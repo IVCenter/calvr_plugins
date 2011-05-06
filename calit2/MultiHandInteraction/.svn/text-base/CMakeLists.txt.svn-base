@@ -1,0 +1,16 @@
+SET(LIB_NAME MultiHandInteraction)
+SET(PLUGIN_HEADERS
+    MultiHandInteraction.h
+)
+
+ADD_LIBRARY(${LIB_NAME}
+    "SHARED"
+    ${PLUGIN_HEADERS}
+    MultiHandInteraction.cpp
+)
+
+
+INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${OSG_LIBRARIES})
+
+INSTALL(TARGETS ${LIB_NAME} DESTINATION lib/plugins)

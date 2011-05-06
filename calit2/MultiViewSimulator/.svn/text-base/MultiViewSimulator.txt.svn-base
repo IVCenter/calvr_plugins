@@ -1,0 +1,30 @@
+Configurable Options: Type & Definitions
+
+*** Everything should be under the Plugin.MultiViewSimulator category. ***
+
+Head0 (category):
+ + value      (bool): Simulate this head by overriding the TrackingManager values.
+ + rotate    (float): Initial rotation angle when simulation starts.
+ + x         (float): Initial location's x-value when simulation starts.
+ + y         (float): Initial location's y-value when simulation starts.
+ + z         (float): Initial location's z-value when simulation starts.
+
+Head1 (category):
+ + value      (bool): Simulate this head by overriding the TrackingManager values.
+ + rotate    (float): Initial rotation angle when simulation starts.
+ + x         (float): Initial location's x-value when simulation starts.
+ + y         (float): Initial location's y-value when simulation starts.
+ + z         (float): Initial location's z-value when simulation starts.
+ + sim         (int): Which simulation this head should go through.
+   * 0 simulates a person spinning in a circle at a constant position.
+   * 1 simulates a person that pans left and right without turning their neck at all.
+
+
+Example:
+
+<Plugin>
+  <MultiViewSimulator value ="on">
+    <Head0 value="on" x="0" y="-1000" z="1000" rotate="60"/>
+    <Head1 value="on" x="-1000" y="-1000" z="0" rotate="0" sim="1" />
+  </MultiViewSimulator>
+</Plugin>

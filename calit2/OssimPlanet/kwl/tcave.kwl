@@ -1,0 +1,25 @@
+archive0.type: local
+archive0.file0: /home/covise/data/ossimPlanet/digSite/ikonos_3band8bit.tif
+archive0.transparent_color_flag:0
+archive0.transparent_color: 0 0 0
+archive0.opacity: 255
+
+archive1.type: wms
+archive1.server: http://hyperquad.ucsd.edu/cgi-bin/NewWorld?SERVICE=wms&VERSION=1.1.1&LAYERS=NewWorld&SRS=EPSG:4326
+archive1.transparent_color_flag: 0
+archive1.transparent_color: 0 0 0
+archive1.opacity: 255
+archive1.cache_dir: /home/covise/data/ossimPlanet/cache
+
+archive2.type: local
+archive2.file0: /home/covise/data/BMNG/world.topo.bathy.200401.3x86400x43200.tif
+archive2.transparent_color_flag:0
+archive2.transparent_color: 0 0 0
+archive2.opacity: 255
+
+//archive1.type: local
+//archive1.file0: /home/covise/data/SanDiego/sandiegoLayer.tif
+//archive1.transparent_color_flag:0
+//archive1.transparent_color: 0 0 0
+//archive1.opacity: 255
+

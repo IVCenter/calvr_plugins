@@ -1,0 +1,6 @@
+Use cuda to do intersection testing
+View frustrum culling done in cuda
+Map line attributes to a 1d texture (instead of using second color, also means can use indicies and have only a single vertex array)
+Find a fast way to do text in shader for labeling
+Port igraph force directed layout to gpu to speed up calculations
+Move layout calculations to a background thread
