@@ -117,9 +117,9 @@ bool SMV2Settings::init()
 
 void SMV2Settings::menuCallback(MenuItem * item)
 {
-    static float linearVar = 90;
-    static float cosineVar = 90;
-    static float gaussianVar = 90;
+    static float linearVar = 180;
+    static float cosineVar = 180;
+    static float gaussianVar = 180;
     static float * contrVar = &cosineVar;
 
     if (item == multipleUsers)
@@ -135,7 +135,7 @@ void SMV2Settings::menuCallback(MenuItem * item)
         ScreenMultiViewer2::setSetContributionFunc(0);
         contrVar = &linearVar;
         contributionVar->setValue(*contrVar);
-        ScreenMultiViewer2::setContributionVar(*contrVar);
+        ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
         linearFunc->setValue(true);
         cosineFunc->setValue(false);
         gaussianFunc->setValue(false);
@@ -145,7 +145,7 @@ void SMV2Settings::menuCallback(MenuItem * item)
         ScreenMultiViewer2::setSetContributionFunc(1);
         contrVar = &cosineVar;
         contributionVar->setValue(*contrVar);
-        ScreenMultiViewer2::setContributionVar(*contrVar);
+        ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
         linearFunc->setValue(false);
         cosineFunc->setValue(true);
         gaussianFunc->setValue(false);
@@ -155,7 +155,7 @@ void SMV2Settings::menuCallback(MenuItem * item)
         ScreenMultiViewer2::setSetContributionFunc(2);
         contrVar = &gaussianVar;
         contributionVar->setValue(*contrVar);
-        ScreenMultiViewer2::setContributionVar(*contrVar);
+        ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
         linearFunc->setValue(false);
         cosineFunc->setValue(false);
         gaussianFunc->setValue(true);
