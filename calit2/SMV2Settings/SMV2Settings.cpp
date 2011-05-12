@@ -23,17 +23,19 @@ SMV2Settings::SMV2Settings()
 SMV2Settings::~SMV2Settings()
 {
     std::cerr << "SMV2Settings destroyed." << std::endl;
+    delete mvsMenu;
+    delete multipleUsers;
+    delete contributionMenu;
     delete linearFunc;
     delete gaussianFunc;
-    delete contributionMenu;
+    delete orientation3d;
+    delete contributionVar;
+    delete zoneMenu;
+    delete autoAdjust;
     delete zoneRowQuantity;
     delete zoneColumnQuantity;
-    delete autoAdjust;
     delete autoAdjustTarget;
     delete autoAdjustOffset;
-    delete zoneMenu;
-    delete multipleUsers;
-    delete mvsMenu;
 }
 
 bool SMV2Settings::init()
@@ -53,19 +55,28 @@ bool SMV2Settings::init()
     contributionMenu = new SubMenu("Contribution Control", "Contribution Control");
     contributionMenu->setCallback(this);
 
-    linearFunc = new MenuCheckbox("Linear Contribution Balancing", false);
-    linearFunc->setCallback(this);
-
-    gaussianFunc = new MenuCheckbox("Gaussian Contribution Balancing", true);
-    gaussianFunc->setCallback(this);
-
     orientation3d = new MenuCheckbox("3D Orientation Contribution Balancing",
             ScreenMultiViewer2::getOrientation3d());
     orientation3d->setCallback(this);
 
-    contributionMenu->addItem(linearFunc);
-    contributionMenu->addItem(gaussianFunc);
+    linearFunc = new MenuCheckbox("Linear Contribution Balancing", false);
+    linearFunc->setCallback(this);
+
+    cosineFunc = new MenuCheckbox("Cosine Contribution Balancing", true);
+    cosineFunc->setCallback(this);
+
+    gaussianFunc = new MenuCheckbox("Gaussian Contribution Balancing", false);
+    gaussianFunc->setCallback(this);
+
+    contributionVar = new MenuRangeValue("Contribution Variable", 1, 180,
+            ScreenMultiViewer2::getContributionVar(), 1);
+    contributionVar->setCallback(this);
+
     contributionMenu->addItem(orientation3d);
+    contributionMenu->addItem(linearFunc);
+    contributionMenu->addItem(cosineFunc);
+    contributionMenu->addItem(gaussianFunc);
+    contributionMenu->addItem(contributionVar);
     mvsMenu->addItem(contributionMenu);
 
     zoneMenu = new SubMenu("Zone Control", "Zone Control");
@@ -106,25 +117,53 @@ bool SMV2Settings::init()
 
 void SMV2Settings::menuCallback(MenuItem * item)
 {
+    static float linearVar = 90;
+    static float cosineVar = 90;
+    static float gaussianVar = 90;
+    static float * contrVar = &cosineVar;
+
     if (item == multipleUsers)
     {
         ScreenMultiViewer2::setMultipleUsers(multipleUsers->getValue());
     }
+    else if (item == orientation3d)
+    {
+        ScreenMultiViewer2::setOrientation3d(orientation3d->getValue());
+    }
     else if (item == linearFunc)
     {
         ScreenMultiViewer2::setSetContributionFunc(0);
+        contrVar = &linearVar;
+        contributionVar->setValue(*contrVar);
+        ScreenMultiViewer2::setContributionVar(*contrVar);
         linearFunc->setValue(true);
+        cosineFunc->setValue(false);
+        gaussianFunc->setValue(false);
+    }
+    else if (item == cosineFunc)
+    {
+        ScreenMultiViewer2::setSetContributionFunc(1);
+        contrVar = &cosineVar;
+        contributionVar->setValue(*contrVar);
+        ScreenMultiViewer2::setContributionVar(*contrVar);
+        linearFunc->setValue(false);
+        cosineFunc->setValue(true);
         gaussianFunc->setValue(false);
     }
     else if (item == gaussianFunc)
     {
-        ScreenMultiViewer2::setSetContributionFunc(1);
+        ScreenMultiViewer2::setSetContributionFunc(2);
+        contrVar = &gaussianVar;
+        contributionVar->setValue(*contrVar);
+        ScreenMultiViewer2::setContributionVar(*contrVar);
         linearFunc->setValue(false);
+        cosineFunc->setValue(false);
         gaussianFunc->setValue(true);
     }
-    else if (item == orientation3d)
+    else if (item == contributionVar)
     {
-        ScreenMultiViewer2::setOrientation3d(orientation3d->getValue());
+        *contrVar = contributionVar->getValue();
+        ScreenMultiViewer2::setContributionVar(*contrVar);
     }
     else if (item == autoAdjust)
     {
