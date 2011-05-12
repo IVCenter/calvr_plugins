@@ -59,6 +59,8 @@
 #include <kernel/Navigation.h>
 #include <kernel/ComController.h>
 #include <config/ConfigManager.h>
+#include <menu/SubMenu.h>
+#include <menu/MenuCheckbox.h>
 
 class OssimPlanet;
 
@@ -99,7 +101,7 @@ struct PreTraversal: public cvr::CVRViewer::UpdateTraversal
 	void update();
 };
 
-class OssimPlanet : public cvr::CVRPlugin, public ossimPlanetCallback, public ossimPlanetCallbackListInterface<ossimPlanetViewerCallback>
+class OssimPlanet : public cvr::CVRPlugin, public cvr::MenuCallback, public ossimPlanetCallback, public ossimPlanetCallbackListInterface<ossimPlanetViewerCallback>
 {
   private:
     static ossimPlanet* planet;
@@ -107,6 +109,15 @@ class OssimPlanet : public cvr::CVRPlugin, public ossimPlanetCallback, public os
     void cloudCover();
     ossimPlanetEphemeris* ephemeris;
     void getObjectIntersection(osg::Node *root, osg::Vec3& wPointerStart, osg::Vec3& wPointerEnd, IsectInfo& isect);
+    void processNav(double speed);
+    double getSpeed(double distance);
+
+    cvr::SubMenu * _ossimMenu;
+    cvr::MenuCheckbox * _navCB;
+
+    bool _navActive;
+    int _navHand;
+    osg::Matrix _navHandMat;
 
   public:
     OssimPlanet();
@@ -116,6 +127,10 @@ class OssimPlanet : public cvr::CVRPlugin, public ossimPlanetCallback, public os
     osg::Vec3d convertUtm84ToLatLon(int zone, char hemi, double northing, double easting); 
     bool init();
     void preFrame();
+    int getPriority() { return 30; }
+    bool buttonEvent(int type, int button, int hand, const osg::Matrix & mat);
+    void menuCallback(cvr::MenuItem * item);
+
     OssimPlanet* instance();
 };
 #endif
