@@ -1,5 +1,10 @@
 #include "OssimPlanet.h"
 
+#include <kernel/Navigation.h>
+#include <kernel/InteractionManager.h>
+
+#include <cmath>
+
 using namespace cvr;
 using namespace osg;
 
@@ -167,6 +172,15 @@ bool OssimPlanet::init()
    //addModel(models, 30.628039, 35.491239, osg::Vec3(0.06, 0.06, 0.06), 20.0, 0.0, 90.0, 135.03); 
    //addModel(models, 30.628039, 35.491239, osg::Vec3(0.06, 0.06, 0.06), 10.0, 0.0, 90.0, 135.0); 
 
+   _ossimMenu = new SubMenu("OssimPlanet");
+
+   _navCB = new MenuCheckbox("Planet Nav Mode",false);
+   _navCB->setCallback(this);
+   _ossimMenu->addItem(_navCB);
+   PluginHelper::addRootMenuItem(_ossimMenu);
+
+   _navActive = false;
+
    SceneManager::instance()->getObjectsRoot()->addChild(planet);
 
    return true;
@@ -318,7 +332,12 @@ void OssimPlanet::preFrame()
 	}
     }
 
-    double minNavScale = 20.0;
+    if(_navActive)
+    {
+	processNav(getSpeed(distanceToSurface));
+    }
+
+    /*double minNavScale = 20.0;
     double maxNavScale = 2000000.0;
     double minDistance = 0.0;   
     double maxDistance = 0.3;  //ratio is multiplied by the earth radius
@@ -334,6 +353,177 @@ void OssimPlanet::preFrame()
     }
 
     double scaleFactor = minNavScale + (ratio * (maxNavScale - minNavScale));
-    Navigation::instance()->setScale(scaleFactor);
+    Navigation::instance()->setScale(scaleFactor);*/
 }
+
+bool OssimPlanet::buttonEvent(int type, int button, int hand, const osg::Matrix & mat)
+{
+    std::cerr << "Button event." << std::endl;
+    if(!_navCB->getValue() || Navigation::instance()->getPrimaryButtonMode() == SCALE)
+    {
+	return false;
+    }
+
+    if(!_navActive && button == 0 && type == BUTTON_DOWN)
+    {
+	_navHand = hand;
+	_navHandMat = mat;
+	_navActive = true;
+	return true;
+    }
+    else if(!_navActive)
+    {
+	return false;
+    }
+
+    if(hand != _navHand)
+    {
+	return false;
+    }
+
+    if(button == 0)
+    {
+	if(type == BUTTON_UP)
+	{
+	    _navActive = false;
+	}
+	return true;
+    }
+
+    return false;
+}
+
+void OssimPlanet::menuCallback(MenuItem * item)
+{
+    if(item == _navCB)
+    {
+	_navActive = false;
+    }
+}
+
+void OssimPlanet::processNav(double speed)
+{
+    double time = PluginHelper::getLastFrameDuration();
+    float rangeValue = 500.0;
+
+    switch(Navigation::instance()->getPrimaryButtonMode())
+    {
+	case WALK:
+	case DRIVE:
+	{
+	    osg::Vec3 trans;
+	    osg::Vec3 offset = PluginHelper::getHandMat(_navHand).getTrans() - _navHandMat.getTrans();
+	    trans = offset;
+	    trans.normalize();
+	    offset.z() = 0.0;
+
+	    float speedScale = fabs(offset.length() / rangeValue);
+
+	    trans = trans * (speedScale * speed * time * 1000.0);
+
+	    osg::Matrix r;
+            r.makeRotate(_navHandMat.getRotate());
+            osg::Vec3 pointInit = osg::Vec3(0, 1, 0);
+            pointInit = pointInit * r;
+            pointInit.z() = 0.0;
+
+            r.makeRotate(PluginHelper::getHandMat(_navHand).getRotate());
+            osg::Vec3 pointFinal = osg::Vec3(0, 1, 0);
+            pointFinal = pointFinal * r;
+            pointFinal.z() = 0.0;
+
+            osg::Matrix turn;
+            if(pointInit.length2() > 0 && pointFinal.length2() > 0)
+            {
+                pointInit.normalize();
+                pointFinal.normalize();
+                float dot = pointInit * pointFinal;
+                float angle = acos(dot) / 15.0;
+                if(dot > 1.0 || dot < -1.0)
+                {
+                    angle = 0.0;
+                }
+                else if((pointInit ^ pointFinal).z() < 0)
+                {
+                    angle = -angle;
+                }
+                turn.makeRotate(-angle, osg::Vec3(0, 0, 1));
+            }
+
+	    osg::Matrix objmat = PluginHelper::getObjectMatrix();
+
+	    osg::Vec3 origin = PluginHelper::getHandMat(_navHand).getTrans();
+
+	    objmat = objmat * osg::Matrix::translate(-origin) * turn * osg::Matrix::translate(origin + trans);
+	    PluginHelper::setObjectMatrix(objmat);
+
+	    break;
+	}
+	case FLY:
+	{
+	    osg::Vec3 trans = PluginHelper::getHandMat(_navHand).getTrans() - _navHandMat.getTrans();
+
+	    float speedScale = fabs(trans.length() / rangeValue);
+	    trans.normalize();
+
+	    trans = trans * (speedScale * speed * time * 1000.0);
+
+	    osg::Matrix r;
+            r.makeRotate(_navHandMat.getRotate());
+            osg::Vec3 pointInit = osg::Vec3(0, 1, 0);
+            pointInit = pointInit * r;
+
+            r.makeRotate(PluginHelper::getHandMat(_navHand).getRotate());
+            osg::Vec3 pointFinal = osg::Vec3(0, 1, 0);
+            pointFinal = pointFinal * r;
+
+            osg::Quat turn;
+            if(pointInit.length2() > 0 && pointFinal.length2() > 0)
+            {
+                pointInit.normalize();
+                pointFinal.normalize();
+		turn.makeRotate(pointInit,pointFinal);
+		
+		double angle;
+		osg::Vec3 vec;
+		turn.getRotate(angle,vec);
+		turn.makeRotate(angle / 20.0, vec);
+            }
+
+	    osg::Matrix objmat = PluginHelper::getObjectMatrix();
+
+	    osg::Vec3 origin = PluginHelper::getHandMat(_navHand).getTrans();
+
+	    objmat = objmat * osg::Matrix::translate(-origin) * osg::Matrix::rotate(turn) * osg::Matrix::translate(origin + trans);
+	    PluginHelper::setObjectMatrix(objmat);
+	    break;
+	}
+	default:
+	    break;
+    }
+}
+
+double OssimPlanet::getSpeed(double distance)
+{
+    double boundDist = std::max((double)0.0,distance);
+    boundDist /= 1000.0;
+
+    if(boundDist < 762.0)
+    {
+	return 0.000000098 * pow(boundDist,3) + 1.38888;
+    }
+    else if(boundDist < 10000.0)
+    {
+	boundDist = boundDist - 762.0;
+	return 0.0314544 * boundDist + 44.704;
+    }
+    else
+    {
+	boundDist = boundDist - 10000;
+	double cap = 0.07 * boundDist + 335.28;
+	cap = std::min((double)2000,cap);
+	return cap;
+    }
+}
+
 CVRPLUGIN(OssimPlanet)
