@@ -69,7 +69,7 @@ bool SMV2Settings::init()
     gaussianFunc->setCallback(this);
 
     contributionVar = new MenuRangeValue("Contribution Variable", 1, 180,
-            ScreenMultiViewer2::getContributionVar(), 1);
+            ScreenMultiViewer2::getContributionVar()*180/M_PI, 1);
     contributionVar->setCallback(this);
 
     contributionMenu->addItem(orientation3d);
@@ -163,7 +163,7 @@ void SMV2Settings::menuCallback(MenuItem * item)
     else if (item == contributionVar)
     {
         *contrVar = contributionVar->getValue();
-        ScreenMultiViewer2::setContributionVar(*contrVar);
+        ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
     }
     else if (item == autoAdjust)
     {
