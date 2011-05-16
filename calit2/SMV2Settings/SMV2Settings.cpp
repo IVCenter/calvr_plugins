@@ -36,6 +36,10 @@ SMV2Settings::~SMV2Settings()
     delete zoneColumnQuantity;
     delete autoAdjustTarget;
     delete autoAdjustOffset;
+    delete zoneColoring;
+    delete zoneMenu;
+    delete multipleUsers;
+    delete mvsMenu;
 }
 
 bool SMV2Settings::init()
@@ -104,9 +108,14 @@ bool SMV2Settings::init()
                     ScreenMultiViewer2::getAutoAdjustOffset(), 1);
     autoAdjustOffset->setCallback(this);
 
+    zoneColoring = new MenuCheckbox("Zone Coloring",
+                    ScreenMultiViewer2::getZoneColoring());
+    zoneColoring->setCallback(this);
+
     zoneMenu->addItem(autoAdjust);
     zoneMenu->addItem(autoAdjustTarget);
     zoneMenu->addItem(autoAdjustOffset);
+    zoneMenu->addItem(zoneColoring);
     mvsMenu->addItem(zoneMenu);
 
     MenuSystem::instance()->addMenuItem(mvsMenu);
@@ -200,5 +209,9 @@ void SMV2Settings::menuCallback(MenuItem * item)
     else if (item == autoAdjustOffset)
     {
         ScreenMultiViewer2::setAutoAdjustOffset(autoAdjustOffset->getValue());
+    }
+    else if (item == zoneColoring)
+    {
+        ScreenMultiViewer2::setZoneColoring(zoneColoring->getValue());
     }
 }
