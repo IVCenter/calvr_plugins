@@ -1,5 +1,5 @@
-#ifndef PLUGIN_TEST
-#define PLUGIN_TEST
+#ifndef SMV2SETTINGS
+#define SMV2SETTINGS
 
 #include <kernel/CVRPlugin.h>
 #include <kernel/ScreenMVSimulator.h>
@@ -32,6 +32,7 @@ class SMV2Settings : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuRangeValue * zoneColumnQuantity;
         cvr::MenuRangeValue * autoAdjustTarget;
         cvr::MenuRangeValue * autoAdjustOffset;
+        cvr::MenuCheckbox * zoneColoring;
 };
 
 #endif
