@@ -112,10 +112,10 @@ bool SMV2Settings::init()
                     ScreenMultiViewer2::getZoneColoring());
     zoneColoring->setCallback(this);
 
+    zoneMenu->addItem(zoneColoring);
     zoneMenu->addItem(autoAdjust);
     zoneMenu->addItem(autoAdjustTarget);
     zoneMenu->addItem(autoAdjustOffset);
-    zoneMenu->addItem(zoneColoring);
     mvsMenu->addItem(zoneMenu);
 
     MenuSystem::instance()->addMenuItem(mvsMenu);
