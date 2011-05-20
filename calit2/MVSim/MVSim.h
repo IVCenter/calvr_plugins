@@ -9,6 +9,8 @@
 #include <menu/MenuRangeValue.h>
 #include <menu/PopupMenu.h>
 
+#include <osg/Group>
+
 class MVSim : public cvr::CVRPlugin, public cvr::MenuCallback
 {
     public:
@@ -39,8 +41,11 @@ class MVSim : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * stopSim;
         cvr::MenuButton * resetSim;
         cvr::MenuButton * stepSim;
-        cvr::MenuButton * setHead1to0;
+        cvr::SubMenu * sceneMenu;
+        cvr::MenuButton * scene1;
         cvr::MenuRangeValue * delaySim;
+
+        osg::Switch * scene1switch;
 };
 
 #endif
