@@ -8,6 +8,7 @@
 #include <kernel/ScreenConfig.h>
 #include <menu/MenuSystem.h>
 
+#include <osg/Config>
 #include <osg/ShapeDrawable>
 
 CVRPLUGIN(MVSim)
@@ -26,8 +27,9 @@ MVSim::~MVSim()
     delete stopSim;
     delete resetSim;
     delete stepSim;
-    delete setHead1to0;
     delete delaySim;
+    delete scene1;
+    delete sceneMenu;
     delete mvsMenu;
 }
 
@@ -87,19 +89,24 @@ bool MVSim::init()
     stepSim = new MenuButton("Step Simulation Forward");
     stepSim->setCallback(this);
 
-    setHead1to0 = new MenuButton("Set Head1 = Head0");
-    setHead1to0->setCallback(this);
-
     _delay = 0.025;
     delaySim = new MenuRangeValue("Simulation Delay (seconds)", 0.0,5.0,_delay,.01); 
     delaySim->setCallback(this);
+
+    sceneMenu = new SubMenu("Scenes", "Scenes");
+    sceneMenu->setCallback(this);
+
+    scene1 = new MenuButton("Central Sphere");
+    scene1->setCallback(this);
+
+    sceneMenu->addItem(scene1);
 
     mvsMenu->addItem(startSim);
     mvsMenu->addItem(stopSim);
     mvsMenu->addItem(resetSim);
     mvsMenu->addItem(stepSim);
-    mvsMenu->addItem(setHead1to0);
     mvsMenu->addItem(delaySim);
+    mvsMenu->addItem(sceneMenu);
 
     MenuSystem::instance()->addMenuItem(mvsMenu);
     /*** End Menu Setup ***/
@@ -170,19 +177,30 @@ void MVSim::menuCallback(MenuItem * item)
     {
         stepEvent();
     }
-    else if (item == setHead1to0)
-    {
-        if (head1 != NULL)
-        {
-            *head1 = _screenMVSim->getCurrentHeadMatrix(0);
-
-            if (viewTransform1)
-                viewTransform1->setMatrix(*head1);
-        }
-    }
     else if (item == delaySim)
     {
         _delay = delaySim->getValue();
+    }
+    else if (item == scene1)
+    {
+        static bool enabled = false;
+        // First time? Create the scene
+        if (scene1switch == NULL)
+        {
+            scene1switch = new osg::Switch();
+            osg::ref_ptr<osg::Sphere> sphere = new osg::Sphere(osg::Vec3(0,0,0),10);
+            osg::ref_ptr<osg::ShapeDrawable> drawable = new osg::ShapeDrawable(sphere);
+            osg::ref_ptr<osg::Geode> geode = new osg::Geode();
+            geode->addDrawable(drawable.get());
+            scene1switch->addChild(geode,enabled);
+            PluginHelper::getObjectsRoot()->addChild(scene1switch);
+        }
+
+        if (enabled)
+            scene1switch->setAllChildrenOff();
+        else
+            scene1switch->setAllChildrenOn();
+        enabled = !enabled;
     }
 }
 
