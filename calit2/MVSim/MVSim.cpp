@@ -1,5 +1,9 @@
 #include "MVSim.h"
 
+#include <time.h>
+#include <sys/types.h>
+#include <dirent.h>
+
 #include <iostream>
 #include <input/TrackingManager.h>
 #include <config/ConfigManager.h>
@@ -10,6 +14,8 @@
 
 #include <osg/Config>
 #include <osg/ShapeDrawable>
+#include <osgDB/ReadFile>
+#include <osgDB/WriteFile>
 
 CVRPLUGIN(MVSim)
 
@@ -30,6 +36,29 @@ MVSim::~MVSim()
     delete delaySim;
     delete scene1;
     delete sceneMenu;
+
+    // clear current lists of heads
+    std::map<cvr::SubMenu *,osg::Matrix *>::iterator it;
+    cvr::MenuItem * item;
+    while (!headMats.empty())
+    {
+        it = headMats.begin();
+        while (it->first->getNumChildren() > 0)
+        {
+            item = it->first->getChild(0);
+            it->first->removeItem(item);
+            delete item;
+        }
+
+        setHeadMenu->removeItem(it->first);
+        delete it->first;
+        delete it->second;
+        headMats.erase(it);
+    }
+
+    delete setHeadMenu;
+    delete saveHeads;
+    delete loadHeads;
     delete mvsMenu;
 }
 
@@ -101,12 +130,25 @@ bool MVSim::init()
 
     sceneMenu->addItem(scene1);
 
+    setHeadMenu = new SubMenu("Head Positions", "Heads to Set");
+    setHeadMenu->setCallback(this);
+
+    saveHeads = new MenuButton("Save Current Head Positions");
+    saveHeads->setCallback(this);
+
+    loadHeads = new MenuButton("Load Head Positions");
+    loadHeads->setCallback(this);
+
+    setHeadMenu->addItem(saveHeads);
+    setHeadMenu->addItem(loadHeads);
+
     mvsMenu->addItem(startSim);
     mvsMenu->addItem(stopSim);
     mvsMenu->addItem(resetSim);
     mvsMenu->addItem(stepSim);
     mvsMenu->addItem(delaySim);
     mvsMenu->addItem(sceneMenu);
+    mvsMenu->addItem(setHeadMenu);
 
     MenuSystem::instance()->addMenuItem(mvsMenu);
     /*** End Menu Setup ***/
@@ -202,6 +244,78 @@ void MVSim::menuCallback(MenuItem * item)
             scene1switch->setAllChildrenOn();
         enabled = !enabled;
     }
+    else if (item == saveHeads)
+    {
+        saveCurrentHeadMatrices();
+    }
+    else if (item == loadHeads)
+    {
+        // clear current lists of heads
+        std::map<cvr::SubMenu *,osg::Matrix *>::iterator it;
+        cvr::MenuItem * item;
+        while (!headMats.empty())
+        {
+            it = headMats.begin();
+            while (it->first->getNumChildren() > 0)
+            {
+                item = it->first->getChild(0);
+                it->first->removeItem(item);
+                delete item;
+            }
+
+            setHeadMenu->removeItem(it->first);
+            delete it->first;
+            delete it->second;
+            headMats.erase(it);
+        }
+
+        // load head matrices from file and store them as neccessary
+        loadHeadMatrices();
+    }
+    else
+    {
+        std::map<cvr::SubMenu*,osg::Matrix*>::iterator it;
+        for (it = headMats.begin(); it != headMats.end(); it++)
+        {
+            for (int i = 0; i < it->first->getNumChildren(); i++)
+            {
+                if (item == it->first->getChild(i))
+                {
+                    cvr::MenuButton * button = dynamic_cast<cvr::MenuButton *> (item);
+
+                    if (button == NULL)
+                    {
+                        std::cerr<<"Error: Non-MenuButton located in MVSim under matrix sub-menu.\n";
+                        return;
+                    }
+
+                    if (button->getText() == "Head 0")
+                    {
+                        if (head0 != NULL)
+                        {
+                            head0->set(*it->second);
+                            _screenMVSim->setSimulatedHeadMatrix(0,head0);
+                        }
+                        else
+                            std::cerr<<"Warning: Load attempted for unsimiluated head (0).\n";
+                        return;
+                    }
+
+                    else if (button->getText() == "Head 1")
+                    {
+                        if (head1 != NULL)
+                        {
+                            head1->set(*it->second);
+                            _screenMVSim->setSimulatedHeadMatrix(1,head1);
+                        }
+                        else
+                            std::cerr<<"Warning: Load attempted for unsimiluated head (1).\n";
+                        return;
+                    }
+                }
+            }
+        }
+    }
 }
 
 void MVSim::preFrame()
@@ -247,4 +361,90 @@ void MVSim::stepEvent()
 
     if (++_event == 360)
         _event = 0;
+}
+
+void MVSim::saveCurrentHeadMatrices()
+{
+    std::string dir = ConfigManager::getEntry("Plugin.MVSim.HeadMatrixDir");
+    if (dir == "")
+    {
+        std::cerr<<"Error: No head matrix directory given by config file.\n";
+        return;
+    }
+
+    time_t rawtime;
+    struct tm * timeinfo;
+    char filename0 [512];
+    char filename1 [512];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+
+    std::string head0format = dir+"%Y_%m_%d_%H_%M_%S_head";
+    std::string head1format = head0format;
+    head0format += "0.osg";
+    head1format += "1.osg";
+    strftime(filename0,512,head0format.c_str(),timeinfo);
+    strftime(filename1,512,head1format.c_str(),timeinfo);
+    std::string f0 = filename0;
+    std::string f1 = filename1;
+
+    // Using MatrixTransforms since writing RefMatrix's is buggy (empty files)
+    osg::MatrixTransform *h0 = new osg::MatrixTransform(_screenMVSim->getCurrentHeadMatrix(0));
+    osg::MatrixTransform *h1 = new osg::MatrixTransform(_screenMVSim->getCurrentHeadMatrix(1));
+
+    std::cerr<<"Saving head0...";
+    if (osgDB::writeObjectFile(*h0,f0))
+        std::cerr<<"success.\n";
+    else
+        std::cerr<<"failure.\n";
+
+    std::cerr<<"Saving head1...";
+    if (osgDB::writeObjectFile(*h1,f1))
+        std::cerr<<"success.\n";
+    else
+        std::cerr<<"failure.\n";
+}
+
+void MVSim::loadHeadMatrices()
+{
+    std::string dir = ConfigManager::getEntry("Plugin.MVSim.HeadMatrixDir");
+    if (dir == "")
+    {
+        std::cerr<<"Error: No head matrix directory given by config file.\n";
+        return;
+    }
+    DIR *dp;
+    struct dirent *dirp;
+    if((dp  = opendir(dir.c_str())) == NULL) {
+        std::cerr<<"Error opening directory("<<dir<<")\n";
+        return;
+    }
+
+    while ((dirp = readdir(dp)) != NULL) {
+        if (dirp->d_name[0] == '.')
+            continue;
+
+        std::cerr<<"Going to read "<<dirp->d_name;
+        osg::MatrixTransform * matTrans = dynamic_cast<osg::MatrixTransform *>(osgDB::readNodeFile(dir+dirp->d_name));
+
+        if (matTrans != NULL)
+        {
+            cvr::SubMenu * menu = new cvr::SubMenu(dirp->d_name,std::string(dirp->d_name));
+            menu->setCallback(this);
+
+            cvr::MenuButton * head0 = new cvr::MenuButton("Head 0");
+            head0->setCallback(this);
+            menu->addItem(head0);
+            cvr::MenuButton * head1 = new cvr::MenuButton("Head 1");
+            head1->setCallback(this);
+            menu->addItem(head1);
+
+            setHeadMenu->addItem(menu);
+            headMats[menu] = new osg::Matrix(matTrans->getMatrix());
+            std::cerr<<"success.\n";
+        }
+        else
+            std::cerr<<"failure.\n";
+    }
+    closedir(dp);
 }

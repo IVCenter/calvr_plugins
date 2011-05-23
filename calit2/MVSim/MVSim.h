@@ -1,5 +1,5 @@
-#ifndef PLUGIN_TEST
-#define PLUGIN_TEST
+#ifndef _MVSIM_H_
+#define _MVSIM_H_
 
 #include <kernel/CVRPlugin.h>
 #include <kernel/ScreenMVSimulator.h>
@@ -18,9 +18,7 @@ class MVSim : public cvr::CVRPlugin, public cvr::MenuCallback
         ~MVSim();
 
         bool init();
-
         void menuCallback(cvr::MenuItem * item);
-
         void preFrame();
 
     protected:
@@ -32,6 +30,8 @@ class MVSim : public cvr::CVRPlugin, public cvr::MenuCallback
         osg::ref_ptr<osg::MatrixTransform> viewTransform1;
 
         void stepEvent();
+        void saveCurrentHeadMatrices();
+        void loadHeadMatrices();
 
         bool _run;
         float _delay;
@@ -41,9 +41,13 @@ class MVSim : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * stopSim;
         cvr::MenuButton * resetSim;
         cvr::MenuButton * stepSim;
+        cvr::MenuRangeValue * delaySim;
         cvr::SubMenu * sceneMenu;
         cvr::MenuButton * scene1;
-        cvr::MenuRangeValue * delaySim;
+        cvr::SubMenu * setHeadMenu;
+        std::map<cvr::SubMenu *, osg::Matrix *> headMats;
+        cvr::MenuButton * saveHeads;
+        cvr::MenuButton * loadHeads;
 
         osg::Switch * scene1switch;
 };
