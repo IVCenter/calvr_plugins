@@ -1,12 +1,12 @@
-SET(LIB_NAME Collaborative)
+SET(LIB_NAME CollaborativePlugin)
 SET(PLUGIN_HEADERS
-    Collaborative.h
+    CollaborativePlugin.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
     "SHARED"
     ${PLUGIN_HEADERS}
-    Collaborative.cpp
+    CollaborativePlugin.cpp
 )
 
 
