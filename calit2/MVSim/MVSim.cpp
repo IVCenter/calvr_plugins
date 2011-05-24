@@ -394,15 +394,15 @@ void MVSim::saveCurrentHeadMatrices()
 
     std::cerr<<"Saving head0...";
     if (osgDB::writeObjectFile(*h0,f0))
-        std::cerr<<"success.\n";
+        std::cerr<<" success.\n";
     else
-        std::cerr<<"failure.\n";
+        std::cerr<<" failure.\n";
 
     std::cerr<<"Saving head1...";
     if (osgDB::writeObjectFile(*h1,f1))
-        std::cerr<<"success.\n";
+        std::cerr<<" success.\n";
     else
-        std::cerr<<"failure.\n";
+        std::cerr<<" failure.\n";
 }
 
 void MVSim::loadHeadMatrices()
@@ -424,7 +424,7 @@ void MVSim::loadHeadMatrices()
         if (dirp->d_name[0] == '.')
             continue;
 
-        std::cerr<<"Going to read "<<dirp->d_name;
+        std::cerr<<"Going to read "<<dirp->d_name<<"...";
         osg::MatrixTransform * matTrans = dynamic_cast<osg::MatrixTransform *>(osgDB::readNodeFile(dir+dirp->d_name));
 
         if (matTrans != NULL)
@@ -441,10 +441,10 @@ void MVSim::loadHeadMatrices()
 
             setHeadMenu->addItem(menu);
             headMats[menu] = new osg::Matrix(matTrans->getMatrix());
-            std::cerr<<"success.\n";
+            std::cerr<<" success.\n";
         }
         else
-            std::cerr<<"failure.\n";
+            std::cerr<<" failure.\n";
     }
     closedir(dp);
 }

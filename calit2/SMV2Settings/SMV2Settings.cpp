@@ -72,6 +72,10 @@ bool SMV2Settings::init()
     gaussianFunc = new MenuCheckbox("Gaussian Contribution Balancing", false);
     gaussianFunc->setCallback(this);
 
+    autoContrVar = new MenuCheckbox("Auto Adjust Contribution Variable",
+            ScreenMultiViewer2::getAutoContributionVar());
+    autoContrVar->setCallback(this);
+
     contributionVar = new MenuRangeValue("Contribution Variable", 1, 180,
             ScreenMultiViewer2::getContributionVar()*180/M_PI, 1);
     contributionVar->setCallback(this);
@@ -80,7 +84,9 @@ bool SMV2Settings::init()
     contributionMenu->addItem(linearFunc);
     contributionMenu->addItem(cosineFunc);
     contributionMenu->addItem(gaussianFunc);
-    contributionMenu->addItem(contributionVar);
+    contributionMenu->addItem(autoContrVar);
+    if (!autoContrVar->getValue())
+        contributionMenu->addItem(contributionVar);
     mvsMenu->addItem(contributionMenu);
 
     zoneMenu = new SubMenu("Zone Control", "Zone Control");
@@ -144,7 +150,10 @@ void SMV2Settings::menuCallback(MenuItem * item)
         ScreenMultiViewer2::setSetContributionFunc(0);
         contrVar = &linearVar;
         contributionVar->setValue(*contrVar);
-        ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
+
+        if (!autoContrVar->getValue())
+            ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
+
         linearFunc->setValue(true);
         cosineFunc->setValue(false);
         gaussianFunc->setValue(false);
@@ -154,7 +163,10 @@ void SMV2Settings::menuCallback(MenuItem * item)
         ScreenMultiViewer2::setSetContributionFunc(1);
         contrVar = &cosineVar;
         contributionVar->setValue(*contrVar);
-        ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
+
+        if (!autoContrVar->getValue())
+            ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
+
         linearFunc->setValue(false);
         cosineFunc->setValue(true);
         gaussianFunc->setValue(false);
@@ -164,10 +176,27 @@ void SMV2Settings::menuCallback(MenuItem * item)
         ScreenMultiViewer2::setSetContributionFunc(2);
         contrVar = &gaussianVar;
         contributionVar->setValue(*contrVar);
-        ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
+
+        if (!autoContrVar->getValue())
+            ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
+
         linearFunc->setValue(false);
         cosineFunc->setValue(false);
         gaussianFunc->setValue(true);
+    }
+    else if (item == autoContrVar)
+    {
+        if (autoContrVar->getValue())
+        {
+            contributionMenu->removeItem(contributionVar);
+            menuCallback(contributionVar);
+        }
+        else
+        {
+            contributionMenu->addItem(contributionVar);
+            
+        }
+        ScreenMultiViewer2::setAutoContributionVar(autoContrVar->getValue());
     }
     else if (item == contributionVar)
     {

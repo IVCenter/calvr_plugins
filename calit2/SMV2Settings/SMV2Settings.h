@@ -27,6 +27,7 @@ class SMV2Settings : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuCheckbox * linearFunc;
         cvr::MenuCheckbox * cosineFunc;
         cvr::MenuCheckbox * gaussianFunc;
+        cvr::MenuCheckbox * autoContrVar;
         cvr::MenuRangeValue * contributionVar;
         cvr::SubMenu * zoneMenu;
         cvr::MenuCheckbox * autoAdjust;
