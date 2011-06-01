@@ -46,6 +46,24 @@ bool SMV2Settings::init()
 {
     std::cerr << "SMV2Settings init()." << std::endl;
 
+    /*** Ensure that ScreenMultiViewer2 is in use. ***/
+    ScreenConfig * sConfig = ScreenConfig::instance();
+    ScreenMultiViewer2 * smv2 = NULL;
+    for (int i=0; i < sConfig->getNumScreens(); i++)
+    {
+        smv2 = dynamic_cast<ScreenMultiViewer2 *> (sConfig->getScreen(i));
+        if (smv2 != NULL)
+            break;
+    }
+    if (smv2 == NULL)
+    {
+        std::cerr<<"Cannot initialize SMV2Settings without running a ScreenMultiViewer2 screen.\n";
+        return false;
+    }
+std::cerr<<smv2<<"Found one?!?!\n";
+std::cerr<<"Found one?!?!\n";
+std::cerr<<"Found one?!?!\n";
+
     /*** Menu Setup ***/
     mvsMenu = new SubMenu("SMV2Settings", "SMV2Settings");
     mvsMenu->setCallback(this);

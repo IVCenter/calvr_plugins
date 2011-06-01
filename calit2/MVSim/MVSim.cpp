@@ -7,7 +7,9 @@
 #include <iostream>
 #include <input/TrackingManager.h>
 #include <config/ConfigManager.h>
+#include <kernel/ComController.h>
 #include <kernel/InteractionManager.h>
+#include <kernel/NodeMask.h>
 #include <kernel/PluginHelper.h>
 #include <kernel/ScreenConfig.h>
 #include <menu/MenuSystem.h>
@@ -59,6 +61,7 @@ MVSim::~MVSim()
     delete setHeadMenu;
     delete saveHeads;
     delete loadHeads;
+    delete showDiagramBox;
     delete mvsMenu;
 }
 
@@ -142,6 +145,9 @@ bool MVSim::init()
     setHeadMenu->addItem(saveHeads);
     setHeadMenu->addItem(loadHeads);
 
+    showDiagramBox = new MenuCheckbox("Show Diagram", ComController::instance()->isMaster());
+    showDiagramBox->setCallback(this);
+
     mvsMenu->addItem(startSim);
     mvsMenu->addItem(stopSim);
     mvsMenu->addItem(resetSim);
@@ -149,9 +155,13 @@ bool MVSim::init()
     mvsMenu->addItem(delaySim);
     mvsMenu->addItem(sceneMenu);
     mvsMenu->addItem(setHeadMenu);
+    mvsMenu->addItem(showDiagramBox);
 
     MenuSystem::instance()->addMenuItem(mvsMenu);
     /*** End Menu Setup ***/
+
+    scene1switch = NULL;
+    diagram = NULL;
 
     _run = false;
     _event = 0;
@@ -168,6 +178,8 @@ bool MVSim::init()
         std::cerr<<"Cannot initialize MVSim without running a ScreenMVSimulator screen.\n";
         return false;
     }
+
+    showDiagram(ComController::instance()->isMaster());
 
     if (ConfigManager::getBool("Plugin.MVSim.Head0",false))
     {
@@ -272,6 +284,10 @@ void MVSim::menuCallback(MenuItem * item)
         // load head matrices from file and store them as neccessary
         loadHeadMatrices();
     }
+    else if (item == showDiagramBox)
+    {
+        showDiagram(showDiagramBox->getValue());
+    }
     else
     {
         std::map<cvr::SubMenu*,osg::Matrix*>::iterator it;
@@ -326,6 +342,22 @@ void MVSim::preFrame()
     {
         lastRun = CVRViewer::instance()->getFrameStartTime();
         stepEvent();
+    }
+
+    // update the heads in the diagram
+    if(diagram != NULL && showDiagramBox->getValue())
+    {
+        osg::Matrix mat0 = _screenMVSim->getCurrentHeadMatrix(0);
+        osg::Matrix mat1 = _screenMVSim->getCurrentHeadMatrix(1);
+
+        osg::Vec3 pos0 = mat0.getTrans();
+        mat0.setTrans(pos0.x(),pos0.y(),0);
+
+        osg::Vec3 pos1 = mat1.getTrans();
+        mat1.setTrans(pos1.x(),pos1.y(),0);
+
+        cone0->setMatrix(mat0);
+        cone1->setMatrix(mat1);
     }
 }
 
@@ -447,4 +479,165 @@ void MVSim::loadHeadMatrices()
             std::cerr<<" failure.\n";
     }
     closedir(dp);
+}
+
+void MVSim::showDiagram(bool show)
+{
+    if (ComController::instance()->isMaster())
+    {
+        static unsigned int objMask = PluginHelper::getObjectsRoot()->getNodeMask();
+
+        ScreenMVMaster * masterScreen = dynamic_cast<ScreenMVMaster *>(_screenMVSim);
+
+        if (masterScreen == NULL)
+        {
+            std::cerr<<"Cannot show diagram without a ScreenMVMaster.";
+            return;
+        }
+
+        if (diagram == NULL)
+            setupCaveDiagram(masterScreen);
+
+        if (show)
+        {
+            objMask = PluginHelper::getObjectsRoot()->getNodeMask();
+            PluginHelper::getObjectsRoot()->setNodeMask(0);
+            PluginHelper::getScene()->addChild(diagram);
+        }
+        else
+        {
+            PluginHelper::getObjectsRoot()->setNodeMask(objMask);
+            PluginHelper::getScene()->removeChild(diagram);
+        }
+
+        masterScreen->showDiagram(show);
+    }
+}
+
+void MVSim::setupCaveDiagram(ScreenMVMaster * masterScreen)
+{
+    diagram = new osg::Group();
+
+    float rad = 1468;
+
+    // circle around cave
+    osg::ref_ptr<osg::Geode> circle = new osg::Geode();
+    osg::ref_ptr<osg::Geometry> circGeo = new osg::Geometry();
+    const int CIRCLE_SEGMENTS = 40;
+    osg::Vec3Array * circVerts = new osg::Vec3Array(CIRCLE_SEGMENTS);    
+
+    for (int a = 0; a < CIRCLE_SEGMENTS; a++)
+    {
+        float angle = a * 2 * M_PI / CIRCLE_SEGMENTS + M_PI/2;
+        (*circVerts)[a].set(rad*cos(angle),0,rad*sin(angle));
+    }
+    circGeo->setVertexArray(circVerts);
+
+    osg::Vec4Array * circColors = new osg::Vec4Array;
+    circColors->push_back(osg::Vec4(0,0,1,1));
+    circGeo->setColorArray(circColors);
+    circGeo->setColorBinding(osg::Geometry::BIND_OVERALL);
+
+    circGeo->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_LOOP,0,CIRCLE_SEGMENTS));
+    circle->addDrawable(circGeo);
+    diagram->addChild(circle);
+
+    // walls of cave
+    osg::ref_ptr<osg::Geode> walls = new osg::Geode();
+    osg::ref_ptr<osg::Geometry> wallGeo = new osg::Geometry();
+    const int WALL_SEGMENTS = 5;
+    osg::Vec3Array * wallVerts = new osg::Vec3Array(WALL_SEGMENTS);    
+
+    for (int a = 0; a < WALL_SEGMENTS; a++)
+    {
+        float angle = a * 2 * M_PI / WALL_SEGMENTS + M_PI/2;
+        (*wallVerts)[a].set(rad*cos(angle),0,rad*sin(angle));
+    }
+    wallGeo->setVertexArray(wallVerts);
+
+    osg::Vec4Array * wallColors = new osg::Vec4Array;
+    wallColors->push_back(osg::Vec4(1,1,0,1));
+    wallGeo->setColorArray(wallColors);
+    wallGeo->setColorBinding(osg::Geometry::BIND_OVERALL);
+
+    wallGeo->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_LOOP,0,WALL_SEGMENTS));
+    walls->addDrawable(wallGeo);
+    diagram->addChild(walls);
+
+    osg::ref_ptr<osg::MatrixTransform> headRot = new osg::MatrixTransform();
+    headRot->setMatrix(osg::Matrix::rotate(osg::Vec3(0,1,0),osg::Vec3(0,0,1)));
+    diagram->addChild(headRot);
+
+    //cone for user 0
+    osg::ref_ptr<osg::Geode> head0Cone = new osg::Geode();
+
+    osg::ref_ptr<osg::Geometry> head0Geo = new osg::Geometry();
+    head0Geo->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    osg::Vec3Array * cone0Verts = new osg::Vec3Array(3);
+    (*cone0Verts)[0].set(0,0,0);
+    (*cone0Verts)[1].set(400,1000,0);
+    (*cone0Verts)[2].set(-400,1000,0);
+    head0Geo->setVertexArray(cone0Verts);
+    osg::Vec4Array * cone0Colors = new osg::Vec4Array;
+    cone0Colors->push_back(osg::Vec4(1,0,0,1));
+    head0Geo->setColorArray(cone0Colors);
+    head0Geo->setColorBinding(osg::Geometry::BIND_OVERALL);
+    head0Geo->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_LOOP,0,3));
+    head0Cone->addDrawable(head0Geo);
+
+    osg::ref_ptr<osg::Geometry> num0Geo = new osg::Geometry();
+    num0Geo->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    osg::Vec3Array * num0Verts = new osg::Vec3Array(8);
+    (*num0Verts)[0].set(0,400,0);
+    (*num0Verts)[1].set(70,430,0);
+    (*num0Verts)[2].set(100,500,0);
+    (*num0Verts)[3].set(70,570,0);
+    (*num0Verts)[4].set(0,600,0);
+    (*num0Verts)[5].set(-70,570,0);
+    (*num0Verts)[6].set(-100,500,0);
+    (*num0Verts)[7].set(-70,430,0);
+    num0Geo->setVertexArray(num0Verts);
+    num0Geo->setColorArray(cone0Colors);
+    num0Geo->setColorBinding(osg::Geometry::BIND_OVERALL);
+    num0Geo->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_LOOP,0,8));
+    head0Cone->addDrawable(num0Geo);
+
+    cone0 = new osg::MatrixTransform();
+    cone0->addChild(head0Cone.get());
+    headRot->addChild(cone0);
+
+    //cone for user 1
+    osg::ref_ptr<osg::Geode> head1Cone = new osg::Geode();
+    osg::ref_ptr<osg::Geometry> head1Geo = new osg::Geometry();
+    head1Geo->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    osg::Vec3Array * cone1Verts = new osg::Vec3Array(3);
+    (*cone1Verts)[0].set(0,0,0);
+    (*cone1Verts)[1].set(400,1000,0);
+    (*cone1Verts)[2].set(-400,1000,0);
+    head1Geo->setVertexArray(cone1Verts);
+    osg::Vec4Array * cone1Colors = new osg::Vec4Array;
+    cone1Colors->push_back(osg::Vec4(0,1,0,1));
+    head1Geo->setColorArray(cone1Colors);
+    head1Geo->setColorBinding(osg::Geometry::BIND_OVERALL);
+    head1Geo->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_LOOP,0,3));
+    head1Cone->addDrawable(head1Geo);
+
+    osg::ref_ptr<osg::Geometry> num1Geo = new osg::Geometry();
+    num1Geo->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    osg::Vec3Array * num1Verts = new osg::Vec3Array(6);
+    (*num1Verts)[0].set(0,400,0);
+    (*num1Verts)[1].set(0,600,0);
+    (*num1Verts)[2].set(-70,400,0);
+    (*num1Verts)[3].set(70,400,0);
+    (*num1Verts)[4].set(0,600,0);
+    (*num1Verts)[5].set(-70,530,0);
+    num1Geo->setVertexArray(num1Verts);
+    num1Geo->setColorArray(cone1Colors);
+    num1Geo->setColorBinding(osg::Geometry::BIND_OVERALL);
+    num1Geo->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES,0,6));
+    head1Cone->addDrawable(num1Geo);
+
+    cone1 = new osg::MatrixTransform();
+    cone1->addChild(head1Cone.get());
+    headRot->addChild(cone1);
 }

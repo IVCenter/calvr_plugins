@@ -2,6 +2,7 @@
 #define _MVSIM_H_
 
 #include <kernel/CVRPlugin.h>
+#include <kernel/ScreenMVMaster.h>
 #include <kernel/ScreenMVSimulator.h>
 #include <menu/MenuButton.h>
 #include <menu/SubMenu.h>
@@ -48,8 +49,23 @@ class MVSim : public cvr::CVRPlugin, public cvr::MenuCallback
         std::map<cvr::SubMenu *, osg::Matrix *> headMats;
         cvr::MenuButton * saveHeads;
         cvr::MenuButton * loadHeads;
+        cvr::MenuCheckbox * showDiagramBox;
 
-        osg::Switch * scene1switch;
+        osg::ref_ptr<osg::Switch> scene1switch;
+        osg::ref_ptr<osg::Group> diagram;
+        osg::ref_ptr<osg::MatrixTransform> cone0;
+        osg::ref_ptr<osg::MatrixTransform> cone1;
+
+        /**
+          * @brief Set diagram as shown or not
+          * @param show Whether or not to show the diagram
+          */
+        void showDiagram(bool show);
+        /**
+          * @brief Creates the geometry for the cave as needed and attaches it to the diagram node
+          * @param masterScreen pointer to the screen(mvmaster) that the diagram is to be rendered on
+          */
+        void setupCaveDiagram(cvr::ScreenMVMaster * masterScreen);
 };
 
 #endif
