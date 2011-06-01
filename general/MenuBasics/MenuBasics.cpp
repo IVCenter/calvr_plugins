@@ -5,6 +5,7 @@
 #include <kernel/SceneManager.h>
 #include <kernel/CVRViewer.h>
 #include <kernel/ScreenConfig.h>
+#include <kernel/ComController.h>
 #include <menu/MenuSystem.h>
 #include <config/ConfigManager.h>
 
@@ -124,27 +125,39 @@ void MenuBasics::menuCallback(MenuItem * item)
     {
 	osg::Matrix m;
 	m.makeIdentity();
-	ComputeBBVisitor * compBB = new ComputeBBVisitor(m);
-	SceneManager::instance()->getObjectsRoot()->accept(*compBB);
-	osg::BoundingBox bb = compBB->getBound();
-	delete compBB;
+	float scale;
+	osg::Vec3 center;
+	if(ComController::instance()->isMaster())
+	{
+	    ComputeBBVisitor * compBB = new ComputeBBVisitor(m);
+	    SceneManager::instance()->getObjectsRoot()->accept(*compBB);
+	    osg::BoundingBox bb = compBB->getBound();
+	    delete compBB;
 
-	osg::Vec3 center = bb.center();
-	osg::Vec3 distance = (bb.corner(0) - bb.center());
+	    center = bb.center();
+	    osg::Vec3 distance = (bb.corner(0) - bb.center());
 
-	float maxSide = std::max(fabs(distance[0]),fabs(distance[1]));
-	maxSide = std::max(maxSide,(float)fabs(distance[2]));
-	maxSide = maxSide * 2.0;
-	maxSide = std::max(maxSide,1.0f);
+	    float maxSide = std::max(fabs(distance[0]),fabs(distance[1]));
+	    maxSide = std::max(maxSide,(float)fabs(distance[2]));
+	    maxSide = maxSide * 2.0;
+	    maxSide = std::max(maxSide,1.0f);
 
-	std::cerr << "Max side " << maxSide << std::endl;
+	    //std::cerr << "Max side " << maxSide << std::endl;
 
-	float scale = sceneSize / maxSide;
-	center = center * scale;
+	    scale = sceneSize / maxSide;
+	    center = center * scale;
 
-	std::cerr << "Scale set to " << scale << std::cerr;
+	    std::cerr << "Scale set to " << scale << std::endl;
 
-	std::cerr << "Center x: " << center.x() << " y: " << center.y() << " z: " << center.z() << std::endl;
+	    std::cerr << "Center x: " << center.x() << " y: " << center.y() << " z: " << center.z() << std::endl;
+	    ComController::instance()->sendSlaves(&scale,sizeof(float));
+	    ComController::instance()->sendSlaves(&center,sizeof(osg::Vec3));
+	}
+	else
+	{
+	    ComController::instance()->readMaster(&scale,sizeof(float));
+	    ComController::instance()->readMaster(&center,sizeof(osg::Vec3));
+	}
 
 	SceneManager::instance()->setObjectScale(scale);
 	//m = SceneManager::instance()->getObjectTransform()->getMatrix();
