@@ -1,6 +1,7 @@
 #include "CylinderDrawable.h"
 
 #include <config/ConfigManager.h>
+#include <kernel/ScreenConfig.h>
 
 #define GL_CLAMP_TO_EDGE 0x812F
 
@@ -236,10 +237,11 @@ bool CylinderDrawable::initTexture(eye e, int context) const
 
 	if(rimage)
 	{
+	    delete[] rimage->data();
 	    rimage->unref();
 	}
 
-	delete tiledata;
+	delete[] tiledata;
 	return true;
     }
     else
@@ -305,9 +307,10 @@ bool CylinderDrawable::initTexture(eye e, int context) const
 	    }
 	}
 
-	delete tiledata;
+	delete[] tiledata;
 	if(limage)
 	{
+	    delete[] limage->data();
 	    limage->unref();
 	}
 	return true;
@@ -622,7 +625,7 @@ void CylinderDrawable::drawImplementation(RenderInfo& ri) const
 	float rads = _rotation;
         for(int j = 0; j < cols; j++)
         {
-            if(eye == RIGHT || (eye == BOTH && currenteye))
+            if(eye == RIGHT || (eye == BOTH && (currenteye || ScreenConfig::instance()->getEyeSeparationMultiplier() == 0.0)))
             {
                 glBindTexture(GL_TEXTURE_2D, *(rtextures[context][i][j]));
             }
