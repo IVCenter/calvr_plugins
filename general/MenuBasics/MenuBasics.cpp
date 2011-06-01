@@ -60,7 +60,9 @@ bool MenuBasics::init()
 
     MenuSystem::instance()->addMenuItem(stopHeadTracking);
 
-    eyeSeparation = new MenuCheckbox("Eye Separation", true);
+    bool state = ConfigManager::getBool("value","EyeSeparation",true);
+
+    eyeSeparation = new MenuCheckbox("Eye Separation", state);
     eyeSeparation->setCallback(this);
 
     MenuSystem::instance()->addMenuItem(eyeSeparation);
