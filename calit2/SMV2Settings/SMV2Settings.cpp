@@ -60,9 +60,6 @@ bool SMV2Settings::init()
         std::cerr<<"Cannot initialize SMV2Settings without running a ScreenMultiViewer2 screen.\n";
         return false;
     }
-std::cerr<<smv2<<"Found one?!?!\n";
-std::cerr<<"Found one?!?!\n";
-std::cerr<<"Found one?!?!\n";
 
     /*** Menu Setup ***/
     mvsMenu = new SubMenu("SMV2Settings", "SMV2Settings");
