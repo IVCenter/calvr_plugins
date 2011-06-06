@@ -350,10 +350,19 @@ void MVSim::preFrame()
         osg::Matrix mat0 = _screenMVSim->getCurrentHeadMatrix(0);
         osg::Matrix mat1 = _screenMVSim->getCurrentHeadMatrix(1);
 
+        osg::Vec4 u0op = osg::Vec4(0,1,0,0) * mat0;
+        osg::Vec4 u1op = osg::Vec4(0,1,0,0) * mat1;
+        osg::Vec3 o0 = osg::Vec3(u0op.x(),u0op.y(),0);
+        osg::Vec3 o1 = osg::Vec3(u1op.x(),u1op.y(),0);
+        o0.normalize();
+        o1.normalize();
+
         osg::Vec3 pos0 = mat0.getTrans();
+        mat0.makeRotate(osg::Vec3(0,1,0),o0);
         mat0.setTrans(pos0.x(),pos0.y(),0);
 
         osg::Vec3 pos1 = mat1.getTrans();
+        mat1.makeRotate(osg::Vec3(0,1,0),o1);
         mat1.setTrans(pos1.x(),pos1.y(),0);
 
         cone0->setMatrix(mat0);
