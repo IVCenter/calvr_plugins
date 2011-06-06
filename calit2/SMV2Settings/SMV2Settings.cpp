@@ -23,14 +23,11 @@ SMV2Settings::SMV2Settings()
 SMV2Settings::~SMV2Settings()
 {
     std::cerr << "SMV2Settings destroyed." << std::endl;
-    delete mvsMenu;
-    delete multipleUsers;
     delete contributionMenu;
     delete linearFunc;
     delete gaussianFunc;
     delete orientation3d;
     delete contributionVar;
-    delete zoneMenu;
     delete autoAdjust;
     delete zoneRowQuantity;
     delete zoneColumnQuantity;
