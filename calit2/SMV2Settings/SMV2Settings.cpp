@@ -23,14 +23,11 @@ SMV2Settings::SMV2Settings()
 SMV2Settings::~SMV2Settings()
 {
     std::cerr << "SMV2Settings destroyed." << std::endl;
-    delete mvsMenu;
-    delete multipleUsers;
     delete contributionMenu;
     delete linearFunc;
     delete gaussianFunc;
     delete orientation3d;
     delete contributionVar;
-    delete zoneMenu;
     delete autoAdjust;
     delete zoneRowQuantity;
     delete zoneColumnQuantity;
@@ -45,6 +42,21 @@ SMV2Settings::~SMV2Settings()
 bool SMV2Settings::init()
 {
     std::cerr << "SMV2Settings init()." << std::endl;
+
+    /*** Ensure that ScreenMultiViewer2 is in use. ***/
+    ScreenConfig * sConfig = ScreenConfig::instance();
+    ScreenMultiViewer2 * smv2 = NULL;
+    for (int i=0; i < sConfig->getNumScreens(); i++)
+    {
+        smv2 = dynamic_cast<ScreenMultiViewer2 *> (sConfig->getScreen(i));
+        if (smv2 != NULL)
+            break;
+    }
+    if (smv2 == NULL)
+    {
+        std::cerr<<"Cannot initialize SMV2Settings without running a ScreenMultiViewer2 screen.\n";
+        return false;
+    }
 
     /*** Menu Setup ***/
     mvsMenu = new SubMenu("SMV2Settings", "SMV2Settings");
@@ -72,6 +84,10 @@ bool SMV2Settings::init()
     gaussianFunc = new MenuCheckbox("Gaussian Contribution Balancing", false);
     gaussianFunc->setCallback(this);
 
+    autoContrVar = new MenuCheckbox("Auto Adjust Contribution Variable",
+            ScreenMultiViewer2::getAutoContributionVar());
+    autoContrVar->setCallback(this);
+
     contributionVar = new MenuRangeValue("Contribution Variable", 1, 180,
             ScreenMultiViewer2::getContributionVar()*180/M_PI, 1);
     contributionVar->setCallback(this);
@@ -80,7 +96,9 @@ bool SMV2Settings::init()
     contributionMenu->addItem(linearFunc);
     contributionMenu->addItem(cosineFunc);
     contributionMenu->addItem(gaussianFunc);
-    contributionMenu->addItem(contributionVar);
+    contributionMenu->addItem(autoContrVar);
+    if (!autoContrVar->getValue())
+        contributionMenu->addItem(contributionVar);
     mvsMenu->addItem(contributionMenu);
 
     zoneMenu = new SubMenu("Zone Control", "Zone Control");
@@ -144,7 +162,10 @@ void SMV2Settings::menuCallback(MenuItem * item)
         ScreenMultiViewer2::setSetContributionFunc(0);
         contrVar = &linearVar;
         contributionVar->setValue(*contrVar);
-        ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
+
+        if (!autoContrVar->getValue())
+            ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
+
         linearFunc->setValue(true);
         cosineFunc->setValue(false);
         gaussianFunc->setValue(false);
@@ -154,7 +175,10 @@ void SMV2Settings::menuCallback(MenuItem * item)
         ScreenMultiViewer2::setSetContributionFunc(1);
         contrVar = &cosineVar;
         contributionVar->setValue(*contrVar);
-        ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
+
+        if (!autoContrVar->getValue())
+            ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
+
         linearFunc->setValue(false);
         cosineFunc->setValue(true);
         gaussianFunc->setValue(false);
@@ -164,10 +188,27 @@ void SMV2Settings::menuCallback(MenuItem * item)
         ScreenMultiViewer2::setSetContributionFunc(2);
         contrVar = &gaussianVar;
         contributionVar->setValue(*contrVar);
-        ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
+
+        if (!autoContrVar->getValue())
+            ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
+
         linearFunc->setValue(false);
         cosineFunc->setValue(false);
         gaussianFunc->setValue(true);
+    }
+    else if (item == autoContrVar)
+    {
+        if (autoContrVar->getValue())
+        {
+            contributionMenu->removeItem(contributionVar);
+            menuCallback(contributionVar);
+        }
+        else
+        {
+            contributionMenu->addItem(contributionVar);
+            
+        }
+        ScreenMultiViewer2::setAutoContributionVar(autoContrVar->getValue());
     }
     else if (item == contributionVar)
     {

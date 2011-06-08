@@ -1,4 +1,4 @@
-#include "Collaborative.h"
+#include "CollaborativePlugin.h"
 
 #include <menu/MenuSystem.h>
 #include <config/ConfigManager.h>
