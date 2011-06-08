@@ -4,12 +4,14 @@
 #include <kernel/CVRPlugin.h>
 #include <menu/SubMenu.h>
 #include <menu/MenuCheckbox.h>
+#include <menu/MenuButton.h>
 
 #include <osg/Material>
 #include <osg/MatrixTransform>
 
 #include <string>
 #include <vector>
+#include <map>
 
 /** Descriptor for a single artifact
 Order of variables:
@@ -27,7 +29,11 @@ class Artifact
     char area;          ///< excavated area with site
     std::string site;   ///< excavation site
     double pos[3];      ///< 3D location of artifact (northing, easting, elevation) in meters
-    osg::Node* geode;  ///< The actual object... when it is made.
+    //osg::Node* geode;  ///< The actual object... when it is made.
+    osg::Drawable * drawable;
+    osg::Vec3 modelPos;
+    bool visible;
+    bool selected;
     
     Artifact()
     {
@@ -45,28 +51,61 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
         virtual ~ArtifactVis();
 
 	bool init();
+        bool buttonEvent(int type, int button, int hand, const osg::Matrix & mat);
+        bool mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix & mat);
         void menuCallback(cvr::MenuItem * item);
+        void preFrame();
+
+        void setDCVisibleStatus(std::string dc, bool status);
+        void updateVisibleStatus();
 
     protected:
-        cvr::MenuCheckbox *showCheckbox;
-        cvr::SubMenu *avMenu;
-        osg::MatrixTransform *root;
+        struct Locus
+        {
+            int id;
+            std::vector<osg::Vec3d> coords;
+        };
 
-        std::string configPath;
+        cvr::MenuCheckbox *_showSiteCB;
+        cvr::MenuCheckbox *_showSpheresCB;
+        cvr::SubMenu *_avMenu;
+        cvr::MenuCheckbox * _selectCB;
+        cvr::SubMenu * _dcFilterMenu;
+        cvr::MenuCheckbox * _dcFilterAuto;
+        cvr::MenuButton * _dcFilterShowAll;
+        cvr::MenuButton * _dcFilterShowNone;
+        std::vector<cvr::SubMenu *> _dcFilterSubMenus;
+        std::vector<cvr::MenuCheckbox *> _dcFilterItems;
+        osg::MatrixTransform * _root;
+
+        std::string _picFolder;
 
         std::vector<Artifact*> _artifacts;    ///< container for artifacts
         std::vector<std::string> _descriptor_list;
         std::vector<osg::Vec4> _descriptor_list_colors;
 
-        osg::LOD * _my_own_root;
-        osg::Group * _my_sphere_root;
-        float _LODmaxRange;
+        std::vector<std::string> _dcList;
+        std::map<std::string,bool> _dcVisibleMap;
 
+        std::vector<Locus*> _locusList;
+
+        //osg::LOD * _my_own_root;
+        osg::ref_ptr<osg::MatrixTransform> _sphereRoot;
+        osg::ref_ptr<osg::MatrixTransform> _siteRoot;
+        osg::ref_ptr<osg::MatrixTransform> _selectBox;
+        //float _LODmaxRange;
+        float _sphereRadius;
+        int _activeArtifact;
+        float _filterTime;
+
+        void setActiveArtifact(int art);
         void readArtifactsFile(std::string);
         void listArtifacts();
         void displayArtifacts(osg::Group * root_node);
-        osg::Node* createObject(int index, int edm, float tessellation, osg::Vec3f & pos);
-
+        osg::Drawable* createObject(int index, float tessellation, osg::Vec3f & pos);
+        void readSiteFile();
+        void readLocusFile();
+        void setupDCFilter();
 };
 
 #endif
