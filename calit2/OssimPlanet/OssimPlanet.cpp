@@ -9,7 +9,7 @@ using namespace cvr;
 using namespace osg;
 
 ossimPlanet* OssimPlanet::planet;
-OssimPlanet* OssimPlanet::oplanet;
+OssimPlanet* OssimPlanet::oplanet = NULL;
 
 const double earthRadiusMM = osg::WGS_84_RADIUS_EQUATOR * 1000.0;
 static const string FILES("Plugin.OssimPlanet.Kml");

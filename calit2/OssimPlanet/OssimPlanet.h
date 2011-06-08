@@ -131,6 +131,6 @@ class OssimPlanet : public cvr::CVRPlugin, public cvr::MenuCallback, public ossi
     bool buttonEvent(int type, int button, int hand, const osg::Matrix & mat);
     void menuCallback(cvr::MenuItem * item);
 
-    OssimPlanet* instance();
+    static OssimPlanet* instance();
 };
 #endif
