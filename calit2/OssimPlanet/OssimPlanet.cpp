@@ -310,6 +310,7 @@ void OssimPlanet::preFrame()
     theEphemerisCamera->setViewMatrix(theCurrentViewMatrixInverse);
 */
 
+/*
     osg::Matrix originToPlanetObjectSpace = PluginHelper::getWorldToObjectTransform();
     // distance to surface in planet units (default without using intersection with surface)
     double distanceToSurface = originToPlanetObjectSpace.getTrans().length() - 1.0;
@@ -332,8 +333,48 @@ void OssimPlanet::preFrame()
 	}
     }
 
+*/
     if(_navActive)
     {
+
+	double distanceToSurface = 0.0; 
+
+        // make sure values are the same across the tiles
+	if(ComController::instance()->isMaster())
+	{
+	    // need to get origin of cave in planet space (world origin is 0, 0, 0)
+	    osg::Vec3d origPlanetPoint = PluginHelper::getWorldToObjectTransform().getTrans();
+    
+	    // planetPoint in latlonheight
+	    osg::Vec3d latLonHeight;
+	    planet->model()->inverse(origPlanetPoint, latLonHeight);
+   
+	    // set height back to the surface level 
+	    latLonHeight[2] = 0.0;
+
+	    // adjust the height to the ellipsoid
+	    planet->model()->mslToEllipsoidal(latLonHeight);
+
+	    // translate point back to cartesian (in planet space)
+	    osg::Vec3d pointObject;
+	    planet->model()->forward(latLonHeight, pointObject);
+
+	    // translate point back into world space
+	    osg::Matrix pointObjectMat;
+	    pointObjectMat.setTrans(pointObject);
+	    osg::Matrixd pointWorldMat = pointObjectMat * PluginHelper::getObjectToWorldTransform();
+	    distanceToSurface = pointWorldMat.getTrans().length(); 
+
+	    ComController::instance()->sendSlaves(&distanceToSurface,sizeof(double));
+	}
+	else
+	{
+	    ComController::instance()->readMaster(&distanceToSurface,sizeof(double));
+	}
+
+        std::cerr << "distance: " << distanceToSurface << std::endl;
+
+        // process the distance
 	processNav(getSpeed(distanceToSurface));
     }
 
@@ -358,7 +399,7 @@ void OssimPlanet::preFrame()
 
 bool OssimPlanet::buttonEvent(int type, int button, int hand, const osg::Matrix & mat)
 {
-    std::cerr << "Button event." << std::endl;
+    //std::cerr << "Button event." << std::endl;
     if(!_navCB->getValue() || Navigation::instance()->getPrimaryButtonMode() == SCALE)
     {
 	return false;
@@ -454,7 +495,7 @@ void OssimPlanet::processNav(double speed)
 
 	    osg::Vec3 origin = PluginHelper::getHandMat(_navHand).getTrans();
 
-	    objmat = objmat * osg::Matrix::translate(-origin) * turn * osg::Matrix::translate(origin + trans);
+	    objmat = objmat * osg::Matrix::translate(-origin) * turn * osg::Matrix::translate(origin - trans);
 	    PluginHelper::setObjectMatrix(objmat);
 
 	    break;
@@ -468,7 +509,17 @@ void OssimPlanet::processNav(double speed)
 
 	    trans = trans * (speedScale * speed * time * 1000.0);
 
-	    osg::Matrix r;
+
+            osg::Matrix rotOffset = osg::Matrix::rotate(_navHandMat.getRotate().inverse())
+	                        * osg::Matrix::rotate(PluginHelper::getHandMat(_navHand).getRotate());
+	    osg::Quat rot = rotOffset.getRotate();                     
+	    rot = rot.inverse();
+	    double angle;
+	    osg::Vec3 vec;
+	    rot.getRotate(angle, vec);
+	    rot.makeRotate(angle / 20.0, vec);
+	    rotOffset.makeRotate(rot);
+	    /*osg::Matrix r;
             r.makeRotate(_navHandMat.getRotate());
             osg::Vec3 pointInit = osg::Vec3(0, 1, 0);
             pointInit = pointInit * r;
@@ -488,13 +539,13 @@ void OssimPlanet::processNav(double speed)
 		osg::Vec3 vec;
 		turn.getRotate(angle,vec);
 		turn.makeRotate(angle / 20.0, vec);
-            }
+            }*/
 
 	    osg::Matrix objmat = PluginHelper::getObjectMatrix();
 
 	    osg::Vec3 origin = PluginHelper::getHandMat(_navHand).getTrans();
 
-	    objmat = objmat * osg::Matrix::translate(-origin) * osg::Matrix::rotate(turn) * osg::Matrix::translate(origin + trans);
+	    objmat = objmat * osg::Matrix::translate(-origin) * rotOffset * osg::Matrix::translate(origin - trans);
 	    PluginHelper::setObjectMatrix(objmat);
 	    break;
 	}
@@ -510,19 +561,19 @@ double OssimPlanet::getSpeed(double distance)
 
     if(boundDist < 762.0)
     {
-	return 0.000000098 * pow(boundDist,3) + 1.38888;
+	return 10.0 * (0.000000098 * pow(boundDist,3) + 1.38888);
     }
     else if(boundDist < 10000.0)
     {
 	boundDist = boundDist - 762.0;
-	return 0.0314544 * boundDist + 44.704;
+	return 10.0 * (0.0314544 * boundDist + 44.704);
     }
     else
     {
 	boundDist = boundDist - 10000;
 	double cap = 0.07 * boundDist + 335.28;
-	cap = std::min((double)2000,cap);
-	return cap;
+	cap = std::min((double)50000,cap);
+	return 10.0 * cap;
     }
 }
 
