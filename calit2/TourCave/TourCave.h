@@ -40,6 +40,9 @@ class TourCave : public CVRPlugin, public MenuCallback
 
         void checkSockets();
         bool processSocketInput(CVRSocket* socket);
+        void processCommands(char *, int size);
+
+        std::vector<char> _commandList;
 
 	enum StopAction
         {

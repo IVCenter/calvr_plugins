@@ -5,6 +5,7 @@
 
 #include <kernel/PluginHelper.h>
 #include <kernel/PluginManager.h>
+#include <kernel/ComController.h>
 #include <config/ConfigManager.h>
 #include <PluginMessageType.h>
 
@@ -20,13 +21,17 @@ TourCave::TourCave()
     _backgroundAudio = NULL;
     _mls = NULL;
     _mStatus = DONE;
+
+    if(ComController::instance()->isMaster())
+    {
 #ifdef HAS_AUDIO
-    std::string base = ConfigManager::getEntry("Plugin.TourCave.AudioBase");
-    std::string server = ConfigManager::getEntry("Audio.AssetManager.Server");
-    _am = new AssetManager(base, server);
-    _am->Init();
-    _am->SetVolume(0.0);
+	std::string base = ConfigManager::getEntry("Plugin.TourCave.AudioBase");
+	std::string server = ConfigManager::getEntry("Audio.AssetManager.Server");
+	_am = new AssetManager(base, server);
+	_am->Init();
+	_am->SetVolume(0.0);
 #endif
+    }
 
 }
 
@@ -42,22 +47,28 @@ TourCave::~TourCave()
 	delete _socketList[i];
     }
 
+    if(ComController::instance()->isMaster())
+    {
 #ifdef HAS_AUDIO
-    _am->Destroy();
-    delete _am;
+	_am->Destroy();
+	delete _am;
 #endif
+    }
 }
 
 bool TourCave::init()
 {
     bool found;
 
-    _mls = new MultiListenSocket(11011);
-    if(!_mls->setup())
+    if(ComController::instance()->isMaster())
     {
-	std::cerr << "Error setting up MultiListen Socket." << std::endl;
-	delete _mls;
-	_mls = NULL;
+	_mls = new MultiListenSocket(11011);
+	if(!_mls->setup())
+	{
+	    std::cerr << "Error setting up MultiListen Socket." << std::endl;
+	    delete _mls;
+	    _mls = NULL;
+	}
     }
 
     std::string name;
@@ -72,11 +83,14 @@ bool TourCave::init()
         _backgroundAudio->volume = ConfigManager::getFloat("volume","Plugin.TourCave.BackgroundAudio",1.0);
 	_backgroundAudio->started = false;
 
-	//TODO: start?, or wait for some sort of trigger
+        if(ComController::instance()->isMaster())
+	{
+	    //TODO: start?, or wait for some sort of trigger
 #ifdef HAS_AUDIO
-	//_am->SendUDP((name + "/Volume").c_str(),"f",1.0 * ta->volume);
-	_am->SendUDP((name + "/Play").c_str(),"i",1);
+	    //_am->SendUDP((name + "/Volume").c_str(),"f",1.0 * ta->volume);
+	    _am->SendUDP((name + "/Play").c_str(),"i",1);
 #endif
+	}
     }
 
     _tourCaveMenu = new SubMenu("TourCave","TourCave");
@@ -178,18 +192,53 @@ bool TourCave::init()
 
 void TourCave::preFrame()
 {
-    if(_mls)
+    int numCommands;
+    char * commands;
+    if(ComController::instance()->isMaster())
     {
-	CVRSocket * con;
-	if((con = _mls->accept()))
+	if(_mls)
 	{
-	    std::cerr << "Adding socket." << std::endl;
-	    con->setNoDelay(true);
-	    _socketList.push_back(con);
+	    CVRSocket * con;
+	    if((con = _mls->accept()))
+	    {
+		std::cerr << "Adding socket." << std::endl;
+		con->setNoDelay(true);
+		_socketList.push_back(con);
+	    }
+	}
+
+	checkSockets();
+
+	numCommands = _commandList.size();
+
+	ComController::instance()->sendSlaves(&numCommands, sizeof(int));
+
+	if(numCommands)
+	{
+	    commands = new char[numCommands];
+	    for(int i = 0; i < numCommands; i++)
+	    {
+		commands[i] = _commandList[i];
+	    }
+	    _commandList.clear();
+	    ComController::instance()->sendSlaves(commands,numCommands * sizeof(char));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&numCommands, sizeof(int));
+	if(numCommands)
+	{
+	    commands = new char[numCommands];
+	    ComController::instance()->readMaster(commands,numCommands * sizeof(char));
 	}
     }
 
-    checkSockets();
+    if(numCommands)
+    {
+	processCommands(commands, numCommands);
+	delete[] commands;
+    }
 
     if(_mStatus == STARTED)
     {
@@ -211,17 +260,20 @@ void TourCave::preFrame()
 		    
 		    std::cerr << "Starting audio file " << ta->name << std::endl;
 
+		    if(ComController::instance()->isMaster())
+		    {
 #ifdef HAS_AUDIO
-		    if(!ta->distance)
-		    {
-			//_am->SendUDP((ta->name + "/Volume").c_str(),"f",1.0 * ta->volume);
-		    }
-		    else
-		    {
-			//_am->SendUDP((ta->name + "/Volume").c_str(),"f",0.0);
-		    }
-		    _am->SendUDP((ta->name + "/Play").c_str(),"i",1);
+			if(!ta->distance)
+			{
+			    //_am->SendUDP((ta->name + "/Volume").c_str(),"f",1.0 * ta->volume);
+			}
+			else
+			{
+			    //_am->SendUDP((ta->name + "/Volume").c_str(),"f",0.0);
+			}
+			_am->SendUDP((ta->name + "/Play").c_str(),"i",1);
 #endif
+		    }
 
 		    ta->started = true;
 		}
@@ -230,20 +282,24 @@ void TourCave::preFrame()
 	    {
 		osg::Vec3 dist = (ta->pos * PluginHelper::getObjectToWorldTransform()) - PluginHelper::getHeadMat(0).getTrans();
 		float f = dist.length();
+
+		if(ComController::instance()->isMaster())
+		{
 #ifdef HAS_AUDIO
-		float rampup = 0.25;
-		if(ta->distance <= f)
-		{
-		    //_am->SendUDP((ta->name + "/Volume").c_str(),"f",1.0 * ta->volume);
-		}
-		else if((f - ta->distance) < ta->distance * rampup)
-		{
-		    float frac = (f - ta->distance) / (ta->distance * rampup);
-		    frac = 1.0 - frac;
-		    //_am->SendUDP((ta->name + "/Volume").c_str(),"f",frac * ta->volume); 
-		}
+		    float rampup = 0.25;
+		    if(ta->distance <= f)
+		    {
+			//_am->SendUDP((ta->name + "/Volume").c_str(),"f",1.0 * ta->volume);
+		    }
+		    else if((f - ta->distance) < ta->distance * rampup)
+		    {
+			float frac = (f - ta->distance) / (ta->distance * rampup);
+			frac = 1.0 - frac;
+			//_am->SendUDP((ta->name + "/Volume").c_str(),"f",frac * ta->volume); 
+		    }
 
 #endif
+		}
 	    }
 	}
     }
@@ -262,30 +318,33 @@ void TourCave::menuCallback(MenuItem * item)
 
 		for(int j = 0; j < _modeAudioList[_currentMode].size(); j++)
 		{
-		    // stop audio
+		    if(ComController::instance()->isMaster())
+		    {
+			// stop audio
 #ifdef HAS_AUDIO
-		    if(_mStatus == STARTED)
-		    {
-                        std::cerr << "Stopping audio file: " << _modeAudioList[_currentMode][j]->name << std::endl;
-			_am->SendUDP((_modeAudioList[_currentMode][j]->name + "/Stop").c_str(),"i", 1);
-		    }
-		    else
-		    {
-			if(_modeAudioList[_currentMode][j]->sl == NEXT_PATH)
+			if(_mStatus == STARTED)
 			{
-			    if(_modeAudioList[_currentMode][j]->sa == STOP)
+			    std::cerr << "Stopping audio file: " << _modeAudioList[_currentMode][j]->name << std::endl;
+			    _am->SendUDP((_modeAudioList[_currentMode][j]->name + "/Stop").c_str(),"i", 1);
+			}
+			else
+			{
+			    if(_modeAudioList[_currentMode][j]->sl == NEXT_PATH)
 			    {
-                                std::cerr << "Stopping audio file: " << _modeAudioList[_currentMode][j]->name << std::endl;
-				_am->SendUDP((_modeAudioList[_currentMode][j]->name + "/Stop").c_str(),"i", 1);
-			    }
-			    else if(_modeAudioList[_currentMode][j]->sa == PAUSE)
-			    {
-                                std::cerr << "Pause audio file: " << _modeAudioList[_currentMode][j]->name << std::endl;
-				_am->SendUDP((_modeAudioList[_currentMode][j]->name + "/Pause").c_str(),"i", 1);
+				if(_modeAudioList[_currentMode][j]->sa == STOP)
+				{
+				    std::cerr << "Stopping audio file: " << _modeAudioList[_currentMode][j]->name << std::endl;
+				    _am->SendUDP((_modeAudioList[_currentMode][j]->name + "/Stop").c_str(),"i", 1);
+				}
+				else if(_modeAudioList[_currentMode][j]->sa == PAUSE)
+				{
+				    std::cerr << "Pause audio file: " << _modeAudioList[_currentMode][j]->name << std::endl;
+				    _am->SendUDP((_modeAudioList[_currentMode][j]->name + "/Pause").c_str(),"i", 1);
+				}
 			    }
 			}
-		    }
 #endif
+		    }
 		}
 	    }
 
@@ -332,22 +391,25 @@ void TourCave::message(int type, char * data)
 	{
 	    for(int j = 0; j < _modeAudioList[_currentMode].size(); j++)
 	    {
-		// stop audio
-#ifdef HAS_AUDIO
-		if(_modeAudioList[_currentMode][j]->sl == PATH_END)
+		if(ComController::instance()->isMaster())
 		{
-		    if(_modeAudioList[_currentMode][j]->sa == STOP)
+		    // stop audio
+#ifdef HAS_AUDIO
+		    if(_modeAudioList[_currentMode][j]->sl == PATH_END)
 		    {
-                        std::cerr << "Stopping audio file: " << _modeAudioList[_currentMode][j]->name << std::endl;
-			_am->SendUDP((_modeAudioList[_currentMode][j]->name + "/Stop").c_str(),"i", 1);
+			if(_modeAudioList[_currentMode][j]->sa == STOP)
+			{
+			    std::cerr << "Stopping audio file: " << _modeAudioList[_currentMode][j]->name << std::endl;
+			    _am->SendUDP((_modeAudioList[_currentMode][j]->name + "/Stop").c_str(),"i", 1);
+			}
+			else if(_modeAudioList[_currentMode][j]->sa == PAUSE)
+			{
+			    std::cerr << "Pause audio file: " << _modeAudioList[_currentMode][j]->name << std::endl;
+			    _am->SendUDP((_modeAudioList[_currentMode][j]->name + "/Pause").c_str(),"i", 1);
+			}
 		    }
-		    else if(_modeAudioList[_currentMode][j]->sa == PAUSE)
-		    {
-			std::cerr << "Pause audio file: " << _modeAudioList[_currentMode][j]->name << std::endl;
-			_am->SendUDP((_modeAudioList[_currentMode][j]->name + "/Pause").c_str(),"i", 1);
-		    }
-		}
 #endif
+		}
 	    }
 	    _mStatus = DONE;	    
 	}
@@ -412,66 +474,57 @@ bool TourCave::processSocketInput(CVRSocket * socket)
     }
 
     std::cerr << "char: " << c << std::endl;
-
-    int mode = (int)(c - '0');
-
-    if(mode >= 0 && mode < _modeButtonList.size())
-    {
-	menuCallback(_modeButtonList[mode]);
-    }
-    else
-    {
-        std::cerr << "Mode: " << mode << std::endl;
-        bool b;
-        if(mode == 4)
-        {
-#ifdef HAS_AUDIO
-            _am->SetVolume(1.0);
-#endif
-        }
-        else if(mode == 5)
-        {
-#ifdef HAS_AUDIO
-            _am->SetVolume(0.0);
-#endif
-        }
-        else if(mode == 6)
-        {
-            b = true;
-            PluginManager::instance()->sendMessageByName("MenuBasics",MB_STEREO,(char*)&b);
-        }
-        else if(mode == 7)
-        {
-            b = false;
-            PluginManager::instance()->sendMessageByName("MenuBasics",MB_STEREO,(char*)&b);
-        }
-        else if(mode == 8)
-        {
-            b = true;
-            PluginManager::instance()->sendMessageByName("MenuBasics",MB_HEAD_TRACKING,(char*)&b);
-        }
-        else if(mode == 9)
-        {
-            b = false;
-            PluginManager::instance()->sendMessageByName("MenuBasics",MB_HEAD_TRACKING,(char*)&b);
-        }
-    }
-
-    /*switch(c)
-    {
-	case '0':
-	    std::cerr << "Switch to mode0" << std::endl;
-	    break;
-	case '1':
-	    std::cerr << "Switch to mode1" << std::endl;
-	    break;
-	case '2':
-	    std::cerr << "Switch to mode2" << std::endl;
-	    break;
-	default:
-	    break;
-	
-    }*/
+    _commandList.push_back(c);
 
     return true;
+}
+
+void TourCave::processCommands(char * commands, int size)
+{
+    for(int i = 0; i < size; i++)
+    {
+	int mode = (int)(commands[i] - '0');
+
+	if(mode >= 0 && mode < _modeButtonList.size())
+	{
+	    menuCallback(_modeButtonList[mode]);
+	}
+	else
+	{
+	    std::cerr << "Mode: " << mode << std::endl;
+	    bool b;
+	    if(mode == 4 && ComController::instance()->isMaster())
+	    {
+#ifdef HAS_AUDIO
+		_am->SetVolume(1.0);
+#endif
+	    }
+	    else if(mode == 5 && ComController::instance()->isMaster())
+	    {
+#ifdef HAS_AUDIO
+		_am->SetVolume(0.0);
+#endif
+	    }
+	    else if(mode == 6)
+	    {
+		b = true;
+		PluginManager::instance()->sendMessageByName("MenuBasics",MB_STEREO,(char*)&b);
+	    }
+	    else if(mode == 7)
+	    {
+		b = false;
+		PluginManager::instance()->sendMessageByName("MenuBasics",MB_STEREO,(char*)&b);
+	    }
+	    else if(mode == 8)
+	    {
+		b = true;
+		PluginManager::instance()->sendMessageByName("MenuBasics",MB_HEAD_TRACKING,(char*)&b);
+	    }
+	    else if(mode == 9)
+	    {
+		b = false;
+		PluginManager::instance()->sendMessageByName("MenuBasics",MB_HEAD_TRACKING,(char*)&b);
+	    }
+	}
+    }
 }
