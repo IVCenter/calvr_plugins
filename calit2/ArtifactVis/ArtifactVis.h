@@ -6,6 +6,7 @@
 #include <menu/MenuCheckbox.h>
 #include <menu/MenuButton.h>
 #include <menu/TabbedDialogPanel.h>
+#include <menu/DialogPanel.h>
 
 #include <osg/Material>
 #include <osg/MatrixTransform>
@@ -81,6 +82,7 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
         osg::MatrixTransform * _root;
 
         cvr::TabbedDialogPanel * _artifactPanel;
+        cvr::DialogPanel * _selectionStatsPanel;
 
         std::string _picFolder;
 

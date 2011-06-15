@@ -113,6 +113,9 @@ bool ArtifactVis::init()
     _artifactPanel->addTextureTab("Bottom","");
     _artifactPanel->setVisible(false);
 
+    _selectionStatsPanel = new DialogPanel(300,"Selection Stats","Plugin.ArtifactVis.SelectionStatsPanel");
+    _selectionStatsPanel->setVisible(false);
+
     std::cerr << "ArtifactVis init done.\n";
     return true;
 }
@@ -359,7 +362,11 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
 	    _selectStart = osg::Vec3(0,0,0);
 	    _selectCurrent = osg::Vec3(0,0,0);
 	    _sphereRoot->addChild(_selectBox);
-	    PluginHelper::getScene()->addChild(_selectMark);
+	    if(PluginHelper::getNumHands())
+	    {
+		PluginHelper::getScene()->addChild(_selectMark);
+	    }
+	    _selectionStatsPanel->setVisible(true);
 	}
 	else
 	{
@@ -379,7 +386,11 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
 		}
 	    }
 	    _sphereRoot->removeChild(_selectBox);
-	    PluginHelper::getScene()->removeChild(_selectMark);
+	    if(PluginHelper::getNumHands())
+	    {
+		PluginHelper::getScene()->removeChild(_selectMark);
+	    }
+	    _selectionStatsPanel->setVisible(false);
 	}
 	_selectActive = false;
     }
@@ -987,6 +998,9 @@ void ArtifactVis::updateSelect()
 
 	_selectBox->setMatrix(scale * trans);
 
+	std::map<string,int> dcCount;
+	int totalSelected = 0;
+
 	for(int i = 0; i < _artifacts.size(); i++)
 	{
 	    if(_artifacts[i]->visible && bb.contains(_artifacts[i]->modelPos) && !_artifacts[i]->selected)
@@ -1000,6 +1014,8 @@ void ArtifactVis::updateSelect()
 		    color.z() = color.z() * 2.0;
 		    sd->setColor(color);
 		}
+		dcCount[_artifacts[i]->dc]++;
+		totalSelected++;
 		_artifacts[i]->selected = true;
 	    }
 	    else if((!_artifacts[i]->visible || !bb.contains(_artifacts[i]->modelPos)) && _artifacts[i]->selected)
@@ -1017,7 +1033,14 @@ void ArtifactVis::updateSelect()
 	    }
 	}
 
-	//TODO: gen selected stats
+	std::stringstream ss;
+	ss << "Region Size: " << fabs(_selectStart.x() - _selectCurrent.x()) << "x" << fabs(_selectStart.y() - _selectCurrent.y()) << "x" << fabs(_selectStart.z() - _selectCurrent.z()) << std::endl;
+	ss << "Artifacts Selected: " << totalSelected;
+	for(std::map<std::string,int>::iterator it = dcCount.begin(); it != dcCount.end(); it++)
+	{
+	    ss << std::endl << it->first << ": " << it->second;
+	}
 
+	_selectionStatsPanel->setText(ss.str());
     }
 }
