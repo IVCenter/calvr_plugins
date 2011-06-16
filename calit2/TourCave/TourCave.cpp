@@ -50,6 +50,8 @@ TourCave::~TourCave()
     if(ComController::instance()->isMaster())
     {
 #ifdef HAS_AUDIO
+	_am->SendUDP("/Ambient/All/Play", "i", 0);
+	_am->SendUDP("/Voice/All/Play", "i", 0);
 	_am->Destroy();
 	delete _am;
 #endif

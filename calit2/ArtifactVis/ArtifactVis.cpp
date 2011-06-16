@@ -79,7 +79,7 @@ bool ArtifactVis::init()
     _selectBox->addChild(geo);
 
     // create select mark for wand
-    osg::Sphere * ssph = new osg::Sphere(osg::Vec3(0,0,0),15);
+    osg::Sphere * ssph = new osg::Sphere(osg::Vec3(0,0,0),10);
     sd = new osg::ShapeDrawable(ssph);
     sd->setColor(osg::Vec4(1.0,0,0,1.0));
     stateset = sd->getOrCreateStateSet();
@@ -113,7 +113,7 @@ bool ArtifactVis::init()
     _artifactPanel->addTextureTab("Bottom","");
     _artifactPanel->setVisible(false);
 
-    _selectionStatsPanel = new DialogPanel(300,"Selection Stats","Plugin.ArtifactVis.SelectionStatsPanel");
+    _selectionStatsPanel = new DialogPanel(450,"Selection Stats","Plugin.ArtifactVis.SelectionStatsPanel");
     _selectionStatsPanel->setVisible(false);
 
     std::cerr << "ArtifactVis init done.\n";
@@ -171,23 +171,24 @@ bool ArtifactVis::buttonEvent(int type, int button, int hand, const osg::Matrix 
 		    return true;
 		}
 	    }
+	}
+	else if(_showSpheresCB->getValue() && _selectCB->getValue() && type == BUTTON_DOUBLE_CLICK)
+	{
+	    osg::Matrix l2w = getLocalToWorldMatrix(_sphereRoot.get());
+	    osg::Matrix w2l = osg::Matrix::inverse(l2w);
+	    if(!_selectActive)
+	    {
+		_selectStart = osg::Vec3(0,1000,0);
+		_selectStart = _selectStart * mat * w2l;
+		_selectActive = true;
+	    }
 	    else
 	    {
-		osg::Matrix l2w = getLocalToWorldMatrix(_sphereRoot.get());
-		osg::Matrix w2l = osg::Matrix::inverse(l2w);
-		if(!_selectActive)
-		{
-		    _selectStart = osg::Vec3(0,1000,0);
-		    _selectStart = _selectStart * mat * w2l;
-		    _selectActive = true;
-		}
-		else
-		{
-		    _selectCurrent = osg::Vec3(0,1000,0);
-		    _selectCurrent = _selectCurrent * mat * w2l;
-		    _selectActive = false;
-		}
+		_selectCurrent = osg::Vec3(0,1000,0);
+		_selectCurrent = _selectCurrent * mat * w2l;
+		_selectActive = false;
 	    }
+	    return true;
 	}
     }
 
@@ -1044,7 +1045,7 @@ void ArtifactVis::updateSelect()
 	}
 
 	std::stringstream ss;
-	ss << "Region Size: " << fabs(_selectStart.x() - _selectCurrent.x()) << "x" << fabs(_selectStart.y() - _selectCurrent.y()) << "x" << fabs(_selectStart.z() - _selectCurrent.z()) << std::endl;
+	ss << "Region Size: " << fabs(_selectStart.x() - _selectCurrent.x()) << " x " << fabs(_selectStart.y() - _selectCurrent.y()) << " x " << fabs(_selectStart.z() - _selectCurrent.z()) << std::endl;
 	ss << "Artifacts Selected: " << totalSelected;
 	for(std::map<std::string,int>::iterator it = dcCount.begin(); it != dcCount.end(); it++)
 	{
