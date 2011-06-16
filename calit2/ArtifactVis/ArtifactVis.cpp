@@ -969,6 +969,12 @@ void ArtifactVis::setupDCFilter()
 
 void ArtifactVis::updateSelect()
 {
+    osg::Vec3 markPos(0,1000,0);
+    markPos = markPos * PluginHelper::getHandMat();
+    osg::Matrix markTrans;
+    markTrans.makeTranslate(markPos);
+    _selectMark->setMatrix(markTrans);
+
     if(_selectActive)
     {
 	osg::Matrix l2w = getLocalToWorldMatrix(_sphereRoot.get());
@@ -1014,8 +1020,6 @@ void ArtifactVis::updateSelect()
 		    color.z() = color.z() * 2.0;
 		    sd->setColor(color);
 		}
-		dcCount[_artifacts[i]->dc]++;
-		totalSelected++;
 		_artifacts[i]->selected = true;
 	    }
 	    else if((!_artifacts[i]->visible || !bb.contains(_artifacts[i]->modelPos)) && _artifacts[i]->selected)
@@ -1030,6 +1034,12 @@ void ArtifactVis::updateSelect()
 		    sd->setColor(color);
 		}
 		_artifacts[i]->selected = false;
+	    }
+
+	    if(_artifacts[i]->selected)
+	    {
+		dcCount[_artifacts[i]->dc]++;
+		totalSelected++;
 	    }
 	}
 
