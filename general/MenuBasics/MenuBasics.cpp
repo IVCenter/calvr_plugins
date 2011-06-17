@@ -167,7 +167,7 @@ void MenuBasics::menuCallback(MenuItem * item)
     }
     else if(item == stopHeadTracking)
     {
-	TrackingManager::instance()->setUpdateHeadTracking(stopHeadTracking->getValue());
+	TrackingManager::instance()->setUpdateHeadTracking(!stopHeadTracking->getValue());
     }
     else if(item == eyeSeparation)
     {
