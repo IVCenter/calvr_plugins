@@ -348,7 +348,7 @@ void OssimPlanet::preFrame()
 	    // planetPoint in latlonheight
 	    osg::Vec3d latLonHeight;
 	    planet->model()->inverse(origPlanetPoint, latLonHeight);
-   
+  
 	    // set height back to the surface level 
 	    latLonHeight[2] = 0.0;
 
@@ -359,11 +359,7 @@ void OssimPlanet::preFrame()
 	    osg::Vec3d pointObject;
 	    planet->model()->forward(latLonHeight, pointObject);
 
-	    // translate point back into world space
-	    osg::Matrix pointObjectMat;
-	    pointObjectMat.setTrans(pointObject);
-	    osg::Matrixd pointWorldMat = pointObjectMat * PluginHelper::getObjectToWorldTransform();
-	    distanceToSurface = pointWorldMat.getTrans().length(); 
+	    distanceToSurface = (pointObject * PluginHelper::getObjectToWorldTransform()).length();
 
 	    ComController::instance()->sendSlaves(&distanceToSurface,sizeof(double));
 	}
@@ -372,7 +368,7 @@ void OssimPlanet::preFrame()
 	    ComController::instance()->readMaster(&distanceToSurface,sizeof(double));
 	}
 
-        std::cerr << "distance: " << distanceToSurface << std::endl;
+        //std::cerr << "distance: " << distanceToSurface << std::endl;
 
         // process the distance
 	processNav(getSpeed(distanceToSurface));
