@@ -5,6 +5,8 @@
 #include <menu/SubMenu.h>
 #include <menu/MenuCheckbox.h>
 #include <menu/MenuButton.h>
+#include <menu/TabbedDialogPanel.h>
+#include <menu/DialogPanel.h>
 
 #include <osg/Material>
 #include <osg/MatrixTransform>
@@ -69,6 +71,7 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
         cvr::MenuCheckbox *_showSiteCB;
         cvr::MenuCheckbox *_showSpheresCB;
         cvr::SubMenu *_avMenu;
+        cvr::MenuCheckbox * _selectArtifactCB;
         cvr::MenuCheckbox * _selectCB;
         cvr::SubMenu * _dcFilterMenu;
         cvr::MenuCheckbox * _dcFilterAuto;
@@ -77,6 +80,9 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
         std::vector<cvr::SubMenu *> _dcFilterSubMenus;
         std::vector<cvr::MenuCheckbox *> _dcFilterItems;
         osg::MatrixTransform * _root;
+
+        cvr::TabbedDialogPanel * _artifactPanel;
+        cvr::DialogPanel * _selectionStatsPanel;
 
         std::string _picFolder;
 
@@ -89,14 +95,21 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
 
         std::vector<Locus*> _locusList;
 
+        osg::Vec3 _selectStart;
+        osg::Vec3 _selectCurrent;
+
+        osg::Material * _defaultMaterial;
+
         //osg::LOD * _my_own_root;
         osg::ref_ptr<osg::MatrixTransform> _sphereRoot;
         osg::ref_ptr<osg::MatrixTransform> _siteRoot;
         osg::ref_ptr<osg::MatrixTransform> _selectBox;
+        osg::ref_ptr<osg::MatrixTransform> _selectMark;
         //float _LODmaxRange;
         float _sphereRadius;
         int _activeArtifact;
         float _filterTime;
+        bool _selectActive;
 
         void setActiveArtifact(int art);
         void readArtifactsFile(std::string);
@@ -106,6 +119,7 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
         void readSiteFile();
         void readLocusFile();
         void setupDCFilter();
+        void updateSelect();
 };
 
 #endif

@@ -67,8 +67,18 @@ bool PluginTest::init()
     rangeValue = new MenuRangeValue("RangeValue 1",0.01,10.0,5.0);
     rangeValue->setCallback(this);
 
+    textButtonSet1 = new MenuTextButtonSet(true, 400, 40, 3);
+    textButtonSet1->setCallback(this);
+    textButtonSet1->addButton("This");
+    textButtonSet1->addButton("Is A");
+    textButtonSet1->addButton("Test");
+    textButtonSet1->addButton("Of");
+    textButtonSet1->addButton("Multiple");
+    textButtonSet1->addButton("Rows");
+
     menu1->addItem(testButton1);
     menu1->addItem(rangeValue);
+    menu1->addItem(textButtonSet1);
     menu2->addItem(testButton3);
     menu2->addItem(menu3);
     menu2->addItem(checkbox1);
@@ -83,7 +93,7 @@ bool PluginTest::init()
     //MenuSystem::instance()->addMenuItem(testButton2);
 
     popup1 = new PopupMenu("Test Popup");
-    popup1->setVisible(true);
+    //popup1->setVisible(true);
 
     pcheckbox1 = new MenuCheckbox("Popup Check", true);
     pmenu1 = new SubMenu("Popup menu line","Popup Menu head");
@@ -92,6 +102,13 @@ bool PluginTest::init()
 
     popup1->addMenuItem(pcheckbox1);
     popup1->addMenuItem(pmenu1);
+
+    tdp1 = new TabbedDialogPanel(400,40,3,"Tabbed Dialog Panel");
+    tdp1->setVisible(true);
+
+    tdp1->addTextTab("Tab1","I am Tab 1");
+    tdp1->addTextTab("Tab2","I am Tab 2");
+    tdp1->addTextTab("Tab3","This is a test of the maxWidth attribute of osgText::Text. Hopefully if will wrap on whitespace.");
 
     //std::cerr << "NodeMask: " << PluginHelper::getObjectsRoot()->getNodeMask() << std::endl;
 
@@ -112,6 +129,14 @@ void PluginTest::menuCallback(MenuItem * item)
     else if(item == testButton3)
     {
 	std::cerr << "Test Button 3" << std::endl;
+	for(int i = 0; i < menu3->getNumChildren(); i++)
+	{
+	    MenuItem * mi = menu3->getChild(i);
+	    menu3->removeItem(menu3->getChild(i));
+	    delete mi;
+	}
+	menu2->removeItem(menu3);
+	delete menu3;
     }
     else if(item == testButton4)
     {

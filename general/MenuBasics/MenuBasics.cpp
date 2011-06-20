@@ -6,6 +6,7 @@
 #include <kernel/CVRViewer.h>
 #include <kernel/ScreenConfig.h>
 #include <kernel/ComController.h>
+#include <input/TrackingManager.h>
 #include <menu/MenuSystem.h>
 #include <config/ConfigManager.h>
 
@@ -56,7 +57,7 @@ bool MenuBasics::init()
     MenuSystem::instance()->addMenuItem(viewall);
     MenuSystem::instance()->addMenuItem(resetview);
 
-    stopHeadTracking = new MenuCheckbox("Stop Head Tracking", cvr::CVRViewer::instance()->getStopHeadTracking());
+    stopHeadTracking = new MenuCheckbox("Stop Head Tracking", !cvr::TrackingManager::instance()->getUpdateHeadTracking());
     stopHeadTracking->setCallback(this);
 
     MenuSystem::instance()->addMenuItem(stopHeadTracking);
@@ -166,7 +167,7 @@ void MenuBasics::menuCallback(MenuItem * item)
     }
     else if(item == stopHeadTracking)
     {
-	CVRViewer::instance()->setStopHeadTracking(stopHeadTracking->getValue());
+	TrackingManager::instance()->setUpdateHeadTracking(!stopHeadTracking->getValue());
     }
     else if(item == eyeSeparation)
     {
