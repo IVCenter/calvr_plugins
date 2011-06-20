@@ -112,6 +112,7 @@ bool ArtifactVis::init()
     _artifactPanel->addTextureTab("Top","");
     _artifactPanel->addTextureTab("Bottom","");
     _artifactPanel->setVisible(false);
+    _artifactPanel->setActiveTab("Info");
 
     _selectionStatsPanel = new DialogPanel(450,"Selection Stats","Plugin.ArtifactVis.SelectionStatsPanel");
     _selectionStatsPanel->setVisible(false);
