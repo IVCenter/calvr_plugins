@@ -110,6 +110,7 @@ class OssimPlanet : public cvr::CVRPlugin, public cvr::MenuCallback, public ossi
     ossimPlanetEphemeris* ephemeris;
     void getObjectIntersection(osg::Node *root, osg::Vec3& wPointerStart, osg::Vec3& wPointerEnd, IsectInfo& isect);
     void processNav(double speed);
+    void processMouseNav(double speed);
     double getSpeed(double distance);
 
     cvr::SubMenu * _ossimMenu;
@@ -118,6 +119,13 @@ class OssimPlanet : public cvr::CVRPlugin, public cvr::MenuCallback, public ossi
     bool _navActive;
     int _navHand;
     osg::Matrix _navHandMat;
+
+    bool _mouseNavActive;
+    int _startX,_startY;
+    int _currentX,_currentY;
+    bool _movePointValid;
+    osg::Vec3d _movePoint;
+    //osg::MatrixTransform * _testMark;
 
   public:
     OssimPlanet();
@@ -129,6 +137,7 @@ class OssimPlanet : public cvr::CVRPlugin, public cvr::MenuCallback, public ossi
     void preFrame();
     int getPriority() { return 30; }
     bool buttonEvent(int type, int button, int hand, const osg::Matrix & mat);
+    bool mouseButtonEvent (int type, int button, int x, int y, const osg::Matrix &mat);
     void menuCallback(cvr::MenuItem * item);
 
     static OssimPlanet* instance();
