@@ -582,16 +582,17 @@ void MVSim::setupCaveDiagram(ScreenMVMaster * masterScreen)
 
     osg::ref_ptr<osg::Geometry> head0Geo = new osg::Geometry();
     head0Geo->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-    osg::Vec3Array * cone0Verts = new osg::Vec3Array(3);
+    osg::Vec3Array * cone0Verts = new osg::Vec3Array(4);
     (*cone0Verts)[0].set(0,0,0);
-    (*cone0Verts)[1].set(400,1000,0);
-    (*cone0Verts)[2].set(-400,1000,0);
+    (*cone0Verts)[1].set(800,2000,0);
+    (*cone0Verts)[2].set(-800,2000,0);
+    (*cone0Verts)[3].set(0,0,0);
     head0Geo->setVertexArray(cone0Verts);
     osg::Vec4Array * cone0Colors = new osg::Vec4Array;
     cone0Colors->push_back(osg::Vec4(1,0,0,1));
     head0Geo->setColorArray(cone0Colors);
     head0Geo->setColorBinding(osg::Geometry::BIND_OVERALL);
-    head0Geo->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_LOOP,0,3));
+    head0Geo->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES,0,4));
     head0Cone->addDrawable(head0Geo);
 
     osg::ref_ptr<osg::Geometry> num0Geo = new osg::Geometry();
@@ -619,16 +620,17 @@ void MVSim::setupCaveDiagram(ScreenMVMaster * masterScreen)
     osg::ref_ptr<osg::Geode> head1Cone = new osg::Geode();
     osg::ref_ptr<osg::Geometry> head1Geo = new osg::Geometry();
     head1Geo->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-    osg::Vec3Array * cone1Verts = new osg::Vec3Array(3);
+    osg::Vec3Array * cone1Verts = new osg::Vec3Array(4);
     (*cone1Verts)[0].set(0,0,0);
-    (*cone1Verts)[1].set(400,1000,0);
-    (*cone1Verts)[2].set(-400,1000,0);
+    (*cone1Verts)[1].set(800,2000,0);
+    (*cone1Verts)[2].set(-800,2000,0);
+    (*cone1Verts)[3].set(0,0,0);
     head1Geo->setVertexArray(cone1Verts);
     osg::Vec4Array * cone1Colors = new osg::Vec4Array;
     cone1Colors->push_back(osg::Vec4(0,1,0,1));
     head1Geo->setColorArray(cone1Colors);
     head1Geo->setColorBinding(osg::Geometry::BIND_OVERALL);
-    head1Geo->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_LOOP,0,3));
+    head1Geo->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES,0,4));
     head1Cone->addDrawable(head1Geo);
 
     osg::ref_ptr<osg::Geometry> num1Geo = new osg::Geometry();

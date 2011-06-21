@@ -7,6 +7,8 @@
 #include <menu/MenuCheckbox.h>
 #include <menu/MenuRangeValue.h>
 #include <menu/PopupMenu.h>
+#include <menu/MenuTextButtonSet.h>
+#include <menu/TabbedDialogPanel.h>
 
 class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
 {
@@ -30,6 +32,8 @@ class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * testButton4;
         cvr::MenuButton * testButton5;
 
+        cvr::MenuTextButtonSet * textButtonSet1;
+
         cvr::MenuCheckbox * checkbox1;
 
         cvr::MenuRangeValue * rangeValue;
@@ -42,6 +46,8 @@ class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::SubMenu * pmenu1;
         cvr::MenuCheckbox * pcheckbox1;
         cvr::MenuButton * pbutton1;
+
+        cvr::TabbedDialogPanel * tdp1;
 };
 
 #endif
