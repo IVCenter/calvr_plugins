@@ -675,13 +675,18 @@ void OssimPlanet::processMouseNav(double speed)
 		double d1,d2;
 		d1 = ldotc + sqrt(determ);
 		d2 = ldotc - sqrt(determ);
-		if(d1 < d2)
+		if(d1 >= 0.0 && d1 < d2)
 		{
 		    d = d1;
 		}
-		else
+		else if(d2 >= 0.0)
 		{
 		    d = d2;
+		}
+		else // intersect with planet behind viewer
+		{
+		    _movePointValid = false;
+		    break;
 		}
 	    }
 	    osg::Vec3d movePoint = lineDir * d + P1;
