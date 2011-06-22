@@ -654,7 +654,7 @@ void OssimPlanet::processMouseNav(double speed)
 	    osg::Vec3d lineDir = P2 - P1;
 	    lineDir.normalize();
 
-	    osg::Vec3d c = P1 - planetPoint;
+	    osg::Vec3d c = planetPoint - P1;
 	    double ldotc = lineDir * c;
 
 	    double determ = ldotc * ldotc - c * c + earthRadiusMM * earthRadiusMM;
@@ -675,9 +675,6 @@ void OssimPlanet::processMouseNav(double speed)
 		double d1,d2;
 		d1 = ldotc + sqrt(determ);
 		d2 = ldotc - sqrt(determ);
-		d1 = -d1;
-		d2 = -d2;
-		//std::cerr << "D1: " << d1 << " D2: " << d2 << std::endl;
 		if(d1 < d2)
 		{
 		    d = d1;
@@ -687,7 +684,6 @@ void OssimPlanet::processMouseNav(double speed)
 		    d = d2;
 		}
 	    }
-	    //std::cerr << "D: " << d << std::endl;
 	    osg::Vec3d movePoint = lineDir * d + P1;
 
 	    if(!_movePointValid)
