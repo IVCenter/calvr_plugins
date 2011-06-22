@@ -720,7 +720,7 @@ void OssimPlanet::processMouseNav(double speed)
 	    planetDir.normalize();
 
 	    double yDiff = _currentY - _startY;
-	    osg::Vec3d planetOffset = screenDir * yDiff * speed * 15.0;
+	    osg::Vec3d planetOffset = screenDir * yDiff * speed * 0.3;
 
 	    osg::Vec3 screen2Planet = screenDir * planetDist;
 
