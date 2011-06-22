@@ -560,7 +560,7 @@ void OssimPlanet::processNav(double speed)
 
 	    osg::Vec3 origin = PluginHelper::getHandMat(_navHand).getTrans();
 
-	    objmat = objmat * osg::Matrix::translate(-origin) * turn * osg::Matrix::translate(origin + trans);
+	    objmat = objmat * osg::Matrix::translate(-origin) * turn * osg::Matrix::translate(origin - trans);
 	    PluginHelper::setObjectMatrix(objmat);
 
 	    break;
@@ -574,7 +574,17 @@ void OssimPlanet::processNav(double speed)
 
 	    trans = trans * (speedScale * speed * time * 1000.0);
 
-	    osg::Matrix r;
+            osg::Matrix rotOffset = osg::Matrix::rotate(_navHandMat.getRotate().inverse())
+	                         * osg::Matrix::rotate(PluginHelper::getHandMat(_navHand).getRotate());
+            osg::Quat rot = rotOffset.getRotate();
+	    rot = rot.inverse();
+	    double angle;
+	    osg::Vec3 vec;
+	    rot.getRotate(angle, vec);
+	    rot.makeRotate(angle / 20.0, vec);
+	    rotOffset.makeRotate(rot);
+
+	    /*osg::Matrix r;
             r.makeRotate(_navHandMat.getRotate());
             osg::Vec3 pointInit = osg::Vec3(0, 1, 0);
             pointInit = pointInit * r;
@@ -594,13 +604,13 @@ void OssimPlanet::processNav(double speed)
 		osg::Vec3 vec;
 		turn.getRotate(angle,vec);
 		turn.makeRotate(angle / 20.0, vec);
-            }
+            }*/
 
 	    osg::Matrix objmat = PluginHelper::getObjectMatrix();
 
 	    osg::Vec3 origin = PluginHelper::getHandMat(_navHand).getTrans();
 
-	    objmat = objmat * osg::Matrix::translate(-origin) * osg::Matrix::rotate(turn) * osg::Matrix::translate(origin + trans);
+	    objmat = objmat * osg::Matrix::translate(-origin) * rotOffset * osg::Matrix::translate(origin - trans);
 	    PluginHelper::setObjectMatrix(objmat);
 	    break;
 	}
@@ -710,7 +720,7 @@ void OssimPlanet::processMouseNav(double speed)
 	    planetDir.normalize();
 
 	    double yDiff = _currentY - _startY;
-	    osg::Vec3d planetOffset = screenDir * yDiff * speed * 15.0;
+	    osg::Vec3d planetOffset = screenDir * yDiff * speed * 0.3;
 
 	    osg::Vec3 screen2Planet = screenDir * planetDist;
 
@@ -784,19 +794,19 @@ double OssimPlanet::getSpeed(double distance)
 
     if(boundDist < 762.0)
     {
-	return 0.000000098 * pow(boundDist,3) + 1.38888;
+	return 10.0 * (0.000000098 * pow(boundDist,3) + 1.38888);
     }
     else if(boundDist < 10000.0)
     {
 	boundDist = boundDist - 762.0;
-	return 0.0314544 * boundDist + 44.704;
+	return 10.0 * (0.0314544 * boundDist + 44.704);
     }
     else
     {
 	boundDist = boundDist - 10000;
 	double cap = 0.07 * boundDist + 335.28;
-	cap = std::min((double)2000,cap);
-	return cap;
+	cap = std::min((double)50000,cap);
+	return 10.0 * cap;
     }
 }
 
