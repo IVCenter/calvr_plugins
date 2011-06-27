@@ -17,6 +17,7 @@ bool GreenLight::loadBox()
     string doorBRfile = "/home/covise/data/GreenLight/Models/backright.WRL";
     string doorBIfile = "/home/covise/data/GreenLight/Models/backinner.WRL";
     string doorBIIfile = "/home/covise/data/GreenLight/Models/backinnerinner.WRL";
+    string fansFile = "/home/covise/data/GreenLight/Models/fans.WRL";
 
     // Load the models
     ref_ptr<osg::Node> box = osgDB::readNodeFile(boxFile);
@@ -29,10 +30,11 @@ bool GreenLight::loadBox()
     ref_ptr<osg::Node> doorBR = osgDB::readNodeFile(doorBRfile);
     ref_ptr<osg::Node> doorBI = osgDB::readNodeFile(doorBIfile);
     ref_ptr<osg::Node> doorBII = osgDB::readNodeFile(doorBIIfile);
+    ref_ptr<osg::Node> fans = osgDB::readNodeFile(fansFile);
 
     // if any files failed to load, report them and cancel loadBox()
     if (!box || !electrical || !pipes || !doorFL || !doorFR || !doorFI 
-    || !doorBL || !doorBR || !doorBI || !doorBII)
+    || !doorBL || !doorBR || !doorBI || !doorBII || !fans)
     {
         cerr << "Error (LoadEntities.cpp): Failed to load files(s):" << endl;
 
@@ -56,6 +58,8 @@ bool GreenLight::loadBox()
             cerr << "\t" << doorBIfile << endl;
         if (!doorBII)
             cerr << "\t" << doorBIIfile << endl;
+        if (!fans)
+            cerr << "\t" << fansFile << endl;
 
         return false;
     }
@@ -66,6 +70,7 @@ bool GreenLight::loadBox()
 
     _electrical = new Entity(electrical);
     _waterPipes = new Entity(pipes);
+    _fans = new Entity(fans);
 
     Vec3 doorOffset;
     AnimationPath::ControlPoint cp;
@@ -156,6 +161,7 @@ bool GreenLight::loadBox()
     // Add it all to the box transform
     _box->addChild(_electrical);
     _box->addChild(_waterPipes);
+    _box->addChild(_fans);
 
     for (int d = 0; d < _door.size(); d++)
         _box->addChild(_door[d]);

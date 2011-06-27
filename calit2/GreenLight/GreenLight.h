@@ -66,6 +66,7 @@ class GreenLight : public CVRPlugin, public MenuCallback
         vector<Entity *> _door; // doors
         Entity * _waterPipes;   // water pipes
         Entity * _electrical;   // electrical
+        Entity * _fans;         // fans
 
         // Functions
         bool loadBox();
