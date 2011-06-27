@@ -19,6 +19,7 @@
 #include <osg/Matrix>
 #include <osg/ShapeDrawable>
 #include <osgDB/ReadFile>
+#include <osg/PolygonMode>
 
 #include <mxml.h>
 
