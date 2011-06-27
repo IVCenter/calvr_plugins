@@ -5,8 +5,9 @@
 GreenLight::Entity::Entity(Node * node, Matrix mat)
 {
     transform = new MatrixTransform(mat);
-    transform->addChild(node);
-    createNodeSet(node);
+    mainNode = node;
+    transform->addChild(mainNode);
+    createNodeSet(mainNode);
     status = START;
     time = 0;
 }
@@ -75,4 +76,16 @@ void GreenLight::Entity::addChild(Entity * child)
     }
 
     transform->addChild(child->transform);
+}
+
+void GreenLight::Entity::showVisual(bool show)
+{
+    if (transform->containsNode(mainNode))
+    {
+        transform->removeChild(mainNode);
+    }
+    else
+    {
+        transform->addChild(mainNode);
+    }
 }

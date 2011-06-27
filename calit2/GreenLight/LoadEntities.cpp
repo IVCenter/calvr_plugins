@@ -4,7 +4,7 @@
 #include <kernel/NodeMask.h>
 #include <osgDB/ReadFile>
 
-bool GreenLight::loadBox()
+bool GreenLight::loadScene()
 {
     // files to load
     string boxFile = "/home/covise/data/GreenLight/Models/box.WRL";
@@ -32,7 +32,7 @@ bool GreenLight::loadBox()
     ref_ptr<osg::Node> doorBII = osgDB::readNodeFile(doorBIIfile);
     ref_ptr<osg::Node> fans = osgDB::readNodeFile(fansFile);
 
-    // if any files failed to load, report them and cancel loadBox()
+    // if any files failed to load, report them and cancel loadScene()
     if (!box || !electrical || !pipes || !doorFL || !doorFR || !doorFI 
     || !doorBL || !doorBR || !doorBI || !doorBII || !fans)
     {
@@ -166,5 +166,30 @@ bool GreenLight::loadBox()
     for (int d = 0; d < _door.size(); d++)
         _box->addChild(_door[d]);
     
+    // Menu Setup
+    _displayComponentsMenu = new SubMenu("Display Components", "Display Components");
+    _displayComponentsMenu->setCallback(this);
+    _glMenu->addItem(_displayComponentsMenu);
+
+    _displayFrameCheckbox = new MenuCheckbox("Box Frame",true);
+    _displayFrameCheckbox->setCallback(this);
+    _displayComponentsMenu->addItem(_displayFrameCheckbox);
+
+    _displayDoorsCheckbox = new MenuCheckbox("Doors",true);
+    _displayDoorsCheckbox->setCallback(this);
+    _displayComponentsMenu->addItem(_displayDoorsCheckbox);
+
+    _displayWaterPipesCheckbox = new MenuCheckbox("Water Pipes",true);
+    _displayWaterPipesCheckbox->setCallback(this);
+    _displayComponentsMenu->addItem(_displayWaterPipesCheckbox);
+
+    _displayElectricalCheckbox = new MenuCheckbox("Electrical",true);
+    _displayElectricalCheckbox->setCallback(this);
+    _displayComponentsMenu->addItem(_displayElectricalCheckbox);
+
+    _displayFansCheckbox = new MenuCheckbox("Fans",true);
+    _displayFansCheckbox->setCallback(this);
+    _displayComponentsMenu->addItem(_displayFansCheckbox);
+
     return true;
 }

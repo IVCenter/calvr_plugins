@@ -43,6 +43,7 @@ class GreenLight : public CVRPlugin, public MenuCallback
 
                 ref_ptr<MatrixTransform> transform; // transform nodes of this entity
                 ref_ptr<AnimationPath> path; // animation path (null if non-existent)
+                ref_ptr<Node> mainNode;
                 set<Node *> nodes; // node-sub-graph loaded in via osgDB readNodeFile
                 AnimationStatus status; // status of animation
                 double time; // time-point within animation path
@@ -51,6 +52,7 @@ class GreenLight : public CVRPlugin, public MenuCallback
                 void handleAnimation();
                 void beginAnimation();
                 void addChild(Entity * child);
+                void showVisual(bool show);
 
             protected:
                 void createNodeSet(Node * node);
@@ -58,10 +60,16 @@ class GreenLight : public CVRPlugin, public MenuCallback
 
         // Menu Items
         SubMenu * _glMenu;
-        MenuCheckbox * _showBoxCheckbox;
+        MenuCheckbox * _showSceneCheckbox;
+
+        SubMenu * _displayComponentsMenu;
+        MenuCheckbox * _displayFrameCheckbox;
+        MenuCheckbox * _displayDoorsCheckbox;
+        MenuCheckbox * _displayWaterPipesCheckbox;
+        MenuCheckbox * _displayElectricalCheckbox;
+        MenuCheckbox * _displayFansCheckbox;
 
         // Entities
-        
         Entity * _box;          // box/frame
         vector<Entity *> _door; // doors
         Entity * _waterPipes;   // water pipes
@@ -69,7 +77,7 @@ class GreenLight : public CVRPlugin, public MenuCallback
         Entity * _fans;         // fans
 
         // Functions
-        bool loadBox();
+        bool loadScene();
         bool handleIntersection(Node * iNode);
 };
 

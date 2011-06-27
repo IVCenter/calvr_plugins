@@ -17,7 +17,7 @@ GreenLight::GreenLight()
 GreenLight::~GreenLight()
 {
     delete _glMenu;
-    if (_showBoxCheckbox) delete _showBoxCheckbox;
+    if (_showSceneCheckbox) delete _showSceneCheckbox;
 
     vector<Entity *>::iterator vit;
     for (vit = _door.begin(); vit != _door.end(); vit++)
@@ -38,9 +38,16 @@ bool GreenLight::init()
     _glMenu->setCallback(this);
     PluginHelper::addRootMenuItem(_glMenu);
 
-    _showBoxCheckbox = new MenuCheckbox("Load Box",false);
-    _showBoxCheckbox->setCallback(this);
-    _glMenu->addItem(_showBoxCheckbox);
+    _showSceneCheckbox = new MenuCheckbox("Load Box",false);
+    _showSceneCheckbox->setCallback(this);
+    _glMenu->addItem(_showSceneCheckbox);
+
+    _displayComponentsMenu = NULL;
+    _displayFrameCheckbox = NULL;
+    _displayDoorsCheckbox = NULL;
+    _displayWaterPipesCheckbox = NULL;
+    _displayElectricalCheckbox = NULL;
+    _displayFansCheckbox = NULL;
     /*** End Menu Setup ***/
 
     /*** Entity Defaults ***/
@@ -55,26 +62,47 @@ bool GreenLight::init()
 
 void GreenLight::menuCallback(MenuItem * item)
 {
-    if(item == _showBoxCheckbox)
+    if (item == _showSceneCheckbox)
     {
         // Load as neccessary
         if (!_box)
         {
-            if (loadBox())
-                _showBoxCheckbox->setText("Show Box");
+            if (loadScene())
+                _showSceneCheckbox->setText("Show Scene");
             else
             {
-                cerr << "Error: loadBox() failed." << endl;
-                _showBoxCheckbox->setValue(false);
+                cerr << "Error: loadScene() failed." << endl;
+                _showSceneCheckbox->setValue(false);
                 return;
             }
 
         }
 
-        if (_showBoxCheckbox->getValue())
+        if (_showSceneCheckbox->getValue())
             PluginHelper::getObjectsRoot()->addChild(_box->transform);
         else
             PluginHelper::getObjectsRoot()->removeChild(_box->transform);
+    }
+    else if (item == _displayFrameCheckbox)
+    {
+        _box->showVisual(_displayFrameCheckbox->getValue());
+    }
+    else if (item == _displayDoorsCheckbox)
+    {
+        for (int d = 0; d < _door.size(); d++)
+            _door[d]->showVisual(_displayDoorsCheckbox->getValue());
+    }
+    else if (item == _displayWaterPipesCheckbox)
+    {
+        _waterPipes->showVisual(_displayWaterPipesCheckbox->getValue());
+    }
+    else if (item == _displayElectricalCheckbox)
+    {
+        _electrical->showVisual(_displayFrameCheckbox->getValue());
+    }
+    else if (item == _displayFansCheckbox)
+    {
+        _fans->showVisual(_displayFansCheckbox->getValue());
     }
 }
 
