@@ -8,6 +8,7 @@ bool GreenLight::loadBox()
 {
     // files to load
     string boxFile = "/home/covise/data/GreenLight/Models/box.WRL";
+    string electricalFile = "/home/covise/data/GreenLight/Models/electrical.WRL";
     string pipesFile = "/home/covise/data/GreenLight/Models/waterpipes.WRL";
     string doorFLfile = "/home/covise/data/GreenLight/Models/frontleft.WRL";
     string doorFRfile = "/home/covise/data/GreenLight/Models/frontright.WRL";
@@ -19,6 +20,7 @@ bool GreenLight::loadBox()
 
     // Load the models
     ref_ptr<osg::Node> box = osgDB::readNodeFile(boxFile);
+    ref_ptr<osg::Node> electrical = osgDB::readNodeFile(electricalFile);
     ref_ptr<osg::Node> pipes = osgDB::readNodeFile(pipesFile);
     ref_ptr<osg::Node> doorFL = osgDB::readNodeFile(doorFLfile);
     ref_ptr<osg::Node> doorFR = osgDB::readNodeFile(doorFRfile);
@@ -29,13 +31,15 @@ bool GreenLight::loadBox()
     ref_ptr<osg::Node> doorBII = osgDB::readNodeFile(doorBIIfile);
 
     // if any files failed to load, report them and cancel loadBox()
-    if (!box || !pipes || !doorFL || !doorFR || !doorFI || !doorBL || !doorBR 
-    || !doorBI || !doorBII)
+    if (!box || !electrical || !pipes || !doorFL || !doorFR || !doorFI 
+    || !doorBL || !doorBR || !doorBI || !doorBII)
     {
         cerr << "Error (LoadEntities.cpp): Failed to load files(s):" << endl;
 
         if (!box)
             cerr << "\t" << boxFile << endl;
+        if (!electrical)
+            cerr << "\t" << electricalFile << endl;
         if (!pipes)
             cerr << "\t" << pipesFile << endl;
         if (!doorFL)
@@ -60,6 +64,7 @@ bool GreenLight::loadBox()
     _box = new Entity(box);
     //box->setNodeMask(box->getNodeMask() & ~INTERSECT_MASK); // No interaction
 
+    _electrical = new Entity(electrical);
     _waterPipes = new Entity(pipes);
 
     Vec3 doorOffset;
@@ -149,6 +154,7 @@ bool GreenLight::loadBox()
     _door[4]->group.push_back(_door[3]);
 
     // Add it all to the box transform
+    _box->addChild(_electrical);
     _box->addChild(_waterPipes);
 
     for (int d = 0; d < _door.size(); d++)

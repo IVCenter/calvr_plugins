@@ -46,6 +46,7 @@ bool GreenLight::init()
     /*** Entity Defaults ***/
     _box = NULL;
     _waterPipes = NULL;
+    _electrical = NULL;
     /*** End Entity Defaults ***/
 
     return true;
