@@ -174,14 +174,33 @@ bool OssimPlanet::init()
 
    _ossimMenu = new SubMenu("OssimPlanet");
 
-   _navCB = new MenuCheckbox("Planet Nav Mode",false);
+   _navCB = new MenuCheckbox("Planet Nav Mode",true);
    _navCB->setCallback(this);
    _ossimMenu->addItem(_navCB);
    PluginHelper::addRootMenuItem(_ossimMenu);
 
    _navActive = false;
+   _mouseNavActive = false;
 
    SceneManager::instance()->getObjectsRoot()->addChild(planet);
+
+    /*Material * mat =new Material();	
+    mat->setColorMode(Material::AMBIENT_AND_DIFFUSE);
+    mat->setDiffuse(Material::FRONT,osg::Vec4(1.0,1.0,1.0,1.0));
+    
+    osg::Sphere * ssph = new osg::Sphere(osg::Vec3(0,0,0),0.00001);
+    osg::ShapeDrawable * sd = new osg::ShapeDrawable(ssph);
+    sd->setColor(osg::Vec4(1.0,0,0,1.0));
+    osg::StateSet * stateset = sd->getOrCreateStateSet();
+    stateset->setMode(GL_LIGHTING, osg::StateAttribute::ON);
+    stateset->setAttributeAndModes(mat,osg::StateAttribute::ON);
+
+    _testMark = new osg::MatrixTransform();
+    osg::Geode * geo = new osg::Geode();
+    geo->addDrawable(sd);
+    _testMark->addChild(geo);
+
+    PluginHelper::getObjectsRoot()->addChild(_testMark);*/
 
    return true;
 }
@@ -310,7 +329,7 @@ void OssimPlanet::preFrame()
     theEphemerisCamera->setViewMatrix(theCurrentViewMatrixInverse);
 */
 
-    osg::Matrix originToPlanetObjectSpace = PluginHelper::getWorldToObjectTransform();
+    /*osg::Matrix originToPlanetObjectSpace = PluginHelper::getWorldToObjectTransform();
     // distance to surface in planet units (default without using intersection with surface)
     double distanceToSurface = originToPlanetObjectSpace.getTrans().length() - 1.0;
     
@@ -330,11 +349,51 @@ void OssimPlanet::preFrame()
 	{
 	    ComController::instance()->readMaster(&distanceToSurface,sizeof(double));
 	}
-    }
+    }*/
 
-    if(_navActive)
+    if(_navActive || _mouseNavActive)
     {
-	processNav(getSpeed(distanceToSurface));
+	double distanceToSurface = 0.0; 
+
+        // make sure values are the same across the tiles
+	if(ComController::instance()->isMaster())
+	{
+	    // need to get origin of cave in planet space (world origin is 0, 0, 0)
+	    osg::Vec3d origPlanetPoint = PluginHelper::getWorldToObjectTransform().getTrans();
+    
+	    // planetPoint in latlonheight
+	    osg::Vec3d latLonHeight;
+	    planet->model()->inverse(origPlanetPoint, latLonHeight);
+  
+	    // set height back to the surface level 
+	    latLonHeight[2] = 0.0;
+
+	    // adjust the height to the ellipsoid
+	    planet->model()->mslToEllipsoidal(latLonHeight);
+
+	    // translate point back to cartesian (in planet space)
+	    osg::Vec3d pointObject;
+	    planet->model()->forward(latLonHeight, pointObject);
+
+	    distanceToSurface = (pointObject * PluginHelper::getObjectToWorldTransform()).length();
+
+	    ComController::instance()->sendSlaves(&distanceToSurface,sizeof(double));
+	}
+	else
+	{
+	    ComController::instance()->readMaster(&distanceToSurface,sizeof(double));
+	}
+
+        //std::cerr << "distance: " << distanceToSurface << std::endl;
+
+	if(_navActive)
+	{
+	    processNav(getSpeed(distanceToSurface));
+	}
+	else
+	{
+	    processMouseNav(getSpeed(distanceToSurface));
+	}
     }
 
     /*double minNavScale = 20.0;
@@ -358,17 +417,18 @@ void OssimPlanet::preFrame()
 
 bool OssimPlanet::buttonEvent(int type, int button, int hand, const osg::Matrix & mat)
 {
-    std::cerr << "Button event." << std::endl;
+    //std::cerr << "Button event." << std::endl;
     if(!_navCB->getValue() || Navigation::instance()->getPrimaryButtonMode() == SCALE)
     {
 	return false;
     }
 
-    if(!_navActive && button == 0 && type == BUTTON_DOWN)
+    if(!_navActive && button == 0 && (type == BUTTON_DOWN || type == BUTTON_DOUBLE_CLICK))
     {
 	_navHand = hand;
 	_navHandMat = mat;
 	_navActive = true;
+	_mouseNavActive = false;
 	return true;
     }
     else if(!_navActive)
@@ -387,6 +447,52 @@ bool OssimPlanet::buttonEvent(int type, int button, int hand, const osg::Matrix 
 	{
 	    _navActive = false;
 	}
+	return true;
+    }
+
+    return false;
+}
+
+bool OssimPlanet::mouseButtonEvent (int type, int button, int x, int y, const osg::Matrix &mat)
+{
+    if(!_navCB->getValue() || Navigation::instance()->getPrimaryButtonMode() == SCALE)
+    {
+	return false;
+    }
+
+    if(_navActive)
+    {
+	return false;
+    }
+
+    if(!_mouseNavActive && button == 0 && (type == MOUSE_BUTTON_DOWN || type == MOUSE_DOUBLE_CLICK))
+    {
+	_startX = x;
+	_startY = y;
+	_currentX = x;
+	_currentY = y;
+	_mouseNavActive = true;
+
+	if(Navigation::instance()->getPrimaryButtonMode() == MOVE_WORLD)
+	{
+	    _movePointValid = false;
+	}
+
+	return true;
+    }
+    else if(!_mouseNavActive)
+    {
+	return false;
+    }
+
+    if(button == 0)
+    {
+	if(type == MOUSE_BUTTON_UP)
+	{
+	    _mouseNavActive = false;
+	}
+	_currentX = x;
+	_currentY = y;
 	return true;
     }
 
@@ -454,7 +560,7 @@ void OssimPlanet::processNav(double speed)
 
 	    osg::Vec3 origin = PluginHelper::getHandMat(_navHand).getTrans();
 
-	    objmat = objmat * osg::Matrix::translate(-origin) * turn * osg::Matrix::translate(origin + trans);
+	    objmat = objmat * osg::Matrix::translate(-origin) * turn * osg::Matrix::translate(origin - trans);
 	    PluginHelper::setObjectMatrix(objmat);
 
 	    break;
@@ -468,7 +574,17 @@ void OssimPlanet::processNav(double speed)
 
 	    trans = trans * (speedScale * speed * time * 1000.0);
 
-	    osg::Matrix r;
+            osg::Matrix rotOffset = osg::Matrix::rotate(_navHandMat.getRotate().inverse())
+	                         * osg::Matrix::rotate(PluginHelper::getHandMat(_navHand).getRotate());
+            osg::Quat rot = rotOffset.getRotate();
+	    rot = rot.inverse();
+	    double angle;
+	    osg::Vec3 vec;
+	    rot.getRotate(angle, vec);
+	    rot.makeRotate(angle / 20.0, vec);
+	    rotOffset.makeRotate(rot);
+
+	    /*osg::Matrix r;
             r.makeRotate(_navHandMat.getRotate());
             osg::Vec3 pointInit = osg::Vec3(0, 1, 0);
             pointInit = pointInit * r;
@@ -488,17 +604,186 @@ void OssimPlanet::processNav(double speed)
 		osg::Vec3 vec;
 		turn.getRotate(angle,vec);
 		turn.makeRotate(angle / 20.0, vec);
-            }
+            }*/
 
 	    osg::Matrix objmat = PluginHelper::getObjectMatrix();
 
 	    osg::Vec3 origin = PluginHelper::getHandMat(_navHand).getTrans();
 
-	    objmat = objmat * osg::Matrix::translate(-origin) * osg::Matrix::rotate(turn) * osg::Matrix::translate(origin + trans);
+	    objmat = objmat * osg::Matrix::translate(-origin) * rotOffset * osg::Matrix::translate(origin - trans);
 	    PluginHelper::setObjectMatrix(objmat);
 	    break;
 	}
 	default:
+	    break;
+    }
+}
+
+void OssimPlanet::processMouseNav(double speed)
+{
+    int masterScreen = CVRViewer::instance()->getActiveMasterScreen();
+    if(masterScreen < 0)
+    {
+	return;
+    }
+
+    ScreenInfo * si = ScreenConfig::instance()->getMasterScreenInfo(masterScreen);
+    if(!si)
+    {
+	return;
+    }
+
+    osg::Vec3d screenCenter = si->xyz;
+    osg::Vec3d screenDir(0,1,0);
+    screenDir = screenDir * si->transform;
+    screenDir = screenDir - screenCenter;
+    screenDir.normalize();
+
+    osg::Vec3d planetPoint(0,0,0);
+    planetPoint = planetPoint * PluginHelper::getObjectToWorldTransform();
+    double planetDist = (screenCenter - planetPoint).length();
+
+    switch(Navigation::instance()->getPrimaryButtonMode())
+    {
+	case MOVE_WORLD:
+	{
+	    osg::Vec3d P1(0,0,0),P2(0,1000000,0);
+	    P1 = P1 * PluginHelper::getMouseMat();
+	    P2 = P2 * PluginHelper::getMouseMat();
+
+	    osg::Vec3d lineDir = P2 - P1;
+	    lineDir.normalize();
+
+	    osg::Vec3d c = planetPoint - P1;
+	    double ldotc = lineDir * c;
+
+	    double determ = ldotc * ldotc - c * c + earthRadiusMM * earthRadiusMM;
+	    if(determ < 0)
+	    {
+		_movePointValid = false;
+		break;
+	    }
+
+	    double d;
+	    
+	    if(determ == 0)
+	    {
+		d = ldotc;
+	    }
+	    else
+	    {
+		double d1,d2;
+		d1 = ldotc + sqrt(determ);
+		d2 = ldotc - sqrt(determ);
+		if(d1 >= 0.0 && d1 < d2)
+		{
+		    d = d1;
+		}
+		else if(d2 >= 0.0)
+		{
+		    d = d2;
+		}
+		else // intersect with planet behind viewer
+		{
+		    _movePointValid = false;
+		    break;
+		}
+	    }
+	    osg::Vec3d movePoint = lineDir * d + P1;
+
+	    if(!_movePointValid)
+	    {
+		_movePoint = movePoint;
+		_movePointValid = true;
+		break;
+	    }
+
+	    P1 = _movePoint - planetPoint;
+	    P2 = movePoint - planetPoint;
+	    P1.normalize();
+	    P2.normalize();
+
+	    osg::Matrix objMat = PluginHelper::getObjectMatrix();
+	    objMat = objMat * osg::Matrix::translate(-planetPoint) * osg::Matrix::rotate(P1,P2) * osg::Matrix::translate(planetPoint);
+	    PluginHelper::setObjectMatrix(objMat);
+
+	    _movePoint = movePoint;
+	    osg::Matrix m;
+	    m.makeTranslate(_movePoint);
+	    //_testMark->setMatrix(m);
+
+	    break;
+	}
+	case WALK:
+	case DRIVE:
+	{
+	    osg::Vec3d planetDir = planetPoint - screenCenter;
+	    planetDir.normalize();
+
+	    double yDiff = _currentY - _startY;
+	    osg::Vec3d planetOffset = screenDir * yDiff * speed * 0.3;
+
+	    osg::Vec3 screen2Planet = screenDir * planetDist;
+
+	    osg::Vec3d screenUp(0,0,1);
+	    screenUp = screenUp * si->transform;
+	    screenUp = screenUp - screenCenter;
+	    screenUp.normalize();
+
+	    /*double dist = _currentX - _startX;
+	    dist /= si->myChannel->width;
+	    dist *= si->width;
+	    osg::Vec3d rotPoint(dist,0,0);
+	    rotPoint = rotPoint * si->transfrom;
+	    rotPoint = rotPoint - planetPoint;
+	    rotPoint.normalize();
+
+	    osg::Vec3d cpoint = -screen2Planet;
+	    cpoint.normalize();*/
+
+
+	    double angle = _currentX - _startX;
+	    //angle /= -100000.0;
+	    angle *= (earthRadiusMM - planetDist) / 500000000000000.0;
+	    //angle *= -speed / 200000000.0;
+	    
+
+	    osg::Matrix objMat = PluginHelper::getObjectMatrix();
+	    objMat = objMat * osg::Matrix::translate(-screenCenter) * osg::Matrix::rotate(planetDir,screenDir) * osg::Matrix::translate(-screen2Planet) * osg::Matrix::rotate(angle,screenUp) * osg::Matrix::translate(screen2Planet + planetOffset + screenCenter);
+	    PluginHelper::setObjectMatrix(objMat);
+	    break;
+	}
+	case FLY:
+	{
+	    osg::Vec3d planetDir = planetPoint - screenCenter;
+	    planetDir.normalize();
+
+	    osg::Vec3d axis(_currentX - _startX, 0, -_currentY + _startY);
+	    double angle = axis.length();
+	    axis.normalize();
+
+	    axis = axis * si->transform;
+	    axis = axis ^ screenDir;
+	    axis.normalize();
+
+	    // check if invalid
+	    if(axis.length() < 0.9)
+	    {
+		break;
+	    }
+
+	    osg::Vec3 screen2Planet = screenDir * planetDist;
+
+	    //angle *= -speed / 200000000.0;
+	    angle *= (earthRadiusMM - planetDist) / 200000000000000.0;
+
+	    osg::Matrix objMat = PluginHelper::getObjectMatrix();
+	    objMat = objMat * osg::Matrix::translate(-screenCenter) * osg::Matrix::rotate(planetDir,screenDir) * osg::Matrix::translate(-screen2Planet) * osg::Matrix::rotate(angle,axis) * osg::Matrix::translate(screen2Planet + screenCenter);
+	    PluginHelper::setObjectMatrix(objMat);
+
+	    break;
+	}
+	defaut:
 	    break;
     }
 }
@@ -510,19 +795,19 @@ double OssimPlanet::getSpeed(double distance)
 
     if(boundDist < 762.0)
     {
-	return 0.000000098 * pow(boundDist,3) + 1.38888;
+	return 10.0 * (0.000000098 * pow(boundDist,3) + 1.38888);
     }
     else if(boundDist < 10000.0)
     {
 	boundDist = boundDist - 762.0;
-	return 0.0314544 * boundDist + 44.704;
+	return 10.0 * (0.0314544 * boundDist + 44.704);
     }
     else
     {
 	boundDist = boundDist - 10000;
 	double cap = 0.07 * boundDist + 335.28;
-	cap = std::min((double)2000,cap);
-	return cap;
+	cap = std::min((double)50000,cap);
+	return 10.0 * cap;
     }
 }
 

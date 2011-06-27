@@ -53,9 +53,17 @@ bool ArtifactVis::init()
 
     setupDCFilter();
 
+    _selectArtifactCB = new MenuCheckbox("Select Artifact",false);
+    _selectArtifactCB->setCallback(this);
+    _avMenu->addItem(_selectArtifactCB);
+
     _selectCB = new MenuCheckbox("Select box", false);
     _selectCB->setCallback(this);
     _avMenu->addItem(_selectCB);
+
+    _defaultMaterial =new Material();	
+    _defaultMaterial->setColorMode(Material::AMBIENT_AND_DIFFUSE);
+    _defaultMaterial->setDiffuse(Material::FRONT,osg::Vec4(1.0,1.0,1.0,1.0));
 
     //create wireframe selection box
     osg::Box * sbox = new osg::Box(osg::Vec3(0,0,0),1.0,1.0,1.0);
@@ -71,6 +79,20 @@ bool ArtifactVis::init()
     _selectBox = new osg::MatrixTransform();
     _selectBox->addChild(geo);
 
+    // create select mark for wand
+    osg::Sphere * ssph = new osg::Sphere(osg::Vec3(0,0,0),10);
+    sd = new osg::ShapeDrawable(ssph);
+    sd->setColor(osg::Vec4(1.0,0,0,1.0));
+    stateset = sd->getOrCreateStateSet();
+    stateset->setMode(GL_LIGHTING, osg::StateAttribute::ON);
+    stateset->setAttributeAndModes(_defaultMaterial,osg::StateAttribute::ON);
+
+    geo = new osg::Geode();
+    geo->addDrawable(sd);
+
+    _selectMark = new osg::MatrixTransform();
+    _selectMark->addChild(geo);
+
     MenuSystem::instance()->addMenuItem(_avMenu);
     SceneManager::instance()->getObjectsRoot()->addChild(_root);
 
@@ -85,6 +107,17 @@ bool ArtifactVis::init()
 
     readLocusFile();
 
+    _artifactPanel = new TabbedDialogPanel(400,30,4,"Selected Artifact","Plugin.ArtifactVis.ArtifactPanel");
+    _artifactPanel->addTextTab("Info","");
+    _artifactPanel->addTextureTab("Side","");
+    _artifactPanel->addTextureTab("Top","");
+    _artifactPanel->addTextureTab("Bottom","");
+    _artifactPanel->setVisible(false);
+    _artifactPanel->setActiveTab("Info");
+
+    _selectionStatsPanel = new DialogPanel(450,"Selection Stats","Plugin.ArtifactVis.SelectionStatsPanel");
+    _selectionStatsPanel->setVisible(false);
+
     std::cerr << "ArtifactVis init done.\n";
     return true;
 }
@@ -98,7 +131,7 @@ bool ArtifactVis::buttonEvent(int type, int button, int hand, const osg::Matrix 
 {
     if((type == BUTTON_DOWN || type == BUTTON_DOUBLE_CLICK) && hand == 0 && button == 0)
     {
-	if(_showSpheresCB->getValue())
+	if(_selectArtifactCB->getValue() && _showSpheresCB->getValue())
 	{
 	    if(!_selectCB->getValue())
 	    {
@@ -137,14 +170,30 @@ bool ArtifactVis::buttonEvent(int type, int button, int hand, const osg::Matrix 
 		{
 		    //std::cerr << "Got sphere intersection with index " << index << std::endl;
 		    setActiveArtifact(index);
-		    //return true;
+		    return true;
 		}
+	    }
+	}
+	else if(_showSpheresCB->getValue() && _selectCB->getValue() && type == BUTTON_DOUBLE_CLICK)
+	{
+	    osg::Matrix l2w = getLocalToWorldMatrix(_sphereRoot.get());
+	    osg::Matrix w2l = osg::Matrix::inverse(l2w);
+	    if(!_selectActive)
+	    {
+		_selectStart = osg::Vec3(0,1000,0);
+		_selectStart = _selectStart * mat * w2l;
+		_selectActive = true;
 	    }
 	    else
 	    {
+		_selectCurrent = osg::Vec3(0,1000,0);
+		_selectCurrent = _selectCurrent * mat * w2l;
+		_selectActive = false;
 	    }
+	    return true;
 	}
     }
+
     return false;
 }
 
@@ -291,6 +340,11 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
 	}
     }
 
+    if(menuItem == _selectArtifactCB)
+    {
+	_artifactPanel->setVisible(_selectArtifactCB->getValue());
+    }
+
     if(menuItem == _selectCB)
     {
 	if(_selectCB->getValue())
@@ -308,12 +362,20 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
 		    sd->setColor(color);
 		}
 	    }
+	    _selectStart = osg::Vec3(0,0,0);
+	    _selectCurrent = osg::Vec3(0,0,0);
+	    _sphereRoot->addChild(_selectBox);
+	    if(PluginHelper::getNumHands())
+	    {
+		PluginHelper::getScene()->addChild(_selectMark);
+	    }
+	    _selectionStatsPanel->setVisible(true);
 	}
 	else
 	{
 	   for(int i = 0; i < _artifacts.size(); i++)
 	    {
-		if(_artifacts[i]->selected)
+		if(!_artifacts[i]->selected)
 		{
 		    osg::ShapeDrawable * sd = dynamic_cast<osg::ShapeDrawable*>(_artifacts[i]->drawable);
 		    if(sd)
@@ -325,8 +387,15 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
 			sd->setColor(color);
 		    }
 		}
-	    } 
+	    }
+	    _sphereRoot->removeChild(_selectBox);
+	    if(PluginHelper::getNumHands())
+	    {
+		PluginHelper::getScene()->removeChild(_selectMark);
+	    }
+	    _selectionStatsPanel->setVisible(false);
 	}
+	_selectActive = false;
     }
 }
 
@@ -380,6 +449,11 @@ void ArtifactVis::preFrame()
 	    }
 	}
     }
+
+    if(_selectCB->getValue())
+    {
+	updateSelect();
+    }
 }
 
 void ArtifactVis::setDCVisibleStatus(std::string dc, bool status)
@@ -424,14 +498,25 @@ void ArtifactVis::setActiveArtifact(int art)
 	return;
     }
 
+    std::stringstream ss;
+    ss << "EDM: " << _artifacts[art]->edm << std::endl;
+    ss << "DC: " << _artifacts[art]->dc << std::endl;
+    ss << "Basket: " << _artifacts[art]->basket;
+
+    _artifactPanel->updateTabWithText("Info",ss.str());
+
     std::stringstream side, top, bottom;
     side <<  _picFolder << "/" << _artifacts[art]->edm << "_s.jpg";
     top << _picFolder << "/" << _artifacts[art]->edm << "_t.jpg";
     bottom << _picFolder << "/" << _artifacts[art]->edm << "_b.jpg";
 
-    std::cerr << "Side texture: " << side.str() << std::endl;
-    std::cerr << "Top texture: " << top.str() << std::endl;
-    std::cerr << "Bottom texture: " << bottom.str() << std::endl;
+    _artifactPanel->updateTabWithTexture("Side",side.str());
+    _artifactPanel->updateTabWithTexture("Top",top.str());
+    _artifactPanel->updateTabWithTexture("Bottom",bottom.str());
+
+    //std::cerr << "Side texture: " << side.str() << std::endl;
+    //std::cerr << "Top texture: " << top.str() << std::endl;
+    //std::cerr << "Bottom texture: " << bottom.str() << std::endl;
 
     _activeArtifact = art;
 }
@@ -664,10 +749,10 @@ void ArtifactVis::displayArtifacts(Group * root_node)
     ss->setMode(GL_LIGHTING, StateAttribute::ON);
     ss->setRenderingHint( osg::StateSet::TRANSPARENT_BIN );
 
-    Material * mat =new Material();	
+    /*Material * mat =new Material();	
     mat->setColorMode(Material::AMBIENT_AND_DIFFUSE);
-    mat->setDiffuse(Material::FRONT,osg::Vec4(1.0,1.0,1.0,1.0));
-    ss->setAttribute(mat);
+    mat->setDiffuse(Material::FRONT,osg::Vec4(1.0,1.0,1.0,1.0));*/
+    ss->setAttribute(_defaultMaterial);
     
     osg::CullFace * cf=new osg::CullFace();
     cf->setMode(osg::CullFace::BACK);
@@ -882,5 +967,93 @@ void ArtifactVis::setupDCFilter()
 	    _dcFilterMenu->addItem(subMenu);
 	    _dcFilterSubMenus.push_back(subMenu);
 	}
+    }
+}
+
+void ArtifactVis::updateSelect()
+{
+    osg::Vec3 markPos(0,1000,0);
+    markPos = markPos * PluginHelper::getHandMat();
+    osg::Matrix markTrans;
+    markTrans.makeTranslate(markPos);
+    _selectMark->setMatrix(markTrans);
+
+    if(_selectActive)
+    {
+	osg::Matrix l2w = getLocalToWorldMatrix(_sphereRoot.get());
+	osg::Matrix w2l = osg::Matrix::inverse(l2w);
+	_selectCurrent = osg::Vec3(0,1000,0);
+	_selectCurrent = _selectCurrent * PluginHelper::getHandMat() * w2l;
+    }
+
+    if(_selectStart.length2() > 0)
+    {
+
+	osg::BoundingBox bb;
+	osg::Vec3 minvec, maxvec;
+	minvec.x() = std::min(_selectStart.x(),_selectCurrent.x());
+	minvec.y() = std::min(_selectStart.y(),_selectCurrent.y());
+	minvec.z() = std::min(_selectStart.z(),_selectCurrent.z());
+
+	maxvec.x() = std::max(_selectStart.x(),_selectCurrent.x());
+	maxvec.y() = std::max(_selectStart.y(),_selectCurrent.y());
+	maxvec.z() = std::max(_selectStart.z(),_selectCurrent.z());
+
+	bb.set(minvec, maxvec);
+
+	osg::Matrix scale, trans;
+	trans.makeTranslate(bb.center());
+	scale.makeScale(maxvec.x() - minvec.x(), maxvec.y() - minvec.y(), maxvec.z() - minvec.z());
+
+	_selectBox->setMatrix(scale * trans);
+
+	std::map<string,int> dcCount;
+	int totalSelected = 0;
+
+	for(int i = 0; i < _artifacts.size(); i++)
+	{
+	    if(_artifacts[i]->visible && bb.contains(_artifacts[i]->modelPos) && !_artifacts[i]->selected)
+	    {
+		osg::ShapeDrawable * sd = dynamic_cast<osg::ShapeDrawable*>(_artifacts[i]->drawable);
+		if(sd)
+		{
+		    osg::Vec4 color = sd->getColor();
+		    color.x() = color.x() * 2.0;
+		    color.y() = color.y() * 2.0;
+		    color.z() = color.z() * 2.0;
+		    sd->setColor(color);
+		}
+		_artifacts[i]->selected = true;
+	    }
+	    else if((!_artifacts[i]->visible || !bb.contains(_artifacts[i]->modelPos)) && _artifacts[i]->selected)
+	    {
+		osg::ShapeDrawable * sd = dynamic_cast<osg::ShapeDrawable*>(_artifacts[i]->drawable);
+		if(sd)
+		{
+		    osg::Vec4 color = sd->getColor();
+		    color.x() = color.x() * 0.5;
+		    color.y() = color.y() * 0.5;
+		    color.z() = color.z() * 0.5;
+		    sd->setColor(color);
+		}
+		_artifacts[i]->selected = false;
+	    }
+
+	    if(_artifacts[i]->selected)
+	    {
+		dcCount[_artifacts[i]->dc]++;
+		totalSelected++;
+	    }
+	}
+
+	std::stringstream ss;
+	ss << "Region Size: " << fabs(_selectStart.x() - _selectCurrent.x()) << " x " << fabs(_selectStart.y() - _selectCurrent.y()) << " x " << fabs(_selectStart.z() - _selectCurrent.z()) << std::endl;
+	ss << "Artifacts Selected: " << totalSelected;
+	for(std::map<std::string,int>::iterator it = dcCount.begin(); it != dcCount.end(); it++)
+	{
+	    ss << std::endl << it->first << ": " << it->second;
+	}
+
+	_selectionStatsPanel->setText(ss.str());
     }
 }
