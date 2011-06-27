@@ -45,6 +45,7 @@ bool GreenLight::init()
 
     /*** Entity Defaults ***/
     _box = NULL;
+    _waterPipes = NULL;
     /*** End Entity Defaults ***/
 
     return true;
@@ -133,8 +134,7 @@ bool GreenLight::buttonEvent(int type, int button, int hand, const osg::Matrix& 
     cerr << "hand: " << hand << " button: " << button << endl;
 */
 
-    // TODO make sure this only works for main button
-    if (type != BUTTON_DOWN)
+    if (type != BUTTON_DOWN || button != 0)
         return false;
 
     if (!_box)

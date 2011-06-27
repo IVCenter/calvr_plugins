@@ -50,6 +50,7 @@ class GreenLight : public CVRPlugin, public MenuCallback
 
                 void handleAnimation();
                 void beginAnimation();
+                void addChild(Entity * child);
 
             protected:
                 void createNodeSet(Node * node);
@@ -61,8 +62,9 @@ class GreenLight : public CVRPlugin, public MenuCallback
 
         // Entities
         
-        Entity * _box;       // box/frame
-        vector<Entity *> _door;
+        Entity * _box;          // box/frame
+        vector<Entity *> _door; // doors
+        Entity * _waterPipes;   // water pipes
 
         // Functions
         bool loadBox();

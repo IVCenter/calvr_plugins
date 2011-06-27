@@ -8,6 +8,7 @@ bool GreenLight::loadBox()
 {
     // files to load
     string boxFile = "/home/covise/data/GreenLight/Models/box.WRL";
+    string pipesFile = "/home/covise/data/GreenLight/Models/waterpipes.WRL";
     string doorFLfile = "/home/covise/data/GreenLight/Models/frontleft.WRL";
     string doorFRfile = "/home/covise/data/GreenLight/Models/frontright.WRL";
     string doorFIfile = "/home/covise/data/GreenLight/Models/frontinner.WRL";
@@ -18,6 +19,7 @@ bool GreenLight::loadBox()
 
     // Load the models
     ref_ptr<osg::Node> box = osgDB::readNodeFile(boxFile);
+    ref_ptr<osg::Node> pipes = osgDB::readNodeFile(pipesFile);
     ref_ptr<osg::Node> doorFL = osgDB::readNodeFile(doorFLfile);
     ref_ptr<osg::Node> doorFR = osgDB::readNodeFile(doorFRfile);
     ref_ptr<osg::Node> doorFI = osgDB::readNodeFile(doorFIfile);
@@ -27,12 +29,15 @@ bool GreenLight::loadBox()
     ref_ptr<osg::Node> doorBII = osgDB::readNodeFile(doorBIIfile);
 
     // if any files failed to load, report them and cancel loadBox()
-    if (!box || !doorFL)
+    if (!box || !pipes || !doorFL || !doorFR || !doorFI || !doorBL || !doorBR 
+    || !doorBI || !doorBII)
     {
         cerr << "Error (LoadEntities.cpp): Failed to load files(s):" << endl;
 
         if (!box)
             cerr << "\t" << boxFile << endl;
+        if (!pipes)
+            cerr << "\t" << pipesFile << endl;
         if (!doorFL)
             cerr << "\t" << doorFLfile << endl;
         if (!doorFR)
@@ -54,6 +59,8 @@ bool GreenLight::loadBox()
     // All loaded -- Create Entities & Animation Paths
     _box = new Entity(box);
     //box->setNodeMask(box->getNodeMask() & ~INTERSECT_MASK); // No interaction
+
+    _waterPipes = new Entity(pipes);
 
     Vec3 doorOffset;
     AnimationPath::ControlPoint cp;
@@ -124,7 +131,7 @@ bool GreenLight::loadBox()
     cp.setRotation(Quat(-osg::PI/2,Vec3(0,0,1)));
     _door[5]->path->insert(1,cp);
 
-    // Door 6 - Back Inner Inner
+    // Door 6 - Back Inner Innera
     doorOffset = Vec3(15.505,81.835,0);
     _door.push_back(new Entity(doorBII, Matrix::translate(doorOffset)));
     _door[6]->path = new AnimationPath();
@@ -142,8 +149,10 @@ bool GreenLight::loadBox()
     _door[4]->group.push_back(_door[3]);
 
     // Add it all to the box transform
+    _box->addChild(_waterPipes);
+
     for (int d = 0; d < _door.size(); d++)
-        _box->transform->addChild(_door[d]->transform);
+        _box->addChild(_door[d]);
     
     return true;
 }

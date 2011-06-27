@@ -65,3 +65,14 @@ void GreenLight::Entity::createNodeSet(Node * node)
             createNodeSet(group->getChild(i));
     }
 }
+
+void GreenLight::Entity::addChild(Entity * child)
+{
+    if (!child)
+    {
+        cerr << "Error: NULL child parameter passed to GreenLight::Entity::addChild function." << endl;
+        return;
+    }
+
+    transform->addChild(child->transform);
+}
