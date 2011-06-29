@@ -10,6 +10,7 @@ ADD_LIBRARY(${LIB_NAME}
     LoadEntities.cpp
     Intersection.cpp
     Entity.cpp
+    Hardware.cpp
 )
 
 

@@ -20,6 +20,21 @@ bool GreenLight::handleIntersection(Node * iNode)
             return true;
         }
 
+    for (int r = 0; r < _rack.size(); r++)
+        if (_rack[r]->nodes.find(iNode) != _rack[r]->nodes.end())
+        {
+            _rack[r]->beginAnimation();
+
+            // Handle group animations
+            list<Entity *>::iterator eit;
+            for (eit = _rack[r]->group.begin(); eit != _rack[r]->group.end(); eit++)
+            {
+                (*eit)->beginAnimation();
+            }
+
+            return true;
+        }
+
     // Not ours
     return false;
 }

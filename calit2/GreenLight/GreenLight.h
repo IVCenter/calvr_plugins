@@ -33,7 +33,7 @@ class GreenLight : public CVRPlugin, public MenuCallback
         bool mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix& mat);
 
     protected:
-
+ 
         class Entity
         {
             public:
@@ -44,6 +44,7 @@ class GreenLight : public CVRPlugin, public MenuCallback
                 ref_ptr<MatrixTransform> transform; // transform nodes of this entity
                 ref_ptr<AnimationPath> path; // animation path (null if non-existent)
                 ref_ptr<Node> mainNode;
+// TODO change nodes to type: set< ref_ptr< Node > >
                 set<Node *> nodes; // node-sub-graph loaded in via osgDB readNodeFile
                 AnimationStatus status; // status of animation
                 double time; // time-point within animation path
@@ -58,6 +59,13 @@ class GreenLight : public CVRPlugin, public MenuCallback
                 void createNodeSet(Node * node);
         };
 
+        typedef struct {
+            string name;
+            int rack;
+            int slot;
+            int height;
+         } Hardware;
+
         // Menu Items
         SubMenu * _glMenu;
         MenuCheckbox * _showSceneCheckbox;
@@ -68,6 +76,7 @@ class GreenLight : public CVRPlugin, public MenuCallback
         MenuCheckbox * _displayWaterPipesCheckbox;
         MenuCheckbox * _displayElectricalCheckbox;
         MenuCheckbox * _displayFansCheckbox;
+        MenuCheckbox * _displayRacksCheckbox;
 
         // Entities
         Entity * _box;          // box/frame
@@ -75,10 +84,13 @@ class GreenLight : public CVRPlugin, public MenuCallback
         Entity * _waterPipes;   // water pipes
         Entity * _electrical;   // electrical
         Entity * _fans;         // fans
+        vector<Entity *> _rack; // racks
 
         // Functions
         bool loadScene();
         bool handleIntersection(Node * iNode);
+        void loadHardwareFile();
+        
 };
 
 #endif
