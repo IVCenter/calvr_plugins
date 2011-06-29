@@ -30,8 +30,8 @@ bool Collaborative::init()
 
     MenuSystem::instance()->addMenuItem(_collabMenu);
 
-    _server = ConfigManager::getEntry("Plugin.Collaborative.Server");
-    _port = ConfigManager::getInt("Plugin.Collaborative.Port",11050);
+    _server = ConfigManager::getEntry("Plugin.CollaborativePlugin.Server");
+    _port = ConfigManager::getInt("Plugin.CollaborativePlugin.Port",11050);
 
     return true;
 }
