@@ -18,7 +18,7 @@ CVRPLUGIN(OsgPathRecorder)
 
 OsgPathRecorder::OsgPathRecorder()
 {
-    std::cerr << "Sizeof: " << sizeof(osg::Vec3d::value_type) << std::endl;
+    //std::cerr << "Sizeof: " << sizeof(osg::Vec3d::value_type) << std::endl;
 }
 
 OsgPathRecorder::~OsgPathRecorder()
