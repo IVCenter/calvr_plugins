@@ -4,8 +4,6 @@
 #include <osgDB/ReadFile>
 #include <osgUtil/Optimizer>
 
-#include <osg/ShapeDrawable>
-
 bool GreenLight::loadScene()
 {
     // files to load
