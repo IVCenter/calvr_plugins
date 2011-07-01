@@ -341,6 +341,14 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
 
     if(menuItem == _selectArtifactCB)
     {
+	if(_selectArtifactCB->getValue())
+	{
+	    if(_selectCB->getValue())
+	    {
+		_selectCB->setValue(false);
+		menuCallback(_selectCB);
+	    }
+	}
 	_artifactPanel->setVisible(_selectArtifactCB->getValue());
     }
 
@@ -348,6 +356,11 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
     {
 	if(_selectCB->getValue())
 	{
+	    if(_selectArtifactCB->getValue())
+	    {
+		_selectArtifactCB->setValue(false);
+		menuCallback(_selectArtifactCB);
+	    }
 	    for(int i = 0; i < _artifacts.size(); i++)
 	    {
 		_artifacts[i]->selected = false;
