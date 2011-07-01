@@ -1,126 +1,49 @@
 #include "GreenLight.h"
 
 #include <iostream>
+#include <config/ConfigManager.h>
 #include <osgDB/ReadFile>
 #include <osgUtil/Optimizer>
 
+// local functions
+ref_ptr<Node> loadModelFile(string file);
+
 bool GreenLight::loadScene()
 {
-    // files to load
-    string modelsDir      = "/home/covise/data/GreenLight/Models/";
-    string boxFile        = modelsDir + "box.WRL";
-    string electricalFile = modelsDir + "electrical.WRL";
-    string pipesFile      = modelsDir + "waterpipes.WRL";
-    string doorFLfile     = modelsDir + "frontleft.WRL";
-    string doorFRfile     = modelsDir + "frontright.WRL";
-    string doorFIfile     = modelsDir + "frontinner.WRL";
-    string doorBLfile     = modelsDir + "backleft.WRL";
-    string doorBRfile     = modelsDir + "backright.WRL";
-    string doorBIfile     = modelsDir + "backinner.WRL";
-    string doorBIIfile    = modelsDir + "backinnerinner.WRL";
-    string fansFile       = modelsDir + "fans_reduced.WRL";
-    string rack1File      = modelsDir + "rack1_c.WRL";
-    string rack2File      = modelsDir + "rack2_c.WRL";
-    string rack3File      = modelsDir + "rack3_c.WRL";
-    string rack4File      = modelsDir + "rack4_c.WRL";
-    string rack5File      = modelsDir + "rack5_c.WRL";
-    string rack6File      = modelsDir + "rack6_c.WRL";
-    string rack7File      = modelsDir + "rack7_c.WRL";
-    string rack8File      = modelsDir + "rack8_c.WRL";
+    // load model files
+    string modelsDir = ConfigManager::getEntry("Plugin.GreenLight.ModelsDir");
 
-    // Load the models
-cerr<<"\nLoading "<<boxFile<<"\n";
-    ref_ptr<Node> box = osgDB::readNodeFile(boxFile);
-cerr<<"Loading "<<electricalFile<<"\n";
-    ref_ptr<Node> electrical = osgDB::readNodeFile(electricalFile);
-cerr<<"Loading "<<pipesFile<<"\n";
-    ref_ptr<Node> pipes = osgDB::readNodeFile(pipesFile);
-cerr<<"Loading "<<doorFLfile<<"\n";
-    ref_ptr<Node> doorFL = osgDB::readNodeFile(doorFLfile);
-cerr<<"Loading "<<doorFRfile<<"\n";
-    ref_ptr<Node> doorFR = osgDB::readNodeFile(doorFRfile);
-cerr<<"Loading "<<doorFIfile<<"\n";
-    ref_ptr<Node> doorFI = osgDB::readNodeFile(doorFIfile);
-cerr<<"Loading "<<doorBLfile<<"\n";
-    ref_ptr<Node> doorBL = osgDB::readNodeFile(doorBLfile);
-cerr<<"Loading "<<doorBRfile<<"\n";
-    ref_ptr<Node> doorBR = osgDB::readNodeFile(doorBRfile);
-cerr<<"Loading "<<doorBIfile<<"\n";
-    ref_ptr<Node> doorBI = osgDB::readNodeFile(doorBIfile);
-cerr<<"Loading "<<doorBIIfile<<"\n";
-    ref_ptr<Node> doorBII = osgDB::readNodeFile(doorBIIfile);
-cerr<<"Loading "<<fansFile<<"\n";
-    ref_ptr<Node> fans = osgDB::readNodeFile(fansFile);
-cerr<<"Loading "<<rack1File<<"\n";
-    ref_ptr<Node> rack1 = osgDB::readNodeFile(rack1File);
-cerr<<"Loading "<<rack2File<<"\n";
-    ref_ptr<Node> rack2 = osgDB::readNodeFile(rack2File);
-cerr<<"Loading "<<rack3File<<"\n";
-    ref_ptr<Node> rack3 = osgDB::readNodeFile(rack3File);
-cerr<<"Loading "<<rack4File<<"\n";
-    ref_ptr<Node> rack4 = osgDB::readNodeFile(rack4File);
-cerr<<"Loading "<<rack5File<<"\n";
-    ref_ptr<Node> rack5 = osgDB::readNodeFile(rack5File);
-cerr<<"Loading "<<rack6File<<"\n";
-    ref_ptr<Node> rack6 = osgDB::readNodeFile(rack6File);
-cerr<<"Loading "<<rack7File<<"\n";
-    ref_ptr<Node> rack7 = osgDB::readNodeFile(rack7File);
-cerr<<"Loading "<<rack8File<<"\n";
-    ref_ptr<Node> rack8 = osgDB::readNodeFile(rack8File);
-cerr<<"Done Loading\n";
+    ref_ptr<Node> box = loadModelFile(modelsDir + "box.WRL");
+    ref_ptr<Node> electrical = loadModelFile(modelsDir + "electrical.WRL");
+    ref_ptr<Node> pipes = loadModelFile(modelsDir + "waterpipes.WRL");
+    ref_ptr<Node> doorFL = loadModelFile(modelsDir + "frontleft.WRL");
+    ref_ptr<Node> doorFR = loadModelFile(modelsDir + "frontright.WRL");
+    ref_ptr<Node> doorFI = loadModelFile(modelsDir + "frontinner.WRL");
+    ref_ptr<Node> doorBL = loadModelFile(modelsDir + "backleft.WRL");
+    ref_ptr<Node> doorBR = loadModelFile(modelsDir + "backright.WRL");
+    ref_ptr<Node> doorBI = loadModelFile(modelsDir + "backinner.WRL");
+    ref_ptr<Node> doorBII = loadModelFile(modelsDir + "backinnerinner.WRL");
+    ref_ptr<Node> fans = loadModelFile(modelsDir + "fans_reduced.WRL");
+    ref_ptr<Node> rack1 = loadModelFile(modelsDir + "rack1_c.WRL");
+    ref_ptr<Node> rack2 = loadModelFile(modelsDir + "rack2_c.WRL");
+    ref_ptr<Node> rack3 = loadModelFile(modelsDir + "rack3_c.WRL");
+    ref_ptr<Node> rack4 = loadModelFile(modelsDir + "rack4_c.WRL");
+    ref_ptr<Node> rack5 = loadModelFile(modelsDir + "rack5_c.WRL");
+    ref_ptr<Node> rack6 = loadModelFile(modelsDir + "rack6_c.WRL");
+    ref_ptr<Node> rack7 = loadModelFile(modelsDir + "rack7_c.WRL");
+    ref_ptr<Node> rack8 = loadModelFile(modelsDir + "rack8_c.WRL");
 
-    // if any files failed to load, report them and cancel loadScene()
+
+    // all or nothing -- cancel loadScene if anythign failed
     if (!box || !electrical || !pipes || !doorFL || !doorFR || !doorFI 
-    || !doorBL || !doorBR || !doorBI || !doorBII || /*!fans ||*/ !rack1 || !rack2
+    || !doorBL || !doorBR || !doorBI || !doorBII || !fans || !rack1 || !rack2
     || !rack3 || !rack4 || !rack5 || !rack6 || !rack7 || !rack8)
     {
-        cerr << "Error (LoadEntities.cpp): Failed to load files(s):" << endl;
-
-        if (!box)
-            cerr << "\t" << boxFile << endl;
-        if (!electrical)
-            cerr << "\t" << electricalFile << endl;
-        if (!pipes)
-            cerr << "\t" << pipesFile << endl;
-        if (!doorFL)
-            cerr << "\t" << doorFLfile << endl;
-        if (!doorFR)
-            cerr << "\t" << doorFRfile << endl;
-        if (!doorFI)
-            cerr << "\t" << doorFIfile << endl;
-        if (!doorBL)
-            cerr << "\t" << doorBLfile << endl;
-        if (!doorBR)
-            cerr << "\t" << doorBRfile << endl;
-        if (!doorBI)
-            cerr << "\t" << doorBIfile << endl;
-        if (!doorBII)
-            cerr << "\t" << doorBIIfile << endl;
-        if (!fans)
-            cerr << "\t" << fansFile << endl;
-        if (!rack1)
-            cerr << "\t" << rack1File << endl;
-        if (!rack2)
-            cerr << "\t" << rack2File << endl;
-        if (!rack3)
-            cerr << "\t" << rack3File << endl;
-        if (!rack4)
-            cerr << "\t" << rack4File << endl;
-        if (!rack5)
-            cerr << "\t" << rack5File << endl;
-        if (!rack6)
-            cerr << "\t" << rack6File << endl;
-        if (!rack7)
-            cerr << "\t" << rack7File << endl;
-        if (!rack8)
-            cerr << "\t" << rack8File << endl;
-
         return false;
     }
 
     // All loaded -- Create Entities & Animation Paths
     _box = new Entity(box, Matrix::scale(25.237011,25.237011,25.237011));
-
     _electrical = new Entity(electrical);
     _waterPipes = new Entity(pipes);
     _fans = new Entity(fans);
@@ -207,7 +130,7 @@ cerr<<"Done Loading\n";
 
     // Racks
     Matrix rackMat;
-    rackMat.setTrans(-26.962,-85.953,0);
+    rackMat.setTrans(-26.962,-77.31,0);
     _rack.push_back(new Entity(rack1,rackMat));
     rackMat.setRotate(Quat(PI,Vec3(0,0,1)));
     rackMat.setTrans(-28.28,-33.44,0);
@@ -254,12 +177,12 @@ cerr<<"Done Loading\n";
     for (int r = 0; r < _rack.size(); r++)
         _box->addChild(_rack[r]);
 
+    // populate racks
     loadHardwareFile();
     
-cerr<<"Optimizing.\n";
+    cerr<<"Optimizing.\n";
     osgUtil::Optimizer o;
     o.optimize(_box->transform.get());
-cerr<<"Done\n";
 
     // Menu Setup
     _displayComponentsMenu = new SubMenu("Display Components", "Display Components");
@@ -291,4 +214,17 @@ cerr<<"Done\n";
     _displayComponentsMenu->addItem(_displayRacksCheckbox);
 
     return true;
+}
+
+ref_ptr<Node> loadModelFile(string file)
+{
+    cerr << "Loading " << file << "... ";
+    ref_ptr<Node> model = osgDB::readNodeFile(file);
+
+    if (!model)
+        cerr << "FAILED." << endl;
+    else
+        cerr << "done." << endl;
+
+    return model.get();
 }

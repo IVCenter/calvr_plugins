@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <config/ConfigManager.h>
 #include <osg/ShapeDrawable>
 #include <osg/Texture2D>
 #include <osgDB/ReadFile>
@@ -14,12 +15,13 @@ ref_ptr<Geode> makePart(float height, string textureFile = "");
 void GreenLight::loadHardwareFile()
 {
     ifstream file;
-    file.open("/home/covise/data/blackbox/json-assets.php?facility=GreenLight");
+    string hardwareFile = ConfigManager::getEntry("Plugin.GreenLight.Hardware");
+    file.open(hardwareFile.c_str());
     string str;
 
     if (!file)
     {
-        cerr << "Error: readHardwareFile() failed to read the file." << endl;
+        cerr << "Error: readHardwareFile() failed to open file." << endl;
         file.close();
         return;
     }
@@ -64,59 +66,59 @@ void GreenLight::loadHardwareFile()
     }
 // TODO validation checks (make sure proper type [string/integer] for token before assignment & state should be 0 after we exit the for loop)
 
-    string mapsDir       = "/home/covise/data/GreenLight/maps/";
-    ref_ptr<Geode> convey   = makePart(2,mapsDir+"unwrap_ConveyHC1.png");
-    ref_ptr<Geode> nvidia   = makePart(4,mapsDir+"unwrap_gpuKOInVidia.png");
-    ref_ptr<Geode> micro    = makePart(1,mapsDir+"unwrap_pcIntelDualXeonQC5430n5440.png");
-    ref_ptr<Geode> head     = makePart(1,mapsDir+"unwrap_pcIntelDualXeonQC5430n5440.png");
-    ref_ptr<Geode> switcher = makePart(1,mapsDir+"switch_unwrap.png");
-    ref_ptr<Geode> xeon     = makePart(1,mapsDir+"unwrap_pcIntelDualXeonQC5430n5440.png"); // NOT USED ?!?!?!?!
-    ref_ptr<Geode> thumper  = makePart(4,mapsDir+"unwrap_thumperSunFireX4540.png");
-    ref_ptr<Geode> nehalem  = makePart(2,mapsDir+"unwrap_IntelSR2600URLXNehalem.png");
+    /*
+     * 1) Read in component which we wish to texture
+     * 2) Create model (geode)
+     * 3) Repeat 1 & 2 for all components in config file
+     * 4) Put components (from hardware file) in to scene via created models
+     * +)Create default models (one per height, as needed) for untextured models
+     * 5) Add component to appropriate rack
+     */
 
+    map< string, ref_ptr<Geode> > nameToGeode;
     map< int, ref_ptr<Geode> > defaultModels;
 
+    vector<string> components;
+    string compBase = "Plugin.GreenLight.Components";
+    string texDir = ConfigManager::getEntry("textureDir","Plugin.GreenLight.Components","");
+    ConfigManager::getChildren(compBase, components);
+
+    for(int c = 0; c < components.size(); c++)
+    {
+        string startname = ConfigManager::getEntry("startname", compBase + "." + components[c], "");
+        int height = ConfigManager::getInt("height", compBase + "." + components[c]);
+        string texture = ConfigManager::getEntry("texture", compBase + "." + components[c], "");
+
+        // map name to model -- at worst, we use an invalid texture and get an untextured box
+        nameToGeode[startname] = makePart(height, texDir + texture);
+    }
+
+    map< string, ref_ptr<Geode> >::iterator mit;
     list<Hardware *>::iterator lit;
     for (lit = hardware.begin(); lit != hardware.end(); lit++)
     {
         Entity * hwEntity;
-        /* Check hardware name */
-        if(((*lit)->name.substr(0,7)).compare("compute") == 0)
+
+        // Does hardware name start with any textured model names?
+        for (mit = nameToGeode.begin(); mit != nameToGeode.end(); mit++)
         {
-            hwEntity = new Entity(micro);
+            if (((*lit)->name.substr(0,mit->first.size())).compare(mit->first) == 0)
+            {
+                hwEntity = new Entity(mit->second.get());
+                break;
+            }
         }
-        else if(((*lit)->name.substr(0,3)).compare("gpu") == 0)
+
+        // No textured model available -- use a default
+        if (mit == nameToGeode.end())
         {
-            hwEntity = new Entity(nvidia);
-        }
-        else if(((*lit)->name.substr(0,9)).compare("bbextreme") == 0)
-        {
-            hwEntity = new Entity(switcher);
-        }
-        else if(((*lit)->name.substr(0,8)).compare("headnode") == 0)
-        {
-            hwEntity = new Entity(head);
-        }
-        else if(((*lit)->name.substr(0,7)).compare("thumper") == 0)
-        {
-            hwEntity = new Entity(thumper);
-        }
-        else if(((*lit)->name.substr(0,6)).compare("convey") == 0)
-        {
-            hwEntity = new Entity(convey);
-        }
-        else if(((*lit)->name.substr(4,7)).compare("nehalem") == 0)
-        {
-            hwEntity = new Entity(nehalem);
-        }
-        else
-        {
-            cout<<"Model does not exist: "<< (*lit)->name <<endl;
+            cout<<"Model does not exist for component: "<< (*lit)->name <<endl;
 
             int height = (*lit)->height;
             ref_ptr<Geode> geode;
             map< int, ref_ptr<Geode> >::iterator mit;
 
+            // re-use model of the same height if it exists
             if ((mit = defaultModels.find(height)) != defaultModels.end())
                 geode = mit->second;
             else
@@ -128,11 +130,13 @@ void GreenLight::loadHardwareFile()
             hwEntity = new Entity(geode);
         }
         
+        // position component in the correct rack slot
         hwEntity->transform->setMatrix(Matrix::translate(0,0,18+getZCoord((*lit)->slot)));
-        
 
+        // finall add entity to the rack
         _rack[(*lit)->rack-1]->addChild(hwEntity);
 
+        // clean up our mess
         delete (*lit);
     }
 }
@@ -149,7 +153,7 @@ float getZCoord(int slot)
 ref_ptr<Geode> makePart(float height, string textureFile)
 {
     const float xRad = 10.7, yRad = 14.951, zRad_2 = 1.75;
-    const float Z_BUFFER_MAGIC = .3;
+    const float Z_BUFFER_MAGIC = .1;
 
     ref_ptr<Geode> box = new Geode;
 
@@ -182,18 +186,6 @@ ref_ptr<Geode> makePart(float height, string textureFile)
     ref_ptr<Vec4Array> colors = new Vec4Array();
     colors->push_back(Vec4(.7,.7,.7,.7));
 
-    // Textures should be created so that the top half is the front face,
-    // and the bottom is the back.
-    ref_ptr<Vec2Array> texcoords = new Vec2Array();
-    texcoords->push_back(0,.5);
-    texcoords->push_back(1,.5);
-    texcoords->push_back(1,1);
-    texcoords->push_back(0,1);
-    texcoords->push_back(0,0);
-    texcoords->push_back(1,0);
-    texcoords->push_back(1,.5);
-    texcoords->push_back(1,.5);
-
     ref_ptr<Geometry> frontFace = new Geometry();
     ref_ptr<Geometry> backFace = new Geometry();
     ref_ptr<Geometry> restFace = new Geometry();
@@ -215,6 +207,19 @@ ref_ptr<Geode> makePart(float height, string textureFile)
 
     if (textureFile != "")
     {
+
+        // Textures should be created so that the top half is the front face,
+        // and the bottom is the back.
+        ref_ptr<Vec2Array> texcoords = new Vec2Array();
+        texcoords->push_back(Vec2(0,.5));
+        texcoords->push_back(Vec2(1,.5));
+        texcoords->push_back(Vec2(1,1));
+        texcoords->push_back(Vec2(0,1));
+        texcoords->push_back(Vec2(0,0));
+        texcoords->push_back(Vec2(1,0));
+        texcoords->push_back(Vec2(1,.5));
+        texcoords->push_back(Vec2(1,.5));
+
         Texture2D * texture = new Texture2D();
         Image * image = osgDB::readImageFile(textureFile);
 

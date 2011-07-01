@@ -1,5 +1,6 @@
 // John Mangan (Summer 2011)
-// Redone BlackBox plugin from Covise
+// Plugin for CalVR -- GreenLight Project
+// Many models taked from prior Covise Plugin (BlackBoxInfo)
 
 #include "GreenLight.h"
 
@@ -34,13 +35,13 @@ GreenLight::~GreenLight()
     vector<Entity *>::iterator vit;
     for (vit = _door.begin(); vit != _door.end(); vit++)
     {
-        delete *vit;
+        if (*vit) delete *vit;
     }
     _door.clear();
 
     for (vit = _rack.begin(); vit != _rack.end(); vit++)
     {
-        delete *vit;
+        if (*vit) delete *vit;
     }
     _rack.clear();
 
@@ -66,6 +67,7 @@ bool GreenLight::init()
     _displayWaterPipesCheckbox = NULL;
     _displayElectricalCheckbox = NULL;
     _displayFansCheckbox = NULL;
+    _displayRacksCheckbox = NULL;
     /*** End Menu Setup ***/
 
     /*** Entity Defaults ***/
