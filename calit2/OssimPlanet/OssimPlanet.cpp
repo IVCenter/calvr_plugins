@@ -369,7 +369,7 @@ void OssimPlanet::preFrame()
 	    latLonHeight[2] = 0.0;
 
 	    // adjust the height to the ellipsoid
-	    planet->model()->mslToEllipsoidal(latLonHeight);
+	    //planet->model()->mslToEllipsoidal(latLonHeight);
 
 	    // translate point back to cartesian (in planet space)
 	    osg::Vec3d pointObject;
