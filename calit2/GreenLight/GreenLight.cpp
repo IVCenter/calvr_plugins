@@ -77,6 +77,8 @@ bool GreenLight::init()
     _fans = NULL;
     /*** End Entity Defaults ***/
 
+    downloadHardwareFile();
+
     return true;
 }
 

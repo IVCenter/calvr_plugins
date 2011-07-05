@@ -178,7 +178,7 @@ bool GreenLight::loadScene()
         _box->addChild(_rack[r]);
 
     // populate racks
-    loadHardwareFile();
+    parseHardwareFile();
     
     cerr<<"Optimizing.\n";
     osgUtil::Optimizer o;

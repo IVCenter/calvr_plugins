@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <config/ConfigManager.h>
+#include <kernel/ComController.h>
 #include <osg/ShapeDrawable>
 #include <osg/Texture2D>
 #include <osgDB/ReadFile>
@@ -12,30 +13,11 @@ float getZCoord(int slot);
 ref_ptr<Geode> makePart(float height, string textureFile = "");
 
 // TODO clean up
-void GreenLight::loadHardwareFile()
+void GreenLight::parseHardwareFile()
 {
-    ifstream file;
-    string hardwareFile = ConfigManager::getEntry("Plugin.GreenLight.Hardware");
-    file.open(hardwareFile.c_str());
-    string str;
-
-    if (!file)
-    {
-        cerr << "Error: readHardwareFile() failed to open file." << endl;
-        file.close();
-        return;
-    }
-
-    /*Read in file */
-    while(!file.eof())
-    {
-       str += file.get();
-    }
-    file.close(); 
-
     // Parse str
-    char  a[str.size()];
-    memcpy(a, str.c_str(), str.size()); 
+    char * a = new char[_hardwareContents.size()];
+    memcpy(a, _hardwareContents.c_str(), _hardwareContents.size()); 
 
     char delim[] = "[\",]";
     int state = 0;
@@ -64,6 +46,7 @@ void GreenLight::loadHardwareFile()
             state = 0;
         }
     }
+    delete[] a;
 // TODO validation checks (make sure proper type [string/integer] for token before assignment & state should be 0 after we exit the for loop)
 
     /*
@@ -140,6 +123,64 @@ void GreenLight::loadHardwareFile()
         delete (*lit);
     }
 }
+
+// Fetch data from server file at url
+void GreenLight::downloadHardwareFile()
+{
+    if (ComController::instance()->isMaster())
+    {
+        string downloadUrl = ConfigManager::getEntry("download", "Plugin.GreenLight.Hardware", "");
+        string fileName = ConfigManager::getEntry("local", "Plugin.GreenLight.Hardware", "");
+
+        // Execute Linux command
+        system ( ("curl --retry 1 --connect-timeout 4 --output " + fileName + " \"" + downloadUrl + "\"").c_str() );
+
+        ifstream file;
+        file.open(fileName.c_str());
+        int fileSize = 0;
+
+        if (!file)
+        {
+            cerr << "Error: readHardwareFile() failed to open file." << endl;
+        }
+        else
+        {
+            /*Read in file */
+            _hardwareContents = ""; // Just incase
+            while(!file.eof())
+            {
+                _hardwareContents += file.get();
+            }
+            fileSize = _hardwareContents.length();
+        }
+        file.close(); 
+
+        ComController::instance()->sendSlaves(&fileSize, sizeof(fileSize));
+
+        if (fileSize > 0)
+        {
+            char * cArray = new char[fileSize];
+            memcpy(cArray, _hardwareContents.c_str(), fileSize); 
+            ComController::instance()->sendSlaves(cArray, sizeof(char)*fileSize);
+            delete[] cArray;
+        }
+    }
+    else //slave nodes
+    {
+        int fileSize;
+        ComController::instance()->readMaster(&fileSize, sizeof(fileSize));
+
+        if (fileSize > 0)
+        {
+            char * cArray = new char[fileSize];
+            ComController::instance()->readMaster(cArray, sizeof(char)*fileSize);
+            _hardwareContents = cArray;
+            delete[] cArray;
+        }
+    }
+}
+
+
 
 float getZCoord(int slot)
 {

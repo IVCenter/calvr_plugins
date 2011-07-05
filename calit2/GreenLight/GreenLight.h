@@ -86,11 +86,14 @@ class GreenLight : public CVRPlugin, public MenuCallback
         Entity * _fans;         // fans
         vector<Entity *> _rack; // racks
 
+        // Hardware file contents -- read via master node
+        string _hardwareContents;
+
         // Functions
         bool loadScene();
         bool handleIntersection(Node * iNode);
-        void loadHardwareFile();
-        
+        void parseHardwareFile();
+        void downloadHardwareFile();
 };
 
 #endif
