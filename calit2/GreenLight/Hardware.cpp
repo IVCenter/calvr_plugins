@@ -272,8 +272,6 @@ ref_ptr<Geode> makePart(float height, string textureFile)
 
             backFace->setTexCoordArray(0,texcoords.get());
             backFace->getOrCreateStateSet()->setTextureAttributeAndModes(0,texture,StateAttribute::ON);
-
-            box->getOrCreateStateSet()->setMode(GL_LIGHTING, StateAttribute::OFF);
         }
         else
             cerr << "Error: Failed to read texture image file \"" << textureFile << "\"\n";
@@ -282,6 +280,8 @@ ref_ptr<Geode> makePart(float height, string textureFile)
     box->addDrawable(frontFace.get());
     box->addDrawable(backFace.get());
     box->addDrawable(restFace.get());
+
+    box->getOrCreateStateSet()->setMode(GL_LIGHTING, StateAttribute::OFF);
 
     return box.get();
 }

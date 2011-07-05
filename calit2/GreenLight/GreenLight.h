@@ -12,6 +12,8 @@
 
 #include <osg/MatrixTransform>
 
+#include "TransparencyVisitor.h"
+
 using namespace cvr;
 using namespace std;
 using namespace osg;
@@ -71,6 +73,7 @@ class GreenLight : public CVRPlugin, public MenuCallback
         MenuCheckbox * _showSceneCheckbox;
 
         SubMenu * _displayComponentsMenu;
+        MenuCheckbox * _componentsViewCheckbox;
         MenuCheckbox * _displayFrameCheckbox;
         MenuCheckbox * _displayDoorsCheckbox;
         MenuCheckbox * _displayWaterPipesCheckbox;
@@ -88,6 +91,9 @@ class GreenLight : public CVRPlugin, public MenuCallback
 
         // Hardware file contents -- read via master node
         string _hardwareContents;
+
+        // Visitors
+        TransparencyVisitor * _transparencyVisitor;
 
         // Functions
         bool loadScene();

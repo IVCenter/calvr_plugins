@@ -20,6 +20,7 @@ GreenLight::~GreenLight()
     if (_glMenu) delete _glMenu;
     if (_showSceneCheckbox) delete _showSceneCheckbox;
     if (_displayComponentsMenu) delete _displayComponentsMenu;
+    if (_componentsViewCheckbox) delete _componentsViewCheckbox;
     if (_displayFrameCheckbox) delete _displayFrameCheckbox;
     if (_displayDoorsCheckbox) delete _displayDoorsCheckbox;
     if (_displayWaterPipesCheckbox) delete _displayWaterPipesCheckbox;
@@ -62,6 +63,7 @@ bool GreenLight::init()
     _glMenu->addItem(_showSceneCheckbox);
 
     _displayComponentsMenu = NULL;
+    _componentsViewCheckbox = NULL;
     _displayFrameCheckbox = NULL;
     _displayDoorsCheckbox = NULL;
     _displayWaterPipesCheckbox = NULL;
@@ -78,6 +80,10 @@ bool GreenLight::init()
     /*** End Entity Defaults ***/
 
     downloadHardwareFile();
+
+    _transparencyVisitor = new TransparencyVisitor();
+    _transparencyVisitor->setTraversalMask(0xffffffff);    // Operate on all nodes
+    _transparencyVisitor->setNodeMaskOverride(0xffffffff); // regardless of node mask
 
     return true;
 }
@@ -104,6 +110,23 @@ void GreenLight::menuCallback(MenuItem * item)
             PluginHelper::getObjectsRoot()->addChild(_box->transform);
         else
             PluginHelper::getObjectsRoot()->removeChild(_box->transform);
+    }
+    else if (item == _componentsViewCheckbox)
+    {
+        if (_componentsViewCheckbox->getValue())
+            _transparencyVisitor->setMode(TransparencyVisitor::ALL_TRANSPARENT);
+        else
+            _transparencyVisitor->setMode(TransparencyVisitor::ALL_OPAQUE);
+
+        _box->mainNode->traverse(*_transparencyVisitor);
+        _waterPipes->mainNode->traverse(*_transparencyVisitor);
+        _electrical->mainNode->traverse(*_transparencyVisitor);
+        _fans->mainNode->traverse(*_transparencyVisitor);
+        for (int d = 0; d < _door.size(); d++)
+            _door[d]->mainNode->traverse(*_transparencyVisitor);
+        for (int r = 0; r < _rack.size(); r++)
+            _rack[r]->mainNode->traverse(*_transparencyVisitor);
+
     }
     else if (item == _displayFrameCheckbox)
     {

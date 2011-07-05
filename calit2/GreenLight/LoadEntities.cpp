@@ -189,6 +189,11 @@ bool GreenLight::loadScene()
     _displayComponentsMenu->setCallback(this);
     _glMenu->addItem(_displayComponentsMenu);
 
+    _componentsViewCheckbox = new MenuCheckbox("Components View",
+        _transparencyVisitor->getMode() == TransparencyVisitor::ALL_TRANSPARENT);
+    _componentsViewCheckbox->setCallback(this);
+    _displayComponentsMenu->addItem(_componentsViewCheckbox);
+
     _displayFrameCheckbox = new MenuCheckbox("Box Frame",true);
     _displayFrameCheckbox->setCallback(this);
     _displayComponentsMenu->addItem(_displayFrameCheckbox);
