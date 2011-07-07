@@ -87,6 +87,8 @@ void GreenLight::parseHardwareFile()
 
     std::map< std::string, osg::ref_ptr<osg::Geode> >::iterator mit;
     std::map< std::string, std::pair<int,int> >::iterator wit;
+    osg::ref_ptr<osg::Geode> geode;
+    osg::CopyOp cOp = osg::CopyOp(osg::CopyOp::DEEP_COPY_ALL &  ~(osg::CopyOp::DEEP_COPY_TEXTURES & osg::CopyOp::DEEP_COPY_IMAGES));
     std::list<Hardware *>::iterator lit;
     for (lit = hardware.begin(); lit != hardware.end(); lit++)
     {
@@ -97,8 +99,7 @@ void GreenLight::parseHardwareFile()
         {
             if (((*lit)->name.substr(0,mit->first.size())).compare(mit->first) == 0)
             {
-                hwEntity = new Entity(mit->second.get());
-                hwEntity->setDefaultMaterial();
+                geode = new osg::Geode(*mit->second,cOp);
                 break;
             }
         }
@@ -109,21 +110,21 @@ void GreenLight::parseHardwareFile()
             std::cerr << "Warning: Model does not exist for component: " << (*lit)->name << std::endl;
 
             int height = (*lit)->height;
-            osg::ref_ptr<osg::Geode> geode;
             std::map< int, osg::ref_ptr<osg::Geode> >::iterator mit;
 
             // re-use model of the same height if it exists
             if ((mit = defaultModels.find(height)) != defaultModels.end())
-                geode = mit->second;
+                geode = new osg::Geode(*mit->second, cOp);
             else
             {
                 geode = makePart(height);
                 defaultModels[height] = geode.get();
             }
 
-            hwEntity = new Entity(geode);
-            hwEntity->setDefaultMaterial();
         }
+
+        hwEntity = new Entity(geode);
+        hwEntity->setDefaultMaterial();
 
         // if min/max wattages were given, set them up
         for (wit = nameToWattage.begin(); wit != nameToWattage.end(); wit++)

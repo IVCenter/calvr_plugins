@@ -20,6 +20,7 @@ GreenLight::~GreenLight()
 {
     if (_glMenu) delete _glMenu;
     if (_showSceneCheckbox) delete _showSceneCheckbox;
+    if (_selectHardwareCheckbox) delete _selectHardwareCheckbox;
     if (_displayComponentsMenu) delete _displayComponentsMenu;
     if (_componentsViewCheckbox) delete _componentsViewCheckbox;
     if (_displayFrameCheckbox) delete _displayFrameCheckbox;
@@ -65,6 +66,8 @@ bool GreenLight::init()
     _showSceneCheckbox = new cvr::MenuCheckbox("Load Scene",false);
     _showSceneCheckbox->setCallback(this);
     _glMenu->addItem(_showSceneCheckbox);
+
+    _selectHardwareCheckbox = NULL;
 
     _displayComponentsMenu = NULL;
     _componentsViewCheckbox = NULL;
@@ -178,6 +181,18 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
     else if (item == _displayPowerCheckbox)
     {
         setPowerColors(_displayPowerCheckbox->getValue());
+    }
+    else if (item == _selectHardwareCheckbox)
+    {
+        // Toggle the non-selected hardware transparencies
+        Entity * ent;
+        std::map<std::string,Entity*>::iterator mit;
+        for (mit = _components.begin(); mit != _components.end(); mit++)
+        {
+            ent = mit->second;
+            if (_selectedEntities.find(ent) == _selectedEntities.end())
+                ent->setTransparency(_selectHardwareCheckbox->getValue(),true);
+        }
     }
 }
 

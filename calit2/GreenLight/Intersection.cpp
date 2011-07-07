@@ -35,6 +35,36 @@ bool GreenLight::handleIntersection(osg::Node * iNode)
             return true;
         }
 
+    if (_selectHardwareCheckbox->getValue())
+    {
+        Entity * ent;
+        std::map<std::string,Entity*>::iterator mit;
+        for (mit = _components.begin(); mit != _components.end(); mit++)
+        {
+            ent = mit->second;
+            if (ent->nodes.find(iNode) != ent->nodes.end())
+            {
+                if (_selectedEntities.find(ent) != _selectedEntities.end())
+                    deselectHardware(ent);
+                else
+                    selectHardware(ent);
+                return true;
+            }
+        }
+    }
+
     // Not ours
     return false;
+}
+
+void GreenLight::selectHardware(Entity * ent)
+{
+    _selectedEntities.insert(ent);
+    ent->setTransparency(false,true);
+}
+
+void GreenLight::deselectHardware(Entity * ent)
+{
+    _selectedEntities.erase(ent);
+    ent->setTransparency(true,true);
 }

@@ -181,7 +181,14 @@ bool GreenLight::loadScene()
     
     std::cerr<<"Optimizing.\n";
     osgUtil::Optimizer o;
-    o.optimize(_box->transform.get());
+    o.optimize(_box->mainNode.get());
+    o.optimize(_electrical->mainNode.get());
+    o.optimize(_waterPipes->mainNode.get());
+    o.optimize(_fans->mainNode.get());
+    for (int d = 0; d < _door.size(); d++)
+        o.optimize(_door[d]->mainNode.get());
+    for (int r = 0; r < _rack.size(); r++)
+        o.optimize(_rack[r]->mainNode.get());
 
     // Menu Setup
     _displayComponentsMenu = new cvr::SubMenu("Display Components", "Display Components");
@@ -223,6 +230,10 @@ bool GreenLight::loadScene()
     _loadPowerButton = new cvr::MenuButton("Load Recent Data");
     _loadPowerButton->setCallback(this);
     _powerMenu->addItem(_loadPowerButton);
+
+    _selectHardwareCheckbox = new cvr::MenuCheckbox("Select Hardware",false);
+    _selectHardwareCheckbox->setCallback(this);
+    _glMenu->addItem(_selectHardwareCheckbox);
 
     return true;
 }

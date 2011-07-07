@@ -72,12 +72,18 @@ void GreenLight::Entity::createNodeSet(osg::Node * node)
 }
 
 
-void GreenLight::Entity::setTransparency(bool transparent)
+void GreenLight::Entity::setTransparency(bool transparent, bool onTransform)
 {
 	float level = transparent ? 0.1f : 1.0f;
 
-        osg::StateSet * stateset = mainNode->getOrCreateStateSet();
-        osg::Material * mm = dynamic_cast<osg::Material*>(stateset->getAttribute
+        osg::ref_ptr<osg::StateSet> stateset;
+        
+        if (onTransform)
+            stateset = transform->getStateSet();
+        else
+            stateset = mainNode->getOrCreateStateSet();
+
+        osg::ref_ptr<osg::Material> mm = dynamic_cast<osg::Material*>(stateset->getAttribute
             (osg::StateAttribute::MATERIAL));
 
         if (!mm)
@@ -91,7 +97,10 @@ void GreenLight::Entity::setTransparency(bool transparent)
         stateset->setAttributeAndModes( mm, osg::StateAttribute::OVERRIDE |
             osg::StateAttribute::ON);
 
-        mainNode->setStateSet(stateset);
+        if (onTransform)
+            transform->setStateSet(stateset);
+        else
+            mainNode->setStateSet(stateset);
 }
 
 void GreenLight::Entity::setColor(const osg::Vec3 color)
@@ -139,8 +148,6 @@ void GreenLight::Entity::setDefaultMaterial()
     osg::ref_ptr<osg::StateSet> stateset = transform->getOrCreateStateSet();
     osg::ref_ptr<osg::Material> mm = dynamic_cast<osg::Material*>(stateset->getAttribute
         (osg::StateAttribute::MATERIAL));
-
-    stateset->setDataVariance(osg::Object::DYNAMIC);
 
     if (!mm)
         mm = new osg::Material;

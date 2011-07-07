@@ -57,7 +57,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 void addChild(Entity * child);
                 void showVisual(bool show);
                 void setColor(const osg::Vec3 color);
-                void setTransparency(bool transparent);
+                void setTransparency(bool transparent, bool onTransform = false);
                 void setDefaultMaterial();
 
             protected:
@@ -74,6 +74,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         // Menu Items
         cvr::SubMenu * _glMenu;
         cvr::MenuCheckbox * _showSceneCheckbox;
+        cvr::MenuCheckbox * _selectHardwareCheckbox;
 
         cvr::SubMenu * _displayComponentsMenu;
         cvr::MenuCheckbox * _componentsViewCheckbox;
@@ -97,6 +98,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         std::vector<Entity *> _rack; // racks
         std::map<std::string,Entity *> _components; // mapping of component names to component entities
 
+        std::set<Entity *> _selectedEntities;
+
         // File contents -- read/write via master node, copy to slave nodes via messages
         std::string _hardwareContents;
         std::string _powerContents;
@@ -106,6 +109,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         bool handleIntersection(osg::Node * iNode);
         void parseHardwareFile();
         void setPowerColors(bool displayPower);
+        void selectHardware(Entity * ent);
+        void deselectHardware(Entity * ent);
 };
 
 #endif
