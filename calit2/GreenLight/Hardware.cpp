@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <utility>
 #include <kernel/ComController.h>
 #include <osg/ShapeDrawable>
 #include <osg/Texture2D>
@@ -58,6 +59,7 @@ void GreenLight::parseHardwareFile()
      */
 
     map< string, ref_ptr<Geode> > nameToGeode;
+    map< string, pair<int,int> > nameToWattage;
     map< int, ref_ptr<Geode> > defaultModels;
 
     vector<string> components;
@@ -68,14 +70,24 @@ void GreenLight::parseHardwareFile()
     for(int c = 0; c < components.size(); c++)
     {
         string startname = ConfigManager::getEntry("startname", compBase + "." + components[c], "");
-        int height = ConfigManager::getInt("height", compBase + "." + components[c]);
+        int height = ConfigManager::getInt("height", compBase + "." + components[c],1);
         string texture = ConfigManager::getEntry("texture", compBase + "." + components[c], "");
 
-        // map name to model -- at worst, we use an invalid texture and get an untextured box
-        nameToGeode[startname] = makePart(height, texDir + texture);
+        // map name to model, if valid
+        if (startname != "" && texture != "")
+            nameToGeode[startname] = makePart(height, texDir + texture);
+
+        int minWatt = ConfigManager::getInt("minWattage", compBase + "." + components[c], 0);
+        int maxWatt = ConfigManager::getInt("maxWattage", compBase + "." + components[c], 0);
+
+        if (minWatt > 0 && maxWatt > 0)
+        {
+            nameToWattage[startname] = make_pair(minWatt,maxWatt);
+        }
     }
 
     map< string, ref_ptr<Geode> >::iterator mit;
+    map< string, pair<int,int> >::iterator wit;
     list<Hardware *>::iterator lit;
     for (lit = hardware.begin(); lit != hardware.end(); lit++)
     {
@@ -113,7 +125,20 @@ void GreenLight::parseHardwareFile()
             hwEntity = new Entity(geode);
             hwEntity->setDefaultMaterial();
         }
-        
+
+        // if min/max wattages were given, set them up
+        for (wit = nameToWattage.begin(); wit != nameToWattage.end(); wit++)
+        {
+            if (((*lit)->name.substr(0,wit->first.size())).compare(wit->first) == 0)
+            {
+                hwEntity->minWattage = wit->second.first;
+                hwEntity->maxWattage = wit->second.second;
+                break;
+            }
+        }
+        if (wit == nameToWattage.end())
+            cerr << "Warning: " << (*lit)->name << " does not have a min/max wattage set in the config file." << endl;
+
         // position component in the correct rack slot
         hwEntity->transform->setMatrix(Matrix::translate(0,0,18+getZCoord((*lit)->slot)));
 

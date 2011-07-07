@@ -12,6 +12,8 @@ GreenLight::Entity::Entity(Node * node, Matrix mat)
     createNodeSet(mainNode);
     status = START;
     time = 0;
+    minWattage = 0;
+    maxWattage = 0;
 }
 
 void GreenLight::Entity::handleAnimation()

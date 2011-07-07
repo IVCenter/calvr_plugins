@@ -51,6 +51,8 @@ class GreenLight : public CVRPlugin, public MenuCallback
                 AnimationStatus status; // status of animation
                 double time; // time-point within animation path
                 list<Entity *> group; // other entities that should animate together
+                int minWattage; // used for coloring range
+                int maxWattage; // used for coloring range
 
                 void handleAnimation();
                 void beginAnimation();

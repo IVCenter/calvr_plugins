@@ -9,8 +9,6 @@ Vec3 wattColor(float watt, int minWatt, int maxWatt);
 
 void GreenLight::setPowerColors(bool displayPower)
 {
-    int maxWattage = 0;
-    int minWattage = 0;
     std::map< string, int> entityWattsMap;
 
     if (!displayPower)
@@ -67,21 +65,16 @@ void GreenLight::setPowerColors(bool displayPower)
 
             int wattage = intFromString(value);
             entityWattsMap[name] = wattage;
-
-            if (wattage > maxWattage)
-                maxWattage = wattage;
-
-            if (wattage > 0 && wattage < minWattage)
-                minWattage = wattage;
-
         } while ((sensor = mxmlWalkNext(sensor,measurements,MXML_NO_DESCEND)) != NULL);
     }
 
     map<string,Entity *>::iterator mit;
+    Entity * ent;
     for (mit = _components.begin(); mit != _components.end(); mit++)
     {
         float wattage = entityWattsMap[mit->first];
-        mit->second->setColor(wattColor(wattage,minWattage,maxWattage));
+        ent = mit->second;
+        ent->setColor( wattColor(wattage, ent->minWattage, ent->maxWattage));
     }
 }
 
@@ -102,25 +95,36 @@ Vec3 wattColor(float watt, int minWatt, int maxWatt)
     if (watt == 0)
         return Vec3(.2,.2,.2);
 
+    if (minWatt == 0 || maxWatt == 0 || maxWatt < minWatt)
+        return Vec3(1,1,1);
+
+    if (watt < minWatt)
+        return Vec3(.9,1,1);
+
+    if (watt > maxWatt)
+        return Vec3(1,0,0);
+
+    // Watt-Weight:  R,  G,  B
+    // minWatt (0):  0,  0,  1
+    // low   (.33):  0,  1,  0
+    // high  (.67):  1,  1,  0
+    // maxWatt (1):  1, .4,  0
+
     float interpolate = (watt-minWatt)/(maxWatt-minWatt);
 
-    float red = (interpolate-.5)/.25;
-    if (red < 0) red = 0;
+    float red = (interpolate-.33)/.34;
     if (red > 1) red = 1;
 
     float green;
-    if (interpolate < .25)
-        green = 1 - interpolate/.25;
-    else if (interpolate < .5)
-        green = (interpolate-.25)/.25;
-    else if (interpolate < .75)
+    if (interpolate < .33)
+        green = interpolate/.33;
+    else if (interpolate < .67)
         green = 1;
     else
-        green = 1 - (interpolate-.75)/.25;
+        green = 1 - .6*(interpolate-.67)/.33;
 
-    float blue = 1-(interpolate-.25)/.25;
+    float blue = 1-(interpolate-.33)/.33;
     if (blue < 0) blue = 0;
-    if (blue > 1) blue = 1;
 
     return Vec3(red, green, blue);
 }
