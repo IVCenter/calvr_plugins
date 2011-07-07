@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-bool GreenLight::handleIntersection(Node * iNode)
+bool GreenLight::handleIntersection(osg::Node * iNode)
 {
     // Is it one of ours?
     for (int d = 0; d < _door.size(); d++)
@@ -11,7 +11,7 @@ bool GreenLight::handleIntersection(Node * iNode)
             _door[d]->beginAnimation();
 
             // Handle group animations
-            list<Entity *>::iterator eit;
+            std::list<Entity *>::iterator eit;
             for (eit = _door[d]->group.begin(); eit != _door[d]->group.end(); eit++)
             {
                 (*eit)->beginAnimation();
@@ -26,7 +26,7 @@ bool GreenLight::handleIntersection(Node * iNode)
             _rack[r]->beginAnimation();
 
             // Handle group animations
-            list<Entity *>::iterator eit;
+            std::list<Entity *>::iterator eit;
             for (eit = _rack[r]->group.begin(); eit != _rack[r]->group.end(); eit++)
             {
                 (*eit)->beginAnimation();

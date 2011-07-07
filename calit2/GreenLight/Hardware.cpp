@@ -10,9 +10,8 @@
 
 // Local Functions
 float getZCoord(int slot);
-ref_ptr<Geode> makePart(float height, string textureFile = "");
+osg::ref_ptr<osg::Geode> makePart(float height, std::string textureFile = "");
 
-// TODO clean up
 void GreenLight::parseHardwareFile()
 {
     // Parse str
@@ -22,7 +21,7 @@ void GreenLight::parseHardwareFile()
     char delim[] = "[\",]";
     int state = 0;
     Hardware * hw;
-    list<Hardware *> hardware;
+    std::list<Hardware *> hardware;
     for (char * stk = strtok(a, delim); stk != NULL; stk = strtok(NULL, delim))
     {
         state++;
@@ -58,37 +57,37 @@ void GreenLight::parseHardwareFile()
      * 5) Add component to appropriate rack
      */
 
-    map< string, ref_ptr<Geode> > nameToGeode;
-    map< string, pair<int,int> > nameToWattage;
-    map< int, ref_ptr<Geode> > defaultModels;
+    std::map< std::string, osg::ref_ptr<osg::Geode> > nameToGeode;
+    std::map< std::string, std::pair<int,int> > nameToWattage;
+    std::map< int, osg::ref_ptr<osg::Geode> > defaultModels;
 
-    vector<string> components;
-    string compBase = "Plugin.GreenLight.Components";
-    string texDir = ConfigManager::getEntry("textureDir","Plugin.GreenLight.Components","");
-    ConfigManager::getChildren(compBase, components);
+    std::vector<std::string> components;
+    std::string compBase = "Plugin.GreenLight.Components";
+    std::string texDir = cvr::ConfigManager::getEntry("textureDir","Plugin.GreenLight.Components","");
+    cvr::ConfigManager::getChildren(compBase, components);
 
     for(int c = 0; c < components.size(); c++)
     {
-        string startname = ConfigManager::getEntry("startname", compBase + "." + components[c], "");
-        int height = ConfigManager::getInt("height", compBase + "." + components[c],1);
-        string texture = ConfigManager::getEntry("texture", compBase + "." + components[c], "");
+        std::string startname = cvr::ConfigManager::getEntry("startname", compBase + "." + components[c], "");
+        int height = cvr::ConfigManager::getInt("height", compBase + "." + components[c],1);
+        std::string texture = cvr::ConfigManager::getEntry("texture", compBase + "." + components[c], "");
 
         // map name to model, if valid
         if (startname != "" && texture != "")
             nameToGeode[startname] = makePart(height, texDir + texture);
 
-        int minWatt = ConfigManager::getInt("minWattage", compBase + "." + components[c], 0);
-        int maxWatt = ConfigManager::getInt("maxWattage", compBase + "." + components[c], 0);
+        int minWatt = cvr::ConfigManager::getInt("minWattage", compBase + "." + components[c], 0);
+        int maxWatt = cvr::ConfigManager::getInt("maxWattage", compBase + "." + components[c], 0);
 
         if (minWatt > 0 && maxWatt > 0)
         {
-            nameToWattage[startname] = make_pair(minWatt,maxWatt);
+            nameToWattage[startname] = std::make_pair(minWatt,maxWatt);
         }
     }
 
-    map< string, ref_ptr<Geode> >::iterator mit;
-    map< string, pair<int,int> >::iterator wit;
-    list<Hardware *>::iterator lit;
+    std::map< std::string, osg::ref_ptr<osg::Geode> >::iterator mit;
+    std::map< std::string, std::pair<int,int> >::iterator wit;
+    std::list<Hardware *>::iterator lit;
     for (lit = hardware.begin(); lit != hardware.end(); lit++)
     {
         Entity * hwEntity;
@@ -107,11 +106,11 @@ void GreenLight::parseHardwareFile()
         // No textured model available -- use a default
         if (mit == nameToGeode.end())
         {
-            cout<<"Model does not exist for component: "<< (*lit)->name <<endl;
+            std::cerr << "Warning: Model does not exist for component: " << (*lit)->name << std::endl;
 
             int height = (*lit)->height;
-            ref_ptr<Geode> geode;
-            map< int, ref_ptr<Geode> >::iterator mit;
+            osg::ref_ptr<osg::Geode> geode;
+            std::map< int, osg::ref_ptr<osg::Geode> >::iterator mit;
 
             // re-use model of the same height if it exists
             if ((mit = defaultModels.find(height)) != defaultModels.end())
@@ -136,11 +135,12 @@ void GreenLight::parseHardwareFile()
                 break;
             }
         }
+
         if (wit == nameToWattage.end())
-            cerr << "Warning: " << (*lit)->name << " does not have a min/max wattage set in the config file." << endl;
+            std::cerr << "Warning: " << (*lit)->name << " does not have a min/max wattage set in the config file." << std::endl;
 
         // position component in the correct rack slot
-        hwEntity->transform->setMatrix(Matrix::translate(0,0,18+getZCoord((*lit)->slot)));
+        hwEntity->transform->setMatrix(osg::Matrix::translate(0,0,18+getZCoord((*lit)->slot)));
 
         // finally add entity to the rack
         _rack[(*lit)->rack-1]->addChild(hwEntity);
@@ -149,67 +149,12 @@ void GreenLight::parseHardwareFile()
         if (_components.find((*lit)->name) == _components.end())
             _components[(*lit)->name] = hwEntity;
         else
-            cerr << "Error (parseHardwareFile): Multiple components with the name \"" << (*lit)->name << "\"." << endl;
+            std::cerr << "Error (parseHardwareFile): Multiple components with the name \"" << (*lit)->name << "\"." << std::endl;
 
         // clean up our mess
         delete (*lit);
     }
 }
-
-// Fetch data from server file at url, save at filename, and store contents in string given
-void GreenLight::downloadFile(string downloadUrl, string fileName, string &content)
-{
-    if (ComController::instance()->isMaster())
-    {
-        // Execute Linux command
-        system ( ("curl --retry 1 --connect-timeout 4 --output " + fileName + " \"" + downloadUrl + "\"").c_str() );
-
-        ifstream file;
-        file.open(fileName.c_str());
-        int fileSize = 0;
-
-        if (!file)
-        {
-            cerr << "Error: downloadFile() failed to open:" << fileName << endl;
-        }
-        else
-        {
-            /*Read in file */
-            content = ""; // Just incase
-            while(!file.eof())
-            {
-                content += file.get();
-            }
-            fileSize = content.length();
-        }
-        file.close(); 
-
-        ComController::instance()->sendSlaves(&fileSize, sizeof(fileSize));
-
-        if (fileSize > 0)
-        {
-            char * cArray = new char[fileSize];
-            memcpy(cArray, content.c_str(), fileSize); 
-            ComController::instance()->sendSlaves(cArray, sizeof(char)*fileSize);
-            delete[] cArray;
-        }
-    }
-    else //slave nodes
-    {
-        int fileSize;
-        ComController::instance()->readMaster(&fileSize, sizeof(fileSize));
-
-        if (fileSize > 0)
-        {
-            char * cArray = new char[fileSize];
-            ComController::instance()->readMaster(cArray, sizeof(char)*fileSize);
-            content = cArray;
-            delete[] cArray;
-        }
-    }
-}
-
-
 
 float getZCoord(int slot)
 {
@@ -220,24 +165,24 @@ float getZCoord(int slot)
 }
 
 // Ignores Normals... add as necessary
-ref_ptr<Geode> makePart(float height, string textureFile)
+osg::ref_ptr<osg::Geode> makePart(float height, std::string textureFile)
 {
     const float xRad = 10.7, yRad = 14.951, zRad_2 = 1.75;
     const float Z_BUFFER_MAGIC = .25;
 
-    ref_ptr<Geode> box = new Geode;
+    osg::ref_ptr<osg::Geode> box = new osg::Geode;
 
     // front/back bottom/top left/right
-    Vec3 fbl = Vec3(-xRad, -yRad, 0);
-    Vec3 fbr = Vec3( xRad, -yRad, 0);
-    Vec3 ftr = Vec3( xRad, -yRad,  zRad_2 * height - Z_BUFFER_MAGIC);
-    Vec3 ftl = Vec3(-xRad, -yRad,  zRad_2 * height - Z_BUFFER_MAGIC);
-    Vec3 bbl = Vec3(-xRad,  yRad, 0);
-    Vec3 bbr = Vec3( xRad,  yRad, 0);
-    Vec3 btr = Vec3( xRad,  yRad,  zRad_2 * height - Z_BUFFER_MAGIC);
-    Vec3 btl = Vec3(-xRad,  yRad,  zRad_2 * height - Z_BUFFER_MAGIC);
+    osg::Vec3 fbl = osg::Vec3(-xRad, -yRad, 0);
+    osg::Vec3 fbr = osg::Vec3( xRad, -yRad, 0);
+    osg::Vec3 ftr = osg::Vec3( xRad, -yRad,  zRad_2 * height - Z_BUFFER_MAGIC);
+    osg::Vec3 ftl = osg::Vec3(-xRad, -yRad,  zRad_2 * height - Z_BUFFER_MAGIC);
+    osg::Vec3 bbl = osg::Vec3(-xRad,  yRad, 0);
+    osg::Vec3 bbr = osg::Vec3( xRad,  yRad, 0);
+    osg::Vec3 btr = osg::Vec3( xRad,  yRad,  zRad_2 * height - Z_BUFFER_MAGIC);
+    osg::Vec3 btl = osg::Vec3(-xRad,  yRad,  zRad_2 * height - Z_BUFFER_MAGIC);
 
-    ref_ptr<Vec3Array> verts = new Vec3Array();
+    osg::ref_ptr<osg::Vec3Array> verts = new osg::Vec3Array();
     verts->push_back(fbl);
     verts->push_back(fbr);
     verts->push_back(ftr);
@@ -253,19 +198,9 @@ ref_ptr<Geode> makePart(float height, string textureFile)
         2, 6, 3, 7, 0, 4, 1, 5, 2, 6 // rest face
     };
 
-/*    ref_ptr<Vec4Array> colors = new Vec4Array();
-    colors->push_back(Vec4(.7,.7,.7,1));
-
-    osg::Vec3Array* frontnormals = new osg::Vec3Array;
-    frontnormals->push_back(osg::Vec3(0.0f,-1.0f,0.0f));
-    osg::Vec3Array* backnormals = new osg::Vec3Array;
-    backnormals->push_back(osg::Vec3(0.0f,1.0f,0.0f));
-    osg::Vec3Array* restnormals = new osg::Vec3Array;
-    restnormals->push_back(osg::Vec3(0.0f,0.0f,1.0f));
-*/
-    ref_ptr<Geometry> frontFace = new Geometry();
-    ref_ptr<Geometry> backFace = new Geometry();
-    ref_ptr<Geometry> restFace = new Geometry();
+    osg::ref_ptr<osg::Geometry> frontFace = new osg::Geometry();
+    osg::ref_ptr<osg::Geometry> backFace = new osg::Geometry();
+    osg::ref_ptr<osg::Geometry> restFace = new osg::Geometry();
 
     frontFace->setUseDisplayList(false);
     backFace->setUseDisplayList(false);
@@ -275,53 +210,39 @@ ref_ptr<Geode> makePart(float height, string textureFile)
     backFace->setVertexArray(verts.get());
     restFace->setVertexArray(verts.get());
 
-/*    frontFace->setColorArray(colors.get());
-    frontFace->setColorBinding(Geometry::BIND_OVERALL);
-    backFace->setColorArray(colors.get());
-    backFace->setColorBinding(Geometry::BIND_OVERALL);
-    restFace->setColorArray(colors.get());
-    restFace->setColorBinding(Geometry::BIND_OVERALL);
-
-    frontFace->setNormalArray(frontnormals);
-    frontFace->setNormalBinding(osg::Geometry::BIND_OVERALL);
-    backFace->setNormalArray(backnormals);
-    backFace->setNormalBinding(osg::Geometry::BIND_OVERALL);
-    restFace->setNormalArray(restnormals);
-    restFace->setNormalBinding(osg::Geometry::BIND_OVERALL);
-*/
-    frontFace->addPrimitiveSet(new DrawElementsUShort(PrimitiveSet::QUADS, 4, &myIndices[0]));
-    backFace->addPrimitiveSet(new DrawElementsUShort(PrimitiveSet::QUADS, 4, &myIndices[4]));
-    restFace->addPrimitiveSet(new DrawElementsUShort(PrimitiveSet::TRIANGLE_STRIP, 10, &myIndices[8]));
+    frontFace->addPrimitiveSet(new osg::DrawElementsUShort(osg::PrimitiveSet::QUADS, 4, &myIndices[0]));
+    backFace->addPrimitiveSet(new osg::DrawElementsUShort(osg::PrimitiveSet::QUADS, 4, &myIndices[4]));
+    restFace->addPrimitiveSet(new osg::DrawElementsUShort(osg::PrimitiveSet::TRIANGLE_STRIP, 10, &myIndices[8]));
 
     if (textureFile != "")
     {
 
         // Textures should be created so that the top half is the front face,
         // and the bottom is the back.
-        ref_ptr<Vec2Array> texcoords = new Vec2Array();
-        texcoords->push_back(Vec2(0,.5));
-        texcoords->push_back(Vec2(1,.5));
-        texcoords->push_back(Vec2(1,1));
-        texcoords->push_back(Vec2(0,1));
-        texcoords->push_back(Vec2(0,0));
-        texcoords->push_back(Vec2(1,0));
-        texcoords->push_back(Vec2(1,.5));
-        texcoords->push_back(Vec2(1,.5));
+        osg::ref_ptr<osg::Vec2Array> texcoords = new osg::Vec2Array();
+        texcoords->push_back(osg::Vec2(0,.5));
+        texcoords->push_back(osg::Vec2(1,.5));
+        texcoords->push_back(osg::Vec2(1,1));
+        texcoords->push_back(osg::Vec2(0,1));
+        texcoords->push_back(osg::Vec2(0,0));
+        texcoords->push_back(osg::Vec2(1,0));
+        texcoords->push_back(osg::Vec2(1,.5));
+        texcoords->push_back(osg::Vec2(1,.5));
 
-        Texture2D * texture = new Texture2D();
-        Image * image = osgDB::readImageFile(textureFile);
+        osg::Texture2D * texture = new osg::Texture2D();
+        osg::Image * image = osgDB::readImageFile(textureFile);
 
         if (image)
         {
             texture->setImage(image);
             frontFace->setTexCoordArray(0,texcoords.get());
-            frontFace->getOrCreateStateSet()->setTextureAttributeAndModes(0,texture,StateAttribute::ON);
+            frontFace->getOrCreateStateSet()->setTextureAttributeAndModes(0,texture,osg::StateAttribute::ON);
 
             backFace->setTexCoordArray(0,texcoords.get());
-            backFace->getOrCreateStateSet()->setTextureAttributeAndModes(0,texture,StateAttribute::ON);
+            backFace->getOrCreateStateSet()->setTextureAttributeAndModes(0,texture,osg::StateAttribute::ON);
         }
         else
-            cerr << "Error: Failed to read texture image file \"" << textureFile << "\"\n";
+            std::cerr << "Error: Failed to read texture image file \"" << textureFile << "\"" << std::endl;
     }
 
     box->addDrawable(frontFace.get());

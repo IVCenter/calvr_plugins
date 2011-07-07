@@ -4,9 +4,9 @@
 #include <osg/Material>
 #include <osg/StateSet>
 
-GreenLight::Entity::Entity(Node * node, Matrix mat)
+GreenLight::Entity::Entity(osg::Node * node, osg::Matrix mat)
 {
-    transform = new MatrixTransform(mat);
+    transform = new osg::MatrixTransform(mat);
     mainNode = node;
     transform->addChild(mainNode);
     createNodeSet(mainNode);
@@ -20,7 +20,7 @@ void GreenLight::Entity::handleAnimation()
 {
     if (status == FORWARD)
     {
-        time += PluginHelper::getLastFrameDuration();
+        time += cvr::PluginHelper::getLastFrameDuration();
 
         if (time > path->getPeriod())
         {
@@ -28,13 +28,13 @@ void GreenLight::Entity::handleAnimation()
             status = END;
         }
 
-        Matrix aniMatrix;
+        osg::Matrix aniMatrix;
         path->getMatrix(time,aniMatrix);
         transform->setMatrix(aniMatrix);
     }
     else if (status == REVERSE)
     {
-        time -= PluginHelper::getLastFrameDuration();
+        time -= cvr::PluginHelper::getLastFrameDuration();
 
         if (time < 0)
         {
@@ -42,7 +42,7 @@ void GreenLight::Entity::handleAnimation()
             status = START;
         }
 
-        Matrix aniMatrix;
+        osg::Matrix aniMatrix;
         path->getMatrix(time,aniMatrix);
         transform->setMatrix(aniMatrix);
     }
@@ -58,12 +58,12 @@ void GreenLight::Entity::beginAnimation()
        status = REVERSE;
 }
 
-void GreenLight::Entity::createNodeSet(Node * node)
+void GreenLight::Entity::createNodeSet(osg::Node * node)
 {
     if (node->asGeode())
         nodes.insert(node);
 
-    Group * group = node->asGroup();
+    osg::Group * group = node->asGroup();
     if (group)
     {
         for (int i = 0; i < group->getNumChildren(); i++)
@@ -94,15 +94,15 @@ void GreenLight::Entity::setTransparency(bool transparent)
         mainNode->setStateSet(stateset);
 }
 
-void GreenLight::Entity::setColor(const Vec3 color)
+void GreenLight::Entity::setColor(const osg::Vec3 color)
 {
-    ref_ptr<StateSet> stateset = transform->getStateSet();
-    ref_ptr<Material> mm = dynamic_cast<osg::Material*>(stateset->getAttribute
+    osg::ref_ptr<osg::StateSet> stateset = transform->getStateSet();
+    osg::ref_ptr<osg::Material> mm = dynamic_cast<osg::Material*>(stateset->getAttribute
         (osg::StateAttribute::MATERIAL));
 
-    Vec4 color4;
+    osg::Vec4 color4;
     color4 = mm->getDiffuse(osg::Material::FRONT_AND_BACK);
-    color4 = Vec4(color, color4.w());
+    color4 = osg::Vec4(color, color4.w());
     mm->setDiffuse(osg::Material::FRONT_AND_BACK, color4);
 
     stateset->setAttributeAndModes( mm, osg::StateAttribute::OVERRIDE |
@@ -115,7 +115,7 @@ void GreenLight::Entity::addChild(Entity * child)
 {
     if (!child)
     {
-        cerr << "Error: NULL child parameter passed to GreenLight::Entity::addChild function." << endl;
+        std::cerr << "Error: NULL child parameter passed to GreenLight::Entity::addChild function." << std::endl;
         return;
     }
 
@@ -136,17 +136,17 @@ void GreenLight::Entity::showVisual(bool show)
 
 void GreenLight::Entity::setDefaultMaterial()
 {
-    ref_ptr<StateSet> stateset = transform->getOrCreateStateSet();
-    ref_ptr<Material> mm = dynamic_cast<osg::Material*>(stateset->getAttribute
+    osg::ref_ptr<osg::StateSet> stateset = transform->getOrCreateStateSet();
+    osg::ref_ptr<osg::Material> mm = dynamic_cast<osg::Material*>(stateset->getAttribute
         (osg::StateAttribute::MATERIAL));
 
-    stateset->setDataVariance(Object::DYNAMIC);
+    stateset->setDataVariance(osg::Object::DYNAMIC);
 
     if (!mm)
         mm = new osg::Material;
 
     mm->setColorMode(osg::Material::DIFFUSE);
-    mm->setDiffuse(osg::Material::FRONT_AND_BACK, Vec4(.7,.7,.7,1));
+    mm->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(.7,.7,.7,1));
 
     stateset->setMode(GL_LIGHTING, osg::StateAttribute::PROTECTED |
             osg::StateAttribute::OFF );

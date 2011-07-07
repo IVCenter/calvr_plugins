@@ -14,11 +14,9 @@
 
 #include <osg/MatrixTransform>
 
-using namespace cvr;
-using namespace std;
-using namespace osg;
+#include "Utility.h"
 
-class GreenLight : public CVRPlugin, public MenuCallback
+class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 {
     public:
         GreenLight();
@@ -26,7 +24,7 @@ class GreenLight : public CVRPlugin, public MenuCallback
 
         bool init();
 
-        void menuCallback(MenuItem * item);
+        void menuCallback(cvr::MenuItem * item);
 
         void preFrame();
         void postFrame();
@@ -41,16 +39,16 @@ class GreenLight : public CVRPlugin, public MenuCallback
             public:
                 enum AnimationStatus { START, FORWARD, END, REVERSE };
 
-                Entity(Node * node, Matrix mat = Matrix::identity());
+                Entity(osg::Node * node, osg::Matrix mat = osg::Matrix::identity());
 
-                ref_ptr<MatrixTransform> transform; // transform nodes of this entity
-                ref_ptr<AnimationPath> path; // animation path (null if non-existent)
-                ref_ptr<Node> mainNode;
+                osg::ref_ptr<osg::MatrixTransform> transform; // transform nodes of this entity
+                osg::ref_ptr<osg::AnimationPath> path; // animation path (null if non-existent)
+                osg::ref_ptr<osg::Node> mainNode;
 // TODO change nodes to type: set< ref_ptr< Node > >
-                set<Node *> nodes; // node-sub-graph loaded in via osgDB readNodeFile
+                std::set<osg::Node *> nodes; // node-sub-graph loaded in via osgDB readNodeFile
                 AnimationStatus status; // status of animation
                 double time; // time-point within animation path
-                list<Entity *> group; // other entities that should animate together
+                std::list<Entity *> group; // other entities that should animate together
                 int minWattage; // used for coloring range
                 int maxWattage; // used for coloring range
 
@@ -58,56 +56,55 @@ class GreenLight : public CVRPlugin, public MenuCallback
                 void beginAnimation();
                 void addChild(Entity * child);
                 void showVisual(bool show);
-                void setColor(const Vec3 color);
+                void setColor(const osg::Vec3 color);
                 void setTransparency(bool transparent);
                 void setDefaultMaterial();
 
             protected:
-                void createNodeSet(Node * node);
+                void createNodeSet(osg::Node * node);
         };
 
         typedef struct {
-            string name;
+            std::string name;
             int rack;
             int slot;
             int height;
          } Hardware;
 
         // Menu Items
-        SubMenu * _glMenu;
-        MenuCheckbox * _showSceneCheckbox;
+        cvr::SubMenu * _glMenu;
+        cvr::MenuCheckbox * _showSceneCheckbox;
 
-        SubMenu * _displayComponentsMenu;
-        MenuCheckbox * _componentsViewCheckbox;
-        MenuCheckbox * _displayFrameCheckbox;
-        MenuCheckbox * _displayDoorsCheckbox;
-        MenuCheckbox * _displayWaterPipesCheckbox;
-        MenuCheckbox * _displayElectricalCheckbox;
-        MenuCheckbox * _displayFansCheckbox;
-        MenuCheckbox * _displayRacksCheckbox;
+        cvr::SubMenu * _displayComponentsMenu;
+        cvr::MenuCheckbox * _componentsViewCheckbox;
+        cvr::MenuCheckbox * _displayFrameCheckbox;
+        cvr::MenuCheckbox * _displayDoorsCheckbox;
+        cvr::MenuCheckbox * _displayWaterPipesCheckbox;
+        cvr::MenuCheckbox * _displayElectricalCheckbox;
+        cvr::MenuCheckbox * _displayFansCheckbox;
+        cvr::MenuCheckbox * _displayRacksCheckbox;
 
-        SubMenu * _powerMenu;
-        MenuCheckbox * _displayPowerCheckbox;
-        MenuButton * _loadPowerButton;
+        cvr::SubMenu * _powerMenu;
+        cvr::MenuCheckbox * _displayPowerCheckbox;
+        cvr::MenuButton * _loadPowerButton;
 
         // Entities
         Entity * _box;          // box/frame
-        vector<Entity *> _door; // doors
+        std::vector<Entity *> _door; // doors
         Entity * _waterPipes;   // water pipes
         Entity * _electrical;   // electrical
         Entity * _fans;         // fans
-        vector<Entity *> _rack; // racks
-        map<string,Entity *> _components; // mapping of component names to component entities
+        std::vector<Entity *> _rack; // racks
+        std::map<std::string,Entity *> _components; // mapping of component names to component entities
 
         // File contents -- read/write via master node, copy to slave nodes via messages
-        string _hardwareContents;
-        string _powerContents;
+        std::string _hardwareContents;
+        std::string _powerContents;
 
         // Functions
         bool loadScene();
-        bool handleIntersection(Node * iNode);
+        bool handleIntersection(osg::Node * iNode);
         void parseHardwareFile();
-        void downloadFile(string downloadUrl, string fileName, string &content);
         void setPowerColors(bool displayPower);
 };
 

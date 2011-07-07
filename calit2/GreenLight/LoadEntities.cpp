@@ -5,36 +5,36 @@
 #include <osgUtil/Optimizer>
 
 // local functions
-ref_ptr<Node> loadModelFile(string file);
+osg::ref_ptr<osg::Node> loadModelFile(std::string file);
 
 bool GreenLight::loadScene()
 {
     // load model files
-    string modelsDir = ConfigManager::getEntry("Plugin.GreenLight.ModelsDir");
+    std::string modelsDir = cvr::ConfigManager::getEntry("Plugin.GreenLight.ModelsDir");
 
-    ref_ptr<Node> box = loadModelFile(modelsDir + "box.WRL");
-    ref_ptr<Node> electrical = loadModelFile(modelsDir + "electrical.WRL");
-    ref_ptr<Node> pipes = loadModelFile(modelsDir + "waterpipes.WRL");
-    ref_ptr<Node> doorFL = loadModelFile(modelsDir + "frontleft.WRL");
-    ref_ptr<Node> doorFR = loadModelFile(modelsDir + "frontright.WRL");
-    ref_ptr<Node> doorFI = loadModelFile(modelsDir + "frontinner.WRL");
-    ref_ptr<Node> doorBL = loadModelFile(modelsDir + "backleft.WRL");
-    ref_ptr<Node> doorBR = loadModelFile(modelsDir + "backright.WRL");
-    ref_ptr<Node> doorBI = loadModelFile(modelsDir + "backinner.WRL");
-    ref_ptr<Node> doorBII = loadModelFile(modelsDir + "backinnerinner.WRL");
-    ref_ptr<Node> fans = loadModelFile(modelsDir + "fans_reduced.WRL");
-    ref_ptr<Node> rack1 = loadModelFile(modelsDir + "rack1_c.WRL");
-    ref_ptr<Node> rack2 = loadModelFile(modelsDir + "rack2_c.WRL");
-    ref_ptr<Node> rack3 = loadModelFile(modelsDir + "rack3_c.WRL");
-    ref_ptr<Node> rack4 = loadModelFile(modelsDir + "rack4_c.WRL");
-    ref_ptr<Node> rack5 = loadModelFile(modelsDir + "rack5_c.WRL");
-    ref_ptr<Node> rack6 = loadModelFile(modelsDir + "rack6_c.WRL");
-    ref_ptr<Node> rack7 = loadModelFile(modelsDir + "rack7_c.WRL");
-    ref_ptr<Node> rack8 = loadModelFile(modelsDir + "rack8_c.WRL");
+    osg::ref_ptr<osg::Node> box = loadModelFile(modelsDir + "box.WRL");
+    osg::ref_ptr<osg::Node> electrical = loadModelFile(modelsDir + "electrical.WRL");
+    osg::ref_ptr<osg::Node> Pipes = loadModelFile(modelsDir + "waterpipes.WRL");
+    osg::ref_ptr<osg::Node> doorFL = loadModelFile(modelsDir + "frontleft.WRL");
+    osg::ref_ptr<osg::Node> doorFR = loadModelFile(modelsDir + "frontright.WRL");
+    osg::ref_ptr<osg::Node> doorFI = loadModelFile(modelsDir + "frontinner.WRL");
+    osg::ref_ptr<osg::Node> doorBL = loadModelFile(modelsDir + "backleft.WRL");
+    osg::ref_ptr<osg::Node> doorBR = loadModelFile(modelsDir + "backright.WRL");
+    osg::ref_ptr<osg::Node> doorBI = loadModelFile(modelsDir + "backinner.WRL");
+    osg::ref_ptr<osg::Node> doorBII = loadModelFile(modelsDir + "backinnerinner.WRL");
+    osg::ref_ptr<osg::Node> fans = loadModelFile(modelsDir + "fans_reduced.WRL");
+    osg::ref_ptr<osg::Node> rack1 = loadModelFile(modelsDir + "rack1_c.WRL");
+    osg::ref_ptr<osg::Node> rack2 = loadModelFile(modelsDir + "rack2_c.WRL");
+    osg::ref_ptr<osg::Node> rack3 = loadModelFile(modelsDir + "rack3_c.WRL");
+    osg::ref_ptr<osg::Node> rack4 = loadModelFile(modelsDir + "rack4_c.WRL");
+    osg::ref_ptr<osg::Node> rack5 = loadModelFile(modelsDir + "rack5_c.WRL");
+    osg::ref_ptr<osg::Node> rack6 = loadModelFile(modelsDir + "rack6_c.WRL");
+    osg::ref_ptr<osg::Node> rack7 = loadModelFile(modelsDir + "rack7_c.WRL");
+    osg::ref_ptr<osg::Node> rack8 = loadModelFile(modelsDir + "rack8_c.WRL");
 
 
     // all or nothing -- cancel loadScene if anythign failed
-    if (!box || !electrical || !pipes || !doorFL || !doorFR || !doorFI 
+    if (!box || !electrical || !Pipes || !doorFL || !doorFR || !doorFI 
     || !doorBL || !doorBR || !doorBI || !doorBII || !fans || !rack1 || !rack2
     || !rack3 || !rack4 || !rack5 || !rack6 || !rack7 || !rack8)
     {
@@ -42,103 +42,103 @@ bool GreenLight::loadScene()
     }
 
     // All loaded -- Create Entities & Animation Paths
-    _box = new Entity(box, Matrix::scale(25.237011,25.237011,25.237011));
+    _box = new Entity(box, osg::Matrix::scale(25.237011,25.237011,25.237011));
     _electrical = new Entity(electrical);
-    _waterPipes = new Entity(pipes);
+    _waterPipes = new Entity(Pipes);
     _fans = new Entity(fans);
 
-    Vec3 doorOffset;
-    AnimationPath::ControlPoint cp;
+    osg::Vec3 doorOffset;
+    osg::AnimationPath::ControlPoint cp;
 
     // Door 0 - Front Left
-    doorOffset = Vec3(-46.978,-118.808,0);
-    _door.push_back(new Entity(doorFL, Matrix::translate(doorOffset)));
-    _door[0]->path = new AnimationPath();
-    _door[0]->path->setLoopMode(AnimationPath::NO_LOOPING);
+    doorOffset = osg::Vec3(-46.978,-118.808,0);
+    _door.push_back(new Entity(doorFL, osg::Matrix::translate(doorOffset)));
+    _door[0]->path = new osg::AnimationPath();
+    _door[0]->path->setLoopMode(osg::AnimationPath::NO_LOOPING);
     cp.setPosition(doorOffset);
-    cp.setRotation(Quat(0,Vec3(0,0,1)));
+    cp.setRotation(osg::Quat(0,osg::Vec3(0,0,1)));
     _door[0]->path->insert(0,cp);
-    cp.setRotation(Quat(-PI*3/4,Vec3(0,0,1)));
+    cp.setRotation(osg::Quat(-osg::PI*3/4,osg::Vec3(0,0,1)));
     _door[0]->path->insert(1,cp);
 
     // Door 1 - Front Right
-    doorOffset = Vec3(47.047,-118.851,0);
-    _door.push_back(new Entity(doorFR, Matrix::translate(doorOffset)));
-    _door[1]->path = new AnimationPath();
-    _door[1]->path->setLoopMode(AnimationPath::NO_LOOPING);
+    doorOffset = osg::Vec3(47.047,-118.851,0);
+    _door.push_back(new Entity(doorFR, osg::Matrix::translate(doorOffset)));
+    _door[1]->path = new osg::AnimationPath();
+    _door[1]->path->setLoopMode(osg::AnimationPath::NO_LOOPING);
     cp.setPosition(doorOffset);
-    cp.setRotation(Quat(0,Vec3(0,0,1)));
+    cp.setRotation(osg::Quat(0,osg::Vec3(0,0,1)));
     _door[1]->path->insert(0,cp);
-    cp.setRotation(Quat(PI*3/4,Vec3(0,0,1)));
+    cp.setRotation(osg::Quat(osg::PI*3/4,osg::Vec3(0,0,1)));
     _door[1]->path->insert(1,cp);
 
     // Door 2 - Front Inner
-    doorOffset = Vec3(15.906,-104.9,0);
-    _door.push_back(new Entity(doorFI, Matrix::translate(doorOffset)));
-    _door[2]->path = new AnimationPath();
-    _door[2]->path->setLoopMode(AnimationPath::NO_LOOPING);
+    doorOffset = osg::Vec3(15.906,-104.9,0);
+    _door.push_back(new Entity(doorFI, osg::Matrix::translate(doorOffset)));
+    _door[2]->path = new osg::AnimationPath();
+    _door[2]->path->setLoopMode(osg::AnimationPath::NO_LOOPING);
     cp.setPosition(doorOffset);
-    cp.setRotation(Quat(0,Vec3(0,0,1)));
+    cp.setRotation(osg::Quat(0,osg::Vec3(0,0,1)));
     _door[2]->path->insert(0,cp);
-    cp.setRotation(Quat(PI/2,Vec3(0,0,1)));
+    cp.setRotation(osg::Quat(osg::PI/2,osg::Vec3(0,0,1)));
     _door[2]->path->insert(1,cp);
 
     // Door 3 - Back Left
-    doorOffset = Vec3(46.993,118.757,0);
-    _door.push_back(new Entity(doorBL, Matrix::translate(doorOffset)));
-    _door[3]->path = new AnimationPath();
-    _door[3]->path->setLoopMode(AnimationPath::NO_LOOPING);
+    doorOffset = osg::Vec3(46.993,118.757,0);
+    _door.push_back(new Entity(doorBL, osg::Matrix::translate(doorOffset)));
+    _door[3]->path = new osg::AnimationPath();
+    _door[3]->path->setLoopMode(osg::AnimationPath::NO_LOOPING);
     cp.setPosition(doorOffset);
-    cp.setRotation(Quat(0,Vec3(0,0,1)));
+    cp.setRotation(osg::Quat(0,osg::Vec3(0,0,1)));
     _door[3]->path->insert(0,cp);
-    cp.setRotation(Quat(-PI*3/4,Vec3(0,0,1)));
+    cp.setRotation(osg::Quat(-osg::PI*3/4,osg::Vec3(0,0,1)));
     _door[3]->path->insert(1,cp);
 
     // Door 4 - Back Right
-    doorOffset = Vec3(-47.117,113.765,0);
-    _door.push_back(new Entity(doorBR, Matrix::translate(doorOffset)));
-    _door[4]->path = new AnimationPath();
-    _door[4]->path->setLoopMode(AnimationPath::NO_LOOPING);
+    doorOffset = osg::Vec3(-47.117,113.765,0);
+    _door.push_back(new Entity(doorBR, osg::Matrix::translate(doorOffset)));
+    _door[4]->path = new osg::AnimationPath();
+    _door[4]->path->setLoopMode(osg::AnimationPath::NO_LOOPING);
     cp.setPosition(doorOffset);
-    cp.setRotation(Quat(0,Vec3(0,0,1)));
+    cp.setRotation(osg::Quat(0,osg::Vec3(0,0,1)));
     _door[4]->path->insert(0,cp);
-    cp.setRotation(Quat(PI*3/4,Vec3(0,0,1)));
+    cp.setRotation(osg::Quat(osg::PI*3/4,osg::Vec3(0,0,1)));
     _door[4]->path->insert(1,cp);
 
     // Door 5 - Back Inner
-    doorOffset = Vec3(18.339,96.197,0);
-    _door.push_back(new Entity(doorBI, Matrix::translate(doorOffset)));
-    _door[5]->path = new AnimationPath();
-    _door[5]->path->setLoopMode(AnimationPath::NO_LOOPING);
+    doorOffset = osg::Vec3(18.339,96.197,0);
+    _door.push_back(new Entity(doorBI, osg::Matrix::translate(doorOffset)));
+    _door[5]->path = new osg::AnimationPath();
+    _door[5]->path->setLoopMode(osg::AnimationPath::NO_LOOPING);
     cp.setPosition(doorOffset);
-    cp.setRotation(Quat(0,Vec3(0,0,1)));
+    cp.setRotation(osg::Quat(0,osg::Vec3(0,0,1)));
     _door[5]->path->insert(0,cp);
-    cp.setRotation(Quat(-PI/2,Vec3(0,0,1)));
+    cp.setRotation(osg::Quat(-osg::PI/2,osg::Vec3(0,0,1)));
     _door[5]->path->insert(1,cp);
 
     // Door 6 - Back Inner Innera
-    doorOffset = Vec3(15.505,81.835,0);
-    _door.push_back(new Entity(doorBII, Matrix::translate(doorOffset)));
-    _door[6]->path = new AnimationPath();
-    _door[6]->path->setLoopMode(AnimationPath::NO_LOOPING);
+    doorOffset = osg::Vec3(15.505,81.835,0);
+    _door.push_back(new Entity(doorBII, osg::Matrix::translate(doorOffset)));
+    _door[6]->path = new osg::AnimationPath();
+    _door[6]->path->setLoopMode(osg::AnimationPath::NO_LOOPING);
     cp.setPosition(doorOffset);
-    cp.setRotation(Quat(0,Vec3(0,0,1)));
+    cp.setRotation(osg::Quat(0,osg::Vec3(0,0,1)));
     _door[6]->path->insert(0,cp);
-    cp.setRotation(Quat(-PI/2,Vec3(0,0,1)));
+    cp.setRotation(osg::Quat(-osg::PI/2,osg::Vec3(0,0,1)));
     _door[6]->path->insert(1,cp);
 
     // Racks
-    Matrix rackMat;
+    osg::Matrix rackMat;
     rackMat.setTrans(-26.962,-77.31,0);
     _rack.push_back(new Entity(rack1,rackMat));
-    rackMat.setRotate(Quat(PI,Vec3(0,0,1)));
+    rackMat.setRotate(osg::Quat(osg::PI,osg::Vec3(0,0,1)));
     rackMat.setTrans(-28.28,-33.44,0);
     _rack.push_back(new Entity(rack2,rackMat));
     rackMat.setTrans(-28.28,10.43,0);
     _rack.push_back(new Entity(rack3,rackMat));
     rackMat.setTrans(-28.28,54.31,0);
     _rack.push_back(new Entity(rack4,rackMat));
-    rackMat.setRotate(Quat());
+    rackMat.setRotate(osg::Quat());
     rackMat.setTrans(28.16,54.31,0);
     _rack.push_back(new Entity(rack5,rackMat));
     rackMat.setTrans(28.16,10.44,0);
@@ -150,12 +150,12 @@ bool GreenLight::loadScene()
 
     for (int r = 0; r < _rack.size(); r++)
     {
-        _rack[r]->path = new AnimationPath();
-        _rack[r]->path->setLoopMode(AnimationPath::NO_LOOPING);
+        _rack[r]->path = new osg::AnimationPath();
+        _rack[r]->path->setLoopMode(osg::AnimationPath::NO_LOOPING);
         cp.setRotation(_rack[r]->transform->getMatrix().getRotate());
         cp.setPosition(_rack[r]->transform->getMatrix().getTrans());
         _rack[r]->path->insert(0,cp);
-        cp.setPosition(_rack[r]->transform->getMatrix().getTrans() + Vec3((r < 4)?25:-25,0,0));
+        cp.setPosition(_rack[r]->transform->getMatrix().getTrans() + osg::Vec3((r < 4)?25:-25,0,0));
         _rack[r]->path->insert(1,cp);
     }
 
@@ -179,63 +179,63 @@ bool GreenLight::loadScene()
     // populate racks
     parseHardwareFile();
     
-    cerr<<"Optimizing.\n";
+    std::cerr<<"Optimizing.\n";
     osgUtil::Optimizer o;
     o.optimize(_box->transform.get());
 
     // Menu Setup
-    _displayComponentsMenu = new SubMenu("Display Components", "Display Components");
+    _displayComponentsMenu = new cvr::SubMenu("Display Components", "Display Components");
     _displayComponentsMenu->setCallback(this);
     _glMenu->addItem(_displayComponentsMenu);
 
-    _componentsViewCheckbox = new MenuCheckbox("Components View",false);
+    _componentsViewCheckbox = new cvr::MenuCheckbox("Components View",false);
     _componentsViewCheckbox->setCallback(this);
     _displayComponentsMenu->addItem(_componentsViewCheckbox);
 
-    _displayFrameCheckbox = new MenuCheckbox("Box Frame",true);
+    _displayFrameCheckbox = new cvr::MenuCheckbox("Box Frame",true);
     _displayFrameCheckbox->setCallback(this);
     _displayComponentsMenu->addItem(_displayFrameCheckbox);
 
-    _displayDoorsCheckbox = new MenuCheckbox("Doors",true);
+    _displayDoorsCheckbox = new cvr::MenuCheckbox("Doors",true);
     _displayDoorsCheckbox->setCallback(this);
     _displayComponentsMenu->addItem(_displayDoorsCheckbox);
 
-    _displayWaterPipesCheckbox = new MenuCheckbox("Water Pipes",true);
+    _displayWaterPipesCheckbox = new cvr::MenuCheckbox("Water Pipes",true);
     _displayWaterPipesCheckbox->setCallback(this);
     _displayComponentsMenu->addItem(_displayWaterPipesCheckbox);
 
-    _displayElectricalCheckbox = new MenuCheckbox("Electrical",true);
+    _displayElectricalCheckbox = new cvr::MenuCheckbox("Electrical",true);
     _displayElectricalCheckbox->setCallback(this);
     _displayComponentsMenu->addItem(_displayElectricalCheckbox);
 
-    _displayFansCheckbox = new MenuCheckbox("Fans",true);
+    _displayFansCheckbox = new cvr::MenuCheckbox("Fans",true);
     _displayFansCheckbox->setCallback(this);
     _displayComponentsMenu->addItem(_displayFansCheckbox);
 
-    _displayRacksCheckbox = new MenuCheckbox("Racks",true);
+    _displayRacksCheckbox = new cvr::MenuCheckbox("Racks",true);
     _displayRacksCheckbox->setCallback(this);
     _displayComponentsMenu->addItem(_displayRacksCheckbox);
 
-    _powerMenu = new SubMenu("Power Consumption", "Power Consumption");
+    _powerMenu = new cvr::SubMenu("Power Consumption", "Power Consumption");
     _powerMenu->setCallback(this);
     _glMenu->addItem(_powerMenu);
 
-    _loadPowerButton = new MenuButton("Load Recent Data");
+    _loadPowerButton = new cvr::MenuButton("Load Recent Data");
     _loadPowerButton->setCallback(this);
     _powerMenu->addItem(_loadPowerButton);
 
     return true;
 }
 
-ref_ptr<Node> loadModelFile(string file)
+osg::ref_ptr<osg::Node> loadModelFile(std::string file)
 {
-    cerr << "Loading " << file << "... ";
-    ref_ptr<Node> model = osgDB::readNodeFile(file);
+    std::cerr << "Loading " << file << "... ";
+    osg::ref_ptr<osg::Node> model = osgDB::readNodeFile(file);
 
     if (!model)
-        cerr << "FAILED." << endl;
+        std::cerr << "FAILED." << std::endl;
     else
-        cerr << "done." << endl;
+        std::cerr << "done." << std::endl;
 
     return model.get();
 }

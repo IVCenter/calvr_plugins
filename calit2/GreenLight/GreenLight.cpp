@@ -13,7 +13,7 @@ CVRPLUGIN(GreenLight)
 
 GreenLight::GreenLight()
 {
-    cerr << "GreenLight created." << endl;
+    std::cerr << "GreenLight created." << std::endl;
 }
 
 GreenLight::~GreenLight()
@@ -37,7 +37,7 @@ GreenLight::~GreenLight()
     if (_electrical) delete _electrical;
     if (_fans) delete _fans;
 
-    vector<Entity *>::iterator vit;
+    std::vector<Entity *>::iterator vit;
     for (vit = _door.begin(); vit != _door.end(); vit++)
     {
         if (*vit) delete *vit;
@@ -50,19 +50,19 @@ GreenLight::~GreenLight()
     }
     _rack.clear();
 
-    cerr << "GreenLight destroyed." << endl;
+    std::cerr << "GreenLight destroyed." << std::endl;
 }
 
 bool GreenLight::init()
 {
-    cerr << "GreenLight init()." << endl;
+    std::cerr << "GreenLight init()." << std::endl;
 
     /*** Menu Setup ***/
-    _glMenu = new SubMenu("GreenLight","GreenLight");
+    _glMenu = new cvr::SubMenu("GreenLight","GreenLight");
     _glMenu->setCallback(this);
-    PluginHelper::addRootMenuItem(_glMenu);
+    cvr::PluginHelper::addRootMenuItem(_glMenu);
 
-    _showSceneCheckbox = new MenuCheckbox("Load Scene",false);
+    _showSceneCheckbox = new cvr::MenuCheckbox("Load Scene",false);
     _showSceneCheckbox->setCallback(this);
     _glMenu->addItem(_showSceneCheckbox);
 
@@ -87,25 +87,25 @@ bool GreenLight::init()
     _fans = NULL;
     /*** End Entity Defaults ***/
 
-    downloadFile(ConfigManager::getEntry("download", "Plugin.GreenLight.Hardware", ""),
-                 ConfigManager::getEntry("local", "Plugin.GreenLight.Hardware", ""),
-                 _hardwareContents);
-
     return true;
 }
 
-void GreenLight::menuCallback(MenuItem * item)
+void GreenLight::menuCallback(cvr::MenuItem * item)
 {
     if (item == _showSceneCheckbox)
     {
         // Load as neccessary
         if (!_box)
         {
+            utl::downloadFile(cvr::ConfigManager::getEntry("download", "Plugin.GreenLight.Hardware", ""),
+                              cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Hardware", ""),
+                              _hardwareContents);
+
             if (loadScene())
                 _showSceneCheckbox->setText("Show Scene");
             else
             {
-                cerr << "Error: loadScene() failed." << endl;
+                std::cerr << "Error: loadScene() failed." << std::endl;
                 _showSceneCheckbox->setValue(false);
                 return;
             }
@@ -113,9 +113,9 @@ void GreenLight::menuCallback(MenuItem * item)
         }
 
         if (_showSceneCheckbox->getValue())
-            PluginHelper::getObjectsRoot()->addChild(_box->transform);
+            cvr::PluginHelper::getObjectsRoot()->addChild(_box->transform);
         else
-            PluginHelper::getObjectsRoot()->removeChild(_box->transform);
+            cvr::PluginHelper::getObjectsRoot()->removeChild(_box->transform);
     }
     else if (item == _componentsViewCheckbox)
     {
@@ -157,17 +157,17 @@ void GreenLight::menuCallback(MenuItem * item)
     }
     else if (item == _loadPowerButton)
     {
-        downloadFile(ConfigManager::getEntry("download", "Plugin.GreenLight.Power", ""),
-                     ConfigManager::getEntry("local", "Plugin.GreenLight.Power", ""),
-                     _powerContents);
+        utl::downloadFile(cvr::ConfigManager::getEntry("download", "Plugin.GreenLight.Power", ""),
+                          cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Power", ""),
+                          _powerContents);
 
         if (!_displayPowerCheckbox)
         {
-            ifstream file;
-            file.open(ConfigManager::getEntry("local", "Plugin.GreenLight.Power", "").c_str());
+            std::ifstream file;
+            file.open(cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Power", "").c_str());
             if (file)
             {
-                _displayPowerCheckbox = new MenuCheckbox("Display Power Consumption",false);
+                _displayPowerCheckbox = new cvr::MenuCheckbox("Display Power Consumption",false);
                 _displayPowerCheckbox->setCallback(this);
                 _powerMenu->addItem(_displayPowerCheckbox);
             }
@@ -177,9 +177,6 @@ void GreenLight::menuCallback(MenuItem * item)
     }
     else if (item == _displayPowerCheckbox)
     {
-//_box->setColor(Vec3(1,1,0));
-//for(int r = 0; r < _rack.size(); r++)
-//_rack[r]->setColor(Vec3(1,0,0));
         setPowerColors(_displayPowerCheckbox->getValue());
     }
 }
@@ -198,37 +195,37 @@ void GreenLight::postFrame()
 
 bool GreenLight::keyEvent(bool keyDown, int key, int mod)
 {
-//    cerr << "GreenLight keyEvent: keyDown: " << keyDown << " key: " << key << " char: " << (char)key << " mod: " << mod << endl;
+//    std::cerr << "GreenLight keyEvent: keyDown: " << keyDown << " key: " << key << " char: " << (char)key << " mod: " << mod << std::endl;
     return false;
 }
 
 bool GreenLight::buttonEvent(int type, int button, int hand, const osg::Matrix& mat)
 {
 /*
-    cerr << "Button event type: ";
+    std::cerr << "Button event type: ";
     switch(type)
     {
         case BUTTON_DOWN:
-            cerr << "BUTTON_DOWN ";
+            std::cerr << "BUTTON_DOWN ";
             break;
         case BUTTON_UP:
-            cerr << "BUTTON_UP ";
+            std::cerr << "BUTTON_UP ";
             break;
         case BUTTON_DRAG:
-            cerr << "BUTTON_DRAG ";
+            std::cerr << "BUTTON_DRAG ";
             break;
         case BUTTON_DOUBLE_CLICK:
-            cerr << "BUTTON_DOUBLE_CLICK ";
+            std::cerr << "BUTTON_DOUBLE_CLICK ";
             break;
         default:
-            cerr << "UNKNOWN ";
+            std::cerr << "UNKNOWN ";
             break;
     }
 
-    cerr << "hand: " << hand << " button: " << button << endl;
+    std::cerr << "hand: " << hand << " button: " << button << std::endl;
 */
 
-    if (type != BUTTON_DOWN || button != 0)
+    if (type != cvr::BUTTON_DOWN || button != 0)
         return false;
 
     if (!_box)
@@ -242,7 +239,7 @@ bool GreenLight::buttonEvent(int type, int button, int hand, const osg::Matrix& 
     pointerEnd.set(0.0f, 10000.0f, 0.0f);
     pointerEnd = pointerEnd * mat;
 
-    isecvec = getObjectIntersection(PluginHelper::getScene(),
+    isecvec = getObjectIntersection(cvr::PluginHelper::getScene(),
                 pointerStart, pointerEnd);
 
     if (isecvec.size() > 0)
@@ -254,30 +251,30 @@ bool GreenLight::buttonEvent(int type, int button, int hand, const osg::Matrix& 
 bool GreenLight::mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix& mat)
 {
 /*
-    cerr << "Mouse Button event type: ";
+    std::cerr << "Mouse Button event type: ";
     switch(type)
     {
         case MOUSE_BUTTON_DOWN:
-            cerr << "MOUSE_BUTTON_DOWN ";
+            std::cerr << "MOUSE_BUTTON_DOWN ";
             break;
         case MOUSE_BUTTON_UP:
-            cerr << "MOUSE_BUTTON_UP ";
+            std::cerr << "MOUSE_BUTTON_UP ";
             break;
         case MOUSE_DRAG:
-            cerr << "MOUSE_DRAG ";
+            std::cerr << "MOUSE_DRAG ";
             break;
         case MOUSE_DOUBLE_CLICK:
-            cerr << "MOUSE_DOUBLE_CLICK ";
+            std::cerr << "MOUSE_DOUBLE_CLICK ";
             break;
         default:
-            cerr << "UNKNOWN ";
+            std::cerr << "UNKNOWN ";
             break;
     }
 
-    cerr << "button: " << button << endl;
+    std::cerr << "button: " << button << std::endl;
 */
     // Left Button Click
-    if (type != MOUSE_BUTTON_DOWN || button != 0)
+    if (type != cvr::MOUSE_BUTTON_DOWN || button != 0)
         return false;
 
     if (!_box)
@@ -291,7 +288,7 @@ bool GreenLight::mouseButtonEvent(int type, int button, int x, int y, const osg:
     pointerEnd.set(0.0f, 10000.0f, 0.0f);
     pointerEnd = pointerEnd * mat;
 
-    isecvec = getObjectIntersection(PluginHelper::getScene(),
+    isecvec = getObjectIntersection(cvr::PluginHelper::getScene(),
                 pointerStart, pointerEnd);
 
     if (isecvec.size() > 0)

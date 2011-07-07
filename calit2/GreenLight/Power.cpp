@@ -4,26 +4,25 @@
 #include <mxml.h>
 
 // local functions
-int intFromString(string str);
-Vec3 wattColor(float watt, int minWatt, int maxWatt);
+osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
 
 void GreenLight::setPowerColors(bool displayPower)
 {
-    std::map< string, int> entityWattsMap;
+    std::map< std::string, int> entityWattsMap;
 
     if (!displayPower)
     {
-        map<string,Entity *>::iterator mit;
+        std::map<std::string,Entity *>::iterator mit;
         for (mit = _components.begin(); mit != _components.end(); mit++)
-            mit->second->setColor(Vec3(.7,.7,.7));
+            mit->second->setColor(osg::Vec3(.7,.7,.7));
         return;
     }
 
     // Display power per component
-    FILE *fp = fopen(ConfigManager::getEntry("local", "Plugin.GreenLight.Power", "").c_str(), "r");
+    FILE *fp = fopen(cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Power", "").c_str(), "r");
     if (!fp)
     {
-        cerr << "Error (setComponentColors): Cannot open \"" << ConfigManager::getEntry("local", "Plugin.GreenLight.Power", "") << "\"." << endl;
+        std::cerr << "Error (setComponentColors): Cannot open \"" << cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Power", "") << "\"." << std::endl;
         _displayPowerCheckbox->setValue(false);
         return;
     }
@@ -34,7 +33,7 @@ void GreenLight::setPowerColors(bool displayPower)
 
     if (measurements == NULL)
     {
-        std::cerr << "Warning: No <measurements> tag in xml power file. Aborting. ";
+        std::cerr << "Warning: No <measurements> tag in xml power file. Aborting." << std::endl;
         return;
     }
 
@@ -49,26 +48,26 @@ void GreenLight::setPowerColors(bool displayPower)
 
             if (nameNode == NULL || nameNode->child->value.text.whitespace == 1)
             {
-                std::cerr << "Error parsing power xml file (bad name on sensor)." << endl;
+                std::cerr << "Error parsing power xml file (bad name on sensor)." << std::endl;
                 continue;
             }
 
-            string name = nameNode->child->value.text.string;
+            std::string name = nameNode->child->value.text.string;
 
             if (valueNode == NULL || valueNode->child->value.text.whitespace == 1)
             {
-                std::cerr << "Error parsing power xml file value for \"" << name <<"\"." << endl;
+                std::cerr << "Error parsing power xml file value for \"" << name <<"\"." << std::endl;
                 continue;
             }
          
-            string value = valueNode->child->value.text.string;
+            std::string value = valueNode->child->value.text.string;
 
-            int wattage = intFromString(value);
+            int wattage = utl::intFromString(value);
             entityWattsMap[name] = wattage;
         } while ((sensor = mxmlWalkNext(sensor,measurements,MXML_NO_DESCEND)) != NULL);
     }
 
-    map<string,Entity *>::iterator mit;
+    std::map<std::string,Entity *>::iterator mit;
     Entity * ent;
     for (mit = _components.begin(); mit != _components.end(); mit++)
     {
@@ -78,31 +77,19 @@ void GreenLight::setPowerColors(bool displayPower)
     }
 }
 
-int intFromString(string str)
-{
-   int i;
-
-   std::stringstream ss;
-
-   ss << str;
-   ss >> i;
-
-   return i;
-}
-
-Vec3 wattColor(float watt, int minWatt, int maxWatt)
+osg::Vec3 wattColor(float watt, int minWatt, int maxWatt)
 {
     if (watt == 0)
-        return Vec3(.2,.2,.2);
+        return osg::Vec3(.2,.2,.2);
 
     if (minWatt == 0 || maxWatt == 0 || maxWatt < minWatt)
-        return Vec3(1,1,1);
+        return osg::Vec3(1,1,1);
 
     if (watt < minWatt)
-        return Vec3(.9,1,1);
+        return osg::Vec3(.9,1,1);
 
     if (watt > maxWatt)
-        return Vec3(1,0,0);
+        return osg::Vec3(1,0,0);
 
     // Watt-Weight:  R,  G,  B
     // minWatt (0):  0,  0,  1
@@ -126,5 +113,5 @@ Vec3 wattColor(float watt, int minWatt, int maxWatt)
     float blue = 1-(interpolate-.33)/.33;
     if (blue < 0) blue = 0;
 
-    return Vec3(red, green, blue);
+    return osg::Vec3(red, green, blue);
 }
