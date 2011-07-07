@@ -2,7 +2,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <config/ConfigManager.h>
 #include <kernel/ComController.h>
 #include <osg/ShapeDrawable>
 #include <osg/Texture2D>
@@ -88,6 +87,7 @@ void GreenLight::parseHardwareFile()
             if (((*lit)->name.substr(0,mit->first.size())).compare(mit->first) == 0)
             {
                 hwEntity = new Entity(mit->second.get());
+                hwEntity->setDefaultMaterial();
                 break;
             }
         }
@@ -111,27 +111,31 @@ void GreenLight::parseHardwareFile()
             }
 
             hwEntity = new Entity(geode);
+            hwEntity->setDefaultMaterial();
         }
         
         // position component in the correct rack slot
         hwEntity->transform->setMatrix(Matrix::translate(0,0,18+getZCoord((*lit)->slot)));
 
-        // finall add entity to the rack
+        // finally add entity to the rack
         _rack[(*lit)->rack-1]->addChild(hwEntity);
+
+        // save a mapping of the component's name to its entity
+        if (_components.find((*lit)->name) == _components.end())
+            _components[(*lit)->name] = hwEntity;
+        else
+            cerr << "Error (parseHardwareFile): Multiple components with the name \"" << (*lit)->name << "\"." << endl;
 
         // clean up our mess
         delete (*lit);
     }
 }
 
-// Fetch data from server file at url
-void GreenLight::downloadHardwareFile()
+// Fetch data from server file at url, save at filename, and store contents in string given
+void GreenLight::downloadFile(string downloadUrl, string fileName, string &content)
 {
     if (ComController::instance()->isMaster())
     {
-        string downloadUrl = ConfigManager::getEntry("download", "Plugin.GreenLight.Hardware", "");
-        string fileName = ConfigManager::getEntry("local", "Plugin.GreenLight.Hardware", "");
-
         // Execute Linux command
         system ( ("curl --retry 1 --connect-timeout 4 --output " + fileName + " \"" + downloadUrl + "\"").c_str() );
 
@@ -141,17 +145,17 @@ void GreenLight::downloadHardwareFile()
 
         if (!file)
         {
-            cerr << "Error: readHardwareFile() failed to open file." << endl;
+            cerr << "Error: downloadFile() failed to open:" << fileName << endl;
         }
         else
         {
             /*Read in file */
-            _hardwareContents = ""; // Just incase
+            content = ""; // Just incase
             while(!file.eof())
             {
-                _hardwareContents += file.get();
+                content += file.get();
             }
-            fileSize = _hardwareContents.length();
+            fileSize = content.length();
         }
         file.close(); 
 
@@ -160,7 +164,7 @@ void GreenLight::downloadHardwareFile()
         if (fileSize > 0)
         {
             char * cArray = new char[fileSize];
-            memcpy(cArray, _hardwareContents.c_str(), fileSize); 
+            memcpy(cArray, content.c_str(), fileSize); 
             ComController::instance()->sendSlaves(cArray, sizeof(char)*fileSize);
             delete[] cArray;
         }
@@ -174,7 +178,7 @@ void GreenLight::downloadHardwareFile()
         {
             char * cArray = new char[fileSize];
             ComController::instance()->readMaster(cArray, sizeof(char)*fileSize);
-            _hardwareContents = cArray;
+            content = cArray;
             delete[] cArray;
         }
     }
@@ -194,7 +198,7 @@ float getZCoord(int slot)
 ref_ptr<Geode> makePart(float height, string textureFile)
 {
     const float xRad = 10.7, yRad = 14.951, zRad_2 = 1.75;
-    const float Z_BUFFER_MAGIC = .1;
+    const float Z_BUFFER_MAGIC = .25;
 
     ref_ptr<Geode> box = new Geode;
 
@@ -224,24 +228,42 @@ ref_ptr<Geode> makePart(float height, string textureFile)
         2, 6, 3, 7, 0, 4, 1, 5, 2, 6 // rest face
     };
 
-    ref_ptr<Vec4Array> colors = new Vec4Array();
-    colors->push_back(Vec4(.7,.7,.7,.7));
+/*    ref_ptr<Vec4Array> colors = new Vec4Array();
+    colors->push_back(Vec4(.7,.7,.7,1));
 
+    osg::Vec3Array* frontnormals = new osg::Vec3Array;
+    frontnormals->push_back(osg::Vec3(0.0f,-1.0f,0.0f));
+    osg::Vec3Array* backnormals = new osg::Vec3Array;
+    backnormals->push_back(osg::Vec3(0.0f,1.0f,0.0f));
+    osg::Vec3Array* restnormals = new osg::Vec3Array;
+    restnormals->push_back(osg::Vec3(0.0f,0.0f,1.0f));
+*/
     ref_ptr<Geometry> frontFace = new Geometry();
     ref_ptr<Geometry> backFace = new Geometry();
     ref_ptr<Geometry> restFace = new Geometry();
+
+    frontFace->setUseDisplayList(false);
+    backFace->setUseDisplayList(false);
+    restFace->setUseDisplayList(false);
 
     frontFace->setVertexArray(verts.get());
     backFace->setVertexArray(verts.get());
     restFace->setVertexArray(verts.get());
 
-    frontFace->setColorArray(colors.get());
+/*    frontFace->setColorArray(colors.get());
     frontFace->setColorBinding(Geometry::BIND_OVERALL);
     backFace->setColorArray(colors.get());
     backFace->setColorBinding(Geometry::BIND_OVERALL);
     restFace->setColorArray(colors.get());
     restFace->setColorBinding(Geometry::BIND_OVERALL);
 
+    frontFace->setNormalArray(frontnormals);
+    frontFace->setNormalBinding(osg::Geometry::BIND_OVERALL);
+    backFace->setNormalArray(backnormals);
+    backFace->setNormalBinding(osg::Geometry::BIND_OVERALL);
+    restFace->setNormalArray(restnormals);
+    restFace->setNormalBinding(osg::Geometry::BIND_OVERALL);
+*/
     frontFace->addPrimitiveSet(new DrawElementsUShort(PrimitiveSet::QUADS, 4, &myIndices[0]));
     backFace->addPrimitiveSet(new DrawElementsUShort(PrimitiveSet::QUADS, 4, &myIndices[4]));
     restFace->addPrimitiveSet(new DrawElementsUShort(PrimitiveSet::TRIANGLE_STRIP, 10, &myIndices[8]));
@@ -280,8 +302,6 @@ ref_ptr<Geode> makePart(float height, string textureFile)
     box->addDrawable(frontFace.get());
     box->addDrawable(backFace.get());
     box->addDrawable(restFace.get());
-
-    box->getOrCreateStateSet()->setMode(GL_LIGHTING, StateAttribute::OFF);
 
     return box.get();
 }

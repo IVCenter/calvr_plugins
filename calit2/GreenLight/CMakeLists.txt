@@ -1,7 +1,6 @@
 SET(LIB_NAME GreenLight)
 SET(PLUGIN_HEADERS
     GreenLight.h
-    TransparencyVisitor.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -12,7 +11,7 @@ ADD_LIBRARY(${LIB_NAME}
     Intersection.cpp
     Entity.cpp
     Hardware.cpp
-    TransparencyVisitor.cpp
+    Power.cpp
 )
 
 

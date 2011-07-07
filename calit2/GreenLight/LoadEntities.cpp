@@ -1,7 +1,6 @@
 #include "GreenLight.h"
 
 #include <iostream>
-#include <config/ConfigManager.h>
 #include <osgDB/ReadFile>
 #include <osgUtil/Optimizer>
 
@@ -189,8 +188,7 @@ bool GreenLight::loadScene()
     _displayComponentsMenu->setCallback(this);
     _glMenu->addItem(_displayComponentsMenu);
 
-    _componentsViewCheckbox = new MenuCheckbox("Components View",
-        _transparencyVisitor->getMode() == TransparencyVisitor::ALL_TRANSPARENT);
+    _componentsViewCheckbox = new MenuCheckbox("Components View",false);
     _componentsViewCheckbox->setCallback(this);
     _displayComponentsMenu->addItem(_componentsViewCheckbox);
 
@@ -217,6 +215,14 @@ bool GreenLight::loadScene()
     _displayRacksCheckbox = new MenuCheckbox("Racks",true);
     _displayRacksCheckbox->setCallback(this);
     _displayComponentsMenu->addItem(_displayRacksCheckbox);
+
+    _powerMenu = new SubMenu("Power Consumption", "Power Consumption");
+    _powerMenu->setCallback(this);
+    _glMenu->addItem(_powerMenu);
+
+    _loadPowerButton = new MenuButton("Load Recent Data");
+    _loadPowerButton->setCallback(this);
+    _powerMenu->addItem(_loadPowerButton);
 
     return true;
 }

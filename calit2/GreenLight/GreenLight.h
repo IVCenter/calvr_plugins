@@ -6,13 +6,13 @@
 #include <vector>
 
 #include <osg/AnimationPath>
+#include <config/ConfigManager.h>
 #include <kernel/CVRPlugin.h>
+#include <menu/MenuButton.h>
 #include <menu/MenuCheckbox.h>
 #include <menu/SubMenu.h>
 
 #include <osg/MatrixTransform>
-
-#include "TransparencyVisitor.h"
 
 using namespace cvr;
 using namespace std;
@@ -56,6 +56,9 @@ class GreenLight : public CVRPlugin, public MenuCallback
                 void beginAnimation();
                 void addChild(Entity * child);
                 void showVisual(bool show);
+                void setColor(const Vec3 color);
+                void setTransparency(bool transparent);
+                void setDefaultMaterial();
 
             protected:
                 void createNodeSet(Node * node);
@@ -81,6 +84,10 @@ class GreenLight : public CVRPlugin, public MenuCallback
         MenuCheckbox * _displayFansCheckbox;
         MenuCheckbox * _displayRacksCheckbox;
 
+        SubMenu * _powerMenu;
+        MenuCheckbox * _displayPowerCheckbox;
+        MenuButton * _loadPowerButton;
+
         // Entities
         Entity * _box;          // box/frame
         vector<Entity *> _door; // doors
@@ -88,18 +95,18 @@ class GreenLight : public CVRPlugin, public MenuCallback
         Entity * _electrical;   // electrical
         Entity * _fans;         // fans
         vector<Entity *> _rack; // racks
+        map<string,Entity *> _components; // mapping of component names to component entities
 
-        // Hardware file contents -- read via master node
+        // File contents -- read/write via master node, copy to slave nodes via messages
         string _hardwareContents;
-
-        // Visitors
-        TransparencyVisitor * _transparencyVisitor;
+        string _powerContents;
 
         // Functions
         bool loadScene();
         bool handleIntersection(Node * iNode);
         void parseHardwareFile();
-        void downloadHardwareFile();
+        void downloadFile(string downloadUrl, string fileName, string &content);
+        void setPowerColors(bool displayPower);
 };
 
 #endif

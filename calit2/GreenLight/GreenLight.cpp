@@ -4,6 +4,7 @@
 
 #include "GreenLight.h"
 
+#include <fstream>
 #include <iostream>
 #include <kernel/PluginHelper.h>
 #include <kernel/InteractionManager.h>
@@ -27,6 +28,9 @@ GreenLight::~GreenLight()
     if (_displayElectricalCheckbox) delete _displayElectricalCheckbox;
     if (_displayFansCheckbox) delete _displayFansCheckbox;
     if (_displayRacksCheckbox) delete _displayRacksCheckbox;
+    if (_powerMenu) delete _powerMenu;
+    if (_displayPowerCheckbox) delete _displayPowerCheckbox;
+    if (_loadPowerButton) delete _loadPowerButton;
 
     if (_box) delete _box;
     if (_waterPipes) delete _waterPipes;
@@ -70,6 +74,10 @@ bool GreenLight::init()
     _displayElectricalCheckbox = NULL;
     _displayFansCheckbox = NULL;
     _displayRacksCheckbox = NULL;
+
+    _powerMenu = NULL;
+    _displayPowerCheckbox = NULL;
+    _loadPowerButton = NULL;
     /*** End Menu Setup ***/
 
     /*** Entity Defaults ***/
@@ -79,11 +87,9 @@ bool GreenLight::init()
     _fans = NULL;
     /*** End Entity Defaults ***/
 
-    downloadHardwareFile();
-
-    _transparencyVisitor = new TransparencyVisitor();
-    _transparencyVisitor->setTraversalMask(0xffffffff);    // Operate on all nodes
-    _transparencyVisitor->setNodeMaskOverride(0xffffffff); // regardless of node mask
+    downloadFile(ConfigManager::getEntry("download", "Plugin.GreenLight.Hardware", ""),
+                 ConfigManager::getEntry("local", "Plugin.GreenLight.Hardware", ""),
+                 _hardwareContents);
 
     return true;
 }
@@ -113,20 +119,15 @@ void GreenLight::menuCallback(MenuItem * item)
     }
     else if (item == _componentsViewCheckbox)
     {
-        if (_componentsViewCheckbox->getValue())
-            _transparencyVisitor->setMode(TransparencyVisitor::ALL_TRANSPARENT);
-        else
-            _transparencyVisitor->setMode(TransparencyVisitor::ALL_OPAQUE);
-
-        _box->mainNode->traverse(*_transparencyVisitor);
-        _waterPipes->mainNode->traverse(*_transparencyVisitor);
-        _electrical->mainNode->traverse(*_transparencyVisitor);
-        _fans->mainNode->traverse(*_transparencyVisitor);
+        bool transparent = _componentsViewCheckbox->getValue();
+        _box->setTransparency(transparent);
+        _waterPipes->setTransparency(transparent);
+        _electrical->setTransparency(transparent);
+        _fans->setTransparency(transparent);
         for (int d = 0; d < _door.size(); d++)
-            _door[d]->mainNode->traverse(*_transparencyVisitor);
+            _door[d]->setTransparency(transparent);
         for (int r = 0; r < _rack.size(); r++)
-            _rack[r]->mainNode->traverse(*_transparencyVisitor);
-
+            _rack[r]->setTransparency(transparent);
     }
     else if (item == _displayFrameCheckbox)
     {
@@ -153,6 +154,33 @@ void GreenLight::menuCallback(MenuItem * item)
     {
         for (int r = 0; r < _rack.size(); r++)
             _rack[r]->showVisual(_displayRacksCheckbox->getValue());
+    }
+    else if (item == _loadPowerButton)
+    {
+        downloadFile(ConfigManager::getEntry("download", "Plugin.GreenLight.Power", ""),
+                     ConfigManager::getEntry("local", "Plugin.GreenLight.Power", ""),
+                     _powerContents);
+
+        if (!_displayPowerCheckbox)
+        {
+            ifstream file;
+            file.open(ConfigManager::getEntry("local", "Plugin.GreenLight.Power", "").c_str());
+            if (file)
+            {
+                _displayPowerCheckbox = new MenuCheckbox("Display Power Consumption",false);
+                _displayPowerCheckbox->setCallback(this);
+                _powerMenu->addItem(_displayPowerCheckbox);
+            }
+            file.close();
+        }
+
+    }
+    else if (item == _displayPowerCheckbox)
+    {
+//_box->setColor(Vec3(1,1,0));
+//for(int r = 0; r < _rack.size(); r++)
+//_rack[r]->setColor(Vec3(1,0,0));
+        setPowerColors(_displayPowerCheckbox->getValue());
     }
 }
 
