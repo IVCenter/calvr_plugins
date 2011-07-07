@@ -231,9 +231,21 @@ bool GreenLight::loadScene()
     _loadPowerButton->setCallback(this);
     _powerMenu->addItem(_loadPowerButton);
 
-    _selectHardwareCheckbox = new cvr::MenuCheckbox("Select Hardware",false);
-    _selectHardwareCheckbox->setCallback(this);
-    _glMenu->addItem(_selectHardwareCheckbox);
+    _hardwareSelectionMenu = new cvr::SubMenu("Hardware Selection", "Hardware Selection");
+    _hardwareSelectionMenu->setCallback(this);
+    _glMenu->addItem(_hardwareSelectionMenu);
+
+    _selectionModeCheckbox = new cvr::MenuCheckbox("Selection Enabled",false);
+    _selectionModeCheckbox->setCallback(this);
+    _hardwareSelectionMenu->addItem(_selectionModeCheckbox);
+
+    _selectAllButton = new cvr::MenuButton("Select All");
+    _selectAllButton->setCallback(this);
+    // Added to _hardwareSelectionMenu when selection mode is enabled
+
+    _deselectAllButton = new cvr::MenuButton("Deselect All");
+    _deselectAllButton->setCallback(this);
+    // Added to _hardwareSelectionMenu when selection mode is enabled
 
     return true;
 }

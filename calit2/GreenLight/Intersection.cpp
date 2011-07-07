@@ -35,7 +35,7 @@ bool GreenLight::handleIntersection(osg::Node * iNode)
             return true;
         }
 
-    if (_selectHardwareCheckbox->getValue())
+    if (_selectionModeCheckbox->getValue())
     {
         Entity * ent;
         std::map<std::string,Entity*>::iterator mit;

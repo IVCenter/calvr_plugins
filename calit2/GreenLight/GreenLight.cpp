@@ -20,7 +20,12 @@ GreenLight::~GreenLight()
 {
     if (_glMenu) delete _glMenu;
     if (_showSceneCheckbox) delete _showSceneCheckbox;
-    if (_selectHardwareCheckbox) delete _selectHardwareCheckbox;
+
+    if (_hardwareSelectionMenu) delete _hardwareSelectionMenu;
+    if (_selectionModeCheckbox) delete _selectionModeCheckbox;
+    if (_selectAllButton) delete _selectAllButton;
+    if (_deselectAllButton) delete _deselectAllButton;
+
     if (_displayComponentsMenu) delete _displayComponentsMenu;
     if (_componentsViewCheckbox) delete _componentsViewCheckbox;
     if (_displayFrameCheckbox) delete _displayFrameCheckbox;
@@ -67,7 +72,10 @@ bool GreenLight::init()
     _showSceneCheckbox->setCallback(this);
     _glMenu->addItem(_showSceneCheckbox);
 
-    _selectHardwareCheckbox = NULL;
+    _hardwareSelectionMenu = NULL;
+    _selectionModeCheckbox = NULL;
+    _selectAllButton = NULL;
+    _deselectAllButton = NULL;
 
     _displayComponentsMenu = NULL;
     _componentsViewCheckbox = NULL;
@@ -182,7 +190,7 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
     {
         setPowerColors(_displayPowerCheckbox->getValue());
     }
-    else if (item == _selectHardwareCheckbox)
+    else if (item == _selectionModeCheckbox)
     {
         // Toggle the non-selected hardware transparencies
         Entity * ent;
@@ -191,8 +199,31 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
         {
             ent = mit->second;
             if (_selectedEntities.find(ent) == _selectedEntities.end())
-                ent->setTransparency(_selectHardwareCheckbox->getValue(),true);
+                ent->setTransparency(_selectionModeCheckbox->getValue(),true);
         }
+
+        if (_selectionModeCheckbox->getValue())
+        {
+            _hardwareSelectionMenu->addItem(_selectAllButton);
+            _hardwareSelectionMenu->addItem(_deselectAllButton);
+        }
+        else
+        {
+            _hardwareSelectionMenu->removeItem(_selectAllButton);
+            _hardwareSelectionMenu->removeItem(_deselectAllButton);
+        }
+    }
+    else if (item == _selectAllButton)
+    {
+        std::map<std::string,Entity*>::iterator mit;
+        for (mit = _components.begin(); mit != _components.end(); mit++)
+            selectHardware(mit->second);
+    }
+    else if (item == _deselectAllButton)
+    {
+        std::map<std::string,Entity*>::iterator mit;
+        for (mit = _components.begin(); mit != _components.end(); mit++)
+            deselectHardware(mit->second);
     }
 }
 

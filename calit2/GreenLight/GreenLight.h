@@ -74,7 +74,11 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         // Menu Items
         cvr::SubMenu * _glMenu;
         cvr::MenuCheckbox * _showSceneCheckbox;
-        cvr::MenuCheckbox * _selectHardwareCheckbox;
+
+        cvr::SubMenu * _hardwareSelectionMenu;
+        cvr::MenuCheckbox * _selectionModeCheckbox;
+        cvr::MenuButton * _selectAllButton;
+        cvr::MenuButton * _deselectAllButton;
 
         cvr::SubMenu * _displayComponentsMenu;
         cvr::MenuCheckbox * _componentsViewCheckbox;
