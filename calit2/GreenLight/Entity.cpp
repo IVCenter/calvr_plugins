@@ -4,6 +4,9 @@
 #include <osg/Material>
 #include <osg/StateSet>
 
+// Local Functions
+void setNodeTransparency(osg::Node * node, float alpha);
+
 GreenLight::Entity::Entity(osg::Node * node, osg::Matrix mat)
 {
     transform = new osg::MatrixTransform(mat);
@@ -12,6 +15,13 @@ GreenLight::Entity::Entity(osg::Node * node, osg::Matrix mat)
     createNodeSet(mainNode);
     status = START;
     time = 0;
+}
+
+GreenLight::Component::Component(osg::Node * node, std::string componentName, osg::Matrix mat)
+    : Entity(node, mat)
+{
+    name = componentName;
+    selected = true;
     minWattage = 0;
     maxWattage = 0;
 }
@@ -72,38 +82,42 @@ void GreenLight::Entity::createNodeSet(osg::Node * node)
 }
 
 
-void GreenLight::Entity::setTransparency(bool transparent, bool onTransform)
+void GreenLight::Entity::setTransparency(bool transparent)
 {
-	float level = transparent ? 0.1f : 1.0f;
-
-        osg::ref_ptr<osg::StateSet> stateset;
-        
-        if (onTransform)
-            stateset = transform->getStateSet();
-        else
-            stateset = mainNode->getOrCreateStateSet();
-
-        osg::ref_ptr<osg::Material> mm = dynamic_cast<osg::Material*>(stateset->getAttribute
-            (osg::StateAttribute::MATERIAL));
-
-        if (!mm)
-            mm = new osg::Material;
-
-        mm->setAlpha(osg::Material::FRONT_AND_BACK, level);
-
-        stateset->setMode(GL_BLEND, osg::StateAttribute::OVERRIDE |
-            osg::StateAttribute::ON );
-        stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-        stateset->setAttributeAndModes( mm, osg::StateAttribute::OVERRIDE |
-            osg::StateAttribute::ON);
-
-        if (onTransform)
-            transform->setStateSet(stateset);
-        else
-            mainNode->setStateSet(stateset);
+    float level = transparent ? 0.1f : 1.0f;
+    setNodeTransparency(mainNode, level);
 }
 
-void GreenLight::Entity::setColor(const osg::Vec3 color)
+void GreenLight::Component::setTransparency(bool transparent)
+{
+    float level = transparent ? 0.1f : 1.0f;
+    setNodeTransparency(transform, level);
+}
+
+void setNodeTransparency(osg::Node * node, float alpha)
+{
+    osg::ref_ptr<osg::StateSet> stateset;
+        
+    stateset = node->getOrCreateStateSet();
+
+    osg::ref_ptr<osg::Material> mm = dynamic_cast<osg::Material*>(stateset->getAttribute
+        (osg::StateAttribute::MATERIAL));
+
+    if (!mm)
+        mm = new osg::Material;
+
+    mm->setAlpha(osg::Material::FRONT_AND_BACK, alpha);
+
+    stateset->setMode(GL_BLEND, osg::StateAttribute::OVERRIDE |
+        osg::StateAttribute::ON );
+    stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    stateset->setAttributeAndModes( mm, osg::StateAttribute::OVERRIDE |
+        osg::StateAttribute::ON);
+
+    node->setStateSet(stateset);
+}
+
+void GreenLight::Component::setColor(const osg::Vec3 color)
 {
     osg::ref_ptr<osg::StateSet> stateset = transform->getStateSet();
     osg::ref_ptr<osg::Material> mm = dynamic_cast<osg::Material*>(stateset->getAttribute
@@ -143,7 +157,7 @@ void GreenLight::Entity::showVisual(bool show)
     }
 }
 
-void GreenLight::Entity::setDefaultMaterial()
+void GreenLight::Component::setDefaultMaterial()
 {
     osg::ref_ptr<osg::StateSet> stateset = transform->getOrCreateStateSet();
     osg::ref_ptr<osg::Material> mm = dynamic_cast<osg::Material*>(stateset->getAttribute

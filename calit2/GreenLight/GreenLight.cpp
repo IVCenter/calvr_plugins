@@ -50,7 +50,7 @@ GreenLight::~GreenLight()
     if (_electrical) delete _electrical;
     if (_fans) delete _fans;
 
-    std::map< std::string, std::set< Entity * > *>::iterator cit;
+    std::map< std::string, std::set< Component * > * >::iterator cit;
     for (cit = _cluster.begin(); cit != _cluster.end(); cit++)
     {
         if (cit->second) delete cit->second;
@@ -200,7 +200,6 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
             }
             file.close();
         }
-
     }
     else if (item == _displayPowerCheckbox)
     {
@@ -210,12 +209,11 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
     {
         // Toggle the non-selected hardware transparencies
         Entity * ent;
-        std::map<std::string,Entity*>::iterator mit;
-        for (mit = _components.begin(); mit != _components.end(); mit++)
+        std::set< Component * >::iterator sit;
+        for (sit = _components.begin(); sit != _components.end(); sit++)
         {
-            ent = mit->second;
-            if (_selectedEntities.find(ent) == _selectedEntities.end())
-                ent->setTransparency(_selectionModeCheckbox->getValue(),true);
+            if (!(*sit)->selected)
+                (*sit)->setTransparency(_selectionModeCheckbox->getValue());
         }
 
         if (_selectionModeCheckbox->getValue())
@@ -233,23 +231,17 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
             _hardwareSelectionMenu->removeItem(_deselectAllButton);
         }
     }
-    else if (item == _selectAllButton)
+    else if (item == _selectAllButton || item == _deselectAllButton)
     {
-        std::map<std::string,Entity*>::iterator mit;
-        for (mit = _components.begin(); mit != _components.end(); mit++)
-            selectHardware(mit->second, true);
-    }
-    else if (item == _deselectAllButton)
-    {
-        std::map<std::string,Entity*>::iterator mit;
-        for (mit = _components.begin(); mit != _components.end(); mit++)
-            selectHardware(mit->second, false);
+        std::set< Component * >::iterator sit;
+        for (sit = _components.begin(); sit != _components.end(); sit++)
+            selectComponent(*sit, item == _selectAllButton);
     }
     else if ((chit = _clusterCheckbox.find(dynamic_cast<cvr::MenuCheckbox *>(item))) != _clusterCheckbox.end())
     {
         cvr::MenuCheckbox * checkbox = *chit;
 
-        std::map< std::string, std::set< Entity * > * >::iterator cit = _cluster.find(checkbox->getText());
+        std::map< std::string, std::set< Component * > * >::iterator cit = _cluster.find(checkbox->getText());
         if (cit == _cluster.end())
         {
             std::cerr << "Error: Cluster checkbox selected without a matching cluster (" << checkbox->getText() << ")" << std::endl;
@@ -257,7 +249,7 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
             return;
         }
 
-        std::set< Entity * > * cluster = cit->second;
+        std::set< Component * > * cluster = cit->second;
         selectCluster(cluster, checkbox->getValue());
     }
 }

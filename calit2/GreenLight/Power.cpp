@@ -8,13 +8,13 @@ osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
 
 void GreenLight::setPowerColors(bool displayPower)
 {
-    std::map< std::string, int> entityWattsMap;
+    std::map< std::string, int> componentWattsMap;
 
     if (!displayPower)
     {
-        std::map<std::string,Entity *>::iterator mit;
-        for (mit = _components.begin(); mit != _components.end(); mit++)
-            mit->second->setColor(osg::Vec3(.7,.7,.7));
+        std::set< Component *>::iterator sit;
+        for (sit = _components.begin(); sit != _components.end(); sit++)
+            (*sit)->setColor(osg::Vec3(.7,.7,.7));
         return;
     }
 
@@ -63,17 +63,15 @@ void GreenLight::setPowerColors(bool displayPower)
             std::string value = valueNode->child->value.text.string;
 
             int wattage = utl::intFromString(value);
-            entityWattsMap[name] = wattage;
+            componentWattsMap[name] = wattage;
         } while ((sensor = mxmlWalkNext(sensor,measurements,MXML_NO_DESCEND)) != NULL);
     }
 
-    std::map<std::string,Entity *>::iterator mit;
-    Entity * ent;
-    for (mit = _components.begin(); mit != _components.end(); mit++)
+    std::set< Component * >::iterator sit;
+    for (sit = _components.begin(); sit != _components.end(); sit++)
     {
-        float wattage = entityWattsMap[mit->first];
-        ent = mit->second;
-        ent->setColor( wattColor(wattage, ent->minWattage, ent->maxWattage));
+        float wattage = componentWattsMap[(*sit)->name];
+        (*sit)->setColor( wattColor(wattage, (*sit)->minWattage, (*sit)->maxWattage));
     }
 }
 

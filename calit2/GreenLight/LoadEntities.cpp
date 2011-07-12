@@ -241,11 +241,11 @@ bool GreenLight::loadScene()
 
     if (_cluster.size() > 0)
     {
-        _selectClusterMenu = new cvr::SubMenu("Cluster Selection", "Cluster Selection");
+        _selectClusterMenu = new cvr::SubMenu("Cluster Selection", "Selected Clusters");
         _selectClusterMenu->setCallback(this);
         // Added to _hardwareSelectionMenu when selection mode is enabled
 
-        std::map< std::string, std::set< Entity * > * >::iterator cit;
+        std::map< std::string, std::set< Component * > * >::iterator cit;
         for (cit = _cluster.begin(); cit != _cluster.end(); cit++)
         {
             cvr::MenuCheckbox * checkbox = new cvr::MenuCheckbox(cit->first,false);

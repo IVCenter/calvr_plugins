@@ -84,7 +84,7 @@ void GreenLight::parseHardwareFile()
             nameToWattage[startname] = std::make_pair(minWatt,maxWatt);
         }
 
-        _cluster[startname] = new std::set< Entity * >;
+        _cluster[startname] = new std::set< Component * >;
     }
 
     std::map< std::string, osg::ref_ptr<osg::Geode> >::iterator mit;
@@ -92,11 +92,11 @@ void GreenLight::parseHardwareFile()
     osg::ref_ptr<osg::Geode> geode;
     osg::CopyOp cOp = osg::CopyOp(osg::CopyOp::DEEP_COPY_ALL &  ~(osg::CopyOp::DEEP_COPY_TEXTURES & osg::CopyOp::DEEP_COPY_IMAGES));
     std::list<Hardware *>::iterator lit;
-    std::map< std::string, std::set< Entity * > * >::iterator cit;
+    std::map< std::string, std::set< Component * > * >::iterator cit;
 
     for (lit = hardware.begin(); lit != hardware.end(); lit++)
     {
-        Entity * hwEntity;
+        Component * hwComp;
 
         // Does hardware name start with any textured model names?
         for (mit = nameToGeode.begin(); mit != nameToGeode.end(); mit++)
@@ -127,24 +127,28 @@ void GreenLight::parseHardwareFile()
 
         }
 
-        hwEntity = new Entity(geode);
+        // Create component from geode, name, and proper translation matrix
+        hwComp = new Component(geode,(*lit)->name, osg::Matrix::translate(0,0,18+getZCoord((*lit)->slot)));
 
         // Does entity belong to a cluster?
         for (cit = _cluster.begin(); cit != _cluster.end(); cit++)
         {
             if (((*lit)->name.substr(0,cit->first.size())).compare(cit->first) == 0)
-                cit->second->insert(hwEntity);
+            {
+                cit->second->insert(hwComp);
+                hwComp->cluster = cit->first;
+            }
         }
 
-        hwEntity->setDefaultMaterial();
+        hwComp->setDefaultMaterial();
 
         // if min/max wattages were given, set them up
         for (wit = nameToWattage.begin(); wit != nameToWattage.end(); wit++)
         {
             if (((*lit)->name.substr(0,wit->first.size())).compare(wit->first) == 0)
             {
-                hwEntity->minWattage = wit->second.first;
-                hwEntity->maxWattage = wit->second.second;
+                hwComp->minWattage = wit->second.first;
+                hwComp->maxWattage = wit->second.second;
                 break;
             }
         }
@@ -152,17 +156,11 @@ void GreenLight::parseHardwareFile()
         if (wit == nameToWattage.end())
             std::cerr << "Warning: " << (*lit)->name << " does not have a min/max wattage set in the config file." << std::endl;
 
-        // position component in the correct rack slot
-        hwEntity->transform->setMatrix(osg::Matrix::translate(0,0,18+getZCoord((*lit)->slot)));
-
         // finally add entity to the rack
-        _rack[(*lit)->rack-1]->addChild(hwEntity);
+        _rack[(*lit)->rack-1]->addChild(hwComp);
 
-        // save a mapping of the component's name to its entity
-        if (_components.find((*lit)->name) == _components.end())
-            _components[(*lit)->name] = hwEntity;
-        else
-            std::cerr << "Error (parseHardwareFile): Multiple components with the name \"" << (*lit)->name << "\"." << std::endl;
+        // keep a reference to the component
+        _components.insert(hwComp);
 
         // clean up our mess
         delete (*lit);

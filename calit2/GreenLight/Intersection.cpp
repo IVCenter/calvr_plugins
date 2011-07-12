@@ -37,17 +37,13 @@ bool GreenLight::handleIntersection(osg::Node * iNode)
 
     if (_selectionModeCheckbox->getValue())
     {
-        Entity * ent;
-        std::map<std::string,Entity*>::iterator mit;
-        for (mit = _components.begin(); mit != _components.end(); mit++)
+        Component * comp;
+        std::set< Component * >::iterator sit;
+        for (sit = _components.begin(); sit != _components.end(); sit++)
         {
-            ent = mit->second;
-            if (ent->nodes.find(iNode) != ent->nodes.end())
+            if ((*sit)->nodes.find(iNode) != (*sit)->nodes.end())
             {
-                if (_selectedEntities.find(ent) != _selectedEntities.end())
-                    selectHardware(ent,false);
-                else
-                    selectHardware(ent,true);
+                selectComponent( *sit, !(*sit)->selected );
                 return true;
             }
         }
@@ -57,29 +53,73 @@ bool GreenLight::handleIntersection(osg::Node * iNode)
     return false;
 }
 
-void GreenLight::selectHardware(Entity * ent, bool select)
+bool GreenLight::Component::select(bool select)
 {
-    if (select)
+    if (select != selected)
     {
-        _selectedEntities.insert(ent);
-        ent->setTransparency(false, true);
+        // apply new selection and transparency
+        selected = select;
+        setTransparency(!select);
+        return true;
     }
-    else
+    return false;
+}
+
+void GreenLight::selectComponent(Component * comp, bool select)
+{
+    // only alter if necessary
+    if (comp->select(select))
     {
-        _selectedEntities.erase(ent);
-        ent->setTransparency(true, true);
+        /* if part of a cluster, change cluster checkbox value as necessary
+         * ----------------------------------------------------------------
+         * 1)  Only act if the Component is part of a cluster
+         * 2)  Find the checkbox that correlates to this cluster
+         * 3a) If the checkbox value is true, and this is a deselection, uncheck the box
+         * 3b) If the checkbox value is false, and this is a selection,
+         *     then check if other nodes in cluster are selected before checking the box
+         */
+        std::string clusterName = comp->cluster;
+        if (clusterName != "")
+        {
+            std::set< cvr::MenuCheckbox * >::iterator chit;
+            for (chit = _clusterCheckbox.begin(); chit != _clusterCheckbox.end(); chit++)
+            {
+                if ((*chit)->getText() == clusterName)
+                     break;
+            }
+
+            if (chit == _clusterCheckbox.end())
+            {
+                std::cerr << "Error: Did not find a checkbox that matches cluster \"" << clusterName << "\"" << std::endl;
+                return;
+            }
+
+            if ((*chit)->getValue())
+            {
+                if (!select)
+                    (*chit)->setValue(false);
+            }
+            else if (select) // checkbox value is also false
+            {
+                std::set< Component * > * clusterSet = _cluster[clusterName];
+                std::set< Component * >::iterator sit;
+                for (sit = clusterSet->begin(); sit != clusterSet->end(); sit++)
+                {
+                    if (!(*sit)->selected)
+                        return; // should not select checkbox
+                }
+                // if we get this far, then all components in the cluster are selected
+                (*chit)->setValue(true);
+            }
+        }
     }
 }
 
-void GreenLight::selectCluster(std::set< Entity * > * cluster, bool select)
+void GreenLight::selectCluster(std::set< Component * > * cluster, bool select)
 {
-    std::set< Entity * >::iterator eit;
-    for (eit = cluster->begin(); eit != cluster->end(); eit++)
+    std::set< Component * >::iterator sit;
+    for (sit = cluster->begin(); sit != cluster->end(); sit++)
     {
-        bool selected = _selectedEntities.find(*eit) != _selectedEntities.end();
-        if (select && !selected)
-            selectHardware(*eit, true);
-        else if (!select && selected)
-            selectHardware(*eit,false);
+            (*sit)->select(select);
     }
 }
