@@ -5,6 +5,7 @@
 #include <menu/SubMenu.h>
 #include <kernel/PluginHelper.h>
 #include <kernel/InteractionManager.h>
+#include <kernel/ThreadedLoader.h>
 
 CVRPLUGIN(PluginTest)
 
@@ -13,6 +14,7 @@ using namespace cvr;
 PluginTest::PluginTest()
 {
     std::cerr << "PluginTest created." << std::endl;
+    _loading = false;
 }
 
 PluginTest::~PluginTest()
@@ -121,6 +123,12 @@ void PluginTest::menuCallback(MenuItem * item)
     if(item == testButton1)
     {
 	std::cerr << "Test Button 1" << std::endl;
+	if(_loading)
+	{
+	    ThreadedLoader::instance()->remove(_job);
+	}
+	_job = ThreadedLoader::instance()->readNodeFile("/home/aprudhom/data/falko/se_building.obj");
+	_loading = true;
     }
     else if(item == testButton2)
     {
@@ -159,6 +167,26 @@ void PluginTest::menuCallback(MenuItem * item)
 void PluginTest::preFrame()
 {
     //std::cerr << "PluginTest preFrame()." << std::endl;
+    if(_loading)
+    {
+	//std::cerr << "Loading status: " << ThreadedLoader::instance()->getProgress(_job) << std::endl;
+	if(ThreadedLoader::instance()->isDone(_job))
+	{
+	    std::cerr << "Job done." << std::endl;
+	    osg::ref_ptr<osg::Node> node;
+	    ThreadedLoader::instance()->getNodeFile(_job,node);
+	    if(!node)
+	    {
+		std::cerr << "Node is null." << std::endl;
+	    }
+	    else
+	    {
+		PluginHelper::getObjectsRoot()->addChild(node);
+	    }
+	    ThreadedLoader::instance()->remove(_job);
+	    _loading = false;
+	}
+    }
 }
 
 void PluginTest::postFrame()

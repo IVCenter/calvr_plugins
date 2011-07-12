@@ -48,6 +48,9 @@ class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * pbutton1;
 
         cvr::TabbedDialogPanel * tdp1;
+
+        bool _loading;
+        int _job;
 };
 
 #endif
