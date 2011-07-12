@@ -23,6 +23,13 @@ GreenLight::~GreenLight()
 
     if (_hardwareSelectionMenu) delete _hardwareSelectionMenu;
     if (_selectionModeCheckbox) delete _selectionModeCheckbox;
+    if (_selectClusterMenu) delete _selectClusterMenu;
+    std::set< cvr::MenuCheckbox * >::iterator chit;
+    for (chit = _clusterCheckbox.begin(); chit != _clusterCheckbox.end(); chit++)
+    {
+        if (*chit) delete *chit;
+    }
+    _clusterCheckbox.clear();
     if (_selectAllButton) delete _selectAllButton;
     if (_deselectAllButton) delete _deselectAllButton;
 
@@ -42,6 +49,13 @@ GreenLight::~GreenLight()
     if (_waterPipes) delete _waterPipes;
     if (_electrical) delete _electrical;
     if (_fans) delete _fans;
+
+    std::map< std::string, std::set< Entity * > *>::iterator cit;
+    for (cit = _cluster.begin(); cit != _cluster.end(); cit++)
+    {
+        if (cit->second) delete cit->second;
+    }
+    _cluster.clear();
 
     std::vector<Entity *>::iterator vit;
     for (vit = _door.begin(); vit != _door.end(); vit++)
@@ -103,6 +117,8 @@ bool GreenLight::init()
 
 void GreenLight::menuCallback(cvr::MenuItem * item)
 {
+    std::set< cvr::MenuCheckbox * >::iterator chit;
+
     if (item == _showSceneCheckbox)
     {
         // Load as neccessary
@@ -204,11 +220,15 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
 
         if (_selectionModeCheckbox->getValue())
         {
+            if (_selectClusterMenu)
+                _hardwareSelectionMenu->addItem(_selectClusterMenu);
             _hardwareSelectionMenu->addItem(_selectAllButton);
             _hardwareSelectionMenu->addItem(_deselectAllButton);
         }
         else
         {
+            if (_selectClusterMenu)
+                _hardwareSelectionMenu->removeItem(_selectClusterMenu);
             _hardwareSelectionMenu->removeItem(_selectAllButton);
             _hardwareSelectionMenu->removeItem(_deselectAllButton);
         }
@@ -217,13 +237,28 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
     {
         std::map<std::string,Entity*>::iterator mit;
         for (mit = _components.begin(); mit != _components.end(); mit++)
-            selectHardware(mit->second);
+            selectHardware(mit->second, true);
     }
     else if (item == _deselectAllButton)
     {
         std::map<std::string,Entity*>::iterator mit;
         for (mit = _components.begin(); mit != _components.end(); mit++)
-            deselectHardware(mit->second);
+            selectHardware(mit->second, false);
+    }
+    else if ((chit = _clusterCheckbox.find(dynamic_cast<cvr::MenuCheckbox *>(item))) != _clusterCheckbox.end())
+    {
+        cvr::MenuCheckbox * checkbox = *chit;
+
+        std::map< std::string, std::set< Entity * > * >::iterator cit = _cluster.find(checkbox->getText());
+        if (cit == _cluster.end())
+        {
+            std::cerr << "Error: Cluster checkbox selected without a matching cluster (" << checkbox->getText() << ")" << std::endl;
+            checkbox->setValue(checkbox->getValue());
+            return;
+        }
+
+        std::set< Entity * > * cluster = cit->second;
+        selectCluster(cluster, checkbox->getValue());
     }
 }
 

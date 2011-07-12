@@ -50,7 +50,7 @@ void GreenLight::parseHardwareFile()
 
     /*
      * 1) Read in component which we wish to texture
-     * 2) Create model (geode)
+     * 2) Create model (geode) and cluster
      * 3) Repeat 1 & 2 for all components in config file
      * 4) Put components (from hardware file) in to scene via created models
      * +)Create default models (one per height, as needed) for untextured models
@@ -83,6 +83,8 @@ void GreenLight::parseHardwareFile()
         {
             nameToWattage[startname] = std::make_pair(minWatt,maxWatt);
         }
+
+        _cluster[startname] = new std::set< Entity * >;
     }
 
     std::map< std::string, osg::ref_ptr<osg::Geode> >::iterator mit;
@@ -90,6 +92,8 @@ void GreenLight::parseHardwareFile()
     osg::ref_ptr<osg::Geode> geode;
     osg::CopyOp cOp = osg::CopyOp(osg::CopyOp::DEEP_COPY_ALL &  ~(osg::CopyOp::DEEP_COPY_TEXTURES & osg::CopyOp::DEEP_COPY_IMAGES));
     std::list<Hardware *>::iterator lit;
+    std::map< std::string, std::set< Entity * > * >::iterator cit;
+
     for (lit = hardware.begin(); lit != hardware.end(); lit++)
     {
         Entity * hwEntity;
@@ -124,6 +128,14 @@ void GreenLight::parseHardwareFile()
         }
 
         hwEntity = new Entity(geode);
+
+        // Does entity belong to a cluster?
+        for (cit = _cluster.begin(); cit != _cluster.end(); cit++)
+        {
+            if (((*lit)->name.substr(0,cit->first.size())).compare(cit->first) == 0)
+                cit->second->insert(hwEntity);
+        }
+
         hwEntity->setDefaultMaterial();
 
         // if min/max wattages were given, set them up

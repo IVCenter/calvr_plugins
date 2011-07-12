@@ -239,6 +239,22 @@ bool GreenLight::loadScene()
     _selectionModeCheckbox->setCallback(this);
     _hardwareSelectionMenu->addItem(_selectionModeCheckbox);
 
+    if (_cluster.size() > 0)
+    {
+        _selectClusterMenu = new cvr::SubMenu("Cluster Selection", "Cluster Selection");
+        _selectClusterMenu->setCallback(this);
+        // Added to _hardwareSelectionMenu when selection mode is enabled
+
+        std::map< std::string, std::set< Entity * > * >::iterator cit;
+        for (cit = _cluster.begin(); cit != _cluster.end(); cit++)
+        {
+            cvr::MenuCheckbox * checkbox = new cvr::MenuCheckbox(cit->first,false);
+            checkbox->setCallback(this);
+            _selectClusterMenu->addItem(checkbox);
+            _clusterCheckbox.insert(checkbox);
+        }
+    }
+
     _selectAllButton = new cvr::MenuButton("Select All");
     _selectAllButton->setCallback(this);
     // Added to _hardwareSelectionMenu when selection mode is enabled

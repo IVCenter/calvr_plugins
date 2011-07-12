@@ -77,6 +77,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 
         cvr::SubMenu * _hardwareSelectionMenu;
         cvr::MenuCheckbox * _selectionModeCheckbox;
+        cvr::SubMenu * _selectClusterMenu;
+        std::set< cvr::MenuCheckbox * > _clusterCheckbox;
         cvr::MenuButton * _selectAllButton;
         cvr::MenuButton * _deselectAllButton;
 
@@ -100,9 +102,11 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         Entity * _electrical;   // electrical
         Entity * _fans;         // fans
         std::vector<Entity *> _rack; // racks
-        std::map<std::string,Entity *> _components; // mapping of component names to component entities
+        std::map<std::string, Entity *> _components; // mapping of component names to component entities
 
+        // Entity Collections
         std::set<Entity *> _selectedEntities;
+        std::map< std::string, std::set< Entity * > *> _cluster;
 
         // File contents -- read/write via master node, copy to slave nodes via messages
         std::string _hardwareContents;
@@ -113,8 +117,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         bool handleIntersection(osg::Node * iNode);
         void parseHardwareFile();
         void setPowerColors(bool displayPower);
-        void selectHardware(Entity * ent);
-        void deselectHardware(Entity * ent);
+        void selectHardware(Entity * ent, bool select);
+        void selectCluster(std::set< Entity * > * cluster, bool select);
 };
 
 #endif

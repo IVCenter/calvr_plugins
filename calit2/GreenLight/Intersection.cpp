@@ -45,9 +45,9 @@ bool GreenLight::handleIntersection(osg::Node * iNode)
             if (ent->nodes.find(iNode) != ent->nodes.end())
             {
                 if (_selectedEntities.find(ent) != _selectedEntities.end())
-                    deselectHardware(ent);
+                    selectHardware(ent,false);
                 else
-                    selectHardware(ent);
+                    selectHardware(ent,true);
                 return true;
             }
         }
@@ -57,14 +57,29 @@ bool GreenLight::handleIntersection(osg::Node * iNode)
     return false;
 }
 
-void GreenLight::selectHardware(Entity * ent)
+void GreenLight::selectHardware(Entity * ent, bool select)
 {
-    _selectedEntities.insert(ent);
-    ent->setTransparency(false,true);
+    if (select)
+    {
+        _selectedEntities.insert(ent);
+        ent->setTransparency(false, true);
+    }
+    else
+    {
+        _selectedEntities.erase(ent);
+        ent->setTransparency(true, true);
+    }
 }
 
-void GreenLight::deselectHardware(Entity * ent)
+void GreenLight::selectCluster(std::set< Entity * > * cluster, bool select)
 {
-    _selectedEntities.erase(ent);
-    ent->setTransparency(true,true);
+    std::set< Entity * >::iterator eit;
+    for (eit = cluster->begin(); eit != cluster->end(); eit++)
+    {
+        bool selected = _selectedEntities.find(*eit) != _selectedEntities.end();
+        if (select && !selected)
+            selectHardware(*eit, true);
+        else if (!select && selected)
+            selectHardware(*eit,false);
+    }
 }
