@@ -1,6 +1,7 @@
 SET(LIB_NAME GreenLight)
 SET(PLUGIN_HEADERS
     GreenLight.h
+    Utility.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -10,6 +11,9 @@ ADD_LIBRARY(${LIB_NAME}
     LoadEntities.cpp
     Intersection.cpp
     Entity.cpp
+    Hardware.cpp
+    Power.cpp
+    Utility.cpp
 )
 
 
