@@ -32,7 +32,7 @@ class PanoView360 : public CVRPlugin, public MenuCallback
         virtual ~PanoView360();
 
         void menuCallback(MenuItem* item);
-        bool key(int type, int keySym, int mod);
+        bool keyEvent(bool keyDown, int key, int mod);
 
         bool init();
         void preFrame();

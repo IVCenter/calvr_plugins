@@ -276,7 +276,7 @@ void PanoView360::preFrame()
    } 
 }
 
-bool PanoView360::key(int, int, int)
+bool PanoView360::keyEvent(bool, int, int)
 {
    if(_cd != NULL)
    {
