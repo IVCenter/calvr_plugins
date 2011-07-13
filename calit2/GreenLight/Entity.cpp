@@ -110,7 +110,9 @@ void setNodeTransparency(osg::Node * node, float alpha)
 
     stateset->setMode(GL_BLEND, osg::StateAttribute::OVERRIDE |
         osg::StateAttribute::ON );
-    stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    stateset->setRenderingHint(alpha == 1.0 ?
+                               osg::StateSet::OPAQUE_BIN :
+                               osg::StateSet::TRANSPARENT_BIN);
     stateset->setAttributeAndModes( mm, osg::StateAttribute::OVERRIDE |
         osg::StateAttribute::ON);
 
