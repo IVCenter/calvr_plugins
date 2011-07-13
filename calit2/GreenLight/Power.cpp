@@ -4,7 +4,7 @@
 #include <mxml.h>
 
 // local functions
-osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
+//osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
 
 void GreenLight::setPowerColors(bool displayPower)
 {
@@ -75,7 +75,7 @@ void GreenLight::setPowerColors(bool displayPower)
     }
 }
 
-osg::Vec3 wattColor(float watt, int minWatt, int maxWatt)
+osg::Vec3 GreenLight::wattColor(float watt, int minWatt, int maxWatt)
 {
     if (watt == 0)
         return osg::Vec3(.2,.2,.2);
@@ -84,7 +84,7 @@ osg::Vec3 wattColor(float watt, int minWatt, int maxWatt)
         return osg::Vec3(1,1,1);
 
     if (watt < minWatt)
-        return osg::Vec3(.9,1,1);
+        return osg::Vec3(1,0,1);
 
     if (watt > maxWatt)
         return osg::Vec3(1,0,0);

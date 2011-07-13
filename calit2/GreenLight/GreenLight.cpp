@@ -24,12 +24,14 @@ GreenLight::~GreenLight()
     if (_hardwareSelectionMenu) delete _hardwareSelectionMenu;
     if (_selectionModeCheckbox) delete _selectionModeCheckbox;
     if (_selectClusterMenu) delete _selectClusterMenu;
+
     std::set< cvr::MenuCheckbox * >::iterator chit;
     for (chit = _clusterCheckbox.begin(); chit != _clusterCheckbox.end(); chit++)
     {
         if (*chit) delete *chit;
     }
     _clusterCheckbox.clear();
+
     if (_selectAllButton) delete _selectAllButton;
     if (_deselectAllButton) delete _deselectAllButton;
 
@@ -111,6 +113,9 @@ bool GreenLight::init()
     _electrical = NULL;
     _fans = NULL;
     /*** End Entity Defaults ***/
+
+    _testRange = NULL;
+    _dehumidifier = NULL;
 
     return true;
 }
@@ -204,6 +209,13 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
     else if (item == _displayPowerCheckbox)
     {
         setPowerColors(_displayPowerCheckbox->getValue());
+
+        if (_testRange == NULL)
+{
+    _testRange = new cvr::MenuRangeValue("Color Test (Dehumidifier)", .9, 2.1, 1, .01);
+    _testRange->setCallback(this);
+    _powerMenu->addItem(_testRange);
+}
     }
     else if (item == _selectionModeCheckbox)
     {
@@ -251,6 +263,11 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
 
         std::set< Component * > * cluster = cit->second;
         selectCluster(cluster, checkbox->getValue());
+    }
+    else if (item == _testRange)
+    {
+        if (_dehumidifier)
+            _dehumidifier->setColor(wattColor(_testRange->getValue(),1,2));
     }
 }
 

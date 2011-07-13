@@ -129,6 +129,8 @@ void GreenLight::parseHardwareFile()
 
         // Create component from geode, name, and proper translation matrix
         hwComp = new Component(geode,(*lit)->name, osg::Matrix::translate(0,0,18+getZCoord((*lit)->slot)));
+if (hwComp->name == "Dehumidifier")
+    _dehumidifier=hwComp;
 
         // Does entity belong to a cluster?
         for (cit = _cluster.begin(); cit != _cluster.end(); cit++)

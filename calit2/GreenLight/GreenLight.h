@@ -10,6 +10,7 @@
 #include <kernel/CVRPlugin.h>
 #include <menu/MenuButton.h>
 #include <menu/MenuCheckbox.h>
+#include <menu/MenuRangeValue.h>
 #include <menu/SubMenu.h>
 
 #include <osg/MatrixTransform>
@@ -107,6 +108,10 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::SubMenu * _powerMenu;
         cvr::MenuCheckbox * _displayPowerCheckbox;
         cvr::MenuButton * _loadPowerButton;
+
+cvr::MenuRangeValue * _testRange;
+Component * _dehumidifier;
+osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
 
         // Entities
         Entity * _box;          // box/frame
