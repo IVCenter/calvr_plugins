@@ -248,7 +248,7 @@ bool GreenLight::loadScene()
         std::map< std::string, std::set< Component * > * >::iterator cit;
         for (cit = _cluster.begin(); cit != _cluster.end(); cit++)
         {
-            cvr::MenuCheckbox * checkbox = new cvr::MenuCheckbox(cit->first,false);
+            cvr::MenuCheckbox * checkbox = new cvr::MenuCheckbox(cit->first, true);
             checkbox->setCallback(this);
             _selectClusterMenu->addItem(checkbox);
             _clusterCheckbox.insert(checkbox);
