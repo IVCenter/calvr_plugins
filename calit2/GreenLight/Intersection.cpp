@@ -19,21 +19,21 @@ void GreenLight::doHoverOver(Entity *& last, Entity * current)
             if (last->asComponent())
                 last->transform->preMult(osg::Matrix::scale(nScale,nScale,nScale));
             else
-                ; // Do something here for doors/racks
+                last->removeColor();
         }
 
         // expand currently hovered over entity, if there is one
-        if (current)
+        if (current != NULL)
         {
             if (current->asComponent())
                 current->transform->preMult(osg::Matrix::scale(eScale,eScale,eScale));
             else
-                ; // Do something here for doors/racks
+                current->setColor(osg::Vec3(1,1,.5));
         }
 
         // assign current to last (notice pass-by-reference)
         last = current;
-     }
+    }
 }
 
 void GreenLight::handleHoverOver(osg::Matrix pointerMat, Entity *& hovered)

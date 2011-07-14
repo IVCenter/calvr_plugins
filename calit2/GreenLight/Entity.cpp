@@ -119,11 +119,14 @@ void setNodeTransparency(osg::Node * node, float alpha)
     node->setStateSet(stateset);
 }
 
-void GreenLight::Component::setColor(const osg::Vec3 color)
+void GreenLight::Entity::setColor(const osg::Vec3 color)
 {
-    osg::ref_ptr<osg::StateSet> stateset = transform->getStateSet();
+    osg::ref_ptr<osg::StateSet> stateset = transform->getOrCreateStateSet();
     osg::ref_ptr<osg::Material> mm = dynamic_cast<osg::Material*>(stateset->getAttribute
         (osg::StateAttribute::MATERIAL));
+
+    if (!mm)
+        mm = new osg::Material;
 
     osg::Vec4 color4;
     color4 = mm->getDiffuse(osg::Material::FRONT_AND_BACK);
@@ -131,7 +134,19 @@ void GreenLight::Component::setColor(const osg::Vec3 color)
     mm->setDiffuse(osg::Material::FRONT_AND_BACK, color4);
 
     stateset->setAttributeAndModes( mm, osg::StateAttribute::OVERRIDE |
+            (asComponent() ? osg::StateAttribute::PROTECTED : 0) |
             osg::StateAttribute::ON );
+
+    transform->setStateSet(stateset);
+}
+
+void GreenLight::Entity::removeColor()
+{
+    osg::ref_ptr<osg::StateSet> stateset = transform->getStateSet();
+    osg::ref_ptr<osg::Material> mm = dynamic_cast<osg::Material*>(stateset->getAttribute
+        (osg::StateAttribute::MATERIAL));
+
+    stateset->setAttributeAndModes( mm, osg::StateAttribute::OFF );
 
     transform->setStateSet(stateset);
 }
@@ -174,6 +189,7 @@ void GreenLight::Component::setDefaultMaterial()
     stateset->setMode(GL_LIGHTING, osg::StateAttribute::PROTECTED |
             osg::StateAttribute::OFF );
     stateset->setAttributeAndModes( mm, osg::StateAttribute::OVERRIDE |
+            osg::StateAttribute::PROTECTED |
             osg::StateAttribute::ON );
 
     transform->setStateSet(stateset);

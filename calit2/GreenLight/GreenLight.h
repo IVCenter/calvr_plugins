@@ -57,6 +57,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 void addChild(Entity * child);
                 void showVisual(bool show);
                 virtual void setTransparency(bool transparent);
+                void setColor(const osg::Vec3 color);
+                void removeColor();
 
                 virtual Component * asComponent() {return NULL;}
 
@@ -75,7 +77,6 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 int maxWattage; // used for coloring range
                 std::string cluster;
 
-                void setColor(const osg::Vec3 color);
                 void setDefaultMaterial();
                 void setTransparency(bool transparent);
                 bool select(bool select);
