@@ -110,6 +110,9 @@ bool GreenLight::init()
     _waterPipes = NULL;
     _electrical = NULL;
     _fans = NULL;
+
+    _mouseOver = NULL;
+    _wandOver = NULL;
     /*** End Entity Defaults ***/
 
     return true;
@@ -256,10 +259,18 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
 
 void GreenLight::preFrame()
 {
-    for (int d = 0; d < _door.size(); d++)
-        _door[d]->handleAnimation();
-    for (int r = 0; r < _rack.size(); r++)
-        _rack[r]->handleAnimation();
+    // update mouse and wand intersection with components
+    if (_box)
+    {
+        // continue animations
+        for (int d = 0; d < _door.size(); d++)
+            _door[d]->handleAnimation();
+        for (int r = 0; r < _rack.size(); r++)
+            _rack[r]->handleAnimation();
+
+        handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver);
+        handleHoverOver(cvr::PluginHelper::getHandMat(), _wandOver);
+    }
 }
 
 void GreenLight::postFrame()
@@ -303,6 +314,17 @@ bool GreenLight::buttonEvent(int type, int button, int hand, const osg::Matrix& 
 
     if (!_box)
         return false;
+
+    // If we are hovering over a component, we already know it
+    if (_wandOver)
+    {
+        Component * comp = dynamic_cast<Component *>(_wandOver);
+        if (comp)
+        {
+            selectComponent( comp, !comp->selected );
+            return true;
+        }
+    }
 
     // process intersection
     osg::Vec3 pointerStart, pointerEnd;
@@ -352,6 +374,17 @@ bool GreenLight::mouseButtonEvent(int type, int button, int x, int y, const osg:
 
     if (!_box)
         return false;
+
+    // If we are hovering over a component, we already know it
+    if (_mouseOver)
+    {
+        Component * comp = dynamic_cast<Component *>(_mouseOver);
+        if (comp)
+        {
+            selectComponent( comp, !comp->selected );
+            return true;
+        }
+    }
 
     // process mouse intersection
     osg::Vec3 pointerStart, pointerEnd;

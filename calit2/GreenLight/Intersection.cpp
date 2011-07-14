@@ -2,9 +2,99 @@
 
 #include <iostream>
 
+#include <kernel/PluginHelper.h>
+#include <kernel/InteractionManager.h>
+
+void GreenLight::doHoverOver(Entity *& last, Entity * current)
+{
+    const float eScale = 11.0/10.0; // scalar value to expand by
+    const float nScale = 10.0/11.0; // scalar value to normalize by
+
+    // fix old as necessary
+    if (last != current)
+    {
+        // normalize last hovered over entity, if there is one
+        if (last != NULL)
+        {
+            if (last->asComponent())
+                last->transform->preMult(osg::Matrix::scale(nScale,nScale,nScale));
+            else
+                ; // Do something here for doors/racks
+        }
+
+        // expand currently hovered over entity, if there is one
+        if (current)
+        {
+            if (current->asComponent())
+                current->transform->preMult(osg::Matrix::scale(eScale,eScale,eScale));
+            else
+                ; // Do something here for doors/racks
+        }
+
+        // assign current to last (notice pass-by-reference)
+        last = current;
+     }
+}
+
+void GreenLight::handleHoverOver(osg::Matrix pointerMat, Entity *& hovered)
+{
+    osg::Vec3 pointerStart, pointerEnd;
+    std::vector<IsectInfo> isecvec;
+
+    pointerStart = pointerMat.getTrans();
+    pointerEnd.set(0.0f, 10000.0f, 0.0f);
+    pointerEnd = pointerEnd * pointerMat;
+
+    isecvec = getObjectIntersection(cvr::PluginHelper::getScene(),
+            pointerStart, pointerEnd);
+
+    if (isecvec.size() == 0)
+    {
+        doHoverOver(hovered,NULL);
+        return;
+    }
+
+    // Is it one of ours?
+    std::vector<Entity *>::iterator vit;
+    for (vit=_door.begin(); vit != _door.end(); vit++)
+    {
+        if ((*vit)->nodes.find(isecvec[0].geode) != (*vit)->nodes.end())
+        {
+            doHoverOver(hovered, *vit);
+            return;
+        }
+    }
+
+    for (vit=_rack.begin(); vit != _rack.end(); vit++)
+    {
+        if ((*vit)->nodes.find(isecvec[0].geode) != (*vit)->nodes.end())
+        {
+            doHoverOver(hovered, *vit);
+            return;
+        }
+    }
+
+    if (_selectionModeCheckbox->getValue())
+    {
+        std::set< Component * >::iterator sit;
+        for (sit = _components.begin(); sit != _components.end(); sit++)
+        {
+            if ((*sit)->nodes.find(isecvec[0].geode) != (*sit)->nodes.end())
+            {
+                doHoverOver(hovered, *sit);
+                return;
+            }
+        }
+    }
+
+    // if we get this far, we aren't hovering over anything
+    doHoverOver(hovered,NULL);
+}
+
 bool GreenLight::handleIntersection(osg::Node * iNode)
 {
     // Is it one of ours?
+
     for (int d = 0; d < _door.size(); d++)
         if (_door[d]->nodes.find(iNode) != _door[d]->nodes.end())
         {
@@ -34,20 +124,6 @@ bool GreenLight::handleIntersection(osg::Node * iNode)
 
             return true;
         }
-
-    if (_selectionModeCheckbox->getValue())
-    {
-        Component * comp;
-        std::set< Component * >::iterator sit;
-        for (sit = _components.begin(); sit != _components.end(); sit++)
-        {
-            if ((*sit)->nodes.find(iNode) != (*sit)->nodes.end())
-            {
-                selectComponent( *sit, !(*sit)->selected );
-                return true;
-            }
-        }
-    }
 
     // Not ours
     return false;

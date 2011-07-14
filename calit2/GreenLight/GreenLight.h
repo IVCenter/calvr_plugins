@@ -33,7 +33,9 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         bool mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix& mat);
 
     protected:
- 
+
+        class Component; // forward declaration
+
         class Entity
         {
             public:
@@ -56,6 +58,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 void showVisual(bool show);
                 virtual void setTransparency(bool transparent);
 
+                virtual Component * asComponent() {return NULL;}
+
             protected:
                 void createNodeSet(osg::Node * node);
         };
@@ -75,6 +79,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 void setDefaultMaterial();
                 void setTransparency(bool transparent);
                 bool select(bool select);
+
+                Component * asComponent() {return this;}
         };
 
         typedef struct {
@@ -117,7 +123,9 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         std::vector<Entity *> _rack; // racks
         std::set<Component *> _components; // components in the racks
 
-        // Entity Collections
+        // Additional Entity Info
+        Entity * _mouseOver;
+        Entity * _wandOver;
         std::map< std::string, std::set< Component * > * > _cluster;
 
         // File contents -- read/write via master node, copy to slave nodes via messages
@@ -131,6 +139,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         void setPowerColors(bool displayPower);
         void selectComponent(Component * comp, bool select);
         void selectCluster(std::set< Component * > * cluster, bool select);
+        void handleHoverOver(osg::Matrix pointerMat, Entity *& hovered);
+        void doHoverOver(Entity *& last, Entity * current);
 };
 
 #endif
