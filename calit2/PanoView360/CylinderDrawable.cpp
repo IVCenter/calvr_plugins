@@ -2,12 +2,20 @@
 
 #include <config/ConfigManager.h>
 #include <kernel/ScreenConfig.h>
+#include <kernel/ScreenBase.h>
+#include <kernel/ComController.h>
+#include <kernel/NodeMask.h>
 
 #define GL_CLAMP_TO_EDGE 0x812F
 
 using namespace osg;
 using namespace std;
 using namespace cvr;
+
+std::map<int, int> CylinderDrawable::_contextinit;
+std::map<int, std::vector<std::vector< GLuint * > > > CylinderDrawable::rtextures;
+std::map<int, std::vector<std::vector< GLuint * > > > CylinderDrawable::ltextures;
+OpenThreads::Mutex CylinderDrawable::_initLock;
 
 CylinderDrawable::CylinderDrawable(float radius_in, float viewangle_in, float viewangleh_in, float camHeight_in, int segmentsPerTexture_in, int maxTextureSize_in)
 {
@@ -23,6 +31,7 @@ CylinderDrawable::CylinderDrawable(float radius_in, float viewangle_in, float vi
     badinit = 0;
 
     floorOffset = ConfigManager::getFloat("Plugin.PanoView360.FloorOffset", 0.0);
+    _renderOnMaster = ConfigManager::getBool("Plugin.PanoView360.RenderOnMaster",false);
 
     if(viewangle < 10)
     {
@@ -114,11 +123,11 @@ void CylinderDrawable::updateRotate(float f)
 
 void CylinderDrawable::deleteTextures()
 {
-    if(!init)
+    /*if(!init)
     {
 	_deleteDone = true;
 	return;
-    }
+    }*/
     /*if(_maxContext == 0)
     {
 	for(int i = 0; i < rows; i++)
@@ -171,6 +180,9 @@ void CylinderDrawable::setImage(std::string file_path_r, std::string file_path_l
     }
     rfile = file_path_r;
     lfile = file_path_l;
+    _contextinit.clear();
+    rtextures.clear();
+    ltextures.clear();
 }
 
 
@@ -418,18 +430,21 @@ void CylinderDrawable::setCamHeight(float h)
 
 void CylinderDrawable::drawImplementation(RenderInfo& ri) const
 {
+    if(ComController::instance()->isMaster() && !_renderOnMaster)
+    {
+	return;
+    }
+
     _initLock.lock();
-    //static int badinit = 0;
     if(badinit)
     {
 	_initLock.unlock();
 	return;
     }
 
-    //static int right = 1;
-    //right = 1 - right;
+    int context = ri.getContextID();
 
-    string host;
+    /*string host;
     int vx, vy, context;
 
     context = ri.getContextID();
@@ -439,116 +454,74 @@ void CylinderDrawable::drawImplementation(RenderInfo& ri) const
 
     char hostname[51];
     gethostname(hostname, 50);
-    host = hostname;
+    host = hostname;*/
 
     int eye = 0;
 
-    for(int i = 0; i < (_eyeMap[host][context]).size(); i++)
+    if(!getNumParents())
     {
-	if(_eyeMap[host][context][i].first.first == vx && _eyeMap[host][context][i].first.second == vy)
-	{
-	    eye = _eyeMap[host][context][i].second;
-	}
-    }
-
-    if(eye == 0)
-    {
-	cerr << "Unable to determine eye for host: " << host << " context: " << context << " vx: " << vx << " vy: " << vy << endl;
-	badinit = 1;
 	_initLock.unlock();
 	return;
     }
 
-    if(!init)
+    osg::Node::NodeMask nm = getParent(0)->getNodeMask();
+    //std::cerr << "Node Mask: " << nm << std::endl;
+    if((nm & CULL_MASK) || (nm & CULL_MASK_LEFT) )
     {
-	_maxContext = ri.getState()->getGraphicsContext()->getMaxContextID();
-	/*if(_maxContext == 0)
+	//std::cerr << "LEFT" << std::endl;
+	if(ScreenBase::getEyeSeparation() >= 0.0)
 	{
-	    if(initTexture(RIGHT))
+	    eye = LEFT;
+	}
+	else
+	{
+	    eye = RIGHT;
+	}
+    }
+    else
+    {
+	//std::cerr << "RIGHT" << std::endl;
+	if(ScreenBase::getEyeSeparation() >= 0.0)
+	{
+	    eye = RIGHT;
+	}
+	else
+	{
+	    eye = LEFT;
+	}
+    }
+
+    if(_contextinit[ri.getContextID()] >= 0)
+    {
+	if(!(_contextinit[ri.getContextID()] & eye))
+	{
+	    if(initTexture((CylinderDrawable::eye)eye, context))
 	    {
-		if(mono)
-		{
-		    init = 1;
-		}
-		else if(initTexture(LEFT))
-		{
-		    init = 1;
-		}
-		else
-		{
-		    badinit = 1;
-		}
+		_contextinit[ri.getContextID()] |= eye;
 	    }
 	    else
 	    {
 		badinit = 1;
+		_initLock.unlock();
+		return;
 	    }
 	}
-	else*/
-	{
-	    //mono = 0;
-	    if(_contextinit[ri.getContextID()] == 0)
-	    {
-		int loadmask = 0;
-		for(int k = 0; k < _eyeMap[host][context].size(); k++)
-		{
-		    loadmask |= _eyeMap[host][context][k].second;
-		}
-		if(eye & RIGHT)
-		{
-		    if(initTexture(RIGHT, context))
-		    {
-			_contextinit[ri.getContextID()] = 1;
-		    }
-		    else
-		    {
-			badinit = 1;
-			_initLock.unlock();
-			return;
-		    }
-		}
-		if(eye & LEFT)
-		{
-		    if(initTexture(LEFT, context))
-		    {
-			_contextinit[ri.getContextID()] = 1;
-		    }
-		    else
-		    {
-			badinit = 1;
-			_initLock.unlock();
-			return;
-		    }
-		}
-		if(_contextinit.size() - 1 == _maxContext)
-		{
-		    init = 1;
-		}
-	    }
-	}
-	_initLock.unlock();
-        return;
     }
 
     if(_doDelete)
     {
-	/*if(_maxContext == 0)
-	{
-	    return;
-	}*/
-
-	if(_contextinit[ri.getContextID()] ==  1)
+	if(_contextinit[ri.getContextID()] > 0)
 	{
 	    for(int i = 0; i < rows; i++)
 	    {
 		for(int j = 0; j < cols; j++)
 		{
-		    if(eye & RIGHT)
+		    if(_contextinit[ri.getContextID()] & RIGHT)
 		    {
 			glDeleteTextures(1, rtextures[context][i][j]);
 			delete rtextures[context][i][j];
 		    }
-		    if(eye & LEFT)
+		    if(_contextinit[ri.getContextID()] & LEFT)
 		    {
 			glDeleteTextures(1, ltextures[context][i][j]);
 			delete ltextures[context][i][j];
@@ -560,7 +533,7 @@ void CylinderDrawable::drawImplementation(RenderInfo& ri) const
 	bool tempb = true;
 	for(map<int, int>::iterator it = _contextinit.begin(); it != _contextinit.end(); it++)
 	{
-	    if(it->second == 1)
+	    if(it->second > 0)
 	    {
 		tempb = false;
 	    }
@@ -625,8 +598,13 @@ void CylinderDrawable::drawImplementation(RenderInfo& ri) const
 	float rads = _rotation;
         for(int j = 0; j < cols; j++)
         {
-            if(eye == RIGHT || (eye == BOTH && (currenteye || ScreenConfig::instance()->getEyeSeparationMultiplier() == 0.0)))
+	    if(eye == RIGHT || (ScreenConfig::instance()->getEyeSeparationMultiplier() == 0.0))
             {
+		if(eye == LEFT && !(_contextinit[ri.getContextID()] == BOTH))
+		{
+		    glPopAttrib();
+		    return;
+		}
                 glBindTexture(GL_TEXTURE_2D, *(rtextures[context][i][j]));
             }
             else
@@ -653,9 +631,5 @@ void CylinderDrawable::drawImplementation(RenderInfo& ri) const
             glEnd();
         }
     }
-
-    
-
-
     glPopAttrib();
 }

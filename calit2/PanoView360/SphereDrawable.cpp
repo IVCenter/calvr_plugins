@@ -2,12 +2,20 @@
 
 #include <config/ConfigManager.h>
 #include <kernel/ScreenConfig.h>
+#include <kernel/ScreenBase.h>
+#include <kernel/ComController.h>
+#include <kernel/NodeMask.h>
 
 #define GL_CLAMP_TO_EDGE 0x812F
 
 using namespace osg;
 using namespace std;
 using namespace cvr;
+
+std::map<int, int> SphereDrawable::_contextinit;
+std::map<int, std::vector<std::vector< GLuint * > > > SphereDrawable::rtextures;
+std::map<int, std::vector<std::vector< GLuint * > > > SphereDrawable::ltextures;
+OpenThreads::Mutex SphereDrawable::_initLock;
 
 SphereDrawable::SphereDrawable(float radius_in, float viewanglev_in, float viewangleh_in, float camHeight_in, int segmentsPerTexture_in, int maxTextureSize_in)
 {
@@ -18,13 +26,12 @@ SphereDrawable::SphereDrawable(float radius_in, float viewanglev_in, float viewa
     viewangleh = viewangleh_in;
     camHeight = camHeight_in;
 
-    currenteye = firsteye;
-
     badinit = 0;
 
     _rotation = 0.0;
 
     floorOffset = ConfigManager::getFloat("Plugin.PanoView360.FloorOffset", 0.0);
+    _renderOnMaster = ConfigManager::getBool("Plugin.PanoView360.RenderOnMaster",false);
 
     if(viewanglev < 10)
     {
@@ -47,10 +54,8 @@ SphereDrawable::SphereDrawable(float radius_in, float viewanglev_in, float viewa
     segmentsPerTexture = segmentsPerTexture_in;
     maxTextureSize = maxTextureSize_in;
     rows = cols = 0;
-    init = 0;
     mono = 0;
     flip = 0;
-    _maxContext = 0;
     setUseDisplayList(false);
     _eyeMask = 0;
 }
@@ -90,7 +95,7 @@ void SphereDrawable::updateRotate(float f)
         return;
     }
 
-    cerr << "UpdateRotate: " << f << endl;
+    //cerr << "UpdateRotate: " << f << endl;
 
     float ff = f;
     if(ff > 1.0)
@@ -118,11 +123,11 @@ void SphereDrawable::updateRotate(float f)
 
 void SphereDrawable::deleteTextures()
 {
-    if(!init)
+    /*if(!init)
     {
 	_deleteDone = true;
 	return;
-    }
+    }*/
 
     /*if(_maxContext == 0)
     {
@@ -176,6 +181,9 @@ void SphereDrawable::setImage(std::string file_path_r, std::string file_path_l)
     }
     rfile = file_path_r;
     lfile = file_path_l;
+    _contextinit.clear();
+    rtextures.clear();
+    ltextures.clear();
 }
 
 
@@ -419,18 +427,21 @@ void SphereDrawable::setCamHeight(float h)
 
 void SphereDrawable::drawImplementation(RenderInfo& ri) const
 {
+    if(ComController::instance()->isMaster() && !_renderOnMaster)
+    {
+	return;
+    }
+
     _initLock.lock();
-    //static int badinit = 0;
     if(badinit)
     {
 	_initLock.unlock();
 	return;
     }
 
-    //static int right = 1;
-    //right = 1 - right;
+    int context = ri.getContextID();
 
-    string host;
+    /*string host;
     int vx, vy, context;
 
     context = ri.getContextID();
@@ -440,11 +451,44 @@ void SphereDrawable::drawImplementation(RenderInfo& ri) const
 
     char hostname[51];
     gethostname(hostname, 50);
-    host = hostname;
+    host = hostname;*/
 
     int eye = 0;
 
-    for(int i = 0; i < (_eyeMap[host][context]).size(); i++)
+    if(!getNumParents())
+    {
+	_initLock.unlock();
+	return;
+    }
+
+    osg::Node::NodeMask nm = getParent(0)->getNodeMask();
+    //std::cerr << "Node Mask: " << nm << std::endl;
+    if((nm & CULL_MASK) || (nm & CULL_MASK_LEFT) )
+    {
+	//std::cerr << "LEFT" << std::endl;
+	if(ScreenBase::getEyeSeparation() >= 0.0)
+	{
+	    eye = LEFT;
+	}
+	else
+	{
+	    eye = RIGHT;
+	}
+    }
+    else
+    {
+	//std::cerr << "RIGHT" << std::endl;
+	if(ScreenBase::getEyeSeparation() >= 0.0)
+	{
+	    eye = RIGHT;
+	}
+	else
+	{
+	    eye = LEFT;
+	}
+    }
+
+    /*for(int i = 0; i < (_eyeMap[host][context]).size(); i++)
     {
 	if(_eyeMap[host][context][i].first.first == vx && _eyeMap[host][context][i].first.second == vy)
 	{
@@ -458,98 +502,39 @@ void SphereDrawable::drawImplementation(RenderInfo& ri) const
 	badinit = 1;
 	_initLock.unlock();
 	return;
-    }
+    }*/
 
-    if(!init)
+    if(_contextinit[ri.getContextID()] >= 0)
     {
-	_maxContext = ri.getState()->getGraphicsContext()->getMaxContextID();
-	/*if(_maxContext == 0)
+	if(!(_contextinit[ri.getContextID()] & eye))
 	{
-	    if(initTexture(RIGHT))
+	    if(initTexture((SphereDrawable::eye)eye, context))
 	    {
-		if(mono)
-		{
-		    init = 1;
-		}
-		else if(initTexture(LEFT))
-		{
-		    init = 1;
-		}
-		else
-		{
-		    badinit = 1;
-		}
+		_contextinit[ri.getContextID()] |= eye;
 	    }
 	    else
 	    {
 		badinit = 1;
+		_initLock.unlock();
+		return;
 	    }
 	}
-	else*/
-	{
-	    //mono = 0;
-	    if(_contextinit[ri.getContextID()] == 0)
-	    {
-		int loadmask = 0;
-		for(int k = 0; k < _eyeMap[host][context].size(); k++)
-		{
-		    loadmask |= _eyeMap[host][context][k].second;
-		}
-		if(eye & RIGHT)
-		{
-		    if(initTexture(RIGHT, context))
-		    {
-			_contextinit[ri.getContextID()] = 1;
-		    }
-		    else
-		    {
-			badinit = 1;
-			_initLock.unlock();
-			return;
-		    }
-		}
-		if(eye & LEFT)
-		{
-		    if(initTexture(LEFT, context))
-		    {
-			_contextinit[ri.getContextID()] = 1;
-		    }
-		    else
-		    {
-			badinit = 1;
-			_initLock.unlock();
-			return;
-		    }
-		}
-		if(_contextinit.size() - 1 == _maxContext)
-		{
-		    init = 1;
-		}
-	    }
-	}
-	_initLock.unlock();
-        return;
     }
 
     if(_doDelete)
     {
-	/*if(_maxContext == 0)
-	{
-	    return;
-	}*/
-    
-	if(_contextinit[ri.getContextID()] ==  1)
+	if(_contextinit[ri.getContextID()] >  0)
 	{
 	    for(int i = 0; i < rows; i++)
 	    {
 		for(int j = 0; j < cols; j++)
 		{
-		    if(eye & RIGHT)
+		    if(_contextinit[ri.getContextID()] & RIGHT)
 		    {
 			glDeleteTextures(1, rtextures[context][i][j]);
 			delete rtextures[context][i][j];
 		    }
-		    if(eye & LEFT)
+		    if(_contextinit[ri.getContextID()] & LEFT)
 		    {
 			glDeleteTextures(1, ltextures[context][i][j]);
 			delete ltextures[context][i][j];
@@ -561,7 +546,7 @@ void SphereDrawable::drawImplementation(RenderInfo& ri) const
 	bool tempb = true;
 	for(map<int, int>::iterator it = _contextinit.begin(); it != _contextinit.end(); it++)
 	{
-	    if(it->second == 1)
+	    if(it->second > 0)
 	    {
 		tempb = false;
 	    }
@@ -588,23 +573,19 @@ void SphereDrawable::drawImplementation(RenderInfo& ri) const
     glDisable(GL_LIGHTING);
     glEnable(GL_TEXTURE_2D);
 
-    if(currenteye)
-    {
-	currenteye = 0;
-    }
-    else
-    {
-	currenteye = 1;
-    }
-
     float radsv = ((180.0f - viewanglev) / 2.0f) * (M_PI / 180.0f); 
     for(int i = rows - 1; i >= 0; i--)
     {
         float radsh = _rotation;
         for(int j = 0; j < cols; j++)
         {
-            if(eye == RIGHT || (eye == BOTH && (currenteye || ScreenConfig::instance()->getEyeSeparationMultiplier() == 0.0)))
+            if(eye == RIGHT || (ScreenConfig::instance()->getEyeSeparationMultiplier() == 0.0))
             {
+		if(eye == LEFT && !(_contextinit[ri.getContextID()] == BOTH))
+		{
+		    glPopAttrib();
+		    return;
+		}
                 glBindTexture(GL_TEXTURE_2D, *(rtextures[context][i][j]));
             }
             else

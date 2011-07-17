@@ -2,8 +2,11 @@
 
 #include <config/ConfigManager.h>
 #include <kernel/PluginHelper.h>
+#include <kernel/NodeMask.h>
 
 #include <mxml.h>
+
+#include <osg/Uniform>
 
 #include <string>
 
@@ -36,10 +39,25 @@ bool PanoView360::init()
     _deleteWait = false;
     _nextLoad = NULL;
 
-    _cd = NULL;
+    _cdLeft = NULL;
+    _cdRight = NULL;
     _joystickSpin = ConfigManager::getBool("Plugin.PanoView360.JoystickSpin", true);
 
     _root = new osg::Group();
+
+    osg::StateSet * stateset = _root->getOrCreateStateSet();
+
+    osg::Uniform * light = new osg::Uniform();
+    light->setName("MVLighting");
+    light->setType(osg::Uniform::BOOL);
+    light->set(false);
+    stateset->addUniform(light);
+
+    osg::Uniform * texture = new osg::Uniform();
+    texture->setName("MVTexture");
+    texture->setType(osg::Uniform::BOOL);
+    texture->set(true);
+    stateset->addUniform(texture);
 
     _panoViewMenu = new SubMenu("PanoView360","PanoView360");
     _panoViewMenu->setCallback(this);
@@ -136,9 +154,10 @@ void PanoView360::menuCallback(MenuItem* menuItem)
         //{
         //    root->removeChildren(0, root->getNumChildren());
         //}
-	if(_cd != NULL)
+	if(_cdLeft != NULL)
 	{
-	    _cd->deleteTextures();
+	    _cdLeft->deleteTextures();
+	    _cdRight->deleteTextures();
 	    _deleteWait = true;
 	    _nextLoad = NULL;
 	}
@@ -155,23 +174,27 @@ void PanoView360::menuCallback(MenuItem* menuItem)
 
     if(menuItem == _tilesp && _wasinit)
     {
-        _cd->setSegmentsPerTexture((int)_tilesp->getValue());
+        _cdLeft->setSegmentsPerTexture((int)_tilesp->getValue());
+	_cdRight->setSegmentsPerTexture((int)_tilesp->getValue());
         return;
     }
     if(menuItem == _radiusp && _wasinit)
     {
-        _cd->setRadius((int)_radiusp->getValue());
+        _cdLeft->setRadius((int)_radiusp->getValue());
+	_cdRight->setRadius((int)_radiusp->getValue());
         return;
     }
     if((menuItem == _viewanglep || menuItem == _viewanglepb) && _wasinit)
     {
-	_cd->setViewAngle(_viewanglep->getValue(), _viewanglepb->getValue());
+	_cdLeft->setViewAngle(_viewanglep->getValue(), _viewanglepb->getValue());
+	_cdRight->setViewAngle(_viewanglep->getValue(), _viewanglepb->getValue());
 	return;
     }
 
     if(menuItem == _camHeightp && _wasinit)
     {
-	_cd->setCamHeight(_camHeightp->getValue());
+	_cdLeft->setCamHeight(_camHeightp->getValue());
+	_cdRight->setCamHeight(_camHeightp->getValue());
 	return;
     }
 
@@ -183,7 +206,7 @@ void PanoView360::menuCallback(MenuItem* menuItem)
             //{
                 //root->removeChildren(0, root->getNumChildren());
             //}
-	    if(_cd != NULL)
+	    if(_cdLeft != NULL)
 	    {
 		menuCallback(_remove);
 		_nextLoad = menuItem;
@@ -194,14 +217,18 @@ void PanoView360::menuCallback(MenuItem* menuItem)
 	    {
 		case CYLINDER:
 		{
-		    _cd = new CylinderDrawable(_pictures[i]->radius, _pictures[i]->viewanglev, _pictures[i]->viewangleh, _pictures[i]->camHeight, _pictures[i]->segments, _pictures[i]->texture_size);
-		    _cd->setMap(_eyeMap);
+		    _cdLeft = new CylinderDrawable(_pictures[i]->radius, _pictures[i]->viewanglev, _pictures[i]->viewangleh, _pictures[i]->camHeight, _pictures[i]->segments, _pictures[i]->texture_size);
+		    _cdLeft->setMap(_eyeMap);
+		    _cdRight = new CylinderDrawable(_pictures[i]->radius, _pictures[i]->viewanglev, _pictures[i]->viewangleh, _pictures[i]->camHeight, _pictures[i]->segments, _pictures[i]->texture_size);
+		    _cdRight->setMap(_eyeMap);
 		    break;
 		}
 		case SPHERE:
 		{
-		    _cd = new SphereDrawable(_pictures[i]->radius, _pictures[i]->viewanglev, _pictures[i]->viewangleh, _pictures[i]->camHeight, _pictures[i]->segments, _pictures[i]->texture_size);
-		    _cd->setMap(_eyeMap);
+		    _cdLeft = new SphereDrawable(_pictures[i]->radius, _pictures[i]->viewanglev, _pictures[i]->viewangleh, _pictures[i]->camHeight, _pictures[i]->segments, _pictures[i]->texture_size);
+		    _cdLeft->setMap(_eyeMap);
+		    _cdRight = new SphereDrawable(_pictures[i]->radius, _pictures[i]->viewanglev, _pictures[i]->viewangleh, _pictures[i]->camHeight, _pictures[i]->segments, _pictures[i]->texture_size);
+		    _cdRight->setMap(_eyeMap);
 		    break;
 		}
 		default:
@@ -210,41 +237,56 @@ void PanoView360::menuCallback(MenuItem* menuItem)
 		    break;
 		}
 	    }
-            _cd->setFlip(_pictures[i]->flip);
+            _cdLeft->setFlip(_pictures[i]->flip);
+	    _cdRight->setFlip(_pictures[i]->flip);
             if(_pictures[i]->right_eye_file == "")
             {
                 if(_pictures[i]->left_eye_file == "")
                 {
                     cerr << "PanoView360: No files listed in config file for " << _pictures[i]->name << endl;
-                    _cd->unref();
+                    _cdLeft->unref();
+		    _cdRight->unref();
                     return;
                 }
-                _cd->setImage(_pictures[i]->left_eye_file);
+                _cdLeft->setImage(_pictures[i]->left_eye_file);
+		_cdRight->setImage(_pictures[i]->left_eye_file);
             }
             else if(_pictures[i]->left_eye_file == "")
             {
                 if(_pictures[i]->right_eye_file == "")
                 {
                     cerr << "PanoView360: No files listed in config file for " << _pictures[i]->name << endl;
-                    _cd->unref();
+                    _cdLeft->unref();
+		    _cdRight->unref();
                     return;
                 }
-                _cd->setImage(_pictures[i]->right_eye_file);
+                _cdLeft->setImage(_pictures[i]->right_eye_file);
+		_cdRight->setImage(_pictures[i]->right_eye_file);
             }
             else
             {
-                _cd->setImage(_pictures[i]->right_eye_file, _pictures[i]->left_eye_file);
+                _cdLeft->setImage(_pictures[i]->right_eye_file, _pictures[i]->left_eye_file);
+		_cdRight->setImage(_pictures[i]->right_eye_file, _pictures[i]->left_eye_file);
             }
-            _tilesp->setValue((float)_cd->getSegmentsPerTexture());
-            _radiusp->setValue((float)_cd->getRadius());
+            _tilesp->setValue((float)_cdLeft->getSegmentsPerTexture());
+            _radiusp->setValue((float)_cdLeft->getRadius());
 	    float a, b;
-	    _cd->getViewAngle(a, b);
+	    _cdLeft->getViewAngle(a, b);
             _viewanglep->setValue(a);
 	    _viewanglepb->setValue(b);
-            _camHeightp->setValue(_cd->getCamHeight());
+            _camHeightp->setValue(_cdLeft->getCamHeight());
             osg::Geode * geo = new osg::Geode();
-            geo->addDrawable(_cd);
+	    geo->setNodeMask(geo->getNodeMask() & ~(CULL_MASK_RIGHT));
+            geo->addDrawable(_cdLeft);
             _root->addChild(geo);
+
+	    geo = new osg::Geode();
+	    geo->setNodeMask(geo->getNodeMask() & ~(CULL_MASK_LEFT));
+	    geo->setNodeMask(geo->getNodeMask() & ~(CULL_MASK));
+            geo->addDrawable(_cdRight);
+            _root->addChild(geo);
+	    _root->setNodeMask(_root->getNodeMask() & ~(CULL_ENABLE));
+
             _wasinit = 1;
         }
     }
@@ -255,13 +297,14 @@ void PanoView360::preFrame()
 {
     if(_deleteWait)
     {
-	if(_cd->deleteDone())
+	if(_cdLeft->deleteDone() && _cdRight->deleteDone())
 	{
 	    if(_root->getNumChildren() != 0)
 	    {
 	        _root->removeChildren(0, _root->getNumChildren());
 	    }
-	    _cd = NULL;
+	    _cdLeft = NULL;
+	    _cdRight = NULL;
 
 	    _deleteWait = false;
 	    if(_nextLoad)
@@ -270,17 +313,19 @@ void PanoView360::preFrame()
 	    }
 	}
     }
-   if(_cd != NULL && _joystickSpin)
+   if(_cdLeft != NULL && _joystickSpin)
    {
-       _cd->updateRotate(PluginHelper::getValuator(0,0));
+       _cdLeft->updateRotate(PluginHelper::getValuator(0,0));
+       _cdRight->updateRotate(PluginHelper::getValuator(0,0));
    } 
 }
 
 bool PanoView360::keyEvent(bool, int, int)
 {
-   if(_cd != NULL)
+   if(_cdLeft != NULL)
    {
-      _cd->updateRotate(0.6);
+      _cdLeft->updateRotate(0.6);
+      _cdRight->updateRotate(0.6);
    }
    return false;
 }
