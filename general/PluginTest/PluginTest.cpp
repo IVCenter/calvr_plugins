@@ -127,7 +127,7 @@ void PluginTest::menuCallback(MenuItem * item)
 	{
 	    ThreadedLoader::instance()->remove(_job);
 	}
-	_job = ThreadedLoader::instance()->readNodeFile("/home/aprudhom/data/falko/se_building.obj");
+	_job = ThreadedLoader::instance()->readNodeFile("/home/covise/data/falko/se_building.obj");
 	_loading = true;
     }
     else if(item == testButton2)

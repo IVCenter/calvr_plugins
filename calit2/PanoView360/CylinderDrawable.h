@@ -71,7 +71,7 @@ class CylinderDrawable : public PanoDrawable
 
     float _rotation;
 
-    mutable OpenThreads::Mutex _initLock;
+    static OpenThreads::Mutex _initLock;
 
     mutable bool _deleteDone, _doDelete;
     mutable int rows, cols; 
@@ -86,9 +86,11 @@ class CylinderDrawable : public PanoDrawable
 
     mutable std::vector<std::vector< unsigned char * > > rtiles;
     mutable std::vector<std::vector< unsigned char * > > ltiles;
-    mutable std::map<int, std::vector<std::vector< GLuint * > > > rtextures;
-    mutable std::map<int, std::vector<std::vector< GLuint * > > > ltextures;
-    mutable std::map<int, int> _contextinit;
+    static std::map<int, std::vector<std::vector< GLuint * > > > rtextures;
+    static std::map<int, std::vector<std::vector< GLuint * > > > ltextures;
+    static std::map<int, int> _contextinit;
     mutable int _maxContext;
+
+    bool _renderOnMaster;
 };
 #endif

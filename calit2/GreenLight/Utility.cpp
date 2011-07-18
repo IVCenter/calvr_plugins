@@ -2,6 +2,8 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <cstring>
+#include <cstdlib>
 #include <kernel/ComController.h>
 
 int utl::intFromString(std::string str)
