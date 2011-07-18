@@ -187,7 +187,25 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
     }
     else if (item == _loadPowerButton)
     {
-        utl::downloadFile(cvr::ConfigManager::getEntry("download", "Plugin.GreenLight.Power", ""),
+        std::string selectedNames = "";
+
+        if (_selectionModeCheckbox->getValue())
+        {
+            std::set<Component *>::iterator sit;
+            for (sit = _components.begin(); sit != _components.end(); sit++)
+            {
+                if ((*sit)->selected)
+                {
+                    if (selectedNames == "")
+                        selectedNames = "&name=";
+                    else
+                        selectedNames += ",";
+                    selectedNames += (*sit)->name;
+                }
+            }
+        }
+
+        utl::downloadFile(cvr::ConfigManager::getEntry("download", "Plugin.GreenLight.Power", "")+selectedNames,
                           cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Power", ""),
                           _powerContents);
 
@@ -203,6 +221,11 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
             }
             file.close();
         }
+
+        if (_displayPowerCheckbox->getValue())
+        {
+            setPowerColors(true);
+    }
     }
     else if (item == _displayPowerCheckbox)
     {

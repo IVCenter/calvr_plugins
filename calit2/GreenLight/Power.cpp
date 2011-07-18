@@ -70,7 +70,9 @@ void GreenLight::setPowerColors(bool displayPower)
     std::set< Component * >::iterator sit;
     for (sit = _components.begin(); sit != _components.end(); sit++)
     {
-        float wattage = componentWattsMap[(*sit)->name];
+        float wattage = 0;
+        if (componentWattsMap.find((*sit)->name) != componentWattsMap.end())
+            wattage = componentWattsMap[(*sit)->name];
         (*sit)->setColor( wattColor(wattage, (*sit)->minWattage, (*sit)->maxWattage));
     }
 }
