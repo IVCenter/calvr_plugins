@@ -8,7 +8,7 @@ osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
 
 void GreenLight::setPowerColors(bool displayPower)
 {
-    std::map< std::string, int> componentWattsMap;
+    std::map< std::string, std::map< std::string, int > > componentWattsMap;
 
     if (!displayPower)
     {
@@ -44,6 +44,7 @@ void GreenLight::setPowerColors(bool displayPower)
         do
         {
             mxml_node_t * nameNode = mxmlFindElement(sensor,sensor,"name",NULL,NULL,MXML_DESCEND_FIRST);
+            mxml_node_t * timeNode = mxmlFindElement(sensor,sensor,"time",NULL,NULL,MXML_DESCEND_FIRST);
             mxml_node_t * valueNode = mxmlFindElement(sensor,sensor,"value",NULL,NULL,MXML_DESCEND_FIRST);
 
             if (nameNode == NULL || nameNode->child->value.text.whitespace == 1)
@@ -54,16 +55,40 @@ void GreenLight::setPowerColors(bool displayPower)
 
             std::string name = nameNode->child->value.text.string;
 
-            if (valueNode == NULL || valueNode->child->value.text.whitespace == 1)
+            if (timeNode == NULL || timeNode->child == NULL || timeNode->child->next == NULL)
             {
-                std::cerr << "Error parsing power xml file value for \"" << name <<"\"." << std::endl;
+                std::cerr << "Error parsing power xml file for \"" << name <<"\" time." << std::endl;
                 continue;
             }
-         
-            std::string value = valueNode->child->value.text.string;
 
+            std::string time = timeNode->child->value.text.string;
+            time += " ";
+            time += timeNode->child->next->value.text.string;
+
+            if (valueNode == NULL || valueNode->child->value.text.whitespace == 1)
+            {
+                std::cerr << "Error parsing power xml file for \"" << name <<"\" value." << std::endl;
+                continue;
+            }
+
+            std::string value = valueNode->child->value.text.string;
             int wattage = utl::intFromString(value);
-            componentWattsMap[name] = wattage;
+
+            std::map< std::string, std::map< std::string, int > >::iterator mit;
+            if ((mit = componentWattsMap.find(name)) == componentWattsMap.end())
+            {
+                std::map<std::string, int> newMap;
+                newMap[time] = wattage;
+                componentWattsMap[name] = newMap;
+            }
+            else
+            {
+                std::map< std::string, int >::iterator tit;
+                if ((tit = mit->second.find(time)) == mit->second.end())
+                    mit->second[time] = wattage;
+                else
+                    tit->second += wattage;                
+            }
         } while ((sensor = mxmlWalkNext(sensor,measurements,MXML_NO_DESCEND)) != NULL);
     }
 
@@ -71,9 +96,26 @@ void GreenLight::setPowerColors(bool displayPower)
     for (sit = _components.begin(); sit != _components.end(); sit++)
     {
         float wattage = 0;
-        if (componentWattsMap.find((*sit)->name) != componentWattsMap.end())
-            wattage = componentWattsMap[(*sit)->name];
-        (*sit)->setColor( wattColor(wattage, (*sit)->minWattage, (*sit)->maxWattage));
+        std::map< std::string, std::map< std::string, int > >::iterator cit;
+        if ((cit = componentWattsMap.find((*sit)->name)) != componentWattsMap.end())
+        {
+            std::string recentTime = "";
+            std::map< std::string, int >::iterator mit;
+            for (mit = cit->second.begin(); mit!= cit->second.end(); mit++)
+            {
+                if (mit->first <= recentTime)
+                    continue;
+
+                recentTime = mit->first;
+            }
+
+            if (recentTime != "")
+                (*sit)->setColor( wattColor(cit->second[recentTime], (*sit)->minWattage, (*sit)->maxWattage));
+        }
+        else
+        {
+            (*sit)->setColor( wattColor(0, (*sit)->minWattage, (*sit)->maxWattage));
+        }
     }
 }
 
