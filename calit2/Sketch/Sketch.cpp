@@ -214,16 +214,19 @@ bool Sketch::buttonEvent(int type, int button, int hand, const osg::Matrix & mat
 		normal2 = v1 ^ v2;
 		normal2.normalize();
 
+		//normal1 = osg::Vec3(normal1.x(),-normal1.z(),normal1.y());
+		//normal2 = osg::Vec3(normal2.x(),-normal2.z(),normal2.y());
+
 		normala = (normal1 + normal2) / 2.0;
 		normala.normalize();
 
-		_normals->push_back(osg::Vec3(0,0,1));
-		_normals->push_back(osg::Vec3(0,0,1));
+		//_normals->push_back(osg::Vec3(0,0,1));
+		//_normals->push_back(osg::Vec3(0,0,1));
 
-		//_normals->push_back(normala);
-		//_normals->push_back(normal2);
+		_normals->push_back(normala);
+		_normals->push_back(normal2);
 
-		/*if(_count == 2)
+		if(_count == 2)
 		{
 		    (*_normals)[0] = normal1;
 		    (*_normals)[1] = normala;
@@ -235,7 +238,7 @@ bool Sketch::buttonEvent(int type, int button, int hand, const osg::Matrix & mat
 
 		    (*_normals)[_count-1] = ((*_normals)[_count-1] + normala) / 2.0;
 		    (*_normals)[_count-1].normalize();
-		}*/
+		}
 
 		_count += 2;
 		_lastTransform = mat * PluginHelper::getWorldToObjectTransform();
