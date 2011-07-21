@@ -19,7 +19,7 @@ void GreenLight::doHoverOver(Entity *& last, Entity * current)
             if (last->asComponent())
                 last->transform->preMult(osg::Matrix::scale(nScale,nScale,nScale));
             else
-                last->removeColor();
+                last->defaultColor();
         }
 
         // expand currently hovered over entity, if there is one

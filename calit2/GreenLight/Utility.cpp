@@ -5,6 +5,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <kernel/ComController.h>
+#include <osgDB/FileUtils>
 
 int utl::intFromString(std::string str)
 {
@@ -67,5 +68,25 @@ void utl::downloadFile(std::string downloadUrl, std::string fileName, std::strin
             content = cArray;
             delete[] cArray;
         }
+    }
+}
+
+bool utl::loadShaderSource(osg::Shader * obj, const std::string& fileName)
+{
+    std::string fqFileName = osgDB::findDataFile(fileName);
+    if( fqFileName.length() == 0 )
+    {
+        std::cout << "File \"" << fileName << "\" not found." << std::endl;
+        return false;
+    }
+    bool success = obj->loadShaderSourceFromFile( fqFileName.c_str());
+    if ( !success  )
+    {
+        std::cout << "Couldn't load file: " << fileName << std::endl;
+        return false;
+    }
+    else
+    {
+        return true;
     }
 }

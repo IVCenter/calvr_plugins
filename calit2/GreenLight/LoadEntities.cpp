@@ -263,6 +263,10 @@ bool GreenLight::loadScene()
     _deselectAllButton->setCallback(this);
     // Added to _hardwareSelectionMenu when selection mode is enabled
 
+    // Back face culling
+    _box->transform->getOrCreateStateSet()->setMode(GL_CULL_FACE, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+
+
     return true;
 }
 

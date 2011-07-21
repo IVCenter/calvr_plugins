@@ -5,14 +5,15 @@
 #include <set>
 #include <vector>
 
-#include <osg/AnimationPath>
 #include <config/ConfigManager.h>
 #include <kernel/CVRPlugin.h>
 #include <menu/MenuButton.h>
 #include <menu/MenuCheckbox.h>
 #include <menu/SubMenu.h>
 
+#include <osg/AnimationPath>
 #include <osg/MatrixTransform>
+#include <osg/Texture2D>
 
 #include "Utility.h"
 
@@ -57,8 +58,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 void addChild(Entity * child);
                 void showVisual(bool show);
                 virtual void setTransparency(bool transparent);
-                void setColor(const osg::Vec3 color);
-                void removeColor();
+                virtual void setColor(const osg::Vec3 color);
+                virtual void defaultColor();
 
                 virtual Component * asComponent() {return NULL;}
 
@@ -69,7 +70,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         class Component : public Entity
         {
             public:
-                Component(osg::Node * node, std::string componentName, osg::Matrix mat = osg::Matrix::identity());
+                Component(osg::Geode * geode, std::string componentName, osg::Matrix mat = osg::Matrix::identity());
 
                 std::string name;
                 bool selected;
@@ -79,9 +80,18 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 
                 void setDefaultMaterial();
                 void setTransparency(bool transparent);
+                void setColor(const osg::Vec3 color);
+                void setColor(const std::list<osg::Vec3> colors);
+                void defaultColor();
                 bool select(bool select);
 
                 Component * asComponent() {return this;}
+
+            protected:
+                float _alpha;
+                osg::ref_ptr<osg::Texture2D> _colors;
+                osg::ref_ptr<osg::Image> _data;
+                osg::ref_ptr<osg::Uniform> _colorsUni;
         };
 
         typedef struct {
@@ -133,6 +143,9 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         std::string _hardwareContents;
         std::string _powerContents;
 
+        // Shaders
+        osg::ref_ptr<osg::Program> _shaderProgram;
+
         // Functions
         bool loadScene();
         bool handleIntersection(osg::Node * iNode);
@@ -142,6 +155,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         void selectCluster(std::set< Component * > * cluster, bool select);
         void handleHoverOver(osg::Matrix pointerMat, Entity *& hovered);
         void doHoverOver(Entity *& last, Entity * current);
+        osg::ref_ptr<osg::Geode> makeComponentGeode(float height, std::string textureFile = "");
 };
 
 #endif

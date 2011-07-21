@@ -105,15 +105,17 @@ bool GreenLight::init()
     _loadPowerButton = NULL;
     /*** End Menu Setup ***/
 
-    /*** Entity Defaults ***/
+    /*** Defaults ***/
     _box = NULL;
     _waterPipes = NULL;
     _electrical = NULL;
     _fans = NULL;
 
+    _shaderProgram = NULL;
+
     _mouseOver = NULL;
     _wandOver = NULL;
-    /*** End Entity Defaults ***/
+    /*** End Defaults ***/
 
     return true;
 }
@@ -127,6 +129,26 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
         // Load as neccessary
         if (!_box)
         {
+            if (!_shaderProgram)
+            {
+                // First compile shaders
+                std::cerr<<"Loading shaders... ";
+                _shaderProgram = new osg::Program;
+
+                osg::ref_ptr<osg::Shader> vertShader = new osg::Shader( osg::Shader::VERTEX );
+                osg::ref_ptr<osg::Shader> fragShader = new osg::Shader( osg::Shader::FRAGMENT );
+
+                if (utl::loadShaderSource(vertShader, cvr::ConfigManager::getEntry("vertex", "Plugin.GreenLight.Shaders", ""))
+                && utl::loadShaderSource(fragShader, cvr::ConfigManager::getEntry("fragment", "Plugin.GreenLight.Shaders", "")))
+                {
+                    _shaderProgram->addShader( vertShader );
+                    _shaderProgram->addShader( fragShader );
+                }
+
+                std::cerr<<"done."<<std::endl;
+                // Done with shaders
+            }
+
             utl::downloadFile(cvr::ConfigManager::getEntry("download", "Plugin.GreenLight.Hardware", ""),
                               cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Hardware", ""),
                               _hardwareContents);
@@ -291,8 +313,10 @@ void GreenLight::preFrame()
         for (int r = 0; r < _rack.size(); r++)
             _rack[r]->handleAnimation();
 
-        handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver);
-        handleHoverOver(cvr::PluginHelper::getHandMat(), _wandOver);
+        if (cvr::ComController::instance()->isMaster())
+            handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver);
+        else
+            handleHoverOver(cvr::PluginHelper::getHandMat(), _wandOver);
     }
 }
 

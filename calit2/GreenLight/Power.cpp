@@ -95,27 +95,21 @@ void GreenLight::setPowerColors(bool displayPower)
     std::set< Component * >::iterator sit;
     for (sit = _components.begin(); sit != _components.end(); sit++)
     {
-        float wattage = 0;
+        std::list< osg::Vec3 > colors;
         std::map< std::string, std::map< std::string, int > >::iterator cit;
         if ((cit = componentWattsMap.find((*sit)->name)) != componentWattsMap.end())
         {
-            std::string recentTime = "";
             std::map< std::string, int >::iterator mit;
             for (mit = cit->second.begin(); mit!= cit->second.end(); mit++)
             {
-                if (mit->first <= recentTime)
-                    continue;
-
-                recentTime = mit->first;
+                 colors.push_back( wattColor(mit->second, (*sit)->minWattage, (*sit)->maxWattage) );
             }
-
-            if (recentTime != "")
-                (*sit)->setColor( wattColor(cit->second[recentTime], (*sit)->minWattage, (*sit)->maxWattage));
         }
         else
         {
-            (*sit)->setColor( wattColor(0, (*sit)->minWattage, (*sit)->maxWattage));
+            colors.push_back( wattColor(0, (*sit)->minWattage, (*sit)->maxWattage) );
         }
+        (*sit)->setColor(colors);
     }
 }
 
