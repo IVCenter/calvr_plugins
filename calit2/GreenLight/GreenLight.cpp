@@ -6,8 +6,9 @@
 
 #include <fstream>
 #include <iostream>
-#include <kernel/PluginHelper.h>
+#include <kernel/ComController.h>
 #include <kernel/InteractionManager.h>
+#include <kernel/PluginHelper.h>
 
 CVRPLUGIN(GreenLight)
 
