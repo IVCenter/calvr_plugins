@@ -26,15 +26,16 @@ GreenLight::Component::Component(osg::Geode * geode, std::string componentName, 
     maxWattage = 0;
 
     _colors = new osg::Texture2D();
-    _colors->setInternalFormat(GL_RGBA32F_ARB);
+    _colors->setInternalFormat(GL_RGB32F_ARB);
     _colors->setFilter(osg::Texture::MIN_FILTER,osg::Texture::NEAREST);
     _colors->setFilter(osg::Texture::MAG_FILTER,osg::Texture::NEAREST);
     _colors->setResizeNonPowerOfTwoHint(false);  
 
-    _alpha = 1;
-    _colorsUni = new osg::Uniform("colors",1);
+    _alphaUni = new osg::Uniform("alpha", 1.0f);
+    _colorsUni = new osg::Uniform("colors", osg::Vec3(.7,.7,.7));
 
     geode->getOrCreateStateSet()->addUniform(_colorsUni.get());
+    geode->getOrCreateStateSet()->addUniform(_alphaUni.get());
  
     defaultColor(); // will set it to the default color
 }
@@ -102,8 +103,9 @@ void GreenLight::Entity::setTransparency(bool transparent)
 
 void GreenLight::Component::setTransparency(bool transparent)
 {
-    _alpha = transparent ? 0.1f : 1.0f;
-    setNodeTransparency(mainNode, _alpha);
+    float alpha = transparent ? 0.1f : 1.0f;
+    _alphaUni->setElement(0, alpha);
+    setNodeTransparency(mainNode, alpha);
 }
 
 void setNodeTransparency(osg::Node * node, float alpha)
@@ -173,7 +175,7 @@ void GreenLight::Component::setColor(const osg::Vec3 color)
 void GreenLight::Component::setColor(std::list<osg::Vec3> colors)
 {
     _data = new osg::Image;
-    _data->allocateImage(1, colors.size(), 1, GL_RGBA, GL_FLOAT);  
+    _data->allocateImage(1, colors.size(), 1, GL_RGB, GL_FLOAT);  
 
     int i;
     std::list<osg::Vec3>::iterator cit;
@@ -183,7 +185,6 @@ void GreenLight::Component::setColor(std::list<osg::Vec3> colors)
         {
             ((float *)_data->data(i))[j] = (*cit)[j];
         }
-        ((float *)_data->data(i))[3] = _alpha;
     }
 
     _data->dirty();

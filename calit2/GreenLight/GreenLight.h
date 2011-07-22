@@ -88,9 +88,9 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 Component * asComponent() {return this;}
 
             protected:
-                float _alpha;
                 osg::ref_ptr<osg::Texture2D> _colors;
                 osg::ref_ptr<osg::Image> _data;
+                osg::ref_ptr<osg::Uniform> _alphaUni;
                 osg::ref_ptr<osg::Uniform> _colorsUni;
         };
 

@@ -214,6 +214,7 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
 
         if (_selectionModeCheckbox->getValue())
         {
+            int selections = 0;
             std::set<Component *>::iterator sit;
             for (sit = _components.begin(); sit != _components.end(); sit++)
             {
@@ -224,7 +225,18 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
                     else
                         selectedNames += ",";
                     selectedNames += (*sit)->name;
+                    selections++;
                 }
+            }
+            if (_components.size() == selections) // we grabbed all of them
+                selectedNames = "";
+            else if (selections == 0) // shouldn't poll anything
+                selectedNames = "&name=null";
+
+            size_t pos;
+            while ((pos = selectedNames.find(' ')) != std::string::npos)
+            {
+                selectedNames.replace(pos,1,"%20");
             }
         }
 
@@ -248,7 +260,7 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
         if (_displayPowerCheckbox->getValue())
         {
             setPowerColors(true);
-    }
+        }
     }
     else if (item == _displayPowerCheckbox)
     {
