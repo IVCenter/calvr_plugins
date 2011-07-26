@@ -32,7 +32,7 @@ GreenLight::Component::Component(osg::Geode * geode, std::string componentName, 
     _colors->setResizeNonPowerOfTwoHint(false);  
 
     _alphaUni = new osg::Uniform("alpha", 1.0f);
-    _colorsUni = new osg::Uniform("colors", osg::Vec3(.7,.7,.7));
+    _colorsUni = new osg::Uniform("colors", 1);
 
     geode->getOrCreateStateSet()->addUniform(_colorsUni.get());
     geode->getOrCreateStateSet()->addUniform(_alphaUni.get());
@@ -148,7 +148,6 @@ void GreenLight::Entity::setColor(const osg::Vec3 color)
     mm->setDiffuse(osg::Material::FRONT, color4);
 
     stateset->setAttributeAndModes( mm, osg::StateAttribute::OVERRIDE |
-            (asComponent() ? osg::StateAttribute::PROTECTED : 0) |
             osg::StateAttribute::ON );
 
     transform->setStateSet(stateset);
@@ -175,7 +174,7 @@ void GreenLight::Component::setColor(const osg::Vec3 color)
 void GreenLight::Component::setColor(std::list<osg::Vec3> colors)
 {
     _data = new osg::Image;
-    _data->allocateImage(1, colors.size(), 1, GL_RGB, GL_FLOAT);  
+    _data->allocateImage(colors.size(), 1, 1, GL_RGB, GL_FLOAT);  
 
     int i;
     std::list<osg::Vec3>::iterator cit;
@@ -222,6 +221,7 @@ void GreenLight::Entity::showVisual(bool show)
 
 void GreenLight::Component::setDefaultMaterial()
 {
+return;
     osg::ref_ptr<osg::StateSet> stateset = mainNode->getOrCreateStateSet();
     osg::ref_ptr<osg::Material> mm = dynamic_cast<osg::Material*>(stateset->getAttribute
         (osg::StateAttribute::MATERIAL));
@@ -229,13 +229,10 @@ void GreenLight::Component::setDefaultMaterial()
     if (!mm)
         mm = new osg::Material;
 
-    mm->setColorMode(osg::Material::DIFFUSE);
-    mm->setDiffuse(osg::Material::FRONT, osg::Vec4(.7,.7,.7,1));
+    mm->setColorMode(osg::Material::OFF);
 
-    stateset->setMode(GL_LIGHTING, osg::StateAttribute::PROTECTED |
-            osg::StateAttribute::OFF );
+    stateset->setMode(GL_LIGHTING, osg::StateAttribute::PROTECTED | osg::StateAttribute::OFF );
     stateset->setAttributeAndModes( mm, osg::StateAttribute::OVERRIDE |
-            osg::StateAttribute::PROTECTED |
             osg::StateAttribute::ON );
 
     mainNode->setStateSet(stateset);

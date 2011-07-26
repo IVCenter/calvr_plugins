@@ -37,13 +37,14 @@ GreenLight::~GreenLight()
     if (_deselectAllButton) delete _deselectAllButton;
 
     if (_displayComponentsMenu) delete _displayComponentsMenu;
-    if (_componentsViewCheckbox) delete _componentsViewCheckbox;
+    if (_xrayViewCheckbox) delete _xrayViewCheckbox;
     if (_displayFrameCheckbox) delete _displayFrameCheckbox;
     if (_displayDoorsCheckbox) delete _displayDoorsCheckbox;
     if (_displayWaterPipesCheckbox) delete _displayWaterPipesCheckbox;
     if (_displayElectricalCheckbox) delete _displayElectricalCheckbox;
     if (_displayFansCheckbox) delete _displayFansCheckbox;
     if (_displayRacksCheckbox) delete _displayRacksCheckbox;
+    if (_displayComponentTexturesCheckbox) delete _displayComponentTexturesCheckbox;
     if (_powerMenu) delete _powerMenu;
     if (_displayPowerCheckbox) delete _displayPowerCheckbox;
     if (_loadPowerButton) delete _loadPowerButton;
@@ -99,13 +100,14 @@ bool GreenLight::init()
     _deselectAllButton = NULL;
 
     _displayComponentsMenu = NULL;
-    _componentsViewCheckbox = NULL;
+    _xrayViewCheckbox = NULL;
     _displayFrameCheckbox = NULL;
     _displayDoorsCheckbox = NULL;
     _displayWaterPipesCheckbox = NULL;
     _displayElectricalCheckbox = NULL;
     _displayFansCheckbox = NULL;
     _displayRacksCheckbox = NULL;
+    _displayComponentTexturesCheckbox = NULL;
 
     _powerMenu = NULL;
     _displayPowerCheckbox = NULL;
@@ -122,6 +124,7 @@ bool GreenLight::init()
     _electrical = NULL;
     _fans = NULL;
 
+    _displayTexturesUni = NULL;
     _shaderProgram = NULL;
 
     _mouseOver = NULL;
@@ -154,9 +157,10 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
                 {
                     _shaderProgram->addShader( vertShader );
                     _shaderProgram->addShader( fragShader );
+                    std::cerr<<"done."<<std::endl;
                 }
-
-                std::cerr<<"done."<<std::endl;
+                else
+                    std::cerr<<"failed!"<<std::endl;
                 // Done with shaders
             }
 
@@ -180,9 +184,9 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
         else
             cvr::PluginHelper::getObjectsRoot()->removeChild(_box->transform);
     }
-    else if (item == _componentsViewCheckbox)
+    else if (item == _xrayViewCheckbox)
     {
-        bool transparent = _componentsViewCheckbox->getValue();
+        bool transparent = _xrayViewCheckbox->getValue();
         _box->setTransparency(transparent);
         _waterPipes->setTransparency(transparent);
         _electrical->setTransparency(transparent);
@@ -217,6 +221,11 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
     {
         for (int r = 0; r < _rack.size(); r++)
             _rack[r]->showVisual(_displayRacksCheckbox->getValue());
+    }
+    else if (item == _displayComponentTexturesCheckbox)
+    {
+        _displayTexturesUni->setElement(0,_displayComponentTexturesCheckbox->getValue());
+        _displayTexturesUni->dirty();
     }
     else if (item == _loadPowerButton)
     {

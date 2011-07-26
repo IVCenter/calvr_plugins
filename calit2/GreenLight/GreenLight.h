@@ -115,13 +115,14 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _deselectAllButton;
 
         cvr::SubMenu * _displayComponentsMenu;
-        cvr::MenuCheckbox * _componentsViewCheckbox;
+        cvr::MenuCheckbox * _xrayViewCheckbox;
         cvr::MenuCheckbox * _displayFrameCheckbox;
         cvr::MenuCheckbox * _displayDoorsCheckbox;
         cvr::MenuCheckbox * _displayWaterPipesCheckbox;
         cvr::MenuCheckbox * _displayElectricalCheckbox;
         cvr::MenuCheckbox * _displayFansCheckbox;
         cvr::MenuCheckbox * _displayRacksCheckbox;
+        cvr::MenuCheckbox * _displayComponentTexturesCheckbox;
 
         cvr::SubMenu * _powerMenu;
         cvr::MenuCheckbox * _displayPowerCheckbox;
@@ -150,6 +151,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         std::string _powerContents;
 
         // Shaders
+        osg::ref_ptr<osg::Uniform> _displayTexturesUni;
         osg::ref_ptr<osg::Program> _shaderProgram;
 
         // Functions
@@ -163,7 +165,6 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         void doHoverOver(Entity *& last, Entity * current);
         osg::ref_ptr<osg::Geode> makeComponentGeode(float height, std::string textureFile = "");
         osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
-
 };
 
 #endif

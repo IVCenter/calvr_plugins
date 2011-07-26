@@ -11,7 +11,7 @@ void GreenLight::setPowerColors(bool displayPower)
     {
         std::set< Component *>::iterator sit;
         for (sit = _components.begin(); sit != _components.end(); sit++)
-            (*sit)->setColor(osg::Vec3(.7,.7,.7));
+            (*sit)->defaultColor();
         return;
     }
 

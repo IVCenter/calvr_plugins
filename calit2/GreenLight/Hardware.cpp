@@ -125,6 +125,9 @@ void GreenLight::parseHardwareFile()
 
         }
 
+        // Add shared uniforms
+        geode->getOrCreateStateSet()->addUniform(_displayTexturesUni.get());
+
         // Create component from geode, name, and proper translation matrix
         hwComp = new Component(geode,(*lit)->name, osg::Matrix::translate(0,0,18+getZCoord((*lit)->slot)));
 
@@ -264,6 +267,7 @@ osg::ref_ptr<osg::Geode> GreenLight::makeComponentGeode(float height, std::strin
     {
         frontFace->getOrCreateStateSet()->setAttributeAndModes(_shaderProgram, osg::StateAttribute::ON);
         backFace->getOrCreateStateSet()->setAttributeAndModes(_shaderProgram, osg::StateAttribute::ON);
+        restFace->getOrCreateStateSet()->setAttributeAndModes(_shaderProgram, osg::StateAttribute::ON);
     }
 
     box->addDrawable(frontFace.get());
