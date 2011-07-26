@@ -1,12 +1,15 @@
 SET(LIB_NAME Sketch)
 SET(PLUGIN_HEADERS
     Sketch.h
+    SketchObject.h
+    SketchLine.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
     "SHARED"
     ${PLUGIN_HEADERS}
     Sketch.cpp
+    SketchLine.cpp
 )
 
 

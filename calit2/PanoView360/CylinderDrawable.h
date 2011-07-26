@@ -73,7 +73,8 @@ class CylinderDrawable : public PanoDrawable
 
     static OpenThreads::Mutex _initLock;
 
-    mutable bool _deleteDone, _doDelete;
+    mutable bool _doDelete;
+    static bool _deleteDone;
     mutable int rows, cols; 
     float radius;
     float viewangle;

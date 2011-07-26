@@ -43,7 +43,17 @@ bool PanoView360::init()
     _cdRight = NULL;
     _joystickSpin = ConfigManager::getBool("Plugin.PanoView360.JoystickSpin", true);
 
-    _root = new osg::Group();
+    _root = new osg::MatrixTransform();
+
+    float x,y,z;
+
+    x = ConfigManager::getFloat("x","Plugin.PanoView360.Offset",0.0);
+    y = ConfigManager::getFloat("y","Plugin.PanoView360.Offset",0.0);
+    z = ConfigManager::getFloat("z","Plugin.PanoView360.Offset",0.0);
+
+    osg::Matrix offset;
+    offset.makeTranslate(osg::Vec3(x,y,z));
+    _root->setMatrix(offset);
 
     osg::StateSet * stateset = _root->getOrCreateStateSet();
 

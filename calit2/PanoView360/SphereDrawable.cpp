@@ -16,6 +16,7 @@ std::map<int, int> SphereDrawable::_contextinit;
 std::map<int, std::vector<std::vector< GLuint * > > > SphereDrawable::rtextures;
 std::map<int, std::vector<std::vector< GLuint * > > > SphereDrawable::ltextures;
 OpenThreads::Mutex SphereDrawable::_initLock;
+bool SphereDrawable::_deleteDone = false;
 
 SphereDrawable::SphereDrawable(float radius_in, float viewanglev_in, float viewangleh_in, float camHeight_in, int segmentsPerTexture_in, int maxTextureSize_in)
 {
