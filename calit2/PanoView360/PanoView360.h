@@ -50,7 +50,7 @@ class PanoView360 : public CVRPlugin, public MenuCallback
 
         std::vector<MenuButton*> _menufilelist;
 
-        osg::Group * _root;
+        osg::MatrixTransform * _root;
         PanoDrawable * _cdLeft;
         PanoDrawable * _cdRight;
 

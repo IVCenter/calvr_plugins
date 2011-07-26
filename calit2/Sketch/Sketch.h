@@ -5,6 +5,8 @@
 
 #include <menu/SubMenu.h>
 #include <menu/MenuTextButtonSet.h>
+#include <menu/MenuRangeValue.h>
+#include <menu/MenuCheckbox.h>
 
 #include <osg/Geode>
 #include <osg/MatrixTransform>
@@ -19,6 +21,8 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback
     public:
         Sketch();
         virtual ~Sketch();
+        
+        static Sketch * instance();
 
         bool init();
         void menuCallback(cvr::MenuItem * item);
@@ -26,12 +30,33 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback
         bool buttonEvent(int type, int button, int hand, const osg::Matrix & mat);
         bool mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix & mat);
 
+        float getPointerDistance() { return _pointerDistance; }
+
     protected:
+        static Sketch * _myPtr;
+
         enum DrawMode
         {
             NONE = -1,
             RIBBON,
-            TUBE,
+            LINE,
+            SHAPE
+        };
+
+        enum LineType
+        {
+            LINE_NONE = -1,
+            SEGMENT,
+            MULTI_SEGMENT,
+            FREEHAND
+        };
+
+        enum ShapeType
+        {
+            SHAPE_NONE = -1,
+            BOX,
+            CYLINDER,
+            CONE,
             SPHERE
         };
 
@@ -44,13 +69,28 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback
             osg::BoundingBox _bound;
         };
 
+        void removeMenuItems(DrawMode dm);
+        void addMenuItems(DrawMode dm);
+        void finishGeometry();
+
         cvr::SubMenu * _sketchMenu;
         cvr::MenuTextButtonSet * _modeButtons;
+        cvr::MenuRangeValue * _sizeRV;
+
+        cvr::MenuTextButtonSet * _lineType;
+        cvr::MenuCheckbox * _lineTube;
+        cvr::MenuCheckbox * _lineSnap;
+
+        cvr::MenuTextButtonSet * _shapeType;
+        cvr::MenuCheckbox * _shapeWireframe;
 
         DrawMode _mode;
+        LineType _lt;
+        ShapeType _st;
 
         std::string _dir;
         bool _drawing;
+        bool _updateLastPoint;
 
         float _brushScale;
         float _pointerDistance;

@@ -1,5 +1,8 @@
 #include "PluginTest.h"
 
+#include <osg/Geometry>
+#include <osgDB/WriteFile>
+
 #include <iostream>
 #include <menu/MenuSystem.h>
 #include <menu/SubMenu.h>
@@ -10,6 +13,7 @@
 CVRPLUGIN(PluginTest)
 
 using namespace cvr;
+using namespace osg;
 
 PluginTest::PluginTest()
 {
@@ -111,6 +115,8 @@ bool PluginTest::init()
     tdp1->addTextTab("Tab1","I am Tab 1");
     tdp1->addTextTab("Tab2","I am Tab 2");
     tdp1->addTextTab("Tab3","This is a test of the maxWidth attribute of osgText::Text. Hopefully if will wrap on whitespace.");
+
+    createSphereTexture();
 
     //std::cerr << "NodeMask: " << PluginHelper::getObjectsRoot()->getNodeMask() << std::endl;
 
@@ -250,4 +256,82 @@ bool PluginTest::mouseButtonEvent(int type, int button, int x, int y, const osg:
 
     std::cerr << "button: " << button << std::endl;
     return false;
+}
+
+void PluginTest::createSphereTexture()
+{
+    osg::Image * image = new osg::Image();
+    image->allocateImage(256,256,1,GL_RED,GL_FLOAT);
+    image->setInternalTextureFormat(1);
+
+    float * textureData = (float *)image->data();
+
+    int index = 0;
+    for(int i = 0; i < 256; i++)
+    {
+	for(int j = 0; j < 256; j++)
+	{
+	    float x, y, z;
+	    x = ((float)j) / 255.0;
+	    x -= 0.5;
+	    x *= 2.0;
+
+	    y = ((float)i) / 255.0;
+	    y -= 0.5;
+	    y *= 2.0;
+
+	    if(x*x + y*y > 1.0)
+	    {
+		textureData[index] = 0;
+	    }
+	    else
+	    {
+		z = sqrt(1.0 - x*x - y*y);
+		textureData[index] = z;
+	    }
+	    index++;
+	}
+    }
+
+    osg::Texture2D * texture = new osg::Texture2D(image);
+
+    osg::Geometry * geometry = new osg::Geometry();
+
+    Vec3Array* vertices = new Vec3Array(4);
+    (*vertices)[0].set(-100,0,-100);
+    (*vertices)[1].set(100,0,-100);
+    (*vertices)[2].set(100,0,100);
+    (*vertices)[3].set(-100,0,100);
+    geometry->setVertexArray(vertices);
+
+    /*Vec4Array* colors = new Vec4Array(1);
+    (*colors)[0].set(1.0, 0.0, 0.0, 1.0);
+    geometry->setColorArray(colors);
+    geometry->setColorBinding(Geometry::BIND_OVERALL);*/
+
+    Vec2Array* texcoords = new Vec2Array(4);
+    (*texcoords)[0].set(0.0, 0.0);
+    (*texcoords)[1].set(1.0, 0.0);
+    (*texcoords)[2].set(1.0, 1.0);
+    (*texcoords)[3].set(0.0, 1.0);
+    geometry->setTexCoordArray(0,texcoords);
+
+    geometry->addPrimitiveSet(new DrawArrays(PrimitiveSet::QUADS, 0, 4));
+
+    StateSet* stateset = geometry->getOrCreateStateSet();
+    stateset->setMode(GL_LIGHTING, StateAttribute::OFF);
+    stateset->setTextureAttributeAndModes(0, texture, StateAttribute::ON);
+
+    osg::Geode * geode = new osg::Geode();
+    geode->addDrawable(geometry);
+    PluginHelper::getScene()->addChild(geode);
+
+    if(geometry->areFastPathsUsed())
+    {
+	std::cerr << "Using GL fast path." << std::endl;
+    }
+    else
+    {
+	std::cerr << "Not using GL fast path." << std::endl;
+    }
 }

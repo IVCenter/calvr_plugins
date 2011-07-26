@@ -16,6 +16,7 @@ std::map<int, int> CylinderDrawable::_contextinit;
 std::map<int, std::vector<std::vector< GLuint * > > > CylinderDrawable::rtextures;
 std::map<int, std::vector<std::vector< GLuint * > > > CylinderDrawable::ltextures;
 OpenThreads::Mutex CylinderDrawable::_initLock;
+bool CylinderDrawable::_deleteDone = false;
 
 CylinderDrawable::CylinderDrawable(float radius_in, float viewangle_in, float viewangleh_in, float camHeight_in, int segmentsPerTexture_in, int maxTextureSize_in)
 {
