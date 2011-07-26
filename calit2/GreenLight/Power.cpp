@@ -3,9 +3,6 @@
 #include <sstream>
 #include <mxml.h>
 
-// local functions
-osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
-
 void GreenLight::setPowerColors(bool displayPower)
 {
     std::map< std::string, std::map< std::string, int > > componentWattsMap;
@@ -113,7 +110,7 @@ void GreenLight::setPowerColors(bool displayPower)
     }
 }
 
-osg::Vec3 wattColor(float watt, int minWatt, int maxWatt)
+osg::Vec3 GreenLight::wattColor(float watt, int minWatt, int maxWatt)
 {
     if (watt == 0)
         return osg::Vec3(.2,.2,.2);
@@ -136,6 +133,7 @@ osg::Vec3 wattColor(float watt, int minWatt, int maxWatt)
     float interpolate = (watt-minWatt)/(maxWatt-minWatt);
 
     float red = (interpolate-.33)/.34;
+    if (red < 0) red = 0;
     if (red > 1) red = 1;
 
     float green;
@@ -148,6 +146,7 @@ osg::Vec3 wattColor(float watt, int minWatt, int maxWatt)
 
     float blue = 1-(interpolate-.33)/.33;
     if (blue < 0) blue = 0;
+    if (blue > 1) blue = 1;
 
     return osg::Vec3(red, green, blue);
 }

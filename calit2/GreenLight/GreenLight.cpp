@@ -10,6 +10,8 @@
 #include <kernel/InteractionManager.h>
 #include <kernel/PluginHelper.h>
 
+#include <osgDB/ReadFile>
+
 CVRPLUGIN(GreenLight)
 
 GreenLight::GreenLight()
@@ -45,6 +47,10 @@ GreenLight::~GreenLight()
     if (_powerMenu) delete _powerMenu;
     if (_displayPowerCheckbox) delete _displayPowerCheckbox;
     if (_loadPowerButton) delete _loadPowerButton;
+    if (_legendText) delete _legendText;
+    if (_legendGradient) delete _legendGradient;
+    if (_legendTextOutOfRange) delete _legendTextOutOfRange;
+    if (_legendGradientOutOfRange) delete _legendGradientOutOfRange;
 
     if (_box) delete _box;
     if (_waterPipes) delete _waterPipes;
@@ -104,6 +110,10 @@ bool GreenLight::init()
     _powerMenu = NULL;
     _displayPowerCheckbox = NULL;
     _loadPowerButton = NULL;
+    _legendText = NULL;
+    _legendGradient = NULL;
+    _legendTextOutOfRange = NULL;
+    _legendGradientOutOfRange = NULL;
     /*** End Menu Setup ***/
 
     /*** Defaults ***/
@@ -255,6 +265,74 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
                 _powerMenu->addItem(_displayPowerCheckbox);
             }
             file.close();
+        }
+
+        if (!_legendText)
+        {
+            _legendText = new cvr::MenuText("Low    <--Legend-->    High");
+            _powerMenu->addItem(_legendText);
+        }
+
+        if (!_legendGradient)
+        {
+            osg::ref_ptr<osg::Texture2D> tex = new osg::Texture2D;
+            tex->setInternalFormat(GL_RGBA32F_ARB);
+            tex->setFilter(osg::Texture::MIN_FILTER,osg::Texture::NEAREST);
+            tex->setFilter(osg::Texture::MAG_FILTER,osg::Texture::NEAREST);
+            tex->setResizeNonPowerOfTwoHint(false);  
+
+            osg::ref_ptr<osg::Image> data = new osg::Image;
+            data->allocateImage(100, 1, 1, GL_RGBA, GL_FLOAT);  
+
+            for (int i = 0; i < 100; i++)
+            {
+                osg::Vec3 color = wattColor(i+1,1,101);
+                for (int j = 0; j < 3; j++)
+                {
+                    ((float *)data->data(i))[j] = color[j];
+                }
+                ((float *)data->data(i))[3] = 1;
+            }
+
+            data->dirty();
+            tex->setImage(data.get());
+
+            _legendGradient = new cvr::MenuImage(tex,450,50);
+            _powerMenu->addItem(_legendGradient);
+        }
+
+        if (!_legendTextOutOfRange)
+        {
+            _legendTextOutOfRange = new cvr::MenuText(" Off     | Too Low  | Too High");
+            _powerMenu->addItem(_legendTextOutOfRange);
+        }
+
+        if (!_legendGradientOutOfRange)
+        {
+            osg::ref_ptr<osg::Texture2D> tex = new osg::Texture2D;
+            tex->setInternalFormat(GL_RGBA32F_ARB);
+            tex->setFilter(osg::Texture::MIN_FILTER,osg::Texture::NEAREST);
+            tex->setFilter(osg::Texture::MAG_FILTER,osg::Texture::NEAREST);
+            tex->setResizeNonPowerOfTwoHint(false);  
+
+            osg::ref_ptr<osg::Image> data = new osg::Image;
+            data->allocateImage(3, 1, 1, GL_RGBA, GL_FLOAT);  
+
+            for (int i = 0; i < 3; i++)
+            {
+                osg::Vec3 color = wattColor(i*2,3,3);
+                for (int j = 0; j < 3; j++)
+                {
+                    ((float *)data->data(i))[j] = color[j];
+                }
+                ((float *)data->data(i))[3] = 1;
+            }
+
+            data->dirty();
+            tex->setImage(data.get());
+
+            _legendGradientOutOfRange = new cvr::MenuImage(tex,450,50);
+            _powerMenu->addItem(_legendGradientOutOfRange);
         }
 
         if (_displayPowerCheckbox->getValue())

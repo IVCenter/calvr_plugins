@@ -8,6 +8,8 @@
 #include <config/ConfigManager.h>
 #include <kernel/CVRPlugin.h>
 #include <menu/MenuButton.h>
+#include <menu/MenuImage.h>
+#include <menu/MenuText.h>
 #include <menu/MenuCheckbox.h>
 #include <menu/SubMenu.h>
 
@@ -124,6 +126,10 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::SubMenu * _powerMenu;
         cvr::MenuCheckbox * _displayPowerCheckbox;
         cvr::MenuButton * _loadPowerButton;
+        cvr::MenuText * _legendText;
+        cvr::MenuImage * _legendGradient;
+        cvr::MenuText * _legendTextOutOfRange;
+        cvr::MenuImage * _legendGradientOutOfRange;
 
         // Entities
         Entity * _box;          // box/frame
@@ -156,6 +162,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         void handleHoverOver(osg::Matrix pointerMat, Entity *& hovered);
         void doHoverOver(Entity *& last, Entity * current);
         osg::ref_ptr<osg::Geode> makeComponentGeode(float height, std::string textureFile = "");
+        osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
+
 };
 
 #endif
