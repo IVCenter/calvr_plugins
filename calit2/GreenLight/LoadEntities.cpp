@@ -198,7 +198,7 @@ bool GreenLight::loadScene()
     _displayComponentsMenu->setCallback(this);
     _glMenu->addItem(_displayComponentsMenu);
 
-    _xrayViewCheckbox = new cvr::MenuCheckbox("Components View",false);
+    _xrayViewCheckbox = new cvr::MenuCheckbox("X-ray Vision",false);
     _xrayViewCheckbox->setCallback(this);
     _displayComponentsMenu->addItem(_xrayViewCheckbox);
 
