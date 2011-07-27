@@ -176,6 +176,9 @@ bool GreenLight::loadScene()
     for (int r = 0; r < _rack.size(); r++)
         _box->addChild(_rack[r]);
 
+    // Create shared uniform
+    _displayTexturesUni = new osg::Uniform("showTexture", true);
+
     // populate racks
     parseHardwareFile();
     
@@ -195,9 +198,9 @@ bool GreenLight::loadScene()
     _displayComponentsMenu->setCallback(this);
     _glMenu->addItem(_displayComponentsMenu);
 
-    _componentsViewCheckbox = new cvr::MenuCheckbox("Components View",false);
-    _componentsViewCheckbox->setCallback(this);
-    _displayComponentsMenu->addItem(_componentsViewCheckbox);
+    _xrayViewCheckbox = new cvr::MenuCheckbox("X-ray Vision",false);
+    _xrayViewCheckbox->setCallback(this);
+    _displayComponentsMenu->addItem(_xrayViewCheckbox);
 
     _displayFrameCheckbox = new cvr::MenuCheckbox("Box Frame",true);
     _displayFrameCheckbox->setCallback(this);
@@ -222,6 +225,12 @@ bool GreenLight::loadScene()
     _displayRacksCheckbox = new cvr::MenuCheckbox("Racks",true);
     _displayRacksCheckbox->setCallback(this);
     _displayComponentsMenu->addItem(_displayRacksCheckbox);
+
+    _displayComponentTexturesCheckbox = new cvr::MenuCheckbox("Component Textures",true);
+    _displayComponentTexturesCheckbox->setCallback(this);
+    _displayComponentsMenu->addItem(_displayComponentTexturesCheckbox);
+    _displayTexturesUni->setElement(0,_displayComponentTexturesCheckbox->getValue());
+    _displayTexturesUni->dirty();
 
     _powerMenu = new cvr::SubMenu("Power Consumption", "Power Consumption");
     _powerMenu->setCallback(this);
@@ -262,6 +271,10 @@ bool GreenLight::loadScene()
     _deselectAllButton = new cvr::MenuButton("Deselect All");
     _deselectAllButton->setCallback(this);
     // Added to _hardwareSelectionMenu when selection mode is enabled
+
+    // Back face culling
+    _box->transform->getOrCreateStateSet()->setMode(GL_CULL_FACE, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+
 
     return true;
 }

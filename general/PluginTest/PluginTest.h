@@ -26,6 +26,8 @@ class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
         bool buttonEvent(int type, int button, int hand, const osg::Matrix& mat);
         bool mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix& mat);
     protected:
+        void createSphereTexture();
+
         cvr::MenuButton * testButton1;
         cvr::MenuButton * testButton2;
         cvr::MenuButton * testButton3;

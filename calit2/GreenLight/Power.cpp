@@ -3,18 +3,15 @@
 #include <sstream>
 #include <mxml.h>
 
-// local functions
-//osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
-
 void GreenLight::setPowerColors(bool displayPower)
 {
-    std::map< std::string, int> componentWattsMap;
+    std::map< std::string, std::map< std::string, int > > componentWattsMap;
 
     if (!displayPower)
     {
         std::set< Component *>::iterator sit;
         for (sit = _components.begin(); sit != _components.end(); sit++)
-            (*sit)->setColor(osg::Vec3(.7,.7,.7));
+            (*sit)->defaultColor();
         return;
     }
 
@@ -44,6 +41,7 @@ void GreenLight::setPowerColors(bool displayPower)
         do
         {
             mxml_node_t * nameNode = mxmlFindElement(sensor,sensor,"name",NULL,NULL,MXML_DESCEND_FIRST);
+            mxml_node_t * timeNode = mxmlFindElement(sensor,sensor,"time",NULL,NULL,MXML_DESCEND_FIRST);
             mxml_node_t * valueNode = mxmlFindElement(sensor,sensor,"value",NULL,NULL,MXML_DESCEND_FIRST);
 
             if (nameNode == NULL || nameNode->child->value.text.whitespace == 1)
@@ -54,24 +52,61 @@ void GreenLight::setPowerColors(bool displayPower)
 
             std::string name = nameNode->child->value.text.string;
 
-            if (valueNode == NULL || valueNode->child->value.text.whitespace == 1)
+            if (timeNode == NULL || timeNode->child == NULL || timeNode->child->next == NULL)
             {
-                std::cerr << "Error parsing power xml file value for \"" << name <<"\"." << std::endl;
+                std::cerr << "Error parsing power xml file for \"" << name <<"\" time." << std::endl;
                 continue;
             }
-         
-            std::string value = valueNode->child->value.text.string;
 
+            std::string time = timeNode->child->value.text.string;
+            time += " ";
+            time += timeNode->child->next->value.text.string;
+
+            if (valueNode == NULL || valueNode->child->value.text.whitespace == 1)
+            {
+                std::cerr << "Error parsing power xml file for \"" << name <<"\" value." << std::endl;
+                continue;
+            }
+
+            std::string value = valueNode->child->value.text.string;
             int wattage = utl::intFromString(value);
-            componentWattsMap[name] = wattage;
+
+            std::map< std::string, std::map< std::string, int > >::iterator mit;
+            if ((mit = componentWattsMap.find(name)) == componentWattsMap.end())
+            {
+                std::map<std::string, int> newMap;
+                newMap[time] = wattage;
+                componentWattsMap[name] = newMap;
+            }
+            else
+            {
+                std::map< std::string, int >::iterator tit;
+                if ((tit = mit->second.find(time)) == mit->second.end())
+                    mit->second[time] = wattage;
+                else
+                    tit->second += wattage;                
+            }
         } while ((sensor = mxmlWalkNext(sensor,measurements,MXML_NO_DESCEND)) != NULL);
     }
 
     std::set< Component * >::iterator sit;
     for (sit = _components.begin(); sit != _components.end(); sit++)
     {
-        float wattage = componentWattsMap[(*sit)->name];
-        (*sit)->setColor( wattColor(wattage, (*sit)->minWattage, (*sit)->maxWattage));
+        std::list< osg::Vec3 > colors;
+        std::map< std::string, std::map< std::string, int > >::iterator cit;
+        if ((cit = componentWattsMap.find((*sit)->name)) != componentWattsMap.end())
+        {
+            std::map< std::string, int >::iterator mit;
+            for (mit = cit->second.begin(); mit!= cit->second.end(); mit++)
+            {
+                 colors.push_back( wattColor(mit->second, (*sit)->minWattage, (*sit)->maxWattage) );
+            }
+        }
+        else
+        {
+            colors.push_back( wattColor(0, (*sit)->minWattage, (*sit)->maxWattage) );
+        }
+        (*sit)->setColor(colors);
     }
 }
 
@@ -98,6 +133,7 @@ osg::Vec3 GreenLight::wattColor(float watt, int minWatt, int maxWatt)
     float interpolate = (watt-minWatt)/(maxWatt-minWatt);
 
     float red = (interpolate-.33)/.34;
+    if (red < 0) red = 0;
     if (red > 1) red = 1;
 
     float green;
@@ -110,6 +146,7 @@ osg::Vec3 GreenLight::wattColor(float watt, int minWatt, int maxWatt)
 
     float blue = 1-(interpolate-.33)/.33;
     if (blue < 0) blue = 0;
+    if (blue > 1) blue = 1;
 
     return osg::Vec3(red, green, blue);
 }

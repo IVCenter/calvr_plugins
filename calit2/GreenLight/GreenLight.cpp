@@ -6,8 +6,11 @@
 
 #include <fstream>
 #include <iostream>
-#include <kernel/PluginHelper.h>
+#include <kernel/ComController.h>
 #include <kernel/InteractionManager.h>
+#include <kernel/PluginHelper.h>
+
+#include <osgDB/ReadFile>
 
 CVRPLUGIN(GreenLight)
 
@@ -36,16 +39,21 @@ GreenLight::~GreenLight()
     if (_deselectAllButton) delete _deselectAllButton;
 
     if (_displayComponentsMenu) delete _displayComponentsMenu;
-    if (_componentsViewCheckbox) delete _componentsViewCheckbox;
+    if (_xrayViewCheckbox) delete _xrayViewCheckbox;
     if (_displayFrameCheckbox) delete _displayFrameCheckbox;
     if (_displayDoorsCheckbox) delete _displayDoorsCheckbox;
     if (_displayWaterPipesCheckbox) delete _displayWaterPipesCheckbox;
     if (_displayElectricalCheckbox) delete _displayElectricalCheckbox;
     if (_displayFansCheckbox) delete _displayFansCheckbox;
     if (_displayRacksCheckbox) delete _displayRacksCheckbox;
+    if (_displayComponentTexturesCheckbox) delete _displayComponentTexturesCheckbox;
     if (_powerMenu) delete _powerMenu;
     if (_displayPowerCheckbox) delete _displayPowerCheckbox;
     if (_loadPowerButton) delete _loadPowerButton;
+    if (_legendText) delete _legendText;
+    if (_legendGradient) delete _legendGradient;
+    if (_legendTextOutOfRange) delete _legendTextOutOfRange;
+    if (_legendGradientOutOfRange) delete _legendGradientOutOfRange;
 
     if (_box) delete _box;
     if (_waterPipes) delete _waterPipes;
@@ -94,25 +102,36 @@ bool GreenLight::init()
     _deselectAllButton = NULL;
 
     _displayComponentsMenu = NULL;
-    _componentsViewCheckbox = NULL;
+    _xrayViewCheckbox = NULL;
     _displayFrameCheckbox = NULL;
     _displayDoorsCheckbox = NULL;
     _displayWaterPipesCheckbox = NULL;
     _displayElectricalCheckbox = NULL;
     _displayFansCheckbox = NULL;
     _displayRacksCheckbox = NULL;
+    _displayComponentTexturesCheckbox = NULL;
 
     _powerMenu = NULL;
     _displayPowerCheckbox = NULL;
     _loadPowerButton = NULL;
+    _legendText = NULL;
+    _legendGradient = NULL;
+    _legendTextOutOfRange = NULL;
+    _legendGradientOutOfRange = NULL;
     /*** End Menu Setup ***/
 
-    /*** Entity Defaults ***/
+    /*** Defaults ***/
     _box = NULL;
     _waterPipes = NULL;
     _electrical = NULL;
     _fans = NULL;
-    /*** End Entity Defaults ***/
+
+    _displayTexturesUni = NULL;
+    _shaderProgram = NULL;
+
+    _mouseOver = NULL;
+    _wandOver = NULL;
+    /*** End Defaults ***/
 
     _testRange = NULL;
     _dehumidifier = NULL;
@@ -129,6 +148,27 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
         // Load as neccessary
         if (!_box)
         {
+            if (!_shaderProgram)
+            {
+                // First compile shaders
+                std::cerr<<"Loading shaders... ";
+                _shaderProgram = new osg::Program;
+
+                osg::ref_ptr<osg::Shader> vertShader = new osg::Shader( osg::Shader::VERTEX );
+                osg::ref_ptr<osg::Shader> fragShader = new osg::Shader( osg::Shader::FRAGMENT );
+
+                if (utl::loadShaderSource(vertShader, cvr::ConfigManager::getEntry("vertex", "Plugin.GreenLight.Shaders", ""))
+                && utl::loadShaderSource(fragShader, cvr::ConfigManager::getEntry("fragment", "Plugin.GreenLight.Shaders", "")))
+                {
+                    _shaderProgram->addShader( vertShader );
+                    _shaderProgram->addShader( fragShader );
+                    std::cerr<<"done."<<std::endl;
+                }
+                else
+                    std::cerr<<"failed!"<<std::endl;
+                // Done with shaders
+            }
+
             utl::downloadFile(cvr::ConfigManager::getEntry("download", "Plugin.GreenLight.Hardware", ""),
                               cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Hardware", ""),
                               _hardwareContents);
@@ -149,9 +189,9 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
         else
             cvr::PluginHelper::getObjectsRoot()->removeChild(_box->transform);
     }
-    else if (item == _componentsViewCheckbox)
+    else if (item == _xrayViewCheckbox)
     {
-        bool transparent = _componentsViewCheckbox->getValue();
+        bool transparent = _xrayViewCheckbox->getValue();
         _box->setTransparency(transparent);
         _waterPipes->setTransparency(transparent);
         _electrical->setTransparency(transparent);
@@ -187,9 +227,44 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
         for (int r = 0; r < _rack.size(); r++)
             _rack[r]->showVisual(_displayRacksCheckbox->getValue());
     }
+    else if (item == _displayComponentTexturesCheckbox)
+    {
+        _displayTexturesUni->setElement(0,_displayComponentTexturesCheckbox->getValue());
+        _displayTexturesUni->dirty();
+    }
     else if (item == _loadPowerButton)
     {
-        utl::downloadFile(cvr::ConfigManager::getEntry("download", "Plugin.GreenLight.Power", ""),
+        std::string selectedNames = "";
+
+        if (_selectionModeCheckbox->getValue())
+        {
+            int selections = 0;
+            std::set<Component *>::iterator sit;
+            for (sit = _components.begin(); sit != _components.end(); sit++)
+            {
+                if ((*sit)->selected)
+                {
+                    if (selectedNames == "")
+                        selectedNames = "&name=";
+                    else
+                        selectedNames += ",";
+                    selectedNames += (*sit)->name;
+                    selections++;
+                }
+            }
+            if (_components.size() == selections) // we grabbed all of them
+                selectedNames = "";
+            else if (selections == 0) // shouldn't poll anything
+                selectedNames = "&name=null";
+
+            size_t pos;
+            while ((pos = selectedNames.find(' ')) != std::string::npos)
+            {
+                selectedNames.replace(pos,1,"%20");
+            }
+        }
+
+        utl::downloadFile(cvr::ConfigManager::getEntry("download", "Plugin.GreenLight.Power", "")+selectedNames,
                           cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Power", ""),
                           _powerContents);
 
@@ -204,6 +279,79 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
                 _powerMenu->addItem(_displayPowerCheckbox);
             }
             file.close();
+        }
+
+        if (!_legendText)
+        {
+            _legendText = new cvr::MenuText("Low    <--Legend-->    High");
+            _powerMenu->addItem(_legendText);
+        }
+
+        if (!_legendGradient)
+        {
+            osg::ref_ptr<osg::Texture2D> tex = new osg::Texture2D;
+            tex->setInternalFormat(GL_RGBA32F_ARB);
+            tex->setFilter(osg::Texture::MIN_FILTER,osg::Texture::NEAREST);
+            tex->setFilter(osg::Texture::MAG_FILTER,osg::Texture::NEAREST);
+            tex->setResizeNonPowerOfTwoHint(false);  
+
+            osg::ref_ptr<osg::Image> data = new osg::Image;
+            data->allocateImage(100, 1, 1, GL_RGBA, GL_FLOAT);  
+
+            for (int i = 0; i < 100; i++)
+            {
+                osg::Vec3 color = wattColor(i+1,1,101);
+                for (int j = 0; j < 3; j++)
+                {
+                    ((float *)data->data(i))[j] = color[j];
+                }
+                ((float *)data->data(i))[3] = 1;
+            }
+
+            data->dirty();
+            tex->setImage(data.get());
+
+            _legendGradient = new cvr::MenuImage(tex,450,50);
+            _powerMenu->addItem(_legendGradient);
+        }
+
+        if (!_legendTextOutOfRange)
+        {
+            _legendTextOutOfRange = new cvr::MenuText(" Off     | Too Low  | Too High");
+            _powerMenu->addItem(_legendTextOutOfRange);
+        }
+
+        if (!_legendGradientOutOfRange)
+        {
+            osg::ref_ptr<osg::Texture2D> tex = new osg::Texture2D;
+            tex->setInternalFormat(GL_RGBA32F_ARB);
+            tex->setFilter(osg::Texture::MIN_FILTER,osg::Texture::NEAREST);
+            tex->setFilter(osg::Texture::MAG_FILTER,osg::Texture::NEAREST);
+            tex->setResizeNonPowerOfTwoHint(false);  
+
+            osg::ref_ptr<osg::Image> data = new osg::Image;
+            data->allocateImage(3, 1, 1, GL_RGBA, GL_FLOAT);  
+
+            for (int i = 0; i < 3; i++)
+            {
+                osg::Vec3 color = wattColor(i*2,3,3);
+                for (int j = 0; j < 3; j++)
+                {
+                    ((float *)data->data(i))[j] = color[j];
+                }
+                ((float *)data->data(i))[3] = 1;
+            }
+
+            data->dirty();
+            tex->setImage(data.get());
+
+            _legendGradientOutOfRange = new cvr::MenuImage(tex,450,50);
+            _powerMenu->addItem(_legendGradientOutOfRange);
+        }
+
+        if (_displayPowerCheckbox->getValue())
+        {
+            setPowerColors(true);
         }
     }
     else if (item == _displayPowerCheckbox)
@@ -273,10 +421,20 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
 
 void GreenLight::preFrame()
 {
-    for (int d = 0; d < _door.size(); d++)
-        _door[d]->handleAnimation();
-    for (int r = 0; r < _rack.size(); r++)
-        _rack[r]->handleAnimation();
+    // update mouse and wand intersection with components
+    if (_box)
+    {
+        // continue animations
+        for (int d = 0; d < _door.size(); d++)
+            _door[d]->handleAnimation();
+        for (int r = 0; r < _rack.size(); r++)
+            _rack[r]->handleAnimation();
+
+        if (cvr::ComController::instance()->isMaster())
+            handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver);
+        else
+            handleHoverOver(cvr::PluginHelper::getHandMat(), _wandOver);
+    }
 }
 
 void GreenLight::postFrame()
@@ -320,6 +478,17 @@ bool GreenLight::buttonEvent(int type, int button, int hand, const osg::Matrix& 
 
     if (!_box)
         return false;
+
+    // If we are hovering over a component, we already know it
+    if (_wandOver)
+    {
+        Component * comp = dynamic_cast<Component *>(_wandOver);
+        if (comp)
+        {
+            selectComponent( comp, !comp->selected );
+            return true;
+        }
+    }
 
     // process intersection
     osg::Vec3 pointerStart, pointerEnd;
@@ -369,6 +538,17 @@ bool GreenLight::mouseButtonEvent(int type, int button, int x, int y, const osg:
 
     if (!_box)
         return false;
+
+    // If we are hovering over a component, we already know it
+    if (_mouseOver)
+    {
+        Component * comp = dynamic_cast<Component *>(_mouseOver);
+        if (comp)
+        {
+            selectComponent( comp, !comp->selected );
+            return true;
+        }
+    }
 
     // process mouse intersection
     osg::Vec3 pointerStart, pointerEnd;

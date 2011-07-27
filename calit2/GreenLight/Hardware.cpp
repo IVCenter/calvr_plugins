@@ -8,9 +8,7 @@
 #include <osg/Texture2D>
 #include <osgDB/ReadFile>
 
-// Local Functions
 float getZCoord(int slot);
-osg::ref_ptr<osg::Geode> makePart(float height, std::string textureFile = "");
 
 void GreenLight::parseHardwareFile()
 {
@@ -74,7 +72,7 @@ void GreenLight::parseHardwareFile()
 
         // map name to model, if valid
         if (startname != "" && texture != "")
-            nameToGeode[startname] = makePart(height, texDir + texture);
+            nameToGeode[startname] = makeComponentGeode(height, texDir + texture);
 
         int minWatt = cvr::ConfigManager::getInt("minWattage", compBase + "." + components[c], 0);
         int maxWatt = cvr::ConfigManager::getInt("maxWattage", compBase + "." + components[c], 0);
@@ -121,11 +119,14 @@ void GreenLight::parseHardwareFile()
                 geode = new osg::Geode(*mit->second, cOp);
             else
             {
-                geode = makePart(height);
+                geode = makeComponentGeode(height);
                 defaultModels[height] = geode.get();
             }
 
         }
+
+        // Add shared uniforms
+        geode->getOrCreateStateSet()->addUniform(_displayTexturesUni.get());
 
         // Create component from geode, name, and proper translation matrix
         hwComp = new Component(geode,(*lit)->name, osg::Matrix::translate(0,0,18+getZCoord((*lit)->slot)));
@@ -158,6 +159,14 @@ if (hwComp->name == "Dehumidifier")
         if (wit == nameToWattage.end())
             std::cerr << "Warning: " << (*lit)->name << " does not have a min/max wattage set in the config file." << std::endl;
 
+        // if item is in rack1, rotate it (since rack1 isn't rotated, but is on the left side of the box)
+        if ((*lit)->rack == 1)
+        {
+            osg::Matrix mat = hwComp->transform->getMatrix();
+            mat.setRotate(osg::Quat(osg::PI,osg::Vec3(0,0,1)));
+            hwComp->transform->setMatrix(mat);
+        }
+
         // finally add entity to the rack
         _rack[(*lit)->rack-1]->addChild(hwComp);
 
@@ -178,10 +187,10 @@ float getZCoord(int slot)
 }
 
 // Ignores Normals... add as necessary
-osg::ref_ptr<osg::Geode> makePart(float height, std::string textureFile)
+osg::ref_ptr<osg::Geode> GreenLight::makeComponentGeode(float height, std::string textureFile)
 {
     const float xRad = 10.7, yRad = 14.951, zRad_2 = 1.75;
-    const float Z_BUFFER_MAGIC = .25;
+    const float Z_BUFFER_MAGIC = .3;
 
     osg::ref_ptr<osg::Geode> box = new osg::Geode;
 
@@ -207,7 +216,7 @@ osg::ref_ptr<osg::Geode> makePart(float height, std::string textureFile)
 
     unsigned short myIndices[] = {
         0, 1, 2, 3, // front face
-        4, 5, 6, 7, // back face
+        7, 6, 5, 4, // back face
         2, 6, 3, 7, 0, 4, 1, 5, 2, 6 // rest face
     };
 
@@ -227,35 +236,40 @@ osg::ref_ptr<osg::Geode> makePart(float height, std::string textureFile)
     backFace->addPrimitiveSet(new osg::DrawElementsUShort(osg::PrimitiveSet::QUADS, 4, &myIndices[4]));
     restFace->addPrimitiveSet(new osg::DrawElementsUShort(osg::PrimitiveSet::TRIANGLE_STRIP, 10, &myIndices[8]));
 
+    // Textures should be created so that the top half is the front face,
+    // and the bottom is the back.
+    osg::ref_ptr<osg::Vec2Array> texcoords = new osg::Vec2Array();
+    texcoords->push_back(osg::Vec2(0,.5));
+    texcoords->push_back(osg::Vec2(1,.5));
+    texcoords->push_back(osg::Vec2(1,1));
+    texcoords->push_back(osg::Vec2(0,1));
+
+    texcoords->push_back(osg::Vec2(1,0));
+    texcoords->push_back(osg::Vec2(0,0));
+    texcoords->push_back(osg::Vec2(0,.5));
+    texcoords->push_back(osg::Vec2(1,.5));
+
+    osg::Texture2D * texture = new osg::Texture2D();
+
+    osg::Image * image = NULL;
+
     if (textureFile != "")
+        image = osgDB::readImageFile(textureFile);
+
+    if (image)
+        texture->setImage(image);
+
+    frontFace->setTexCoordArray(0,texcoords.get());
+    frontFace->getOrCreateStateSet()->setTextureAttributeAndModes(0,texture,osg::StateAttribute::ON);
+
+    backFace->setTexCoordArray(0,texcoords.get());
+    backFace->getOrCreateStateSet()->setTextureAttributeAndModes(0,texture,osg::StateAttribute::ON);
+
+    if (_shaderProgram);
     {
-
-        // Textures should be created so that the top half is the front face,
-        // and the bottom is the back.
-        osg::ref_ptr<osg::Vec2Array> texcoords = new osg::Vec2Array();
-        texcoords->push_back(osg::Vec2(0,.5));
-        texcoords->push_back(osg::Vec2(1,.5));
-        texcoords->push_back(osg::Vec2(1,1));
-        texcoords->push_back(osg::Vec2(0,1));
-        texcoords->push_back(osg::Vec2(0,0));
-        texcoords->push_back(osg::Vec2(1,0));
-        texcoords->push_back(osg::Vec2(1,.5));
-        texcoords->push_back(osg::Vec2(1,.5));
-
-        osg::Texture2D * texture = new osg::Texture2D();
-        osg::Image * image = osgDB::readImageFile(textureFile);
-
-        if (image)
-        {
-            texture->setImage(image);
-            frontFace->setTexCoordArray(0,texcoords.get());
-            frontFace->getOrCreateStateSet()->setTextureAttributeAndModes(0,texture,osg::StateAttribute::ON);
-
-            backFace->setTexCoordArray(0,texcoords.get());
-            backFace->getOrCreateStateSet()->setTextureAttributeAndModes(0,texture,osg::StateAttribute::ON);
-        }
-        else
-            std::cerr << "Error: Failed to read texture image file \"" << textureFile << "\"" << std::endl;
+        frontFace->getOrCreateStateSet()->setAttributeAndModes(_shaderProgram, osg::StateAttribute::ON);
+        backFace->getOrCreateStateSet()->setAttributeAndModes(_shaderProgram, osg::StateAttribute::ON);
+        restFace->getOrCreateStateSet()->setAttributeAndModes(_shaderProgram, osg::StateAttribute::ON);
     }
 
     box->addDrawable(frontFace.get());
