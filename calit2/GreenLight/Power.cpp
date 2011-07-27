@@ -119,7 +119,7 @@ osg::Vec3 GreenLight::wattColor(float watt, int minWatt, int maxWatt)
         return osg::Vec3(1,1,1);
 
     if (watt < minWatt)
-        return osg::Vec3(1,0,1);
+        return osg::Vec3(.8,.8,1);
 
     if (watt > maxWatt)
         return osg::Vec3(1,0,0);

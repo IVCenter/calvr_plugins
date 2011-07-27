@@ -11,7 +11,6 @@
 #include <menu/MenuImage.h>
 #include <menu/MenuText.h>
 #include <menu/MenuCheckbox.h>
-#include <menu/MenuRangeValue.h>
 #include <menu/SubMenu.h>
 
 #include <osg/AnimationPath>
@@ -132,10 +131,6 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuImage * _legendGradient;
         cvr::MenuText * _legendTextOutOfRange;
         cvr::MenuImage * _legendGradientOutOfRange;
-
-cvr::MenuRangeValue * _testRange;
-Component * _dehumidifier;
-osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
 
         // Entities
         Entity * _box;          // box/frame

@@ -133,9 +133,6 @@ bool GreenLight::init()
     _wandOver = NULL;
     /*** End Defaults ***/
 
-    _testRange = NULL;
-    _dehumidifier = NULL;
-
     return true;
 }
 
@@ -358,12 +355,6 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
     {
         setPowerColors(_displayPowerCheckbox->getValue());
 
-        if (_testRange == NULL)
-{
-    _testRange = new cvr::MenuRangeValue("Color Test (Dehumidifier)", .9, 2.1, 1, .01);
-    _testRange->setCallback(this);
-    _powerMenu->addItem(_testRange);
-}
     }
     else if (item == _selectionModeCheckbox)
     {
@@ -411,11 +402,6 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
 
         std::set< Component * > * cluster = cit->second;
         selectCluster(cluster, checkbox->getValue());
-    }
-    else if (item == _testRange)
-    {
-        if (_dehumidifier)
-            _dehumidifier->setColor(wattColor(_testRange->getValue(),1,2));
     }
 }
 
