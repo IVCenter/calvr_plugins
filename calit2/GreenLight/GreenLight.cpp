@@ -538,7 +538,6 @@ bool GreenLight::mouseButtonEvent(int type, int button, int x, int y, const osg:
     if (!_box)
         return false;
 
-std::cerr<<std::hex<<_mouseOver<<std::endl;
     // Should be hovering over it
     if (_mouseOver)
     {
