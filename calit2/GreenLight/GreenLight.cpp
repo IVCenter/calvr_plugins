@@ -465,17 +465,30 @@ bool GreenLight::buttonEvent(int type, int button, int hand, const osg::Matrix& 
     if (!_box)
         return false;
 
-    // If we are hovering over a component, we already know it
+    // Should be hovering over it
     if (_wandOver)
     {
-        Component * comp = dynamic_cast<Component *>(_wandOver);
+        Component * comp = _wandOver->asComponent();
         if (comp)
         {
             selectComponent( comp, !comp->selected );
-            return true;
         }
+        else // _wandOver is a rack/door/etc.
+        {
+            _wandOver->beginAnimation();
+
+            // Handle group animations
+            std::list<Entity *>::iterator eit;
+            for (eit = _wandOver->group.begin(); eit != _wandOver->group.end(); eit++)
+            {
+                (*eit)->beginAnimation();
+            }
+        }
+
+        return true;
     }
 
+/* no longer need this.. commenting out instead of deletion, until tested
     // process intersection
     osg::Vec3 pointerStart, pointerEnd;
     std::vector<IsectInfo> isecvec;
@@ -489,7 +502,7 @@ bool GreenLight::buttonEvent(int type, int button, int hand, const osg::Matrix& 
 
     if (isecvec.size() > 0)
         return handleIntersection(isecvec[0].geode);
-
+*/
     return false;
 }
 
@@ -525,17 +538,31 @@ bool GreenLight::mouseButtonEvent(int type, int button, int x, int y, const osg:
     if (!_box)
         return false;
 
-    // If we are hovering over a component, we already know it
+std::cerr<<std::hex<<_mouseOver<<std::endl;
+    // Should be hovering over it
     if (_mouseOver)
     {
-        Component * comp = dynamic_cast<Component *>(_mouseOver);
+        Component * comp = _mouseOver->asComponent();
         if (comp)
         {
             selectComponent( comp, !comp->selected );
-            return true;
         }
+        else // _mouseOver is a rack/door/etc.
+        {
+            _mouseOver->beginAnimation();
+
+            // Handle group animations
+            std::list<Entity *>::iterator eit;
+            for (eit = _mouseOver->group.begin(); eit != _mouseOver->group.end(); eit++)
+            {
+                (*eit)->beginAnimation();
+            }
+        }
+
+        return true;
     }
 
+/* no longer need this.. commenting out instead of deletion, until tested
     // process mouse intersection
     osg::Vec3 pointerStart, pointerEnd;
     std::vector<IsectInfo> isecvec;
@@ -549,6 +576,6 @@ bool GreenLight::mouseButtonEvent(int type, int button, int x, int y, const osg:
 
     if (isecvec.size() > 0)
         return handleIntersection(isecvec[0].geode);
-
+*/
     return false;
 }
