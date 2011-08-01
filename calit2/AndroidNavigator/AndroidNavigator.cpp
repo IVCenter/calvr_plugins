@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <kernel/ComController.h>
 
 using namespace std;
 using namespace osg;
@@ -34,6 +35,11 @@ AndroidNavigator::~AndroidNavigator()
 bool AndroidNavigator::init()
 {
     std::cerr << "Android Navigator init\n"; 
+
+    bool status = false;
+    if(ComController::instance()->isMaster())
+    {
+        status = true;
 
     _root = new osg::MatrixTransform();
     _andMenu = new SubMenu("AndroidNavigator", "AndroidNavigator");
@@ -96,7 +102,13 @@ bool AndroidNavigator::init()
     markTrans.makeTranslate(osg::Vec3 (0,0,0));
     trans4->setMatrix(markTrans);
 
-    SceneManager::instance()->getObjectsRoot()->addChild(_root);
+        SceneManager::instance()->getObjectsRoot()->addChild(_root);
+        ComController::instance()->sendSlaves((char *)&status, sizeof(bool));
+    }
+    else
+    {
+        ComController::instance()->readMaster((char *)&status, sizeof(bool));
+    }
 
     // Matrix data
     transMult = ConfigManager::getFloat("Plugin.AndroidNavigator.TransMult", 1.0);
@@ -112,12 +124,17 @@ bool AndroidNavigator::init()
     _tagCommand = 4;
 
     std::cerr<<"AndroidNavigator done"<<endl;
-
-    return true;
+      
+    return status;
 }
 
 void AndroidNavigator::preFrame()
 {
+    Matrixd finalmat;
+    
+    if(ComController::instance()->isMaster())
+    {
+
     int RECVCONST = 48;
     double x, y, z;
     x = y = z = 0.0;
@@ -130,7 +147,6 @@ void AndroidNavigator::preFrame()
     int start = 0;
     char* value;
 
-    Matrix finalmat;
             
     double angle [3] = {0.0, 0.0, 0.0};
     double coord [3] = {0.0, 0.0, 0.0};
@@ -138,159 +154,187 @@ void AndroidNavigator::preFrame()
     int bytes_read;
     char recv_data[1024];
     struct sockaddr_in client_addr;
+
+    fd_set fds;
+    struct timeval timeout;
+    int rc, result;
+
+    timeout.tv_sec = 0;
+
+    double usecDuration = PluginHelper::getLastFrameDuration();
+    timeout.tv_usec =((int) usecDuration * 1000000);    
+    // Converts from sec to microseconds
           
-    bytes_read = recvfrom(sock, recv_data, 1024, 0, (struct sockaddr *)&client_addr, &addr_len);
+    FD_ZERO(&fds); 
+    FD_SET(sock, &fds);
+    while(true){
+
+        // Selects on a socket for the given time(timeout). Processes the data queue.
+        rc = select(sizeof(fds)*8, &fds, NULL, NULL, &timeout);
+        if(rc < 0){
+            cerr<<"Select Error!"<<endl;
+            break;
+        }
+        if(rc == 0){
+            break;
+        }
+
+        bytes_read = recvfrom(sock, recv_data, 1024, 0, (struct sockaddr *)&client_addr, &addr_len);
  
-    if(bytes_read <= 0){
-        cerr<<"No data read."<<endl;
+        if(bytes_read <= 0){
+            cerr<<"No data read."<<endl;
         
-    }
+        }
 
     
-    // Prepare Data for processing...
-    recv_data[bytes_read]='\0';
-    tag = recv_data[0] - RECVCONST;
+        // Prepare Data for processing...
+        recv_data[bytes_read]='\0';
+        tag = recv_data[0] - RECVCONST;
  
-    // Checks tag to see if it's a command
-    if(tag > 3 && tag < 7){
-       _tagCommand = tag;
-       angle[0] = angle[1] = angle[2] = 0.0;
-       coord[0] = coord[1] = coord[2] = 0.0;
-    }
+        // Checks tag to see if it's a command
+        if(tag > 3 && tag < 7){
+            _tagCommand = tag;
+            angle[0] = angle[1] = angle[2] = 0.0;
+            coord[0] = coord[1] = coord[2] = 0.0;
+        }
    
-    else{
-        //Takes in tag for which kind of motion
-        tag = recv_data[1] - RECVCONST;
-
-        // Updates Rotation data 
-        if (tag == 0){
-                
-            // First angle
-            size = recv_data[6] - RECVCONST;
-            start = 21;
-            value = new char[size];
-            for(int i=start; i<start+size; i++){
-                value[i-start] = recv_data[i];
-            }
-            angle[0] = atof(value);
-
-            // Second angle
-            start += size + 2;                // 2 accounts for space in string. Size is from previous angle size.
-            size = recv_data[11] - RECVCONST;
-            value = new char[size];
-            for(int i=start; i<start+size; i++){
-                value[i-start] = recv_data[i];
-            }
-            angle[1] = atof(value);
-
-            // Third angle
-            start += size + 2;                // 2 accounts for space in string. Size is from previous angle size.
-            size = recv_data[16] - RECVCONST;
-            value = new char[size];
-            for(int i=start; i<start+size; i++){
-                value[i-start] = recv_data[i];
-            }
-            angle[2] = atof(value);
-        }
-
-
-        // Updates touch movement data
-        else if (tag == 1){
-                    
-            //First coord
-            size = recv_data[6] - RECVCONST;
-            start = 16;
-            value = new char[size];
-            for(int i=start; i<start+size; i++){
-                value[i-start] = recv_data[i];
-            }
-            coord[0] = atof(value);
-
-            // Second coord
-            start += size + 2;                // 2 accounts for space in string. Size is from previous coord.
-            size = recv_data[11] - RECVCONST;
-            value = new char[size];
-            for(int i=start; i<start+size; i++){
-                value[i-start] = recv_data[i];
-            }
-            coord[1] = atof(value);
-        }
-     
-        // Handles pinching movement (on touch screen) 
         else{
-            size = recv_data[6] - RECVCONST;
-            value = new char[size]; 
-            start = 11;
-            for(int i = start; i<start+size; i++){
-                value[i-start] = recv_data[i];
+            //Takes in tag for which kind of motion
+            tag = recv_data[1] - RECVCONST;
+
+            // Updates Rotation data 
+            if (tag == 0){
+                
+                // First angle
+                size = recv_data[6] - RECVCONST;
+                start = 21;
+                value = new char[size];
+                for(int i=start; i<start+size; i++){
+                    value[i-start] = recv_data[i];
+                }
+                angle[0] = atof(value);
+
+                // Second angle
+                start += size + 2;            // 2 accounts for space in string. Size is from previous angle size.
+                size = recv_data[11] - RECVCONST;
+                value = new char[size];
+                for(int i=start; i<start+size; i++){
+                    value[i-start] = recv_data[i];
+                }
+                angle[1] = atof(value);
+
+                // Third angle
+                start += size + 2;            // 2 accounts for space in string. Size is from previous angle size.
+                size = recv_data[16] - RECVCONST;
+                value = new char[size];
+                for(int i=start; i<start+size; i++){
+                    value[i-start] = recv_data[i];
+                }
+                angle[2] = atof(value);
             }
-            coord[2] = atof(value);
+
+
+            // Updates touch movement data
+            else if (tag == 1){
+                    
+                //First coord
+                size = recv_data[6] - RECVCONST;
+                start = 16;
+                value = new char[size];
+                for(int i=start; i<start+size; i++){
+                    value[i-start] = recv_data[i];
+                }
+                coord[0] = atof(value);
+
+                // Second coord
+                start += size + 2;            // 2 accounts for space in string. Size is from previous coord.
+                size = recv_data[11] - RECVCONST;
+                value = new char[size];
+                for(int i=start; i<start+size; i++){
+                    value[i-start] = recv_data[i];
+                }
+                coord[1] = atof(value);
+            }
+     
+            // Handles pinching movement (on touch screen) 
+            else{
+                size = recv_data[6] - RECVCONST;
+                value = new char[size]; 
+                start = 11;
+                for(int i = start; i<start+size; i++){
+                    value[i-start] = recv_data[i];
+                }
+                coord[2] = atof(value);
+            }
         }
-    }
 
     
 
-    switch(_tagCommand){
-        case 4:
-            // For FLY movement
-            rx -= angle[2];
-            ry += angle[0];
-            rz -= angle[1];
+        switch(_tagCommand){
+            case 4:
+                // For FLY movement
+                rx -= angle[2];
+                ry += angle[0];
+                rz -= angle[1];
 
-            x -= coord[0];
-            z += coord[1];
-            y += coord[2];
-            break;
+                x -= coord[0];
+                z += coord[1];
+                y += coord[2];
+                break;
+            case 5:
+                // For DRIVE movement
+                rz -= angle[1];
+                y -= angle[2] * 250; 
+                break;
+            case 6:
+                // For MOVE_WORLD movement
+                rx -= angle[2];
+                ry += angle[0];
+                rz -= angle[1];
+                break;
+        }
 
-        case 5:
-            // For DRIVE movement
-            rz -= angle[1];
-            y -= angle[2] * 250; 
-            break;
-        case 6:
-            // For MOVE_WORLD movement
-            rx -= angle[2];
-            ry += angle[0];
-            rz -= angle[1];
-            break;
-    }
-
-    x *= transcale;
-    y *= transcale;
-    z *= transcale;
-    rx *= rotscale;
-    ry *= rotscale;
-    rz *= rotscale;
+        x *= transcale;
+        y *= transcale;
+        z *= transcale;
+        rx *= rotscale;
+        ry *= rotscale;
+        rz *= rotscale;
   
-    //tag = 9;
- 
-    Matrix view = PluginHelper::getHeadMat();
+        Matrix view = PluginHelper::getHeadMat();
 
-    Vec3 campos = view.getTrans();
-    Vec3 trans = Vec3(x, y, z);
+        Vec3 campos = view.getTrans();
+        Vec3 trans = Vec3(x, y, z);
 
-    trans = (trans * view) - campos;
+        trans = (trans * view) - campos;
 
-    Matrix tmat;
-    tmat.makeTranslate(trans);
-    Vec3 xa = Vec3(1.0, 0.0, 0.0);
-    Vec3 ya = Vec3(0.0, 1.0, 0.0);
-    Vec3 za = Vec3(0.0, 0.0, 1.0);
+        Matrix tmat;
+        tmat.makeTranslate(trans);
+        Vec3 xa = Vec3(1.0, 0.0, 0.0);
+        Vec3 ya = Vec3(0.0, 1.0, 0.0);
+        Vec3 za = Vec3(0.0, 0.0, 1.0);
 
-    xa = (xa * view) - campos;
-    ya = (ya * view) - campos;
-    za = (za * view) - campos;
+        xa = (xa * view) - campos;
+        ya = (ya * view) - campos;
+        za = (za * view) - campos;
 
-    Matrix rot;
-    rot.makeRotate(rx, xa, ry, ya, rz, za);
+        Matrix rot;
+        rot.makeRotate(rx, xa, ry, ya, rz, za);
 
-    Matrix ctrans, nctrans;
-    ctrans.makeTranslate(campos);
-    nctrans.makeTranslate(-campos);
+        Matrix ctrans, nctrans;
+        ctrans.makeTranslate(campos);
+        nctrans.makeTranslate(-campos);
 
-    finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
-    PluginHelper::setObjectMatrix(finalmat);
-    
+        finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
+        ComController::instance()->sendSlaves((char *)finalmat.ptr(), sizeof(double[16]));
+       PluginHelper::setObjectMatrix(finalmat);  
+    }
+    }
+    else
+    {
+        ComController::instance()->readMaster((char *)finalmat.ptr(), sizeof(double[16]));
+        PluginHelper::setObjectMatrix(finalmat);
+    }
 }
 
 	
