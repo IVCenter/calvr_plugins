@@ -429,95 +429,45 @@ void GreenLight::postFrame()
 
 bool GreenLight::keyEvent(bool keyDown, int key, int mod)
 {
-//    std::cerr << "GreenLight keyEvent: keyDown: " << keyDown << " key: " << key << " char: " << (char)key << " mod: " << mod << std::endl;
     return false;
 }
 
 bool GreenLight::buttonEvent(int type, int button, int hand, const osg::Matrix& mat)
 {
-/*
-    std::cerr << "Button event type: ";
-    switch(type)
-    {
-        case BUTTON_DOWN:
-            std::cerr << "BUTTON_DOWN ";
-            break;
-        case BUTTON_UP:
-            std::cerr << "BUTTON_UP ";
-            break;
-        case BUTTON_DRAG:
-            std::cerr << "BUTTON_DRAG ";
-            break;
-        case BUTTON_DOUBLE_CLICK:
-            std::cerr << "BUTTON_DOUBLE_CLICK ";
-            break;
-        default:
-            std::cerr << "UNKNOWN ";
-            break;
-    }
-
-    std::cerr << "hand: " << hand << " button: " << button << std::endl;
-*/
-
     if (type != cvr::BUTTON_DOWN || button != 0)
         return false;
 
     if (!_box)
         return false;
 
-    // If we are hovering over a component, we already know it
+    // Should be hovering over it
     if (_wandOver)
     {
-        Component * comp = dynamic_cast<Component *>(_wandOver);
+        Component * comp = _wandOver->asComponent();
         if (comp)
         {
             selectComponent( comp, !comp->selected );
-            return true;
         }
+        else // _wandOver is a rack/door/etc.
+        {
+            _wandOver->beginAnimation();
+
+            // Handle group animations
+            std::list<Entity *>::iterator eit;
+            for (eit = _wandOver->group.begin(); eit != _wandOver->group.end(); eit++)
+            {
+                (*eit)->beginAnimation();
+            }
+        }
+
+        return true;
     }
-
-    // process intersection
-    osg::Vec3 pointerStart, pointerEnd;
-    std::vector<IsectInfo> isecvec;
-
-    pointerStart = mat.getTrans();
-    pointerEnd.set(0.0f, 10000.0f, 0.0f);
-    pointerEnd = pointerEnd * mat;
-
-    isecvec = getObjectIntersection(cvr::PluginHelper::getScene(),
-                pointerStart, pointerEnd);
-
-    if (isecvec.size() > 0)
-        return handleIntersection(isecvec[0].geode);
 
     return false;
 }
 
 bool GreenLight::mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix& mat)
 {
-/*
-    std::cerr << "Mouse Button event type: ";
-    switch(type)
-    {
-        case MOUSE_BUTTON_DOWN:
-            std::cerr << "MOUSE_BUTTON_DOWN ";
-            break;
-        case MOUSE_BUTTON_UP:
-            std::cerr << "MOUSE_BUTTON_UP ";
-            break;
-        case MOUSE_DRAG:
-            std::cerr << "MOUSE_DRAG ";
-            break;
-        case MOUSE_DOUBLE_CLICK:
-            std::cerr << "MOUSE_DOUBLE_CLICK ";
-            break;
-        default:
-            std::cerr << "UNKNOWN ";
-            break;
-    }
-
-    std::cerr << "button: " << button << std::endl;
-*/
     // Left Button Click
     if (type != cvr::MOUSE_BUTTON_DOWN || button != 0)
         return false;
@@ -525,30 +475,28 @@ bool GreenLight::mouseButtonEvent(int type, int button, int x, int y, const osg:
     if (!_box)
         return false;
 
-    // If we are hovering over a component, we already know it
+    // Should be hovering over it
     if (_mouseOver)
     {
-        Component * comp = dynamic_cast<Component *>(_mouseOver);
+        Component * comp = _mouseOver->asComponent();
         if (comp)
         {
             selectComponent( comp, !comp->selected );
-            return true;
         }
+        else // _mouseOver is a rack/door/etc.
+        {
+            _mouseOver->beginAnimation();
+
+            // Handle group animations
+            std::list<Entity *>::iterator eit;
+            for (eit = _mouseOver->group.begin(); eit != _mouseOver->group.end(); eit++)
+            {
+                (*eit)->beginAnimation();
+            }
+        }
+
+        return true;
     }
-
-    // process mouse intersection
-    osg::Vec3 pointerStart, pointerEnd;
-    std::vector<IsectInfo> isecvec;
-
-    pointerStart = mat.getTrans();
-    pointerEnd.set(0.0f, 10000.0f, 0.0f);
-    pointerEnd = pointerEnd * mat;
-
-    isecvec = getObjectIntersection(cvr::PluginHelper::getScene(),
-                pointerStart, pointerEnd);
-
-    if (isecvec.size() > 0)
-        return handleIntersection(isecvec[0].geode);
 
     return false;
 }
