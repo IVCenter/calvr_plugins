@@ -37,11 +37,11 @@ bool AndroidNavigator::init()
     std::cerr << "Android Navigator init\n"; 
 
     bool status = false;
+    _root = new osg::MatrixTransform();
     if(ComController::instance()->isMaster())
     {
         status = true;
 
-    _root = new osg::MatrixTransform();
     _andMenu = new SubMenu("AndroidNavigator", "AndroidNavigator");
     _andMenu->setCallback(this);
     
@@ -72,6 +72,13 @@ bool AndroidNavigator::init()
     addr_len = sizeof(struct sockaddr);
     cout<<"Server waiting for client on port: "<<PORT<<endl;
 
+    ComController::instance()->sendSlaves((char *)&status, sizeof(bool));
+    }
+    else
+    {
+        ComController::instance()->readMaster((char *)&status, sizeof(bool));
+    }
+
     // Adds drawable for testing
        
     osg::Node* objNode = NULL;
@@ -101,15 +108,8 @@ bool AndroidNavigator::init()
     trans3->setMatrix(markTrans);
     markTrans.makeTranslate(osg::Vec3 (0,0,0));
     trans4->setMatrix(markTrans);
-
-        SceneManager::instance()->getObjectsRoot()->addChild(_root);
-        ComController::instance()->sendSlaves((char *)&status, sizeof(bool));
-    }
-    else
-    {
-        ComController::instance()->readMaster((char *)&status, sizeof(bool));
-    }
-
+    SceneManager::instance()->getObjectsRoot()->addChild(_root);
+    
     // Matrix data
     transMult = ConfigManager::getFloat("Plugin.AndroidNavigator.TransMult", 1.0);
     rotMult = ConfigManager::getFloat("Plugin.AndroidNavigator.RotMult", 1.0);
@@ -131,9 +131,11 @@ bool AndroidNavigator::init()
 void AndroidNavigator::preFrame()
 {
     Matrixd finalmat;
-    
+    //int num;
+
     if(ComController::instance()->isMaster())
-    {
+    {  // num = 0;
+    cout<<"Starting Master"<<endl;
 
     int RECVCONST = 48;
     double x, y, z;
@@ -167,25 +169,26 @@ void AndroidNavigator::preFrame()
           
     FD_ZERO(&fds); 
     FD_SET(sock, &fds);
-    while(true){
+    //while(true)
+    //{
 
         // Selects on a socket for the given time(timeout). Processes the data queue.
-        rc = select(sizeof(fds)*8, &fds, NULL, NULL, &timeout);
-        if(rc < 0){
-            cerr<<"Select Error!"<<endl;
-            break;
-        }
-        if(rc == 0){
-            break;
-        }
+        //rc = select(sizeof(fds)*8, &fds, NULL, NULL, &timeout);
+        //rc = select(sizeof(fds)*8, &fds, NULL, NULL, NULL);  //No timeout for testing
+        //if(rc < 0){
+        //    cerr<<"Select Error!"<<endl;
+        //    break;
+        //}
+        //if(rc == 0){
+        //    cout<<"Timeout"<<endl;
+        //    break;
+       // }
 
         bytes_read = recvfrom(sock, recv_data, 1024, 0, (struct sockaddr *)&client_addr, &addr_len);
  
         if(bytes_read <= 0){
             cerr<<"No data read."<<endl;
-        
         }
-
     
         // Prepare Data for processing...
         recv_data[bytes_read]='\0';
@@ -205,7 +208,8 @@ void AndroidNavigator::preFrame()
             sendto(sock, send_data, 1, 0, (struct sockaddr *)&client_addr, addr_len);
         }
  
-        else{
+        else
+        {
             //Takes in tag for which kind of motion
             tag = recv_data[1] - RECVCONST;
 
@@ -274,10 +278,9 @@ void AndroidNavigator::preFrame()
                 coord[2] = atof(value);
             }
         }
-
     
-
-        switch(_tagCommand){
+        switch(_tagCommand)
+        {
             case 4:
                 // For FLY movement
                 rx -= angle[2];
@@ -335,12 +338,17 @@ void AndroidNavigator::preFrame()
         finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
         ComController::instance()->sendSlaves((char *)finalmat.ptr(), sizeof(double[16]));
         PluginHelper::setObjectMatrix(finalmat);  
-    }
+        
+    //}
+
+    //ComController::instance()->sendSlaves((char *)num, sizeof(int));
     }
     else
-    {
+    {   cout<<"Starting Slave"<<endl; 
+        //ComController::instance()->readMaster((char *)num, sizeof(int));
         ComController::instance()->readMaster((char *)finalmat.ptr(), sizeof(double[16]));
         PluginHelper::setObjectMatrix(finalmat);
+        cout<<"End slave"<<endl;
     }
 }
 
