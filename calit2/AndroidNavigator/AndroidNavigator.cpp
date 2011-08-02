@@ -147,12 +147,12 @@ void AndroidNavigator::preFrame()
     int start = 0;
     char* value;
 
-            
     double angle [3] = {0.0, 0.0, 0.0};
     double coord [3] = {0.0, 0.0, 0.0};
 
     int bytes_read;
     char recv_data[1024];
+    char send_data[1];
     struct sockaddr_in client_addr;
 
     fd_set fds;
@@ -193,11 +193,18 @@ void AndroidNavigator::preFrame()
  
         // Checks tag to see if it's a command
         if(tag > 3 && tag < 7){
-            _tagCommand = tag;
-            angle[0] = angle[1] = angle[2] = 0.0;
-            coord[0] = coord[1] = coord[2] = 0.0;
+            _tagCommand = (int) tag;
+            send_data[0] = tag;
+            sendto(sock, send_data, 1, 0, (struct sockaddr *)&client_addr, addr_len);
         }
-   
+  
+        else if(tag == 7)
+        {
+            cout<<"Socket Connected"<<endl;
+            send_data[0] = tag;
+            sendto(sock, send_data, 1, 0, (struct sockaddr *)&client_addr, addr_len);
+        }
+ 
         else{
             //Takes in tag for which kind of motion
             tag = recv_data[1] - RECVCONST;
@@ -327,7 +334,7 @@ void AndroidNavigator::preFrame()
 
         finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
         ComController::instance()->sendSlaves((char *)finalmat.ptr(), sizeof(double[16]));
-       PluginHelper::setObjectMatrix(finalmat);  
+        PluginHelper::setObjectMatrix(finalmat);  
     }
     }
     else
