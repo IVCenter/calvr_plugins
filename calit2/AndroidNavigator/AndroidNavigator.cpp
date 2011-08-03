@@ -38,49 +38,48 @@ bool AndroidNavigator::init()
 
     bool status = false;
     _root = new osg::MatrixTransform();
+
     if(ComController::instance()->isMaster())
     {
         status = true;
-
-    _andMenu = new SubMenu("AndroidNavigator", "AndroidNavigator");
-    _andMenu->setCallback(this);
+        _andMenu = new SubMenu("AndroidNavigator", "AndroidNavigator");
+        _andMenu->setCallback(this);
     
-    _isOn = new MenuCheckbox("On", false);
-    _isOn->setCallback(this);
-    _andMenu->addItem(_isOn);
-    MenuSystem::instance()->addMenuItem(_andMenu);
+        _isOn = new MenuCheckbox("On", false);
+        _isOn->setCallback(this);
+        _andMenu->addItem(_isOn);
+        MenuSystem::instance()->addMenuItem(_andMenu);
 
-    // For Socket
-     
-    cout<<"Starting socket..."<<endl;    
+        // For Socket     
+        cout<<"Starting socket..."<<endl;    
  
-    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1){
-        cerr<<"Socket Error!"<<endl;
-        exit(1); 
+        if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1){
+            cerr<<"Socket Error!"<<endl;
+            exit(1); 
+        }
+
+        server_addr.sin_family = AF_INET;
+        server_addr.sin_port = htons(PORT);
+        server_addr.sin_addr.s_addr = INADDR_ANY;
+        bzero(&(server_addr.sin_zero), 8);
+
+        if (bind(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1){
+            cerr<<"Bind Error!"<<endl;
+            exit(1);
+        }
+
+        addr_len = sizeof(struct sockaddr);
+        cout<<"Server waiting for client on port: "<<PORT<<endl;
+
+        ComController::instance()->sendSlaves((char *)&status, sizeof(bool));
     }
 
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(PORT);
-    server_addr.sin_addr.s_addr = INADDR_ANY;
-    bzero(&(server_addr.sin_zero), 8);
-
-    if (bind(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1){
-        cerr<<"Bind Error!"<<endl;
-        exit(1);
-    }
-
-    addr_len = sizeof(struct sockaddr);
-    cout<<"Server waiting for client on port: "<<PORT<<endl;
-
-    ComController::instance()->sendSlaves((char *)&status, sizeof(bool));
-    }
     else
     {
         ComController::instance()->readMaster((char *)&status, sizeof(bool));
     }
 
-    // Adds drawable for testing
-       
+    // Adds drawables bears for testing       
     osg::Node* objNode = NULL;
     objNode = osgDB::readNodeFile("/home/bschlamp/Desktop/teddy.obj");    
   
@@ -119,6 +118,9 @@ bool AndroidNavigator::init()
     transcale = -.5 * transMult;
     rotscale = -.012 *rotMult; 
     _menuUp = false;
+    
+    // Default velocity for drive
+    velocity = 15;
 
     // Default Movement to FLY
     _tagCommand = 4;
@@ -131,58 +133,30 @@ bool AndroidNavigator::init()
 void AndroidNavigator::preFrame()
 {
     Matrixd finalmat;
-    //int num;
 
     if(ComController::instance()->isMaster())
-    {  // num = 0;
-    cout<<"Starting Master"<<endl;
+    {  
 
-    int RECVCONST = 48;
-    double x, y, z;
-    x = y = z = 0.0;
-    double rx, ry, rz;
-    rx = ry = rz = 0.0;
+        int RECVCONST = 48;
+        double x, y, z;
+        x = y = z = 0.0;
+        double rx, ry, rz;
+        rx = ry = rz = 0.0;
     
-    // 0 = rotation, 1 = move, 2 = scale, 9 = error/initalize
-    int tag = 9;
-    int size = 0; 
-    int start = 0;
-    char* value;
+        // 0 = rotation, 1 = move, 2 = scale, 9 = error/initalize
+        int tag = 9;
 
-    double angle [3] = {0.0, 0.0, 0.0};
-    double coord [3] = {0.0, 0.0, 0.0};
+        int size = 0; 
+        int start = 0;
+        char* value;
 
-    int bytes_read;
-    char recv_data[1024];
-    char send_data[1];
-    struct sockaddr_in client_addr;
+        double angle [3] = {0.0, 0.0, 0.0};
+        double coord [3] = {0.0, 0.0, 0.0};
 
-    fd_set fds;
-    struct timeval timeout;
-    int rc, result;
-
-    timeout.tv_sec = 0;
-
-    double usecDuration = PluginHelper::getLastFrameDuration();
-    timeout.tv_usec =((int) usecDuration * 1000000);    
-    // Converts from sec to microseconds
-          
-    FD_ZERO(&fds); 
-    FD_SET(sock, &fds);
-    //while(true)
-    //{
-
-        // Selects on a socket for the given time(timeout). Processes the data queue.
-        //rc = select(sizeof(fds)*8, &fds, NULL, NULL, &timeout);
-        //rc = select(sizeof(fds)*8, &fds, NULL, NULL, NULL);  //No timeout for testing
-        //if(rc < 0){
-        //    cerr<<"Select Error!"<<endl;
-        //    break;
-        //}
-        //if(rc == 0){
-        //    cout<<"Timeout"<<endl;
-        //    break;
-       // }
+        int bytes_read;
+        char recv_data[1024];
+        char send_data[1];
+        struct sockaddr_in client_addr;
 
         bytes_read = recvfrom(sock, recv_data, 1024, 0, (struct sockaddr *)&client_addr, &addr_len);
  
@@ -190,6 +164,7 @@ void AndroidNavigator::preFrame()
             cerr<<"No data read."<<endl;
         }
     
+        else{
         // Prepare Data for processing...
         recv_data[bytes_read]='\0';
         tag = recv_data[0] - RECVCONST;
@@ -275,7 +250,13 @@ void AndroidNavigator::preFrame()
                 for(int i = start; i<start+size; i++){
                     value[i-start] = recv_data[i];
                 }
-                coord[2] = atof(value);
+                
+                if (tag == 2){
+                    coord[2] = atof(value);
+                }
+                else if (tag == 8){
+                    velocity = atof(value);
+                }
             }
         }
     
@@ -294,7 +275,7 @@ void AndroidNavigator::preFrame()
             case 5:
                 // For DRIVE movement
                 rz -= angle[1];
-                y -= angle[2] * 250; 
+                y -= angle[2] * velocity * 10;
                 break;
             case 6:
                 // For MOVE_WORLD movement
@@ -337,18 +318,13 @@ void AndroidNavigator::preFrame()
 
         finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
         ComController::instance()->sendSlaves((char *)finalmat.ptr(), sizeof(double[16]));
+     }
         PluginHelper::setObjectMatrix(finalmat);  
-        
-    //}
-
-    //ComController::instance()->sendSlaves((char *)num, sizeof(int));
     }
     else
-    {   cout<<"Starting Slave"<<endl; 
-        //ComController::instance()->readMaster((char *)num, sizeof(int));
+    {
         ComController::instance()->readMaster((char *)finalmat.ptr(), sizeof(double[16]));
         PluginHelper::setObjectMatrix(finalmat);
-        cout<<"End slave"<<endl;
     }
 }
 

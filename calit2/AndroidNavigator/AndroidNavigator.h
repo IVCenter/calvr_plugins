@@ -46,7 +46,7 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback
         int sock;
         socklen_t addr_len;
         struct sockaddr_in server_addr;
-        int count;
+        double velocity;  // For Drive mode only 
 };
 
 #endif
