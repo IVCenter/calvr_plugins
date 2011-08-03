@@ -176,9 +176,6 @@ bool GreenLight::loadScene()
     for (int r = 0; r < _rack.size(); r++)
         _box->addChild(_rack[r]);
 
-    // Create shared uniform
-    _displayTexturesUni = new osg::Uniform("showTexture", true);
-
     // populate racks
     parseHardwareFile();
     
@@ -229,8 +226,8 @@ bool GreenLight::loadScene()
     _displayComponentTexturesCheckbox = new cvr::MenuCheckbox("Component Textures",true);
     _displayComponentTexturesCheckbox->setCallback(this);
     _displayComponentsMenu->addItem(_displayComponentTexturesCheckbox);
-    _displayTexturesUni->setElement(0,_displayComponentTexturesCheckbox->getValue());
-    _displayTexturesUni->dirty();
+    Component::_displayTexturesUni->setElement(0,_displayComponentTexturesCheckbox->getValue());
+    Component::_displayTexturesUni->dirty();
 
     _powerMenu = new cvr::SubMenu("Power Consumption", "Power Consumption");
     _powerMenu->setCallback(this);

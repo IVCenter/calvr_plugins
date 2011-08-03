@@ -89,6 +89,9 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 
                 Component * asComponent() {return this;}
 
+                static osg::ref_ptr<osg::Uniform> _displayTexturesUni;
+                static osg::ref_ptr<osg::Uniform> _neverTextureUni;
+
             protected:
                 osg::ref_ptr<osg::Texture2D> _colors;
                 osg::ref_ptr<osg::Image> _data;
@@ -151,7 +154,6 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         std::string _powerContents;
 
         // Shaders
-        osg::ref_ptr<osg::Uniform> _displayTexturesUni;
         osg::ref_ptr<osg::Program> _shaderProgram;
 
         // Functions

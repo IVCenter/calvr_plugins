@@ -37,6 +37,15 @@ GreenLight::Component::Component(osg::Geode * geode, std::string componentName, 
     geode->getOrCreateStateSet()->addUniform(_colorsUni.get());
     geode->getOrCreateStateSet()->addUniform(_alphaUni.get());
  
+    for (int i = 0; i < geode->getNumDrawables(); i++)
+    {
+        osg::StateSet * sset = geode->getDrawable(i)->getOrCreateStateSet();
+        if (sset->getTextureAttribute(0,osg::StateAttribute::TEXTURE) != NULL)
+            sset->addUniform(_displayTexturesUni.get());
+        else
+            sset->addUniform(_neverTextureUni.get());
+    }
+
     defaultColor(); // will set it to the default color
 }
 
