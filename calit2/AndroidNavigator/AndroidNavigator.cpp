@@ -17,6 +17,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <kernel/ComController.h>
+#include <math.h>
 
 using namespace std;
 using namespace osg;
@@ -146,6 +147,7 @@ void AndroidNavigator::preFrame()
         // 0 = rotation, 1 = move, 2 = scale, 9 = error/initalize
         int tag = 9;
 
+	int type = 0;
         int size = 0; 
         int start = 0;
         char* value;
@@ -155,7 +157,7 @@ void AndroidNavigator::preFrame()
 
         int bytes_read;
         char recv_data[1024];
-        char send_data[1];
+        char send_data[2];
         struct sockaddr_in client_addr;
 
         fd_set readfds;
@@ -166,7 +168,8 @@ void AndroidNavigator::preFrame()
         FD_SET(sock, &readfds);
 
         timeout.tv_sec = 0; 
-        timeout.tv_usec = (int)(PluginHelper::getLastFrameDuration() * 1000000);
+        //timeout.tv_usec = (int)(PluginHelper::getLastFrameDuration() * 1000000);
+	timeout.tv_usec = 1000;
 
         rs = select(sock + 1, &readfds, 0, 0, &timeout);
          
@@ -183,33 +186,37 @@ void AndroidNavigator::preFrame()
            
             // Prepare Data for processing...
             recv_data[bytes_read]='\0';
-            tag = recv_data[0] - RECVCONST;
- 
-            // Checks tag to see if it's a command
-            if(tag > 3 && tag < 7){
-                _tagCommand = (int) tag;
-                send_data[0] = tag;
-                sendto(sock, send_data, 1, 0, (struct sockaddr *)&client_addr, addr_len);
+            type = recv_data[1] - RECVCONST;
+            tag = recv_data[2] - RECVCONST;
+            
+            send_data[0] = type;
+            send_data[1] = tag;
+            
+            if(type == 2){
+                _tagCommand = tag;
+                sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
             }
   
-            else if(tag == 7)
+            else if(type == 3)
             {
-                cout<<"Socket Connected"<<endl;
-                send_data[0] = tag;
-                sendto(sock, send_data, 1, 0, (struct sockaddr *)&client_addr, addr_len);
-            }
- 
-            else
+                if(tag == 0){
+                    cout<<"Socket Connected"<<endl;
+                    sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
+                }
+                else if(tag == 1){
+                    if(_menuUp){ removeMenu();}
+                    else{ addMenu();}
+                    sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
+                }  
+            } 
+            else if (type == 1)
             {
-                //Takes in tag for which kind of motion
-                tag = recv_data[1] - RECVCONST;
-
                 // Updates Rotation data 
                 if (tag == 0){
                 
                     // First angle
-                    size = recv_data[6] - RECVCONST;
-                    start = 21;
+                    size = recv_data[7] - RECVCONST;
+                    start = 22;
                     value = new char[size];
                     for(int i=start; i<start+size; i++){
                         value[i-start] = recv_data[i];
@@ -218,7 +225,7 @@ void AndroidNavigator::preFrame()
 
                     // Second angle
                     start += size + 2;        // 2 accounts for space in string. Size is from previous angle size.
-                    size = recv_data[11] - RECVCONST;
+                    size = recv_data[12] - RECVCONST;
                     value = new char[size];
                     for(int i=start; i<start+size; i++){
                         value[i-start] = recv_data[i];
@@ -227,7 +234,7 @@ void AndroidNavigator::preFrame()
 
                     // Third angle
                     start += size + 2;        // 2 accounts for space in string. Size is from previous angle size.
-                    size = recv_data[16] - RECVCONST;
+                    size = recv_data[17] - RECVCONST;
                     value = new char[size];
                     for(int i=start; i<start+size; i++){
                         value[i-start] = recv_data[i];
@@ -240,8 +247,8 @@ void AndroidNavigator::preFrame()
                 else if (tag == 1){
                     
                     //First coord
-                    size = recv_data[6] - RECVCONST;
-                    start = 16;
+                    size = recv_data[7] - RECVCONST;
+                    start = 17;
                     value = new char[size];
                     for(int i=start; i<start+size; i++){
                         value[i-start] = recv_data[i];
@@ -250,7 +257,7 @@ void AndroidNavigator::preFrame()
 
                     // Second coord
                     start += size + 2;        // 2 accounts for space in string. Size is from previous coord.
-                    size = recv_data[11] - RECVCONST;
+                    size = recv_data[12] - RECVCONST;
                     value = new char[size];
                     for(int i=start; i<start+size; i++){
                         value[i-start] = recv_data[i];
@@ -260,9 +267,9 @@ void AndroidNavigator::preFrame()
      
                 // Handles pinching movement (on touch screen) and drive velocity
                 else{
-                    size = recv_data[6] - RECVCONST;
+                    size = recv_data[7] - RECVCONST;
                     value = new char[size]; 
-                    start = 11;
+                    start = 12;
                     for(int i = start; i<start+size; i++){
                         value[i-start] = recv_data[i];
                     }
@@ -270,7 +277,7 @@ void AndroidNavigator::preFrame()
                     if (tag == 2){
                         coord[2] = atof(value);
                     }
-                    else if (tag == 8){
+                    else if (tag == 3){
                         velocity = atof(value);
                     }
                 }
@@ -278,7 +285,7 @@ void AndroidNavigator::preFrame()
     
             switch(_tagCommand)
             {
-                case 4:
+                case 0:
                     // For FLY movement
                     rx -= angle[2];
                     ry += angle[0];
@@ -288,12 +295,12 @@ void AndroidNavigator::preFrame()
                     z += coord[1];
                     y += coord[2];
                     break;
-                case 5:
+                case 1:
                     // For DRIVE movement
                     rz -= angle[1];
                     y -= angle[2] * velocity * 10;
                     break;
-                case 6:
+                case 2:
                     // For MOVE_WORLD movement
                     rx -= angle[2];
                     ry += angle[0];
@@ -366,3 +373,43 @@ bool AndroidNavigator::removeMenu()
     _menuUp = false;
     return true;
 }
+
+// For use with ArtifactVis.
+// Iterates through items and determines which are in
+// camera view for object selection.
+/*
+void ObjectIntersection(){
+
+    objMatrix = PluginHelper::getObjectMatrix();
+    osg::Vec3 y = Vec3(0.0, 1.0, 0.0);
+
+    double objAngle;
+    double minAngle = .1;
+
+    // To get.. Iteration through artifactvis objects
+    // vector<Artifact*>::iterator item --> protected in ArtifactVis
+    // itemSize --> size of iterator
+
+    // new iterator::suitableItem
+
+    for(int obj = 0; item < itemSize; item++){
+ 
+        osg::Vec3 pos = (*item)->modelPos;
+        Vec3 alpha = (pos * objMatrix);
+        Vec3 beta = (y * objMatrix);
+        double objAngle = acos(alpha * beta / (alpha.lenght() * beta.length()))
+        if (objAngle < minAngle){
+            // suitableItem add item
+            obj++;
+        }
+    }
+
+    for(int suitableObj = 0; suitableItem<obj; suitableItem++){
+    
+       // Show suitable item. Get response Yes/No.
+       // If yes. Finish
+       // If no. Show next item
+    }
+    
+}
+*/
