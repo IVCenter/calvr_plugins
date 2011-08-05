@@ -14,6 +14,10 @@
 
 CVRPLUGIN(GreenLight)
 
+// Static Variables
+osg::ref_ptr<osg::Uniform> GreenLight::Component::_displayTexturesUni = new osg::Uniform("showTexture",false);
+osg::ref_ptr<osg::Uniform> GreenLight::Component::_neverTextureUni = new osg::Uniform("showTexture",false);
+
 GreenLight::GreenLight()
 {
     std::cerr << "GreenLight created." << std::endl;
@@ -126,7 +130,6 @@ bool GreenLight::init()
     _electrical = NULL;
     _fans = NULL;
 
-    _displayTexturesUni = NULL;
     _shaderProgram = NULL;
 
     _mouseOver = NULL;
@@ -226,8 +229,8 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
     }
     else if (item == _displayComponentTexturesCheckbox)
     {
-        _displayTexturesUni->setElement(0,_displayComponentTexturesCheckbox->getValue());
-        _displayTexturesUni->dirty();
+        Component::_displayTexturesUni->setElement(0,_displayComponentTexturesCheckbox->getValue());
+        Component::_displayTexturesUni->dirty();
     }
     else if (item == _loadPowerButton)
     {

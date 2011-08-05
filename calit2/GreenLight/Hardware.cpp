@@ -125,9 +125,6 @@ void GreenLight::parseHardwareFile()
 
         }
 
-        // Add shared uniforms
-        geode->getOrCreateStateSet()->addUniform(_displayTexturesUni.get());
-
         // Create component from geode, name, and proper translation matrix
         hwComp = new Component(geode,(*lit)->name, osg::Matrix::translate(0,0,18+getZCoord((*lit)->slot)));
 
@@ -254,14 +251,24 @@ osg::ref_ptr<osg::Geode> GreenLight::makeComponentGeode(float height, std::strin
     if (textureFile != "")
         image = osgDB::readImageFile(textureFile);
 
+    // Default Textures for Demos
+    if (!image && cvr::ConfigManager::getBool("Plugin.GreenLight.Demo",true))
+    {
+        std::string texDir = cvr::ConfigManager::getEntry("textureDir","Plugin.GreenLight.Components","");
+        if (height > 6)
+            image = osgDB::readImageFile(texDir + "unwrap_dcmeter.png");
+        else
+            image = osgDB::readImageFile(texDir + "unwrap_IntelSR2600URLXNehalem.png");
+    }
+
     if (image)
         texture->setImage(image);
 
     frontFace->setTexCoordArray(0,texcoords.get());
-    frontFace->getOrCreateStateSet()->setTextureAttributeAndModes(0,texture,osg::StateAttribute::ON);
+    frontFace->getOrCreateStateSet()->setTextureAttributeAndModes(0,texture);
 
     backFace->setTexCoordArray(0,texcoords.get());
-    backFace->getOrCreateStateSet()->setTextureAttributeAndModes(0,texture,osg::StateAttribute::ON);
+    backFace->getOrCreateStateSet()->setTextureAttributeAndModes(0,texture);
 
     if (_shaderProgram);
     {
