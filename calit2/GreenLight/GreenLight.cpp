@@ -6,6 +6,8 @@
 
 #include <fstream>
 #include <iostream>
+#include <stdlib.h>
+
 #include <kernel/ComController.h>
 #include <kernel/InteractionManager.h>
 #include <kernel/PluginHelper.h>
@@ -58,6 +60,24 @@ GreenLight::~GreenLight()
     if (_legendGradient) delete _legendGradient;
     if (_legendTextOutOfRange) delete _legendTextOutOfRange;
     if (_legendGradientOutOfRange) delete _legendGradientOutOfRange;
+
+    if (_timeFrom) delete _timeFrom;
+    if (_timeTo) delete _timeTo;
+    if (_yearText) delete _yearText;
+    if (_monthText) delete _monthText;
+    if (_dayText) delete _dayText;
+    if (_hourText) delete _hourText;
+    if (_minuteText) delete _minuteText;
+    if (_yearFrom) delete _yearFrom;
+    if (_monthFrom) delete _monthFrom;
+    if (_dayFrom) delete _dayFrom;
+    if (_hourFrom) delete _hourFrom;
+    if (_minuteFrom) delete _minuteFrom;
+    if (_yearTo) delete _yearTo;
+    if (_monthTo) delete _monthTo;
+    if (_dayTo) delete _dayTo;
+    if (_hourTo) delete _hourTo;
+    if (_minuteTo) delete _minuteTo;
 
     if (_box) delete _box;
     if (_waterPipes) delete _waterPipes;
@@ -116,12 +136,31 @@ bool GreenLight::init()
     _displayComponentTexturesCheckbox = NULL;
 
     _powerMenu = NULL;
-    _displayPowerCheckbox = NULL;
     _loadPowerButton = NULL;
+    _pollHistoricalDataCheckbox = NULL;
+    _displayPowerCheckbox = NULL;
     _legendText = NULL;
     _legendGradient = NULL;
     _legendTextOutOfRange = NULL;
     _legendGradientOutOfRange = NULL;
+
+    _timeFrom = NULL;
+    _timeTo = NULL;
+    _yearText = NULL;
+    _monthText = NULL;
+    _dayText = NULL;
+    _hourText = NULL;
+    _minuteText = NULL;
+    _yearFrom = NULL;
+    _monthFrom = NULL;
+    _dayFrom = NULL;
+    _hourFrom = NULL;
+    _minuteFrom = NULL;
+    _yearTo = NULL;
+    _monthTo = NULL;
+    _dayTo = NULL;
+    _hourTo = NULL;
+    _minuteTo = NULL;
     /*** End Menu Setup ***/
 
     /*** Defaults ***/
@@ -257,14 +296,30 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
             else if (selections == 0) // shouldn't poll anything
                 selectedNames = "&name=null";
 
-            size_t pos;
-            while ((pos = selectedNames.find(' ')) != std::string::npos)
-            {
-                selectedNames.replace(pos,1,"%20");
-            }
         }
 
-        utl::downloadFile(cvr::ConfigManager::getEntry("download", "Plugin.GreenLight.Power", "")+selectedNames,
+        std::string downloadUrl = cvr::ConfigManager::getEntry("download", "Plugin.GreenLight.Power", "");
+
+        if (_timeFrom != NULL && _timeTo != NULL && _pollHistoricalDataCheckbox->getValue())
+        {
+            int monF = _monthFrom->getIndex() + 1;
+            std::string monthF = (monF < 10 ? "0" : "") + utl::stringFromInt(monF);
+            int monT = _monthTo->getIndex() + 1;
+            std::string monthT = (monT < 10 ? "0" : "") + utl::stringFromInt(monT);
+
+            downloadUrl += "&from=" + _yearFrom->getValue() + "-" + monthF + "-" + _dayFrom->getValue() + " " + _hourFrom->getValue() + ":" + _minuteFrom->getValue() + ":00";
+            downloadUrl += "&to=" + _yearTo->getValue() + "-" + monthT + "-" + _dayTo->getValue() + " " + _hourTo->getValue() + ":" + _minuteTo->getValue() + ":00";
+        }
+
+        downloadUrl += selectedNames;
+
+        size_t pos;
+        while ((pos = downloadUrl.find(' ')) != std::string::npos)
+        {
+            downloadUrl.replace(pos,1,"%20");
+        }
+
+        utl::downloadFile(downloadUrl,
                           cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Power", ""),
                           _powerContents);
 
@@ -354,6 +409,11 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
             setPowerColors(true);
         }
     }
+    else if (item == _pollHistoricalDataCheckbox)
+    {
+        if (_timeFrom == NULL && _timeTo == NULL)
+            createTimestampMenus();
+    }
     else if (item == _displayPowerCheckbox)
     {
         setPowerColors(_displayPowerCheckbox->getValue());
@@ -405,6 +465,76 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
 
         std::set< Component * > * cluster = cit->second;
         selectCluster(cluster, checkbox->getValue());
+    }
+    else if (item == _yearFrom || item == _monthFrom || item == _dayFrom ||
+             item == _hourFrom || item == _minuteFrom)
+    {
+        if (item == _monthFrom || item == _dayFrom)
+        {
+            int day = _dayFrom->getIndex() + 1; // +1 offsets indexing from 0
+            if (day > 28)
+            {
+                int month = _monthFrom->getIndex();
+                if (month == 1)
+                {
+                    if (month % 4 == 0 && (month % 100 != 0 || month % 400 == 0))
+                        _dayFrom->setIndex(28); // 29th
+                    else
+                        _dayFrom->setIndex(27); // 28th
+                }
+                else if ((month % 2 == 0) != (month < 7) && day == 31)
+                    _dayFrom->setIndex(29); // 30th
+            }
+        }
+
+        if (_yearFrom->getIndex() > _yearTo->getIndex() || (_yearFrom->getIndex() == _yearTo->getIndex() &&
+            (_monthFrom->getIndex() > _monthTo->getIndex() || (_monthFrom->getIndex() == _monthTo->getIndex() &&
+            (_dayFrom->getIndex() > _dayTo->getIndex() || (_dayFrom->getIndex() == _dayTo->getIndex() &&
+            (_hourFrom->getIndex() > _hourTo->getIndex() || (_hourFrom->getIndex() == _hourTo->getIndex() &&
+            (_minuteFrom->getIndex() > _minuteTo->getIndex() || (_minuteFrom->getIndex() == _minuteTo->getIndex()
+           ))))))))))
+        {
+            _yearTo->setIndex(_yearFrom->getIndex());
+            _monthTo->setIndex(_monthFrom->getIndex());
+            _dayTo->setIndex(_dayFrom->getIndex());
+            _hourTo->setIndex(_hourFrom->getIndex());
+            _minuteTo->setIndex(_minuteFrom->getIndex());
+        }
+    }
+    else if (item == _yearTo || item == _monthTo || item == _dayTo ||
+             item == _hourTo || item == _minuteTo)
+    {
+        if (item == _monthTo || item == _dayTo)
+        {
+            int day = _dayTo->getIndex() + 1; // +1 offsets indexing from 0
+            if (day > 28)
+            {
+                int month = _monthTo->getIndex();
+                if (month == 1)
+                {
+                    if (month % 4 == 0 && (month % 100 != 0 || month % 400 == 0))
+                        _dayTo->setIndex(28); // 29th
+                    else
+                        _dayTo->setIndex(27); // 28th
+                }
+                else if ((month % 2 == 0) != (month < 7) && day == 31)
+                    _dayTo->setIndex(29); // 30th
+            }
+        }
+
+        if (_yearTo->getIndex() < _yearFrom->getIndex() || (_yearTo->getIndex() == _yearFrom->getIndex() &&
+            (_monthTo->getIndex() < _monthFrom->getIndex() || (_monthTo->getIndex() == _monthFrom->getIndex() &&
+            (_dayTo->getIndex() < _dayFrom->getIndex() || (_dayTo->getIndex() == _dayFrom->getIndex() &&
+            (_hourTo->getIndex() < _hourFrom->getIndex() || (_hourTo->getIndex() == _hourFrom->getIndex() &&
+            (_minuteTo->getIndex() < _minuteFrom->getIndex() || (_minuteTo->getIndex() == _minuteFrom->getIndex()
+           ))))))))))
+        {
+            _yearFrom->setIndex(_yearTo->getIndex());
+            _monthFrom->setIndex(_monthTo->getIndex());
+            _dayFrom->setIndex(_dayTo->getIndex());
+            _hourFrom->setIndex(_hourTo->getIndex());
+            _minuteFrom->setIndex(_minuteTo->getIndex());
+        }
     }
 }
 

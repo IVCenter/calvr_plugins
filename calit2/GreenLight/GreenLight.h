@@ -8,9 +8,10 @@
 #include <config/ConfigManager.h>
 #include <kernel/CVRPlugin.h>
 #include <menu/MenuButton.h>
-#include <menu/MenuImage.h>
-#include <menu/MenuText.h>
 #include <menu/MenuCheckbox.h>
+#include <menu/MenuImage.h>
+#include <menu/MenuList.h>
+#include <menu/MenuText.h>
 #include <menu/SubMenu.h>
 
 #include <osg/AnimationPath>
@@ -128,12 +129,35 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuCheckbox * _displayComponentTexturesCheckbox;
 
         cvr::SubMenu * _powerMenu;
-        cvr::MenuCheckbox * _displayPowerCheckbox;
         cvr::MenuButton * _loadPowerButton;
+        cvr::MenuCheckbox * _pollHistoricalDataCheckbox;
+        cvr::MenuCheckbox * _displayPowerCheckbox;
         cvr::MenuText * _legendText;
         cvr::MenuImage * _legendGradient;
         cvr::MenuText * _legendTextOutOfRange;
         cvr::MenuImage * _legendGradientOutOfRange;
+
+        // Timestamps
+        cvr::SubMenu * _timeFrom;
+        cvr::SubMenu * _timeTo;
+
+        cvr::MenuText * _yearText;
+        cvr::MenuText * _monthText;
+        cvr::MenuText * _dayText;
+        cvr::MenuText * _hourText;
+        cvr::MenuText * _minuteText;
+
+        cvr::MenuList * _yearFrom;
+        cvr::MenuList * _monthFrom;
+        cvr::MenuList * _dayFrom;
+        cvr::MenuList * _hourFrom;
+        cvr::MenuList * _minuteFrom;
+
+        cvr::MenuList * _yearTo;
+        cvr::MenuList * _monthTo;
+        cvr::MenuList * _dayTo;
+        cvr::MenuList * _hourTo;
+        cvr::MenuList * _minuteTo;
 
         // Entities
         Entity * _box;          // box/frame
@@ -167,6 +191,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         void doHoverOver(Entity *& last, Entity * current);
         osg::ref_ptr<osg::Geode> makeComponentGeode(float height, std::string textureFile = "");
         osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
+        void createTimestampMenus();
 };
 
 #endif

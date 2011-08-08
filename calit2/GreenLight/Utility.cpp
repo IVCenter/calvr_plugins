@@ -18,6 +18,15 @@ int utl::intFromString(std::string str)
    return i;
 }
 
+std::string utl::stringFromInt(int i)
+{
+   std::stringstream ss;
+
+   ss << i;
+
+   return ss.str();
+}
+
 // Fetch data from server file at url, save at filename, and store contents in std::string given
 void utl::downloadFile(std::string downloadUrl, std::string fileName, std::string &content)
 {

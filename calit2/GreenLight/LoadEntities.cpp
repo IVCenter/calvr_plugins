@@ -237,6 +237,10 @@ bool GreenLight::loadScene()
     _loadPowerButton->setCallback(this);
     _powerMenu->addItem(_loadPowerButton);
 
+    _pollHistoricalDataCheckbox = new cvr::MenuCheckbox("Poll Historical Data",false);
+    _pollHistoricalDataCheckbox->setCallback(this);
+    _powerMenu->addItem(_pollHistoricalDataCheckbox);
+
     _hardwareSelectionMenu = new cvr::SubMenu("Hardware Selection", "Hardware Selection");
     _hardwareSelectionMenu->setCallback(this);
     _glMenu->addItem(_hardwareSelectionMenu);
