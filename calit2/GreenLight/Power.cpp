@@ -96,10 +96,25 @@ void GreenLight::setPowerColors(bool displayPower)
         std::map< std::string, std::map< std::string, int > >::iterator cit;
         if ((cit = componentWattsMap.find((*sit)->name)) != componentWattsMap.end())
         {
+            std::list< int > watts;
+            int minWatt = 0, maxWatt = 0;
             std::map< std::string, int >::iterator mit;
             for (mit = cit->second.begin(); mit!= cit->second.end(); mit++)
             {
-                 colors.push_back( wattColor(mit->second, (*sit)->minWattage, (*sit)->maxWattage) );
+                 watts.push_back( mit->second );
+                 if (mit->second != 0 && (mit->second < minWatt || minWatt == 0))
+                     minWatt = mit->second;
+                 if (mit->second > maxWatt)
+                     maxWatt = mit->second;
+            }
+
+            std::list< int >::iterator lit;
+            for (lit = watts.begin(); lit != watts.end(); lit++)
+            {
+                 if (_magnifyRangeCheckbox->getValue())
+                     colors.push_back( wattColor(*lit, minWatt, maxWatt) );
+                 else
+                     colors.push_back( wattColor(*lit, (*sit)->minWattage, (*sit)->maxWattage) );
             }
         }
         else
@@ -131,6 +146,9 @@ osg::Vec3 GreenLight::wattColor(float watt, int minWatt, int maxWatt)
     // maxWatt (1):  1, .4,  0
 
     float interpolate = (watt-minWatt)/(maxWatt-minWatt);
+
+    if (minWatt == maxWatt)
+        interpolate = .5;
 
     float red = (interpolate-.33)/.34;
     if (red < 0) red = 0;

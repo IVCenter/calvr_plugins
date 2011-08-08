@@ -139,6 +139,7 @@ bool GreenLight::init()
     _loadPowerButton = NULL;
     _pollHistoricalDataCheckbox = NULL;
     _displayPowerCheckbox = NULL;
+    _magnifyRangeCheckbox = NULL;
     _legendText = NULL;
     _legendGradient = NULL;
     _legendTextOutOfRange = NULL;
@@ -334,6 +335,13 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
                 _powerMenu->addItem(_displayPowerCheckbox);
             }
             file.close();
+
+            if (!_magnifyRangeCheckbox)
+            {
+                _magnifyRangeCheckbox = new cvr::MenuCheckbox("Magnify Range", false);
+                _magnifyRangeCheckbox->setCallback(this);
+                _powerMenu->addItem(_magnifyRangeCheckbox);
+            }
         }
 
         if (!_legendText)
@@ -417,7 +425,11 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
     else if (item == _displayPowerCheckbox)
     {
         setPowerColors(_displayPowerCheckbox->getValue());
-
+    }
+    else if (item == _magnifyRangeCheckbox)
+    {
+        if (_displayPowerCheckbox->getValue())
+            setPowerColors(true);
     }
     else if (item == _selectionModeCheckbox)
     {

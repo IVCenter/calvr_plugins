@@ -132,6 +132,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _loadPowerButton;
         cvr::MenuCheckbox * _pollHistoricalDataCheckbox;
         cvr::MenuCheckbox * _displayPowerCheckbox;
+        cvr::MenuCheckbox * _magnifyRangeCheckbox;
         cvr::MenuText * _legendText;
         cvr::MenuImage * _legendGradient;
         cvr::MenuText * _legendTextOutOfRange;
