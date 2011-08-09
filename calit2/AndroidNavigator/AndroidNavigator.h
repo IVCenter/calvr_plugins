@@ -33,6 +33,7 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback
         void menuCallback(cvr::MenuItem * item);
         bool addMenu();
         bool removeMenu();
+        void objectSelection();
 
     protected:
         osg::MatrixTransform * _root;
@@ -46,6 +47,7 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback
         int sock;
         socklen_t addr_len;
         struct sockaddr_in server_addr;
+        struct sockaddr_in client_addr;
         double velocity;  // For Drive mode only 
 };
 

@@ -18,10 +18,13 @@
 #include <unistd.h>
 #include <kernel/ComController.h>
 #include <math.h>
+#include "/home/bschlamp/CalVR/plugins/calit2/ArtifactVis/ArtifactVis.h"
 
 using namespace std;
 using namespace osg;
 using namespace cvr;
+
+class ArtifactVis;
 
 CVRPLUGIN(AndroidNavigator)
 
@@ -80,6 +83,7 @@ bool AndroidNavigator::init()
         ComController::instance()->readMaster((char *)&status, sizeof(bool));
     }
 
+    /*
     // Adds drawables bears for testing       
     osg::Node* objNode = NULL;
     objNode = osgDB::readNodeFile("/home/bschlamp/Desktop/teddy.obj");    
@@ -109,7 +113,8 @@ bool AndroidNavigator::init()
     markTrans.makeTranslate(osg::Vec3 (0,0,0));
     trans4->setMatrix(markTrans);
     SceneManager::instance()->getObjectsRoot()->addChild(_root);
-    
+    */
+
     // Matrix data
     transMult = ConfigManager::getFloat("Plugin.AndroidNavigator.TransMult", 1.0);
     rotMult = ConfigManager::getFloat("Plugin.AndroidNavigator.RotMult", 1.0);
@@ -158,7 +163,6 @@ void AndroidNavigator::preFrame()
         int bytes_read;
         char recv_data[1024];
         char send_data[2];
-        struct sockaddr_in client_addr;
 
         fd_set readfds;
         struct timeval timeout;
@@ -208,6 +212,10 @@ void AndroidNavigator::preFrame()
                     else{ addMenu();}
                     sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
                 }  
+                else if(tag == 2){
+		    sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
+                    //objectSelection();                
+                }
             } 
             else if (type == 1)
             {
@@ -282,7 +290,7 @@ void AndroidNavigator::preFrame()
                     }
                 }
             }
-    
+        }
             switch(_tagCommand)
             {
                 case 0:
@@ -342,7 +350,7 @@ void AndroidNavigator::preFrame()
             finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
             ComController::instance()->sendSlaves((char *)finalmat.ptr(), sizeof(double[16]));
             PluginHelper::setObjectMatrix(finalmat);  
-        }
+        
     }
     else
     {
@@ -378,38 +386,98 @@ bool AndroidNavigator::removeMenu()
 // Iterates through items and determines which are in
 // camera view for object selection.
 /*
-void ObjectIntersection(){
-
-    objMatrix = PluginHelper::getObjectMatrix();
-    osg::Vec3 y = Vec3(0.0, 1.0, 0.0);
+void AndroidNavigator::objectSelection(){
 
     double objAngle;
     double minAngle = .1;
+    int bytes_read;
+    char recv_data[1024];
+    char send_data[2];
+    vector<Vec3> inRange;
+    int rangeObj = 0;
+    vector<osg::Vec3> position;
+    
+    Matrix objMatrix = PluginHelper::getObjectMatrix();
+    osg::Vec3 camera = Vec3(0.0, 1.0, 0.0);
 
-    // To get.. Iteration through artifactvis objects
-    // vector<Artifact*>::iterator item --> protected in ArtifactVis
-    // itemSize --> size of iterator
+    Matrix viewOffsetM;
+    osg::Vec3 viewOffset = Vec3f(ConfigManager::getFloat("x", "ViewerPosition", 0.0f),
+		ConfigManager::getFloat("y", "ViewerPosition", 0.0f),
+                ConfigManager::getFloat("z", "ViewerPosition", 0.0f)) * -1;
+    viewOffsetM.makeTranslate(viewOffset);
+    objMatrix = objMatrix * viewOffsetM;
+    camera = camera * objMatrix;
 
-    // new iterator::suitableItem
+    ArtifactVis* art = ArtifactVis::getInstance();
+    if(art != NULL){ 
+        cout<<"Getting artifacts"<<endl;
+    	position = art->getArtifactsPos();
+    }
+    else{
+        cout<<"ArtifactVis not initialized"<<endl;
+        send_data[0] = 9;
+        sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
+    }
 
-    for(int obj = 0; item < itemSize; item++){
- 
-        osg::Vec3 pos = (*item)->modelPos;
-        Vec3 alpha = (pos * objMatrix);
-        Vec3 beta = (y * objMatrix);
-        double objAngle = acos(alpha * beta / (alpha.lenght() * beta.length()))
+    if(position.empty()){
+        cerr<<"No artifact positions received"<<endl;
+        send_data[0] = 8;
+        sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
+        return;
+    }
+
+    cout<<"Camera: "<<camera[0]<<", "<<camera[1]<<", "<<camera[2]<<endl;  
+
+    for(int obj = 0; obj < position.size(); obj++){
+        osg::Vec3 pos = position.at(obj); 
+        osg::Vec3 alpha = (pos * objMatrix);
+        objAngle = acos(alpha * camera / (alpha.length() * camera.length()));
         if (objAngle < minAngle){
-            // suitableItem add item
-            obj++;
+            inRange.push_back(pos);   
         }
     }
 
-    for(int suitableObj = 0; suitableItem<obj; suitableItem++){
+    if(inRange.empty()){
+        cerr<<"No suitable objects"<<endl;
+        send_data[0] = 7;
+        sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
+        return;
+    }
+    else{
+        cout<<inRange.size()<<" objects found!"<<endl;
+        send_data[0] = 3;
+        sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
+    }
+
     
-       // Show suitable item. Get response Yes/No.
-       // If yes. Finish
-       // If no. Show next item
+    while(rangeObj < inRange.size() && rangeObj >= 0){
+        osg::Vec3 pos = inRange.at(rangeObj);
+        cout<<"Pos "<<rangeObj + 1<<": <"<<pos[0]<<", "<<pos[1]<<", "<<pos[2]<<">"<<endl;
+        
+        bytes_read = recvfrom(sock, recv_data, 1024, 0, (struct sockaddr *)&client_addr, &addr_len); 
+
+        if(bytes_read <= 0){
+            cerr<<"No data read."<<endl;
+        }   
+        recv_data[bytes_read]='\0';
+        if(recv_data[0] == 0){ 
+            cout<<"Object Found"<<endl;
+            return;
+        }
+        else if(recv_data[0] == 1){
+            cout<<"Next object..."<<endl;
+            if(rangeObj + 1 >= inRange.size()){
+                cerr<<"Cannot find Next: Out of range"<<endl;
+            }
+            else rangeObj++;
+        }
+        else if(recv_data[0] == 2){
+            cout<<"Previous object..."<<endl;
+            if(rangeObj - 1 < 0){
+                cerr<<"Cannot find Previous: out of range"<<endl;
+            }            
+            else rangeObj--;
+        }        
     }
     
-}
-*/
+}*/
