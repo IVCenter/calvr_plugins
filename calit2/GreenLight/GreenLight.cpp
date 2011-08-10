@@ -1,6 +1,6 @@
 // John Mangan (Summer 2011)
 // Plugin for CalVR -- GreenLight Project
-// Many models taked from prior Covise Plugin (BlackBoxInfo)
+// Many models altered from prior Covise Plugin (BlackBoxInfo)
 
 #include "GreenLight.h"
 
