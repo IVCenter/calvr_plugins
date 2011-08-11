@@ -112,7 +112,7 @@ void GreenLight::Entity::setTransparency(bool transparent)
 
 void GreenLight::Component::setTransparency(bool transparent)
 {
-    float alpha = transparent ? 0.1f : 1.0f;
+    float alpha = transparent ? 0.25f : 1.0f;
     _alphaUni->setElement(0, alpha);
     setNodeTransparency(mainNode, alpha);
 }
