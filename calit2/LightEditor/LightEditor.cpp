@@ -251,19 +251,18 @@ bool LightEditor::buttonEvent(int type, int button, int hand, const osg::Matrix&
     }
     else if (type == cvr::BUTTON_DRAG || type == cvr::BUTTON_UP)
     {
-        if (!pos && !dir) // We can't do anything
+        if (!pos) // We can't do anything
         {
             return false;
         }
-        else if (pos) // Changing Physical Light Position
+
+        osg::Matrix diffMat = invLastWand * mat * cvr::PluginHelper::getWorldToObjectTransform();
+
+        mLightManager->PhysicalPosition(*pos * diffMat);
+
+        if (dir) // Update Spot Direction
         {
-            mLightManager->PhysicalPosition(*pos * invLastWand * mat * 
-                        cvr::PluginHelper::getWorldToObjectTransform());
-        }
-        else // Changing Spot Direction
-        {
-            osg::Quat rotQ = (invLastWand * mat * cvr::PluginHelper::getWorldToObjectTransform()).getRotate();
-            mLightManager->SpotDirection(*dir * osg::Matrix(rotQ));
+            mLightManager->SpotDirection(*dir * osg::Matrix(diffMat.getRotate()));
         }
 
         if (type == cvr::BUTTON_UP)
