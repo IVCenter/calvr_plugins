@@ -143,7 +143,7 @@ class LightManager
       unsigned int enabledLights;
       bool lightsChanged;
 
-      void initBundle(LightBundle *lb);
+      void selectLight (LightBundle * light);
       void changeGraphicShape();
       void updateGraphicModels();
       void updateGraphicTrans();      

@@ -6,6 +6,7 @@
 
 #include <osg/Geometry>
 #include <osg/Geode>
+#include <osg/PolygonMode>
 
 #include <kernel/PluginHelper.h>
 
@@ -90,7 +91,7 @@ void LightManager::createNewLight()
 
    LightBundle * newLight = new LightBundle();
    mLights.push_back(newLight);
-   selectedLight.top() = newLight;
+   selectLight(newLight);
 
    std::ostringstream os;
    os << "Light " << lightCount++;
@@ -248,6 +249,33 @@ void LightManager::disableLight()
    enabledLights--;
 }
 
+void LightManager::selectLight(LightBundle * light)
+{
+   if (selectedLight.top())
+   {
+      osg::StateSet * ss = selectedLight.top()->graphicTrans->getOrCreateStateSet();
+      osg::PolygonMode * pm = dynamic_cast< osg::PolygonMode * >(ss->getAttribute(osg::StateAttribute::POLYGONMODE));
+
+      if (!pm)
+          ss->setAttribute(pm = new osg::PolygonMode);
+
+      pm->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::FILL);
+   }
+
+   selectedLight.top() = light;
+
+   if (selectedLight.top())
+   {
+      osg::StateSet * ss = selectedLight.top()->graphicTrans->getOrCreateStateSet();
+      osg::PolygonMode * pm = dynamic_cast< osg::PolygonMode * >(ss->getAttribute(osg::StateAttribute::POLYGONMODE));
+
+      if (!pm)
+          ss->setAttribute(pm = new osg::PolygonMode);
+
+      pm->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+   }
+}
+
 void LightManager::changeGraphicShape()
 {
    if (!isLightSelected( true ))
@@ -306,7 +334,7 @@ bool LightManager::selectLightByName(std::string name)
    {
       if ((*i)->name == name)
       {
-         selectedLight.top() = *i;
+         selectLight(*i);
          return true;
       }
    }
@@ -321,7 +349,7 @@ bool LightManager::selectLightByGeodePtr(osg::Geode * geode)
    {
       if ((*i)->modelGeode == geode)
       {
-         selectedLight.top() = *i;
+         selectLight(*i);
          return true;
       }
    }
