@@ -97,7 +97,12 @@ void LightLoader::populateLightManager(mxml_node_t * xmlTree, LightManager * man
 
             std::string propertyName = property->value.element.name;
 
-            if (!propertyName.compare("Position"))
+            if (propertyName == "Enabled")
+            {   // Default is enabled from createNewLight()
+                if (floatFromProperty(property,"value") == 0)
+                    manager->disableLight();
+            }
+            else if (propertyName == "Position")
             {
                manager->Position(osg::Vec4(
                   floatFromProperty(property,"x"),
@@ -106,7 +111,7 @@ void LightLoader::populateLightManager(mxml_node_t * xmlTree, LightManager * man
                   floatFromProperty(property,"w")
                ));
             }
-            else if (!propertyName.compare("Ambient"))
+            else if (propertyName == "Ambient")
             {
                manager->Ambient(osg::Vec4(
                   floatFromProperty(property,"r"),
@@ -115,7 +120,7 @@ void LightLoader::populateLightManager(mxml_node_t * xmlTree, LightManager * man
                   floatFromProperty(property,"a")
                ));
             }
-            else if (!propertyName.compare("Diffuse"))
+            else if (propertyName == "Diffuse")
             {
                manager->Diffuse(osg::Vec4(
                   floatFromProperty(property,"r"),
@@ -124,7 +129,7 @@ void LightLoader::populateLightManager(mxml_node_t * xmlTree, LightManager * man
                   floatFromProperty(property,"a")
                ));
             }
-            else if (!propertyName.compare("Specular"))
+            else if (propertyName == "Specular")
             {
                manager->Specular(osg::Vec4(
                   floatFromProperty(property,"r"),
@@ -133,19 +138,19 @@ void LightLoader::populateLightManager(mxml_node_t * xmlTree, LightManager * man
                   floatFromProperty(property,"a")
                ));
             }
-            else if (!propertyName.compare("ConstantAttenuation"))
+            else if (propertyName == "ConstantAttenuation")
             {
                manager->ConstantAttenuation(floatFromProperty(property,"float"));
             }
-            else if (!propertyName.compare("LinearAttenuation"))
+            else if (propertyName == "LinearAttenuation")
             {
                manager->LinearAttenuation(floatFromProperty(property,"float"));
             }
-            else if (!propertyName.compare("QuadraticAttenuation"))
+            else if (propertyName == "QuadraticAttenuation")
             {
                manager->QuadraticAttenuation(floatFromProperty(property,"float"));
             }
-            else if (!propertyName.compare("SpotDirection"))
+            else if (propertyName == "SpotDirection")
             {
                manager->SpotDirection(osg::Vec3(
                   floatFromProperty(property,"x"),
@@ -153,11 +158,11 @@ void LightLoader::populateLightManager(mxml_node_t * xmlTree, LightManager * man
                   floatFromProperty(property,"z")
                ));
             }
-            else if (!propertyName.compare("SpotExponent"))
+            else if (propertyName == "SpotExponent")
             {
                manager->SpotExponent(floatFromProperty(property,"float"));
             }
-            else if (!propertyName.compare("SpotCutoff"))
+            else if (propertyName == "SpotCutoff")
             {
                manager->SpotCutoff(floatFromProperty(property,"float"));
             }
@@ -197,7 +202,7 @@ void LightLoader::populateXmlTree(mxml_node_t * xmlTree, LightManager * manager)
 
    // Get light information
    std::list<LightManager::LightInfo*> infoList;
-   manager->populateLightInfoList(infoList);
+   manager->populateLightInfoList(infoList, false);
 
    // Populate tree given the lights in manager. Use populateLightInfoList.
    mxml_node_t * light, * property;
@@ -209,6 +214,8 @@ void LightLoader::populateXmlTree(mxml_node_t * xmlTree, LightManager * manager)
       light = mxmlNewElement(data, "Light");
       mxmlElementSetAttr(light,"name",(*i)->name.c_str());
       // Position
+      property = mxmlNewElement(light,"Enabled");
+      mxmlElementSetAttrf(property,"value","%f",(*i)->on?1.0f:0.0f);
       property = mxmlNewElement(light,"Position");
       mxmlElementSetAttrf(property,"x","%f",(*i)->position.x());
       mxmlElementSetAttrf(property,"y","%f",(*i)->position.y());

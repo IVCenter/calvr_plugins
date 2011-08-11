@@ -50,7 +50,7 @@ class LightManager
             LightInfo(osg::Vec4 position, osg::Vec4 ambient, osg::Vec4 diffuse, osg::Vec4 specular,
                float constant, float linear, float quadratic,
                osg::Vec3 spotDirection, float spotExponent, float spotCutoff,
-               std::string name);
+               std::string name, bool on);
             ~LightInfo();
 
             osg::Vec4 position;
@@ -64,6 +64,7 @@ class LightManager
             float spotExponent;
             float spotCutoff;
             std::string name;
+            bool on;
       };
 
       enum Type { SPOT, POINT, DIRECTIONAL };
@@ -107,9 +108,10 @@ class LightManager
       bool selectLightByGeodePtr(osg::Geode * geodePtr);
       bool enableLight();
       void disableLight();
+      bool isEnabled();
 
       int getNumLightsEnabled();
-      void populateLightInfoList(std::list<LightInfo*> &liList);
+      void populateLightInfoList(std::list<LightInfo*> &liList, bool onlyEnabled = true);
       void populateLightNameList(std::list<std::string> &lnList);
 
       // Handles for Graphic Models

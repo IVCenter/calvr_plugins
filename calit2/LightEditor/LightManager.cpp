@@ -50,7 +50,7 @@ LightManager::LightBundle::LightBundle()
 
 LightManager::LightInfo::LightInfo(osg::Vec4 position, osg::Vec4 ambient, osg::Vec4 diffuse,
    osg::Vec4 specular, float constant, float linear, float quadratic,
-   osg::Vec3 spotDirection, float spotExponent, float spotCutoff, std::string name)
+   osg::Vec3 spotDirection, float spotExponent, float spotCutoff, std::string name, bool on)
 {
    this->position      = position;
    this->ambient       = ambient;
@@ -63,6 +63,7 @@ LightManager::LightInfo::LightInfo(osg::Vec4 position, osg::Vec4 ambient, osg::V
    this->spotExponent  = spotExponent;
    this->spotCutoff    = spotCutoff;
    this->name          = name;
+   this->on            = on;
 }
 
 void LightManager::storeSelectedLight()
@@ -333,18 +334,20 @@ int LightManager::getNumLightsEnabled()
    return enabledLights;
 }
 
-void LightManager::populateLightInfoList(std::list<LightManager::LightInfo*> &liList)
+void LightManager::populateLightInfoList(std::list<LightManager::LightInfo*> &liList, bool onlyEnabled)
 {
    std::list<LightBundle*>::iterator i;
    for (i = mLights.begin(); i != mLights.end(); i++)
    {
       selectedLight.push(*i);
-      if (LightOn())
+
+      if (!onlyEnabled || LightOn())
       {
          LightInfo* newInfo = new LightInfo(Position(), Ambient(), Diffuse(),
             Specular(), ConstantAttenuation(), LinearAttenuation(),
             QuadraticAttenuation(), SpotDirection(), SpotExponent(),
-            SpotCutoff(), Name());
+            SpotCutoff(), Name(), LightOn());
+
          liList.push_back(newInfo);
       }
       selectedLight.pop();

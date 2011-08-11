@@ -236,12 +236,14 @@ bool LightEditor::buttonEvent(int type, int button, int hand, const osg::Matrix&
         if (isecvec.size() == 0 || !mLightManager->selectLightByGeodePtr(isecvec[0].geode))
             return false;
 
+        _selectLightList->matchIndexToValue(mLightManager->Name());
+
         invLastWand = osg::Matrix::inverse(mat * cvr::PluginHelper::getWorldToObjectTransform());
 
-        if (type == cvr::BUTTON_DOUBLE_CLICK && mLightManager->LightType() == LightManager::SPOT)
+        pos = new osg::Vec4(mLightManager->PhysicalPosition());
+
+        if (mLightManager->LightType() == LightManager::SPOT)
             dir = new osg::Vec3(mLightManager->SpotDirection());
-        else
-            pos = new osg::Vec4(mLightManager->PhysicalPosition());
 
         updateEditLightMenu();
 
