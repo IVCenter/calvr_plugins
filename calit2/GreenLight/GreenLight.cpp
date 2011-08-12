@@ -79,6 +79,8 @@ GreenLight::~GreenLight()
     if (_hourTo) delete _hourTo;
     if (_minuteTo) delete _minuteTo;
 
+    if (_hoverDialog) delete _hoverDialog;
+
     if (_box) delete _box;
     if (_waterPipes) delete _waterPipes;
     if (_electrical) delete _electrical;
@@ -162,6 +164,8 @@ bool GreenLight::init()
     _dayTo = NULL;
     _hourTo = NULL;
     _minuteTo = NULL;
+
+    _hoverDialog = NULL;
     /*** End Menu Setup ***/
 
     /*** Defaults ***/
@@ -456,6 +460,8 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
             _hardwareSelectionMenu->removeItem(_selectAllButton);
             _hardwareSelectionMenu->removeItem(_deselectAllButton);
         }
+
+        _hoverDialog->setVisible(_selectionModeCheckbox->getValue());
     }
     else if (item == _selectAllButton || item == _deselectAllButton)
     {

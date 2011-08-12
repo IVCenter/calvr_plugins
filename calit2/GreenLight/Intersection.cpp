@@ -33,6 +33,11 @@ void GreenLight::doHoverOver(Entity *& last, Entity * current)
 
         // assign current to last (notice pass-by-reference)
         last = current;
+
+        if (current && current->asComponent())
+            _hoverDialog->setText(current->asComponent()->name);
+        else
+            _hoverDialog->setText("(nothing)");
     }
 }
 
@@ -154,6 +159,7 @@ void GreenLight::selectComponent(Component * comp, bool select)
          * 3b) If the checkbox value is false, and this is a selection,
          *     then check if other nodes in cluster are selected before checking the box
          */
+
         std::string clusterName = comp->cluster;
         if (clusterName != "")
         {

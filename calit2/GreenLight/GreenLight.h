@@ -12,6 +12,7 @@
 #include <menu/MenuImage.h>
 #include <menu/MenuList.h>
 #include <menu/MenuText.h>
+#include <menu/DialogPanel.h>
 #include <menu/SubMenu.h>
 
 #include <osg/AnimationPath>
@@ -137,6 +138,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuImage * _legendGradient;
         cvr::MenuText * _legendTextOutOfRange;
         cvr::MenuImage * _legendGradientOutOfRange;
+
+        cvr::DialogPanel * _hoverDialog;
 
         // Timestamps
         cvr::SubMenu * _timeFrom;
