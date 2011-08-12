@@ -63,7 +63,7 @@ void GreenLight::handleHoverOver(osg::Matrix pointerMat, Entity *& hovered, bool
     }
 
     // Optimization
-    if (hovered->nodes.find(isecvec[0].geode) != hovered->nodes.end())
+    if (hovered && hovered->nodes.find(isecvec[0].geode) != hovered->nodes.end())
         return;
 
     // Is it one of ours?
