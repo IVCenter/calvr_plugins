@@ -1,18 +1,19 @@
-SET(LIB_NAME GreenLight)
+SET(LIB_NAME LightEditor)
 SET(PLUGIN_HEADERS
-    GreenLight.h
+    LightEditor.h
+    LightLoader.h
+    LightManager.h
+    LightShading.h
     Utility.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
     "SHARED"
     ${PLUGIN_HEADERS}
-    GreenLight.cpp
-    LoadEntities.cpp
-    Intersection.cpp
-    Entity.cpp
-    Hardware.cpp
-    Power.cpp
+    LightEditor.cpp
+    LightLoader.cpp
+    LightManager.cpp
+    LightShading.cpp
     Utility.cpp
 )
 

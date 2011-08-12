@@ -1,19 +1,15 @@
-SET(LIB_NAME GreenLight)
+SET(LIB_NAME Sketch)
 SET(PLUGIN_HEADERS
-    GreenLight.h
-    Utility.h
+    Sketch.h
+    SketchObject.h
+    SketchLine.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
     "SHARED"
     ${PLUGIN_HEADERS}
-    GreenLight.cpp
-    LoadEntities.cpp
-    Intersection.cpp
-    Entity.cpp
-    Hardware.cpp
-    Power.cpp
-    Utility.cpp
+    Sketch.cpp
+    SketchLine.cpp
 )
 
 

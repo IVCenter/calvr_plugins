@@ -32,7 +32,7 @@ class PanoView360 : public CVRPlugin, public MenuCallback
         virtual ~PanoView360();
 
         void menuCallback(MenuItem* item);
-        bool key(int type, int keySym, int mod);
+        bool keyEvent(bool keyDown, int key, int mod);
 
         bool init();
         void preFrame();
@@ -50,8 +50,9 @@ class PanoView360 : public CVRPlugin, public MenuCallback
 
         std::vector<MenuButton*> _menufilelist;
 
-        osg::Group * _root;
-        PanoDrawable * _cd;
+        osg::MatrixTransform * _root;
+        PanoDrawable * _cdLeft;
+        PanoDrawable * _cdRight;
 
         MenuItem * _nextLoad;
         bool _deleteWait;
