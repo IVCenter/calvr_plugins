@@ -19,6 +19,8 @@
 #include <kernel/ComController.h>
 #include <math.h>
 #include "/home/bschlamp/CalVR/plugins/calit2/ArtifactVis/ArtifactVis.h"
+#include <algorithm>
+#include <kernel/InteractionManager.h>
 
 using namespace std;
 using namespace osg;
@@ -54,26 +56,7 @@ bool AndroidNavigator::init()
         _andMenu->addItem(_isOn);
         MenuSystem::instance()->addMenuItem(_andMenu);
 
-        // For Socket     
-        cout<<"Starting socket..."<<endl;    
- 
-        if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1){
-            cerr<<"Socket Error!"<<endl;
-            exit(1); 
-        }
-
-        server_addr.sin_family = AF_INET;
-        server_addr.sin_port = htons(PORT);
-        server_addr.sin_addr.s_addr = INADDR_ANY;
-        bzero(&(server_addr.sin_zero), 8);
-
-        if (bind(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1){
-            cerr<<"Bind Error!"<<endl;
-            exit(1);
-        }
-
-        addr_len = sizeof(struct sockaddr);
-        cout<<"Server waiting for client on port: "<<PORT<<endl;
+        makeThread();
 
         ComController::instance()->sendSlaves((char *)&status, sizeof(bool));
     }
@@ -83,7 +66,18 @@ bool AndroidNavigator::init()
         ComController::instance()->readMaster((char *)&status, sizeof(bool));
     }
 
-    /*
+/*
+    //Adds world for testing
+    osg::Node* modelNode = NULL;
+    modelNode = osgDB::readNodeFile("data/campus/UCSDCampus_2010.WRL");
+    osg::MatrixTransform* transfloor = new osg::MatrixTransform();
+    _root->addChild(transfloor);
+    transfloor->addChild(modelNode);
+    osg::Matrix worldTrans;
+    worldTrans.makeTranslate(osg::Vec3 (0, 0, 0));
+    transfloor->setMatrix(worldTrans);
+*/
+   /* 
     // Adds drawables bears for testing       
     osg::Node* objNode = NULL;
     objNode = osgDB::readNodeFile("/home/bschlamp/Desktop/teddy.obj");    
@@ -156,40 +150,24 @@ void AndroidNavigator::preFrame()
         int size = 0; 
         int start = 0;
         char* value;
+        int VELO_CONST = 20;
 
         double angle [3] = {0.0, 0.0, 0.0};
         double coord [3] = {0.0, 0.0, 0.0};
 
-        int bytes_read;
-        char recv_data[1024];
         char send_data[2];
+        string str;
+        const char* recv_data;
+        
+        _mutex.lock();
+        while(!queue.empty()){
+                      
+            str = queue.front();
+            //cout<<queue.front()<<" received: "<<queue.size()<<endl;
+            queue.pop();
 
-        fd_set readfds;
-        struct timeval timeout;
-        int rs;
-
-        FD_ZERO(&readfds);
-        FD_SET(sock, &readfds);
-
-        timeout.tv_sec = 0; 
-        //timeout.tv_usec = (int)(PluginHelper::getLastFrameDuration() * 1000000);
-	timeout.tv_usec = 1000;
-
-        rs = select(sock + 1, &readfds, 0, 0, &timeout);
-         
-        // rs = 0 --> timeout
-        // rs < 0 --> error
-        // rs > 0 --> Data is ready to read
-        if(rs > 0){
-
-            bytes_read = recvfrom(sock, recv_data, 1024, 0, (struct sockaddr *)&client_addr, &addr_len);
- 
-            if(bytes_read <= 0){
-                cerr<<"No data read."<<endl;
-            }
-           
-            // Prepare Data for processing...
-            recv_data[bytes_read]='\0';
+            recv_data = new char[str.size()];
+            recv_data = str.c_str();
             type = recv_data[1] - RECVCONST;
             tag = recv_data[2] - RECVCONST;
             
@@ -214,7 +192,7 @@ void AndroidNavigator::preFrame()
                 }  
                 else if(tag == 2){
 		    sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
-                    //objectSelection();                
+                    objectSelection();                
                 }
             } 
             else if (type == 1)
@@ -291,6 +269,8 @@ void AndroidNavigator::preFrame()
                 }
             }
         }
+        _mutex.unlock();
+
             switch(_tagCommand)
             {
                 case 0:
@@ -306,7 +286,7 @@ void AndroidNavigator::preFrame()
                 case 1:
                     // For DRIVE movement
                     rz -= angle[1];
-                    y -= angle[2] * velocity * 10;
+                    y -= angle[2] * velocity * VELO_CONST;
                     break;
                 case 2:
                     // For MOVE_WORLD movement
@@ -370,7 +350,24 @@ void AndroidNavigator::menuCallback(MenuItem* menuItem)
 
 bool AndroidNavigator::addMenu()
 {
-    MenuSystem::instance()->updateStart();
+    cout<<"Starting addMenu"<<endl;
+
+    TrackingInteractionEvent* tracker = new TrackingInteractionEvent;
+    tracker->type = BUTTON_DOUBLE_CLICK;
+    Vec3 location = Vec3(0.0, 1.0, 0.0) * PluginHelper::getObjectMatrix();
+    tracker->xyz[0] = location[0];
+    tracker->xyz[1] = location[1];
+    tracker->xyz[2] = location[2];
+
+    tracker->rot[0] = 0.0;
+    tracker->rot[1] = 0.0;
+    tracker->rot[2] = 0.0;
+    tracker->rot[3] = 0.0;
+
+    InteractionManager::instance()->addEvent(tracker);
+    InteractionManager::instance()->handleEvent(tracker);
+
+    cout<<"Finishing..."<<endl;
     _menuUp = true;
     return true;
 }
@@ -385,11 +382,11 @@ bool AndroidNavigator::removeMenu()
 // For use with ArtifactVis.
 // Iterates through items and determines which are in
 // camera view for object selection.
-/*
+
 void AndroidNavigator::objectSelection(){
 
     double objAngle;
-    double minAngle = .1;
+    double minAngle = .05;
     int bytes_read;
     char recv_data[1024];
     char send_data[2];
@@ -406,7 +403,14 @@ void AndroidNavigator::objectSelection(){
                 ConfigManager::getFloat("z", "ViewerPosition", 0.0f)) * -1;
     viewOffsetM.makeTranslate(viewOffset);
     objMatrix = objMatrix * viewOffsetM;
-    camera = camera * objMatrix;
+   
+    // Adds drawable to mark which object is being chosen.  
+    osg::Node* objNode = NULL;
+    objNode = osgDB::readNodeFile("/home/bschlamp/Desktop/teddy.obj");    
+    osg::MatrixTransform* trans1 = new osg::MatrixTransform();  
+    _root->addChild(trans1);
+    trans1->addChild(objNode);
+    osg::Matrix markTrans;
 
     ArtifactVis* art = ArtifactVis::getInstance();
     if(art != NULL){ 
@@ -426,14 +430,12 @@ void AndroidNavigator::objectSelection(){
         return;
     }
 
-    cout<<"Camera: "<<camera[0]<<", "<<camera[1]<<", "<<camera[2]<<endl;  
-
     for(int obj = 0; obj < position.size(); obj++){
         osg::Vec3 pos = position.at(obj); 
         osg::Vec3 alpha = (pos * objMatrix);
         objAngle = acos(alpha * camera / (alpha.length() * camera.length()));
         if (objAngle < minAngle){
-            inRange.push_back(pos);   
+            inRange.push_back(alpha);   
         }
     }
 
@@ -443,17 +445,21 @@ void AndroidNavigator::objectSelection(){
         sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
         return;
     }
-    else{
-        cout<<inRange.size()<<" objects found!"<<endl;
-        send_data[0] = 3;
-        sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
-    }
 
+    cout<<inRange.size()<<" objects found!"<<endl;
+    send_data[0] = 3;
+    sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
+
+    std::sort (inRange.begin(), inRange.end(), compare());
     
     while(rangeObj < inRange.size() && rangeObj >= 0){
-        osg::Vec3 pos = inRange.at(rangeObj);
+        osg::Vec3 pos = inRange.at(rangeObj) * PluginHelper::getObjectToWorldTransform();
         cout<<"Pos "<<rangeObj + 1<<": <"<<pos[0]<<", "<<pos[1]<<", "<<pos[2]<<">"<<endl;
         
+        //osg::Vec3 bearpos = pos + osg::Vec3(0, -100, 0);
+        //markTrans.makeTranslate(bearpos);
+        //trans1->setMatrix(markTrans);       
+       
         bytes_read = recvfrom(sock, recv_data, 1024, 0, (struct sockaddr *)&client_addr, &addr_len); 
 
         if(bytes_read <= 0){
@@ -480,4 +486,68 @@ void AndroidNavigator::objectSelection(){
         }        
     }
     
-}*/
+}
+
+void AndroidNavigator::makeThread(){
+
+    cout<<"Starting socket..."<<endl;    
+    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1){
+        cerr<<"Socket Error!"<<endl;
+        exit(1); 
+    }
+
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(PORT);
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    bzero(&(server_addr.sin_zero), 8);
+
+    if (bind(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1){
+        cerr<<"Bind Error!"<<endl;
+        exit(1);
+    }
+
+    addr_len = sizeof(struct sockaddr);
+    cout<<"Server waiting for client on port: "<<PORT<<endl;
+    
+    _mkill = false;
+    start();
+}
+
+void AndroidNavigator::run()
+{
+    int bytes_read;
+    char recv_data[1024];
+
+    fd_set readfds;
+    struct timeval timeout;
+    int rs;
+
+    FD_ZERO(&readfds);
+    FD_SET(sock, &readfds);
+    string str;
+
+    timeout.tv_sec = 0; 
+        // Gets last framerate to take in data more quickly
+    timeout.tv_usec = (int) (PluginHelper::getLastFrameDuration() * 1000000);
+
+    while(!_mkill)
+    {
+        
+        rs = select(sock + 1, &readfds, 0, 0, 0);
+        _mutex.lock();
+        if(rs > 0){
+            bytes_read = recvfrom(sock, recv_data, 1024, 0, (struct sockaddr *)&client_addr, &addr_len);
+
+            if(bytes_read <= 0){
+                cerr<<"No data read."<<endl;
+            }
+           
+              // Prepares data for processing...
+            recv_data[bytes_read]='\0';
+            str = recv_data;
+            queue.push(str);
+            //cout<<str<<" added: "<<queue.size()<<endl;
+        }
+        _mutex.unlock();
+    }
+}

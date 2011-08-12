@@ -17,12 +17,16 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <queue>
+#include <OpenThreads/Mutex>
+#include <OpenThreads/Thread>
+
 
 #include <iostream>
 #include <string>
 #include <vector>
 
-class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback
+class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public OpenThreads::Thread
 {
     public:
         AndroidNavigator();
@@ -34,6 +38,14 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback
         bool addMenu();
         bool removeMenu();
         void objectSelection();
+        void makeThread();
+
+        class compare{
+            public: 
+                bool operator() (const osg::Vec3 vec1, const osg::Vec3 vec2){
+                    return(vec1.length() < vec2.length());
+                }
+        };
 
     protected:
         osg::MatrixTransform * _root;
@@ -49,6 +61,11 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback
         struct sockaddr_in server_addr;
         struct sockaddr_in client_addr;
         double velocity;  // For Drive mode only 
-};
+        std::queue<std::string> queue;
+        bool _mkill;
+        OpenThreads::Mutex _mutex;
 
+        virtual void run();
+
+};
 #endif
