@@ -191,8 +191,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         void setPowerColors(bool displayPower);
         void selectComponent(Component * comp, bool select);
         void selectCluster(std::set< Component * > * cluster, bool select);
-        void handleHoverOver(osg::Matrix pointerMat, Entity *& hovered);
-        void doHoverOver(Entity *& last, Entity * current);
+        void handleHoverOver(osg::Matrix pointerMat, Entity *& hovered, bool showHover);
+        void doHoverOver(Entity *& last, Entity * current, bool showHover);
         osg::ref_ptr<osg::Geode> makeComponentGeode(float height, std::string textureFile = "");
         osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
         void createTimestampMenus();

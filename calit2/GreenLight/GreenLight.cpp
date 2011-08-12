@@ -567,10 +567,10 @@ void GreenLight::preFrame()
         for (int r = 0; r < _rack.size(); r++)
             _rack[r]->handleAnimation();
 
-        if (cvr::ComController::instance()->isMaster())
-            handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver);
-        else
-            handleHoverOver(cvr::PluginHelper::getHandMat(), _wandOver);
+//        if (cvr::ComController::instance()->isMaster())
+        handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver, cvr::ComController::instance()->isMaster());
+//        else
+        handleHoverOver(cvr::PluginHelper::getHandMat(), _wandOver, !cvr::ComController::instance()->isMaster());
     }
 }
 
