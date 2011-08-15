@@ -18,7 +18,7 @@
 #include <unistd.h>
 #include <kernel/ComController.h>
 #include <math.h>
-#include "/home/bschlamp/CalVR/plugins/calit2/ArtifactVis/ArtifactVis.h"
+//#include "/home/bschlamp/CalVR/plugins/calit2/ArtifactVis/ArtifactVis.h"
 #include <algorithm>
 #include <kernel/InteractionManager.h>
 
@@ -26,7 +26,7 @@ using namespace std;
 using namespace osg;
 using namespace cvr;
 
-class ArtifactVis;
+//class ArtifactVis;
 
 CVRPLUGIN(AndroidNavigator)
 
@@ -66,17 +66,6 @@ bool AndroidNavigator::init()
         ComController::instance()->readMaster((char *)&status, sizeof(bool));
     }
 
-/*
-    //Adds world for testing
-    osg::Node* modelNode = NULL;
-    modelNode = osgDB::readNodeFile("data/campus/UCSDCampus_2010.WRL");
-    osg::MatrixTransform* transfloor = new osg::MatrixTransform();
-    _root->addChild(transfloor);
-    transfloor->addChild(modelNode);
-    osg::Matrix worldTrans;
-    worldTrans.makeTranslate(osg::Vec3 (0, 0, 0));
-    transfloor->setMatrix(worldTrans);
-*/
    /* 
     // Adds drawables bears for testing       
     osg::Node* objNode = NULL;
@@ -108,22 +97,30 @@ bool AndroidNavigator::init()
     trans4->setMatrix(markTrans);
     SceneManager::instance()->getObjectsRoot()->addChild(_root);
     */
+    
+    tracker = new TrackingInteractionEvent;
+    Vec3 location = Vec3(0.0, 1.0, 0.0) * PluginHelper::getObjectMatrix();
+    tracker->xyz[0] = location[0];
+    tracker->xyz[1] = location[1];
+    tracker->xyz[2] = location[2];
+
+    tracker->hand = 0;
+    tracker->button = 1;
+    tracker->rot[0] = 0.0;
+    tracker->rot[1] = 0.0;
+    tracker->rot[2] = 0.0;
+    tracker->rot[3] = 0.0;
 
     // Matrix data
     transMult = ConfigManager::getFloat("Plugin.AndroidNavigator.TransMult", 1.0);
     rotMult = ConfigManager::getFloat("Plugin.AndroidNavigator.RotMult", 1.0);
     
-    //transcale = -0.05  * transMult;
-    //rotscale = -0.000009 * rotMult;
-    transcale = -.5 * transMult;
+    transcale = -1 * transMult;
     rotscale = -.012 *rotMult; 
     _menuUp = false;
     
     // Default velocity for drive
     velocity = 15;
-
-    // Default Movement to FLY
-    _tagCommand = 4;
 
     std::cerr<<"AndroidNavigator done"<<endl;
       
@@ -150,7 +147,7 @@ void AndroidNavigator::preFrame()
         int size = 0; 
         int start = 0;
         char* value;
-        int VELO_CONST = 20;
+        int VELO_CONST = 10;
 
         double angle [3] = {0.0, 0.0, 0.0};
         double coord [3] = {0.0, 0.0, 0.0};
@@ -188,6 +185,7 @@ void AndroidNavigator::preFrame()
                 else if(tag == 1){
                     if(_menuUp){ removeMenu();}
                     else{ addMenu();}
+                    InteractionManager::instance()->addEvent(tracker);
                     sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
                 }  
                 else if(tag == 2){
@@ -271,13 +269,17 @@ void AndroidNavigator::preFrame()
         }
         _mutex.unlock();
 
+        if(_menuUp){
+            // TODO menu interaction    
+        }
+        else{
             switch(_tagCommand)
             {
                 case 0:
                     // For FLY movement
-                    rx -= angle[2];
+                    rx += angle[2];
                     ry += angle[0];
-                    rz -= angle[1];
+                    rz += angle[1];
 
                     x -= coord[0];
                     z += coord[1];
@@ -285,16 +287,17 @@ void AndroidNavigator::preFrame()
                     break;
                 case 1:
                     // For DRIVE movement
-                    rz -= angle[1];
-                    y -= angle[2] * velocity * VELO_CONST;
+                    rz += angle[1] * VELO_CONST/2;
+                    y += angle[2] * velocity * VELO_CONST;
                     break;
                 case 2:
                     // For MOVE_WORLD movement
-                    rx -= angle[2];
+                    rx += angle[2];
                     ry += angle[0];
-                    rz -= angle[1];
+                    rz += angle[1];
                     break;
             }
+        }
 
             x *= transcale;
             y *= transcale;
@@ -350,35 +353,45 @@ void AndroidNavigator::menuCallback(MenuItem* menuItem)
 
 bool AndroidNavigator::addMenu()
 {
-    cout<<"Starting addMenu"<<endl;
-
-    TrackingInteractionEvent* tracker = new TrackingInteractionEvent;
-    tracker->type = BUTTON_DOUBLE_CLICK;
+    tracker = new TrackingInteractionEvent;
     Vec3 location = Vec3(0.0, 1.0, 0.0) * PluginHelper::getObjectMatrix();
     tracker->xyz[0] = location[0];
     tracker->xyz[1] = location[1];
     tracker->xyz[2] = location[2];
 
+    tracker->hand = 0;
+    tracker->button = 1;
     tracker->rot[0] = 0.0;
     tracker->rot[1] = 0.0;
     tracker->rot[2] = 0.0;
     tracker->rot[3] = 0.0;
+    tracker->type = BUTTON_DOUBLE_CLICK;
 
-    InteractionManager::instance()->addEvent(tracker);
-    InteractionManager::instance()->handleEvent(tracker);
-
-    cout<<"Finishing..."<<endl;
     _menuUp = true;
     return true;
 }
 
 bool AndroidNavigator::removeMenu()
 {   
-    SceneManager::instance()->getMenuRoot()->removeChild(_root);
+    tracker = new TrackingInteractionEvent;
+    Vec3 location = Vec3(0.0, 1.0, 0.0) * PluginHelper::getObjectMatrix();
+    tracker->xyz[0] = location[0];
+    tracker->xyz[1] = location[1];
+    tracker->xyz[2] = location[2];
+
+    tracker->hand = 0;
+    tracker->button = 1;
+    tracker->rot[0] = 0.0;
+    tracker->rot[1] = 0.0;
+    tracker->rot[2] = 0.0;
+    tracker->rot[3] = 0.0;
+    tracker->type = BUTTON_DOWN;
+
     _menuUp = false;
     return true;
 }
 
+/*
 // For use with ArtifactVis.
 // Iterates through items and determines which are in
 // camera view for object selection.
@@ -404,14 +417,6 @@ void AndroidNavigator::objectSelection(){
     viewOffsetM.makeTranslate(viewOffset);
     objMatrix = objMatrix * viewOffsetM;
    
-    // Adds drawable to mark which object is being chosen.  
-    osg::Node* objNode = NULL;
-    objNode = osgDB::readNodeFile("/home/bschlamp/Desktop/teddy.obj");    
-    osg::MatrixTransform* trans1 = new osg::MatrixTransform();  
-    _root->addChild(trans1);
-    trans1->addChild(objNode);
-    osg::Matrix markTrans;
-
     ArtifactVis* art = ArtifactVis::getInstance();
     if(art != NULL){ 
         cout<<"Getting artifacts"<<endl;
@@ -447,7 +452,7 @@ void AndroidNavigator::objectSelection(){
     }
 
     cout<<inRange.size()<<" objects found!"<<endl;
-    send_data[0] = 3;
+    send_data[0] = 6;
     sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
 
     std::sort (inRange.begin(), inRange.end(), compare());
@@ -456,10 +461,6 @@ void AndroidNavigator::objectSelection(){
         osg::Vec3 pos = inRange.at(rangeObj) * PluginHelper::getObjectToWorldTransform();
         cout<<"Pos "<<rangeObj + 1<<": <"<<pos[0]<<", "<<pos[1]<<", "<<pos[2]<<">"<<endl;
         
-        //osg::Vec3 bearpos = pos + osg::Vec3(0, -100, 0);
-        //markTrans.makeTranslate(bearpos);
-        //trans1->setMatrix(markTrans);       
-       
         bytes_read = recvfrom(sock, recv_data, 1024, 0, (struct sockaddr *)&client_addr, &addr_len); 
 
         if(bytes_read <= 0){
@@ -484,9 +485,13 @@ void AndroidNavigator::objectSelection(){
             }            
             else rangeObj--;
         }        
+        else if(recv_data[0] == 3){
+            return;
+        }
     }
     
 }
+*/
 
 void AndroidNavigator::makeThread(){
 

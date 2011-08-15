@@ -20,7 +20,7 @@
 #include <queue>
 #include <OpenThreads/Mutex>
 #include <OpenThreads/Thread>
-
+#include <kernel/InteractionManager.h>
 
 #include <iostream>
 #include <string>
@@ -35,11 +35,15 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
         bool init();
         void preFrame();
         void menuCallback(cvr::MenuItem * item);
+            // Adds a menu to the screen
         bool addMenu();
+            // Removes menu from screen
         bool removeMenu();
+            // Gets objects from artifactVis and determines which one is being pointed at
         void objectSelection();
+            // Makes a background thread to take in data
         void makeThread();
-
+            // Allows Vec3 comparison
         class compare{
             public: 
                 bool operator() (const osg::Vec3 vec1, const osg::Vec3 vec2){
@@ -65,6 +69,8 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
         bool _mkill;
         OpenThreads::Mutex _mutex;
 
+        cvr::TrackingInteractionEvent* tracker;
+            // Runs the thread to take in android data
         virtual void run();
 
 };
