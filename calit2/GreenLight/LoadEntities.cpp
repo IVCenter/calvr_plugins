@@ -249,6 +249,10 @@ bool GreenLight::loadScene()
     _selectionModeCheckbox->setCallback(this);
     _hardwareSelectionMenu->addItem(_selectionModeCheckbox);
 
+    _hoverDialog = new cvr::DialogPanel(400, "Intersected Component");
+    _hoverDialog->setText("(nothing)");
+    _hoverDialog->setVisible(_selectionModeCheckbox->getValue());
+
     if (_cluster.size() > 0)
     {
         _selectClusterMenu = new cvr::SubMenu("Cluster Selection", "Selected Clusters");

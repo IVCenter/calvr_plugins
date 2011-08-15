@@ -397,11 +397,7 @@ void LightEditor::initEditLightMenu()
     _elAttenuation->setCallback(this);
     _elPopup->addMenuItem(_elAttenuation);
 
-    _elToggleSpotDirection = new cvr::MenuCheckbox("Spot Direction", false);
-    _elToggleSpotDirection->setCallback(this);
-
-    _elLabelSpotDirection = new cvr::MenuText("[]");
-    _elLabelSpotDirection->setCallback(this);
+    _elLabelSpotDirection = new cvr::MenuText("Spot Direction:\n[]");
 
     _elSpotExponent = new cvr::MenuRangeValue("Spot Exponent:", 0.0,
         cvr::ConfigManager::getFloat("value","Plugin.LightEditor.SpotExponentMax",125.0), 0.25);
@@ -444,7 +440,6 @@ void LightEditor::updateEditLightMenu()
     _elG->setValue(color.y());
     _elB->setValue(color.z());
 
-    _elPopup->removeMenuItem(_elToggleSpotDirection);
     _elPopup->removeMenuItem(_elLabelSpotDirection);
     _elPopup->removeMenuItem(_elSpotExponent);
     _elPopup->removeMenuItem(_elSpotCutoff);
@@ -452,7 +447,6 @@ void LightEditor::updateEditLightMenu()
     if (mLightManager->LightType() == LightManager::SPOT)
     {
         _elLightTypeList->matchIndexToValue("Spot");
-        _elPopup->addMenuItem(_elToggleSpotDirection);
         _elPopup->addMenuItem(_elLabelSpotDirection);
         _elPopup->addMenuItem(_elSpotExponent);
         _elPopup->addMenuItem(_elSpotCutoff);
@@ -479,8 +473,8 @@ void LightEditor::updateEditLightMenu()
 
     // update spot direction
     osg::Vec3 dir = mLightManager->SpotDirection();
-    char str[40]; // Minimum value here needs to be at least (13 + 3 * precision).
-    sprintf(str, "[%.2f, %.2f, %.2f]", dir.x(), dir.y(), dir.z());
+    char str[55]; // Minimum value here needs to be at least (29 + 3 * precision).
+    sprintf(str, "Spot Direction:\n[%.2f, %.2f, %.2f]", dir.x(), dir.y(), dir.z());
     _elLabelSpotDirection->setText(str);
 
     _elPopup->setVisible(true);
@@ -554,7 +548,6 @@ LightEditor::~LightEditor()
     if (_elAttenuationList) delete _elAttenuationList;
     if (_elAttenuation) delete _elAttenuation; 
 
-    if (_elToggleSpotDirection) delete _elToggleSpotDirection;
     if (_elLabelSpotDirection) delete _elLabelSpotDirection;		
     if (_elSpotExponent) delete _elSpotExponent;
     if (_elSpotCutoff) delete _elSpotCutoff;

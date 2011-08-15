@@ -12,6 +12,7 @@
 #include <menu/MenuImage.h>
 #include <menu/MenuList.h>
 #include <menu/MenuText.h>
+#include <menu/DialogPanel.h>
 #include <menu/SubMenu.h>
 
 #include <osg/AnimationPath>
@@ -138,6 +139,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuText * _legendTextOutOfRange;
         cvr::MenuImage * _legendGradientOutOfRange;
 
+        cvr::DialogPanel * _hoverDialog;
+
         // Timestamps
         cvr::SubMenu * _timeFrom;
         cvr::SubMenu * _timeTo;
@@ -188,8 +191,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         void setPowerColors(bool displayPower);
         void selectComponent(Component * comp, bool select);
         void selectCluster(std::set< Component * > * cluster, bool select);
-        void handleHoverOver(osg::Matrix pointerMat, Entity *& hovered);
-        void doHoverOver(Entity *& last, Entity * current);
+        void handleHoverOver(osg::Matrix pointerMat, Entity *& hovered, bool showHover);
+        void doHoverOver(Entity *& last, Entity * current, bool showHover);
         osg::ref_ptr<osg::Geode> makeComponentGeode(float height, std::string textureFile = "");
         osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
         void createTimestampMenus();

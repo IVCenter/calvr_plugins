@@ -5,7 +5,7 @@
 #include <kernel/PluginHelper.h>
 #include <kernel/InteractionManager.h>
 
-void GreenLight::doHoverOver(Entity *& last, Entity * current)
+void GreenLight::doHoverOver(Entity *& last, Entity * current, bool showHover)
 {
     const float eScale = 11.0/10.0; // scalar value to expand by
     const float nScale = 10.0/11.0; // scalar value to normalize by
@@ -13,22 +13,30 @@ void GreenLight::doHoverOver(Entity *& last, Entity * current)
     // fix old as necessary
     if (last != current)
     {
-        // normalize last hovered over entity, if there is one
-        if (last != NULL)
+        if (showHover)
         {
-            if (last->asComponent())
-                last->transform->preMult(osg::Matrix::scale(nScale,nScale,nScale));
-            else
-                last->defaultColor();
-        }
+            // normalize last hovered over entity, if there is one
+            if (last != NULL)
+            {
+                if (last->asComponent())
+                    last->transform->preMult(osg::Matrix::scale(nScale,nScale,nScale));
+                else
+                    last->defaultColor();
+            }
 
-        // expand currently hovered over entity, if there is one
-        if (current != NULL)
-        {
-            if (current->asComponent())
-                current->transform->preMult(osg::Matrix::scale(eScale,eScale,eScale));
+            // expand currently hovered over entity, if there is one
+            if (current != NULL)
+            {
+                if (current->asComponent())
+                    current->transform->preMult(osg::Matrix::scale(eScale,eScale,eScale));
+                else
+                    current->setColor(osg::Vec3(1,1,.5));
+            }
+
+            if (current && current->asComponent())
+                _hoverDialog->setText(current->asComponent()->name);
             else
-                current->setColor(osg::Vec3(1,1,.5));
+                _hoverDialog->setText("(nothing)");
         }
 
         // assign current to last (notice pass-by-reference)
@@ -36,7 +44,7 @@ void GreenLight::doHoverOver(Entity *& last, Entity * current)
     }
 }
 
-void GreenLight::handleHoverOver(osg::Matrix pointerMat, Entity *& hovered)
+void GreenLight::handleHoverOver(osg::Matrix pointerMat, Entity *& hovered, bool showHover)
 {
     osg::Vec3 pointerStart, pointerEnd;
     std::vector<IsectInfo> isecvec;
@@ -50,9 +58,13 @@ void GreenLight::handleHoverOver(osg::Matrix pointerMat, Entity *& hovered)
 
     if (isecvec.size() == 0)
     {
-        doHoverOver(hovered,NULL);
+        doHoverOver(hovered, NULL, showHover);
         return;
     }
+
+    // Optimization
+    if (hovered && hovered->nodes.find(isecvec[0].geode) != hovered->nodes.end())
+        return;
 
     // Is it one of ours?
     std::vector<Entity *>::iterator vit;
@@ -60,7 +72,7 @@ void GreenLight::handleHoverOver(osg::Matrix pointerMat, Entity *& hovered)
     {
         if ((*vit)->nodes.find(isecvec[0].geode) != (*vit)->nodes.end())
         {
-            doHoverOver(hovered, *vit);
+            doHoverOver(hovered, *vit, showHover);
             return;
         }
     }
@@ -69,7 +81,7 @@ void GreenLight::handleHoverOver(osg::Matrix pointerMat, Entity *& hovered)
     {
         if ((*vit)->nodes.find(isecvec[0].geode) != (*vit)->nodes.end())
         {
-            doHoverOver(hovered, *vit);
+            doHoverOver(hovered, *vit, showHover);
             return;
         }
     }
@@ -81,14 +93,14 @@ void GreenLight::handleHoverOver(osg::Matrix pointerMat, Entity *& hovered)
         {
             if ((*sit)->nodes.find(isecvec[0].geode) != (*sit)->nodes.end())
             {
-                doHoverOver(hovered, *sit);
+                doHoverOver(hovered, *sit, showHover);
                 return;
             }
         }
     }
 
     // if we get this far, we aren't hovering over anything
-    doHoverOver(hovered,NULL);
+    doHoverOver(hovered, NULL, showHover);
 }
 
 bool GreenLight::handleIntersection(osg::Node * iNode)
@@ -154,6 +166,7 @@ void GreenLight::selectComponent(Component * comp, bool select)
          * 3b) If the checkbox value is false, and this is a selection,
          *     then check if other nodes in cluster are selected before checking the box
          */
+
         std::string clusterName = comp->cluster;
         if (clusterName != "")
         {
