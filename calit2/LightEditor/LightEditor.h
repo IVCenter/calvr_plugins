@@ -63,7 +63,6 @@ class LightEditor : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList *          _elAttenuationList;
         cvr::MenuRangeValue *    _elAttenuation; 
 
-        cvr::MenuCheckbox *      _elToggleSpotDirection;
         cvr::MenuText *	         _elLabelSpotDirection;		
         cvr::MenuRangeValue *    _elSpotExponent; 
         cvr::MenuRangeValue *    _elSpotCutoff; 

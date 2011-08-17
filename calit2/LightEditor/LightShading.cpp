@@ -66,16 +66,13 @@ void LightShading::UpdateUniforms()
    std::list<LightManager::LightInfo*> liList;
    mLightManager->populateLightInfoList(liList);
 
-   if (liList.empty())
-      return;
-
    std::list<LightManager::LightInfo*>::iterator iter;
    iter = liList.begin();   
 
    bool noMoreLights = false;
    for (int i = 0; i < MAX_LIGHTS; i++)
    {
-      if (!noMoreLights)
+      if (!(noMoreLights = iter == liList.end()))
       {
          // Check if texture needs to be generated
          if (regenerateTexture)
@@ -114,7 +111,7 @@ void LightShading::UpdateUniforms()
             } 
          }
 
-         if (++iter == liList.end()) noMoreLights = true;
+         iter++;
       }
       else 
          //lightType->setElement(i, -1.0f);
