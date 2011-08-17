@@ -46,7 +46,9 @@ SketchLine::SketchLine(LineType type, bool tube, bool snap, osg::Vec4 color, flo
 
     stateset = _brushDrawable->getOrCreateStateSet();
     osg::Material * mat = new osg::Material();
-    stateset->setAttributeAndModes(mat,osg::StateAttribute::ON);
+    //stateset->setAttributeAndModes(mat,osg::StateAttribute::ON);
+
+    _drawing = false;
 
     _count = 0;
 }
@@ -68,14 +70,134 @@ bool SketchLine::buttonEvent(int type, const osg::Matrix & mat)
 	if(!_drawing)
 	{
 	    osg::Vec3 point;
-	    point = osg::Vec3(0, Sketch::instance()->getPointerDistance(), 0);
-	    point = point * mat;
+	    if(!_snap)
+	    {
+		point = osg::Vec3(0, Sketch::instance()->getPointerDistance(), 0);
+		point = point * mat * PluginHelper::getWorldToObjectTransform();
+	    }
+	    else
+	    {
+		//TODO: find this point
+	    }
 
-	    
+	    gettimeofday(&_lastPointTime, NULL);
+
+	    // set object timestamp
+	    _timeStamp = _lastPointTime;
+
+	    if(_type == FREEHAND)
+	    {
+		_lastPoint = point;
+	    }
+
+	    _verts->push_back(point);
+	    _mcb->_bound.expandBy(point);
+
+	    if(_type == SEGMENT || _type == MULTI_SEGMENT)
+	    {
+		_verts->push_back(point);
+		_count = 2;
+	    }
+	    else
+	    {
+		_count = 1;
+	    }
+
+	    _primitive->setCount(_count);
+	    _geometry->dirtyBound();
+	    _drawing = true;
 	}
+	else if(_type == MULTI_SEGMENT)
+	{
+	    _valid = true;
+	    osg::Vec3 point;
+	    if(!_snap)
+	    {
+		point = osg::Vec3(0, Sketch::instance()->getPointerDistance(), 0);
+		point = point * mat * PluginHelper::getWorldToObjectTransform();
+	    }
+	    else
+	    {
+		//TODO: find this point
+	    }
+
+	    if(_type == FREEHAND)
+	    {
+		gettimeofday(&_lastPointTime, NULL);
+		_lastPoint = point;
+	    }
+
+	    _verts->push_back(point);
+	    _mcb->_bound.expandBy(point);
+
+	    _count++;
+
+	    _primitive->setCount(_count);
+	    _geometry->dirtyBound();
+	}
+
+	return true;
     }
     else if(type == BUTTON_DRAG)
     {
+	if(!_drawing)
+	{
+	    return false;
+	}
+
+	osg::Vec3 point;
+	if(!_snap)
+	{
+	    point = osg::Vec3(0, Sketch::instance()->getPointerDistance(), 0);
+	    point = point * mat * PluginHelper::getWorldToObjectTransform();
+	}
+	else
+	{
+	    //TODO: find this point
+	}
+
+	if(_type == FREEHAND)
+	{
+	    struct timeval currentTime;
+	    gettimeofday(&currentTime,NULL);
+
+	    double timediff = (currentTime.tv_sec - _lastPointTime.tv_sec) + ((currentTime.tv_usec - _lastPointTime.tv_usec) / 1000000.0);
+	    float distance2 = (point - _lastPoint).length2();
+
+	    if(timediff > 0.75 || distance2 > 10.0)
+	    {
+		_valid = true;
+
+		_verts->push_back(point);
+		_count++;
+		_primitive->setCount(_count);
+
+		_mcb->_bound.expandBy(point);
+		_geometry->dirtyBound();
+
+		_lastPoint = point;
+		_lastPointTime = currentTime;
+	    }
+	}
+	else if(_type == SEGMENT || _type == MULTI_SEGMENT)
+	{
+	    (*_verts)[_count-1] = point;
+	    _mcb->_bound.expandBy(point);
+	    _geometry->dirtyBound();
+	}
+	return true;
+    }
+    else if(type == BUTTON_UP)
+    {
+	if(_type == SEGMENT || _type == FREEHAND)
+	{
+	    _done = true;
+	}
+	if(_type == SEGMENT)
+	{
+	    _valid = true;
+	}
+	return true;
     }
 }
 
@@ -103,6 +225,7 @@ void SketchLine::updateBrush(osg::MatrixTransform * mt)
 
 void SketchLine::finish()
 {
+    _done = true;
 }
 
 osg::Drawable * SketchLine::getDrawable()
