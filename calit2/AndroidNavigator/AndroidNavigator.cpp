@@ -117,11 +117,11 @@ bool AndroidNavigator::init()
     
     transcale = -1 * transMult;
     rotscale = -.012 *rotMult; 
+    scale = .01;
     _menuUp = false;
-    
-    // Default velocity for drive
-    velocity = 15;
-
+    newMode = false; 
+    // Default velocity
+    velocity = 0;
     std::cerr<<"AndroidNavigator done"<<endl;
       
     return status;
@@ -139,6 +139,8 @@ void AndroidNavigator::preFrame()
         x = y = z = 0.0;
         double rx, ry, rz;
         rx = ry = rz = 0.0;
+        double sx, sy, sz; 
+        sx = sy = sz = 1.0;
     
         // 0 = rotation, 1 = move, 2 = scale, 9 = error/initalize
         int tag = 9;
@@ -160,7 +162,6 @@ void AndroidNavigator::preFrame()
         while(!queue.empty()){
                       
             str = queue.front();
-            //cout<<queue.front()<<" received: "<<queue.size()<<endl;
             queue.pop();
 
             recv_data = new char[str.size()];
@@ -174,6 +175,7 @@ void AndroidNavigator::preFrame()
             if(type == 2){
                 _tagCommand = tag;
                 sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
+                newMode = true;
             }
   
             else if(type == 3)
@@ -288,13 +290,23 @@ void AndroidNavigator::preFrame()
                 case 1:
                     // For DRIVE movement
                     rz += angle[1] * VELO_CONST/2;
-                    y += angle[2] * velocity * VELO_CONST;
+                    y += velocity;
                     break;
                 case 2:
                     // For MOVE_WORLD movement
+                    ry += angle[1];
+                    break;
+                case 3:
+                    // New fly mode -- moves like a plane
                     rx += angle[2];
-                    ry += angle[0];
+                    ry += angle[0]; 
                     rz += angle[1];
+                    y += velocity;
+                    break;
+                case 4:
+                    // Scale world
+                    sx += coord[2];
+                    sy = sz = sx;
                     break;
             }
         }
@@ -305,10 +317,16 @@ void AndroidNavigator::preFrame()
             rx *= rotscale;
             ry *= rotscale;
             rz *= rotscale;
-   
-            Matrix view = PluginHelper::getHeadMat();
-  
+            sx *= scale;
+            sy *= scale;
+            sz *= scale;
+            
+            if(newMode || ( (_tagCommand == 0) || (_tagCommand == 2) ) ){   
+                view = PluginHelper::getHeadMat();
+                newMode = false;
+            }
             Vec3 campos = view.getTrans();
+            
             Vec3 trans = Vec3(x, y, z);
 
             trans = (trans * view) - campos;
@@ -325,6 +343,9 @@ void AndroidNavigator::preFrame()
 
             Matrix rot;
             rot.makeRotate(rx, xa, ry, ya, rz, za);
+            
+            Matrix scale;
+            scale.makeScale(sx, sy, sz);
 
             Matrix ctrans, nctrans;
             ctrans.makeTranslate(campos);

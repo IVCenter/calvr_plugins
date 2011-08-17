@@ -56,7 +56,7 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
         cvr::MenuCheckbox *_isOn;
         cvr::SubMenu *_andMenu;
         float transMult, rotMult;
-        float transcale, rotscale;
+        float transcale, rotscale, scale;
         bool _menuUp;
         cvr::MenuSystem* _menu;
         int _tagCommand;
@@ -64,11 +64,12 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
         socklen_t addr_len;
         struct sockaddr_in server_addr;
         struct sockaddr_in client_addr;
-        double velocity;  // For Drive mode only 
+        double velocity;
         std::queue<std::string> queue;
         bool _mkill;
         OpenThreads::Mutex _mutex;
-
+        bool newMode;
+        osg::Matrix view;
         cvr::TrackingInteractionEvent* tracker;
             // Runs the thread to take in android data
         virtual void run();
