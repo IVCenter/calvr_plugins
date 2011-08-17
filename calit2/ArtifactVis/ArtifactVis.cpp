@@ -128,7 +128,7 @@ bool ArtifactVis::init()
 
     //_my_own_root = new LOD();
 
-    _sphereRadius = 25.0;
+    _sphereRadius = 5.0;
     _activeArtifact  = -1;
     //_LODmaxRange = ConfigManager::getFloat("Plugins.ArtifactVis.MaxVisibleRange", 30.0);
 
@@ -147,6 +147,14 @@ bool ArtifactVis::init()
     _selectionStatsPanel->setVisible(false);
 
     std::cerr << "ArtifactVis init done.\n";
+#ifdef WITH_OSSIMPLANET
+    if(OssimPlanet::instance() && OssimPlanet::instance()->addModel(_root,ConfigManager::getFloat("Plugins.ArtifactVis.Site.Latitude",0),
+                    ConfigManager::getFloat("Plugins.ArtifactVis.Site.Longitude",0),
+		    osg::Vec3(0.6, 0.6, 0.6), 0.0, 0.0, 0.0, 135.0))
+    {
+        cout << "Loaded into OssimPlanet." << endl;
+    }
+#endif
     return true;
 }
 
@@ -296,7 +304,8 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
         {
             if(_showModelCB[i]->getValue())
 	    {
-		readSiteFile(i);
+                if(_siteRoot[i]->getNumChildren()==0)
+		    readSiteFile(i);
 
 	        _root->addChild(_siteRoot[i]);
 	    }
@@ -312,7 +321,8 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
         {
             if(_showPCCB[i]->getValue())
 	    {
-		readPointCloud(i);
+                if(_pcRoot[i]->getNumChildren()==0)
+		    readPointCloud(i);
 
 	        _root->addChild(_pcRoot[i]);
 	    }
@@ -657,7 +667,7 @@ void ArtifactVis::preFrame()
             {
                 Vec3f vec2 = allArtifacts[j]->modelPos*objMat;
                 double angle = acos(vec1*vec2/(vec1.length()*vec2.length()));
-                if(angle  < atan2(1,24))
+                if(angle  < atan2(1,60))
                 {
                     allArtifacts[j]->showLabel = false;
                 }
@@ -977,12 +987,10 @@ void ArtifactVis::readPointCloud(int index)
     pointGeode->addDrawable(pointCloud);
     StateSet * ss=pointGeode->getOrCreateStateSet();
     ss->setMode(GL_LIGHTING, StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
-    MatrixTransform * pcRoot = new osg::MatrixTransform();
     MatrixTransform * rotTransform = new MatrixTransform();
     Matrix pitchMat;
     Matrix yawMat;
     Matrix rollMat;
-    cout << _pcRot[index].x() << ", " << _pcRot[index].y() << ", " << _pcRot[index].z() << endl;
     pitchMat.makeRotate(DegreesToRadians(_pcRot[index].x()),1,0,0);
     yawMat.makeRotate(DegreesToRadians(_pcRot[index].y()),0,1,0);
     rollMat.makeRotate(DegreesToRadians(_pcRot[index].z()),0,0,1);
@@ -995,11 +1003,10 @@ void ArtifactVis::readPointCloud(int index)
     Matrix posMat;
     posMat.makeTranslate(_pcPos[index]);
     posTransform->setMatrix(posMat);
-    rotTransform->addChild(pointGeode); 
-    scaleTransform->addChild(rotTransform); 
+    rotTransform->addChild(pointGeode);
+    scaleTransform->addChild(rotTransform);
     posTransform->addChild(scaleTransform);
-    pcRoot->addChild(posTransform);
-    _pcRoot.push_back(pcRoot);
+    _pcRoot[index]->addChild(posTransform);
 }
 void ArtifactVis::readSiteFile(int index)
 {
@@ -1010,7 +1017,6 @@ void ArtifactVis::readSiteFile(int index)
     cerr << "Reading site file: " << modelFileName << " ..." << endl;
     if (!modelFileName.empty()) 
     {
-	MatrixTransform * siteRoot = new osg::MatrixTransform();
 	Node* modelFileNode = osgDB::readNodeFile(modelFileName);
 	if (modelFileNode==NULL) cerr << "Error reading file" << endl;
 	else
@@ -1032,9 +1038,9 @@ void ArtifactVis::readSiteFile(int index)
             transMat.makeTranslate(_sitePos[index]);
             siteTrans->setMatrix(transMat);
             siteTrans->addChild(siteRot);
-	    siteRoot->addChild(siteTrans);
+	    _siteRoot[index]->addChild(siteTrans);
 
-	    StateSet * ss=siteRoot->getOrCreateStateSet();
+	    StateSet * ss=_siteRoot[index]->getOrCreateStateSet();
 	    ss->setMode(GL_LIGHTING, StateAttribute::ON | osg::StateAttribute::OVERRIDE);
 
 	    Material* mat =new Material();	
@@ -1046,7 +1052,6 @@ void ArtifactVis::readSiteFile(int index)
 
 	    cerr << "File read." << endl;
 	}
-        _siteRoot.push_back(siteRoot);
     }
     else
     {
@@ -1276,7 +1281,7 @@ void ArtifactVis::readLocusFile(QueryGroup * query)
                 Vec3f edge = (loc->coordsBot[(i+1)%size]-loc->coordsBot[i]);
                 Matrix scale;
                 double scaleFactor = min(min(edge.length()/600,width/60),0.7f);
-                scale.makeScale(scaleFactor,scaleFactor,scaleFactor);
+                scale.makeScale(-scaleFactor,scaleFactor,scaleFactor);
                 MatrixTransform * scaleTrans = new MatrixTransform();
                 scaleTrans->setMatrix(scale);
                 Matrix rot1;
@@ -1284,7 +1289,7 @@ void ArtifactVis::readLocusFile(QueryGroup * query)
                 Matrix rot2;
                 rot2.makeRotate(osg::DegreesToRadians(180.0),1,0,0);
                 MatrixTransform * rotTrans = new MatrixTransform();
-                rotTrans->setMatrix(rot2*rot1);
+                rotTrans->setMatrix(rot1);
                 Matrix pos;
                 Vec3f norm = (loc->coordsBot[i]-loc->coordsTop[i])^(loc->coordsTop[(i+1)%size]-loc->coordsTop[i]);
                 norm/=norm.length();
@@ -1380,6 +1385,7 @@ void ArtifactVis::setupSiteMenu()
         offsetMat.makeTranslate(offset);
         if(isPC)
         {
+            _pcRoot.push_back(new MatrixTransform());
             Vec3d pos = Vec3d(0,0,0) * transMat;
             _pcDisplayMenu->addItem(site); 
             _showPCCB.push_back(site);
@@ -1389,6 +1395,7 @@ void ArtifactVis::setupSiteMenu()
         }
         else
         {
+            _siteRoot.push_back(new MatrixTransform());
             Vec3d pos = Vec3d(0,0,0) * mirror * transMat * scaleMat * mirror * rot2 * rot1 * offsetMat;
             _modelDisplayMenu->addItem(site); 
             _showModelCB.push_back(site);
