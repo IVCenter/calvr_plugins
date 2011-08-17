@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<Plugin>
+<ArtifactVis value="on" />
+ <ArtifactVis>
+          <Database value="/data/ArtifactVis/artifact-databank/artifactslist.txt" />
+          <ArchInterfaceFolder value="/home/cdefanti/ArchInterface/" />
+          <TopoFile value="/data/ArtifactVis/3d-model/Ken3dv3.wrl" />
+          <PicFolder value="/data/ArtifactVis/pictures/AllPics/" />
+          <DCInfoFile value="/home/cdefanti/calvr/plugins/calit2/ArtifactVis/DCCategories.txt" />
+          <LociFile value="/home/cdefanti/calvr/plugins/calit2/ArtifactVis/AreaMLociDepth.kml" />
+          <ArtifactFileList value="/home/covise/data/3DArtifacts.txt" />
+          <MaxVisibleRange value="1000000000.0" />
+          <Offset>
+            <X value="-304670000.000" />
+            <Y value="1450800.00" />
+            <Z value="-354990000.00" />
+          </Offset>
+          <Site>
+            <Longitude value="35.491239" />
+            <Latitude value="30.628039" />
+            <!--Height value="0" /-->
+            <!--Scale value="1" /-->
+          </Site>
+          <Tessellation value=".2" />
+          <ArtifactPanel x="-200" y="25" z="100" scale="1.0" />
+        </ArtifactVis>
+</Plugin>
