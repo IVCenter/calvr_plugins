@@ -2,6 +2,7 @@
 #include "SketchLine.h"
 #include "SketchRibbon.h"
 
+#include <config/ConfigManager.h>
 #include <kernel/PluginHelper.h>
 #include <kernel/InteractionManager.h>
 
@@ -134,6 +135,9 @@ bool Sketch::init()
 
     _colorSelector = new ColorSelector(_color);
     //_colorSelector->setVisible(true);
+    osg::Vec3 pos = ConfigManager::getVec3("Plugin.Sketch.ColorSelector");
+    _colorSelector->setPosition(pos);
+
 
     return true;
 }
