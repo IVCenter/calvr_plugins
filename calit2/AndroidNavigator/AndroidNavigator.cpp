@@ -48,16 +48,7 @@ bool AndroidNavigator::init()
     if(ComController::instance()->isMaster())
     {
         status = true;
-        _andMenu = new SubMenu("AndroidNavigator", "AndroidNavigator");
-        _andMenu->setCallback(this);
-    
-        _isOn = new MenuCheckbox("On", false);
-        _isOn->setCallback(this);
-        _andMenu->addItem(_isOn);
-        MenuSystem::instance()->addMenuItem(_andMenu);
-
         makeThread();
-
         ComController::instance()->sendSlaves((char *)&status, sizeof(bool));
     }
 
@@ -97,6 +88,13 @@ bool AndroidNavigator::init()
     trans4->setMatrix(markTrans);
     SceneManager::instance()->getObjectsRoot()->addChild(_root);
     */
+    _andMenu = new SubMenu("AndroidNavigator", "AndroidNavigator");
+    _andMenu->setCallback(this);
+    
+    //_isOn = new MenuCheckbox("On", false);
+    //_isOn->setCallback(this);
+    //_andMenu->addItem(_isOn);
+    MenuSystem::instance()->addMenuItem(_andMenu);
     
     tracker = new TrackingInteractionEvent;
     Vec3 location = Vec3(0.0, 1.0, 0.0) * PluginHelper::getObjectMatrix();
@@ -291,6 +289,7 @@ void AndroidNavigator::preFrame()
                     // For DRIVE movement
                     rz += angle[1] * VELO_CONST/2;
                     y += velocity;
+                    z += angle[2]; // For vertical movement                    
                     break;
                 case 2:
                     // For MOVE_WORLD movement
@@ -299,7 +298,7 @@ void AndroidNavigator::preFrame()
                 case 3:
                     // New fly mode -- moves like a plane
                     rx += angle[2];
-                    ry += angle[0]; 
+                    ry -= coord[0] * .5; // Fixes orientation 
                     rz += angle[1];
                     y += velocity;
                     break;
