@@ -147,14 +147,6 @@ bool ArtifactVis::init()
     _selectionStatsPanel->setVisible(false);
 
     std::cerr << "ArtifactVis init done.\n";
-#ifdef WITH_OSSIMPLANET
-    if(OssimPlanet::instance() && OssimPlanet::instance()->addModel(_root,ConfigManager::getFloat("Plugins.ArtifactVis.Site.Latitude",0),
-                    ConfigManager::getFloat("Plugins.ArtifactVis.Site.Longitude",0),
-		    osg::Vec3(0.6, 0.6, 0.6), 0.0, 0.0, 0.0, 135.0))
-    {
-        cout << "Loaded into OssimPlanet." << endl;
-    }
-#endif
     return true;
 }
 
@@ -298,6 +290,13 @@ std::vector<string> ArtifactVis::getSelectedQueries()
 }
 void ArtifactVis::menuCallback(MenuItem* menuItem)
 {
+#ifdef WITH_OSSIMPLANET
+    if(!_ossim&&OssimPlanet::instance())
+    {
+        _ossim = true;
+        cout << "Loaded into OssimPlanet." << endl;
+    }
+#endif
     for(int i = 0; i < _showModelCB.size(); i++)
     {
         if(menuItem == _showModelCB[i])
@@ -852,22 +851,41 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
     {
         //cerr<<"Creating object "<<++objCount<<" out of"<<artCount<<endl;
         Vec3f position((*item)->pos[0], (*item)->pos[1], (*item)->pos[2]);
-        Matrixd trans;
-        trans.makeTranslate(position);
-        Matrixd scale;
-        scale.makeScale(M_TO_MM*LATLONG_FACTOR, M_TO_MM*LATLONG_FACTOR, M_TO_MM);
-        Matrixd rot1;
-        rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
-        Matrixd rot2;
-        rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
-        Matrixd mirror;
-        mirror.makeScale(1, -1, 1);
-        Matrixd offsetMat;
-        offsetMat.makeTranslate(offset);
-        osg::Vec3d pos = osg::Vec3d(0,0,0) * mirror * trans * scale * mirror * rot2 * rot1 * offsetMat;
-        (*item)->modelPos = pos;
-        center+=pos;
+        osg::Vec3d pos;
+        if(!_ossim)
+        {
+            Matrixd trans;
+            trans.makeTranslate(position);
+            Matrixd scale;
+            scale.makeScale(M_TO_MM*LATLONG_FACTOR, M_TO_MM*LATLONG_FACTOR, M_TO_MM);
+            Matrixd rot1;
+            rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
+            Matrixd rot2;
+            rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
+            Matrixd mirror;
+            mirror.makeScale(1, -1, 1);
+            Matrixd offsetMat;
+            offsetMat.makeTranslate(offset);
+            pos = osg::Vec3d(0,0,0) * mirror * trans * scale * mirror * rot2 * rot1 * offsetMat;
+            (*item)->modelPos = pos;
+            center+=pos;
+        }
+        else
+        {
+            pos = position;
+            center+=pos;
+            (*item)->modelPos = pos;
+        }
+    }
+    center/=artifacts.size();
+    for(item = artifacts.begin(); item < artifacts.end();item++)
+    {
+        if(_ossim)
+        {
+            (*item)->modelPos-=center;
+        }
         //if(artCount < 250){     //NOTE: Models not yet implemented, so spheres are always on for now.
+        Vec3d pos = (*item)->modelPos;
         if(true)
         {
             Drawable* g = createObject((*item)->dc,tessellation, pos);
@@ -894,7 +912,6 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
         (*item)->label->setCharacterSize(50);
         (*item)->label->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
     }
-    center/=artifacts.size();
     query->center = center;
     cerr << "done" << endl;
     
@@ -910,8 +927,11 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
     cf->setMode(osg::CullFace::BACK);
   
     ss->setAttributeAndModes( cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-
-    root_node->addChild(sphereGeode);
+    cout << center.x() << ", " << center.y() << endl;
+    if(_ossim)
+        OssimPlanet::instance()->addModel(sphereGeode,center.y(),center.x(),Vec3(1.0,1.0,1.0),0,0,0,0);
+    else
+        root_node->addChild(sphereGeode);
 }
 
 Drawable * ArtifactVis::createObject(std::string dc, float tessellation, Vec3d & pos)
