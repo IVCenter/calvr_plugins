@@ -65,13 +65,7 @@ bool ArtifactVis::init()
     _displayMenu = new SubMenu("Display");
     _avMenu->addItem(_displayMenu);
 
-    _modelDisplayMenu = new SubMenu("Models");
-    _displayMenu->addItem(_modelDisplayMenu);
 
-    _pcDisplayMenu = new SubMenu("Point Clouds");
-    _displayMenu->addItem(_pcDisplayMenu);
-
-    setupSiteMenu();
 
     setupQuerySelectMenu();
 
@@ -127,7 +121,6 @@ bool ArtifactVis::init()
     SceneManager::instance()->getObjectsRoot()->addChild(_root);
 
     //_my_own_root = new LOD();
-
     _sphereRadius = 5.0;
     _activeArtifact  = -1;
     //_LODmaxRange = ConfigManager::getFloat("Plugins.ArtifactVis.MaxVisibleRange", 30.0);
@@ -294,9 +287,12 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
     if(!_ossim&&OssimPlanet::instance())
     {
         _ossim = true;
+        _sphereRadius /= 1000;
         cout << "Loaded into OssimPlanet." << endl;
     }
 #endif
+    if(!_modelDisplayMenu)
+        setupSiteMenu();
     for(int i = 0; i < _showModelCB.size(); i++)
     {
         if(menuItem == _showModelCB[i])
@@ -305,7 +301,7 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
 	    {
                 if(_siteRoot[i]->getNumChildren()==0)
 		    readSiteFile(i);
-
+                if(!_ossim)
 	        _root->addChild(_siteRoot[i]);
 	    }
 	    else
@@ -666,7 +662,7 @@ void ArtifactVis::preFrame()
             {
                 Vec3f vec2 = allArtifacts[j]->modelPos*objMat;
                 double angle = acos(vec1*vec2/(vec1.length()*vec2.length()));
-                if(angle  < atan2(1,60))
+                if(angle  < atan2(1,24))
                 {
                     allArtifacts[j]->showLabel = false;
                 }
@@ -702,8 +698,8 @@ void ArtifactVis::setActiveArtifact(int art, int q)
                  ss << artifacts[art]->fields.at(i) << " " << artifacts[art]->values.at(i) << endl;
             }
             ss << "Position: " << endl;
-            ss << "-Latitude: " << artifacts[art]->pos[0] << endl;
-            ss << "-Longitude: " << artifacts[art]->pos[1] << endl;
+            ss << "-Longitude: " << artifacts[art]->pos[0] << endl;
+            ss << "-Latitude: " << artifacts[art]->pos[1] << endl;
             ss << "-Altitude: " << artifacts[art]->pos[2] << endl;
 
             _artifactPanel->updateTabWithText("Info",ss.str());
@@ -929,7 +925,7 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
     ss->setAttributeAndModes( cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
     cout << center.x() << ", " << center.y() << endl;
     if(_ossim)
-        OssimPlanet::instance()->addModel(sphereGeode,center.y(),center.x(),Vec3(1.0,1.0,1.0),0,0,0,0);
+        OssimPlanet::instance()->addModel(sphereGeode,center.y(),center.x(),Vec3(1.0,1.0,1.0),10,0,0,0);
     else
         root_node->addChild(sphereGeode);
 }
@@ -1046,19 +1042,28 @@ void ArtifactVis::readSiteFile(int index)
             scaleMat.makeScale(_siteScale[index]*INCH_IN_MM);
             siteScale->setMatrix(scaleMat);
             siteScale->addChild(modelFileNode);
-            MatrixTransform * siteRot = new MatrixTransform();
-            Matrixd rot1;
-            rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
-            Matrixd rot2;
-            rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
-            siteRot->setMatrix(rot2);
-            siteRot->addChild(siteScale);
-            MatrixTransform * siteTrans = new MatrixTransform();
-            Matrix transMat;
-            transMat.makeTranslate(_sitePos[index]);
-            siteTrans->setMatrix(transMat);
-            siteTrans->addChild(siteRot);
-	    _siteRoot[index]->addChild(siteTrans);
+            if(_ossim)
+            {
+                _siteRoot[index]->addChild(siteScale);
+                OssimPlanet::instance()->addModel(_siteRoot[index],_sitePos[index].y(),_sitePos[index].x(),Vec3f(1,1,1),0,0,0,0);
+                cout << _sitePos[index].y() << ", " << _sitePos[index].x() << endl;
+            }
+            else
+            {
+                MatrixTransform * siteRot = new MatrixTransform();
+                Matrixd rot1;
+                rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
+                Matrixd rot2;
+                rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
+                siteRot->setMatrix(rot2);
+                siteRot->addChild(siteScale);
+                MatrixTransform * siteTrans = new MatrixTransform();
+                Matrix transMat;
+                transMat.makeTranslate(_sitePos[index]);
+                siteTrans->setMatrix(transMat);
+                siteTrans->addChild(siteRot);
+                _siteRoot[index]->addChild(siteTrans);
+            }
 
 	    StateSet * ss=_siteRoot[index]->getOrCreateStateSet();
 	    ss->setMode(GL_LIGHTING, StateAttribute::ON | osg::StateAttribute::OVERRIDE);
@@ -1165,21 +1170,29 @@ void ArtifactVis::readLocusFile(QueryGroup * query)
                 child = child->next;
             }
             Vec3d position = Vec3d(pos[0],pos[1],pos[2]);
-            Matrixd trans;
-            trans.makeTranslate(position);
-            Matrixd scale;
-            scale.makeScale(M_TO_MM*LATLONG_FACTOR, M_TO_MM*LATLONG_FACTOR, M_TO_MM);
-            Matrixd rot1;
-            rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
-            Matrixd rot2;
-            rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
-            Matrixd mirror;
-            mirror.makeScale(1, -1, 1);
-            Matrixd offsetMat;
-            offsetMat.makeTranslate(offset);
-            osg::Vec3d posVec = osg::Vec3d(0,0,0) * mirror * trans * scale * mirror * rot2 * rot1 * offsetMat ;
-            loc->coordsTop.push_back(posVec);
-            coords->push_back(posVec);
+            if(_ossim)
+            {
+                loc->coordsTop.push_back(position);
+                coords->push_back(position);
+            }
+            else
+            {
+                Matrixd trans;
+                trans.makeTranslate(position);
+                Matrixd scale;
+                scale.makeScale(M_TO_MM*LATLONG_FACTOR, M_TO_MM*LATLONG_FACTOR, M_TO_MM);
+                Matrixd rot1;
+                rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
+                Matrixd rot2;
+                rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
+                Matrixd mirror;
+                mirror.makeScale(1, -1, 1);
+                Matrixd offsetMat;
+                offsetMat.makeTranslate(offset);
+                osg::Vec3d posVec = osg::Vec3d(0,0,0) * mirror * trans * scale * mirror * rot2 * rot1 * offsetMat ;
+                loc->coordsTop.push_back(posVec);
+                coords->push_back(posVec);
+            }
         }
         coords->pop_back();
         coord_node = mxmlFindElement(node, tree, "coordBottom", NULL, NULL, MXML_DESCEND);
@@ -1197,21 +1210,29 @@ void ArtifactVis::readLocusFile(QueryGroup * query)
                 child = child->next;
             }
             Vec3d position = Vec3d(pos[0],pos[1],pos[2]);
-            Matrixd trans;
-            trans.makeTranslate(position);
-            Matrixd scale;
-            scale.makeScale(M_TO_MM*LATLONG_FACTOR, M_TO_MM*LATLONG_FACTOR, M_TO_MM);
-            Matrixd rot1;
-            rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
-            Matrixd rot2;
-            rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
-            Matrixd mirror;
-            mirror.makeScale(1, -1, 1);
-            Matrixd offsetMat;
-            offsetMat.makeTranslate(offset);
-            osg::Vec3d posVec = osg::Vec3d(0,0,0) * mirror * trans * scale * mirror * rot2 * rot1 * offsetMat;
-            loc->coordsBot.push_back(posVec);
-            coords->push_back(posVec);
+            if(_ossim)
+            {
+                loc->coordsBot.push_back(position);
+                coords->push_back(position);
+            }
+            else
+            {
+                Matrixd trans;
+                trans.makeTranslate(position);
+                Matrixd scale;
+                scale.makeScale(M_TO_MM*LATLONG_FACTOR, M_TO_MM*LATLONG_FACTOR, M_TO_MM);
+                Matrixd rot1;
+                rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
+                Matrixd rot2;
+                rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
+                Matrixd mirror;
+                mirror.makeScale(1, -1, 1);
+                Matrixd offsetMat;
+                offsetMat.makeTranslate(offset);
+                osg::Vec3d posVec = osg::Vec3d(0,0,0) * mirror * trans * scale * mirror * rot2 * rot1 * offsetMat;
+                loc->coordsBot.push_back(posVec);
+                coords->push_back(posVec);
+            }
         }
         coords->pop_back();
         int size = coords->size()/2;
@@ -1332,10 +1353,17 @@ void ArtifactVis::readLocusFile(QueryGroup * query)
     }
     center/=query->loci.size();
     query->center = center;
+    if(_ossim)
+        OssimPlanet::instance()->addModel(query->sphereRoot,center.y(),center.x(),Vec3(1,1,1),10,0,0,0);
     std::cerr << "Loci Loaded." << std::endl;
 }
 void ArtifactVis::setupSiteMenu()
 {
+    _modelDisplayMenu = new SubMenu("Models");
+    _displayMenu->addItem(_modelDisplayMenu);
+
+    _pcDisplayMenu = new SubMenu("Point Clouds");
+    _displayMenu->addItem(_pcDisplayMenu);
     cout << "Generating Model menu..."<<endl; 
     string file = ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").append("Model/KISterrain2.kml");
     FILE * fp = fopen(file.c_str(),"r");
@@ -1416,7 +1444,17 @@ void ArtifactVis::setupSiteMenu()
         else
         {
             _siteRoot.push_back(new MatrixTransform());
-            Vec3d pos = Vec3d(0,0,0) * mirror * transMat * scaleMat * mirror * rot2 * rot1 * offsetMat;
+            Vec3d pos;
+            if(_ossim)
+            {
+                pos = position;
+                cout << "Ossim position: ";
+            }
+            else
+            {
+                pos = Vec3d(0,0,0) * mirror * transMat * scaleMat * mirror * rot2 * rot1 * offsetMat;
+            }
+            cout << pos[0] << ", " << pos[1] << ", " << pos[2] << endl;
             _modelDisplayMenu->addItem(site); 
             _showModelCB.push_back(site);
             _sitePos.push_back(pos);
