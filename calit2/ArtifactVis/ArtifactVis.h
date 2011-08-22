@@ -120,6 +120,7 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
             std::string current_query;
         };
         osg::Node * _models[676];
+        bool _modelLoaded[676];
         cvr::SubMenu * _modelDisplayMenu;
         std::vector<cvr::MenuCheckbox *> _showModelCB;
         cvr::SubMenu * _pcDisplayMenu;

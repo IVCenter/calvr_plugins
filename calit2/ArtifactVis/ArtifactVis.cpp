@@ -823,7 +823,11 @@ void ArtifactVis::listArtifacts()
         }
     }
 }
-
+bool modelExists(const char * filename)
+{
+    ifstream ifile(filename);
+    return ifile;
+}
 void ArtifactVis::displayArtifacts(QueryGroup * query)
 {   
     Group * root_node = query->sphereRoot;
@@ -880,9 +884,9 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
         {
             (*item)->modelPos-=center;
         }
-        //if(artCount < 250){     //NOTE: Models not yet implemented, so spheres are always on for now.
         Vec3d pos = (*item)->modelPos;
-        if(true)
+        string modelPath = ConfigManager::getEntry("Plugin.ArtifactVis.3DModelFolder").append((*item)->dc.substr(0,2)+"/"+(*item)->dc.substr(0,2)+".obj");
+        if(!modelExists(modelPath.c_str()))
         {
             Drawable* g = createObject((*item)->dc,tessellation, pos);
             g->setUseDisplayList(false);
@@ -893,10 +897,16 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
         {
             PositionAttitudeTransform* modelTrans = new PositionAttitudeTransform();
             Matrixd scale;
-            scale.makeScale(1,1,1);
+            scale.makeScale(10,10,10);
             MatrixTransform* scaleTrans = new MatrixTransform();
             scaleTrans->setMatrix(scale);
-            scaleTrans->addChild(_models[0]);
+            int dcInt = dc2Int((*item)->dc);
+            if(!_modelLoaded[dcInt])
+            {
+                _modelLoaded[dcInt] = true;
+                _models[dcInt] = osgDB::readNodeFile(modelPath); 
+            }
+            scaleTrans->addChild(_models[dcInt]);
             modelTrans->setPosition(pos);
             modelTrans->addChild(scaleTrans);
             root_node->addChild(modelTrans);
