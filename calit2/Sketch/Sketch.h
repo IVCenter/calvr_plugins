@@ -1,12 +1,17 @@
 #ifndef SKETCH_PLUGIN_H
 #define SKETCH_PLUGIN_H
 
+#include "SketchObject.h"
+#include "SketchLine.h"
+#include "ColorSelector.h"
+
 #include <kernel/CVRPlugin.h>
 
 #include <menu/SubMenu.h>
 #include <menu/MenuTextButtonSet.h>
 #include <menu/MenuRangeValue.h>
 #include <menu/MenuCheckbox.h>
+#include <menu/MenuButton.h>
 
 #include <osg/Geode>
 #include <osg/MatrixTransform>
@@ -43,13 +48,13 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback
             SHAPE
         };
 
-        enum LineType
+        /*enum LineType
         {
             LINE_NONE = -1,
             SEGMENT,
             MULTI_SEGMENT,
             FREEHAND
-        };
+        };*/
 
         enum ShapeType
         {
@@ -72,10 +77,12 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback
         void removeMenuItems(DrawMode dm);
         void addMenuItems(DrawMode dm);
         void finishGeometry();
+        void createGeometry();
 
         cvr::SubMenu * _sketchMenu;
         cvr::MenuTextButtonSet * _modeButtons;
         cvr::MenuRangeValue * _sizeRV;
+        cvr::MenuCheckbox * _csCB;
 
         cvr::MenuTextButtonSet * _lineType;
         cvr::MenuCheckbox * _lineTube;
@@ -84,8 +91,10 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuTextButtonSet * _shapeType;
         cvr::MenuCheckbox * _shapeWireframe;
 
+        cvr::MenuButton * _saveButton;
+
         DrawMode _mode;
-        LineType _lt;
+        SketchLine::LineType _lt;
         ShapeType _st;
 
         std::string _dir;
@@ -114,6 +123,11 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback
         osg::Geometry * _currentGeometry;
 
         std::map<double, osg::ref_ptr<osg::Geometry> > _geometryMap;
+
+        SketchObject * _activeObject;
+        std::vector<SketchObject*> _objectList;
+
+        ColorSelector * _colorSelector;
 };
 
 #endif
