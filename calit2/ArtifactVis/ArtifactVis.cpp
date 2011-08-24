@@ -67,6 +67,7 @@ bool ArtifactVis::init()
     _displayMenu = new SubMenu("Display");
     _avMenu->addItem(_displayMenu);
 
+    setupSiteMenu();
 
 
     setupQuerySelectMenu();
@@ -160,7 +161,7 @@ void ArtifactVis::loadModels()
             stringstream ss;
             ss << c1 << c2;
             string dc = ss.str();
-            string modelPath = ConfigManager::getEntry("Plugin.ArtifactVis.3DModelFolder").append(dc+"/"+dc+".obj");
+            string modelPath = ConfigManager::getEntry("Plugin.ArtifactVis.3DModelFolder").append(dc+"/"+dc+"_old.obj");
             if(modelExists(modelPath.c_str()))
             {
                 _models[i*26+j] = osgDB::readNodeFile(modelPath); 
@@ -168,6 +169,7 @@ void ArtifactVis::loadModels()
             }
             else
             {
+                _models[i*26+j] = NULL;
                 _modelLoaded[i*26+j] = false;
             }
         }
@@ -316,8 +318,6 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
         cout << "Loaded into OssimPlanet." << endl;
     }
 #endif
-    if(!_modelDisplayMenu)
-        setupSiteMenu();
     for(int i = 0; i < _showModelCB.size(); i++)
     {
         if(menuItem == _showModelCB[i])
@@ -394,7 +394,6 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
                  {
                      displayArtifacts(_query[0]);
                      _query[0]->updated = false;
-                     _root->addChild(_query[0]->sphereRoot);
                  }
             }
             if(_queryOption[1]->getValue())
@@ -402,7 +401,6 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
                  if((*t)->name.find("sf",0)==string::npos)
                  {
                      _query[1]->updated = false;
-                     _root->addChild(_query[1]->sphereRoot);
                  }
             }
             setupQuerySelectMenu();
@@ -930,8 +928,10 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
             modelTrans->setPosition(pos);
             modelTrans->addChild(scaleTrans);
             root_node->addChild(modelTrans);
+            (*item)->drawable = (*item)->label;
         }
         sphereGeode->addDrawable((*item)->label);
+        (*item)->label->setUseDisplayList(false);
         (*item)->label->setAxisAlignment(osgText::Text::SCREEN);
         (*item)->label->setPosition((*item)->modelPos+Vec3f(0,0,_sphereRadius*1.1));
         (*item)->label->setAlignment(osgText::Text::CENTER_CENTER);
