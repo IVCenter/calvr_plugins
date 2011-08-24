@@ -52,6 +52,8 @@ bool ArtifactVis::init()
     std::cerr << "ArtifactVis init\n";
     _root = new osg::MatrixTransform();
 
+
+    loadModels();
     //_models[0] = osgDB::readNodeFile("");
 
     for(int i = 0; i < 729; i++)
@@ -147,7 +149,30 @@ bool ArtifactVis::init()
 ArtifactVis::~ArtifactVis()
 {
 }
-
+void ArtifactVis::loadModels()
+{
+    for(int i = 0; i < 26; i++)
+    {
+        for(int j = 0 ; j < 26; j++)
+        {
+            char c1 = i+65;
+            char c2 = j+65;
+            stringstream ss;
+            ss << c1 << c2;
+            string dc = ss.str();
+            string modelPath = ConfigManager::getEntry("Plugin.ArtifactVis.3DModelFolder").append(dc+"/"+dc+".obj");
+            if(modelExists(modelPath.c_str()))
+            {
+                _models[i*26+j] = osgDB::readNodeFile(modelPath); 
+                _modelLoaded[i*26+j] = true;
+            }
+            else
+            {
+                _modelLoaded[i*26+j] = false;
+            }
+        }
+    }
+}
 bool ArtifactVis::buttonEvent(int type, int button, int hand, const osg::Matrix & mat)
 {
     if((type == BUTTON_DOWN || type == BUTTON_DOUBLE_CLICK) && hand == 0 && button == 0)
@@ -823,7 +848,7 @@ void ArtifactVis::listArtifacts()
         }
     }
 }
-bool modelExists(const char * filename)
+bool ArtifactVis::modelExists(const char * filename)
 {
     ifstream ifile(filename);
     return ifile;
@@ -838,7 +863,7 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
     const double M_TO_MM = 100.0f;
     const double LATLONG_FACTOR = 100000.0f;
     std::vector<Artifact*> artifacts = query->artifacts;
-    cerr << "Creating " << artifacts.size() << " artifacts...";
+    cerr << "Creating " << artifacts.size() << " artifacts..." << endl;
     vector<Artifact*>::iterator item = artifacts.begin();
     float tessellation = ConfigManager::getFloat("Plugin.ArtifactVis.Tessellation",.2);
     Vec3f offset = Vec3f(
@@ -849,8 +874,7 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
     Vec3f center(0,0,0);
     for (; item < artifacts.end();item++)
     {
-        //cerr<<"Creating object "<<++objCount<<" out of"<<artCount<<endl;
-        Vec3f position((*item)->pos[0], (*item)->pos[1], (*item)->pos[2]);
+        Vec3d position((*item)->pos[0], (*item)->pos[1], (*item)->pos[2]);
         osg::Vec3d pos;
         if(!_ossim)
         {
@@ -880,13 +904,15 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
     center/=artifacts.size();
     for(item = artifacts.begin(); item < artifacts.end();item++)
     {
+        //cerr<<"Creating object "<<(item-artifacts.begin())<<" out of "<<artifacts.size()<<endl;
         if(_ossim)
         {
             (*item)->modelPos-=center;
         }
         Vec3d pos = (*item)->modelPos;
-        string modelPath = ConfigManager::getEntry("Plugin.ArtifactVis.3DModelFolder").append((*item)->dc.substr(0,2)+"/"+(*item)->dc.substr(0,2)+".obj");
-        if(!modelExists(modelPath.c_str()))
+        int dcInt = dc2Int((*item)->dc);
+        //if(!_modelLoaded[dcInt])
+        if(true)
         {
             Drawable* g = createObject((*item)->dc,tessellation, pos);
             g->setUseDisplayList(false);
@@ -897,15 +923,9 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
         {
             PositionAttitudeTransform* modelTrans = new PositionAttitudeTransform();
             Matrixd scale;
-            scale.makeScale(10,10,10);
+            scale.makeScale(3,3,3);
             MatrixTransform* scaleTrans = new MatrixTransform();
             scaleTrans->setMatrix(scale);
-            int dcInt = dc2Int((*item)->dc);
-            if(!_modelLoaded[dcInt])
-            {
-                _modelLoaded[dcInt] = true;
-                _models[dcInt] = osgDB::readNodeFile(modelPath); 
-            }
             scaleTrans->addChild(_models[dcInt]);
             modelTrans->setPosition(pos);
             modelTrans->addChild(scaleTrans);
@@ -935,7 +955,11 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
     ss->setAttributeAndModes( cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
     cout << center.x() << ", " << center.y() << endl;
     if(_ossim)
+    {
+#ifdef WITH_OSSIMPLANET
         OssimPlanet::instance()->addModel(sphereGeode,center.y(),center.x(),Vec3(1.0,1.0,1.0),10,0,0,0);
+#endif
+    }
     else
         root_node->addChild(sphereGeode);
 }
@@ -1055,7 +1079,9 @@ void ArtifactVis::readSiteFile(int index)
             if(_ossim)
             {
                 _siteRoot[index]->addChild(siteScale);
+#ifdef WITH_OSSIMPLANET
                 OssimPlanet::instance()->addModel(_siteRoot[index],_sitePos[index].y(),_sitePos[index].x(),Vec3f(1,1,1),0,0,0,0);
+#endif
                 cout << _sitePos[index].y() << ", " << _sitePos[index].x() << endl;
             }
             else
@@ -1363,8 +1389,10 @@ void ArtifactVis::readLocusFile(QueryGroup * query)
     }
     center/=query->loci.size();
     query->center = center;
+#ifdef WITH_OSSIMPLANET
     if(_ossim)
         OssimPlanet::instance()->addModel(query->sphereRoot,center.y(),center.x(),Vec3(1,1,1),10,0,0,0);
+#endif
     std::cerr << "Loci Loaded." << std::endl;
 }
 void ArtifactVis::setupSiteMenu()

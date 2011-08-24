@@ -196,6 +196,8 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
         void setupQueryMenu(Table * table);
         void updateSelect();
         std::string getCurrentQuery(Table * t);
+        bool modelExists(const char * filename);
+        void loadModels();
 };
 
 #endif
