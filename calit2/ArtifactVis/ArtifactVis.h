@@ -120,6 +120,7 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
             std::string current_query;
         };
         osg::Node * _models[676];
+        bool _modelLoaded[676];
         cvr::SubMenu * _modelDisplayMenu;
         std::vector<cvr::MenuCheckbox *> _showModelCB;
         cvr::SubMenu * _pcDisplayMenu;
@@ -174,6 +175,7 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
         float _sphereRadius;
         int _activeArtifact;
         bool _selectActive;
+        bool _ossim;
        
         std::string getTimeModified(std::string file); 
         int dc2Int(std::string dc);
@@ -194,6 +196,8 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
         void setupQueryMenu(Table * table);
         void updateSelect();
         std::string getCurrentQuery(Table * t);
+        bool modelExists(const char * filename);
+        void loadModels();
 };
 
 #endif

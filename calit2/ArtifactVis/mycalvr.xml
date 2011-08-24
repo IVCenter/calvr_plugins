@@ -1,5 +1,9 @@
 <?xml version="1.0"?>
 <Plugin>
+<OssimPlanet value="on" />
+ <OssimPlanet>
+          <ConfigFile value="/home/cdefanti/calvr/plugins/calit2/OssimPlanet/kwl/ivl.kwl" />
+ </OssimPlanet>
 <ArtifactVis value="on" />
  <ArtifactVis>
           <Database value="/data/ArtifactVis/artifact-databank/artifactslist.txt" />

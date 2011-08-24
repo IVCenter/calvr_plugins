@@ -52,6 +52,8 @@ bool ArtifactVis::init()
     std::cerr << "ArtifactVis init\n";
     _root = new osg::MatrixTransform();
 
+
+    loadModels();
     //_models[0] = osgDB::readNodeFile("");
 
     for(int i = 0; i < 729; i++)
@@ -65,13 +67,7 @@ bool ArtifactVis::init()
     _displayMenu = new SubMenu("Display");
     _avMenu->addItem(_displayMenu);
 
-    _modelDisplayMenu = new SubMenu("Models");
-    _displayMenu->addItem(_modelDisplayMenu);
 
-    _pcDisplayMenu = new SubMenu("Point Clouds");
-    _displayMenu->addItem(_pcDisplayMenu);
-
-    setupSiteMenu();
 
     setupQuerySelectMenu();
 
@@ -127,8 +123,7 @@ bool ArtifactVis::init()
     SceneManager::instance()->getObjectsRoot()->addChild(_root);
 
     //_my_own_root = new LOD();
-
-    _sphereRadius = 25.0;
+    _sphereRadius = 5.0;
     _activeArtifact  = -1;
     //_LODmaxRange = ConfigManager::getFloat("Plugins.ArtifactVis.MaxVisibleRange", 30.0);
 
@@ -154,7 +149,30 @@ bool ArtifactVis::init()
 ArtifactVis::~ArtifactVis()
 {
 }
-
+void ArtifactVis::loadModels()
+{
+    for(int i = 0; i < 26; i++)
+    {
+        for(int j = 0 ; j < 26; j++)
+        {
+            char c1 = i+65;
+            char c2 = j+65;
+            stringstream ss;
+            ss << c1 << c2;
+            string dc = ss.str();
+            string modelPath = ConfigManager::getEntry("Plugin.ArtifactVis.3DModelFolder").append(dc+"/"+dc+".obj");
+            if(modelExists(modelPath.c_str()))
+            {
+                _models[i*26+j] = osgDB::readNodeFile(modelPath); 
+                _modelLoaded[i*26+j] = true;
+            }
+            else
+            {
+                _modelLoaded[i*26+j] = false;
+            }
+        }
+    }
+}
 bool ArtifactVis::buttonEvent(int type, int button, int hand, const osg::Matrix & mat)
 {
     if((type == BUTTON_DOWN || type == BUTTON_DOUBLE_CLICK) && hand == 0 && button == 0)
@@ -290,14 +308,25 @@ std::vector<string> ArtifactVis::getSelectedQueries()
 }
 void ArtifactVis::menuCallback(MenuItem* menuItem)
 {
+#ifdef WITH_OSSIMPLANET
+    if(!_ossim&&OssimPlanet::instance())
+    {
+        _ossim = true;
+        _sphereRadius /= 1000;
+        cout << "Loaded into OssimPlanet." << endl;
+    }
+#endif
+    if(!_modelDisplayMenu)
+        setupSiteMenu();
     for(int i = 0; i < _showModelCB.size(); i++)
     {
         if(menuItem == _showModelCB[i])
         {
             if(_showModelCB[i]->getValue())
 	    {
-		readSiteFile(i);
-
+                if(_siteRoot[i]->getNumChildren()==0)
+		    readSiteFile(i);
+                if(!_ossim)
 	        _root->addChild(_siteRoot[i]);
 	    }
 	    else
@@ -312,7 +341,8 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
         {
             if(_showPCCB[i]->getValue())
 	    {
-		readPointCloud(i);
+                if(_pcRoot[i]->getNumChildren()==0)
+		    readPointCloud(i);
 
 	        _root->addChild(_pcRoot[i]);
 	    }
@@ -693,8 +723,8 @@ void ArtifactVis::setActiveArtifact(int art, int q)
                  ss << artifacts[art]->fields.at(i) << " " << artifacts[art]->values.at(i) << endl;
             }
             ss << "Position: " << endl;
-            ss << "-Latitude: " << artifacts[art]->pos[0] << endl;
-            ss << "-Longitude: " << artifacts[art]->pos[1] << endl;
+            ss << "-Longitude: " << artifacts[art]->pos[0] << endl;
+            ss << "-Latitude: " << artifacts[art]->pos[1] << endl;
             ss << "-Altitude: " << artifacts[art]->pos[2] << endl;
 
             _artifactPanel->updateTabWithText("Info",ss.str());
@@ -818,7 +848,11 @@ void ArtifactVis::listArtifacts()
         }
     }
 }
-
+bool ArtifactVis::modelExists(const char * filename)
+{
+    ifstream ifile(filename);
+    return ifile;
+}
 void ArtifactVis::displayArtifacts(QueryGroup * query)
 {   
     Group * root_node = query->sphereRoot;
@@ -829,7 +863,7 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
     const double M_TO_MM = 100.0f;
     const double LATLONG_FACTOR = 100000.0f;
     std::vector<Artifact*> artifacts = query->artifacts;
-    cerr << "Creating " << artifacts.size() << " artifacts...";
+    cerr << "Creating " << artifacts.size() << " artifacts..." << endl;
     vector<Artifact*>::iterator item = artifacts.begin();
     float tessellation = ConfigManager::getFloat("Plugin.ArtifactVis.Tessellation",.2);
     Vec3f offset = Vec3f(
@@ -840,24 +874,44 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
     Vec3f center(0,0,0);
     for (; item < artifacts.end();item++)
     {
-        //cerr<<"Creating object "<<++objCount<<" out of"<<artCount<<endl;
-        Vec3f position((*item)->pos[0], (*item)->pos[1], (*item)->pos[2]);
-        Matrixd trans;
-        trans.makeTranslate(position);
-        Matrixd scale;
-        scale.makeScale(M_TO_MM*LATLONG_FACTOR, M_TO_MM*LATLONG_FACTOR, M_TO_MM);
-        Matrixd rot1;
-        rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
-        Matrixd rot2;
-        rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
-        Matrixd mirror;
-        mirror.makeScale(1, -1, 1);
-        Matrixd offsetMat;
-        offsetMat.makeTranslate(offset);
-        osg::Vec3d pos = osg::Vec3d(0,0,0) * mirror * trans * scale * mirror * rot2 * rot1 * offsetMat;
-        (*item)->modelPos = pos;
-        center+=pos;
-        //if(artCount < 250){     //NOTE: Models not yet implemented, so spheres are always on for now.
+        Vec3d position((*item)->pos[0], (*item)->pos[1], (*item)->pos[2]);
+        osg::Vec3d pos;
+        if(!_ossim)
+        {
+            Matrixd trans;
+            trans.makeTranslate(position);
+            Matrixd scale;
+            scale.makeScale(M_TO_MM*LATLONG_FACTOR, M_TO_MM*LATLONG_FACTOR, M_TO_MM);
+            Matrixd rot1;
+            rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
+            Matrixd rot2;
+            rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
+            Matrixd mirror;
+            mirror.makeScale(1, -1, 1);
+            Matrixd offsetMat;
+            offsetMat.makeTranslate(offset);
+            pos = osg::Vec3d(0,0,0) * mirror * trans * scale * mirror * rot2 * rot1 * offsetMat;
+            (*item)->modelPos = pos;
+            center+=pos;
+        }
+        else
+        {
+            pos = position;
+            center+=pos;
+            (*item)->modelPos = pos;
+        }
+    }
+    center/=artifacts.size();
+    for(item = artifacts.begin(); item < artifacts.end();item++)
+    {
+        //cerr<<"Creating object "<<(item-artifacts.begin())<<" out of "<<artifacts.size()<<endl;
+        if(_ossim)
+        {
+            (*item)->modelPos-=center;
+        }
+        Vec3d pos = (*item)->modelPos;
+        int dcInt = dc2Int((*item)->dc);
+        //if(!_modelLoaded[dcInt])
         if(true)
         {
             Drawable* g = createObject((*item)->dc,tessellation, pos);
@@ -869,10 +923,10 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
         {
             PositionAttitudeTransform* modelTrans = new PositionAttitudeTransform();
             Matrixd scale;
-            scale.makeScale(1,1,1);
+            scale.makeScale(3,3,3);
             MatrixTransform* scaleTrans = new MatrixTransform();
             scaleTrans->setMatrix(scale);
-            scaleTrans->addChild(_models[0]);
+            scaleTrans->addChild(_models[dcInt]);
             modelTrans->setPosition(pos);
             modelTrans->addChild(scaleTrans);
             root_node->addChild(modelTrans);
@@ -884,7 +938,6 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
         (*item)->label->setCharacterSize(50);
         (*item)->label->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
     }
-    center/=artifacts.size();
     query->center = center;
     cerr << "done" << endl;
     
@@ -900,8 +953,15 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
     cf->setMode(osg::CullFace::BACK);
   
     ss->setAttributeAndModes( cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-
-    root_node->addChild(sphereGeode);
+    cout << center.x() << ", " << center.y() << endl;
+    if(_ossim)
+    {
+#ifdef WITH_OSSIMPLANET
+        OssimPlanet::instance()->addModel(sphereGeode,center.y(),center.x(),Vec3(1.0,1.0,1.0),10,0,0,0);
+#endif
+    }
+    else
+        root_node->addChild(sphereGeode);
 }
 
 Drawable * ArtifactVis::createObject(std::string dc, float tessellation, Vec3d & pos)
@@ -977,12 +1037,10 @@ void ArtifactVis::readPointCloud(int index)
     pointGeode->addDrawable(pointCloud);
     StateSet * ss=pointGeode->getOrCreateStateSet();
     ss->setMode(GL_LIGHTING, StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
-    MatrixTransform * pcRoot = new osg::MatrixTransform();
     MatrixTransform * rotTransform = new MatrixTransform();
     Matrix pitchMat;
     Matrix yawMat;
     Matrix rollMat;
-    cout << _pcRot[index].x() << ", " << _pcRot[index].y() << ", " << _pcRot[index].z() << endl;
     pitchMat.makeRotate(DegreesToRadians(_pcRot[index].x()),1,0,0);
     yawMat.makeRotate(DegreesToRadians(_pcRot[index].y()),0,1,0);
     rollMat.makeRotate(DegreesToRadians(_pcRot[index].z()),0,0,1);
@@ -995,11 +1053,10 @@ void ArtifactVis::readPointCloud(int index)
     Matrix posMat;
     posMat.makeTranslate(_pcPos[index]);
     posTransform->setMatrix(posMat);
-    rotTransform->addChild(pointGeode); 
-    scaleTransform->addChild(rotTransform); 
+    rotTransform->addChild(pointGeode);
+    scaleTransform->addChild(rotTransform);
     posTransform->addChild(scaleTransform);
-    pcRoot->addChild(posTransform);
-    _pcRoot.push_back(pcRoot);
+    _pcRoot[index]->addChild(posTransform);
 }
 void ArtifactVis::readSiteFile(int index)
 {
@@ -1010,7 +1067,6 @@ void ArtifactVis::readSiteFile(int index)
     cerr << "Reading site file: " << modelFileName << " ..." << endl;
     if (!modelFileName.empty()) 
     {
-	MatrixTransform * siteRoot = new osg::MatrixTransform();
 	Node* modelFileNode = osgDB::readNodeFile(modelFileName);
 	if (modelFileNode==NULL) cerr << "Error reading file" << endl;
 	else
@@ -1020,21 +1076,32 @@ void ArtifactVis::readSiteFile(int index)
             scaleMat.makeScale(_siteScale[index]*INCH_IN_MM);
             siteScale->setMatrix(scaleMat);
             siteScale->addChild(modelFileNode);
-            MatrixTransform * siteRot = new MatrixTransform();
-            Matrixd rot1;
-            rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
-            Matrixd rot2;
-            rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
-            siteRot->setMatrix(rot2);
-            siteRot->addChild(siteScale);
-            MatrixTransform * siteTrans = new MatrixTransform();
-            Matrix transMat;
-            transMat.makeTranslate(_sitePos[index]);
-            siteTrans->setMatrix(transMat);
-            siteTrans->addChild(siteRot);
-	    siteRoot->addChild(siteTrans);
+            if(_ossim)
+            {
+                _siteRoot[index]->addChild(siteScale);
+#ifdef WITH_OSSIMPLANET
+                OssimPlanet::instance()->addModel(_siteRoot[index],_sitePos[index].y(),_sitePos[index].x(),Vec3f(1,1,1),0,0,0,0);
+#endif
+                cout << _sitePos[index].y() << ", " << _sitePos[index].x() << endl;
+            }
+            else
+            {
+                MatrixTransform * siteRot = new MatrixTransform();
+                Matrixd rot1;
+                rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
+                Matrixd rot2;
+                rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
+                siteRot->setMatrix(rot2);
+                siteRot->addChild(siteScale);
+                MatrixTransform * siteTrans = new MatrixTransform();
+                Matrix transMat;
+                transMat.makeTranslate(_sitePos[index]);
+                siteTrans->setMatrix(transMat);
+                siteTrans->addChild(siteRot);
+                _siteRoot[index]->addChild(siteTrans);
+            }
 
-	    StateSet * ss=siteRoot->getOrCreateStateSet();
+	    StateSet * ss=_siteRoot[index]->getOrCreateStateSet();
 	    ss->setMode(GL_LIGHTING, StateAttribute::ON | osg::StateAttribute::OVERRIDE);
 
 	    Material* mat =new Material();	
@@ -1046,7 +1113,6 @@ void ArtifactVis::readSiteFile(int index)
 
 	    cerr << "File read." << endl;
 	}
-        _siteRoot.push_back(siteRoot);
     }
     else
     {
@@ -1140,21 +1206,29 @@ void ArtifactVis::readLocusFile(QueryGroup * query)
                 child = child->next;
             }
             Vec3d position = Vec3d(pos[0],pos[1],pos[2]);
-            Matrixd trans;
-            trans.makeTranslate(position);
-            Matrixd scale;
-            scale.makeScale(M_TO_MM*LATLONG_FACTOR, M_TO_MM*LATLONG_FACTOR, M_TO_MM);
-            Matrixd rot1;
-            rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
-            Matrixd rot2;
-            rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
-            Matrixd mirror;
-            mirror.makeScale(1, -1, 1);
-            Matrixd offsetMat;
-            offsetMat.makeTranslate(offset);
-            osg::Vec3d posVec = osg::Vec3d(0,0,0) * mirror * trans * scale * mirror * rot2 * rot1 * offsetMat ;
-            loc->coordsTop.push_back(posVec);
-            coords->push_back(posVec);
+            if(_ossim)
+            {
+                loc->coordsTop.push_back(position);
+                coords->push_back(position);
+            }
+            else
+            {
+                Matrixd trans;
+                trans.makeTranslate(position);
+                Matrixd scale;
+                scale.makeScale(M_TO_MM*LATLONG_FACTOR, M_TO_MM*LATLONG_FACTOR, M_TO_MM);
+                Matrixd rot1;
+                rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
+                Matrixd rot2;
+                rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
+                Matrixd mirror;
+                mirror.makeScale(1, -1, 1);
+                Matrixd offsetMat;
+                offsetMat.makeTranslate(offset);
+                osg::Vec3d posVec = osg::Vec3d(0,0,0) * mirror * trans * scale * mirror * rot2 * rot1 * offsetMat ;
+                loc->coordsTop.push_back(posVec);
+                coords->push_back(posVec);
+            }
         }
         coords->pop_back();
         coord_node = mxmlFindElement(node, tree, "coordBottom", NULL, NULL, MXML_DESCEND);
@@ -1172,21 +1246,29 @@ void ArtifactVis::readLocusFile(QueryGroup * query)
                 child = child->next;
             }
             Vec3d position = Vec3d(pos[0],pos[1],pos[2]);
-            Matrixd trans;
-            trans.makeTranslate(position);
-            Matrixd scale;
-            scale.makeScale(M_TO_MM*LATLONG_FACTOR, M_TO_MM*LATLONG_FACTOR, M_TO_MM);
-            Matrixd rot1;
-            rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
-            Matrixd rot2;
-            rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
-            Matrixd mirror;
-            mirror.makeScale(1, -1, 1);
-            Matrixd offsetMat;
-            offsetMat.makeTranslate(offset);
-            osg::Vec3d posVec = osg::Vec3d(0,0,0) * mirror * trans * scale * mirror * rot2 * rot1 * offsetMat;
-            loc->coordsBot.push_back(posVec);
-            coords->push_back(posVec);
+            if(_ossim)
+            {
+                loc->coordsBot.push_back(position);
+                coords->push_back(position);
+            }
+            else
+            {
+                Matrixd trans;
+                trans.makeTranslate(position);
+                Matrixd scale;
+                scale.makeScale(M_TO_MM*LATLONG_FACTOR, M_TO_MM*LATLONG_FACTOR, M_TO_MM);
+                Matrixd rot1;
+                rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
+                Matrixd rot2;
+                rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
+                Matrixd mirror;
+                mirror.makeScale(1, -1, 1);
+                Matrixd offsetMat;
+                offsetMat.makeTranslate(offset);
+                osg::Vec3d posVec = osg::Vec3d(0,0,0) * mirror * trans * scale * mirror * rot2 * rot1 * offsetMat;
+                loc->coordsBot.push_back(posVec);
+                coords->push_back(posVec);
+            }
         }
         coords->pop_back();
         int size = coords->size()/2;
@@ -1276,7 +1358,7 @@ void ArtifactVis::readLocusFile(QueryGroup * query)
                 Vec3f edge = (loc->coordsBot[(i+1)%size]-loc->coordsBot[i]);
                 Matrix scale;
                 double scaleFactor = min(min(edge.length()/600,width/60),0.7f);
-                scale.makeScale(scaleFactor,scaleFactor,scaleFactor);
+                scale.makeScale(-scaleFactor,scaleFactor,scaleFactor);
                 MatrixTransform * scaleTrans = new MatrixTransform();
                 scaleTrans->setMatrix(scale);
                 Matrix rot1;
@@ -1284,7 +1366,7 @@ void ArtifactVis::readLocusFile(QueryGroup * query)
                 Matrix rot2;
                 rot2.makeRotate(osg::DegreesToRadians(180.0),1,0,0);
                 MatrixTransform * rotTrans = new MatrixTransform();
-                rotTrans->setMatrix(rot2*rot1);
+                rotTrans->setMatrix(rot1);
                 Matrix pos;
                 Vec3f norm = (loc->coordsBot[i]-loc->coordsTop[i])^(loc->coordsTop[(i+1)%size]-loc->coordsTop[i]);
                 norm/=norm.length();
@@ -1307,10 +1389,19 @@ void ArtifactVis::readLocusFile(QueryGroup * query)
     }
     center/=query->loci.size();
     query->center = center;
+#ifdef WITH_OSSIMPLANET
+    if(_ossim)
+        OssimPlanet::instance()->addModel(query->sphereRoot,center.y(),center.x(),Vec3(1,1,1),10,0,0,0);
+#endif
     std::cerr << "Loci Loaded." << std::endl;
 }
 void ArtifactVis::setupSiteMenu()
 {
+    _modelDisplayMenu = new SubMenu("Models");
+    _displayMenu->addItem(_modelDisplayMenu);
+
+    _pcDisplayMenu = new SubMenu("Point Clouds");
+    _displayMenu->addItem(_pcDisplayMenu);
     cout << "Generating Model menu..."<<endl; 
     string file = ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").append("Model/KISterrain2.kml");
     FILE * fp = fopen(file.c_str(),"r");
@@ -1380,6 +1471,7 @@ void ArtifactVis::setupSiteMenu()
         offsetMat.makeTranslate(offset);
         if(isPC)
         {
+            _pcRoot.push_back(new MatrixTransform());
             Vec3d pos = Vec3d(0,0,0) * transMat;
             _pcDisplayMenu->addItem(site); 
             _showPCCB.push_back(site);
@@ -1389,7 +1481,18 @@ void ArtifactVis::setupSiteMenu()
         }
         else
         {
-            Vec3d pos = Vec3d(0,0,0) * mirror * transMat * scaleMat * mirror * rot2 * rot1 * offsetMat;
+            _siteRoot.push_back(new MatrixTransform());
+            Vec3d pos;
+            if(_ossim)
+            {
+                pos = position;
+                cout << "Ossim position: ";
+            }
+            else
+            {
+                pos = Vec3d(0,0,0) * mirror * transMat * scaleMat * mirror * rot2 * rot1 * offsetMat;
+            }
+            cout << pos[0] << ", " << pos[1] << ", " << pos[2] << endl;
             _modelDisplayMenu->addItem(site); 
             _showModelCB.push_back(site);
             _sitePos.push_back(pos);
