@@ -43,6 +43,10 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
         void objectSelection();
             // Makes a background thread to take in data
         void makeThread();
+            // Selects a node to adjust
+        void nodeSelect();
+            // Adjusts selected node
+        void adjustNode(double height, double magnitude);
             // Allows Vec3 comparison
         class compare{
             public: 
@@ -69,10 +73,9 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
         bool _mkill;
         OpenThreads::Mutex _mutex;
         bool newMode;
-        osg::Matrix view;
         cvr::TrackingInteractionEvent* tracker;
             // Runs the thread to take in android data
         virtual void run();
-
+        bool flip;
 };
 #endif

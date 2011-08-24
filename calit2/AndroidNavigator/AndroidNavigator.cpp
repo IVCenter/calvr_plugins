@@ -114,13 +114,15 @@ bool AndroidNavigator::init()
     rotMult = ConfigManager::getFloat("Plugin.AndroidNavigator.RotMult", 1.0);
     
     transcale = -1 * transMult;
-    rotscale = -.012 *rotMult; 
+    rotscale = -.0005 *rotMult; 
     scale = .01;
     _menuUp = false;
     newMode = false; 
     // Default velocity
     velocity = 0;
     std::cerr<<"AndroidNavigator done"<<endl;
+
+    _tagCommand = -1;
       
     return status;
 }
@@ -149,6 +151,8 @@ void AndroidNavigator::preFrame()
         char* value;
         int VELO_CONST = 10;
 
+        double height = 0.0;
+        double magnitude = 1.0;
         double angle [3] = {0.0, 0.0, 0.0};
         double coord [3] = {0.0, 0.0, 0.0};
 
@@ -183,14 +187,16 @@ void AndroidNavigator::preFrame()
                     sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
                 }
                 else if(tag == 1){
-                    if(_menuUp){ removeMenu();}
-                    else{ addMenu();}
-                    InteractionManager::instance()->addEvent(tracker);
-                    sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
-                }  
-                else if(tag == 2){
 		    sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
                     objectSelection();                
+                }
+                else if(tag == 2){
+		    sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
+                    angle[1] = PI/rotscale;   
+                }
+                else if(tag == 3){
+                    sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
+                    _tagCommand = 5;
                 }
             } 
             else if (type == 1)
@@ -248,7 +254,29 @@ void AndroidNavigator::preFrame()
                     }
                     coord[1] = atof(value);
                 }
-     
+                
+                // Node Adjustment Data
+                else if (tag == 4){
+    
+                    //First coord
+                    size = recv_data[7] - RECVCONST;
+                    start = 17;
+                    value = new char[size];
+                    for(int i=start; i<start+size; i++){
+                        value[i-start] = recv_data[i];
+                    }
+                    height = atof(value);
+
+                    // Second coord
+                    start += size + 2;        // 2 accounts for space in string. Size is from previous coord.
+                    size = recv_data[12] - RECVCONST;
+                    value = new char[size];
+                    for(int i=start; i<start+size; i++){
+                        value[i-start] = recv_data[i];
+                    }
+                    magnitude = atof(value);
+                }
+
                 // Handles pinching movement (on touch screen) and drive velocity
                 else{
                     size = recv_data[7] - RECVCONST;
@@ -263,16 +291,14 @@ void AndroidNavigator::preFrame()
                     }
                     else if (tag == 3){
                         velocity = atof(value);
+                        if(velocity == 0){
+                            newMode = true;
+                        }
                     }
                 }
             }
         }
         _mutex.unlock();
-
-        if(_menuUp){
-            // TODO menu interaction    
-        }
-        else{
             switch(_tagCommand)
             {
                 case 0:
@@ -287,19 +313,20 @@ void AndroidNavigator::preFrame()
                     break;
                 case 1:
                     // For DRIVE movement
-                    rz += angle[1] * VELO_CONST/2;
+                    rz += angle[1];
+                    ry -= coord[0] * .5; // Fixes orientation
                     y += velocity;
                     z += angle[2]; // For vertical movement                    
                     break;
                 case 2:
-                    // For MOVE_WORLD movement
+                    // For ROTATE_WORLD movement
                     ry += angle[1];
                     break;
                 case 3:
                     // New fly mode -- moves like a plane
-                    rx += angle[2];
+                    rx -= angle[2];
                     ry -= coord[0] * .5; // Fixes orientation 
-                    rz += angle[1];
+                    rz -= angle[1];
                     y += velocity;
                     break;
                 case 4:
@@ -307,8 +334,9 @@ void AndroidNavigator::preFrame()
                     sx += coord[2];
                     sy = sz = sx;
                     break;
+                case 5:
+                    adjustNode(height, magnitude);
             }
-        }
 
             x *= transcale;
             y *= transcale;
@@ -319,7 +347,9 @@ void AndroidNavigator::preFrame()
             sx *= scale;
             sy *= scale;
             sz *= scale;
-            
+        
+    
+            Matrix view = Matrix::identity();
             if(newMode || ( (_tagCommand == 0) || (_tagCommand == 2) ) ){   
                 view = PluginHelper::getHeadMat();
                 newMode = false;
@@ -327,7 +357,6 @@ void AndroidNavigator::preFrame()
             Vec3 campos = view.getTrans();
             
             Vec3 trans = Vec3(x, y, z);
-
             trans = (trans * view) - campos;
 
             Matrix tmat;
@@ -353,7 +382,6 @@ void AndroidNavigator::preFrame()
             finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
             ComController::instance()->sendSlaves((char *)finalmat.ptr(), sizeof(double[16]));
             PluginHelper::setObjectMatrix(finalmat);  
-        
     }
     else
     {
@@ -544,35 +572,125 @@ void AndroidNavigator::run()
     char recv_data[1024];
 
     fd_set readfds;
-    struct timeval timeout;
     int rs;
-
     FD_ZERO(&readfds);
     FD_SET(sock, &readfds);
     string str;
-
-    timeout.tv_sec = 0; 
-        // Gets last framerate to take in data more quickly
-    timeout.tv_usec = (int) (PluginHelper::getLastFrameDuration() * 1000000);
-
     while(!_mkill)
     {
-        
         rs = select(sock + 1, &readfds, 0, 0, 0);
         _mutex.lock();
         if(rs > 0){
             bytes_read = recvfrom(sock, recv_data, 1024, 0, (struct sockaddr *)&client_addr, &addr_len);
-
             if(bytes_read <= 0){
                 cerr<<"No data read."<<endl;
             }
-           
-              // Prepares data for processing...
+            // Prepares data for processing...
             recv_data[bytes_read]='\0';
             str = recv_data;
             queue.push(str);
-            //cout<<str<<" added: "<<queue.size()<<endl;
         }
         _mutex.unlock();
     }
+}
+
+void AndroidNavigator::nodeSelect(){
+   // TODO adapt function for node selection
+    double minAngle = .05;
+    int bytes_read;
+    char recv_data[1024];
+    char send_data[2];
+    vector<Vec3> inRange;
+    int rangeObj = 0;
+    vector<osg::Vec3> position;
+    double objAngle;   
+ 
+    Matrix objMatrix = PluginHelper::getObjectMatrix();
+    osg::Vec3 camera = Vec3(0.0, 1.0, 0.0);
+
+    Matrix viewOffsetM;
+    osg::Vec3 viewOffset = Vec3f(ConfigManager::getFloat("x", "ViewerPosition", 0.0f),
+		ConfigManager::getFloat("y", "ViewerPosition", 0.0f),
+                ConfigManager::getFloat("z", "ViewerPosition", 0.0f)) * -1;
+    viewOffsetM.makeTranslate(viewOffset);
+    objMatrix = objMatrix * viewOffsetM;
+  
+    // Check if nodes exist... 
+    //ArtifactVis* art = ArtifactVis::getInstance();
+   // if(art != NULL){ 
+      //  cout<<"Getting artifacts"<<endl;
+    //	position = art->getArtifactsPos();
+   // }
+    //else{
+        cout<<"No nodes found"<<endl;
+        send_data[0] = 9;
+        sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
+   // }
+
+    if(position.empty()){
+        cerr<<"No artifact positions received"<<endl;
+        send_data[0] = 8;
+        sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
+        return;
+    }
+
+    for(int obj = 0; obj < position.size(); obj++){
+        osg::Vec3 pos = position.at(obj); 
+        osg::Vec3 alpha = (pos * objMatrix);
+        objAngle = acos(alpha * camera / (alpha.length() * camera.length()));
+        if (objAngle < minAngle){
+            inRange.push_back(alpha);   
+        }
+    }
+
+    if(inRange.empty()){
+        cerr<<"No suitable objects"<<endl;
+        send_data[0] = 7;
+        sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
+        return;
+    }
+
+    cout<<inRange.size()<<" objects found!"<<endl;
+    send_data[0] = 6;
+    sendto(sock, send_data, 2, 0, (struct sockaddr *)&client_addr, addr_len);
+
+    std::sort (inRange.begin(), inRange.end(), compare());
+    // Find possible nodes.. run through them until node is selected or options are discarded
+    while(rangeObj < inRange.size() && rangeObj >= 0 && !queue.empty() ){
+        osg::Vec3 pos = inRange.at(rangeObj) * PluginHelper::getObjectToWorldTransform();
+        cout<<"Pos "<<rangeObj + 1<<": <"<<pos[0]<<", "<<pos[1]<<", "<<pos[2]<<">"<<endl;
+        
+        bytes_read = recvfrom(sock, recv_data, 1024, 0, (struct sockaddr *)&client_addr, &addr_len); 
+
+        if(bytes_read <= 0){
+            cerr<<"No data read."<<endl;
+        }   
+        recv_data[bytes_read]='\0';
+        if(recv_data[0] == 0){ 
+            cout<<"Object Found"<<endl;
+            return;
+        }
+        else if(recv_data[0] == 1){
+            cout<<"Next object..."<<endl;
+            if(rangeObj + 1 >= inRange.size()){
+                cerr<<"Cannot find Next: Out of range"<<endl;
+            }
+            else rangeObj++;
+        }
+        else if(recv_data[0] == 2){
+            cout<<"Previous object..."<<endl;
+            if(rangeObj - 1 < 0){
+                cerr<<"Cannot find Previous: out of range"<<endl;
+            }            
+            else rangeObj--;
+        }        
+        else if(recv_data[0] == 3){
+            return;
+        }
+    }
+    
+}
+
+void AndroidNavigator::adjustNode(double height, double magnitude){
+    // TODO adjust nodes with height and magnitude
 }
