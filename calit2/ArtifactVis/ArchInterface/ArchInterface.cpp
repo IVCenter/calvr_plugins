@@ -108,6 +108,11 @@ string getLocusColor(string locus,string table);
 
 string getLocusName(string locus, string table);
 
+void convertKML(string filename);
+
+string outputDescriptionBase(string gid, string the_geom, string list);
+
+string getTimeStamp();
 
 int     main(int argc, char *argv[]) {
 //In main we will run all the common queries needed for Archfield and common outputs to GE or CalVR.
@@ -115,6 +120,322 @@ int     main(int argc, char *argv[]) {
 commandLineParse(argc, argv);
 //..
 //cin.get();
+
+}
+void convertKML(string filename)
+{
+
+//const char* node_name = "placemark";
+//vector<string>array;
+
+    mxml_node_t * tree;
+    //string tableName;
+    tree = getTree(filename);
+    int len = filename.length() - 4;
+    string kmlfile = filename.substr(0,len);
+    //Make Time Stamp
+       string timestamp = getTimeStamp();
+
+
+       mxml_node_t *Document;
+
+       mxml_node_t *query;
+       mxml_node_t *time;
+       mxml_node_t *nameKML;
+
+       nameKML = mxmlFindElement(tree, tree, "name", NULL, NULL, MXML_DESCEND);
+       if (nameKML != NULL)
+       {
+                cout << "Name Exists!\n";
+                //mxmlSetText(nameKML, 0,kmlfile.c_str());
+
+                mxmlSetText(nameKML->child, 0,kmlfile.c_str());
+
+       }
+
+
+       Document = mxmlFindElement(tree, tree, "Document", NULL, NULL, MXML_DESCEND);
+
+
+            query = mxmlNewElement(Document, "query");
+                mxmlNewText(query, 0,"Not from Query");
+
+           time = mxmlNewElement(Document, "timestamp");
+                          mxmlNewText(time, 0,timestamp.c_str());
+
+
+mxml_node_t * node;
+string coord;
+string pname;
+string placemarkname;
+    //for (node = mxmlFindElement(tree, tree, "Point", NULL, NULL, MXML_DESCEND); node != NULL; node = mxmlFindElement(node, tree, "Point", NULL, NULL, MXML_DESCEND))
+    mxml_node_t * check;
+        check = mxmlFindElement(tree, tree, "description", NULL, NULL, MXML_DESCEND);
+
+        if (check != NULL)
+        {
+            //cout << "Exists!\n";
+            //mxml_node_t * upname = mxmlWalkPrev(check,tree,0);
+            placemarkname = check->parent->value.element.name;
+
+            //cout << placemarkname << "\n";
+        }
+string description;
+string the_geom;
+string list;
+int r = 0;
+
+    for (node = mxmlFindElement(tree, tree, placemarkname.c_str(), NULL, NULL, MXML_DESCEND); node != NULL; node = mxmlFindElement(node, tree, placemarkname.c_str(), NULL, NULL, MXML_DESCEND))
+
+    {
+
+        mxml_node_t * desc_node;
+        desc_node = mxmlFindElement(node, tree, "Point", NULL, NULL, MXML_DESCEND);
+        cout << "Pass: " << r << "\n";
+        string inc;
+        std::stringstream ss;
+        //ss.precision(19);
+        ss << r;
+        inc = ss.str();
+        ss.flush();
+
+        if (desc_node != NULL)
+        {
+
+
+            mxml_node_t * desc_child;
+
+            desc_child = mxmlFindElement(desc_node, tree, "coordinates", NULL, NULL, MXML_DESCEND);
+            coord = desc_child->child->value.text.string;
+            //cout << coord << "\n";
+
+            the_geom = coord;
+            cout << "Point:" << the_geom << "\n";
+            desc_node = mxmlFindElement(node, tree, "name", NULL, NULL, MXML_DESCEND);
+            if (desc_node != NULL)
+            {
+                pname = desc_node->child->value.text.string;
+                //cout << pname << "\n";
+            }
+
+            list = "gid,basket,chk,locus,dccode,square,date,area,publication,heightinstrument,poleheight,bone,flint,pottery,rc,soilsample,crate,location,the_geom";
+
+            description = outputDescriptionBase(inc, the_geom, list);
+            /*
+            desc_node = mxmlFindElement(node, tree, "description", NULL, NULL, MXML_DESCEND);
+           if (desc_node != NULL)
+           {
+                //pname = desc_node->child->value.text.string;
+                pname = desc_node->value.text.string;
+                cout << pname << "\n";
+           }
+           */
+        }
+        desc_node = mxmlFindElement(node, tree, "Polygon", NULL, NULL, MXML_DESCEND);
+
+        if (desc_node != NULL)
+        {
+        //cout << "found\n";
+
+        mxml_node_t * desc_child;
+
+        desc_child = mxmlFindElement(desc_node, tree, "coordinates", NULL, NULL, MXML_DESCEND);
+        mxml_node_t * desc_child_child;
+        vector< vector<string> > data;
+        //vector<string>piece;
+        string the_geom = "";
+        char delim = ',';
+        int m=0;
+        for(desc_child_child = desc_child->child; desc_child_child != NULL; desc_child_child = desc_child_child->next)
+        {
+
+
+            string coord = desc_child_child->value.text.string;
+            if (coord != "" && coord != "\n" && coord != "\r" && coord != " ")
+            {
+                the_geom.append(coord);
+                the_geom.append(" ");
+                //char delim = ',';
+                //cout << coord << "\n";
+                //piece.push_back(coord);
+
+                data.push_back(splitSTR(coord,delim));
+           // coord = desc_child->child->value.text.string;
+                //cout << piece[0] << " " << piece[1] << "\n";
+                //cout << piece[m] << "\n";
+                //cout << m << " " << coord << "\n";
+            }
+            m++;
+        }
+
+        //cout << the_geom << "\n";
+        //cout << "MAde it here\n";
+        desc_node = mxmlFindElement(node, tree, "name", NULL, NULL, MXML_DESCEND);
+
+
+
+       if (desc_node != NULL)
+       {
+            //pname = desc_node->child->value.text.string;
+            //cout << pname << "\n";
+       }
+       else
+       {
+           //Make Name tag
+           pname = inc;
+           mxml_node_t *name;
+           name = mxmlNewElement(node, "name");
+                          mxmlNewText(name, 0,pname.c_str());
+           //BANG
+
+       }
+
+        list = "gid,basket,chk,dccode,locusdesc,locus,square,date,area,structure,publication,heightinstrument,poleheight,the_geom";
+        description = outputDescriptionBase(inc, the_geom, list);
+
+        desc_node = mxmlFindElement(node, tree, "description", NULL, NULL, MXML_DESCEND);
+        if (desc_node != NULL)
+        {
+            //cout << "Exists!\n";
+            mxmlRemove(desc_node);
+            desc_node = mxmlNewElement(node, "description");
+            mxmlNewText(desc_node, 0,description.c_str());
+
+        }
+        else
+        {
+            desc_node = mxmlNewElement(node, "description");
+            mxmlNewText(desc_node, 0,description.c_str());
+
+        }
+
+
+        //cout << description << "\n";
+
+        int count = data.size();
+        //cout << count << "\n";
+
+        string top = "1452.000";
+        string ph_top = "";
+        int i;
+        double tempD;
+        //string tempB;
+        string bottom;
+        double lowelev = 10000;
+        for (i=0; i<count; i++)
+	{
+        ph_top.append(data[i][0]);
+        ph_top.append(" ");
+        ph_top.append(data[i][1]);
+        ph_top.append(" ");
+
+        if (data[i].size() == 3)
+        {
+            ph_top.append(data[i][2]);
+            tempD = atof(data[i][2].c_str());
+            //tempB = data[i][2];
+        }
+        else
+        {
+            //Top Always PS
+            ph_top.append(top);
+            tempD = atof(top.c_str());
+            //tempB = top;
+        }
+
+
+
+        if (lowelev > tempD)
+        {
+            lowelev = tempD;
+            //bottom = tempB;
+        }
+        if (i != (count -1))
+        {
+        ph_top.append("\n");
+        }
+
+	}
+        string ph_bottom = "";
+        double newelev = lowelev - 0.1;
+        std::stringstream ss;
+        ss.precision(19);
+        ss << newelev;
+        bottom = ss.str();
+        ss.flush();
+
+
+	   for (i=0; i<count; i++)
+	{
+        ph_bottom.append(data[i][0]);
+        ph_bottom.append(" ");
+        ph_bottom.append(data[i][1]);
+        ph_bottom.append(" ");
+
+            //Top Always PS
+        ph_bottom.append(bottom);
+
+
+
+        if (i != (count -1))
+        {
+        ph_bottom.append("\n");
+        }
+
+	}
+
+	//cout << ph_bottom << "\n";
+
+	mxml_node_t *polyhedron;
+	mxml_node_t *coordTop;
+	mxml_node_t *coordBottom;
+	mxml_node_t *color;
+
+	polyhedron = mxmlNewElement(node, "Polyhedron");
+                        coordTop = mxmlNewElement(polyhedron, "coordTop");
+                          mxmlNewText(coordTop, 0, ph_top.c_str());
+                        coordBottom = mxmlNewElement(polyhedron, "coordBottom");
+                          mxmlNewText(coordBottom, 0, ph_bottom.c_str());
+                        color = mxmlNewElement(polyhedron, "color");
+                          mxmlNewText(color, 0,"0 255 0");
+    /*
+        desc_node = mxmlFindElement(node, tree, "description", NULL, NULL, MXML_DESCEND);
+       if (desc_node != NULL)
+       {
+            //pname = desc_node->child->value.text.string;
+            pname = desc_node->value.text.string;
+            cout << pname << "\n";
+       }
+       */
+        }
+        r++;
+        }
+    /*
+    mxml_node_t * table = mxmlFindElement(tree, tree, node_name, NULL, NULL, MXML_DESCEND);
+    for(mxml_node_t * child = table-> child; child != NULL; child = child->next)
+    {
+       tableName = child->value.text.string;
+       array.push_back(tableName);
+       //cout << "test: " << tableName << "\n";
+    }
+*/
+//Add file to kmlfiles.xml
+
+//Rename Placemark
+
+char *ptr = mxmlSaveAllocString(tree, MXML_NO_CALLBACK);
+
+    FILE *fp;
+    string filestr = "queries/";
+    filestr.append(kmlfile);
+    filestr.append(".kml");
+    const char* file = filestr.c_str();
+    fp = fopen(file, "w");
+
+    fprintf(fp, ptr);
+
+    fclose(fp);
+    cout << "File Written! Completed!\n";
 
 }
 string getLocusName(string locus, string table)
@@ -1346,7 +1667,8 @@ void makePointKML(vector< vector<string> > rowdata, string list, string where, s
 //KML Name
     if (q_name == "")
     {
-        q_name = generateQName(where,"Point");
+        //q_name = generateQName(where,"Point");
+        q_name = "query";
     }
 
     string g_timestamp = getTimeStamp();
@@ -1511,7 +1833,7 @@ void makePolygonKML(vector< vector<string> > rowdata, string list, string where,
 //Create KML Container
 
 //KML Name
-    q_name == "queryp";
+    q_name = "querp";
     if (q_name == "")
     {
         q_name = generateQName(where,"Polygon");
@@ -1741,7 +2063,75 @@ description = "";
 
     return description;
 }
+string outputDescriptionBase(string gid, string the_geom, string list)
+{
+    //int rows = rowdata.size();
+    int count;
+    //int m;
+    int i;
+    string description;
 
+    //Converts list sent by user to array for next for loop
+
+    char delim = ',';
+    vector<string>field;
+    field = splitSTR(list,delim);
+    //cout << "Rows: " << rows << "\n";
+    count = field.size();
+    //cout << "Fields: " << count << "\n";
+description = "";
+
+
+    //cout << "Entry: " << m  << "\n";
+    for(i=0; i<count; i++)
+    {
+        //cout << field[i] << ": " << rowdata[m][i] << "\n";
+        if (field[i] == "the_geom")
+        {
+
+        description.append(field[i]);
+        description.append(": ");
+        description.append(the_geom);
+        description.append("\n");
+        }
+        else if (field[i] == "dccode")
+        {
+
+        description.append(field[i]);
+        description.append(": ");
+        description.append("GR-GROUND_SHOT");
+        description.append("\n");
+        }
+        else if (field[i] == "locusdesc")
+        {
+
+        description.append(field[i]);
+        description.append(": ");
+        description.append("FI-FILL");
+        description.append("\n");
+        }
+        else if (field[i] == "gid")
+        {
+
+        description.append(field[i]);
+        description.append(": ");
+        description.append(gid);
+        description.append("\n");
+        }
+        else
+        {
+
+
+        description.append(field[i]);
+        description.append(": ");
+        description.append("0");
+        description.append("\n");
+        }
+    }
+    //cout << "\n";
+
+    return description;
+}
 void commandLineParse(int argc, char *argv[])
 {
         /*
@@ -1829,6 +2219,20 @@ void commandLineParse(int argc, char *argv[])
 
       case 'g':   cout << "You have selected Python/Matlab Analysis, return KML\n";
                   cout << "-This function has not been impletmented yet!\n";
+
+            break;
+
+      case 'k':   cout << "You have selected to convert a KML for ArtifactVis\n";
+                  if (argc == 3)
+                  {
+                      kmlfile = argv[2];
+                      convertKML(kmlfile);
+                  }
+                  else
+                  {
+                      cout << "You must enter the kmlfile you wish to convert\n";
+                  }
+
 
             break;
 

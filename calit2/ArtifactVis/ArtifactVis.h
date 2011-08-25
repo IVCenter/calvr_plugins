@@ -174,6 +174,7 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
         float _sphereRadius;
         int _activeArtifact;
         bool _selectActive;
+        bool _ossim;
        
         std::string getTimeModified(std::string file); 
         int dc2Int(std::string dc);
