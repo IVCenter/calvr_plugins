@@ -13,6 +13,9 @@
 #include <cmath>
 #include <algorithm>
 #include <vector>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <time.h>
 
 #include <config/ConfigManager.h>
 #include <kernel/PluginHelper.h>
@@ -40,6 +43,10 @@ ArtifactVis::ArtifactVis()
 {
 
 }
+
+/*
+* Returns an instance for use with other programs.
+*/
 ArtifactVis* ArtifactVis::getInstance()
 {
     return _artifactvis;
@@ -54,25 +61,27 @@ bool ArtifactVis::init()
 
 
     loadModels();
-    //_models[0] = osgDB::readNodeFile("");
 
+    //Algorithm for generating colors based on DC.
     for(int i = 0; i < 729; i++)
     {
         _colors[i] = Vec4(1-float((i%9)*0.125),1-float(((i/9)%9)*0.125),1-float(((i/81)%9)*0.125),1);
     }
 
+    //Menu Setup:
     _avMenu = new SubMenu("ArtifactVis", "ArtifactVis");
     _avMenu->setCallback(this);
 
     _displayMenu = new SubMenu("Display");
     _avMenu->addItem(_displayMenu);
 
+    //Generates the menu for selecting models to load
     setupSiteMenu();
 
-
+    //Generates the menus to toggle each query on/off.
     setupQuerySelectMenu();
 
-    
+    //Generates the menus to query each table.
     setupTablesMenu();
     for(int i = 0; i < _tables.size(); i++)
     {
@@ -123,14 +132,12 @@ bool ArtifactVis::init()
     MenuSystem::instance()->addMenuItem(_avMenu);
     SceneManager::instance()->getObjectsRoot()->addChild(_root);
 
-    //_my_own_root = new LOD();
     _sphereRadius = 5.0;
     _activeArtifact  = -1;
-    //_LODmaxRange = ConfigManager::getFloat("Plugins.ArtifactVis.MaxVisibleRange", 30.0);
 
     _picFolder = ConfigManager::getEntry("value","Plugin.ArtifactVis.PicFolder","");
 
-
+    //Tabbed dialog for selecting artifacts
     _artifactPanel = new TabbedDialogPanel(400,30,4,"Selected Artifact","Plugin.ArtifactVis.ArtifactPanel");
     _artifactPanel->addTextTab("Info","");
     _artifactPanel->addTextureTab("Side","");
@@ -150,6 +157,11 @@ bool ArtifactVis::init()
 ArtifactVis::~ArtifactVis()
 {
 }
+
+/*
+ Loads in all existing models of the form 3dModelFolder/DC/DC.obj, where DC is the two letter DCode.
+ Has space for ALL possible DC codes (26^2).
+*/
 void ArtifactVis::loadModels()
 {
     for(int i = 0; i < 26; i++)
@@ -161,7 +173,7 @@ void ArtifactVis::loadModels()
             stringstream ss;
             ss << c1 << c2;
             string dc = ss.str();
-            string modelPath = ConfigManager::getEntry("Plugin.ArtifactVis.3DModelFolder").append(dc+"/"+dc+"_old.obj");
+            string modelPath = ConfigManager::getEntry("Plugin.ArtifactVis.3DModelFolder").append(dc+"/"+dc+".obj");
             if(modelExists(modelPath.c_str()))
             {
                 _models[i*26+j] = osgDB::readNodeFile(modelPath); 
@@ -179,6 +191,7 @@ bool ArtifactVis::buttonEvent(int type, int button, int hand, const osg::Matrix 
 {
     if((type == BUTTON_DOWN || type == BUTTON_DOUBLE_CLICK) && hand == 0 && button == 0)
     {
+    //Artifact Selection
 	if(_selectArtifactCB->getValue() )
 	{
 	    if(!_selectCB->getValue())
@@ -224,6 +237,7 @@ bool ArtifactVis::buttonEvent(int type, int button, int hand, const osg::Matrix 
 		}
 	    }
 	}
+        //Box selection
 	else if(_selectCB->getValue() && type == BUTTON_DOUBLE_CLICK)
 	{
             osg::Matrix w2l = PluginHelper::getWorldToObjectTransform();
@@ -265,6 +279,9 @@ bool ArtifactVis::mouseButtonEvent(int type, int button, int x, int y, const osg
 
     return false;
 }
+
+//Gets the string of the query that would be sent to PGSQL via ArchInterface.
+//Includes only the current 'OR' statement, not previous ones. Those are stored in the current_query variable for Tables.
 std::string ArtifactVis::getCurrentQuery(Table * t)
 {
         std::stringstream ss;
@@ -298,16 +315,7 @@ std::string ArtifactVis::getCurrentQuery(Table * t)
        }
        return ss.str();
 }
-std::vector<string> ArtifactVis::getSelectedQueries()
-{
-    std::vector<string> queries;
-    for(int i = 0; i < _queryOption.size(); i++)
-    {
-        if(_queryOption.at(i)->getValue())
-            queries.push_back(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").append("queries/").append(_queryOptionMenu.at(i)->getTitle()).append(".kml"));
-    }
-    return queries;
-}
+
 void ArtifactVis::menuCallback(MenuItem* menuItem)
 {
 #ifdef WITH_OSSIMPLANET
@@ -355,6 +363,21 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
     std::vector<Table *>::iterator t = _tables.begin();
     for(; t < _tables.end(); t++)
     {
+        for(int i = 0; i < (*t)->querySlider.size(); i++)
+        {
+            if(menuItem == (*t)->querySlider[i])
+                (*t)->query_view->setText((*t)->current_query+getCurrentQuery((*t)));
+        }
+        for(int i = 0; i < (*t)->queryOptionsSlider.size(); i++)
+        {
+            if(menuItem == (*t)->queryOptionsSlider[i])
+                (*t)->query_view->setText((*t)->current_query+getCurrentQuery((*t)));
+        }
+        for(int i = 0; i < (*t)->queryOptions.size(); i++)
+        {
+            if(menuItem == (*t)->queryOptions[i])
+                (*t)->query_view->setText((*t)->current_query+getCurrentQuery((*t)));
+        }
         if(menuItem == (*t)->clearConditions)
         {
             clearConditions((*t));
@@ -372,6 +395,8 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
         }
         if(menuItem == (*t)->genQuery)
         {
+            _query[0]->sphereRoot->setNodeMask(0);
+            _query[1]->sphereRoot->setNodeMask(0);
             std::stringstream ss;
             ss <<  "./ArchInterface -b ";
             ss << "\"";
@@ -459,6 +484,39 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
             SceneManager::instance()->setObjectMatrix(mat);
         }
     }
+    if(menuItem == _locusDisplayMode)
+    {
+        if(_locusDisplayMode->firstOn()=="Wireframe")
+        {
+            for(int i = 0; i < _query.size(); i++)
+            {
+                if(!_query[i]->sf)
+                {
+                    for(int j = 0; j < _query[i]->loci.size(); j++)
+                    {
+                        StateSet * state = _query[i]->loci[j]->fill_geode->getOrCreateStateSet();
+                        Material * mat = dynamic_cast<Material*>(state->getAttribute(StateAttribute::MATERIAL,0));
+                        mat->setAlpha(Material::FRONT_AND_BACK,0.01);
+                    }
+                }
+            }
+        }
+        else
+        {
+            for(int i = 0; i < _query.size(); i++)
+            {
+                if(!_query[i]->sf)
+                {
+                    for(int j = 0; j < _query[i]->loci.size(); j++)
+                    {
+                        StateSet * state = _query[i]->loci[j]->fill_geode->getOrCreateStateSet();
+                        Material * mat = dynamic_cast<Material*>(state->getAttribute(StateAttribute::MATERIAL,0));
+                        mat->setAlpha(Material::FRONT_AND_BACK,0.4);
+                    }
+                }
+            }
+        }
+    }
     if(menuItem == _selectArtifactCB)
     {
 	if(_selectArtifactCB->getValue())
@@ -537,6 +595,7 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
 	_selectActive = false;
     }
 }
+//Removes all conditions set in the query for the selected table.
 void ArtifactVis::clearConditions(Table * t)
 {
         std::vector<cvr::MenuCheckbox *>::iterator button;
@@ -546,34 +605,7 @@ void ArtifactVis::clearConditions(Table * t)
             t->queryOptions[i]->setValue(t->queryOptions[i]->firstOn(),false);
      
 }
-string ArtifactVis::parseDate(string date)
-{
-    string year = date.substr(0,4);
-    string day = date.substr(4,3);
-    string hours = date.substr(7,2);
-    string minutes = date.substr(9,2);
-    string seconds = date.substr(11,2);
-    string month;
-    string months[] = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
-    int monthLength[] = {31,28,31,30,31,30,31,31,30,31,30,31};
-    if(atoi(year.c_str())%4==0) monthLength[1]++;
-    int dayNum = atoi(day.c_str());
-    int i = 0;
-    while(dayNum > monthLength[i])
-    {
-        dayNum -= monthLength[i];
-        i++;
-    }
-    month = months[i];
-    stringstream ss;
-    ss << hours;
-    ss << ":" << minutes;
-    ss << ":" << seconds;
-    ss << ", " << month;
-    ss << " " << dayNum;
-    ss << ", " << year;
-    return ss.str();
-}
+//Converts the DC into a unique integer, 0 through (26^2 - 1).
 int ArtifactVis::dc2Int(string dc)
 {
     char letter1 = dc.c_str()[0];
@@ -585,31 +617,26 @@ int ArtifactVis::dc2Int(string dc)
 }
 std::string ArtifactVis::getTimeModified(std::string file)
 {
-    FILE * fp = fopen(file.c_str(),"r");
-    if(fp == NULL)
-    {
-      std::cerr << "Unable to open file: " << file << std::endl;
-      return "";
-    }
-
-    mxml_node_t * tree;
-    tree = mxmlLoadFile(NULL, fp, MXML_TEXT_CALLBACK);
-    fclose(fp);
-    if(tree == NULL)
-    {
-      std::cerr << "Unable to parse XML file: " << file << std::endl;
-      return "";
-    }
-    mxml_node_t * node = mxmlFindElement(tree, tree, "timestamp", NULL, NULL, MXML_DESCEND);
-    string output = node->child->value.text.string;
+    struct tm* clock;
+    struct stat attrib;
+    stat(file.c_str(),&attrib);
+    clock = gmtime(&(attrib.st_mtime));
+    stringstream ss;
+    ss << clock->tm_year+1900;
+    if(clock->tm_yday + 1 < 100) ss << "0";
+    if(clock->tm_yday + 1 < 10) ss << "0";
+    ss << clock->tm_yday + 1;
+    if(clock->tm_hour < 10) ss << "0";
+    ss << clock->tm_hour;
+    if(clock->tm_min < 10) ss << "0";
+    ss << clock->tm_min;
+    if(clock->tm_sec < 10) ss << "0";
+    ss << clock->tm_sec;
+    string output = ss.str();
     return output;
 }
 void ArtifactVis::preFrame()
 {
-    for(int t = 0; t < _tables.size(); t++)
-    {
-        _tables[t]->query_view->setText(_tables[t]->current_query+getCurrentQuery(_tables[t]));
-    }
     std::vector<Artifact*> allArtifacts;
     for(int i = 0; i < _query.size(); i++)
     {
@@ -634,30 +661,7 @@ void ArtifactVis::preFrame()
        if(_query[i]->active&&_query[i]->sf)
           for(int j = 0; j < _query[i]->artifacts.size(); j++)
              allArtifacts.push_back(_query[i]->artifacts[j]);
-       if(_locusDisplayMode->firstOn()=="Wireframe")
-       {
-           for(int j = 0; j < _query[i]->loci.size(); j++)
-           {
-               if(!_query[i]->sf)
-               {
-                   StateSet * state = _query[i]->loci[j]->fill_geode->getOrCreateStateSet();
-                   Material * mat = dynamic_cast<Material*>(state->getAttribute(StateAttribute::MATERIAL,0));
-                   mat->setAlpha(Material::FRONT_AND_BACK,0.01);
-               }
-           }
-       }
-       else
-       {
-           for(int j = 0; j < _query[i]->loci.size(); j++)
-           {
-               if(!_query[i]->sf)
-               {
-                   StateSet * state = _query[i]->loci[j]->fill_geode->getOrCreateStateSet();
-                   Material * mat = dynamic_cast<Material*>(state->getAttribute(StateAttribute::MATERIAL,0));
-                   mat->setAlpha(Material::FRONT_AND_BACK,0.4);
-               }
-           }
-       }
+       
     }
     std::sort(allArtifacts.begin(),allArtifacts.end(),compare());
     Matrixd viewOffsetM;
@@ -771,7 +775,7 @@ void ArtifactVis::readQuery(QueryGroup * query)
     node = mxmlFindElement(tree, tree, "query", NULL, NULL, MXML_DESCEND);
     query->query = node->child->value.text.string;
     node = mxmlFindElement(tree, tree, "timestamp", NULL, NULL, MXML_DESCEND);
-    query->timestamp = node->child->value.text.string;
+    query->timestamp = getTimeModified(filename);
     if(!query->sf) 
     {
         readLocusFile(query);
@@ -909,8 +913,8 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
         }
         Vec3d pos = (*item)->modelPos;
         int dcInt = dc2Int((*item)->dc);
-        //if(!_modelLoaded[dcInt])
-        if(true)
+        if(!_modelLoaded[dcInt])
+        //if(true)
         {
             Drawable* g = createObject((*item)->dc,tessellation, pos);
             g->setUseDisplayList(false);
@@ -1431,7 +1435,6 @@ void ArtifactVis::setupSiteMenu()
         mxml_node_t * child = mxmlFindElement(node, tree, "name", NULL, NULL, MXML_DESCEND);
         string child_text = child->child->value.text.string;
         bool isPC = child_text.find("PointCloud")!=string::npos;
-        cout << child->child->value.text.string << endl;
         child = mxmlFindElement(node, tree, "href", NULL, NULL, MXML_DESCEND);
         MenuCheckbox * site = new MenuCheckbox(child->child->value.text.string,false);
         site->setCallback(this);
@@ -1594,7 +1597,6 @@ void ArtifactVis::setupQuerySelectMenu()
         stringstream ss;
         ss << "Query: " << query->query << "\n";
         ss << "Size: " << query->artifacts.size() << " Artifacts\n";
-        ss << "Last Updated: " << parseDate(query->timestamp) << "\n";
         MenuText * info = new MenuText(ss.str(),1,false,400);
         showInfo->addItem(info);
         MenuCheckbox * dynamic = new MenuCheckbox("Dynamically Update", false);
@@ -1710,6 +1712,7 @@ void ArtifactVis::setupQueryMenu(Table * table)
              {
                  optionSet->addButton(children[i]);
              }
+             optionSet->setCallback(this);
              table->queryOptions.push_back(optionSet);
              menu->addItem(optionSet);
              table->querySubMenu.push_back(menu);
@@ -1727,8 +1730,10 @@ void ArtifactVis::setupQueryMenu(Table * table)
             table->sliderEntry.push_back(children);
             MenuList *slider = new MenuList();
             slider->setValues(children);
+            slider->setCallback(this);
             table->queryOptionsSlider.push_back(slider);
             MenuCheckbox *useSlider = new MenuCheckbox("Use Value",false);
+            useSlider->setCallback(this);
             table->querySlider.push_back(useSlider);
             menu->addItem(useSlider);
             menu->addItem(slider);
