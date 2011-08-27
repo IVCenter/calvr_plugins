@@ -9,6 +9,9 @@
 #include <kernel/PluginHelper.h>
 #include <kernel/InteractionManager.h>
 #include <kernel/ThreadedLoader.h>
+#include <kernel/SceneManager.h>
+
+#include <osgDB/ReadFile>
 
 CVRPLUGIN(PluginTest)
 
@@ -110,13 +113,24 @@ bool PluginTest::init()
     popup1->addMenuItem(pmenu1);
 
     tdp1 = new TabbedDialogPanel(400,40,3,"Tabbed Dialog Panel");
-    tdp1->setVisible(true);
+    tdp1->setVisible(false);
 
     tdp1->addTextTab("Tab1","I am Tab 1");
     tdp1->addTextTab("Tab2","I am Tab 2");
     tdp1->addTextTab("Tab3","This is a test of the maxWidth attribute of osgText::Text. Hopefully if will wrap on whitespace.");
 
-    createSphereTexture();
+    //createSphereTexture();
+
+    _testobj = new SceneObject("My Test Object", true, true, false, false, true);
+    osg::Node * node = osgDB::readNodeFile("/home/aprudhom/data/heart/heart00.iv");
+    if(node)
+    {
+	_testobj->addChild(node);
+	_testobj->computeBoundingBox();
+    }
+
+    SceneManager::instance()->registerSceneObject(_testobj,"PluginTest");
+    _testobj->attachToScene();
 
     //std::cerr << "NodeMask: " << PluginHelper::getObjectsRoot()->getNodeMask() << std::endl;
 
