@@ -23,6 +23,7 @@
 #include <kernel/InteractionManager.h>
 #include <menu/MenuSystem.h>
 #include <util/LocalToWorldVisitor.h>
+#include <kernel/ComController.h>
 
 #include <osg/CullFace>
 #include <osg/Matrix>
@@ -397,18 +398,27 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
         {
             _query[0]->sphereRoot->setNodeMask(0);
             _query[1]->sphereRoot->setNodeMask(0);
-            std::stringstream ss;
-            ss <<  "./ArchInterface -b ";
-            ss << "\"";
-            ss << (*t)->name;
-            ss << "\" ";
-            ss << "\"";
-            ss << (*t)->current_query;
-            ss << getCurrentQuery((*t)); 
-            ss << "\"";
-            chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
-            cout <<ss.str().c_str() << endl;
-            system(ss.str().c_str());
+            bool status;
+            if(ComController::instance()->isMaster())
+            {
+                std::stringstream ss;
+                ss <<  "./ArchInterface -b ";
+                ss << "\"";
+                ss << (*t)->name;
+                ss << "\" ";
+                ss << "\"";
+                ss << (*t)->current_query;
+                ss << getCurrentQuery((*t)); 
+                ss << "\"";
+                chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
+                cout <<ss.str().c_str() << endl;
+                system(ss.str().c_str());
+    	        ComController::instance()->sendSlaves(&status,sizeof(bool));
+            }
+            else
+            {
+    	        ComController::instance()->readMaster(&status,sizeof(bool));
+            }
             if((*t)->name.find("sf",0)!=string::npos)
                 readQuery(_query[0]);
             else
@@ -435,12 +445,31 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
             chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
             if((*t)->name.find("sf",0)!=string::npos)
             {
-                system("./ArchInterface -r \"query\"");
+                bool status;
+                if(ComController::instance()->isMaster())
+                {
+                    system("./ArchInterface -r \"query\"");
+    	            ComController::instance()->sendSlaves(&status,sizeof(bool));
+                }
+                else
+                {
+    	            ComController::instance()->readMaster(&status,sizeof(bool));
+                }
+                
                 setupQuerySelectMenu();
             }
             else
             {
-                system("./ArchInterface -r \"querp\"");
+                bool status;
+                if(ComController::instance()->isMaster())
+                {
+                    system("./ArchInterface -r \"querp\"");
+    	            ComController::instance()->sendSlaves(&status,sizeof(bool));
+                }
+                else
+                {
+    	            ComController::instance()->readMaster(&status,sizeof(bool));
+                }
                 setupQuerySelectMenu();
             }
         }
@@ -467,11 +496,20 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
         }
         if(menuItem==_eraseQuery[i])
         {
-            chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
-            stringstream ss;
-            ss << "./ArchInterface -n \"" << _query[i]->name << "\"";
-            cout << ss.str() << endl;
-            system(ss.str().c_str());
+            bool status;
+            if(ComController::instance()->isMaster())
+            {
+                chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
+                stringstream ss;
+                ss << "./ArchInterface -n \"" << _query[i]->name << "\"";
+                cout << ss.str() << endl;
+                system(ss.str().c_str());
+    	        ComController::instance()->sendSlaves(&status,sizeof(bool));
+            }
+            else
+            {
+    	        ComController::instance()->readMaster(&status,sizeof(bool));
+            }
             _root->removeChild(_query[i]->sphereRoot);
             _query.erase(_query.begin()+i);
             setupQuerySelectMenu();
@@ -1663,11 +1701,19 @@ void ArtifactVis::setupTablesMenu()
 }
 void ArtifactVis::setupQueryMenu(Table * table)
 {
-    
-    chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
-    stringstream ss;
-    ss << "./ArchInterface -m \"" << table->name << "\"";
-    system(ss.str().c_str());
+    bool status;
+    if(ComController::instance()->isMaster())
+    {
+        chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
+        stringstream ss;
+        ss << "./ArchInterface -m \"" << table->name << "\"";
+        system(ss.str().c_str());
+    	ComController::instance()->sendSlaves(&status,sizeof(bool));
+    }
+    else
+    {
+	ComController::instance()->readMaster(&status,sizeof(bool));
+    }
     table->query_view = new MenuText("",1,false,400);
     std::string file = ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").append("menu.xml");
     FILE * fp = fopen(file.c_str(),"r");
