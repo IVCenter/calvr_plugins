@@ -1,5 +1,8 @@
 #include "Sketch.h"
+#include "SketchLine.h"
+#include "SketchRibbon.h"
 
+#include <config/ConfigManager.h>
 #include <kernel/PluginHelper.h>
 #include <kernel/InteractionManager.h>
 
@@ -7,6 +10,7 @@
 #include <osg/Material>
 #include <osg/LightModel>
 #include <osg/LineWidth>
+#include <osgDB/WriteFile>
 
 #include <iostream>
 
@@ -44,9 +48,17 @@ bool Sketch::init()
     _modeButtons->addButton("Shape");
     _sketchMenu->addItem(_modeButtons);
 
+    _csCB = new MenuCheckbox("Color Selector",false);
+    _csCB->setCallback(this);
+    _sketchMenu->addItem(_csCB);
+
     _sizeRV = new MenuRangeValue("Size",0.1,10.0,1.0);
     _sizeRV->setCallback(this);
     _sketchMenu->addItem(_sizeRV);
+
+    _saveButton = new MenuButton("Save");
+    _saveButton->setCallback(this);
+    _sketchMenu->addItem(_saveButton);
 
     _lineType = new MenuTextButtonSet(true, 400, 30, 3);
     _lineType->setCallback(this);
@@ -71,7 +83,7 @@ bool Sketch::init()
     _shapeWireframe->setCallback(this);
 
     _mode = NONE;
-    _lt = LINE_NONE;
+    _lt = SketchLine::NONE;
     _st = SHAPE_NONE;
     _drawing = false;
 
@@ -87,16 +99,18 @@ bool Sketch::init()
 
     osg::StateSet * stateset = _sketchGeode->getOrCreateStateSet();
     //stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
-    osg::LightModel * lm = new osg::LightModel();
-    lm->setTwoSided(true);
-    stateset->setAttributeAndModes(lm,osg::StateAttribute::ON);
+    //osg::LightModel * lm = new osg::LightModel();
+    //lm->setTwoSided(true);
+    //stateset->setAttributeAndModes(lm,osg::StateAttribute::ON);
     osg::Material * mat = new osg::Material();
     stateset->setAttributeAndModes(mat,osg::StateAttribute::ON);
 
     _brushRoot = new osg::MatrixTransform();
     PluginHelper::getScene()->addChild(_brushRoot);
 
-    osg::Shape * shape;
+    _activeObject = NULL;
+
+    /*osg::Shape * shape;
     osg::ShapeDrawable * sd;
     osg::Geode * geode;
 
@@ -117,7 +131,12 @@ bool Sketch::init()
     geode->addDrawable(sd);
     _brushes.push_back(geode);
 
-    _brushes.push_back(geode);
+    _brushes.push_back(geode);*/
+
+    _colorSelector = new ColorSelector(_color);
+    //_colorSelector->setVisible(true);
+    osg::Vec3 pos = ConfigManager::getVec3("Plugin.Sketch.ColorSelector");
+    _colorSelector->setPosition(pos);
 
 
     return true;
@@ -125,7 +144,7 @@ bool Sketch::init()
 
 void Sketch::menuCallback(MenuItem * item)
 {
-    if(item == _modeButtons)
+    /*if(item == _modeButtons)
     {
 	finishGeometry();
 	removeMenuItems(_mode);
@@ -151,12 +170,75 @@ void Sketch::menuCallback(MenuItem * item)
     {
 	finishGeometry();
 	_st = (ShapeType)_shapeType->firstNumOn();
+    }*/
+
+    if(item == _modeButtons)
+    {
+	finishGeometry();
+	removeMenuItems(_mode);
+	_mode = (DrawMode)_modeButtons->firstNumOn();
+	//_brushRoot->removeChildren(0,_brushRoot->getNumChildren());
+	//if(_mode >= 0)
+	//{
+	//    _brushRoot->addChild(_brushes[_mode]);
+	//}
+
+	_sizeRV->setValue(1.0);
+	addMenuItems(_mode);
+	createGeometry();
+    }
+    else if(item == _sizeRV)
+    {
+	if(_activeObject)
+	{
+	    _activeObject->setSize(_sizeRV->getValue());
+	}
+    }
+    else if(item == _lineType)
+    {
+	finishGeometry();
+	_lt = (SketchLine::LineType)_lineType->firstNumOn();
+	createGeometry();
+    }
+    else if(item == _lineTube)
+    {
+	SketchLine * line = dynamic_cast<SketchLine*>(_activeObject);
+	if(line)
+	{
+	    line->setTube(_lineTube->getValue());
+	}
+    }
+    else if(item == _lineSnap)
+    {
+	SketchLine * line = dynamic_cast<SketchLine*>(_activeObject);
+	if(line)
+	{
+	    line->setSnap(_lineSnap->getValue());
+	}
+    }
+    else if(item == _shapeType)
+    {
+	finishGeometry();
+	_st = (ShapeType)_shapeType->firstNumOn();
+	createGeometry();
+    }
+    else if(item == _saveButton)
+    {
+	osgDB::writeNodeFile(*_sketchRoot.get(), "/home/aprudhom/ribbontest.obj");
+    }
+    else if(item == _csCB)
+    {
+	_colorSelector->setVisible(_csCB->getValue());
     }
 }
 
 void Sketch::preFrame()
 {
-    if(_mode >= 0)
+    if(_activeObject)
+    {
+	_activeObject->updateBrush(_brushRoot.get());
+    }
+    /*if(_mode >= 0)
     {
 	osg::Matrix m;
 	osg::Quat rot = TrackingManager::instance()->getHandMat(0).getRotate();
@@ -172,12 +254,38 @@ void Sketch::preFrame()
 
 	m = scale *  m * osg::Matrix::translate(pos);
 	_brushRoot->setMatrix(m);
-    }
+    }*/
 }
 
 bool Sketch::buttonEvent(int type, int button, int hand, const osg::Matrix & mat)
 {
-    if(hand == 0 && button == 0 && type == BUTTON_DOWN && _mode >= 0)
+    if(hand == 0 && button == 0)
+    {
+	if(_csCB->getValue())
+	{
+	    if(_colorSelector->buttonEvent(type, mat))
+	    {
+		_color = _colorSelector->getColor();
+		if(_activeObject)
+		{
+		    _activeObject->setColor(_color);
+		}
+		return true;
+	    }
+	}
+
+	if(_activeObject)
+	{
+	    bool ret = _activeObject->buttonEvent(type, mat);
+	    if(_activeObject->isDone())
+	    {
+		finishGeometry();
+		createGeometry();
+	    }
+	    return ret;
+	}
+    }
+    /*if(hand == 0 && button == 0 && type == BUTTON_DOWN && _mode >= 0)
     {
 	//std::cerr << "Start drawing." << std::endl;
 
@@ -450,7 +558,7 @@ bool Sketch::buttonEvent(int type, int button, int hand, const osg::Matrix & mat
 	    //std::cerr << "Count: " << _count << std::endl;
 	}
 	return true;
-    }
+    }*/
 
     return false;
 }
@@ -509,7 +617,7 @@ void Sketch::addMenuItems(DrawMode dm)
 	case RIBBON:
 	    break;
 	case LINE:
-	    _lt = LINE_NONE;
+	    _lt = SketchLine::NONE;
 	    if(_lineType->firstNumOn() >= 0)
 	    {
 		_lineType->setValue(_lineType->firstNumOn(), false);
@@ -538,7 +646,7 @@ void Sketch::addMenuItems(DrawMode dm)
 
 void Sketch::finishGeometry()
 {
-    if(!_drawing)
+    /*if(!_drawing)
     {
 	return;
     }
@@ -548,5 +656,57 @@ void Sketch::finishGeometry()
 	_geometryMap[PluginHelper::getProgramDuration()] = _currentGeometry;
     }
 
-    _drawing = false;
+    _drawing = false;*/
+
+    if(!_activeObject)
+    {
+	return;
+    }
+
+    if(!_activeObject->isDone())
+    {
+	_activeObject->finish();
+    }
+
+    _activeObject->removeBrush(_brushRoot.get());
+
+    if(_activeObject->isValid())
+    {
+	_objectList.push_back(_activeObject);
+    }
+    else
+    {
+	_sketchGeode->removeDrawable(_activeObject->getDrawable());
+	delete _activeObject;
+    }
+
+    _activeObject = NULL;
+}
+
+void Sketch::createGeometry()
+{
+    if(_activeObject)
+    {
+	finishGeometry();
+    }
+
+    switch(_mode)
+    {
+	case RIBBON:
+	    _activeObject = new SketchRibbon(_color, _sizeRV->getValue());
+	    break;
+	case LINE:
+	    _activeObject = new SketchLine(_lt, _lineTube->getValue(), _lineSnap->getValue(), _color, _sizeRV->getValue());
+	    break;
+	case SHAPE:
+	    break;
+	default:
+	    break;
+    }
+
+    if(_activeObject)
+    {
+	_sketchGeode->addDrawable(_activeObject->getDrawable());
+	_activeObject->addBrush(_brushRoot.get());
+    }
 }
