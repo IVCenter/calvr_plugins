@@ -2326,8 +2326,8 @@ void commandLineParse(int argc, char *argv[])
                   else
                   {
                       cout << "Please Input: \"File\" \"Name\" \"Type\" \"Delimeter(e.g. ',' or '|')\"\n";
+                      importDemos();
                   }
-                  //importDemos();
 
 
 
@@ -2558,21 +2558,7 @@ string connectParam(string serverName)
     //int count = output.size();
     //cout << count << "\n";
 
-    if (serverName == "")
-    {
-        cinfo = "dbname=";
-        cinfo.append(output[1][1]);
-        cinfo.append(" host=");
-        //cinfo.append("192.168.0.103");
-        cinfo.append(output[2][1]);
-        cinfo.append(" user=");
-        cinfo.append(output[3][1]);
-        cinfo.append(" password=");
-        cinfo.append(output[4][1]);
-        //cout << cinfo << "Hello\n";
-       // c = cinfo.c_str ();
-    }
-    else if (serverName == "Local")
+    if (serverName == "" || serverName == "Local")
     {
         cinfo = "dbname=";
         cinfo.append(output[1][1]);
@@ -2608,7 +2594,6 @@ PGconn *connectDB(string param)
     PGconn          *conn;
 
     const char*    c = param.c_str();
-
     conn = PQconnectdb(c);
 
          if (PQstatus(conn) == CONNECTION_BAD) {
