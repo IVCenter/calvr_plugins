@@ -126,7 +126,7 @@ bool PluginTest::init()
     if(node)
     {
 	_testobj->addChild(node);
-	_testobj->computeBoundingBox();
+	//_testobj->computeBoundingBox();
     }
 
     SceneManager::instance()->registerSceneObject(_testobj,"PluginTest");
