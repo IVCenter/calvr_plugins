@@ -129,8 +129,21 @@ bool PluginTest::init()
 	//_testobj->computeBoundingBox();
     }
 
-    SceneManager::instance()->registerSceneObject(_testobj,"PluginTest");
-    _testobj->attachToScene();
+    _testobj->setScale(0.1);
+    //SceneManager::instance()->registerSceneObject(_testobj,"PluginTest");
+    //_testobj->attachToScene();
+
+    _testobj2 = new SceneObject("TestObject2", false, true, false, false, true);
+    node = osgDB::readNodeFile("/home/aprudhom/data/PDB/cache/4HHBcart.wrl");
+    if(node)
+    {
+	_testobj2->addChild(node);
+    }
+
+    SceneManager::instance()->registerSceneObject(_testobj2,"PluginTest");
+    _testobj2->attachToScene();
+    _testobj2->setScale(20.0);
+    _testobj2->addChild(_testobj);
 
     //std::cerr << "NodeMask: " << PluginHelper::getObjectsRoot()->getNodeMask() << std::endl;
 

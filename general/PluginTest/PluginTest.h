@@ -53,6 +53,7 @@ class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::TabbedDialogPanel * tdp1;
 
         cvr::SceneObject * _testobj;
+        cvr::SceneObject * _testobj2;
 
         bool _loading;
         int _job;
