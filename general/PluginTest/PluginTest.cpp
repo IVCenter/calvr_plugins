@@ -121,7 +121,7 @@ bool PluginTest::init()
 
     //createSphereTexture();
 
-    _testobj = new SceneObject("My Test Object", true, true, false, false, true);
+    _testobj = new SceneObject("My Test Object", true, true, false, true, true);
     osg::Node * node = osgDB::readNodeFile("/home/aprudhom/data/heart/heart00.iv");
     if(node)
     {
@@ -129,11 +129,14 @@ bool PluginTest::init()
 	//_testobj->computeBoundingBox();
     }
 
-    _testobj->setScale(0.1);
+    _testobj->setScale(0.3);
+    _testobj->addMoveMenuItem();
     //SceneManager::instance()->registerSceneObject(_testobj,"PluginTest");
     //_testobj->attachToScene();
 
-    _testobj2 = new SceneObject("TestObject2", false, true, false, false, true);
+    _testobj2 = new SceneObject("TestObject2", true, true, false, true, true);
+    _testobj2->addMoveMenuItem();
+    _testobj2->addNavigationMenuItem();
     node = osgDB::readNodeFile("/home/aprudhom/data/PDB/cache/4HHBcart.wrl");
     if(node)
     {
