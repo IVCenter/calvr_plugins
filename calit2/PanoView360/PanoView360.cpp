@@ -42,6 +42,7 @@ bool PanoView360::init()
     _cdLeft = NULL;
     _cdRight = NULL;
     _joystickSpin = ConfigManager::getBool("Plugin.PanoView360.JoystickSpin", true);
+    _spinScale = ConfigManager::getFloat("Plugin.PanoView360.SpinScale",1.0);
 
     _root = new osg::MatrixTransform();
 
@@ -325,8 +326,8 @@ void PanoView360::preFrame()
     }
    if(_cdLeft != NULL && _joystickSpin)
    {
-       _cdLeft->updateRotate(PluginHelper::getValuator(0,0));
-       _cdRight->updateRotate(PluginHelper::getValuator(0,0));
+       _cdLeft->updateRotate(_spinScale * PluginHelper::getValuator(0,0));
+       _cdRight->updateRotate(_spinScale * PluginHelper::getValuator(0,0));
    } 
 }
 
