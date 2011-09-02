@@ -7,6 +7,7 @@
 #include <menu/MenuSystem.h>
 #include <menu/SubMenu.h>
 #include <kernel/PluginHelper.h>
+#include <kernel/ComController.h>
 #include <kernel/InteractionManager.h>
 #include <kernel/ThreadedLoader.h>
 #include <kernel/SceneManager.h>
@@ -222,6 +223,7 @@ void PluginTest::preFrame()
 	    _loading = false;
 	}
     }
+    testMulticast();
 }
 
 void PluginTest::postFrame()
@@ -363,4 +365,36 @@ void PluginTest::createSphereTexture()
     {
 	std::cerr << "Not using GL fast path." << std::endl;
     }
+}
+
+void PluginTest::testMulticast()
+{
+    int * data = new int[4000];
+
+    if(ComController::instance()->isMaster())
+    {
+	for(int i = 0; i < 4000; i++)
+	{
+	    data[i] = i % 10;
+	}
+
+	ComController::instance()->sendSlavesMulticast(data,4000*sizeof(int));
+    }
+    else
+    {
+	memset(data,0,4000*sizeof(int));
+	ComController::instance()->readMasterMulticast(data,4000*sizeof(int));
+	std::cerr << "Got data : ";
+	bool ok = true;
+	for(int i = 0; i < 4000; i++)
+	{
+	    if(data[i] != i % 10)
+	    {
+		ok = false;
+	    }
+	}
+	std::cerr << ok << std::endl;
+    }
+
+    delete[] data;
 }
