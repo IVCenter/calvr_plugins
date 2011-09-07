@@ -211,7 +211,7 @@ void MenuBasics::preFrame()
     }
 }
 
-void MenuBasics::message(int type, char * data)
+void MenuBasics::message(int type, char * & data, bool)
 {
     MenuMessageType mt = (MenuMessageType) type;
     switch(mt)

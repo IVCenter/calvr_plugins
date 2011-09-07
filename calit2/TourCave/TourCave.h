@@ -34,7 +34,7 @@ class TourCave : public CVRPlugin, public MenuCallback
 
         void menuCallback(MenuItem * item);
 
-        void message(int type, char * data);
+        void message(int type, char * & data, bool);
 
     protected:
 

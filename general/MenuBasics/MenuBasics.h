@@ -19,7 +19,7 @@ class MenuBasics : public cvr::CVRPlugin, public cvr::MenuCallback
 
         void preFrame();
 
-        void message(int type, char * data);
+        void message(int type, char * & data, bool);
     protected:
         cvr::MenuCheckbox * moveworld;
         cvr::MenuCheckbox * scale;

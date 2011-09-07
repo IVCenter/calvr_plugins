@@ -661,7 +661,7 @@ void OsgPathRecorder::saveCurrentPath()
     }
 }
 
-void OsgPathRecorder::message(int type, char * data)
+void OsgPathRecorder::message(int type, char * & data, bool)
 {
     PathRecorderMessageType mtype = (PathRecorderMessageType)type;
     switch(mtype)

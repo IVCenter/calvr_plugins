@@ -372,7 +372,7 @@ void TourCave::menuCallback(MenuItem * item)
     }
 }
 
-void TourCave::message(int type, char * data)
+void TourCave::message(int type, char * & data, bool)
 {
     if(type == PR_GET_TIME)
     {

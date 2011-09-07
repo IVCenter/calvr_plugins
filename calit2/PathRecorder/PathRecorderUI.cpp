@@ -137,7 +137,7 @@ void PathRecorder::menuCallback(MenuItem *activeItem)
     }
 }
 
-void PathRecorder::message(int type, char * data)
+void PathRecorder::message(int type, char * & data, bool)
 {
     PathRecorderMessageType mtype = (PathRecorderMessageType)type;
     switch(mtype)
