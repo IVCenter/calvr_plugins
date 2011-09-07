@@ -223,7 +223,7 @@ void PluginTest::preFrame()
 	    _loading = false;
 	}
     }
-    testMulticast();
+    //testMulticast();
 }
 
 void PluginTest::postFrame()

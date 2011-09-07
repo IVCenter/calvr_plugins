@@ -14,7 +14,7 @@ using namespace cvr;
 
 CVRPLUGIN(ModelLoader)
 
-ModelLoader::ModelLoader() : FileLoadCallback("vrml,obj")
+ModelLoader::ModelLoader() : FileLoadCallback("iv,wrl,vrml,obj")
 {
 
 }
