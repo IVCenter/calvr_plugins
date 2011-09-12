@@ -20,7 +20,12 @@
 #include <queue>
 #include <OpenThreads/Mutex>
 #include <OpenThreads/Thread>
+#include <osg/Geode>
 #include <kernel/InteractionManager.h>
+#include <osg/Shape>
+#include <osg/Node>
+#include "AndroidTransform.h"
+#include "AndroidVisitor.h"
 
 #include <iostream>
 #include <string>
@@ -46,7 +51,7 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
             // Selects a node to adjust
         void nodeSelect();
             // Adjusts selected node
-        void adjustNode(double height, double magnitude);
+        void adjustNode(double height, double magnitude, int position);
             // Allows Vec3 comparison
         class compare{
             public: 
@@ -54,7 +59,7 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
                     return(vec1.length() < vec2.length());
                 }
         };
-
+        
     protected:
         osg::MatrixTransform * _root;
         cvr::MenuCheckbox *_isOn;
@@ -73,9 +78,20 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
         bool _mkill;
         OpenThreads::Mutex _mutex;
         bool newMode;
-        cvr::TrackingInteractionEvent* tracker;
-            // Runs the thread to take in android data
-        virtual void run();
         bool flip;
+        AndroidTransform * node;
+        osg::Geode* thing;        
+        osg::MatrixTransform* coneTrans;
+        osg::MatrixTransform* rotCone;
+        double ry;
+        osg::Cone* cone;
+        osg::Matrix currentMat;
+        std::map<char*, AndroidTransform*> nodeMap;
+        char* node_name;
+
+        // Runs the thread to take in android data
+        virtual void run();
+        
 };
+
 #endif
