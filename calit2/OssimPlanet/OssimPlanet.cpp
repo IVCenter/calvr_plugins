@@ -101,11 +101,11 @@ bool OssimPlanet::init()
 
    ossimPlanetTerrain::CullAmountType cullAmount = ossimPlanetTerrain::HIGH_CULL;
    ossimPlanetTerrain::SplitMergeSpeedType splitMergeSpeed = ossimPlanetTerrain::MEDIUM_SPEED;
-   ossimPlanetTerrain::ElevationDensityType elevationDensity = ossimPlanetTerrain::MEDIUM_ELEVATION_DENSITY;
+   ossimPlanetTerrain::ElevationDensityType elevationDensity = ossimPlanetTerrain::HIGH_ELEVATION_DENSITY;
    ossimPlanetTerrain::TextureDensityType textureDensity = ossimPlanetTerrain::MEDIUM_TEXTURE_DENSITY;
    double minTimeToCompilePerFrame = .003;
 
-   osg::ref_ptr<ossimPlanetTerrain> terrain = new ossimPlanetTerrain(grid.get());
+   terrain = new ossimPlanetTerrain(grid.get());
    terrain->setPrecompileEnabledFlag(false);
    terrain->setTerrainTechnique(technique);
    terrain->setCullAmountType(cullAmount);
@@ -115,7 +115,7 @@ bool OssimPlanet::init()
    terrain->setElevationExaggeration(1.0);
    terrain->setMinimumTimeToCompilePerFrameInSeconds(minTimeToCompilePerFrame);
    terrain->setElevationMemoryCache(new ossimPlanetMemoryImageCache);
-   terrain->elevationCache()->setMinMaxCacheSizeInMegaBytes(128, 256);
+   terrain->elevationCache()->setMinMaxCacheSizeInMegaBytes(128, 2048);
 
    // add texture  
    if( groupLayer.valid() )
@@ -161,7 +161,7 @@ bool OssimPlanet::init()
    PluginHelper::setObjectMatrix(objects);    // moves the planet; matrix should be a pure translation and rotation
    PluginHelper::setObjectScale(earthRadiusMM); // this matrix should be a pure scale
    
-   planet->addChild(terrain.get());
+   planet->addChild(terrain);
    
    // enable cloud cover
    cloudCover();
@@ -308,7 +308,6 @@ void OssimPlanet::cloudCover()
    ephemeris->setNumberOfCloudLayers(1);
    ephemeris->cloudLayer(0)->computeMesh(cloudAltitude, 128, 128, 0);
    ephemeris->cloudLayer(0)->updateTexture(0, cloudCoverage, cloudSharpness);
-   //ephemeris->cloudLayer(0)->setSpeedPerHour(1000, OSSIM_MILES);
    ephemeris->cloudLayer(0)->setSpeedPerHour(10000, OSSIM_MILES);
    ephemeris->cloudLayer(0)->setScale(3);
    ephemeris->cloudLayer(0)->setMaxAltitudeToShowClouds(cloudAltitude*2.0);
@@ -318,6 +317,13 @@ void OssimPlanet::cloudCover()
 OssimPlanet::~OssimPlanet()
 {
    fprintf(stderr,"OssimPlanet::~OssimPlanet\n");
+}
+
+void OssimPlanet::postFrame()
+{
+    // release background processing threads
+    //if(terrain != NULL)
+    //	terrain->release();
 }
 
 
@@ -413,6 +419,10 @@ void OssimPlanet::preFrame()
 
     double scaleFactor = minNavScale + (ratio * (maxNavScale - minNavScale));
     Navigation::instance()->setScale(scaleFactor);*/
+
+    // block background threads for draw and culling phase
+    //if( terrain != NULL )
+    //	terrain->pause();
 }
 
 bool OssimPlanet::buttonEvent(int type, int button, int hand, const osg::Matrix & mat)

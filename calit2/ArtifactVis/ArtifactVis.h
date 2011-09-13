@@ -55,7 +55,7 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
                 return ((*a1).distToCam < (*a2).distToCam);
             }
         };
-
+        void message(int type, char* data);
 	bool init();
         bool buttonEvent(int type, int button, int hand, const osg::Matrix & mat);
         bool mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix & mat);
@@ -176,6 +176,7 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
         int _activeArtifact;
         bool _selectActive;
         bool _ossim;
+        bool _osgearth;
        
         std::string getTimeModified(std::string file); 
         int dc2Int(std::string dc);

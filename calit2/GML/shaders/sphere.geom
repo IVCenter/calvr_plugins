@@ -62,9 +62,9 @@ main()
 	gl_FrontColor  = gl_FrontColorIn[ i ];
 
      	// triangles (v0, v2, v4) (v0, v4, v3) (v0, v3, v5) (v0, v5, v2)
-     	generateSurfaces(direction[i], up[i] - direction[i], right[i] - direction[i], gl_PositionIn[i].xyz, gl_FrontColorIn[i].w);
-     	generateSurfaces(direction[i], -right[i] - direction[i], up[i] - direction[i], gl_PositionIn[i].xyz, gl_FrontColorIn[i].w);
-     	generateSurfaces(direction[i], -up[i] - direction[i], -right[i] - direction[i], gl_PositionIn[i].xyz, gl_FrontColorIn[i].w);
-     	generateSurfaces(direction[i], right[i] - direction[i], -up[i] - direction[i], gl_PositionIn[i].xyz, gl_FrontColorIn[i].w);
+     	generateSurfaces(direction[i], up[i] - direction[i], right[i] - direction[i],  gl_PositionIn[i].xyz, gl_FrontColorIn[i].w);
+     	generateSurfaces(direction[i], -right[i] - direction[i], up[i] - direction[i],  gl_PositionIn[i].xyz, gl_FrontColorIn[i].w);
+     	generateSurfaces(direction[i], -up[i] - direction[i], -right[i] - direction[i],  gl_PositionIn[i].xyz, gl_FrontColorIn[i].w);
+     	generateSurfaces(direction[i], right[i] - direction[i], -up[i] - direction[i],  gl_PositionIn[i].xyz, gl_FrontColorIn[i].w);
      }
 }

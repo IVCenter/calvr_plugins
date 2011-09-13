@@ -24,6 +24,8 @@
 #include <osgText/Text>
 #include <osg/ShapeDrawable>
 #include <osg/LineWidth>
+#include <osg/PointSprite>
+#include <osg/AlphaFunc>
 #include <osg/PositionAttitudeTransform>
 #include <osg/Billboard>
 #include <map>
@@ -183,7 +185,6 @@ bool GML::loadFile(std::string filename)
                 nodeindex++;
 
 		// set inital point to move too
-		//n->savePoint(n->getX(), n->getY(), n->getZ());
 		n->savePoint(initPoint.x(), initPoint.y(), initPoint.z());
 	}
 	else if( tokens.size() != 0 && tokens[0].compare("edge") == 0)
@@ -336,15 +337,18 @@ bool GML::loadFile(std::string filename)
   lineGeom->setColorArray(colorsEdges);
   lineGeom->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
 
-  // attach shaders here to each of the geometry nodes
-  osg::ref_ptr<osg::Program> pgm1 = new osg::Program;
-  pgm1->setName( "Sphere" );
-  pgm1->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile("/home/covise/CalVR/plugins/calit2/GML/shaders/sphere.vert")));
-  pgm1->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile("/home/covise/CalVR/plugins/calit2/GML/shaders/sphere.frag")));
-  pgm1->addShader(osg::Shader::readShaderFile(osg::Shader::GEOMETRY, osgDB::findDataFile("/home/covise/CalVR/plugins/calit2/GML/shaders/sphere.geom")));
-  pgm1->setParameter( GL_GEOMETRY_VERTICES_OUT_EXT, 128 );
+  // point shader
+  osg::StateSet *state = nodeGeom->getOrCreateStateSet();
+  pgm2->setName( "Sphere" );
+  osg::Program* pgm1 = new osg::Program;
+  pgm1->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile("/home/covise/CalVR/plugins/calit2/GML/shaders/Sphere.vert")));
+  pgm1->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile("/home/covise/CalVR/plugins/calit2/GML/shaders/Sphere.frag")));
+  pgm1->addShader(osg::Shader::readShaderFile(osg::Shader::GEOMETRY, osgDB::findDataFile("/home/covise/CalVR/plugins/calit2/GML/shaders/Sphere.geom")));
+  pgm1->setParameter( GL_GEOMETRY_VERTICES_OUT_EXT, 4 );
   pgm1->setParameter( GL_GEOMETRY_INPUT_TYPE_EXT, GL_POINTS );
   pgm1->setParameter( GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP );
+  state->setAttribute(pgm1);
+
 
   // tube shader
   osg::ref_ptr<osg::Program> pgm2 = new osg::Program;
@@ -356,52 +360,23 @@ bool GML::loadFile(std::string filename)
   pgm2->setParameter( GL_GEOMETRY_INPUT_TYPE_EXT, GL_LINES );
   pgm2->setParameter( GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP );
 
-
-  osg::StateSet* state = lineGeom->getOrCreateStateSet();
+  // get line state
+  state = lineGeom->getOrCreateStateSet();
   state->setAttribute(pgm2);
   edgeScale = new osg::Uniform("edgeScale", 1.0f);
   state->addUniform(edgeScale);
 
   state = nodeGeom->getOrCreateStateSet();
   state->setAttribute(pgm1);
-  state->setMode(GL_CULL_FACE, osg::StateAttribute::ON);
-  object2world = new osg::Uniform("obj2mod", PluginHelper::getObjectToWorldTransform());
-  nodeScale = new osg::Uniform("nodeScale", 1.0f);
-  state->addUniform(nodeScale);
-  state->addUniform(object2world);
+  objectScale = new osg::Uniform("objectScale", PluginHelper::getObjectScale());
+  //nodeScale = new osg::Uniform("nodeScale", 1.0f);
+  //state->addUniform(nodeScale);
+  state->addUniform(objectScale);
   
   geode = new osg::Geode();
   geode->addDrawable(lineGeom);
   geode->addDrawable(nodeGeom);
   
-  state = geode->getOrCreateStateSet(); 
-  world2object = new osg::Uniform("mod2obj", PluginHelper::getWorldToObjectTransform());
-  state->addUniform(world2object);
-
-/*
-  // need to add the uniform of the 6 planes and points that make up the fixed camera TODO
-  std::list< osg::ref_ptr<osg::Camera> > cameras = VRViewer::instance()->getCameras();
-
-  printf("Number of cameras %d\n", (int) cameras.size());
-
-  // allocate temp space for the frustum values
-  float frustum[36];
-  float fov, aspect, near, far;
-  for(int i = 0; i < (int) cameras.size(); i++)
-  {
-	// create uniform of an array of floats
-        // 3 + 3 (normal and point) * 6 = 36 float values
- 	cameras[i]->setProjectionMatrixAsPerspective(&fov, &aspect, &near, &far);
-
-        // compute planes and add to frustrum
-        	
-  }
-
-  // create and bind uniform
-  osg::Uniform* camUni = new osg::Uniform("camFrust", 36, &frustum);
-  state->addUnifrom(camUni);
-*/ 
-
   printf("Initalization finished\n");
  
   // attach graph to group
@@ -527,7 +502,7 @@ void GML::initializeVertices()
         colorsNodes->at(i) = osg::Vec4(node->getR(), node->getG(), node->getB(), node->getW());
   }
 
-  // need to break because node data needs to be inialized first
+  // need to break because node data needs to be initialized first
   int index = 0;
   for(int i = 0; i < (int)nodelist->size(); i++)
   {
@@ -979,7 +954,7 @@ void GML::movePoints()
 	}
 }
 
-// TODO shift to gpu in pre process.... as test is slow the more nodes you have
+// TODO shift to gpu in pre process.... as test is slow the more nodes you have (only intersect test with visible data)
 void GML::intersectionTesting()
 {
   if( geode != NULL)
@@ -1061,6 +1036,7 @@ bool GML::init()
   pointsMoving = false;
   activeNode = NULL;
   mouseOver = NULL;
+  objectScale = NULL;
 
   geode = NULL;
   group = new osg::Group();
@@ -1087,8 +1063,8 @@ GML::~GML()
 
 void GML::preFrame()
 {
-  object2world->set(PluginHelper::getObjectToWorldTransform());
-  world2object->set(PluginHelper::getWorldToObjectTransform());
+  if( objectScale != NULL )
+    objectScale->set(PluginHelper::getObjectScale());
 
   //intersectionTesting();
   
@@ -1106,7 +1082,7 @@ Node::Node()
 	_g = 0.0;
 	_b = 0.0;
 	//_w = 20.0;
-	_w = 1000.0;
+	_w = 500.0;
 	mouseOver = false;
 	lerp = new Lerpable<osg::Vec3>();
 }
@@ -1173,7 +1149,7 @@ Edge::Edge()
 	_r = 0.0;
 	_g = 1.0;
 	_b = 0.0;
-	_w = 200.0;
+	_w = 100.0;
 	_seen = false;
 	_falseEdge = false;
 };
@@ -1183,7 +1159,7 @@ Edge::Edge(bool edge)
 	_r = 1.0;
 	_g = 1.0;
 	_b = 1.0;
-	_w = 200.0;
+	_w = 100.0;
 	_seen = false;
 	_falseEdge = edge;
 };

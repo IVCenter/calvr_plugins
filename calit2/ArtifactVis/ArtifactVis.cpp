@@ -19,10 +19,12 @@
 
 #include <config/ConfigManager.h>
 #include <kernel/PluginHelper.h>
+#include <kernel/PluginManager.h>
 #include <kernel/SceneManager.h>
 #include <kernel/InteractionManager.h>
 #include <menu/MenuSystem.h>
 #include <util/LocalToWorldVisitor.h>
+#include <PluginMessageType.h>
 
 #include <osg/CullFace>
 #include <osg/Matrix>
@@ -50,6 +52,15 @@ ArtifactVis::ArtifactVis()
 ArtifactVis* ArtifactVis::getInstance()
 {
     return _artifactvis;
+}
+void ArtifactVis::message(int type, char * data)
+{
+    if(type == OE_TRANSFORM_POINTER)
+    {
+	OsgEarthRequest * request = (OsgEarthRequest*) data;
+	 
+    }
+    _osgearth = true;
 }
 bool ArtifactVis::init()
 {
@@ -1088,7 +1099,7 @@ void ArtifactVis::readSiteFile(int index)
 #endif
                 cout << _sitePos[index].y() << ", " << _sitePos[index].x() << endl;
             }
-            else
+            else if(!_osgearth)
             {
                 MatrixTransform * siteRot = new MatrixTransform();
                 Matrixd rot1;
@@ -1103,8 +1114,19 @@ void ArtifactVis::readSiteFile(int index)
                 siteTrans->setMatrix(transMat);
                 siteTrans->addChild(siteRot);
                 _siteRoot[index]->addChild(siteTrans);
+		
             }
-
+	    else
+	    {
+	        _siteRoot[index]->addChild(siteScale);
+                OsgEarthRequest request;
+	        request.lat = _sitePos[index].y();
+	        request.lon = _sitePos[index].x();
+	        cout << "Lat, Lon: " << _sitePos[index].y() << ", " << _sitePos[index].x() << endl;
+	        request.height = 30000.0f;
+	        request.trans = _siteRoot[index];
+	        PluginManager::instance()->sendMessageByName("OsgEarth",OE_ADD_MODEL,(char *) &request);
+	    }
 	    StateSet * ss=_siteRoot[index]->getOrCreateStateSet();
 	    ss->setMode(GL_LIGHTING, StateAttribute::ON | osg::StateAttribute::OVERRIDE);
 
@@ -1486,14 +1508,15 @@ void ArtifactVis::setupSiteMenu()
         {
             _siteRoot.push_back(new MatrixTransform());
             Vec3d pos;
-            if(_ossim)
+            //if(_ossim)
+            if(true)
             {
                 pos = position;
                 cout << "Ossim position: ";
             }
             else
             {
-                pos = Vec3d(0,0,0) * mirror * transMat * scaleMat * mirror * rot2 * rot1 * offsetMat;
+                //pos = Vec3d(0,0,0) * mirror * transMat * scaleMat * mirror * rot2 * rot1 * offsetMat;
             }
             cout << pos[0] << ", " << pos[1] << ", " << pos[2] << endl;
             _modelDisplayMenu->addItem(site); 
