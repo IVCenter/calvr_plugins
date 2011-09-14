@@ -64,13 +64,16 @@ osg::Vec3 AndroidTransform::getTrans(){
     return transmat.getTrans();
 }
 void AndroidTransform::setRotation(float rx, Vec3 xa, float ry, Vec3 ya, float rz, Vec3 za){
-    rotmat.makeRotate(rx, xa, ry, ya, rz, za);
-    Matrix inverseT = transmat.inverse(transmat);
-    setMatrix(inverseT * rotmat * transmat);
+    setRotation((double)rx, xa, (double) ry, ya, (double) rz, za);
 }
 
 void AndroidTransform::setRotation(double rx, Vec3 xa, double ry, Vec3 ya, double rz, Vec3 za){
-    rotmat.makeRotate(rx, xa, ry, ya, rz, za);
+    Quat x, y, z, main;
+    x.makeRotate(rx, xa);
+    y.makeRotate(ry, ya);
+    z.makeRotate(rz, za);
+    main = rotmat.getRotate();
+    rotmat.makeRotate(main * x * y* z);
     setMatrix(rotmat * transmat);
 }
 

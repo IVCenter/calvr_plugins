@@ -83,7 +83,7 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
         osg::Geode* thing;        
         osg::MatrixTransform* coneTrans;
         osg::MatrixTransform* rotCone;
-        double ry;
+        double old_ry;
         osg::Cone* cone;
         osg::Matrix currentMat;
         std::map<char*, AndroidTransform*> nodeMap;

@@ -65,7 +65,7 @@ bool AndroidNavigator::init()
         ComController::instance()->readMaster((char *)&status, sizeof(bool));
     }
 
-   /* 
+    
     // Adds drawables bears for testing       
     osg::Node* objNode = NULL;
     objNode = osgDB::readNodeFile("/home/bschlamp/Desktop/teddy.obj");    
@@ -88,9 +88,9 @@ bool AndroidNavigator::init()
     trans3->addChild(objNode);
     //trans4->addChild(objNode);
     
-   // trans1->setTrans(50.0,0.0,0.0);
+    trans1->setTrans(50.0,0.0,0.0);
     trans2->setTrans(100.0,0.0,100.0);
-
+/*
     Matrix markTrans;
     markTrans.makeTranslate(osg::Vec3 (50,0,0));
     trans1->setMatrix(markTrans);
@@ -124,7 +124,7 @@ bool AndroidNavigator::init()
     scale = .01;
     _menuUp = false;
     newMode = false; 
-    ry = 0.0; 
+    old_ry = 0.0; 
     node_name = NULL;
 
     // Default velocity
@@ -147,8 +147,8 @@ void AndroidNavigator::preFrame()
         int RECVCONST = 48;
         double x, y, z;
         x = y = z = 0.0;
-        double rx, rz;
-        rx = rz = 0.0;
+        double rx, ry, rz;
+        rx = ry = rz = 0.0;
         double sx, sy, sz; 
         sx = sy = sz = 1.0;
     
@@ -200,9 +200,11 @@ void AndroidNavigator::preFrame()
               /** 
                * Process Commands from the android phone
                * 0 = Connect to server
+               * 1 = Hide Node
                * 2 = Flip view
-               * 3 = Move Nodes
-               * 4 = Find Nodes (to send to phone)
+               * 3 = Show Node
+               * 4 = Move Nodes
+               * 5 = Find Nodes (to send to phone)
                */
             else if(type == 3)
             {
@@ -210,12 +212,17 @@ void AndroidNavigator::preFrame()
                     cout<<"Socket Connected"<<endl;
                     sendto(sock, &tagNum, sizeof(int), 0, (struct sockaddr *)&client_addr, addr_len);
                 }
+                else if(tag == 1){
+                    sendto(sock, &tagNum, sizeof(int), 0, (struct sockaddr *)&client_addr, addr_len);
+                    node->setNodeMask(0x0); 
+                }
                 else if(tag == 2){
                     sendto(sock, &tagNum, sizeof(int), 0, (struct sockaddr *)&client_addr, addr_len);
                     angle[1] = PI/rotscale;   
                 }
                 else if(tag == 3){
                     sendto(sock, &tagNum, sizeof(int), 0, (struct sockaddr *)&client_addr, addr_len);
+                    node->setNodeMask(0xffffff);
                 }
                 else if(tag == 4){
                     sendto(sock, &tagNum, sizeof(int), 0, (struct sockaddr *)&client_addr, addr_len);
@@ -331,7 +338,7 @@ void AndroidNavigator::preFrame()
                     rx += angle[2];
                     rz += angle[1];
                     if(angle[0] != 0)
-	            	ry = angle[0];
+	            	old_ry = angle[0];
                     x -= coord[0];
                     z += coord[1];
                     y += coord[2];
@@ -339,7 +346,7 @@ void AndroidNavigator::preFrame()
                 case 1:
                     // For DRIVE movement
                     rz += angle[1];
-                    ry -= coord[0] * .5; // Fixes orientation
+                    ry -= coord[0] * .5;  // Fixes orientation
                     y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
                     z += angle[2]; // For vertical movement                    
                     break;
@@ -349,9 +356,9 @@ void AndroidNavigator::preFrame()
                     break;
                 case 3:
                     // New fly mode -- moves like a plane
-                    rx -= angle[2];
+                    rx += angle[2];
                     ry -= coord[0] * .5; // Fixes orientation 
-                    rz -= angle[1];
+                    rz += angle[1];
                     y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
                     break;
                 case 5:
@@ -367,10 +374,12 @@ void AndroidNavigator::preFrame()
             z *= transcale;
             rx *= rotscale;
             rz *= rotscale;
+            ry *= rotscale;
     
             Matrix view = Matrix::identity();
             view = PluginHelper::getHeadMat();
             Vec3 campos = view.getTrans();
+
             campos[2] = 0;
             if(newMode || ( (_tagCommand == 0) || (_tagCommand == 2) ) ){   
                 campos = view.getTrans();
@@ -391,7 +400,7 @@ void AndroidNavigator::preFrame()
             za = (za * view) - campos;
 
             Matrix rot;
-            rot.makeRotate(rx, xa, 0.0, ya, rz, za);
+            rot.makeRotate(rx, xa, ry, ya, rz, za);
              
             Matrix ctrans, nctrans;
             ctrans.makeTranslate(campos);
@@ -499,18 +508,10 @@ void AndroidNavigator::adjustNode(double height, double magnitude, int position)
     }    
 
     Vec3 pos = node->getTrans();
-    Quat rot = node->getRotation();
-    double angle;
-    Vec3d axis;
-    rot.getRotate(angle, axis);
 
     if(position >= 0 && position <= 2){
         pos = pos + newVec;
     }
-        node_rx += angle * axis[0]; 
-        node_ry += angle * axis[1];
-        node_rz += angle * axis[2];
-
         Matrix view = PluginHelper::getHeadMat();
         Vec3 campos = view.getTrans();
 
@@ -521,6 +522,7 @@ void AndroidNavigator::adjustNode(double height, double magnitude, int position)
         xa = (xa * view) - campos;
         ya = (ya * view) - campos;
         za = (za * view) - campos;
+        
 
         node->setRotation(node_rx , xa, node_ry, ya, node_rz , za);
         node->setTrans(pos);
