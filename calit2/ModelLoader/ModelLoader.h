@@ -3,6 +3,7 @@
 
 #include <kernel/CVRPlugin.h>
 #include <kernel/FileHandler.h>
+#include <kernel/SceneObject.h>
 #include <menu/SubMenu.h>
 #include <menu/MenuButton.h>
 
@@ -33,17 +34,23 @@ class ModelLoader : public cvr::MenuCallback, public cvr::CVRPlugin, public cvr:
         virtual bool loadFile(std::string file);
 
     protected:
-        cvr::SubMenu * MLMenu, * loadMenu, * saveMenu;
-        cvr::MenuButton * removeButton, * loadButton, * saveButton;
+        cvr::SubMenu * MLMenu, * loadMenu;
+        cvr::MenuButton * removeButton;
 
         std::vector<cvr::MenuButton*> menuFileList;
-
-        osg::MatrixTransform * root;
 
         std::string configPath;
         std::map<std::string, std::pair<float, osg::Matrix> > locInit;
         std::vector<struct loadinfo *> models;
-        int wasInit, loadedModel;
+
+        std::map<cvr::SceneObject*,cvr::MenuButton*> _saveMap;
+        std::map<cvr::SceneObject*,cvr::MenuButton*> _loadMap;
+        std::map<cvr::SceneObject*,cvr::MenuButton*> _resetMap;
+        std::map<cvr::SceneObject*,cvr::MenuButton*> _deleteMap;
+        std::map<cvr::SceneObject*,cvr::SubMenu*> _posMap;
+        std::map<cvr::SceneObject*,cvr::SubMenu*> _saveMenuMap;
+
+        std::vector<cvr::SceneObject*> _loadedObjects;
 };
 
 #endif
