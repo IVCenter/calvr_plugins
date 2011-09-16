@@ -43,6 +43,7 @@ AndroidNavigator::AndroidNavigator()
 AndroidNavigator::~AndroidNavigator()
 {
 }
+
 bool AndroidNavigator::init()
 {
     std::cerr << "Android Navigator init\n"; 
@@ -56,7 +57,6 @@ bool AndroidNavigator::init()
     {
         status = true;
         makeThread();
-
         ComController::instance()->sendSlaves((char *)&status, sizeof(bool));
     }
 
@@ -65,73 +65,44 @@ bool AndroidNavigator::init()
         ComController::instance()->readMaster((char *)&status, sizeof(bool));
     }
 
-    
+/*
     // Adds drawables bears for testing       
     osg::Node* objNode = NULL;
     objNode = osgDB::readNodeFile("/home/bschlamp/Desktop/teddy.obj");    
-
-    cout<<"MAKING BEARS"<<endl; 
     name = "Bear1"; 
     AndroidTransform* trans1 = new AndroidTransform(name);
     name="Bear2";  
     AndroidTransform* trans2 = new AndroidTransform(name); 
     osg::MatrixTransform* trans3 = new osg::MatrixTransform(); 
-    //osg::MatrixTransform* trans4 = new osg::MatrixTransform(); 
-
     _root->addChild(trans1);
     _root->addChild(trans2);
     _root->addChild(trans3);
-    //_root->addChild(trans4);
-
     trans1->addChild(objNode);
     trans2->addChild(objNode);
     trans3->addChild(objNode);
-    //trans4->addChild(objNode);
-    
     trans1->setTrans(50.0,0.0,0.0);
     trans2->setTrans(100.0,0.0,100.0);
-/*
-    Matrix markTrans;
-    markTrans.makeTranslate(osg::Vec3 (50,0,0));
-    trans1->setMatrix(markTrans);
-    markTrans.makeTranslate(osg::Vec3 (0,50,50));
-    trans2->setMatrix(markTrans);
-    markTrans.makeTranslate(osg::Vec3 (50,50,100));
-    trans3->setMatrix(markTrans);
-    markTrans.makeTranslate(osg::Vec3 (0,0,0));
-    trans4->setMatrix(markTrans);
-     
-  */  
+*/    
     SceneManager::instance()->getObjectsRoot()->addChild(_root);
-    
+  
+    // Adds a menu option for AndroidNav (just so you know it's loaded). Doesn't actually do anything...  
     _andMenu = new SubMenu("AndroidNavigator", "AndroidNavigator");
-    _andMenu->setCallback(this);
-   
-     
+    _andMenu->setCallback(this); 
     _isOn = new MenuCheckbox("On", false);
     _isOn->setCallback(this);
     _andMenu->addItem(_isOn);
-    
-    
     MenuSystem::instance()->addMenuItem(_andMenu);
    
-    // Matrix data
+    // Global set
     transMult = ConfigManager::getFloat("Plugin.AndroidNavigator.TransMult", 1.0);
     rotMult = ConfigManager::getFloat("Plugin.AndroidNavigator.RotMult", 1.0);
-    
     transcale = -1 * transMult;
     rotscale = -.012 *rotMult; 
-    scale = .01;
-    _menuUp = false;
     newMode = false; 
     old_ry = 0.0; 
     node_name = NULL;
-
-    // Default velocity
-    velocity = 0;
-
-    // Default tag command
-    _tagCommand = -1;
+    velocity = 0;  // Default velocity --> not moving
+    _tagCommand = -1; // Default tag command --> no movement mode
 
     std::cerr<<"AndroidNavigator done"<<endl;
     return status;
@@ -152,13 +123,9 @@ void AndroidNavigator::preFrame()
         double sx, sy, sz; 
         sx = sy = sz = 1.0;
     
-        // 0 = rotation, 1 = move, 2 = scale, 9 = error/initalize
         int tag = 9;
-        int mode = 0;
 	int type = 0;
-        int size = 0; 
-        int start = 0;
-        char* value;
+        int mode = -1; // Navigation = 8, Node = 9, Command = 7
 
         double height = 0.0;
         double magnitude = 1.0;
@@ -203,8 +170,8 @@ void AndroidNavigator::preFrame()
                * 1 = Hide Node
                * 2 = Flip view
                * 3 = Show Node
-               * 4 = Move Nodes
-               * 5 = Find Nodes (to send to phone)
+               * 4 = Find AndroidTransform Nodes (to send to phone)
+               * 5 = Gets back a selected AndroidTransform Node from phone, allows nodes to move.
                */
             else if(type == 3)
             {
@@ -286,7 +253,6 @@ void AndroidNavigator::preFrame()
                     angle[2] = atof(split_str);
                 }
 
-
                 // Updates touch movement data
                 else if (tag == 1){
                     
@@ -331,84 +297,96 @@ void AndroidNavigator::preFrame()
             }
         }
         _mutex.unlock();
-            switch(_tagCommand)
-            {
-                case 0:
-                    // For FLY movement
-                    rx += angle[2];
-                    rz += angle[1];
-                    if(angle[0] != 0)
-	            	old_ry = angle[0];
-                    x -= coord[0];
-                    z += coord[1];
-                    y += coord[2];
-                    break;
-                case 1:
-                    // For DRIVE movement
-                    rz += angle[1];
-                    ry -= coord[0] * .5;  // Fixes orientation
-                    y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
-                    z += angle[2]; // For vertical movement                    
-                    break;
-                case 2:
-                    // For ROTATE_WORLD movement
-                    ry += angle[1];
-                    break;
-                case 3:
-                    // New fly mode -- moves like a plane
-                    rx += angle[2];
-                    ry -= coord[0] * .5; // Fixes orientation 
-                    rz += angle[1];
-                    y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
-                    break;
-                case 5:
-                    if(node_name != NULL){
-                        adjustNode(height, magnitude, position);
-                    }
-                    else cout<<"No Node Selected"<<endl;
-                    break;
-            }
 
-            x *= transcale;
-            y *= transcale;
-            z *= transcale;
-            rx *= rotscale;
-            rz *= rotscale;
-            ry *= rotscale;
-    
-            Matrix view = Matrix::identity();
-            view = PluginHelper::getHeadMat();
-            Vec3 campos = view.getTrans();
+        switch(_tagCommand)
+        {
+            case 0:
+                // For FLY movement
+                rx += angle[2];
+                rz += angle[1];
+                if(angle[0] != 0)
+                    old_ry = angle[0];
+                x -= coord[0];
+                z += coord[1];
+                y += coord[2];
+                break;
+            case 1:
+                // For DRIVE movement
+                rz += angle[1];
+                ry -= coord[0] * .5;  // Fixes orientation
+                y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
+                z += angle[2]; // For vertical movement                    
+                break;
+            case 2:
+                // For ROTATE_WORLD movement
+                ry += angle[1];
+                break;
+            case 3:
+                // New fly mode -- moves like a plane
+                rx += angle[2];
+                ry -= coord[0] * .5; // Fixes orientation 
+                rz += angle[1];
+                y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
+                break;
+            case 5:
+                if(node_name != NULL){
+                    adjustNode(height, magnitude, position);
+                }
+                else cout<<"No Node Selected"<<endl;
+                break;
+        }
 
-            campos[2] = 0;
-            if(newMode || ( (_tagCommand == 0) || (_tagCommand == 2) ) ){   
-                campos = view.getTrans();
-                newMode = false;
-            }
+        // Scales data by set amount
+        x *= transcale;
+        y *= transcale;
+        z *= transcale;
+        rx *= rotscale;
+        rz *= rotscale;
+        ry *= rotscale;
+   
+        /*
+         * If newMode (which occurs when Drive and New Fly starts),
+         *  this takes in a new headMat camera pos.
+         * If not, this takes in the old position, with the exception
+         *  of the z axis, which corresponds to moving your head up and down
+         *  to elimate conflict between phone and head tracker movement.
+         */ 
+        Matrix view = PluginHelper::getHeadMat(); 
+        if(newMode || ( (_tagCommand == 0) || (_tagCommand == 2) ) ){   
+            campos = view.getTrans();
+            newMode = false;
+        }
+        else{
+            Vec3 newCampos = view.getTrans();
+            campos[0] = newCampos[0];
+            campos[1] = newCampos[1];
+        }  
             
-            Vec3 trans = Vec3(x, y, z);
-            trans = (trans * view) - campos;
+        // Gets translation
+        Vec3 trans = Vec3(x, y, z);
+        trans = (trans * view) - campos;
+        Matrix tmat;
+        tmat.makeTranslate(trans);
 
-            Matrix tmat;
-            tmat.makeTranslate(trans);
-            Vec3 xa = Vec3(1.0, 0.0, 0.0);
-            Vec3 ya = Vec3(0.0, 1.0, 0.0);
-            Vec3 za = Vec3(0.0, 0.0, 1.0);
+        Vec3 xa = Vec3(1.0, 0.0, 0.0);
+        Vec3 ya = Vec3(0.0, 1.0, 0.0);
+        Vec3 za = Vec3(0.0, 0.0, 1.0);
+        xa = (xa * view) - campos;
+        ya = (ya * view) - campos;
+        za = (za * view) - campos;
 
-            xa = (xa * view) - campos;
-            ya = (ya * view) - campos;
-            za = (za * view) - campos;
-
-            Matrix rot;
-            rot.makeRotate(rx, xa, ry, ya, rz, za);
+        // Gets rotation
+        Matrix rot;
+        rot.makeRotate(rx, xa, ry, ya, rz, za);
              
-            Matrix ctrans, nctrans;
-            ctrans.makeTranslate(campos);
-            nctrans.makeTranslate(-campos);
+        Matrix ctrans, nctrans;
+        ctrans.makeTranslate(campos);
+        nctrans.makeTranslate(-campos);
 
-            finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
-            ComController::instance()->sendSlaves((char *)finalmat.ptr(), sizeof(double[16]));
-            PluginHelper::setObjectMatrix(finalmat);  
+        // Calculates new objectMatrix (will send to Slaves).
+        finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
+        ComController::instance()->sendSlaves((char *)finalmat.ptr(), sizeof(double[16]));
+        PluginHelper::setObjectMatrix(finalmat);  
     }
     else
     {
@@ -422,12 +400,15 @@ void AndroidNavigator::menuCallback(MenuItem* menuItem)
 {
     if(menuItem == _isOn)
     {
-        //TODO
+        //If I ever need a menu item?
     }
 }    
 
+/*
+ * Makes a new thread to take in data from phone
+ * Port = 8888.
+ */
 void AndroidNavigator::makeThread(){
-
     cout<<"Starting socket..."<<endl;    
     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1){
         cerr<<"Socket Error!"<<endl;
@@ -446,11 +427,14 @@ void AndroidNavigator::makeThread(){
 
     addr_len = sizeof(struct sockaddr);
     cout<<"Server waiting for client on port: "<<PORT<<endl;
-    
     _mkill = false;
     start();
 }
 
+/*
+ * Runs thread that takes data. Queues it to be processed
+ *   in preFrame.
+ */
 void AndroidNavigator::run()
 {
     int bytes_read;
@@ -479,6 +463,11 @@ void AndroidNavigator::run()
     }
 }
 
+/*
+ * Adjusts the selected AndroidTransform node.
+ *   (One has to be selected for this function to even be called).
+ * Gets data from phone.
+ */
 void AndroidNavigator::adjustNode(double height, double magnitude, int position){
     double adjust = height * magnitude;
     double value = adjust * PluginHelper::getObjectScale();
@@ -487,22 +476,22 @@ void AndroidNavigator::adjustNode(double height, double magnitude, int position)
 
     Vec3 newVec;
     switch(position){
-       case 0:
+       case 0:  // X Trans
            newVec = Vec3(value, 0, 0);
            break;
-       case 1:
+       case 1:  // Y Trans
            newVec = Vec3(0, value, 0);
            break;
-       case 2: 
+       case 2:  // Z Trans
            newVec = Vec3(0, 0, value);
            break;
-       case 3:
+       case 3:  // X Rot
            node_rx += value * rotscale;
            break;
-       case 4:
+       case 4:  // Y Rot
            node_ry += value * rotscale;
            break; 
-       case 5: 
+       case 5:  // Z Rot
            node_rz += value * rotscale;
            break;
     }    
@@ -512,19 +501,18 @@ void AndroidNavigator::adjustNode(double height, double magnitude, int position)
     if(position >= 0 && position <= 2){
         pos = pos + newVec;
     }
-        Matrix view = PluginHelper::getHeadMat();
-        Vec3 campos = view.getTrans();
-
-        Vec3 xa = Vec3(1.0, 0.0, 0.0);
-        Vec3 ya = Vec3(0.0, 1.0, 0.0);
-        Vec3 za = Vec3(0.0, 0.0, 1.0);
-
-        xa = (xa * view) - campos;
-        ya = (ya * view) - campos;
-        za = (za * view) - campos;
         
+    Matrix view = PluginHelper::getHeadMat();
+    Vec3 campos = view.getTrans();
 
-        node->setRotation(node_rx , xa, node_ry, ya, node_rz , za);
-        node->setTrans(pos);
+    Vec3 xa = Vec3(1.0, 0.0, 0.0);
+    Vec3 ya = Vec3(0.0, 1.0, 0.0);
+    Vec3 za = Vec3(0.0, 0.0, 1.0);
+    xa = (xa * view) - campos;
+    ya = (ya * view) - campos;
+    za = (za * view) - campos;
+      
+    node->setRotation(node_rx , xa, node_ry, ya, node_rz , za);
+    node->setTrans(pos);
 }
 
