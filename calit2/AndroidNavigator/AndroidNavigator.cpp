@@ -138,17 +138,12 @@ void AndroidNavigator::preFrame()
         const char* recv_data;
         char* split_str = NULL;
         
-        int count = 0;
-
         _mutex.lock();
         while(!queue.empty()){
                          
             str = queue.front();
             queue.pop();
              
-            count++; 
-            cout<<"COUNT: "<<count<<" STRING: "<<str<<endl;
-
             split_str = strtok(const_cast<char*>(str.c_str()), " ");
 
             type = split_str[1] - RECVCONST;
@@ -248,18 +243,14 @@ void AndroidNavigator::preFrame()
                     // First angle
                     split_str = strtok(NULL, " ");
                     angle[0] += atof(split_str);
-                    cout<<"0:"<<split_str<<endl;                   
 
                     // Second angle
                     split_str = strtok(NULL, " ");
                     angle[1] += atof(split_str);
-                    cout<<"1:"<<split_str<<endl;                   
 
                     // Third angle
                     split_str = strtok(NULL, " ");
                     angle[2] += atof(split_str);
-                    cout<<"2:"<<split_str<<endl;      
-                    cout<<angle[0]<<" "<<angle[1]<<" "<<angle[2]<<endl;             
                 }
 
                 // Updates touch movement data
@@ -298,8 +289,9 @@ void AndroidNavigator::preFrame()
                     }
                     else if (tag == 3){
                         velocity += atof(split_str);
-                        if(velocity == 0){
+                        if(atof(split_str) == 0){
                             newMode = true;
+                            velocity = 0;
                         }
                     }
                 }
@@ -353,7 +345,6 @@ void AndroidNavigator::preFrame()
         rz *= rotscale;
         ry *= rotscale;
   
-        cout<<rx<<", "<<ry<<", "<<rz<<endl; 
         /*
          * If newMode (which occurs when Drive and New Fly starts),
          *  this takes in a new headMat camera pos.
@@ -362,14 +353,12 @@ void AndroidNavigator::preFrame()
          *  to elimate conflict between phone and head tracker movement.
          */ 
         Matrix view = PluginHelper::getHeadMat(); 
+        Vec3 campos = view.getTrans();
         if(newMode || ( (_tagCommand == 0) || (_tagCommand == 2) ) ){   
-            campos = view.getTrans();
             newMode = false;
         }
         else{
-            Vec3 newCampos = view.getTrans();
-            campos[0] = newCampos[0];
-            campos[1] = newCampos[1];
+            campos[2] = 0;
         }  
             
         // Gets translation
