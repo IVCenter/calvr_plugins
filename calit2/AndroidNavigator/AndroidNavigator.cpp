@@ -50,7 +50,7 @@ bool AndroidNavigator::init()
 
     bool status = false;
     _root = new osg::MatrixTransform();
-    char* name = "new";
+    char* name = "None";
     node = new AndroidTransform(name);
 
     if(ComController::instance()->isMaster())
@@ -65,10 +65,10 @@ bool AndroidNavigator::init()
         ComController::instance()->readMaster((char *)&status, sizeof(bool));
     }
 
-/*
-    // Adds drawables bears for testing       
+
+    // Adds drawables bears for testing AndroidTransform 
     osg::Node* objNode = NULL;
-    objNode = osgDB::readNodeFile("/home/bschlamp/Desktop/teddy.obj");    
+    objNode = osgDB::readNodeFile("teddy.obj");    
     name = "Bear1"; 
     AndroidTransform* trans1 = new AndroidTransform(name);
     name="Bear2";  
@@ -82,7 +82,7 @@ bool AndroidNavigator::init()
     trans3->addChild(objNode);
     trans1->setTrans(50.0,0.0,0.0);
     trans2->setTrans(100.0,0.0,100.0);
-*/    
+    
     SceneManager::instance()->getObjectsRoot()->addChild(_root);
   
     // Adds a menu option for AndroidNav (just so you know it's loaded). Doesn't actually do anything...  
@@ -112,6 +112,10 @@ void AndroidNavigator::preFrame()
 {
     Matrixd finalmat;
 
+    double height = 0.0;
+    double magnitude = 1.0;
+    int position = 0;
+    
     if(ComController::instance()->isMaster())
     {  
 
@@ -127,9 +131,6 @@ void AndroidNavigator::preFrame()
 	int type = 0;
         int mode = -1; // Navigation = 8, Node = 9, Command = 7
 
-        double height = 0.0;
-        double magnitude = 1.0;
-        int position = 0;
         double angle [3] = {0.0, 0.0, 0.0};
         double coord [3] = {0.0, 0.0, 0.0};
 
@@ -331,7 +332,7 @@ void AndroidNavigator::preFrame()
                 break;
             case 5:
                 if(node_name != NULL){
-                    adjustNode(height, magnitude, position);
+                   adjustNode(height, magnitude, position);
                 }
                 else cout<<"No Node Selected"<<endl;
                 break;
@@ -357,9 +358,8 @@ void AndroidNavigator::preFrame()
         if(newMode || ( (_tagCommand == 0) || (_tagCommand == 2) ) ){   
             newMode = false;
         }
-        else{
-            campos[2] = 0;
-        }  
+          //Adjust for head tracking? Currently, not done.
+
             
         // Gets translation
         Vec3 trans = Vec3(x, y, z);
@@ -386,12 +386,15 @@ void AndroidNavigator::preFrame()
         finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
         ComController::instance()->sendSlaves((char *)finalmat.ptr(), sizeof(double[16]));
         PluginHelper::setObjectMatrix(finalmat);  
+    
     }
     else
     {
         ComController::instance()->readMaster((char *)finalmat.ptr(), sizeof(double[16]));
         PluginHelper::setObjectMatrix(finalmat);
     }
+
+    
 }
 
 	
@@ -468,6 +471,7 @@ void AndroidNavigator::run()
  * Gets data from phone.
  */
 void AndroidNavigator::adjustNode(double height, double magnitude, int position){
+
     double adjust = height * magnitude;
     double value = adjust * PluginHelper::getObjectScale();
     double node_rx, node_ry, node_rz;
@@ -514,4 +518,3 @@ void AndroidNavigator::adjustNode(double height, double magnitude, int position)
     node->setRotation(node_rx , xa, node_ry, ya, node_rz , za);
     node->setTrans(pos);
 }
-
