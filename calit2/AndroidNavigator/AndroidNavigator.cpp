@@ -138,11 +138,16 @@ void AndroidNavigator::preFrame()
         const char* recv_data;
         char* split_str = NULL;
         
+        int count = 0;
+
         _mutex.lock();
         while(!queue.empty()){
-                      
+                         
             str = queue.front();
             queue.pop();
+             
+            count++; 
+            cout<<"COUNT: "<<count<<" STRING: "<<str<<endl;
 
             split_str = strtok(const_cast<char*>(str.c_str()), " ");
 
@@ -242,15 +247,19 @@ void AndroidNavigator::preFrame()
                 if (tag == 0){
                     // First angle
                     split_str = strtok(NULL, " ");
-                    angle[0] = atof(split_str);
-                    
+                    angle[0] += atof(split_str);
+                    cout<<"0:"<<split_str<<endl;                   
+
                     // Second angle
                     split_str = strtok(NULL, " ");
-                    angle[1] = atof(split_str);
+                    angle[1] += atof(split_str);
+                    cout<<"1:"<<split_str<<endl;                   
 
                     // Third angle
                     split_str = strtok(NULL, " ");
-                    angle[2] = atof(split_str);
+                    angle[2] += atof(split_str);
+                    cout<<"2:"<<split_str<<endl;      
+                    cout<<angle[0]<<" "<<angle[1]<<" "<<angle[2]<<endl;             
                 }
 
                 // Updates touch movement data
@@ -258,11 +267,11 @@ void AndroidNavigator::preFrame()
                     
                     // First coord 
                     split_str = strtok(NULL, " ");
-                    coord[0] = atof(split_str);
+                    coord[0] += atof(split_str);
 
                     // Second coord
                     split_str = strtok(NULL, " ");
-                    coord[1] = atof(split_str);
+                    coord[1] += atof(split_str);
                 }
                 
                 // Node Adjustment Data
@@ -270,11 +279,11 @@ void AndroidNavigator::preFrame()
     
                     // Height
                     split_str = strtok(NULL, " ");
-                    height = atof(split_str);
+                    height += atof(split_str);
 
                     // Magnitude
                     split_str = strtok(NULL, " ");
-                    magnitude = atof(split_str);
+                    magnitude += atof(split_str);
  
                     // Axis
                     split_str = strtok(NULL, " ");
@@ -285,10 +294,10 @@ void AndroidNavigator::preFrame()
                 else{
                     split_str = strtok(NULL, " ");
                     if (tag == 2){
-                        coord[2] = atof(split_str);
+                        coord[2] += atof(split_str);
                     }
                     else if (tag == 3){
-                        velocity = atof(split_str);
+                        velocity += atof(split_str);
                         if(velocity == 0){
                             newMode = true;
                         }
@@ -343,7 +352,8 @@ void AndroidNavigator::preFrame()
         rx *= rotscale;
         rz *= rotscale;
         ry *= rotscale;
-   
+  
+        cout<<rx<<", "<<ry<<", "<<rz<<endl; 
         /*
          * If newMode (which occurs when Drive and New Fly starts),
          *  this takes in a new headMat camera pos.
@@ -450,7 +460,7 @@ void AndroidNavigator::run()
         rs = select(sock + 1, &readfds, 0, 0, 0);
         _mutex.lock();
         if(rs > 0){
-            bytes_read = recvfrom(sock, recv_data, 1024, 0, (struct sockaddr *)&client_addr, &addr_len);
+            bytes_read = recvfrom(sock, recv_data, 1024 , 0, (struct sockaddr *)&client_addr, &addr_len);
             if(bytes_read <= 0){
                 cerr<<"No data read."<<endl;
             }

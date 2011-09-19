@@ -40,12 +40,6 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
         bool init();
         void preFrame();
         void menuCallback(cvr::MenuItem * item);
-            // Adds a menu to the screen
-        bool addMenu();
-            // Removes menu from screen
-        bool removeMenu();
-            // Gets objects from artifactVis and determines which one is being pointed at
-        void objectSelection();
             // Makes a background thread to take in data
         void makeThread();
             // Selects a node to adjust
@@ -66,7 +60,6 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
         cvr::SubMenu *_andMenu;
         float transMult, rotMult;
         float transcale, rotscale, scale;
-        bool _menuUp;
         cvr::MenuSystem* _menu;
         int _tagCommand;
         int sock;
@@ -80,12 +73,7 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
         bool newMode;
         bool flip;
         AndroidTransform * node;
-        osg::Geode* thing;        
-        osg::MatrixTransform* coneTrans;
-        osg::MatrixTransform* rotCone;
         double old_ry;
-        osg::Cone* cone;
-        osg::Matrix currentMat;
         std::map<char*, AndroidTransform*> nodeMap;
         char* node_name;
         osg::Vec3 campos;

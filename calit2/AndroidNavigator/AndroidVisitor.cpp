@@ -9,6 +9,7 @@ using namespace osg;
   {
   }
 
+  // If a node is an AndroidTransform, it gets put into the nodeMap 
   void AndroidVisitor::apply(osg::Transform& node)
   {
     AndroidTransform* trans = dynamic_cast<AndroidTransform* > (&node);
@@ -19,6 +20,7 @@ using namespace osg;
     traverse(node);
   }
 
+  // Gets node map
   std::map<char*, AndroidTransform*> AndroidVisitor::getMap(){
       return nodeMap;
   }
