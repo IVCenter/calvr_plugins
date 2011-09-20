@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:orientation="vertical"
+  android:layout_width="fill_parent"
+  android:layout_height="fill_parent"
+  android:id="@+id/findNodeLayout"
+  android:background="@drawable/calitlogo_" 
+  android:padding="10dip">
+    
+  <Spinner 
+  		android:id="@+id/nodeOptions"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/nodePrompt" 
+        android:layout_gravity="center"
+        
+  />
+   
+  <Button 
+   		android:id="@+id/findNodesButton"
+    	android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Find Nodes"
+        android:layout_below="@id/nodeOptions"
+        android:layout_alignParentRight="true"
+  /> 
+  
+   <Button 
+   		android:id="@+id/selectNodeButton"
+    	android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Select Node"
+        android:layout_below="@id/nodeOptions"
+        android:layout_alignParentLeft="true"
+  /> 
+  
+  <CheckBox
+  	android:id="@+id/hideNodeBox"
+    	android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Hide Node"
+        android:layout_below="@id/selectNodeButton"
+        android:layout_alignParentBottom = "true"
+  /> 
+    
+    
+</RelativeLayout>
