@@ -9,6 +9,7 @@
 #include <menu/PopupMenu.h>
 #include <menu/MenuTextButtonSet.h>
 #include <menu/TabbedDialogPanel.h>
+#include <kernel/SceneObject.h>
 
 class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
 {
@@ -27,6 +28,7 @@ class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
         bool mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix& mat);
     protected:
         void createSphereTexture();
+        void testMulticast();
 
         cvr::MenuButton * testButton1;
         cvr::MenuButton * testButton2;
@@ -50,6 +52,9 @@ class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * pbutton1;
 
         cvr::TabbedDialogPanel * tdp1;
+
+        cvr::SceneObject * _testobj;
+        cvr::SceneObject * _testobj2;
 
         bool _loading;
         int _job;

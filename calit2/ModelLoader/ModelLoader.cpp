@@ -3,6 +3,7 @@
 #include <config/ConfigManager.h>
 #include <kernel/SceneManager.h>
 #include <menu/MenuSystem.h>
+#include <kernel/PluginHelper.h>
 #include <iostream>
 
 #include <osg/Matrix>
@@ -14,7 +15,7 @@ using namespace cvr;
 
 CVRPLUGIN(ModelLoader)
 
-ModelLoader::ModelLoader() : FileLoadCallback("vrml,obj")
+ModelLoader::ModelLoader() : FileLoadCallback("iv,wrl,vrml,obj,earth")
 {
 
 }
@@ -23,10 +24,6 @@ bool ModelLoader::init()
 {
     std::cerr << "ModelLoader init\n";
 
-    wasInit = 0;
-
-    root = new osg::MatrixTransform();
-
     MLMenu = new SubMenu("ModelLoader", "ModelLoader");
     MLMenu->setCallback(this);
 
@@ -34,19 +31,7 @@ bool ModelLoader::init()
     loadMenu->setCallback(this);
     MLMenu->addItem(loadMenu);
 
-    loadButton = new MenuButton("Load Position");
-    loadButton->setCallback(this);
-    MLMenu->addItem(loadButton);
-
-    saveMenu = new SubMenu("Save Position", "Save Position");
-    saveMenu->setCallback(this);
-    MLMenu->addItem(saveMenu);
-
-    saveButton = new MenuButton("Save");
-    saveButton->setCallback(this);
-    saveMenu->addItem(saveButton);
-
-    removeButton = new MenuButton("Remove");
+    removeButton = new MenuButton("Remove All");
     removeButton->setCallback(this);
     MLMenu->addItem(removeButton);
 
@@ -109,8 +94,6 @@ bool ModelLoader::init()
 
     MenuSystem::instance()->addMenuItem(MLMenu);
 
-    SceneManager::instance()->getObjectsRoot()->addChild(root);
-
     std::cerr << "ModelLoader init done.\n";
     return true;
 }
@@ -124,39 +107,43 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
 {
     if(menuItem == removeButton)
     {
-        if(root->getNumChildren() != 0)
-        {
-            root->removeChildren(0, root->getNumChildren());
-        }
-        wasInit = 0;
-        return;
-    }
+	std::map<SceneObject*,MenuButton*>::iterator it;
+	for(it = _saveMap.begin(); it != _saveMap.end(); it++)
+	{
+	    delete it->second;
+	}
+	for(it = _loadMap.begin(); it != _loadMap.end(); it++)
+	{
+	    delete it->second;
+	}
+	for(it = _resetMap.begin(); it != _resetMap.end(); it++)
+	{
+	    delete it->second;
+	}
+	for(it = _deleteMap.begin(); it != _deleteMap.end(); it++)
+	{
+	    delete it->second;
+	}
+	for(std::map<SceneObject*,SubMenu*>::iterator it2 = _posMap.begin(); it2 != _posMap.end(); it2++)
+	{
+	    delete it->second;
+	}
+	for(std::map<SceneObject*,SubMenu*>::iterator it2 = _saveMenuMap.begin(); it2 != _saveMenuMap.end(); it2++)
+	{
+	    delete it->second;
+	}
+	_saveMap.clear();
+	_loadMap.clear();
+	_resetMap.clear();
+	_deleteMap.clear();
+	_posMap.clear();
+	_saveMenuMap.clear();
 
-    if(menuItem == loadButton)
-    {
-        if(!wasInit)
-        {
-            return;
-        }
-
-        if(locInit.find(models[loadedModel]->name) != locInit.end())
-        {
-	    SceneManager::instance()->setObjectScale(locInit[models[loadedModel]->name].first);
-	    SceneManager::instance()->setObjectMatrix(locInit[models[loadedModel]->name].second);
-        }
-
-        return;
-    }
-
-    if(menuItem == saveButton)
-    {
-        if(!wasInit)
-        {
-            return;
-        }
-
-        locInit[models[loadedModel]->name] = pair<float, Matrix>(SceneManager::instance()->getObjectScale(), SceneManager::instance()->getObjectTransform()->getMatrix());
-        writeConfigFile();
+	for(int i = 0; i < _loadedObjects.size(); i++)
+	{
+	    delete _loadedObjects[i];
+	}
+	_loadedObjects.clear();
 
         return;
     }
@@ -165,11 +152,6 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
     {
         if(menuFileList[i] == menuItem)
         {
-            if(root->getNumChildren() != 0)
-            {
-                root->removeChildren(0, root->getNumChildren());
-            }
-
             osg::Node* modelNode = osgDB::readNodeFile(models[i]->path);
             if(modelNode==NULL)
             { 
@@ -189,42 +171,214 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
                 }
             }
 
-            root->addChild(modelNode);
+	    SceneObject * so;
+	    //TODO: change out of debug values
+	    so = new SceneObject(models[i]->name, false, false, false, true, true);
+	    so->addChild(modelNode);
+	    PluginHelper::registerSceneObject(so,"ModelLoader");
+	    so->attachToScene();
             
             if(locInit.find(models[i]->name) != locInit.end())
             {
-                SceneManager::instance()->setObjectScale(locInit[models[i]->name].first);
-                SceneManager::instance()->setObjectMatrix(locInit[models[i]->name].second);
+		osg::Matrix scale;
+		scale.makeScale(osg::Vec3(locInit[models[i]->name].first,locInit[models[i]->name].first,locInit[models[i]->name].first));
+		so->setTransform(scale * locInit[models[i]->name].second);
+            }
+	    so->setNavigationOn(true);
+	    so->addMoveMenuItem();
+	    so->addNavigationMenuItem();
+
+	    SubMenu * sm = new SubMenu("Position");
+	    so->addMenuItem(sm);
+	    _posMap[so] = sm;
+
+	    MenuButton * mb;
+	    mb = new MenuButton("Load");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+	    _loadMap[so] = mb;
+
+	    SubMenu * savemenu = new SubMenu("Save");
+	    sm->addItem(savemenu);
+	    _saveMenuMap[so] = savemenu;
+
+	    mb = new MenuButton("Save");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+	    _saveMap[so] = mb;
+
+	    mb = new MenuButton("Reset");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+	    _resetMap[so] = mb;
+	    
+	    mb = new MenuButton("Delete");
+	    mb->setCallback(this);
+	    so->addMenuItem(mb);
+	    _deleteMap[so] = mb;
+
+	    _loadedObjects.push_back(so);
+        }
+    }
+
+    for(std::map<SceneObject*,MenuButton*>::iterator it = _saveMap.begin(); it != _saveMap.end(); it++)
+    {
+	if(menuItem == it->second)
+	{
+	    std::cerr << "Save." << std::endl;
+	    bool nav;
+	    nav = it->first->getNavigationOn();
+	    it->first->setNavigationOn(false);
+
+	    locInit[it->first->getName()] = std::pair<float, osg::Matrix>(1.0,it->first->getTransform());
+
+	    it->first->setNavigationOn(nav);
+
+	    writeConfigFile(); 
+	}
+    }
+
+    for(std::map<SceneObject*,MenuButton*>::iterator it = _loadMap.begin(); it != _loadMap.end(); it++)
+    {
+	if(menuItem == it->second)
+	{
+	    bool nav;
+	    nav = it->first->getNavigationOn();
+	    it->first->setNavigationOn(false);
+
+	    if(locInit.find(it->first->getName()) != locInit.end())
+            {
+		std::cerr << "Load." << std::endl;
+		//osg::Matrix scale;
+		//scale.makeScale(osg::Vec3(locInit[it->first->getName()].first,locInit[it->first->getName()].first,locInit[it->first->getName()].first));
+		it->first->setTransform(locInit[it->first->getName()].second);
             }
 
-            wasInit = 1;
-            loadedModel = i;
-        }
+	    it->first->setNavigationOn(nav);
+	}
+    }
+
+    for(std::map<SceneObject*,MenuButton*>::iterator it = _resetMap.begin(); it != _resetMap.end(); it++)
+    {
+	if(menuItem == it->second)
+	{
+	    bool nav;
+	    nav = it->first->getNavigationOn();
+	    it->first->setNavigationOn(false);
+
+	    if(locInit.find(it->first->getName()) != locInit.end())
+            {
+		it->first->setTransform(osg::Matrix::identity());
+            }
+
+	    it->first->setNavigationOn(nav);
+	}
+    }
+
+    for(std::map<SceneObject*,MenuButton*>::iterator it = _deleteMap.begin(); it != _deleteMap.end(); it++)
+    {
+	if(menuItem == it->second)
+	{
+	    if(_saveMap.find(it->first) != _saveMap.end())
+	    {
+		delete _saveMap[it->first];
+		_saveMap.erase(it->first);
+	    }
+	    if(_loadMap.find(it->first) != _loadMap.end())
+	    {
+		delete _loadMap[it->first];
+		_loadMap.erase(it->first);
+	    }
+	    if(_resetMap.find(it->first) != _resetMap.end())
+	    {
+		delete _resetMap[it->first];
+		_resetMap.erase(it->first);
+	    }
+	    if(_posMap.find(it->first) != _posMap.end())
+	    {
+		delete _posMap[it->first];
+		_posMap.erase(it->first);
+	    }
+	    if(_saveMenuMap.find(it->first) != _saveMenuMap.end())
+	    {
+		delete _saveMenuMap[it->first];
+		_saveMenuMap.erase(it->first);
+	    }
+	    for(std::vector<SceneObject*>::iterator delit = _loadedObjects.begin(); delit != _loadedObjects.end(); delit++)
+	    {
+		if((*delit) == it->first)
+		{
+		    _loadedObjects.erase(delit);
+		    break;
+		}
+	    }
+
+
+	    delete it->first;
+	    delete it->second;
+	    _deleteMap.erase(it);
+
+	    break;
+	}
     }
 }
 
 bool ModelLoader::loadFile(std::string file)
 {
     std::cerr << "ModelLoader: Loading file: " << file << std::endl;
-    if(root->getNumChildren() != 0)
-    {
-        root->removeChildren(0, root->getNumChildren());
-    }
-
-    wasInit = 0;
 
     osg::Node* modelNode = osgDB::readNodeFile(file);
     if(modelNode==NULL)
     {
-        cerr << "ModelLoader: Error reading file " << file << endl;
-        return false;
+	cerr << "ModelLoader: Error reading file " << file << endl;
+	return false;
     }
     else
     {
-        modelNode->setNodeMask(modelNode->getNodeMask() & ~2);
+	modelNode->setNodeMask(modelNode->getNodeMask() & ~2);
     }
 
-    root->addChild(modelNode);
+    std::string name;
+
+    size_t pos = file.find_last_of("/\\");
+    if(pos == std::string::npos)
+    {
+	name = file;
+    }
+    else
+    {
+	if(pos + 1 < file.length())
+	{
+	    name = file.substr(pos+1);
+	}
+	else
+	{
+	    name = "Loaded File";
+	}
+    }
+
+    //TODO: change from debug values
+    SceneObject * so = new SceneObject(name,false,false,false,true,true);
+    PluginHelper::registerSceneObject(so,"ModelLoader");
+    so->addChild(modelNode);
+    so->attachToScene();
+    so->setNavigationOn(true);
+    so->addMoveMenuItem();
+    so->addNavigationMenuItem();
+
+    MenuButton * mb;
+
+    mb = new MenuButton("Reset Position");
+    mb->setCallback(this);
+    so->addMenuItem(mb);
+    _resetMap[so] = mb;
+
+    mb = new MenuButton("Delete");
+    mb->setCallback(this);
+    so->addMenuItem(mb);
+    _deleteMap[so] = mb;
+
+    _loadedObjects.push_back(so);
 
     return true;
 }
