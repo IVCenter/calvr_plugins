@@ -962,8 +962,8 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
         }
         Vec3d pos = (*item)->modelPos;
         int dcInt = dc2Int((*item)->dc);
-        if(!_modelLoaded[dcInt])
-        //if(true)
+        //if(!_modelLoaded[dcInt])
+        if(true)
         {
             Drawable* g = createObject((*item)->dc,tessellation, pos);
             g->setUseDisplayList(false);

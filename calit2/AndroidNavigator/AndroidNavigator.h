@@ -76,6 +76,7 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
         double old_ry;
         std::map<char*, AndroidTransform*> nodeMap;
         char* node_name;
+        bool nodeChange;
 
         // Runs the thread to take in android data
         virtual void run();
