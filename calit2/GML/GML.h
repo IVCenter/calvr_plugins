@@ -174,7 +174,7 @@ class GML : public cvr::MenuCallback, public cvr::CVRPlugin, public cvr::FileLoa
     bool pointsMoving;
     int numEdges;
 
-    osg::Uniform* object2world;
+    osg::Uniform* objectScale;
     osg::Uniform* world2object;
     osg::Uniform* nodeScale;
     osg::Uniform* edgeScale;

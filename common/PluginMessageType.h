@@ -8,6 +8,8 @@
 #ifndef CALVR_PLUGIN_MESSAGE_TYPE_H
 #define CALVR_PLUGIN_MESSAGE_TYPE_H
 
+#include <osg/MatrixTransform>
+
 // PathRecorder
 enum PathRecorderMessageType
 {
@@ -29,6 +31,24 @@ enum MenuMessageType
 {
     MB_HEAD_TRACKING = 0,
     MB_STEREO
+};
+
+// OsgEarth
+enum OsgEarthMessageType
+{
+    OE_ADD_MODEL = 0,
+    OE_TRANSFORM_POINTER
+};
+
+// OsgEarth message struct (lat (degrees), lon (degrees), height (meters above surface)
+// and PluginName (name of plugin sending message)
+struct OsgEarthRequest
+{
+    float lat;
+    float lon;
+    float height;
+    char pluginName[4096];
+    osg::MatrixTransform* trans;
 };
 
 #endif

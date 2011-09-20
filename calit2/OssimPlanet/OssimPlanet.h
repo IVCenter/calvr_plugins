@@ -106,6 +106,7 @@ class OssimPlanet : public cvr::CVRPlugin, public cvr::MenuCallback, public ossi
   private:
     static ossimPlanet* planet;
     static OssimPlanet* oplanet;
+    ossimPlanetTerrain * terrain;
     void cloudCover();
     ossimPlanetEphemeris* ephemeris;
     void getObjectIntersection(osg::Node *root, osg::Vec3& wPointerStart, osg::Vec3& wPointerEnd, IsectInfo& isect);
@@ -135,6 +136,7 @@ class OssimPlanet : public cvr::CVRPlugin, public cvr::MenuCallback, public ossi
     osg::Vec3d convertUtm84ToLatLon(int zone, char hemi, double northing, double easting); 
     bool init();
     void preFrame();
+    void postFrame();
     int getPriority() { return 30; }
     bool buttonEvent(int type, int button, int hand, const osg::Matrix & mat);
     bool mouseButtonEvent (int type, int button, int x, int y, const osg::Matrix &mat);

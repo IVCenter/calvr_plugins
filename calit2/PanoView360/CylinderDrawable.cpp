@@ -436,14 +436,47 @@ void CylinderDrawable::drawImplementation(RenderInfo& ri) const
 	return;
     }
 
+    int context = ri.getContextID();
+
     _initLock.lock();
     if(badinit)
     {
+	if(_doDelete)
+	{
+	    if(_contextinit[ri.getContextID()] > 0)
+	    {
+		for(int i = 0; i < rows; i++)
+		{
+		    for(int j = 0; j < cols; j++)
+		    {
+			if(_contextinit[ri.getContextID()] & RIGHT)
+			{
+			    glDeleteTextures(1, rtextures[context][i][j]);
+			    delete rtextures[context][i][j];
+			}
+			if(_contextinit[ri.getContextID()] & LEFT)
+			{
+			    glDeleteTextures(1, ltextures[context][i][j]);
+			    delete ltextures[context][i][j];
+			}
+		    }
+		}
+		_contextinit[ri.getContextID()] = -1;
+	    }
+	    bool tempb = true;
+	    for(map<int, int>::iterator it = _contextinit.begin(); it != _contextinit.end(); it++)
+	    {
+		if(it->second > 0)
+		{
+		    tempb = false;
+		}
+	    }
+	    _deleteDone = tempb;
+	}
 	_initLock.unlock();
 	return;
     }
-
-    int context = ri.getContextID();
+ 
 
     /*string host;
     int vx, vy, context;

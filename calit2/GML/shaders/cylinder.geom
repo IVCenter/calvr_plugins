@@ -4,7 +4,6 @@
 varying float LightIntensity;
 varying in vec3 ls[];
 varying in vec3 direction[];
-varying in float inBounds[];
 
 void
 ProduceVertex( vec3 v, vec3 ndir)
@@ -95,10 +94,6 @@ ProduceArrow(float ratio1, float ratio2, vec3 dirLine, vec3 origin, vec3 dirUp, 
 void
 main(void)
 {
-     //check if line is in view
-     if((inBounds[0] + inBounds[1]) > 0.0)
-	return;
-
      // just use first color
      gl_FrontColor = gl_FrontColorIn[0];
 
@@ -110,6 +105,11 @@ main(void)
      	else
      	{
         	vec3 dirLine = gl_PositionIn[1].xyz - gl_PositionIn[0].xyz;
+
+		//check if line is shorter than the combined radius of the spheres
+		if(length(dirLine) <= gl_FrontColorIn[1].r + gl_FrontColorIn[1].g)
+			return;
+
 
         	// need to check that line is not in the same direction as the view
         	vec3 parallelCheck = cross(dirLine, direction[0]);

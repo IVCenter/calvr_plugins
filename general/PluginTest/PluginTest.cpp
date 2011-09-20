@@ -7,8 +7,12 @@
 #include <menu/MenuSystem.h>
 #include <menu/SubMenu.h>
 #include <kernel/PluginHelper.h>
+#include <kernel/ComController.h>
 #include <kernel/InteractionManager.h>
 #include <kernel/ThreadedLoader.h>
+#include <kernel/SceneManager.h>
+
+#include <osgDB/ReadFile>
 
 CVRPLUGIN(PluginTest)
 
@@ -110,13 +114,39 @@ bool PluginTest::init()
     popup1->addMenuItem(pmenu1);
 
     tdp1 = new TabbedDialogPanel(400,40,3,"Tabbed Dialog Panel");
-    tdp1->setVisible(true);
+    tdp1->setVisible(false);
 
     tdp1->addTextTab("Tab1","I am Tab 1");
     tdp1->addTextTab("Tab2","I am Tab 2");
     tdp1->addTextTab("Tab3","This is a test of the maxWidth attribute of osgText::Text. Hopefully if will wrap on whitespace.");
 
-    createSphereTexture();
+    //createSphereTexture();
+
+    _testobj = new SceneObject("My Test Object", true, true, false, true, true);
+    osg::Node * node = osgDB::readNodeFile("/home/aprudhom/data/heart/heart00.iv");
+    if(node)
+    {
+	_testobj->addChild(node);
+    }
+
+    _testobj->setScale(0.3);
+    _testobj->addMoveMenuItem();
+    //SceneManager::instance()->registerSceneObject(_testobj,"PluginTest");
+    //_testobj->attachToScene();
+
+    _testobj2 = new SceneObject("TestObject2", true, true, false, true, true);
+    _testobj2->addMoveMenuItem();
+    _testobj2->addNavigationMenuItem();
+    node = osgDB::readNodeFile("/home/aprudhom/data/PDB/cache/4HHBcart.wrl");
+    if(node)
+    {
+	_testobj2->addChild(node);
+    }
+
+    SceneManager::instance()->registerSceneObject(_testobj2,"PluginTest");
+    _testobj2->attachToScene();
+    _testobj2->setScale(20.0);
+    _testobj2->addChild(_testobj);
 
     //std::cerr << "NodeMask: " << PluginHelper::getObjectsRoot()->getNodeMask() << std::endl;
 
@@ -193,6 +223,7 @@ void PluginTest::preFrame()
 	    _loading = false;
 	}
     }
+    //testMulticast();
 }
 
 void PluginTest::postFrame()
@@ -334,4 +365,36 @@ void PluginTest::createSphereTexture()
     {
 	std::cerr << "Not using GL fast path." << std::endl;
     }
+}
+
+void PluginTest::testMulticast()
+{
+    int * data = new int[4000];
+
+    if(ComController::instance()->isMaster())
+    {
+	for(int i = 0; i < 4000; i++)
+	{
+	    data[i] = i % 10;
+	}
+
+	ComController::instance()->sendSlavesMulticast(data,4000*sizeof(int));
+    }
+    else
+    {
+	memset(data,0,4000*sizeof(int));
+	ComController::instance()->readMasterMulticast(data,4000*sizeof(int));
+	std::cerr << "Got data : ";
+	bool ok = true;
+	for(int i = 0; i < 4000; i++)
+	{
+	    if(data[i] != i % 10)
+	    {
+		ok = false;
+	    }
+	}
+	std::cerr << ok << std::endl;
+    }
+
+    delete[] data;
 }

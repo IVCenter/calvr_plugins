@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout  xmlns:android="http://schemas.android.com/apk/res/android"
+	    android:orientation="vertical"
+	    android:layout_width="fill_parent"
+	    android:layout_height="fill_parent"
+	    android:id="@+id/nodeMoveTypeLayout" 
+	    android:stretchColumns="*"
+	    android:background="@drawable/calitlogo_"
+	    
+	    >
+	    
+	    <TableRow>
+		    <TextView  
+		   		android:text="Trans:" 
+		    	android:textColor="#ffffff"
+		    	android:layout_width="wrap_content"
+		    	
+		   	/>  
+			 <TextView  
+		   		android:text="Rot:" 
+		    	android:paddingLeft="10dip"
+		   	   	android:textColor="#ffffff"
+		    />  
+		  
+	   	</TableRow>
+	   	
+	   	<TableRow>
+	   	    <CheckBox android:id="@+id/allTrans"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="All" />
+			 <CheckBox android:id="@+id/allRot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="All" />
+		 
+	   	</TableRow>
+	   	
+	   	<TableRow>
+	   	    <CheckBox android:id="@+id/xTrans"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="X" />
+			 <CheckBox android:id="@+id/xRot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="RX" />
+		  
+		 
+	   	</TableRow>
+	   	
+	  <TableRow>
+	   	    <CheckBox android:id="@+id/yTrans"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Y" />
+			 <CheckBox android:id="@+id/yRot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="RY" />
+	
+		 
+	   	</TableRow>
+	   	
+	   	<TableRow>
+	   	    <CheckBox android:id="@+id/zTrans"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Z" />
+			 <CheckBox android:id="@+id/zRot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="RZ" />
+		 
+		 
+	   	</TableRow>
+</TableLayout>

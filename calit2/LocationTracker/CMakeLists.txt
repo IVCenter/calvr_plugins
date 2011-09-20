@@ -1,0 +1,26 @@
+SET(LIB_NAME LocationTracker)
+SET(PLUGIN_HEADERS
+    LocationTracker.h
+    TourMedia.h
+    TourLocation.h
+    Tour.h
+)
+
+ADD_LIBRARY(${LIB_NAME}
+    "SHARED"
+    ${PLUGIN_HEADERS}
+    LocationTracker.cpp
+    TourMedia.cpp
+    TourLocation.cpp
+    Tour.cpp
+)
+
+FIND_PACKAGE(Mysql)
+
+INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${MYSQL_INCLUDE_DIR})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${OSG_LIBRARIES})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${MYSQL_LIBRARY})
+
+INSTALL(TARGETS ${LIB_NAME} DESTINATION lib/plugins)
+

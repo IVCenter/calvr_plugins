@@ -43,7 +43,7 @@ class PathRecorder: public CVRPlugin, public MenuCallback
     bool init();
     void preFrame();
     void menuCallback(MenuItem *);
-    void message(int type, char * data);
+    void message(int type, char * & data, bool);
 
     void initUI();
 

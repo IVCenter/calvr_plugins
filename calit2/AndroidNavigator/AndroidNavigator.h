@@ -20,7 +20,12 @@
 #include <queue>
 #include <OpenThreads/Mutex>
 #include <OpenThreads/Thread>
+#include <osg/Geode>
 #include <kernel/InteractionManager.h>
+#include <osg/Shape>
+#include <osg/Node>
+#include "AndroidTransform.h"
+#include "AndroidVisitor.h"
 
 #include <iostream>
 #include <string>
@@ -35,18 +40,12 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
         bool init();
         void preFrame();
         void menuCallback(cvr::MenuItem * item);
-            // Adds a menu to the screen
-        bool addMenu();
-            // Removes menu from screen
-        bool removeMenu();
-            // Gets objects from artifactVis and determines which one is being pointed at
-        void objectSelection();
             // Makes a background thread to take in data
         void makeThread();
             // Selects a node to adjust
         void nodeSelect();
             // Adjusts selected node
-        void adjustNode(double height, double magnitude);
+        void adjustNode(double height, double magnitude, int position);
             // Allows Vec3 comparison
         class compare{
             public: 
@@ -54,14 +53,13 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
                     return(vec1.length() < vec2.length());
                 }
         };
-
+        
     protected:
         osg::MatrixTransform * _root;
         cvr::MenuCheckbox *_isOn;
         cvr::SubMenu *_andMenu;
         float transMult, rotMult;
         float transcale, rotscale, scale;
-        bool _menuUp;
         cvr::MenuSystem* _menu;
         int _tagCommand;
         int sock;
@@ -73,9 +71,15 @@ class AndroidNavigator : public cvr::CVRPlugin, public cvr::MenuCallback, public
         bool _mkill;
         OpenThreads::Mutex _mutex;
         bool newMode;
-        cvr::TrackingInteractionEvent* tracker;
-            // Runs the thread to take in android data
-        virtual void run();
         bool flip;
+        AndroidTransform * node;
+        double old_ry;
+        std::map<char*, AndroidTransform*> nodeMap;
+        char* node_name;
+
+        // Runs the thread to take in android data
+        virtual void run();
+        
 };
+
 #endif

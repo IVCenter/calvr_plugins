@@ -19,10 +19,13 @@
 
 #include <config/ConfigManager.h>
 #include <kernel/PluginHelper.h>
+#include <kernel/PluginManager.h>
 #include <kernel/SceneManager.h>
 #include <kernel/InteractionManager.h>
 #include <menu/MenuSystem.h>
 #include <util/LocalToWorldVisitor.h>
+#include <PluginMessageType.h>
+#include <kernel/ComController.h>
 
 #include <osg/CullFace>
 #include <osg/Matrix>
@@ -50,6 +53,15 @@ ArtifactVis::ArtifactVis()
 ArtifactVis* ArtifactVis::getInstance()
 {
     return _artifactvis;
+}
+void ArtifactVis::message(int type, char * data)
+{
+    if(type == OE_TRANSFORM_POINTER)
+    {
+	OsgEarthRequest * request = (OsgEarthRequest*) data;
+	 
+    }
+    _osgearth = true;
 }
 bool ArtifactVis::init()
 {
@@ -397,18 +409,27 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
         {
             _query[0]->sphereRoot->setNodeMask(0);
             _query[1]->sphereRoot->setNodeMask(0);
-            std::stringstream ss;
-            ss <<  "./ArchInterface -b ";
-            ss << "\"";
-            ss << (*t)->name;
-            ss << "\" ";
-            ss << "\"";
-            ss << (*t)->current_query;
-            ss << getCurrentQuery((*t)); 
-            ss << "\"";
-            chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
-            cout <<ss.str().c_str() << endl;
-            system(ss.str().c_str());
+            bool status;
+            if(ComController::instance()->isMaster())
+            {
+                std::stringstream ss;
+                ss <<  "./ArchInterface -b ";
+                ss << "\"";
+                ss << (*t)->name;
+                ss << "\" ";
+                ss << "\"";
+                ss << (*t)->current_query;
+                ss << getCurrentQuery((*t)); 
+                ss << "\"";
+                chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
+                cout <<ss.str().c_str() << endl;
+                system(ss.str().c_str());
+    	        ComController::instance()->sendSlaves(&status,sizeof(bool));
+            }
+            else
+            {
+    	        ComController::instance()->readMaster(&status,sizeof(bool));
+            }
             if((*t)->name.find("sf",0)!=string::npos)
                 readQuery(_query[0]);
             else
@@ -435,12 +456,31 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
             chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
             if((*t)->name.find("sf",0)!=string::npos)
             {
-                system("./ArchInterface -r \"query\"");
+                bool status;
+                if(ComController::instance()->isMaster())
+                {
+                    system("./ArchInterface -r \"query\"");
+    	            ComController::instance()->sendSlaves(&status,sizeof(bool));
+                }
+                else
+                {
+    	            ComController::instance()->readMaster(&status,sizeof(bool));
+                }
+                
                 setupQuerySelectMenu();
             }
             else
             {
-                system("./ArchInterface -r \"querp\"");
+                bool status;
+                if(ComController::instance()->isMaster())
+                {
+                    system("./ArchInterface -r \"querp\"");
+    	            ComController::instance()->sendSlaves(&status,sizeof(bool));
+                }
+                else
+                {
+    	            ComController::instance()->readMaster(&status,sizeof(bool));
+                }
                 setupQuerySelectMenu();
             }
         }
@@ -467,11 +507,20 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
         }
         if(menuItem==_eraseQuery[i])
         {
-            chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
-            stringstream ss;
-            ss << "./ArchInterface -n \"" << _query[i]->name << "\"";
-            cout << ss.str() << endl;
-            system(ss.str().c_str());
+            bool status;
+            if(ComController::instance()->isMaster())
+            {
+                chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
+                stringstream ss;
+                ss << "./ArchInterface -n \"" << _query[i]->name << "\"";
+                cout << ss.str() << endl;
+                system(ss.str().c_str());
+    	        ComController::instance()->sendSlaves(&status,sizeof(bool));
+            }
+            else
+            {
+    	        ComController::instance()->readMaster(&status,sizeof(bool));
+            }
             _root->removeChild(_query[i]->sphereRoot);
             _query.erase(_query.begin()+i);
             setupQuerySelectMenu();
@@ -1088,7 +1137,7 @@ void ArtifactVis::readSiteFile(int index)
 #endif
                 cout << _sitePos[index].y() << ", " << _sitePos[index].x() << endl;
             }
-            else
+            else if(!_osgearth)
             {
                 MatrixTransform * siteRot = new MatrixTransform();
                 Matrixd rot1;
@@ -1103,8 +1152,19 @@ void ArtifactVis::readSiteFile(int index)
                 siteTrans->setMatrix(transMat);
                 siteTrans->addChild(siteRot);
                 _siteRoot[index]->addChild(siteTrans);
+		
             }
-
+	    else
+	    {
+	        _siteRoot[index]->addChild(siteScale);
+                OsgEarthRequest request;
+	        request.lat = _sitePos[index].y();
+	        request.lon = _sitePos[index].x();
+	        cout << "Lat, Lon: " << _sitePos[index].y() << ", " << _sitePos[index].x() << endl;
+	        request.height = 30000.0f;
+	        request.trans = _siteRoot[index];
+	        PluginManager::instance()->sendMessageByName("OsgEarth",OE_ADD_MODEL,(char *) &request);
+	    }
 	    StateSet * ss=_siteRoot[index]->getOrCreateStateSet();
 	    ss->setMode(GL_LIGHTING, StateAttribute::ON | osg::StateAttribute::OVERRIDE);
 
@@ -1486,14 +1546,15 @@ void ArtifactVis::setupSiteMenu()
         {
             _siteRoot.push_back(new MatrixTransform());
             Vec3d pos;
-            if(_ossim)
+            //if(_ossim)
+            if(true)
             {
                 pos = position;
                 cout << "Ossim position: ";
             }
             else
             {
-                pos = Vec3d(0,0,0) * mirror * transMat * scaleMat * mirror * rot2 * rot1 * offsetMat;
+                //pos = Vec3d(0,0,0) * mirror * transMat * scaleMat * mirror * rot2 * rot1 * offsetMat;
             }
             cout << pos[0] << ", " << pos[1] << ", " << pos[2] << endl;
             _modelDisplayMenu->addItem(site); 
@@ -1663,11 +1724,19 @@ void ArtifactVis::setupTablesMenu()
 }
 void ArtifactVis::setupQueryMenu(Table * table)
 {
-    
-    chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
-    stringstream ss;
-    ss << "./ArchInterface -m \"" << table->name << "\"";
-    system(ss.str().c_str());
+    bool status;
+    if(ComController::instance()->isMaster())
+    {
+        chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
+        stringstream ss;
+        ss << "./ArchInterface -m \"" << table->name << "\"";
+        system(ss.str().c_str());
+    	ComController::instance()->sendSlaves(&status,sizeof(bool));
+    }
+    else
+    {
+	ComController::instance()->readMaster(&status,sizeof(bool));
+    }
     table->query_view = new MenuText("",1,false,400);
     std::string file = ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").append("menu.xml");
     FILE * fp = fopen(file.c_str(),"r");

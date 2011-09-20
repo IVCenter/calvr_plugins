@@ -87,6 +87,7 @@ class PanoView360 : public CVRPlugin, public MenuCallback
         std::string _configFile;
 
         bool _joystickSpin;
+        float _spinScale;
 };
 
 #endif
