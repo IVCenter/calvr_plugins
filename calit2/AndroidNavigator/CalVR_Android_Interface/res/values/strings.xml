@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+   <string name="app_name">CalVR Android Interface</string>
+    <string name="sensor">Mode: None</string> 
+    <string name="ip">Select IP</string>
+    <string name="velocity">Velocity: 0.000</string>
+    <string name="accel">Accel: 0, 0, 0</string>
+    <string name="ipPrompt">Select IP:</string>
+    <string-array name="hosts_array">
+    </string-array>
+    <string name="nodePrompt">Select Node:</string>
+    <string-array name="nodes_array">
+    </string-array>
+</resources>

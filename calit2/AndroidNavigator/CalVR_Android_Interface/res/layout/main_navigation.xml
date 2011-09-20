@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout  xmlns:android="http://schemas.android.com/apk/res/android"
+	    android:orientation="vertical"
+	    android:layout_width="fill_parent"
+	    android:layout_height="fill_parent"
+	    android:id="@+id/navigationLayout" 
+	    android:stretchColumns="2, 3"
+	    
+	    android:background="@drawable/calitlogo_"
+	    
+	    >
+	    
+	    <TableRow>
+		    <TextView  
+		   		android:text="@string/ip" 
+		    	android:id="@+id/ipText"
+		    	android:textColor="#ffffff"
+		    	android:layout_width="wrap_content"
+		    	
+		   	/>  
+			 <TextView  
+		   		android:text="@string/sensor" 
+		    	android:id="@+id/sensorText"
+		    	android:paddingLeft="10dip"
+		   	   	android:textColor="#ffffff"
+		    />  
+		   	<ImageView  
+		    	
+		    	android:id="@+id/faster" 
+		    	android:layout_height="wrap_content"
+		    	android:src="@drawable/buttonplusup"
+		    	android:layout_width="wrap_content"
+		    	android:layout_column="3"
+		    	android:scaleType="fitXY"
+		   	/>  
+	   	</TableRow>
+	   	
+	   	<TableRow>
+	   	    <TextView
+	   	    	android:text="@string/velocity"
+	   	    	android:id="@+id/velocity"
+	   	    	android:textColor="#ffffff"
+	   	    	
+	   	    />
+		   	<ImageView  
+		    	
+		    	android:id="@+id/stop"
+		    	android:layout_column="3"
+		    	android:layout_height="wrap_content"
+		    	android:src="@drawable/buttonstopup"
+		    	android:layout_width="wrap_content"
+		   	/>  
+	   	</TableRow>
+	   	
+	   	<TableRow>
+	   	
+	   		<TextView
+	   	    	android:text="@string/accel"
+	   	    	android:id="@+id/accelData"
+	   	    	android:textColor="#ffffff"
+	   	    	
+	   	    />
+			
+			 <ImageView  
+		    	
+		    	android:id="@+id/slower"
+		    	android:layout_column="3"
+		    	android:layout_height="wrap_content"
+		    	android:src="@drawable/buttonminusup"
+		    	android:layout_width="wrap_content"
+		   	/> 
+	   	 </TableRow>
+	   	 
+	   	
+	   	 
+</TableLayout>

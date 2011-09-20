@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android">
+     <item android:id="@+id/address"
+        android:title="IP Address"
+        >
+        </item>
+   
+   <item android:id="@+id/findNodesMenu"
+        android:title="Find Nodes" >    
+        </item>
+        
+	<item android:id="@+id/moveNodesMenu"
+        android:title="Adjust Nodes" >    
+        </item>   	
+    
+    <item android:id="@+id/menu"
+        android:title="Menu"
+        >
+           	<menu>
+           			<item android:id="@+id/returnMain"
+        				android:title="Return to Main Screen" /> 
+        		
+         	</menu>
+    </item>
+    
+    
+</menu>

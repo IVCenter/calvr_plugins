@@ -1,0 +1,21 @@
+SET(LIB_NAME AndroidNavigator)
+SET(PLUGIN_HEADERS
+    AndroidNavigator.h
+    AndroidTransform.h
+    AndroidVisitor.h
+)
+
+ADD_LIBRARY(${LIB_NAME}
+    "SHARED"
+    ${PLUGIN_HEADERS}
+    AndroidNavigator.cpp
+    AndroidTransform.cpp
+    AndroidVisitor.cpp
+)
+
+INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${ANDROIDNAV_INCLUDE_DIR})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${OSG_LIBRARIES})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${ANDROIDNAV_LIBRARY})
+
+INSTALL(TARGETS ${LIB_NAME} DESTINATION lib/plugins)

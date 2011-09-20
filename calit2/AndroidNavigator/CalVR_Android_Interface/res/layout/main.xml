@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout  xmlns:android="http://schemas.android.com/apk/res/android"
+	    android:orientation="vertical"
+	    android:layout_width="fill_parent"
+	    android:layout_height="fill_parent"
+	    android:id="@+id/mainLayout" 
+	    android:stretchColumns="2, 3"
+	    
+	    android:background="@drawable/calitlogo_"
+	    
+	    >
+	    
+	<Button android:id="@+id/navigationButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Navigation" />
+    
+    <Button android:id="@+id/nodeButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Nodes" 
+        android:layout_toRightOf="@id/navigationButton"/>
+	   	 
+</RelativeLayout>
