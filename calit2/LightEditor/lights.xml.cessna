@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LightEditor version="1">
 	<Light name="Light 0">
-		<Position x="-5.437127" y="20.510031" z="-5.945366"
+		<Enabled value="0.000000" />
+		<Position x="2.742211" y="-15.397603" z="-29.453650"
 w="1.000000" />
 		<Ambient r="0.050000" g="0.050000" b="0.050000"
 a="1.000000" />
@@ -17,7 +18,8 @@ a="1.000000" />
 		<SpotCutoff float="180.000000" />
 	</Light>
 	<Light name="Light 1">
-		<Position x="6.891972" y="17.561846" z="-6.237585"
+		<Enabled value="0.000000" />
+		<Position x="-37.584778" y="-8.681040" z="-6.217409"
 w="1.000000" />
 		<Ambient r="0.050000" g="0.050000" b="0.050000"
 a="1.000000" />
@@ -33,7 +35,8 @@ a="1.000000" />
 		<SpotCutoff float="180.000000" />
 	</Light>
 	<Light name="Light 2">
-		<Position x="20.913689" y="-2.538233" z="-6.822613"
+		<Enabled value="0.000000" />
+		<Position x="25.838558" y="-20.543348" z="11.015922"
 w="1.000000" />
 		<Ambient r="0.050000" g="0.050000" b="0.050000"
 a="1.000000" />
@@ -49,7 +52,8 @@ a="1.000000" />
 		<SpotCutoff float="180.000000" />
 	</Light>
 	<Light name="Light 3">
-		<Position x="-20.739790" y="0.257001" z="-9.039591"
+		<Enabled value="0.000000" />
+		<Position x="-20.378761" y="-6.119697" z="-29.642654"
 w="1.000000" />
 		<Ambient r="0.050000" g="0.050000" b="0.050000"
 a="1.000000" />
@@ -65,7 +69,8 @@ a="1.000000" />
 		<SpotCutoff float="180.000000" />
 	</Light>
 	<Light name="Light 4">
-		<Position x="0.073877" y="4.982515" z="-9.678316"
+		<Enabled value="0.000000" />
+		<Position x="34.372444" y="-13.839900" z="3.424832"
 w="1.000000" />
 		<Ambient r="0.050000" g="0.050000" b="0.050000"
 a="1.000000" />
@@ -81,7 +86,8 @@ a="1.000000" />
 		<SpotCutoff float="180.000000" />
 	</Light>
 	<Light name="Light 5">
-		<Position x="0.180570" y="-13.742154" z="-11.119701"
+		<Enabled value="0.000000" />
+		<Position x="14.416028" y="-19.356146" z="-25.203304"
 w="1.000000" />
 		<Ambient r="0.050000" g="0.050000" b="0.050000"
 a="1.000000" />
@@ -97,7 +103,8 @@ a="1.000000" />
 		<SpotCutoff float="180.000000" />
 	</Light>
 	<Light name="Light 6">
-		<Position x="6.388255" y="12.387091" z="4.848524"
+		<Enabled value="0.000000" />
+		<Position x="-31.739811" y="-16.112644" z="14.488938"
 w="1.000000" />
 		<Ambient r="0.050000" g="0.050000" b="0.050000"
 a="1.000000" />
@@ -113,7 +120,8 @@ a="1.000000" />
 		<SpotCutoff float="180.000000" />
 	</Light>
 	<Light name="Light 7">
-		<Position x="-9.479769" y="13.937346" z="5.820362"
+		<Enabled value="0.000000" />
+		<Position x="48.643978" y="-17.354511" z="12.964482"
 w="1.000000" />
 		<Ambient r="0.050000" g="0.050000" b="0.050000"
 a="1.000000" />
@@ -129,7 +137,8 @@ a="1.000000" />
 		<SpotCutoff float="180.000000" />
 	</Light>
 	<Light name="Light 8">
-		<Position x="-14.448410" y="-4.390615" z="-0.256238"
+		<Enabled value="1.000000" />
+		<Position x="-6.712691" y="-12.414396" z="8.949455"
 w="1.000000" />
 		<Ambient r="0.050000" g="0.050000" b="0.050000"
 a="1.000000" />
@@ -140,12 +149,13 @@ a="1.000000" />
 		<ConstantAttenuation float="1.000000" />
 		<LinearAttenuation float="0.000000" />
 		<QuadraticAttenuation float="0.000000" />
-		<SpotDirection x="0.000000" y="0.000000" z="-1.000000" />
+		<SpotDirection x="0.000380" y="0.334742" z="-0.942310" />
 		<SpotExponent float="0.000000" />
 		<SpotCutoff float="23.863792" />
 	</Light>
 	<Light name="Light 9">
-		<Position x="10.393658" y="-4.193088" z="2.595826"
+		<Enabled value="1.000000" />
+		<Position x="15.340131" y="-19.803726" z="8.702556"
 w="1.000000" />
 		<Ambient r="0.050000" g="0.050000" b="0.050000"
 a="1.000000" />
@@ -156,36 +166,38 @@ a="1.000000" />
 		<ConstantAttenuation float="1.000000" />
 		<LinearAttenuation float="0.000000" />
 		<QuadraticAttenuation float="0.000000" />
-		<SpotDirection x="-0.462314" y="0.092420" z="-0.881887" />
+		<SpotDirection x="-0.006860" y="0.714804" z="-0.699292" />
 		<SpotExponent float="0.000000" />
 		<SpotCutoff float="11.871900" />
 	</Light>
 	<Light name="Light 10">
-		<Position x="0.269802" y="-0.556949" z="6.758963"
+		<Enabled value="1.000000" />
+		<Position x="-1.219942" y="-2.567521" z="22.899090"
 w="1.000000" />
 		<Ambient r="0.050000" g="0.050000" b="0.050000"
 a="1.000000" />
-		<Diffuse r="0.000000" g="0.997960" b="0.800000"
+		<Diffuse r="0.989072" g="0.149547" b="0.002450"
 a="1.000000" />
 		<Specular r="0.050000" g="0.050000" b="0.050000"
 a="1.000000" />
-		<ConstantAttenuation float="3.505221" />
+		<ConstantAttenuation float="0.851622" />
 		<LinearAttenuation float="0.000000" />
 		<QuadraticAttenuation float="0.000000" />
-		<SpotDirection x="0.000000" y="0.000000" z="-1.000000" />
-		<SpotExponent float="43.828026" />
-		<SpotCutoff float="29.555813" />
+		<SpotDirection x="0.056834" y="-0.451817" z="-0.890298" />
+		<SpotExponent float="0.000000" />
+		<SpotCutoff float="34.150078" />
 	</Light>
 	<Light name="Light 11">
-		<Position x="17.210272" y="-10.910042" z="-26.559490"
+		<Enabled value="1.000000" />
+		<Position x="0.990788" y="-33.174862" z="7.616475"
 w="0.000000" />
-		<Ambient r="0.050000" g="0.050000" b="0.050000"
+		<Ambient r="0.130666" g="0.050000" b="0.050000"
 a="1.000000" />
-		<Diffuse r="0.019911" g="1.000000" b="0.997994"
+		<Diffuse r="0.000000" g="0.169833" b="0.069195"
 a="1.000000" />
 		<Specular r="0.050000" g="0.050000" b="0.050000"
 a="1.000000" />
-		<ConstantAttenuation float="1.000000" />
+		<ConstantAttenuation float="1.054778" />
 		<LinearAttenuation float="0.000000" />
 		<QuadraticAttenuation float="0.000000" />
 		<SpotDirection x="0.000000" y="0.000000" z="-1.000000" />
