@@ -109,8 +109,9 @@ bool PanoView360::init()
     for(int i = 0; i < tagList.size(); i++)
     {
 	std::string tag = FILES + "." + tagList[i];
+	createLoadMenu(tagList[i], tag, _loadMenu);
 
-	MenuButton* temp = new MenuButton(tagList[i]);
+	/*MenuButton* temp = new MenuButton(tagList[i]);
 	temp->setCallback(this);
 	_menufilelist.push_back(temp);
 	struct loadinfo * info = new struct loadinfo;
@@ -133,13 +134,13 @@ bool PanoView360::init()
 	    info->shape = CYLINDER;
 	}
 
-	_pictures.push_back(info);
+	_pictures.push_back(info);*/
     }
     
-    for(int i = 0; i < _menufilelist.size(); i++)
-    {
-      _loadMenu->addItem(_menufilelist[i]);
-    }
+    //for(int i = 0; i < _menufilelist.size(); i++)
+    //{
+    //  _loadMenu->addItem(_menufilelist[i]);
+    //}
 
     PluginHelper::addRootMenuItem(_panoViewMenu);
     PluginHelper::getScene()->addChild(_root);    
@@ -402,5 +403,49 @@ void PanoView360::parseConfig(std::string file)
 	}
 
 	_eyeMap[host][context].push_back(pair<pair<int, int>, int >(pair<int, int>(vx, vy), eyei));
+    }
+}
+
+void PanoView360::createLoadMenu(std::string tagBase, std::string tag, SubMenu * menu)
+{
+    std::vector<std::string> tagList;
+    ConfigManager::getChildren(tag, tagList);
+
+    if(tagList.size())
+    {
+	SubMenu * sm = new SubMenu(tagBase);
+	menu->addItem(sm);
+	for(int i = 0; i < tagList.size(); i++)
+	{
+	    createLoadMenu(tagList[i], tag + "." + tagList[i], sm);
+	}
+    }
+    else
+    {
+	MenuButton* temp = new MenuButton(tagBase);
+	temp->setCallback(this);
+	_menufilelist.push_back(temp);
+	struct loadinfo * info = new struct loadinfo;
+	info->name = tagBase;
+	info->right_eye_file = ConfigManager::getEntry("reye", tag, "");
+	info->left_eye_file = ConfigManager::getEntry("leye", tag, "");
+	info->radius = ConfigManager::getFloat("radius", tag, 10000.0);
+	info->viewanglev = ConfigManager::getFloat("viewanglev", tag, 120.0);
+	info->viewangleh = ConfigManager::getFloat("viewangleh", tag, 360.0);
+	info->camHeight = ConfigManager::getFloat("camHeight", tag, 0.0);
+	info->segments = ConfigManager::getInt("segments", tag, 25);
+	info->texture_size = ConfigManager::getInt("tsize", tag, 1024);
+	info->flip = ConfigManager::getInt("flip", tag, 0);
+	if(ConfigManager::getInt("sphere", tag, 0))
+	{
+	    info->shape = SPHERE;
+	}
+	else
+	{
+	    info->shape = CYLINDER;
+	}
+
+	_pictures.push_back(info);
+	menu->addItem(temp);
     }
 }

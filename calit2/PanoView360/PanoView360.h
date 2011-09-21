@@ -39,6 +39,8 @@ class PanoView360 : public CVRPlugin, public MenuCallback
         void parseConfig(std::string file);
 
     protected:
+        void createLoadMenu(std::string tagBase, std::string tag, SubMenu * menu);
+
         SubMenu* _panoViewMenu;
         SubMenu* _loadMenu;
         MenuButton* _remove;
