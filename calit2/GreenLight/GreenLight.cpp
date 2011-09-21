@@ -123,6 +123,7 @@ bool GreenLight::init()
     _glMenu->addItem(_showSceneCheckbox);
 
     _hardwareSelectionMenu = NULL;
+    _selectClusterMenu = NULL;
     _selectionModeCheckbox = NULL;
     _selectAllButton = NULL;
     _deselectAllButton = NULL;

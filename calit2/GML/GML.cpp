@@ -339,8 +339,8 @@ bool GML::loadFile(std::string filename)
 
   // point shader
   osg::StateSet *state = nodeGeom->getOrCreateStateSet();
-  pgm2->setName( "Sphere" );
   osg::Program* pgm1 = new osg::Program;
+  pgm1->setName( "Sphere" );
   pgm1->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile("/home/covise/CalVR/plugins/calit2/GML/shaders/Sphere.vert")));
   pgm1->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile("/home/covise/CalVR/plugins/calit2/GML/shaders/Sphere.frag")));
   pgm1->addShader(osg::Shader::readShaderFile(osg::Shader::GEOMETRY, osgDB::findDataFile("/home/covise/CalVR/plugins/calit2/GML/shaders/Sphere.geom")));
