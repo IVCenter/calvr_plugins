@@ -71,6 +71,7 @@ bool ArtifactVis::init()
     std::cerr << "ArtifactVis init\n";
     _root = new osg::MatrixTransform();
 
+    _tablesMenu = NULL;
 
     loadModels();
 
@@ -99,7 +100,10 @@ bool ArtifactVis::init()
     {
         setupQueryMenu(_tables[i]);
     }
-    _avMenu->addItem(_tablesMenu);
+    if(_tablesMenu)
+    {
+	_avMenu->addItem(_tablesMenu);
+    }
 
     _selectArtifactCB = new MenuCheckbox("Select Artifact",false);
     _selectArtifactCB->setCallback(this);
@@ -421,9 +425,11 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
                 ss << (*t)->current_query;
                 ss << getCurrentQuery((*t)); 
                 ss << "\"";
+		const char* current_path = getcwd(NULL, 0);
                 chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
                 cout <<ss.str().c_str() << endl;
                 system(ss.str().c_str());
+		chdir(current_path);
     	        ComController::instance()->sendSlaves(&status,sizeof(bool));
             }
             else
@@ -453,6 +459,7 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
         }
         if(menuItem == (*t)->saveQuery)
         {
+	    const char* current_path = getcwd(NULL, 0);
             chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
             if((*t)->name.find("sf",0)!=string::npos)
             {
@@ -483,6 +490,7 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
                 }
                 setupQuerySelectMenu();
             }
+	    chdir(current_path);
         }
     }
     for(int i = 0; i < _queryOption.size(); i++)
@@ -510,11 +518,13 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
             bool status;
             if(ComController::instance()->isMaster())
             {
+		const char* current_path = getcwd(NULL, 0);
                 chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
                 stringstream ss;
                 ss << "./ArchInterface -n \"" << _query[i]->name << "\"";
                 cout << ss.str() << endl;
                 system(ss.str().c_str());
+		chdir(current_path);
     	        ComController::instance()->sendSlaves(&status,sizeof(bool));
             }
             else
@@ -1727,10 +1737,12 @@ void ArtifactVis::setupQueryMenu(Table * table)
     bool status;
     if(ComController::instance()->isMaster())
     {
+	const char* current_path = getcwd(NULL, 0);
         chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
         stringstream ss;
         ss << "./ArchInterface -m \"" << table->name << "\"";
         system(ss.str().c_str());
+	chdir(current_path);
     	ComController::instance()->sendSlaves(&status,sizeof(bool));
     }
     else
