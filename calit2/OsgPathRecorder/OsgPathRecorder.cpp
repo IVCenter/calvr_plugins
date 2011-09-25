@@ -125,7 +125,7 @@ void OsgPathRecorder::preFrame()
 	    _time = _path->getLastTime() - 0.0001;
 	}
 
-	osg::AnimationPath::AnimationPath::ControlPoint cp;
+	osg::AnimationPath::ControlPoint cp;
 	_path->getInterpolatedControlPoint(_time,cp);
 
         /*osg::AnimationPath::TimeControlPointMap::const_iterator first,second;
@@ -219,7 +219,7 @@ void OsgPathRecorder::preFrame()
 	    _time = _time + (PluginHelper::getLastFrameDuration() * _timeScale);
 	}
 
-	osg::AnimationPath::AnimationPath::ControlPoint cp;
+	osg::AnimationPath::ControlPoint cp;
 	osg::Vec3d scale;
 	double dscale = PluginHelper::getObjectScale();
 	scale = osg::Vec3d(dscale,dscale,dscale);
@@ -493,7 +493,7 @@ void OsgPathRecorder::menuCallback(MenuItem * item)
     {
 	if(!_path->empty())
 	{
-	    osg::AnimationPath::AnimationPath::ControlPoint cp;
+	    osg::AnimationPath::ControlPoint cp;
 	    _path->getInterpolatedControlPoint(_path->getLastTime(),cp);
 	    /*osg::Matrixd m;
 	    m.makeRotate(cp.getRotation());
@@ -519,7 +519,7 @@ void OsgPathRecorder::menuCallback(MenuItem * item)
     {
 	if(!_path->empty())
 	{
-	    osg::AnimationPath::AnimationPath::ControlPoint cp;
+	    osg::AnimationPath::ControlPoint cp;
 	    _path->getInterpolatedControlPoint(_path->getFirstTime(),cp);
 	    /*osg::Matrixd m;
 	    m.makeRotate(cp.getRotation());
@@ -543,7 +543,7 @@ void OsgPathRecorder::menuCallback(MenuItem * item)
 
     if(item == _emitB)
     {
-	 osg::AnimationPath::AnimationPath::ControlPoint cp;
+	 osg::AnimationPath::ControlPoint cp;
 	 osg::Vec3d scale;
 	 double dscale = PluginHelper::getObjectScale();
 	 scale = osg::Vec3d(dscale,dscale,dscale);
@@ -613,7 +613,7 @@ void OsgPathRecorder::loadCurrentFile()
 	for(int i = 0; i < numEntries; i++)
 	{
 	    double time;
-	    osg::AnimationPath::AnimationPath::ControlPoint cp;
+	    osg::AnimationPath::ControlPoint cp;
 
 	    fread(&time,sizeof(double),1,infile);
 	    fread((void*)cp.getPosition().ptr(),3*sizeof(double),1,infile);

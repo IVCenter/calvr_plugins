@@ -560,7 +560,7 @@ void LightManager::SpotCutoff(const float f)
       light->lastValidCutoff = f;
    }
 
-   if (wasSpot != LightType() == SPOT)
+   if (wasSpot != (LightType() == SPOT))
       updateGraphicTrans();
 
    changeGraphicShape();

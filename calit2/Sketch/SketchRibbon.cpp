@@ -4,6 +4,13 @@
 #include <input/TrackingManager.h>
 #include <kernel/InteractionManager.h>
 #include <kernel/PluginHelper.h>
+#ifdef WIN32
+#include <util/TimeOfDay.h>
+#endif
+
+#ifdef WIN32
+#define M_PI 3.141592653589793238462643
+#endif
 
 #include <iostream>
 #include <osg/Material>

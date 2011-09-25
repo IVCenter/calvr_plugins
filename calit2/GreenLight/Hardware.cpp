@@ -270,7 +270,7 @@ osg::ref_ptr<osg::Geode> GreenLight::makeComponentGeode(float height, std::strin
     backFace->setTexCoordArray(0,texcoords.get());
     backFace->getOrCreateStateSet()->setTextureAttributeAndModes(0,texture);
 
-    if (_shaderProgram);
+    if (_shaderProgram)
     {
         frontFace->getOrCreateStateSet()->setAttributeAndModes(_shaderProgram, osg::StateAttribute::ON);
         backFace->getOrCreateStateSet()->setAttributeAndModes(_shaderProgram, osg::StateAttribute::ON);

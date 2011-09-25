@@ -4,7 +4,11 @@
 #include <osg/Matrix>
 #include <osg/Drawable>
 
+#ifndef WIN32
 #include <sys/time.h>
+#else
+#include <windows.h>
+#endif
 
 class SketchObject
 {

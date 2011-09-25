@@ -45,7 +45,7 @@ LightEditor::LightEditor()
 void LightEditor::menuCallback(cvr::MenuItem * item)
 {
     // Used later if necessary 
-    bool isDir, isPoi, isSpo, isAmb, isDif, isSpe, isCon, isLin, isQua, isExp, isCut;
+    //bool isDir, isPoi, isSpo, isAmb, isDif, isSpe, isCon, isLin, isQua, isExp, isCut;
 
     if (item == _createNewLightButton)
     {

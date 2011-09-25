@@ -14,6 +14,10 @@
 #include <cmath>
 #include <algorithm>
 
+#ifdef WIN32
+#define M_PI 3.141592653589793238462643
+#endif
+
 using namespace cvr;
 
 float acos360(float x, float y,bool degrees)
@@ -221,7 +225,7 @@ osg::Vec3 ColorSelector::hcl2rgb(osg::Vec3 hcl,bool undefh)
     }
     else
     {
-	float x = hcl.y() * (1.0 - fabs(fmod(hprime,2.0) - 1.0));
+	float x = hcl.y() * (1.0 - fabs(fmod(hprime,2.0f) - 1.0));
 	int hpi = (int)hprime;
 
 	switch(hpi)
@@ -277,7 +281,7 @@ osg::Vec3 ColorSelector::rgb2hcl(osg::Vec4 color)
     }
     else if(maxcval == color.x())
     {
-	hprime = fmod((color.y() - color.z()) / hcl.y(),6.0);
+	hprime = fmod((color.y() - color.z()) / hcl.y(),6.0f);
     }
     else if(maxcval == color.y())
     {

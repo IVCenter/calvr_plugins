@@ -14,8 +14,13 @@
 #include <algorithm>
 #include <vector>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <time.h>
+
+#ifndef WIN32
+#include <unistd.h>
+#else
+#include <direct.h>
+#endif
 
 #include <config/ConfigManager.h>
 #include <kernel/PluginHelper.h>
@@ -748,7 +753,7 @@ void ArtifactVis::preFrame()
             {
                 Vec3f vec2 = allArtifacts[j]->modelPos*objMat;
                 double angle = acos(vec1*vec2/(vec1.length()*vec2.length()));
-                if(angle  < atan2(1,24))
+                if(angle  < atan2(1.0f,24.0f))
                 {
                     allArtifacts[j]->showLabel = false;
                 }
@@ -912,7 +917,7 @@ void ArtifactVis::listArtifacts()
 bool ArtifactVis::modelExists(const char * filename)
 {
     ifstream ifile(filename);
-    return ifile;
+    return !ifile.fail();
 }
 void ArtifactVis::displayArtifacts(QueryGroup * query)
 {   
@@ -1262,7 +1267,7 @@ void ArtifactVis::readLocusFile(QueryGroup * query)
             ss << desc_child->value.text.string << " ";
         loc->name = ss.str();
         mxml_node_t * coord_node;
-        mxml_node_t * polyhedron_node;
+        //mxml_node_t * polyhedron_node;
         Vec3Array * coords = new Vec3Array();
         coord_node = mxmlFindElement(node, tree, "coordTop", NULL, NULL, MXML_DESCEND);
         mxml_node_t * child;

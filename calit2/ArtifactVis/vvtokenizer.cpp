@@ -123,7 +123,7 @@ int vvTokenizer::readChar()
     else
     {
       // Read next block:
-      blockUsed = fread(data, 1, BLOCK_SIZE, fp);
+      blockUsed = (int)fread(data, 1, BLOCK_SIZE, fp);
       cur = 0;
     }
   }

@@ -4,6 +4,9 @@
 #include <input/TrackingManager.h>
 #include <kernel/InteractionManager.h>
 #include <kernel/PluginHelper.h>
+#ifdef WIN32
+#include <util/TimeOfDay.h>
+#endif
 
 #include <iostream>
 #include <osg/Material>
@@ -199,6 +202,7 @@ bool SketchLine::buttonEvent(int type, const osg::Matrix & mat)
 	}
 	return true;
     }
+	return false;
 }
 
 void SketchLine::addBrush(osg::MatrixTransform * mt)

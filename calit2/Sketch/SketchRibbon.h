@@ -8,7 +8,11 @@
 #include <osg/ShapeDrawable>
 #include <osg/Geode>
 
+#ifndef WIN32
 #include <sys/time.h>
+#else
+#include <windows.h>
+#endif
 
 class SketchRibbon : public SketchObject
 {

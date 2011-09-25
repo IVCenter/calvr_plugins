@@ -1,6 +1,10 @@
 #include "LightLoader.h"
 #include <sstream>
 
+#ifdef WIN32
+#define snprintf _snprintf
+#endif
+
 void LightLoader::loadLights(const char * xmlFile, LightManager * manager)
 {
    FILE *fp;

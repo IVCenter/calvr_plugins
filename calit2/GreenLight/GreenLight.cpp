@@ -439,7 +439,7 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
     else if (item == _selectionModeCheckbox)
     {
         // Toggle the non-selected hardware transparencies
-        Entity * ent;
+        //Entity * ent;
         std::set< Component * >::iterator sit;
         for (sit = _components.begin(); sit != _components.end(); sit++)
         {
