@@ -138,6 +138,7 @@ class OssimPlanet : public cvr::CVRPlugin, public cvr::MenuCallback, public ossi
     void preFrame();
     void postFrame();
     int getPriority() { return 30; }
+    bool processEvent(cvr::InteractionEvent * event);
     bool buttonEvent(int type, int button, int hand, const osg::Matrix & mat);
     bool mouseButtonEvent (int type, int button, int x, int y, const osg::Matrix &mat);
     void menuCallback(cvr::MenuItem * item);

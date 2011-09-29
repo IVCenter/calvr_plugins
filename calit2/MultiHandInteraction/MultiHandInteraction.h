@@ -17,7 +17,7 @@ class MultiHandInteraction : public cvr::CVRPlugin
 
         int getPriority() { return 1; }
 
-        bool buttonEvent(int type, int button, int hand, const osg::Matrix & mat);
+        bool processEvent(cvr::InteractionEvent * event);
 
     protected:
         void processNav();

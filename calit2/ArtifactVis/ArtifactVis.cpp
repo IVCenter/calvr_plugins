@@ -208,9 +208,15 @@ void ArtifactVis::loadModels()
         }
     }
 }
-bool ArtifactVis::buttonEvent(int type, int button, int hand, const osg::Matrix & mat)
+bool ArtifactVis::processEvent(InteractionEvent * event)
 {
-    if((type == BUTTON_DOWN || type == BUTTON_DOUBLE_CLICK) && hand == 0 && button == 0)
+    TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
+    if(!tie)
+    {
+	return false;
+    }
+
+    if((event->getInteraction() == BUTTON_DOWN || event->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getHand() == 0 && tie->getButton() == 0)
     {
     //Artifact Selection
 	if(_selectArtifactCB->getValue() )
@@ -221,8 +227,8 @@ bool ArtifactVis::buttonEvent(int type, int button, int hand, const osg::Matrix 
 		osg::Vec3 start(0,0,0);
 		osg::Vec3 end(0,1000000,0);
 
-		start = start * mat * w2l;
-		end = end * mat * w2l;
+		start = start * tie->getTransform() * w2l;
+		end = end * tie->getTransform() * w2l;
 
 		int index = -1;
                 int queryIndex = -1;
@@ -259,42 +265,22 @@ bool ArtifactVis::buttonEvent(int type, int button, int hand, const osg::Matrix 
 	    }
 	}
         //Box selection
-	else if(_selectCB->getValue() && type == BUTTON_DOUBLE_CLICK)
+	else if(_selectCB->getValue() && tie->getInteraction() == BUTTON_DOUBLE_CLICK)
 	{
             osg::Matrix w2l = PluginHelper::getWorldToObjectTransform();
 	    if(!_selectActive)
 	    {
 		_selectStart = osg::Vec3(0,1000,0);
-		_selectStart = _selectStart * mat * w2l;
+		_selectStart = _selectStart * tie->getTransform() * w2l;
 		_selectActive = true;
 	    }
 	    else
 	    {
 		_selectCurrent = osg::Vec3(0,1000,0);
-		_selectCurrent = _selectCurrent * mat * w2l;
+		_selectCurrent = _selectCurrent * tie->getTransform() * w2l;
 		_selectActive = false;
 	    }
 	    return true;
-	}
-    }
-
-    return false;
-}
-
-bool ArtifactVis::mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix & mat)
-{
-    if(type == MOUSE_BUTTON_DOWN)
-    {
-	if(!_selectCB->getValue())
-	{
-	    return buttonEvent(BUTTON_DOWN, button, 0, mat);
-	}
-    }
-    if(type == MOUSE_DOUBLE_CLICK)
-    {
-	if(!_selectCB->getValue())
-	{
-	    return buttonEvent(BUTTON_DOUBLE_CLICK, button, 0, mat);
 	}
     }
 
