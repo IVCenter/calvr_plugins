@@ -14,6 +14,8 @@
 
 #include <osgDB/ReadFile>
 
+#include<cstring>
+
 CVRPLUGIN(PluginTest)
 
 using namespace cvr;
