@@ -57,8 +57,9 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
         };
         void message(int type, char* data);
 	bool init();
-        bool buttonEvent(int type, int button, int hand, const osg::Matrix & mat);
-        bool mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix & mat);
+
+        bool processEvent(cvr::InteractionEvent * event);
+
         void menuCallback(cvr::MenuItem * item);
         void preFrame();
 

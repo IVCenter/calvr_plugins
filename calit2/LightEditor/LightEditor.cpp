@@ -193,41 +193,24 @@ void LightEditor::menuCallback(cvr::MenuItem * item)
     updateEditLightMenu();
 }
 
-bool LightEditor::mouseButtonEvent (int type, int button, int x, int y, const osg::Matrix &mat)
+bool LightEditor::processEvent(cvr::InteractionEvent * event)
 {
-    switch(type)
-    {
-        case cvr::MOUSE_BUTTON_DOWN:
-            return buttonEvent(cvr::BUTTON_DOWN, button, 0, mat);
-        case cvr::MOUSE_BUTTON_UP:
-            return buttonEvent(cvr::BUTTON_UP, button, 0, mat);
-        case cvr::MOUSE_DRAG:
-            return buttonEvent(cvr::BUTTON_DRAG, button, 0, mat);
-        case cvr::MOUSE_DOUBLE_CLICK:
-            return buttonEvent(cvr::BUTTON_DOUBLE_CLICK, button, 0, mat);
-        default:
-            return false;            
-    }
-}
-
-
-bool LightEditor::buttonEvent(int type, int button, int hand, const osg::Matrix& mat)
-{
-    if (button != 0)
+    cvr::TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
+    if (!tie || tie->getButton() != 0 || tie->getHand() != 0)
         return false;
 
     static osg::Matrix invLastWand = osg::Matrix();
     static osg::Vec4 * pos = NULL;
     static osg::Vec3 * dir = NULL;
 
-    if (type == cvr::BUTTON_DOWN || type == cvr::BUTTON_DOUBLE_CLICK)
+    if (tie->getInteraction() == cvr::BUTTON_DOWN || tie->getInteraction() == cvr::BUTTON_DOUBLE_CLICK)
     {
         osg::Vec3 pointerStart, pointerEnd;
         std::vector<IsectInfo> isecvec;
 
-        pointerStart = mat.getTrans();
+        pointerStart = tie->getTransform().getTrans();
         pointerEnd.set(0.0f, 10000.0f, 0.0f);
-        pointerEnd = pointerEnd * mat;
+        pointerEnd = pointerEnd * tie->getTransform();
 
         isecvec = getObjectIntersection(cvr::PluginHelper::getScene(),
             pointerStart, pointerEnd);
@@ -238,7 +221,7 @@ bool LightEditor::buttonEvent(int type, int button, int hand, const osg::Matrix&
 
         _selectLightList->matchIndexToValue(mLightManager->Name());
 
-        invLastWand = osg::Matrix::inverse(mat * cvr::PluginHelper::getWorldToObjectTransform());
+        invLastWand = osg::Matrix::inverse(tie->getTransform() * cvr::PluginHelper::getWorldToObjectTransform());
 
         pos = new osg::Vec4(mLightManager->PhysicalPosition());
 
@@ -249,14 +232,14 @@ bool LightEditor::buttonEvent(int type, int button, int hand, const osg::Matrix&
 
         return true;
     }
-    else if (type == cvr::BUTTON_DRAG || type == cvr::BUTTON_UP)
+    else if (tie->getInteraction() == cvr::BUTTON_DRAG || tie->getInteraction() == cvr::BUTTON_UP)
     {
         if (!pos) // We can't do anything
         {
             return false;
         }
 
-        osg::Matrix diffMat = invLastWand * mat * cvr::PluginHelper::getWorldToObjectTransform();
+        osg::Matrix diffMat = invLastWand * tie->getTransform() * cvr::PluginHelper::getWorldToObjectTransform();
 
         mLightManager->PhysicalPosition(*pos * diffMat);
 
@@ -265,7 +248,7 @@ bool LightEditor::buttonEvent(int type, int button, int hand, const osg::Matrix&
             mLightManager->SpotDirection(*dir * osg::Matrix(diffMat.getRotate()));
         }
 
-        if (type == cvr::BUTTON_UP)
+        if (tie->getInteraction() == cvr::BUTTON_UP)
         {
             pos = NULL;
             dir = NULL;

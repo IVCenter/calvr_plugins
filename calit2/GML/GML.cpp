@@ -1010,9 +1010,15 @@ void GML::intersectionTesting()
   }
 }
 
-bool GML::buttonEvent(int type, int button, int hand, const osg::Matrix &)
+bool GML::processEvent(InteractionEvent * event)
 {
-    if(hand == 0 && button == 0 && type == BUTTON_DOWN)
+    TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
+    if(!tie)
+    {
+	return false;
+    }
+
+    if(tie->getHand() == 0 && tie->getButton() == 0 && tie->getInteraction() == BUTTON_DOWN)
     {
 	// check for current intersected node
 	if( mouseOver != NULL && activeNode != mouseOver)

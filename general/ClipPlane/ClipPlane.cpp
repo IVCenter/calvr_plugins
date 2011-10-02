@@ -106,15 +106,26 @@ void ClipPlane::menuCallback(MenuItem * item)
     }
 }
 
-bool ClipPlane::buttonEvent(int type, int button, int hand, const osg::Matrix & mat)
+bool ClipPlane::processEvent(InteractionEvent * event)
 {
-    if(hand == 0 && button == 0 && type == BUTTON_DOWN)
+    if(!event->getEventType() == TRACKED_BUTTON_INTER_EVENT)
+    {
+	return false;
+    }
+
+    TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
+    if(!tie)
+    {
+	return false;
+    }
+
+    if(tie->getHand() == 0 && tie->getButton() == 0 && tie->getInteraction() == BUTTON_DOWN)
     {
 	if(_activePlane >= 0)
 	{
-	    osg::Vec3 point = mat.getTrans();
+	    osg::Vec3 point = tie->getTransform().getTrans();
 	    osg::Vec3 normal(0,1,0);
-	    normal = normal * mat;
+	    normal = normal * tie->getTransform();
 
 	    point = point * PluginHelper::getWorldToObjectTransform();
 	    normal = normal * PluginHelper::getWorldToObjectTransform();

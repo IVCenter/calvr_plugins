@@ -33,7 +33,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 
         void preFrame();
         void postFrame();
-        bool keyEvent(bool keyDown, int key, int mod);
+        bool processEvent(cvr::InteractionEvent * event);
         bool buttonEvent(int type, int button, int hand, const osg::Matrix& mat);
         bool mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix& mat);
 

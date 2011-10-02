@@ -45,10 +45,11 @@ void MultiHandInteraction::preFrame()
     }
 }
 
-bool MultiHandInteraction::buttonEvent(int type, int button, int hand, const osg::Matrix & mat)
+bool MultiHandInteraction::processEvent(InteractionEvent * event)
 {
+    TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
     //std::cerr << "Button event hand: " << hand << " button: " << button << std::endl;
-    if(button)
+    if(!tie || tie->getButton())
     {
 	return false;
     }
@@ -63,10 +64,10 @@ bool MultiHandInteraction::buttonEvent(int type, int button, int hand, const osg
 	return true;
     }*/
 
-    if(!_interactionStarted && type == BUTTON_DOWN)
+    if(!_interactionStarted && tie->getInteraction() == BUTTON_DOWN)
     {
-	_activeHand = hand;
-	if(hand)
+	_activeHand = tie->getHand();
+	if(tie->getHand())
 	{
 	    _refHand = 0;
 	}
@@ -79,7 +80,7 @@ bool MultiHandInteraction::buttonEvent(int type, int button, int hand, const osg
 	//_activeHandMat = mat;
 	_lastRefHandMat = TrackingManager::instance()->getHandMat(_refHand);
 	_currentRefHandMat = _lastRefHandMat;
-	_lastActiveHandMat = mat;
+	_lastActiveHandMat = tie->getTransform();
 	_currentActiveHandMat = _lastActiveHandMat;
 	_navMode = Navigation::instance()->getPrimaryButtonMode();
 
@@ -133,20 +134,20 @@ bool MultiHandInteraction::buttonEvent(int type, int button, int hand, const osg
         std::cerr << "Button drag event." << std::endl;
     }*/
 
-    if(type == BUTTON_UP || type == BUTTON_DRAG)
+    if(tie->getInteraction() == BUTTON_UP || tie->getInteraction() == BUTTON_DRAG)
     {
-	if(hand == _activeHand)
+	if(tie->getHand() == _activeHand)
 	{
 	    //std::cerr << "Primary hand updated." << std::endl;
 	    _lastActiveHandMat = _currentActiveHandMat;
-	    _currentActiveHandMat = mat;
+	    _currentActiveHandMat = tie->getTransform();
 	    _activeUpdated = true;
 	}
-	else if(hand == _refHand)
+	else if(tie->getHand() == _refHand)
 	{
 	    //std::cerr << "Ref hand updated." << std::endl;
 	    _lastRefHandMat = _currentRefHandMat;
-	    _currentRefHandMat = mat;
+	    _currentRefHandMat = tie->getTransform();
 	    if(_setLastRefHand)
 	    {
 		switch(_navMode)
@@ -184,11 +185,11 @@ bool MultiHandInteraction::buttonEvent(int type, int button, int hand, const osg
 	}
     }
 
-    if(hand == _activeHand && type == BUTTON_UP)
+    if(tie->getHand() == _activeHand && tie->getInteraction() == BUTTON_UP)
     {
 	_interactionStarted = false;
     }
-    else if(hand == _refHand && type == BUTTON_UP)
+    else if(tie->getHand() == _refHand && tie->getInteraction() == BUTTON_UP)
     {
 	_setLastRefHand = true;
     }

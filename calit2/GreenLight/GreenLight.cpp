@@ -569,7 +569,7 @@ void GreenLight::preFrame()
             _rack[r]->handleAnimation();
 
 //        if (cvr::ComController::instance()->isMaster())
-        handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver, cvr::ComController::instance()->isMaster());
+        //handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver, cvr::ComController::instance()->isMaster());
 //        else
         handleHoverOver(cvr::PluginHelper::getHandMat(), _wandOver, !cvr::ComController::instance()->isMaster());
     }
@@ -579,14 +579,15 @@ void GreenLight::postFrame()
 {
 }
 
-bool GreenLight::keyEvent(bool keyDown, int key, int mod)
+bool GreenLight::processEvent(cvr::InteractionEvent * event)
 {
-    return false;
-}
+    cvr::TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
+    if(!tie)
+    {
+	return false;
+    }
 
-bool GreenLight::buttonEvent(int type, int button, int hand, const osg::Matrix& mat)
-{
-    if (type != cvr::BUTTON_DOWN || button != 0)
+    if (tie->getInteraction() != cvr::BUTTON_DOWN || tie->getButton() != 0 || tie->getHand() != 0 )
         return false;
 
     if (!_box)
@@ -607,41 +608,6 @@ bool GreenLight::buttonEvent(int type, int button, int hand, const osg::Matrix& 
             // Handle group animations
             std::list<Entity *>::iterator eit;
             for (eit = _wandOver->group.begin(); eit != _wandOver->group.end(); eit++)
-            {
-                (*eit)->beginAnimation();
-            }
-        }
-
-        return true;
-    }
-
-    return false;
-}
-
-bool GreenLight::mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix& mat)
-{
-    // Left Button Click
-    if (type != cvr::MOUSE_BUTTON_DOWN || button != 0)
-        return false;
-
-    if (!_box)
-        return false;
-
-    // Should be hovering over it
-    if (_mouseOver)
-    {
-        Component * comp = _mouseOver->asComponent();
-        if (comp)
-        {
-            selectComponent( comp, !comp->selected );
-        }
-        else // _mouseOver is a rack/door/etc.
-        {
-            _mouseOver->beginAnimation();
-
-            // Handle group animations
-            std::list<Entity *>::iterator eit;
-            for (eit = _mouseOver->group.begin(); eit != _mouseOver->group.end(); eit++)
             {
                 (*eit)->beginAnimation();
             }

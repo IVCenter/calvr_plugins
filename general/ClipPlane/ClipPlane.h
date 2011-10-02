@@ -21,7 +21,7 @@ class ClipPlane : public cvr::CVRPlugin, public cvr::MenuCallback
 
         void menuCallback(cvr::MenuItem * item);
 
-        bool buttonEvent(int type, int button, int hand, const osg::Matrix & mat);
+        bool processEvent(cvr::InteractionEvent * event);
 
         void preFrame();
 

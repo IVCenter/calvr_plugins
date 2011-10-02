@@ -332,14 +332,18 @@ void PanoView360::preFrame()
    } 
 }
 
-bool PanoView360::keyEvent(bool, int, int)
+bool PanoView360::processEvent(InteractionEvent * event)
 {
-   if(_cdLeft != NULL)
-   {
-      _cdLeft->updateRotate(0.6);
-      _cdRight->updateRotate(0.6);
-   }
-   return false;
+    if(!event->asKeyboardEvent())
+    {
+	return false;
+    }
+    if(_cdLeft != NULL)
+    {
+	_cdLeft->updateRotate(0.6);
+	_cdRight->updateRotate(0.6);
+    }
+    return false;
 }
 
 void PanoView360::parseConfig(std::string file)

@@ -463,6 +463,23 @@ bool OssimPlanet::buttonEvent(int type, int button, int hand, const osg::Matrix 
     return false;
 }
 
+bool OssimPlanet::processEvent(InteractionEvent * event)
+{
+    MouseInteractionEvent * mie = event->asMouseEvent();
+    if(mie)
+    {
+	return mouseButtonEvent(mie->getInteraction(),mie->getButton(),mie->getX(),mie->getY(),mie->getTransform());
+    }
+    
+    TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
+    if(tie)
+    {
+	return buttonEvent(tie->getInteraction(),tie->getButton(),tie->getHand(),tie->getTransform());
+    }
+
+    return false;
+}
+
 bool OssimPlanet::mouseButtonEvent (int type, int button, int x, int y, const osg::Matrix &mat)
 {
     if(!_navCB->getValue() || Navigation::instance()->getPrimaryButtonMode() == SCALE)
