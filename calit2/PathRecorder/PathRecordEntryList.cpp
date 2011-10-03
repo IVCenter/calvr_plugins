@@ -9,6 +9,7 @@
 #include "PathRecordEntryList.h"
 
 #include <iostream>
+#include <cstdio>
 
 using namespace std;
 using namespace osg;

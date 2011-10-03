@@ -8,6 +8,8 @@
 #include <osg/Texture2D>
 #include <osgDB/ReadFile>
 
+#include <cstring>
+
 float getZCoord(int slot);
 
 void GreenLight::parseHardwareFile()
