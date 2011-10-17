@@ -3,6 +3,9 @@
 
 #include <config/ConfigManager.h>
 #include <kernel/NodeMask.h>
+#include <kernel/ScreenConfig.h>
+
+#include <osg/GraphicsContext>
 
 #include <iostream>
 #include <string>
@@ -76,6 +79,37 @@ PanoDrawableLOD::PanoDrawableLOD(std::string leftEyeFile, std::string rightEyeFi
     setUpdateCallback(new PanoUpdate());
 }
 
+PanoDrawableLOD::PanoDrawableLOD(std::vector<std::string> & leftEyeFiles, std::vector<std::string> & rightEyeFiles, float radius, int mesh, int depth, int size, std::string vertFile, std::string fragFile)
+{
+    setUseDisplayList(false);
+    _badInit = false;
+    _leftEyeFiles = leftEyeFiles;
+    _rightEyeFiles = rightEyeFiles;
+    _radius = radius;
+    _mesh = mesh;
+    _depth = depth;
+    _size = size;
+    _currentIndex = 0;
+
+    std::string shaderDir = ConfigManager::getEntry("value","Plugin.PanoViewLOD.ShaderDir","");
+    _vertData = loadShaderFile(shaderDir + "/" + vertFile);
+    _fragData = loadShaderFile(shaderDir + "/" + fragFile);
+
+    if(!_vertData)
+    {
+	std::cerr << "Error loading shader file: " << shaderDir + "/" + vertFile << std::endl;
+	_badInit = true;
+    }
+    
+    if(!_fragData)
+    {
+	std::cerr << "Error loading shader file: " << shaderDir + "/" + fragFile << std::endl;
+	_badInit = true;
+    }
+
+    setUpdateCallback(new PanoUpdate());
+}
+
 PanoDrawableLOD::PanoDrawableLOD(const PanoDrawableLOD&,const osg::CopyOp& copyop)
 {
     std::cerr << "PanoDrawableLOD Warning: in copy constructor." << std::endl;
@@ -91,6 +125,22 @@ PanoDrawableLOD::~PanoDrawableLOD()
     {
 	delete[] _fragData;
     }
+
+    _leftFileIDs.clear();
+    _rightFileIDs.clear();
+    _updateDoneMap.clear();
+    for(std::map<int,sph_cache*>::iterator it = _cacheMap.begin(); it != _cacheMap.end(); it++)
+    {
+	//make current
+	if(it->first < ScreenConfig::instance()->getNumWindows())
+	{
+	    ScreenConfig::instance()->getWindowInfo(it->first)->gc->makeCurrent();
+	}
+	delete it->second;
+	delete _modelMap[it->first];
+    }
+    _cacheMap.clear();
+    _modelMap.clear();
 }
 
 osg::BoundingBox PanoDrawableLOD::computeBound() const
