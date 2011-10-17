@@ -49,7 +49,7 @@ class PanoDrawableLOD : public osg::Drawable
         char * _fragData;
 
         int _currentIndex;
-        bool _badInit;
+        mutable bool _badInit;
 
         static OpenThreads::Mutex _initLock;
 

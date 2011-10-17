@@ -31,12 +31,15 @@ bool PanoViewLOD::init()
     _rightGeode->setNodeMask(_rightGeode->getNodeMask() & (~CULL_MASK));
 
 
-    _leftDrawable = new PanoDrawableLOD("/home/covise/data/PansLOD/LuxorTempleNight2-L_512_3.tif","/home/covise/data/PansLOD/LuxorTempleNight2-L_512_3.tif",9000,16,3,512);
-    _rightDrawable = new PanoDrawableLOD("/home/covise/data/PansLOD/LuxorTempleNight2-L_512_3.tif","/home/covise/data/PansLOD/LuxorTempleNight2-L_512_3.tif",9000,16,3,512);
+    _leftDrawable = new PanoDrawableLOD("/home/covise/data/PansLOD/LuxorTempleNight2-L_512_3.tif","/home/covise/data/PansLOD/LuxorTempleNight2-R_512_3.tif",9000,16,3,512);
+    _rightDrawable = new PanoDrawableLOD("/home/covise/data/PansLOD/LuxorTempleNight2-L_512_3.tif","/home/covise/data/PansLOD/LuxorTempleNight2-R_512_3.tif",9000,16,3,512);
 
     _leftGeode->addDrawable(_leftDrawable);
     _rightGeode->addDrawable(_rightDrawable);
 
+    osg::Matrix m;
+    m.makeRotate(M_PI/2.0,osg::Vec3(1,0,0));
+    _root->setMatrix(m);
 
     PluginHelper::getScene()->addChild(_root);
 }

@@ -1,3 +1,4 @@
+#include <GL/glew.h>
 #include "PanoDrawableLOD.h"
 
 #include <config/ConfigManager.h>
@@ -113,14 +114,26 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	return;
     }
 
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+
     int context = ri.getContextID();
 
     _initLock.lock();
 
     if(!_cacheMap[context])
     {
+        GLenum err = glewInit();
+        if (GLEW_OK != err)
+        {
+            std::cerr << "Error on glew init: " << glewGetErrorString(err) << std::endl;
+            _badInit = true;
+            _initLock.unlock();
+            glPopAttrib();
+            return;
+        }
 	int cachesize = ConfigManager::getInt("value","Plugin.PanoViewLOD.CacheSize",256);
 	_cacheMap[context] = new sph_cache(cachesize);
+        _cacheMap[context]->set_debug(false);
 
 	_modelMap[context] = new sph_model(*_cacheMap[context],_vertData,_fragData,_mesh,_depth,_size);
 	_leftFileIDs[context] = std::vector<int>();
@@ -175,6 +188,7 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
     int fileID;
     if(left)
     {
+        //std::cerr << "Left" << std::endl;
 	if(_currentIndex >= _leftFileIDs[context].size())
 	{
 	    return;
@@ -183,6 +197,7 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
     }
     else
     {
+        //std::cerr << "Right" << std::endl;
 	if(_currentIndex >= _rightFileIDs[context].size())
 	{
 	    return;
@@ -191,6 +206,7 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
     }
 
     _modelMap[context]->draw(ri.getState()->getProjectionMatrix().ptr(), modelview.ptr(), &fileID, 1, 0, 0);
+    glPopAttrib();
 }
 
 void PanoDrawableLOD::PanoUpdate::update(osg::NodeVisitor *, osg::Drawable * drawable)
