@@ -8,6 +8,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+std::map<int,std::vector<int> > PanoDrawableLOD::_leftFileIDs;
+std::map<int,std::vector<int> > PanoDrawableLOD::_rightFileIDs;
+std::map<int,bool> PanoDrawableLOD::_updateDoneMap;
+OpenThreads::Mutex PanoDrawableLOD::_initLock;
+std::map<int,sph_cache*> PanoDrawableLOD::_cacheMap;
+std::map<int,sph_model*> PanoDrawableLOD::_modelMap;
+
 using namespace cvr;
 
 char * loadShaderFile(std::string file)
@@ -116,13 +123,15 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	_cacheMap[context] = new sph_cache(cachesize);
 
 	_modelMap[context] = new sph_model(*_cacheMap[context],_vertData,_fragData,_mesh,_depth,_size);
+	_leftFileIDs[context] = std::vector<int>();
+	_rightFileIDs[context] = std::vector<int>();
 	for(int i = 0; i < _leftEyeFiles.size(); i++)
 	{
-	    _leftFileIDs.push_back(_cacheMap[context]->add_file(_leftEyeFiles[i]));
+	    _leftFileIDs[context].push_back(_cacheMap[context]->add_file(_leftEyeFiles[i]));
 	}
 	for(int i = 0; i < _rightEyeFiles.size(); i++)
 	{
-	    _rightFileIDs.push_back(_cacheMap[context]->add_file(_rightEyeFiles[i]));
+	    _rightFileIDs[context].push_back(_cacheMap[context]->add_file(_rightEyeFiles[i]));
 	}
     }
 
@@ -166,19 +175,19 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
     int fileID;
     if(left)
     {
-	if(_currentIndex >= _leftFileIDs.size())
+	if(_currentIndex >= _leftFileIDs[context].size())
 	{
 	    return;
 	}
-	fileID = _leftFileIDs[_currentIndex];
+	fileID = _leftFileIDs[context][_currentIndex];
     }
     else
     {
-	if(_currentIndex >= _rightFileIDs.size())
+	if(_currentIndex >= _rightFileIDs[context].size())
 	{
 	    return;
 	}
-	fileID = _rightFileIDs[_currentIndex];
+	fileID = _rightFileIDs[context][_currentIndex];
     }
 
     _modelMap[context]->draw(ri.getState()->getProjectionMatrix().ptr(), modelview.ptr(), &fileID, 1, 0, 0);

@@ -35,11 +35,11 @@ class PanoDrawableLOD : public osg::Drawable
         };
 
         std::vector<std::string> _leftEyeFiles;
-        mutable std::vector<int> _leftFileIDs;
+        static std::map<int,std::vector<int> > _leftFileIDs;
         std::vector<std::string> _rightEyeFiles;
-        mutable std::vector<int> _rightFileIDs;
+        static std::map<int,std::vector<int> > _rightFileIDs;
 
-        mutable std::map<int,bool> _updateDoneMap;
+        static std::map<int,bool> _updateDoneMap;
 
         float _radius;
         int _mesh;
@@ -51,10 +51,10 @@ class PanoDrawableLOD : public osg::Drawable
         int _currentIndex;
         bool _badInit;
 
-        mutable OpenThreads::Mutex _initLock;
+        static OpenThreads::Mutex _initLock;
 
-        mutable std::map<int,sph_cache*> _cacheMap;
-        mutable std::map<int,sph_model*> _modelMap;
+        static std::map<int,sph_cache*> _cacheMap;
+        static std::map<int,sph_model*> _modelMap;
 
         mutable osg::BoundingBox _boundingBox;
 };
