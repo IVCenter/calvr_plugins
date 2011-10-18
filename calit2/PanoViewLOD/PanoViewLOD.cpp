@@ -7,6 +7,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
+#include <cmath>
 
 #include <mxml.h>
 
@@ -73,6 +74,88 @@ bool PanoViewLOD::init()
     PluginHelper::addRootMenuItem(_panoViewMenu);
 
     return true;
+}
+
+bool PanoViewLOD::processEvent(InteractionEvent * event)
+{
+    if(event->asTrackedButtonEvent())
+    {
+	TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
+	if(_rightDrawable || _leftDrawable)
+	{
+	    if(tie->getButton() == 2 && tie->getInteraction() == BUTTON_DOWN)
+	    {
+		if(_rightDrawable)
+		{
+		    _rightDrawable->next();
+		}
+		if(_leftDrawable)
+		{
+		    _leftDrawable->next();
+		}
+		return true;
+	    }
+	    if(tie->getButton() == 3 && tie->getInteraction() == BUTTON_DOWN)
+	    {
+		if(_rightDrawable)
+		{
+		    _rightDrawable->previous();
+		}
+		if(_leftDrawable)
+		{
+		    _leftDrawable->previous();
+		}
+		return true;
+	    }
+	    if(tie->getButton() == 0 && tie->getInteraction() == BUTTON_DOWN)
+	    {
+		//_zoomActive = true;
+		//_currentZoom = 0.0;
+
+		osg::Vec3 dir(0,1,0);
+		dir = dir * tie->getTransform();
+		dir = dir - tie->getTransform().getTrans();
+		dir.normalize();
+
+		if(_leftDrawable)
+		{
+		    _leftDrawable->setZoom(dir,pow(10.0, _currentZoom));
+		}
+		else
+		{
+		    _rightDrawable->setZoom(dir,pow(10.0, _currentZoom));
+		}
+
+		return true;
+	    }
+	    if(tie->getButton() == 0 && (tie->getInteraction() == BUTTON_DRAG || tie->getInteraction() == BUTTON_UP))
+	    {
+		float val = PluginHelper::getValuator(0,0);
+		if(fabs(val) > 0.25)
+		{
+		    _currentZoom += val * PluginHelper::getLastFrameDuration() * 0.25;
+		    if(_currentZoom < -2.0) _currentZoom = -2.0;
+		    if(_currentZoom > 0.5) _currentZoom = 0.5;
+		}
+
+		osg::Vec3 dir(0,1,0);
+		dir = dir * tie->getTransform();
+		dir = dir - tie->getTransform().getTrans();
+		dir.normalize();
+
+		if(_leftDrawable)
+		{
+		    _leftDrawable->setZoom(dir,pow(10.0, _currentZoom));
+		}
+		else
+		{
+		    _rightDrawable->setZoom(dir,pow(10.0, _currentZoom));
+		}
+		return true;
+	    }
+	}
+    }
+    return false;
 }
 
 void PanoViewLOD::menuCallback(MenuItem * item)

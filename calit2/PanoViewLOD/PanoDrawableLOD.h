@@ -21,6 +21,10 @@ class PanoDrawableLOD : public osg::Drawable
  
         void cleanup();
 
+        void next();
+        void previous();
+        void setZoom(osg::Vec3 dir, float k);
+
         virtual Object* cloneType() const { return NULL; }
         virtual Object* clone(const osg::CopyOp& copyop) const { return new PanoDrawableLOD(*this,copyop); }
         virtual bool isSameKindAs(const Object* obj) const { return dynamic_cast<const PanoDrawableLOD*>(obj)!=NULL; }
@@ -52,8 +56,13 @@ class PanoDrawableLOD : public osg::Drawable
         char * _fragData;
 
         int _currentIndex;
+        int _lastIndex;
+        int _nextIndex;
+        float _totalFadeTime;
+        float _currentFadeTime;
         mutable bool _badInit;
 
+        static std::map<int,bool> _initMap;
         static OpenThreads::Mutex _initLock;
 
         static std::map<int,sph_cache*> _cacheMap;

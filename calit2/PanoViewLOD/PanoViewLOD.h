@@ -19,6 +19,7 @@ class PanoViewLOD : public cvr::CVRPlugin, public cvr::MenuCallback
 	virtual ~PanoViewLOD();
 
         bool init();
+        bool processEvent(cvr::InteractionEvent * event);
 
         void menuCallback(cvr::MenuItem * item);
 
@@ -55,6 +56,8 @@ class PanoViewLOD : public cvr::CVRPlugin, public cvr::MenuCallback
         std::string _defaultConfigDir;
         std::string _imageSearchPath;
         float _floorOffset;
+
+        float _currentZoom;
 };
 
 #endif
