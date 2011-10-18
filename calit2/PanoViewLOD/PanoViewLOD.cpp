@@ -153,6 +153,21 @@ bool PanoViewLOD::processEvent(InteractionEvent * event)
 		}
 		return true;
 	    }
+	    if(tie->getButton() == 4 && tie->getInteraction() == BUTTON_DOWN)
+	    {
+		_currentZoom = 0.0;
+
+		if(_leftDrawable)
+		{
+		    _leftDrawable->setZoom(osg::Vec3(0,1,0),pow(10.0, _currentZoom));
+		}
+		else
+		{
+		    _rightDrawable->setZoom(osg::Vec3(0,1,0),pow(10.0, _currentZoom));
+		}
+
+		return true;
+	    }
 	}
     }
     return false;
