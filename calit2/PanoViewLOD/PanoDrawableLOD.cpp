@@ -125,21 +125,24 @@ PanoDrawableLOD::~PanoDrawableLOD()
     {
 	delete[] _fragData;
     }
+}
 
+void PanoDrawableLOD::cleanup()
+{
     _leftFileIDs.clear();
     _rightFileIDs.clear();
     _updateDoneMap.clear();
     for(std::map<int,sph_cache*>::iterator it = _cacheMap.begin(); it != _cacheMap.end(); it++)
     {
 	//make current
-	if(it->first < ScreenConfig::instance()->getNumWindows())
-	{
-	    ScreenConfig::instance()->getWindowInfo(it->first)->gc->makeCurrent();
-	}
-	delete it->second;
+	//if(it->first < ScreenConfig::instance()->getNumWindows())
+	//{
+	    //ScreenConfig::instance()->getWindowInfo(it->first)->gc->makeCurrent();
+	//}
+	//delete it->second;
 	delete _modelMap[it->first];
     }
-    _cacheMap.clear();
+    //_cacheMap.clear();
     _modelMap.clear();
 }
 
@@ -185,6 +188,11 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	_cacheMap[context] = new sph_cache(cachesize);
         _cacheMap[context]->set_debug(false);
 
+
+    }
+
+    if(!_modelMap[context])
+    {
 	_modelMap[context] = new sph_model(*_cacheMap[context],_vertData,_fragData,_mesh,_depth,_size);
 	_leftFileIDs[context] = std::vector<int>();
 	_rightFileIDs[context] = std::vector<int>();

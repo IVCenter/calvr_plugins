@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <cstdlib>
+#include <cstring>
 
 #include <mxml.h>
 
@@ -43,12 +44,17 @@ bool PanoViewLOD::init()
 
     std::string temp("PANOPATH=");
     temp = temp + _imageSearchPath;
-    putenv((char*)temp.c_str());
+
+    char * carray = new char[temp.size()+1];
+    
+    strcpy(carray,temp.c_str());
+
+    putenv(carray);
 
     std::vector<std::string> tagList;
     ConfigManager::getChildren("Plugin.PanoViewLOD.Pans", tagList);
 
-    _panoViewMenu = new SubMenu("PanoView360","PanoView360");
+    _panoViewMenu = new SubMenu("PanoViewLOD","PanoViewLOD");
     _panoViewMenu->setCallback(this);
 
     _loadMenu = new SubMenu("Load","Load");
@@ -64,6 +70,8 @@ bool PanoViewLOD::init()
 	createLoadMenu(tagList[i], tag, _loadMenu);
     }
 
+    PluginHelper::addRootMenuItem(_panoViewMenu);
+
     return true;
 }
 
@@ -73,8 +81,10 @@ void PanoViewLOD::menuCallback(MenuItem * item)
     {
 	if(_rightDrawable && _leftDrawable)
 	{
+            _leftDrawable->cleanup();
 	    _leftGeode->removeDrawables(0,_leftGeode->getNumDrawables());
 	    _rightGeode->removeDrawables(0,_rightGeode->getNumDrawables());
+            _leftDrawable = _rightDrawable = NULL;
 	}
 	PluginHelper::getScene()->removeChild(_root);
     }
@@ -97,7 +107,7 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 	    m.makeRotate(M_PI/2.0,osg::Vec3(1,0,0));
 	    float offset = _pans[i]->height - _floorOffset;
 	    t.makeTranslate(osg::Vec3(0,0,offset));
-	    _root->setMatrix(m*t);
+	    _root->setMatrix(m);
 
 	    PluginHelper::getScene()->addChild(_root);
 
@@ -256,6 +266,26 @@ PanoViewLOD::PanInfo * PanoViewLOD::loadInfoFromXML(std::string file)
 	std::cerr << "Unmatched left/right files in: " << file << std::endl;
 	delete info;
 	return NULL;
+    }
+
+    if(0)
+    {
+        std::cerr << "File: " << file << std::endl;
+        std::cerr << "LeftFiles:" << std::endl;
+        for(int i = 0; i < info->leftFiles.size(); i++)
+        {
+            std::cerr << info->leftFiles[i] << std::endl;
+        }
+        std::cerr << "RightFiles:" << std::endl;
+        for(int i = 0; i < info->rightFiles.size(); i++)
+        {
+            std::cerr << info->rightFiles[i] << std::endl;
+        }
+        std::cerr << "Depth: " << info->depth << std::endl;
+        std::cerr << "Mesh: " << info->mesh << std::endl;
+        std::cerr << "Size: " << info->size << std::endl;
+        std::cerr << "VertFile: " << info->vertFile << std::endl;
+        std::cerr << "FragFile: " << info->fragFile << std::endl;
     }
 
     return info;

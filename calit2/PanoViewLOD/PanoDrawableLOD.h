@@ -18,6 +18,8 @@ class PanoDrawableLOD : public osg::Drawable
         PanoDrawableLOD(std::vector<std::string> & leftEyeFiles, std::vector<std::string> & rightEyeFiles, float radius, int mesh, int depth, int size, std::string vertFile = "sph-zoomer.vert", std::string fragFile = "sph-render.frag");
         PanoDrawableLOD(const PanoDrawableLOD&,const osg::CopyOp& copyop=osg::CopyOp::SHALLOW_COPY);
         virtual ~PanoDrawableLOD();
+ 
+        void cleanup();
 
         virtual Object* cloneType() const { return NULL; }
         virtual Object* clone(const osg::CopyOp& copyop) const { return new PanoDrawableLOD(*this,copyop); }
