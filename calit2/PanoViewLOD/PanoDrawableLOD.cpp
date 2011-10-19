@@ -68,6 +68,8 @@ PanoDrawableLOD::PanoDrawableLOD(std::string leftEyeFile, std::string rightEyeFi
     _vertData = loadShaderFile(shaderDir + "/" + vertFile);
     _fragData = loadShaderFile(shaderDir + "/" + fragFile);
 
+    //std::cerr << "Vertfile: " << vertFile << " fragFile: " << fragFile << std::endl;
+
     if(!_vertData)
     {
 	std::cerr << "Error loading shader file: " << shaderDir + "/" + vertFile << std::endl;
@@ -100,6 +102,8 @@ PanoDrawableLOD::PanoDrawableLOD(std::vector<std::string> & leftEyeFiles, std::v
     std::string shaderDir = ConfigManager::getEntry("value","Plugin.PanoViewLOD.ShaderDir","");
     _vertData = loadShaderFile(shaderDir + "/" + vertFile);
     _fragData = loadShaderFile(shaderDir + "/" + fragFile);
+
+    //std::cerr << "Vertfile: " << vertFile << " fragFile: " << fragFile << std::endl;
 
     if(!_vertData)
     {
@@ -317,7 +321,8 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	    fc = 2;
 	    pv[0] = _leftFileIDs[context][_nextIndex];
 	    pc = 1;
-	    fade = _currentFadeTime / _totalFadeTime;
+	    fade = 1.0 - (_currentFadeTime / _totalFadeTime);
+            //std::cerr << "Files: " << fileID[0] << " " << fileID[1] << std::endl;
 	}
     }
     else
@@ -334,9 +339,12 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	    fc = 2;
 	    pv[0] = _rightFileIDs[context][_nextIndex];
 	    pc = 1;
-	    fade = _currentFadeTime / _totalFadeTime;
+	    fade = 1.0 - (_currentFadeTime / _totalFadeTime);
+            //std::cerr << "Files: " << fileID[0] << " " << fileID[1] << std::endl;
 	}
     }
+
+    //std::cerr << "Fade: " << fade << std::endl;
 
     _modelMap[context]->set_fade(fade);
     _modelMap[context]->prep(ri.getState()->getProjectionMatrix().ptr(),modelview.ptr(), (int)ri.getState()->getCurrentViewport()->width(), (int)ri.getState()->getCurrentViewport()->height());

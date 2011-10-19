@@ -111,10 +111,12 @@ bool PanoViewLOD::processEvent(InteractionEvent * event)
 	    {
 		//_zoomActive = true;
 		//_currentZoom = 0.0;
-
+                osg::Matrix m;
+                m.makeRotate(M_PI/2.0,osg::Vec3(1,0,0));
 		osg::Vec3 dir(0,1,0);
 		dir = dir * tie->getTransform();
 		dir = dir - tie->getTransform().getTrans();
+                dir = dir * m;
 		dir.normalize();
 
 		if(_leftDrawable)
@@ -137,10 +139,13 @@ bool PanoViewLOD::processEvent(InteractionEvent * event)
 		    if(_currentZoom < -2.0) _currentZoom = -2.0;
 		    if(_currentZoom > 0.5) _currentZoom = 0.5;
 		}
-
+                
+                osg::Matrix m;
+                m.makeRotate(M_PI/2.0,osg::Vec3(1,0,0));
 		osg::Vec3 dir(0,1,0);
 		dir = dir * tie->getTransform();
 		dir = dir - tie->getTransform().getTrans();
+                dir = dir * m;
 		dir.normalize();
 
 		if(_leftDrawable)
@@ -195,8 +200,8 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 		menuCallback(_removeButton);
 	    }
 
-	    _leftDrawable = new PanoDrawableLOD(_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size);
-	    _rightDrawable = new PanoDrawableLOD(_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size);
+	    _leftDrawable = new PanoDrawableLOD(_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size,_pans[i]->vertFile,_pans[i]->fragFile);
+	    _rightDrawable = new PanoDrawableLOD(_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size,_pans[i]->vertFile,_pans[i]->fragFile);
 
 	    _leftGeode->addDrawable(_leftDrawable);
 	    _rightGeode->addDrawable(_rightDrawable);
@@ -329,15 +334,21 @@ PanoViewLOD::PanInfo * PanoViewLOD::loadInfoFromXML(std::string file)
     size_t pos = vertFile.find_last_of('/');
     if(pos != std::string::npos)
     {
-	info->vertFile = vertFile.substr(pos,vertFile.size() - pos);
+	vertFile = vertFile.substr(pos,vertFile.size() - pos);
     }
+    info->vertFile = vertFile;
+
+    //std::cerr << "VertFile: " << info->vertFile << std::endl;
 
     std::string fragFile = mxmlElementGetAttr(node, "frag");
     pos = fragFile.find_last_of('/');
     if(pos != std::string::npos)
     {
-	info->fragFile = fragFile.substr(pos,fragFile.size() - pos);
+	fragFile = fragFile.substr(pos,fragFile.size() - pos);
     }
+    info->fragFile = fragFile;
+
+    //std::cerr << "FragFile: " << info->fragFile << std::endl;
 
     mxml_node_t * node2;
 
