@@ -109,10 +109,8 @@ bool PanoViewLOD::processEvent(InteractionEvent * event)
 	    }
 	    if(tie->getButton() == 0 && tie->getInteraction() == BUTTON_DOWN)
 	    {
-		//_zoomActive = true;
-		//_currentZoom = 0.0;
                 osg::Matrix m;
-                m.makeRotate(M_PI/2.0,osg::Vec3(1,0,0));
+                m.makeRotate(-M_PI/2.0,osg::Vec3(1,0,0));
 		osg::Vec3 dir(0,1,0);
 		dir = dir * tie->getTransform();
 		dir = dir - tie->getTransform().getTrans();
@@ -132,7 +130,7 @@ bool PanoViewLOD::processEvent(InteractionEvent * event)
 	    }
 	    if(tie->getButton() == 0 && (tie->getInteraction() == BUTTON_DRAG || tie->getInteraction() == BUTTON_UP))
 	    {
-		float val = PluginHelper::getValuator(0,0);
+		float val = -PluginHelper::getValuator(0,1);
 		if(fabs(val) > 0.25)
 		{
 		    _currentZoom += val * PluginHelper::getLastFrameDuration() * 0.25;
@@ -141,7 +139,7 @@ bool PanoViewLOD::processEvent(InteractionEvent * event)
 		}
                 
                 osg::Matrix m;
-                m.makeRotate(M_PI/2.0,osg::Vec3(1,0,0));
+                m.makeRotate(-M_PI/2.0,osg::Vec3(1,0,0));
 		osg::Vec3 dir(0,1,0);
 		dir = dir * tie->getTransform();
 		dir = dir - tie->getTransform().getTrans();

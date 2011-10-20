@@ -18,6 +18,7 @@ std::map<int,std::vector<int> > PanoDrawableLOD::_rightFileIDs;
 std::map<int,bool> PanoDrawableLOD::_updateDoneMap;
 std::map<int,bool> PanoDrawableLOD::_initMap;
 OpenThreads::Mutex PanoDrawableLOD::_initLock;
+std::map<int,OpenThreads::Mutex*> PanoDrawableLOD::_updateLock;
 std::map<int,sph_cache*> PanoDrawableLOD::_cacheMap;
 std::map<int,sph_model*> PanoDrawableLOD::_modelMap;
 
@@ -61,7 +62,7 @@ PanoDrawableLOD::PanoDrawableLOD(std::string leftEyeFile, std::string rightEyeFi
     _depth = depth;
     _size = size;
     _currentIndex = 0;
-    _totalFadeTime = 1.5;
+    _totalFadeTime = ConfigManager::getFloat("value","Plugin.PanoViewLOD.FadeTime",2.0);
     _currentFadeTime = 0.0;
 
     std::string shaderDir = ConfigManager::getEntry("value","Plugin.PanoViewLOD.ShaderDir","");
@@ -96,7 +97,7 @@ PanoDrawableLOD::PanoDrawableLOD(std::vector<std::string> & leftEyeFiles, std::v
     _depth = depth;
     _size = size;
     _currentIndex = 0;
-    _totalFadeTime = 1.5;
+    _totalFadeTime = ConfigManager::getFloat("value","Plugin.PanoViewLOD.FadeTime",2.0);
     _currentFadeTime = 0.0;
 
     std::string shaderDir = ConfigManager::getEntry("value","Plugin.PanoViewLOD.ShaderDir","");
@@ -245,7 +246,7 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	_cacheMap[context] = new sph_cache(cachesize);
         _cacheMap[context]->set_debug(false);
 
-
+	_updateLock[context] = new OpenThreads::Mutex();
     }
 
     if(!_initMap[context])
@@ -268,14 +269,17 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	_initMap[context] = true;
     }
 
-    //TODO: maybe make this only under a context level lock
+    _initLock.unlock();
+
+    _updateLock[context]->lock();
+
     if(!_updateDoneMap[context])
     {
 	_cacheMap[context]->update(_modelMap[context]->tick());
 	_updateDoneMap[context] = true;
     }
 
-    _initLock.unlock();
+    _updateLock[context]->unlock();
 
     bool left = false;
 

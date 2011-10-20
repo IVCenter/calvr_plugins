@@ -65,6 +65,8 @@ class PanoDrawableLOD : public osg::Drawable
         static std::map<int,bool> _initMap;
         static OpenThreads::Mutex _initLock;
 
+        static std::map<int,OpenThreads::Mutex*> _updateLock;
+
         static std::map<int,sph_cache*> _cacheMap;
         static std::map<int,sph_model*> _modelMap;
 
