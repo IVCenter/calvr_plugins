@@ -61,6 +61,14 @@ bool PanoViewLOD::init()
     _loadMenu = new SubMenu("Load","Load");
     _panoViewMenu->addItem(_loadMenu);
 
+    _radiusRV = new MenuRangeValue("Radius", 100, 100000, 6000);
+    _radiusRV->setCallback(this);
+    _panoViewMenu->addItem(_radiusRV);
+
+    _heightRV = new MenuRangeValue("Height", -1000, 10000, 1700);
+    _heightRV->setCallback(this);
+    _panoViewMenu->addItem(_heightRV);
+
     _removeButton = new MenuButton("Remove");
     _removeButton->setCallback(this);
     _panoViewMenu->addItem(_removeButton);
@@ -74,6 +82,37 @@ bool PanoViewLOD::init()
     PluginHelper::addRootMenuItem(_panoViewMenu);
 
     return true;
+}
+
+void PanoViewLOD::preFrame()
+{
+    if(_leftDrawable || _rightDrawable)
+    {
+	float val = PluginHelper::getValuator(0,0);
+	if(fabs(val) < 0.2)
+	{
+	    return;
+	}
+
+	if(val > 1.0)
+	{
+	    val = 1.0;
+	}
+	else if(val < -1.0)
+	{
+	    val = -1.0;
+	}
+
+	osg::Matrix rot;
+	rot.makeRotate((M_PI / 50.0) * val, osg::Vec3(0,0,1));
+	_spinMat = _spinMat * rot;
+	_root->setMatrix(_coordChangeMat * _spinMat * _heightMat);
+
+	if(_currentZoom != 0.0)
+	{
+	    updateZoom(_lastZoomMat);
+	}
+    }
 }
 
 bool PanoViewLOD::processEvent(InteractionEvent * event)
@@ -109,22 +148,7 @@ bool PanoViewLOD::processEvent(InteractionEvent * event)
 	    }
 	    if(tie->getButton() == 0 && tie->getInteraction() == BUTTON_DOWN)
 	    {
-                osg::Matrix m;
-                m.makeRotate(-M_PI/2.0,osg::Vec3(1,0,0));
-		osg::Vec3 dir(0,1,0);
-		dir = dir * tie->getTransform();
-		dir = dir - tie->getTransform().getTrans();
-                dir = dir * m;
-		dir.normalize();
-
-		if(_leftDrawable)
-		{
-		    _leftDrawable->setZoom(dir,pow(10.0, _currentZoom));
-		}
-		else
-		{
-		    _rightDrawable->setZoom(dir,pow(10.0, _currentZoom));
-		}
+		updateZoom(tie->getTransform());
 
 		return true;
 	    }
@@ -138,22 +162,8 @@ bool PanoViewLOD::processEvent(InteractionEvent * event)
 		    if(_currentZoom > 0.5) _currentZoom = 0.5;
 		}
                 
-                osg::Matrix m;
-                m.makeRotate(-M_PI/2.0,osg::Vec3(1,0,0));
-		osg::Vec3 dir(0,1,0);
-		dir = dir * tie->getTransform();
-		dir = dir - tie->getTransform().getTrans();
-                dir = dir * m;
-		dir.normalize();
+		updateZoom(tie->getTransform());
 
-		if(_leftDrawable)
-		{
-		    _leftDrawable->setZoom(dir,pow(10.0, _currentZoom));
-		}
-		else
-		{
-		    _rightDrawable->setZoom(dir,pow(10.0, _currentZoom));
-		}
 		return true;
 	    }
 	    if(tie->getButton() == 4 && tie->getInteraction() == BUTTON_DOWN)
@@ -204,15 +214,40 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 	    _leftGeode->addDrawable(_leftDrawable);
 	    _rightGeode->addDrawable(_rightDrawable);
 
-	    osg::Matrix m,t;
-	    m.makeRotate(M_PI/2.0,osg::Vec3(1,0,0));
+	    _coordChangeMat.makeRotate(M_PI/2.0,osg::Vec3(1,0,0));
+	    _spinMat.makeIdentity();
 	    float offset = _pans[i]->height - _floorOffset;
-	    t.makeTranslate(osg::Vec3(0,0,offset));
-	    _root->setMatrix(m);
+	    _heightMat.makeTranslate(osg::Vec3(0,0,offset));
+	    _root->setMatrix(_coordChangeMat * _spinMat * _heightMat);
 
 	    PluginHelper::getScene()->addChild(_root);
 
+	    _radiusRV->setValue(_pans[i]->radius);
+	    _heightRV->setValue(_pans[i]->height);
+
 	    break;
+	}
+    }
+    
+    if(item == _radiusRV)
+    {
+	if(_leftDrawable)
+	{
+	    _leftDrawable->setRadius(_radiusRV->getValue());
+	}
+	if(_rightDrawable)
+	{
+	    _rightDrawable->setRadius(_radiusRV->getValue());
+	}
+    }
+
+    if(item == _heightRV)
+    {
+	if(_leftDrawable || _rightDrawable)
+	{
+	    float offset = _heightRV->getValue() - _floorOffset;
+	    _heightMat.makeTranslate(osg::Vec3(0,0,offset));
+	    _root->setMatrix(_coordChangeMat * _spinMat * _heightMat);
 	}
     }
 }
@@ -396,4 +431,26 @@ PanoViewLOD::PanInfo * PanoViewLOD::loadInfoFromXML(std::string file)
     }
 
     return info;
+}
+
+void PanoViewLOD::updateZoom(osg::Matrix & mat)
+{
+    osg::Matrix m = osg::Matrix::inverse(_root->getMatrix());
+    osg::Vec3 dir(0,1,0);
+    osg::Vec3 point(0,0,0);
+    dir = dir * mat * m;
+    point = point * mat * m;
+    dir = dir - point;
+    dir.normalize();
+
+    if(_leftDrawable)
+    {
+	_leftDrawable->setZoom(dir,pow(10.0, _currentZoom));
+    }
+    else
+    {
+	_rightDrawable->setZoom(dir,pow(10.0, _currentZoom));
+    }
+
+    _lastZoomMat = mat;
 }
