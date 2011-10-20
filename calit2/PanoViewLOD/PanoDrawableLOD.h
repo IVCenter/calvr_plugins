@@ -24,6 +24,7 @@ class PanoDrawableLOD : public osg::Drawable
         void next();
         void previous();
         void setZoom(osg::Vec3 dir, float k);
+        void setRadius(float radius) { _radius = radius; }
 
         virtual Object* cloneType() const { return NULL; }
         virtual Object* clone(const osg::CopyOp& copyop) const { return new PanoDrawableLOD(*this,copyop); }
@@ -39,6 +40,12 @@ class PanoDrawableLOD : public osg::Drawable
         struct PanoUpdate : public osg::Drawable::UpdateCallback
         {
             virtual void update(osg::NodeVisitor *, osg::Drawable *);
+        };
+
+        enum DrawEye
+        {
+            DRAW_LEFT = 1,
+            DRAW_RIGHT = 2
         };
 
         std::vector<std::string> _leftEyeFiles;
@@ -62,8 +69,10 @@ class PanoDrawableLOD : public osg::Drawable
         float _currentFadeTime;
         mutable bool _badInit;
 
-        static std::map<int,bool> _initMap;
+        static std::map<int,int> _initMap;
         static OpenThreads::Mutex _initLock;
+
+        static std::map<int,OpenThreads::Mutex*> _updateLock;
 
         static std::map<int,sph_cache*> _cacheMap;
         static std::map<int,sph_model*> _modelMap;

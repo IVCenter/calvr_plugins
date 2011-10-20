@@ -1,0 +1,355 @@
+<html>
+    <head>
+        <title>Panorama Processing and Display</title>
+        <style>
+            body {
+                margin: 10%;
+            }
+            p {
+                text-align: justify;
+                margin-left: 2em;
+            }
+            blockquote {
+                text-align: justify;
+                margin-left: 4em;
+            }
+            table {
+                border-collapse: collapse;
+            }
+            td {
+                border: 1px solid black;
+                width: 4em;
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Panorama Processing and Display</h1>
+        
+        <p>&copy; 2011 Robert Kooima &lt;<i>kooima@csc.lsu.edu</i>&gt;</p>
+        
+        <p>This document describes the use of the <code>panoproc</code> and <code>panoview</code> tools and spherical cube map image file format for stereoscopic spherical panorama processing and virtual reality display.</p>
+        
+        <p>The process of creating and viewing a stereoscopic panorama is largely automatic, but it's necessary to organize files so that the applications know where they are and how they're configured. This document describes each aspect of the process in detail. It's not complex, but there's a fair amount of background in its rationale.</p>
+        
+        <ul>
+            <li><a href="#processing">Panorama Processing</a></li>
+            <ul>
+                <li><a href="#representation">Spherical Image Representation</a></li>
+                <li><a href="#filename">File Naming Convention</a></li>
+                <li><a href="#panoproc">Panorama Processing Tool</a></li>
+                <li><a href="#example0">Processing Example</a></li>
+            </ul>
+            <li><a href="#display">Panorama Display</a></li>
+            <ul>
+                <li><a href="#renderer">Panorama Renderer Library</a></li>
+                <li><a href="#definition">Panorama Definition File</a></li>
+                <ul>
+                    <li><a href="#example1">Basic Stereo Panorama</a></li>
+                    <li><a href="#example2">Multi-Image Panorama</a></li>
+                </ul>
+                <li><a href="#panoview">PanoView Usage</a></li>
+            </ul>
+            <li><a href="#checklist">Checklist</a></li>
+        </ul>
+        
+        <a name="processing"><h2>Panorama Processing</h2></a>
+        
+        <p>A panoramic image is usually initially available as a large equirectangular image file. For real-time display, such an image is preprocessed into an optimized intermediate format.
+        
+        <a name="representation"><h3>Spherical Image Representation</h3></a>
+        
+        <p>In an effort to maximize sampling uniformity across the entire sphere, data is stored in the form of a spherical cube map. The basic layout resembles the cube map texture commonly used in real-time 3D graphics, and is represented by six square images, one for each face of a cube. However, while the common cube map texture maps spherical positions onto image pixels using a straightforward linear mapping, our spherical cube map uses spherical linear interpolation. This alteration helps equalize the solid angle subtended by each image pixel.</p>
+        
+        <p>To enable zoomable high resolution imagery at interactive rates, each face of the spherical cube map is subdivided into a quad-tree resembling a mipmap hierarchy. To enable seamless linear magnification filtering across this discontinuous image representation, each page is stored with a 1-pixel border. Special care is taken to ensure that this border wraps correctly around the edges of the base cube.</p>
+        
+        <p>Because the resulting spherical image is represented by a number of sub-images, a multi-page image file format is required, and TIFF is chosen. Spherical cube map pages are enumerated in the TIFF file in breadth-first order, which gathers low-resolution base imagery to the front of the file and provides increasing resolution with increasing file length.</p>
+        
+        <p>The resolution of a spherical cube map image is determined by two values, the <em>size</em> of each square page in pixels, and the <em>depth</em> of the quad-tree subdivision.</p>
+        
+        <p>A spherical cube map image of depth <i>d</i> will contain 2<sup>2<i>d</i> + 3</sup> - 2 separate pages. The current renderer has a maximum depth of 7. The number of pages for each possble value of <i>d</i> is shown here. Note the obvious fact that a cube map with zero subdivisions has six pages.</p>
+        
+        <table style="margin-left:auto; margin-right:auto">
+            <tr>
+                <td><i>d</i></td>
+                <td>0</td>
+                <td>1</td>
+                <td>2</td>
+                <td>3</td>
+                <td>4</td>
+                <td>5</td>
+                <td>6</td>
+                <td>7</td>
+            </tr>
+            <tr>
+                <td><i>n</i></td>
+                <td>6</td>
+                <td>30</td>
+                <td>126</td>
+                <td>510</td>
+                <td>2046</td>
+                <td>8190</td>
+                <td>32766</td>
+                <td>131070</td>
+            </tr>
+        </table>
+        
+        <p>A spherical cube map's page size impacts out-of-core data access performance, and values between 512 and 1024 are usually best. This need <em>not</em> be a power of two on modern hardware, and non-power-of-two values are actually necessary when reprojecting a non-power-of-two source image.</p>
+        
+        <p>Given a spherical cube map with page size <i>s</i> and depth <i>d</i>, the effective resolution of the equivalent equirectangular projection is 4&middot;<i>s</i>&middot;2<sup><i>d</i></sup> &times; 2&middot;<i>s</i>&middot;2<sup><i>d</i></sup>. Given a base page size of 512, the effective resolution of a spherical cube map for each depth <i>d</i> is</p>
+
+        <table style="margin-left:auto; margin-right:auto">
+            <tr>
+                <td><i>d</i></td>
+                <td>0</td>
+                <td>1</td>
+                <td>2</td>
+                <td>3</td>
+                <td>4</td>
+                <td>5</td>
+                <td>6</td>
+                <td>7</td>
+            </tr>
+            <tr>
+                <td><i>width</i></td>
+                <td>2048</td>
+                <td>4096</td>
+                <td>8192</td>
+                <td>16384</td>
+                <td>32768</td>
+                <td>65536</td>
+                <td>131072</td>
+                <td>262144</td>
+            </tr>
+            <tr>
+                <td><i>height</i></td>
+                <td>1024</td>
+                <td>2048</td>
+                <td>4096</td>
+                <td>8192</td>
+                <td>16384</td>
+                <td>32768</td>
+                <td>65536</td>
+                <td>131072</td>
+            </tr>
+        </table>
+        
+        <p>Often, non-power-of-two image sources have resolution measured in pixels per degree. A page size of 720 is usually best for these.</p>
+        
+        <table style="margin-left:auto; margin-right:auto">
+            <tr>
+                <td><i>d</i></td>
+                <td>0</td>
+                <td>1</td>
+                <td>2</td>
+                <td>3</td>
+                <td>4</td>
+                <td>5</td>
+                <td>6</td>
+                <td>7</td>
+            </tr>
+            <tr>
+                <td><i>width</i></td>
+                <td>2880</td>
+                <td>5760</td>
+                <td>11520</td>
+                <td>23040</td>
+                <td>46080</td>
+                <td>92160</td>
+                <td>184320</td>
+                <td>368640</td>
+            </tr>
+            <tr>
+                <td><i>height</i></td>
+                <td>1440</td>
+                <td>2880</td>
+                <td>5760</td>
+                <td>11520</td>
+                <td>23040</td>
+                <td>46080</td>
+                <td>92160</td>
+                <td>184320</td>
+            </tr>
+        </table>
+        
+        <p>Use these tables to help guide the selection of spherical cube map parameters for a given input sphere map.</p>
+        
+        <a name="filename"><h3>File Naming Convention</h3></a>
+        
+        <p>While not required, a simple file naming convention has been of great help in keeping panorama data organized. For example,</p>
+        
+        <blockquote>
+            <code>Blue-Mounds-8-L-512-4.tif</code><br>
+            <code>Blue-Mounds-8-R-512-4.tif</code><br>
+        </blockquote>
+        
+        <p>These images were generated from source imagery in equirectangular projection with a resolution of 28000 &times; 14000. The text <code>Blue-Mounds-8</code> gives the general <em>name</em> of the panorama. The <code>L</code> and <code>R</code> note the eye association, and thus the channel. The value <code>512</code> gives the size of each page of image data, not counting its border, so the true TIFF page size will be 514 &times; 514 in this example. Finally, the value <code>4</code> notes the number of subdivisions in the page hierarchy. The page count (2046) and effective resolution of these images (32768 &times; 16384) may be computed from these values as described above.</p>
+        
+        <p>This naming convention is not expected or encoded by any program code, so users may feel free to tune it to their needs.</p>
+        
+        <a name="panoproc"><h3>Panorama Processing Tool</h3></a>
+        
+        <p>Panorama preprocessing is performed using a command line tool called <code>panoproc</code>. Invoked with no argument, <code>panoproc</code> lists its options and their defaults like so:</p>
+        
+        <pre>
+        $ panoproc
+        Usage: panoproc [opt] infile ...
+            -o &lt;name&gt; ... Output file name    (out.tif)
+            -n &lt;n&gt;    ... Output page size    (512)
+            -d &lt;d&gt;    ... Subdivision depth   (0)
+            -S &lt;mode&gt; ... Sample mode         (single)
+            -I &lt;type&gt; ... Image type          (rect)
+            -t &lt;text&gt; ... Copyright text
+            -b        ... BigTIFF output
+            -c        ... Bicubic sampling
+        Sample modes: single, quincunx, adaptive, stochastic, test
+        </pre>
+
+        <p>Input image file type is automically detected, and supported formats include <code>JPG</code>, <code>TIFF</code>, and <code>PNG</code></p>
+
+        <p>The output file name, page size, and subdivision depth are are as defined above. If omitted, <code>panoproc</code> will produce a TIFF file named <code>out.tif</code> with six 512 &times; 512 pages, zero subdivisions, and an effective resolution of 2048 &times; 1024.</p>
+
+        <p><code>-S</code> &hellip; The sample mode determines how input pixels are resampled to give output pixels. Modes include <code>single</code>, <code>quincunx</code>, <code>adaptive</code>, and <code>stochastic</code>, plus a debug mode called <code>test</code>. The fastest and lowest-quality sampling mode is <code>single</code>, which makes exactly one source image reference per output pixel. <code>quincunx</code> mode makes five samples for basic anti-aliasing, and is reasonable for &ldquo;draft&rdquo; mode usage. <code>adaptive</code> mode uses a recursively refined quincunx pattern, and may or may give optimal quality or speed depending on the source image. For normal usage, highest quality is achieved with <code>stochastic</code> mode, which uses a poisson distribution of image samplings for each pixel, with the number of samples determined by the contrast of the pixel's footprint.</p>
+
+        <p><code>-I</code> &hellip; The image type should usually be left to its default value <code>rect</code>, which implies an input image with equirectangular projection. Other values engage experimental features including tiled image sources (e.g. <code>-Irect4x2</code>) and direct ingest of NASA Planetary Data System archives (e.g. <code>-Ipds</code>).</p>
+        
+        <p><code>-t</code> &hellip; The copyright option allows an arbitrary string of characters to be included in the copyright block of the TIFF file. This text is inserted into the file one, but is referenced by all pages. The only limit on the length of this text is the shell's command line buffer length. Note also that quotes should be used to protect the string from interpretation by the shell. The default text is &ldquo;<code>Copyright (C) 2011 Robert Kooima</code>&rdquo; so be sure to assert yourself.</p>
+        
+        <p><code>-b</code> &hellip; A 32-bit TIFF image file has a maximum size of 4GB. <code>panoproc</code> will happily produce a 32-bit TIFF larger than 4GB, but this output will not be reliably usable. Engaging the BigTIFF option produces a 64-bit TIFF file with significantly relaxed limits. Such files are compatible with <code>libtiff</code> version 4.0 and above, and supported by <code>panoview</code> when compiled against this dependency.</p>
+        
+        <p><code>-c</code> &hellip; <code>panoproc</code> uses bi-linear filtering for all image sampling. This is best under normal circumstances. However, when heavily <em>over</em>-sampling an image, better image quality is obtained with bi-cubic sampling, at the cost of a factor of four in processing time.</p>
+        
+        <a name="example0"><h3>Processing Example</h3></a>
+        
+        <p>Here is an example of the common usage of <code>panoproc</code>, processing an input image to the default page size of 512 and a depth of 4.</p>
+        
+        <pre>
+            $ panoproc -o Blue-Mounds-8-L-512-4.tif -d 4 Blue-Mounds-8-L.tif
+        </pre>
+        
+        <p>During execution, <code>panoproc</code> will produce a listing of each image loaded and the time taken to load it. It will then begin updating an account of the number of pages processed, the current execution time, and the estimated wait time.</p>
+        
+        <pre>
+            2.95s : /Volumes/Data/Data/pan/Equirectangular/Blue-Mounds-8-L.tif
+            Processing: 825 of 2046  Time: 0h 03m 48s  Remaining: 0h 05m 38s
+        </pre>
+        
+        <p>This example finished in 13 minutes 24 seconds on a 3GHz 2&times;4-core Xeon Mac Pro. <code>panoproc</code> is parallelized using OpenMP, and will take advantage of all available processors. For very large images, performance is input-bound. Pages of varying resolution exhibit markedly different cache behavior, so <code>panoproc</code>'s time estimate should not be presumed accurate.</p>
+        
+        <p>If the wait is too long, or if you wish to confirm the correctness of the output prior to its completion, you may proceed to display the panorama while still being processed. Due to the breadth-first ordering of the page hierarchy, a partially finished panorama will be rendered at whatever resolution has been generated.
+        
+        <a name="display"><h2>Panorama Display</h2></a>
+        
+        <a name="renderer"><h3>Panorama Renderer Library</h3></a>
+        
+        <p>The out-of-core panorama renderer is implemented as a small C++ library that may be embedded within any O<small>PEN</small>GL host application. This library has just one system-level configuration parameter:</p>
+        
+        <p><code>PANOPATH</code> is a shell environment variable akin to the <code>bash</code> executable path. It lists directories where spherical cube map TIFF files may be found. If the application requests that the renderer load a file, but the renderer cannot find that file, then it will search this list of directories. Set this variable in the shell resource file, as need be, separated by colons. For example,</p>
+        
+        <pre>
+            export PANOPATH=/share/pan:$HOME/Data/pan:.
+        </pre>
+        
+        <p>For cluster-driven display systems, try to replicate all panorama image files to local directories on all rendering nodes. This will perform better than data files stored on network shares.</p>
+        
+        <a name="definition"><h3>Panorama Definition File</h3></a>
+        
+        <p>An example panorama viewer, <code>panoview</code>, is implemented using the Thumb framework.  While the previous sections on panorama handling apply to any embedding of the panorama renderer, the following sections describe the configuration and usage specifically of <code>panoview</code>.</p>
+        
+        <p>For correct display, <code>panoview</code> must understand the parameters of each panoramic image. The panorama definition is an XML file that provides this information. 
+        
+        <p>Like any data file, Thumb must be able to find these panorama definitions. They are appear in the Thumb data hierarchy like any other configuration file. This means they may be placed in a <code>data</code> directory rooted at the current directory, or in the <code>~/.thumb</code> hierarchy, or in a data hierarchy given by the <code>THUMB_RO_DATA</code> environment variable. Panorama definition files need <em>not</em> be stored along side the TIFF files that the reference. It is the <code>PANOPATH</code> environment variable that defines the location of these.</p>
+        
+        <a name="example1"><h4>Basic Stereo Panorama</h4></a>
+        
+        <p>Here is an example of a basic stereo panorama definition, named <code>Blue-Mounds-8.xml</code>.</p>
+
+        <pre>
+        &lt;?xml version="1.0"?&gt;
+          &lt;panorama channels="2" depth="4" mesh="16" size="512" height="1.5" radius="6.0"
+                       vert="glsl/sph-zoomer.vert"
+                       frag="glsl/sph-render.frag"&gt;
+            &lt;image channel="0" file="Blue-Mounds-8-L-512-4.tif" /&gt;
+            &lt;image channel="1" file="Blue-Mounds-8-R-512-4.tif" /&gt;
+          &lt;/panorama&gt;
+        </pre>
+
+        <p>The file begins with an XML header and contains a single root <code>panorama</code> element with several attributes and one <code>image</code> sub-element for each panorama image.</p>
+
+        <p>The <code>channels</code> attribute gives the number view positions. This adapts a panorama definition to a specific display configuration. A desktop display will have one channel, a CAVE will have two, and a multi-view lenticular may have many more.</p>
+
+        <p>The <code>size</code> and <code>depth</code> attributes give the size of each page in the panorama image files and the depth of their page hierarchies. Note that the values coincide with the image parameters given by the file names. Other values are allowed, and may enable quality-speed tradeoffs.</p>
+        
+        <p>The <code>mesh</code> attribute determines the tesselation of the geometry mesh used to render each page of data. The example value, 16, indicates that each page of the sphere will be rendered using a 16 &times; 16 grid of polygons. There is little reason to change this.</p>
+
+        <p>The <code>radius</code> attribute determines the radius of the spherical proxy geometry used to render the panorama. The <code>height</code> attribute determines the placement of the proxy geometry in the scene, and should match the height of the camera at the time the panorama was captured. These values are given in meters, and are mostly significant in VR display environments. The default radius is 6 meters, and the default height is 1.5 meters.</p>
+        
+        <p>The <code>vert</code> and <code>frag</code> attributes give the vertex and fragment programs to be used by the renderer, named relative to the root of the Thumb data hierarchy. These will remain the same for most panorama definitions.The <em>zoomer</em>; vertex program must be specified for zoomable panoramas. The <em>render</em> fragment program is used for static panoramas such as this one.</p>
+
+        <a name="example2"><h4>Multi-image Panorama</h4></a>
+
+        <p>The following example, <code>Taliesin-Path</code>, is more complex. It defines several images for each channel. This will behave as a <em>circular</em> list of images, and the renderer will interpolate between them in order, following an internal &ldquo;playback head.&rdquo;</p>
+
+        <pre>
+        &lt;?xml version="1.0"?&gt;
+          &lt;panorama channels="2" depth="3" mesh="16" size="512"
+                    vert="glsl/sph-zoomer.vert"
+                    frag="glsl/sph-blend.frag"&gt;
+            &lt;image channel="0" file="Taliesin-Path-A-L-512-3.tif" /&gt;
+            &lt;image channel="1" file="Taliesin-Path-A-R-512-3.tif" /&gt;
+            &lt;image channel="0" file="Taliesin-Path-B-L-512-3.tif" /&gt;
+            &lt;image channel="1" file="Taliesin-Path-B-R-512-3.tif" /&gt;
+            &lt;image channel="0" file="Taliesin-Path-C-L-512-3.tif" /&gt;
+            &lt;image channel="1" file="Taliesin-Path-C-R-512-3.tif" /&gt;
+            &lt;image channel="0" file="Taliesin-Path-D-L-512-3.tif" /&gt;
+            &lt;image channel="1" file="Taliesin-Path-D-R-512-3.tif" /&gt;
+            &lt;image channel="0" file="Taliesin-Path-E-L-512-3.tif" /&gt;
+            &lt;image channel="1" file="Taliesin-Path-E-R-512-3.tif" /&gt;
+            &lt;image channel="0" file="Taliesin-Path-F-L-512-3.tif" /&gt;
+            &lt;image channel="1" file="Taliesin-Path-F-R-512-3.tif" /&gt;
+            &lt;image channel="0" file="Taliesin-Path-G-L-512-3.tif" /&gt;
+            &lt;image channel="1" file="Taliesin-Path-G-R-512-3.tif" /&gt;
+            &lt;image channel="0" file="Taliesin-Path-H-L-512-3.tif" /&gt;
+            &lt;image channel="1" file="Taliesin-Path-H-R-512-3.tif" /&gt;
+          &lt;/panorama&gt;
+        </pre>
+
+        <p>Note that the <code>frag</code> attribute of the <code>panorama</code> element specifies the <em>blend</em> fragment program. This program performs the interpolation. Non-interpolating panoramas should <em>not</em> use the <em>blend</em> program, as it doubles the texture access load of the renderer.</p>
+
+    <a name="panoview"><h3>PanoView Usage</h3>
+
+    <p>Panoview is configured and run like any other Thumb application. The following keyboard commands are defined.</p>
+    
+    <p><code>F1</code> &hellip; Toggle the <code>panoview</code> file selection dialog. This dialog allows the user to navigate the Thumb data hierarchy and select a panorama definition for viewing.</p>
+    
+    <p><code>F2</code> &hellip; Toggle the cache visualization overlay. This allows the set of all resident pages to be viewed in thumbnail.</p>
+    
+    <p><code>F3</code> &hellip; Toggle the page coloration debug view. This feature recolors each incoming page to indicate its depth in the page tree.</p>
+    
+    <p><code>F4</code> &hellip; Toggle automatic zoom centering. This option controls whether the center of the zoom is static or dynamic.</p>
+
+    <p>In addition, there is one option in the Thumb configuration file <code>conf.xml</code> that impacts the behavior and performance of the panorama renderer.</p>
+    
+    <pre>
+        &lt;option name="panoview_cache_size"&gt;128&lt;/option&gt;
+    </pre>
+    
+    <p>This option selects the maximum number of pages that may be loaded at any given moment. A 512 &times; 512 page of RGB data consumes 1MB of VRAM, and this cache size option should be set accordingly. A larger value gives better performance, but too large a value will result in catastrophically bad performance.</p>
+
+    <a name="checklist"><h2>Checklist</h2></a>
+    
+    <p>This is a list of issues to be aware of, should trouble arise.</p>
+
+    <ul>
+        <li>If the panorama definition XML files are not visible in the <code>panoview</code> file loader, then be sure they are located within the Thumb data hierarchy, or add their location to the Thumb data hierarchy by including the path in the <code>THUMB_RO_PATH</code> environment variable.</li>
+        
+        <li>If the panorama definition loads but does not display an image, be sure the path to the spherical cube map TIFF files appears in the <code>PANOPATH</code> environment variable.</li>
+        
+        <li>If a multi-image panorama jumps from one panorama to the next instead of fading, be sure the <em>blend</em> fragment program is referenced by the definition.</li>
+
+        <li>In general, be sure that the <code>depth</code> and <code>size</code> attributes of the panorama definition match the input files.</li>
+    
+        <li>If performance is bad, be sure that panorama image files are <em>not</em> being accessed from a network share.</li>
+    </ul>
+    </body>
+</html>

@@ -16,8 +16,9 @@
 std::map<int,std::vector<int> > PanoDrawableLOD::_leftFileIDs;
 std::map<int,std::vector<int> > PanoDrawableLOD::_rightFileIDs;
 std::map<int,bool> PanoDrawableLOD::_updateDoneMap;
-std::map<int,bool> PanoDrawableLOD::_initMap;
+std::map<int,int> PanoDrawableLOD::_initMap;
 OpenThreads::Mutex PanoDrawableLOD::_initLock;
+std::map<int,OpenThreads::Mutex*> PanoDrawableLOD::_updateLock;
 std::map<int,sph_cache*> PanoDrawableLOD::_cacheMap;
 std::map<int,sph_model*> PanoDrawableLOD::_modelMap;
 
@@ -61,12 +62,14 @@ PanoDrawableLOD::PanoDrawableLOD(std::string leftEyeFile, std::string rightEyeFi
     _depth = depth;
     _size = size;
     _currentIndex = 0;
-    _totalFadeTime = 1.5;
+    _totalFadeTime = ConfigManager::getFloat("value","Plugin.PanoViewLOD.FadeTime",2.0);
     _currentFadeTime = 0.0;
 
     std::string shaderDir = ConfigManager::getEntry("value","Plugin.PanoViewLOD.ShaderDir","");
     _vertData = loadShaderFile(shaderDir + "/" + vertFile);
     _fragData = loadShaderFile(shaderDir + "/" + fragFile);
+
+    //std::cerr << "Vertfile: " << vertFile << " fragFile: " << fragFile << std::endl;
 
     if(!_vertData)
     {
@@ -94,12 +97,14 @@ PanoDrawableLOD::PanoDrawableLOD(std::vector<std::string> & leftEyeFiles, std::v
     _depth = depth;
     _size = size;
     _currentIndex = 0;
-    _totalFadeTime = 1.5;
+    _totalFadeTime = ConfigManager::getFloat("value","Plugin.PanoViewLOD.FadeTime",2.0);
     _currentFadeTime = 0.0;
 
     std::string shaderDir = ConfigManager::getEntry("value","Plugin.PanoViewLOD.ShaderDir","");
     _vertData = loadShaderFile(shaderDir + "/" + vertFile);
     _fragData = loadShaderFile(shaderDir + "/" + fragFile);
+
+    //std::cerr << "Vertfile: " << vertFile << " fragFile: " << fragFile << std::endl;
 
     if(!_vertData)
     {
@@ -224,6 +229,26 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 
     int context = ri.getContextID();
 
+    int eye = 0;
+    osg::Node::NodeMask parentMask;
+
+    if(!getNumParents())
+    {
+	glPopAttrib();
+	return;
+    }
+
+    parentMask = getParent(0)->getNodeMask();
+
+    if((parentMask & CULL_MASK_LEFT) || (parentMask & CULL_MASK) || (ScreenConfig::instance()->getEyeSeparationMultiplier() == 0.0))
+    {
+	eye = DRAW_LEFT;
+    }
+    else
+    {
+	eye = DRAW_RIGHT;
+    }
+
     _initLock.lock();
 
     if(!_cacheMap[context])
@@ -241,57 +266,50 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	_cacheMap[context] = new sph_cache(cachesize);
         _cacheMap[context]->set_debug(false);
 
-
+	_updateLock[context] = new OpenThreads::Mutex();
     }
 
-    if(!_initMap[context])
+    if(!(_initMap[context] & eye))
     {
-	if(_modelMap[context])
+	if(!_initMap[context])
 	{
-	    delete _modelMap[context];
+	    if(_modelMap[context])
+	    {
+		delete _modelMap[context];
+	    }
+	    _modelMap[context] = new sph_model(*_cacheMap[context],_vertData,_fragData,_mesh,_depth,_size);
+	    _leftFileIDs[context] = std::vector<int>();
+	    _rightFileIDs[context] = std::vector<int>();
 	}
-	_modelMap[context] = new sph_model(*_cacheMap[context],_vertData,_fragData,_mesh,_depth,_size);
-	_leftFileIDs[context] = std::vector<int>();
-	_rightFileIDs[context] = std::vector<int>();
-	for(int i = 0; i < _leftEyeFiles.size(); i++)
+
+	if(eye & DRAW_LEFT)
 	{
-	    _leftFileIDs[context].push_back(_cacheMap[context]->add_file(_leftEyeFiles[i]));
+	    for(int i = 0; i < _leftEyeFiles.size(); i++)
+	    {
+		_leftFileIDs[context].push_back(_cacheMap[context]->add_file(_leftEyeFiles[i]));
+	    }
 	}
-	for(int i = 0; i < _rightEyeFiles.size(); i++)
+	else if(eye & DRAW_RIGHT)
 	{
-	    _rightFileIDs[context].push_back(_cacheMap[context]->add_file(_rightEyeFiles[i]));
+	    for(int i = 0; i < _rightEyeFiles.size(); i++)
+	    {
+		_rightFileIDs[context].push_back(_cacheMap[context]->add_file(_rightEyeFiles[i]));
+	    }
 	}
-	_initMap[context] = true;
+	_initMap[context] |= eye;
     }
 
-    //TODO: maybe make this only under a context level lock
+    _initLock.unlock();
+
+    _updateLock[context]->lock();
+
     if(!_updateDoneMap[context])
     {
 	_cacheMap[context]->update(_modelMap[context]->tick());
 	_updateDoneMap[context] = true;
     }
 
-    _initLock.unlock();
-
-    bool left = false;
-
-    osg::Node::NodeMask parentMask;
-
-    if(!getNumParents())
-    {
-	return;
-    }
-
-    parentMask = getParent(0)->getNodeMask();
-
-    if((parentMask & CULL_MASK_LEFT) || (parentMask & CULL_MASK))
-    {
-	left = true;
-    }
-    else
-    {
-	left = false;
-    }
+    _updateLock[context]->unlock(); 
 
     osg::Matrix modelview;
 
@@ -303,7 +321,7 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
     int pc = 0;
     int fc = 0;
     float fade = 0;
-    if(left || (ScreenConfig::instance()->getEyeSeparationMultiplier() == 0.0))
+    if(eye & DRAW_LEFT)
     {
 	if(_currentFadeTime == 0.0)
 	{
@@ -317,10 +335,11 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	    fc = 2;
 	    pv[0] = _leftFileIDs[context][_nextIndex];
 	    pc = 1;
-	    fade = _currentFadeTime / _totalFadeTime;
+	    fade = 1.0 - (_currentFadeTime / _totalFadeTime);
+            //std::cerr << "Files: " << fileID[0] << " " << fileID[1] << std::endl;
 	}
     }
-    else
+    else if(eye & DRAW_RIGHT)
     {
 	if(_currentFadeTime == 0.0)
 	{
@@ -334,9 +353,12 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	    fc = 2;
 	    pv[0] = _rightFileIDs[context][_nextIndex];
 	    pc = 1;
-	    fade = _currentFadeTime / _totalFadeTime;
+	    fade = 1.0 - (_currentFadeTime / _totalFadeTime);
+            //std::cerr << "Files: " << fileID[0] << " " << fileID[1] << std::endl;
 	}
     }
+
+    //std::cerr << "Fade: " << fade << std::endl;
 
     _modelMap[context]->set_fade(fade);
     _modelMap[context]->prep(ri.getState()->getProjectionMatrix().ptr(),modelview.ptr(), (int)ri.getState()->getCurrentViewport()->width(), (int)ri.getState()->getCurrentViewport()->height());
