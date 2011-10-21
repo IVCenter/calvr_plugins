@@ -277,7 +277,15 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	    {
 		delete _modelMap[context];
 	    }
+	    GLint buffer,ebuffer;
+	    glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&buffer);
+	    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&ebuffer);
+
 	    _modelMap[context] = new sph_model(*_cacheMap[context],_vertData,_fragData,_mesh,_depth,_size);
+
+	    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+	    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebuffer);
+
 	    _leftFileIDs[context] = std::vector<int>();
 	    _rightFileIDs[context] = std::vector<int>();
 	}
@@ -361,8 +369,22 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
     //std::cerr << "Fade: " << fade << std::endl;
 
     _modelMap[context]->set_fade(fade);
+    glUseProgram(0);
     _modelMap[context]->prep(ri.getState()->getProjectionMatrix().ptr(),modelview.ptr(), (int)ri.getState()->getCurrentViewport()->width(), (int)ri.getState()->getCurrentViewport()->height());
+
+    GLint buffer,ebuffer;
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&buffer);
+    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&ebuffer);
+    bool vertexOn = glIsEnabled(GL_VERTEX_ARRAY);
+
     _modelMap[context]->draw(ri.getState()->getProjectionMatrix().ptr(), modelview.ptr(), fileID, fc, pv, pc);
+
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebuffer);
+    if(vertexOn)
+    {
+	glEnableClientState(GL_VERTEX_ARRAY);
+    }
 
     glPopAttrib();
 }

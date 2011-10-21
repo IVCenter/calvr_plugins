@@ -10,6 +10,7 @@
 #include <cmath>
 
 #include <mxml.h>
+#include <tiffio.h>
 
 using namespace cvr;
 
@@ -80,6 +81,8 @@ bool PanoViewLOD::init()
     }
 
     PluginHelper::addRootMenuItem(_panoViewMenu);
+
+    TIFFSetWarningHandler(0);
 
     return true;
 }
