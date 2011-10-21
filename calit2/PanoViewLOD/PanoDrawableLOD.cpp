@@ -5,6 +5,7 @@
 #include <kernel/NodeMask.h>
 #include <kernel/ScreenConfig.h>
 #include <kernel/PluginHelper.h>
+#include <kernel/ScreenBase.h>
 
 #include <osg/GraphicsContext>
 
@@ -242,11 +243,25 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 
     if((parentMask & CULL_MASK_LEFT) || (parentMask & CULL_MASK) || (ScreenConfig::instance()->getEyeSeparationMultiplier() == 0.0))
     {
-	eye = DRAW_LEFT;
+	if(ScreenBase::getEyeSeparation() >= 0)
+	{
+	    eye = DRAW_LEFT;
+	}
+	else
+	{
+	    eye = DRAW_RIGHT;
+	}
     }
     else
     {
-	eye = DRAW_RIGHT;
+	if(ScreenBase::getEyeSeparation() >= 0)
+	{
+	    eye = DRAW_RIGHT;
+	}
+	else
+	{
+	    eye = DRAW_LEFT;
+	}
     }
 
     _initLock.lock();
