@@ -6,6 +6,7 @@
 #include <menu/SubMenu.h>
 #include <menu/MenuRangeValue.h>
 #include "PanoDrawableLOD.h"
+#include "PanoViewObject.h"
 
 #include <osg/MatrixTransform>
 #include <osg/Geode>
@@ -44,6 +45,8 @@ class PanoViewLOD : public cvr::CVRPlugin, public cvr::MenuCallback
 
         PanInfo * loadInfoFromXML(std::string file);
 
+        PanoViewObject * _panObject;
+
         std::vector<struct PanInfo *> _pans;
         std::vector<cvr::MenuButton*> _panButtonList;
         cvr::SubMenu * _panoViewMenu;
@@ -52,23 +55,7 @@ class PanoViewLOD : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuRangeValue * _heightRV;
         cvr::MenuButton * _removeButton;
 
-        osg::ref_ptr<osg::MatrixTransform> _root;
-        osg::Geode * _leftGeode;
-        osg::Geode * _rightGeode;
-        PanoDrawableLOD * _rightDrawable;
-        PanoDrawableLOD * _leftDrawable;
-
         std::string _defaultConfigDir;
-        std::string _imageSearchPath;
-        float _floorOffset;
-
-        float _currentZoom;
-
-        osg::Matrix _heightMat;
-        osg::Matrix _spinMat;
-        osg::Matrix _coordChangeMat;
-
-        osg::Matrix _lastZoomMat;
 };
 
 #endif
