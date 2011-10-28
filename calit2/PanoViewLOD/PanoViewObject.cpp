@@ -200,7 +200,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 	    return true;
 	}
     }
-    if(ie->asKeyboardEvent())
+    else if(ie->asKeyboardEvent())
     {
 	osg::Matrix rot;
 	rot.makeRotate((M_PI / 50.0) * 0.6, osg::Vec3(0,0,1));
@@ -211,6 +211,10 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 	{
 	    updateZoom(_lastZoomMat);
 	}
+    }
+    else if(ie->asValuatorEvent())
+    {
+	std::cerr << "Valuator id: " << ie->asValuatorEvent()->getValuator() << " value: " << ie->asValuatorEvent()->getValue() << std::endl;
     }
     return false;
 }
