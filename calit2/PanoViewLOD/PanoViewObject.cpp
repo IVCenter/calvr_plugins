@@ -84,6 +84,39 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
     _heightRV = new MenuRangeValue("Height", -1000, 10000, height);
     _heightRV->setCallback(this);
     addMenuItem(_heightRV);
+
+    _zoomValuator = ConfigManager::getInt("value","Plugin.PanoViewLOD.ZoomValuator",0);
+    _spinValuator = ConfigManager::getInt("value","Plugin.PanoViewLOD.SpinValuator",0);
+    _spinScale = ConfigManager::getFloat("value","Plugin.PanoViewLOD.SpinScale",1.0);
+    _zoomScale = ConfigManager::getFloat("value","Plugin.PanoViewLOD.ZoomScale",1.0);
+    if(_zoomValuator == _spinValuator)
+    {
+	_sharedValuator = true;
+    }
+    else
+    {
+	_sharedValuator = false;
+    }
+
+    if(!_sharedValuator)
+    {
+	_spinCB = NULL;
+	_zoomCB = NULL;
+    }
+    else
+    {
+	_spinCB = new MenuCheckbox("Spin Mode",true);
+	_spinCB->setCallback(this);
+	addMenuItem(_spinCB);
+
+	_zoomCB = new MenuCheckbox("Zoom Mode",false);
+	_zoomCB->setCallback(this);
+	addMenuItem(_zoomCB);
+    }
+
+    _zoomResetButton = new MenuButton("Reset Zoom");
+    _zoomResetButton->setCallback(this);
+    addMenuItem(_zoomResetButton);
 }
 
 void PanoViewObject::next()
@@ -122,12 +155,36 @@ void PanoViewObject::menuCallback(cvr::MenuItem * item)
 	_heightMat.makeTranslate(osg::Vec3(0,0,offset));
 	setTransform(_coordChangeMat * _spinMat * _heightMat);
     }
+
+    if(item == _zoomResetButton)
+    {
+	_currentZoom = 0.0;
+
+	_leftDrawable->setZoom(osg::Vec3(0,1,0),pow(10.0, _currentZoom));
+	_rightDrawable->setZoom(osg::Vec3(0,1,0),pow(10.0, _currentZoom));
+    }
+
+    if(item == _spinCB)
+    {
+	if(_spinCB->getValue())
+	{
+	    _zoomCB->setValue(false);
+	}
+    }
+
+    if(item == _zoomCB)
+    {
+	if(_zoomCB->getValue())
+	{
+	    _spinCB->setValue(false);
+	}
+    }
     SceneObject::menuCallback(item);
 }
 
 void PanoViewObject::updateCallback(int handID, const osg::Matrix & mat)
 {
-    float val = PluginHelper::getValuator(0,0);
+    /*float val = PluginHelper::getValuator(0,0);
     if(fabs(val) < 0.2)
     {
 	return;
@@ -150,7 +207,7 @@ void PanoViewObject::updateCallback(int handID, const osg::Matrix & mat)
     if(_currentZoom != 0.0)
     {
 	updateZoom(_lastZoomMat);
-    }
+    }*/
 }
 
 bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
@@ -214,7 +271,57 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
     }
     else if(ie->asValuatorEvent())
     {
-	std::cerr << "Valuator id: " << ie->asValuatorEvent()->getValuator() << " value: " << ie->asValuatorEvent()->getValue() << std::endl;
+	//std::cerr << "Valuator id: " << ie->asValuatorEvent()->getValuator() << " value: " << ie->asValuatorEvent()->getValue() << std::endl;
+
+	ValuatorInteractionEvent * vie = ie->asValuatorEvent();
+	if(vie->getValuator() == _spinValuator)
+	{
+	    if(!_sharedValuator || _spinCB->getValue())
+	    {
+		float val = vie->getValue();
+		if(fabs(val) < 0.2)
+		{
+		    return true;
+		}
+
+		if(val > 1.0)
+		{
+		    val = 1.0;
+		}
+		else if(val < -1.0)
+		{
+		    val = -1.0;
+		}
+
+		osg::Matrix rot;
+		rot.makeRotate((M_PI / 50.0) * val, osg::Vec3(0,0,1));
+		_spinMat = _spinMat * rot;
+		setTransform(_coordChangeMat * _spinMat * _heightMat);
+
+		if(_currentZoom != 0.0)
+		{
+		    updateZoom(_lastZoomMat);
+		}
+		return true;
+	    }
+	}
+	if(vie->getValuator() == _zoomValuator)
+	{
+	    if(!_sharedValuator || _zoomCB->getValue())
+	    {
+		float val = vie->getValue();
+		if(fabs(val) > 0.20)
+		{
+		    _currentZoom += val * PluginHelper::getLastFrameDuration() * 0.25;
+		    if(_currentZoom < -2.0) _currentZoom = -2.0;
+		    if(_currentZoom > 0.5) _currentZoom = 0.5;
+		}
+
+		//TODO: create hand valuator mapping
+		updateZoom(PluginHelper::getHandMat());
+		return true;
+	    }
+	}
     }
     return false;
 }

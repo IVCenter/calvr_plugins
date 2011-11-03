@@ -7,6 +7,7 @@
 #include <menu/MenuButton.h>
 #include <menu/MenuCheckbox.h>
 #include <menu/MenuRangeValue.h>
+#include <menu/MenuCheckbox.h>
 
 #include <string>
 
@@ -49,6 +50,15 @@ class PanoViewObject : public cvr::SceneObject
         cvr::MenuButton * _previousButton;
         cvr::MenuRangeValue * _radiusRV;
         cvr::MenuRangeValue * _heightRV;
+        cvr::MenuCheckbox * _spinCB;
+        cvr::MenuCheckbox * _zoomCB;
+        cvr::MenuButton * _zoomResetButton;
+
+        float _spinScale;
+        float _zoomScale;
+        int _zoomValuator;
+        int _spinValuator;
+        bool _sharedValuator;
 };
 
 #endif
