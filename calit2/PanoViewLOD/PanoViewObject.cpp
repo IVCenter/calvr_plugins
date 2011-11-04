@@ -25,6 +25,10 @@ PanoViewObject::PanoViewObject(std::string name, std::vector<std::string> & left
 
 PanoViewObject::~PanoViewObject()
 {
+    if(_leftDrawable)
+    {
+        _leftDrawable->cleanup();
+    }
 }
 
 void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<std::string> & rightEyeFiles, float radius, int mesh, int depth, int size, float height, std::string vertFile, std::string fragFile)
