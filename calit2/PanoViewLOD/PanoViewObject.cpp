@@ -238,7 +238,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 	    float val = -PluginHelper::getValuator(0,1);
 	    if(fabs(val) > 0.25)
 	    {
-		_currentZoom += val * PluginHelper::getLastFrameDuration() * 0.25;
+		_currentZoom += val * _zoomScale * PluginHelper::getLastFrameDuration() * 0.25;
 		if(_currentZoom < -2.0) _currentZoom = -2.0;
 		if(_currentZoom > 0.5) _currentZoom = 0.5;
 	    }
@@ -294,7 +294,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 		}
 
 		osg::Matrix rot;
-		rot.makeRotate((M_PI / 50.0) * val, osg::Vec3(0,0,1));
+		rot.makeRotate((M_PI / 50.0) * val * _spinScale, osg::Vec3(0,0,1));
 		_spinMat = _spinMat * rot;
 		setTransform(_coordChangeMat * _spinMat * _heightMat);
 
@@ -312,7 +312,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 		float val = vie->getValue();
 		if(fabs(val) > 0.20)
 		{
-		    _currentZoom += val * PluginHelper::getLastFrameDuration() * 0.25;
+		    _currentZoom += val * _zoomScale * 0.017 * 0.25;
 		    if(_currentZoom < -2.0) _currentZoom = -2.0;
 		    if(_currentZoom > 0.5) _currentZoom = 0.5;
 		}
