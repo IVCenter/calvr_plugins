@@ -321,8 +321,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 		    if(_currentZoom > 0.5) _currentZoom = 0.5;
 		}
 
-		//TODO: create hand valuator mapping
-		updateZoom(PluginHelper::getHandMat());
+		updateZoom(PluginHelper::getHandMat(vie->getHand()));
 		return true;
 	    }
 	}
