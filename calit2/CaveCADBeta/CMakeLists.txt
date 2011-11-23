@@ -1,0 +1,134 @@
+SET(LIB_NAME CaveCADBeta)
+SET(PLUGIN_HEADERS
+
+	CaveCADBeta.h
+	CAVEDesigner.h
+	DesignStateHandler.h
+	DesignStateRenderer.h
+	AudioConfigHandler.h
+	Audio/OSCPack.h
+	DesignStates/DesignStateParticleSystem.h
+	DesignStates/DesignStateBase.h
+	DesignStates/DSVirtualSphere.h
+	DesignStates/DSVirtualEarth.h
+	DesignStates/DSParamountSwitch.h
+	DesignStates/DSSketchBook.h
+	DesignStates/DSGeometryCreator.h
+	DesignStates/DSGeometryEditor.h
+	DesignStates/DSTexturePallette.h
+	DesignStateIntersector.h
+	DesignObjectHandler.h
+	DesignObjectIntersector.h
+	DesignObjects/DesignObjectBase.h
+	DesignObjects/DOGeometryCollector.h
+	DesignObjects/DOGeometryCreator.h
+	DesignObjects/DOGeometryEditor.h
+	DesignObjects/DOGeometryCloner.h
+	CAVEIntersector.h
+	TrackballController.h
+	SnapLevelController.h
+	VirtualScenicHandler.h
+
+	Geometry/CAVEGeometry.h
+	Geometry/CAVEGroup.h
+	Geometry/CAVEGroupReference.h
+	Geometry/CAVEGroupShape.h
+	Geometry/CAVEGroupIconSurface.h
+	Geometry/CAVEGroupIconToolkit.h
+	Geometry/CAVEGroupEditWireframe.h
+	Geometry/CAVEGeode.h
+	Geometry/CAVEGeodeShape.h
+	Geometry/CAVEGeodeIcon.h
+	Geometry/CAVEGeodeIconSurface.h
+	Geometry/CAVEGeodeIconToolkit.h
+	Geometry/CAVEGeodeReference.h
+	Geometry/CAVEGeodeSnapWireframe.h
+	Geometry/CAVEGeodeSnapSolidshape.h
+	Geometry/CAVEGeodeEditWireframe.h                           
+
+	AnimationModeler.h
+	AnimationModeler/AnimationModelerBase.h
+	AnimationModeler/ANIMDSParticleSystem.h
+	AnimationModeler/ANIMVirtualSphere.h
+	AnimationModeler/ANIMVirtualEarth.h
+	AnimationModeler/ANIMRefXYPlane.h
+	AnimationModeler/ANIMRefSkyDome.h
+	AnimationModeler/ANIMRefWaterSurf.h
+	AnimationModeler/ANIMParamountPaintFrames.h
+	AnimationModeler/ANIMSketchBook.h
+	AnimationModeler/ANIMGeometryCollector.h
+	AnimationModeler/ANIMGeometryCreator.h
+	AnimationModeler/ANIMGeometryEditor.h
+	AnimationModeler/ANIMTexturePallette.h
+	AnimationModeler/ANIMObjectHandler.h
+)
+
+ADD_LIBRARY(${LIB_NAME}
+    "SHARED"
+    ${PLUGIN_HEADERS}
+
+	CaveCADBeta.cpp
+	CAVEDesigner.cpp
+	DesignStateHandler.cpp
+	DesignStateRenderer.cpp
+	AudioConfigHandler.cpp
+	Audio/OSCPack.cpp
+	DesignStates/DesignStateParticleSystem.cpp
+	DesignStates/DesignStateBase.cpp
+	DesignStates/DSVirtualSphere.cpp
+	DesignStates/DSVirtualEarth.cpp
+	DesignStates/DSParamountSwitch.cpp
+	DesignStates/DSSketchBook.cpp
+	DesignStates/DSGeometryCreator.cpp
+	DesignStates/DSGeometryEditor.cpp
+	DesignStates/DSTexturePallette.cpp
+	DesignStateIntersector.cpp
+	DesignObjectHandler.cpp
+	DesignObjectIntersector.cpp
+	DesignObjects/DesignObjectBase.cpp
+	DesignObjects/DOGeometryCollector.cpp
+	DesignObjects/DOGeometryCreator.cpp
+	DesignObjects/DOGeometryEditor.cpp
+	DesignObjects/DOGeometryCloner.cpp
+	CAVEIntersector.cpp
+	TrackballController.cpp
+	SnapLevelController.cpp
+	VirtualScenicHandler.cpp
+	Geometry/CAVEGeometry.cpp	
+	Geometry/CAVEGroupReference.cpp
+	Geometry/CAVEGroupShape.cpp
+	Geometry/CAVEGroupIconSurface.cpp
+	Geometry/CAVEGroupIconToolkit.cpp
+	Geometry/CAVEGroupEditWireframe.cpp
+	Geometry/CAVEGroupEditGeodeWireframe.cpp
+	Geometry/CAVEGroupEditGeometryWireframe.cpp
+	Geometry/CAVEGeode.cpp
+	Geometry/CAVEGeodeShape.cpp
+	Geometry/CAVEGeodeIcon.cpp
+	Geometry/CAVEGeodeIconSurface.cpp
+	Geometry/CAVEGeodeIconToolkit.cpp
+	Geometry/CAVEGeodeReference.cpp
+	Geometry/CAVEGeodeSnapWireframe.cpp
+	Geometry/CAVEGeodeSnapSolidshape.cpp
+	Geometry/CAVEGeodeEditWireframe.cpp
+	AnimationModeler/AnimationModelerBase.cpp
+	AnimationModeler/ANIMDSParticleSystem.cpp
+	AnimationModeler/ANIMVirtualSphere.cpp
+	AnimationModeler/ANIMVirtualEarth.cpp
+	AnimationModeler/ANIMRefXYPlane.cpp
+	AnimationModeler/ANIMRefSkyDome.cpp
+	AnimationModeler/ANIMRefWaterSurf.cpp
+	AnimationModeler/ANIMParamountPaintFrames.cpp
+	AnimationModeler/ANIMSketchBook.cpp
+	AnimationModeler/ANIMGeometryCollector.cpp
+	AnimationModeler/ANIMGeometryCreator.cpp
+	AnimationModeler/ANIMGeometryEditor.cpp
+	AnimationModeler/ANIMTexturePallette.cpp
+	AnimationModeler/ANIMObjectHandler.cpp
+)
+
+INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${OSG_LIBRARIES})
+
+INSTALL(TARGETS ${LIB_NAME} DESTINATION lib/plugins)
+
