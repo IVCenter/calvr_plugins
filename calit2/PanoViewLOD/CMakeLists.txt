@@ -10,6 +10,7 @@ SET(PLUGIN_HEADERS
     math3d.h
     PanoDrawableLOD.h
     PanoViewLOD.h
+    PanoViewObject.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -23,6 +24,7 @@ ADD_LIBRARY(${LIB_NAME}
     math3d.c
     PanoDrawableLOD.cpp
     PanoViewLOD.cpp
+    PanoViewObject.cpp
 )
 
 FIND_PACKAGE(GLEW)

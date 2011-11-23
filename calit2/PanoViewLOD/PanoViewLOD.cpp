@@ -26,7 +26,7 @@ PanoViewLOD::~PanoViewLOD()
 
 bool PanoViewLOD::init()
 {
-    _root = new osg::MatrixTransform();
+    /*_root = new osg::MatrixTransform();
     _leftGeode = new osg::Geode();
     _rightGeode = new osg::Geode();
 
@@ -51,7 +51,11 @@ bool PanoViewLOD::init()
     
     strcpy(carray,temp.c_str());
 
-    putenv(carray);
+    putenv(carray);*/
+
+    _panObject = NULL;
+
+    _defaultConfigDir = ConfigManager::getEntry("value","Plugin.PanoViewLOD.DefaultConfigDir","");
 
     std::vector<std::string> tagList;
     ConfigManager::getChildren("Plugin.PanoViewLOD.Pans", tagList);
@@ -62,13 +66,13 @@ bool PanoViewLOD::init()
     _loadMenu = new SubMenu("Load","Load");
     _panoViewMenu->addItem(_loadMenu);
 
-    _radiusRV = new MenuRangeValue("Radius", 100, 100000, 6000);
+    /*_radiusRV = new MenuRangeValue("Radius", 100, 100000, 6000);
     _radiusRV->setCallback(this);
     _panoViewMenu->addItem(_radiusRV);
 
     _heightRV = new MenuRangeValue("Height", -1000, 10000, 1700);
     _heightRV->setCallback(this);
-    _panoViewMenu->addItem(_heightRV);
+    _panoViewMenu->addItem(_heightRV);*/
 
     _removeButton = new MenuButton("Remove");
     _removeButton->setCallback(this);
@@ -89,7 +93,7 @@ bool PanoViewLOD::init()
 
 void PanoViewLOD::preFrame()
 {
-    if(_leftDrawable || _rightDrawable)
+    /*if(_leftDrawable || _rightDrawable)
     {
 	float val = PluginHelper::getValuator(0,0);
 	if(fabs(val) < 0.2)
@@ -115,12 +119,12 @@ void PanoViewLOD::preFrame()
 	{
 	    updateZoom(_lastZoomMat);
 	}
-    }
+    }*/
 }
 
 bool PanoViewLOD::processEvent(InteractionEvent * event)
 {
-    if(event->asTrackedButtonEvent())
+    /*if(event->asTrackedButtonEvent())
     {
 	TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
 	if(_rightDrawable || _leftDrawable)
@@ -185,7 +189,7 @@ bool PanoViewLOD::processEvent(InteractionEvent * event)
 		return true;
 	    }
 	}
-    }
+    }*/
     return false;
 }
 
@@ -193,25 +197,37 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 {
     if(item == _removeButton)
     {
-	if(_rightDrawable && _leftDrawable)
+	if(_panObject)
+	{
+	    _panObject->detachFromScene();
+	    PluginHelper::unregisterSceneObject(_panObject);
+	    delete _panObject;
+	    _panObject = NULL;
+	}
+	/*if(_rightDrawable && _leftDrawable)
 	{
             _leftDrawable->cleanup();
 	    _leftGeode->removeDrawables(0,_leftGeode->getNumDrawables());
 	    _rightGeode->removeDrawables(0,_rightGeode->getNumDrawables());
             _leftDrawable = _rightDrawable = NULL;
 	}
-	PluginHelper::getScene()->removeChild(_root);
+	PluginHelper::getScene()->removeChild(_root);*/
     }
     for(int i = 0; i < _panButtonList.size(); i++)
     {
 	if(item == _panButtonList[i])
 	{
-	    if(_rightDrawable && _leftDrawable)
+	    if(_panObject)
 	    {
 		menuCallback(_removeButton);
 	    }
 
-	    _leftDrawable = new PanoDrawableLOD(_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size,_pans[i]->vertFile,_pans[i]->fragFile);
+	    _panObject = new PanoViewObject(_panButtonList[i]->getText(),_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size,_pans[i]->height,_pans[i]->vertFile,_pans[i]->fragFile);
+
+	    PluginHelper::registerSceneObject(_panObject,"PanoViewLOD");
+	    _panObject->attachToScene();
+
+	    /*_leftDrawable = new PanoDrawableLOD(_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size,_pans[i]->vertFile,_pans[i]->fragFile);
 	    _rightDrawable = new PanoDrawableLOD(_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size,_pans[i]->vertFile,_pans[i]->fragFile);
 
 	    _leftGeode->addDrawable(_leftDrawable);
@@ -226,11 +242,13 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 	    PluginHelper::getScene()->addChild(_root);
 
 	    _radiusRV->setValue(_pans[i]->radius);
-	    _heightRV->setValue(_pans[i]->height);
+	    _heightRV->setValue(_pans[i]->height);*/
 
 	    break;
 	}
     }
+    /*
+    
     
     if(item == _radiusRV)
     {
@@ -252,7 +270,7 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 	    _heightMat.makeTranslate(osg::Vec3(0,0,offset));
 	    _root->setMatrix(_coordChangeMat * _spinMat * _heightMat);
 	}
-    }
+    }*/
 }
 
 void PanoViewLOD::createLoadMenu(std::string tagBase, std::string tag, SubMenu * menu)
@@ -438,7 +456,7 @@ PanoViewLOD::PanInfo * PanoViewLOD::loadInfoFromXML(std::string file)
 
 void PanoViewLOD::updateZoom(osg::Matrix & mat)
 {
-    osg::Matrix m = osg::Matrix::inverse(_root->getMatrix());
+    /*osg::Matrix m = osg::Matrix::inverse(_root->getMatrix());
     osg::Vec3 dir(0,1,0);
     osg::Vec3 point(0,0,0);
     dir = dir * mat * m;
@@ -455,5 +473,5 @@ void PanoViewLOD::updateZoom(osg::Matrix & mat)
 	_rightDrawable->setZoom(dir,pow(10.0, _currentZoom));
     }
 
-    _lastZoomMat = mat;
+    _lastZoomMat = mat;*/
 }
