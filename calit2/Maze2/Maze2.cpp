@@ -183,7 +183,7 @@ void Maze2::preFrame()
 
     mAudioConfigHandler->updatePoses(viewDir, viewPos);
     mNaviHandler->updateNaviStates(Navigation::instance()->getScale(), viewDir, viewPos);
-//    mNaviHandler->updateButtonStates();
+    // mNaviHandler->updateButtonStates();
     mNaviHandler->updateXformMat();
 
     /* ECGClient: Master-Slave operations: Read current time for update */
