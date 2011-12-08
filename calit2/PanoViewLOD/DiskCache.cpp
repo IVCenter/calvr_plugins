@@ -16,9 +16,11 @@ OpenThreads::Mutex listLock;
 OpenThreads::Mutex mapLock;
 OpenThreads::Mutex pageCountLock;
 
-JobThread::JobThread(JobType jt, std::list<std::pair<sph_task*, CopyJobInfo*> > * readlist, std::list<std::pair<sph_task*, CopyJobInfo*> > * copylist, std::list<JobThread*> * freeThreadList, std::map<int, std::map<int,DiskCacheEntry*> > * cacheMap) : _jt(jt), _readList(readlist), _copyList(copylist), _freeThreadList(freeThreadList), _cacheMap(cacheMap)
+JobThread::JobThread(JobType jt, std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * readlist, std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * copylist, std::list<JobThread*> * freeThreadList, std::map<int, std::map<int,DiskCacheEntry*> > * cacheMap, std::map<sph_cache*,int> * cacheIndexMap) : _jt(jt), _readList(readlist), _copyList(copylist), _freeThreadList(freeThreadList), _cacheMap(cacheMap), _cacheIndexMap(cacheIndexMap)
 {
     _quit = false;
+    _readIndex = 0;
+    _copyIndex = 0;
 }
 
 JobThread::~JobThread()
@@ -63,13 +65,22 @@ void JobThread::read()
 {
     CopyJobInfo * cji = NULL;
     sph_task * task = NULL;
+
     listLock.lock();
     if(_readList->size())
     {
-	task = _readList->front().first;
-	cji = _readList->front().second;
-	_readList->pop_front();
-	std::cerr << "Read Thread grabbed job f: " << task->f << " i: " << task->i << " t: " << task->timestamp << std::endl;
+	for(int i = 0; i < _readList->size(); i++)
+	{
+	    _readIndex = _readIndex % _readList->size();
+	    if(_readList->at(_readIndex).size())
+	    {
+		task = _readList->at(_readIndex).front().first;
+		cji = _readList->at(_readIndex).front().second;
+		_readList->at(_readIndex).pop_front();
+		std::cerr << "Read Thread grabbed job f: " << task->f << " i: " << task->i << " t: " << task->timestamp << std::endl;
+	    }
+	    _readIndex++;
+	}
     }
     listLock.unlock();
 
@@ -114,8 +125,16 @@ void JobThread::copy()
     listLock.lock();
     if(_copyList->size())
     {
-	taskpair = _copyList->front();
-	_copyList->pop_front();
+	for(int i = 0; i < _copyList->size(); i++)
+	{
+	    _copyIndex = _copyIndex % _copyList->size();
+	    if(_copyList->at(_copyIndex).size())
+	    {
+		taskpair = _copyList->at(_copyIndex).front();
+		_copyList->at(_copyIndex).pop_front();
+	    }
+	    _copyIndex++;
+	}
     }
     listLock.unlock();
 
@@ -187,7 +206,7 @@ void JobThread::readData(sph_task * task, CopyJobInfo * cji, TIFF * T, uint32 w,
 
 	listLock.lock();
 
-	_copyList->push_back(std::pair<sph_task*,CopyJobInfo*>(task,cji));
+	_copyList->at((*_cacheIndexMap)[task->cache]).push_back(std::pair<sph_task*,CopyJobInfo*>(task,cji));
 
 	listLock.unlock();
 
@@ -252,7 +271,7 @@ DiskCache::DiskCache(int pages) : _pages(pages)
 
     for(int i = 0; i < numReadThreads; i++)
     {
-	_readThreads.push_back(new JobThread(READ_THREAD, &_readList, &_copyList, &_freeThreadList, &_cacheMap));
+	_readThreads.push_back(new JobThread(READ_THREAD, &_readList, &_copyList, &_freeThreadList, &_cacheMap, &_cacheIndexMap));
 	//_readThreads[i]->setProcessorAffinity((1+i) % cores);
 	_readThreads[i]->startThread();
     }
@@ -261,7 +280,7 @@ DiskCache::DiskCache(int pages) : _pages(pages)
     for(int i = 0; i < numCopyThreads; i++)
     {
 	std::cerr << "Starting copy thread: " << i << std::endl;
-	_copyThreads.push_back(new JobThread(COPY_THREAD, &_readList, &_copyList, &_freeThreadList, &_cacheMap));
+	_copyThreads.push_back(new JobThread(COPY_THREAD, &_readList, &_copyList, &_freeThreadList, &_cacheMap, &_cacheIndexMap));
 	//_copyThreads[i]->setProcessorAffinity((1 + numReadThreads + i) % cores);
 	_copyThreads[i]->startThread();
 	_freeThreadList.push_back(_copyThreads[i]);
@@ -308,6 +327,10 @@ int DiskCache::add_file(const std::string& name)
 
 	_cacheMap[id] = std::map<int,DiskCacheEntry*>();
 
+	listLock.lock();
+	_readList.push_back(std::list<std::pair<sph_task*, CopyJobInfo*> >());
+	listLock.unlock();
+
 	_nextID++;
     }
 
@@ -320,10 +343,19 @@ int DiskCache::add_file(const std::string& name)
 
 void DiskCache::add_task(sph_task * task)
 {
-    mapLock.lock();
+    if(_cacheIndexMap.find(task->cache) == _cacheIndexMap.end())
+    {
+	listLock.lock();
+	int index = _cacheIndexMap.size();
+	_cacheIndexMap[task->cache] = index;
+	_copyList.push_back(std::list<std::pair<sph_task*, CopyJobInfo*> >());
+	listLock.unlock();
+    }
 
     if(!_cacheMap[task->f][task->i])
     {
+	mapLock.lock();
+
 	_cacheMap[task->f][task->i] = new DiskCacheEntry;
 	_cacheMap[task->f][task->i]->timestamp = task->timestamp;
 	_cacheMap[task->f][task->i]->f = task->f;
@@ -342,7 +374,7 @@ void DiskCache::add_task(sph_task * task)
 	listLock.lock();
 
 	std::cerr << "Job started for task f: " << task->f << " i: " << task->i << " t: " << task->timestamp << std::endl;
-	_readList.push_back(std::pair<sph_task*, CopyJobInfo*>(task,cji));
+	_readList[task->f].push_back(std::pair<sph_task*, CopyJobInfo*>(task,cji));
 
 	listLock.unlock();
 
@@ -360,6 +392,8 @@ void DiskCache::add_task(sph_task * task)
     }
     else
     {
+	mapLock.lock();
+
 	std::cerr << "DiskCache Hit." << std::endl;
 	_cacheMap[task->f][task->i]->timestamp = task->timestamp;
 	CopyJobInfo * cji = _cacheMap[task->f][task->i]->cji;
@@ -367,7 +401,7 @@ void DiskCache::add_task(sph_task * task)
 
 	listLock.lock();
 
-	_copyList.push_back(std::pair<sph_task*, CopyJobInfo*>(task,cji));
+	_copyList[_cacheIndexMap[task->cache]].push_back(std::pair<sph_task*, CopyJobInfo*>(task,cji));
 
 	listLock.unlock();
     }
