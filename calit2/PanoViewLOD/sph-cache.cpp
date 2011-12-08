@@ -22,6 +22,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <OpenThreads/ScopedLock>
+#include <config/ConfigManager.h>
+
+DiskCache * sph_cache::_diskCache = NULL;
+
 static bool exists(const std::string& name)
 {
     struct stat info;
@@ -122,7 +127,7 @@ static GLenum external_type(uint16 c, uint16 b)
 
 // Construct a load task. Map the PBO to provide a destination for the loader.
 
-sph_task::sph_task(int f, int i, GLuint u, GLsizei s) : sph_item(f, i), u(u)
+sph_task::sph_task(int f, int i, GLuint u, GLsizei s, sph_cache * c, int t) : sph_item(f, i), u(u), cache(c), timestamp(t)
 {
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, u);
     {
@@ -383,15 +388,25 @@ sph_cache::sph_cache(int n) : pages(n), waits(n), needs(32), loads(8)
 {
     GLuint b;
     int    i;
+   
+    static OpenThreads::Mutex _initMutex;
+    {
+	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_initMutex);
+	if(!_diskCache)
+	{
+	    _diskCache = new DiskCache(cvr::ConfigManager::getInt("value","Plugin.PanoViewLOD.DiskCacheSize",256));
+	}
+    }
+
     
     // Launch the image loader threads.
     
     int loader(void *data);
 
-    thread[0] = SDL_CreateThread(loader, this);
-    thread[1] = SDL_CreateThread(loader, this);
-    thread[2] = SDL_CreateThread(loader, this);
-    thread[3] = SDL_CreateThread(loader, this);
+    //thread[0] = SDL_CreateThread(loader, this);
+    //thread[1] = SDL_CreateThread(loader, this);
+    //thread[2] = SDL_CreateThread(loader, this);
+    //thread[3] = SDL_CreateThread(loader, this);
 
     // Generate pixel buffer objects.
  
@@ -416,19 +431,19 @@ sph_cache::~sph_cache()
     
     // Enqueue an exit command for each loader thread.
     
-    needs.insert(sph_task(-1, -1));
-    needs.insert(sph_task(-2, -2));
-    needs.insert(sph_task(-3, -3));
-    needs.insert(sph_task(-4, -4));
+    //needs.insert(sph_task(-1, -1));
+    //needs.insert(sph_task(-2, -2));
+    //needs.insert(sph_task(-3, -3));
+    //needs.insert(sph_task(-4, -4));
     
     // Await their exit. 
     
     int s;
 
-    SDL_WaitThread(thread[0], &s);
-    SDL_WaitThread(thread[1], &s);
-    SDL_WaitThread(thread[2], &s);
-    SDL_WaitThread(thread[3], &s);
+    //SDL_WaitThread(thread[0], &s);
+    //SDL_WaitThread(thread[1], &s);
+    //SDL_WaitThread(thread[2], &s);
+    //SDL_WaitThread(thread[3], &s);
 
     // Release the pixel buffer objects.
     
@@ -468,10 +483,14 @@ static void debug_on(int l)
 
 int sph_cache::add_file(const std::string& name)
 {
-    int f = int(files.size());
+    /*int f = int(files.size());
 
     files.push_back(sph_file(name));
 
+    return f;*/
+    
+    int f = _diskCache->add_file(name);
+    files[f] = sph_file(name);
     return f;
 }
 
@@ -513,7 +532,8 @@ GLuint sph_cache::get_page(int f, int i, int t, int& n)
             
         if (o)
         {
-            needs.insert(sph_task(f, i, pbos.deq(), pagelen(f)));
+            //needs.insert(sph_task(f, i, pbos.deq(), pagelen(f), this));
+	    _diskCache->add_task(new sph_task(f, i, pbos.deq(), pagelen(f), this, t));
             waits.insert(sph_page(f, i, filler), t);
             pages.insert(sph_page(f, i, o),      t);            
             clear(o);
@@ -587,13 +607,13 @@ GLsizei sph_cache::pagelen(int f)
 
 //------------------------------------------------------------------------------
 
-static int up(TIFF *T, int i);
-static int dn(TIFF *T, int i);
+//static int up(TIFF *T, int i);
+//static int dn(TIFF *T, int i);
 
 // Seek upward to the root of the page tree and choose the appropriate base
 // image. Navigate to the requested sub-image directory on the way back down.
 
-static int up(TIFF *T, int i)
+int up(TIFF *T, int i)
 {
     if (i < 6)
         return TIFFSetDirectory(T, i);
@@ -606,7 +626,7 @@ static int up(TIFF *T, int i)
     }
 }
 
-static int dn(TIFF *T, int i)
+int dn(TIFF *T, int i)
 {
     uint64 *v;
     uint16  n;
