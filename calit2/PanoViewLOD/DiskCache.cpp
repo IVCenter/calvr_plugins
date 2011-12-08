@@ -9,6 +9,8 @@
 #include <cstring>
 #include <climits>
 
+//#define DC_PRINT_DEBUG
+
 using namespace cvr;
 
 OpenThreads::Mutex freeThreadLock;
@@ -77,7 +79,11 @@ void JobThread::read()
 		task = _readList->at(_readIndex).front().first;
 		cji = _readList->at(_readIndex).front().second;
 		_readList->at(_readIndex).pop_front();
+#ifdef DC_PRINT_DEBUG
 		std::cerr << "Read Thread grabbed job f: " << task->f << " i: " << task->i << " t: " << task->timestamp << std::endl;
+#endif
+		_readIndex++;
+		break;
 	    }
 	    _readIndex++;
 	}
@@ -98,7 +104,9 @@ void JobThread::read()
                     uint16 b = task->cache->files[task->f].b;
                 
 		    readData(task, cji,T,w,h,c,b);
+#ifdef DC_PRINT_DEBUG
 		    std::cerr << "Done reading data f: " << task->f << " i: " << task->i << std::endl;
+#endif
                     //task.load_texture(T, w, h, c, b);
                     //task->cache->loads.insert(*task);
                 }
@@ -132,6 +140,8 @@ void JobThread::copy()
 	    {
 		taskpair = _copyList->at(_copyIndex).front();
 		_copyList->at(_copyIndex).pop_front();
+		_copyIndex++;
+		break;
 	    }
 	    _copyIndex++;
 	}
@@ -140,11 +150,13 @@ void JobThread::copy()
 
     if(taskpair.first)
     {
+#ifdef DC_PRINT_DEBUG
 	std::cerr << "Copy thread got task f: " << taskpair.first->f << " i: " << taskpair.first->i << std::endl;
 	if(_jt == READ_THREAD)
 	{
 	    std::cerr << "Copy done by read thread." << std::endl;
 	}
+#endif
 	unsigned char * currentP = taskpair.second->data;
 	unsigned int currentCopied = 0;
 	do
@@ -164,7 +176,9 @@ void JobThread::copy()
 
 	} while(currentCopied < taskpair.second->size);
 	taskpair.first->cache->loads.insert(*(taskpair.first));
+#ifdef DC_PRINT_DEBUG
 	std::cerr << "Copy thread finished task f: " << taskpair.first->f << " i: " << taskpair.first->i << std::endl;
+#endif
 	delete taskpair.first;
     }
     else
@@ -279,7 +293,9 @@ DiskCache::DiskCache(int pages) : _pages(pages)
     freeThreadLock.lock();
     for(int i = 0; i < numCopyThreads; i++)
     {
+#ifdef DC_PRINT_DEBUG
 	std::cerr << "Starting copy thread: " << i << std::endl;
+#endif
 	_copyThreads.push_back(new JobThread(COPY_THREAD, &_readList, &_copyList, &_freeThreadList, &_cacheMap, &_cacheIndexMap));
 	//_copyThreads[i]->setProcessorAffinity((1 + numReadThreads + i) % cores);
 	_copyThreads[i]->startThread();
@@ -336,7 +352,9 @@ int DiskCache::add_file(const std::string& name)
 
     _fileAddLock.unlock();
 
+#ifdef DC_PRINT_DEBUG
     std::cerr << "add_file called with name: " << name << " given ID: " << id << std::endl;
+#endif
 
     return id;
 }
@@ -352,10 +370,9 @@ void DiskCache::add_task(sph_task * task)
 	listLock.unlock();
     }
 
+    mapLock.lock();
     if(!_cacheMap[task->f][task->i])
     {
-	mapLock.lock();
-
 	_cacheMap[task->f][task->i] = new DiskCacheEntry;
 	_cacheMap[task->f][task->i]->timestamp = task->timestamp;
 	_cacheMap[task->f][task->i]->f = task->f;
@@ -373,7 +390,9 @@ void DiskCache::add_task(sph_task * task)
 
 	listLock.lock();
 
+#ifdef DC_PRINT_DEBUG
 	std::cerr << "Job started for task f: " << task->f << " i: " << task->i << " t: " << task->timestamp << std::endl;
+#endif
 	_readList[task->f].push_back(std::pair<sph_task*, CopyJobInfo*>(task,cji));
 
 	listLock.unlock();
@@ -392,9 +411,9 @@ void DiskCache::add_task(sph_task * task)
     }
     else
     {
-	mapLock.lock();
-
+#ifdef DC_PRINT_DEBUG
 	std::cerr << "DiskCache Hit." << std::endl;
+#endif
 	_cacheMap[task->f][task->i]->timestamp = task->timestamp;
 	CopyJobInfo * cji = _cacheMap[task->f][task->i]->cji;
 	mapLock.unlock();
@@ -409,7 +428,9 @@ void DiskCache::add_task(sph_task * task)
 
 void DiskCache::eject()
 {
+#ifdef DC_PRINT_DEBUG
     std::cerr << "DiskCache::eject()" << std::endl;
+#endif
 
     mapLock.lock();
     // find oldest referenced page
@@ -422,6 +443,11 @@ void DiskCache::eject()
     {
 	for(std::map<int,DiskCacheEntry*>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++)
 	{
+	    if(!it2->second)
+	    {
+		continue;
+	    }
+
 	    if(it2->second->timestamp < mint)
 	    {
 		mint = it2->second->timestamp;
