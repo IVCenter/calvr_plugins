@@ -25,6 +25,10 @@
 
 #include "queue.hpp"
 
+#include "DiskCache.h"
+
+class sph_cache;
+
 //------------------------------------------------------------------------------
 
 template <typename T> class fifo : public std::list <T>
@@ -79,22 +83,26 @@ struct sph_page : public sph_item
 
 struct sph_task : public sph_item
 {
-    sph_task()             : sph_item(    ), u(0), p(0) { }
-    sph_task(int f, int i) : sph_item(i, f), u(0), p(0) { }
-    sph_task(int f, int i, GLuint u, GLsizei s);
+    sph_task()             : sph_item(    ), u(0), p(0), cache(NULL), timestamp(0) { }
+    sph_task(int f, int i) : sph_item(i, f), u(0), p(0), cache(NULL), timestamp(0) { }
+    sph_task(int f, int i, GLuint u, GLsizei s, sph_cache * c, int t);
     
     GLuint u;
     void  *p;
+    int timestamp;
     
     void make_texture(GLuint, uint32, uint32, uint16, uint16);
     void load_texture(TIFF *, uint32, uint32, uint16, uint16);
     void dump_texture();
+
+    sph_cache * cache;
 };
 
 //------------------------------------------------------------------------------
 
 struct sph_file
 {
+    sph_file() {}
     sph_file(const std::string& name);
     
     std::string name;
@@ -133,6 +141,7 @@ private:
 
 class sph_cache
 {
+    friend class JobThread;
 public:
 
     sph_cache(int);
@@ -150,8 +159,9 @@ public:
 
 private:
 
-    std::vector<sph_file> files;
-
+    //std::vector<sph_file> files;
+    std::map<int,sph_file> files;
+    
     sph_set pages;
     sph_set waits;
     
@@ -164,11 +174,16 @@ private:
     GLuint  filler;
     bool    debug;
     
-    SDL_Thread *thread[4];
+    //SDL_Thread *thread[4];
     
     friend int loader(void *);
+
+    static DiskCache * _diskCache;
 };
 
 //------------------------------------------------------------------------------
+
+int up(TIFF *T, int i);
+int dn(TIFF *T, int i);
 
 #endif

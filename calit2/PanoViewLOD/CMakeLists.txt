@@ -11,6 +11,7 @@ SET(PLUGIN_HEADERS
     PanoDrawableLOD.h
     PanoViewLOD.h
     PanoViewObject.h
+    DiskCache.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -25,6 +26,7 @@ ADD_LIBRARY(${LIB_NAME}
     PanoDrawableLOD.cpp
     PanoViewLOD.cpp
     PanoViewObject.cpp
+    DiskCache.cpp
 )
 
 FIND_PACKAGE(GLEW)
