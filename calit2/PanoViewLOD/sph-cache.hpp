@@ -28,7 +28,7 @@
 #include "DiskCache.h"
 
 class sph_cache;
-
+class PanoViewLOD;
 //------------------------------------------------------------------------------
 
 template <typename T> class fifo : public std::list <T>
@@ -142,6 +142,7 @@ private:
 class sph_cache
 {
     friend class JobThread;
+    friend class PanoViewLOD;
 public:
 
     sph_cache(int);
