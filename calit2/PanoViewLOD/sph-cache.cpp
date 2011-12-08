@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <cassert>
 #include <sstream>
+#include <iostream>
 
 #include "sph-cache.hpp"
 #include "cube.hpp"
@@ -247,6 +248,7 @@ sph_file::sph_file(const std::string& tiff)
 
     if (!name.empty())
     {
+	std::cerr << "File name: " << name << std::endl;
         if (TIFF *T = TIFFOpen(name.c_str(), "r"))
         {
             TIFFGetField(T, TIFFTAG_IMAGEWIDTH,      &w);

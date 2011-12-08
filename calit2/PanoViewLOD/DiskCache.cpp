@@ -313,6 +313,8 @@ int DiskCache::add_file(const std::string& name)
 
     _fileAddLock.unlock();
 
+    std::cerr << "add_file called with name: " << name << " given ID: " << id << std::endl;
+
     return id;
 }
 
@@ -358,6 +360,7 @@ void DiskCache::add_task(sph_task * task)
     }
     else
     {
+	std::cerr << "DiskCache Hit." << std::endl;
 	_cacheMap[task->f][task->i]->timestamp = task->timestamp;
 	CopyJobInfo * cji = _cacheMap[task->f][task->i]->cji;
 	mapLock.unlock();
@@ -372,6 +375,7 @@ void DiskCache::add_task(sph_task * task)
 
 void DiskCache::eject()
 {
+    std::cerr << "DiskCache::eject()" << std::endl;
 
     mapLock.lock();
     // find oldest referenced page
