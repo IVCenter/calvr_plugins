@@ -12,6 +12,9 @@
 #include <mxml.h>
 #include <tiffio.h>
 
+#include "sph-cache.hpp"
+#include "DiskCache.h"
+
 using namespace cvr;
 
 CVRPLUGIN(PanoViewLOD)
@@ -217,6 +220,12 @@ void PanoViewLOD::menuCallback(MenuItem * item)
     {
 	if(item == _panButtonList[i])
 	{
+	    if(!sph_cache::_diskCache)
+	    {
+		std::cerr << "Creating cache in plugin." << std::endl;
+		sph_cache::_diskCache = new DiskCache(cvr::ConfigManager::getInt("value","Plugin.PanoViewLOD.DiskCacheSize",256));
+	    }
+
 	    if(_panObject)
 	    {
 		menuCallback(_removeButton);
