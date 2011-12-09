@@ -39,7 +39,7 @@ struct DiskCacheEntry
 class JobThread: public OpenThreads::Thread
 {
     public:
-        JobThread(JobType jt, std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * readlist, std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * copylist, std::list<JobThread*> * freeThreadList, std::map<int, std::map<int,DiskCacheEntry*> > * cacheMap, std::map<sph_cache*,int> * cacheIndexMap);
+        JobThread(JobType jt, std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * readlist, std::vector<std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > > * copylist, std::list<JobThread*> * freeThreadList, std::map<int, std::map<int,DiskCacheEntry*> > * cacheMap, std::map<sph_cache*,int> * cacheIndexMap);
         virtual ~JobThread();
 
         void run();
@@ -55,11 +55,12 @@ class JobThread: public OpenThreads::Thread
         bool _quit;
 
         int _readIndex;
-        int _copyIndex;
+        int _copyCacheNum;
+        int _copyFileNum;
 
         JobType _jt;
         std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * _readList;
-        std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * _copyList;
+        std::vector<std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > > * _copyList;
         std::map<int, std::map<int,DiskCacheEntry*> > * _cacheMap;
         std::map<sph_cache*,int> * _cacheIndexMap;
 
@@ -91,7 +92,7 @@ class DiskCache
         std::list<JobThread*> _freeThreadList;
 
         std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > _readList;
-        std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > _copyList;
+        std::vector<std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > > _copyList;
 
         std::map<int, std::map<int,DiskCacheEntry*> > _cacheMap;
 
