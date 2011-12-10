@@ -22,6 +22,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 
 #include <OpenThreads/ScopedLock>
 #include <config/ConfigManager.h>
@@ -128,7 +129,7 @@ static GLenum external_type(uint16 c, uint16 b)
 
 // Construct a load task. Map the PBO to provide a destination for the loader.
 
-sph_task::sph_task(int f, int i, GLuint u, GLsizei s, sph_cache * c, int t) : sph_item(f, i), u(u), cache(c), timestamp(t)
+sph_task::sph_task(int f, int i, GLuint u, GLsizei s, sph_cache * c, int t) : sph_item(f, i), u(u), cache(c), timestamp(t), valid(true)
 {
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, u);
     {
@@ -400,6 +401,10 @@ sph_cache::sph_cache(int n) : pages(n), waits(n), needs(32), loads(8)
 	}
     }
 
+    float targetFPS = cvr::ConfigManager::getFloat("value","Plugin.PanoViewLOD.TargetFPS",60.0);
+    _maxTime = 1.0f / targetFPS;
+    // give some time for other things
+    _maxTime *= 0.9;
     
     // Launch the image loader threads.
     
@@ -550,9 +555,12 @@ GLuint sph_cache::get_page(int f, int i, int t, int& n)
 
 void sph_cache::update(int t)
 {
+    struct timeval start, end;
+    gettimeofday(&start,NULL);
     glPushAttrib(GL_PIXEL_MODE_BIT);
     {
-        for (int c = 0; !loads.empty() && c < 4; ++c)
+	int c;
+        for (c = 0; !loads.empty(); ++c)
         {
             sph_task task = loads.remove();
             sph_page page = pages.search(sph_page(task.f, task.i), t);
@@ -560,21 +568,44 @@ void sph_cache::update(int t)
 
             if (page.valid())
             {
-                page.t = t;
-                pages.remove(page);
-                pages.insert(page, t);
-                
-                if (debug)
-                    debug_on(face_level(task.i));
+		if(task.valid)
+		{
+		    page.t = t;
+		    pages.remove(page);
+		    pages.insert(page, t);
 
-                task.make_texture(page.o, files[task.f].w, files[task.f].h,
-                                          files[task.f].c, files[task.f].b);
+		    if (debug)
+			debug_on(face_level(task.i));
+
+		    task.make_texture(page.o, files[task.f].w, files[task.f].h,
+			    files[task.f].c, files[task.f].b);
+		}
+		else
+		{
+		    pages.remove(page);
+		    task.dump_texture();
+		}
             }
             else
+	    {
                 task.dump_texture();
+	    }
 
             pbos.enq(task.u);
+
+	    gettimeofday(&end,NULL);
+	    float time = (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec)/1000000.0);
+	    if(time > _maxTime)
+	    {
+		//std::cerr << "Textures loaded: " << c+1 << std::endl;
+		break;
+	    }
         }
+
+	/*if(c)
+	{
+	    std::cerr << "Textures loaded: " << c << std::endl;
+	}*/
     }
     glPopAttrib();
 }

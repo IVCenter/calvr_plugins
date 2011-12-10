@@ -75,10 +75,16 @@ class DiskCache
 
         int add_file(const std::string& name);
         void add_task(sph_task * task);
+        void add_prefetch_task(sph_task * task);
+
+        void kill_tasks(int file);
 
     protected:
         int _pages;
         int _numPages;
+
+        int _prefetchPages;
+        int _prefetchNumPages;
 
         void eject();
 
@@ -93,8 +99,10 @@ class DiskCache
 
         std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > _readList;
         std::vector<std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > > _copyList;
+        std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > _prefetchList;
 
         std::map<int, std::map<int,DiskCacheEntry*> > _cacheMap;
+        std::map<int, std::map<int,DiskCacheEntry*> > _prefetchMap;
 
         std::map<sph_cache*,int> _cacheIndexMap;
 };

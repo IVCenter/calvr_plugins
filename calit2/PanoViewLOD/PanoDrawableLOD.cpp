@@ -14,6 +14,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include "sph-cache.hpp"
+
 std::map<int,std::vector<int> > PanoDrawableLOD::_leftFileIDs;
 std::map<int,std::vector<int> > PanoDrawableLOD::_rightFileIDs;
 std::map<int,bool> PanoDrawableLOD::_updateDoneMap;
@@ -182,6 +184,12 @@ void PanoDrawableLOD::next()
     _nextIndex = (_currentIndex+1) % _leftEyeFiles.size();
 
     _currentFadeTime = _totalFadeTime + PluginHelper::getLastFrameDuration();
+
+    if(_leftFileIDs.size())
+    {
+	sph_cache::_diskCache->kill_tasks(_leftFileIDs.begin()->second[_lastIndex]);
+	sph_cache::_diskCache->kill_tasks(_rightFileIDs.begin()->second[_lastIndex]);
+    }
 }
 
 void PanoDrawableLOD::previous()
@@ -195,6 +203,12 @@ void PanoDrawableLOD::previous()
     _nextIndex = (_currentIndex+_leftEyeFiles.size()-1) % _leftEyeFiles.size();
 
     _currentFadeTime = _totalFadeTime + PluginHelper::getLastFrameDuration();
+
+    if(_leftFileIDs.size())
+    {
+	sph_cache::_diskCache->kill_tasks(_leftFileIDs.begin()->second[_lastIndex]);
+	sph_cache::_diskCache->kill_tasks(_rightFileIDs.begin()->second[_lastIndex]);
+    }
 }
 
 void PanoDrawableLOD::setZoom(osg::Vec3 dir, float k)

@@ -83,8 +83,8 @@ struct sph_page : public sph_item
 
 struct sph_task : public sph_item
 {
-    sph_task()             : sph_item(    ), u(0), p(0), cache(NULL), timestamp(0) { }
-    sph_task(int f, int i) : sph_item(i, f), u(0), p(0), cache(NULL), timestamp(0) { }
+    sph_task()             : sph_item(    ), u(0), p(0), cache(NULL), timestamp(0), valid(true) { }
+    sph_task(int f, int i) : sph_item(i, f), u(0), p(0), cache(NULL), timestamp(0), valid(true) { }
     sph_task(int f, int i, GLuint u, GLsizei s, sph_cache * c, int t);
     
     GLuint u;
@@ -95,6 +95,7 @@ struct sph_task : public sph_item
     void load_texture(TIFF *, uint32, uint32, uint16, uint16);
     void dump_texture();
 
+    bool valid;
     sph_cache * cache;
 };
 
@@ -142,7 +143,9 @@ private:
 class sph_cache
 {
     friend class JobThread;
+    friend class DiskCache;
     friend class PanoViewLOD;
+    friend class PanoDrawableLOD;
 public:
 
     sph_cache(int);
@@ -180,6 +183,7 @@ private:
     friend int loader(void *);
 
     static DiskCache * _diskCache;
+    float _maxTime;
 };
 
 //------------------------------------------------------------------------------

@@ -3,6 +3,7 @@
 
 #include <config/ConfigManager.h>
 
+#include <queue>
 #include <iostream>
 #include <unistd.h>
 #include <time.h>
@@ -493,6 +494,59 @@ void DiskCache::add_task(sph_task * task)
 
 	listLock.unlock();
     }
+}
+
+void DiskCache::kill_tasks(int file)
+{
+    if(file < 0 || file >= _readList.size())
+    {
+	return;
+    }
+
+    listLock.lock();
+
+    std::queue<sph_task> tempq;
+
+    for(std::map<sph_cache*,int>::iterator it = _cacheIndexMap.begin(); it != _cacheIndexMap.end(); it++)
+    {
+	while(!it->first->loads.empty())
+	{
+	    tempq.push(it->first->loads.remove());
+	    if(tempq.front().f == file)
+	    {
+		tempq.front().valid = false;
+	    }
+	}
+
+	while(tempq.size())
+	{
+	    it->first->loads.insert(tempq.front());
+	    tempq.pop();
+	}
+    }
+
+    for(std::list<std::pair<sph_task*, CopyJobInfo*> >::iterator it = _readList[file].begin(); it != _readList[file].end(); it++)
+    {
+	it->first->valid = false;
+	it->first->cache->loads.insert(*(it->first));
+	delete it->first;
+	delete it->second;
+    }
+
+    _readList[file].clear();
+
+    for(int i = 0; i < _copyList.size(); i++)
+    {
+	for(std::list<std::pair<sph_task*, CopyJobInfo*> >::iterator it = _copyList[i][file].begin(); it != _copyList[i][file].end(); it++)
+	{
+	    it->first->valid = false;
+	    it->first->cache->loads.insert(*(it->first));
+	    delete it->first;
+	}
+	_copyList[i][file].clear();
+    }
+
+    listLock.unlock();
 }
 
 void DiskCache::eject()
