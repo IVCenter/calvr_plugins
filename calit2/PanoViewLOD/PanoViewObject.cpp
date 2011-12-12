@@ -6,6 +6,8 @@
 
 #include <iostream>
 
+#define PRINT_TIMING
+
 using namespace cvr;
 
 PanoViewObject::PanoViewObject(std::string name, std::string leftEyeFile, std::string rightEyeFile, float radius, int mesh, int depth, int size, float height, std::string vertFile, std::string fragFile) : SceneObject(name,false,false,false,true,false)
@@ -121,16 +123,23 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
     _zoomResetButton = new MenuButton("Reset Zoom");
     _zoomResetButton->setCallback(this);
     addMenuItem(_zoomResetButton);
+
+    _fadeActive = false;
+    _fadeFrames = 0;
 }
 
 void PanoViewObject::next()
 {
+    _fadeActive = true;
+    _fadeFrames = 0;
     _leftDrawable->next();
     _rightDrawable->next();
 }
 
 void PanoViewObject::previous()
 {
+    _fadeActive = true;
+    _fadeFrames = 0;
     _leftDrawable->previous();
     _rightDrawable->previous();
 }
@@ -188,6 +197,23 @@ void PanoViewObject::menuCallback(cvr::MenuItem * item)
 
 void PanoViewObject::updateCallback(int handID, const osg::Matrix & mat)
 {
+
+#ifdef PRINT_TIMING
+
+    if(_fadeActive)
+    {
+	if(_leftDrawable->getCurrentFadeTime() > 0.0)
+	{
+	    _fadeFrames++;
+	}
+	else
+	{
+	    std::cerr << "Frames this fade: " << _fadeFrames << std::endl;
+	    _fadeActive = false;
+	}
+    }
+
+#endif
     /*float val = PluginHelper::getValuator(0,0);
     if(fabs(val) < 0.2)
     {

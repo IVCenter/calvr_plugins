@@ -59,6 +59,9 @@ class PanoViewObject : public cvr::SceneObject
         int _zoomValuator;
         int _spinValuator;
         bool _sharedValuator;
+
+        bool _fadeActive;
+        int _fadeFrames;
 };
 
 #endif

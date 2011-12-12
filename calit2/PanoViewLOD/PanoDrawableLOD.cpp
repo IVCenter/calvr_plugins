@@ -16,6 +16,10 @@
 
 #include "sph-cache.hpp"
 
+#define PRINT_TIMING
+
+#include <sys/time.h>
+
 std::map<int,std::vector<int> > PanoDrawableLOD::_leftFileIDs;
 std::map<int,std::vector<int> > PanoDrawableLOD::_rightFileIDs;
 std::map<int,bool> PanoDrawableLOD::_updateDoneMap;
@@ -362,8 +366,17 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 
     if(!_updateDoneMap[context])
     {
+#ifdef PRINT_TIMING
+	struct timeval ustart, uend;
+	gettimeofday(&ustart,NULL);
+#endif
 	_cacheMap[context]->update(_modelMap[context]->tick());
 	_updateDoneMap[context] = true;
+#ifdef PRINT_TIMING
+	gettimeofday(&uend,NULL);
+	double utime = (uend.tv_sec - ustart.tv_sec) / ((uend.tv_usec - ustart.tv_usec)/1000000.0);
+	std::cerr << "Context: " << context << " Update time: " << utime << std::endl;
+#endif
     }
 
     _updateLock[context]->unlock(); 
