@@ -525,8 +525,22 @@ void DiskCache::kill_tasks(int file)
 	}
     }
 
+
+    for(int i = 0; i < _copyList.size(); i++)
+    {
+        for(std::list<std::pair<sph_task*, CopyJobInfo*> >::iterator it = _copyList[i][file].begin(); it != _copyList[i][file].end(); it++)
+        {
+            it->first->valid = false;
+            it->first->cache->loads.insert(*(it->first));
+            delete it->first;
+        }
+        _copyList[i][file].clear();
+    }
+
+
     for(std::list<std::pair<sph_task*, CopyJobInfo*> >::iterator it = _readList[file].begin(); it != _readList[file].end(); it++)
     {
+        _cacheMap[it->first->f].erase(it->first->i);
 	it->first->valid = false;
 	it->first->cache->loads.insert(*(it->first));
 	delete it->first;
@@ -534,17 +548,6 @@ void DiskCache::kill_tasks(int file)
     }
 
     _readList[file].clear();
-
-    for(int i = 0; i < _copyList.size(); i++)
-    {
-	for(std::list<std::pair<sph_task*, CopyJobInfo*> >::iterator it = _copyList[i][file].begin(); it != _copyList[i][file].end(); it++)
-	{
-	    it->first->valid = false;
-	    it->first->cache->loads.insert(*(it->first));
-	    delete it->first;
-	}
-	_copyList[i][file].clear();
-    }
 
     listLock.unlock();
 }
