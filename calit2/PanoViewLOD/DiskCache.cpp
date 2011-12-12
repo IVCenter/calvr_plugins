@@ -18,6 +18,7 @@ OpenThreads::Mutex freeThreadLock;
 OpenThreads::Mutex listLock;
 OpenThreads::Mutex mapLock;
 OpenThreads::Mutex pageCountLock;
+OpenThreads::Mutex cleanupLock;
 
 JobThread::JobThread(JobType jt, std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * readlist, std::vector<std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > > * copylist, std::list<JobThread*> * freeThreadList, std::map<int, std::map<int,DiskCacheEntry*> > * cacheMap, std::map<sph_cache*,int> * cacheIndexMap) : _jt(jt), _readList(readlist), _copyList(copylist), _freeThreadList(freeThreadList), _cacheMap(cacheMap), _cacheIndexMap(cacheIndexMap)
 {
@@ -213,11 +214,13 @@ void JobThread::copy()
 #endif
 	unsigned char * currentP = taskpair.second->data;
 	unsigned int currentCopied = 0;
+	unsigned int size = 0;
 	do
 	{
 	    unsigned int currentValid;
 	    taskpair.second->lock.lock();
 	    currentValid = taskpair.second->valid;
+	    size = taskpair.second->size;
 	    taskpair.second->lock.unlock();
 
 	    if(currentCopied < currentValid)
@@ -228,7 +231,14 @@ void JobThread::copy()
 		currentCopied = currentValid;
 	    }
 
-	} while(currentCopied < taskpair.second->size);
+	} while(currentCopied < size);
+	taskpair.second->lock.lock();
+	taskpair.second->refs--;
+	if(!taskpair.second->size)
+	{
+	    taskpair.first->valid = false;
+	}
+	taskpair.second->lock.unlock();
 	taskpair.first->cache->loads.insert(*(taskpair.first));
 #ifdef DC_PRINT_DEBUG
 	std::cerr << "Copy thread finished task f: " << taskpair.first->f << " i: " << taskpair.first->i << std::endl;
@@ -270,6 +280,7 @@ void JobThread::readData(sph_task * task, CopyJobInfo * cji, TIFF * T, uint32 w,
 	cji->data = data;
 	cji->size = totalData;
 	cji->valid = 0;
+	cji->refs++;
 	cji->lock.unlock();
 
 	listLock.lock();
@@ -356,6 +367,10 @@ DiskCache::DiskCache(int pages) : _pages(pages)
 	_freeThreadList.push_back(_copyThreads[i]);
     }
     freeThreadLock.unlock();
+
+    _prevFileL = _prevFileR = -1;
+    _currentFileL = _currentFileR = -1;
+    _nextFileL = _nextFileR = -1;
 }
 
 DiskCache::~DiskCache()
@@ -422,6 +437,16 @@ int DiskCache::add_file(const std::string& name)
 
 void DiskCache::add_task(sph_task * task)
 {
+    cleanup();
+
+    if(task->f != _currentFileL && task->f != _currentFileR)
+    {
+	task->valid = false;
+	task->cache->loads.insert(*task);
+	delete task;
+	return;
+    }
+
     if(_cacheIndexMap.find(task->cache) == _cacheIndexMap.end())
     {
 	listLock.lock();
@@ -450,6 +475,7 @@ void DiskCache::add_task(sph_task * task)
 	cji->data = NULL;
 	cji->size = 100;
 	cji->valid = 0;
+	cji->refs = 1;
 
 	_cacheMap[task->f][task->i]->cji = cji;
 
@@ -487,6 +513,10 @@ void DiskCache::add_task(sph_task * task)
 	_cacheMap[task->f][task->i]->timestamp = task->timestamp;
 	CopyJobInfo * cji = _cacheMap[task->f][task->i]->cji;
 	mapLock.unlock();
+
+	cji->lock.lock();
+	cji->refs++;
+	cji->lock.unlock();
 
 	listLock.lock();
 
@@ -532,6 +562,9 @@ void DiskCache::kill_tasks(int file)
         {
             it->first->valid = false;
             it->first->cache->loads.insert(*(it->first));
+	    it->second->lock.lock();
+	    it->second->refs--;
+	    it->second->lock.unlock();
             delete it->first;
         }
         _copyList[i][file].clear();
@@ -540,11 +573,24 @@ void DiskCache::kill_tasks(int file)
 
     for(std::list<std::pair<sph_task*, CopyJobInfo*> >::iterator it = _readList[file].begin(); it != _readList[file].end(); it++)
     {
-        _cacheMap[it->first->f].erase(it->first->i);
 	it->first->valid = false;
 	it->first->cache->loads.insert(*(it->first));
-	delete it->first;
-	delete it->second;
+
+	it->second->lock.lock();
+	it->second->refs--;
+	if(it->second->refs)
+	{
+	    _cacheMap[it->first->f].erase(it->first->i);
+	    it->second->lock.unlock();
+	    delete it->second;
+	    delete it->first;
+	}
+	else
+	{
+	    it->second->size = 0;
+	    _cleanupList.push_back(std::pair<int,int>(it->first->f,it->first->i));
+	    it->second->lock.unlock();
+	}
     }
 
     _readList[file].clear();
@@ -600,4 +646,57 @@ void DiskCache::eject()
     pageCountLock.lock();
     _numPages--;
     pageCountLock.unlock();
+}
+
+void DiskCache::setLeftFiles(int prev, int curr, int next)
+{
+    if(curr != _currentFileL)
+    {
+	if(_currentFileL != -1)
+	{
+	    kill_tasks(_currentFileL);
+	}
+    }
+
+    _prevFileL = prev;
+    _currentFileL = curr;
+    _nextFileL = next;
+}
+
+void DiskCache::setRightFiles(int prev, int curr, int next)
+{
+    if(curr != _currentFileR)
+    {
+	if(_currentFileR != -1)
+	{
+	    kill_tasks(_currentFileR);
+	}
+    }
+
+    _prevFileR = prev;
+    _currentFileR = curr;
+    _nextFileR = next;
+}
+
+void DiskCache::cleanup()
+{
+    cleanupLock.lock();
+
+    for(std::list<std::pair<int,int> >::iterator it = _cleanupList.begin(); it != _cleanupList.end(); )
+    {
+	_cacheMap[it->first][it->second]->cji->lock.lock();
+	if(!_cacheMap[it->first][it->second]->cji->refs)
+	{
+	    _cacheMap[it->first][it->second]->cji->lock.unlock();
+	    delete _cacheMap[it->first][it->second]->cji;
+	    delete _cacheMap[it->first][it->second];
+	    _cacheMap[it->first].erase(it->second);
+	}
+	else
+	{
+	    _cacheMap[it->first][it->second]->cji->lock.unlock();
+	}
+    }
+
+    cleanupLock.unlock();
 }

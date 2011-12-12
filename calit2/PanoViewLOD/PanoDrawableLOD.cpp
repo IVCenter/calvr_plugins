@@ -206,8 +206,10 @@ void PanoDrawableLOD::previous()
 
     if(_leftFileIDs.size())
     {
-	sph_cache::_diskCache->kill_tasks(_leftFileIDs.begin()->second[_lastIndex]);
-	sph_cache::_diskCache->kill_tasks(_rightFileIDs.begin()->second[_lastIndex]);
+	sph_cache::_diskCache->setLeftFiles(_leftFileIDs.begin()->second[_lastIndex],_leftFileIDs.begin()->second[_currentIndex],_leftFileIDs.begin()->second[_nextIndex]);
+	sph_cache::_diskCache->setRightFiles(_rightFileIDs.begin()->second[_lastIndex],_rightFileIDs.begin()->second[_currentIndex],_rightFileIDs.begin()->second[_nextIndex]);
+	//sph_cache::_diskCache->kill_tasks(_leftFileIDs.begin()->second[_lastIndex]);
+	//sph_cache::_diskCache->kill_tasks(_rightFileIDs.begin()->second[_lastIndex]);
     }
 }
 
@@ -325,12 +327,28 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	    {
 		_leftFileIDs[context].push_back(_cacheMap[context]->add_file(_leftEyeFiles[i]));
 	    }
+	    if(_leftEyeFiles.size() > 1)
+	    {
+		sph_cache::_diskCache->setLeftFiles(_leftFileIDs[context].back(),_leftFileIDs[context][0],_leftFileIDs[context][1]);
+	    }
+	    else if(_leftEyeFiles.size() == 1)
+	    {
+		sph_cache::_diskCache->setLeftFiles(-1,_leftFileIDs[context][0],-1);
+	    }
 	}
 	else if(eye & DRAW_RIGHT)
 	{
 	    for(int i = 0; i < _rightEyeFiles.size(); i++)
 	    {
 		_rightFileIDs[context].push_back(_cacheMap[context]->add_file(_rightEyeFiles[i]));
+	    }
+	    if(_rightEyeFiles.size() > 1)
+	    {
+		sph_cache::_diskCache->setRightFiles(_rightFileIDs[context].back(),_rightFileIDs[context][0],_rightFileIDs[context][1]);
+	    }
+	    else if(_rightEyeFiles.size() == 1)
+	    {
+		sph_cache::_diskCache->setRightFiles(-1,_rightFileIDs[context][0],-1);
 	    }
 	}
 	_initMap[context] |= eye;

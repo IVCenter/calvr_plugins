@@ -25,6 +25,7 @@ struct CopyJobInfo
     unsigned char * data;
     unsigned int size;
     unsigned int valid;
+    int refs;
     OpenThreads::Mutex lock;
 };
 
@@ -77,14 +78,25 @@ class DiskCache
         void add_task(sph_task * task);
         void add_prefetch_task(sph_task * task);
 
+        void setLeftFiles(int prev, int curr, int next);
+        void setRightFiles(int prev, int curr, int next);
         void kill_tasks(int file);
 
     protected:
+        void cleanup();
+
         int _pages;
         int _numPages;
 
         int _prefetchPages;
         int _prefetchNumPages;
+
+        int _prevFileL;
+        int _currentFileL;
+        int _nextFileL;
+        int _prevFileR;
+        int _currentFileR;
+        int _nextFileR;
 
         void eject();
 
@@ -100,6 +112,8 @@ class DiskCache
         std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > _readList;
         std::vector<std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > > _copyList;
         std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > _prefetchList;
+
+        std::list<std::pair<int,int> > _cleanupList;
 
         std::map<int, std::map<int,DiskCacheEntry*> > _cacheMap;
         std::map<int, std::map<int,DiskCacheEntry*> > _prefetchMap;
