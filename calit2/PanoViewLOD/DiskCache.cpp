@@ -578,7 +578,7 @@ void DiskCache::kill_tasks(int file)
 
 	it->second->lock.lock();
 	it->second->refs--;
-	if(it->second->refs)
+	if(!it->second->refs)
 	{
 	    _cacheMap[it->first->f].erase(it->first->i);
 	    it->second->lock.unlock();
@@ -691,10 +691,12 @@ void DiskCache::cleanup()
 	    delete _cacheMap[it->first][it->second]->cji;
 	    delete _cacheMap[it->first][it->second];
 	    _cacheMap[it->first].erase(it->second);
+        it = _cleanupList.erase(it);
 	}
 	else
 	{
 	    _cacheMap[it->first][it->second]->cji->lock.unlock();
+        it++;
 	}
     }
 

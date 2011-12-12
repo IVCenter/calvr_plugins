@@ -187,8 +187,10 @@ void PanoDrawableLOD::next()
 
     if(_leftFileIDs.size())
     {
-	sph_cache::_diskCache->kill_tasks(_leftFileIDs.begin()->second[_lastIndex]);
-	sph_cache::_diskCache->kill_tasks(_rightFileIDs.begin()->second[_lastIndex]);
+        sph_cache::_diskCache->setLeftFiles(_leftFileIDs.begin()->second[_lastIndex],_leftFileIDs.begin()->second[_currentIndex],_leftFileIDs.begin()->second[_nextIndex]);
+        sph_cache::_diskCache->setRightFiles(_rightFileIDs.begin()->second[_lastIndex],_rightFileIDs.begin()->second[_currentIndex],_rightFileIDs.begin()->second[_nextIndex]);
+	//sph_cache::_diskCache->kill_tasks(_leftFileIDs.begin()->second[_lastIndex]);
+	//sph_cache::_diskCache->kill_tasks(_rightFileIDs.begin()->second[_lastIndex]);
     }
 }
 
