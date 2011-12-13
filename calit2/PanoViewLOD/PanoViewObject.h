@@ -53,6 +53,10 @@ class PanoViewObject : public cvr::SceneObject
         cvr::MenuCheckbox * _spinCB;
         cvr::MenuCheckbox * _zoomCB;
         cvr::MenuButton * _zoomResetButton;
+        cvr::MenuCheckbox * _demoMode;
+
+        double _demoTime;
+        double _demoChangeTime;
 
         float _spinScale;
         float _zoomScale;

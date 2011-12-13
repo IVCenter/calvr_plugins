@@ -65,6 +65,9 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
 
     _currentZoom = 0.0;
 
+    _demoTime = 0.0;
+    _demoChangeTime = ConfigManager::getDouble("value","Plugin.PanoViewLOD.DemoChangeTime",90.0);
+
     _coordChangeMat.makeRotate(M_PI/2.0,osg::Vec3(1,0,0));
     _spinMat.makeIdentity();
     float offset = height - _floorOffset;
@@ -82,6 +85,10 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
 	_previousButton->setCallback(this);
 	addMenuItem(_previousButton);
     }
+
+    _demoMode = new MenuCheckbox("Demo Mode", ConfigManager::getBool("value","Plugin.PanoViewLOD.DemoMode",false, NULL));
+    _demoMode->setCallback(this);
+    addMenuItem(_demoMode);
 
     _radiusRV = new MenuRangeValue("Radius", 100, 100000, radius);
     _radiusRV->setCallback(this);
@@ -216,6 +223,29 @@ void PanoViewObject::updateCallback(int handID, const osg::Matrix & mat)
     }
 
 #endif
+
+    if(_demoMode->getValue())
+    {
+	double time = PluginHelper::getLastFrameDuration();
+	double val = (time / _demoChangeTime) * 2.0 * M_PI;
+	osg::Matrix rot;
+	rot.makeRotate(val, osg::Vec3(0,0,1));
+	_spinMat = _spinMat * rot;
+	setTransform(_coordChangeMat * _spinMat * _heightMat);
+
+	if(_currentZoom != 0.0)
+	{
+	    updateZoom(_lastZoomMat);
+	}
+
+	_demoTime += time;
+	if(_demoTime > _demoChangeTime)
+	{
+	    _demoTime = 0.0;
+	    next();
+	}
+    }
+
     /*float val = PluginHelper::getValuator(0,0);
     if(fabs(val) < 0.2)
     {
