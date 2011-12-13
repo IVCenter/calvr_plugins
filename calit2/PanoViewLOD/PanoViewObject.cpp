@@ -198,8 +198,10 @@ void PanoViewObject::menuCallback(cvr::MenuItem * item)
 void PanoViewObject::updateCallback(int handID, const osg::Matrix & mat)
 {
 
+    //std::cerr << "Update Callback." << std::endl;
 #ifdef PRINT_TIMING
 
+    //std::cerr << "Fade Time: " << _leftDrawable->getCurrentFadeTime() << std::endl;
     if(_fadeActive)
     {
 	if(_leftDrawable->getCurrentFadeTime() > 0.0)
@@ -247,14 +249,16 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 	TrackedButtonInteractionEvent * tie = ie->asTrackedButtonEvent();
 	if(tie->getButton() == 2 && tie->getInteraction() == BUTTON_DOWN)
 	{
-	    _rightDrawable->next();
-	    _leftDrawable->next();
+	    //_rightDrawable->next();
+	    //_leftDrawable->next();
+        next();
 	    return true;
 	}
 	if(tie->getButton() == 3 && tie->getInteraction() == BUTTON_DOWN)
 	{
-	    _rightDrawable->previous();
-	    _leftDrawable->previous();
+	    //_rightDrawable->previous();
+	    //_leftDrawable->previous();
+        previous();
 	    return true;
 	}
 	if(tie->getButton() == 0 && tie->getInteraction() == BUTTON_DOWN)

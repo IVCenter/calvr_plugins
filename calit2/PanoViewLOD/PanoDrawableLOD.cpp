@@ -16,7 +16,7 @@
 
 #include "sph-cache.hpp"
 
-#define PRINT_TIMING
+//#define PRINT_TIMING
 
 #include <sys/time.h>
 
