@@ -597,7 +597,7 @@ void sph_cache::update(int t)
 	    float time = (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec)/1000000.0);
 	    if(time > _maxTime)
 	    {
-		//std::cerr << "Textures loaded: " << c+1 << std::endl;
+		std::cerr << "Timeout break: Textures loaded: " << c+1 << std::endl;
 		break;
 	    }
         }
