@@ -16,7 +16,7 @@
 
 #include "sph-cache.hpp"
 
-//#define PRINT_TIMING
+#define PRINT_TIMING
 
 #include <sys/time.h>
 
@@ -374,7 +374,7 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	_updateDoneMap[context] = true;
 #ifdef PRINT_TIMING
 	gettimeofday(&uend,NULL);
-	double utime = (uend.tv_sec - ustart.tv_sec) / ((uend.tv_usec - ustart.tv_usec)/1000000.0);
+	double utime = (uend.tv_sec - ustart.tv_sec) + ((uend.tv_usec - ustart.tv_usec)/1000000.0);
 	std::cerr << "Context: " << context << " Update time: " << utime << std::endl;
 #endif
     }
