@@ -123,6 +123,94 @@ static GLenum external_type(uint16 c, uint16 b)
     return 0;
 }
 
+
+static void initTexture(GLuint o, uint32 w, uint32 h, uint16 c, uint16 b)
+{
+    static const GLfloat p[] = { 0, 0, 0, 0 };
+        
+    glBindTexture  (GL_TEXTURE_2D, o);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP);
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, p);
+    glTexImage2D (GL_TEXTURE_2D, 0, internal_form(c, b), w, h, 0,
+                                        external_form(c, b),
+                                        external_type(c, b), NULL);
+    //glBindTexture  (GL_TEXTURE_2D, 0);
+}
+
+
+void pbotiming(GLuint pbo)
+{
+    int size = 5000000;
+    void * p;
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
+    {
+	glBufferData(GL_PIXEL_UNPACK_BUFFER, size, 0, GL_STREAM_DRAW);
+	p = glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT);
+	if(!p)
+	{
+	    std::cerr << "Invalid map." << std::endl;
+	}
+
+	memset(p,0x00,size);
+
+	struct timeval start, end;
+	gettimeofday(&start,NULL);
+
+	glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+
+	gettimeofday(&end,NULL);
+
+	std::cerr << "Full unmap time: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec)/ 1000000.0) << std::endl;
+
+	p = glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, size, GL_MAP_WRITE_BIT | GL_MAP_FLUSH_EXPLICIT_BIT);
+	memset(p,0x01,size);
+
+	float segments = 5.0;
+	int ssize = size / segments;
+	if(segments * ssize < size)
+	{
+	    ssize++;
+	}
+	int copied = 0;
+	for(int i = 0; i < segments; i++)
+	{
+	    int copy = std::min(size - copied,ssize);
+	    
+	    std::cerr << "Offset: " << copied << " length: " << copy << std::endl;
+
+	    struct timeval fstart, fend;
+
+	    gettimeofday(&fstart,NULL);
+
+	    glFlushMappedBufferRange(GL_PIXEL_UNPACK_BUFFER,copied,copy);
+	    //glFinish();
+
+	    gettimeofday(&fend,NULL);
+
+	    std::cerr << "Segment flush time: " << (fend.tv_sec - fstart.tv_sec) + ((fend.tv_usec - fstart.tv_usec)/ 1000000.0) << std::endl;
+
+	    copied += copy;
+	    sleep(1);
+	}
+
+	gettimeofday(&start,NULL);
+
+	glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+
+	gettimeofday(&end,NULL);
+
+	std::cerr << "Final unmap time: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec)/ 1000000.0) << std::endl;
+
+    }
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
+    exit(0);
+}
+
+
 // * 24-bit images are always padded to 32 bits.
 
 //------------------------------------------------------------------------------
@@ -131,28 +219,45 @@ static GLenum external_type(uint16 c, uint16 b)
 
 sph_task::sph_task(int f, int i, GLuint u, GLsizei s, sph_cache * c, int t) : sph_item(f, i), u(u), cache(c), timestamp(t), valid(true)
 {
+    //pbotiming(u);
+    size = s;
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, u);
     {
-        glBufferData(GL_PIXEL_UNPACK_BUFFER, s, 0, GL_STREAM_DRAW);
-        p = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+        glBufferData(GL_PIXEL_UNPACK_BUFFER, s, 0, GL_STREAM_READ);
+        p = glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT);
+	if(!p)
+	{
+	    std::cerr << "Invalid map." << std::endl;
+	}
     }
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 }
 
 // Upload the pixel buffer to a newly-generated OpenGL texture object.
 
-void sph_task::make_texture(GLuint o, uint32 w, uint32 h, uint16 c, uint16 b)
+bool sph_task::make_texture(GLuint o, uint32 w, uint32 h, uint16 c, uint16 b)
 {
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, u);
     {
-        glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+	struct timeval ustart, uend, tstart, tend;
+	gettimeofday(&ustart,NULL);
+	glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+	gettimeofday(&uend,NULL);
 
-        glBindTexture(GL_TEXTURE_2D, o);
-        glTexImage2D (GL_TEXTURE_2D, 0, internal_form(c, b), w, h, 1,
-                                        external_form(c, b),
-                                        external_type(c, b), 0);
+	glBindTexture(GL_TEXTURE_2D, o);
+	/*glTexImage2D (GL_TEXTURE_2D, 0, internal_form(c, b), w, h, 1,
+	  external_form(c, b),
+	  external_type(c, b), 0);*/
+	gettimeofday(&tstart,NULL);
+	glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, w, h,
+		external_form(c, b),
+		external_type(c, b), 0);
+	gettimeofday(&tend,NULL);
+
+	std::cerr << "Size: " << size <<  " Unmap time: " << (uend.tv_sec - ustart.tv_sec) + ((uend.tv_usec - ustart.tv_usec)/ 1000000.0) << " Texture time: " << (tend.tv_sec - tstart.tv_sec) + ((tend.tv_usec - tstart.tv_usec)/ 1000000.0) << std::endl;
     }
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    return true;
 }
 
 // A texture was loaded but is no longer necessary. Discard the pixel buffer.
@@ -543,7 +648,9 @@ GLuint sph_cache::get_page(int f, int i, int t, int& n)
 	    _diskCache->add_task(new sph_task(f, i, pbos.deq(), pagelen(f), this, t));
             waits.insert(sph_page(f, i, filler), t);
             pages.insert(sph_page(f, i, o),      t);            
-            clear(o);
+            //clear(o);
+	    initTexture(o, files[f].w, files[f].h,
+	    		    files[f].c, files[f].b);
         }
     }
 

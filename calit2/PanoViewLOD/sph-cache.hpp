@@ -90,8 +90,9 @@ struct sph_task : public sph_item
     GLuint u;
     void  *p;
     int timestamp;
+    unsigned int size;
     
-    void make_texture(GLuint, uint32, uint32, uint16, uint16);
+    bool make_texture(GLuint, uint32, uint32, uint16, uint16);
     void load_texture(TIFF *, uint32, uint32, uint16, uint16);
     void dump_texture();
 
