@@ -25,6 +25,8 @@
 
 #include "queue.hpp"
 
+#include <list>
+
 #include "DiskCache.h"
 
 class sph_cache;
@@ -172,6 +174,8 @@ private:
     
     queue<sph_task> needs;
     queue<sph_task> loads;
+
+    std::list<sph_task> _delayList;
 
     fifo<GLuint> pbos;
         

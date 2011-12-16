@@ -666,10 +666,16 @@ void sph_cache::update(int t)
     gettimeofday(&start,NULL);
     glPushAttrib(GL_PIXEL_MODE_BIT);
     {
+	while(!loads.empty())
+	{
+	    _delayList.push_back(loads.remove());
+	}
 	int c;
-        for (c = 0; !loads.empty(); ++c)
+        for (c = 0; !_delayList.empty(); ++c)
         {
-            sph_task task = loads.remove();
+            //sph_task task = loads.remove();
+	    sph_task task = *_delayList.begin();
+	    _delayList.erase(_delayList.begin());
             sph_page page = pages.search(sph_page(task.f, task.i), t);
                             waits.remove(sph_page(task.f, task.i));
 
