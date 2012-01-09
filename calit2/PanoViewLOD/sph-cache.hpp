@@ -175,7 +175,7 @@ private:
     queue<sph_task> needs;
     queue<sph_task> loads;
 
-    std::list<sph_task> _delayList;
+    //std::list<sph_task> _delayList;
 
     fifo<GLuint> pbos;
         

@@ -16,7 +16,7 @@
 
 #include "sph-cache.hpp"
 
-#define PRINT_TIMING
+//#define PRINT_TIMING
 
 #include <sys/time.h>
 
@@ -174,7 +174,7 @@ void PanoDrawableLOD::cleanup()
 	//delete _modelMap[it->first];
     //}
     //_cacheMap.clear();
-    _modelMap.clear();
+    //_modelMap.clear();
 }
 
 void PanoDrawableLOD::next()
@@ -288,45 +288,45 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 
     _initLock.lock();
 
-    if(!_cacheMap[context])
+    if(!_initMap[context])
     {
-        GLenum err = glewInit();
-        if (GLEW_OK != err)
-        {
-            std::cerr << "Error on glew init: " << glewGetErrorString(err) << std::endl;
-            _badInit = true;
-            _initLock.unlock();
-            glPopAttrib();
-            return;
-        }
-	int cachesize = ConfigManager::getInt("value","Plugin.PanoViewLOD.CacheSize",256);
-	_cacheMap[context] = new sph_cache(cachesize);
-        _cacheMap[context]->set_debug(false);
+	if(!_cacheMap[context])
+	{
+	    GLenum err = glewInit();
+	    if (GLEW_OK != err)
+	    {
+		std::cerr << "Error on glew init: " << glewGetErrorString(err) << std::endl;
+		_badInit = true;
+		_initLock.unlock();
+		glPopAttrib();
+		return;
+	    }
+	    int cachesize = ConfigManager::getInt("value","Plugin.PanoViewLOD.CacheSize",256);
+	    _cacheMap[context] = new sph_cache(cachesize);
+	    _cacheMap[context]->set_debug(false);
 
-	_updateLock[context] = new OpenThreads::Mutex();
+	    _updateLock[context] = new OpenThreads::Mutex();
+	}
+
+	if(_modelMap[context])
+	{
+	    delete _modelMap[context];
+	}
+	GLint buffer,ebuffer;
+	glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&buffer);
+	glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&ebuffer);
+
+	_modelMap[context] = new sph_model(*_cacheMap[context],_vertData,_fragData,_mesh,_depth,_size);
+
+	glBindBuffer(GL_ARRAY_BUFFER, buffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebuffer);
+
+	_leftFileIDs[context] = std::vector<int>();
+	_rightFileIDs[context] = std::vector<int>();
     }
 
     if(!(_initMap[context] & eye))
     {
-	if(!_initMap[context])
-	{
-	    if(_modelMap[context])
-	    {
-		delete _modelMap[context];
-	    }
-	    GLint buffer,ebuffer;
-	    glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&buffer);
-	    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&ebuffer);
-
-	    _modelMap[context] = new sph_model(*_cacheMap[context],_vertData,_fragData,_mesh,_depth,_size);
-
-	    glBindBuffer(GL_ARRAY_BUFFER, buffer);
-	    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebuffer);
-
-	    _leftFileIDs[context] = std::vector<int>();
-	    _rightFileIDs[context] = std::vector<int>();
-	}
-
 	if(eye & DRAW_LEFT)
 	{
 	    for(int i = 0; i < _leftEyeFiles.size(); i++)

@@ -245,31 +245,6 @@ void PanoViewObject::updateCallback(int handID, const osg::Matrix & mat)
 	    next();
 	}
     }
-
-    /*float val = PluginHelper::getValuator(0,0);
-    if(fabs(val) < 0.2)
-    {
-	return;
-    }
-
-    if(val > 1.0)
-    {
-	val = 1.0;
-    }
-    else if(val < -1.0)
-    {
-	val = -1.0;
-    }
-
-    osg::Matrix rot;
-    rot.makeRotate((M_PI / 50.0) * val, osg::Vec3(0,0,1));
-    _spinMat = _spinMat * rot;
-    setTransform(_coordChangeMat * _spinMat * _heightMat);
-
-    if(_currentZoom != 0.0)
-    {
-	updateZoom(_lastZoomMat);
-    }*/
 }
 
 bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
@@ -279,16 +254,12 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 	TrackedButtonInteractionEvent * tie = ie->asTrackedButtonEvent();
 	if(tie->getButton() == 2 && tie->getInteraction() == BUTTON_DOWN)
 	{
-	    //_rightDrawable->next();
-	    //_leftDrawable->next();
-        next();
+	    next();
 	    return true;
 	}
 	if(tie->getButton() == 3 && tie->getInteraction() == BUTTON_DOWN)
 	{
-	    //_rightDrawable->previous();
-	    //_leftDrawable->previous();
-        previous();
+	    previous();
 	    return true;
 	}
 	if(tie->getButton() == 0 && tie->getInteraction() == BUTTON_DOWN)

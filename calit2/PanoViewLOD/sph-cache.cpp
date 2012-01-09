@@ -169,7 +169,7 @@ void pbotiming(GLuint pbo)
 	memset(p,0x01,size);
 
 	float segments = 5.0;
-	int ssize = size / segments;
+	int ssize = (int)(size / segments);
 	if(segments * ssize < size)
 	{
 	    ssize++;
@@ -223,8 +223,9 @@ sph_task::sph_task(int f, int i, GLuint u, GLsizei s, sph_cache * c, int t) : sp
     size = s;
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, u);
     {
-        glBufferData(GL_PIXEL_UNPACK_BUFFER, s, 0, GL_STREAM_READ);
-        p = glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT);
+        glBufferData(GL_PIXEL_UNPACK_BUFFER, s, 0, GL_STREAM_DRAW);
+        //p = glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT);
+	p = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
 	if(!p)
 	{
 	    std::cerr << "Invalid map." << std::endl;
@@ -666,16 +667,16 @@ void sph_cache::update(int t)
     gettimeofday(&start,NULL);
     glPushAttrib(GL_PIXEL_MODE_BIT);
     {
-	while(!loads.empty())
+	/*while(!loads.empty())
 	{
 	    _delayList.push_back(loads.remove());
-	}
+	}*/
 	int c;
-        for (c = 0; !_delayList.empty(); ++c)
+        for (c = 0; !loads.empty(); ++c)
         {
-            //sph_task task = loads.remove();
-	    sph_task task = *_delayList.begin();
-	    _delayList.erase(_delayList.begin());
+            sph_task task = loads.remove();
+	    //sph_task task = *_delayList.begin();
+	    //_delayList.erase(_delayList.begin());
             sph_page page = pages.search(sph_page(task.f, task.i), t);
                             waits.remove(sph_page(task.f, task.i));
 
