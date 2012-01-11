@@ -508,7 +508,7 @@ void DiskCache::add_task(sph_task * task)
     else
     {
 #ifdef DC_PRINT_DEBUG
-	std::cerr << "DiskCache Hit f: " << task->f << " i: " << task->i << std::endl;
+	std::cerr << "DiskCache Hit f: " << task->f << " i: " << task->i << " t: " << task->timestamp << std::endl;
 #endif
 	_cacheMap[task->f][task->i]->timestamp = task->timestamp;
 	CopyJobInfo * cji = _cacheMap[task->f][task->i]->cji;
@@ -635,6 +635,10 @@ void DiskCache::eject()
 	mapLock.unlock();
 	return;
     }
+
+#ifdef DC_PRINT_DEBUG
+    std::cerr << "Eject f: " << f << " i: " << i << " t: " << mint << std::endl;
+#endif
 
     delete[] _cacheMap[f][i]->cji->data;
     delete _cacheMap[f][i]->cji;
