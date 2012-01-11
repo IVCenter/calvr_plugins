@@ -20,12 +20,13 @@ OpenThreads::Mutex mapLock;
 OpenThreads::Mutex pageCountLock;
 OpenThreads::Mutex cleanupLock;
 
-JobThread::JobThread(JobType jt, std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * readlist, std::vector<std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > > * copylist, std::list<JobThread*> * freeThreadList, std::map<int, std::map<int,DiskCacheEntry*> > * cacheMap, std::map<sph_cache*,int> * cacheIndexMap) : _jt(jt), _readList(readlist), _copyList(copylist), _freeThreadList(freeThreadList), _cacheMap(cacheMap), _cacheIndexMap(cacheIndexMap)
+JobThread::JobThread(int id, JobType jt, std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * readlist, std::vector<std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > > * copylist, std::list<JobThread*> * freeThreadList, std::map<int, std::map<int,DiskCacheEntry*> > * cacheMap, std::map<sph_cache*,int> * cacheIndexMap) : _jt(jt), _readList(readlist), _copyList(copylist), _freeThreadList(freeThreadList), _cacheMap(cacheMap), _cacheIndexMap(cacheIndexMap)
 {
     _quit = false;
     _readIndex = 0;
     _copyCacheNum = 0;
     _copyFileNum = 0;
+    _id = id;
 }
 
 JobThread::~JobThread()
@@ -186,6 +187,16 @@ void JobThread::copy()
 	}
     }
 
+#ifdef DC_PRINT_DEBUG
+    int cjobsize = 0;
+    for(int i = 0; i < _copyList->size(); i++)
+    {
+	cjobsize += _copyList->at(i).size();
+    }
+    std::cerr << "Copy Jobs left: " << cjobsize << std::endl;
+#endif
+
+
     /*if(_copyList->size())
     {
 	for(int i = 0; i < _copyList->size(); i++)
@@ -206,7 +217,7 @@ void JobThread::copy()
     if(taskpair.first)
     {
 #ifdef DC_PRINT_DEBUG
-	std::cerr << "Copy thread got task f: " << taskpair.first->f << " i: " << taskpair.first->i << std::endl;
+	std::cerr << "Copy thread: " << _id << " got task f: " << taskpair.first->f << " i: " << taskpair.first->i << std::endl;
 	if(_jt == READ_THREAD)
 	{
 	    std::cerr << "Copy done by read thread." << std::endl;
@@ -241,7 +252,7 @@ void JobThread::copy()
 	taskpair.second->lock.unlock();
 	taskpair.first->cache->loads.insert(*(taskpair.first));
 #ifdef DC_PRINT_DEBUG
-	std::cerr << "Copy thread finished task f: " << taskpair.first->f << " i: " << taskpair.first->i << std::endl;
+	std::cerr << "Copy thread: " << _id << " finished task f: " << taskpair.first->f << " i: " << taskpair.first->i << std::endl;
 #endif
 	delete taskpair.first;
     }
@@ -350,7 +361,7 @@ DiskCache::DiskCache(int pages) : _pages(pages)
 
     for(int i = 0; i < numReadThreads; i++)
     {
-	_readThreads.push_back(new JobThread(READ_THREAD, &_readList, &_copyList, &_freeThreadList, &_cacheMap, &_cacheIndexMap));
+	_readThreads.push_back(new JobThread(numCopyThreads + i,READ_THREAD, &_readList, &_copyList, &_freeThreadList, &_cacheMap, &_cacheIndexMap));
 	//_readThreads[i]->setProcessorAffinity((1+i) % cores);
 	_readThreads[i]->startThread();
     }
@@ -361,7 +372,7 @@ DiskCache::DiskCache(int pages) : _pages(pages)
 #ifdef DC_PRINT_DEBUG
 	std::cerr << "Starting copy thread: " << i << std::endl;
 #endif
-	_copyThreads.push_back(new JobThread(COPY_THREAD, &_readList, &_copyList, &_freeThreadList, &_cacheMap, &_cacheIndexMap));
+	_copyThreads.push_back(new JobThread(i, COPY_THREAD, &_readList, &_copyList, &_freeThreadList, &_cacheMap, &_cacheIndexMap));
 	//_copyThreads[i]->setProcessorAffinity((1 + numReadThreads + i) % cores);
 	_copyThreads[i]->startThread();
 	_freeThreadList.push_back(_copyThreads[i]);

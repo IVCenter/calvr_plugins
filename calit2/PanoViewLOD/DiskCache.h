@@ -40,7 +40,7 @@ struct DiskCacheEntry
 class JobThread: public OpenThreads::Thread
 {
     public:
-        JobThread(JobType jt, std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * readlist, std::vector<std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > > * copylist, std::list<JobThread*> * freeThreadList, std::map<int, std::map<int,DiskCacheEntry*> > * cacheMap, std::map<sph_cache*,int> * cacheIndexMap);
+        JobThread(int id, JobType jt, std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * readlist, std::vector<std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > > * copylist, std::list<JobThread*> * freeThreadList, std::map<int, std::map<int,DiskCacheEntry*> > * cacheMap, std::map<sph_cache*,int> * cacheIndexMap);
         virtual ~JobThread();
 
         void run();
@@ -66,6 +66,8 @@ class JobThread: public OpenThreads::Thread
         std::map<sph_cache*,int> * _cacheIndexMap;
 
         std::list<JobThread*> * _freeThreadList;
+
+        int _id;
 };
 
 class DiskCache
