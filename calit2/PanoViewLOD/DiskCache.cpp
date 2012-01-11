@@ -149,11 +149,26 @@ void JobThread::copy()
 	    {
 		if(_copyList->at(_copyCacheNum)[_copyFileNum].size())
 		{
-		    taskpair = _copyList->at(_copyCacheNum)[_copyFileNum].front();
-		    _copyList->at(_copyCacheNum)[_copyFileNum].pop_front();
-		    found = true;
-		    _copyFileNum++;
-		    break;
+		    for(std::list<std::pair<sph_task*, CopyJobInfo*> >::iterator it = _copyList->at(_copyCacheNum)[_copyFileNum].begin(); it != _copyList->at(_copyCacheNum)[_copyFileNum].end(); it++)
+		    {
+			if(it->second->valid)
+			{
+			    taskpair = *it;
+			    _copyList->at(_copyCacheNum)[_copyFileNum].erase(it);
+			    found = true;
+			    break;
+			}
+		    }
+		    if(found)
+		    {
+			_copyFileNum++;
+			break;
+		    }
+		    //taskpair = _copyList->at(_copyCacheNum)[_copyFileNum].front();
+		    //_copyList->at(_copyCacheNum)[_copyFileNum].pop_front();
+		    //found = true;
+		    //_copyFileNum++;
+		    //break;
 		}
 	    }
 	    if(found)
@@ -177,11 +192,26 @@ void JobThread::copy()
 	    {
 		if(_copyList->at(_copyCacheNum)[_copyFileNum].size())
 		{
-		    taskpair = _copyList->at(_copyCacheNum)[_copyFileNum].front();
-		    _copyList->at(_copyCacheNum)[_copyFileNum].pop_front();
-		    found = true;
-		    _copyFileNum++;
-		    break;
+		    for(std::list<std::pair<sph_task*, CopyJobInfo*> >::iterator it = _copyList->at(_copyCacheNum)[_copyFileNum].begin(); it != _copyList->at(_copyCacheNum)[_copyFileNum].end(); it++)
+		    {
+			if(it->second->valid)
+			{
+			    taskpair = *it;
+			    _copyList->at(_copyCacheNum)[_copyFileNum].erase(it);
+			    found = true;
+			    break;
+			}
+		    }
+		    if(found)
+		    {
+			_copyFileNum++;
+			break;
+		    }
+		    //taskpair = _copyList->at(_copyCacheNum)[_copyFileNum].front();
+		    //_copyList->at(_copyCacheNum)[_copyFileNum].pop_front();
+		    //found = true;
+		    //_copyFileNum++;
+		    //break;
 		}
 	    }
 	}
