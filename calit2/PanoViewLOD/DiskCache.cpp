@@ -20,6 +20,7 @@ OpenThreads::Mutex mapLock;
 OpenThreads::Mutex pageCountLock;
 OpenThreads::Mutex cleanupLock;
 OpenThreads::Mutex loadsLock;
+OpenThreads::Mutex ejectLock;
 
 JobThread::JobThread(int id, JobType jt, std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * readlist, std::vector<std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > > * copylist, std::list<JobThread*> * freeThreadList, std::map<int, std::map<int,DiskCacheEntry*> > * cacheMap, std::map<sph_cache*,int> * cacheIndexMap) : _jt(jt), _readList(readlist), _copyList(copylist), _freeThreadList(freeThreadList), _cacheMap(cacheMap), _cacheIndexMap(cacheIndexMap)
 {
@@ -610,7 +611,9 @@ void DiskCache::add_task(sph_task * task)
     while(_numPages >= _pages && tries > 0)
     {
 	pageCountLock.unlock();
+	ejectLock.lock();
 	eject();
+	ejectLock.unlock();
 	tries--;
 	pageCountLock.lock();
     }
