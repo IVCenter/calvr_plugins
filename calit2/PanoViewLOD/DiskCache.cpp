@@ -747,6 +747,7 @@ void DiskCache::eject()
 	mapLock.unlock();
 	return;
     }
+    _cacheMap[f][i]->timestamp = INT_MAX;
     mapLock.unlock();
 
 #ifdef DC_PRINT_DEBUG
@@ -761,11 +762,6 @@ void DiskCache::eject()
 	std::cerr << "Already Ejecting f: " << f << " i: " << i << " t: " << mint << std::endl;
 #endif
 	_cacheMap[f][i]->cji->lock.unlock();
-
-	// update timestamp so it won't be selected again
-	mapLock.lock();
-	_cacheMap[f][i]->timestamp = INT_MAX;
-	mapLock.unlock();
 
 	return;
     }
