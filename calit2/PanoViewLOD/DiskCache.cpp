@@ -160,7 +160,7 @@ void JobThread::copy()
 		{
 		    for(std::list<std::pair<sph_task*, CopyJobInfo*> >::iterator it = _copyList->at(_copyCacheNum)[_copyFileNum].begin(); it != _copyList->at(_copyCacheNum)[_copyFileNum].end(); it++)
 		    {
-			if(it->second->valid)
+			if(it->second->valid || !it->second->size)
 			{
 			    taskpair = *it;
 			    _copyList->at(_copyCacheNum)[_copyFileNum].erase(it);
@@ -203,7 +203,7 @@ void JobThread::copy()
 		{
 		    for(std::list<std::pair<sph_task*, CopyJobInfo*> >::iterator it = _copyList->at(_copyCacheNum)[_copyFileNum].begin(); it != _copyList->at(_copyCacheNum)[_copyFileNum].end(); it++)
 		    {
-			if(it->second->valid)
+			if(it->second->valid || !it->second->size)
 			{
 			    taskpair = *it;
 			    _copyList->at(_copyCacheNum)[_copyFileNum].erase(it);
