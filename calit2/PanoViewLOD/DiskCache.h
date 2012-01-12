@@ -82,7 +82,6 @@ class DiskCache
 
         void setLeftFiles(int prev, int curr, int next);
         void setRightFiles(int prev, int curr, int next);
-        void purge(int f, int i);
         void kill_tasks(int file);
 
     protected:

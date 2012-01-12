@@ -246,13 +246,13 @@ bool sph_task::make_texture(GLuint o, uint32 w, uint32 h, uint16 c, uint16 b)
 	gettimeofday(&uend,NULL);
 
 	glBindTexture(GL_TEXTURE_2D, o);
-	gettimeofday(&tstart,NULL);
-	glTexImage2D (GL_TEXTURE_2D, 0, internal_form(c, b), w, h, 1,
+	/*glTexImage2D (GL_TEXTURE_2D, 0, internal_form(c, b), w, h, 1,
 	  external_form(c, b),
-	  external_type(c, b), 0);
-	/*glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, w, h,
+	  external_type(c, b), 0);*/
+	gettimeofday(&tstart,NULL);
+	glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, w, h,
 		external_form(c, b),
-		external_type(c, b), 0);*/
+		external_type(c, b), 0);
 	gettimeofday(&tend,NULL);
 
 	std::cerr << "Size: " << size <<  " Unmap time: " << (uend.tv_sec - ustart.tv_sec) + ((uend.tv_usec - ustart.tv_usec)/ 1000000.0) << " Texture time: " << (tend.tv_sec - tstart.tv_sec) + ((tend.tv_usec - tstart.tv_usec)/ 1000000.0) << std::endl;
@@ -649,9 +649,9 @@ GLuint sph_cache::get_page(int f, int i, int t, int& n)
 	    _diskCache->add_task(new sph_task(f, i, pbos.deq(), pagelen(f), this, t));
             waits.insert(sph_page(f, i, filler), t);
             pages.insert(sph_page(f, i, o),      t);            
-            clear(o);
-	    //initTexture(o, files[f].w, files[f].h,
-	    //		    files[f].c, files[f].b);
+            //clear(o);
+	    initTexture(o, files[f].w, files[f].h,
+	    		    files[f].c, files[f].b);
         }
     }
 
