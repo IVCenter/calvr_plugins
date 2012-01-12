@@ -91,6 +91,12 @@ void JobThread::read()
 	    }
 	    _readIndex++;
 	}
+	if(task)
+	{
+	    cji->lock.lock();
+	    cji->refs++;
+	    cji->lock.unlock();
+	}
     }
     listLock.unlock();
 
@@ -121,6 +127,9 @@ void JobThread::read()
 	{
 	    delete task;
 	}
+	cji->lock.lock();
+	cji->refs--;
+	cji->lock.unlock();
     }
     else
     {
@@ -279,8 +288,8 @@ void JobThread::copy()
 	{
 	    taskpair.first->valid = false;
 	}
-	taskpair.second->lock.unlock();
 	taskpair.first->cache->loads.insert(*(taskpair.first));
+	taskpair.second->lock.unlock();
 #ifdef DC_PRINT_DEBUG
 	std::cerr << "Copy thread: " << _id << " finished task f: " << taskpair.first->f << " i: " << taskpair.first->i << std::endl;
 #endif
@@ -312,16 +321,32 @@ void JobThread::readData(sph_task * task, CopyJobInfo * cji, TIFF * T, uint32 w,
     if (W == w && H == h && B == b && C == c)
     {
 
+	cji->lock.lock();
+	cji->valid = 0;
+	cji->refs++;
+
+	// job has already been ejected
+	if(!cji->size)
+	{
+	    cji->lock.unlock();
+
+	    listLock.lock();
+
+	    _copyList->at((*_cacheIndexMap)[task->cache])[task->f].push_back(std::pair<sph_task*,CopyJobInfo*>(task,cji));
+
+	    listLock.unlock();
+	    
+	    return;
+	}
+
 	unsigned int linesize = TIFFScanlineSize(T);
 	unsigned int totalData = W*H*4;
 	unsigned char * data = new unsigned char[totalData];
 	unsigned int currentValid = 0;
 
-	cji->lock.lock();
 	cji->data = data;
 	cji->size = totalData;
-	cji->valid = 0;
-	cji->refs++;
+	
 	cji->lock.unlock();
 
 	listLock.lock();
@@ -537,7 +562,7 @@ void DiskCache::add_task(sph_task * task)
 
 	_numPages++;
 
-	while(_numPages >= _pages)
+	if(_numPages >= _pages)
 	{
 	    pageCountLock.unlock();
 	    eject();
@@ -565,6 +590,122 @@ void DiskCache::add_task(sph_task * task)
 
 	listLock.unlock();
     }
+}
+
+void DiskCache::purge(int f, int i)
+{
+    CopyJobInfo * cji = NULL;
+
+    mapLock.lock();
+
+    if(_cacheMap.find(f) == _cacheMap.end() || _cacheMap[f].find(i) == _cacheMap[f].end() || !_cacheMap[f][i]->cji->size)
+    {
+	mapLock.unlock();
+	return;
+    }
+
+    //make sure it can not be ejected
+    _cacheMap[f][i]->timestamp = INT_MAX;
+    cji = _cacheMap[f][i]->cji;
+
+    mapLock.unlock();
+
+    listLock.lock();
+
+    // invalidate a finished job that has not yet had its texture loaded
+    std::queue<sph_task> tempq;
+
+    for(std::map<sph_cache*,int>::iterator it = _cacheIndexMap.begin(); it != _cacheIndexMap.end(); it++)
+    {
+	while(!it->first->loads.empty())
+	{
+	    tempq.push(it->first->loads.remove());
+	    if(tempq.front().f == f || tempq.front().i == i)
+	    {
+		tempq.front().valid = false;
+	    }
+	}
+
+	while(tempq.size())
+	{
+	    it->first->loads.insert(tempq.front());
+	    tempq.pop();
+	}
+    }
+
+    cji->lock.lock();
+    cji->refs--;
+    cji->lock.unlock();
+
+    for(int j = 0; j < _copyList.size(); j++)
+    {
+        for(std::list<std::pair<sph_task*, CopyJobInfo*> >::iterator it = _copyList[j][f].begin(); it != _copyList[j][f].end(); it++)
+        {
+	    if(it->first->i == i)
+	    {
+		it->first->valid = false;
+		it->second->lock.lock();
+		it->second->refs--;
+		it->second->lock.unlock();
+		it->first->cache->loads.insert(*(it->first));
+		delete it->first;
+		_copyList[j][f].erase(it);
+		break;
+	    }
+        }
+    }
+
+
+    for(std::list<std::pair<sph_task*, CopyJobInfo*> >::iterator it = _readList[f].begin(); it != _readList[f].end(); it++)
+    {
+	if(it->first->i == i)
+	{
+	    it->first->valid = false;
+
+	    it->second->lock.lock();
+	    it->second->refs--;
+	    it->second->lock.unlock();
+	    it->first->cache->loads.insert(*(it->first));
+	    delete it->first;
+	    /*if(!it->second->refs)
+	    {
+		_cacheMap[it->first->f].erase(it->first->i);
+		it->second->lock.unlock();
+		delete it->second;
+		delete it->first;
+	    }
+	    else
+	    {
+		it->second->size = 0;
+		_cleanupList.push_back(std::pair<int,int>(it->first->f,it->first->i));
+		it->second->lock.unlock();
+	    }*/
+	    _readList[f].erase(it);
+	    break;
+	}
+    }
+
+    cji->lock.lock();
+
+    if(!cji->refs)
+    {
+	delete _cacheMap[f][i];
+	_cacheMap[f].erase(i);
+	if(cji->data)
+	{
+	    delete[] cji->data;
+	}
+	cji->lock.unlock();
+	delete cji;
+    }
+    else
+    {
+	cji->size = 0;
+	_cleanupList.push_back(std::pair<int,int>(f,i));
+	cji->lock.unlock();
+    }
+
+    listLock.unlock();
 }
 
 void DiskCache::kill_tasks(int file)
@@ -605,6 +746,17 @@ void DiskCache::kill_tasks(int file)
             it->first->cache->loads.insert(*(it->first));
 	    it->second->lock.lock();
 	    it->second->refs--;
+	    if(it->second->refs == 1)
+	    {
+		delete _cacheMap[it->first->f][it->first->i];
+		_cacheMap[it->first->f].erase(it->first->i);
+		if(it->second->data)
+		{
+		    delete[] it->second->data;
+		}
+		it->second->lock.unlock();
+		delete it->second;
+	    }
 	    it->second->lock.unlock();
             delete it->first;
         }
@@ -619,12 +771,13 @@ void DiskCache::kill_tasks(int file)
 
 	it->second->lock.lock();
 	it->second->refs--;
-	if(!it->second->refs)
+	delete it->first;
+	if(it->second->refs == 1)
 	{
+	    delete _cacheMap[it->first->f][it->first->i];
 	    _cacheMap[it->first->f].erase(it->first->i);
 	    it->second->lock.unlock();
 	    delete it->second;
-	    delete it->first;
 	}
 	else
 	{
@@ -681,10 +834,11 @@ void DiskCache::eject()
     std::cerr << "Eject f: " << f << " i: " << i << " t: " << mint << std::endl;
 #endif
 
-    delete[] _cacheMap[f][i]->cji->data;
+    purge(f,i);
+    /*delete[] _cacheMap[f][i]->cji->data;
     delete _cacheMap[f][i]->cji;
     delete _cacheMap[f][i];
-    _cacheMap[f].erase(i);
+    _cacheMap[f].erase(i);*/
 
     mapLock.unlock();
 
@@ -733,15 +887,19 @@ void DiskCache::cleanup()
 	if(!_cacheMap[it->first][it->second]->cji->refs)
 	{
 	    _cacheMap[it->first][it->second]->cji->lock.unlock();
+	    if(_cacheMap[it->first][it->second]->cji->data)
+	    {
+		delete[] _cacheMap[it->first][it->second]->cji->data;
+	    }
 	    delete _cacheMap[it->first][it->second]->cji;
 	    delete _cacheMap[it->first][it->second];
 	    _cacheMap[it->first].erase(it->second);
-        it = _cleanupList.erase(it);
+	    it = _cleanupList.erase(it);
 	}
 	else
 	{
 	    _cacheMap[it->first][it->second]->cji->lock.unlock();
-        it++;
+	    it++;
 	}
     }
 
