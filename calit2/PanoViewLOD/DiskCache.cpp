@@ -225,9 +225,15 @@ void JobThread::copy()
     int cjobsize = 0;
     for(int i = 0; i < _copyList->size(); i++)
     {
-	cjobsize += _copyList->at(i).size();
+	for(int j = 0; j < _copyList->at(i).size(); j++)
+	{
+	    cjobsize += _copyList->at(i)[j].size();
+	}
     }
-    std::cerr << "Copy Jobs left: " << cjobsize << std::endl;
+    if(cjobsize)
+    {
+	std::cerr << "Copy Jobs left: " << cjobsize << std::endl;
+    }
 #endif
 
 
