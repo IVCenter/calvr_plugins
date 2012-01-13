@@ -27,6 +27,8 @@
 #include <OpenThreads/ScopedLock>
 #include <config/ConfigManager.h>
 
+#define CACHE_PRINT_DEBUG
+
 DiskCache * sph_cache::_diskCache = NULL;
 
 static bool exists(const std::string& name)
@@ -140,7 +142,7 @@ static void initTexture(GLuint o, uint32 w, uint32 h, uint16 c, uint16 b)
     //glBindTexture  (GL_TEXTURE_2D, 0);
 }
 
-
+// AP - Function that I was using to test pbo unmap timing with different options, should never be called in production.  Also it exits at the end.
 void pbotiming(GLuint pbo)
 {
     int size = 5000000;
@@ -240,22 +242,34 @@ bool sph_task::make_texture(GLuint o, uint32 w, uint32 h, uint16 c, uint16 b)
 {
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, u);
     {
+#ifdef CACHE_PRINT_DEBUG
 	struct timeval ustart, uend, tstart, tend;
 	gettimeofday(&ustart,NULL);
+#endif
+
 	glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+
+#ifdef CACHE_PRINT_DEBUG
 	gettimeofday(&uend,NULL);
+#endif
 
 	glBindTexture(GL_TEXTURE_2D, o);
 	/*glTexImage2D (GL_TEXTURE_2D, 0, internal_form(c, b), w, h, 1,
 	  external_form(c, b),
 	  external_type(c, b), 0);*/
+
+#ifdef CACHE_PRINT_DEBUG
 	gettimeofday(&tstart,NULL);
+#endif
+
 	glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, w, h,
 		external_form(c, b),
 		external_type(c, b), 0);
-	gettimeofday(&tend,NULL);
 
+#ifdef CACHE_PRINT_DEBUG
+	gettimeofday(&tend,NULL);
 	std::cerr << "Size: " << size <<  " Unmap time: " << (uend.tv_sec - ustart.tv_sec) + ((uend.tv_usec - ustart.tv_usec)/ 1000000.0) << " Texture time: " << (tend.tv_sec - tstart.tv_sec) + ((tend.tv_usec - tstart.tv_usec)/ 1000000.0) << std::endl;
+#endif
     }
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
     return true;
@@ -503,6 +517,7 @@ sph_cache::sph_cache(int n) : pages(n), waits(n), needs(32), loads(100)
 	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_initMutex);
 	if(!_diskCache)
 	{
+	    std::cerr << "Warning: Creating DiskCache in sph_cache.  This may cause the DiskCache threads to bind to a single core." << std::endl;
 	    _diskCache = new DiskCache(cvr::ConfigManager::getInt("value","Plugin.PanoViewLOD.DiskCacheSize",256));
 	}
     }
@@ -711,7 +726,9 @@ void sph_cache::update(int t)
 	    float time = (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec)/1000000.0);
 	    if(time > _maxTime)
 	    {
+#ifdef CACHE_PRINT_DEBUG
 		std::cerr << "Timeout break: Textures loaded: " << c+1 << std::endl;
+#endif
 		break;
 	    }
         }

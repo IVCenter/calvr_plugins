@@ -448,6 +448,7 @@ DiskCache::~DiskCache()
 	{
 	    _readThreads[i]->quit();
 	    _readThreads[i]->join();
+	    delete _readThreads[i];
 	}
     }
 
@@ -457,10 +458,41 @@ DiskCache::~DiskCache()
 	{
 	    _copyThreads[i]->quit();
 	    _copyThreads[i]->join();
+	    delete _copyThreads[i];
 	}
     }
 
-    //TODO: free buffers
+    for(int i = 0; i < _readList.size(); i++)
+    {
+	for(std::list<std::pair<sph_task*, CopyJobInfo*> >::iterator it = _readList[i].begin(); it != _readList[i].end(); it++)
+	{
+	    delete it->first;
+	}
+    }
+
+    for(int i = 0; i < _copyList.size(); i++)
+    {
+	for(int j = 0; j < _copyList[i].size(); j++)
+	{
+	    for(std::list<std::pair<sph_task*, CopyJobInfo*> >::iterator it = _copyList[i][j].begin(); it != _copyList[i][j].end(); it++)
+	    {
+		delete it->first;
+	    }
+	}
+    }
+
+    for(std::map<int, std::map<int,DiskCacheEntry*> >::iterator it = _cacheMap.begin(); it != _cacheMap.end(); it++)
+    {
+	for(std::map<int,DiskCacheEntry*>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++)
+	{
+	    if(it2->second->cji->data)
+	    {
+		delete[] it2->second->cji->data;
+	    }
+	    delete it2->second->cji;
+	    delete it2->second;
+	}
+    }
 }
 
 int DiskCache::add_file(const std::string& name)
@@ -576,9 +608,6 @@ void DiskCache::add_task(sph_task * task)
     }
     else
     {
-#ifdef DC_PRINT_DEBUG
-	std::cerr << "DiskCache Hit f: " << task->f << " i: " << task->i << " t: " << task->timestamp << std::endl;
-#endif
 	_cacheMap[task->f][task->i]->timestamp = task->timestamp;
 	CopyJobInfo * cji = _cacheMap[task->f][task->i]->cji;
 
@@ -590,6 +619,10 @@ void DiskCache::add_task(sph_task * task)
 
 	    mapLock.unlock();
 
+#ifdef DC_PRINT_DEBUG
+	    std::cerr << "DiskCache Hit f: " << task->f << " i: " << task->i << " t: " << task->timestamp << std::endl;
+#endif
+
 	    listLock.lock();
 
 	    _copyList[_cacheIndexMap[task->cache]][task->f].push_back(std::pair<sph_task*, CopyJobInfo*>(task,cji));
@@ -600,7 +633,16 @@ void DiskCache::add_task(sph_task * task)
 	{
 	    cji->lock.unlock();
 	    mapLock.unlock();
-	    std::cerr << "Cache Hit on deleting entry." << std::endl;
+
+#ifdef DC_PRINT_DEBUG
+	    std::cerr << "DiskCache Hit on deleting entry f: " << task->f << " i: " << task->i << std::endl;
+#endif
+
+	    task->valid = false;
+	    loadsLock.lock();
+	    task->cache->loads.insert(*task);
+	    loadsLock.unlock();
+	    delete task;
 	}
     }
 
@@ -686,6 +728,8 @@ void DiskCache::kill_tasks(int file)
 	cleanupLock.lock();
 	_cleanupList.push_back(std::pair<int,int>(it->first->f,it->first->i));
 	cleanupLock.unlock();
+
+	delete it->first;
 
 	pageCountLock.lock();
 	_numPages--;
