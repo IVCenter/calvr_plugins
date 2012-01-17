@@ -308,8 +308,10 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	    _updateLock[context] = new OpenThreads::Mutex();
 	}
 
+	int time = 1;
 	if(_modelMap[context])
 	{
+	    time = _modelMap[context]->get_time();
 	    delete _modelMap[context];
 	}
 	GLint buffer,ebuffer;
@@ -317,6 +319,8 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&ebuffer);
 
 	_modelMap[context] = new sph_model(*_cacheMap[context],_vertData,_fragData,_mesh,_depth,_size);
+	// Set start time to last model's time since timestamps are used by the disk cache
+	_modelMap[context]->set_time(time);
 
 	glBindBuffer(GL_ARRAY_BUFFER, buffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebuffer);

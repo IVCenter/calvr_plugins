@@ -28,6 +28,10 @@ public:
    ~sph_model();
    
     int  tick() { return time++; }
+
+    int  get_time() { return time; }
+    void set_time(int t) { time = t; }
+
     void prep(const double *, const double *, int, int);
     void draw(const double *, const double *, const int *, int,
                                               const int *, int);

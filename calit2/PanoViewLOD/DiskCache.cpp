@@ -608,12 +608,12 @@ void DiskCache::add_task(sph_task * task)
     }
     else
     {
-	_cacheMap[task->f][task->i]->timestamp = task->timestamp;
 	CopyJobInfo * cji = _cacheMap[task->f][task->i]->cji;
 
 	cji->lock.lock();
 	if(!cji->size == 0)
 	{
+	    _cacheMap[task->f][task->i]->timestamp = task->timestamp;
 	    cji->refs++;
 	    cji->lock.unlock();
 
