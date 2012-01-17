@@ -888,6 +888,17 @@ void DiskCache::cleanup()
 
     for(std::list<std::pair<int,int> >::iterator it = _cleanupList.begin(); it != _cleanupList.end(); )
     {
+#ifdef DC_PRINT_DEBUG
+        std::cerr << "Cleanup f: " << it->first << " i: " << it->second << std::endl;
+#endif
+	if(_cacheMap.find(it->first) == _cacheMap.end() || _cacheMap[it->first].find(it->second) == _cacheMap[it->first].end())
+	{
+#ifdef DC_PRINT_DEBUG
+	    std::cerr << "Double Cleanup f: " << it->first << " i: " << it->second << std::endl;
+#endif
+            it = _cleanupList.erase(it);
+	    continue;
+	}
 	_cacheMap[it->first][it->second]->cji->lock.lock();
 	if(_cacheMap[it->first][it->second]->cji->refs <= 1)
 	{
