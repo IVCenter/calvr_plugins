@@ -536,6 +536,17 @@ int DiskCache::add_file(const std::string& name)
 
 void DiskCache::add_task(sph_task * task)
 {
+
+    
+    /*int curPages = 0;
+    mapLock.lock();
+    for(std::map<int, std::map<int,DiskCacheEntry*> >::iterator it = _cacheMap.begin(); it != _cacheMap.end(); it++)
+    {
+	curPages += it->second.size();
+    }
+    mapLock.unlock();
+    std::cerr << "Actual Current Pages: " << curPages << std::endl;*/
+
     cleanup();
 
     if(task->f != _currentFileL && task->f != _currentFileR)

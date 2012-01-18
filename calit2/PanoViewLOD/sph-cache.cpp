@@ -713,6 +713,11 @@ void sph_cache::update(int t)
 		{
 		    pages.remove(page);
 		    task.dump_texture();
+		    if(page.o)
+		    {
+			glDeleteTextures(1,&page.o);
+			page.o = 0;
+		    }
 		}
             }
             else
