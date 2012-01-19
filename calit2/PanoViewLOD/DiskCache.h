@@ -100,7 +100,7 @@ class DiskCache
         int _currentFileR;
         int _nextFileR;
 
-        void eject();
+        bool eject();
 
         OpenThreads::Mutex _fileAddLock;
         std::map<std::string, int> _fileIDMap;

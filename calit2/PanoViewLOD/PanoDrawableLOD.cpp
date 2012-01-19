@@ -31,6 +31,19 @@ std::map<int,sph_model*> PanoDrawableLOD::_modelMap;
 
 using namespace cvr;
 
+void printGLState()
+{
+    std::cerr << "Draw State:" << std::endl;
+    std::cerr << "ColorArray: " << glIsEnabled(GL_COLOR_ARRAY) << std::endl;
+    std::cerr << "EdgeFlag: " << glIsEnabled(GL_EDGE_FLAG_ARRAY) << std::endl;
+    std::cerr << "Fog: " << glIsEnabled(GL_FOG_COORD_ARRAY) << std::endl;
+    std::cerr << "Index: " << glIsEnabled(GL_INDEX_ARRAY) << std::endl;
+    std::cerr << "Normal: " << glIsEnabled(GL_NORMAL_ARRAY) << std::endl;
+    std::cerr << "Sec Color: " << glIsEnabled(GL_SECONDARY_COLOR_ARRAY) << std::endl;
+    std::cerr << "Texture: " << glIsEnabled(GL_TEXTURE_COORD_ARRAY) << std::endl;
+    std::cerr << "Vertex: " << glIsEnabled(GL_VERTEX_ARRAY) << std::endl;
+}
+
 char * loadShaderFile(std::string file)
 {
     struct stat st;
@@ -437,6 +450,8 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
     _modelMap[context]->set_fade(fade);
     glUseProgram(0);
     _modelMap[context]->prep(ri.getState()->getProjectionMatrix().ptr(),modelview.ptr(), (int)ri.getState()->getCurrentViewport()->width(), (int)ri.getState()->getCurrentViewport()->height());
+
+    printGLState();
 
     GLint buffer,ebuffer;
     glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&buffer);

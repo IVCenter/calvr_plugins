@@ -314,7 +314,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 	    if(!_sharedValuator || _spinCB->getValue())
 	    {
 		float val = vie->getValue();
-		if(fabs(val) < 0.2)
+		if(fabs(val) < 0.15)
 		{
 		    return true;
 		}
@@ -326,6 +326,15 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 		else if(val < -1.0)
 		{
 		    val = -1.0;
+		}
+
+		if(val < 0)
+		{
+		    val = -(val * val);
+		}
+		else
+		{
+		    val *= val;
 		}
 
 		osg::Matrix rot;

@@ -665,8 +665,15 @@ void DiskCache::add_task(sph_task * task)
     {
 	pageCountLock.unlock();
 	ejectLock.lock();
-	eject();
+	bool result = eject();
 	ejectLock.unlock();
+
+	// if you could not eject a page, stop trying
+	if(!result)
+	{
+	    break;
+	}
+
 	tries--;
 	pageCountLock.lock();
     }
@@ -731,20 +738,35 @@ void DiskCache::kill_tasks(int file)
 	it->first->cache->loads.insert(*(it->first));
 	loadsLock.unlock();
 
+	bool ejecting;
 	it->second->lock.lock();
 	it->second->refs--;
-	it->second->size = 0;
+	if(it->second->size)
+	{
+	    ejecting = false;
+	    it->second->size = 0;
+	}
+	else
+	{
+	    ejecting = true;
+	}
 	it->second->lock.unlock();
 
-	cleanupLock.lock();
-	_cleanupList.push_back(std::pair<int,int>(it->first->f,it->first->i));
-	cleanupLock.unlock();
+	if(!ejecting)
+	{
+	    cleanupLock.lock();
+	    _cleanupList.push_back(std::pair<int,int>(it->first->f,it->first->i));
+	    cleanupLock.unlock();
+	}
 
 	delete it->first;
 
-	pageCountLock.lock();
-	_numPages--;
-	pageCountLock.unlock();
+	if(!ejecting)
+	{
+	    pageCountLock.lock();
+	    _numPages--;
+	    pageCountLock.unlock();
+	}
 	/*if(!it->second->refs)
 	{
 	    _cacheMap[it->first->f].erase(it->first->i);
@@ -765,7 +787,7 @@ void DiskCache::kill_tasks(int file)
     listLock.unlock();
 }
 
-void DiskCache::eject()
+bool DiskCache::eject()
 {
 #ifdef DC_PRINT_DEBUG
     std::cerr << "DiskCache::eject()" << std::endl;
@@ -800,7 +822,7 @@ void DiskCache::eject()
     {
 	std::cerr << "No Min page found!?!?..." << std::endl;
 	mapLock.unlock();
-	return;
+	return false;
     }
     _cacheMap[f][i]->timestamp = INT_MAX;
     mapLock.unlock();
@@ -818,7 +840,7 @@ void DiskCache::eject()
 #endif
 	_cacheMap[f][i]->cji->lock.unlock();
 
-	return;
+	return false;
     }
     
     _cacheMap[f][i]->cji->size = 0;
@@ -860,6 +882,8 @@ void DiskCache::eject()
     pageCountLock.lock();
     _numPages--;
     pageCountLock.unlock();
+
+    return true;
 }
 
 void DiskCache::setLeftFiles(int prev, int curr, int next)
