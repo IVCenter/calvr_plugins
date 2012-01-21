@@ -31,6 +31,106 @@ std::map<int,sph_model*> PanoDrawableLOD::_modelMap;
 
 using namespace cvr;
 
+struct MyGLClientState
+{
+    GLint abuffer;
+    GLint ebuffer;
+    GLboolean carray;
+    GLboolean efarray;
+    GLboolean farray;
+    GLboolean iarray;
+    GLboolean narray;
+    GLboolean scarray;
+    GLboolean tarray;
+    GLboolean varray;
+};
+
+void pushClientState(MyGLClientState & state)
+{
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&state.abuffer);
+    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&state.ebuffer);
+    state.carray = glIsEnabled(GL_COLOR_ARRAY);
+    state.efarray = glIsEnabled(GL_EDGE_FLAG_ARRAY);
+    state.farray = glIsEnabled(GL_FOG_COORD_ARRAY);
+    state.iarray = glIsEnabled(GL_INDEX_ARRAY);
+    state.narray = glIsEnabled(GL_NORMAL_ARRAY);
+    state.scarray = glIsEnabled(GL_SECONDARY_COLOR_ARRAY);
+    state.tarray = glIsEnabled(GL_TEXTURE_COORD_ARRAY);
+    state.varray = glIsEnabled(GL_VERTEX_ARRAY);
+
+    if(state.carray)
+    {
+	glDisableClientState(GL_COLOR_ARRAY);
+    }
+    if(state.efarray)
+    {
+	glDisableClientState(GL_EDGE_FLAG_ARRAY);
+    }
+    if(state.farray)
+    {
+	glDisableClientState(GL_FOG_COORD_ARRAY);
+    }
+    if(state.iarray)
+    {
+	glDisableClientState(GL_INDEX_ARRAY);
+    }
+    if(state.narray)
+    {
+	glDisableClientState(GL_NORMAL_ARRAY);
+    }
+    if(state.scarray)
+    {
+	glDisableClientState(GL_SECONDARY_COLOR_ARRAY);
+    }
+    if(state.tarray)
+    {
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    }
+    if(state.varray)
+    {
+	glDisableClientState(GL_VERTEX_ARRAY);
+    }
+}
+
+void popClientState(MyGLClientState & state)
+{
+    if(state.carray)
+    {
+	glEnableClientState(GL_COLOR_ARRAY);
+    }
+    if(state.efarray)
+    {
+	glEnableClientState(GL_EDGE_FLAG_ARRAY);
+    }
+    if(state.farray)
+    {
+	glEnableClientState(GL_FOG_COORD_ARRAY);
+    }
+    if(state.iarray)
+    {
+	glEnableClientState(GL_INDEX_ARRAY);
+    }
+    if(state.narray)
+    {
+	glEnableClientState(GL_NORMAL_ARRAY);
+    }
+    if(state.scarray)
+    {
+	glEnableClientState(GL_SECONDARY_COLOR_ARRAY);
+    }
+    if(state.tarray)
+    {
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    }
+    if(state.varray)
+    {
+	glEnableClientState(GL_VERTEX_ARRAY);
+    }
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, state.ebuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, state.abuffer);
+}
+
 void printGLState()
 {
     std::cerr << "Draw State:" << std::endl;
@@ -42,6 +142,18 @@ void printGLState()
     std::cerr << "Sec Color: " << glIsEnabled(GL_SECONDARY_COLOR_ARRAY) << std::endl;
     std::cerr << "Texture: " << glIsEnabled(GL_TEXTURE_COORD_ARRAY) << std::endl;
     std::cerr << "Vertex: " << glIsEnabled(GL_VERTEX_ARRAY) << std::endl;
+}
+
+void clearGLClientState()
+{
+    glDisableClientState(GL_COLOR_ARRAY);
+    glDisableClientState(GL_EDGE_FLAG_ARRAY);
+    glDisableClientState(GL_FOG_COORD_ARRAY);
+    glDisableClientState(GL_INDEX_ARRAY);
+    glDisableClientState(GL_NORMAL_ARRAY);
+    glDisableClientState(GL_SECONDARY_COLOR_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    glDisableClientState(GL_VERTEX_ARRAY);
 }
 
 char * loadShaderFile(std::string file)
@@ -451,21 +563,27 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
     glUseProgram(0);
     _modelMap[context]->prep(ri.getState()->getProjectionMatrix().ptr(),modelview.ptr(), (int)ri.getState()->getCurrentViewport()->width(), (int)ri.getState()->getCurrentViewport()->height());
 
-    printGLState();
+    //printGLState();
+    MyGLClientState glstate;
+    pushClientState(glstate);
 
-    GLint buffer,ebuffer;
-    glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&buffer);
-    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&ebuffer);
-    bool vertexOn = glIsEnabled(GL_VERTEX_ARRAY);
+    //GLint buffer,ebuffer;
+    //glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&buffer);
+    //glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&ebuffer);
+    //bool vertexOn = glIsEnabled(GL_VERTEX_ARRAY);
+    //glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
+    //clearGLClientState();
 
     _modelMap[context]->draw(ri.getState()->getProjectionMatrix().ptr(), modelview.ptr(), fileID, fc, pv, pc);
 
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebuffer);
-    if(vertexOn)
+    popClientState(glstate);
+    //glPopClientAttrib();
+    //glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebuffer);
+    /*if(vertexOn)
     {
 	glEnableClientState(GL_VERTEX_ARRAY);
-    }
+    }*/
 
     glPopAttrib();
 }
