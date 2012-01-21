@@ -134,14 +134,14 @@ void popClientState(MyGLClientState & state)
 void printGLState()
 {
     std::cerr << "Draw State:" << std::endl;
-    std::cerr << "ColorArray: " << glIsEnabled(GL_COLOR_ARRAY) << std::endl;
-    std::cerr << "EdgeFlag: " << glIsEnabled(GL_EDGE_FLAG_ARRAY) << std::endl;
-    std::cerr << "Fog: " << glIsEnabled(GL_FOG_COORD_ARRAY) << std::endl;
-    std::cerr << "Index: " << glIsEnabled(GL_INDEX_ARRAY) << std::endl;
-    std::cerr << "Normal: " << glIsEnabled(GL_NORMAL_ARRAY) << std::endl;
-    std::cerr << "Sec Color: " << glIsEnabled(GL_SECONDARY_COLOR_ARRAY) << std::endl;
-    std::cerr << "Texture: " << glIsEnabled(GL_TEXTURE_COORD_ARRAY) << std::endl;
-    std::cerr << "Vertex: " << glIsEnabled(GL_VERTEX_ARRAY) << std::endl;
+    std::cerr << "ColorArray: " << (int)glIsEnabled(GL_COLOR_ARRAY) << std::endl;
+    std::cerr << "EdgeFlag: " << (int)glIsEnabled(GL_EDGE_FLAG_ARRAY) << std::endl;
+    std::cerr << "Fog: " << (int)glIsEnabled(GL_FOG_COORD_ARRAY) << std::endl;
+    std::cerr << "Index: " << (int)glIsEnabled(GL_INDEX_ARRAY) << std::endl;
+    std::cerr << "Normal: " << (int)glIsEnabled(GL_NORMAL_ARRAY) << std::endl;
+    std::cerr << "Sec Color: " << (int)glIsEnabled(GL_SECONDARY_COLOR_ARRAY) << std::endl;
+    std::cerr << "Texture: " << (int)glIsEnabled(GL_TEXTURE_COORD_ARRAY) << std::endl;
+    std::cerr << "Vertex: " << (int)glIsEnabled(GL_VERTEX_ARRAY) << std::endl;
 }
 
 void clearGLClientState()
