@@ -24,6 +24,8 @@ class ModelLoader : public cvr::MenuCallback, public cvr::CVRPlugin, public cvr:
             std::string path;
             int mask;
             int lights;
+            bool backfaceCulling;
+            bool showBound;
         };
 
 	bool init();
