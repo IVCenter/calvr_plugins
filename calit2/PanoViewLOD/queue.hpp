@@ -37,6 +37,7 @@ public:
 
     void insert(T);
     T    remove( );
+    T    peek( );
     bool empty ( );
     bool full  ( );
     
@@ -90,6 +91,19 @@ template <typename T> T queue<T>::remove()
     }
     SDL_mutexV(data_mutex);
     SDL_SemPost(free_slots);
+    
+    return d;
+}
+
+template <typename T> T queue<T>::peek()
+{
+    T d;
+    
+    SDL_mutexP(data_mutex);
+    {
+        d   = *(S.begin());
+    }
+    SDL_mutexV(data_mutex);
     
     return d;
 }

@@ -14,6 +14,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include "sph-cache.hpp"
+
+//#define PRINT_TIMING
+
+#include <sys/time.h>
+
 std::map<int,std::vector<int> > PanoDrawableLOD::_leftFileIDs;
 std::map<int,std::vector<int> > PanoDrawableLOD::_rightFileIDs;
 std::map<int,bool> PanoDrawableLOD::_updateDoneMap;
@@ -24,6 +30,131 @@ std::map<int,sph_cache*> PanoDrawableLOD::_cacheMap;
 std::map<int,sph_model*> PanoDrawableLOD::_modelMap;
 
 using namespace cvr;
+
+struct MyGLClientState
+{
+    GLint abuffer;
+    GLint ebuffer;
+    GLboolean carray;
+    GLboolean efarray;
+    GLboolean farray;
+    GLboolean iarray;
+    GLboolean narray;
+    GLboolean scarray;
+    GLboolean tarray;
+    GLboolean varray;
+};
+
+void pushClientState(MyGLClientState & state)
+{
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&state.abuffer);
+    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&state.ebuffer);
+    state.carray = glIsEnabled(GL_COLOR_ARRAY);
+    state.efarray = glIsEnabled(GL_EDGE_FLAG_ARRAY);
+    state.farray = glIsEnabled(GL_FOG_COORD_ARRAY);
+    state.iarray = glIsEnabled(GL_INDEX_ARRAY);
+    state.narray = glIsEnabled(GL_NORMAL_ARRAY);
+    state.scarray = glIsEnabled(GL_SECONDARY_COLOR_ARRAY);
+    state.tarray = glIsEnabled(GL_TEXTURE_COORD_ARRAY);
+    state.varray = glIsEnabled(GL_VERTEX_ARRAY);
+
+    if(state.carray)
+    {
+	glDisableClientState(GL_COLOR_ARRAY);
+    }
+    if(state.efarray)
+    {
+	glDisableClientState(GL_EDGE_FLAG_ARRAY);
+    }
+    if(state.farray)
+    {
+	glDisableClientState(GL_FOG_COORD_ARRAY);
+    }
+    if(state.iarray)
+    {
+	glDisableClientState(GL_INDEX_ARRAY);
+    }
+    if(state.narray)
+    {
+	glDisableClientState(GL_NORMAL_ARRAY);
+    }
+    if(state.scarray)
+    {
+	glDisableClientState(GL_SECONDARY_COLOR_ARRAY);
+    }
+    if(state.tarray)
+    {
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    }
+    if(state.varray)
+    {
+	glDisableClientState(GL_VERTEX_ARRAY);
+    }
+}
+
+void popClientState(MyGLClientState & state)
+{
+    if(state.carray)
+    {
+	glEnableClientState(GL_COLOR_ARRAY);
+    }
+    if(state.efarray)
+    {
+	glEnableClientState(GL_EDGE_FLAG_ARRAY);
+    }
+    if(state.farray)
+    {
+	glEnableClientState(GL_FOG_COORD_ARRAY);
+    }
+    if(state.iarray)
+    {
+	glEnableClientState(GL_INDEX_ARRAY);
+    }
+    if(state.narray)
+    {
+	glEnableClientState(GL_NORMAL_ARRAY);
+    }
+    if(state.scarray)
+    {
+	glEnableClientState(GL_SECONDARY_COLOR_ARRAY);
+    }
+    if(state.tarray)
+    {
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    }
+    if(state.varray)
+    {
+	glEnableClientState(GL_VERTEX_ARRAY);
+    }
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, state.ebuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, state.abuffer);
+}
+
+void printGLState()
+{
+    std::cerr << "Draw State:" << std::endl;
+    std::cerr << "ColorArray: " << (int)glIsEnabled(GL_COLOR_ARRAY) << std::endl;
+    std::cerr << "EdgeFlag: " << (int)glIsEnabled(GL_EDGE_FLAG_ARRAY) << std::endl;
+    std::cerr << "Fog: " << (int)glIsEnabled(GL_FOG_COORD_ARRAY) << std::endl;
+    std::cerr << "Index: " << (int)glIsEnabled(GL_INDEX_ARRAY) << std::endl;
+    std::cerr << "Normal: " << (int)glIsEnabled(GL_NORMAL_ARRAY) << std::endl;
+    std::cerr << "Sec Color: " << (int)glIsEnabled(GL_SECONDARY_COLOR_ARRAY) << std::endl;
+    std::cerr << "Texture: " << (int)glIsEnabled(GL_TEXTURE_COORD_ARRAY) << std::endl;
+    std::cerr << "Vertex: " << (int)glIsEnabled(GL_VERTEX_ARRAY) << std::endl;
+}
+
+void clearGLClientState()
+{
+    glDisableClientState(GL_COLOR_ARRAY);
+    glDisableClientState(GL_EDGE_FLAG_ARRAY);
+    glDisableClientState(GL_FOG_COORD_ARRAY);
+    glDisableClientState(GL_INDEX_ARRAY);
+    glDisableClientState(GL_NORMAL_ARRAY);
+    glDisableClientState(GL_SECONDARY_COLOR_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    glDisableClientState(GL_VERTEX_ARRAY);
+}
 
 char * loadShaderFile(std::string file)
 {
@@ -168,7 +299,7 @@ void PanoDrawableLOD::cleanup()
 	//delete _modelMap[it->first];
     //}
     //_cacheMap.clear();
-    _modelMap.clear();
+    //_modelMap.clear();
 }
 
 void PanoDrawableLOD::next()
@@ -182,6 +313,14 @@ void PanoDrawableLOD::next()
     _nextIndex = (_currentIndex+1) % _leftEyeFiles.size();
 
     _currentFadeTime = _totalFadeTime + PluginHelper::getLastFrameDuration();
+
+    if(_leftFileIDs.size())
+    {
+        sph_cache::_diskCache->setLeftFiles(_leftFileIDs.begin()->second[_lastIndex],_leftFileIDs.begin()->second[_currentIndex],_leftFileIDs.begin()->second[_nextIndex]);
+        sph_cache::_diskCache->setRightFiles(_rightFileIDs.begin()->second[_lastIndex],_rightFileIDs.begin()->second[_currentIndex],_rightFileIDs.begin()->second[_nextIndex]);
+	//sph_cache::_diskCache->kill_tasks(_leftFileIDs.begin()->second[_lastIndex]);
+	//sph_cache::_diskCache->kill_tasks(_rightFileIDs.begin()->second[_lastIndex]);
+    }
 }
 
 void PanoDrawableLOD::previous()
@@ -195,6 +334,14 @@ void PanoDrawableLOD::previous()
     _nextIndex = (_currentIndex+_leftEyeFiles.size()-1) % _leftEyeFiles.size();
 
     _currentFadeTime = _totalFadeTime + PluginHelper::getLastFrameDuration();
+
+    if(_leftFileIDs.size())
+    {
+	sph_cache::_diskCache->setLeftFiles(_leftFileIDs.begin()->second[_lastIndex],_leftFileIDs.begin()->second[_currentIndex],_leftFileIDs.begin()->second[_nextIndex]);
+	sph_cache::_diskCache->setRightFiles(_rightFileIDs.begin()->second[_lastIndex],_rightFileIDs.begin()->second[_currentIndex],_rightFileIDs.begin()->second[_nextIndex]);
+	//sph_cache::_diskCache->kill_tasks(_leftFileIDs.begin()->second[_lastIndex]);
+	//sph_cache::_diskCache->kill_tasks(_rightFileIDs.begin()->second[_lastIndex]);
+    }
 }
 
 void PanoDrawableLOD::setZoom(osg::Vec3 dir, float k)
@@ -266,50 +413,62 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 
     _initLock.lock();
 
-    if(!_cacheMap[context])
+    if(!_initMap[context])
     {
-        GLenum err = glewInit();
-        if (GLEW_OK != err)
-        {
-            std::cerr << "Error on glew init: " << glewGetErrorString(err) << std::endl;
-            _badInit = true;
-            _initLock.unlock();
-            glPopAttrib();
-            return;
-        }
-	int cachesize = ConfigManager::getInt("value","Plugin.PanoViewLOD.CacheSize",256);
-	_cacheMap[context] = new sph_cache(cachesize);
-        _cacheMap[context]->set_debug(false);
+	if(!_cacheMap[context])
+	{
+	    GLenum err = glewInit();
+	    if (GLEW_OK != err)
+	    {
+		std::cerr << "Error on glew init: " << glewGetErrorString(err) << std::endl;
+		_badInit = true;
+		_initLock.unlock();
+		glPopAttrib();
+		return;
+	    }
+	    int cachesize = ConfigManager::getInt("value","Plugin.PanoViewLOD.CacheSize",256);
+	    _cacheMap[context] = new sph_cache(cachesize);
+	    _cacheMap[context]->set_debug(false);
 
-	_updateLock[context] = new OpenThreads::Mutex();
+	    _updateLock[context] = new OpenThreads::Mutex();
+	}
+
+	int time = 1;
+	if(_modelMap[context])
+	{
+	    time = _modelMap[context]->get_time();
+	    delete _modelMap[context];
+	}
+	GLint buffer,ebuffer;
+	glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&buffer);
+	glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&ebuffer);
+
+	_modelMap[context] = new sph_model(*_cacheMap[context],_vertData,_fragData,_mesh,_depth,_size);
+	// Set start time to last model's time since timestamps are used by the disk cache
+	_modelMap[context]->set_time(time);
+
+	glBindBuffer(GL_ARRAY_BUFFER, buffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebuffer);
+
+	_leftFileIDs[context] = std::vector<int>();
+	_rightFileIDs[context] = std::vector<int>();
     }
 
     if(!(_initMap[context] & eye))
     {
-	if(!_initMap[context])
-	{
-	    if(_modelMap[context])
-	    {
-		delete _modelMap[context];
-	    }
-	    GLint buffer,ebuffer;
-	    glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&buffer);
-	    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&ebuffer);
-
-	    _modelMap[context] = new sph_model(*_cacheMap[context],_vertData,_fragData,_mesh,_depth,_size);
-
-	    glBindBuffer(GL_ARRAY_BUFFER, buffer);
-	    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebuffer);
-
-	    _leftFileIDs[context] = std::vector<int>();
-	    _rightFileIDs[context] = std::vector<int>();
-	}
-
 	if(eye & DRAW_LEFT)
 	{
 	    for(int i = 0; i < _leftEyeFiles.size(); i++)
 	    {
 		_leftFileIDs[context].push_back(_cacheMap[context]->add_file(_leftEyeFiles[i]));
+	    }
+	    if(_leftEyeFiles.size() > 1)
+	    {
+		sph_cache::_diskCache->setLeftFiles(_leftFileIDs[context].back(),_leftFileIDs[context][0],_leftFileIDs[context][1]);
+	    }
+	    else if(_leftEyeFiles.size() == 1)
+	    {
+		sph_cache::_diskCache->setLeftFiles(-1,_leftFileIDs[context][0],-1);
 	    }
 	}
 	else if(eye & DRAW_RIGHT)
@@ -317,6 +476,14 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	    for(int i = 0; i < _rightEyeFiles.size(); i++)
 	    {
 		_rightFileIDs[context].push_back(_cacheMap[context]->add_file(_rightEyeFiles[i]));
+	    }
+	    if(_rightEyeFiles.size() > 1)
+	    {
+		sph_cache::_diskCache->setRightFiles(_rightFileIDs[context].back(),_rightFileIDs[context][0],_rightFileIDs[context][1]);
+	    }
+	    else if(_rightEyeFiles.size() == 1)
+	    {
+		sph_cache::_diskCache->setRightFiles(-1,_rightFileIDs[context][0],-1);
 	    }
 	}
 	_initMap[context] |= eye;
@@ -328,8 +495,17 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 
     if(!_updateDoneMap[context])
     {
+#ifdef PRINT_TIMING
+	struct timeval ustart, uend;
+	gettimeofday(&ustart,NULL);
+#endif
 	_cacheMap[context]->update(_modelMap[context]->tick());
 	_updateDoneMap[context] = true;
+#ifdef PRINT_TIMING
+	gettimeofday(&uend,NULL);
+	double utime = (uend.tv_sec - ustart.tv_sec) + ((uend.tv_usec - ustart.tv_usec)/1000000.0);
+	std::cerr << "Context: " << context << " Update time: " << utime << std::endl;
+#endif
     }
 
     _updateLock[context]->unlock(); 
@@ -387,19 +563,27 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
     glUseProgram(0);
     _modelMap[context]->prep(ri.getState()->getProjectionMatrix().ptr(),modelview.ptr(), (int)ri.getState()->getCurrentViewport()->width(), (int)ri.getState()->getCurrentViewport()->height());
 
-    GLint buffer,ebuffer;
-    glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&buffer);
-    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&ebuffer);
-    bool vertexOn = glIsEnabled(GL_VERTEX_ARRAY);
+    //printGLState();
+    MyGLClientState glstate;
+    pushClientState(glstate);
+
+    //GLint buffer,ebuffer;
+    //glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&buffer);
+    //glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&ebuffer);
+    //bool vertexOn = glIsEnabled(GL_VERTEX_ARRAY);
+    //glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
+    //clearGLClientState();
 
     _modelMap[context]->draw(ri.getState()->getProjectionMatrix().ptr(), modelview.ptr(), fileID, fc, pv, pc);
 
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebuffer);
-    if(vertexOn)
+    popClientState(glstate);
+    //glPopClientAttrib();
+    //glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebuffer);
+    /*if(vertexOn)
     {
 	glEnableClientState(GL_VERTEX_ARRAY);
-    }
+    }*/
 
     glPopAttrib();
 }

@@ -12,16 +12,28 @@
 #include <mxml.h>
 #include <tiffio.h>
 
+#include "sph-cache.hpp"
+#include "DiskCache.h"
+
+#define PRINT_TIMING
+
 using namespace cvr;
 
 CVRPLUGIN(PanoViewLOD)
 
 PanoViewLOD::PanoViewLOD()
 {
+    _timecount = 0;
+    _time = 0;
 }
 
 PanoViewLOD::~PanoViewLOD()
 {
+    if(sph_cache::_diskCache)
+    {
+	delete sph_cache::_diskCache;
+	sph_cache::_diskCache = NULL;
+    }
 }
 
 bool PanoViewLOD::init()
@@ -93,6 +105,23 @@ bool PanoViewLOD::init()
 
 void PanoViewLOD::preFrame()
 {
+
+#ifdef PRINT_TIMING
+
+    if(_panObject)
+    {
+	_timecount++;
+	_time += PluginHelper::getLastFrameDuration();
+
+	if(_time > 5.0)
+	{
+	    std::cerr << "FPS: " << _timecount / _time << std::endl;
+	    _timecount = 0;
+	    _time = 0.0;
+	}
+    }
+
+#endif
     /*if(_leftDrawable || _rightDrawable)
     {
 	float val = PluginHelper::getValuator(0,0);
@@ -217,6 +246,12 @@ void PanoViewLOD::menuCallback(MenuItem * item)
     {
 	if(item == _panButtonList[i])
 	{
+	    if(!sph_cache::_diskCache)
+	    {
+		std::cerr << "Creating cache in plugin." << std::endl;
+		sph_cache::_diskCache = new DiskCache(cvr::ConfigManager::getInt("value","Plugin.PanoViewLOD.DiskCacheSize",256));
+	    }
+
 	    if(_panObject)
 	    {
 		menuCallback(_removeButton);
