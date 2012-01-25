@@ -59,6 +59,7 @@ class PanoViewLOD : public cvr::CVRPlugin, public cvr::MenuCallback
 
         int _timecount;
         double _time;
+        bool _useDiskCache;
 };
 
 #endif

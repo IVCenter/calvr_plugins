@@ -98,6 +98,8 @@ bool PanoViewLOD::init()
 
     PluginHelper::addRootMenuItem(_panoViewMenu);
 
+    _useDiskCache = ConfigManager::getBool("value","Plugin.PanoViewLOD.DiskCache",true);
+
     TIFFSetWarningHandler(0);
 
     return true;
@@ -246,7 +248,7 @@ void PanoViewLOD::menuCallback(MenuItem * item)
     {
 	if(item == _panButtonList[i])
 	{
-	    if(!sph_cache::_diskCache)
+	    if(_useDiskCache && !sph_cache::_diskCache)
 	    {
 		std::cerr << "Creating cache in plugin." << std::endl;
 		sph_cache::_diskCache = new DiskCache(cvr::ConfigManager::getInt("value","Plugin.PanoViewLOD.DiskCacheSize",256));
