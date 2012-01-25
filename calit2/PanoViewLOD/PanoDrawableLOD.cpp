@@ -14,6 +14,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include "sph-cache.hpp"
+
+#define PRINT_TIMING
+
+#include <sys/time.h>
+
 std::map<int,std::vector<int> > PanoDrawableLOD::_leftFileIDs;
 std::map<int,std::vector<int> > PanoDrawableLOD::_rightFileIDs;
 std::map<int,bool> PanoDrawableLOD::_updateDoneMap;
@@ -182,6 +188,14 @@ void PanoDrawableLOD::next()
     _nextIndex = (_currentIndex+1) % _leftEyeFiles.size();
 
     _currentFadeTime = _totalFadeTime + PluginHelper::getLastFrameDuration();
+
+    if(_leftFileIDs.size())
+    {
+        sph_cache::_diskCache->setLeftFiles(_leftFileIDs.begin()->second[_lastIndex],_leftFileIDs.begin()->second[_currentIndex],_leftFileIDs.begin()->second[_nextIndex]);
+        sph_cache::_diskCache->setRightFiles(_rightFileIDs.begin()->second[_lastIndex],_rightFileIDs.begin()->second[_currentIndex],_rightFileIDs.begin()->second[_nextIndex]);
+	//sph_cache::_diskCache->kill_tasks(_leftFileIDs.begin()->second[_lastIndex]);
+	//sph_cache::_diskCache->kill_tasks(_rightFileIDs.begin()->second[_lastIndex]);
+    }
 }
 
 void PanoDrawableLOD::previous()
@@ -195,6 +209,14 @@ void PanoDrawableLOD::previous()
     _nextIndex = (_currentIndex+_leftEyeFiles.size()-1) % _leftEyeFiles.size();
 
     _currentFadeTime = _totalFadeTime + PluginHelper::getLastFrameDuration();
+
+    if(_leftFileIDs.size())
+    {
+	sph_cache::_diskCache->setLeftFiles(_leftFileIDs.begin()->second[_lastIndex],_leftFileIDs.begin()->second[_currentIndex],_leftFileIDs.begin()->second[_nextIndex]);
+	sph_cache::_diskCache->setRightFiles(_rightFileIDs.begin()->second[_lastIndex],_rightFileIDs.begin()->second[_currentIndex],_rightFileIDs.begin()->second[_nextIndex]);
+	//sph_cache::_diskCache->kill_tasks(_leftFileIDs.begin()->second[_lastIndex]);
+	//sph_cache::_diskCache->kill_tasks(_rightFileIDs.begin()->second[_lastIndex]);
+    }
 }
 
 void PanoDrawableLOD::setZoom(osg::Vec3 dir, float k)
@@ -311,12 +333,28 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	    {
 		_leftFileIDs[context].push_back(_cacheMap[context]->add_file(_leftEyeFiles[i]));
 	    }
+	    if(_leftEyeFiles.size() > 1)
+	    {
+		sph_cache::_diskCache->setLeftFiles(_leftFileIDs[context].back(),_leftFileIDs[context][0],_leftFileIDs[context][1]);
+	    }
+	    else if(_leftEyeFiles.size() == 1)
+	    {
+		sph_cache::_diskCache->setLeftFiles(-1,_leftFileIDs[context][0],-1);
+	    }
 	}
 	else if(eye & DRAW_RIGHT)
 	{
 	    for(int i = 0; i < _rightEyeFiles.size(); i++)
 	    {
 		_rightFileIDs[context].push_back(_cacheMap[context]->add_file(_rightEyeFiles[i]));
+	    }
+	    if(_rightEyeFiles.size() > 1)
+	    {
+		sph_cache::_diskCache->setRightFiles(_rightFileIDs[context].back(),_rightFileIDs[context][0],_rightFileIDs[context][1]);
+	    }
+	    else if(_rightEyeFiles.size() == 1)
+	    {
+		sph_cache::_diskCache->setRightFiles(-1,_rightFileIDs[context][0],-1);
 	    }
 	}
 	_initMap[context] |= eye;
@@ -328,8 +366,17 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 
     if(!_updateDoneMap[context])
     {
+#ifdef PRINT_TIMING
+	struct timeval ustart, uend;
+	gettimeofday(&ustart,NULL);
+#endif
 	_cacheMap[context]->update(_modelMap[context]->tick());
 	_updateDoneMap[context] = true;
+#ifdef PRINT_TIMING
+	gettimeofday(&uend,NULL);
+	double utime = (uend.tv_sec - ustart.tv_sec) + ((uend.tv_usec - ustart.tv_usec)/1000000.0);
+	std::cerr << "Context: " << context << " Update time: " << utime << std::endl;
+#endif
     }
 
     _updateLock[context]->unlock(); 

@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <cassert>
 #include <sstream>
+#include <iostream>
 
 #include "sph-cache.hpp"
 #include "cube.hpp"
@@ -21,6 +22,12 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+
+#include <OpenThreads/ScopedLock>
+#include <config/ConfigManager.h>
+
+DiskCache * sph_cache::_diskCache = NULL;
 
 static bool exists(const std::string& name)
 {
@@ -116,36 +123,141 @@ static GLenum external_type(uint16 c, uint16 b)
     return 0;
 }
 
+
+static void initTexture(GLuint o, uint32 w, uint32 h, uint16 c, uint16 b)
+{
+    static const GLfloat p[] = { 0, 0, 0, 0 };
+        
+    glBindTexture  (GL_TEXTURE_2D, o);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP);
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, p);
+    glTexImage2D (GL_TEXTURE_2D, 0, internal_form(c, b), w, h, 0,
+                                        external_form(c, b),
+                                        external_type(c, b), NULL);
+    //glBindTexture  (GL_TEXTURE_2D, 0);
+}
+
+
+void pbotiming(GLuint pbo)
+{
+    int size = 5000000;
+    void * p;
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
+    {
+	glBufferData(GL_PIXEL_UNPACK_BUFFER, size, 0, GL_STREAM_DRAW);
+	p = glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT);
+	if(!p)
+	{
+	    std::cerr << "Invalid map." << std::endl;
+	}
+
+	memset(p,0x00,size);
+
+	struct timeval start, end;
+	gettimeofday(&start,NULL);
+
+	glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+
+	gettimeofday(&end,NULL);
+
+	std::cerr << "Full unmap time: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec)/ 1000000.0) << std::endl;
+
+	p = glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, size, GL_MAP_WRITE_BIT | GL_MAP_FLUSH_EXPLICIT_BIT);
+	memset(p,0x01,size);
+
+	float segments = 5.0;
+	int ssize = size / segments;
+	if(segments * ssize < size)
+	{
+	    ssize++;
+	}
+	int copied = 0;
+	for(int i = 0; i < segments; i++)
+	{
+	    int copy = std::min(size - copied,ssize);
+	    
+	    std::cerr << "Offset: " << copied << " length: " << copy << std::endl;
+
+	    struct timeval fstart, fend;
+
+	    gettimeofday(&fstart,NULL);
+
+	    glFlushMappedBufferRange(GL_PIXEL_UNPACK_BUFFER,copied,copy);
+	    //glFinish();
+
+	    gettimeofday(&fend,NULL);
+
+	    std::cerr << "Segment flush time: " << (fend.tv_sec - fstart.tv_sec) + ((fend.tv_usec - fstart.tv_usec)/ 1000000.0) << std::endl;
+
+	    copied += copy;
+	    sleep(1);
+	}
+
+	gettimeofday(&start,NULL);
+
+	glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+
+	gettimeofday(&end,NULL);
+
+	std::cerr << "Final unmap time: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec)/ 1000000.0) << std::endl;
+
+    }
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
+    exit(0);
+}
+
+
 // * 24-bit images are always padded to 32 bits.
 
 //------------------------------------------------------------------------------
 
 // Construct a load task. Map the PBO to provide a destination for the loader.
 
-sph_task::sph_task(int f, int i, GLuint u, GLsizei s) : sph_item(f, i), u(u)
+sph_task::sph_task(int f, int i, GLuint u, GLsizei s, sph_cache * c, int t) : sph_item(f, i), u(u), cache(c), timestamp(t), valid(true)
 {
+    //pbotiming(u);
+    size = s;
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, u);
     {
-        glBufferData(GL_PIXEL_UNPACK_BUFFER, s, 0, GL_STREAM_DRAW);
-        p = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+        glBufferData(GL_PIXEL_UNPACK_BUFFER, s, 0, GL_STREAM_READ);
+        p = glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT);
+	if(!p)
+	{
+	    std::cerr << "Invalid map." << std::endl;
+	}
     }
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 }
 
 // Upload the pixel buffer to a newly-generated OpenGL texture object.
 
-void sph_task::make_texture(GLuint o, uint32 w, uint32 h, uint16 c, uint16 b)
+bool sph_task::make_texture(GLuint o, uint32 w, uint32 h, uint16 c, uint16 b)
 {
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, u);
     {
-        glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+	struct timeval ustart, uend, tstart, tend;
+	gettimeofday(&ustart,NULL);
+	glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+	gettimeofday(&uend,NULL);
 
-        glBindTexture(GL_TEXTURE_2D, o);
-        glTexImage2D (GL_TEXTURE_2D, 0, internal_form(c, b), w, h, 1,
-                                        external_form(c, b),
-                                        external_type(c, b), 0);
+	glBindTexture(GL_TEXTURE_2D, o);
+	/*glTexImage2D (GL_TEXTURE_2D, 0, internal_form(c, b), w, h, 1,
+	  external_form(c, b),
+	  external_type(c, b), 0);*/
+	gettimeofday(&tstart,NULL);
+	glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, w, h,
+		external_form(c, b),
+		external_type(c, b), 0);
+	gettimeofday(&tend,NULL);
+
+	std::cerr << "Size: " << size <<  " Unmap time: " << (uend.tv_sec - ustart.tv_sec) + ((uend.tv_usec - ustart.tv_usec)/ 1000000.0) << " Texture time: " << (tend.tv_sec - tstart.tv_sec) + ((tend.tv_usec - tstart.tv_usec)/ 1000000.0) << std::endl;
     }
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    return true;
 }
 
 // A texture was loaded but is no longer necessary. Discard the pixel buffer.
@@ -242,6 +354,7 @@ sph_file::sph_file(const std::string& tiff)
 
     if (!name.empty())
     {
+	//std::cerr << "File name: " << name << std::endl;
         if (TIFF *T = TIFFOpen(name.c_str(), "r"))
         {
             TIFFGetField(T, TIFFTAG_IMAGEWIDTH,      &w);
@@ -379,19 +492,33 @@ void sph_set::draw()
 
 //------------------------------------------------------------------------------
 
-sph_cache::sph_cache(int n) : pages(n), waits(n), needs(32), loads(8)
+sph_cache::sph_cache(int n) : pages(n), waits(n), needs(32), loads(100)
 {
     GLuint b;
     int    i;
+   
+    static OpenThreads::Mutex _initMutex;
+    {
+	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_initMutex);
+	if(!_diskCache)
+	{
+	    _diskCache = new DiskCache(cvr::ConfigManager::getInt("value","Plugin.PanoViewLOD.DiskCacheSize",256));
+	}
+    }
+
+    float targetFPS = cvr::ConfigManager::getFloat("value","Plugin.PanoViewLOD.TargetFPS",60.0);
+    _maxTime = 1.0f / targetFPS;
+    // give some time for other things
+    _maxTime *= 0.9;
     
     // Launch the image loader threads.
     
     int loader(void *data);
 
-    thread[0] = SDL_CreateThread(loader, this);
-    thread[1] = SDL_CreateThread(loader, this);
-    thread[2] = SDL_CreateThread(loader, this);
-    thread[3] = SDL_CreateThread(loader, this);
+    //thread[0] = SDL_CreateThread(loader, this);
+    //thread[1] = SDL_CreateThread(loader, this);
+    //thread[2] = SDL_CreateThread(loader, this);
+    //thread[3] = SDL_CreateThread(loader, this);
 
     // Generate pixel buffer objects.
  
@@ -416,19 +543,19 @@ sph_cache::~sph_cache()
     
     // Enqueue an exit command for each loader thread.
     
-    needs.insert(sph_task(-1, -1));
-    needs.insert(sph_task(-2, -2));
-    needs.insert(sph_task(-3, -3));
-    needs.insert(sph_task(-4, -4));
+    //needs.insert(sph_task(-1, -1));
+    //needs.insert(sph_task(-2, -2));
+    //needs.insert(sph_task(-3, -3));
+    //needs.insert(sph_task(-4, -4));
     
     // Await their exit. 
     
     int s;
 
-    SDL_WaitThread(thread[0], &s);
-    SDL_WaitThread(thread[1], &s);
-    SDL_WaitThread(thread[2], &s);
-    SDL_WaitThread(thread[3], &s);
+    //SDL_WaitThread(thread[0], &s);
+    //SDL_WaitThread(thread[1], &s);
+    //SDL_WaitThread(thread[2], &s);
+    //SDL_WaitThread(thread[3], &s);
 
     // Release the pixel buffer objects.
     
@@ -468,10 +595,14 @@ static void debug_on(int l)
 
 int sph_cache::add_file(const std::string& name)
 {
-    int f = int(files.size());
+    /*int f = int(files.size());
 
     files.push_back(sph_file(name));
 
+    return f;*/
+    
+    int f = _diskCache->add_file(name);
+    files[f] = sph_file(name);
     return f;
 }
 
@@ -513,10 +644,13 @@ GLuint sph_cache::get_page(int f, int i, int t, int& n)
             
         if (o)
         {
-            needs.insert(sph_task(f, i, pbos.deq(), pagelen(f)));
+            //needs.insert(sph_task(f, i, pbos.deq(), pagelen(f), this));
+	    _diskCache->add_task(new sph_task(f, i, pbos.deq(), pagelen(f), this, t));
             waits.insert(sph_page(f, i, filler), t);
             pages.insert(sph_page(f, i, o),      t);            
-            clear(o);
+            //clear(o);
+	    initTexture(o, files[f].w, files[f].h,
+	    		    files[f].c, files[f].b);
         }
     }
 
@@ -528,31 +662,63 @@ GLuint sph_cache::get_page(int f, int i, int t, int& n)
 
 void sph_cache::update(int t)
 {
+    struct timeval start, end;
+    gettimeofday(&start,NULL);
     glPushAttrib(GL_PIXEL_MODE_BIT);
     {
-        for (int c = 0; !loads.empty() && c < 4; ++c)
+	while(!loads.empty())
+	{
+	    _delayList.push_back(loads.remove());
+	}
+	int c;
+        for (c = 0; !_delayList.empty(); ++c)
         {
-            sph_task task = loads.remove();
+            //sph_task task = loads.remove();
+	    sph_task task = *_delayList.begin();
+	    _delayList.erase(_delayList.begin());
             sph_page page = pages.search(sph_page(task.f, task.i), t);
                             waits.remove(sph_page(task.f, task.i));
 
             if (page.valid())
             {
-                page.t = t;
-                pages.remove(page);
-                pages.insert(page, t);
-                
-                if (debug)
-                    debug_on(face_level(task.i));
+		if(task.valid)
+		{
+		    page.t = t;
+		    pages.remove(page);
+		    pages.insert(page, t);
 
-                task.make_texture(page.o, files[task.f].w, files[task.f].h,
-                                          files[task.f].c, files[task.f].b);
+		    if (debug)
+			debug_on(face_level(task.i));
+
+		    task.make_texture(page.o, files[task.f].w, files[task.f].h,
+			    files[task.f].c, files[task.f].b);
+		}
+		else
+		{
+		    pages.remove(page);
+		    task.dump_texture();
+		}
             }
             else
+	    {
                 task.dump_texture();
+	    }
 
             pbos.enq(task.u);
+
+	    gettimeofday(&end,NULL);
+	    float time = (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec)/1000000.0);
+	    if(time > _maxTime)
+	    {
+		std::cerr << "Timeout break: Textures loaded: " << c+1 << std::endl;
+		break;
+	    }
         }
+
+	/*if(c)
+	{
+	    std::cerr << "Textures loaded: " << c << std::endl;
+	}*/
     }
     glPopAttrib();
 }
@@ -587,13 +753,13 @@ GLsizei sph_cache::pagelen(int f)
 
 //------------------------------------------------------------------------------
 
-static int up(TIFF *T, int i);
-static int dn(TIFF *T, int i);
+//static int up(TIFF *T, int i);
+//static int dn(TIFF *T, int i);
 
 // Seek upward to the root of the page tree and choose the appropriate base
 // image. Navigate to the requested sub-image directory on the way back down.
 
-static int up(TIFF *T, int i)
+int up(TIFF *T, int i)
 {
     if (i < 6)
         return TIFFSetDirectory(T, i);
@@ -606,7 +772,7 @@ static int up(TIFF *T, int i)
     }
 }
 
-static int dn(TIFF *T, int i)
+int dn(TIFF *T, int i)
 {
     uint64 *v;
     uint16  n;

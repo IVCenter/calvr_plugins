@@ -25,6 +25,8 @@ class PanoDrawableLOD : public osg::Drawable
         void previous();
         void setZoom(osg::Vec3 dir, float k);
         void setRadius(float radius) { _radius = radius; }
+        
+        float getCurrentFadeTime() { return _currentFadeTime; }
 
         virtual Object* cloneType() const { return NULL; }
         virtual Object* clone(const osg::CopyOp& copyop) const { return new PanoDrawableLOD(*this,copyop); }

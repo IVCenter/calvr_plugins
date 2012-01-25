@@ -56,6 +56,9 @@ class PanoViewLOD : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _removeButton;
 
         std::string _defaultConfigDir;
+
+        int _timecount;
+        double _time;
 };
 
 #endif
