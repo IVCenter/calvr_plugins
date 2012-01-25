@@ -14,7 +14,6 @@
 
 using namespace cvr;
 
-OpenThreads::Mutex freeThreadLock;
 OpenThreads::Mutex listLock;
 OpenThreads::Mutex mapLock;
 OpenThreads::Mutex pageCountLock;
@@ -22,7 +21,7 @@ OpenThreads::Mutex cleanupLock;
 OpenThreads::Mutex loadsLock;
 OpenThreads::Mutex ejectLock;
 
-JobThread::JobThread(int id, JobType jt, std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * readlist, std::vector<std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > > * copylist, std::list<JobThread*> * freeThreadList, std::map<int, std::map<int,DiskCacheEntry*> > * cacheMap, std::map<sph_cache*,int> * cacheIndexMap) : _jt(jt), _readList(readlist), _copyList(copylist), _freeThreadList(freeThreadList), _cacheMap(cacheMap), _cacheIndexMap(cacheIndexMap)
+JobThread::JobThread(int id, JobType jt, std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * readlist, std::vector<std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > > * copylist, std::map<int, std::map<int,DiskCacheEntry*> > * cacheMap, std::map<sph_cache*,int> * cacheIndexMap) : _jt(jt), _readList(readlist), _copyList(copylist), _cacheMap(cacheMap), _cacheIndexMap(cacheIndexMap)
 {
     _quit = false;
     _readIndex = 0;
@@ -410,30 +409,10 @@ DiskCache::DiskCache(int pages) : _pages(pages)
     _nextID = 0;
     _numPages = 0;
 
-    int numReadThreads = ConfigManager::getInt("value","Plugin.PanoViewLOD.ReadThreads",1);
-    int numCopyThreads = ConfigManager::getInt("value","Plugin.PanoViewLOD.CopyThreads",3);
+    _numReadThreads = ConfigManager::getInt("value","Plugin.PanoViewLOD.ReadThreads",1);
+    _numCopyThreads = ConfigManager::getInt("value","Plugin.PanoViewLOD.CopyThreads",3);
 
-    //int cores = OpenThreads::GetNumberOfProcessors();
-
-    for(int i = 0; i < numReadThreads; i++)
-    {
-	_readThreads.push_back(new JobThread(numCopyThreads + i,READ_THREAD, &_readList, &_copyList, &_freeThreadList, &_cacheMap, &_cacheIndexMap));
-	//_readThreads[i]->setProcessorAffinity((1+i) % cores);
-	_readThreads[i]->startThread();
-    }
-
-    freeThreadLock.lock();
-    for(int i = 0; i < numCopyThreads; i++)
-    {
-#ifdef DC_PRINT_DEBUG
-	std::cerr << "Starting copy thread: " << i << std::endl;
-#endif
-	_copyThreads.push_back(new JobThread(i, COPY_THREAD, &_readList, &_copyList, &_freeThreadList, &_cacheMap, &_cacheIndexMap));
-	//_copyThreads[i]->setProcessorAffinity((1 + numReadThreads + i) % cores);
-	_copyThreads[i]->startThread();
-	_freeThreadList.push_back(_copyThreads[i]);
-    }
-    freeThreadLock.unlock();
+    _running = false;
 
     _prevFileL = _prevFileR = -1;
     _currentFileL = _currentFileR = -1;
@@ -442,6 +421,54 @@ DiskCache::DiskCache(int pages) : _pages(pages)
 
 DiskCache::~DiskCache()
 {
+    if(_running)
+    {
+	stop();
+    }
+}
+
+void DiskCache::start()
+{
+    if(_running)
+    {
+	return;
+    }
+
+    //int cores = OpenThreads::GetNumberOfProcessors();
+
+    for(int i = 0; i < _numReadThreads; i++)
+    {
+	_readThreads.push_back(new JobThread(_numCopyThreads + i,READ_THREAD, &_readList, &_copyList, &_cacheMap, &_cacheIndexMap));
+	//_readThreads[i]->setProcessorAffinity((1+i) % cores);
+	_readThreads[i]->startThread();
+    }
+
+    for(int i = 0; i < _numCopyThreads; i++)
+    {
+#ifdef DC_PRINT_DEBUG
+	std::cerr << "Starting copy thread: " << i << std::endl;
+#endif
+	_copyThreads.push_back(new JobThread(i, COPY_THREAD, &_readList, &_copyList, &_cacheMap, &_cacheIndexMap));
+	//_copyThreads[i]->setProcessorAffinity((1 + numReadThreads + i) % cores);
+	_copyThreads[i]->startThread();
+    }
+
+    _running = true;
+
+#ifdef DC_PRINT_DEBUG
+    std::cerr << "DiskCache::start()" << std::endl;
+#endif
+}
+
+
+
+void DiskCache::stop()
+{
+    if(!_running)
+    {
+	return;
+    }
+
     for(int i = 0; i < _readThreads.size(); i++)
     {
 	if(_readThreads[i]->isRunning())
@@ -451,6 +478,7 @@ DiskCache::~DiskCache()
 	    delete _readThreads[i];
 	}
     }
+    _readThreads.clear();
 
     for(int i = 0; i < _copyThreads.size(); i++)
     {
@@ -461,13 +489,16 @@ DiskCache::~DiskCache()
 	    delete _copyThreads[i];
 	}
     }
+    _copyThreads.clear();
 
     for(int i = 0; i < _readList.size(); i++)
     {
 	for(std::list<std::pair<sph_task*, CopyJobInfo*> >::iterator it = _readList[i].begin(); it != _readList[i].end(); it++)
 	{
+	    it->first->cache->loads.insert(*(it->first));
 	    delete it->first;
 	}
+	_readList[i].clear();
     }
 
     for(int i = 0; i < _copyList.size(); i++)
@@ -476,8 +507,10 @@ DiskCache::~DiskCache()
 	{
 	    for(std::list<std::pair<sph_task*, CopyJobInfo*> >::iterator it = _copyList[i][j].begin(); it != _copyList[i][j].end(); it++)
 	    {
+		it->first->cache->loads.insert(*(it->first));
 		delete it->first;
 	    }
+	    _copyList[i][j].clear();
 	}
     }
 
@@ -492,7 +525,33 @@ DiskCache::~DiskCache()
 	    delete it2->second->cji;
 	    delete it2->second;
 	}
+	it->second.clear();
     }
+
+    // Invalidate all pending loads
+    std::queue<sph_task> tempq;
+
+    for(std::map<sph_cache*,int>::iterator it = _cacheIndexMap.begin(); it != _cacheIndexMap.end(); it++)
+    {
+	while(!it->first->loads.empty())
+	{
+	    tempq.push(it->first->loads.remove());
+	    tempq.front().valid = false;
+	}
+
+	while(tempq.size())
+	{
+	    it->first->loads.insert(tempq.front());
+	    tempq.pop();
+	}
+    }
+
+    _cleanupList.clear();
+    _running = false;
+
+#ifdef DC_PRINT_DEBUG
+    std::cerr << "DiskCache::stop()" << std::endl;
+#endif
 }
 
 int DiskCache::add_file(const std::string& name)
@@ -549,7 +608,7 @@ void DiskCache::add_task(sph_task * task)
 
     cleanup();
 
-    if(task->f != _currentFileL && task->f != _currentFileR)
+    if(!_running || (task->f != _currentFileL && task->f != _currentFileR))
     {
 	task->valid = false;
 	loadsLock.lock();

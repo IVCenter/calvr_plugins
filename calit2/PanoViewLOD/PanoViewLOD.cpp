@@ -228,6 +228,11 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 {
     if(item == _removeButton)
     {
+	if(_useDiskCache && sph_cache::_diskCache && sph_cache::_diskCache->isRunning())
+	{
+	    sph_cache::_diskCache->stop();
+	}
+
 	if(_panObject)
 	{
 	    _panObject->detachFromScene();
@@ -254,9 +259,18 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 		sph_cache::_diskCache = new DiskCache(cvr::ConfigManager::getInt("value","Plugin.PanoViewLOD.DiskCacheSize",256));
 	    }
 
+	    if(_useDiskCache && sph_cache::_diskCache && !sph_cache::_diskCache->isRunning())
+	    {
+		sph_cache::_diskCache->start();
+	    }
+
 	    if(_panObject)
 	    {
-		menuCallback(_removeButton);
+		//menuCallback(_removeButton);
+		_panObject->detachFromScene();
+		PluginHelper::unregisterSceneObject(_panObject);
+		delete _panObject;
+		_panObject = NULL;
 	    }
 
 	    _panObject = new PanoViewObject(_panButtonList[i]->getText(),_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size,_pans[i]->height,_pans[i]->vertFile,_pans[i]->fragFile);
