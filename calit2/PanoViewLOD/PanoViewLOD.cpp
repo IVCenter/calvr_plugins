@@ -228,10 +228,10 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 {
     if(item == _removeButton)
     {
-	if(_useDiskCache && sph_cache::_diskCache && sph_cache::_diskCache->isRunning())
+	/*if(_useDiskCache && sph_cache::_diskCache && sph_cache::_diskCache->isRunning())
 	{
 	    sph_cache::_diskCache->stop();
-	}
+	}*/
 
 	if(_panObject)
 	{
@@ -257,12 +257,13 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 	    {
 		std::cerr << "Creating cache in plugin." << std::endl;
 		sph_cache::_diskCache = new DiskCache(cvr::ConfigManager::getInt("value","Plugin.PanoViewLOD.DiskCacheSize",256));
-	    }
-
-	    if(_useDiskCache && sph_cache::_diskCache && !sph_cache::_diskCache->isRunning())
-	    {
 		sph_cache::_diskCache->start();
 	    }
+
+	    /*if(_useDiskCache && sph_cache::_diskCache && !sph_cache::_diskCache->isRunning())
+	    {
+		sph_cache::_diskCache->start();
+	    }*/
 
 	    if(_panObject)
 	    {

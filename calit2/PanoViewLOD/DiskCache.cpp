@@ -520,6 +520,7 @@ void DiskCache::stop()
 	{
 	    if(it2->second->cji->data)
 	    {
+		//std::cerr << "data deleted." << std::endl;
 		delete[] it2->second->cji->data;
 	    }
 	    delete it2->second->cji;
@@ -546,8 +547,13 @@ void DiskCache::stop()
 	}
     }
 
+    _numPages = 0;
     _cleanupList.clear();
     _running = false;
+
+    _prevFileL = _prevFileR = -1;
+    _currentFileL = _currentFileR = -1;
+    _nextFileL = _nextFileR = -1;
 
 #ifdef DC_PRINT_DEBUG
     std::cerr << "DiskCache::stop()" << std::endl;
