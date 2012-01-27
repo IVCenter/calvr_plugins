@@ -40,7 +40,7 @@ struct DiskCacheEntry
 class JobThread: public OpenThreads::Thread
 {
     public:
-        JobThread(int id, JobType jt, std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * readlist, std::vector<std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > > * copylist, std::list<JobThread*> * freeThreadList, std::map<int, std::map<int,DiskCacheEntry*> > * cacheMap, std::map<sph_cache*,int> * cacheIndexMap);
+        JobThread(int id, JobType jt, std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > * readlist, std::vector<std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > > * copylist, std::map<int, std::map<int,DiskCacheEntry*> > * cacheMap, std::map<sph_cache*,int> * cacheIndexMap);
         virtual ~JobThread();
 
         void run();
@@ -65,8 +65,6 @@ class JobThread: public OpenThreads::Thread
         std::map<int, std::map<int,DiskCacheEntry*> > * _cacheMap;
         std::map<sph_cache*,int> * _cacheIndexMap;
 
-        std::list<JobThread*> * _freeThreadList;
-
         int _id;
 };
 
@@ -75,6 +73,14 @@ class DiskCache
     public:
         DiskCache(int pages);
         virtual ~DiskCache();
+
+        bool isRunning()
+        {
+            return _running;
+        }
+
+        void start();
+        void stop();
 
         int add_file(const std::string& name);
         void add_task(sph_task * task);
@@ -86,6 +92,9 @@ class DiskCache
 
     protected:
         void cleanup();
+
+        int _numReadThreads;
+        int _numCopyThreads;
 
         int _pages;
         int _numPages;
@@ -102,14 +111,14 @@ class DiskCache
 
         bool eject();
 
+        bool _running;
+
         OpenThreads::Mutex _fileAddLock;
         std::map<std::string, int> _fileIDMap;
         int _nextID;
 
         std::vector<JobThread*> _readThreads;
         std::vector<JobThread*> _copyThreads;
-
-        std::list<JobThread*> _freeThreadList;
 
         std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > _readList;
         std::vector<std::vector<std::list<std::pair<sph_task*, CopyJobInfo*> > > > _copyList;

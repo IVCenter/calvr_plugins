@@ -98,6 +98,8 @@ bool PanoViewLOD::init()
 
     PluginHelper::addRootMenuItem(_panoViewMenu);
 
+    _useDiskCache = ConfigManager::getBool("value","Plugin.PanoViewLOD.DiskCache",true);
+
     TIFFSetWarningHandler(0);
 
     return true;
@@ -226,6 +228,11 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 {
     if(item == _removeButton)
     {
+	/*if(_useDiskCache && sph_cache::_diskCache && sph_cache::_diskCache->isRunning())
+	{
+	    sph_cache::_diskCache->stop();
+	}*/
+
 	if(_panObject)
 	{
 	    _panObject->detachFromScene();
@@ -246,15 +253,25 @@ void PanoViewLOD::menuCallback(MenuItem * item)
     {
 	if(item == _panButtonList[i])
 	{
-	    if(!sph_cache::_diskCache)
+	    if(_useDiskCache && !sph_cache::_diskCache)
 	    {
 		std::cerr << "Creating cache in plugin." << std::endl;
 		sph_cache::_diskCache = new DiskCache(cvr::ConfigManager::getInt("value","Plugin.PanoViewLOD.DiskCacheSize",256));
+		sph_cache::_diskCache->start();
 	    }
+
+	    /*if(_useDiskCache && sph_cache::_diskCache && !sph_cache::_diskCache->isRunning())
+	    {
+		sph_cache::_diskCache->start();
+	    }*/
 
 	    if(_panObject)
 	    {
-		menuCallback(_removeButton);
+		//menuCallback(_removeButton);
+		_panObject->detachFromScene();
+		PluginHelper::unregisterSceneObject(_panObject);
+		delete _panObject;
+		_panObject = NULL;
 	    }
 
 	    _panObject = new PanoViewObject(_panButtonList[i]->getText(),_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size,_pans[i]->height,_pans[i]->vertFile,_pans[i]->fragFile);

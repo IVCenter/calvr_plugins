@@ -183,12 +183,13 @@ private:
     GLuint  filler;
     bool    debug;
     
-    //SDL_Thread *thread[4];
+    SDL_Thread *thread[4];
     
     friend int loader(void *);
 
     static DiskCache * _diskCache;
     float _maxTime;
+    bool _useDiskCache;
 };
 
 //------------------------------------------------------------------------------

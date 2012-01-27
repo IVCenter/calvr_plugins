@@ -136,7 +136,7 @@ static void initTexture(GLuint o, uint32 w, uint32 h, uint16 c, uint16 b)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP);
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, p);
-    glTexImage2D (GL_TEXTURE_2D, 0, internal_form(c, b), w, h, 0,
+    glTexImage2D (GL_TEXTURE_2D, 0, internal_form(c, b), w, h, 1,
                                         external_form(c, b),
                                         external_type(c, b), NULL);
     //glBindTexture  (GL_TEXTURE_2D, 0);
@@ -262,7 +262,7 @@ bool sph_task::make_texture(GLuint o, uint32 w, uint32 h, uint16 c, uint16 b)
 	gettimeofday(&tstart,NULL);
 #endif
 
-	glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, w, h,
+	glTexSubImage2D (GL_TEXTURE_2D, 0, -1, -1, w, h,
 		external_form(c, b),
 		external_type(c, b), 0);
 
@@ -515,10 +515,18 @@ sph_cache::sph_cache(int n) : pages(n), waits(n), needs(32), loads(100)
     static OpenThreads::Mutex _initMutex;
     {
 	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_initMutex);
-	if(!_diskCache)
+	/*if(!_diskCache)
 	{
 	    std::cerr << "Warning: Creating DiskCache in sph_cache.  This may cause the DiskCache threads to bind to a single core." << std::endl;
 	    _diskCache = new DiskCache(cvr::ConfigManager::getInt("value","Plugin.PanoViewLOD.DiskCacheSize",256));
+	}*/
+	if(!_diskCache)
+	{
+	    _useDiskCache = false;
+	}
+	else
+	{
+	    _useDiskCache = true;
 	}
     }
 
@@ -531,10 +539,13 @@ sph_cache::sph_cache(int n) : pages(n), waits(n), needs(32), loads(100)
     
     int loader(void *data);
 
-    //thread[0] = SDL_CreateThread(loader, this);
-    //thread[1] = SDL_CreateThread(loader, this);
-    //thread[2] = SDL_CreateThread(loader, this);
-    //thread[3] = SDL_CreateThread(loader, this);
+    if(!_useDiskCache)
+    {
+	thread[0] = SDL_CreateThread(loader, this);
+	thread[1] = SDL_CreateThread(loader, this);
+	thread[2] = SDL_CreateThread(loader, this);
+	thread[3] = SDL_CreateThread(loader, this);
+    }
 
     // Generate pixel buffer objects.
  
@@ -559,19 +570,22 @@ sph_cache::~sph_cache()
     
     // Enqueue an exit command for each loader thread.
     
-    //needs.insert(sph_task(-1, -1));
-    //needs.insert(sph_task(-2, -2));
-    //needs.insert(sph_task(-3, -3));
-    //needs.insert(sph_task(-4, -4));
-    
-    // Await their exit. 
-    
-    int s;
+    if(!_useDiskCache)
+    {
+	needs.insert(sph_task(-1, -1));
+	needs.insert(sph_task(-2, -2));
+	needs.insert(sph_task(-3, -3));
+	needs.insert(sph_task(-4, -4));
 
-    //SDL_WaitThread(thread[0], &s);
-    //SDL_WaitThread(thread[1], &s);
-    //SDL_WaitThread(thread[2], &s);
-    //SDL_WaitThread(thread[3], &s);
+	// Await their exit. 
+
+	int s;
+
+	SDL_WaitThread(thread[0], &s);
+	SDL_WaitThread(thread[1], &s);
+	SDL_WaitThread(thread[2], &s);
+	SDL_WaitThread(thread[3], &s);
+    }
 
     // Release the pixel buffer objects.
     
@@ -611,15 +625,20 @@ static void debug_on(int l)
 
 int sph_cache::add_file(const std::string& name)
 {
-    /*int f = int(files.size());
+    if(!_useDiskCache)
+    {
+	int f = int(files.size());
 
-    files.push_back(sph_file(name));
+	files[f] = sph_file(name);
 
-    return f;*/
-    
-    int f = _diskCache->add_file(name);
-    files[f] = sph_file(name);
-    return f;
+	return f;
+    }
+    else
+    {
+	int f = _diskCache->add_file(name);
+	files[f] = sph_file(name);
+	return f;
+    }
 }
 
 // Return the texture object associated with the requested page. Request the
@@ -660,8 +679,14 @@ GLuint sph_cache::get_page(int f, int i, int t, int& n)
             
         if (o)
         {
-            //needs.insert(sph_task(f, i, pbos.deq(), pagelen(f), this));
-	    _diskCache->add_task(new sph_task(f, i, pbos.deq(), pagelen(f), this, t));
+	    if(!_useDiskCache)
+	    {
+		needs.insert(sph_task(f, i, pbos.deq(), pagelen(f), this, t));
+	    }
+	    else
+	    {
+		_diskCache->add_task(new sph_task(f, i, pbos.deq(), pagelen(f), this, t));
+	    }
             waits.insert(sph_page(f, i, filler), t);
             pages.insert(sph_page(f, i, o),      t);            
             //clear(o);
@@ -682,16 +707,10 @@ void sph_cache::update(int t)
     gettimeofday(&start,NULL);
     glPushAttrib(GL_PIXEL_MODE_BIT);
     {
-	/*while(!loads.empty())
-	{
-	    _delayList.push_back(loads.remove());
-	}*/
 	int c;
         for (c = 0; !loads.empty(); ++c)
         {
             sph_task task = loads.remove();
-	    //sph_task task = *_delayList.begin();
-	    //_delayList.erase(_delayList.begin());
             sph_page page = pages.search(sph_page(task.f, task.i), t);
                             waits.remove(sph_page(task.f, task.i));
 
