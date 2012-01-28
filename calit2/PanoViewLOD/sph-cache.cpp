@@ -254,17 +254,17 @@ bool sph_task::make_texture(GLuint o, uint32 w, uint32 h, uint16 c, uint16 b)
 #endif
 
 	glBindTexture(GL_TEXTURE_2D, o);
-	/*glTexImage2D (GL_TEXTURE_2D, 0, internal_form(c, b), w, h, 1,
+	glTexImage2D (GL_TEXTURE_2D, 0, internal_form(c, b), w, h, 1,
 	  external_form(c, b),
-	  external_type(c, b), 0);*/
+	  external_type(c, b), 0);
 
 #ifdef CACHE_PRINT_DEBUG
 	gettimeofday(&tstart,NULL);
 #endif
 
-	glTexSubImage2D (GL_TEXTURE_2D, 0, -1, -1, w, h,
+	/*glTexSubImage2D (GL_TEXTURE_2D, 0, -1, -1, w, h,
 		external_form(c, b),
-		external_type(c, b), 0);
+		external_type(c, b), 0);*/
 
 #ifdef CACHE_PRINT_DEBUG
 	gettimeofday(&tend,NULL);
@@ -689,9 +689,9 @@ GLuint sph_cache::get_page(int f, int i, int t, int& n)
 	    }
             waits.insert(sph_page(f, i, filler), t);
             pages.insert(sph_page(f, i, o),      t);            
-            //clear(o);
-	    initTexture(o, files[f].w, files[f].h,
-	    		    files[f].c, files[f].b);
+            clear(o);
+	    //initTexture(o, files[f].w, files[f].h,
+	    //		    files[f].c, files[f].b);
         }
     }
 
