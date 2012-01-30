@@ -77,6 +77,8 @@ class SphereDrawable : public PanoDrawable
 
     static OpenThreads::Mutex _initLock;
 
+    bool _highRamLoad;
+
     mutable bool _doDelete;
     static bool _deleteDone;
     mutable int rows, cols; 
