@@ -33,6 +33,7 @@ SphereDrawable::SphereDrawable(float radius_in, float viewanglev_in, float viewa
 
     floorOffset = ConfigManager::getFloat("Plugin.PanoView360.FloorOffset", 0.0);
     _renderOnMaster = ConfigManager::getBool("Plugin.PanoView360.RenderOnMaster",false);
+    _highRamLoad = ConfigManager::getBool("Plugin.PanoView360.HighRamLoad",false);
 
     if(viewanglev < 10)
     {
@@ -82,6 +83,32 @@ SphereDrawable::~SphereDrawable()
         }
     }
     */
+    if(_highRamLoad)
+    {
+	for(int i = 0; i < rtiles.size(); i++)
+	{
+	    for(int j = 0; j < rtiles[i].size(); j++)
+	    {
+		if(rtiles[i][j])
+		{
+		    delete[] rtiles[i][j];
+		}
+	    }
+	}
+	rtiles.clear();
+
+	for(int i = 0; i < ltiles.size(); i++)
+	{
+	    for(int j = 0; j < ltiles[i].size(); j++)
+	    {
+		if(ltiles[i][j])
+		{
+		    delete[] ltiles[i][j];
+		}
+	    }
+	}
+	ltiles.clear();
+    }
 }
 
 void SphereDrawable::updateRotate(float f)
@@ -124,6 +151,33 @@ void SphereDrawable::updateRotate(float f)
 
 void SphereDrawable::deleteTextures()
 {
+    if(_highRamLoad)
+    {
+	for(int i = 0; i < rtiles.size(); i++)
+	{
+	    for(int j = 0; j < rtiles[i].size(); j++)
+	    {
+		if(rtiles[i][j])
+		{
+		    delete[] rtiles[i][j];
+		}
+	    }
+	}
+	rtiles.clear();
+
+	for(int i = 0; i < ltiles.size(); i++)
+	{
+	    for(int j = 0; j < ltiles[i].size(); j++)
+	    {
+		if(ltiles[i][j])
+		{
+		    delete[] ltiles[i][j];
+		}
+	    }
+	}
+	ltiles.clear();
+    }
+
     /*if(!init)
     {
 	_deleteDone = true;
@@ -195,7 +249,7 @@ bool SphereDrawable::initTexture(eye e, int context) const
 	osg::Image* rimage =osgDB::readImageFile(rfile);
 	if(!rimage)
 	{
-	    std::cerr << "CylinderDrawable: Unable to load right eye image: " << rfile << endl;
+	    std::cerr << "SphereDrawable: Unable to load right eye image: " << rfile << endl;
 	    return false;
 	}
 	if(flip)
@@ -208,7 +262,7 @@ bool SphereDrawable::initTexture(eye e, int context) const
 
 	if(height % maxTextureSize != 0 || width % maxTextureSize != 0)
 	{
-	    std::cerr << "CylinderDrawable: Image dimensions not multiple of " << maxTextureSize << endl;
+	    std::cerr << "SphereDrawable: Image dimensions not multiple of " << maxTextureSize << endl;
 	    return false;
 	}
 
@@ -224,20 +278,42 @@ bool SphereDrawable::initTexture(eye e, int context) const
 	rows = height / maxTextureSize;
 	cols = width / maxTextureSize;
 
-	unsigned char * tiledata = new unsigned char[maxTextureSize * maxTextureSize * 3];
+	unsigned char * tiledata;
+
+	if(!_highRamLoad)
+	{
+	    tiledata = new unsigned char[maxTextureSize * maxTextureSize * 3];
+	}
 
 	int rowsize = maxTextureSize * 3;
 
 	for(int i = 0; i < rows; i++)
 	{
+	    if(_highRamLoad && i == rtiles.size())
+	    {
+		rtiles.push_back(std::vector<unsigned char *>());
+	    }
 	    for(int j = 0; j < cols; j++)
 	    {
-		ridata = rimage->data();
-		ridata = ridata + (i * width * maxTextureSize * 3) + (j * rowsize);
-		for(int k = 0; k < maxTextureSize; k++)
+		if(_highRamLoad && j != rtiles[i].size())
 		{
-		    memcpy((void*)(tiledata + (k*rowsize)), (void *)ridata, rowsize);
-		    ridata += width * 3;
+		    tiledata = rtiles[i][j];
+		}
+		else
+		{
+		    if(_highRamLoad)
+		    {
+			tiledata = new unsigned char[maxTextureSize * maxTextureSize * 3];
+			rtiles[i].push_back(tiledata);
+		    }
+
+		    ridata = rimage->data();
+		    ridata = ridata + (i * width * maxTextureSize * 3) + (j * rowsize);
+		    for(int k = 0; k < maxTextureSize; k++)
+		    {
+			memcpy((void*)(tiledata + (k*rowsize)), (void *)ridata, rowsize);
+			ridata += width * 3;
+		    }
 		}
 		glGenTextures(1, rtextures[context][i][j]);
 		glBindTexture(GL_TEXTURE_2D, *(rtextures[context][i][j]));
@@ -255,7 +331,10 @@ bool SphereDrawable::initTexture(eye e, int context) const
 	    rimage->unref();
 	}
 
-	delete[] tiledata;
+	if(!_highRamLoad)
+	{
+	    delete[] tiledata;
+	}
 	return true;
     }
     else
@@ -292,20 +371,40 @@ bool SphereDrawable::initTexture(eye e, int context) const
 	rows = height / maxTextureSize;
 	cols = width / maxTextureSize;
 
-	unsigned char * tiledata = new unsigned char[maxTextureSize * maxTextureSize * 3];
+	unsigned char * tiledata;
+	if(!_highRamLoad)
+	{
+	    tiledata = new unsigned char[maxTextureSize * maxTextureSize * 3];
+	}
 
 	int rowsize = maxTextureSize * 3;
 
 	for(int i = 0; i < rows; i++)
 	{
+	    if(_highRamLoad && i == ltiles.size())
+	    {
+		ltiles.push_back(std::vector<unsigned char *>());
+	    }
 	    for(int j = 0; j < cols; j++)
 	    {
-		lidata = limage->data();
-		lidata = lidata + (i * width * maxTextureSize * 3) + (j * rowsize);
-		for(int k = 0; k < maxTextureSize; k++)
+		if(_highRamLoad && j != ltiles[i].size())
 		{
-		    memcpy((void*)(tiledata + (k*rowsize)), (void *)lidata, rowsize);
-		    lidata += width * 3;
+		    tiledata = ltiles[i][j];
+		}
+		else
+		{
+		    if(_highRamLoad)
+		    {
+			tiledata = new unsigned char[maxTextureSize * maxTextureSize * 3];
+			ltiles[i].push_back(tiledata);
+		    }
+		    lidata = limage->data();
+		    lidata = lidata + (i * width * maxTextureSize * 3) + (j * rowsize);
+		    for(int k = 0; k < maxTextureSize; k++)
+		    {
+			memcpy((void*)(tiledata + (k*rowsize)), (void *)lidata, rowsize);
+			lidata += width * 3;
+		    }
 		}
 		glGenTextures(1, ltextures[context][i][j]);
 		glBindTexture(GL_TEXTURE_2D, *(ltextures[context][i][j]));
@@ -317,7 +416,10 @@ bool SphereDrawable::initTexture(eye e, int context) const
 	    }
 	}
 
-	delete[] tiledata;
+	if(!_highRamLoad)
+	{
+	    delete[] tiledata;
+	}
 	if(limage)
 	{
 	    delete[] limage->data();
