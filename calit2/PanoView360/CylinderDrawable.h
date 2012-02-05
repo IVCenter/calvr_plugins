@@ -10,7 +10,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <GL/glut.h>
+#ifdef __APPLE__
+#include <glu.h>
+#else
+#include <GL/glu.h>
+#endif
 #include <iostream>
 #include <vector>
 
