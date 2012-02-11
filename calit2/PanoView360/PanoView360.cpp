@@ -33,7 +33,7 @@ bool PanoView360::init()
 
     _configFile = ConfigManager::getEntry("Plugin.PanoView360.ScreenConfig");
 
-    parseConfig(_configFile);
+    //parseConfig(_configFile);
 
     _wasinit = 0;
     _deleteWait = false;
@@ -230,17 +230,17 @@ void PanoView360::menuCallback(MenuItem* menuItem)
 		case CYLINDER:
 		{
 		    _cdLeft = new CylinderDrawable(_pictures[i]->radius, _pictures[i]->viewanglev, _pictures[i]->viewangleh, _pictures[i]->camHeight, _pictures[i]->segments, _pictures[i]->texture_size);
-		    _cdLeft->setMap(_eyeMap);
+		    //_cdLeft->setMap(_eyeMap);
 		    _cdRight = new CylinderDrawable(_pictures[i]->radius, _pictures[i]->viewanglev, _pictures[i]->viewangleh, _pictures[i]->camHeight, _pictures[i]->segments, _pictures[i]->texture_size);
-		    _cdRight->setMap(_eyeMap);
+		    //_cdRight->setMap(_eyeMap);
 		    break;
 		}
 		case SPHERE:
 		{
 		    _cdLeft = new SphereDrawable(_pictures[i]->radius, _pictures[i]->viewanglev, _pictures[i]->viewangleh, _pictures[i]->camHeight, _pictures[i]->segments, _pictures[i]->texture_size);
-		    _cdLeft->setMap(_eyeMap);
+		    //_cdLeft->setMap(_eyeMap);
 		    _cdRight = new SphereDrawable(_pictures[i]->radius, _pictures[i]->viewanglev, _pictures[i]->viewangleh, _pictures[i]->camHeight, _pictures[i]->segments, _pictures[i]->texture_size);
-		    _cdRight->setMap(_eyeMap);
+		    //_cdRight->setMap(_eyeMap);
 		    break;
 		}
 		default:
@@ -346,7 +346,7 @@ bool PanoView360::processEvent(InteractionEvent * event)
     return false;
 }
 
-void PanoView360::parseConfig(std::string file)
+/*void PanoView360::parseConfig(std::string file)
 {
     FILE * fp;
     mxml_node_t * tree;
@@ -408,7 +408,7 @@ void PanoView360::parseConfig(std::string file)
 
 	_eyeMap[host][context].push_back(pair<pair<int, int>, int >(pair<int, int>(vx, vy), eyei));
     }
-}
+}*/
 
 void PanoView360::createLoadMenu(std::string tagBase, std::string tag, SubMenu * menu)
 {
