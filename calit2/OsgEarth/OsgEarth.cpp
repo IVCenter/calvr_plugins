@@ -3,6 +3,10 @@
 #include <config/ConfigManager.h>
 #include <kernel/SceneManager.h>
 #include <kernel/PluginManager.h>
+#include <kernel/PluginHelper.h>
+#include <kernel/ComController.h>
+#include <kernel/Navigation.h>
+#include <kernel/InteractionManager.h>
 #include <menu/MenuSystem.h>
 #include <PluginMessageType.h>
 #include <iostream>
@@ -11,6 +15,8 @@
 #include <osgDB/ReadFile>
 #include <osg/Geode>
 #include <osg/ShapeDrawable>
+#include <osgUtil/IntersectVisitor>
+#include <osgEarthDrivers/kml/KML>
 
 using namespace osg;
 using namespace std;
@@ -19,6 +25,7 @@ using namespace osgEarth;
 using namespace osgEarth::Drivers;
 using namespace osgEarth::Util;
 
+const double earthRadiusMM = osg::WGS_84_RADIUS_EQUATOR * 1000.0;
 
 CVRPLUGIN(OsgEarth)
 
@@ -68,91 +75,537 @@ bool OsgEarth::init()
     map = new Map();
 
     //Add a base layer
-    //GDALOptions basemapOpt;
-    //basemapOpt.url() = "/home/covise/data/BMNG/world.topo.bathy.200401.3x86400x43200.tif";
-    //map->addImageLayer( new ImageLayer( ImageLayerOptions("basemap", basemapOpt) ) );
-
-    //Add a base layer
-    //TMSOptions bluemarbleOpt;
-    //bluemarbleOpt.url() = "http://demo.pelicanmapping.com/rmweb/data/bluemarble-tms/tms.xml";
-    //map->addImageLayer( new ImageLayer( ImageLayerOptions("bluemarble", bluemarbleOpt) ) );
-
-    //Add a base layer
     ArcGISOptions mapserverOpt;
     mapserverOpt.url() = "http://server.arcgisonline.com/ArcGIS/rest/services/ESRI_Imagery_World_2D/MapServer";
     map->addImageLayer( new ImageLayer( ImageLayerOptions("mapserver", mapserverOpt) ) );
-
-    // add a TMS fire layer:
-    //TMSOptions firetms;
-    //firetms.url() = "http://lava.ucsd.edu/FireTMS/tilemapresource.xml";
-    //map->addImageLayer( new ImageLayer( ImageLayerOptions( "firetms", firetms ) ) );
 
     // add a TMS elevation layer:
     TMSOptions elevationtms;
     elevationtms.url() = "http://demo.pelicanmapping.com/rmweb/data/srtm30_plus_tms/tms.xml";
     map->addElevationLayer( new ElevationLayer( "SRTM", elevationtms ) );
 
-    // add a local elevation layer (san diego)
-    //GDALOptions elevation;
-    //elevation.url() = "/home/covise/data/elevation/sdmrg_elev.tif";
-    //map->addElevationLayer( new ElevationLayer("Elevation", elevation) );
-
-    //http://hyperquad.ucsd.edu/cgi-bin/irene?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetCapabilities
-    //add san diego fire imagery
-    //GDALOptions sandiegoOpt;
-    //sandiegoOpt.url() = "/state/partition1/data/SanDiego/bigMergeSanDiego2.tif";
-    //map->addImageLayer( new ImageLayer( ImageLayerOptions("sanDiegoFire", sandiegoOpt) ) );
-
-/*
-    // lat, lon, height (meters, about ground level??)
-    osg::Matrixd output;
-    map->getProfile()->getSRS()->getEllipsoid()->computeLocalToWorldTransformFromLatLongHeight(
-                osg::DegreesToRadians(32.73f),
-		osg::DegreesToRadians(-117.17f),
-		0.0f,
-		output );
-
-    printf("Trans is %f %f %f\n", output.getTrans().x(), output.getTrans().y(), output.getTrans().z());
-
-    // creating a rectangular box to add to the surface for testing ( orientation and size )
-    osg::Geode* geode = new osg::Geode();
-    geode->addDrawable(new osg::ShapeDrawable(new osg::Box(osg::Vec3(0.0f,0.0f,0.0f),2000.0, 3000.0, 4000.0)));
-    osg::MatrixTransform* trans = new osg::MatrixTransform();
-    trans->setMatrix(output);
-    trans->addChild(geode);
-    SceneManager::instance()->getObjectsRoot()->addChild(trans);
-*/
-/*
-    osgEarth::CompositeTileSourceOptions compositeOpt;
-    for (unsigned int i = 0; i < files.size(); i++)
-    {
-       GDALOptions gdalOpt;
-       gdalOpt.url() = files[i];
-       ImageLayerOptions ilo(files[i], gdalOpt);
-       //Set the transparent color on each image        
-       ilo.transparentColor() = osg::Vec4ub(255, 255, 206, 0); 
-       compositeOpt.add( ilo );
-    }
-
-    map->addImageLayer( new ImageLayer( ImageLayerOptions("composite", compositeOpt) ) );
-*/
     MapNodeOptions mapNodeOptions;
     mapNodeOptions.enableLighting() = false;
     
     MapNode* mapNode = new MapNode( map , mapNodeOptions);
 
+    // add kml test
+    //KMLOptions kmlo;
+    //kmlo.defaultIconImage() = URI("http://www.osgearth.org/chrome/site/pushpin_yellow.png").readImage();
+    
+    osg::Node* kml = KML::load( URI("/home/pweber/Downloads/kml/saudi/qasr/doc.kml"), mapNode );
+    if ( kml )
+    {
+	 printf("Added model to planet\n");
+	 SceneManager::instance()->getObjectsRoot()->addChild(kml);
+    }
 /*
     //add sky
     double hours = skyConf.value( "hours", 12.0 );
     SkyNode* s_sky = new SkyNode( mapNode->getMap() );
     s_sky->setDateTime( 2011, 3, 6, hours );
-    s_sky->attach( &viewer ); // NEED TO GET ACCESS TO THE VIEWER
+    s_sky->attach( &CVRViewer::instance() );
     SceneManager::instance()->getObjectsRoot()->addChild( s_sky );
 */
 
     SceneManager::instance()->getObjectsRoot()->addChild(mapNode);
 
+    osg::Referenced::setThreadSafeReferenceCounting(true);
+
+    // initialize the location
+    //osg::Matrix mat(0.861380, 0.483984, 0.154220, 0.000000, -0.507961, 0.820889, 0.260991, 0.000000, -0.000282, -0.303150, 0.952943, 0.000000, -34278.109801, 662009.393172, -179429.821688, 1.000000);
+    //PluginHelper::setObjectMatrix(mat);
+    //PluginHelper::setObjectScale(0.107497);
+    
+    osg::Matrix objects = PluginHelper::getObjectMatrix();
+    objects.setTrans(0.0, earthRadiusMM * 3.0, 0.0);
+    PluginHelper::setObjectScale(1000.0);
+    PluginHelper::setObjectMatrix(objects);    // moves the planet; matrix should be a pure translation and rotation
+
+    // add menu for flying nav
+    _osgEarthMenu = new SubMenu("OsgEarth");
+
+    _navCB = new MenuCheckbox("Planet Nav Mode",true);
+    _navCB->setCallback(this);
+    _osgEarthMenu->addItem(_navCB);
+    PluginHelper::addRootMenuItem(_osgEarthMenu);
+
+    _navActive = false;
+    _mouseNavActive = false;
+
     return true;
+}
+
+void OsgEarth::preFrame()
+{
+    if(_navActive || _mouseNavActive)
+    {
+        double distanceToSurface = 0.0;
+
+        // make sure values are the same across the tiles
+        if(ComController::instance()->isMaster())
+        {
+            // need to get origin of cave in planet space (world origin is 0, 0, 0)
+            osg::Vec3d origPlanetPoint = PluginHelper::getWorldToObjectTransform().getTrans();
+
+            // planetPoint in latlonheight
+            osg::Vec3d latLonHeight;
+            map->getProfile()->getSRS()->getEllipsoid()->convertXYZToLatLongHeight(
+                                    origPlanetPoint.x(),
+                                    origPlanetPoint.y(),
+                                    origPlanetPoint.z(),
+                                    latLonHeight.x(),
+                                    latLonHeight.y(),
+                                    latLonHeight.z());
+
+            // set height back to the surface level 
+            latLonHeight[2] = 0.0;
+
+            // adjust the height to the ellipsoid
+            map->getProfile()->getSRS()->getEllipsoid()->convertLatLongHeightToXYZ(
+                                    latLonHeight.x(),
+                                    latLonHeight.y(),
+                                    latLonHeight.z(),
+                                    origPlanetPoint.x(),
+                                    origPlanetPoint.y(),
+                                    origPlanetPoint.z());
+
+
+            distanceToSurface = (origPlanetPoint * PluginHelper::getObjectToWorldTransform()).length();
+
+	
+            ComController::instance()->sendSlaves(&distanceToSurface,sizeof(double));
+        }
+        else
+        {
+            ComController::instance()->readMaster(&distanceToSurface,sizeof(double));
+        }
+
+	//std::cerr << "distance: " << distanceToSurface << std::endl;
+
+        if(_navActive)
+        {
+            processNav(getSpeed(distanceToSurface));
+        }
+        else
+        {
+            processMouseNav(getSpeed(distanceToSurface));
+        }
+    }
+}
+
+bool OsgEarth::buttonEvent(int type, int button, int hand, const osg::Matrix & mat)
+{
+    //std::cerr << "Button event." << std::endl;
+    if(!_navCB->getValue() || Navigation::instance()->getPrimaryButtonMode() == SCALE)
+    {
+        return false;
+    }
+
+    if(!_navActive && button == 0 && (type == BUTTON_DOWN || type == BUTTON_DOUBLE_CLICK))
+    {
+        _navHand = hand;
+        _navHandMat = mat;
+        _navActive = true;
+        _mouseNavActive = false;
+        return true;
+    }
+    else if(!_navActive)
+    {
+        return false;
+    }
+
+    if(hand != _navHand)
+    {
+        return false;
+    }
+
+    if(button == 0)
+    {
+        if(type == BUTTON_UP)
+        {
+            _navActive = false;
+        }
+        return true;
+    }
+
+    return false;
+}
+
+bool OsgEarth::processEvent(InteractionEvent * event)
+{
+    MouseInteractionEvent * mie = event->asMouseEvent();
+    if(mie)
+    {
+        return mouseButtonEvent(mie->getInteraction(),mie->getButton(),mie->getX(),mie->getY(),mie->getTransform());
+    }
+
+    TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
+    if(tie)
+    {
+        return buttonEvent(tie->getInteraction(),tie->getButton(),tie->getHand(),tie->getTransform());
+    }
+
+    return false;
+}
+
+bool OsgEarth::mouseButtonEvent (int type, int button, int x, int y, const osg::Matrix &mat)
+{
+    if(!_navCB->getValue() || Navigation::instance()->getPrimaryButtonMode() == SCALE)
+    {
+        return false;
+    }
+
+    if(_navActive)
+    {
+        return false;
+    }
+
+
+    if(!_mouseNavActive && button == 0 && (type == BUTTON_DOWN || type == BUTTON_DOUBLE_CLICK))
+    {
+        _startX = x;
+        _startY = y;
+        _currentX = x;
+        _currentY = y;
+        _mouseNavActive = true;
+
+        if(Navigation::instance()->getPrimaryButtonMode() == MOVE_WORLD)
+        {
+            _movePointValid = false;
+        }
+
+        return true;
+    }
+    else if(!_mouseNavActive)
+    {
+        return false;
+    }
+
+    if(button == 0)
+    {
+        if(type == BUTTON_UP)
+        {
+            _mouseNavActive = false;
+        }
+        _currentX = x;
+        _currentY = y;
+        return true;
+    }
+
+    return false;
+}
+
+void OsgEarth::menuCallback(MenuItem * item)
+{
+    if(item == _navCB)
+    {
+        _navActive = _navCB->getValue();
+    }
+}
+
+void OsgEarth::processNav(double speed)
+{
+    double time = PluginHelper::getLastFrameDuration();
+    float rangeValue = 500.0;
+
+    switch(Navigation::instance()->getPrimaryButtonMode())
+    {
+        case WALK:
+        case DRIVE:
+        {
+            osg::Vec3 trans;
+            osg::Vec3 offset = PluginHelper::getHandMat(_navHand).getTrans() - _navHandMat.getTrans();
+            trans = offset;
+            trans.normalize();
+            offset.z() = 0.0;
+
+            float speedScale = fabs(offset.length() / rangeValue);
+
+            trans = trans * (speedScale * speed * time * 1000.0);
+
+            osg::Matrix r;
+            r.makeRotate(_navHandMat.getRotate());
+            osg::Vec3 pointInit = osg::Vec3(0, 1, 0);
+            pointInit = pointInit * r;
+            pointInit.z() = 0.0;
+
+            r.makeRotate(PluginHelper::getHandMat(_navHand).getRotate());
+            osg::Vec3 pointFinal = osg::Vec3(0, 1, 0);
+            pointFinal = pointFinal * r;
+            pointFinal.z() = 0.0;
+
+            osg::Matrix turn;
+            if(pointInit.length2() > 0 && pointFinal.length2() > 0)
+            {
+                pointInit.normalize();
+                pointFinal.normalize();
+                float dot = pointInit * pointFinal;
+                float angle = acos(dot) / 15.0;
+                if(dot > 1.0 || dot < -1.0)
+		{
+                    angle = 0.0;
+                }
+                else if((pointInit ^ pointFinal).z() < 0)
+                {
+                    angle = -angle;
+                }
+                turn.makeRotate(-angle, osg::Vec3(0, 0, 1));
+            }
+
+            osg::Matrix objmat = PluginHelper::getObjectMatrix();
+
+            osg::Vec3 origin = PluginHelper::getHandMat(_navHand).getTrans();
+
+            objmat = objmat * osg::Matrix::translate(-origin) * turn * osg::Matrix::translate(origin - trans);
+            PluginHelper::setObjectMatrix(objmat);
+
+            break;
+        }
+        case FLY:
+        {
+            osg::Vec3 trans = PluginHelper::getHandMat(_navHand).getTrans() - _navHandMat.getTrans();
+
+            float speedScale = fabs(trans.length() / rangeValue);
+            trans.normalize();
+
+            trans = trans * (speedScale * speed * time * 1000.0);
+
+            osg::Matrix rotOffset = osg::Matrix::rotate(_navHandMat.getRotate().inverse())
+                                 * osg::Matrix::rotate(PluginHelper::getHandMat(_navHand).getRotate());
+            osg::Quat rot = rotOffset.getRotate();
+            rot = rot.inverse();
+            double angle;
+            osg::Vec3 vec;
+            rot.getRotate(angle, vec);
+            rot.makeRotate(angle / 20.0, vec);
+            rotOffset.makeRotate(rot);
+
+            /*osg::Matrix r;
+            r.makeRotate(_navHandMat.getRotate());
+            osg::Vec3 pointInit = osg::Vec3(0, 1, 0);
+            pointInit = pointInit * r;
+
+            r.makeRotate(PluginHelper::getHandMat(_navHand).getRotate());
+	    osg::Vec3 pointFinal = osg::Vec3(0, 1, 0);
+            pointFinal = pointFinal * r;
+
+            osg::Quat turn;
+            if(pointInit.length2() > 0 && pointFinal.length2() > 0)
+            {
+                pointInit.normalize();
+                pointFinal.normalize();
+                turn.makeRotate(pointInit,pointFinal);
+                
+                double angle;
+                osg::Vec3 vec;
+                turn.getRotate(angle,vec);
+                turn.makeRotate(angle / 20.0, vec);
+            }*/
+
+            osg::Matrix objmat = PluginHelper::getObjectMatrix();
+
+            osg::Vec3 origin = PluginHelper::getHandMat(_navHand).getTrans();
+
+            objmat = objmat * osg::Matrix::translate(-origin) * rotOffset * osg::Matrix::translate(origin - trans);
+            PluginHelper::setObjectMatrix(objmat);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+void OsgEarth::processMouseNav(double speed)
+{
+    int masterScreen = CVRViewer::instance()->getActiveMasterScreen();
+    if(masterScreen < 0)
+    {
+        return;
+    }
+
+    ScreenInfo * si = ScreenConfig::instance()->getMasterScreenInfo(masterScreen);
+    if(!si)
+    {
+        return;
+    }
+
+    osg::Vec3d screenCenter = si->xyz;
+    osg::Vec3d screenDir(0,1,0);
+    screenDir = screenDir * si->transform;
+    screenDir = screenDir - screenCenter;
+    screenDir.normalize();
+
+    osg::Vec3d planetPoint(0,0,0);
+    planetPoint = planetPoint * PluginHelper::getObjectToWorldTransform();
+    double planetDist = (screenCenter - planetPoint).length();
+
+    switch(Navigation::instance()->getPrimaryButtonMode())
+    {
+        case MOVE_WORLD:
+        {
+            osg::Vec3d P1(0,0,0),P2(0,1000000,0);
+            P1 = P1 * PluginHelper::getMouseMat();
+            P2 = P2 * PluginHelper::getMouseMat();
+
+            osg::Vec3d lineDir = P2 - P1;
+            lineDir.normalize();
+
+            osg::Vec3d c = planetPoint - P1;
+            double ldotc = lineDir * c;
+
+            double determ = ldotc * ldotc - c * c + earthRadiusMM * earthRadiusMM;
+            if(determ < 0)
+            {
+                _movePointValid = false;
+                break;
+            }
+
+            double d;
+
+            if(determ == 0)
+	    {
+                d = ldotc;
+            }
+            else
+            {
+                double d1,d2;
+                d1 = ldotc + sqrt(determ);
+                d2 = ldotc - sqrt(determ);
+                if(d1 >= 0.0 && d1 < d2)
+                {
+                    d = d1;
+                }
+                                                                else if(d2 >= 0.0)
+                {
+                    d = d2;
+                }
+                else // intersect with planet behind viewer
+                {
+                    _movePointValid = false;
+                    break;
+                }
+            }
+            osg::Vec3d movePoint = lineDir * d + P1;
+
+            if(!_movePointValid)
+            {
+                _movePoint = movePoint;
+                _movePointValid = true;
+                break;
+            }
+
+            P1 = _movePoint - planetPoint;
+            P2 = movePoint - planetPoint;
+            P1.normalize();
+            P2.normalize();
+
+            osg::Matrix objMat = PluginHelper::getObjectMatrix();
+            objMat = objMat * osg::Matrix::translate(-planetPoint) * osg::Matrix::rotate(P1,P2) * osg::Matrix::translate(planetPoint);
+            PluginHelper::setObjectMatrix(objMat);
+
+            _movePoint = movePoint;
+            osg::Matrix m;
+            m.makeTranslate(_movePoint);
+            //_testMark->setMatrix(m);
+
+            break;
+        }
+        case WALK:
+	case DRIVE:
+        {
+            osg::Vec3d planetDir = planetPoint - screenCenter;
+            planetDir.normalize();
+
+            double yDiff = _currentY - _startY;
+            osg::Vec3d planetOffset = screenDir * yDiff * speed * 0.3;
+
+            osg::Vec3 screen2Planet = screenDir * planetDist;
+
+            osg::Vec3d screenUp(0,0,1);
+            screenUp = screenUp * si->transform;
+            screenUp = screenUp - screenCenter;
+            screenUp.normalize();
+
+            /*double dist = _currentX - _startX;
+            dist /= si->myChannel->width;
+            dist *= si->width;
+            osg::Vec3d rotPoint(dist,0,0);
+            rotPoint = rotPoint * si->transfrom;
+            rotPoint = rotPoint - planetPoint;
+            rotPoint.normalize();
+
+            osg::Vec3d cpoint = -screen2Planet;
+                                                cpoint.normalize();*/
+
+
+            double angle = _currentX - _startX;
+            //angle /= -100000.0;
+            angle *= (earthRadiusMM - planetDist) / 500000000000000.0;
+            //angle *= -speed / 200000000.0;
+
+
+            osg::Matrix objMat = PluginHelper::getObjectMatrix();
+            objMat = objMat * osg::Matrix::translate(-screenCenter) * osg::Matrix::rotate(planetDir,screenDir) * osg::Matrix::translate(-screen2Planet) * osg::Matrix::rotate(angle,screenUp) * osg::Matrix::translate(screen2Planet + planetOffset + screenCenter);
+            PluginHelper::setObjectMatrix(objMat);
+            break;
+        }
+        case FLY:
+        {
+            osg::Vec3d planetDir = planetPoint - screenCenter;
+            planetDir.normalize();
+
+            osg::Vec3d axis(_currentX - _startX, 0, -_currentY + _startY);
+            double angle = axis.length();
+            axis.normalize();
+
+            axis = axis * si->transform;
+            axis = axis ^ screenDir;
+	    axis.normalize();
+
+            // check if invalid
+            if(axis.length() < 0.9)
+            {
+                break;
+            }
+
+            osg::Vec3 screen2Planet = screenDir * planetDist;
+
+            //angle *= -speed / 200000000.0;
+            angle *= (earthRadiusMM - planetDist) / 200000000000000.0;
+
+            osg::Matrix objMat = PluginHelper::getObjectMatrix();
+            objMat = objMat * osg::Matrix::translate(-screenCenter) * osg::Matrix::rotate(planetDir,screenDir) * osg::Matrix::translate(-screen2Planet) * osg::Matrix::rotate(angle,axis) * osg::Matrix::translate(screen2Planet + screenCenter);
+            PluginHelper::setObjectMatrix(objMat);
+
+            break;
+        }
+        defaut:
+            break;
+    }
+}
+
+double OsgEarth::getSpeed(double distance)
+{
+    double boundDist = std::max((double)0.0,distance);
+    boundDist/=1000.0;
+
+    if(boundDist < 762.0)
+    {
+        return 10.0 * (0.000000098 * pow(boundDist,3) + 1.38888);
+    }
+    else if(boundDist < 10000.0)
+    {
+        boundDist = boundDist - 762.0;
+        return 10.0 * (0.0314544 * boundDist + 44.704);
+    }
+    else
+    {
+        boundDist = boundDist - 10000;
+        double cap = 0.07 * boundDist + 335.28;
+        cap = std::min((double)50000,cap);
+        return 10.0 * cap;
+    }
 }
 
 

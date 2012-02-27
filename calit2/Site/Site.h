@@ -21,38 +21,46 @@
 #include <kernel/Navigation.h>
 #include <kernel/ComController.h>
 #include <config/ConfigManager.h>
+#include <kernel/PluginHelper.h>
+#include <menu/MenuSystem.h>
+#include <menu/SubMenu.h>
+#include <menu/MenuButton.h>
+#include <menu/MenuCheckbox.h>
+#include <menu/MenuRangeValue.h>
+
 
 
 const int selection = 2;
 
 using namespace std;
 
-class Site : public cvr::CVRPlugin, public cvr::FileLoadCallback
+class Site : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::FileLoadCallback
 {
   private:
-    bool joyStickReset;
     int currentMode;
     vector< osg::ref_ptr<osg::Texture2D> > texFiles;
     osg::StateSet* texstate;
     int numberDivisions;
     int totalNumPoints;
-    int level;
-    int textureVisible; 
     osg::Geometry* radar;
     int dimensions[2];
-    osg::Uniform* pixelsize;
-    osg::Uniform* density;
+    osg::Uniform* objectScale;
+    osg::Uniform* pointSize;
     osg::Group* group;
     void createSite();
-    void loadPointData(char *, osg::Group *);
+    void loadPointData(string, osg::Group *);
+
+    //menu items
+    cvr::SubMenu* siteSubMenuItem;
+    cvr::SubMenu* textureSubMenuItem;
+    cvr::MenuRangeValue * rangeMenuItem;
 
   public:
     Site();
     virtual ~Site();
     bool init();
-    int unloadFile();
-    int loadFile(const char*);
     void preFrame();
     virtual bool loadFile(string filename);
+    void menuCallback(cvr::MenuItem * item);
 };
 #endif
