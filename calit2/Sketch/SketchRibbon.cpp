@@ -87,7 +87,6 @@ bool SketchRibbon::buttonEvent(int type, const osg::Matrix & mat)
 
 	    point = osg::Vec3(50.0 * _size, Sketch::instance()->getPointerDistance(), 0);
 	    point = point * mat * PluginHelper::getWorldToObjectTransform();
-
 	    _verts->push_back(point);
 	    _normals->push_back(osg::Vec3(0,0,1));
 	    _mcb->_bound.expandBy(point);

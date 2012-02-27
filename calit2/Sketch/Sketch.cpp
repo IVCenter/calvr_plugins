@@ -1,18 +1,29 @@
 #include "Sketch.h"
 #include "SketchLine.h"
 #include "SketchRibbon.h"
+#include "SketchShape.h"
+#include "Layout.h"
 
 #include <config/ConfigManager.h>
 #include <kernel/PluginHelper.h>
 #include <kernel/InteractionManager.h>
+#include <kernel/SceneManager.h>
+#include <kernel/SceneObject.h>
 
 #include <osg/ShapeDrawable>
 #include <osg/Material>
 #include <osg/LightModel>
 #include <osg/LineWidth>
 #include <osgDB/WriteFile>
+#include <osgDB/ReadFile>
+
+#include <util/Intersection.h>
 
 #include <iostream>
+#include <dirent.h>
+#include <math.h>
+
+#define MAX_GRID_SIZE 200
 
 Sketch * Sketch::_myPtr = NULL;
 
@@ -20,8 +31,9 @@ CVRPLUGIN(Sketch)
 
 using namespace cvr;
 using namespace osg;
+using namespace std;
 
-Sketch::Sketch()
+Sketch::Sketch() : FileLoadCallback("obj")
 {
     _myPtr = this;
 }
@@ -41,12 +53,19 @@ bool Sketch::init()
 
     PluginHelper::addRootMenuItem(_sketchMenu);
 
-    _modeButtons = new MenuTextButtonSet(true, 400, 35, 3);
+    _modeButtons = new MenuTextButtonSet(true, 450, 30, 3);
     _modeButtons->setCallback(this);
-    _modeButtons->addButton("Ribbon");
-    _modeButtons->addButton("Line");
-    _modeButtons->addButton("Shape");
+    _modeButtons->addButton("Draw");
+    _modeButtons->addButton("Select");
+    _modeButtons->addButton("Move");
     _sketchMenu->addItem(_modeButtons);
+
+    _drawModeButtons = new MenuTextButtonSet(true, 450, 30, 4);
+    _drawModeButtons->setCallback(this);
+    _drawModeButtons->addButton("Shape");
+    _drawModeButtons->addButton("Layout");
+    _drawModeButtons->addButton("Ribbon");
+    _drawModeButtons->addButton("Line");
 
     _csCB = new MenuCheckbox("Color Selector",false);
     _csCB->setCallback(this);
@@ -56,9 +75,37 @@ bool Sketch::init()
     _sizeRV->setCallback(this);
     _sketchMenu->addItem(_sizeRV);
 
+    _sizeAllRV = new MenuRangeValue("Size All", 0.1,10.0,1.0);
+    _sizeAllRV->setCallback(this);
+    _sketchMenu->addItem(_sizeAllRV);
+
+    _tessellationsRV = new MenuRangeValue("Tessellations", 6, 30, 12, 2);
+    _tessellationsRV->setCallback(this);
+    _sketchMenu->addItem(_tessellationsRV);
+
     _saveButton = new MenuButton("Save");
     _saveButton->setCallback(this);
     _sketchMenu->addItem(_saveButton);
+
+    _loadMenu = new SubMenu("Load", "Load");
+    _loadMenu->setCallback(this);
+    _sketchMenu->addItem(_loadMenu);
+
+    _clearButton = new MenuButton("Clear");
+    _clearButton->setCallback(this);
+    _sketchMenu->addItem(_clearButton);
+
+    _freezeCB = new MenuCheckbox("Freeze", false);
+    _freezeCB->setCallback(this);
+    _sketchMenu->addItem(_freezeCB);
+
+    _snapToGridCB = new MenuCheckbox("Snap To Grid", false);
+    _snapToGridCB->setCallback(this);
+    _sketchMenu->addItem(_snapToGridCB);
+
+    _showLayoutCB = new MenuCheckbox("Show Layout", true);
+    _showLayoutCB->setCallback(this);
+    _sketchMenu->addItem(_showLayoutCB);
 
     _lineType = new MenuTextButtonSet(true, 400, 30, 3);
     _lineType->setCallback(this);
@@ -79,29 +126,54 @@ bool Sketch::init()
     _shapeType->addButton("Cone");
     _shapeType->addButton("Sphere");
 
-    _shapeWireframe = new MenuCheckbox("Wireframe", false);
+    _layoutType = new MenuTextButtonSet(true, 400, 30, 3);
+    _layoutType->setCallback(this);
+    _layoutType->addButton("Torus");
+    _layoutType->addButton("Horizontal");
+    _layoutType->addButton("Vertical");
+
+    _layoutSizeRV = new MenuRangeValue("Layout Size", 0.1,10.0,1.0);
+    _layoutSizeRV->setCallback(this);
+
+    _shapeWireframe = new MenuCheckbox("Wireframe", true);
     _shapeWireframe->setCallback(this);
 
-    _mode = NONE;
+
+    _mode = SELECT;
+    _drawMode = NONE;
     _lt = SketchLine::NONE;
-    _st = SHAPE_NONE;
+    _st = SketchShape::NONE;
     _drawing = false;
 
-    _pointerDistance = 1000.0;
+    _dataDir = ConfigManager::getEntry("Plugin.Sketch.DataDir");
+    _dataDir = _dataDir + "/";
 
-    _color = osg::Vec4(1.0,1.0,1.0,1.0);
+    _modelDir = ConfigManager::getEntry("Plugin.Sketch.ModelDir");
+    _modelDir = _modelDir + "/";
+
+    std::string gridSize = ConfigManager::getEntry("Plugin.Sketch.GridSize");
+    _gridSize = atoi(gridSize.c_str());
+
+    if (!_gridSize || _gridSize > MAX_GRID_SIZE)
+        _gridSize = 1;
+
+    cvr::MenuButton * button;
+    std::string filename;
+
+    _pointerDistance = 1000.0;
+    _sizeScale = 100;
+    _modelScale = 12;
+
+    _color = osg::Vec4(0.0,1.0,0.0,1.0);
 
     _sketchRoot = new osg::MatrixTransform();
     _sketchGeode = new osg::Geode();
     _sketchRoot->addChild(_sketchGeode);
 
     PluginHelper::getObjectsRoot()->addChild(_sketchRoot);
+    _isObjectRoot = true;
 
     osg::StateSet * stateset = _sketchGeode->getOrCreateStateSet();
-    //stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
-    //osg::LightModel * lm = new osg::LightModel();
-    //lm->setTwoSided(true);
-    //stateset->setAttributeAndModes(lm,osg::StateAttribute::ON);
     osg::Material * mat = new osg::Material();
     stateset->setAttributeAndModes(mat,osg::StateAttribute::ON);
 
@@ -110,31 +182,15 @@ bool Sketch::init()
 
     _activeObject = NULL;
 
-    /*osg::Shape * shape;
-    osg::ShapeDrawable * sd;
-    osg::Geode * geode;
+    _pat = new osg::PositionAttitudeTransform();
 
-    osg::Quat rot;
-
-    shape = new osg::Cylinder(osg::Vec3(0,0,0),5,100);
-    rot.makeRotate(M_PI/ 2.0, osg::Vec3(0,1.0,0));
-    ((osg::Cylinder*)shape)->setRotation(rot);
-
-    sd = new osg::ShapeDrawable(shape);
-    geode = new osg::Geode();
-    geode->addDrawable(sd);
-    _brushes.push_back(geode);
-
-    shape = new osg::Sphere(osg::Vec3(0,0,0),5);
-    sd = new osg::ShapeDrawable(shape);
-    geode = new osg::Geode();
-    geode->addDrawable(sd);
-    _brushes.push_back(geode);
-
-    _brushes.push_back(geode);*/
-
+    _moveBrushShape = new osg::Sphere(osg::Vec3(0,0,0),10);
+    _moveBrushDrawable = new osg::ShapeDrawable(_moveBrushShape);
+    _moveBrushDrawable->setColor(osg::Vec4(.5,.5,.5,1));
+    _moveBrushGeode = new osg::Geode();
+    _moveBrushGeode->addDrawable(_moveBrushDrawable);
+    
     _colorSelector = new ColorSelector(_color);
-    //_colorSelector->setVisible(true);
     osg::Vec3 pos = ConfigManager::getVec3("Plugin.Sketch.ColorSelector");
     _colorSelector->setPosition(pos);
 
@@ -144,91 +200,331 @@ bool Sketch::init()
 
 void Sketch::menuCallback(MenuItem * item)
 {
-    /*if(item == _modeButtons)
-    {
-	finishGeometry();
-	removeMenuItems(_mode);
-	_mode = (DrawMode)_modeButtons->firstNumOn();
-	_brushRoot->removeChildren(0,_brushRoot->getNumChildren());
-	if(_mode >= 0)
-	{
-	    _brushRoot->addChild(_brushes[_mode]);
-	}
-
-	_sizeRV->setValue(1.0);
-	addMenuItems(_mode);
-    }
-    else if(item == _sizeRV)
-    {
-    }
-    else if(item == _lineType)
-    {
-	finishGeometry();
-	_lt = (LineType)_lineType->firstNumOn();
-    }
-    else if(item == _shapeType)
-    {
-	finishGeometry();
-	_st = (ShapeType)_shapeType->firstNumOn();
-    }*/
-
     if(item == _modeButtons)
     {
-	finishGeometry();
-	removeMenuItems(_mode);
-	_mode = (DrawMode)_modeButtons->firstNumOn();
-	//_brushRoot->removeChildren(0,_brushRoot->getNumChildren());
-	//if(_mode >= 0)
-	//{
-	//    _brushRoot->addChild(_brushes[_mode]);
-	//}
+        finishGeometry();
+        removeMenuItems(_mode);
+        preFrame();
+        _mode = (Mode)_modeButtons->firstNumOn();
 
-	_sizeRV->setValue(1.0);
-	addMenuItems(_mode);
-	createGeometry();
-    }
-    else if(item == _sizeRV)
+        _sizeRV->setValue(1.0);
+        addMenuItems(_mode);
+
+        if (_mode == MOVE || _mode == SELECT)
+        {
+            _moveBrushGeode = new osg::Geode();
+            _moveBrushGeode->addDrawable(_moveBrushDrawable);
+            _brushRoot->addChild(_moveBrushGeode);
+        }
+        else
+        {
+            _brushRoot->removeChild(_moveBrushGeode);
+        }
+    } 
+
+    else if (item == _drawModeButtons)
     {
-	if(_activeObject)
-	{
-	    _activeObject->setSize(_sizeRV->getValue());
-	}
+        finishGeometry();
+        removeMenuItems(_drawMode);
+        _drawMode = (DrawMode)_drawModeButtons->firstNumOn(); 
+        addMenuItems(_drawMode);
+
+        // Only draw shapes and layouts when type is picked
+        if (_drawMode != SHAPE && _drawMode != LAYOUT)
+        {
+            createGeometry();
+        }
     }
-    else if(item == _lineType)
+
+    else if (item == _shapeType)
     {
-	finishGeometry();
-	_lt = (SketchLine::LineType)_lineType->firstNumOn();
-	createGeometry();
+        finishGeometry();
+        _st = (SketchShape::ShapeType)_shapeType->firstNumOn();
+        createGeometry();
     }
-    else if(item == _lineTube)
+
+    else if (item == _layoutType)
     {
-	SketchLine * line = dynamic_cast<SketchLine*>(_activeObject);
-	if(line)
-	{
-	    line->setTube(_lineTube->getValue());
-	}
+        finishGeometry();
+        _st = (SketchShape::ShapeType)(_layoutType->firstNumOn() + 4);
+        _lot = (Layout::LayoutType)(_layoutType->firstNumOn());
+        createGeometry();
     }
-    else if(item == _lineSnap)
+
+    else if (item == _csCB)
     {
-	SketchLine * line = dynamic_cast<SketchLine*>(_activeObject);
-	if(line)
-	{
-	    line->setSnap(_lineSnap->getValue());
-	}
+        _colorSelector->setVisible(_csCB->getValue());
     }
-    else if(item == _shapeType)
+
+    else if (item == _freezeCB)
     {
-	finishGeometry();
-	_st = (ShapeType)_shapeType->firstNumOn();
-	createGeometry();
+        if(_freezeCB->getValue())
+        {
+            _sketchRoot->postMult(PluginHelper::getObjectToWorldTransform());
+            PluginHelper::getObjectsRoot()->removeChild(_sketchRoot);
+            PluginHelper::getScene()->addChild(_sketchRoot);
+            _isObjectRoot = false;
+        }
+        else
+        {
+            _sketchRoot->postMult(PluginHelper::getWorldToObjectTransform());
+            PluginHelper::getScene()->removeChild(_sketchRoot);
+            PluginHelper::getObjectsRoot()->addChild(_sketchRoot);
+            _isObjectRoot = true;
+        }
     }
-    else if(item == _saveButton)
+
+    else if (item == _snapToGridCB)
     {
-	osgDB::writeNodeFile(*_sketchRoot.get(), "/home/aprudhom/ribbontest.obj");
+        _snapToGrid = _snapToGridCB->getValue();
     }
-    else if(item == _csCB)
+
+    else if (item == _sizeRV)
     {
-	_colorSelector->setVisible(_csCB->getValue());
+        if (_mode == DRAW)
+        {
+            if(_activeObject)
+            {
+                _activeObject->setSize(_sizeRV->getValue());
+            }
+            if (_highlightPat)
+            {
+                _highlightPat->setScale(osg::Vec3(_sizeRV->getValue(),
+                                                  _sizeRV->getValue(),
+                                                  _sizeRV->getValue()));
+            }
+        }
+        else if (_mode == SELECT)
+        {
+            float s = _sizeRV->getValue();
+            vector<PositionAttitudeTransform *>::iterator it;
+            for (it = _movingList.begin(); it != _movingList.end(); ++it)
+            {
+                for (int i = 0; i < _layoutStructList.size(); ++i)
+                {
+                    if ((*it) == _layoutStructList[i]->getPat())
+                    {
+                        _layoutStructList[i]->scaleMajorRadius(s);
+                    }
+                    else
+                    {
+                        (*it)->setScale(osg::Vec3(s,s,s));
+                    }
+                }
+            }
+        }
+    }
+
+    else if (item == _sizeAllRV)
+    {
+        float s = _sizeAllRV->getValue();
+        for (int i = 0; i < _shapeList.size(); ++i)
+        {
+            _shapeList[i]->scale(osg::Vec3(s,s,s));
+        }
+    }
+
+    else if (item == _tessellationsRV)
+    {
+        float t = _tessellationsRV->getValue();
+        int tes = (int)floor(t);
+        SketchShape * shape;
+        for (int i = 0; i < _objectList.size(); ++i)
+        {
+            shape = dynamic_cast<SketchShape *>(_objectList[i]);
+            if (shape)
+            {
+                shape->setTessellations(tes);
+            }
+        }
+    }
+
+    else if (item == _lineType)
+    {
+        finishGeometry();
+        _lt = (SketchLine::LineType)_lineType->firstNumOn();
+        createGeometry();
+    }
+
+    else if (item == _lineTube)
+    {
+        SketchLine * line = dynamic_cast<SketchLine*>(_activeObject);
+        if(line)
+        {
+            line->setTube(_lineTube->getValue());
+        }
+    }
+
+    else if (item == _lineSnap)
+    {
+        SketchLine * line = dynamic_cast<SketchLine*>(_activeObject);
+        if(line)
+        {
+            line->setSnap(_lineSnap->getValue());
+        }
+    }
+
+    else if (item == _showLayoutCB)
+    {
+        for (int i = 0; i < _layoutStructList.size(); ++i)
+        {
+            if (_showLayoutCB->getValue())
+            {
+                _layoutStructList[i]->show();
+            }
+            else
+            {
+                _layoutStructList[i]->hide();
+            }
+        }
+    }
+
+    else if (item == _layoutSizeRV)
+    {
+        for (int i = 0; i < _layoutStructList.size(); ++i)
+        {
+            _layoutStructList[i]->scaleMajorRadius(_layoutSizeRV->getValue());
+        }
+    }
+
+    else if (item == _shapeWireframe)
+    {
+        SketchShape * shape = dynamic_cast<SketchShape*>(_activeObject);
+        if(shape)
+        {
+            shape->setWireframe(_shapeWireframe->getValue());
+        }
+    }
+
+    else if (item == _saveButton)
+    {
+        std::string filename;
+        size_t pos;
+        string sub;
+        int i, max = 0;
+        
+        // traverses directory searching for files like sketch-005.osg
+        if (DIR *dir = opendir(_dataDir.c_str()))
+        {
+            while (struct dirent *entry = readdir(dir))
+            {
+                filename = entry->d_name;
+                // sketch-005.osg
+                pos = filename.rfind("-");
+
+                // 005.osg
+                sub = filename.substr(pos + 1, filename.size() - pos);
+
+                pos = filename.rfind(".");
+                // 005
+                sub = sub.substr(0, filename.size() - pos + 1);
+
+                i = atoi(sub.c_str());
+
+                if (i != 0 && i > max)
+                {
+                    max = i; 
+                }
+            }
+
+            char buf [10];
+            sprintf(buf, "%03d", ++max);
+            filename = _dataDir + "sketch-" + buf + ".osg";
+            std::cout << "Saving " << filename << std::endl;
+            osgDB::writeNodeFile(*_sketchRoot.get(), filename);
+            closedir(dir);
+        }
+    }
+
+    else if (item == _clearButton)
+    {
+        _sketchRoot->removeChildren(0, _sketchRoot->getNumChildren());
+        for (int i = 0; i < _objectList.size(); ++i)
+        {
+            delete _objectList[i];
+        }
+        _objectList.clear();
+        _shapeList.clear();
+        _layoutStructList.clear();
+
+        _patList.clear();
+        _movingList.clear();
+
+        _sketchGeode = new osg::Geode();
+        _sketchRoot->addChild(_sketchGeode);
+
+        finishGeometry();
+        createGeometry();
+    }
+
+    else if (item == _loadMenu)
+    {
+        for (int i = 0; i < _loadFileButtons.size(); ++i)
+        {
+            _loadMenu->removeItem(_loadFileButtons[i]);
+        }
+        _loadFileList.clear();
+        _loadFileButtons.clear();
+
+        cvr::MenuButton * button;
+        std::string filename;
+        
+        if (DIR *dir = opendir(_dataDir.c_str()))
+        {
+            while (struct dirent *entry = readdir(dir))
+            {
+                filename = entry->d_name; 
+                if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, ".."))
+                {
+                    _loadFileList.push_back(filename);
+
+                }
+            }
+            closedir(dir);
+        }
+        
+        sort(_loadFileList.begin(), _loadFileList.end());
+        
+        for (int i = 0; i < _loadFileList.size(); ++i)
+        {
+            button = new MenuButton(_loadFileList[i]);
+            button->setCallback(this);
+            _loadFileButtons.push_back(button);
+            _loadMenu->addItem(button);
+            _loadFileList[i] = _dataDir + _loadFileList[i];
+        }
+    }
+
+    for (int i = 0; i < _loadFileButtons.size(); ++i)
+    {
+        if (item == _loadMenu->getChild(i))
+        {
+            std::cout << "Loading " << _loadFileList[i] << std::endl;
+            osg::Node * node = osgDB::readNodeFile(_loadFileList[i]);
+
+            if (node == NULL)
+            {
+                std::cout << "Error loading file." << std::endl;
+                return;
+            }
+            _sketchRoot->removeChildren(0, _sketchRoot->getNumChildren());
+            _sketchRoot->addChild(node);
+            
+            // get all children of root that are PATs, for shape objects
+            osg::MatrixTransform * mat = dynamic_cast<MatrixTransform *>(node);
+            if (mat)
+            {
+                for (int i = 0; i < mat->getNumChildren(); ++i)
+                {
+                    osg::PositionAttitudeTransform * pat = 
+                        dynamic_cast<PositionAttitudeTransform*>(mat->getChild(i));
+                    if (pat)
+                    {
+                        _patList.push_back(pat);
+                    }
+                } 
+            }
+        }
     }
 }
 
@@ -236,342 +532,443 @@ void Sketch::preFrame()
 {
     if(_activeObject)
     {
-	_activeObject->updateBrush(_brushRoot.get());
-    }
-    /*if(_mode >= 0)
+        _activeObject->updateBrush(_brushRoot.get());
+    } 
+
+    osg::Matrix m;
+    osg::Quat rot = TrackingManager::instance()->getHandMat(0).getRotate();
+    osg::Vec3 point(0,Sketch::instance()->getPointerDistance(),0);
+    point = point * TrackingManager::instance()->getHandMat(0);
+
+    m.makeRotate(rot);
+    m = m * osg::Matrix::translate(point);
+    (_brushRoot.get())->setMatrix(m);
+
+    if (_isObjectRoot)
     {
-	osg::Matrix m;
-	osg::Quat rot = TrackingManager::instance()->getHandMat(0).getRotate();
-	osg::Vec3 pos(0,_pointerDistance,0);
-	pos = pos * TrackingManager::instance()->getHandMat(0);
-	m.makeRotate(rot);
+        point = point * PluginHelper::getWorldToObjectTransform();
+    }
 
-	osg::Matrix scale;
-	if(_mode == RIBBON)
-	{
-	    scale.makeScale(osg::Vec3(_sizeRV->getValue(),1.0,1.0));
-	}
+    if (_mode == DRAW && _drawMode == SHAPE)
+    {
+        for (int i = 0; i < _layoutStructList.size(); ++i)
+        {
+            _layoutStructList[i]->getPat()->dirtyBound();
+            if (_layoutStructList[i]->shape->containsPoint(point))
+            {
+                if (_showLayoutCB->getValue())
+                {
+                    _layoutStructList[i]->shape->highlight();
+                }
+            }
+            else
+            {
+                _layoutStructList[i]->shape->unhighlight();
+            }
+        }
+    }
 
-	m = scale *  m * osg::Matrix::translate(pos);
-	_brushRoot->setMatrix(m);
-    }*/
+    // highlight layouts and shapes when moving, and layouts when placing shapes
+    else if (_mode == MOVE)
+    {
+        bool isShapeHighlight = false;
+
+        for (int i = 0; i < _shapeList.size(); ++i)
+        {
+            if (_shapeList[i]->containsPoint(point))
+            {
+                _shapeList[i]->highlight();
+                isShapeHighlight = true;
+            }
+            else
+            {
+                _shapeList[i]->unhighlight();
+            }
+        }
+        
+        for (int i = 0; i < _layoutStructList.size(); ++i)
+        {
+            if (isShapeHighlight)
+            {
+                _layoutStructList[i]->shape->unhighlight();
+            }
+            else if (_layoutStructList[i]->shape->containsPoint(point))
+            {
+                if (_showLayoutCB->getValue())
+                {
+                    _layoutStructList[i]->shape->highlight();
+                }
+            }
+            else
+            {
+                _layoutStructList[i]->shape->unhighlight();
+            }
+        }
+    }
+    
+    else if (_mode == SELECT)
+    {
+        bool isShapeHighlight = false;
+
+        for (int i = 0; i < _shapeList.size(); ++i)
+        {
+            if (_shapeList[i]->containsPoint(point))
+            {
+                _shapeList[i]->highlight();
+            }
+            else
+            {
+                _shapeList[i]->unhighlight();
+            }
+
+            for (int j = 0; j < _movingList.size(); ++j)
+            {
+                if (_movingList[j] == _shapeList[i]->getPat())
+                {
+                    _shapeList[i]->highlight();
+                }
+            }
+        }
+
+        for (int i = 0; i < _layoutStructList.size(); ++i)
+        {
+            if (_layoutStructList[i]->shape->containsPoint(point))
+            {
+                if (!isShapeHighlight && _showLayoutCB->getValue())
+                {
+                    _layoutStructList[i]->shape->highlight();
+                }
+            }
+            else
+            {
+                _layoutStructList[i]->shape->unhighlight();
+            }
+            
+            for (int j = 0; j < _movingList.size(); ++j)
+            {
+                if (_layoutStructList[i]->getPat() == _movingList[j])
+                {
+                    _layoutStructList[i]->shape->highlight();
+                }
+            }
+        }
+    }
 }
 
 bool Sketch::processEvent(InteractionEvent * event)
 {
     TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
+
     if(!tie)
     {
-	return false;
+        return false;
     }
 
     if(tie->getHand() == 0 && tie->getButton() == 0)
     {
-	if(_csCB->getValue())
-	{
-	    if(_colorSelector->buttonEvent(tie->getInteraction(), tie->getTransform()))
-	    {
-		_color = _colorSelector->getColor();
-		if(_activeObject)
-		{
-		    _activeObject->setColor(_color);
-		}
-		return true;
-	    }
-	}
+        if(_csCB->getValue())
+        {
+            if(_colorSelector->buttonEvent(tie->getInteraction(), 
+                                           tie->getTransform()))
+            {
+                _color = _colorSelector->getColor();
+                if(_activeObject)
+                {
+                    _activeObject->setColor(_color);
+                }
+                return true;
+            }
+        }
 
-	if(_activeObject)
-	{
-	    bool ret = _activeObject->buttonEvent(tie->getInteraction(), tie->getTransform());
-	    if(_activeObject->isDone())
-	    {
-		finishGeometry();
-		createGeometry();
-	    }
-	    return ret;
-	}
-    }
-    /*if(hand == 0 && button == 0 && type == BUTTON_DOWN && _mode >= 0)
-    {
-	//std::cerr << "Start drawing." << std::endl;
+        osg::Vec3 pos(0,Sketch::instance()->getPointerDistance(),0);
+        pos = pos * TrackingManager::instance()->getHandMat(0);
 
-	if(_mode == RIBBON)
-	{
-	    _verts = new Vec3Array(0);
-	    _colors = new Vec4Array(1);
-	    _normals = new Vec3Array(0);
-	    _primitive = new DrawArrays(PrimitiveSet::TRIANGLE_STRIP, 0, 0);
-	    _currentGeometry = new osg::Geometry();
-	    
-	    (*_colors)[0] = _color;
+        osg::Vec3 point;
 
-	    _currentGeometry->setVertexArray(_verts);
-	    _currentGeometry->setColorArray(_colors);
-	    _currentGeometry->setNormalArray(_normals);
-	    _currentGeometry->setNormalBinding(Geometry::BIND_PER_VERTEX);
-	    _currentGeometry->setColorBinding(Geometry::BIND_OVERALL);
-	    _currentGeometry->setUseDisplayList(false);
-	    //_currentGeometry->setUseVertexBufferObjects(true);
-	    _currentGeometry->addPrimitiveSet(_primitive);
+        if (_isObjectRoot)
+            point = pos * PluginHelper::getWorldToObjectTransform();
+        else
+            point = pos;
+        
 
-	    _sketchGeode->addDrawable(_currentGeometry);
+        if (_gridSize != 1) // for testing use 1 as no snap
+        {
+            for (int i = 0; i < 3; ++i)
+            {
+                int diff = (int)floor(point[i]) % _gridSize;     
+                point[i] -= diff;
+            }
+        }
+        osg::Vec3 distance = point - _lastPoint;
+        
+        if (_gridSize != 1)
+        {
+            distance[0] = (int)distance[0];
+            distance[1] = (int)distance[1];
+            distance[2] = (int)distance[2];
+        }
+        
 
-	    MyComputeBounds * mcb = new MyComputeBounds();
-	    _currentBound = &mcb->_bound;
-	    _currentGeometry->setComputeBoundingBoxCallback(mcb);
+        _lastPoint = point;
 
-	    osg::Vec3 point(-50.0 * _sizeRV->getValue(), _pointerDistance, 0);
-	    point = point * mat * PluginHelper::getWorldToObjectTransform();
+        if (_mode == MOVE)
+        {
+            if (tie->getInteraction() == BUTTON_DOWN)
+            {
+                bool inSphere = false;
+                
+                for (int i = 0; i < _shapeList.size(); ++i)
+                {
+                    if (_shapeList[i]->containsPoint(_lastPoint))
+                    {
+                        _movingList.push_back(_shapeList[i]->getPat());
 
-	    _verts->push_back(point);
-	    _normals->push_back(osg::Vec3(0,0,1));
-	    _currentBound->expandBy(point);
+                        _movingLayout = false;
+                        inSphere = true;
+                    }
+                }
+                
+                for (int i = 0; i < _layoutStructList.size(); ++i)
+                {
+                    if (_layoutStructList[i]->shape->containsPoint(_lastPoint))
+                    {
+                        if (!inSphere)
+                        {
+                            _movingLayout = true;
+                            _movingList.push_back(_layoutStructList[i]->getPat());
 
-	    point = osg::Vec3(50.0 * _sizeRV->getValue(), _pointerDistance, 0);
-	    point = point * mat * PluginHelper::getWorldToObjectTransform();
+                            for (int j = 0; j < _layoutStructList[i]->children.size(); ++j)
+                            {
+                                _movingList.push_back(_layoutStructList[i]->children[j]);
+                            }
+                        }
+                    }
+                }
+                return !_movingList.empty();
+            }
+            else if (tie->getInteraction() == BUTTON_DRAG)
+            {
+                // remove child shapes that are dragged out of layouts
+                for (int i = 0; i < _movingList.size(); ++i)
+                {
+                    if (!_movingLayout)
+                    {
+                        for (int j = 0; j < _layoutStructList.size(); ++j)
+                        {
+                            _layoutStructList[j]->removeChild(_movingList[i]);
+                        }
+                    }
+                    _movingList[i]->setPosition(
+                        _movingList[i]->getPosition() + distance);
 
-	    _verts->push_back(point);
-	    _normals->push_back(osg::Vec3(0,0,1));
-	    _currentBound->expandBy(point);
+                    _movingList[i]->dirtyBound();                   
+                }
+                return !_movingList.empty();
+            }
+            else if (tie->getInteraction() == BUTTON_UP)
+            {
+                _movingList.clear();
+                return false;
+            }
 
-	    _lastTransform = mat * PluginHelper::getWorldToObjectTransform();
+            return true;
+        }
 
-	    _count = 2;
+        else if (_mode == DRAW && !_activeObject)
+        {
+            return false;
+        }
 
-	    _primitive->setCount(_count);
-	    _currentGeometry->dirtyBound();
+        else if (_mode == DRAW && _activeObject)
+        {
+            bool ret = _activeObject->buttonEvent(tie->getInteraction(),
+                                                  tie->getTransform());
+            
+            if (tie->getInteraction() == BUTTON_DOWN)
+            {
+                if (_drawMode == SHAPE)
+                {
+                    SketchShape * shape = dynamic_cast<SketchShape*>(_activeObject);
+                    if (shape)
+                    {
+                        _sketchRoot->addChild(_pat);
+                        _shapeList.push_back((SketchShape*)_activeObject);
+                        shape->setSize(_sizeRV->getValue() * _sizeScale);
+                    }
 
-	    _drawing = true;
-	}
-	else if(_mode == LINE)
-	{
-	    if(_lt == LINE_NONE)
-	    {
-		//std::cerr << "LINE_NONE" << std::endl;
-		return false;
-	    }
+                    // add shape as child of layout if point in layout
+                    for (int i = 0; i < _layoutStructList.size(); ++i)
+                    {
+                        if (_layoutStructList[i]->shape->containsPoint(point))
+                        {
+                            point = _layoutStructList[i]->addChild(_pat);
+                            _lastPoint = point;
+                            break;
+                        }
+                    }
 
-	    if(!_drawing)
-	    {
-		//std::cerr << "Starting Line." << std::endl;
-		_verts = new Vec3Array(0);
-		_colors = new Vec4Array(1);
-		_primitive = new DrawArrays(PrimitiveSet::LINE_STRIP, 0, 0);
-		_currentGeometry = new osg::Geometry();
+                    _pat->setPosition(_lastPoint);
+                    _modelpat->setPosition(_lastPoint);
+                    _modelpatScale->setPosition(osg::Vec3(0,0, - _sizeRV->getValue() * 10));
+                    
+                    // position adjusted forward in cylinder
+                    if (_st == 1)
+                    {
+                        _modelpatScale->setPosition(_modelpatScale->getPosition() +
+                            osg::Vec3(0, -_sizeRV->getValue() * _sizeScale / 2, 0));
+                    }
 
-		(*_colors)[0] = _color;
+                    _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * _modelScale,
+                             _sizeRV->getValue() * _modelScale, _sizeRV->getValue() * _modelScale));
+                    _model = osgDB::readNodeFile(_modelDir + "fileIcon.obj");
 
-		_currentGeometry->setVertexArray(_verts);
-		_currentGeometry->setColorArray(_colors);
-		_currentGeometry->setColorBinding(Geometry::BIND_OVERALL);
-		_currentGeometry->setUseDisplayList(false);
-		//_currentGeometry->setUseVertexBufferObjects(true);
-		_currentGeometry->addPrimitiveSet(_primitive);
+                    _modelpatScale->addChild(_model);
+                    _pat->addChild(_modelpatScale);
 
-		_sketchGeode->addDrawable(_currentGeometry);
+                    return true;
+                }
+            
 
-		MyComputeBounds * mcb = new MyComputeBounds();
-		_currentBound = &mcb->_bound;
-		_currentGeometry->setComputeBoundingBoxCallback(mcb);
+                else if (_drawMode == LAYOUT)
+                 {
+                    SketchShape * shape = dynamic_cast<SketchShape*>(_activeObject);
+                    if (shape)
+                    {
+                        Layout * lo;
 
-		osg::Vec3 point;
-		if(_lineSnap->getValue())
-		{
-		    point = _brushRoot->getMatrix().getTrans();
-		}
-		else 
-		{
-		    point = osg::Vec3(0, _pointerDistance, 0);
-		    point = point * mat;
-		}
+                        switch (_st)
+                        {
+                            case 4:
+                                lo = new Layout(_lot,
+                                _layoutSizeRV->getValue() * _sizeScale * 1.5,
+                                _layoutSizeRV->getValue() * _sizeScale * 0.5);
+                                break;
+                            
+                            case 5:
+                                lo = new Layout(_lot,
+                                _layoutSizeRV->getValue() * _sizeScale * 0.5, 
+                                _layoutSizeRV->getValue() * 1.5 * _sizeScale * 4);
+                                break;
+                           
+                            case 6:
+                                lo = new Layout(_lot,
+                                _layoutSizeRV->getValue() * _sizeScale * 0.5, 
+                                _layoutSizeRV->getValue() * 1.5 * _sizeScale * 4);
+                            break;
+                        }
 
-		point = point * PluginHelper::getWorldToObjectTransform();
+                        lo->setPat(_layoutPat);
+                        lo->setCenter(_lastPoint);
+                        lo->setShape(shape);
 
-		_verts->push_back(point);
-		_currentBound->expandBy(point);
+                        _layoutStructList.push_back(lo);
 
-		_count = 1;
+                        _sketchRoot->addChild(_layoutPat);
+                        _layoutPat->setPosition(_lastPoint);
+                    }
+                    return true;
+                 }
+                 
+                if(_activeObject->isDone())
+                {
+                    finishGeometry();
+                    createGeometry();
+                }
+            }
+            else if (tie->getInteraction() == BUTTON_DRAG)
+            {
+                if(_drawMode == SHAPE)
+                {
+                    _pat->setPosition(_pat->getPosition() + distance);
+                    _modelpat->setPosition(_modelpat->getPosition() + distance);
 
-		if(_lt == SEGMENT || _lt == MULTI_SEGMENT)
-		{
-		    _verts->push_back(point);
-		    _count = 2;
-		    _updateLastPoint = true;
-		}
+                    for (int i = 0; i < _layoutStructList.size(); ++i)
+                    {
+                        _layoutStructList[i]->removeChild(_pat);
+                    }
+                }
 
-		_primitive->setCount(_count);
-		_currentGeometry->dirtyBound();
+                if (_drawMode == LAYOUT)
+                {
+                    _layoutPat->setPosition(_layoutPat->getPosition() + distance);
 
-		osg::StateSet * stateset = _currentGeometry->getOrCreateStateSet();
-		stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-		osg::LineWidth * lw = new osg::LineWidth();
-		lw->setWidth(_sizeRV->getValue());
-		stateset->setAttributeAndModes(lw,osg::StateAttribute::ON);
-		//TODO: tube shader?
+                    _layoutStructList[_layoutStructList.size() - 1]->setCenter(
+                        _layoutPat->getPosition() + distance);
+                }
+            }
+            else if (tie->getInteraction() == BUTTON_UP)
+            {
+                finishGeometry();
+                createGeometry();
+            }
 
-		_drawing = true;
-	    }
-	    else if(_lt == MULTI_SEGMENT)
-	    {
-		osg::Vec3 point;
-		if(_lineSnap->getValue())
-		{
-		    point = _brushRoot->getMatrix().getTrans();
-		}
-		else 
-		{
-		    point = osg::Vec3(0, _pointerDistance, 0);
-		    point = point * mat;
-		}
+            return ret;
+        }
 
-		point = point * PluginHelper::getWorldToObjectTransform();
+        else if (_mode == SELECT)
+        {
+            if (tie->getInteraction() == BUTTON_DOWN)
+            {
+                bool inNone = true;
+                bool alreadyIn = false; 
+                bool inSphere = false;
 
-		_verts->push_back(point);
-		_currentBound->expandBy(point);
-
-		_count++;
-
-		_primitive->setCount(_count);
-		_currentGeometry->dirtyBound();
-		_updateLastPoint = true;
-	    }
-	}
-
-	return true;
-    }
-    else if(hand == 0 && button == 0 && type == BUTTON_UP && _drawing)
-    {
-	//std::cerr << "Stop drawing." << std::endl;
-
-	if(_mode == RIBBON || (_mode == LINE && (_lt == SEGMENT || _lt == FREEHAND)))
-	{
-	    //std::cerr << "Finish geometry" << std::endl;
-	    finishGeometry();
-	}
-	if(_mode == LINE && (_lt == SEGMENT || _lt == MULTI_SEGMENT))
-	{
-	    _updateLastPoint = false;
-	}
-
-	return true;
-    }
-    else if(hand == 0 && button == 0 && type == BUTTON_DRAG && _drawing)
-    {
-	if(_mode == RIBBON)
-	{
-	    osg::Vec3 lastpoint1(-50.0 * _sizeRV->getValue(), _pointerDistance, 0), lastpoint2(50.0 * _sizeRV->getValue(), _pointerDistance, 0), newpoint1(-50.0 * _sizeRV->getValue(), _pointerDistance, 0), newpoint2(50.0 * _sizeRV->getValue(), _pointerDistance, 0);
-
-	    lastpoint1 = lastpoint1 * _lastTransform;
-	    lastpoint2 = lastpoint2 * _lastTransform;
-
-	    newpoint1 = newpoint1 * mat * PluginHelper::getWorldToObjectTransform();
-	    newpoint2 = newpoint2 * mat * PluginHelper::getWorldToObjectTransform();
-
-	    if((newpoint1 - lastpoint1).length2() > 10.0 || (newpoint2 - lastpoint2).length2() > 10.0)
-	    {
-		_verts->push_back(newpoint1);
-		_verts->push_back(newpoint2);
-
-
-		osg::Vec3 v1, v2, normal1, normal2, normala;
-		v1 = newpoint1 - (*_verts)[_count-2];
-		v1.normalize();
-		v2 = (*_verts)[_count-1] - (*_verts)[_count-2];
-		v2.normalize();
-
-		normal1 = v1 ^ v2;
-		normal1.normalize();
-
-		v1 = (*_verts)[_count-1] - newpoint2;
-		v1.normalize();
-		v2 = newpoint1 - newpoint2;
-		v2.normalize();
-
-		normal2 = v1 ^ v2;
-		normal2.normalize();
-
-		//normal1 = osg::Vec3(normal1.x(),-normal1.z(),normal1.y());
-		//normal2 = osg::Vec3(normal2.x(),-normal2.z(),normal2.y());
-
-		normala = (normal1 + normal2) / 2.0;
-		normala.normalize();
-
-		//_normals->push_back(osg::Vec3(0,0,1));
-		//_normals->push_back(osg::Vec3(0,0,1));
-
-		_normals->push_back(normala);
-		_normals->push_back(normal2);
-
-		if(_count == 2)
-		{
-		    (*_normals)[0] = normal1;
-		    (*_normals)[1] = normala;
-		}
-		else
-		{
-		    (*_normals)[_count-2] = ((*_normals)[_count-2] + normal1) / 2.0;
-		    (*_normals)[_count-2].normalize();
-
-		    (*_normals)[_count-1] = ((*_normals)[_count-1] + normala) / 2.0;
-		    (*_normals)[_count-1].normalize();
-		}
-
-		_count += 2;
-		_lastTransform = mat * PluginHelper::getWorldToObjectTransform();
-
-		_primitive->setCount(_count);
-
-		_currentBound->expandBy(newpoint1);
-		_currentBound->expandBy(newpoint2);
-
-		_currentGeometry->dirtyBound();
-
-		//std::cerr << "Count: " << _count << std::endl;
-	    }
-	}
-	if(_mode == LINE)
-	{
-	    //std::cerr << "Line update" << std::endl;
-	    osg::Vec3 point;
-	    if(_lineSnap->getValue())
-	    {
-		point = _brushRoot->getMatrix().getTrans();
-	    }
-	    else 
-	    {
-		point = osg::Vec3(0, _pointerDistance, 0);
-		point = point * mat;
-	    }
-
-	    point = point * PluginHelper::getWorldToObjectTransform();
-
-	    if(_lt == FREEHAND)
-	    {
-		_verts->push_back(point);
-		_count++;
-		_primitive->setCount(_count);
-	    }
-	    else if(_updateLastPoint)
-	    {
-		//std::cerr << "Changing last point" << std::endl;
-		//std::cerr << "Point x: " << point.x() << " y: " << point.y() << " z: " << point.z() << std::endl;
-		(*_verts)[_count-1] = point;
-	    }
-
-	    _currentBound->expandBy(point);
-	    _currentGeometry->dirtyBound();
-
-	    //std::cerr << "Count: " << _count << std::endl;
-	}
-	return true;
-    }*/
-
+                for (int i = 0; i < _shapeList.size(); ++i)
+                {
+                    if (_shapeList[i]->containsPoint(_lastPoint))
+                    {
+                        vector<osg::PositionAttitudeTransform*>::iterator it;
+                        for (it = _movingList.begin(); it != _movingList.end(); ++it)
+                        {
+                            if (*it == _shapeList[i]->getPat())
+                            {
+                                _movingList.erase(it);
+                                alreadyIn = true;
+                                break;
+                            }
+                        }
+                        if (!alreadyIn)
+                        {
+                            inSphere = true;
+                            _movingList.push_back(_shapeList[i]->getPat());
+                        }
+                        inNone = false;
+                    }
+                }
+                
+                for (int i = 0; i < _layoutStructList.size(); ++i)
+                {
+                    if (_layoutStructList[i]->shape->containsPoint(_lastPoint))
+                    {
+                        if (!inSphere)
+                        {
+                            inNone = false;
+                            _movingList.push_back(_layoutStructList[i]->getPat());
+                        }
+                    }
+                }
+                if (inNone)
+                {
+                    _movingList.clear();
+                    return false;
+                }
+            }
+            else if (tie->getInteraction() == BUTTON_DRAG)
+            {
+                return false;
+            }
+            else if (tie->getInteraction() == BUTTON_UP)
+            {
+                return false;
+            }
+        }
+        return true;
+    } 
     return false;
 }
 
 osg::BoundingBox Sketch::MyComputeBounds::computeBound(const osg::Drawable &) const
 {
-    //std::cerr << "Returning bound." << std::endl;
     return _bound;
 }
 
@@ -590,6 +987,9 @@ void Sketch::removeMenuItems(DrawMode dm)
 	    _sketchMenu->removeItem(_shapeType);
 	    _sketchMenu->removeItem(_shapeWireframe);
 	    break;
+    case LAYOUT:
+        _sketchMenu->removeItem(_layoutType);
+        _sketchMenu->removeItem(_layoutSizeRV);
 	default:
 	    break;
     }
@@ -605,7 +1005,7 @@ void Sketch::addMenuItems(DrawMode dm)
 	    _lt = SketchLine::NONE;
 	    if(_lineType->firstNumOn() >= 0)
 	    {
-		_lineType->setValue(_lineType->firstNumOn(), false);
+            _lineType->setValue(_lineType->firstNumOn(), false);
 	    }
 	    _lineTube->setValue(false);
 	    _lineSnap->setValue(false);
@@ -615,15 +1015,61 @@ void Sketch::addMenuItems(DrawMode dm)
 	    _sketchMenu->addItem(_lineSnap);
 	    break;
 	case SHAPE:
-	    _st = SHAPE_NONE;
+	    _st = SketchShape::NONE;
 	    if(_shapeType->firstNumOn() >= 0)
 	    {
-		_shapeType->setValue(_shapeType->firstNumOn(), false);
+            _shapeType->setValue(_shapeType->firstNumOn(), false);
 	    }
-	    _shapeWireframe->setValue(false);
+	    _shapeWireframe->setValue(true);
 	    _sketchMenu->addItem(_shapeType);
 	    _sketchMenu->addItem(_shapeWireframe);
 	    break;
+     case LAYOUT:
+        _st = SketchShape::NONE;
+        if(_layoutType->firstNumOn() >= 0)
+        {
+            _layoutType->setValue(_layoutType->firstNumOn(), false);
+        }
+        _sketchMenu->addItem(_layoutType);
+        _sketchMenu->addItem(_layoutSizeRV);
+	default:
+	    break;
+    }
+}
+
+void Sketch::removeMenuItems(Mode dm)
+{
+    switch(dm)
+    {
+	case DRAW:
+	    _sketchMenu->removeItem(_drawModeButtons);
+        removeMenuItems(_drawMode);
+        _movingList.clear();
+	    break;
+	case SELECT:
+	    break;
+    case MOVE:
+        break;
+	default:
+	    break;
+    }
+}
+
+void Sketch::addMenuItems(Mode dm)
+{
+    switch(dm)
+    {
+	case DRAW:
+	    _sketchMenu->addItem(_drawModeButtons);
+	    if(_drawModeButtons->firstNumOn() >= 0)
+	    {
+            _drawModeButtons->setValue(_drawModeButtons->firstNumOn(), false);
+	    }
+	    break;
+	case MOVE:
+	    break;
+    case SELECT:
+        break;
 	default:
 	    break;
     }
@@ -631,40 +1077,26 @@ void Sketch::addMenuItems(DrawMode dm)
 
 void Sketch::finishGeometry()
 {
-    /*if(!_drawing)
-    {
-	return;
-    }
-
-    if(_mode == RIBBON || _mode == LINE)
-    {
-	_geometryMap[PluginHelper::getProgramDuration()] = _currentGeometry;
-    }
-
-    _drawing = false;*/
-
     if(!_activeObject)
     {
-	return;
+        return;
     }
-
     if(!_activeObject->isDone())
     {
-	_activeObject->finish();
+        _activeObject->finish();
     }
 
     _activeObject->removeBrush(_brushRoot.get());
 
     if(_activeObject->isValid())
     {
-	_objectList.push_back(_activeObject);
+        _objectList.push_back(_activeObject);
     }
     else
     {
-	_sketchGeode->removeDrawable(_activeObject->getDrawable());
-	delete _activeObject;
+        _sketchGeode->removeDrawable(_activeObject->getDrawable());
+        delete _activeObject;
     }
-
     _activeObject = NULL;
 }
 
@@ -672,26 +1104,108 @@ void Sketch::createGeometry()
 {
     if(_activeObject)
     {
-	finishGeometry();
+        finishGeometry();
     }
 
-    switch(_mode)
+    float size = _sizeScale * _sizeRV->getValue(),
+        layoutSize = _sizeScale * _layoutSizeRV->getValue();
+
+    float highlightScale = .95;
+
+    osg::Vec3 cylinderScaleVec(1,1,4);
+    
+    SketchShape * p;
+
+    switch(_drawMode)
     {
 	case RIBBON:
-	    _activeObject = new SketchRibbon(_color, _sizeRV->getValue());
+	    _activeObject = new SketchRibbon(_color, size/_sizeScale);
 	    break;
+
 	case LINE:
-	    _activeObject = new SketchLine(_lt, _lineTube->getValue(), _lineSnap->getValue(), _color, _sizeRV->getValue());
+	    _activeObject = new SketchLine(_lt, _lineTube->getValue(), 
+            _lineSnap->getValue(), _color, _sizeRV->getValue());
 	    break;
+
 	case SHAPE:
+        // do not create object if no shape type selected
+        if (_st == (SketchShape::ShapeType)NONE)
+        {
+            _activeObject = NULL;
+            break;
+        }
+
+        _pat = new osg::PositionAttitudeTransform();
+        
+	    p = new SketchShape(_st, _shapeWireframe->getValue(), _color, 
+                            (int) _tessellationsRV->getValue(), size);
+        p->setPat(&_pat);
+        _activeObject = p;
+
+        _modelpat = new osg::PositionAttitudeTransform();
+        _modelpatScale = new osg::PositionAttitudeTransform();
+
 	    break;
+
+   case LAYOUT:
+        if (_st < 4 || _st > 6 )
+        {
+            _activeObject = NULL;
+            break;
+        }
+
+        _layoutPat = new osg::PositionAttitudeTransform();
+        
+	    p = new SketchShape(_st, _shapeWireframe->getValue(), osg::Vec4(1,1,1,1), 
+                            (int) _tessellationsRV->getValue(), layoutSize);
+        p->setPat(&_layoutPat);
+        _activeObject = p;
+
+
+        switch (_st)
+        {
+            case 5: // HORIZONTAL
+                _layoutPat->setScale(cylinderScaleVec);
+                _layoutPat->setAttitude(osg::Quat(M_PI/2, osg::Vec3(0,1,0)));
+                break;
+
+            case 6: // VERTICAL
+                _layoutPat->setScale(cylinderScaleVec);
+                break;
+
+            default:
+                break;
+
+        }
+        break;
+
 	default:
 	    break;
     }
 
     if(_activeObject)
     {
-	_sketchGeode->addDrawable(_activeObject->getDrawable());
-	_activeObject->addBrush(_brushRoot.get());
+        if (_drawMode == SHAPE || _drawMode == LAYOUT)    
+        {
+        }
+        else 
+        {
+            _sketchGeode->addDrawable(_activeObject->getDrawable());
+        }
+        _activeObject->addBrush(_brushRoot.get());
+    }
+}
+
+bool Sketch::loadFile(std::string file)
+{
+    osg::Node * node = osgDB::readNodeFile(file);
+    if (node)
+    {
+        _sketchRoot->addChild(node);
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
