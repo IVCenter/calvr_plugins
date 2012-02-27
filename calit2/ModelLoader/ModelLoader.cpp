@@ -4,9 +4,12 @@
 #include <kernel/SceneManager.h>
 #include <menu/MenuSystem.h>
 #include <kernel/PluginHelper.h>
+#include <util/TextureVisitors.h>
+
 #include <iostream>
 
 #include <osg/Matrix>
+#include <osg/CullFace>
 #include <osgDB/ReadFile>
 
 using namespace osg;
@@ -52,6 +55,8 @@ bool ModelLoader::init()
 	info->path = ConfigManager::getEntry("path",configBase + "." + list[i],"");
 	info->mask = ConfigManager::getInt("mask",configBase + "." + list[i], 1);
 	info->lights = ConfigManager::getInt("lights",configBase + "." + list[i], 1);
+	info->backfaceCulling = ConfigManager::getBool("backfaceCulling",configBase + "." + list[i], false);
+	info->showBound = ConfigManager::getBool("showBound",configBase + "." + list[i], false);
 
 	models.push_back(info);
     }
@@ -172,12 +177,23 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
             }
 
 	    SceneObject * so;
-	    //TODO: change out of debug values
-	    so = new SceneObject(models[i]->name, false, false, false, true, true);
+	    so = new SceneObject(models[i]->name, false, false, false, true, models[i]->showBound);
 	    so->addChild(modelNode);
 	    PluginHelper::registerSceneObject(so,"ModelLoader");
 	    so->attachToScene();
-            
+           
+	    if(models[i]->backfaceCulling)
+	    {
+		osg::StateSet * stateset = modelNode->getOrCreateStateSet();
+		osg::CullFace * cf=new osg::CullFace();
+		cf->setMode(osg::CullFace::BACK);
+
+		stateset->setAttributeAndModes( cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+	    }
+	    
+	    TextureResizeNonPowerOfTwoHintVisitor tr2v(false);
+	    modelNode->accept(tr2v);
+
             if(locInit.find(models[i]->name) != locInit.end())
             {
 		osg::Matrix scale;
@@ -357,8 +373,10 @@ bool ModelLoader::loadFile(std::string file)
 	}
     }
 
-    //TODO: change from debug values
-    SceneObject * so = new SceneObject(name,false,false,false,true,true);
+    TextureResizeNonPowerOfTwoHintVisitor tr2v(false);
+    modelNode->accept(tr2v);
+
+    SceneObject * so = new SceneObject(name,false,false,false,true,false);
     PluginHelper::registerSceneObject(so,"ModelLoader");
     so->addChild(modelNode);
     so->attachToScene();

@@ -29,8 +29,7 @@ class LightEditor : public cvr::CVRPlugin, public cvr::MenuCallback
         void menuCallback(cvr::MenuItem * item);
 
         void preFrame();
-        bool buttonEvent(int type, int button, int hand, const osg::Matrix& mat);
-        bool mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix& mat);
+        bool processEvent(cvr::InteractionEvent * event);
 
     protected:
         LightManager * mLightManager;   

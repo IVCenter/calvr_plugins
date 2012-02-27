@@ -40,6 +40,8 @@ bool MenuBasics::init()
     drive->setCallback(this);
     fly = new MenuCheckbox("Fly",false);
     fly->setCallback(this);
+    navScale = new MenuRangeValueCompact("Nav Scale",0.01,100.0,1.0,true,1.5);
+    navScale->setCallback(this);
 
     activeMode = drive;
 
@@ -47,6 +49,7 @@ bool MenuBasics::init()
     MenuSystem::instance()->addMenuItem(scale);
     MenuSystem::instance()->addMenuItem(drive);
     MenuSystem::instance()->addMenuItem(fly);
+    MenuSystem::instance()->addMenuItem(navScale);
 
     viewall = new MenuButton("View All");
     viewall->setCallback(this);
@@ -147,6 +150,10 @@ void MenuBasics::menuCallback(MenuItem * item)
 
 	    scale = sceneSize / maxSide;
 	    center = center * scale;
+	    if(scale == 0)
+	    {
+		scale = 1.0;
+	    }
 
 	    std::cerr << "Scale set to " << scale << std::endl;
 
@@ -183,6 +190,10 @@ void MenuBasics::menuCallback(MenuItem * item)
 
 	sepStep = (target - ScreenConfig::instance()->getEyeSeparationMultiplier()) / 40.0;
 	changeSep = true;
+    }
+    else if(item == navScale)
+    {
+	Navigation::instance()->setScale(navScale->getValue());
     }
 }
 

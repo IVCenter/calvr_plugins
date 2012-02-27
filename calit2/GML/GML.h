@@ -222,7 +222,7 @@ class GML : public cvr::MenuCallback, public cvr::CVRPlugin, public cvr::FileLoa
     virtual ~GML();
     bool init();
     void menuCallback(cvr::MenuItem * item);
-    bool buttonEvent(int type, int button, int hand, const osg::Matrix & mat);
+    bool processEvent(cvr::InteractionEvent * event);
     virtual bool loadFile(std::string file);
     void preFrame();
 };

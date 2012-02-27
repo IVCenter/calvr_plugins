@@ -32,11 +32,12 @@ class PanoView360 : public CVRPlugin, public MenuCallback
         virtual ~PanoView360();
 
         void menuCallback(MenuItem* item);
-        bool keyEvent(bool keyDown, int key, int mod);
+
+        bool processEvent(InteractionEvent * event);
 
         bool init();
         void preFrame();
-        void parseConfig(std::string file);
+        //void parseConfig(std::string file);
 
     protected:
         void createLoadMenu(std::string tagBase, std::string tag, SubMenu * menu);

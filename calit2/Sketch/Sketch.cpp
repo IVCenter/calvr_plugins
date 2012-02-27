@@ -257,13 +257,19 @@ void Sketch::preFrame()
     }*/
 }
 
-bool Sketch::buttonEvent(int type, int button, int hand, const osg::Matrix & mat)
+bool Sketch::processEvent(InteractionEvent * event)
 {
-    if(hand == 0 && button == 0)
+    TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
+    if(!tie)
+    {
+	return false;
+    }
+
+    if(tie->getHand() == 0 && tie->getButton() == 0)
     {
 	if(_csCB->getValue())
 	{
-	    if(_colorSelector->buttonEvent(type, mat))
+	    if(_colorSelector->buttonEvent(tie->getInteraction(), tie->getTransform()))
 	    {
 		_color = _colorSelector->getColor();
 		if(_activeObject)
@@ -276,7 +282,7 @@ bool Sketch::buttonEvent(int type, int button, int hand, const osg::Matrix & mat
 
 	if(_activeObject)
 	{
-	    bool ret = _activeObject->buttonEvent(type, mat);
+	    bool ret = _activeObject->buttonEvent(tie->getInteraction(), tie->getTransform());
 	    if(_activeObject->isDone())
 	    {
 		finishGeometry();
@@ -560,27 +566,6 @@ bool Sketch::buttonEvent(int type, int button, int hand, const osg::Matrix & mat
 	return true;
     }*/
 
-    return false;
-}
-
-bool Sketch::mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix & mat)
-{
-    if(type == MOUSE_BUTTON_DOWN)
-    {
-	buttonEvent(BUTTON_DOWN, button, -1, mat);
-    }
-    else if(type == MOUSE_BUTTON_UP)
-    {
-	buttonEvent(BUTTON_UP, button, -1, mat);
-    }
-    else if(type == MOUSE_DOUBLE_CLICK)
-    {
-	buttonEvent(BUTTON_DOUBLE_CLICK, button, -1, mat);
-    }
-    else if(type == MOUSE_DRAG)
-    {
-	buttonEvent(BUTTON_DRAG, button, -1, mat);
-    }
     return false;
 }
 
