@@ -9,6 +9,7 @@
 #include <osgDB/ReadFile>
 
 #include <iostream>
+#include <cstring>
 
 #ifdef __APPLE__
 #include <glu.h>
@@ -49,6 +50,8 @@ PanoDrawable::PanoDrawable(float radius_in, float viewanglev_in, float viewangle
     _renderOnMaster = ConfigManager::getBool("Plugin.PanoView360.RenderOnMaster",false);
     _highRamLoad = ConfigManager::getBool("Plugin.PanoView360.HighRamLoad",false);
     _useSingleLock = ConfigManager::getBool("Plugin.PanoView360.UseSingleLock",true);
+
+    std::cerr << "High ram load value: " << _highRamLoad << std::endl;
 
     if(viewanglev < 10)
     {
