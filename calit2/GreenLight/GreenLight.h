@@ -8,6 +8,7 @@
 
 #include <config/ConfigManager.h>
 #include <kernel/SceneManager.h>
+#include <kernel/SceneObject.h>
 #include <kernel/CVRPlugin.h>
 #include <menu/MenuButton.h>
 #include <menu/MenuCheckbox.h>
@@ -166,6 +167,12 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         osgParticle::Particle * _pTemplate;
 
         // Menu Items
+        
+        /*** GreenLight Component Menus ***/
+        cvr::SceneObject * so;
+        cvr::MenuButton  * _customButton;
+        /*** ENDGREENLIGHTCOMPONENTMENU ***/
+        
         cvr::SubMenu * _glMenu;
         cvr::MenuCheckbox * _showSceneCheckbox;
 

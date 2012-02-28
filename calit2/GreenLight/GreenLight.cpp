@@ -39,29 +39,18 @@ void zoom(){
       savedMatrix = true;
     }
 
-            double xScale = 342.677490; // 995.622864;
+            double xScale = 342.677490;
             Matrixd xMatrix = Matrixd(
-/*
-     0.890098,   0.215620,   -0.401541,  0.000000,
-     -0.455671,  0.439463,   -0.774103,  0.000000,
-     0.009551,   0.871998,   0.489416,   0.000000,
-     -7204856.539063,    -129307523.281975,  -2179672623.631263,     1.000000
-*/
+            // Values gained from logging (keyboard event 'l')
+             0.894261,    0.247156,    -0.373112,   0.000000,
+             -0.446530,   0.548915,    -0.706614,   0.000000,
+             0.030163,    0.798503,    0.601235,    0.000000,
+             -13083652.887404,    162726828.747752,    -2177405384.833411,  1.000000
 
-     0.894261,    0.247156,    -0.373112,   0.000000,
-     -0.446530,   0.548915,    -0.706614,   0.000000,
-     0.030163,    0.798503,    0.601235,    0.000000,
-     -13083652.887404,    162726828.747752,    -2177405384.833411,  1.000000
+            );
 
-/*                                   
-      0.894261, 0.247156,-0.373112, 0.000000,
-      -0.446530, 0.548915,	 -0.706614,	 0.000000,
-      0.030163,	 0.798503,	 0.601235,	 0.000000,
-  -38013959.387404,	 472790492.747752,	 -6326282696.833411,	 1.0
-*/
-              );
-              SceneManager::instance()->setObjectMatrix(xMatrix);
-              SceneManager::instance()->setObjectScale( xScale ) ;
+            SceneManager::instance()->setObjectMatrix(xMatrix);
+            SceneManager::instance()->setObjectScale( xScale ) ;
 }
 void restoreView(){
     if (savedMatrix){
@@ -306,6 +295,21 @@ bool GreenLight::init()
 void GreenLight::menuCallback(cvr::MenuItem * item)
 {
     std::set< cvr::MenuCheckbox * >::iterator chit;
+
+    /*** Things for Context Menus.. ***/
+              // SO(name, navigation, movable, clip, contextMenu, bounds);
+    so = new SceneObject("testSceneObject", false, false,false,true,true);
+//  so -> addChild(<modelNode>);
+    PluginHelper::registerSceneObject(so,"GreenLight");
+    so -> attachToScene();
+    so->setNavigationOn(true);
+    so->addMoveMenuItem();
+    so->addNavigationMenuItem();
+    
+    _customButton = new MenuButton("RedButton");
+    _customButton->setCallback(this);
+    so->addMenuItem(_customButton);
+    /*** END: Things for Context Menus.. ***/
 
     if (item == _showSceneCheckbox)
     {
@@ -619,7 +623,8 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
         std::map< std::string, std::set< Component * > * >::iterator cit = _cluster.find(checkbox->getText());
         if (cit == _cluster.end())
         {
-            std::cerr << "Error: Cluster checkbox selected without a matching cluster (" << checkbox->getText() << ")" << std::endl;
+            std::cerr << "Error: Cluster checkbox selected without a matching cluster (" <<
+                 checkbox->getText() << ")" << std::endl;
             checkbox->setValue(checkbox->getValue());
             return;
         }
