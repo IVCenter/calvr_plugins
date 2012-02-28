@@ -101,6 +101,8 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
         cvr::MenuButton * _saveButton;
         cvr::MenuButton * _clearButton;
 
+        cvr::MenuButton * _selectAllButton;
+
         cvr::SubMenu * _loadMenu;
         std::vector<cvr::MenuButton*> _loadFileButtons;
         std::vector<std::string> _loadFileList;
@@ -191,6 +193,7 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
 
         int _sizeScale;
         float _modelScale;
+        int _modelCounter;
 };
 
 

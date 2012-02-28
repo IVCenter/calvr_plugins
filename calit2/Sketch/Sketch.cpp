@@ -75,10 +75,6 @@ bool Sketch::init()
     _sizeRV->setCallback(this);
     _sketchMenu->addItem(_sizeRV);
 
-    _sizeAllRV = new MenuRangeValue("Size All", 0.1,10.0,1.0);
-    _sizeAllRV->setCallback(this);
-    _sketchMenu->addItem(_sizeAllRV);
-
     _tessellationsRV = new MenuRangeValue("Tessellations", 6, 30, 12, 2);
     _tessellationsRV->setCallback(this);
     _sketchMenu->addItem(_tessellationsRV);
@@ -94,6 +90,9 @@ bool Sketch::init()
     _clearButton = new MenuButton("Clear");
     _clearButton->setCallback(this);
     _sketchMenu->addItem(_clearButton);
+
+    _selectAllButton = new MenuButton("Select All Shapes");
+    _selectAllButton->setCallback(this);
 
     _freezeCB = new MenuCheckbox("Freeze", false);
     _freezeCB->setCallback(this);
@@ -163,6 +162,7 @@ bool Sketch::init()
     _pointerDistance = 1000.0;
     _sizeScale = 100;
     _modelScale = 12;
+    _modelCounter = 0;
 
     _color = osg::Vec4(0.0,1.0,0.0,1.0);
 
@@ -298,29 +298,33 @@ void Sketch::menuCallback(MenuItem * item)
         {
             float s = _sizeRV->getValue();
             vector<PositionAttitudeTransform *>::iterator it;
+            bool isLayout;
             for (it = _movingList.begin(); it != _movingList.end(); ++it)
             {
+                isLayout = false;
                 for (int i = 0; i < _layoutStructList.size(); ++i)
                 {
                     if ((*it) == _layoutStructList[i]->getPat())
                     {
                         _layoutStructList[i]->scaleMajorRadius(s);
+                        isLayout = true;
                     }
-                    else
-                    {
-                        (*it)->setScale(osg::Vec3(s,s,s));
-                    }
+                }
+                if (!isLayout)
+                {
+                    (*it)->setScale(osg::Vec3(s,s,s));
                 }
             }
         }
     }
 
-    else if (item == _sizeAllRV)
+    else if (item == _selectAllButton)
     {
-        float s = _sizeAllRV->getValue();
+        _movingList.clear();
         for (int i = 0; i < _shapeList.size(); ++i)
         {
-            _shapeList[i]->scale(osg::Vec3(s,s,s));
+            _movingList.push_back(_shapeList[i]->getPat());
+            _shapeList[i]->highlight();
         }
     }
 
@@ -609,23 +613,29 @@ void Sketch::preFrame()
     else if (_mode == SELECT)
     {
         bool isShapeHighlight = false;
-
+        bool isMoving;
         for (int i = 0; i < _shapeList.size(); ++i)
         {
-            if (_shapeList[i]->containsPoint(point))
-            {
-                _shapeList[i]->highlight();
-            }
-            else
-            {
-                _shapeList[i]->unhighlight();
-            }
-
+            isMoving = false;
             for (int j = 0; j < _movingList.size(); ++j)
             {
                 if (_movingList[j] == _shapeList[i]->getPat())
                 {
                     _shapeList[i]->highlight();
+                    isMoving = true;
+                    isShapeHighlight = true;
+                }
+            }
+            // don't double-highlight selected things
+            if (!isMoving)
+            {
+                if (_shapeList[i]->containsPoint(point))
+                {
+                    _shapeList[i]->highlight();
+                }
+                else
+                {
+                    _shapeList[i]->unhighlight();
                 }
             }
         }
@@ -686,12 +696,16 @@ bool Sketch::processEvent(InteractionEvent * event)
         osg::Vec3 point;
 
         if (_isObjectRoot)
+        {
             point = pos * PluginHelper::getWorldToObjectTransform();
+        }
         else
+        {
             point = pos;
+        }
         
 
-        if (_gridSize != 1) // for testing use 1 as no snap
+        if (_gridSize != 1) // for testing use gridsize = 1 as no snap
         {
             for (int i = 0; i < 3; ++i)
             {
@@ -700,14 +714,12 @@ bool Sketch::processEvent(InteractionEvent * event)
             }
         }
         osg::Vec3 distance = point - _lastPoint;
-        
         if (_gridSize != 1)
         {
             distance[0] = (int)distance[0];
             distance[1] = (int)distance[1];
             distance[2] = (int)distance[2];
         }
-        
 
         _lastPoint = point;
 
@@ -748,15 +760,24 @@ bool Sketch::processEvent(InteractionEvent * event)
             }
             else if (tie->getInteraction() == BUTTON_DRAG)
             {
-                // remove child shapes that are dragged out of layouts
                 for (int i = 0; i < _movingList.size(); ++i)
                 {
+
+                    // remove child shapes that are dragged out of layouts
+                    // add shapes to layout if dragged into layout
                     if (!_movingLayout)
                     {
                         for (int j = 0; j < _layoutStructList.size(); ++j)
                         {
                             _layoutStructList[j]->removeChild(_movingList[i]);
+                             
+                            if (_layoutStructList[j]->shape->containsPoint(_lastPoint))
+                            {
+                                _layoutStructList[j]->shape->highlight();
+                                _layoutStructList[j]->addChild(_movingList[i]);
+                            }
                         }
+
                     }
                     _movingList[i]->setPosition(
                         _movingList[i]->getPosition() + distance);
@@ -818,10 +839,31 @@ bool Sketch::processEvent(InteractionEvent * event)
                             osg::Vec3(0, -_sizeRV->getValue() * _sizeScale / 2, 0));
                     }
 
-                    _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * _modelScale,
-                             _sizeRV->getValue() * _modelScale, _sizeRV->getValue() * _modelScale));
-                    _model = osgDB::readNodeFile(_modelDir + "fileIcon.obj");
 
+                    if (_modelCounter % 3 == 0)
+                    {
+                        _model = osgDB::readNodeFile(_modelDir + "fileIcon.obj");
+                        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * _modelScale,
+                             _sizeRV->getValue() * _modelScale, _sizeRV->getValue() * _modelScale));
+                    }
+                    else if (_modelCounter % 3 == 1)
+                    {
+                        _model = osgDB::readNodeFile(_modelDir + "bicycleIcon.obj");
+                        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * _modelScale,
+                             _sizeRV->getValue() * _modelScale, _sizeRV->getValue() * _modelScale));
+
+                        _modelpatScale->setAttitude(osg::Quat(M_PI/2, Vec3(0,0,1)));
+                    }
+                    else
+                    {
+                        _model = osgDB::readNodeFile(_modelDir + "handIcon.obj");
+                        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 16,
+                             _sizeRV->getValue() * 16, _sizeRV->getValue() * 16));
+                                _modelpatScale->setPosition(_modelpatScale->getPosition() -
+                                    osg::Vec3(-_sizeRV->getValue() * 6, 0, _sizeRV->getValue() * 20));
+                    }
+                    
+                    _modelCounter++;
                     _modelpatScale->addChild(_model);
                     _pat->addChild(_modelpatScale);
 
@@ -1047,6 +1089,7 @@ void Sketch::removeMenuItems(Mode dm)
         _movingList.clear();
 	    break;
 	case SELECT:
+        _sketchMenu->removeItem(_selectAllButton);
 	    break;
     case MOVE:
         break;
@@ -1069,6 +1112,7 @@ void Sketch::addMenuItems(Mode dm)
 	case MOVE:
 	    break;
     case SELECT:
+        _sketchMenu->addItem(_selectAllButton);
         break;
 	default:
 	    break;

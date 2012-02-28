@@ -1,4 +1,3 @@
-
 #include "Layout.h"
 #include <iostream>
 
@@ -121,19 +120,17 @@ void Layout::show()
 
 void Layout::scaleMajorRadius(float s)
 {
-    R /= scaleMaj;
-    R *= s;
+
     if (_type == 0)
     {
+        R /= scaleMaj;
+        R *= s;
         shape->resizeTorus(R, r);
     }
-    else if (_type == 2)
+    else 
     {
-        _pat->setScale(osg::Vec3(s, 1, 1));
-    }
-    else if (_type == 1)
-    {
-        _pat->setScale(osg::Vec3(1, 1, s));
+        _pat->setScale(osg::Vec3(_pat->getScale()[0], _pat->getScale()[1],
+            s * scaleMaj));
     }
     positionChildren();
     scaleMaj = s; 

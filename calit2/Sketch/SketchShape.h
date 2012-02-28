@@ -65,8 +65,9 @@ class SketchShape: public SketchObject
         bool _wireframe;
         bool _drawing;
         int _tessellations;
+        bool _growing;
 
-        osg::PositionAttitudeTransform * _pat, * _highlightPat, * _modelPat;
+        osg::PositionAttitudeTransform * _pat, * _highlightPat, * _modelPat, * _shapePat;
         osg::ref_ptr<osg::Geode> _shapeGeode;
         osg::ref_ptr<osg::Geode> _highlightGeode;
         osg::ref_ptr<osg::ShapeDrawable> _highlightDrawable;
@@ -94,6 +95,7 @@ class SketchShape: public SketchObject
         struct timeval _lastPointTime;
         osg::Vec3 _lastPoint;
 
+        void pulsate();
         void drawBox();
         void drawCylinder();
         void drawCone();

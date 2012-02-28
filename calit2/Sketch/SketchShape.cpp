@@ -112,7 +112,13 @@ SketchShape::SketchShape(ShapeType type, bool wireframe, osg::Vec4 color,
 void SketchShape::setPat(osg::PositionAttitudeTransform **pat)
 {
 
-osg::Drawable * hlDrawable;
+    osg::Drawable * hlDrawable;
+    _highlightPat = new osg::PositionAttitudeTransform();
+    _shapeGeode = new osg::Geode();
+    _shapePat = new osg::PositionAttitudeTransform();
+    _pat = *pat;
+    _highlightGeode = new osg::Geode();
+
     switch (_type)
     {
         case 0: // BOX
@@ -127,6 +133,9 @@ osg::Drawable * hlDrawable;
             drawCylinder();
             _highlightDrawable = new osg::ShapeDrawable(new osg::Cylinder(
                 osg::Vec3(0,0,0), _size * .5 * .95, _size * .95));
+
+            // push cylinder highlights forward into shape
+            _highlightPat->setPosition(osg::Vec3(0, -_size/2, 0));
             break;
 
         case 2: // CONE
@@ -149,7 +158,6 @@ osg::Drawable * hlDrawable;
             break; 
     }
 
-    _highlightGeode = new osg::Geode();
 
     if (_type == 0 || _type == 1 || _type == 2 || _type == 3)
     {
@@ -174,17 +182,11 @@ osg::Drawable * hlDrawable;
 
     stateset->setMode(GL_CULL_FACE, osg::StateAttribute::ON);
 
-    _highlightPat = new osg::PositionAttitudeTransform();
-    _shapeGeode = new osg::Geode();
-
     _shapeGeode->addDrawable(_geometry);
-
     _highlightGeode->setNodeMask(HL_OFF_MASK);
-
-    _pat = *pat;
-    
     _highlightPat->addChild(_highlightGeode);
-    _pat->addChild(_shapeGeode);
+    _shapePat->addChild(_shapeGeode);
+    _pat->addChild(_shapePat);
     _pat->addChild(_highlightPat);
 }
 
@@ -318,12 +320,32 @@ void SketchShape::setWireframe(bool b)
 
 void SketchShape::highlight()
 {
-    _highlightGeode->setNodeMask(HL_ON_MASK);
+    _highlightGeode->setNodeMask(HL_OFF_MASK);//HL_ON_MASK);
+    
+    float hlStep = .003;
+    if (_growing)
+    {
+        _shapePat->setScale(_shapePat->getScale() + osg::Vec3(hlStep, hlStep, hlStep));
+        _highlightPat->setScale(_highlightPat->getScale() + osg::Vec3(hlStep, hlStep, hlStep));
+
+        if (_shapePat->getScale()[0] > 1.03)
+            _growing = false;
+    }
+    else
+    {
+        _shapePat->setScale(_shapePat->getScale() - osg::Vec3(hlStep, hlStep, hlStep));
+        _highlightPat->setScale(_highlightPat->getScale() - osg::Vec3(hlStep, hlStep, hlStep));
+
+        if (_shapePat->getScale()[0] < .97)
+            _growing = true;
+    }
 }
 
 void SketchShape::unhighlight()
 {
     _highlightGeode->setNodeMask(HL_OFF_MASK);
+    _shapePat->setScale(osg::Vec3(1,1,1));
+    _highlightPat->setScale(osg::Vec3(1,1,1));
 }
 
 bool SketchShape::containsPoint(const osg::Vec3 point)
@@ -332,6 +354,8 @@ bool SketchShape::containsPoint(const osg::Vec3 point)
     {
         return false;
     }
+
+    // TODO: proper intersection testing
 
     _pat->dirtyBound();
     return _pat->getBound().contains(point);
@@ -355,6 +379,11 @@ void SketchShape::resizeTorus(float majorRad, float minorRad)
     }
 }
 
+
+void pulsate()
+{
+
+}
 
 void SketchShape::drawBox()
 {
