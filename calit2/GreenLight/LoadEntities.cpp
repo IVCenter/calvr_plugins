@@ -249,6 +249,20 @@ bool GreenLight::loadScene()
     _selectionModeCheckbox->setCallback(this);
     _hardwareSelectionMenu->addItem(_selectionModeCheckbox);
 
+    /*** AT_2/14/12 ***/
+    if ( osgEarthInit ){
+      _navigateToPluginButton = new cvr::MenuButton("Navigate to Plugin");
+      _navigateToPluginButton->setCallback(this);
+      _glMenu->addItem(_navigateToPluginButton);
+
+      // For Debugging purposes.
+      _restorePreviousViewButton = new cvr::MenuButton("Restore Previous View");
+      _restorePreviousViewButton->setCallback(this);
+      _glMenu->addItem(_restorePreviousViewButton);
+
+    }
+    /*** AT_2/14/12 ***/
+
     _hoverDialog = new cvr::DialogPanel(400, "Intersected Component");
     _hoverDialog->setText("(nothing)");
     _hoverDialog->setVisible(_selectionModeCheckbox->getValue());

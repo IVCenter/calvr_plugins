@@ -182,12 +182,16 @@ void GreenLight::Component::setColor(const osg::Vec3 color)
 
 void GreenLight::Component::setColor(std::list<osg::Vec3> colors)
 {
+  // TODO: GO OVER THIS WITH JURGEN/PHILLIP.
+  // sets the size of the image, based on the number of colors.
+  // Is this to partition it so that when using the maginify range option,
+  // it has individual color regions?
     _data = new osg::Image;
     _data->allocateImage(colors.size(), 1, 1, GL_RGB, GL_FLOAT);  
 
     int i;
     std::list<osg::Vec3>::iterator cit;
-     for (cit = colors.begin(), i = 0; cit != colors.end(); cit++, i++)
+    for (cit = colors.begin(), i = 0; cit != colors.end(); cit++, i++)
     {
         for (int j = 0; j < 3; j++)
         {
