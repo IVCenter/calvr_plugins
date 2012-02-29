@@ -43,8 +43,13 @@ class PanoViewObject : public cvr::SceneObject
         osg::Matrix _heightMat;
         osg::Matrix _spinMat;
         osg::Matrix _coordChangeMat;
+        osg::Matrix _tbMat;
 
         osg::Matrix _lastZoomMat;
+
+        osg::Vec3 _tbDir;
+        bool _tbDirValid;
+        int _tbHand;
 
         cvr::MenuButton * _nextButton;
         cvr::MenuButton * _previousButton;
@@ -54,6 +59,7 @@ class PanoViewObject : public cvr::SceneObject
         cvr::MenuCheckbox * _zoomCB;
         cvr::MenuButton * _zoomResetButton;
         cvr::MenuCheckbox * _demoMode;
+        cvr::MenuCheckbox * _trackball;
 
         double _demoTime;
         double _demoChangeTime;
