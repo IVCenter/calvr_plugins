@@ -1,4 +1,5 @@
 // John Mangan (Summer 2011)
+//  Alfred Tarng (Spring 2012)
 // Plugin for CalVR -- GreenLight Project
 // Many models altered from prior Covise Plugin (BlackBoxInfo)
 
@@ -300,6 +301,8 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
               // SO(name, navigation, movable, clip, contextMenu, bounds);
     so = new SceneObject("testSceneObject", false, false,false,true,true);
 //  so -> addChild(<modelNode>);
+    if ( _box != NULL )
+        so -> addChild( _box -> transform );
     PluginHelper::registerSceneObject(so,"GreenLight");
     so -> attachToScene();
     so->setNavigationOn(true);
@@ -309,6 +312,16 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
     _customButton = new MenuButton("RedButton");
     _customButton->setCallback(this);
     so->addMenuItem(_customButton);
+
+/*
+    if(locInit.find(models[i]->name) != locInit.end())
+    {
+        osg::Matrix scale;
+        scale.makeScale(osg::Vec3(locInit[models[i]->name].first,locInit[models[i]->name].first,
+        locInit[models[i]->name].first));
+        so->setTransform(scale * locInit[models[i]->name].second);
+    };
+*/
     /*** END: Things for Context Menus.. ***/
 
     if (item == _showSceneCheckbox)
