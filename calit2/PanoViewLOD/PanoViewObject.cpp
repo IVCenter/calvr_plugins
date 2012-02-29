@@ -353,6 +353,10 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 		    rot.makeRotate(_tbDir,newDir);
 		    _tbMat = rot * _tbMat;
 		    setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+                    if(_currentZoom != 0.0)
+                    {
+                        updateZoom(_lastZoomMat);
+                    }
 		}
 		else
 		{
