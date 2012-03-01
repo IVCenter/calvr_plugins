@@ -112,43 +112,44 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
 {
     if(menuItem == removeButton)
     {
-	std::map<SceneObject*,MenuButton*>::iterator it;
-	for(it = _saveMap.begin(); it != _saveMap.end(); it++)
-	{
-	    delete it->second;
-	}
-	for(it = _loadMap.begin(); it != _loadMap.end(); it++)
-	{
-	    delete it->second;
-	}
-	for(it = _resetMap.begin(); it != _resetMap.end(); it++)
-	{
-	    delete it->second;
-	}
-	for(it = _deleteMap.begin(); it != _deleteMap.end(); it++)
-	{
-	    delete it->second;
-	}
-	for(std::map<SceneObject*,SubMenu*>::iterator it2 = _posMap.begin(); it2 != _posMap.end(); it2++)
-	{
-	    delete it->second;
-	}
-	for(std::map<SceneObject*,SubMenu*>::iterator it2 = _saveMenuMap.begin(); it2 != _saveMenuMap.end(); it2++)
-	{
-	    delete it->second;
-	}
-	_saveMap.clear();
-	_loadMap.clear();
-	_resetMap.clear();
-	_deleteMap.clear();
-	_posMap.clear();
-	_saveMenuMap.clear();
+    	std::map<SceneObject*,MenuButton*>::iterator it;
+    	for(it = _saveMap.begin(); it != _saveMap.end(); it++)
+    	{
+    	    delete it->second;
+    	}
+    	for(it = _loadMap.begin(); it != _loadMap.end(); it++)
+    	{
+    	    delete it->second;
+    	}
+    	for(it = _resetMap.begin(); it != _resetMap.end(); it++)
+    	{
+    	    delete it->second;
+    	}
+    	for(it = _deleteMap.begin(); it != _deleteMap.end(); it++)
+    	{
+    	    delete it->second;
+    	}
+    	for(std::map<SceneObject*,SubMenu*>::iterator it2 = _posMap.begin(); it2 != _posMap.end(); it2++)
+    	{
+    	    delete it->second;
+    	}
+    	for(std::map<SceneObject*,SubMenu*>::iterator it2 = _saveMenuMap.begin();
+            it2 != _saveMenuMap.end(); it2++)
+    	{
+    	    delete it->second;
+    	}
+    	_saveMap.clear();
+    	_loadMap.clear();
+    	_resetMap.clear();
+    	_deleteMap.clear();
+    	_posMap.clear();
+    	_saveMenuMap.clear();
 
-	for(int i = 0; i < _loadedObjects.size(); i++)
-	{
-	    delete _loadedObjects[i];
-	}
-	_loadedObjects.clear();
+    	for(int i = 0; i < _loadedObjects.size(); i++)
+    	{
+    	    delete _loadedObjects[i];
+    	}
+    	_loadedObjects.clear();
 
         return;
     }
@@ -176,166 +177,169 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
                 }
             }
 
-	    SceneObject * so;
-	    so = new SceneObject(models[i]->name, false, false, false, true, models[i]->showBound);
-	    so->addChild(modelNode);
-	    PluginHelper::registerSceneObject(so,"ModelLoader");
-	    so->attachToScene();
+            SceneObject * so;
+    	    so = new SceneObject(models[i]->name, false, false, false, true, models[i]->showBound);
+    	    so->addChild(modelNode);
+    	    PluginHelper::registerSceneObject(so,"ModelLoader");
+    	    so->attachToScene();
            
-	    if(models[i]->backfaceCulling)
-	    {
-		osg::StateSet * stateset = modelNode->getOrCreateStateSet();
-		osg::CullFace * cf=new osg::CullFace();
-		cf->setMode(osg::CullFace::BACK);
+    	    if(models[i]->backfaceCulling)
+    	    {
+        		osg::StateSet * stateset = modelNode->getOrCreateStateSet();
+    	    	osg::CullFace * cf=new osg::CullFace();
+    		    cf->setMode(osg::CullFace::BACK);
 
-		stateset->setAttributeAndModes( cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-	    }
+    	    	stateset->setAttributeAndModes( cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+    	    }
 	    
-	    TextureResizeNonPowerOfTwoHintVisitor tr2v(false);
-	    modelNode->accept(tr2v);
+    	    TextureResizeNonPowerOfTwoHintVisitor tr2v(false);
+    	    modelNode->accept(tr2v);
 
             if(locInit.find(models[i]->name) != locInit.end())
             {
-		osg::Matrix scale;
-		scale.makeScale(osg::Vec3(locInit[models[i]->name].first,locInit[models[i]->name].first,locInit[models[i]->name].first));
-		so->setTransform(scale * locInit[models[i]->name].second);
+                osg::Matrix scale;
+            	scale.makeScale(osg::Vec3(locInit[models[i]->name].first,locInit[models[i]->name].first,
+                            locInit[models[i]->name].first));
+            	so->setTransform(scale * locInit[models[i]->name].second);
             }
-	    so->setNavigationOn(true);
-	    so->addMoveMenuItem();
-	    so->addNavigationMenuItem();
+    	    so->setNavigationOn(true);
+    	    so->addMoveMenuItem();
+    	    so->addNavigationMenuItem();
 
-	    SubMenu * sm = new SubMenu("Position");
-	    so->addMenuItem(sm);
-	    _posMap[so] = sm;
+    	    SubMenu * sm = new SubMenu("Position");
+    	    so->addMenuItem(sm);
+    	    _posMap[so] = sm;
 
-	    MenuButton * mb;
-	    mb = new MenuButton("Load");
-	    mb->setCallback(this);
-	    sm->addItem(mb);
-	    _loadMap[so] = mb;
+    	    MenuButton * mb;
+    	    mb = new MenuButton("Load");
+    	    mb->setCallback(this);
+    	    sm->addItem(mb);
+    	    _loadMap[so] = mb;
 
-	    SubMenu * savemenu = new SubMenu("Save");
-	    sm->addItem(savemenu);
-	    _saveMenuMap[so] = savemenu;
+    	    SubMenu * savemenu = new SubMenu("Save");
+    	    sm->addItem(savemenu);
+    	    _saveMenuMap[so] = savemenu;
 
-	    mb = new MenuButton("Save");
-	    mb->setCallback(this);
-	    savemenu->addItem(mb);
-	    _saveMap[so] = mb;
+    	    mb = new MenuButton("Save");
+    	    mb->setCallback(this);
+    	    savemenu->addItem(mb);
+    	    _saveMap[so] = mb;
 
-	    mb = new MenuButton("Reset");
-	    mb->setCallback(this);
-	    sm->addItem(mb);
-	    _resetMap[so] = mb;
+    	    mb = new MenuButton("Reset");
+    	    mb->setCallback(this);
+    	    sm->addItem(mb);
+    	    _resetMap[so] = mb;
 	    
-	    mb = new MenuButton("Delete");
-	    mb->setCallback(this);
-	    so->addMenuItem(mb);
-	    _deleteMap[so] = mb;
+    	    mb = new MenuButton("Delete");
+    	    mb->setCallback(this);
+    	    so->addMenuItem(mb);
+    	    _deleteMap[so] = mb;
 
-	    _loadedObjects.push_back(so);
+    	    _loadedObjects.push_back(so);
         }
     }
 
     for(std::map<SceneObject*,MenuButton*>::iterator it = _saveMap.begin(); it != _saveMap.end(); it++)
     {
-	if(menuItem == it->second)
-	{
-	    std::cerr << "Save." << std::endl;
-	    bool nav;
-	    nav = it->first->getNavigationOn();
-	    it->first->setNavigationOn(false);
+    	if(menuItem == it->second)
+    	{
+    	    std::cerr << "Save." << std::endl;
+    	    bool nav;
+    	    nav = it->first->getNavigationOn();
+    	    it->first->setNavigationOn(false);
 
-	    locInit[it->first->getName()] = std::pair<float, osg::Matrix>(1.0,it->first->getTransform());
+    	    locInit[it->first->getName()] = std::pair<float, osg::Matrix>(1.0,it->first->getTransform());
 
-	    it->first->setNavigationOn(nav);
+    	    it->first->setNavigationOn(nav);
 
-	    writeConfigFile(); 
-	}
+    	    writeConfigFile(); 
+    	}
     }
 
     for(std::map<SceneObject*,MenuButton*>::iterator it = _loadMap.begin(); it != _loadMap.end(); it++)
     {
-	if(menuItem == it->second)
-	{
-	    bool nav;
-	    nav = it->first->getNavigationOn();
-	    it->first->setNavigationOn(false);
+    	if(menuItem == it->second)
+    	{
+    	    bool nav;
+    	    nav = it->first->getNavigationOn();
+    	    it->first->setNavigationOn(false);
 
-	    if(locInit.find(it->first->getName()) != locInit.end())
+    	    if(locInit.find(it->first->getName()) != locInit.end())
             {
-		std::cerr << "Load." << std::endl;
-		//osg::Matrix scale;
-		//scale.makeScale(osg::Vec3(locInit[it->first->getName()].first,locInit[it->first->getName()].first,locInit[it->first->getName()].first));
-		it->first->setTransform(locInit[it->first->getName()].second);
+        		std::cerr << "Load." << std::endl;
+        		//osg::Matrix scale;
+        		//scale.makeScale(osg::Vec3(locInit[it->first->getName()].first,
+        		//                locInit[it->first->getName()].first,locInit[it->first->getName()].first));
+        		it->first->setTransform(locInit[it->first->getName()].second);
             }
 
-	    it->first->setNavigationOn(nav);
-	}
+    	    it->first->setNavigationOn(nav);
+    	}
     }
 
     for(std::map<SceneObject*,MenuButton*>::iterator it = _resetMap.begin(); it != _resetMap.end(); it++)
     {
-	if(menuItem == it->second)
-	{
-	    bool nav;
-	    nav = it->first->getNavigationOn();
-	    it->first->setNavigationOn(false);
+    	if(menuItem == it->second)
+    	{
+    	    bool nav;
+    	    nav = it->first->getNavigationOn();
+    	    it->first->setNavigationOn(false);
 
-	    if(locInit.find(it->first->getName()) != locInit.end())
+    	    if(locInit.find(it->first->getName()) != locInit.end())
             {
-		it->first->setTransform(osg::Matrix::identity());
+        		it->first->setTransform(osg::Matrix::identity());
             }
 
-	    it->first->setNavigationOn(nav);
-	}
+    	    it->first->setNavigationOn(nav);
+    	}
     }
 
     for(std::map<SceneObject*,MenuButton*>::iterator it = _deleteMap.begin(); it != _deleteMap.end(); it++)
     {
-	if(menuItem == it->second)
-	{
-	    if(_saveMap.find(it->first) != _saveMap.end())
-	    {
-		delete _saveMap[it->first];
-		_saveMap.erase(it->first);
-	    }
-	    if(_loadMap.find(it->first) != _loadMap.end())
-	    {
-		delete _loadMap[it->first];
-		_loadMap.erase(it->first);
-	    }
-	    if(_resetMap.find(it->first) != _resetMap.end())
-	    {
-		delete _resetMap[it->first];
-		_resetMap.erase(it->first);
-	    }
-	    if(_posMap.find(it->first) != _posMap.end())
-	    {
-		delete _posMap[it->first];
-		_posMap.erase(it->first);
-	    }
-	    if(_saveMenuMap.find(it->first) != _saveMenuMap.end())
-	    {
-		delete _saveMenuMap[it->first];
-		_saveMenuMap.erase(it->first);
-	    }
-	    for(std::vector<SceneObject*>::iterator delit = _loadedObjects.begin(); delit != _loadedObjects.end(); delit++)
-	    {
-		if((*delit) == it->first)
-		{
-		    _loadedObjects.erase(delit);
-		    break;
-		}
-	    }
+    	if(menuItem == it->second)
+    	{
+    	    if(_saveMap.find(it->first) != _saveMap.end())
+    	    {
+        		delete _saveMap[it->first];
+        		_saveMap.erase(it->first);
+    	    }
+    	    if(_loadMap.find(it->first) != _loadMap.end())
+    	    {
+        		delete _loadMap[it->first];
+        		_loadMap.erase(it->first);
+    	    }
+    	    if(_resetMap.find(it->first) != _resetMap.end())
+    	    {
+        		delete _resetMap[it->first];
+        		_resetMap.erase(it->first);
+    	    }
+    	    if(_posMap.find(it->first) != _posMap.end())
+    	    {
+        		delete _posMap[it->first];
+        		_posMap.erase(it->first);
+    	    }
+            if(_saveMenuMap.find(it->first) != _saveMenuMap.end())
+    	    {
+        		delete _saveMenuMap[it->first];
+        		_saveMenuMap.erase(it->first);
+    	    }
+    	    for(std::vector<SceneObject*>::iterator delit = _loadedObjects.begin();
+                delit != _loadedObjects.end();
+                delit++)
+	        {
+          		if((*delit) == it->first)
+        		{
+        		    _loadedObjects.erase(delit);
+        		    break;
+        		}
+    	    }
 
+    	    delete it->first;
+    	    delete it->second;
+    	    _deleteMap.erase(it);
 
-	    delete it->first;
-	    delete it->second;
-	    _deleteMap.erase(it);
-
-	    break;
-	}
+    	    break;
+    	}
     }
 }
 
@@ -408,7 +412,8 @@ void ModelLoader::writeConfigFile()
 
     if(!cfile.fail())
     {
-       for(map<std::string, std::pair<float, osg::Matrix> >::iterator it = locInit.begin(); it != locInit.end(); it++)
+       for(map<std::string, std::pair<float, osg::Matrix> >::iterator it = locInit.begin();
+           it != locInit.end(); it++)
        {
            //cerr << "Writing entry for " << it->first << endl;
            cfile << it->first << " " << it->second.first << " ";

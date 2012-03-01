@@ -31,6 +31,17 @@ osg::ref_ptr<osg::Uniform> GreenLight::Component::_neverTextureUni =
 Matrixd previousViewMatrix; // TODO: move this to .h file;
 double  previousViewScale;
 bool savedMatrix = false;
+bool SOCM = true;
+
+class SMA : public SceneManager {
+
+    public:
+        int grabProtectedMember1(){ return _menuDefaultOpenButton; }
+        int grabProtectedMember2(){ return _menuScale; }
+
+} sma;
+
+
 
 void zoom(){
 
@@ -43,11 +54,17 @@ void zoom(){
             double xScale = 342.677490;
             Matrixd xMatrix = Matrixd(
             // Values gained from logging (keyboard event 'l')
+              0.875374,   0.271526,   -0.399995,  0.000000,
+             -0.483186,  0.464147,   -0.742360,  0.000000,
+             -0.015913,  0.843115,   0.537499,   0.000000,
+             -34501329.462374,   -7890269.618077,    -2183230472.145897,     1.000000
+
+/*        // Camera Position Based off original object position.
              0.894261,    0.247156,    -0.373112,   0.000000,
              -0.446530,   0.548915,    -0.706614,   0.000000,
              0.030163,    0.798503,    0.601235,    0.000000,
              -13083652.887404,    162726828.747752,    -2177405384.833411,  1.000000
-
+*/
             );
 
             SceneManager::instance()->setObjectMatrix(xMatrix);
@@ -66,6 +83,9 @@ GreenLight::GreenLight()
 {
     std::cerr << "GreenLight created." << std::endl;
     osgEarthInit = false;
+    sma = *(SMA *) SceneManager::instance();
+    _menuButton = sma.grabProtectedMember1();
+                //(SceneManager::instance()->_menuDefaultOpenButton);
 }
 
 GreenLight::~GreenLight()
@@ -183,13 +203,16 @@ bool GreenLight::init()
 
         mapVariable = mapNode -> getMap();
 
-        double lat = 32.874264, lon = -117.236074, height = 0.0;// 56.196423; //100.0;
+        // POSITION:  Texture Based:      Original:
+        double lat    =   32.874175,  //  32.874264,
+               lon    = -117.236122,  //-117.236074,
+               height =  0.0;
 
-           osgEarth::ElevationQuery query( mapVariable );
-           double query_resolution = 0.0; // 1/10th of a degree
-           double out_resolution = 0.0;
-           bool ret = query.getElevation(osg::Vec3d( lon, lat, 0),
-           mapVariable->getProfile()->getSRS(), height, query_resolution, &out_resolution);
+        osgEarth::ElevationQuery query( mapVariable );
+        double query_resolution = 0.0; // 1/10th of a degree
+        double out_resolution = 0.0;
+        bool ret = query.getElevation(osg::Vec3d( lon, lat, 0),
+        mapVariable->getProfile()->getSRS(), height, query_resolution, &out_resolution);
 
         mapVariable->getProfile()->getSRS()->getEllipsoid()->computeLocalToWorldTransformFromLatLongHeight(
             DegreesToRadians(lat),
@@ -201,7 +224,9 @@ bool GreenLight::init()
         OsgE_MT->setMatrix( output );
 
         scaleMatrix = new osg::Matrixd();
-        scaleVector = new osg::Vec3d( 1.0/691.0, 1.0/691.0, 1.0/691.0 );
+        double scaleVal =  // 1.0/500.0;
+                              1.0/691.0;
+        scaleVector = new osg::Vec3d( scaleVal, scaleVal, scaleVal );
 
         scaleMatrix->makeScale( *scaleVector );
         scaleMT->setMatrix( *scaleMatrix );
@@ -216,6 +241,14 @@ bool GreenLight::init()
 
         cvr::PluginHelper::getObjectsRoot()->addChild( OsgE_MT );
     }
+
+
+    /*** Things for Context Menus.. ***/
+    /******/
+                  //name, tag(?), closable
+    _myMenu = new PopupMenu("GreenLight", "", false);
+    _myMenu -> addMenuItem(_customButton);
+    
     /***************************************/
 
 
@@ -297,22 +330,6 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
 {
     std::set< cvr::MenuCheckbox * >::iterator chit;
 
-    /*** Things for Context Menus.. ***/
-              // SO(name, navigation, movable, clip, contextMenu, bounds);
-    so = new SceneObject("testSceneObject", false, false,false,true,true);
-//  so -> addChild(<modelNode>);
-    if ( _box != NULL )
-        so -> addChild( _box -> transform );
-    PluginHelper::registerSceneObject(so,"GreenLight");
-    so -> attachToScene();
-    so->setNavigationOn(true);
-    so->addMoveMenuItem();
-    so->addNavigationMenuItem();
-    
-    _customButton = new MenuButton("RedButton");
-    _customButton->setCallback(this);
-    so->addMenuItem(_customButton);
-
 /*
     if(locInit.find(models[i]->name) != locInit.end())
     {
@@ -322,6 +339,7 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
         so->setTransform(scale * locInit[models[i]->name].second);
     };
 */
+
     /*** END: Things for Context Menus.. ***/
 
     if (item == _showSceneCheckbox)
@@ -788,37 +806,32 @@ bool GreenLight::keyboardEvent(int key , int type )
               }
               printf("Scale is: %f\n",SceneManager::instance()->getObjectScale());
 
-              printf( "Scale of BlackBox is currently : x%f\n ", v3d.x() ); 
+              printf( "Scale of BlackBox is currently : x%f\n ", v3d.x() );
+ 
           }else if( c == 'x' ){
             zoom();
-/*
-            Matrixd xMatrix = Matrixd(
-// BIRDS EYE VIEW
-     0.921287,    0.385126,    0.053931,    0.000000,
-     -0.345919,   0.748221,    0.566132,    0.000000,
-     0.177680,    -0.540226,   0.822548,    0.000000,
-     0.000393,    6372226294.186625,   0.000000,    1.000000
-
-// FREE HAND VIEW
-              0.438817,   0.829416,   -0.345701,   0.000000,
-             -0.662198,   0.038437,   -0.748343,   0.000000,
-             -0.607400,   0.557308,    0.566104,   0.000000,
-            991.104518,  25295.150761, -593466.995305,  1.000000
-              );
-            double xScale = 995.622864; // 1000.0; // 0.093236;
-              SceneManager::instance()->setObjectMatrix(xMatrix);
-              SceneManager::instance()->setObjectScale( xScale );
-*/
-//            SceneManager::instance()->setObjectMatrix(output);
           }else // do nothing.
           {
           }
-          scaleMatrix->makeScale( v3d );
-          scaleMT->setMatrix( *scaleMatrix );
+          if( osgEarthInit ){
+            scaleMatrix->makeScale( v3d );
+            scaleMT->setMatrix( *scaleMatrix );
+          }
         }
         return true;
       }
     return false;
+}
+
+/***
+ * Will this get used at all?
+ */
+void GreenLight::closeMenu()
+{
+    if(_myMenu)
+    {
+        _myMenu->setVisible(false);
+    }
 }
 
 bool GreenLight::processEvent(cvr::InteractionEvent * event)
@@ -836,11 +849,54 @@ bool GreenLight::processEvent(cvr::InteractionEvent * event)
         }
     }
 
+    // cast to TrackedButtonEvent.
     cvr::TrackedButtonInteractionEvent * tie = (TrackedButtonInteractionEvent *) ie;
 
+    
+    if (SOCM){
+      if ( tie->getButton() == _menuButton )
+      {
+        if(tie->getInteraction() == BUTTON_DOWN)
+        {
+            if( !_myMenu->isVisible() )
+            {
+              /***
+               * TODO: Look into incorporating the check, to make it so menu
+               *       only shows up when hover over a component box.
+               */
+              
+                _myMenu->setVisible(true);
+            
+                osg::Vec3 start(0,0,0), end(0,1000,0);
+                start = start * tie->getTransform();
+                end = end * tie->getTransform();
+                
+                // Insert PositionInformation stuff here?
+                Vec3 menuPoint(0, 500.0, 0);
+                menuPoint = menuPoint * tie->getTransform();
+
+                Matrix m;
+                m.makeTranslate(menuPoint);
+                _myMenu->setTransform( m );
+    
+                _myMenu->setScale( sma.grabProtectedMember2() );
+//                                SceneManager::instance()->_menuScale);
+//              SceneManager::instance()->setMenuOpenObject(this);  //#
+            }else
+            {
+                _myMenu->setVisible(false); // #
+//              SceneManager::instance()->closeOpenObjectMenu();  //#
+            }
+        }
+      }
+    }
+
+
+    // ???
     if (tie->getInteraction() != cvr::BUTTON_DOWN || tie->getButton() != 0 || tie->getHand() != 0 )
         return false;
 
+    // if box is still not loaded?
     if (!_box)
         return false;
 

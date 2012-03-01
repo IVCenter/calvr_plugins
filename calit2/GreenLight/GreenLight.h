@@ -18,6 +18,7 @@
 #include <menu/DialogPanel.h>
 #include <menu/SubMenu.h>
 #include <menu/MenuSystem.h>
+#include <menu/PopupMenu.h>
 
 #include <osg/AnimationPath>
 #include <osg/MatrixTransform>
@@ -48,6 +49,9 @@
 
 class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 {
+//  friend class SceneManager;
+
+
     public:
         GreenLight();
         ~GreenLight();
@@ -171,6 +175,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         /*** GreenLight Component Menus ***/
         cvr::SceneObject * so;
         cvr::MenuButton  * _customButton;
+        cvr::PopupMenu   * _myMenu;
         /*** ENDGREENLIGHTCOMPONENTMENU ***/
         
         cvr::SubMenu * _glMenu;
@@ -273,6 +278,10 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         void updateParticles();
         /*** Draw the particles? ***/
         void drawParticles();
+
+        void closeMenu();
+
+        int _menuButton;
 };
 
 #endif
