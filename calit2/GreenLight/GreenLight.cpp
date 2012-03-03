@@ -31,7 +31,7 @@ osg::ref_ptr<osg::Uniform> GreenLight::Component::_neverTextureUni =
 Matrixd previousViewMatrix; // TODO: move this to .h file;
 double  previousViewScale;
 bool savedMatrix = false;
-bool SOCM = true;
+bool SOCM = false;// true;
 
 class SMA : public SceneManager {
 
@@ -245,8 +245,11 @@ bool GreenLight::init()
 
     /*** Things for Context Menus.. ***/
     /******/
-                  //name, tag(?), closable
+                         // name, tag(?), closable
     _myMenu = new PopupMenu("GreenLight", "", false);
+
+    _customButton = new MenuButton("Custom Button");
+    _customButton->setCallback(this);
     _myMenu -> addMenuItem(_customButton);
     
     /***************************************/
@@ -756,6 +759,8 @@ void GreenLight::preFrame()
 //        else
         handleHoverOver(cvr::PluginHelper::getHandMat(), _wandOver, !cvr::ComController::instance()->isMaster());
     }
+
+
 }
 
 void GreenLight::postFrame()
@@ -864,6 +869,17 @@ bool GreenLight::processEvent(cvr::InteractionEvent * event)
                * TODO: Look into incorporating the check, to make it so menu
                *       only shows up when hover over a component box.
                */
+                if (_wandOver){
+                    Component * comp = _wandOver->asComponent();
+                    if (comp)
+                    {
+//                      selectComponent( comp, !comp->selected );
+                        cout << "on a component." << endl;
+                    } else
+                    {
+                        cout << "on a rack/door/other." << endl;
+                    }
+                }
               
                 _myMenu->setVisible(true);
             
@@ -872,7 +888,7 @@ bool GreenLight::processEvent(cvr::InteractionEvent * event)
                 end = end * tie->getTransform();
                 
                 // Insert PositionInformation stuff here?
-                Vec3 menuPoint(0, 500.0, 0);
+                Vec3 menuPoint(0, 1000.0, 0);
                 menuPoint = menuPoint * tie->getTransform();
 
                 Matrix m;
@@ -906,6 +922,7 @@ bool GreenLight::processEvent(cvr::InteractionEvent * event)
         Component * comp = _wandOver->asComponent();
         if (comp)
         {
+            cout << "on a component." << endl;
             selectComponent( comp, !comp->selected );
         }
         else // _wandOver is a rack/door/etc.
