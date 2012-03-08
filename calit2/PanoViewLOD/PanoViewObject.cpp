@@ -7,7 +7,7 @@
 
 #include <iostream>
 
-#define PRINT_TIMING
+//#define PRINT_TIMING
 
 using namespace cvr;
 

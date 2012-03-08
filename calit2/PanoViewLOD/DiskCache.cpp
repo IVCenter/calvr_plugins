@@ -10,7 +10,7 @@
 #include <cstring>
 #include <climits>
 
-#define DC_PRINT_DEBUG
+//#define DC_PRINT_DEBUG
 
 using namespace cvr;
 

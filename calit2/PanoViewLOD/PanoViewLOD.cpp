@@ -15,7 +15,7 @@
 #include "sph-cache.hpp"
 #include "DiskCache.h"
 
-#define PRINT_TIMING
+//#define PRINT_TIMING
 
 using namespace cvr;
 
@@ -255,7 +255,7 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 	{
 	    if(_useDiskCache && !sph_cache::_diskCache)
 	    {
-		std::cerr << "Creating cache in plugin." << std::endl;
+		//std::cerr << "Creating cache in plugin." << std::endl;
 		sph_cache::_diskCache = new DiskCache(cvr::ConfigManager::getInt("value","Plugin.PanoViewLOD.DiskCacheSize",256));
 		sph_cache::_diskCache->start();
 	    }

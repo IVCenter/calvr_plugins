@@ -27,7 +27,7 @@
 #include <OpenThreads/ScopedLock>
 #include <config/ConfigManager.h>
 
-#define CACHE_PRINT_DEBUG
+//#define CACHE_PRINT_DEBUG
 
 DiskCache * sph_cache::_diskCache = NULL;
 
