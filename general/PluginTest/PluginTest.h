@@ -9,6 +9,7 @@
 #include <menu/PopupMenu.h>
 #include <menu/MenuTextButtonSet.h>
 #include <menu/TabbedDialogPanel.h>
+#include <menu/MenuScrollText.h>
 #include <kernel/SceneObject.h>
 
 class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
@@ -52,6 +53,8 @@ class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
 
         cvr::SceneObject * _testobj;
         cvr::SceneObject * _testobj2;
+
+        cvr::MenuScrollText * _mst;
 
         bool _loading;
         int _job;
