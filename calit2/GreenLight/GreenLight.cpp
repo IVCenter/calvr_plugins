@@ -242,11 +242,13 @@ bool GreenLight::init()
     scaleMT -> addChild (pluginMT);
 
 //  OsgE_MT->addChild( scaleMT );
-    OsgE_MT -> addChild(_glLOD);
-    printf("Attached First LOD \"Box\" \n");
 
     if( mapNode )
     {
+        _glLOD -> addChild( scaleMT );
+        OsgE_MT -> addChild(_glLOD);
+        printf("Attached First LOD \"Box\" \n");
+
         mapNode->setNodeMask(mapNode->getNodeMask() & ~2);
 
         // Execute OSGEarth Specific initialization.
@@ -294,7 +296,6 @@ bool GreenLight::init()
         secondDegreeMT = new GreenLight::MTA();
         secondDegreeMT -> addChild(pluginMT);
 
-        _glLOD -> addChild( scaleMT );
         ((MTA *)scaleMT) ->LLOD = 0; // true;
         _glLOD -> addChild( secondDegreeMT );
         ((MTA *)secondDegreeMT) -> LLOD = 1;
@@ -323,7 +324,10 @@ bool GreenLight::init()
         printf("Initializing GreenLight with default configuration...\n");
         osgEarthInit = false;
 
+        OsgE_MT -> addChild(scaleMT);
         cvr::PluginHelper::getObjectsRoot()->addChild( OsgE_MT );
+
+        lodLevel = 0;
     }
 
 
@@ -847,9 +851,11 @@ void GreenLight::preFrame()
 
 
 //        if (cvr::ComController::instance()->isMaster())
-        //handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver, cvr::ComController::instance()->isMaster());
+        if( lodLevel == 0 ){
+            handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver, cvr::ComController::instance()->isMaster());
 //        else
-        handleHoverOver(cvr::PluginHelper::getHandMat(), _wandOver, !cvr::ComController::instance()->isMaster());
+            handleHoverOver(cvr::PluginHelper::getHandMat(), _wandOver, !cvr::ComController::instance()->isMaster());
+        }
     }
 
 
