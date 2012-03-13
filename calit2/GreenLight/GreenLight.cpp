@@ -33,7 +33,7 @@ double  previousViewScale;
 bool savedMatrix = false;
 bool SOCM = false; // TOGGLE for Custom Menu.
 
-float range = 100;
+float range = 64;
 
 // TODO move this to green light and allow it to disable functionality.
 int lodLevel = -1;//false;
@@ -280,12 +280,13 @@ bool GreenLight::init()
     	// attach a silly shape
         osg::MatrixTransform * gMT = new GreenLight::MTA();
         osg::Geode* geode = new osg::Geode();
+        double _swidth = 10, _slength = 30, _sheight = 12;
         osg::ShapeDrawable* shape = new osg::ShapeDrawable(
-             new osg::Box(osg::Vec3(0.0, 0.0, 0.0), 20, 60, 24 ));
+             new osg::Box(osg::Vec3(0.0, 0.0, 0.0), _swidth, _slength, _sheight ));
 
         osg::MatrixTransform * lodShapeHeightOffset = new MatrixTransform();
         osg::Matrixd * shapeHeightOffset = new Matrixd();
-        shapeHeightOffset->makeTranslate( Vec3d(0,0,12) );
+        shapeHeightOffset->makeTranslate( Vec3d(0,0, _sheight/2) );
         lodShapeHeightOffset->setMatrix( *shapeHeightOffset );
 
         geode->addDrawable(shape);
@@ -303,8 +304,8 @@ bool GreenLight::init()
         ((MTA *)gMT)->LLOD = 2;
 
         _glLOD->setRange(0, 0, range);
-        _glLOD->setRange(1, range, range * 10);
-        _glLOD->setRange(2, range * 10, range * 1000);
+        _glLOD->setRange(1, range, range * 4);
+        _glLOD->setRange(2, range * 4, range * 1024);
         printf("Attached Second LOD \"Box\" \n");
 
         scaleMatrix = new osg::Matrixd();
@@ -888,18 +889,18 @@ bool GreenLight::keyboardEvent(int key , int type )
           }else if( c == 'g' )  // scaleUp
           {
 //            v3d *= 1.5; //2;
-              range *= 10;
+              range *= 8;
               _glLOD->setRange(0, 0, range);
-              _glLOD->setRange(1, range, range * 10);
-              _glLOD->setRange(2, range * 10, range * 1000);
+              _glLOD->setRange(1, range, range * 4);
+              _glLOD->setRange(2, range * 4, range * 1024);
               printf("range is: %f \n", range);
           }else if( c == 's' )  // scaleDown
           {
 //            v3d *= .75; //.5;
-              range /= 10;
+              range /= 8;
               _glLOD->setRange(0, 0, range);
-              _glLOD->setRange(1, range, range * 10);
-              _glLOD->setRange(2, range * 10, range * 1000);
+              _glLOD->setRange(1, range, range * 4);
+              _glLOD->setRange(2, range * 4, range * 1024);
               printf("range is: %f \n", range);
           }else if( c == 'l' ) // log.
           {
