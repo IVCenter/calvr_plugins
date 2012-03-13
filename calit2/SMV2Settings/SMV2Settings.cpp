@@ -6,7 +6,7 @@
 #include <kernel/InteractionManager.h>
 #include <kernel/PluginHelper.h>
 #include <kernel/ScreenConfig.h>
-#include <kernel/ScreenMultiViewer2.h>
+#include <kernel/ScreenMVZones.h>
 #include <menu/MenuSystem.h>
 
 #include <osg/ShapeDrawable>
@@ -47,18 +47,18 @@ bool SMV2Settings::init()
 {
     std::cerr << "SMV2Settings init()." << std::endl;
 
-    /*** Ensure that ScreenMultiViewer2 is in use. ***/
+    /*** Ensure that ScreenMVZones is in use. ***/
     ScreenConfig * sConfig = ScreenConfig::instance();
-    ScreenMultiViewer2 * smv2 = NULL;
+    ScreenMVZones * smv2 = NULL;
     for (int i=0; i < sConfig->getNumScreens(); i++)
     {
-        smv2 = dynamic_cast<ScreenMultiViewer2 *> (sConfig->getScreen(i));
+        smv2 = dynamic_cast<ScreenMVZones *> (sConfig->getScreen(i));
         if (smv2 != NULL)
             break;
     }
     if (smv2 == NULL)
     {
-        std::cerr<<"Cannot initialize SMV2Settings without running a ScreenMultiViewer2 screen.\n";
+        std::cerr<<"Cannot initialize SMV2Settings without running a ScreenMVZones screen.\n";
         return false;
     }
 
@@ -67,7 +67,7 @@ bool SMV2Settings::init()
     mvsMenu->setCallback(this);
 
     multipleUsers = new MenuCheckbox("Multiple Users",
-            ScreenMultiViewer2::getMultipleUsers());
+            ScreenMVZones::getMultipleUsers());
     multipleUsers->setCallback(this);
 
     mvsMenu->addItem(multipleUsers);
@@ -76,7 +76,7 @@ bool SMV2Settings::init()
     contributionMenu->setCallback(this);
 
     orientation3d = new MenuCheckbox("3D Orientation Contribution Balancing",
-            ScreenMultiViewer2::getOrientation3d());
+            ScreenMVZones::getOrientation3d());
     orientation3d->setCallback(this);
 
     linearFunc = new MenuCheckbox("Linear Contribution Balancing", false);
@@ -89,11 +89,11 @@ bool SMV2Settings::init()
     gaussianFunc->setCallback(this);
 
     autoContrVar = new MenuCheckbox("Auto Adjust Contribution Variable",
-            ScreenMultiViewer2::getAutoContributionVar());
+            ScreenMVZones::getAutoContributionVar());
     autoContrVar->setCallback(this);
 
     contributionVar = new MenuRangeValue("Contribution Variable", 1, 180,
-            ScreenMultiViewer2::getContributionVar()*180/M_PI, 1);
+            ScreenMVZones::getContributionVar()*180/M_PI, 1);
     contributionVar->setCallback(this);
 
     contributionMenu->addItem(orientation3d);
@@ -109,29 +109,29 @@ bool SMV2Settings::init()
     zoneMenu->setCallback(this);
 
     autoAdjust = new MenuCheckbox("AutoAdjust Zones for FPS",
-                    ScreenMultiViewer2::getAutoAdjust());
+                    ScreenMVZones::getAutoAdjust());
     autoAdjust->setCallback(this);
 
     zoneRowQuantity = new MenuRangeValue("Zone Row Quantity", 1,
-                    ScreenMultiViewer2::getMaxZoneRows(),
-                    ScreenMultiViewer2::getZoneRows(), 1);
+                    ScreenMVZones::getMaxZoneRows(),
+                    ScreenMVZones::getZoneRows(), 1);
     zoneRowQuantity->setCallback(this);
 
     zoneColumnQuantity = new MenuRangeValue("Zone Column Quantity", 1,
-                    ScreenMultiViewer2::getMaxZoneColumns(),
-                    ScreenMultiViewer2::getZoneColumns(), 1);
+                    ScreenMVZones::getMaxZoneColumns(),
+                    ScreenMVZones::getZoneColumns(), 1);
     zoneColumnQuantity->setCallback(this);
 
     autoAdjustTarget = new MenuRangeValue("AutoAdjust FPS Target", 1, 70,
-                    ScreenMultiViewer2::getAutoAdjustTarget(), 1);
+                    ScreenMVZones::getAutoAdjustTarget(), 1);
     autoAdjustTarget->setCallback(this);
 
     autoAdjustOffset = new MenuRangeValue("AutoAdjust FPS Offset", 0, 10,
-                    ScreenMultiViewer2::getAutoAdjustOffset(), 1);
+                    ScreenMVZones::getAutoAdjustOffset(), 1);
     autoAdjustOffset->setCallback(this);
 
     zoneColoring = new MenuCheckbox("Zone Coloring",
-                    ScreenMultiViewer2::getZoneColoring());
+                    ScreenMVZones::getZoneColoring());
     zoneColoring->setCallback(this);
 
     zoneMenu->addItem(zoneColoring);
@@ -155,20 +155,20 @@ void SMV2Settings::menuCallback(MenuItem * item)
 
     if (item == multipleUsers)
     {
-        ScreenMultiViewer2::setMultipleUsers(multipleUsers->getValue());
+        ScreenMVZones::setMultipleUsers(multipleUsers->getValue());
     }
     else if (item == orientation3d)
     {
-        ScreenMultiViewer2::setOrientation3d(orientation3d->getValue());
+        ScreenMVZones::setOrientation3d(orientation3d->getValue());
     }
     else if (item == linearFunc)
     {
-        ScreenMultiViewer2::setSetContributionFunc(0);
+        ScreenMVZones::setSetContributionFunc(0);
         contrVar = &linearVar;
         contributionVar->setValue(*contrVar);
 
         if (!autoContrVar->getValue())
-            ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
+            ScreenMVZones::setContributionVar(*contrVar*M_PI/180);
 
         linearFunc->setValue(true);
         cosineFunc->setValue(false);
@@ -176,12 +176,12 @@ void SMV2Settings::menuCallback(MenuItem * item)
     }
     else if (item == cosineFunc)
     {
-        ScreenMultiViewer2::setSetContributionFunc(1);
+        ScreenMVZones::setSetContributionFunc(1);
         contrVar = &cosineVar;
         contributionVar->setValue(*contrVar);
 
         if (!autoContrVar->getValue())
-            ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
+            ScreenMVZones::setContributionVar(*contrVar*M_PI/180);
 
         linearFunc->setValue(false);
         cosineFunc->setValue(true);
@@ -189,12 +189,12 @@ void SMV2Settings::menuCallback(MenuItem * item)
     }
     else if (item == gaussianFunc)
     {
-        ScreenMultiViewer2::setSetContributionFunc(2);
+        ScreenMVZones::setSetContributionFunc(2);
         contrVar = &gaussianVar;
         contributionVar->setValue(*contrVar);
 
         if (!autoContrVar->getValue())
-            ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
+            ScreenMVZones::setContributionVar(*contrVar*M_PI/180);
 
         linearFunc->setValue(false);
         cosineFunc->setValue(false);
@@ -212,17 +212,17 @@ void SMV2Settings::menuCallback(MenuItem * item)
             contributionMenu->addItem(contributionVar);
             
         }
-        ScreenMultiViewer2::setAutoContributionVar(autoContrVar->getValue());
+        ScreenMVZones::setAutoContributionVar(autoContrVar->getValue());
     }
     else if (item == contributionVar)
     {
         *contrVar = contributionVar->getValue();
-        ScreenMultiViewer2::setContributionVar(*contrVar*M_PI/180);
+        ScreenMVZones::setContributionVar(*contrVar*M_PI/180);
     }
     else if (item == autoAdjust)
     {
         bool adjust = autoAdjust->getValue();
-        ScreenMultiViewer2::setAutoAdjust(adjust);
+        ScreenMVZones::setAutoAdjust(adjust);
 
         if (adjust)
         {
@@ -241,22 +241,22 @@ void SMV2Settings::menuCallback(MenuItem * item)
     }
     else if (item == zoneRowQuantity)
     {
-        ScreenMultiViewer2::setZoneRows((int)(zoneRowQuantity->getValue()));
+        ScreenMVZones::setZoneRows((int)(zoneRowQuantity->getValue()));
     }
     else if (item == zoneColumnQuantity)
     {
-        ScreenMultiViewer2::setZoneColumns((int)(zoneColumnQuantity->getValue()));
+        ScreenMVZones::setZoneColumns((int)(zoneColumnQuantity->getValue()));
     }
     else if (item == autoAdjustTarget)
     {
-        ScreenMultiViewer2::setAutoAdjustTarget(autoAdjustTarget->getValue());
+        ScreenMVZones::setAutoAdjustTarget(autoAdjustTarget->getValue());
     }
     else if (item == autoAdjustOffset)
     {
-        ScreenMultiViewer2::setAutoAdjustOffset(autoAdjustOffset->getValue());
+        ScreenMVZones::setAutoAdjustOffset(autoAdjustOffset->getValue());
     }
     else if (item == zoneColoring)
     {
-        ScreenMultiViewer2::setZoneColoring(zoneColoring->getValue());
+        ScreenMVZones::setZoneColoring(zoneColoring->getValue());
     }
 }
