@@ -12,7 +12,8 @@ bool GreenLight::loadScene()
     // load model files
     std::string modelsDir = cvr::ConfigManager::getEntry("Plugin.GreenLight.ModelsDir");
 
-    osg::ref_ptr<osg::Node> box = loadModelFile(modelsDir + "box.WRL");
+    osg::ref_ptr<osg::Node> box = (GreenLight::NodeA *)(&(*loadModelFile(modelsDir + "box.WRL")));
+//  osg::ref_ptr<osg::Node> box =  loadModelFile(modelsDir + "box.WRL");
     osg::ref_ptr<osg::Node> electrical = loadModelFile(modelsDir + "electrical.WRL");
     osg::ref_ptr<osg::Node> Pipes = loadModelFile(modelsDir + "waterpipes.WRL");
     osg::ref_ptr<osg::Node> doorFL = loadModelFile(modelsDir + "frontleft.WRL");

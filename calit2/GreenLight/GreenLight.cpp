@@ -31,8 +31,17 @@ osg::ref_ptr<osg::Uniform> GreenLight::Component::_neverTextureUni =
 Matrixd previousViewMatrix; // TODO: move this to .h file;
 double  previousViewScale;
 bool savedMatrix = false;
-bool SOCM = false;// true;
+bool SOCM = false; // TOGGLE for Custom Menu.
 
+float range = 100;
+
+// TODO move this to green light and allow it to disable functionality.
+int lodLevel = -1;//false;
+osg::MatrixTransform * secondDegreeMT;// = new GreenLight::MTA();
+/***
+ * Accessor of a Scenemanager to get specific popup menu members.
+ *
+ */
 class SMA : public SceneManager {
 
     public:
@@ -41,10 +50,46 @@ class SMA : public SceneManager {
 
 } sma;
 
+class LODA : public LOD {
+    public:
+        typedef LOD super;
+    // Wrapper to toggle activity based on active child?
+    //
+        void traverse(NodeVisitor& nv){
+//          super::traverse(nv);
+        }
+} loda;
 
 
+void GreenLight::NodeA::accept(NodeVisitor& nv){
+//    printf("check or call accept of lowestLOD\n");
+    if (nv.validNodeMask(*this)) 
+    {
+        nv.pushOntoNodePath(this);
+        nv.apply(*this);
+        nv.popFromNodePath();
+    }
+}
+
+void GreenLight::MTA::accept(NodeVisitor& nv){
+    if (nv.validNodeMask(*this)) 
+    {
+        if ( nv.getTraversalMode() == nv.TRAVERSE_ACTIVE_CHILDREN )
+        {
+            lodLevel = LLOD;
+        }
+        nv.pushOntoNodePath(this);
+        nv.apply(*this);
+        nv.popFromNodePath();
+    }
+}
+
+/***
+ * Called when Navigate To Plugin button is clicked.
+ * Sets Matrix and Scale to be in front of the Green Light Plugin using
+ * hardcoded values.
+ */
 void zoom(){
-
     if (savedMatrix == false){
       previousViewMatrix = SceneManager::instance()->getObjectTransform()->getMatrix(); 
       previousViewScale = SceneManager::instance()-> getObjectScale();
@@ -188,13 +233,20 @@ bool GreenLight::init()
     osgEarth::MapNode* mapNode = MapNode::findMapNode( SceneManager::instance()->getObjectsRoot() ); 
 
     OsgE_MT = new MatrixTransform();
-    scaleMT = new osg::MatrixTransform(); 
-    
-    OsgE_MT->addChild( scaleMT );
+    _glLOD  = new LOD();
+//    MinMaxPair mmp = pair<500, 5000>;
+//    scaleMT = new osg::MatrixTransform(); 
+    scaleMT = new GreenLight::MTA();
+    pluginMT = new osg::MatrixTransform();
+
+    scaleMT -> addChild (pluginMT);
+
+//  OsgE_MT->addChild( scaleMT );
+    OsgE_MT -> addChild(_glLOD);
+    printf("Attached First LOD \"Box\" \n");
 
     if( mapNode )
     {
-
         mapNode->setNodeMask(mapNode->getNodeMask() & ~2);
 
         // Execute OSGEarth Specific initialization.
@@ -223,13 +275,45 @@ bool GreenLight::init()
 
         OsgE_MT->setMatrix( output );
 
+    	// attach a silly shape
+        osg::MatrixTransform * gMT = new GreenLight::MTA();
+        osg::Geode* geode = new osg::Geode();
+        osg::ShapeDrawable* shape = new osg::ShapeDrawable(
+             new osg::Box(osg::Vec3(0.0, 0.0, 0.0), 20, 60, 24 ));
+
+        osg::MatrixTransform * lodShapeHeightOffset = new MatrixTransform();
+        osg::Matrixd * shapeHeightOffset = new Matrixd();
+        shapeHeightOffset->makeTranslate( Vec3d(0,0,12) );
+        lodShapeHeightOffset->setMatrix( *shapeHeightOffset );
+
+        geode->addDrawable(shape);
+        lodShapeHeightOffset->addChild(geode);
+        gMT->addChild( lodShapeHeightOffset );
+//        lodShapeHeightOffset->addChild( geode );
+
+        secondDegreeMT = new GreenLight::MTA();
+        secondDegreeMT -> addChild(pluginMT);
+
+        _glLOD -> addChild( scaleMT );
+        ((MTA *)scaleMT) ->LLOD = 0; // true;
+        _glLOD -> addChild( secondDegreeMT );
+        ((MTA *)secondDegreeMT) -> LLOD = 1;
+        _glLOD -> addChild( gMT );
+        ((MTA *)gMT)->LLOD = 2;
+
+        _glLOD->setRange(0, 0, range);
+        _glLOD->setRange(1, range, range * 10);
+        _glLOD->setRange(2, range * 10, range * 1000);
+        printf("Attached Second LOD \"Box\" \n");
+
         scaleMatrix = new osg::Matrixd();
         double scaleVal =  // 1.0/500.0;
                               1.0/691.0;
         scaleVector = new osg::Vec3d( scaleVal, scaleVal, scaleVal );
 
         scaleMatrix->makeScale( *scaleVector );
-        scaleMT->setMatrix( *scaleMatrix );
+//        scaleMT->setMatrix( *scaleMatrix );
+        pluginMT->setMatrix( *scaleMatrix );
 
         mapNode->addChild( OsgE_MT );
     }
@@ -390,11 +474,13 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
 
         if (_showSceneCheckbox->getValue())
         {
-            scaleMT -> addChild( _box -> transform );
+//            scaleMT -> addChild( _box -> transform );
+            pluginMT -> addChild( _box -> transform );
         }
         else
         {
-            scaleMT -> removeChild( _box -> transform );
+//            scaleMT -> removeChild( _box -> transform );
+            pluginMT -> removeChild( _box -> transform );
         }
     }
     else if (item == _xrayViewCheckbox)
@@ -745,6 +831,11 @@ void GreenLight::preFrame()
      * within reach? Add two more call backs for out of sight and in sight.
      */
 
+    if( true ){
+    }else if(true){
+    }else{
+    }
+
     // update mouse and wand intersection with components
     if (_box)
     {
@@ -753,6 +844,7 @@ void GreenLight::preFrame()
             _door[d]->handleAnimation();
         for (int r = 0; r < _rack.size(); r++)
             _rack[r]->handleAnimation();
+
 
 //        if (cvr::ComController::instance()->isMaster())
         //handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver, cvr::ComController::instance()->isMaster());
@@ -789,10 +881,20 @@ bool GreenLight::keyboardEvent(int key , int type )
 
           }else if( c == 'g' )  // scaleUp
           {
-              v3d *= 1.5; //2;
+//            v3d *= 1.5; //2;
+              range *= 10;
+              _glLOD->setRange(0, 0, range);
+              _glLOD->setRange(1, range, range * 10);
+              _glLOD->setRange(2, range * 10, range * 1000);
+              printf("range is: %f \n", range);
           }else if( c == 's' )  // scaleDown
           {
-              v3d *= .75; //.5;
+//            v3d *= .75; //.5;
+              range /= 10;
+              _glLOD->setRange(0, 0, range);
+              _glLOD->setRange(1, range, range * 10);
+              _glLOD->setRange(2, range * 10, range * 1000);
+              printf("range is: %f \n", range);
           }else if( c == 'l' ) // log.
           {
               printf("Current Matrix Config: \n");
@@ -812,6 +914,8 @@ bool GreenLight::keyboardEvent(int key , int type )
               printf("Scale is: %f\n",SceneManager::instance()->getObjectScale());
 
               printf( "Scale of BlackBox is currently : x%f\n ", v3d.x() );
+                
+              printf( "LOD level: %d\n", lodLevel ) ;
  
           }else if( c == 'x' ){
             zoom();
@@ -841,6 +945,7 @@ void GreenLight::closeMenu()
 
 bool GreenLight::processEvent(cvr::InteractionEvent * event)
 {
+    
     cvr::InteractionEvent * ie = event->asTrackedButtonEvent();
     if(!ie)
     { // If it is not a TrackedButton Event Check if it is a keyboardEvent.
@@ -854,13 +959,16 @@ bool GreenLight::processEvent(cvr::InteractionEvent * event)
         }
     }
 
+    if ( lodLevel == 0 )
+    {
     // cast to TrackedButtonEvent.
     cvr::TrackedButtonInteractionEvent * tie = (TrackedButtonInteractionEvent *) ie;
 
     
-    if (SOCM){
-      if ( tie->getButton() == _menuButton )
+      if (SOCM)
       {
+        if ( tie->getButton() == _menuButton )
+        {
         if(tie->getInteraction() == BUTTON_DOWN)
         {
             if( !_myMenu->isVisible() )
@@ -903,22 +1011,22 @@ bool GreenLight::processEvent(cvr::InteractionEvent * event)
                 _myMenu->setVisible(false); // #
 //              SceneManager::instance()->closeOpenObjectMenu();  //#
             }
+          }
         }
       }
-    }
 
 
-    // ???
-    if (tie->getInteraction() != cvr::BUTTON_DOWN || tie->getButton() != 0 || tie->getHand() != 0 )
+      // ???
+      if (tie->getInteraction() != cvr::BUTTON_DOWN || tie->getButton() != 0 || tie->getHand() != 0 )
         return false;
 
-    // if box is still not loaded?
-    if (!_box)
+      // if box is still not loaded?
+      if (!_box)
         return false;
 
-    // Should be hovering over it
-    if (_wandOver)
-    {
+      // Should be hovering over it
+      if (_wandOver)
+      {
         Component * comp = _wandOver->asComponent();
         if (comp)
         {
@@ -938,7 +1046,7 @@ bool GreenLight::processEvent(cvr::InteractionEvent * event)
         }
 
         return true;
+      }
     }
-
     return false;
 }

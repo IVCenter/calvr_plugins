@@ -22,7 +22,9 @@
 
 #include <osg/AnimationPath>
 #include <osg/MatrixTransform>
+#include <osg/ShapeDrawable>
 #include <osg/Texture2D>
+#include <osg/NodeVisitor>
 
 /*** OSG EARTH PLUGINS ***/
 
@@ -72,9 +74,13 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         osg::Matrixd output;
 
         osg::MatrixTransform * scaleMT;
+        osg::MatrixTransform * pluginMT;
+//        osg::MTA * scaleMT;
         osg::Matrixd*      scaleMatrix; 
         osg::Vec3d*        scaleVector; 
 
+
+        osg::LOD * _glLOD;
 
         osgEarth::Map * mapVariable;
 
@@ -91,7 +97,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 
                 osg::ref_ptr<osg::MatrixTransform> transform; // transform nodes of this entity
                 osg::ref_ptr<osg::AnimationPath> path; // animation path (null if non-existent)
-                osg::ref_ptr<osg::Node> mainNode;
+                osg::ref_ptr<osg::Node> mainNode;   // change mainNode to be the type of node with overriden accept.
 // TODO change nodes to type: set< ref_ptr< Node > >
                 std::set<osg::Node *> nodes; // node-sub-graph loaded in via osgDB readNodeFile
                 AnimationStatus status; // status of animation
@@ -140,6 +146,21 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 osg::ref_ptr<osg::Image> _data;
                 osg::ref_ptr<osg::Uniform> _alphaUni;
                 osg::ref_ptr<osg::Uniform> _colorsUni;
+        };
+
+
+        class NodeA : public osg::Node
+        {
+            public:
+                virtual void accept(osg::NodeVisitor&);
+        };
+
+        class MTA : public osg::MatrixTransform
+        {
+            public:
+                virtual void accept(osg::NodeVisitor&);
+//                bool LLOD;
+                int LLOD;
         };
 
         typedef struct {
