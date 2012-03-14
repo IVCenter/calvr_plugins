@@ -99,11 +99,16 @@ void zoom(){
             double xScale = 342.677490;
             Matrixd xMatrix = Matrixd(
             // Values gained from logging (keyboard event 'l')
+             0.877197,	 0.271391,	 -0.396074,	 0.000000,
+            -0.480072,	 0.482691,	 -0.732489,	 0.000000,
+             -0.007609,	 0.832681,	 0.553702,	 0.000000,
+             -37676051.444037,	 34600540.784007,	 -2182918049.382696,	 1.000000
+/*
               0.875374,   0.271526,   -0.399995,  0.000000,
              -0.483186,  0.464147,   -0.742360,  0.000000,
              -0.015913,  0.843115,   0.537499,   0.000000,
              -34501329.462374,   -7890269.618077,    -2183230472.145897,     1.000000
-
+*/
 /*        // Camera Position Based off original object position.
              0.894261,    0.247156,    -0.373112,   0.000000,
              -0.446530,   0.548915,    -0.706614,   0.000000,
@@ -317,7 +322,8 @@ bool GreenLight::init()
 //        scaleMT->setMatrix( *scaleMatrix );
         pluginMT->setMatrix( *scaleMatrix );
 
-        mapNode->addChild( OsgE_MT );
+//        mapNode->addChild( OsgE_MT );
+        cvr::PluginHelper::getObjectsRoot()->addChild( OsgE_MT );
     }
     else
     {
