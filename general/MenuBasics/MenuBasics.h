@@ -3,6 +3,7 @@
 
 #include <menu/MenuCheckbox.h>
 #include <menu/MenuButton.h>
+#include <menu/MenuRangeValueCompact.h>
 #include <kernel/CVRPlugin.h>
 
 class MenuBasics : public cvr::CVRPlugin, public cvr::MenuCallback
@@ -25,6 +26,7 @@ class MenuBasics : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuCheckbox * scale;
         cvr::MenuCheckbox * drive;
         cvr::MenuCheckbox * fly;
+        cvr::MenuRangeValueCompact * navScale;
 
         cvr::MenuCheckbox * activeMode;
 
