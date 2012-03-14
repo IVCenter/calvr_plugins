@@ -5,6 +5,8 @@ SET(PLUGIN_HEADERS
     SketchLine.h
     SketchRibbon.h
     ColorSelector.h
+    SketchShape.h
+    Layout.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -14,6 +16,8 @@ ADD_LIBRARY(${LIB_NAME}
     SketchLine.cpp
     SketchRibbon.cpp
     ColorSelector.cpp
+    SketchShape.cpp
+    Layout.cpp
 )
 
 
