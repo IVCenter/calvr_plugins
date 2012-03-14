@@ -1,0 +1,4 @@
+DataDir - path to save and load location
+ModelDir - path to directory of model files
+GridSize - a positive integer for grid snapping, 1 for off
+OrientToViewer - on or off, controlls rotation of shapes to face viewer
