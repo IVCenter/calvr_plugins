@@ -10,10 +10,16 @@
 #endif
 
 #include <iostream>
+#include <string.h>
 #include <osg/Material>
 #include <osg/PolygonMode>
+#include <osgText/Text>
+#include <osgText/Text3D>
 
 using namespace cvr;
+
+float SketchShape::_scale = 1;
+bool SketchShape::_growing = false;
 
 SketchShape::SketchShape(ShapeType type, bool wireframe, osg::Vec4 color, 
                          int tessellations, float size) : SketchObject(color,size)
@@ -107,11 +113,12 @@ SketchShape::SketchShape(ShapeType type, bool wireframe, osg::Vec4 color,
     _drawing = false;
     _done = false;
     _valid = true;
+
+    _textPat = new osg::PositionAttitudeTransform();
 }
 
 void SketchShape::setPat(osg::PositionAttitudeTransform **pat)
 {
-
     osg::Drawable * hlDrawable;
     _highlightPat = new osg::PositionAttitudeTransform();
     _shapeGeode = new osg::Geode();
@@ -188,9 +195,47 @@ void SketchShape::setPat(osg::PositionAttitudeTransform **pat)
     _shapePat->addChild(_shapeGeode);
     _pat->addChild(_shapePat);
     _pat->addChild(_highlightPat);
+
+
+/*    osgText::Text * text = new osgText::Text();
+    std::string str = "Shape"; 
+    text->setText(str);
+    text->setCharacterSize(10);
+    text->setAxisAlignment(osgText::Text3D::XZ_PLANE);
+    text->setColor(osg::Vec4(1,1,1,.4)); */
+
+    osgText::Text3D * text = new osgText::Text3D();
+    std::string str = "Shape"; 
+    text->setFont("/home/cehughes/data/arial.ttf");
+    text->setText(str);
+    text->setCharacterSize(10);
+    text->setCharacterDepth(5);
+    text->setDrawMode(osgText::Text3D::TEXT);
+    text->setAxisAlignment(osgText::Text3D::XZ_PLANE);
+    text->setColor(_color);//osg::Vec4(1,1,1,1));
+
+    osg::Geode* textGeode = new osg::Geode();
+    float centerAdjust = text->getFontWidth() * str.length() / 10;
+    _textPat->setPosition(osg::Vec3(-centerAdjust, 0, 60));
+
+    textGeode->addDrawable(text);
+    _textPat->addChild(textGeode);
+    _pat->addChild(_textPat);
+
+     osg::LineWidth * lineWidth = new osg::LineWidth();
+    lineWidth->setWidth(3.0);
+    _textPat->getOrCreateStateSet()->setAttributeAndModes(lineWidth, osg::StateAttribute::ON);
+  
+    textGeode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::ON);
+    _textPat->setNodeMask(0x0);
 }
 
 SketchShape::~SketchShape() {}
+
+void SketchShape::setFont(std::string font)
+{
+    text->setFont(font);
+}
 
 
 bool SketchShape::buttonEvent(int type, const osg::Matrix & mat)
@@ -252,7 +297,6 @@ osg::Drawable * SketchShape::getDrawable()
     return _geometry;
 }
 
-
 void SketchShape::setColor(osg::Vec4 color)
 {
     _color = color;
@@ -263,6 +307,36 @@ void SketchShape::setColor(osg::Vec4 color)
 void SketchShape::setSize(float size)
 {
     _size = size;
+    switch (_type)
+    {
+         case 0: // BOX
+            drawBox();
+            break;
+
+        case 1: // CYLINDER
+            drawCylinder();
+            break;
+
+        case 2: // CONE
+            drawCone();
+           break;
+
+        case 3: // SPHERE
+            drawSphere();
+            break; 
+
+        case 4: // TORUS 
+            drawTorus(_size * 1.5, _size * .5);
+            break; 
+
+        case 5: // Horizontal Cylinder 
+            drawCylinder();
+            break; 
+
+        case 6: // Vertical Cylinder 
+            drawCylinder();
+            break; 
+    }
 }
 
 void SketchShape::scale(osg::Vec3 scale)
@@ -320,32 +394,63 @@ void SketchShape::setWireframe(bool b)
 
 void SketchShape::highlight()
 {
-    _highlightGeode->setNodeMask(HL_OFF_MASK);//HL_ON_MASK);
-    
-    float hlStep = .003;
-    if (_growing)
-    {
-        _shapePat->setScale(_shapePat->getScale() + osg::Vec3(hlStep, hlStep, hlStep));
-        _highlightPat->setScale(_highlightPat->getScale() + osg::Vec3(hlStep, hlStep, hlStep));
+    _highlightGeode->setNodeMask(HL_ON_MASK);
+    _textPat->setNodeMask(TEXT_ON_MASK);
 
-        if (_shapePat->getScale()[0] > 1.03)
+    osg::LineWidth * lineWidth = new osg::LineWidth();
+    lineWidth->setWidth(HL_BOLD);
+    _shapeGeode->getOrCreateStateSet()->setAttributeAndModes(lineWidth, osg::StateAttribute::ON);
+    
+    osg::Vec3 scaleVec(SketchShape::_scale,SketchShape::_scale,SketchShape::_scale);
+
+    _shapePat->setScale(scaleVec);
+    _highlightPat->setScale(scaleVec);
+    
+/*  if (_growing)
+    {
+        _shapePat->setScale(_shapePat->getScale() + scaleVec);
+        _highlightPat->setScale(_highlightPat->getScale() + scaleVec);
+
+        if (_shapePat->getScale()[0] > 1 + hlMaxDiff)
             _growing = false;
     }
     else
     {
-        _shapePat->setScale(_shapePat->getScale() - osg::Vec3(hlStep, hlStep, hlStep));
-        _highlightPat->setScale(_highlightPat->getScale() - osg::Vec3(hlStep, hlStep, hlStep));
+        _shapePat->setScale(_shapePat->getScale() - scaleVec);
+        _highlightPat->setScale(_highlightPat->getScale() - scaleVec);
 
-        if (_shapePat->getScale()[0] < .97)
+        if (_shapePat->getScale()[0] < 1 - hlMaxDiff)
             _growing = true;
-    }
+    }*/
 }
 
 void SketchShape::unhighlight()
 {
     _highlightGeode->setNodeMask(HL_OFF_MASK);
+    _textPat->setNodeMask(TEXT_OFF_MASK);
+
     _shapePat->setScale(osg::Vec3(1,1,1));
     _highlightPat->setScale(osg::Vec3(1,1,1));
+
+    osg::LineWidth * lineWidth = new osg::LineWidth();
+    lineWidth->setWidth(HL_UNBOLD);
+    _shapeGeode->getOrCreateStateSet()->setAttributeAndModes(lineWidth, osg::StateAttribute::ON);
+}
+
+void SketchShape::updateHighlight()
+{
+    if (_growing)
+    {
+        SketchShape::_scale += HL_STEP;
+        if (SketchShape::_scale > 1 + HL_MAX_DIFF)
+            SketchShape::_growing = false;
+    }
+    else
+    {
+        SketchShape::_scale -= HL_STEP;
+        if (SketchShape::_scale < 1 - HL_MAX_DIFF)
+            SketchShape::_growing = true;
+    }   
 }
 
 bool SketchShape::containsPoint(const osg::Vec3 point)
@@ -355,7 +460,7 @@ bool SketchShape::containsPoint(const osg::Vec3 point)
         return false;
     }
 
-    // TODO: proper intersection testing
+    // TODO: proper intersection testing esp. for torus, cylinder
 
     _pat->dirtyBound();
     return _pat->getBound().contains(point);

@@ -120,7 +120,6 @@ void Layout::show()
 
 void Layout::scaleMajorRadius(float s)
 {
-
     if (_type == 0)
     {
         R /= scaleMaj;
@@ -130,7 +129,9 @@ void Layout::scaleMajorRadius(float s)
     else 
     {
         _pat->setScale(osg::Vec3(_pat->getScale()[0], _pat->getScale()[1],
-            s * scaleMaj));
+            _pat->getScale()[2] * (s / scaleMaj)));
+        r /= scaleMaj;
+        r *= s;
     }
     positionChildren();
     scaleMaj = s; 

@@ -75,6 +75,8 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
         void removeMenuItems(Mode dm);
         void addMenuItems(Mode dm);
 
+        osg::Vec3 getCurrentPoint();
+
         cvr::SubMenu * _sketchMenu;
         cvr::MenuTextButtonSet * _modeButtons;
         cvr::MenuRangeValue * _sizeRV;
@@ -102,6 +104,7 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
         cvr::MenuButton * _clearButton;
 
         cvr::MenuButton * _selectAllButton;
+        cvr::MenuButton * _clearSelectButton;
 
         cvr::SubMenu * _loadMenu;
         std::vector<cvr::MenuButton*> _loadFileButtons;
@@ -149,27 +152,15 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
 
         SketchObject * _activeObject;
 
-        // shape lists
         std::vector<SketchObject*> _objectList;
-
         std::vector<SketchShape *> _shapeList;
-
-        std::vector<osg::PositionAttitudeTransform *> _patList;
-        std::vector<osg::Geode *> _highlightList;
-        
-        // layout lists
-        std::vector<osg::Geode*> _layoutList;
-        std::vector<osg::PositionAttitudeTransform * > _layoutPatList;
-        std::vector<osg::Geode *> _layoutHighlightList;
-        std::vector<Layout *> _layoutStructList;
-
+        std::vector<Layout *> _layoutList;
         std::vector<osg::PositionAttitudeTransform *> _movingList;
+        std::vector<osg::PositionAttitudeTransform *> _patList;
 
         ColorSelector * _colorSelector;
 
-//        osg::ref_ptr<osg::PositionAttitudeTransform> _pat;
         osg::PositionAttitudeTransform * _pat;
-
         osg::PositionAttitudeTransform * _modelpat;
         osg::PositionAttitudeTransform * _modelpatScale;
         osg::Node * _model;
@@ -190,10 +181,13 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
         bool _isObjectRoot;
         bool _movingLayout;
         bool _isIntersecting;
+        bool _orientToViewer;
 
         int _sizeScale;
         float _modelScale;
+
         int _modelCounter;
+
 };
 
 

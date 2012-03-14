@@ -17,6 +17,8 @@
 #include <osgDB/WriteFile>
 #include <osgDB/ReadFile>
 
+#include <osgText/Text3D>
+#include <osgText/Text>
 #include <util/Intersection.h>
 
 #include <iostream>
@@ -67,10 +69,6 @@ bool Sketch::init()
     _drawModeButtons->addButton("Ribbon");
     _drawModeButtons->addButton("Line");
 
-    _csCB = new MenuCheckbox("Color Selector",false);
-    _csCB->setCallback(this);
-    _sketchMenu->addItem(_csCB);
-
     _sizeRV = new MenuRangeValue("Size",0.1,10.0,1.0);
     _sizeRV->setCallback(this);
     _sketchMenu->addItem(_sizeRV);
@@ -78,6 +76,10 @@ bool Sketch::init()
     _tessellationsRV = new MenuRangeValue("Tessellations", 6, 30, 12, 2);
     _tessellationsRV->setCallback(this);
     _sketchMenu->addItem(_tessellationsRV);
+
+    _csCB = new MenuCheckbox("Color Selector",false);
+    _csCB->setCallback(this);
+    _sketchMenu->addItem(_csCB);
 
     _saveButton = new MenuButton("Save");
     _saveButton->setCallback(this);
@@ -93,6 +95,9 @@ bool Sketch::init()
 
     _selectAllButton = new MenuButton("Select All Shapes");
     _selectAllButton->setCallback(this);
+
+    _clearSelectButton = new MenuButton("Clear Selection");
+    _clearSelectButton->setCallback(this);
 
     _freezeCB = new MenuCheckbox("Freeze", false);
     _freezeCB->setCallback(this);
@@ -152,6 +157,9 @@ bool Sketch::init()
 
     std::string gridSize = ConfigManager::getEntry("Plugin.Sketch.GridSize");
     _gridSize = atoi(gridSize.c_str());
+
+    std::string orient = ConfigManager::getEntry("Plugin.Sketch.OrientToViewer");
+    _orientToViewer = orient == "on";
 
     if (!_gridSize || _gridSize > MAX_GRID_SIZE)
         _gridSize = 1;
@@ -261,6 +269,7 @@ void Sketch::menuCallback(MenuItem * item)
         if(_freezeCB->getValue())
         {
             _sketchRoot->postMult(PluginHelper::getObjectToWorldTransform());
+
             PluginHelper::getObjectsRoot()->removeChild(_sketchRoot);
             PluginHelper::getScene()->addChild(_sketchRoot);
             _isObjectRoot = false;
@@ -268,6 +277,7 @@ void Sketch::menuCallback(MenuItem * item)
         else
         {
             _sketchRoot->postMult(PluginHelper::getWorldToObjectTransform());
+
             PluginHelper::getScene()->removeChild(_sketchRoot);
             PluginHelper::getObjectsRoot()->addChild(_sketchRoot);
             _isObjectRoot = true;
@@ -299,14 +309,17 @@ void Sketch::menuCallback(MenuItem * item)
             float s = _sizeRV->getValue();
             vector<PositionAttitudeTransform *>::iterator it;
             bool isLayout;
+
             for (it = _movingList.begin(); it != _movingList.end(); ++it)
             {
                 isLayout = false;
-                for (int i = 0; i < _layoutStructList.size(); ++i)
+
+                // layouts get scaled differently than shapes
+                for (int i = 0; i < _layoutList.size(); ++i)
                 {
-                    if ((*it) == _layoutStructList[i]->getPat())
+                    if ((*it) == _layoutList[i]->getPat())
                     {
-                        _layoutStructList[i]->scaleMajorRadius(s);
+                        _layoutList[i]->scaleMajorRadius(s);
                         isLayout = true;
                     }
                 }
@@ -326,6 +339,11 @@ void Sketch::menuCallback(MenuItem * item)
             _movingList.push_back(_shapeList[i]->getPat());
             _shapeList[i]->highlight();
         }
+    }
+    
+    else if (item == _clearSelectButton)
+    {
+        _movingList.clear();
     }
 
     else if (item == _tessellationsRV)
@@ -370,24 +388,24 @@ void Sketch::menuCallback(MenuItem * item)
 
     else if (item == _showLayoutCB)
     {
-        for (int i = 0; i < _layoutStructList.size(); ++i)
+        for (int i = 0; i < _layoutList.size(); ++i)
         {
             if (_showLayoutCB->getValue())
             {
-                _layoutStructList[i]->show();
+                _layoutList[i]->show();
             }
             else
             {
-                _layoutStructList[i]->hide();
+                _layoutList[i]->hide();
             }
         }
     }
 
     else if (item == _layoutSizeRV)
     {
-        for (int i = 0; i < _layoutStructList.size(); ++i)
+        for (int i = 0; i < _layoutList.size(); ++i)
         {
-            _layoutStructList[i]->scaleMajorRadius(_layoutSizeRV->getValue());
+            _layoutList[i]->scaleMajorRadius(_layoutSizeRV->getValue());
         }
     }
 
@@ -449,7 +467,7 @@ void Sketch::menuCallback(MenuItem * item)
         }
         _objectList.clear();
         _shapeList.clear();
-        _layoutStructList.clear();
+        _layoutList.clear();
 
         _patList.clear();
         _movingList.clear();
@@ -534,6 +552,17 @@ void Sketch::menuCallback(MenuItem * item)
 
 void Sketch::preFrame()
 {
+    if (_orientToViewer)
+    {
+        osg::Quat rot = (TrackingManager::instance()->getHeadMat(0)
+            * PluginHelper::getWorldToObjectTransform()).getRotate();
+
+        for (int i = 0; i < _shapeList.size(); ++i)
+        {
+            _shapeList[i]->getPat()->setAttitude(rot);
+        }
+    }
+
     if(_activeObject)
     {
         _activeObject->updateBrush(_brushRoot.get());
@@ -549,30 +578,36 @@ void Sketch::preFrame()
     (_brushRoot.get())->setMatrix(m);
 
     if (_isObjectRoot)
-    {
         point = point * PluginHelper::getWorldToObjectTransform();
-    }
 
+    SketchShape::updateHighlight();
+    
+    // approximate position of hand for testing
+    osg::Vec3 hpoint(0,0,0);
+    hpoint = hpoint * TrackingManager::instance()->getHandMat(0);
+    if (_isObjectRoot)
+        hpoint = hpoint * PluginHelper::getWorldToObjectTransform();
+    
+    // highlight layouts when placing shapes
     if (_mode == DRAW && _drawMode == SHAPE)
     {
-        for (int i = 0; i < _layoutStructList.size(); ++i)
+        for (int i = 0; i < _layoutList.size(); ++i)
         {
-            _layoutStructList[i]->getPat()->dirtyBound();
-            if (_layoutStructList[i]->shape->containsPoint(point))
+            _layoutList[i]->getPat()->dirtyBound();
+            if (_layoutList[i]->shape->containsPoint(point))
             {
                 if (_showLayoutCB->getValue())
                 {
-                    _layoutStructList[i]->shape->highlight();
+                    _layoutList[i]->shape->highlight();
                 }
             }
             else
             {
-                _layoutStructList[i]->shape->unhighlight();
+                _layoutList[i]->shape->unhighlight();
             }
         }
     }
 
-    // highlight layouts and shapes when moving, and layouts when placing shapes
     else if (_mode == MOVE)
     {
         bool isShapeHighlight = false;
@@ -590,22 +625,23 @@ void Sketch::preFrame()
             }
         }
         
-        for (int i = 0; i < _layoutStructList.size(); ++i)
+        // do not highlight layout when point inside shape
+        for (int i = 0; i < _layoutList.size(); ++i)
         {
             if (isShapeHighlight)
             {
-                _layoutStructList[i]->shape->unhighlight();
+                _layoutList[i]->shape->unhighlight();
             }
-            else if (_layoutStructList[i]->shape->containsPoint(point))
+            else if (_layoutList[i]->shape->containsPoint(point))
             {
                 if (_showLayoutCB->getValue())
                 {
-                    _layoutStructList[i]->shape->highlight();
+                    _layoutList[i]->shape->highlight();
                 }
             }
             else
             {
-                _layoutStructList[i]->shape->unhighlight();
+                _layoutList[i]->shape->unhighlight();
             }
         }
     }
@@ -626,10 +662,10 @@ void Sketch::preFrame()
                     isShapeHighlight = true;
                 }
             }
-            // don't double-highlight selected things
+            // don't double-highlight selected things when point inside them
             if (!isMoving)
             {
-                if (_shapeList[i]->containsPoint(point))
+                if (_shapeList[i]->containsPoint(point) || _shapeList[i]->containsPoint(hpoint))
                 {
                     _shapeList[i]->highlight();
                 }
@@ -640,29 +676,35 @@ void Sketch::preFrame()
             }
         }
 
-        for (int i = 0; i < _layoutStructList.size(); ++i)
+        for (int i = 0; i < _layoutList.size(); ++i)
         {
-            if (_layoutStructList[i]->shape->containsPoint(point))
-            {
-                if (!isShapeHighlight && _showLayoutCB->getValue())
-                {
-                    _layoutStructList[i]->shape->highlight();
-                }
-            }
-            else
-            {
-                _layoutStructList[i]->shape->unhighlight();
-            }
-            
+            isMoving = false;
             for (int j = 0; j < _movingList.size(); ++j)
             {
-                if (_layoutStructList[i]->getPat() == _movingList[j])
+                if (_layoutList[i]->getPat() == _movingList[j])
                 {
-                    _layoutStructList[i]->shape->highlight();
+                    _layoutList[i]->shape->highlight();
+                   isMoving = true;
                 }
             }
-        }
-    }
+            
+            if (!isMoving)
+            {
+                if (_layoutList[i]->shape->containsPoint(point) ||
+                    _layoutList[i]->shape->containsPoint(hpoint))
+                {
+                    if (!isShapeHighlight && _showLayoutCB->getValue())
+                    {
+                        _layoutList[i]->shape->highlight();
+                    }
+                }
+                else
+                {
+                    _layoutList[i]->shape->unhighlight();
+                }
+            }
+        } // for layoutList
+    } // if mode == SELECT
 }
 
 bool Sketch::processEvent(InteractionEvent * event)
@@ -703,7 +745,6 @@ bool Sketch::processEvent(InteractionEvent * event)
         {
             point = pos;
         }
-        
 
         if (_gridSize != 1) // for testing use gridsize = 1 as no snap
         {
@@ -740,18 +781,18 @@ bool Sketch::processEvent(InteractionEvent * event)
                     }
                 }
                 
-                for (int i = 0; i < _layoutStructList.size(); ++i)
+                for (int i = 0; i < _layoutList.size(); ++i)
                 {
-                    if (_layoutStructList[i]->shape->containsPoint(_lastPoint))
+                    if (_layoutList[i]->shape->containsPoint(_lastPoint))
                     {
                         if (!inSphere)
                         {
                             _movingLayout = true;
-                            _movingList.push_back(_layoutStructList[i]->getPat());
+                            _movingList.push_back(_layoutList[i]->getPat());
 
-                            for (int j = 0; j < _layoutStructList[i]->children.size(); ++j)
+                            for (int j = 0; j < _layoutList[i]->children.size(); ++j)
                             {
-                                _movingList.push_back(_layoutStructList[i]->children[j]);
+                                _movingList.push_back(_layoutList[i]->children[j]);
                             }
                         }
                     }
@@ -762,23 +803,21 @@ bool Sketch::processEvent(InteractionEvent * event)
             {
                 for (int i = 0; i < _movingList.size(); ++i)
                 {
-
                     // remove child shapes that are dragged out of layouts
-                    // add shapes to layout if dragged into layout
                     if (!_movingLayout)
                     {
-                        for (int j = 0; j < _layoutStructList.size(); ++j)
+                        for (int j = 0; j < _layoutList.size(); ++j)
                         {
-                            _layoutStructList[j]->removeChild(_movingList[i]);
+                            _layoutList[j]->removeChild(_movingList[i]);
                              
-                            if (_layoutStructList[j]->shape->containsPoint(_lastPoint))
+                            if (_layoutList[j]->shape->containsPoint(_lastPoint))
                             {
-                                _layoutStructList[j]->shape->highlight();
-                                _layoutStructList[j]->addChild(_movingList[i]);
+                                _layoutList[j]->shape->highlight();
+                                _layoutList[j]->addChild(_movingList[i]);
                             }
                         }
-
                     }
+
                     _movingList[i]->setPosition(
                         _movingList[i]->getPosition() + distance);
 
@@ -818,11 +857,11 @@ bool Sketch::processEvent(InteractionEvent * event)
                     }
 
                     // add shape as child of layout if point in layout
-                    for (int i = 0; i < _layoutStructList.size(); ++i)
+                    for (int i = 0; i < _layoutList.size(); ++i)
                     {
-                        if (_layoutStructList[i]->shape->containsPoint(point))
+                        if (_layoutList[i]->shape->containsPoint(point))
                         {
-                            point = _layoutStructList[i]->addChild(_pat);
+                            point = _layoutList[i]->addChild(_pat);
                             _lastPoint = point;
                             break;
                         }
@@ -832,37 +871,114 @@ bool Sketch::processEvent(InteractionEvent * event)
                     _modelpat->setPosition(_lastPoint);
                     _modelpatScale->setPosition(osg::Vec3(0,0, - _sizeRV->getValue() * 10));
                     
-                    // position adjusted forward in cylinder
+                    // position adjusted forward in cylinder due to weirdness
                     if (_st == 1)
                     {
                         _modelpatScale->setPosition(_modelpatScale->getPosition() +
                             osg::Vec3(0, -_sizeRV->getValue() * _sizeScale / 2, 0));
                     }
 
+                    
+                    int numIcons = 8;
 
-                    if (_modelCounter % 3 == 0)
+                    switch (_modelCounter % numIcons)
                     {
+                    case 0:
                         _model = osgDB::readNodeFile(_modelDir + "fileIcon.obj");
+
                         _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * _modelScale,
-                             _sizeRV->getValue() * _modelScale, _sizeRV->getValue() * _modelScale));
-                    }
-                    else if (_modelCounter % 3 == 1)
-                    {
+                                                           _sizeRV->getValue() * _modelScale, 
+                                                           _sizeRV->getValue() * _modelScale));
+                       break;
+                    
+                    case 1:
                         _model = osgDB::readNodeFile(_modelDir + "bicycleIcon.obj");
-                        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * _modelScale,
-                             _sizeRV->getValue() * _modelScale, _sizeRV->getValue() * _modelScale));
+
+                        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 11,
+                                                           _sizeRV->getValue() * 11, 
+                                                           _sizeRV->getValue() * 11));
 
                         _modelpatScale->setAttitude(osg::Quat(M_PI/2, Vec3(0,0,1)));
-                    }
-                    else
-                    {
+                        break;
+                    case 2:
                         _model = osgDB::readNodeFile(_modelDir + "handIcon.obj");
+
                         _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 16,
-                             _sizeRV->getValue() * 16, _sizeRV->getValue() * 16));
-                                _modelpatScale->setPosition(_modelpatScale->getPosition() -
-                                    osg::Vec3(-_sizeRV->getValue() * 6, 0, _sizeRV->getValue() * 20));
+                                                           _sizeRV->getValue() * 16, 
+                                                           _sizeRV->getValue() * 16));
+
+                        _modelpatScale->setPosition(_modelpatScale->getPosition() -
+                             osg::Vec3(-_sizeRV->getValue() * 6, 0, _sizeRV->getValue() * 20));
+                        break;
+                    case 3:
+                        _model = osgDB::readNodeFile(_modelDir + "magnifyingIcon.obj");
+
+                        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 15,
+                                                           _sizeRV->getValue() * 15,
+                                                           _sizeRV->getValue() * 15));
+
+                        _modelpatScale->setPosition(_modelpatScale->getPosition() +
+                             osg::Vec3(-_sizeRV->getValue() * 10, 0, _sizeRV->getValue() * 25));
+
+                        _modelpatScale->setAttitude(osg::Quat(-M_PI/5, Vec3(0,1,0)));
+                        break;
+                    case 4: 
+                        _model = osgDB::readNodeFile(_modelDir + "birdIcon.obj");
+
+                        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 8,
+                                                           _sizeRV->getValue() * 8, 
+                                                           _sizeRV->getValue() * 8));
+
+                        _modelpatScale->setPosition(_modelpatScale->getPosition() -
+                             osg::Vec3(-_sizeRV->getValue() * 5, 0, _sizeRV->getValue() * 15));
+
+                        _modelpatScale->setAttitude(osg::Quat(M_PI/3, Vec3(0,0,1)));
+                        break;
+                    case 5:
+                        _model = osgDB::readNodeFile(_modelDir + "carIcon.obj");
+
+                        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 12,
+                                                           _sizeRV->getValue() * 12, 
+                                                           _sizeRV->getValue() * 12));
+
+                        _modelpatScale->setPosition(_modelpatScale->getPosition() -
+                             osg::Vec3(-_sizeRV->getValue() * 5, 0, _sizeRV->getValue() * 0));
+
+                        break;
+                    case 6:
+                        _model = osgDB::readNodeFile(_modelDir + "planeIcon.obj");
+
+                        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 9,
+                                                           _sizeRV->getValue() * 9, 
+                                                           _sizeRV->getValue() * 9));
+
+                        _modelpatScale->setPosition(_modelpatScale->getPosition() -
+                             osg::Vec3(_sizeRV->getValue() * 5, _sizeRV->getValue() * 5, _sizeRV->getValue() * 5));
+
+                        _modelpatScale->setAttitude(osg::Quat(M_PI/3,  Vec3(0,0,1), 
+                                                              M_PI/8,  Vec3(1,0,0), 
+                                                              0,       Vec3(0,1,0)));
+                        break;
+                    case 7:
+                        osgText::Text3D * text = new osgText::Text3D();
+                        osg::Geode * geode = new osg::Geode();
+                        text->setFont("/home/cehughes/data/arial.ttf");
+                        text->setText("Open");
+                        text->setCharacterSize(35);
+                        text->setCharacterDepth(20);
+                        text->setDrawMode(osgText::Text3D::TEXT);
+                        text->setAxisAlignment(osgText::Text3D::XZ_PLANE);
+                        text->setColor(osg::Vec4(1,1,1,1));
+                        geode->addDrawable(text);
+
+                        _modelpatScale->setPosition(_modelpatScale->getPosition() -
+                             osg::Vec3(45, 0,0));//_sizeRV->getValue() * 5, _sizeRV->getValue() * 5));
+
+                        _model = geode;
+
+                        break;
                     }
-                    
+
                     _modelCounter++;
                     _modelpatScale->addChild(_model);
                     _pat->addChild(_modelpatScale);
@@ -870,7 +986,6 @@ bool Sketch::processEvent(InteractionEvent * event)
                     return true;
                 }
             
-
                 else if (_drawMode == LAYOUT)
                  {
                     SketchShape * shape = dynamic_cast<SketchShape*>(_activeObject);
@@ -903,7 +1018,7 @@ bool Sketch::processEvent(InteractionEvent * event)
                         lo->setCenter(_lastPoint);
                         lo->setShape(shape);
 
-                        _layoutStructList.push_back(lo);
+                        _layoutList.push_back(lo);
 
                         _sketchRoot->addChild(_layoutPat);
                         _layoutPat->setPosition(_lastPoint);
@@ -921,12 +1036,26 @@ bool Sketch::processEvent(InteractionEvent * event)
             {
                 if(_drawMode == SHAPE)
                 {
-                    _pat->setPosition(_pat->getPosition() + distance);
-                    _modelpat->setPosition(_modelpat->getPosition() + distance);
 
-                    for (int i = 0; i < _layoutStructList.size(); ++i)
+                    bool inLayout = false;
+
+                    for (int i = 0; i < _layoutList.size(); ++i)
                     {
-                        _layoutStructList[i]->removeChild(_pat);
+                        if (_layoutList[i]->shape->containsPoint(point))
+                        {
+                            inLayout = true;
+                        //    point = _layoutList[i]->addChild(_pat);
+                            break;
+                        }
+                        else
+                        {
+                            _layoutList[i]->removeChild(_pat);
+                        }
+                    }
+                    if (!inLayout)
+                    {
+                        _pat->setPosition(_pat->getPosition() + distance);
+                        _modelpat->setPosition(_modelpat->getPosition() + distance);
                     }
                 }
 
@@ -934,7 +1063,7 @@ bool Sketch::processEvent(InteractionEvent * event)
                 {
                     _layoutPat->setPosition(_layoutPat->getPosition() + distance);
 
-                    _layoutStructList[_layoutStructList.size() - 1]->setCenter(
+                    _layoutList[_layoutList.size() - 1]->setCenter(
                         _layoutPat->getPosition() + distance);
                 }
             }
@@ -978,14 +1107,14 @@ bool Sketch::processEvent(InteractionEvent * event)
                     }
                 }
                 
-                for (int i = 0; i < _layoutStructList.size(); ++i)
+                for (int i = 0; i < _layoutList.size(); ++i)
                 {
-                    if (_layoutStructList[i]->shape->containsPoint(_lastPoint))
+                    if (_layoutList[i]->shape->containsPoint(_lastPoint))
                     {
                         if (!inSphere)
                         {
                             inNone = false;
-                            _movingList.push_back(_layoutStructList[i]->getPat());
+                            _movingList.push_back(_layoutList[i]->getPat());
                         }
                     }
                 }
@@ -1004,6 +1133,7 @@ bool Sketch::processEvent(InteractionEvent * event)
                 return false;
             }
         }
+
         return true;
     } 
     return false;
@@ -1087,9 +1217,56 @@ void Sketch::removeMenuItems(Mode dm)
 	    _sketchMenu->removeItem(_drawModeButtons);
         removeMenuItems(_drawMode);
         _movingList.clear();
+
+        for (int i = 0; i < _shapeList.size(); ++i)
+        {
+            for (int j = 0; j < _movingList.size(); ++j)
+            {
+                if (_movingList[j] = _shapeList[i]->getPat())
+                {
+                    _shapeList[i]->unhighlight();
+                }
+            }
+        }
+
+        for (int i = 0; i < _layoutList.size(); ++i)
+        {
+            for (int j = 0; j < _movingList.size(); ++j)
+            {
+                if (_movingList[j] = _layoutList[i]->shape->getPat())
+                {
+                    _layoutList[i]->shape->unhighlight();
+                }
+            }
+        }
+
 	    break;
 	case SELECT:
         _sketchMenu->removeItem(_selectAllButton);
+        _sketchMenu->removeItem(_clearSelectButton);
+        _movingList.clear();
+
+        for (int i = 0; i < _shapeList.size(); ++i)
+        {
+            for (int j = 0; j < _movingList.size(); ++j)
+            {
+                if (_movingList[j] = _shapeList[i]->getPat())
+                {
+                    _shapeList[i]->unhighlight();
+                }
+            }
+        }
+
+        for (int i = 0; i < _layoutList.size(); ++i)
+        {
+            for (int j = 0; j < _movingList.size(); ++j)
+            {
+                if (_movingList[j] = _layoutList[i]->shape->getPat())
+                {
+                    _layoutList[i]->shape->unhighlight();
+                }
+            }
+        }
 	    break;
     case MOVE:
         break;
@@ -1113,6 +1290,7 @@ void Sketch::addMenuItems(Mode dm)
 	    break;
     case SELECT:
         _sketchMenu->addItem(_selectAllButton);
+        _sketchMenu->addItem(_clearSelectButton);
         break;
 	default:
 	    break;
@@ -1184,6 +1362,9 @@ void Sketch::createGeometry()
 	    p = new SketchShape(_st, _shapeWireframe->getValue(), _color, 
                             (int) _tessellationsRV->getValue(), size);
         p->setPat(&_pat);
+
+//        p->setFont(_dataDir + "arial.ttf");
+
         _activeObject = p;
 
         _modelpat = new osg::PositionAttitudeTransform();
@@ -1252,4 +1433,17 @@ bool Sketch::loadFile(std::string file)
     {
         return false;
     }
+}
+
+osg::Vec3 Sketch::getCurrentPoint()
+{
+    osg::Vec3 pos(0,Sketch::instance()->getPointerDistance(),0);
+    pos = pos * TrackingManager::instance()->getHandMat(0);
+
+    if (_isObjectRoot)
+    {
+        pos = pos * PluginHelper::getWorldToObjectTransform();
+    }
+    
+    return pos;
 }

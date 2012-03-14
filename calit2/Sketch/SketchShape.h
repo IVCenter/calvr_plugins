@@ -8,6 +8,10 @@
 #include <osg/ShapeDrawable>
 #include <osg/Geode>
 #include <osg/PositionAttitudeTransform>
+#include <osgText/Text>
+#include <osgText/Text3D>
+
+#include <string.h>
 
 #ifndef WIN32
 #include <sys/time.h>
@@ -15,8 +19,17 @@
 #include <windows.h>
 #endif
 
-#define HL_ON_MASK  0xFFFFFF
+#define HL_ON_MASK  0xFFFFFF /* 0x0 off, 0xFFFFFF on */
 #define HL_OFF_MASK 0x0
+
+#define TEXT_ON_MASK  0xFFFFFF
+#define TEXT_OFF_MASK 0x0
+
+#define HL_BOLD     2   /* 1 off, >1 on */
+#define HL_UNBOLD   1
+
+#define HL_STEP     0.003 /* 0.0 for off, >0.0 on (.003 works well) */
+#define HL_MAX_DIFF 0.03  /* max scale to expand/contract to */
 
 class SketchShape: public SketchObject
 {
@@ -36,41 +49,46 @@ class SketchShape: public SketchObject
 
         virtual ~SketchShape();
 
-        virtual void setPat(osg::PositionAttitudeTransform **pat);
+        void setPat(osg::PositionAttitudeTransform **pat);
+        bool buttonEvent(int type, const osg::Matrix & mat);
+        void addBrush(osg::MatrixTransform * mt);
+        void removeBrush(osg::MatrixTransform * mt);
+        void updateBrush(osg::MatrixTransform * mt);
+        void finish();
+        osg::Drawable * getDrawable();
 
-        virtual bool buttonEvent(int type, const osg::Matrix & mat);
-        virtual void addBrush(osg::MatrixTransform * mt);
-        virtual void removeBrush(osg::MatrixTransform * mt);
-        virtual void updateBrush(osg::MatrixTransform * mt);
-        virtual void finish();
-        virtual osg::Drawable * getDrawable();
+        void setColor(osg::Vec4 color);
+        void setSize(float size);
+        void setWireframe(bool b);
+        void setTessellations(int t);
 
-        virtual void setColor(osg::Vec4 color);
-        virtual void setSize(float size);
-        virtual void setWireframe(bool b);
-        virtual void setTessellations(int t);
-
-        virtual void highlight();
-        virtual void unhighlight();
-        virtual bool containsPoint(const osg::Vec3 point);
-        virtual osg::PositionAttitudeTransform* getPat();
-        virtual void scale(osg::Vec3 scale);
-
-        virtual void resizeTorus(float majorRad, float minorRad);
-
+        void highlight();
+        void unhighlight();
+        bool containsPoint(const osg::Vec3 point);
+        osg::PositionAttitudeTransform* getPat();
+        void scale(osg::Vec3 scale);
         bool getWireframe() { return _wireframe; }
+        void resizeTorus(float majorRad, float minorRad);
+        void setFont(std::string font);
+
+        static void updateHighlight();
 
     protected:
         ShapeType _type;
         bool _wireframe;
         bool _drawing;
         int _tessellations;
-        bool _growing;
+
+        static bool _growing;
+        static float _scale;
 
         osg::PositionAttitudeTransform * _pat, * _highlightPat, * _modelPat, * _shapePat;
         osg::ref_ptr<osg::Geode> _shapeGeode;
         osg::ref_ptr<osg::Geode> _highlightGeode;
         osg::ref_ptr<osg::ShapeDrawable> _highlightDrawable;
+
+        osg::PositionAttitudeTransform * _textPat; 
+        osgText::Text3D * text;
 
         SketchShape * _torusHLShape;
 
@@ -102,5 +120,4 @@ class SketchShape: public SketchObject
         void drawSphere();
         void drawTorus(float majorRad, float minorRad);
 };
-
 #endif

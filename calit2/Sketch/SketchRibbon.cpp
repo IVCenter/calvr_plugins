@@ -56,6 +56,7 @@ SketchRibbon::SketchRibbon(osg::Vec4 color, float size) : SketchObject(color,siz
 
     stateset = _geometry->getOrCreateStateSet();
     //stateset->setAttributeAndModes(mat,osg::StateAttribute::ON);
+    stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
 
     _drawing = false;
 
@@ -114,7 +115,8 @@ bool SketchRibbon::buttonEvent(int type, const osg::Matrix & mat)
 	    return false;
 	}
 
-	osg::Vec3 newpoint1(-50.0 * _size, Sketch::instance()->getPointerDistance(), 0), newpoint2(50.0 * _size, Sketch::instance()->getPointerDistance(), 0);
+	osg::Vec3 newpoint1(-50.0 * _size, Sketch::instance()->getPointerDistance(), 0), 
+              newpoint2(50.0 * _size, Sketch::instance()->getPointerDistance(), 0);
 
 	newpoint1 = newpoint1 * mat * PluginHelper::getWorldToObjectTransform();
 	newpoint2 = newpoint2 * mat * PluginHelper::getWorldToObjectTransform();
@@ -122,7 +124,8 @@ bool SketchRibbon::buttonEvent(int type, const osg::Matrix & mat)
 	struct timeval currentTime;
 	gettimeofday(&currentTime,NULL);
 
-	double timediff = (currentTime.tv_sec - _lastPointTime.tv_sec) + ((currentTime.tv_usec - _lastPointTime.tv_usec) / 1000000.0);
+	double timediff = (currentTime.tv_sec - _lastPointTime.tv_sec) + 
+        ((currentTime.tv_usec - _lastPointTime.tv_usec) / 1000000.0);
 
 	if(timediff > 0.75 || (newpoint1 - _lastPoint1).length2() > 10.0 || (newpoint2 - _lastPoint2).length2() > 10.0)
 	{
