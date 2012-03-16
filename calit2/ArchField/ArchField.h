@@ -1,5 +1,5 @@
-#ifndef _ARTIFACTVIS_
-#define _ARTIFACTVIS_
+#ifndef _ARCH_FIELD_H
+#define _ARCH_FIELD_H
 
 #include <kernel/CVRPlugin.h>
 #include <menu/SubMenu.h>
@@ -42,11 +42,11 @@ class Artifact
     }
 };
 
-class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
+class ArchField : public cvr::MenuCallback, public cvr::CVRPlugin
 {
     public:        
-        ArtifactVis();
-        virtual ~ArtifactVis();
+        ArchField();
+        virtual ~ArchField();
         class compare
         {
           public:
@@ -66,11 +66,11 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
         void setDCVisibleStatus(std::string dc, bool status);
         void updateVisibleStatus();
         std::string parseDate(std::string date);
-        static ArtifactVis* getInstance();
+        static ArchField* getInstance();
         std::vector<osg::Vec3> getArtifactsPos(); 
 
     protected:
-        static ArtifactVis* _artifactvis;
+        static ArchField* _artifactvis;
         struct Locus
         {
             std::vector<std::string> fields;

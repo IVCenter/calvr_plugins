@@ -1,4 +1,4 @@
-#include "ArtifactVis.h"
+#include "ArchField.h"
 #include "vvtokenizer.h"
 
 #ifdef WITH_OSSIMPLANET
@@ -45,9 +45,9 @@ using namespace osg;
 using namespace std;
 using namespace cvr;
 
-CVRPLUGIN(ArtifactVis)
-ArtifactVis* ArtifactVis::_artifactvis = NULL;
-ArtifactVis::ArtifactVis()
+CVRPLUGIN(ArchField)
+ArchField* ArchField::_artifactvis = NULL;
+ArchField::ArchField()
 {
 
 }
@@ -55,11 +55,11 @@ ArtifactVis::ArtifactVis()
 /*
 * Returns an instance for use with other programs.
 */
-ArtifactVis* ArtifactVis::getInstance()
+ArchField* ArchField::getInstance()
 {
     return _artifactvis;
 }
-void ArtifactVis::message(int type, char * data)
+void ArchField::message(int type, char * data)
 {
     if(type == OE_TRANSFORM_POINTER)
     {
@@ -68,12 +68,12 @@ void ArtifactVis::message(int type, char * data)
     }
     _osgearth = true;
 }
-bool ArtifactVis::init()
+bool ArchField::init()
 {
-    if(!ArtifactVis::_artifactvis)
-        _artifactvis = new ArtifactVis();
+    if(!ArchField::_artifactvis)
+        _artifactvis = new ArchField();
     
-    std::cerr << "ArtifactVis init\n";
+    std::cerr << "ArchField init\n";
     _root = new osg::MatrixTransform();
 
     _tablesMenu = NULL;
@@ -87,7 +87,7 @@ bool ArtifactVis::init()
     }
 
     //Menu Setup:
-    _avMenu = new SubMenu("ArtifactVis", "ArtifactVis");
+    _avMenu = new SubMenu("ArchField", "ArchField");
     _avMenu->setCallback(this);
 
     _displayMenu = new SubMenu("Display");
@@ -156,10 +156,10 @@ bool ArtifactVis::init()
     _sphereRadius = 5.0;
     _activeArtifact  = -1;
 
-    _picFolder = ConfigManager::getEntry("value","Plugin.ArtifactVis.PicFolder","");
+    _picFolder = ConfigManager::getEntry("value","Plugin.ArchField.PicFolder","");
 
     //Tabbed dialog for selecting artifacts
-    _artifactPanel = new TabbedDialogPanel(400,30,4,"Selected Artifact","Plugin.ArtifactVis.ArtifactPanel");
+    _artifactPanel = new TabbedDialogPanel(400,30,4,"Selected Artifact","Plugin.ArchField.ArtifactPanel");
     _artifactPanel->addTextTab("Info","");
     _artifactPanel->addTextureTab("Side","");
     _artifactPanel->addTextureTab("Top","");
@@ -167,15 +167,15 @@ bool ArtifactVis::init()
     _artifactPanel->setVisible(false);
     _artifactPanel->setActiveTab("Info");
 
-    _selectionStatsPanel = new DialogPanel(450,"Selection Stats","Plugin.ArtifactVis.SelectionStatsPanel");
+    _selectionStatsPanel = new DialogPanel(450,"Selection Stats","Plugin.ArchField.SelectionStatsPanel");
     _selectionStatsPanel->setVisible(false);
 
-    std::cerr << "ArtifactVis init done.\n";
+    std::cerr << "ArchField init done.\n";
     return true;
 }
 
 
-ArtifactVis::~ArtifactVis()
+ArchField::~ArchField()
 {
 }
 
@@ -183,7 +183,7 @@ ArtifactVis::~ArtifactVis()
  Loads in all existing models of the form 3dModelFolder/DC/DC.obj, where DC is the two letter DCode.
  Has space for ALL possible DC codes (26^2).
 */
-void ArtifactVis::loadModels()
+void ArchField::loadModels()
 {
     for(int i = 0; i < 26; i++)
     {
@@ -194,7 +194,7 @@ void ArtifactVis::loadModels()
             stringstream ss;
             ss << c1 << c2;
             string dc = ss.str();
-            string modelPath = ConfigManager::getEntry("Plugin.ArtifactVis.3DModelFolder").append(dc+"/"+dc+".obj");
+            string modelPath = ConfigManager::getEntry("Plugin.ArchField.3DModelFolder").append(dc+"/"+dc+".obj");
             if(modelExists(modelPath.c_str()))
             {
                 _models[i*26+j] = osgDB::readNodeFile(modelPath); 
@@ -208,7 +208,7 @@ void ArtifactVis::loadModels()
         }
     }
 }
-bool ArtifactVis::processEvent(InteractionEvent * event)
+bool ArchField::processEvent(InteractionEvent * event)
 {
     TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
     if(!tie)
@@ -289,7 +289,7 @@ bool ArtifactVis::processEvent(InteractionEvent * event)
 
 //Gets the string of the query that would be sent to PGSQL via ArchInterface.
 //Includes only the current 'OR' statement, not previous ones. Those are stored in the current_query variable for Tables.
-std::string ArtifactVis::getCurrentQuery(Table * t)
+std::string ArchField::getCurrentQuery(Table * t)
 {
         std::stringstream ss;
         std::vector<cvr::SubMenu *>::iterator menu = t->querySubMenu.begin();
@@ -323,7 +323,7 @@ std::string ArtifactVis::getCurrentQuery(Table * t)
        return ss.str();
 }
 
-void ArtifactVis::menuCallback(MenuItem* menuItem)
+void ArchField::menuCallback(MenuItem* menuItem)
 {
 #ifdef WITH_OSSIMPLANET
     if(!_ossim&&OssimPlanet::instance())
@@ -417,7 +417,7 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
                 ss << getCurrentQuery((*t)); 
                 ss << "\"";
 		const char* current_path = getcwd(NULL, 0);
-                chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
+                chdir(ConfigManager::getEntry("Plugin.ArchField.ArchInterfaceFolder").c_str());
                 cout <<ss.str().c_str() << endl;
                 system(ss.str().c_str());
 		chdir(current_path);
@@ -451,7 +451,7 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
         if(menuItem == (*t)->saveQuery)
         {
 	    const char* current_path = getcwd(NULL, 0);
-            chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
+            chdir(ConfigManager::getEntry("Plugin.ArchField.ArchInterfaceFolder").c_str());
             if((*t)->name.find("sf",0)!=string::npos)
             {
                 bool status;
@@ -510,7 +510,7 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
             if(ComController::instance()->isMaster())
             {
 		const char* current_path = getcwd(NULL, 0);
-                chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
+                chdir(ConfigManager::getEntry("Plugin.ArchField.ArchInterfaceFolder").c_str());
                 stringstream ss;
                 ss << "./ArchInterface -n \"" << _query[i]->name << "\"";
                 cout << ss.str() << endl;
@@ -646,7 +646,7 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
     }
 }
 //Removes all conditions set in the query for the selected table.
-void ArtifactVis::clearConditions(Table * t)
+void ArchField::clearConditions(Table * t)
 {
         std::vector<cvr::MenuCheckbox *>::iterator button;
         for(button = t->querySlider.begin(); button < t->querySlider.end(); button++)
@@ -656,7 +656,7 @@ void ArtifactVis::clearConditions(Table * t)
      
 }
 //Converts the DC into a unique integer, 0 through (26^2 - 1).
-int ArtifactVis::dc2Int(string dc)
+int ArchField::dc2Int(string dc)
 {
     char letter1 = dc.c_str()[0];
     char letter2 = dc.c_str()[1];
@@ -665,7 +665,7 @@ int ArtifactVis::dc2Int(string dc)
     int tot = char1*26 + char2;
     return tot;
 }
-std::string ArtifactVis::getTimeModified(std::string file)
+std::string ArchField::getTimeModified(std::string file)
 {
     struct tm* clock;
     struct stat attrib;
@@ -685,7 +685,7 @@ std::string ArtifactVis::getTimeModified(std::string file)
     string output = ss.str();
     return output;
 }
-void ArtifactVis::preFrame()
+void ArchField::preFrame()
 {
     std::vector<Artifact*> allArtifacts;
     for(int i = 0; i < _query.size(); i++)
@@ -756,7 +756,7 @@ void ArtifactVis::preFrame()
     }
 }
 
-void ArtifactVis::setActiveArtifact(int art, int q)
+void ArchField::setActiveArtifact(int art, int q)
 {
             vector<Artifact*> artifacts = _query[q]->artifacts;
             if(art < 0 || art >= artifacts.size())
@@ -796,7 +796,7 @@ void ArtifactVis::setActiveArtifact(int art, int q)
 
             _activeArtifact = art;
 }
-void ArtifactVis::readQuery(QueryGroup * query)
+void ArchField::readQuery(QueryGroup * query)
 {
     
     _root->removeChild(query->sphereRoot);
@@ -882,7 +882,7 @@ void ArtifactVis::readQuery(QueryGroup * query)
     query->artifacts = generatedArtifacts;
     cout <<"Query read!" <<endl;
 }
-void ArtifactVis::listArtifacts()
+void ArchField::listArtifacts()
 {
     for(int q = 0; q < _query.size(); q++)
     {
@@ -900,12 +900,12 @@ void ArtifactVis::listArtifacts()
         }
     }
 }
-bool ArtifactVis::modelExists(const char * filename)
+bool ArchField::modelExists(const char * filename)
 {
     ifstream ifile(filename);
     return !ifile.fail();
 }
-void ArtifactVis::displayArtifacts(QueryGroup * query)
+void ArchField::displayArtifacts(QueryGroup * query)
 {   
     Group * root_node = query->sphereRoot;
     while(root_node->getNumChildren()!=0)
@@ -917,11 +917,11 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
     std::vector<Artifact*> artifacts = query->artifacts;
     cerr << "Creating " << artifacts.size() << " artifacts..." << endl;
     vector<Artifact*>::iterator item = artifacts.begin();
-    float tessellation = ConfigManager::getFloat("Plugin.ArtifactVis.Tessellation",.2);
+    float tessellation = ConfigManager::getFloat("Plugin.ArchField.Tessellation",.2);
     Vec3f offset = Vec3f(
-                   ConfigManager::getFloat("Plugin.ArtifactVis.Offset.X",0),
-                   ConfigManager::getFloat("Plugin.ArtifactVis.Offset.Y",0),
-                   ConfigManager::getFloat("Plugin.ArtifactVis.Offset.Z",0));
+                   ConfigManager::getFloat("Plugin.ArchField.Offset.X",0),
+                   ConfigManager::getFloat("Plugin.ArchField.Offset.Y",0),
+                   ConfigManager::getFloat("Plugin.ArchField.Offset.Z",0));
     osg::Geode * sphereGeode = new osg::Geode();
     Vec3f center(0,0,0);
     for (; item < artifacts.end();item++)
@@ -1018,7 +1018,7 @@ void ArtifactVis::displayArtifacts(QueryGroup * query)
         root_node->addChild(sphereGeode);
 }
 
-Drawable * ArtifactVis::createObject(std::string dc, float tessellation, Vec3d & pos)
+Drawable * ArchField::createObject(std::string dc, float tessellation, Vec3d & pos)
 {
     TessellationHints * hints = new TessellationHints();
     hints->setDetailRatio(tessellation);
@@ -1028,9 +1028,9 @@ Drawable * ArtifactVis::createObject(std::string dc, float tessellation, Vec3d &
     shapeDrawable->setColor(_colors[dc2Int(dc)]);
     return shapeDrawable;
 }
-void ArtifactVis::readPointCloud(int index)
+void ArchField::readPointCloud(int index)
 {
-    string filename = ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").append("Model/").append(_showPCCB[index]->getText());
+    string filename = ConfigManager::getEntry("Plugin.ArchField.ArchInterfaceFolder").append("Model/").append(_showPCCB[index]->getText());
     cout << "Reading point cloud data from : " << filename <<  "..." << endl;
     ifstream file(filename.c_str());
     string line;
@@ -1112,12 +1112,12 @@ void ArtifactVis::readPointCloud(int index)
     posTransform->addChild(scaleTransform);
     _pcRoot[index]->addChild(posTransform);
 }
-void ArtifactVis::readSiteFile(int index)
+void ArchField::readSiteFile(int index)
 {
     const double INCH_IN_MM = 25.4f;
     const double M_TO_MM = 100.0f;
 
-    std::string modelFileName = ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").append("Model/").append(_showModelCB[index]->getText());
+    std::string modelFileName = ConfigManager::getEntry("Plugin.ArchField.ArchInterfaceFolder").append("Model/").append(_showModelCB[index]->getText());
     cerr << "Reading site file: " << modelFileName << " ..." << endl;
     if (!modelFileName.empty()) 
     {
@@ -1181,11 +1181,11 @@ void ArtifactVis::readSiteFile(int index)
     }
     else
     {
-	cerr << "Error: Plugin.ArtifactVis.Topo needs to point to a .wrl 3D topography file" << endl;
+	cerr << "Error: Plugin.ArchField.Topo needs to point to a .wrl 3D topography file" << endl;
     }
 }
 
-void ArtifactVis::readLocusFile(QueryGroup * query)
+void ArchField::readLocusFile(QueryGroup * query)
 {
     cout << "Reading Locus File..." << endl;
     const double M_TO_MM = 100.0f;
@@ -1197,13 +1197,13 @@ void ArtifactVis::readLocusFile(QueryGroup * query)
     }
     query->loci.clear();
     Vec3f offset = Vec3f(
-        ConfigManager::getFloat("Plugin.ArtifactVis.Offset.X",0),
-        ConfigManager::getFloat("Plugin.ArtifactVis.Offset.Y",0),
-        ConfigManager::getFloat("Plugin.ArtifactVis.Offset.Z",0));
+        ConfigManager::getFloat("Plugin.ArchField.Offset.X",0),
+        ConfigManager::getFloat("Plugin.ArchField.Offset.Y",0),
+        ConfigManager::getFloat("Plugin.ArchField.Offset.Z",0));
     std::string locusFile = query->kmlPath; 
     if(locusFile.empty())
     {
-	std::cerr << "ArtifactVis: Warning: No Plugin.ArtifactVis.LociFile entry." << std::endl;
+	std::cerr << "ArchField: Warning: No Plugin.ArchField.LociFile entry." << std::endl;
 	return;
     }
 
@@ -1460,7 +1460,7 @@ void ArtifactVis::readLocusFile(QueryGroup * query)
 #endif
     std::cerr << "Loci Loaded." << std::endl;
 }
-void ArtifactVis::setupSiteMenu()
+void ArchField::setupSiteMenu()
 {
     _modelDisplayMenu = new SubMenu("Models");
     _displayMenu->addItem(_modelDisplayMenu);
@@ -1468,7 +1468,7 @@ void ArtifactVis::setupSiteMenu()
     _pcDisplayMenu = new SubMenu("Point Clouds");
     _displayMenu->addItem(_pcDisplayMenu);
     cout << "Generating Model menu..."<<endl; 
-    string file = ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").append("Model/KISterrain2.kml");
+    string file = ConfigManager::getEntry("Plugin.ArchField.ArchInterfaceFolder").append("Model/KISterrain2.kml");
     FILE * fp = fopen(file.c_str(),"r");
     if(fp == NULL)
     {
@@ -1478,9 +1478,9 @@ void ArtifactVis::setupSiteMenu()
     const double M_TO_MM = 100.0f;
     const double LATLONG_FACTOR = 100000.0f;
     Vec3f offset = Vec3f(
-                   ConfigManager::getFloat("Plugin.ArtifactVis.Offset.X",0),
-                   ConfigManager::getFloat("Plugin.ArtifactVis.Offset.Y",0),
-                   ConfigManager::getFloat("Plugin.ArtifactVis.Offset.Z",0));
+                   ConfigManager::getFloat("Plugin.ArchField.Offset.X",0),
+                   ConfigManager::getFloat("Plugin.ArchField.Offset.Y",0),
+                   ConfigManager::getFloat("Plugin.ArchField.Offset.Z",0));
 
     mxml_node_t * tree;
     tree = mxmlLoadFile(NULL, fp, MXML_TEXT_CALLBACK);
@@ -1568,7 +1568,7 @@ void ArtifactVis::setupSiteMenu()
     }
     cout << "done." << endl;
 }
-void ArtifactVis::setupQuerySelectMenu()
+void ArchField::setupQuerySelectMenu()
 {
     vector<std::string> queryNames;
     vector<bool> queryActive;
@@ -1601,7 +1601,7 @@ void ArtifactVis::setupQuerySelectMenu()
     _queryDynamicUpdate.clear();
     _eraseQuery.clear();
     _centerQuery.clear();
-    std::string file = ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").append("kmlfiles.xml");
+    std::string file = ConfigManager::getEntry("Plugin.ArchField.ArchInterfaceFolder").append("kmlfiles.xml");
     FILE * fp = fopen(file.c_str(),"r");
     if(fp == NULL)
     {
@@ -1621,7 +1621,7 @@ void ArtifactVis::setupQuerySelectMenu()
     for(mxml_node_t * child = table-> child; child != NULL; child = child->next)
     {
         std::string kmlName = child->value.text.string;
-        std::string kmlfile = ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").append("queries/").append(kmlName).append(".kml");
+        std::string kmlfile = ConfigManager::getEntry("Plugin.ArchField.ArchInterfaceFolder").append("queries/").append(kmlName).append(".kml");
         FILE * fpkml = fopen(kmlfile.c_str(),"r");
         if(fpkml == NULL)
         {
@@ -1692,9 +1692,9 @@ void ArtifactVis::setupQuerySelectMenu()
     }
     cout << "Menu loaded." << endl;
 }
-void ArtifactVis::setupTablesMenu()
+void ArchField::setupTablesMenu()
 {
-    std::string file = ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").append("tables.xml");
+    std::string file = ConfigManager::getEntry("Plugin.ArchField.ArchInterfaceFolder").append("tables.xml");
     FILE * fp = fopen(file.c_str(),"r");
     if(fp == NULL)
     {
@@ -1723,13 +1723,13 @@ void ArtifactVis::setupTablesMenu()
         _tables.push_back(table);
     }
 }
-void ArtifactVis::setupQueryMenu(Table * table)
+void ArchField::setupQueryMenu(Table * table)
 {
     bool status;
     if(ComController::instance()->isMaster())
     {
 	const char* current_path = getcwd(NULL, 0);
-        chdir(ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").c_str());
+        chdir(ConfigManager::getEntry("Plugin.ArchField.ArchInterfaceFolder").c_str());
         stringstream ss;
         ss << "./ArchInterface -m \"" << table->name << "\"";
         system(ss.str().c_str());
@@ -1741,7 +1741,7 @@ void ArtifactVis::setupQueryMenu(Table * table)
 	ComController::instance()->readMaster(&status,sizeof(bool));
     }
     table->query_view = new MenuText("",1,false,400);
-    std::string file = ConfigManager::getEntry("Plugin.ArtifactVis.ArchInterfaceFolder").append("menu.xml");
+    std::string file = ConfigManager::getEntry("Plugin.ArchField.ArchInterfaceFolder").append("menu.xml");
     FILE * fp = fopen(file.c_str(),"r");
     if(fp == NULL)
     {
@@ -1833,7 +1833,7 @@ void ArtifactVis::setupQueryMenu(Table * table)
     table->queryMenu->addItem(table->saveQuery);
     _tablesMenu->addItem(table->queryMenu);
 }
-void ArtifactVis::updateSelect()
+void ArchField::updateSelect()
 {
     osg::Vec3 markPos(0,1000,0);
     markPos = markPos * PluginHelper::getHandMat();
@@ -1924,7 +1924,7 @@ void ArtifactVis::updateSelect()
     }
 }
 
-std::vector<Vec3> ArtifactVis::getArtifactsPos(){
+std::vector<Vec3> ArchField::getArtifactsPos(){
     vector<Vec3f> positions;
     for(int q = 0; q < _query.size(); q++)
     {
