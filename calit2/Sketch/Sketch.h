@@ -5,7 +5,11 @@
 #include "SketchLine.h"
 #include "ColorSelector.h"
 
+#include "SketchShape.h"
+#include "Layout.h"
+
 #include <kernel/CVRPlugin.h>
+#include <kernel/FileHandler.h>
 
 #include <menu/SubMenu.h>
 #include <menu/MenuTextButtonSet.h>
@@ -16,25 +20,24 @@
 #include <osg/Geode>
 #include <osg/MatrixTransform>
 #include <osg/Geometry>
+#include <osg/PositionAttitudeTransform>
 
-#include <string>
+#include <string.h>
 #include <vector>
 #include <map>
 
-class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback
+class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::FileLoadCallback
 {
     public:
         Sketch();
         virtual ~Sketch();
-        
         static Sketch * instance();
-
         bool init();
         void menuCallback(cvr::MenuItem * item);
         void preFrame();
         bool processEvent(cvr::InteractionEvent * event);
-
         float getPointerDistance() { return _pointerDistance; }
+        virtual bool loadFile(std::string file);
 
     protected:
         static Sketch * _myPtr;
@@ -42,29 +45,20 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback
         enum DrawMode
         {
             NONE = -1,
+            SHAPE,
+            LAYOUT,
             RIBBON,
-            LINE,
-            SHAPE
+            LINE
         };
 
-        /*enum LineType
+        enum Mode
         {
-            LINE_NONE = -1,
-            SEGMENT,
-            MULTI_SEGMENT,
-            FREEHAND
-        };*/
-
-        enum ShapeType
-        {
-            SHAPE_NONE = -1,
-            BOX,
-            CYLINDER,
-            CONE,
-            SPHERE
+            DRAW,
+            SELECT,
+            MOVE
         };
 
-        struct MyComputeBounds : public osg::Drawable::ComputeBoundingBoxCallback
+       struct MyComputeBounds : public osg::Drawable::ComputeBoundingBoxCallback
         {
             MyComputeBounds() {}
             MyComputeBounds(const MyComputeBounds & mcb, const osg::CopyOp &) {}
@@ -78,10 +72,22 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback
         void finishGeometry();
         void createGeometry();
 
+        void removeMenuItems(Mode dm);
+        void addMenuItems(Mode dm);
+
+        osg::Vec3 getCurrentPoint();
+
         cvr::SubMenu * _sketchMenu;
         cvr::MenuTextButtonSet * _modeButtons;
         cvr::MenuRangeValue * _sizeRV;
         cvr::MenuCheckbox * _csCB;
+
+        cvr::MenuTextButtonSet * _drawModeButtons;
+        
+        cvr::MenuRangeValue * _sizeAllRV;
+        cvr::MenuRangeValue * _tessellationsRV;
+
+        cvr::MenuCheckbox * _freezeCB;
 
         cvr::MenuTextButtonSet * _lineType;
         cvr::MenuCheckbox * _lineTube;
@@ -90,11 +96,32 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuTextButtonSet * _shapeType;
         cvr::MenuCheckbox * _shapeWireframe;
 
-        cvr::MenuButton * _saveButton;
+        cvr::MenuTextButtonSet * _layoutType;
+        cvr::MenuCheckbox * _showLayoutCB;
+        cvr::MenuRangeValue * _layoutSizeRV;
 
-        DrawMode _mode;
+        cvr::MenuButton * _saveButton;
+        cvr::MenuButton * _clearButton;
+
+        cvr::MenuButton * _selectAllButton;
+        cvr::MenuButton * _clearSelectButton;
+
+        cvr::SubMenu * _loadMenu;
+        std::vector<cvr::MenuButton*> _loadFileButtons;
+        std::vector<std::string> _loadFileList;
+        std::string _dataDir;
+        std::string _modelDir;
+        
+        int _gridSize;
+        bool _snapToGrid;
+        cvr::MenuCheckbox * _snapToGridCB;
+        
+        Mode _mode;
+        DrawMode _drawMode;
+
         SketchLine::LineType _lt;
-        ShapeType _st;
+        SketchShape::ShapeType _st;
+        Layout::LayoutType _lot;
 
         std::string _dir;
         bool _drawing;
@@ -124,9 +151,44 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback
         std::map<double, osg::ref_ptr<osg::Geometry> > _geometryMap;
 
         SketchObject * _activeObject;
+
         std::vector<SketchObject*> _objectList;
+        std::vector<SketchShape *> _shapeList;
+        std::vector<Layout *> _layoutList;
+        std::vector<osg::PositionAttitudeTransform *> _movingList;
+        std::vector<osg::PositionAttitudeTransform *> _patList;
 
         ColorSelector * _colorSelector;
+
+        osg::PositionAttitudeTransform * _pat;
+        osg::PositionAttitudeTransform * _modelpat;
+        osg::PositionAttitudeTransform * _modelpatScale;
+        osg::Node * _model;
+
+        osg::Geode * _shapeGeode;
+        osg::Vec3 _lastPoint;
+        osg::ShapeDrawable * _highlightDrawable;
+        osg::Geode * _highlightGeode;
+        osg::PositionAttitudeTransform * _highlightPat;
+
+        osg::Shape * _moveBrushShape;
+        osg::ShapeDrawable * _moveBrushDrawable;
+        osg::Geode * _moveBrushGeode;
+
+        osg::PositionAttitudeTransform * _layoutPat;
+        osg::Geode * _layoutGeode;
+
+        bool _isObjectRoot;
+        bool _movingLayout;
+        bool _isIntersecting;
+        bool _orientToViewer;
+
+        int _sizeScale;
+        float _modelScale;
+
+        int _modelCounter;
+
 };
+
 
 #endif

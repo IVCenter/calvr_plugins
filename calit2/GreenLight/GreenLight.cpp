@@ -1,4 +1,5 @@
 // John Mangan (Summer 2011)
+//  Alfred Tarng (Spring 2012)
 // Plugin for CalVR -- GreenLight Project
 // Many models altered from prior Covise Plugin (BlackBoxInfo)
 
@@ -16,13 +17,128 @@
 
 CVRPLUGIN(GreenLight)
 
+using namespace osg;
+using namespace std;
+using namespace cvr;
+using namespace osgEarth;
+
 // Static Variables
-osg::ref_ptr<osg::Uniform> GreenLight::Component::_displayTexturesUni = new osg::Uniform("showTexture",false);
-osg::ref_ptr<osg::Uniform> GreenLight::Component::_neverTextureUni = new osg::Uniform("showTexture",false);
+osg::ref_ptr<osg::Uniform> GreenLight::Component::_displayTexturesUni =
+                                         new osg::Uniform("showTexture",false);
+osg::ref_ptr<osg::Uniform> GreenLight::Component::_neverTextureUni =
+                                         new osg::Uniform("showTexture",false);
+
+Matrixd previousViewMatrix; // TODO: move this to .h file;
+double  previousViewScale;
+bool savedMatrix = false;
+bool SOCM = false; // TOGGLE for Custom Menu.
+
+float range = 64;
+
+// TODO move this to green light and allow it to disable functionality.
+int lodLevel = -1;//false;
+osg::MatrixTransform * secondDegreeMT;// = new GreenLight::MTA();
+/***
+ * Accessor of a Scenemanager to get specific popup menu members.
+ *
+ */
+class SMA : public SceneManager {
+
+    public:
+        int grabProtectedMember1(){ return _menuDefaultOpenButton; }
+        int grabProtectedMember2(){ return _menuScale; }
+
+} sma;
+
+class LODA : public LOD {
+    public:
+        typedef LOD super;
+    // Wrapper to toggle activity based on active child?
+    //
+        void traverse(NodeVisitor& nv){
+//          super::traverse(nv);
+        }
+} loda;
+
+
+void GreenLight::NodeA::accept(NodeVisitor& nv){
+//    printf("check or call accept of lowestLOD\n");
+    if (nv.validNodeMask(*this)) 
+    {
+        nv.pushOntoNodePath(this);
+        nv.apply(*this);
+        nv.popFromNodePath();
+    }
+}
+
+void GreenLight::MTA::accept(NodeVisitor& nv){
+    if (nv.validNodeMask(*this)) 
+    {
+        if ( nv.getTraversalMode() == nv.TRAVERSE_ACTIVE_CHILDREN )
+        {
+            lodLevel = LLOD;
+        }
+        nv.pushOntoNodePath(this);
+        nv.apply(*this);
+        nv.popFromNodePath();
+    }
+}
+
+/***
+ * Called when Navigate To Plugin button is clicked.
+ * Sets Matrix and Scale to be in front of the Green Light Plugin using
+ * hardcoded values.
+ */
+void zoom(){
+    if (savedMatrix == false){
+      previousViewMatrix = SceneManager::instance()->getObjectTransform()->getMatrix(); 
+      previousViewScale = SceneManager::instance()-> getObjectScale();
+      savedMatrix = true;
+    }
+
+            double xScale = 342.677490;
+            Matrixd xMatrix = Matrixd(
+            // Values gained from logging (keyboard event 'l')
+            //
+/*         
+      0.890503,	 0.247582,	 -0.381720,	 0.000000,
+	 -0.454463,	 0.523984,	 -0.720350,	 0.000000,
+	 0.021670,	 0.814951,	 0.579125,	 0.000000,
+	 -19185177.449566,	 102954049.534328,	 -2181004421.189106,	 1.000000
+*/
+
+              0.875374,   0.271526,   -0.399995,  0.000000,
+             -0.483186,  0.464147,   -0.742360,  0.000000,
+             -0.015913,  0.843115,   0.537499,   0.000000,
+             -34501329.462374,   -7890269.618077,    -2183230472.145897,     1.000000
+/*
+        // Camera Position Based off original object position.
+             0.894261,    0.247156,    -0.373112,   0.000000,
+             -0.446530,   0.548915,    -0.706614,   0.000000,
+             0.030163,    0.798503,    0.601235,    0.000000,
+             -13083652.887404,    162726828.747752,    -2177405384.833411,  1.000000
+*/
+            );
+
+            SceneManager::instance()->setObjectMatrix(xMatrix);
+            SceneManager::instance()->setObjectScale( xScale ) ;
+}
+void restoreView(){
+    if (savedMatrix){
+        SceneManager::instance()->setObjectMatrix( previousViewMatrix );
+        SceneManager::instance()->setObjectScale( previousViewScale ) ;
+
+        savedMatrix = false;
+    }
+}
 
 GreenLight::GreenLight()
 {
     std::cerr << "GreenLight created." << std::endl;
+    osgEarthInit = false;
+    sma = *(SMA *) SceneManager::instance();
+    _menuButton = sma.grabProtectedMember1();
+                //(SceneManager::instance()->_menuDefaultOpenButton);
 }
 
 GreenLight::~GreenLight()
@@ -33,6 +149,13 @@ GreenLight::~GreenLight()
     if (_hardwareSelectionMenu) delete _hardwareSelectionMenu;
     if (_selectionModeCheckbox) delete _selectionModeCheckbox;
     if (_selectClusterMenu) delete _selectClusterMenu;
+
+    if (_navigateToPluginButton) delete _navigateToPluginButton;
+    if (_restorePreviousViewButton) delete _restorePreviousViewButton;
+
+//    if (scaleMT) delete scaleMT; // can't delete... protected?
+    if (scaleMatrix) delete scaleMatrix;
+    if (scaleVector) delete scaleVector;
 
     std::set< cvr::MenuCheckbox * >::iterator chit;
     for (chit = _clusterCheckbox.begin(); chit != _clusterCheckbox.end(); chit++)
@@ -113,6 +236,123 @@ bool GreenLight::init()
 {
     std::cerr << "GreenLight init()." << std::endl;
 
+    /*** OSG EARTH PLUGIN INITIALIZATION ***/
+    mapVariable = NULL; // doesn't seem neccessary.
+    osgEarth::MapNode* mapNode = MapNode::findMapNode( SceneManager::instance()->getObjectsRoot() ); 
+
+    OsgE_MT = new MatrixTransform();
+    _glLOD  = new LOD();
+//    MinMaxPair mmp = pair<500, 5000>;
+//    scaleMT = new osg::MatrixTransform(); 
+    scaleMT = new GreenLight::MTA();
+    pluginMT = new osg::MatrixTransform();
+
+    scaleMT -> addChild (pluginMT);
+
+//  OsgE_MT->addChild( scaleMT );
+
+    if( mapNode )
+    {
+        _glLOD -> addChild( scaleMT );
+        OsgE_MT -> addChild(_glLOD);
+        printf("Attached First LOD \"Box\" \n");
+
+        mapNode->setNodeMask(mapNode->getNodeMask() & ~2);
+
+        // Execute OSGEarth Specific initialization.
+        printf("Initializing GreenLight with OSGEarth configuration...\n");
+        osgEarthInit = true;
+
+        mapVariable = mapNode -> getMap();
+
+        // POSITION:  Texture Based:      Original:
+        double lat    =   32.874175,  //  32.874264,
+               lon    = -117.236122,  //-117.236074,
+               height =  0.0;
+
+        osgEarth::ElevationQuery query( mapVariable );
+        double query_resolution = 0.0; // 1/10th of a degree
+        double out_resolution = 0.0;
+        bool ret = query.getElevation(osg::Vec3d( lon, lat, 0),
+        mapVariable->getProfile()->getSRS(), height, query_resolution, &out_resolution);
+
+        mapVariable->getProfile()->getSRS()->getEllipsoid()->computeLocalToWorldTransformFromLatLongHeight(
+            DegreesToRadians(lat),
+            DegreesToRadians(lon),
+            height,
+            output
+        );
+
+        OsgE_MT->setMatrix( output );
+
+    	// attach a silly shape
+        osg::MatrixTransform * gMT = new GreenLight::MTA();
+        osg::Geode* geode = new osg::Geode();
+        double _swidth = 10, _slength = 30, _sheight = 12;
+        osg::ShapeDrawable* shape = new osg::ShapeDrawable(
+             new osg::Box(osg::Vec3(0.0, 0.0, 0.0), _swidth, _slength, _sheight ));
+
+        osg::MatrixTransform * lodShapeHeightOffset = new MatrixTransform();
+        osg::Matrixd * shapeHeightOffset = new Matrixd();
+        shapeHeightOffset->makeTranslate( Vec3d(0,0, _sheight/2) );
+        lodShapeHeightOffset->setMatrix( *shapeHeightOffset );
+
+        geode->addDrawable(shape);
+        lodShapeHeightOffset->addChild(geode);
+        gMT->addChild( lodShapeHeightOffset );
+//        lodShapeHeightOffset->addChild( geode );
+
+        secondDegreeMT = new GreenLight::MTA();
+        secondDegreeMT -> addChild(pluginMT);
+
+        ((MTA *)scaleMT) ->LLOD = 0; // true;
+        _glLOD -> addChild( secondDegreeMT );
+        ((MTA *)secondDegreeMT) -> LLOD = 1;
+        _glLOD -> addChild( gMT );
+        ((MTA *)gMT)->LLOD = 2;
+
+        _glLOD->setRange(0, 0, range);
+        _glLOD->setRange(1, range, range * 4);
+        _glLOD->setRange(2, range * 4, range * 1024);
+        printf("Attached Second LOD \"Box\" \n");
+
+        scaleMatrix = new osg::Matrixd();
+        double scaleVal =  // 1.0/500.0;
+                              1.0/691.0;
+        scaleVector = new osg::Vec3d( scaleVal, scaleVal, scaleVal );
+
+        scaleMatrix->makeScale( *scaleVector );
+//        scaleMT->setMatrix( *scaleMatrix );
+        pluginMT->setMatrix( *scaleMatrix );
+
+//        mapNode->addChild( OsgE_MT );
+        cvr::PluginHelper::getObjectsRoot()->addChild( OsgE_MT );
+    }
+    else
+    {
+        // Execute Default Initialization.
+        printf("Initializing GreenLight with default configuration...\n");
+        osgEarthInit = false;
+
+        OsgE_MT -> addChild(scaleMT);
+        cvr::PluginHelper::getObjectsRoot()->addChild( OsgE_MT );
+
+        lodLevel = 0;
+    }
+
+
+    /*** Things for Context Menus.. ***/
+    /******/
+                         // name, tag(?), closable
+    _myMenu = new PopupMenu("GreenLight", "", false);
+
+    _customButton = new MenuButton("Custom Button");
+    _customButton->setCallback(this);
+    _myMenu -> addMenuItem(_customButton);
+    
+    /***************************************/
+
+
     /*** Menu Setup ***/
     _glMenu = new cvr::SubMenu("GreenLight","GreenLight");
     _glMenu->setCallback(this);
@@ -167,6 +407,9 @@ bool GreenLight::init()
     _minuteTo = NULL;
 
     _hoverDialog = NULL;
+
+    _navigateToPluginButton = NULL;
+    _restorePreviousViewButton = NULL;
     /*** End Menu Setup ***/
 
     /*** Defaults ***/
@@ -188,6 +431,18 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
 {
     std::set< cvr::MenuCheckbox * >::iterator chit;
 
+/*
+    if(locInit.find(models[i]->name) != locInit.end())
+    {
+        osg::Matrix scale;
+        scale.makeScale(osg::Vec3(locInit[models[i]->name].first,locInit[models[i]->name].first,
+        locInit[models[i]->name].first));
+        so->setTransform(scale * locInit[models[i]->name].second);
+    };
+*/
+
+    /*** END: Things for Context Menus.. ***/
+
     if (item == _showSceneCheckbox)
     {
         // Load as neccessary
@@ -202,8 +457,10 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
                 osg::ref_ptr<osg::Shader> vertShader = new osg::Shader( osg::Shader::VERTEX );
                 osg::ref_ptr<osg::Shader> fragShader = new osg::Shader( osg::Shader::FRAGMENT );
 
-                if (utl::loadShaderSource(vertShader, cvr::ConfigManager::getEntry("vertex", "Plugin.GreenLight.Shaders", ""))
-                && utl::loadShaderSource(fragShader, cvr::ConfigManager::getEntry("fragment", "Plugin.GreenLight.Shaders", "")))
+                if (utl::loadShaderSource(vertShader, cvr::ConfigManager::getEntry("vertex",
+                         "Plugin.GreenLight.Shaders", ""))
+                && utl::loadShaderSource(fragShader, cvr::ConfigManager::getEntry("fragment",
+                         "Plugin.GreenLight.Shaders", "")))
                 {
                     _shaderProgram->addShader( vertShader );
                     _shaderProgram->addShader( fragShader );
@@ -230,9 +487,15 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
         }
 
         if (_showSceneCheckbox->getValue())
-            cvr::PluginHelper::getObjectsRoot()->addChild(_box->transform);
+        {
+//            scaleMT -> addChild( _box -> transform );
+            pluginMT -> addChild( _box -> transform );
+        }
         else
-            cvr::PluginHelper::getObjectsRoot()->removeChild(_box->transform);
+        {
+//            scaleMT -> removeChild( _box -> transform );
+            pluginMT -> removeChild( _box -> transform );
+        }
     }
     else if (item == _xrayViewCheckbox)
     {
@@ -281,6 +544,9 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
     {
         std::string selectedNames = "";
 
+        /***
+         * If the checkbox for <pollHistoricalData?> is checked?
+         */
         if (_selectionModeCheckbox->getValue())
         {
             int selections = 0;
@@ -313,8 +579,10 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
             int monT = _monthTo->getIndex() + 1;
             std::string monthT = (monT < 10 ? "0" : "") + utl::stringFromInt(monT);
 
-            downloadUrl += "&from=" + _yearFrom->getValue() + "-" + monthF + "-" + _dayFrom->getValue() + " " + _hourFrom->getValue() + ":" + _minuteFrom->getValue() + ":00";
-            downloadUrl += "&to=" + _yearTo->getValue() + "-" + monthT + "-" + _dayTo->getValue() + " " + _hourTo->getValue() + ":" + _minuteTo->getValue() + ":00";
+            downloadUrl += "&from=" + _yearFrom->getValue() + "-" + monthF + "-" + _dayFrom->getValue() + " " +
+                                      _hourFrom->getValue() + ":" + _minuteFrom->getValue() + ":00";
+            downloadUrl += "&to=" + _yearTo->getValue() + "-" + monthT + "-" + _dayTo->getValue() + " " +
+                                     _hourTo->getValue() + ":" + _minuteTo->getValue() + ":00";
         }
 
         downloadUrl += selectedNames;
@@ -355,6 +623,9 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
             _powerMenu->addItem(_legendText);
         }
 
+        /***
+         * Creates the Legend gradient....
+         */ 
         if (!_legendGradient)
         {
             osg::ref_ptr<osg::Texture2D> tex = new osg::Texture2D;
@@ -385,7 +656,8 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
 
         if (!_legendTextOutOfRange)
         {
-            _legendTextOutOfRange = new cvr::MenuText(" Off     | Too Low  | Too High");
+            _legendTextOutOfRange = new cvr::MenuText("   Off            |        Standby  ");
+            //     | Too Low  | Too High");
             _powerMenu->addItem(_legendTextOutOfRange);
         }
 
@@ -398,9 +670,10 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
             tex->setResizeNonPowerOfTwoHint(false);  
 
             osg::ref_ptr<osg::Image> data = new osg::Image;
-            data->allocateImage(3, 1, 1, GL_RGBA, GL_FLOAT);  
+            int sections = 2; //3;
+            data->allocateImage( sections , 1, 1, GL_RGBA, GL_FLOAT );
 
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 2; i++)//Removing "Too High"  // 3; i++)
             {
                 osg::Vec3 color = wattColor(i*2,3,3);
                 for (int j = 0; j < 3; j++)
@@ -421,6 +694,13 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
         {
             setPowerColors(true);
         }
+    }
+    else if (item == _navigateToPluginButton) // Do Navigate to Plugin location on OsgEarth.
+    {
+        zoom();
+    }else if (item == _restorePreviousViewButton)
+    {
+        restoreView();
     }
     else if (item == _pollHistoricalDataCheckbox)
     {
@@ -477,7 +757,8 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
         std::map< std::string, std::set< Component * > * >::iterator cit = _cluster.find(checkbox->getText());
         if (cit == _cluster.end())
         {
-            std::cerr << "Error: Cluster checkbox selected without a matching cluster (" << checkbox->getText() << ")" << std::endl;
+            std::cerr << "Error: Cluster checkbox selected without a matching cluster (" <<
+                 checkbox->getText() << ")" << std::endl;
             checkbox->setValue(checkbox->getValue());
             return;
         }
@@ -559,6 +840,16 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
 
 void GreenLight::preFrame()
 {
+    /***
+     * TODO: Add LOD Call-back support.
+     * within reach? Add two more call backs for out of sight and in sight.
+     */
+
+    if( true ){
+    }else if(true){
+    }else{
+    }
+
     // update mouse and wand intersection with components
     if (_box)
     {
@@ -568,37 +859,194 @@ void GreenLight::preFrame()
         for (int r = 0; r < _rack.size(); r++)
             _rack[r]->handleAnimation();
 
+
 //        if (cvr::ComController::instance()->isMaster())
-        //handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver, cvr::ComController::instance()->isMaster());
+        if( lodLevel == 0 ){
+            handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver, cvr::ComController::instance()->isMaster());
 //        else
-        handleHoverOver(cvr::PluginHelper::getHandMat(), _wandOver, !cvr::ComController::instance()->isMaster());
+            handleHoverOver(cvr::PluginHelper::getHandMat(), _wandOver, !cvr::ComController::instance()->isMaster());
+        }
     }
+
+
 }
 
 void GreenLight::postFrame()
 {
 }
 
+
+bool GreenLight::keyboardEvent(int key , int type )
+{
+
+    char c = key;
+
+    if ( (osgEarthInit && _showSceneCheckbox->getValue()) || c == 'l' ){
+      if( type == KEY_DOWN )
+      {   
+          osg::Vec3d v3d = scaleMT->getMatrix().getScale();
+          if ( c == 'r' ) // revert to location on earth.
+          {
+              OsgE_MT->setMatrix( output );
+          }else if( c == 'i' )  // set to Identity
+          {
+              osg::Matrixd identity = Matrixd();
+              OsgE_MT->setMatrix( identity ); // reset position to middle.
+              BoundingSphere bs = _box->transform->getBound();
+              printf("Radius of the Bounding Sphere of the Box is: %f\n", bs.radius());
+
+          }else if( c == 'g' )  // scaleUp
+          {
+//            v3d *= 1.5; //2;
+              range *= 8;
+              _glLOD->setRange(0, 0, range);
+              _glLOD->setRange(1, range, range * 4);
+              _glLOD->setRange(2, range * 4, range * 1024);
+              printf("range is: %f \n", range);
+          }else if( c == 's' )  // scaleDown
+          {
+//            v3d *= .75; //.5;
+              range /= 8;
+              _glLOD->setRange(0, 0, range);
+              _glLOD->setRange(1, range, range * 4);
+              _glLOD->setRange(2, range * 4, range * 1024);
+              printf("range is: %f \n", range);
+          }else if( c == 'l' ) // log.
+          {
+              printf("Current Matrix Config: \n");
+              const MatrixTransform * mmt = SceneManager::instance()->getObjectTransform();
+              Matrixd mmd = mmt->getMatrix();
+              for ( int i = 0; i < 4; i++ )
+              {
+                for ( int j = 0; j < 4; j++ )
+                {
+                  printf("\t %f", mmd(i,j) );
+
+                  if( !( i == 3 && j == 3 ) )
+                      printf(",");
+                }
+                cout<<endl;
+              }
+              printf("Scale is: %f\n",SceneManager::instance()->getObjectScale());
+
+              printf( "Scale of BlackBox is currently : x%f\n ", v3d.x() );
+                
+              printf( "LOD level: %d\n", lodLevel ) ;
+ 
+          }else if( c == 'x' ){
+            zoom();
+          }else // do nothing.
+          {
+          }
+          if( osgEarthInit ){
+            scaleMatrix->makeScale( v3d );
+            scaleMT->setMatrix( *scaleMatrix );
+          }
+        }
+        return true;
+      }
+    return false;
+}
+
+/***
+ * Will this get used at all?
+ */
+void GreenLight::closeMenu()
+{
+    if(_myMenu)
+    {
+        _myMenu->setVisible(false);
+    }
+}
+
 bool GreenLight::processEvent(cvr::InteractionEvent * event)
 {
-    cvr::TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
-    if(!tie)
-    {
-	return false;
+    
+    cvr::InteractionEvent * ie = event->asTrackedButtonEvent();
+    if(!ie)
+    { // If it is not a TrackedButton Event Check if it is a keyboardEvent.
+        cvr::InteractionEvent * ie = event->asKeyboardEvent();
+        if(!ie)
+        	return false;
+        else
+        {
+            KeyboardInteractionEvent * kie = (KeyboardInteractionEvent *) ie;
+            return ( keyboardEvent( kie->getKey() , kie->getInteraction() ) );
+        }
     }
 
-    if (tie->getInteraction() != cvr::BUTTON_DOWN || tie->getButton() != 0 || tie->getHand() != 0 )
-        return false;
-
-    if (!_box)
-        return false;
-
-    // Should be hovering over it
-    if (_wandOver)
+    if ( lodLevel == 0 )
     {
+    // cast to TrackedButtonEvent.
+    cvr::TrackedButtonInteractionEvent * tie = (TrackedButtonInteractionEvent *) ie;
+
+    
+      if (SOCM)
+      {
+        if ( tie->getButton() == _menuButton )
+        {
+        if(tie->getInteraction() == BUTTON_DOWN)
+        {
+            if( !_myMenu->isVisible() )
+            {
+              /***
+               * TODO: Look into incorporating the check, to make it so menu
+               *       only shows up when hover over a component box.
+               */
+                if (_wandOver){
+                    Component * comp = _wandOver->asComponent();
+                    if (comp)
+                    {
+//                      selectComponent( comp, !comp->selected );
+                        cout << "on a component." << endl;
+                    } else
+                    {
+                        cout << "on a rack/door/other." << endl;
+                    }
+                }
+              
+                _myMenu->setVisible(true);
+            
+                osg::Vec3 start(0,0,0), end(0,1000,0);
+                start = start * tie->getTransform();
+                end = end * tie->getTransform();
+                
+                // Insert PositionInformation stuff here?
+                Vec3 menuPoint(0, 1000.0, 0);
+                menuPoint = menuPoint * tie->getTransform();
+
+                Matrix m;
+                m.makeTranslate(menuPoint);
+                _myMenu->setTransform( m );
+    
+                _myMenu->setScale( sma.grabProtectedMember2() );
+//                                SceneManager::instance()->_menuScale);
+//              SceneManager::instance()->setMenuOpenObject(this);  //#
+            }else
+            {
+                _myMenu->setVisible(false); // #
+//              SceneManager::instance()->closeOpenObjectMenu();  //#
+            }
+          }
+        }
+      }
+
+
+      // ???
+      if (tie->getInteraction() != cvr::BUTTON_DOWN || tie->getButton() != 0 || tie->getHand() != 0 )
+        return false;
+
+      // if box is still not loaded?
+      if (!_box)
+        return false;
+
+      // Should be hovering over it
+      if (_wandOver)
+      {
         Component * comp = _wandOver->asComponent();
         if (comp)
         {
+            cout << "on a component." << endl;
             selectComponent( comp, !comp->selected );
         }
         else // _wandOver is a rack/door/etc.
@@ -614,7 +1062,7 @@ bool GreenLight::processEvent(cvr::InteractionEvent * event)
         }
 
         return true;
+      }
     }
-
     return false;
 }

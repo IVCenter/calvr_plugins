@@ -12,7 +12,8 @@ bool GreenLight::loadScene()
     // load model files
     std::string modelsDir = cvr::ConfigManager::getEntry("Plugin.GreenLight.ModelsDir");
 
-    osg::ref_ptr<osg::Node> box = loadModelFile(modelsDir + "box.WRL");
+    osg::ref_ptr<osg::Node> box = (GreenLight::NodeA *)(&(*loadModelFile(modelsDir + "box.WRL")));
+//  osg::ref_ptr<osg::Node> box =  loadModelFile(modelsDir + "box.WRL");
     osg::ref_ptr<osg::Node> electrical = loadModelFile(modelsDir + "electrical.WRL");
     osg::ref_ptr<osg::Node> Pipes = loadModelFile(modelsDir + "waterpipes.WRL");
     osg::ref_ptr<osg::Node> doorFL = loadModelFile(modelsDir + "frontleft.WRL");
@@ -248,6 +249,20 @@ bool GreenLight::loadScene()
     _selectionModeCheckbox = new cvr::MenuCheckbox("Selection Enabled",false);
     _selectionModeCheckbox->setCallback(this);
     _hardwareSelectionMenu->addItem(_selectionModeCheckbox);
+
+    /*** AT_2/14/12 ***/
+    if ( osgEarthInit ){
+      _navigateToPluginButton = new cvr::MenuButton("Navigate to Plugin");
+      _navigateToPluginButton->setCallback(this);
+      _glMenu->addItem(_navigateToPluginButton);
+
+      // For Debugging purposes.
+      _restorePreviousViewButton = new cvr::MenuButton("Restore Previous View");
+      _restorePreviousViewButton->setCallback(this);
+      _glMenu->addItem(_restorePreviousViewButton);
+
+    }
+    /*** AT_2/14/12 ***/
 
     _hoverDialog = new cvr::DialogPanel(400, "Intersected Component");
     _hoverDialog->setText("(nothing)");

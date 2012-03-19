@@ -3,10 +3,18 @@
 #include <sstream>
 #include <mxml.h>
 
+/***
+ * TODO: LOOK AT THIS SECTION 2/21/12
+ * Parses through an XML file and sets the watt color of individual components?
+ *
+ */
 void GreenLight::setPowerColors(bool displayPower)
 {
     std::map< std::string, std::map< std::string, int > > componentWattsMap;
 
+    /***
+     * If the switch is off, revert all components colors back to their default color(?)
+     */
     if (!displayPower)
     {
         std::set< Component *>::iterator sit;
@@ -16,33 +24,43 @@ void GreenLight::setPowerColors(bool displayPower)
     }
 
     // Display power per component
-    FILE *fp = fopen(cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Power", "").c_str(), "r");
+    FILE *fp = fopen(cvr::ConfigManager::getEntry("local",
+                      "Plugin.GreenLight.Power", "").c_str(), "r");
     if (!fp)
-    {
-        std::cerr << "Error (setComponentColors): Cannot open \"" << cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Power", "") << "\"." << std::endl;
+    { //If there is no valid entry? file?
+        std::cerr << "Error (setComponentColors): Cannot open \"" <<
+             cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Power", "")
+             << "\"." << std::endl;
+
         _displayPowerCheckbox->setValue(false);
         return;
     }
 
     mxml_node_t * xmlTree = mxmlLoadFile(NULL, fp, MXML_TEXT_CALLBACK);
 
-    mxml_node_t * measurements = mxmlFindElement(xmlTree,xmlTree,"measurements",NULL,NULL,MXML_DESCEND_FIRST);
+    mxml_node_t * measurements = 
+        mxmlFindElement(xmlTree,xmlTree,"measurements",NULL,NULL,MXML_DESCEND_FIRST);
 
     if (measurements == NULL)
     {
-        std::cerr << "Warning: No <measurements> tag in xml power file. Aborting." << std::endl;
+        std::cerr << 
+            "Warning: No <measurements> tag in xml power file. Aborting." << std::endl;
         return;
     }
 
-    mxml_node_t * sensor = mxmlFindElement(measurements,measurements,"sensor",NULL,NULL,MXML_DESCEND_FIRST);
+    mxml_node_t * sensor = mxmlFindElement(measurements,measurements,"sensor",
+                                           NULL,NULL,MXML_DESCEND_FIRST);
 
     if (sensor)
-    {
+    { // interpret xml
         do
         {
-            mxml_node_t * nameNode = mxmlFindElement(sensor,sensor,"name",NULL,NULL,MXML_DESCEND_FIRST);
-            mxml_node_t * timeNode = mxmlFindElement(sensor,sensor,"time",NULL,NULL,MXML_DESCEND_FIRST);
-            mxml_node_t * valueNode = mxmlFindElement(sensor,sensor,"value",NULL,NULL,MXML_DESCEND_FIRST);
+            mxml_node_t * nameNode = mxmlFindElement(sensor,sensor,"name",
+                                         NULL,NULL,MXML_DESCEND_FIRST);
+            mxml_node_t * timeNode = mxmlFindElement(sensor,sensor,"time",
+                                         NULL,NULL,MXML_DESCEND_FIRST);
+            mxml_node_t * valueNode = mxmlFindElement(sensor,sensor,"value",
+                                         NULL,NULL,MXML_DESCEND_FIRST);
 
             if (nameNode == NULL || nameNode->child->value.text.whitespace == 1)
             {
@@ -111,6 +129,8 @@ void GreenLight::setPowerColors(bool displayPower)
             std::list< int >::iterator lit;
             for (lit = watts.begin(); lit != watts.end(); lit++)
             {
+              // if the magnifyRange checkbox is set to true.. use minWatt/maxWatt as the color,
+              //  otherwise, use the current iteration's (sit) Component's color value..
                  if (_magnifyRangeCheckbox->getValue())
                      colors.push_back( wattColor(*lit, minWatt, maxWatt) );
                  else
@@ -127,15 +147,19 @@ void GreenLight::setPowerColors(bool displayPower)
 
 osg::Vec3 GreenLight::wattColor(float watt, int minWatt, int maxWatt)
 {
-    if (watt == 0)
+    if (watt == 0)  // If it is off, grey?
         return osg::Vec3(.2,.2,.2);
 
+    // White if any of the min/max constraints are zero
+    // OR if max is less than min.
     if (minWatt == 0 || maxWatt == 0 || maxWatt < minWatt)
         return osg::Vec3(1,1,1);
 
+    // Less than the minimum watt reqs.
     if (watt < minWatt)
         return osg::Vec3(.8,.8,1);
 
+    // Over the maximum watt reqs.
     if (watt > maxWatt)
         return osg::Vec3(1,0,0);
 
@@ -160,9 +184,16 @@ osg::Vec3 GreenLight::wattColor(float watt, int minWatt, int maxWatt)
     else if (interpolate < .67)
         green = 1;
     else
-        green = 1 - .6*(interpolate-.67)/.33;
+    {
+        float maxGreenSub = 1.0; // .6
+        green = 1 - maxGreenSub * (interpolate-.67)/.33;
 
-    float blue = 1-(interpolate-.33)/.33;
+        if (green < (1 - maxGreenSub) ) green = ( 1 - maxGreenSub ) ;
+        if (green > 1) green = 1;
+    }
+
+
+    float blue = 1 - (interpolate-.33)/.33;
     if (blue < 0) blue = 0;
     if (blue > 1) blue = 1;
 
@@ -279,3 +310,72 @@ void GreenLight::createTimestampMenus()
     _minuteTo->setValues(minutes);
     _timeTo->addItem(_minuteTo);
 }
+
+/***
+ * TODO: Create a Particle System for Smoke?
+ *
+ */
+void GreenLight::initParticles(){
+    /* Loop through and instantiate instances.
+     * set Fields/Behavior.
+     */
+/*
+    for ( SmokeParticle sp : smokeContainer )// int i = 0; i < PARTICLECOUNT; ++i )
+    {
+//     sp->_position = new osg::Vec3(0,0,0);
+//     sp->_color    = new osg::Vec3( 0.8, 0.8, 0.8 ); // randomize?
+       sp.xPos = sp.yPos = sp.zPos = 0;
+       sp.red = sp.green = sp.blue = 0;
+    }
+*/
+    for ( int i = 0; i < PARTICLECOUNT; ++i )
+    {
+        SmokeParticle sp = smokeContainer[i];
+        sp.xPos = sp.yPos = sp.zPos = 0;
+        sp.red = sp.green = sp.blue = 0;
+        
+        sp.xMov = sp.yMov = sp.zMov = rand() % 5 + 1;
+        sp.rDif = sp.gDif = sp.bDif = rand() % 5 + 1;
+
+     // attach as a drawable component to the scene?
+     
+    }
+    
+    // Initialize particle Template:
+    _pTemplate = new osgParticle::Particle();
+    _osgParticleSystem = new osgParticle::ParticleSystem();
+
+    //Create (initial) Particles
+    for ( int i = 0; i < PARTICLECOUNT; ++i )
+    {
+        _osgParticleSystem->createParticle(_pTemplate);
+    }
+
+    // Attach osg Particle System to Scene Here....
+//  SceneManager::instance()->getScene()->addChild();
+}
+void GreenLight::updateParticles(){
+    /* Loop through and modify particle based on behavior.
+     */
+    
+    for ( int i = 0; i < PARTICLECOUNT; ++i )
+    {
+        SmokeParticle sp = smokeContainer[i];
+        sp.xPos += sp.xMov;
+        sp.yPos += sp.yMov;
+        sp.zPos += 
+
+        sp.red   += sp.rDif;
+        sp.green += sp.gDif;
+        sp.blue  += sp.bDif;
+    }
+}
+/*
+void GreenLight::drawParticles(){
+    // ... attach to scene?
+    for ( int i = 0; i < PARTICLECOUNT; ++i )
+    {
+
+    }
+}
+*/

@@ -33,10 +33,14 @@ void GreenLight::doHoverOver(Entity *& last, Entity * current, bool showHover)
                     current->setColor(osg::Vec3(1,1,.5));
             }
 
-            if (current && current->asComponent())
+            if (current && current->asComponent()){
                 _hoverDialog->setText(current->asComponent()->name);
-            else
+            }else if( current ){
                 _hoverDialog->setText("(nothing)");
+            }
+            else{
+                _hoverDialog->setText("(nothing)");
+            }
         }
 
         // assign current to last (notice pass-by-reference)
@@ -63,7 +67,7 @@ void GreenLight::handleHoverOver(osg::Matrix pointerMat, Entity *& hovered, bool
     }
 
     // Optimization
-    if (hovered && hovered->nodes.find(isecvec[0].geode) != hovered->nodes.end())
+    if (hovered && (hovered->nodes.find(isecvec[0].geode) != hovered->nodes.end()) )
         return;
 
     // Is it one of ours?

@@ -4,8 +4,11 @@
 #include <list>
 #include <set>
 #include <vector>
+#include <string>
 
 #include <config/ConfigManager.h>
+#include <kernel/SceneManager.h>
+#include <kernel/SceneObject.h>
 #include <kernel/CVRPlugin.h>
 #include <menu/MenuButton.h>
 #include <menu/MenuCheckbox.h>
@@ -14,15 +17,43 @@
 #include <menu/MenuText.h>
 #include <menu/DialogPanel.h>
 #include <menu/SubMenu.h>
+#include <menu/MenuSystem.h>
+#include <menu/PopupMenu.h>
 
 #include <osg/AnimationPath>
 #include <osg/MatrixTransform>
+#include <osg/ShapeDrawable>
 #include <osg/Texture2D>
+#include <osg/NodeVisitor>
+
+/*** OSG EARTH PLUGINS ***/
+
+#include <osgEarth/Map>
+#include <osgEarth/MapNode>
+#include <osgEarth/FindNode>
+#include <osgEarth/Utils>
+
+#include <osgEarth/ElevationQuery>
+
+#include <osgDB/FileUtils>
+#include <osgDB/FileNameUtils>
+
+/*************************/
+
+/*** osgParticle things ***/
+#define PARTICLECOUNT 220
+
+#include <osgParticle/ParticleSystem>
+#include <osgParticle/Particle>
+/**************************/
 
 #include "Utility.h"
 
 class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 {
+//  friend class SceneManager;
+
+
     public:
         GreenLight();
         ~GreenLight();
@@ -37,6 +68,22 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         bool buttonEvent(int type, int button, int hand, const osg::Matrix& mat);
         bool mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix& mat);
 
+        bool keyboardEvent(int key, int type);
+
+        osg::ref_ptr<osg::MatrixTransform> OsgE_MT; // transform nodes of this entity
+        osg::Matrixd output;
+
+        osg::MatrixTransform * scaleMT;
+        osg::MatrixTransform * pluginMT;
+//        osg::MTA * scaleMT;
+        osg::Matrixd*      scaleMatrix; 
+        osg::Vec3d*        scaleVector; 
+
+
+        osg::LOD * _glLOD;
+
+        osgEarth::Map * mapVariable;
+
     protected:
 
         class Component; // forward declaration
@@ -50,7 +97,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 
                 osg::ref_ptr<osg::MatrixTransform> transform; // transform nodes of this entity
                 osg::ref_ptr<osg::AnimationPath> path; // animation path (null if non-existent)
-                osg::ref_ptr<osg::Node> mainNode;
+                osg::ref_ptr<osg::Node> mainNode;   // change mainNode to be the type of node with overriden accept.
 // TODO change nodes to type: set< ref_ptr< Node > >
                 std::set<osg::Node *> nodes; // node-sub-graph loaded in via osgDB readNodeFile
                 AnimationStatus status; // status of animation
@@ -101,6 +148,21 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 osg::ref_ptr<osg::Uniform> _colorsUni;
         };
 
+
+        class NodeA : public osg::Node
+        {
+            public:
+                virtual void accept(osg::NodeVisitor&);
+        };
+
+        class MTA : public osg::MatrixTransform
+        {
+            public:
+                virtual void accept(osg::NodeVisitor&);
+//                bool LLOD;
+                int LLOD;
+        };
+
         typedef struct {
             std::string name;
             int rack;
@@ -108,7 +170,35 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
             int height;
          } Hardware;
 
+		/***
+		 * Potential Particle System.
+	     */
+        typedef struct {
+//        osg::ref_ptr<osg::Vec3> _position;
+            // OR
+          double xPos, yPos, zPos;
+//        osg::ref_ptr<osg::Vec3> _color;
+            // OR
+          double red, green, blue;
+
+          double xMov, yMov, zMov;
+          double rDif, gDif, bDif;
+//          <OTHER FIELDS>
+        } SmokeParticle;
+
+        // ParticleContainer
+        SmokeParticle smokeContainer[PARTICLECOUNT];
+        osgParticle::ParticleSystem * _osgParticleSystem;
+        osgParticle::Particle * _pTemplate;
+
         // Menu Items
+        
+        /*** GreenLight Component Menus ***/
+        cvr::SceneObject * so;
+        cvr::MenuButton  * _customButton;
+        cvr::PopupMenu   * _myMenu;
+        /*** ENDGREENLIGHTCOMPONENTMENU ***/
+        
         cvr::SubMenu * _glMenu;
         cvr::MenuCheckbox * _showSceneCheckbox;
 
@@ -163,6 +253,9 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _hourTo;
         cvr::MenuList * _minuteTo;
 
+        cvr::MenuButton * _navigateToPluginButton;
+        cvr::MenuButton * _restorePreviousViewButton;
+
         // Entities
         Entity * _box;          // box/frame
         std::vector<Entity *> _door; // doors
@@ -184,6 +277,9 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         // Shaders
         osg::ref_ptr<osg::Program> _shaderProgram;
 
+        // Instance variables
+        bool osgEarthInit;
+
         // Functions
         bool loadScene();
         bool handleIntersection(osg::Node * iNode);
@@ -196,6 +292,17 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         osg::ref_ptr<osg::Geode> makeComponentGeode(float height, std::string textureFile = "");
         osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
         void createTimestampMenus();
+
+        /*** Initialize the particles ***/
+        void initParticles();
+        /*** Update the particles ***/
+        void updateParticles();
+        /*** Draw the particles? ***/
+        void drawParticles();
+
+        void closeMenu();
+
+        int _menuButton;
 };
 
 #endif
