@@ -17,6 +17,7 @@
 #include <osgDB/WriteFile>
 #include <osgDB/ReadFile>
 
+#include <osg/Version>
 #include <osgText/Text3D>
 #include <osgText/Text>
 #include <util/Intersection.h>
@@ -968,7 +969,10 @@ bool Sketch::processEvent(InteractionEvent * event)
                         text->setCharacterDepth(20);
                         text->setDrawMode(osgText::Text3D::TEXT);
                         text->setAxisAlignment(osgText::Text3D::XZ_PLANE);
+#if (OPENSCENEGRAPH_MAJOR_VERSION >= 3)
+			// AP - there is no setColor for Text3D in older osg versions
                         text->setColor(osg::Vec4(1,1,1,1));
+#endif
                         geode->addDrawable(text);
 
                         _modelpatScale->setPosition(_modelpatScale->getPosition() -
