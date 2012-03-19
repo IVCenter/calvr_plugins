@@ -13,11 +13,13 @@
 #include <kernel/SceneManager.h>
 #include <kernel/InteractionManager.h>
 #include <menu/MenuSystem.h>
+#include <input/TrackingManager.h>
 #include <util/LocalToWorldVisitor.h>
 
 #include <osg/CullFace>
 #include <osg/Matrix>
 #include <osg/ShapeDrawable>
+#include <osg/PolygonMode>
 #include <osgDB/ReadFile>
 
 #include <mxml.h>
@@ -89,8 +91,18 @@ bool ArtifactVis::init()
     geo = new osg::Geode();
     geo->addDrawable(sd);
 
-    _selectMark = new osg::MatrixTransform();
-    _selectMark->addChild(geo);
+    //_selectMark = new osg::MatrixTransform();
+    //_selectMark->addChild(geo);
+
+    for(int i = 0; i < PluginHelper::getNumHands(); i++)
+    {
+	_selectMarks.push_back(new osg::MatrixTransform());
+	// no need to mark the mouse, kind of a hack, should probably use scene objects
+	if(TrackingManager::instance()->getHandTrackerType(i) != TrackerBase::MOUSE)
+	{
+	    _selectMarks[i]->addChild(geo);
+	}
+    }
 
     MenuSystem::instance()->addMenuItem(_avMenu);
     SceneManager::instance()->getObjectsRoot()->addChild(_root);
@@ -126,7 +138,103 @@ ArtifactVis::~ArtifactVis()
 {
 }
 
-bool ArtifactVis::buttonEvent(int type, int button, int hand, const osg::Matrix & mat)
+bool ArtifactVis::processEvent(InteractionEvent * event)
+{
+    TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
+
+    if(tie)
+    {
+	if((tie->getInteraction() == BUTTON_DOWN || tie->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getButton() == 0)
+	{
+	    if(_selectArtifactCB->getValue() && _showSpheresCB->getValue())
+	    {
+		if(!_selectCB->getValue())
+		{
+		    osg::Matrix l2w = getLocalToWorldMatrix(_sphereRoot.get());
+		    osg::Matrix w2l = osg::Matrix::inverse(l2w);
+
+		    osg::Vec3 start(0,0,0);
+		    osg::Vec3 end(0,1000000,0);
+
+		    start = start * tie->getTransform() * w2l;
+		    end = end * tie->getTransform() * w2l;
+
+		    int index = -1;
+		    double distance;
+		    for(int i = 0; i < _artifacts.size(); i++)
+		    {
+			if(!_artifacts[i]->visible)
+			{
+			    continue;
+			}
+			osg::Vec3 num = (_artifacts[i]->modelPos - start) ^ (_artifacts[i]->modelPos - end);
+			osg::Vec3 denom = end - start;
+			double point2line = num.length() / denom.length();
+			if(point2line <= _sphereRadius)
+			{
+			    double point2start = (_artifacts[i]->modelPos - start).length2();
+			    if(index == -1 || point2start < distance)
+			    {
+				distance = point2start;
+				index = i;
+			    }
+			}
+		    }
+
+		    if(index != -1)
+		    {
+			//std::cerr << "Got sphere intersection with index " << index << std::endl;
+			setActiveArtifact(index);
+			return true;
+		    }
+		}
+	    }
+	    else if(_showSpheresCB->getValue() && _selectCB->getValue() && tie->getInteraction() == BUTTON_DOUBLE_CLICK)
+	    {
+		if(_selectActive && tie->getHand() != _selectHand)
+		{
+		    return false;
+		}
+		osg::Matrix l2w = getLocalToWorldMatrix(_sphereRoot.get());
+		osg::Matrix w2l = osg::Matrix::inverse(l2w);
+		if(!_selectActive)
+		{
+		    _selectStart = osg::Vec3(0,1000,0);
+		    _selectStart = _selectStart * tie->getTransform() * w2l;
+		    _selectActive = true;
+		    _selectHand = tie->getHand();
+		    for(int i = 0; i < PluginHelper::getNumHands(); i++)
+		    {
+			if(i == _selectHand)
+			{
+			    continue;
+			}
+			PluginHelper::getScene()->removeChild(_selectMarks[i]);
+		    }
+		}
+		else
+		{
+		    _selectCurrent = osg::Vec3(0,1000,0);
+		    _selectCurrent = _selectCurrent * tie->getTransform() * w2l;
+		    _selectActive = false;
+		    for(int i = 0; i < PluginHelper::getNumHands(); i++)
+		    {
+			if(i == _selectHand)
+			{
+			    continue;
+			}
+			PluginHelper::getScene()->addChild(_selectMarks[i]);
+		    }
+		}
+		return true;
+	    }
+	}
+    }
+
+    return false;
+}
+
+/*bool ArtifactVis::buttonEvent(int type, int button, int hand, const osg::Matrix & mat)
 {
     if((type == BUTTON_DOWN || type == BUTTON_DOUBLE_CLICK) && hand == 0 && button == 0)
     {
@@ -214,7 +322,7 @@ bool ArtifactVis::mouseButtonEvent(int type, int button, int x, int y, const osg
     }
 
     return false;
-}
+}*/
 
 void ArtifactVis::menuCallback(MenuItem* menuItem)
 {
@@ -377,10 +485,14 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
 	    _selectStart = osg::Vec3(0,0,0);
 	    _selectCurrent = osg::Vec3(0,0,0);
 	    _sphereRoot->addChild(_selectBox);
-	    if(PluginHelper::getNumHands())
+	    for(int i = 0; i < PluginHelper::getNumHands(); i++)
+	    {
+		PluginHelper::getScene()->addChild(_selectMarks[i]);
+	    }
+	    /*if(PluginHelper::getNumHands())
 	    {
 		PluginHelper::getScene()->addChild(_selectMark);
-	    }
+	    }*/
 	    _selectionStatsPanel->setVisible(true);
 	}
 	else
@@ -401,10 +513,14 @@ void ArtifactVis::menuCallback(MenuItem* menuItem)
 		}
 	    }
 	    _sphereRoot->removeChild(_selectBox);
-	    if(PluginHelper::getNumHands())
+	    for(int i = 0; i < PluginHelper::getNumHands(); i++)
+	    {
+		PluginHelper::getScene()->removeChild(_selectMarks[i]);
+	    }
+	    /*if(PluginHelper::getNumHands())
 	    {
 		PluginHelper::getScene()->removeChild(_selectMark);
-	    }
+	    }*/
 	    _selectionStatsPanel->setVisible(false);
 	}
 	_selectActive = false;
@@ -706,10 +822,10 @@ void ArtifactVis::displayArtifacts(Group * root_node)
     cerr << "Creating " << _artifacts.size() << " artifacts...";
     vector<Artifact*>::iterator item = _artifacts.begin();
 
-    Vec3f offset = Vec3f(
-        ConfigManager::getFloat("Plugin.ArtifactVis.Offset.X",0),
-        ConfigManager::getFloat("Plugin.ArtifactVis.Offset.Y",0),
-        ConfigManager::getFloat("Plugin.ArtifactVis.Offset.Z",0));
+    Vec3d offset = Vec3d(
+        ConfigManager::getDouble("Plugin.ArtifactVis.Offset.X",0),
+        ConfigManager::getDouble("Plugin.ArtifactVis.Offset.Y",0),
+        ConfigManager::getDouble("Plugin.ArtifactVis.Offset.Z",0));
 
     float tessellation = ConfigManager::getFloat("Plugin.ArtifactVis.Tessellation",.2);
 
@@ -720,7 +836,7 @@ void ArtifactVis::displayArtifacts(Group * root_node)
     for (int objCount = 0; item < _artifacts.end();item++)
     {
         //cerr<<"Creating object "<<++objCount<<" out of"<<artCount<<endl;
-        Vec3f position((*item)->pos[0], (*item)->pos[1], (*item)->pos[2]);
+        Vec3d position((*item)->pos[0], (*item)->pos[1], (*item)->pos[2]);
 
         Matrixd trans;
         trans.makeTranslate(position + offset);
@@ -742,7 +858,7 @@ void ArtifactVis::displayArtifacts(Group * root_node)
             index++;
         }
 	
-	osg::Vec3 pos = osg::Vec3(0,0,0) * mirror * trans * scale * mirror * rot2 * rot1;
+	osg::Vec3d pos = osg::Vec3d(0,0,0) * mirror * trans * scale * mirror * rot2 * rot1;
 
 	(*item)->modelPos = pos;
 
@@ -774,7 +890,7 @@ void ArtifactVis::displayArtifacts(Group * root_node)
     root_node->addChild(sphereGeode);
 }
 
-Drawable * ArtifactVis::createObject(int index, float tessellation, Vec3f & pos)
+Drawable * ArtifactVis::createObject(int index, float tessellation, Vec3d & pos)
 {
     //const double M_TO_MM = 1000.0f;
     //const double radius = 0.05f * M_TO_MM;
@@ -984,18 +1100,32 @@ void ArtifactVis::setupDCFilter()
 
 void ArtifactVis::updateSelect()
 {
-    osg::Vec3 markPos(0,1000,0);
-    markPos = markPos * PluginHelper::getHandMat();
-    osg::Matrix markTrans;
-    markTrans.makeTranslate(markPos);
-    _selectMark->setMatrix(markTrans);
+    if(_selectActive)
+    {
+	osg::Vec3 markPos(0,1000,0);
+	markPos = markPos * PluginHelper::getHandMat(_selectHand);
+	osg::Matrix markTrans;
+	markTrans.makeTranslate(markPos);
+	_selectMarks[_selectHand]->setMatrix(markTrans);
+    }
+    else
+    {
+	for(int i = 0; i < PluginHelper::getNumHands(); i++)
+	{
+	    osg::Vec3 markPos(0,1000,0);
+	    markPos = markPos * PluginHelper::getHandMat(i);
+	    osg::Matrix markTrans;
+	    markTrans.makeTranslate(markPos);
+	    _selectMarks[i]->setMatrix(markTrans);
+	}
+    }
 
     if(_selectActive)
     {
 	osg::Matrix l2w = getLocalToWorldMatrix(_sphereRoot.get());
 	osg::Matrix w2l = osg::Matrix::inverse(l2w);
 	_selectCurrent = osg::Vec3(0,1000,0);
-	_selectCurrent = _selectCurrent * PluginHelper::getHandMat() * w2l;
+	_selectCurrent = _selectCurrent * PluginHelper::getHandMat(_selectHand) * w2l;
     }
 
     if(_selectStart.length2() > 0)

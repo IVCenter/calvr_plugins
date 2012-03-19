@@ -33,7 +33,7 @@ class Artifact
     double pos[3];      ///< 3D location of artifact (northing, easting, elevation) in meters
     //osg::Node* geode;  ///< The actual object... when it is made.
     osg::Drawable * drawable;
-    osg::Vec3 modelPos;
+    osg::Vec3d modelPos;
     bool visible;
     bool selected;
     
@@ -53,8 +53,9 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
         virtual ~ArtifactVis();
 
 	bool init();
-        bool buttonEvent(int type, int button, int hand, const osg::Matrix & mat);
-        bool mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix & mat);
+        //bool buttonEvent(int type, int button, int hand, const osg::Matrix & mat);
+        bool processEvent(cvr::InteractionEvent * event);
+        //bool mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix & mat);
         void menuCallback(cvr::MenuItem * item);
         void preFrame();
 
@@ -104,18 +105,19 @@ class ArtifactVis : public cvr::MenuCallback, public cvr::CVRPlugin
         osg::ref_ptr<osg::MatrixTransform> _sphereRoot;
         osg::ref_ptr<osg::MatrixTransform> _siteRoot;
         osg::ref_ptr<osg::MatrixTransform> _selectBox;
-        osg::ref_ptr<osg::MatrixTransform> _selectMark;
+        std::vector<osg::ref_ptr<osg::MatrixTransform> > _selectMarks;
         //float _LODmaxRange;
         float _sphereRadius;
         int _activeArtifact;
         float _filterTime;
         bool _selectActive;
+        int _selectHand;
 
         void setActiveArtifact(int art);
         void readArtifactsFile(std::string);
         void listArtifacts();
         void displayArtifacts(osg::Group * root_node);
-        osg::Drawable* createObject(int index, float tessellation, osg::Vec3f & pos);
+        osg::Drawable* createObject(int index, float tessellation, osg::Vec3d & pos);
         void readSiteFile();
         void readLocusFile();
         void setupDCFilter();
