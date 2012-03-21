@@ -20,7 +20,10 @@ CVRPLUGIN(GreenLight)
 using namespace osg;
 using namespace std;
 using namespace cvr;
+
+#ifdef WITH_OSGEARTH
 using namespace osgEarth;
+#endif
 
 // Static Variables
 osg::ref_ptr<osg::Uniform> GreenLight::Component::_displayTexturesUni =
@@ -46,7 +49,7 @@ class SMA : public SceneManager {
 
     public:
         int grabProtectedMember1(){ return _menuDefaultOpenButton; }
-        int grabProtectedMember2(){ return _menuScale; }
+        float grabProtectedMember2(){ return _menuScale; }
 
 } sma;
 
@@ -236,12 +239,7 @@ bool GreenLight::init()
 {
     std::cerr << "GreenLight init()." << std::endl;
 
-    /*** OSG EARTH PLUGIN INITIALIZATION ***/
-    mapVariable = NULL; // doesn't seem neccessary.
-    osgEarth::MapNode* mapNode = MapNode::findMapNode( SceneManager::instance()->getObjectsRoot() ); 
-
     OsgE_MT = new MatrixTransform();
-    _glLOD  = new LOD();
 //    MinMaxPair mmp = pair<500, 5000>;
 //    scaleMT = new osg::MatrixTransform(); 
     scaleMT = new GreenLight::MTA();
@@ -250,6 +248,11 @@ bool GreenLight::init()
     scaleMT -> addChild (pluginMT);
 
 //  OsgE_MT->addChild( scaleMT );
+
+#ifdef WITH_OSGEARTH 
+    mapVariable = NULL; // doesn't seem neccessary.
+    osgEarth::MapNode* mapNode = MapNode::findMapNode( SceneManager::instance()->getObjectsRoot() );
+    _glLOD  = new LOD();
 
     if( mapNode )
     {
@@ -329,6 +332,7 @@ bool GreenLight::init()
         cvr::PluginHelper::getObjectsRoot()->addChild( OsgE_MT );
     }
     else
+#endif
     {
         // Execute Default Initialization.
         printf("Initializing GreenLight with default configuration...\n");

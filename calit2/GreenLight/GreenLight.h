@@ -26,6 +26,7 @@
 #include <osg/Texture2D>
 #include <osg/NodeVisitor>
 
+#ifdef WITH_OSGEARTH
 /*** OSG EARTH PLUGINS ***/
 
 #include <osgEarth/Map>
@@ -34,6 +35,8 @@
 #include <osgEarth/Utils>
 
 #include <osgEarth/ElevationQuery>
+
+#endif
 
 #include <osgDB/FileUtils>
 #include <osgDB/FileNameUtils>
@@ -82,8 +85,9 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 
         osg::LOD * _glLOD;
 
+#ifdef WITH_OSGEARTH
         osgEarth::Map * mapVariable;
-
+#endif
     protected:
 
         class Component; // forward declaration
