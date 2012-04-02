@@ -111,6 +111,10 @@ bool Sketch::init()
     _showLayoutCB->setCallback(this);
     _sketchMenu->addItem(_showLayoutCB);
 
+    _modelCB = new MenuCheckbox("Place Models", true);
+    _modelCB->setCallback(this);
+    _sketchMenu->addItem(_modelCB);
+
     _lineType = new MenuTextButtonSet(true, 400, 30, 3);
     _lineType->setCallback(this);
     _lineType->addButton("Segment");
@@ -490,7 +494,10 @@ void Sketch::menuCallback(MenuItem * item)
 
         cvr::MenuButton * button;
         std::string filename;
-        
+
+        size_t pos;
+        string sub;
+
         if (DIR *dir = opendir(_dataDir.c_str()))
         {
             while (struct dirent *entry = readdir(dir))
@@ -498,8 +505,13 @@ void Sketch::menuCallback(MenuItem * item)
                 filename = entry->d_name; 
                 if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, ".."))
                 {
-                    _loadFileList.push_back(filename);
+                    pos = filename.rfind(".");
+                    sub = filename.substr(pos + 1, filename.size() - pos);
 
+                    if (!strcmp(sub.c_str(), "osg"))
+                    {
+                        _loadFileList.push_back(filename);
+                    }
                 }
             }
             closedir(dir);
@@ -690,8 +702,11 @@ void Sketch::preFrame()
             
             if (!isMoving)
             {
-                if (_layoutList[i]->shape->containsPoint(point) ||
-                    _layoutList[i]->shape->containsPoint(hpoint))
+                //if (_layoutList[i]->shape->containsPoint(point) ||
+                //    _layoutList[i]->shape->containsPoint(hpoint))
+                if (_layoutList[i]->containsPoint(point) ||
+                    _layoutList[i]->containsPoint(hpoint))
+
                 {
                     if (!isShapeHighlight && _showLayoutCB->getValue())
                     {
@@ -868,6 +883,9 @@ bool Sketch::processEvent(InteractionEvent * event)
                     }
 
                     _pat->setPosition(_lastPoint);
+
+                    if (_modelCB->getValue())
+                    {
                     _modelpat->setPosition(_lastPoint);
                     _modelpatScale->setPosition(osg::Vec3(0,0, - _sizeRV->getValue() * 10));
                     
@@ -982,7 +1000,7 @@ bool Sketch::processEvent(InteractionEvent * event)
                     _modelCounter++;
                     _modelpatScale->addChild(_model);
                     _pat->addChild(_modelpatScale);
-
+                    }
                     return true;
                 }
             
@@ -1036,7 +1054,6 @@ bool Sketch::processEvent(InteractionEvent * event)
             {
                 if(_drawMode == SHAPE)
                 {
-
                     bool inLayout = false;
 
                     for (int i = 0; i < _layoutList.size(); ++i)
@@ -1044,7 +1061,7 @@ bool Sketch::processEvent(InteractionEvent * event)
                         if (_layoutList[i]->shape->containsPoint(point))
                         {
                             inLayout = true;
-                        //    point = _layoutList[i]->addChild(_pat);
+                         //  point = _layoutList[i]->addChild(_pat);
                             break;
                         }
                         else

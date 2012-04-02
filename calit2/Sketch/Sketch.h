@@ -88,6 +88,7 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
         cvr::MenuRangeValue * _tessellationsRV;
 
         cvr::MenuCheckbox * _freezeCB;
+        cvr::MenuCheckbox * _modelCB;
 
         cvr::MenuTextButtonSet * _lineType;
         cvr::MenuCheckbox * _lineTube;
