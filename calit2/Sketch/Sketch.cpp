@@ -55,11 +55,12 @@ bool Sketch::init()
 
     PluginHelper::addRootMenuItem(_sketchMenu);
 
-    _modeButtons = new MenuTextButtonSet(true, 450, 30, 3);
+    _modeButtons = new MenuTextButtonSet(true, 450, 30, 4);
     _modeButtons->setCallback(this);
     _modeButtons->addButton("Draw");
     _modeButtons->addButton("Select");
     _modeButtons->addButton("Move");
+    _modeButtons->addButton("Options");
     _sketchMenu->addItem(_modeButtons);
 
     _drawModeButtons = new MenuTextButtonSet(true, 450, 30, 4);
@@ -145,6 +146,16 @@ bool Sketch::init()
 
     _shapeWireframe = new MenuCheckbox("Wireframe", true);
     _shapeWireframe->setCallback(this);
+   
+    _highlightLabel = new MenuText("Highlight Options");
+    _transparentHLCB = new MenuCheckbox("Transparent", true);
+    _textHLCB = new MenuCheckbox("Text Labels", true);
+    _boldHLCB = new MenuCheckbox("Bolded", true);
+    _pulsatingHLCB = new MenuCheckbox("Pulsating", true);
+
+
+    _dialogPanel = new ScrollingDialogPanel(100, 20, 1, false, "Dialog Panel", "Plugin.Sketch.DialogInfo");
+    _dialogPanel->addText("This is text.");
 
 
     _mode = SELECT;
@@ -290,7 +301,6 @@ void Sketch::menuCallback(MenuItem * item)
 
     else if (item == _snapToGridCB)
     {
-        _snapToGrid = _snapToGridCB->getValue();
     }
 
     else if (item == _sizeRV)
@@ -725,7 +735,6 @@ void Sketch::preFrame()
 bool Sketch::processEvent(InteractionEvent * event)
 {
     TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
-
     if(!tie)
     {
         return false;
@@ -761,7 +770,7 @@ bool Sketch::processEvent(InteractionEvent * event)
             point = pos;
         }
 
-        if (_gridSize != 1) // for testing use gridsize = 1 as no snap
+        if (_snapToGridCB->getValue()) // for testing use gridsize = 1 as no snap
         {
             for (int i = 0; i < 3; ++i)
             {
@@ -770,7 +779,7 @@ bool Sketch::processEvent(InteractionEvent * event)
             }
         }
         osg::Vec3 distance = point - _lastPoint;
-        if (_gridSize != 1)
+        if (_snapToGridCB->getValue())
         {
             distance[0] = (int)distance[0];
             distance[1] = (int)distance[1];
@@ -886,120 +895,7 @@ bool Sketch::processEvent(InteractionEvent * event)
 
                     if (_modelCB->getValue())
                     {
-                    _modelpat->setPosition(_lastPoint);
-                    _modelpatScale->setPosition(osg::Vec3(0,0, - _sizeRV->getValue() * 10));
-                    
-                    // position adjusted forward in cylinder due to weirdness
-                    if (_st == 1)
-                    {
-                        _modelpatScale->setPosition(_modelpatScale->getPosition() +
-                            osg::Vec3(0, -_sizeRV->getValue() * _sizeScale / 2, 0));
-                    }
-
-                    
-                    int numIcons = 8;
-
-                    switch (_modelCounter % numIcons)
-                    {
-                    case 0:
-                        _model = osgDB::readNodeFile(_modelDir + "fileIcon.obj");
-
-                        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * _modelScale,
-                                                           _sizeRV->getValue() * _modelScale, 
-                                                           _sizeRV->getValue() * _modelScale));
-                       break;
-                    
-                    case 1:
-                        _model = osgDB::readNodeFile(_modelDir + "bicycleIcon.obj");
-
-                        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 11,
-                                                           _sizeRV->getValue() * 11, 
-                                                           _sizeRV->getValue() * 11));
-
-                        _modelpatScale->setAttitude(osg::Quat(M_PI/2, Vec3(0,0,1)));
-                        break;
-                    case 2:
-                        _model = osgDB::readNodeFile(_modelDir + "handIcon.obj");
-
-                        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 16,
-                                                           _sizeRV->getValue() * 16, 
-                                                           _sizeRV->getValue() * 16));
-
-                        _modelpatScale->setPosition(_modelpatScale->getPosition() -
-                             osg::Vec3(-_sizeRV->getValue() * 6, 0, _sizeRV->getValue() * 20));
-                        break;
-                    case 3:
-                        _model = osgDB::readNodeFile(_modelDir + "magnifyingIcon.obj");
-
-                        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 15,
-                                                           _sizeRV->getValue() * 15,
-                                                           _sizeRV->getValue() * 15));
-
-                        _modelpatScale->setPosition(_modelpatScale->getPosition() +
-                             osg::Vec3(-_sizeRV->getValue() * 10, 0, _sizeRV->getValue() * 25));
-
-                        _modelpatScale->setAttitude(osg::Quat(-M_PI/5, Vec3(0,1,0)));
-                        break;
-                    case 4: 
-                        _model = osgDB::readNodeFile(_modelDir + "birdIcon.obj");
-
-                        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 8,
-                                                           _sizeRV->getValue() * 8, 
-                                                           _sizeRV->getValue() * 8));
-
-                        _modelpatScale->setPosition(_modelpatScale->getPosition() -
-                             osg::Vec3(-_sizeRV->getValue() * 5, 0, _sizeRV->getValue() * 15));
-
-                        _modelpatScale->setAttitude(osg::Quat(M_PI/3, Vec3(0,0,1)));
-                        break;
-                    case 5:
-                        _model = osgDB::readNodeFile(_modelDir + "carIcon.obj");
-
-                        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 12,
-                                                           _sizeRV->getValue() * 12, 
-                                                           _sizeRV->getValue() * 12));
-
-                        _modelpatScale->setPosition(_modelpatScale->getPosition() -
-                             osg::Vec3(-_sizeRV->getValue() * 5, 0, _sizeRV->getValue() * 0));
-
-                        break;
-                    case 6:
-                        _model = osgDB::readNodeFile(_modelDir + "planeIcon.obj");
-
-                        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 9,
-                                                           _sizeRV->getValue() * 9, 
-                                                           _sizeRV->getValue() * 9));
-
-                        _modelpatScale->setPosition(_modelpatScale->getPosition() -
-                             osg::Vec3(_sizeRV->getValue() * 5, _sizeRV->getValue() * 5, _sizeRV->getValue() * 5));
-
-                        _modelpatScale->setAttitude(osg::Quat(M_PI/3,  Vec3(0,0,1), 
-                                                              M_PI/8,  Vec3(1,0,0), 
-                                                              0,       Vec3(0,1,0)));
-                        break;
-                    case 7:
-                        osgText::Text3D * text = new osgText::Text3D();
-                        osg::Geode * geode = new osg::Geode();
-                        text->setFont("/home/cehughes/data/arial.ttf");
-                        text->setText("Open");
-                        text->setCharacterSize(35);
-                        text->setCharacterDepth(20);
-                        text->setDrawMode(osgText::Text3D::TEXT);
-                        text->setAxisAlignment(osgText::Text3D::XZ_PLANE);
-                        text->setColor(osg::Vec4(1,1,1,1));
-                        geode->addDrawable(text);
-
-                        _modelpatScale->setPosition(_modelpatScale->getPosition() -
-                             osg::Vec3(45, 0,0));//_sizeRV->getValue() * 5, _sizeRV->getValue() * 5));
-
-                        _model = geode;
-
-                        break;
-                    }
-
-                    _modelCounter++;
-                    _modelpatScale->addChild(_model);
-                    _pat->addChild(_modelpatScale);
+                        _pat->addChild(getNextModel());
                     }
                     return true;
                 }
@@ -1287,6 +1183,13 @@ void Sketch::removeMenuItems(Mode dm)
 	    break;
     case MOVE:
         break;
+    case OPTIONS:
+        _sketchMenu->removeItem(_highlightLabel);
+        _sketchMenu->removeItem(_transparentHLCB);
+        _sketchMenu->removeItem(_textHLCB);
+        _sketchMenu->removeItem(_boldHLCB);
+        _sketchMenu->removeItem(_pulsatingHLCB);       
+        break;
 	default:
 	    break;
     }
@@ -1308,6 +1211,13 @@ void Sketch::addMenuItems(Mode dm)
     case SELECT:
         _sketchMenu->addItem(_selectAllButton);
         _sketchMenu->addItem(_clearSelectButton);
+        break;
+    case OPTIONS:
+        _sketchMenu->addItem(_highlightLabel);
+        _sketchMenu->addItem(_transparentHLCB);
+        _sketchMenu->addItem(_textHLCB);
+        _sketchMenu->addItem(_boldHLCB);
+        _sketchMenu->addItem(_pulsatingHLCB);
         break;
 	default:
 	    break;
@@ -1417,7 +1327,6 @@ void Sketch::createGeometry()
 
             default:
                 break;
-
         }
         break;
 
@@ -1463,4 +1372,122 @@ osg::Vec3 Sketch::getCurrentPoint()
     }
     
     return pos;
+}
+
+osg::PositionAttitudeTransform * Sketch::getNextModel()
+{
+    _modelpat->setPosition(_lastPoint);
+    _modelpatScale->setPosition(osg::Vec3(0,0, - _sizeRV->getValue() * 10));
+    
+    // position adjusted forward in cylinder due to the way cylinders are tessellated
+    if (_st == 1)
+    {
+        _modelpatScale->setPosition(_modelpatScale->getPosition() +
+            osg::Vec3(0, -_sizeRV->getValue() * _sizeScale / 2, 0));
+    }
+
+    
+    int numIcons = 8;
+
+    switch (_modelCounter % numIcons)
+    {
+    case 0:
+        _model = osgDB::readNodeFile(_modelDir + "fileIcon.obj");
+
+        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * _modelScale,
+                                           _sizeRV->getValue() * _modelScale, 
+                                           _sizeRV->getValue() * _modelScale));
+       break;
+    
+    case 1:
+        _model = osgDB::readNodeFile(_modelDir + "bicycleIcon.obj");
+
+        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 11,
+                                           _sizeRV->getValue() * 11, 
+                                           _sizeRV->getValue() * 11));
+
+        _modelpatScale->setAttitude(osg::Quat(M_PI/2, Vec3(0,0,1)));
+        break;
+    case 2:
+        _model = osgDB::readNodeFile(_modelDir + "handIcon.obj");
+
+        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 16,
+                                           _sizeRV->getValue() * 16, 
+                                           _sizeRV->getValue() * 16));
+
+        _modelpatScale->setPosition(_modelpatScale->getPosition() -
+             osg::Vec3(-_sizeRV->getValue() * 6, 0, _sizeRV->getValue() * 20));
+        break;
+    case 3:
+        _model = osgDB::readNodeFile(_modelDir + "magnifyingIcon.obj");
+
+        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 15,
+                                           _sizeRV->getValue() * 15,
+                                           _sizeRV->getValue() * 15));
+
+        _modelpatScale->setPosition(_modelpatScale->getPosition() +
+             osg::Vec3(-_sizeRV->getValue() * 10, 0, _sizeRV->getValue() * 25));
+
+        _modelpatScale->setAttitude(osg::Quat(-M_PI/5, Vec3(0,1,0)));
+        break;
+    case 4: 
+        _model = osgDB::readNodeFile(_modelDir + "birdIcon.obj");
+
+        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 8,
+                                           _sizeRV->getValue() * 8, 
+                                           _sizeRV->getValue() * 8));
+
+        _modelpatScale->setPosition(_modelpatScale->getPosition() -
+             osg::Vec3(-_sizeRV->getValue() * 5, 0, _sizeRV->getValue() * 15));
+
+        _modelpatScale->setAttitude(osg::Quat(M_PI/3, Vec3(0,0,1)));
+        break;
+    case 5:
+        _model = osgDB::readNodeFile(_modelDir + "carIcon.obj");
+
+        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 12,
+                                           _sizeRV->getValue() * 12, 
+                                           _sizeRV->getValue() * 12));
+
+        _modelpatScale->setPosition(_modelpatScale->getPosition() -
+             osg::Vec3(-_sizeRV->getValue() * 5, 0, _sizeRV->getValue() * 0));
+
+        break;
+    case 6:
+        _model = osgDB::readNodeFile(_modelDir + "planeIcon.obj");
+
+        _modelpatScale->setScale(osg::Vec3(_sizeRV->getValue() * 9,
+                                           _sizeRV->getValue() * 9, 
+                                           _sizeRV->getValue() * 9));
+
+        _modelpatScale->setPosition(_modelpatScale->getPosition() -
+             osg::Vec3(_sizeRV->getValue() * 5, _sizeRV->getValue() * 5, _sizeRV->getValue() * 5));
+
+        _modelpatScale->setAttitude(osg::Quat(M_PI/3,  Vec3(0,0,1), 
+                                              M_PI/8,  Vec3(1,0,0), 
+                                              0,       Vec3(0,1,0)));
+        break;
+    case 7:
+        osgText::Text3D * text = new osgText::Text3D();
+        osg::Geode * geode = new osg::Geode();
+        text->setFont("/home/cehughes/data/arial.ttf");
+        text->setText("Open");
+        text->setCharacterSize(35);
+        text->setCharacterDepth(20);
+        text->setDrawMode(osgText::Text3D::TEXT);
+        text->setAxisAlignment(osgText::Text3D::XZ_PLANE);
+        text->setColor(osg::Vec4(1,1,1,1));
+        geode->addDrawable(text);
+
+        _modelpatScale->setPosition(_modelpatScale->getPosition() -
+             osg::Vec3(45, 0,0));//_sizeRV->getValue() * 5, _sizeRV->getValue() * 5));
+
+        _model = geode;
+
+        break;
+    }
+
+    _modelCounter++;
+    _modelpatScale->addChild(_model);
+    return _modelpatScale; 
 }
