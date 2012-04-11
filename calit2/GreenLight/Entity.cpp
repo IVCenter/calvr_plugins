@@ -25,6 +25,9 @@ GreenLight::Component::Component(osg::Geode * geode, std::string componentName, 
     minWattage = 0;
     maxWattage = 0;
 
+    animating = false;
+    animationPosition = 0;
+
     _colors = new osg::Texture2D();
     _colors->setInternalFormat(GL_RGB32F_ARB);
     _colors->setFilter(osg::Texture::MIN_FILTER,osg::Texture::NEAREST);
@@ -189,13 +192,23 @@ void GreenLight::Component::setColor(std::list<osg::Vec3> colors)
     _data = new osg::Image;
     _data->allocateImage(colors.size(), 1, 1, GL_RGB, GL_FLOAT);  
 
-    int i;
+    int i = 0;
     std::list<osg::Vec3>::iterator cit;
     for (cit = colors.begin(), i = 0; cit != colors.end(); cit++, i++)
     {
-        for (int j = 0; j < 3; j++)
+        if ( !animating || animationPosition > (( i *100 ) / colors.size() ) )
         {
-            ((float *)_data->data(i))[j] = (*cit)[j];
+        // rgb probably..
+            for (int j = 0; j < 3; j++)
+            {
+
+                ((float *)_data->data(i))[j] = (*cit)[j];
+            }
+        }else{ // set to some default color.
+            for (int j = 0; j < 3; j++)
+            {
+                ((float *)_data->data(i))[j] = 0.7;
+            }
         }
     }
 

@@ -5,6 +5,10 @@
 #include <set>
 #include <vector>
 #include <string>
+#include <fstream>
+#include <iostream>
+#include <stdlib.h>
+#include <stdio.h>
 
 #include <config/ConfigManager.h>
 #include <kernel/SceneManager.h>
@@ -45,6 +49,7 @@
 
 #include <osgParticle/ParticleSystem>
 #include <osgParticle/Particle>
+#include <osg/PositionAttitudeTransform>
 /**************************/
 
 #include "Utility.h"
@@ -70,15 +75,15 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 
         bool keyboardEvent(int key, int type);
 
+        osg::MatrixTransform * InitSmoke();
+
         osg::ref_ptr<osg::MatrixTransform> OsgE_MT; // transform nodes of this entity
         osg::Matrixd output;
 
         osg::MatrixTransform * scaleMT;
         osg::MatrixTransform * pluginMT;
-//        osg::MTA * scaleMT;
         osg::Matrixd*      scaleMatrix; 
         osg::Vec3d*        scaleVector; 
-
 
         osg::LOD * _glLOD;
 
@@ -140,6 +145,11 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 
                 static osg::ref_ptr<osg::Uniform> _displayTexturesUni;
                 static osg::ref_ptr<osg::Uniform> _neverTextureUni;
+
+                // Variables for animation.
+                int animationPosition;
+                bool animating;
+                osg::Geode * animationMarker;
 
             protected:
                 osg::ref_ptr<osg::Texture2D> _colors;
@@ -292,6 +302,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         osg::ref_ptr<osg::Geode> makeComponentGeode(float height, std::string textureFile = "");
         osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
         void createTimestampMenus();
+
+        void animatePower();
 
         /*** Initialize the particles ***/
         void initParticles();

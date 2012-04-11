@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iostream>
 #include <stdlib.h>
+#include <string.h>
 
 #include <kernel/ComController.h>
 #include <kernel/InteractionManager.h>
@@ -32,44 +33,21 @@ Matrixd previousViewMatrix; // TODO: move this to .h file;
 double  previousViewScale;
 bool savedMatrix = false;
 bool SOCM = false; // TOGGLE for Custom Menu.
+bool debug = false;
 
 float range = 64;
 
 // TODO move this to green light and allow it to disable functionality.
-int lodLevel = -1;//false;
-osg::MatrixTransform * secondDegreeMT;// = new GreenLight::MTA();
-/***
- * Accessor of a Scenemanager to get specific popup menu members.
- *
- */
-class SMA : public SceneManager {
-
-    public:
-        int grabProtectedMember1(){ return _menuDefaultOpenButton; }
-        int grabProtectedMember2(){ return _menuScale; }
-
-} sma;
+int lodLevel = -1;
+osg::MatrixTransform * secondDegreeMT;
 
 class LODA : public LOD {
     public:
         typedef LOD super;
-    // Wrapper to toggle activity based on active child?
-    //
+     // Wrapper to toggle activity based on active child?
         void traverse(NodeVisitor& nv){
-//          super::traverse(nv);
         }
 } loda;
-
-
-void GreenLight::NodeA::accept(NodeVisitor& nv){
-//    printf("check or call accept of lowestLOD\n");
-    if (nv.validNodeMask(*this)) 
-    {
-        nv.pushOntoNodePath(this);
-        nv.apply(*this);
-        nv.popFromNodePath();
-    }
-}
 
 void GreenLight::MTA::accept(NodeVisitor& nv){
     if (nv.validNodeMask(*this)) 
@@ -84,40 +62,103 @@ void GreenLight::MTA::accept(NodeVisitor& nv){
     }
 }
 
+template <class T>
+bool from_string(T& t, 
+                 const std::string& s, 
+                 std::ios_base& (*f)(std::ios_base&))
+{
+  std::istringstream iss(s);
+  return !(iss >> f >> t).fail();
+}
+
+float configScale = 1000; // should not need to set this.
+float configLoc[16];
+void testConfigRead( int m )
+{
+    /***
+     * TODO: move this functionality into a different file.
+     */
+	string line;
+	ifstream myfile;
+	myfile.open ("GreenLight.config");
+    int i = 0;
+    int mode = 0;
+	if (myfile.is_open())
+	{
+		while ( myfile.good() )
+		{
+            getline(myfile, line);
+			cout << line << endl;
+            char *cp = (char *) line.c_str();
+            cp = strtok (cp, "\t, ");
+            while ( cp != NULL )
+            {
+//    			cout << cp << endl;
+                if ( m == 1 )
+                {
+
+                    if ( cp[0] == 'm' || cp[0] == 'd' || cp [0] == 's' )
+                    {
+                       if ( mode !=  (int) cp[0] )
+                       {
+                           i = 0;
+                           mode = (int) cp[0];
+                       }
+                    }
+                    float f;
+                    if ( from_string<float>(f, cp , dec) )
+                    {
+                       cout << "found float: " <<  f << endl;
+                       if (mode == 'm')
+                       {
+                           configLoc[i] = f;
+                           i++;
+                       }
+                       if (mode == 's')
+                           configScale = f;
+
+                    }
+                }
+                cp = strtok (NULL, "\t, ");
+            }
+		}
+		myfile.close();
+	}else
+	{
+		cout << "Unable to open file.\n";
+	}
+
+}
+
+
 /***
  * Called when Navigate To Plugin button is clicked.
  * Sets Matrix and Scale to be in front of the Green Light Plugin using
  * hardcoded values.
  */
 void zoom(){
+	// Used in Navigate to Previous View, for debugging purposes...
     if (savedMatrix == false){
       previousViewMatrix = SceneManager::instance()->getObjectTransform()->getMatrix(); 
       previousViewScale = SceneManager::instance()-> getObjectScale();
       savedMatrix = true;
     }
 
-            double xScale = 342.677490;
-            Matrixd xMatrix = Matrixd(
-            // Values gained from logging (keyboard event 'l')
-            //
-/*         
-      0.890503,	 0.247582,	 -0.381720,	 0.000000,
-	 -0.454463,	 0.523984,	 -0.720350,	 0.000000,
-	 0.021670,	 0.814951,	 0.579125,	 0.000000,
-	 -19185177.449566,	 102954049.534328,	 -2181004421.189106,	 1.000000
-*/
+    testConfigRead(1);    
 
+            double xScale = configScale;
+            Matrixd xMatrix = Matrixd(
+         // Values gained from logging (keyboard event 'l')
+              configLoc[0], configLoc[1], configLoc[2], configLoc[3],
+              configLoc[4], configLoc[5], configLoc[6], configLoc[7],
+              configLoc[8], configLoc[9], configLoc[10],configLoc[11],
+              configLoc[12],configLoc[13],configLoc[14],configLoc[15]
+          /*
               0.875374,   0.271526,   -0.399995,  0.000000,
              -0.483186,  0.464147,   -0.742360,  0.000000,
              -0.015913,  0.843115,   0.537499,   0.000000,
              -34501329.462374,   -7890269.618077,    -2183230472.145897,     1.000000
-/*
-        // Camera Position Based off original object position.
-             0.894261,    0.247156,    -0.373112,   0.000000,
-             -0.446530,   0.548915,    -0.706614,   0.000000,
-             0.030163,    0.798503,    0.601235,    0.000000,
-             -13083652.887404,    162726828.747752,    -2177405384.833411,  1.000000
-*/
+          */
             );
 
             SceneManager::instance()->setObjectMatrix(xMatrix);
@@ -136,8 +177,8 @@ GreenLight::GreenLight()
 {
     std::cerr << "GreenLight created." << std::endl;
     osgEarthInit = false;
-    sma = *(SMA *) SceneManager::instance();
-    _menuButton = sma.grabProtectedMember1();
+//    sma = *(SMA *) SceneManager::instance();
+//    _menuButton = sma.grabProtectedMember1();
                 //(SceneManager::instance()->_menuDefaultOpenButton);
 }
 
@@ -242,18 +283,12 @@ bool GreenLight::init()
 
     OsgE_MT = new MatrixTransform();
     _glLOD  = new LOD();
-//    MinMaxPair mmp = pair<500, 5000>;
-//    scaleMT = new osg::MatrixTransform(); 
     scaleMT = new GreenLight::MTA();
     pluginMT = new osg::MatrixTransform();
 
     scaleMT -> addChild (pluginMT);
-
-//  OsgE_MT->addChild( scaleMT );
-
     if( mapNode )
     {
-        _glLOD -> addChild( scaleMT );
         OsgE_MT -> addChild(_glLOD);
         printf("Attached First LOD \"Box\" \n");
 
@@ -276,7 +311,8 @@ bool GreenLight::init()
         bool ret = query.getElevation(osg::Vec3d( lon, lat, 0),
         mapVariable->getProfile()->getSRS(), height, query_resolution, &out_resolution);
 
-        mapVariable->getProfile()->getSRS()->getEllipsoid()->computeLocalToWorldTransformFromLatLongHeight(
+        mapVariable->getProfile()->getSRS()->getEllipsoid()->
+        computeLocalToWorldTransformFromLatLongHeight(
             DegreesToRadians(lat),
             DegreesToRadians(lon),
             height,
@@ -300,7 +336,6 @@ bool GreenLight::init()
         geode->addDrawable(shape);
         lodShapeHeightOffset->addChild(geode);
         gMT->addChild( lodShapeHeightOffset );
-//        lodShapeHeightOffset->addChild( geode );
 
         secondDegreeMT = new GreenLight::MTA();
         secondDegreeMT -> addChild(pluginMT);
@@ -322,11 +357,7 @@ bool GreenLight::init()
         scaleVector = new osg::Vec3d( scaleVal, scaleVal, scaleVal );
 
         scaleMatrix->makeScale( *scaleVector );
-//        scaleMT->setMatrix( *scaleMatrix );
         pluginMT->setMatrix( *scaleMatrix );
-
-//        mapNode->addChild( OsgE_MT );
-        cvr::PluginHelper::getObjectsRoot()->addChild( OsgE_MT );
     }
     else
     {
@@ -335,21 +366,19 @@ bool GreenLight::init()
         osgEarthInit = false;
 
         OsgE_MT -> addChild(scaleMT);
-        cvr::PluginHelper::getObjectsRoot()->addChild( OsgE_MT );
 
         lodLevel = 0;
     }
 
+    cvr::PluginHelper::getObjectsRoot()->addChild( OsgE_MT );
 
     /*** Things for Context Menus.. ***/
-    /******/
                          // name, tag(?), closable
     _myMenu = new PopupMenu("GreenLight", "", false);
 
     _customButton = new MenuButton("Custom Button");
     _customButton->setCallback(this);
     _myMenu -> addMenuItem(_customButton);
-    
     /***************************************/
 
 
@@ -424,24 +453,11 @@ bool GreenLight::init()
     _wandOver = NULL;
     /*** End Defaults ***/
 
-    return true;
 }
 
 void GreenLight::menuCallback(cvr::MenuItem * item)
 {
     std::set< cvr::MenuCheckbox * >::iterator chit;
-
-/*
-    if(locInit.find(models[i]->name) != locInit.end())
-    {
-        osg::Matrix scale;
-        scale.makeScale(osg::Vec3(locInit[models[i]->name].first,locInit[models[i]->name].first,
-        locInit[models[i]->name].first));
-        so->setTransform(scale * locInit[models[i]->name].second);
-    };
-*/
-
-    /*** END: Things for Context Menus.. ***/
 
     if (item == _showSceneCheckbox)
     {
@@ -488,12 +504,11 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
 
         if (_showSceneCheckbox->getValue())
         {
-//            scaleMT -> addChild( _box -> transform );
             pluginMT -> addChild( _box -> transform );
+//            pluginMT -> addChild( InitSmoke() );
         }
         else
         {
-//            scaleMT -> removeChild( _box -> transform );
             pluginMT -> removeChild( _box -> transform );
         }
     }
@@ -541,7 +556,7 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
         Component::_displayTexturesUni->dirty();
     }
     else if (item == _loadPowerButton)
-    {
+    {   // The button is named... "Load Recent Data"
         std::string selectedNames = "";
 
         /***
@@ -698,7 +713,8 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
     else if (item == _navigateToPluginButton) // Do Navigate to Plugin location on OsgEarth.
     {
         zoom();
-    }else if (item == _restorePreviousViewButton)
+    }
+    else if (item == _restorePreviousViewButton)
     {
         restoreView();
     }
@@ -859,13 +875,20 @@ void GreenLight::preFrame()
         for (int r = 0; r < _rack.size(); r++)
             _rack[r]->handleAnimation();
 
-
-//        if (cvr::ComController::instance()->isMaster())
         if( lodLevel == 0 ){
-            handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver, cvr::ComController::instance()->isMaster());
-//        else
-            handleHoverOver(cvr::PluginHelper::getHandMat(), _wandOver, !cvr::ComController::instance()->isMaster());
+		    if ( debug )
+			{
+            	handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver,
+                                cvr::ComController::instance()->isMaster());
+			}else{
+	            handleHoverOver(cvr::PluginHelper::getHandMat(), _wandOver,
+				                cvr::ComController::instance()->isMaster());
+//              !cvr::ComController::instance()->isMaster());
+			}
         }
+
+        animatePower();
+
     }
 
 
@@ -881,7 +904,8 @@ bool GreenLight::keyboardEvent(int key , int type )
 
     char c = key;
 
-    if ( (osgEarthInit && _showSceneCheckbox->getValue()) || c == 'l' ){
+    if ( (osgEarthInit && _showSceneCheckbox->getValue()) )// || c == 'l' )
+    {
       if( type == KEY_DOWN )
       {   
           osg::Vec3d v3d = scaleMT->getMatrix().getScale();
@@ -897,7 +921,6 @@ bool GreenLight::keyboardEvent(int key , int type )
 
           }else if( c == 'g' )  // scaleUp
           {
-//            v3d *= 1.5; //2;
               range *= 8;
               _glLOD->setRange(0, 0, range);
               _glLOD->setRange(1, range, range * 4);
@@ -905,7 +928,6 @@ bool GreenLight::keyboardEvent(int key , int type )
               printf("range is: %f \n", range);
           }else if( c == 's' )  // scaleDown
           {
-//            v3d *= .75; //.5;
               range /= 8;
               _glLOD->setRange(0, 0, range);
               _glLOD->setRange(1, range, range * 4);
@@ -942,9 +964,17 @@ bool GreenLight::keyboardEvent(int key , int type )
             scaleMatrix->makeScale( v3d );
             scaleMT->setMatrix( *scaleMatrix );
           }
-        }
-        return true;
       }
+      return true;
+    }else
+    {
+        if( c == 'l' ) // log.
+        {
+            testConfigRead(1);
+        }
+
+    }
+
     return false;
 }
 
@@ -975,78 +1005,22 @@ bool GreenLight::processEvent(cvr::InteractionEvent * event)
         }
     }
 
-    if ( lodLevel == 0 )
-    {
-    // cast to TrackedButtonEvent.
     cvr::TrackedButtonInteractionEvent * tie = (TrackedButtonInteractionEvent *) ie;
 
-    
-      if (SOCM)
-      {
-        if ( tie->getButton() == _menuButton )
-        {
-        if(tie->getInteraction() == BUTTON_DOWN)
-        {
-            if( !_myMenu->isVisible() )
-            {
-              /***
-               * TODO: Look into incorporating the check, to make it so menu
-               *       only shows up when hover over a component box.
-               */
-                if (_wandOver){
-                    Component * comp = _wandOver->asComponent();
-                    if (comp)
-                    {
-//                      selectComponent( comp, !comp->selected );
-                        cout << "on a component." << endl;
-                    } else
-                    {
-                        cout << "on a rack/door/other." << endl;
-                    }
-                }
-              
-                _myMenu->setVisible(true);
-            
-                osg::Vec3 start(0,0,0), end(0,1000,0);
-                start = start * tie->getTransform();
-                end = end * tie->getTransform();
-                
-                // Insert PositionInformation stuff here?
-                Vec3 menuPoint(0, 1000.0, 0);
-                menuPoint = menuPoint * tie->getTransform();
-
-                Matrix m;
-                m.makeTranslate(menuPoint);
-                _myMenu->setTransform( m );
-    
-                _myMenu->setScale( sma.grabProtectedMember2() );
-//                                SceneManager::instance()->_menuScale);
-//              SceneManager::instance()->setMenuOpenObject(this);  //#
-            }else
-            {
-                _myMenu->setVisible(false); // #
-//              SceneManager::instance()->closeOpenObjectMenu();  //#
-            }
-          }
-        }
-      }
-
-
-      // ???
-      if (tie->getInteraction() != cvr::BUTTON_DOWN || tie->getButton() != 0 || tie->getHand() != 0 )
+    if (tie->getInteraction() != cvr::BUTTON_DOWN || tie->getButton() != 0 ||
+        tie->getHand() != 0 )
         return false;
 
-      // if box is still not loaded?
-      if (!_box)
+    // if box is still not loaded?
+    if (!_box)
         return false;
 
-      // Should be hovering over it
-      if (_wandOver)
-      {
+    // Should be hovering over it
+    if (_wandOver)
+    {
         Component * comp = _wandOver->asComponent();
         if (comp)
         {
-            cout << "on a component." << endl;
             selectComponent( comp, !comp->selected );
         }
         else // _wandOver is a rack/door/etc.
@@ -1062,7 +1036,6 @@ bool GreenLight::processEvent(cvr::InteractionEvent * event)
         }
 
         return true;
-      }
     }
     return false;
 }
