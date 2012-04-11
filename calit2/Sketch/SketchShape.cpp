@@ -216,7 +216,7 @@ void SketchShape::setPat(osg::PositionAttitudeTransform **pat)
 
     osg::Geode* textGeode = new osg::Geode();
     float centerAdjust = text->getFontWidth() * str.length() / 10;
-    _textPat->setPosition(osg::Vec3(-centerAdjust, 0, 60));
+    _textPat->setPosition(osg::Vec3(-centerAdjust, 0, 6 * _size/10));
 
     textGeode->addDrawable(text);
     _textPat->addChild(textGeode);
@@ -235,6 +235,11 @@ SketchShape::~SketchShape() {}
 void SketchShape::setFont(std::string font)
 {
     text->setFont(font);
+}
+
+void SketchShape::setModelPat(osg::PositionAttitudeTransform * pat)
+{
+    _modelPat = pat; 
 }
 
 
@@ -311,31 +316,38 @@ void SketchShape::setSize(float size)
     {
          case 0: // BOX
             drawBox();
+            _highlightDrawable = new osg::ShapeDrawable(new osg::Box(
+                osg::Vec3(0,0,0), _size * .95));
             break;
-
+        
+        case 5:
+        case 6:
         case 1: // CYLINDER
             drawCylinder();
+            _highlightDrawable = new osg::ShapeDrawable(new osg::Cylinder(
+                osg::Vec3(0,0,0), _size * .5 * .95, _size * .95));
             break;
 
         case 2: // CONE
             drawCone();
+            _highlightDrawable = new osg::ShapeDrawable(new osg::Cone(
+                osg::Vec3(0,0,0), _size * .5 * .95, _size * .95));
            break;
 
         case 3: // SPHERE
             drawSphere();
+            _highlightDrawable = new osg::ShapeDrawable(new osg::Sphere(
+                osg::Vec3(0,0,0), _size * .5 * .95));
             break; 
 
         case 4: // TORUS 
             drawTorus(_size * 1.5, _size * .5);
+            _torusHLShape = new SketchShape(_type, false, 
+              osg::Vec4(0,1,0,.2), 12, _size);
+//            hlDrawable = _torusHLShape->getDrawable();
+
             break; 
 
-        case 5: // Horizontal Cylinder 
-            drawCylinder();
-            break; 
-
-        case 6: // Vertical Cylinder 
-            drawCylinder();
-            break; 
     }
 }
 
@@ -460,7 +472,7 @@ bool SketchShape::containsPoint(const osg::Vec3 point)
         return false;
     }
 
-    // TODO: proper intersection testing esp. for torus, cylinder
+    // TODO: proper intersection testing for torus, cylinder
 
     _pat->dirtyBound();
     return _pat->getBound().contains(point);
@@ -484,11 +496,6 @@ void SketchShape::resizeTorus(float majorRad, float minorRad)
     }
 }
 
-
-void pulsate()
-{
-
-}
 
 void SketchShape::drawBox()
 {

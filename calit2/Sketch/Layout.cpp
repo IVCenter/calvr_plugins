@@ -4,7 +4,7 @@
 
 Layout::Layout() {}
 
-// if cylinder, majorRad = radius, minorRad = height
+// if cylinder, R = radius, r = height
 Layout::Layout(LayoutType type, float majorRadius, float minorRadius)
 {
     R = majorRadius;
@@ -144,4 +144,47 @@ void Layout::scaleMinorRadius(float s)
     shape->resizeTorus(R, r);
     positionChildren();
     scaleMin = s;
+}
+
+bool Layout::containsPoint(osg::Vec3 point)
+{
+    // R = radius, r = length
+    
+/*    if (_type == 2) // Vertical 
+    {
+        osg::Vec3 bottom(center - osg::Vec3(0, 0, r));
+        osg::Vec3 top(center + osg::Vec3(0, 0, r));
+
+        osg::Vec3 d = top - bottom;
+        osg::Vec3 pd(point - bottom);
+
+        float dot = pd * d;
+
+        if (dot < 0 || dot > pow(r, 2))
+        {
+            return false;
+        }
+        else
+        {
+            float dsq = (pd * pd) - ((dot * dot) / pow(r, 2));
+            if (dsq > pow(R, 2))
+            {
+                return false;
+            }
+            else
+            {
+                std::cout << "contains" << std::endl;
+                return true;
+            }
+        } 
+    }
+    else if (_type == 4) // Vertical
+    {
+        osg::Vec3 bottom(center - osg::Vec3(0, 0, R));
+        osg::Vec3 top(center + osg::Vec3(0, 0, R));
+    }*/
+
+    return shape->containsPoint(point);
+
+
 }

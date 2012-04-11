@@ -1,0 +1,12 @@
+DataDir - path to save and load location
+ModelDir - path to directory of model files, looks for:
+	handIcon.obj  handIcon.mtl
+	carIcon.obj  car2Icon.mtl
+	planeIcon.obj  planeIcon.mtl
+	bicycleIcon.obj  bicycleIcon.mtl
+	magnifyingIcon.obj  magnifyingIcon.mtl
+	birdIcon.obj  birdIcon.mtl
+	fileIcon.obj  fileIcon.mtl
+
+GridSize - a positive integer for grid snapping, 1 for off
+OrientToViewer - on or off, controlls rotation of shapes to face viewer

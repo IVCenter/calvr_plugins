@@ -1,0 +1,22 @@
+SET(LIB_NAME AppSwitcher)
+SET(PLUGIN_HEADERS
+    ArtifactHack.h
+    planesite.h
+)
+
+ADD_LIBRARY(${LIB_NAME}
+    "SHARED"
+    ${PLUGIN_HEADERS}
+    ArtifactHack.cpp
+    PointCloud.cpp
+    Plane.cpp
+    planesite.cpp
+)
+
+FIND_PACKAGE(OsgEarth)
+
+INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${OSG_LIBRARIES})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${OSGEARTH_LIBRARY})
+
+INSTALL(TARGETS ${LIB_NAME} DESTINATION lib/plugins)
