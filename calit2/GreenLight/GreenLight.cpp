@@ -78,56 +78,26 @@ void testConfigRead( int m )
     /***
      * TODO: move this functionality into a different file.
      */
-	string line;
-	ifstream myfile;
-	myfile.open ("GreenLight.config");
-    int i = 0;
-    int mode = 0;
-	if (myfile.is_open())
-	{
-		while ( myfile.good() )
-		{
-            getline(myfile, line);
-			cout << line << endl;
-            char *cp = (char *) line.c_str();
-            cp = strtok (cp, "\t, ");
-            while ( cp != NULL )
-            {
-//    			cout << cp << endl;
-                if ( m == 1 )
-                {
+    float defaultLoc[16] = {
+                        	0.875374,0.271526,-0.399995,0.000000 
+                        	-0.483186,0.464147,-0.742360,0.000000
+                        	-0.015913,0.843115,0.537499,0.000000,
+                        	-34501329.462374,-7890269.618077,-2183230472.145897,1.000000
+                           };
 
-                    if ( cp[0] == 'm' || cp[0] == 'd' || cp [0] == 's' )
-                    {
-                       if ( mode !=  (int) cp[0] )
-                       {
-                           i = 0;
-                           mode = (int) cp[0];
-                       }
-                    }
-                    float f;
-                    if ( from_string<float>(f, cp , dec) )
-                    {
-                       cout << "found float: " <<  f << endl;
-                       if (mode == 'm')
-                       {
-                           configLoc[i] = f;
-                           i++;
-                       }
-                       if (mode == 's')
-                           configScale = f;
+    configScale =  cvr::ConfigManager::getFloat("scale","Plugin.GreenLight.OsgCoord", 342.677490, NULL);
+    for(int i = 0; i < 16; i++)
+    {
+        string p = "point";
 
-                    }
-                }
-                cp = strtok (NULL, "\t, ");
-            }
-		}
-		myfile.close();
-	}else
-	{
-		cout << "Unable to open file.\n";
-	}
+        char numString[10];
 
+        sprintf(numString, "%d", i);
+        configLoc[i] = cvr::ConfigManager::getFloat(
+                         strcat( (char*) p.c_str(), numString ),
+                         "Plugin.GreenLight.OsgCoord", defaultLoc[i], NULL);
+
+    }
 }
 
 
@@ -153,12 +123,6 @@ void zoom(){
               configLoc[4], configLoc[5], configLoc[6], configLoc[7],
               configLoc[8], configLoc[9], configLoc[10],configLoc[11],
               configLoc[12],configLoc[13],configLoc[14],configLoc[15]
-          /*
-              0.875374,   0.271526,   -0.399995,  0.000000,
-             -0.483186,  0.464147,   -0.742360,  0.000000,
-             -0.015913,  0.843115,   0.537499,   0.000000,
-             -34501329.462374,   -7890269.618077,    -2183230472.145897,     1.000000
-          */
             );
 
             SceneManager::instance()->setObjectMatrix(xMatrix);
