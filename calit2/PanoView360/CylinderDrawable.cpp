@@ -15,6 +15,10 @@ CylinderDrawable::~CylinderDrawable()
 {
 }
 
+CylinderDrawable::CylinderDrawable(const CylinderDrawable& cd,const osg::CopyOp& copyop) : PanoDrawable(cd,copyop)
+{
+}
+
 void CylinderDrawable::drawShape(PanoDrawable::eye eye,int context) const
 {
     float radsPerTile = (2.0 * PI * (viewangleh / 360.0)) / ((float)cols);

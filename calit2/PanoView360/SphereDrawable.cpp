@@ -15,6 +15,10 @@ SphereDrawable::~SphereDrawable()
 {
 }
 
+SphereDrawable::SphereDrawable(const SphereDrawable& sd,const osg::CopyOp& copyop) : PanoDrawable(sd,copyop)
+{
+}
+
 void SphereDrawable::drawShape(PanoDrawable::eye eye, int context) const
 {
     float radsPerTileH = (viewangleh * (M_PI / 180.0f)) / ((float)cols);
