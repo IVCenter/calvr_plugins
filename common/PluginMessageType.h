@@ -10,6 +10,8 @@
 
 #include <osg/MatrixTransform>
 
+#include <string>
+
 // PathRecorder
 enum PathRecorderMessageType
 {
@@ -49,6 +51,36 @@ struct OsgEarthRequest
     float height;
     char pluginName[4096];
     osg::MatrixTransform* trans;
+};
+
+enum PointsMessageType
+{
+    POINTS_LOAD_REQUEST=0
+};
+
+struct PointsLoadInfo
+{
+    std::string file;
+    osg::ref_ptr<osg::Group> group;
+};
+
+enum PanoViewLODMessageType
+{
+    PAN_LOAD_REQUEST=0
+};
+
+struct PanLoadRequest
+{
+    std::string name;
+    float rotationOffset;
+    std::string plugin;
+    int pluginMessageType;
+    bool loaded;
+};
+
+enum PointsWithPanMessageType
+{
+    PWP_PAN_UNLOADED=0
 };
 
 #endif

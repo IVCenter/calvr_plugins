@@ -1,3 +1,5 @@
+#include <PluginMessageType.h>
+
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -33,10 +35,22 @@ Points::Points() : FileLoadCallback("xyz,ply,xyb")
 
 }
 
-
 bool Points::loadFile(std::string filename)
 {
+    if(!group->getNumParents())
+    {
+	SceneManager::instance()->getObjectsRoot()->addChild(group);
+    }
+    return loadFile(filename, group);
+}
+
+bool Points::loadFile(std::string filename, osg::Group * grp)
+{
  
+  if(!grp)
+  {
+      return false;
+  }
   cerr << "Loading points" << endl; 
 
 
@@ -94,7 +108,7 @@ bool Points::loadFile(std::string filename)
             
 	    // make sure bound is correct and add to group
   	    geode->dirtyBound();
-	    group->addChild(geode);
+	    grp->addChild(geode);
 	}
   }
   else
@@ -139,7 +153,7 @@ bool Points::loadFile(std::string filename)
   	geode->dirtyBound();
   
 	// attach graph to group
-  	group->addChild(geode); 
+  	grp->addChild(geode);
   }
 
   cerr << "Initalization finished\n" << endl;
@@ -246,7 +260,7 @@ bool Points::init()
   pgm1->setParameter( GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP );
 
   // attach group node
-  SceneManager::instance()->getObjectsRoot()->addChild(group);
+  //SceneManager::instance()->getObjectsRoot()->addChild(group);
 
   return true;
 }
@@ -261,4 +275,23 @@ void Points::preFrame()
 {
   if( objectScale != NULL )
     objectScale->set(PluginHelper::getObjectScale());
+}
+
+void Points::message(int type, char *&data, bool collaborative)
+{
+    if(type == POINTS_LOAD_REQUEST)
+    {
+	if(collaborative)
+	{
+	    return;
+	}
+
+	PointsLoadInfo * pli = (PointsLoadInfo*) data;
+	if(!pli->group)
+	{
+	    return;
+	}
+
+	loadFile(pli->file,pli->group.get());
+    }
 }
