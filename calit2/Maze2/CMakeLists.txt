@@ -11,6 +11,7 @@ SET(PLUGIN_HEADERS
 	EOGClient/BallHandler.h
 	EOGClient/CaliFieldHandler.h
 	EOGClient/Playback.h
+        Audio/OSCPack.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -28,10 +29,13 @@ ADD_LIBRARY(${LIB_NAME}
 	EOGClient/CalibrationController.cpp
 	EOGClient/BallHandler.cpp
 	EOGClient/CaliFieldHandler.cpp
+        Audio/OSCPack.cpp
 )
 
 INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})
 TARGET_LINK_LIBRARIES(${LIB_NAME} ${OSG_LIBRARIES})
+
+ADD_CALVR_LIBRARIES(${LIB_NAME})
 
 INSTALL(TARGETS ${LIB_NAME} DESTINATION lib/plugins)
 

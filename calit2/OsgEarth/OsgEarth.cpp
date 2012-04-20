@@ -1,13 +1,13 @@
 #include "OsgEarth.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/SceneManager.h>
-#include <kernel/PluginManager.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/ComController.h>
-#include <kernel/Navigation.h>
-#include <kernel/InteractionManager.h>
-#include <menu/MenuSystem.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/PluginManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/ComController.h>
+#include <cvrKernel/Navigation.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrMenu/MenuSystem.h>
 #include <PluginMessageType.h>
 #include <iostream>
 

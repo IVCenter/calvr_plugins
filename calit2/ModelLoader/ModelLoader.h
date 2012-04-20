@@ -1,11 +1,11 @@
 #ifndef _MODELLOADER_
 #define _MODELLOADER_
 
-#include <kernel/CVRPlugin.h>
-#include <kernel/FileHandler.h>
-#include <kernel/SceneObject.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuButton.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrKernel/FileHandler.h>
+#include <cvrKernel/SceneObject.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuButton.h>
 
 #include <osg/MatrixTransform>
 

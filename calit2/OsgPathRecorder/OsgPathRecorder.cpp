@@ -1,8 +1,8 @@
 #include "OsgPathRecorder.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/PluginManager.h>
+#include <cvrconfig/ConfigManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/PluginManager.h>
 
 #include <PluginMessageType.h>
 

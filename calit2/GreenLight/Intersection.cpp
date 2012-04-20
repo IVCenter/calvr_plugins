@@ -2,8 +2,8 @@
 
 #include <iostream>
 
-#include <kernel/PluginHelper.h>
-#include <kernel/InteractionManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/InteractionManager.h>
 
 void GreenLight::doHoverOver(Entity *& last, Entity * current, bool showHover)
 {

@@ -9,13 +9,13 @@
 #include <sstream>
 
 // Calvr:
-#include <config/ConfigManager.h>
-#include <kernel/CVRPlugin.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/ScreenBase.h>
-#include <kernel/SceneManager.h>
-#include <kernel/Navigation.h>
-#include <kernel/ComController.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/ScreenBase.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/Navigation.h>
+#include <cvrKernel/ComController.h>
 
 // OSG:
 #include <osg/Node>

@@ -1,13 +1,13 @@
 #include "SMV2Settings.h"
 
 #include <iostream>
-#include <input/TrackingManager.h>
-#include <config/ConfigManager.h>
-#include <kernel/InteractionManager.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/ScreenConfig.h>
-#include <kernel/ScreenMVZones.h>
-#include <menu/MenuSystem.h>
+#include <cvrInput/TrackingManager.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/ScreenConfig.h>
+#include <cvrKernel/ScreenMVZones.h>
+#include <cvrMenu/MenuSystem.h>
 
 #include <osg/ShapeDrawable>
 

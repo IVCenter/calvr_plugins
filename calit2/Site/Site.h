@@ -14,19 +14,19 @@
 #include <osg/Sequence>
 #include <osg/Vec3>
 
-#include <kernel/CVRPlugin.h>
-#include <kernel/FileHandler.h>
-#include <kernel/ScreenBase.h>
-#include <kernel/SceneManager.h>
-#include <kernel/Navigation.h>
-#include <kernel/ComController.h>
-#include <config/ConfigManager.h>
-#include <kernel/PluginHelper.h>
-#include <menu/MenuSystem.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuButton.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuRangeValue.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrKernel/FileHandler.h>
+#include <cvrKernel/ScreenBase.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/Navigation.h>
+#include <cvrKernel/ComController.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrMenu/MenuSystem.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuRangeValue.h>
 
 
 

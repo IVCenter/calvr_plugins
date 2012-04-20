@@ -20,14 +20,14 @@ using std::string;
 #include <osg/PositionAttitudeTransform>
 using namespace osg;
 
-#include <config/ConfigManager.h>
+#include <cvrConfig/ConfigManager.h>
 
 #include <osgEarth/Map>
 #include <osgEarth/MapNode>
 
-#include <util/LocalToWorldVisitor.h>
-#include <kernel/SceneManager.h>
-#include <menu/SubMenu.h>
+#include <cvrUtil/LocalToWorldVisitor.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrMenu/SubMenu.h>
 using namespace cvr;
 
 CVRPLUGIN(ArtifactHack)

@@ -1,11 +1,11 @@
 #ifndef _OSGEARTH_
 #define _OSGEARTH_
 
-#include <kernel/CVRPlugin.h>
-#include <kernel/InteractionManager.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuButton.h>
-#include <menu/MenuCheckbox.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuCheckbox.h>
 
 #include <osgEarth/Map>
 #include <osgEarth/MapNode>

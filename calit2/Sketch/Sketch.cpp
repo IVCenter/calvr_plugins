@@ -4,11 +4,11 @@
 #include "SketchShape.h"
 #include "Layout.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/InteractionManager.h>
-#include <kernel/SceneManager.h>
-#include <kernel/SceneObject.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/SceneObject.h>
 
 #include <osg/ShapeDrawable>
 #include <osg/Material>
@@ -20,7 +20,7 @@
 #include <osg/Version>
 #include <osgText/Text3D>
 #include <osgText/Text>
-#include <util/Intersection.h>
+#include <cvrUtil/Intersection.h>
 
 #include <iostream>
 #include <dirent.h>

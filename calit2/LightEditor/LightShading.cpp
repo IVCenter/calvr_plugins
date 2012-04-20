@@ -1,8 +1,8 @@
 #include <osgDB/FileUtils>
 #include <osg/BlendEquation>
 
-#include <config/ConfigManager.h>
-#include <kernel/PluginHelper.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/PluginHelper.h>
 
 #include <stdio.h>
 #include <math.h>

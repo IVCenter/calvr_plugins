@@ -1,9 +1,9 @@
 #include "LocationTracker.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/SceneManager.h>
-#include <kernel/PluginManager.h>
-#include <menu/MenuSystem.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/PluginManager.h>
+#include <cvrMenu/MenuSystem.h>
 #include <PluginMessageType.h>
 #include <iostream>
 

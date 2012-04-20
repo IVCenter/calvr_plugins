@@ -1,7 +1,7 @@
 #ifndef PLUGIN_POINTS_OBJECT_H
 #define PLUGIN_POINTS_OBJECT_H
 
-#include <kernel/SceneObject.h>
+#include <cvrKernel/SceneObject.h>
 
 #include <osg/Node>
 

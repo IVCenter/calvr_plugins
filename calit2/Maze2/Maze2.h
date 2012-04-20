@@ -22,18 +22,18 @@
 #include <osgDB/ReadFile>
 
 // CalVR menu system
-#include <menu/SubMenu.h>
-#include <menu/MenuButton.h>
-#include <menu/MenuRangeValue.h>
-#include <menu/MenuCheckbox.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuRangeValue.h>
+#include <cvrMenu/MenuCheckbox.h>
 
 // CalVR plugin support
-#include <config/ConfigManager.h>
-#include <kernel/ComController.h>
-#include <kernel/CVRPlugin.h>
-#include <kernel/InteractionEvent.h>
-#include <kernel/SceneManager.h>
-#include <kernel/PluginHelper.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/ComController.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrKernel/InteractionEvent.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/PluginHelper.h>
 
 // local
 #include "MazeModelHandler.h"

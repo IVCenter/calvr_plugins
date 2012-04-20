@@ -8,14 +8,14 @@
 #include "SketchShape.h"
 #include "Layout.h"
 
-#include <kernel/CVRPlugin.h>
-#include <kernel/FileHandler.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrKernel/FileHandler.h>
 
-#include <menu/SubMenu.h>
-#include <menu/MenuTextButtonSet.h>
-#include <menu/MenuRangeValue.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuButton.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuTextButtonSet.h>
+#include <cvrMenu/MenuRangeValue.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuButton.h>
 
 #include <osg/Geode>
 #include <osg/MatrixTransform>

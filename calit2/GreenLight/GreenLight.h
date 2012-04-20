@@ -6,19 +6,19 @@
 #include <vector>
 #include <string>
 
-#include <config/ConfigManager.h>
-#include <kernel/SceneManager.h>
-#include <kernel/SceneObject.h>
-#include <kernel/CVRPlugin.h>
-#include <menu/MenuButton.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuImage.h>
-#include <menu/MenuList.h>
-#include <menu/MenuText.h>
-#include <menu/DialogPanel.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuSystem.h>
-#include <menu/PopupMenu.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/SceneObject.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuImage.h>
+#include <cvrMenu/MenuList.h>
+#include <cvrMenu/MenuText.h>
+#include <cvrMenu/DialogPanel.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuSystem.h>
+#include <cvrMenu/PopupMenu.h>
 
 #include <osg/AnimationPath>
 #include <osg/MatrixTransform>

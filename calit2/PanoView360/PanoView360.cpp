@@ -1,8 +1,8 @@
 #include "PanoView360.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/NodeMask.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/NodeMask.h>
 
 #include <mxml.h>
 

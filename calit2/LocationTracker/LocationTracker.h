@@ -1,9 +1,9 @@
 #ifndef _LOCATIONTRACKER_
 #define _LOCATIONTRACKER_
 
-#include <kernel/CVRPlugin.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuButton.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuButton.h>
 
 #include <osgDB/FileUtils>
 #include <osgDB/FileNameUtils>

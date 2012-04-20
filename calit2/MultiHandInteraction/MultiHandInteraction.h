@@ -1,5 +1,5 @@
-#include <kernel/CVRPlugin.h>
-#include <kernel/Navigation.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrKernel/Navigation.h>
 
 #include <iostream>
 

@@ -1,10 +1,10 @@
 #include "PanoDrawable.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/ScreenConfig.h>
-#include <kernel/ScreenBase.h>
-#include <kernel/ComController.h>
-#include <kernel/NodeMask.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/ScreenConfig.h>
+#include <cvrKernel/ScreenBase.h>
+#include <cvrKernel/ComController.h>
+#include <cvrKernel/NodeMask.h>
 
 #include <osgDB/ReadFile>
 

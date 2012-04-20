@@ -3,11 +3,11 @@
 
 #include "PanoDrawableLOD.h"
 
-#include <kernel/SceneObject.h>
-#include <menu/MenuButton.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuRangeValue.h>
-#include <menu/MenuCheckbox.h>
+#include <cvrKernel/SceneObject.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuRangeValue.h>
+#include <cvrMenu/MenuCheckbox.h>
 
 #include <string>
 

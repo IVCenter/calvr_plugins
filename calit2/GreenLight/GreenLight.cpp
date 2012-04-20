@@ -9,9 +9,9 @@
 #include <iostream>
 #include <stdlib.h>
 
-#include <kernel/ComController.h>
-#include <kernel/InteractionManager.h>
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/ComController.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/PluginHelper.h>
 
 #include <osgDB/ReadFile>
 

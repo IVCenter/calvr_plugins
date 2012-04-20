@@ -1,8 +1,8 @@
 #include "AnimationManager.h"
 #include "Timing.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/CVRViewer.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/CVRViewer.h>
 #include <sstream>
 
 #include <sys/syscall.h>

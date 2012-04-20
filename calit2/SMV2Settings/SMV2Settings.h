@@ -1,13 +1,13 @@
 #ifndef SMV2SETTINGS
 #define SMV2SETTINGS
 
-#include <kernel/CVRPlugin.h>
-#include <kernel/ScreenMVSimulator.h>
-#include <menu/MenuButton.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuRangeValue.h>
-#include <menu/PopupMenu.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrKernel/ScreenMVSimulator.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuRangeValue.h>
+#include <cvrMenu/PopupMenu.h>
 
 class SMV2Settings : public cvr::CVRPlugin, public cvr::MenuCallback
 {

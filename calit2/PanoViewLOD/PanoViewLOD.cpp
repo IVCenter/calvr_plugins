@@ -1,8 +1,8 @@
 #include "PanoViewLOD.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/NodeMask.h>
-#include <kernel/PluginHelper.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/NodeMask.h>
+#include <cvrKernel/PluginHelper.h>
 #include <PluginMessageType.h>
 
 #include <iostream>

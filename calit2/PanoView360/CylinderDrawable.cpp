@@ -1,6 +1,6 @@
 #include "CylinderDrawable.h"
 
-#include <kernel/ScreenConfig.h>
+#include <cvrKernel/ScreenConfig.h>
 
 using namespace osg;
 using namespace std;

@@ -1,9 +1,9 @@
 #include "DumpTracking.h"
 
 #include <cstdio>
-#include <kernel/PluginHelper.h>
-#include <kernel/ComController.h>
-#include <config/ConfigManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/ComController.h>
+#include <cvrConfig/ConfigManager.h>
 #include <string>
 
 CVRPLUGIN(DumpTracking)

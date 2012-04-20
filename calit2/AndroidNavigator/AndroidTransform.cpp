@@ -3,7 +3,7 @@
 #define PORT 8888
 
 #include <stdio.h>
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/PluginHelper.h>
 #include <osg/Vec4>
 #include <osg/Vec3>
 #include <osg/Quat>

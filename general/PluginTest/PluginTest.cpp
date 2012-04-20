@@ -4,13 +4,13 @@
 #include <osgDB/WriteFile>
 
 #include <iostream>
-#include <menu/MenuSystem.h>
-#include <menu/SubMenu.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/ComController.h>
-#include <kernel/InteractionManager.h>
-#include <kernel/ThreadedLoader.h>
-#include <kernel/SceneManager.h>
+#include <cvrMenu/MenuSystem.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/ComController.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/ThreadedLoader.h>
+#include <cvrKernel/SceneManager.h>
 
 #include <osgDB/ReadFile>
 

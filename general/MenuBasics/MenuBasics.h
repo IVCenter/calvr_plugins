@@ -1,10 +1,10 @@
 #ifndef CALVR_MENU_BASICS
 #define CALVR_MENU_BASICS
 
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuButton.h>
-#include <menu/MenuRangeValueCompact.h>
-#include <kernel/CVRPlugin.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuRangeValueCompact.h>
+#include <cvrKernel/CVRPlugin.h>
 
 class MenuBasics : public cvr::CVRPlugin, public cvr::MenuCallback
 {
