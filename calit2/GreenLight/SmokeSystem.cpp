@@ -1,5 +1,14 @@
 #define ANIM_VIRTUAL_SPHERE_NUM_SAMPS 30
 
+
+#include "GreenLight.h"
+
+//CVRPLUGIN(GreenLight)
+
+#include <stdio.h>
+#include <string.h>
+#include <kernel/PluginHelper.h>
+
 #include <osgParticle/Particle>
 #include <osgParticle/ParticleSystem>
 #include <osgParticle/ParticleSystemUpdater>
@@ -9,11 +18,8 @@
 #include <osgParticle/SectorPlacer>
 #include <osgParticle/RadialShooter>
 #include <osgParticle/AccelOperator>
-
-#include <stdio.h>
-#include <string.h>
-
-#include "GreenLight.h"
+#include <osgParticle/MultiSegmentPlacer>
+#include <osgParticle/FluidFrictionOperator>
 
 
 using namespace osg;
@@ -23,76 +29,93 @@ MatrixTransform * GreenLight::InitSmoke()
 {
     cout << "initializing smoke" << endl;
 
-    MatrixTransform *psTrans = new MatrixTransform;
-    MatrixTransform *psGreenflameTrans = new MatrixTransform;
-    PositionAttitudeTransform* psRotTrans = new PositionAttitudeTransform;
-
-    psRotTrans->addChild(psGreenflameTrans);
-
-    AnimationPath* animationPathRot = new AnimationPath;
-    animationPathRot->setLoopMode(AnimationPath::LOOP);
-
-    Quat rotation;
-    float step = 1.f / ANIM_VIRTUAL_SPHERE_NUM_SAMPS;
-    for (int i = 0; i < ANIM_VIRTUAL_SPHERE_NUM_SAMPS; i++)
+    float pc[12];
+    for ( int i = 0; i < 12; i++)
     {
-    	float val = i * step;
-    	rotation = Quat(M_PI * 2 * val , Vec3(0, 0, 1));
-    	animationPathRot->insert(val, AnimationPath::ControlPoint(Vec3(), Quat(), Vec3(1, 1, 1)));
+        string p = "p";
+        char numString[10];
+
+        sprintf(numString, "%d", i);
+
+        pc[i] = cvr::ConfigManager::getFloat( strcat( (char*) p.c_str(), numString),
+                            "Plugin.GreenLight.ParticleTest", 0.0, NULL);
     }
-    psRotTrans->setUpdateCallback(new AnimationPathCallback(animationPathRot, 0.0, 100.0));
 
-    osgParticle::Particle ptemplate1;
-    ptemplate1.setLifeTime(2);
-    ptemplate1.setShape(osgParticle::Particle::QUAD);
-    ptemplate1.setSizeRange(osgParticle::rangef(0.f, 48.f));
-    ptemplate1.setAlphaRange(osgParticle::rangef(0.4f, 0.6f));
-    ptemplate1.setColorRange(osgParticle::rangev4(Vec4(0.2, 0.2, 0.2, 1.0), Vec4(0.2, 0.2, 0.2, 1.0)));
-    ptemplate1.setRadius(0.5f);
-    ptemplate1.setMass(0.05f);
+    osg::Geode * testGeode = new osg::Geode;
+    osg::ShapeDrawable * testShape = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0,0,0),5,5,5));
+    osg::MatrixTransform * test_MT = new MatrixTransform;
+    testGeode->addDrawable(testShape);
+    osg::Vec3 testVector = osg::Vec3(pc[9],pc[10],pc[11]);
+    osg::Matrixd testMatrix;
+    testMatrix.makeScale(testVector);
+    test_MT->setMatrix(testMatrix);
+    test_MT->addChild(testGeode);
+    cvr::PluginHelper::getObjectsRoot()->addChild( test_MT );
 
-    osgParticle::ParticleSystem *ps1 = new osgParticle::ParticleSystem;
-    char particleTextureLocation[] = "/home/atarng/CALIT2/calvr_plugins/calit2/GreenLight";
-    ps1->setDefaultAttributes( strcat(particleTextureLocation, "test-Particle.png"), true, false );
-    ps1->setDefaultParticleTemplate(ptemplate1);
+    // Creates/Initializes ParticleSystem.
+    // Sets Attributes of texture, emissive, and lighting.
+    _osgParticleSystem = new osgParticle::ParticleSystem;
+    _osgParticleSystem->setDefaultAttributes( "test-Particle.png", false, false );
 
-    osgParticle::ModularEmitter *emitter1 = new osgParticle::ModularEmitter;
+    // PS is derived from Drawable, therefore we can create and add it as a child.
+    osg::Geode * _particleGeode = new osg::Geode;
+    cvr::PluginHelper::getObjectsRoot()->addChild( _particleGeode );
+    _particleGeode->addDrawable( _osgParticleSystem );
+
+    // adds an updater for per-frame management
+    osgParticle::ParticleSystemUpdater * _osgPSUpdater = new osgParticle::ParticleSystemUpdater;
+    _osgPSUpdater->addParticleSystem(_osgParticleSystem);
+    cvr::PluginHelper::getObjectsRoot()->addChild( _osgPSUpdater );
+
+    // Creates a particle to be used by the Particle System and define a few of its props.
+    _pTemplate.setSizeRange(osgParticle::rangef(pc[0],pc[1])); // meters
+    _pTemplate.setLifeTime(pc[2]);                             // seconds
+    _pTemplate.setMass(pc[3]);                                 // kg
+    _osgParticleSystem->setDefaultParticleTemplate(_pTemplate);
+
+    /////////////////////////////////////
+
+    // Creates a modular Emitter (has default counter, place and shooter.)
+    osgParticle::ModularEmitter * emitter = new osgParticle::ModularEmitter;
+    emitter->setParticleSystem(_osgParticleSystem);
+
+    // rate at which new particles spawn
+    osgParticle::RandomRateCounter * pRate =
+        static_cast<osgParticle::RandomRateCounter *>(emitter->getCounter());
+    pRate->setRateRange(pc[4],pc[5]);
+
+    // customizes placer?
+    osgParticle::MultiSegmentPlacer * lineSegment = new osgParticle::MultiSegmentPlacer();
+    lineSegment->addVertex(0,0,-2);
+    lineSegment->addVertex(0,-2,-2);
+    lineSegment->addVertex(0,-16,0);
+    emitter->setPlacer(lineSegment);
+
+    // creates and initializes radial shooter.
+    osgParticle::RadialShooter* smokeShooter = new osgParticle::RadialShooter();
+    smokeShooter->setThetaRange(0.0, 3.14159/2); // radians relative to z axis.
+    smokeShooter->setInitialSpeedRange(pc[6],pc[7]);  // meters/seconds.
+    emitter->setShooter(smokeShooter);
+
+    /////////////////////////////////////////////
     
-    osgParticle::RandomRateCounter *counter1 = new osgParticle::RandomRateCounter;
-    counter1->setRateRange(800, 1200);
-    emitter1->setCounter(counter1);
+    test_MT->addChild(emitter);
 
-    osgParticle::SectorPlacer *placer1 = new osgParticle::SectorPlacer;
-    placer1->setCenter(0, 0, -0.2);
-    placer1->setRadiusRange(0.1, 0.28);
-    placer1->setPhiRange(0, 2 * osg::PI);
-    emitter1->setPlacer(placer1);
+    //////////////////////////////////////////////
 
-    osgParticle::RadialShooter *shooter1 = new osgParticle::RadialShooter;
-    shooter1->setInitialSpeedRange(0, 0.1);
-    emitter1->setShooter(shooter1);
+    osgParticle::ModularProgram * MPP = new osgParticle ::ModularProgram;
+    MPP->setParticleSystem(_osgParticleSystem);
 
-    osgParticle::ModularProgram *program1 = new osgParticle::ModularProgram;
+    osgParticle::AccelOperator * accelUp = new osgParticle::AccelOperator;
+    accelUp->setToGravity(pc[8]);
+    MPP->addOperator(accelUp);
 
-    osgParticle::AccelOperator *op1 = new osgParticle::AccelOperator;
-    op1->setAcceleration(Vec3(0, 0, 0.0002));
-    program1->addOperator(op1);
+    osgParticle::FluidFrictionOperator * airFriction = new osgParticle::FluidFrictionOperator;
+    airFriction->setFluidToAir();
+    MPP->addOperator(airFriction);
 
+    cvr::PluginHelper::getObjectsRoot()->addChild( MPP );
+    /***************************************/
 
-    Geode *geode1 = new osg::Geode;
-
-    osgParticle::ParticleSystemUpdater *psu1 = new osgParticle::ParticleSystemUpdater;
- 
-    emitter1->setParticleSystem(ps1);
-    program1->setParticleSystem(ps1);
-    psu1->addParticleSystem(ps1);
-    geode1->addDrawable(ps1);
-
-    psGreenflameTrans->addChild(emitter1);
-    psGreenflameTrans->addChild(program1);
-    psGreenflameTrans->addChild(psu1);
-    psGreenflameTrans->addChild(geode1);
-
-//    dsEmitterList->push_back(emitter1);
-    return psTrans;
+    return test_MT; // probably unneccesary...
 }

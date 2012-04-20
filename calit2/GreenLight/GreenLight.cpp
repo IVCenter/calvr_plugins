@@ -16,7 +16,11 @@
 
 #include <osgDB/ReadFile>
 
+
 CVRPLUGIN(GreenLight)
+
+//#define LOD_RANGE  64
+float LOD_RANGE = 64;
 
 using namespace osg;
 using namespace std;
@@ -29,32 +33,21 @@ osg::ref_ptr<osg::Uniform> GreenLight::Component::_displayTexturesUni =
 osg::ref_ptr<osg::Uniform> GreenLight::Component::_neverTextureUni =
                                          new osg::Uniform("showTexture",false);
 
+int GreenLight::lodLevel = -1;
+
+// Used in Zoom function
 Matrixd previousViewMatrix; // TODO: move this to .h file;
 double  previousViewScale;
 bool savedMatrix = false;
-bool SOCM = false; // TOGGLE for Custom Menu.
-bool debug = false;
 
-float range = 64;
-
-// TODO move this to green light and allow it to disable functionality.
-int lodLevel = -1;
-osg::MatrixTransform * secondDegreeMT;
-
-class LODA : public LOD {
-    public:
-        typedef LOD super;
-     // Wrapper to toggle activity based on active child?
-        void traverse(NodeVisitor& nv){
-        }
-} loda;
+bool developmentMode = false;
 
 void GreenLight::MTA::accept(NodeVisitor& nv){
     if (nv.validNodeMask(*this)) 
     {
         if ( nv.getTraversalMode() == nv.TRAVERSE_ACTIVE_CHILDREN )
         {
-            lodLevel = LLOD;
+            lodLevel = LLOD; //Level of LOD.
         }
         nv.pushOntoNodePath(this);
         nv.apply(*this);
@@ -62,21 +55,15 @@ void GreenLight::MTA::accept(NodeVisitor& nv){
     }
 }
 
-template <class T>
-bool from_string(T& t, 
-                 const std::string& s, 
-                 std::ios_base& (*f)(std::ios_base&))
-{
-  std::istringstream iss(s);
-  return !(iss >> f >> t).fail();
-}
-
 float configScale = 1000; // should not need to set this.
 float configLoc[16];
-void testConfigRead( int m )
+void readConfigurationFile( )
 {
     /***
      * TODO: move this functionality into a different file.
+     *
+     * Set these default locations in your myCalvr.xml or put in your own.
+     * scale is: 342.677490
      */
     float defaultLoc[16] = {
                         	0.875374,0.271526,-0.399995,0.000000 
@@ -85,7 +72,12 @@ void testConfigRead( int m )
                         	-34501329.462374,-7890269.618077,-2183230472.145897,1.000000
                            };
 
-    configScale =  cvr::ConfigManager::getFloat("scale","Plugin.GreenLight.OsgCoord", 342.677490, NULL);
+    developmentMode = cvr::ConfigManager::getBool("testValue",
+                      "Plugin.GreenLight.OsgCoord", false, NULL);
+
+    configScale =  cvr::ConfigManager::getFloat("scale",
+                   "Plugin.GreenLight.OsgCoord", 342.677490, NULL);
+
     for(int i = 0; i < 16; i++)
     {
         string p = "point";
@@ -113,9 +105,6 @@ void zoom(){
       previousViewScale = SceneManager::instance()-> getObjectScale();
       savedMatrix = true;
     }
-
-    testConfigRead(1);    
-
             double xScale = configScale;
             Matrixd xMatrix = Matrixd(
          // Values gained from logging (keyboard event 'l')
@@ -139,11 +128,9 @@ void restoreView(){
 
 GreenLight::GreenLight()
 {
+
     std::cerr << "GreenLight created." << std::endl;
     osgEarthInit = false;
-//    sma = *(SMA *) SceneManager::instance();
-//    _menuButton = sma.grabProtectedMember1();
-                //(SceneManager::instance()->_menuDefaultOpenButton);
 }
 
 GreenLight::~GreenLight()
@@ -158,7 +145,7 @@ GreenLight::~GreenLight()
     if (_navigateToPluginButton) delete _navigateToPluginButton;
     if (_restorePreviousViewButton) delete _restorePreviousViewButton;
 
-//    if (scaleMT) delete scaleMT; // can't delete... protected?
+//  if (scaleMT) delete scaleMT; // can't delete... protected?
     if (scaleMatrix) delete scaleMatrix;
     if (scaleVector) delete scaleVector;
 
@@ -240,6 +227,8 @@ GreenLight::~GreenLight()
 bool GreenLight::init()
 {
     std::cerr << "GreenLight init()." << std::endl;
+    
+    readConfigurationFile();
 
     /*** OSG EARTH PLUGIN INITIALIZATION ***/
     mapVariable = NULL; // doesn't seem neccessary.
@@ -310,9 +299,9 @@ bool GreenLight::init()
         _glLOD -> addChild( gMT );
         ((MTA *)gMT)->LLOD = 2;
 
-        _glLOD->setRange(0, 0, range);
-        _glLOD->setRange(1, range, range * 4);
-        _glLOD->setRange(2, range * 4, range * 1024);
+        _glLOD->setRange(0, 0, LOD_RANGE );
+        _glLOD->setRange(1, LOD_RANGE, LOD_RANGE * 4);
+        _glLOD->setRange(2, LOD_RANGE * 4, LOD_RANGE * 1024);
         printf("Attached Second LOD \"Box\" \n");
 
         scaleMatrix = new osg::Matrixd();
@@ -336,15 +325,9 @@ bool GreenLight::init()
 
     cvr::PluginHelper::getObjectsRoot()->addChild( OsgE_MT );
 
-    /*** Things for Context Menus.. ***/
-                         // name, tag(?), closable
-    _myMenu = new PopupMenu("GreenLight", "", false);
-
-    _customButton = new MenuButton("Custom Button");
-    _customButton->setCallback(this);
-    _myMenu -> addMenuItem(_customButton);
-    /***************************************/
-
+    /********************** PARTICLE SYSTEM INIT ********************************/
+    InitSmoke();
+    /********************** END: PARTICLE SYSTEM INIT ***************************/
 
     /*** Menu Setup ***/
     _glMenu = new cvr::SubMenu("GreenLight","GreenLight");
@@ -840,7 +823,7 @@ void GreenLight::preFrame()
             _rack[r]->handleAnimation();
 
         if( lodLevel == 0 ){
-		    if ( debug )
+		    if ( developmentMode )
 			{
             	handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver,
                                 cvr::ComController::instance()->isMaster());
@@ -885,18 +868,18 @@ bool GreenLight::keyboardEvent(int key , int type )
 
           }else if( c == 'g' )  // scaleUp
           {
-              range *= 8;
-              _glLOD->setRange(0, 0, range);
-              _glLOD->setRange(1, range, range * 4);
-              _glLOD->setRange(2, range * 4, range * 1024);
-              printf("range is: %f \n", range);
+              LOD_RANGE *= 8;
+              _glLOD->setRange(0, 0, LOD_RANGE);
+              _glLOD->setRange(1, LOD_RANGE, LOD_RANGE * 4);
+              _glLOD->setRange(2, LOD_RANGE * 4, LOD_RANGE * 1024);
+              printf("LOD_RANGE is: %f \n", LOD_RANGE);
           }else if( c == 's' )  // scaleDown
           {
-              range /= 8;
-              _glLOD->setRange(0, 0, range);
-              _glLOD->setRange(1, range, range * 4);
-              _glLOD->setRange(2, range * 4, range * 1024);
-              printf("range is: %f \n", range);
+              LOD_RANGE /= 8;
+              _glLOD->setRange(0, 0, LOD_RANGE);
+              _glLOD->setRange(1, LOD_RANGE, LOD_RANGE * 4);
+              _glLOD->setRange(2, LOD_RANGE * 4, LOD_RANGE * 1024);
+              printf("LOD_RANGE is: %f \n", LOD_RANGE);
           }else if( c == 'l' ) // log.
           {
               printf("Current Matrix Config: \n");
@@ -930,27 +913,9 @@ bool GreenLight::keyboardEvent(int key , int type )
           }
       }
       return true;
-    }else
-    {
-        if( c == 'l' ) // log.
-        {
-            testConfigRead(1);
-        }
-
     }
 
     return false;
-}
-
-/***
- * Will this get used at all?
- */
-void GreenLight::closeMenu()
-{
-    if(_myMenu)
-    {
-        _myMenu->setVisible(false);
-    }
 }
 
 bool GreenLight::processEvent(cvr::InteractionEvent * event)
