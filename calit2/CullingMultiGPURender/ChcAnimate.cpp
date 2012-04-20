@@ -2,6 +2,8 @@
 
 #include <config/ConfigManager.h>
 
+#include <cstring>
+
 ChcAnimate::ChcAnimate(std::string filename, int numcontexts) : numContexts(numcontexts)
 {
    //init starting frame

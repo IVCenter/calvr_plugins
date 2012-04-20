@@ -22,6 +22,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <cstring>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
