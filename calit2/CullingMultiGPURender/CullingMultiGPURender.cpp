@@ -12,12 +12,12 @@
 #include "CullingMultiGPURender.h"
 #include "CustomStatsHandler.h"
 
-#include <kernel/SceneManager.h>
-#include <kernel/CVRViewer.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/CVRViewer.h>
 
-#include <config/ConfigManager.h>
+#include <cvrConfig/ConfigManager.h>
 
-#include <input/TrackingManager.h>
+#include <cvrInput/TrackingManager.h>
 
 #include <osgViewer/View>
 #include <osgViewer/ViewerEventHandlers>

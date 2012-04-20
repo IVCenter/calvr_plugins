@@ -1,7 +1,7 @@
 #include "PanMarkerObject.h"
 #include "PointsObject.h"
 
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/PluginHelper.h>
 #include <PluginMessageType.h>
 
 #include <osg/CullFace>

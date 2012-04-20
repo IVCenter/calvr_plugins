@@ -5,8 +5,8 @@
 #include <set>
 #include <vector>
 
-#include <config/ConfigManager.h>
-#include <kernel/CVRPlugin.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/CVRPlugin.h>
 
 #include <osgEarth/Map>
 #include <osgEarth/MapNode>

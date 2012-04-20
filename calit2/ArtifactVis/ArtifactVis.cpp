@@ -8,13 +8,13 @@
 #include <iostream>
 #include <sstream>
 
-#include <config/ConfigManager.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/SceneManager.h>
-#include <kernel/InteractionManager.h>
-#include <menu/MenuSystem.h>
-#include <input/TrackingManager.h>
-#include <util/LocalToWorldVisitor.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrMenu/MenuSystem.h>
+#include <cvrInput/TrackingManager.h>
+#include <cvrUtil/LocalToWorldVisitor.h>
 
 #include <osg/CullFace>
 #include <osg/Matrix>

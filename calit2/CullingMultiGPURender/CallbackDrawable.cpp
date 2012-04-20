@@ -9,7 +9,7 @@
 
 #include "CallbackDrawable.h"
 
-#include <kernel/CVRViewer.h>
+#include <cvrKernel/CVRViewer.h>
 
 #include "FetchQueue.h"
 

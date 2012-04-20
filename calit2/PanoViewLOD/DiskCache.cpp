@@ -1,7 +1,7 @@
 #include "DiskCache.h"
 #include "sph-cache.hpp"
 
-#include <config/ConfigManager.h>
+#include <cvrConfig/ConfigManager.h>
 
 #include <queue>
 #include <iostream>

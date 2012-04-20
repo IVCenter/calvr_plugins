@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/PluginHelper.h>
 #include <osg/Vec3>
 #include <osg/Node>
 #include <osg/MatrixTransform>

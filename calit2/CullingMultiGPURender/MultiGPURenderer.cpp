@@ -11,8 +11,8 @@
 #include <GL/glew.h>
 #include "MultiGPURenderer.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/CVRViewer.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/CVRViewer.h>
 #include <OpenThreads/ScopedLock>
 
 #include "GLHelper.h"

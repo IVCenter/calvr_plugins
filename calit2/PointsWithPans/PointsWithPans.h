@@ -1,9 +1,9 @@
 #ifndef PLUGIN_POINTS_WITH_PANS_H
 #define PLUGIN_POINTS_WITH_PANS_H
 
-#include <kernel/CVRPlugin.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuButton.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuButton.h>
 
 #include <osg/Vec3>
 #include <osg/Uniform>

@@ -1,7 +1,7 @@
 #ifndef SPACE_NAVIGATOR_H
 #define SPACE_NAVIGATOR_H
 
-#include <kernel/CVRPlugin.h>
+#include <cvrKernel/CVRPlugin.h>
 
 #include <stdio.h>
 #include <stdlib.h>

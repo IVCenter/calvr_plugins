@@ -1,12 +1,12 @@
 #ifndef _ARTIFACTVIS_
 #define _ARTIFACTVIS_
 
-#include <kernel/CVRPlugin.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuButton.h>
-#include <menu/TabbedDialogPanel.h>
-#include <menu/DialogPanel.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/TabbedDialogPanel.h>
+#include <cvrMenu/DialogPanel.h>
 
 #include <osg/Material>
 #include <osg/MatrixTransform>

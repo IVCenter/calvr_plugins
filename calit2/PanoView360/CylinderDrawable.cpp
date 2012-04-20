@@ -1,6 +1,6 @@
 #include "CylinderDrawable.h"
 
-#include <kernel/ScreenConfig.h>
+#include <cvrKernel/ScreenConfig.h>
 
 using namespace osg;
 using namespace std;
@@ -12,6 +12,10 @@ CylinderDrawable::CylinderDrawable(float radius_in, float viewanglev_in, float v
 
 
 CylinderDrawable::~CylinderDrawable()
+{
+}
+
+CylinderDrawable::CylinderDrawable(const CylinderDrawable& cd,const osg::CopyOp& copyop) : PanoDrawable(cd,copyop)
 {
 }
 

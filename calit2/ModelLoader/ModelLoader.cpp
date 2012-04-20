@@ -1,10 +1,10 @@
 #include "ModelLoader.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/SceneManager.h>
-#include <menu/MenuSystem.h>
-#include <kernel/PluginHelper.h>
-#include <util/TextureVisitors.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrMenu/MenuSystem.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrUtil/TextureVisitors.h>
 
 #include <iostream>
 

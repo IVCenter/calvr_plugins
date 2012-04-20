@@ -4,7 +4,7 @@
 #include <fstream>
 #include <cstring>
 #include <cstdlib>
-#include <kernel/ComController.h>
+#include <cvrKernel/ComController.h>
 #include <osgDB/FileUtils>
 
 int utl::intFromString(std::string str)

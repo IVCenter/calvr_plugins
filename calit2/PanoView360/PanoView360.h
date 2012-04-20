@@ -18,10 +18,10 @@
 #include <iostream>
 #include "CylinderDrawable.h"
 #include "SphereDrawable.h"
-#include <menu/SubMenu.h>
-#include <menu/MenuButton.h>
-#include <menu/MenuRangeValue.h>
-#include <kernel/CVRPlugin.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuRangeValue.h>
+#include <cvrKernel/CVRPlugin.h>
 
 using namespace cvr;
 

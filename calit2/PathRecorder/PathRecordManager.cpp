@@ -9,7 +9,7 @@
 ***************************************************************/
 #include "PathRecordManager.h"
 
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/PluginHelper.h>
 
 using namespace std;
 

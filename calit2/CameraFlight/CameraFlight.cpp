@@ -1,11 +1,11 @@
 #include "CameraFlight.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/InteractionManager.h>
-#include <kernel/ComController.h>
-#include <util/Intersection.h>
-#include <util/LocalToWorldVisitor.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/ComController.h>
+#include <cvrUtil/Intersection.h>
+#include <cvrUtil/LocalToWorldVisitor.h>
 
 #include <osgUtil/SceneView>
 #include <osg/Camera>

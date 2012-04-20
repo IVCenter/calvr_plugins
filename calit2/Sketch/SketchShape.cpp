@@ -1,12 +1,12 @@
 #include "SketchShape.h"
 #include "Sketch.h"
 
-#include <input/TrackingManager.h>
-#include <kernel/InteractionManager.h>
-#include <kernel/PluginHelper.h>
+#include <cvrInput/TrackingManager.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/PluginHelper.h>
 
 #ifdef WIN32
-#include <util/TimeOfDay.h>
+#include <cvrUtil/TimeOfDay.h>
 #endif
 
 #include <iostream>

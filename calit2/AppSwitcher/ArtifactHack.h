@@ -1,16 +1,16 @@
-#include <config/ConfigManager.h>
-#include <kernel/ComController.h>
-#include <kernel/CVRPlugin.h>
-#include <kernel/InteractionEvent.h>
-#include <kernel/SceneManager.h>
-#include <kernel/PluginHelper.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/ComController.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrKernel/InteractionEvent.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/PluginHelper.h>
 
 #include <osgEarth/Map>
 
 
-#include <menu/MenuText.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuRangeValue.h>
+#include <cvrMenu/MenuText.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuRangeValue.h>
 #include <string>
 
 class DistanceMenu : public cvr::SubMenu

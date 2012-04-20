@@ -1,8 +1,8 @@
 #include "PointsWithPans.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/PluginManager.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/PluginManager.h>
 #include <PluginMessageType.h>
 
 #include <sstream>

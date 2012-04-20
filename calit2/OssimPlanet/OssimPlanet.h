@@ -50,17 +50,17 @@
 #include <osgText/Text>
 #include <osgUtil/IntersectVisitor>
 #include <osg/ShapeDrawable>
-#include <kernel/CVRViewer.h>
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/CVRViewer.h>
+#include <cvrKernel/PluginHelper.h>
 
-#include <kernel/CVRPlugin.h>
-#include <kernel/ScreenBase.h>
-#include <kernel/SceneManager.h>
-#include <kernel/Navigation.h>
-#include <kernel/ComController.h>
-#include <config/ConfigManager.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuCheckbox.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrKernel/ScreenBase.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/Navigation.h>
+#include <cvrKernel/ComController.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuCheckbox.h>
 
 class OssimPlanet;
 

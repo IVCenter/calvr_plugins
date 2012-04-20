@@ -1,7 +1,7 @@
 #include "PointsObject.h"
 #include "PanMarkerObject.h"
 
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/PluginHelper.h>
 
 using namespace cvr;
 

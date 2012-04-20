@@ -1,12 +1,12 @@
 #ifndef _OSGMOVIE_
 #define _OSGMOVIE_
 
-#include <kernel/CVRPlugin.h>
-#include <kernel/FileHandler.h>
-#include <kernel/SceneObject.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuButton.h>
-#include <menu/MenuCheckbox.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrKernel/FileHandler.h>
+#include <cvrKernel/SceneObject.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuCheckbox.h>
 
 #include <osgDB/FileUtils>
 #include <osgDB/FileNameUtils>

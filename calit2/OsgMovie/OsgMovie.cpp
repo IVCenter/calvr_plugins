@@ -1,11 +1,11 @@
 #include "OsgMovie.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/SceneManager.h>
-#include <kernel/PluginManager.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/NodeMask.h>
-#include <menu/MenuSystem.h>
+#include <cvrconfig/ConfigManager.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/PluginManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/NodeMask.h>
+#include <cvrMenu/MenuSystem.h>
 #include <PluginMessageType.h>
 #include <iostream>
 

@@ -1,14 +1,14 @@
 #include "MenuBasics.h"
 #include "ComputeBBVisitor.h"
 
-#include <kernel/Navigation.h>
-#include <kernel/SceneManager.h>
-#include <kernel/CVRViewer.h>
-#include <kernel/ScreenConfig.h>
-#include <kernel/ComController.h>
-#include <input/TrackingManager.h>
-#include <menu/MenuSystem.h>
-#include <config/ConfigManager.h>
+#include <cvrKernel/Navigation.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/CVRViewer.h>
+#include <cvrKernel/ScreenConfig.h>
+#include <cvrKernel/ComController.h>
+#include <cvrInput/TrackingManager.h>
+#include <cvrMenu/MenuSystem.h>
+#include <cvrConfig/ConfigManager.h>
 
 #include <PluginMessageType.h>
 

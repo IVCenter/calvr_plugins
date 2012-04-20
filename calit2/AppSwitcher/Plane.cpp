@@ -4,7 +4,7 @@ using namespace osg;
 #include <string>
 using std::string;
 
-#include <config/ConfigManager.h>
+#include <cvrConfig/ConfigManager.h>
 using namespace cvr;
 
 Node* makePlane()

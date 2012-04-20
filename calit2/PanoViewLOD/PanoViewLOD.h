@@ -1,10 +1,10 @@
 #ifndef PANOVIEW_LOD_H
 #define PANOVIEW_LOD_H
 
-#include <kernel/CVRPlugin.h>
-#include <menu/MenuButton.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuRangeValue.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuRangeValue.h>
 #include "PanoDrawableLOD.h"
 #include "PanoViewObject.h"
 

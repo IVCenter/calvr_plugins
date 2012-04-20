@@ -1,6 +1,6 @@
 #include "ChcAnimate.h"
 
-#include <config/ConfigManager.h>
+#include <cvrConfig/ConfigManager.h>
 
 #include <cstring>
 

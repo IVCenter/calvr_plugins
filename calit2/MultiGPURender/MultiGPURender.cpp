@@ -1,8 +1,8 @@
 #include "MultiGPURender.h"
 #include "Timing.h"
 
-#include <kernel/SceneManager.h>
-#include <config/ConfigManager.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrConfig/ConfigManager.h>
 
 #include <osg/Material>
 

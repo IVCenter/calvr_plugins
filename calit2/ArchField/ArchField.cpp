@@ -22,15 +22,15 @@
 #include <direct.h>
 #endif
 
-#include <config/ConfigManager.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/PluginManager.h>
-#include <kernel/SceneManager.h>
-#include <kernel/InteractionManager.h>
-#include <menu/MenuSystem.h>
-#include <util/LocalToWorldVisitor.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/PluginManager.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrMenu/MenuSystem.h>
+#include <cvrUtil/LocalToWorldVisitor.h>
 #include <PluginMessageType.h>
-#include <kernel/ComController.h>
+#include <cvrKernel/ComController.h>
 
 #include <osg/CullFace>
 #include <osg/Matrix>

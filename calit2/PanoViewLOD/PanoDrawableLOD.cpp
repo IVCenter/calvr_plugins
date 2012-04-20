@@ -1,11 +1,11 @@
 #include <GL/glew.h>
 #include "PanoDrawableLOD.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/NodeMask.h>
-#include <kernel/ScreenConfig.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/ScreenBase.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/NodeMask.h>
+#include <cvrKernel/ScreenConfig.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/ScreenBase.h>
 
 #include <osg/GraphicsContext>
 

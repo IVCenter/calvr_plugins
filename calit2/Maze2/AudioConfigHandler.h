@@ -22,7 +22,7 @@
 #include <osg/Matrixd>
 
 // CalVR plugin support
-#include <config/ConfigManager.h>
+#include <cvrConfig/ConfigManager.h>
 
 // local includes
 #include "Audio/OSCPack.h"

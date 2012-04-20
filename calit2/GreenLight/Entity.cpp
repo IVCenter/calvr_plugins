@@ -1,6 +1,6 @@
 #include "GreenLight.h"
 
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/PluginHelper.h>
 #include <osg/Material>
 #include <osg/StateSet>
 

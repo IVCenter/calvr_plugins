@@ -1,7 +1,7 @@
 #include "ClipPlane.h"
 
-#include <kernel/PluginHelper.h>
-#include <kernel/InteractionManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/InteractionManager.h>
 
 #include <iostream>
 #include <sstream>

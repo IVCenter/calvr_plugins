@@ -1,8 +1,8 @@
 #include "CollaborativePlugin.h"
 
-#include <menu/MenuSystem.h>
-#include <config/ConfigManager.h>
-#include <collaborative/CollaborativeManager.h>
+#include <cvrMenu/MenuSystem.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrCollaborative/CollaborativeManager.h>
 
 #include <iostream>
 
