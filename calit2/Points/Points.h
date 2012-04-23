@@ -40,6 +40,8 @@ class Points : public cvr::CVRPlugin, public cvr::FileLoadCallback
     virtual ~Points();
     bool init();
     virtual bool loadFile(std::string file);
+    bool loadFile(std::string file, osg::Group * grp);
     void preFrame();
+    void message(int type, char *&data, bool collaborative=false);
 };
 #endif
