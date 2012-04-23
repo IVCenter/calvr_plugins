@@ -27,6 +27,7 @@
 #include <osg/Quat>
 #include "AndroidTransform.h"
 #include <sstream>
+#include <cstring>
 
 using namespace std;
 using namespace osg;
