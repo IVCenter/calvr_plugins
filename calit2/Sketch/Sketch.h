@@ -16,6 +16,8 @@
 #include <cvrMenu/MenuRangeValue.h>
 #include <cvrMenu/MenuCheckbox.h>
 #include <cvrMenu/MenuButton.h>
+#include <cvrMenu/ScrollingDialogPanel.h>
+#include <cvrMenu/MenuText.h>
 
 #include <osg/Geode>
 #include <osg/MatrixTransform>
@@ -55,7 +57,8 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
         {
             DRAW,
             SELECT,
-            MOVE
+            MOVE,
+            OPTIONS
         };
 
        struct MyComputeBounds : public osg::Drawable::ComputeBoundingBoxCallback
@@ -75,6 +78,8 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
         void removeMenuItems(Mode dm);
         void addMenuItems(Mode dm);
 
+        osg::PositionAttitudeTransform * getNextModel();
+
         osg::Vec3 getCurrentPoint();
 
         cvr::SubMenu * _sketchMenu;
@@ -88,6 +93,7 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
         cvr::MenuRangeValue * _tessellationsRV;
 
         cvr::MenuCheckbox * _freezeCB;
+        cvr::MenuCheckbox * _modelCB;
 
         cvr::MenuTextButtonSet * _lineType;
         cvr::MenuCheckbox * _lineTube;
@@ -106,6 +112,14 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
         cvr::MenuButton * _selectAllButton;
         cvr::MenuButton * _clearSelectButton;
 
+        cvr::MenuText * _highlightLabel;
+        cvr::MenuCheckbox * _transparentHLCB;
+        cvr::MenuCheckbox * _textHLCB;
+        cvr::MenuCheckbox * _boldHLCB;
+        cvr::MenuCheckbox * _pulsatingHLCB;
+
+        cvr::ScrollingDialogPanel * _dialogPanel;
+
         cvr::SubMenu * _loadMenu;
         std::vector<cvr::MenuButton*> _loadFileButtons;
         std::vector<std::string> _loadFileList;
@@ -113,7 +127,6 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
         std::string _modelDir;
         
         int _gridSize;
-        bool _snapToGrid;
         cvr::MenuCheckbox * _snapToGridCB;
         
         Mode _mode;

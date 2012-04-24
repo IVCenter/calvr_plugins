@@ -42,6 +42,7 @@ class Layout
         void scale(osg::Vec3 scale);
         void scaleMajorRadius(float scale);
         void scaleMinorRadius(float scale);
+        bool containsPoint(osg::Vec3 point);
 
    protected:
         float scaleMaj, scaleMin;

@@ -70,6 +70,8 @@ class SketchShape: public SketchObject
         bool getWireframe() { return _wireframe; }
         void resizeTorus(float majorRad, float minorRad);
         void setFont(std::string font);
+        void setModelPat(osg::PositionAttitudeTransform * pat);
+        osg::PositionAttitudeTransform * getModelPat() { return _modelPat; }
 
         static void updateHighlight();
 
@@ -113,7 +115,6 @@ class SketchShape: public SketchObject
         struct timeval _lastPointTime;
         osg::Vec3 _lastPoint;
 
-        void pulsate();
         void drawBox();
         void drawCylinder();
         void drawCone();

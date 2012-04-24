@@ -6,7 +6,7 @@
 /***
  * TODO: LOOK AT THIS SECTION 2/21/12
  * Parses through an XML file and sets the watt color of individual components?
- *
+ * Called on Button Action Event....
  */
 void GreenLight::setPowerColors(bool displayPower)
 {
@@ -28,9 +28,9 @@ void GreenLight::setPowerColors(bool displayPower)
                       "Plugin.GreenLight.Power", "").c_str(), "r");
     if (!fp)
     { //If there is no valid entry? file?
-        std::cerr << "Error (setComponentColors): Cannot open \"" <<
-             cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Power", "")
-             << "\"." << std::endl;
+        std::cerr << "Error (setComponentColors): Cannot open \""
+                  << cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Power", "")
+                  << "\"." << std::endl;
 
         _displayPowerCheckbox->setValue(false);
         return;
@@ -43,8 +43,7 @@ void GreenLight::setPowerColors(bool displayPower)
 
     if (measurements == NULL)
     {
-        std::cerr << 
-            "Warning: No <measurements> tag in xml power file. Aborting." << std::endl;
+        std::cerr << "Warning: No <measurements> tag in xml power file. Aborting." << std::endl;
         return;
     }
 
@@ -135,7 +134,7 @@ void GreenLight::setPowerColors(bool displayPower)
                      colors.push_back( wattColor(*lit, minWatt, maxWatt) );
                  else
                      colors.push_back( wattColor(*lit, (*sit)->minWattage, (*sit)->maxWattage) );
-            }
+              }
         }
         else
         {
@@ -311,71 +310,21 @@ void GreenLight::createTimestampMenus()
     _timeTo->addItem(_minuteTo);
 }
 
-/***
- * TODO: Create a Particle System for Smoke?
- *
- */
-void GreenLight::initParticles(){
-    /* Loop through and instantiate instances.
-     * set Fields/Behavior.
-     */
-/*
-    for ( SmokeParticle sp : smokeContainer )// int i = 0; i < PARTICLECOUNT; ++i )
+void GreenLight::animatePower()
+{
+    std::set< Component * >::iterator sit;
+    for (sit = _components.begin(); sit != _components.end(); sit++)
     {
-//     sp->_position = new osg::Vec3(0,0,0);
-//     sp->_color    = new osg::Vec3( 0.8, 0.8, 0.8 ); // randomize?
-       sp.xPos = sp.yPos = sp.zPos = 0;
-       sp.red = sp.green = sp.blue = 0;
-    }
-*/
-    for ( int i = 0; i < PARTICLECOUNT; ++i )
-    {
-        SmokeParticle sp = smokeContainer[i];
-        sp.xPos = sp.yPos = sp.zPos = 0;
-        sp.red = sp.green = sp.blue = 0;
-        
-        sp.xMov = sp.yMov = sp.zMov = rand() % 5 + 1;
-        sp.rDif = sp.gDif = sp.bDif = rand() % 5 + 1;
-
-     // attach as a drawable component to the scene?
-     
-    }
-    
-    // Initialize particle Template:
-    _pTemplate = new osgParticle::Particle();
-    _osgParticleSystem = new osgParticle::ParticleSystem();
-
-    //Create (initial) Particles
-    for ( int i = 0; i < PARTICLECOUNT; ++i )
-    {
-        _osgParticleSystem->createParticle(_pTemplate);
-    }
-
-    // Attach osg Particle System to Scene Here....
-//  SceneManager::instance()->getScene()->addChild();
-}
-void GreenLight::updateParticles(){
-    /* Loop through and modify particle based on behavior.
-     */
-    
-    for ( int i = 0; i < PARTICLECOUNT; ++i )
-    {
-        SmokeParticle sp = smokeContainer[i];
-        sp.xPos += sp.xMov;
-        sp.yPos += sp.yMov;
-        sp.zPos += 
-
-        sp.red   += sp.rDif;
-        sp.green += sp.gDif;
-        sp.blue  += sp.bDif;
+        if ( (*sit)-> animating ){
+            if( ++((*sit)->animationPosition) > 100  )
+            { // End Animation
+                (*sit) -> animationPosition = 0;
+                (*sit) -> animating = false;
+            }else
+            {
+//              std::cout << "Animation Position: " << (*sit) -> animationPosition << std::endl;
+                setPowerColors(true); // update texture.
+            }
+        }
     }
 }
-/*
-void GreenLight::drawParticles(){
-    // ... attach to scene?
-    for ( int i = 0; i < PARTICLECOUNT; ++i )
-    {
-
-    }
-}
-*/

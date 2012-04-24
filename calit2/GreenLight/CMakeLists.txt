@@ -14,6 +14,7 @@ ADD_LIBRARY(${LIB_NAME}
     Hardware.cpp
     Power.cpp
     Utility.cpp
+    SmokeSystem.cpp
 )
 
 FIND_PACKAGE(MXML)
