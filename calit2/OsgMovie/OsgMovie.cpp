@@ -1,6 +1,6 @@
 #include "OsgMovie.h"
 
-#include <cvrconfig/ConfigManager.h>
+#include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/SceneManager.h>
 #include <cvrKernel/PluginManager.h>
 #include <cvrKernel/PluginHelper.h>
