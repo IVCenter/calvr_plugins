@@ -190,7 +190,7 @@ void MenuBasics::menuCallback(MenuItem * item)
     }
     else if(item == snap)
     {
-	Navigation::instance()->setSnapToGround(snap);
+	Navigation::instance()->setSnapToGround(snap->getValue());
     }
     else if(item == stopHeadTracking)
     {
