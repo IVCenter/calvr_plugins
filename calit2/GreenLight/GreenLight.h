@@ -5,20 +5,24 @@
 #include <set>
 #include <vector>
 #include <string>
+#include <fstream>
+#include <iostream>
+#include <stdlib.h>
+#include <stdio.h>
 
-#include <config/ConfigManager.h>
-#include <kernel/SceneManager.h>
-#include <kernel/SceneObject.h>
-#include <kernel/CVRPlugin.h>
-#include <menu/MenuButton.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuImage.h>
-#include <menu/MenuList.h>
-#include <menu/MenuText.h>
-#include <menu/DialogPanel.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuSystem.h>
-#include <menu/PopupMenu.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/SceneObject.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuImage.h>
+#include <cvrMenu/MenuList.h>
+#include <cvrMenu/MenuText.h>
+#include <cvrMenu/DialogPanel.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuSystem.h>
+#include <cvrMenu/PopupMenu.h>
 
 #include <osg/AnimationPath>
 #include <osg/MatrixTransform>
@@ -26,6 +30,7 @@
 #include <osg/Texture2D>
 #include <osg/NodeVisitor>
 
+#ifdef WITH_OSGEARTH
 /*** OSG EARTH PLUGINS ***/
 
 #include <osgEarth/Map>
@@ -35,16 +40,17 @@
 
 #include <osgEarth/ElevationQuery>
 
+#endif
+
 #include <osgDB/FileUtils>
 #include <osgDB/FileNameUtils>
 
 /*************************/
 
 /*** osgParticle things ***/
-#define PARTICLECOUNT 220
-
 #include <osgParticle/ParticleSystem>
 #include <osgParticle/Particle>
+#include <osg/PositionAttitudeTransform>
 /**************************/
 
 #include "Utility.h"
@@ -70,20 +76,21 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 
         bool keyboardEvent(int key, int type);
 
+        osg::MatrixTransform * InitSmoke();
+
         osg::ref_ptr<osg::MatrixTransform> OsgE_MT; // transform nodes of this entity
         osg::Matrixd output;
 
         osg::MatrixTransform * scaleMT;
         osg::MatrixTransform * pluginMT;
-//        osg::MTA * scaleMT;
         osg::Matrixd*      scaleMatrix; 
         osg::Vec3d*        scaleVector; 
 
+        osg::ref_ptr<osg::LOD> _glLOD;
 
-        osg::LOD * _glLOD;
-
+#ifdef WITH_OSGEARTH
         osgEarth::Map * mapVariable;
-
+#endif
     protected:
 
         class Component; // forward declaration
@@ -98,7 +105,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 osg::ref_ptr<osg::MatrixTransform> transform; // transform nodes of this entity
                 osg::ref_ptr<osg::AnimationPath> path; // animation path (null if non-existent)
                 osg::ref_ptr<osg::Node> mainNode;   // change mainNode to be the type of node with overriden accept.
-// TODO change nodes to type: set< ref_ptr< Node > >
+             // TODO change nodes to type: set< ref_ptr< Node > >
                 std::set<osg::Node *> nodes; // node-sub-graph loaded in via osgDB readNodeFile
                 AnimationStatus status; // status of animation
                 double time; // time-point within animation path
@@ -141,6 +148,11 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 static osg::ref_ptr<osg::Uniform> _displayTexturesUni;
                 static osg::ref_ptr<osg::Uniform> _neverTextureUni;
 
+                // Variables for animation.
+                int animationPosition;
+                bool animating;
+                osg::Geode * animationMarker;
+
             protected:
                 osg::ref_ptr<osg::Texture2D> _colors;
                 osg::ref_ptr<osg::Image> _data;
@@ -148,7 +160,18 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 osg::ref_ptr<osg::Uniform> _colorsUni;
         };
 
+        typedef struct {
+            std::string name;
+            int rack;
+            int slot;
+            int height;
+         } Hardware;
 
+/***************** LOD SWITCHING MECHANISM **********/
+        static int lodLevel;
+        osg::MatrixTransform * secondDegreeMT; // used as the second LOD?
+
+        // used in LoadEntities?
         class NodeA : public osg::Node
         {
             public:
@@ -159,46 +182,20 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         {
             public:
                 virtual void accept(osg::NodeVisitor&);
-//                bool LLOD;
                 int LLOD;
         };
+/*********************************************************/
 
-        typedef struct {
-            std::string name;
-            int rack;
-            int slot;
-            int height;
-         } Hardware;
-
-		/***
-		 * Potential Particle System.
-	     */
-        typedef struct {
-//        osg::ref_ptr<osg::Vec3> _position;
-            // OR
-          double xPos, yPos, zPos;
-//        osg::ref_ptr<osg::Vec3> _color;
-            // OR
-          double red, green, blue;
-
-          double xMov, yMov, zMov;
-          double rDif, gDif, bDif;
-//          <OTHER FIELDS>
-        } SmokeParticle;
-
-        // ParticleContainer
-        SmokeParticle smokeContainer[PARTICLECOUNT];
+/****** PARTICLE SYSTEM VARIABLES ***************************/
         osgParticle::ParticleSystem * _osgParticleSystem;
-        osgParticle::Particle * _pTemplate;
+        osgParticle::Particle _pTemplate;
 
-        // Menu Items
-        
-        /*** GreenLight Component Menus ***/
-        cvr::SceneObject * so;
-        cvr::MenuButton  * _customButton;
-        cvr::PopupMenu   * _myMenu;
-        /*** ENDGREENLIGHTCOMPONENTMENU ***/
-        
+/****** MISCELLANEOUS VARIABLES *****************************/
+        // animation function for power comsumption.
+        void animatePower();
+        bool osgEarthInit;
+/****** END: MISCELLANEOUS VARIABLES ************************/
+
         cvr::SubMenu * _glMenu;
         cvr::MenuCheckbox * _showSceneCheckbox;
 
@@ -257,12 +254,12 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _restorePreviousViewButton;
 
         // Entities
-        Entity * _box;          // box/frame
-        std::vector<Entity *> _door; // doors
-        Entity * _waterPipes;   // water pipes
-        Entity * _electrical;   // electrical
-        Entity * _fans;         // fans
-        std::vector<Entity *> _rack; // racks
+        Entity * _box;                     // box/frame
+        std::vector<Entity *> _door;       // doors
+        Entity * _waterPipes;              // water pipes
+        Entity * _electrical;              // electrical
+        Entity * _fans;                    // fans
+        std::vector<Entity *> _rack;       // racks
         std::set<Component *> _components; // components in the racks
 
         // Additional Entity Info
@@ -277,9 +274,6 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         // Shaders
         osg::ref_ptr<osg::Program> _shaderProgram;
 
-        // Instance variables
-        bool osgEarthInit;
-
         // Functions
         bool loadScene();
         bool handleIntersection(osg::Node * iNode);
@@ -293,16 +287,6 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
         void createTimestampMenus();
 
-        /*** Initialize the particles ***/
-        void initParticles();
-        /*** Update the particles ***/
-        void updateParticles();
-        /*** Draw the particles? ***/
-        void drawParticles();
-
-        void closeMenu();
-
-        int _menuButton;
 };
 
 #endif

@@ -4,13 +4,13 @@
 #include <osgDB/WriteFile>
 
 #include <iostream>
-#include <menu/MenuSystem.h>
-#include <menu/SubMenu.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/ComController.h>
-#include <kernel/InteractionManager.h>
-#include <kernel/ThreadedLoader.h>
-#include <kernel/SceneManager.h>
+#include <cvrMenu/MenuSystem.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/ComController.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/ThreadedLoader.h>
+#include <cvrKernel/SceneManager.h>
 
 #include <osgDB/ReadFile>
 
@@ -105,7 +105,14 @@ bool PluginTest::init()
     //MenuSystem::instance()->addMenuItem(testButton2);
 
     popup1 = new PopupMenu("Test Popup");
-    //popup1->setVisible(true);
+    popup1->setVisible(true);
+
+    // test text from random wikipedia articles
+    _mst = new MenuScrollText("There is a great range of specialisations within the ANC. Environmental noise consultants carry out measurement, calculation, evaluation and mitigation of noise pollution to fit within current noise regulation and produce an environmental impact assessment often leading to appearance as an expert witness at public inquiries. In building acoustics, sound insulation is tested between dwellings as required by approved document E of the Building Regulations, schools are designed for optimal learning conditions and the acoustic environments of performing arts venues are designed for their specific intended purposes.\n",500,4,1.0,false);
+    popup1->addMenuItem(_mst);
+    _mst->appendText("Vipul's Razor is a checksum-based, distributed, collaborative, spam-detection-and-filtering network. Through user contribution, Razor establishes a distributed and constantly updating catalogue of spam in propagation that is consulted by email clients to filter out known spam. Detection is done with statistical and randomized signatures that efficiently spot mutating spam content. User input is validated through reputation assignments based on consensus on report and revoke assertions which in turn is used for computing confidence values associated with individual signatures. \n");
+
+    return true;
 
     pcheckbox1 = new MenuCheckbox("Popup Check", true);
     pmenu1 = new SubMenu("Popup menu line","Popup Menu head");

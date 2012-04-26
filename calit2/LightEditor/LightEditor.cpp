@@ -3,8 +3,8 @@
 #include <stdio.h>
 
 // CalVR Headers:
-#include <kernel/ComController.h>
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/ComController.h>
+#include <cvrKernel/PluginHelper.h>
 
 // OSG headers:
 #include <osgDB/ReadFile>

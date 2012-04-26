@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <iostream>
+#include <cstdlib>
 
 bool checkShader(GLuint shader)
 {

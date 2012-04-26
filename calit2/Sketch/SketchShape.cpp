@@ -1,16 +1,18 @@
 #include "SketchShape.h"
 #include "Sketch.h"
 
-#include <input/TrackingManager.h>
-#include <kernel/InteractionManager.h>
-#include <kernel/PluginHelper.h>
+#include <cvrInput/TrackingManager.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/PluginHelper.h>
 
 #ifdef WIN32
-#include <util/TimeOfDay.h>
+#include <cvrUtil/TimeOfDay.h>
 #endif
 
 #include <iostream>
 #include <string.h>
+
+#include <osg/Version>
 #include <osg/Material>
 #include <osg/PolygonMode>
 #include <osgText/Text>
@@ -206,7 +208,11 @@ void SketchShape::setPat(osg::PositionAttitudeTransform **pat)
     text->setCharacterDepth(5);
     text->setDrawMode(osgText::Text3D::TEXT);
     text->setAxisAlignment(osgText::Text3D::XZ_PLANE);
-    text->setColor(_color);
+
+#if (OPENSCENEGRAPH_MAJOR_VERSION >= 3)
+    // AP - there is no setColor for Text3D in older osg versions
+    text->setColor(_color);//osg::Vec4(1,1,1,1));
+#endif
 
     osg::Geode* textGeode = new osg::Geode();
     float centerAdjust = text->getFontWidth() * str.length() / 10;

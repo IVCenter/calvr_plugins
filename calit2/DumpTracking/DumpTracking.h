@@ -1,7 +1,7 @@
 #ifndef DUMP_TRACKING_H
 #define DUMP_TRACKING_H
 
-#include <kernel/CVRPlugin.h>
+#include <cvrKernel/CVRPlugin.h>
 #include <iostream>
 #include <fstream>
 

@@ -1,12 +1,13 @@
 #include "PanoViewObject.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/NodeMask.h>
-#include <kernel/PluginHelper.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/NodeMask.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrUtil/OsgMath.h>
 
 #include <iostream>
 
-#define PRINT_TIMING
+//#define PRINT_TIMING
 
 using namespace cvr;
 
@@ -72,7 +73,7 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
     _spinMat.makeIdentity();
     float offset = height - _floorOffset;
     _heightMat.makeTranslate(osg::Vec3(0,0,offset));
-    setTransform(_coordChangeMat * _spinMat * _heightMat);
+    setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
 
     _nextButton = _previousButton = NULL;
 
@@ -89,6 +90,10 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
     _demoMode = new MenuCheckbox("Demo Mode", ConfigManager::getBool("value","Plugin.PanoViewLOD.DemoMode",false, NULL));
     _demoMode->setCallback(this);
     addMenuItem(_demoMode);
+
+    _trackball = new MenuCheckbox("Trackball Mode", false);
+    _trackball->setCallback(this);
+    addMenuItem(_trackball);
 
     _radiusRV = new MenuRangeValue("Radius", 100, 100000, radius);
     _radiusRV->setCallback(this);
@@ -173,7 +178,7 @@ void PanoViewObject::menuCallback(cvr::MenuItem * item)
     {
 	float offset = _heightRV->getValue() - _floorOffset;
 	_heightMat.makeTranslate(osg::Vec3(0,0,offset));
-	setTransform(_coordChangeMat * _spinMat * _heightMat);
+	setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
     }
 
     if(item == _zoomResetButton)
@@ -231,7 +236,7 @@ void PanoViewObject::updateCallback(int handID, const osg::Matrix & mat)
 	osg::Matrix rot;
 	rot.makeRotate(val, osg::Vec3(0,0,1));
 	_spinMat = _spinMat * rot;
-	setTransform(_coordChangeMat * _spinMat * _heightMat);
+	setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
 
 	if(_currentZoom != 0.0)
 	{
@@ -262,7 +267,106 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 	    previous();
 	    return true;
 	}
-	if(tie->getButton() == 0 && tie->getInteraction() == BUTTON_DOWN)
+	if(_trackball->getValue() && tie->getButton() == 0 && tie->getInteraction() == BUTTON_DOWN)
+	{
+	    _tbDirValid = false;
+	    osg::Vec3 startpoint(0,0,0), endpoint(0,1000.0,0), center(0,0,0);
+	    startpoint = startpoint * tie->getTransform() * getWorldToObjectMatrix();
+	    endpoint = endpoint * tie->getTransform() * getWorldToObjectMatrix();
+
+	    _tbHand = tie->getHand();
+
+	    osg::Vec3 isec1,isec2;
+	    float w1,w2;
+	    if(lineSphereIntersectionRef(startpoint,endpoint,center,_radiusRV->getValue(),isec1,w1,isec2,w2))
+	    {
+		osg::Vec3 isec;
+		float w;
+		if(w1 > w2)
+		{
+		    isec = isec1;
+		    w = w1;
+		}
+		else
+		{
+		    isec = isec2;
+		    w = w2;
+		}
+
+		if(w < 0)
+		{
+		    return false;
+		}
+
+		_tbDirValid = true;
+		_tbDir = isec - center;
+		_tbDir.normalize();
+	    }
+	    return true;
+	}
+	if(_trackball->getValue() && tie->getButton() == 0 && (tie->getInteraction() == BUTTON_DRAG || tie->getInteraction() == BUTTON_UP))
+	{
+	    if(tie->getHand() != _tbHand)
+	    {
+		return false;
+	    }
+
+	    osg::Vec3 startpoint(0,0,0), endpoint(0,1000.0,0), center(0,0,0);
+	    startpoint = startpoint * tie->getTransform() * getWorldToObjectMatrix();
+	    endpoint = endpoint * tie->getTransform() * getWorldToObjectMatrix();
+
+	    //std::cerr << "Start x: " << startpoint.x() << " y: " << startpoint.y() << " z: " << startpoint.z() << std::endl;
+	    //std::cerr << "End x: " << endpoint.x() << " y: " << endpoint.y() << " z: " << endpoint.z() << std::endl;
+
+	    osg::Vec3 isec1,isec2;
+	    float w1,w2;
+	    if(lineSphereIntersectionRef(startpoint,endpoint,center,_radiusRV->getValue(),isec1,w1,isec2,w2))
+	    {
+		//std::cerr << "isec1 x: " << isec1.x() << " y: " << isec1.y() << " z: " << isec1.z() << " w: " << w1 << std::endl;
+		//std::cerr << "isec2 x: " << isec2.x() << " y: " << isec2.y() << " z: " << isec2.z() << " w: " << w2 << std::endl;
+		osg::Vec3 isec;
+		float w;
+		if(w1 > w2)
+		{
+		    isec = isec1;
+		    w = w1;
+		}
+		else
+		{
+		    isec = isec2;
+		    w = w2;
+		}
+
+		if(w < 0)
+		{
+		    return false;
+		}
+
+		//std::cerr << "isec x: " << isec.x() << " y: " << isec.y() << " z: " << isec.z() << std::endl;
+
+		osg::Vec3 newDir = isec - center;
+		newDir.normalize();
+
+		if(_tbDirValid)
+		{
+		    osg::Matrix rot;
+		    rot.makeRotate(_tbDir,newDir);
+		    _tbMat = rot * _tbMat;
+		    setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+                    if(_currentZoom != 0.0)
+                    {
+                        updateZoom(_lastZoomMat);
+                    }
+		}
+		else
+		{
+		    _tbDirValid = true;
+		    _tbDir = newDir;
+		}
+	    }
+	    return true;
+	}
+	/*if(tie->getButton() == 0 && tie->getInteraction() == BUTTON_DOWN)
 	{
 	    updateZoom(tie->getTransform());
 
@@ -281,7 +385,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 	    updateZoom(tie->getTransform());
 
 	    return true;
-	}
+	}*/
 	if(tie->getButton() == 4 && tie->getInteraction() == BUTTON_DOWN)
 	{
 	    _currentZoom = 0.0;
@@ -297,7 +401,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 	osg::Matrix rot;
 	rot.makeRotate((M_PI / 50.0) * 0.6, osg::Vec3(0,0,1));
 	_spinMat = _spinMat * rot;
-	setTransform(_coordChangeMat * _spinMat * _heightMat);
+	setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
 
 	if(_currentZoom != 0.0)
 	{
@@ -340,7 +444,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 		osg::Matrix rot;
 		rot.makeRotate((M_PI / 50.0) * val * _spinScale, osg::Vec3(0,0,1));
 		_spinMat = _spinMat * rot;
-		setTransform(_coordChangeMat * _spinMat * _heightMat);
+		setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
 
 		if(_currentZoom != 0.0)
 		{

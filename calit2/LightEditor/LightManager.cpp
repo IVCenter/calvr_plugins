@@ -8,7 +8,7 @@
 #include <osg/Geode>
 #include <osg/PolygonMode>
 
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/PluginHelper.h>
 
 const double rad2deg = 180/osg::PI;
 const double deg2rad = osg::PI/180;

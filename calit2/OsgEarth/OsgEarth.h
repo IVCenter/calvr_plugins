@@ -1,9 +1,11 @@
 #ifndef _OSGEARTH_
 #define _OSGEARTH_
 
-#include <kernel/CVRPlugin.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuButton.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuCheckbox.h>
 
 #include <osgEarth/Map>
 #include <osgEarth/MapNode>
@@ -23,7 +25,7 @@
 #include <string>
 #include <vector>
 
-class OsgEarth : public cvr::CVRPlugin
+class OsgEarth : public cvr::CVRPlugin, public cvr::MenuCallback
 {
     public:        
         OsgEarth();
@@ -32,9 +34,31 @@ class OsgEarth : public cvr::CVRPlugin
 	bool init();
         void message(int type, char * data);
         int getPriority() { return 51; }
+	void preFrame();
+        bool processEvent(cvr::InteractionEvent * event);
+        bool buttonEvent(int type, int button, int hand, const osg::Matrix & mat);
+        bool mouseButtonEvent (int type, int button, int x, int y, const osg::Matrix &mat);
+        void menuCallback(cvr::MenuItem * item);
+        double getSpeed(double distance);
+        void processNav(double speed);
+        void processMouseNav(double speed);
+
 
     protected:
         osgEarth::Map * map;
+
+	cvr::SubMenu * _osgEarthMenu;
+        cvr::MenuCheckbox * _navCB;
+
+        bool _navActive;
+        int _navHand;
+        osg::Matrix _navHandMat;
+
+        bool _mouseNavActive;
+        int _startX,_startY;
+        int _currentX,_currentY;
+        bool _movePointValid;
+        osg::Vec3d _movePoint;
                 
 };
 

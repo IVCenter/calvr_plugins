@@ -8,6 +8,7 @@
 ***************************************************************/
 #include "AudioConfigHandler.h"
 
+#include <cstring>
 
 using namespace cvr;
 using namespace std;

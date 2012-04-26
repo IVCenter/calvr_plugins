@@ -2,8 +2,10 @@
 
 #include <iostream>
 
-#include <kernel/PluginHelper.h>
-#include <kernel/InteractionManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/InteractionManager.h>
+
+using namespace std;
 
 void GreenLight::doHoverOver(Entity *& last, Entity * current, bool showHover)
 {
@@ -15,6 +17,7 @@ void GreenLight::doHoverOver(Entity *& last, Entity * current, bool showHover)
     {
         if (showHover)
         {
+//          cout << "Show Hover: ";
             // normalize last hovered over entity, if there is one
             if (last != NULL)
             {
@@ -34,14 +37,18 @@ void GreenLight::doHoverOver(Entity *& last, Entity * current, bool showHover)
             }
 
             if (current && current->asComponent()){
+//              cout << "Hovering over a component." << endl;
                 _hoverDialog->setText(current->asComponent()->name);
+                
             }else if( current ){
                 _hoverDialog->setText("(nothing)");
             }
             else{
+//              cout << "Hovering over... nothing." << endl;
                 _hoverDialog->setText("(nothing)");
             }
         }
+//      cout << "Don't Show Hover." << endl;
 
         // assign current to last (notice pass-by-reference)
         last = current;
@@ -205,7 +212,10 @@ void GreenLight::selectComponent(Component * comp, bool select)
                 (*chit)->setValue(true);
             }
         }
+//      comp -> animating = select ;
     }
+
+    comp -> animating = select;
 }
 
 void GreenLight::selectCluster(std::set< Component * > * cluster, bool select)

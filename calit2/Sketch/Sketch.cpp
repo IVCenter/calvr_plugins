@@ -4,11 +4,11 @@
 #include "SketchShape.h"
 #include "Layout.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/InteractionManager.h>
-#include <kernel/SceneManager.h>
-#include <kernel/SceneObject.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/SceneObject.h>
 
 #include <osg/ShapeDrawable>
 #include <osg/Material>
@@ -17,9 +17,10 @@
 #include <osgDB/WriteFile>
 #include <osgDB/ReadFile>
 
+#include <osg/Version>
 #include <osgText/Text3D>
 #include <osgText/Text>
-#include <util/Intersection.h>
+#include <cvrUtil/Intersection.h>
 
 #include <iostream>
 #include <dirent.h>
@@ -1498,7 +1499,9 @@ osg::PositionAttitudeTransform * Sketch::getNextModel()
         text->setCharacterDepth(5);
         text->setDrawMode(osgText::Text3D::TEXT);
         text->setAxisAlignment(osgText::Text3D::XZ_PLANE);
+#if OPENSCENEGRAPH_MAJOR_VERSION >= 3
         text->setColor(osg::Vec4(1,1,1,1));
+#endif
         geode->addDrawable(text);
 
         stateset = text->getOrCreateStateSet();

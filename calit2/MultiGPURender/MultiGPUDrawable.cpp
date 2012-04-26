@@ -5,8 +5,8 @@
 #include "Timing.h"
 #include "CudaHelper.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/CVRViewer.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/CVRViewer.h>
 
 #include <osgDB/ReadFile>
 #include <osg/Material>

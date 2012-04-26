@@ -15,14 +15,14 @@
 #include <osg/Matrixf>
 
 // CalVR plugin support
-#include <config/ConfigManager.h>
+#include <cvrConfig/ConfigManager.h>
 
 // CalVR menu system
-#include <menu/SubMenu.h>
-#include <menu/MenuButton.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuRangeValue.h>
-#include <menu/MenuText.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuRangeValue.h>
+#include <cvrMenu/MenuText.h>
 
 // Local:
 #include "CalibrationController.h"

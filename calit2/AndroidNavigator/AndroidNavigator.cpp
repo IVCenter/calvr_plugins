@@ -3,12 +3,12 @@
 #define PORT 8888
 
 #include <stdio.h>
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/PluginHelper.h>
 #include <osg/Vec4>
 #include <osg/Matrix>
 #include <osgUtil/SceneView>
-#include <config/ConfigManager.h>
-#include <menu/MenuSystem.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrMenu/MenuSystem.h>
 #include <osg/Node>
 #include <osgDB/ReadFile>
 #include <string>
@@ -16,17 +16,18 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <unistd.h>
-#include <kernel/ComController.h>
+#include <cvrKernel/ComController.h>
 #include <math.h>
 //#include "/home/bschlamp/CalVR/plugins/calit2/ArtifactVis/ArtifactVis.h"
 #include <algorithm>
-#include <kernel/InteractionManager.h>
+#include <cvrKernel/InteractionManager.h>
 #include <osg/Shape>
 #include <osg/ShapeDrawable>
 #include <osg/Geode>
 #include <osg/Quat>
 #include "AndroidTransform.h"
 #include <sstream>
+#include <cstring>
 
 using namespace std;
 using namespace osg;

@@ -1,11 +1,11 @@
 #ifndef CVR_COLLABORATIVE_PLUGIN_H
 #define CVR_COLLABORATIVE_PLUGIN_H
 
-#include <kernel/CVRPlugin.h>
-#include <menu/MenuButton.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuText.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuText.h>
 
 #include <string>
 #include <map>

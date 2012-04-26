@@ -1,8 +1,9 @@
 #include "PanoViewLOD.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/NodeMask.h>
-#include <kernel/PluginHelper.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/NodeMask.h>
+#include <cvrKernel/PluginHelper.h>
+#include <PluginMessageType.h>
 
 #include <iostream>
 #include <cstdlib>
@@ -15,7 +16,7 @@
 #include "sph-cache.hpp"
 #include "DiskCache.h"
 
-#define PRINT_TIMING
+//#define PRINT_TIMING
 
 using namespace cvr;
 
@@ -25,6 +26,7 @@ PanoViewLOD::PanoViewLOD()
 {
     _timecount = 0;
     _time = 0;
+    _loadRequest = NULL;
 }
 
 PanoViewLOD::~PanoViewLOD()
@@ -89,6 +91,9 @@ bool PanoViewLOD::init()
     _removeButton = new MenuButton("Remove");
     _removeButton->setCallback(this);
     _panoViewMenu->addItem(_removeButton);
+
+    _returnButton = new MenuButton("Return");
+    _returnButton->setCallback(this);
 
     for(int i = 0; i < tagList.size(); i++)
     {
@@ -226,20 +231,15 @@ bool PanoViewLOD::processEvent(InteractionEvent * event)
 
 void PanoViewLOD::menuCallback(MenuItem * item)
 {
-    if(item == _removeButton)
+    if(item == _removeButton || item == _returnButton)
     {
 	/*if(_useDiskCache && sph_cache::_diskCache && sph_cache::_diskCache->isRunning())
 	{
 	    sph_cache::_diskCache->stop();
 	}*/
 
-	if(_panObject)
-	{
-	    _panObject->detachFromScene();
-	    PluginHelper::unregisterSceneObject(_panObject);
-	    delete _panObject;
-	    _panObject = NULL;
-	}
+	removePan();
+
 	/*if(_rightDrawable && _leftDrawable)
 	{
             _leftDrawable->cleanup();
@@ -255,7 +255,7 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 	{
 	    if(_useDiskCache && !sph_cache::_diskCache)
 	    {
-		std::cerr << "Creating cache in plugin." << std::endl;
+		//std::cerr << "Creating cache in plugin." << std::endl;
 		sph_cache::_diskCache = new DiskCache(cvr::ConfigManager::getInt("value","Plugin.PanoViewLOD.DiskCacheSize",256));
 		sph_cache::_diskCache->start();
 	    }
@@ -265,19 +265,17 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 		sph_cache::_diskCache->start();
 	    }*/
 
-	    if(_panObject)
-	    {
-		//menuCallback(_removeButton);
-		_panObject->detachFromScene();
-		PluginHelper::unregisterSceneObject(_panObject);
-		delete _panObject;
-		_panObject = NULL;
-	    }
+	    removePan();
 
 	    _panObject = new PanoViewObject(_panButtonList[i]->getText(),_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size,_pans[i]->height,_pans[i]->vertFile,_pans[i]->fragFile);
 
 	    PluginHelper::registerSceneObject(_panObject,"PanoViewLOD");
 	    _panObject->attachToScene();
+
+	    if(_loadRequest)
+	    {
+		_panObject->addMenuItem(_returnButton);
+	    }
 
 	    /*_leftDrawable = new PanoDrawableLOD(_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size,_pans[i]->vertFile,_pans[i]->fragFile);
 	    _rightDrawable = new PanoDrawableLOD(_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size,_pans[i]->vertFile,_pans[i]->fragFile);
@@ -323,6 +321,44 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 	    _root->setMatrix(_coordChangeMat * _spinMat * _heightMat);
 	}
     }*/
+}
+
+void PanoViewLOD::message(int type, char *&data, bool collaborative)
+{
+    if(type == PAN_LOAD_REQUEST)
+    {
+	if(collaborative)
+	{
+	    return;
+	}
+
+	PanLoadRequest * plr = (PanLoadRequest*)data;
+
+	int i;
+	for(i = 0; i < _panButtonList.size(); i++)
+	{
+	    if(plr->name == _panButtonList[i]->getText())
+	    {
+		break;
+	    }
+	}
+
+	if(i == _panButtonList.size())
+	{
+	    std::cerr << "PanoViewLOD message load: no pan named " << plr->name << std::endl;
+	    plr->loaded = false;
+	    return;
+	}
+
+	removePan();
+
+	_loadRequest = new PanLoadRequest;
+	*_loadRequest = *plr;
+
+	menuCallback(_panButtonList[i]);
+	plr->loaded = true;
+	return;
+    }
 }
 
 void PanoViewLOD::createLoadMenu(std::string tagBase, std::string tag, SubMenu * menu)
@@ -526,4 +562,22 @@ void PanoViewLOD::updateZoom(osg::Matrix & mat)
     }
 
     _lastZoomMat = mat;*/
+}
+
+void PanoViewLOD::removePan()
+{
+    if(_panObject)
+    {
+	_panObject->detachFromScene();
+	PluginHelper::unregisterSceneObject(_panObject);
+	delete _panObject;
+	_panObject = NULL;
+
+	if(_loadRequest)
+	{
+	    PluginHelper::sendMessageByName(_loadRequest->plugin,_loadRequest->pluginMessageType,(char*)NULL);
+	    delete _loadRequest;
+	    _loadRequest = NULL;
+	}
+    }
 }

@@ -1,6 +1,6 @@
 #include "CudaTest.h"
 
-#include <kernel/SceneManager.h>
+#include <cvrKernel/SceneManager.h>
 
 #include <osg/Geode>
 

@@ -1,10 +1,10 @@
 #ifndef PANOVIEW_LOD_H
 #define PANOVIEW_LOD_H
 
-#include <kernel/CVRPlugin.h>
-#include <menu/MenuButton.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuRangeValue.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuRangeValue.h>
 #include "PanoDrawableLOD.h"
 #include "PanoViewObject.h"
 
@@ -13,6 +13,8 @@
 
 #include <string>
 #include <vector>
+
+struct PanLoadRequest;
 
 class PanoViewLOD : public cvr::CVRPlugin, public cvr::MenuCallback
 {
@@ -26,9 +28,13 @@ class PanoViewLOD : public cvr::CVRPlugin, public cvr::MenuCallback
 
         void menuCallback(cvr::MenuItem * item);
 
+        virtual void message(int type, char *&data, bool collaborative = false);
+
     protected:
         void createLoadMenu(std::string tagBase, std::string tag, cvr::SubMenu * menu);
         void updateZoom(osg::Matrix & mat);
+
+        void removePan();
 
         struct PanInfo
         {
@@ -55,11 +61,15 @@ class PanoViewLOD : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuRangeValue * _heightRV;
         cvr::MenuButton * _removeButton;
 
+        cvr::MenuButton * _returnButton;
+
         std::string _defaultConfigDir;
 
         int _timecount;
         double _time;
         bool _useDiskCache;
+
+        PanLoadRequest * _loadRequest;
 };
 
 #endif

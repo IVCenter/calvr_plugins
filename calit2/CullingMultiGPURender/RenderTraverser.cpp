@@ -1,7 +1,7 @@
 #include <GL/glew.h>
 #include "GLHelper.h"
 #include "RenderTraverser.h"
-#include <config/ConfigManager.h>
+#include <cvrConfig/ConfigManager.h>
 
 #ifndef GL_GEOMETRY_SHADER
 #define GL_GEOMETRY_SHADER 0x8DD9

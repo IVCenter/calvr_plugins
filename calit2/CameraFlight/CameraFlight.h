@@ -5,21 +5,21 @@
 #include <set>
 #include <vector>
 
-#include <config/ConfigManager.h>
-#include <kernel/CVRPlugin.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/CVRPlugin.h>
 
 #include <osgEarth/Map>
 #include <osgEarth/MapNode>
 #include <osgEarth/Utils>
 #include <osgDB/FileUtils>
 #include <osgDB/FileNameUtils>
-#include <menu/MenuButton.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuImage.h>
-#include <menu/MenuList.h>
-#include <menu/MenuText.h>
-#include <menu/DialogPanel.h>
-#include <menu/SubMenu.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuImage.h>
+#include <cvrMenu/MenuList.h>
+#include <cvrMenu/MenuText.h>
+#include <cvrMenu/DialogPanel.h>
+#include <cvrMenu/SubMenu.h>
 
 #include <osg/Vec4>
 #include <osg/Matrix>

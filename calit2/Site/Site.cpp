@@ -6,15 +6,16 @@
 #include <iterator>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 // Calvr:
-#include <config/ConfigManager.h>
-#include <kernel/CVRPlugin.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/ScreenBase.h>
-#include <kernel/SceneManager.h>
-#include <kernel/Navigation.h>
-#include <kernel/ComController.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/ScreenBase.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/Navigation.h>
+#include <cvrKernel/ComController.h>
 
 // OSG:
 #include <osg/Node>
@@ -68,6 +69,19 @@ bool Site::loadFile(string filename)
 	// create a heightfield object so data can be added
 	osg::ref_ptr<osg::HeightField> hf = new osg::HeightField;
 
+	//path
+	string path;
+
+	printf("Loading: %s\n", filename.c_str());
+	size_t found = filename.find_last_of("//");
+	if(found != filename.npos)
+	{
+	    path =filename.substr(0,found);
+	    path.append("/");
+	}
+
+	printf("Path is %s\n", path.c_str());	
+
 	//read in file data and set the node positions
 	ifstream myfile (filename.c_str());
 	if (myfile.is_open())
@@ -89,7 +103,7 @@ bool Site::loadFile(string filename)
 			for(int i = 0; i < size; i++)
 			{
 				myfile.getline(str,255);
-                		osg::ref_ptr<osg::Texture2D> tex = new osg::Texture2D(osgDB::readImageFile(str));
+                		osg::ref_ptr<osg::Texture2D> tex = new osg::Texture2D(osgDB::readImageFile((path + str).c_str()));
         			if ( tex )
         			{
                 			tex->setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::LINEAR_MIPMAP_LINEAR);
@@ -98,7 +112,15 @@ bool Site::loadFile(string filename)
                 			tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
 					texFiles.push_back(tex);					
 				}
+
+				// add button to link to this texture TODO
+				stringstream name;
+				name << i;
+				MenuButton* button = new MenuButton(name.str());
+				button->setCallback(this);
+				textureSubMenuItem->addItem(button);
 			}
+
 		}
 
 		// get dimensions for grid so memory can be allocated
@@ -136,8 +158,13 @@ bool Site::loadFile(string filename)
 				myfile.getline(str,255);
 
 				// load point data and attach to scene
-				loadPointData(str, group);
+				loadPointData((path + str), group);
 			}
+
+			// add slider for points
+			rangeMenuItem = new MenuRangeValue("Level", 0.0, (float)(numberDivisions - 1), 0.0, 1.0);
+			rangeMenuItem->setCallback(this);
+			siteSubMenuItem->addItem(rangeMenuItem);
 		}
 
 		// loop through rest of file loading in point data
@@ -183,13 +210,16 @@ bool Site::loadFile(string filename)
     	texstate->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
     	texstate->setAttribute(material, osg::StateAttribute::ON);
 
+	// add menu item to main menu
+	MenuSystem::instance()->addMenuItem(siteSubMenuItem);
+
 	return true;
 }
 
-void Site::loadPointData(char * filename, osg::Group* group)
+void Site::loadPointData(string filename, osg::Group* group)
 {
 	//read in file data and set the node positions
-        ifstream myfile (filename);
+        ifstream myfile (filename.c_str());
         if (myfile.is_open())
         {
 		myfile.read((char *)&totalNumPoints, sizeof(int));
@@ -207,7 +237,7 @@ void Site::loadPointData(char * filename, osg::Group* group)
 		{
 			myfile.read((char *) &temp, sizeof(float) * 4);
 			vertices->at(i) = osg::Vec3(temp[0], temp[1], temp[2]);
-			colors->at(i) = osg::Vec4(0.0, 0.0, 0.0, temp[3]);
+			colors->at(i) = osg::Vec4(temp[3], 0.0, 0.0, 1.0);
 		}
 		myfile.close();
 		
@@ -222,143 +252,49 @@ void Site::loadPointData(char * filename, osg::Group* group)
 		// default starting point
 		radar->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS, 0, (int)floor(totalNumPoints / numberDivisions)));
     		geode->addDrawable(radar);
-		group->addChild(geode);
 
 		// set state set parameters
 		osg::StateSet *set = geode->getOrCreateStateSet();
-  		set->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
 
-		set->setMode(GL_VERTEX_PROGRAM_POINT_SIZE, osg::StateAttribute::ON);
-    		osg::PointSprite* sprite = new osg::PointSprite();
-    		set->setTextureAttributeAndModes(0, sprite, osg::StateAttribute::ON);
-    		set->setAttribute( new osg::AlphaFunc( osg::AlphaFunc::GREATER, 0.1f) );
-    		set->setMode( GL_ALPHA_TEST, GL_TRUE );
- 	
 		std::string shaderpath = ConfigManager::getEntry("Plugin.Site.ShaderPath");	
 		osg::Program* program = new osg::Program;
-    		//program->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile("/home/covise/plugins/calit2/Site/PtclSprite.vsh")));
-    		//program->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile("/home/covise/plugins/calit2/Site/PtclSprite.fsh")));
-    		program->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile(shaderpath + "/PtclSprite.vsh")));
-    		program->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile(shaderpath + "/PtclSprite.fsh")));
-    		geode->getOrCreateStateSet()->setAttribute(program);
-    		geode->setCullingActive( false );
+    		program->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile(shaderpath + "/Sphere.vert")));
+    		program->addShader(osg::Shader::readShaderFile(osg::Shader::GEOMETRY, osgDB::findDataFile(shaderpath + "/Sphere.geom")));
+    		program->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile(shaderpath + "/Sphere.frag")));
+		program->setParameter( GL_GEOMETRY_VERTICES_OUT_EXT, 4 );
+		program->setParameter( GL_GEOMETRY_INPUT_TYPE_EXT, GL_POINTS );
+		program->setParameter( GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP );
 
-    		// Screen resolution for particle sprite
-		if( pixelsize == NULL )
-		{
-    			pixelsize = new osg::Uniform();
-    			pixelsize->setName( "pixelsize" );
-    			pixelsize->setType( osg::Uniform::FLOAT_VEC2 );
-    			pixelsize->set( osg::Vec2(0.1f,0.2f) );
-    			group->getOrCreateStateSet()->addUniform( pixelsize );
+		objectScale = new osg::Uniform("objectScale", PluginHelper::getObjectScale());
+		set->addUniform(objectScale);
+		
+		pointSize = new osg::Uniform("pointSize", 0.01f);
+		set->addUniform(pointSize);
 
-			density = new osg::Uniform();
-			density->setName( "density" );
-			density->setType( osg::Uniform::FLOAT );
-			density->set( 0.0f );
-			group->getOrCreateStateSet()->addUniform( density );
+    		set->setAttribute(program);
 
-			// texture look up
-			std::string colortable = ConfigManager::getEntry("Plugin.Site.ColorTable");
-			//osg::Image* image = osgDB::readImageFile("/home/covise/plugins/calit2/Site/colortable.rgb");
-			osg::Image* image = osgDB::readImageFile(colortable);
-    			osg::Texture2D* texture = new osg::Texture2D(image);
-    			texture->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
-    			texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
-    			group->getOrCreateStateSet()->setTextureAttribute(0, texture);
+		// texture look up
+		std::string colortable = ConfigManager::getEntry("Plugin.Site.ColorTable");
+		osg::Image* image = osgDB::readImageFile(colortable);
+    		osg::Texture2D* texture = new osg::Texture2D(image);
+    		texture->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
+    		texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+    		set->setTextureAttribute(0, texture);
 
-    			osg::Uniform* baseTextureSampler = new osg::Uniform("baseTexture",0);
-    			group->getOrCreateStateSet()->addUniform(baseTextureSampler);
-		}
+    		//osg::Uniform* baseTextureSampler = new osg::Uniform("baseTexture",0);
+    		//set->addUniform(baseTextureSampler);
+		group->addChild(geode);
     	}
+	else
+	{
+	    printf("Data load failed, %s\n", filename.c_str());
+	}
 }
 
 void Site::preFrame()
 {
-	float value1 = 0.0;
-	float value2 = 0.0;
-
-	// update based on world scale
-  	if( pixelsize && joyStickReset && PluginHelper::getNumValuatorStations())
-	{
-		// update pixel size
-		pixelsize->set( osg::Vec2(0.1f, 0.2 * PluginHelper::getObjectScale()) );
-
-		// scroll through modes
-		value1 = PluginHelper::getValuator(0,1); // need Y here
-
-		//check for mode change
-		if( value1 == -1.0 )
-		{
-			currentMode--;
-
-			if( currentMode < 0 )
-				currentMode = selection - 1;
-		}
-		else if ( value1 == 1.0 )
-		{
-			currentMode++;
-			if( currentMode > selection - 1)
-				currentMode = 0;
-		}
-
-		// determine movement
-		value2 = PluginHelper::getValuator(0,0);  // need X here
-
-
-		switch ( currentMode )
-		{
-
-			case 0:
-				// find next index
-				if( value2 == -1.0 )
-				{
-					textureVisible--;
-					if(textureVisible < 0)
-						textureVisible = (int)texFiles.size() - 1;
-			
-					texstate->setTextureAttribute(0, texFiles.at(textureVisible));
-				}
-				else if( value2 == 1.0 )
-				{
-					textureVisible++;
-					if(textureVisible >= (int)texFiles.size())
-						textureVisible = 0;
-			
-					texstate->setTextureAttribute(0, texFiles.at(textureVisible));
-				}
-				break;
-
-			case 1:
-				if( value2 == 1.0 ) //move up
-				{
-					if(level > 0)
-					{
-						level--;
-						if( radar->getNumPrimitiveSets() )
-							radar->removePrimitiveSet(0);
-						radar->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS, (int)floor(totalNumPoints / numberDivisions) * level, (int)floor(totalNumPoints / numberDivisions)));				
-					}
-				}
-				else if( value2 == -1.0 ) // move down
-				{	
-					if(level < numberDivisions - 1)
-					{
-						level++;
-						if( radar->getNumPrimitiveSets() )
-							radar->removePrimitiveSet(0);
-						radar->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS, (int)(totalNumPoints / numberDivisions) * level, (int)totalNumPoints / numberDivisions));
-					}
-				}
-				break;
-			default:
-				break;
-		}
-		joyStickReset = false;
-	}
-
-	if( value1 == 0.0 && value2 == 0.0 )
-		joyStickReset = true;
+    if( objectScale != NULL )
+	    objectScale->set(PluginHelper::getObjectScale());
 }
 
 // intialize
@@ -371,18 +307,45 @@ bool Site::init()
   SceneManager::instance()->getObjectsRoot()->addChild(group);
 
   //osg::setNotifyLevel( osg::INFO );
+  
+  // add menus
+  siteSubMenuItem = new SubMenu("Site", "Site");
+  textureSubMenuItem = new SubMenu("Texture", "Texture");
+  siteSubMenuItem->addItem(textureSubMenuItem);
 
-  joyStickReset = true;
-  pixelsize = NULL;
-  texstate = NULL;
-  textureVisible = 1;
+  //MenuSystem::instance()->addMenuItem(siteSubMenuItem);
+
+  objectScale = NULL;
   totalNumPoints = 0;
-  numberDivisions = 25;
-  currentMode = 0;
-  level = 0;
-
+  numberDivisions = 25;  // currently hard coded
   return true;
 }
+
+void Site::menuCallback(cvr::MenuItem * item)
+{
+    if( item == rangeMenuItem)
+    {
+	//printf(" value is %f\n", rangeMenuItem->getValue());	
+	// set the range value for the point data
+	if( radar->getNumPrimitiveSets() )
+	    radar->removePrimitiveSet(0);
+
+	radar->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS, (int)(totalNumPoints / numberDivisions) * (int)(rangeMenuItem->getValue()), (int)totalNumPoints / numberDivisions));
+
+    }
+    else // slider for levels
+    {
+	cvr::MenuButton * button = dynamic_cast<cvr::MenuButton * > (item);
+	if( button )
+	{
+	    int index;
+	    stringstream ss(button->getText());
+	    ss >> index;
+	    texstate->setTextureAttribute(0, texFiles.at(index));
+	}
+    }
+}
+
 
 // this is called if the plugin is removed at runtime
 Site::~Site()

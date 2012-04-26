@@ -1,8 +1,8 @@
 #include "planesite.h"
 #include "Plane.h"
 
-#include <kernel/SceneManager.h>
-#include <config/ConfigManager.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrConfig/ConfigManager.h>
 #include <osg/Quat>
 #include <string>
 using std::string;
