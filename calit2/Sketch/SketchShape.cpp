@@ -20,6 +20,10 @@ using namespace cvr;
 
 float SketchShape::_scale = 1;
 bool SketchShape::_growing = false;
+bool SketchShape::_transparentHL = true;
+bool SketchShape::_textHL = true;
+bool SketchShape::_boldHL = true;
+bool SketchShape::_pulsatingHL = true;;
 
 SketchShape::SketchShape(ShapeType type, bool wireframe, osg::Vec4 color, 
                          int tessellations, float size) : SketchObject(color,size)
@@ -58,7 +62,6 @@ SketchShape::SketchShape(ShapeType type, bool wireframe, osg::Vec4 color,
     _geometry->setComputeBoundingBoxCallback(_mcb.get());
     osg::StateSet * stateset = _geometry->getOrCreateStateSet();
     stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-    
 
     // wireframe
     osg::PolygonMode * polygonMode = new osg::PolygonMode();
@@ -186,7 +189,6 @@ void SketchShape::setPat(osg::PositionAttitudeTransform **pat)
     stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
     stateset->setMode(GL_BLEND, osg::StateAttribute::ON);
     stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-
     stateset->setMode(GL_CULL_FACE, osg::StateAttribute::ON);
 
     _shapeGeode->addDrawable(_geometry);
@@ -196,14 +198,6 @@ void SketchShape::setPat(osg::PositionAttitudeTransform **pat)
     _pat->addChild(_shapePat);
     _pat->addChild(_highlightPat);
 
-
-/*    osgText::Text * text = new osgText::Text();
-    std::string str = "Shape"; 
-    text->setText(str);
-    text->setCharacterSize(10);
-    text->setAxisAlignment(osgText::Text3D::XZ_PLANE);
-    text->setColor(osg::Vec4(1,1,1,.4)); */
-
     osgText::Text3D * text = new osgText::Text3D();
     std::string str = "Shape"; 
     text->setFont("/home/cehughes/data/arial.ttf");
@@ -212,7 +206,7 @@ void SketchShape::setPat(osg::PositionAttitudeTransform **pat)
     text->setCharacterDepth(5);
     text->setDrawMode(osgText::Text3D::TEXT);
     text->setAxisAlignment(osgText::Text3D::XZ_PLANE);
-    text->setColor(_color);//osg::Vec4(1,1,1,1));
+    text->setColor(_color);
 
     osg::Geode* textGeode = new osg::Geode();
     float centerAdjust = text->getFontWidth() * str.length() / 10;
@@ -392,61 +386,86 @@ void SketchShape::setWireframe(bool b)
 {
     _wireframe = b;
     osg::StateSet * stateset = _geometry->getOrCreateStateSet();
-
-    // wireframe
     osg::PolygonMode * polygonMode = new osg::PolygonMode();
     polygonMode->setMode(osg::PolygonMode::FRONT_AND_BACK,
         osg::PolygonMode::LINE);
+
     if (_wireframe)
         stateset->setAttribute(polygonMode, osg::StateAttribute::ON);
     else
-      stateset->setAttribute(polygonMode, osg::StateAttribute::OFF);
-
+        stateset->setAttribute(polygonMode, osg::StateAttribute::OFF);
 }
 
 void SketchShape::highlight()
 {
-    _highlightGeode->setNodeMask(HL_ON_MASK);
-    _textPat->setNodeMask(TEXT_ON_MASK);
-
-    osg::LineWidth * lineWidth = new osg::LineWidth();
-    lineWidth->setWidth(HL_BOLD);
-    _shapeGeode->getOrCreateStateSet()->setAttributeAndModes(lineWidth, osg::StateAttribute::ON);
-    
-    osg::Vec3 scaleVec(SketchShape::_scale,SketchShape::_scale,SketchShape::_scale);
-
-    _shapePat->setScale(scaleVec);
-    _highlightPat->setScale(scaleVec);
-    
-/*  if (_growing)
+    if (SketchShape::_transparentHL)
     {
-        _shapePat->setScale(_shapePat->getScale() + scaleVec);
-        _highlightPat->setScale(_highlightPat->getScale() + scaleVec);
-
-        if (_shapePat->getScale()[0] > 1 + hlMaxDiff)
-            _growing = false;
+        _highlightGeode->setNodeMask(HL_ON_MASK);
     }
     else
     {
-        _shapePat->setScale(_shapePat->getScale() - scaleVec);
-        _highlightPat->setScale(_highlightPat->getScale() - scaleVec);
+        _highlightGeode->setNodeMask(HL_OFF_MASK);
+    }
 
-        if (_shapePat->getScale()[0] < 1 - hlMaxDiff)
-            _growing = true;
-    }*/
+    if (SketchShape::_textHL)
+    {
+        _textPat->setNodeMask(TEXT_ON_MASK);
+    }
+    else
+    {
+        _textPat->setNodeMask(TEXT_OFF_MASK);
+    }
+
+    if (SketchShape::_boldHL)
+    {
+        osg::LineWidth * lineWidth = new osg::LineWidth();
+        lineWidth->setWidth(HL_BOLD);
+        _shapeGeode->getOrCreateStateSet()->setAttributeAndModes(lineWidth, osg::StateAttribute::ON);
+    } 
+    else
+    {
+        osg::LineWidth * lineWidth = new osg::LineWidth();
+        lineWidth->setWidth(HL_UNBOLD);
+        _shapeGeode->getOrCreateStateSet()->setAttributeAndModes(lineWidth, osg::StateAttribute::ON);
+    }
+    
+    if (SketchShape::_pulsatingHL)
+    {
+        osg::Vec3 scaleVec(SketchShape::_scale,SketchShape::_scale,SketchShape::_scale);
+        _shapePat->setScale(scaleVec);
+        _highlightPat->setScale(scaleVec);
+    }
+    else
+    {
+        _shapePat->setScale(osg::Vec3(1,1,1));
+        _highlightPat->setScale(osg::Vec3(1,1,1));
+    }
 }
 
 void SketchShape::unhighlight()
 {
-    _highlightGeode->setNodeMask(HL_OFF_MASK);
-    _textPat->setNodeMask(TEXT_OFF_MASK);
+    if (SketchShape::_transparentHL)
+    {
+        _highlightGeode->setNodeMask(HL_OFF_MASK);
+    }
 
-    _shapePat->setScale(osg::Vec3(1,1,1));
-    _highlightPat->setScale(osg::Vec3(1,1,1));
+    if (SketchShape::_textHL)
+    {
+        _textPat->setNodeMask(TEXT_OFF_MASK);
+    }
 
-    osg::LineWidth * lineWidth = new osg::LineWidth();
-    lineWidth->setWidth(HL_UNBOLD);
-    _shapeGeode->getOrCreateStateSet()->setAttributeAndModes(lineWidth, osg::StateAttribute::ON);
+    if (SketchShape::_boldHL)
+    {
+        osg::LineWidth * lineWidth = new osg::LineWidth();
+        lineWidth->setWidth(HL_UNBOLD);
+        _shapeGeode->getOrCreateStateSet()->setAttributeAndModes(lineWidth, osg::StateAttribute::ON);
+    }
+
+    if (SketchShape::_pulsatingHL)
+    {
+        _shapePat->setScale(osg::Vec3(1,1,1));
+        _highlightPat->setScale(osg::Vec3(1,1,1));
+    }
 }
 
 void SketchShape::updateHighlight()
@@ -495,6 +514,28 @@ void SketchShape::resizeTorus(float majorRad, float minorRad)
         _torusHLShape->resizeTorus(majorRad, minorRad);
     }
 }
+
+
+void SketchShape::setTransparentHighlight(bool b)
+{
+    _transparentHL = b;
+}
+
+void SketchShape::setTextHighlight(bool b)
+{
+    _textHL = b;
+}
+
+void SketchShape::setBoldHighlight(bool b)
+{
+    _boldHL = b;
+}
+
+void SketchShape::setPulsatingHighlight(bool b)
+{
+    _pulsatingHL = b;
+}
+
 
 
 void SketchShape::drawBox()
@@ -758,11 +799,18 @@ void SketchShape::drawSphere()
                                               z + radius * costn);
 
             _verts->push_back(topLeft);
-            _verts->push_back(bottomLeft);
-            _verts->push_back(bottomRight);
-            _verts->push_back(topRight);
-
             _normals->push_back(topLeft);
+
+            _verts->push_back(bottomLeft);
+            _normals->push_back(bottomLeft);
+
+            _verts->push_back(bottomRight);
+            _normals->push_back(bottomRight);
+
+            _verts->push_back(topRight);
+            _normals->push_back(topRight);
+
+//            _normals->push_back(topLeft);
 
             _mcb->_bound.expandBy(topLeft);
         }

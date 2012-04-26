@@ -108,13 +108,17 @@ bool Sketch::init()
     _snapToGridCB->setCallback(this);
     _sketchMenu->addItem(_snapToGridCB);
 
-    _showLayoutCB = new MenuCheckbox("Show Layout", true);
+    _showLayoutCB = new MenuCheckbox("Show Layouts", true);
     _showLayoutCB->setCallback(this);
     _sketchMenu->addItem(_showLayoutCB);
 
     _modelCB = new MenuCheckbox("Place Models", true);
     _modelCB->setCallback(this);
     _sketchMenu->addItem(_modelCB);
+
+    _orientToViewerCB = new MenuCheckbox("Orient To Viewer", false);
+    _orientToViewerCB->setCallback(this);
+    _sketchMenu->addItem(_orientToViewerCB);
 
     _lineType = new MenuTextButtonSet(true, 400, 30, 3);
     _lineType->setCallback(this);
@@ -149,14 +153,21 @@ bool Sketch::init()
    
     _highlightLabel = new MenuText("Highlight Options");
     _transparentHLCB = new MenuCheckbox("Transparent", true);
+    _transparentHLCB->setCallback(this);
+
     _textHLCB = new MenuCheckbox("Text Labels", true);
+    _textHLCB->setCallback(this);
+
     _boldHLCB = new MenuCheckbox("Bolded", true);
+    _boldHLCB->setCallback(this);
+
     _pulsatingHLCB = new MenuCheckbox("Pulsating", true);
+    _pulsatingHLCB->setCallback(this);
 
+    //_dialogPanel = new ScrollingDialogPanel(100, 20, 1, false, "Dialog Panel");
+    //_dialogPanel->addText("This is text.");
 
-    _dialogPanel = new ScrollingDialogPanel(100, 20, 1, false, "Dialog Panel", "Plugin.Sketch.DialogInfo");
-    _dialogPanel->addText("This is text.");
-
+    //_panel = new DialogPanel(100, "Panel");
 
     _mode = SELECT;
     _drawMode = NONE;
@@ -174,7 +185,7 @@ bool Sketch::init()
     _gridSize = atoi(gridSize.c_str());
 
     std::string orient = ConfigManager::getEntry("Plugin.Sketch.OrientToViewer");
-    _orientToViewer = orient == "on";
+    //_orientToViewer = orient == "on";
 
     if (!_gridSize || _gridSize > MAX_GRID_SIZE)
         _gridSize = 1;
@@ -281,17 +292,19 @@ void Sketch::menuCallback(MenuItem * item)
 
     else if (item == _freezeCB)
     {
-        if(_freezeCB->getValue())
+        if(_freezeCB->getValue()) // Object -> Scene
         {
             _sketchRoot->postMult(PluginHelper::getObjectToWorldTransform());
+            _lastPoint = PluginHelper::getObjectToWorldTransform() * _lastPoint;
 
             PluginHelper::getObjectsRoot()->removeChild(_sketchRoot);
             PluginHelper::getScene()->addChild(_sketchRoot);
             _isObjectRoot = false;
         }
-        else
+        else // Scene -> Object
         {
             _sketchRoot->postMult(PluginHelper::getWorldToObjectTransform());
+            _lastPoint = PluginHelper::getWorldToObjectTransform() * _lastPoint;
 
             PluginHelper::getScene()->removeChild(_sketchRoot);
             PluginHelper::getObjectsRoot()->addChild(_sketchRoot);
@@ -300,6 +313,10 @@ void Sketch::menuCallback(MenuItem * item)
     }
 
     else if (item == _snapToGridCB)
+    {
+    }
+
+    else if (item == _orientToViewerCB)
     {
     }
 
@@ -328,7 +345,7 @@ void Sketch::menuCallback(MenuItem * item)
             {
                 isLayout = false;
 
-                // layouts get scaled differently than shapes
+                // layouts do not get uniformly scaled
                 for (int i = 0; i < _layoutList.size(); ++i)
                 {
                     if ((*it) == _layoutList[i]->getPat())
@@ -431,6 +448,28 @@ void Sketch::menuCallback(MenuItem * item)
             shape->setWireframe(_shapeWireframe->getValue());
         }
     }
+
+
+    else if (item == _transparentHLCB)
+    {
+        SketchShape::setTransparentHighlight(_transparentHLCB->getValue());    
+    }
+
+    else if (item == _textHLCB)
+    {
+         SketchShape::setTextHighlight(_textHLCB->getValue());       
+    }
+
+    else if (item == _boldHLCB)
+    {
+        SketchShape::setBoldHighlight(_boldHLCB->getValue());
+    }
+
+    else if (item == _pulsatingHLCB)
+    {
+        SketchShape::setPulsatingHighlight(_pulsatingHLCB->getValue());
+    }
+
 
     else if (item == _saveButton)
     {
@@ -574,7 +613,7 @@ void Sketch::menuCallback(MenuItem * item)
 
 void Sketch::preFrame()
 {
-    if (_orientToViewer)
+    if (_orientToViewerCB->getValue())
     {
         osg::Quat rot = (TrackingManager::instance()->getHeadMat(0)
             * PluginHelper::getWorldToObjectTransform()).getRotate();
@@ -668,7 +707,7 @@ void Sketch::preFrame()
         }
     }
     
-    else if (_mode == SELECT)
+    if (_mode == SELECT || _mode == OPTIONS || _mode == MOVE)
     {
         bool isShapeHighlight = false;
         bool isMoving;
@@ -756,37 +795,39 @@ bool Sketch::processEvent(InteractionEvent * event)
             }
         }
 
-        osg::Vec3 pos(0,Sketch::instance()->getPointerDistance(),0);
-        pos = pos * TrackingManager::instance()->getHandMat(0);
+        osg::Vec3 point(0,Sketch::instance()->getPointerDistance(),0);
+        point = point * TrackingManager::instance()->getHandMat(0);
 
-        osg::Vec3 point;
+        osg::Vec3 distance;
 
-        if (_isObjectRoot)
+        if (!_freezeCB->getValue())
         {
-            point = pos * PluginHelper::getWorldToObjectTransform();
+            point = point * PluginHelper::getWorldToObjectTransform();
         }
         else
         {
-            point = pos;
-        }
 
-        if (_snapToGridCB->getValue()) // for testing use gridsize = 1 as no snap
+        }
+        if (_snapToGridCB->getValue()) 
         {
             for (int i = 0; i < 3; ++i)
             {
                 int diff = (int)floor(point[i]) % _gridSize;     
                 point[i] -= diff;
             }
-        }
-        osg::Vec3 distance = point - _lastPoint;
-        if (_snapToGridCB->getValue())
-        {
+
+            distance = point - _lastPoint;
+
             distance[0] = (int)distance[0];
             distance[1] = (int)distance[1];
             distance[2] = (int)distance[2];
         }
-
+        else
+        {
+            distance = point - _lastPoint;
+        }
         _lastPoint = point;
+
 
         if (_mode == MOVE)
         {
@@ -844,7 +885,6 @@ bool Sketch::processEvent(InteractionEvent * event)
 
                     _movingList[i]->setPosition(
                         _movingList[i]->getPosition() + distance);
-
                     _movingList[i]->dirtyBound();                   
                 }
                 return !_movingList.empty();
@@ -989,7 +1029,7 @@ bool Sketch::processEvent(InteractionEvent * event)
             return ret;
         }
 
-        else if (_mode == SELECT)
+        else if (_mode == SELECT || _mode == OPTIONS)
         {
             if (tie->getInteraction() == BUTTON_DOWN)
             {
@@ -1049,6 +1089,7 @@ bool Sketch::processEvent(InteractionEvent * event)
 
         return true;
     } 
+
     return false;
 }
 
@@ -1129,57 +1170,10 @@ void Sketch::removeMenuItems(Mode dm)
 	case DRAW:
 	    _sketchMenu->removeItem(_drawModeButtons);
         removeMenuItems(_drawMode);
-        _movingList.clear();
-
-        for (int i = 0; i < _shapeList.size(); ++i)
-        {
-            for (int j = 0; j < _movingList.size(); ++j)
-            {
-                if (_movingList[j] = _shapeList[i]->getPat())
-                {
-                    _shapeList[i]->unhighlight();
-                }
-            }
-        }
-
-        for (int i = 0; i < _layoutList.size(); ++i)
-        {
-            for (int j = 0; j < _movingList.size(); ++j)
-            {
-                if (_movingList[j] = _layoutList[i]->shape->getPat())
-                {
-                    _layoutList[i]->shape->unhighlight();
-                }
-            }
-        }
-
 	    break;
 	case SELECT:
         _sketchMenu->removeItem(_selectAllButton);
         _sketchMenu->removeItem(_clearSelectButton);
-        _movingList.clear();
-
-        for (int i = 0; i < _shapeList.size(); ++i)
-        {
-            for (int j = 0; j < _movingList.size(); ++j)
-            {
-                if (_movingList[j] = _shapeList[i]->getPat())
-                {
-                    _shapeList[i]->unhighlight();
-                }
-            }
-        }
-
-        for (int i = 0; i < _layoutList.size(); ++i)
-        {
-            for (int j = 0; j < _movingList.size(); ++j)
-            {
-                if (_movingList[j] = _layoutList[i]->shape->getPat())
-                {
-                    _layoutList[i]->shape->unhighlight();
-                }
-            }
-        }
 	    break;
     case MOVE:
         break;
@@ -1205,6 +1199,30 @@ void Sketch::addMenuItems(Mode dm)
 	    {
             _drawModeButtons->setValue(_drawModeButtons->firstNumOn(), false);
 	    }
+
+        for (int i = 0; i < _shapeList.size(); ++i)
+        {
+            for (int j = 0; j < _movingList.size(); ++j)
+            {
+                if (_movingList[j] = _shapeList[i]->getPat())
+                {
+                    _shapeList[i]->unhighlight();
+                }
+            }
+        }
+
+        for (int i = 0; i < _layoutList.size(); ++i)
+        {
+            for (int j = 0; j < _movingList.size(); ++j)
+            {
+                if (_movingList[j] = _layoutList[i]->shape->getPat())
+                {
+                    _layoutList[i]->shape->unhighlight();
+                }
+            }
+        } 
+
+        _movingList.clear();
 	    break;
 	case MOVE:
 	    break;
@@ -1387,7 +1405,11 @@ osg::PositionAttitudeTransform * Sketch::getNextModel()
     }
 
     
-    int numIcons = 8;
+    int numIcons = 10;
+    osgText::Text3D * text;
+    osg::Geode * geode;
+    osg::StateSet * stateset;
+    osg::Material * material;
 
     switch (_modelCounter % numIcons)
     {
@@ -1468,10 +1490,57 @@ osg::PositionAttitudeTransform * Sketch::getNextModel()
                                               0,       Vec3(0,1,0)));
         break;
     case 7:
-        osgText::Text3D * text = new osgText::Text3D();
-        osg::Geode * geode = new osg::Geode();
-        text->setFont("/home/cehughes/data/arial.ttf");
-        text->setText("Open");
+        text = new osgText::Text3D();
+        geode = new osg::Geode();
+        text->setFont(_modelDir + "arial.ttf");
+        text->setText("Drive");
+        text->setCharacterSize(35);
+        text->setCharacterDepth(5);
+        text->setDrawMode(osgText::Text3D::TEXT);
+        text->setAxisAlignment(osgText::Text3D::XZ_PLANE);
+        text->setColor(osg::Vec4(1,1,1,1));
+        geode->addDrawable(text);
+
+        stateset = text->getOrCreateStateSet();
+        stateset->setRenderingHint(osg::StateSet::OPAQUE_BIN);
+
+        material = new osg::Material();
+        material->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(1,0,0,1));
+        material->setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4(1,0,0,1));
+        //stateset->setAttributeAndModes(material, osg::StateAttribute::ON);
+
+        stateset->setMode(GL_LIGHTING, osg::StateAttribute::ON);
+
+        _modelpatScale->setPosition(_modelpatScale->getPosition() -
+             osg::Vec3(40, 10, 0));
+
+        _model = geode;
+        break;
+    case 8:
+        text = new osgText::Text3D();
+        geode = new osg::Geode();
+        text->setFont(_modelDir + "arial.ttf");
+        text->setText("Fly");
+        text->setCharacterSize(35);
+        text->setCharacterDepth(15);
+        text->setDrawMode(osgText::Text3D::TEXT);
+        text->setAxisAlignment(osgText::Text3D::XZ_PLANE);
+        text->setColor(osg::Vec4(1,1,1,1));
+        geode->addDrawable(text);
+
+        stateset = text->getOrCreateStateSet();
+        stateset->setRenderingHint(osg::StateSet::OPAQUE_BIN);
+
+        _modelpatScale->setPosition(_modelpatScale->getPosition() - 
+            osg::Vec3(25, 10,0));
+
+        _model = geode;
+        break;
+    case 9:
+        text = new osgText::Text3D();
+        geode = new osg::Geode();
+        text->setFont(_modelDir + "arial.ttf");
+        text->setText("Scale");
         text->setCharacterSize(35);
         text->setCharacterDepth(20);
         text->setDrawMode(osgText::Text3D::TEXT);
@@ -1479,11 +1548,20 @@ osg::PositionAttitudeTransform * Sketch::getNextModel()
         text->setColor(osg::Vec4(1,1,1,1));
         geode->addDrawable(text);
 
+        stateset = text->getOrCreateStateSet();
+        stateset->setRenderingHint(osg::StateSet::OPAQUE_BIN);
+
+        material = new osg::Material();
+        material->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(1,1,0,1));
+        material->setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4(0,0,0,1));
+        //stateset->setAttributeAndModes(material, osg::StateAttribute::ON);
+        
+        stateset->setMode(GL_LIGHTING, osg::StateAttribute::ON);
+
         _modelpatScale->setPosition(_modelpatScale->getPosition() -
-             osg::Vec3(45, 0,0));//_sizeRV->getValue() * 5, _sizeRV->getValue() * 5));
+             osg::Vec3(43, 10,0));//_sizeRV->getValue() * 5, _sizeRV->getValue() * 5));
 
         _model = geode;
-
         break;
     }
 
