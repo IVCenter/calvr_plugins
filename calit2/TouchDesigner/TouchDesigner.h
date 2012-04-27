@@ -8,6 +8,11 @@
 
 #include <osg/MatrixTransform>
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include <string>
 #include <vector>
 
@@ -24,13 +29,17 @@ class TouchDesigner : public cvr::MenuCallback, public cvr::CVRPlugin
         void menuCallback(cvr::MenuItem*);
 
     protected:
+        struct sockaddr_in _serverAddr;
+        struct sockaddr_in _clientAddr;
         cvr::SubMenu* _menu;
         cvr::MenuButton* _receiveButton;
         std::string _port;
-        CVRSocket* _cvrsock;
         int _sockID; ///< socket descriptor
-
-	void receiveGeometry();
+        socklen_t _addrLen;
+        
+      	void receiveGeometry();
+      	void initSocket();
+      	void readSocket();
 };
 
 #endif
