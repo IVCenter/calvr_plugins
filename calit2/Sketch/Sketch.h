@@ -8,6 +8,7 @@
 #include "SketchShape.h"
 #include "Layout.h"
 
+
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrKernel/FileHandler.h>
 
@@ -118,7 +119,10 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
         cvr::MenuCheckbox * _boldHLCB;
         cvr::MenuCheckbox * _pulsatingHLCB;
 
-        cvr::ScrollingDialogPanel * _dialogPanel;
+        cvr::MenuCheckbox * _orientToViewerCB;
+        
+        //cvr::ScrollingDialogPanel * _dialogPanel;
+        cvr::DialogPanel * _panel;
 
         cvr::SubMenu * _loadMenu;
         std::vector<cvr::MenuButton*> _loadFileButtons;
@@ -194,13 +198,10 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
         bool _isObjectRoot;
         bool _movingLayout;
         bool _isIntersecting;
-        bool _orientToViewer;
 
         int _sizeScale;
         float _modelScale;
-
         int _modelCounter;
-
 };
 
 

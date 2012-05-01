@@ -133,8 +133,8 @@ void Layout::scaleMajorRadius(float s)
         r /= scaleMaj;
         r *= s;
     }
-    positionChildren();
     scaleMaj = s; 
+    positionChildren();
 }
 
 void Layout::scaleMinorRadius(float s)
