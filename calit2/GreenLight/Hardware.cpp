@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <utility>
-#include <kernel/ComController.h>
+#include <cvrKernel/ComController.h>
 #include <osg/ShapeDrawable>
 #include <osg/Texture2D>
 #include <osgDB/ReadFile>

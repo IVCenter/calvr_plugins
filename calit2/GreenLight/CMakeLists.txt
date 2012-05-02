@@ -2,6 +2,9 @@ SET(LIB_NAME GreenLight)
 SET(PLUGIN_HEADERS
     GreenLight.h
     Utility.h
+
+    oasClient/OASSound.h
+    oasClient/OASClientInterface.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -15,6 +18,9 @@ ADD_LIBRARY(${LIB_NAME}
     Power.cpp
     Utility.cpp
     SmokeSystem.cpp
+
+    oasClient/OASClientInterface.cpp
+    oasClient/OASSound.cpp
 )
 
 FIND_PACKAGE(MXML)
@@ -35,4 +41,5 @@ TARGET_LINK_LIBRARIES(${LIB_NAME} ${OSGEARTHUTIL_LIBRARY})
 ADD_CALVR_LIBRARIES(${LIB_NAME})
 
 INSTALL(TARGETS ${LIB_NAME} DESTINATION lib/plugins)
+
 

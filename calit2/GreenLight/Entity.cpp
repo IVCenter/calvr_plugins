@@ -1,6 +1,6 @@
 #include "GreenLight.h"
 
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/PluginHelper.h>
 #include <osg/Material>
 #include <osg/StateSet>
 
@@ -48,6 +48,8 @@ GreenLight::Component::Component(osg::Geode * geode, std::string componentName, 
         else
             sset->addUniform(_neverTextureUni.get());
     }
+
+    soundComponent = 0;
 
     defaultColor(); // will set it to the default color
 }
@@ -183,6 +185,9 @@ void GreenLight::Component::setColor(const osg::Vec3 color)
     setColor(colors);
 }
 
+/***
+ * Set Color for multi colored Component.
+ */
 void GreenLight::Component::setColor(std::list<osg::Vec3> colors)
 {
   // TODO: GO OVER THIS WITH JURGEN/PHILLIP.
@@ -262,4 +267,18 @@ return;
             osg::StateAttribute::ON );
 
     mainNode->setStateSet(stateset);
+}
+
+void GreenLight::Component::playSound()
+{
+    if (soundComponent != NULL)
+    {   
+//      soundComponent->setPosition(x,y,z);
+        soundComponent->setPosition(0,0,0);
+//      soundComponent->setDirection(x,y,z);
+        soundComponent->setDirection(0,0,1);
+//      soundComponent->setDirection(angle);
+        soundComponent->setVelocity(0,0,5);
+        soundComponent->play();
+    }
 }

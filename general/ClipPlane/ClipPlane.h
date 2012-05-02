@@ -1,9 +1,9 @@
 #ifndef CLIP_PLANE_PLUGIN_H
 #define CLIP_PLANE_PLUGIN_H
 
-#include <kernel/CVRPlugin.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuCheckbox.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuCheckbox.h>
 
 #include <osg/ClipPlane>
 

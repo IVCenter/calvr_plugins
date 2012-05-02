@@ -1,15 +1,15 @@
 #ifndef PLUGIN_TEST
 #define PLUGIN_TEST
 
-#include <kernel/CVRPlugin.h>
-#include <menu/MenuButton.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuRangeValue.h>
-#include <menu/PopupMenu.h>
-#include <menu/MenuTextButtonSet.h>
-#include <menu/TabbedDialogPanel.h>
-#include <kernel/SceneObject.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuRangeValue.h>
+#include <cvrMenu/PopupMenu.h>
+#include <cvrMenu/MenuTextButtonSet.h>
+#include <cvrMenu/TabbedDialogPanel.h>
+#include <cvrKernel/SceneObject.h>
 
 class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
 {

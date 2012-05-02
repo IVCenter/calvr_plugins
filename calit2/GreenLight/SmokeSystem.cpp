@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/PluginHelper.h>
 
 #include <osgParticle/Particle>
 #include <osgParticle/ParticleSystem>
@@ -42,14 +42,14 @@ MatrixTransform * GreenLight::InitSmoke()
     }
 
     osg::Geode * testGeode = new osg::Geode;
-    osg::ShapeDrawable * testShape = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0,0,0),5,5,5));
+//    osg::ShapeDrawable * testShape = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0,0,0),5,5,5));
     osg::MatrixTransform * test_MT = new MatrixTransform;
-    testGeode->addDrawable(testShape);
+//    testGeode->addDrawable(testShape);
     osg::Vec3 testVector = osg::Vec3(pc[9],pc[10],pc[11]);
     osg::Matrixd testMatrix;
     testMatrix.makeScale(testVector);
     test_MT->setMatrix(testMatrix);
-    test_MT->addChild(testGeode);
+//    test_MT->addChild(testGeode);
     cvr::PluginHelper::getObjectsRoot()->addChild( test_MT );
 
     // Creates/Initializes ParticleSystem.
