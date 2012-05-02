@@ -4,16 +4,16 @@
 #include <iostream>
 #include <list>
 
-#include <config/ConfigManager.h>
-#include <kernel/CVRPlugin.h>
-#include <menu/MenuButton.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuImage.h>
-#include <menu/MenuList.h>
-#include <menu/MenuRangeValue.h>
-#include <menu/MenuText.h>
-#include <menu/SubMenu.h>
-#include <menu/PopupMenu.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuImage.h>
+#include <cvrMenu/MenuList.h>
+#include <cvrMenu/MenuRangeValue.h>
+#include <cvrMenu/MenuText.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/PopupMenu.h>
 
 #include "LightManager.h"
 #include "LightShading.h"

@@ -18,7 +18,7 @@
 #include <osg/Matrixd>
 
 // CalVR plugin support
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/PluginHelper.h>
 
 
 /***************************************************************

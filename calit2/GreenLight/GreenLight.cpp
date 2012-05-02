@@ -32,7 +32,10 @@ float LOD_RANGE = 64;
 using namespace osg;
 using namespace std;
 using namespace cvr;
+
+#ifdef WITH_OSGEARTH
 using namespace osgEarth;
+#endif
 
 // Static Variables
 osg::ref_ptr<osg::Uniform> GreenLight::Component::_displayTexturesUni =
@@ -270,16 +273,16 @@ bool GreenLight::init()
     
     readConfigurationFile();
 
-    /*** OSG EARTH PLUGIN INITIALIZATION ***/
-    mapVariable = NULL; // doesn't seem neccessary.
-    osgEarth::MapNode* mapNode = MapNode::findMapNode( SceneManager::instance()->getObjectsRoot() ); 
-
     OsgE_MT = new MatrixTransform();
     _glLOD  = new LOD();
     scaleMT = new GreenLight::MTA();
     pluginMT = new osg::MatrixTransform();
 
     scaleMT -> addChild (pluginMT);
+
+#ifdef WITH_OSGEARTH 
+    osgEarth::MapNode* mapNode = MapNode::findMapNode( SceneManager::instance()->getObjectsRoot() );
+
     if( mapNode )
     {
         OsgE_MT -> addChild(_glLOD);
@@ -353,6 +356,7 @@ bool GreenLight::init()
         pluginMT->setMatrix( *scaleMatrix );
     }
     else
+#endif
     {
         // Execute Default Initialization.
         printf("Initializing GreenLight with default configuration...\n");

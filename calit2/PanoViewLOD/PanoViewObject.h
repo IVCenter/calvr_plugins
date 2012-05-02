@@ -3,11 +3,11 @@
 
 #include "PanoDrawableLOD.h"
 
-#include <kernel/SceneObject.h>
-#include <menu/MenuButton.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuRangeValue.h>
-#include <menu/MenuCheckbox.h>
+#include <cvrKernel/SceneObject.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuRangeValue.h>
+#include <cvrMenu/MenuCheckbox.h>
 
 #include <string>
 
@@ -43,8 +43,13 @@ class PanoViewObject : public cvr::SceneObject
         osg::Matrix _heightMat;
         osg::Matrix _spinMat;
         osg::Matrix _coordChangeMat;
+        osg::Matrix _tbMat;
 
         osg::Matrix _lastZoomMat;
+
+        osg::Vec3 _tbDir;
+        bool _tbDirValid;
+        int _tbHand;
 
         cvr::MenuButton * _nextButton;
         cvr::MenuButton * _previousButton;
@@ -54,6 +59,7 @@ class PanoViewObject : public cvr::SceneObject
         cvr::MenuCheckbox * _zoomCB;
         cvr::MenuButton * _zoomResetButton;
         cvr::MenuCheckbox * _demoMode;
+        cvr::MenuCheckbox * _trackball;
 
         double _demoTime;
         double _demoChangeTime;

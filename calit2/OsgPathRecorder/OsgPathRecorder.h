@@ -1,12 +1,12 @@
 #ifndef OSG_PATH_RECORDER_H
 #define OSG_PATH_RECORDER_H
 
-#include <kernel/CVRPlugin.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuButton.h>
-#include <menu/MenuText.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuRangeValue.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuText.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuRangeValue.h>
 
 #include <osg/AnimationPath>
 

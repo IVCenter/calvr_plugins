@@ -1,12 +1,12 @@
 #include "SpaceNavigator.h"
 
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/PluginHelper.h>
 #include <osg/Vec4>
 #include <osg/Matrix>
 #include <osgUtil/SceneView>
 #include <osg/Camera>
-#include <config/ConfigManager.h>
-#include <kernel/ComController.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/ComController.h>
 
 using namespace std;
 using namespace osg;

@@ -1,12 +1,12 @@
 #include "MultiViewSimulator.h"
 
 #include <iostream>
-#include <input/TrackingManager.h>
-#include <config/ConfigManager.h>
-#include <kernel/InteractionManager.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/ScreenMultiViewer2.h>
-#include <menu/MenuSystem.h>
+#include <cvrInput/TrackingManager.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/ScreenMultiViewer2.h>
+#include <cvrMenu/MenuSystem.h>
 
 #include <osg/ShapeDrawable>
 

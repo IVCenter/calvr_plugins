@@ -16,9 +16,9 @@
 #include <osg/Switch>
 
 // CalVR plugin support
-#include <kernel/Navigation.h>
-#include <kernel/SceneManager.h>
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/Navigation.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/PluginHelper.h>
 
 // local
 #include "MazeGenerator.h"

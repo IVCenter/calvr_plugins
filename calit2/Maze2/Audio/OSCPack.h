@@ -76,7 +76,9 @@ extern "C" {
 typedef unsigned char uint8_t;
 typedef unsigned int uint32_t;
 typedef int int32_t;
+#ifndef __APPLE__
 typedef long int int64_t;
+#endif
 
 int32_t oscpack(uint8_t* buf, const char* addr, const char* format, ...);
 

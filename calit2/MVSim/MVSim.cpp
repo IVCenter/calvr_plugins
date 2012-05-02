@@ -7,14 +7,14 @@
 #endif
 
 #include <iostream>
-#include <input/TrackingManager.h>
-#include <config/ConfigManager.h>
-#include <kernel/ComController.h>
-#include <kernel/InteractionManager.h>
-#include <kernel/NodeMask.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/ScreenConfig.h>
-#include <menu/MenuSystem.h>
+#include <cvrInput/TrackingManager.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/ComController.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/NodeMask.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/ScreenConfig.h>
+#include <cvrMenu/MenuSystem.h>
 
 #include <osg/Config>
 #include <osg/ShapeDrawable>

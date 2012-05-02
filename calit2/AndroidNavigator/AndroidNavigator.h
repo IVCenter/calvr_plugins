@@ -1,17 +1,17 @@
 #ifndef ANDROID_NAVIGATOR_H
 #define ANDROID_NAVIGATOR_H
 
-#include <kernel/CVRPlugin.h>
+#include <cvrKernel/CVRPlugin.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <X11/Xlib.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuButton.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuButton.h>
 #include <osg/MatrixTransform>
-#include <menu/MenuSystem.h>
+#include <cvrMenu/MenuSystem.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -21,7 +21,7 @@
 #include <OpenThreads/Mutex>
 #include <OpenThreads/Thread>
 #include <osg/Geode>
-#include <kernel/InteractionManager.h>
+#include <cvrKernel/InteractionManager.h>
 #include <osg/Shape>
 #include <osg/Node>
 #include "AndroidTransform.h"

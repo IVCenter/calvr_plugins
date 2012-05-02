@@ -1,6 +1,6 @@
 #include "SphereDrawable.h"
 
-#include <kernel/ScreenConfig.h>
+#include <cvrKernel/ScreenConfig.h>
 
 using namespace osg;
 using namespace std;
@@ -12,6 +12,10 @@ SphereDrawable::SphereDrawable(float radius_in, float viewanglev_in, float viewa
 
 
 SphereDrawable::~SphereDrawable()
+{
+}
+
+SphereDrawable::SphereDrawable(const SphereDrawable& sd,const osg::CopyOp& copyop) : PanoDrawable(sd,copyop)
 {
 }
 

@@ -19,7 +19,7 @@
 #include <windows.h>
 #endif
 
-#define HL_ON_MASK  0xFFFFFF /* 0x0 off, 0xFFFFFF on */
+#define HL_ON_MASK  0xFFFFFF 
 #define HL_OFF_MASK 0x0
 
 #define TEXT_ON_MASK  0xFFFFFF
@@ -75,6 +75,11 @@ class SketchShape: public SketchObject
 
         static void updateHighlight();
 
+        static void setTransparentHighlight(bool b);
+        static void setTextHighlight(bool b);
+        static void setBoldHighlight(bool b);
+        static void setPulsatingHighlight(bool b);
+
     protected:
         ShapeType _type;
         bool _wireframe;
@@ -83,6 +88,8 @@ class SketchShape: public SketchObject
 
         static bool _growing;
         static float _scale;
+
+        static bool _transparentHL, _textHL, _boldHL, _pulsatingHL;
 
         osg::PositionAttitudeTransform * _pat, * _highlightPat, * _modelPat, * _shapePat;
         osg::ref_ptr<osg::Geode> _shapeGeode;

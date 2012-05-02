@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-//#include <cvr/config/ConfigManager.h>
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/SceneManager.h>
 #include <cvrKernel/SceneObject.h>
@@ -31,6 +30,7 @@
 #include <osg/Texture2D>
 #include <osg/NodeVisitor>
 
+#ifdef WITH_OSGEARTH
 /*** OSG EARTH PLUGINS ***/
 
 #include <osgEarth/Map>
@@ -39,6 +39,8 @@
 #include <osgEarth/Utils>
 
 #include <osgEarth/ElevationQuery>
+
+#endif
 
 #include <osgDB/FileUtils>
 #include <osgDB/FileNameUtils>
@@ -90,10 +92,11 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         osg::Matrixd*      scaleMatrix; 
         osg::Vec3d*        scaleVector; 
 
-        osg::LOD * _glLOD;
+        osg::ref_ptr<osg::LOD> _glLOD;
 
+#ifdef WITH_OSGEARTH
         osgEarth::Map * mapVariable;
-
+#endif
     protected:
 
         class Component; // forward declaration

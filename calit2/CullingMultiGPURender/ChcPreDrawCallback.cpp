@@ -1,11 +1,11 @@
 #include <GL/glew.h>
-#include <kernel/SceneManager.h>
-#include <kernel/CVRViewer.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/CVRViewer.h>
 #include <osgViewer/View>
 #include "ChcPreDrawCallback.h"
 #include "ChcAnimate.h"
 
-#include <config/ConfigManager.h>
+#include <cvrConfig/ConfigManager.h>
 #include "CudaHelper.h"
 
 using namespace cvr;

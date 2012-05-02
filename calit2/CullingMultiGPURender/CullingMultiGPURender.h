@@ -12,7 +12,7 @@
 #ifndef CULLING_MULTI_GPU_RENDER_H
 #define CULLING_MULTI_GPU_RENDER_H
 
-#include <kernel/CVRPlugin.h>
+#include <cvrKernel/CVRPlugin.h>
 
 #include <osg/Geode>
 

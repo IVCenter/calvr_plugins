@@ -19,8 +19,8 @@
 #include <osg/Matrix>
 
 // CalVR
-#include <menu/MenuButton.h>
-#include <menu/MenuText.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuText.h>
 
 // Local include
 #include "PathRecordEntryList.h"

@@ -9,7 +9,6 @@ ADD_LIBRARY(${LIB_NAME}
     ArtifactVis.cpp
     vvtokenizer.cpp)
 
-FIND_PACKAGE(MXML)
 FIND_PACKAGE(OSSIMPLANET)
 FIND_PACKAGE(OSSIM)
 

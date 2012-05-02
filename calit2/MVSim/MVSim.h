@@ -1,14 +1,14 @@
 #ifndef _MVSIM_H_
 #define _MVSIM_H_
 
-#include <kernel/CVRPlugin.h>
-#include <kernel/ScreenMVMaster.h>
-#include <kernel/ScreenMVSimulator.h>
-#include <menu/MenuButton.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuRangeValue.h>
-#include <menu/PopupMenu.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrKernel/ScreenMVMaster.h>
+#include <cvrKernel/ScreenMVSimulator.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuRangeValue.h>
+#include <cvrMenu/PopupMenu.h>
 
 #include <osg/Group>
 

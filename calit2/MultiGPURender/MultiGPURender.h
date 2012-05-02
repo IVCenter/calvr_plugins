@@ -1,7 +1,7 @@
 #ifndef MULTI_GPU_RENDER
 #define MULTI_GPU_RENDER
 
-#include <kernel/CVRPlugin.h>
+#include <cvrKernel/CVRPlugin.h>
 
 #include <osg/Geode>
 #include <osg/Vec4>

@@ -3,10 +3,10 @@
 
 #include <vector>
 
-#include <kernel/CVRPlugin.h>
+#include <cvrKernel/CVRPlugin.h>
 
-#include <menu/SubMenu.h>
-#include <menu/MenuCheckbox.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuCheckbox.h>
 
 using namespace cvr;
 
