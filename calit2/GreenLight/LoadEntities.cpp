@@ -7,37 +7,41 @@
 // local functions
 osg::ref_ptr<osg::Node> loadModelFile(std::string file);
 
+extern bool developmentMode;
+
 bool GreenLight::loadScene()
 {
     // load model files
     std::string modelsDir = cvr::ConfigManager::getEntry("Plugin.GreenLight.ModelsDir");
 
-    osg::ref_ptr<osg::Node> box = (GreenLight::NodeA *)(&(*loadModelFile(modelsDir + "box.WRL")));
+//  For LOD Levels.
 //  osg::ref_ptr<osg::Node> box =  loadModelFile(modelsDir + "box.WRL");
+    osg::ref_ptr<osg::Node> box = (GreenLight::NodeA *)(&(*loadModelFile(modelsDir + "box.WRL")));
+
     osg::ref_ptr<osg::Node> electrical = loadModelFile(modelsDir + "electrical.WRL");
-    osg::ref_ptr<osg::Node> Pipes = loadModelFile(modelsDir + "waterpipes.WRL");
-    osg::ref_ptr<osg::Node> doorFL = loadModelFile(modelsDir + "frontleft.WRL");
-    osg::ref_ptr<osg::Node> doorFR = loadModelFile(modelsDir + "frontright.WRL");
-    osg::ref_ptr<osg::Node> doorFI = loadModelFile(modelsDir + "frontinner.WRL");
-    osg::ref_ptr<osg::Node> doorBL = loadModelFile(modelsDir + "backleft.WRL");
-    osg::ref_ptr<osg::Node> doorBR = loadModelFile(modelsDir + "backright.WRL");
-    osg::ref_ptr<osg::Node> doorBI = loadModelFile(modelsDir + "backinner.WRL");
-    osg::ref_ptr<osg::Node> doorBII = loadModelFile(modelsDir + "backinnerinner.WRL");
-    osg::ref_ptr<osg::Node> fans = loadModelFile(modelsDir + "fans_reduced.WRL");
-    osg::ref_ptr<osg::Node> rack1 = loadModelFile(modelsDir + "rack1_c.WRL");
-    osg::ref_ptr<osg::Node> rack2 = loadModelFile(modelsDir + "rack2_c.WRL");
-    osg::ref_ptr<osg::Node> rack3 = loadModelFile(modelsDir + "rack3_c.WRL");
-    osg::ref_ptr<osg::Node> rack4 = loadModelFile(modelsDir + "rack4_c.WRL");
-    osg::ref_ptr<osg::Node> rack5 = loadModelFile(modelsDir + "rack5_c.WRL");
-    osg::ref_ptr<osg::Node> rack6 = loadModelFile(modelsDir + "rack6_c.WRL");
-    osg::ref_ptr<osg::Node> rack7 = loadModelFile(modelsDir + "rack7_c.WRL");
-    osg::ref_ptr<osg::Node> rack8 = loadModelFile(modelsDir + "rack8_c.WRL");
+    osg::ref_ptr<osg::Node> Pipes      = loadModelFile(modelsDir + "waterpipes.WRL");
+    osg::ref_ptr<osg::Node> doorFL     = loadModelFile(modelsDir + "frontleft.WRL");
+    osg::ref_ptr<osg::Node> doorFR     = loadModelFile(modelsDir + "frontright.WRL");
+    osg::ref_ptr<osg::Node> doorFI     = loadModelFile(modelsDir + "frontinner.WRL");
+    osg::ref_ptr<osg::Node> doorBL     = loadModelFile(modelsDir + "backleft.WRL");
+    osg::ref_ptr<osg::Node> doorBR     = loadModelFile(modelsDir + "backright.WRL");
+    osg::ref_ptr<osg::Node> doorBI     = loadModelFile(modelsDir + "backinner.WRL");
+    osg::ref_ptr<osg::Node> doorBII    = loadModelFile(modelsDir + "backinnerinner.WRL");
+    osg::ref_ptr<osg::Node> fans       = loadModelFile(modelsDir + "fans_reduced.WRL");
+    osg::ref_ptr<osg::Node> rack1      = loadModelFile(modelsDir + "rack1_c.WRL");
+    osg::ref_ptr<osg::Node> rack2      = loadModelFile(modelsDir + "rack2_c.WRL");
+    osg::ref_ptr<osg::Node> rack3      = loadModelFile(modelsDir + "rack3_c.WRL");
+    osg::ref_ptr<osg::Node> rack4      = loadModelFile(modelsDir + "rack4_c.WRL");
+    osg::ref_ptr<osg::Node> rack5      = loadModelFile(modelsDir + "rack5_c.WRL");
+    osg::ref_ptr<osg::Node> rack6      = loadModelFile(modelsDir + "rack6_c.WRL");
+    osg::ref_ptr<osg::Node> rack7      = loadModelFile(modelsDir + "rack7_c.WRL");
+    osg::ref_ptr<osg::Node> rack8      = loadModelFile(modelsDir + "rack8_c.WRL");
 
 
     // all or nothing -- cancel loadScene if anythign failed
     if (!box || !electrical || !Pipes || !doorFL || !doorFR || !doorFI 
-    || !doorBL || !doorBR || !doorBI || !doorBII || !fans || !rack1 || !rack2
-    || !rack3 || !rack4 || !rack5 || !rack6 || !rack7 || !rack8)
+     || !doorBL || !doorBR || !doorBI || !doorBII || !fans || !rack1 || !rack2
+     || !rack3 || !rack4 || !rack5 || !rack6 || !rack7 || !rack8)
     {
         return false;
     }
@@ -146,7 +150,9 @@ bool GreenLight::loadScene()
     _rack.push_back(new Entity(rack6,rackMat));
     rackMat.setTrans(28.16,-33.44,0);
     _rack.push_back(new Entity(rack7,rackMat));
-    rackMat.setTrans(28.16,-77.31,0);
+
+    if (developmentMode) rackMat.setTrans(28.16,-77.31,30);
+    else rackMat.setTrans(28.16,-77.31,0);
     _rack.push_back(new Entity(rack8,rackMat));
 
     for (int r = 0; r < _rack.size(); r++)
@@ -191,7 +197,7 @@ bool GreenLight::loadScene()
     for (int r = 0; r < _rack.size(); r++)
         o.optimize(_rack[r]->mainNode.get());
 
-    // Menu Setup
+//// Menu Setup //////////////////////////////////////////////////////////////////////////
     _displayComponentsMenu = new cvr::SubMenu("Display Components", "Display Components");
     _displayComponentsMenu->setCallback(this);
     _glMenu->addItem(_displayComponentsMenu);

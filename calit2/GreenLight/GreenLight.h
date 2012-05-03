@@ -53,6 +53,12 @@
 #include <osg/PositionAttitudeTransform>
 /**************************/
 
+/*** oasClientSound Things **********************/
+#include "oasClient/OASSound.h"
+
+
+/************************************************/
+
 #include "Utility.h"
 
 class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
@@ -152,6 +158,9 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 int animationPosition;
                 bool animating;
                 osg::Geode * animationMarker;
+
+                void playSound();
+                oasclient::OASSound * soundComponent;
 
             protected:
                 osg::ref_ptr<osg::Texture2D> _colors;
@@ -287,6 +296,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
         void createTimestampMenus();
 
+        void InitializeOASClient();
+    
 };
 
 #endif

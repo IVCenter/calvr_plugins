@@ -1,7 +1,11 @@
 // John Mangan (Summer 2011)
-//  Alfred Tarng (Spring 2012)
+// Alfred Tarng (Spring 2012)
 // Plugin for CalVR -- GreenLight Project
 // Many models altered from prior Covise Plugin (BlackBoxInfo)
+//
+// WILL NEED TO SPECIFY A CONFIGURATION FILE WITH THE FOLLOWING PROPERTIES:
+//
+//
 
 #include "GreenLight.h"
 
@@ -15,6 +19,9 @@
 #include <cvrKernel/PluginHelper.h>
 
 #include <osgDB/ReadFile>
+
+//#include "oasClient/OASSound.h"
+
 
 
 CVRPLUGIN(GreenLight)
@@ -43,8 +50,24 @@ Matrixd previousViewMatrix; // TODO: move this to .h file;
 double  previousViewScale;
 bool savedMatrix = false;
 
+// CONFIGURATION DEPENDENT VALUES
 bool developmentMode = false;
+string ipaddress;
+int portNumber;
 
+float configScale = 1000; // should not need to set this.
+float configLoc[16];
+string workingDirectory;
+string soundFile1_str, soundFile2_str;
+//
+
+oasclient::OASSound *soundFile1, *soundFile2;
+
+/***
+ * Matrix Transform Accessor.
+ * Extended the Matrix Transform Class and overrode its accept methode in order
+ * to modify its behavior to set the LODLevel to desired level.
+ */
 void GreenLight::MTA::accept(NodeVisitor& nv){
     if (nv.validNodeMask(*this)) 
     {
@@ -58,8 +81,6 @@ void GreenLight::MTA::accept(NodeVisitor& nv){
     }
 }
 
-float configScale = 1000; // should not need to set this.
-float configLoc[16];
 void readConfigurationFile( )
 {
     /***
@@ -93,8 +114,24 @@ void readConfigurationFile( )
                          "Plugin.GreenLight.OsgCoord", defaultLoc[i], NULL);
 
     }
+
+    ipaddress = cvr::ConfigManager::getEntry("ipaddress", "Plugin.GreenLight.OASConfig", "137.110.118.26", NULL);
+    portNumber = cvr::ConfigManager::getInt("port", "Plugin.GreenLight.OASConfig", 31231, NULL);
+
+    workingDirectory = cvr::ConfigManager::getEntry("workingDirectory", "Plugin.GreenLight.Files", "/home/atarng/CALIT2/calvr_plugins/calit2/GreenLight", NULL);
+    soundFile1_str = cvr::ConfigManager::getEntry("soundFile1", "Plugin.GreenLight.Files", "turbine.wav", NULL);
+    soundFile2_str = cvr::ConfigManager::getEntry("soundFile2", "Plugin.GreenLight.Files", "DOORHINGES.WAV", NULL);
+
 }
 
+void test0()
+{
+    // Play stationary sound
+
+    //soundFile1->setLoop(true);
+    soundFile1->setGain(0.5);
+    soundFile1->play();
+}
 
 /***
  * Called when Navigate To Plugin button is clicked.
@@ -108,17 +145,20 @@ void zoom(){
       previousViewScale = SceneManager::instance()-> getObjectScale();
       savedMatrix = true;
     }
-            double xScale = configScale;
-            Matrixd xMatrix = Matrixd(
-         // Values gained from logging (keyboard event 'l')
-              configLoc[0], configLoc[1], configLoc[2], configLoc[3],
-              configLoc[4], configLoc[5], configLoc[6], configLoc[7],
-              configLoc[8], configLoc[9], configLoc[10],configLoc[11],
-              configLoc[12],configLoc[13],configLoc[14],configLoc[15]
-            );
 
-            SceneManager::instance()->setObjectMatrix(xMatrix);
-            SceneManager::instance()->setObjectScale( xScale ) ;
+    double xScale = configScale;
+    Matrixd xMatrix = Matrixd(
+ // Values gained from logging (keyboard event 'l')
+        configLoc[0], configLoc[1], configLoc[2], configLoc[3],
+        configLoc[4], configLoc[5], configLoc[6], configLoc[7],
+        configLoc[8], configLoc[9], configLoc[10],configLoc[11],
+        configLoc[12],configLoc[13],configLoc[14],configLoc[15]
+    );
+
+    SceneManager::instance()->setObjectMatrix(xMatrix);
+    SceneManager::instance()->setObjectScale( xScale );
+
+//  test0();
 }
 void restoreView(){
     if (savedMatrix){
@@ -330,7 +370,7 @@ bool GreenLight::init()
     cvr::PluginHelper::getObjectsRoot()->addChild( OsgE_MT );
 
     /********************** PARTICLE SYSTEM INIT ********************************/
-    InitSmoke();
+    //InitSmoke();
     /********************** END: PARTICLE SYSTEM INIT ***************************/
 
     /*** Menu Setup ***/
@@ -403,8 +443,39 @@ bool GreenLight::init()
     _mouseOver = NULL;
     _wandOver = NULL;
     /*** End Defaults ***/
-
 }
+
+void GreenLight::InitializeOASClient()
+{
+    cout << "Initializing SoundClient" << endl;
+    if(!oasclient::OASClientInterface::initialize(ipaddress, portNumber))
+    {
+        cout << "cannot initialize oasClient from here." << endl;
+    }else
+    {
+        cout << "Successfully Initialized OASClientInterface" << endl;
+    }
+
+    soundFile1 = new oasclient::OASSound(workingDirectory, soundFile1_str );
+    //soundFile1 = new oasclient::OASSound("/home/atarng/CALIT2/calvr_plugins/calit2/GreenLight", "turbine.wav");
+    if (!soundFile1->isValid())
+    {
+        std::cerr << "Could not create turbine sound!\n";
+    }else
+    {
+        std::cerr << "[GreenLight] Created turbine sound!\n";
+    }
+
+    soundFile2 = new oasclient::OASSound(workingDirectory, soundFile2_str );
+    //soundFile1 = new oasclient::OASSound("/home/atarng/CALIT2/calvr_plugins/calit2/GreenLight", "turbine.wav");
+    if (!soundFile2->isValid())
+    {
+        std::cerr << "Could not create doorhinges sound!\n";
+    }else
+    {
+        std::cerr << "[GreenLight] Created Door hinges sound!\n";
+    }
+};
 
 void GreenLight::menuCallback(cvr::MenuItem * item)
 {
@@ -415,6 +486,13 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
         // Load as neccessary
         if (!_box)
         {
+            InitializeOASClient();            
+		    if ( developmentMode )
+            {
+                cout << "Initializing Smoke System." << endl;
+                InitSmoke();
+            }
+
             if (!_shaderProgram)
             {
                 // First compile shaders
@@ -450,13 +528,11 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
                 _showSceneCheckbox->setValue(false);
                 return;
             }
-
         }
 
         if (_showSceneCheckbox->getValue())
         {
             pluginMT -> addChild( _box -> transform );
-//            pluginMT -> addChild( InitSmoke() );
         }
         else
         {
@@ -945,8 +1021,7 @@ bool GreenLight::processEvent(cvr::InteractionEvent * event)
         return false;
 
     // if box is still not loaded?
-    if (!_box)
-        return false;
+    if (!_box)  return false;
 
     // Should be hovering over it
     if (_wandOver)
@@ -954,7 +1029,9 @@ bool GreenLight::processEvent(cvr::InteractionEvent * event)
         Component * comp = _wandOver->asComponent();
         if (comp)
         {
+            comp->soundComponent = soundFile1; // #
             selectComponent( comp, !comp->selected );
+            comp->soundComponent = NULL; // #
         }
         else // _wandOver is a rack/door/etc.
         {
