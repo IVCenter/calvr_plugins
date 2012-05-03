@@ -1,0 +1,20 @@
+SET(LIB_NAME ImageViewer)
+SET(PLUGIN_HEADERS
+    ImageViewer.h
+    ImageObject.h
+)
+
+ADD_LIBRARY(${LIB_NAME}
+    "SHARED"
+    ${PLUGIN_HEADERS}
+    ImageViewer.cpp
+    ImageObject.cpp
+)
+
+
+INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${OSG_LIBRARIES})
+
+ADD_CALVR_LIBRARIES(${LIB_NAME})
+
+INSTALL(TARGETS ${LIB_NAME} DESTINATION lib/plugins)
