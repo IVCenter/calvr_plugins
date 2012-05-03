@@ -63,48 +63,7 @@ bool ImageViewer::init()
     for(int i = 0; i < fileNames.size(); i++)
     {
 	std::string tag = "Plugin.ImageViewer.Files." + fileNames[i];
-	ImageInfo * ii = new ImageInfo;
-	ii->name = fileNames[i];
-
-	ii->fileLeft = findFile(ConfigManager::getEntry("file",tag,""));
-	if(!ii->fileLeft.empty())
-	{
-	    ii->stereo = false;
-	}
-	else
-	{
-	    ii->fileLeft = findFile(ConfigManager::getEntry("fileLeft",tag,""));
-	    ii->fileRight = findFile(ConfigManager::getEntry("fileRight",tag,""));
-	    ii->stereo = true;
-	    if(ii->fileLeft.empty() || ii->fileRight.empty())
-	    {
-		std::cerr << "ImageViewer: Unable to find files for " << fileNames[i] << std::endl;
-		delete ii;
-		continue;
-	    }
-	}
-
-	ii->aspectRatio = ConfigManager::getFloat("aspectRatio",tag,-1.0);
-	ii->width = ConfigManager::getFloat("width",tag,1000.0);
-	ii->scale = ConfigManager::getFloat("scale",tag,1.0);
-
-	float x,y,z;
-	x = ConfigManager::getFloat("x",tag,0.0);
-	y = ConfigManager::getFloat("y",tag,0.0);
-	z = ConfigManager::getFloat("z",tag,0.0);
-	ii->position = osg::Vec3(x,y,z);
-
-	float h,p,r;
-	h = ConfigManager::getFloat("h",tag,0.0);
-	p = ConfigManager::getFloat("p",tag,0.0);
-	r = ConfigManager::getFloat("r",tag,0.0);
-	ii->rotation = osg::Quat(r,osg::Vec3(0,1.0,0),p,osg::Vec3(1.0,0,0),h,osg::Vec3(0,0,1.0));
-
-	_files.push_back(ii);
-	MenuButton * button = new MenuButton(fileNames[i]);
-	button->setCallback(this);
-	_filesMenu->addItem(button);
-	_fileButtons.push_back(button);
+	createLoadMenu(fileNames[i], tag, _filesMenu);
     }
 
     return true;
@@ -221,4 +180,65 @@ std::string ImageViewer::findFile(std::string name)
     }
 
     return "";
+}
+
+void ImageViewer::createLoadMenu(std::string tagBase, std::string tag, SubMenu * menu)
+{
+    std::vector<std::string> tagList;
+    ConfigManager::getChildren(tag, tagList);
+
+    if(tagList.size())
+    {
+	SubMenu * sm = new SubMenu(tagBase);
+	menu->addItem(sm);
+	for(int i = 0; i < tagList.size(); i++)
+	{
+	    createLoadMenu(tagList[i], tag + "." + tagList[i], sm);
+	}
+    }
+    else
+    {
+	ImageInfo * ii = new ImageInfo;
+	ii->name = tagBase;
+
+	ii->fileLeft = findFile(ConfigManager::getEntry("file",tag,""));
+	if(!ii->fileLeft.empty())
+	{
+	    ii->stereo = false;
+	}
+	else
+	{
+	    ii->fileLeft = findFile(ConfigManager::getEntry("fileLeft",tag,""));
+	    ii->fileRight = findFile(ConfigManager::getEntry("fileRight",tag,""));
+	    ii->stereo = true;
+	    if(ii->fileLeft.empty() || ii->fileRight.empty())
+	    {
+		std::cerr << "ImageViewer: Unable to find files for " << tagBase << std::endl;
+		delete ii;
+		return;
+	    }
+	}
+
+	ii->aspectRatio = ConfigManager::getFloat("aspectRatio",tag,-1.0);
+	ii->width = ConfigManager::getFloat("width",tag,1000.0);
+	ii->scale = ConfigManager::getFloat("scale",tag,1.0);
+
+	float x,y,z;
+	x = ConfigManager::getFloat("x",tag,0.0);
+	y = ConfigManager::getFloat("y",tag,0.0);
+	z = ConfigManager::getFloat("z",tag,0.0);
+	ii->position = osg::Vec3(x,y,z);
+
+	float h,p,r;
+	h = ConfigManager::getFloat("h",tag,0.0);
+	p = ConfigManager::getFloat("p",tag,0.0);
+	r = ConfigManager::getFloat("r",tag,0.0);
+	ii->rotation = osg::Quat(r,osg::Vec3(0,1.0,0),p,osg::Vec3(1.0,0,0),h,osg::Vec3(0,0,1.0));
+
+	_files.push_back(ii);
+	MenuButton * button = new MenuButton(tagBase);
+	button->setCallback(this);
+	menu->addItem(button);
+	_fileButtons.push_back(button);
+    }
 }

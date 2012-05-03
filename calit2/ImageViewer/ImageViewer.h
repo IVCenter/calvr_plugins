@@ -33,6 +33,8 @@ class ImageViewer : public cvr::CVRPlugin, public cvr::MenuCallback
         void menuCallback(cvr::MenuItem * item);
 
     protected:
+        void createLoadMenu(std::string tagBase, std::string tag, cvr::SubMenu * menu);
+
         std::string findFile(std::string name);
 
         cvr::SubMenu * _imageViewerMenu;
