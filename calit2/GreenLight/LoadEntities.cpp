@@ -15,8 +15,9 @@ bool GreenLight::loadScene()
     std::string modelsDir = cvr::ConfigManager::getEntry("Plugin.GreenLight.ModelsDir");
 
 //  For LOD Levels.
-//  osg::ref_ptr<osg::Node> box =  loadModelFile(modelsDir + "box.WRL");
+//  Probably Deprecated....
     osg::ref_ptr<osg::Node> box = (GreenLight::NodeA *)(&(*loadModelFile(modelsDir + "box.WRL")));
+//  osg::ref_ptr<osg::Node> box =  loadModelFile(modelsDir + "box.WRL");
 
     osg::ref_ptr<osg::Node> electrical = loadModelFile(modelsDir + "electrical.WRL");
     osg::ref_ptr<osg::Node> Pipes      = loadModelFile(modelsDir + "waterpipes.WRL");
@@ -28,6 +29,8 @@ bool GreenLight::loadScene()
     osg::ref_ptr<osg::Node> doorBI     = loadModelFile(modelsDir + "backinner.WRL");
     osg::ref_ptr<osg::Node> doorBII    = loadModelFile(modelsDir + "backinnerinner.WRL");
     osg::ref_ptr<osg::Node> fans       = loadModelFile(modelsDir + "fans_reduced.WRL");
+
+//  osg::ref_ptr<osg::Node> rack1      = loadModelFile(modelsDir + "rack1_c.WRL");
     osg::ref_ptr<osg::Node> rack1      = loadModelFile(modelsDir + "rack1_c.WRL");
     osg::ref_ptr<osg::Node> rack2      = loadModelFile(modelsDir + "rack2_c.WRL");
     osg::ref_ptr<osg::Node> rack3      = loadModelFile(modelsDir + "rack3_c.WRL");
@@ -136,6 +139,11 @@ bool GreenLight::loadScene()
     osg::Matrix rackMat;
     rackMat.setTrans(-26.962,-77.31,0);
     _rack.push_back(new Entity(rack1,rackMat));
+
+    _rack.at(0)->transform = new GreenLight::LOD_MTAccessor();
+    _rack.at(0)->transform->setMatrix(rackMat);
+    ((GreenLight::LOD_MTAccessor *)&*(_rack.at(0)->transform))->setRackMTA(true);
+
     rackMat.setRotate(osg::Quat(osg::PI,osg::Vec3(0,0,1)));
     rackMat.setTrans(-28.28,-33.44,0);
     _rack.push_back(new Entity(rack2,rackMat));
@@ -183,7 +191,7 @@ bool GreenLight::loadScene()
     for (int r = 0; r < _rack.size(); r++)
         _box->addChild(_rack[r]);
 
-    // populate racks
+    // POPULATE RACKS
     parseHardwareFile();
     
     std::cerr<<"Optimizing.\n";
