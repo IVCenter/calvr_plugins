@@ -9,10 +9,7 @@
 #include <cvrMenu/PopupMenu.h>
 #include <cvrMenu/MenuTextButtonSet.h>
 #include <cvrMenu/TabbedDialogPanel.h>
-<<<<<<< HEAD
-=======
 #include <cvrMenu/MenuScrollText.h>
->>>>>>> 2fd2fca9961bf5ce1152c5de4571ce166af119ca
 #include <cvrKernel/SceneObject.h>
 
 class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
