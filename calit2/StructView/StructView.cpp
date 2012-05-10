@@ -103,7 +103,7 @@ void StructView::menuCallback(MenuItem* menuItem)
 {
   if(menuItem == enable)
   {
-    cerr << "Enable: " << enable->getValue() << endl;
+    //cerr << "Enable: " << enable->getValue() << endl;
     if(enable->getValue())
     {
       PluginHelper::getObjectsRoot()->addChild(mainNode.get());

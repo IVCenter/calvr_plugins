@@ -49,6 +49,8 @@ GreenLight::Component::Component(osg::Geode * geode, std::string componentName, 
             sset->addUniform(_neverTextureUni.get());
     }
 
+    soundComponent = 0;
+
     defaultColor(); // will set it to the default color
 }
 
@@ -183,6 +185,9 @@ void GreenLight::Component::setColor(const osg::Vec3 color)
     setColor(colors);
 }
 
+/***
+ * Set Color for multi colored Component.
+ */
 void GreenLight::Component::setColor(std::list<osg::Vec3> colors)
 {
   // TODO: GO OVER THIS WITH JURGEN/PHILLIP.
@@ -263,3 +268,15 @@ return;
 
     mainNode->setStateSet(stateset);
 }
+
+
+int testSoundAway = 0;
+void GreenLight::Component::playSound()
+{
+    if (soundComponent != NULL)
+    {  
+        testSoundAway++; 
+        soundComponent->setPosition(testSoundAway,0,0);
+    }
+}
+

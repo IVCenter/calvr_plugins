@@ -130,7 +130,7 @@ void GreenLight::setPowerColors(bool displayPower)
             {
               // if the magnifyRange checkbox is set to true.. use minWatt/maxWatt as the color,
               //  otherwise, use the current iteration's (sit) Component's color value..
-                 if (_magnifyRangeCheckbox->getValue())
+                 if (_magnifyRangeCheckbox != NULL && _magnifyRangeCheckbox->getValue())
                      colors.push_back( wattColor(*lit, minWatt, maxWatt) );
                  else
                      colors.push_back( wattColor(*lit, (*sit)->minWattage, (*sit)->maxWattage) );
@@ -140,7 +140,9 @@ void GreenLight::setPowerColors(bool displayPower)
         {
             colors.push_back( wattColor(0, (*sit)->minWattage, (*sit)->maxWattage) );
         }
+
         (*sit)->setColor(colors);
+
     }
 }
 
@@ -315,15 +317,29 @@ void GreenLight::animatePower()
     std::set< Component * >::iterator sit;
     for (sit = _components.begin(); sit != _components.end(); sit++)
     {
-        if ( (*sit)-> animating ){
-            if( ++((*sit)->animationPosition) > 100  )
-            { // End Animation
-                (*sit) -> animationPosition = 0;
-                (*sit) -> animating = false;
-            }else
+        if ( (*sit) != NULL )
+        {
+            if ( (*sit)-> animating )
             {
-//              std::cout << "Animation Position: " << (*sit) -> animationPosition << std::endl;
-                setPowerColors(true); // update texture.
+                if( ++((*sit)->animationPosition) > 100  )
+                { // End Animation
+                    (*sit) -> animationPosition = 0;
+                    (*sit) -> animating = false;
+
+                    if((*sit)->soundComponent != NULL ) (*sit)->soundComponent = NULL;
+                }else
+                { // Continue Animation
+                    if (_displayPowerCheckbox != NULL )
+                        setPowerColors(_displayPowerCheckbox->getValue()); // update texture.
+                    else
+                        setPowerColors(false); // update texture.
+
+                    if((*sit)->soundComponent != NULL )
+                    {   
+                        printf("sound position now at: (%g,%g,%g)\n", (*sit)->animationPosition,0,0);
+                        (*sit)->soundComponent->setPosition((*sit)->animationPosition,0,0);
+                    }
+                }
             }
         }
     }
