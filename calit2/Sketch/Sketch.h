@@ -122,7 +122,7 @@ class Sketch : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
         cvr::MenuCheckbox * _orientToViewerCB;
         
         //cvr::ScrollingDialogPanel * _dialogPanel;
-        cvr::DialogPanel * _panel;
+        //cvr::DialogPanel * _panel;
 
         cvr::SubMenu * _loadMenu;
         std::vector<cvr::MenuButton*> _loadFileButtons;

@@ -187,11 +187,23 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 virtual void accept(osg::NodeVisitor&);
         };
 
-        class MTA : public osg::MatrixTransform
+        /***
+         * Used to override default MatrixTransform behavior and 
+         * set LOD properties of the GreenLight plugin.
+         */
+        class LOD_MTAccessor : public osg::MatrixTransform
         {
+            private:
+                bool isRack;
+                osg::Vec3f position;
+                bool initialized;
             public:
                 virtual void accept(osg::NodeVisitor&);
                 int LLOD;
+
+                inline bool isRackMTA(){ return isRack; };
+                inline void setRackMTA(bool scmta){ isRack = scmta; };
+                inline osg::Vec3f getPosition() { return position; };
         };
 /*********************************************************/
 

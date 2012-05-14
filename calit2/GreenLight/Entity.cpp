@@ -269,16 +269,14 @@ return;
     mainNode->setStateSet(stateset);
 }
 
+
+int testSoundAway = 0;
 void GreenLight::Component::playSound()
 {
     if (soundComponent != NULL)
-    {   
-//      soundComponent->setPosition(x,y,z);
-        soundComponent->setPosition(0,0,0);
-//      soundComponent->setDirection(x,y,z);
-        soundComponent->setDirection(0,0,1);
-//      soundComponent->setDirection(angle);
-        soundComponent->setVelocity(0,0,5);
-        soundComponent->play();
+    {  
+        testSoundAway++; 
+        soundComponent->setPosition(testSoundAway,0,0);
     }
 }
+
