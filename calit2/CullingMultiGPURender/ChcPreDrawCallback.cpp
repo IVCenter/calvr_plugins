@@ -8,6 +8,9 @@
 #include <cvrConfig/ConfigManager.h>
 #include "CudaHelper.h"
 
+#include <iostream>
+#include <sstream>
+
 using namespace cvr;
 using namespace osgViewer;
 
@@ -30,6 +33,13 @@ ChcPreDrawCallback::ChcPreDrawCallback(int gpuNum, int totalGpuNum, ChcAnimate* 
 
     _cudaInit = false;
     _bufferManInit = false;
+
+    for(int i = 0; i < totalGpuNum; i++)
+    {
+        std::stringstream attr;
+        attr << "gpu" << i;
+        _gpu2context[i] = ConfigManager::getInt(attr.str(),"Plugin.CullingMultiGPURender.CudaGPUMap",i);
+    }
 }
 
 
@@ -58,7 +68,7 @@ void ChcPreDrawCallback::preDrawCallback(osg::Camera * cam)
     {
 	//glewInit();
 	//cudaSetDevice(_gpuNum);
-	cudaGLSetGLDevice(_gpuNum);
+	cudaGLSetGLDevice(_gpu2context[_gpuNum]);
 	_cudaInit = true;
 	printCudaErr();
 	std::cerr << "Cuda Device set to: " << _gpuNum << std::endl;

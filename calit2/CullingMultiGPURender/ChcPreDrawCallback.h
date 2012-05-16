@@ -42,6 +42,8 @@ protected:
      bool _cudaCopy;
      bool _cudaInit;
      bool _bufferManInit;
+
+     std::map<int,int> _gpu2context;
 };
 
 #endif

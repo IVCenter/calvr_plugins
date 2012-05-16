@@ -535,18 +535,13 @@ void Sketch::menuCallback(MenuItem * item)
 
     else if (item == _loadMenu)
     {
-        for (int i = 0; i < _loadFileButtons.size(); ++i)
-        {
-            _loadMenu->removeItem(_loadFileButtons[i]);
-        }
-        _loadFileList.clear();
-        _loadFileButtons.clear();
-
         cvr::MenuButton * button;
         std::string filename;
 
         size_t pos;
         string sub;
+        
+        vector<std::string> addList;
 
         if (DIR *dir = opendir(_dataDir.c_str()))
         {
@@ -560,22 +555,37 @@ void Sketch::menuCallback(MenuItem * item)
 
                     if (!strcmp(sub.c_str(), "osg"))
                     {
-                        _loadFileList.push_back(filename);
+                        bool found = false;
+                        for (vector<std::string>::iterator it = _loadFileList.begin();
+                            it != _loadFileList.end(); ++it)
+                        {
+                            if ((*it).compare(filename))
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+
+                        if (!found)
+                        {
+                            addList.push_back(filename);
+                        }
                     }
                 }
             }
             closedir(dir);
         }
-        
+
         sort(_loadFileList.begin(), _loadFileList.end());
-        
-        for (int i = 0; i < _loadFileList.size(); ++i)
+        sort(addList.begin(), addList.end());       
+
+        for (int i = 0; i < addList.size(); ++i)
         {
-            button = new MenuButton(_loadFileList[i]);
+            button = new MenuButton(addList[i]);
             button->setCallback(this);
             _loadFileButtons.push_back(button);
             _loadMenu->addItem(button);
-            _loadFileList[i] = _dataDir + _loadFileList[i];
+            _loadFileList.push_back(_dataDir + addList[i]);
         }
     }
 
@@ -1528,7 +1538,9 @@ osg::PositionAttitudeTransform * Sketch::getNextModel()
         text->setCharacterDepth(15);
         text->setDrawMode(osgText::Text3D::TEXT);
         text->setAxisAlignment(osgText::Text3D::XZ_PLANE);
+#if OPENSCENEGRAPH_MAJOR_VERSION >= 3
         text->setColor(osg::Vec4(1,1,1,1));
+#endif
         geode->addDrawable(text);
 
         stateset = text->getOrCreateStateSet();
@@ -1548,7 +1560,9 @@ osg::PositionAttitudeTransform * Sketch::getNextModel()
         text->setCharacterDepth(20);
         text->setDrawMode(osgText::Text3D::TEXT);
         text->setAxisAlignment(osgText::Text3D::XZ_PLANE);
+#if OPENSCENEGRAPH_MAJOR_VERSION >= 3
         text->setColor(osg::Vec4(1,1,1,1));
+#endif
         geode->addDrawable(text);
 
         stateset = text->getOrCreateStateSet();

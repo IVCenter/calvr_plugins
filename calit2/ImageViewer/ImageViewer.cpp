@@ -66,6 +66,12 @@ bool ImageViewer::init()
 	createLoadMenu(fileNames[i], tag, _filesMenu);
     }
 
+    float x,y,z;
+    x = ConfigManager::getFloat("x","Plugin.ImageViewer.GlobalOffset",0.0);
+    y = ConfigManager::getFloat("y","Plugin.ImageViewer.GlobalOffset",0.0);
+    z = ConfigManager::getFloat("z","Plugin.ImageViewer.GlobalOffset",0.0);
+    _globalOffset = osg::Vec3(x,y,z);
+
     return true;
 }
 
@@ -90,7 +96,6 @@ void ImageViewer::menuCallback(MenuItem * item)
     {
 	if(item == _fileButtons[i])
 	{
-	    std::cerr << "Loading file" << std::endl;
 	    ImageObject * io = new ImageObject(_files[i]->name,false,true,false,true,false);
 	    if(_files[i]->stereo)
 	    {
@@ -104,8 +109,6 @@ void ImageViewer::menuCallback(MenuItem * item)
 	    PluginHelper::registerSceneObject(io,"ImageViewer");
 	    io->attachToScene();
 
-	    io->setNavigationOn(true);
-
 	    MenuButton * mb = new MenuButton("Delete");
 	    mb->setCallback(this);
 	    io->addMenuItem(mb);
@@ -116,7 +119,10 @@ void ImageViewer::menuCallback(MenuItem * item)
 
 	    osg::Matrix m;
 	    m.makeRotate(_files[i]->rotation);
-	    m.setTrans(_files[i]->position);
+	    m.setTrans(_files[i]->position + _globalOffset);
+            io->setTransform(m);
+
+            io->setNavigationOn(true);
 
 	    _loadedImages.push_back(io);
 	    _deleteButtons.push_back(mb);

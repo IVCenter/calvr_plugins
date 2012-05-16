@@ -5,6 +5,8 @@
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuButton.h>
 
+#include <osg/Vec3>
+
 #include <vector>
 #include <string>
 
@@ -47,6 +49,8 @@ class ImageViewer : public cvr::CVRPlugin, public cvr::MenuCallback
         std::vector<cvr::MenuButton*> _deleteButtons;
 
         std::vector<std::string> _pathList;
+
+        osg::Vec3 _globalOffset;
 };
 
 #endif
