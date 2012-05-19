@@ -23,6 +23,7 @@
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuSystem.h>
 #include <cvrMenu/PopupMenu.h>
+#include <cvrMenu/TabbedDialogPanel.h>
 
 #include <osg/AnimationPath>
 #include <osg/MatrixTransform>
@@ -117,6 +118,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 double time; // time-point within animation path
                 std::list<Entity *> group; // other entities that should animate together
 
+                bool usingLODMTA;
+
                 void handleAnimation();
                 void beginAnimation();
                 void addChild(Entity * child);
@@ -159,7 +162,9 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 bool animating;
                 osg::Geode * animationMarker;
 
-                void playSound();
+                osg::Vec3f soundPosition;
+
+//                void playSound();
                 oasclient::OASSound * soundComponent;
 
             protected:
@@ -197,7 +202,10 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 bool isRack;
                 osg::Vec3f position;
                 bool initialized;
+
             public:
+                std::vector<Component *> componentsList;
+
                 virtual void accept(osg::NodeVisitor&);
                 int LLOD;
 
@@ -213,8 +221,12 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 
 /****** MISCELLANEOUS VARIABLES *****************************/
         // animation function for power comsumption.
+        cvr::MenuButton * component_AnimateButton;
+        Component * _currentComponent;
         void animatePower();
         bool osgEarthInit;
+
+        std::vector<cvr::SubMenu*> _HiddenMenuItems;
 /****** END: MISCELLANEOUS VARIABLES ************************/
 
         cvr::SubMenu * _glMenu;
@@ -248,6 +260,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuImage * _legendGradientOutOfRange;
 
         cvr::DialogPanel * _hoverDialog;
+        cvr::TabbedDialogPanel * _hoverDialog_2; // DEPRECATED
 
         // Timestamps
         cvr::SubMenu * _timeFrom;

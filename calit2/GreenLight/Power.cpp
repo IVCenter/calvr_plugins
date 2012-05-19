@@ -333,12 +333,14 @@ void GreenLight::animatePower()
                         setPowerColors(_displayPowerCheckbox->getValue()); // update texture.
                     else
                         setPowerColors(false); // update texture.
-
+/*
                     if((*sit)->soundComponent != NULL )
                     {   
-                        printf("sound position now at: (%g,%g,%g)\n", (*sit)->animationPosition,0,0);
-                        (*sit)->soundComponent->setPosition((*sit)->animationPosition,0,0);
+                        printf("sound position now at: (%f,%f,%f)\n",
+                               (*sit)->animationPosition,0.0f,0.0f);
+                        (*sit)->soundComponent->setPosition((*sit)->animationPosition,0.0f,0.0f);
                     }
+*/
                 }
             }
         }

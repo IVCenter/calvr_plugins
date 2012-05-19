@@ -4,6 +4,8 @@
 #include <osgDB/ReadFile>
 #include <osgUtil/Optimizer>
 
+//#include <cvrMenu/MenuButton.h>
+
 // local functions
 osg::ref_ptr<osg::Node> loadModelFile(std::string file);
 
@@ -41,7 +43,7 @@ bool GreenLight::loadScene()
     osg::ref_ptr<osg::Node> rack8      = loadModelFile(modelsDir + "rack8_c.WRL");
 
 
-    // all or nothing -- cancel loadScene if anythign failed
+    // all or nothing -- cancel loadScene if anything failed
     if (!box || !electrical || !Pipes || !doorFL || !doorFR || !doorFI 
      || !doorBL || !doorBR || !doorBI || !doorBII || !fans || !rack1 || !rack2
      || !rack3 || !rack4 || !rack5 || !rack6 || !rack7 || !rack8)
@@ -140,28 +142,70 @@ bool GreenLight::loadScene()
     rackMat.setTrans(-26.962,-77.31,0);
     _rack.push_back(new Entity(rack1,rackMat));
 
-    _rack.at(0)->transform = new GreenLight::LOD_MTAccessor();
-    _rack.at(0)->transform->setMatrix(rackMat);
-    ((GreenLight::LOD_MTAccessor *)&*(_rack.at(0)->transform))->setRackMTA(true);
+    _rack.back()->transform = new GreenLight::LOD_MTAccessor(); // ###
+    _rack.back()->transform->setMatrix(rackMat); // ###
+    ((GreenLight::LOD_MTAccessor *)&*(_rack.back()->transform))->setRackMTA(true); // ###
+    _rack.back()->usingLODMTA = true; // ###
 
     rackMat.setRotate(osg::Quat(osg::PI,osg::Vec3(0,0,1)));
     rackMat.setTrans(-28.28,-33.44,0);
     _rack.push_back(new Entity(rack2,rackMat));
+
+    _rack.back()->transform = new GreenLight::LOD_MTAccessor(); // ###
+    _rack.back()->transform->setMatrix(rackMat); // ###
+    ((GreenLight::LOD_MTAccessor *)&*(_rack.back()->transform))->setRackMTA(true); // ###
+    _rack.back()->usingLODMTA = true; // ###
+
     rackMat.setTrans(-28.28,10.43,0);
     _rack.push_back(new Entity(rack3,rackMat));
+
+    _rack.back()->transform = new GreenLight::LOD_MTAccessor(); // ###
+    _rack.back()->transform->setMatrix(rackMat); // ###
+    ((GreenLight::LOD_MTAccessor *)&*(_rack.back()->transform))->setRackMTA(true); // ###
+    _rack.back()->usingLODMTA = true; // ###
+
     rackMat.setTrans(-28.28,54.31,0);
     _rack.push_back(new Entity(rack4,rackMat));
+
+    _rack.back()->transform = new GreenLight::LOD_MTAccessor(); // ###
+    _rack.back()->transform->setMatrix(rackMat); // ###
+    ((GreenLight::LOD_MTAccessor *)&*(_rack.back()->transform))->setRackMTA(true); // ###
+    _rack.back()->usingLODMTA = true; // ###
+
     rackMat.setRotate(osg::Quat());
     rackMat.setTrans(28.16,54.31,0);
     _rack.push_back(new Entity(rack5,rackMat));
+
+    _rack.back()->transform = new GreenLight::LOD_MTAccessor(); // ###
+    _rack.back()->transform->setMatrix(rackMat); // ###
+    ((GreenLight::LOD_MTAccessor *)&*(_rack.back()->transform))->setRackMTA(true); // ###
+    _rack.back()->usingLODMTA = true; // ###
+
     rackMat.setTrans(28.16,10.44,0);
     _rack.push_back(new Entity(rack6,rackMat));
+
+    _rack.back()->transform = new GreenLight::LOD_MTAccessor(); // ###
+    _rack.back()->transform->setMatrix(rackMat); // ###
+    ((GreenLight::LOD_MTAccessor *)&*(_rack.back()->transform))->setRackMTA(true); // ###
+    _rack.back()->usingLODMTA = true; // ###
+
     rackMat.setTrans(28.16,-33.44,0);
     _rack.push_back(new Entity(rack7,rackMat));
 
+    _rack.back()->transform = new GreenLight::LOD_MTAccessor(); // ###
+    _rack.back()->transform->setMatrix(rackMat); // ###
+    ((GreenLight::LOD_MTAccessor *)&*(_rack.back()->transform))->setRackMTA(true); // ###
+    _rack.back()->usingLODMTA = true; // ###
+
     if (developmentMode) rackMat.setTrans(28.16,-77.31,30);
     else rackMat.setTrans(28.16,-77.31,0);
+
     _rack.push_back(new Entity(rack8,rackMat));
+
+    _rack.back()->transform = new GreenLight::LOD_MTAccessor(); // ###
+    _rack.back()->transform->setMatrix(rackMat); // ###
+    ((GreenLight::LOD_MTAccessor *)&*(_rack.back()->transform))->setRackMTA(true); // ###
+    _rack.back()->usingLODMTA = true; // ###
 
     for (int r = 0; r < _rack.size(); r++)
     {
@@ -200,16 +244,15 @@ bool GreenLight::loadScene()
     o.optimize(_electrical->mainNode.get());
     o.optimize(_waterPipes->mainNode.get());
     o.optimize(_fans->mainNode.get());
-    for (int d = 0; d < _door.size(); d++)
-        o.optimize(_door[d]->mainNode.get());
-    for (int r = 0; r < _rack.size(); r++)
-        o.optimize(_rack[r]->mainNode.get());
+    for (int d = 0; d < _door.size(); d++) o.optimize(_door[d]->mainNode.get());
+    for (int r = 0; r < _rack.size(); r++) o.optimize(_rack[r]->mainNode.get());
 
 //// Menu Setup //////////////////////////////////////////////////////////////////////////
     _displayComponentsMenu = new cvr::SubMenu("Display Components", "Display Components");
     _displayComponentsMenu->setCallback(this);
     _glMenu->addItem(_displayComponentsMenu);
-
+//  _HiddenMenuItems.push_back(_displayComponentsMenu);
+  
     _xrayViewCheckbox = new cvr::MenuCheckbox("X-ray Vision",false);
     _xrayViewCheckbox->setCallback(this);
     _displayComponentsMenu->addItem(_xrayViewCheckbox);
@@ -241,12 +284,14 @@ bool GreenLight::loadScene()
     _displayComponentTexturesCheckbox = new cvr::MenuCheckbox("Component Textures",true);
     _displayComponentTexturesCheckbox->setCallback(this);
     _displayComponentsMenu->addItem(_displayComponentTexturesCheckbox);
+
     Component::_displayTexturesUni->setElement(0,_displayComponentTexturesCheckbox->getValue());
     Component::_displayTexturesUni->dirty();
-
+////
     _powerMenu = new cvr::SubMenu("Power Consumption", "Power Consumption");
     _powerMenu->setCallback(this);
     _glMenu->addItem(_powerMenu);
+//    _HiddenMenuItems.push_back(_powerMenu);
 
     _loadPowerButton = new cvr::MenuButton("Load Recent Data");
     _loadPowerButton->setCallback(this);
@@ -255,16 +300,17 @@ bool GreenLight::loadScene()
     _pollHistoricalDataCheckbox = new cvr::MenuCheckbox("Poll Historical Data",false);
     _pollHistoricalDataCheckbox->setCallback(this);
     _powerMenu->addItem(_pollHistoricalDataCheckbox);
-
+////
     _hardwareSelectionMenu = new cvr::SubMenu("Hardware Selection", "Hardware Selection");
     _hardwareSelectionMenu->setCallback(this);
-    _glMenu->addItem(_hardwareSelectionMenu);
+    _glMenu->addItem(_hardwareSelectionMenu); // Remove this and only attach if LOD is set.
+    //_HiddenMenuItems.push_back( _hardwareSelectionMenu );
 
     _selectionModeCheckbox = new cvr::MenuCheckbox("Selection Enabled",false);
     _selectionModeCheckbox->setCallback(this);
     _hardwareSelectionMenu->addItem(_selectionModeCheckbox);
 
-    /*** AT_2/14/12 ***/
+    /*** BEGIN: AT_2/14/12 ***/
     if ( osgEarthInit ){
       _navigateToPluginButton = new cvr::MenuButton("Navigate to Plugin");
       _navigateToPluginButton->setCallback(this);
@@ -276,11 +322,23 @@ bool GreenLight::loadScene()
       _glMenu->addItem(_restorePreviousViewButton);
 
     }
-    /*** AT_2/14/12 ***/
+    /*** END: AT_2/14/12 ***/
 
     _hoverDialog = new cvr::DialogPanel(400, "Intersected Component");
     _hoverDialog->setText("(nothing)");
     _hoverDialog->setVisible(_selectionModeCheckbox->getValue());
+
+    component_AnimateButton = new cvr::MenuButton("Animate");
+    component_AnimateButton->setCallback(this);
+    _hoverDialog->addMenuItem(component_AnimateButton);
+
+//    cvr::MenuButton* animateButton = new cvr::MenuButton("Animate");
+
+/*
+    _hoverDialog_2 = new cvr::TabbedDialogPanel(400, 200, 1, "SelectedComponent");
+    _hoverDialog_2->addTextTab("testAnimateTab", "animate?");
+    _hoverDialog_2->setVisible(_selectionModeCheckbox->getValue());
+*/
 
     if (_cluster.size() > 0)
     {

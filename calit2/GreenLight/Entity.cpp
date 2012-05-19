@@ -15,13 +15,15 @@ GreenLight::Entity::Entity(osg::Node * node, osg::Matrix mat)
     createNodeSet(mainNode);
     status = START;
     time = 0;
+    
+    usingLODMTA = false;
 }
 
-GreenLight::Component::Component(osg::Geode * geode, std::string componentName, osg::Matrix mat)
-    : Entity(geode, mat)
+GreenLight::Component::Component(osg::Geode * geode, std::string componentName, osg::Matrix mat) : Entity(geode, mat)
 {
     name = componentName;
-    selected = true;
+    // Default behavior should be unselected, as well as only one selected item at a time.
+    selected = false;    //selected = true;
     minWattage = 0;
     maxWattage = 0;
 
@@ -269,14 +271,15 @@ return;
     mainNode->setStateSet(stateset);
 }
 
-
+/*
 int testSoundAway = 0;
 void GreenLight::Component::playSound()
 {
     if (soundComponent != NULL)
-    {  
+    {
+
         testSoundAway++; 
         soundComponent->setPosition(testSoundAway,0,0);
     }
 }
-
+*/
