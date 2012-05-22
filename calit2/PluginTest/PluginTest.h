@@ -11,6 +11,7 @@
 #include <cvrMenu/TabbedDialogPanel.h>
 #include <cvrMenu/MenuScrollText.h>
 #include <cvrKernel/SceneObject.h>
+#include <cvrUtil/PointsNode.h>
 
 class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
 {
@@ -26,7 +27,11 @@ class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
         void postFrame();
     protected:
         void createSphereTexture();
+        void createPointsNode();
         void testMulticast();
+
+        osg::ref_ptr<osg::MatrixTransform> _pointsMT;
+        osg::ref_ptr<cvr::PointsNode> _pointsNode;
 
         cvr::MenuButton * testButton1;
         cvr::MenuButton * testButton2;
