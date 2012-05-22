@@ -1,6 +1,7 @@
 #include "ImageObject.h"
 
 #include <cvrKernel/NodeMask.h>
+#include <cvrKernel/ScreenBase.h>
 
 #include <osgDB/ReadFile>
 
@@ -128,8 +129,16 @@ void ImageObject::loadImages(std::string fileLeft, std::string fileRight)
 
     if(_imageTextureLeft && _imageTextureRight)
     {
-	_imageGeodeLeft->setNodeMask(_imageGeodeLeft->getNodeMask() & ~(CULL_MASK_RIGHT));
-	_imageGeodeRight->setNodeMask(_imageGeodeRight->getNodeMask() & ~(CULL_MASK_LEFT | CULL_MASK));
+        if(ScreenBase::getEyeSeparation() >= 0.0)
+        {
+	        _imageGeodeLeft->setNodeMask(_imageGeodeLeft->getNodeMask() & ~(CULL_MASK_RIGHT));
+	        _imageGeodeRight->setNodeMask(_imageGeodeRight->getNodeMask() & ~(CULL_MASK_LEFT | CULL_MASK));
+        }
+        else
+        {
+            _imageGeodeRight->setNodeMask(_imageGeodeRight->getNodeMask() & ~(CULL_MASK_RIGHT));
+            _imageGeodeLeft->setNodeMask(_imageGeodeLeft->getNodeMask() & ~(CULL_MASK_LEFT | CULL_MASK));
+        }
     }
 
 }
