@@ -14,7 +14,7 @@
 
 #include <osgDB/ReadFile>
 
-#include<cstring>
+#include <cstring>
 
 CVRPLUGIN(PluginTest)
 
@@ -38,11 +38,11 @@ PluginTest::~PluginTest()
     delete menu1;
     delete menu2;
     delete menu3;
-    delete pmenu1;
+    //delete pmenu1;
     delete checkbox1;
     delete rangeValue;
-    delete pcheckbox1;
-    delete pbutton1;
+    //delete pcheckbox1;
+    //delete pbutton1;
 }
 
 bool PluginTest::init()
@@ -105,13 +105,14 @@ bool PluginTest::init()
     //MenuSystem::instance()->addMenuItem(testButton2);
 
     popup1 = new PopupMenu("Test Popup");
-    popup1->setVisible(true);
+    popup1->setVisible(false);
 
     // test text from random wikipedia articles
     _mst = new MenuScrollText("There is a great range of specialisations within the ANC. Environmental noise consultants carry out measurement, calculation, evaluation and mitigation of noise pollution to fit within current noise regulation and produce an environmental impact assessment often leading to appearance as an expert witness at public inquiries. In building acoustics, sound insulation is tested between dwellings as required by approved document E of the Building Regulations, schools are designed for optimal learning conditions and the acoustic environments of performing arts venues are designed for their specific intended purposes.\n",500,4,1.0,false);
     popup1->addMenuItem(_mst);
     _mst->appendText("Vipul's Razor is a checksum-based, distributed, collaborative, spam-detection-and-filtering network. Through user contribution, Razor establishes a distributed and constantly updating catalogue of spam in propagation that is consulted by email clients to filter out known spam. Detection is done with statistical and randomized signatures that efficiently spot mutating spam content. User input is validated through reputation assignments based on consensus on report and revoke assertions which in turn is used for computing confidence values associated with individual signatures. \n");
 
+    createPointsNode();
     return true;
 
     pcheckbox1 = new MenuCheckbox("Popup Check", true);
@@ -316,6 +317,51 @@ void PluginTest::createSphereTexture()
     {
 	std::cerr << "Not using GL fast path." << std::endl;
     }
+}
+
+void PluginTest::createPointsNode()
+{
+    std::cerr << "Points load start." << std::endl;
+    _pointsMT = new osg::MatrixTransform();
+    osg::Matrix m;
+    m.makeScale(osg::Vec3(1000.0,1000.0,1000.0));
+    _pointsMT->setMatrix(m);
+
+    std::ifstream infile("/home/aprudhom/trishPans/gal12NdrfFilterFilt-r20.xyb", std::ios::in|std::ios::binary);
+    if(!infile.fail())
+    {
+	infile.seekg(0, std::ios::end);
+	std::ifstream::pos_type size = infile.tellg();
+	infile.seekg(0, std::ios::beg);
+
+	int num = size / ((sizeof(float) * 3) + (sizeof(float) * 3));
+
+	_pointsNode = new PointsNode(PointsNode::POINTS_GL_POINTS,num,1.0f,0.005f,osg::Vec4ub(255,0,0,255));
+
+	osg::Vec3 pos;
+	osg::Vec4ub color(255,255,255,255);
+	float tempColor[3];
+	for(int i = 0; i < num; i++)
+	{
+	    infile.read((char*)pos.ptr(), sizeof(float) * 3);
+	    infile.read((char*)tempColor, sizeof(float) * 3);
+	    color.r() = (char)(tempColor[0] * 255.0);
+	    color.g() = (char)(tempColor[1] * 255.0);
+	    color.b() = (char)(tempColor[2] * 255.0);
+
+	    _pointsNode->setPoint(i,pos,color,0.01f,1.0f + ((float)i) * 0.000003);
+	}
+    }
+    else
+    {
+	std::cerr << "PluginTest: Unable to open test points file." << std::endl;
+	return;
+    }
+
+    _pointsMT->addChild(_pointsNode);
+    PluginHelper::getObjectsRoot()->addChild(_pointsMT);
+
+    std::cerr << "Points load end." << std::endl;
 }
 
 void PluginTest::testMulticast()
