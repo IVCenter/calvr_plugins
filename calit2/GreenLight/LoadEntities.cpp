@@ -142,70 +142,68 @@ bool GreenLight::loadScene()
     rackMat.setTrans(-26.962,-77.31,0);
     _rack.push_back(new Entity(rack1,rackMat));
 
-    _rack.back()->transform = new GreenLight::LOD_MTAccessor(); // ###
-    _rack.back()->transform->setMatrix(rackMat); // ###
+    _rack.back()->transform = new GreenLight::LOD_MTAccessor();                    // ###
+    _rack.back()->transform->setMatrix(rackMat);                                   // ###
     ((GreenLight::LOD_MTAccessor *)&*(_rack.back()->transform))->setRackMTA(true); // ###
-    _rack.back()->usingLODMTA = true; // ###
+    _rack.back()->usingLODMTA = true;                                              // ###
 
-    rackMat.setRotate(osg::Quat(osg::PI,osg::Vec3(0,0,1)));
+    rackMat.setRotate(osg::Quat(osg::PI,osg::Vec3(0,0,1)));                        // Why rotate?
     rackMat.setTrans(-28.28,-33.44,0);
     _rack.push_back(new Entity(rack2,rackMat));
 
-    _rack.back()->transform = new GreenLight::LOD_MTAccessor(); // ###
-    _rack.back()->transform->setMatrix(rackMat); // ###
+    _rack.back()->transform = new GreenLight::LOD_MTAccessor();                    // ###
+    _rack.back()->transform->setMatrix(rackMat);                                   // ###
     ((GreenLight::LOD_MTAccessor *)&*(_rack.back()->transform))->setRackMTA(true); // ###
-    _rack.back()->usingLODMTA = true; // ###
+    _rack.back()->usingLODMTA = true;                                              // ###
 
     rackMat.setTrans(-28.28,10.43,0);
     _rack.push_back(new Entity(rack3,rackMat));
 
-    _rack.back()->transform = new GreenLight::LOD_MTAccessor(); // ###
-    _rack.back()->transform->setMatrix(rackMat); // ###
+    _rack.back()->transform = new GreenLight::LOD_MTAccessor();                    // ###
+    _rack.back()->transform->setMatrix(rackMat);                                   // ###
     ((GreenLight::LOD_MTAccessor *)&*(_rack.back()->transform))->setRackMTA(true); // ###
-    _rack.back()->usingLODMTA = true; // ###
+    _rack.back()->usingLODMTA = true;                                              // ###
 
     rackMat.setTrans(-28.28,54.31,0);
     _rack.push_back(new Entity(rack4,rackMat));
 
-    _rack.back()->transform = new GreenLight::LOD_MTAccessor(); // ###
-    _rack.back()->transform->setMatrix(rackMat); // ###
+    _rack.back()->transform = new GreenLight::LOD_MTAccessor();                    // ###
+    _rack.back()->transform->setMatrix(rackMat);                                   // ###
     ((GreenLight::LOD_MTAccessor *)&*(_rack.back()->transform))->setRackMTA(true); // ###
-    _rack.back()->usingLODMTA = true; // ###
+    _rack.back()->usingLODMTA = true;                                              // ###
 
     rackMat.setRotate(osg::Quat());
     rackMat.setTrans(28.16,54.31,0);
     _rack.push_back(new Entity(rack5,rackMat));
 
-    _rack.back()->transform = new GreenLight::LOD_MTAccessor(); // ###
-    _rack.back()->transform->setMatrix(rackMat); // ###
+    _rack.back()->transform = new GreenLight::LOD_MTAccessor();                    // ###
+    _rack.back()->transform->setMatrix(rackMat);                                   // ###
     ((GreenLight::LOD_MTAccessor *)&*(_rack.back()->transform))->setRackMTA(true); // ###
-    _rack.back()->usingLODMTA = true; // ###
+    _rack.back()->usingLODMTA = true;                                              // ###
 
     rackMat.setTrans(28.16,10.44,0);
     _rack.push_back(new Entity(rack6,rackMat));
 
-    _rack.back()->transform = new GreenLight::LOD_MTAccessor(); // ###
-    _rack.back()->transform->setMatrix(rackMat); // ###
+    _rack.back()->transform = new GreenLight::LOD_MTAccessor();                    // ###
+    _rack.back()->transform->setMatrix(rackMat);                                   // ###
     ((GreenLight::LOD_MTAccessor *)&*(_rack.back()->transform))->setRackMTA(true); // ###
-    _rack.back()->usingLODMTA = true; // ###
+    _rack.back()->usingLODMTA = true;                                              // ###
 
     rackMat.setTrans(28.16,-33.44,0);
     _rack.push_back(new Entity(rack7,rackMat));
 
-    _rack.back()->transform = new GreenLight::LOD_MTAccessor(); // ###
-    _rack.back()->transform->setMatrix(rackMat); // ###
+    _rack.back()->transform = new GreenLight::LOD_MTAccessor();                    // ###
+    _rack.back()->transform->setMatrix(rackMat);                                   // ###
     ((GreenLight::LOD_MTAccessor *)&*(_rack.back()->transform))->setRackMTA(true); // ###
-    _rack.back()->usingLODMTA = true; // ###
+    _rack.back()->usingLODMTA = true;                                              // ###
 
-    if (developmentMode) rackMat.setTrans(28.16,-77.31,30);
-    else rackMat.setTrans(28.16,-77.31,0);
-
+    rackMat.setTrans( 28.16, -77.31, 0);
     _rack.push_back(new Entity(rack8,rackMat));
 
-    _rack.back()->transform = new GreenLight::LOD_MTAccessor(); // ###
-    _rack.back()->transform->setMatrix(rackMat); // ###
+    _rack.back()->transform = new GreenLight::LOD_MTAccessor();                    // ###
+    _rack.back()->transform->setMatrix(rackMat);                                   // ###
     ((GreenLight::LOD_MTAccessor *)&*(_rack.back()->transform))->setRackMTA(true); // ###
-    _rack.back()->usingLODMTA = true; // ###
+    _rack.back()->usingLODMTA = true;                                              // ###
 
     for (int r = 0; r < _rack.size(); r++)
     {
@@ -331,14 +329,6 @@ bool GreenLight::loadScene()
     component_AnimateButton = new cvr::MenuButton("Animate");
     component_AnimateButton->setCallback(this);
     _hoverDialog->addMenuItem(component_AnimateButton);
-
-//    cvr::MenuButton* animateButton = new cvr::MenuButton("Animate");
-
-/*
-    _hoverDialog_2 = new cvr::TabbedDialogPanel(400, 200, 1, "SelectedComponent");
-    _hoverDialog_2->addTextTab("testAnimateTab", "animate?");
-    _hoverDialog_2->setVisible(_selectionModeCheckbox->getValue());
-*/
 
     if (_cluster.size() > 0)
     {
