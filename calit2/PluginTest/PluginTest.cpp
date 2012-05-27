@@ -15,6 +15,8 @@
 #include <osgDB/ReadFile>
 
 #include <cstring>
+#include <cstdlib>
+#include <time.h>
 
 CVRPLUGIN(PluginTest)
 
@@ -25,6 +27,7 @@ PluginTest::PluginTest()
 {
     std::cerr << "PluginTest created." << std::endl;
     _loading = false;
+    srand(time(NULL));
 }
 
 PluginTest::~PluginTest()
@@ -212,6 +215,20 @@ void PluginTest::menuCallback(MenuItem * item)
 
 void PluginTest::preFrame()
 {
+    if(_pointsNode)
+    {
+	/*for(int i = 0; i < _pointsNode->getNumPoints(); i++)
+	{
+	    float mult = 0.001;
+	    osg::Vec3 diffvec(((rand() % 10 + 1) - 5) * mult, ((rand() % 10 + 1) - 5) * mult, ((rand() % 10 + 1) - 5) * mult);
+	    _pointsNode->setPointPosition(i,_pointsNode->getPointPosition(i) + diffvec);
+	}*/
+	if(_pointsNode->getNumPoints())
+	{
+	int delindex = rand() % _pointsNode->getNumPoints();
+	_pointsNode->removePoints(delindex,10000);
+	}
+    }
     //std::cerr << "PluginTest preFrame()." << std::endl;
     if(_loading)
     {
@@ -239,6 +256,26 @@ void PluginTest::preFrame()
 void PluginTest::postFrame()
 {
     //std::cerr << "PluginTest postFrame()." << std::endl;
+}
+
+bool PluginTest::processEvent(InteractionEvent * event)
+{
+    if(event->asKeyboardEvent())
+    {
+	if(event->getInteraction() == KEY_UP && _pointsNode)
+	{
+	    if(_pointMode == PointsNode::POINTS_GL_POINTS)
+	    {
+		_pointMode = PointsNode::POINTS_SHADED_SPHERES;
+	    }
+	    else if(_pointMode == PointsNode::POINTS_SHADED_SPHERES)
+	    {
+		_pointMode = PointsNode::POINTS_GL_POINTS;
+	    }
+	    _pointsNode->setPointsMode(_pointMode);
+	}
+    }
+    return false;
 }
 
 void PluginTest::createSphereTexture()
@@ -327,6 +364,8 @@ void PluginTest::createPointsNode()
     m.makeScale(osg::Vec3(1000.0,1000.0,1000.0));
     _pointsMT->setMatrix(m);
 
+    _pointMode = PointsNode::POINTS_GL_POINTS;
+
     std::ifstream infile("/home/aprudhom/trishPans/gal12NdrfFilterFilt-r20.xyb", std::ios::in|std::ios::binary);
     if(!infile.fail())
     {
@@ -336,7 +375,7 @@ void PluginTest::createPointsNode()
 
 	int num = size / ((sizeof(float) * 3) + (sizeof(float) * 3));
 
-	_pointsNode = new PointsNode(PointsNode::POINTS_GL_POINTS,num,1.0f,0.005f,osg::Vec4ub(255,0,0,255));
+	_pointsNode = new PointsNode(_pointMode,num,1.0f,0.005f,osg::Vec4ub(255,0,0,255));
 
 	osg::Vec3 pos;
 	osg::Vec4ub color(255,255,255,255);
