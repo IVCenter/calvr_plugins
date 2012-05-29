@@ -1,0 +1,10 @@
+NOTES REGARDING SHAPES
+1. Shapes with an odd number for type (from getType()) means it's generated with a center point, even number means each point is assigned individually
+   Shapes with types 1,2 are triangles; 3,4 are rectangles; 5 is circle.
+
+NOTES REGARDING SHAPEHELPER
+1. each ShapeHelper is assigned to manage one geode only (specified when ShapeHelper is constructed)
+2. update keywords(ie "updatetc" "updatec") are optional when updating shape; the id of the shape (position of shape in ShapeHelper object) can be used to 
+   update the shape. The client side should also keep track of the id/position of the shapes within the geode
+3. The position data are assumed to be present in each packet, other data can be optional.
+4. processData(char*) is the ideal method to process data, the other available public methods are better suited for testing
