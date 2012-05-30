@@ -20,12 +20,16 @@ PanMarkerObject::PanMarkerObject(float scale, float rotationOffset, std::string 
     _sphereGeode->addDrawable(_sphere);
     addChild(_sphereGeode);
 
+    _name = name;
+
     osg::StateSet * stateset = _sphereGeode->getOrCreateStateSet();
     stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
     stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
 
     osg::CullFace * cf = new osg::CullFace();
     stateset->setAttributeAndModes(cf,osg::StateAttribute::ON);
+
+    addMoveMenuItem();
 }
 
 PanMarkerObject::~PanMarkerObject()
@@ -39,19 +43,26 @@ bool PanMarkerObject::processEvent(InteractionEvent * ie)
     {
 	if(!tie->getButton() && tie->getInteraction() == BUTTON_DOWN && _viewerInRange)
 	{
-	    if(_parent)
+	    if(_parent && !getMovable())
 	    {
 		PointsObject * po = dynamic_cast<PointsObject*>(_parent);
 		if(po && !po->getPanActive())
 		{	    
 		    std::cerr << "Pan Transition." << std::endl;
 		    po->setActiveMarker(this);
+		    return true;
 		}
 	    }
 	}
     }
 
     return SceneObject::processEvent(ie);
+}
+
+void PanMarkerObject::enterCallback(int handID, const osg::Matrix &mat)
+{
+    osg::Vec3 pos = getTransform().getTrans();
+    std::cerr << "Marker " << _name << ": x: " << pos.x() << " y: " << pos.y() << " z: " << pos.z() << std::endl;
 }
 
 void PanMarkerObject::setViewerDistance(float distance)

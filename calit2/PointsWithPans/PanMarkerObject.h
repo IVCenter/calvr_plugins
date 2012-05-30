@@ -13,6 +13,7 @@ class PanMarkerObject : public cvr::SceneObject
         virtual ~PanMarkerObject();
 
         virtual bool processEvent(cvr::InteractionEvent * ie);
+        virtual void enterCallback(int handID, const osg::Matrix &mat);
 
         void setViewerDistance(float distance);
 
@@ -25,6 +26,8 @@ class PanMarkerObject : public cvr::SceneObject
         float _rotationOffset;
         osg::ref_ptr<osg::ShapeDrawable> _sphere;
         osg::ref_ptr<osg::Geode> _sphereGeode;
+
+        std::string _name;
 };
 
 #endif

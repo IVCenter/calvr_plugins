@@ -123,7 +123,7 @@ void PointsWithPans::menuCallback(MenuItem * item)
 
 	    for(int j = 0; j < _setList[i]->panList.size(); j++)
 	    {
-		PanMarkerObject * pmo = new PanMarkerObject(_setList[i]->scale,_setList[i]->panList[j].rotationOffset,_setList[i]->panList[j].name,false,false,false,false,true);
+		PanMarkerObject * pmo = new PanMarkerObject(_setList[i]->scale,_setList[i]->panList[j].rotationOffset,_setList[i]->panList[j].name,false,false,false,true,true);
 		_activeObject->addChild(pmo);
 
 		osg::Matrix m;
