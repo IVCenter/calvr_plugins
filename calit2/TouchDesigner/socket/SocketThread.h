@@ -45,6 +45,7 @@ class SocketThread : public OpenThreads::Thread
 		OpenThreads::Mutex _mutex;
 		ShapeHelper * sh;
 		Geode * geoWorker;
+		string sceneData;
 
 	protected:
 		SocketThread();
@@ -62,5 +63,6 @@ class SocketThread : public OpenThreads::Thread
 		~SocketThread();
 		string getSerializedScene(); 
 		Geode * getTestNode();
+		ShapeHelper * getTestSH();
 };
 #endif

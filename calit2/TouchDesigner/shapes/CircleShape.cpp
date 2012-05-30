@@ -20,7 +20,7 @@ CircleShape::CircleShape()
 	gradient = Vec4d(0.0,0.0,0.0,0.0);
 	degree = 10;
 	type = 5;
-	
+
 	generate();
 }
 
@@ -38,7 +38,7 @@ CircleShape::CircleShape(string _name)
 	gradient = Vec4d(0.0,0.0,0.0,0.0);
 	degree = 10;
 	type = 5;
-	
+
 	generate();
 }
 
@@ -54,7 +54,7 @@ CircleShape::CircleShape(string _name, Vec3d& _center, double _radius, Vec4d& _c
 	gradient = _gradient;
 	degree = _deg;
 	type = 5;
-	
+
 	generate();
 }
 
@@ -68,7 +68,7 @@ CircleShape::CircleShape(string _name, Vec3d& _center, double _radius, Vec4d& _c
 	gradient = _gradient;	
 	degree = 10;
 	type = 5;
-	
+
 	generate();
 }
 
@@ -82,7 +82,7 @@ CircleShape::CircleShape(string _name, Vec3d& _center, double _radius, Vec4d& _c
 	gradient = color;	
 	degree = _deg;
 	type = 5;
-	
+
 	generate();
 }
 
@@ -96,7 +96,7 @@ CircleShape::CircleShape(string _name, Vec3d& _center, double _radius, Vec4d& _c
 	gradient = color;
 	degree = 10;
 	type = 5;
-	
+
 	generate();
 }
 
@@ -110,7 +110,7 @@ CircleShape::CircleShape(string _name, Vec3d& _center, double _radius)
 	gradient = color;
 	degree = 10;
 	type = 5;
-	
+
 	generate();
 }
 
@@ -124,7 +124,7 @@ CircleShape::CircleShape(string _name, Vec3d& _center)
 	gradient = color;
 	degree = 10;
 	type = 5;
-	
+
 	generate();
 }
 
@@ -138,7 +138,7 @@ CircleShape::CircleShape(Vec3d& _center)
 	gradient = color;
 	degree = 10;
 	type = 5;
-	
+
 	generate();
 }
 

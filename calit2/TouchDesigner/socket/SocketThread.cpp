@@ -24,10 +24,10 @@ fd_set readfds;
 // socket thread constructor
 SocketThread::SocketThread(string & serverName) : _serverName(serverName)
 {
-   _mkill = false;
+	_mkill = false;
 
-   // create connection to server
-   	if ((_sockID = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+	// create connection to server
+	if ((_sockID = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
 	{
 		cerr<<"Socket Error!" << endl;
 	} 
@@ -38,7 +38,7 @@ SocketThread::SocketThread(string & serverName) : _serverName(serverName)
 		_serverAddr.sin_addr.s_addr = INADDR_ANY;
 		bzero(&(_serverAddr.sin_zero), 8);
 	}
-	
+
 	if (bind(_sockID, (struct sockaddr *)&_serverAddr, sizeof(struct sockaddr)) == -1)
 	{
 		cerr << "Bind Error!" << endl;
@@ -47,18 +47,18 @@ SocketThread::SocketThread(string & serverName) : _serverName(serverName)
 	{
 		_addrLen = sizeof(struct sockaddr);
 		cerr<<"Server waiting for client on port: "<<PORT<<endl;
-	
+
 		FD_ZERO(&readfds);
 		FD_SET(_sockID, &readfds);
 	}
-	
+
 	// a bunch of stuff needed for threads?
 	sh = new ShapeHelper();
-//	_mu
-	
-   	start(); //starts the thread
-   	
-   	cerr << "SOCKET THREAD INITIALIZED" << endl;
+	//	_mu
+
+	start(); //starts the thread
+
+	cerr << "SOCKET THREAD INITIALIZED" << endl;
 }
 
 
@@ -70,61 +70,46 @@ void SocketThread::run()
 
 	//serialize
 	stringstream ss;
-	
+
 
 	//printf("%s\n", ss.str().c_str());  // send this via master slave
 
-   	 while ( ! _mkill ) 
-    	{
-	// check server for info
-	
-	
-	
-	sh->processData(readSocket());
-	
-	//if (sh->processedAll)
-	//{
+	while ( ! _mkill ) 
+	{
+		// check server for info
+
+
 		_mutex.lock();
-		// GOTTA TURN THIS TO BINARY
-		geoWorker = sh->getGeode();
-		readerwriter->writeNode(*geoWorker, ss);
-		_serializedScenes.push_back(ss.str());
-		
-		//cerr
-		//cerr << "pushing data\t" << endl;
-		//cerr << ss.str() << endl;
+		sh->processData(readSocket());
 		_mutex.unlock();
-	//	sh->processedAll=false;
-	//}
-		
-	
-	// send result to parser 
-	// place mutex around adding ive string to vector e.g _mutex.lock() and _mutex.unlock();
-    }
+
+		if (sh->processedAll)
+		{
+			// GOTTA TURN THIS TO BINARY
+			geoWorker = sh->getGeode();
+			readerwriter->writeNode(*geoWorker, ss);
+			//_serializedScenes.push_back(ss.str());
+			sceneData = ss.str();
+			sh->processedAll=false;
+		}
+
+
+		// send result to parser 
+		// place mutex around adding ive string to vector e.g _mutex.lock() and _mutex.unlock();
+	}
 }
 
 string SocketThread::getSerializedScene(void)
 {
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-
-    string ret = "";
-
-    if (!_serializedScenes.empty())
-    {
-        ret = _serializedScenes.front();
-        _serializedScenes.pop_front();
-    }
-    
-    cerr << "size " << _serializedScenes.size() << endl;
-    
-    return ret;
+	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
+	return sceneData;
 }
 
 
 SocketThread::~SocketThread() 
 {
-      _mkill = true;
-      join();
+	_mkill = true;
+	join();
 }
 
 char* SocketThread::readSocket()
@@ -147,5 +132,11 @@ char* SocketThread::readSocket()
 
 Geode * SocketThread::getTestNode()
 {
-	return geoWorker;
+	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
+	return new Geode(*geoWorker, CopyOp::DEEP_COPY_ALL);
+}
+
+ShapeHelper * SocketThread::getTestSH()
+{
+	return sh;
 }
