@@ -126,6 +126,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 void showVisual(bool show);
                 virtual void setTransparency(bool transparent);
                 virtual void setColor(const osg::Vec3 color);
+                //virtual void setColor(const osg::Vec4 color); // 5_21_12
                 virtual void defaultColor();
 
                 virtual Component * asComponent() {return NULL;}
@@ -149,6 +150,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 void setTransparency(bool transparent);
                 void setColor(const osg::Vec3 color);
                 void setColor(const std::list<osg::Vec3> colors);
+                void setColor(const std::list<osg::Vec4> colors); // 5_21_12
                 void defaultColor();
                 bool select(bool select);
 
@@ -162,6 +164,8 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 bool animating;
                 osg::Geode * animationMarker;
 
+                float soundIntensity;
+                float prev_soundIntensity;
                 osg::Vec3f soundPosition;
 
 //                void playSound();
@@ -319,6 +323,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         void doHoverOver(Entity *& last, Entity * current, bool showHover);
         osg::ref_ptr<osg::Geode> makeComponentGeode(float height, std::string textureFile = "");
         osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
+        osg::Vec4 wattColor2(float watt, int minWatt, int maxWatt);
         void createTimestampMenus();
 
         void InitializeOASClient();

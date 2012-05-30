@@ -95,25 +95,34 @@ void GreenLight::LOD_MTAccessor::accept(NodeVisitor& nv){
         position = d_trans;
 
         printf("Ref-Position: (%g,%g,%g) \n", position.x(), position.y(), position.z() );
+//        printf("Ref-Rotation: (%g,%g,%g,%g) \n\n", d_rot.x(), d_rot.y(), d_rot.z(), d_rot.w() );
 
         for (unsigned int i = 0; i < componentsList.size(); ++i)
         {
             componentsList.at(i)->soundPosition = position;
             Matrixd transMat = componentsList.at(i)->transform->getMatrix();
 
-            DEBUG_MatrixPrint(transMat); 
+            Vec3f trans, scale;
+            Quat  rot, so;
+//          DEBUG_MatrixPrint(transMat);
+            transMat.decompose( trans, rot, scale, so ); 
+
+            transMat.makeTranslate(trans);
 
             (componentsList.at(i)->soundPosition) = transMat.preMult(componentsList.at(i)->soundPosition);
 
             componentsList.at(i)->soundPosition.x() /= 2.0f;
             componentsList.at(i)->soundPosition.y() /= 2.0f;
-//            componentsList.at(i)->soundPosition.y() += 50.0f;
+
+//          componentsList.at(i)->soundPosition.y() += 50.0f;
+//
             componentsList.at(i)->soundPosition.z() -= 40.0f;
             componentsList.at(i)->soundPosition.z() /= 2.0f;
-
+/*
             printf("\tLoc-Position: (%g,%g,%g) \n", componentsList.at(i)->soundPosition.x(),
                                                     componentsList.at(i)->soundPosition.y(),
                                                     componentsList.at(i)->soundPosition.z());
+*/
         }
     
         setRackMTA( false );
@@ -933,7 +942,7 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
 
 void GreenLight::preFrame()
 {
-    /***
+/***
  * TODO: Add LOD Call-back support.
  * within reach? Add two more call backs for out of sight and in sight.
  */
@@ -946,11 +955,12 @@ void GreenLight::preFrame()
       for (int r = 0; r < _rack.size(); r++)
         _rack[r]->handleAnimation();
 
-      if( lodLevel == 0 ){
-	    if ( developmentMode )
-	    {
-          handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver,
-                          cvr::ComController::instance()->isMaster());
+      if( lodLevel == 0 )
+      {
+	      if ( developmentMode )
+	      {
+            handleHoverOver(cvr::PluginHelper::getMouseMat(), _mouseOver,
+                            cvr::ComController::instance()->isMaster());
 		  }else{
 	        handleHoverOver(cvr::PluginHelper::getHandMat(), _wandOver,
 		                    cvr::ComController::instance()->isMaster());
@@ -958,10 +968,14 @@ void GreenLight::preFrame()
 	      }
       }
 
+      // update Sound Position relative to currentLocation.
+      soundFile1;
+      soundFile2;
+
       animatePower();
 
-    if( lodLevel != 0 && _HiddenMenuItems.empty() )
-    {
+      if( lodLevel != 0 && _HiddenMenuItems.empty() )
+      {
         printf("Unpopulate Menu\n");
         _glMenu->removeItem(_displayComponentsMenu);
         _glMenu->removeItem(_powerMenu);
@@ -970,18 +984,16 @@ void GreenLight::preFrame()
         _HiddenMenuItems.push_back(_displayComponentsMenu);
         _HiddenMenuItems.push_back(_powerMenu);
         _HiddenMenuItems.push_back(_hardwareSelectionMenu);
-    }else if( lodLevel == 0 && !_HiddenMenuItems.empty())
-    {
+      }else if( lodLevel == 0 && !_HiddenMenuItems.empty())
+      {
         while(!_HiddenMenuItems.empty())
         {
            _glMenu->addItem(_HiddenMenuItems.back());
            _HiddenMenuItems.pop_back();
         }
-    }else
-    {
-//        printf("Current LODLevel: %d, (HiddenMenuEmpty): %s\n", lodLevel,
-//                (_HiddenMenuItems.empty()) ? "true" : "false" );
-    }
+      }else
+      {
+      }
 
     }
 
@@ -1090,10 +1102,11 @@ bool GreenLight::processEvent(cvr::InteractionEvent * event)
         {// SET POSITION TO SOUND
             comp->soundComponent = soundFile1; // #
             comp->soundComponent->setPosition (
-            comp->soundPosition.x(), comp->soundPosition.y(), comp->soundPosition.z());
+                comp->soundPosition.x(), comp->soundPosition.y(), comp->soundPosition.z());
 
             selectComponent( comp, !comp->selected );
 
+            // Unselects previously selected component.
             if(_currentComponent != NULL)
             {
                 _currentComponent -> select( !_currentComponent->selected );
@@ -1111,6 +1124,9 @@ bool GreenLight::processEvent(cvr::InteractionEvent * event)
         {
             (*eit)->beginAnimation();
         }
+    
+        soundFile2->setPosition ( 0, 0, 30 );
+        soundFile2 -> play();
     }
     return true;
   }
