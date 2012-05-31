@@ -28,12 +28,12 @@ bool MultiGPURender::init()
 {
     std::cerr << "MultiGPURender init()" << std::endl;
 
-    //_basePath = ConfigManager::getEntry("Plugin.MultiGPURender.BasePath");
-    _basePath = ConfigManager::getEntry("basePath","Plugin.MultiGPURender.Animation","");
-    _baseName = ConfigManager::getEntry("baseName","Plugin.MultiGPURender.Animation","");
-    _frames = ConfigManager::getInt("frames","Plugin.MultiGPURender.Animation",1);
-    _colors = ConfigManager::getInt("colors","Plugin.MultiGPURender.Animation",1);
-    _numGPUs = ConfigManager::getInt("Plugin.MultiGPURender.NumberOfGPUs");
+    //_basePath = ConfigManager::getEntry("Plugin.CrashDemo.BasePath");
+    _basePath = ConfigManager::getEntry("basePath","Plugin.CrashDemo.Animation","");
+    _baseName = ConfigManager::getEntry("baseName","Plugin.CrashDemo.Animation","");
+    _frames = ConfigManager::getInt("frames","Plugin.CrashDemo.Animation",1);
+    _colors = ConfigManager::getInt("colors","Plugin.CrashDemo.Animation",1);
+    _numGPUs = ConfigManager::getInt("Plugin.CrashDemo.NumberOfGPUs");
 
     _geode = new Geode();
     _geode->setNodeMask(_geode->getNodeMask() & ~2); // disable interaction
