@@ -5,6 +5,7 @@
 #include <cvrKernel/ComController.h>
 #include <sstream>
 #include <algorithm>
+#include <cstdio>
 
 #include <sys/syscall.h>
 #include <sys/stat.h>
@@ -23,9 +24,9 @@ AnimationManager::AnimationManager(std::string basepath, std::string basename,in
     _cacheDone = false;
 
     _currentFrame = -1;
-    _loadRatio = ConfigManager::getFloat("loadRatio","Plugin.MultiGPURender.Animation",1.0);
+    _loadRatio = ConfigManager::getFloat("loadRatio","Plugin.CrashDemo.Animation",1.0);
 
-    _numGPUs = ConfigManager::getInt("Plugin.MultiGPURender.NumberOfGPUs");
+    _numGPUs = ConfigManager::getInt("Plugin.CrashDemo.NumberOfGPUs");
     _timingStack = new CircularStack(10);
 
     loadOrCreateInfoFile();
@@ -377,7 +378,7 @@ void AnimationManager::loadColorSplitData(int frame)
 
 void AnimationManager::loadOrCreateInfoFile()
 {
-    std::string fileName = ConfigManager::getEntry("infoFile","Plugin.MultiGPURender.Animation","default.ani");
+    std::string fileName = ConfigManager::getEntry("infoFile","Plugin.CrashDemo.Animation","default.ani");
 
     std::stringstream ss;
     ss << _basePath << "/" << fileName;
