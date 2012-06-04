@@ -21,7 +21,8 @@ PyramidShape::PyramidShape()
 	center = Vec3d(0,0,0);
 	length = 10;
 	color1 = Vec4d(0.6,0.2,0.8,0.3);		
-	type = 1;
+	type = 7;
+	sides = 3;
 	genVer= true;
 	generate();
 }
@@ -35,113 +36,215 @@ PyramidShape::~PyramidShape()
 
 PyramidShape::PyramidShape(string _name)
 {
-	name = "";
+	name = _name;
 	center = Vec3d(0,0,0);
 	length = 10;
 	color1 = Vec4d(0.6,0.2,0.8,0.3);		
-	type = 1;
+	type = 7;
+	sides = 3;
 	genVer= true;
 	generate();
 }
 
-
-// name, p1, p2, p3, color1, color2, color3
-PyramidShape::PyramidShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec4d& _c1, Vec4d& _c2, Vec4d& _c3)
+/****************3 sided*****************************/
+// name, p1, p2, p3, p4, color1, color2, color3
+PyramidShape::PyramidShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec3d& _p4, Vec4d& _c1, Vec4d& _c2, Vec4d& _c3)
 {
 	name = _name;
 	p1 = _p1;
 	p2 = _p2;
 	p3 = _p3;
+	p4 = _p4;
+	p5 = NULL;
 	color1 = _c1;
 	color2 = _c2;
 	color3 = _c3;	
-	type = 2;
+	type = 6;
+	sides = 3;
 	genVer= false;
 	generate();
 }
 
-// name, p1, p2, p3, color1, color2
-PyramidShape::PyramidShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec4d& _c1, Vec4d& _c2)
+// name, p1, p2, p3, p4, color1, color2
+PyramidShape::PyramidShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec3d& _p4, Vec4d& _c1, Vec4d& _c2)
 {
 	name = _name;
 	p1 = _p1;
 	p2 = _p2;
 	p3 = _p3;
+	p4 = _p4;
+	p5 = NULL;
 	color1 = _c1;
 	color2 = _c2;
 	color3 = _c2;
-	type = 2;
+	type = 6;
+	sides = 3;
 	genVer= false;
 	generate();
 }
 
-// name, p1, p2, p3, color
-PyramidShape::PyramidShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec4d& _c1)
+// name, p1, p2, p3, p4, color
+PyramidShape::PyramidShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec3d& _p4, Vec4d& _c1)
 {
 	name = _name;
 	p1 = _p1;
 	p2 = _p2;
 	p3 = _p3;
+	p4 = _p4;
+	p5 = NULL;
 	color1 = _c1;
 	color2 = _c1;
 	color3 = _c1;
-	type = 2;
+	type = 6;
+	sides = 3;
 	genVer= false;
 	generate();
 }
 
 
-// name, p1, p2, p3
-PyramidShape::PyramidShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3)
+// name, p1, p2, p3, p4
+PyramidShape::PyramidShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec3d& _p4)
 {
 	name = _name;
 	p1 = _p1;
 	p2 = _p2;
 	p3 = _p3;
+	p4 = _p4;
+	p5 = NULL;
 	color1 = Vec4d(0.6,0.2,0.8,0.3);
 	color2 = color1;
 	color3 = color1;
-	type = 2;
+	type = 6;
+	sides = 3;
 	genVer= false;
 	generate();
 }
 
-// name, center, length, color
-PyramidShape::PyramidShape(string _name, Vec3d& _center, int _length, Vec4d& _color)
+
+/*************4 sided**************************/
+// name, p1, p2, p3, p4, p5, color1, color2, color3
+PyramidShape::PyramidShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec3d& _p4, Vec3d& _p5, Vec4d& _c1, Vec4d& _c2, Vec4d& _c3)
+{
+	name = _name;
+	p1 = _p1;
+	p2 = _p2;
+	p3 = _p3;
+	p4 = _p4;
+	p5 = _p5;
+	color1 = _c1;
+	color2 = _c2;
+	color3 = _c3;	
+	type = 6;
+	sides = 4;
+	genVer= false;
+	generate();
+}
+
+// name, p1, p2, p3, p4, p5, color1, color2
+PyramidShape::PyramidShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec3d& _p4, Vec3d& _p5,  Vec4d& _c1, Vec4d& _c2)
+{
+	name = _name;
+	p1 = _p1;
+	p2 = _p2;
+	p3 = _p3;
+	p4 = _p4;
+	p5 = _p5;
+	color1 = _c1;
+	color2 = _c2;
+	color3 = _c2;
+	type = 6;
+	sides = 4;
+	genVer= false;
+	generate();
+}
+
+// name, p1, p2, p3, p4, p5, color
+PyramidShape::PyramidShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec3d& _p4, Vec3d& _p5, Vec4d& _c1)
+{
+	name = _name;
+	p1 = _p1;
+	p2 = _p2;
+	p3 = _p3;
+	p4 = _p4;
+	p5 = _p5;
+	color1 = _c1;
+	color2 = _c1;
+	color3 = _c1;
+	type = 6;
+	sides = 4;
+	genVer= false;
+	generate();
+}
+
+
+// name, p1, p2, p3, p4, p5
+PyramidShape::PyramidShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec3d& _p4, Vec3d& _p5)
+{
+	name = _name;
+	p1 = _p1;
+	p2 = _p2;
+	p3 = _p3;
+	p4 = _p4;
+	p5 = _p5;
+	color1 = Vec4d(0.6,0.2,0.8,0.3);
+	color2 = color1;
+	color3 = color1;
+	type = 6;
+	sides = 4;
+	genVer= false;
+	generate();
+}
+
+
+
+
+
+/***********gen with centers****************/
+// name, center, sides, height, length, width, color
+PyramidShape::PyramidShape(string _name, Vec3d& _center, int _sides, int _height, int _length, int _width, Vec4d& _color)
 {
 	name = _name;
 	center = _center;
+	height = _height;
+	width = _width;
 	length = _length;
 	color1 = _color;	
 	color2 = _color;	
-	type = 1;
+	type = 7;
+	sides = _sides;
 	genVer= true;
 	generate();
 }
 
-// name, center, length, color, gradient
-PyramidShape::PyramidShape(string _name, Vec3d& _center, int _length, Vec4d& _color, Vec4d& _c2)
+// name, center, sides, height, length, width, color, gradient
+PyramidShape::PyramidShape(string _name, Vec3d& _center, int _sides, int _height, int _length, int _width, Vec4d& _color, Vec4d& _c2)
 {
 	name = _name;
 	center = _center;
+	height = _height;
+	width = _width;
 	length = _length;
 	color1 = _color;
 	color2 = _c2;		
-	type = 1;
+	type = 7;
+	sides = _sides;
 	genVer= true;
 	generate();
 }
 
 
-// name, center, length
-PyramidShape::PyramidShape(string _name, Vec3d& _center, int _length)
+// name, center, sides, height, length, width
+PyramidShape::PyramidShape(string _name, Vec3d& _center, int _sides, int _height, int _length, int _width)
 {
 	name = _name;
 	center = _center;
+	height = _height;
+	width = _width;
 	length = _length;
 	color1 = Vec4d(0.6,0.2,0.8,0.3);
 	color2 = color1;		
-	type = 1;
+	type = 7;
+	sides = _sides;
 	genVer= true;
 	generate();
 }
@@ -217,11 +320,21 @@ Vec4d PyramidShape::getColor3()
 	return color3;
 }
 
-void PyramidShape::setPoints(Vec3d& _p1, Vec3d& _p2, Vec3d& _p3)
+void PyramidShape::setPoints(Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec3d& _p4)
 {
 	p1 = _p1;
 	p2 = _p2;
 	p3 = _p3;
+	p4 = _p4;
+	p5 = NULL;
+}
+void PyramidShape::setPoints(Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec3d& _p4, Vec3d& _p5)
+{
+	p1 = _p1;
+	p2 = _p2;
+	p3 = _p3;
+	p4 = _p4;
+	p5 = _p5;
 }
 
 void PyramidShape::generate()	
@@ -233,35 +346,129 @@ void PyramidShape::generate()
 	 ****************************************************************
 	 */
 	
+  // 3 sided pyramid:                 3                4 sided pyramid:         4
+  //                                 / \                                       / \
+  //                                /   \                                     /   \
+  //                               /  1  \                                   1-----2
+  //                              0-------2                                 /       \
+  //                                                                       0---------3
 
 
-	// check if all 3 points are present, otherwise use default method to calculate vertices
+  vertices = new Vec3Array();
+
+	// check if all points are present, otherwise use default method to calculate vertices
 	if(!genVer)
 	{		
-		vertices = new Vec3Array(3);
-		(*vertices)[0].set(p1);
-		(*vertices)[1].set(p2);
-		(*vertices)[2].set(p3);		
+	  if(sides == 3) {
+	    vertices->push_back(p1);
+	    vertices->push_back(p2);
+	    vertices->push_back(p3);
+	    vertices->push_back(p4);
+		}
+		else if(sides == 4) {
+		  vertices->push_back(p1);
+	    vertices->push_back(p2);
+	    vertices->push_back(p3);
+	    vertices->push_back(p4);
+	    vertices->push_back(p5);
+		}
+	
 	}
 	else if (genVer)
 	{
-		vertices = new Vec3Array();
-		// top point
-		Vec3d v1(center.x(), center.y(), center.z()+length/2);
-		// bottom left point
-		Vec3d v2((center.x()-cos(120)*length/2), center.y(), (center.z()-sin(-60)*length/2));
-		// bottom right point
-		Vec3d v3((center.x()-cos(60)*length/2), center.y(), (center.z()-sin(-60)*length/2));
+	  if(sides == 4) {
+		  // top point
+	  	Vec3d top(center.x(), center.y(), center.z()+height);
+	  	// front left point
+	  	Vec3d v1(( center.x()-(width/2) , center.y()-(length/2) , center.z() ));
+		  // back left point
+	  	Vec3d v2(( center.x()-(width/2) , center.y()+(length/2) , center.z() ));
+	  	// back right point
+	  	Vec3d v3(( center.x()+(width/2) , center.y()+(length/2) , center.z() ));
+	  	// front right point
+	  	Vec3d v4(( center.x()+(width/2) , center.y()-(length/2) , center.z() ));
 				
-		vertices->push_back(center);
-		vertices->push_back(v1);
-		vertices->push_back(center);
-		vertices->push_back(v2);
-		vertices->push_back(center);
-		vertices->push_back(v3);	
-		vertices->push_back(center);
-		vertices->push_back(v1);
-			
+
+	  	vertices->push_back(v1);
+		  vertices->push_back(v2);
+		  vertices->push_back(v3);	
+		  vertices->push_back(v4);
+		  vertices->push_back(top);
+		  
+		  //base
+		  DrawElementsUInt* base = new DrawElementsUInt(PrimitiveSet::QUADS, 0);
+		  base->push_back(0);
+		  base->push_back(3);
+		  base->push_back(2);
+		  base->push_back(4);
+		  addPrimitiveSet(base);
+		  //front face
+		  DrawElementsUInt* frontface = new DrawElementsUInt(PrimitiveSet::TRIANGLES, 0);
+		  frontface->push_back(0);
+		  frontface->push_back(1);
+	  	frontface->push_back(4);
+		  addPrimitiveSet(frontface);
+		  //back face
+		  DrawElementsUInt* backface = new DrawElementsUInt(PrimitiveSet::TRIANGLES, 0);
+		  backface->push_back(3);
+		  backface->push_back(4);
+	  	backface->push_back(2);
+		  addPrimitiveSet(backface);
+		  //left face
+		  DrawElementsUInt* leftface = new DrawElementsUInt(PrimitiveSet::TRIANGLES, 0);
+		  leftface->push_back(0);
+		  leftface->push_back(4);
+	  	leftface->push_back(3);
+		  addPrimitiveSet(leftface);
+		  //right face
+		  DrawElementsUInt* rightface = new DrawElementsUInt(PrimitiveSet::TRIANGLES, 0);
+		  rightface->push_back(4);
+		  rightface->push_back(1);
+	  	rightface->push_back(2);
+		  addPrimitiveSet(rightface);
+	  
+		  
+		}
+		else if(sides == 3) {
+		  // top point
+	  	Vec3d top(center.x(), center.y(), center.z()+height);
+	  	// front left point
+	  	Vec3d v1((center.x()-(width/2), center.y()-(w/(2*sqrt(3))) , center.z()));
+		  // back point
+	  	Vec3d v2((center.x() , center.y()+(width/sqrt(3)) , center.z());
+	  	// front right point
+	  	Vec3d v3((center.x()+(width/2) , center.y()-(width/(2*sqrt(3)) , center.z());
+	  
+		  vertices->push_back(v1);
+		  vertices->push_back(v2);
+		  vertices->push_back(v3);	
+		  vertices->push_back(top);
+		  
+		  //base
+		  DrawElementsUInt* base = new DrawElementsUInt(PrimitiveSet::TRIANGLES, 0);
+		  base->push_back(0);
+		  base->push_back(1);
+		  base->push_back(2);
+		  addPrimitiveSet(base);
+		  //front face
+		  DrawElementsUInt* frontface = new DrawElementsUInt(PrimitiveSet::TRIANGLES, 0);
+		  frontface->push_back(0);
+		  frontface->push_back(2);
+	  	frontface->push_back(3);
+		  addPrimitiveSet(frontface);
+		  //left face
+		  DrawElementsUInt* leftface = new DrawElementsUInt(PrimitiveSet::TRIANGLES, 0);
+		  leftface->push_back(0);
+		  leftface->push_back(3);
+	  	leftface->push_back(1);
+		  addPrimitiveSet(leftface);
+		  //right face
+		  DrawElementsUInt* rightface = new DrawElementsUInt(PrimitiveSet::TRIANGLES, 0);
+		  rightface->push_back(2);
+		  rightface->push_back(1);
+	  	rightface->push_back(3);
+		  addPrimitiveSet(rightface);
+		}
 		
 	}
 
@@ -287,16 +494,27 @@ void PyramidShape::generate()
 	 ****************************************************************
 	 */
 	
-	if (!genVer)
-	{
-		colors = new Vec4Array(3);
-		(*colors)[0].set(color1.x(), color1.y(), color1.z(), color1.w());
-		(*colors)[1].set(color2.x(), color2.y(), color2.z(), color2.w());
-		(*colors)[2].set(color3.x(), color3.y(), color3.z(), color3.w());
-		addPrimitiveSet(new DrawArrays(PrimitiveSet::TRIANGLES, 0, 3));
-
-	}
-	else
+	//if (!genVer)
+	//{
+	  if(sides == 3) {
+		  colors = new Vec4Array(4);
+		  (*colors)[0].set(color1.x(), color1.y(), color1.z(), color1.w());
+		  (*colors)[1].set(color2.x(), color2.y(), color2.z(), color2.w());
+		  (*colors)[2].set(color3.x(), color3.y(), color3.z(), color3.w());
+		  (*colors)[3].set(color3.x(), color3.y(), color3.z(), color3.w());
+		  //addPrimitiveSet(new DrawArrays(PrimitiveSet::TRIANGLES, 0, 3));
+    }
+    else if(sides == 4) {
+      colors = new Vec4Array(5);
+		  (*colors)[0].set(color1.x(), color1.y(), color1.z(), color1.w());
+		  (*colors)[1].set(color2.x(), color2.y(), color2.z(), color2.w());
+		  (*colors)[2].set(color3.x(), color3.y(), color3.z(), color3.w());
+		  (*colors)[3].set(color2.x(), color2.y(), color2.z(), color2.w());
+		  (*colors)[4].set(color3.x(), color3.y(), color3.z(), color3.w());
+		  //addPrimitiveSet(new DrawArrays(PrimitiveSet::TRIANGLES, 0, 3));		  
+    }
+	//}
+	/*else
 	{
 		colors = new Vec4Array();
 		colors->push_back(color1);
@@ -310,8 +528,8 @@ void PyramidShape::generate()
 		
 		
 		
-		addPrimitiveSet(new DrawArrays(PrimitiveSet::TRIANGLE_STRIP, 0, 8));	
-	}
+		//addPrimitiveSet(new DrawArrays(PrimitiveSet::TRIANGLE_STRIP, 0, 8));	
+	}*/
 	
 	
 	
@@ -357,30 +575,57 @@ void PyramidShape::generate()
 
 void PyramidShape::updateLocation()
 {
-	// check if all 3 points are present, otherwise use default method to calculate vertices
-	if(p1.valid() && p2.valid() && p3.valid() && !genVer)
+	// check if all points are present, otherwise use default method to calculate vertices
+	if(sides == 3 && p1.valid() && p2.valid() && p3.valid() && p4.valid() && !genVer)
 	{		
 		(*vertices)[0].set(p1);
 		(*vertices)[1].set(p2);
-		(*vertices)[2].set(p3);		
+		(*vertices)[2].set(p3);
+		(*vertices)[3].set(p4);		
+	}
+	else if(sides == 4 && p1.valid() && p2.valid() && p3.valid() && p4.valid() && p5.valid() && !genVer)
+	{
+	  (*vertices)[0].set(p1);
+		(*vertices)[1].set(p2);
+		(*vertices)[2].set(p3);
+		(*vertices)[3].set(p4);	
+		(*vertices)[4].set(p1);
 	}
 	else if (genVer)
 	{
-		// top point
-		Vec3d v1(center.x(), center.y(), center.z()+length/2);
-		// bottom left point
-		Vec3d v2((center.x()-cos(120)*length/2), center.y(), (center.z()-sin(-60)*length/2));
-		// bottom right point
-		Vec3d v3((center.x()-cos(60)*length/2), center.y(), (center.z()-sin(-60)*length/2));
+	  if(sides == 3) {
+		 // top point
+	  	Vec3d top(center.x(), center.y(), center.z()+height);
+	  	// front left point
+	  	Vec3d v1((center.x()-(width/2), center.y()-(w/(2*sqrt(3))) , center.z()));
+		  // back point
+	  	Vec3d v2((center.x() , center.y()+(width/sqrt(3)) , center.z());
+	  	// front right point
+	  	Vec3d v3((center.x()+(width/2) , center.y()-(width/(2*sqrt(3)) , center.z());
+	  
+		  (*vertices)[0].set(v1);
+		  (*vertices)[1].set(v2);
+		  (*vertices)[2].set(v3);
+		  (*vertices)[3].set(top);
+		}
+		else if(sides == 4) {
+		  // top point
+	  	Vec3d top(center.x(), center.y(), center.z()+height);
+	  	// front left point
+	  	Vec3d v1(( center.x()-(width/2) , center.y()-(length/2) , center.z() ));
+		  // back left point
+	  	Vec3d v2(( center.x()-(width/2) , center.y()+(length/2) , center.z() ));
+	  	// back right point
+	  	Vec3d v3(( center.x()+(width/2) , center.y()+(length/2) , center.z() ));
+	  	// front right point
+	  	Vec3d v4(( center.x()+(width/2) , center.y()-(length/2) , center.z() ));
 				
-		(*vertices)[0].set(center);
-		(*vertices)[1].set(v1);
-		(*vertices)[2].set(center);
-		(*vertices)[3].set(v2);
-		(*vertices)[4].set(center);
-		(*vertices)[5].set(v3);	
-		(*vertices)[6].set(center);
-		(*vertices)[7].set(v1);		
+      (*vertices)[0].set(v1);
+		  (*vertices)[1].set(v2);
+		  (*vertices)[2].set(v3);
+		  (*vertices)[3].set(v4);
+		  (*vertices)[4].set(top);
+		} 
 	}
 	setVertexArray(vertices);
 }
@@ -388,22 +633,20 @@ void PyramidShape::updateLocation()
 void PyramidShape::updateColor()
 {
 	
-	if (!genVer)
+	if (sides == 3)
 	{
 		(*colors)[0].set(color1.x(), color1.y(), color1.z(), color1.w());
 		(*colors)[1].set(color2.x(), color2.y(), color2.z(), color2.w());
 		(*colors)[2].set(color3.x(), color3.y(), color3.z(), color3.w());
+		(*colors)[3].set(color3.x(), color3.y(), color3.z(), color3.w());
 	}
-	else
+	else if(sides == 4)
 	{
-		(*colors)[0] = color1;
-		(*colors)[1] = color2;
-		(*colors)[2] = color1;
-		(*colors)[3] = color2;
-		(*colors)[4] = color1;
-		(*colors)[5] = color2;
-		(*colors)[6] = color1;
-		(*colors)[7] = color2;
+		(*colors)[0].set(color1.x(), color1.y(), color1.z(), color1.w());
+		(*colors)[1].set(color2.x(), color2.y(), color2.z(), color2.w());
+		(*colors)[2].set(color3.x(), color3.y(), color3.z(), color3.w());
+		(*colors)[3].set(color3.x(), color3.y(), color3.z(), color3.w());
+		(*colors)[4].set(color3.x(), color3.y(), color3.z(), color3.w());
 	}
 	setColorArray(colors);
 }

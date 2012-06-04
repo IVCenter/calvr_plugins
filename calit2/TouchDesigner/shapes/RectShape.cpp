@@ -31,7 +31,7 @@ RectShape::~RectShape()
 
 RectShape::RectShape(string _name)
 {
-	name = "";
+	name = _name;
 	center = Vec3d(0,0,0);
 	width = 100;
 	height = 100;

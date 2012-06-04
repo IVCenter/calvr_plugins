@@ -162,7 +162,11 @@ void TouchDesigner::receiveGeometry()
 	//string dummyURP = "updaterp p1x=-100 p1y=0 p1z=0  p2x=0 p2y=0 p2z=0 p3x=0 p3y=0 p3z=100 p4x=-100 p4y=0 p4z=100 c1r=0 c1g=0.5 c1b=1.0 c1a=0.8 c2r=0 c2g=0 c2b=0 c2a=1 comment=sh\0";
 
 	string dummyURP = "1 p1x=-100 p1y=0 p1z=0  p2x=0 p2y=0 p2z=0 p3x=0 p3y=0 p3z=100 p4x=-100 p4y=0 p4z=100 c1r=0 c1g=0.5 c1b=1.0 c1a=0.8 c2r=0 c2g=0 c2b=0 c2a=1 comment=sh\0";
-
+	
+	BoxShape *ps = new BoxShape();
+	Geode *node = new Geode();
+	node->addDrawable(ps);
+	
 
 	//SceneManager::instance()->getObjectsRoot()->addChild(st->getTestNode());
 

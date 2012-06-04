@@ -35,7 +35,7 @@ public:
 	BoxShape(string, Vec3d&, Vec3d&, Vec3d&, Vec3d&, Vec3d&, Vec3d&, Vec3d&, Vec3d&, Vec4d&);
 
 	// name, p1, p2, p3, p4, p5, p6, p7, p8
-	BoxShape(string, Vec3d&, Vec3d&, Vec3d&, Vec3d&, Vec3d&, Vec3d&, Vec3d&, Vec3d&,);
+	BoxShape(string, Vec3d&, Vec3d&, Vec3d&, Vec3d&, Vec3d&, Vec3d&, Vec3d&, Vec3d&);
 
 	// name, center, width, height, depth, color
 	// this generates a solid color Boxangle center point _center

@@ -57,8 +57,6 @@ SocketThread::SocketThread(string & serverName) : _serverName(serverName)
 	//	_mu
 
 	start(); //starts the thread
-
-	cerr << "SOCKET THREAD INITIALIZED" << endl;
 }
 
 
@@ -99,10 +97,11 @@ void SocketThread::run()
 string SocketThread::getSerializedScene(void)
 {
 	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-	cerr << "size\t" << sceneData.size() << endl;
+//	cerr << "size\t" << sceneData.size() << endl;
 //	cerr << "max\t" << sceneData.max_size() << endl;
 //	cerr << "cap\t" << sceneData.capacity() << endl;
 	return sceneData;
+
 }
 
 

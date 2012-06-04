@@ -5,6 +5,9 @@ SET(PLUGIN_HEADERS
     shapes/CircleShape.h
     shapes/TriangleShape.h
     shapes/RectShape.h
+    shapes/BoxShape.h
+    shapes/PyramidShape.h
+    shapes/SphereShape.h
     util/vvtokenizer.h
     util/ShapeHelper.h
     socket/SocketThread.h
@@ -17,6 +20,9 @@ ADD_LIBRARY(${LIB_NAME}
     shapes/BasicShape.cpp
     shapes/CircleShape.cpp
     shapes/TriangleShape.cpp
+    shapes/BoxShape.cpp
+    shapes/PyramidShape.cpp
+    shapes/SphereShape.cpp
     shapes/RectShape.cpp
     util/vvtokenizer.cpp
     util/ShapeHelper.cpp
