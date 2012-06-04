@@ -41,11 +41,8 @@ class SocketThread : public OpenThreads::Thread
 		bool _mkill;
 		virtual void run();
 		string _serverName;
-		list< string > _serializedScenes;
 		OpenThreads::Mutex _mutex;
 		ShapeHelper * sh;
-		Geode * geoWorker;
-
 	protected:
 		SocketThread();
 		
@@ -60,7 +57,6 @@ class SocketThread : public OpenThreads::Thread
 	public:
 		SocketThread( string& server);
 		~SocketThread();
-		string getSerializedScene(); 
-		Geode * getTestNode();
+		string getSerializedScene(); 		
 };
 #endif

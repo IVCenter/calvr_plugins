@@ -67,8 +67,9 @@ protected:
 	// returns a random number btwn min and max
 	int random(int,int);
 
- 	ShapeHelper * sh;
+	ShapeHelper * sh;
 	SocketThread * st;
+	Node * prevNode;
 };
 
 #endif

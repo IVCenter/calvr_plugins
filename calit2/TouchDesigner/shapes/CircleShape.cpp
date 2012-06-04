@@ -13,6 +13,7 @@ using namespace std;
 
 CircleShape::CircleShape()
 {
+	setUseVertexBufferObjects(true);
 	name = "def";
 	center = Vec3d(random()*600,0,random()*600);
 	radius = 100;
@@ -20,7 +21,7 @@ CircleShape::CircleShape()
 	gradient = Vec4d(0.0,0.0,0.0,0.0);
 	degree = 10;
 	type = 5;
-	
+
 	generate();
 }
 
@@ -31,6 +32,7 @@ CircleShape::~CircleShape()
 
 CircleShape::CircleShape(string _name)
 {
+	setUseVertexBufferObjects(true);
 	name = _name;
 	center = Vec3d(0,0,0);
 	radius = 10;
@@ -38,7 +40,7 @@ CircleShape::CircleShape(string _name)
 	gradient = Vec4d(0.0,0.0,0.0,0.0);
 	degree = 10;
 	type = 5;
-	
+
 	generate();
 }
 
@@ -47,6 +49,7 @@ CircleShape::CircleShape(string _name)
 // name, center, radius, color, gradient, tesselation
 CircleShape::CircleShape(string _name, Vec3d& _center, double _radius, Vec4d& _color, Vec4d& _gradient, int _deg)
 {
+	setUseVertexBufferObjects(true);
 	name = _name;
 	center = _center;
 	radius = _radius;
@@ -54,13 +57,14 @@ CircleShape::CircleShape(string _name, Vec3d& _center, double _radius, Vec4d& _c
 	gradient = _gradient;
 	degree = _deg;
 	type = 5;
-	
+
 	generate();
 }
 
 // name, center, raidus, color, gradient
 CircleShape::CircleShape(string _name, Vec3d& _center, double _radius, Vec4d& _color, Vec4d& _gradient)
 {
+ 	setUseVertexBufferObjects(true);
 	name = _name;
 	center = _center;
 	radius = _radius;
@@ -68,13 +72,14 @@ CircleShape::CircleShape(string _name, Vec3d& _center, double _radius, Vec4d& _c
 	gradient = _gradient;	
 	degree = 10;
 	type = 5;
-	
+
 	generate();
 }
 
 // name, center, radius, color, tesselation
 CircleShape::CircleShape(string _name, Vec3d& _center, double _radius, Vec4d& _color, int _deg)
 {
+	setUseVertexBufferObjects(true);
 	name = _name;
 	center = _center;
 	radius = _radius;
@@ -82,13 +87,14 @@ CircleShape::CircleShape(string _name, Vec3d& _center, double _radius, Vec4d& _c
 	gradient = color;	
 	degree = _deg;
 	type = 5;
-	
+
 	generate();
 }
 
 // name, center, radius, color
 CircleShape::CircleShape(string _name, Vec3d& _center, double _radius, Vec4d& _color)
 {
+	setUseVertexBufferObjects(true);
 	name = _name;
 	center = _center;
 	radius = _radius;
@@ -96,13 +102,14 @@ CircleShape::CircleShape(string _name, Vec3d& _center, double _radius, Vec4d& _c
 	gradient = color;
 	degree = 10;
 	type = 5;
-	
+
 	generate();
 }
 
 // name, center, radius
 CircleShape::CircleShape(string _name, Vec3d& _center, double _radius)
 {
+	setUseVertexBufferObjects(true);
 	name = _name;
 	center = _center;
 	radius = _radius;
@@ -110,13 +117,14 @@ CircleShape::CircleShape(string _name, Vec3d& _center, double _radius)
 	gradient = color;
 	degree = 10;
 	type = 5;
-	
+
 	generate();
 }
 
 // name, center
 CircleShape::CircleShape(string _name, Vec3d& _center)
 {
+	setUseVertexBufferObjects(true);
 	name = _name;
 	center = _center;	
 	radius = 10;
@@ -124,13 +132,14 @@ CircleShape::CircleShape(string _name, Vec3d& _center)
 	gradient = color;
 	degree = 10;
 	type = 5;
-	
+
 	generate();
 }
 
 // center
 CircleShape::CircleShape(Vec3d& _center)
 {
+	setUseVertexBufferObjects(true);
 	center = _center;
 	name = "";	
 	radius = 10;
@@ -138,7 +147,7 @@ CircleShape::CircleShape(Vec3d& _center)
 	gradient = color;
 	degree = 10;
 	type = 5;
-	
+
 	generate();
 }
 
@@ -304,16 +313,17 @@ void CircleShape::updateLocation()
 
 
 		(*vertices)[index] = center;
+		//printf("New center is %f %f %f\n", (*vertices)[0].x(), (*vertices)[0].y(), (*vertices)[0].z());		
 		index++;
 		(*vertices)[index] = Vec3d(x,0,z)+center;	
 		index++;
 		numVertices+=2;		
 
 	}
+	//printf("New center is %f %f %f\n", (*vertices)[0].x(), (*vertices)[0].y(), (*vertices)[0].z());
 
 	(*vertices)[index] = center;
-	setVertexArray(vertices);
-
+	//setVertexArray(vertices);
 }
 
 void CircleShape::updateColor()
