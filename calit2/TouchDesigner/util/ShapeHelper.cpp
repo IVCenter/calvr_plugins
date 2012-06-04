@@ -12,7 +12,7 @@ using namespace osg;
 using namespace std;
 
 #define DEBUGSHAPECOUNT 10
-#define RENDERSCALE 700
+#define RENDERSCALE 1
 
 
 int updateIndex = 0;
@@ -110,13 +110,16 @@ void ShapeHelper::processData(char* data)
 	
 	if (0 == pch.compare("circle") && genAll) 	
 	{
+		//cerr << updateIndex << endl;
 		updateCircle(updateIndex);
 		updateIndex++;
 		
-		if (updateIndex > 10)
+		if (updateIndex > 1)
 		{
 			updateIndex=0;
-		}		
+			processedAll = true;
+		}
+		geode->dirtyBound();		
 	}	
 	else if (0 == pch.compare("circle")) 	
 	{
@@ -124,7 +127,7 @@ void ShapeHelper::processData(char* data)
 		geode->addDrawable(genCircle());
 		shapeCount++;
 		
-		if (shapeCount > 10)
+		if (shapeCount > 1)
 		{
 			genAll = true;
 		}		
@@ -324,7 +327,7 @@ char* ShapeHelper::getCharParamC(char* param)
 		if ( 0 == strcmp(tok->sval,param))
 		{	
 			ttype = tok->nextToken();
-			cerr << tok->sval << endl;
+			//cerr << tok->sval << endl;
 			tok->reset();
 			return tok->sval;		
 		}
@@ -360,7 +363,6 @@ char* ShapeHelper::getCharParam(string param)
 CircleShape* ShapeHelper::genCircle()
 {
 
-	//cerr << data << endl;
 	CircleShape * circle;
 
 	double cx = getDoubleParam("cx") * RENDERSCALE;	
@@ -381,9 +383,8 @@ CircleShape* ShapeHelper::genCircle()
 	Vec3d center(cx,cy,cz);
 
 
-	//cerr << "x\t" << cx << endl;
 
-	cerr << "generating shape # " << shapeCount << endl;
+	// cerr << "generating shape # " << shapeCount << endl;
 
 	// if no tesselation specified, use 10 as default
 	if (tess == 0)
@@ -425,10 +426,10 @@ CircleShape* ShapeHelper::genCircle()
 TriangleShape * ShapeHelper::genTriangleC()
 {	
 	TriangleShape * tr;
-	int cx = getIntParam("cx");
-	int cy = getIntParam("cy");
-	int cz = getIntParam("cz");
-	int height = getIntParam("length");
+	int cx = getIntParam("cx")* RENDERSCALE;
+	int cy = getIntParam("cy")* RENDERSCALE;
+	int cz = getIntParam("cz")* RENDERSCALE;
+	int height = getIntParam("length")* RENDERSCALE;
 	double c1r = getDoubleParam("c1r");
 	double c1g = getDoubleParam("c1g");
 	double c1b = getDoubleParam("c1b");
@@ -481,15 +482,15 @@ TriangleShape * ShapeHelper::genTriangleC()
 TriangleShape * ShapeHelper::genTriangleP()
 {	
 	TriangleShape * tr;
-	int p1x = getIntParam("p1x");
-	int p1y = getIntParam("p1y");
-	int p1z = getIntParam("p1z");
-	int p2x = getIntParam("p2x");
-	int p2y = getIntParam("p2y");
-	int p2z = getIntParam("p2z");
-	int p3x = getIntParam("p3x");
-	int p3y = getIntParam("p3y");
-	int p3z = getIntParam("p3z");
+	int p1x = getIntParam("p1x")* RENDERSCALE;
+	int p1y = getIntParam("p1y")* RENDERSCALE;
+	int p1z = getIntParam("p1z")* RENDERSCALE;
+	int p2x = getIntParam("p2x")* RENDERSCALE;
+	int p2y = getIntParam("p2y")* RENDERSCALE;
+	int p2z = getIntParam("p2z")* RENDERSCALE;
+	int p3x = getIntParam("p3x")* RENDERSCALE;
+	int p3y = getIntParam("p3y")* RENDERSCALE;
+	int p3z = getIntParam("p3z")* RENDERSCALE;
 	double c1r = getDoubleParam("c1r");
 	double c1g = getDoubleParam("c1g");
 	double c1b = getDoubleParam("c1b");
@@ -552,11 +553,11 @@ TriangleShape * ShapeHelper::genTriangleP()
 RectShape * ShapeHelper::genRectC()
 {	
 	RectShape * rect;
-	int cx = getIntParam("cx");
-	int cy = getIntParam("cy");
-	int cz = getIntParam("cz");
-	int height = getIntParam("height");
-	int wid = getIntParam("width");
+	int cx = getIntParam("cx")* RENDERSCALE;
+	int cy = getIntParam("cy")* RENDERSCALE;
+	int cz = getIntParam("cz")* RENDERSCALE;
+	int height = getIntParam("height")* RENDERSCALE;
+	int wid = getIntParam("width")* RENDERSCALE;
 	double c1r = getDoubleParam("c1r");
 	double c1g = getDoubleParam("c1g");
 	double c1b = getDoubleParam("c1b");
@@ -606,18 +607,18 @@ RectShape * ShapeHelper::genRectC()
 RectShape * ShapeHelper::genRectP()
 {	
 	RectShape * rect;	
-	int p1x = getIntParam("p1x");
-	int p1y = getIntParam("p1y");
-	int p1z = getIntParam("p1z");
-	int p2x = getIntParam("p2x");
-	int p2y = getIntParam("p2y");
-	int p2z = getIntParam("p2z");
-	int p3x = getIntParam("p3x");
-	int p3y = getIntParam("p3y");
-	int p3z = getIntParam("p3z");
-	int p4x = getIntParam("p4x");
-	int p4y = getIntParam("p4y");
-	int p4z = getIntParam("p4z");
+	int p1x = getIntParam("p1x")* RENDERSCALE;
+	int p1y = getIntParam("p1y")* RENDERSCALE;
+	int p1z = getIntParam("p1z")* RENDERSCALE;
+	int p2x = getIntParam("p2x")* RENDERSCALE;
+	int p2y = getIntParam("p2y")* RENDERSCALE;
+	int p2z = getIntParam("p2z")* RENDERSCALE;
+	int p3x = getIntParam("p3x")* RENDERSCALE;
+	int p3y = getIntParam("p3y")* RENDERSCALE;
+	int p3z = getIntParam("p3z")* RENDERSCALE;
+	int p4x = getIntParam("p4x")* RENDERSCALE;
+	int p4y = getIntParam("p4y")* RENDERSCALE;
+	int p4z = getIntParam("p4z")* RENDERSCALE;
 	double c1r = getDoubleParam("c1r");
 	double c1g = getDoubleParam("c1g");
 	double c1b = getDoubleParam("c1b");

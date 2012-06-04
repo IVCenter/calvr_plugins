@@ -16,6 +16,9 @@
 #include <osg/CullFace>
 #include <osgDB/ReadFile>
 
+#define PACKETLEN 500
+bool received = false;
+static string recvData ="";
 
 using namespace osg;
 using namespace std;
@@ -61,71 +64,70 @@ TouchDesigner::~TouchDesigner()
 
 void TouchDesigner::preFrame()
 {
-	string data;
-	/*
+	string data = "";
+	
 	if(ComController::instance()->isMaster()) // head node
 	{
-	data = st->getSerializedScene();
-	ComController::instance()->sendSlaves(&data[0], PACKETLEN);
-	ComController::instance()->sendSlaves(&received, sizeof(bool));
+		data = st->getSerializedScene();
+		ComController::instance()->sendSlaves(&data[0], data.size());
+		ComController::instance()->sendSlaves(&received, sizeof(bool));
 	}
 	else  // rendering nodes
 	{
-	ComController::instance()->readMaster(recvData, PACKETLEN);
-	data = recvData;
-	ComController::instance()->readMaster(&received, sizeof(bool));
-
+		ComController::instance()->readMaster(&recvData[0], data.size());
+		data = recvData;
+		ComController::instance()->readMaster(&received, sizeof(bool));
 	}
 
 	std::stringstream ss(data);
 	osgDB::ReaderWriter * readerwriter =  Registry::instance()->getReaderWriterForExtension("ive");
 	ReaderWriter::ReadResult result = readerwriter->readNode(ss);	
-	*/
+	
 
-	//cerr <<" valid node "  << result.validNode() << endl;
-	//if (result.validNode())
+	if (result.validNode())
 	{
-		//Node * node = result.getNode();
-		/*		
+		//printf("Node valid\n");
+		Node * node = result.getNode();
+/*			
 		osg::Geode * geode = dynamic_cast<osg::Geode* > (node);
+		
 		if( geode )
 		{
-		for(int i = 0; i < geode->getNumDrawables(); i++)
-		{
-		osg::Geometry* geom = dynamic_cast<osg::Geometry*> (geode->getDrawable(i));
-		if( geom )
-		{
-		osg::Vec3Array* array = dynamic_cast<osg::Vec3Array *> (geom->getVertexArray());
-		//for(int j =0; j < array->size(); j++)
-		//{
-		cerr << array->at(0)[0] << " " << array->at(0)[1] << " " << array->at(0)[2] << endl;
-		//}
+			for(int i = 0; i < geode->getNumDrawables(); i++)
+			{
+				osg::Geometry* geom = dynamic_cast<osg::Geometry*> (geode->getDrawable(i));
+				
+				if( geom )
+				{
+					osg::Vec3Array* array = dynamic_cast<osg::Vec3Array *> (geom->getVertexArray());
+					
+					for(int j =0; j < array->size(); j++)
+					{
+						cerr << array->at(0)[0] << " " << array->at(0)[1] << " " << array->at(0)[2] << endl;
+					}
+				}
+			}	
 		}
-		}	
-		}
+*/		
+		osg::Group * objectRoot = SceneManager::instance()->getObjectsRoot();
 
 
-		cerr << "" << endl;
-		*/		osg::Group * objectRoot = SceneManager::instance()->getObjectsRoot();
+		// remove all children and add new node
+		objectRoot->addChild(node);
 
-	osg::Node * node = st->getTestNode();
+		if( prevNode )
+			objectRoot->removeChild(prevNode);
 
-	// remove all children and add new node
-	objectRoot->addChild(node);
-
-	if( prevNode )
-		objectRoot->removeChild(prevNode);
-
-	//cerr << objectRoot->getNumChildren() << " nodes are in root" << endl;
-	//cerr << "previous node\t" << prevNode << endl;
-	//cerr << "current node\t" << node << endl;
-	prevNode = node;
+		//cerr << objectRoot->getNumChildren() << " nodes are in root" << endl;
+		//cerr << "previous node\t" << prevNode << endl;
+		//cerr << "current node\t" << node << endl;
+		prevNode = node;
 	}
+		
+	
 
 
-
-
-
+		//cerr << "" << endl;
 
 }
 

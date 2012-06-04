@@ -19,7 +19,7 @@ using namespace OpenThreads;
 char recvData[PACKETLEN];
 fd_set readfds;
 
-
+string sceneData = "";
 
 // socket thread constructor
 SocketThread::SocketThread(string & serverName) : _serverName(serverName)
@@ -68,10 +68,7 @@ void SocketThread::run()
 
 	ReaderWriter * readerwriter =  Registry::instance()->getReaderWriterForExtension("ive");
 
-	//serialize
-	stringstream ss;
-
-
+	
 	//printf("%s\n", ss.str().c_str());  // send this via master slave
 
 	while ( ! _mkill ) 
@@ -79,22 +76,22 @@ void SocketThread::run()
 		// check server for info
 
 
-		_mutex.lock();
 		sh->processData(readSocket());
-		_mutex.unlock();
 
 		if (sh->processedAll)
 		{
 			// GOTTA TURN THIS TO BINARY
-			geoWorker = sh->getGeode();
-			readerwriter->writeNode(*geoWorker, ss);
-			//_serializedScenes.push_back(ss.str());
-			sceneData = ss.str();
+	//		cerr << "# drawables before\t" << sh->getGeode()->getNumDrawables() << endl;
+			stringstream ss;
+			_mutex.lock();
+			readerwriter->writeNode(*(sh->getGeode()), ss);
+			sceneData=ss.str();
+//			ss.clear();
+			_mutex.unlock();
 			sh->processedAll=false;
+			
+			
 		}
-
-
-		// send result to parser 
 		// place mutex around adding ive string to vector e.g _mutex.lock() and _mutex.unlock();
 	}
 }
@@ -102,6 +99,9 @@ void SocketThread::run()
 string SocketThread::getSerializedScene(void)
 {
 	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
+	cerr << "size\t" << sceneData.size() << endl;
+//	cerr << "max\t" << sceneData.max_size() << endl;
+//	cerr << "cap\t" << sceneData.capacity() << endl;
 	return sceneData;
 }
 
@@ -130,13 +130,3 @@ char* SocketThread::readSocket()
 	}
 }
 
-Geode * SocketThread::getTestNode()
-{
-	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-	return new Geode(*geoWorker, CopyOp::DEEP_COPY_ALL);
-}
-
-ShapeHelper * SocketThread::getTestSH()
-{
-	return sh;
-}
