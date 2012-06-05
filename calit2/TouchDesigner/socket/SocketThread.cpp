@@ -52,11 +52,14 @@ SocketThread::SocketThread(string & serverName) : _serverName(serverName)
 		FD_SET(_sockID, &readfds);
 	}
 
-	// a bunch of stuff needed for threads?
+	
+	// get a data processor started
 	sh = new ShapeHelper();
-	//	_mu
-
+	
+	
 	start(); //starts the thread
+
+	cerr << "SOCKET THREAD INITIALIZED" << endl;
 }
 
 
@@ -66,8 +69,6 @@ void SocketThread::run()
 
 	ReaderWriter * readerwriter =  Registry::instance()->getReaderWriterForExtension("ive");
 
-	
-	//printf("%s\n", ss.str().c_str());  // send this via master slave
 
 	while ( ! _mkill ) 
 	{
@@ -78,13 +79,13 @@ void SocketThread::run()
 
 		if (sh->processedAll)
 		{
-			// GOTTA TURN THIS TO BINARY
-	//		cerr << "# drawables before\t" << sh->getGeode()->getNumDrawables() << endl;
+
 			stringstream ss;
 			_mutex.lock();
 			readerwriter->writeNode(*(sh->getGeode()), ss);
+	//		cerr << "writing scene data" << endl;
 			sceneData=ss.str();
-//			ss.clear();
+
 			_mutex.unlock();
 			sh->processedAll=false;
 			
@@ -124,7 +125,9 @@ char* SocketThread::readSocket()
 		}
 		// Prepares data for processing...
 		recvData[bytes_read]='\0';	
-		//cerr << &recvData[0] << endl;	
+
+	//	cerr << &recvData[0] << endl;	
+
 		return &recvData[0];
 	}
 }

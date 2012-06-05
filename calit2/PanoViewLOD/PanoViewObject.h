@@ -47,6 +47,8 @@ class PanoViewObject : public cvr::SceneObject
 
         osg::Matrix _lastZoomMat;
 
+        osg::Vec3 _offset;
+
         osg::Vec3 _tbDir;
         bool _tbDirValid;
         int _tbHand;

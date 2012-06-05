@@ -56,7 +56,9 @@ class SocketThread : public OpenThreads::Thread
 
 	public:
 		SocketThread( string& server);
-		~SocketThread();
+
+		virtual ~SocketThread();
+
 		string getSerializedScene(); 		
 };
 #endif

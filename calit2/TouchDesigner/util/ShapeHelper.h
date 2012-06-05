@@ -38,23 +38,16 @@ public:
 	void processData(char*);
 
 
-
-	// generates a shape from data given
-	BasicShape * genShape(char*);
-	BasicShape * genShape();	
-
-	// update shape from data given
-	void updateShape(char*);
-	void updateShape();
-
 	// get the number of shapes managed by this shape helper
 	int getShapeCount();
 
 	Geode * getGeode();
 
 	bool processedAll;
-	int debugX;
-	bool genAll;
+
+
+	bool debugOn;
+
 
 protected:
 
@@ -68,6 +61,9 @@ protected:
 
 	vvTokenizer * tok;
 
+	
+	bool genAll;
+
 
 
 	// the geode we're managing
@@ -78,6 +74,9 @@ protected:
 
 
 	// shape generating
+	BasicShape* genShape(char*);
+	BasicShape* genShape();
+	
 	CircleShape * genCircle();
 	RectShape * genRectP();
 	RectShape * genRectC();
@@ -93,14 +92,20 @@ protected:
 	void updateTriangleP();
 	void updateTriangleC();
 
+	void updateTriangleC(int);
+
+ 
 	void updateCircle(CircleShape*);
 	void updateRectP(RectShape*);
 	void updateRectC(RectShape*);
 	void updateTriangleP(TriangleShape*);
 	void updateTriangleC(TriangleShape*);
 
-	void updateShape(BasicShape*);
-
+	// a cleaner update method
+	void updateShape(int);
+  void updateShape(BasicShape*);
+  void updateShape();
+  void updateShape(char*);
 
 	// other handlers
 	int shapeCount;
