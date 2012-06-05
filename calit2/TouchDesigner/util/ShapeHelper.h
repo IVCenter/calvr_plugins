@@ -37,23 +37,14 @@ public:
 	// this method is the ideal way to handle most data packets
 	void processData(char*);
 
-	
-
-	// generates a shape from data given
-	BasicShape * genShape(char*);
-	BasicShape * genShape();	
-
-	// update shape from data given
-	void updateShape(char*);
-	void updateShape();
-	
 	// get the number of shapes managed by this shape helper
 	int getShapeCount();
-	
+
 	Geode * getGeode();
-	
+
 	bool processedAll;
-	int updateIndex;
+
+	bool debugOn;
 
 protected:
 
@@ -66,9 +57,11 @@ protected:
 	char* getCharParamC(char*);	
 
 	vvTokenizer * tok;
+
 	
-	
-	
+	bool genAll;
+
+
 	// the geode we're managing
 	Geode * geode;
 
@@ -91,15 +84,16 @@ protected:
 	void updateRectC();
 	void updateTriangleP();
 	void updateTriangleC();
-		
+	void updateTriangleC(int);
+
 	void updateCircle(CircleShape*);
 	void updateRectP(RectShape*);
 	void updateRectC(RectShape*);
 	void updateTriangleP(TriangleShape*);
 	void updateTriangleC(TriangleShape*);
-	
-	void updateShape(BasicShape*);
 
+	// a cleaner update method
+	void updateShape(int);
 
 	// other handlers
 	int shapeCount;
