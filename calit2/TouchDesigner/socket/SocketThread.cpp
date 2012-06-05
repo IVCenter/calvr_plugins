@@ -52,10 +52,11 @@ SocketThread::SocketThread(string & serverName) : _serverName(serverName)
 		FD_SET(_sockID, &readfds);
 	}
 
-	// a bunch of stuff needed for threads?
+	
+	// get a data processor started
 	sh = new ShapeHelper();
-	//	_mu
-
+	
+	
 	start(); //starts the thread
 
 	cerr << "SOCKET THREAD INITIALIZED" << endl;
@@ -69,8 +70,6 @@ void SocketThread::run()
 	ReaderWriter * readerwriter =  Registry::instance()->getReaderWriterForExtension("ive");
 
 	
-	//printf("%s\n", ss.str().c_str());  // send this via master slave
-
 	while ( ! _mkill ) 
 	{
 		// check server for info
@@ -80,13 +79,10 @@ void SocketThread::run()
 
 		if (sh->processedAll)
 		{
-			// GOTTA TURN THIS TO BINARY
-	//		cerr << "# drawables before\t" << sh->getGeode()->getNumDrawables() << endl;
 			stringstream ss;
 			_mutex.lock();
 			readerwriter->writeNode(*(sh->getGeode()), ss);
 			sceneData=ss.str();
-//			ss.clear();
 			_mutex.unlock();
 			sh->processedAll=false;
 			
@@ -99,7 +95,7 @@ void SocketThread::run()
 string SocketThread::getSerializedScene(void)
 {
 	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-	cerr << "size\t" << sceneData.size() << endl;
+//	cerr << "size\t" << sceneData.size() << endl;
 //	cerr << "max\t" << sceneData.max_size() << endl;
 //	cerr << "cap\t" << sceneData.capacity() << endl;
 	return sceneData;
