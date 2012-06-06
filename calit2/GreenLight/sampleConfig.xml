@@ -3,9 +3,9 @@
     <ModelLoader value="off"/>
     <GreenLight value="on">
 
-        <Files workingDirectory="/home/atarng/CALIT2/calvr_plugins/calit2/GreenLight" />
-        <Files soundFile1="turbine.wav" />
-        <Files soundFile2="DOORHINGES.WAV" />
+        <Files workingDirectory="/data/GreenLight" />
+        <Files soundFile1="turbine_mono.wav" />
+        <Files soundFile2="doorHinges_Mono.wav" />
 
         <OsgCoord testValue="false" scale="342.677490" />
         <OsgCoord  point0="0.875374" point1="0.271526" point2="-0.399995" point3="0.000000" />
@@ -16,8 +16,6 @@
         <ParticleTest p0="0.01" p1="20.0" p2="4" p3="0.01" p4="5" p5="10" p6="200" p7="100" p8="-1" p9="1" p10="1" p11="1" />
 
         <OASConfig ipaddress="137.110.118.124" port="31231" />
-
-
 
     </GreenLight>
 <!--<myOsgEarth value="off" />-->

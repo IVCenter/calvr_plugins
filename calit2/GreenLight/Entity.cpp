@@ -228,7 +228,9 @@ void GreenLight::Component::setColor(std::list<osg::Vec4> colors)
             {
                 ((float *)_data->data(i))[j] = 0.7;
             }
+        	soundIntensity = (*cit)[3];
         }
+
     }
 
     _data->dirty();
