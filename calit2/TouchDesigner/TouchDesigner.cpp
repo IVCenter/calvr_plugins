@@ -16,6 +16,9 @@
 #include <osg/CullFace>
 #include <osgDB/ReadFile>
 
+#include "util/TrackerTree.h"
+
+
 #define PACKETLEN 500
 bool received = false;
 static string recvData = "";
@@ -169,10 +172,43 @@ void TouchDesigner::receiveGeometry()
 
 	string dummyURP = "1 p1x=-100 p1y=0 p1z=0  p2x=0 p2y=0 p2z=0 p3x=0 p3y=0 p3z=100 p4x=-100 p4y=0 p4z=100 c1r=0 c1g=0.5 c1b=1.0 c1a=0.8 c2r=0 c2g=0 c2b=0 c2a=1 comment=sh\0";
 	
-	BoxShape *ps = new BoxShape();
-	Geode *node = new Geode();
-	node->addDrawable(ps);
+	//BoxShape *ps = new BoxShape();
+	//Geode *node = new Geode();
+	//node->addDrawable(ps);
 	
+  TrackerTree* tt = new TrackerTree();
+  tt->root = tt->insert(string("Sphere1"),tt->root);
+  tt->printTree(tt->root);
+  tt->root = tt->insert(string("Sphere2"),tt->root);
+  tt->printTree(tt->root);
+  tt->root = tt->insert(string("Apple"),tt->root);
+  tt->printTree(tt->root);
+  tt->root = tt->insert(string("Bam"),tt->root);
+  tt->printTree(tt->root);
+  tt->root = tt->remove(string("Whopper"),tt->root);
+  tt->printTree(tt->root);
+  tt->root = tt->remove(string("Apple"),tt->root);
+  tt->printTree(tt->root);
+  tt->root = tt->insert(string("Accle"),tt->root);
+  tt->printTree(tt->root);
+  tt->root = tt->insert(string("Abble"),tt->root);
+  tt->root = tt->insert(string("Apple"),tt->root);
+  tt->printTree(tt->root);
+  tt->root = tt->insert(string("AAAAAA"),tt->root);
+  tt->printTree(tt->root);
+  tt->root = tt->insert(string("AAAAAA"),tt->root);
+  tt->printTree(tt->root);
+  tt->root = tt->insert(string("AAAAAA"),tt->root);
+  tt->printTree(tt->root);
+  tt->root = tt->remove(string("AAAAAA"),tt->root);
+  tt->printTree(tt->root);
+  
+  TrackerNode* tem = tt->get(string("Apple"),tt->root);
+  cerr<<"tem = "<<tem->comment<<endl;
+  tem = tt->get(string("AAAAAA"),tt->root);
+  cerr<<"tem = "<<tem->comment<<endl;
+  tem = tt->get(string("AAAAAA"),tt->root);
+  cerr<<"tem = "<<tem->comment<<endl;
 
 	//SceneManager::instance()->getObjectsRoot()->addChild(st->getTestNode());
 
