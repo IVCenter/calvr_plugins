@@ -36,7 +36,7 @@ PanoViewObject::~PanoViewObject()
 
 void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<std::string> & rightEyeFiles, float radius, int mesh, int depth, int size, float height, std::string vertFile, std::string fragFile)
 {
-    _imageSearchPath = ConfigManager::getEntry("value","Plugin.PanoViewLOD.ImageSearchPath","");
+    _imageSearchPath = ConfigManager::getEntryConcat("value","Plugin.PanoViewLOD.ImageSearchPath",':',"");
     _floorOffset = ConfigManager::getFloat("value","Plugin.PanoViewLOD.FloorOffset",0);
 
     std::string temp("PANOPATH=");
