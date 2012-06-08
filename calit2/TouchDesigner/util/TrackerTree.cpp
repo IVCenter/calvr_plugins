@@ -29,7 +29,6 @@ TrackerTree::TrackerTree(TrackerNode* _root)
 TrackerTree::~TrackerTree()
 {
   delete root;
-  delete this;
 }
 
 //balance operation; right rotation
@@ -74,7 +73,7 @@ TrackerNode* TrackerTree::split(TrackerNode* node)
   
 }
 
-//inserts recursively in alphabetical order, skews and splits each stack level as necessary
+//inserts recursively in alphabetical order, skews and splits each stack level as necessary=================================================
 //input: node to be inserted, root of tree
 //output: root to a balanced tree with new inserted node
 TrackerNode* TrackerTree::insert(TrackerNode* _node, TrackerNode* _root)
@@ -113,7 +112,7 @@ TrackerNode* TrackerTree::insert(string _comment, TrackerNode* _root)
   
   return _root;
 }
-//insert, by string and position in geode
+//insert, by string and position in root
 TrackerNode* TrackerTree::insert(string _comment, int _pos, TrackerNode* _root)
 {
   cerr<<"inserting "<<_comment<<endl;
@@ -132,6 +131,26 @@ TrackerNode* TrackerTree::insert(string _comment, int _pos, TrackerNode* _root)
   
   return _root;
 }
+//insert, by string and position in root and pointer to Geode
+TrackerNode* TrackerTree::insert(string _comment, int _pos, osg::Geode* _geo, TrackerNode* _root)
+{
+  cerr<<"inserting "<<_comment<<endl;
+
+   TrackerNode* _node = new TrackerNode(_comment,_pos, _geo);
+  //recursive insertion 
+  if(_root == NULL) {
+    return _node;
+  }
+  else if(_node->comment.compare(_root->comment) < 0) _root->leftChild = insert(_node, _root->leftChild);
+  else if(_node->comment.compare(_root->comment) >= 0) _root->rightChild = insert(_node, _root->rightChild);
+  
+  //skew and split as necessary
+  _root = skew(_root);
+  _root = split(_root);
+  
+  return _root;
+}
+//================================================================================================================================
 
 
 //these functions are used by remove

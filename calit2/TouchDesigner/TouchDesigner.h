@@ -29,6 +29,15 @@
 #include "util/ShapeHelper.h"
 #include "socket/SocketThread.h"
 
+
+#include<osg/ShapeDrawable>
+#include<osg/Shape>
+#include<osg/Texture2D>
+#include<osg/TexEnv>
+#include<osg/StateSet>
+#include<osg/Image>
+
+
 #include <math.h>
 #include <vector>
 #include <string>

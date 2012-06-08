@@ -127,12 +127,12 @@ void TouchDesigner::preFrame() {
 		objectRoot->addChild(node);
 
 		if (prevNode)
-			objectRoot->removeChild(prevNode);
+		  objectRoot->removeChild(prevNode);
 
 		//cerr << objectRoot->getNumChildren() << " nodes are in root" << endl;
 		//cerr << "previous node\t" << prevNode << endl;
 		//cerr << "current node\t" << node << endl;
-		prevNode = node;
+		  prevNode = node;
 	}
 
 	//cerr << "" << endl;
@@ -172,9 +172,7 @@ void TouchDesigner::receiveGeometry()
 
 	string dummyURP = "1 p1x=-100 p1y=0 p1z=0  p2x=0 p2y=0 p2z=0 p3x=0 p3y=0 p3z=100 p4x=-100 p4y=0 p4z=100 c1r=0 c1g=0.5 c1b=1.0 c1a=0.8 c2r=0 c2g=0 c2b=0 c2a=1 comment=sh\0";
 	
-	//BoxShape *ps = new BoxShape();
-	//Geode *node = new Geode();
-	//node->addDrawable(ps);
+
 	
   TrackerTree* tt = new TrackerTree();
   tt->root = tt->insert(string("Sphere1"),tt->root);
@@ -210,7 +208,43 @@ void TouchDesigner::receiveGeometry()
   tem = tt->get(string("AAAAAA"),tt->root);
   cerr<<"tem = "<<tem->comment<<endl;
 
-	//SceneManager::instance()->getObjectsRoot()->addChild(st->getTestNode());
+  //shapes
+  Sphere *ss = new Sphere(Vec3(0,0,0),100);
+  ShapeDrawable* ssD = new ShapeDrawable(ss);
+  ssD->setColor(Vec4(0,0,1,1));
+	
+	Box *bx = new Box(Vec3(250,0,0),100);
+	ShapeDrawable* bxD = new ShapeDrawable(bx);
+	bxD->setColor(Vec4(1,0,0,1));
+	
+	Geode *node = new Geode();
+	node->addDrawable(ssD);
+	node->addDrawable(bxD);
+	
+	
+	//textures
+	Texture2D* tex = new Texture2D;
+	tex->setDataVariance(osg::Object::DYNAMIC);
+	Image* img = osgDB::readImageFile("texture.tga");
+	if(!img) cerr<<"can't find texture"<<endl;
+	tex->setImage(img);
+	
+	StateSet* stateblend = new StateSet();
+	TexEnv* blendtexenv = new TexEnv;
+	blendtexenv->setMode(osg::TexEnv::BLEND);
+	stateblend->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+	stateblend->setTextureAttribute(0,blendtexenv);
+	
+	StateSet* statedec = new StateSet();
+	TexEnv* dectexenv = new TexEnv;
+	dectexenv->setMode(osg::TexEnv::DECAL);
+	statedec->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+	statedec->setTextureAttribute(0,dectexenv);
+	
+	SceneManager::instance()->getObjectsRoot()->setStateSet(stateblend);
+  node->setStateSet(statedec);
+
+	SceneManager::instance()->getObjectsRoot()->addChild(node);
 
 	//(st->getTestSH())->processData(&dummyUC[0]);
 

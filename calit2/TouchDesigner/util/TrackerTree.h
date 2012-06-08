@@ -6,7 +6,10 @@
 #include <iostream>
 #include <math.h>
 
+#include<osg/Geode>
+
 using namespace std;
+using namespace osg;
 
 //Node Struct
 //Contains comment and position in geode
@@ -14,7 +17,8 @@ using namespace std;
 struct TrackerNode {
 
     string comment;
-    int posInGeode;
+    int posInRoot;                //child index under Root
+    osg::Geode* ptrToGeode;       //pointer to the Geode
 
     TrackerNode* leftChild;
     TrackerNode* rightChild;
@@ -24,7 +28,8 @@ struct TrackerNode {
     //default constructor
     TrackerNode() {
       comment = "";
-      posInGeode = -1;
+      posInRoot = -1;
+      ptrToGeode = NULL;
 
       leftChild = NULL;
       rightChild = NULL;
@@ -32,10 +37,33 @@ struct TrackerNode {
       level = 1;
     }
 
-    //constructor with params
+    //constructor with param position in root
     TrackerNode(string _comment, int _pos) {
       comment = _comment;
-      posInGeode = _pos;
+      posInRoot = _pos;
+      ptrToGeode = NULL;
+
+      leftChild = NULL;
+      rightChild = NULL;
+      
+      level = 1;
+    }
+    //constructor with param ptr to Geode
+    TrackerNode(string _comment, osg::Geode* _ptr) {
+      comment = _comment;
+      posInRoot = -1;
+      ptrToGeode = _ptr;
+
+      leftChild = NULL;
+      rightChild = NULL;
+      
+      level = 1;
+    }
+    //constructor with both params
+    TrackerNode(string _comment, int _pos, osg::Geode* _ptr) {
+      comment = _comment;
+      posInRoot = _pos;
+      ptrToGeode = _ptr;
 
       leftChild = NULL;
       rightChild = NULL;
@@ -71,10 +99,10 @@ public:
   
   TrackerTree(TrackerNode*);    //constructor that takes in a root node
 
-  TrackerNode* insert(TrackerNode*, TrackerNode*);      //inserts a node, decided by alphabetical order
-  TrackerNode* insert(string, TrackerNode*);            //insert by comment
-  TrackerNode* insert(string,int,TrackerNode*);         //insert by comment and pos in geode
-  
+  TrackerNode* insert(TrackerNode*, TrackerNode*);        //inserts a node, decided by alphabetical order
+  TrackerNode* insert(string, TrackerNode*);              //insert by comment
+  TrackerNode* insert(string,int,TrackerNode*);           //insert by comment and position
+  TrackerNode* insert(string, int, osg::Geode*, TrackerNode*); //insert by comment with geode and position in root
   
   TrackerNode* remove(string, TrackerNode*);      //removes a node by comment
   
