@@ -1,0 +1,4 @@
+// this plugin a simple sample on create a plugin that uses OSgEarth plugin
+// If working correctly it should construct a shape and place it in San Diego, Ca
+
+<SampleEarth value="on" />
