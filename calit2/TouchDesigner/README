@@ -2,7 +2,7 @@ NOTES REGARDING SHAPES
 1. Shapes with an odd number for type (from getType()) means it's generated with a center point, even number means each point is assigned individually
    Shapes with types 1,2 are triangles; 3,4 are rectangles; 5 is circle.
 
-   3D: 6,7 pyramids; 8,9 cubes; 10 sphere;
+   3D: 6,7 pyramids; 8,9 cubes; 11 sphere;
 
 NOTES REGARDING SHAPEHELPER
 1. each ShapeHelper is assigned to manage one geode only (specified when ShapeHelper is constructed)

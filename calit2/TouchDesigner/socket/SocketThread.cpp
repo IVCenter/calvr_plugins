@@ -69,7 +69,11 @@ void SocketThread::run()
 
 	ReaderWriter * readerwriter =  Registry::instance()->getReaderWriterForExtension("ive");
 
+<<<<<<< HEAD
 
+=======
+	
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 	while ( ! _mkill ) 
 	{
 		// check server for info
@@ -79,13 +83,19 @@ void SocketThread::run()
 
 		if (sh->processedAll)
 		{
+<<<<<<< HEAD
 
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 			stringstream ss;
 			_mutex.lock();
 			readerwriter->writeNode(*(sh->getGeode()), ss);
 	//		cerr << "writing scene data" << endl;
 			sceneData=ss.str();
+<<<<<<< HEAD
 
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 			_mutex.unlock();
 			sh->processedAll=false;
 			

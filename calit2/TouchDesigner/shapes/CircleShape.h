@@ -17,7 +17,10 @@
 using namespace std;
 using namespace osg;
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 class CircleShape: public BasicShape {
 	friend class ShapeHelper;
 public:
@@ -78,7 +81,10 @@ public:
 	void updateLocation();
 
 	void updateColor();
+<<<<<<< HEAD
 
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 
 	// multiplies radius by param	
 	void scale(int);
@@ -86,7 +92,10 @@ public:
 	void setAll(Vec3d&, double, Vec4d&, Vec4d&);
 
 	void updateAll();
+<<<<<<< HEAD
 
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 
 protected:
 	// identify the type of shape, 1 triangle, 2 cirlce, 3 rectangle
@@ -105,7 +114,10 @@ protected:
 	Vec4d gradient;
 
 	// radius of circle, default = 100
+<<<<<<< HEAD
 
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 	double radius;
 
 	// center point of circle, default = (0,0,0)

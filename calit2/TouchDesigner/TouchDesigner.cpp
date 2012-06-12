@@ -29,14 +29,20 @@ using namespace osg;
 using namespace std;
 using namespace cvr;
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 CVRPLUGIN( TouchDesigner)
 TouchDesigner::TouchDesigner() {
 	cerr << "1" << endl;
 }
 
 bool TouchDesigner::init() {
+<<<<<<< HEAD
 
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 	cerr << "TouchDesigner init\n";
 
 	_menu = new SubMenu("TouchDesigner", "TouchDesigner");
@@ -63,27 +69,40 @@ bool TouchDesigner::init() {
 }
 
 TouchDesigner::~TouchDesigner() {
+<<<<<<< HEAD
 
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 }
 
 void TouchDesigner::preFrame() {
 	string data = "";
+<<<<<<< HEAD
 	
 //	cerr << "painting\t" << endl;
+=======
+
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 	if (ComController::instance()->isMaster()) // head node
 	{
 		data = st->getSerializedScene();
 		dsize = data.size();
+<<<<<<< HEAD
 		
 //		cerr << "in master doing nothing" << endl;
                 ComController::instance()->sendSlaves(&dsize, sizeof(int));
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 		ComController::instance()->sendSlaves(&data[0], dsize);
 		ComController::instance()->sendSlaves(&received, sizeof(bool));
 	} else // rendering nodes
 	{
+<<<<<<< HEAD
 //		cerr<<"slave node"<<endl;	
                 ComController::instance()->readMaster(&dsize, sizeof(int));
                 recvData.resize(dsize);
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 		ComController::instance()->readMaster(&recvData[0], dsize);
 		data = recvData;
 		ComController::instance()->readMaster(&received, sizeof(bool));
@@ -127,7 +146,11 @@ void TouchDesigner::preFrame() {
 		objectRoot->addChild(node);
 
 		if (prevNode)
+<<<<<<< HEAD
 		  objectRoot->removeChild(prevNode);
+=======
+			objectRoot->removeChild(prevNode);
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 
 		//cerr << objectRoot->getNumChildren() << " nodes are in root" << endl;
 		//cerr << "previous node\t" << prevNode << endl;
@@ -139,20 +162,26 @@ void TouchDesigner::preFrame() {
 
 }
 
+<<<<<<< HEAD
 
 void TouchDesigner::menuCallback(MenuItem* menuItem)
 {
 	if(menuItem == _receiveButton)
 	{
+=======
+void TouchDesigner::menuCallback(MenuItem* menuItem) {
+	if (menuItem == _receiveButton) {
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 		receiveGeometry();
 		return;
 	}
 }
 
-double TouchDesigner::random(){
+double TouchDesigner::random() {
 	return rand() / double(RAND_MAX);
 }
 
+<<<<<<< HEAD
 void TouchDesigner::receiveGeometry()
 {
 	Vec4d nil(0.0,0.0,0.0,0.0);
@@ -250,6 +279,12 @@ void TouchDesigner::receiveGeometry()
 
 }
 
+=======
+void TouchDesigner::receiveGeometry() {
+
+}
+
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 int TouchDesigner::random(int min, int max) {
 	return (max - min) * random() + min;
 }

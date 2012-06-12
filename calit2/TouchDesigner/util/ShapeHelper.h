@@ -37,7 +37,10 @@ public:
 	// this method is the ideal way to handle most data packets
 	void processData(char*);
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 	// get the number of shapes managed by this shape helper
 	int getShapeCount();
 
@@ -45,9 +48,13 @@ public:
 
 	bool processedAll;
 
+<<<<<<< HEAD
 
 	bool debugOn;
 
+=======
+	bool debugOn;
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 
 protected:
 
@@ -63,7 +70,10 @@ protected:
 
 	
 	bool genAll;
+<<<<<<< HEAD
 
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 
 
 	// the geode we're managing
@@ -91,6 +101,7 @@ protected:
 	void updateRectC();
 	void updateTriangleP();
 	void updateTriangleC();
+	void updateTriangleC(int);
 
 	void updateTriangleC(int);
 
@@ -103,9 +114,12 @@ protected:
 
 	// a cleaner update method
 	void updateShape(int);
+<<<<<<< HEAD
   void updateShape(BasicShape*);
   void updateShape();
   void updateShape(char*);
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 
 	// other handlers
 	int shapeCount;

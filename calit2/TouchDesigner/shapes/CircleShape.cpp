@@ -11,7 +11,10 @@
 using namespace osg;
 using namespace std;
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 CircleShape::CircleShape() {
 	//setUseVertexBufferObjects(true);
 	name = "def";
@@ -57,8 +60,12 @@ CircleShape::CircleShape(string _name, Vec3d& _center, double _radius,
 	generate();
 }
 
+<<<<<<< HEAD
 
 // name, center, radius, color, gradient
+=======
+// name, center, raidus, color, gradient
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 CircleShape::CircleShape(string _name, Vec3d& _center, double _radius,
 		Vec4d& _color, Vec4d& _gradient) {
 	CircleShape(_name,_center,_radius,_color,_gradient,10);
@@ -258,13 +265,19 @@ void CircleShape::setAll(Vec3d& c1, double rad, Vec4d& rgba1, Vec4d& rgba2) {
 	gradient = rgba2;
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 void CircleShape::updateAll() {
 	updateLocation();
 	updateColor();
 }
 
 void CircleShape::setId(int _id) {
+<<<<<<< HEAD
 
+=======
+>>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 	id = _id;
 }
