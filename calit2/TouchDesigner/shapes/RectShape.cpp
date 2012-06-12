@@ -14,14 +14,7 @@ using namespace std;
 
 RectShape::RectShape()
 {
-	name = "";
-	center = Vec3d(0,0,0);
-	width = 100;
-	height = 100;
-	color1 = Vec4d(0.8,0.5,0.3,0.3);		
-	type = 3;
-	genVer= true;
-	generate();
+	RectShape("def");
 }
 
 RectShape::~RectShape()
@@ -31,11 +24,13 @@ RectShape::~RectShape()
 
 RectShape::RectShape(string _name)
 {
-	name = "";
+	setUseVertexBufferObjects(true);
+	name = _name;	
 	center = Vec3d(0,0,0);
 	width = 100;
 	height = 100;
-	color1 = Vec4d(0.8,0.5,0.3,0.3);		
+	// apparently this shade of yellow is called "jonquil"
+	color1 = Vec4d (250/255, 218/255, 94/255, 0.8);
 	type = 3;
 	genVer= true;
 	generate();
@@ -45,6 +40,7 @@ RectShape::RectShape(string _name)
 // name, p1, p2, p3, p4, color1, color2
 RectShape::RectShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec3d& _p4, Vec4d& _c1, Vec4d& _c2)
 {
+	setUseVertexBufferObjects(true);
 	name = _name;
 	p1 = _p1;
 	p2 = _p2;
@@ -59,51 +55,20 @@ RectShape::RectShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec3d& _p
 // name, p1, p2, p3, p4, color1
 RectShape::RectShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec3d& _p4, Vec4d& _c1)
 {
-	name = _name;
-	p1 = _p1;
-	p2 = _p2;
-	p3 = _p3;
-	p4 = _p4;
-	color1 = _c1;	
-	color2 = _c1;
-	type = 4;
-	genVer= false;
-	generate();
+	RectShape(_name, _p1, _p2, _p3, _p4, _c1, _c1);
 }
 
 // name, p1, p2, p3, p4
 RectShape::RectShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec3d& _p4)
 {
-	name = _name;
-	p1 = _p1;
-	p2 = _p2;
-	p3 = _p3;
-	p4 = _p4;
-	color1 = Vec4d(0.8,0.5,0.3,0.3);
-	color2 = color1;
-	type = 4;
-	genVer= false;
-	generate();
+	Vec4d _c1(250/255, 218/255, 94/255, 0.8);
+	RectShape(_name, _p1, _p2, _p3, _p4, _c1);
 }
-
-// name, center, width, height, color
-RectShape::RectShape(string _name, Vec3d& _center, int _width, int _height, Vec4d& _color)
-{
-	name = _name;
-	center = _center;
-	width = _width;
-	height = _height;
-	color1 = _color;	
-	color2 = _color;	
-	type = 3;
-	genVer= true;
-	generate();
-}
-
 
 // name, center, width, height, color, gradient
-RectShape::RectShape(string _name, Vec3d& _center, int _width, int _height, Vec4d& _color, Vec4d& _color2)
+RectShape::RectShape(string _name, Vec3d& _center, double _width, double _height, Vec4d& _color, Vec4d& _color2)
 {
+	setUseVertexBufferObjects(true);
 	name = _name;
 	center = _center;
 	width = _width;
@@ -115,20 +80,19 @@ RectShape::RectShape(string _name, Vec3d& _center, int _width, int _height, Vec4
 	generate();
 }
 
+// name, center, width, height, color
+RectShape::RectShape(string _name, Vec3d& _center, double _width, double _height, Vec4d& _color)
+{
+	RectShape(_name, _center, _width, _height, _color, _color);
+}
+
 
 
 // name, center, width
-RectShape::RectShape(string _name, Vec3d& _center, int _width, int _height)
+RectShape::RectShape(string _name, Vec3d& _center, double _width, double _height)
 {
-	name = _name;
-	center = _center;
-	width = _width;
-	height = _height;
-	color1 = Vec4d(0.8,0.5,0.3,0.3);	
-	color2 = color1;	
-	type = 3;
-	genVer= true;
-	generate();
+	Vec4d _c1(250/255, 218/255, 94/255, 0.8);
+	RectShape(_name, _center, _width, _height, _c1);
 }
 
 
@@ -137,22 +101,22 @@ void RectShape::setCenter(Vec3d& _center)
 	center = _center;
 }
 
-void RectShape::setWidth(int _width)
+void RectShape::setWidth(double _width)
 {
 	width = _width;
 }
 
-int RectShape::getWidth()
+double RectShape::getWidth()
 {
 	return width;
 }
 
-void RectShape::setHeight(int _height)
+void RectShape::setHeight(double _height)
 {
 	height = _height;
 }
 
-int RectShape::getHeight()
+double RectShape::getHeight()
 {
 	return height;
 }

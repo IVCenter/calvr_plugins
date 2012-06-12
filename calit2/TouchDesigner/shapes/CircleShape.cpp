@@ -12,8 +12,16 @@ using namespace osg;
 using namespace std;
 
 CircleShape::CircleShape() {
-	//setUseVertexBufferObjects(true);
-	name = "def";
+	CircleShape("def");
+}
+
+CircleShape::~CircleShape() {
+
+}
+
+CircleShape::CircleShape(string _name) {
+	setUseVertexBufferObjects(true);
+	name = _name;
 	center = Vec3d(random() * 600, 0, random() * 600);
 	radius = 100;
 	color = Vec4d(0.0, 0.5, 1.0, 0.8);
@@ -24,54 +32,37 @@ CircleShape::CircleShape() {
 	generate();
 }
 
-CircleShape::~CircleShape() {
-
-}
-
-CircleShape::CircleShape(string _name) {
-	//setUseVertexBufferObjects(true);
-	name = _name;
-	center = Vec3d(0, 0, 0);
-	radius = 10;
-	color = Vec4d(0.0, 0.5, 1.0, 0.3);
-	gradient = Vec4d(0.0, 0.0, 0.0, 0.0);
-	degree = 10;
-	type = 5;
-
-	generate();
-}
-
 // name, center, radius, color, gradient, tesselation
 CircleShape::CircleShape(string _name, Vec3d& _center, double _radius,
-		Vec4d& _color, Vec4d& _gradient, int _deg) {
-	//setUseVertexBufferObjects(true);
-	name = _name;
-	center = _center;
-	radius = _radius;
-	color = _color;
-	gradient = _gradient;
-	degree = _deg;
-	type = 5;
+	Vec4d& _color, Vec4d& _gradient, int _deg) {
+		setUseVertexBufferObjects(true);
+		name = _name;
+		center = _center;
+		radius = _radius;
+		color = _color;
+		gradient = _gradient;
+		degree = _deg;
+		type = 5;
 
-	generate();
+		generate();
 }
 
 // name, center, raidus, color, gradient
 CircleShape::CircleShape(string _name, Vec3d& _center, double _radius,
-		Vec4d& _color, Vec4d& _gradient) {
-	CircleShape(_name,_center,_radius,_color,_gradient,10);
+	Vec4d& _color, Vec4d& _gradient) {
+		CircleShape(_name,_center,_radius,_color,_gradient,10);
 }
 
 // name, center, radius, color, tesselation
 CircleShape::CircleShape(string _name, Vec3d& _center, double _radius,
-		Vec4d& _color, int _deg) {
-	CircleShape(_name,_center,_radius,_color,_color,_deg);
+	Vec4d& _color, int _deg) {
+		CircleShape(_name,_center,_radius,_color,_color,_deg);
 }
 
 // name, center, radius, color
 CircleShape::CircleShape(string _name, Vec3d& _center, double _radius,
-		Vec4d& _color) {
-	CircleShape(_name,_center,_radius,_color,10);
+	Vec4d& _color) {
+		CircleShape(_name,_center,_radius,_color,10);
 }
 
 // name, center, radius
@@ -140,11 +131,11 @@ Vec4d CircleShape::getGradient() {
 
 void CircleShape::generate() {
 	/********************************************************************
-	 *																    *
-	 *					Vertices									    *
-	 *																    *
-	 ********************************************************************
-	 */
+	*																    *
+	*					Vertices									    *
+	*																    *
+	********************************************************************
+	*/
 	int numVertices = 0;
 
 	vertices = new Vec3Array;
@@ -163,31 +154,31 @@ void CircleShape::generate() {
 	setVertexArray( vertices);
 
 	/********************************************************************
-	 *								    *
-	 *				colors				    *
-	 *								    *
-	 ********************************************************************
-	 */
+	*								    *
+	*				colors				    *
+	*								    *
+	********************************************************************
+	*/
 
 	colors = new Vec4Array(numVertices);
 	for (int g = 0; g < numVertices; g += 2) {
 		(*colors)[g].set(color.x(), color.y(), color.z(), color.w());
 		(*colors)[g + 1].set(gradient.x(), gradient.y(), gradient.z(),
-				gradient.w());
+			gradient.w());
 	}
 
 	setColorArray( colors);
 	setColorBinding(Geometry::BIND_PER_VERTEX);
 
 	addPrimitiveSet(new DrawArrays(PrimitiveSet::TRIANGLE_STRIP, 0, 2 + (360
-			* 2 / degree)));
+		* 2 / degree)));
 
 	/********************************************************************
-	 *								    *
-	 *			stateset and material			    *
-	 *	  							    *
-	 ********************************************************************
-	 */
+	*								    *
+	*			stateset and material			    *
+	*	  							    *
+	********************************************************************
+	*/
 
 	// stateset and material
 	StateSet* state = getOrCreateStateSet();
@@ -196,19 +187,19 @@ void CircleShape::generate() {
 	mat->setAlpha(Material::FRONT_AND_BACK, 0.1);
 	mat->setColorMode(Material::AMBIENT_AND_DIFFUSE);
 	state->setAttributeAndModes(mat, StateAttribute::ON
-			| StateAttribute::OVERRIDE);
+		| StateAttribute::OVERRIDE);
 
 	/********************************************************************
-	 *								    *
-	 *			blending				    *
-	 *								    *
-	 ********************************************************************
-	 */
+	*								    *
+	*			blending				    *
+	*								    *
+	********************************************************************
+	*/
 
 	// blending
 
 	BlendFunc* bf = new BlendFunc(BlendFunc::SRC_ALPHA,
-			BlendFunc::ONE_MINUS_SRC_ALPHA);
+		BlendFunc::ONE_MINUS_SRC_ALPHA);
 	state->setAttributeAndModes(bf);
 
 	state->setRenderingHint(StateSet::TRANSPARENT_BIN);
@@ -241,7 +232,7 @@ void CircleShape::updateColor() {
 	for (int g = 0; g < (720 / degree) + 1; g += 2) {
 		(*colors)[g].set(color.x(), color.y(), color.z(), color.w());
 		(*colors)[g + 1].set(gradient.x(), gradient.y(), gradient.z(),
-				gradient.w());
+			gradient.w());
 	}
 }
 
