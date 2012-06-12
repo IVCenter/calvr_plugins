@@ -6,6 +6,7 @@
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/NodeMask.h>
 #include <cvrMenu/MenuSystem.h>
+#include <cvrMenu/MenuRangeValue.h>
 #include <PluginMessageType.h>
 #include <iostream>
 
@@ -31,7 +32,7 @@ using namespace cvr;
 
 CVRPLUGIN(OsgMovie)
 
-OsgMovie::OsgMovie() : FileLoadCallback("mov,mpeg,wmv,flv,avi")
+OsgMovie::OsgMovie() : FileLoadCallback("mov,mpeg,wmv,flv,avi,mp4")
 {
 }
 
@@ -107,35 +108,47 @@ bool OsgMovie::loadFile(std::string filename)
     static const char *fragShader = {
       "#extension GL_ARB_texture_rectangle : enable \n"
       "uniform sampler2DRect movie_texture; \n"
+      "uniform int split;\n"
       "uniform int mode;\n"
+      "uniform int type;\n"
       "uniform int eye;\n"
       "void main(void)\n"
       "{\n"
       "    vec2 coord = gl_TexCoord[0].st; \n"
       "    ivec2 size = textureSize(movie_texture, 0);\n"
-      "    if( mode == 1 ) \n"
-      "        coord.y = (coord.y * 0.5) + (0.5 * size.y * eye); \n"
-      "    if( mode == 2 ) \n"
-      "        coord.x = (coord.x * 0.5) + (0.5 * size.x * eye); \n"
+      "	   if( (mode == 0) && split ) \n"
+      "    { \n"
+      "       if( type == 1 ) \n"
+      "            coord.y = (coord.y * 0.5); \n"
+      "       else \n"
+      "            coord.x = (coord.x * 0.5); \n" 
+      "    } \n"
+      "	   else if( mode == 1) \n"
+      "    { \n"
+      "        if( type == 1 ) \n"
+      "            coord.y = (coord.y * 0.5) + (0.5 * size.y * eye); \n"
+      "        else \n"
+      "            coord.x = (coord.x * 0.5) + (0.5 * size.x * eye); \n"
+      "    } \n"
       "    gl_FragColor = texture2DRect(movie_texture, coord); \n"
       "}\n"
     };
    
 
-    osg::ref_ptr<osg::Group> group = new osg::Group;
+    osg::ref_ptr<osg::MatrixTransform> group = new osg::MatrixTransform;
     osg::ref_ptr<osg::Geode> geodeL = new osg::Geode;
     osg::ref_ptr<osg::Geode> geodeR = new osg::Geode;
 
     //get state for left geode
     osg::StateSet* stateset = geodeL->getOrCreateStateSet();
     geodeL->setNodeMask(geodeL->getNodeMask() & ~(CULL_MASK_RIGHT));
-    stateset->addUniform(new osg::Uniform("eye",1));
+    stateset->addUniform(new osg::Uniform("eye",0));
     
     //get state for right geode
     stateset = geodeR->getOrCreateStateSet();
     geodeR->setNodeMask(geodeR->getNodeMask() & ~(CULL_MASK_LEFT));
     geodeR->setNodeMask(geodeR->getNodeMask() & ~(CULL_MASK));
-    stateset->addUniform(new osg::Uniform("eye",0));
+    stateset->addUniform(new osg::Uniform("eye",1));
 
     group->addChild(geodeR);
     group->addChild(geodeL);
@@ -143,43 +156,66 @@ bool OsgMovie::loadFile(std::string filename)
     // add shader to group node
     osg::Program* program = new osg::Program;
     program->addShader(new osg::Shader(osg::Shader::FRAGMENT, fragShader));
-    
+   
+    // get name of file
+    std::string name(filename);
+    size_t found = filename.find_last_of("//");
+    if(found != filename.npos)
+    {
+       name = filename.substr(found + 1,filename.npos);
+    }
+ 
+    // create object to hold movie data
+    struct VideoObject * currentobject = new struct VideoObject;
+    currentobject->name = name;
+    currentobject->stream = NULL;
+    currentobject->scene = NULL;
+    currentobject->firstPlay = false;
+    currentobject->modeUniform = new osg::Uniform("mode",0);
+    currentobject->typeUniform = new osg::Uniform("type",0);
+    currentobject->splitUniform = new osg::Uniform("split",0);
+
+    // set state parameters
     stateset = group->getOrCreateStateSet();
     stateset->setAttribute(program);
     stateset->addUniform(new osg::Uniform("movie_texture",0));
-    stereoUniform = new osg::Uniform("mode",0);
-    stateset->addUniform(stereoUniform);
     stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
-
-    // create object to hold movie data
-    struct VideoObject * currentobject = new struct VideoObject;
-    currentobject->name = filename;
-    currentobject->stream = NULL;
-    currentobject->scene = NULL;
+    stateset->addUniform(currentobject->modeUniform);
+    stateset->addUniform(currentobject->typeUniform);
+    stateset->addUniform(currentobject->splitUniform);
 
     osg::Image* image = osgDB::readImageFile(filename.c_str());
     osg::ImageStream* imagestream = dynamic_cast<osg::ImageStream*>(image);
     if (imagestream)
     {
-	imagestream->pause();
-	imagestream->seek(0);
 	currentobject->stream = imagestream;
+	currentobject->stream->pause();
 
 	 osg::ImageStream::AudioStreams& audioStreams = currentobject->stream->getAudioStreams();
     	if ( !audioStreams.empty() )
     	{
+		#ifdef FMOD_FOUND
         	osg::AudioStream* audioStream = audioStreams[0].get();
         	audioStream->setAudioSink(new FmodAudioSink(audioStream));
+		currentobject->stream->setVolume(1.0);
+		#endif
     	}
     }
 
     if (image)
     {
-      
 	float width = image->s() * image->getPixelAspectRatio();
 	float height = image->t();
 
-	osg::ref_ptr<osg::Drawable> drawable = myCreateTexturedQuadGeometry(osg::Vec3(0.0,0.0,0.0), width, height,image);
+	//check the ratio of the image 
+	float widthFactor = 1.0;
+	if( (width / height) > 2.5 )
+	{
+		widthFactor = 0.5;
+		currentobject->splitUniform->set(1); // indicate double image
+	}
+
+	osg::ref_ptr<osg::Drawable> drawable = myCreateTexturedQuadGeometry(osg::Vec3(0.0,0.0,0.0), width * widthFactor, height,image);
 
 	if (image->isImageTranslucent())
 	{
@@ -199,14 +235,6 @@ bool OsgMovie::loadFile(std::string filename)
 	return false;
     }
 
-    // get name of file
-    std::string name(filename);
-    size_t found = filename.find_last_of("//");
-    if(found != filename.npos)
-    {
-       name = filename.substr(found + 1,filename.npos);
-    }
-	    
     // add stream to the scene
     SceneObject * so = new SceneObject(name,false,false,false,true,true);
     PluginHelper::registerSceneObject(so,"OsgMovie");
@@ -232,6 +260,26 @@ bool OsgMovie::loadFile(std::string filename)
     scb->setCallback(this);
     so->addMenuItem(scb);
     _stereoMap[currentobject] = scb;
+    
+    MenuCheckbox * tbcb = new MenuCheckbox("TopBottom", false); // make toggle button
+    tbcb->setCallback(this);
+    so->addMenuItem(tbcb);
+    _stereoTypeMap[currentobject] = tbcb;
+
+    MenuRangeValue * ms = new MenuRangeValue("Scale", 0.0, 10.0, 1.0); // make video scale
+    ms->setCallback(this);
+    so->addMenuItem(ms);
+    _scaleMap[currentobject] = ms;
+
+    MenuButton * msab = new MenuButton("Save"); // make position and scale of video
+    msab->setCallback(this);
+    so->addMenuItem(msab);
+    _saveMap[currentobject] = msab;
+
+    MenuButton * mscb = new MenuButton("Load"); // load position of video
+    mscb->setCallback(this);
+    so->addMenuItem(mscb);
+    _loadMap[currentobject] = mscb;
 
     MenuButton * mb = new MenuButton("Delete");
     mb->setCallback(this);
@@ -254,12 +302,17 @@ void OsgMovie::menuCallback(MenuItem* menuItem)
 	    {
 	    	if( it->second->getValue() )
 		{
+			if( !it->first->firstPlay )
+			{
+			    it->first->stream->seek(0);
+			    it->first->firstPlay = true;
+			}
             		it->first->stream->play();
 		}
 	    	else
-		{
             		it->first->stream->pause();
-		}
+
+		return;
 	    }
         }
     }
@@ -271,6 +324,8 @@ void OsgMovie::menuCallback(MenuItem* menuItem)
         {
             if( it->first->stream )
                it->first->stream->seek(0);
+
+	    return;
         }
     }
  
@@ -280,9 +335,80 @@ void OsgMovie::menuCallback(MenuItem* menuItem)
         if(menuItem == it->second)
         {
 	    if( it->second->getValue() )
-		stereoUniform->set(1);
+		it->first->modeUniform->set(1);  // stereo on
 	    else
-		stereoUniform->set(0);
+		it->first->modeUniform->set(0);
+
+	    return;
+        }
+    }
+
+    // check for video scaling
+    for(std::map<struct VideoObject*,MenuRangeValue*>::iterator it = _scaleMap.begin(); it != _scaleMap.end(); it++)
+    {
+        if(menuItem == it->second)
+        {
+	    it->first->scene->setScale(it->second->getValue());  // set scale
+            return;
+	}
+    }
+
+    // check for saving position
+    for(std::map<struct VideoObject*,MenuButton*>::iterator it = _saveMap.begin(); it != _saveMap.end(); it++)
+    {
+        if(menuItem == it->second)
+        {
+	    // save position
+	    _configMap[it->first->name].second = it->first->scene->getTransform();
+
+	    // save if video stereo
+	    if(_stereoMap.find(it->first) != _stereoMap.end())
+	    	_configMap[it->first->name].first = (int)_stereoMap.find(it->first)->second->getValue();
+
+	    // update config file
+	    writeConfigFile();
+
+            return;
+	}
+    }
+
+    // check for loading position
+    for(std::map<struct VideoObject*,MenuButton*>::iterator it = _loadMap.begin(); it != _loadMap.end(); it++)
+    {
+        if(menuItem == it->second)
+        {
+	    if(_configMap.find(it->first->name) != _configMap.end())
+            {
+                //std::cerr << "Load." << std::endl;
+                it->first->scene->setTransform(_configMap[it->first->name].second);
+
+		// adjust the scale slider
+		if(_scaleMap.find(it->first) != _scaleMap.end())
+			_scaleMap.find(it->first)->second->setValue(it->first->scene->getScale());
+
+		// set the stereo checkbox
+	        if(_stereoMap.find(it->first) != _stereoMap.end())
+		{
+	    	        _stereoMap.find(it->first)->second->setValue((bool)_configMap[it->first->name].first);
+			_stereoMap.find(it->first)->first->modeUniform->set(_configMap[it->first->name].first);
+		}
+            }
+            return;
+	}
+    }
+
+
+    // check for toggling stereo type support
+    for(std::map<struct VideoObject*,MenuCheckbox*>::iterator it = _stereoTypeMap.begin(); it != _stereoTypeMap.end(); it++)
+    {
+        if(menuItem == it->second)
+        {
+	    if( it->second->getValue() )
+		it->first->typeUniform->set(0);   // top down enabled
+	    else
+		it->first->typeUniform->set(1);
+
+	    return;
         }
     }
 
@@ -303,12 +429,23 @@ void OsgMovie::menuCallback(MenuItem* menuItem)
                 _restartMap.erase(it->first);
             }
 
+            if(_stereoTypeMap.find(it->first) != _stereoTypeMap.end())
+            {
+                delete _stereoTypeMap[it->first];
+                _stereoTypeMap.erase(it->first);
+            }
+
             if(_stereoMap.find(it->first) != _stereoMap.end())
             {
                 delete _stereoMap[it->first];
                 _stereoMap.erase(it->first);
             }
 		
+            if(_scaleMap.find(it->first) != _scaleMap.end())
+            {
+                delete _scaleMap[it->first];
+                _scaleMap.erase(it->first);
+            }
 
             for(std::vector<struct VideoObject*>::iterator delit = _loadedVideos.begin(); delit != _loadedVideos.end(); delit++)
             {
@@ -317,7 +454,7 @@ void OsgMovie::menuCallback(MenuItem* menuItem)
 		    // need to delete the SceneObject
 		    if( it->first->scene )
 			delete it->first->scene;
-
+		   
                     _loadedVideos.erase(delit);
                     break;
                 }
@@ -327,7 +464,7 @@ void OsgMovie::menuCallback(MenuItem* menuItem)
             delete it->second;
             _deleteMap.erase(it);
 
-            break;
+            return;
         }
     }
 }
@@ -336,7 +473,63 @@ bool OsgMovie::init()
 {
     std::cerr << "OsgMovie init\n";
     //osg::setNotifyLevel( osg::INFO );
+    
+    configPath = ConfigManager::getEntry("Plugin.OsgMovie.ConfigDir");
+
+    ifstream cfile;
+    cfile.open((configPath + "/Init.cfg").c_str(), ios::in);
+
+    if(!cfile.fail())
+    {
+        string line;
+        while(!cfile.eof())
+        {
+            Matrix m;
+            char name[150];
+	    int stereo;
+            cfile >> name;
+            if(cfile.eof())
+            {
+                break;
+            }
+	    cfile >> stereo;
+            for(int i = 0; i < 4; i++)
+            {
+                for(int j = 0; j < 4; j++)
+                {
+                    cfile >> m(i, j);
+                }
+            }
+            _configMap[string(name)] = std::pair<int, osg::Matrix> (stereo,m);
+        }
+    }
+    cfile.close();
+
     return true;
+}
+
+void OsgMovie::writeConfigFile()
+{
+    ofstream cfile;
+    cfile.open((configPath + "/Init.cfg").c_str(), ios::trunc);
+
+    if(!cfile.fail())
+    {
+       for(map<std::string, std::pair<int, osg::Matrix> >::iterator it = _configMap.begin(); it != _configMap.end(); it++)
+       {
+           //cerr << "Writing entry for " << it->first << endl;
+           cfile << it->first << " " << it->second.first << " ";
+           for(int i = 0; i < 4; i++)
+           {
+              for(int j = 0; j < 4; j++)
+              {
+                  cfile << it->second.second(i, j) << " ";
+              }
+           }
+           cfile << endl;
+        }
+     }
+     cfile.close();
 }
 
 osg::Geometry* OsgMovie::myCreateTexturedQuadGeometry(osg::Vec3 pos, float width,float height, osg::Image* image)
@@ -362,4 +555,71 @@ osg::Geometry* OsgMovie::myCreateTexturedQuadGeometry(osg::Vec3 pos, float width
 
 OsgMovie::~OsgMovie()
 {
+
+   printf("Called movie destructor\n");
+
+   // stop video play back and remove videos first
+   std::map<struct VideoObject*, MenuButton*>::iterator it;
+
+   while( (it = _deleteMap.begin()) != _deleteMap.end())
+   {
+            if(_playMap.find(it->first) != _playMap.end())
+            {
+                delete _playMap[it->first];
+                _playMap.erase(it->first);
+            }
+
+            if(_restartMap.find(it->first) != _restartMap.end())
+            {
+                delete _restartMap[it->first];
+                _restartMap.erase(it->first);
+            }
+
+            if(_stereoTypeMap.find(it->first) != _stereoTypeMap.end())
+            {
+                delete _stereoTypeMap[it->first];
+                _stereoTypeMap.erase(it->first);
+            }
+
+            if(_stereoMap.find(it->first) != _stereoMap.end())
+            {
+                delete _stereoMap[it->first];
+                _stereoMap.erase(it->first);
+            }
+
+            if(_scaleMap.find(it->first) != _scaleMap.end())
+            {
+                delete _scaleMap[it->first];
+                _scaleMap.erase(it->first);
+            }
+
+            if(_saveMap.find(it->first) != _saveMap.end())
+            {
+                delete _saveMap[it->first];
+                _saveMap.erase(it->first);
+            }
+
+            if(_loadMap.find(it->first) != _loadMap.end())
+            {
+                delete _loadMap[it->first];
+                _loadMap.erase(it->first);
+            }
+
+            for(std::vector<struct VideoObject*>::iterator delit = _loadedVideos.begin(); delit != _loadedVideos.end(); delit++)
+            {
+                if((*delit) == it->first)
+                {
+                    // need to delete the SceneObject
+                    if( it->first->scene )
+                         delete it->first->scene;
+                  
+                    _loadedVideos.erase(delit);
+                     break;
+                 }
+             }
+
+             delete it->first;
+             delete it->second;
+             _deleteMap.erase(it);
+    }
 }

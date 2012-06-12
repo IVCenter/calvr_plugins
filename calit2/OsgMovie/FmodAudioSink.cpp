@@ -11,7 +11,7 @@
 
 using namespace osg;
 
-/*static*/ FMOD::System *  FmodAudioSink::mFsystem = NULL;
+FMOD::System *  FmodAudioSink::mFsystem = NULL;
 
 static FMOD_RESULT F_CALLBACK soundReadCallback(FMOD_SOUND *in_sound, void *in_data, unsigned int datalen)
 {
@@ -39,7 +39,8 @@ FmodAudioSink::FmodAudioSink(osg::AudioStream* audioStream):
         {
             FMOD::System_Create(&mFsystem);
             mFsystem->init(32, FMOD_INIT_NORMAL, 0);
-            unsigned int ui = 0;
+	    mFsystem->setDriver(-1);
+	    mChannel = NULL;
         }
     }
 }
@@ -83,7 +84,7 @@ void FmodAudioSink::play()
     exinfo.pcmreadcallback = soundReadCallback;                           /* User callback for reading. */
     exinfo.userdata = this;
 
-    FMOD_MODE mode = FMOD_2D | FMOD_OPENUSER  | FMOD_HARDWARE | FMOD_LOOP_NORMAL| FMOD_CREATESTREAM;
+    FMOD_MODE mode = FMOD_2D | FMOD_OPENUSER | FMOD_HARDWARE | FMOD_LOOP_NORMAL| FMOD_CREATESTREAM;
     FMOD_RESULT result = mFsystem->createStream(NULL, mode, &exinfo, &mFsound);
 
     mFsystem->update();
@@ -92,7 +93,9 @@ void FmodAudioSink::play()
     {
         FMOD_RESULT result2 = mFsystem->playSound(FMOD_CHANNEL_FREE, mFsound, false, &mChannel);
         if (result2 == FMOD_OK)
-               mChannel->setVolume(1000);
+	{
+               mChannel->setVolume(1.0);
+	}
         else
         {
            printf("Error found\n");
@@ -107,6 +110,21 @@ void FmodAudioSink::play()
          mFsound = NULL;
          mChannel = NULL;
     }
+}
+
+void FmodAudioSink::setVolume( float volume)
+{
+    if( mChannel )
+    	mChannel->setVolume(volume);
+
+}
+
+float FmodAudioSink::getVolume()
+{
+    float volume = 0.0f;
+    if( mChannel )
+    	mChannel->getVolume(&volume);
+    return volume;
 }
 
 void FmodAudioSink::pause()

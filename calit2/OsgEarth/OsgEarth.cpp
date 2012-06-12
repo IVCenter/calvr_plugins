@@ -7,6 +7,7 @@
 #include <cvrKernel/ComController.h>
 #include <cvrKernel/Navigation.h>
 #include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/NodeMask.h>
 #include <cvrMenu/MenuSystem.h>
 #include <PluginMessageType.h>
 #include <iostream>
@@ -14,16 +15,27 @@
 #include <osg/Matrix>
 #include <osgDB/ReadFile>
 #include <osg/Geode>
+#include <osg/Image>
+#include <osg/CullFace>
 #include <osg/ShapeDrawable>
-#include <osgUtil/IntersectVisitor>
+#include <osg/Referenced>
+#include <osg/PositionAttitudeTransform>
+#include <osgTerrain/TerrainTile>
+#include <osgTerrain/GeometryTechnique>
 #include <osgEarthDrivers/kml/KML>
+#include <osgEarth/TerrainOptions>
+#include <osgEarth/MapNodeOptions>
+#include <osgEarth/optional>
+
+#include <osgDB/ReaderWriter>
+#include <osgDB/Registry>
+
 
 using namespace osg;
 using namespace std;
 using namespace cvr;
 using namespace osgEarth;
 using namespace osgEarth::Drivers;
-using namespace osgEarth::Util;
 
 const double earthRadiusMM = osg::WGS_84_RADIUS_EQUATOR * 1000.0;
 
@@ -34,89 +46,52 @@ OsgEarth::OsgEarth()
 
 }
 
-void OsgEarth::message(int type, char * data)
-{
-    // data needs to include the plugin name and also the lat,lon and height
-    if(type == OE_ADD_MODEL)
-    {
-	// data contains 3 floats
-	OsgEarthRequest request = * (OsgEarthRequest*) data;
-
-	// if get a request create new node add matrix and return the address of the matrixtransform
-        osg::Matrixd output;
-	map->getProfile()->getSRS()->getEllipsoid()->computeLocalToWorldTransformFromLatLongHeight(
-	        osg::DegreesToRadians(request.lat),
-	        osg::DegreesToRadians(request.lon),
-		request.height,
-	        output );
-
-	if( request.trans != NULL )
-	{
-            request.trans->setMatrix(output);
-	}
-	else
-	{
-	    osg::MatrixTransform* trans = new osg::MatrixTransform();
-            trans->setMatrix(output);
-            SceneManager::instance()->getObjectsRoot()->addChild(trans);
-            request.trans = trans;
-	}
-
-        // send message back	
-	PluginManager::instance()->sendMessageByName(request.pluginName,OE_TRANSFORM_POINTER,(char *) &request);
-    }
-}
-
 bool OsgEarth::init()
 {
     std::cerr << "OsgEarth init\n";
 
-    // Start by creating the map:
-    map = new Map();
+    string baseEarth = ConfigManager::getEntry("Plugin.OsgEarth.Earth");
 
-    //Add a base layer
-    ArcGISOptions mapserverOpt;
-    mapserverOpt.url() = "http://server.arcgisonline.com/ArcGIS/rest/services/ESRI_Imagery_World_2D/MapServer";
-    map->addImageLayer( new ImageLayer( ImageLayerOptions("mapserver", mapserverOpt) ) );
+    osg::Node* earth = osgDB::readNodeFile(baseEarth);
 
-    // add a TMS elevation layer:
-    TMSOptions elevationtms;
-    elevationtms.url() = "http://demo.pelicanmapping.com/rmweb/data/srtm30_plus_tms/tms.xml";
-    map->addElevationLayer( new ElevationLayer( "SRTM", elevationtms ) );
-
-    MapNodeOptions mapNodeOptions;
-    mapNodeOptions.enableLighting() = false;
-    
-    MapNode* mapNode = new MapNode( map , mapNodeOptions);
-
-    // add kml test
-    //KMLOptions kmlo;
-    //kmlo.defaultIconImage() = URI("http://www.osgearth.org/chrome/site/pushpin_yellow.png").readImage();
-    
-    osg::Node* kml = KML::load( URI("/home/pweber/Downloads/kml/saudi/qasr/doc.kml"), mapNode );
-    if ( kml )
+    if(!earth)
     {
-	 printf("Added model to planet\n");
-	 SceneManager::instance()->getObjectsRoot()->addChild(kml);
+        std::cerr << "OsgEarth error: Unable to load earth: " << baseEarth << std::endl;
+        return false;
     }
-/*
-    //add sky
-    double hours = skyConf.value( "hours", 12.0 );
-    SkyNode* s_sky = new SkyNode( mapNode->getMap() );
-    s_sky->setDateTime( 2011, 3, 6, hours );
-    s_sky->attach( &CVRViewer::instance() );
-    SceneManager::instance()->getObjectsRoot()->addChild( s_sky );
-*/
 
-    SceneManager::instance()->getObjectsRoot()->addChild(mapNode);
+    // disable special culling of the planet
+    earth->setNodeMask(earth->getNodeMask() & ~DISABLE_FIRST_CULL & ~INTERSECT_MASK);
 
-    osg::Referenced::setThreadSafeReferenceCounting(true);
+    SceneManager::instance()->getObjectsRoot()->addChild(earth);
 
-    // initialize the location
-    //osg::Matrix mat(0.861380, 0.483984, 0.154220, 0.000000, -0.507961, 0.820889, 0.260991, 0.000000, -0.000282, -0.303150, 0.952943, 0.000000, -34278.109801, 662009.393172, -179429.821688, 1.000000);
-    //PluginHelper::setObjectMatrix(mat);
-    //PluginHelper::setObjectScale(0.107497);
-    
+    _mapNode = MapNode::findMapNode( earth );
+    _map = _mapNode->getMap();
+
+
+    // loop through the configuration and add models to the planet
+    // Load a KML file if specified
+    vector<string> list;
+    string configBase = "Plugin.OsgEarth.Models";
+    ConfigManager::getChildren(configBase,list);
+
+    for(int i = 0; i < list.size(); i++)
+    {
+            //KMLOptions kmlo;
+            //kmlo.defaultIconImage() = URI("http://www.osgearth.org/chrome/site/pushpin_yellow.png").readImage();
+            //osg::Node* kml = KML::load( URI(kmlFile), mapNode, kmlo );
+
+            string file = ConfigManager::getEntry(configBase + "." + list[i]);
+            printf("Trying to load %s\n", file.c_str());
+            osg::Node* kml = KML::load( URI(file), _mapNode);
+            
+            if ( kml )
+            {
+                SceneManager::instance()->getObjectsRoot()->addChild( kml );
+            }
+    }
+
+    // set planet to correct scale
     osg::Matrix objects = PluginHelper::getObjectMatrix();
     objects.setTrans(0.0, earthRadiusMM * 3.0, 0.0);
     PluginHelper::setObjectScale(1000.0);
@@ -125,9 +100,16 @@ bool OsgEarth::init()
     // add menu for flying nav
     _osgEarthMenu = new SubMenu("OsgEarth");
 
-    _navCB = new MenuCheckbox("Planet Nav Mode",true);
+    // enable and disable visibility
+    _visCB = new MenuCheckbox("Visible", true);
+    _visCB->setCallback(this);
+    _osgEarthMenu->addItem(_visCB);
+
+    // enable and disable navigation
+    _navCB = new MenuCheckbox("Planet Nav Mode", false);
     _navCB->setCallback(this);
     _osgEarthMenu->addItem(_navCB);
+
     PluginHelper::addRootMenuItem(_osgEarthMenu);
 
     _navActive = false;
@@ -135,6 +117,147 @@ bool OsgEarth::init()
 
     return true;
 }
+
+/*
+void OsgEarth::setViewpoint( const Viewpoint& vp, double duration_s )
+{
+    if ( !established() ) 
+    {
+        _pending_viewpoint = vp;
+        _pending_viewpoint_duration_s = duration_s;
+        _has_pending_viewpoint = true;
+    }
+
+    else if ( duration_s > 0.0 )
+    {
+        // xform viewpoint into map SRS
+        osg::Vec3d vpFocalPoint = vp.getFocalPoint();
+
+        _start_viewpoint = getViewpoint(); //TODO
+        
+        _delta_heading = vp.getHeading() - _start_viewpoint.getHeading(); //TODO: adjust for crossing -180
+        _delta_pitch   = vp.getPitch() - _start_viewpoint.getPitch();
+        _delta_range   = vp.getRange() - _start_viewpoint.getRange();
+        _delta_focal_point = vpFocalPoint - _start_viewpoint.getFocalPoint(); // TODO: adjust for lon=180 crossing
+
+        while( _delta_heading > 180.0 ) _delta_heading -= 360.0;
+        while( _delta_heading < -180.0 ) _delta_heading += 360.0;
+
+        // adjust for geocentric date-line crossing
+        while( _delta_focal_point.x() > 180.0 ) _delta_focal_point.x() -= 360.0;
+        while( _delta_focal_point.x() < -180.0 ) _delta_focal_point.x() += 360.0;
+
+        // calculate an acceleration factor based on the Z differential
+        double h0 = _start_viewpoint.getRange() * sin( osg::DegreesToRadians(-_start_viewpoint.getPitch()) );
+        double h1 = vp.getRange() * sin( osg::DegreesToRadians( -vp.getPitch() ) );
+        double dh = (h1 - h0);
+
+        // calculate the total distance the focal point will travel and derive an arc height:
+        double de;
+        
+        osg::Vec3d startFP = _start_viewpoint.getFocalPoint();
+        double x0,y0,z0, x1,y1,z1;
+        _map->getProfile()->getSRS()->getEllipsoid()->convertLatLongHeightToXYZ(
+            osg::DegreesToRadians( _start_viewpoint.y() ), osg::DegreesToRadians( _start_viewpoint.x() ), 0.0, x0, y0, z0 );
+        _map->getProfile()->getSRS()->getEllipsoid()->convertLatLongHeightToXYZ(
+            osg::DegreesToRadians( vpFocalPoint.y() ), osg::DegreesToRadians( vpFocalPoint.x() ), 0.0, x1, y1, z1 );
+        de = (osg::Vec3d(x0,y0,z0) - osg::Vec3d(x1,y1,z1)).length();
+        
+                 
+        _arc_height = osg::maximum( de - fabs(dh), 0.0 );
+
+        // calculate acceleration coefficients
+        if ( _arc_height > 0.0 )
+        {
+            // if we're arcing, we need seperate coefficients for the up and down stages
+            double h_apex = 2.0*(h0+h1) + _arc_height;
+            double dh2_up = fabs(h_apex - h0)/100000.0;
+            _set_viewpoint_accel = log10( dh2_up );
+            double dh2_down = fabs(h_apex - h1)/100000.0;
+            _set_viewpoint_accel_2 = -log10( dh2_down );
+        }
+        else
+        {
+            // on arc => simple unidirectional acceleration:
+            double dh2 = (h1 - h0)/100000.0;
+            _set_viewpoint_accel = fabs(dh2) <= 1.0? 0.0 : dh2 > 0.0? log10( dh2 ) : -log10( -dh2 );
+            if ( fabs( _set_viewpoint_accel ) < 1.0 ) _set_viewpoint_accel = 0.0;
+        }
+        
+        
+        // don't use _time_s_now; that's the time of the last event
+        _time_s_set_viewpoint = osg::Timer::instance()->time_s();
+        _set_viewpoint_duration_s = duration_s;
+
+        _setting_viewpoint = true;
+        
+        // recalculate the center point.
+        recalculateCenter(); //TODO
+    }
+    else
+    {
+        osg::Vec3d new_center = vp.getFocalPoint();
+
+        // start by transforming the requested focal point into world coordinates:
+        if ( getSRS() )
+        {
+            // resolve the VP's srs. If the VP's SRS is not specified, assume that it
+            // is either lat/long (if the map is geocentric) or X/Y (otherwise).
+            osg::ref_ptr<const SpatialReference> vp_srs = vp.getSRS()? vp.getSRS() :
+                _is_geocentric? getSRS()->getGeographicSRS() :
+                getSRS();
+
+    //TODO: streamline
+            if ( !getSRS()->isEquivalentTo( vp_srs.get() ) )
+            {
+                osg::Vec3d local = new_center;
+                // reproject the focal point if necessary:
+                vp_srs->transform2D( new_center.x(), new_center.y(), getSRS(), local.x(), local.y() );
+                new_center = local;
+            }
+
+            // convert to geocentric coords if necessary:
+            if ( _is_geocentric )
+            {
+                osg::Vec3d geocentric;
+
+                getSRS()->getEllipsoid()->convertLatLongHeightToXYZ(
+                    osg::DegreesToRadians( new_center.y() ),
+                    osg::DegreesToRadians( new_center.x() ),
+                    new_center.z(),
+                    geocentric.x(), geocentric.y(), geocentric.z() );
+
+                new_center = geocentric;            
+            }
+        }
+
+        // now calculate the new rotation matrix based on the angles:
+
+
+        double new_pitch = osg::DegreesToRadians(
+            osg::clampBetween( vp.getPitch(), _settings->getMinPitch(), _settings->getMaxPitch() ) );
+
+        double new_azim = normalizeAzimRad( osg::DegreesToRadians( vp.getHeading() ) );
+
+        setCenter( new_center ); // TODO
+		setDistance( vp.getRange() ); // TODO
+
+        _previousUp = getUpVector( _centerLocalToWorld ); //TODO
+
+        _centerRotation = getRotation( new_center ).getRotate().inverse(); //TODO
+
+		osg::Quat azim_q( new_azim, osg::Vec3d(0,0,1) );
+        osg::Quat pitch_q( -new_pitch -osg::PI_2, osg::Vec3d(1,0,0) );
+
+		osg::Matrix new_rot = osg::Matrixd( azim_q * pitch_q );
+
+		_rotation = osg::Matrixd::inverse(new_rot).getRotate();
+
+        recalculateCenter(); //TODO
+    }
+}
+*/
+
 
 void OsgEarth::preFrame()
 {
@@ -150,30 +273,29 @@ void OsgEarth::preFrame()
 
             // planetPoint in latlonheight
             osg::Vec3d latLonHeight;
-            map->getProfile()->getSRS()->getEllipsoid()->convertXYZToLatLongHeight(
-                                    origPlanetPoint.x(),
-                                    origPlanetPoint.y(),
-                                    origPlanetPoint.z(),
-                                    latLonHeight.x(),
-                                    latLonHeight.y(),
-                                    latLonHeight.z());
+	    _map->getProfile()->getSRS()->getEllipsoid()->convertXYZToLatLongHeight(
+				    origPlanetPoint.x(),
+				    origPlanetPoint.y(),
+				    origPlanetPoint.z(),
+		                    latLonHeight.x(),
+				    latLonHeight.y(),
+				    latLonHeight.z());
 
             // set height back to the surface level 
             latLonHeight[2] = 0.0;
 
             // adjust the height to the ellipsoid
-            map->getProfile()->getSRS()->getEllipsoid()->convertLatLongHeightToXYZ(
-                                    latLonHeight.x(),
-                                    latLonHeight.y(),
-                                    latLonHeight.z(),
-                                    origPlanetPoint.x(),
-                                    origPlanetPoint.y(),
-                                    origPlanetPoint.z());
+	    _map->getProfile()->getSRS()->getEllipsoid()->convertLatLongHeightToXYZ(
+		                    latLonHeight.x(),
+				    latLonHeight.y(),
+				    latLonHeight.z(),
+				    origPlanetPoint.x(),
+				    origPlanetPoint.y(),
+				    origPlanetPoint.z());
 
 
             distanceToSurface = (origPlanetPoint * PluginHelper::getObjectToWorldTransform()).length();
 
-	
             ComController::instance()->sendSlaves(&distanceToSurface,sizeof(double));
         }
         else
@@ -181,8 +303,8 @@ void OsgEarth::preFrame()
             ComController::instance()->readMaster(&distanceToSurface,sizeof(double));
         }
 
-	//std::cerr << "distance: " << distanceToSurface << std::endl;
-
+        //std::cerr << "distance: " << distanceToSurface << std::endl;
+    	
         if(_navActive)
         {
             processNav(getSpeed(distanceToSurface));
@@ -261,7 +383,6 @@ bool OsgEarth::mouseButtonEvent (int type, int button, int x, int y, const osg::
         return false;
     }
 
-
     if(!_mouseNavActive && button == 0 && (type == BUTTON_DOWN || type == BUTTON_DOUBLE_CLICK))
     {
         _startX = x;
@@ -298,9 +419,13 @@ bool OsgEarth::mouseButtonEvent (int type, int button, int x, int y, const osg::
 
 void OsgEarth::menuCallback(MenuItem * item)
 {
-    if(item == _navCB)
+    if(item == _visCB)
     {
-        _navActive = _navCB->getValue();
+	if(_visCB->getValue())
+		_mapNode->setNodeMask(~2);
+	else
+		_mapNode->setNodeMask(0);
+
     }
 }
 
@@ -343,7 +468,7 @@ void OsgEarth::processNav(double speed)
                 float dot = pointInit * pointFinal;
                 float angle = acos(dot) / 15.0;
                 if(dot > 1.0 || dot < -1.0)
-		{
+                {
                     angle = 0.0;
                 }
                 else if((pointInit ^ pointFinal).z() < 0)
@@ -362,7 +487,7 @@ void OsgEarth::processNav(double speed)
 
             break;
         }
-        case FLY:
+	case FLY:
         {
             osg::Vec3 trans = PluginHelper::getHandMat(_navHand).getTrans() - _navHandMat.getTrans();
 
@@ -387,7 +512,7 @@ void OsgEarth::processNav(double speed)
             pointInit = pointInit * r;
 
             r.makeRotate(PluginHelper::getHandMat(_navHand).getRotate());
-	    osg::Vec3 pointFinal = osg::Vec3(0, 1, 0);
+            osg::Vec3 pointFinal = osg::Vec3(0, 1, 0);
             pointFinal = pointFinal * r;
 
             osg::Quat turn;
@@ -464,7 +589,7 @@ void OsgEarth::processMouseNav(double speed)
             double d;
 
             if(determ == 0)
-	    {
+            {
                 d = ldotc;
             }
             else
@@ -476,7 +601,7 @@ void OsgEarth::processMouseNav(double speed)
                 {
                     d = d1;
                 }
-                                                                else if(d2 >= 0.0)
+								else if(d2 >= 0.0)
                 {
                     d = d2;
                 }
@@ -512,7 +637,7 @@ void OsgEarth::processMouseNav(double speed)
             break;
         }
         case WALK:
-	case DRIVE:
+        case DRIVE:
         {
             osg::Vec3d planetDir = planetPoint - screenCenter;
             planetDir.normalize();
@@ -536,7 +661,7 @@ void OsgEarth::processMouseNav(double speed)
             rotPoint.normalize();
 
             osg::Vec3d cpoint = -screen2Planet;
-                                                cpoint.normalize();*/
+						cpoint.normalize();*/
 
 
             double angle = _currentX - _startX;
@@ -561,7 +686,7 @@ void OsgEarth::processMouseNav(double speed)
 
             axis = axis * si->transform;
             axis = axis ^ screenDir;
-	    axis.normalize();
+            axis.normalize();
 
             // check if invalid
             if(axis.length() < 0.9)
@@ -588,7 +713,7 @@ void OsgEarth::processMouseNav(double speed)
 double OsgEarth::getSpeed(double distance)
 {
     double boundDist = std::max((double)0.0,distance);
-    boundDist/=1000.0;
+    boundDist /= 1000.0;
 
     if(boundDist < 762.0)
     {
@@ -607,7 +732,6 @@ double OsgEarth::getSpeed(double distance)
         return 10.0 * cap;
     }
 }
-
 
 OsgEarth::~OsgEarth()
 {
