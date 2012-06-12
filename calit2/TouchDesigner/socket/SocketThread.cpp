@@ -52,11 +52,10 @@ SocketThread::SocketThread(string & serverName) : _serverName(serverName)
 		FD_SET(_sockID, &readfds);
 	}
 
-	
-	// get a data processor started
+
+	// get a data processor started	
 	sh = new ShapeHelper();
-	
-	
+
 	start(); //starts the thread
 
 	cerr << "SOCKET THREAD INITIALIZED" << endl;
@@ -69,11 +68,6 @@ void SocketThread::run()
 
 	ReaderWriter * readerwriter =  Registry::instance()->getReaderWriterForExtension("ive");
 
-<<<<<<< HEAD
-
-=======
-	
->>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 	while ( ! _mkill ) 
 	{
 		// check server for info
@@ -83,23 +77,14 @@ void SocketThread::run()
 
 		if (sh->processedAll)
 		{
-<<<<<<< HEAD
-
-=======
->>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 			stringstream ss;
 			_mutex.lock();
-			readerwriter->writeNode(*(sh->getGeode()), ss);
-	//		cerr << "writing scene data" << endl;
+			//readerwriter->writeNode(*(sh->getGeode()), ss);
 			sceneData=ss.str();
-<<<<<<< HEAD
-
-=======
->>>>>>> e7aefd8ba4f234f3d166f0a934e5cf6ea045a343
 			_mutex.unlock();
 			sh->processedAll=false;
-			
-			
+
+
 		}
 		// place mutex around adding ive string to vector e.g _mutex.lock() and _mutex.unlock();
 	}
@@ -108,9 +93,9 @@ void SocketThread::run()
 string SocketThread::getSerializedScene(void)
 {
 	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-//	cerr << "size\t" << sceneData.size() << endl;
-//	cerr << "max\t" << sceneData.max_size() << endl;
-//	cerr << "cap\t" << sceneData.capacity() << endl;
+	//	cerr << "size\t" << sceneData.size() << endl;
+	//	cerr << "max\t" << sceneData.max_size() << endl;
+	//	cerr << "cap\t" << sceneData.capacity() << endl;
 	return sceneData;
 
 }

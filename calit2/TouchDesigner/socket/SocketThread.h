@@ -27,6 +27,7 @@
 
 #include <cvrUtil/CVRSocket.h>
 
+
 #include "../util/ShapeHelper.h"
 
 using namespace osg;
@@ -37,28 +38,27 @@ using namespace OpenThreads;
 
 class SocketThread : public OpenThreads::Thread
 {
-	private:
-		bool _mkill;
-		virtual void run();
-		string _serverName;
-		OpenThreads::Mutex _mutex;
-		ShapeHelper * sh;
-	protected:
-		SocketThread();
-		
-		struct sockaddr_in _serverAddr;
-        	struct sockaddr_in _clientAddr;
-        
-        	string _port;
-        	int _sockID; ///< socket descriptor
-        	socklen_t _addrLen;
-        	char* readSocket();
+private:
+	bool _mkill;
+	virtual void run();
+	string _serverName;
+	OpenThreads::Mutex _mutex;
+	ShapeHelper * sh;
+protected:
+	SocketThread();
 
-	public:
-		SocketThread( string& server);
+	struct sockaddr_in _serverAddr;
+	struct sockaddr_in _clientAddr;
 
-		virtual ~SocketThread();
+	string _port;
+	int _sockID; ///< socket descriptor
+	socklen_t _addrLen;
+	char* readSocket();
 
-		string getSerializedScene(); 		
+public:
+	SocketThread( string& server);
+	~SocketThread();
+	string getSerializedScene(); 		
+
 };
 #endif

@@ -23,12 +23,8 @@
 #include "shapes/CircleShape.h"
 #include "shapes/TriangleShape.h"
 #include "shapes/RectShape.h"
-#include "shapes/BoxShape.h"
-#include "shapes/PyramidShape.h"
-#include "shapes/SphereShape.h"
 #include "util/ShapeHelper.h"
 #include "socket/SocketThread.h"
-
 
 #include<osg/ShapeDrawable>
 #include<osg/Shape>
@@ -36,7 +32,6 @@
 #include<osg/TexEnv>
 #include<osg/StateSet>
 #include<osg/Image>
-
 
 #include <math.h>
 #include <vector>
