@@ -208,10 +208,10 @@ int il_check_error(void)
 
 MultiGPUDrawable::MultiGPUDrawable(std::string vertFile, std::string fragFile)
 {
-    _shaderDir = ConfigManager::getEntry("Plugin.MultiGPURender.ShaderDir");
-    _width = ConfigManager::getInt("Plugin.MultiGPURender.Width");
-    _height = ConfigManager::getInt("Plugin.MultiGPURender.Height");
-    _gpus = ConfigManager::getInt("Plugin.MultiGPURender.NumberOfGPUs", 2);
+    _shaderDir = ConfigManager::getEntry("Plugin.CrashDemo.ShaderDir");
+    _width = ConfigManager::getInt("Plugin.CrashDemo.Width");
+    _height = ConfigManager::getInt("Plugin.CrashDemo.Height");
+    _gpus = ConfigManager::getInt("Plugin.CrashDemo.NumberOfGPUs", 2);
 
     _vertFile = _shaderDir + "/" + vertFile;
     _fragFile = _shaderDir + "/" + fragFile;
