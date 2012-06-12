@@ -2,8 +2,7 @@
 #extension GL_EXT_geometry_shader4: enable
 #extension GL_ARB_gpu_shader5 : enable
 
-uniform float objectScale;
-uniform float pointSize;
+uniform float pointScale;
 
 flat out vec3 vertex_light_position;
 flat out vec4 eye_position;
@@ -12,7 +11,7 @@ flat out float sphere_radius;
 void
 main(void)
 {
-    	sphere_radius =  gl_FrontColorIn[0].a * objectScale * pointSize * 2.0;
+    	sphere_radius =  pointScale * 2.0;
     	float halfsize = sphere_radius * 0.5;
 
     	gl_FrontColor = gl_FrontColorIn[0];

@@ -9,16 +9,15 @@
 
 #include <osgEarth/Map>
 #include <osgEarth/MapNode>
-#include <osgEarthUtil/EarthManipulator>
 #include <osgEarth/Utils>
-#include <osgEarth/CompositeTileSource>
+#include <osgEarth/TerrainOptions>
 
 #include <osgDB/FileUtils>
 #include <osgDB/FileNameUtils>
 
-#include <osgEarthDrivers/gdal/GDALOptions>
 #include <osgEarthDrivers/tms/TMSOptions>
 #include <osgEarthDrivers/arcgis/ArcGISOptions>
+#include <osgEarthDrivers/gdal/GDALOptions>
 
 #include <osg/MatrixTransform>
 
@@ -32,9 +31,8 @@ class OsgEarth : public cvr::CVRPlugin, public cvr::MenuCallback
         virtual ~OsgEarth();
         
 	bool init();
-        void message(int type, char * data);
         int getPriority() { return 51; }
-	void preFrame();
+        void preFrame();
         bool processEvent(cvr::InteractionEvent * event);
         bool buttonEvent(int type, int button, int hand, const osg::Matrix & mat);
         bool mouseButtonEvent (int type, int button, int x, int y, const osg::Matrix &mat);
@@ -45,21 +43,30 @@ class OsgEarth : public cvr::CVRPlugin, public cvr::MenuCallback
 
 
     protected:
-        osgEarth::Map * map;
+        osgEarth::Map * _map;
+        osgEarth::MapNode * _mapNode;
 
-	cvr::SubMenu * _osgEarthMenu;
+        cvr::SubMenu * _osgEarthMenu;
         cvr::MenuCheckbox * _navCB;
-
+        cvr::MenuCheckbox * _visCB;
+            
         bool _navActive;
         int _navHand;
         osg::Matrix _navHandMat;
-
+                       
         bool _mouseNavActive;
         int _startX,_startY;
         int _currentX,_currentY;
         bool _movePointValid;
         osg::Vec3d _movePoint;
-                
+
+ 	//bool _setting_viewpoint;
+	//osgEarthUtil::Viewpoint _pending_viewpoint;
+        //double _pending_viewpoint_duration_s;
+        //bool _has_pending_viewpoint;
+
+	//void setViewPoint( const Viewpoint& vp, double duration_s = 0.0);
+	//void cancelViewpointTransition() { _setting_viewpoint = false; }
 };
 
 #endif

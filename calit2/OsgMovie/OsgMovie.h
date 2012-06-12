@@ -18,7 +18,11 @@
 #include <string>
 #include <vector>
 
+#include "config.h"
+
+#ifdef FMOD_FOUND 
 #include "FmodAudioSink.h"
+#endif
 
 class OsgMovie : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::FileLoadCallback
 {
@@ -32,6 +36,10 @@ class OsgMovie : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::Fi
             std::string name;
 	    cvr::SceneObject * scene;
 	    osg::ImageStream * stream;
+            osg::Uniform * modeUniform;
+            osg::Uniform * typeUniform;
+            osg::Uniform * splitUniform;
+	    bool firstPlay;
         };
 
 	bool init();
@@ -42,12 +50,19 @@ class OsgMovie : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::Fi
         std::map<struct VideoObject*,cvr::MenuCheckbox*> _playMap;
         std::map<struct VideoObject*,cvr::MenuButton*> _restartMap;
         std::map<struct VideoObject*,cvr::MenuCheckbox*> _stereoMap;
+        std::map<struct VideoObject*,cvr::MenuCheckbox*> _stereoTypeMap;
+        std::map<struct VideoObject*,cvr::MenuRangeValue*> _scaleMap;
+        std::map<struct VideoObject*,cvr::MenuButton*> _saveMap;
+        std::map<struct VideoObject*,cvr::MenuButton*> _loadMap;
         std::map<struct VideoObject*,cvr::MenuButton*> _deleteMap;
         std::vector<struct VideoObject*> _loadedVideos;
 
-        osg::Geometry* myCreateTexturedQuadGeometry(osg::Vec3 pos, float width,float height, osg::Image* image);
+        // config entry map
+	std::map<std::string , std::pair< int, osg::Matrix>  > _configMap;
+	std::string configPath;
 
-        osg::Uniform * stereoUniform;	
+        osg::Geometry* myCreateTexturedQuadGeometry(osg::Vec3 pos, float width,float height, osg::Image* image);
+        void writeConfigFile();
 };
 
 #endif

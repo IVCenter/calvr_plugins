@@ -1,3 +1,5 @@
+#include "Points.h"
+
 #include <PluginMessageType.h>
 
 #include <fstream>
@@ -20,8 +22,6 @@
 #include <map>
 #include <limits>
 
-#include "Points.h"
-
 using namespace std;
 using namespace cvr;
 using namespace osg;
@@ -37,11 +37,65 @@ Points::Points() : FileLoadCallback("xyz,ply,xyb")
 
 bool Points::loadFile(std::string filename)
 {
-    if(!group->getNumParents())
+    osg::ref_ptr<osg::Group> group = new osg::Group();
+
+    bool result = loadFile(filename, group);
+
+    // if successful get last child and add to sceneobject
+    if( result )
     {
-	SceneManager::instance()->getObjectsRoot()->addChild(group);
+	    cerr << "found points" << endl;
+	    osg:Geode* points = group->getChild(0)->asGeode();
+	    
+
+	    // get name of file
+	    std::string name(filename);
+	    size_t found = filename.find_last_of("//");
+	    if(found != filename.npos)
+	    {
+	       name = filename.substr(found + 1,filename.npos);
+	    }
+
+	    // create a point object
+	    struct PointObject * currentobject = new struct PointObject;
+	    currentobject->name = name;
+	    currentobject->points = points;
+	    currentobject->scene = NULL;
+	    currentobject->pointScale = NULL;
+
+	    // add stream to the scene
+	    SceneObject * so = new SceneObject(name,false,false,false,true,true);
+	    PluginHelper::registerSceneObject(so,"Points");
+	    so->addChild(points);
+	    so->attachToScene();
+	    so->setNavigationOn(true);
+	    so->addMoveMenuItem();
+	    so->addNavigationMenuItem();
+	    currentobject->scene = so;
+
+	    currentobject->pointScale = new osg::Uniform("pointScale", initialPointScale);
+	    MenuRangeValue * mrv = new MenuRangeValue("Point Scale", 0.0, 0.5, initialPointScale);
+	    mrv->setCallback(this);
+	    so->addMenuItem(mrv);
+	    _sliderMap[currentobject] = mrv;
+
+	    MenuButton * mb = new MenuButton("Delete");
+	    mb->setCallback(this);
+	    so->addMenuItem(mb);
+	    _deleteMap[currentobject] = mb;
+	    
+	    //attach shader and uniform
+	    osg::StateSet *state = points->getOrCreateStateSet();
+	    state->setAttribute(pgm1);
+	    state->addUniform(currentobject->pointScale);
+
+	    _loadedPoints.push_back(currentobject);
+
+	    group->removeChild(0, 1);
+
     }
-    return loadFile(filename, group);
+
+    return result;
 }
 
 bool Points::loadFile(std::string filename, osg::Group * grp)
@@ -55,7 +109,7 @@ bool Points::loadFile(std::string filename, osg::Group * grp)
 
 
   osg::ref_ptr<osg::Node> node = osgDB::readNodeFile(filename);
- 
+
   // assume node is ply format check 
   if( node.valid() )
   {
@@ -68,6 +122,8 @@ bool Points::loadFile(std::string filename, osg::Group * grp)
 	{
 	    // disable culling
 	    geode->setCullingActive(false);
+	    	
+            bool onlyPoints = true;
 
 	    // test to make sure all primitives are points
 	    for(int i = 0; i < (int) geode->getNumDrawables(); i++)
@@ -88,27 +144,16 @@ bool Points::loadFile(std::string filename, osg::Group * grp)
 			if( primlist.at(j)->getMode() != osg::PrimitiveSet::POINTS )
 				onlyPoints = false;
 		    }
-
-		    // add point shader to geometry
-		    if ( onlyPoints )
-		    {
-			osg::StateSet* state = nodeGeom->getOrCreateStateSet();
-			state->setAttribute(pgm1);
-		    }
 		}
 	    }
 
-	    // add uniforms
-	    osg::StateSet* state = geode->getOrCreateStateSet();
-            state->setAttribute(pgm1);
-
-            // add pointSize        
-            osg::Uniform* pointSize = new osg::Uniform("pointSize", 0.005f);
-            state->addUniform(pointSize);
-            
 	    // make sure bound is correct and add to group
   	    geode->dirtyBound();
 	    grp->addChild(geode);
+
+	    // return if ply file is just point set
+	    if( onlyPoints )
+		return true;
 	}
   }
   else
@@ -143,22 +188,64 @@ bool Points::loadFile(std::string filename, osg::Group * grp)
   	nodeGeom->setColorArray(verticesC);
   	nodeGeom->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
 
-	osg::Uniform* pointSize = new osg::Uniform("pointSize", 0.005f);
-        state->addUniform(pointSize);
-
-	// attach point shader
-	state->setAttribute(pgm1);
-  
   	geode->addDrawable(nodeGeom);
   	geode->dirtyBound();
-  
-	// attach graph to group
-  	grp->addChild(geode);
+ 
+	grp->addChild(geode);
+	return true;
   }
 
   cerr << "Initalization finished\n" << endl;
  
-  return true; 
+  return false; 
+}
+
+void Points::menuCallback(MenuItem* menuItem)
+{
+   //slider
+    for(std::map<struct PointObject*,MenuRangeValue*>::iterator it = _sliderMap.begin(); it != _sliderMap.end(); it++)
+    {
+        if(menuItem == it->second)
+        {
+            if( it->first->points )
+            {
+                 it->first->pointScale->set(it->second->getValue());
+                 break;
+            }
+        }
+    }
+
+    //check map for a delete
+    for(std::map<struct PointObject*, MenuButton*>::iterator it = _deleteMap.begin(); it != _deleteMap.end(); it++)
+    {
+        if(menuItem == it->second)
+        {
+            if(_sliderMap.find(it->first) != _sliderMap.end())
+            {
+                delete _sliderMap[it->first];
+                _sliderMap.erase(it->first);
+            }
+
+            for(std::vector<struct PointObject*>::iterator delit = _loadedPoints.begin(); delit != _loadedPoints.end(); delit++)
+            {
+                if((*delit) == it->first)
+                {
+                    // need to delete the SceneObject
+                    if( it->first->scene )
+                        delete it->first->scene;
+
+                    _loadedPoints.erase(delit);
+                    break;
+                }
+            }
+
+            delete it->first;
+            delete it->second;
+            _deleteMap.erase(it);
+
+            break;
+        }
+    }
 }
 
 void Points::readXYZ(std::string& filename, osg::Vec3Array* points, osg::Vec4Array* colors)
@@ -239,15 +326,7 @@ bool Points::init()
 
   // enable osg debugging
   //osg::setNotifyLevel( osg::INFO );
-
-  objectScale = NULL;
-  group = new osg::Group();
-  osg::StateSet* state = group->getOrCreateStateSet();
-
-  // add object scale uniform
-  objectScale = new osg::Uniform("objectScale", PluginHelper::getObjectScale());
-  state->addUniform(objectScale);
- 
+  
   // create shader
   pgm1 = new osg::Program;
   pgm1->setName( "Sphere" );
@@ -259,8 +338,8 @@ bool Points::init()
   pgm1->setParameter( GL_GEOMETRY_INPUT_TYPE_EXT, GL_POINTS );
   pgm1->setParameter( GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP );
 
-  // attach group node
-  //SceneManager::instance()->getObjectsRoot()->addChild(group);
+  // set default point scale
+  initialPointScale = ConfigManager::getFloat("Plugin.Points.PointScale", 0.001f);
 
   return true;
 }
@@ -273,8 +352,6 @@ Points::~Points()
 
 void Points::preFrame()
 {
-  if( objectScale != NULL )
-    objectScale->set(PluginHelper::getObjectScale());
 }
 
 void Points::message(int type, char *&data, bool collaborative)

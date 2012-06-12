@@ -1,0 +1,8 @@
+OsgPDF ReadeWriter correction
+-----------------------------
+
+Note using own ReaderWriterPDF (seperate from wxWidgets and also corrects bug in originalPlugin)
+
+Error in ReaderWriterPDF.cpp
+Comment out //cairo_rectangle(_cairoImage->getContext(), 0.0, 0.0, double(s()), double(t()));
+And recompile.
