@@ -17,7 +17,7 @@ using namespace osg;
 struct TrackerNode {
 
     string comment;
-    int posInRoot;                //child index under Root
+    int positionInRoot;                //child index under Root
     osg::Geode* ptrToGeode;       //pointer to the Geode
 
     TrackerNode* leftChild;
@@ -28,7 +28,7 @@ struct TrackerNode {
     //default constructor
     TrackerNode() {
       comment = "";
-      posInRoot = -1;
+      positionInRoot = -1;
       ptrToGeode = NULL;
 
       leftChild = NULL;
@@ -40,7 +40,7 @@ struct TrackerNode {
     //constructor with param position in root
     TrackerNode(string _comment, int _pos) {
       comment = _comment;
-      posInRoot = _pos;
+      positionInRoot = _pos;
       ptrToGeode = NULL;
 
       leftChild = NULL;
@@ -51,7 +51,7 @@ struct TrackerNode {
     //constructor with param ptr to Geode
     TrackerNode(string _comment, osg::Geode* _ptr) {
       comment = _comment;
-      posInRoot = -1;
+      positionInRoot = -1;
       ptrToGeode = _ptr;
 
       leftChild = NULL;
@@ -62,7 +62,7 @@ struct TrackerNode {
     //constructor with both params
     TrackerNode(string _comment, int _pos, osg::Geode* _ptr) {
       comment = _comment;
-      posInRoot = _pos;
+      positionInRoot = _pos;
       ptrToGeode = _ptr;
 
       leftChild = NULL;

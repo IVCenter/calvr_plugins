@@ -17,6 +17,8 @@
 #include <math.h>
 #include <limits>
 
+#include "TrackerTree.h"
+
 using namespace std;
 using namespace osg;
 
@@ -75,10 +77,11 @@ protected:
 	void handleTriangle(int);
 	void handleRect(int);
 
-
-
 	// the group/scene we're managing
 	Group * group;
+
+ //Tree to store geodes of the group
+ TrackerTree* tree;
 
 	double random();
 	double random(double,double);
@@ -87,8 +90,7 @@ protected:
 	int shapeCount;	
 	bool genAll;
 
-	int updateIndex;
-	int geodeBeginIndex;
+	int updateIndex;	
 };
 
 #endif

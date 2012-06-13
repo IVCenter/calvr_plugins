@@ -21,6 +21,9 @@ using namespace std;
 ShapeHelper::ShapeHelper(Group * _gr) 
 {
 	group = _gr;
+	
+	tree = new TrackerTree();
+	
 	tok = new vvTokenizer();
 	tok->setEOLisSignificant(true);
 	tok->setCaseConversion(vvTokenizer::VV_LOWER);
@@ -35,7 +38,20 @@ ShapeHelper::ShapeHelper(Group * _gr)
 
 ShapeHelper::ShapeHelper() 
 {	
-	ShapeHelper(cvr::SceneManager::instance()->getObjectsRoot());
+	group = new Group();
+	
+	tree = new TrackerTree();
+	
+	tok = new vvTokenizer();
+	tok->setEOLisSignificant(true);
+	tok->setCaseConversion(vvTokenizer::VV_LOWER);
+	tok->setParseNumbers(true);
+	tok->setWhitespaceCharacter('=');
+	shapeCount = 0;
+	processedAll = false;
+	genAll = false;
+	debug = false;	
+	updateIndex = 0;
 }
 
 
@@ -54,15 +70,16 @@ void ShapeHelper::processData(char* data) {
 
 
 	// i really need to implement easier ways to debug with pd
-	if (shapeCount == MAXNUMSHAPE && debug) 
+	if (shapeCount == MAXNUMSHAPE)// && debug) 
 	{
 		genAll = true;
+		processedAll = true;
+		updateIndex = 0;
 	}	
-
 	// keeping track of the updateIndex, so it doesnt go out of bound
 	if (updateIndex > MAXNUMSHAPE-1)
 	{
-		updateIndex = geodeBeginIndex;
+		updateIndex = 0;
 	}
 
 
@@ -74,11 +91,12 @@ void ShapeHelper::processData(char* data) {
 		string query = tok->sval;
 
 		// TODO add tree functions here
-
+    TrackerNode* temp = tree->get(query,tree->root);
 
 		// set pch to the according shape so the ifs down there can process
-
+    
 		// set the updateIndex, which is the positionInRoot return by tree node
+		updateIndex = temp->positionInRoot;
 	}
 
 
@@ -475,16 +493,11 @@ void ShapeHelper::handleCircle(int positionInGroup)
 		circle = new CircleShape(comment,center,radius,c1,c2,tess);
 		geode->addDrawable(circle);
 		group->addChild(geode);
-
-		// when the first geode is created, get its index so we can get update working correctly
-		if (shapeCount == 0)
-		{
-			geodeBeginIndex = group->getChildIndex(geode);
-		}
-
+			
 		shapeCount++;
 
 		// TODO add comment and geode to tracking tree
+		tree->root = tree->insert(comment,pIG,geode,tree->root);
 	}
 
 }
@@ -601,15 +614,10 @@ void ShapeHelper::handleTriangle(int positionInGroup)
 		geode->addDrawable(tri);
 		group->addChild(geode);
 
-		// when the first geode is created, get its index so we can get update working correctly
-		if (shapeCount == 0)
-		{
-			geodeBeginIndex = group->getChildIndex(geode);
-		}
-
 		shapeCount++;
 
 		// TODO add comment and geode to tracking tree
+		tree->root = tree->insert(comment,pIG,geode,tree->root);
 	}
 
 
@@ -733,14 +741,9 @@ void ShapeHelper::handleRect(int positionInGroup)
 		geode->addDrawable(rect);
 		group->addChild(geode);
 
-		// when the first geode is created, get its index so we can get update working correctly
-		if (shapeCount == 0)
-		{
-			geodeBeginIndex = group->getChildIndex(geode);
-		}
-
 		shapeCount++;
 
 		// TODO add comment and geode to tracking tree
+		tree->root = tree->insert(comment,pIG,geode,tree->root);
 	}
 }

@@ -77,9 +77,10 @@ void SocketThread::run()
 
 		if (sh->processedAll)
 		{
+		  //cerr<<"processed all...."<<endl;
 			stringstream ss;
 			_mutex.lock();
-			//readerwriter->writeNode(*(sh->getGeode()), ss);
+			readerwriter->writeNode(*(sh->getGroup()), ss);
 			sceneData=ss.str();
 			_mutex.unlock();
 			sh->processedAll=false;
@@ -121,7 +122,7 @@ char* SocketThread::readSocket()
 		// Prepares data for processing...
 		recvData[bytes_read]='\0';	
 
-	//	cerr << &recvData[0] << endl;	
+		//cerr << &recvData[0] << endl;	
 
 		return &recvData[0];
 	}

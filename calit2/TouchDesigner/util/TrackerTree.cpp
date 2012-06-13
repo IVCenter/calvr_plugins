@@ -6,16 +6,7 @@ using namespace std;
 //constructer
 TrackerTree::TrackerTree()
 {
-  /*
-  TrackerNode* rootnode;
-  rootnode->comment = "";
-  rootnode->posInGeode = -1;
-  
-  rootnode->level = 1;
-  
-  rootnode->leftChild = NULL;
-  rootnode->rightChild = NULL;
-  */
+
   root = NULL;
 
 }
@@ -150,7 +141,7 @@ TrackerNode* TrackerTree::insert(string _comment, int _pos, osg::Geode* _geo, Tr
   
   return _root;
 }
-//================================================================================================================================
+//==================================================================================================
 
 
 //these functions are used by remove

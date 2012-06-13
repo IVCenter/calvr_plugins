@@ -56,6 +56,7 @@ bool TouchDesigner::init() {
 	{
 		string name = "test run";
 		st = new SocketThread(name);
+		//st->setDebug(true);
 	}
 
 	return true;
@@ -90,7 +91,7 @@ void TouchDesigner::preFrame() {
 
 
 
-	//	cerr << "data size\t" << dsize << endl;
+		//cerr << "data size\t" << dsize << endl;
 	std::stringstream ss(data);
 	osgDB::ReaderWriter * readerwriter =
 		Registry::instance()->getReaderWriterForExtension("ive");
@@ -98,6 +99,7 @@ void TouchDesigner::preFrame() {
 
 	if (result.validNode()) {
 		//printf("Node valid\n");
+		//cerr<<"Valid Node"<<endl;
 		Node * node = result.getNode();
 		/*			
 		osg::Geode * geode = dynamic_cast<osg::Geode* > (node);
@@ -123,19 +125,19 @@ void TouchDesigner::preFrame() {
 		osg::Group * objectRoot = SceneManager::instance()->getObjectsRoot();
 
 		// remove all children and add new node
-		/*objectRoot->addChild(node);
+	  objectRoot->addChild(node);
 
 		if (prevNode)
 			objectRoot->removeChild(prevNode);
 
 		prevNode = node;
-		*/
+		
 
 
 		// lets see if directly reassigning the entire thing works?
 		// TODO err, is there a way to assign the root object as node?
 		//SceneManager::instance()->getObjectsRoot() = node->asGroup();
-		
+
 	}
 
 	//cerr << "" << endl;
@@ -157,18 +159,25 @@ double TouchDesigner::random(){
 }
 
 void TouchDesigner::receiveGeometry()
-{
-  
+{/*
+  //constructing the tree
   TrackerTree* tt = new TrackerTree();
+  
+  //inserting
   tt->root = tt->insert(string("Sphere1"),tt->root);
+  //printing out what's currently in the tree
   tt->printTree(tt->root);
+  
   tt->root = tt->insert(string("Sphere2"),tt->root);
   tt->printTree(tt->root);
   tt->root = tt->insert(string("Apple"),tt->root);
   tt->printTree(tt->root);
   tt->root = tt->insert(string("Bam"),tt->root);
   tt->printTree(tt->root);
+  
+  //removing
   tt->root = tt->remove(string("Whopper"),tt->root);
+  
   tt->printTree(tt->root);
   tt->root = tt->remove(string("Apple"),tt->root);
   tt->printTree(tt->root);
@@ -186,6 +195,7 @@ void TouchDesigner::receiveGeometry()
   tt->root = tt->remove(string("AAAAAA"),tt->root);
   tt->printTree(tt->root);
   
+  //getting
   TrackerNode* tem = tt->get(string("Apple"),tt->root);
   cerr<<"tem = "<<tem->comment<<endl;
   tem = tt->get(string("AAAAAA"),tt->root);
@@ -230,7 +240,7 @@ void TouchDesigner::receiveGeometry()
   node->setStateSet(statedec);
 
 	SceneManager::instance()->getObjectsRoot()->addChild(node);
-	
+	*/
 	
 }
 
