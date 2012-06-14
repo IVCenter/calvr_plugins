@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<Plugin>
+	<PathRecorder value="off" >
+		<DataDir value="/tmp/" />
+	</PathRecorder>
+
+	<CameraFlight value = "on"/>
+	</CamerFlight>
+	<OsgEarth value="on"/>
+	</OsgEarth>
+</Plugin>
+	<UseDepthPartition value = "true"/>
