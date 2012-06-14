@@ -22,6 +22,7 @@
 #include <cstring>
 #include <cassert>
 #include <cmath>
+#include <stdint.h>
 
 #include <sys/stat.h>
 #include <sys/mman.h>

@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<Plugin>
+    <ModelLoader value="off"/>
+    <GreenLight value="on">
+
+        <Files workingDirectory="/home/atarng/CALIT2/calvr_plugins/calit2/GreenLight" />
+        <Files soundFile1="turbine.wav" />
+        <Files soundFile2="DOORHINGES.WAV" />
+
+        <OsgCoord testValue="false" scale="342.677490" />
+        <OsgCoord  point0="0.875374" point1="0.271526" point2="-0.399995" point3="0.000000" />
+        <OsgCoord  point4="-0.483186" point5="0.464147" point6="-0.742360" point7="0.000000" />
+        <OsgCoord  point8="-0.015913" point9="0.843115" point10="0.537499" point11="0.000000" />
+        <OsgCoord  point12="-34501329.462374" point13="-7890269.618077" point14="-2183230472.145897" point15="1.000000" />
+
+        <ParticleTest p0="0.01" p1="20.0" p2="4" p3="0.01" p4="5" p5="10" p6="200" p7="100" p8="-1" p9="1" p10="1" p11="1" />
+
+        <OASConfig ipaddress="137.110.118.124" port="31231" />
+
+
+
+    </GreenLight>
+<!--<myOsgEarth value="off" />-->
+    <OsgEarth value="off" />
+    <CaveCADBeta value="off" />
+    <CameraFlight value="off" />
+    
+    <AppSwitcher value="off" />
+    <ArtifactVis value="off" />
+</Plugin>
+<UseDepthPartition value="false" />

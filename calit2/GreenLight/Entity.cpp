@@ -7,6 +7,9 @@
 // Local Functions
 void setNodeTransparency(osg::Node * node, float alpha);
 
+/***
+ * Ctor for Entity(); 
+ */
 GreenLight::Entity::Entity(osg::Node * node, osg::Matrix mat)
 {
     transform = new osg::MatrixTransform(mat);
@@ -15,13 +18,17 @@ GreenLight::Entity::Entity(osg::Node * node, osg::Matrix mat)
     createNodeSet(mainNode);
     status = START;
     time = 0;
+    
+    usingLODMTA = false;
 }
-
-GreenLight::Component::Component(osg::Geode * geode, std::string componentName, osg::Matrix mat)
-    : Entity(geode, mat)
+/***
+ * Ctor for Component(); 
+ */
+GreenLight::Component::Component(osg::Geode * geode, std::string componentName, osg::Matrix mat) : Entity(geode, mat)
 {
     name = componentName;
-    selected = true;
+    // Default behavior should be unselected, as well as only one selected item at a time.
+    selected = false;    //selected = true;
     minWattage = 0;
     maxWattage = 0;
 
@@ -48,6 +55,9 @@ GreenLight::Component::Component(osg::Geode * geode, std::string componentName, 
         else
             sset->addUniform(_neverTextureUni.get());
     }
+
+    soundComponent = 0;
+    soundIntensity = prev_soundIntensity = 0;
 
     defaultColor(); // will set it to the default color
 }
@@ -183,7 +193,10 @@ void GreenLight::Component::setColor(const osg::Vec3 color)
     setColor(colors);
 }
 
-void GreenLight::Component::setColor(std::list<osg::Vec3> colors)
+/***
+ * Fourth color value in order to have intensity of sound.
+ */
+void GreenLight::Component::setColor(std::list<osg::Vec4> colors)
 {
   // TODO: GO OVER THIS WITH JURGEN/PHILLIP.
   // sets the size of the image, based on the number of colors.
@@ -193,18 +206,57 @@ void GreenLight::Component::setColor(std::list<osg::Vec3> colors)
     _data->allocateImage(colors.size(), 1, 1, GL_RGB, GL_FLOAT);  
 
     int i = 0;
+    std::list<osg::Vec4>::iterator cit;
+    for (cit = colors.begin(), i = 0; cit != colors.end(); cit++, i++)
+    {
+        // if not animating or actively animating
+        if ( !animating || animationPosition > (( i * 100 ) / colors.size() ))
+        {// rgb probably..
+
+            if ( animating )
+            {
+                soundIntensity = (*cit)[3];
+            }
+
+            for (int j = 0; j < 3; j++)
+            {
+                ((float *)_data->data(i))[j] = (*cit)[j];
+            }
+        }else
+        {// set to some default color. to be animated.
+            for (int j = 0; j < 3; j++)
+            {
+                ((float *)_data->data(i))[j] = 0.7;
+            }
+        }
+    }
+
+    _data->dirty();
+    _colors->setImage(_data.get());
+    mainNode->getOrCreateStateSet()->setTextureAttributeAndModes(1, _colors.get());
+}
+/***
+ * Set Color for multi colored Component.
+ */
+void GreenLight::Component::setColor(std::list<osg::Vec3> colors)
+{
+  // Sets the size of the image, based on the number of colors.
+    _data = new osg::Image;
+    _data->allocateImage(colors.size(), 1, 1, GL_RGB, GL_FLOAT);  
+
+    int i = 0;
     std::list<osg::Vec3>::iterator cit;
     for (cit = colors.begin(), i = 0; cit != colors.end(); cit++, i++)
     {
-        if ( !animating || animationPosition > (( i *100 ) / colors.size() ) )
-        {
-        // rgb probably..
+        // if not animating or actively animating
+        if ( !animating || animationPosition > (( i * 100 ) / colors.size() ))
+        {// rgb probably..
             for (int j = 0; j < 3; j++)
             {
-
                 ((float *)_data->data(i))[j] = (*cit)[j];
             }
-        }else{ // set to some default color.
+        }else
+        {// set to some default color. to be animated.
             for (int j = 0; j < 3; j++)
             {
                 ((float *)_data->data(i))[j] = 0.7;

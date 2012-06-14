@@ -23,6 +23,7 @@
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuSystem.h>
 #include <cvrMenu/PopupMenu.h>
+#include <cvrMenu/TabbedDialogPanel.h>
 
 #include <osg/AnimationPath>
 #include <osg/MatrixTransform>
@@ -52,6 +53,12 @@
 #include <osgParticle/Particle>
 #include <osg/PositionAttitudeTransform>
 /**************************/
+
+/*** oasClientSound Things **********************/
+#include "oasClient/OASSound.h"
+
+
+/************************************************/
 
 #include "Utility.h"
 
@@ -111,12 +118,15 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 double time; // time-point within animation path
                 std::list<Entity *> group; // other entities that should animate together
 
+                bool usingLODMTA;
+
                 void handleAnimation();
                 void beginAnimation();
                 void addChild(Entity * child);
                 void showVisual(bool show);
                 virtual void setTransparency(bool transparent);
                 virtual void setColor(const osg::Vec3 color);
+                //virtual void setColor(const osg::Vec4 color); // 5_21_12
                 virtual void defaultColor();
 
                 virtual Component * asComponent() {return NULL;}
@@ -140,6 +150,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 void setTransparency(bool transparent);
                 void setColor(const osg::Vec3 color);
                 void setColor(const std::list<osg::Vec3> colors);
+                void setColor(const std::list<osg::Vec4> colors); // 5_21_12
                 void defaultColor();
                 bool select(bool select);
 
@@ -152,6 +163,13 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 int animationPosition;
                 bool animating;
                 osg::Geode * animationMarker;
+
+                float soundIntensity;
+                float prev_soundIntensity;
+                osg::Vec3f soundPosition;
+
+//                void playSound();
+                oasclient::OASSound * soundComponent;
 
             protected:
                 osg::ref_ptr<osg::Texture2D> _colors;
@@ -178,11 +196,26 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 virtual void accept(osg::NodeVisitor&);
         };
 
-        class MTA : public osg::MatrixTransform
+        /***
+         * Used to override default MatrixTransform behavior and 
+         * set LOD properties of the GreenLight plugin.
+         */
+        class LOD_MTAccessor : public osg::MatrixTransform
         {
+            private:
+                bool isRack;
+                osg::Vec3f position;
+                bool initialized;
+
             public:
+                std::vector<Component *> componentsList;
+
                 virtual void accept(osg::NodeVisitor&);
                 int LLOD;
+
+                inline bool isRackMTA(){ return isRack; };
+                inline void setRackMTA(bool scmta){ isRack = scmta; };
+                inline osg::Vec3f getPosition() { return position; };
         };
 /*********************************************************/
 
@@ -192,8 +225,12 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 
 /****** MISCELLANEOUS VARIABLES *****************************/
         // animation function for power comsumption.
+        cvr::MenuButton * component_AnimateButton;
+        Component * _currentComponent;
         void animatePower();
         bool osgEarthInit;
+
+        std::vector<cvr::SubMenu*> _HiddenMenuItems;
 /****** END: MISCELLANEOUS VARIABLES ************************/
 
         cvr::SubMenu * _glMenu;
@@ -227,6 +264,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuImage * _legendGradientOutOfRange;
 
         cvr::DialogPanel * _hoverDialog;
+        cvr::TabbedDialogPanel * _hoverDialog_2; // DEPRECATED
 
         // Timestamps
         cvr::SubMenu * _timeFrom;
@@ -285,8 +323,11 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         void doHoverOver(Entity *& last, Entity * current, bool showHover);
         osg::ref_ptr<osg::Geode> makeComponentGeode(float height, std::string textureFile = "");
         osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
+        osg::Vec4 wattColor2(float watt, int minWatt, int maxWatt);
         void createTimestampMenus();
 
+        void InitializeOASClient();
+    
 };
 
 #endif

@@ -17,7 +17,6 @@ void GreenLight::doHoverOver(Entity *& last, Entity * current, bool showHover)
     {
         if (showHover)
         {
-//          cout << "Show Hover: ";
             // normalize last hovered over entity, if there is one
             if (last != NULL)
             {
@@ -36,19 +35,26 @@ void GreenLight::doHoverOver(Entity *& last, Entity * current, bool showHover)
                     current->setColor(osg::Vec3(1,1,.5));
             }
 
-            if (current && current->asComponent()){
-//              cout << "Hovering over a component." << endl;
-                _hoverDialog->setText(current->asComponent()->name);
-                
-            }else if( current ){
-                _hoverDialog->setText("(nothing)");
-            }
-            else{
-//              cout << "Hovering over... nothing." << endl;
-                _hoverDialog->setText("(nothing)");
+            /***
+             *
+             */
+            if ( _currentComponent == NULL ) 
+            {
+              if (current && current->asComponent())
+              {
+                  _hoverDialog->setText(current->asComponent()->name);   
+              }else if( current )
+              {
+                  _hoverDialog->setText("(nothing)");
+              } else
+              {
+                  _hoverDialog->setText("(nothing)");
+              }
+            }else
+            {
+              _hoverDialog->setText(_currentComponent->name);
             }
         }
-//      cout << "Don't Show Hover." << endl;
 
         // assign current to last (notice pass-by-reference)
         last = current;
@@ -114,10 +120,15 @@ void GreenLight::handleHoverOver(osg::Matrix pointerMat, Entity *& hovered, bool
     doHoverOver(hovered, NULL, showHover);
 }
 
+/***
+ * Not being used?
+ */
 bool GreenLight::handleIntersection(osg::Node * iNode)
 {
     // Is it one of ours?
 
+    cout << "Handling Intersection." << endl;
+    
     for (int d = 0; d < _door.size(); d++)
         if (_door[d]->nodes.find(iNode) != _door[d]->nodes.end())
         {
@@ -190,7 +201,8 @@ void GreenLight::selectComponent(Component * comp, bool select)
 
             if (chit == _clusterCheckbox.end())
             {
-                std::cerr << "Error: Did not find a checkbox that matches cluster \"" << clusterName << "\"" << std::endl;
+                std::cerr << "Error: Did not find a checkbox that matches cluster \"" <<
+                              clusterName << "\"" << std::endl;
                 return;
             }
 
@@ -205,17 +217,22 @@ void GreenLight::selectComponent(Component * comp, bool select)
                 std::set< Component * >::iterator sit;
                 for (sit = clusterSet->begin(); sit != clusterSet->end(); sit++)
                 {
-                    if (!(*sit)->selected)
-                        return; // should not select checkbox
+                    if (!(*sit)->selected) return; // should not select checkbox
                 }
                 // if we get this far, then all components in the cluster are selected
                 (*chit)->setValue(true);
             }
         }
-//      comp -> animating = select ;
+        if (comp->soundComponent != NULL)
+        {
+            comp -> soundComponent -> play();
+            printf("Playing sound with position: (%g,%g,%g)\n", comp->soundPosition.x(),
+                                    /* Hardcoded 50 offset */   comp->soundPosition.y(),
+                                    /* Hardcoded -40 offset */  comp->soundPosition.z()
+                                                );
+        }
+//      comp -> animating = select;
     }
-
-    comp -> animating = select;
 }
 
 void GreenLight::selectCluster(std::set< Component * > * cluster, bool select)

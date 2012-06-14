@@ -66,13 +66,16 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
 
     _currentZoom = 0.0;
 
+    _offset = ConfigManager::getVec3("Plugin.PanoViewLOD.Offset");
+
     _demoTime = 0.0;
     _demoChangeTime = ConfigManager::getDouble("value","Plugin.PanoViewLOD.DemoChangeTime",90.0);
 
     _coordChangeMat.makeRotate(M_PI/2.0,osg::Vec3(1,0,0));
     _spinMat.makeIdentity();
     float offset = height - _floorOffset;
-    _heightMat.makeTranslate(osg::Vec3(0,0,offset));
+    osg::Vec3 ovec(0,0,offset);
+    _heightMat.makeTranslate(ovec + _offset);
     setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
 
     _nextButton = _previousButton = NULL;
@@ -177,7 +180,8 @@ void PanoViewObject::menuCallback(cvr::MenuItem * item)
     if(item == _heightRV)
     {
 	float offset = _heightRV->getValue() - _floorOffset;
-	_heightMat.makeTranslate(osg::Vec3(0,0,offset));
+	osg::Vec3 ovec(0,0,offset);
+	_heightMat.makeTranslate(ovec + _offset);
 	setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
     }
 

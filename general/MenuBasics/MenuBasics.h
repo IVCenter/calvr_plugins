@@ -26,6 +26,7 @@ class MenuBasics : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuCheckbox * scale;
         cvr::MenuCheckbox * drive;
         cvr::MenuCheckbox * fly;
+        cvr::MenuCheckbox * snap;
         cvr::MenuRangeValueCompact * navScale;
 
         cvr::MenuCheckbox * activeMode;

@@ -1,4 +1,3 @@
 ADD_SUBDIRECTORY(MenuBasics)
-ADD_SUBDIRECTORY(PluginTest)
 ADD_SUBDIRECTORY(CollaborativePlugin)
 ADD_SUBDIRECTORY(ClipPlane)

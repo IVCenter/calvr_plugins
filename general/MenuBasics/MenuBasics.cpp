@@ -40,6 +40,8 @@ bool MenuBasics::init()
     drive->setCallback(this);
     fly = new MenuCheckbox("Fly",false);
     fly->setCallback(this);
+    snap = new MenuCheckbox("Snap",false);
+    snap->setCallback(this);
     navScale = new MenuRangeValueCompact("Nav Scale",0.01,100.0,1.0,true,1.5);
     navScale->setCallback(this);
 
@@ -48,6 +50,7 @@ bool MenuBasics::init()
     MenuSystem::instance()->addMenuItem(moveworld);
     MenuSystem::instance()->addMenuItem(scale);
     MenuSystem::instance()->addMenuItem(drive);
+    MenuSystem::instance()->addMenuItem(snap);
     MenuSystem::instance()->addMenuItem(fly);
     MenuSystem::instance()->addMenuItem(navScale);
 
@@ -84,6 +87,10 @@ void MenuBasics::menuCallback(MenuItem * item)
 	if(activeMode != item)
 	{
 	    activeMode->setValue(false);
+	    if(activeMode == drive)
+	    {
+		MenuSystem::instance()->removeMenuItem(snap);
+	    }
 	}
 	activeMode = moveworld;
 	moveworld->setValue(true);
@@ -94,6 +101,10 @@ void MenuBasics::menuCallback(MenuItem * item)
 	if(activeMode != item)
 	{
 	    activeMode->setValue(false);
+	    if(activeMode == drive)
+	    {
+		MenuSystem::instance()->removeMenuItem(snap);
+	    }
 	}
 	activeMode = scale;
 	scale->setValue(true);
@@ -104,6 +115,7 @@ void MenuBasics::menuCallback(MenuItem * item)
 	if(activeMode != item)
 	{
 	    activeMode->setValue(false);
+	    MenuSystem::instance()->getMenu()->addItem(snap,MenuSystem::instance()->getMenu()->getItemPosition(drive)+1);
 	}
 	activeMode = drive;
 	drive->setValue(true);
@@ -114,6 +126,10 @@ void MenuBasics::menuCallback(MenuItem * item)
 	if(activeMode != item)
 	{
 	    activeMode->setValue(false);
+	    if(activeMode == drive)
+	    {
+		MenuSystem::instance()->removeMenuItem(snap);
+	    }
 	}
 	activeMode = fly;
 	fly->setValue(true);
@@ -171,6 +187,10 @@ void MenuBasics::menuCallback(MenuItem * item)
 	//m = SceneManager::instance()->getObjectTransform()->getMatrix();
 	m.makeTranslate(-center);
 	SceneManager::instance()->setObjectMatrix(m);
+    }
+    else if(item == snap)
+    {
+	Navigation::instance()->setSnapToGround(snap->getValue());
     }
     else if(item == stopHeadTracking)
     {
