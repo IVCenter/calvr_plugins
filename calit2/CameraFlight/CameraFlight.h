@@ -15,6 +15,7 @@
 #include <osgDB/FileNameUtils>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuRangeValue.h>
 #include <cvrMenu/MenuImage.h>
 #include <cvrMenu/MenuList.h>
 #include <cvrMenu/MenuText.h>
@@ -63,19 +64,31 @@ class CameraFlight : public cvr::CVRPlugin, public cvr::MenuCallback
 
 	void printMat(osg::Matrix, double);
 	void printVec(osg::Vec3);
-	void printQuat(osg::Quat);	
-	void navigate(osg::Matrix, osg::Vec3);
-	void zoomIn(osg::Vec3 v, osg::Matrix mat);
-	void zoomOut(osg::Vec3 v, osg::Matrix mat);
-	void rotate(osg::Vec3 from, osg::Vec3 to);
+	void printQuat(osg::Quat);
+	double findMaxHeight(double);
+	
+	void navigate(osg::Vec3);
+
+	void normalView();
+
+	/*For Plane Mode Only*/
+	void planeView();
+	void planeDir(osg::Vec3, osg::Vec3);
+	void directSet(int);
+
+	void rise(osg::Vec3, osg::Matrix);
+	void zoomOut(osg::Vec3, osg::Matrix);
+	void rotate(osg::Vec3, osg::Vec3);
 
     protected:
 	cvr::SubMenu * _camMenu;
 	cvr::SubMenu * _algoMenu;
 	cvr::SubMenu * _destMenu;
+	cvr::SubMenu * _customDestMenu;
 
 	cvr::MenuCheckbox * _instant;
 	cvr::MenuCheckbox * _satellite;
+	cvr::MenuCheckbox * _airplane;
 	cvr::MenuCheckbox * _reset;
 
 	cvr::MenuCheckbox * _dest1;
@@ -87,6 +100,9 @@ class CameraFlight : public cvr::CVRPlugin, public cvr::MenuCallback
 
 	cvr::MenuCheckbox * activeMode;
 	cvr::MenuCheckbox * destMode;
+	cvr::MenuRangeValue * _customLat;
+	cvr::MenuRangeValue * _customLon;
+	cvr::MenuButton * _goButton;
 	FlightMode _flightMode;
 
 	osg::Vec3 currentPos;

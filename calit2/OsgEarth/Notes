@@ -1,0 +1,15 @@
+// configuration example
+
+ <OsgEarth value="on" >
+        <Earth value="/home/johnsmith/test.earth" />
+</OsgEarth>
+
+
+// if get a request create new node add matrix and return the address of the matrixtransform
+        osg::Matrixd output;
+        map->getProfile()->getSRS()->getEllipsoid()->computeLocalToWorldTransformFromLatLongHeight(
+                osg::DegreesToRadians(request.lat),
+                osg::DegreesToRadians(request.lon),
+                request.height,
+                output );
+
