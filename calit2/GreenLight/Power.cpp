@@ -411,8 +411,6 @@ void GreenLight::animatePower()
                     {   
                       if ( ((*sit)->prev_soundIntensity != (*sit)->soundIntensity) )
                       {
-//                      (*sit)->soundComponent->setGain( (*sit)->soundIntensity );
-//                      (*sit)->soundComponent->setGain( 1.4 );
                         (*sit)->soundComponent->setPitch( (*sit)->soundIntensity );
                         (*sit)->prev_soundIntensity = (*sit)->soundIntensity;
                       }

@@ -25,6 +25,8 @@ class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
 
         void preFrame();
         void postFrame();
+
+        bool processEvent(cvr::InteractionEvent * event);
     protected:
         void createSphereTexture();
         void createPointsNode();
@@ -32,6 +34,8 @@ class PluginTest : public cvr::CVRPlugin, public cvr::MenuCallback
 
         osg::ref_ptr<osg::MatrixTransform> _pointsMT;
         osg::ref_ptr<cvr::PointsNode> _pointsNode;
+
+        cvr::PointsNode::PointsMode _pointMode;
 
         cvr::MenuButton * testButton1;
         cvr::MenuButton * testButton2;
