@@ -1,5 +1,5 @@
-#ifndef _CircleShape_
-#define _CircleShape_
+#ifndef _SphereShape_
+#define _SphereShape_
 
 #include <osg/MatrixTransform>
 #include <osg/Vec3d>
@@ -7,6 +7,7 @@
 #include <osg/StateSet>
 #include <osg/Material>
 #include <osg/BlendFunc>
+
 
 #include <string>
 #include <vector>
@@ -17,38 +18,41 @@
 using namespace std;
 using namespace osg;
 
+class SphereShape : public BasicShape
+{
+friend class ShapeHelper;
+public:        
 
-class CircleShape: public BasicShape {
-	friend class ShapeHelper;
-public:
+	SphereShape();
 
-	CircleShape();
-
-	virtual ~CircleShape();
+	virtual ~SphereShape();
 
 	// name
-	CircleShape( string);
+	SphereShape(string);
+
 
 	// name, center, radius, color, gradient, tesselation, 
-	CircleShape(string, Vec3d&, double, Vec4d&, Vec4d&, int);
+	SphereShape(string, Vec3d&, double, Vec4d&, Vec4d&, int);
 
 	// name, center, raidus, color, gradient
-	CircleShape(string, Vec3d&, double, Vec4d&, Vec4d&);
+	SphereShape(string, Vec3d&, double, Vec4d&, Vec4d&);
 
 	// name, center, radius, color, tesselation
-	CircleShape(string, Vec3d&, double, Vec4d&, int);
+	SphereShape(string, Vec3d&, double, Vec4d&, int);
 
 	// name, center, radius, color
-	CircleShape(string, Vec3d&, double, Vec4d&);
+	SphereShape(string, Vec3d&, double, Vec4d&);
 
 	// name, center, radius
-	CircleShape(string, Vec3d&, double);
+	SphereShape(string, Vec3d&, double);
 
 	// name, center
-	CircleShape(string, Vec3d&);
+	SphereShape(string, Vec3d&);
 
 	// center
-	CircleShape(Vec3d&);
+	SphereShape(Vec3d&);
+
+
 
 	int getType();
 
@@ -70,15 +74,16 @@ public:
 
 	Vec3d getCenter();
 
+		
 	// sets the Radius directly
 	void setRadius(double);
 
 	double getRadius();
 
 	void updateLocation();
-
+	
 	void updateColor();
-
+	
 
 	// multiplies radius by param	
 	void scale(int);
@@ -86,6 +91,9 @@ public:
 	void setAll(Vec3d&, double, Vec4d&, Vec4d&);
 
 	void updateAll();
+	
+	
+
 
 
 protected:
@@ -104,29 +112,28 @@ protected:
 	// (gradient) secondary color of shape, if specified
 	Vec4d gradient;
 
-	// radius of circle, default = 100
-
+	// radius of sphere, default = 10
 	double radius;
 
-	// center point of circle, default = (0,0,0)
+	// center point of sphere, default = (0,0,0)
 	Vec3d center;
 
-	// degree tesselation of circle, higher number = less triangles used to draw circle, default = 10
+	// degree tesselation of sphere, higher number = less triangles used to draw sphere, default = 10
 	int degree;
 
-	// points of the circle
+	// points of the sphere
 	Vec3Array* vertices;
 
-	// color vertices of cirlce
+	// color vertices of sphere
 	Vec4Array* colors;
 
-	// calculates vertices and stuff for circle
+	// calculates vertices and stuff for sphere
 	void generate();
 
 	int numVertices;
-
+	
 	void setId(int);
-
+	
 };
 
 #endif

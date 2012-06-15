@@ -39,14 +39,14 @@ public:
 
 	// name, center, width, height, color
 	// this generates a solid color rectangle center point _center
-	RectShape(string, Vec3d&, int, int, Vec4d&);
+	RectShape(string, Vec3d&, double, double, Vec4d&);
 
 
 	// name, center, width, height, color, gradient	
-	RectShape(string, Vec3d&, int, int, Vec4d&, Vec4d&);
+	RectShape(string, Vec3d&, double, double, Vec4d&, Vec4d&);
 
 	// name, center, width, height
-	RectShape(string, Vec3d&, int, int);
+	RectShape(string, Vec3d&, double, double);
 
 
 
@@ -69,13 +69,13 @@ public:
 
 	void setCenter(Vec3d&);
 	
-	void setHeight(int);
+	void setHeight(double);
 
-	int getHeight();
+	double getHeight();
 
-	void setWidth(int);
+	void setWidth(double);
 
-	int getWidth();
+	double getWidth();
 
 	void updateAll();
 
@@ -103,10 +103,10 @@ protected:
 	Vec4d color2;	
 
 	// width default = 10
-	int width;
+	double width;
 
 	// height, default = 10
-	int height;
+	double height;
 
 	// center point of triangle, default = (0,0,0)
 	Vec3d center;
