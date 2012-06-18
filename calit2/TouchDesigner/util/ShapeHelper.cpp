@@ -142,6 +142,34 @@ void ShapeHelper::processData(char* data) {
 			handleRect(-1);
 		}
 	}
+	/*
+	//handle 3d shapes
+	else if (0 == pch.compare("sphere"))
+	{
+	  if (genAll)
+	  {
+	    handleSphere(updateIndex);
+	    updateIndex++;
+	  }
+	  else
+	  {
+	    handleSphere(-1);
+	  }
+	}
+	else if (0 == pch.compare("box"))
+	{
+	  if (genAll)
+	  {
+	    handleBox(updateIndex);
+	    updateIndex++;
+	  }
+	  else
+	  {
+	    handleBox(-1);
+	  }
+	}
+	//Cone,Cylinder,Capsule,InfinitePlane, -Pyramids from shapes/PyramidShape.cpp ?
+	*/
 	else if (0 == pch.compare("done"))
 	{
 		processedAll = true;
@@ -747,3 +775,116 @@ void ShapeHelper::handleRect(int positionInGroup)
 		tree->root = tree->insert(comment,pIG,geode,tree->root);
 	}
 }
+
+/*
+//handle for 3d spheres using internal osg Sphere Shape
+//which in turns uses a ShapeDrawable
+void ShapeHelper::handleSphere(int positionInGroup)
+{
+	int pIG = -1;
+	Geode* geode;
+	Sphere* sphere;
+	ShapeDrawable* sd = new ShapeDrawable(sphere);
+	
+
+	char * comment = getCharParam("comment");
+
+	if (comment == NULL) {
+		string empty = "";
+		comment = &empty[0];
+	}
+
+	// if we're not creating a new geometry, we're going to get the geode at position pIG
+	if (positionInGroup != -1)
+	{
+		pIG = positionInGroup;
+		geode = dynamic_cast<Geode*> (group->getChild(pIG));
+		dr = dynamic_cast<ShapeDrawable*> (geode->getDrawable(0));
+		sphere = (Sphere*) dr;
+	}
+	// otherwise, we'll make a new geode
+	else 
+	{
+		geode = new Geode();
+	}
+
+
+	// get radius parsed from the incoming data
+	double radius = getDoubleParam("radius");	
+
+	if (!isnan(radius))
+	{
+		radius = radius * RENDERSCALE;
+		sphere->setRadius(radius);
+	}
+	// if we're generating, give it a default value
+	else if (pIG == -1)
+	{
+		radius = 100;
+	}
+
+	int tess = getIntParam("tess");
+
+	if (tess == 0)
+	{
+		tess = 10;
+	}
+
+	Vec3d center = getCenter();
+
+	// double check if center is initialized, can getCenter() return an unintialized Vec3d? or will it throw an error already?
+	if (center.valid())
+	{
+		if (pIG != -1)
+		{
+			sphere->setCenter(center);
+		}
+	} else
+	{
+		// if we're generating a new circle and there isn't a center specified
+		if (pIG == -1)
+		{
+			center = Vec3d(0,0,0);
+		}
+	}
+
+	// check colors too
+	Vec4d c1 = getC1();
+
+	if (c1.valid())
+	{	
+		if (pIG != -1)
+		{
+			sd->setColor(c1);
+		}
+	}
+	else
+	{
+		// we'll give it a nice lavender color
+		if (pIG == -1)
+		{
+			c1 = Vec4d((195/255),(149/255),(237/255),0.8);
+		}
+	}
+
+
+	if (pIG != -1)
+	{
+		sphere->set(center,radius);
+		sd->setColor(color);
+	}
+	else 
+	{
+		sphere = new Sphere(center,radius);
+		sd->setColor(color);
+		geode->addDrawable(sd);
+		group->addChild(geode);
+			
+		shapeCount++;
+
+		// TODO add comment and geode to tracking tree
+		tree->root = tree->insert(comment,pIG,geode,tree->root);
+	}
+
+}*/
+
