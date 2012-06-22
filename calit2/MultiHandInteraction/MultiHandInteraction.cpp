@@ -1,9 +1,9 @@
 #include "MultiHandInteraction.h"
 
-#include <kernel/InteractionManager.h>
-#include <kernel/SceneManager.h>
-#include <input/TrackingManager.h>
-#include <kernel/PluginHelper.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrInput/TrackingManager.h>
+#include <cvrKernel/PluginHelper.h>
 
 #include <cmath>
 

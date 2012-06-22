@@ -1,14 +1,14 @@
 #include "MenuBasics.h"
 #include "ComputeBBVisitor.h"
 
-#include <kernel/Navigation.h>
-#include <kernel/SceneManager.h>
-#include <kernel/CVRViewer.h>
-#include <kernel/ScreenConfig.h>
-#include <kernel/ComController.h>
-#include <input/TrackingManager.h>
-#include <menu/MenuSystem.h>
-#include <config/ConfigManager.h>
+#include <cvrKernel/Navigation.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/CVRViewer.h>
+#include <cvrKernel/ScreenConfig.h>
+#include <cvrKernel/ComController.h>
+#include <cvrInput/TrackingManager.h>
+#include <cvrMenu/MenuSystem.h>
+#include <cvrConfig/ConfigManager.h>
 
 #include <PluginMessageType.h>
 
@@ -40,13 +40,19 @@ bool MenuBasics::init()
     drive->setCallback(this);
     fly = new MenuCheckbox("Fly",false);
     fly->setCallback(this);
+    snap = new MenuCheckbox("Snap",false);
+    snap->setCallback(this);
+    navScale = new MenuRangeValueCompact("Nav Scale",0.01,100.0,1.0,true,1.5);
+    navScale->setCallback(this);
 
     activeMode = drive;
 
     MenuSystem::instance()->addMenuItem(moveworld);
     MenuSystem::instance()->addMenuItem(scale);
     MenuSystem::instance()->addMenuItem(drive);
+    MenuSystem::instance()->addMenuItem(snap);
     MenuSystem::instance()->addMenuItem(fly);
+    MenuSystem::instance()->addMenuItem(navScale);
 
     viewall = new MenuButton("View All");
     viewall->setCallback(this);
@@ -81,6 +87,10 @@ void MenuBasics::menuCallback(MenuItem * item)
 	if(activeMode != item)
 	{
 	    activeMode->setValue(false);
+	    if(activeMode == drive)
+	    {
+		MenuSystem::instance()->removeMenuItem(snap);
+	    }
 	}
 	activeMode = moveworld;
 	moveworld->setValue(true);
@@ -91,6 +101,10 @@ void MenuBasics::menuCallback(MenuItem * item)
 	if(activeMode != item)
 	{
 	    activeMode->setValue(false);
+	    if(activeMode == drive)
+	    {
+		MenuSystem::instance()->removeMenuItem(snap);
+	    }
 	}
 	activeMode = scale;
 	scale->setValue(true);
@@ -101,6 +115,7 @@ void MenuBasics::menuCallback(MenuItem * item)
 	if(activeMode != item)
 	{
 	    activeMode->setValue(false);
+	    MenuSystem::instance()->getMenu()->addItem(snap,MenuSystem::instance()->getMenu()->getItemPosition(drive)+1);
 	}
 	activeMode = drive;
 	drive->setValue(true);
@@ -111,6 +126,10 @@ void MenuBasics::menuCallback(MenuItem * item)
 	if(activeMode != item)
 	{
 	    activeMode->setValue(false);
+	    if(activeMode == drive)
+	    {
+		MenuSystem::instance()->removeMenuItem(snap);
+	    }
 	}
 	activeMode = fly;
 	fly->setValue(true);
@@ -147,6 +166,10 @@ void MenuBasics::menuCallback(MenuItem * item)
 
 	    scale = sceneSize / maxSide;
 	    center = center * scale;
+	    if(scale == 0)
+	    {
+		scale = 1.0;
+	    }
 
 	    std::cerr << "Scale set to " << scale << std::endl;
 
@@ -164,6 +187,10 @@ void MenuBasics::menuCallback(MenuItem * item)
 	//m = SceneManager::instance()->getObjectTransform()->getMatrix();
 	m.makeTranslate(-center);
 	SceneManager::instance()->setObjectMatrix(m);
+    }
+    else if(item == snap)
+    {
+	Navigation::instance()->setSnapToGround(snap->getValue());
     }
     else if(item == stopHeadTracking)
     {
@@ -183,6 +210,10 @@ void MenuBasics::menuCallback(MenuItem * item)
 
 	sepStep = (target - ScreenConfig::instance()->getEyeSeparationMultiplier()) / 40.0;
 	changeSep = true;
+    }
+    else if(item == navScale)
+    {
+	Navigation::instance()->setScale(navScale->getValue());
     }
 }
 

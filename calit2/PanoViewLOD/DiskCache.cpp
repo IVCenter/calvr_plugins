@@ -1,7 +1,7 @@
 #include "DiskCache.h"
 #include "sph-cache.hpp"
 
-#include <config/ConfigManager.h>
+#include <cvrConfig/ConfigManager.h>
 
 #include <queue>
 #include <iostream>
@@ -10,7 +10,7 @@
 #include <cstring>
 #include <climits>
 
-#define DC_PRINT_DEBUG
+//#define DC_PRINT_DEBUG
 
 using namespace cvr;
 

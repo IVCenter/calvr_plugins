@@ -3,10 +3,10 @@
 #include <iostream>
 #include <sstream>
 
-#include <kernel/PluginHelper.h>
-#include <kernel/PluginManager.h>
-#include <kernel/ComController.h>
-#include <config/ConfigManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/PluginManager.h>
+#include <cvrKernel/ComController.h>
+#include <cvrConfig/ConfigManager.h>
 #include <PluginMessageType.h>
 
 using namespace std;

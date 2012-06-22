@@ -18,12 +18,12 @@
 #include <osg/Matrixd>
 
 // CalVR
-#include <kernel/CVRPlugin.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuButton.h>
-#include <menu/MenuText.h>
-#include <menu/MenuRangeValue.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuText.h>
+#include <cvrMenu/MenuRangeValue.h>
 
 // Local includes
 #include "PathRecordManager.h"

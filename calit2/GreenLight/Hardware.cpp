@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <utility>
-#include <kernel/ComController.h>
+#include <cvrKernel/ComController.h>
 #include <osg/ShapeDrawable>
 #include <osg/Texture2D>
 #include <osgDB/ReadFile>
@@ -128,7 +128,7 @@ void GreenLight::parseHardwareFile()
         }
 
         // Create component from geode, name, and proper translation matrix
-        hwComp = new Component(geode,(*lit)->name, osg::Matrix::translate(0,0,18+getZCoord((*lit)->slot)));
+        hwComp = new Component(geode,(*lit)->name, osg::Matrix::translate(0,0,18 + getZCoord((*lit)->slot)));
 
         // Does entity belong to a cluster?
         for (cit = _cluster.begin(); cit != _cluster.end(); cit++)
@@ -165,7 +165,13 @@ void GreenLight::parseHardwareFile()
         }
 
         // finally add entity to the rack
+        //
         _rack[(*lit)->rack-1]->addChild(hwComp);
+        if( _rack[(*lit)->rack-1]->usingLODMTA )
+        {
+            ((LOD_MTAccessor *)&*(_rack[(*lit)->rack-1]->transform))->
+                componentsList.push_back(hwComp) ;
+        }
 
         // keep a reference to the component
         _components.insert(hwComp);

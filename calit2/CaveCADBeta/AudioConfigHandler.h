@@ -18,7 +18,7 @@
 #include <sys/socket.h>
 
 // CalVR plugin support
-#include <config/ConfigManager.h>
+#include <cvrConfig/ConfigManager.h>
 
 // Open scene graph
 #include <osg/Switch>

@@ -1,10 +1,10 @@
 #include "ModelLoader.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/SceneManager.h>
-#include <menu/MenuSystem.h>
-#include <kernel/PluginHelper.h>
-#include <util/TextureVisitors.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrMenu/MenuSystem.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrUtil/TextureVisitors.h>
 
 #include <iostream>
 
@@ -18,7 +18,7 @@ using namespace cvr;
 
 CVRPLUGIN(ModelLoader)
 
-ModelLoader::ModelLoader() : FileLoadCallback("iv,wrl,vrml,obj,earth")
+ModelLoader::ModelLoader() : FileLoadCallback("iv,wrl,vrml,obj,osg,earth")
 {
 
 }
@@ -133,7 +133,8 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
 	{
 	    delete it->second;
 	}
-	for(std::map<SceneObject*,SubMenu*>::iterator it2 = _saveMenuMap.begin(); it2 != _saveMenuMap.end(); it2++)
+	for(std::map<SceneObject*,SubMenu*>::iterator it2 = _saveMenuMap.begin();
+		it2 != _saveMenuMap.end(); it2++)
 	{
 	    delete it->second;
 	}
@@ -150,38 +151,38 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
 	}
 	_loadedObjects.clear();
 
-        return;
+	return;
     }
 
     for(int i = 0; i < menuFileList.size(); i++)
     {
-        if(menuFileList[i] == menuItem)
-        {
-            osg::Node* modelNode = osgDB::readNodeFile(models[i]->path);
-            if(modelNode==NULL)
-            { 
-                std::cerr << "ModelLoader: Error reading file " << models[i]->path << endl;
-                return;
-            }
-            else
-            {
-                if(models[i]->mask)
-                {
-                    modelNode->setNodeMask(modelNode->getNodeMask() & ~2);
-                }
-                if(!models[i]->lights)
-                {
-                    osg::StateSet* stateset = modelNode->getOrCreateStateSet();
-                    stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-                }
-            }
+	if(menuFileList[i] == menuItem)
+	{
+	    osg::Node* modelNode = osgDB::readNodeFile(models[i]->path);
+	    if(modelNode==NULL)
+	    { 
+		std::cerr << "ModelLoader: Error reading file " << models[i]->path << endl;
+		return;
+	    }
+	    else
+	    {
+		if(models[i]->mask)
+		{
+		    modelNode->setNodeMask(modelNode->getNodeMask() & ~2);
+		}
+		if(!models[i]->lights)
+		{
+		    osg::StateSet* stateset = modelNode->getOrCreateStateSet();
+		    stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+		}
+	    }
 
 	    SceneObject * so;
 	    so = new SceneObject(models[i]->name, false, false, false, true, models[i]->showBound);
 	    so->addChild(modelNode);
 	    PluginHelper::registerSceneObject(so,"ModelLoader");
 	    so->attachToScene();
-           
+
 	    if(models[i]->backfaceCulling)
 	    {
 		osg::StateSet * stateset = modelNode->getOrCreateStateSet();
@@ -190,16 +191,17 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
 
 		stateset->setAttributeAndModes( cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
 	    }
-	    
+
 	    TextureResizeNonPowerOfTwoHintVisitor tr2v(false);
 	    modelNode->accept(tr2v);
 
-            if(locInit.find(models[i]->name) != locInit.end())
-            {
+	    if(locInit.find(models[i]->name) != locInit.end())
+	    {
 		osg::Matrix scale;
-		scale.makeScale(osg::Vec3(locInit[models[i]->name].first,locInit[models[i]->name].first,locInit[models[i]->name].first));
+		scale.makeScale(osg::Vec3(locInit[models[i]->name].first,locInit[models[i]->name].first,
+			    locInit[models[i]->name].first));
 		so->setTransform(scale * locInit[models[i]->name].second);
-            }
+	    }
 	    so->setNavigationOn(true);
 	    so->addMoveMenuItem();
 	    so->addNavigationMenuItem();
@@ -227,14 +229,14 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
 	    mb->setCallback(this);
 	    sm->addItem(mb);
 	    _resetMap[so] = mb;
-	    
+
 	    mb = new MenuButton("Delete");
 	    mb->setCallback(this);
 	    so->addMenuItem(mb);
 	    _deleteMap[so] = mb;
 
 	    _loadedObjects.push_back(so);
-        }
+	}
     }
 
     for(std::map<SceneObject*,MenuButton*>::iterator it = _saveMap.begin(); it != _saveMap.end(); it++)
@@ -263,12 +265,13 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
 	    it->first->setNavigationOn(false);
 
 	    if(locInit.find(it->first->getName()) != locInit.end())
-            {
+	    {
 		std::cerr << "Load." << std::endl;
 		//osg::Matrix scale;
-		//scale.makeScale(osg::Vec3(locInit[it->first->getName()].first,locInit[it->first->getName()].first,locInit[it->first->getName()].first));
+		//scale.makeScale(osg::Vec3(locInit[it->first->getName()].first,
+		//                locInit[it->first->getName()].first,locInit[it->first->getName()].first));
 		it->first->setTransform(locInit[it->first->getName()].second);
-            }
+	    }
 
 	    it->first->setNavigationOn(nav);
 	}
@@ -283,9 +286,9 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
 	    it->first->setNavigationOn(false);
 
 	    if(locInit.find(it->first->getName()) != locInit.end())
-            {
+	    {
 		it->first->setTransform(osg::Matrix::identity());
-            }
+	    }
 
 	    it->first->setNavigationOn(nav);
 	}
@@ -320,7 +323,9 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
 		delete _saveMenuMap[it->first];
 		_saveMenuMap.erase(it->first);
 	    }
-	    for(std::vector<SceneObject*>::iterator delit = _loadedObjects.begin(); delit != _loadedObjects.end(); delit++)
+	    for(std::vector<SceneObject*>::iterator delit = _loadedObjects.begin();
+		    delit != _loadedObjects.end();
+		    delit++)
 	    {
 		if((*delit) == it->first)
 		{
@@ -328,7 +333,6 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
 		    break;
 		}
 	    }
-
 
 	    delete it->first;
 	    delete it->second;
@@ -408,19 +412,20 @@ void ModelLoader::writeConfigFile()
 
     if(!cfile.fail())
     {
-       for(map<std::string, std::pair<float, osg::Matrix> >::iterator it = locInit.begin(); it != locInit.end(); it++)
-       {
-           //cerr << "Writing entry for " << it->first << endl;
-           cfile << it->first << " " << it->second.first << " ";
-           for(int i = 0; i < 4; i++)
-           {
-               for(int j = 0; j < 4; j++)
-               {
-                   cfile << it->second.second(i, j) << " ";
-               }
-           }
-           cfile << endl;
-       }
+	for(map<std::string, std::pair<float, osg::Matrix> >::iterator it = locInit.begin();
+		it != locInit.end(); it++)
+	{
+	    //cerr << "Writing entry for " << it->first << endl;
+	    cfile << it->first << " " << it->second.first << " ";
+	    for(int i = 0; i < 4; i++)
+	    {
+		for(int j = 0; j < 4; j++)
+		{
+		    cfile << it->second.second(i, j) << " ";
+		}
+	    }
+	    cfile << endl;
+	}
     }
     cfile.close();
 }

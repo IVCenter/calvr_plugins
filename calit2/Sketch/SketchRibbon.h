@@ -1,5 +1,6 @@
 #ifndef SKETCH_RIBBON_H
 #define SKETCH_RIBBON_H
+#endif 
 
 #include "SketchObject.h"
 
@@ -46,4 +47,3 @@ class SketchRibbon : public SketchObject
         osg::Vec3 _lastPoint1, _lastPoint2;
 };
 
-#endif

@@ -1,12 +1,12 @@
 #ifndef TOUR_CAVE_PLUGIN_H
 #define TOUR_CAVE_PLUGIN_H
 
-#include <kernel/CVRPlugin.h>
+#include <cvrKernel/CVRPlugin.h>
 
-#include <menu/SubMenu.h>
-#include <menu/MenuButton.h>
-#include <util/MultiListenSocket.h>
-#include <util/CVRSocket.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrUtil/MultiListenSocket.h>
+#include <cvrUtil/CVRSocket.h>
 
 #include <osg/Vec3>
 #include <osg/Matrix>

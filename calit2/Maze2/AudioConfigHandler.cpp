@@ -8,6 +8,7 @@
 ***************************************************************/
 #include "AudioConfigHandler.h"
 
+#include <cstring>
 
 using namespace osg;
 using namespace std;

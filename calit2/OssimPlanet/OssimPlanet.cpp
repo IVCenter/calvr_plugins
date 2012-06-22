@@ -1,7 +1,7 @@
 #include "OssimPlanet.h"
 
-#include <kernel/Navigation.h>
-#include <kernel/InteractionManager.h>
+#include <cvrKernel/Navigation.h>
+#include <cvrKernel/InteractionManager.h>
 
 #include <cmath>
 

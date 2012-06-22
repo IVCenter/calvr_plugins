@@ -4,25 +4,69 @@
 #include <list>
 #include <set>
 #include <vector>
+#include <string>
+#include <fstream>
+#include <iostream>
+#include <stdlib.h>
+#include <stdio.h>
 
-#include <config/ConfigManager.h>
-#include <kernel/CVRPlugin.h>
-#include <menu/MenuButton.h>
-#include <menu/MenuCheckbox.h>
-#include <menu/MenuImage.h>
-#include <menu/MenuList.h>
-#include <menu/MenuText.h>
-#include <menu/DialogPanel.h>
-#include <menu/SubMenu.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/SceneObject.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuImage.h>
+#include <cvrMenu/MenuList.h>
+#include <cvrMenu/MenuText.h>
+#include <cvrMenu/DialogPanel.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuSystem.h>
+#include <cvrMenu/PopupMenu.h>
+#include <cvrMenu/TabbedDialogPanel.h>
 
 #include <osg/AnimationPath>
 #include <osg/MatrixTransform>
+#include <osg/ShapeDrawable>
 #include <osg/Texture2D>
+#include <osg/NodeVisitor>
+
+#ifdef WITH_OSGEARTH
+/*** OSG EARTH PLUGINS ***/
+
+#include <osgEarth/Map>
+#include <osgEarth/MapNode>
+#include <osgEarth/FindNode>
+#include <osgEarth/Utils>
+
+#include <osgEarth/ElevationQuery>
+
+#endif
+
+#include <osgDB/FileUtils>
+#include <osgDB/FileNameUtils>
+
+/*************************/
+
+/*** osgParticle things ***/
+#include <osgParticle/ParticleSystem>
+#include <osgParticle/Particle>
+#include <osg/PositionAttitudeTransform>
+/**************************/
+
+/*** oasClientSound Things **********************/
+#include "oasClient/OASSound.h"
+
+
+/************************************************/
 
 #include "Utility.h"
 
 class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 {
+//  friend class SceneManager;
+
+
     public:
         GreenLight();
         ~GreenLight();
@@ -37,6 +81,23 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         bool buttonEvent(int type, int button, int hand, const osg::Matrix& mat);
         bool mouseButtonEvent(int type, int button, int x, int y, const osg::Matrix& mat);
 
+        bool keyboardEvent(int key, int type);
+
+        osg::MatrixTransform * InitSmoke();
+
+        osg::ref_ptr<osg::MatrixTransform> OsgE_MT; // transform nodes of this entity
+        osg::Matrixd output;
+
+        osg::MatrixTransform * scaleMT;
+        osg::MatrixTransform * pluginMT;
+        osg::Matrixd*      scaleMatrix; 
+        osg::Vec3d*        scaleVector; 
+
+        osg::ref_ptr<osg::LOD> _glLOD;
+
+#ifdef WITH_OSGEARTH
+        osgEarth::Map * mapVariable;
+#endif
     protected:
 
         class Component; // forward declaration
@@ -50,12 +111,14 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 
                 osg::ref_ptr<osg::MatrixTransform> transform; // transform nodes of this entity
                 osg::ref_ptr<osg::AnimationPath> path; // animation path (null if non-existent)
-                osg::ref_ptr<osg::Node> mainNode;
-// TODO change nodes to type: set< ref_ptr< Node > >
+                osg::ref_ptr<osg::Node> mainNode;   // change mainNode to be the type of node with overriden accept.
+             // TODO change nodes to type: set< ref_ptr< Node > >
                 std::set<osg::Node *> nodes; // node-sub-graph loaded in via osgDB readNodeFile
                 AnimationStatus status; // status of animation
                 double time; // time-point within animation path
                 std::list<Entity *> group; // other entities that should animate together
+
+                bool usingLODMTA;
 
                 void handleAnimation();
                 void beginAnimation();
@@ -63,6 +126,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 void showVisual(bool show);
                 virtual void setTransparency(bool transparent);
                 virtual void setColor(const osg::Vec3 color);
+                //virtual void setColor(const osg::Vec4 color); // 5_21_12
                 virtual void defaultColor();
 
                 virtual Component * asComponent() {return NULL;}
@@ -86,6 +150,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
                 void setTransparency(bool transparent);
                 void setColor(const osg::Vec3 color);
                 void setColor(const std::list<osg::Vec3> colors);
+                void setColor(const std::list<osg::Vec4> colors); // 5_21_12
                 void defaultColor();
                 bool select(bool select);
 
@@ -93,6 +158,18 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
 
                 static osg::ref_ptr<osg::Uniform> _displayTexturesUni;
                 static osg::ref_ptr<osg::Uniform> _neverTextureUni;
+
+                // Variables for animation.
+                int animationPosition;
+                bool animating;
+                osg::Geode * animationMarker;
+
+                float soundIntensity;
+                float prev_soundIntensity;
+                osg::Vec3f soundPosition;
+
+//                void playSound();
+                oasclient::OASSound * soundComponent;
 
             protected:
                 osg::ref_ptr<osg::Texture2D> _colors;
@@ -108,7 +185,54 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
             int height;
          } Hardware;
 
-        // Menu Items
+/***************** LOD SWITCHING MECHANISM **********/
+        static int lodLevel;
+        osg::MatrixTransform * secondDegreeMT; // used as the second LOD?
+
+        // used in LoadEntities?
+        class NodeA : public osg::Node
+        {
+            public:
+                virtual void accept(osg::NodeVisitor&);
+        };
+
+        /***
+         * Used to override default MatrixTransform behavior and 
+         * set LOD properties of the GreenLight plugin.
+         */
+        class LOD_MTAccessor : public osg::MatrixTransform
+        {
+            private:
+                bool isRack;
+                osg::Vec3f position;
+                bool initialized;
+
+            public:
+                std::vector<Component *> componentsList;
+
+                virtual void accept(osg::NodeVisitor&);
+                int LLOD;
+
+                inline bool isRackMTA(){ return isRack; };
+                inline void setRackMTA(bool scmta){ isRack = scmta; };
+                inline osg::Vec3f getPosition() { return position; };
+        };
+/*********************************************************/
+
+/****** PARTICLE SYSTEM VARIABLES ***************************/
+        osgParticle::ParticleSystem * _osgParticleSystem;
+        osgParticle::Particle _pTemplate;
+
+/****** MISCELLANEOUS VARIABLES *****************************/
+        // animation function for power comsumption.
+        cvr::MenuButton * component_AnimateButton;
+        Component * _currentComponent;
+        void animatePower();
+        bool osgEarthInit;
+
+        std::vector<cvr::SubMenu*> _HiddenMenuItems;
+/****** END: MISCELLANEOUS VARIABLES ************************/
+
         cvr::SubMenu * _glMenu;
         cvr::MenuCheckbox * _showSceneCheckbox;
 
@@ -140,6 +264,7 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuImage * _legendGradientOutOfRange;
 
         cvr::DialogPanel * _hoverDialog;
+        cvr::TabbedDialogPanel * _hoverDialog_2; // DEPRECATED
 
         // Timestamps
         cvr::SubMenu * _timeFrom;
@@ -163,13 +288,16 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _hourTo;
         cvr::MenuList * _minuteTo;
 
+        cvr::MenuButton * _navigateToPluginButton;
+        cvr::MenuButton * _restorePreviousViewButton;
+
         // Entities
-        Entity * _box;          // box/frame
-        std::vector<Entity *> _door; // doors
-        Entity * _waterPipes;   // water pipes
-        Entity * _electrical;   // electrical
-        Entity * _fans;         // fans
-        std::vector<Entity *> _rack; // racks
+        Entity * _box;                     // box/frame
+        std::vector<Entity *> _door;       // doors
+        Entity * _waterPipes;              // water pipes
+        Entity * _electrical;              // electrical
+        Entity * _fans;                    // fans
+        std::vector<Entity *> _rack;       // racks
         std::set<Component *> _components; // components in the racks
 
         // Additional Entity Info
@@ -195,7 +323,11 @@ class GreenLight : public cvr::CVRPlugin, public cvr::MenuCallback
         void doHoverOver(Entity *& last, Entity * current, bool showHover);
         osg::ref_ptr<osg::Geode> makeComponentGeode(float height, std::string textureFile = "");
         osg::Vec3 wattColor(float watt, int minWatt, int maxWatt);
+        osg::Vec4 wattColor2(float watt, int minWatt, int maxWatt);
         void createTimestampMenus();
+
+        void InitializeOASClient();
+    
 };
 
 #endif

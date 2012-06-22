@@ -1,7 +1,7 @@
 #ifndef ANDROID_TRANSFORM_H
 #define ANDROID_TRANSFORM_H
 
-#include <kernel/CVRPlugin.h>
+#include <cvrKernel/CVRPlugin.h>
 
 #include <stdio.h>
 #include <stdlib.h>

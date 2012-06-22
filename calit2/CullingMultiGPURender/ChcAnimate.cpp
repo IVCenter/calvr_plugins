@@ -1,6 +1,8 @@
 #include "ChcAnimate.h"
 
-#include <config/ConfigManager.h>
+#include <cvrConfig/ConfigManager.h>
+
+#include <cstring>
 
 ChcAnimate::ChcAnimate(std::string filename, int numcontexts) : numContexts(numcontexts)
 {

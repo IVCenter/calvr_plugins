@@ -3,10 +3,20 @@
 #include <sstream>
 #include <mxml.h>
 
+float gainHack = 1.0f;
+int   currentAnimationRef = 0;
+/***
+ * TODO: LOOK AT THIS SECTION 2/21/12
+ * Parses through an XML file and sets the watt color of individual components?
+ * Called on Button Action Event....
+ */
 void GreenLight::setPowerColors(bool displayPower)
 {
     std::map< std::string, std::map< std::string, int > > componentWattsMap;
 
+    /***
+     * If the switch is off, revert all components colors back to their default color(?)
+     */
     if (!displayPower)
     {
         std::set< Component *>::iterator sit;
@@ -16,17 +26,22 @@ void GreenLight::setPowerColors(bool displayPower)
     }
 
     // Display power per component
-    FILE *fp = fopen(cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Power", "").c_str(), "r");
+    FILE *fp = fopen(cvr::ConfigManager::getEntry("local",
+                      "Plugin.GreenLight.Power", "").c_str(), "r");
     if (!fp)
-    {
-        std::cerr << "Error (setComponentColors): Cannot open \"" << cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Power", "") << "\"." << std::endl;
+    { //If there is no valid entry? file?
+        std::cerr << "Error (setComponentColors): Cannot open \""
+                  << cvr::ConfigManager::getEntry("local", "Plugin.GreenLight.Power", "")
+                  << "\"." << std::endl;
+
         _displayPowerCheckbox->setValue(false);
         return;
     }
 
     mxml_node_t * xmlTree = mxmlLoadFile(NULL, fp, MXML_TEXT_CALLBACK);
 
-    mxml_node_t * measurements = mxmlFindElement(xmlTree,xmlTree,"measurements",NULL,NULL,MXML_DESCEND_FIRST);
+    mxml_node_t * measurements = 
+        mxmlFindElement(xmlTree,xmlTree,"measurements",NULL,NULL,MXML_DESCEND_FIRST);
 
     if (measurements == NULL)
     {
@@ -34,15 +49,19 @@ void GreenLight::setPowerColors(bool displayPower)
         return;
     }
 
-    mxml_node_t * sensor = mxmlFindElement(measurements,measurements,"sensor",NULL,NULL,MXML_DESCEND_FIRST);
+    mxml_node_t * sensor = mxmlFindElement(measurements,measurements,"sensor",
+                                           NULL,NULL,MXML_DESCEND_FIRST);
 
     if (sensor)
-    {
+    { // interpret xml
         do
         {
-            mxml_node_t * nameNode = mxmlFindElement(sensor,sensor,"name",NULL,NULL,MXML_DESCEND_FIRST);
-            mxml_node_t * timeNode = mxmlFindElement(sensor,sensor,"time",NULL,NULL,MXML_DESCEND_FIRST);
-            mxml_node_t * valueNode = mxmlFindElement(sensor,sensor,"value",NULL,NULL,MXML_DESCEND_FIRST);
+            mxml_node_t * nameNode = mxmlFindElement(sensor,sensor,"name",
+                                         NULL,NULL,MXML_DESCEND_FIRST);
+            mxml_node_t * timeNode = mxmlFindElement(sensor,sensor,"time",
+                                         NULL,NULL,MXML_DESCEND_FIRST);
+            mxml_node_t * valueNode = mxmlFindElement(sensor,sensor,"value",
+                                         NULL,NULL,MXML_DESCEND_FIRST);
 
             if (nameNode == NULL || nameNode->child->value.text.whitespace == 1)
             {
@@ -60,6 +79,7 @@ void GreenLight::setPowerColors(bool displayPower)
 
             std::string time = timeNode->child->value.text.string;
             time += " ";
+
             time += timeNode->child->next->value.text.string;
 
             if (valueNode == NULL || valueNode->child->value.text.whitespace == 1)
@@ -93,6 +113,7 @@ void GreenLight::setPowerColors(bool displayPower)
     for (sit = _components.begin(); sit != _components.end(); sit++)
     {
         std::list< osg::Vec3 > colors;
+        std::list< osg::Vec4 > colors4;
         std::map< std::string, std::map< std::string, int > >::iterator cit;
         if ((cit = componentWattsMap.find((*sit)->name)) != componentWattsMap.end())
         {
@@ -111,31 +132,106 @@ void GreenLight::setPowerColors(bool displayPower)
             std::list< int >::iterator lit;
             for (lit = watts.begin(); lit != watts.end(); lit++)
             {
-                 if (_magnifyRangeCheckbox->getValue())
+              // if the magnifyRange checkbox is set to true.. use minWatt/maxWatt as the color,
+              //  otherwise, use the current iteration's (sit) Component's color value..
+                if (_magnifyRangeCheckbox != NULL && _magnifyRangeCheckbox->getValue())
+                {
                      colors.push_back( wattColor(*lit, minWatt, maxWatt) );
-                 else
+                     colors4.push_back( wattColor2(*lit, minWatt, maxWatt) );
+                }
+                else
+                {
                      colors.push_back( wattColor(*lit, (*sit)->minWattage, (*sit)->maxWattage) );
+                     colors4.push_back( wattColor2(*lit, (*sit)->minWattage, (*sit)->maxWattage) );
+                }
+                currentAnimationRef = 0; 
             }
         }
         else
         {
             colors.push_back( wattColor(0, (*sit)->minWattage, (*sit)->maxWattage) );
+            colors4.push_back( wattColor2(0, (*sit)->minWattage, (*sit)->maxWattage) );
         }
-        (*sit)->setColor(colors);
+        // Set color of components to the vector list of colors.
+        // ORIGINAL CALL:: //(*sit)->setColor( colors );
+        (*sit)->setColor( colors4 );
     }
 }
 
+/***
+ * osg::Vec4 GreenLight::wattColor2(float watt, int minWatt, int maxWatt)
+ *
+ * @author: Alfred Tarng
+ */
+osg::Vec4 GreenLight::wattColor2(float watt, int minWatt, int maxWatt)
+{
+// If it is off, grey?
+    if (watt == 0) return osg::Vec4(.2,.2,.2, 0.0);
+
+    // White if any of the min/max constraints are zero
+    // OR if max is less than min.
+    if (minWatt == 0 || maxWatt == 0 || maxWatt < minWatt)
+        return osg::Vec4(1,1,1, 0);
+
+    // Less than the minimum watt reqs.
+    if (watt < minWatt) return osg::Vec4(.8,.8,1, 1.0f);
+
+    // Over the maximum watt reqs.
+    if (watt > maxWatt) return osg::Vec4(1,0,0, 1.7f);
+
+    // Watt-Weight:  R,  G,  B
+    // minWatt (0):  0,  0,  1
+    // low   (.33):  0,  1,  0
+    // high  (.67):  1,  1,  0
+    // maxWatt (1):  1, .4,  0
+
+    float interpolate = (watt-minWatt)/(maxWatt-minWatt);
+
+    if (minWatt == maxWatt) interpolate = .5;
+
+    float red = (interpolate-.33)/.34;
+    if (red < 0) red = 0;
+    if (red > 1) red = 1;
+
+    float green;
+    if (interpolate < .33)
+        green = interpolate/.33;
+    else if (interpolate < .67)
+        green = 1;
+    else
+    {
+        float maxGreenSub = 1.0; // .6
+        green = 1 - maxGreenSub * (interpolate-.67)/.33;
+
+        if (green < (1 - maxGreenSub) ) green = ( 1 - maxGreenSub ) ;
+        if (green > 1) green = 1;
+    }
+
+
+    float blue = 1 - (interpolate-.33)/.33;
+    if (blue < 0) blue = 0;
+    if (blue > 1) blue = 1;
+
+    return osg::Vec4(red, green, blue, (interpolate) + 1.0f  );
+}
+
+
+
 osg::Vec3 GreenLight::wattColor(float watt, int minWatt, int maxWatt)
 {
-    if (watt == 0)
+    if (watt == 0)  // If it is off, grey?
         return osg::Vec3(.2,.2,.2);
 
+    // White if any of the min/max constraints are zero
+    // OR if max is less than min.
     if (minWatt == 0 || maxWatt == 0 || maxWatt < minWatt)
         return osg::Vec3(1,1,1);
 
+    // Less than the minimum watt reqs.
     if (watt < minWatt)
         return osg::Vec3(.8,.8,1);
 
+    // Over the maximum watt reqs.
     if (watt > maxWatt)
         return osg::Vec3(1,0,0);
 
@@ -160,9 +256,16 @@ osg::Vec3 GreenLight::wattColor(float watt, int minWatt, int maxWatt)
     else if (interpolate < .67)
         green = 1;
     else
-        green = 1 - .6*(interpolate-.67)/.33;
+    {
+        float maxGreenSub = 1.0; // .6
+        green = 1 - maxGreenSub * (interpolate-.67)/.33;
 
-    float blue = 1-(interpolate-.33)/.33;
+        if (green < (1 - maxGreenSub) ) green = ( 1 - maxGreenSub ) ;
+        if (green > 1) green = 1;
+    }
+
+
+    float blue = 1 - (interpolate-.33)/.33;
     if (blue < 0) blue = 0;
     if (blue > 1) blue = 1;
 
@@ -173,9 +276,11 @@ void GreenLight::createTimestampMenus()
 {
     std::vector<std::string> years;
     years.push_back("2011");
+    years.push_back("2012");
 
     std::vector<std::string> months;
     months.push_back("January");
+
     months.push_back("Febuary");
     months.push_back("March");
     months.push_back("April");
@@ -278,4 +383,48 @@ void GreenLight::createTimestampMenus()
     _minuteTo->setCallback(this);
     _minuteTo->setValues(minutes);
     _timeTo->addItem(_minuteTo);
+}
+
+void GreenLight::animatePower()
+{
+    std::set< Component * >::iterator sit;
+    for (sit = _components.begin(); sit != _components.end(); sit++)
+    {
+        if ( (*sit) != NULL )
+        {
+            if ( (*sit)-> animating )
+            {
+                if( ++((*sit)->animationPosition) > 100  )
+                { // End Animation
+                    (*sit) -> animationPosition = 0;
+                    (*sit) -> animating = false;
+
+                    if((*sit)->soundComponent != NULL ) (*sit)->soundComponent = NULL;
+                }else
+                { // Continue Animation
+                    if (_displayPowerCheckbox != NULL )
+                        setPowerColors(_displayPowerCheckbox->getValue()); // update texture.
+                    else
+                        setPowerColors(false); // update texture.
+
+                    if((*sit)->soundComponent != NULL )
+                    {   
+                      if ( ((*sit)->prev_soundIntensity != (*sit)->soundIntensity) )
+                      {
+                        (*sit)->soundComponent->setPitch( (*sit)->soundIntensity );
+                        (*sit)->prev_soundIntensity = (*sit)->soundIntensity;
+                      }
+                    }
+                }
+            }
+            if((*sit)->soundComponent != NULL )
+            {   
+              if ( ((*sit)->prev_soundIntensity != (*sit)->soundIntensity) )
+              {
+                (*sit)->soundComponent->setPitch( (*sit)->soundIntensity );
+                (*sit)->prev_soundIntensity = (*sit)->soundIntensity;
+              }
+            }
+        }
+    }
 }

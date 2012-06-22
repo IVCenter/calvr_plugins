@@ -9,8 +9,8 @@
 
 #include "PathRecorder.h"
 
-#include <kernel/PluginHelper.h>
-#include <kernel/PluginManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/PluginManager.h>
 
 #include <PluginMessageType.h>
 

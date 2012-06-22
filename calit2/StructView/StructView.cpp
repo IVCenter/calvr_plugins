@@ -8,8 +8,8 @@
 //
 // **************************************************************************
 
-#include <config/ConfigManager.h>
-#include <kernel/PluginHelper.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/PluginHelper.h>
 #include <string.h>
 
 // OSG:
@@ -103,7 +103,7 @@ void StructView::menuCallback(MenuItem* menuItem)
 {
   if(menuItem == enable)
   {
-    cerr << "Enable: " << enable->getValue() << endl;
+    //cerr << "Enable: " << enable->getValue() << endl;
     if(enable->getValue())
     {
       PluginHelper::getObjectsRoot()->addChild(mainNode.get());

@@ -1,11 +1,11 @@
 #include <GL/glew.h>
 #include "PanoDrawableLOD.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/NodeMask.h>
-#include <kernel/ScreenConfig.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/ScreenBase.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/NodeMask.h>
+#include <cvrKernel/ScreenConfig.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/ScreenBase.h>
 
 #include <osg/GraphicsContext>
 
@@ -314,13 +314,39 @@ void PanoDrawableLOD::next()
 
     _currentFadeTime = _totalFadeTime + PluginHelper::getLastFrameDuration();
 
-    if(_leftFileIDs.size())
+    for(std::map<int,std::vector<int> >::iterator it = _leftFileIDs.begin(); it != _leftFileIDs.end(); it++)
     {
-        sph_cache::_diskCache->setLeftFiles(_leftFileIDs.begin()->second[_lastIndex],_leftFileIDs.begin()->second[_currentIndex],_leftFileIDs.begin()->second[_nextIndex]);
-        sph_cache::_diskCache->setRightFiles(_rightFileIDs.begin()->second[_lastIndex],_rightFileIDs.begin()->second[_currentIndex],_rightFileIDs.begin()->second[_nextIndex]);
+        if(it->second.size())
+        {
+            sph_cache::_diskCache->setLeftFiles(it->second[_lastIndex],it->second[_currentIndex],it->second[_nextIndex]);
+            break;
+        }
+    }
+
+    for(std::map<int,std::vector<int> >::iterator it = _rightFileIDs.begin(); it != _rightFileIDs.end(); it++)
+    {
+        if(it->second.size())
+        {
+            sph_cache::_diskCache->setRightFiles(it->second[_lastIndex],it->second[_currentIndex],it->second[_nextIndex]);
+            break;
+        }
+    }
+
+    /*if(_leftFileIDs.size())
+    {
+        
+        if(_leftFileIDs.begin()->second.size())
+        {
+            sph_cache::_diskCache->setLeftFiles(_leftFileIDs.begin()->second[_lastIndex],_leftFileIDs.begin()->second[_currentIndex],_leftFileIDs.begin()->second[_nextIndex]);
+        }
+
+        if(_rightFileIDs.begin()->second.size())
+        {
+            sph_cache::_diskCache->setRightFiles(_rightFileIDs.begin()->second[_lastIndex],_rightFileIDs.begin()->second[_currentIndex],_rightFileIDs.begin()->second[_nextIndex]);
+        }
 	//sph_cache::_diskCache->kill_tasks(_leftFileIDs.begin()->second[_lastIndex]);
 	//sph_cache::_diskCache->kill_tasks(_rightFileIDs.begin()->second[_lastIndex]);
-    }
+    }*/
 }
 
 void PanoDrawableLOD::previous()
@@ -335,13 +361,38 @@ void PanoDrawableLOD::previous()
 
     _currentFadeTime = _totalFadeTime + PluginHelper::getLastFrameDuration();
 
-    if(_leftFileIDs.size())
+    for(std::map<int,std::vector<int> >::iterator it = _leftFileIDs.begin(); it != _leftFileIDs.end(); it++)
     {
-	sph_cache::_diskCache->setLeftFiles(_leftFileIDs.begin()->second[_lastIndex],_leftFileIDs.begin()->second[_currentIndex],_leftFileIDs.begin()->second[_nextIndex]);
-	sph_cache::_diskCache->setRightFiles(_rightFileIDs.begin()->second[_lastIndex],_rightFileIDs.begin()->second[_currentIndex],_rightFileIDs.begin()->second[_nextIndex]);
+        if(it->second.size())
+        {
+            sph_cache::_diskCache->setLeftFiles(it->second[_lastIndex],it->second[_currentIndex],it->second[_nextIndex]);
+            break;
+        }
+    }
+
+    for(std::map<int,std::vector<int> >::iterator it = _rightFileIDs.begin(); it != _rightFileIDs.end(); it++)
+    {
+        if(it->second.size())
+        {
+            sph_cache::_diskCache->setRightFiles(it->second[_lastIndex],it->second[_currentIndex],it->second[_nextIndex]);
+            break;
+        }
+    }
+
+    /*if(_leftFileIDs.size())
+    {
+        if(_leftFileIDs.begin()->second.size())
+        {
+	    sph_cache::_diskCache->setLeftFiles(_leftFileIDs.begin()->second[_lastIndex],_leftFileIDs.begin()->second[_currentIndex],_leftFileIDs.begin()->second[_nextIndex]);
+        }
+
+        if(_rightFileIDs.begin()->second.size())
+        {
+	    sph_cache::_diskCache->setRightFiles(_rightFileIDs.begin()->second[_lastIndex],_rightFileIDs.begin()->second[_currentIndex],_rightFileIDs.begin()->second[_nextIndex]);
+        }
 	//sph_cache::_diskCache->kill_tasks(_leftFileIDs.begin()->second[_lastIndex]);
 	//sph_cache::_diskCache->kill_tasks(_rightFileIDs.begin()->second[_lastIndex]);
-    }
+    }*/
 }
 
 void PanoDrawableLOD::setZoom(osg::Vec3 dir, float k)
@@ -462,13 +513,16 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	    {
 		_leftFileIDs[context].push_back(_cacheMap[context]->add_file(_leftEyeFiles[i]));
 	    }
-	    if(_leftEyeFiles.size() > 1)
+	    if(_leftEyeFiles.size() > 1 && _currentIndex < _leftFileIDs[context].size())
 	    {
-		sph_cache::_diskCache->setLeftFiles(_leftFileIDs[context].back(),_leftFileIDs[context][0],_leftFileIDs[context][1]);
+                int last, next;
+                next = (_currentIndex+1) % _leftFileIDs[context].size();
+                last = (_currentIndex-1+_leftFileIDs[context].size()) % _leftFileIDs[context].size();
+		sph_cache::_diskCache->setLeftFiles(_leftFileIDs[context][last],_leftFileIDs[context][_currentIndex],_leftFileIDs[context][next]);
 	    }
-	    else if(_leftEyeFiles.size() == 1)
+	    else if(_leftEyeFiles.size() == 1 && _currentIndex < _leftFileIDs[context].size())
 	    {
-		sph_cache::_diskCache->setLeftFiles(-1,_leftFileIDs[context][0],-1);
+		sph_cache::_diskCache->setLeftFiles(-1,_leftFileIDs[context][_currentIndex],-1);
 	    }
 	}
 	else if(eye & DRAW_RIGHT)
@@ -477,13 +531,16 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	    {
 		_rightFileIDs[context].push_back(_cacheMap[context]->add_file(_rightEyeFiles[i]));
 	    }
-	    if(_rightEyeFiles.size() > 1)
+	    if(_rightEyeFiles.size() > 1 && _currentIndex < _rightFileIDs[context].size())
 	    {
-		sph_cache::_diskCache->setRightFiles(_rightFileIDs[context].back(),_rightFileIDs[context][0],_rightFileIDs[context][1]);
+                int last, next;
+                next = (_currentIndex+1) % _rightFileIDs[context].size();
+                last = (_currentIndex-1+_rightFileIDs[context].size()) % _rightFileIDs[context].size();
+		sph_cache::_diskCache->setRightFiles(_rightFileIDs[context][last],_rightFileIDs[context][_currentIndex],_rightFileIDs[context][next]);
 	    }
-	    else if(_rightEyeFiles.size() == 1)
+	    else if(_rightEyeFiles.size() == 1 && _currentIndex < _rightFileIDs[context].size())
 	    {
-		sph_cache::_diskCache->setRightFiles(-1,_rightFileIDs[context][0],-1);
+		sph_cache::_diskCache->setRightFiles(-1,_rightFileIDs[context][_currentIndex],-1);
 	    }
 	}
 	_initMap[context] |= eye;
