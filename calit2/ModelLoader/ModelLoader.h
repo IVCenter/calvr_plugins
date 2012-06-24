@@ -32,6 +32,7 @@ class ModelLoader : public cvr::MenuCallback, public cvr::CVRPlugin, public cvr:
         void writeConfigFile();
 
         void menuCallback(cvr::MenuItem * item);
+        void preFrame();
 
         virtual bool loadFile(std::string file);
 
@@ -53,6 +54,13 @@ class ModelLoader : public cvr::MenuCallback, public cvr::CVRPlugin, public cvr:
         std::map<cvr::SceneObject*,cvr::SubMenu*> _saveMenuMap;
 
         std::vector<cvr::SceneObject*> _loadedObjects;
+        
+        // String manipulation routines from vvToolshed
+        void strcpyTail(char*, const char*, char);
+        void extractFilename(char*, const char*);
+        void extractExtension(char*, const char*);
+        bool increaseFilename(char*);
+        bool isFile(const char*);
 };
 
 #endif
