@@ -63,7 +63,7 @@ void PointsObject::update()
 	float status = _transition / _transitionTime;
 	status -= lastStatus;
 
-	osg::Vec3 movement = (_startCenter - _endCenter);
+	osg::Vec3 movement = (_endCenter - _startCenter);
 	movement.x() *= status;
 	movement.y() *= status;
 	movement.z() *= status;
