@@ -1,4 +1,5 @@
 #include "PanoViewObject.h"
+#include "PanoViewLOD.h"
 
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/NodeMask.h>
@@ -37,7 +38,7 @@ PanoViewObject::~PanoViewObject()
 void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<std::string> & rightEyeFiles, float radius, int mesh, int depth, int size, float height, std::string vertFile, std::string fragFile)
 {
     _imageSearchPath = ConfigManager::getEntryConcat("value","Plugin.PanoViewLOD.ImageSearchPath",':',"");
-    _floorOffset = ConfigManager::getFloat("value","Plugin.PanoViewLOD.FloorOffset",0);
+    _floorOffset = ConfigManager::getFloat("value","Plugin.PanoViewLOD.FloorOffset",1500);
 
     std::string temp("PANOPATH=");
     temp = temp + _imageSearchPath;
@@ -73,7 +74,7 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
 
     _coordChangeMat.makeRotate(M_PI/2.0,osg::Vec3(1,0,0));
     _spinMat.makeIdentity();
-    float offset = height - _floorOffset;
+    float offset = height - _floorOffset + DEFAULT_PAN_HEIGHT;
     osg::Vec3 ovec(0,0,offset);
     _heightMat.makeTranslate(ovec + _offset);
     setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
@@ -102,7 +103,7 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
     _radiusRV->setCallback(this);
     addMenuItem(_radiusRV);
 
-    _heightRV = new MenuRangeValue("Height", -1000, 10000, height);
+    _heightRV = new MenuRangeValue("Height", -2000, 2000, height);
     _heightRV->setCallback(this);
     addMenuItem(_heightRV);
 
@@ -179,7 +180,7 @@ void PanoViewObject::menuCallback(cvr::MenuItem * item)
 
     if(item == _heightRV)
     {
-	float offset = _heightRV->getValue() - _floorOffset;
+	float offset = _heightRV->getValue() - _floorOffset + DEFAULT_PAN_HEIGHT;
 	osg::Vec3 ovec(0,0,offset);
 	_heightMat.makeTranslate(ovec + _offset);
 	setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);

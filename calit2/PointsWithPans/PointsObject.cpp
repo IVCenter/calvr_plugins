@@ -2,6 +2,7 @@
 #include "PanMarkerObject.h"
 
 #include <cvrKernel/PluginHelper.h>
+#include <cvrConfig/ConfigManager.h>
 
 using namespace cvr;
 
@@ -9,6 +10,7 @@ PointsObject::PointsObject(std::string name, bool navigation, bool movable, bool
 {
     _activePanMarker = NULL;
     _transitionActive = false;
+    _transitionTime = 4.0;
 }
 
 PointsObject::~PointsObject()
@@ -51,17 +53,38 @@ void PointsObject::update()
 {
     if(_transitionActive)
     {
-	//TODO: advance and check for done
-	_transitionActive = false;
-	if(_activePanMarker->loadPan())
+	float lastStatus = _transition / _transitionTime;
+	_transition += PluginHelper::getLastFrameDuration();
+	if(_transition > _transitionTime)
 	{
-	    _storedNodeMask = _root->getNodeMask();
-	    _root->setNodeMask(0);
+	    _transition = _transitionTime;
 	}
-	else
+
+	float status = _transition / _transitionTime;
+	status -= lastStatus;
+
+	osg::Vec3 movement = (_startCenter - _endCenter);
+	movement.x() *= status;
+	movement.y() *= status;
+	movement.z() *= status;
+	osg::Matrix m;
+	m.makeTranslate(movement);
+
+	setTransform(getTransform() * m);
+
+	if(_transition == _transitionTime)
 	{
-	    _activePanMarker = NULL;
-	    setNavigationOn(true);
+	    _transitionActive = false;
+	    if(_activePanMarker->loadPan())
+	    {
+		_storedNodeMask = _root->getNodeMask();
+		_root->setNodeMask(0);
+	    }
+	    else
+	    {
+		_activePanMarker = NULL;
+		setNavigationOn(true);
+	    }
 	}
     }
 }
@@ -86,4 +109,12 @@ void PointsObject::startTransition()
     //TODO: find to/from movement points
     _transitionActive = true;
     setNavigationOn(false);
+    _transition = 0.0;
+
+    osg::Vec3 offset = ConfigManager::getVec3("Plugin.PanoViewLOD.Offset");
+    offset = offset + osg::Vec3(0,0,_activePanMarker->getCenterHeight());
+
+    _endCenter = offset;
+    _startCenter = _activePanMarker->getObjectToWorldMatrix().getTrans();
+
 }

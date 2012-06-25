@@ -16,6 +16,10 @@ class PanMarkerObject : public cvr::SceneObject
         virtual void enterCallback(int handID, const osg::Matrix &mat);
 
         void setViewerDistance(float distance);
+        float getCenterHeight()
+        {
+            return _centerHeight;
+        }
 
         bool loadPan();
         void panUnloaded();
@@ -26,6 +30,8 @@ class PanMarkerObject : public cvr::SceneObject
         float _rotationOffset;
         osg::ref_ptr<osg::ShapeDrawable> _sphere;
         osg::ref_ptr<osg::Geode> _sphereGeode;
+
+        float _centerHeight;
 
         std::string _name;
 };

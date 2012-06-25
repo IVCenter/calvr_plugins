@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+#define DEFAULT_PAN_HEIGHT 1128.0
+
 struct PanLoadRequest;
 
 class PanoViewLOD : public cvr::CVRPlugin, public cvr::MenuCallback

@@ -22,6 +22,13 @@ PanMarkerObject::PanMarkerObject(float scale, float rotationOffset, std::string 
 
     _name = name;
 
+    PanHeightRequest phr;
+    phr.name = name;
+    phr.height = 0.0;
+
+    PluginHelper::sendMessageByName("PanoViewLOD",PAN_HEIGHT_REQUEST,(char*)&phr);
+    _centerHeight = phr.height;
+
     osg::StateSet * stateset = _sphereGeode->getOrCreateStateSet();
     stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
     stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
