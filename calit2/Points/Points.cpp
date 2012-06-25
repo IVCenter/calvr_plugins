@@ -370,5 +370,11 @@ void Points::message(int type, char *&data, bool collaborative)
 	}
 
 	loadFile(pli->file,pli->group.get());
+
+	//attach shader and uniform
+	osg::StateSet *state = pli->group->getOrCreateStateSet();
+	state->setAttribute(pgm1);
+	state->addUniform(new osg::Uniform("pointScale", initialPointScale));
+
     }
 }

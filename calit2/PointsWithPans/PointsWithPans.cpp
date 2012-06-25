@@ -112,12 +112,12 @@ void PointsWithPans::menuCallback(MenuItem * item)
 	    _activeObject->setNavigationOn(true);
 	    _activeObject->addChild(pli.group.get());
 
-	    _sizeUni = pli.group->getOrCreateStateSet()->getUniform("pointSize");
+	    /*_sizeUni = pli.group->getOrCreateStateSet()->getUniform("pointSize");
 	    if(_sizeUni)
 	    {
 		_sizeUni->set(_setList[i]->pointSize);
-	    }
-	    _scaleUni = new osg::Uniform("objectScale",1.0f);
+	    }*/
+	    _scaleUni = new osg::Uniform("pointScale",1.0f * _setList[i]->pointSize);
 	    pli.group->getOrCreateStateSet()->addUniform(_scaleUni);
 	    _scaleUni->set((float)_activeObject->getObjectToWorldMatrix().getScale().x());
 
@@ -141,7 +141,7 @@ void PointsWithPans::preFrame()
 {
     if(_loadedSetIndex >= 0 && _scaleUni && _activeObject)
     {
-	_scaleUni->set((float)_activeObject->getObjectToWorldMatrix().getScale().x());
+	_scaleUni->set((float)(_activeObject->getObjectToWorldMatrix().getScale().x()*_setList[_loadedSetIndex]->pointSize));
     }
 
     if(_loadedSetIndex >= 0)

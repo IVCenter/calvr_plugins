@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#define DEFAULT_PAN_HEIGHT 1128.0
+#define DEFAULT_PAN_HEIGHT 1800.0
 
 struct PanLoadRequest;
 
