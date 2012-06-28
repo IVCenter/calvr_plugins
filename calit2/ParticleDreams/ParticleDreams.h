@@ -31,6 +31,8 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
         void initGeometry();
         void initSound();
 
+        void updateHand();
+
         void pdata_init_age(int mAge);
         void pdata_init_velocity(float vx,float vy,float vz);
 	void pdata_init_rand();

@@ -4,6 +4,7 @@
 
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/Navigation.h>
+#include <cvrConfig/ConfigManager.h>
 
 #include <cuda_gl_interop.h>
 
@@ -56,6 +57,8 @@ bool ParticleDreams::init()
 
     PluginHelper::addRootMenuItem(_myMenu);
 
+    hand_id = ConfigManager::getInt("value","Plugin.ParticleDreams.HandID",0);
+
     return true;
 }
 
@@ -67,7 +70,7 @@ void ParticleDreams::menuCallback(MenuItem * item)
 	{
 	    initPart();
 	    initGeometry();
-	    //initSound();
+	    initSound();
 	}
     }
 }
@@ -93,6 +96,8 @@ void ParticleDreams::preFrame()
 	    startTime = nowTime;  frNum =0;
 	}
 	frNum++;
+
+	updateHand();
 
 	sceneChange =0;
 
@@ -158,6 +163,60 @@ void ParticleDreams::preFrame()
 
 bool ParticleDreams::processEvent(InteractionEvent * event)
 {
+    TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
+    if(tie)
+    {
+	if(tie->getHand() == hand_id)
+	{
+	    if((tie->getInteraction() == BUTTON_DOWN || tie->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getButton() <= 4)
+	    {
+		if(tie->getButton() == 0)
+		{
+		    trigger = 1;
+		}
+		else if(tie->getButton() == 1)
+		{
+		    but1 = 1;
+		}
+		else if(tie->getButton() == 2)
+		{
+		    but2 = 1;
+		}
+		else if(tie->getButton() == 3)
+		{
+		    but3 = 1;
+		}
+		else if(tie->getButton() == 4)
+		{
+		    but4 = 1;
+		}
+	    }
+	    else if(tie->getInteraction() == BUTTON_UP && tie->getButton() <= 4)
+	    {
+		if(tie->getButton() == 0)
+		{
+		    trigger = 0;
+		}
+		else if(tie->getButton() == 1)
+		{
+		    but1 = 0;
+		}
+		else if(tie->getButton() == 2)
+		{
+		    but2 = 0;
+		}
+		else if(tie->getButton() == 3)
+		{
+		    but3 = 0;
+		}
+		else if(tie->getButton() == 4)
+		{
+		    but4 = 0;
+		}
+	    }
+	}
+    }
+
     return false;
 }
 
@@ -416,6 +475,27 @@ void ParticleDreams::initGeometry()
 
 void ParticleDreams::initSound()
 {
+}
+
+void ParticleDreams::updateHand()
+{
+    osg::Vec3 offset(0.0,0.150,0.0);
+
+    osg::Matrix m = PluginHelper::getHandMat(hand_id) * _particleObject->getWorldToObjectMatrix();
+    osg::Vec3 handdir = osg::Vec3(0,1.0,0) * m;
+    handdir = handdir - m.getTrans();
+    handdir.normalize();
+    osg::Vec3 handpos = m.getTrans() + offset;
+    m.setTrans(handpos);
+
+    wandPos[0] = handpos.x();
+    wandPos[1] = handpos.y();
+    wandPos[2] = handpos.z();
+    wandVec[0] = handdir.x();
+    wandVec[1] = handdir.y();
+    wandVec[2] = handdir.z();
+
+    
 }
 
 void ParticleDreams::pdata_init_age(int mAge)

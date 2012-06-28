@@ -491,8 +491,12 @@ void ModelLoader::preFrame()
     // Switch time dependent objects to next step:
     for(int i = 0; i < _loadedObjects.size(); i++)
     {
-        osg::Switch* switchnode = dynamic_cast<osg::Switch*>(_loadedObjects[i]->getRootNode()->getChild(0));
-        assert(switchnode);
+        osg::Switch* switchnode = dynamic_cast<osg::Switch*>(_loadedObjects[i]->getChildNode(0));
+        if(!switchnode)
+	{
+	    std::cerr << "ModelLoader: Unable to get model Switch node." << std::endl;
+	    continue;
+	}
         numChildren = switchnode->getNumChildren();
         if (numChildren > 1)
         {
