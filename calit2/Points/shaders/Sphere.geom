@@ -8,6 +8,8 @@ flat out vec3 vertex_light_position;
 flat out vec4 eye_position;
 flat out float sphere_radius;
 
+uniform float globalAlpha;
+
 void
 main(void)
 {
@@ -15,7 +17,7 @@ main(void)
     	float halfsize = sphere_radius * 0.5;
 
     	gl_FrontColor = gl_FrontColorIn[0];
-    	gl_FrontColor.a = 1.0;
+    	gl_FrontColor.a = globalAlpha;
 
     	vertex_light_position = normalize(gl_LightSource[0].position.xyz);
     	eye_position = gl_PositionIn[0];

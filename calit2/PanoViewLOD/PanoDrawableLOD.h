@@ -25,6 +25,9 @@ class PanoDrawableLOD : public osg::Drawable
         void previous();
         void setZoom(osg::Vec3 dir, float k);
         void setRadius(float radius) { _radius = radius; }
+       
+        void setAlpha(float alpha) { _alpha = alpha; }
+        float getAlpha() { return _alpha; }
         
         float getCurrentFadeTime() { return _currentFadeTime; }
 
@@ -58,6 +61,7 @@ class PanoDrawableLOD : public osg::Drawable
         static std::map<int,bool> _updateDoneMap;
 
         float _radius;
+        float _alpha;
         int _mesh;
         int _depth;
         int _size;

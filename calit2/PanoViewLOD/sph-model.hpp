@@ -34,7 +34,7 @@ public:
 
     void prep(const double *, const double *, int, int);
     void draw(const double *, const double *, const int *, int,
-                                              const int *, int);
+                                              const int *, int, float);
     
     void set_fade(double k);
     void set_zoom(double x, double y, double z, double k)

@@ -107,6 +107,13 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
     _heightRV->setCallback(this);
     addMenuItem(_heightRV);
 
+    _alphaRV = new MenuRangeValue("Alpha",0.0,1.0,1.0);
+    _alphaRV->setCallback(this);
+    addMenuItem(_alphaRV);
+
+    _leftDrawable->setAlpha(_alphaRV->getValue());
+    _rightDrawable->setAlpha(_alphaRV->getValue());
+
     _zoomValuator = ConfigManager::getInt("value","Plugin.PanoViewLOD.ZoomValuator",0);
     _spinValuator = ConfigManager::getInt("value","Plugin.PanoViewLOD.SpinValuator",0);
     _spinScale = ConfigManager::getFloat("value","Plugin.PanoViewLOD.SpinScale",1.0);
@@ -160,6 +167,18 @@ void PanoViewObject::previous()
     _rightDrawable->previous();
 }
 
+void PanoViewObject::setAlpha(float alpha)
+{
+    _alphaRV->setValue(alpha);
+    _leftDrawable->setAlpha(_alphaRV->getValue());
+    _rightDrawable->setAlpha(_alphaRV->getValue());
+}
+
+float PanoViewObject::getAlpha()
+{
+    return _alphaRV->getValue();
+}
+
 void PanoViewObject::menuCallback(cvr::MenuItem * item)
 {
     if(item == _nextButton)
@@ -184,6 +203,12 @@ void PanoViewObject::menuCallback(cvr::MenuItem * item)
 	osg::Vec3 ovec(0,0,offset);
 	_heightMat.makeTranslate(ovec + _offset);
 	setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+    }
+
+    if(item == _alphaRV)
+    {
+	_leftDrawable->setAlpha(_alphaRV->getValue());
+	_rightDrawable->setAlpha(_alphaRV->getValue());
     }
 
     if(item == _zoomResetButton)

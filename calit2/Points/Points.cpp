@@ -88,6 +88,7 @@ bool Points::loadFile(std::string filename)
 	    osg::StateSet *state = points->getOrCreateStateSet();
 	    state->setAttribute(pgm1);
 	    state->addUniform(currentobject->pointScale);
+	    state->addUniform(new osg::Uniform("globalAlpha",1.0f));
 
 	    _loadedPoints.push_back(currentobject);
 
@@ -375,6 +376,7 @@ void Points::message(int type, char *&data, bool collaborative)
 	osg::StateSet *state = pli->group->getOrCreateStateSet();
 	state->setAttribute(pgm1);
 	state->addUniform(new osg::Uniform("pointScale", initialPointScale));
+	state->addUniform(new osg::Uniform("globalAlpha",1.0f));
 
     }
 }

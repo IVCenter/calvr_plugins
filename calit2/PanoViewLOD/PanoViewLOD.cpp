@@ -215,6 +215,16 @@ void PanoViewLOD::message(int type, char *&data, bool collaborative)
 
 	phr->height = _pans[i]->height - ConfigManager::getFloat("value","Plugin.PanoViewLOD.FloorOffset",1500.0) + DEFAULT_PAN_HEIGHT;
     }
+
+    if(type == PAN_SET_ALPHA)
+    {
+	float alpha = *((float*)data);
+
+	if(_panObject)
+	{
+	    _panObject->setAlpha(alpha);
+	}
+    }
 }
 
 void PanoViewLOD::createLoadMenu(std::string tagBase, std::string tag, SubMenu * menu)

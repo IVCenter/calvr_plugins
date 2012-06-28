@@ -24,6 +24,9 @@ class PanMarkerObject : public cvr::SceneObject
         bool loadPan();
         void panUnloaded();
 
+        void hide();
+        void unhide();
+
     protected:
         bool _viewerInRange;
         float _scale;

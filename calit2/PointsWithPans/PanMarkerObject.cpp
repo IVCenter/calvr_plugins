@@ -30,7 +30,9 @@ PanMarkerObject::PanMarkerObject(float scale, float rotationOffset, std::string 
     _centerHeight = phr.height;
 
     osg::StateSet * stateset = _sphereGeode->getOrCreateStateSet();
-    stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    std::string bname = "spheres";
+    //stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    stateset->setRenderBinDetails(2,bname);
     stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
 
     osg::CullFace * cf = new osg::CullFace();
@@ -99,7 +101,7 @@ bool PanMarkerObject::loadPan()
 
     if(plr.loaded)
     {
-	removeChild(_sphereGeode);
+	//removeChild(_sphereGeode);
     }
     else
     {
@@ -110,6 +112,19 @@ bool PanMarkerObject::loadPan()
 }
 
 void PanMarkerObject::panUnloaded()
+{
+    /*if(!_sphereGeode->getNumParents())
+    {
+	addChild(_sphereGeode);
+    }*/
+}
+
+void PanMarkerObject::hide()
+{
+    removeChild(_sphereGeode);
+}
+
+void PanMarkerObject::unhide()
 {
     if(!_sphereGeode->getNumParents())
     {

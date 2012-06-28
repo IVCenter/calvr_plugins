@@ -70,7 +70,7 @@ bool PointsWithPans::init()
 	_buttonList.push_back(button);
     }
 
-    _activeObject = new PointsObject("Points",true,false,false,false,true);
+    _activeObject = new PointsObject("Points",true,false,false,true,true);
     PluginHelper::registerSceneObject(_activeObject,"PointsWithPans");
 
     return true;

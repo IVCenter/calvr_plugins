@@ -9,6 +9,8 @@
 #include <cvrMenu/MenuRangeValue.h>
 #include <cvrMenu/MenuCheckbox.h>
 
+#include <osg/Uniform>
+
 #include <string>
 
 class PanoViewObject : public cvr::SceneObject
@@ -22,6 +24,9 @@ class PanoViewObject : public cvr::SceneObject
 
         void next();
         void previous();
+
+        void setAlpha(float alpha);
+        float getAlpha();
 
         virtual void menuCallback(cvr::MenuItem * item);
         virtual void updateCallback(int handID, const osg::Matrix & mat);
@@ -57,11 +62,14 @@ class PanoViewObject : public cvr::SceneObject
         cvr::MenuButton * _previousButton;
         cvr::MenuRangeValue * _radiusRV;
         cvr::MenuRangeValue * _heightRV;
+        cvr::MenuRangeValue * _alphaRV;
         cvr::MenuCheckbox * _spinCB;
         cvr::MenuCheckbox * _zoomCB;
         cvr::MenuButton * _zoomResetButton;
         cvr::MenuCheckbox * _demoMode;
         cvr::MenuCheckbox * _trackball;
+
+        osg::ref_ptr<osg::Uniform> _alphaUni;
 
         double _demoTime;
         double _demoChangeTime;

@@ -6,6 +6,8 @@ uniform sampler2D image[16];
 uniform float     alpha[16];
 uniform float     fader;
 
+uniform float globalAlpha;
+
 //------------------------------------------------------------------------------
 
 // Some hardware disallows accessing a sampler array element using a computed
@@ -143,6 +145,6 @@ void main()
     vec4 A = sampleA(gl_TexCoord[0].xy);
     vec4 B = sampleB(gl_TexCoord[0].xy);
 
-    gl_FragColor = mix(A, B, fader);
+    gl_FragColor = vec4(mix(A.rgb, B.rgb, fader),globalAlpha);
 }
 

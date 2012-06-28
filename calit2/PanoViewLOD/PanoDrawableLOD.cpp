@@ -631,7 +631,7 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
     //glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
     //clearGLClientState();
 
-    _modelMap[context]->draw(ri.getState()->getProjectionMatrix().ptr(), modelview.ptr(), fileID, fc, pv, pc);
+    _modelMap[context]->draw(ri.getState()->getProjectionMatrix().ptr(), modelview.ptr(), fileID, fc, pv, pc, _alpha);
 
     popClientState(glstate);
     //glPopClientAttrib();

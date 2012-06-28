@@ -10,6 +10,7 @@ CMakeCache.txt
 *.sdf
 *.sln
 *.suo
+*.o
 Debug
 ipch
 *.dir
