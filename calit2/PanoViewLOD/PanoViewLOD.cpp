@@ -225,6 +225,11 @@ void PanoViewLOD::message(int type, char *&data, bool collaborative)
 	    _panObject->setAlpha(alpha);
 	}
     }
+
+    if(type == PAN_UNLOAD)
+    {
+	removePan();
+    }
 }
 
 void PanoViewLOD::createLoadMenu(std::string tagBase, std::string tag, SubMenu * menu)
@@ -438,16 +443,18 @@ void PanoViewLOD::removePan()
 {
     if(_panObject)
     {
-	_panObject->detachFromScene();
-	PluginHelper::unregisterSceneObject(_panObject);
-	delete _panObject;
-	_panObject = NULL;
-
 	if(_loadRequest)
 	{
 	    PluginHelper::sendMessageByName(_loadRequest->plugin,_loadRequest->pluginMessageType,(char*)NULL);
 	    delete _loadRequest;
 	    _loadRequest = NULL;
+	}
+	else
+	{
+	    _panObject->detachFromScene();
+	    PluginHelper::unregisterSceneObject(_panObject);
+	    delete _panObject;
+	    _panObject = NULL;
 	}
     }
 }

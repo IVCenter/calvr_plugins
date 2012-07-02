@@ -12,6 +12,7 @@ PointsObject::PointsObject(std::string name, bool navigation, bool movable, bool
     _activePanMarker = NULL;
     _transitionActive = false;
     _fadeActive = false;
+    _fadeInActive = false;
     _transitionTime = 4.0;
 
     _totalFadeTime = 5.0;
@@ -58,10 +59,14 @@ void PointsObject::panUnloaded()
 	//_root->setNodeMask(_storedNodeMask);
 	if(_alphaUni)
 	{
-	    _alphaUni->set(1.0f);
+	    _alphaUni->set(0.0f);
 	}
 	attachToScene();
-	_activePanMarker->panUnloaded();
+	_fadeInActive = true;
+	float panAlpha = 1.0f;
+	PluginHelper::sendMessageByName("PanoViewLOD",PAN_SET_ALPHA,(char*)&panAlpha);
+	_fadeTime = 0.0;
+	/*_activePanMarker->panUnloaded();
 	_activePanMarker = NULL;
 	setNavigationOn(true);
 
@@ -72,7 +77,7 @@ void PointsObject::panUnloaded()
 	    {
 		pmo->unhide();
 	    }
-	}
+	}*/
     }
 }
 
@@ -196,6 +201,36 @@ void PointsObject::update()
 		detachFromScene();
 		
 	    }
+	}
+    }
+    else if(_fadeInActive)
+    {
+	_fadeTime += PluginHelper::getLastFrameDuration();
+	if(_fadeTime > _totalFadeTime)
+	{
+	    _fadeTime = _totalFadeTime;
+	}
+
+	setAlpha(_fadeTime / _totalFadeTime);
+	float panAlpha = 1.0f - (_fadeTime / _totalFadeTime);
+	PluginHelper::sendMessageByName("PanoViewLOD",PAN_SET_ALPHA,(char*)&panAlpha);
+
+	if(_fadeTime == _totalFadeTime)
+	{
+	    _fadeInActive = false;
+	    _activePanMarker->panUnloaded();
+	    _activePanMarker = NULL;
+	    setNavigationOn(true);
+
+	    for(int i = 0; i < getNumChildObjects(); i++)
+	    {
+		PanMarkerObject * pmo = dynamic_cast<PanMarkerObject*>(getChildObject(i));
+		if(pmo)
+		{
+		    pmo->unhide();
+		}
+	    }
+	    PluginHelper::sendMessageByName("PanoViewLOD",PAN_UNLOAD,NULL);
 	}
     }
 }

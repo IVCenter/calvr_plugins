@@ -68,7 +68,8 @@ enum PanoViewLODMessageType
 {
     PAN_LOAD_REQUEST=0,
     PAN_HEIGHT_REQUEST,
-    PAN_SET_ALPHA
+    PAN_SET_ALPHA,
+    PAN_UNLOAD
 };
 
 struct PanLoadRequest

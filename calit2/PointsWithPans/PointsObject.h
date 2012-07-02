@@ -36,6 +36,7 @@ class PointsObject : public cvr::SceneObject
 
         bool _transitionActive;
         bool _fadeActive;
+        bool _fadeInActive;
         osg::Node::NodeMask _storedNodeMask;
 
         osg::Vec3 _startCenter;
