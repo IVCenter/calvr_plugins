@@ -4,6 +4,8 @@
 
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/Navigation.h>
+#include <cvrKernel/CVRViewer.h>
+#include <cvrKernel/CVRStatsHandler.h>
 #include <cvrConfig/ConfigManager.h>
 
 #include <cuda_gl_interop.h>
@@ -68,6 +70,10 @@ void ParticleDreams::menuCallback(MenuItem * item)
     {
 	if(_enable->getValue())
 	{
+
+	    CVRViewer::instance()->getStatsHandler()->addStatTimeBar(CVRStatsHandler::CAMERA_STAT,"PDCuda Time:","PD Cuda duration","PD Cuda start","PD Cuda end",osg::Vec3(0,1,0),"PD stats");
+	    //CVRViewer::instance()->getStatsHandler()->addStatTimeBar(CVRStatsHandler::CAMERA_STAT,"PDCuda Copy:","PD Cuda Copy duration","PD Cuda Copy start","PD Cuda Copy end",osg::Vec3(0,0,1),"PD stats");
+
 	    initPart();
 	    initGeometry();
 	    initSound();
@@ -222,15 +228,22 @@ bool ParticleDreams::processEvent(InteractionEvent * event)
 
 void ParticleDreams::perContextCallback(int contextid) const
 {
+    if(CVRViewer::instance()->done())
+    {
+	//TODO: add cuda cleanup
+	return;
+    }
     //std::cerr << "ContextID: " << contextid << std::endl;
     _callbackLock.lock();
     if(!_callbackInit[contextid])
     {
 	//TODO: setup real mapping
 	cudaGLSetGLDevice(contextid);
+	cudaSetDevice(contextid);
 
 	printCudaErr();
 	osg::VertexBufferObject * vbo = _particleGeo->getOrCreateVertexBufferObject();
+	vbo->setUsage(GL_DYNAMIC_DRAW);
 	osg::GLBufferObject * glbo = vbo->getOrCreateGLBufferObject(contextid);
 	std::cerr << "Context: " << contextid << " VBO id: " << glbo->getGLObjectID() << " size: " << vbo->computeRequiredBufferSize() << std::endl;
 	checkRegBufferObj(glbo->getGLObjectID());
@@ -265,6 +278,48 @@ void ParticleDreams::perContextCallback(int contextid) const
     }
     _callbackLock.unlock();
 
+    osg::Stats * stats = NULL;
+
+    osgViewer::ViewerBase::Contexts contexts;
+    CVRViewer::instance()->getContexts(contexts);
+
+    for(osgViewer::ViewerBase::Contexts::iterator citr = contexts.begin(); citr != contexts.end();
+                ++citr)
+    {
+	if((*citr)->getState()->getContextID() != contextid)
+	{
+	    continue;
+	}
+
+	osg::GraphicsContext::Cameras& cameras = (*citr)->getCameras();
+	for(osg::GraphicsContext::Cameras::iterator camitr = cameras.begin(); camitr != cameras.end();++camitr)
+	{
+	    if((*camitr)->getStats())
+	    {
+		stats = (*camitr)->getStats();
+		break;
+	    }
+	}
+
+	if(stats)
+	{
+	    break;
+	}
+    }
+
+    double cudastart, cudaend;
+    double cudacopystart, cudacopyend;
+
+    if(stats && ! stats->collectStats("PD stats"))
+    {
+	stats = NULL;
+    }
+
+    if(stats)
+    {
+	cudastart = osg::Timer::instance()->delta_s(CVRViewer::instance()->getStartTick(), osg::Timer::instance()->tick());
+    }
+
     if (sceneNum ==0)
     {//paint on walls
 	scene_data_0_context(contextid);
@@ -287,8 +342,18 @@ void ParticleDreams::perContextCallback(int contextid) const
 	scene_data_4_context(contextid);
     }
 
+    //if(stats)
+    //{
+    //	cudacopystart = osg::Timer::instance()->delta_s(CVRViewer::instance()->getStartTick(), osg::Timer::instance()->tick());
+    //}
+
     cudaMemcpyToSymbol("injdata",h_injectorData,sizeof(h_injectorData));
     cudaMemcpyToSymbol("refldata",h_reflectorData,sizeof(h_reflectorData));
+
+    //if(stats)
+    //{
+    //	cudacopyend = osg::Timer::instance()->delta_s(CVRViewer::instance()->getStartTick(), osg::Timer::instance()->tick());
+    //}
 
     //process audio fades
     //if ((SOUND_SERV ==1)&& (::host->root() == 1)){	audioProcess();}
@@ -303,11 +368,24 @@ void ParticleDreams::perContextCallback(int contextid) const
 
     launchPoint1((float3*)d_vbo,(float4*)d_colorptr,(float*)d_particleDataMap[contextid],(float*)d_debugDataMap[contextid],CUDA_MESH_WIDTH,CUDA_MESH_HEIGHT,max_age,disappear_age,alphaControl,anim,gravity,colorFreq,0.0);
 
+
     printCudaErr();
+
+    cudaThreadSynchronize();
 
     checkUnmapBufferObj(vbo);
 
-    cudaThreadSynchronize();
+    if(stats)
+    {
+	cudaend = osg::Timer::instance()->delta_s(CVRViewer::instance()->getStartTick(), osg::Timer::instance()->tick());
+        stats->setAttribute(CVRViewer::instance()->getViewerFrameStamp()->getFrameNumber(), "PD Cuda start", cudastart);
+        stats->setAttribute(CVRViewer::instance()->getViewerFrameStamp()->getFrameNumber(), "PD Cuda end", cudaend);
+        stats->setAttribute(CVRViewer::instance()->getViewerFrameStamp()->getFrameNumber(), "PD Cuda duration", cudaend-cudastart);
+	
+	//stats->setAttribute(CVRViewer::instance()->getViewerFrameStamp()->getFrameNumber(), "PD Cuda Copy start", cudacopystart);
+        //stats->setAttribute(CVRViewer::instance()->getViewerFrameStamp()->getFrameNumber(), "PD Cuda Copy end", cudacopyend);
+        //stats->setAttribute(CVRViewer::instance()->getViewerFrameStamp()->getFrameNumber(), "PD Cuda Copy duration", cudacopyend-cudacopystart);
+    }
 }
 
 void ParticleDreams::initPart()

@@ -12,7 +12,7 @@ CUDA_ADD_LIBRARY(${LIB_NAME}
     ParticleDreams.cpp
     PDObject.cpp
     CudaHelper.cpp
-    "SHARED")
+    "SHARED" OPTIONS --ptxas-options=-v)
 
 INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})
 INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIRS})
