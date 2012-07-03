@@ -496,7 +496,7 @@ void ParticleDreams::initPart()
         //printf ( "rnd num %f %f %f \n", h_particleData[PDATA_ROW_SIZE * i +4],h_particleData[PDATA_ROW_SIZE * i +5],h_particleData[PDATA_ROW_SIZE * i +6]);
     }
 
-    CVRViewer::instance()->addPerContextFrameStartCallback(this);
+    CVRViewer::instance()->addPerContextPostFinishCallback(this);
 }
 
 void ParticleDreams::initGeometry()
