@@ -187,6 +187,12 @@ void PanoViewLOD::message(int type, char *&data, bool collaborative)
 
 	menuCallback(_panButtonList[i]);
 	plr->loaded = true;
+
+	if(_panObject)
+	{
+	    _panObject->setRotate(plr->rotationOffset);
+	}
+
 	return;
     }
 
@@ -445,7 +451,9 @@ void PanoViewLOD::removePan()
     {
 	if(_loadRequest)
 	{
-	    PluginHelper::sendMessageByName(_loadRequest->plugin,_loadRequest->pluginMessageType,(char*)NULL);
+	    float rotate = 0.0;
+	    rotate = _panObject->getRotate();
+	    PluginHelper::sendMessageByName(_loadRequest->plugin,_loadRequest->pluginMessageType,(char*)&rotate);
 	    delete _loadRequest;
 	    _loadRequest = NULL;
 	}

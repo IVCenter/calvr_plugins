@@ -61,6 +61,7 @@ bool PointsWithPans::init()
 	    pan.location = osg::Vec3(x,y,z);
 	    pan.name = ConfigManager::getEntry("name",panss.str(),"",NULL);
 	    pan.rotationOffset = ConfigManager::getFloat("rotationOffset",panss.str(),0);
+	    pan.rotationOffset = pan.rotationOffset * M_PI / 180.0;
 	    set->panList.push_back(pan);
 	}
 	_setList.push_back(set);
@@ -156,7 +157,8 @@ void PointsWithPans::message(int type, char *&data, bool collaborative)
     {
 	if(_loadedSetIndex >= 0)
 	{
-	    _activeObject->panUnloaded();
+	    float rotation = *((float*)data);
+	    _activeObject->panUnloaded(rotation);
 	}
     }
 }

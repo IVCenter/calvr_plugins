@@ -28,6 +28,9 @@ class PanoViewObject : public cvr::SceneObject
         void setAlpha(float alpha);
         float getAlpha();
 
+        void setRotate(float rotate);
+        float getRotate();
+
         virtual void menuCallback(cvr::MenuItem * item);
         virtual void updateCallback(int handID, const osg::Matrix & mat);
         virtual bool eventCallback(cvr::InteractionEvent * ie);

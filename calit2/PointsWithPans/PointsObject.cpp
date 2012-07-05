@@ -52,10 +52,14 @@ void PointsObject::setActiveMarker(PanMarkerObject * marker)
     }
 }
 
-void PointsObject::panUnloaded()
+void PointsObject::panUnloaded(float rotation)
 {
     if(_activePanMarker)
     {
+	float roffset = rotation - _activePanMarker->getRotationOffset();
+	osg::Vec3 rpoint = _activePanMarker->getTransform().getTrans();
+	//TODO: apply this rotation correction, but test other stuff first
+
 	//_root->setNodeMask(_storedNodeMask);
 	if(_alphaUni)
 	{

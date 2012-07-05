@@ -20,6 +20,10 @@ class PanMarkerObject : public cvr::SceneObject
         {
             return _centerHeight;
         }
+        float getRotationOffset()
+        {
+            return _rotationOffset;
+        }
 
         bool loadPan();
         void panUnloaded();

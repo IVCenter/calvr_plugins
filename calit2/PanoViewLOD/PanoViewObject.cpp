@@ -179,6 +179,25 @@ float PanoViewObject::getAlpha()
     return _alphaRV->getValue();
 }
 
+void PanoViewObject::setRotate(float rotate)
+{
+    _spinMat.makeRotate(rotate, osg::Vec3(0,0,1));
+    setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+
+    if(_currentZoom != 0.0)
+    {
+	updateZoom(_lastZoomMat);
+    }
+}
+
+float PanoViewObject::getRotate()
+{
+    osg::Vec3d vec;
+    double angle;
+    _spinMat.getRotate().getRotate(angle,vec);
+    return angle;
+}
+
 void PanoViewObject::menuCallback(cvr::MenuItem * item)
 {
     if(item == _nextButton)

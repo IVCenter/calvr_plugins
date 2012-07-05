@@ -17,7 +17,7 @@ class PointsObject : public cvr::SceneObject
 
         bool getPanActive();
         void setActiveMarker(PanMarkerObject * marker);
-        void panUnloaded();
+        void panUnloaded(float rotation);
         void clear();
 
         void setAlpha(float alpha);
