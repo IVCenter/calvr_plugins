@@ -8,6 +8,10 @@
 #include <cvrKernel/CVRStatsHandler.h>
 #include <cvrConfig/ConfigManager.h>
 
+#include <osg/PointSprite>
+#include <osg/BlendFunc>
+#include <osg/Depth>
+
 #include <cuda_gl_interop.h>
 
 #include <sys/time.h>
@@ -237,15 +241,16 @@ void ParticleDreams::perContextCallback(int contextid) const
     _callbackLock.lock();
     if(!_callbackInit[contextid])
     {
-	//TODO: setup real mapping
-	cudaGLSetGLDevice(contextid);
-	cudaSetDevice(contextid);
+	int cudaDevice = ScreenConfig::instance()->getCudaDevice(contextid);
+	cudaGLSetGLDevice(cudaDevice);
+	cudaSetDevice(cudaDevice);
+	//std::cerr << "CudaDevice: " << cudaDevice << std::endl;
 
 	printCudaErr();
 	osg::VertexBufferObject * vbo = _particleGeo->getOrCreateVertexBufferObject();
 	vbo->setUsage(GL_DYNAMIC_DRAW);
 	osg::GLBufferObject * glbo = vbo->getOrCreateGLBufferObject(contextid);
-	std::cerr << "Context: " << contextid << " VBO id: " << glbo->getGLObjectID() << " size: " << vbo->computeRequiredBufferSize() << std::endl;
+	//std::cerr << "Context: " << contextid << " VBO id: " << glbo->getGLObjectID() << " size: " << vbo->computeRequiredBufferSize() << std::endl;
 	checkRegBufferObj(glbo->getGLObjectID());
 	printCudaErr();
 
@@ -534,9 +539,19 @@ void ParticleDreams::initGeometry()
     _primitive = new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT);
     _particleGeo->addPrimitiveSet(_primitive);
 
+    osg::PointSprite * sprite = new osg::PointSprite();
+    osg::BlendFunc * blend = new osg::BlendFunc();
+    blend->setFunction(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE);
+    osg::Depth * depth = new osg::Depth();
+    depth->setWriteMask(false);
+
     osg::StateSet * stateset = _particleGeo->getOrCreateStateSet();
+    stateset->setTextureAttributeAndModes(0, sprite, osg::StateAttribute::ON);
+    stateset->setAttributeAndModes(blend, osg::StateAttribute::ON);
+    stateset->setAttributeAndModes(depth, osg::StateAttribute::ON);
     stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
     stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+    
 
     _particleGeode->addDrawable(_particleGeo);
     _particleObject->addChild(_particleGeode);
