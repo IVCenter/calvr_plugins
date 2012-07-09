@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#define HAS_AUDIO
+#define HAS_AUDIO 0
 
 #ifdef HAS_AUDIO
 #include "Audio/AssetManager.h"
