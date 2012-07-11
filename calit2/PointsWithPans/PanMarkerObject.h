@@ -31,10 +31,16 @@ class PanMarkerObject : public cvr::SceneObject
         void hide();
         void unhide();
 
+        float getCurrentRotation()
+        {
+            return _currentRotation;
+        }
+
     protected:
         bool _viewerInRange;
         float _scale;
         float _rotationOffset;
+        float _currentRotation;
         osg::ref_ptr<osg::ShapeDrawable> _sphere;
         osg::ref_ptr<osg::Geode> _sphereGeode;
 

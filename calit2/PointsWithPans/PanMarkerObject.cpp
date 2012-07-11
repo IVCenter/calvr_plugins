@@ -90,9 +90,27 @@ void PanMarkerObject::setViewerDistance(float distance)
 
 bool PanMarkerObject::loadPan()
 {
+    osg::Vec3 dir(0,1,0);
+    dir = dir * getWorldToObjectMatrix();
+    dir = dir - getWorldToObjectMatrix().getTrans();
+    dir.z() = 0;
+    dir.normalize();
+    osg::Matrix m;
+    osg::Vec3 axis(0,1,0);
+    double rot;
+    m.makeRotate(dir,axis);
+    m.getRotate().getRotate(rot,axis);
+    if(axis.z() < 0)
+    {
+        rot = (2.0 * M_PI) - rot;
+    }
+
+    std::cerr << "Nav rotation offset: " << rot * 180.0 / M_PI << std::endl;
+    _currentRotation = rot;
+
     PanLoadRequest plr;
     plr.name = getName();
-    plr.rotationOffset = _rotationOffset;
+    plr.rotationOffset = rot + _rotationOffset;
     plr.plugin = "PointsWithPans";
     plr.pluginMessageType = PWP_PAN_UNLOADED;
     plr.loaded = false;

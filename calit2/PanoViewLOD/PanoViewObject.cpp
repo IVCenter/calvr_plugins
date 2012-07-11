@@ -195,6 +195,10 @@ float PanoViewObject::getRotate()
     osg::Vec3d vec;
     double angle;
     _spinMat.getRotate().getRotate(angle,vec);
+    if(vec.z() < 0 )
+    {
+        angle = (2.0 * M_PI) - angle;
+    }
     return angle;
 }
 
@@ -494,6 +498,8 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 		rot.makeRotate((M_PI / 50.0) * val * _spinScale, osg::Vec3(0,0,1));
 		_spinMat = _spinMat * rot;
 		setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+
+                std::cerr << "Spin value: " << getRotate() * 180.0 / M_PI << std::endl;
 
 		if(_currentZoom != 0.0)
 		{
