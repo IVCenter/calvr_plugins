@@ -11,6 +11,8 @@
 #include <osg/PointSprite>
 #include <osg/BlendFunc>
 #include <osg/Depth>
+#include <osgDB/FileUtils>
+#include <osgDB/ReadFile>
 
 #include <cuda_gl_interop.h>
 
@@ -60,6 +62,8 @@ bool ParticleDreams::init()
     _enable = new MenuCheckbox("Enable",false);
     _enable->setCallback(this);
     _myMenu->addItem(_enable);
+
+    _dataDir = ConfigManager::getEntry("value","Plugin.ParticleDreams.DataDir","") + "/";
 
     PluginHelper::addRootMenuItem(_myMenu);
 
@@ -551,7 +555,32 @@ void ParticleDreams::initGeometry()
     stateset->setAttributeAndModes(depth, osg::StateAttribute::ON);
     stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
     stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
-    
+   
+    _spriteVert = osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile(_dataDir + "glsl/sprite.vert"));
+    _spriteFrag = osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile(_dataDir + "glsl/sprite.frag"));
+    _spriteProgram = new osg::Program();
+    _spriteProgram->setName("Sprite");
+    _spriteProgram->addShader(_spriteVert);
+    _spriteProgram->addShader(_spriteFrag);
+    stateset->setAttribute(_spriteProgram);
+    stateset->setMode(GL_VERTEX_PROGRAM_POINT_SIZE, osg::StateAttribute::ON);
+
+    _spriteTexture = new osg::Texture2D();
+    osg::ref_ptr<osg::Image> image = osgDB::readImageFile(_dataDir + "glsl/sprite.png");
+    if(image)
+    {
+	_spriteTexture->setImage(image);
+	_spriteTexture->setWrap(osg::Texture::WRAP_S,osg::Texture::CLAMP_TO_EDGE);
+	_spriteTexture->setWrap(osg::Texture::WRAP_T,osg::Texture::CLAMP_TO_EDGE);
+	_spriteTexture->setFilter(osg::Texture::MIN_FILTER,osg::Texture::LINEAR_MIPMAP_LINEAR);
+	_spriteTexture->setFilter(osg::Texture::MAG_FILTER,osg::Texture::LINEAR);
+	_spriteTexture->setResizeNonPowerOfTwoHint(false);
+	stateset->setTextureAttributeAndModes(0,_spriteTexture,osg::StateAttribute::ON);
+    }
+    else
+    {
+	std::cerr << "Unable to read sprite texture: " << _dataDir + "glsl/sprite.png" << std::endl;
+    }
 
     _particleGeode->addDrawable(_particleGeo);
     _particleObject->addChild(_particleGeode);

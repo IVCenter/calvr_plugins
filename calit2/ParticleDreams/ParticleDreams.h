@@ -11,7 +11,12 @@
 
 #include <osg/Geometry>
 #include <osg/Geode>
+#include <osg/Shader>
+#include <osg/Program>
+#include <osg/Texture2D>
 #include <OpenThreads/Mutex>
+
+#include <string>
 
 class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::PerContextCallback
 {
@@ -113,6 +118,13 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
         double startTime;
         double nowTime;
         double frNum;
+
+        std::string _dataDir;
+
+        osg::ref_ptr<osg::Shader> _spriteVert;
+        osg::ref_ptr<osg::Shader> _spriteFrag;
+        osg::ref_ptr<osg::Program> _spriteProgram;
+        osg::ref_ptr<osg::Texture2D> _spriteTexture;
 
         mutable OpenThreads::Mutex _callbackLock;
         mutable std::map<int,bool> _callbackInit;
