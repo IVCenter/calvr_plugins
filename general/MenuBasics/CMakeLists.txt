@@ -1,14 +1,12 @@
 SET(LIB_NAME MenuBasics)
 SET(PLUGIN_HEADERS
     MenuBasics.h
-    ComputeBBVisitor.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
     "SHARED"
     ${PLUGIN_HEADERS}
     MenuBasics.cpp
-    ComputeBBVisitor.cpp
 )
 
 

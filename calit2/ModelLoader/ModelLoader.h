@@ -44,6 +44,7 @@ class ModelLoader : public cvr::MenuCallback, public cvr::CVRPlugin, public cvr:
 
         std::string configPath;
         std::map<std::string, std::pair<float, osg::Matrix> > locInit;
+        std::map<std::string, std::pair<float, osg::Matrix> > _defaultLocInit;
         std::vector<struct loadinfo *> models;
 
         std::map<cvr::SceneObject*,cvr::MenuButton*> _saveMap;

@@ -4,13 +4,13 @@
 #include <cvrKernel/SceneManager.h>
 #include <cvrMenu/MenuSystem.h>
 #include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/NodeMask.h>
 #include <cvrUtil/TextureVisitors.h>
 
 #include <iostream>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <assert.h>
 
 #include <osg/Matrix>
 #include <osg/CullFace>
@@ -62,6 +62,20 @@ bool ModelLoader::init()
 	info->showBound = ConfigManager::getBool("showBound",configBase + "." + list[i], false);
 
 	models.push_back(info);
+
+	osg::Vec3 center = ConfigManager::getVec3(configBase + "." + list[i]);
+	float scale = ConfigManager::getFloat("scale",configBase + "." + list[i],1.0);
+	float h,p,r;
+	h = ConfigManager::getFloat("h",configBase + "." + list[i],0.0) * M_PI / 180.0;
+	p = ConfigManager::getFloat("p",configBase + "." + list[i],0.0) * M_PI / 180.0;
+	r = ConfigManager::getFloat("r",configBase + "." + list[i],0.0) * M_PI / 180.0;
+	osg::Matrix rot;
+	rot.makeRotate(r,osg::Vec3(0,1,0),p,osg::Vec3(1,0,0),h,osg::Vec3(0,0,1));
+	osg::Matrix trans;
+	trans.makeTranslate(-center);
+	osg::Matrix scaleMat;
+	scaleMat.makeScale(osg::Vec3(scale,scale,scale));
+	_defaultLocInit[info->name] = pair<float, Matrix>(1.0, trans * scaleMat * rot);
     }
 
     configPath = ConfigManager::getEntry("Plugin.ModelLoader.ConfigDir");
@@ -159,122 +173,129 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
 
     for(int i = 0; i < menuFileList.size(); i++)
     {
-	    if(menuFileList[i] == menuItem)
+	if(menuFileList[i] == menuItem)
+	{
+	    if (!isFile(models[i]->path.c_str()))
 	    {
-	        if (!isFile(models[i]->path.c_str()))
-	        {
-	            std::cerr << "ModelLoader: file not found: " << models[i]->path << endl;
-		        return;
-	        }
-	
-	        // Prepare scene object for model file(s):
-	        SceneObject * so;
-	        so = new SceneObject(models[i]->name, false, false, false, true, models[i]->showBound);
-	        osg::Switch* switchNode = new osg::Switch();
-	        so->addChild(switchNode);
-	        PluginHelper::registerSceneObject(so,"ModelLoader");
-	        so->attachToScene();
-
-            char filename[256];
-            strcpy(filename, models[i]->path.c_str());
-            bool done = false;
-            while (!done)
-            {
-                // Read model file:
-                std::string filenamestring(filename);
-                osg::Node* modelNode = osgDB::readNodeFile(filenamestring);
-                if(modelNode==NULL)
-                { 
-                    std::cerr << "ModelLoader: Error reading file " << filename << endl;
-                    done=true;
-                    break;
-                }
-                if(models[i]->mask)
-                {
-                    modelNode->setNodeMask(modelNode->getNodeMask() & ~2);
-                }
-                if(!models[i]->lights)
-                {
-                    osg::StateSet* stateset = modelNode->getOrCreateStateSet();
-                    stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-                }
-                if(models[i]->backfaceCulling)
-                {
-	                osg::StateSet * stateset = modelNode->getOrCreateStateSet();
-	                osg::CullFace * cf=new osg::CullFace();
-	                cf->setMode(osg::CullFace::BACK);
-    	            stateset->setAttributeAndModes( cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-                }
-                
-                // TODO: This should be configurable in menu or config file
-                TextureResizeNonPowerOfTwoHintVisitor tr2v(false);
-                modelNode->accept(tr2v);
-                
-                switchNode->addChild(modelNode);
-           
-                if (!increaseFilename(filename)) done=true;
-                else 
-                {
-                    cerr << "ModelLoader: Checking for file " << filename << endl;
-                    if (!isFile(filename)) 
-                    {
-                      cerr << "ModelLoader: no more time steps found" << endl;
-                      done=true;
-                    }
-                }
-            }
-            if (switchNode->getNumChildren()==1)
-            {
-                cerr << "ModelLoader: Model file loaded successfully." << endl;
-            }
-            else
-            {
-                cerr << "ModelLoader: Loaded animation with " << switchNode->getNumChildren() << " time steps" << endl;
-            }
-            switchNode->setSingleChildOn(0);
-
-	        if(locInit.find(models[i]->name) != locInit.end())
-	        {
-		        osg::Matrix scale;
-		        scale.makeScale(osg::Vec3(locInit[models[i]->name].first,locInit[models[i]->name].first,
-			            locInit[models[i]->name].first));
-		        so->setTransform(scale * locInit[models[i]->name].second);
-	        }
-	        so->setNavigationOn(true);
-	        so->addMoveMenuItem();
-	        so->addNavigationMenuItem();
-
-	        SubMenu * sm = new SubMenu("Position");
-	        so->addMenuItem(sm);
-	        _posMap[so] = sm;
-
-	        MenuButton * mb;
-	        mb = new MenuButton("Load");
-	        mb->setCallback(this);
-	        sm->addItem(mb);
-	        _loadMap[so] = mb;
-
-	        SubMenu * savemenu = new SubMenu("Save");
-	        sm->addItem(savemenu);
-	        _saveMenuMap[so] = savemenu;
-
-	        mb = new MenuButton("Save");
-	        mb->setCallback(this);
-	        savemenu->addItem(mb);
-	        _saveMap[so] = mb;
-
-	        mb = new MenuButton("Reset");
-	        mb->setCallback(this);
-	        sm->addItem(mb);
-	        _resetMap[so] = mb;
-
-	        mb = new MenuButton("Delete");
-	        mb->setCallback(this);
-	        so->addMenuItem(mb);
-	        _deleteMap[so] = mb;
-
-	        _loadedObjects.push_back(so);
+		std::cerr << "ModelLoader: file not found: " << models[i]->path << endl;
+		return;
 	    }
+
+	    // Prepare scene object for model file(s):
+	    SceneObject * so;
+	    so = new SceneObject(models[i]->name, false, false, false, true, models[i]->showBound);
+	    osg::Switch* switchNode = new osg::Switch();
+	    so->addChild(switchNode);
+	    PluginHelper::registerSceneObject(so,"ModelLoader");
+	    so->attachToScene();
+
+	    char filename[256];
+	    strcpy(filename, models[i]->path.c_str());
+	    bool done = false;
+	    while (!done)
+	    {
+		// Read model file:
+		std::string filenamestring(filename);
+		osg::Node* modelNode = osgDB::readNodeFile(filenamestring);
+		if(modelNode==NULL)
+		{ 
+		    std::cerr << "ModelLoader: Error reading file " << filename << endl;
+		    done=true;
+		    break;
+		}
+		if(models[i]->mask)
+		{
+		    modelNode->setNodeMask(modelNode->getNodeMask() & ~INTERSECT_MASK);
+		}
+		if(!models[i]->lights)
+		{
+		    osg::StateSet* stateset = modelNode->getOrCreateStateSet();
+		    stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+		}
+		if(models[i]->backfaceCulling)
+		{
+		    osg::StateSet * stateset = modelNode->getOrCreateStateSet();
+		    osg::CullFace * cf=new osg::CullFace();
+		    cf->setMode(osg::CullFace::BACK);
+		    stateset->setAttributeAndModes( cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+		}
+
+		// TODO: This should be configurable in menu or config file
+		TextureResizeNonPowerOfTwoHintVisitor tr2v(false);
+		modelNode->accept(tr2v);
+
+		switchNode->addChild(modelNode);
+
+		if (!increaseFilename(filename)) done=true;
+		else 
+		{
+		    cerr << "ModelLoader: Checking for file " << filename << endl;
+		    if (!isFile(filename)) 
+		    {
+			cerr << "ModelLoader: no more time steps found" << endl;
+			done=true;
+		    }
+		}
+	    }
+	    if (switchNode->getNumChildren()==1)
+	    {
+		cerr << "ModelLoader: Model file loaded successfully." << endl;
+	    }
+	    else
+	    {
+		cerr << "ModelLoader: Loaded animation with " << switchNode->getNumChildren() << " time steps" << endl;
+	    }
+	    switchNode->setSingleChildOn(0);
+
+	    if(locInit.find(models[i]->name) != locInit.end())
+	    {
+		osg::Matrix scale;
+		scale.makeScale(osg::Vec3(locInit[models[i]->name].first,locInit[models[i]->name].first,
+			    locInit[models[i]->name].first));
+		so->setTransform(scale * locInit[models[i]->name].second);
+	    }
+	    else if(_defaultLocInit.find(models[i]->name) != _defaultLocInit.end())
+	    {
+		osg::Matrix scale;
+		scale.makeScale(osg::Vec3(_defaultLocInit[models[i]->name].first,_defaultLocInit[models[i]->name].first,
+			    _defaultLocInit[models[i]->name].first));
+		so->setTransform(scale * _defaultLocInit[models[i]->name].second);
+	    }
+	    so->setNavigationOn(true);
+	    so->addMoveMenuItem();
+	    so->addNavigationMenuItem();
+
+	    SubMenu * sm = new SubMenu("Position");
+	    so->addMenuItem(sm);
+	    _posMap[so] = sm;
+
+	    MenuButton * mb;
+	    mb = new MenuButton("Load");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+	    _loadMap[so] = mb;
+
+	    SubMenu * savemenu = new SubMenu("Save");
+	    sm->addItem(savemenu);
+	    _saveMenuMap[so] = savemenu;
+
+	    mb = new MenuButton("Save");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+	    _saveMap[so] = mb;
+
+	    mb = new MenuButton("Reset");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+	    _resetMap[so] = mb;
+
+	    mb = new MenuButton("Delete");
+	    mb->setCallback(this);
+	    so->addMenuItem(mb);
+	    _deleteMap[so] = mb;
+
+	    _loadedObjects.push_back(so);
+	}
     }
 
     for(std::map<SceneObject*,MenuButton*>::iterator it = _saveMap.begin(); it != _saveMap.end(); it++)
@@ -521,7 +542,8 @@ bool ModelLoader::loadFile(std::string file)
     }
     else
     {
-	modelNode->setNodeMask(modelNode->getNodeMask() & ~2);
+	std::cerr << "ModelLoader: Model file loaded successfully." << std::endl;
+	modelNode->setNodeMask(modelNode->getNodeMask() & ~INTERSECT_MASK);
     }
 
     std::string name;
@@ -548,7 +570,9 @@ bool ModelLoader::loadFile(std::string file)
 
     SceneObject * so = new SceneObject(name,false,false,false,true,false);
     PluginHelper::registerSceneObject(so,"ModelLoader");
-    so->addChild(modelNode);
+    osg::Switch * sNode = new osg::Switch();
+    sNode->addChild(modelNode);
+    so->addChild(sNode);
     so->attachToScene();
     so->setNavigationOn(true);
     so->addMoveMenuItem();
