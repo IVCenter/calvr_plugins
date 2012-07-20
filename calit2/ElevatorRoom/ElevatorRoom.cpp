@@ -79,8 +79,6 @@ bool ElevatorRoom::init()
     
     PluginHelper::getObjectsRoot()->addChild(_geoRoot);
 
-
-    
     _activeDoor = -1;
     _isOpening = true;
     _doorDist = 0;
@@ -94,30 +92,52 @@ bool ElevatorRoom::init()
     srand(time(NULL));
 
     // Sound
-/*    
-    std::string server = ConfigManager::getEntry("value", "MenuSystem.BubbleMenu.Sound.Server", "");
-    int port = ConfigManager::getInt("value","MenuSystem.BubbleMenu.Sound.Port", 0);
-
-    if (!oasclient::OASClientInterface::initialize(server, port))
+    
+    std::string server = ConfigManager::getEntry("value", "Plugin.ElevatorRoom.Server", "");
+    int port = ConfigManager::getInt("value","Plugin.ElevatorRoom.Port", 0);
+    
+    if (!oasclient::OASClientInterface::isInitialized())
     {
-        std::cerr << "Could not set up connection to sound server!\n";
-        _soundEnabled = false;
+        if (!oasclient::OASClientInterface::initialize(server, port))
+        {
+            std::cerr << "Could not set up connection to sound server!\n" << std::endl;
+            _soundEnabled = false;
+        }
+    }
+    else
+    {
+        std::cerr << "Sound server already initialized!" << std::endl;
     }
 
     std::string path, file;
-    path = ConfigManager::getEntry("path", "MenuSystem.BubbleMenu.Sound.ClickSound", "");
-    file = ConfigManager::getEntry("file", "MenuSystem.BubbleMenu.Sound.ClickSound", "");
+//    path = ConfigManager::getEntry("path", "Plugin.ElevatorRoom.D", "");
+    file = ConfigManager::getEntry("file", "Plugin.ElevatorRoom.DingSound", "");
 
     // Set up ding sound
-    _ding = new oasclient::OASSound(path, file);
-    if (!click->isValid())
+    _ding = new oasclient::OASSound(_dataDir, file);
+    if (!_ding->isValid())
     {
-        std::cerr << "Could not create click sound!\n";
+        std::cerr << "Could not create click sound!\n" << std::endl;
         _soundEnabled = false;
     }
 
-    click->setGain(1.5);
-*/
+    file = ConfigManager::getEntry("file", "Plugin.ElevatorRoom.LaserSound", "");
+    _laser= new oasclient::OASSound(_dataDir, file);
+    if (!_laser->isValid())
+    {
+        std::cerr << "Could not create click sound!\n" << std::endl;
+        _soundEnabled = false;
+    }
+
+    file = ConfigManager::getEntry("file", "Plugin.ElevatorRoom.HitSound", "");
+    _hitSound = new oasclient::OASSound(_dataDir, file);
+    if (!_hitSound->isValid())
+    {
+        std::cerr << "Could not create click sound!\n" << std::endl;
+        _soundEnabled = false;
+    }
+    _ding->setGain(1.5);
+
     return true;
 }
 
@@ -547,8 +567,12 @@ void ElevatorRoom::preFrame()
         // Pick a door to open 
         if (_activeDoor < 0)
         {
+
+
             if ((PluginHelper::getProgramDuration() - _pauseStart) > _pauseLength)
             {
+                _ding->play();
+
                 _activeDoor = rand() % NUM_DOORS;
                 if (_activeDoor <= _lights.size())
                 {
@@ -844,6 +868,7 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
     {
         if (tie->getInteraction() == BUTTON_DOWN)
         {
+            _laser->play();
             osg::Vec3 pointerStart, pointerEnd;
             std::vector<IsectInfo> isecvec;
             
@@ -867,6 +892,7 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                     {
                         if (_mode == ALIEN && !_hit)
                         {
+                            _hitSound->play();
                             std::cout << "Hit!" << std::endl; 
                             _score++;
 
@@ -881,6 +907,7 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                         }
                         else if (_mode == ALLY && !_hit)
                         {
+                            _hitSound->play();
                             std::cout << "Whoops!" << std::endl;
                             if (_score > 0)
                             {

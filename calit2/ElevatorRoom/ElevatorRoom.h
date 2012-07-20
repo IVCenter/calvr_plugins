@@ -23,9 +23,7 @@
 #include <vector>
 #include <map>
 
-// need to install Shree's library
-//#include "OASClientInterface.h"
-//#include "OASSound.h"
+#include "OAS/OASSound.h"
 
 #define NUM_DOORS 8
 #define DOOR_SPEED 0.007
@@ -71,7 +69,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         // first node is regular geometry, second node is flashing geometry
         std::vector<osg::ref_ptr<osg::Switch> > _aliensSwitch, _alliesSwitch, _checkersSwitch;
         
-//        oasclient::OASSound _ding;
+        oasclient::OASSound * _ding, * _hitSound, * _laser;
 
         float _modelScale; // scale of entire scene
         float _pauseLength; // length in seconds of time between door close and next lighting up
@@ -89,6 +87,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         bool _hit; // whether a hit has been made on the active avatar
         bool _debug; // turns on debug messages to command line
         bool _connected; // for EOG syncer communication
+        bool _soundEnabled;
 
         Mode _mode; // which kind of avatar is currently active
         
