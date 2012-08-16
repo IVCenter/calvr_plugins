@@ -9,6 +9,7 @@
 #include <cvrMenu/MenuRangeValue.h>
 #include <cvrMenu/MenuCheckbox.h>
 #include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuText.h>
 
 #include <osg/Geode>
 #include <osg/Geometry>
@@ -23,7 +24,7 @@
 #include <vector>
 #include <map>
 
-#include "OAS/OASSound.h"
+#include "OAS/OASClient.h"
 
 #define NUM_DOORS 8
 #define DOOR_SPEED 0.007
@@ -55,7 +56,9 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         };
 
         cvr::SubMenu * _elevatorMenu;
-        cvr::MenuButton * _loadButton;
+        cvr::MenuButton * _loadButton, * _clearButton;
+        cvr::MenuRangeValue * _checkerSpeedRV, * _alienChanceRV;
+        cvr::MenuText * _chancesText;
 
         osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry
         std::string _dataDir;
@@ -63,24 +66,30 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         osg::ref_ptr<osg::Geode> _activeObject; // currently active avatar
         osg::ref_ptr<osgText::Text> _scoreText; // GUI to display current score
         
-        std::vector<osg::ref_ptr<osg::PositionAttitudeTransform> > _leftdoorPat, _rightdoorPat;
+        std::vector<osg::ref_ptr<osg::PositionAttitudeTransform> > _leftdoorPat,    
+            _rightdoorPat;
         std::vector<osg::ref_ptr<osg::ShapeDrawable> > _lights;
 
         // first node is regular geometry, second node is flashing geometry
-        std::vector<osg::ref_ptr<osg::Switch> > _aliensSwitch, _alliesSwitch, _checkersSwitch;
+        std::vector<osg::ref_ptr<osg::Switch> > _aliensSwitch, _alliesSwitch, 
+            _checkersSwitch, _lightSwitch;
         
-        oasclient::OASSound * _ding, * _hitSound, * _laser;
+        oasclient::Sound * _ding, * _hitSound, * _laser;
 
         float _modelScale; // scale of entire scene
         float _pauseLength; // length in seconds of time between door close and next lighting up
         float _pauseStart; // start time of the current pause
         float _doorDist; // distance doors are currently translated
+        float _checkSpeed; // number of checkerboard flashes per second
+        float _flashStartTime;
+        float _avatarFlashPerSec;
+        float _lightFlashPerSec;
 
         int _activeDoor; // which door is currently opening/closing
-        int _checkerTick; // frames since last flash of avatar
-        int _score; // current score
+        int _score; // current score (should be > 0)
         int _sockfd; // for EOG syncer communication
         int _flashCount; // number of times active avatar has flashed
+        int _alienChance, _allyChance, _checkChance;
 
         bool _isOpening; // whether the active door is opening or closing
         bool _loaded; // whether the model has finished loading
@@ -95,8 +104,9 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         void openDoor(int doorNum);
         void closeDoor(int doorNum);
         void loadModels();
+        void clear();
         osg::ref_ptr<osg::Geometry> drawBox(osg::Vec3 center, float x, float y,
-            float z, osg::Vec4 color = osg::Vec4(1, 1, 1, 1));
+            float z, osg::Vec4 color = osg::Vec4(1, 1, 1, 1), float texScale = 1.0);
         osg::ref_ptr<osg::Geometry> makeQuad(float width, float height,
             osg::Vec4 color, osg::Vec3 pos);
 
