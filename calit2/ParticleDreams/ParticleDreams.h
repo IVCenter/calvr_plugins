@@ -18,6 +18,9 @@
 
 #include <string>
 
+#include <OAS/OASClient.h>
+
+
 class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::PerContextCallback
 {
     public:
@@ -56,6 +59,12 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
         void scene_data_2_context(int contextid) const;
         void scene_data_3_context(int contextid) const;
         void scene_data_4_context(int contextid) const;
+
+        void scene_data_0_kill_audio();
+        void scene_data_1_kill_audio();
+        void scene_data_2_kill_audio();
+        void scene_data_3_kill_audio();
+        void scene_data_4_kill_audio();
 
         cvr::SubMenu * _myMenu;
         cvr::MenuCheckbox * _enable;
@@ -119,6 +128,28 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
         double nowTime;
         double frNum;
 
+        bool soundEnabled;
+        oasclient::Sound chimes;
+        oasclient::Sound pinkNoise;
+        oasclient::Sound dan_texture_09;
+        oasclient::Sound texture_12;
+        oasclient::Sound short_sound_01a;
+        oasclient::Sound texture_17_swirls3;
+        oasclient::Sound rain_at_sea;
+        oasclient::Sound dan_texture_13;
+        oasclient::Sound dan_texture_05;
+        oasclient::Sound dan_short_sound_04;
+        oasclient::Sound dan_ambiance_2;
+        oasclient::Sound dan_ambiance_1;
+        oasclient::Sound dan_5min_ostinato;
+        oasclient::Sound dan_10120603_Rez1;
+        oasclient::Sound dan_mel_amb_slower;
+        oasclient::Sound harmonicAlgorithm;
+        oasclient::Sound dan_rain_at_sea_loop;
+        oasclient::Sound dan_10122606_sound_spray;
+        oasclient::Sound dan_10122608_sound_spray_low;
+        oasclient::Sound dan_10120600_rezS3_rez2;
+        
         std::string _dataDir;
 
         osg::ref_ptr<osg::Shader> _spriteVert;
