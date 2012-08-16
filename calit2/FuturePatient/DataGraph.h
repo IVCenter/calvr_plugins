@@ -60,6 +60,19 @@ class DataGraph
 
         osg::MatrixTransform * getGraphRoot();
 
+        void getGraphNameList(std::vector<std::string> & nameList);
+
+        float getDisplayWidth()
+        {
+            return _width;
+        }
+        float getDisplayHeight()
+        {
+            return _height;
+        }
+        time_t getMaxTimestamp(std::string graphName);
+        time_t getMinTimestamp(std::string graphName);
+
     protected:
         void update();
         void updateAxis();

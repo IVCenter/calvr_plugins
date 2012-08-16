@@ -78,10 +78,10 @@ DataGraph::DataGraph()
     _minDisplayZ = 0;
     _maxDisplayZ = 1.0;
 
-    _clipNode->addClipPlane(new osg::ClipPlane(0));
-    _clipNode->addClipPlane(new osg::ClipPlane(1));
-    _clipNode->addClipPlane(new osg::ClipPlane(2));
-    _clipNode->addClipPlane(new osg::ClipPlane(3));
+    //_clipNode->addClipPlane(new osg::ClipPlane(0));
+    //_clipNode->addClipPlane(new osg::ClipPlane(1));
+    //_clipNode->addClipPlane(new osg::ClipPlane(2));
+    //_clipNode->addClipPlane(new osg::ClipPlane(3));
 
     _font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
 }
@@ -104,6 +104,8 @@ void DataGraph::addGraph(std::string name, osg::Vec3Array * points, GraphDisplay
 	std::cerr << "Error: Graph " << name << " has already been added to DataGraph." << std::endl;
 	return;
     }
+
+    //std::cerr << "Points: " << points->size() << std::endl;
 
     GraphDataInfo gdi;
     gdi.name = name;
@@ -140,8 +142,22 @@ void DataGraph::addGraph(std::string name, osg::Vec3Array * points, GraphDisplay
 	geometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
     }
 
+    for(int i = 0; i < points->size(); i++)
+    {
+	osg::Vec3 p = points->at(i);
+	//std::cerr << "Point x: " << p.x() << " y: " << p.y() << " z: " << p.z() << std::endl;
+    }
+    if(perPointColor)
+    {
+	for(int i = 0; i < perPointColor->size(); i++)
+	{
+	    osg::Vec4 c = perPointColor->at(i);
+	    //std::cerr << "Color r: " << c.x() << " g: " << c.y() << " b: " << c.z() << " a: " << c.w() << std::endl;
+	}
+    }
+
     geometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,points->size()));
-    if(displayType == POINTS_WITH_LINES)
+    if(displayType == POINTS_WITH_LINES && points->size())
     {
 	geometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP,0,points->size()));
     }
@@ -210,6 +226,32 @@ osg::MatrixTransform * DataGraph::getGraphRoot()
     return _root.get();
 }
 
+void DataGraph::getGraphNameList(std::vector<std::string> & nameList)
+{
+    for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)
+    {
+	nameList.push_back(it->first);
+    }
+}
+
+time_t DataGraph::getMaxTimestamp(std::string graphName)
+{
+    if(_dataInfoMap.find(graphName) != _dataInfoMap.end())
+    {
+	return _dataInfoMap[graphName].xMaxT;
+    }
+    return 0;
+}
+
+time_t DataGraph::getMinTimestamp(std::string graphName)
+{
+    if(_dataInfoMap.find(graphName) != _dataInfoMap.end())
+    {
+	return _dataInfoMap[graphName].xMinT;
+    }
+    return 0;
+}
+
 void DataGraph::update()
 {
     float padding = calcPadding();
@@ -241,7 +283,14 @@ void DataGraph::update()
 	    myRangeCenter = (center - _minDisplayX) / totalrange;
 	}
 
-	std::cerr << "My range size: " << myRangeSize << " range center: " << myRangeCenter << std::endl;
+	float minxBound = ((0.5 * myRangeSize) - myRangeCenter) / myRangeSize;
+	float maxxBound = ((0.5 * myRangeSize) + (1.0 - myRangeCenter)) / myRangeSize;
+
+	//std::cerr << "x bounds min: " << minxBound << " max: " << maxxBound << std::endl;
+
+	//TODO: use to adjust what points in primitives to draw
+
+	//std::cerr << "My range size: " << myRangeSize << " range center: " << myRangeCenter << std::endl;
 
 	osg::Matrix centerm;
 	centerm.makeTranslate(osg::Vec3((myRangeCenter - 0.5) * dataWidth,0,0));
@@ -255,10 +304,10 @@ void DataGraph::update()
     _graphTransform->setMatrix(tran*scale);
 
     //TODO: set based on width/height
-    _point->setSize(3.0);
+    _point->setSize(5.0);
 
     updateAxis();
-    updateClip();
+    //updateClip();
 }
 
 void DataGraph::updateAxis()
@@ -423,7 +472,7 @@ void DataGraph::updateAxis()
 				    {
 					intervalMult = 2;
 				    }
-				    std::cerr << "Setting tick value to YEAR, totalTime: " << totalTime / 12.0 << std::endl;
+				    //std::cerr << "Setting tick value to YEAR, totalTime: " << totalTime / 12.0 << std::endl;
 				}
 			    }
 			}
@@ -437,7 +486,7 @@ void DataGraph::updateAxis()
 		endtm = *gmtime(&maxTime);
 		starttm = *gmtime(&minTime);
 
-		std::cerr << "start year: " << starttm.tm_year << " end year: " << endtm.tm_year << std::endl;
+		//std::cerr << "start year: " << starttm.tm_year << " end year: " << endtm.tm_year << std::endl;
 
 		if(starttm.tm_year != endtm.tm_year)
 		{
@@ -664,7 +713,7 @@ void DataGraph::updateAxis()
 	text->setCharacterSize(std::min(hsize,wsize));
 	text->setAxisAlignment(osgText::Text::XZ_PLANE);
 
-	text->setPosition(osg::Vec3(0,-1,(_width-padding)/2.0));
+	text->setPosition(osg::Vec3(0,-1,(_height-padding)/2.0));
 
 	_axisGeode->addDrawable(text);
     }

@@ -2,10 +2,19 @@
 #define CVRPLUGIN_FUTURE_PATIENT_H
 
 #include <cvrKernel/CVRPlugin.h>
+#include <cvrMenu/MenuList.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/SubMenu.h>
 
 #include <string>
+#include <map>
 
-class FuturePatient : public cvr::CVRPlugin
+#include <mysql++/mysql++.h>
+
+#include "GraphObject.h"
+#include "GraphLayoutObject.h"
+
+class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 {
     public:
         FuturePatient();
@@ -13,8 +22,22 @@ class FuturePatient : public cvr::CVRPlugin
 
         bool init();
 
+        virtual void menuCallback(cvr::MenuItem * item);
+
     protected:
         void makeGraph(std::string name);
+
+        mysqlpp::Connection * _conn;
+
+        cvr::SubMenu * _fpMenu;
+        cvr::MenuList * _testList;
+        cvr::MenuButton * _loadButton;
+        cvr::MenuButton * _removeAllButton;
+
+        //Temp until layout so is created
+        std::map<std::string,GraphObject*> _graphObjectMap;
+
+        GraphLayoutObject * _layoutObject;
 };
 
 #endif

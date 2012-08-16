@@ -2,8 +2,10 @@
 #include "DataGraph.h"
 
 #include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/ComController.h>
 
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 
@@ -15,6 +17,8 @@ CVRPLUGIN(FuturePatient)
 
 FuturePatient::FuturePatient()
 {
+    _conn = NULL;
+    _layoutObject = NULL;
 }
 
 FuturePatient::~FuturePatient()
@@ -67,9 +71,132 @@ bool FuturePatient::init()
     //dg->setXDisplayRange(0.25,0.8);
     //PluginHelper::getObjectsRoot()->addChild(dg->getGraphRoot());
 
-    makeGraph("SIga");
+    //makeGraph("SIga");
+    
+    _fpMenu = new SubMenu("FuturePatient");
+
+    _testList = new MenuList();
+    _testList->setCallback(this);
+    _fpMenu->addItem(_testList);
+
+    _loadButton = new MenuButton("Load");
+    _loadButton->setCallback(this);
+    _fpMenu->addItem(_loadButton);
+
+    _removeAllButton = new MenuButton("Remove All");
+    _removeAllButton->setCallback(this);
+    _fpMenu->addItem(_removeAllButton);
+
+    PluginHelper::addRootMenuItem(_fpMenu);
+
+    struct listField
+    {
+	char entry[256];
+    };
+
+    struct listField * lfList = NULL;
+    int listEntries = 0;
+
+    if(ComController::instance()->isMaster())
+    {
+	if(!_conn)
+	{
+	    _conn = new mysqlpp::Connection(false);
+	    if(!_conn->connect("futurepatient","palmsdev2.ucsd.edu","fpuser","FPp@ssw0rd"))
+	    {
+		std::cerr << "Unable to connect to database." << std::endl;
+		delete _conn;
+		_conn = NULL;
+	    }
+	}
+
+	if(_conn)
+	{
+	    mysqlpp::Query q = _conn->query("select distinct name from Measure order by name;");
+	    mysqlpp::StoreQueryResult res = q.store();
+
+	    listEntries = res.num_rows();
+
+	    if(listEntries)
+	    {
+		lfList = new struct listField[listEntries];
+
+		for(int i = 0; i < listEntries; i++)
+		{
+		    strncpy(lfList[i].entry,res[i]["name"].c_str(),255);
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&listEntries,sizeof(int));
+	if(listEntries)
+	{
+	    ComController::instance()->sendSlaves(lfList,sizeof(struct listField)*listEntries);
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&listEntries,sizeof(int));
+	if(listEntries)
+	{
+	    lfList = new struct listField[listEntries];
+	    ComController::instance()->readMaster(lfList,sizeof(struct listField)*listEntries);
+	}
+    }
+
+    std::vector<std::string> stringlist;
+    for(int i = 0; i < listEntries; i++)
+    {
+	stringlist.push_back(lfList[i].entry);
+    }
+
+    _testList->setValues(stringlist);
+
+    if(lfList)
+    {
+	delete[] lfList;
+    }
+    /*if(_conn)
+    {
+	GraphObject * gobject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
+	gobject->addGraph("LDL");
+	PluginHelper::registerSceneObject(gobject,"FuturePatient");
+	gobject->attachToScene();
+    }*/
 
     return true;
+}
+
+void FuturePatient::menuCallback(MenuItem * item)
+{
+    if(item == _loadButton)
+    {
+	std::string value = _testList->getValue();
+	if(!value.empty())
+	{
+	    if(_graphObjectMap.find(value) == _graphObjectMap.end())
+	    {
+		GraphObject * gobject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
+		if(gobject->addGraph(value))
+		{
+		    if(!_layoutObject)
+		    {
+			_layoutObject = new GraphLayoutObject(1500.0,1000.0,3,"GraphLayout",false,true,false,true,true);
+			PluginHelper::registerSceneObject(_layoutObject,"FuturePatient");
+			_layoutObject->attachToScene();
+		    }
+		    
+		    _layoutObject->addGraphObject(gobject);
+
+		    _graphObjectMap[value] = gobject;
+		}
+		else
+		{
+		    delete gobject;
+		}
+	    }
+	}
+    }
 }
 
 void FuturePatient::makeGraph(std::string name)

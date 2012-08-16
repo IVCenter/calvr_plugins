@@ -2,6 +2,8 @@ SET(LIB_NAME FuturePatient)
 SET(PLUGIN_HEADERS
     FuturePatient.h
     DataGraph.h
+    GraphObject.h
+    GraphLayoutObject.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -9,6 +11,8 @@ ADD_LIBRARY(${LIB_NAME}
     ${PLUGIN_HEADERS}
     FuturePatient.cpp
     DataGraph.cpp
+    GraphObject.cpp
+    GraphLayoutObject.cpp
 )
 
 # placeholder for when the database goes active
