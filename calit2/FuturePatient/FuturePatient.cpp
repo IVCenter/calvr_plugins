@@ -3,6 +3,7 @@
 
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/ComController.h>
+#include <cvrConfig/ConfigManager.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -179,15 +180,6 @@ void FuturePatient::menuCallback(MenuItem * item)
 		GraphObject * gobject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
 		if(gobject->addGraph(value))
 		{
-		    if(!_layoutObject)
-		    {
-			_layoutObject = new GraphLayoutObject(1500.0,1000.0,3,"GraphLayout",false,true,false,true,true);
-			PluginHelper::registerSceneObject(_layoutObject,"FuturePatient");
-			_layoutObject->attachToScene();
-		    }
-		    
-		    _layoutObject->addGraphObject(gobject);
-
 		    _graphObjectMap[value] = gobject;
 		}
 		else
@@ -195,6 +187,32 @@ void FuturePatient::menuCallback(MenuItem * item)
 		    delete gobject;
 		}
 	    }
+
+	    if(_graphObjectMap.find(value) != _graphObjectMap.end())
+	    {
+		if(!_layoutObject)
+		{
+		    float width, height;
+		    osg::Vec3 pos;
+		    width = ConfigManager::getFloat("width","Plugin.FuturePatient.Layout",1500.0);
+		    height = ConfigManager::getFloat("height","Plugin.FuturePatient.Layout",1000.0);
+		    pos = ConfigManager::getVec3("Plugin.FuturePatient.Layout");
+		    _layoutObject = new GraphLayoutObject(width,height,3,"GraphLayout",false,true,false,true,false);
+		    _layoutObject->setPosition(pos);
+		    PluginHelper::registerSceneObject(_layoutObject,"FuturePatient");
+		    _layoutObject->attachToScene();
+		}
+
+		_layoutObject->addGraphObject(_graphObjectMap[value]);
+	    }
+	}
+    }
+
+    if(item == _removeAllButton)
+    {
+	if(_layoutObject)
+	{
+	    _layoutObject->removeAll();
 	}
     }
 }

@@ -73,7 +73,11 @@ class DataGraph
         time_t getMaxTimestamp(std::string graphName);
         time_t getMinTimestamp(std::string graphName);
 
+        bool displayHoverText(osg::Matrix & mat);
+        void clearHoverText();
+
     protected:
+        void makeHover();
         void update();
         void updateAxis();
         void updateClip();
@@ -91,6 +95,15 @@ class DataGraph
         osg::ref_ptr<osg::MatrixTransform> _graphTransform;
         osg::ref_ptr<osg::ClipNode> _clipNode;
         osg::ref_ptr<osg::MatrixTransform> _root;
+
+        osg::ref_ptr<osg::MatrixTransform> _hoverTransform;
+        osg::ref_ptr<osg::MatrixTransform> _hoverBGScale;
+        osg::ref_ptr<osg::Geode> _hoverBGGeode;
+        osg::ref_ptr<osg::Geode> _hoverTextGeode;
+        osg::ref_ptr<osgText::Text> _hoverText;
+
+        std::string _hoverGraph;
+        int _hoverPoint;
 
         bool _xAxisTimestamp;
         float _width;

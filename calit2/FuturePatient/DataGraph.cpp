@@ -1,6 +1,7 @@
 #include "DataGraph.h"
 
 #include <cvrKernel/CalVR.h>
+#include <cvrUtil/OsgMath.h>
 
 #include <osgText/Text>
 #include <osg/Geode>
@@ -84,6 +85,8 @@ DataGraph::DataGraph()
     //_clipNode->addClipPlane(new osg::ClipPlane(3));
 
     _font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
+
+    makeHover();
 }
 
 DataGraph::~DataGraph()
@@ -250,6 +253,120 @@ time_t DataGraph::getMinTimestamp(std::string graphName)
 	return _dataInfoMap[graphName].xMinT;
     }
     return 0;
+}
+
+bool DataGraph::displayHoverText(osg::Matrix & mat)
+{
+    std::string selectedGraph;
+    int selectedPoint = -1;
+
+    float hdist = -1, vdist = -1;
+    for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)
+    {
+	if(!it->second.data->size())
+	{
+	    continue;
+	}
+
+	osg::Matrix invT = osg::Matrix::inverse(_graphTransformMap[it->first]->getMatrix());
+	osg::Vec3 point1, point2(0,1000,0);
+	
+	point1 = point1 * mat * invT;
+	point2 = point2 * mat * invT;
+	
+	osg::Vec3 planePoint, planeNormal(0,-1,0);
+	float w;
+
+	osg::Vec3 intersect;
+	if(linePlaneIntersectionRef(point1,point2,planePoint,planeNormal,intersect,w))
+	{
+	    //std::cerr << "Intersect Point x: " << intersect.x() << " y: " << intersect.y() << " z: " << intersect.z() << std::endl;
+	    
+	    if(intersect.x() < 0.0 || intersect.x() > 1.0 || intersect.z() < 0.0 || intersect.z() > 1.0)
+	    {
+		continue;
+	    }
+
+	    // find nearest point on x axis
+	    int start, end, current;
+	    start = 0;
+	    end = it->second.data->size() - 1;
+	    current = end / 2;
+
+	}
+	else
+	{
+	    return false;
+	}
+    }
+
+    return false;
+}
+
+void DataGraph::clearHoverText()
+{
+    if(_hoverTransform->getNumParents())
+    {
+	_hoverTransform->getParent(0)->removeChild(_hoverTransform);
+    }
+
+    _hoverGraph = "";
+    _hoverPoint = -1;
+}
+
+void DataGraph::makeHover()
+{
+    _hoverTransform = new osg::MatrixTransform();
+    _hoverBGScale = new osg::MatrixTransform();
+    _hoverBGGeode = new osg::Geode();
+    _hoverTextGeode = new osg::Geode();
+
+    _hoverTransform->addChild(_hoverBGScale);
+    _hoverTransform->addChild(_hoverTextGeode);
+    _hoverBGScale->addChild(_hoverBGGeode);
+
+    osg::Vec4 color(0.0,0.0,0.0,1.0);
+
+    osg::Geometry * geo = new osg::Geometry();
+    osg::Vec3Array* verts = new osg::Vec3Array();
+    verts->push_back(osg::Vec3(1.0,-3,0));
+    verts->push_back(osg::Vec3(1.0,-3,-1.0));
+    verts->push_back(osg::Vec3(0,-3,-1.0));
+    verts->push_back(osg::Vec3(0,-3,0));
+
+    geo->setVertexArray(verts);
+
+    osg::DrawElementsUInt * ele = new osg::DrawElementsUInt(
+	    osg::PrimitiveSet::QUADS,0);
+
+    ele->push_back(0);
+    ele->push_back(1);
+    ele->push_back(2);
+    ele->push_back(3);
+    geo->addPrimitiveSet(ele);
+
+    osg::Vec4Array* colors = new osg::Vec4Array;
+    colors->push_back(color);
+
+    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
+    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
+		    osg::Array::UIntArrayType,4,4>;
+    colorIndexArray->push_back(0);
+    colorIndexArray->push_back(0);
+    colorIndexArray->push_back(0);
+    colorIndexArray->push_back(0);
+
+    geo->setColorArray(colors);
+    geo->setColorIndices(colorIndexArray);
+    geo->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+
+    _hoverBGGeode->addDrawable(geo);
+
+    _hoverText = makeText("",osg::Vec4(1.0,1.0,1.0,1.0));
+    _hoverTextGeode->addDrawable(_hoverText);
+    _hoverText->setAlignment(osgText::Text::LEFT_TOP);
+    osg::Vec3 pos(0,-4,0);
+    _hoverText->setPosition(pos);
 }
 
 void DataGraph::update()

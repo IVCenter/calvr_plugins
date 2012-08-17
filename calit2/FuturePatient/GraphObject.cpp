@@ -17,6 +17,8 @@ GraphObject::GraphObject(mysqlpp::Connection * conn, float width, float height, 
     setBoundsCalcMode(SceneObject::MANUAL);
     osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
     setBoundingBox(bb);
+
+    _activeHand = -1;
 }
 
 GraphObject::~GraphObject()
@@ -227,6 +229,24 @@ void GraphObject::setGraphSize(float width, float height)
     setBoundingBox(bb);
 }
 
+void GraphObject::setGraphDisplayRange(time_t start, time_t end)
+{
+    _graph->setXDisplayRangeTimestamp(start,end);
+}
+
+void GraphObject::resetGraphDisplayRange()
+{
+    time_t min, max;
+
+    min = getMinTimestamp();
+    max = getMaxTimestamp();
+
+    if(min && max)
+    {
+	setGraphDisplayRange(min,max);
+    }
+}
+
 time_t GraphObject::getMaxTimestamp()
 {
     std::vector<std::string> names;
@@ -279,4 +299,37 @@ time_t GraphObject::getMinTimestamp()
     }
 
     return min;
+}
+
+void GraphObject::enterCallback(int handID, const osg::Matrix &mat)
+{
+}
+
+void GraphObject::updateCallback(int handID, const osg::Matrix &mat)
+{
+    if(_activeHand >= 0 && handID != _activeHand)
+    {
+	return;
+    }
+
+    osg::Matrix m;
+    m = mat * getWorldToObjectMatrix();
+
+    if(_graph->displayHoverText(m))
+    {
+	_activeHand = handID;
+    }
+    else if(_activeHand >= 0)
+    {
+	_activeHand = -1;
+    }
+}
+
+void GraphObject::leaveCallback(int handID)
+{
+    if(handID == _activeHand)
+    {
+	_activeHand = -1;
+	_graph->clearHoverText();
+    }
 }

@@ -2,6 +2,8 @@
 #define FP_GRAPH_LAYOUT_OBJECT_H
 
 #include <cvrKernel/TiledWallSceneObject.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuCheckbox.h>
 
 #include "GraphObject.h"
 
@@ -11,6 +13,7 @@
 
 #include <ctime>
 #include <vector>
+#include <map>
 
 class GraphLayoutObject : public cvr::TiledWallSceneObject
 {
@@ -19,11 +22,17 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         virtual ~GraphLayoutObject();
 
         void addGraphObject(GraphObject * object);
+        void removeGraphObject(GraphObject * object);
+        void removeAll();
+
+        virtual void menuCallback(cvr::MenuItem * item);
 
     protected:
+        void makeGeometry();
         void updateLayout();
 
         std::vector<GraphObject *> _objectList;
+        std::map<GraphObject *,cvr::MenuButton *> _deleteButtonMap;
 
         float _width;
         float _height;
@@ -34,7 +43,10 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         time_t _currentMaxX;
         time_t _currentMinX;
 
-        osg::ref_ptr<osg::Geode> _titleGeode;
+        osg::ref_ptr<osg::Geode> _layoutGeode;
+
+        cvr::MenuButton * _resetLayoutButton;
+        cvr::MenuCheckbox * _syncTimeCB;
 };
 
 #endif
