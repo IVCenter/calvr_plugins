@@ -31,10 +31,12 @@ DataGraph::DataGraph()
     _axisGeode->addDrawable(_axisGeometry);
 
     _point = new osg::Point();
+    _lineWidth = new osg::LineWidth();
 
     osg::StateSet * stateset = getGraphRoot()->getOrCreateStateSet();
     stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
     stateset->setAttributeAndModes(_point,osg::StateAttribute::ON);
+    _clipNode->getOrCreateStateSet()->setAttributeAndModes(_lineWidth,osg::StateAttribute::ON);
 
     _width = _height = 1000.0;
 
@@ -259,8 +261,9 @@ bool DataGraph::displayHoverText(osg::Matrix & mat)
 {
     std::string selectedGraph;
     int selectedPoint = -1;
+    osg::Vec3 point;
+    float dist;
 
-    float hdist = -1, vdist = -1;
     for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)
     {
 	if(!it->second.data->size())
@@ -281,7 +284,7 @@ bool DataGraph::displayHoverText(osg::Matrix & mat)
 	if(linePlaneIntersectionRef(point1,point2,planePoint,planeNormal,intersect,w))
 	{
 	    //std::cerr << "Intersect Point x: " << intersect.x() << " y: " << intersect.y() << " z: " << intersect.z() << std::endl;
-	    
+
 	    if(intersect.x() < 0.0 || intersect.x() > 1.0 || intersect.z() < 0.0 || intersect.z() > 1.0)
 	    {
 		continue;
@@ -291,13 +294,104 @@ bool DataGraph::displayHoverText(osg::Matrix & mat)
 	    int start, end, current;
 	    start = 0;
 	    end = it->second.data->size() - 1;
-	    current = end / 2;
+	    while(end - start > 1)
+	    {
+		current = start + ((end-start) / 2);
+		if(intersect.x() < it->second.data->at(current).x())
+		{
+		    end = current;
+		}
+		else
+		{
+		    start = current;
+		}
+	    }
 
+	    if(end == start)
+	    {
+		current = start;
+	    }
+	    else
+	    {
+		float startx, endx;
+		startx = it->second.data->at(start).x();
+		endx = it->second.data->at(end).x();
+
+		if(fabs(intersect.x() - startx) > fabs(endx - intersect.x()))
+		{
+		    current = end;
+		}
+		else
+		{
+		    current = start;
+		}
+	    }
+	    osg::Vec3 currentPoint = it->second.data->at(current);
+	    currentPoint = currentPoint * _graphTransformMap[it->first]->getMatrix();
+
+	    intersect = intersect * _graphTransformMap[it->first]->getMatrix();
+	    if(selectedPoint < 0)
+	    {
+		selectedPoint = current;
+		selectedGraph = it->first;
+		point = currentPoint;
+		dist = (intersect - currentPoint).length();
+	    }
+	    else if((intersect - currentPoint).length() < dist)
+	    {
+		selectedPoint = current;
+		selectedGraph = it->first;
+		point = currentPoint;
+		dist = (intersect - currentPoint).length();
+	    }
 	}
 	else
 	{
-	    return false;
+	    break;
 	}
+    }
+
+    if(selectedPoint >= 0 && dist < (_width + _height) * 0.02 / 2.0)
+    {
+	//std::cerr << "selecting point" << std::endl;
+	if(selectedGraph != _hoverGraph || selectedPoint != _hoverPoint)
+	{
+	    std::stringstream textss;
+	    time_t time;
+	    float value;
+	    value = _dataInfoMap[selectedGraph].zMin + ((_dataInfoMap[selectedGraph].zMax - _dataInfoMap[selectedGraph].zMin) * _dataInfoMap[selectedGraph].data->at(selectedPoint).z());
+	    time = _dataInfoMap[selectedGraph].xMinT + (time_t)((_dataInfoMap[selectedGraph].xMaxT - _dataInfoMap[selectedGraph].xMinT) * _dataInfoMap[selectedGraph].data->at(selectedPoint).x());
+	    textss << "x: " << ctime(&time) << "y: " << value << " " << _dataInfoMap[selectedGraph].zLabel;
+	    _hoverText->setText(textss.str());
+	    _hoverText->setCharacterSize(1.0);
+
+	    float targetHeight = _height * 0.07;
+	    osg::BoundingBox bb = _hoverText->getBound();
+	    _hoverText->setCharacterSize(targetHeight / (bb.zMax() - bb.zMin()));
+
+	    bb = _hoverText->getBound();
+	    osg::Matrix bgScale;
+	    bgScale.makeScale(osg::Vec3((bb.xMax() - bb.xMin()),1.0,(bb.zMax() - bb.zMin())));
+	    _hoverBGScale->setMatrix(bgScale);
+	}
+	if(_hoverPoint < 0)
+	{
+	    _root->addChild(_hoverTransform);
+	}
+
+	_hoverGraph = selectedGraph;
+	_hoverPoint = selectedPoint;
+	osg::Matrix m;
+	m.makeTranslate(point);
+	_hoverTransform->setMatrix(m);
+
+	return true;
+    }
+    else if(_hoverPoint != -1)
+    {
+	_root->removeChild(_hoverTransform);
+	_hoverGraph = "";
+	_hoverPoint = -1;
     }
 
     return false;
@@ -422,6 +516,7 @@ void DataGraph::update()
 
     //TODO: set based on width/height
     _point->setSize(5.0);
+    _lineWidth->setWidth(1.0);
 
     updateAxis();
     //updateClip();

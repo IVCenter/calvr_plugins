@@ -5,6 +5,7 @@
 #include <osg/MatrixTransform>
 #include <osg/ClipNode>
 #include <osg/Point>
+#include <osg/LineWidth>
 #include <osgText/Text>
 
 #include <string>
@@ -116,6 +117,7 @@ class DataGraph
         float _maxDisplayZ;
 
         osg::ref_ptr<osg::Point> _point;
+        osg::ref_ptr<osg::LineWidth> _lineWidth;
         osg::ref_ptr<osgText::Font> _font;
 };
 
