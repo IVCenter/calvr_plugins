@@ -514,9 +514,9 @@ void DataGraph::update()
     scale.makeScale(osg::Vec3(_width,1.0,_height));
     _graphTransform->setMatrix(tran*scale);
 
-    //TODO: set based on width/height
-    _point->setSize(5.0);
-    _lineWidth->setWidth(1.0);
+    float avglen = (_width + _height) / 2.0;
+    _point->setSize(avglen * 0.05);
+    _lineWidth->setWidth(avglen * 0.05);
 
     updateAxis();
     //updateClip();
