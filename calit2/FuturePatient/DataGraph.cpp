@@ -293,7 +293,7 @@ bool DataGraph::displayHoverText(osg::Matrix & mat)
 	{
 	    //std::cerr << "Intersect Point x: " << intersect.x() << " y: " << intersect.y() << " z: " << intersect.z() << std::endl;
 
-	    if(intersect.x() < 0.0 || intersect.x() > 1.0 || intersect.z() < 0.0 || intersect.z() > 1.0)
+	    if(intersect.x() < -0.1 || intersect.x() > 1.1 || intersect.z() < -0.1 || intersect.z() > 1.1)
 	    {
 		continue;
 	    }
@@ -302,36 +302,47 @@ bool DataGraph::displayHoverText(osg::Matrix & mat)
 	    int start, end, current;
 	    start = 0;
 	    end = it->second.data->size() - 1;
-	    while(end - start > 1)
-	    {
-		current = start + ((end-start) / 2);
-		if(intersect.x() < it->second.data->at(current).x())
-		{
-		    end = current;
-		}
-		else
-		{
-		    start = current;
-		}
-	    }
-
-	    if(end == start)
+	    if(intersect.x() <= 0.0)
 	    {
 		current = start;
 	    }
+	    else if(intersect.x() >= 1.0)
+	    {
+		current = end;
+	    }
 	    else
 	    {
-		float startx, endx;
-		startx = it->second.data->at(start).x();
-		endx = it->second.data->at(end).x();
-
-		if(fabs(intersect.x() - startx) > fabs(endx - intersect.x()))
+		while(end - start > 1)
 		{
-		    current = end;
+		    current = start + ((end-start) / 2);
+		    if(intersect.x() < it->second.data->at(current).x())
+		    {
+			end = current;
+		    }
+		    else
+		    {
+			start = current;
+		    }
+		}
+
+		if(end == start)
+		{
+		    current = start;
 		}
 		else
 		{
-		    current = start;
+		    float startx, endx;
+		    startx = it->second.data->at(start).x();
+		    endx = it->second.data->at(end).x();
+
+		    if(fabs(intersect.x() - startx) > fabs(endx - intersect.x()))
+		    {
+			current = end;
+		    }
+		    else
+		    {
+			current = start;
+		    }
 		}
 	    }
 	    osg::Vec3 currentPoint = it->second.data->at(current);
