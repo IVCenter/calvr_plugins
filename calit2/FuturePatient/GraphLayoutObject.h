@@ -4,6 +4,8 @@
 #include <cvrKernel/TiledWallSceneObject.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuRangeValueCompact.h>
+#include <cvrInput/TrackerBase.h>
 
 #include "GraphObject.h"
 
@@ -27,8 +29,13 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
 
         virtual void menuCallback(cvr::MenuItem * item);
 
+        virtual bool processEvent(cvr::InteractionEvent * event);
+        virtual void enterCallback(int handID, const osg::Matrix &mat);
+        virtual void updateCallback(int handID, const osg::Matrix &mat);
+        virtual void leaveCallback(int handID);
     protected:
         void makeGeometry();
+        void updateGeometry();
         void updateLayout();
 
         std::vector<GraphObject *> _objectList;
@@ -44,9 +51,21 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         time_t _currentMinX;
 
         osg::ref_ptr<osg::Geode> _layoutGeode;
+        osg::ref_ptr<osg::Vec3Array> _verts;
+        osg::ref_ptr<osgText::Text> _text;
 
         cvr::MenuButton * _resetLayoutButton;
         cvr::MenuCheckbox * _syncTimeCB;
+        cvr::MenuCheckbox * _zoomCB;
+        cvr::MenuRangeValueCompact * _rowsRV;
+        cvr::MenuRangeValueCompact * _widthRV;
+        cvr::MenuRangeValueCompact * _heightRV;
+
+        int _activeHand;
+        cvr::TrackerBase::TrackerType _activeHandType;
+
+        std::vector<int> _perGraphActiveHand;
+        std::vector<cvr::TrackerBase::TrackerType> _perGraphActiveHandType;
 };
 
 #endif

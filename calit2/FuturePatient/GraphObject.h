@@ -21,8 +21,14 @@ class GraphObject : public cvr::TiledWallSceneObject
         void setGraphDisplayRange(time_t start, time_t end);
         void resetGraphDisplayRange();
 
+        void getGraphDisplayRange(time_t & start, time_t & end);
         time_t getMaxTimestamp();
         time_t getMinTimestamp();
+        void setBarPosition(float pos);
+        float getBarPosition();
+        void setBarVisible(bool b);
+        bool getBarVisible();
+        bool getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point);
 
         virtual void enterCallback(int handID, const osg::Matrix &mat);
         virtual void updateCallback(int handID, const osg::Matrix &mat);

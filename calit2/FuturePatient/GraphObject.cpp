@@ -247,6 +247,11 @@ void GraphObject::resetGraphDisplayRange()
     }
 }
 
+void GraphObject::getGraphDisplayRange(time_t & start, time_t & end)
+{
+    _graph->getXDisplayRangeTimestamp(start,end);
+}
+
 time_t GraphObject::getMaxTimestamp()
 {
     std::vector<std::string> names;
@@ -299,6 +304,33 @@ time_t GraphObject::getMinTimestamp()
     }
 
     return min;
+}
+
+void GraphObject::setBarPosition(float pos)
+{
+    _graph->setBarPosition(pos);
+}
+
+float GraphObject::getBarPosition()
+{
+    return _graph->getBarPosition();
+}
+
+void GraphObject::setBarVisible(bool b)
+{
+    _graph->setBarVisible(b);
+}
+
+bool GraphObject::getBarVisible()
+{
+    return _graph->getBarVisible();
+}
+
+bool GraphObject::getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point)
+{
+    osg::Matrix m;
+    m = mat * getWorldToObjectMatrix();
+    return _graph->getGraphSpacePoint(m,point);
 }
 
 void GraphObject::enterCallback(int handID, const osg::Matrix &mat)

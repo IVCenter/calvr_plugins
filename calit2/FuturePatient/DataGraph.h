@@ -63,6 +63,17 @@ class DataGraph
 
         void getGraphNameList(std::vector<std::string> & nameList);
 
+        void getXDisplayRange(float & min, float & max)
+        {
+            min = _minDisplayX;
+            max = _maxDisplayX;
+        }
+        void getXDisplayRangeTimestamp(time_t & start, time_t & end)
+        {
+            start = _minDisplayXT;
+            end = _maxDisplayXT;
+        }
+
         float getDisplayWidth()
         {
             return _width;
@@ -77,10 +88,19 @@ class DataGraph
         bool displayHoverText(osg::Matrix & mat);
         void clearHoverText();
 
+        void setBarPosition(float pos);
+        float getBarPosition();
+        void setBarVisible(bool b);
+        bool getBarVisible();
+
+        bool getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point);
+
     protected:
         void makeHover();
+        void makeBar();
         void update();
         void updateAxis();
+        void updateBar();
         void updateClip();
         float calcPadding();
 
@@ -106,6 +126,11 @@ class DataGraph
         std::string _hoverGraph;
         int _hoverPoint;
 
+        osg::ref_ptr<osg::MatrixTransform> _barTransform;
+        osg::ref_ptr<osg::MatrixTransform> _barPosTransform;
+        osg::ref_ptr<osg::Geode> _barGeode;
+        osg::ref_ptr<osg::Geometry> _barGeometry;
+
         bool _xAxisTimestamp;
         float _width;
         float _height;
@@ -118,6 +143,7 @@ class DataGraph
 
         osg::ref_ptr<osg::Point> _point;
         osg::ref_ptr<osg::LineWidth> _lineWidth;
+        float _pointLineScale;
         osg::ref_ptr<osgText::Font> _font;
 };
 

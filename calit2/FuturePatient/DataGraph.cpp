@@ -2,6 +2,7 @@
 
 #include <cvrKernel/CalVR.h>
 #include <cvrUtil/OsgMath.h>
+#include <cvrConfig/ConfigManager.h>
 
 #include <osgText/Text>
 #include <osg/Geode>
@@ -30,8 +31,12 @@ DataGraph::DataGraph()
     _graphGeode->addDrawable(_bgGeometry);
     _axisGeode->addDrawable(_axisGeometry);
 
+    _clipNode->setCullingActive(false);
+
     _point = new osg::Point();
     _lineWidth = new osg::LineWidth();
+
+    _pointLineScale = ConfigManager::getFloat("value","Plugin.FuturePatient.PointLineScale",1.0);
 
     osg::StateSet * stateset = getGraphRoot()->getOrCreateStateSet();
     stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
@@ -89,6 +94,7 @@ DataGraph::DataGraph()
     _font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
 
     makeHover();
+    makeBar();
 }
 
 DataGraph::~DataGraph()
@@ -170,9 +176,11 @@ void DataGraph::addGraph(std::string name, osg::Vec3Array * points, GraphDisplay
     _graphGeometryMap[name] = geometry;
     osg::Geode * geode = new osg::Geode();
     geode->addDrawable(geometry);
+    geode->setCullingActive(false);
 
     _graphTransformMap[name] = new osg::MatrixTransform();
     _graphTransformMap[name]->addChild(geode);
+    _graphTransformMap[name]->setCullingActive(false);
     _clipNode->addChild(_graphTransformMap[name]);
 
     update();
@@ -408,6 +416,69 @@ void DataGraph::clearHoverText()
     _hoverPoint = -1;
 }
 
+void DataGraph::setBarPosition(float pos)
+{
+    osg::Matrix m;
+    m.makeTranslate(osg::Vec3(pos,0,0));
+    _barPosTransform->setMatrix(m);
+}
+
+float DataGraph::getBarPosition()
+{
+    return _barPosTransform->getMatrix().getTrans().x();
+}
+
+void DataGraph::setBarVisible(bool b)
+{
+    if(b == getBarVisible())
+    {
+	return;
+    }
+
+    if(b)
+    {
+	_clipNode->addChild(_barTransform);
+    }
+    else
+    {
+	_clipNode->removeChild(_barTransform);
+    }
+
+    updateBar();
+}
+
+bool DataGraph::getBarVisible()
+{
+    return _barTransform->getNumParents();
+}
+
+bool DataGraph::getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point)
+{
+    float padding = calcPadding();
+    float dataWidth = _width - (2.0 * padding);
+    float dataHeight = _height - (2.0 * padding);
+
+    osg::Vec3 point1,point2(0,1000.0,0),planePoint,planeNormal(0,-1,0),intersect;
+    float w;
+    point1 = point1 * mat;
+    point2 = point2 * mat;
+
+    if(linePlaneIntersectionRef(point1,point2,planePoint,planeNormal,intersect,w))
+    {
+	intersect.x() /= dataWidth;
+	intersect.z() /= dataHeight;
+	intersect.x() += 0.5;
+	intersect.z() += 0.5;
+	point = intersect;
+    }
+    else
+    {
+	return false;
+    }
+
+    return true;
+}
+
 void DataGraph::makeHover()
 {
     _hoverTransform = new osg::MatrixTransform();
@@ -463,6 +534,44 @@ void DataGraph::makeHover()
     _hoverText->setPosition(pos);
 }
 
+void DataGraph::makeBar()
+{
+    _barTransform = new osg::MatrixTransform();
+    _barPosTransform = new osg::MatrixTransform();
+    _barGeode = new osg::Geode();
+    _barGeometry = new osg::Geometry();
+    _barTransform->addChild(_barPosTransform);
+    _barPosTransform->addChild(_barGeode);
+    _barGeode->addDrawable(_barGeometry);
+
+    osg::Geometry * geo = _barGeometry.get();
+    osg::Vec3Array* verts = new osg::Vec3Array();
+    verts->push_back(osg::Vec3(0,-0.2,0));
+    verts->push_back(osg::Vec3(0,-0.2,1.0));
+
+    geo->setVertexArray(verts);
+
+    osg::DrawElementsUInt * ele = new osg::DrawElementsUInt(
+	    osg::PrimitiveSet::LINES,0);
+
+    ele->push_back(0);
+    ele->push_back(1);
+    geo->addPrimitiveSet(ele);
+
+    osg::Vec4Array* colors = new osg::Vec4Array;
+    colors->push_back(osg::Vec4(1.0,1.0,0,1.0));
+
+    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
+    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
+		    osg::Array::UIntArrayType,4,4>;
+    colorIndexArray->push_back(0);
+    colorIndexArray->push_back(0);
+
+    geo->setColorArray(colors);
+    geo->setColorIndices(colorIndexArray);
+    geo->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+}
+
 void DataGraph::update()
 {
     float padding = calcPadding();
@@ -499,7 +608,48 @@ void DataGraph::update()
 
 	//std::cerr << "x bounds min: " << minxBound << " max: " << maxxBound << std::endl;
 
-	//TODO: use to adjust what points in primitives to draw
+	//std::cerr << "TotalPoint: " << _dataInfoMap[it->first].data->size() << std::endl;
+
+	// TODO: redo this with binary searches
+	int maxpoint = -1, minpoint = -1;
+	for(int j = 0; j < _dataInfoMap[it->first].data->size(); j++)
+	{
+	    if(_dataInfoMap[it->first].data->at(j).x() >= minxBound-0.001)
+	    {
+		minpoint = j;
+		break;
+	    }
+	}
+
+	for(int j = _dataInfoMap[it->first].data->size() - 1; j >= 0; j--)
+	{
+	    if(_dataInfoMap[it->first].data->at(j).x() <= maxxBound+0.001)
+	    {
+		maxpoint = j;
+		break;
+	    }
+	}
+
+	//std::cerr << "Minpoint: " << minpoint << " Maxpoint: " << maxpoint << std::endl;
+
+	for(int i = 0; i < _graphGeometryMap[it->first]->getNumPrimitiveSets(); i++)
+	{
+	    osg::DrawArrays * da = dynamic_cast<osg::DrawArrays*>(_graphGeometryMap[it->first]->getPrimitiveSet(i));
+	    if(!da)
+	    {
+		continue;
+	    }
+
+	    if(maxpoint == -1 || minpoint == -1)
+	    {
+		da->setCount(0);
+	    }
+	    else
+	    {
+		da->setFirst(minpoint);
+		da->setCount((maxpoint-minpoint)+1);
+	    }
+	}
 
 	//std::cerr << "My range size: " << myRangeSize << " range center: " << myRangeCenter << std::endl;
 
@@ -515,10 +665,11 @@ void DataGraph::update()
     _graphTransform->setMatrix(tran*scale);
 
     float avglen = (_width + _height) / 2.0;
-    _point->setSize(avglen * 0.05);
-    _lineWidth->setWidth(avglen * 0.05);
+    _point->setSize(avglen * 0.04 * _pointLineScale);
+    _lineWidth->setWidth(avglen * 0.05 * _pointLineScale * _pointLineScale);
 
     updateAxis();
+    updateBar();
     //updateClip();
 }
 
@@ -966,6 +1117,19 @@ void DataGraph::updateClip()
     _clipNode->getClipPlane(3)->setClipPlane(plane);
 
     _clipNode->setLocalStateSetModes(); 
+}
+
+void DataGraph::updateBar()
+{
+    float padding = calcPadding();
+    float dataWidth = _width - (2.0 * padding);
+    float dataHeight = _height - (2.0 * padding);
+
+    osg::Matrix tran, scale;
+    tran.makeTranslate(osg::Vec3(-0.5,0,-0.5));
+    scale.makeScale(osg::Vec3(dataWidth,1.0,dataHeight));
+
+    _barTransform->setMatrix(tran*scale);
 }
 
 float DataGraph::calcPadding()

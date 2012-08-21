@@ -1,5 +1,7 @@
 #include "GraphLayoutObject.h"
 
+#include <cvrInput/TrackingManager.h>
+
 using namespace cvr;
 
 GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : TiledWallSceneObject(name,navigation,movable,clip,true,showBounds)
@@ -16,6 +18,25 @@ GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std
     _syncTimeCB = new MenuCheckbox("Sync Time",false);
     _syncTimeCB->setCallback(this);
     addMenuItem(_syncTimeCB);
+
+    _zoomCB = new MenuCheckbox("Zoom",false);
+    _zoomCB->setCallback(this);
+    addMenuItem(_zoomCB);
+
+    _rowsRV = new MenuRangeValueCompact("Rows",1.0,10.0,maxRows);
+    _rowsRV->setCallback(this);
+    addMenuItem(_rowsRV);
+
+    _widthRV = new MenuRangeValueCompact("Width",100.0,width*1.5,width);
+    _widthRV->setCallback(this);
+    addMenuItem(_widthRV);
+
+    _heightRV = new MenuRangeValueCompact("Height",100.0,height*1.5,height);
+    _heightRV->setCallback(this);
+    addMenuItem(_heightRV);
+
+    _activeHand = -1;
+    _activeHandType = TrackerBase::INVALID;
 }
 
 GraphLayoutObject::~GraphLayoutObject()
@@ -36,10 +57,20 @@ void GraphLayoutObject::addGraphObject(GraphObject * object)
 
     if(_syncTimeCB->getValue())
     {
-	menuCallback(_syncTimeCB);
+	if(!_zoomCB->getValue())
+	{
+	    menuCallback(_syncTimeCB);
+	}
+	else
+	{
+	    object->setGraphDisplayRange(_currentMinX,_currentMaxX);
+	}
     }
 
     addChild(object);
+
+    _perGraphActiveHand.push_back(-1);
+    _perGraphActiveHandType.push_back(TrackerBase::INVALID);
 
     MenuButton * button = new MenuButton("Delete");
     button->setCallback(this);
@@ -52,7 +83,8 @@ void GraphLayoutObject::addGraphObject(GraphObject * object)
 
 void GraphLayoutObject::removeGraphObject(GraphObject * object)
 {
-    for(std::vector<GraphObject *>::iterator it = _objectList.begin(); it != _objectList.end(); it++)\
+    int index = 0;
+    for(std::vector<GraphObject *>::iterator it = _objectList.begin(); it != _objectList.end(); it++, index++)
     {
 	if((*it) == object)
 	{
@@ -63,6 +95,20 @@ void GraphLayoutObject::removeGraphObject(GraphObject * object)
 	    _objectList.erase(it);
 	    break;
 	}
+    }
+
+    if(index < _perGraphActiveHand.size())
+    {
+	std::vector<int>::iterator it = _perGraphActiveHand.begin();
+	it += index;
+	_perGraphActiveHand.erase(it);
+    }
+
+    if(index < _perGraphActiveHandType.size())
+    {
+	std::vector<TrackerBase::TrackerType>::iterator it = _perGraphActiveHandType.begin();
+	it += index;
+	_perGraphActiveHandType.erase(it);
     }
 
     updateLayout();
@@ -81,6 +127,8 @@ void GraphLayoutObject::removeAll()
 	delete it->second;
     }
     _deleteButtonMap.clear();
+    _perGraphActiveHand.clear();
+    _perGraphActiveHandType.clear();
 
     _objectList.clear();
 }
@@ -91,6 +139,61 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
     {
 	updateLayout();
 	return;
+    }
+
+    if(item == _rowsRV)
+    {
+	if(((int)_rowsRV->getValue()) != _maxRows)
+	{
+	    _maxRows = (int)_rowsRV->getValue();
+	    updateLayout();
+	}
+	return;
+    }
+
+    if(item == _widthRV)
+    {
+	_width = _widthRV->getValue();
+	updateGeometry();
+	updateLayout();
+	return;
+    }
+
+    if(item == _heightRV)
+    {
+	_height = _heightRV->getValue();
+	updateGeometry();
+	updateLayout();
+	return;
+    }
+
+    if(item == _zoomCB)
+    {
+	if(_zoomCB->getValue())
+	{
+	}
+	else
+	{
+	    if(_syncTimeCB->getValue())
+	    {
+		_activeHand = -1;
+		_activeHandType = TrackerBase::INVALID;
+		for(int i = 0; i < _objectList.size(); i++)
+		{
+		    _objectList[i]->setBarVisible(false);
+		}
+	    }
+	    else
+	    {
+		for(int i = 0; i < _objectList.size(); i++)
+		{
+		    _perGraphActiveHand[i] = -1;
+		    _perGraphActiveHandType[i] = TrackerBase::INVALID;
+		    _objectList[i]->setBarVisible(false);
+		}
+	    }
+	    menuCallback(_syncTimeCB);
+	}
     }
 
     if(item == _syncTimeCB)
@@ -130,12 +233,32 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 		    _objectList[i]->setGraphDisplayRange(_minX,_maxX);
 		}
 	    }
+
+	    if(_zoomCB->getValue())
+	    {
+		for(int i = 0; i < _objectList.size(); i++)
+		{
+		    _perGraphActiveHand[i] = -1;
+		    _perGraphActiveHandType[i] = TrackerBase::INVALID;
+		    _objectList[i]->setBarVisible(false);
+		}
+	    }
 	}
 	else
 	{
 	    for(int i = 0; i < _objectList.size(); i++)
 	    {
 		_objectList[i]->resetGraphDisplayRange();
+	    }
+
+	    if(_zoomCB->getValue())
+	    {
+		_activeHand = -1;
+		_activeHandType = TrackerBase::INVALID;
+		for(int i = 0; i < _objectList.size(); i++)
+		{
+		    _objectList[i]->setBarVisible(false);
+		}
 	    }
 	}
 	return;
@@ -154,6 +277,188 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
     TiledWallSceneObject::menuCallback(item);
 }
 
+bool GraphLayoutObject::processEvent(InteractionEvent * event)
+{
+    ValuatorInteractionEvent * vie = event->asValuatorEvent();
+    if(vie)
+    {
+	if(_zoomCB->getValue())
+	{
+	    if(_syncTimeCB->getValue())
+	    {
+		if(_objectList.size() && vie->getHand() == _activeHand)
+		{
+		    double pos = _objectList[0]->getBarPosition();
+		    time_t change = (time_t)(difftime(_currentMaxX,_currentMinX)*0.03);
+		    _currentMinX += change * pos * vie->getValue();
+		    _currentMaxX -= change * (1.0 - pos) * vie->getValue();
+		    _currentMinX = std::max(_currentMinX,_minX);
+		    _currentMaxX = std::min(_currentMaxX,_maxX);
+
+		    for(int i = 0; i < _objectList.size(); i++)
+		    {
+			_objectList[i]->setGraphDisplayRange(_currentMinX,_currentMaxX);
+		    }
+		    return true;
+		}
+	    }
+	    else
+	    {
+		for(int i = 0; i < _objectList.size(); i++)
+		{
+		    if(_perGraphActiveHand[i] == vie->getHand())
+		    {
+			time_t currentStart,currentEnd;
+			_objectList[i]->getGraphDisplayRange(currentStart,currentEnd);
+			double pos = _objectList[i]->getBarPosition();
+
+			time_t change = (time_t)(difftime(currentEnd,currentStart)*0.03);
+			currentStart += change * pos * vie->getValue();
+			currentEnd -= change * (1.0 - pos) * vie->getValue();
+			currentStart = std::max(currentStart,_objectList[i]->getMinTimestamp());
+			currentEnd = std::min(currentEnd,_objectList[i]->getMaxTimestamp());
+			_objectList[i]->setGraphDisplayRange(currentStart,currentEnd);
+
+			return true;
+		    }
+		}
+	    }
+	}
+    }
+
+    return TiledWallSceneObject::processEvent(event);
+}
+
+void GraphLayoutObject::enterCallback(int handID, const osg::Matrix &mat)
+{
+}
+
+void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
+{
+    if(!_zoomCB->getValue())
+    {
+	return;
+    }
+
+    if(_syncTimeCB->getValue())
+    {
+	if(handID != _activeHand && _activeHandType <= TrackingManager::instance()->getHandTrackerType(handID))
+	{
+	    return;
+	}
+
+	bool hit = false;
+	osg::Vec3 graphPoint;
+	for(int i = 0; i < _objectList.size(); i++)
+	{
+	    if(!_objectList[i]->getGraphSpacePoint(mat,graphPoint) || graphPoint.x() < 0 || graphPoint.x() > 1.0 || graphPoint.z() < 0 || graphPoint.z() > 1.0)
+	    {
+		continue;
+	    }
+
+	    hit = true;
+	    break;
+	}
+
+	if(!hit && _activeHand == handID)
+	{
+	    _activeHand = -1;
+	    _activeHandType = TrackerBase::INVALID;
+	    for(int i = 0; i < _objectList.size(); i++)
+	    {
+		_objectList[i]->setBarVisible(false);
+	    }
+	    return;
+	}
+	else if(!hit)
+	{
+	    return;
+	}
+
+	if(_activeHand == -1)
+	{
+	    for(int i = 0; i < _objectList.size(); i++)
+	    {
+		_objectList[i]->setBarVisible(true);
+	    }
+	}
+
+	if(_activeHand != handID)
+	{
+	    _activeHand = handID;
+	    _activeHandType = TrackingManager::instance()->getHandTrackerType(handID);
+	}
+
+	for(int i = 0; i < _objectList.size(); i++)
+	{
+	    _objectList[i]->setBarPosition(graphPoint.x());
+	}
+    }
+    else
+    {
+	for(int i = 0; i < _objectList.size(); i++)
+	{
+	    if(_perGraphActiveHand[i] != handID && _perGraphActiveHandType[i] <= TrackingManager::instance()->getHandTrackerType(handID))
+	    {
+		continue;
+	    }
+
+	    osg::Vec3 graphPoint;
+	    if(!_objectList[i]->getGraphSpacePoint(mat,graphPoint) || graphPoint.x() < 0 || graphPoint.x() > 1.0 || graphPoint.z() < 0 || graphPoint.z() > 1.0)
+	    {
+		if(handID == _perGraphActiveHand[i])
+		{
+		    _perGraphActiveHand[i] = -1;
+		    _perGraphActiveHandType[i] = TrackerBase::INVALID;
+		    _objectList[i]->setBarVisible(false);
+		}
+		continue;
+	    }
+
+	    if(_perGraphActiveHand[i] == -1)
+	    {
+		_objectList[i]->setBarVisible(true);
+	    }
+
+	    if(_perGraphActiveHand[i] != handID)
+	    {
+		_perGraphActiveHand[i] = handID;
+		_perGraphActiveHandType[i] = TrackingManager::instance()->getHandTrackerType(handID);
+	    }
+
+	    _objectList[i]->setBarPosition(graphPoint.x());
+	}
+    }
+}
+
+void GraphLayoutObject::leaveCallback(int handID)
+{
+    if(_syncTimeCB->getValue())
+    {
+	if(_activeHand == handID)
+	{
+	    _activeHand = -1;
+	    _activeHandType = TrackerBase::INVALID;
+	    for(int i = 0; i < _objectList.size(); i++)
+	    {
+		_objectList[i]->setBarVisible(false);
+	    }
+	}
+    }
+    else
+    {
+	for(int i = 0; i < _objectList.size(); i++)
+	{
+	    if(_perGraphActiveHand[i] == handID)
+	    {
+		_perGraphActiveHand[i] = -1;
+		_perGraphActiveHandType[i] = TrackerBase::INVALID;
+		_objectList[i]->setBarVisible(false);
+	    }
+	}
+    }
+}
+
 void GraphLayoutObject::makeGeometry()
 {
     _layoutGeode = new osg::Geode();
@@ -165,17 +470,17 @@ void GraphLayoutObject::makeGeometry()
     float halfh = (_height * 1.05) / 2.0;
 
     osg::Geometry * geo = new osg::Geometry();
-    osg::Vec3Array* verts = new osg::Vec3Array();
-    verts->push_back(osg::Vec3(halfw,2,halfh+(_height*0.1)));
-    verts->push_back(osg::Vec3(halfw,2,-halfh));
-    verts->push_back(osg::Vec3(-halfw,2,-halfh));
-    verts->push_back(osg::Vec3(-halfw,2,halfh+(_height*0.1)));
+    _verts = new osg::Vec3Array();
+    _verts->push_back(osg::Vec3(halfw,2,halfh+(_height*0.1)));
+    _verts->push_back(osg::Vec3(halfw,2,-halfh));
+    _verts->push_back(osg::Vec3(-halfw,2,-halfh));
+    _verts->push_back(osg::Vec3(-halfw,2,halfh+(_height*0.1)));
 
     // Title line
-    verts->push_back(osg::Vec3(-_width / 2.0,1.5,halfh));
-    verts->push_back(osg::Vec3(_width / 2.0,1.5,halfh));
+    _verts->push_back(osg::Vec3(-_width / 2.0,1.5,halfh));
+    _verts->push_back(osg::Vec3(_width / 2.0,1.5,halfh));
 
-    geo->setVertexArray(verts);
+    geo->setVertexArray(_verts);
 
     osg::DrawElementsUInt * ele = new osg::DrawElementsUInt(
 	    osg::PrimitiveSet::QUADS,0);
@@ -219,28 +524,59 @@ void GraphLayoutObject::makeGeometry()
     float targetWidth = _width;
     float targetHeight = _height * 0.1 * 0.9;
 
-    osgText::Text * text = new osgText::Text();
-    text->setCharacterSize(1.0);
-    text->setAlignment(osgText::Text::CENTER_CENTER);
-    text->setColor(osg::Vec4(1.0,1.0,1.0,1.0));
-    text->setBackdropColor(osg::Vec4(0,0,0,0));
-    text->setAxisAlignment(osgText::Text::XZ_PLANE);
-    text->setText(getName());
+    _text = new osgText::Text();
+    _text->setCharacterSize(1.0);
+    _text->setAlignment(osgText::Text::CENTER_CENTER);
+    _text->setColor(osg::Vec4(1.0,1.0,1.0,1.0));
+    _text->setBackdropColor(osg::Vec4(0,0,0,0));
+    _text->setAxisAlignment(osgText::Text::XZ_PLANE);
+    _text->setText(getName());
     osgText::Font * font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
     if(font)
     {
-	text->setFont(font);
+	_text->setFont(font);
     }
 
-    osg::BoundingBox bb = text->getBound();
+    osg::BoundingBox bb = _text->getBound();
     float hsize = targetHeight / (bb.zMax() - bb.zMin());
     float wsize = targetWidth / (bb.xMax() - bb.xMin());
-    text->setCharacterSize(std::min(hsize,wsize));
-    text->setAxisAlignment(osgText::Text::XZ_PLANE);
+    _text->setCharacterSize(std::min(hsize,wsize));
+    _text->setAxisAlignment(osgText::Text::XZ_PLANE);
 
-    text->setPosition(osg::Vec3(0,1.5,halfh+(_height*0.05)));
+    _text->setPosition(osg::Vec3(0,1.5,halfh+(_height*0.05)));
 
-    _layoutGeode->addDrawable(text);
+    _layoutGeode->addDrawable(_text);
+}
+
+void GraphLayoutObject::updateGeometry()
+{
+    float halfw = (_width * 1.05) / 2.0;
+    float halfh = (_height * 1.05) / 2.0;
+
+    _verts->at(0) = osg::Vec3(halfw,2,halfh+(_height*0.1));
+    _verts->at(1) = osg::Vec3(halfw,2,-halfh);
+    _verts->at(2) = osg::Vec3(-halfw,2,-halfh);
+    _verts->at(3) = osg::Vec3(-halfw,2,halfh+(_height*0.1));
+
+    // Title line
+    _verts->at(4) = osg::Vec3(-_width / 2.0,1.5,halfh);
+    _verts->at(5) = osg::Vec3(_width / 2.0,1.5,halfh);
+
+    _verts->dirty();
+
+    float targetWidth = _width;
+    float targetHeight = _height * 0.1 * 0.9;
+    _text->setCharacterSize(1.0);
+    osg::BoundingBox bb = _text->getBound();
+    float hsize = targetHeight / (bb.zMax() - bb.zMin());
+    float wsize = targetWidth / (bb.xMax() - bb.xMin());
+    _text->setCharacterSize(std::min(hsize,wsize));
+    _text->setPosition(osg::Vec3(0,1.5,halfh+(_height*0.05)));
+
+    for(int i = 0; i < _layoutGeode->getNumDrawables(); i++)
+    {
+	_layoutGeode->getDrawable(i)->dirtyDisplayList();
+    }
 }
 
 void GraphLayoutObject::updateLayout()
