@@ -76,6 +76,20 @@ bool FuturePatient::init()
     
     _fpMenu = new SubMenu("FuturePatient");
 
+    _presetMenu = new SubMenu("Presets");
+    _fpMenu->addItem(_presetMenu);
+
+    _inflammationButton = new MenuButton("Big 4");
+    _inflammationButton->setCallback(this);
+    _presetMenu->addItem(_inflammationButton);
+
+    _loadAll = new MenuButton("All");
+    _loadAll->setCallback(this);
+    _presetMenu->addItem(_loadAll);
+
+    _groupLoadMenu = new SubMenu("Group Load");
+    _fpMenu->addItem(_groupLoadMenu);
+
     _testList = new MenuList();
     _testList->setCallback(this);
     _fpMenu->addItem(_testList);
@@ -157,6 +171,142 @@ bool FuturePatient::init()
     {
 	delete[] lfList;
     }
+
+    _groupList = new MenuList();
+    _groupList->setCallback(this);
+    _groupLoadMenu->addItem(_groupList);
+
+    _groupLoadButton = new MenuButton("Load");
+    _groupLoadButton->setCallback(this);
+    _groupLoadMenu->addItem(_groupLoadButton);
+
+    lfList = NULL;
+    listEntries = 0;
+    int * sizes = NULL;
+    listField ** groupLists = NULL;
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    mysqlpp::Query q = _conn->query("select display_name from Measure_Type order by display_name;");
+	    mysqlpp::StoreQueryResult res = q.store();
+
+	    listEntries = res.num_rows();
+
+	    if(listEntries)
+	    {
+		lfList = new struct listField[listEntries];
+
+		for(int i = 0; i < listEntries; i++)
+		{
+		    strncpy(lfList[i].entry,res[i]["display_name"].c_str(),255);
+		}
+	    }
+
+	    if(listEntries)
+	    {
+		sizes = new int[listEntries];
+		groupLists = new listField*[listEntries];
+
+		for(int i = 0; i < listEntries; i++)
+		{
+		    std::stringstream groupss;
+		    groupss << "select Measure.name from Measure inner join Measure_Type on Measure_Type.measure_type_id = Measure.measure_type_id where Measure_Type.display_name = \"" << res[i]["display_name"].c_str() << "\";";
+
+		    mysqlpp::Query groupq = _conn->query(groupss.str().c_str());
+		    mysqlpp::StoreQueryResult groupRes = groupq.store();
+
+		    sizes[i] = groupRes.num_rows();
+		    if(groupRes.num_rows())
+		    {
+			groupLists[i] = new listField[groupRes.num_rows()];
+		    }
+		    else
+		    {
+			groupLists[i] = NULL;
+		    }
+
+		    for(int j = 0; j < groupRes.num_rows(); j++)
+		    {
+			strncpy(groupLists[i][j].entry,groupRes[j]["name"].c_str(),255);
+		    }
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&listEntries,sizeof(int));
+	if(listEntries)
+	{
+	    ComController::instance()->sendSlaves(lfList,sizeof(struct listField)*listEntries);
+	    ComController::instance()->sendSlaves(sizes,sizeof(int)*listEntries);
+	    for(int i = 0; i < listEntries; i++)
+	    {
+		if(sizes[i])
+		{
+		    ComController::instance()->sendSlaves(groupLists[i],sizeof(struct listField)*sizes[i]);
+		}
+	    }
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&listEntries,sizeof(int));
+	if(listEntries)
+	{
+	    lfList = new struct listField[listEntries];
+	    ComController::instance()->readMaster(lfList,sizeof(struct listField)*listEntries);
+	    sizes = new int[listEntries];
+	    ComController::instance()->readMaster(sizes,sizeof(int)*listEntries);
+	    groupLists = new listField*[listEntries];
+	    for(int i = 0; i < listEntries; i++)
+	    {
+		if(sizes[i])
+		{
+		    groupLists[i] = new listField[sizes[i]];
+		    ComController::instance()->readMaster(groupLists[i],sizeof(struct listField)*sizes[i]);
+		}
+		else
+		{
+		    groupLists[i] = NULL;
+		}
+	    }
+	}
+    }
+
+    stringlist.clear();
+    for(int i = 0; i < listEntries; i++)
+    {
+	stringlist.push_back(lfList[i].entry);
+
+	_groupTestMap[lfList[i].entry] = std::vector<std::string>();
+	for(int j = 0; j < sizes[i]; j++)
+	{
+	    _groupTestMap[lfList[i].entry].push_back(groupLists[i][j].entry);
+	}
+    }
+
+    _groupList->setValues(stringlist);
+
+    if(lfList)
+    {
+	delete[] lfList;
+    }
+
+    for(int i = 0; i < listEntries; i++)
+    {
+	if(groupLists[i])
+	{
+	    delete[] groupLists[i];
+	}
+    }
+
+    if(listEntries)
+    {
+	delete[] sizes;
+	delete[] groupLists;
+    }
+
     /*if(_conn)
     {
 	GraphObject * gobject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
@@ -172,7 +322,8 @@ void FuturePatient::menuCallback(MenuItem * item)
 {
     if(item == _loadButton)
     {
-	std::string value = _testList->getValue();
+	loadGraph(_testList->getValue());
+	/*std::string value = _testList->getValue();
 	if(!value.empty())
 	{
 	    if(_graphObjectMap.find(value) == _graphObjectMap.end())
@@ -205,6 +356,30 @@ void FuturePatient::menuCallback(MenuItem * item)
 
 		_layoutObject->addGraphObject(_graphObjectMap[value]);
 	    }
+	}*/
+    }
+
+    if(item == _groupLoadButton)
+    {
+	for(int i = 0; i < _groupTestMap[_groupList->getValue()].size(); i++)
+	{
+	    loadGraph(_groupTestMap[_groupList->getValue()][i]);
+	}
+    }
+
+    if(item == _inflammationButton)
+    {
+	loadGraph("hs-CRP");
+	loadGraph("SIgA");
+	loadGraph("Lysozyme");
+	loadGraph("Lactoferrin");
+    }
+
+    if(item == _loadAll)
+    {
+	for(int i = 0; i < _testList->getListSize(); i++)
+	{
+	    loadGraph(_testList->getValue(i));
 	}
     }
 
@@ -217,7 +392,45 @@ void FuturePatient::menuCallback(MenuItem * item)
     }
 }
 
-void FuturePatient::makeGraph(std::string name)
+void FuturePatient::loadGraph(std::string name)
+{
+    std::string value = name;
+    if(!value.empty())
+    {
+	if(_graphObjectMap.find(value) == _graphObjectMap.end())
+	{
+	    GraphObject * gobject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
+	    if(gobject->addGraph(value))
+	    {
+		_graphObjectMap[value] = gobject;
+	    }
+	    else
+	    {
+		delete gobject;
+	    }
+	}
+
+	if(_graphObjectMap.find(value) != _graphObjectMap.end())
+	{
+	    if(!_layoutObject)
+	    {
+		float width, height;
+		osg::Vec3 pos;
+		width = ConfigManager::getFloat("width","Plugin.FuturePatient.Layout",1500.0);
+		height = ConfigManager::getFloat("height","Plugin.FuturePatient.Layout",1000.0);
+		pos = ConfigManager::getVec3("Plugin.FuturePatient.Layout");
+		_layoutObject = new GraphLayoutObject(width,height,3,"GraphLayout",false,true,false,true,false);
+		_layoutObject->setPosition(pos);
+		PluginHelper::registerSceneObject(_layoutObject,"FuturePatient");
+		_layoutObject->attachToScene();
+	    }
+
+	    _layoutObject->addGraphObject(_graphObjectMap[value]);
+	}
+    }
+}
+
+/*void FuturePatient::makeGraph(std::string name)
 {
     mysqlpp::Connection conn(false);
     if(!conn.connect("futurepatient","palmsdev2.ucsd.edu","fpuser","FPp@ssw0rd"))
@@ -321,4 +534,4 @@ void FuturePatient::makeGraph(std::string name)
     dg->setZDataRange(metaRes[0]["display_name"].c_str(),minval,maxval);
     dg->setXDataRangeTimestamp(metaRes[0]["display_name"].c_str(),mint,maxt);
     PluginHelper::getObjectsRoot()->addChild(dg->getGraphRoot());
-}
+}*/

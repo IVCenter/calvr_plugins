@@ -8,6 +8,7 @@
 
 #include <string>
 #include <map>
+#include <vector>
 
 #include <mysql++/mysql++.h>
 
@@ -25,7 +26,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         virtual void menuCallback(cvr::MenuItem * item);
 
     protected:
-        void makeGraph(std::string name);
+        void loadGraph(std::string name);
+        //void makeGraph(std::string name);
 
         mysqlpp::Connection * _conn;
 
@@ -33,6 +35,16 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _testList;
         cvr::MenuButton * _loadButton;
         cvr::MenuButton * _removeAllButton;
+        
+        cvr::SubMenu * _groupLoadMenu;
+        cvr::MenuList * _groupList;
+        cvr::MenuButton * _groupLoadButton;
+
+        std::map<std::string,std::vector<std::string> > _groupTestMap;
+
+        cvr::SubMenu * _presetMenu;
+        cvr::MenuButton * _inflammationButton;
+        cvr::MenuButton * _loadAll;
 
         //Temp until layout so is created
         std::map<std::string,GraphObject*> _graphObjectMap;
