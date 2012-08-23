@@ -1,6 +1,7 @@
 #include "DataGraph.h"
 
 #include <cvrKernel/CalVR.h>
+#include <cvrKernel/SceneManager.h>
 #include <cvrUtil/OsgMath.h>
 #include <cvrConfig/ConfigManager.h>
 
@@ -380,11 +381,17 @@ bool DataGraph::displayHoverText(osg::Matrix & mat)
 	    float value;
 	    value = _dataInfoMap[selectedGraph].zMin + ((_dataInfoMap[selectedGraph].zMax - _dataInfoMap[selectedGraph].zMin) * _dataInfoMap[selectedGraph].data->at(selectedPoint).z());
 	    time = _dataInfoMap[selectedGraph].xMinT + (time_t)((_dataInfoMap[selectedGraph].xMaxT - _dataInfoMap[selectedGraph].xMinT) * _dataInfoMap[selectedGraph].data->at(selectedPoint).x());
+
+	    if(getNumGraphs() > 1)
+	    {
+		textss << _dataInfoMap[selectedGraph].name << std::endl;
+	    }
+
 	    textss << "x: " << ctime(&time) << "y: " << value << " " << _dataInfoMap[selectedGraph].zLabel;
 	    _hoverText->setText(textss.str());
 	    _hoverText->setCharacterSize(1.0);
 
-	    float targetHeight = _height * 0.07;
+	    float targetHeight = SceneManager::instance()->getTiledWallHeight() * 0.05;
 	    osg::BoundingBox bb = _hoverText->getBound();
 	    _hoverText->setCharacterSize(targetHeight / (bb.zMax() - bb.zMin()));
 
@@ -1093,6 +1100,31 @@ void DataGraph::updateAxis()
     }
     else
     {
+	std::stringstream titless;
+
+	for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end();)
+	{
+	    titless << it->second.name;
+	    it++;
+	    if(it != _dataInfoMap.end())
+	    {
+		titless << " - ";
+	    }
+	}
+
+	osgText::Text * text = makeText(titless.str(),osg::Vec4(0.0,0.0,0.0,1.0));
+	
+	float targetHeight = padding * 0.95;
+	float targetWidth = _width - (2.0 * padding);
+	osg::BoundingBox bb = text->getBound();
+	float hsize = targetHeight / (bb.zMax() - bb.zMin());
+	float wsize = targetWidth / (bb.xMax() - bb.xMin());
+	text->setCharacterSize(std::min(hsize,wsize));
+	text->setAxisAlignment(osgText::Text::XZ_PLANE);
+
+	text->setPosition(osg::Vec3(0,-1,(_height-padding)/2.0));
+
+	_axisGeode->addDrawable(text);
     }
 }
 
@@ -1165,3 +1197,52 @@ osgText::Text * DataGraph::makeText(std::string text, osg::Vec4 color)
     }
     return textNode;
 }
+
+osg::Vec3 DataGraph::makeColor(float f)
+{
+    if(f < 0)
+    {
+        f = 0;
+    }
+    else if(f > 1.0)
+    {
+        f = 1.0;
+    }
+
+    osg::Vec3 color;
+
+    if(f <= 0.33)
+    {
+        float part = f / 0.33;
+        float part2 = 1.0 - part;
+
+        color.x() = part2;
+        color.y() = part;
+        color.z() = 0;
+    }
+    else if(f <= 0.66)
+    {
+        f = f - 0.33;
+        float part = f / 0.33;
+        float part2 = 1.0 - part;
+
+        color.x() = 0;
+        color.y() = part2;
+        color.z() = part;
+    }
+    else if(f <= 1.0)
+    {
+        f = f - 0.66;
+        float part = f / 0.33;
+        float part2 = 1.0 - part;
+
+        color.x() = part;
+        color.y() = 0;
+        color.z() = part2;
+    }
+
+    //std::cerr << "Color x: " << color.x() << " y: " << color.y() << " z: " << color.z() << std::endl;
+
+    return color;
+}
+

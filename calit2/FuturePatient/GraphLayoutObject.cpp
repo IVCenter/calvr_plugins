@@ -93,6 +93,11 @@ void GraphLayoutObject::removeGraphObject(GraphObject * object)
 	    _deleteButtonMap.erase(object);
 	    removeChild(object);
 	    _objectList.erase(it);
+	    if(object->getLayoutDoesDelete())
+	    {
+		//TODO fix scene object delete
+		//delete object;
+	    }
 	    break;
 	}
     }
@@ -119,6 +124,11 @@ void GraphLayoutObject::removeAll()
     for(int i = 0; i < _objectList.size(); i++)
     {
 	removeChild(_objectList[i]);
+	if(_objectList[i]->getLayoutDoesDelete())
+	{
+	    //TODO fix scene object delete
+	    //delete _objectList[i];
+	}
     }
 
     for(std::map<GraphObject *,cvr::MenuButton *>::iterator it = _deleteButtonMap.begin(); it != _deleteButtonMap.end(); it++)

@@ -20,6 +20,7 @@ FuturePatient::FuturePatient()
 {
     _conn = NULL;
     _layoutObject = NULL;
+    _multiObject = NULL;
 }
 
 FuturePatient::~FuturePatient()
@@ -101,6 +102,10 @@ bool FuturePatient::init()
     _removeAllButton = new MenuButton("Remove All");
     _removeAllButton->setCallback(this);
     _fpMenu->addItem(_removeAllButton);
+
+    _multiAddCB = new MenuCheckbox("Multi Add", false);
+    _multiAddCB->setCallback(this);
+    _fpMenu->addItem(_multiAddCB);
 
     PluginHelper::addRootMenuItem(_fpMenu);
 
@@ -375,6 +380,18 @@ void FuturePatient::menuCallback(MenuItem * item)
 	loadGraph("Lactoferrin");
     }
 
+    if(item == _multiAddCB)
+    {
+	if(_multiObject)
+	{
+	    if(!_multiObject->getNumGraphs())
+	    {
+		delete _multiObject;
+	    }
+	    _multiObject = NULL;
+	}
+    }
+
     if(item == _loadAll)
     {
 	for(int i = 0; i < _testList->getListSize(); i++)
@@ -389,43 +406,63 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    _layoutObject->removeAll();
 	}
+	menuCallback(_multiAddCB);
     }
 }
 
 void FuturePatient::loadGraph(std::string name)
 {
+    if(!_layoutObject)
+    {
+	float width, height;
+	osg::Vec3 pos;
+	width = ConfigManager::getFloat("width","Plugin.FuturePatient.Layout",1500.0);
+	height = ConfigManager::getFloat("height","Plugin.FuturePatient.Layout",1000.0);
+	pos = ConfigManager::getVec3("Plugin.FuturePatient.Layout");
+	_layoutObject = new GraphLayoutObject(width,height,3,"GraphLayout",false,true,false,true,false);
+	_layoutObject->setPosition(pos);
+	PluginHelper::registerSceneObject(_layoutObject,"FuturePatient");
+	_layoutObject->attachToScene();
+    }
+
     std::string value = name;
     if(!value.empty())
     {
-	if(_graphObjectMap.find(value) == _graphObjectMap.end())
+	if(!_multiAddCB->getValue())
 	{
-	    GraphObject * gobject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
-	    if(gobject->addGraph(value))
+	    if(_graphObjectMap.find(value) == _graphObjectMap.end())
 	    {
-		_graphObjectMap[value] = gobject;
+		GraphObject * gobject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
+		if(gobject->addGraph(value))
+		{
+		    _graphObjectMap[value] = gobject;
+		}
+		else
+		{
+		    delete gobject;
+		}
 	    }
-	    else
+
+	    if(_graphObjectMap.find(value) != _graphObjectMap.end())
 	    {
-		delete gobject;
+		_layoutObject->addGraphObject(_graphObjectMap[value]);
 	    }
 	}
-
-	if(_graphObjectMap.find(value) != _graphObjectMap.end())
+	else
 	{
-	    if(!_layoutObject)
+	    if(!_multiObject)
 	    {
-		float width, height;
-		osg::Vec3 pos;
-		width = ConfigManager::getFloat("width","Plugin.FuturePatient.Layout",1500.0);
-		height = ConfigManager::getFloat("height","Plugin.FuturePatient.Layout",1000.0);
-		pos = ConfigManager::getVec3("Plugin.FuturePatient.Layout");
-		_layoutObject = new GraphLayoutObject(width,height,3,"GraphLayout",false,true,false,true,false);
-		_layoutObject->setPosition(pos);
-		PluginHelper::registerSceneObject(_layoutObject,"FuturePatient");
-		_layoutObject->attachToScene();
+		_multiObject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
 	    }
 
-	    _layoutObject->addGraphObject(_graphObjectMap[value]);
+	    if(_multiObject->addGraph(value))
+	    {
+		if(_multiObject->getNumGraphs() == 1)
+		{
+		    _multiObject->setLayoutDoesDelete(true);
+		    _layoutObject->addGraphObject(_multiObject);
+		}
+	    }
 	}
     }
 }

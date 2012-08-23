@@ -16,6 +16,10 @@ class GraphObject : public cvr::TiledWallSceneObject
         virtual ~GraphObject();
 
         bool addGraph(std::string name);
+        int getNumGraphs()
+        {
+            return _graph->getNumGraphs();
+        }
 
         void setGraphSize(float width, float height);
         void setGraphDisplayRange(time_t start, time_t end);
@@ -30,6 +34,15 @@ class GraphObject : public cvr::TiledWallSceneObject
         bool getBarVisible();
         bool getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point);
 
+        void setLayoutDoesDelete(bool b)
+        {
+            _layoutDoesDelete = b;
+        }
+        bool getLayoutDoesDelete()
+        {
+            return _layoutDoesDelete;
+        }
+
         virtual void enterCallback(int handID, const osg::Matrix &mat);
         virtual void updateCallback(int handID, const osg::Matrix &mat);
         virtual void leaveCallback(int handID);
@@ -39,6 +52,7 @@ class GraphObject : public cvr::TiledWallSceneObject
         DataGraph * _graph;
 
         int _activeHand;
+        bool _layoutDoesDelete;
 };
 
 #endif

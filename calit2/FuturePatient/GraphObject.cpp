@@ -19,6 +19,7 @@ GraphObject::GraphObject(mysqlpp::Connection * conn, float width, float height, 
     setBoundingBox(bb);
 
     _activeHand = -1;
+    _layoutDoesDelete = false;
 }
 
 GraphObject::~GraphObject()

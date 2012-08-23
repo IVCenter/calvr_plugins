@@ -40,6 +40,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _groupList;
         cvr::MenuButton * _groupLoadButton;
 
+        cvr::MenuCheckbox * _multiAddCB;
+
         std::map<std::string,std::vector<std::string> > _groupTestMap;
 
         cvr::SubMenu * _presetMenu;
@@ -48,6 +50,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         //Temp until layout so is created
         std::map<std::string,GraphObject*> _graphObjectMap;
+        GraphObject * _multiObject;
 
         GraphLayoutObject * _layoutObject;
 };

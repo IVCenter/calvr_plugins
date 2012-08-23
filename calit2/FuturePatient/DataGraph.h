@@ -94,6 +94,10 @@ class DataGraph
         bool getBarVisible();
 
         bool getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point);
+        int getNumGraphs()
+        {
+            return _dataInfoMap.size();
+        }
 
     protected:
         void makeHover();
@@ -103,6 +107,8 @@ class DataGraph
         void updateBar();
         void updateClip();
         float calcPadding();
+
+        osg::Vec3 makeColor(float f);
 
         osgText::Text * makeText(std::string text, osg::Vec4 color);
 
