@@ -29,11 +29,11 @@ DesignStateRenderer::DesignStateRenderer(osg::Group* designStateRootGroup): mFla
     mDSSketchBook = new DSSketchBook();
     mDSGeometryCreator = new DSGeometryCreator();
     mDSTexturePallette = new DSTexturePallette();
-    mActiveDSPtr = mDSVirtualSphere;
+    mActiveDSPtr = mDSGeometryCreator;//VirtualSphere;
 
     /* push state object transforms to list, attach them to scene graph */
     mDSList.clear();
-    mDSList.push_back(mDSVirtualSphere);
+    //mDSList.push_back(mDSVirtualSphere);
     mDSList.push_back(mDSVirtualEarth);
     mDSList.push_back(mDSParamountSwitch);
     mDSList.push_back(mDSSketchBook);
@@ -42,8 +42,8 @@ DesignStateRenderer::DesignStateRenderer(osg::Group* designStateRootGroup): mFla
     mActiveDSItr = mDSList.begin();
 
     mDSRootTrans = new MatrixTransform();
-    mDSRootTrans->addChild(mDSParticleSystem);
-    mDSRootTrans->addChild(mDSVirtualSphere);
+    //mDSRootTrans->addChild(mDSParticleSystem);
+    //mDSRootTrans->addChild(mDSVirtualSphere);
     mDSRootTrans->addChild(mDSVirtualEarth);
     mDSRootTrans->addChild(mDSParamountSwitch);
     mDSRootTrans->addChild(mDSSketchBook);
@@ -52,7 +52,9 @@ DesignStateRenderer::DesignStateRenderer(osg::Group* designStateRootGroup): mFla
     designStateRootGroup->addChild(mDSRootTrans);
 
     for (DesignStateList::iterator itrDS = mDSList.begin(); itrDS != mDSList.end(); itrDS++)
-	(*itrDS)->setParticleSystemPtr(mDSParticleSystem);
+    {
+        (*itrDS)->setParticleSystemPtr(mDSParticleSystem);
+    }
 
     /* initialize design state objects that NOT registered in 'mDSList'*/
     mDSGeometryEditor = new DSGeometryEditor();
@@ -124,7 +126,13 @@ void DesignStateRenderer::setAudioConfigHandlerPtr(AudioConfigHandler *audioConf
 void DesignStateRenderer::setVisible(bool flag)
 {
     mFlagVisible = flag;
-    mActiveDSPtr->setObjectEnabled(flag);
+//    mActiveDSPtr->setObjectEnabled(flag);
+
+    mDSVirtualEarth->setObjectEnabled(flag);
+    mDSParamountSwitch->setObjectEnabled(flag);
+    mDSSketchBook->setObjectEnabled(flag);
+    mDSGeometryCreator->setObjectEnabled(flag);
+    mDSTexturePallette->setObjectEnabled(flag);
 
     /* align state spheres with viewer's position and front orientation */
     if (flag) resetPose();
@@ -153,14 +161,17 @@ void DesignStateRenderer::switchToPrevState()
 
     if (!mActiveDSPtr->isLocked())
     {
-	mActiveDSPtr->setObjectEnabled(false);
-	if (++mActiveDSItr == mDSList.end()) mActiveDSItr = mDSList.begin();
-	mActiveDSPtr = dynamic_cast <DesignStateBase*> (*mActiveDSItr);
-	if (mActiveDSPtr)
-	{
-	    mActiveDSPtr->setObjectEnabled(true);
-	    resetPose();
-	}
+        mActiveDSPtr->setObjectEnabled(false);
+        if (++mActiveDSItr == mDSList.end()) 
+        {
+            mActiveDSItr = mDSList.begin();
+        }
+        mActiveDSPtr = dynamic_cast <DesignStateBase*> (*mActiveDSItr);
+        if (mActiveDSPtr)
+        {
+            mActiveDSPtr->setObjectEnabled(true);
+            resetPose();
+        }
     }
     // else: pass the button event to existing rendering state
 }
@@ -178,15 +189,18 @@ void DesignStateRenderer::switchToNextState()
 
     if (!mActiveDSPtr->isLocked())
     {
-	mActiveDSPtr->setObjectEnabled(false);
-	if (mActiveDSItr == mDSList.begin()) mActiveDSItr = mDSList.end();
-	mActiveDSItr--;
-	mActiveDSPtr = dynamic_cast <DesignStateBase*> (*mActiveDSItr);
-	if (mActiveDSPtr)
-	{
-	    mActiveDSPtr->setObjectEnabled(true);
-	    resetPose();
-	}
+        mActiveDSPtr->setObjectEnabled(false);
+        if (mActiveDSItr == mDSList.begin()) 
+        {
+            mActiveDSItr = mDSList.end();
+        }
+        mActiveDSItr--;
+        mActiveDSPtr = dynamic_cast <DesignStateBase*> (*mActiveDSItr);
+        if (mActiveDSPtr)
+        {
+            mActiveDSPtr->setObjectEnabled(true);
+            resetPose();
+        }
     }
     // else: pass the button event to existing rendering state
 }
@@ -255,6 +269,14 @@ void DesignStateRenderer::switchToNextSubState()
 void DesignStateRenderer::inputDevMoveEvent(const Vec3 &pointerOrg, const Vec3 &pointerPos)
 {
     mActiveDSPtr->inputDevMoveEvent(pointerOrg, pointerPos); 
+    
+/*   mDSVirtualEarth->inputDevMoveEvent(pointerOrg, pointerPos);
+    mDSParamountSwitch->inputDevMoveEvent(pointerOrg, pointerPos);
+    mDSSketchBook->inputDevMoveEvent(pointerOrg, pointerPos);
+    mDSGeometryCreator->inputDevMoveEvent(pointerOrg, pointerPos);
+    mDSTexturePallette->inputDevMoveEvent(pointerOrg, pointerPos);
+*/
+    resetPose();
 }
 
 
@@ -267,7 +289,8 @@ void DesignStateRenderer::update(const osg::Vec3 &viewDir, const osg::Vec3 &view
     mViewDir = viewDir;
 
     mActiveDSPtr->update();
-    if (mDSVirtualEarth) mDSVirtualEarth->updateVSParameters(viewDir, viewPos);
+    if (mDSVirtualEarth) 
+        mDSVirtualEarth->updateVSParameters(viewDir, viewPos);
 }
 
 
@@ -276,6 +299,44 @@ void DesignStateRenderer::update(const osg::Vec3 &viewDir, const osg::Vec3 &view
 ***************************************************************/
 bool DesignStateRenderer::inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 &pointerPos)
 {
+    if (mDSVirtualEarth->test(pointerOrg, pointerPos))
+    {
+        if (mActiveDSPtr != mDSVirtualEarth)
+        {
+            mActiveDSPtr->setObjectEnabled(false);
+        }
+        mActiveDSPtr = mDSVirtualEarth;
+        mActiveDSPtr->setObjectEnabled(true);
+    }
+    else if (mDSParamountSwitch->test(pointerOrg, pointerPos))
+    {
+        if (mActiveDSPtr != mDSParamountSwitch)
+            mActiveDSPtr->setObjectEnabled(false);
+        mActiveDSPtr = mDSParamountSwitch;
+        mActiveDSPtr->setObjectEnabled(true);
+    }
+    else if (mDSSketchBook->test(pointerOrg, pointerPos))
+    {
+        if (mActiveDSPtr != mDSSketchBook)
+            mActiveDSPtr->setObjectEnabled(false);
+        mActiveDSPtr = mDSSketchBook;
+        mActiveDSPtr->setObjectEnabled(true);
+    }
+    else if (mDSGeometryCreator->test(pointerOrg, pointerPos))
+    {
+        if (mActiveDSPtr != mDSGeometryCreator)
+            mActiveDSPtr->setObjectEnabled(false);
+        mActiveDSPtr = mDSGeometryCreator;
+        mActiveDSPtr->setObjectEnabled(true);
+    }
+    else if (mDSTexturePallette->test(pointerOrg, pointerPos))
+    {
+        if (mActiveDSPtr != mDSTexturePallette)
+            mActiveDSPtr->setObjectEnabled(false);
+        mActiveDSPtr = mDSTexturePallette;
+        mActiveDSPtr->setObjectEnabled(true);
+    }    
+
     return (mActiveDSPtr->inputDevPressEvent(pointerOrg, pointerPos));
 }
 
@@ -297,7 +358,11 @@ void DesignStateRenderer::resetPose()
     /* calculate position and front direction: project viewer's front 
        to XY plane and use that as front orientation, to make sure 
        all design tools are aligned straight up when showing up. */
+
+    float height = 0.5;
+
     Vec3 pos = mViewOrg + mViewDir * ANIM_VIRTUAL_SPHERE_DISTANCE * 0.5;
+    pos[2] += height;
     Vec3 front = mViewDir;
     front.z() = 0;
     front.normalize();
@@ -359,20 +424,4 @@ Group *DesignStateRenderer::createDirectionalLights(osg::StateSet *stateset)
 
     return lightGroup;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

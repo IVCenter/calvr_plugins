@@ -85,25 +85,25 @@ CAVEGroupReferenceAxis::CAVEGroupReferenceAxis(): mVisibleFlag(false), mTextEnab
     /* create 3D texts geometry */
     if (mTextEnabledFlag)
     {
-	mGridInfoTextTrans = new MatrixTransform;
-	mXAxisTextTrans = new MatrixTransform;
-	mYAxisTextTrans = new MatrixTransform;
-	mZAxisTextTrans = new MatrixTransform;
+        mGridInfoTextTrans = new MatrixTransform;
+        mXAxisTextTrans = new MatrixTransform;
+        mYAxisTextTrans = new MatrixTransform;
+        mZAxisTextTrans = new MatrixTransform;
 
-	Geode *gridInfoTextGeode = createText3D(&mGridInfoText);
-	Geode *xAxisTextGeode = createText3D(&mXAxisText);
-	Geode *yAxisTextGeode = createText3D(&mYAxisText);
-	Geode *zAxisTextGeode = createText3D(&mZAxisText);
+        Geode *gridInfoTextGeode = createText3D(&mGridInfoText);
+        Geode *xAxisTextGeode = createText3D(&mXAxisText);
+        Geode *yAxisTextGeode = createText3D(&mYAxisText);
+        Geode *zAxisTextGeode = createText3D(&mZAxisText);
 
-	mGridInfoTextTrans->addChild(gridInfoTextGeode);
-	mXAxisTextTrans->addChild(xAxisTextGeode);
-	mYAxisTextTrans->addChild(yAxisTextGeode);
-	mZAxisTextTrans->addChild(zAxisTextGeode);
+        mGridInfoTextTrans->addChild(gridInfoTextGeode);
+        mXAxisTextTrans->addChild(xAxisTextGeode);
+        mYAxisTextTrans->addChild(yAxisTextGeode);
+        mZAxisTextTrans->addChild(zAxisTextGeode);
 
-	mAxisSwitch->addChild(mGridInfoTextTrans);
-	mAxisSwitch->addChild(mXAxisTextTrans);
-	mAxisSwitch->addChild(mYAxisTextTrans);
-	mAxisSwitch->addChild(mZAxisTextTrans);
+        mAxisSwitch->addChild(mGridInfoTextTrans);
+        mAxisSwitch->addChild(mXAxisTextTrans);
+        mAxisSwitch->addChild(mYAxisTextTrans);
+        mAxisSwitch->addChild(mZAxisTextTrans);
     }
 }
 
@@ -126,13 +126,13 @@ void CAVEGroupReferenceAxis::updateUnitGridSizeInfo(const string &infoStr)
 {
     if (mTextEnabledFlag)
     {
-	mGridInfoText->setText("Unit size = " + infoStr);
-	mGridInfoText->setPosition(Vec3(0, -gCharSize, -gCharSize));
+        mGridInfoText->setText("Unit size = " + infoStr);
+        mGridInfoText->setPosition(Vec3(0, -gCharSize, -gCharSize));
 
-	/* align the text to viewer's front direction */
-	Matrixd rotMat;
-	rotMat.makeRotate(Vec3(0, 1, 0), gPointerDir);
-	mGridInfoTextTrans->setMatrix(Matrixd(rotMat)); 
+        /* align the text to viewer's front direction */
+        Matrixd rotMat;
+        rotMat.makeRotate(Vec3(0, 1, 0), gPointerDir);
+        mGridInfoTextTrans->setMatrix(Matrixd(rotMat)); 
     }
 }
 
@@ -149,14 +149,20 @@ void CAVEGroupReferenceAxis::updateUnitGridSizeInfo(const string &infoStr)
 void CAVEGroupReferenceAxis::updateDiagonal(const osg::Vec3 &wireFrameVect, const osg::Vec3 &solidShapeVect)
 {
     /* update axis */
-    if (wireFrameVect.x() >= 0) mXAxisGeode->setType(CAVEGeodeReferenceAxis::POS_X, &mXDirTrans);
-    else mXAxisGeode->setType(CAVEGeodeReferenceAxis::NEG_X, &mXDirTrans);
+    if (wireFrameVect.x() >= 0) 
+        mXAxisGeode->setType(CAVEGeodeReferenceAxis::POS_X, &mXDirTrans);
+    else 
+        mXAxisGeode->setType(CAVEGeodeReferenceAxis::NEG_X, &mXDirTrans);
 
-    if (wireFrameVect.y() >= 0) mYAxisGeode->setType(CAVEGeodeReferenceAxis::POS_Y, &mYDirTrans);
-    else mYAxisGeode->setType(CAVEGeodeReferenceAxis::NEG_Y, &mYDirTrans);
+    if (wireFrameVect.y() >= 0) 
+        mYAxisGeode->setType(CAVEGeodeReferenceAxis::POS_Y, &mYDirTrans);
+    else 
+        mYAxisGeode->setType(CAVEGeodeReferenceAxis::NEG_Y, &mYDirTrans);
 
-    if (wireFrameVect.z() >= 0) mZAxisGeode->setType(CAVEGeodeReferenceAxis::POS_Z, &mZDirTrans);
-    else mZAxisGeode->setType(CAVEGeodeReferenceAxis::NEG_Z, &mZDirTrans);
+    if (wireFrameVect.z() >= 0) 
+        mZAxisGeode->setType(CAVEGeodeReferenceAxis::POS_Z, &mZDirTrans);
+    else 
+        mZAxisGeode->setType(CAVEGeodeReferenceAxis::NEG_Z, &mZDirTrans);
 
     mXAxisGeode->resize(wireFrameVect.x());
     mYAxisGeode->resize(wireFrameVect.y());
@@ -165,47 +171,59 @@ void CAVEGroupReferenceAxis::updateDiagonal(const osg::Vec3 &wireFrameVect, cons
     /* update text */
     if (mTextEnabledFlag)
     {
-	char lenstr[64];
-	const float threshold = CAVEGeodeSnapWireframe::gSnappingUnitDist;
-	const float lx = solidShapeVect.x() > 0 ? solidShapeVect.x(): -solidShapeVect.x();
-	const float ly = solidShapeVect.y() > 0 ? solidShapeVect.y(): -solidShapeVect.y();
-	const float lz = solidShapeVect.z() > 0 ? solidShapeVect.z(): -solidShapeVect.z();
+        char lenstr[64];
+        const float threshold = CAVEGeodeSnapWireframe::gSnappingUnitDist;
+        const float lx = solidShapeVect.x() > 0 ? solidShapeVect.x(): -solidShapeVect.x();
+        const float ly = solidShapeVect.y() > 0 ? solidShapeVect.y(): -solidShapeVect.y();
+        const float lz = solidShapeVect.z() > 0 ? solidShapeVect.z(): -solidShapeVect.z();
 
-	Matrixd rotMat;
-	rotMat.makeRotate(Vec3(0, 1, 0), gPointerDir);
+        Matrixd rotMat;
+        rotMat.makeRotate(Vec3(0, 1, 0), gPointerDir);
 
-	if (lx >= threshold)
-	{
-	    sprintf(lenstr, "%3.2f m", lx);
-	    mXAxisText->setText(string(lenstr));
+        if (lx >= threshold)
+        {
+            sprintf(lenstr, "%3.2f m", lx);
+            mXAxisText->setText(string(lenstr));
 
-	    /* apply pointer oriented rotation and offset along the axis */
-	    Matrixd transMat;
-	    transMat.makeTranslate(Vec3(wireFrameVect.x(), 0, gCharSize));
-	    mXAxisTextTrans->setMatrix(rotMat * transMat);
-	} else mXAxisText->setText("");
+            /* apply pointer oriented rotation and offset along the axis */
+            Matrixd transMat;
+            transMat.makeTranslate(Vec3(wireFrameVect.x(), 0, gCharSize));
+            mXAxisTextTrans->setMatrix(rotMat * transMat);
+        } 
+        else 
+        {
+            mXAxisText->setText("");
+        }
 
-	if (ly >= threshold)
-	{
-	    sprintf(lenstr, "%3.2f m", ly);
-	    mYAxisText->setText(string(lenstr));
+        if (ly >= threshold)
+        {
+            sprintf(lenstr, "%3.2f m", ly);
+            mYAxisText->setText(string(lenstr));
 
-	    /* apply pointer oriented rotation and offset along the axis */
-	    Matrixd transMat;
-	    transMat.makeTranslate(Vec3(0, wireFrameVect.y(), gCharSize));
-	    mYAxisTextTrans->setMatrix(rotMat * transMat);
-	} else mYAxisText->setText("");
+            /* apply pointer oriented rotation and offset along the axis */
+            Matrixd transMat;
+            transMat.makeTranslate(Vec3(0, wireFrameVect.y(), gCharSize));
+            mYAxisTextTrans->setMatrix(rotMat * transMat);
+        } 
+        else 
+        {
+            mYAxisText->setText("");
+        }
 
-	if (lz >= threshold)
-	{
-	    sprintf(lenstr, "%3.2f m", lz);
-	    mZAxisText->setText(string(lenstr));
+        if (lz >= threshold)
+        {
+            sprintf(lenstr, "%3.2f m", lz);
+            mZAxisText->setText(string(lenstr));
 
-	    /* apply pointer oriented rotation and offset along the axis */
-	    Matrixd transMat;
-	    transMat.makeTranslate(Vec3(0, -gCharSize, wireFrameVect.z()));
-	    mZAxisTextTrans->setMatrix(rotMat * transMat);
-	} else mZAxisText->setText("");
+            /* apply pointer oriented rotation and offset along the axis */
+            Matrixd transMat;
+            transMat.makeTranslate(Vec3(0, -gCharSize, wireFrameVect.z()));
+            mZAxisTextTrans->setMatrix(rotMat * transMat);
+        } 
+        else 
+        {
+            mZAxisText->setText("");
+        }
     }
 }
 
@@ -297,30 +315,47 @@ CAVEGroupReferencePlane::CAVEGroupReferencePlane()
 /***************************************************************
 * Function: setCenterPos()
 ***************************************************************/
-void CAVEGroupReferencePlane::setCenterPos(const osg::Vec3 &center)
+void CAVEGroupReferencePlane::setCenterPos(const osg::Vec3 &center, bool noSnap)
 {
-    /* snap 'center' vector with respect to mUnitGridSize */
     Vec3 centerRounded;
-    float snapUnitX, snapUnitY, snapUnitZ;
-    snapUnitX = snapUnitY = snapUnitZ = mUnitGridSize;
-    if (center.x() < 0) snapUnitX = -mUnitGridSize;
-    if (center.y() < 0) snapUnitY = -mUnitGridSize;
-    if (center.z() < 0) snapUnitZ = -mUnitGridSize;
-    int xSeg = (int)(abs((int)((center.x() + 0.5 * snapUnitX) / mUnitGridSize)));
-    int ySeg = (int)(abs((int)((center.y() + 0.5 * snapUnitY) / mUnitGridSize)));
-    int zSeg = (int)(abs((int)((center.z() + 0.5 * snapUnitZ) / mUnitGridSize)));
-    centerRounded.x() = xSeg * snapUnitX;
-    centerRounded.y() = ySeg * snapUnitY;
-    centerRounded.z() = zSeg * snapUnitZ;
+    if (noSnap)
+    {
+        centerRounded = center;
+    }
+    else
+    {
+        /* snap 'center' vector with respect to mUnitGridSize */
+        float snapUnitX, snapUnitY, snapUnitZ;
+        snapUnitX = snapUnitY = snapUnitZ = mUnitGridSize;
+        if (center.x() < 0) 
+            snapUnitX = -mUnitGridSize;
+        if (center.y() < 0) 
+            snapUnitY = -mUnitGridSize;
+        if (center.z() < 0) 
+            snapUnitZ = -mUnitGridSize;
+        int xSeg = (int)(abs((int)((center.x() + 0.5 * snapUnitX) / mUnitGridSize)));
+        int ySeg = (int)(abs((int)((center.y() + 0.5 * snapUnitY) / mUnitGridSize)));
+        int zSeg = (int)(abs((int)((center.z() + 0.5 * snapUnitZ) / mUnitGridSize)));
+        centerRounded.x() = xSeg * snapUnitX;
+        centerRounded.y() = ySeg * snapUnitY;
+        centerRounded.z() = zSeg * snapUnitZ;
+    
 
-    /* set highlights of either XZ plane or YZ plane */
-    Vec3 offset = centerRounded - mCenter;
-    float offx = offset.x() * offset.x();
-    float offy = offset.y() * offset.y();
-    if (offx > offy) mYZPlaneGeode->setAlpha(1.0f);
-    else mYZPlaneGeode->setAlpha(0.4f);
-    if (offx < offy) mXZPlaneGeode->setAlpha(1.0f);
-    else mXZPlaneGeode->setAlpha(0.4f);
+        /* set highlights of either XZ plane or YZ plane */
+        Vec3 offset = centerRounded - mCenter;
+        float offx = offset.x() * offset.x();
+        float offy = offset.y() * offset.y();
+
+        if (offx > offy) 
+            mYZPlaneGeode->setAlpha(1.0f);
+        else 
+            mYZPlaneGeode->setAlpha(0.4f);
+
+        if (offx < offy) 
+            mXZPlaneGeode->setAlpha(1.0f);
+        else 
+            mXZPlaneGeode->setAlpha(0.4f);
+    } 
 
     mCenter = centerRounded;
     Matrixf transMat;
@@ -354,35 +389,4 @@ void CAVEGroupReferencePlane::setPlaneMasking(bool flagXY, bool flagXZ, bool fla
     if (flagYZ) mYZPlaneSwitch->setAllChildrenOn();
     else mYZPlaneSwitch->setAllChildrenOff();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

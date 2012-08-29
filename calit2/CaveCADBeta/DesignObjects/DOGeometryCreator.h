@@ -43,13 +43,13 @@ class DOGeometryCreator: public DesignObjectBase
     void setWireframeActiveID(const int &idx);
     void setSolidshapeActiveID(const int &idx);
     void setWireframeInitPos(const osg::Vec3 &initPos);
-    void setSolidshapeInitPos(const osg::Vec3 &initPos);
+    void setSolidshapeInitPos(const osg::Vec3 &initPos, bool snap = true);
     void resetWireframeGeodes(const osg::Vec3 &centerPos);
     void setReferencePlaneMasking(bool flagXY, bool flagXZ, bool flagYZ);
     void setReferenceAxisMasking(bool flag);
     void setScalePerUnit(const float &scalePerUnit, const std::string &infoStr);
     void updateReferenceAxis();
-    void updateReferencePlane(const osg::Vec3 &center);
+    void updateReferencePlane(const osg::Vec3 &center, bool noSnap = false);
     void setPointerDir(const osg::Vec3 &pointerDir);
     void setSnapPos(const osg::Vec3 &snapPos);
     void setResize(const float &s);

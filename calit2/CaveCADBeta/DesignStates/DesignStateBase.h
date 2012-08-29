@@ -48,6 +48,8 @@ class DesignStateBase: public osg::Switch
     virtual bool inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) = 0;
     virtual bool inputDevReleaseEvent() = 0;
     virtual void update() = 0;
+    bool test(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
+
 
     void setParticleSystemPtr(DesignStateParticleSystem *psPtr) { mDSParticleSystemPtr = psPtr; }
 

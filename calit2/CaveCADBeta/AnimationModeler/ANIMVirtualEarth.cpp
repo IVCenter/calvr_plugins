@@ -211,15 +211,15 @@ Geode *ANIMCreateWiredSphereGeode(const int numLatiSegs, const int numLongiSegs,
     vertices->push_back(Vec3(0, 0, rad));
     for (int i = 1; i < numLatiSegs; i++)
     {
-	theta = thetaStep * i;
-	for (int j = 0; j < numLongiSegs; j++)
-	{
-	    phi = j * phiStep;
-	    cx = rad * sin(theta) * cos(phi);
-	    cy = rad * sin(theta) * sin(phi);
-	    cz = rad * cos(theta);
-	    vertices->push_back(Vec3(cx, cy, cz));
-	}
+        theta = thetaStep * i;
+        for (int j = 0; j < numLongiSegs; j++)
+        {
+            phi = j * phiStep;
+            cx = rad * sin(theta) * cos(phi);
+            cy = rad * sin(theta) * sin(phi);
+            cz = rad * cos(theta);
+            vertices->push_back(Vec3(cx, cy, cz));
+        }
     }
     vertices->push_back(Vec3(0, 0, -rad));
     wiredSphereGeometry->setVertexArray(vertices);
@@ -227,21 +227,27 @@ Geode *ANIMCreateWiredSphereGeode(const int numLatiSegs, const int numLongiSegs,
     /* setup connections between adjacent vertices */
     for (int i = 1; i < numLatiSegs; i++)		// draw latitudes
     {
-	DrawElementsUInt* edges = new DrawElementsUInt(PrimitiveSet::LINE_STRIP, 0);
-	int idxStart = (i - 1) * numLongiSegs + 1;
-	int idxEnd = idxStart + numLongiSegs - 1;
-	for (int k = idxStart; k <= idxEnd; k++) edges->push_back(k);
-	edges->push_back(idxStart);
-	wiredSphereGeometry->addPrimitiveSet(edges);
+        DrawElementsUInt* edges = new DrawElementsUInt(PrimitiveSet::LINE_STRIP, 0);
+        int idxStart = (i - 1) * numLongiSegs + 1;
+        int idxEnd = idxStart + numLongiSegs - 1;
+        for (int k = idxStart; k <= idxEnd; k++)
+        {
+            edges->push_back(k);
+        }
+        edges->push_back(idxStart);
+        wiredSphereGeometry->addPrimitiveSet(edges);
     }
     for (int j = 0; j < numLongiSegs; j++)		// draw longitudes
     {
-	DrawElementsUInt* edges = new DrawElementsUInt(PrimitiveSet::LINE_STRIP, 0);
-	int idxStart = j + 1;
-	edges->push_back(0);
-	for (int k = 0; k < numLatiSegs - 1; k++) edges->push_back(idxStart + k * numLongiSegs);
-	edges->push_back(numVerts - 1);
-	wiredSphereGeometry->addPrimitiveSet(edges);
+        DrawElementsUInt* edges = new DrawElementsUInt(PrimitiveSet::LINE_STRIP, 0);
+        int idxStart = j + 1;
+        edges->push_back(0);
+        for (int k = 0; k < numLatiSegs - 1; k++) 
+        {
+            edges->push_back(idxStart + k * numLongiSegs);
+        }
+        edges->push_back(numVerts - 1);
+        wiredSphereGeometry->addPrimitiveSet(edges);
     } 
 
     /* apply color stateset to wire frames */
@@ -259,20 +265,5 @@ Geode *ANIMCreateWiredSphereGeode(const int numLatiSegs, const int numLongiSegs,
     return wiredSphereGeode;
 }
 
-
-
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -36,12 +36,12 @@ class DSGeometryCreator: public DesignStateBase
     bool inputDevReleaseEvent();
     void update();
 
-    /* definition of drawsing states */
+    /* definition of drawing states */
     enum DrawingState
     {
-	IDLE,
-	READY_TO_DRAW,
-	START_DRAWING
+        IDLE,
+        READY_TO_DRAW,
+        START_DRAWING
     };
 
     /* link 'DesignObjectHandler->DOGeometryCreator' to 'DSGeometryCreator'
@@ -58,6 +58,8 @@ class DSGeometryCreator: public DesignStateBase
     osg::Geode *mSphereExteriorGeode;		// exterior geode target for intersection test
     int mShapeSwitchIdx, mNumShapeSwitches;
     CAVEAnimationModeler::ANIMShapeSwitchEntry **mShapeSwitchEntryArray;
+    
+    CAVEGeodeShape *prevGeode;
 
     DrawingState mDrawingState;
     SnapLevelController *mSnapLevelController;

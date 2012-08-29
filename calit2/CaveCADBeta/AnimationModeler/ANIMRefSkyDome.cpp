@@ -27,6 +27,10 @@ MatrixTransform *ANIMCreateRefSkyDome(StateSet **stateset)
     ShapeDrawable* skyDrawable = new ShapeDrawable(skyShape);
     Geode* skyGeode = new Geode();
     MatrixTransform *skyDomeTrans = new MatrixTransform;
+    
+    //osg::Matrix m;
+    //m.makeRotate(osg::Quat(M_PI/2, osg::Vec3(0, 1, 0)));
+    //skyDomeTrans->setMatrix(m);
 
     skyShape->setRadius(ANIM_SKYDOME_RADIUS);
     skyGeode->addDrawable(skyDrawable);
@@ -91,11 +95,4 @@ MatrixTransform *ANIMCreateRefSkyDome(StateSet **stateset)
 }
 
 };
-
-
-
-
-
-
-
 

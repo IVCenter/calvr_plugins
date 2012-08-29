@@ -12,8 +12,8 @@ using namespace std;
 using namespace osg;
 
 
-float BallHandler::BOUNDING_BALL_SIZE(0.025f);
-float BallHandler::CENTER_BALL_SIZE(0.005f);
+//float BallHandler::BOUNDING_BALL_SIZE(0.025f);
+//float BallHandler::CENTER_BALL_SIZE(0.005f);
 
 float PlaybackBallHandler::VISUAL_POLE_LENGTH(5.0f);
 float PlaybackBallHandler::VISUAL_POLE_RADIUS(0.05f);
@@ -26,6 +26,8 @@ string BallHandler::gDataDir("");
 BallHandler::BallHandler(): mFlagVisible(false),
 			mBoundingBallGeode(NULL), mCenterBallGeode(NULL)
 {
+    BOUNDING_BALL_SIZE = cvr::ConfigManager::getFloat("value", "Plugin.Maze2.OuterBall.Size", 0.025);
+    CENTER_BALL_SIZE   = cvr::ConfigManager::getFloat("value", "Plugin.Maze2.InnerBall.Size", 0.005);
 }
 
 
@@ -34,8 +36,25 @@ BallHandler::BallHandler(): mFlagVisible(false),
 ***************************************************************/
 CaliBallHandler::CaliBallHandler(MatrixTransform *rootViewerTrans)
 {
-	Vec4 exteriorBallColor = Vec4(1.0f, 1.0f, 0.0f, 1.0f);
-    initCaliBallGeometry(rootViewerTrans, exteriorBallColor);
+
+    float r, g, b, a, innerSize, outerSize;
+    osg::Vec4 innerBallColor, outerBallColor;
+
+    r = cvr::ConfigManager::getFloat("r", "Plugin.Maze2.InnerBall.Color", 1.0f);
+    g = cvr::ConfigManager::getFloat("g", "Plugin.Maze2.InnerBall.Color", 1.0f);
+    b = cvr::ConfigManager::getFloat("b", "Plugin.Maze2.InnerBall.Color", 1.0f);
+    a = cvr::ConfigManager::getFloat("a", "Plugin.Maze2.InnerBall.Color", 1.0f);
+    innerBallColor = osg::Vec4(r, g, b, a);
+
+    r = cvr::ConfigManager::getFloat("r", "Plugin.Maze2.OuterBall.Color", 1.0f);
+    g = cvr::ConfigManager::getFloat("g", "Plugin.Maze2.OuterBall.Color", 1.0f);
+    b = cvr::ConfigManager::getFloat("b", "Plugin.Maze2.OuterBall.Color", 1.0f);
+    a = cvr::ConfigManager::getFloat("a", "Plugin.Maze2.OuterBall.Color", 0.5f);
+    outerBallColor = osg::Vec4(r, g, b, a);
+
+
+	Vec4 exteriorBallColor = Vec4(outerBallColor);//1.0f, 1.0f, 0.0f, 1.0f);
+    initCaliBallGeometry(rootViewerTrans, outerBallColor, innerBallColor);
 }
 
 
@@ -52,13 +71,15 @@ PlaybackBallHandler::PlaybackBallHandler(MatrixTransform *rootViewerTrans)
 	importPlaybackFile(gDataDir + "/EOGClient/EOGPlayback.dat");
 
 	/* create original calibration ball */
-	Vec4 exteriorBallColor = Vec4(0.0f, 1.0f, 0.0f, 1.0f);
-	initCaliBallGeometry(rootViewerTrans, exteriorBallColor);
+	Vec4 exteriorBallColor = Vec4(1.0f, 0.0f, 1.0f, 0.4f);
+	//initCaliBallGeometry(rootViewerTrans, exteriorBallColor);
 
 	/* create extra 'ghost' ball for prediction */
 	mGhostBallTrans = new MatrixTransform();
-	mGhostBallTrans->addChild(mBoundingBallGeode);
-    mGhostBallTrans->addChild(mCenterBallGeode);
+    if (mBoundingBallGeode)
+        mGhostBallTrans->addChild(mBoundingBallGeode);
+    if (mCenterBallGeode)
+        mGhostBallTrans->addChild(mCenterBallGeode);
 	rootViewerTrans->addChild(mGhostBallTrans);
 
 	mHeadSwitch = new Switch();
@@ -80,7 +101,7 @@ PlaybackBallHandler::PlaybackBallHandler(MatrixTransform *rootViewerTrans)
     Cone *poleShape = new Cone(Vec3(0, VISUAL_POLE_LENGTH * 0.75, 0), VISUAL_POLE_RADIUS, VISUAL_POLE_LENGTH);
 	poleShape->setRotation(Quat(M_PI * 0.5f, Vec3(1, 0, 0)));
     Drawable *poleDrawable = new ShapeDrawable(poleShape);
-    mPoleGeode->addDrawable(poleDrawable);
+//    mPoleGeode->addDrawable(poleDrawable);
 	mPoleTrans->addChild(mPoleGeode);
 
 	/* apply pole texture */
@@ -107,8 +128,20 @@ PlaybackBallHandler::PlaybackBallHandler(MatrixTransform *rootViewerTrans)
 void BallHandler::setVisible(bool flag)
 {
     mFlagVisible = flag;
-    if (flag) mBallSwitch->setAllChildrenOn();
-    else mBallSwitch->setAllChildrenOff();
+    if (flag) 
+    {
+        if (mBallSwitch)
+        {
+            mBallSwitch->setAllChildrenOn();
+        }
+    }
+    else 
+    {
+        if (mBallSwitch)
+        {
+            mBallSwitch->setAllChildrenOff();
+        }
+    }
 }
 
 
@@ -120,12 +153,14 @@ void PlaybackBallHandler::setVisible(bool flag)
 	mFlagVisible = flag;
     if (flag)
 	{
-		mBallSwitch->setAllChildrenOn();
+        if (mBallSwitch)
+            mBallSwitch->setAllChildrenOn();
 		mHeadSwitch->setAllChildrenOn();
 	}
     else
 	{
-		mBallSwitch->setAllChildrenOff();
+        if (mBallSwitch)
+            mBallSwitch->setAllChildrenOff();
 		mHeadSwitch->setAllChildrenOff();
 	}
 }
@@ -134,7 +169,8 @@ void PlaybackBallHandler::setVisible(bool flag)
 /***************************************************************
 *  Function: initCaliBallGeometry()
 ***************************************************************/
-void BallHandler::initCaliBallGeometry(MatrixTransform *rootViewerTrans, const Vec4 &exteriorBallColor)
+void BallHandler::initCaliBallGeometry(MatrixTransform *rootViewerTrans, const Vec4 &exteriorBallColor,
+    const Vec4 &interiorBallColor)
 {
     /* create calibration ball */
     mBallSwitch = new Switch();
@@ -157,22 +193,45 @@ void BallHandler::initCaliBallGeometry(MatrixTransform *rootViewerTrans, const V
     mBallTrans->addChild(mCenterBallGeode);    
 
     /* apply calibration ball textures */
-    Material* bndSphereMaterial = new Material;
-    bndSphereMaterial->setDiffuse(Material::FRONT_AND_BACK, exteriorBallColor);
-    bndSphereMaterial->setAlpha(Material::FRONT_AND_BACK, 0.4f);
+    //Material* bndSphereMaterial = new Material;
+    //bndSphereMaterial->setDiffuse(Material::FRONT_AND_BACK, exteriorBallColor);
+    //bndSphereMaterial->setAlpha(Material::FRONT_AND_BACK, 0.4f);
     StateSet* bndSphereStateSet = new StateSet();
-    bndSphereStateSet->setAttributeAndModes(bndSphereMaterial, StateAttribute::OVERRIDE | StateAttribute::ON);
-    bndSphereStateSet->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
-    bndSphereStateSet->setRenderingHint(StateSet::TRANSPARENT_BIN);
+   // bndSphereStateSet->setAttributeAndModes(bndSphereMaterial, StateAttribute::OVERRIDE | StateAttribute::ON);
+   // bndSphereStateSet->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
+    
+    ((ShapeDrawable*)bndSphereDrawable)->setColor(exteriorBallColor);
+    bndSphereStateSet->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    bndSphereStateSet->setMode(GL_BLEND, osg::StateAttribute::ON);
+    bndSphereStateSet->setMode(GL_CULL_FACE, osg::StateAttribute::ON);
+
+    if (cvr::ConfigManager::getEntry("value", "Plugin.Maze2.OuterBall.Lighting", "off") == "on")
+        bndSphereStateSet->setMode(GL_LIGHTING, osg::StateAttribute::ON);
+    else
+        bndSphereStateSet->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    //bndSphereStateSet->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+
     mBoundingBallGeode->setStateSet(bndSphereStateSet);
 
-    Material* ctrSphereMaterial = new Material;
+/*    Material* ctrSphereMaterial = new Material;
     ctrSphereMaterial->setDiffuse(Material::FRONT_AND_BACK, Vec4(1.f,1.f,1.f, 1.f));
     ctrSphereMaterial->setAlpha(Material::FRONT_AND_BACK, 1.0f);
     StateSet* ctrSphereStateSet = new StateSet();
     ctrSphereStateSet->setAttributeAndModes(ctrSphereMaterial, StateAttribute::OVERRIDE | StateAttribute::ON);
     ctrSphereStateSet->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
+    mCenterBallGeode->setStateSet(ctrSphereStateSet);*/
+    StateSet* ctrSphereStateSet = new StateSet();
+    ((ShapeDrawable*)ctrSphereDrawable)->setColor(interiorBallColor);
+    ctrSphereStateSet->setMode(GL_BLEND, osg::StateAttribute::ON);
+    ctrSphereStateSet->setMode(GL_CULL_FACE, osg::StateAttribute::OFF);
+
+    if (cvr::ConfigManager::getEntry("value", "Plugin.Maze2.InnerBall.Lighting", "off") == "on")
+        ctrSphereStateSet->setMode(GL_LIGHTING, osg::StateAttribute::ON);
+    else
+        ctrSphereStateSet->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+
     mCenterBallGeode->setStateSet(ctrSphereStateSet);
+
 }
 
 
@@ -186,7 +245,8 @@ void BallHandler::updateCaliBall(const float &phi, const float &theta, const flo
 
     Matrixf ballTransMat;
     ballTransMat.makeTranslate(pos);
-    mBallTrans->setMatrix(ballTransMat);
+    if (mBallTrans)
+        mBallTrans->setMatrix(ballTransMat);
 }
 
 
@@ -284,7 +344,8 @@ void PlaybackBallHandler::updatePlaybackBallPos()
 		/* apply current stimuli calibration position */
 		Matrixf caliTransMat;
     	caliTransMat.makeTranslate(caliBallPos);
-    	mBallTrans->setMatrix(caliTransMat);
+        if (mBallTrans)
+            mBallTrans->setMatrix(caliTransMat);
 
 		/* apply current predictive ball position */
 		Matrixf predTransMat;

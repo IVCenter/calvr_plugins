@@ -38,31 +38,45 @@ CAVEGeodeSnapSolidshape::CAVEGeodeSnapSolidshape(): mSnappingUnitDist(0.0f)
 ***************************************************************/
 bool CAVEGeodeSnapSolidshape::isValid()
 {
-    if (mScaleVect.length() >= mSnappingUnitDist) return true;
-    else return false;
+    if (mScaleVect.length() >= mSnappingUnitDist) 
+        return true;
+    else 
+        return false;
 }
 
 
 /***************************************************************
 * Function: setInitPosition()
 ***************************************************************/
-void CAVEGeodeSnapSolidshape::setInitPosition(const osg::Vec3 &initPos)
+void CAVEGeodeSnapSolidshape::setInitPosition(const osg::Vec3 &initPos, bool snap)
 {
-    /* round intersected position to integer multiples of 'mSnappingUnitDist' */
-    Vec3 initPosRounded;
-    float snapUnitX, snapUnitY, snapUnitZ;
-    snapUnitX = snapUnitY = snapUnitZ = mSnappingUnitDist;
-    if (initPos.x() < 0) snapUnitX = -mSnappingUnitDist;
-    if (initPos.y() < 0) snapUnitY = -mSnappingUnitDist;
-    if (initPos.z() < 0) snapUnitZ = -mSnappingUnitDist;
-    int xSeg = (int)(abs((int)((initPos.x() + 0.5 * snapUnitX) / mSnappingUnitDist)));
-    int ySeg = (int)(abs((int)((initPos.y() + 0.5 * snapUnitY) / mSnappingUnitDist)));
-    int zSeg = (int)(abs((int)((initPos.z() + 0.5 * snapUnitZ) / mSnappingUnitDist)));
-    initPosRounded.x() = xSeg * snapUnitX;
-    initPosRounded.y() = ySeg * snapUnitY;
-    initPosRounded.z() = zSeg * snapUnitZ;
+    if (snap)
+    {
+        /* round intersected position to integer multiples of 'mSnappingUnitDist' */
+        Vec3 initPosRounded;
+        float snapUnitX, snapUnitY, snapUnitZ;
+        snapUnitX = snapUnitY = snapUnitZ = mSnappingUnitDist;
+        if (initPos.x() < 0) 
+            snapUnitX = -mSnappingUnitDist;
+        if (initPos.y() < 0) 
+            snapUnitY = -mSnappingUnitDist;
+        if (initPos.z() < 0) 
+            snapUnitZ = -mSnappingUnitDist;
 
-    mInitPosition = initPosRounded;
+        int xSeg = (int)(abs((int)((initPos.x() + 0.5 * snapUnitX) / mSnappingUnitDist)));
+        int ySeg = (int)(abs((int)((initPos.y() + 0.5 * snapUnitY) / mSnappingUnitDist)));
+        int zSeg = (int)(abs((int)((initPos.z() + 0.5 * snapUnitZ) / mSnappingUnitDist)));
+
+        initPosRounded.x() = xSeg * snapUnitX;
+        initPosRounded.y() = ySeg * snapUnitY;
+        initPosRounded.z() = zSeg * snapUnitZ;
+
+        mInitPosition = initPosRounded;
+    }
+    else
+    {
+        mInitPosition = initPos;
+    }
 }
 
 
@@ -91,7 +105,12 @@ void CAVEGeodeSnapSolidshapeBox::resize(const osg::Vec3 &gridVect)
 {
     mScaleVect = gridVect * mSnappingUnitDist;
     mBox = new Box;
+
+    //mBox->setCenter(mInitPosition + mScaleVect * 0.5);
+    
+    // Keep the initial position the same - snapping
     mBox->setCenter(mInitPosition + mScaleVect * 0.5);
+
     mBox->setHalfLengths(mScaleVect * 0.5);
     Drawable* boxDrawable = new ShapeDrawable(mBox);
     setDrawable(0, boxDrawable);

@@ -29,12 +29,15 @@ void DesignStateParticleSystem::setEmitterEnabled(bool flag)
 {
     if (mDSEmitterList.size() > 0)
     {
-	CAVEAnimationModeler::ANIMEmitterList::iterator itrEmitter;
-	for (itrEmitter = mDSEmitterList.begin(); itrEmitter != mDSEmitterList.end(); itrEmitter++)
-	{
-	    osgParticle::Emitter *emitterPtr = dynamic_cast <osgParticle::Emitter*> (*itrEmitter);
-	    if (emitterPtr) emitterPtr->setEnabled(flag);
-	}
+        CAVEAnimationModeler::ANIMEmitterList::iterator itrEmitter;
+        for (itrEmitter = mDSEmitterList.begin(); itrEmitter != mDSEmitterList.end(); itrEmitter++)
+        {
+            osgParticle::Emitter *emitterPtr = dynamic_cast <osgParticle::Emitter*> (*itrEmitter);
+            if (emitterPtr) 
+            {
+                emitterPtr->setEnabled(flag);
+            }
+        }
     }
 }
 

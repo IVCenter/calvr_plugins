@@ -39,9 +39,9 @@ class DSSketchBook: public DesignStateBase
     /* definition of switch lock states */
     enum FlipLockState
     {
-	FLIP_UPWARD,
-	FLIP_DOWNWARD,
-	RELEASED
+        FLIP_UPWARD,
+        FLIP_DOWNWARD,
+        RELEASED
     };
 
   protected:
