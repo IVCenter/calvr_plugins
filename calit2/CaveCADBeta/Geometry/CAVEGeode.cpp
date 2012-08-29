@@ -7,7 +7,7 @@
 *
 ***************************************************************/
 #include "CAVEGeode.h"
-
+#include <cvrConfig/ConfigManager.h>
 
 using namespace std;
 using namespace osg;
@@ -25,7 +25,10 @@ CAVEGeode::~CAVEGeode()
 }
 
 //TODO: Get this from config
-const string CAVEGeode::getDataDir() { return string("/home/cehughes/data/CaveCAD/"); }
+const string CAVEGeode::getDataDir()  
+{
+    return cvr::ConfigManager::getEntry("Plugin.CaveCADBeta.DataDir");//string("/home/cehughes/data/CaveCAD/"); 
+}
 
 
 /***************************************************************
