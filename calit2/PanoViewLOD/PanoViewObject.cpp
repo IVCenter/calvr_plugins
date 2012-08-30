@@ -7,6 +7,8 @@
 #include <cvrUtil/OsgMath.h>
 
 #include <iostream>
+#include <cstdio>
+#include <fstream>
 
 //#define PRINT_TIMING
 
@@ -56,8 +58,12 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
     _rightGeode->setNodeMask(_rightGeode->getNodeMask() & (~CULL_MASK_LEFT));
     _rightGeode->setNodeMask(_rightGeode->getNodeMask() & (~CULL_MASK));
 
-    _leftDrawable = new PanoDrawableLOD(leftEyeFiles,rightEyeFiles,radius,mesh,depth,size,vertFile,fragFile);
-    _rightDrawable = new PanoDrawableLOD(leftEyeFiles,rightEyeFiles,radius,mesh,depth,size,vertFile,fragFile);
+    _pdi = new PanoDrawableInfo;
+    _pdi->leftEyeFiles = leftEyeFiles;
+    _pdi->rightEyeFiles = rightEyeFiles;
+
+    _leftDrawable = new PanoDrawableLOD(_pdi,radius,mesh,depth,size,vertFile,fragFile);
+    _rightDrawable = new PanoDrawableLOD(_pdi,radius,mesh,depth,size,vertFile,fragFile);
 
     _leftGeode->addDrawable(_leftDrawable);
     _rightGeode->addDrawable(_rightDrawable);
@@ -149,22 +155,140 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
 
     _fadeActive = false;
     _fadeFrames = 0;
+    _transitionType = NORMAL;
+
+    _printValues = ConfigManager::getBool("value","Plugin.PanoViewLOD.PrintValues",false,NULL);
+}
+
+void PanoViewObject::setTransition(PanTransitionType transitionType, std::string transitionFilesDir, std::vector<std::string> & leftTransitionFiles, std::vector<std::string> & rightTransitionFiles)
+{
+    _transitionType = transitionType;
+    _leftTransitionFiles = leftTransitionFiles;
+    _rightTransitionFiles = rightTransitionFiles;
+    _transitionFilesDir = transitionFilesDir;
+
+    if(transitionType == ZOOM)
+    {
+	_rotateStartDelay = ConfigManager::getFloat("rotateStart","Plugin.PanoViewLOD.ZoomTransition",0.0);
+	_rotateInterval = ConfigManager::getFloat("rotateInterval","Plugin.PanoViewLOD.ZoomTransition",4.0);
+	_zoomStartDelay = ConfigManager::getFloat("zoomStart","Plugin.PanoViewLOD.ZoomTransition",4.0);
+	_zoomInterval = ConfigManager::getFloat("zoomInterval","Plugin.PanoViewLOD.ZoomTransition",4.0);
+	_fadeStartDelay = ConfigManager::getFloat("fadeStart","Plugin.PanoViewLOD.ZoomTransition",8.0);
+	_fadeInterval = ConfigManager::getFloat("fadeInterval","Plugin.PanoViewLOD.ZoomTransition",4.0);
+
+	_transitionStarted = _rotateDone = _zoomDone = _fadeDone = false;
+
+	if(leftTransitionFiles.size())
+	{
+	    std::ifstream infile;
+	    infile.open(leftTransitionFiles[0].c_str());
+	    if(infile.fail())
+	    {
+		infile.open((transitionFilesDir + "/" + leftTransitionFiles[0]).c_str());
+	    }
+
+	    if(infile.fail())
+	    {
+		std::cerr << "Error: unable to open zoom transition file: " << leftTransitionFiles[0] << std::endl;
+		_transitionType = NORMAL;
+		return;
+	    }
+
+	    std::string line;
+	    while(infile.good() && _zoomTransitionInfo.size() < _leftTransitionFiles.size())
+	    {
+		std::getline(infile,line);
+		ZoomTransitionInfo zti;
+		zti.rotationFromImage = zti.rotationToImage = zti.zoomValue = 0.0;
+		zti.zoomDir = osg::Vec3(0,1,0);
+
+		float x,y,z;
+		int readValues = sscanf(line.c_str(),"%f %f %f %f %f %f", &zti.rotationFromImage, &zti.rotationToImage, &zti.zoomValue, &x, &y, &z);
+		if(readValues < 3)
+		{
+		    std::cerr << "Warning: unable to parse transition values for line: " << line << std::endl;
+		}
+		else if(readValues > 3 && readValues < 6)
+		{
+		    std::cerr << "Warning: unable to parse transition zoom direction for line: " << line << std::endl;
+		}
+		else if(readValues == 6)
+		{
+		    zti.zoomDir.x() = x; 
+		    zti.zoomDir.y() = y;
+		    zti.zoomDir.z() = z;
+		}
+
+		zti.rotationFromImage *= M_PI / 180.0;
+		zti.rotationToImage *= M_PI / 180.0;
+
+		_zoomTransitionInfo.push_back(zti);
+	    }
+
+	    if(_zoomTransitionInfo.size() != _leftTransitionFiles.size())
+	    {
+		std::cerr << "Warning: Zoom transition entries count does not match set size.  Transitions: " << _zoomTransitionInfo.size() << " Set size: " << _leftTransitionFiles.size() << std::endl;
+
+		while(_zoomTransitionInfo.size() < _leftTransitionFiles.size())
+		{
+		    ZoomTransitionInfo zti;
+		    zti.rotationFromImage = zti.rotationToImage = zti.zoomValue = 0.0;
+		    zti.zoomDir = osg::Vec3(0,1,0);
+
+		    _zoomTransitionInfo.push_back(zti);
+		}
+	    }
+
+#if 1
+	    std::cerr << "Zoom TransitionInfo" << std::endl;
+	    for(int i = 0; i < _zoomTransitionInfo.size(); i++)
+	    {
+		std::cerr << "Rotation From: " << _zoomTransitionInfo[i].rotationFromImage * 180.0 / M_PI << " To: " << _zoomTransitionInfo[i].rotationToImage * 180.0 / M_PI << " Zoom: " << _zoomTransitionInfo[i].zoomValue << " Zoom Direction x: " << _zoomTransitionInfo[i].zoomDir.x() << " y: " << _zoomTransitionInfo[i].zoomDir.y() << " z: " << _zoomTransitionInfo[i].zoomDir.z() << std::endl;
+	    }
+#endif
+
+	}
+
+	/*for(int i = 0; i < leftTransitionFiles.size(); i++)
+	{
+	    //TODO: read from files
+	    ZoomTransitionInfo zti;
+	    zti.rotationFromImage = 0.5 * ((float)i+1.0);
+	    zti.rotationToImage = 0.2;
+	    zti.zoomValue = -0.25;
+	    _leftZoomTransitionInfo.push_back(zti);
+	    _rightZoomTransitionInfo.push_back(zti);
+	}*/
+    }
+
+    _leftDrawable->setTransitionType(transitionType);
+    _rightDrawable->setTransitionType(transitionType);
 }
 
 void PanoViewObject::next()
 {
+    if(_transitionStarted)
+    {
+	return;
+    }
     _fadeActive = true;
     _fadeFrames = 0;
     _leftDrawable->next();
     _rightDrawable->next();
+    startTransition();
 }
 
 void PanoViewObject::previous()
 {
+    if(_transitionStarted)
+    {
+	return;
+    }
     _fadeActive = true;
     _fadeFrames = 0;
     _leftDrawable->previous();
     _rightDrawable->previous();
+    startTransition();
 }
 
 void PanoViewObject::setAlpha(float alpha)
@@ -499,7 +623,10 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 		_spinMat = _spinMat * rot;
 		setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
 
-                std::cerr << "Spin value: " << getRotate() * 180.0 / M_PI << std::endl;
+		if(_printValues)
+		{
+		    std::cerr << "Spin value: " << getRotate() * 180.0 / M_PI << std::endl;
+		}
 
 		if(_currentZoom != 0.0)
 		{
@@ -528,6 +655,97 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
     return false;
 }
 
+void PanoViewObject::preFrameUpdate()
+{
+    if(_transitionType == ZOOM && _transitionStarted)
+    {	
+	_transitionTime += PluginHelper::getLastFrameDuration();
+
+	if(!_rotateDone)
+	{
+	    float value;
+	    if(_transitionTime <= _rotateStartDelay)
+	    {
+		value = 0.0;
+	    }
+	    else if(_transitionTime >= _rotateStartDelay + _rotateInterval)
+	    {
+		value = 1.0;
+		_rotateDone = true;
+	    }
+	    else
+	    {
+		value = (_transitionTime - _rotateStartDelay) / _rotateInterval;
+	    }
+
+	    float rotateValue = _rotateStart + value * (_rotateEnd - _rotateStart);
+
+	    _pdi->fromTransitionTransform.makeRotate(rotateValue,osg::Vec3(0,1,0));
+	}
+
+	if(!_zoomDone)
+	{
+	    float value;
+	    if(_transitionTime <= _zoomStartDelay)
+	    {
+		value = 0.0;
+	    }
+	    else if(_transitionTime >= _zoomStartDelay + _zoomInterval)
+	    {
+		value = 1.0;
+		_zoomDone = true;
+	    }
+	    else
+	    {
+		value = (_transitionTime - _zoomStartDelay) / _zoomInterval;
+	    }
+
+	    float zoomValue = value * _zoomEnd;
+
+	    osg::Vec3 dir = _zoomTransitionDir;
+	    dir = dir * getWorldToObjectMatrix() * osg::Matrix::inverse(_pdi->fromTransitionTransform);
+	    osg::Vec3 point;
+	    point = point * getWorldToObjectMatrix() * osg::Matrix::inverse(_pdi->fromTransitionTransform);
+	    dir = dir - point;
+	    dir.normalize();
+
+	    //dir = osg::Vec3(0,0,-1);
+
+	    for(std::map<int,sph_model*>::iterator it = _pdi->transitionModelMap.begin(); it!= _pdi->transitionModelMap.end(); it++)
+	    {
+		it->second->set_zoom(dir.x(),dir.y(),dir.z(),pow(10.0, zoomValue));
+	    }
+	}
+
+	if(!_fadeDone)
+	{
+	    float value;
+	    if(_transitionTime <= _fadeStartDelay)
+	    {
+		value = 0.0;
+	    }
+	    else if(_transitionTime >= _fadeStartDelay + _fadeInterval)
+	    {
+		value = 1.0;
+		_fadeDone = true;
+	    }
+	    else
+	    {
+		value = (_transitionTime - _fadeStartDelay) / _fadeInterval;
+	    }
+	    _pdi->transitionFade = value;
+	}
+
+	if(_rotateDone && _zoomDone && _fadeDone)
+	{
+	    _transitionStarted = false;
+	    _leftDrawable->transitionDone();
+	    _rightDrawable->transitionDone();
+	    setRotate(_finalRotate);
+	}
+    }
+}
+
 void PanoViewObject::updateZoom(osg::Matrix & mat)
 {
     osg::Matrix m = osg::Matrix::inverse(_root->getMatrix());
@@ -537,6 +755,14 @@ void PanoViewObject::updateZoom(osg::Matrix & mat)
     point = point * mat * m;
     dir = dir - point;
     dir.normalize();
+
+    if(_printValues)
+    {
+	osg::Vec3 zoomDir = osg::Vec3(0,1,0) * mat;
+	zoomDir = zoomDir - mat.getTrans();
+	zoomDir.normalize();
+	std::cerr << "Zoom value: " << _currentZoom << " x: " << zoomDir.x() << " y: " << zoomDir.y() << " z: " << zoomDir.z() << std::endl;
+    }
 
     if(_leftDrawable)
     {
@@ -548,4 +774,41 @@ void PanoViewObject::updateZoom(osg::Matrix & mat)
     }
 
     _lastZoomMat = mat;
+}
+
+void PanoViewObject::startTransition()
+{
+    if(_leftDrawable->getSetSize() < 2)
+    {
+	return;
+    }
+
+    if(_transitionType == ZOOM)
+    { 
+	_pdi->transitionFade = 0.0;
+
+	_transitionStarted = true;
+	_transitionTime = 0.0;
+	_rotateDone = _zoomDone = _fadeDone = false;
+
+	int fromIndex = _leftDrawable->getLastIndex();
+	int toIndex = _leftDrawable->getCurrentIndex();
+	std::cerr << "From Index: " << fromIndex << " To Index: " << toIndex << std::endl;
+
+	_rotateStart = getRotate();
+	_rotateEnd = _zoomTransitionInfo[fromIndex].rotationFromImage;
+	float toRotation = _zoomTransitionInfo[fromIndex].rotationToImage;
+	_finalRotate = toRotation;
+
+	setRotate(0.0);
+
+	_pdi->toTransitionTransform.makeRotate(toRotation,osg::Vec3(0,1,0));
+	_pdi->fromTransitionTransform.makeRotate(_rotateStart,osg::Vec3(0,1,0));
+
+	_currentZoom = 0.0;
+	_leftDrawable->setZoom(osg::Vec3(0,1,0),pow(10.0, _currentZoom));
+	_rightDrawable->setZoom(osg::Vec3(0,1,0),pow(10.0, _currentZoom));
+	_zoomEnd = _zoomTransitionInfo[fromIndex].zoomValue;
+	_zoomTransitionDir = _zoomTransitionInfo[fromIndex].zoomDir;
+    }
 }

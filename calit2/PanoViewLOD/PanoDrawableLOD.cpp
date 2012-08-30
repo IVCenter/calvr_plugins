@@ -20,15 +20,6 @@
 
 #include <sys/time.h>
 
-std::map<int,std::vector<int> > PanoDrawableLOD::_leftFileIDs;
-std::map<int,std::vector<int> > PanoDrawableLOD::_rightFileIDs;
-std::map<int,bool> PanoDrawableLOD::_updateDoneMap;
-std::map<int,int> PanoDrawableLOD::_initMap;
-OpenThreads::Mutex PanoDrawableLOD::_initLock;
-std::map<int,OpenThreads::Mutex*> PanoDrawableLOD::_updateLock;
-std::map<int,sph_cache*> PanoDrawableLOD::_cacheMap;
-std::map<int,sph_model*> PanoDrawableLOD::_modelMap;
-
 using namespace cvr;
 
 struct MyGLClientState
@@ -183,19 +174,20 @@ char * loadShaderFile(std::string file)
     return fileBuffer;
 }
 
-PanoDrawableLOD::PanoDrawableLOD(std::string leftEyeFile, std::string rightEyeFile, float radius, int mesh, int depth, int size, std::string vertFile, std::string fragFile)
+PanoDrawableLOD::PanoDrawableLOD(PanoDrawableInfo * pdi, float radius, int mesh, int depth, int size, std::string vertFile, std::string fragFile)
 {
+    _pdi = pdi;
     setUseDisplayList(false);
     _badInit = false;
-    _leftEyeFiles.push_back(leftEyeFile);
-    _rightEyeFiles.push_back(rightEyeFile);
     _radius = radius;
     _mesh = mesh;
     _depth = depth;
     _size = size;
     _currentIndex = 0;
+    _lastIndex = _nextIndex = -1;
     _totalFadeTime = ConfigManager::getFloat("value","Plugin.PanoViewLOD.FadeTime",2.0);
     _currentFadeTime = 0.0;
+    _transitionActive = false;
 
     std::string shaderDir = ConfigManager::getEntry("value","Plugin.PanoViewLOD.ShaderDir","");
     _vertData = loadShaderFile(shaderDir + "/" + vertFile);
@@ -215,48 +207,13 @@ PanoDrawableLOD::PanoDrawableLOD(std::string leftEyeFile, std::string rightEyeFi
 	_badInit = true;
     }
 
-    setUpdateCallback(new PanoUpdate());
-}
-
-PanoDrawableLOD::PanoDrawableLOD(std::vector<std::string> & leftEyeFiles, std::vector<std::string> & rightEyeFiles, float radius, int mesh, int depth, int size, std::string vertFile, std::string fragFile)
-{
-    setUseDisplayList(false);
-    _badInit = false;
-    _leftEyeFiles = leftEyeFiles;
-    _rightEyeFiles = rightEyeFiles;
-    _radius = radius;
-    _mesh = mesh;
-    _depth = depth;
-    _size = size;
-    _currentIndex = 0;
-    _totalFadeTime = ConfigManager::getFloat("value","Plugin.PanoViewLOD.FadeTime",2.0);
-    _currentFadeTime = 0.0;
-
-    std::string shaderDir = ConfigManager::getEntry("value","Plugin.PanoViewLOD.ShaderDir","");
-    _vertData = loadShaderFile(shaderDir + "/" + vertFile);
-    _fragData = loadShaderFile(shaderDir + "/" + fragFile);
-
-    //std::cerr << "Vertfile: " << vertFile << " fragFile: " << fragFile << std::endl;
-
-    if(!_vertData)
-    {
-	std::cerr << "Error loading shader file: " << shaderDir + "/" + vertFile << std::endl;
-	_badInit = true;
-    }
-    
-    if(!_fragData)
-    {
-	std::cerr << "Error loading shader file: " << shaderDir + "/" + fragFile << std::endl;
-	_badInit = true;
-    }
-
-    if(_leftEyeFiles.size() == 0 || _rightEyeFiles.size() == 0)
+    if(_pdi->leftEyeFiles.size() == 0 || _pdi->rightEyeFiles.size() == 0)
     {
 	std::cerr << "PanoDrawableLOD error: empty file list." << std::endl;
 	_badInit = true;
     }
 
-    if(_leftEyeFiles.size() != _rightEyeFiles.size())
+    if(_pdi->leftEyeFiles.size() != _pdi->rightEyeFiles.size())
     {
 	std::cerr << "PanoDrawableLOD error: files list sizes do not match." << std::endl;
 	_badInit = true;
@@ -284,10 +241,10 @@ PanoDrawableLOD::~PanoDrawableLOD()
 
 void PanoDrawableLOD::cleanup()
 {
-    _leftFileIDs.clear();
-    _rightFileIDs.clear();
-    _updateDoneMap.clear();
-    _initMap.clear();
+    _pdi->leftFileIDs.clear();
+    _pdi->rightFileIDs.clear();
+    _pdi->updateDoneMap.clear();
+    _pdi->initMap.clear();
     //for(std::map<int,sph_cache*>::iterator it = _cacheMap.begin(); it != _cacheMap.end(); it++)
     //{
 	//make current
@@ -304,17 +261,24 @@ void PanoDrawableLOD::cleanup()
 
 void PanoDrawableLOD::next()
 {
-    if(_leftEyeFiles.size() < 2)
+    if(_pdi->leftEyeFiles.size() < 2)
     {
 	return;
     }
     _lastIndex = _currentIndex;
-    _currentIndex = (_currentIndex+1) % _leftEyeFiles.size();
-    _nextIndex = (_currentIndex+1) % _leftEyeFiles.size();
+    _currentIndex = (_currentIndex+1) % _pdi->leftEyeFiles.size();
+    _nextIndex = (_currentIndex+1) % _pdi->leftEyeFiles.size();
 
-    _currentFadeTime = _totalFadeTime + PluginHelper::getLastFrameDuration();
+    if(_transitionType == NORMAL)
+    {
+	_currentFadeTime = _totalFadeTime + PluginHelper::getLastFrameDuration();
+    }
+    else
+    {
+	_transitionActive = true;
+    }
 
-    for(std::map<int,std::vector<int> >::iterator it = _leftFileIDs.begin(); it != _leftFileIDs.end(); it++)
+    for(std::map<int,std::vector<int> >::iterator it = _pdi->leftFileIDs.begin(); it != _pdi->leftFileIDs.end(); it++)
     {
         if(it->second.size())
         {
@@ -323,7 +287,7 @@ void PanoDrawableLOD::next()
         }
     }
 
-    for(std::map<int,std::vector<int> >::iterator it = _rightFileIDs.begin(); it != _rightFileIDs.end(); it++)
+    for(std::map<int,std::vector<int> >::iterator it = _pdi->rightFileIDs.begin(); it != _pdi->rightFileIDs.end(); it++)
     {
         if(it->second.size())
         {
@@ -331,37 +295,28 @@ void PanoDrawableLOD::next()
             break;
         }
     }
-
-    /*if(_leftFileIDs.size())
-    {
-        
-        if(_leftFileIDs.begin()->second.size())
-        {
-            sph_cache::_diskCache->setLeftFiles(_leftFileIDs.begin()->second[_lastIndex],_leftFileIDs.begin()->second[_currentIndex],_leftFileIDs.begin()->second[_nextIndex]);
-        }
-
-        if(_rightFileIDs.begin()->second.size())
-        {
-            sph_cache::_diskCache->setRightFiles(_rightFileIDs.begin()->second[_lastIndex],_rightFileIDs.begin()->second[_currentIndex],_rightFileIDs.begin()->second[_nextIndex]);
-        }
-	//sph_cache::_diskCache->kill_tasks(_leftFileIDs.begin()->second[_lastIndex]);
-	//sph_cache::_diskCache->kill_tasks(_rightFileIDs.begin()->second[_lastIndex]);
-    }*/
 }
 
 void PanoDrawableLOD::previous()
 {
-    if(_leftEyeFiles.size() < 2)
+    if(_pdi->leftEyeFiles.size() < 2)
     {
 	return;
     }
     _lastIndex = _currentIndex;
-    _currentIndex = (_currentIndex+_leftEyeFiles.size()-1) % _leftEyeFiles.size();
-    _nextIndex = (_currentIndex+_leftEyeFiles.size()-1) % _leftEyeFiles.size();
+    _currentIndex = (_currentIndex+_pdi->leftEyeFiles.size()-1) % _pdi->leftEyeFiles.size();
+    _nextIndex = (_currentIndex+_pdi->leftEyeFiles.size()-1) % _pdi->leftEyeFiles.size();
 
-    _currentFadeTime = _totalFadeTime + PluginHelper::getLastFrameDuration();
+    if(_transitionType == NORMAL)
+    {
+	_currentFadeTime = _totalFadeTime + PluginHelper::getLastFrameDuration();
+    }
+    else
+    {
+	_transitionActive = true;
+    }
 
-    for(std::map<int,std::vector<int> >::iterator it = _leftFileIDs.begin(); it != _leftFileIDs.end(); it++)
+    for(std::map<int,std::vector<int> >::iterator it = _pdi->leftFileIDs.begin(); it != _pdi->leftFileIDs.end(); it++)
     {
         if(it->second.size())
         {
@@ -370,7 +325,7 @@ void PanoDrawableLOD::previous()
         }
     }
 
-    for(std::map<int,std::vector<int> >::iterator it = _rightFileIDs.begin(); it != _rightFileIDs.end(); it++)
+    for(std::map<int,std::vector<int> >::iterator it = _pdi->rightFileIDs.begin(); it != _pdi->rightFileIDs.end(); it++)
     {
         if(it->second.size())
         {
@@ -378,26 +333,16 @@ void PanoDrawableLOD::previous()
             break;
         }
     }
+}
 
-    /*if(_leftFileIDs.size())
-    {
-        if(_leftFileIDs.begin()->second.size())
-        {
-	    sph_cache::_diskCache->setLeftFiles(_leftFileIDs.begin()->second[_lastIndex],_leftFileIDs.begin()->second[_currentIndex],_leftFileIDs.begin()->second[_nextIndex]);
-        }
-
-        if(_rightFileIDs.begin()->second.size())
-        {
-	    sph_cache::_diskCache->setRightFiles(_rightFileIDs.begin()->second[_lastIndex],_rightFileIDs.begin()->second[_currentIndex],_rightFileIDs.begin()->second[_nextIndex]);
-        }
-	//sph_cache::_diskCache->kill_tasks(_leftFileIDs.begin()->second[_lastIndex]);
-	//sph_cache::_diskCache->kill_tasks(_rightFileIDs.begin()->second[_lastIndex]);
-    }*/
+void PanoDrawableLOD::transitionDone()
+{
+    _transitionActive = false;
 }
 
 void PanoDrawableLOD::setZoom(osg::Vec3 dir, float k)
 {
-    for(std::map<int,sph_model*>::iterator it = _modelMap.begin(); it!= _modelMap.end(); it++)
+    for(std::map<int,sph_model*>::iterator it = _pdi->modelMap.begin(); it!= _pdi->modelMap.end(); it++)
     {
 	it->second->set_zoom(dir.x(),dir.y(),dir.z(),k);
     }
@@ -462,102 +407,106 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	}
     }
 
-    _initLock.lock();
+    _pdi->initLock.lock();
 
-    if(!_initMap[context])
+    if(!_pdi->initMap[context])
     {
-	if(!_cacheMap[context])
+	if(!_pdi->cacheMap[context])
 	{
 	    GLenum err = glewInit();
 	    if (GLEW_OK != err)
 	    {
 		std::cerr << "Error on glew init: " << glewGetErrorString(err) << std::endl;
 		_badInit = true;
-		_initLock.unlock();
+		_pdi->initLock.unlock();
 		glPopAttrib();
 		return;
 	    }
 	    int cachesize = ConfigManager::getInt("value","Plugin.PanoViewLOD.CacheSize",256);
-	    _cacheMap[context] = new sph_cache(cachesize);
-	    _cacheMap[context]->set_debug(false);
+	    _pdi->cacheMap[context] = new sph_cache(cachesize);
+	    _pdi->cacheMap[context]->set_debug(false);
 
-	    _updateLock[context] = new OpenThreads::Mutex();
+	    _pdi->updateLock[context] = new OpenThreads::Mutex();
 	}
 
 	int time = 1;
-	if(_modelMap[context])
+	if(_pdi->modelMap[context])
 	{
-	    time = _modelMap[context]->get_time();
-	    delete _modelMap[context];
+	    time = _pdi->modelMap[context]->get_time();
+	    delete _pdi->modelMap[context];
+	    delete _pdi->transitionModelMap[context];
 	}
 	GLint buffer,ebuffer;
 	glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&buffer);
 	glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&ebuffer);
 
-	_modelMap[context] = new sph_model(*_cacheMap[context],_vertData,_fragData,_mesh,_depth,_size);
+	_pdi->modelMap[context] = new sph_model(*_pdi->cacheMap[context],_vertData,_fragData,_mesh,_depth,_size);
+	_pdi->transitionModelMap[context] = new sph_model(*_pdi->cacheMap[context],_vertData,_fragData,_mesh,_depth,_size);
 	// Set start time to last model's time since timestamps are used by the disk cache
-	_modelMap[context]->set_time(time);
+	_pdi->modelMap[context]->set_time(time);
+	_pdi->transitionModelMap[context]->set_time(time);
 
 	glBindBuffer(GL_ARRAY_BUFFER, buffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebuffer);
 
-	_leftFileIDs[context] = std::vector<int>();
-	_rightFileIDs[context] = std::vector<int>();
+	_pdi->leftFileIDs[context] = std::vector<int>();
+	_pdi->rightFileIDs[context] = std::vector<int>();
     }
 
-    if(!(_initMap[context] & eye))
+    if(!(_pdi->initMap[context] & eye))
     {
 	if(eye & DRAW_LEFT)
 	{
-	    for(int i = 0; i < _leftEyeFiles.size(); i++)
+	    for(int i = 0; i < _pdi->leftEyeFiles.size(); i++)
 	    {
-		_leftFileIDs[context].push_back(_cacheMap[context]->add_file(_leftEyeFiles[i]));
+		_pdi->leftFileIDs[context].push_back(_pdi->cacheMap[context]->add_file(_pdi->leftEyeFiles[i]));
 	    }
-	    if(_leftEyeFiles.size() > 1 && _currentIndex < _leftFileIDs[context].size())
+	    if(_pdi->leftEyeFiles.size() > 1 && _currentIndex < _pdi->leftFileIDs[context].size())
 	    {
                 int last, next;
-                next = (_currentIndex+1) % _leftFileIDs[context].size();
-                last = (_currentIndex-1+_leftFileIDs[context].size()) % _leftFileIDs[context].size();
-		sph_cache::_diskCache->setLeftFiles(_leftFileIDs[context][last],_leftFileIDs[context][_currentIndex],_leftFileIDs[context][next]);
+                next = (_currentIndex+1) % _pdi->leftFileIDs[context].size();
+                last = (_currentIndex-1+_pdi->leftFileIDs[context].size()) % _pdi->leftFileIDs[context].size();
+		sph_cache::_diskCache->setLeftFiles(_pdi->leftFileIDs[context][last],_pdi->leftFileIDs[context][_currentIndex],_pdi->leftFileIDs[context][next]);
 	    }
-	    else if(_leftEyeFiles.size() == 1 && _currentIndex < _leftFileIDs[context].size())
+	    else if(_pdi->leftEyeFiles.size() == 1 && _currentIndex < _pdi->leftFileIDs[context].size())
 	    {
-		sph_cache::_diskCache->setLeftFiles(-1,_leftFileIDs[context][_currentIndex],-1);
+		sph_cache::_diskCache->setLeftFiles(-1,_pdi->leftFileIDs[context][_currentIndex],-1);
 	    }
 	}
 	else if(eye & DRAW_RIGHT)
 	{
-	    for(int i = 0; i < _rightEyeFiles.size(); i++)
+	    for(int i = 0; i < _pdi->rightEyeFiles.size(); i++)
 	    {
-		_rightFileIDs[context].push_back(_cacheMap[context]->add_file(_rightEyeFiles[i]));
+		_pdi->rightFileIDs[context].push_back(_pdi->cacheMap[context]->add_file(_pdi->rightEyeFiles[i]));
 	    }
-	    if(_rightEyeFiles.size() > 1 && _currentIndex < _rightFileIDs[context].size())
+	    if(_pdi->rightEyeFiles.size() > 1 && _currentIndex < _pdi->rightFileIDs[context].size())
 	    {
                 int last, next;
-                next = (_currentIndex+1) % _rightFileIDs[context].size();
-                last = (_currentIndex-1+_rightFileIDs[context].size()) % _rightFileIDs[context].size();
-		sph_cache::_diskCache->setRightFiles(_rightFileIDs[context][last],_rightFileIDs[context][_currentIndex],_rightFileIDs[context][next]);
+                next = (_currentIndex+1) % _pdi->rightFileIDs[context].size();
+                last = (_currentIndex-1+_pdi->rightFileIDs[context].size()) % _pdi->rightFileIDs[context].size();
+		sph_cache::_diskCache->setRightFiles(_pdi->rightFileIDs[context][last],_pdi->rightFileIDs[context][_currentIndex],_pdi->rightFileIDs[context][next]);
 	    }
-	    else if(_rightEyeFiles.size() == 1 && _currentIndex < _rightFileIDs[context].size())
+	    else if(_pdi->rightEyeFiles.size() == 1 && _currentIndex < _pdi->rightFileIDs[context].size())
 	    {
-		sph_cache::_diskCache->setRightFiles(-1,_rightFileIDs[context][_currentIndex],-1);
+		sph_cache::_diskCache->setRightFiles(-1,_pdi->rightFileIDs[context][_currentIndex],-1);
 	    }
 	}
-	_initMap[context] |= eye;
+	_pdi->initMap[context] |= eye;
     }
 
-    _initLock.unlock();
+    _pdi->initLock.unlock();
 
-    _updateLock[context]->lock();
+    _pdi->updateLock[context]->lock();
 
-    if(!_updateDoneMap[context])
+    if(!_pdi->updateDoneMap[context])
     {
 #ifdef PRINT_TIMING
 	struct timeval ustart, uend;
 	gettimeofday(&ustart,NULL);
 #endif
-	_cacheMap[context]->update(_modelMap[context]->tick());
-	_updateDoneMap[context] = true;
+	_pdi->cacheMap[context]->update(_pdi->modelMap[context]->tick());
+	_pdi->transitionModelMap[context]->tick();
+	_pdi->updateDoneMap[context] = true;
 #ifdef PRINT_TIMING
 	gettimeofday(&uend,NULL);
 	double utime = (uend.tv_sec - ustart.tv_sec) + ((uend.tv_usec - ustart.tv_usec)/1000000.0);
@@ -565,75 +514,124 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 #endif
     }
 
-    _updateLock[context]->unlock(); 
+    _pdi->updateLock[context]->unlock(); 
 
-    osg::Matrix modelview;
-
-    modelview.makeScale(osg::Vec3(_radius,_radius,_radius));
-    modelview = modelview * ri.getState()->getModelViewMatrix();
-    
-    int fileID[2];
-    int pv[2];
-    int pc = 0;
-    int fc = 0;
-    float fade = 0;
-    if(eye & DRAW_LEFT)
+    if(_transitionType == NORMAL || !_transitionActive)
     {
-	if(_currentFadeTime == 0.0)
+	osg::Matrix modelview;
+	modelview.makeScale(osg::Vec3(_radius,_radius,_radius));
+	modelview = modelview * ri.getState()->getModelViewMatrix();
+
+	int fileID[2];
+	int pv[2];
+	int pc = 0;
+	int fc = 0;
+	float fade = 0;
+	if(eye & DRAW_LEFT)
 	{
-	    fileID[0] = _leftFileIDs[context][_currentIndex];
+	    if(_currentFadeTime == 0.0)
+	    {
+		fileID[0] = _pdi->leftFileIDs[context][_currentIndex];
+		fc = 1;
+	    }
+	    else
+	    {
+		fileID[0] = _pdi->leftFileIDs[context][_lastIndex];
+		fileID[1] = _pdi->leftFileIDs[context][_currentIndex];
+		fc = 2;
+		pv[0] = _pdi->leftFileIDs[context][_nextIndex];
+		pc = 1;
+		fade = 1.0 - (_currentFadeTime / _totalFadeTime);
+		//std::cerr << "Files: " << fileID[0] << " " << fileID[1] << std::endl;
+	    }
+	}
+	else if(eye & DRAW_RIGHT)
+	{
+	    if(_currentFadeTime == 0.0)
+	    {
+		fileID[0] = _pdi->rightFileIDs[context][_currentIndex];
+		fc = 1;
+	    }
+	    else
+	    {
+		fileID[0] = _pdi->rightFileIDs[context][_lastIndex];
+		fileID[1] = _pdi->rightFileIDs[context][_currentIndex];
+		fc = 2;
+		pv[0] = _pdi->rightFileIDs[context][_nextIndex];
+		pc = 1;
+		fade = 1.0 - (_currentFadeTime / _totalFadeTime);
+		//std::cerr << "Files: " << fileID[0] << " " << fileID[1] << std::endl;
+	    }
+	}
+
+	//std::cerr << "Fade: " << fade << std::endl;
+
+	_pdi->modelMap[context]->set_fade(fade);
+	glUseProgram(0);
+	_pdi->modelMap[context]->prep(ri.getState()->getProjectionMatrix().ptr(),modelview.ptr(), (int)ri.getState()->getCurrentViewport()->width(), (int)ri.getState()->getCurrentViewport()->height());
+
+	//printGLState();
+	MyGLClientState glstate;
+	pushClientState(glstate);
+
+	//GLint buffer,ebuffer;
+	//glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&buffer);
+	//glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&ebuffer);
+	//bool vertexOn = glIsEnabled(GL_VERTEX_ARRAY);
+	//glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
+	//clearGLClientState();
+
+	_pdi->modelMap[context]->draw(ri.getState()->getProjectionMatrix().ptr(), modelview.ptr(), fileID, fc, pv, pc, _alpha);
+
+	popClientState(glstate);
+
+    }
+    else
+    {
+	osg::Matrix modelviewfrom;
+	modelviewfrom.makeScale(osg::Vec3(_radius,_radius,_radius));
+	modelviewfrom = modelviewfrom * _pdi->fromTransitionTransform * ri.getState()->getModelViewMatrix();
+
+	osg::Matrix modelviewto;
+	modelviewto.makeScale(osg::Vec3(_radius*1.001,_radius*1.001,_radius*1.001));
+	modelviewto = modelviewto * _pdi->toTransitionTransform * ri.getState()->getModelViewMatrix();
+
+	int fileIDfrom[2];
+	int fileIDto[2];
+	int pv[2];
+	int pc = 0;
+	int fc = 0;
+	float fade = 0;
+	if(eye & DRAW_LEFT)
+	{
+	    fileIDfrom[0] = _pdi->leftFileIDs[context][_lastIndex];
+	    fileIDto[0] = _pdi->leftFileIDs[context][_currentIndex];
 	    fc = 1;
 	}
-	else
+	else if(eye & DRAW_RIGHT)
 	{
-	    fileID[0] = _leftFileIDs[context][_lastIndex];
-	    fileID[1] = _leftFileIDs[context][_currentIndex];
-	    fc = 2;
-	    pv[0] = _leftFileIDs[context][_nextIndex];
-	    pc = 1;
-	    fade = 1.0 - (_currentFadeTime / _totalFadeTime);
-            //std::cerr << "Files: " << fileID[0] << " " << fileID[1] << std::endl;
-	}
-    }
-    else if(eye & DRAW_RIGHT)
-    {
-	if(_currentFadeTime == 0.0)
-	{
-	    fileID[0] = _rightFileIDs[context][_currentIndex];
+	    fileIDfrom[0] = _pdi->rightFileIDs[context][_lastIndex];
+	    fileIDto[0] = _pdi->rightFileIDs[context][_currentIndex];
 	    fc = 1;
 	}
-	else
-	{
-	    fileID[0] = _rightFileIDs[context][_lastIndex];
-	    fileID[1] = _rightFileIDs[context][_currentIndex];
-	    fc = 2;
-	    pv[0] = _rightFileIDs[context][_nextIndex];
-	    pc = 1;
-	    fade = 1.0 - (_currentFadeTime / _totalFadeTime);
-            //std::cerr << "Files: " << fileID[0] << " " << fileID[1] << std::endl;
-	}
+
+	//std::cerr << "Fade: " << fade << std::endl;
+
+	_pdi->modelMap[context]->set_fade(fade);
+	_pdi->transitionModelMap[context]->set_fade(fade);
+	glUseProgram(0);
+	_pdi->modelMap[context]->prep(ri.getState()->getProjectionMatrix().ptr(),modelviewto.ptr(), (int)ri.getState()->getCurrentViewport()->width(), (int)ri.getState()->getCurrentViewport()->height());
+	_pdi->transitionModelMap[context]->prep(ri.getState()->getProjectionMatrix().ptr(),modelviewfrom.ptr(), (int)ri.getState()->getCurrentViewport()->width(), (int)ri.getState()->getCurrentViewport()->height());
+
+	MyGLClientState glstate;
+	pushClientState(glstate);
+
+	_pdi->modelMap[context]->draw(ri.getState()->getProjectionMatrix().ptr(), modelviewto.ptr(), fileIDto, fc, pv, pc, 1.0);
+	_pdi->transitionModelMap[context]->draw(ri.getState()->getProjectionMatrix().ptr(), modelviewfrom.ptr(), fileIDfrom, fc, pv, pc, 1.0 - _pdi->transitionFade);
+
+	popClientState(glstate);
     }
 
-    //std::cerr << "Fade: " << fade << std::endl;
-
-    _modelMap[context]->set_fade(fade);
-    glUseProgram(0);
-    _modelMap[context]->prep(ri.getState()->getProjectionMatrix().ptr(),modelview.ptr(), (int)ri.getState()->getCurrentViewport()->width(), (int)ri.getState()->getCurrentViewport()->height());
-
-    //printGLState();
-    MyGLClientState glstate;
-    pushClientState(glstate);
-
-    //GLint buffer,ebuffer;
-    //glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&buffer);
-    //glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&ebuffer);
-    //bool vertexOn = glIsEnabled(GL_VERTEX_ARRAY);
-    //glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
-    //clearGLClientState();
-
-    _modelMap[context]->draw(ri.getState()->getProjectionMatrix().ptr(), modelview.ptr(), fileID, fc, pv, pc, _alpha);
-
-    popClientState(glstate);
     //glPopClientAttrib();
     //glBindBuffer(GL_ARRAY_BUFFER, buffer);
     //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebuffer);
@@ -645,6 +643,15 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
     glPopAttrib();
 }
 
+int PanoDrawableLOD::getSetSize()
+{
+    if(_pdi)
+    {
+	return _pdi->leftEyeFiles.size();
+    }
+    return 0;
+}
+
 void PanoDrawableLOD::PanoUpdate::update(osg::NodeVisitor *, osg::Drawable * drawable)
 {
     PanoDrawableLOD * pdl = dynamic_cast<PanoDrawableLOD*>(drawable);
@@ -653,17 +660,20 @@ void PanoDrawableLOD::PanoUpdate::update(osg::NodeVisitor *, osg::Drawable * dra
 	return;
     }
 
-    for(std::map<int,bool>::iterator it = pdl->_updateDoneMap.begin(); it != pdl->_updateDoneMap.end(); it++)
+    for(std::map<int,bool>::iterator it = pdl->_pdi->updateDoneMap.begin(); it != pdl->_pdi->updateDoneMap.end(); it++)
     {
 	it->second = false;
     }
 
-    if(pdl->_currentFadeTime > 0.0)
+    if(pdl->_transitionType == NORMAL)
     {
-	pdl->_currentFadeTime -= PluginHelper::getLastFrameDuration();
-	if(pdl->_currentFadeTime < 0.0)
+	if(pdl->_currentFadeTime > 0.0)
 	{
-	    pdl->_currentFadeTime = 0.0;
+	    pdl->_currentFadeTime -= PluginHelper::getLastFrameDuration();
+	    if(pdl->_currentFadeTime < 0.0)
+	    {
+		pdl->_currentFadeTime = 0.0;
+	    }
 	}
     }
 }

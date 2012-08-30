@@ -13,6 +13,18 @@
 
 #include <string>
 
+struct ZoomTransitionInfo
+{
+    float rotationFromImage;
+    float rotationToImage;
+    float zoomValue;
+    osg::Vec3 zoomDir;
+};
+
+struct MorphTransitionInfo
+{
+};
+
 class PanoViewObject : public cvr::SceneObject
 {
     public:
@@ -21,6 +33,8 @@ class PanoViewObject : public cvr::SceneObject
         virtual ~PanoViewObject();
 
         void init(std::vector<std::string> & leftEyeFiles, std::vector<std::string> & rightEyeFiles, float radius, int mesh, int depth, int size, float height, std::string vertFile, std::string fragFile);
+
+        void setTransition(PanTransitionType transitionType, std::string transitionFilesDir, std::vector<std::string> & leftTransitionFiles, std::vector<std::string> & rightTransitionFiles);
 
         void next();
         void previous();
@@ -35,8 +49,20 @@ class PanoViewObject : public cvr::SceneObject
         virtual void updateCallback(int handID, const osg::Matrix & mat);
         virtual bool eventCallback(cvr::InteractionEvent * ie);
 
+        void preFrameUpdate();
+
     protected:
         void updateZoom(osg::Matrix & mat);
+        void startTransition();
+
+        bool _printValues;
+
+        PanTransitionType _transitionType;
+        std::vector<std::string> _leftTransitionFiles;
+        std::vector<std::string> _rightTransitionFiles;
+        std::string _transitionFilesDir;
+
+        std::vector<ZoomTransitionInfo> _zoomTransitionInfo;
 
         osg::Geode * _leftGeode;
         osg::Geode * _rightGeode;
@@ -85,6 +111,28 @@ class PanoViewObject : public cvr::SceneObject
 
         bool _fadeActive;
         int _fadeFrames;
+
+        PanoDrawableInfo * _pdi;
+    
+        float _transitionTime;
+        bool _transitionStarted;
+        bool _rotateDone;
+        bool _zoomDone;
+        bool _fadeDone;
+
+        float _rotateStartDelay;
+        float _rotateInterval;
+        float _rotateStart;
+        float _rotateEnd;
+        float _finalRotate;
+
+        float _zoomStartDelay;
+        float _zoomInterval;
+        float _zoomEnd;
+        osg::Vec3 _zoomTransitionDir;
+        
+        float _fadeStartDelay;
+        float _fadeInterval; 
 };
 
 #endif
