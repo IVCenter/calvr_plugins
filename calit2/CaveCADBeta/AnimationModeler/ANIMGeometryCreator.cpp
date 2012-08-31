@@ -46,7 +46,7 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
 
     /* create drawables, geodes and attach them to animation switches */
     *sphereExteriorGeode = new Geode();
-    Sphere *sphere = new Sphere(Vec3(0, 0, 0), ANIM_VIRTUAL_SPHERE_RADIUS);
+    Sphere *sphere = new Sphere(Vec3(-1, 0, 0), ANIM_VIRTUAL_SPHERE_RADIUS);
     ShapeDrawable *sphereDrawable = new ShapeDrawable(sphere);
     (*sphereExteriorGeode)->addDrawable(sphereDrawable);
 
@@ -62,6 +62,7 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
     sphereStateSet->setRenderingHint(StateSet::TRANSPARENT_BIN);
     sphereStateSet->setAttributeAndModes(transmaterial, StateAttribute::OVERRIDE | StateAttribute::ON);
     sphereStateSet->setTextureAttributeAndModes(0, envTex, StateAttribute::ON);
+    sphereStateSet->setMode(GL_CULL_FACE, StateAttribute::ON);
 
     sphereExteriorTrans->addChild(*sphereExteriorGeode);
     (*sphereExteriorSwitch)->addChild(sphereExteriorTrans);
@@ -88,11 +89,11 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
     float step = 1.f / ANIM_VIRTUAL_SPHERE_NUM_SAMPS;
     for (int i = 0; i < ANIM_VIRTUAL_SPHERE_NUM_SAMPS + 1; i++)
     {
-	float val = i * step;
-	scaleFwd = Vec3(val, val, val);
-	scaleBwd = Vec3(1.f-val, 1.f-val, 1.f-val);
-	animationPathScaleFwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleFwd));
-	animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleBwd));
+        float val = i * step;
+        scaleFwd = Vec3(val, val, val);
+        scaleBwd = Vec3(1.f-val, 1.f-val, 1.f-val);
+        animationPathScaleFwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleFwd));
+        animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleBwd));
     }
 
     AnimationPathCallback *animCallbackFwd = new AnimationPathCallback(animationPathScaleFwd, 
@@ -124,14 +125,14 @@ void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, con
     Geode *shapeGeode = new Geode;
     if (typ == CAVEGeodeShape::BOX)
     {
-	Box *box = new Box(Vec3(0, 0, 0), ANIM_VIRTUAL_SPHERE_RADIUS / 0.9);
-	shapeGeode->addDrawable(new ShapeDrawable(box));
+        Box *box = new Box(Vec3(-1, 0, 0), ANIM_VIRTUAL_SPHERE_RADIUS / 0.9);
+        shapeGeode->addDrawable(new ShapeDrawable(box));
     }
     else if (typ == CAVEGeodeShape::CYLINDER)
     {
-	float r = ANIM_VIRTUAL_SPHERE_RADIUS / 1.5;
-	Cylinder *cylinder = new Cylinder(Vec3(0, 0, 0), r, r * 2);
-	shapeGeode->addDrawable(new ShapeDrawable(cylinder));
+        float r = ANIM_VIRTUAL_SPHERE_RADIUS / 1.5;
+        Cylinder *cylinder = new Cylinder(Vec3(-1, 0, 0), r, r * 2);
+        shapeGeode->addDrawable(new ShapeDrawable(cylinder));
     }
     flipUpFwdTrans->addChild(shapeGeode);
     flipDownFwdTrans->addChild(shapeGeode);
@@ -155,18 +156,18 @@ void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, con
     float anglestep = M_PI * 0.5 / ANIM_GEOMETRY_CREATOR_SHAPE_FLIP_SAMPS;
     for (int i = 0; i < ANIM_GEOMETRY_CREATOR_SHAPE_FLIP_SAMPS + 1; i++)
     {
-	float t = i * timestep;
-	float val = i * scalestep;
-	scaleUpVect = Vec3(val, val, val);
-	scaleDownVect = Vec3(1.f-val, 1.f-val, 1.f-val);
-	flipUpFwdQuat = Quat(i * anglestep - M_PI / 2, Vec3(1, 0, 0));
-	flipDownFwdQuat = Quat(i * anglestep, Vec3(1, 0, 0));
-	flipUpBwdQuat = Quat(i * anglestep - M_PI / 2, Vec3(-1, 0, 0));
-	flipDownBwdQuat = Quat(i * anglestep, Vec3(-1, 0, 0));
-	animationFlipUpFwd->insert(t, AnimationPath::ControlPoint(Vec3(), flipUpFwdQuat, scaleUpVect));
-	animationFlipDownFwd->insert(t, AnimationPath::ControlPoint(Vec3(), flipDownFwdQuat, scaleDownVect));
-	animationFlipUpBwd->insert(t, AnimationPath::ControlPoint(Vec3(), flipUpBwdQuat, scaleUpVect));
-	animationFlipDownBwd->insert(t, AnimationPath::ControlPoint(Vec3(), flipDownBwdQuat, scaleDownVect));
+        float t = i * timestep;
+        float val = i * scalestep;
+        scaleUpVect = Vec3(val, val, val);
+        scaleDownVect = Vec3(1.f-val, 1.f-val, 1.f-val);
+        flipUpFwdQuat = Quat(i * anglestep - M_PI / 2, Vec3(1, 0, 0));
+        flipDownFwdQuat = Quat(i * anglestep, Vec3(1, 0, 0));
+        flipUpBwdQuat = Quat(i * anglestep - M_PI / 2, Vec3(-1, 0, 0));
+        flipDownBwdQuat = Quat(i * anglestep, Vec3(-1, 0, 0));
+        animationFlipUpFwd->insert(t, AnimationPath::ControlPoint(Vec3(), flipUpFwdQuat, scaleUpVect));
+        animationFlipDownFwd->insert(t, AnimationPath::ControlPoint(Vec3(), flipDownFwdQuat, scaleDownVect));
+        animationFlipUpBwd->insert(t, AnimationPath::ControlPoint(Vec3(), flipUpBwdQuat, scaleUpVect));
+        animationFlipDownBwd->insert(t, AnimationPath::ControlPoint(Vec3(), flipDownBwdQuat, scaleDownVect));
     }
 
     AnimationPathCallback *animCallbackFlipUpFwd = new AnimationPathCallback(animationFlipUpFwd, 
@@ -214,29 +215,5 @@ void ANIMLoadGeometryCreatorReference(Switch **snapWireframeSwitch, Switch **sna
     (*snapSolidshapeSwitch)->setAllChildrenOff();
 }
 
-
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

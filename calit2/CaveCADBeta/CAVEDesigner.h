@@ -11,6 +11,8 @@
 // Open scene graph
 #include <osg/Group>
 
+#include <cvrKernel/PluginHelper.h>
+
 // local includes
 #include "DesignStateHandler.h"
 #include "DesignObjectHandler.h"

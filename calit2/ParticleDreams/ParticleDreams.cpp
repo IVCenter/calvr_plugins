@@ -53,6 +53,7 @@ ParticleDreams::ParticleDreams()
 
 ParticleDreams::~ParticleDreams()
 {
+	oasclient::ClientInterface::shutdown();
 }
 
 bool ParticleDreams::init()
@@ -133,6 +134,15 @@ void ParticleDreams::preFrame()
 	//if((sceneChange==1) && (witch_scene ==1)){scene_data_1_kill_audio();}
 	//if((sceneChange==1) && (witch_scene ==2)){scene_data_2_kill_audio();}
 	//if((sceneChange==1) && (witch_scene ==4)){scene_data_4_kill_audio();}
+
+	if (sceneChange)
+	{
+		if (witch_scene == 0) 		scene_data_0_kill_audio();
+		else if (witch_scene == 1)	scene_data_1_kill_audio();
+		else if (witch_scene == 2)	scene_data_2_kill_audio();
+		else if (witch_scene == 3)	scene_data_3_kill_audio();
+		else if (witch_scene == 4)	scene_data_4_kill_audio();
+	}
 
 	if (sceneNum ==0)
 	{//paint on walls
@@ -245,9 +255,10 @@ void ParticleDreams::perContextCallback(int contextid) const
     _callbackLock.lock();
     if(!_callbackInit[contextid])
     {
+
 	int cudaDevice = ScreenConfig::instance()->getCudaDevice(contextid);
 	cudaGLSetGLDevice(cudaDevice);
-	cudaSetDevice(cudaDevice);
+	cudaSetDevice(cudaDevice); 
 	//std::cerr << "CudaDevice: " << cudaDevice << std::endl;
 
 	printCudaErr();
@@ -597,6 +608,61 @@ void ParticleDreams::initGeometry()
 
 void ParticleDreams::initSound()
 {
+    std::string ipAddrStr;
+    unsigned short port;
+    std::string pathToAudioFiles;
+
+    ipAddrStr =  ConfigManager::getEntry("ipAddr","Plugin.ParticleDreams.SoundServer","127.0.0.1");
+;
+    port = ConfigManager::getInt("port", "Plugin.ParticleDreams.SoundServer", 31231);
+
+    if (!oasclient::ClientInterface::initialize(ipAddrStr, port))
+    {
+        std::cerr << "Unable to connect to sound server at " << ipAddrStr << ", port " << port << std::endl;
+        soundEnabled = false;
+        return;
+    }
+
+    soundEnabled = true;
+
+    // LOAD pathToAudioFiles HERE
+    pathToAudioFiles = _dataDir + "/sound/";
+
+    oasclient::Listener::getInstance().setGain(0.7);
+    
+    std::cerr << pathToAudioFiles << std::endl;
+    chimes.initialize(pathToAudioFiles, "chimes.wav");
+
+    pinkNoise.initialize(pathToAudioFiles, "cdtds.31.pinkNoise.wav");
+    pinkNoise.setGain(0); pinkNoise.setLoop(true); pinkNoise.play(1.0);
+
+    dan_texture_09.initialize(pathToAudioFiles, "dan_texture_09.wav");
+    dan_texture_09.setGain(0); dan_texture_09.setLoop(true); dan_texture_09.play(1.0);
+
+    texture_12.initialize(pathToAudioFiles, "dan_texture_12.wav");
+    texture_12.setGain(0); texture_12.setLoop(true); texture_12.play(1.0);
+
+    short_sound_01a.initialize(pathToAudioFiles, "dan_short_sound_01a.wav");
+    short_sound_01a.play(1);
+
+    texture_17_swirls3.initialize(pathToAudioFiles, "dan_texture_17_swirls3.wav");
+    rain_at_sea.initialize(pathToAudioFiles, "dan_texture_18_rain_at_sea.wav");
+    dan_texture_13.initialize(pathToAudioFiles, "dan_texture_13.wav");
+    dan_texture_05.initialize(pathToAudioFiles, "dan_texture_05.wav");
+    dan_short_sound_04.initialize(pathToAudioFiles, "dan_short_sound_04.wav");
+    dan_ambiance_2.initialize(pathToAudioFiles, "dan_ambiance_2.wav");
+    dan_ambiance_1.initialize(pathToAudioFiles, "dan_ambiance_1.wav");
+    dan_5min_ostinato.initialize(pathToAudioFiles, "dan_10120607_5_min_ostinato.WAV");
+    dan_10120603_Rez1.initialize(pathToAudioFiles, "dan_10120603_Rez.1.wav");
+    dan_mel_amb_slower.initialize(pathToAudioFiles, "dan_10122604_mel_amb_slower.wav");
+    harmonicAlgorithm.initialize(pathToAudioFiles, "harmonicAlgorithm.wav");
+    dan_rain_at_sea_loop.initialize(pathToAudioFiles, "dan_rain_at_sea_loop.wav");
+
+    dan_10122606_sound_spray.initialize(pathToAudioFiles, "dan_10122606_sound_spray.wav");
+    dan_10122606_sound_spray.setGain(0); dan_10122606_sound_spray.setLoop(true); dan_10122606_sound_spray.play(1);
+
+    dan_10122608_sound_spray_low.initialize(pathToAudioFiles, "dan_10122608_sound_spray_low.wav");
+    dan_10120600_rezS3_rez2.initialize(pathToAudioFiles, "dan_10120600_RezS.3_Rez.2.wav");
 }
 
 void ParticleDreams::updateHand()
@@ -616,8 +682,6 @@ void ParticleDreams::updateHand()
     wandVec[0] = handdir.x();
     wandVec[1] = handdir.y();
     wandVec[2] = handdir.z();
-
-    
 }
 
 void ParticleDreams::pdata_init_age(int mAge)
@@ -762,6 +826,12 @@ void ParticleDreams::scene_data_0_host()
 	    audioPlay(dan_ambiance_2,1.0);audioGain(dan_ambiance_2,1);
 
 	}*/
+	if (soundEnabled)
+	{
+		dan_ambiance_2.setGain(1);
+		dan_ambiance_2.play(1);
+	}
+
 	scene0ContextStart = 1;
     }
     else
@@ -790,6 +860,18 @@ void ParticleDreams::scene_data_0_host()
 
     }*/
 
+    if (soundEnabled)
+    {
+    	if (triggerold == 0 && trigger == 1)
+    	{
+    		short_sound_01a.play();
+    		texture_12.fade(1, 1);
+    	}
+    	else if (triggerold == 1 && trigger == 0)
+    	{
+    		texture_12.fade(0, 10);
+    	}
+    }
     injNum =1;
     h_injectorData[injNum][1][0]=1;h_injectorData[injNum][1][1]=trigger;// type, injection ratio ie streem volume, ~
     h_injectorData[injNum][2][0]=wandPos[0];h_injectorData[injNum][2][1]=wandPos[1];h_injectorData[injNum][2][2]=wandPos[2];//x,y,z position
@@ -836,7 +918,11 @@ void ParticleDreams::scene_data_1_host()
             audioPlay(dan_5min_ostinato,1.0);audioGain(dan_5min_ostinato,0.5);
                     
         }*/
- 
+        if (soundEnabled)
+        {
+        	dan_5min_ostinato.setGain(0.5);
+        	dan_5min_ostinato.play(1);
+        }
             
         //printf( " time %f \n", ::user->get_t());
 	scene1ContextStart = 1;
@@ -968,6 +1054,19 @@ void ParticleDreams::scene_data_1_host()
 
     }*/
 
+    if (soundEnabled)
+    {
+    	if ((REFL_HITS == 1) && trigger)
+    	{
+    		float newGain = h_debugData[reflNum]/500.0;
+    		if (newGain > 0.5) newGain = 0.5;
+    		dan_10122606_sound_spray.setGain(newGain);
+    	}
+    	if ((triggerold == 1) && (trigger == 0))
+    		dan_10122606_sound_spray.setGain(0);
+    }
+
+
     scene1Start =0;
 }
 
@@ -1005,6 +1104,12 @@ void ParticleDreams::scene_data_2_host()
 	    audioPlay(harmonicAlgorithm,1.0);audioGain(harmonicAlgorithm,1);
 
 	}*/
+
+	if (soundEnabled)
+	{
+		harmonicAlgorithm.setGain(1);
+		harmonicAlgorithm.play(1);
+	}
 
 	//printf( " time %f \n", ::user->get_t());
 	scene2ContextStart = 1;
@@ -1163,6 +1268,20 @@ void ParticleDreams::scene_data_2_host()
 
     }*/
 
+    if (soundEnabled)
+    {
+    	if ((REFL_HITS == 1) && trigger)
+    	{
+    		float newGain = h_debugData[reflNum]/500.0;
+    		if (newGain > 0.5) newGain = 0.5;
+
+    		dan_10122606_sound_spray.setGain(newGain);
+    	}
+
+    	if (triggerold == 1 && !trigger)
+    		dan_10122606_sound_spray.setGain(0);
+    }
+
     scene2Start =0;
 }
 
@@ -1186,33 +1305,43 @@ void ParticleDreams::scene_data_3_host()
 
     if (scene3Start == 1)
     {
-	size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
-	pdata_init_age( max_age);
-	pdata_init_velocity(-10000, -10000, -10000);
-	pdata_init_rand();
-	///cuMemcpyHtoD(d_particleData, h_particleData, size);
-	if (DEBUG_PRINT >0)printf( "in start sean3 \n");
-	time_in_sean =0 * TARGET_FR_RATE;
-	//::user->home();
-	rotRate = .05;
-	///::user->set_t(86400);// set to 00:00 monday  old
-	///::user->set_t(1);// set to 0 days 1 sec
-	///::user->set_t(63711);// set to 0 days 1 sec
+		size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
+		pdata_init_age( max_age);
+		pdata_init_velocity(-10000, -10000, -10000);
+		pdata_init_rand();
+		///cuMemcpyHtoD(d_particleData, h_particleData, size);
+		if (DEBUG_PRINT >0)printf( "in start sean3 \n");
+		time_in_sean =0 * TARGET_FR_RATE;
+		//::user->home();
+		rotRate = .05;
+		///::user->set_t(86400);// set to 00:00 monday  old
+		///::user->set_t(1);// set to 0 days 1 sec
+		///::user->set_t(63711);// set to 0 days 1 sec
 
-	//::user->time(43200/2.0);// set to dawn  old
-	//::user->set_t(43200/2.0);
+		//::user->time(43200/2.0);// set to dawn  old
+		//::user->set_t(43200/2.0);
 
-	//::user->pass(43200/2.0);
-	//printf( " time %f \n", ::user->get_t());
+		//::user->pass(43200/2.0);
+		//printf( " time %f \n", ::user->get_t());
 
-	/*if ((SOUND_SERV ==1)&& (::host->root() == 1))
-	{
-	    audioLoop(rain_at_sea,1);audioPlay(rain_at_sea,1.0);audioGain(rain_at_sea,1);
-	    audioLoop(texture_17_swirls3,1);audioPlay(texture_17_swirls3,1.0);audioGain(texture_17_swirls3,1);
+		/*if ((SOUND_SERV ==1)&& (::host->root() == 1))
+		{
+			audioLoop(rain_at_sea,1);audioPlay(rain_at_sea,1.0);audioGain(rain_at_sea,1);
+			audioLoop(texture_17_swirls3,1);audioPlay(texture_17_swirls3,1.0);audioGain(texture_17_swirls3,1);
 
-	}*/
+		}*/
 
-	scene3ContextStart = 1;
+		if (soundEnabled)
+		{
+			rain_at_sea.setLoop(true);
+			rain_at_sea.setGain(1);
+			rain_at_sea.play(1);
+
+			texture_17_swirls3.setLoop(true);
+			texture_17_swirls3.setGain(1);
+			texture_17_swirls3.play(1);
+		}
+		scene3ContextStart = 1;
     }
     else
     {
@@ -1268,6 +1397,11 @@ void ParticleDreams::scene_data_3_host()
 
     }*/
 
+    if (soundEnabled && ENABLE_SOUND_POS_UPDATES)
+    {
+    	texture_17_swirls3.setPosition(30 * h_injectorData[injNum][3][0], 0, -30 * h_injectorData[injNum][3][2]);
+    }
+
     //
     // injector 2
     injNum =2;
@@ -1299,6 +1433,32 @@ void ParticleDreams::scene_data_3_host()
 	} 
 
     }*/
+
+    if (soundEnabled)
+    {
+    	if (triggerold == 0 && trigger == 1)
+    	{
+    		short_sound_01a.setGain(10);
+    		short_sound_01a.play();
+    		texture_12.fade(1, 1);
+    	}
+    	if (triggerold == 1 && trigger == 0)
+    	{
+    		texture_12.fade(0, 10);
+    	}
+
+    	if (ENABLE_SOUND_POS_UPDATES)
+    	{
+    		texture_12.setPosition(	1 * h_injectorData[injNum][2][0],
+    								1 * h_injectorData[injNum][1][0],
+    							   -1 * h_injectorData[injNum][2][2]);
+
+    		short_sound_01a.setPosition(1 * h_injectorData[injNum][2][0],
+    									1 * h_injectorData[injNum][1][0],
+    								   -1 * h_injectorData[injNum][2][2]);
+    	}
+    }
+
     h_injectorData[injNum][1][0]=1;h_injectorData[injNum][1][1]=trigger*4.0;// type, injection ratio ie streem volume, ~
     h_injectorData[injNum][2][0]=wandPos[0];h_injectorData[injNum][2][1]=wandPos[1];h_injectorData[injNum][2][2]=wandPos[2];//x,y,z position
     h_injectorData[injNum][3][0]=wandVec[0];h_injectorData[injNum][3][1]=wandVec[1];h_injectorData[injNum][3][2]=wandVec[2];//x,y,z velocity direction
@@ -1350,6 +1510,12 @@ void ParticleDreams::scene_data_4_host()
 	    //printf(" playcode exicuted\n");
 	}*/
 
+	if (soundEnabled)
+	{
+		dan_rain_at_sea_loop.setLoop(1);
+		dan_rain_at_sea_loop.setGain(1);
+		dan_rain_at_sea_loop.play();
+	}
 	//printf( " time %f \n", ::user->get_t());
 	scene4ContextStart = 1;
     }
@@ -1468,6 +1634,19 @@ void ParticleDreams::scene_data_4_host()
 	if ((triggerold ==1) && (trigger ==0)) audioGain(dan_10122606_sound_spray,0);
     }*/
 
+    if (soundEnabled)
+    {
+    	if (REFL_HITS == 1 && trigger)
+    	{
+    		float newGain = h_debugData[reflNum] / 500.0;
+    		if (newGain > 0.5) newGain = 0.5;
+
+    		dan_10122606_sound_spray.setGain(newGain);
+    	}
+
+    	if (triggerold == 1 && !trigger)
+    		dan_10122606_sound_spray.setGain(0);
+    }
     scene4Start =0;
 }
 
@@ -1508,4 +1687,66 @@ void ParticleDreams::scene_data_4_context(int contextid) const
     if(scene4ContextStart)
     {
     }
+}
+
+void ParticleDreams::scene_data_0_kill_audio()
+{
+	h_reflectorData[0][0][0] = 0;
+	h_injectorData[0][0][0] = 0;
+
+	if (soundEnabled)
+	{
+		dan_ambiance_2.fade(0, 150);
+		dan_10122606_sound_spray.setGain(0);
+	}
+}
+
+void ParticleDreams::scene_data_1_kill_audio()
+{
+	h_reflectorData[0][0][0] = 0;
+	h_injectorData[0][0][0] = 0;
+
+	if (soundEnabled)
+	{
+		dan_5min_ostinato.fade(0, 150);
+		dan_10122606_sound_spray.setGain(0);
+	}
+}
+
+void ParticleDreams::scene_data_2_kill_audio()
+{
+	h_reflectorData[0][0][0] = 0;
+	h_injectorData[0][0][0] = 0;
+
+	if (soundEnabled)
+	{
+		harmonicAlgorithm.fade(0, 150);
+		dan_10122606_sound_spray.setGain(0);
+	}
+}
+
+void ParticleDreams::scene_data_3_kill_audio()
+{
+	h_reflectorData[0][0][0] = 0;
+	h_injectorData[0][0][0] = 0;
+
+	if (soundEnabled)
+	{
+		rain_at_sea.fade(0, 150);
+		texture_17_swirls3.fade(0, 150);
+		dan_10122606_sound_spray.setGain(0);
+		dan_10120600_rezS3_rez2.setGain(0);
+	}
+}
+
+void ParticleDreams::scene_data_4_kill_audio()
+{
+	h_reflectorData[0][0][0] = 0;
+	h_injectorData[0][0][0] = 0;
+
+	if (soundEnabled)
+	{
+		dan_rain_at_sea_loop.fade(0, 150);
+		dan_10122606_sound_spray.setGain(0);
+	}
 }

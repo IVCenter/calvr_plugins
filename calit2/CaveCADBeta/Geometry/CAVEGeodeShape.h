@@ -19,6 +19,7 @@
 #include <osg/Material>
 #include <osg/StateSet>
 #include <osg/Texture2D>
+#include <osg/ShapeDrawable>
 
 #include <osgDB/ReadFile>
 
@@ -47,8 +48,8 @@ class CAVEGeodeShape: public CAVEGeode
     /* definition of two initial shape types */
     enum Type
     {
-	BOX,
-	CYLINDER
+        BOX,
+        CYLINDER
     };
 
     /***************************************************************
@@ -58,67 +59,67 @@ class CAVEGeodeShape: public CAVEGeode
     {
       public:
 
-	enum ActiveTypeMasking
-	{
-	    NONE = 0x00,
-	    MOVE = 0x01,
-	    ROTATE = 0x02,
-	    SCALE = 0x04,
-	    MANIPULATE = 0x08
-	};
+        enum ActiveTypeMasking
+        {
+            NONE = 0x00,
+            MOVE = 0x01,
+            ROTATE = 0x02,
+            SCALE = 0x04,
+            MANIPULATE = 0x08
+        };
 
-	void reset()
-	{
-	    mTypeMasking = NONE;
-	    mMoveOffset = osg::Vec3(0, 0, 0);
-	    mRotateCenter = osg::Vec3(0, 0, 0);
-	    mRotateAxis = osg::Vec3(0, 0, 1);
-	    mRotateAngle = 0;
-	    mScaleCenter = osg::Vec3(0, 0, 0);
-	    mScaleVect = osg::Vec3(1, 1, 1);
-	}
+        void reset()
+        {
+            mTypeMasking = NONE;
+            mMoveOffset = osg::Vec3(0, 0, 0);
+            mRotateCenter = osg::Vec3(0, 0, 0);
+            mRotateAxis = osg::Vec3(0, 0, 1);
+            mRotateAngle = 0;
+            mScaleCenter = osg::Vec3(0, 0, 0);
+            mScaleVect = osg::Vec3(1, 1, 1);
+        }
 
-	/* default constructor */
-	EditorInfo() { reset(); }
+        /* default constructor */
+        EditorInfo() { reset(); }
 
-	/* parameter update functions */
-	void setMoveUpdate(const osg::Vec3 &offset)
-	{
-	    mMoveOffset = offset;
-	    mTypeMasking = MOVE;
-	}
+        /* parameter update functions */
+        void setMoveUpdate(const osg::Vec3 &offset)
+        {
+            mMoveOffset = offset;
+            mTypeMasking = MOVE;
+        }
 
-	void setRotateUpdate(const osg::Vec3 &center, const osg::Vec3 &axis, const float &angle)
-	{
-	    mRotateCenter = center;
-	    mRotateAxis = axis;
-	    mRotateAngle = angle;
-	    mTypeMasking = ROTATE;
-	}
+        void setRotateUpdate(const osg::Vec3 &center, const osg::Vec3 &axis, const float &angle)
+        {
+            mRotateCenter = center;
+            mRotateAxis = axis;
+            mRotateAngle = angle;
+            mTypeMasking = ROTATE;
+        }
 
-	void setScaleUpdate(const osg::Vec3 &center, const osg::Vec3 &scalevect)
-	{
-	    mScaleCenter = center;
-	    mScaleVect = scalevect;
-	    mTypeMasking = SCALE;
-	}
+        void setScaleUpdate(const osg::Vec3 &center, const osg::Vec3 &scalevect)
+        {
+            mScaleCenter = center;
+            mScaleVect = scalevect;
+            mTypeMasking = SCALE;
+        }
 
-	/* parameter access functions */
-	const osg::Vec3 &getMoveOffset() { return mMoveOffset; }
-	const osg::Vec3 &getRotateCenter() { return mRotateCenter; }
-	const osg::Vec3 &getRotateAxis() { return mRotateAxis; }
-	const osg::Vec3 &getScaleCenter() { return mScaleCenter; }
-	const osg::Vec3 &getScaleVect() { return mScaleVect; }
-	const float &getRotateAngle() { return mRotateAngle; }
-	const ActiveTypeMasking &getTypeMasking() { return mTypeMasking; }
+        /* parameter access functions */
+        const osg::Vec3 &getMoveOffset() { return mMoveOffset; }
+        const osg::Vec3 &getRotateCenter() { return mRotateCenter; }
+        const osg::Vec3 &getRotateAxis() { return mRotateAxis; }
+        const osg::Vec3 &getScaleCenter() { return mScaleCenter; }
+        const osg::Vec3 &getScaleVect() { return mScaleVect; }
+        const float &getRotateAngle() { return mRotateAngle; }
+        const ActiveTypeMasking &getTypeMasking() { return mTypeMasking; }
 
       protected:
 
-	ActiveTypeMasking mTypeMasking;
-	osg::Vec3 mMoveOffset;
-	osg::Vec3 mRotateCenter, mRotateAxis;
-	float mRotateAngle;
-	osg::Vec3 mScaleCenter, mScaleVect;
+        ActiveTypeMasking mTypeMasking;
+        osg::Vec3 mMoveOffset;
+        osg::Vec3 mRotateCenter, mRotateAxis;
+        float mRotateAngle;
+        osg::Vec3 mScaleCenter, mScaleVect;
     };
 
     /* 'CAVEGeodeShape' constructors & destructor */
@@ -153,6 +154,10 @@ class CAVEGeodeShape: public CAVEGeode
 				const osg::Vec2Array *refTexcoordArrayPtr, 
 				const int &nVerts, EditorInfo **infoPtr, const VertexMaskingVector &vertMaskingVector);
 
+    bool snapToVertex(const osg::Vec3 point, osg::Vec3 *ctr);
+    void hideSnapBounds();
+
+
   protected:
 
     /* vector index that indicates the selection status of the Geode, ONLY accessed by 'DOGeometryCollector' */
@@ -167,7 +172,13 @@ class CAVEGeodeShape: public CAVEGeode
     osg::Vec3Array* mVDirArray;
     osg::Vec2Array* mTexcoordArray;
     CAVEGeometryVector mGeometryVector;
+    
+    std::vector<osg::Sphere*> mVertBoundingSpheres;
+    std::map<osg::Sphere*, osg::ShapeDrawable*> mShapeDrawableMap;
 
+    std::vector<osg::Cylinder*> mEdgeBoundingCylinder;
+    std::map<osg::Cylinder*, osg::ShapeDrawable*> mEdgeDrawableMap;
+    std::map<osg::Cylinder*, osg::Geode*>  mEdgeGeodeMap;
     /* center vector is normally the average of all vertices, which will be used for generating surface icons */
     osg::Vec3 mCenterVect;
 
@@ -185,12 +196,4 @@ class CAVEGeodeShape: public CAVEGeode
 
 
 #endif
-
-
-
-
-
-
-
-
 

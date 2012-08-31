@@ -45,11 +45,11 @@ class CAVEGeometry: public osg::Geometry
     class IndexClusterBase
     {
       public:
-	IndexClusterBase(): mNumIndices(0) {}
+        IndexClusterBase(): mNumIndices(0) {}
 
-	/* number of indices contained in a cluster */
-	int mNumIndices;
-	std::vector<int> mIndexVector;
+        /* number of indices contained in a cluster */
+        int mNumIndices;
+        std::vector<int> mIndexVector;
     };
 
     typedef std::vector<IndexClusterBase*>	IndexClusterVector;
@@ -62,37 +62,37 @@ class CAVEGeometry: public osg::Geometry
     class IndexClusterPair: public IndexClusterBase
     {
       public:
-	IndexClusterPair(const int &idx1, const int &idx2)
-	{
-	    mNumIndices = 2;
-	    mIndexVector.push_back(idx1);
-	    mIndexVector.push_back(idx2);
-	}
+        IndexClusterPair(const int &idx1, const int &idx2)
+        {
+            mNumIndices = 2;
+            mIndexVector.push_back(idx1);
+            mIndexVector.push_back(idx2);
+        }
     };
 
     class IndexClusterTriple: public IndexClusterBase
     {
       public:
-	IndexClusterTriple(const int &idx1, const int &idx2, const int &idx3)
-	{
-	    mNumIndices = 3;
-	    mIndexVector.push_back(idx1);
-	    mIndexVector.push_back(idx2);
-	    mIndexVector.push_back(idx3);
-	}
+        IndexClusterTriple(const int &idx1, const int &idx2, const int &idx3)
+        {
+            mNumIndices = 3;
+            mIndexVector.push_back(idx1);
+            mIndexVector.push_back(idx2);
+            mIndexVector.push_back(idx3);
+        }
     };
 
     class IndexClusterQuad: public IndexClusterBase
     {
       public:
-	IndexClusterQuad(const int &idx1, const int &idx2, const int &idx3, const int &idx4)
-	{
-	    mNumIndices = 4;
-	    mIndexVector.push_back(idx1);
-	    mIndexVector.push_back(idx2);
-	    mIndexVector.push_back(idx3);
-	    mIndexVector.push_back(idx4);
-	}
+        IndexClusterQuad(const int &idx1, const int &idx2, const int &idx3, const int &idx4)
+        {
+            mNumIndices = 4;
+            mIndexVector.push_back(idx1);
+            mIndexVector.push_back(idx2);
+            mIndexVector.push_back(idx3);
+            mIndexVector.push_back(idx4);
+        }
     };
 
     /***************************************************************

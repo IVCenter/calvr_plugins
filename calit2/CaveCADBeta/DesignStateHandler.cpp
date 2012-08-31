@@ -35,6 +35,10 @@ DesignStateHandler::~DesignStateHandler()
 void DesignStateHandler::setActive(bool flag)
 {
     mActiveFlag = flag;
+
+    /* initialize menu system */
+
+
 }
 
 
@@ -57,23 +61,23 @@ void DesignStateHandler::inputDevButtonEvent(const InputDevButtonType& typ)
 {
     if (typ == TOGGLE)
     {
-	mDesignStateRenderer->toggleDSVisibility();
+        mDesignStateRenderer->toggleDSVisibility();
     }
     else if (typ == LEFT)
     {
-	mDesignStateRenderer->switchToPrevState();
+        mDesignStateRenderer->switchToPrevState();
     }
     else if (typ == RIGHT)
     {
-	mDesignStateRenderer->switchToNextState();
+        mDesignStateRenderer->switchToNextState();
     }
     else if (typ == UP)
     {
-	mDesignStateRenderer->switchToPrevSubState();
+        mDesignStateRenderer->switchToPrevSubState();
     }
     else if (typ == DOWN)
     {
-	mDesignStateRenderer->switchToNextSubState();
+        mDesignStateRenderer->switchToNextSubState();
     }
 }
 

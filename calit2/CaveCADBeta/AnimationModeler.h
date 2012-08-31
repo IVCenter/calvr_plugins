@@ -113,11 +113,11 @@ namespace CAVEAnimationModeler
     class ANIMParamountSwitchEntry
     {
       public:
-	osg::MatrixTransform *mMatrixTrans;
-	osg::Switch *mSwitch;
-	osg::AnimationPathCallback *mZoomInAnim, *mZoomOutAnim;
-	osg::Geode *mPaintGeode;
-	std::string mTexFilename;
+        osg::MatrixTransform *mMatrixTrans;
+        osg::Switch *mSwitch;
+        osg::AnimationPathCallback *mZoomInAnim, *mZoomOutAnim;
+        osg::Geode *mPaintGeode;
+        std::string mTexFilename;
     };
 
     void ANIMLoadParamountPaintFrames(	osg::PositionAttitudeTransform** xformScaleFwd, 
@@ -134,11 +134,11 @@ namespace CAVEAnimationModeler
     class ANIMPageEntry
     {
       public:
-	osg::Switch *mSwitch;
-	osg::AnimationPathCallback *mFlipUpAnim, *mFlipDownAnim;
-	osg::Geode *mPageGeode;
-	std::string mTexFilename;
-	float mLength, mWidth, mAlti;
+        osg::Switch *mSwitch;
+        osg::AnimationPathCallback *mFlipUpAnim, *mFlipDownAnim;
+        osg::Geode *mPageGeode;
+        std::string mTexFilename;
+        float mLength, mWidth, mAlti;
     };
 
     void ANIMLoadSketchBook(osg::PositionAttitudeTransform** xformScaleFwd, 
@@ -156,13 +156,13 @@ namespace CAVEAnimationModeler
     class ANIMShapeSwitchEntry
     {
       public:
-	osg::Switch *mSwitch;
-	osg::AnimationPathCallback *mFlipUpFwdAnim, *mFlipDownFwdAnim;
-	osg::AnimationPathCallback *mFlipUpBwdAnim, *mFlipDownBwdAnim;
+        osg::Switch *mSwitch;
+        osg::AnimationPathCallback *mFlipUpFwdAnim, *mFlipDownFwdAnim;
+        osg::AnimationPathCallback *mFlipUpBwdAnim, *mFlipDownBwdAnim;
     };
 
     void ANIMLoadGeometryCreator(osg::PositionAttitudeTransform** xformScaleFwd, 
-			    	 osg::PositionAttitudeTransform** xformScaleBwd,
+		     	 osg::PositionAttitudeTransform** xformScaleBwd,
 				 osg::Switch **sphereExteriorSwitch, osg::Geode **sphereExteriorGeode,
 				 int &numTypes, ANIMShapeSwitchEntry ***shapeSwitchEntryArray);
     void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, const CAVEGeodeShape::Type &typ);

@@ -7,7 +7,7 @@
 *
 ***************************************************************/
 #include "CAVEGeode.h"
-
+#include <cvrConfig/ConfigManager.h>
 
 using namespace std;
 using namespace osg;
@@ -24,7 +24,11 @@ CAVEGeode::~CAVEGeode()
 {
 }
 
-const string CAVEGeode::getDataDir() { return string("/home/covise/data/CaveCADBeta/"); }
+//TODO: Get this from config
+const string CAVEGeode::getDataDir()  
+{
+    return cvr::ConfigManager::getEntry("Plugin.CaveCADBeta.DataDir");//string("/home/cehughes/data/CaveCAD/"); 
+}
 
 
 /***************************************************************
@@ -36,7 +40,8 @@ void CAVEGeode::applyColorTexture(const Vec3 &diffuse, const Vec3 &specular, con
 
     /* update material parameters */
     Material *material = dynamic_cast <Material*> (stateset->getAttribute(StateAttribute::MATERIAL)); 
-    if (!material) material = new Material;
+    if (!material) 
+        material = new Material;
     material->setDiffuse(Material::FRONT_AND_BACK, Vec4(diffuse, 1.f));
     material->setSpecular(Material::FRONT_AND_BACK, Vec4(specular, 1.f));
     material->setAlpha(Material::FRONT_AND_BACK, alpha);
@@ -44,7 +49,8 @@ void CAVEGeode::applyColorTexture(const Vec3 &diffuse, const Vec3 &specular, con
 
     /* update texture image */
     Texture2D *texture = dynamic_cast <Texture2D*> (stateset->getAttribute(StateAttribute::TEXTURE));
-    if (!texture) texture = new Texture2D;
+    if (!texture) 
+        texture = new Texture2D;
     Image* texImage = osgDB::readImageFile(texFilename);
     texture->setImage(texImage); 
     texture->setWrap(Texture::WRAP_S,Texture::MIRROR);
@@ -71,7 +77,8 @@ void CAVEGeode::applyAlpha(const float &alpha)
 
     /* update material parameters */
     Material *material = dynamic_cast <Material*> (stateset->getAttribute(StateAttribute::MATERIAL)); 
-    if (!material) material = new Material;
+    if (!material) 
+        material = new Material;
     material->setAlpha(Material::FRONT_AND_BACK, alpha);
     stateset->setAttributeAndModes(material, StateAttribute::ON);
 

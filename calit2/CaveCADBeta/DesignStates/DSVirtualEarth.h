@@ -40,10 +40,10 @@ class DSVirtualEarth: public DesignStateBase
     /* sub states definition */
     enum DSVirtualEarthState
     {
-	SET_NULL = 0,
-	SET_PIN,
-	SET_TIME,
-	SET_DATE
+        SET_NULL = 0,
+        SET_PIN,
+        SET_TIME,
+        SET_DATE
     };
 
   protected:

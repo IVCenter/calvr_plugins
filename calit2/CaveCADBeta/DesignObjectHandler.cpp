@@ -122,26 +122,3 @@ void DesignObjectHandler::update()
 {
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

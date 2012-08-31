@@ -65,9 +65,10 @@ class CaveCADBeta : public cvr::MenuCallback, public cvr::CVRPlugin
   private:
 
     /* use flag to ensure that each click event is only handled once */
-    bool pointerPressFlag;
+    bool pointerPressFlag, mValPressed;
     int frameCnt;
     string mDataDir;
+    float mMenuDistance, mValDownTime, mValCutoff;
   
   protected:
 
