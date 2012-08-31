@@ -793,10 +793,23 @@ void PanoViewObject::startTransition()
 
 	int fromIndex = _leftDrawable->getLastIndex();
 	int toIndex = _leftDrawable->getCurrentIndex();
-	std::cerr << "From Index: " << fromIndex << " To Index: " << toIndex << std::endl;
+	//std::cerr << "From Index: " << fromIndex << " To Index: " << toIndex << std::endl;
 
 	_rotateStart = getRotate();
 	_rotateEnd = _zoomTransitionInfo[fromIndex].rotationFromImage;
+
+	while(fabs(_rotateEnd - _rotateStart) > M_PI)
+	{
+	    if(_rotateEnd > _rotateStart)
+	    {
+		_rotateEnd -= 2.0 * M_PI;
+	    }
+	    else
+	    {
+		_rotateEnd += 2.0 * M_PI;
+	    }
+	}
+
 	float toRotation = _zoomTransitionInfo[fromIndex].rotationToImage;
 	_finalRotate = toRotation;
 
