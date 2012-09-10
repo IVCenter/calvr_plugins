@@ -43,10 +43,13 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
     geomCreatorTrans->addChild(*sphereExteriorSwitch);
     geomCreatorTrans->addChild(createBoxSwitch);
     geomCreatorTrans->addChild(createCylinderSwitch);
+    
+
+    osg::Vec3 pos(-1, 0, 0);
 
     /* create drawables, geodes and attach them to animation switches */
     *sphereExteriorGeode = new Geode();
-    Sphere *sphere = new Sphere(Vec3(-1, 0, 0), ANIM_VIRTUAL_SPHERE_RADIUS);
+    Sphere *sphere = new Sphere(osg::Vec3(), ANIM_VIRTUAL_SPHERE_RADIUS);
     ShapeDrawable *sphereDrawable = new ShapeDrawable(sphere);
     (*sphereExteriorGeode)->addDrawable(sphereDrawable);
 
@@ -92,8 +95,8 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
         float val = i * step;
         scaleFwd = Vec3(val, val, val);
         scaleBwd = Vec3(1.f-val, 1.f-val, 1.f-val);
-        animationPathScaleFwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleFwd));
-        animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleBwd));
+        animationPathScaleFwd->insert(val, AnimationPath::ControlPoint(pos, Quat(), scaleFwd));
+        animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(pos, Quat(), scaleBwd));
     }
 
     AnimationPathCallback *animCallbackFwd = new AnimationPathCallback(animationPathScaleFwd, 
@@ -120,18 +123,21 @@ void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, con
     (*shapeEntry)->mSwitch->addChild(flipUpBwdTrans);		// child #2
     (*shapeEntry)->mSwitch->addChild(flipDownBwdTrans);		// child #3
     (*shapeEntry)->mSwitch->setAllChildrenOff();
+    
+
+    osg::Vec3 pos(0, 0, 0);
 
     /* create shape geode based on 'ANIMShapeSwitchEntry::Type' */
     Geode *shapeGeode = new Geode;
     if (typ == CAVEGeodeShape::BOX)
     {
-        Box *box = new Box(Vec3(-1, 0, 0), ANIM_VIRTUAL_SPHERE_RADIUS / 0.9);
+        Box *box = new Box(osg::Vec3(), ANIM_VIRTUAL_SPHERE_RADIUS / 0.9);
         shapeGeode->addDrawable(new ShapeDrawable(box));
     }
     else if (typ == CAVEGeodeShape::CYLINDER)
     {
         float r = ANIM_VIRTUAL_SPHERE_RADIUS / 1.5;
-        Cylinder *cylinder = new Cylinder(Vec3(-1, 0, 0), r, r * 2);
+        Cylinder *cylinder = new Cylinder(osg::Vec3(), r, r * 2);
         shapeGeode->addDrawable(new ShapeDrawable(cylinder));
     }
     flipUpFwdTrans->addChild(shapeGeode);
@@ -154,20 +160,29 @@ void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, con
     float timestep = ANIM_GEOMETRY_CREATOR_SHAPE_FLIP_TIME / ANIM_GEOMETRY_CREATOR_SHAPE_FLIP_SAMPS;
     float scalestep = 1.f / ANIM_GEOMETRY_CREATOR_SHAPE_FLIP_SAMPS;
     float anglestep = M_PI * 0.5 / ANIM_GEOMETRY_CREATOR_SHAPE_FLIP_SAMPS;
+
+    if (typ == CAVEGeodeShape::BOX)
+        pos[2] -= 0.5;
+    else if (typ == CAVEGeodeShape::CYLINDER)
+        pos[2] -= 1.0;
+
     for (int i = 0; i < ANIM_GEOMETRY_CREATOR_SHAPE_FLIP_SAMPS + 1; i++)
     {
+
         float t = i * timestep;
         float val = i * scalestep;
         scaleUpVect = Vec3(val, val, val);
         scaleDownVect = Vec3(1.f-val, 1.f-val, 1.f-val);
+
         flipUpFwdQuat = Quat(i * anglestep - M_PI / 2, Vec3(1, 0, 0));
         flipDownFwdQuat = Quat(i * anglestep, Vec3(1, 0, 0));
         flipUpBwdQuat = Quat(i * anglestep - M_PI / 2, Vec3(-1, 0, 0));
         flipDownBwdQuat = Quat(i * anglestep, Vec3(-1, 0, 0));
-        animationFlipUpFwd->insert(t, AnimationPath::ControlPoint(Vec3(), flipUpFwdQuat, scaleUpVect));
-        animationFlipDownFwd->insert(t, AnimationPath::ControlPoint(Vec3(), flipDownFwdQuat, scaleDownVect));
-        animationFlipUpBwd->insert(t, AnimationPath::ControlPoint(Vec3(), flipUpBwdQuat, scaleUpVect));
-        animationFlipDownBwd->insert(t, AnimationPath::ControlPoint(Vec3(), flipDownBwdQuat, scaleDownVect));
+
+        animationFlipUpFwd->insert(t, AnimationPath::ControlPoint(pos, flipUpFwdQuat, scaleUpVect));
+        animationFlipDownFwd->insert(t, AnimationPath::ControlPoint(pos, flipDownFwdQuat, scaleDownVect));
+        animationFlipUpBwd->insert(t, AnimationPath::ControlPoint(pos, flipUpBwdQuat, scaleUpVect));
+        animationFlipDownBwd->insert(t, AnimationPath::ControlPoint(pos, flipDownBwdQuat, scaleDownVect));
     }
 
     AnimationPathCallback *animCallbackFlipUpFwd = new AnimationPathCallback(animationFlipUpFwd, 

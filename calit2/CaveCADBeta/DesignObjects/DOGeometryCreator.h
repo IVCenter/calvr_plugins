@@ -51,9 +51,9 @@ class DOGeometryCreator: public DesignObjectBase
     void updateReferenceAxis();
     void updateReferencePlane(const osg::Vec3 &center, bool noSnap = false);
     void setPointerDir(const osg::Vec3 &pointerDir);
-    void setSnapPos(const osg::Vec3 &snapPos);
+    void setSnapPos(const osg::Vec3 &snapPos, bool snap = true);
     void setResize(const float &s);
-    void setResize();
+    void setResize(bool snap = true);
     void registerSolidShape();
 
   protected:

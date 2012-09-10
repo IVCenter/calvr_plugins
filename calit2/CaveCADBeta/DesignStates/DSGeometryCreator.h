@@ -58,7 +58,9 @@ class DSGeometryCreator: public DesignStateBase
     osg::Geode *mSphereExteriorGeode;		// exterior geode target for intersection test
     int mShapeSwitchIdx, mNumShapeSwitches;
     CAVEAnimationModeler::ANIMShapeSwitchEntry **mShapeSwitchEntryArray;
-    
+    bool mIsOpen;
+    std::vector<osg::PositionAttitudeTransform*> fwdVec, bwdVec;
+
     CAVEGeodeShape *prevGeode;
 
     DrawingState mDrawingState;
@@ -74,10 +76,4 @@ class DSGeometryCreator: public DesignStateBase
 
 
 #endif
-
-
-
-
-
-
 

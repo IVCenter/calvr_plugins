@@ -75,11 +75,13 @@ void DSTexturePallette::setObjectEnabled(bool flag)
     } 
     else 
     {
-        /*this->setSingleChildOn(1);
-        animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
-        mDSIntersector->loadRootTargetNode(NULL, NULL);
-        mDOIntersector->loadRootTargetNode(NULL, NULL);
-        */
+        texturingStateTransitionHandle(mTexturingState, IDLE);
+        mTexturingState = IDLE;
+
+//        this->setSingleChildOn(1);
+//        animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
+//        mDSIntersector->loadRootTargetNode(NULL, NULL);
+//        mDOIntersector->loadRootTargetNode(NULL, NULL);
     }
 
     if (animCallback) 
@@ -92,28 +94,28 @@ void DSTexturePallette::setObjectEnabled(bool flag)
 ***************************************************************/
 void DSTexturePallette::switchToPrevSubState()
 {
-    /* prev state look up */
+    // prev state look up 
     switch (mTexturingState)
     {
-	case IDLE:
-	{
-	    mTexturingState = APPLY_TEXTURE;
-	    texturingStateTransitionHandle(IDLE, APPLY_TEXTURE);
-	    break;
-	}
-	case SELECT_TEXTURE:
-	{
-	    mTexturingState = IDLE; 
-	    texturingStateTransitionHandle(SELECT_TEXTURE, IDLE);
-	    break;
-	}
-	case APPLY_TEXTURE:
-	{
-	    mTexturingState = SELECT_TEXTURE; 
-	    texturingStateTransitionHandle(APPLY_TEXTURE, SELECT_TEXTURE);
-	    break;
-	}
-	default: break;
+        case IDLE:
+        {
+            mTexturingState = APPLY_TEXTURE;
+            texturingStateTransitionHandle(IDLE, APPLY_TEXTURE);
+            break;
+        }
+        case SELECT_TEXTURE:
+        {
+            mTexturingState = IDLE; 
+            texturingStateTransitionHandle(SELECT_TEXTURE, IDLE);
+            break;
+        }
+        case APPLY_TEXTURE:
+        {
+            mTexturingState = SELECT_TEXTURE; 
+            texturingStateTransitionHandle(APPLY_TEXTURE, SELECT_TEXTURE);
+            break;
+        }
+        default: break;
     }
     
 }
@@ -124,7 +126,7 @@ void DSTexturePallette::switchToPrevSubState()
 ***************************************************************/
 void DSTexturePallette::switchToNextSubState()
 {
-    /* next state look up */
+    // next state look up 
     switch (mTexturingState)
     {
 	case IDLE:
@@ -186,7 +188,7 @@ bool DSTexturePallette::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
     {
         if (mDSIntersector->test(pointerOrg, pointerPos))
         {
-            /* find the intersected geode and adjust index number of texture entry */
+            // find the intersected geode and adjust index number of texture entry 
             Node *hitNode = mDSIntersector->getHitNode();
             int hitIdx = mTexIndex;
             for (int i = 0; i < mNumTexs; i++)
@@ -217,7 +219,7 @@ bool DSTexturePallette::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
                 geode->applyColorTexture(diffuse, specular, 1.0f, filename);
                 geode->applyAudioInfo(audioinfo);
 
-                /* update audio parameters */
+                // update audio parameters 
                 mAudioConfigHandler->updateShapes();
             }
         }
@@ -250,7 +252,7 @@ void DSTexturePallette::update()
 ***************************************************************/
 void DSTexturePallette::texturingStateTransitionHandle(const TexturingState& prevState, const TexturingState& nextState)
 {
-    /* mIdleStateSwitch: always on except transition between 'SELECT_TEXTURE' and 'APPLY_TEXTURE' */
+    // mIdleStateSwitch: always on except transition between 'SELECT_TEXTURE' and 'APPLY_TEXTURE' 
     mIdleStateSwitch->setAllChildrenOn();	
     mSelectStateSwitch->setAllChildrenOn();
     mAlphaTurnerSwitch->setAllChildrenOff();
@@ -258,7 +260,7 @@ void DSTexturePallette::texturingStateTransitionHandle(const TexturingState& pre
     int idxSelected = -1;	// index of animation that to be reset for selected texture entry
     int idxUnselected = -1;	// index of animation that to be reset for all un-selected texture entry
 
-    /* transitions between 'IDLE' and 'SELECT_TEXTURE' */
+    // transitions between 'IDLE' and 'SELECT_TEXTURE' 
     if (prevState == IDLE && nextState == SELECT_TEXTURE)
     {
         idxSelected = 0;	idxUnselected = 0;
@@ -272,7 +274,7 @@ void DSTexturePallette::texturingStateTransitionHandle(const TexturingState& pre
         mTextureStatesIdleEntry->mFwdAnim->reset();
     }
 
-    /* transitions between 'SELECT_TEXTURE' and 'APPLY_TEXTURE' */
+    // transitions between 'SELECT_TEXTURE' and 'APPLY_TEXTURE' 
     else if (prevState == SELECT_TEXTURE && nextState == APPLY_TEXTURE)
     {
         idxSelected = 4;	idxUnselected = 2;
@@ -285,7 +287,7 @@ void DSTexturePallette::texturingStateTransitionHandle(const TexturingState& pre
 
     }
 
-    /* transitions between 'IDLE' and 'APPLY_TEXTURE' */
+    // transitions between 'IDLE' and 'APPLY_TEXTURE' 
     else if (prevState == IDLE && nextState == APPLY_TEXTURE)
     {
         idxSelected = 7;	idxUnselected = -1;
@@ -299,7 +301,7 @@ void DSTexturePallette::texturingStateTransitionHandle(const TexturingState& pre
         mTextureStatesIdleEntry->mFwdAnim->reset();
     }
 
-    /* reset animation associated with 'mTextureStatesSelectEntryArray' */
+    // reset animation associated with 'mTextureStatesSelectEntryArray' 
     for (int i = 0; i < mNumTexs; i++)
     {
         if (i == mTexIndex && idxSelected >= 0)
@@ -336,29 +338,4 @@ void DSTexturePallette::resetIntersectionRootTarget()
         mDOIntersector->loadRootTargetNode(gDesignObjectRootGroup, NULL);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

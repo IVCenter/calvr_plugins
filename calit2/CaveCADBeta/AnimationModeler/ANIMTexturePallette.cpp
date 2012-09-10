@@ -284,7 +284,6 @@ void ANIMLoadTexturePalletteSelect( Switch **selectStateSwitch, Switch **alphaTu
 }
 
 
-
 /***************************************************************
 * Function: ANIMCreateTextureEntryGeode()
 *
@@ -376,7 +375,6 @@ void ANIMCreateTextureEntryGeode(const Vec3 &showUpPos, const Vec3 &diffuse, con
         statePATransArray[i]->setUpdateCallback((*textureEntry)->mStateAnimationArray[i]);
     }
 }
-
 
 
 /***************************************************************

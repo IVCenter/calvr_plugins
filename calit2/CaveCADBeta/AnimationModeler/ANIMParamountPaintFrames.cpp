@@ -157,8 +157,8 @@ void ANIMCreateParamountPaintFrameAnimation(AnimationPathCallback **zoomInCallba
         zoomOutVect = Vec3(ANIM_PARA_PAINT_FRAME_ZOOM_FACTOR - val, 
                 ANIM_PARA_PAINT_FRAME_ZOOM_FACTOR - val, 
                 ANIM_PARA_PAINT_FRAME_ZOOM_FACTOR - val);
-        animationPathZoomIn->insert(i * timestep, AnimationPath::ControlPoint(Vec3(0.75,0,0), Quat(), zoomInVect));
-        animationPathZoomOut->insert(i * timestep, AnimationPath::ControlPoint(Vec3(0.75,0,0), Quat(), zoomOutVect));
+        animationPathZoomIn->insert(i * timestep, AnimationPath::ControlPoint(Vec3(0,0,0), Quat(), zoomInVect));
+        animationPathZoomOut->insert(i * timestep, AnimationPath::ControlPoint(Vec3(0,0,0), Quat(), zoomOutVect));
     }
     *zoomInCallback = new AnimationPathCallback(animationPathZoomIn, 
 						0.0, 1.f / ANIM_PARA_PAINT_FRAME_LAPSE_TIME);

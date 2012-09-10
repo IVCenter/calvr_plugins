@@ -26,7 +26,7 @@ void ANIMLoadSketchBook(PositionAttitudeTransform** xformScaleFwd, PositionAttit
 
     MatrixTransform *sketchbookTrans = new MatrixTransform;
     Matrixf transMat, scaleMat;
-    transMat.makeTranslate(Vec3(1.0, 0, ANIM_VIRTUAL_SPHERE_RADIUS));
+    transMat.makeTranslate(Vec3(0, 0, ANIM_VIRTUAL_SPHERE_RADIUS));
     scaleMat.makeScale(Vec3(ANIM_PARA_PAINT_FRAME_ZOOM_FACTOR,
 			    ANIM_PARA_PAINT_FRAME_ZOOM_FACTOR,
 			    ANIM_PARA_PAINT_FRAME_ZOOM_FACTOR));

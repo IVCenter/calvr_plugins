@@ -61,7 +61,3 @@ class CAVEGeode: public osg::Geode
 
 #endif
 
-
-
-
-

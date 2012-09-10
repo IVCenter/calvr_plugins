@@ -31,7 +31,7 @@ class CAVEDesigner
     void setActive(bool flag);
 
     void inputDevMoveEvent(const osg::Vec3 pointerOrg, const osg::Vec3 pointerPos);
-    bool inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 &pointerPos);
+    bool inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 &pointerPos, int button = 0);
     bool inputDevReleaseEvent();
     void update(const osg::Vec3 &viewDir, const osg::Vec3 &viewPos);
     void inputDevButtonEvent(const int keySym);

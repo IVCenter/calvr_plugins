@@ -147,22 +147,3 @@ void DesignStateHandler::setAudioConfigHandlerPtr(AudioConfigHandler *audioConfi
     mDesignStateRenderer->setAudioConfigHandlerPtr(audioConfigHandler);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

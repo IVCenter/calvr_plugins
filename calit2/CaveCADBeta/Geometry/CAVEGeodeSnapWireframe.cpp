@@ -128,8 +128,8 @@ void CAVEGeodeSnapWireframeBox::resize(osg::Vec3 &gridVect)
     stateset->setAttributeAndModes(material, StateAttribute::OVERRIDE | StateAttribute::ON);
     setStateSet(stateset);
     */
-
-    /* calculate grid vector */
+    
+    // calculate grid vector 
     float snapUnitX, snapUnitY, snapUnitZ;
     snapUnitX = snapUnitY = snapUnitZ = mSnappingUnitDist;
     if (mScaleVect.x() < 0) 

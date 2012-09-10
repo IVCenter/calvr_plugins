@@ -76,7 +76,7 @@ DSVirtualEarth::DSVirtualEarth(): mState(SET_NULL), mLongi(-117.17f), mLati(32.7
 void DSVirtualEarth::setObjectEnabled(bool flag)
 {
     mObjEnabledFlag = flag;
-    mDSParticleSystemPtr->setEmitterEnabled(flag);
+//    mDSParticleSystemPtr->setEmitterEnabled(flag);
 
     /* set geometry switches when state is enabled / diabled */
     if (flag) 
@@ -129,7 +129,7 @@ void DSVirtualEarth::switchToPrevSubState()
         default: break;
     }
     stateSwitchHandler();
-    mDSParticleSystemPtr->setEmitterEnabled(false);
+//    mDSParticleSystemPtr->setEmitterEnabled(false);
 }
 
 
@@ -148,7 +148,7 @@ void DSVirtualEarth::switchToNextSubState()
         default: break;
     }
     stateSwitchHandler();
-    mDSParticleSystemPtr->setEmitterEnabled(false);
+//    mDSParticleSystemPtr->setEmitterEnabled(false);
 }
 
 

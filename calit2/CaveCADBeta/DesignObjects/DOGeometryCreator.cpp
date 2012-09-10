@@ -232,11 +232,11 @@ void DOGeometryCreator::setPointerDir(const osg::Vec3 &pointerDir)
 /***************************************************************
 * Function: setSnapPos()
 ***************************************************************/
-void DOGeometryCreator::setSnapPos(const osg::Vec3 &snapPos)
+void DOGeometryCreator::setSnapPos(const osg::Vec3 &snapPos, bool snap)
 {
     if (mWireframeGeode) 
         mWireframeGeode->setScaleVect(snapPos - mWireframeGeode->getInitPosition());
-    setResize();
+    setResize(snap);
 }
 
 
@@ -254,14 +254,16 @@ void DOGeometryCreator::setResize(const float &s)
 /***************************************************************
 * Function: setResize()
 ***************************************************************/
-void DOGeometryCreator::setResize()
+void DOGeometryCreator::setResize(bool snap)
 {
     Vec3 wireframeGridVect = Vec3(0, 0, 0);
     if (mWireframeGeode) 
         mWireframeGeode->resize(wireframeGridVect);
 
     if (mSolidshapeGeode) 
-        mSolidshapeGeode->resize(wireframeGridVect);
+    {
+        mSolidshapeGeode->resize(wireframeGridVect, snap);
+    }
 }
 
 
