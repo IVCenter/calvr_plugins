@@ -49,6 +49,10 @@ class PanoViewLOD : public cvr::CVRPlugin, public cvr::MenuCallback
             std::string fragFile;
             float height;
             float radius;
+            PanTransitionType transitionType;
+            std::vector<std::string> leftTransitionFiles;
+            std::vector<std::string> rightTransitionFiles;
+            std::string transitionDirectory;
         };
 
         PanInfo * loadInfoFromXML(std::string file);
@@ -65,7 +69,7 @@ class PanoViewLOD : public cvr::CVRPlugin, public cvr::MenuCallback
 
         cvr::MenuButton * _returnButton;
 
-        std::string _defaultConfigDir;
+        std::vector<std::string> _defaultConfigDirs;
 
         int _timecount;
         double _time;

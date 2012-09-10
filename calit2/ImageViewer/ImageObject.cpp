@@ -7,7 +7,7 @@
 
 using namespace cvr;
 
-ImageObject::ImageObject(std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : SceneObject(name,navigation,movable,clip,contextMenu,showBounds)
+ImageObject::ImageObject(std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : TiledWallSceneObject(name,navigation,movable,clip,contextMenu,showBounds)
 {
     _scaleMT = new osg::MatrixTransform();
     addChild(_scaleMT);

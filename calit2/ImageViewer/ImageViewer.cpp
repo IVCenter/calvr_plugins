@@ -97,6 +97,7 @@ void ImageViewer::menuCallback(MenuItem * item)
 	if(item == _fileButtons[i])
 	{
 	    ImageObject * io = new ImageObject(_files[i]->name,false,true,false,true,false);
+	    io->setTiledWallMovement(SceneManager::instance()->getTiledWallValid());
 	    if(_files[i]->stereo)
 	    {
 		io->loadImages(_files[i]->fileLeft,_files[i]->fileRight);
@@ -118,8 +119,15 @@ void ImageViewer::menuCallback(MenuItem * item)
 	    io->setScale(_files[i]->scale);
 
 	    osg::Matrix m;
-	    m.makeRotate(_files[i]->rotation);
-	    m.setTrans(_files[i]->position + _globalOffset);
+	    if(SceneManager::instance()->getTiledWallValid())
+	    {
+		m = SceneManager::instance()->getTiledWallTransform();
+	    }
+	    else
+	    {
+		m.makeRotate(_files[i]->rotation);
+		m.setTrans(_files[i]->position + _globalOffset);
+	    }
             io->setTransform(m);
 
             io->setNavigationOn(true);
