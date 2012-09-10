@@ -362,11 +362,11 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
         return true;
     else 
         return false;
-}
+/*}
 else
 {
     // open menu
-}
+}*/
 
 }
 
