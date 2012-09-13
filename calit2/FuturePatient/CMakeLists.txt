@@ -4,6 +4,7 @@ SET(PLUGIN_HEADERS
     DataGraph.h
     GraphObject.h
     GraphLayoutObject.h
+    ShapeTextureGenerator.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -13,6 +14,7 @@ ADD_LIBRARY(${LIB_NAME}
     DataGraph.cpp
     GraphObject.cpp
     GraphLayoutObject.cpp
+    ShapeTextureGenerator.cpp
 )
 
 # placeholder for when the database goes active

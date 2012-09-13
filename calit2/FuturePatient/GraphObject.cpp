@@ -18,6 +18,17 @@ GraphObject::GraphObject(mysqlpp::Connection * conn, float width, float height, 
     osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
     setBoundingBox(bb);
 
+    std::vector<std::string> mgdText;
+    mgdText.push_back("Normal");
+    mgdText.push_back("Color");
+    mgdText.push_back("Shape");
+    mgdText.push_back("Shape and Color");
+
+    _mgdList = new MenuList();
+    _mgdList->setValues(mgdText);
+    _mgdList->setCallback(this);
+    addMenuItem(_mgdList);
+
     _activeHand = -1;
     _layoutDoesDelete = false;
 }
@@ -158,7 +169,26 @@ bool GraphObject::addGraph(std::string name)
 			{
 			    if(value < goodLow || value > goodHigh)
 			    {
-				colors->at(i) = osg::Vec4(1.0,0,0,1.0);
+				if(value > goodHigh)
+				{
+				    float mult = value / goodHigh;
+				    if(mult <= 10.0)
+				    {
+					colors->at(i) = osg::Vec4(1.0,0.5,0.25,1.0);
+				    }
+				    else if(mult <= 100.0)
+				    {
+					colors->at(i) = osg::Vec4(1.0,0,0,1.0);
+				    }
+				    else
+				    {
+					colors->at(i) = osg::Vec4(1.0,0,1.0,1.0);
+				    }
+				}
+				else
+				{
+				    colors->at(i) = osg::Vec4(1.0,0,1.0,1.0);
+				}
 			    }
 			    else
 			    {
@@ -332,6 +362,18 @@ bool GraphObject::getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point)
     osg::Matrix m;
     m = mat * getWorldToObjectMatrix();
     return _graph->getGraphSpacePoint(m,point);
+}
+
+void GraphObject::menuCallback(MenuItem * item)
+{
+    if(item == _mgdList)
+    {
+	std::cerr << "Got index: " << _mgdList->getIndex() << std::endl;
+	_graph->setMultiGraphDisplayMode((MultiGraphDisplayMode)_mgdList->getIndex());
+	return;
+    }
+
+    TiledWallSceneObject::menuCallback(item);
 }
 
 void GraphObject::enterCallback(int handID, const osg::Matrix &mat)
