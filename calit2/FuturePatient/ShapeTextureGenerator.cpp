@@ -7,7 +7,7 @@
 
 std::map<int,osg::ref_ptr<osg::Texture2D> > ShapeTextureGenerator::_textureMap;
 
-osg::Texture2D * ShapeTextureGenerator::getOrCreateShapeTexture(int sides, int width, int height)
+osg::Texture2D * ShapeTextureGenerator::getOrCreateShapeTexture(int sides, int width, int height, bool border)
 {
     if(sides < 3)
     {
@@ -69,7 +69,7 @@ osg::Texture2D * ShapeTextureGenerator::getOrCreateShapeTexture(int sides, int w
 	    if(included)
 	    {
 		//std::cerr << ".";
-		textureData[index] = 255;
+		textureData[index] = 128;
 	    }
 	    else
 	    {
@@ -79,6 +79,33 @@ osg::Texture2D * ShapeTextureGenerator::getOrCreateShapeTexture(int sides, int w
 	    index++;
 	}
 	//std::cerr << std::endl;
+    }
+
+    if(border)
+    {
+	for(int i = 0; i < height; i++)
+	{
+	    bool in = false;
+	    for(int j = 0; j < width; j++)
+	    {
+		index = (i * width) + j;
+		if(textureData[index] > 0 && !in)
+		{
+		    textureData[index] = 255;
+		    in = true;
+		}
+		else if(textureData[index] == 0 && in)
+		{
+		    textureData[index-1] = 255;
+		    in = false;
+		}
+	    }
+	    if(in)
+	    {
+		index = (i * width) + width - 1;
+		textureData[index] = 255;
+	    }
+	}
     }
 
     _textureMap[sides] = new osg::Texture2D(image);

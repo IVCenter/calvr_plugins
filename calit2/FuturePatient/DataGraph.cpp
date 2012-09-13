@@ -36,13 +36,17 @@ std::string shapeFragSrc =
 "void main(void)                                             \n"
 "{                                                           \n"
 "    vec4 value = texture2D(tex,gl_TexCoord[0].st);          \n"
-"    if(value.r > 0.5)                                       \n"
+"    if(value.r < 0.25)                                      \n"
+"    {                                                       \n"
+"        discard;                                            \n"
+"    }                                                       \n"
+"    else if(value.r < 0.75)                                 \n"
 "    {                                                       \n"
 "        gl_FragColor = gl_Color;                            \n"
 "    }                                                       \n"
 "    else                                                    \n"
 "    {                                                       \n"
-"        discard;                                            \n"
+"        gl_FragColor = vec4(0.0,0.0,0.0,1.0);               \n"
 "    }                                                       \n"
 "}                                                           \n";
 
@@ -833,7 +837,8 @@ void DataGraph::update()
 
     if(_dataInfoMap.size() > 1)
     {
-	if(_multiGraphDisplayMode != _currentMultiGraphDisplayMode)
+	// need this to run when a new graph is added, maybe break into function call
+	//if(_multiGraphDisplayMode != _currentMultiGraphDisplayMode)
 	{
 	    int count = 0;
 	    for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)

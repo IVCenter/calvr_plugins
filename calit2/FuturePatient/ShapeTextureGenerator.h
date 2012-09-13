@@ -9,7 +9,7 @@
 class ShapeTextureGenerator
 {
     public:
-        static osg::Texture2D * getOrCreateShapeTexture(int sides, int width, int height);
+        static osg::Texture2D * getOrCreateShapeTexture(int sides, int width, int height, bool border = true);
 
     protected:
         static void createPoints(int sides, std::vector<osg::Vec3> & points);

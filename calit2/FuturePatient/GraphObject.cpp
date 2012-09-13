@@ -368,7 +368,7 @@ void GraphObject::menuCallback(MenuItem * item)
 {
     if(item == _mgdList)
     {
-	std::cerr << "Got index: " << _mgdList->getIndex() << std::endl;
+	//std::cerr << "Got index: " << _mgdList->getIndex() << std::endl;
 	_graph->setMultiGraphDisplayMode((MultiGraphDisplayMode)_mgdList->getIndex());
 	return;
     }
