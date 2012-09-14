@@ -74,20 +74,19 @@ bool CaveCADBeta::init()
 void CaveCADBeta::preFrame()
 {
     Matrixf invBaseMat = PluginHelper::getWorldToObjectTransform();
-    Matrixf viewMat = PluginHelper::getHeadMat(0);
+    Matrixf viewMat;// = PluginHelper::getHeadMat(0);
+    viewMat.makeTranslate(0, 200, 0);
 
     Vec3 viewOrg = viewMat.getTrans() * invBaseMat; 
     Vec3 viewPos = Vec3(0.0, mMenuDistance, 0.0) * viewMat * invBaseMat; 
     Vec3 viewDir = viewPos - viewOrg;
     viewDir.normalize(); 
 
-
     osg::Vec3 pointerOrg, pointerPos;
     osg::Matrixd w2o = PluginHelper::getWorldToObjectTransform();
 
     pointerOrg = osg::Vec3(0, 0, 0) * TrackingManager::instance()->getHandMat(0) * w2o;
     pointerPos = osg::Vec3(0, 1000, 0) * TrackingManager::instance()->getHandMat(0) * w2o;
-
 
     mCAVEDesigner->update(viewDir, viewPos);
     mCAVEDesigner->inputDevMoveEvent(pointerOrg, pointerPos);
@@ -209,28 +208,36 @@ bool CaveCADBeta::processEvent(cvr::InteractionEvent *event)
     TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
     if (tie)
     {
+        osg::Vec3 pointerOrg, pointerPos;
+        osg::Matrixd w2o = PluginHelper::getWorldToObjectTransform();
+
+        pointerOrg = osg::Vec3(0, 0, 0) * TrackingManager::instance()->getHandMat(0) * w2o;
+        pointerPos = osg::Vec3(0, 1000, 0) * TrackingManager::instance()->getHandMat(0) * w2o;
+
         if (tie->getHand() == 0 && tie->getButton() == 0)
         {
-            osg::Vec3 pointerOrg, pointerPos;
-            osg::Matrixd w2o = PluginHelper::getWorldToObjectTransform();
-
-            pointerOrg = osg::Vec3(0, 0, 0) * TrackingManager::instance()->getHandMat(0) * w2o;
-            pointerPos = osg::Vec3(0, 1000, 0) * TrackingManager::instance()->getHandMat(0) * w2o;
 
             if (tie->getInteraction() == BUTTON_DOWN)
             {
                 bool res = mCAVEDesigner->inputDevPressEvent(pointerOrg, pointerPos);
-                //std::cout << "Click " << res << std::endl;
                 return res;
             }
 
             else if (tie->getInteraction() == BUTTON_UP)
             {
                 bool res = mCAVEDesigner->inputDevReleaseEvent();
-                //std::cout << "Release " << res << std::endl;
                 return res;
             }
         }
+        if (tie->getHand() == 0 && tie->getButton() == 1)
+        {
+            if (tie->getInteraction() == BUTTON_DOWN)
+            {
+                bool res = mCAVEDesigner->inputDevPressEvent(pointerOrg, pointerPos, 1);
+                return res;
+            }
+        }
+
         return false;
     }
     
@@ -312,7 +319,7 @@ bool CaveCADBeta::processEvent(cvr::InteractionEvent *event)
 ***************************************************************/
 void CaveCADBeta::spinWheelEvent(const float spinX, const float spinY, const int pointerStat)
 {
-    mCAVEDesigner->inputDevButtonEvent(spinX, spinY, pointerStat);
+//    mCAVEDesigner->inputDevButtonEvent(spinX, spinY, pointerStat);
 }
 
 

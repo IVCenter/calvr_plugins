@@ -31,7 +31,11 @@ class CAVEIntersector
     CAVEIntersector();
     virtual ~CAVEIntersector();
 
-    void loadRootTargetNode(osg::Node *rNode, osg::Node *tNode) { mRootNode = rNode;  mTargetNode = tNode; }
+    void loadRootTargetNode(osg::Node *rNode, osg::Node *tNode) 
+    { 
+        mRootNode = rNode;  
+        mTargetNode = tNode; 
+    }
     bool test(const osg::Vec3 pointerOrg, const osg::Vec3 pointerPos);
     osg::Vec3 getWorldHitPosition() { return mHit.getWorldIntersectPoint(); }
     osg::Vec3 getWorldHitNormal() { return mHit.getWorldIntersectNormal(); }

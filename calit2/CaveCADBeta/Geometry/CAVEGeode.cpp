@@ -24,10 +24,11 @@ CAVEGeode::~CAVEGeode()
 {
 }
 
-//TODO: Get this from config
 const string CAVEGeode::getDataDir()  
 {
-    return cvr::ConfigManager::getEntry("Plugin.CaveCADBeta.DataDir");//string("/home/cehughes/data/CaveCAD/"); 
+    std::string dataDir = cvr::ConfigManager::getEntry("Plugin.CaveCADBeta.DataDir");
+    dataDir = dataDir + "/";
+    return dataDir;
 }
 
 
@@ -53,8 +54,8 @@ void CAVEGeode::applyColorTexture(const Vec3 &diffuse, const Vec3 &specular, con
         texture = new Texture2D;
     Image* texImage = osgDB::readImageFile(texFilename);
     texture->setImage(texImage); 
-    texture->setWrap(Texture::WRAP_S,Texture::MIRROR);
-    texture->setWrap(Texture::WRAP_T,Texture::MIRROR);
+    texture->setWrap(Texture::WRAP_S,Texture::REPEAT);
+    texture->setWrap(Texture::WRAP_T,Texture::REPEAT);
     texture->setDataVariance(Object::DYNAMIC);
     stateset->setTextureAttributeAndModes(0, texture, StateAttribute::ON);
     stateset->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
@@ -85,21 +86,4 @@ void CAVEGeode::applyAlpha(const float &alpha)
     /* update alpha value */
     mAlpha = alpha;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

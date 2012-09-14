@@ -49,9 +49,9 @@ namespace CAVEAnimationModeler
     class ANIMTexturePalletteIdleEntry
     {
       public:
-	osg::Switch *mEntrySwitch;
-	osg::AnimationPathCallback *mFwdAnim, *mBwdAnim;
-	osg::Geode *mEntryGeode;
+        osg::Switch *mEntrySwitch;
+        osg::AnimationPathCallback *mFwdAnim, *mBwdAnim;
+        osg::Geode *mEntryGeode;
     };
 
 
@@ -72,25 +72,25 @@ namespace CAVEAnimationModeler
     class ANIMTexturePalletteSelectEntry
     {
       public:
-	osg::Switch *mEntrySwitch;
-	osg::AnimationPathCallback **mStateAnimationArray;
-	osg::Geode *mEntryGeode;
+        osg::Switch *mEntrySwitch;
+        osg::AnimationPathCallback **mStateAnimationArray;
+        osg::Geode *mEntryGeode;
 
-	/* sets & gets functions */
-	void setDiffuse(const osg::Vec3 &diffuse) { mDiffuse = diffuse; }
-	void setSpecular(const osg::Vec3 &specular) { mSpecular = specular; }
-	void setTexFilename(const std::string &texfilename) { mTexFilename = texfilename; }
-	void setAudioInfo(const std::string &audioinfo) { mAudioInfo = audioinfo; }
+        /* sets & gets functions */
+        void setDiffuse(const osg::Vec3 &diffuse) { mDiffuse = diffuse; }
+        void setSpecular(const osg::Vec3 &specular) { mSpecular = specular; }
+        void setTexFilename(const std::string &texfilename) { mTexFilename = texfilename; }
+        void setAudioInfo(const std::string &audioinfo) { mAudioInfo = audioinfo; }
 
-	const osg::Vec3 &getDiffuse() { return mDiffuse; }
-	const osg::Vec3 &getSpecular() { return mSpecular; }
-	const std::string &getTexFilename() { return mTexFilename; }
-	const std::string &getAudioInfo() { return mAudioInfo; }
+        const osg::Vec3 &getDiffuse() { return mDiffuse; }
+        const osg::Vec3 &getSpecular() { return mSpecular; }
+        const std::string &getTexFilename() { return mTexFilename; }
+        const std::string &getAudioInfo() { return mAudioInfo; }
 
       protected:
-	osg::Vec3 mDiffuse, mSpecular;
-	std::string mTexFilename;
-	std::string mAudioInfo;
+        osg::Vec3 mDiffuse, mSpecular;
+        std::string mTexFilename;
+        std::string mAudioInfo;
     };
 
 
@@ -109,9 +109,4 @@ namespace CAVEAnimationModeler
 
 
 #endif
-
-
-
-
-
 

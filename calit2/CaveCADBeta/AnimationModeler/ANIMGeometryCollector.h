@@ -62,9 +62,5 @@ namespace CAVEAnimationModeler
 		CAVEGroupEditGeometryWireframe **editGeometryWireframe, CAVEGeometry *geometry);
 };
 
-
 #endif
-
-
-
 

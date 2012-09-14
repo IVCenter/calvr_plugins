@@ -28,15 +28,15 @@ MatrixTransform *ANIMCreateRefSkyDome(StateSet **stateset)
     Geode* skyGeode = new Geode();
     MatrixTransform *skyDomeTrans = new MatrixTransform;
     
-    //osg::Matrix m;
-    //m.makeRotate(osg::Quat(M_PI/2, osg::Vec3(0, 1, 0)));
-    //skyDomeTrans->setMatrix(m);
+//    osg::Matrix m;
+//    m.makeRotate(osg::Quat(M_PI/2, osg::Vec3(0, 1, 0)));
+//    skyDomeTrans->setMatrix(m);
 
     skyShape->setRadius(ANIM_SKYDOME_RADIUS);
     skyGeode->addDrawable(skyDrawable);
     skyDomeTrans->addChild(skyGeode);
 
-    /* apply simple colored materials */
+    // apply simple colored materials
     Material* material = new Material;
     material->setDiffuse(Material::FRONT_AND_BACK, Vec4(1.0f, 1.0f, 1.0f, 1.0f));
     material->setAlpha(Material::FRONT_AND_BACK, 1.0f);
@@ -47,7 +47,7 @@ MatrixTransform *ANIMCreateRefSkyDome(StateSet **stateset)
     (*stateset)->setRenderingHint(StateSet::TRANSPARENT_BIN);
     skyGeode->setStateSet(*stateset);
 
-    /* load sky dome shader */
+    // load sky dome shader
     Uniform* sunrUniform = new Uniform("hazeRadisuMin", 0.975f);
     (*stateset)->addUniform(sunrUniform);
 

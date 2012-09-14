@@ -30,6 +30,7 @@
 #include "DesignStates/DSGeometryCreator.h"
 #include "DesignStates/DSGeometryEditor.h"
 #include "DesignStates/DSTexturePallette.h"
+#include "DesignStates/DSViewpoints.h"
 
 
 /***************************************************************
@@ -84,6 +85,7 @@ class DesignStateRenderer
     DSSketchBook *mDSSketchBook;
     DSGeometryCreator *mDSGeometryCreator;
     DSTexturePallette *mDSTexturePallette;
+    DSViewpoints *mDSViewpoints;
 
     /* design states that NOT registered in 'mDSList' */
     DSGeometryEditor *mDSGeometryEditor;

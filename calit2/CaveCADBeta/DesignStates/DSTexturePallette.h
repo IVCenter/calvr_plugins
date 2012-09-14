@@ -38,9 +38,9 @@ class DSTexturePallette: public DesignStateBase
     /* definition of texturing states */
     enum TexturingState
     {
-	IDLE,
-	SELECT_TEXTURE,
-	APPLY_TEXTURE
+        IDLE,
+        SELECT_TEXTURE,
+        APPLY_TEXTURE
     };
 
     void setAudioConfigHandlerPtr(AudioConfigHandler *audioConfigHandler) { mAudioConfigHandler = audioConfigHandler; }
@@ -49,6 +49,9 @@ class DSTexturePallette: public DesignStateBase
 
     /* OSG objects as decendents in DSTexturePallette */
     osg::Switch *mIdleStateSwitch, *mSelectStateSwitch, *mAlphaTurnerSwitch;
+    
+    bool mIsOpen;
+    std::vector<osg::PositionAttitudeTransform*> mFwdVec, mBwdVec, mHighlightVec;
 
     int mTexIndex, mNumTexs;
     CAVEAnimationModeler::ANIMTexturePalletteIdleEntry *mTextureStatesIdleEntry;
@@ -67,7 +70,4 @@ class DSTexturePallette: public DesignStateBase
 
 
 #endif
-
-
-
 

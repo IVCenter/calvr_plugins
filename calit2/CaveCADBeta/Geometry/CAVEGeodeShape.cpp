@@ -700,8 +700,6 @@ void CAVEGeodeShape::initGeometryBox(const Vec3 &initVect, const Vec3 &sVect)
     geometryArrayPtr[5]->addIndexCluster(3, 8, 21);
     geometryArrayPtr[5]->addIndexCluster(7, 11, 22);
     geometryArrayPtr[5]->addIndexCluster(4, 15, 23);
-
-
 }
 
 
@@ -753,6 +751,98 @@ void CAVEGeodeShape::initGeometryCylinder(const Vec3 &initVect, const Vec3 &sVec
         mTexcoordArray->push_back(Vec2(rad * intvl * i, height) / gTextureTileSize);
         mTexcoordArray->push_back(Vec2(rad * intvl * i, 0.0f) / gTextureTileSize);
     }
+
+
+
+    // Snapping bounds
+    
+    float radius = 0.2;
+    float snapSphereRadius = 0.2, snapSphereOpacity = 0.5;
+    osg::Vec4 snapSphereColor = osg::Vec4(1, 0, 1, 0); 
+
+
+    // Add edge bounding cylinders 
+    std::vector<osg::Cylinder*> cylVec;
+    float width = (mVertexArray->at(4) - mVertexArray->at(0)).length();
+
+    for (int i = 0; i < numFanSegs; ++i)
+    {
+        // vertical edges
+        osg::Vec3 center = mVertexArray->at(i*4) + osg::Vec3(0, 0, -height/2);
+        osg::Cylinder *cyl = new osg::Cylinder(center, radius, height);
+        cylVec.push_back(cyl);
+        
+        // horizontal edges
+        float rot = intvl * i;
+        center = mVertexArray->at(i*4 + 4) - mVertexArray->at(i*4);
+        center[2] = 0;
+        cyl = new osg::Cylinder(center, 0.1, width);
+/*        cyl->setRotation(osg::Quat(0,      osg::Vec3(1, 0, 0),
+                                   M_PI/2, osg::Vec3(0, 1, 0),
+                                   rad*intvl*i,    osg::Vec3(0, 0, 1)));
+                                   */
+        cylVec.push_back(cyl);
+
+        center[2] = height;
+        cyl = new osg::Cylinder(center, 0.1, width);
+/*        cyl->setRotation(osg::Quat(0,      osg::Vec3(1, 0, 0),
+                                   M_PI/2, osg::Vec3(0, 1, 0),
+                                   rad*intvl*i,    osg::Vec3(0, 0, 1)));
+                                   */
+        cylVec.push_back(cyl);
+
+    }
+
+    osg::StateSet *ss;
+    osg::ShapeDrawable *shpDrawable;
+    osg::Material *mat;
+    osg::Geode *geode;
+    for (int i = 0; i < cylVec.size(); ++i)
+    {
+        shpDrawable = new osg::ShapeDrawable(cylVec[i]);
+
+        mat = new Material;
+        mat->setDiffuse(Material::FRONT_AND_BACK, snapSphereColor);
+
+        ss = shpDrawable->getOrCreateStateSet();
+        ss->setMode(GL_BLEND, StateAttribute::PROTECTED | StateAttribute::ON );
+        ss->setRenderingHint(StateAttribute::PROTECTED | StateSet::TRANSPARENT_BIN);
+        ss->setAttributeAndModes(mat, StateAttribute::PROTECTED | StateAttribute::ON);
+        ss->setMode(GL_CULL_FACE, StateAttribute::PROTECTED| StateAttribute::ON);
+
+        addDrawable(shpDrawable);
+
+        mEdgeDrawableMap[cylVec[i]] = shpDrawable; 
+        geode = new osg::Geode();
+        geode->addDrawable(shpDrawable);
+        mEdgeGeodeMap[cylVec[i]] = geode;
+    }
+
+
+    // Add vertex bounding spheres
+    for (int i = 0; i <= numFanSegs; ++i)
+    {
+        for (int j = 0; j < 2; ++j)
+        {
+            osg::Sphere *sph = new osg::Sphere(mVertexArray->at((i*4) + j), snapSphereRadius);
+            osg::ShapeDrawable *shpDraw = new osg::ShapeDrawable(sph);
+
+            mat = new Material;
+            mat->setDiffuse(Material::FRONT_AND_BACK, snapSphereColor);
+
+            StateSet *ss = shpDraw->getOrCreateStateSet();
+            ss->setMode(GL_BLEND, StateAttribute::PROTECTED | StateAttribute::ON );
+            ss->setRenderingHint(StateAttribute::PROTECTED | StateSet::TRANSPARENT_BIN);
+            ss->setAttributeAndModes(mat, StateAttribute::PROTECTED | StateAttribute::ON);
+            ss->setMode(GL_CULL_FACE, StateAttribute::PROTECTED| StateAttribute::ON);
+
+            addDrawable(shpDraw);
+            mVertBoundingSpheres.push_back(sph);
+            mShapeDrawableMap[sph] = shpDraw;
+        }
+    }
+
+
 
     /* create geometries for each surface */
     CAVEGeometry **geometryArrayPtr = new CAVEGeometry*[3];

@@ -38,14 +38,14 @@ typedef std::vector<bool>		VertexMaskingVector;
 ***************************************************************/
 class CAVEGeodeShape: public CAVEGeode
 {
-    /* allow class 'DOGeometryCollector' to change its private vector index values */
+    // allow class 'DOGeometryCollector' to change its private vector index values
     friend class DOGeometryCollector;
 
-    /* allow class 'CAVEGroupIconSurface' to get access to geometry list and date */
+    // allow class 'CAVEGroupIconSurface' to get access to geometry list and date
     friend class CAVEGroupIconSurface;
 
   public:
-    /* definition of two initial shape types */
+    // definition of two initial shape types
     enum Type
     {
         BOX,
@@ -79,10 +79,10 @@ class CAVEGeodeShape: public CAVEGeode
             mScaleVect = osg::Vec3(1, 1, 1);
         }
 
-        /* default constructor */
+        // default constructor
         EditorInfo() { reset(); }
 
-        /* parameter update functions */
+        // parameter update functions
         void setMoveUpdate(const osg::Vec3 &offset)
         {
             mMoveOffset = offset;
@@ -104,7 +104,7 @@ class CAVEGeodeShape: public CAVEGeode
             mTypeMasking = SCALE;
         }
 
-        /* parameter access functions */
+        // parameter access functions
         const osg::Vec3 &getMoveOffset() { return mMoveOffset; }
         const osg::Vec3 &getRotateCenter() { return mRotateCenter; }
         const osg::Vec3 &getRotateAxis() { return mRotateAxis; }
@@ -122,7 +122,7 @@ class CAVEGeodeShape: public CAVEGeode
         osg::Vec3 mScaleCenter, mScaleVect;
     };
 
-    /* 'CAVEGeodeShape' constructors & destructor */
+    // 'CAVEGeodeShape' constructors & destructor
     CAVEGeodeShape(const Type &typ, const osg::Vec3 &initVect, const osg::Vec3 &sVect);
     CAVEGeodeShape(CAVEGeodeShape *geodeShapeRef);
     ~CAVEGeodeShape();
@@ -132,12 +132,12 @@ class CAVEGeodeShape: public CAVEGeode
     virtual void pressed() {}
     virtual void released() {}
 
-    /* update vertex masking vector based on selected geometries, or apply an existing vector with the same size */
+    // update vertex masking vector based on selected geometries, or apply an existing vector with the same size
     void updateVertexMaskingVector(bool flag);
     void updateVertexMaskingVector(const VertexMaskingVector &vertMaskingVector);
     void updateVertexMaskingVector();
 
-    /* apply editting changes to vertex, normal & texcoord arrays */
+    // apply editting changes to vertex, normal & texcoord arrays
     void applyEditorInfo(EditorInfo **infoPtr);
     void applyEditorInfo(EditorInfo **infoPtr, CAVEGeodeShape *refGeodePtr);
 
@@ -145,7 +145,7 @@ class CAVEGeodeShape: public CAVEGeode
     CAVEGeometryVector &getCAVEGeometryVector() { return mGeometryVector; }
     const VertexMaskingVector &getVertexMaskingVector() { return mVertexMaskingVector; }
 
-    /* static function that implements 'EditorInfo' changes */
+    // static function that implements 'EditorInfo' changes
     static void applyEditorInfo(osg::Vec3Array **vertexArrayPtr, osg::Vec3Array **normalArrayPtr, 
 				osg::Vec3Array **udirArrayPtr, osg::Vec3Array **vdirArrayPtr, 
 				osg::Vec2Array **texcoordArrayPtr, 
@@ -160,11 +160,11 @@ class CAVEGeodeShape: public CAVEGeode
 
   protected:
 
-    /* vector index that indicates the selection status of the Geode, ONLY accessed by 'DOGeometryCollector' */
+    // vector index that indicates the selection status of the Geode, ONLY accessed by 'DOGeometryCollector'
     int mDOCollectorIndex;
 
-    /* all CAVEGeometry objects share the same 'VertexArray', 'NormalArray' and 'TexcoordArray' 
-       normaly each entry of 'mGeometryVector' contains one instance of CAVEGeometry */
+    // all CAVEGeometry objects share the same 'VertexArray', 'NormalArray' and 'TexcoordArray' 
+    // normaly each entry of 'mGeometryVector' contains one instance of CAVEGeometry
     int mNumVertices, mNumNormals, mNumTexcoords;
     osg::Vec3Array* mVertexArray;
     osg::Vec3Array* mNormalArray;
@@ -178,19 +178,20 @@ class CAVEGeodeShape: public CAVEGeode
 
     std::vector<osg::Cylinder*> mEdgeBoundingCylinder;
     std::map<osg::Cylinder*, osg::ShapeDrawable*> mEdgeDrawableMap;
-    std::map<osg::Cylinder*, osg::Geode*>  mEdgeGeodeMap;
-    /* center vector is normally the average of all vertices, which will be used for generating surface icons */
+    std::map<osg::Cylinder*, osg::Geode*> mEdgeGeodeMap;
+
+    // center vector is normally the average of all vertices, which will be used for generating surface icons
     osg::Vec3 mCenterVect;
 
-    /* bool vector with the same size as 'mVertexArray' that indicates active editing states of each vertex */
+    // bool vector with the same size as 'mVertexArray' that indicates active editing states of each vertex
     VertexMaskingVector mVertexMaskingVector;
 
-    /* these functions are only called when the shape is being created and give no specific type 
-      'sticker' of the shape, since it can be anything after modification. */
+    // these functions are only called when the shape is being created and give no specific type 
+    // 'sticker' of the shape, since it can be anything after modification.
     void initGeometryBox(const osg::Vec3 &initVect, const osg::Vec3 &sVect);
     void initGeometryCylinder(const osg::Vec3 &initVect, const osg::Vec3 &sVect);
 
-    /* actual side length of each texture image pattern in geometry */
+    // actual side length of each texture image pattern in geometry
     static const float gTextureTileSize;
 };
 

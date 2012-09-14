@@ -8,6 +8,7 @@
 ***************************************************************/
 
 #include "VirtualScenicHandler.h"
+#include <cvrKernel/PluginHelper.h>
 
 using namespace std;
 using namespace osg;
@@ -204,7 +205,7 @@ void VirtualScenicHandler::updateVSParameters(const Matrixd &matShaderToWorld,
 
     mPointLight->setPosition(Vec4(viewPos, 0.0f));
 
-    /* update sky dome uniform list */
+    // update sky dome uniform list
     Uniform *hazeRadisuMinUniform = mSkyDomeStateset->getOrCreateUniform("hazeRadisuMin", Uniform::FLOAT);
     hazeRadisuMinUniform->set(hazeRadisuMin);
 
@@ -226,7 +227,7 @@ void VirtualScenicHandler::updateVSParameters(const Matrixd &matShaderToWorld,
     Uniform *matShaderToWorldUniform = mSkyDomeStateset->getOrCreateUniform("shaderToWorldMat", Uniform::FLOAT_MAT4);
     matShaderToWorldUniform->set(matWorldToShader);
 
-    /* update water surface uniform list */
+    // update water surface uniform list
     if (mWaterEnabled)
     {
         Uniform *sunDirUniform2 = mWatersurfStateset->getOrCreateUniform("sundir", Uniform::FLOAT_VEC3);
@@ -238,7 +239,7 @@ void VirtualScenicHandler::updateVSParameters(const Matrixd &matShaderToWorld,
     Uniform *skycolorUniform2 = mSkyDomeStateset->getOrCreateUniform("skycolor", Uniform::FLOAT_VEC4);
     skycolorUniform2->set(skyColor);
 
-    /* change texture coordinates of normal map */
+    // change texture coordinates of normal map
     if (mWaterEnabled)
     {
         Array* texcoordArray = mWatersurfGeometry->getTexCoordArray(0);
@@ -434,60 +435,68 @@ void VirtualScenicHandler::interpretColorParameters(const Vec3 &sunDir, Vec4 &su
     if (sunHeight > -0.2) 
     {
         float r, g, b;
-        if (sunHeight > 0.25) { r = 1;  g = 1;   b = 1; }
+        if (sunHeight > 0.25) 
+        { 
+            r = 1;  g = 1;   b = 1; 
+        }
         else if (sunHeight > 0.0)
         {
-	    r = 1.0f;		r = r > 0 ? r:0;
-	    g = sunHeight * 3.2 + 0.2;	g = g > 0 ? g:0;
-	    b = sunHeight * 3.2 + 0.2;	b = b > 0 ? b:0;
-	    r = sqrt(r);    g = sqrt(g);    b = sqrt(b);
+            r = 1.0f;		r = r > 0 ? r:0;
+            g = sunHeight * 3.2 + 0.2;	g = g > 0 ? g:0;
+            b = sunHeight * 3.2 + 0.2;	b = b > 0 ? b:0;
+            r = sqrt(r);    g = sqrt(g);    b = sqrt(b);
         }
-	else { r = 1.0f;    g = 0.2f;    b = 0.2f; }
+        else 
+        { 
+            r = 1.0f;    g = 0.2f;    b = 0.2f; 
+        }
         sunColor = Vec4(r, g, b, 1);
-    } else {
-	sunColor = Vec4(0, 0, 0, 1);
+    } 
+    else 
+    {
+        sunColor = Vec4(0, 0, 0, 1);
     }
 
     Vec4 skyColor1(0.0, 0.0, 0.0, 1.0), skyColor2(0.0, 0.0, 0.0, 1.0);
     if (sunHeight < -0.3)
     {
-	interp = 0.0;
-	skyFadingColor = Vec4(0, 0, 0, 1);
+        interp = 0.0;
+        skyFadingColor = Vec4(0, 0, 0, 1);
     }
     else if (sunHeight < -0.1) 
     { 
-	interp = (sunHeight + 0.3)/0.2; 
-	skyColor1 = Vec4(0.0, 0.0, 0.0, 1.0); 
-	skyColor2 = Vec4(0.0, 0.0, 0.3, 1.0);
-	skyFadingColor = skyColor1;
+        interp = (sunHeight + 0.3)/0.2; 
+        skyColor1 = Vec4(0.0, 0.0, 0.0, 1.0); 
+        skyColor2 = Vec4(0.0, 0.0, 0.3, 1.0);
+        skyFadingColor = skyColor1;
     }
     else if (sunHeight < 0.1) 
     { 
-	interp = (sunHeight + 0.1)/0.1; 
-	skyColor1 = Vec4(0.0, 0.0, 0.3, 1.0); 
-	skyColor2 = Vec4(0.6, 0.0, 0.1, 1.0); 
-	skyFadingColor = skyColor1;
+        interp = (sunHeight + 0.1)/0.1; 
+        skyColor1 = Vec4(0.0, 0.0, 0.3, 1.0); 
+        skyColor2 = Vec4(0.6, 0.0, 0.1, 1.0); 
+        skyFadingColor = skyColor1;
     }
     else if (sunHeight < 0.2) 
     { 
-	interp = (sunHeight - 0.1)/0.1; 
-	skyColor1 = Vec4(0.6, 0.0, 0.1, 1.0); 
-	skyColor2 = Vec4(0.8, 0.6, 0.1, 1.0);
-	skyFadingColor = skyColor1;
+        interp = (sunHeight - 0.1)/0.1; 
+        skyColor1 = Vec4(0.6, 0.0, 0.1, 1.0); 
+        skyColor2 = Vec4(0.8, 0.6, 0.1, 1.0);
+        skyFadingColor = skyColor1;
     }
     else if (sunHeight < 0.4) 
     { 
-	interp = (sunHeight - 0.1)/0.2; 
-	skyColor1 = Vec4(0.8, 0.6, 0.1, 1.0); 
-	skyColor2 = Vec4(0.5, 0.5, 1.0, 1.0);
-	skyFadingColor = Vec4(0.8, 0.8, 0.8, 1.0);
+        interp = (sunHeight - 0.1)/0.2; 
+        skyColor1 = Vec4(0.8, 0.6, 0.1, 1.0); 
+        skyColor2 = Vec4(0.5, 0.5, 1.0, 1.0);
+        skyFadingColor = Vec4(0.8, 0.8, 0.8, 1.0);
     }
     else 
     { 
-	interp = 1.0;
-	skyColor1 = Vec4(0.5, 0.5, 1.0, 1.0); 
-	skyColor2 = Vec4(0.5, 0.5, 1.0, 1.0); 
-	skyFadingColor = Vec4(0.8, 0.8, 0.8, 1.0);
+        interp = 1.0;
+        skyColor1 = Vec4(0.5, 0.5, 1.0, 1.0); 
+        skyColor2 = Vec4(0.5, 0.5, 1.0, 1.0); 
+        skyFadingColor = Vec4(0.8, 0.8, 0.8, 1.0);
     }
     skyColor = skyColor1 * (1.0f - interp) + skyColor2 * interp;
 }

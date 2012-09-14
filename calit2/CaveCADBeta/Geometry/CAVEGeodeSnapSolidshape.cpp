@@ -101,11 +101,16 @@ CAVEGeodeSnapSolidshapeCylinder::CAVEGeodeSnapSolidshapeCylinder()
 /***************************************************************
 * Function: resize()
 ***************************************************************/
-void CAVEGeodeSnapSolidshapeBox::resize(const osg::Vec3 &gridVect)
+void CAVEGeodeSnapSolidshapeBox::resize(const osg::Vec3 &gridVect, bool snap)
 {
-    mScaleVect = gridVect * mSnappingUnitDist;
-    mBox = new Box;
+    if (snap)
+        mScaleVect = gridVect * mSnappingUnitDist;
+    else
+        mScaleVect = gridVect;
 
+    mBox = new Box;
+    
+    //std::cout << snap << std::endl;
     //mBox->setCenter(mInitPosition + mScaleVect * 0.5);
     
     // Keep the initial position the same - snapping
@@ -120,42 +125,16 @@ void CAVEGeodeSnapSolidshapeBox::resize(const osg::Vec3 &gridVect)
 /***************************************************************
 * Function: resize()
 ***************************************************************/
-void CAVEGeodeSnapSolidshapeCylinder::resize(const osg::Vec3 &gridVect)
+void CAVEGeodeSnapSolidshapeCylinder::resize(const osg::Vec3 &gridVect, bool snap)
 {
     mScaleVect = gridVect * mSnappingUnitDist;
     float rad = sqrt(mScaleVect.x() * mScaleVect.x() + mScaleVect.y() * mScaleVect.y());
     mCylinder = new Cylinder;
+
     mCylinder->setCenter(mInitPosition + Vec3(0, 0, mScaleVect.z() * 0.5));
     mCylinder->setRadius(rad);
     mCylinder->setHeight(mScaleVect.z());
     Drawable* cylinderDrawable = new ShapeDrawable(mCylinder);
     setDrawable(0, cylinderDrawable);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

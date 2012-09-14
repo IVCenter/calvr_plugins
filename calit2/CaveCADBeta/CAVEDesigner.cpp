@@ -7,6 +7,7 @@
 *
 ***************************************************************/
 #include "CAVEDesigner.h"
+#include <cvrKernel/PluginHelper.h>
 
 using namespace std;
 using namespace osg;
@@ -14,7 +15,7 @@ using namespace osg;
 //Constructor
 CAVEDesigner::CAVEDesigner(Group* rootGroup): mActiveFlag(false), mKeypressFlag(false)
 {
-    mDesignStateHandler = new DesignStateHandler(rootGroup);
+    mDesignStateHandler = new DesignStateHandler(rootGroup);//cvr::PluginHelper::getScene());//rootGroup);
     mDesignObjectHandler = new DesignObjectHandler(rootGroup);
     mAudioConfigHandler = new AudioConfigHandler(mDesignObjectHandler->getCAVEShapeSwitchPtr());
 
@@ -76,7 +77,7 @@ void CAVEDesigner::update(const osg::Vec3 &viewDir, const osg::Vec3 &viewPos)
 * Description: Handle input device press event
 *
 ***************************************************************/
-bool CAVEDesigner::inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 &pointerPos)
+bool CAVEDesigner::inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 &pointerPos, int button)
 {
     if (!mActiveFlag) 
         return false;

@@ -85,9 +85,3 @@ Node *CAVEIntersector::getHitNode()
     return hitNode;
 }
 
-
-
-
-
-
-
