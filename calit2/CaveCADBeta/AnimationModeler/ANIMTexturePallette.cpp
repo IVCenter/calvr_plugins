@@ -33,7 +33,7 @@ void ANIMLoadTexturePalletteRoot(osg::PositionAttitudeTransform** xformScaleFwd,
     AnimationPath* animationPathScaleBwd = new AnimationPath;
     animationPathScaleFwd->setLoopMode(AnimationPath::NO_LOOPING);
     animationPathScaleBwd->setLoopMode(AnimationPath::NO_LOOPING);
-   
+     
     Vec3 scaleFwd, scaleBwd;
     float step = 1.f / ANIM_VIRTUAL_SPHERE_NUM_SAMPS;
     for (int i = 0; i < ANIM_VIRTUAL_SPHERE_NUM_SAMPS + 1; i++)
@@ -41,8 +41,8 @@ void ANIMLoadTexturePalletteRoot(osg::PositionAttitudeTransform** xformScaleFwd,
         float val = i * step;
         scaleFwd = Vec3(val, val, val);
         scaleBwd = Vec3(1.f-val, 1.f-val, 1.f-val);
-        animationPathScaleFwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleFwd));
-        animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleBwd));
+        animationPathScaleFwd->insert(val, AnimationPath::ControlPoint(Vec3(-0.5, 0, 0),Quat(), scaleFwd));
+        animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(Vec3(-0.5, 0, 0),Quat(), scaleBwd));
     }
 
     AnimationPathCallback *animCallbackFwd = new AnimationPathCallback(animationPathScaleFwd, 
@@ -67,7 +67,7 @@ void ANIMLoadTexturePalletteIdle(osg::Switch **idleStateSwitch, ANIMTexturePalle
 
     /* create drawables, geodes and texture mapping */
     (*textureStateIdelEntry)->mEntryGeode = new Geode();
-    Sphere *idleSphere = new Sphere(Vec3(-0.5, 0, 0), ANIM_VIRTUAL_SPHERE_RADIUS);
+    Sphere *idleSphere = new Sphere(Vec3(0, 0, 0), ANIM_VIRTUAL_SPHERE_RADIUS);
     ShapeDrawable *idleSphereDrawable = new ShapeDrawable(idleSphere);
     ((*textureStateIdelEntry)->mEntryGeode)->addDrawable(idleSphereDrawable);
 
@@ -101,8 +101,8 @@ void ANIMLoadTexturePalletteIdle(osg::Switch **idleStateSwitch, ANIMTexturePalle
         float val = i * step;
         scaleFwd = Vec3(val, val, val);
         scaleBwd = Vec3(1.f-val, 1.f-val, 1.f-val);
-        animationPathScaleFwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleFwd));
-        animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleBwd));
+        animationPathScaleFwd->insert(val, AnimationPath::ControlPoint(Vec3(0, 0, 0), Quat(), scaleFwd));
+        animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(Vec3(0, 0, 0), Quat(), scaleBwd));
     }
 
     (*textureStateIdelEntry)->mFwdAnim = new AnimationPathCallback(animationPathScaleFwd, 
@@ -133,7 +133,7 @@ void ANIMLoadTexturePalletteIdle(osg::Switch **idleStateSwitch, ANIMTexturePalle
 * textureStatesEntryArray: Data pointer to texture states
 *
 ***************************************************************/
-void ANIMLoadTexturePalletteSelect( Switch **selectStateSwitch, Switch **alphaTurnerSwitch,
+void ANIMLoadTexturePalletteSelect(Switch **selectStateSwitch, Switch **alphaTurnerSwitch,
 				    int &numTexs, ANIMTexturePalletteSelectEntry ***textureStatesEntryArray)
 {
     *selectStateSwitch = new Switch;
@@ -193,9 +193,10 @@ void ANIMLoadTexturePalletteSelect( Switch **selectStateSwitch, Switch **alphaTu
 
     numTex = j;
     
+    osg::Vec3 subpos(0, 0, -0.5);
     for (int i = 0; i < numTex; ++i)
     {
-        ANIMCreateTextureEntryGeode(showUpPosArray[i], voidColor, voidColor, filenames[i],
+        ANIMCreateTextureEntryGeode(showUpPosArray[i] + subpos, voidColor, voidColor, filenames[i],
 				&((*textureStatesEntryArray)[i]));
 
     }
@@ -225,7 +226,33 @@ void ANIMLoadTexturePalletteSelect( Switch **selectStateSwitch, Switch **alphaTu
 */
 
     /* create 14 color entries */
-    ANIMCreateTextureEntryGeode(showUpPosArray[10], Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 0.0), voidTex,
+    std::vector<osg::Vec3> colors;
+    colors.push_back(osg::Vec3(0.0, 0.0, 0.0)); // black
+    colors.push_back(osg::Vec3(0.5, 0.5, 0.5)); // grey
+    colors.push_back(osg::Vec3(1.0, 1.0, 1.0)); // white
+    colors.push_back(osg::Vec3(1.0, 0.0, 0.0)); // red 
+    colors.push_back(osg::Vec3(0.0, 1.0, 0.0)); // green
+
+    colors.push_back(osg::Vec3(0.0, 0.0, 1.0)); // blue
+    colors.push_back(osg::Vec3(1.0, 1.0, 0.0)); // yellow
+    colors.push_back(osg::Vec3(1.0, 0.0, 1.0)); // pink
+    colors.push_back(osg::Vec3(0.0, 1.0, 1.0)); // cyan
+    colors.push_back(osg::Vec3(0.5, 0.0, 1.0)); // purple
+
+    colors.push_back(osg::Vec3(1.0, 0.5, 0.0)); // orange
+    colors.push_back(osg::Vec3(0.0, 0.5, 1.0)); // sky blue
+    colors.push_back(osg::Vec3(1.0, 0.0, 0.5)); // bright pink
+    colors.push_back(osg::Vec3(0.0, 0.5, 1.0)); // light bluegreenish
+    
+    subpos = osg::Vec3(0, 0, -1.5);
+    for (int i = 0; i < colors.size(); ++i)
+    {
+        ANIMCreateTextureEntryGeode(showUpPosArray[i] + subpos, colors[i], colors[i], voidTex,
+				&((*textureStatesEntryArray)[i+10]));
+
+    }
+
+/*    ANIMCreateTextureEntryGeode(showUpPosArray[10], Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 0.0), voidTex,
 				&((*textureStatesEntryArray)[10]));
     ANIMCreateTextureEntryGeode(showUpPosArray[11], Vec3(0.5, 0.5, 0.5), Vec3(0.5, 0.5, 0.5), voidTex,
 				&((*textureStatesEntryArray)[11]));
@@ -253,7 +280,7 @@ void ANIMLoadTexturePalletteSelect( Switch **selectStateSwitch, Switch **alphaTu
 				&((*textureStatesEntryArray)[22]));
     ANIMCreateTextureEntryGeode(showUpPosArray[23], Vec3(1.0, 1.0, 0.5), Vec3(1.0, 1.0, 0.5), voidTex,
 				&((*textureStatesEntryArray)[23]));
-
+*/
     /* add entry animation objects to 'selectStateSwitch' */
     for (int i = 0; i < numTexs; i++) 
     {
@@ -306,7 +333,7 @@ void ANIMCreateTextureEntryGeode(const Vec3 &showUpPos, const Vec3 &diffuse, con
     (*textureEntry)->setTexFilename(texfilename);
 
     /* create drawables, geodes and texture mapping */
-    Sphere *texEntrySphere = new Sphere(Vec3(-0.25, 0, 0), ANIM_TEXTURE_PALLETTE_ENTRY_SPHERE_RADIUS);
+    Sphere *texEntrySphere = new Sphere(Vec3(0, 0, 0), ANIM_TEXTURE_PALLETTE_ENTRY_SPHERE_RADIUS);
     ShapeDrawable *texEntryDrawable = new ShapeDrawable(texEntrySphere);
     (*textureEntry)->mEntryGeode->addDrawable(texEntryDrawable);
 
@@ -352,10 +379,15 @@ void ANIMCreateTextureEntryGeode(const Vec3 &showUpPos, const Vec3 &diffuse, con
         scaleBwd1 = Vec3(1.f - val, 1.f - val, 1.f - val);
         scaleFwd2 = Vec3(1 + val * diff, 1 + val * diff, 1 + val * diff);
         scaleBwd2 = Vec3(1 + (1 - val) * diff, 1 + (1 - val) * diff, 1 + (1 - val) * diff);
-        scaleFwd3 = Vec3((1+ diff) * val, (1+ diff) * val, (1+ diff) * val);
-        scaleBwd3 = Vec3((1+ diff) * (1 - val), (1+ diff) * (1 - val), (1+ diff) * (1 - val));
+        scaleFwd3 = Vec3((1 + diff) * val, (1 + diff) * val, (1 + diff) * val);
+        scaleBwd3 = Vec3((1 + diff) * (1 - val), (1 + diff) * (1 - val), (1 + diff) * (1 - val));
         transFwd = showUpPos * val;
         transBwd = showUpPos * (1.f - val);
+        
+        // new menu positioning
+        osg::Vec3 offset(0, 0, 0);
+        transFwd += offset;
+        transBwd += offset;
 
         animationPathsArray[0]->insert(val, AnimationPath::ControlPoint(transFwd, Quat(), scaleFwd1));
         animationPathsArray[1]->insert(val, AnimationPath::ControlPoint(transBwd, Quat(), scaleBwd1));

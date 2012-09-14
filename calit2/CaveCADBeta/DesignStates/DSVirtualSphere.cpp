@@ -27,8 +27,9 @@ DSVirtualSphere::DSVirtualSphere()
     mDOIntersector = new DOIntersector();
     mDSIntersector->loadRootTargetNode(NULL, NULL);
     mDOIntersector->loadRootTargetNode(NULL, NULL);
-
+    mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPATransFwd->getChild(0));
     mIsOpen = false;
+    mDevPressedFlag = false;
 }
 
 
@@ -92,6 +93,7 @@ void DSVirtualSphere::addChildState(DesignStateBase* ds)
     this->addChild(bwd);
 
     setAllChildrenOn();
+    mActiveSubState = NULL;
 }
 
 
@@ -104,33 +106,90 @@ void DSVirtualSphere::addChildState(DesignStateBase* ds)
 void DSVirtualSphere::setObjectEnabled(bool flag)
 {
     mObjEnabledFlag = flag;
-    if (flag) 
+/*    if (flag) 
     {
         setAllChildrenOn();
     }
     else 
     {
-    }
 
+    }
+*/
     if (!mPATransFwd || !mPATransBwd) 
         return;
 
     AnimationPathCallback* animCallback = NULL;
     if (flag)
     {
-        setSingleChildOn(0);
-        animCallback = dynamic_cast <AnimationPathCallback*> (mPATransFwd->getUpdateCallback());
-        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPATransFwd);
-        //mDOIntersector->loadRootTargetNode(gDesignObjectRootGroup, NULL);
+        if (!mIsOpen)
+        {
+           // setSingleChildOn(0);
+           // animCallback = dynamic_cast <AnimationPathCallback*> (mPATransFwd->getUpdateCallback());
+           // mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPATransFwd);
+            //mDOIntersector->loadRootTargetNode(gDesignObjectRootGroup, NULL);
+            
+            setSingleChildOn(0);
+            for (int i = 0; i < fwdVec.size(); ++i)
+            {
+                setChildValue(fwdVec[i], true);
+                animCallback = dynamic_cast <AnimationPathCallback*> (fwdVec[i]->getUpdateCallback());
+
+                if (animCallback)
+                    animCallback->reset();
+            }
+
+            std::list<DesignStateBase*>::iterator it;
+            for (it = mChildStates.begin(); it != mChildStates.end(); ++it)
+            {
+                (*it)->setObjectEnabled(true);
+            }
+            mIsOpen = true;
+        }
+        else
+        {
+            setSingleChildOn(0);
+            for (int i = 1; i < bwdVec.size(); ++i)
+            {
+                setChildValue(bwdVec[i], true);
+                animCallback = dynamic_cast <AnimationPathCallback*> (bwdVec[i]->getUpdateCallback());
+
+                if (animCallback)
+                    animCallback->reset();
+            }
+
+            std::list<DesignStateBase*>::iterator it;
+            for (it = mChildStates.begin(); it != mChildStates.end(); ++it)
+            {
+                (*it)->setObjectEnabled(false);
+            }
+            mIsOpen = false;
+        }
     } 
     else 
     {
-        //setSingleChildOn(1);
-        //animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
+        setSingleChildOn(0);
+        for (int i = 1; i < bwdVec.size(); ++i)
+        {
+            setChildValue(bwdVec[i], true);
+            animCallback = dynamic_cast <AnimationPathCallback*> (bwdVec[i]->getUpdateCallback());
+
+            if (animCallback)
+                animCallback->reset();
+        }
+
+        std::list<DesignStateBase*>::iterator it;
+        for (it = mChildStates.begin(); it != mChildStates.end(); ++it)
+        {
+            (*it)->setObjectEnabled(false);
+        }
+        mIsOpen = false;
     }
 
     if (animCallback) 
         animCallback->reset();
+    
+    mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPATransFwd->getChild(0));
+    mActiveSubState = NULL;
 }
 
 
@@ -139,7 +198,13 @@ void DSVirtualSphere::setObjectEnabled(bool flag)
 ***************************************************************/
 void DSVirtualSphere::switchToPrevSubState()
 {
-    AnimationPathCallback* animCallback = NULL;
+    if (mActiveSubState)
+    {
+        mActiveSubState->switchToPrevSubState();
+        return;
+    }
+
+/*    AnimationPathCallback* animCallback = NULL;
     setAllChildrenOff();
     if (mIsOpen)
     {
@@ -153,6 +218,7 @@ void DSVirtualSphere::switchToPrevSubState()
             if (animCallback)
                 animCallback->reset();
         }
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPATransFwd);
 
         std::list<DesignStateBase*>::iterator it;
         for (it = mChildStates.begin(); it != mChildStates.end(); ++it)
@@ -173,14 +239,17 @@ void DSVirtualSphere::switchToPrevSubState()
             if (animCallback)
                 animCallback->reset();
         }
+
         std::list<DesignStateBase*>::iterator it;
         for (it = mChildStates.begin(); it != mChildStates.end(); ++it)
         {
             (*it)->setObjectEnabled(true);
         }
 
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPATransFwd);
         mIsOpen = true;
     }
+    */
 }
 
 
@@ -189,6 +258,12 @@ void DSVirtualSphere::switchToPrevSubState()
 ***************************************************************/
 void DSVirtualSphere::switchToNextSubState()
 {
+    if (mActiveSubState)
+    {
+        mActiveSubState->switchToNextSubState();
+        return;
+    }
+
     switchToPrevSubState();
 }
 
@@ -222,7 +297,54 @@ bool DSVirtualSphere::inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg:
         }
         it++;
     }
-    mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, fwdVec[0]->getChild(0));
+    
+    for (it = mChildStates.begin(); it != mChildStates.end(); ++it)
+    {
+        if ((*it)->test(pointerOrg, pointerPos))
+        {
+            mActiveSubState = (*it);
+
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPATransFwd->getChild(0));
+
+            return (*it)->inputDevPressEvent(pointerOrg, pointerPos);
+        }
+    }
+    mActiveSubState = NULL;
+
+    mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPATransFwd->getChild(0));
     return false;
+}
+
+
+/***************************************************************
+* Function: inputDevMoveEvent()
+***************************************************************/
+void DSVirtualSphere::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos)
+{
+    if (mActiveSubState)
+        mActiveSubState->inputDevMoveEvent(pointerOrg, pointerPos);
+}
+
+
+/***************************************************************
+* Function: inputDevReleaseEvent()
+***************************************************************/
+bool DSVirtualSphere::inputDevReleaseEvent()
+{
+    mDevPressedFlag = false;
+    if (mActiveSubState)
+        return mActiveSubState->inputDevReleaseEvent();
+
+    return false;
+}
+
+
+/***************************************************************
+* Function: update()
+***************************************************************/
+void DSVirtualSphere::update()
+{
+    if (mActiveSubState)
+        mActiveSubState->update();
 }
 

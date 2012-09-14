@@ -31,16 +31,17 @@ class DSVirtualSphere: public DesignStateBase
     virtual void switchToPrevSubState();
     virtual void switchToNextSubState();
 
-    void inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) {}
-    bool inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);// { mDevPressedFlag = true; return false; }
-    bool inputDevReleaseEvent() { mDevPressedFlag = false; return false; }
-    void update() {}
+    void inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
+    bool inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
+    bool inputDevReleaseEvent();
+    void update();// {}
     void addChildState(DesignStateBase* ds);
 
   protected:
     std::list<DesignStateBase*> mChildStates;
     bool mIsOpen;
     std::vector<osg::PositionAttitudeTransform*> fwdVec, bwdVec;
+    DesignStateBase *mActiveSubState;
 };
 
 

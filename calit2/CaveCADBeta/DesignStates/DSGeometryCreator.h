@@ -50,7 +50,6 @@ class DSGeometryCreator: public DesignStateBase
        to make these actions happen.
     */
     void setDesignObjectHandlerPtr(DesignObjectHandler *designObjectHandler);
-
     void setAudioConfigHandlerPtr(AudioConfigHandler *audioConfigHandler) { mAudioConfigHandler = audioConfigHandler; }
 
   protected:

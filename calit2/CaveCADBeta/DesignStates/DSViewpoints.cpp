@@ -29,6 +29,8 @@ DSViewpoints::DSViewpoints()
     mDSIntersector->loadRootTargetNode(NULL, NULL);
     mDOIntersector->loadRootTargetNode(NULL, NULL);
 
+    mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, fwdVec[0]->getChild(0));
+
     mIsOpen = false;
 }
 
@@ -42,25 +44,26 @@ DSViewpoints::DSViewpoints()
 void DSViewpoints::setObjectEnabled(bool flag)
 {
     AnimationPathCallback* animCallback = NULL;
-    if (flag)
+    setAllChildrenOff();
+    if (flag) 
     {
-        setSingleChildOn(0);
-        for (int i = 0; i < 1; ++i)
+        if (!mIsOpen) // open menu
         {
-            setChildValue(fwdVec[i], true);
-            animCallback = dynamic_cast <AnimationPathCallback*> (fwdVec[i]->getUpdateCallback());
-            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, fwdVec[i]->getChild(0));
-
-            if (animCallback)
+            setSingleChildOn(0);
+            for (int i = 0; i < fwdVec.size(); ++i)
             {
-                animCallback->reset();
+                setChildValue(fwdVec[i], true);
+                animCallback = dynamic_cast <AnimationPathCallback*> (fwdVec[i]->getUpdateCallback());
+                mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, fwdVec[i]->getChild(0));
+
+                if (animCallback)
+                {
+                    animCallback->reset();
+                }
             }
+            mIsOpen = true;
         }
-        mIsOpen = false;
-    }
-    else 
-    {
-        if (mIsOpen)
+        else // close menu
         {
             setSingleChildOn(0);
             for (int i = 1; i < bwdVec.size(); ++i)
@@ -77,6 +80,23 @@ void DSViewpoints::setObjectEnabled(bool flag)
             mIsOpen = false;
         }
     }
+    else // close menu
+    {
+        setSingleChildOn(0);
+        for (int i = 1; i < bwdVec.size(); ++i)
+        {
+            setChildValue(bwdVec[i], true);
+            animCallback = dynamic_cast <AnimationPathCallback*> (bwdVec[i]->getUpdateCallback());
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, bwdVec[i]);
+
+            if (animCallback)
+            {
+                animCallback->reset();
+            }
+        }
+        mIsOpen = false;
+    }
+    mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, fwdVec[0]->getChild(0));
 }
 
 
@@ -85,9 +105,8 @@ void DSViewpoints::setObjectEnabled(bool flag)
 ***************************************************************/
 void DSViewpoints::switchToPrevSubState()
 {
-    AnimationPathCallback* animCallback = NULL;
+   /* AnimationPathCallback* animCallback = NULL;
     setAllChildrenOff();
-//    std::cout << mIsOpen << std::endl;
     if (mIsOpen)
     {
         setSingleChildOn(0);
@@ -116,6 +135,7 @@ void DSViewpoints::switchToPrevSubState()
         }
         mIsOpen = true;
     }
+    */
 }
 
 

@@ -84,7 +84,7 @@ DesignStateRenderer::DesignStateRenderer(osg::Group* designStateRootGroup): mFla
 
     // disable all virtual objects 
     // mDSParticleSystem->setEmitterEnabled(false);
-    mActiveDSPtr->setObjectEnabled(false);
+    //mActiveDSPtr->setObjectEnabled(false);
 
     // create two directional light sources for all DS objects 
     designStateRootGroup->addChild(createDirectionalLights(designStateRootGroup->getOrCreateStateSet()));
@@ -147,8 +147,8 @@ void DesignStateRenderer::setVisible(bool flag)
     for (DesignStateList::iterator itrDS = mDSList.begin(); itrDS != mDSList.end(); itrDS++)
     {
         (*itrDS)->setObjectEnabled(flag);
+        (*itrDS)->setObjectEnabled(!flag);
     }
-
 /*
     mDSVirtualSphere->setObjectEnabled(flag);
     mDSVirtualEarth->setObjectEnabled(flag);
@@ -158,7 +158,8 @@ void DesignStateRenderer::setVisible(bool flag)
     mDSTexturePallette->setObjectEnabled(flag);
     mDSViewpoints->setObjectEnabled(flag);
 */
-    /* align state spheres with viewer's position and front orientation */
+
+    // align state spheres with viewer's position and front orientation
     if (flag) 
         resetPose();
 }
@@ -182,7 +183,8 @@ void DesignStateRenderer::toggleDSVisibility()
 ***************************************************************/
 void DesignStateRenderer::switchToPrevState()
 {
-    if (!mFlagVisible || mDSList.size() <= 0) return;
+    if (!mFlagVisible || mDSList.size() <= 0) 
+        return;
 
     if (!mActiveDSPtr->isLocked())
     {
@@ -309,8 +311,10 @@ void DesignStateRenderer::update(const osg::Vec3 &viewDir, const osg::Vec3 &view
     mViewDir = viewDir;
 
     mActiveDSPtr->update();
-    if (mDSVirtualEarth) 
+    if (mDSVirtualEarth)
+    {
         mDSVirtualEarth->updateVSParameters(viewDir, viewPos);
+    }
 }
 
 
@@ -323,12 +327,13 @@ bool DesignStateRenderer::inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 
     {
         if ((*it)->test(pointerOrg, pointerPos))
         {
-            if (mActiveDSPtr != (*it))
+            if (mActiveDSPtr != (*it)) // turn off the previous state
             {
                 mActiveDSPtr->setObjectEnabled(false);
             }
             mActiveDSPtr = (*it);
             mActiveDSPtr->setObjectEnabled(true);
+            break;
         }
     }
     return (mActiveDSPtr->inputDevPressEvent(pointerOrg, pointerPos));

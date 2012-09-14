@@ -61,18 +61,45 @@ void DSGeometryCreator::setObjectEnabled(bool flag)
     AnimationPathCallback* animCallback = NULL;
     if (flag)
     {
-        setSingleChildOn(0);
-        animCallback = dynamic_cast <AnimationPathCallback*> (mPATransFwd->getUpdateCallback());
+        if (!mIsOpen)
+        {
+            this->setSingleChildOn(0);
+            animCallback = dynamic_cast <AnimationPathCallback*> (mPATransFwd->getUpdateCallback());
 
-        // load intersection root and targets when state is enabled, no need to change till disabled 
-        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
-        mDOIntersector->loadRootTargetNode(gDesignObjectRootGroup, NULL);
-
-        mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setSingleChildOn(0);
-        mShapeSwitchEntryArray[mShapeSwitchIdx]->mFlipUpFwdAnim->reset();
+            // load intersection root and targets when state is enabled, no need to change till disabled 
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
+            mDOIntersector->loadRootTargetNode(gDesignObjectRootGroup, NULL);
+            
+            for (int i = 0; i < mNumShapeSwitches; ++i)
+            {
+                mShapeSwitchEntryArray[i]->mSwitch->setSingleChildOn(0);
+                mShapeSwitchEntryArray[i]->mFlipUpFwdAnim->reset();
+            }
+            mIsOpen = true;
+        }
+        else 
+        {
+            for (int i = 0; i < mNumShapeSwitches; ++i)
+            {
+                mShapeSwitchEntryArray[i]->mSwitch->setSingleChildOn(2);
+                mShapeSwitchEntryArray[i]->mFlipUpBwdAnim->reset();
+            }
+            mIsOpen = false;
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
+        }
+        //mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setSingleChildOn(0);
+        //mShapeSwitchEntryArray[mShapeSwitchIdx]->mFlipUpFwdAnim->reset();
     } 
     else 
     {
+        for (int i = 0; i < mNumShapeSwitches; ++i)
+        {
+            mShapeSwitchEntryArray[i]->mSwitch->setSingleChildOn(2);
+            mShapeSwitchEntryArray[i]->mFlipUpBwdAnim->reset();
+        }
+        mIsOpen = false;
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
+
         /*setSingleChildOn(1);
         animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
 
@@ -90,7 +117,6 @@ void DSGeometryCreator::setObjectEnabled(bool flag)
 
     if (animCallback) 
         animCallback->reset();
-
 }
 
 
@@ -249,7 +275,6 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
     {
         mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, fwdVec[i]->getChild(0));
         //setChildValue(fwdVec[i], true);
-
         if (mDSIntersector->test(pointerOrg, pointerPos))
         {
             if (i == 0)
@@ -257,32 +282,60 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
                 if (mIsOpen)
                 {
                     // close menu
-                    
                     return true;
                 }
                 else
                 {
                     // open menu
-
                     return true;
                 }
             }
             else
             {
                 // switch geometry state
-
                 return true;
             }
         }
     }
-
     // no menu intersect, so draw shape
 */ 
 
+    //std::cout << "press" << std::endl; 
 
     if (mDrawingState == IDLE)
     {
-        if (mDSIntersector->test(pointerOrg, pointerPos))
+/*        if (mDSIntersector->test(pointerOrg, pointerPos))
+        {
+    std::cout << "DSintersect" << std::endl;
+            Node *hitNode = mDSIntersector->getHitNode();
+            for (int i = 0; i < mNumShapeSwitches; i++)
+            {
+                mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, 
+                    mShapeSwitchEntryArray[i]->mSwitch->getChild(0));
+
+                // clicked a texture sphere, enter apply texture state
+                if (hitNode == mShapeSwitchEntryArray[i]->mSwitch->getChild(0))
+                {
+    std::cout << "intersecting " << i << std::endl;
+                    mShapeSwitchIdx = i;
+                }
+            }
+*/
+        bool hit = false;
+        for (int i = 0; i < mNumShapeSwitches; i++)
+        {
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, 
+                mShapeSwitchEntryArray[i]->mSwitch->getChild(0));
+
+            if (mDSIntersector->test(pointerOrg, pointerPos))
+            {
+                hit = true;
+                //std::cout << "intersecting " << i << std::endl;
+            }
+        }
+
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
+        if (hit)
         {
             mDrawingState = READY_TO_DRAW;
             DrawingStateTransitionHandle(IDLE, READY_TO_DRAW);
@@ -293,8 +346,8 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
             mDOGeometryCreator->resetWireframeGeodes(gDesignStateCenterPos);
         }
 
-        /* switching to lower state 'DSGeometryEditor' only happens in IDLE state, to be specific, 
-           the state changes only if a CAVEGeodeShape object is intersected */
+        // switching to lower state 'DSGeometryEditor' only happens in IDLE state, to be specific,
+        // the state changes only if a CAVEGeodeShape object is intersected
         else if (mDOIntersector->test(pointerOrg, pointerPos))
         {
             CAVEGeodeShape *hitCAVEGeode = dynamic_cast <CAVEGeodeShape*>(mDOIntersector->getHitNode());
@@ -362,12 +415,6 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
         return true;
     else 
         return false;
-/*}
-else
-{
-    // open menu
-}*/
-
 }
 
 
@@ -427,8 +474,8 @@ void DSGeometryCreator::DrawingStateTransitionHandle(const DrawingState& prevSta
 {
     if (prevState == IDLE && nextState == READY_TO_DRAW)
     {
-        mSphereExteriorSwitch->setAllChildrenOff();
-        mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setAllChildrenOff();
+        //mSphereExteriorSwitch->setAllChildrenOff();
+        //mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setAllChildrenOff();
         //mDSParticleSystemPtr->setEmitterEnabled(true);
 
         setLocked(true);

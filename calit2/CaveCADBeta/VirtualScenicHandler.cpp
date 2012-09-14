@@ -8,6 +8,7 @@
 ***************************************************************/
 
 #include "VirtualScenicHandler.h"
+#include <cvrKernel/PluginHelper.h>
 
 using namespace std;
 using namespace osg;
@@ -204,7 +205,7 @@ void VirtualScenicHandler::updateVSParameters(const Matrixd &matShaderToWorld,
 
     mPointLight->setPosition(Vec4(viewPos, 0.0f));
 
-    /* update sky dome uniform list */
+    // update sky dome uniform list
     Uniform *hazeRadisuMinUniform = mSkyDomeStateset->getOrCreateUniform("hazeRadisuMin", Uniform::FLOAT);
     hazeRadisuMinUniform->set(hazeRadisuMin);
 
@@ -226,7 +227,7 @@ void VirtualScenicHandler::updateVSParameters(const Matrixd &matShaderToWorld,
     Uniform *matShaderToWorldUniform = mSkyDomeStateset->getOrCreateUniform("shaderToWorldMat", Uniform::FLOAT_MAT4);
     matShaderToWorldUniform->set(matWorldToShader);
 
-    /* update water surface uniform list */
+    // update water surface uniform list
     if (mWaterEnabled)
     {
         Uniform *sunDirUniform2 = mWatersurfStateset->getOrCreateUniform("sundir", Uniform::FLOAT_VEC3);
@@ -238,7 +239,7 @@ void VirtualScenicHandler::updateVSParameters(const Matrixd &matShaderToWorld,
     Uniform *skycolorUniform2 = mSkyDomeStateset->getOrCreateUniform("skycolor", Uniform::FLOAT_VEC4);
     skycolorUniform2->set(skyColor);
 
-    /* change texture coordinates of normal map */
+    // change texture coordinates of normal map
     if (mWaterEnabled)
     {
         Array* texcoordArray = mWatersurfGeometry->getTexCoordArray(0);

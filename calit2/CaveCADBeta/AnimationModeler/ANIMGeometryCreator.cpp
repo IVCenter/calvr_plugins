@@ -14,7 +14,6 @@ using namespace osg;
 namespace CAVEAnimationModeler
 {
 
-
 /***************************************************************
 * Function: ANIMLoadGeometryCreator()
 *
@@ -44,14 +43,25 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
     geomCreatorTrans->addChild(createBoxSwitch);
     geomCreatorTrans->addChild(createCylinderSwitch);
     
-
     osg::Vec3 pos(-1, 0, 0);
 
-    /* create drawables, geodes and attach them to animation switches */
+    // create drawables, geodes and attach them to animation switches
     *sphereExteriorGeode = new Geode();
     Sphere *sphere = new Sphere(osg::Vec3(), ANIM_VIRTUAL_SPHERE_RADIUS);
     ShapeDrawable *sphereDrawable = new ShapeDrawable(sphere);
     (*sphereExteriorGeode)->addDrawable(sphereDrawable);
+
+
+    Box *box = new Box(osg::Vec3(0.1, 0, 0), ANIM_VIRTUAL_SPHERE_RADIUS / 1.9);
+    (*sphereExteriorGeode)->addDrawable(new ShapeDrawable(box));
+
+    float r = ANIM_VIRTUAL_SPHERE_RADIUS / 3.0;
+    Cylinder *cylinder = new Cylinder(osg::Vec3(-0.05, 0, -0.05), r, r * 2);
+    (*sphereExteriorGeode)->addDrawable(new ShapeDrawable(cylinder));
+    
+    Cone *cone = new osg::Cone(osg::Vec3(0, -0.1, 0.05), r, r * 2);
+    (*sphereExteriorGeode)->addDrawable(new ShapeDrawable(cone));
+
 
     Material *transmaterial = new Material;
     transmaterial->setDiffuse(Material::FRONT_AND_BACK, Vec4(1, 1, 1, 1));
@@ -60,7 +70,7 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
     Image* envMap = osgDB::readImageFile(ANIMDataDir() + "Textures/ShapeContainer.JPG");
     Texture2D* envTex = new Texture2D(envMap);    
     
-    StateSet *sphereStateSet = (*sphereExteriorGeode)->getOrCreateStateSet();
+    StateSet *sphereStateSet = (sphereDrawable)->getOrCreateStateSet();
     sphereStateSet->setMode(GL_BLEND, StateAttribute::OVERRIDE | StateAttribute::ON );
     sphereStateSet->setRenderingHint(StateSet::TRANSPARENT_BIN);
     sphereStateSet->setAttributeAndModes(transmaterial, StateAttribute::OVERRIDE | StateAttribute::ON);
@@ -71,7 +81,7 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
     (*sphereExteriorSwitch)->addChild(sphereExteriorTrans);
     (*sphereExteriorSwitch)->setAllChildrenOn();
 
-    /* write into shape switch entry array record*/
+    // write into shape switch entry array record
     numTypes = 2;
     *shapeSwitchEntryArray = new ANIMShapeSwitchEntry*[numTypes];
     (*shapeSwitchEntryArray)[0] = new ANIMShapeSwitchEntry;
@@ -123,7 +133,6 @@ void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, con
     (*shapeEntry)->mSwitch->addChild(flipUpBwdTrans);		// child #2
     (*shapeEntry)->mSwitch->addChild(flipDownBwdTrans);		// child #3
     (*shapeEntry)->mSwitch->setAllChildrenOff();
-    
 
     osg::Vec3 pos(0, 0, 0);
 
@@ -166,9 +175,10 @@ void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, con
     else if (typ == CAVEGeodeShape::CYLINDER)
         pos[2] -= 1.0;
 
+    osg::Vec3 diff, startPos(0,0,0), fwd, bwd;
+
     for (int i = 0; i < ANIM_GEOMETRY_CREATOR_SHAPE_FLIP_SAMPS + 1; i++)
     {
-
         float t = i * timestep;
         float val = i * scalestep;
         scaleUpVect = Vec3(val, val, val);
@@ -179,10 +189,17 @@ void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, con
         flipUpBwdQuat = Quat(i * anglestep - M_PI / 2, Vec3(-1, 0, 0));
         flipDownBwdQuat = Quat(i * anglestep, Vec3(-1, 0, 0));
 
-        animationFlipUpFwd->insert(t, AnimationPath::ControlPoint(pos, flipUpFwdQuat, scaleUpVect));
-        animationFlipDownFwd->insert(t, AnimationPath::ControlPoint(pos, flipDownFwdQuat, scaleDownVect));
-        animationFlipUpBwd->insert(t, AnimationPath::ControlPoint(pos, flipUpBwdQuat, scaleUpVect));
-        animationFlipDownBwd->insert(t, AnimationPath::ControlPoint(pos, flipDownBwdQuat, scaleDownVect));
+        diff = startPos - pos;
+        
+        for (int j = 0; j < 3; ++j)
+            diff[j] *= val; 
+        fwd = startPos - diff;
+        bwd = pos + diff;
+
+        animationFlipUpFwd->insert(t, AnimationPath::ControlPoint(fwd, flipUpFwdQuat, scaleUpVect));
+        animationFlipDownFwd->insert(t, AnimationPath::ControlPoint(fwd, flipDownFwdQuat, scaleUpVect));
+        animationFlipUpBwd->insert(t, AnimationPath::ControlPoint(bwd, flipUpBwdQuat, scaleDownVect));
+        animationFlipDownBwd->insert(t, AnimationPath::ControlPoint(bwd, flipDownBwdQuat, scaleDownVect));
     }
 
     AnimationPathCallback *animCallbackFlipUpFwd = new AnimationPathCallback(animationFlipUpFwd, 
@@ -216,7 +233,7 @@ void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, con
 ***************************************************************/
 void ANIMLoadGeometryCreatorReference(Switch **snapWireframeSwitch, Switch **snapSolidshapeSwitch)
 {
-    *snapWireframeSwitch = new Switch;
+    *snapWireframeSwitch = new Switch();
     CAVEGeodeSnapWireframeBox *snapWireframeBox = new CAVEGeodeSnapWireframeBox();
     CAVEGeodeSnapWireframeCylinder * snapWireframeCylinder = new CAVEGeodeSnapWireframeCylinder();
 
@@ -224,7 +241,7 @@ void ANIMLoadGeometryCreatorReference(Switch **snapWireframeSwitch, Switch **sna
     (*snapWireframeSwitch)->addChild(snapWireframeCylinder);
     (*snapWireframeSwitch)->setAllChildrenOff();
 
-    *snapSolidshapeSwitch = new Switch;
+    *snapSolidshapeSwitch = new Switch();
     (*snapSolidshapeSwitch)->addChild(new CAVEGeodeSnapSolidshapeBox());
     (*snapSolidshapeSwitch)->addChild(new CAVEGeodeSnapSolidshapeCylinder());
     (*snapSolidshapeSwitch)->setAllChildrenOff();

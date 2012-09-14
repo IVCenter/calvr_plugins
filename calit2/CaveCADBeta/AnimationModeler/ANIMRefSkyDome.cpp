@@ -36,7 +36,7 @@ MatrixTransform *ANIMCreateRefSkyDome(StateSet **stateset)
     skyGeode->addDrawable(skyDrawable);
     skyDomeTrans->addChild(skyGeode);
 
-    /* apply simple colored materials */
+    // apply simple colored materials
     Material* material = new Material;
     material->setDiffuse(Material::FRONT_AND_BACK, Vec4(1.0f, 1.0f, 1.0f, 1.0f));
     material->setAlpha(Material::FRONT_AND_BACK, 1.0f);
@@ -47,7 +47,7 @@ MatrixTransform *ANIMCreateRefSkyDome(StateSet **stateset)
     (*stateset)->setRenderingHint(StateSet::TRANSPARENT_BIN);
     skyGeode->setStateSet(*stateset);
 
-    /* load sky dome shader */
+    // load sky dome shader
     Uniform* sunrUniform = new Uniform("hazeRadisuMin", 0.975f);
     (*stateset)->addUniform(sunrUniform);
 
