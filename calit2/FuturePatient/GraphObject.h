@@ -46,6 +46,7 @@ class GraphObject : public cvr::TiledWallSceneObject
 
         virtual void menuCallback(cvr::MenuItem * item);
 
+        virtual bool processEvent(cvr::InteractionEvent * ie);
         virtual void enterCallback(int handID, const osg::Matrix &mat);
         virtual void updateCallback(int handID, const osg::Matrix &mat);
         virtual void leaveCallback(int handID);
@@ -55,6 +56,8 @@ class GraphObject : public cvr::TiledWallSceneObject
         DataGraph * _graph;
 
         cvr::MenuList * _mgdList;
+
+        std::string _pdfDir;
 
         int _activeHand;
         bool _layoutDoesDelete;

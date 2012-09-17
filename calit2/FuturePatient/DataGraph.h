@@ -16,6 +16,8 @@
 #include <map>
 #include <ctime>
 
+#include "PointActions.h"
+
 enum AxisType
 {
     LINEAR = 1,
@@ -61,8 +63,6 @@ struct GraphDataInfo
     float zMin;
     float zMax;
 };
-
-class PointAction;
 
 class DataGraph
 {
@@ -132,6 +132,7 @@ class DataGraph
         }
 
         void setPointActions(std::string graphname, std::map<int,PointAction*> & actionMap);
+        bool pointClick();
 
     protected:
         void setupMultiGraphDisplayModes();
@@ -198,12 +199,6 @@ class DataGraph
         osg::ref_ptr<osg::Program> _shapeProgram;
 
         std::map<std::string,std::map<int,PointAction*> > _pointActionMap;
-};
-
-class PointAction
-{
-    public:
-        virtual void action()=0;
 };
 
 #endif

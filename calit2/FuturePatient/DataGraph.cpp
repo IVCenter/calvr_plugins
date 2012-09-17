@@ -620,6 +620,17 @@ void DataGraph::setPointActions(std::string graphname, std::map<int,PointAction*
     // add to action point geometry
 }
 
+bool DataGraph::pointClick()
+{
+    if(_pointActionMap.find(_hoverGraph) != _pointActionMap.end() && _pointActionMap[_hoverGraph].find(_hoverPoint) != _pointActionMap[_hoverGraph].end())
+    {
+	_pointActionMap[_hoverGraph][_hoverPoint]->action();
+	return true;
+    }
+
+    return false;
+}
+
 void DataGraph::setupMultiGraphDisplayModes()
 {
     //shape setup

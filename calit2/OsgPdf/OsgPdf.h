@@ -1,13 +1,13 @@
 #ifndef _OSGPDF_
 #define _OSGPDF_
 
-#include <kernel/CVRPlugin.h>
-#include <kernel/FileHandler.h>
-#include <kernel/SceneObject.h>
-#include <menu/SubMenu.h>
-#include <menu/MenuButton.h>
-#include <menu/MenuRangeValue.h>
-#include <menu/MenuCheckbox.h>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrKernel/FileHandler.h>
+#include <cvrKernel/SceneObject.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuRangeValue.h>
+#include <cvrMenu/MenuCheckbox.h>
 
 #include <osgDB/FileUtils>
 #include <osgDB/FileNameUtils>
@@ -29,9 +29,14 @@ class OsgPdf : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::File
         OsgPdf();
         virtual ~OsgPdf();
 	bool init();
-        virtual bool loadFile(std::string file);
+        virtual bool loadFile(std::string file)
+        {
+            return loadFile(file,0);
+        }
+        virtual bool loadFile(std::string file, float width, bool tiledSO = false);
 	void menuCallback(cvr::MenuItem * item);
 
+        virtual void message(int type, char *&data, bool collaborative=false);
     protected:
 
 	// container to hold pdf data

@@ -1,6 +1,7 @@
 #include "GraphObject.h"
 
 #include <cvrKernel/ComController.h>
+#include <cvrConfig/ConfigManager.h>
 
 #include <iostream>
 #include <sstream>
@@ -28,6 +29,8 @@ GraphObject::GraphObject(mysqlpp::Connection * conn, float width, float height, 
     _mgdList->setValues(mgdText);
     _mgdList->setCallback(this);
     addMenuItem(_mgdList);
+
+    _pdfDir = ConfigManager::getEntry("value","Plugin.FuturePatient.PDFDir","");
 
     _activeHand = -1;
     _layoutDoesDelete = false;
@@ -60,10 +63,21 @@ bool GraphObject::addGraph(std::string name)
 	time_t minTime;
 	time_t maxTime;
 	int numPoints;
+	int numAnnotations;
 	bool valid;
     };
 
+    struct pointAnnotation
+    {
+	int point;
+	char text[1024];
+	char url[2048];
+    };
+
     struct graphData gd;
+    gd.numAnnotations = 0;
+
+    struct pointAnnotation * annotations = NULL;
 
     if(ComController::instance()->isMaster())
     {
@@ -88,13 +102,20 @@ bool GraphObject::addGraph(std::string name)
 		int measureId = atoi(metaRes[0]["measure_id"].c_str());
 
 		std::stringstream qss;
-		qss << "select Measurement.timestamp, unix_timestamp(Measurement.timestamp) as utime, Measurement.value from Measurement inner join Measure on Measurement.measure_id = Measure.measure_id where Measure.measure_id = \"" << measureId << "\" order by utime;";
+		qss << "select Measurement.timestamp, unix_timestamp(Measurement.timestamp) as utime, Measurement.value, Measurement.has_annotation from Measurement inner join Measure on Measurement.measure_id = Measure.measure_id where Measure.measure_id = \"" << measureId << "\" order by utime;";
 
 		//std::cerr << "Query: " << qss.str() << std::endl;
 
 		mysqlpp::Query query = _conn->query(qss.str().c_str());
 		mysqlpp::StoreQueryResult res;
 		res = query.store();
+
+		std::stringstream annotationss;
+		annotationss << "select Annotation.text, Annotation.URL, unix_timestamp(Measurement.timestamp) as utime from Measurement inner join Annotation on Measurement.measurement_id = Annotation.measurement_id where Measurement.measure_id = \"" << measureId << "\" order by utime;";
+
+		mysqlpp::Query annotationQuery = _conn->query(annotationss.str().c_str());
+		mysqlpp::StoreQueryResult annotationRes = annotationQuery.store();
+
 		//std::cerr << "Num Rows: " << res.num_rows() << std::endl;
 		if(!res.num_rows())
 		{
@@ -160,10 +181,17 @@ bool GraphObject::addGraph(std::string name)
 			maxt += 86400;
 		    }
 
+		    int annCount = 0;
 		    for(int i = 0; i < res.num_rows(); i++)
 		    {
 			time_t time = atol(res[i]["utime"].c_str());
 			float value = atof(res[i]["value"].c_str());
+			int hasAnn = atoi(res[i]["has_annotation"].c_str());
+			if(hasAnn)
+			{
+			    annCount++;
+			}
+
 			points->at(i) = osg::Vec3((time-mint) / (double)(maxt-mint),0,(value-minval) / (maxval-minval));
 			if(hasGoodRange)
 			{
@@ -209,6 +237,32 @@ bool GraphObject::addGraph(std::string name)
 		    gd.minTime = mint;
 		    gd.maxTime = maxt;
 		    gd.numPoints = res.num_rows();
+
+		    annCount = std::min(annCount,(int)annotationRes.num_rows());
+
+		    if(annCount)
+		    {
+			annotations = new pointAnnotation[annCount];
+		    }
+
+		    int annIndex = 0;
+		    for(int i = 0; i < res.num_rows(); i++)
+		    {
+			if(annIndex >= annotationRes.num_rows())
+			{
+			    break;
+			}
+
+			int hasAnn = atoi(res[i]["has_annotation"].c_str());
+			if(hasAnn)
+			{
+			    annotations[annIndex].point = i;
+			    strncpy(annotations[annIndex].text, annotationRes[annIndex]["text"].c_str(), 1023);
+			    strncpy(annotations[annIndex].url, annotationRes[annIndex]["URL"].c_str(), 2047);
+			    annIndex++;
+			}
+		    }
+		    gd.numAnnotations = annCount;
 		}
 	    }
 	}
@@ -223,6 +277,10 @@ bool GraphObject::addGraph(std::string name)
 	{
 	    ComController::instance()->sendSlaves((void*)points->getDataPointer(),points->size()*sizeof(osg::Vec3));
 	    ComController::instance()->sendSlaves((void*)colors->getDataPointer(),colors->size()*sizeof(osg::Vec4));
+	    if(gd.numAnnotations)
+	    {
+		ComController::instance()->sendSlaves((void*)annotations,sizeof(struct pointAnnotation)*gd.numAnnotations);
+	    }
 	}
     }
     else
@@ -236,6 +294,12 @@ bool GraphObject::addGraph(std::string name)
 	    ComController::instance()->readMaster(colorData,gd.numPoints*sizeof(osg::Vec4));
 	    points = new osg::Vec3Array(gd.numPoints,pointData);
 	    colors = new osg::Vec4Array(gd.numPoints,colorData);
+
+	    if(gd.numAnnotations)
+	    {
+		annotations = new struct pointAnnotation[gd.numAnnotations];
+		ComController::instance()->readMaster(annotations,gd.numAnnotations*sizeof(struct pointAnnotation));
+	    }
 	}
     }
 
@@ -246,8 +310,27 @@ bool GraphObject::addGraph(std::string name)
 	_graph->setXDataRangeTimestamp(gd.displayName,gd.minTime,gd.maxTime);
 	addChild(_graph->getGraphRoot());
 	_nameList.push_back(name);
+
+	if(gd.numAnnotations)
+	{
+	    std::map<int,PointAction*> actionMap;
+
+	    for(int i = 0; i < gd.numAnnotations; i++)
+	    {
+		//TODO: add directory path to urls
+		actionMap[annotations[i].point] = new PointActionPDF(_pdfDir + "/" + annotations[i].url);
+	    }
+
+	    _graph->setPointActions(gd.displayName,actionMap);
+	}
     }
-    //std::cerr << "Graph added" << std::endl;
+
+    if(annotations)
+    {
+	delete[] annotations;
+    }
+
+    std::cerr << "Graph added with " << gd.numAnnotations << " annotations" << std::endl;
 
     return gd.valid;
 }
@@ -374,6 +457,19 @@ void GraphObject::menuCallback(MenuItem * item)
     }
 
     TiledWallSceneObject::menuCallback(item);
+}
+
+bool GraphObject::processEvent(InteractionEvent * ie)
+{
+    TrackedButtonInteractionEvent * tie = ie->asTrackedButtonEvent();
+    if(tie)
+    {
+	if(tie->getHand() == _activeHand && (tie->getInteraction() == cvr::BUTTON_DOWN || tie->getInteraction() == cvr::BUTTON_DOUBLE_CLICK))
+	{
+	    return _graph->pointClick();
+	}
+    }
+    return TiledWallSceneObject::processEvent(ie);
 }
 
 void GraphObject::enterCallback(int handID, const osg::Matrix &mat)

@@ -89,6 +89,13 @@ osg::Texture2D * ShapeTextureGenerator::getOrCreateShapeTexture(int sides, int w
 	    for(int j = 0; j < width; j++)
 	    {
 		index = (i * width) + j;
+
+		if((i == 0 || i == (height-1)) && textureData[index] > 0)
+		{
+		    textureData[index] = 255;
+		    continue;
+		}
+
 		if(textureData[index] > 0 && !in)
 		{
 		    textureData[index] = 255;
@@ -107,6 +114,33 @@ osg::Texture2D * ShapeTextureGenerator::getOrCreateShapeTexture(int sides, int w
 	    }
 	}
     }
+
+#if 0
+
+    index = 0;
+    std::cerr << std::endl;
+    for(int i = 0; i < height; i++)
+    {
+	for(int j = 0; j < width; j++)
+	{
+	    if(textureData[index] == 0)
+	    {
+		std::cerr << "-";
+	    }
+	    else if(textureData[index] == 128)
+	    {
+		std::cerr << ".";
+	    }
+	    else
+	    {
+		std::cerr << "+";
+	    }
+	    index++;
+	}
+	std::cerr << std::endl;
+    }
+
+#endif
 
     _textureMap[sides] = new osg::Texture2D(image);
 
