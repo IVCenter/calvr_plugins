@@ -19,7 +19,6 @@ ADD_LIBRARY(${LIB_NAME}
     PointActions.cpp
 )
 
-# placeholder for when the database goes active
 FIND_PACKAGE(Mysql)
 
 INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})

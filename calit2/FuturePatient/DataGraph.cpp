@@ -291,6 +291,8 @@ time_t DataGraph::getMinTimestamp(std::string graphName)
 
 bool DataGraph::displayHoverText(osg::Matrix & mat)
 {
+    std::string currentHoverGraph = _hoverGraph;
+
     std::string selectedGraph;
     int selectedPoint = -1;
     osg::Vec3 point;
@@ -394,6 +396,8 @@ bool DataGraph::displayHoverText(osg::Matrix & mat)
 	}
     }
 
+    bool retVal = false;
+
     if(selectedPoint >= 0 && dist < (_width + _height) * 0.02 / 2.0)
     {
 	//std::cerr << "selecting point" << std::endl;
@@ -434,7 +438,7 @@ bool DataGraph::displayHoverText(osg::Matrix & mat)
 	m.makeTranslate(point);
 	_hoverTransform->setMatrix(m);
 
-	return true;
+	retVal = true;
     }
     else if(_hoverPoint != -1)
     {
@@ -443,7 +447,12 @@ bool DataGraph::displayHoverText(osg::Matrix & mat)
 	_hoverPoint = -1;
     }
 
-    return false;
+    if(_dataInfoMap.size() > 1 && currentHoverGraph != _hoverGraph)
+    {
+	updateAxis();
+    }
+
+    return retVal;
 }
 
 void DataGraph::clearHoverText()
@@ -1039,11 +1048,53 @@ void DataGraph::updateAxis()
 	    }
 	    else
 	    {
-		minValue = _minDisplayZ;
-		maxValue = _maxDisplayZ;
-		textColor = osg::Vec4(0.0,0.0,0.0,1.0);
-		axisLabel = "Normalized Value";
-		axisType = LINEAR;
+		bool useNormalized = true;
+
+		bool validHover = false;
+		int graphCount = 0;
+		std::map<std::string,GraphDataInfo>::iterator it;
+
+		for(it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)
+		{
+		    if(it->first == _hoverGraph)
+		    {
+			validHover = true;
+			break;
+		    }
+		    graphCount++;
+		}
+
+		if(validHover)
+		{
+		    switch(_currentMultiGraphDisplayMode)
+		    {
+			case MGDM_COLOR:
+			case MGDM_COLOR_SHAPE:
+			{
+			    float max = it->second.zMax;
+			    float min = it->second.zMin;
+			    float dataRange = max - min;
+			    minValue = min + (_minDisplayZ * dataRange);
+			    maxValue = min + (_maxDisplayZ * dataRange);
+			    textColor = it->second.singleColorArray->at(0);
+			    axisLabel = it->second.zLabel;
+			    axisType = it->second.zAxisType;
+			    useNormalized = false;
+			    break;
+			}
+			default:
+			    break;
+		    }
+		}
+
+		if(useNormalized)
+		{
+		    minValue = _minDisplayZ;
+		    maxValue = _maxDisplayZ;
+		    textColor = osg::Vec4(0.0,0.0,0.0,1.0);
+		    axisLabel = "Normalized Value";
+		    axisType = LINEAR;
+		}
 	    }
 	}
 
@@ -1373,6 +1424,25 @@ void DataGraph::updateAxis()
     }
     else
     {
+	static bool sizeCalibrated = false;
+	static float spacerSize;
+
+	if(!sizeCalibrated)
+	{
+	    osg::ref_ptr<osgText::Text> spacerText1 = makeText(": - :",osg::Vec4(0.0,0.0,0.0,1.0));
+	    osg::ref_ptr<osgText::Text> spacerText2 = makeText("::",osg::Vec4(0.0,0.0,0.0,1.0));
+
+	    float size1, size2;
+
+	    osg::BoundingBox bb = spacerText1->getBound();
+	    size1 = bb.xMax() - bb.xMin();
+	    bb = spacerText2->getBound();
+	    size2 = bb.xMax() - bb.xMin();
+
+	    spacerSize = size1 - size2;
+	    sizeCalibrated = true;
+	}
+
 	std::stringstream titless;
 
 	for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end();)
@@ -1385,19 +1455,63 @@ void DataGraph::updateAxis()
 	    }
 	}
 
-	osgText::Text * text = makeText(titless.str(),osg::Vec4(0.0,0.0,0.0,1.0));
+	osg::ref_ptr<osgText::Text> text = makeText(titless.str(),osg::Vec4(0.0,0.0,0.0,1.0));
 	
 	float targetHeight = padding * 0.95;
 	float targetWidth = _width - (2.0 * padding);
 	osg::BoundingBox bb = text->getBound();
 	float hsize = targetHeight / (bb.zMax() - bb.zMin());
 	float wsize = targetWidth / (bb.xMax() - bb.xMin());
-	text->setCharacterSize(std::min(hsize,wsize));
-	text->setAxisAlignment(osgText::Text::XZ_PLANE);
 
-	text->setPosition(osg::Vec3(0,-1,(_height-padding)/2.0));
+	float csize = std::min(hsize,wsize);
 
-	_axisGeode->addDrawable(text);
+	bool defaultTitle = true;
+
+	switch(_currentMultiGraphDisplayMode)
+	{
+	    case MGDM_COLOR:
+	    case MGDM_COLOR_SHAPE:
+	    {
+		float spSize = csize * spacerSize;
+		float position = -((bb.xMax() - bb.xMin()) * csize) / 2.0;
+		for(std::map<std::string,GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end();)
+		{
+		    osgText::Text * ttext = makeText(it->second.name,it->second.singleColorArray->at(0));
+		    ttext->setCharacterSize(csize);
+		    ttext->setAxisAlignment(osgText::Text::XZ_PLANE);
+		    ttext->setAlignment(osgText::Text::LEFT_CENTER);
+		    ttext->setPosition(osg::Vec3(position,-1,(_height-padding)/2.0));
+		    osg::BoundingBox tbb = ttext->getBound();
+		    position += (tbb.xMax() - tbb.xMin());
+		    _axisGeode->addDrawable(ttext);
+		    it++;
+		    if(it != _dataInfoMap.end())
+		    {
+			ttext = makeText("-",osg::Vec4(0,0,0,1));
+			ttext->setCharacterSize(csize);
+			ttext->setAxisAlignment(osgText::Text::XZ_PLANE);
+			ttext->setAlignment(osgText::Text::CENTER_CENTER);
+			ttext->setPosition(osg::Vec3(position + (spSize / 2.0),-1,(_height-padding)/2.0));
+			_axisGeode->addDrawable(ttext);
+			position += spSize;
+		    }
+		}
+		defaultTitle = false;
+		break;
+	    }
+	    default:
+		break;
+	}
+
+	if(defaultTitle)
+	{
+	    text->setCharacterSize(std::min(hsize,wsize));
+	    text->setAxisAlignment(osgText::Text::XZ_PLANE);
+
+	    text->setPosition(osg::Vec3(0,-1,(_height-padding)/2.0));
+
+	    _axisGeode->addDrawable(text);
+	}
     }
 }
 
