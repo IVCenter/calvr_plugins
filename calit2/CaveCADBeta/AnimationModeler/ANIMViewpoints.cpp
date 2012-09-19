@@ -7,6 +7,7 @@
 *
 ***************************************************************/
 #include "ANIMViewpoints.h"
+#include <osgText/Text3D>
 
 using namespace std;
 using namespace osg;
@@ -79,10 +80,15 @@ void ANIMCreateViewpoints(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
         else
             color = osg::Vec4(1, 0, 0, 0.5);
 
+        stateset = sphereDrawable->getOrCreateStateSet();
+        stateset->setMode(GL_BLEND, StateAttribute::ON);
+        stateset->setMode(GL_CULL_FACE, StateAttribute::ON);
+        stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
+
         sphereDrawable->setColor(color);
         sphereGeode = new osg::Geode();
         sphereGeode->addDrawable(sphereDrawable);
-        
+ 
         AnimationPath* animationPathScaleFwd = new AnimationPath;
         AnimationPath* animationPathScaleBwd = new AnimationPath;
         animationPathScaleFwd->setLoopMode(AnimationPath::NO_LOOPING);
@@ -157,20 +163,18 @@ void ANIMCreateViewpoints(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
 void ANIMAddViewpoint(std::vector<osg::PositionAttitudeTransform*>* fwdVec, 
                       std::vector<osg::PositionAttitudeTransform*>* bwdVec)
 {
-    Geode* sphereGeode = new Geode();
-    Sphere* virtualSphere = new Sphere();
-    ShapeDrawable* sphereDrawable = new ShapeDrawable(virtualSphere);
-
-    virtualSphere->setRadius(ANIM_VIRTUAL_SPHERE_RADIUS);
+    Geode* sphereGeode;// = new Geode();
+    Sphere* virtualSphere;// = new Sphere();
+    ShapeDrawable* sphereDrawable;// = new ShapeDrawable(virtualSphere);
+    //virtualSphere->setRadius(ANIM_VIRTUAL_SPHERE_RADIUS);
 
     // apply shaders to geode stateset 
-    sphereDrawable->setColor(osg::Vec4(1, 0, 0, 0.5));
+    //sphereDrawable->setColor(osg::Vec4(1, 0, 0, 0.5));
 
-    StateSet* stateset = new StateSet();
-    stateset->setMode(GL_BLEND, StateAttribute::OVERRIDE | StateAttribute::ON);
-    stateset->setMode(GL_CULL_FACE, StateAttribute::OVERRIDE | StateAttribute::ON);
-    stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
-    sphereGeode->setStateSet(stateset);
+    //stateset->setMode(GL_BLEND, StateAttribute::OVERRIDE | StateAttribute::ON);
+    //stateset->setMode(GL_CULL_FACE, StateAttribute::OVERRIDE | StateAttribute::ON);
+    //stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
+    //sphereGeode->setStateSet(stateset);
 
     int numViews = fwdVec->size();
     //std::vector<osg::PositionAttitudeTransform*>::iterator it = fwdVec->begin();
@@ -184,7 +188,7 @@ void ANIMAddViewpoint(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
 
         virtualSphere = new osg::Sphere(osg::Vec3(), ANIM_VIRTUAL_SPHERE_RADIUS);
         sphereDrawable = new osg::ShapeDrawable(virtualSphere);
-        
+
         osg::Vec4 color;
 
         if (i == 0)
@@ -192,12 +196,48 @@ void ANIMAddViewpoint(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
         else if (i == numViews)
             color = osg::Vec4(1, 0, 0, 0.5); // red
         else
-            color = osg::Vec4(1, 1, 0, 0.5); // purple
+            color = osg::Vec4(1, 1, 0, 0.5); // yellow
+
+        StateSet* stateset;        
+        stateset = sphereDrawable->getOrCreateStateSet();
+        stateset->setMode(GL_BLEND, StateAttribute::ON);
+        stateset->setMode(GL_CULL_FACE, StateAttribute::ON);
+        stateset->setMode(GL_LIGHTING, osg::StateAttribute::ON);
+        stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
 
         sphereDrawable->setColor(color);
         sphereGeode = new osg::Geode();
         sphereGeode->addDrawable(sphereDrawable);
- 
+        
+        if (i != 0 && i != numViews)
+        {
+            osgText::Text3D * textNode = new osgText::Text3D();
+            char buf[2];
+            sprintf(buf, "%d", i);
+            textNode->setText(std::string(buf));
+
+            textNode->setCharacterSize(30);
+            textNode->setCharacterDepth(15);
+            textNode->setDrawMode(osgText::Text3D::TEXT);
+            //textNode->setAlignment(osgText::Text3D::CENTER_CENTER);
+            textNode->setPosition(osg::Vec3(0,0,0));
+            textNode->setColor(osg::Vec4(1,1,1,1));
+            textNode->setAxisAlignment(osgText::Text3D::XZ_PLANE);
+            //textNode->setMaximumWidth(1000);
+            //textNode->getOrCreateStateSet()->setRenderingHint(StateAttribute::PROTECTED | osg::StateSet::OPAQUE_BIN);
+            //textNode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::ON);
+
+            osg::StateSet *ss = textNode->getOrCreateStateSet();
+            ss->setRenderingHint(osg::StateSet::OPAQUE_BIN);
+            //ss->setMode(GL_LIGHTING, osg::StateAttribute::ON);
+            //ss->setMode(GL_BLEND, osg::StateAttribute::ON);
+            //ss->setMode(GL_LIGHTING, osg::StateAttribute::PROTECTED | osg::StateAttribute::ON);
+            //ss->setMode(GL_DEPTH_TEST, osg::StateAttribute::PROTECTED | osg::StateAttribute::OFF);
+            //ss->setRenderBinDetails(0, "Render Bin");
+
+//            sphereGeode->addDrawable(textNode);
+        }
+
         AnimationPath* animationPathScaleFwd = new AnimationPath();
         AnimationPath* animationPathScaleBwd = new AnimationPath();
         animationPathScaleFwd->setLoopMode(AnimationPath::NO_LOOPING);

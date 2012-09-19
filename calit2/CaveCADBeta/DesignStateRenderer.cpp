@@ -327,12 +327,20 @@ bool DesignStateRenderer::inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 
     {
         if ((*it)->test(pointerOrg, pointerPos))
         {
-            if (mActiveDSPtr != (*it)) // turn off the previous state
+            if (mActiveDSPtr != (*it) && (mActiveDSPtr)->isEnabled()) // turn off the previous state
             {
                 mActiveDSPtr->setObjectEnabled(false);
             }
             mActiveDSPtr = (*it);
-            mActiveDSPtr->setObjectEnabled(true);
+            
+            if (mActiveDSPtr->isEnabled())
+            {
+                mActiveDSPtr->setObjectEnabled(false);
+            }
+            else
+            {
+                mActiveDSPtr->setObjectEnabled(true);
+            }
             break;
         }
     }

@@ -73,6 +73,7 @@ class DesignStateBase: public osg::Switch
     /* Lock function: Setup flag that enables/disables switch between different design states */
     void setLocked(bool flag) { mLockedFlag = flag; }
     bool isLocked() { return mLockedFlag; }
+    bool isEnabled() { return mObjEnabledFlag; }
 
     /* static member functions: called within 'DesignStateRenderer' where global information for
 	root groups are written, including group pointer, position and orientation. */

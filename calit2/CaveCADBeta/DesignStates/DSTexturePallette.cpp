@@ -15,13 +15,13 @@ using namespace osg;
 // Constructor
 DSTexturePallette::DSTexturePallette(): mTexIndex(0), mTexturingState(IDLE), mAudioConfigHandler(NULL)
 {
-    /* load objects for design state root switch */
+    // load objects for design state root switch
     CAVEAnimationModeler::ANIMLoadTexturePalletteRoot(&mPATransFwd, &mPATransBwd);
 
-    /* load objects for 'IDLE' state */
+    // load objects for 'IDLE' state
     CAVEAnimationModeler::ANIMLoadTexturePalletteIdle(&mIdleStateSwitch, &mTextureStatesIdleEntry);
 
-    /* load objects for 'SELECT_TEXTURE' and 'APPLY_TEXTURE' state */
+    // load objects for 'SELECT_TEXTURE' and 'APPLY_TEXTURE' state
     CAVEAnimationModeler::ANIMLoadTexturePalletteSelect(&mSelectStateSwitch, &mAlphaTurnerSwitch, 
 							mNumTexs, &mTextureStatesSelectEntryArray);
 
@@ -32,14 +32,14 @@ DSTexturePallette::DSTexturePallette(): mTexIndex(0), mTexturingState(IDLE), mAu
     mPATransFwd->addChild(mSelectStateSwitch);		mPATransBwd->addChild(mSelectStateSwitch);
     mPATransFwd->addChild(mAlphaTurnerSwitch);		mPATransBwd->addChild(mAlphaTurnerSwitch);
 
-    /* use both instances of intersector */
+    // use both instances of intersector
     mDSIntersector = new DSIntersector();
     mDOIntersector = new DOIntersector();
     mDSIntersector->loadRootTargetNode(NULL, NULL);
     mDOIntersector->loadRootTargetNode(NULL, NULL);
 
     setAllChildrenOff();
-    mIdleStateSwitch->setAllChildrenOn();		// default state = IDLE
+    mIdleStateSwitch->setAllChildrenOn(); // default state = IDLE
     mSelectStateSwitch->setAllChildrenOff();
     mAlphaTurnerSwitch->setAllChildrenOff();
 
@@ -62,7 +62,7 @@ DSTexturePallette::~DSTexturePallette()
 ***************************************************************/
 void DSTexturePallette::setObjectEnabled(bool flag)
 {
-//std::cout << "setEnabled" << std::endl;
+    //std::cout << "setEnabled" << std::endl;
     mObjEnabledFlag = flag;
 
     if (flag) setAllChildrenOn();
@@ -99,12 +99,12 @@ void DSTexturePallette::setObjectEnabled(bool flag)
     } 
     else 
     {
-        /*texturingStateTransitionHandle(mTexturingState, IDLE);
+        //texturingStateTransitionHandle(mTexturingState, IDLE);
         //this->setSingleChildOn(1);
         //animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
         //mDSIntersector->loadRootTargetNode(NULL, NULL);
         //mDOIntersector->loadRootTargetNode(NULL, NULL);
-        */
+
         mTexturingState = IDLE;
         for (int i = 0; i < mNumTexs; i++)
         {
@@ -158,7 +158,7 @@ void DSTexturePallette::switchToPrevSubState()
 ***************************************************************/
 void DSTexturePallette::switchToNextSubState()
 {
-std::cout << "switchNext" << std::endl;
+    //std::cout << "switchNext" << std::endl;
     // next state look up 
     switch (mTexturingState)
     {
@@ -208,7 +208,7 @@ void DSTexturePallette::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg
 ***************************************************************/
 bool DSTexturePallette::inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos)
 {
-//std::cout << "pressEvent" << std::endl;
+    //std::cout << "pressEvent" << std::endl;
     mDevPressedFlag = true;
 
     if (mIsOpen)
@@ -229,14 +229,16 @@ bool DSTexturePallette::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
                     return true;
                 }
             }
-            
+
+            /* 
             // else clicked the main sphere - close menu
-/*            for (int i = 0; i < mNumTexs; i++)
+            for (int i = 0; i < mNumTexs; i++)
             {
                 mTextureStatesSelectEntryArray[i]->mStateAnimationArray[1]->reset();
                 mTextureStatesSelectEntryArray[i]->mEntrySwitch->setSingleChildOn(1);
             }
-            mIsOpen = false; */
+            mIsOpen = false; 
+            */
             return true;
         }
      
@@ -266,7 +268,10 @@ bool DSTexturePallette::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
         }
         return false;
     }
-    /*else
+    resetIntersectionRootTarget();
+
+/*
+    else
     {
         // open submenus
         if (mDSIntersector->test(pointerOrg, pointerPos))
@@ -283,9 +288,8 @@ bool DSTexturePallette::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
             mTexturingState = SELECT_TEXTURE;
             mIsOpen = true;
         }
-    }*/
-    resetIntersectionRootTarget();
-
+    }
+*/
 /*
         AnimationPathCallback* animCallback = NULL;
         setSingleChildOn(0);
@@ -354,7 +358,7 @@ bool DSTexturePallette::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
         }
     }
     return false;
-    */
+*/
 }
 
 

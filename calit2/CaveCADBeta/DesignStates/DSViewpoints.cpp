@@ -43,6 +43,7 @@ DSViewpoints::DSViewpoints()
 ***************************************************************/
 void DSViewpoints::setObjectEnabled(bool flag)
 {
+    mObjEnabledFlag = flag;
     AnimationPathCallback* animCallback = NULL;
     setAllChildrenOff();
     if (flag) 

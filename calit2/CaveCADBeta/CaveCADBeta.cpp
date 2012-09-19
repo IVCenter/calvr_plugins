@@ -31,7 +31,7 @@ CaveCADBeta::~CaveCADBeta()
 ***************************************************************/
 bool CaveCADBeta::init()
 {
-    mValCutoff = 2.0;
+    mValCutoff = 0.5;
     mValDownTime = PluginHelper::getProgramDuration();
     mValPressed = false;
     pointerPressFlag = false;
@@ -76,9 +76,16 @@ void CaveCADBeta::preFrame()
     Matrixf invBaseMat = PluginHelper::getWorldToObjectTransform();
     Matrixf viewMat;// = PluginHelper::getHeadMat(0);
     viewMat.makeTranslate(0, 200, 0);
+    
+    float x, y, z;
+    x = ConfigManager::getFloat("x", "Plugin.CaveCADBeta.MenuPosition", 3000.0);
+    y = ConfigManager::getFloat("y", "Plugin.CaveCADBeta.MenuPosition", 8000.0);
+    z = ConfigManager::getFloat("z", "Plugin.CaveCADBeta.MenuPosition", 0.0);
+
+    osg::Vec3 pos(x, y, z);
 
     Vec3 viewOrg = viewMat.getTrans() * invBaseMat; 
-    Vec3 viewPos = Vec3(0.0, mMenuDistance, 0.0) * viewMat * invBaseMat; 
+    Vec3 viewPos = pos * viewMat * invBaseMat; 
     Vec3 viewDir = viewPos - viewOrg;
     viewDir.normalize(); 
 
@@ -245,7 +252,7 @@ bool CaveCADBeta::processEvent(cvr::InteractionEvent *event)
     if(vie)
     {
         int id = vie->getValuator();
-        int mainVal = 0, subVal = 1;
+        int mainVal = 1, subVal = 0;
         int left = 65361, up = 65362, right = 65363, down = 65364;
 
         if (id == mainVal)

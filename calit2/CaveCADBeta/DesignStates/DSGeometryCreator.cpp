@@ -52,6 +52,7 @@ void DSGeometryCreator::setObjectEnabled(bool flag)
 {
     mObjEnabledFlag = flag;
     mDrawingState = IDLE;
+
     if (flag) 
         setAllChildrenOn();
 
@@ -100,7 +101,8 @@ void DSGeometryCreator::setObjectEnabled(bool flag)
         mIsOpen = false;
         mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
 
-        /*setSingleChildOn(1);
+        /*
+        setSingleChildOn(1);
         animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
 
         mDSIntersector->loadRootTargetNode(NULL, NULL);
@@ -115,6 +117,7 @@ void DSGeometryCreator::setObjectEnabled(bool flag)
         */
     }
 
+    mDrawingState = IDLE;
     if (animCallback) 
         animCallback->reset();
 }
@@ -324,11 +327,13 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
         bool hit = false;
         for (int i = 0; i < mNumShapeSwitches; i++)
         {
+            //std::cout << i << std::endl;
             mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, 
-                mShapeSwitchEntryArray[i]->mSwitch->getChild(0));
+                ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->getChild(0));
 
             if (mDSIntersector->test(pointerOrg, pointerPos))
             {
+                mShapeSwitchIdx = i;
                 hit = true;
                 //std::cout << "intersecting " << i << std::endl;
             }
@@ -430,14 +435,14 @@ bool DSGeometryCreator::inputDevReleaseEvent()
         mDrawingState = IDLE;
         DrawingStateTransitionHandle(START_DRAWING, IDLE);
 
-        /* finish with Design Object handlers */
+        // finish with Design Object handlers
         mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
         mDOGeometryCreator->setReferenceAxisMasking(false);
         mDOGeometryCreator->registerSolidShape();
         mDOGeometryCreator->setSolidshapeActiveID(-1);
         mDOGeometryCreator->setWireframeActiveID(-1);
 
-        /* update audio parameters */
+        // update audio parameters
         mAudioConfigHandler->updateShapes();
 
         return true;
