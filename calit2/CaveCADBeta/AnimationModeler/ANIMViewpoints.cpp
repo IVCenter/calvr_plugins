@@ -235,7 +235,7 @@ void ANIMAddViewpoint(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
             //ss->setMode(GL_DEPTH_TEST, osg::StateAttribute::PROTECTED | osg::StateAttribute::OFF);
             //ss->setRenderBinDetails(0, "Render Bin");
 
-//            sphereGeode->addDrawable(textNode);
+            //sphereGeode->addDrawable(textNode);
         }
 
         AnimationPath* animationPathScaleFwd = new AnimationPath();

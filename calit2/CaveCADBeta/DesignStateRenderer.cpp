@@ -297,6 +297,26 @@ void DesignStateRenderer::switchToNextSubState()
 ***************************************************************/
 void DesignStateRenderer::inputDevMoveEvent(const Vec3 &pointerOrg, const Vec3 &pointerPos)
 {
+    for (DesignStateList::iterator it = mDSList.begin(); it != mDSList.end(); ++it)
+    {
+        if ((*it)->test(pointerOrg, pointerPos))
+        {
+            (*it)->setHighlight(true, pointerOrg, pointerPos);
+            //std::cout << "intersect" << std::endl;
+            mHighlighted = (*it);
+            break;
+        }
+        else
+        {
+            if (mHighlighted)
+            {
+                mHighlighted->setHighlight(false, pointerOrg, pointerPos);
+                mHighlighted = NULL;
+            }
+        }
+    }
+
+    (mActiveDSPtr)->setHighlight(true, pointerOrg, pointerPos);
     mActiveDSPtr->inputDevMoveEvent(pointerOrg, pointerPos); 
     resetPose();
 }

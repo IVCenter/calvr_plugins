@@ -246,3 +246,42 @@ bool DSViewpoints::inputDevReleaseEvent()
     return false;
 }
 
+
+void DSViewpoints::setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) 
+{
+    if (isHighlighted)
+    {
+        for (int i = 0; i < fwdVec.size(); ++i)
+        {
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, fwdVec[i]->getChild(0));
+
+            if (mDSIntersector->test(pointerOrg, pointerPos))
+            {
+//                std::cout << "viewpoints intersect" << std::endl;
+                //fwdVec[i]->setScale(fwdVec[i]->getScale() * 1.5);
+                osg::Sphere *sphere = new osg::Sphere();
+                osg::ShapeDrawable *sd = new osg::ShapeDrawable(sphere);
+                mHighlightGeode = new osg::Geode();
+                sphere->setRadius(0.25);
+                sd->setColor(osg::Vec4(1,1,1,0.5));
+                mHighlightGeode->addDrawable(sd);
+                //fwdVec[i]->addChild(mHighlightGeode);
+
+                StateSet *stateset = sd->getOrCreateStateSet();
+                stateset->setMode(GL_BLEND, StateAttribute::OVERRIDE | StateAttribute::ON);
+                stateset->setMode(GL_CULL_FACE, StateAttribute::OVERRIDE | StateAttribute::ON);
+                stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
+
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < fwdVec.size(); ++i)
+        {
+            fwdVec[i]->removeChild(mHighlightGeode);
+        }
+    }
+    mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, fwdVec[0]->getChild(0));
+}
+

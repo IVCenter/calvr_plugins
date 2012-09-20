@@ -36,12 +36,14 @@ class DSVirtualSphere: public DesignStateBase
     bool inputDevReleaseEvent();
     void update();// {}
     void addChildState(DesignStateBase* ds);
+    void setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
 
   protected:
     std::list<DesignStateBase*> mChildStates;
     bool mIsOpen;
     std::vector<osg::PositionAttitudeTransform*> fwdVec, bwdVec;
     DesignStateBase *mActiveSubState;
+    osg::Geode *mHighlightGeode;
 };
 
 

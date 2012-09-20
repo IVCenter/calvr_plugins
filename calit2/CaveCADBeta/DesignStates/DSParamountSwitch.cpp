@@ -212,3 +212,7 @@ void DSParamountSwitch::update()
     }
 }
 
+void DSParamountSwitch::setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) 
+{
+
+}

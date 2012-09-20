@@ -34,6 +34,7 @@ class DSGeometryEditor: public DesignStateBase
     bool inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
     bool inputDevReleaseEvent();
     void update();
+    void setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
 
     /* definition of editting states */
     enum EdittingState
@@ -64,8 +65,4 @@ class DSGeometryEditor: public DesignStateBase
 
 
 #endif
-
-
-
-
 

@@ -274,68 +274,36 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
 {
     mDevPressedFlag = true;
 
-/*    for (int i = 0; i < fwdVec.size(); ++i)
-    {
-        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, fwdVec[i]->getChild(0));
-        //setChildValue(fwdVec[i], true);
-        if (mDSIntersector->test(pointerOrg, pointerPos))
-        {
-            if (i == 0)
-            {
-                if (mIsOpen)
-                {
-                    // close menu
-                    return true;
-                }
-                else
-                {
-                    // open menu
-                    return true;
-                }
-            }
-            else
-            {
-                // switch geometry state
-                return true;
-            }
-        }
-    }
-    // no menu intersect, so draw shape
-*/ 
-
-    //std::cout << "press" << std::endl; 
-
     if (mDrawingState == IDLE)
     {
-/*        if (mDSIntersector->test(pointerOrg, pointerPos))
-        {
-    std::cout << "DSintersect" << std::endl;
-            Node *hitNode = mDSIntersector->getHitNode();
-            for (int i = 0; i < mNumShapeSwitches; i++)
-            {
-                mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, 
-                    mShapeSwitchEntryArray[i]->mSwitch->getChild(0));
-
-                // clicked a texture sphere, enter apply texture state
-                if (hitNode == mShapeSwitchEntryArray[i]->mSwitch->getChild(0))
-                {
-    std::cout << "intersecting " << i << std::endl;
-                    mShapeSwitchIdx = i;
-                }
-            }
-*/
+        // test for sub shape intersection
         bool hit = false;
         for (int i = 0; i < mNumShapeSwitches; i++)
         {
-            //std::cout << i << std::endl;
             mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, 
                 ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->getChild(0));
 
             if (mDSIntersector->test(pointerOrg, pointerPos))
             {
+            //std::cout << "1 hit " << i << std::endl;
                 mShapeSwitchIdx = i;
                 hit = true;
-                //std::cout << "intersecting " << i << std::endl;
+                break;
+            }
+
+            if (((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->getNumChildren()
+                 < 2)
+                continue;
+
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, 
+                ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->getChild(1));
+
+            if (mDSIntersector->test(pointerOrg, pointerPos))
+            {
+            //std::cout << "2 hit " << i << std::endl;
+                mShapeSwitchIdx = i;
+                hit = true;
+                break;
             }
         }
 
@@ -504,3 +472,55 @@ void DSGeometryCreator::DrawingStateTransitionHandle(const DrawingState& prevSta
     }
 }
 
+
+void DSGeometryCreator::setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) 
+{
+    int idx = -1;
+    mIsHighlighted = isHighlighted;
+
+    for (int i = 0; i < mNumShapeSwitches; i++)
+    {
+        ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->removeChild(mHighlightGeode);
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, 
+            ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->getChild(0));
+
+        if (mDSIntersector->test(pointerOrg, pointerPos))
+        {
+            idx = i;
+        }
+    }
+
+    if (idx > -1)
+    {
+        osg::Sphere *sphere = new osg::Sphere();
+        mSD = new osg::ShapeDrawable(sphere);
+        mHighlightGeode = new osg::Geode();
+        mHighlightGeode->addDrawable(mSD);
+        sphere->setRadius(0.25);
+        mSD->setColor(osg::Vec4(1, 1, 1, 0.5));
+
+        StateSet *stateset = mSD->getOrCreateStateSet();
+        stateset->setMode(GL_BLEND, StateAttribute::OVERRIDE | StateAttribute::ON);
+        stateset->setMode(GL_CULL_FACE, StateAttribute::OVERRIDE | StateAttribute::ON);
+        stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
+
+        //fwdVec[i]->addChild(mHighlightGeode);
+        //((osg::Geode*)mShapeSwitchEntryArray[idx]->mSwitch->getChild(0))->addDrawable(mSD);
+        //std::cout << idx << std::endl;
+
+        ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[idx]->mSwitch->getChild(0)))->addChild(mHighlightGeode);
+    }
+
+    /*    else
+    {
+        for (int i = 0; i < mNumShapeSwitches; i++)
+        {
+            if (mHighlightGeode)
+                ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->removeChild(mHighlightGeode);
+                //((osg::Geode*)mShapeSwitchEntryArray[i]->mSwitch->getChild(0))->removeDrawable(mSD);
+        }
+    }*/
+
+    mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
+}
+ 

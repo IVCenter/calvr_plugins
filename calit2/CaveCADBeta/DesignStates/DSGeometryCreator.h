@@ -26,7 +26,7 @@ class DSGeometryCreator: public DesignStateBase
     DSGeometryCreator();
     ~DSGeometryCreator();
 
-    /* virtual functions inherited from base class */
+    // virtual functions inherited from base class
     virtual void setObjectEnabled(bool flag);
     virtual void switchToPrevSubState();
     virtual void switchToNextSubState();
@@ -35,8 +35,9 @@ class DSGeometryCreator: public DesignStateBase
     bool inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
     bool inputDevReleaseEvent();
     void update();
+    void setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
 
-    /* definition of drawing states */
+    // definition of drawing states
     enum DrawingState
     {
         IDLE,
@@ -55,9 +56,11 @@ class DSGeometryCreator: public DesignStateBase
   protected:
     osg::Switch *mSphereExteriorSwitch;		// switch on/off container exterior sphere
     osg::Geode *mSphereExteriorGeode;		// exterior geode target for intersection test
+    osg::Geode *mHighlightGeode;
+    osg::ShapeDrawable *mSD;
     int mShapeSwitchIdx, mNumShapeSwitches;
     CAVEAnimationModeler::ANIMShapeSwitchEntry **mShapeSwitchEntryArray;
-    bool mIsOpen;
+    bool mIsOpen, mIsHighlighted;
     std::vector<osg::PositionAttitudeTransform*> fwdVec, bwdVec;
 
     CAVEGeodeShape *prevGeode;
@@ -66,7 +69,7 @@ class DSGeometryCreator: public DesignStateBase
     SnapLevelController *mSnapLevelController;
     AudioConfigHandler *mAudioConfigHandler;
 
-    /* interfaces to design object (DO) controllers */
+    // interfaces to design object (DO) controllers
     DOGeometryCollector *mDOGeometryCollector;
     DOGeometryCreator *mDOGeometryCreator;
  

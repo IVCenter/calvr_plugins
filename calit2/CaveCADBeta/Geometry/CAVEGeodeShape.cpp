@@ -310,7 +310,7 @@ bool CAVEGeodeShape::snapToVertex(const osg::Vec3 point, osg::Vec3 *ctr)
 {
     osg::Vec4 hideColor, showColor;
     hideColor = osg::Vec4(1, 0, 1, 0);
-    showColor = osg::Vec4(1, 0, 1, 0.6);
+    showColor = osg::Vec4(1, 0, 1, 0);//0.6);
     Material *mat = new Material;
     mat->setDiffuse(Material::FRONT_AND_BACK, hideColor);
 

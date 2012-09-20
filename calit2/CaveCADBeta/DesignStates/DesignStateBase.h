@@ -74,6 +74,7 @@ class DesignStateBase: public osg::Switch
     void setLocked(bool flag) { mLockedFlag = flag; }
     bool isLocked() { return mLockedFlag; }
     bool isEnabled() { return mObjEnabledFlag; }
+    virtual void setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) = 0;// {std::cout << isHighlighted << std::endl;}
 
     /* static member functions: called within 'DesignStateRenderer' where global information for
 	root groups are written, including group pointer, position and orientation. */

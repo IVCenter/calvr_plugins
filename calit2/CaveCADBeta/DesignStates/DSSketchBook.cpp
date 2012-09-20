@@ -239,3 +239,8 @@ void DSSketchBook::setScenicHandlerPtr(VirtualScenicHandler *vsHandlerPtr)
     mVirtualScenicHandler->createFloorplanGeometry(mNumPages, mPageEntryArray);
 }
 
+
+void DSSketchBook::setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) 
+{
+
+}
