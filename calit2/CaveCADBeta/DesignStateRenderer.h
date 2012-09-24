@@ -76,6 +76,7 @@ class DesignStateRenderer
     DesignStateParticleSystem *mDSParticleSystem;
     DesignStateList::iterator mActiveDSItr;
     DesignStateList mDSList;
+    DesignStateBase *mHighlighted;
 
     /* design states that registered in 'mDSList' */
     DesignStateBase *mActiveDSPtr;

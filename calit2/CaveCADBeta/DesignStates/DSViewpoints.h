@@ -32,6 +32,7 @@ class DSViewpoints: public DesignStateBase
     bool inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);// { mDevPressedFlag = true; return false; }
     bool inputDevReleaseEvent();// { mDevPressedFlag = false; return false; }
     void update() {}
+    void setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
 
     struct Location 
     {
@@ -44,7 +45,7 @@ class DSViewpoints: public DesignStateBase
     bool mIsOpen;
     std::vector<osg::PositionAttitudeTransform*> fwdVec, bwdVec;
     std::vector<Location> locations;
-    
+    osg::Geode *mHighlightGeode;    
 };
 
 

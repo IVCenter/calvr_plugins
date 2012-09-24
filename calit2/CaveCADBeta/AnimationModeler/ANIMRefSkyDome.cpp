@@ -28,9 +28,9 @@ MatrixTransform *ANIMCreateRefSkyDome(StateSet **stateset)
     Geode* skyGeode = new Geode();
     MatrixTransform *skyDomeTrans = new MatrixTransform;
     
-//    osg::Matrix m;
-//    m.makeRotate(osg::Quat(M_PI/2, osg::Vec3(0, 1, 0)));
-//    skyDomeTrans->setMatrix(m);
+    //osg::Matrix m;
+    //m.makeRotate(osg::Quat(M_PI/2, osg::Vec3(0, 1, 0)));
+    //skyDomeTrans->setMatrix(m);
 
     skyShape->setRadius(ANIM_SKYDOME_RADIUS);
     skyGeode->addDrawable(skyDrawable);
@@ -78,6 +78,7 @@ MatrixTransform *ANIMCreateRefSkyDome(StateSet **stateset)
 
     Image* imagePara = osgDB::readImageFile(ANIMDataDir() + "Textures/Paramounts/Paramount00.JPG");
     Texture2D* texturePara = new Texture2D(imagePara);
+
     (*stateset)->setTextureAttributeAndModes(1, texturePara, StateAttribute::ON);
 
     Uniform* skyNightSampler = new Uniform("texNightSky", 0);

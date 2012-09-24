@@ -30,7 +30,9 @@ float LOD_RANGE = 64;
 using namespace osg;
 using namespace std;
 using namespace cvr;
+#ifdef WITH_OSGEARTH
 using namespace osgEarth;
+#endif
 
 void wait(double duration);
 
@@ -111,18 +113,9 @@ void GreenLight::LOD_MTAccessor::accept(NodeVisitor& nv){
 
             (componentsList.at(i)->soundPosition) = transMat.preMult(componentsList.at(i)->soundPosition);
 
-            componentsList.at(i)->soundPosition.x() /= 2.0f;
-            componentsList.at(i)->soundPosition.y() /= 2.0f;
-
-//          componentsList.at(i)->soundPosition.y() += 50.0f;
-//
-            componentsList.at(i)->soundPosition.z() -= 40.0f;
-            componentsList.at(i)->soundPosition.z() /= 2.0f;
-/*
-            printf("\tLoc-Position: (%g,%g,%g) \n", componentsList.at(i)->soundPosition.x(),
-                                                    componentsList.at(i)->soundPosition.y(),
-                                                    componentsList.at(i)->soundPosition.z());
-*/
+            componentsList.at(i)->soundPosition.x() /= 10.0f;
+            componentsList.at(i)->soundPosition.y() /= 10.0f;
+            componentsList.at(i)->soundPosition.z() /= 10.0f;
         }
     
         setRackMTA( false );
@@ -333,9 +326,13 @@ bool GreenLight::init()
     readConfigurationFile();
 
     /*** OSG EARTH PLUGIN INITIALIZATION ***/
+
+#ifdef WITH_OSGEARTH
     mapVariable = NULL; // doesn't seem neccessary.
     osgEarth::MapNode* mapNode = MapNode::findMapNode( SceneManager::instance()->getObjectsRoot() ); 
-
+#else
+    double * mapNode = NULL;
+#endif
     OsgE_MT = new MatrixTransform();
     _glLOD  = new LOD();
     scaleMT = new GreenLight::LOD_MTAccessor();
@@ -347,23 +344,27 @@ bool GreenLight::init()
     OsgE_MT -> addChild(_glLOD);
     printf("Attached First LOD \"Box\" \n");
 
+#ifdef WITH_OSGEARTH
     mapNode->setNodeMask(mapNode->getNodeMask() & ~2);
-
+#endif
     // Execute OSGEarth Specific initialization.
     printf("Initializing GreenLight with OSGEarth configuration...\n");
     osgEarthInit = true;
 
+#ifdef WITH_OSGEARTH
     mapVariable = mapNode -> getMap();
-
+#endif
     // POSITION:  Texture Based:      Original:
     double lat    =   32.874175,  //  32.874264,
            lon    = -117.236122,  //-117.236074,
            height =  0.0;
 
+#ifdef WITH_OSGEARTH
     osgEarth::ElevationQuery query( mapVariable );
     double query_resolution = 0.0; // 1/10th of a degree
     double out_resolution = 0.0;
     bool ret = query.getElevation(osg::Vec3d( lon, lat, 0),
+
     mapVariable->getProfile()->getSRS(), height, query_resolution, &out_resolution);
 
     mapVariable->getProfile()->getSRS()->getEllipsoid()->
@@ -373,7 +374,7 @@ bool GreenLight::init()
         height,
         output
     );
-
+#endif
     OsgE_MT->setMatrix( output );
 
     	// attach a silly shape
@@ -969,8 +970,13 @@ void GreenLight::preFrame()
       }
 
       // update Sound Position relative to currentLocation.
-      soundFile1;
-      soundFile2;
+      Vec3f d_trans, d_scale;
+      Quat  d_rot,   d_so;
+      const MatrixTransform * mmt = SceneManager::instance()->getObjectTransform();
+      Matrixd sceneTransform = mmt->getMatrix();
+      sceneTransform.decompose(d_trans, d_rot, d_scale, d_so);
+      oasclient::OASClientInterface::setListenerPosition(d_trans.x() / 100, d_trans.z() / 100, d_trans.y() / 100);
+      
 
       animatePower();
 
@@ -1051,7 +1057,6 @@ bool GreenLight::keyboardEvent(int key , int type )
             } cout<<endl;
           }*/
           printf("Scale is: %f\n",SceneManager::instance()->getObjectScale());
-
           printf( "Scale of BlackBox is currently : x%f\n ", v3d.x() );
             
           printf( "LOD level: %d\n", lodLevel ) ;

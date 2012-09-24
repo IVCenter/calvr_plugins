@@ -18,6 +18,7 @@ DesignStateHandler::DesignStateHandler(Group* rootGroup): mActiveFlag(false)
     rootGroup->addChild(mDesignStateRoot);
 
     mDesignStateRenderer = new DesignStateRenderer(mDesignStateRoot);
+    mRoot = rootGroup;
 }
 
 //Destructor
@@ -35,10 +36,17 @@ DesignStateHandler::~DesignStateHandler()
 void DesignStateHandler::setActive(bool flag)
 {
     mActiveFlag = flag;
-
-    /* initialize menu system */
-
-
+/*    if (flag)
+    {
+        if (!mRoot->containsNode(mDesignStateRoot) && mRoot && mDesignStateRoot)
+        {
+            mRoot->addChild(mDesignStateRoot);
+        }
+    }
+    else
+    {
+        mRoot->removeChild(mDesignStateRoot);
+    }*/
 }
 
 

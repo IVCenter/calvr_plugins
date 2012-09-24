@@ -8,7 +8,6 @@
 #include <osg/Material>
 #include <osg/BlendFunc>
 
-
 #include <string>
 #include <vector>
 #include <iostream>
@@ -18,18 +17,17 @@
 using namespace std;
 using namespace osg;
 
-class CircleShape : public BasicShape
-{
-friend class ShapeHelper;
-public:        
+
+class CircleShape: public BasicShape {
+	friend class ShapeHelper;
+public:
 
 	CircleShape();
 
 	virtual ~CircleShape();
 
 	// name
-	CircleShape(string);
-
+	CircleShape( string);
 
 	// name, center, radius, color, gradient, tesselation, 
 	CircleShape(string, Vec3d&, double, Vec4d&, Vec4d&, int);
@@ -52,8 +50,6 @@ public:
 	// center
 	CircleShape(Vec3d&);
 
-
-
 	int getType();
 
 	int getId();
@@ -74,16 +70,15 @@ public:
 
 	Vec3d getCenter();
 
-		
 	// sets the Radius directly
 	void setRadius(double);
 
 	double getRadius();
 
 	void updateLocation();
-	
+
 	void updateColor();
-	
+
 
 	// multiplies radius by param	
 	void scale(int);
@@ -91,9 +86,6 @@ public:
 	void setAll(Vec3d&, double, Vec4d&, Vec4d&);
 
 	void updateAll();
-	
-	
-
 
 
 protected:
@@ -112,7 +104,8 @@ protected:
 	// (gradient) secondary color of shape, if specified
 	Vec4d gradient;
 
-	// radius of circle, default = 10
+	// radius of circle, default = 100
+
 	double radius;
 
 	// center point of circle, default = (0,0,0)
@@ -131,9 +124,9 @@ protected:
 	void generate();
 
 	int numVertices;
-	
+
 	void setId(int);
-	
+
 };
 
 #endif

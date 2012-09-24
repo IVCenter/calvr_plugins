@@ -55,7 +55,7 @@ class DesignStateHandler
   protected:
     bool mActiveFlag;
     osg::Group *mDesignStateRoot;
-
+    osg::Group *mRoot;
     DesignStateRenderer *mDesignStateRenderer;
 
     // Testing Function

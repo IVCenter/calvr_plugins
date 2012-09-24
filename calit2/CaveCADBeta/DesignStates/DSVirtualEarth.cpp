@@ -553,3 +553,8 @@ void DSVirtualEarth::cartesianToLongilati(const Vec3 &coord, float &longi, float
     lati = asin(coord.z() / rad) / M_PI * 180.f;
 }
 
+
+void DSVirtualEarth::setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) 
+{
+
+}

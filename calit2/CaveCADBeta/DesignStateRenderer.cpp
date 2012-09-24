@@ -297,6 +297,26 @@ void DesignStateRenderer::switchToNextSubState()
 ***************************************************************/
 void DesignStateRenderer::inputDevMoveEvent(const Vec3 &pointerOrg, const Vec3 &pointerPos)
 {
+    for (DesignStateList::iterator it = mDSList.begin(); it != mDSList.end(); ++it)
+    {
+        if ((*it)->test(pointerOrg, pointerPos))
+        {
+            (*it)->setHighlight(true, pointerOrg, pointerPos);
+            //std::cout << "intersect" << std::endl;
+            mHighlighted = (*it);
+            break;
+        }
+        else
+        {
+            if (mHighlighted)
+            {
+                mHighlighted->setHighlight(false, pointerOrg, pointerPos);
+                mHighlighted = NULL;
+            }
+        }
+    }
+
+    (mActiveDSPtr)->setHighlight(true, pointerOrg, pointerPos);
     mActiveDSPtr->inputDevMoveEvent(pointerOrg, pointerPos); 
     resetPose();
 }
@@ -327,12 +347,20 @@ bool DesignStateRenderer::inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 
     {
         if ((*it)->test(pointerOrg, pointerPos))
         {
-            if (mActiveDSPtr != (*it)) // turn off the previous state
+            if (mActiveDSPtr != (*it) && (mActiveDSPtr)->isEnabled()) // turn off the previous state
             {
                 mActiveDSPtr->setObjectEnabled(false);
             }
             mActiveDSPtr = (*it);
-            mActiveDSPtr->setObjectEnabled(true);
+            
+            if (mActiveDSPtr->isEnabled())
+            {
+                mActiveDSPtr->setObjectEnabled(false);
+            }
+            else
+            {
+                mActiveDSPtr->setObjectEnabled(true);
+            }
             break;
         }
     }

@@ -22,7 +22,7 @@ namespace CAVEAnimationModeler
 void ANIMCreateVirtualSphere(osg::PositionAttitudeTransform** xformScaleFwd, 
 			     osg::PositionAttitudeTransform** xformScaleBwd)
 {
-    /* create sphere geometry */
+    // create sphere geometry
     *xformScaleFwd = new PositionAttitudeTransform;
     *xformScaleBwd = new PositionAttitudeTransform;
     Geode* sphereGeode = new Geode();
@@ -34,7 +34,26 @@ void ANIMCreateVirtualSphere(osg::PositionAttitudeTransform** xformScaleFwd,
     (*xformScaleFwd)->addChild(sphereGeode);
     (*xformScaleBwd)->addChild(sphereGeode);
 
-    /* set up the forward / backward scale animation path */
+    osg::StateSet* stateset;   
+
+    // highlights
+/*    Sphere* highlightSphere = new Sphere();
+    ShapeDrawable* highlightDrawable = new ShapeDrawable(highlightSphere);
+    Geode* highlightGeode = new Geode();
+    highlightSphere->setRadius(ANIM_VIRTUAL_SPHERE_RADIUS * 1.3);
+    highlightDrawable->setColor(osg::Vec4(0,0,1,0.3));
+    highlightGeode->addDrawable(highlightDrawable);
+    (*xformScaleFwd)->addChild(highlightGeode);
+    (*xformScaleBwd)->addChild(highlightGeode);
+
+    stateset = highlightDrawable->getOrCreateStateSet();
+    stateset->setMode(GL_BLEND, StateAttribute::ON);
+    stateset->setMode(GL_CULL_FACE, StateAttribute::ON);
+    stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
+*/
+
+    // set up the forward / backward scale animation path
     AnimationPath* animationPathScaleFwd = new AnimationPath;
     AnimationPath* animationPathScaleBwd = new AnimationPath;
     animationPathScaleFwd->setLoopMode(AnimationPath::NO_LOOPING);
@@ -61,10 +80,11 @@ void ANIMCreateVirtualSphere(osg::PositionAttitudeTransform** xformScaleFwd,
     (*xformScaleBwd)->setUpdateCallback(animCallbackBwd);
 
     /* apply shaders to geode stateset */
-    StateSet* stateset = new StateSet();
+    stateset = new StateSet();
     stateset->setMode(GL_BLEND, StateAttribute::OVERRIDE | StateAttribute::ON );
     stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
-    sphereGeode->setStateSet(stateset);
+    //sphereGeode->setStateSet(stateset);
+    sphereDrawable->setStateSet(stateset);
 
     Program* shaderProg = new Program;
     stateset->setAttribute(shaderProg);

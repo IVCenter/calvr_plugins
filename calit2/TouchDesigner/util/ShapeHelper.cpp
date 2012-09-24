@@ -8,12 +8,22 @@
 #include <osg/CullFace>
 #include <osgDB/ReadFile>
 
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/SceneObject.h>
+#include <cvrKernel/PluginHelper.h>
+
 using namespace osg;
 using namespace std;
 
-ShapeHelper::ShapeHelper(Geode * _geo)
+#define MAXNUMSHAPE 3
+#define RENDERSCALE 1
+
+ShapeHelper::ShapeHelper(Group * _gr) 
 {
-	geode = _geo;
+	group = _gr;
+	
+	tree = new TrackerTree();
+	
 	tok = new vvTokenizer();
 	tok->setEOLisSignificant(true);
 	tok->setCaseConversion(vvTokenizer::VV_LOWER);
@@ -21,11 +31,17 @@ ShapeHelper::ShapeHelper(Geode * _geo)
 	tok->setWhitespaceCharacter('=');
 	shapeCount = 0;
 	processedAll = false;
+	genAll = false;
+	debug = false;	
+	updateIndex = 0;
 }
 
-ShapeHelper::ShapeHelper()
-{
-	geode = new Geode();
+ShapeHelper::ShapeHelper() 
+{	
+	group = new Group();
+	
+	tree = new TrackerTree();
+	
 	tok = new vvTokenizer();
 	tok->setEOLisSignificant(true);
 	tok->setCaseConversion(vvTokenizer::VV_LOWER);
@@ -33,262 +49,166 @@ ShapeHelper::ShapeHelper()
 	tok->setWhitespaceCharacter('=');
 	shapeCount = 0;
 	processedAll = false;
+	genAll = false;
+	debug = false;	
+	updateIndex = 0;
 }
+
+
 
 ShapeHelper::~ShapeHelper()
 {
 	delete tok;
 }
 
-BasicShape * ShapeHelper::genShape(char * data)
-{
+
+void ShapeHelper::processData(char* data) {
 	tok->newData(data);
-	return genShape();
-}
-
-BasicShape * ShapeHelper::genShape()
-{
-	tok->nextToken();
-	string pch = tok->sval;	
-
-	if (0 == pch.compare("circle")) 	
-	{
-		shapeCount++;
-		return genCircle();
-	}
-	else if (0 == pch.compare("trianglec")) 
-	{
-		shapeCount++;
-		return genTriangleC();
-	}
-	else if (0 == pch.compare("trianglep")) 
-	{
-		shapeCount++;
-		return genTriangleP();
-	}
-	else if (0 == pch.compare("rectc")) 
-	{
-		shapeCount++;
-		return genRectC();
-	}
-	else if (0 == pch.compare("rectp")) 
-	{
-		shapeCount++;
-		return genRectP();
-	}
-	else
-	{
-		cerr << "shape not supported " << endl;
-		return NULL;
-	}	
-
-}
-
-void ShapeHelper::processData(char* data)
-{
-	tok->newData(data);
-	vvTokenizer::TokenType ttype; 	
-	ttype = tok->nextToken();	
-	string pch = tok->sval;	
-	
-	if (ttype == vvTokenizer::VV_NUMBER)
-	{
-		int shapeId = tok->nval;
-		Drawable * db = geode->getDrawable(shapeId);            
-		Geometry * geo = db->asGeometry();
-		updateShape((BasicShape*)geo);		
-	}	
-	else if ((0 == pch.compare("circle") && shapeCount >= 1))	
-	{
-		//updateCircle(0);
-	}
-	else if (0 == pch.compare("circle")) 	
-	{
-		shapeCount++;
-		//geode->addDrawable(genCircle());		
-	}
-	else if (0 == pch.compare("trianglec")) 
-	{
-		shapeCount++;
-		geode->addDrawable(genTriangleC());
-	}
-	else if (0 == pch.compare("trianglep")) 
-	{
-		shapeCount++;
-		geode->addDrawable(genTriangleP());
-	}
-	else if (0 == pch.compare("rectc")) 
-	{
-		shapeCount++;
-		geode->addDrawable(genRectC());
-	}
-	else if (0 == pch.compare("rectp")) 
-	{
-		shapeCount++;
-		geode->addDrawable(genRectP());
-	}
-	// triangle with center given
-	else if (0 == pch.compare("updatetc")) 
-	{
-		updateTriangleC();
-	} 
-	// triangle with points given
-	else if (0 == pch.compare("updatetp")) 
-	{
-		updateTriangleP();
-	}
-	// rectangle with center	
-	else if(0 == pch.compare("updaterc"))
-	{ 
-		updateRectC();
-	}
-	// rectangle with points
-	else if(0 == pch.compare("updaterp"))
-	{
-		updateRectP();
-	}
-	// circle
-	else if (0 == pch.compare("updatec"))	
-	{
-		updateCircle();
-	} 
-	else if (0 == pch.compare("done"))	
-	{
-		processedAll = true;
-	}
-	else if (shapeCount >= 1)	
-	{
-		processedAll = true;
-	} 
-	 
-	else
-	{
-		cerr << "pch\t" << pch << endl;
-		cerr << "command not recognized " << endl;	
-	}	
-}
-
-void ShapeHelper::updateShape(BasicShape * bs)
-{
-	// TO FIX  for some strange reason the super class's get methods doesn't correctly return values, but any type of
-	// specific shape type casting fixes the problem..
-	// int shapeType = bs->getType();
-	
-	
-	int shapeType = ((CircleShape*)bs)->getType();
-	int shapeId = ((CircleShape*)bs)->getId();
-	cerr << "updating shape # " << shapeId << " of type\t" << shapeType << endl;
-	if (shapeType == 1)
-	{
-		updateTriangleC((TriangleShape*)bs);
-	}
-	else if (shapeType == 2)
-	{
-		updateTriangleP((TriangleShape*)bs);
-	}
-	else if (shapeType == 3)
-	{
-		updateRectC((RectShape*)bs);
-	}
-	else if (shapeType == 4)
-	{
-		updateRectP((RectShape*)bs);
-	}
-	else if (shapeType == 5)
-	{
-		updateCircle((CircleShape*)bs);
-	}
-	else
-	{
-		cerr << "unable to determine shape type" << endl;
-	}
-
-}
-
-
-void ShapeHelper::updateShape(char* data)
-{
-	tok->newData(data);	
-	updateShape();
-}
-
-void ShapeHelper::updateShape()
-{
-	tok->nextToken();
-	string pch = tok->sval;	
-	
-	
-	// triangle with center given
-	if (0 == pch.compare("updatetc"))
-	{
-		updateTriangleC();
-	} 
-	// triangle with points given
-	else if (0 == pch.compare("updatetp")) 
-	{
-		updateTriangleP();
-	}
-	// rectangle with center	
-	else if(0 == pch.compare("updaterc"))
-	{ 
-		updateRectC();
-	}
-	// rectangle with points
-	else if(0 == pch.compare("updaterp"))
-	{
-		updateRectP();
-	}
-	// circle
-	else if (0 == pch.compare("updatec"))	
-	{
-		updateCircle();
-	}
-	else
-	{
-		cerr << "unable to update shape" << endl;
-	}
-
-
-}
-
-double ShapeHelper::getDoubleParamC(char* param)
-{	
-	vvTokenizer::TokenType ttype; 	
+	vvTokenizer::TokenType ttype;
 	ttype = tok->nextToken();
-	while (ttype != vvTokenizer::VV_EOL && (tok->currentPos() < strlen(tok->peekData())))
+	string pch = tok->sval;
+
+
+	// i really need to implement easier ways to debug with pd
+	if (shapeCount == MAXNUMSHAPE)// && debug) 
 	{
-		if ( 0 == strcmp(tok->sval,param))
-		{	
-			ttype = tok->nextToken();
-			tok->reset();
-			return tok->nval;		
+		genAll = true;
+		processedAll = true;
+		updateIndex = 0;
+	}	
+	// keeping track of the updateIndex, so it doesnt go out of bound
+	if (updateIndex > MAXNUMSHAPE-1)
+	{
+		updateIndex = 0;
+	}
+
+
+	// this is for finding a certain geode by comment
+	// the protocol should be something like find=circle with red center
+	if (0 == pch.compare("find"))
+	{
+		tok->nextToken();
+		string query = tok->sval;
+
+		// TODO add tree functions here
+    TrackerNode* temp = tree->get(query,tree->root);
+
+		// set pch to the according shape so the ifs down there can process
+    
+		// set the updateIndex, which is the positionInRoot return by tree node
+		updateIndex = temp->positionInRoot;
+	}
+
+
+	if (0 == pch.compare("circle"))
+	{
+		// if we finished generating, we tell handle update instead
+		if (genAll){			
+			handleCircle(updateIndex);
+			updateIndex++;
 		}
+		// otherwise generate a new one
 		else 
 		{
-			ttype = tok->nextToken();	
+			handleCircle(-1);
+		}
+
+	}
+	else if (0 == pch.compare("triangle"))
+	{
+		// update
+		if (genAll)
+		{
+			handleTriangle(updateIndex);
+			updateIndex++;
+		}
+		// generate
+		else
+		{
+			handleTriangle(-1);
+		}
+	}
+	else if (0 == pch.compare("rect"))
+	{
+		// update
+		if (genAll)
+		{
+			handleRect(updateIndex);
+			updateIndex++;
+		}
+		// generate
+		else
+		{
+			handleRect(-1);
+		}
+	}
+	/*
+	//handle 3d shapes
+	else if (0 == pch.compare("sphere"))
+	{
+	  if (genAll)
+	  {
+	    handleSphere(updateIndex);
+	    updateIndex++;
+	  }
+	  else
+	  {
+	    handleSphere(-1);
+	  }
+	}
+	else if (0 == pch.compare("box"))
+	{
+	  if (genAll)
+	  {
+	    handleBox(updateIndex);
+	    updateIndex++;
+	  }
+	  else
+	  {
+	    handleBox(-1);
+	  }
+	}
+	//Cone,Cylinder,Capsule,InfinitePlane, -Pyramids from shapes/PyramidShape.cpp ?
+	*/
+	else if (0 == pch.compare("done"))
+	{
+		processedAll = true;
+		genAll = true;
+	}
+
+}
+
+
+
+double ShapeHelper::getDoubleParamC(char* param) {
+	vvTokenizer::TokenType ttype;
+	ttype = tok->nextToken();
+	while (ttype != vvTokenizer::VV_EOL) {
+		if (0 == strcmp(tok->sval, param)) {
+			ttype = tok->nextToken();
+			tok->reset();
+			return tok->nval;
+		} else {
+			ttype = tok->nextToken();
 		}
 	}
 	tok->reset();
 	return numeric_limits<double>::quiet_NaN();
 }
 
-int ShapeHelper::getIntParamC(char* param)
-{
 
-	vvTokenizer::TokenType ttype; 
+int ShapeHelper::getIntParamC(char* param) {
+
+	vvTokenizer::TokenType ttype;
 
 	ttype = tok->nextToken();
-	while (ttype != vvTokenizer::VV_EOL && (tok->currentPos() < strlen(tok->peekData())))
-	{
-		if ( 0 == strcmp(tok->sval,param))
-		{	
+	while (ttype != vvTokenizer::VV_EOL) {
+		if (0 == strcmp(tok->sval, param)) {
 			ttype = tok->nextToken();
 			tok->reset();
-			return tok->nval;		
-		}
-		else 
-		{
-			ttype = tok->nextToken();		
+			return tok->nval;
+		} else {
+			ttype = tok->nextToken();
 		}
 
 	}
@@ -297,23 +217,18 @@ int ShapeHelper::getIntParamC(char* param)
 
 }
 
-char* ShapeHelper::getCharParamC(char* param)
-{	
-	vvTokenizer::TokenType ttype; 
+
+char* ShapeHelper::getCharParamC(char* param) {
+	vvTokenizer::TokenType ttype;
 
 	ttype = tok->nextToken();
-	while (ttype != vvTokenizer::VV_EOL)
-	{
-		if ( 0 == strcmp(tok->sval,param))
-		{	
+	while (ttype != vvTokenizer::VV_EOL) {
+		if (0 == strcmp(tok->sval, param)) {
 			ttype = tok->nextToken();
-			cerr << tok->sval << endl;
 			tok->reset();
-			return tok->sval;		
-		}
-		else 
-		{
-			ttype = tok->nextToken();		
+			return tok->sval;
+		} else {
+			ttype = tok->nextToken();
 		}
 
 	}
@@ -321,676 +236,655 @@ char* ShapeHelper::getCharParamC(char* param)
 	return NULL;
 }
 
-double ShapeHelper::getDoubleParam(string param)
-{
-	getDoubleParamC(&param[0]);
+
+double ShapeHelper::getDoubleParam(string param) {
+	return getDoubleParamC(&param[0]);
+}
+
+int ShapeHelper::getIntParam(string param) {
+
+	return getIntParamC(&param[0]);
+
 }
 
 
-int ShapeHelper::getIntParam(string param)
-{
-	getIntParamC(&param[0]);
+char* ShapeHelper::getCharParam(string param) {
 
+	return getCharParamC(&param[0]);
 }
 
 
-char* ShapeHelper::getCharParam(string param)
-{	
-	getCharParamC(&param[0]);
+
+//returns a random number between 0 and 1
+double ShapeHelper::random() {
+	return rand() / double(RAND_MAX);
 }
 
-// generates a circle within incoming data packet
-CircleShape* ShapeHelper::genCircle()
+// returns a random number between min and max
+double ShapeHelper::random(double min, double max) {
+	return (max - min) * random() + min;
+}
+
+void ShapeHelper::setObjectRoot(Group * _gr)
 {
+	group = _gr;
+}
+
+
+Vec3d ShapeHelper::getCenter()
+{
+	Vec3d center;
+
+	double	cx = getDoubleParam("cx");
+	double	cy = getDoubleParam("cy");
+	double	cz = getDoubleParam("cz");
+
+	if (!isnan(cx) && !isnan(cy) && !isnan(cz)) 
+	{
+		center = Vec3d(cx * RENDERSCALE, cy * RENDERSCALE, cz * RENDERSCALE);
+	}
+
+	return center;
+}
+
+
+Vec3d ShapeHelper::getP1()
+{
+	Vec3d p1;
+	double	p1x = getDoubleParam("p1x");
+	double	p1y = getDoubleParam("p1y");
+	double	p1z = getDoubleParam("p1z");
+
+	if (!isnan(p1x) && !isnan(p1y) && !isnan(p1z)) 
+	{
+		p1 = Vec3d(p1x * RENDERSCALE, p1y * RENDERSCALE, p1z * RENDERSCALE);
+	}
+
+	return p1;
+}
+
+Vec3d ShapeHelper::getP2()
+{
+	Vec3d p2;
+	double	p2x = getDoubleParam("p2x");
+	double	p2y = getDoubleParam("p2y");
+	double	p2z = getDoubleParam("p2z");
+
+	if (!isnan(p2x) && !isnan(p2y) && !isnan(p2z)) 
+	{
+		p2 = Vec3d(p2x * RENDERSCALE, p2y * RENDERSCALE, p2z * RENDERSCALE);
+	}
+
+	return p2;
+}
+
+Vec3d ShapeHelper::getP3()
+{
+	Vec3d p3;
+
+	double 	p3x = getDoubleParam("p3x");
+	double	p3y = getDoubleParam("p3y");
+	double	p3z = getDoubleParam("p3z");
+
+
+	if (!isnan(p3x) && !isnan(p3y) && !isnan(p3z))
+	{
+		p3 = Vec3d(p3x * RENDERSCALE, p3y * RENDERSCALE, p3z * RENDERSCALE);
+	}
+
+	return p3;
+}
+
+Vec3d ShapeHelper::getP4()
+{
+	Vec3d p4;
+
+	double	p4x = getDoubleParam("p4x");
+	double	p4y = getDoubleParam("p4y");
+	double	p4z = getDoubleParam("p4z");
+
+	if (!isnan(p4x) && !isnan(p4y) && !isnan(p4z)) 
+	{
+		p4 = Vec3d(p4x * RENDERSCALE, p4y * RENDERSCALE, p4z * RENDERSCALE);
+	}
+
+	return p4;
+}
+
+
+// get color1 from incoming data
+Vec4d ShapeHelper::getC1()
+{
+	Vec4d c1;
+
+	double	c1r = getDoubleParam("c1r");
+	double	c1g = getDoubleParam("c1g");
+	double	c1b = getDoubleParam("c1b");
+	double	c1a = getDoubleParam("c1a");
+
+	if (!isnan(c1r) && !isnan(c1g) && !isnan(c1b) && !isnan(c1a)) {
+		c1 = Vec4d(c1r, c1g, c1b, c1a);
+	}
+
+	return c1;
+}
+
+Vec4d ShapeHelper::getC2()
+{
+	Vec4d c2;
+
+	double	c2r = getDoubleParam("c2r");
+	double	c2g = getDoubleParam("c2g");
+	double	c2b = getDoubleParam("c2b");
+	double	c2a = getDoubleParam("c2a");
+
+	if (!isnan(c2r) && !isnan(c2g) && !isnan(c2b) && !isnan(c2a)) {
+		c2 = Vec4d(c2r, c2g, c2b, c2a);
+	}
+
+	return c2;
+}
+
+Vec4d ShapeHelper::getC3()
+{
+	Vec4d c3;
+
+	double	c3r = getDoubleParam("c3r");
+	double	c3g = getDoubleParam("c3g");
+	double	c3b = getDoubleParam("c3b");
+	double	c3a = getDoubleParam("c3a");
+
+	if (!isnan(c3r) && !isnan(c3g) && !isnan(c3b) && !isnan(c3a)) {
+		c3 = Vec4d(c3r, c3g, c3b, c3a);
+	}
+
+	return c3;
+}
+
+Group * ShapeHelper::getGroup()
+{
+	return group;
+}
+
+void ShapeHelper::handleCircle(int positionInGroup)
+{
+	int pIG = -1;
+	Geode* geode;
+	Drawable * dr;
 	CircleShape * circle;
 
-	int cx = getIntParam("cx");	
-	
-		
-	
-		cx = 0;
-	
-	
-
-	int cy = getIntParam("cy");
-	int cz = getIntParam("cz");
-	int radius = getIntParam("radius");
-	double c1r = getDoubleParam("c1r");
-	double c1g = getDoubleParam("c1g");
-	double c1b = getDoubleParam("c1b");
-	double c1a = getDoubleParam("c1a");
-	double c2r = getDoubleParam("c2r");
-	double c2g = getDoubleParam("c2g");
-	double c2b = getDoubleParam("c2b");
-	double c2a = getDoubleParam("c2a");	
-	int tess = getIntParam("tess");
 	char * comment = getCharParam("comment");
 
-	Vec3d center(cx,cy,cz);
+	if (comment == NULL) {
+		string empty = "";
+		comment = &empty[0];
+	}
+
+	// if we're not creating a new geometry, we're going to get the geode at position pIG
+	if (positionInGroup != -1)
+	{
+		pIG = positionInGroup;
+		geode = dynamic_cast<Geode*> (group->getChild(pIG));
+		dr = dynamic_cast<Drawable*> (geode->getDrawable(0));
+		circle = (CircleShape*) dr;
+	}
+	// otherwise, we'll make a new geode
+	else 
+	{
+		geode = new Geode();
+	}
 
 
-	//cerr << "x\t" << cx << endl;
-	
-	cerr << "generating shape # " << shapeCount << endl;
-	
-	// if no tesselation specified, use 10 as default
+	// get radius parsed from the incoming data
+	double radius = getDoubleParam("radius");	
+
+	if (!isnan(radius))
+	{
+		radius = radius * RENDERSCALE;
+		circle->setRadius(radius);
+	}
+	// if we're generating, give it a default value
+	else if (pIG == -1)
+	{
+		radius = 100;
+	}
+
+	int tess = getIntParam("tess");
+
 	if (tess == 0)
 	{
 		tess = 10;
 	}
-	
-	if (comment == NULL)
+
+	Vec3d center = getCenter();
+
+	// double check if center is initialized, can getCenter() return an unintialized Vec3d? or will it throw an error already?
+	if (center.valid())
 	{
-		string empty = "";
-		comment = &empty[0];
-	}
-
-
-	if (!isnan(c1r) && !isnan(c1g) && !isnan(c1b) && !isnan(c1a))
-	{		
-		Vec4d c1(c1r,c1g,c1b,c1a);
-
-		if (!isnan(c2r) && !isnan(c2g) && !isnan(c2b) && !isnan(c2a))	
-		{	
-			Vec4d c2(c2r,c2g,c2b,c2a);
-			circle = new CircleShape(comment,center,radius,c1,c2,tess);
-			circle->setId(shapeCount);
-			return circle;				
-		}
-
-		circle = new CircleShape(comment,center,radius,c1,tess);
-		circle->setId(shapeCount);
-		return circle;		
-	}
-
-	circle = new CircleShape(comment,center,radius);
-	circle->setId(shapeCount);
-	return circle;
-}
-
-
-// generates a triangle with a center given
-TriangleShape * ShapeHelper::genTriangleC()
-{	
-	TriangleShape * tr;
-	int cx = getIntParam("cx");
-	int cy = getIntParam("cy");
-	int cz = getIntParam("cz");
-	int height = getIntParam("length");
-	double c1r = getDoubleParam("c1r");
-	double c1g = getDoubleParam("c1g");
-	double c1b = getDoubleParam("c1b");
-	double c1a = getDoubleParam("c1a");
-	double c2r = getDoubleParam("c2r");
-	double c2g = getDoubleParam("c2g");
-	double c2b = getDoubleParam("c2b");
-	double c2a = getDoubleParam("c2a");	
-	char * comment = getCharParam("comment");
-
-	Vec3d center(cx,cy,cz);
-
-	cerr << "generating shape # " << shapeCount << endl;
-	
-	
-	if (comment == NULL)
-	{
-		string empty = "";
-		comment = &empty[0];
-	}
-
-	
-
-
-	if (!isnan(c1r) && !isnan(c1g) && !isnan(c1b) && !isnan(c1a))
-	{		
-		Vec4d c1(c1r,c1g,c1b,c1a);
-
-		if (!isnan(c2r) && !isnan(c2g) && !isnan(c2b) && !isnan(c2a))	
-		{	
-			Vec4d c2(c2r,c2g,c2b,c2a);
-			tr = new TriangleShape(comment,center,height,c1,c2);
-			tr->setId(shapeCount);
-			return tr;				
-		}
-
-		tr = new TriangleShape(comment,center,height,c1);
-		tr->setId(shapeCount);
-		return tr;
-
-	}
-
-	tr = new TriangleShape(comment,center,height);
-	tr->setId(shapeCount);
-	return tr;
-
-}
-
-// generates a triangle with 3 points given
-TriangleShape * ShapeHelper::genTriangleP()
-{	
-	TriangleShape * tr;
-	int p1x = getIntParam("p1x");
-	int p1y = getIntParam("p1y");
-	int p1z = getIntParam("p1z");
-	int p2x = getIntParam("p2x");
-	int p2y = getIntParam("p2y");
-	int p2z = getIntParam("p2z");
-	int p3x = getIntParam("p3x");
-	int p3y = getIntParam("p3y");
-	int p3z = getIntParam("p3z");
-	double c1r = getDoubleParam("c1r");
-	double c1g = getDoubleParam("c1g");
-	double c1b = getDoubleParam("c1b");
-	double c1a = getDoubleParam("c1a");
-	double c2r = getDoubleParam("c2r");
-	double c2g = getDoubleParam("c2g");
-	double c2b = getDoubleParam("c2b");
-	double c2a = getDoubleParam("c2a");
-	double c3r = getDoubleParam("c3r");
-	double c3g = getDoubleParam("c3g");
-	double c3b = getDoubleParam("c3b");
-	double c3a = getDoubleParam("c3a");		
-	char * comment = getCharParam("comment");
-
-	Vec3d p1(p1x,p1y,p1z);
-	Vec3d p2(p2x,p2y,p2z);
-	Vec3d p3(p3x,p3y,p3z);
-
-	cerr << "generating shape # " << shapeCount << endl;
-	
-	if (comment == NULL)
-	{
-		string empty = "";
-		comment = &empty[0];
-	}
-
-
-	if (!isnan(c1r) && !isnan(c1g) && !isnan(c1b) && !isnan(c1a))
-	{		
-		Vec4d c1(c1r,c1g,c1b,c1a);
-
-		if (!isnan(c2r) && !isnan(c2g) && !isnan(c2b) && !isnan(c2a))	
-		{	
-			Vec4d c2(c2r,c2g,c2b,c2a);
-
-			if (!isnan(c3r) && !isnan(c3g) && !isnan(c3b) && !isnan(c3a))	
-			{	
-				Vec4d c3(c3r,c3g,c3b,c3a);
-				tr = new TriangleShape(comment,p1,p2,p3,c1,c2,c3);
-				tr->setId(shapeCount);
-				return tr;
-			}
-			tr = new TriangleShape(comment,p1,p2,p3,c1,c2);
-			return tr;				
-		}
-
-		tr = new TriangleShape(comment,p1,p2,p3,c1);
-		tr->setId(shapeCount);
-		return tr;
-
-	}
-
-	tr = new TriangleShape(comment,p1,p2,p3);
-	tr->setId(shapeCount);
-	return tr;
-
-}
-
-// generates a rectangle with center given
-RectShape * ShapeHelper::genRectC()
-{	
-	RectShape * rect;
-	int cx = getIntParam("cx");
-	int cy = getIntParam("cy");
-	int cz = getIntParam("cz");
-	int height = getIntParam("height");
-	int wid = getIntParam("width");
-	double c1r = getDoubleParam("c1r");
-	double c1g = getDoubleParam("c1g");
-	double c1b = getDoubleParam("c1b");
-	double c1a = getDoubleParam("c1a");
-	double c2r = getDoubleParam("c2r");
-	double c2g = getDoubleParam("c2g");
-	double c2b = getDoubleParam("c2b");
-	double c2a = getDoubleParam("c2a");	
-	char * comment = getCharParam("comment");
-
-	Vec3d center(cx,cy,cz);
-
-	
-	cerr << "generating shape # " << shapeCount << endl;
-	
-	if (comment == NULL)
-	{
-		string empty = "";
-		comment = &empty[0];
-	}
-
-	if (!isnan(c1r) && !isnan(c1g) && !isnan(c1b) && !isnan(c1a))
-	{		
-		Vec4d c1(c1r,c1g,c1b,c1a);
-
-		if (!isnan(c2r) && !isnan(c2g) && !isnan(c2b) && !isnan(c2a))	
-		{	
-			Vec4d c2(c2r,c2g,c2b,c2a);
-			rect= new RectShape(comment,center,wid,height,c1,c2);
-			rect->setId(shapeCount);
-			return rect;				
-		}
-
-		rect = new RectShape(comment,center,wid,height,c1);
-		rect->setId(shapeCount);
-		return rect;
-
-	}
-
-	rect = new RectShape(comment,center,wid,height);
-	rect->setId(shapeCount);
-	return rect;
-
-}
-
-//generates a rectangle with 4 points given
-RectShape * ShapeHelper::genRectP()
-{	
-	RectShape * rect;	
-	int p1x = getIntParam("p1x");
-	int p1y = getIntParam("p1y");
-	int p1z = getIntParam("p1z");
-	int p2x = getIntParam("p2x");
-	int p2y = getIntParam("p2y");
-	int p2z = getIntParam("p2z");
-	int p3x = getIntParam("p3x");
-	int p3y = getIntParam("p3y");
-	int p3z = getIntParam("p3z");
-	int p4x = getIntParam("p4x");
-	int p4y = getIntParam("p4y");
-	int p4z = getIntParam("p4z");
-	double c1r = getDoubleParam("c1r");
-	double c1g = getDoubleParam("c1g");
-	double c1b = getDoubleParam("c1b");
-	double c1a = getDoubleParam("c1a");
-	double c2r = getDoubleParam("c2r");
-	double c2g = getDoubleParam("c2g");
-	double c2b = getDoubleParam("c2b");
-	double c2a = getDoubleParam("c2a");	
-	char * comment = getCharParam("comment");
-
-	Vec3d p1(p1x,p1y,p1z);
-	Vec3d p2(p2x,p2y,p2z);
-	Vec3d p3(p3x,p3y,p3z);
-	Vec3d p4(p4x,p4y,p4z);
-
-	cerr << "generating shape # " << shapeCount << endl;
-	
-	if (comment == NULL)
-	{
-		string empty = "";
-		comment = &empty[0];
-	}
-	
-	if (!isnan(c1r) && !isnan(c1g) && !isnan(c1b) && !isnan(c1a))
-	{		
-		Vec4d c1(c1r,c1g,c1b,c1a);
-
-		if (!isnan(c2r) && !isnan(c2g) && !isnan(c2b) && !isnan(c2a))	
-		{	
-			Vec4d c2(c2r,c2g,c2b,c2a);
-			rect= new RectShape(comment,p1,p2,p3,p4,c1,c2);
-			rect->setId(shapeCount);
-			return rect;				
-		}
-
-		rect = new RectShape(comment,p1,p2,p3,p4,c1);
-		rect->setId(shapeCount);
-		return rect;
-
-	}
-
-	rect = new RectShape(comment,p1,p2,p3,p4);
-	rect->setId(shapeCount);
-	return rect;
-
-}
-
-
-//returns a random number between 0 and 1
-double ShapeHelper::random()
-{
-	return rand() / double(RAND_MAX);
-}
-
-
-// returns a random number between min and max
-double ShapeHelper::random(double min, double max)
-{
-	return (max-min)*random() + min;
-}
-
-
-/**
- *	circle updating functions
- */
-void ShapeHelper:: updateCircle()
-{
-	int id = getIntParam("id");
-	Drawable * db = geode->getDrawable(id);            
-	Geometry * geo = db->asGeometry();
-	updateCircle((CircleShape*) geo);
-}
-
-void ShapeHelper:: updateCircle(int _id)
-{
-	Drawable * db = geode->getDrawable(_id);            
-	Geometry * geo = db->asGeometry();
-	updateCircle((CircleShape*) geo);	
-}
-
-
-void ShapeHelper:: updateCircle(CircleShape* geo)
-{
-
-	//cerr << "geo is: " << geo << endl;	
-	
-	int cx = getIntParam("cx");	
-		
-		updateIndex+=1;
-		
-		if (updateIndex > 200)
+		if (pIG != -1)
 		{
-			updateIndex = -200;
+			circle->setCenter(center);
 		}
-		cx = updateIndex;
-	
-	//cerr << "cx\t" << cx << endl;
-	
-	int cy = getIntParam("cy");
-	int cz = getIntParam("cz");
-	double radius = getDoubleParam("radius");
-	double c1r = getDoubleParam("c1r");
-	double c1g = getDoubleParam("c1g");
-	double c1b = getDoubleParam("c1b");
-	double c1a = getDoubleParam("c1a");
-	double c2r = getDoubleParam("c2r");
-	double c2g = getDoubleParam("c2g");
-	double c2b = getDoubleParam("c2b");
-	double c2a = getDoubleParam("c2a");	
-	
-	Vec3d center(cx,cy,cz);
-
-	//cerr << "updating shape # " << geo->getId() << endl;
-
-	if (!isnan(c1r) && !isnan(c1g) && !isnan(c1b) && !isnan(c1a))
-	{		
-		Vec4d c1(c1r,c1g,c1b,c1a);
-		((CircleShape*)geo)->setColor(c1);		
-	}
-	
-	if (!isnan(c2r) && !isnan(c2g) && !isnan(c2b) && !isnan(c2a))	
-	{	
-		Vec4d c2(c2r,c2g,c2b,c2a);
-		((CircleShape*)geo)->setGradient(c2);
-	}
-
-	
-	if (radius != 0)
+	} else
 	{
-		((CircleShape*)geo)->setRadius(radius);
+		// if we're generating a new circle and there isn't a center specified
+		if (pIG == -1)
+		{
+			center = Vec3d(0,0,0);
+		}
 	}
-	
-	
-	((CircleShape*)geo)->setCenter(center);	
-	((CircleShape*)geo)->updateAll();
 
+	// check colors too
+	Vec4d c1 = getC1();
+
+	if (c1.valid())
+	{	
+		if (pIG != -1)
+		{
+			circle->setColor(c1);
+		}
+	}
+	else
+	{
+		// we'll give it a nice lavender color
+		if (pIG == -1)
+		{
+			c1 = Vec4d((195/255),(149/255),(237/255),0.8);
+		}
+	}
+
+	Vec4d c2 = getC2();
+
+	if (c2.valid())
+	{	
+		if (pIG != -1)
+		{
+			circle->setGradient(c2);
+		}
+	}
+	else
+	{
+		// default black
+		if (pIG == -1)
+		{
+			c2 = Vec4d(0,0,0,0.8);
+		}
+	}
+
+
+	if (pIG != -1)
+	{
+		circle->updateAll();
+	}
+	else 
+	{
+		circle = new CircleShape(comment,center,radius,c1,c2,tess);
+		geode->addDrawable(circle);
+		group->addChild(geode);
+			
+		shapeCount++;
+
+		// TODO add comment and geode to tracking tree
+		tree->root = tree->insert(comment,pIG,geode,tree->root);
+	}
 
 }
 
-/**
- *	rectangle with center updating functions
- */
-void ShapeHelper::updateRectC()
+// for now we're only taking care of triangles generated witha center, 
+// individual points will be handled later on
+void ShapeHelper::handleTriangle(int positionInGroup)
 {
-	int id = getIntParam("id");
-	Drawable * db = geode->getDrawable(id);            
-	Geometry * geo = db->asGeometry();
-	updateRectC((RectShape*) geo);
-} 
- 
-void ShapeHelper::updateRectC(RectShape* geo)
-{
-	int cx = getIntParam("cx");
-	int cy = getIntParam("cy");
-	int cz = getIntParam("cz");
-	int height = getIntParam("height");
-	int wid = getIntParam("width");	
-	double c1r = getDoubleParam("c1r");
-	double c1g = getDoubleParam("c1g");
-	double c1b = getDoubleParam("c1b");
-	double c1a = getDoubleParam("c1a");
-	double c2r = getDoubleParam("c2r");
-	double c2g = getDoubleParam("c2g");
-	double c2b = getDoubleParam("c2b");
-	double c2a = getDoubleParam("c2a");	
+	int pIG = -1;
+	Geode* geode;
+	Drawable * dr;
+	TriangleShape * tri;
+
 	char * comment = getCharParam("comment");
 
-	Vec3d center(cx,cy,cz);
-
-	cerr << "updating shape # " << geo->getId() << endl;
-
-
-	if (!isnan(c1r) && !isnan(c1g) && !isnan(c1b) && !isnan(c1a))
-	{		
-		Vec4d c1(c1r,c1g,c1b,c1a);
-		((RectShape*)geo)->setColor1(c1);
+	if (comment == NULL) {
+		string empty = "";
+		comment = &empty[0];
 	}
-	
-	if (!isnan(c2r) && !isnan(c2g) && !isnan(c2b) && !isnan(c2a))	
+
+	// if we're not creating a new geometry, we're going to get the geode at position pIG
+	if (positionInGroup != -1)
+	{
+		pIG = positionInGroup;
+		geode = dynamic_cast<Geode*> (group->getChild(pIG));
+		dr = dynamic_cast<Drawable*> (geode->getDrawable(0));
+		tri = (TriangleShape*) dr;
+	}
+	// otherwise, we'll make a new geode
+	else 
+	{
+		geode = new Geode();
+	}
+
+
+	// get radius parsed from the incoming data
+	double len = getDoubleParam("length");
+
+	if (!isnan(len))
+	{
+		len = len * RENDERSCALE;
+		tri->setLength(len);
+	}
+	// if we're generating, give it a default value
+	else if (pIG == -1)
+	{
+		len = 100;
+	}
+
+
+	Vec3d center = getCenter();
+
+	// double check if center is initialized, can getCenter() return an unintialized Vec3d? or will it throw an error already?
+	if (center.valid())
+	{
+		if (pIG != -1)
+		{
+			tri->setCenter(center);
+		}
+	} else
+	{
+		// if we're generating a new circle and there isn't a center specified
+		if (pIG == -1)
+		{
+			center = Vec3d(0,0,0);
+		}
+	}
+
+	// check colors too
+	Vec4d c1 = getC1();
+
+	if (c1.valid())
 	{	
-		Vec4d c2(c2r,c2g,c2b,c2a);
-		((RectShape*)geo)->setColor2(c2);		
+		if (pIG != -1)
+		{
+			tri->setColor(c1);
+		}
 	}
-	
-	if (height>0)
+	else
 	{
-		((RectShape*)geo)->setHeight(height);	
+		// we'll give it a nice lavender color
+		if (pIG == -1)
+		{
+			c1 = Vec4d(62/255, 180/255, 137/255,0.8);
+		}
 	}
-	
-	if (wid>0)
+
+	Vec4d c2 = getC2();
+
+	if (c2.valid())
+	{	
+		if (pIG != -1)
+		{
+			tri->setGradient(c2);
+		}
+	}
+	else
 	{
-		((RectShape*)geo)->setWidth(wid);
+		// default black
+		if (pIG == -1)
+		{
+			c2 = Vec4d(0,0,0,0.8);
+		}
 	}
-	
-	((RectShape*)geo)->setCenter(center);
-	
-	((RectShape*)geo)->updateAll();
+
+
+	if (pIG != -1)
+	{
+		tri->updateAll();
+	}
+	else 
+	{
+		tri = new TriangleShape(comment,center,len,c1,c2);
+		geode->addDrawable(tri);
+		group->addChild(geode);
+
+		shapeCount++;
+
+		// TODO add comment and geode to tracking tree
+		tree->root = tree->insert(comment,pIG,geode,tree->root);
+	}
+
+
 }
 
-
-/**
- *	triangle with center updating functions
- */
-void ShapeHelper::updateTriangleC()
+// likewise, we're only handling rects with a center point
+void ShapeHelper::handleRect(int positionInGroup)
 {
-	int id = getIntParam("id");
-	Drawable * db = geode->getDrawable(id);            
-	Geometry * geo = db->asGeometry();
-	updateTriangleC((TriangleShape*) geo);
-}
+	int pIG = -1;
+	Geode* geode;
+	Drawable * dr;
+	RectShape * rect;
 
-void ShapeHelper::updateTriangleC(TriangleShape* geo)
-{
-	int cx = getIntParam("cx");
-	int cy = getIntParam("cy");
-	int cz = getIntParam("cz");
-	int len = getIntParam("length");
-	double c1r = getDoubleParam("c1r");
-	double c1g = getDoubleParam("c1g");
-	double c1b = getDoubleParam("c1b");
-	double c1a = getDoubleParam("c1a");
-	double c2r = getDoubleParam("c2r");
-	double c2g = getDoubleParam("c2g");
-	double c2b = getDoubleParam("c2b");
-	double c2a = getDoubleParam("c2a");	
 	char * comment = getCharParam("comment");
 
-	Vec3d center(cx,cy,cz);
-
-	cerr << "updating shape # " << geo->getId() << endl;
-
-
-	if (!isnan(c1r) && !isnan(c1g) && !isnan(c1b) && !isnan(c1a))
-	{		
-		Vec4d c1(c1r,c1g,c1b,c1a);
-		((TriangleShape*)geo)->setColor1(c1);
+	if (comment == NULL) {
+		string empty = "";
+		comment = &empty[0];
 	}
-	
-	if (!isnan(c2r) && !isnan(c2g) && !isnan(c2b) && !isnan(c2a))	
-	{	
-		Vec4d c2(c2r,c2g,c2b,c2a);
-		((TriangleShape*)geo)->setColor2(c2);		
-	}
-	
-	if (len>0)
+
+	// if we're not creating a new geometry, we're going to get the geode at position pIG
+	if (positionInGroup != -1)
 	{
-		((TriangleShape*)geo)->setLength(len);
+		pIG = positionInGroup;
+		geode = dynamic_cast<Geode*> (group->getChild(pIG));
+		dr = dynamic_cast<Drawable*> (geode->getDrawable(0));
+		rect = (RectShape*) dr;
 	}
-	
-	((TriangleShape*)geo)->setCenter(center);
-	
-	((TriangleShape*)geo)->updateAll();
+	// otherwise, we'll make a new geode
+	else 
+	{
+		geode = new Geode();
+	}
+
+
+
+	double	height = getDoubleParam("height");
+	double	wid = getDoubleParam("width");
+	if (!isnan(height))
+	{
+		height = height * RENDERSCALE;
+		rect->setHeight(height);
+	}
+	else if (pIG == -1)
+	{
+		height = 100;
+	}
+	if (!isnan(wid))
+	{
+		wid = wid * RENDERSCALE;
+		rect->setWidth(wid);
+	}
+	else if (pIG == -1)
+	{
+		wid = 100;
+	}
+
+	Vec3d center = getCenter();
+
+	// double check if center is initialized, can getCenter() return an unintialized Vec3d? or will it throw an error already?
+	if (center.valid())
+	{
+		if (pIG != -1)
+		{
+			rect->setCenter(center);
+		}
+	} else
+	{
+		// if we're generating a new circle and there isn't a center specified
+		if (pIG == -1)
+		{
+			center = Vec3d(0,0,0);
+		}
+	}
+
+	// check colors too
+	Vec4d c1 = getC1();
+
+	if (c1.valid())
+	{	
+		if (pIG != -1)
+		{
+			rect->setColor(c1);
+		}
+	}
+	else
+	{
+		// we'll give it a nice "jonquil" color
+		if (pIG == -1)
+		{
+			c1 = Vec4d(250/255, 218/255, 94/255, 0.8);
+		}
+	}
+
+	Vec4d c2 = getC2();
+
+	if (c2.valid())
+	{	
+		if (pIG != -1)
+		{
+			rect->setGradient(c2);
+		}
+	}
+	else
+	{
+		// default black
+		if (pIG == -1)
+		{
+			c2 = Vec4d(0,0,0,0.8);
+		}
+	}
+
+
+	if (pIG != -1)
+	{
+		rect->updateAll();
+	}
+	else 
+	{
+		rect = new RectShape(comment,center,wid,height,c1,c2);
+		geode->addDrawable(rect);
+		group->addChild(geode);
+
+		shapeCount++;
+
+		// TODO add comment and geode to tracking tree
+		tree->root = tree->insert(comment,pIG,geode,tree->root);
+	}
 }
 
-
-/**
- *	triangle with points updating functions
- */
-void ShapeHelper::updateTriangleP()
+/*
+//handle for 3d spheres using internal osg Sphere Shape
+//which in turns uses a ShapeDrawable
+void ShapeHelper::handleSphere(int positionInGroup)
 {
-	int id = getIntParam("id");
-	Drawable * db = geode->getDrawable(id);            
-	Geometry * geo = db->asGeometry();
-	updateTriangleP((TriangleShape*) geo);
-}
+	int pIG = -1;
+	Geode* geode;
+	Sphere* sphere;
+	ShapeDrawable* sd = new ShapeDrawable(sphere);
+	
 
-void ShapeHelper::updateTriangleP(TriangleShape* geo)
-{
-	int p1x = getIntParam("p1x");
-	int p1y = getIntParam("p1y");
-	int p1z = getIntParam("p1z");
-	int p2x = getIntParam("p2x");
-	int p2y = getIntParam("p2y");
-	int p2z = getIntParam("p2z");
-	int p3x = getIntParam("p3x");
-	int p3y = getIntParam("p3y");
-	int p3z = getIntParam("p3z");
-	double c1r = getDoubleParam("c1r");
-	double c1g = getDoubleParam("c1g");
-	double c1b = getDoubleParam("c1b");
-	double c1a = getDoubleParam("c1a");
-	double c2r = getDoubleParam("c2r");
-	double c2g = getDoubleParam("c2g");
-	double c2b = getDoubleParam("c2b");
-	double c2a = getDoubleParam("c2a");
-	double c3r = getDoubleParam("c3r");
-	double c3g = getDoubleParam("c3g");
-	double c3b = getDoubleParam("c3b");
-	double c3a = getDoubleParam("c3a");		
 	char * comment = getCharParam("comment");
 
-	Vec3d p1(p1x,p1y,p1z);
-	Vec3d p2(p2x,p2y,p2z);
-	Vec3d p3(p3x,p3y,p3z);
-	
-	((TriangleShape*)geo)->setPoints(p1,p2,p3);
-	
-	cerr << "updating shape # " << geo->getId() << endl;
-	
-	
-	if (!isnan(c1r) && !isnan(c1g) && !isnan(c1b) && !isnan(c1a))
-	{		
-		Vec4d c1(c1r,c1g,c1b,c1a);
-		((TriangleShape*)geo)->setColor1(c1);
-
+	if (comment == NULL) {
+		string empty = "";
+		comment = &empty[0];
 	}
-	
-	if (!isnan(c2r) && !isnan(c2g) && !isnan(c2b) && !isnan(c2a))	
+
+	// if we're not creating a new geometry, we're going to get the geode at position pIG
+	if (positionInGroup != -1)
+	{
+		pIG = positionInGroup;
+		geode = dynamic_cast<Geode*> (group->getChild(pIG));
+		dr = dynamic_cast<ShapeDrawable*> (geode->getDrawable(0));
+		sphere = (Sphere*) dr;
+	}
+	// otherwise, we'll make a new geode
+	else 
+	{
+		geode = new Geode();
+	}
+
+
+	// get radius parsed from the incoming data
+	double radius = getDoubleParam("radius");	
+
+	if (!isnan(radius))
+	{
+		radius = radius * RENDERSCALE;
+		sphere->setRadius(radius);
+	}
+	// if we're generating, give it a default value
+	else if (pIG == -1)
+	{
+		radius = 100;
+	}
+
+	int tess = getIntParam("tess");
+
+	if (tess == 0)
+	{
+		tess = 10;
+	}
+
+	Vec3d center = getCenter();
+
+	// double check if center is initialized, can getCenter() return an unintialized Vec3d? or will it throw an error already?
+	if (center.valid())
+	{
+		if (pIG != -1)
+		{
+			sphere->setCenter(center);
+		}
+	} else
+	{
+		// if we're generating a new circle and there isn't a center specified
+		if (pIG == -1)
+		{
+			center = Vec3d(0,0,0);
+		}
+	}
+
+	// check colors too
+	Vec4d c1 = getC1();
+
+	if (c1.valid())
 	{	
-		Vec4d c2(c2r,c2g,c2b,c2a);
-		((TriangleShape*)geo)->setColor2(c2);
-	
+		if (pIG != -1)
+		{
+			sd->setColor(c1);
+		}
+	}
+	else
+	{
+		// we'll give it a nice lavender color
+		if (pIG == -1)
+		{
+			c1 = Vec4d((195/255),(149/255),(237/255),0.8);
+		}
 	}
 
-	if (!isnan(c3r) && !isnan(c3g) && !isnan(c3b) && !isnan(c3a))	
-	{	
-		Vec4d c3(c3r,c3g,c3b,c3a);
-		((TriangleShape*)geo)->setColor3(c3);
+
+	if (pIG != -1)
+	{
+		sphere->set(center,radius);
+		sd->setColor(color);
 	}
-	
-	((TriangleShape*)geo)->updateAll();
-}
+	else 
+	{
+		sphere = new Sphere(center,radius);
+		sd->setColor(color);
+		geode->addDrawable(sd);
+		group->addChild(geode);
+			
+		shapeCount++;
 
-/**
- *	rectangle with points updating functions
- */
-void ShapeHelper::updateRectP()
-{
-	int id = getIntParam("id");
-	Drawable * db = geode->getDrawable(id);            
-	Geometry * geo = db->asGeometry();
-	updateRectP((RectShape*) geo);
-}
-
-void ShapeHelper::updateRectP(RectShape* geo)
-{
-	int p1x = getIntParam("p1x");
-	int p1y = getIntParam("p1y");
-	int p1z = getIntParam("p1z");
-	int p2x = getIntParam("p2x");
-	int p2y = getIntParam("p2y");
-	int p2z = getIntParam("p2z");
-	int p3x = getIntParam("p3x");
-	int p3y = getIntParam("p3y");
-	int p3z = getIntParam("p3z");
-	int p4x = getIntParam("p4x");
-	int p4y = getIntParam("p4y");
-	int p4z = getIntParam("p4z");
-	double c1r = getDoubleParam("c1r");
-	double c1g = getDoubleParam("c1g");
-	double c1b = getDoubleParam("c1b");
-	double c1a = getDoubleParam("c1a");
-	double c2r = getDoubleParam("c2r");
-	double c2g = getDoubleParam("c2g");
-	double c2b = getDoubleParam("c2b");
-	double c2a = getDoubleParam("c2a");		
-	char * comment = getCharParam("comment");
-
-	Vec3d p1(p1x,p1y,p1z);
-	Vec3d p2(p2x,p2y,p2z);
-	Vec3d p3(p3x,p3y,p3z);
-	Vec3d p4(p4x,p4y,p4z);
-	
-	((RectShape*)geo)->setPoints(p1,p2,p3,p4);
-	
-	cerr << "updating shape # " << geo->getId() << endl;
-	
-	if (!isnan(c1r) && !isnan(c1g) && !isnan(c1b) && !isnan(c1a))
-	{		
-		Vec4d c1(c1r,c1g,c1b,c1a);
-		((RectShape*)geo)->setColor1(c1);
+		// TODO add comment and geode to tracking tree
+		tree->root = tree->insert(comment,pIG,geode,tree->root);
 	}
-	
-	if (!isnan(c2r) && !isnan(c2g) && !isnan(c2b) && !isnan(c2a))	
-	{	
-		Vec4d c2(c2r,c2g,c2b,c2a);
-		((RectShape*)geo)->setColor2(c2);		
-	}
-	
 
-	((RectShape*)geo)->updateAll();
+}*/
 
-}
-
-Geode * ShapeHelper::getGeode()
-{
-	return geode;
-}

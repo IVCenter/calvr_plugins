@@ -243,8 +243,8 @@ void DSGeometryEditor::setDesignObjectHandlerPtr(DesignObjectHandler *designObje
 }
 
 
+void DSGeometryEditor::setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) 
+{
 
-
-
-
+}
 

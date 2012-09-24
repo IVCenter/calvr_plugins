@@ -106,27 +106,19 @@ void DSVirtualSphere::addChildState(DesignStateBase* ds)
 void DSVirtualSphere::setObjectEnabled(bool flag)
 {
     mObjEnabledFlag = flag;
-/*    if (flag) 
-    {
-        setAllChildrenOn();
-    }
-    else 
-    {
 
-    }
-*/
     if (!mPATransFwd || !mPATransBwd) 
         return;
 
     AnimationPathCallback* animCallback = NULL;
     if (flag)
     {
-        if (!mIsOpen)
+        if (!mIsOpen) // open menu
         {
            // setSingleChildOn(0);
            // animCallback = dynamic_cast <AnimationPathCallback*> (mPATransFwd->getUpdateCallback());
            // mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPATransFwd);
-            //mDOIntersector->loadRootTargetNode(gDesignObjectRootGroup, NULL);
+           // mDOIntersector->loadRootTargetNode(gDesignObjectRootGroup, NULL);
             
             setSingleChildOn(0);
             for (int i = 0; i < fwdVec.size(); ++i)
@@ -144,8 +136,9 @@ void DSVirtualSphere::setObjectEnabled(bool flag)
                 (*it)->setObjectEnabled(true);
             }
             mIsOpen = true;
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPATransFwd);
         }
-        else
+        else // close menu
         {
             setSingleChildOn(0);
             for (int i = 1; i < bwdVec.size(); ++i)
@@ -163,9 +156,10 @@ void DSVirtualSphere::setObjectEnabled(bool flag)
                 (*it)->setObjectEnabled(false);
             }
             mIsOpen = false;
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPATransFwd->getChild(0));
         }
     } 
-    else 
+    else  // close menu
     {
         setSingleChildOn(0);
         for (int i = 1; i < bwdVec.size(); ++i)
@@ -183,12 +177,12 @@ void DSVirtualSphere::setObjectEnabled(bool flag)
             (*it)->setObjectEnabled(false);
         }
         mIsOpen = false;
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPATransFwd->getChild(0));
     }
 
     if (animCallback) 
         animCallback->reset();
     
-    mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPATransFwd->getChild(0));
     mActiveSubState = NULL;
 }
 
@@ -281,7 +275,6 @@ bool DSVirtualSphere::inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg:
     {
         mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, fwdVec[i]->getChild(0));
         //setChildValue(fwdVec[i], true);
-
         if (mDSIntersector->test(pointerOrg, pointerPos))
         {
             // open/close menu
@@ -292,6 +285,7 @@ bool DSVirtualSphere::inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg:
             // pass on event
             else
             {
+                //std::cout << "passing on event " << i << std::endl;
                 (*it)->inputDevPressEvent(pointerOrg, pointerPos);
             }
         }
@@ -303,9 +297,7 @@ bool DSVirtualSphere::inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg:
         if ((*it)->test(pointerOrg, pointerPos))
         {
             mActiveSubState = (*it);
-
             mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPATransFwd->getChild(0));
-
             return (*it)->inputDevPressEvent(pointerOrg, pointerPos);
         }
     }
@@ -346,5 +338,47 @@ void DSVirtualSphere::update()
 {
     if (mActiveSubState)
         mActiveSubState->update();
+}
+
+
+/***************************************************************
+* Function: setHighlight()
+***************************************************************/
+void DSVirtualSphere::setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) 
+{
+//    std::cout << "virtual sphere setHighlight " << isHighlighted << std::endl;
+    if (isHighlighted)
+    {
+        for (int i = 0; i < fwdVec.size(); ++i)
+        {
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, fwdVec[i]->getChild(0));
+
+            if (mDSIntersector->test(pointerOrg, pointerPos))
+            {
+
+                osg::Sphere *sphere = new osg::Sphere();
+                osg::ShapeDrawable *sd = new osg::ShapeDrawable(sphere);
+                mHighlightGeode = new osg::Geode();
+                sphere->setRadius(0.25);
+                sd->setColor(osg::Vec4(1,1,1,0.5));
+                mHighlightGeode->addDrawable(sd);
+//                fwdVec[i]->addChild(mHighlightGeode);
+
+                StateSet *stateset = sd->getOrCreateStateSet();
+                stateset->setMode(GL_BLEND, StateAttribute::OVERRIDE | StateAttribute::ON);
+                stateset->setMode(GL_CULL_FACE, StateAttribute::OVERRIDE | StateAttribute::ON);
+                stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
+
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < fwdVec.size(); ++i)
+        {
+            fwdVec[i]->removeChild(mHighlightGeode);
+        }
+    }
+    mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPATransFwd->getChild(0));
 }
 

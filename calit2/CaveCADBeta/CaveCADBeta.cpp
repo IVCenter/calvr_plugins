@@ -31,7 +31,8 @@ CaveCADBeta::~CaveCADBeta()
 ***************************************************************/
 bool CaveCADBeta::init()
 {
-    mValCutoff = 2.0;
+    mIsEnabled = false;
+    mValCutoff = 0.5;
     mValDownTime = PluginHelper::getProgramDuration();
     mValPressed = false;
     pointerPressFlag = false;
@@ -73,28 +74,38 @@ bool CaveCADBeta::init()
 ***************************************************************/
 void CaveCADBeta::preFrame()
 {
-    Matrixf invBaseMat = PluginHelper::getWorldToObjectTransform();
-    Matrixf viewMat;// = PluginHelper::getHeadMat(0);
-    viewMat.makeTranslate(0, 200, 0);
-
-    Vec3 viewOrg = viewMat.getTrans() * invBaseMat; 
-    Vec3 viewPos = Vec3(0.0, mMenuDistance, 0.0) * viewMat * invBaseMat; 
-    Vec3 viewDir = viewPos - viewOrg;
-    viewDir.normalize(); 
-
-    osg::Vec3 pointerOrg, pointerPos;
-    osg::Matrixd w2o = PluginHelper::getWorldToObjectTransform();
-
-    pointerOrg = osg::Vec3(0, 0, 0) * TrackingManager::instance()->getHandMat(0) * w2o;
-    pointerPos = osg::Vec3(0, 1000, 0) * TrackingManager::instance()->getHandMat(0) * w2o;
-
-    mCAVEDesigner->update(viewDir, viewPos);
-    mCAVEDesigner->inputDevMoveEvent(pointerOrg, pointerPos);
-
-    // valuator press cutoff
-    if (mValPressed && PluginHelper::getProgramDuration() - mValDownTime > mValCutoff)
+    if (mIsEnabled)
     {
-        mValPressed = false;
+        Matrixf invBaseMat = PluginHelper::getWorldToObjectTransform();
+        Matrixf viewMat;// = PluginHelper::getHeadMat(0);
+        viewMat.makeTranslate(0, 200, 0);
+        
+        float x, y, z;
+        x = ConfigManager::getFloat("x", "Plugin.CaveCADBeta.MenuPosition", 3000.0);
+        y = ConfigManager::getFloat("y", "Plugin.CaveCADBeta.MenuPosition", 8000.0);
+        z = ConfigManager::getFloat("z", "Plugin.CaveCADBeta.MenuPosition", 0.0);
+
+        osg::Vec3 pos(x, y, z);
+
+        Vec3 viewOrg = viewMat.getTrans() * invBaseMat; 
+        Vec3 viewPos = pos * viewMat * invBaseMat; 
+        Vec3 viewDir = viewPos - viewOrg;
+        viewDir.normalize(); 
+
+        osg::Vec3 pointerOrg, pointerPos;
+        osg::Matrixd w2o = PluginHelper::getWorldToObjectTransform();
+
+        pointerOrg = osg::Vec3(0, 0, 0) * TrackingManager::instance()->getHandMat(0) * w2o;
+        pointerPos = osg::Vec3(0, 1000, 0) * TrackingManager::instance()->getHandMat(0) * w2o;
+
+        mCAVEDesigner->update(viewDir, viewPos);
+        mCAVEDesigner->inputDevMoveEvent(pointerOrg, pointerPos);
+
+        // valuator press cutoff
+        if (mValPressed && PluginHelper::getProgramDuration() - mValDownTime > mValCutoff)
+        {
+            mValPressed = false;
+        }
     }
 
     // get pointer position in world space 
@@ -168,33 +179,41 @@ void CaveCADBeta::menuCallback(MenuItem *item)
       	if (enablePluginCheckbox->getValue())
       	{
             //mainMenu->setVisible(false);
-	    	if (mCAVEDesigner) mCAVEDesigner->setActive(true);
+	    	if (mCAVEDesigner) 
+                mCAVEDesigner->setActive(true);
 
 	    	/* set initial scale and viewport */
 			Matrixd intObeMat = Matrixd(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -500, 1);
 			PluginHelper::setObjectScale(1000.f);
 	    	PluginHelper::setObjectMatrix(intObeMat);
+            mIsEnabled = true;
       	} 
         else 
         {
             //mainMenu->setVisible(true);
-	    	if (mCAVEDesigner) mCAVEDesigner->setActive(false);
+            mIsEnabled = false;
+	    	if (mCAVEDesigner) 
+                mCAVEDesigner->setActive(false);
 		}
     }
 
     if (item == setToolkitVisibleCheckbox)
     {
 		bool flag = setToolkitVisibleCheckbox->getValue();
-		if (mCAVEDesigner) mCAVEDesigner->getStateHandler()->setVisible(flag);
+		if (mCAVEDesigner) 
+            mCAVEDesigner->getStateHandler()->setVisible(flag);
     }
 }
 
 
 /***************************************************************
-*  Function: coVRKey()
+*  Function: processEvent()
 ***************************************************************/
 bool CaveCADBeta::processEvent(cvr::InteractionEvent *event)
 {
+    if (!mIsEnabled)
+        return false;
+
     KeyboardInteractionEvent * kie = event->asKeyboardEvent();
     if (kie)
     {
@@ -245,7 +264,7 @@ bool CaveCADBeta::processEvent(cvr::InteractionEvent *event)
     if(vie)
     {
         int id = vie->getValuator();
-        int mainVal = 0, subVal = 1;
+        int mainVal = 1, subVal = 0;
         int left = 65361, up = 65362, right = 65363, down = 65364;
 
         if (id == mainVal)

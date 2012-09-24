@@ -15,13 +15,13 @@ using namespace osg;
 // Constructor
 DSTexturePallette::DSTexturePallette(): mTexIndex(0), mTexturingState(IDLE), mAudioConfigHandler(NULL)
 {
-    /* load objects for design state root switch */
+    // load objects for design state root switch
     CAVEAnimationModeler::ANIMLoadTexturePalletteRoot(&mPATransFwd, &mPATransBwd);
 
-    /* load objects for 'IDLE' state */
+    // load objects for 'IDLE' state
     CAVEAnimationModeler::ANIMLoadTexturePalletteIdle(&mIdleStateSwitch, &mTextureStatesIdleEntry);
 
-    /* load objects for 'SELECT_TEXTURE' and 'APPLY_TEXTURE' state */
+    // load objects for 'SELECT_TEXTURE' and 'APPLY_TEXTURE' state
     CAVEAnimationModeler::ANIMLoadTexturePalletteSelect(&mSelectStateSwitch, &mAlphaTurnerSwitch, 
 							mNumTexs, &mTextureStatesSelectEntryArray);
 
@@ -32,14 +32,14 @@ DSTexturePallette::DSTexturePallette(): mTexIndex(0), mTexturingState(IDLE), mAu
     mPATransFwd->addChild(mSelectStateSwitch);		mPATransBwd->addChild(mSelectStateSwitch);
     mPATransFwd->addChild(mAlphaTurnerSwitch);		mPATransBwd->addChild(mAlphaTurnerSwitch);
 
-    /* use both instances of intersector */
+    // use both instances of intersector
     mDSIntersector = new DSIntersector();
     mDOIntersector = new DOIntersector();
     mDSIntersector->loadRootTargetNode(NULL, NULL);
     mDOIntersector->loadRootTargetNode(NULL, NULL);
 
     setAllChildrenOff();
-    mIdleStateSwitch->setAllChildrenOn();		// default state = IDLE
+    mIdleStateSwitch->setAllChildrenOn(); // default state = IDLE
     mSelectStateSwitch->setAllChildrenOff();
     mAlphaTurnerSwitch->setAllChildrenOff();
 
@@ -62,7 +62,7 @@ DSTexturePallette::~DSTexturePallette()
 ***************************************************************/
 void DSTexturePallette::setObjectEnabled(bool flag)
 {
-//std::cout << "setEnabled" << std::endl;
+    //std::cout << "setEnabled" << std::endl;
     mObjEnabledFlag = flag;
 
     if (flag) setAllChildrenOn();
@@ -99,12 +99,12 @@ void DSTexturePallette::setObjectEnabled(bool flag)
     } 
     else 
     {
-        /*texturingStateTransitionHandle(mTexturingState, IDLE);
+        //texturingStateTransitionHandle(mTexturingState, IDLE);
         //this->setSingleChildOn(1);
         //animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
         //mDSIntersector->loadRootTargetNode(NULL, NULL);
         //mDOIntersector->loadRootTargetNode(NULL, NULL);
-        */
+
         mTexturingState = IDLE;
         for (int i = 0; i < mNumTexs; i++)
         {
@@ -158,7 +158,7 @@ void DSTexturePallette::switchToPrevSubState()
 ***************************************************************/
 void DSTexturePallette::switchToNextSubState()
 {
-std::cout << "switchNext" << std::endl;
+    //std::cout << "switchNext" << std::endl;
     // next state look up 
     switch (mTexturingState)
     {
@@ -208,40 +208,50 @@ void DSTexturePallette::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg
 ***************************************************************/
 bool DSTexturePallette::inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos)
 {
-//std::cout << "pressEvent" << std::endl;
+    //std::cout << "pressEvent" << std::endl;
     mDevPressedFlag = true;
 
     if (mIsOpen)
     {
+//    mTexturingState = IDLE;
+//    resetIntersectionRootTarget();
         // test all submenus for intersection
-        if (mDSIntersector->test(pointerOrg, pointerPos))
+        
+        for (int i = 0; i < mNumTexs; ++i)
+        {
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mTextureStatesSelectEntryArray[i]->mEntryGeode);
+            if (mDSIntersector->test(pointerOrg, pointerPos))
+            {
+                mTexIndex = i;
+                mTexturingState = APPLY_TEXTURE;
+                return true;
+            }
+        }
+        resetIntersectionRootTarget();
+ 
+/*        if (mDSIntersector->test(pointerOrg, pointerPos))
         {
             Node *hitNode = mDSIntersector->getHitNode();
             int hitIdx = mTexIndex;
+            std::cout << "hit" << std::endl;
             for (int i = 0; i < mNumTexs; i++)
             {
                 // clicked a texture sphere, enter apply texture state
                 if (hitNode == mTextureStatesSelectEntryArray[i]->mEntryGeode)
                 {
+                std::cout << "hitnode == mEntryGeode" << std::endl;
                     hitIdx = i;
                     mTexIndex = i;
                     mTexturingState = APPLY_TEXTURE;
                     return true;
                 }
             }
-            
-            // else clicked the main sphere - close menu
-/*            for (int i = 0; i < mNumTexs; i++)
-            {
-                mTextureStatesSelectEntryArray[i]->mStateAnimationArray[1]->reset();
-                mTextureStatesSelectEntryArray[i]->mEntrySwitch->setSingleChildOn(1);
-            }
-            mIsOpen = false; */
             return true;
         }
+        */
      
         // test world geometry for intersection
-        else if (mTexturingState == APPLY_TEXTURE)
+        if (mTexturingState == APPLY_TEXTURE)
         {
             if (mDOIntersector->test(pointerOrg, pointerPos))
             {
@@ -260,101 +270,19 @@ bool DSTexturePallette::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
                     // update audio parameters 
                     mAudioConfigHandler->updateShapes();
                     mTexturingState = IDLE;
+                    /*TexturingState oldState = mTexturingState;
+                    mTexturingState = IDLE;
+                    resetIntersectionRootTarget();
+                    mTexturingState = oldState;
+                    */
+
                     return true;
+
                 }
             }
         }
         return false;
     }
-    /*else
-    {
-        // open submenus
-        if (mDSIntersector->test(pointerOrg, pointerPos))
-        {
-            //mTextureStatesIdleEntry->mEntrySwitch->setSingleChildOn(0);
-            mSelectStateSwitch->setAllChildrenOn();
-
-            for (int i = 0; i < mNumTexs; i++)
-            {
-                mSelectStateSwitch->setValue(i, true);
-                mTextureStatesSelectEntryArray[i]->mStateAnimationArray[0]->reset();
-                mTextureStatesSelectEntryArray[i]->mEntrySwitch->setSingleChildOn(0);
-            }
-            mTexturingState = SELECT_TEXTURE;
-            mIsOpen = true;
-        }
-    }*/
-    resetIntersectionRootTarget();
-
-/*
-        AnimationPathCallback* animCallback = NULL;
-        setSingleChildOn(0);
-
-        for (int i = 0; i < mFwdVec.size(); ++i)
-        {
-            setChildValue(mFwdVec[i], true);
-            animCallback = dynamic_cast <AnimationPathCallback*> (mFwdVec[i]->getUpdateCallback());
-            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mFwdVec[i]);
-
-            if (animCallback)
-                animCallback->reset();
-        }
-        mIsOpen = true;
-        return true;
-    }
-*/
-/*
-    if (mTexturingState == IDLE)
-    {
-        if (mDSIntersector->test(pointerOrg, pointerPos)) 
-        {
-            switchToNextSubState();
-        }
-    }
-
-    else if (mTexturingState == SELECT_TEXTURE)
-    {
-        if (mDSIntersector->test(pointerOrg, pointerPos))
-        {
-            // find the intersected geode and adjust index number of texture entry 
-            Node *hitNode = mDSIntersector->getHitNode();
-            int hitIdx = mTexIndex;
-            for (int i = 0; i < mNumTexs; i++)
-            {
-                if (hitNode == mTextureStatesSelectEntryArray[i]->mEntryGeode)
-                {
-                    hitIdx = i;
-                    break;
-                }
-            }
-            mTexIndex = hitIdx;
-            switchToNextSubState();
-        }
-    }
-
-    else if (mTexturingState == APPLY_TEXTURE)
-    {
-        if (mDOIntersector->test(pointerOrg, pointerPos))
-        {
-            // adjust texture transparency or apply texture to geode
-            Node *hitNode = mDOIntersector->getHitNode();
-            CAVEGeode *geode = dynamic_cast <CAVEGeode*> (hitNode);
-            if (geode)
-            {
-                Vec3 diffuse = mTextureStatesSelectEntryArray[mTexIndex]->getDiffuse();
-                Vec3 specular = mTextureStatesSelectEntryArray[mTexIndex]->getSpecular();
-                string filename = mTextureStatesSelectEntryArray[mTexIndex]->getTexFilename();
-                string audioinfo = mTextureStatesSelectEntryArray[mTexIndex]->getAudioInfo();
-                geode->applyColorTexture(diffuse, specular, 1.0f, filename);
-                geode->applyAudioInfo(audioinfo);
-
-                // update audio parameters 
-                mAudioConfigHandler->updateShapes();
-            }
-        }
-    }
-    return false;
-    */
 }
 
 
@@ -467,5 +395,51 @@ void DSTexturePallette::resetIntersectionRootTarget()
     {
         mDOIntersector->loadRootTargetNode(gDesignObjectRootGroup, NULL);
     }
+}
+
+
+void DSTexturePallette::setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) 
+{
+    if (isHighlighted)
+    {
+        //std::cout << "texture highlight" << std::endl;
+        int idx = -1;
+        for (int i = 0; i < mNumTexs; ++i)
+        {
+            mTextureStatesSelectEntryArray[i]->mEntryGeode->removeDrawable(mSD);
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mTextureStatesSelectEntryArray[i]->mEntryGeode);
+            if (mDSIntersector->test(pointerOrg, pointerPos))
+            {
+                idx = i;
+            }
+        }
+        resetIntersectionRootTarget();
+
+        if (idx == -1)
+            return;
+
+        osg::Sphere *sphere = new osg::Sphere();
+        mSD = new osg::ShapeDrawable(sphere);
+        sphere->setRadius(0.15);
+        mSD->setColor(osg::Vec4(1, 1, 1, 0.5));
+
+        mTextureStatesSelectEntryArray[idx]->mEntryGeode->addDrawable(mSD);
+
+        StateSet *stateset = mSD->getOrCreateStateSet();
+        //stateset->setMode(GL_BLEND, StateAttribute::OVERRIDE | StateAttribute::ON);
+        //stateset->setMode(GL_CULL_FACE, StateAttribute::OVERRIDE | StateAttribute::ON);
+        //stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
+    }
+    else
+    {
+        for (int i = 0; i < mNumTexs; ++i)
+        {
+            mTextureStatesSelectEntryArray[i]->mEntryGeode->removeDrawable(mSD);
+        }
+    }
+    TexturingState oldState = mTexturingState;;
+    mTexturingState = IDLE;
+    resetIntersectionRootTarget();
+    mTexturingState = oldState;
 }
 

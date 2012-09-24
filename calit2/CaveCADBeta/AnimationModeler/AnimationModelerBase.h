@@ -59,6 +59,7 @@
 #include "../Geometry/CAVEGroupIconToolkit.h"
 
 #include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/PluginHelper.h>
 
 
 namespace CAVEAnimationModeler

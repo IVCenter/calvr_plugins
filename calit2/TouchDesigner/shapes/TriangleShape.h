@@ -42,14 +42,14 @@ public:
 
 	// name, center, length, color
 	// this generates a solid color equalateral triangle with center point _center
-	TriangleShape(string, Vec3d&, int, Vec4d&);
+	TriangleShape(string, Vec3d&, double, Vec4d&);
 
 	// name, center, length, color, gradient
 	// this generates a vertical gradient equalateral triangle with center point _center
-	TriangleShape(string, Vec3d&, int, Vec4d&, Vec4d&);
+	TriangleShape(string, Vec3d&, double, Vec4d&, Vec4d&);
 
 	// name, center, length
-	TriangleShape(string, Vec3d&, int);
+	TriangleShape(string, Vec3d&, double);
 
 
 
@@ -76,9 +76,9 @@ public:
 
 	void setCenter(Vec3d&);
 	
-	void setLength(int);
+	void setLength(double);
 
-	int getLength();
+	double getLength();
 
 	void updateAll();
 	
@@ -110,7 +110,7 @@ protected:
 	Vec4d color3;
 
 	// radius of triangle, default = 10
-	int length;
+	double length;
 
 	// center point of triangle, default = (0,0,0)
 	Vec3d center;
