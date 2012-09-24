@@ -16,6 +16,7 @@ SET(PLUGIN_HEADERS
 	DesignStates/DSGeometryCreator.h
 	DesignStates/DSGeometryEditor.h
 	DesignStates/DSTexturePallette.h
+	DesignStates/DSViewpoints.h
 	DesignStateIntersector.h
 	DesignObjectHandler.h
 	DesignObjectIntersector.h
@@ -50,6 +51,7 @@ SET(PLUGIN_HEADERS
 	AnimationModeler/AnimationModelerBase.h
 	AnimationModeler/ANIMDSParticleSystem.h
 	AnimationModeler/ANIMVirtualSphere.h
+	AnimationModeler/ANIMViewpoints.h
 	AnimationModeler/ANIMVirtualEarth.h
 	AnimationModeler/ANIMRefXYPlane.h
 	AnimationModeler/ANIMRefSkyDome.h
@@ -61,6 +63,7 @@ SET(PLUGIN_HEADERS
 	AnimationModeler/ANIMGeometryEditor.h
 	AnimationModeler/ANIMTexturePallette.h
 	AnimationModeler/ANIMObjectHandler.h
+
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -82,6 +85,7 @@ ADD_LIBRARY(${LIB_NAME}
 	DesignStates/DSGeometryCreator.cpp
 	DesignStates/DSGeometryEditor.cpp
 	DesignStates/DSTexturePallette.cpp
+	DesignStates/DSViewpoints.cpp
 	DesignStateIntersector.cpp
 	DesignObjectHandler.cpp
 	DesignObjectIntersector.cpp
@@ -114,6 +118,7 @@ ADD_LIBRARY(${LIB_NAME}
 	AnimationModeler/AnimationModelerBase.cpp
 	AnimationModeler/ANIMDSParticleSystem.cpp
 	AnimationModeler/ANIMVirtualSphere.cpp
+	AnimationModeler/ANIMViewpoints.cpp
 	AnimationModeler/ANIMVirtualEarth.cpp
 	AnimationModeler/ANIMRefXYPlane.cpp
 	AnimationModeler/ANIMRefSkyDome.cpp

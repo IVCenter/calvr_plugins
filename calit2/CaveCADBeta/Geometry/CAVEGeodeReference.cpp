@@ -55,20 +55,21 @@ CAVEGeodeReferenceAxis::CAVEGeodeReferenceAxis(): mType(POS_Z)
 ***************************************************************/
 void CAVEGeodeReferenceAxis::setType(const AxisType &typ, osg::MatrixTransform **matTrans)
 {
-    if (typ == mType) return;
+    if (typ == mType) 
+        return;
 
     mType = typ;
 
     Quat rotation = Quat(0.f, Vec3(0, 0, 1));
     switch (mType)
     {
-	case POS_X: rotation = Quat(M_PI * 0.5, Vec3(0, 1, 0));		break;
-	case POS_Y: rotation = Quat(M_PI * 0.5, Vec3(-1, 0, 0));	break;
-	case POS_Z: rotation = Quat(0.f, Vec3(0, 0, 1));		break;
-	case NEG_X: rotation = Quat(M_PI * 0.5, Vec3(0, -1, 0));	break;
-	case NEG_Y: rotation = Quat(M_PI * 0.5, Vec3(1, 0, 0));		break;
-	case NEG_Z: rotation = Quat(M_PI, Vec3(0, 0, 1));		break;
-	default: break;
+        case POS_X: rotation = Quat(M_PI * 0.5, Vec3(0, 1, 0));  break;
+        case POS_Y: rotation = Quat(M_PI * 0.5, Vec3(-1, 0, 0)); break;
+        case POS_Z: rotation = Quat(0.f, Vec3(0, 0, 1));         break;
+        case NEG_X: rotation = Quat(M_PI * 0.5, Vec3(0, -1, 0)); break;
+        case NEG_Y: rotation = Quat(M_PI * 0.5, Vec3(1, 0, 0));	 break;
+        case NEG_Z: rotation = Quat(M_PI, Vec3(0, 0, 1));        break;
+        default: break;
     }
 
     Matrixf rotMat;
@@ -157,19 +158,19 @@ void CAVEGeodeReferencePlane::resize(const float lx, const float ly, const float
     if (mVertexArray->getType() == Array::Vec3ArrayType)
     {
         Vec3* vertexArrayDataPtr = (Vec3*) (mVertexArray->getDataPointer());
-	vertexArrayDataPtr[0] = Vec3(-lx, -ly, 0);
-	vertexArrayDataPtr[1] = Vec3( lx, -ly, 0);
-	vertexArrayDataPtr[2] = Vec3( lx,  ly, 0);
-	vertexArrayDataPtr[3] = Vec3(-lx,  ly, 0);
+        vertexArrayDataPtr[0] = Vec3(-lx, -ly, 0);
+        vertexArrayDataPtr[1] = Vec3( lx, -ly, 0);
+        vertexArrayDataPtr[2] = Vec3( lx,  ly, 0);
+        vertexArrayDataPtr[3] = Vec3(-lx,  ly, 0);
     }
 
     if (mTexcoordArray->getType() == Array::Vec2ArrayType)
     {
-	Vec2* texcoordArrayDataPtr = (Vec2*) (mTexcoordArray->getDataPointer());
-	texcoordArrayDataPtr[0] = Vec2(-lx, -ly) / unitsize;
-	texcoordArrayDataPtr[1] = Vec2( lx, -ly) / unitsize;
-	texcoordArrayDataPtr[2] = Vec2( lx,  ly) / unitsize;
-	texcoordArrayDataPtr[3] = Vec2(-lx,  ly) / unitsize;
+        Vec2* texcoordArrayDataPtr = (Vec2*) (mTexcoordArray->getDataPointer());
+        texcoordArrayDataPtr[0] = Vec2(-lx, -ly) / unitsize;
+        texcoordArrayDataPtr[1] = Vec2( lx, -ly) / unitsize;
+        texcoordArrayDataPtr[2] = Vec2( lx,  ly) / unitsize;
+        texcoordArrayDataPtr[3] = Vec2(-lx,  ly) / unitsize;
     }
 
     mGeometry->dirtyDisplayList();
@@ -183,13 +184,18 @@ void CAVEGeodeReferencePlane::resize(const float lx, const float ly, const float
 void CAVEGeodeReferencePlane::setGridColor(const GridColor &color)
 {
     StateSet *stateset = getOrCreateStateSet();
-    if (!stateset) return;
+    if (!stateset) 
+        return;
 
     Image* texImage;
-    if (color == RED) texImage = osgDB::readImageFile(CAVEGeode::getDataDir() + "Textures/RedTile.PNG");
-    else if (color == GREEN) texImage = osgDB::readImageFile(CAVEGeode::getDataDir() + "Textures/GreenTile.PNG");
-    else if (color == BLUE) texImage = osgDB::readImageFile(CAVEGeode::getDataDir() + "Textures/BlueTile.PNG");
-    else return;
+    if (color == RED) 
+        texImage = osgDB::readImageFile(CAVEGeode::getDataDir() + "Textures/RedTile.PNG");
+    else if (color == GREEN) 
+        texImage = osgDB::readImageFile(CAVEGeode::getDataDir() + "Textures/GreenTile.PNG");
+    else if (color == BLUE) 
+        texImage = osgDB::readImageFile(CAVEGeode::getDataDir() + "Textures/BlueTile.PNG");
+    else    
+        return;
 
     Texture2D *texture = new Texture2D(texImage);
     texture->setWrap(Texture::WRAP_S, Texture::REPEAT);
@@ -206,10 +212,12 @@ void CAVEGeodeReferencePlane::setGridColor(const GridColor &color)
 void CAVEGeodeReferencePlane::setAlpha(const float &alpha)
 {
     StateSet *stateset = getOrCreateStateSet();
-    if (!stateset) return;
+    if (!stateset) 
+        return;
 
     Material *material = dynamic_cast<Material*> (stateset->getAttribute(StateAttribute::MATERIAL));
-    if (!material) return;
+    if (!material) 
+        return;
 
     material->setAlpha(Material::FRONT_AND_BACK, alpha);
     stateset->setAttributeAndModes(material, StateAttribute::ON);

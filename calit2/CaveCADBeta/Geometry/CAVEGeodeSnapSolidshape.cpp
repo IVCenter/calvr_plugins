@@ -38,31 +38,45 @@ CAVEGeodeSnapSolidshape::CAVEGeodeSnapSolidshape(): mSnappingUnitDist(0.0f)
 ***************************************************************/
 bool CAVEGeodeSnapSolidshape::isValid()
 {
-    if (mScaleVect.length() >= mSnappingUnitDist) return true;
-    else return false;
+    if (mScaleVect.length() >= mSnappingUnitDist) 
+        return true;
+    else 
+        return false;
 }
 
 
 /***************************************************************
 * Function: setInitPosition()
 ***************************************************************/
-void CAVEGeodeSnapSolidshape::setInitPosition(const osg::Vec3 &initPos)
+void CAVEGeodeSnapSolidshape::setInitPosition(const osg::Vec3 &initPos, bool snap)
 {
-    /* round intersected position to integer multiples of 'mSnappingUnitDist' */
-    Vec3 initPosRounded;
-    float snapUnitX, snapUnitY, snapUnitZ;
-    snapUnitX = snapUnitY = snapUnitZ = mSnappingUnitDist;
-    if (initPos.x() < 0) snapUnitX = -mSnappingUnitDist;
-    if (initPos.y() < 0) snapUnitY = -mSnappingUnitDist;
-    if (initPos.z() < 0) snapUnitZ = -mSnappingUnitDist;
-    int xSeg = (int)(abs((int)((initPos.x() + 0.5 * snapUnitX) / mSnappingUnitDist)));
-    int ySeg = (int)(abs((int)((initPos.y() + 0.5 * snapUnitY) / mSnappingUnitDist)));
-    int zSeg = (int)(abs((int)((initPos.z() + 0.5 * snapUnitZ) / mSnappingUnitDist)));
-    initPosRounded.x() = xSeg * snapUnitX;
-    initPosRounded.y() = ySeg * snapUnitY;
-    initPosRounded.z() = zSeg * snapUnitZ;
+    if (snap)
+    {
+        /* round intersected position to integer multiples of 'mSnappingUnitDist' */
+        Vec3 initPosRounded;
+        float snapUnitX, snapUnitY, snapUnitZ;
+        snapUnitX = snapUnitY = snapUnitZ = mSnappingUnitDist;
+        if (initPos.x() < 0) 
+            snapUnitX = -mSnappingUnitDist;
+        if (initPos.y() < 0) 
+            snapUnitY = -mSnappingUnitDist;
+        if (initPos.z() < 0) 
+            snapUnitZ = -mSnappingUnitDist;
 
-    mInitPosition = initPosRounded;
+        int xSeg = (int)(abs((int)((initPos.x() + 0.5 * snapUnitX) / mSnappingUnitDist)));
+        int ySeg = (int)(abs((int)((initPos.y() + 0.5 * snapUnitY) / mSnappingUnitDist)));
+        int zSeg = (int)(abs((int)((initPos.z() + 0.5 * snapUnitZ) / mSnappingUnitDist)));
+
+        initPosRounded.x() = xSeg * snapUnitX;
+        initPosRounded.y() = ySeg * snapUnitY;
+        initPosRounded.z() = zSeg * snapUnitZ;
+
+        mInitPosition = initPosRounded;
+    }
+    else
+    {
+        mInitPosition = initPos;
+    }
 }
 
 
@@ -87,11 +101,21 @@ CAVEGeodeSnapSolidshapeCylinder::CAVEGeodeSnapSolidshapeCylinder()
 /***************************************************************
 * Function: resize()
 ***************************************************************/
-void CAVEGeodeSnapSolidshapeBox::resize(const osg::Vec3 &gridVect)
+void CAVEGeodeSnapSolidshapeBox::resize(const osg::Vec3 &gridVect, bool snap)
 {
-    mScaleVect = gridVect * mSnappingUnitDist;
+    if (snap)
+        mScaleVect = gridVect * mSnappingUnitDist;
+    else
+        mScaleVect = gridVect;
+
     mBox = new Box;
+    
+    //std::cout << snap << std::endl;
+    //mBox->setCenter(mInitPosition + mScaleVect * 0.5);
+    
+    // Keep the initial position the same - snapping
     mBox->setCenter(mInitPosition + mScaleVect * 0.5);
+
     mBox->setHalfLengths(mScaleVect * 0.5);
     Drawable* boxDrawable = new ShapeDrawable(mBox);
     setDrawable(0, boxDrawable);
@@ -101,42 +125,16 @@ void CAVEGeodeSnapSolidshapeBox::resize(const osg::Vec3 &gridVect)
 /***************************************************************
 * Function: resize()
 ***************************************************************/
-void CAVEGeodeSnapSolidshapeCylinder::resize(const osg::Vec3 &gridVect)
+void CAVEGeodeSnapSolidshapeCylinder::resize(const osg::Vec3 &gridVect, bool snap)
 {
     mScaleVect = gridVect * mSnappingUnitDist;
     float rad = sqrt(mScaleVect.x() * mScaleVect.x() + mScaleVect.y() * mScaleVect.y());
     mCylinder = new Cylinder;
+
     mCylinder->setCenter(mInitPosition + Vec3(0, 0, mScaleVect.z() * 0.5));
     mCylinder->setRadius(rad);
     mCylinder->setHeight(mScaleVect.z());
     Drawable* cylinderDrawable = new ShapeDrawable(mCylinder);
     setDrawable(0, cylinderDrawable);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

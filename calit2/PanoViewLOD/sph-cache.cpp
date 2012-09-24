@@ -369,7 +369,7 @@ sph_file::sph_file(const std::string& tiff)
 
     if (!name.empty())
     {
-	//std::cerr << "File name: " << name << std::endl;
+	std::cerr << "File name: " << name << std::endl;
         if (TIFF *T = TIFFOpen(name.c_str(), "r"))
         {
             TIFFGetField(T, TIFFTAG_IMAGEWIDTH,      &w);

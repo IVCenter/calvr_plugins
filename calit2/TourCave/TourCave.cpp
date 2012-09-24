@@ -244,7 +244,7 @@ void TourCave::preFrame()
 
     if(_mStatus == STARTED)
     {
-	PluginManager::instance()->sendMessageByName(PathPlugin,PR_IS_STOPPED,"TourCave");
+	PluginManager::instance()->sendMessageByName(PathPlugin,PR_IS_STOPPED,(char*)"TourCave");
     }
 
     if(_currentMode >= 0 && _mStatus == STARTED)

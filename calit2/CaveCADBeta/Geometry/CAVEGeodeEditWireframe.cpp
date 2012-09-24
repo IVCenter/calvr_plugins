@@ -131,17 +131,17 @@ CAVEGeodeEditWireframeRotate::CAVEGeodeEditWireframeRotate()
 
     for (int i = 0; i < numSegs; i++)
     {
-	float theta = stepTheta * i;
-	float cosT = cos(theta);
-	float sinT = sin(theta);
+        float theta = stepTheta * i;
+        float cosT = cos(theta);
+        float sinT = sin(theta);
 
-	vertices->push_back(Vec3(cosT, sinT, 0));	// vertex in XY plane
-	vertices->push_back(Vec3(cosT, 0, sinT));	// vertex in XZ plane
-	vertices->push_back(Vec3(0, cosT, sinT));	// vertex in YZ plane
+        vertices->push_back(Vec3(cosT, sinT, 0));	// vertex in XY plane
+        vertices->push_back(Vec3(cosT, 0, sinT));	// vertex in XZ plane
+        vertices->push_back(Vec3(0, cosT, sinT));	// vertex in YZ plane
 
-	normals->push_back(Vec3(cosT, sinT, 0));	// vertex in XY plane
-	normals->push_back(Vec3(cosT, 0, sinT));	// vertex in XZ plane
-	normals->push_back(Vec3(0, cosT, sinT));	// vertex in YZ plane
+        normals->push_back(Vec3(cosT, sinT, 0));	// vertex in XY plane
+        normals->push_back(Vec3(cosT, 0, sinT));	// vertex in XZ plane
+        normals->push_back(Vec3(0, cosT, sinT));	// vertex in YZ plane
     }
 
     DrawElementsUInt* xyPlaneEdges = new DrawElementsUInt(PrimitiveSet::LINE_STRIP, 0);
@@ -149,9 +149,9 @@ CAVEGeodeEditWireframeRotate::CAVEGeodeEditWireframeRotate()
     DrawElementsUInt* xzPlaneEdges = new DrawElementsUInt(PrimitiveSet::LINE_STRIP, 0);
     for (int i = 0; i < numSegs; i++)
     {
-	xyPlaneEdges->push_back(i * 3);
-	yzPlaneEdges->push_back(i * 3 + 1);
-	xzPlaneEdges->push_back(i * 3 + 2);
+        xyPlaneEdges->push_back(i * 3);
+        yzPlaneEdges->push_back(i * 3 + 1);
+        xzPlaneEdges->push_back(i * 3 + 2);
     }
     xyPlaneEdges->push_back(0);
     yzPlaneEdges->push_back(1);
@@ -199,16 +199,19 @@ CAVEGeodeEditGeometryWireframe::CAVEGeodeEditGeometryWireframe(CAVEGeometry *geo
 
     /* check the valid status of all data field from 'CAVEGeodeShape', refer them to 'this' geode */
     if (geodeVertexArray->getType() == Array::Vec3ArrayType)
-	mCAVEGeometry->setVertexArray((Vec3Array*) geodeVertexArray);
-    else return;
+        mCAVEGeometry->setVertexArray((Vec3Array*) geodeVertexArray);
+    else 
+        return;
 
     if (geodeNormalArray->getType() == Array::Vec3ArrayType)
-	mCAVEGeometry->setNormalArray((Vec3Array*) geodeNormalArray);
-    else return;
+        mCAVEGeometry->setNormalArray((Vec3Array*) geodeNormalArray);
+    else 
+        return;
 
     if (geodeTexcoordArray->getType() == Array::Vec2ArrayType)
         mCAVEGeometry->setTexCoordArray(0, (Vec2Array*) geodeTexcoordArray);
-    else return;
+    else 
+        return;
 
     mCAVEGeometry->setNormalBinding(Geometry::BIND_PER_VERTEX);
 }

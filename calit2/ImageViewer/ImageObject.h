@@ -1,7 +1,7 @@
 #ifndef IMAGE_OBJECT_H
 #define IMAGE_OBJECT_H
 
-#include <cvrKernel/SceneObject.h>
+#include <cvrKernel/TiledWallSceneObject.h>
 #include <cvrMenu/MenuRangeValueCompact.h>
 
 #include <osg/MatrixTransform>
@@ -9,7 +9,7 @@
 #include <osg/Texture2D>
 #include <osg/Image>
 
-class ImageObject : public cvr::SceneObject
+class ImageObject : public cvr::TiledWallSceneObject
 {
     public:
         ImageObject(std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);

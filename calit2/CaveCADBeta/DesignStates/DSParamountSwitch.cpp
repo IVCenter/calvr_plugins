@@ -35,7 +35,10 @@ DSParamountSwitch::DSParamountSwitch(): mStateParaIdx(0), mNumParas(1), mRotStep
 // Destructor
 DSParamountSwitch::~DSParamountSwitch()
 {
-    for (int i = 0; i < mNumParas; i++) delete mParaEntryArray[i];
+    for (int i = 0; i < mNumParas; i++) 
+    {
+        delete mParaEntryArray[i];
+    }
     delete mParaEntryArray;
 }
 
@@ -49,21 +52,28 @@ DSParamountSwitch::~DSParamountSwitch()
 void DSParamountSwitch::setObjectEnabled(bool flag)
 {
     mObjEnabledFlag = flag;
-    if (flag) setAllChildrenOn();
-    if (!mPATransFwd || !mPATransBwd) return;
+    if (flag) 
+        setAllChildrenOn();
+    if (!mPATransFwd || !mPATransBwd) 
+        return;
 
     AnimationPathCallback* animCallback = NULL;
     if (flag)
     {
-	setSingleChildOn(0);
-	mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mParaEntryArray[mStateParaIdx]->mPaintGeode);
-	animCallback = dynamic_cast <AnimationPathCallback*> (mPATransFwd->getUpdateCallback());
-    } else {
-	setSingleChildOn(1);
-	mDSIntersector->loadRootTargetNode(NULL, NULL);
-	animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
+        setSingleChildOn(0);
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mParaEntryArray[mStateParaIdx]->mPaintGeode);
+        animCallback = dynamic_cast <AnimationPathCallback*> (mPATransFwd->getUpdateCallback());
+    } 
+    else 
+    {
+    /*    setSingleChildOn(1);
+        mDSIntersector->loadRootTargetNode(NULL, NULL);
+        animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
+    */
     }
-    if (animCallback) animCallback->reset();
+
+    if (animCallback) 
+        animCallback->reset();
 }
 
 
@@ -72,13 +82,16 @@ void DSParamountSwitch::setObjectEnabled(bool flag)
 ***************************************************************/
 void DSParamountSwitch::switchToPrevSubState()
 {
-    if (mSwitchLockState != RELEASED) return;
-    else mSwitchLockState = ROTATE_BACKWARD;
+    if (mSwitchLockState != RELEASED) 
+        return;
+    else 
+        mSwitchLockState = ROTATE_BACKWARD;
 
     mParaEntryArray[mStateParaIdx]->mSwitch->setSingleChildOn(1);
     mParaEntryArray[mStateParaIdx]->mZoomOutAnim->reset();
 
-    if (--mStateParaIdx < 0) mStateParaIdx = mNumParas - 1;
+    if (--mStateParaIdx < 0) 
+        mStateParaIdx = mNumParas - 1;
 
     mParaEntryArray[mStateParaIdx]->mSwitch->setSingleChildOn(0);
     mParaEntryArray[mStateParaIdx]->mZoomInAnim->reset();
@@ -92,13 +105,16 @@ void DSParamountSwitch::switchToPrevSubState()
 ***************************************************************/
 void DSParamountSwitch::switchToNextSubState()
 {
-    if (mSwitchLockState != RELEASED) return;
-    else mSwitchLockState = ROTATE_FORWARD;
+    if (mSwitchLockState != RELEASED) 
+        return;
+    else 
+        mSwitchLockState = ROTATE_FORWARD;
 
     mParaEntryArray[mStateParaIdx]->mSwitch->setSingleChildOn(1);
     mParaEntryArray[mStateParaIdx]->mZoomOutAnim->reset();
 
-    if (++mStateParaIdx >= mNumParas) mStateParaIdx = 0;
+    if (++mStateParaIdx >= mNumParas) 
+        mStateParaIdx = 0;
 
     mParaEntryArray[mStateParaIdx]->mSwitch->setSingleChildOn(0);
     mParaEntryArray[mStateParaIdx]->mZoomInAnim->reset();
@@ -114,28 +130,31 @@ void DSParamountSwitch::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg
 {
     if (mDevPressedFlag)
     {
-	if (!mSwitchReadyFlag)
-	{
-	    mSwitchReadyFlag = mDSIntersector->test(pointerOrg, pointerPos);
-	    if (mSwitchReadyFlag)
-		mVirtualScenicHandler->setVSParamountPreviewHighlight(true, mParaEntryArray[mStateParaIdx]->mPaintGeode);
-	}
-	else 
-	{
-	    mVirtualScenicHandler->setSkyMaskingColorEnabled(!mDSIntersector->test(pointerOrg, pointerPos));
-	}
+        if (!mSwitchReadyFlag)
+        {
+            mSwitchReadyFlag = mDSIntersector->test(pointerOrg, pointerPos);
+            if (mSwitchReadyFlag)
+            {
+                mVirtualScenicHandler->setVSParamountPreviewHighlight(true, 
+                    mParaEntryArray[mStateParaIdx]->mPaintGeode);
+            }
+        }
+        else 
+        {
+            mVirtualScenicHandler->setSkyMaskingColorEnabled(!mDSIntersector->test(pointerOrg, pointerPos));
+        }
     }
     else if (!mDevPressedFlag)
     {
-	if (mSwitchReadyFlag)
-	{
-	    if (!mDSIntersector->test(pointerOrg, pointerPos))
-	    {
-		mVirtualScenicHandler->switchVSParamount(mParaEntryArray[mStateParaIdx]->mTexFilename);
-		mVirtualScenicHandler->setSkyMaskingColorEnabled(false);
-	    }
-	}
-	mSwitchReadyFlag = false;
+        if (mSwitchReadyFlag)
+        {
+            if (!mDSIntersector->test(pointerOrg, pointerPos))
+            {
+                mVirtualScenicHandler->switchVSParamount(mParaEntryArray[mStateParaIdx]->mTexFilename);
+                mVirtualScenicHandler->setSkyMaskingColorEnabled(false);
+            }
+        }
+        mSwitchReadyFlag = false;
     }
 }
 
@@ -171,9 +190,9 @@ void DSParamountSwitch::update()
     /* release rotation lock flag */
     if (++mRotStepsCount > ANIM_PARA_PAINT_FRAME_ROTATE_SAMPS)
     {
-	mRotStepsCount = 0;
-	mSwitchLockState = RELEASED;
-	return;
+        mRotStepsCount = 0;
+        mSwitchLockState = RELEASED;
+        return;
     }
 
     Matrixd transMat;
@@ -181,33 +200,19 @@ void DSParamountSwitch::update()
     float rotStepAngle = intvlAngle / ANIM_PARA_PAINT_FRAME_ROTATE_SAMPS;
     for (int i = 0; i < mNumParas; i++)
     {
-	float phi = i * intvlAngle;
-	if (mSwitchLockState == ROTATE_FORWARD)
-	    phi += -intvlAngle * (mStateParaIdx - 1) - rotStepAngle * mRotStepsCount;
-	else if (mSwitchLockState == ROTATE_BACKWARD)
-	    phi += -intvlAngle * (mStateParaIdx + 1) + rotStepAngle * mRotStepsCount;
+        float phi = i * intvlAngle;
+        if (mSwitchLockState == ROTATE_FORWARD)
+            phi += -intvlAngle * (mStateParaIdx - 1) - rotStepAngle * mRotStepsCount;
+        else if (mSwitchLockState == ROTATE_BACKWARD)
+            phi += -intvlAngle * (mStateParaIdx + 1) + rotStepAngle * mRotStepsCount;
 
-	Vec3 transVec = Vec3(0, -cos(phi), sin(phi)) * mSwitchRadius;
-	transMat.makeTranslate(transVec);
-	mParaEntryArray[i]->mMatrixTrans->setMatrix(transMat);
+        Vec3 transVec = Vec3(0, -cos(phi), sin(phi)) * mSwitchRadius;
+        transMat.makeTranslate(transVec);
+        mParaEntryArray[i]->mMatrixTrans->setMatrix(transMat);
     }
 }
 
+void DSParamountSwitch::setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) 
+{
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+}

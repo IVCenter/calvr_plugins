@@ -5,6 +5,8 @@ uniform vec2 tex_d[8];
 uniform sampler2D image[8];
 uniform float     alpha[8];
 
+uniform float globalAlpha;
+
 //------------------------------------------------------------------------------
 
 // Some hardware disallows accessing a sampler array element using a computed
@@ -98,5 +100,5 @@ vec4 sample(vec2 t)
 void main()
 {
     vec3 p = sample(gl_TexCoord[0].xy).rgb;
-    gl_FragColor = vec4(p, 1.0);
+    gl_FragColor = vec4(p, globalAlpha);
 }

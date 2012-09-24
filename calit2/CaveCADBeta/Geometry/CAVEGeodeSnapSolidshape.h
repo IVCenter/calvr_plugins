@@ -38,12 +38,12 @@ class CAVEGeodeSnapSolidshape: public CAVEGeode
     virtual void pressed() {}
     virtual void released() {}
 
-    virtual void resize(const osg::Vec3 &gridVect) = 0;
+    virtual void resize(const osg::Vec3 &gridVect, bool snap = true) = 0;
     bool isValid();
 
     /* shape morphing functions: 'dirtyBound()' is called with in 'resize()' */
     void setSnappingUnitDist(const float &dist) { mSnappingUnitDist = dist; }
-    void setInitPosition(const osg::Vec3 &initPos);
+    void setInitPosition(const osg::Vec3 &initPos, bool snap = true);
     void setScaleVect(const osg::Vec3 &scaleVect) { mScaleVect = scaleVect; }
 
     const float &getSnappingUnitDist() { return mSnappingUnitDist; }
@@ -68,7 +68,7 @@ class CAVEGeodeSnapSolidshapeBox: public CAVEGeodeSnapSolidshape
   public:
     CAVEGeodeSnapSolidshapeBox();
 
-    virtual void resize(const osg::Vec3 &gridVect);
+    virtual void resize(const osg::Vec3 &gridVect, bool snap);
 
   protected:
     osg::Box* mBox;
@@ -83,7 +83,7 @@ class CAVEGeodeSnapSolidshapeCylinder: public CAVEGeodeSnapSolidshape
   public:
     CAVEGeodeSnapSolidshapeCylinder();
 
-    virtual void resize(const osg::Vec3 &gridVect);
+    virtual void resize(const osg::Vec3 &gridVect, bool snap);
 
   protected:
     osg::Cylinder* mCylinder;

@@ -31,6 +31,8 @@ DSGeometryCreator::DSGeometryCreator(): mShapeSwitchIdx(0), mNumShapeSwitches(0)
 
     setAllChildrenOff();
     mDevPressedFlag = false;
+
+    prevGeode = NULL;
 }
 
 
@@ -50,36 +52,74 @@ void DSGeometryCreator::setObjectEnabled(bool flag)
 {
     mObjEnabledFlag = flag;
     mDrawingState = IDLE;
-    if (flag) setAllChildrenOn();
-    if (!mPATransFwd || !mPATransBwd) return;
+
+    if (flag) 
+        setAllChildrenOn();
+
+    if (!mPATransFwd || !mPATransBwd) 
+        return;
 
     AnimationPathCallback* animCallback = NULL;
     if (flag)
     {
-	setSingleChildOn(0);
-	animCallback = dynamic_cast <AnimationPathCallback*> (mPATransFwd->getUpdateCallback());
+        if (!mIsOpen)
+        {
+            this->setSingleChildOn(0);
+            animCallback = dynamic_cast <AnimationPathCallback*> (mPATransFwd->getUpdateCallback());
 
-	/* load intersection root and targets when state is enabled, no need to change till disabled */
-	mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
-	mDOIntersector->loadRootTargetNode(gDesignObjectRootGroup, NULL);
+            // load intersection root and targets when state is enabled, no need to change till disabled 
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
+            mDOIntersector->loadRootTargetNode(gDesignObjectRootGroup, NULL);
+            
+            for (int i = 0; i < mNumShapeSwitches; ++i)
+            {
+                mShapeSwitchEntryArray[i]->mSwitch->setSingleChildOn(0);
+                mShapeSwitchEntryArray[i]->mFlipUpFwdAnim->reset();
+            }
+            mIsOpen = true;
+        }
+        else 
+        {
+            for (int i = 0; i < mNumShapeSwitches; ++i)
+            {
+                mShapeSwitchEntryArray[i]->mSwitch->setSingleChildOn(2);
+                mShapeSwitchEntryArray[i]->mFlipUpBwdAnim->reset();
+            }
+            mIsOpen = false;
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
+        }
+        //mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setSingleChildOn(0);
+        //mShapeSwitchEntryArray[mShapeSwitchIdx]->mFlipUpFwdAnim->reset();
+    } 
+    else 
+    {
+        for (int i = 0; i < mNumShapeSwitches; ++i)
+        {
+            mShapeSwitchEntryArray[i]->mSwitch->setSingleChildOn(2);
+            mShapeSwitchEntryArray[i]->mFlipUpBwdAnim->reset();
+        }
+        mIsOpen = false;
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
 
-	mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setSingleChildOn(0);
-	mShapeSwitchEntryArray[mShapeSwitchIdx]->mFlipUpFwdAnim->reset();
-    } else {
-	setSingleChildOn(1);
-	animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
+        /*
+        setSingleChildOn(1);
+        animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
 
-	mDSIntersector->loadRootTargetNode(NULL, NULL);
-	mDOIntersector->loadRootTargetNode(NULL, NULL);
+        mDSIntersector->loadRootTargetNode(NULL, NULL);
+        mDOIntersector->loadRootTargetNode(NULL, NULL);
 
-	/* turn off all geometry objects associated with DesignObjectHanlder */
-	mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
-	mDOGeometryCreator->setReferenceAxisMasking(false);
-	mDOGeometryCreator->setWireframeActiveID(-1);
-	mDOGeometryCreator->setSolidshapeActiveID(-1);
-	DrawingStateTransitionHandle(mDrawingState, IDLE);  
+        // turn off all geometry objects associated with DesignObjectHanlder 
+        mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
+        mDOGeometryCreator->setReferenceAxisMasking(false);
+        mDOGeometryCreator->setWireframeActiveID(-1);
+        mDOGeometryCreator->setSolidshapeActiveID(-1);
+        DrawingStateTransitionHandle(mDrawingState, IDLE);  
+        */
     }
-    if (animCallback) animCallback->reset();
+
+    mDrawingState = IDLE;
+    if (animCallback) 
+        animCallback->reset();
 }
 
 
@@ -90,22 +130,25 @@ void DSGeometryCreator::switchToPrevSubState()
 {
     if (mDrawingState == IDLE)
     {
-	mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setSingleChildOn(3);
-	mShapeSwitchEntryArray[mShapeSwitchIdx]->mFlipDownBwdAnim->reset();
+        mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setSingleChildOn(3);
+        mShapeSwitchEntryArray[mShapeSwitchIdx]->mFlipDownBwdAnim->reset();
 
-	if (--mShapeSwitchIdx < 0) mShapeSwitchIdx = mNumShapeSwitches - 1;
+        if (--mShapeSwitchIdx < 0) 
+        {
+            mShapeSwitchIdx = mNumShapeSwitches - 1;
+        }
 
-	mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setSingleChildOn(2);
-	mShapeSwitchEntryArray[mShapeSwitchIdx]->mFlipUpBwdAnim->reset();
+        mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setSingleChildOn(2);
+        mShapeSwitchEntryArray[mShapeSwitchIdx]->mFlipUpBwdAnim->reset();
 
-	mDOGeometryCreator->setWireframeActiveID(-1);
-	mDOGeometryCreator->setResize(0.0f);
+        mDOGeometryCreator->setWireframeActiveID(-1);
+        mDOGeometryCreator->setResize(0.0f);
     }
     else
     {
-	mSnapLevelController->switchToUpperLevel();
-	mDOGeometryCreator->setScalePerUnit(  mSnapLevelController->getSnappingLength(),
-						mSnapLevelController->getSnappingLengthInfo());
+        mSnapLevelController->switchToUpperLevel();
+        mDOGeometryCreator->setScalePerUnit(mSnapLevelController->getSnappingLength(),
+                            mSnapLevelController->getSnappingLengthInfo());
     }
 }
 
@@ -117,22 +160,25 @@ void DSGeometryCreator::switchToNextSubState()
 {
     if (mDrawingState == IDLE)
     {
-	mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setSingleChildOn(1);
-	mShapeSwitchEntryArray[mShapeSwitchIdx]->mFlipDownFwdAnim->reset();
+        mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setSingleChildOn(1);
+        mShapeSwitchEntryArray[mShapeSwitchIdx]->mFlipDownFwdAnim->reset();
 
-	if (++mShapeSwitchIdx >= mNumShapeSwitches) mShapeSwitchIdx = 0;
+        if (++mShapeSwitchIdx >= mNumShapeSwitches) 
+        {
+            mShapeSwitchIdx = 0;
+        }
 
-	mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setSingleChildOn(0);
-	mShapeSwitchEntryArray[mShapeSwitchIdx]->mFlipUpFwdAnim->reset();
+        mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setSingleChildOn(0);
+        mShapeSwitchEntryArray[mShapeSwitchIdx]->mFlipUpFwdAnim->reset();
 
-	mDOGeometryCreator->setWireframeActiveID(-1);
-	mDOGeometryCreator->setResize(0.0f);
+        mDOGeometryCreator->setWireframeActiveID(-1);
+        mDOGeometryCreator->setResize(0.0f);
     }
     else
     {
-	mSnapLevelController->switchToLowerLevel();
-	mDOGeometryCreator->setScalePerUnit(  mSnapLevelController->getSnappingLength(), 
-						mSnapLevelController->getSnappingLengthInfo());
+        mSnapLevelController->switchToLowerLevel();
+        mDOGeometryCreator->setScalePerUnit(  mSnapLevelController->getSnappingLength(), 
+                            mSnapLevelController->getSnappingLengthInfo());
     }
 }
 
@@ -144,23 +190,79 @@ void DSGeometryCreator::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg
 {	
     if (mDevPressedFlag)
     {
-	if (mDrawingState == START_DRAWING)
-	{
-	    mDOGeometryCreator->setSnapPos(pointerPos);
-	    mDOGeometryCreator->updateReferenceAxis();
-	}
+        if (mDrawingState == START_DRAWING)
+        {
+            if (mDOIntersector->test(pointerOrg, pointerPos))
+            {
+                osg::Vec3 hit = mDOIntersector->getWorldHitPosition();
+
+                CAVEGeodeShape *hitCAVEGeode = dynamic_cast <CAVEGeodeShape*>(mDOIntersector->getHitNode());
+                if (hitCAVEGeode)
+                { 
+                    osg::Vec3 center = osg::Vec3();
+                    if (hitCAVEGeode->snapToVertex(hit, &center))
+                    {
+                        mDOGeometryCreator->setSnapPos(center, false);
+                    }
+                    else
+                    {
+                        mDOGeometryCreator->setSnapPos(pointerPos);
+                    }
+                }
+                else
+                {
+                    mDOGeometryCreator->setSnapPos(pointerPos);
+                }
+            }
+            else
+            {
+                mDOGeometryCreator->setSnapPos(pointerPos);
+            }
+
+            //mDOGeometryCreator->setSnapPos(pointerPos);
+            mDOGeometryCreator->updateReferenceAxis();
+        }
     }
     if (!mDevPressedFlag)
     {
-	if (mDrawingState == READY_TO_DRAW)
-	{
-	    if (mDOIntersector->test(pointerOrg, pointerPos))
-	    {
-		mDOGeometryCreator->setReferencePlaneMasking(true, true, true);
-		mDOGeometryCreator->updateReferencePlane(mDOIntersector->getWorldHitPosition());
-	    }
-	    else mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
-	}
+        if (prevGeode)
+        {
+            prevGeode->hideSnapBounds();
+        }
+
+        if (mDrawingState == READY_TO_DRAW)
+        {
+            if (mDOIntersector->test(pointerOrg, pointerPos))
+            {
+                osg::Vec3 hit = mDOIntersector->getWorldHitPosition();
+
+                CAVEGeodeShape *hitCAVEGeode = dynamic_cast <CAVEGeodeShape*>(mDOIntersector->getHitNode());
+                if (hitCAVEGeode)
+                { 
+                    osg::Vec3 center = osg::Vec3();
+                    if (hitCAVEGeode->snapToVertex(hit, &center))
+                    {
+                        mDOGeometryCreator->updateReferencePlane(center, true);
+                        mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
+                    }
+                    else
+                    {
+                        mDOGeometryCreator->updateReferencePlane(hit);
+                        mDOGeometryCreator->setReferencePlaneMasking(true, true, true);
+                    }
+                    prevGeode = hitCAVEGeode;
+                }
+                else
+                {
+                    mDOGeometryCreator->setReferencePlaneMasking(true, true, true);
+                    mDOGeometryCreator->updateReferencePlane(hit);
+                }
+            }
+            else 
+            {
+                mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
+            }
+        }
     }
 }
 
@@ -174,61 +276,118 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
 
     if (mDrawingState == IDLE)
     {
-	if (mDSIntersector->test(pointerOrg, pointerPos))
-	{
-	    mDrawingState = READY_TO_DRAW;
-	    DrawingStateTransitionHandle(IDLE, READY_TO_DRAW);
+        // test for sub shape intersection
+        bool hit = false;
+        for (int i = 0; i < mNumShapeSwitches; i++)
+        {
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, 
+                ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->getChild(0));
 
-	    /* initialize wireframe geode attached to 'DesignObjectHandler' root */
-	    mDOGeometryCreator->setReferenceAxisMasking(false);
-	    mDOGeometryCreator->setWireframeActiveID(mShapeSwitchIdx);
-	    mDOGeometryCreator->resetWireframeGeodes(gDesignStateCenterPos);
-	}
+            if (mDSIntersector->test(pointerOrg, pointerPos))
+            {
+            //std::cout << "1 hit " << i << std::endl;
+                mShapeSwitchIdx = i;
+                hit = true;
+                break;
+            }
 
-	/* switching to lower state 'DSGeometryEditor' only happens in IDLE state, to be specific, 
-	   the state changes only if a CAVEGeodeShape object is intersected */
-	else if (mDOIntersector->test(pointerOrg, pointerPos))
-	{
-	    CAVEGeodeShape *hitCAVEGeode = dynamic_cast <CAVEGeodeShape*>(mDOIntersector->getHitNode());
-	    if (hitCAVEGeode)
-	    {
-		mDOGeometryCollector->setSurfaceCollectionHints(hitCAVEGeode, gDesignStateCenterPos);
-		mDOGeometryCollector->toggleCAVEGeodeShape(hitCAVEGeode);
+            if (((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->getNumChildren()
+                 < 2)
+                continue;
 
-		switchToLowerDesignState(0);
-		return false;
-	    }
-	}
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, 
+                ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->getChild(1));
+
+            if (mDSIntersector->test(pointerOrg, pointerPos))
+            {
+            //std::cout << "2 hit " << i << std::endl;
+                mShapeSwitchIdx = i;
+                hit = true;
+                break;
+            }
+        }
+
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
+        if (hit)
+        {
+            mDrawingState = READY_TO_DRAW;
+            DrawingStateTransitionHandle(IDLE, READY_TO_DRAW);
+
+            // initialize wireframe geode attached to 'DesignObjectHandler' root
+            mDOGeometryCreator->setReferenceAxisMasking(false);
+            mDOGeometryCreator->setWireframeActiveID(mShapeSwitchIdx);
+            mDOGeometryCreator->resetWireframeGeodes(gDesignStateCenterPos);
+        }
+
+        // switching to lower state 'DSGeometryEditor' only happens in IDLE state, to be specific,
+        // the state changes only if a CAVEGeodeShape object is intersected
+        else if (mDOIntersector->test(pointerOrg, pointerPos))
+        {
+            CAVEGeodeShape *hitCAVEGeode = dynamic_cast <CAVEGeodeShape*>(mDOIntersector->getHitNode());
+            if (hitCAVEGeode)
+            {
+                mDOGeometryCollector->setSurfaceCollectionHints(hitCAVEGeode, gDesignStateCenterPos);
+                mDOGeometryCollector->toggleCAVEGeodeShape(hitCAVEGeode);
+
+                switchToLowerDesignState(0);
+                return false;
+            }
+        }
     }
+
     else if (mDrawingState == READY_TO_DRAW)
     {
-	if (mDOIntersector->test(pointerOrg, pointerPos))
-	{
-	    mDrawingState = START_DRAWING;
-	    DrawingStateTransitionHandle(READY_TO_DRAW, START_DRAWING);
- 
-	    mDOGeometryCreator->setWireframeInitPos(pointerPos);
-	    mDOGeometryCreator->setSolidshapeActiveID(mShapeSwitchIdx);
-	    mDOGeometryCreator->setPointerDir(pointerPos - pointerOrg);
-	    mDOGeometryCreator->setScalePerUnit(mSnapLevelController->getSnappingLength(),
-						  mSnapLevelController->getSnappingLengthInfo());
-	    mDOGeometryCreator->setSolidshapeInitPos(mDOIntersector->getWorldHitPosition());
-	    mDOGeometryCreator->setResize(0.0f);
-	    mDOGeometryCreator->setReferenceAxisMasking(true);
-	    mDOGeometryCreator->setSnapPos(pointerPos);
-	    mDOGeometryCreator->setReferencePlaneMasking(true, true, true);
-	} else {
-	    mDrawingState = IDLE;
-	    DrawingStateTransitionHandle(READY_TO_DRAW, IDLE);
+        if (mDOIntersector->test(pointerOrg, pointerPos))
+        {
+            mDrawingState = START_DRAWING;
+            DrawingStateTransitionHandle(READY_TO_DRAW, START_DRAWING);
+     
+            mDOGeometryCreator->setWireframeInitPos(pointerPos);
+            mDOGeometryCreator->setSolidshapeActiveID(mShapeSwitchIdx);
+            mDOGeometryCreator->setPointerDir(pointerPos - pointerOrg);
+            mDOGeometryCreator->setScalePerUnit(mSnapLevelController->getSnappingLength(),
+                              mSnapLevelController->getSnappingLengthInfo());
 
-	    mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
-	    mDOGeometryCreator->setReferenceAxisMasking(false);
-	    mDOGeometryCreator->setWireframeActiveID(-1);
-	}
+            mDOGeometryCreator->setResize(0.0f);
+            mDOGeometryCreator->setReferenceAxisMasking(true);
+            
+            // Vertex/edge snapping 
+            CAVEGeodeShape *hitCAVEGeode = dynamic_cast <CAVEGeodeShape*>(mDOIntersector->getHitNode());
+            if (hitCAVEGeode)
+            {
+                osg::Vec3 center = osg::Vec3();
+                if (hitCAVEGeode->snapToVertex(mDOIntersector->getWorldHitPosition(), &center))
+                {
+                    mDOGeometryCreator->setSolidshapeInitPos(center, false);
+                } 
+                else
+                {
+                    mDOGeometryCreator->setSolidshapeInitPos(mDOIntersector->getWorldHitPosition());
+                }
+            }
+            else
+            {
+                mDOGeometryCreator->setSolidshapeInitPos(mDOIntersector->getWorldHitPosition());
+            }
+
+            mDOGeometryCreator->setSnapPos(pointerPos);
+            mDOGeometryCreator->setReferencePlaneMasking(true, true, true);
+        } 
+        else 
+        {
+            mDrawingState = IDLE;
+            DrawingStateTransitionHandle(READY_TO_DRAW, IDLE);
+
+            mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
+            mDOGeometryCreator->setReferenceAxisMasking(false);
+            mDOGeometryCreator->setWireframeActiveID(-1);
+        }
     }
 
-    if (mDrawingState == START_DRAWING) return true;
-    else return false;
+    if (mDrawingState == START_DRAWING) 
+        return true;
+    else 
+        return false;
 }
 
 
@@ -241,20 +400,20 @@ bool DSGeometryCreator::inputDevReleaseEvent()
 
     if (mDrawingState == START_DRAWING)
     {
-	mDrawingState = IDLE;
-	DrawingStateTransitionHandle(START_DRAWING, IDLE);
+        mDrawingState = IDLE;
+        DrawingStateTransitionHandle(START_DRAWING, IDLE);
 
-	/* finish with Design Object handlers */
-	mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
-	mDOGeometryCreator->setReferenceAxisMasking(false);
-	mDOGeometryCreator->registerSolidShape();
-	mDOGeometryCreator->setSolidshapeActiveID(-1);
-	mDOGeometryCreator->setWireframeActiveID(-1);
+        // finish with Design Object handlers
+        mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
+        mDOGeometryCreator->setReferenceAxisMasking(false);
+        mDOGeometryCreator->registerSolidShape();
+        mDOGeometryCreator->setSolidshapeActiveID(-1);
+        mDOGeometryCreator->setWireframeActiveID(-1);
 
-	/* update audio parameters */
-	mAudioConfigHandler->updateShapes();
+        // update audio parameters
+        mAudioConfigHandler->updateShapes();
 
-	return true;
+        return true;
     }
     return false;
 }
@@ -288,55 +447,80 @@ void DSGeometryCreator::DrawingStateTransitionHandle(const DrawingState& prevSta
 {
     if (prevState == IDLE && nextState == READY_TO_DRAW)
     {
-	mSphereExteriorSwitch->setAllChildrenOff();
-	mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setAllChildrenOff();
-	mDSParticleSystemPtr->setEmitterEnabled(true);
+        //mSphereExteriorSwitch->setAllChildrenOff();
+        //mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setAllChildrenOff();
+        //mDSParticleSystemPtr->setEmitterEnabled(true);
 
-	setLocked(true);
+        setLocked(true);
     }
+
     else if (prevState == READY_TO_DRAW && nextState == START_DRAWING)
     {
-	mDSParticleSystemPtr->setEmitterEnabled(false);
+        //mDSParticleSystemPtr->setEmitterEnabled(false);
     }
-    else if ((prevState == READY_TO_DRAW && nextState == IDLE) ||
-	     (prevState == START_DRAWING && nextState == IDLE) ||
-	     (prevState == IDLE && nextState == IDLE))
-    {
-	mSphereExteriorSwitch->setAllChildrenOn();
-	mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setSingleChildOn(0);
-	mShapeSwitchEntryArray[mShapeSwitchIdx]->mFlipUpFwdAnim->reset();
-	mDSParticleSystemPtr->setEmitterEnabled(false);
 
-	setLocked(false);
+    else if ((prevState == READY_TO_DRAW && nextState == IDLE) ||
+	         (prevState == START_DRAWING && nextState == IDLE) ||
+	         (prevState == IDLE          && nextState == IDLE))
+    {
+        mSphereExteriorSwitch->setAllChildrenOn();
+        mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setSingleChildOn(0);
+        mShapeSwitchEntryArray[mShapeSwitchIdx]->mFlipUpFwdAnim->reset();
+        //mDSParticleSystemPtr->setEmitterEnabled(false);
+
+        setLocked(false);
     }
 }
 
 
+void DSGeometryCreator::setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) 
+{
+    int idx = -1;
+    mIsHighlighted = isHighlighted;
 
+    for (int i = 0; i < mNumShapeSwitches; i++)
+    {
+        ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->removeChild(mHighlightGeode);
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, 
+            ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->getChild(0));
 
+        if (mDSIntersector->test(pointerOrg, pointerPos))
+        {
+            idx = i;
+        }
+    }
 
+    if (idx > -1)
+    {
+        osg::Sphere *sphere = new osg::Sphere();
+        mSD = new osg::ShapeDrawable(sphere);
+        mHighlightGeode = new osg::Geode();
+        mHighlightGeode->addDrawable(mSD);
+        sphere->setRadius(0.25);
+        mSD->setColor(osg::Vec4(1, 1, 1, 0.5));
 
+        StateSet *stateset = mSD->getOrCreateStateSet();
+        stateset->setMode(GL_BLEND, StateAttribute::OVERRIDE | StateAttribute::ON);
+        stateset->setMode(GL_CULL_FACE, StateAttribute::OVERRIDE | StateAttribute::ON);
+        stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
 
+        //fwdVec[i]->addChild(mHighlightGeode);
+        //((osg::Geode*)mShapeSwitchEntryArray[idx]->mSwitch->getChild(0))->addDrawable(mSD);
+        //std::cout << idx << std::endl;
 
+        ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[idx]->mSwitch->getChild(0)))->addChild(mHighlightGeode);
+    }
 
+    /*    else
+    {
+        for (int i = 0; i < mNumShapeSwitches; i++)
+        {
+            if (mHighlightGeode)
+                ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->removeChild(mHighlightGeode);
+                //((osg::Geode*)mShapeSwitchEntryArray[i]->mSwitch->getChild(0))->removeDrawable(mSD);
+        }
+    }*/
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
+}
+ 

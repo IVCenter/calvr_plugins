@@ -61,6 +61,7 @@ bool PointsWithPans::init()
 	    pan.location = osg::Vec3(x,y,z);
 	    pan.name = ConfigManager::getEntry("name",panss.str(),"",NULL);
 	    pan.rotationOffset = ConfigManager::getFloat("rotationOffset",panss.str(),0);
+	    pan.rotationOffset = pan.rotationOffset * M_PI / 180.0;
 	    set->panList.push_back(pan);
 	}
 	_setList.push_back(set);
@@ -70,7 +71,7 @@ bool PointsWithPans::init()
 	_buttonList.push_back(button);
     }
 
-    _activeObject = new PointsObject("Points",true,false,false,false,true);
+    _activeObject = new PointsObject("Points",true,false,false,true,true);
     PluginHelper::registerSceneObject(_activeObject,"PointsWithPans");
 
     return true;
@@ -112,18 +113,18 @@ void PointsWithPans::menuCallback(MenuItem * item)
 	    _activeObject->setNavigationOn(true);
 	    _activeObject->addChild(pli.group.get());
 
-	    _sizeUni = pli.group->getOrCreateStateSet()->getUniform("pointSize");
+	    /*_sizeUni = pli.group->getOrCreateStateSet()->getUniform("pointSize");
 	    if(_sizeUni)
 	    {
 		_sizeUni->set(_setList[i]->pointSize);
-	    }
-	    _scaleUni = new osg::Uniform("objectScale",1.0f);
+	    }*/
+	    _scaleUni = new osg::Uniform("pointScale",1.0f * _setList[i]->pointSize);
 	    pli.group->getOrCreateStateSet()->addUniform(_scaleUni);
 	    _scaleUni->set((float)_activeObject->getObjectToWorldMatrix().getScale().x());
 
 	    for(int j = 0; j < _setList[i]->panList.size(); j++)
 	    {
-		PanMarkerObject * pmo = new PanMarkerObject(_setList[i]->scale,_setList[i]->panList[j].rotationOffset,_setList[i]->panList[j].name,false,false,false,false,true);
+		PanMarkerObject * pmo = new PanMarkerObject(_setList[i]->scale,_setList[i]->panList[j].rotationOffset,_setList[i]->panList[j].name,false,false,false,true,true);
 		_activeObject->addChild(pmo);
 
 		osg::Matrix m;
@@ -141,7 +142,7 @@ void PointsWithPans::preFrame()
 {
     if(_loadedSetIndex >= 0 && _scaleUni && _activeObject)
     {
-	_scaleUni->set((float)_activeObject->getObjectToWorldMatrix().getScale().x());
+	_scaleUni->set((float)(_activeObject->getObjectToWorldMatrix().getScale().x()*_setList[_loadedSetIndex]->pointSize));
     }
 
     if(_loadedSetIndex >= 0)
@@ -156,7 +157,8 @@ void PointsWithPans::message(int type, char *&data, bool collaborative)
     {
 	if(_loadedSetIndex >= 0)
 	{
-	    _activeObject->panUnloaded();
+	    float rotation = *((float*)data);
+	    _activeObject->panUnloaded(rotation);
 	}
     }
 }

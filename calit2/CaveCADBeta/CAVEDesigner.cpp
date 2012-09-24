@@ -7,6 +7,7 @@
 *
 ***************************************************************/
 #include "CAVEDesigner.h"
+#include <cvrKernel/PluginHelper.h>
 
 using namespace std;
 using namespace osg;
@@ -14,7 +15,7 @@ using namespace osg;
 //Constructor
 CAVEDesigner::CAVEDesigner(Group* rootGroup): mActiveFlag(false), mKeypressFlag(false)
 {
-    mDesignStateHandler = new DesignStateHandler(rootGroup);
+    mDesignStateHandler = new DesignStateHandler(rootGroup);//cvr::PluginHelper::getScene());//rootGroup);
     mDesignObjectHandler = new DesignObjectHandler(rootGroup);
     mAudioConfigHandler = new AudioConfigHandler(mDesignObjectHandler->getCAVEShapeSwitchPtr());
 
@@ -39,7 +40,6 @@ CAVEDesigner::~CAVEDesigner()
 void CAVEDesigner::setActive(bool flag)
 {
     mActiveFlag = flag;
-
     mDesignStateHandler->setActive(flag);
     mDesignObjectHandler->setActive(flag);
 }
@@ -53,7 +53,8 @@ void CAVEDesigner::setActive(bool flag)
 ***************************************************************/
 void CAVEDesigner::inputDevMoveEvent(const Vec3 pointerOrg, const Vec3 pointerPos)
 {
-    if (!mActiveFlag) return;
+    if (!mActiveFlag)   
+        return;
 
     mDesignStateHandler->inputDevMoveEvent(pointerOrg, pointerPos);
     mDesignObjectHandler->inputDevMoveEvent();
@@ -76,9 +77,10 @@ void CAVEDesigner::update(const osg::Vec3 &viewDir, const osg::Vec3 &viewPos)
 * Description: Handle input device press event
 *
 ***************************************************************/
-bool CAVEDesigner::inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 &pointerPos)
+bool CAVEDesigner::inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 &pointerPos, int button)
 {
-    if (!mActiveFlag) return false;
+    if (!mActiveFlag) 
+        return false;
 
     bool flagDS = mDesignStateHandler->inputDevPressEvent(pointerOrg, pointerPos);
     bool flagDO = mDesignObjectHandler->inputDevPressEvent(pointerOrg, pointerPos);
@@ -117,12 +119,12 @@ void CAVEDesigner::inputDevButtonEvent(const int keySym)
     /* key index look-up */
     switch (keySym)
     {
-	case 32: 	btnTyp = DesignStateHandler::TOGGLE;	break;
-	case 65361:	btnTyp = DesignStateHandler::LEFT;	break;
-	case 65362:	btnTyp = DesignStateHandler::UP;	break;
-	case 65363: 	btnTyp = DesignStateHandler::RIGHT;	break;
-	case 65364: 	btnTyp = DesignStateHandler::DOWN;	break;
-	default: return;
+        case 32: 	btnTyp = DesignStateHandler::TOGGLE;break;
+        case 65361:	btnTyp = DesignStateHandler::RIGHT;	break;
+        case 65362:	btnTyp = DesignStateHandler::UP;	break;
+        case 65363: btnTyp = DesignStateHandler::LEFT;	break;
+        case 65364: btnTyp = DesignStateHandler::DOWN;	break;
+        default: return;
     }
 
     mDesignStateHandler->inputDevButtonEvent(btnTyp);
@@ -158,16 +160,5 @@ void CAVEDesigner::inputDevButtonEvent(const float spinX, const float spinY, con
     mDesignStateHandler->inputDevButtonEvent(btnTyp);
     mKeypressFlag = true;               // lock key flag
 */
-
 }
-
-
-
-
-
-
-
-
-
-
 

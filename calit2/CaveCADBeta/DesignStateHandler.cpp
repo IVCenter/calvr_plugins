@@ -18,6 +18,7 @@ DesignStateHandler::DesignStateHandler(Group* rootGroup): mActiveFlag(false)
     rootGroup->addChild(mDesignStateRoot);
 
     mDesignStateRenderer = new DesignStateRenderer(mDesignStateRoot);
+    mRoot = rootGroup;
 }
 
 //Destructor
@@ -35,6 +36,17 @@ DesignStateHandler::~DesignStateHandler()
 void DesignStateHandler::setActive(bool flag)
 {
     mActiveFlag = flag;
+/*    if (flag)
+    {
+        if (!mRoot->containsNode(mDesignStateRoot) && mRoot && mDesignStateRoot)
+        {
+            mRoot->addChild(mDesignStateRoot);
+        }
+    }
+    else
+    {
+        mRoot->removeChild(mDesignStateRoot);
+    }*/
 }
 
 
@@ -57,23 +69,23 @@ void DesignStateHandler::inputDevButtonEvent(const InputDevButtonType& typ)
 {
     if (typ == TOGGLE)
     {
-	mDesignStateRenderer->toggleDSVisibility();
+        mDesignStateRenderer->toggleDSVisibility();
     }
     else if (typ == LEFT)
     {
-	mDesignStateRenderer->switchToPrevState();
+        mDesignStateRenderer->switchToPrevState();
     }
     else if (typ == RIGHT)
     {
-	mDesignStateRenderer->switchToNextState();
+        mDesignStateRenderer->switchToNextState();
     }
     else if (typ == UP)
     {
-	mDesignStateRenderer->switchToPrevSubState();
+        mDesignStateRenderer->switchToPrevSubState();
     }
     else if (typ == DOWN)
     {
-	mDesignStateRenderer->switchToNextSubState();
+        mDesignStateRenderer->switchToNextSubState();
     }
 }
 
@@ -142,23 +154,4 @@ void DesignStateHandler::setAudioConfigHandlerPtr(AudioConfigHandler *audioConfi
 {
     mDesignStateRenderer->setAudioConfigHandlerPtr(audioConfigHandler);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

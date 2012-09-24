@@ -57,8 +57,9 @@ class DesignObjectHandler
     osg::Group *mDesignObjectRoot;
     osg::Group *mNonIntersectableSceneGraphPtr;		// non-intersectable objects
     osg::Group *mIntersectableSceneGraphPtr;		// intersectable objects
+    osg::Group *mRoot;
 
-    /* switches under 'mIntersectableSceneGraphPtr' that control different types of CAVEGeode objects */
+    // switches under 'mIntersectableSceneGraphPtr' that control different types of CAVEGeode objects
     osg::Switch *mCAVEShapeSwitch;
     osg::Switch *mCAVEIconSurfaceSwitch;
     osg::Switch *mCAVEIconToolkitSwitch;
@@ -75,7 +76,4 @@ class DesignObjectHandler
 
 
 #endif
-
-
-
 

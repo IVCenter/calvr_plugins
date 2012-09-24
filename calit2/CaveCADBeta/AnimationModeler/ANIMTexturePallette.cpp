@@ -33,16 +33,16 @@ void ANIMLoadTexturePalletteRoot(osg::PositionAttitudeTransform** xformScaleFwd,
     AnimationPath* animationPathScaleBwd = new AnimationPath;
     animationPathScaleFwd->setLoopMode(AnimationPath::NO_LOOPING);
     animationPathScaleBwd->setLoopMode(AnimationPath::NO_LOOPING);
-   
+     
     Vec3 scaleFwd, scaleBwd;
     float step = 1.f / ANIM_VIRTUAL_SPHERE_NUM_SAMPS;
     for (int i = 0; i < ANIM_VIRTUAL_SPHERE_NUM_SAMPS + 1; i++)
     {
-	float val = i * step;
-	scaleFwd = Vec3(val, val, val);
-	scaleBwd = Vec3(1.f-val, 1.f-val, 1.f-val);
-	animationPathScaleFwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleFwd));
-	animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleBwd));
+        float val = i * step;
+        scaleFwd = Vec3(val, val, val);
+        scaleBwd = Vec3(1.f-val, 1.f-val, 1.f-val);
+        animationPathScaleFwd->insert(val, AnimationPath::ControlPoint(Vec3(-0.5, 0, 0),Quat(), scaleFwd));
+        animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(Vec3(-0.5, 0, 0),Quat(), scaleBwd));
     }
 
     AnimationPathCallback *animCallbackFwd = new AnimationPathCallback(animationPathScaleFwd, 
@@ -98,11 +98,11 @@ void ANIMLoadTexturePalletteIdle(osg::Switch **idleStateSwitch, ANIMTexturePalle
     float step = 1.f / ANIM_VIRTUAL_SPHERE_NUM_SAMPS;
     for (int i = 0; i < ANIM_VIRTUAL_SPHERE_NUM_SAMPS + 1; i++)
     {
-	float val = i * step;
-	scaleFwd = Vec3(val, val, val);
-	scaleBwd = Vec3(1.f-val, 1.f-val, 1.f-val);
-	animationPathScaleFwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleFwd));
-	animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleBwd));
+        float val = i * step;
+        scaleFwd = Vec3(val, val, val);
+        scaleBwd = Vec3(1.f-val, 1.f-val, 1.f-val);
+        animationPathScaleFwd->insert(val, AnimationPath::ControlPoint(Vec3(0, 0, 0), Quat(), scaleFwd));
+        animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(Vec3(0, 0, 0), Quat(), scaleBwd));
     }
 
     (*textureStateIdelEntry)->mFwdAnim = new AnimationPathCallback(animationPathScaleFwd, 
@@ -133,7 +133,7 @@ void ANIMLoadTexturePalletteIdle(osg::Switch **idleStateSwitch, ANIMTexturePalle
 * textureStatesEntryArray: Data pointer to texture states
 *
 ***************************************************************/
-void ANIMLoadTexturePalletteSelect( Switch **selectStateSwitch, Switch **alphaTurnerSwitch,
+void ANIMLoadTexturePalletteSelect(Switch **selectStateSwitch, Switch **alphaTurnerSwitch,
 				    int &numTexs, ANIMTexturePalletteSelectEntry ***textureStatesEntryArray)
 {
     *selectStateSwitch = new Switch;
@@ -157,17 +157,53 @@ void ANIMLoadTexturePalletteSelect( Switch **selectStateSwitch, Switch **alphaTu
     /* initialize texture state entry record array and randomly generated showing up positions array*/
     numTexs = 24;
     *textureStatesEntryArray = new ANIMTexturePalletteSelectEntry*[numTexs];
-    for (int i = 0; i < numTexs; i++) (*textureStatesEntryArray)[i] = new ANIMTexturePalletteSelectEntry;
+    for (int i = 0; i < numTexs; i++) 
+    {
+        (*textureStatesEntryArray)[i] = new ANIMTexturePalletteSelectEntry;
+    }
     Vec3 *showUpPosArray = new Vec3[numTexs];
     ANIMCreateRandomShowupPosArray(numTexs, &showUpPosArray);
 
-    /* plaine white texture and color */
+    /* plain white texture and color */
     Vec3 voidColor = Vec3(1, 1, 1);
     string voidTex = ANIMDataDir() + "Textures/White.JPG";
 
+
+    // Load texture filenames from config file
+    bool isFile = true;
+    int j = 0, numTex;
+    std::string filename = "", dir, path;
+    std::vector<std::string> filenames;
+    
+    dir = cvr::ConfigManager::getEntry("dir", "Plugin.CaveCADBeta.Textures", "/home/cehughes");
+    dir = dir + "/";
+    path = "Plugin.CaveCADBeta.Textures.0";
+    filename = cvr::ConfigManager::getEntry(path, "", &isFile);
+
+    while (isFile)
+    {
+        filenames.push_back(dir + filename);
+
+        j++;
+        char buf[50];
+        sprintf(buf, "Plugin.CaveCADBeta.Textures.%d", j);
+        std::string path = std::string(buf);
+        filename = cvr::ConfigManager::getEntry(path, "", &isFile);
+    }
+
+    numTex = j;
+    
+    osg::Vec3 subpos(0, 0, -0.5);
+    for (int i = 0; i < numTex; ++i)
+    {
+        ANIMCreateTextureEntryGeode(showUpPosArray[i] + subpos, voidColor, voidColor, filenames[i],
+				&((*textureStatesEntryArray)[i]));
+
+    }
+
     /* create 10 texture entries */
     string headerTex = ANIMDataDir() + "Textures/Pallette/";
-    ANIMCreateTextureEntryGeode(showUpPosArray[0], voidColor, voidColor, headerTex + "00.JPG", 
+/*    ANIMCreateTextureEntryGeode(showUpPosArray[0], voidColor, voidColor, headerTex + "00.JPG", 
 				&((*textureStatesEntryArray)[0]));
     ANIMCreateTextureEntryGeode(showUpPosArray[1], voidColor, voidColor, headerTex + "01.JPG", 
 				&((*textureStatesEntryArray)[1]));
@@ -187,9 +223,36 @@ void ANIMLoadTexturePalletteSelect( Switch **selectStateSwitch, Switch **alphaTu
 				&((*textureStatesEntryArray)[8]));
     ANIMCreateTextureEntryGeode(showUpPosArray[9], voidColor, voidColor, headerTex + "09.JPG", 
 				&((*textureStatesEntryArray)[9]));
+*/
 
     /* create 14 color entries */
-    ANIMCreateTextureEntryGeode(showUpPosArray[10], Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 0.0), voidTex,
+    std::vector<osg::Vec3> colors;
+    colors.push_back(osg::Vec3(0.0, 0.0, 0.0)); // black
+    colors.push_back(osg::Vec3(0.5, 0.5, 0.5)); // grey
+    colors.push_back(osg::Vec3(1.0, 1.0, 1.0)); // white
+    colors.push_back(osg::Vec3(1.0, 0.0, 0.0)); // red 
+    colors.push_back(osg::Vec3(0.0, 1.0, 0.0)); // green
+
+    colors.push_back(osg::Vec3(0.0, 0.0, 1.0)); // blue
+    colors.push_back(osg::Vec3(1.0, 1.0, 0.0)); // yellow
+    colors.push_back(osg::Vec3(1.0, 0.0, 1.0)); // pink
+    colors.push_back(osg::Vec3(0.0, 1.0, 1.0)); // cyan
+    colors.push_back(osg::Vec3(0.5, 0.0, 1.0)); // purple
+
+    colors.push_back(osg::Vec3(1.0, 0.5, 0.0)); // orange
+    colors.push_back(osg::Vec3(0.0, 0.5, 1.0)); // sky blue
+    colors.push_back(osg::Vec3(1.0, 0.0, 0.5)); // bright pink
+    colors.push_back(osg::Vec3(0.0, 0.5, 1.0)); // light bluegreenish
+    
+    subpos = osg::Vec3(0, 0, -1.5);
+    for (int i = 0; i < colors.size(); ++i)
+    {
+        ANIMCreateTextureEntryGeode(showUpPosArray[i] + subpos, colors[i], colors[i], voidTex,
+				&((*textureStatesEntryArray)[i+10]));
+
+    }
+
+/*    ANIMCreateTextureEntryGeode(showUpPosArray[10], Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 0.0), voidTex,
 				&((*textureStatesEntryArray)[10]));
     ANIMCreateTextureEntryGeode(showUpPosArray[11], Vec3(0.5, 0.5, 0.5), Vec3(0.5, 0.5, 0.5), voidTex,
 				&((*textureStatesEntryArray)[11]));
@@ -217,33 +280,35 @@ void ANIMLoadTexturePalletteSelect( Switch **selectStateSwitch, Switch **alphaTu
 				&((*textureStatesEntryArray)[22]));
     ANIMCreateTextureEntryGeode(showUpPosArray[23], Vec3(1.0, 1.0, 0.5), Vec3(1.0, 1.0, 0.5), voidTex,
 				&((*textureStatesEntryArray)[23]));
-
+*/
     /* add entry animation objects to 'selectStateSwitch' */
-    for (int i = 0; i < numTexs; i++) (*selectStateSwitch)->addChild((*textureStatesEntryArray)[i]->mEntrySwitch);
+    for (int i = 0; i < numTexs; i++) 
+    {
+        (*selectStateSwitch)->addChild((*textureStatesEntryArray)[i]->mEntrySwitch);
+    }
 
     /* get audio parameters of each material from audio configuration file */
     FILE *audioInfoFilePtr = fopen((headerTex + string("AudioInfo.cfg")).c_str(), "r");
     if (!audioInfoFilePtr)
     {
-	cerr << "CaveCADBeta ANIMLoadTexturePalletteSelect: Error openning audio config file." << endl;
-	return;
+        cerr << "CaveCADBeta ANIMLoadTexturePalletteSelect: Error openning audio config file." << endl;
+        return;
     }
 
     char audioentry[128];
     for (int i = 0; i < numTexs; i++)
     {
-	if (!feof(audioInfoFilePtr))
-	{
-	    fgets(audioentry, 128, audioInfoFilePtr);
-	    string str = string(audioentry);
-	    str.erase(str.size()-1, 1);		// discard the last '/n' at the end of each line
-	    (*textureStatesEntryArray)[i]->setAudioInfo(str);
-	}
+        if (!feof(audioInfoFilePtr))
+        {
+            fgets(audioentry, 128, audioInfoFilePtr);
+            string str = string(audioentry);
+            str.erase(str.size()-1, 1);		// discard the last '/n' at the end of each line
+            (*textureStatesEntryArray)[i]->setAudioInfo(str);
+        }
     }
 
     if (audioInfoFilePtr) fclose((FILE*)audioInfoFilePtr);
 }
-
 
 
 /***************************************************************
@@ -290,18 +355,18 @@ void ANIMCreateTextureEntryGeode(const Vec3 &showUpPos, const Vec3 &diffuse, con
     PositionAttitudeTransform **statePATransArray = new PositionAttitudeTransform*[8];
     for (int i = 0; i < 8; i++)
     {
-	statePATransArray[i] = new PositionAttitudeTransform;
+        statePATransArray[i] = new PositionAttitudeTransform;
 
-	(*textureEntry)->mEntrySwitch->addChild(statePATransArray[i]);
-	statePATransArray[i]->addChild((*textureEntry)->mEntryGeode);
+        (*textureEntry)->mEntrySwitch->addChild(statePATransArray[i]);
+        statePATransArray[i]->addChild((*textureEntry)->mEntryGeode);
     }
 
     /* set up animation paths for four way transitions */
     AnimationPath **animationPathsArray = new AnimationPath*[8];
     for (int i = 0; i < 8; i++)
     {
-	animationPathsArray[i] = new AnimationPath;
-	animationPathsArray[i]->setLoopMode(AnimationPath::NO_LOOPING);
+        animationPathsArray[i] = new AnimationPath;
+        animationPathsArray[i]->setLoopMode(AnimationPath::NO_LOOPING);
     }
 
     Vec3 scaleFwd1, scaleBwd1, scaleFwd2, scaleBwd2, scaleFwd3, scaleBwd3,transFwd, transBwd;
@@ -309,35 +374,39 @@ void ANIMCreateTextureEntryGeode(const Vec3 &showUpPos, const Vec3 &diffuse, con
     float diff = (ANIM_VIRTUAL_SPHERE_RADIUS / ANIM_TEXTURE_PALLETTE_ENTRY_SPHERE_RADIUS - 1.0f);
     for (int i = 0; i < ANIM_VIRTUAL_SPHERE_NUM_SAMPS + 1; i++)
     {
-	float val = i * step;
-	scaleFwd1 = Vec3(val, val, val);
-	scaleBwd1 = Vec3(1.f - val, 1.f - val, 1.f - val);
-	scaleFwd2 = Vec3(1 + val * diff, 1 + val * diff, 1 + val * diff);
-	scaleBwd2 = Vec3(1 + (1 - val) * diff, 1 + (1 - val) * diff, 1 + (1 - val) * diff);
-	scaleFwd3 = Vec3((1+ diff) * val, (1+ diff) * val, (1+ diff) * val);
-	scaleBwd3 = Vec3((1+ diff) * (1 - val), (1+ diff) * (1 - val), (1+ diff) * (1 - val));
-	transFwd = showUpPos * val;
-	transBwd = showUpPos * (1.f - val);
+        float val = i * step;
+        scaleFwd1 = Vec3(val, val, val);
+        scaleBwd1 = Vec3(1.f - val, 1.f - val, 1.f - val);
+        scaleFwd2 = Vec3(1 + val * diff, 1 + val * diff, 1 + val * diff);
+        scaleBwd2 = Vec3(1 + (1 - val) * diff, 1 + (1 - val) * diff, 1 + (1 - val) * diff);
+        scaleFwd3 = Vec3((1 + diff) * val, (1 + diff) * val, (1 + diff) * val);
+        scaleBwd3 = Vec3((1 + diff) * (1 - val), (1 + diff) * (1 - val), (1 + diff) * (1 - val));
+        transFwd = showUpPos * val;
+        transBwd = showUpPos * (1.f - val);
+        
+        // new menu positioning
+        osg::Vec3 offset(0, 0, 0);
+        transFwd += offset;
+        transBwd += offset;
 
-	animationPathsArray[0]->insert(val, AnimationPath::ControlPoint(transFwd, Quat(), scaleFwd1));
-	animationPathsArray[1]->insert(val, AnimationPath::ControlPoint(transBwd, Quat(), scaleBwd1));
-	animationPathsArray[2]->insert(val, AnimationPath::ControlPoint(showUpPos, Quat(), scaleBwd1));
-	animationPathsArray[3]->insert(val, AnimationPath::ControlPoint(showUpPos, Quat(), scaleFwd1));
-	animationPathsArray[4]->insert(val, AnimationPath::ControlPoint(transBwd, Quat(), scaleFwd2));
-	animationPathsArray[5]->insert(val, AnimationPath::ControlPoint(transFwd, Quat(), scaleBwd2));
-	animationPathsArray[6]->insert(val, AnimationPath::ControlPoint(Vec3(0, 0, 0), Quat(), scaleBwd3));
-	animationPathsArray[7]->insert(val, AnimationPath::ControlPoint(Vec3(0, 0, 0), Quat(), scaleFwd3));
+        animationPathsArray[0]->insert(val, AnimationPath::ControlPoint(transFwd, Quat(), scaleFwd1));
+        animationPathsArray[1]->insert(val, AnimationPath::ControlPoint(transBwd, Quat(), scaleBwd1));
+        animationPathsArray[2]->insert(val, AnimationPath::ControlPoint(showUpPos, Quat(), scaleBwd1));
+        animationPathsArray[3]->insert(val, AnimationPath::ControlPoint(showUpPos, Quat(), scaleFwd1));
+        animationPathsArray[4]->insert(val, AnimationPath::ControlPoint(transBwd, Quat(), scaleFwd2));
+        animationPathsArray[5]->insert(val, AnimationPath::ControlPoint(transFwd, Quat(), scaleBwd2));
+        animationPathsArray[6]->insert(val, AnimationPath::ControlPoint(Vec3(0, 0, 0), Quat(), scaleBwd3));
+        animationPathsArray[7]->insert(val, AnimationPath::ControlPoint(Vec3(0, 0, 0), Quat(), scaleFwd3));
     }
 
     (*textureEntry)->mStateAnimationArray = new AnimationPathCallback*[8];
     for (int i = 0; i < 8; i++)
     {
-	(*textureEntry)->mStateAnimationArray[i] =  new AnimationPathCallback(animationPathsArray[i], 
-						    0.0, 1.f / ANIM_TEXTURE_PALLETTE_ANIMATION_TIME);
-	statePATransArray[i]->setUpdateCallback((*textureEntry)->mStateAnimationArray[i]);
+        (*textureEntry)->mStateAnimationArray[i] =  new AnimationPathCallback(animationPathsArray[i], 
+                                0.0, 1.f / ANIM_TEXTURE_PALLETTE_ANIMATION_TIME);
+        statePATransArray[i]->setUpdateCallback((*textureEntry)->mStateAnimationArray[i]);
     }
 }
-
 
 
 /***************************************************************
@@ -374,20 +443,11 @@ void ANIMCreateRandomShowupPosArray(const int &numTexs, Vec3 **showUpPosArray)
     /* Showing up positions are evenly distributed with the spherical region with radius 3R. */
     for (int i = 0; i < numTexs; i++)
     {
-	Vec3 pos = Vec3(randIntArray[i * 3], randIntArray[i * 3 + 1], randIntArray[i * 3 + 2]);
-	pos = (pos / 16384.f - Vec3(1, 1, 1)) * ANIM_VIRTUAL_SPHERE_RADIUS * 3;
-	(*showUpPosArray)[i] = pos;
+        Vec3 pos = Vec3(randIntArray[i * 3], randIntArray[i * 3 + 1], randIntArray[i * 3 + 2]);
+        pos = (pos / 16384.f - Vec3(1, 1, 1)) * ANIM_VIRTUAL_SPHERE_RADIUS * 3;
+        (*showUpPosArray)[i] = pos;
     }
 }
 
-
-
 };
-
-
-
-
-
-
-
 

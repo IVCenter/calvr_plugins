@@ -33,15 +33,16 @@ class DSSketchBook: public DesignStateBase
     bool inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
     bool inputDevReleaseEvent();
     void update();
+    void setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
 
     void setScenicHandlerPtr(VirtualScenicHandler *vsHandlerPtr);
 
     /* definition of switch lock states */
     enum FlipLockState
     {
-	FLIP_UPWARD,
-	FLIP_DOWNWARD,
-	RELEASED
+        FLIP_UPWARD,
+        FLIP_DOWNWARD,
+        RELEASED
     };
 
   protected:

@@ -25,7 +25,8 @@ class FmodAudioSink : public osg::AudioSink
         virtual void play();
         virtual void pause();
         virtual void stop();
-
+	virtual float getVolume();
+	virtual void setVolume(float);
         virtual bool playing() const { return mStarted && !mPaused; }
 
         osg::observer_ptr<osg::AudioStream>

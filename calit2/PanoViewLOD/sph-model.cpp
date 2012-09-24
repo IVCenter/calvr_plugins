@@ -319,7 +319,7 @@ GLfloat sph_model::age(int then)
 }
 
 void sph_model::draw(const double *P, const double *V, const int *fv, int fc,
-                                                       const int *pv, int pc)
+                                                       const int *pv, int pc, float alpha)
 {
     double M[16];
     
@@ -376,6 +376,7 @@ void sph_model::draw(const double *P, const double *V, const int *fv, int fc,
     glUseProgram(program);
     {
         glUniform1f(glGetUniformLocation(program, "zoomk"), zoomk);
+	glUniform1f(glGetUniformLocation(program, "globalAlpha"), alpha);
         glUniform3f(glGetUniformLocation(program, "zoomv"),
                     zoomv[0], zoomv[1], zoomv[2]);
 

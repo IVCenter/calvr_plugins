@@ -95,7 +95,7 @@ class CAVEGroupReferencePlane: public CAVEGroupReference
   public:
     CAVEGroupReferencePlane();
 
-    virtual void setCenterPos(const osg::Vec3 &center);
+    virtual void setCenterPos(const osg::Vec3 &center, bool noSnap = false);
 
     void setUnitGridSize(const float &gridsize);
     void setPlaneMasking(bool flagXY, bool flagXZ, bool flagYZ);

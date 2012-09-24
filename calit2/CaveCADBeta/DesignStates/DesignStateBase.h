@@ -48,6 +48,8 @@ class DesignStateBase: public osg::Switch
     virtual bool inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) = 0;
     virtual bool inputDevReleaseEvent() = 0;
     virtual void update() = 0;
+    bool test(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
+
 
     void setParticleSystemPtr(DesignStateParticleSystem *psPtr) { mDSParticleSystemPtr = psPtr; }
 
@@ -71,6 +73,8 @@ class DesignStateBase: public osg::Switch
     /* Lock function: Setup flag that enables/disables switch between different design states */
     void setLocked(bool flag) { mLockedFlag = flag; }
     bool isLocked() { return mLockedFlag; }
+    bool isEnabled() { return mObjEnabledFlag; }
+    virtual void setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) = 0;// {std::cout << isHighlighted << std::endl;}
 
     /* static member functions: called within 'DesignStateRenderer' where global information for
 	root groups are written, including group pointer, position and orientation. */

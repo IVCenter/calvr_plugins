@@ -1,5 +1,4 @@
 #include "MenuBasics.h"
-#include "ComputeBBVisitor.h"
 
 #include <cvrKernel/Navigation.h>
 #include <cvrKernel/SceneManager.h>
@@ -9,6 +8,7 @@
 #include <cvrInput/TrackingManager.h>
 #include <cvrMenu/MenuSystem.h>
 #include <cvrConfig/ConfigManager.h>
+#include <cvrUtil/ComputeBoundingBoxVisitor.h>
 
 #include <PluginMessageType.h>
 
@@ -149,7 +149,7 @@ void MenuBasics::menuCallback(MenuItem * item)
 	osg::Vec3 center;
 	if(ComController::instance()->isMaster())
 	{
-	    ComputeBBVisitor * compBB = new ComputeBBVisitor(m);
+	    ComputeBoundingBoxVisitor * compBB = new ComputeBoundingBoxVisitor();
 	    SceneManager::instance()->getObjectsRoot()->accept(*compBB);
 	    osg::BoundingBox bb = compBB->getBound();
 	    delete compBB;

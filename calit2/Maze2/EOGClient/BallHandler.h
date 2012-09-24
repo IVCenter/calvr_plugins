@@ -22,6 +22,8 @@
 #include <osg/Switch>
 #include <osgDB/ReadFile>
 
+#include <cvrConfig/ConfigManager.h>
+
 // Local
 #include "Playback.h"
 
@@ -46,7 +48,8 @@ class BallHandler
 	static void setDataDir(const std::string &datadir) { gDataDir = datadir; }
 
   protected:
-    void initCaliBallGeometry(MatrixTransform *rootViewerTrans, const Vec4 &exteriorBallColor);
+    void initCaliBallGeometry(MatrixTransform *rootViewerTrans, const Vec4 &exteriorBallColor,
+        const Vec4 &interiorBallColor = osg::Vec4(1.0, 1.0, 1.0, 1.0));
 
     /* osg geometries */
     bool mFlagVisible;
@@ -55,8 +58,10 @@ class BallHandler
     Geode *mBoundingBallGeode, *mCenterBallGeode;
 
     /* calibration ball parameters */
-    static float BOUNDING_BALL_SIZE;
-    static float CENTER_BALL_SIZE;
+    //static float BOUNDING_BALL_SIZE;
+    //static float CENTER_BALL_SIZE;
+    float BOUNDING_BALL_SIZE;
+    float CENTER_BALL_SIZE;
 
 	static std::string gDataDir;
 

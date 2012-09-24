@@ -16,13 +16,14 @@ FIND_PATH(FMOD_INCLUDE_DIR fmodex/fmod.h
 )
 
 FIND_LIBRARY(FMOD_LIBRARY 
-  NAMES fmodex64 fmodex64-4.40.00
+  NAMES fmodex64-4.40.00
   PATHS $ENV{FMOD_HOME}
     NO_DEFAULT_PATH
     PATH_SUFFIXES lib64 lib
 )
+
 FIND_LIBRARY(FMOD_LIBRARY 
-  NAMES fmodex64 fmodex64-4.40.00
+  NAMES fmodex64-4.40.00
   PATHS
     /usr/local
     /usr

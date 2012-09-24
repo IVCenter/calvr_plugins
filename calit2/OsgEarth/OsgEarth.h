@@ -32,7 +32,6 @@ class OsgEarth : public cvr::CVRPlugin, public cvr::MenuCallback
         virtual ~OsgEarth();
         
 	bool init();
-        void message(int type, char * data);
         int getPriority() { return 51; }
         void preFrame();
         bool processEvent(cvr::InteractionEvent * event);
@@ -51,8 +50,6 @@ class OsgEarth : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::SubMenu * _osgEarthMenu;
         cvr::MenuCheckbox * _navCB;
         cvr::MenuCheckbox * _visCB;
-
-	
             
         bool _navActive;
         int _navHand;
@@ -63,6 +60,14 @@ class OsgEarth : public cvr::CVRPlugin, public cvr::MenuCallback
         int _currentX,_currentY;
         bool _movePointValid;
         osg::Vec3d _movePoint;
+
+ 	//bool _setting_viewpoint;
+	//osgEarthUtil::Viewpoint _pending_viewpoint;
+        //double _pending_viewpoint_duration_s;
+        //bool _has_pending_viewpoint;
+
+	//void setViewPoint( const Viewpoint& vp, double duration_s = 0.0);
+	//void cancelViewpointTransition() { _setting_viewpoint = false; }
 };
 
 #endif

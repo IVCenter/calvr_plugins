@@ -6,6 +6,7 @@
 #include <PluginMessageType.h>
 
 #include <iostream>
+#include <sstream>
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
@@ -40,36 +41,34 @@ PanoViewLOD::~PanoViewLOD()
 
 bool PanoViewLOD::init()
 {
-    /*_root = new osg::MatrixTransform();
-    _leftGeode = new osg::Geode();
-    _rightGeode = new osg::Geode();
-
-    _root->addChild(_leftGeode);
-    _root->addChild(_rightGeode);
-
-    _leftGeode->setNodeMask(_leftGeode->getNodeMask() & (~CULL_MASK_RIGHT));
-    _rightGeode->setNodeMask(_rightGeode->getNodeMask() & (~CULL_MASK_LEFT));
-    _rightGeode->setNodeMask(_rightGeode->getNodeMask() & (~CULL_MASK));
-
-    _rightDrawable = NULL;
-    _leftDrawable = NULL;
-
-    _defaultConfigDir = ConfigManager::getEntry("value","Plugin.PanoViewLOD.DefaultConfigDir","");
-    _imageSearchPath = ConfigManager::getEntry("value","Plugin.PanoViewLOD.ImageSearchPath","");
-    _floorOffset = ConfigManager::getFloat("value","Plugin.PanoViewLOD.FloorOffset",0);
-
-    std::string temp("PANOPATH=");
-    temp = temp + _imageSearchPath;
-
-    char * carray = new char[temp.size()+1];
-    
-    strcpy(carray,temp.c_str());
-
-    putenv(carray);*/
-
     _panObject = NULL;
 
-    _defaultConfigDir = ConfigManager::getEntry("value","Plugin.PanoViewLOD.DefaultConfigDir","");
+    std::string paths = ConfigManager::getEntryConcat("value","Plugin.PanoViewLOD.DefaultConfigDir",':',"");
+    size_t position = 0;
+    
+    while(position < paths.size())
+    {
+	size_t lastPosition = position;
+	position = paths.find_first_of(':', position);
+	if(position == std::string::npos)
+	{
+	    size_t length = paths.size() - lastPosition;
+	    if(length)
+	    {
+		_defaultConfigDirs.push_back(paths.substr(lastPosition,length));
+		break;
+	    }
+	}
+	else
+	{
+	    size_t length = position - lastPosition;
+	    if(length)
+	    {
+		_defaultConfigDirs.push_back(paths.substr(lastPosition,length));
+	    }
+	    position++;
+	}
+    }
 
     std::vector<std::string> tagList;
     ConfigManager::getChildren("Plugin.PanoViewLOD.Pans", tagList);
@@ -113,6 +112,11 @@ bool PanoViewLOD::init()
 void PanoViewLOD::preFrame()
 {
 
+    if(_panObject)
+    {
+	_panObject->preFrameUpdate();
+    }
+
 #ifdef PRINT_TIMING
 
     if(_panObject)
@@ -129,103 +133,10 @@ void PanoViewLOD::preFrame()
     }
 
 #endif
-    /*if(_leftDrawable || _rightDrawable)
-    {
-	float val = PluginHelper::getValuator(0,0);
-	if(fabs(val) < 0.2)
-	{
-	    return;
-	}
-
-	if(val > 1.0)
-	{
-	    val = 1.0;
-	}
-	else if(val < -1.0)
-	{
-	    val = -1.0;
-	}
-
-	osg::Matrix rot;
-	rot.makeRotate((M_PI / 50.0) * val, osg::Vec3(0,0,1));
-	_spinMat = _spinMat * rot;
-	_root->setMatrix(_coordChangeMat * _spinMat * _heightMat);
-
-	if(_currentZoom != 0.0)
-	{
-	    updateZoom(_lastZoomMat);
-	}
-    }*/
 }
 
 bool PanoViewLOD::processEvent(InteractionEvent * event)
 {
-    /*if(event->asTrackedButtonEvent())
-    {
-	TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
-	if(_rightDrawable || _leftDrawable)
-	{
-	    if(tie->getButton() == 2 && tie->getInteraction() == BUTTON_DOWN)
-	    {
-		if(_rightDrawable)
-		{
-		    _rightDrawable->next();
-		}
-		if(_leftDrawable)
-		{
-		    _leftDrawable->next();
-		}
-		return true;
-	    }
-	    if(tie->getButton() == 3 && tie->getInteraction() == BUTTON_DOWN)
-	    {
-		if(_rightDrawable)
-		{
-		    _rightDrawable->previous();
-		}
-		if(_leftDrawable)
-		{
-		    _leftDrawable->previous();
-		}
-		return true;
-	    }
-	    if(tie->getButton() == 0 && tie->getInteraction() == BUTTON_DOWN)
-	    {
-		updateZoom(tie->getTransform());
-
-		return true;
-	    }
-	    if(tie->getButton() == 0 && (tie->getInteraction() == BUTTON_DRAG || tie->getInteraction() == BUTTON_UP))
-	    {
-		float val = -PluginHelper::getValuator(0,1);
-		if(fabs(val) > 0.25)
-		{
-		    _currentZoom += val * PluginHelper::getLastFrameDuration() * 0.25;
-		    if(_currentZoom < -2.0) _currentZoom = -2.0;
-		    if(_currentZoom > 0.5) _currentZoom = 0.5;
-		}
-                
-		updateZoom(tie->getTransform());
-
-		return true;
-	    }
-	    if(tie->getButton() == 4 && tie->getInteraction() == BUTTON_DOWN)
-	    {
-		_currentZoom = 0.0;
-
-		if(_leftDrawable)
-		{
-		    _leftDrawable->setZoom(osg::Vec3(0,1,0),pow(10.0, _currentZoom));
-		}
-		else
-		{
-		    _rightDrawable->setZoom(osg::Vec3(0,1,0),pow(10.0, _currentZoom));
-		}
-
-		return true;
-	    }
-	}
-    }*/
     return false;
 }
 
@@ -239,15 +150,6 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 	}*/
 
 	removePan();
-
-	/*if(_rightDrawable && _leftDrawable)
-	{
-            _leftDrawable->cleanup();
-	    _leftGeode->removeDrawables(0,_leftGeode->getNumDrawables());
-	    _rightGeode->removeDrawables(0,_rightGeode->getNumDrawables());
-            _leftDrawable = _rightDrawable = NULL;
-	}
-	PluginHelper::getScene()->removeChild(_root);*/
     }
     for(int i = 0; i < _panButtonList.size(); i++)
     {
@@ -269,6 +171,8 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 
 	    _panObject = new PanoViewObject(_panButtonList[i]->getText(),_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size,_pans[i]->height,_pans[i]->vertFile,_pans[i]->fragFile);
 
+	    _panObject->setTransition(_pans[i]->transitionType,_pans[i]->transitionDirectory,_pans[i]->leftTransitionFiles,_pans[i]->rightTransitionFiles);
+
 	    PluginHelper::registerSceneObject(_panObject,"PanoViewLOD");
 	    _panObject->attachToScene();
 
@@ -277,50 +181,9 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 		_panObject->addMenuItem(_returnButton);
 	    }
 
-	    /*_leftDrawable = new PanoDrawableLOD(_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size,_pans[i]->vertFile,_pans[i]->fragFile);
-	    _rightDrawable = new PanoDrawableLOD(_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size,_pans[i]->vertFile,_pans[i]->fragFile);
-
-	    _leftGeode->addDrawable(_leftDrawable);
-	    _rightGeode->addDrawable(_rightDrawable);
-
-	    _coordChangeMat.makeRotate(M_PI/2.0,osg::Vec3(1,0,0));
-	    _spinMat.makeIdentity();
-	    float offset = _pans[i]->height - _floorOffset;
-	    _heightMat.makeTranslate(osg::Vec3(0,0,offset));
-	    _root->setMatrix(_coordChangeMat * _spinMat * _heightMat);
-
-	    PluginHelper::getScene()->addChild(_root);
-
-	    _radiusRV->setValue(_pans[i]->radius);
-	    _heightRV->setValue(_pans[i]->height);*/
-
 	    break;
 	}
     }
-    /*
-    
-    
-    if(item == _radiusRV)
-    {
-	if(_leftDrawable)
-	{
-	    _leftDrawable->setRadius(_radiusRV->getValue());
-	}
-	if(_rightDrawable)
-	{
-	    _rightDrawable->setRadius(_radiusRV->getValue());
-	}
-    }
-
-    if(item == _heightRV)
-    {
-	if(_leftDrawable || _rightDrawable)
-	{
-	    float offset = _heightRV->getValue() - _floorOffset;
-	    _heightMat.makeTranslate(osg::Vec3(0,0,offset));
-	    _root->setMatrix(_coordChangeMat * _spinMat * _heightMat);
-	}
-    }*/
 }
 
 void PanoViewLOD::message(int type, char *&data, bool collaborative)
@@ -357,7 +220,54 @@ void PanoViewLOD::message(int type, char *&data, bool collaborative)
 
 	menuCallback(_panButtonList[i]);
 	plr->loaded = true;
+
+	if(_panObject)
+	{
+	    _panObject->setRotate(plr->rotationOffset);
+	}
+
 	return;
+    }
+
+    if(type == PAN_HEIGHT_REQUEST)
+    {
+	if(collaborative)
+	{
+	    return;
+	}
+
+	PanHeightRequest * phr = (PanHeightRequest*)data;
+
+	int i;
+	for(i = 0; i < _panButtonList.size(); i++)
+	{
+	    if(phr->name == _panButtonList[i]->getText())
+	    {
+		break;
+	    }
+	}
+
+	if(i == _panButtonList.size())
+	{
+	    return;
+	}
+
+	phr->height = _pans[i]->height - ConfigManager::getFloat("value","Plugin.PanoViewLOD.FloorOffset",1500.0) + DEFAULT_PAN_HEIGHT;
+    }
+
+    if(type == PAN_SET_ALPHA)
+    {
+	float alpha = *((float*)data);
+
+	if(_panObject)
+	{
+	    _panObject->setAlpha(alpha);
+	}
+    }
+
+    if(type == PAN_UNLOAD)
+    {
+	removePan();
     }
 }
 
@@ -397,8 +307,7 @@ void PanoViewLOD::createLoadMenu(std::string tagBase, std::string tag, SubMenu *
 	    info->size = ConfigManager::getInt("size",tag,512);
 	    info->vertFile = ConfigManager::getEntry("vertFile",tag,"sph-zoomer.vert");
 	    info->fragFile = ConfigManager::getEntry("fragFile",tag,"sph-render.frag");
-	    //info->height = ConfigManager::getFloat("height",tag,1500);
-	    //info->radius = ConfigManager::getFloat("radius",tag,6000);
+	    info->height = ConfigManager::getFloat("height",tag,0.0);
 	}
 	else if(fxml)
 	{
@@ -412,11 +321,45 @@ void PanoViewLOD::createLoadMenu(std::string tagBase, std::string tag, SubMenu *
 	if(info)
 	{
 	    //put here for now since the values are not in the xml files
-	    info->height = ConfigManager::getFloat("height",tag,1500);
 	    info->radius = ConfigManager::getFloat("radius",tag,6000);
 	    _panButtonList.push_back(temp);
 	    _pans.push_back(info);
 	    menu->addItem(temp);
+
+	    //get transition data
+	    std::string transitionstr = ConfigManager::getEntry("transitionType",tag,"NORMAL");
+	    if(transitionstr == "MORPH" || transitionstr == "ZOOM")
+	    {
+		if(transitionstr == "MORPH")
+		{
+		    info->transitionType = MORPH;
+		}
+		else
+		{
+		    info->transitionType = ZOOM;
+		}
+
+		//read in transition file values
+		info->transitionDirectory = ConfigManager::getEntry("transitionFilesDir",tag,"");
+
+		for(int i = 0; i < info->leftFiles.size(); i++)
+		{
+		    std::stringstream ss;
+		    ss << "transition" << i << "FileL";
+		    info->leftTransitionFiles.push_back(ConfigManager::getEntry(ss.str(),tag,""));
+		}
+
+		for(int i = 0; i < info->rightFiles.size(); i++)
+		{
+		    std::stringstream ss;
+		    ss << "transition" << i << "FileR";
+		    info->rightTransitionFiles.push_back(ConfigManager::getEntry(ss.str(),tag,""));
+		}
+	    }
+	    else
+	    {
+		 info->transitionType = NORMAL;
+	    }
 	}
 	else
 	{
@@ -428,17 +371,25 @@ void PanoViewLOD::createLoadMenu(std::string tagBase, std::string tag, SubMenu *
 
 PanoViewLOD::PanInfo * PanoViewLOD::loadInfoFromXML(std::string file)
 {
-    FILE * fp;
+    FILE * fp = NULL;
     mxml_node_t * tree;
-
     fp = fopen(file.c_str(), "r");
+
     if(!fp)
     {
-	fp = fopen((_defaultConfigDir + "/" + file).c_str(),"r");
-	if(!fp)
+	for(int i = 0; i < _defaultConfigDirs.size(); i++)
 	{
-	    return NULL;
+	    fp = fopen((_defaultConfigDirs[i] + "/" + file).c_str(),"r");
+	    if(fp)
+	    {
+		break;
+	    }
 	}
+    }
+
+    if(!fp)
+    {
+	return NULL;
     }
 
     tree = mxmlLoadFile(NULL, fp,
@@ -472,6 +423,12 @@ PanoViewLOD::PanInfo * PanoViewLOD::loadInfoFromXML(std::string file)
     info->mesh = atoi(mxmlElementGetAttr(node, "mesh"));
     info->size = atoi(mxmlElementGetAttr(node, "size"));
     std::string vertFile = mxmlElementGetAttr(node, "vert");
+
+    const char * height = mxmlElementGetAttr(node, "height");
+    if(height)
+    {
+	info->height = atof(height);
+    }
 
     size_t pos = vertFile.find_last_of('/');
     if(pos != std::string::npos)
@@ -568,16 +525,20 @@ void PanoViewLOD::removePan()
 {
     if(_panObject)
     {
-	_panObject->detachFromScene();
-	PluginHelper::unregisterSceneObject(_panObject);
-	delete _panObject;
-	_panObject = NULL;
-
 	if(_loadRequest)
 	{
-	    PluginHelper::sendMessageByName(_loadRequest->plugin,_loadRequest->pluginMessageType,(char*)NULL);
+	    float rotate = 0.0;
+	    rotate = _panObject->getRotate();
+	    PluginHelper::sendMessageByName(_loadRequest->plugin,_loadRequest->pluginMessageType,(char*)&rotate);
 	    delete _loadRequest;
 	    _loadRequest = NULL;
+	}
+	else
+	{
+	    _panObject->detachFromScene();
+	    PluginHelper::unregisterSceneObject(_panObject);
+	    delete _panObject;
+	    _panObject = NULL;
 	}
     }
 }

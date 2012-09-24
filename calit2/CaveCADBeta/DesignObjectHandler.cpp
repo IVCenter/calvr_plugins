@@ -19,6 +19,7 @@ DesignObjectHandler::DesignObjectHandler(Group* rootGroup)
     mDesignObjectRoot = new Group();
     mNonIntersectableSceneGraphPtr = new Group();
     mIntersectableSceneGraphPtr = new Group();
+    mRoot = rootGroup;
 
     mCAVEShapeSwitch = new Switch();
     mCAVEIconSurfaceSwitch = new Switch();
@@ -77,6 +78,18 @@ DesignObjectHandler::~DesignObjectHandler()
 void DesignObjectHandler::setActive(bool flag)
 {
     mVirtualScenicHandler->setGeometryVisible(flag);
+/*    if (flag)
+    {
+        if (!mRoot->containsNode(mDesignObjectRoot) && mRoot && mDesignObjectRoot)
+        {
+            mRoot->addChild(mDesignObjectRoot);
+        }
+    }
+    else
+    {
+        mRoot->removeChild(mDesignObjectRoot);
+    }
+    */
 }
 
 
@@ -121,27 +134,4 @@ bool DesignObjectHandler::inputDevReleaseEvent()
 void DesignObjectHandler::update()
 {
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

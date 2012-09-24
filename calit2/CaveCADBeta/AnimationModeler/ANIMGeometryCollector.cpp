@@ -108,10 +108,3 @@ void ANIMLoadGeometryCollectorGeometryWireframe(MatrixTransform **wireframeTrans
 
 };
 
-
-
-
-
-
-
-

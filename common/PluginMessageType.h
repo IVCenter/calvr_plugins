@@ -66,7 +66,10 @@ struct PointsLoadInfo
 
 enum PanoViewLODMessageType
 {
-    PAN_LOAD_REQUEST=0
+    PAN_LOAD_REQUEST=0,
+    PAN_HEIGHT_REQUEST,
+    PAN_SET_ALPHA,
+    PAN_UNLOAD
 };
 
 struct PanLoadRequest
@@ -76,6 +79,12 @@ struct PanLoadRequest
     std::string plugin;
     int pluginMessageType;
     bool loaded;
+};
+
+struct PanHeightRequest
+{
+    std::string name;
+    float height;
 };
 
 enum PointsWithPanMessageType

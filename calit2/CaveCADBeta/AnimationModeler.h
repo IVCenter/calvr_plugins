@@ -91,21 +91,43 @@ namespace CAVEAnimationModeler
     * Function: Animation & model prototypes
     ***************************************************************/
     osg::MatrixTransform* ANIMCreateDesignStateParticleSystem(ANIMEmitterList *dsEmitterList);
+
+
+    // Virtual Sphere
+
     void ANIMCreateVirtualSphere(osg::PositionAttitudeTransform** xformScaleFwd, 
-				 osg::PositionAttitudeTransform** xformScaleBwd);
+                                 osg::PositionAttitudeTransform** xformScaleBwd);
     osg::MatrixTransform* ANIMCreateVirtualSpherePointSprite();
+
+
+    // Design Objects
+
     osg::MatrixTransform* ANIMCreateRefXYPlane();
     osg::MatrixTransform* ANIMCreateRefSkyDome(osg::StateSet **stateset);
-    osg::MatrixTransform* ANIMCreateRefWaterSurf(osg::StateSet **stateset, osg::Geometry **watersurfGeometry);
+    osg::MatrixTransform* ANIMCreateRefWaterSurf(osg::StateSet **stateset,
+                                                 osg::Geometry **watersurfGeometry);
+    osg::Geode* ANIMCreateWiredSphereGeode(const int numLatiSegs, const int numLongiSegs,
+					                       const float rad, const osg::Vec4 color);
 
-    osg::Geode* ANIMCreateWiredSphereGeode(const int numLatiSegs, const int numLongiSegs, 
-					   const float rad, const osg::Vec4 color);
+
+    // Virtual Earth
 
     void ANIMLoadVirtualEarthReferenceLevel(osg::Switch **designStateSwitch, osg::Geode **seasonsMapNode);
     void ANIMLoadVirtualEarthEclipticLevel(osg::Switch **eclipticSwitch);
-    void ANIMLoadVirtualEarthEquatorLevel(osg::Switch **equatorSwitch, osg::Geode **earthGeode, 
-		osg::PositionAttitudeTransform **xformTransFwd, osg::PositionAttitudeTransform **xformTransBwd, 
+    void ANIMLoadVirtualEarthEquatorLevel(osg::Switch **equatorSwitch, osg::Geode **earthGeode,
+		osg::PositionAttitudeTransform **xformTransFwd, osg::PositionAttitudeTransform **xformTransBwd,
 		osg::MatrixTransform **fixedPinIndicatorTrans, osg::MatrixTransform **fixedPinTrans);
+
+
+    // Viewpoints
+
+    void ANIMCreateViewpoints(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
+                              std::vector<osg::PositionAttitudeTransform*>* bwdVec);
+    void ANIMAddViewpoint(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
+                          std::vector<osg::PositionAttitudeTransform*>* bwdVec);
+
+
+    // Panoramas
 
     /***************************************************************
     * Class: ANIMParamountSwitchEntry
@@ -113,20 +135,23 @@ namespace CAVEAnimationModeler
     class ANIMParamountSwitchEntry
     {
       public:
-	osg::MatrixTransform *mMatrixTrans;
-	osg::Switch *mSwitch;
-	osg::AnimationPathCallback *mZoomInAnim, *mZoomOutAnim;
-	osg::Geode *mPaintGeode;
-	std::string mTexFilename;
+        osg::MatrixTransform *mMatrixTrans;
+        osg::Switch *mSwitch;
+        osg::AnimationPathCallback *mZoomInAnim, *mZoomOutAnim;
+        osg::Geode *mPaintGeode;
+        std::string mTexFilename;
     };
 
-    void ANIMLoadParamountPaintFrames(	osg::PositionAttitudeTransform** xformScaleFwd, 
-					osg::PositionAttitudeTransform** xformScaleBwd,
-					int &numParas, float &paraswitchRadius, 
-					ANIMParamountSwitchEntry ***paraEntryArray);
+    void ANIMLoadParamountPaintFrames(osg::PositionAttitudeTransform** xformScaleFwd,
+                                      osg::PositionAttitudeTransform** xformScaleBwd,
+                                      int &numParas, float &paraswitchRadius,
+                                      ANIMParamountSwitchEntry ***paraEntryArray);
     void ANIMCreateParamountPaintFrameAnimation(osg::AnimationPathCallback **zoomInCallback,
 						osg::AnimationPathCallback **zoomOutCallback);
     osg::Geode *ANIMCreateParamountPaintGeode(const std::string &texfilename);
+
+
+    // Sketchbook
 
     /***************************************************************
     * Class: ANIMPageEntry
@@ -134,21 +159,23 @@ namespace CAVEAnimationModeler
     class ANIMPageEntry
     {
       public:
-	osg::Switch *mSwitch;
-	osg::AnimationPathCallback *mFlipUpAnim, *mFlipDownAnim;
-	osg::Geode *mPageGeode;
-	std::string mTexFilename;
-	float mLength, mWidth, mAlti;
+        osg::Switch *mSwitch;
+        osg::AnimationPathCallback *mFlipUpAnim, *mFlipDownAnim;
+        osg::Geode *mPageGeode;
+        std::string mTexFilename;
+        float mLength, mWidth, mAlti;
     };
 
-    void ANIMLoadSketchBook(osg::PositionAttitudeTransform** xformScaleFwd, 
+    void ANIMLoadSketchBook(osg::PositionAttitudeTransform** xformScaleFwd,
 			    osg::PositionAttitudeTransform** xformScaleBwd,
 			    int &numPages, ANIMPageEntry ***pageEntryArray);
     void ANIMCreateSinglePageGeodeAnimation(const std::string& texfilename,
-					    osg::Geode **flipUpGeode, osg::Geode **flipDownGeode, 
+					    osg::Geode **flipUpGeode, osg::Geode **flipDownGeode,
 					    osg::AnimationPathCallback **flipUpCallback,
 					    osg::AnimationPathCallback **flipDownCallback);
 
+
+    // Geometry creator
 
     /***************************************************************
     * Class: ANIMShapeSwitchEntry
@@ -156,25 +183,18 @@ namespace CAVEAnimationModeler
     class ANIMShapeSwitchEntry
     {
       public:
-	osg::Switch *mSwitch;
-	osg::AnimationPathCallback *mFlipUpFwdAnim, *mFlipDownFwdAnim;
-	osg::AnimationPathCallback *mFlipUpBwdAnim, *mFlipDownBwdAnim;
+        osg::Switch *mSwitch;
+        osg::AnimationPathCallback *mFlipUpFwdAnim, *mFlipDownFwdAnim;
+        osg::AnimationPathCallback *mFlipUpBwdAnim, *mFlipDownBwdAnim;
     };
 
-    void ANIMLoadGeometryCreator(osg::PositionAttitudeTransform** xformScaleFwd, 
-			    	 osg::PositionAttitudeTransform** xformScaleBwd,
+    void ANIMLoadGeometryCreator(osg::PositionAttitudeTransform** xformScaleFwd,
+		     	 osg::PositionAttitudeTransform** xformScaleBwd,
 				 osg::Switch **sphereExteriorSwitch, osg::Geode **sphereExteriorGeode,
 				 int &numTypes, ANIMShapeSwitchEntry ***shapeSwitchEntryArray);
     void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, const CAVEGeodeShape::Type &typ);
-
-    void ANIMLoadObjectHandler( osg::Switch **snapWireframeSwitch, osg::Switch **snapSolidshapeSwitch);
+    void ANIMLoadObjectHandler(osg::Switch **snapWireframeSwitch, osg::Switch **snapSolidshapeSwitch);
 };
 
 #endif
-
-
-
-
-
-
 

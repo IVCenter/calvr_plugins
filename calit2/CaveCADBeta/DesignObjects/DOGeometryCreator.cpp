@@ -52,13 +52,13 @@ void DOGeometryCreator::setWireframeActiveID(const int &idx)
     mWireframeActiveID = idx;
     if (idx >= 0)
     {
-	mSnapWireframeSwitch->setSingleChildOn(mWireframeActiveID);
-	mWireframeGeode = dynamic_cast <CAVEGeodeSnapWireframe*> (mSnapWireframeSwitch->getChild(mWireframeActiveID));
+        mSnapWireframeSwitch->setSingleChildOn(mWireframeActiveID);
+        mWireframeGeode = dynamic_cast <CAVEGeodeSnapWireframe*> (mSnapWireframeSwitch->getChild(mWireframeActiveID));
     }
     else 
     {
-	mSnapWireframeSwitch->setAllChildrenOff();
-	mWireframeGeode = NULL;
+        mSnapWireframeSwitch->setAllChildrenOff();
+        mWireframeGeode = NULL;
     }
 }
 
@@ -71,13 +71,14 @@ void DOGeometryCreator::setSolidshapeActiveID(const int &idx)
     mSolidShapeActiveID = idx;
     if (idx >= 0)
     {
-	mSnapSolidshapeSwitch->setSingleChildOn(mSolidShapeActiveID);
-	mSolidshapeGeode = dynamic_cast <CAVEGeodeSnapSolidshape*> (mSnapSolidshapeSwitch->getChild(mSolidShapeActiveID));
+        mSnapSolidshapeSwitch->setSingleChildOn(mSolidShapeActiveID);
+        mSolidshapeGeode = 
+            dynamic_cast <CAVEGeodeSnapSolidshape*> (mSnapSolidshapeSwitch->getChild(mSolidShapeActiveID));
     }
     else 
     {
-	mSnapSolidshapeSwitch->setAllChildrenOff();
-	mSolidshapeGeode = NULL;
+        mSnapSolidshapeSwitch->setAllChildrenOff();
+        mSolidshapeGeode = NULL;
     }
 }
 
@@ -87,16 +88,18 @@ void DOGeometryCreator::setSolidshapeActiveID(const int &idx)
 ***************************************************************/
 void DOGeometryCreator::setWireframeInitPos(const osg::Vec3 &initPos)
 {
-    if (mWireframeGeode) mWireframeGeode->setInitPosition(initPos);
+    if (mWireframeGeode) 
+        mWireframeGeode->setInitPosition(initPos);
 }
 
 
 /***************************************************************
 * Function: setSolidshapeInitPos()
 ***************************************************************/
-void DOGeometryCreator::setSolidshapeInitPos(const osg::Vec3 &initPos)
+void DOGeometryCreator::setSolidshapeInitPos(const osg::Vec3 &initPos, bool snap)
 {
-    if (mSolidshapeGeode) mSolidshapeGeode->setInitPosition(initPos);
+    if (mSolidshapeGeode) 
+        mSolidshapeGeode->setInitPosition(initPos, snap);
 }
 
 
@@ -115,26 +118,26 @@ void DOGeometryCreator::resetWireframeGeodes(const osg::Vec3 &centerPos)
 {
     if (mWireframeGeode)
     {
-	Vec3 wireframeGridVect;
-	float zoomfact = 1.5f;
-	float unit = CAVEGeodeSnapWireframe::gSnappingUnitDist;
-	if (mWireframeActiveID == CAVEGeodeShape::BOX)
-	{
-	    float len = ANIM_VIRTUAL_SPHERE_RADIUS / 0.9 * zoomfact;
-	    len = ((int) (len / unit)) * unit;
-	    Vec3 scaleBox = Vec3(len, len, len);
-	    mWireframeGeode->setInitPosition(centerPos + Vec3(-len, -len, -len) * 0.5);
-	    mWireframeGeode->setScaleVect(scaleBox);
-	}
-	else if (mWireframeActiveID == CAVEGeodeShape::CYLINDER)
-	{
-	    float rad = ANIM_VIRTUAL_SPHERE_RADIUS / 1.5 * zoomfact;
-	    rad = ((int) (rad / unit)) * unit;
-	    Vec3 scaleCylinder = Vec3(rad, 0, rad * 2);
-	    mWireframeGeode->setInitPosition(centerPos + Vec3(0, 0, -rad));
-	    mWireframeGeode->setScaleVect(scaleCylinder);
-	}
-	mWireframeGeode->resize(wireframeGridVect);
+        Vec3 wireframeGridVect;
+        float zoomfact = 1.5f;
+        float unit = CAVEGeodeSnapWireframe::gSnappingUnitDist;
+        if (mWireframeActiveID == CAVEGeodeShape::BOX)
+        {
+            float len = ANIM_VIRTUAL_SPHERE_RADIUS / 0.9 * zoomfact;
+            len = ((int) (len / unit)) * unit;
+            Vec3 scaleBox = Vec3(len, len, len);
+            mWireframeGeode->setInitPosition(centerPos + Vec3(-len, -len, -len) * 0.5);
+            mWireframeGeode->setScaleVect(scaleBox);
+        }
+        else if (mWireframeActiveID == CAVEGeodeShape::CYLINDER)
+        {
+            float rad = ANIM_VIRTUAL_SPHERE_RADIUS / 1.5 * zoomfact;
+            rad = ((int) (rad / unit)) * unit;
+            Vec3 scaleCylinder = Vec3(rad, 0, rad * 2);
+            mWireframeGeode->setInitPosition(centerPos + Vec3(0, 0, -rad));
+            mWireframeGeode->setScaleVect(scaleCylinder);
+        }
+        mWireframeGeode->resize(wireframeGridVect);
     }
 }
 
@@ -168,7 +171,9 @@ void DOGeometryCreator::setReferenceAxisMasking(bool flag)
 ***************************************************************/
 void DOGeometryCreator::setScalePerUnit(const float &scalePerUnit, const string &infoStr)
 {
-    if (mSolidshapeGeode) mSolidshapeGeode->setSnappingUnitDist(scalePerUnit);
+    if (mSolidshapeGeode) 
+        mSolidshapeGeode->setSnappingUnitDist(scalePerUnit);
+
     setResize();
 
     mCAVEGroupRefPlane->setUnitGridSize(scalePerUnit);
@@ -189,15 +194,15 @@ void DOGeometryCreator::updateReferenceAxis()
 {
     if (mCAVEGroupRefAxis->isVisible())
     {
-	if (mWireframeGeode)
-	{
-	    mCAVEGroupRefAxis->setCenterPos(mWireframeGeode->getInitPosition());
-	    if (mSolidshapeGeode)
-	    {
-		mCAVEGroupRefAxis->updateDiagonal(mWireframeGeode->getDiagonalVect(), 
-						  mSolidshapeGeode->getScaleVect());
-	    }
-	}
+        if (mWireframeGeode)
+        {
+            mCAVEGroupRefAxis->setCenterPos(mWireframeGeode->getInitPosition());
+            if (mSolidshapeGeode)
+            {
+                mCAVEGroupRefAxis->updateDiagonal(mWireframeGeode->getDiagonalVect(), 
+                              mSolidshapeGeode->getScaleVect());
+            }
+        }
     }
 }
 
@@ -208,10 +213,10 @@ void DOGeometryCreator::updateReferenceAxis()
 * Round intersected vector 'center' to closest snapping point
 *
 ***************************************************************/
-void DOGeometryCreator::updateReferencePlane(const osg::Vec3 &center)
+void DOGeometryCreator::updateReferencePlane(const osg::Vec3 &center, bool noSnap)
 {
     mCAVEGroupRefPlane->setPlaneMasking(true, true, true);
-    mCAVEGroupRefPlane->setCenterPos(center);
+    mCAVEGroupRefPlane->setCenterPos(center, noSnap);
 }
 
 
@@ -227,10 +232,11 @@ void DOGeometryCreator::setPointerDir(const osg::Vec3 &pointerDir)
 /***************************************************************
 * Function: setSnapPos()
 ***************************************************************/
-void DOGeometryCreator::setSnapPos(const osg::Vec3 &snapPos)
+void DOGeometryCreator::setSnapPos(const osg::Vec3 &snapPos, bool snap)
 {
-    if (mWireframeGeode) mWireframeGeode->setScaleVect(snapPos - mWireframeGeode->getInitPosition());
-    setResize();
+    if (mWireframeGeode) 
+        mWireframeGeode->setScaleVect(snapPos - mWireframeGeode->getInitPosition());
+    setResize(snap);
 }
 
 
@@ -239,7 +245,8 @@ void DOGeometryCreator::setSnapPos(const osg::Vec3 &snapPos)
 ***************************************************************/
 void DOGeometryCreator::setResize(const float &s)
 {
-    if (mWireframeGeode) mWireframeGeode->setScaleVect(Vec3(s, s, s));
+    if (mWireframeGeode) 
+        mWireframeGeode->setScaleVect(Vec3(s, s, s));
     setResize();
 }
 
@@ -247,11 +254,16 @@ void DOGeometryCreator::setResize(const float &s)
 /***************************************************************
 * Function: setResize()
 ***************************************************************/
-void DOGeometryCreator::setResize()
+void DOGeometryCreator::setResize(bool snap)
 {
     Vec3 wireframeGridVect = Vec3(0, 0, 0);
-    if (mWireframeGeode) mWireframeGeode->resize(wireframeGridVect);
-    if (mSolidshapeGeode) mSolidshapeGeode->resize(wireframeGridVect);
+    if (mWireframeGeode) 
+        mWireframeGeode->resize(wireframeGridVect);
+
+    if (mSolidshapeGeode) 
+    {
+        mSolidshapeGeode->resize(wireframeGridVect, snap);
+    }
 }
 
 
@@ -262,25 +274,12 @@ void DOGeometryCreator::registerSolidShape()
 {
     if (mSolidshapeGeode->isValid())
     {
-	/* 'mDOShapeSwitch -> CAVEGroupShape -> CAVEGeodeShape' each CAVEGroupShape contains
-	    only one instance of 'CAVEGeodeShape' at the time of being created. */
-	CAVEGeodeShape *shape = new CAVEGeodeShape((CAVEGeodeShape::Type) mSolidShapeActiveID, 
-			mSolidshapeGeode->getInitPosition(), mSolidshapeGeode->getScaleVect());
-	CAVEGroupShape *group = new CAVEGroupShape(shape);
-	mDOShapeSwitch->addChild(group);
+        /* 'mDOShapeSwitch -> CAVEGroupShape -> CAVEGeodeShape' each CAVEGroupShape contains
+            only one instance of 'CAVEGeodeShape' at the time of being created. */
+        CAVEGeodeShape *shape = new CAVEGeodeShape((CAVEGeodeShape::Type) mSolidShapeActiveID, 
+                mSolidshapeGeode->getInitPosition(), mSolidshapeGeode->getScaleVect());
+        CAVEGroupShape *group = new CAVEGroupShape(shape);
+        mDOShapeSwitch->addChild(group);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
