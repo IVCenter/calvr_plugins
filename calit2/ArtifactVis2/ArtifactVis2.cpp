@@ -118,6 +118,8 @@ void ArtifactVis2::message(int type, char* data)
 
 bool ArtifactVis2::init()
 {
+
+    navSphereTimer = 0;
     pointGeode = new osg::Geode();
     _modelFileNode = NULL;
     useKinect = ConfigManager::getBool("Plugin.ArtifactVis2.KinectDefaultOn");
@@ -194,6 +196,8 @@ bool ArtifactVis2::init()
     //   _avMenu->addItem(_kColorFPS);
     _kShowPCloud = new MenuCheckbox("Show Point Cloud", kShowPCloud);  //new
     _kShowPCloud->setCallback(this);
+    _kShowInfoPanel = new MenuCheckbox("Show Info Panel", kShowInfoPanel);  //new
+    _kShowInfoPanel->setCallback(this);
     //   _avMenu->addItem(_kShowPCloud);
     _kColorOn = new MenuCheckbox("Show Real Colors on Point Cloud", useKColor);  //new
     _kColorOn->setCallback(this);
@@ -213,6 +217,7 @@ bool ArtifactVis2::init()
     _kinectMenu->addItem(_kUseGestures);
     _kinectMenu->addItem(_kMoveWithCam);
     _kinectMenu->addItem(_kShowArtifactPanel);
+    _kinectMenu->addItem(_kShowInfoPanel);
     //   _avMenu->addItem(_kColorOn);
     _selectCB = new MenuCheckbox("Select box", false);
     _selectCB->setCallback(this);
@@ -255,6 +260,10 @@ bool ArtifactVis2::init()
     _artifactPanel->addTextureTab("Bottom", "");
     _artifactPanel->setVisible(false);
     _artifactPanel->setActiveTab("Info");
+    _infoPanel = new TabbedDialogPanel(400, 30, 4, "Info Panel", "Plugin.ArtifactVis2.InfoPanel");
+    _infoPanel->addTextTab("Info", "");
+    _infoPanel->setVisible(false);
+    _infoPanel->setActiveTab("Info");
     _selectionStatsPanel = new DialogPanel(450, "Selection Stats", "Plugin.ArtifactVis2.SelectionStatsPanel");
     _selectionStatsPanel->setVisible(false);
     //_testA = 0;
@@ -1193,6 +1202,19 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
             kShowArtifactPanel = false;
         }
     }
+    if (menuItem == _kShowInfoPanel)
+    {
+        if (_kShowInfoPanel->getValue())
+        {
+            kShowInfoPanel = true;
+            _infoPanel->setVisible(true);
+        }
+        else
+        {
+            kShowInfoPanel = false;
+            _infoPanel->setVisible(false);
+        }
+    }
 
     for (int i = 0; i < _goto.size(); i++)
     {
@@ -1747,9 +1769,11 @@ void ArtifactVis2::preFrame()
         //        float tessellation = ConfigManager::getFloat("Plugin.ArtifactVis2.Tessellation", .2);
         ThirdLoop();
         std::map< osg::ref_ptr<osg::Geode>, int >::iterator iter;
-
+        
+        
         for (std::map<int, Skeleton>::iterator it = mapIdSkel.begin(); it != mapIdSkel.end(); ++it)
         {
+
             if (kNavSpheres)
             {
                 // if boundingbox of a sphere intersects cylinder, lock
@@ -1788,9 +1812,22 @@ void ArtifactVis2::preFrame()
 
             Vec3 StartPoint = it->second.joints[M_LHAND].position;
             Vec3 EndPoint = it->second.joints[M_RHAND].position;
+            float headZ = it->second.joints[M_HEAD].position.z();
+            float lhandZ = it->second.joints[M_LHAND].position.z();
             // if cylinder would be >distanceMIN && <distanceMAX, draw it and check for collisions
             double distance = (StartPoint - EndPoint).length();
 
+                            if (lhandZ > headZ)
+			    {
+			      if(navSphereTimer != 3.00)
+			      {
+                                 navSphereTimer += PluginHelper::getLastFrameDuration();
+				if(navSphereTimer > 1.00)
+				{
+				  navSphereTimer = 3.00;
+				}
+			      }
+			    }
 //Test Single Hand Intersect
 bool tHandIntersect = true;
 if(tHandIntersect)
@@ -1895,10 +1932,10 @@ if(tHandIntersect)
                 //printf("Cylinder is attached\n");
                 //
                 bool detachC = false;
-
+/*
                 if (it->second.cylinder.locked && ((it->second.joints[9].position.z() - it->second.joints[7].position.z() < 0) && (it->second.joints[15].position.z() - it->second.joints[13].position.z() < 0)))
                     detachC = true;
-
+*/
                 // navSphere gets special treatment and unlocks when cylinder is smaller
                 /*
                 if (it->second.navSphere.lock == it->first)
@@ -1947,6 +1984,7 @@ if(tHandIntersect)
                     // and NavSpheres
                     it->second.navSphere.lock = -1;
                     navLock = -1;
+                    navSphereTimer = 0;
                     it->second.navSphere.activated = false;
 
                     it->second.cylinder.locked = false;
@@ -1964,8 +2002,9 @@ if(tHandIntersect)
                             Sphere* tempNav = new Sphere(it->second.navSphere.position, 0.03 * 2);
                             ShapeDrawable* ggg3 = new ShapeDrawable(tempNav);
                             const osg::BoundingBox& fakenav = ggg3->getBound();
-
-                            if (bboxCyl.intersects(fakenav) && it->second.navSphere.lock == -1)
+			    float cylinderZ = it->second.cylinder.center.z();
+                            float headZ = it->second.joints[M_HEAD].position.z();
+                            if (bboxCyl.intersects(fakenav) && it->second.navSphere.lock == -1 && false)
                             {
                                 it->second.navSphere.lock = it->first;
                                 navLock = it->first;
@@ -1977,6 +2016,18 @@ if(tHandIntersect)
                                 // save previous position
                                 //it->second.navSphere.prevPosition.set(it->second.navSphere.position);  //XXX I don't think this is ever used
                             }
+                            else if (navSphereTimer == 3.00)
+			    {
+				  navLock = it->first;
+                                  it->second.cylinder.locked = true;
+                                //printf("Intersecting with NavSphere\n");
+                                it->second.cylinder.prevVec = (it->second.joints[M_LHAND].position - osg::Vec3d((StartPoint.x() + EndPoint.x()) / 2, (StartPoint.y() + EndPoint.y()) / 2, (StartPoint.z() + EndPoint.z()) / 2));
+                                it->second.cylinder.handsBeenAboveElbows = true;
+                                
+				
+			      
+
+			    }
                         }
 
                         for (int j = 0; j < selectableItems.size(); j++)
@@ -2049,6 +2100,8 @@ if(tHandIntersect)
                 }
             }
         }
+
+//End of Skeleton Iteration
 
         // move all the locked artifacts ..
 
@@ -2211,12 +2264,29 @@ if(tHandIntersect)
 
             selectableItems[j].setScale(newscale);
         }
+	navSphereActivated = false;
         if(kNavSpheres && navLock != -1)
         {
             int cylinderId = navLock;
-            Vec3 diff = mapIdSkel[cylinderId].cylinder.center - mapIdSkel[cylinderId].navSphere.position;
-            bool navSphereActivated = mapIdSkel[cylinderId].navSphere.activated;
-            if (!navSphereActivated)
+            Vec3 diff;
+	    if(navSphereTimer == 3.00)
+	    {
+		navSphereActivated = true;
+                Vec3 center2 = mapIdSkel[cylinderId].joints[3].position;
+                center2.y() += 0.3;
+                center2.z() += 0.1;
+	        diff = mapIdSkel[cylinderId].cylinder.center - center2;
+                mapIdSkel[cylinderId].navSphere.update(mapIdSkel[cylinderId].cylinder.center, Vec4(0, 0, 0, 1));
+                mapIdSkel[cylinderId].navSphere.activated = true;
+	    }
+	    else if(navSphereTimer != 3.00)
+	    {
+	    diff = mapIdSkel[cylinderId].cylinder.center - mapIdSkel[cylinderId].navSphere.position;
+	    navSphereActivated = mapIdSkel[cylinderId].navSphere.activated;
+	    }
+
+
+            if (!navSphereActivated and navSphereTimer != 3.00)
             {
                 const osg::BoundingBox& bboxCyl = mapIdSkel[cylinderId].cylinder.geode->getDrawable(0)->getBound();
                 //Vec3 navPos = mapIdSkel[cylinderId].joints[3].position; navbang
@@ -2242,13 +2312,18 @@ if(tHandIntersect)
                     mapIdSkel[cylinderId].navSphere.update(mapIdSkel[cylinderId].cylinder.center, Vec4(0, 0, 0, 1));
                 }
             }
-            else
+            else if (navSphereTimer != 3.00)
             {
                 Vec3 center2 = mapIdSkel[cylinderId].joints[3].position;
                 center2.y() += 0.4;
                 //center2.z() += 0.2;
                 mapIdSkel[cylinderId].navSphere.update(center2, Vec4(0, 0, 0, 1));
             }
+            else if (navSphereTimer == 3.00)
+	    {
+
+
+	    }
 
             Matrix rotMat0;
             rotMat0.makeRotate(mapIdSkel[cylinderId].cylinder.prevVec, mapIdSkel[cylinderId].cylinder.currVec);
@@ -2270,43 +2345,110 @@ if(tHandIntersect)
             //it->second.navSphere.position - it->second.offset - it->second.navSphere.prevPosition; ////////NEW CHANGE TO VERIFY
 
             //                    diff/=3;
+            double diffScale;
+	    double diffScaleNeg;
+            double tranScale;
+	    if(navSphereTimer == 3.00)
+	    {
+            	diffScale = 0.05;
+	    	diffScaleNeg = -0.05;
+                tranScale = -100;
+	    }
+	    else
+	    {
+            	diffScale = 0.1;
+	    	diffScaleNeg = -0.1;
+                tranScale = -50;
+            }
+
             if(navSphereActivated)
             {
                 double x, y, z;
                 x = y = z = 0.0;
                 double rx, ry, rz;
                 rx = ry = rz = 0.0;
-                double tranScale = -75;
                 bool moved = false;
-                if(diff.x() > 0.1 || diff.x() < -0.1)
+/*
+                if(diff.x() > diffScale || diff.x() < diffScaleNeg)
                 {
                     x = diff.x() * tranScale;
                     //printf("X:%g",x);
                     moved = true;
                 }
-                if(diff.y() > 0.1 || diff.y() < -0.1)
+                if(diff.y() > diffScale || diff.y() < diffScaleNeg)
                 {
                     y = diff.y() * tranScale;
                     //printf(" Y:%g",y);
                     moved = true;
                 }
-                if(diff.z() > 0.1 || diff.z() < -0.1)
+                if(diff.z() > diffScale || diff.z() < diffScaleNeg)
                 {
                     z = diff.z() * tranScale;
                     //printf(" Z:%g",z);
                     moved = true;
                 }
+*/
+
+                if(diff.x() > diffScale)
+                {
+                    x = 0.1 * tranScale;
+                    //printf("X:%g",x);
+                    moved = true;
+                }
+                else if(diff.x() < diffScaleNeg)
+		{
+
+                    x = -0.1 * tranScale;
+                    //printf("X:%g",x);
+                    moved = true;
+
+		}
+                if(diff.y() > diffScale)
+                {
+                    y = 0.1 * tranScale;
+                    //printf("X:%g",y);
+                    moved = true;
+                }
+                else if(diff.y() < diffScaleNeg)
+		{
+
+                    y = -0.1 * tranScale;
+                    //printf("X:%g",y);
+                    moved = true;
+
+		}
+                if(diff.z() > diffScale)
+                {
+                    z = 0.1 * tranScale;
+                    //printf("X:%g",x);
+                    moved = true;
+                }
+                else if(diff.z() < diffScaleNeg)
+		{
+
+                    z = -0.1 * tranScale;
+                    //printf("X:%g",x);
+                    moved = true;
+
+		}
+	        moved = true;
                 if(moved)
                 {
+                    //Quat handQuad = mapIdSkel[cylinderId].cylinder.translate->getRotate();
                     Quat handQuad = rotMat0.getRotate();
                     double rscale = 1;
                     rx = 0.0; //handQuad.x();
                     ry = 0.0; //handQuad.y();
                     rz = handQuad.z();
-                    if(rz > 0.03 || rz < -0.03)
+                    cerr << " Rot:" << rx << "," << ry << "," << rz << "\n";
+                    if(rz > 0.01)
                     {
                         //cerr << " Rot:" << rx << "," << ry << "," << rz << "\n";
-                        rz = 0.0;
+                        rz = 0.01;
+                    }
+                    else if(rz < -0.01)
+                    {
+                        rz = -0.01;
                     }
                     else
                     {
@@ -2545,6 +2687,10 @@ if(tHandIntersect)
     //        }
     //    }
     //..............................................................................
+
+//Update Info Panel for PreFrame
+updateInfoPanel();
+
 }
 void ArtifactVis2::loadScaleBar(osg::Vec3d start)
 {
@@ -2760,6 +2906,68 @@ void ArtifactVis2::setActiveArtifact(int _lockedTo, int _lockedType, int art, in
 
     _activeArtifact = art;
 }
+void ArtifactVis2::updateInfoPanel()
+{
+
+    std::stringstream ss;
+//kinectUsers
+    ss << "Info: " << endl;
+  //  ss << "FPS: " << navSphereTimer << endl;
+    ss << "Kinect Users: " << kinectUsers << endl;
+
+	//Should loope through users
+	bool lHand = false;
+	bool rHand = false;
+	bool rHandAssist = false;
+
+	string lHandOn = "Off";
+	string rHandOn = "Off";
+	string rHandAssisting = "Off";
+	if(lHand) lHandOn = "On";
+	if(rHand) rHandOn = "On";
+	if(rHandAssist) rHandAssisting = "On";
+        //navSphereTimer = 3.00;
+        string navSphereStatus = "Off";
+    	ss << "-Nav Sphere Status: ";
+        if(navSphereTimer != 0 && navSphereTimer < 3.00 &&  !navSphereActivated)
+	{
+          //Nav Sphere Activating
+          navSphereStatus = "Activating";
+    	  ss << navSphereStatus << ": " << navSphereTimer << endl;
+	}
+        if(navSphereTimer != 0 && navSphereTimer < 3.00 && navSphereActivated)
+	{
+          //Nav Sphere Deactivating
+          navSphereStatus = "Deactivating";
+    	  ss << navSphereStatus << ": " << navSphereTimer << endl;
+	}
+	else if (navSphereTimer == 3.00 && !navSphereActivated)
+	{
+          //Nav Sphere Ready
+          navSphereStatus = "navSphere Activated Create Cylinder to Move";
+    	  ss << navSphereStatus << endl;
+	}
+	else if (navSphereActivated)
+	{
+          //Nav Sphere Activated
+          navSphereStatus = "On";
+    	  ss << navSphereStatus << endl;
+	}
+	else 
+	{
+	//Nav Sphere Detection Off
+          navSphereStatus = "Off";
+    	  ss << navSphereStatus << endl;
+	}
+    	ss << "-Left Hand Selecting: " << lHandOn << endl;
+    	ss << "-Right Hand Selecting: " << rHandOn << endl;
+    	ss << "-Right Hand Assisting: " << rHandAssisting << endl;
+
+
+    _infoPanel->updateTabWithText("Info", ss.str());
+
+}
+
 void ArtifactVis2::readQuery(QueryGroup* query)
 {
     _root->removeChild(query->sphereRoot);
@@ -4800,6 +5008,17 @@ void ArtifactVis2::kinectInit()
     {
       _kShowArtifactPanel->setValue(true);
     }
+    kShowInfoPanel = ConfigManager::getBool("Plugin.ArtifactVis2.KinectDefaultOn.ShowInfoPanel");
+    if(kShowInfoPanel)
+    {
+      _kShowInfoPanel->setValue(true);
+      _infoPanel->setVisible(true);
+    }
+    kNavSpheres = ConfigManager::getBool("Plugin.ArtifactVis2.KinectDefaultOn.NavSpheres");
+    if(kNavSpheres)
+    {
+      _kNavSpheres->setValue(true);
+    }
 }
 
 void ArtifactVis2::moveCam(double bscale, double x, double y, double z, double o1, double o2, double o3, double o4)
@@ -4936,7 +5155,7 @@ void ArtifactVis2::ThirdLoop()
                 mapIdSkel[it2->first].detach(_root);
             }
         }
-
+        kinectUsers = sf.skeletons_size();
         for (int i = 0; i < sf.skeletons_size(); i++)
         {
             if (mapIdSkel.count(sf.skeletons(i).skeleton_id()) == 0)

@@ -248,8 +248,10 @@ public:
     osg::ref_ptr<osg::MatrixTransform> bitmaptransform;
     int bcounter;
     float colorfps;
+    float navSphereTimer;
+    int kinectUsers;
     bool handsBeenAbove;
-
+    bool navSphereActivated;
     bool useKColor;
     bool useKinect;
     bool kSelectKinect;
@@ -269,6 +271,7 @@ public:
     bool kLockScale;
     bool kLockPos;
     bool kShowArtifactPanel;
+    bool kShowInfoPanel;
     std::vector<SelectableItem> selectableItems;
     void kinectInit();
     void kinectOff();
@@ -289,6 +292,7 @@ public:
     void gesturesOn();
     void moveWithCamOff();
     void moveWithCamOn();
+    void updateInfoPanel();
 
     osg::ref_ptr<osg::Vec4dArray> kinectColours;
     osg::ref_ptr<osg::Vec3Array> kinectVertices;
@@ -398,6 +402,7 @@ protected:
     cvr::MenuCheckbox* _kNavSpheres;
     cvr::MenuCheckbox* _kUseGestures;
     cvr::MenuCheckbox* _kShowArtifactPanel;
+    cvr::MenuCheckbox* _kShowInfoPanel;
     cvr::SubMenu* _kinectMenu;
 
     cvr::MenuCheckbox* _kLockRot;
@@ -416,6 +421,7 @@ protected:
     osg::MatrixTransform* _root;
 
     cvr::TabbedDialogPanel* _artifactPanel;
+    cvr::TabbedDialogPanel* _infoPanel;
     cvr::DialogPanel* _selectionStatsPanel;
 
     std::string _picFolder;
