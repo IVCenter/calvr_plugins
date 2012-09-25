@@ -2273,12 +2273,13 @@ if(tHandIntersect)
 	    {
 		navSphereActivated = true;
                 Vec3 center2 = mapIdSkel[cylinderId].joints[3].position;
-                center2.y() += 0.3;
-                center2.z() += 0.1;
+                center2.y() += navSphereOffsetY;
+                center2.z() += navSphereOffsetZ;
 	        diff = mapIdSkel[cylinderId].cylinder.center - center2;
                 mapIdSkel[cylinderId].navSphere.update(mapIdSkel[cylinderId].cylinder.center, Vec4(0, 0, 0, 1));
                 mapIdSkel[cylinderId].navSphere.activated = true;
 	    }
+/*
 	    else if(navSphereTimer != 3.00)
 	    {
 	    diff = mapIdSkel[cylinderId].cylinder.center - mapIdSkel[cylinderId].navSphere.position;
@@ -2319,149 +2320,95 @@ if(tHandIntersect)
                 //center2.z() += 0.2;
                 mapIdSkel[cylinderId].navSphere.update(center2, Vec4(0, 0, 0, 1));
             }
-            else if (navSphereTimer == 3.00)
-	    {
-
-
-	    }
-
-            Matrix rotMat0;
-            rotMat0.makeRotate(mapIdSkel[cylinderId].cylinder.prevVec, mapIdSkel[cylinderId].cylinder.currVec);
-            /*
-            //selectableItems[j].rt->postMult(rotMat0);
-                      Matrix posMat;
-                      posMat.setTrans(mapIdSkel[cylinderId].cylinder.center);
-                      //selectableItems[j].mt->setMatrix(posMat);
-                      //double newscale = selectableItems[j].scale;
-                      double newscale = 1;
-                      newscale *= (1 + ((mapIdSkel[cylinderId].cylinder.length - mapIdSkel[cylinderId].cylinder.prevLength) / (500 * (m2mm / 1000.0))));
-
-                      if (newscale < 1 * m2mm / 1000.0) newscale = 1 * m2mm / 1000.0;
-            */
-            //selectableItems[j].setScale(newscale);
-
-            //                  diff.set(diff.x(),diff.y(),-diff.z()); // z=-z so that moving hands in front of the head brings the skeleton forward
-
-            //it->second.navSphere.position - it->second.offset - it->second.navSphere.prevPosition; ////////NEW CHANGE TO VERIFY
-
-            //                    diff/=3;
-            double diffScale;
-	    double diffScaleNeg;
-            double tranScale;
-	    if(navSphereTimer == 3.00)
-	    {
-            	diffScale = 0.05;
-	    	diffScaleNeg = -0.05;
-                tranScale = -100;
-	    }
-	    else
-	    {
-            	diffScale = 0.1;
-	    	diffScaleNeg = -0.1;
-                tranScale = -50;
-            }
-
+*/
             if(navSphereActivated)
             {
+
+
+	    
+
+		//Compute NavMovement
                 double x, y, z;
                 x = y = z = 0.0;
                 double rx, ry, rz;
                 rx = ry = rz = 0.0;
                 bool moved = false;
-/*
-                if(diff.x() > diffScale || diff.x() < diffScaleNeg)
-                {
-                    x = diff.x() * tranScale;
-                    //printf("X:%g",x);
-                    moved = true;
-                }
-                if(diff.y() > diffScale || diff.y() < diffScaleNeg)
-                {
-                    y = diff.y() * tranScale;
-                    //printf(" Y:%g",y);
-                    moved = true;
-                }
-                if(diff.z() > diffScale || diff.z() < diffScaleNeg)
-                {
-                    z = diff.z() * tranScale;
-                    //printf(" Z:%g",z);
-                    moved = true;
-                }
-*/
 
-                if(diff.x() > diffScale)
+                if(diff.x() > diffScaleX)
                 {
-                    x = 0.1 * tranScale;
-                    //printf("X:%g",x);
-                    moved = true;
+                    //x = 0.1 * tranScaleX;
+                    rz = tranScaleX;
                 }
-                else if(diff.x() < diffScaleNeg)
+                else if(diff.x() < diffScaleNegX)
 		{
 
-                    x = -0.1 * tranScale;
-                    //printf("X:%g",x);
-                    moved = true;
-
+                    //x = -0.1 * tranScaleX;
+                    rz = -tranScaleX;
 		}
-                if(diff.y() > diffScale)
+		else
+		{
+	 		rz = 0.0;
+		}
+                if(diff.y() > diffScaleY)
                 {
-                    y = 0.1 * tranScale;
-                    //printf("X:%g",y);
-                    moved = true;
+                    y = 0.1 * tranScaleY;
                 }
-                else if(diff.y() < diffScaleNeg)
+                else if(diff.y() < diffScaleNegY)
 		{
 
-                    y = -0.1 * tranScale;
-                    //printf("X:%g",y);
-                    moved = true;
+                    y = -0.1 * tranScaleY;
 
 		}
-                if(diff.z() > diffScale)
+                if(diff.z() > diffScaleZ)
                 {
-                    z = 0.1 * tranScale;
-                    //printf("X:%g",x);
-                    moved = true;
+                    //z = 0.1 * tranScalez;
+                    rx = -0.003;
                 }
-                else if(diff.z() < diffScaleNeg)
+                else if(diff.z() < diffScaleNegZ)
 		{
 
-                    z = -0.1 * tranScale;
-                    //printf("X:%g",x);
-                    moved = true;
-
+                    //z = -0.1 * tranScalez;
+                    rx = 0.003;
 		}
-	        moved = true;
-                if(moved)
-                {
-                    //Quat handQuad = mapIdSkel[cylinderId].cylinder.translate->getRotate();
-                    Quat handQuad = rotMat0.getRotate();
+		else
+		{
+			rx = 0;
+		}
+	        
+               
+              
+                    Quat handQuad = mapIdSkel[cylinderId].cylinder.rotation;
                     double rscale = 1;
-                    rx = 0.0; //handQuad.x();
-                    ry = 0.0; //handQuad.y();
-                    rz = handQuad.z();
-                    cerr << " Rot:" << rx << "," << ry << "," << rz << "\n";
-                    if(rz > 0.01)
+                    //rz = handQuad.asVec4().x();
+                    ry = handQuad.asVec4().y();
+                    //rz = handQuad.asVec4().z();
+                    double rw = handQuad.asVec4().w();
+                    //cerr << " Rot:" << rx << "," << ry << "," << rz << "," << rw <<"\n";
+                    if(rz > 0.3)
                     {
-                        //cerr << " Rot:" << rx << "," << ry << "," << rz << "\n";
-                        rz = 0.01;
+                      //  rz = -0.006;
                     }
-                    else if(rz < -0.01)
+                    else if(rz < -0.3)
                     {
-                        rz = -0.01;
+                      //  rz = 0.006;
                     }
                     else
                     {
-                        rz = 0.0;
+                      //  rz = 0.0;
                     }
-
-//                    x += sev.motion.x;
-                    //                  y += sev.motion.z;
-                    //                z += sev.motion.y;
-//                    rx += sev.motion.rx;
-                    //                  ry += sev.motion.rz;
-                    //                rz += sev.motion.ry;
-
+                    if(ry > diffScaleRY)
+                    {
+                        //cerr << " Rot:" << rx << "," << ry << "," << rz << "\n";
+                        ry = -tranScaleRY;
+                    }
+                    else if(ry < diffScaleNegRY)
+                    {
+                        ry = tranScaleRY;
+                    }
+                    else
+                    {
+                        ry = 0.0;
+                    }
                     Matrixd finalmat;
                     Matrix view = PluginHelper::getHeadMat();
                     Vec3 campos = view.getTrans();
@@ -2481,125 +2428,12 @@ if(tHandIntersect)
                     ctrans.makeTranslate(campos);
                     nctrans.makeTranslate(-campos);
                     finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
-                    // XXX Cause of segfaults / freezes XXX
-                    //            ComController::instance()->sendSlaves((char*) finalmat.ptr(), sizeof(double[16]));
                     PluginHelper::setObjectMatrix(finalmat);
-                }
-            }            //                           printf("-- %g %g %g \n",diff.x(),diff.y(),diff.z());
-        }
-
-        //        bool testK = false;
-        //
-        //        if (position[0][0] != 0 && testK)
-        //        {
-        //            double x, y, z;
-        //            x = y = z = 0.0;
-        //            double rx, ry, rz;
-        //            rx = ry = rz = 0.0;
-        //            Matrixd finalmat;
-        //            double transcale = 10;
-        //            double rotscale = 0;
-        //            double yscale;
-        //            y = (orientation[6][0]); //Left Elbow Rotatation on X-axis
-        //
-        //            if (y < 0)
-        //            {
-        //                yscale = 0.5;
-        //            }
-        //            else
-        //            {
-        //                yscale = -0.5;
-        //            }
-        //
-        //            int offs = 1;
-        //            y += yscale;
-        //            x = (orientation[6 + offs][1] + 0.5) * -1; //Left Elbow Rotation on Y-axis
-        //            z = orientation[5 + offs][1]; //Left Shoulder Rotation on Y-axis
-        //            rx = orientation[8 + offs][3] - 0.5; //Left Hand Rotation on Z-axis
-        //            ry = orientation[8 + offs][0] - 0.5; //Left Hand Rotation on X-axis
-        //            rz = orientation[8 + offs][1] + 0.5; //Left Hand Rotation on Y-axis
-        //            x *= 5;
-        //            y *= 10;
-        //
-        //            if (x <= -1.5 || x >= 1.5 )
-        //            {
-        //            }
-        //            else
-        //            {
-        //                x = 0;
-        //            }
-        //
-        //            if (y <= -1.5 || y >= 1.5 )
-        //            {
-        //            }
-        //            else
-        //            {
-        //                y = 0;
-        //            }
-        //
-        //            z *= transcale * 0;
-        //            rx *= rotscale;
-        //            ry *= rotscale;
-        //            rz *= rotscale;
-        //            // cout << "Trans: " << x << "," << y << "," << z << " Rotation: " << rx << "," << ry << "," << rz << "\n";
-        //            Matrix view = PluginHelper::getHeadMat();
-        //            Vec3 campos = view.getTrans();
-        //            Vec3 trans = Vec3(x, y, z);
-        //            trans = (trans * view) - campos;
-        //            Matrix tmat;
-        //            tmat.makeTranslate(trans);
-        //            Vec3 xa = Vec3(1.0, 0.0, 0.0);
-        //            Vec3 ya = Vec3(0.0, 1.0, 0.0);
-        //            Vec3 za = Vec3(0.0, 0.0, 1.0);
-        //            xa = (xa * view) - campos;
-        //            ya = (ya * view) - campos;
-        //            za = (za * view) - campos;
-        //            Matrix rot;
-        //            rot.makeRotate(rx, xa, ry, ya, rz, za);
-        //            Matrix ctrans, nctrans;
-        //            ctrans.makeTranslate(campos);
-        //            nctrans.makeTranslate(-campos);
-        //            finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
-        //            ComController::instance()->sendSlaves((char*)finalmat.ptr(), sizeof(double[16]));
-        //            PluginHelper::setObjectMatrix(finalmat);
-        //        }
-
-        if (false)
-        {
-            std::map<int, Skeleton>::iterator it = mapIdSkel.begin();
-            ////////////////////// fps mode
-            //head pos: -88.0128 -120.75 1783.44. rot: -0.260835 -0.0327381 0.0650437 0.962633 (x,y,z,w)
-            //
-            float offsetX = 0;
-            float offsetY = 0;//-400;
-            float offsetZ = 0;
-            float offsetQX = -0.26;
-            float offsetQY = -0.033;//0.00681957;
-            float offsetQZ = 0.065;//0.00660647;
-            float offsetQW = 0;//0.07;
-            float rotX = it->second.joints[1].orientation[0] - offsetQX;
-            float rotY = it->second.joints[1].orientation[1] - offsetQY;
-            float rotZ = it->second.joints[1].orientation[2] - offsetQZ;
-            float rotW = it->second.joints[1].orientation[3] - offsetQW;
-            float posX = 0;//it->second.joints[1].position[0]-offsetX;
-            float posY = 0;//it->second.joints[1].position[1]-offsetY;
-            float posZ = 0;//it->second.joints[1].position[2]-offsetZ;
-            ////////////////////////////////          printf("head pos: %g %g %g. rot: %g %g %g %g (x,y,z,w)\n",posX,posY,posZ,rotX,rotY,rotZ,rotW);
-            float cscale = PluginHelper::getObjectScale();
-            //////////////////////////////////////////////////////////////////////// MOVING CAM FPS
-            //moveCam(0.2,posX,posY,posZ,rotX,rotY,rotZ,rotW);
-            // << "\nHead Kinect Output-Rotation:" << orientation[0][0] << "," << orientation[0][1] << "," << orientation[0][2] << "\n";
-            //Get IR Head
-            int heads = PluginHelper::getNumHeads();
-
-            if (heads > 0)
-            {
-                Matrix headIR = PluginHelper::getHeadMat();
-                Vec3 headIrTrans = headIR.getTrans();
-                Quat headIrRot = headIR.getRotate();
-                cout << "Head IR Output-Position: " << headIrTrans.x() << "," << headIrTrans.y() << "," << headIrTrans.z() << "\n";
+             
             }
         }
+
+
     }
 
     //Hand Tracking for Model Manipulation
@@ -4969,6 +4803,27 @@ void ArtifactVis2::kinectInit()
     pgm1->setParameter( GL_GEOMETRY_VERTICES_OUT_EXT, 4 );
     pgm1->setParameter( GL_GEOMETRY_INPUT_TYPE_EXT, GL_POINTS );
     pgm1->setParameter( GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP );
+
+    //Set Default navSphere Settings
+    	
+                navSphereOffsetY = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.navSphereOffsetY");
+                navSphereOffsetZ = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.navSphereOffsetZ");
+
+            	diffScaleY = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.diffScaleY");
+	    	diffScaleNegY = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.diffScaleNegY");
+                tranScaleY = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.tranScaleY");
+
+            	diffScaleX = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.diffScaleX");
+	    	diffScaleNegX = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.diffScaleNegX");
+		tranScaleX = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.tranScaleX");
+
+            	diffScaleZ = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.diffScaleZ");
+	    	diffScaleNegZ = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.diffScaleNegZ");
+		tranScaleZ = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.tranScaleZ");
+
+            	diffScaleRY = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.diffScaleRY");
+	    	diffScaleNegRY = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.diffScaleNegRY");
+		tranScaleRY = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.tranScaleRY");
 
     // set default point scale
     //   initialPointScale = ConfigManager::getFloat("Plugin.Points.PointScale", 0.001f);

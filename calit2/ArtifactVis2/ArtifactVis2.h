@@ -244,6 +244,25 @@ public:
 
     //Kinect
     NavigationSphere navSphere;
+	    double navSphereOffsetY;
+	    double navSphereOffsetZ;
+	    //X
+            double diffScaleX;
+	    double diffScaleNegX;
+            double tranScaleX;
+	    //Y
+            double diffScaleY;
+	    double diffScaleNegY;
+            double tranScaleY;
+	    //Z
+            double diffScaleZ;
+	    double diffScaleNegZ;
+            double tranScaleZ;
+
+	    //RY
+            double diffScaleRY;
+	    double diffScaleNegRY;
+            double tranScaleRY;
 
     osg::ref_ptr<osg::MatrixTransform> bitmaptransform;
     int bcounter;
