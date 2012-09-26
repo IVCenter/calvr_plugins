@@ -5,8 +5,8 @@
 #include <stdexcept>
 #include <zmq.hpp>
 #include <google/protobuf/message_lite.h>
-#include "protocol/packing.pb.h"
-#include "snappy.h"
+#include <protocol/packing.pb.h>
+#include <snappy.h>
 
 struct PubSocket
 {
