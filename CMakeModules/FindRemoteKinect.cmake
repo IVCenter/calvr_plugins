@@ -1,0 +1,41 @@
+FIND_PATH(REMOTEKINECT_INCLUDE_DIR
+  PATHS
+  $ENV{REMOTEKINECT_HOME}
+  NO_DEFAULT_PATH
+    PATH_SUFFIXES include
+)
+
+FIND_PATH(REMOTEKINECT_INCLUDE_DIR
+  PATHS
+  /usr/local/include
+  /usr/include
+  /sw/include # Fink
+  /opt/local/include # DarwinPorts
+  /opt/csw/include # Blastwave
+  /opt/include
+)
+
+FIND_LIBRARY(REMOTEKINECT_LIBRARY 
+  NAMES libRemoteKinect
+  PATHS $ENV{REMOTEKINECT_HOME}
+    NO_DEFAULT_PATH
+    PATH_SUFFIXES lib64 lib
+)
+FIND_LIBRARY(REMOTEKINECT_LIBRARY 
+  NAMES libRemoteKinect
+  PATHS
+    /usr/local
+    /usr
+    /sw
+    /opt/local
+    /opt/csw
+    /opt
+    /usr/freeware
+  PATH_SUFFIXES lib64 lib
+)
+
+SET(REMOTEKINECT_FOUND "NO")
+IF(REMOTEKINECT_LIBRARY AND REMOTEKINECT_INCLUDE_DIR)
+  SET(REMOTEKINECT_FOUND "YES")
+ENDIF(REMOTEKINECT_LIBRARY AND REMOTEKINECT_INCLUDE_DIR)
+
