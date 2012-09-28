@@ -4,6 +4,8 @@ SET(PLUGIN_HEADERS
     DataGraph.h
     GraphObject.h
     GraphLayoutObject.h
+    ShapeTextureGenerator.h
+    PointActions.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -13,9 +15,10 @@ ADD_LIBRARY(${LIB_NAME}
     DataGraph.cpp
     GraphObject.cpp
     GraphLayoutObject.cpp
+    ShapeTextureGenerator.cpp
+    PointActions.cpp
 )
 
-# placeholder for when the database goes active
 FIND_PACKAGE(Mysql)
 
 INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})

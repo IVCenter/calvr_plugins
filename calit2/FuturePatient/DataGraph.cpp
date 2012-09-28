@@ -1,9 +1,11 @@
 #include "DataGraph.h"
+#include "ShapeTextureGenerator.h"
 
 #include <cvrKernel/CalVR.h>
 #include <cvrKernel/SceneManager.h>
 #include <cvrUtil/OsgMath.h>
 #include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/ComController.h>
 
 #include <osgText/Text>
 #include <osg/Geode>
@@ -14,6 +16,39 @@
 #include <cmath>
 
 using namespace cvr;
+
+std::string shapeVertSrc =
+"#version 150 compatibility                                  \n"
+"#extension GL_ARB_gpu_shader5 : enable                      \n"
+"                                                            \n"
+"void main(void)                                             \n"
+"{                                                           \n"
+"    gl_FrontColor = gl_Color;                               \n"
+"    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex; \n"
+"}                                                           \n";
+
+std::string shapeFragSrc =
+"#version 150 compatibility                                  \n"
+"#extension GL_ARB_gpu_shader5 : enable                      \n"
+"                                                            \n"
+"uniform sampler2D tex;                                      \n"
+"                                                            \n"
+"void main(void)                                             \n"
+"{                                                           \n"
+"    vec4 value = texture2D(tex,gl_TexCoord[0].st);          \n"
+"    if(value.r < 0.25)                                      \n"
+"    {                                                       \n"
+"        discard;                                            \n"
+"    }                                                       \n"
+"    else if(value.r < 0.75)                                 \n"
+"    {                                                       \n"
+"        gl_FragColor = gl_Color;                            \n"
+"    }                                                       \n"
+"    else                                                    \n"
+"    {                                                       \n"
+"        gl_FragColor = vec4(0.0,0.0,0.0,1.0);               \n"
+"    }                                                       \n"
+"}                                                           \n";
 
 DataGraph::DataGraph()
 {
@@ -45,6 +80,8 @@ DataGraph::DataGraph()
     _clipNode->getOrCreateStateSet()->setAttributeAndModes(_lineWidth,osg::StateAttribute::ON);
 
     _width = _height = 1000.0;
+
+    _multiGraphDisplayMode = _currentMultiGraphDisplayMode = MGDM_NORMAL;
 
     osg::Vec4 color(1.0,1.0,1.0,1.0);
 
@@ -87,6 +124,9 @@ DataGraph::DataGraph()
     _minDisplayZ = 0;
     _maxDisplayZ = 1.0;
 
+    _masterPointScale = ConfigManager::getFloat("value","Plugin.FuturePatient.MasterPointScale",1.0);
+    _masterLineScale = ConfigManager::getFloat("value","Plugin.FuturePatient.MasterLineScale",1.0);
+
     //_clipNode->addClipPlane(new osg::ClipPlane(0));
     //_clipNode->addClipPlane(new osg::ClipPlane(1));
     //_clipNode->addClipPlane(new osg::ClipPlane(2));
@@ -94,6 +134,7 @@ DataGraph::DataGraph()
 
     _font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
 
+    setupMultiGraphDisplayModes();
     makeHover();
     makeBar();
 }
@@ -125,7 +166,7 @@ void DataGraph::addGraph(std::string name, osg::Vec3Array * points, GraphDisplay
     gdi.colorArray = perPointColor;
     gdi.secondaryColorArray = secondaryPerPointColor;
     gdi.color = color;
-    gdi.displayType = displayType;
+    gdi.displayType = NONE;
     gdi.xLabel = xLabel;
     gdi.zLabel = zLabel;
     gdi.xAxisType = LINEAR;
@@ -134,55 +175,37 @@ void DataGraph::addGraph(std::string name, osg::Vec3Array * points, GraphDisplay
     gdi.xMax = 1.0;
     gdi.zMin = 0.0;
     gdi.zMax = 1.0;
+
+    gdi.pointGeometry = new osg::Geometry();
+    gdi.pointGeometry->setUseDisplayList(false);
+    gdi.pointGeometry->setUseVertexBufferObjects(true);
+    
+    gdi.connectorGeometry = new osg::Geometry();
+    gdi.connectorGeometry->setUseDisplayList(false);
+    gdi.connectorGeometry->setUseVertexBufferObjects(true);
+
+    gdi.singleColorArray = new osg::Vec4Array(1);
+    gdi.singleColorArray->at(0) = osg::Vec4(0.0,0.0,0.0,1.0);
+
+    gdi.pointGeode = new osg::Geode();
+    gdi.connectorGeode = new osg::Geode();
+
     _dataInfoMap[name] = gdi;
 
-    osg::Geometry * geometry = new osg::Geometry();
-    geometry->setUseDisplayList(false);
-    geometry->setUseVertexBufferObjects(true);
-    geometry->setVertexArray(points);
+    _pointActionMap[name] = std::map<int,PointAction*>();
 
-    if(!perPointColor || perPointColor->size() != points->size())
-    {
-	osg::Vec4Array * colorArray = new osg::Vec4Array(1);
-	colorArray->at(0) = color;
-	geometry->setColorArray(colorArray);
-	geometry->setColorBinding(osg::Geometry::BIND_OVERALL);
-    }
-    else
-    {
-	geometry->setColorArray(perPointColor);
-	geometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
-    }
-
-    for(int i = 0; i < points->size(); i++)
-    {
-	osg::Vec3 p = points->at(i);
-	//std::cerr << "Point x: " << p.x() << " y: " << p.y() << " z: " << p.z() << std::endl;
-    }
-    if(perPointColor)
-    {
-	for(int i = 0; i < perPointColor->size(); i++)
-	{
-	    osg::Vec4 c = perPointColor->at(i);
-	    //std::cerr << "Color r: " << c.x() << " g: " << c.y() << " b: " << c.z() << " a: " << c.w() << std::endl;
-	}
-    }
-
-    geometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,points->size()));
-    if(displayType == POINTS_WITH_LINES && points->size())
-    {
-	geometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP,0,points->size()));
-    }
-
-    _graphGeometryMap[name] = geometry;
-    osg::Geode * geode = new osg::Geode();
-    geode->addDrawable(geometry);
-    geode->setCullingActive(false);
+    gdi.pointGeode->addDrawable(gdi.pointGeometry);
+    gdi.connectorGeode->addDrawable(gdi.connectorGeometry);
+    gdi.pointGeode->setCullingActive(false);
+    gdi.connectorGeode->setCullingActive(false);
 
     _graphTransformMap[name] = new osg::MatrixTransform();
-    _graphTransformMap[name]->addChild(geode);
+    _graphTransformMap[name]->addChild(gdi.pointGeode);
+    _graphTransformMap[name]->addChild(gdi.connectorGeode);
     _graphTransformMap[name]->setCullingActive(false);
     _clipNode->addChild(_graphTransformMap[name]);
+
+    setDisplayType(name, displayType);
 
     update();
 }
@@ -200,7 +223,7 @@ void DataGraph::setXDataRangeTimestamp(std::string graphName, time_t & start, ti
 	_dataInfoMap[graphName].xMinT = start;
 	_dataInfoMap[graphName].xMaxT = end;
 	_dataInfoMap[graphName].xAxisType = TIMESTAMP;
-	updateAxis();
+	update();
     }
 }
 
@@ -268,6 +291,8 @@ time_t DataGraph::getMinTimestamp(std::string graphName)
 
 bool DataGraph::displayHoverText(osg::Matrix & mat)
 {
+    std::string currentHoverGraph = _hoverGraph;
+
     std::string selectedGraph;
     int selectedPoint = -1;
     osg::Vec3 point;
@@ -371,6 +396,8 @@ bool DataGraph::displayHoverText(osg::Matrix & mat)
 	}
     }
 
+    bool retVal = false;
+
     if(selectedPoint >= 0 && dist < (_width + _height) * 0.02 / 2.0)
     {
 	//std::cerr << "selecting point" << std::endl;
@@ -411,7 +438,7 @@ bool DataGraph::displayHoverText(osg::Matrix & mat)
 	m.makeTranslate(point);
 	_hoverTransform->setMatrix(m);
 
-	return true;
+	retVal = true;
     }
     else if(_hoverPoint != -1)
     {
@@ -420,7 +447,12 @@ bool DataGraph::displayHoverText(osg::Matrix & mat)
 	_hoverPoint = -1;
     }
 
-    return false;
+    if(_dataInfoMap.size() > 1 && currentHoverGraph != _hoverGraph)
+    {
+	updateAxis();
+    }
+
+    return retVal;
 }
 
 void DataGraph::clearHoverText()
@@ -495,6 +527,130 @@ bool DataGraph::getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point)
     }
 
     return true;
+}
+
+void DataGraph::setDisplayType(std::string graphName, GraphDisplayType displayType)
+{
+    if(_dataInfoMap.find(graphName) == _dataInfoMap.end())
+    {
+	return;
+    }
+
+    std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.find(graphName);
+
+    // cleanup old mode
+    switch(it->second.displayType)
+    {
+	case NONE:
+	    break;
+	case POINTS:
+	{
+	    it->second.pointGeometry->setColorArray(NULL);
+	    it->second.pointGeometry->setVertexArray(NULL);
+	    it->second.pointGeometry->removePrimitiveSet(0,it->second.pointGeometry->getNumPrimitiveSets());
+	    break;
+	}
+	case POINTS_WITH_LINES:
+	{
+	    it->second.pointGeometry->setColorArray(NULL);
+	    it->second.pointGeometry->setVertexArray(NULL);
+	    it->second.pointGeometry->removePrimitiveSet(0,it->second.pointGeometry->getNumPrimitiveSets());
+	    it->second.connectorGeometry->setColorArray(NULL);
+	    it->second.connectorGeometry->setVertexArray(NULL);
+	    it->second.connectorGeometry->removePrimitiveSet(0,it->second.connectorGeometry->getNumPrimitiveSets());
+	    break;
+	}
+	default:
+	    break;
+    }
+
+    it->second.displayType = displayType;
+
+     switch(displayType)
+     {
+	 case NONE:
+	    break;
+	case POINTS:
+	{
+	    it->second.pointGeometry->setVertexArray(it->second.data);
+	    if(!it->second.colorArray || it->second.colorArray->size() != it->second.data->size())
+	    {
+		it->second.pointGeometry->setColorArray(it->second.singleColorArray);
+		it->second.pointGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+	    }
+	    else
+	    {
+		it->second.pointGeometry->setColorArray(it->second.colorArray);
+		it->second.pointGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+	    }
+
+	    it->second.pointGeometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,it->second.data->size()));
+	    break;
+	}
+	case POINTS_WITH_LINES:
+	{
+	    it->second.pointGeometry->setVertexArray(it->second.data);
+	    it->second.connectorGeometry->setVertexArray(it->second.data);
+	    if(!it->second.colorArray || it->second.colorArray->size() != it->second.data->size())
+	    {
+		it->second.pointGeometry->setColorArray(it->second.singleColorArray);
+		it->second.pointGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+		it->second.connectorGeometry->setColorArray(it->second.singleColorArray);
+		it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+	    }
+	    else
+	    {
+		it->second.pointGeometry->setColorArray(it->second.colorArray);
+		it->second.pointGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+		it->second.connectorGeometry->setColorArray(it->second.colorArray);
+		it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+	    }
+
+	    it->second.pointGeometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,it->second.data->size()));
+	    it->second.connectorGeometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP,0,it->second.data->size()));
+	    break;
+	}
+	default:
+	    break;
+     }
+
+     update();
+}
+
+void DataGraph::setPointActions(std::string graphname, std::map<int,PointAction*> & actionMap)
+{
+    if(_pointActionMap.find(graphname) == _pointActionMap.end())
+    {
+	return;
+    }
+
+    _pointActionMap[graphname] = actionMap;
+
+    // add to action point geometry
+}
+
+bool DataGraph::pointClick()
+{
+    if(_pointActionMap.find(_hoverGraph) != _pointActionMap.end() && _pointActionMap[_hoverGraph].find(_hoverPoint) != _pointActionMap[_hoverGraph].end())
+    {
+	_pointActionMap[_hoverGraph][_hoverPoint]->action();
+	return true;
+    }
+
+    return false;
+}
+
+void DataGraph::setupMultiGraphDisplayModes()
+{
+    //shape setup
+    _shapeProgram = new osg::Program();
+    _shapeProgram->setName("Shape Shader");
+    _shapeProgram->addShader(new osg::Shader(osg::Shader::VERTEX,shapeVertSrc));
+    _shapeProgram->addShader(new osg::Shader(osg::Shader::FRAGMENT,shapeFragSrc));
+
+    _shapePointSprite = new osg::PointSprite();
+    _shapeDepth = new osg::Depth();
+    _shapeDepth->setWriteMask(false);
 }
 
 void DataGraph::makeHover()
@@ -650,9 +806,10 @@ void DataGraph::update()
 
 	//std::cerr << "Minpoint: " << minpoint << " Maxpoint: " << maxpoint << std::endl;
 
-	for(int i = 0; i < _graphGeometryMap[it->first]->getNumPrimitiveSets(); i++)
+	//TODO maybe move this into a subset function call, so there can be different actions based on the display type
+	for(int i = 0; i < _dataInfoMap[it->first].pointGeometry->getNumPrimitiveSets(); i++)
 	{
-	    osg::DrawArrays * da = dynamic_cast<osg::DrawArrays*>(_graphGeometryMap[it->first]->getPrimitiveSet(i));
+	    osg::DrawArrays * da = dynamic_cast<osg::DrawArrays*>(_dataInfoMap[it->first].pointGeometry->getPrimitiveSet(i));
 	    if(!da)
 	    {
 		continue;
@@ -669,6 +826,26 @@ void DataGraph::update()
 	    }
 	}
 
+	for(int i = 0; i < _dataInfoMap[it->first].connectorGeometry->getNumPrimitiveSets(); i++)
+	{
+	    osg::DrawArrays * da = dynamic_cast<osg::DrawArrays*>(_dataInfoMap[it->first].connectorGeometry->getPrimitiveSet(i));
+	    if(!da)
+	    {
+		continue;
+	    }
+
+	    if(maxpoint == -1 || minpoint == -1)
+	    {
+		da->setCount(0);
+	    }
+	    else
+	    {
+		da->setFirst(minpoint);
+		da->setCount((maxpoint-minpoint)+1);
+	    }
+	}
+
+
 	//std::cerr << "My range size: " << myRangeSize << " range center: " << myRangeCenter << std::endl;
 
 	osg::Matrix centerm;
@@ -678,6 +855,105 @@ void DataGraph::update()
 	_graphTransformMap[it->second.name]->setMatrix(tran*scale*centerm);
     }
 
+    if(_dataInfoMap.size() > 1)
+    {
+	// need this to run when a new graph is added, maybe break into function call
+	//if(_multiGraphDisplayMode != _currentMultiGraphDisplayMode)
+	{
+	    int count = 0;
+	    for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)
+	    {
+		// revert old mode
+		switch(_currentMultiGraphDisplayMode)
+		{
+		    case MGDM_NORMAL:
+			{
+			    break;
+			}
+		    case MGDM_COLOR:
+			{
+			    it->second.connectorGeometry->setColorArray(it->second.colorArray);
+			    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+			    break;
+			}
+		    case MGDM_SHAPE:
+			{
+			    osg::StateSet * stateset = it->second.pointGeode->getOrCreateStateSet();
+			    stateset->removeTextureAttribute(0,osg::StateAttribute::POINTSPRITE);
+			    stateset->removeTextureAttribute(0,osg::StateAttribute::TEXTURE);
+			    stateset->removeAttribute(_shapeProgram);
+			    it->second.connectorGeode->getOrCreateStateSet()->removeAttribute(_shapeDepth);
+			    break;
+			}
+		    case MGDM_COLOR_SHAPE:
+			{
+			    it->second.connectorGeometry->setColorArray(it->second.colorArray);
+			    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+			    osg::StateSet * stateset = it->second.pointGeode->getOrCreateStateSet();
+			    stateset->removeTextureAttribute(0,osg::StateAttribute::POINTSPRITE);
+			    stateset->removeTextureAttribute(0,osg::StateAttribute::TEXTURE);
+			    stateset->removeAttribute(_shapeProgram);
+			    it->second.connectorGeode->getOrCreateStateSet()->removeAttribute(_shapeDepth);
+			    break;
+			}
+		    default:
+			break;
+		}
+		count++;
+	    }
+
+	    count = 0;
+	    for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)
+	    {
+		switch(_multiGraphDisplayMode)
+		{
+		    case MGDM_NORMAL:
+			{
+			    break;
+			}
+		    case MGDM_COLOR:
+			{
+			    float f = ((float)count) / ((float)_dataInfoMap.size());
+			    osg::Vec4 color = makeColor(f);
+			    it->second.singleColorArray->at(0) = color;
+			    it->second.connectorGeometry->setColorArray(it->second.singleColorArray);
+			    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+			    break;
+			}
+		    case MGDM_SHAPE:
+			{
+			    osg::StateSet * stateset = it->second.pointGeode->getOrCreateStateSet();
+			    stateset->setTextureAttributeAndModes(0, _shapePointSprite, osg::StateAttribute::ON);
+			    stateset->setTextureAttributeAndModes(0, ShapeTextureGenerator::getOrCreateShapeTexture(count+3,128,128), osg::StateAttribute::ON);
+			    stateset->setAttribute(_shapeProgram);
+			    it->second.connectorGeode->getOrCreateStateSet()->setAttributeAndModes(_shapeDepth,osg::StateAttribute::ON);
+			    break;
+			}
+		    case MGDM_COLOR_SHAPE:
+			{
+			    float f = ((float)count) / ((float)_dataInfoMap.size());
+			    osg::Vec4 color = makeColor(f);
+			    it->second.singleColorArray->at(0) = color;
+			    it->second.connectorGeometry->setColorArray(it->second.singleColorArray);
+			    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+
+			    osg::StateSet * stateset = it->second.pointGeode->getOrCreateStateSet();
+			    stateset->setTextureAttributeAndModes(0, _shapePointSprite, osg::StateAttribute::ON);
+			    stateset->setTextureAttributeAndModes(0, ShapeTextureGenerator::getOrCreateShapeTexture(count+3,128,128), osg::StateAttribute::ON);
+			    stateset->setAttribute(_shapeProgram);
+			    it->second.connectorGeode->getOrCreateStateSet()->setAttributeAndModes(_shapeDepth,osg::StateAttribute::ON);
+			    break;
+			}
+		    default:
+			break;
+		}
+		count++;
+	    }
+
+	    _currentMultiGraphDisplayMode = _multiGraphDisplayMode;
+	}
+    }
+
     tran.makeTranslate(osg::Vec3(-0.5,0,-0.5));
     scale.makeScale(osg::Vec3(_width,1.0,_height));
     _graphTransform->setMatrix(tran*scale);
@@ -685,6 +961,12 @@ void DataGraph::update()
     float avglen = (_width + _height) / 2.0;
     _point->setSize(avglen * 0.04 * _pointLineScale);
     _lineWidth->setWidth(avglen * 0.05 * _pointLineScale * _pointLineScale);
+
+    if(ComController::instance()->isMaster())
+    {
+	_point->setSize(_point->getSize() * _masterPointScale);
+	_lineWidth->setWidth(_lineWidth->getWidth() * _masterLineScale);
+    }
 
     updateAxis();
     updateBar();
@@ -766,11 +1048,53 @@ void DataGraph::updateAxis()
 	    }
 	    else
 	    {
-		minValue = _minDisplayZ;
-		maxValue = _maxDisplayZ;
-		textColor = osg::Vec4(0.0,0.0,0.0,1.0);
-		axisLabel = "Normalized Value";
-		axisType = LINEAR;
+		bool useNormalized = true;
+
+		bool validHover = false;
+		int graphCount = 0;
+		std::map<std::string,GraphDataInfo>::iterator it;
+
+		for(it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)
+		{
+		    if(it->first == _hoverGraph)
+		    {
+			validHover = true;
+			break;
+		    }
+		    graphCount++;
+		}
+
+		if(validHover)
+		{
+		    switch(_currentMultiGraphDisplayMode)
+		    {
+			case MGDM_COLOR:
+			case MGDM_COLOR_SHAPE:
+			{
+			    float max = it->second.zMax;
+			    float min = it->second.zMin;
+			    float dataRange = max - min;
+			    minValue = min + (_minDisplayZ * dataRange);
+			    maxValue = min + (_maxDisplayZ * dataRange);
+			    textColor = it->second.singleColorArray->at(0);
+			    axisLabel = it->second.zLabel;
+			    axisType = it->second.zAxisType;
+			    useNormalized = false;
+			    break;
+			}
+			default:
+			    break;
+		    }
+		}
+
+		if(useNormalized)
+		{
+		    minValue = _minDisplayZ;
+		    maxValue = _maxDisplayZ;
+		    textColor = osg::Vec4(0.0,0.0,0.0,1.0);
+		    axisLabel = "Normalized Value";
+		    axisType = LINEAR;
+		}
 	    }
 	}
 
@@ -1100,6 +1424,25 @@ void DataGraph::updateAxis()
     }
     else
     {
+	static bool sizeCalibrated = false;
+	static float spacerSize;
+
+	if(!sizeCalibrated)
+	{
+	    osg::ref_ptr<osgText::Text> spacerText1 = makeText(": - :",osg::Vec4(0.0,0.0,0.0,1.0));
+	    osg::ref_ptr<osgText::Text> spacerText2 = makeText("::",osg::Vec4(0.0,0.0,0.0,1.0));
+
+	    float size1, size2;
+
+	    osg::BoundingBox bb = spacerText1->getBound();
+	    size1 = bb.xMax() - bb.xMin();
+	    bb = spacerText2->getBound();
+	    size2 = bb.xMax() - bb.xMin();
+
+	    spacerSize = size1 - size2;
+	    sizeCalibrated = true;
+	}
+
 	std::stringstream titless;
 
 	for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end();)
@@ -1112,19 +1455,63 @@ void DataGraph::updateAxis()
 	    }
 	}
 
-	osgText::Text * text = makeText(titless.str(),osg::Vec4(0.0,0.0,0.0,1.0));
+	osg::ref_ptr<osgText::Text> text = makeText(titless.str(),osg::Vec4(0.0,0.0,0.0,1.0));
 	
 	float targetHeight = padding * 0.95;
 	float targetWidth = _width - (2.0 * padding);
 	osg::BoundingBox bb = text->getBound();
 	float hsize = targetHeight / (bb.zMax() - bb.zMin());
 	float wsize = targetWidth / (bb.xMax() - bb.xMin());
-	text->setCharacterSize(std::min(hsize,wsize));
-	text->setAxisAlignment(osgText::Text::XZ_PLANE);
 
-	text->setPosition(osg::Vec3(0,-1,(_height-padding)/2.0));
+	float csize = std::min(hsize,wsize);
 
-	_axisGeode->addDrawable(text);
+	bool defaultTitle = true;
+
+	switch(_currentMultiGraphDisplayMode)
+	{
+	    case MGDM_COLOR:
+	    case MGDM_COLOR_SHAPE:
+	    {
+		float spSize = csize * spacerSize;
+		float position = -((bb.xMax() - bb.xMin()) * csize) / 2.0;
+		for(std::map<std::string,GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end();)
+		{
+		    osgText::Text * ttext = makeText(it->second.name,it->second.singleColorArray->at(0));
+		    ttext->setCharacterSize(csize);
+		    ttext->setAxisAlignment(osgText::Text::XZ_PLANE);
+		    ttext->setAlignment(osgText::Text::LEFT_CENTER);
+		    ttext->setPosition(osg::Vec3(position,-1,(_height-padding)/2.0));
+		    osg::BoundingBox tbb = ttext->getBound();
+		    position += (tbb.xMax() - tbb.xMin());
+		    _axisGeode->addDrawable(ttext);
+		    it++;
+		    if(it != _dataInfoMap.end())
+		    {
+			ttext = makeText("-",osg::Vec4(0,0,0,1));
+			ttext->setCharacterSize(csize);
+			ttext->setAxisAlignment(osgText::Text::XZ_PLANE);
+			ttext->setAlignment(osgText::Text::CENTER_CENTER);
+			ttext->setPosition(osg::Vec3(position + (spSize / 2.0),-1,(_height-padding)/2.0));
+			_axisGeode->addDrawable(ttext);
+			position += spSize;
+		    }
+		}
+		defaultTitle = false;
+		break;
+	    }
+	    default:
+		break;
+	}
+
+	if(defaultTitle)
+	{
+	    text->setCharacterSize(std::min(hsize,wsize));
+	    text->setAxisAlignment(osgText::Text::XZ_PLANE);
+
+	    text->setPosition(osg::Vec3(0,-1,(_height-padding)/2.0));
+
+	    _axisGeode->addDrawable(text);
+	}
     }
 }
 
@@ -1198,7 +1585,7 @@ osgText::Text * DataGraph::makeText(std::string text, osg::Vec4 color)
     return textNode;
 }
 
-osg::Vec3 DataGraph::makeColor(float f)
+osg::Vec4 DataGraph::makeColor(float f)
 {
     if(f < 0)
     {
@@ -1209,7 +1596,8 @@ osg::Vec3 DataGraph::makeColor(float f)
         f = 1.0;
     }
 
-    osg::Vec3 color;
+    osg::Vec4 color;
+    color.w() = 1.0;
 
     if(f <= 0.33)
     {

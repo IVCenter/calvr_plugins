@@ -1,11 +1,12 @@
 #include "OsgPdf.h"
 
-#include <config/ConfigManager.h>
-#include <kernel/SceneManager.h>
-#include <kernel/PluginManager.h>
-#include <kernel/PluginHelper.h>
-#include <kernel/NodeMask.h>
-#include <menu/MenuSystem.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/PluginManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/NodeMask.h>
+#include <cvrKernel/TiledWallSceneObject.h>
+#include <cvrMenu/MenuSystem.h>
 #include <PluginMessageType.h>
 #include <iostream>
 
@@ -58,7 +59,7 @@ osg::Geometry* OsgPdf::myCreateTexturedQuadGeometry(osg::Vec3 pos, float width,f
 }
 
 
-bool OsgPdf::loadFile(std::string filename)
+bool OsgPdf::loadFile(std::string filename,float width,bool tiledSO)
 {
     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
 
@@ -71,16 +72,35 @@ bool OsgPdf::loadFile(std::string filename)
     currentobject->pdf = NULL;
     currentobject->scene = NULL;
 
+    osg::Image * image = osgDB::readImageFile(filename.c_str());
+    if(image)
+    {
+	std::cerr << "Image is valid." << std::endl;
+    }
+    else
+    {
+	std::cerr << "Image not valid" << std::endl;
+    }
+
     // cast to a PdfImage
-    PdfImage* pdfImage = dynamic_cast<PdfImage* > (osgDB::readImageFile(filename.c_str()));
+    PdfImage* pdfImage = (PdfImage*)image;//dynamic_cast<PdfImage* > (image);
     if (pdfImage)
     {
 	// create texture for pdf
-	float width = pdfImage->s() * pdfImage->getPixelAspectRatio();
-        float height = pdfImage->t();
+	float twidth;
+	float theight;
+	if(width > 0)
+	{
+	    twidth = width;
+	    theight = twidth / pdfImage->getPixelAspectRatio();
+	}
+	else
+	{
+	    twidth = pdfImage->s() * pdfImage->getPixelAspectRatio();
+	    theight = pdfImage->t();
+	}
 
-        osg::ref_ptr<osg::Drawable> drawable = myCreateTexturedQuadGeometry(osg::Vec3(0.0,0.0,0.0), width, height, pdfImage);
-
+        osg::ref_ptr<osg::Drawable> drawable = myCreateTexturedQuadGeometry(osg::Vec3(0.0,0.0,0.0), twidth, theight, pdfImage); 
         geode->addDrawable(drawable.get());
 
 	currentobject->pdf = pdfImage;
@@ -100,11 +120,18 @@ bool OsgPdf::loadFile(std::string filename)
     }
 	    
     // add stream to the scene
-    SceneObject * so = new SceneObject(name,false,false,false,true,true);
+    SceneObject * so;
+    if(!tiledSO)
+    {
+	so = new SceneObject(name,true,false,false,true,true);
+    }
+    else
+    {
+	so = new TiledWallSceneObject(name,false,true,false,true,true);
+    }
     PluginHelper::registerSceneObject(so,"OsgPdf");
     so->addChild(geode);
     so->attachToScene();
-    so->setNavigationOn(true);
     so->addMoveMenuItem();
     so->addNavigationMenuItem();
     currentobject->scene = so;	   
@@ -188,7 +215,7 @@ void OsgPdf::menuCallback(MenuItem* menuItem)
         {
             if( it->first->pdf )
             {
-                 it->first->pdf->page(it->second->getValue());
+                 it->first->pdf->page((int)it->second->getValue());
 		 break;
             }
 	}
@@ -236,6 +263,29 @@ void OsgPdf::menuCallback(MenuItem* menuItem)
 
             break;
         }
+    }
+}
+
+void OsgPdf::message(int type, char *&data, bool collaborative)
+{
+    if(type == PDF_LOAD_REQUEST)
+    {
+	if(collaborative)
+	{
+	    return;
+	}
+
+	OsgPdfLoadRequest * pdflr = (OsgPdfLoadRequest*)data;
+	if(loadFile(pdflr->path,0,pdflr->tiledWallObject))
+	{
+	    pdflr->object = _loadedPdfs.back()->scene;
+	    pdflr->object->setTransform(pdflr->transform);
+	    pdflr->loaded = true;
+	}
+	else
+	{
+	    pdflr->loaded = false;
+	}
     }
 }
 

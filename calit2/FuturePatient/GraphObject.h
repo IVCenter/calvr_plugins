@@ -2,6 +2,7 @@
 #define FP_GRAPH_OBJECT_H
 
 #include <cvrKernel/TiledWallSceneObject.h>
+#include <cvrMenu/MenuList.h>
 
 #include <string>
 
@@ -43,6 +44,9 @@ class GraphObject : public cvr::TiledWallSceneObject
             return _layoutDoesDelete;
         }
 
+        virtual void menuCallback(cvr::MenuItem * item);
+
+        virtual bool processEvent(cvr::InteractionEvent * ie);
         virtual void enterCallback(int handID, const osg::Matrix &mat);
         virtual void updateCallback(int handID, const osg::Matrix &mat);
         virtual void leaveCallback(int handID);
@@ -50,6 +54,10 @@ class GraphObject : public cvr::TiledWallSceneObject
         mysqlpp::Connection * _conn;
         std::vector<std::string> _nameList;
         DataGraph * _graph;
+
+        cvr::MenuList * _mgdList;
+
+        std::string _pdfDir;
 
         int _activeHand;
         bool _layoutDoesDelete;

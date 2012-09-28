@@ -45,24 +45,22 @@ const int vvTokenizer::MAX_TOKEN_LEN = 1024;
 */
 vvTokenizer::vvTokenizer(FILE* file)
 {
-  // Memory allocation:
-  sval = new char[MAX_TOKEN_LEN + 1];
-  data = new char[BLOCK_SIZE];
-
-  // Attribute initialization:
-  ttype            = VV_NOTHING;
-  nval             = 0.0f;
-  sval[0]          = '\0';
-  pushedBack       = false;
-  fp               = file;
-  line             = determineCurrentLine();
-  caseConversion   = VV_NONE;
-  eolIsSignificant = false;
-  blockUsed = 0;
-  cur = 0;
-  firstPass = true;
-
-  setDefault();                                   // disable number parsing
+    // Memory allocation:
+    sval = new char[MAX_TOKEN_LEN + 1];
+    data = new char[BLOCK_SIZE];
+    // Attribute initialization:
+    ttype            = VV_NOTHING;
+    nval             = 0.0f;
+    sval[0]          = '\0';
+    pushedBack       = false;
+    fp               = file;
+    line             = determineCurrentLine();
+    caseConversion   = VV_NONE;
+    eolIsSignificant = false;
+    blockUsed = 0;
+    cur = 0;
+    firstPass = true;
+    setDefault();                                   // disable number parsing
 }
 
 //----------------------------------------------------------------------------
@@ -73,13 +71,14 @@ vvTokenizer::vvTokenizer(FILE* file)
 */
 vvTokenizer::~vvTokenizer()
 {
-  long offset;
+    long offset;
+    offset = cur - blockUsed;
 
-  offset = cur-blockUsed;
-  if (!firstPass) --offset;
-  fseek(fp, offset, SEEK_CUR);
-  delete[] sval;
-  delete[] data;
+    if (!firstPass) --offset;
+
+    fseek(fp, offset, SEEK_CUR);
+    delete[] sval;
+    delete[] data;
 }
 
 //----------------------------------------------------------------------------
@@ -90,25 +89,27 @@ vvTokenizer::~vvTokenizer()
 */
 int vvTokenizer::determineCurrentLine()
 {
-  int  lineNr = 1;
-  long current;                                   // current position in file
-  long i;
-  int  c;
+    int  lineNr = 1;
+    long current;                                   // current position in file
+    long i;
+    int  c;
+    current = ftell(fp);                            // memorize file pointer
 
-  current = ftell(fp);                            // memorize file pointer
-  if (current<0) return -1;
-  fseek(fp, 0, SEEK_SET);
+    if (current < 0) return -1;
 
-  // Count number of line breaks by counting the number
-  // of '\r' characters in the file:
-  for (i=0; i<current; ++i)
-  {
-    c = fgetc(fp);
-    if (c=='\r')
-      ++lineNr;
-  }
+    fseek(fp, 0, SEEK_SET);
 
-  return lineNr;
+    // Count number of line breaks by counting the number
+    // of '\r' characters in the file:
+    for (i = 0; i < current; ++i)
+    {
+        c = fgetc(fp);
+
+        if (c == '\r')
+            ++lineNr;
+    }
+
+    return lineNr;
 }
 
 //----------------------------------------------------------------------------
@@ -117,17 +118,18 @@ int vvTokenizer::determineCurrentLine()
 */
 int vvTokenizer::readChar()
 {
-  if (cur >= blockUsed)                           // end of buffer reached?
-  {
-    if (feof(fp)) return -1;
-    else
+    if (cur >= blockUsed)                           // end of buffer reached?
     {
-      // Read next block:
-      blockUsed = fread(data, 1, BLOCK_SIZE, fp);
-      cur = 0;
+        if (feof(fp)) return -1;
+        else
+        {
+            // Read next block:
+            blockUsed = fread(data, 1, BLOCK_SIZE, fp);
+            cur = 0;
+        }
     }
-  }
-  return (unsigned char)data[cur++];
+
+    return (unsigned char) data[cur++];
 }
 
 //----------------------------------------------------------------------------
@@ -139,16 +141,19 @@ int vvTokenizer::readChar()
 */
 void vvTokenizer::setDefault()
 {
-  int i;
+    int i;
 
-  for (i=0; i<33; ++i)
-    ctype[i] = VV_WHITESPACE;
-  for (i=33; i<127; ++i)
-    ctype[i] = VV_ALPHA;
-  for (i=127; i<192; ++i)
-    ctype[i] = VV_WHITESPACE;
-  for (i=192; i<256; ++i)
-    ctype[i] = VV_ALPHA;
+    for (i = 0; i < 33; ++i)
+        ctype[i] = VV_WHITESPACE;
+
+    for (i = 33; i < 127; ++i)
+        ctype[i] = VV_ALPHA;
+
+    for (i = 127; i < 192; ++i)
+        ctype[i] = VV_WHITESPACE;
+
+    for (i = 192; i < 256; ++i)
+        ctype[i] = VV_ALPHA;
 }
 
 //----------------------------------------------------------------------------
@@ -160,7 +165,7 @@ void vvTokenizer::setDefault()
 */
 void vvTokenizer::setLineNumber(int lineNumber)
 {
-  line = lineNumber;
+    line = lineNumber;
 }
 
 //----------------------------------------------------------------------------
@@ -169,7 +174,7 @@ void vvTokenizer::setLineNumber(int lineNumber)
 */
 int vvTokenizer::getLineNumber()
 {
-  return line;
+    return line;
 }
 
 //----------------------------------------------------------------------------
@@ -180,9 +185,11 @@ int vvTokenizer::getLineNumber()
 */
 long vvTokenizer::getFilePos()
 {
-  long pos = ftell(fp) - blockUsed + cur;
-  if (!firstPass) --pos;
-  return pos;
+    long pos = ftell(fp) - blockUsed + cur;
+
+    if (!firstPass) --pos;
+
+    return pos;
 }
 
 //----------------------------------------------------------------------------
@@ -193,15 +200,15 @@ long vvTokenizer::getFilePos()
 */
 void vvTokenizer::setFilePos(FILE* newFP)
 {
-  fp = newFP;
-  ttype = VV_NOTHING;
-  nval = 0.0f;
-  sval[0] = '\0';
-  pushedBack = false;
-  blockUsed = 0;
-  cur = 0;
-  firstPass = true;
-  line = determineCurrentLine();
+    fp = newFP;
+    ttype = VV_NOTHING;
+    nval = 0.0f;
+    sval[0] = '\0';
+    pushedBack = false;
+    blockUsed = 0;
+    cur = 0;
+    firstPass = true;
+    line = determineCurrentLine();
 }
 
 //----------------------------------------------------------------------------
@@ -212,7 +219,7 @@ void vvTokenizer::setFilePos(FILE* newFP)
 */
 void vvTokenizer::setAlphaCharacter(char cc)
 {
-  ctype[static_cast<int>(cc)] = VV_ALPHA;
+    ctype[static_cast<int>(cc)] = VV_ALPHA;
 }
 
 //----------------------------------------------------------------------------
@@ -223,7 +230,7 @@ void vvTokenizer::setAlphaCharacter(char cc)
 */
 void vvTokenizer::setCommentCharacter(char cc)
 {
-  ctype[static_cast<int>(cc)] = VV_COMMENT;
+    ctype[static_cast<int>(cc)] = VV_COMMENT;
 }
 
 //----------------------------------------------------------------------------
@@ -234,7 +241,7 @@ void vvTokenizer::setCommentCharacter(char cc)
 */
 void vvTokenizer::setWhitespaceCharacter(char wc)
 {
-  ctype[static_cast<int>(wc)] = VV_WHITESPACE;
+    ctype[static_cast<int>(wc)] = VV_WHITESPACE;
 }
 
 //----------------------------------------------------------------------------
@@ -250,11 +257,12 @@ void vvTokenizer::setWhitespaceCharacter(char wc)
 */
 void vvTokenizer::setParseNumbers(bool pn)
 {
-  for (int i='0'; i<='9'; ++i)
-    ctype[i] = pn ? VV_DIGIT : VV_ALPHA;
-  ctype[static_cast<int>('.')] = pn ? VV_DIGIT : VV_ALPHA;
-  ctype[static_cast<int>('-')] = pn ? VV_DIGIT : VV_ALPHA;
-  ctype[static_cast<int>('+')] = pn ? VV_DIGIT : VV_ALPHA;
+    for (int i = '0'; i <= '9'; ++i)
+        ctype[i] = pn ? VV_DIGIT : VV_ALPHA;
+
+    ctype[static_cast<int>('.')] = pn ? VV_DIGIT : VV_ALPHA;
+    ctype[static_cast<int>('-')] = pn ? VV_DIGIT : VV_ALPHA;
+    ctype[static_cast<int>('+')] = pn ? VV_DIGIT : VV_ALPHA;
 }
 
 //----------------------------------------------------------------------------
@@ -276,7 +284,7 @@ end-of-line characters are white space.
 */
 void vvTokenizer::setEOLisSignificant(bool eol)
 {
-  eolIsSignificant = eol;
+    eolIsSignificant = eol;
 }
 
 //----------------------------------------------------------------------------
@@ -286,7 +294,7 @@ void vvTokenizer::setEOLisSignificant(bool eol)
 */
 void vvTokenizer::setCaseConversion(CaseType cc)
 {
-  caseConversion = cc;
+    caseConversion = cc;
 }
 
 //----------------------------------------------------------------------------
@@ -297,8 +305,8 @@ void vvTokenizer::setCaseConversion(CaseType cc)
 */
 void vvTokenizer::pushBack()
 {
-  if (ttype != VV_NOTHING)                        // no-op if nextToken() not called
-    pushedBack = true;
+    if (ttype != VV_NOTHING)                        // no-op if nextToken() not called
+        pushedBack = true;
 }
 
 //----------------------------------------------------------------------------
@@ -309,30 +317,34 @@ void vvTokenizer::pushBack()
 */
 void vvTokenizer::nextLine()
 {
-  int c;                                          // read character, or -1 for EOF
+    int c;                                          // read character, or -1 for EOF
 
-  if (peekChar!='\n'  &&  peekChar!='\r'  &&  peekChar>=0)
-  {
-    do                                            // skip until EOF or EOL
+    if (peekChar != '\n'  &&  peekChar != '\r'  &&  peekChar >= 0)
     {
-      c = readChar();
-    } while (c!='\n'  &&  c!='\r'  &&  c>=0);
-  }
-  else c = peekChar;
-  if (c<0)                                        // EOF reached?
-  {
-    pushBack();
-    return;
-  }
-  if (c=='\r')
-  {
-    c = readChar();
-    if (c=='\n')
-      c = readChar();
-  }
-  else c = readChar();
-  ++line;
-  peekChar = c;
+        do                                            // skip until EOF or EOL
+        {
+            c = readChar();
+        } while (c != '\n'  &&  c != '\r'  &&  c >= 0);
+    }
+    else c = peekChar;
+
+    if (c < 0)                                      // EOF reached?
+    {
+        pushBack();
+        return;
+    }
+
+    if (c == '\r')
+    {
+        c = readChar();
+
+        if (c == '\n')
+            c = readChar();
+    }
+    else c = readChar();
+
+    ++line;
+    peekChar = c;
 }
 
 //----------------------------------------------------------------------------
@@ -349,119 +361,132 @@ void vvTokenizer::nextLine()
 */
 vvTokenizer::TokenType vvTokenizer::nextToken()
 {
-  int   c;                                        // read character, or -1 for EOF
-  int   len;                                      // string length
-  int   i;
-  CharacterType ct;
+    int   c;                                        // read character, or -1 for EOF
+    int   len;                                      // string length
+    int   i;
+    CharacterType ct;
 
-  if (pushedBack)                                 // if token was pushed back, re-use the last read token
-  {
-    pushedBack = false;
-    return ttype;
-  }
-
-  // Initialization:
-  sval[0] = '\0';
-  nval = 0.0f;
-
-  if (firstPass)                                  // is this the first pass?
-  {
-    c = readChar();
-    firstPass = false;
-  }
-  else
-    c = peekChar;
-
-  if (c<0 || c>255)
-    return ttype = VV_EOF;
-
-  ct = ctype[c];                                  // look up character properties
-
-  // Parse whitespace:
-  while (ct==VV_WHITESPACE)
-  {
-    if (c == '\r')
+    if (pushedBack)                                 // if token was pushed back, re-use the last read token
     {
-      ++line;
-      c = readChar();
-      if (c == '\n')
+        pushedBack = false;
+        return ttype;
+    }
+
+    // Initialization:
+    sval[0] = '\0';
+    nval = 0.0f;
+
+    if (firstPass)                                  // is this the first pass?
+    {
         c = readChar();
-      if (eolIsSignificant)
-      {
-        peekChar = c;
-        return ttype = VV_EOL;
-      }
+        firstPass = false;
     }
     else
+        c = peekChar;
+
+    if (c < 0 || c > 255)
+        return ttype = VV_EOF;
+
+    ct = ctype[c];                                  // look up character properties
+
+    // Parse whitespace:
+    while (ct == VV_WHITESPACE)
     {
-      if (c == '\n')
-      {
-        ++line;
-        if (eolIsSignificant)
+        if (c == '\r')
         {
-          peekChar = readChar();
-          return ttype = VV_EOL;
+            ++line;
+            c = readChar();
+
+            if (c == '\n')
+                c = readChar();
+
+            if (eolIsSignificant)
+            {
+                peekChar = c;
+                return ttype = VV_EOL;
+            }
         }
-      }
-      c = readChar();
-    }
-    if (c<0 || c>255)
-      return ttype = VV_EOF;
-    ct = ctype[c];
-  }
-
-  // Parse comment:
-  if (ct==VV_COMMENT)
-  {
-    while ((c = readChar())!='\n'  &&  c!='\r'  &&  c>=0)
-    {
-      // skip until EOF or EOL
-    }
-    if (c=='\r')
-    {
-      ++line;
-      c = readChar();
-      if (c=='\n') c = readChar();
-    }
-    else if (c=='\n')
-    {
-      ++line;
-      c = readChar();
-    }
-    peekChar = c;
-    return nextToken();                           // call self recursively
-  }
-
-  // Parse token:
-  len = 0;
-  while ((ct==VV_DIGIT || ct==VV_ALPHA) && len<MAX_TOKEN_LEN)
-  {
-    sval[len] = (char)c;
-    ++len;
-    c = readChar();
-    ct = ctype[c];
-  }
-  sval[len] = '\0';
-  peekChar = c;
-  if (isNumberToken(sval))
-  {
-    nval = (double)atof(sval);
-    return ttype = VV_NUMBER;
-  }
-  else                                            // word token
-  {
-    if (caseConversion!=VV_NONE)                  // check for case conversion
-    {
-      for (i=0; i<len; ++i)                       // convert each character
-      {
-        if (caseConversion==VV_UPPER)
-          sval[i] = (char)toupper((int)sval[i]);
         else
-          sval[i] = (char)tolower((int)sval[i]);
-      }
+        {
+            if (c == '\n')
+            {
+                ++line;
+
+                if (eolIsSignificant)
+                {
+                    peekChar = readChar();
+                    return ttype = VV_EOL;
+                }
+            }
+
+            c = readChar();
+        }
+
+        if (c < 0 || c > 255)
+            return ttype = VV_EOF;
+
+        ct = ctype[c];
     }
-    return ttype = VV_WORD;
-  }
+
+    // Parse comment:
+    if (ct == VV_COMMENT)
+    {
+        while ((c = readChar()) != '\n'  &&  c != '\r'  &&  c >= 0)
+        {
+            // skip until EOF or EOL
+        }
+
+        if (c == '\r')
+        {
+            ++line;
+            c = readChar();
+
+            if (c == '\n') c = readChar();
+        }
+        else if (c == '\n')
+        {
+            ++line;
+            c = readChar();
+        }
+
+        peekChar = c;
+        return nextToken();                           // call self recursively
+    }
+
+    // Parse token:
+    len = 0;
+
+    while ((ct == VV_DIGIT || ct == VV_ALPHA) && len < MAX_TOKEN_LEN)
+    {
+        sval[len] = (char) c;
+        ++len;
+        c = readChar();
+        ct = ctype[c];
+    }
+
+    sval[len] = '\0';
+    peekChar = c;
+
+    if (isNumberToken(sval))
+    {
+        nval = (double) atof(sval);
+        return ttype = VV_NUMBER;
+    }
+    else                                            // word token
+    {
+        if (caseConversion != VV_NONE)                // check for case conversion
+        {
+            for (i = 0; i < len; ++i)                   // convert each character
+            {
+                if (caseConversion == VV_UPPER)
+                    sval[i] = (char) toupper((int) sval[i]);
+                else
+                    sval[i] = (char) tolower((int) sval[i]);
+            }
+        }
+
+        return ttype = VV_WORD;
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -475,18 +500,19 @@ vvTokenizer::TokenType vvTokenizer::nextToken()
 */
 bool vvTokenizer::isNumberToken(char* str)
 {
-  int i;
-  bool isNumber = true;
+    int i;
+    bool isNumber = true;
 
-  for (i=0; i<int(strlen(str)); ++i)
-  {
-    if ((ctype[static_cast<int>(str[i])] & VV_DIGIT) == 0 && str[i]!='e' && str[i]!='E')
+    for (i = 0; i < int (strlen(str)); ++i)
     {
-      isNumber = false;
-      break;
+        if ((ctype[static_cast<int>(str[i])] & VV_DIGIT) == 0 && str[i] != 'e' && str[i] != 'E')
+        {
+            isNumber = false;
+            break;
+        }
     }
-  }
-  return isNumber;
+
+    return isNumber;
 }
 
 //============================================================================
@@ -501,57 +527,63 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-  vvTokenizer* tokenizer;                         // ASCII file tokenizer
-  vvTokenizer::TokenType ttype;                   // currently processed token type
-  FILE* fp;                                       // volume file pointer
-  bool done;
+    vvTokenizer* tokenizer;                         // ASCII file tokenizer
+    vvTokenizer::TokenType ttype;                   // currently processed token type
+    FILE* fp;                                       // volume file pointer
+    bool done;
 
-  if (argc!=2)
-  {
-    cout << "Tokenizer Test. Syntax: tokentext <filename.txt>" << endl;
-    return(0);
-  }
-
-  if ( (fp = fopen(argv[1], "rb")) == NULL)
-  {
-    cout << "Error: Cannot open input file." << endl;
-    return(0);
-  }
-
-  // Read file data:
-  tokenizer = new vvTokenizer(fp);
-  tokenizer->setCommentCharacter('#');
-  tokenizer->setEOLisSignificant(false);
-  tokenizer->setCaseConversion(vvTokenizer::VV_UPPER);
-  tokenizer->setParseNumbers(true);
-  tokenizer->setWhitespaceCharacter('=');
-  done = false;
-  while (!done)
-  {
-    // Read a token:
-    ttype = tokenizer->nextToken();
-    switch (ttype)
+    if (argc != 2)
     {
-      case vvTokenizer::VV_WORD:
-        cout << "Line " << tokenizer->getLineNumber() <<
-          ": Found word token: " << tokenizer->sval << endl;
-        break;
-      case vvTokenizer::VV_NUMBER:
-        cout << "Line " << tokenizer->getLineNumber() <<
-          ": Found number token: " << tokenizer->nval << endl;
-        break;
-      case vvTokenizer::VV_EOL:
-        cout << "EOL" << endl;
-        break;
-      default: done = true;
-      break;
+        cout << "Tokenizer Test. Syntax: tokentext <filename.txt>" << endl;
+        return (0);
     }
-  }
 
-  // Clean up:
-  delete tokenizer;
-  fclose(fp);
-  return 1;
+    if ((fp = fopen(argv[1], "rb")) == NULL)
+    {
+        cout << "Error: Cannot open input file." << endl;
+        return (0);
+    }
+
+    // Read file data:
+    tokenizer = new vvTokenizer(fp);
+    tokenizer->setCommentCharacter('#');
+    tokenizer->setEOLisSignificant(false);
+    tokenizer->setCaseConversion(vvTokenizer::VV_UPPER);
+    tokenizer->setParseNumbers(true);
+    tokenizer->setWhitespaceCharacter('=');
+    done = false;
+
+    while (!done)
+    {
+        // Read a token:
+        ttype = tokenizer->nextToken();
+
+        switch (ttype)
+        {
+        case vvTokenizer::VV_WORD:
+            cout << "Line " << tokenizer->getLineNumber() <<
+                 ": Found word token: " << tokenizer->sval << endl;
+            break;
+
+        case vvTokenizer::VV_NUMBER:
+            cout << "Line " << tokenizer->getLineNumber() <<
+                 ": Found number token: " << tokenizer->nval << endl;
+            break;
+
+        case vvTokenizer::VV_EOL:
+            cout << "EOL" << endl;
+            break;
+
+        default:
+            done = true;
+            break;
+        }
+    }
+
+    // Clean up:
+    delete tokenizer;
+    fclose(fp);
+    return 1;
 }
 #endif
 

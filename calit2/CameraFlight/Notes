@@ -1,0 +1,5 @@
+// to enable enable osgEarth and CameraFlight
+
+<OsgEarth value="on" />
+<CameraFlight value="on" />
+

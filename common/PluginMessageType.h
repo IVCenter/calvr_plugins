@@ -8,6 +8,8 @@
 #ifndef CALVR_PLUGIN_MESSAGE_TYPE_H
 #define CALVR_PLUGIN_MESSAGE_TYPE_H
 
+#include <cvrKernel/SceneObject.h>
+
 #include <osg/MatrixTransform>
 
 #include <string>
@@ -90,6 +92,21 @@ struct PanHeightRequest
 enum PointsWithPanMessageType
 {
     PWP_PAN_UNLOADED=0
+};
+
+enum OsgPdfMessageType
+{
+    PDF_LOAD_REQUEST=0
+};
+
+struct OsgPdfLoadRequest
+{
+    osg::Matrixd transform;
+    float width;
+    std::string path;
+    bool loaded;
+    bool tiledWallObject;
+    cvr::SceneObject * object;
 };
 
 #endif

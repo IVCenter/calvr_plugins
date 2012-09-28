@@ -174,10 +174,10 @@ osg::Vec4 GreenLight::wattColor2(float watt, int minWatt, int maxWatt)
         return osg::Vec4(1,1,1, 0);
 
     // Less than the minimum watt reqs.
-    if (watt < minWatt) return osg::Vec4(.8,.8,1, 0);
+    if (watt < minWatt) return osg::Vec4(.8,.8,1, 1.0f);
 
     // Over the maximum watt reqs.
-    if (watt > maxWatt) return osg::Vec4(1,0,0, 1);
+    if (watt > maxWatt) return osg::Vec4(1,0,0, 1.7f);
 
     // Watt-Weight:  R,  G,  B
     // minWatt (0):  0,  0,  1
@@ -212,7 +212,7 @@ osg::Vec4 GreenLight::wattColor2(float watt, int minWatt, int maxWatt)
     if (blue < 0) blue = 0;
     if (blue > 1) blue = 1;
 
-    return osg::Vec4(red, green, blue, (watt - minWatt) / (maxWatt - minWatt ) + 0.5f  );
+    return osg::Vec4(red, green, blue, (interpolate) + 1.0f  );
 }
 
 
@@ -276,6 +276,7 @@ void GreenLight::createTimestampMenus()
 {
     std::vector<std::string> years;
     years.push_back("2011");
+    years.push_back("2012");
 
     std::vector<std::string> months;
     months.push_back("January");
@@ -408,16 +409,21 @@ void GreenLight::animatePower()
 
                     if((*sit)->soundComponent != NULL )
                     {   
-//                      printf("sound position now at: (%f,%f,%f)\n",
-//                             (*sit)->animationPosition,0.0f,0.0f);
                       if ( ((*sit)->prev_soundIntensity != (*sit)->soundIntensity) )
                       {
-//                        (*sit)->soundComponent->setGain( (*sit)->soundIntensity );
                         (*sit)->soundComponent->setPitch( (*sit)->soundIntensity );
                         (*sit)->prev_soundIntensity = (*sit)->soundIntensity;
                       }
                     }
                 }
+            }
+            if((*sit)->soundComponent != NULL )
+            {   
+              if ( ((*sit)->prev_soundIntensity != (*sit)->soundIntensity) )
+              {
+                (*sit)->soundComponent->setPitch( (*sit)->soundIntensity );
+                (*sit)->prev_soundIntensity = (*sit)->soundIntensity;
+              }
             }
         }
     }

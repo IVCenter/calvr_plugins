@@ -23,6 +23,8 @@
 #include <osgTerrain/TerrainTile>
 #include <osgTerrain/GeometryTechnique>
 #include <osgEarthDrivers/kml/KML>
+#include <osg/Referenced>
+#include <osg/PositionAttitudeTransform>
 #include <osgEarth/TerrainOptions>
 #include <osgEarth/MapNodeOptions>
 #include <osgEarth/optional>
@@ -46,6 +48,39 @@ OsgEarth::OsgEarth()
 
 }
 
+void OsgEarth::message(int type, char * data)
+{
+    // data needs to include the plugin name and also the lat,lon and height
+    if(type == OE_ADD_MODEL)
+    {
+	// data contains 3 floats
+	OsgEarthRequest request = * (OsgEarthRequest*) data;
+
+	// if get a request create new node add matrix and return the address of the matrixtransform
+        osg::Matrixd output;
+	_map->getProfile()->getSRS()->getEllipsoid()->computeLocalToWorldTransformFromLatLongHeight(
+	        osg::DegreesToRadians(request.lat),
+	        osg::DegreesToRadians(request.lon),
+		request.height,
+	        output );
+
+	if( request.trans != NULL )
+	{
+            request.trans->setMatrix(output);
+	}
+	else
+	{
+	    osg::MatrixTransform* trans = new osg::MatrixTransform();
+            trans->setMatrix(output);
+            SceneManager::instance()->getObjectsRoot()->addChild(trans);
+            request.trans = trans;
+	}
+
+        // send message back	
+	PluginManager::instance()->sendMessageByName(request.pluginName,OE_TRANSFORM_POINTER,(char *) &request);
+    }
+}
+
 bool OsgEarth::init()
 {
     std::cerr << "OsgEarth init\n";
@@ -62,12 +97,12 @@ bool OsgEarth::init()
 
     // disable special culling of the planet
     earth->setNodeMask(earth->getNodeMask() & ~DISABLE_FIRST_CULL & ~INTERSECT_MASK);
-
     SceneManager::instance()->getObjectsRoot()->addChild(earth);
 
+    // get the map to use for elevation
     _mapNode = MapNode::findMapNode( earth );
+    _mapNode->setNodeMask(~2);
     _map = _mapNode->getMap();
-
 
     // loop through the configuration and add models to the planet
     // Load a KML file if specified
@@ -304,7 +339,6 @@ void OsgEarth::preFrame()
         }
 
         //std::cerr << "distance: " << distanceToSurface << std::endl;
-    	
         if(_navActive)
         {
             processNav(getSpeed(distanceToSurface));
@@ -420,6 +454,14 @@ bool OsgEarth::mouseButtonEvent (int type, int button, int x, int y, const osg::
 void OsgEarth::menuCallback(MenuItem * item)
 {
     if(item == _visCB)
+    {
+	if(_visCB->getValue())
+		_mapNode->setNodeMask(~2);
+	else
+		_mapNode->setNodeMask(0);
+
+    }
+    else if(item == _visCB)
     {
 	if(_visCB->getValue())
 		_mapNode->setNodeMask(~2);
