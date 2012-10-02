@@ -107,6 +107,36 @@ bool FuturePatient::init()
     _multiAddCB->setCallback(this);
     _fpMenu->addItem(_multiAddCB);
 
+    _microbeMenu = new SubMenu("Microbe Data");
+    _fpMenu->addItem(_microbeMenu);
+
+    _microbeSpecialMenu = new SubMenu("Special");
+    _microbeMenu->addItem(_microbeSpecialMenu);
+
+    _microbeLoadAverage = new MenuButton("Average");
+    _microbeLoadAverage->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadAverage);
+
+    _microbeLoadHealthyAverage = new MenuButton("Healthy Average");
+    _microbeLoadHealthyAverage->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadHealthyAverage);
+
+    _microbeLoadCrohnsAverage = new MenuButton("Crohns Average");
+    _microbeLoadCrohnsAverage->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadCrohnsAverage);
+
+    _microbePatients = new MenuList();
+    _microbePatients->setCallback(this);
+    _microbeMenu->addItem(_microbePatients);
+
+    _microbeTest = new MenuList();
+    _microbeTest->setCallback(this);
+    _microbeMenu->addItem(_microbeTest);
+
+    _microbeLoad = new MenuButton("Load");
+    _microbeLoad->setCallback(this);
+    _microbeMenu->addItem(_microbeLoad);
+
     PluginHelper::addRootMenuItem(_fpMenu);
 
     struct listField
@@ -312,6 +342,13 @@ bool FuturePatient::init()
 	delete[] groupLists;
     }
 
+    setupMicrobePatients();
+    
+    if(_microbePatients->getListSize())
+    {
+	updateMicrobeTests(_microbePatients->getIndex() + 1);
+    }
+
     /*if(_conn)
     {
 	GraphObject * gobject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
@@ -407,6 +444,29 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    _layoutObject->removeAll();
 	}
 	menuCallback(_multiAddCB);
+    }
+
+    if(item == _microbePatients)
+    {
+	if(_microbePatients->getListSize())
+	{
+	    updateMicrobeTests(_microbePatients->getIndex() + 1);
+	}
+    }
+
+    if(item == _microbeLoad && _microbePatients->getListSize() && _microbeTest->getListSize())
+    {
+	MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue()))
+	{
+	    PluginHelper::registerSceneObject(mgo,"FuturePatient");
+	    mgo->attachToScene();
+	    _microbeGraphList.push_back(mgo);
+	}
+	else
+	{
+	    delete mgo;
+	}
     }
 }
 
@@ -572,3 +632,123 @@ void FuturePatient::loadGraph(std::string name)
     dg->setXDataRangeTimestamp(metaRes[0]["display_name"].c_str(),mint,maxt);
     PluginHelper::getObjectsRoot()->addChild(dg->getGraphRoot());
 }*/
+
+void FuturePatient::setupMicrobePatients()
+{
+    struct PatientName
+    {
+	char name[64];
+    };
+
+    PatientName * names = NULL;
+    int numNames = 0;
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    mysqlpp::Query q = _conn->query("select last_name, patient_id from Patient order by patient_id;");
+	    mysqlpp::StoreQueryResult res = q.store();
+
+	    numNames = res.num_rows();
+
+	    if(numNames)
+	    {
+		names = new struct PatientName[numNames];
+
+		for(int i = 0; i < numNames; ++i)
+		{
+		    strncpy(names[i].name,res[i]["last_name"].c_str(),63);
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&numNames,sizeof(int));
+	if(numNames)
+	{
+	    ComController::instance()->sendSlaves(names,numNames*sizeof(struct PatientName));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&numNames,sizeof(int));
+	if(numNames)
+	{
+	    names = new struct PatientName[numNames];
+	    ComController::instance()->readMaster(names,numNames*sizeof(struct PatientName));
+	}
+    }
+
+    std::vector<std::string> nameVec;
+    for(int i = 0; i < numNames; ++i)
+    {
+	nameVec.push_back(names[i].name);
+    }
+
+    _microbePatients->setValues(nameVec);
+
+    if(names)
+    {
+	delete[] names;
+    }
+}
+
+void FuturePatient::updateMicrobeTests(int patientid)
+{
+    //std::cerr << "Update Microbe Tests Patient: " << patientid << std::endl;
+    struct TestLabel
+    {
+	char label[256];
+    };
+
+    TestLabel * labels = NULL;
+    int numTests = 0;
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    std::stringstream qss;
+	    qss << "select distinct timestamp from Microbe_Measurement where patient_id = \"" << patientid << "\" order by timestamp;";
+
+	    mysqlpp::Query q = _conn->query(qss.str().c_str());
+	    mysqlpp::StoreQueryResult res = q.store();
+
+	    numTests = res.num_rows();
+
+	    if(numTests)
+	    {
+		labels = new struct TestLabel[numTests];
+
+		for(int i = 0; i < numTests; ++i)
+		{
+		    strncpy(labels[i].label,res[i]["timestamp"].c_str(),255);
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&numTests,sizeof(int));
+	if(numTests)
+	{
+	    ComController::instance()->sendSlaves(labels,numTests*sizeof(struct TestLabel));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&numTests,sizeof(int));
+	if(numTests)
+	{
+	    labels = new struct TestLabel[numTests];
+	    ComController::instance()->readMaster(labels,numTests*sizeof(struct TestLabel));
+	}
+    }
+
+    std::vector<std::string> labelVec;
+
+    for(int i = 0; i < numTests; ++i)
+    {
+	labelVec.push_back(labels[i].label);
+    }
+
+    _microbeTest->setValues(labelVec);
+}

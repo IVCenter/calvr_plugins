@@ -6,6 +6,9 @@ SET(PLUGIN_HEADERS
     GraphLayoutObject.h
     ShapeTextureGenerator.h
     PointActions.h
+    MicrobeGraphObject.h
+    GroupedBarGraph.h
+    ColorGenerator.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -17,6 +20,9 @@ ADD_LIBRARY(${LIB_NAME}
     GraphLayoutObject.cpp
     ShapeTextureGenerator.cpp
     PointActions.cpp
+    MicrobeGraphObject.cpp
+    GroupedBarGraph.cpp
+    ColorGenerator.cpp
 )
 
 FIND_PACKAGE(Mysql)
