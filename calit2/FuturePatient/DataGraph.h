@@ -35,6 +35,7 @@ enum MultiGraphDisplayMode
 {
     MGDM_NORMAL=0,
     MGDM_COLOR,
+    MGDM_COLOR_SOLID,
     MGDM_SHAPE,
     MGDM_COLOR_SHAPE
 };

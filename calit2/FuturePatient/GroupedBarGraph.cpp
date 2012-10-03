@@ -17,8 +17,8 @@ GroupedBarGraph::GroupedBarGraph(float width, float height)
 
     _font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
 
-    _topPaddingMult = 0.1;
-    _leftPaddingMult = 0.08;
+    _topPaddingMult = 0.15;
+    _leftPaddingMult = 0.05;
     _rightPaddingMult = 0.01;
     _maxBottomPaddingMult = _currentBottomPaddingMult = 0.25;
 
@@ -129,6 +129,7 @@ bool GroupedBarGraph::setGraph(std::string title, std::map<std::string, std::vec
     stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
 
     makeBG();
+    makeHover();
     makeGraph();
 
     update();
@@ -168,6 +169,104 @@ void GroupedBarGraph::setColor(osg::Vec4 color)
 	    colors->dirty();
 	    _barGeom->dirtyDisplayList();
 	}
+    }
+}
+
+void GroupedBarGraph::setHover(osg::Vec3 intersect)
+{
+    if(!_hoverGeode)
+    {
+	return;
+    }
+
+    float graphLeft = _width * (_leftPaddingMult - 0.5);
+    float graphBottom = _height * (_currentBottomPaddingMult - 0.5);
+    float graphTop = _height * (0.5 - _topPaddingMult);
+    float barWidth = (_width * (1.0 - _leftPaddingMult - _rightPaddingMult)) / ((float)_numBars);
+    float halfWidth = barWidth * 0.75 * 0.5;
+
+    bool hoverSet = false;
+
+    float barLeft = graphLeft + (barWidth / 2.0) - halfWidth;
+    float barRight = graphLeft + (barWidth / 2.0) + halfWidth;
+    for(int i = 0; i < _groupOrder.size(); ++i)
+    {
+	std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it;
+	if((it = _data.find(_groupOrder[i])) == _data.end())
+	{
+	    continue;
+	}
+
+	bool breakOut = false;
+	for(int j = 0; j < it->second.size(); ++j)
+	{ 
+	    if(intersect.x() < barLeft)
+	    {
+		breakOut = true;
+		break;
+	    }
+
+	    if(intersect.x() < barRight)
+	    {
+		breakOut = true;
+
+		if(intersect.z() <= graphTop && intersect.z() >= graphBottom)
+		{
+		    float hitValue = (intersect.z() - graphBottom) / (graphTop - graphBottom);
+		    hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
+		    hitValue += log10(_minDisplayRange);
+		    hitValue = pow(10.0,hitValue);
+
+		    if(hitValue <= it->second[j].second)
+		    {
+			std::stringstream hoverss;
+			hoverss << it->first << std::endl;
+			hoverss << it->second[j].first << std::endl;
+			hoverss << "Value: " << it->second[j].second << " " << _axisUnits;
+
+			_hoverText->setCharacterSize(1.0);
+			_hoverText->setText(hoverss.str());
+			_hoverText->setAlignment(osgText::Text::LEFT_TOP);
+			osg::BoundingBox bb = _hoverText->getBound();
+			//TODO: don't hardcode this
+			float csize = 150.0 / (bb.zMax() - bb.zMin());
+			_hoverText->setCharacterSize(csize);
+			_hoverText->setPosition(osg::Vec3(intersect.x(),-2.5,intersect.z()));
+
+			float bgheight = (bb.zMax() - bb.zMin()) * csize;
+			float bgwidth = (bb.xMax() - bb.xMin()) * csize;
+			osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(_hoverBGGeom->getVertexArray());
+			if(verts)
+			{
+			    verts->at(0) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z()-bgheight);
+			    verts->at(1) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z());
+			    verts->at(2) = osg::Vec3(intersect.x(),-2,intersect.z());
+			    verts->at(3) = osg::Vec3(intersect.x(),-2,intersect.z()-bgheight);
+			    verts->dirty();
+			}
+
+			hoverSet = true;
+		    }
+		}
+	    }
+
+	    barLeft += barWidth;
+	    barRight += barWidth;
+	}
+
+	if(breakOut)
+	{
+	    break;
+	}
+    }
+
+    if(hoverSet && !_hoverGeode->getNumParents())
+    {
+	_root->addChild(_hoverGeode);
+    }
+    else if(!hoverSet && _hoverGeode->getNumParents())
+    {
+	_root->removeChild(_hoverGeode);
     }
 }
 
@@ -418,6 +517,25 @@ void GroupedBarGraph::makeGraph()
 
     stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
     stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
+}
+
+void GroupedBarGraph::makeHover()
+{
+    _hoverGeode = new osg::Geode();
+    _hoverBGGeom = new osg::Geometry();
+    _hoverBGGeom->setUseDisplayList(false);
+    _hoverText = makeText("",osg::Vec4(1,1,1,1));
+    _hoverGeode->addDrawable(_hoverBGGeom);
+    _hoverGeode->addDrawable(_hoverText);
+
+    osg::Vec3Array * verts = new osg::Vec3Array(4);
+    osg::Vec4Array * colors = new osg::Vec4Array(1);
+    colors->at(0) = osg::Vec4(0,0,0,1);
+
+    _hoverBGGeom->setVertexArray(verts);
+    _hoverBGGeom->setColorArray(colors);
+    _hoverBGGeom->setColorBinding(osg::Geometry::BIND_OVERALL);
+    _hoverBGGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
 }
 
 void GroupedBarGraph::makeBG()

@@ -134,6 +134,11 @@ void GraphLayoutObject::addMicrobeGraphObject(MicrobeGraphObject * object)
 
     _microbeObjectList.push_back(object);
 
+    if(_syncTimeCB->getValue())
+    {
+	menuCallback(_syncTimeCB);
+    }
+
     MenuButton * button = new MenuButton("Delete");
     button->setCallback(this);
     object->addMenuItem(button);

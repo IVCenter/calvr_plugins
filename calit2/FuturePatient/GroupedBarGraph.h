@@ -67,12 +67,15 @@ class GroupedBarGraph
             return _root.get();
         }
 
+        void setHover(osg::Vec3 intersect);
+
         void selectItems(std::string & group, std::vector<std::string> & keys);
 
         bool processClick(osg::Vec3 & hitPoint, std::string & selectedGroup, std::vector<std::string> & selectedKeys);
 
     protected:
         void makeGraph();
+        void makeHover();
         void makeBG();
         void update();
         void updateGraph();
@@ -103,6 +106,10 @@ class GroupedBarGraph
         osg::ref_ptr<osg::Geode> _bgGeode;
         osg::ref_ptr<osg::Geode> _selectGeode;
         osg::ref_ptr<osg::Geometry> _barGeom;
+
+        osg::ref_ptr<osg::Geode> _hoverGeode;
+        osg::ref_ptr<osg::Geometry> _hoverBGGeom;
+        osg::ref_ptr<osgText::Text> _hoverText;
 
         osg::ref_ptr<osgText::Font> _font;
 };

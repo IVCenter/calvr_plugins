@@ -2,6 +2,7 @@
 #include "GraphLayoutObject.h"
 
 #include <cvrKernel/ComController.h>
+#include <cvrInput/TrackingManager.h>
 #include <cvrUtil/OsgMath.h>
 
 #include <iostream>
@@ -118,6 +119,26 @@ bool MicrobeGraphObject::processEvent(InteractionEvent * ie)
     }
 
     return TiledWallSceneObject::processEvent(ie);
+}
+
+void MicrobeGraphObject::updateCallback(int handID, const osg::Matrix & mat)
+{
+    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER)
+    {
+	osg::Vec3 start, end(0,1000,0);
+	start = start * mat * getWorldToObjectMatrix();
+	end = end * mat * getWorldToObjectMatrix();
+
+	osg::Vec3 planePoint;
+	osg::Vec3 planeNormal(0,-1,0);
+	osg::Vec3 intersect;
+	float w;
+
+	if(linePlaneIntersectionRef(start,end,planePoint,planeNormal,intersect,w))
+	{
+	    _graph->setHover(intersect);
+	}
+    }
 }
 
 bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, int microbes)

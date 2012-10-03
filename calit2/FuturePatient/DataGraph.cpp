@@ -1,5 +1,6 @@
 #include "DataGraph.h"
 #include "ShapeTextureGenerator.h"
+#include "ColorGenerator.h"
 
 #include <cvrKernel/CalVR.h>
 #include <cvrKernel/SceneManager.h>
@@ -876,6 +877,14 @@ void DataGraph::update()
 			    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
 			    break;
 			}
+		    case MGDM_COLOR_SOLID:
+			{
+			    it->second.connectorGeometry->setColorArray(it->second.colorArray);
+			    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+			    it->second.pointGeometry->setColorArray(it->second.colorArray);
+			    it->second.pointGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+			    break;
+			}
 		    case MGDM_SHAPE:
 			{
 			    osg::StateSet * stateset = it->second.pointGeode->getOrCreateStateSet();
@@ -913,11 +922,22 @@ void DataGraph::update()
 			}
 		    case MGDM_COLOR:
 			{
-			    float f = ((float)count) / ((float)_dataInfoMap.size());
-			    osg::Vec4 color = makeColor(f);
+			    //float f = ((float)count) / ((float)_dataInfoMap.size());
+			    //osg::Vec4 color = makeColor(f);
+			    osg::Vec4 color = ColorGenerator::makeColor(count, _dataInfoMap.size());
 			    it->second.singleColorArray->at(0) = color;
 			    it->second.connectorGeometry->setColorArray(it->second.singleColorArray);
 			    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+			    break;
+			}
+		    case MGDM_COLOR_SOLID:
+			{
+			    osg::Vec4 color = ColorGenerator::makeColor(count, _dataInfoMap.size());
+			    it->second.singleColorArray->at(0) = color;
+			    it->second.connectorGeometry->setColorArray(it->second.singleColorArray);
+			    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+			    it->second.pointGeometry->setColorArray(it->second.singleColorArray);
+			    it->second.pointGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
 			    break;
 			}
 		    case MGDM_SHAPE:
@@ -931,8 +951,9 @@ void DataGraph::update()
 			}
 		    case MGDM_COLOR_SHAPE:
 			{
-			    float f = ((float)count) / ((float)_dataInfoMap.size());
-			    osg::Vec4 color = makeColor(f);
+			    //float f = ((float)count) / ((float)_dataInfoMap.size());
+			    //osg::Vec4 color = makeColor(f);
+			    osg::Vec4 color = ColorGenerator::makeColor(count, _dataInfoMap.size());
 			    it->second.singleColorArray->at(0) = color;
 			    it->second.connectorGeometry->setColorArray(it->second.singleColorArray);
 			    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
