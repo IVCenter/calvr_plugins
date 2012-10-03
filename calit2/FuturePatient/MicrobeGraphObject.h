@@ -23,8 +23,24 @@ class MicrobeGraphObject : public cvr::TiledWallSceneObject
         MicrobeGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~MicrobeGraphObject();
 
-        bool setGraph(std::string title, int patientid, std::string testLabel);
-        bool setSpecialGraph(SpecialMicrobeGraphType smgt);
+        bool setGraph(std::string title, int patientid, std::string testLabel, int microbes);
+        bool setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes);
+
+        void setGraphSize(float width, float height);
+        void setColor(osg::Vec4 color);
+
+        float getGraphMaxValue();
+        float getGraphMinValue();
+
+        float getGraphDisplayRangeMax();
+        float getGraphDisplayRangeMin();
+
+        void setGraphDisplayRange(float min, float max);
+        void resetGraphDisplayRange();
+
+        void selectMicrobes(std::string & group, std::vector<std::string> & keys);
+
+        virtual bool processEvent(cvr::InteractionEvent * ie);
 
     protected:
         bool loadGraphData(std::string valueQuery, std::string orderQuery);

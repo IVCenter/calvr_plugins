@@ -4,6 +4,7 @@
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrMenu/MenuList.h>
 #include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuRangeValueCompact.h>
 #include <cvrMenu/SubMenu.h>
 
 #include <string>
@@ -28,6 +29,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         virtual void menuCallback(cvr::MenuItem * item);
 
     protected:
+        void checkLayout();
         void loadGraph(std::string name);
         //void makeGraph(std::string name);
         
@@ -58,6 +60,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _microbePatients;
         cvr::MenuList * _microbeTest;
         cvr::MenuButton * _microbeLoad;
+        cvr::MenuRangeValueCompact * _microbeNumBars;
 
         cvr::SubMenu * _microbeSpecialMenu;
         cvr::MenuButton * _microbeLoadAverage;

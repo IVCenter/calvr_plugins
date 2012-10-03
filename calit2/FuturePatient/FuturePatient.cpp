@@ -133,6 +133,10 @@ bool FuturePatient::init()
     _microbeTest->setCallback(this);
     _microbeMenu->addItem(_microbeTest);
 
+    _microbeNumBars = new MenuRangeValueCompact("Microbes",1,100,25);
+    _microbeNumBars->setCallback(this);
+    _microbeMenu->addItem(_microbeNumBars);
+
     _microbeLoad = new MenuButton("Load");
     _microbeLoad->setCallback(this);
     _microbeMenu->addItem(_microbeLoad);
@@ -457,11 +461,45 @@ void FuturePatient::menuCallback(MenuItem * item)
     if(item == _microbeLoad && _microbePatients->getListSize() && _microbeTest->getListSize())
     {
 	MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue()))
+	if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(),(int)_microbeNumBars->getValue()))
 	{
-	    PluginHelper::registerSceneObject(mgo,"FuturePatient");
-	    mgo->attachToScene();
-	    _microbeGraphList.push_back(mgo);
+	    //PluginHelper::registerSceneObject(mgo,"FuturePatient");
+	    //mgo->attachToScene();
+	    //_microbeGraphList.push_back(mgo);
+	    checkLayout();
+	    _layoutObject->addMicrobeGraphObject(mgo);
+	}
+	else
+	{
+	    delete mgo;
+	}
+    }
+
+    if(item == _microbeLoadAverage || item == _microbeLoadHealthyAverage || item == _microbeLoadCrohnsAverage)
+    {
+	MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+
+	SpecialMicrobeGraphType mgt;
+	if(item == _microbeLoadAverage)
+	{
+	    mgt = SMGT_AVERAGE;
+	}
+	else if(item == _microbeLoadHealthyAverage)
+	{
+	    mgt = SMGT_HEALTHY_AVERAGE;
+	}
+	else if(item == _microbeLoadCrohnsAverage)
+	{
+	    mgt = SMGT_CROHNS_AVERAGE;
+	}
+
+	if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue()))
+	{
+	    //PluginHelper::registerSceneObject(mgo,"FuturePatient");
+	    //mgo->attachToScene();
+	    //_microbeGraphList.push_back(mgo);
+	    checkLayout();
+	    _layoutObject->addMicrobeGraphObject(mgo);
 	}
 	else
 	{
@@ -470,7 +508,7 @@ void FuturePatient::menuCallback(MenuItem * item)
     }
 }
 
-void FuturePatient::loadGraph(std::string name)
+void FuturePatient::checkLayout()
 {
     if(!_layoutObject)
     {
@@ -484,6 +522,11 @@ void FuturePatient::loadGraph(std::string name)
 	PluginHelper::registerSceneObject(_layoutObject,"FuturePatient");
 	_layoutObject->attachToScene();
     }
+}
+
+void FuturePatient::loadGraph(std::string name)
+{
+    checkLayout();
 
     std::string value = name;
     if(!value.empty())

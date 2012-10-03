@@ -8,6 +8,7 @@
 #include <cvrInput/TrackerBase.h>
 
 #include "GraphObject.h"
+#include "MicrobeGraphObject.h"
 
 #include <osg/Geometry>
 #include <osg/Geode>
@@ -25,6 +26,11 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
 
         void addGraphObject(GraphObject * object);
         void removeGraphObject(GraphObject * object);
+
+        void addMicrobeGraphObject(MicrobeGraphObject * object);
+        void removeMicrobeGraphObject(MicrobeGraphObject * object);
+        void selectMicrobes(std::string & group, std::vector<std::string> & keys);
+
         void removeAll();
 
         virtual void menuCallback(cvr::MenuItem * item);
@@ -40,6 +46,12 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
 
         std::vector<GraphObject *> _objectList;
         std::map<GraphObject *,cvr::MenuButton *> _deleteButtonMap;
+
+        std::vector<MicrobeGraphObject *> _microbeObjectList;
+        std::map<MicrobeGraphObject *, cvr::MenuButton *> _microbeDeleteButtonMap;
+
+        std::string _currentSelectedMicrobeGroup;
+        std::vector<std::string> _currentSelectedMicrobes;
 
         float _width;
         float _height;

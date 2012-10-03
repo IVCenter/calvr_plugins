@@ -1,6 +1,8 @@
 #include "MicrobeGraphObject.h"
+#include "GraphLayoutObject.h"
 
 #include <cvrKernel/ComController.h>
+#include <cvrUtil/OsgMath.h>
 
 #include <iostream>
 #include <sstream>
@@ -26,19 +28,111 @@ MicrobeGraphObject::~MicrobeGraphObject()
 {
 }
 
-bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel)
+void MicrobeGraphObject::setGraphSize(float width, float height)
+{
+    osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
+    setBoundingBox(bb);
+
+    _graph->setDisplaySize(width,height);
+}
+
+void MicrobeGraphObject::setColor(osg::Vec4 color)
+{
+    _graph->setColor(color);
+}
+
+float MicrobeGraphObject::getGraphMaxValue()
+{
+    return _graph->getDataMax();
+}
+
+float MicrobeGraphObject::getGraphMinValue()
+{
+    return _graph->getDataMin();
+}
+
+float MicrobeGraphObject::getGraphDisplayRangeMax()
+{
+    return _graph->getDisplayRangeMax();
+}
+
+float MicrobeGraphObject::getGraphDisplayRangeMin()
+{
+    return _graph->getDisplayRangeMin();
+}
+
+void MicrobeGraphObject::setGraphDisplayRange(float min, float max)
+{
+    _graph->setDisplayRange(min,max);
+}
+
+void MicrobeGraphObject::resetGraphDisplayRange()
+{
+    _graph->setDisplayRange(_graph->getDisplayRangeMin(),_graph->getDisplayRangeMax());
+}
+
+void MicrobeGraphObject::selectMicrobes(std::string & group, std::vector<std::string> & keys)
+{
+    _graph->selectItems(group,keys);
+}
+
+bool MicrobeGraphObject::processEvent(InteractionEvent * ie)
+{
+    if(ie->asTrackedButtonEvent() && (ie->getInteraction() == BUTTON_DOWN || ie->getInteraction() == BUTTON_DOUBLE_CLICK))
+    {
+	TrackedButtonInteractionEvent * tie = (TrackedButtonInteractionEvent*)ie;
+
+	GraphLayoutObject * layout = dynamic_cast<GraphLayoutObject*>(_parent);
+	if(!layout)
+	{
+	    return false;
+	}
+
+	std::string selectedGroup;
+	std::vector<std::string> selectedKeys;
+
+	osg::Vec3 start, end(0,1000,0);
+	start = start * tie->getTransform() * getWorldToObjectMatrix();
+	end = end * tie->getTransform() * getWorldToObjectMatrix();
+
+	osg::Vec3 planePoint;
+	osg::Vec3 planeNormal(0,-1,0);
+	osg::Vec3 intersect;
+	float w;
+
+	bool clickUsed = false;
+
+	if(linePlaneIntersectionRef(start,end,planePoint,planeNormal,intersect,w))
+	{
+	    if(_graph->processClick(intersect,selectedGroup,selectedKeys))
+	    {
+		clickUsed = true;
+	    }
+	}
+
+	layout->selectMicrobes(selectedGroup,selectedKeys);
+	if(clickUsed)
+	{
+	    return true;
+	}
+    }
+
+    return TiledWallSceneObject::processEvent(ie);
+}
+
+bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, int microbes)
 {
     _graphTitle = title;
     std::stringstream valuess, orderss;
 
-    valuess << "select * from (select Microbes.description, Microbes.phylum, Microbes.species, Microbe_Measurement.value from  Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \""<< testLabel << "\" order by value desc limit 25)t order by t.phylum, t.value desc;";
+    valuess << "select * from (select Microbes.description, Microbes.phylum, Microbes.species, Microbe_Measurement.value from  Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \""<< testLabel << "\" order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
 
-    orderss << "select t.phylum, sum(t.value) as total_value from (select Microbes.phylum, Microbe_Measurement.value from  Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \"" << testLabel << "\" order by value desc limit 25)t group by phylum order by total_value desc;";
+    orderss << "select t.phylum, sum(t.value) as total_value from (select Microbes.phylum, Microbe_Measurement.value from  Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
 
     return loadGraphData(valuess.str(), orderss.str());
 }
 
-bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt)
+bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes)
 {
     std::string field;
 
@@ -61,8 +155,8 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt)
     }
 
     std::stringstream valuess, orderss;
-    valuess << "select * from (select description, phylum, species, " << field << " as value from Microbes order by value desc limit 25)t order by t.phylum, t.value desc;";
-    orderss << "select t.phylum, sum(t.value) as total_value from (select phylum, " << field << " as value from Microbes order by value desc limit 25)t group by phylum order by total_value desc;";
+    valuess << "select * from (select description, phylum, species, " << field << " as value from Microbes order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
+    orderss << "select t.phylum, sum(t.value) as total_value from (select phylum, " << field << " as value from Microbes order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
 
     return loadGraphData(valuess.str(), orderss.str());
 }

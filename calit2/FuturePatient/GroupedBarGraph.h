@@ -23,10 +23,53 @@ class GroupedBarGraph
 
         bool setGraph(std::string title, std::map<std::string, std::vector<std::pair<std::string, float> > > & data, std::vector<std::string> & groupOrder, BarGraphAxisType axisType, std::string axisLabel, std::string axisUnits, std::string groupLabel, osg::Vec4 color);
 
+        float getWidth()
+        {
+            return _width;
+        }
+
+        float getHeight()
+        {
+            return _height;
+        }
+
+        void setDisplaySize(float width, float height);
+        void setDisplayRange(float min, float max);
+
+        float getDisplayRangeMin()
+        {
+            return _defaultMinDisplayRange;
+        }
+
+        float getDisplayRangeMax()
+        {
+            return _defaultMaxDisplayRange;
+        }
+
+        float getDataMax()
+        {
+            return _maxGraphValue;
+        }
+
+        float getDataMin()
+        {
+            return _minGraphValue;
+        }
+
+        void setColor(osg::Vec4 color);
+        const osg::Vec4 & getColor()
+        {
+            return _color;
+        }
+
         osg::Group * getRootNode()
         {
             return _root.get();
         }
+
+        void selectItems(std::string & group, std::vector<std::string> & keys);
+
+        bool processClick(osg::Vec3 & hitPoint, std::string & selectedGroup, std::vector<std::string> & selectedKeys);
 
     protected:
         void makeGraph();
@@ -40,7 +83,9 @@ class GroupedBarGraph
 
         float _width, _height;
         float _maxGraphValue, _minGraphValue;
-        float _topPaddingMult, _leftPaddingMult, _maxBottomPaddingMult, _currentBottomPaddingMult;
+        float _defaultMaxDisplayRange, _defaultMinDisplayRange;
+        float _topPaddingMult, _leftPaddingMult, _rightPaddingMult, _maxBottomPaddingMult, _currentBottomPaddingMult;
+        float _titleMult, _topLabelMult, _groupLabelMult;
         int _numBars;
         float _minDisplayRange;
         float _maxDisplayRange;
@@ -56,6 +101,7 @@ class GroupedBarGraph
         osg::ref_ptr<osg::Geode> _barGeode;
         osg::ref_ptr<osg::Geode> _axisGeode;
         osg::ref_ptr<osg::Geode> _bgGeode;
+        osg::ref_ptr<osg::Geode> _selectGeode;
         osg::ref_ptr<osg::Geometry> _barGeom;
 
         osg::ref_ptr<osgText::Font> _font;
