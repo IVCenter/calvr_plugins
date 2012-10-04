@@ -713,7 +713,7 @@ void GroupedBarGraph::updateAxis()
     float tickSize = _height * 0.01;
 
     //std::cerr << "Max width: " << maxWidthValue << " height: " << maxHeightValue << std::endl;
-    float targetWidth = ((_width * (1.0 - _leftPaddingMult)) / ((float)_numBars));
+    float targetWidth = ((_width * (1.0 - _leftPaddingMult - _rightPaddingMult)) / ((float)_numBars));
     float spacer = targetWidth * 0.05;
     targetWidth *= 0.9;
     float charSize = targetWidth / maxWidthValue;
@@ -726,7 +726,7 @@ void GroupedBarGraph::updateAxis()
     }
     else
     {
-	_currentBottomPaddingMult = (maxHeightValue + 2.0 * tickSize) / _height;
+	_currentBottomPaddingMult = (maxHeightValue * charSize + 2.0 * tickSize) / _height;
     }
 
     float barWidth = (_width * (1.0 - _leftPaddingMult - _rightPaddingMult)) / ((float)_numBars);
