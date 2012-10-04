@@ -155,29 +155,66 @@ bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string 
 
 bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes)
 {
-    std::string field;
+    std::stringstream valuess, orderss;
 
     switch(smgt)
     {
 	case SMGT_AVERAGE:
-	    field = "average";
-	    _graphTitle = "Average";
-	    break;
 	case SMGT_HEALTHY_AVERAGE:
-	    field = "average_healthy";
-	    _graphTitle = "Healthy Average";
-	    break;
 	case SMGT_CROHNS_AVERAGE:
-	    field = "average_crohns";
-	    _graphTitle = "Crohns Average";
-	    break;
-	default:
-	    break;
-    }
+	    {
 
-    std::stringstream valuess, orderss;
-    valuess << "select * from (select description, phylum, species, " << field << " as value from Microbes order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
-    orderss << "select t.phylum, sum(t.value) as total_value from (select phylum, " << field << " as value from Microbes order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
+		std::string field;
+
+		switch(smgt)
+		{
+		    case SMGT_AVERAGE:
+			field = "average";
+			_graphTitle = "Average";
+			break;
+		    case SMGT_HEALTHY_AVERAGE:
+			field = "average_healthy";
+			_graphTitle = "Healthy Average";
+			break;
+		    case SMGT_CROHNS_AVERAGE:
+			field = "average_crohns";
+			_graphTitle = "Crohns Average";
+			break;
+		    default:
+			break;
+		}
+
+		valuess << "select * from (select description, phylum, species, " << field << " as value from Microbes order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
+		orderss << "select t.phylum, sum(t.value) as total_value from (select phylum, " << field << " as value from Microbes order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
+		break;
+	    }
+	case SMGT_SRS_AVERAGE:
+	case SMGT_SRX_AVERAGE:
+	{
+
+	    std::string regexp;
+	    switch(smgt)
+	    {
+		case SMGT_SRS_AVERAGE:
+		    regexp = "^SRS";
+		    _graphTitle = "SRS Average";
+		    break;
+		case SMGT_SRX_AVERAGE:
+		    regexp = "^SRX";
+		    _graphTitle = "SRX Average";
+		    break;
+		default:
+		    break;
+	    }
+
+	    valuess << "select * from (select Microbes.description, Microbes.phylum, Microbes.species, avg(Microbe_Measurement.value) as value from Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id inner join Patient on Microbe_Measurement.patient_id = Patient.patient_id where Patient.last_name regexp '" << regexp << "' group by species order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
+	    orderss << "select t.phylum, sum(t.value) as total_value from (select Microbes.description, Microbes.phylum, Microbes.species, avg(Microbe_Measurement.value) as value from Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id inner join Patient on Microbe_Measurement.patient_id = Patient.patient_id where Patient.last_name regexp '" << regexp << "' group by species order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
+
+	    break;
+	}
+	default:
+	    return false;
+    }
 
     return loadGraphData(valuess.str(), orderss.str());
 }
@@ -312,7 +349,7 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
 	_graphOrder.push_back(order[i].group);
     }
     
-    bool graphValid = _graph->setGraph(_graphTitle, _graphData, _graphOrder, BGAT_LOG, _graphTitle, "%", "phylum / species",osg::Vec4(1.0,0,0,1));
+    bool graphValid = _graph->setGraph(_graphTitle, _graphData, _graphOrder, BGAT_LOG, "Value", "", "phylum / species",osg::Vec4(1.0,0,0,1));
 
     if(graphValid)
     {

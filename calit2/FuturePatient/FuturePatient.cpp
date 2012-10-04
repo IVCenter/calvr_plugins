@@ -125,6 +125,14 @@ bool FuturePatient::init()
     _microbeLoadCrohnsAverage->setCallback(this);
     _microbeSpecialMenu->addItem(_microbeLoadCrohnsAverage);
 
+    _microbeLoadSRSAverage = new MenuButton("SRS Average");
+    _microbeLoadSRSAverage->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadSRSAverage);
+
+    _microbeLoadSRXAverage = new MenuButton("SRX Average");
+    _microbeLoadSRXAverage->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadSRXAverage);
+
     _microbePatients = new MenuList();
     _microbePatients->setCallback(this);
     _microbeMenu->addItem(_microbePatients);
@@ -475,7 +483,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	}
     }
 
-    if(item == _microbeLoadAverage || item == _microbeLoadHealthyAverage || item == _microbeLoadCrohnsAverage)
+    if(item == _microbeLoadAverage || item == _microbeLoadHealthyAverage || item == _microbeLoadCrohnsAverage || item == _microbeLoadSRSAverage || item == _microbeLoadSRXAverage)
     {
 	MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 
@@ -491,6 +499,14 @@ void FuturePatient::menuCallback(MenuItem * item)
 	else if(item == _microbeLoadCrohnsAverage)
 	{
 	    mgt = SMGT_CROHNS_AVERAGE;
+	}
+	else if(item == _microbeLoadSRSAverage)
+	{
+	    mgt = SMGT_SRS_AVERAGE;
+	}
+	else if(item == _microbeLoadSRXAverage)
+	{
+	    mgt = SMGT_SRX_AVERAGE;
 	}
 
 	if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue()))

@@ -14,7 +14,9 @@ enum SpecialMicrobeGraphType
 {
     SMGT_AVERAGE=0,
     SMGT_HEALTHY_AVERAGE,
-    SMGT_CROHNS_AVERAGE
+    SMGT_CROHNS_AVERAGE,
+    SMGT_SRS_AVERAGE,
+    SMGT_SRX_AVERAGE
 };
 
 class MicrobeGraphObject : public cvr::TiledWallSceneObject

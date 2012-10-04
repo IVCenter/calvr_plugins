@@ -512,6 +512,7 @@ void GroupedBarGraph::makeGraph()
 
     _barGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,verts->size()));
     _barGeode->addDrawable(_barGeom);
+    _barGeode->setCullingActive(false);
 
     osg::StateSet * stateset = _barGeode->getOrCreateStateSet();
 
@@ -876,7 +877,12 @@ void GroupedBarGraph::updateAxis()
 
     // value axis label
     std::stringstream valueAxisss;
-    valueAxisss << _axisLabel << " (" << _axisUnits << ")";
+    valueAxisss << _axisLabel;
+    
+    if(!_axisUnits.empty())
+    {
+	valueAxisss << " (" << _axisUnits << ")";
+    }
 
     osgText::Text * vaText = makeText(valueAxisss.str(),osg::Vec4(0,0,0,1));
     vaText->setRotation(q);

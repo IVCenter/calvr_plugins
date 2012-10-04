@@ -1090,6 +1090,7 @@ void DataGraph::updateAxis()
 		    switch(_currentMultiGraphDisplayMode)
 		    {
 			case MGDM_COLOR:
+			case MGDM_COLOR_SOLID:
 			case MGDM_COLOR_SHAPE:
 			{
 			    float max = it->second.zMax;
@@ -1491,6 +1492,7 @@ void DataGraph::updateAxis()
 	switch(_currentMultiGraphDisplayMode)
 	{
 	    case MGDM_COLOR:
+	    case MGDM_COLOR_SOLID:
 	    case MGDM_COLOR_SHAPE:
 	    {
 		float spSize = csize * spacerSize;

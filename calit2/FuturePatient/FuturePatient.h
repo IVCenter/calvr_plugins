@@ -66,6 +66,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeLoadAverage;
         cvr::MenuButton * _microbeLoadHealthyAverage;
         cvr::MenuButton * _microbeLoadCrohnsAverage;
+        cvr::MenuButton * _microbeLoadSRSAverage;
+        cvr::MenuButton * _microbeLoadSRXAverage;
 
         //Temp until layout so is created
         std::map<std::string,GraphObject*> _graphObjectMap;
