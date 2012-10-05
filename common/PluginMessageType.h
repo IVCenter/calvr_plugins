@@ -123,4 +123,14 @@ struct ModelLoaderLoadRequest
     osg::Matrixd transform;
 };
 
+// StructView
+
+enum StructViewMessageType
+{
+    SV_ENABLE=0,
+    SV_DISABLE,
+    SV_LAYER_ON,
+    SV_LAYER_OFF
+};
+
 #endif
