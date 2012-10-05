@@ -112,7 +112,7 @@ void StructView::menuCallback(MenuItem* menuItem)
 	{
 	    if(CollaborativeManager::instance()->isConnected() && !_collabOp)
 	    {
-		PluginHelper::sendCollaborativeMessageAsync("StructView",SV_ENABLE,NULL,0);
+		PluginHelper::sendCollaborativeMessageSync("StructView",SV_ENABLE,NULL,0);
 	    }
 	    PluginHelper::getObjectsRoot()->addChild(mainNode.get());
 	    // set default directory and layer file names
