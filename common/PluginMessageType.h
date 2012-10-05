@@ -109,4 +109,18 @@ struct OsgPdfLoadRequest
     cvr::SceneObject * object;
 };
 
+// ModelLoader
+ 
+enum ModelLoaderMessageType
+{
+    ML_LOAD_REQUEST=0,
+    ML_REMOVE_ALL
+};
+
+struct ModelLoaderLoadRequest
+{
+    char fileLabel[1024];
+    osg::Matrixd transform;
+};
+
 #endif

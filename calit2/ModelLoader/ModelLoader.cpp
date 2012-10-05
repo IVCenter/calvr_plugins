@@ -6,8 +6,11 @@
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/NodeMask.h>
 #include <cvrUtil/TextureVisitors.h>
+#include <cvrCollaborative/CollaborativeManager.h>
+#include <PluginMessageType.h>
 
 #include <iostream>
+#include <cstring>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -40,6 +43,11 @@ bool ModelLoader::init()
     removeButton = new MenuButton("Remove All");
     removeButton->setCallback(this);
     MLMenu->addItem(removeButton);
+
+    _collabCB = new MenuCheckbox("Collaborative Load",false);
+    _collabCB->setCallback(this);
+
+    _collabLoading = false;
 
     vector<string> list;
 
@@ -168,6 +176,11 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
 	    }
 	    _loadedObjects.clear();
 
+	    if(CollaborativeManager::instance()->isConnected() && _collabCB->getValue() && !_collabLoading)
+	    {
+		PluginHelper::sendCollaborativeMessageAsync("ModelLoader",ML_REMOVE_ALL,NULL,0);
+	    }
+
 	    return;
     }
 
@@ -295,6 +308,15 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
 	    _deleteMap[so] = mb;
 
 	    _loadedObjects.push_back(so);
+
+	    if(CollaborativeManager::instance()->isConnected() && _collabCB->getValue() && !_collabLoading)
+	    {
+		ModelLoaderLoadRequest mllr;
+		strncpy(mllr.fileLabel,models[i]->name.c_str(),1023);
+		mllr.fileLabel[1023] = '\0';
+		mllr.transform = so->getTransform();
+		PluginHelper::sendCollaborativeMessageSync("ModelLoader",ML_LOAD_REQUEST,(char*)&mllr,sizeof(struct ModelLoaderLoadRequest));
+	    }
 	}
     }
 
@@ -528,6 +550,64 @@ void ModelLoader::preFrame()
     
     // TODO: add delay for this:
     ++counter;
+
+    // check collaborative checkbox
+    bool collabFound = false;
+    for(int i = 0; i < MLMenu->getNumChildren(); ++i)
+    {
+	if(MLMenu->getChild(i) == _collabCB)
+	{
+	    collabFound = true;
+	    break;
+	}
+    }
+
+    if(CollaborativeManager::instance()->isConnected() && !collabFound)
+    {
+	MLMenu->addItem(_collabCB);
+    }
+    else if(!CollaborativeManager::instance()->isConnected() && collabFound)
+    {
+	MLMenu->removeItem(_collabCB);
+    }
+}
+
+void ModelLoader::message(int type, char * &data, bool collaborative)
+{
+    if(type == ML_LOAD_REQUEST)
+    {
+	ModelLoaderLoadRequest * mllr = (ModelLoaderLoadRequest*)data;
+	std::string name = mllr->fileLabel;
+	int numObjects = _loadedObjects.size();
+	for(int i = 0; i < menuFileList.size(); ++i)
+	{
+	    if(menuFileList[i]->getText() == name)
+	    {
+		if(collaborative)
+		{
+		    _collabLoading = true;
+		}
+		menuCallback(menuFileList[i]);
+		_collabLoading = false;
+
+		if(_loadedObjects.size() > numObjects)
+		{
+		    _loadedObjects.back()->setTransform(mllr->transform);
+		}
+
+		break;
+	    }
+	}
+    }
+    else if(type == ML_REMOVE_ALL)
+    {
+	if(collaborative)
+	{
+	    _collabLoading = true;
+	}
+	menuCallback(removeButton);
+	_collabLoading = false;
+    }
 }
 
 bool ModelLoader::loadFile(std::string file)
