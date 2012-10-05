@@ -156,12 +156,12 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
 	    }
 	    for(std::map<SceneObject*,SubMenu*>::iterator it2 = _posMap.begin(); it2 != _posMap.end(); it2++)
 	    {
-	        delete it->second;
+	        delete it2->second;
 	    }
 	    for(std::map<SceneObject*,SubMenu*>::iterator it2 = _saveMenuMap.begin();
 		    it2 != _saveMenuMap.end(); it2++)
 	    {
-	        delete it->second;
+	        delete it2->second;
 	    }
 	    _saveMap.clear();
 	    _loadMap.clear();
