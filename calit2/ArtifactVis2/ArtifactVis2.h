@@ -26,11 +26,11 @@
 #include <spnav.h>
 
 #include "skeleton.h"
-#include "PubSub.h"
-#include "protocol/skeletonframe.pb.h"
-#include "protocol/colormap.pb.h"
-#include "protocol/depthmap.pb.h"
-#include "protocol/pointcloud.pb.h"
+#include <shared/PubSub.h>
+#include <protocol/skeletonframe.pb.h>
+#include <protocol/colormap.pb.h>
+#include <protocol/depthmap.pb.h>
+#include <protocol/pointcloud.pb.h>
 #include <zmq.hpp>
 
 

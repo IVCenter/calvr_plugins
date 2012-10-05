@@ -51,6 +51,7 @@
 //#include <osg/Image>
 //#include </home/calvr/calvr_plugins/calit2/SpaceNavigator/SpaceNavigator.h>
 
+
 #include <mxml.h>
 
 //#include <osgDB/WriteFile>
