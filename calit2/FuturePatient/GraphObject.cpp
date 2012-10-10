@@ -22,6 +22,7 @@ GraphObject::GraphObject(mysqlpp::Connection * conn, float width, float height, 
     std::vector<std::string> mgdText;
     mgdText.push_back("Normal");
     mgdText.push_back("Color");
+    mgdText.push_back("Color Solid");
     mgdText.push_back("Shape");
     mgdText.push_back("Shape and Color");
 

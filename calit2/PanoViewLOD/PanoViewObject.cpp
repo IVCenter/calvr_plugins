@@ -6,9 +6,12 @@
 #include <cvrKernel/PluginHelper.h>
 #include <cvrUtil/OsgMath.h>
 
+#include <osg/Depth>
+
 #include <iostream>
 #include <cstdio>
 #include <fstream>
+#include <cmath>
 
 //#define PRINT_TIMING
 
@@ -156,11 +159,16 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
     _fadeActive = false;
     _fadeFrames = 0;
     _transitionType = NORMAL;
+    _transitionStarted = false;
 
     _printValues = ConfigManager::getBool("value","Plugin.PanoViewLOD.PrintValues",false,NULL);
+
+    osg::Depth * wdepth = new osg::Depth();
+    wdepth->setWriteMask(false);
+    _root->getOrCreateStateSet()->setAttributeAndModes(wdepth,osg::StateAttribute::ON);
 }
 
-void PanoViewObject::setTransition(PanTransitionType transitionType, std::string transitionFilesDir, std::vector<std::string> & leftTransitionFiles, std::vector<std::string> & rightTransitionFiles)
+void PanoViewObject::setTransition(PanTransitionType transitionType, std::string transitionFilesDir, std::vector<std::string> & leftTransitionFiles, std::vector<std::string> & rightTransitionFiles, std::string configTag)
 {
     _transitionType = transitionType;
     _leftTransitionFiles = leftTransitionFiles;
@@ -170,11 +178,35 @@ void PanoViewObject::setTransition(PanTransitionType transitionType, std::string
     if(transitionType == ZOOM)
     {
 	_rotateStartDelay = ConfigManager::getFloat("rotateStart","Plugin.PanoViewLOD.ZoomTransition",0.0);
+	_rotateStartDelay = ConfigManager::getFloat("rotateStart",configTag,_rotateStartDelay);
 	_rotateInterval = ConfigManager::getFloat("rotateInterval","Plugin.PanoViewLOD.ZoomTransition",4.0);
+	_rotateInterval = ConfigManager::getFloat("rotateInterval",configTag,_rotateInterval);
 	_zoomStartDelay = ConfigManager::getFloat("zoomStart","Plugin.PanoViewLOD.ZoomTransition",4.0);
+	_zoomStartDelay = ConfigManager::getFloat("zoomStart",configTag,_zoomStartDelay);
 	_zoomInterval = ConfigManager::getFloat("zoomInterval","Plugin.PanoViewLOD.ZoomTransition",4.0);
+	_zoomInterval = ConfigManager::getFloat("zoomInterval",configTag,_zoomInterval);
 	_fadeStartDelay = ConfigManager::getFloat("fadeStart","Plugin.PanoViewLOD.ZoomTransition",8.0);
+	_fadeStartDelay = ConfigManager::getFloat("fadeStart",configTag,_fadeStartDelay);
 	_fadeInterval = ConfigManager::getFloat("fadeInterval","Plugin.PanoViewLOD.ZoomTransition",4.0);
+	_fadeInterval = ConfigManager::getFloat("fadeInterval",configTag,_fadeInterval);
+	_rotateRampUp = ConfigManager::getFloat("rotateRampUp","Plugin.PanoViewLOD.ZoomTransition",0.1*_rotateInterval);
+	_rotateRampUp = ConfigManager::getFloat("rotateRampUp",configTag,_rotateRampUp);
+	_rotateRampDown = ConfigManager::getFloat("rotateRampDown","Plugin.PanoViewLOD.ZoomTransition",0.1*_rotateInterval);
+	_rotateRampDown = ConfigManager::getFloat("rotateRampDown",configTag,_rotateRampDown);
+	_zoomRampUp = ConfigManager::getFloat("zoomRampUp","Plugin.PanoViewLOD.ZoomTransition",0.1*_zoomInterval);
+	_zoomRampUp = ConfigManager::getFloat("zoomRampUp",configTag,_zoomRampUp);
+	_zoomRampDown = ConfigManager::getFloat("zoomRampDown","Plugin.PanoViewLOD.ZoomTransition",0.1*_zoomInterval);
+	_zoomRampDown = ConfigManager::getFloat("zoomRampDown",configTag,_zoomRampDown);
+
+	if(_rotateRampUp + _rotateRampDown > _rotateInterval)
+	{
+	    _rotateRampUp = _rotateRampDown = 0.5 * _rotateInterval;
+	}
+
+	if(_zoomRampUp + _zoomRampDown > _zoomInterval)
+	{
+	    _zoomRampUp = _zoomRampDown = 0.5 * _zoomInterval;
+	}
 
 	_transitionStarted = _rotateDone = _zoomDone = _fadeDone = false;
 
@@ -657,7 +689,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 
 void PanoViewObject::preFrameUpdate()
 {
-    if(_transitionType == ZOOM && _transitionStarted)
+    if(_transitionType == ZOOM && _transitionStarted && !_transitionSkipFrames)
     {	
 	_transitionTime += PluginHelper::getLastFrameDuration();
 
@@ -675,8 +707,41 @@ void PanoViewObject::preFrameUpdate()
 	    }
 	    else
 	    {
-		value = (_transitionTime - _rotateStartDelay) / _rotateInterval;
+		//removed to add rampup/down
+		//value = (_transitionTime - _rotateStartDelay) / _rotateInterval;
+		value = 0.0;
+
+		float ratio = (2.0 * _rotateRampUp / M_PI);
+
+		if(_transitionTime < _rotateStartDelay + _rotateRampUp)
+		{
+		    //std::cerr << "RampUp: ";
+		    float angle = ((_transitionTime - _rotateStartDelay) / _rotateRampUp) * (M_PI / 2.0);
+		    value += _rotateAmp * (1.0 - cos(angle)) * ratio;
+		}
+		else
+		{
+		    value += _rotateAmp * ratio;
+		    if(_transitionTime < (_rotateStartDelay + _rotateInterval - _rotateRampDown))
+		    {
+			//std::cerr << "Middle: ";
+			float length = _transitionTime - _rotateStartDelay - _rotateRampUp;
+			value += _rotateAmp * length;
+		    }
+		    else
+		    {
+			//std::cerr << "RampDown: ";
+			value += _rotateAmp * (_rotateInterval - _rotateRampUp - _rotateRampDown);
+			float angle = ((_transitionTime - _rotateStartDelay - (_rotateInterval - _rotateRampDown)) / _rotateRampDown) * (M_PI / 2.0);
+			value += _rotateAmp * sin(angle) * ratio;
+		    }
+		}
 	    }
+
+	    //if(value > 0.0)
+	    //{
+	    //	std::cerr << "Rotate Transition Value: " << value << " Time Value: " << (_transitionTime - _rotateStartDelay) / _rotateInterval << std::endl;
+	    //}
 
 	    float rotateValue = _rotateStart + value * (_rotateEnd - _rotateStart);
 
@@ -697,8 +762,41 @@ void PanoViewObject::preFrameUpdate()
 	    }
 	    else
 	    {
-		value = (_transitionTime - _zoomStartDelay) / _zoomInterval;
+		//removed to add rampup/down
+		//value = (_transitionTime - _zoomStartDelay) / _zoomInterval;
+		value = 0.0;
+
+		float ratio = (2.0 * _zoomRampUp / M_PI);
+
+		if(_transitionTime < _zoomStartDelay + _zoomRampUp)
+		{
+		    //std::cerr << "RampUp: ";
+		    float angle = ((_transitionTime - _zoomStartDelay) / _zoomRampUp) * (M_PI / 2.0);
+		    value += _zoomAmp * (1.0 - cos(angle)) * ratio;
+		}
+		else
+		{
+		    value += _zoomAmp * ratio;
+		    if(_transitionTime < (_zoomStartDelay + _zoomInterval - _zoomRampDown))
+		    {
+			//std::cerr << "Middle: ";
+			float length = _transitionTime - _zoomStartDelay - _zoomRampUp;
+			value += _zoomAmp * length;
+		    }
+		    else
+		    {
+			//std::cerr << "RampDown: ";
+			value += _zoomAmp * (_zoomInterval - _zoomRampUp - _zoomRampDown);
+			float angle = ((_transitionTime - _zoomStartDelay - (_zoomInterval - _zoomRampDown)) / _zoomRampDown) * (M_PI / 2.0);
+			value += _zoomAmp * sin(angle) * ratio;
+		    }
+		}
 	    }
+
+	    //if(value > 0.0)
+	    //{
+	    //	std::cerr << "Zoom Transition Value: " << value << " Time Value: " << (_transitionTime - _zoomStartDelay) / _zoomInterval << std::endl;
+	    //}
 
 	    float zoomValue = value * _zoomEnd;
 
@@ -744,6 +842,10 @@ void PanoViewObject::preFrameUpdate()
 	    setRotate(_finalRotate);
 	}
     }
+    else if(_transitionSkipFrames)
+    {
+	_transitionSkipFrames--;
+    }
 }
 
 void PanoViewObject::updateZoom(osg::Matrix & mat)
@@ -788,6 +890,7 @@ void PanoViewObject::startTransition()
 	_pdi->transitionFade = 0.0;
 
 	_transitionStarted = true;
+	_transitionSkipFrames = 4;
 	_transitionTime = 0.0;
 	_rotateDone = _zoomDone = _fadeDone = false;
 
@@ -823,5 +926,9 @@ void PanoViewObject::startTransition()
 	_rightDrawable->setZoom(osg::Vec3(0,1,0),pow(10.0, _currentZoom));
 	_zoomEnd = _zoomTransitionInfo[fromIndex].zoomValue;
 	_zoomTransitionDir = _zoomTransitionInfo[fromIndex].zoomDir;
+
+	static float ratio = 2.0 / M_PI;
+	_rotateAmp = 1.0 / (_rotateRampUp*ratio + (_rotateInterval - _rotateRampUp - _rotateRampDown) + _rotateRampDown*ratio);
+	_zoomAmp = 1.0 / (_zoomRampUp*ratio + (_zoomInterval - _zoomRampUp - _zoomRampDown) + _zoomRampDown*ratio);
     }
 }

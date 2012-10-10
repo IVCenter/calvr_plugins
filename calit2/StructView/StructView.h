@@ -20,6 +20,8 @@ class StructView : public CVRPlugin, public MenuCallback
     std::vector<MenuCheckbox*> menuList;
     SubMenu* structViewMenu;
     MenuCheckbox* enable;
+
+    bool _collabOp;
   public:
     static CVRPlugin * plugin;
 
@@ -27,6 +29,8 @@ class StructView : public CVRPlugin, public MenuCallback
     virtual ~StructView();
     bool init();
     void menuCallback(MenuItem*);
+
+    virtual void message(int type, char *&data, bool collaborative=false);
 };
 
 #endif

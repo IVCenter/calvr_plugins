@@ -34,7 +34,7 @@ class PanoViewObject : public cvr::SceneObject
 
         void init(std::vector<std::string> & leftEyeFiles, std::vector<std::string> & rightEyeFiles, float radius, int mesh, int depth, int size, float height, std::string vertFile, std::string fragFile);
 
-        void setTransition(PanTransitionType transitionType, std::string transitionFilesDir, std::vector<std::string> & leftTransitionFiles, std::vector<std::string> & rightTransitionFiles);
+        void setTransition(PanTransitionType transitionType, std::string transitionFilesDir, std::vector<std::string> & leftTransitionFiles, std::vector<std::string> & rightTransitionFiles, std::string configTag);
 
         void next();
         void previous();
@@ -113,7 +113,8 @@ class PanoViewObject : public cvr::SceneObject
         int _fadeFrames;
 
         PanoDrawableInfo * _pdi;
-    
+
+        int _transitionSkipFrames;
         float _transitionTime;
         bool _transitionStarted;
         bool _rotateDone;
@@ -125,10 +126,16 @@ class PanoViewObject : public cvr::SceneObject
         float _rotateStart;
         float _rotateEnd;
         float _finalRotate;
+        float _rotateRampUp;
+        float _rotateRampDown;
+        float _rotateAmp;
 
         float _zoomStartDelay;
         float _zoomInterval;
         float _zoomEnd;
+        float _zoomRampUp;
+        float _zoomRampDown;
+        float _zoomAmp;
         osg::Vec3 _zoomTransitionDir;
         
         float _fadeStartDelay;

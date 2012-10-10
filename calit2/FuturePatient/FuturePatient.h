@@ -4,6 +4,7 @@
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrMenu/MenuList.h>
 #include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuRangeValueCompact.h>
 #include <cvrMenu/SubMenu.h>
 
 #include <string>
@@ -14,6 +15,8 @@
 
 #include "GraphObject.h"
 #include "GraphLayoutObject.h"
+#include "MicrobeGraphObject.h"
+
 
 class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 {
@@ -26,8 +29,13 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         virtual void menuCallback(cvr::MenuItem * item);
 
     protected:
+        void checkLayout();
         void loadGraph(std::string name);
         //void makeGraph(std::string name);
+        
+        void setupMicrobePatients();
+        void updateMicrobeTests(int patientid);
+
 
         mysqlpp::Connection * _conn;
 
@@ -48,11 +56,26 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _inflammationButton;
         cvr::MenuButton * _loadAll;
 
+        cvr::SubMenu * _microbeMenu;
+        cvr::MenuList * _microbePatients;
+        cvr::MenuList * _microbeTest;
+        cvr::MenuButton * _microbeLoad;
+        cvr::MenuRangeValueCompact * _microbeNumBars;
+
+        cvr::SubMenu * _microbeSpecialMenu;
+        cvr::MenuButton * _microbeLoadAverage;
+        cvr::MenuButton * _microbeLoadHealthyAverage;
+        cvr::MenuButton * _microbeLoadCrohnsAverage;
+        cvr::MenuButton * _microbeLoadSRSAverage;
+        cvr::MenuButton * _microbeLoadSRXAverage;
+
         //Temp until layout so is created
         std::map<std::string,GraphObject*> _graphObjectMap;
         GraphObject * _multiObject;
 
         GraphLayoutObject * _layoutObject;
+
+        std::vector<MicrobeGraphObject *> _microbeGraphList;
 };
 
 #endif

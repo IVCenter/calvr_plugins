@@ -1,4 +1,5 @@
 #include "GraphLayoutObject.h"
+#include "ColorGenerator.h"
 
 #include <cvrInput/TrackingManager.h>
 
@@ -119,6 +120,65 @@ void GraphLayoutObject::removeGraphObject(GraphObject * object)
     updateLayout();
 }
 
+void GraphLayoutObject::addMicrobeGraphObject(MicrobeGraphObject * object)
+{
+    //std::cerr << "Adding graph object" << std::endl;
+
+    for(int i = 0; i < _microbeObjectList.size(); ++i)
+    {
+	if(_microbeObjectList[i] == object)
+	{
+	    return;
+	}
+    }
+
+    _microbeObjectList.push_back(object);
+
+    if(_syncTimeCB->getValue())
+    {
+	menuCallback(_syncTimeCB);
+    }
+
+    MenuButton * button = new MenuButton("Delete");
+    button->setCallback(this);
+    object->addMenuItem(button);
+
+    _microbeDeleteButtonMap[object] = button;
+
+    addChild(object);
+
+    updateLayout();
+}
+
+void GraphLayoutObject::removeMicrobeGraphObject(MicrobeGraphObject * object)
+{
+    for(std::vector<MicrobeGraphObject *>::iterator it = _microbeObjectList.begin(); it != _microbeObjectList.end(); ++it)
+    {
+	if((*it) == object)
+	{
+	    removeChild(*it);
+	    delete _microbeDeleteButtonMap[*it];
+	    _microbeDeleteButtonMap.erase(*it);
+	    _microbeObjectList.erase(it);
+	    break;
+	}
+    }
+
+    updateLayout();
+}
+
+void GraphLayoutObject::selectMicrobes(std::string & group, std::vector<std::string> & keys)
+{
+    // make copy to apply to new graphs when added
+    _currentSelectedMicrobeGroup = group;
+    _currentSelectedMicrobes = keys;
+
+    for(int i = 0; i < _microbeObjectList.size(); ++i)
+    {
+	_microbeObjectList[i]->selectMicrobes(group,keys);
+    }
+}
+
 void GraphLayoutObject::removeAll()
 {
     for(int i = 0; i < _objectList.size(); i++)
@@ -131,16 +191,30 @@ void GraphLayoutObject::removeAll()
 	}
     }
 
+    for(int i = 0; i < _microbeObjectList.size(); ++i)
+    {
+	removeChild(_microbeObjectList[i]);
+    }
+
     for(std::map<GraphObject *,cvr::MenuButton *>::iterator it = _deleteButtonMap.begin(); it != _deleteButtonMap.end(); it++)
     {
 	it->first->removeMenuItem(it->second);
 	delete it->second;
     }
+
+    for(std::map<MicrobeGraphObject *, cvr::MenuButton *>::iterator it = _microbeDeleteButtonMap.begin(); it != _microbeDeleteButtonMap.end(); ++it)
+    {
+	 it->first->removeMenuItem(it->second);
+	 delete it->second;
+    }
+
     _deleteButtonMap.clear();
+    _microbeDeleteButtonMap.clear();
     _perGraphActiveHand.clear();
     _perGraphActiveHandType.clear();
 
     _objectList.clear();
+    _microbeObjectList.clear();
 }
 
 void GraphLayoutObject::menuCallback(MenuItem * item)
@@ -253,6 +327,29 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 		    _objectList[i]->setBarVisible(false);
 		}
 	    }
+
+	    // sync grouped graph range
+	    float dataMin = FLT_MAX;
+	    float dataMax = FLT_MIN;
+
+	    for(int i = 0; i < _microbeObjectList.size(); ++i)
+	    {
+		float temp = _microbeObjectList[i]->getGraphDisplayRangeMax();
+		if(temp > dataMax)
+		{
+		    dataMax = temp;
+		}
+		temp = _microbeObjectList[i]->getGraphDisplayRangeMin();
+		if(temp < dataMin)
+		{
+		    dataMin = temp;
+		}
+	    }
+
+	    for(int i = 0; i < _microbeObjectList.size(); ++i)
+	    {
+		_microbeObjectList[i]->setGraphDisplayRange(dataMin,dataMax);
+	    }
 	}
 	else
 	{
@@ -270,6 +367,11 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 		    _objectList[i]->setBarVisible(false);
 		}
 	    }
+
+	    for(int i = 0; i < _microbeObjectList.size(); ++i)
+	    {
+		_microbeObjectList[i]->resetGraphDisplayRange();
+	    }
 	}
 	return;
     }
@@ -280,6 +382,16 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	{
 	    it->first->closeMenu();
 	    removeGraphObject(it->first);
+	    return;
+	}
+    }
+
+    for(std::map<MicrobeGraphObject *, cvr::MenuButton *>::iterator it = _microbeDeleteButtonMap.begin(); it != _microbeDeleteButtonMap.end(); ++it)
+    {
+	if(it->second == item)
+	{
+	    it->first->closeMenu();
+	    removeMicrobeGraphObject(it->first);
 	    return;
 	}
     }
@@ -591,23 +703,25 @@ void GraphLayoutObject::updateGeometry()
 
 void GraphLayoutObject::updateLayout()
 {
-    if(!_objectList.size())
+    int totalGraphs = _objectList.size() + _microbeObjectList.size();
+
+    if(!totalGraphs)
     {
 	return;
     }
 
     float graphWidth, graphHeight;
 
-    if(_objectList.size() >= _maxRows)
+    if(totalGraphs >= _maxRows)
     {
 	graphHeight = _height / (float)_maxRows;
     }
     else
     {
-	graphHeight = _height / (float)_objectList.size();
+	graphHeight = _height / (float)totalGraphs;
     }
 
-    float div = (float)((_objectList.size()-1) / _maxRows);
+    float div = (float)((totalGraphs-1) / _maxRows);
     div += 1.0;
 
     graphWidth = _width / div;
@@ -619,6 +733,21 @@ void GraphLayoutObject::updateLayout()
     {
 	_objectList[i]->setGraphSize(graphWidth,graphHeight);
 	_objectList[i]->setPosition(osg::Vec3(posX,0,posZ));
+	posZ -= graphHeight;
+	if(posZ < -(_height*0.5))
+	{
+	    posX += graphWidth;
+	    posZ = (_height*0.5) - (graphHeight*0.5);
+	}
+    }
+
+    for(int i = 0; i < _microbeObjectList.size(); ++i)
+    {
+	//std::cerr << "Setting microbe graph width: " << graphWidth << " height: " << graphHeight << " X: " << posX << " Z: " << posZ << std::endl;
+	_microbeObjectList[i]->setGraphSize(graphWidth,graphHeight);
+	_microbeObjectList[i]->setPosition(osg::Vec3(posX,0,posZ));
+	_microbeObjectList[i]->setColor(ColorGenerator::makeColor(i,_microbeObjectList.size()));
+	_microbeObjectList[i]->selectMicrobes(_currentSelectedMicrobeGroup,_currentSelectedMicrobes);
 	posZ -= graphHeight;
 	if(posZ < -(_height*0.5))
 	{
