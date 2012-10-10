@@ -31,7 +31,9 @@ struct PanoDrawableInfo
 
     std::map<int,OpenThreads::Mutex*> updateLock;
 
-    std::map<int,sph_cache*> cacheMap;
+    static std::map<int,sph_cache*> cacheMap;
+    static std::map<int,std::vector<std::pair<bool,sph_model*> > > currentModels;
+    static OpenThreads::Mutex staticLock;
     std::map<int,sph_model*> modelMap;
     std::map<int,sph_model*> transitionModelMap;
 
