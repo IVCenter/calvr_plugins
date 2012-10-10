@@ -159,6 +159,7 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
     _fadeActive = false;
     _fadeFrames = 0;
     _transitionType = NORMAL;
+    _transitionStarted = false;
 
     _printValues = ConfigManager::getBool("value","Plugin.PanoViewLOD.PrintValues",false,NULL);
 
