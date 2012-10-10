@@ -614,7 +614,9 @@ void DiskCache::add_task(sph_task * task)
     mapLock.unlock();
     std::cerr << "Actual Current Pages: " << curPages << std::endl;*/
 
+    ejectLock.lock();
     cleanup();
+    ejectLock.unlock();
 
     if(!_running || (task->f != _currentFileL && task->f != _currentFileR))
     {
