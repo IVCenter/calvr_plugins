@@ -51,6 +51,31 @@ std::string shapeFragSrc =
 "    }                                                       \n"
 "}                                                           \n";
 
+std::string pointSizeVertSrc =
+"#version 150 compatibility                                  \n"
+"#extension GL_ARB_gpu_shader5 : enable                      \n"
+"#extension GL_ARB_explicit_attrib_location : enable         \n"
+"                                                            \n"
+"layout(location = 4) in vec4 size;                          \n"
+"uniform float pointSize;                                    \n"
+"                                                            \n"
+"void main(void)                                             \n"
+"{                                                           \n"
+"                                                            \n"
+"    gl_FrontColor = gl_Color;                               \n"
+"    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex; \n"
+"    gl_PointSize = pointSize * size.r;                      \n"
+"}                                                           \n";
+
+std::string pointSizeFragSrc =
+"#version 150 compatibility                                  \n"
+"#extension GL_ARB_gpu_shader5 : enable                      \n"
+"                                                            \n"
+"void main(void)                                             \n"
+"{                                                           \n"
+"    gl_FragColor = gl_Color;                                \n"
+"}                                                           \n";
+
 DataGraph::DataGraph()
 {
     _root = new osg::MatrixTransform();
@@ -652,6 +677,15 @@ void DataGraph::setupMultiGraphDisplayModes()
     _shapePointSprite = new osg::PointSprite();
     _shapeDepth = new osg::Depth();
     _shapeDepth->setWriteMask(false);
+
+    //point size setup
+    _sizeProgram = new osg::Program();
+    _sizeProgram->setName("Point Size Shader");
+    _sizeProgram->addShader(new osg::Shader(osg::Shader::VERTEX,pointSizeVertSrc));
+    _sizeProgram->addShader(new osg::Shader(osg::Shader::FRAGMENT,pointSizeFragSrc));
+
+    _pointSizeUniform = new osg::Uniform(osg::Uniform::FLOAT,"pointSize");
+    _pointSizeUniform->set(1.0f);
 }
 
 void DataGraph::makeHover()
@@ -885,6 +919,24 @@ void DataGraph::update()
 			    it->second.pointGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
 			    break;
 			}
+		    case MGDM_COLOR_PT_SIZE:
+			{
+			    if(!it->second.secondaryColorArray)
+			    {
+				break;
+			    }
+			    it->second.connectorGeometry->setColorArray(it->second.colorArray);
+			    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+			    it->second.pointGeometry->setColorArray(it->second.colorArray);
+			    it->second.pointGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+
+			    it->second.pointGeometry->setVertexAttribArray(4,NULL);
+			    osg::StateSet * stateset = it->second.pointGeode->getOrCreateStateSet();
+			    stateset->removeAttribute(_sizeProgram);
+			    stateset->removeUniform(_pointSizeUniform);
+			    stateset->removeMode(GL_VERTEX_PROGRAM_POINT_SIZE);
+			    break;
+			}
 		    case MGDM_SHAPE:
 			{
 			    osg::StateSet * stateset = it->second.pointGeode->getOrCreateStateSet();
@@ -940,6 +992,28 @@ void DataGraph::update()
 			    it->second.pointGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
 			    break;
 			}
+		    case MGDM_COLOR_PT_SIZE:
+			{
+			    if(!it->second.secondaryColorArray)
+			    {
+				break;
+			    }
+			    osg::Vec4 color = ColorGenerator::makeColor(count, _dataInfoMap.size());
+			    it->second.singleColorArray->at(0) = color;
+			    it->second.connectorGeometry->setColorArray(it->second.singleColorArray);
+			    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+			    it->second.pointGeometry->setColorArray(it->second.singleColorArray);
+			    it->second.pointGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+
+			    it->second.pointGeometry->setVertexAttribArray(4,it->second.secondaryColorArray);
+			    it->second.pointGeometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
+			    osg::StateSet * stateset = it->second.pointGeode->getOrCreateStateSet();
+			    stateset->setAttribute(_sizeProgram);
+			    stateset->addUniform(_pointSizeUniform);
+			    stateset->setMode(GL_VERTEX_PROGRAM_POINT_SIZE, osg::StateAttribute::ON);
+			    
+			    break;
+			}
 		    case MGDM_SHAPE:
 			{
 			    osg::StateSet * stateset = it->second.pointGeode->getOrCreateStateSet();
@@ -981,6 +1055,8 @@ void DataGraph::update()
 
     float avglen = (_width + _height) / 2.0;
     _point->setSize(avglen * 0.04 * _pointLineScale);
+    _pointSizeUniform->set((float)_point->getSize());
+    //std::cerr << "Point size set to: " << _point->getSize() << std::endl;
     _lineWidth->setWidth(avglen * 0.05 * _pointLineScale * _pointLineScale);
 
     if(ComController::instance()->isMaster())
@@ -1091,6 +1167,7 @@ void DataGraph::updateAxis()
 		    {
 			case MGDM_COLOR:
 			case MGDM_COLOR_SOLID:
+			case MGDM_COLOR_PT_SIZE:
 			case MGDM_COLOR_SHAPE:
 			{
 			    float max = it->second.zMax;
@@ -1493,6 +1570,7 @@ void DataGraph::updateAxis()
 	{
 	    case MGDM_COLOR:
 	    case MGDM_COLOR_SOLID:
+	    case MGDM_COLOR_PT_SIZE:
 	    case MGDM_COLOR_SHAPE:
 	    {
 		float spSize = csize * spacerSize;

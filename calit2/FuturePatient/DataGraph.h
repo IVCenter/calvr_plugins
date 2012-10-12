@@ -9,6 +9,7 @@
 #include <osg/Depth>
 #include <osg/PointSprite>
 #include <osg/Program>
+#include <osg/Uniform>
 #include <osgText/Text>
 
 #include <string>
@@ -36,6 +37,7 @@ enum MultiGraphDisplayMode
     MGDM_NORMAL=0,
     MGDM_COLOR,
     MGDM_COLOR_SOLID,
+    MGDM_COLOR_PT_SIZE,
     MGDM_SHAPE,
     MGDM_COLOR_SHAPE
 };
@@ -198,6 +200,9 @@ class DataGraph
         osg::ref_ptr<osg::PointSprite> _shapePointSprite;
         osg::ref_ptr<osg::Depth> _shapeDepth;
         osg::ref_ptr<osg::Program> _shapeProgram;
+
+        osg::ref_ptr<osg::Program> _sizeProgram;
+        osg::ref_ptr<osg::Uniform> _pointSizeUniform;
 
         std::map<std::string,std::map<int,PointAction*> > _pointActionMap;
 };
