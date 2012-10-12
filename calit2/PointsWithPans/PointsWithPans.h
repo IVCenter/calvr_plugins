@@ -50,6 +50,8 @@ class PointsWithPans : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::SubMenu * _pwpMenu;
         cvr::SubMenu * _setMenu;
 
+        cvr::MenuButton * _removeButton;
+
         std::vector<cvr::MenuButton*> _buttonList;
         std::vector<PWPSet *> _setList;
 

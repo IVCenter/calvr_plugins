@@ -32,6 +32,10 @@ bool PointsWithPans::init()
     _setMenu = new SubMenu("Sets");
     _pwpMenu->addItem(_setMenu);
 
+    _removeButton = new MenuButton("Remove");
+    _removeButton->setCallback(this);
+    _pwpMenu->addItem(_removeButton);
+
     std::vector<std::string> setTags;
     ConfigManager::getChildren("Plugin.PointsWithPans.Sets",setTags);
 
@@ -85,6 +89,16 @@ bool PointsWithPans::init()
 
 void PointsWithPans::menuCallback(MenuItem * item)
 {
+    if(item == _removeButton)
+    {
+	if(_loadedSetIndex >= 0)
+	{
+	    _loadedSetIndex = -1;
+	    _activeObject->clear();
+	}
+	return;
+    }
+
     for(int i = 0; i < _buttonList.size(); i++)
     {
 	if(item == _buttonList[i])

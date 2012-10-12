@@ -93,6 +93,24 @@ void PointsObject::clear()
     _root->removeChildren(0,_root->getNumChildren());
     setTransform(osg::Matrix::identity());
     _alphaUni = NULL;
+    _activePanMarker = NULL;
+    _transitionActive = false;
+    _fadeActive = false;
+    _fadeInActive = false;
+    _transitionTime = 4.0;
+    _totalFadeTime = 5.0;
+
+    while(getNumChildObjects())
+    {
+	SceneObject * so = getChildObject(0);
+	removeChild(so);
+	// TODO: fix nested delete
+	//delete so;
+    }
+
+    detachFromScene();
+    PluginHelper::sendMessageByName("PanoViewLOD",PAN_UNLOAD,NULL);
+    PluginHelper::sendMessageByName("PanoViewLOD",PAN_UNLOAD,NULL);
 }
 
 void PointsObject::setTransitionTimes(float moveTime, float fadeTime)
