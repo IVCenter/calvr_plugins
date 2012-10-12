@@ -18,6 +18,8 @@ struct PWPPan
     osg::Vec3 location;
     std::string name;
     float rotationOffset;
+    float sphereRadius;
+    float selectDistance;
 };
 
 struct PWPSet
@@ -26,6 +28,8 @@ struct PWPSet
     osg::Vec3 offset;
     std::string file;
     float pointSize;
+    float moveTime;
+    float fadeTime;
     std::vector<PWPPan> panList;
 };
 

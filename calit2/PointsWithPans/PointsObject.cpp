@@ -31,6 +31,7 @@ PointsObject::PointsObject(std::string name, bool navigation, bool movable, bool
     _root->getOrCreateStateSet()->setMode(GL_BLEND,osg::StateAttribute::ON);
     std::string bname = "Points";
     _root->getOrCreateStateSet()->setRenderBinDetails(1,bname);
+    //_root->getOrCreateStateSet()->setBinNumber(1);
 }
 
 PointsObject::~PointsObject()
@@ -92,6 +93,12 @@ void PointsObject::clear()
     _root->removeChildren(0,_root->getNumChildren());
     setTransform(osg::Matrix::identity());
     _alphaUni = NULL;
+}
+
+void PointsObject::setTransitionTimes(float moveTime, float fadeTime)
+{
+    _transitionTime = moveTime;
+    _totalFadeTime = fadeTime;
 }
 
 void PointsObject::setAlpha(float alpha)

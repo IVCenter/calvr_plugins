@@ -9,7 +9,7 @@
 class PanMarkerObject : public cvr::SceneObject
 {
     public:
-        PanMarkerObject(float scale, float rotationOffset, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
+        PanMarkerObject(float scale, float rotationOffset, float radius, float selectDistance, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~PanMarkerObject();
 
         virtual bool processEvent(cvr::InteractionEvent * ie);
@@ -41,6 +41,7 @@ class PanMarkerObject : public cvr::SceneObject
         float _scale;
         float _rotationOffset;
         float _currentRotation;
+        float _selectDistance;
         osg::ref_ptr<osg::ShapeDrawable> _sphere;
         osg::ref_ptr<osg::Geode> _sphereGeode;
 

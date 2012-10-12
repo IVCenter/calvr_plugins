@@ -48,8 +48,12 @@ bool PointsWithPans::init()
 	z = ConfigManager::getFloat("z",setss.str(),0);
 	set->offset = osg::Vec3(x,y,z);
 	set->file = ConfigManager::getEntry("file",setss.str(),"",NULL);
+	set->moveTime = ConfigManager::getFloat("moveTime",setss.str(),4.0);
+	set->fadeTime = ConfigManager::getFloat("fadeTime",setss.str(),5.0);
 	std::vector<std::string> panTags;
 	ConfigManager::getChildren(setss.str(),panTags);
+	float radius = ConfigManager::getFloat("sphereRadius",setss.str(),250.0);
+	float distance = ConfigManager::getFloat("selectDistance",setss.str(),2500.0);
 	for(int j = 0; j < panTags.size(); j++)
 	{
 	    std::stringstream panss;
@@ -62,6 +66,8 @@ bool PointsWithPans::init()
 	    pan.name = ConfigManager::getEntry("name",panss.str(),"",NULL);
 	    pan.rotationOffset = ConfigManager::getFloat("rotationOffset",panss.str(),0);
 	    pan.rotationOffset = pan.rotationOffset * M_PI / 180.0;
+	    pan.sphereRadius = ConfigManager::getFloat("sphereRadius",panss.str(),radius);
+	    pan.selectDistance = ConfigManager::getFloat("selectDistance",panss.str(),distance);
 	    set->panList.push_back(pan);
 	}
 	_setList.push_back(set);
@@ -112,6 +118,7 @@ void PointsWithPans::menuCallback(MenuItem * item)
 	    _activeObject->setPosition(_setList[i]->offset);
 	    _activeObject->setNavigationOn(true);
 	    _activeObject->addChild(pli.group.get());
+	    _activeObject->setTransitionTimes(_setList[i]->moveTime,_setList[i]->fadeTime);
 
 	    /*_sizeUni = pli.group->getOrCreateStateSet()->getUniform("pointSize");
 	    if(_sizeUni)
@@ -124,7 +131,7 @@ void PointsWithPans::menuCallback(MenuItem * item)
 
 	    for(int j = 0; j < _setList[i]->panList.size(); j++)
 	    {
-		PanMarkerObject * pmo = new PanMarkerObject(_setList[i]->scale,_setList[i]->panList[j].rotationOffset,_setList[i]->panList[j].name,false,false,false,true,true);
+		PanMarkerObject * pmo = new PanMarkerObject(_setList[i]->scale,_setList[i]->panList[j].rotationOffset,_setList[i]->panList[j].sphereRadius,_setList[i]->panList[j].selectDistance,_setList[i]->panList[j].name,false,false,false,true,true);
 		_activeObject->addChild(pmo);
 
 		osg::Matrix m;
