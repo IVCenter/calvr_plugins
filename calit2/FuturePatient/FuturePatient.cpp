@@ -372,6 +372,14 @@ bool FuturePatient::init()
     return true;
 }
 
+void FuturePatient::preFrame()
+{
+    if(_layoutObject)
+    {
+	_layoutObject->perFrame();
+    }
+}
+
 void FuturePatient::menuCallback(MenuItem * item)
 {
     if(item == _loadButton)

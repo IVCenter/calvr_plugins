@@ -27,9 +27,9 @@ enum AxisType
 
 enum GraphDisplayType
 {
-    NONE = 0,
-    POINTS,
-    POINTS_WITH_LINES
+    GDT_NONE = 0,
+    GDT_POINTS,
+    GDT_POINTS_WITH_LINES
 };
 
 enum MultiGraphDisplayMode
@@ -65,6 +65,8 @@ struct GraphDataInfo
     time_t xMaxT;
     float zMin;
     float zMax;
+    osg::ref_ptr<osg::Geode> pointActionGeode;
+    osg::ref_ptr<osg::Geometry> pointActionGeometry;
 };
 
 class DataGraph
@@ -134,7 +136,10 @@ class DataGraph
             return _multiGraphDisplayMode;
         }
 
+        void setGLScale(float scale);
+
         void setPointActions(std::string graphname, std::map<int,PointAction*> & actionMap);
+        void updatePointAction();
         bool pointClick();
 
     protected:
@@ -189,6 +194,8 @@ class DataGraph
         float _masterPointScale;
         float _masterLineScale;
 
+        float _glScale;
+
         osg::ref_ptr<osg::Point> _point;
         osg::ref_ptr<osg::LineWidth> _lineWidth;
         float _pointLineScale;
@@ -205,6 +212,9 @@ class DataGraph
         osg::ref_ptr<osg::Uniform> _pointSizeUniform;
 
         std::map<std::string,std::map<int,PointAction*> > _pointActionMap;
+        osg::ref_ptr<osg::Point> _pointActionPoint;
+        float _pointActionAlpha;
+        bool _pointActionAlphaDir;
 };
 
 #endif

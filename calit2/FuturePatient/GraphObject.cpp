@@ -327,7 +327,7 @@ bool GraphObject::addGraph(std::string name)
 
     if(gd.valid)
     {
-	_graph->addGraph(gd.displayName, points, POINTS_WITH_LINES, "Time", gd.units, osg::Vec4(0,1.0,0,1.0),colors,secondary);
+	_graph->addGraph(gd.displayName, points, GDT_POINTS_WITH_LINES, "Time", gd.units, osg::Vec4(0,1.0,0,1.0),colors,secondary);
 	_graph->setZDataRange(gd.displayName,gd.minValue,gd.maxValue);
 	_graph->setXDataRangeTimestamp(gd.displayName,gd.minTime,gd.maxTime);
 	addChild(_graph->getGraphRoot());
@@ -467,6 +467,16 @@ bool GraphObject::getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point)
     osg::Matrix m;
     m = mat * getWorldToObjectMatrix();
     return _graph->getGraphSpacePoint(m,point);
+}
+
+void GraphObject::setGLScale(float scale)
+{
+    _graph->setGLScale(scale);
+}
+
+void GraphObject::perFrame()
+{
+    _graph->updatePointAction();
 }
 
 void GraphObject::menuCallback(MenuItem * item)

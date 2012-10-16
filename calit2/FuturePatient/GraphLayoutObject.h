@@ -32,6 +32,14 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         void selectMicrobes(std::string & group, std::vector<std::string> & keys);
 
         void removeAll();
+        void perFrame();
+
+        void minimize();
+        void maximize();
+        bool isMinimized()
+        {
+            return _minimized;
+        }
 
         virtual void menuCallback(cvr::MenuItem * item);
 
@@ -43,6 +51,8 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         void makeGeometry();
         void updateGeometry();
         void updateLayout();
+
+        bool _minimized;
 
         std::vector<GraphObject *> _objectList;
         std::map<GraphObject *,cvr::MenuButton *> _deleteButtonMap;
@@ -67,6 +77,7 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         osg::ref_ptr<osgText::Text> _text;
 
         cvr::MenuButton * _resetLayoutButton;
+        cvr::MenuButton * _minmaxButton;
         cvr::MenuCheckbox * _syncTimeCB;
         cvr::MenuCheckbox * _zoomCB;
         cvr::MenuRangeValueCompact * _rowsRV;

@@ -44,6 +44,10 @@ class GraphObject : public cvr::TiledWallSceneObject
             return _layoutDoesDelete;
         }
 
+        void setGLScale(float scale);
+
+        void perFrame();
+
         virtual void menuCallback(cvr::MenuItem * item);
 
         virtual bool processEvent(cvr::InteractionEvent * ie);
