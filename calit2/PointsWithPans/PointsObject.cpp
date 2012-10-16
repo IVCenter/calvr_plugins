@@ -90,7 +90,10 @@ void PointsObject::panUnloaded(float rotation)
 
 void PointsObject::clear()
 {
-    _root->removeChildren(0,_root->getNumChildren());
+    while(getNumChildNodes())
+    {
+	removeChild(getChildNode(0));
+    }
     setTransform(osg::Matrix::identity());
     _alphaUni = NULL;
     _activePanMarker = NULL;

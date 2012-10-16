@@ -166,6 +166,8 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
     osg::Depth * wdepth = new osg::Depth();
     wdepth->setWriteMask(false);
     _root->getOrCreateStateSet()->setAttributeAndModes(wdepth,osg::StateAttribute::ON);
+
+    _transitionSkipFrames = 0;
 }
 
 void PanoViewObject::setTransition(PanTransitionType transitionType, std::string transitionFilesDir, std::vector<std::string> & leftTransitionFiles, std::vector<std::string> & rightTransitionFiles, std::string configTag)

@@ -365,6 +365,11 @@ void PanoDrawableLOD::setZoom(osg::Vec3 dir, float k)
     {
 	it->second->set_zoom(dir.x(),dir.y(),dir.z(),k);
     }
+
+    for(std::map<int,sph_model*>::iterator it = _pdi->transitionModelMap.begin(); it!= _pdi->transitionModelMap.end(); it++)
+    {
+	it->second->set_zoom(dir.x(),dir.y(),dir.z(),k);
+    }
 }
 
 osg::BoundingBox PanoDrawableLOD::computeBound() const

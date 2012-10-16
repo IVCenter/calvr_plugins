@@ -29,7 +29,7 @@
 class Points : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::FileLoadCallback
 {
   protected:
-    osg::Program* pgm1;
+    osg::ref_ptr<osg::Program> pgm1;
     float initialPointScale;
  
     // container to hold pdf data
