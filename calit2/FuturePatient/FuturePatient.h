@@ -25,6 +25,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         virtual ~FuturePatient();
 
         bool init();
+        void preFrame();
 
         virtual void menuCallback(cvr::MenuItem * item);
 

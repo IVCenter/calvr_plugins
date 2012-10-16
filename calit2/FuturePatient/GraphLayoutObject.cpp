@@ -2,6 +2,7 @@
 #include "ColorGenerator.h"
 
 #include <cvrInput/TrackingManager.h>
+#include <cvrConfig/ConfigManager.h>
 
 using namespace cvr;
 
@@ -36,8 +37,14 @@ GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std
     _heightRV->setCallback(this);
     addMenuItem(_heightRV);
 
+    _minmaxButton = new MenuButton("Minimize");
+    _minmaxButton->setCallback(this);
+    addMenuItem(_minmaxButton);
+
     _activeHand = -1;
     _activeHandType = TrackerBase::INVALID;
+
+    _minimized = false;
 }
 
 GraphLayoutObject::~GraphLayoutObject()
@@ -217,6 +224,59 @@ void GraphLayoutObject::removeAll()
     _microbeObjectList.clear();
 }
 
+void GraphLayoutObject::perFrame()
+{
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	_objectList[i]->perFrame();
+    }
+}
+
+void GraphLayoutObject::minimize()
+{
+    if(_minimized)
+    {
+	return;
+    }
+
+    osg::Vec3 pos = ConfigManager::getVec3("Plugin.FuturePatient.MinimizedLayout");
+    float scale = ConfigManager::getFloat("scale","Plugin.FuturePatient.MinimizedLayout",0.5);
+
+    setScale(scale);
+    setPosition(pos);
+
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	_objectList[i]->setGLScale(scale);
+    }
+
+    _minmaxButton->setText("Maximize");
+
+    _minimized = true;
+}
+
+void GraphLayoutObject::maximize()
+{
+    if(!_minimized)
+    {
+	return;
+    }
+
+    osg::Vec3 pos = ConfigManager::getVec3("Plugin.FuturePatient.Layout");
+
+    setScale(1.0);
+    setPosition(pos);
+
+    _minmaxButton->setText("Minimize");
+
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	_objectList[i]->setGLScale(1.0);
+    }
+
+    _minimized = false;
+}
+
 void GraphLayoutObject::menuCallback(MenuItem * item)
 {
     if(item == _resetLayoutButton)
@@ -231,6 +291,19 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	{
 	    _maxRows = (int)_rowsRV->getValue();
 	    updateLayout();
+	}
+	return;
+    }
+
+    if(item == _minmaxButton)
+    {
+	if(_minimized)
+	{
+	    maximize();
+	}
+	else
+	{
+	    minimize();
 	}
 	return;
     }
