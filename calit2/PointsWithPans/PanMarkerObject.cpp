@@ -20,20 +20,26 @@ PanMarkerObject::PanMarkerObject(float scale, float rotationOffset, float radius
 	osg::Sphere * sphere = new osg::Sphere(osg::Vec3(0,0,0),radius/_scale);
 	_sphere = new osg::ShapeDrawable(sphere);
 	_sphere->setColor(osg::Vec4(1.0,0,0,0.5));
-	_sphereGeode = new osg::Geode();
-	_sphereGeode->addDrawable(_sphere);
+	osg::Geode * geode = new osg::Geode();
+	geode->addDrawable(_sphere);
+	_sphereNode = geode;
 
-	osg::StateSet * stateset = _sphereGeode->getOrCreateStateSet();
+	osg::StateSet * stateset = _sphereNode->getOrCreateStateSet();
 	std::string bname = "spheres";
 	stateset->setRenderBinDetails(2,bname);
 	stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
     }
     else
     {
-	_sphereGeode = TexturedSphere::makeSphere(textureFile,radius/_scale,2.0);
+	osg::MatrixTransform * mt = new osg::MatrixTransform();
+	osg::Matrix m;
+	m.makeRotate(rotationOffset,osg::Vec3(0,0,1));
+	mt->setMatrix(m);
+	mt->addChild(TexturedSphere::makeSphere(textureFile,radius/_scale,2.0));
+	_sphereNode = mt;
     }
 
-    addChild(_sphereGeode);
+    addChild(_sphereNode);
 
     _selectDistance = selectDistance;
 
@@ -46,7 +52,7 @@ PanMarkerObject::PanMarkerObject(float scale, float rotationOffset, float radius
     PluginHelper::sendMessageByName("PanoViewLOD",PAN_HEIGHT_REQUEST,(char*)&phr);
     _centerHeight = phr.height;
 
-    osg::StateSet * stateset = _sphereGeode->getOrCreateStateSet();
+    osg::StateSet * stateset = _sphereNode->getOrCreateStateSet();
 
     osg::CullFace * cf = new osg::CullFace();
     stateset->setAttributeAndModes(cf,osg::StateAttribute::ON);
@@ -158,13 +164,13 @@ void PanMarkerObject::panUnloaded()
 
 void PanMarkerObject::hide()
 {
-    removeChild(_sphereGeode);
+    removeChild(_sphereNode);
 }
 
 void PanMarkerObject::unhide()
 {
-    if(!_sphereGeode->getNumParents())
+    if(!_sphereNode->getNumParents())
     {
-	addChild(_sphereGeode);
+	addChild(_sphereNode);
     }
 }

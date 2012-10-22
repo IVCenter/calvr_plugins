@@ -43,7 +43,7 @@ class PanMarkerObject : public cvr::SceneObject
         float _currentRotation;
         float _selectDistance;
         osg::ref_ptr<osg::ShapeDrawable> _sphere;
-        osg::ref_ptr<osg::Geode> _sphereGeode;
+        osg::ref_ptr<osg::Node> _sphereNode;
 
         float _centerHeight;
 
