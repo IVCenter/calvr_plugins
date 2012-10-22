@@ -33,7 +33,7 @@ PanMarkerObject::PanMarkerObject(float scale, float rotationOffset, float radius
     {
 	osg::MatrixTransform * mt = new osg::MatrixTransform();
 	osg::Matrix m;
-	m.makeRotate(rotationOffset,osg::Vec3(0,0,1));
+	m.makeRotate(rotationOffset-90.0,osg::Vec3(0,0,1));
 	mt->setMatrix(m);
 	mt->addChild(TexturedSphere::makeSphere(textureFile,radius/_scale,2.0,true));
 	_sphereNode = mt;
