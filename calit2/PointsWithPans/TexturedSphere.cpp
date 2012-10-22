@@ -7,7 +7,7 @@
 #include <iostream>
 #include <cmath>
 
-osg::Geode * TexturedSphere::makeSphere(std::string file, float radius, float tfactor)
+osg::Geode * TexturedSphere::makeSphere(std::string file, float radius, float tfactor, bool flipS)
 {
     osg::Geometry * geom = new osg::Geometry();
     osg::Vec3Array * verts = new osg::Vec3Array();
@@ -43,6 +43,12 @@ osg::Geode * TexturedSphere::makeSphere(std::string file, float radius, float tf
 	    tcoordR = ((float)(j+1)) / ((float)segments);
 	    tcoordT = ((float)i) / ((float)segments);
 	    tcoordB = ((float)(i+1)) / ((float)segments);
+
+	    if(flipS)
+	    {
+		tcoordL = 1.0 - tcoordL;
+		tcoordR = 1.0 - tcoordR;
+	    }
 
 	    osg::Vec3 point;
 	    // top left

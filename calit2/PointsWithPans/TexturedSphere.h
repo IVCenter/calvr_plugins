@@ -9,7 +9,7 @@
 class TexturedSphere
 {
     public:
-        static osg::Geode * makeSphere(std::string file, float radius = 1.0, float tfactor = 1.0);
+        static osg::Geode * makeSphere(std::string file, float radius = 1.0, float tfactor = 1.0, bool flipS = false);
 };
 
 #endif
