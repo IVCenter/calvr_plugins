@@ -1,12 +1,16 @@
 SET(LIB_NAME ElevatorRoom)
 SET(PLUGIN_HEADERS
     ElevatorRoom.h
+    AudioHandler.h
+    OSCPack.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
     "SHARED"
     ${PLUGIN_HEADERS}
     ElevatorRoom.cpp
+    AudioHandler.cpp
+    OSCPack.cpp
 )
 
 FIND_PACKAGE(OASCLIENT)
