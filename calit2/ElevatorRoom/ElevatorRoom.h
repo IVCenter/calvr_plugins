@@ -2,8 +2,16 @@
 #define ELEVATORROOM_PLUGIN_H
 
 
+#include <cvrKernel/ComController.h>
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrKernel/FileHandler.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/SceneObject.h>
+
+#include <cvrUtil/Intersection.h>
+#include <cvrConfig/ConfigManager.h>
 
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuRangeValue.h>
@@ -13,18 +21,26 @@
 
 #include <osg/Geode>
 #include <osg/Geometry>
+#include <osg/Material>
 #include <osg/MatrixTransform>
 #include <osg/PositionAttitudeTransform>
 #include <osg/ShapeDrawable>
 #include <osg/Switch>
 #include <osg/Texture2D>
 #include <osgText/Text>
+#include <osgDB/ReadFile>
 
 #include <string.h>
 #include <vector>
 #include <map>
 
-#include "OAS/OASClient.h"
+#include <iostream>
+#include <stdio.h>
+#include <netdb.h>
+#include <sys/socket.h>
+
+#include "AudioHandler.h"
+//#include "OAS/OASClient.h"
 
 #define NUM_DOORS 8
 #define DOOR_SPEED 0.007
@@ -46,6 +62,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
 
     protected:
         static ElevatorRoom * _myPtr;
+        AudioHandler * _audioHandler; 
 
         enum Mode
         {
@@ -74,7 +91,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         std::vector<osg::ref_ptr<osg::Switch> > _aliensSwitch, _alliesSwitch, 
             _checkersSwitch, _lightSwitch;
         
-        oasclient::Sound * _ding, * _hitSound, * _laser;
+        //oasclient::Sound * _ding, * _hitSound, * _laser;
 
         float _modelScale; // scale of entire scene
         float _pauseLength; // length in seconds of time between door close and next lighting up
@@ -99,7 +116,9 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         bool _soundEnabled;
 
         Mode _mode; // which kind of avatar is currently active
-        
+        osg::Quat _eventRot;
+        osg::Vec3 _eventPos;
+
         void connectToServer();
         void openDoor(int doorNum);
         void closeDoor(int doorNum);
