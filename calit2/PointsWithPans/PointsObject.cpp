@@ -31,6 +31,7 @@ PointsObject::PointsObject(std::string name, bool navigation, bool movable, bool
     _root->getOrCreateStateSet()->setMode(GL_BLEND,osg::StateAttribute::ON);
     std::string bname = "Points";
     _root->getOrCreateStateSet()->setRenderBinDetails(1,bname);
+    //_root->getOrCreateStateSet()->setBinNumber(1);
 }
 
 PointsObject::~PointsObject()
@@ -69,6 +70,7 @@ void PointsObject::panUnloaded(float rotation)
 	}
 	attachToScene();
 	_fadeInActive = true;
+	_fadeActive = false;
 	float panAlpha = 1.0f;
 	PluginHelper::sendMessageByName("PanoViewLOD",PAN_SET_ALPHA,(char*)&panAlpha);
 	_fadeTime = 0.0;
@@ -89,9 +91,36 @@ void PointsObject::panUnloaded(float rotation)
 
 void PointsObject::clear()
 {
-    _root->removeChildren(0,_root->getNumChildren());
+    while(getNumChildNodes())
+    {
+	removeChild(getChildNode(0));
+    }
     setTransform(osg::Matrix::identity());
     _alphaUni = NULL;
+    _activePanMarker = NULL;
+    _transitionActive = false;
+    _fadeActive = false;
+    _fadeInActive = false;
+    _transitionTime = 4.0;
+    _totalFadeTime = 5.0;
+
+    while(getNumChildObjects())
+    {
+	SceneObject * so = getChildObject(0);
+	removeChild(so);
+	// TODO: fix nested delete
+	//delete so;
+    }
+
+    detachFromScene();
+    PluginHelper::sendMessageByName("PanoViewLOD",PAN_UNLOAD,NULL);
+    PluginHelper::sendMessageByName("PanoViewLOD",PAN_UNLOAD,NULL);
+}
+
+void PointsObject::setTransitionTimes(float moveTime, float fadeTime)
+{
+    _transitionTime = moveTime;
+    _totalFadeTime = fadeTime;
 }
 
 void PointsObject::setAlpha(float alpha)

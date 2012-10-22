@@ -23,6 +23,7 @@ GraphObject::GraphObject(mysqlpp::Connection * conn, float width, float height, 
     mgdText.push_back("Normal");
     mgdText.push_back("Color");
     mgdText.push_back("Color Solid");
+    mgdText.push_back("Color + Pt Size");
     mgdText.push_back("Shape");
     mgdText.push_back("Shape and Color");
 
@@ -54,6 +55,7 @@ bool GraphObject::addGraph(std::string name)
 
     osg::ref_ptr<osg::Vec3Array> points;
     osg::ref_ptr<osg::Vec4Array> colors;
+    osg::ref_ptr<osg::Vec4Array> secondary;
 
     struct graphData
     {
@@ -128,6 +130,7 @@ bool GraphObject::addGraph(std::string name)
 
 		    points = new osg::Vec3Array(res.num_rows());
 		    colors = new osg::Vec4Array(res.num_rows());
+		    secondary = new osg::Vec4Array(res.num_rows());
 
 		    bool hasGoodRange = false;
 		    float goodLow, goodHigh;
@@ -198,35 +201,49 @@ bool GraphObject::addGraph(std::string name)
 			{
 			    if(value < goodLow || value > goodHigh)
 			    {
+				float multipleIncrease = 0.33;
 				if(value > goodHigh)
 				{
 				    float mult = value / goodHigh;
+				    float sizeMult = (log10(mult)*multipleIncrease) + 1.0;
+				    sizeMult = std::min(sizeMult,4.0f*multipleIncrease+1.0f);
+				    secondary->at(i).x() = sizeMult;
 				    if(mult <= 10.0)
 				    {
 					colors->at(i) = osg::Vec4(1.0,0.5,0.25,1.0);
+					//secondary->at(i).x() = 1.25;
 				    }
 				    else if(mult <= 100.0)
 				    {
 					colors->at(i) = osg::Vec4(1.0,0,0,1.0);
+					//secondary->at(i).x() = 1.5;
 				    }
 				    else
 				    {
 					colors->at(i) = osg::Vec4(1.0,0,1.0,1.0);
+					//secondary->at(i).x() = 1.75;
 				    }
 				}
 				else
 				{
+				    float mult = value / goodLow;
+				    float sizeMult = (log10(mult)*multipleIncrease) + 1.0;
+				    sizeMult = std::max(sizeMult,0.1f);
+				    secondary->at(i).x() = sizeMult;
 				    colors->at(i) = osg::Vec4(1.0,0,1.0,1.0);
+				    //secondary->at(i).x() = 0.75;
 				}
 			    }
 			    else
 			    {
 				colors->at(i) = osg::Vec4(0,1.0,0,1.0);
+				secondary->at(i).x() = 1.0;
 			    }
 			}
 			else
 			{
 			    colors->at(i) = osg::Vec4(0,0,1.0,1.0);
+			    secondary->at(i).x() = 1.0;
 			}
 		    }
 		    gd.valid = true;
@@ -278,6 +295,7 @@ bool GraphObject::addGraph(std::string name)
 	{
 	    ComController::instance()->sendSlaves((void*)points->getDataPointer(),points->size()*sizeof(osg::Vec3));
 	    ComController::instance()->sendSlaves((void*)colors->getDataPointer(),colors->size()*sizeof(osg::Vec4));
+	    ComController::instance()->sendSlaves((void*)secondary->getDataPointer(),secondary->size()*sizeof(osg::Vec4));
 	    if(gd.numAnnotations)
 	    {
 		ComController::instance()->sendSlaves((void*)annotations,sizeof(struct pointAnnotation)*gd.numAnnotations);
@@ -291,10 +309,13 @@ bool GraphObject::addGraph(std::string name)
 	{
 	    osg::Vec3 * pointData = new osg::Vec3[gd.numPoints];
 	    osg::Vec4 * colorData = new osg::Vec4[gd.numPoints];
+	    osg::Vec4 * secondaryData = new osg::Vec4[gd.numPoints];
 	    ComController::instance()->readMaster(pointData,gd.numPoints*sizeof(osg::Vec3));
 	    ComController::instance()->readMaster(colorData,gd.numPoints*sizeof(osg::Vec4));
+	    ComController::instance()->readMaster(secondaryData,gd.numPoints*sizeof(osg::Vec4));
 	    points = new osg::Vec3Array(gd.numPoints,pointData);
 	    colors = new osg::Vec4Array(gd.numPoints,colorData);
+	    secondary = new osg::Vec4Array(gd.numPoints,secondaryData);
 
 	    if(gd.numAnnotations)
 	    {
@@ -306,7 +327,7 @@ bool GraphObject::addGraph(std::string name)
 
     if(gd.valid)
     {
-	_graph->addGraph(gd.displayName, points, POINTS_WITH_LINES, "Time", gd.units, osg::Vec4(0,1.0,0,1.0),colors);
+	_graph->addGraph(gd.displayName, points, GDT_POINTS_WITH_LINES, "Time", gd.units, osg::Vec4(0,1.0,0,1.0),colors,secondary);
 	_graph->setZDataRange(gd.displayName,gd.minValue,gd.maxValue);
 	_graph->setXDataRangeTimestamp(gd.displayName,gd.minTime,gd.maxTime);
 	addChild(_graph->getGraphRoot());
@@ -446,6 +467,16 @@ bool GraphObject::getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point)
     osg::Matrix m;
     m = mat * getWorldToObjectMatrix();
     return _graph->getGraphSpacePoint(m,point);
+}
+
+void GraphObject::setGLScale(float scale)
+{
+    _graph->setGLScale(scale);
+}
+
+void GraphObject::perFrame()
+{
+    _graph->updatePointAction();
 }
 
 void GraphObject::menuCallback(MenuItem * item)
