@@ -17,6 +17,7 @@ struct PWPPan
 {
     osg::Vec3 location;
     std::string name;
+    std::string textureFile;
     float rotationOffset;
     float sphereRadius;
     float selectDistance;

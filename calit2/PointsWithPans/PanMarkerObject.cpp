@@ -1,5 +1,6 @@
 #include "PanMarkerObject.h"
 #include "PointsObject.h"
+#include "TexturedSphere.h"
 
 #include <cvrKernel/PluginHelper.h>
 #include <PluginMessageType.h>
@@ -8,16 +9,30 @@
 
 using namespace cvr;
 
-PanMarkerObject::PanMarkerObject(float scale, float rotationOffset, float radius, float selectDistance, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : SceneObject(name,navigation,movable,clip,contextMenu,showBounds)
+PanMarkerObject::PanMarkerObject(float scale, float rotationOffset, float radius, float selectDistance, std::string name, std::string textureFile, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : SceneObject(name,navigation,movable,clip,contextMenu,showBounds)
 {
     _viewerInRange = false;
     _scale = scale;
     _rotationOffset = rotationOffset;
-    osg::Sphere * sphere = new osg::Sphere(osg::Vec3(0,0,0),radius/_scale);
-    _sphere = new osg::ShapeDrawable(sphere);
-    _sphere->setColor(osg::Vec4(1.0,0,0,0.5));
-    _sphereGeode = new osg::Geode();
-    _sphereGeode->addDrawable(_sphere);
+
+    if(textureFile.empty())
+    {
+	osg::Sphere * sphere = new osg::Sphere(osg::Vec3(0,0,0),radius/_scale);
+	_sphere = new osg::ShapeDrawable(sphere);
+	_sphere->setColor(osg::Vec4(1.0,0,0,0.5));
+	_sphereGeode = new osg::Geode();
+	_sphereGeode->addDrawable(_sphere);
+
+	osg::StateSet * stateset = _sphereGeode->getOrCreateStateSet();
+	std::string bname = "spheres";
+	stateset->setRenderBinDetails(2,bname);
+	stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
+    }
+    else
+    {
+	_sphereGeode = TexturedSphere::makeSphere(textureFile,radius/_scale,2.0);
+    }
+
     addChild(_sphereGeode);
 
     _selectDistance = selectDistance;
@@ -32,11 +47,6 @@ PanMarkerObject::PanMarkerObject(float scale, float rotationOffset, float radius
     _centerHeight = phr.height;
 
     osg::StateSet * stateset = _sphereGeode->getOrCreateStateSet();
-    std::string bname = "spheres";
-    //stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-    stateset->setRenderBinDetails(2,bname);
-    //stateset->setBinNumber(2);
-    stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
 
     osg::CullFace * cf = new osg::CullFace();
     stateset->setAttributeAndModes(cf,osg::StateAttribute::ON);
@@ -81,12 +91,18 @@ void PanMarkerObject::setViewerDistance(float distance)
 {
     if(distance < _selectDistance)
     {
-	_sphere->setColor(osg::Vec4(0.0,1.0,0.0,0.5));
+	if(_sphere)
+	{
+	    _sphere->setColor(osg::Vec4(0.0,1.0,0.0,0.5));
+	}
 	_viewerInRange = true;
     }
     else
     {
-	_sphere->setColor(osg::Vec4(1.0,0.0,0.0,0.5));
+	if(_sphere)
+	{
+	    _sphere->setColor(osg::Vec4(1.0,0.0,0.0,0.5));
+	}
 	_viewerInRange = false;
     }
 }

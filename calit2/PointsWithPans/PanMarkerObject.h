@@ -9,7 +9,7 @@
 class PanMarkerObject : public cvr::SceneObject
 {
     public:
-        PanMarkerObject(float scale, float rotationOffset, float radius, float selectDistance, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
+        PanMarkerObject(float scale, float rotationOffset, float radius, float selectDistance, std::string name, std::string textureFile, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~PanMarkerObject();
 
         virtual bool processEvent(cvr::InteractionEvent * ie);
