@@ -70,6 +70,7 @@ void PointsObject::panUnloaded(float rotation)
 	}
 	attachToScene();
 	_fadeInActive = true;
+	_fadeActive = false;
 	float panAlpha = 1.0f;
 	PluginHelper::sendMessageByName("PanoViewLOD",PAN_SET_ALPHA,(char*)&panAlpha);
 	_fadeTime = 0.0;
