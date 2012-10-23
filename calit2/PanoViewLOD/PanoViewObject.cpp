@@ -5,6 +5,7 @@
 #include <cvrKernel/NodeMask.h>
 #include <cvrKernel/PluginHelper.h>
 #include <cvrUtil/OsgMath.h>
+#include <PluginMessageType.h>
 
 #include <osg/Depth>
 
@@ -80,6 +81,8 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
 
     _demoTime = 0.0;
     _demoChangeTime = ConfigManager::getDouble("value","Plugin.PanoViewLOD.DemoChangeTime",90.0);
+
+    _removeOnClick = false;
 
     _coordChangeMat.makeRotate(M_PI/2.0,osg::Vec3(1,0,0));
     _spinMat.makeIdentity();
@@ -468,6 +471,15 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
     if(ie->asTrackedButtonEvent())
     {
 	TrackedButtonInteractionEvent * tie = ie->asTrackedButtonEvent();
+
+	if(_removeOnClick)
+	{
+	    PluginHelper::sendMessageByName("PanoViewLOD",PAN_UNLOAD,NULL);
+
+	    _removeOnClick = false;
+	    return true;
+	}
+
 	if(tie->getButton() == 2 && tie->getInteraction() == BUTTON_DOWN)
 	{
 	    next();

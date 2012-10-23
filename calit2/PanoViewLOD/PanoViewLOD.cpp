@@ -179,6 +179,7 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 	    if(_loadRequest)
 	    {
 		_panObject->addMenuItem(_returnButton);
+		_panObject->setRemoveOnClick(true);
 	    }
 
 	    break;
