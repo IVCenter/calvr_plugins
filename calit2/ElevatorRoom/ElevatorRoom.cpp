@@ -323,19 +323,22 @@ void ElevatorRoom::loadModels()
         
         // Sound
         
-        osg::Vec3 pos, center, dir;
-        osg::Matrix o2w, local2o;
-        o2w = PluginHelper::getObjectMatrix();
-        local2o = _geoRoot->getInverseMatrix();
+        if (_audioHandler)
+        {
+            osg::Vec3 pos, center, dir;
+            osg::Matrix o2w, local2o;
+            o2w = PluginHelper::getObjectMatrix();
+            local2o = _geoRoot->getInverseMatrix();
 
-        pos = osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0);
-        pos = pos * local2o * o2w;
-        center = _geoRoot->getMatrix().getTrans();
-        center = center * local2o * o2w;
-        dir = pos - center;
+            pos = osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0);
+            pos = pos * local2o * o2w;
+            center = _geoRoot->getMatrix().getTrans();
+            center = center * local2o * o2w;
+            dir = pos - center;
 
-        // 1 - 8 ding sounds
-        _audioHandler->loadSound(i + DING_OFFSET, dir, pos);
+            // 1 - 8 ding sounds
+            _audioHandler->loadSound(i + DING_OFFSET, dir, pos);
+        }
     }
 
 
@@ -387,11 +390,14 @@ void ElevatorRoom::loadModels()
 
         // Sound
         
-        osg::Vec3 pos = osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0);
-        osg::Vec3 dir = pos - osg::Vec3(0,0,0);
+        if (_audioHandler)
+        {
+            osg::Vec3 pos = osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0);
+            osg::Vec3 dir = pos - osg::Vec3(0,0,0);
 
-        // 9 - 16 explosion sounds
-        _audioHandler->loadSound(i + EXPLOSION_OFFSET, dir, pos);
+            // 9 - 16 explosion sounds
+            _audioHandler->loadSound(i + EXPLOSION_OFFSET, dir, pos);
+        }
     }   
 
 
@@ -1061,19 +1067,21 @@ void ElevatorRoom::preFrame()
             }
         }
     }
-
+    
     // Update sound
-    osg::Vec3 handPos, headPos, headDir, handDir;
-    handPos = cvr::PluginHelper::getHandMat().getTrans();
-    headPos = cvr::PluginHelper::getHeadMat().getTrans();
-    headDir = osg::Vec3(0, 0, -1); 
-    handDir = handPos - headPos;
+    if (_audioHandler)
+    {
+        osg::Vec3 handPos, headPos, headDir, handDir;
+        handPos = cvr::PluginHelper::getHandMat().getTrans();
+        headPos = cvr::PluginHelper::getHeadMat().getTrans();
+        headDir = osg::Vec3(0, 0, -1); 
+        handDir = handPos - headPos;
 
-    // user position
-    _audioHandler->update(0, headDir, headPos);
-    // laser sound
-    _audioHandler->update(17, handDir, handPos);
-
+        // user position
+        _audioHandler->update(0, headDir, headPos);
+        // laser sound
+        _audioHandler->update(17, handDir, handPos);
+    }
 }
 
 void ElevatorRoom::openDoor(int doorNum)
