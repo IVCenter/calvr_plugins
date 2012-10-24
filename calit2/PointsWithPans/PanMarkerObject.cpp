@@ -3,6 +3,7 @@
 #include "TexturedSphere.h"
 
 #include <cvrKernel/PluginHelper.h>
+#include <cvrInput/TrackingManager.h>
 #include <PluginMessageType.h>
 
 #include <osg/CullFace>
@@ -14,6 +15,14 @@ PanMarkerObject::PanMarkerObject(float scale, float rotationOffset, float radius
     _viewerInRange = false;
     _scale = scale;
     _rotationOffset = rotationOffset;
+    _radius = radius;
+    _pulseTime = 0.0;
+    _pulseTotalTime = 1.5;
+    _pulseScale = 0.1;
+    _pulseDir = true;
+
+    _activeHand = -1;
+    _activeHandType = TrackerBase::INVALID;
 
     if(textureFile.empty())
     {
@@ -35,8 +44,14 @@ PanMarkerObject::PanMarkerObject(float scale, float rotationOffset, float radius
 	osg::Matrix m;
 	m.makeRotate(rotationOffset-90.0,osg::Vec3(0,0,1));
 	mt->setMatrix(m);
+
+	osg::MatrixTransform * scaleMT = new osg::MatrixTransform();
+	m.makeScale(osg::Vec3(1.0,1.0,1.0));
+	scaleMT->setMatrix(m);
+	scaleMT->addChild(mt);
 	mt->addChild(TexturedSphere::makeSphere(textureFile,radius/_scale,2.0,true));
-	_sphereNode = mt;
+	
+	_sphereNode = scaleMT;
     }
 
     addChild(_sphereNode);
@@ -85,12 +100,6 @@ bool PanMarkerObject::processEvent(InteractionEvent * ie)
     }
 
     return SceneObject::processEvent(ie);
-}
-
-void PanMarkerObject::enterCallback(int handID, const osg::Matrix &mat)
-{
-    osg::Vec3 pos = getTransform().getTrans();
-    std::cerr << "Marker " << _name << ": x: " << pos.x() << " y: " << pos.y() << " z: " << pos.z() << std::endl;
 }
 
 void PanMarkerObject::setViewerDistance(float distance)
@@ -172,5 +181,74 @@ void PanMarkerObject::unhide()
     if(!_sphereNode->getNumParents())
     {
 	addChild(_sphereNode);
+    }
+}
+
+void PanMarkerObject::enterCallback(int handID, const osg::Matrix &mat)
+{
+    osg::Vec3 pos = getTransform().getTrans();
+    std::cerr << "Marker " << _name << ": x: " << pos.x() << " y: " << pos.y() << " z: " << pos.z() << std::endl;
+
+    if(_activeHand == -1 || TrackingManager::instance()->getHandTrackerType(handID) < _activeHandType)
+    {
+	_activeHand = handID;
+	_activeHandType = TrackingManager::instance()->getHandTrackerType(handID);
+    }
+}
+
+void PanMarkerObject::updateCallback(int handID, const osg::Matrix &mat)
+{
+    if(_activeHand >= 0 && _viewerInRange && handID == _activeHand)
+    {
+	if(_pulseDir)
+	{
+	    _pulseTime += PluginHelper::getLastFrameDuration();
+	}
+	else
+	{
+	    _pulseTime -= PluginHelper::getLastFrameDuration();
+	}
+
+	if(_pulseTime > _pulseTotalTime)
+	{
+	    _pulseTime = _pulseTotalTime;
+	    _pulseDir = false;
+	}
+	else if(_pulseTime < 0.0)
+	{
+	    _pulseTime = 0.0;
+	    _pulseDir = true;
+	}
+
+	setSphereScale(1.0 + (_pulseTime/_pulseTotalTime)*_pulseScale);
+    }
+    else if(_activeHand >= 0)
+    {
+	setSphereScale(1.0);
+	_pulseTime = 0.0;
+	_pulseDir = true;
+    }
+}
+
+void PanMarkerObject::leaveCallback(int handID)
+{
+    if(handID == _activeHand)
+    {
+	_activeHand = -1;
+	_activeHandType == TrackerBase::INVALID;
+	setSphereScale(1.0);
+	_pulseTime = 0.0;
+	_pulseDir = true;
+    }
+}
+
+void PanMarkerObject::setSphereScale(float scale)
+{
+    osg::MatrixTransform * mt = dynamic_cast<osg::MatrixTransform*>(_sphereNode.get());
+    if(mt)
+    {
+	osg::Matrix m;
+	m.makeScale(osg::Vec3(scale,scale,scale));
+	mt->setMatrix(m);
     }
 }
