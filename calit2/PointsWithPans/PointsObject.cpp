@@ -228,7 +228,7 @@ void PointsObject::update()
 
 	    setAlpha(1.0f - (_fadeTime / _totalFadeTime));
 	    float panAlpha = _fadeTime / _totalFadeTime;
-	    panAlpha *= 1.3;
+	    panAlpha *= 1.6;
 	    panAlpha = std::min(panAlpha,1.0f);
 	    PluginHelper::sendMessageByName("PanoViewLOD",PAN_SET_ALPHA,(char*)&panAlpha);
 
@@ -249,7 +249,7 @@ void PointsObject::update()
 	}
 
 	float pointAlpha = _fadeTime / _totalFadeTime;
-	pointAlpha *= 1.3;
+	pointAlpha *= 2.0;
 	pointAlpha = std::min(pointAlpha,1.0f);
 
 	setAlpha(pointAlpha);
