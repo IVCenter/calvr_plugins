@@ -337,7 +337,7 @@ void ArtifactVis2::loadModels()
             stringstream ss;
             ss << c1 << c2;
             string dc = ss.str();
-            string modelPath = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("dcode_models/Finished/obj/" + dc + "/" + dc + ".obj");
+            string modelPath = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("dcode_models/" + dc + "/" + dc + ".obj");
 
             if (modelExists(modelPath.c_str()))
             {
@@ -435,9 +435,9 @@ bool ArtifactVis2::processEvent(InteractionEvent* event)
                 float cscale = 1; //Want to keep scale to actual Kinect
                 Vec3 camTrans = camMat.getTrans();
                 Quat camQuad = camMat.getRotate();  //Rotation of cam will cause skeleton to be off center--need Fix!!
-                double xOffset = (camTrans.x() / cscale);
-                double yOffset = (camTrans.y() / cscale) + 5; //Added 5 meter offset of skeleton from Camera (this only works when properly scaled, ofcourse
-                double zOffset = (camTrans.z() / cscale);
+                double xOffset = (camTrans.x() / cscale) + skelOffsetX;
+                double yOffset = (camTrans.y() / cscale) + skelOffsetY; //Added 5 meter offset of skeleton from Camera (this only works when properly scaled, ofcourse
+                double zOffset = (camTrans.z() / cscale) + skelOffsetZ;
 
                 //printf("%g,%g,%g\n", xOffset,yOffset,zOffset);
                 if (kShowPCloud)
@@ -1221,7 +1221,8 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
     {
         if (menuItem == _goto[i])
         {
-            double x, y, z, rx, ry, rz, rw;
+/*        
+    double x, y, z, rx, ry, rz, rw;
             x = y = z = rx = ry = rz = rw = 0.0;
             double bscale;
             bscale = _flyplace->scale[i];
@@ -1237,7 +1238,8 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
             rw = _flyplace->rw[i];
 
             moveCam(bscale,x,y,z,rx,ry,rz,rw);
-
+*/
+		flyTo(i);
 //    moveCam(218.641, -39943.9, -73211.9, -1451.93, 0, 0, 0, 0);
 
             //-2.2317e+06,-4.09041e+06,-81120.3 Scale:55.8708
@@ -2114,9 +2116,9 @@ if(tHandIntersect)
         float cscale = 1; //Want to keep scale to actual Kinect
         Vec3 camTrans = camMat.getTrans();
         Quat camQuad = camMat.getRotate();  //Rotation of cam will cause skeleton to be off center--need Fix!!
-        double xOffset = (camTrans.x() / cscale);
-        double yOffset = (camTrans.y() / cscale)+7; //Added 5 meter offset of skeleton from Camera (this only works when properly scaled, ofcourse
-        double zOffset = (camTrans.z() / cscale);
+        double xOffset = (camTrans.x() / cscale) + skelOffsetX;
+        double yOffset = (camTrans.y() / cscale) + skelOffsetY; //Added 5 meter offset of skeleton from Camera (this only works when properly scaled, ofcourse
+        double zOffset = (camTrans.z() / cscale) + skelOffsetZ;
         for (int q = 0; q < _query.size(); q++)
         {
             vector<Artifact*> artifacts = _query[q]->artifacts;
@@ -2156,7 +2158,7 @@ if(tHandIntersect)
                     panelPos.x() *= 1000;
                     panelPos.y() *= 1000;
                     panelPos.z() *= 1000;
-                    panelPos.y() += 4500;
+                    panelPos.y() += 3000;
                    _artifactPanel->setPosition(panelPos);
                     //	printf("Panel Pos = %g,%g,%g\n",panelPos.x(),panelPos.y(),panelPos.z());
                     //_artifactPanel->setRotation(rot);
@@ -2641,7 +2643,7 @@ void ArtifactVis2::setActiveArtifact(int _lockedTo, int _lockedType, int art, in
         string dc;
         dc = artifacts[art]->dc;
         cout << dc << "\n";
-        _snum = 0.01;
+        _snum = 0.001;
         double xrot = 0;
         double yrot = 0;
         double zrot = 0;
@@ -4830,7 +4832,11 @@ void ArtifactVis2::kinectInit()
     //   initialPointScale = ConfigManager::getFloat("Plugin.Points.PointScale", 0.001f);
     //
 
-
+    //_picFolder = ConfigManager::getEntry("value", "Plugin.ArtifactVis2.PicFolder", "");
+            skelOffsetX = ConfigManager::getFloat("x","Plugin.ArtifactVis2.KinectSkeleton",0.0f);
+            skelOffsetY = ConfigManager::getFloat("y","Plugin.ArtifactVis2.KinectSkeleton",0.0f);
+            skelOffsetZ = ConfigManager::getFloat("z","Plugin.ArtifactVis2.KinectSkeleton",0.0f);
+cerr << "SkelOffset " << skelOffsetY << "\n";
     //    TrackingManager::instance()->setUpdateHeadTracking(false);
     distanceMAX = ConfigManager::getFloat("Plugin.ArtifactVis2.Cylinder.Max");
     distanceMIN = ConfigManager::getFloat("Plugin.ArtifactVis2.Cylinder.Min");
@@ -4845,7 +4851,11 @@ void ArtifactVis2::kinectInit()
     //createSelObj(Vec3(0.0, m2mm * 3.0, m2mm * -0.4), string("ED"), _sphereRadius * m2mm * 3);
     // move camera to the kinect-person
     //moveCam(1000, 19415.8, -81104.4, -1452.27, 0, 0, 0.359046, 0.93332);
-    moveCam(1000, -39943.9, -73211.9, -1451.93, 0, 0, 0, 1);
+    //FlyToDefault
+
+            	int flyIndex = ConfigManager::getInt("Plugin.ArtifactVis2.KinectDefaultOn.FlyToDefault");
+    flyTo(flyIndex);
+    //moveCam(1000, -39943.9, -73211.9, -1451.93, 0, 0, 0, 1);
 //<placemark><name>3</name><scale>1000</scale><x>-39943.9</x><y>-73211.9</y><z>-1451.93</z><rx>0</rx><ry>0</ry><rz>0</rz><rw>1</rw></placemark>
     //moveCam(355, -95.7394 / 355, 217.398 / 355, 21.6934 / 355, 0, 0, 0, 1); //0.685045, 0.140189, 0.144502, 0.700128);
     _avMenu->addItem(_kinectMenu);
@@ -4982,9 +4992,10 @@ void ArtifactVis2::ThirdLoop()
         float cscale = 1; //Want to keep scale to actual Kinect which is is meters
         Vec3 camTrans = camMat.getTrans();
         Quat camQuad = camMat.getRotate();  //Rotation of cam will cause skeleton to be off center--need Fix!!
-        double xOffset = (camTrans.x() / cscale);
-        double yOffset = (camTrans.y() / cscale) + 7; //Added Offset of Skeleton so see a little ways from camera (i.e. 5 meters, works at this scale,only)
-        double zOffset = (camTrans.z() / cscale);
+
+        double xOffset = (camTrans.x() / cscale) + skelOffsetX;
+        double yOffset = (camTrans.y() / cscale) + skelOffsetY; //Added Offset of Skeleton so see a little ways from camera (i.e. 5 meters, works at this scale,only)
+        double zOffset = (camTrans.z() / cscale) + skelOffsetZ;
         Skeleton::camPos = Vec3d(xOffset, yOffset, zOffset);
         Skeleton::camRot = camQuad;
     }
@@ -5524,5 +5535,27 @@ void ArtifactVis2::moveWithCamOn()
     //moveCam(355, -95.7394 / 355, 217.398 / 355, 21.6934 / 355, 0, 0, 0, 1); //0.685045, 0.140189, 0.144502, 0.700128);
     Skeleton::moveWithCam = true;
 }
+void ArtifactVis2::flyTo(int i)
+{
 
+            double x, y, z, rx, ry, rz, rw;
+            x = y = z = rx = ry = rz = rw = 0.0;
+            double bscale;
+	if(_flyplace->scale.size() >= i)
+	{	
+            bscale = _flyplace->scale[i];
+            //x=-2231700;
+            //y=-4090410;
+            //z=-81120.3;
+            x = _flyplace->x[i]/bscale;
+            y = _flyplace->y[i]/bscale;
+            z = _flyplace->z[i]/bscale;
+            rx = _flyplace->rx[i];
+            ry = _flyplace->ry[i];
+            rz = _flyplace->rz[i];
+            rw = _flyplace->rw[i];
+
+            moveCam(bscale,x,y,z,rx,ry,rz,rw);
+	}
+}
 
