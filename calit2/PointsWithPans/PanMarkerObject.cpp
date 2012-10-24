@@ -17,8 +17,8 @@ PanMarkerObject::PanMarkerObject(float scale, float rotationOffset, float radius
     _rotationOffset = rotationOffset;
     _radius = radius;
     _pulseTime = 0.0;
-    _pulseTotalTime = 1.5;
-    _pulseScale = 0.1;
+    _pulseTotalTime = 0.35;
+    _pulseScale = 0.05;
     _pulseDir = true;
 
     _activeHand = -1;
