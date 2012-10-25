@@ -38,6 +38,8 @@
 #include <stdio.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <X11/Xlib.h>
+#include <spnav.h>
 
 #include "AudioHandler.h"
 //#include "OAS/OASClient.h"
@@ -98,9 +100,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         float _pauseStart; // start time of the current pause
         float _doorDist; // distance doors are currently translated
         float _checkSpeed; // number of checkerboard flashes per second
-        float _flashStartTime;
-        float _avatarFlashPerSec;
-        float _lightFlashPerSec;
+        float _flashStartTime, _avatarFlashPerSec, _lightFlashPerSec;
 
         int _activeDoor; // which door is currently opening/closing
         int _score; // current score (should be > 0)
@@ -118,6 +118,10 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         Mode _mode; // which kind of avatar is currently active
         osg::Quat _eventRot;
         osg::Vec3 _eventPos;
+        osg::PositionAttitudeTransform *_crosshairPat;
+
+        float _transMult, _rotMult;
+        float _transcale, _rotscale;
 
         void connectToServer();
         void openDoor(int doorNum);

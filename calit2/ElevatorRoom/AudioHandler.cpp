@@ -82,19 +82,43 @@ void AudioHandler::loadSound(int soundID, osg::Vec3 &dir, osg::Vec3 &pos)
 
     float yaw, pitch, roll;
 
-    yaw = acos(dir.x());
+/*    yaw = acos(dir.x());
     if (dir.y() < 0) 
         yaw = M_PI * 2 - yaw;
     yaw += M_PI * 0.5;
     if (yaw > M_PI * 2) 
-        yaw -= M_PI * 2;
+        yaw -= M_PI * 2;*/
+
+    float val;
+    if(dir.x() >= 0)
+    {
+        if(dir.y() >= 0)
+        {
+            val = acos( dir.x() );
+        }
+        else
+        {
+            val = 2*M_PI - acos( dir.x() );
+        }
+    }
+    else
+    {
+        if(dir.y() >= 0)
+        {
+            val = M_PI - acos( -dir.x() );
+        }
+        else
+        {
+            val = M_PI + acos( -dir.x() );
+        }
+    }
+    yaw = val;
 
     pitch = M_PI * 0.5 - atan(dir.z());
-
     roll = 0.0f;
 
     size = oscpack(packet, "/sc.elevators/pose", "iffffff", soundID, 
-        pos.x(), pos.y(), pos.z(), yaw, pitch, roll);
+        pos.x() / 1000, pos.y() / 1000, pos.z() / 1000, yaw, pitch, roll);
 
     if (send(_sock, (char *) packet, size, 0))
     {
@@ -126,19 +150,43 @@ void AudioHandler::update(int soundID, const osg::Vec3 &dir, const osg::Vec3 &po
     // OSCPack Messenger: send pose info within every frame, typ = 0 for observer
     float yaw, pitch, roll;
 
-    yaw = acos(dir.x());
+    /*yaw = acos(dir.x());
     if (dir.y() < 0) 
         yaw = M_PI * 2 - yaw;
     yaw += M_PI * 0.5;
     if (yaw > M_PI * 2) 
-        yaw -= M_PI * 2;
+        yaw -= M_PI * 2;*/
+
+    float val;
+    if(dir.x() >= 0)
+    {
+        if(dir.y() >= 0)
+        {
+            val = acos( dir.x() );
+        }
+        else
+        {
+            val = 2*M_PI - acos( dir.x() );
+        }
+    }
+    else
+    {
+        if(dir.y() >= 0)
+        {
+            val = M_PI - acos( -dir.x() );
+        }
+        else
+        {
+            val = M_PI + acos( -dir.x() );
+        }
+    }
+    yaw = val;
 
     pitch = M_PI * 0.5 - atan(dir.z());
-
     roll = 0.0f;
 
     size = oscpack(packet, "/sc.elevators/pose", "iffffff", soundID, 
-        pos.x(), pos.y(), pos.z(), yaw, pitch, roll);
+        pos.x() / 1000, pos.y() / 1000, pos.z() / 1000, yaw, pitch, roll);
     if (send(_sock, (char *) packet, size, 0))
     {
         //std::cerr << "AudioHandler  Viewer's info: " << viewPos.x() << " " << viewPos.y() << " " << viewPos.z() << std::endl;	

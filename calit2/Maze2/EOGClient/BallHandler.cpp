@@ -26,6 +26,8 @@ string BallHandler::gDataDir("");
 BallHandler::BallHandler(): mFlagVisible(false),
 			mBoundingBallGeode(NULL), mCenterBallGeode(NULL)
 {
+    mBallSwitch = NULL;
+    mBallTrans = NULL;
     BOUNDING_BALL_SIZE = cvr::ConfigManager::getFloat("value", "Plugin.Maze2.OuterBall.Size", 0.025);
     CENTER_BALL_SIZE   = cvr::ConfigManager::getFloat("value", "Plugin.Maze2.InnerBall.Size", 0.005);
 }
@@ -71,8 +73,8 @@ PlaybackBallHandler::PlaybackBallHandler(MatrixTransform *rootViewerTrans)
 	importPlaybackFile(gDataDir + "/EOGClient/EOGPlayback.dat");
 
 	/* create original calibration ball */
-	Vec4 exteriorBallColor = Vec4(1.0f, 0.0f, 1.0f, 0.4f);
-	//initCaliBallGeometry(rootViewerTrans, exteriorBallColor);
+	Vec4 exteriorBallColor = Vec4(1.0f, 0.0f, 1.0f, 0.0f);
+	initCaliBallGeometry(rootViewerTrans, exteriorBallColor);
 
 	/* create extra 'ghost' ball for prediction */
 	mGhostBallTrans = new MatrixTransform();
@@ -114,8 +116,8 @@ PlaybackBallHandler::PlaybackBallHandler(MatrixTransform *rootViewerTrans)
     poleMaterialStateSet->setRenderingHint(StateSet::TRANSPARENT_BIN);
     mPoleGeode->setStateSet(poleMaterialStateSet);
 
-	mHeadTrans->addChild(mPoleTrans);
-	mHeadSwitch->addChild(mHeadTrans);
+	//mHeadTrans->addChild(mPoleTrans);
+	//mHeadSwitch->addChild(mHeadTrans);
 	mHeadSwitch->setAllChildrenOff();
 
 	rootViewerTrans->addChild(mHeadSwitch);

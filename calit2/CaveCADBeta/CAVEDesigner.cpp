@@ -15,11 +15,11 @@ using namespace osg;
 //Constructor
 CAVEDesigner::CAVEDesigner(Group* rootGroup): mActiveFlag(false), mKeypressFlag(false)
 {
-    mDesignStateHandler = new DesignStateHandler(rootGroup);//cvr::PluginHelper::getScene());//rootGroup);
+    mDesignStateHandler = new DesignStateHandler(rootGroup);
     mDesignObjectHandler = new DesignObjectHandler(rootGroup);
     mAudioConfigHandler = new AudioConfigHandler(mDesignObjectHandler->getCAVEShapeSwitchPtr());
 
-    /* exchange shared handle pointers */
+    // exchange shared handle pointers
     mDesignStateHandler->setDesignObjectHandlerPtr(mDesignObjectHandler);
     mDesignStateHandler->setScenicHandlerPtr(mDesignObjectHandler->getScenicHandlerPtr());
     mDesignStateHandler->setAudioConfigHandlerPtr(mAudioConfigHandler);
@@ -28,6 +28,7 @@ CAVEDesigner::CAVEDesigner(Group* rootGroup): mActiveFlag(false), mKeypressFlag(
 //Destructor
 CAVEDesigner::~CAVEDesigner()
 {
+
 }
 
 
@@ -116,7 +117,7 @@ void CAVEDesigner::inputDevButtonEvent(const int keySym)
 
     DesignStateHandler::InputDevButtonType btnTyp;
 
-    /* key index look-up */
+    // key index look-up
     switch (keySym)
     {
         case 32: 	btnTyp = DesignStateHandler::TOGGLE;break;
@@ -126,7 +127,6 @@ void CAVEDesigner::inputDevButtonEvent(const int keySym)
         case 65364: btnTyp = DesignStateHandler::DOWN;	break;
         default: return;
     }
-
     mDesignStateHandler->inputDevButtonEvent(btnTyp);
 }
 
@@ -142,23 +142,5 @@ void CAVEDesigner::inputDevButtonEvent(const float spinX, const float spinY, con
     if (!mActiveFlag) return;
 
     DesignStateHandler::InputDevButtonType btnTyp = DesignStateHandler::TOGGLE;
-
-    /* spin wheel event look-up: spinX has higher priority than spinY */
-/*
-    if (spinX > 0.5) btnTyp = DesignStateHandler::RIGHT;
-    else if (spinX < -0.5) btnTyp = DesignStateHandler::LEFT;
-    else if (spinY > 0.5) btnTyp = DesignStateHandler::UP;
-    else if (spinY < -0.5) btnTyp = DesignStateHandler::DOWN;
-    else
-    {
-        mKeypressFlag = false;          // release key flag
-        return;
-    }
-
-    if (mKeypressFlag) return;
-
-    mDesignStateHandler->inputDevButtonEvent(btnTyp);
-    mKeypressFlag = true;               // lock key flag
-*/
 }
 

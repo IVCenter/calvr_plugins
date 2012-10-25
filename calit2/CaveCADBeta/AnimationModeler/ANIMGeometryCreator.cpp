@@ -64,7 +64,7 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
 
 
     Material *transmaterial = new Material;
-    transmaterial->setDiffuse(Material::FRONT_AND_BACK, Vec4(1, 1, 1, 1));
+    transmaterial->setDiffuse(Material::FRONT_AND_BACK, Vec4(0.2, 1, 0.2, 1));
     transmaterial->setAlpha(Material::FRONT_AND_BACK, 0.6f);
 
     Image* envMap = osgDB::readImageFile(ANIMDataDir() + "Textures/ShapeContainer.JPG");
@@ -74,7 +74,7 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
     sphereStateSet->setMode(GL_BLEND, StateAttribute::OVERRIDE | StateAttribute::ON );
     sphereStateSet->setRenderingHint(StateSet::TRANSPARENT_BIN);
     sphereStateSet->setAttributeAndModes(transmaterial, StateAttribute::OVERRIDE | StateAttribute::ON);
-    sphereStateSet->setTextureAttributeAndModes(0, envTex, StateAttribute::ON);
+    //sphereStateSet->setTextureAttributeAndModes(0, envTex, StateAttribute::ON);
     sphereStateSet->setMode(GL_CULL_FACE, StateAttribute::ON);
 
     sphereExteriorTrans->addChild(*sphereExteriorGeode);
@@ -92,7 +92,7 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
     ANIMCreateSingleShapeSwitchAnimation(&((*shapeSwitchEntryArray)[0]), CAVEGeodeShape::BOX);
     ANIMCreateSingleShapeSwitchAnimation(&((*shapeSwitchEntryArray)[1]), CAVEGeodeShape::CYLINDER);
 
-    /* set up the forward / backward scale animation paths for geometry creator */
+    // set up the forward / backward scale animation paths for geometry creator
     AnimationPath* animationPathScaleFwd = new AnimationPath;
     AnimationPath* animationPathScaleBwd = new AnimationPath;
     animationPathScaleFwd->setLoopMode(AnimationPath::NO_LOOPING);
@@ -136,7 +136,7 @@ void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, con
 
     osg::Vec3 pos(0, 0, 0);
 
-    /* create shape geode based on 'ANIMShapeSwitchEntry::Type' */
+    // create shape geode based on 'ANIMShapeSwitchEntry::Type'
     Geode *shapeGeode = new Geode;
     if (typ == CAVEGeodeShape::BOX)
     {
@@ -154,7 +154,7 @@ void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, con
     flipUpBwdTrans->addChild(shapeGeode);
     flipDownBwdTrans->addChild(shapeGeode);
 
-    /* set up flip up / flip down animation paths for shape switch */
+    // set up flip up / flip down animation paths for shape switch
     AnimationPath* animationFlipUpFwd = new AnimationPath;
     AnimationPath* animationFlipDownFwd = new AnimationPath;
     AnimationPath* animationFlipUpBwd = new AnimationPath;
@@ -215,7 +215,7 @@ void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, con
     flipUpBwdTrans->setUpdateCallback(animCallbackFlipUpBwd);
     flipDownBwdTrans->setUpdateCallback(animCallbackFlipDownBwd);
 
-    /* write into shape switch entry array record*/
+    // write into shape switch entry array record
     (*shapeEntry)->mFlipUpFwdAnim = animCallbackFlipUpFwd;
     (*shapeEntry)->mFlipDownFwdAnim = animCallbackFlipDownFwd;
     (*shapeEntry)->mFlipUpBwdAnim = animCallbackFlipUpBwd;

@@ -12,17 +12,17 @@ using namespace std;
 using namespace osg;
 
 
-//Constructor
+// Constructor
 CAVEGeometry::CAVEGeometry(): mDOCollectorIndex(-1)
 {
     mIndexClusterVector.clear();
 }
 
 
-//Constructor: Making deep copy of 'refGeometry' without copy of 'mDOCollectorIndex'
+// Constructor: Making deep copy of 'refGeometry' without copy of 'mDOCollectorIndex'
 CAVEGeometry::CAVEGeometry(CAVEGeometry *refGeometry): mDOCollectorIndex(-1)
 {
-    /* copy primitive set and index clusters */
+    // copy primitive set and index clusters
     unsigned int nPrimitiveSets = refGeometry->getNumPrimitiveSets();
     if (nPrimitiveSets > 0)
     {
@@ -30,14 +30,14 @@ CAVEGeometry::CAVEGeometry(CAVEGeometry *refGeometry): mDOCollectorIndex(-1)
         {
             PrimitiveSet* primSetRef = refGeometry->getPrimitiveSet(i);
 
-            /* support primitive set 'DrawElementsUInt', add more types of primitive sets here if needed */
+            // support primitive set 'DrawElementsUInt', add more types of primitive sets here if needed
             DrawElementsUInt* drawElementUIntRef = dynamic_cast <DrawElementsUInt*> (primSetRef);
             if (drawElementUIntRef)
             {
                 unsigned int nIdices = drawElementUIntRef->getNumIndices();
                 const GLenum &mode = drawElementUIntRef->getMode();
 
-                /* create duplicated primitive set, copy index field and add it to 'this' */
+                // create duplicated primitive set, copy index field and add it to 'this'
                 DrawElementsUInt* drawElementUIntDup = new DrawElementsUInt(mode, 0); 
                 if (nIdices > 0)
                 {
@@ -51,7 +51,7 @@ CAVEGeometry::CAVEGeometry(CAVEGeometry *refGeometry): mDOCollectorIndex(-1)
         }
     }
 
-    /* copy the field of overlapping index by calling addIndexCluster() function sets */
+    // copy the field of overlapping index by calling addIndexCluster() function sets
     const IndexClusterVector &refClusterVector = refGeometry->mIndexClusterVector;
     if (refClusterVector.size() > 0)
     {
@@ -83,7 +83,7 @@ void CAVEGeometry::setPrimitiveSetModes(const GLenum &mode)
         {
             PrimitiveSet* primset = getPrimitiveSet(i);
 
-            /* support primitive set 'DrawElementsUInt', add more types of primitive sets here if needed */
+            // support primitive set 'DrawElementsUInt', add more types of primitive sets here if needed
             DrawElementsUInt* drawElementUIntRef = dynamic_cast <DrawElementsUInt*> (primset);
             if (drawElementUIntRef) 
                 drawElementUIntRef->setMode(mode);
@@ -150,13 +150,4 @@ void CAVEGeometry::addIndexCluster(IndexClusterBase *clusterPtr)
         mIndexClusterVector.push_back(cluster);
     }
 }
-
-
-
-
-
-
-
-
-
 

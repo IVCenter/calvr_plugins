@@ -24,7 +24,7 @@ DSParamountSwitch::DSParamountSwitch(): mStateParaIdx(0), mNumParas(1), mRotStep
     mSwitchReadyFlag = false;
     mSwitchLockState = RELEASED;
 
-    /* create instance of intersector */
+    // create instance of intersector
     mDSIntersector = new DSIntersector();
     mDSIntersector->loadRootTargetNode(NULL, NULL);
 
@@ -66,10 +66,7 @@ void DSParamountSwitch::setObjectEnabled(bool flag)
     } 
     else 
     {
-    /*    setSingleChildOn(1);
-        mDSIntersector->loadRootTargetNode(NULL, NULL);
-        animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
-    */
+
     }
 
     if (animCallback) 
@@ -187,7 +184,7 @@ void DSParamountSwitch::update()
 {
     if (mSwitchLockState == RELEASED) return;
 
-    /* release rotation lock flag */
+    // release rotation lock flag
     if (++mRotStepsCount > ANIM_PARA_PAINT_FRAME_ROTATE_SAMPS)
     {
         mRotStepsCount = 0;

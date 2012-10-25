@@ -21,7 +21,7 @@ DSGeometryCreator::DSGeometryCreator(): mShapeSwitchIdx(0), mNumShapeSwitches(0)
     this->addChild(mPATransFwd);
     this->addChild(mPATransBwd);
 
-    /* create both instances of intersector */
+    // create both instances of intersector
     mDSIntersector = new DSIntersector();
     mDOIntersector = new DOIntersector();
     mDSIntersector->loadRootTargetNode(NULL, NULL);
@@ -39,6 +39,7 @@ DSGeometryCreator::DSGeometryCreator(): mShapeSwitchIdx(0), mNumShapeSwitches(0)
 // Destructor
 DSGeometryCreator::~DSGeometryCreator()
 {
+
 }
 
 
@@ -88,8 +89,6 @@ void DSGeometryCreator::setObjectEnabled(bool flag)
             mIsOpen = false;
             mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
         }
-        //mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setSingleChildOn(0);
-        //mShapeSwitchEntryArray[mShapeSwitchIdx]->mFlipUpFwdAnim->reset();
     } 
     else 
     {
@@ -100,21 +99,6 @@ void DSGeometryCreator::setObjectEnabled(bool flag)
         }
         mIsOpen = false;
         mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
-
-        /*
-        setSingleChildOn(1);
-        animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
-
-        mDSIntersector->loadRootTargetNode(NULL, NULL);
-        mDOIntersector->loadRootTargetNode(NULL, NULL);
-
-        // turn off all geometry objects associated with DesignObjectHanlder 
-        mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
-        mDOGeometryCreator->setReferenceAxisMasking(false);
-        mDOGeometryCreator->setWireframeActiveID(-1);
-        mDOGeometryCreator->setSolidshapeActiveID(-1);
-        DrawingStateTransitionHandle(mDrawingState, IDLE);  
-        */
     }
 
     mDrawingState = IDLE;
@@ -187,24 +171,27 @@ void DSGeometryCreator::switchToNextSubState()
 * Function: inputDevMoveEvent()
 ***************************************************************/
 void DSGeometryCreator::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos)
-{	
+{
     if (mDevPressedFlag)
     {
         if (mDrawingState == START_DRAWING)
         {
+            bool snap = false;
+            osg::Vec3 center = osg::Vec3();
+
             if (mDOIntersector->test(pointerOrg, pointerPos))
             {
                 osg::Vec3 hit = mDOIntersector->getWorldHitPosition();
 
                 CAVEGeodeShape *hitCAVEGeode = dynamic_cast <CAVEGeodeShape*>(mDOIntersector->getHitNode());
                 if (hitCAVEGeode)
-                { 
-                    osg::Vec3 center = osg::Vec3();
+                {
                     if (hitCAVEGeode->snapToVertex(hit, &center))
                     {
-                        mDOGeometryCreator->setSnapPos(center, false);
+                        snap = true;
+                        //mDOGeometryCreator->setSnapPos(center, false);
                     }
-                    else
+                    /*else
                     {
                         mDOGeometryCreator->setSnapPos(pointerPos);
                     }
@@ -212,14 +199,32 @@ void DSGeometryCreator::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg
                 else
                 {
                     mDOGeometryCreator->setSnapPos(pointerPos);
+                }*/
+                
                 }
+            }
+
+            osg::Matrixf w2o = cvr::PluginHelper::getWorldToObjectTransform();
+            osg::Matrixd scaleMat;
+            scaleMat.makeScale(osg::Vec3(1.5, 1.5, 1.5));
+            //scaleMat.invert(scaleMat);
+            osg::Matrixd o2cad = scaleMat;
+
+            if (snap)
+            {
+                center = center * o2cad;
+
+                mDOGeometryCreator->setSnapPos(center, false);
+                std::cout << "snap " << center[0] << " " << center[1] << " " << center[2] << std::endl;
             }
             else
             {
-                mDOGeometryCreator->setSnapPos(pointerPos);
-            }
+                osg::Vec3 pos = pointerPos;
+                pos = pos * o2cad;
 
-            //mDOGeometryCreator->setSnapPos(pointerPos);
+                mDOGeometryCreator->setSnapPos(pos);
+                std::cout << "no snap " << pos[0] << " " << pos[1] << " " << pos[2] << std::endl;
+            }
             mDOGeometryCreator->updateReferenceAxis();
         }
     }
@@ -285,7 +290,6 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
 
             if (mDSIntersector->test(pointerOrg, pointerPos))
             {
-            //std::cout << "1 hit " << i << std::endl;
                 mShapeSwitchIdx = i;
                 hit = true;
                 break;
@@ -300,7 +304,6 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
 
             if (mDSIntersector->test(pointerOrg, pointerPos))
             {
-            //std::cout << "2 hit " << i << std::endl;
                 mShapeSwitchIdx = i;
                 hit = true;
                 break;
@@ -369,7 +372,6 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
             {
                 mDOGeometryCreator->setSolidshapeInitPos(mDOIntersector->getWorldHitPosition());
             }
-
             mDOGeometryCreator->setSnapPos(pointerPos);
             mDOGeometryCreator->setReferencePlaneMasking(true, true, true);
         } 
@@ -424,6 +426,7 @@ bool DSGeometryCreator::inputDevReleaseEvent()
 ***************************************************************/
 void DSGeometryCreator::update()
 {
+
 }
 
 
@@ -447,16 +450,12 @@ void DSGeometryCreator::DrawingStateTransitionHandle(const DrawingState& prevSta
 {
     if (prevState == IDLE && nextState == READY_TO_DRAW)
     {
-        //mSphereExteriorSwitch->setAllChildrenOff();
-        //mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setAllChildrenOff();
-        //mDSParticleSystemPtr->setEmitterEnabled(true);
-
         setLocked(true);
     }
 
     else if (prevState == READY_TO_DRAW && nextState == START_DRAWING)
     {
-        //mDSParticleSystemPtr->setEmitterEnabled(false);
+
     }
 
     else if ((prevState == READY_TO_DRAW && nextState == IDLE) ||
@@ -466,7 +465,6 @@ void DSGeometryCreator::DrawingStateTransitionHandle(const DrawingState& prevSta
         mSphereExteriorSwitch->setAllChildrenOn();
         mShapeSwitchEntryArray[mShapeSwitchIdx]->mSwitch->setSingleChildOn(0);
         mShapeSwitchEntryArray[mShapeSwitchIdx]->mFlipUpFwdAnim->reset();
-        //mDSParticleSystemPtr->setEmitterEnabled(false);
 
         setLocked(false);
     }
@@ -504,23 +502,8 @@ void DSGeometryCreator::setHighlight(bool isHighlighted, const osg::Vec3 &pointe
         stateset->setMode(GL_CULL_FACE, StateAttribute::OVERRIDE | StateAttribute::ON);
         stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
 
-        //fwdVec[i]->addChild(mHighlightGeode);
-        //((osg::Geode*)mShapeSwitchEntryArray[idx]->mSwitch->getChild(0))->addDrawable(mSD);
-        //std::cout << idx << std::endl;
-
         ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[idx]->mSwitch->getChild(0)))->addChild(mHighlightGeode);
     }
-
-    /*    else
-    {
-        for (int i = 0; i < mNumShapeSwitches; i++)
-        {
-            if (mHighlightGeode)
-                ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->removeChild(mHighlightGeode);
-                //((osg::Geode*)mShapeSwitchEntryArray[i]->mSwitch->getChild(0))->removeDrawable(mSD);
-        }
-    }*/
-
     mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
 }
  

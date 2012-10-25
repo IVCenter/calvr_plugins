@@ -39,7 +39,7 @@ class CAVEGeodeSnapWireframe: public CAVEGeode
 
     virtual void resize(osg::Vec3 &gridVect) = 0;
 
-    /* shape morphing functions: 'dirtyBound()' is called with in 'resize()' */
+    // shape morphing functions: 'dirtyBound()' is called with in 'resize()'
     void setInitPosition(const osg::Vec3 &initVect) { mInitPosition = initVect; }
     void setScaleVect(const osg::Vec3 &scaleVect) { mScaleVect = scaleVect; }
 
@@ -89,18 +89,4 @@ class CAVEGeodeSnapWireframeCylinder: public CAVEGeodeSnapWireframe
 
 
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

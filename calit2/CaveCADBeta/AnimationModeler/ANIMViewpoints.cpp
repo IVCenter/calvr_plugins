@@ -29,33 +29,6 @@ void ANIMCreateViewpoints(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
     
     virtualSphere->setRadius(ANIM_VIRTUAL_SPHERE_RADIUS);
 
-    // set up the forward / backward scale animation path 
-/*    AnimationPath* animationPathScaleFwd = new AnimationPath;
-    AnimationPath* animationPathScaleBwd = new AnimationPath;
-    animationPathScaleFwd->setLoopMode(AnimationPath::NO_LOOPING);
-    animationPathScaleBwd->setLoopMode(AnimationPath::NO_LOOPING);
-
-    osg::Vec3 pos(2.5, 0, 0);   
-
-    Vec3 scaleFwd, scaleBwd;
-    float step = 1.f / ANIM_VIRTUAL_SPHERE_NUM_SAMPS;
-    for (int i = 0; i < ANIM_VIRTUAL_SPHERE_NUM_SAMPS + 1; i++)
-    {
-        float val = i * step;
-        scaleFwd = Vec3(val, val, val);
-        scaleBwd = Vec3(1-val, 1-val, 1-val);
-        animationPathScaleFwd->insert(val, AnimationPath::ControlPoint(pos, Quat(), scaleFwd));
-        animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(pos, Quat(), scaleBwd));
-    }
-
-    AnimationPathCallback *animCallbackFwd = new AnimationPathCallback(animationPathScaleFwd, 
-						0.0, 1.f / ANIM_VIRTUAL_SPHERE_LAPSE_TIME);
-    AnimationPathCallback *animCallbackBwd = new AnimationPathCallback(animationPathScaleBwd, 
-						0.0, 1.f / ANIM_VIRTUAL_SPHERE_LAPSE_TIME); 
-    (*xformScaleFwd)->setUpdateCallback(animCallbackFwd);
-    (*xformScaleBwd)->setUpdateCallback(animCallbackBwd);
- */   
-
     // apply shaders to geode stateset 
     sphereDrawable->setColor(osg::Vec4(1, 0, 0, 0.5));
 

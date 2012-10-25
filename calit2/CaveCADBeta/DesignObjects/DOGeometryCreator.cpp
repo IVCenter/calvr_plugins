@@ -274,8 +274,8 @@ void DOGeometryCreator::registerSolidShape()
 {
     if (mSolidshapeGeode->isValid())
     {
-        /* 'mDOShapeSwitch -> CAVEGroupShape -> CAVEGeodeShape' each CAVEGroupShape contains
-            only one instance of 'CAVEGeodeShape' at the time of being created. */
+        // 'mDOShapeSwitch -> CAVEGroupShape -> CAVEGeodeShape' each CAVEGroupShape contains
+        //  only one instance of 'CAVEGeodeShape' at the time of being created.
         CAVEGeodeShape *shape = new CAVEGeodeShape((CAVEGeodeShape::Type) mSolidShapeActiveID, 
                 mSolidshapeGeode->getInitPosition(), mSolidshapeGeode->getScaleVect());
         CAVEGroupShape *group = new CAVEGroupShape(shape);

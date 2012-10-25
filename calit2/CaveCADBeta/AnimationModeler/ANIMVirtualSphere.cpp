@@ -36,23 +36,6 @@ void ANIMCreateVirtualSphere(osg::PositionAttitudeTransform** xformScaleFwd,
 
     osg::StateSet* stateset;   
 
-    // highlights
-/*    Sphere* highlightSphere = new Sphere();
-    ShapeDrawable* highlightDrawable = new ShapeDrawable(highlightSphere);
-    Geode* highlightGeode = new Geode();
-    highlightSphere->setRadius(ANIM_VIRTUAL_SPHERE_RADIUS * 1.3);
-    highlightDrawable->setColor(osg::Vec4(0,0,1,0.3));
-    highlightGeode->addDrawable(highlightDrawable);
-    (*xformScaleFwd)->addChild(highlightGeode);
-    (*xformScaleBwd)->addChild(highlightGeode);
-
-    stateset = highlightDrawable->getOrCreateStateSet();
-    stateset->setMode(GL_BLEND, StateAttribute::ON);
-    stateset->setMode(GL_CULL_FACE, StateAttribute::ON);
-    stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-    stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
-*/
-
     // set up the forward / backward scale animation path
     AnimationPath* animationPathScaleFwd = new AnimationPath;
     AnimationPath* animationPathScaleBwd = new AnimationPath;
@@ -79,19 +62,18 @@ void ANIMCreateVirtualSphere(osg::PositionAttitudeTransform** xformScaleFwd,
     (*xformScaleFwd)->setUpdateCallback(animCallbackFwd);
     (*xformScaleBwd)->setUpdateCallback(animCallbackBwd);
 
-    /* apply shaders to geode stateset */
+    // apply shaders to geode stateset
     stateset = new StateSet();
     stateset->setMode(GL_BLEND, StateAttribute::OVERRIDE | StateAttribute::ON );
     stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
-    //sphereGeode->setStateSet(stateset);
     sphereDrawable->setStateSet(stateset);
 
     Program* shaderProg = new Program;
-    stateset->setAttribute(shaderProg);
-    shaderProg->addShader(Shader::readShaderFile(Shader::VERTEX, ANIMDataDir() + "Shaders/VirtualSphere.vert"));
-    shaderProg->addShader(Shader::readShaderFile(Shader::FRAGMENT, ANIMDataDir() + "Shaders/VirtualSphere.frag"));
+    shaderProg->addShader(Shader::readShaderFile(Shader::VERTEX, ANIMDataDir() + "Shaders/VirtualEarth.vert"));//Sphere.vert"));
+    shaderProg->addShader(Shader::readShaderFile(Shader::FRAGMENT, ANIMDataDir() + "Shaders/VirtualEarth.frag"));//Sphere.frag"));
+    //stateset->setAttribute(shaderProg);
 
-    Image* envMap = osgDB::readImageFile(ANIMDataDir() + "Textures/EnvMap.JPG");
+    Image* envMap = osgDB::readImageFile(ANIMDataDir() + "Textures/EarthDay.JPG");//EnvMap.JPG");
     Texture2D* envTex = new Texture2D(envMap);
     stateset->setTextureAttributeAndModes(0, envTex, StateAttribute::ON);
 
@@ -103,7 +85,6 @@ void ANIMCreateVirtualSphere(osg::PositionAttitudeTransform** xformScaleFwd,
 
     Uniform* lightPosUniform = new Uniform("LightPos", Vec4(1.0, 0.0, 0.2, 0.0));
     stateset->addUniform(lightPosUniform);
-
 }
 
 

@@ -193,7 +193,9 @@ void Maze2::preFrame()
 		frameDuration = PluginHelper::getLastFrameDuration();
 		((double*)mClkBuf)[0] = frameDuration;
 		ComController::instance()->sendSlaves((char*) &mClkBuf, sizeof(mClkBuf));
-    } else {
+    } 
+    else 
+    {
 		ComController::instance()->readMaster((char*) &mClkBuf, sizeof(mClkBuf));
 		frameDuration = ((double*)mClkBuf)[0];
     }
@@ -334,19 +336,12 @@ bool Maze2::processEvent(InteractionEvent *event)
 	{
 		KeyboardInteractionEvent *keyEvent = event->asKeyboardEvent();
 		int key = keyEvent->getKey();
-		if (keyEvent->getInteraction() == KEY_DOWN) mNaviHandler->updateKeys(key, true);
-		else mNaviHandler->updateKeys(key, false);
+		if (keyEvent->getInteraction() == KEY_DOWN) 
+            mNaviHandler->updateKeys(key, true);
+		else 
+            mNaviHandler->updateKeys(key, false);
 	}
 
 	return false;
 }
-
-
-
-
-
-
-
-
-
 

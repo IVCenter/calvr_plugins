@@ -13,9 +13,10 @@ using namespace std;
 using namespace osg;
 
 
-const float CAVEGeodeShape::gTextureTileSize(0.3048f);
+//const float CAVEGeodeShape::gTextureTileSize(0.3048f);
+const float CAVEGeodeShape::gTextureTileSize(304.8f);
 
-//Constructor
+// Constructor
 CAVEGeodeShape::CAVEGeodeShape(const Type &typ, const Vec3 &initVect, const Vec3 &sVect):
 		mCenterVect(Vec3(0, 0, 0)), mNumVertices(0), mNumNormals(0), mNumTexcoords(0),
 		mDOCollectorIndex(-1)
@@ -34,7 +35,7 @@ CAVEGeodeShape::CAVEGeodeShape(const Type &typ, const Vec3 &initVect, const Vec3
         default: break;
     }
 
-    /* texture coordinates is associated with size of the geometry */
+    // texture coordinates is associated with size of the geometry
     Image* img = osgDB::readImageFile(CAVEGeode::getDataDir() + "Textures/White.JPG");
     Texture2D* texture = new Texture2D(img);
     texture->setWrap(Texture::WRAP_S, Texture::MIRROR);
@@ -77,7 +78,7 @@ CAVEGeodeShape::CAVEGeodeShape(CAVEGeodeShape *geodeShapeRef): mDOCollectorIndex
     Vec3 *geodeVertexDataPtr, *geodeNormalDataPtr, *geodeUDirDataPtr, *geodeVDirDataPtr;
     Vec2 *geodeTexcoordDataPtr;
 
-    /* check the valid status of all data field from 'CAVEGeodeShape' */
+    // check the valid status of all data field from 'CAVEGeodeShape'
     if (geodeVertexArray->getType() == Array::Vec3ArrayType)
         geodeVertexDataPtr = (Vec3*) (geodeVertexArray->getDataPointer());
     else return;
@@ -118,7 +119,7 @@ CAVEGeodeShape::CAVEGeodeShape(CAVEGeodeShape *geodeShapeRef): mDOCollectorIndex
         mTexcoordArray->push_back(geodeTexcoordDataPtr[i]);
     }
 
-    /* make deep copy of 'CAVEGeometry' objects into this 'CAVEGeodeShape' */
+    // make deep copy of 'CAVEGeometry' objects into this 'CAVEGeodeShape'
     CAVEGeometryVector &geomVector = geodeShapeRef->getCAVEGeometryVector();
     const int nGeoms = geomVector.size();
     if (nGeoms > 0)
@@ -137,17 +138,17 @@ CAVEGeodeShape::CAVEGeodeShape(CAVEGeodeShape *geodeShapeRef): mDOCollectorIndex
     }
 
 
-    /* copy the same center vector from 'geodeShapeRef', vertex masking vector is with all false values */
+    // copy the same center vector from 'geodeShapeRef', vertex masking vector is with all false values
     mCenterVect = geodeShapeRef->mCenterVect;
     mVertexMaskingVector.resize(mNumVertices, false);
 
-    /* apply color texture to virtual surface */
+    // apply color texture to virtual surface
     applyColorTexture(geodeShapeRef->mDiffuse, geodeShapeRef->mSpecular, geodeShapeRef->mAlpha,
 			geodeShapeRef->mTexFilename);
 }
 
 
-//Destructor
+// Destructor
 CAVEGeodeShape::~CAVEGeodeShape()
 {
 }
@@ -199,7 +200,7 @@ void CAVEGeodeShape::updateVertexMaskingVector()
     {
         if (mGeometryVector[i]->mDOCollectorIndex >= 0)
         {
-            /* mark single indices contained in mGeometryVector[i] */
+            // mark single indices contained in mGeometryVector[i]
             unsigned int nPrimitiveSets = mGeometryVector[i]->getNumPrimitiveSets();
             if (nPrimitiveSets > 0)
             {
@@ -207,7 +208,7 @@ void CAVEGeodeShape::updateVertexMaskingVector()
                 {
                     PrimitiveSet *primSetRef = mGeometryVector[i]->getPrimitiveSet(j);
 
-                    /* support primitive set 'DrawElementsUInt', add more types of primitive sets here if needed */
+                    // support primitive set 'DrawElementsUInt', add more types of primitive sets here if needed
                     DrawElementsUInt* drawElementUIntRef = dynamic_cast <DrawElementsUInt*> (primSetRef);
                     if (drawElementUIntRef)
                     {
@@ -224,7 +225,7 @@ void CAVEGeodeShape::updateVertexMaskingVector()
                 }
             }
 
-            /* mark clustered indices contained in 'mIndexClusterVector' */
+            // mark clustered indices contained in 'mIndexClusterVector'
             const int numClusters = mGeometryVector[i]->mIndexClusterVector.size();
             for (int j = 0; j < numClusters; j++)
             {
@@ -254,13 +255,13 @@ void CAVEGeodeShape::applyEditorInfo(EditorInfo **infoPtr)
 ***************************************************************/
 void CAVEGeodeShape::applyEditorInfo(EditorInfo **infoPtr, CAVEGeodeShape *refGeodePtr)
 {
-    /* call generic static function to adapt 'EditorInfo' changes into array data */
+    // call generic static function to adapt 'EditorInfo' changes into array data
     applyEditorInfo(&mVertexArray, &mNormalArray, &mUDirArray, &mVDirArray, &mTexcoordArray,
 		    	refGeodePtr->mVertexArray, refGeodePtr->mNormalArray,
 			refGeodePtr->mUDirArray, refGeodePtr->mVDirArray, refGeodePtr->mTexcoordArray, 
 		    mNumVertices, infoPtr, mVertexMaskingVector);
 
-    /* dirty display list and bound for all geometries */
+    // dirty display list and bound for all geometries
     const int nGeoms = mGeometryVector.size();
     if (nGeoms > 0)
     {
@@ -271,15 +272,18 @@ void CAVEGeodeShape::applyEditorInfo(EditorInfo **infoPtr, CAVEGeodeShape *refGe
         }
     }
 
-    /* update geode shape center */
+    // update geode shape center
     const BoundingBox& bb = getBoundingBox();
     mCenterVect = bb.center();
 }
 
 
+/***************************************************************
+* Function: hideSnapBounds()
+***************************************************************/
 void CAVEGeodeShape::hideSnapBounds()
 {
-    osg::Vec4 snapSphereColor = osg::Vec4(1,0,1,0);
+    osg::Vec4 snapSphereColor = osg::Vec4(1, 0, 1, 0);
     Material *mat = new Material;
     mat->setDiffuse(Material::FRONT_AND_BACK, snapSphereColor);
 
@@ -306,15 +310,18 @@ void CAVEGeodeShape::hideSnapBounds()
 }
 
 
+/***************************************************************
+* Function: snapToVertex()
+***************************************************************/
 bool CAVEGeodeShape::snapToVertex(const osg::Vec3 point, osg::Vec3 *ctr)
 {
     osg::Vec4 hideColor, showColor;
     hideColor = osg::Vec4(1, 0, 1, 0);
-    showColor = osg::Vec4(1, 0, 1, 0);//0.6);
+    showColor = osg::Vec4(1, 0, 1, 0.6);
     Material *mat = new Material;
     mat->setDiffuse(Material::FRONT_AND_BACK, hideColor);
 
-    // hide all bounding spheres
+    // hide all vertex bounding spheres
     for (int i = 0 ; i < mVertBoundingSpheres.size(); ++i)
     {
         osg::ShapeDrawable * sd = mShapeDrawableMap[mVertBoundingSpheres[i]];
@@ -325,7 +332,7 @@ bool CAVEGeodeShape::snapToVertex(const osg::Vec3 point, osg::Vec3 *ctr)
 
     std::map<osg::Cylinder*, osg::ShapeDrawable*>::iterator it;
 
-    // hide all edge cylinder bounds
+    // hide all edge bounding cylinders
     for (it = mEdgeDrawableMap.begin(); it != mEdgeDrawableMap.end(); ++it)
     {
         osg::ShapeDrawable *sd = it->second;
@@ -356,7 +363,6 @@ bool CAVEGeodeShape::snapToVertex(const osg::Vec3 point, osg::Vec3 *ctr)
             return true;
         }
     }
-    
     
     // check edge intersection
     for (it = mEdgeDrawableMap.begin(); it != mEdgeDrawableMap.end(); ++it)
@@ -427,7 +433,7 @@ void CAVEGeodeShape::initGeometryBox(const Vec3 &initVect, const Vec3 &sVect)
     front = Vec3(0, -1, 0);	back = Vec3(0, 1, 0);
     left = Vec3(-1, 0, 0);	right = Vec3(1, 0, 0);
 
-    /* decide x, y, z span and write 'mCenterVect' */
+    // decide x, y, z span and write 'mCenterVect'
     float xspan = xMax - xMin, yspan = yMax - yMin, zspan = zMax - zMin;
     mCenterVect = Vec3((xMax + xMin) * 0.5, (yMax + yMin) * 0.5, (zMax + zMin) * 0.5);
     mNumVertices = mNumNormals = mNumTexcoords = 24;
@@ -624,7 +630,7 @@ void CAVEGeodeShape::initGeometryBox(const Vec3 &initVect, const Vec3 &sVect)
         mTexcoordArray->push_back(Vec2(yspan, 0) / gTextureTileSize);
     }
 
-    /* create geometries for each surface */
+    // create geometries for each surface
     CAVEGeometry **geometryArrayPtr = new CAVEGeometry*[6];
     for (int i = 0; i < 6; i++)
     {
@@ -638,7 +644,7 @@ void CAVEGeodeShape::initGeometryBox(const Vec3 &initVect, const Vec3 &sVect)
         addDrawable(geometryArrayPtr[i]);
     }
 
-    /* write primitive set and index clusters */
+    // write primitive set and index clusters
     DrawElementsUInt* topSurface = new DrawElementsUInt(PrimitiveSet::POLYGON, 0);  
     DrawElementsUInt* bottomSurface = new DrawElementsUInt(PrimitiveSet::POLYGON, 0);
     DrawElementsUInt* frontSurface = new DrawElementsUInt(PrimitiveSet::POLYGON, 0);  
@@ -719,11 +725,11 @@ void CAVEGeodeShape::initGeometryCylinder(const Vec3 &initVect, const Vec3 &sVec
         height = -height; 
     }
 
-    /* take record of center vector and number of vertices, normals, texcoords */
+    // take record of center vector and number of vertices, normals, texcoords
     mCenterVect = Vec3(cx, cy, cz + height * 0.5);
     mNumVertices = mNumNormals = mNumTexcoords = (numFanSegs + 1) * 4;
 
-    /* create vertical edges, cap radiating edges and ring strips on side surface */
+    // create vertical edges, cap radiating edges and ring strips on side surface
     float intvl = M_PI * 2 / numFanSegs;
     for (int i = 0; i <= numFanSegs; i++)
     {
@@ -753,9 +759,7 @@ void CAVEGeodeShape::initGeometryCylinder(const Vec3 &initVect, const Vec3 &sVec
     }
 
 
-
     // Snapping bounds
-    
     float radius = 0.2;
     float snapSphereRadius = 0.2, snapSphereOpacity = 0.5;
     osg::Vec4 snapSphereColor = osg::Vec4(1, 0, 1, 0); 
@@ -843,8 +847,7 @@ void CAVEGeodeShape::initGeometryCylinder(const Vec3 &initVect, const Vec3 &sVec
     }
 
 
-
-    /* create geometries for each surface */
+    // create geometries for each surface
     CAVEGeometry **geometryArrayPtr = new CAVEGeometry*[3];
     for (int i = 0; i < 3; i++)
     {
@@ -858,7 +861,7 @@ void CAVEGeodeShape::initGeometryCylinder(const Vec3 &initVect, const Vec3 &sVec
         addDrawable(geometryArrayPtr[i]);
     }
 
-    /* write primitive set and index clusters */
+    // write primitive set and index clusters
     DrawElementsUInt* topSurface = new DrawElementsUInt(PrimitiveSet::POLYGON, 0);  
     DrawElementsUInt* bottomSurface = new DrawElementsUInt(PrimitiveSet::POLYGON, 0);
 
@@ -897,7 +900,7 @@ void CAVEGeodeShape::applyEditorInfo(Vec3Array **vertexArrayPtr, Vec3Array **nor
 		const Vec3Array *refUDirArrayPtr, const Vec3Array *refVDirArrayPtr, const Vec2Array *refTexcoordArrayPtr,
 		const int &nVerts, EditorInfo **infoPtr, const VertexMaskingVector &vertMaskingVector)
 {
-    /* access target and source data pointers */
+    // access target and source data pointers
     Vec3 *geodeVertexDataPtr, *geodeNormalDataPtr, *geodeUDirDataPtr, *geodeVDirDataPtr;
     Vec2 *geodeTexcoordDataPtr;
     const Vec3 *refGeodeVertexDataPtr, *refGeodeNormalDataPtr, *refGeodeUDirDataPtr, *refGeodeVDirDataPtr;
@@ -926,10 +929,10 @@ void CAVEGeodeShape::applyEditorInfo(Vec3Array **vertexArrayPtr, Vec3Array **nor
         {
             if (vertMaskingVector[i])
             {
-                /* apply offset values to vetex data vector */
+                // apply offset values to vetex data vector
                 geodeVertexDataPtr[i] = refGeodeVertexDataPtr[i] + offset;
 
-                /* apply offset values to texture coordinates, normal is not changed */
+                // apply offset values to texture coordinates, normal is not changed
                 Vec3 udir = refGeodeUDirDataPtr[i];
                 Vec3 vdir = refGeodeVDirDataPtr[i];
                 Vec2 texoffset = Vec2(udir * offset, vdir * offset) / gTextureTileSize;
@@ -951,11 +954,11 @@ void CAVEGeodeShape::applyEditorInfo(Vec3Array **vertexArrayPtr, Vec3Array **nor
         {
             if (vertMaskingVector[i])
             {
-                /* update vertex list: 'translation' -> 'rotation' -> 'reversed translation' */
+                // update vertex list: 'translation' -> 'rotation' -> 'reversed translation'
                 Vec3 pos = refGeodeVertexDataPtr[i];
                 geodeVertexDataPtr[i] = (pos - center) * rotMat + center;
 
-                /* update normal and u, v-direction vectors with single rotations */
+                // update normal and u, v-direction vectors with single rotations
                 Vec3 norm = refGeodeNormalDataPtr[i];
                 Vec3 udir = refGeodeUDirDataPtr[i];
                 Vec3 vdir = refGeodeVDirDataPtr[i];
@@ -978,12 +981,12 @@ void CAVEGeodeShape::applyEditorInfo(Vec3Array **vertexArrayPtr, Vec3Array **nor
         {
             if (vertMaskingVector[i])
             {
-                /* update vertex list: 'translation' -> 'scaling' -> 'reversed translation' */
+                // update vertex list: 'translation' -> 'scaling' -> 'reversed translation'
                 Vec3 pos = refGeodeVertexDataPtr[i];
                 geodeVertexDataPtr[i] = (pos - center) * scaleMat + center;
                 Vec3 offset = geodeVertexDataPtr[i] - pos;
 
-                /* update texture coordinates 'u', 'v', normal and u, v-direction vectors are not changed  */
+                // update texture coordinates 'u', 'v', normal and u, v-direction vectors are not changed
                 Vec3 udir = refGeodeUDirDataPtr[i];
                 Vec3 vdir = refGeodeVDirDataPtr[i];
                 Vec2 texoffset = Vec2(udir * offset, vdir * offset) / gTextureTileSize;
