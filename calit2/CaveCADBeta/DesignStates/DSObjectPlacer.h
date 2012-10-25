@@ -1,12 +1,12 @@
 /***************************************************************
-* File Name: DSGeometryCreator.h
+* File Name: DSObjectPlacer.h
 *
 * Description: Derived class from DesignStateBase
 *
 ***************************************************************/
 
-#ifndef _DS_GEOMETRY_CREATOR_H_
-#define _DS_GEOMETRY_CREATOR_H_
+#ifndef _DS_OBJECT_PLACER_H
+#define _DS_OBJECT_PLACER_H
 
 
 // Local include
@@ -14,18 +14,17 @@
 #include "../AudioConfigHandler.h"
 #include "../SnapLevelController.h"
 #include "../DesignObjects/DOGeometryCreator.h"
-#include "../AnimationModeler/ANIMGeometryCreator.h"
-#include <cvrKernel/PluginHelper.h>
+#include "../AnimationModeler/ANIMObjectPlacer.h"
 
 
 /***************************************************************
-* Class: DSGeometryCreator
+* Class: DSObjectPlacer
 ***************************************************************/
-class DSGeometryCreator: public DesignStateBase
+class DSObjectPlacer: public DesignStateBase
 {
   public:
-    DSGeometryCreator();
-    ~DSGeometryCreator();
+    DSObjectPlacer();
+    ~DSObjectPlacer();
 
     // virtual functions inherited from base class
     virtual void setObjectEnabled(bool flag);
@@ -46,29 +45,27 @@ class DSGeometryCreator: public DesignStateBase
         START_DRAWING
     };
 
-    /* link 'DesignObjectHandler->DOGeometryCreator' to 'DSGeometryCreator'
-       class 'DSGeometryCreator' listens to input devices and translate the
+    /* link 'DesignObjectHandler->DOGeometryCreator' to 'DSObjectPlacer'
+       class 'DSObjectPlacer' listens to input devices and translate the
        input commands to geometry actions, communicate with 'DOGeometryCreator'
        to make these actions happen.
     */
     void setDesignObjectHandlerPtr(DesignObjectHandler *designObjectHandler);
-    void setAudioConfigHandlerPtr(AudioConfigHandler *audioConfigHandler) { mAudioConfigHandler = audioConfigHandler; }
 
   protected:
+    std::vector<osg::PositionAttitudeTransform*> mFwdVec, mBwdVec;
+
     osg::Switch *mSphereExteriorSwitch;		// switch on/off container exterior sphere
     osg::Geode *mSphereExteriorGeode;		// exterior geode target for intersection test
     osg::Geode *mHighlightGeode;
     osg::ShapeDrawable *mSD;
     int mShapeSwitchIdx, mNumShapeSwitches;
-    CAVEAnimationModeler::ANIMShapeSwitchEntry **mShapeSwitchEntryArray;
     bool mIsOpen, mIsHighlighted;
     std::vector<osg::PositionAttitudeTransform*> fwdVec, bwdVec;
 
     CAVEGeodeShape *prevGeode;
 
     DrawingState mDrawingState;
-    SnapLevelController *mSnapLevelController;
-    AudioConfigHandler *mAudioConfigHandler;
 
     // interfaces to design object (DO) controllers
     DOGeometryCollector *mDOGeometryCollector;

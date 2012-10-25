@@ -14,7 +14,7 @@
 #include "../AudioConfigHandler.h"
 #include "../TrackballController.h"
 #include "../AnimationModeler/ANIMTexturePallette.h"
-
+#include "../ColorSelector.h"
 
 /***************************************************************
 * Class: DSTexturePallette
@@ -25,7 +25,7 @@ class DSTexturePallette: public DesignStateBase
     DSTexturePallette();
     ~DSTexturePallette();
 
-    /* virtual functions inherited from base class */
+    // virtual functions inherited from base class
     virtual void setObjectEnabled(bool flag);
     virtual void switchToPrevSubState();
     virtual void switchToNextSubState();
@@ -36,7 +36,7 @@ class DSTexturePallette: public DesignStateBase
     void update();
     void setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
 
-    /* definition of texturing states */
+    // definition of texturing states
     enum TexturingState
     {
         IDLE,
@@ -48,22 +48,25 @@ class DSTexturePallette: public DesignStateBase
 
   protected:
 
-    /* OSG objects as decendents in DSTexturePallette */
+    // OSG objects as decendents in DSTexturePallette
     osg::Switch *mIdleStateSwitch, *mSelectStateSwitch, *mAlphaTurnerSwitch;
-    osg::ShapeDrawable *mSD;    
-
+    osg::ShapeDrawable *mSD;
+    ColorSelector *mColorSelector;
+    osg::PositionAttitudeTransform *mButtonFwd, *mButtonBwd;
     bool mIsOpen;
     std::vector<osg::PositionAttitudeTransform*> mFwdVec, mBwdVec, mHighlightVec;
 
-    int mTexIndex, mNumTexs;
+    int mTexIndex, mNumTexs, mColorIndex;
     CAVEAnimationModeler::ANIMTexturePalletteIdleEntry *mTextureStatesIdleEntry;
     CAVEAnimationModeler::ANIMTexturePalletteSelectEntry **mTextureStatesSelectEntryArray;
 
-    /* states and pointers that handles device inputs */
+    std::vector<CAVEAnimationModeler::ANIMTexturePalletteSelectEntry*> mTextureEntries, mColorEntries;
+
+    // states and pointers that handles device inputs
     TexturingState mTexturingState;
     DesignObjectHandler *mDesignObjectHandler;
 
-    /* audio config handler: update audio parameters as textures are adapted */
+    // audio config handler: update audio parameters as textures are adapted
     AudioConfigHandler *mAudioConfigHandler;
 
     void resetIntersectionRootTarget();

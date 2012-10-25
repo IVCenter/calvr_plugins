@@ -121,6 +121,26 @@ bool ElevatorRoom::init()
         _audioHandler->loadSound(17, handDir, handPos);
     }
 
+    // Spacenav
+    _transMult = ConfigManager::getFloat("Plugin.SpaceNavigator.TransMult", 1.0);
+    _rotMult = ConfigManager::getFloat("Plugin.SpaceNavigator.RotMult", 1.0);
+    _transcale = -0.05 * _transMult;
+    _rotscale = -0.00500 * _rotMult;//-0.000009 * _rotMult;
+
+    bool status = false;
+    if(ComController::instance()->isMaster())
+    {
+        if(spnav_open()==-1) 
+        {
+            cerr << "SpaceNavigator: Failed to connect to the space navigator daemon" << endl;
+        }
+        else
+        {
+            status = true;
+        }
+    }
+
+
 /*    if (ComController::instance()->isMaster())
     {
         std::string server = ConfigManager::getEntry("value", "Plugin.ElevatorRoom.Server", "");
@@ -188,6 +208,667 @@ bool ElevatorRoom::init()
         
     }
     */
+    return true;
+}
+
+void ElevatorRoom::preFrame()
+{
+    if (!_loaded)
+        return;
+    
+    osg::Vec3 objMat, headmat;
+    objMat = PluginHelper::getObjectMatrix().getTrans();
+    headmat = PluginHelper::getHeadMat().getTrans();
+    //std::cout << "Object x = " << objMat[0] << " y = " << objMat[1] << " z = " << objMat[2] << std::endl;
+    //std::cout << "Head x = " << headmat[0] << " y = " << headmat[1] << " z = " << headmat[2] << std::endl;
+
+    // update crosshair
+    osg::Vec3 pos, headpos, handdir;
+    headpos = PluginHelper::getHeadMat(0).getTrans();
+    handdir = osg::Vec3(0,1,0) * PluginHelper::getHandMat(0);
+    osg::Matrixd rotMat;
+    rotMat = PluginHelper::getHandMat(0);
+    rotMat.setTrans(osg::Vec3(0,0,0));
+    pos = PluginHelper::getHeadMat(0).getTrans() + (osg::Vec3(-32, 200, 0) * rotMat);
+
+    //pos = osg::Vec3(0,0,0);
+    //std::cout << pos[0] << " " << pos[1] << " " << pos[2] << std::endl;
+    _crosshairPat->setPosition(pos); 
+
+    // Pick a door to open 
+    if (_activeDoor < 0)
+    {
+        if ((PluginHelper::getProgramDuration() - _pauseStart) > _pauseLength)
+        {
+            _activeDoor = rand() % NUM_DOORS;
+
+            if (_audioHandler)
+            {
+                _audioHandler->playSound(_activeDoor + DING_OFFSET, "ding");
+            }
+
+            int num = rand() % 10;
+
+            if (num <= 3)
+            {
+                if (_debug)
+                {
+                    std::cout << _activeDoor << " - alien" << std::endl;
+                }
+
+                _aliensSwitch[_activeDoor]->setSingleChildOn(0);
+
+                _alliesSwitch[_activeDoor]->setAllChildrenOff();
+                _checkersSwitch[_activeDoor]->setAllChildrenOff();
+
+                _mode = ALIEN;
+
+                osg::ref_ptr<osg::Geode > geode;
+                geode = dynamic_cast<osg::Geode *>(_aliensSwitch[_activeDoor]->getChild(0));
+                if (geode)
+                {
+                    _activeObject = geode;
+                }
+            }
+            else if (num <= 7)
+            {
+                if (_debug)
+                {
+                    std::cout << _activeDoor << " - ally" << std::endl;
+                }
+
+                _alliesSwitch[_activeDoor]->setSingleChildOn(0);
+
+                _aliensSwitch[_activeDoor]->setAllChildrenOff();
+                _checkersSwitch[_activeDoor]->setAllChildrenOff();
+
+                _mode = ALLY;
+
+                osg::ref_ptr<osg::Geode > geode;
+                geode = dynamic_cast<osg::Geode *>(_alliesSwitch[_activeDoor]->getChild(0));
+                if (geode)
+                {
+                    _activeObject = geode;
+                }
+            }
+            else
+            {
+                if (_debug)
+                {
+                    std::cout << _activeDoor << " - checker " << std::endl;
+                }
+
+                _checkersSwitch[_activeDoor]->setSingleChildOn(0);
+
+                _alliesSwitch[_activeDoor]->setAllChildrenOff();
+                _aliensSwitch[_activeDoor]->setAllChildrenOff();
+
+                _mode = CHECKER;
+
+                osg::ref_ptr<osg::Geode > geode;
+                geode = dynamic_cast<osg::Geode *>(_checkersSwitch[_activeDoor]->getChild(0));
+                if (geode)
+                {
+                    _activeObject = geode;
+                }
+            }
+            _flashCount = 0;
+        }
+
+        if (_activeDoor <= _lights.size())
+        {
+            _lightSwitch[_activeDoor]->setValue((int)_mode, true);
+            _flashStartTime = PluginHelper::getProgramDuration();
+            _pauseStart = PluginHelper::getProgramDuration();
+            _pauseLength = LIGHT_PAUSE_LENGTH;
+        }
+
+    }
+    
+    // Handle light flashes
+    if (_activeDoor >= 0 && _activeDoor < NUM_DOORS &&
+        (PluginHelper::getProgramDuration() - _pauseStart) < _pauseLength)
+    {
+        if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _lightFlashPerSec)
+        {
+            if (_lightSwitch[_activeDoor]->getValue(_mode))
+            {
+                _lightSwitch[_activeDoor]->setSingleChildOn(NONE);
+                _flashStartTime = PluginHelper::getProgramDuration();
+            }
+            else
+            {
+                _lightSwitch[_activeDoor]->setSingleChildOn(_mode);
+                _flashStartTime = PluginHelper::getProgramDuration();
+            }
+        }
+    }
+   
+    // Handle door movement and animation
+    if (_activeDoor >= 0 && _activeDoor < NUM_DOORS &&
+        (PluginHelper::getProgramDuration() - _pauseStart) > _pauseLength)
+    {
+        _lightSwitch[_activeDoor]->setValue((int)_mode, true);
+        
+        // Flashing avatars
+       
+        if (_mode == CHECKER)
+        {
+            if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _checkSpeed)
+            {
+                if (_checkersSwitch[_activeDoor]->getValue(0))
+                {
+                    _checkersSwitch[_activeDoor]->setValue(0, false);
+                    _checkersSwitch[_activeDoor]->setValue(1, true);
+
+                    osg::ref_ptr<osg::Geode > geode;
+                    geode = dynamic_cast<osg::Geode *>(_checkersSwitch[_activeDoor]->getChild(1));
+                    if (geode)
+                    {
+                        _activeObject = geode;
+                    }
+                }
+                else
+                {
+                    _checkersSwitch[_activeDoor]->setValue(0, true);
+                    _checkersSwitch[_activeDoor]->setValue(1, false);
+
+                    osg::ref_ptr<osg::Geode > geode;
+                    geode = dynamic_cast<osg::Geode *>(_checkersSwitch[_activeDoor]->getChild(0));
+                    if (geode)
+                    {
+                        _activeObject = geode;
+                    }
+                }
+                _flashCount++;
+                _flashStartTime = PluginHelper::getProgramDuration();
+            }
+        }
+
+        else if (_mode == ALIEN)
+        {
+            if (_hit)
+            {
+                if (_flashCount > NUM_ALIEN_FLASH)
+                {
+                        _aliensSwitch[_activeDoor]->setValue(0, false);
+                        _aliensSwitch[_activeDoor]->setValue(1, false);
+                }
+
+                else if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _avatarFlashPerSec)
+                {
+                    if (_aliensSwitch[_activeDoor]->getValue(0))
+                    {
+                        _aliensSwitch[_activeDoor]->setValue(0, false);
+                        _aliensSwitch[_activeDoor]->setValue(1, true);
+
+                        osg::ref_ptr<osg::Geode > geode;
+                        geode = dynamic_cast<osg::Geode *>(_aliensSwitch[_activeDoor]->getChild(1));
+                        if (geode)
+                        {
+                            _activeObject = geode;
+                        }
+                    }
+                    else
+                    {
+                        _aliensSwitch[_activeDoor]->setValue(0, true);
+                        _aliensSwitch[_activeDoor]->setValue(1, false);
+
+<<<<<<< HEAD
+                        osg::ref_ptr<osg::Geode > geode;
+                        geode = dynamic_cast<osg::Geode *>(_aliensSwitch[_activeDoor]->getChild(0));
+                        if (geode)
+                        {
+                            _activeObject = geode;
+                        }
+                    }
+                    _flashCount++; 
+                    _flashStartTime = PluginHelper::getProgramDuration();
+                }
+            }
+        }
+
+        else if (_mode == ALLY)
+        {
+            if (_hit)
+            {
+                if (_flashCount > NUM_ALLY_FLASH)
+                {
+                        _alliesSwitch[_activeDoor]->setValue(0, true);
+                        _alliesSwitch[_activeDoor]->setValue(1, false);
+                }
+
+                else if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _avatarFlashPerSec)
+                {
+                    if (_alliesSwitch[_activeDoor]->getValue(0))
+                    {
+                        _alliesSwitch[_activeDoor]->setValue(0, false);
+                        _alliesSwitch[_activeDoor]->setValue(1, true);
+=======
+        _lights.push_back(drawable);
+        
+        
+        // Sound
+        
+        if (_audioHandler)
+        {
+            osg::Vec3 pos, center, dir;
+            osg::Matrix o2w, local2o;
+            o2w = PluginHelper::getObjectMatrix();
+            local2o = _geoRoot->getInverseMatrix();
+
+            pos = osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0);
+            pos = pos * local2o * o2w;
+            center = _geoRoot->getMatrix().getTrans();
+            center = center * local2o * o2w;
+            dir = pos - center;
+
+            // 1 - 8 ding sounds
+            _audioHandler->loadSound(i + DING_OFFSET, dir, pos);
+        }
+    }
+>>>>>>> 85785cfe26d13bcaf6117a54cafed5f6891f8791
+
+                        osg::ref_ptr<osg::Geode > geode;
+                        geode = dynamic_cast<osg::Geode *>(_alliesSwitch[_activeDoor]->getChild(1));
+                        if (geode)
+                        {
+                            _activeObject = geode;
+                        }
+                    }
+                    else
+                    {
+                        _alliesSwitch[_activeDoor]->setValue(0, true);
+                        _alliesSwitch[_activeDoor]->setValue(1, false);
+
+                        osg::ref_ptr<osg::Geode > geode;
+                        geode = dynamic_cast<osg::Geode *>(_alliesSwitch[_activeDoor]->getChild(0));
+                        if (geode)
+                        {
+                            _activeObject = geode;
+                        }
+                    }
+                    _flashCount++; 
+                    _flashStartTime = PluginHelper::getProgramDuration();
+                }
+            }
+        }
+
+        if (_isOpening)
+        {
+            openDoor(_activeDoor);
+            if (_doorDist > 0.8)
+            {
+                _isOpening = false;
+            }
+        }
+        else
+        {
+            closeDoor(_activeDoor);
+            if (_doorDist < DOOR_SPEED)
+            {
+                if (_activeDoor <= _lightSwitch.size())
+                {
+                    _lightSwitch[_activeDoor]->setValue(NONE, true);
+                }
+                
+                _isOpening = true;
+                _activeDoor = -1;
+                _doorDist = 0;
+                _pauseStart = PluginHelper::getProgramDuration();
+                _pauseLength = 1 + rand() % 5;
+                _hit = false;
+
+                if (_debug)
+                {
+                    std::cout << "Pause for " << _pauseLength << " seconds" << std::endl;
+                }
+            }
+        }
+    }
+    
+    if (_audioHandler)
+    {
+        // Update sound
+        osg::Vec3 handPos, headPos, headDir, handDir;
+/*        handPos = cvr::PluginHelper::getHandMat().getTrans();
+        headPos = cvr::PluginHelper::getHeadMat().getTrans();
+        headDir = osg::Vec3(0, 0, -1); 
+        handDir = handPos - headPos;*/
+
+        headPos = osg::Vec3(0, 1, 0) * cvr::PluginHelper::getObjectMatrix();//cvr::PluginHelper::getHeadMat(0);
+        headDir = headPos - cvr::PluginHelper::getObjectMatrix().getTrans();//cvr::PluginHelper::getHeadMat(0).getTrans();
+        headDir.normalize();
+
+        handPos = osg::Vec3(0, 1, 0) * cvr::PluginHelper::getHandMat();
+        handDir = handPos - cvr::PluginHelper::getHandMat().getTrans();//headPos;
+        handDir.normalize();
+ 
+        // user position
+        _audioHandler->update(0, headDir, headPos);
+        // laser sound
+        _audioHandler->update(17, handDir, handPos);
+
+    }
+
+    // Spacenav
+    Matrixd finalmat;
+
+    if(ComController::instance()->isMaster())
+    {
+        spnav_event sev;
+
+<<<<<<< HEAD
+        double x, y, z;
+        x = y = z = 0.0;
+        double rx, ry, rz;
+        rx = ry = rz = 0.0;
+
+        while(spnav_poll_event(&sev)) 
+        {
+            if(sev.type == SPNAV_EVENT_MOTION) 
+            {
+                x += sev.motion.x;
+                y += sev.motion.z;
+                z += sev.motion.y;
+                rx += sev.motion.rx;
+                ry += sev.motion.rz;
+                rz += sev.motion.ry;
+                // printf("got motion event: t(%d, %d, %d) ", sev.motion.x, sev.motion.y, sev.motion.z);
+                // printf("r(%d, %d, %d)\n", sev.motion.rx, sev.motion.ry, sev.motion.rz);
+            } 
+            else 
+            {	/* SPNAV_EVENT_BUTTON */
+                //printf("got button %s event b(%d)\n", sev.button.press ? "press" : "release", sev.button.bnum);
+                if(sev.button.press)
+                {
+                    /*switch(sev.button.bnum)
+                    {
+                    case 0:
+                        transcale *= 1.1;
+                        break;
+                    case 1:
+                        transcale *= 0.9;
+                        break;
+                    case 2:
+                        rotscale *= 1.1;
+                        break;
+                    case 3:
+                        rotscale *= 0.9;
+                        break;
+                    default:
+                        break;
+=======
+        // Sound
+        
+        if (_audioHandler)
+        {
+            osg::Vec3 pos = osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0);
+            osg::Vec3 dir = pos - osg::Vec3(0,0,0);
+
+            // 9 - 16 explosion sounds
+            _audioHandler->loadSound(i + EXPLOSION_OFFSET, dir, pos);
+        }
+    }   
+>>>>>>> 85785cfe26d13bcaf6117a54cafed5f6891f8791
+
+                    }
+                    cerr << "Translate Scale: " << transcale << " Rotate Scale: " << rotscale << endl;
+                    */
+                }
+            }
+        }
+
+        x *= 0;//_transcale;
+        y *= 0;//_transcale;
+        z *= 0;//_transcale;
+        rx *= 0;//_rotscale;
+        ry *= 0;//_rotscale;
+        rz *= _rotscale;
+
+
+        Matrix view = PluginHelper::getHeadMat();
+
+        Vec3 campos = view.getTrans();
+        Vec3 trans = Vec3(x, y, z);
+
+        trans = (trans * view) - campos;
+
+        Matrix tmat;
+        tmat.makeTranslate(trans);
+        Vec3 xa = Vec3(1.0, 0.0, 0.0);
+        Vec3 ya = Vec3(0.0, 1.0, 0.0);
+        Vec3 za = Vec3(0.0, 0.0, 1.0);
+
+        xa = osg::Vec3();//(xa * view) - campos;
+        ya = osg::Vec3();//(ya * view) - campos;
+        za = (za * view) - campos;
+
+        Matrix rot;
+        rot.makeRotate(rx, xa, ry, ya, rz, za);
+
+        Matrix ctrans, nctrans;
+        ctrans.makeTranslate(campos);
+        nctrans.makeTranslate(-campos);
+
+        finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
+
+        ComController::instance()->sendSlaves((char *)finalmat.ptr(), sizeof(double[16]));
+    }
+    else
+    {
+        ComController::instance()->readMaster((char *)finalmat.ptr(), sizeof(double[16]));
+    }
+
+    PluginHelper::setObjectMatrix(finalmat);
+}
+
+void ElevatorRoom::menuCallback(MenuItem * item)
+{
+    if(item == _loadButton)
+    {
+        if (!_loaded)
+        {
+            loadModels();
+            _loaded = true;
+        }
+    }
+
+    else if (item == _clearButton)
+    {
+        if (_loaded)
+        {
+            clear();
+            _loaded = false;
+        }
+    }
+
+    else if(item == _checkerSpeedRV)
+    {
+        _checkSpeed = (int)_checkerSpeedRV->getValue();
+    }
+
+    else if(item == _alienChanceRV)
+    {
+        int newVal = _alienChanceRV->getValue();
+        if (_alienChance + _allyChance + _checkChance <= 100 &&
+            newVal > -1  && 100 - newVal - _checkChance > -1  && _checkChance > -1)
+        {
+            _alienChance = newVal;
+            _allyChance = 100 - _alienChance - _checkChance;
+
+            char str[50];
+            sprintf(str, "Alien: %d  Astro: %d  Checker: %d", _alienChance, _allyChance, _checkChance);
+            _chancesText->setText(str);
+        }
+
+    }
+
+}
+
+bool ElevatorRoom::processEvent(InteractionEvent * event)
+{
+    if (!_loaded)
+        return false;
+
+    TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
+
+    if(!tie)
+    {
+        return true;
+    }
+
+    if(tie->getHand() == 0 && tie->getButton() == 0)
+    {
+        if (tie->getInteraction() == BUTTON_DOWN)
+        {
+            osg::Vec3 pointerStart, pointerEnd;
+            std::vector<IsectInfo> isecvec;
+            
+            osg::Matrix pointerMat = tie->getTransform();
+            pointerStart = pointerMat.getTrans();
+            pointerEnd.set(0.0f, 10000.0f, 0.0f);
+            pointerEnd = pointerEnd * pointerMat;
+
+            isecvec = getObjectIntersection(cvr::PluginHelper::getScene(),
+                    pointerStart, pointerEnd);
+
+            _eventRot = tie->getTransform().getRotate();
+            _eventPos = tie->getTransform().getTrans();
+
+            if (isecvec.size() == 0)
+            {
+                return true;
+            }
+            else
+            {
+                if (_activeDoor >= 0)
+                {
+                    if (isecvec[0].geode == _activeObject && _doorDist > 0)
+                    {
+                        /*if (_laser)
+                        {
+                            _laser->play();
+                        }*/
+                        if (_audioHandler)
+                        {
+                            _audioHandler->playSound(LASER_OFFSET, "laser");
+                        }
+
+                        if (_mode == ALIEN && !_hit)
+                        {
+                            /*if (_hitSound)
+                            {
+                                _hitSound->play();
+                            }*/
+                            if (_audioHandler)
+                            {
+                                _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
+                            }
+
+                            std::cout << "Hit!" << std::endl; 
+                            _score++;
+
+                            char buf[10];
+                            sprintf(buf, "%d", _score);
+                            std::string text = "Score: ";
+                            text += buf;
+                            _scoreText->setText(text);
+
+                            std::cout << "Score: " << _score << std::endl;
+                            _hit = true;
+                        }
+                        else if (_mode == ALLY && !_hit)
+                        {
+                            /*if (_hitSound)
+                            {
+                                _hitSound->play();
+                            }*/
+                            if (_audioHandler)
+                            {
+                                _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
+                            }
+
+                            std::cout << "Whoops!" << std::endl;
+                            if (_score > 0)
+                            {
+                                _score--;
+                            }
+
+                            char buf[10];
+                            sprintf(buf, "%d", _score);
+                            std::string text = "Score: ";
+                            text += buf;
+                            _scoreText->setText(text);
+
+                            std::cout << "Score: " << _score << std::endl;
+                            _hit = true;
+                        }
+                        return true;
+                    }
+                }
+            }
+        }
+        else if (tie->getInteraction() == BUTTON_DRAG)
+        {
+            osg::Matrix mat = tie->getTransform();
+
+            osg::Vec3 pos, offset;
+            SceneManager::instance()->getPointOnTiledWall(mat,pos);
+            offset.y() = -(pos.z() - _eventPos.z()) * 50.0 / SceneManager::instance()->getTiledWallHeight();
+            offset = offset * Navigation::instance()->getScale();
+            offset = osg::Vec3(0,0,0);
+            osg::Matrix m;
+
+            osg::Matrix r;
+            r.makeRotate(_eventRot);
+            osg::Vec3 pointInit = osg::Vec3(0,1,0);
+            pointInit = pointInit * r;
+            pointInit.z() = 0.0;
+
+            r.makeRotate(mat.getRotate());
+            osg::Vec3 pointFinal = osg::Vec3(0,1,0);
+            pointFinal = pointFinal * r;
+            pointFinal.z() = 0.0;
+
+            osg::Matrix turn;
+            
+            if(pointInit.length2() > 0 && pointFinal.length2() > 0)
+            {
+                pointInit.normalize();
+                pointFinal.normalize();
+                float dot = pointInit * pointFinal;
+                float angle = acos(dot) / 15.0;
+
+                if(dot > 1.0 || dot < -1.0)
+                {
+                    angle = 0.0;
+                }
+                else if((pointInit ^ pointFinal).z() < 0)
+                {
+                    angle = -angle;
+                }
+                turn.makeRotate(-angle, osg::Vec3(0, 0, 1));
+            }
+
+            osg::Matrix objmat =
+                    SceneManager::instance()->getObjectTransform()->getMatrix();
+            
+            osg::Vec3 origin = mat.getTrans();
+            origin = _geoRoot->getMatrix().getTrans();
+
+            m.makeTranslate(origin + offset);
+            m = objmat * osg::Matrix::translate(-(origin+offset)) * turn * m;
+            SceneManager::instance()->setObjectMatrix(m);
+
+            return true;
+        }
+        else if (tie->getInteraction() == BUTTON_UP)
+        {
+            return true;
+        }
+        return true;
+    }
     return true;
 }
 
@@ -323,20 +1004,20 @@ void ElevatorRoom::loadModels()
         
         // Sound
         
+        osg::Vec3 pos, center, dir;
+        osg::Matrix o2w, local2o;
+        o2w = PluginHelper::getObjectMatrix();
+        local2o = _geoRoot->getInverseMatrix();
+
+        pos = osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0);
+        pos = pos * local2o * o2w;
+        center = _geoRoot->getMatrix().getTrans();
+        center = center * local2o * o2w;
+        dir = pos - center;
+
+        // 1 - 8 ding sounds
         if (_audioHandler)
         {
-            osg::Vec3 pos, center, dir;
-            osg::Matrix o2w, local2o;
-            o2w = PluginHelper::getObjectMatrix();
-            local2o = _geoRoot->getInverseMatrix();
-
-            pos = osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0);
-            pos = pos * local2o * o2w;
-            center = _geoRoot->getMatrix().getTrans();
-            center = center * local2o * o2w;
-            dir = pos - center;
-
-            // 1 - 8 ding sounds
             _audioHandler->loadSound(i + DING_OFFSET, dir, pos);
         }
     }
@@ -390,12 +1071,12 @@ void ElevatorRoom::loadModels()
 
         // Sound
         
+        osg::Vec3 pos = osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0);
+        osg::Vec3 dir = pos - osg::Vec3(0,0,0);
+
+        // 9 - 16 explosion sounds
         if (_audioHandler)
         {
-            osg::Vec3 pos = osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0);
-            osg::Vec3 dir = pos - osg::Vec3(0,0,0);
-
-            // 9 - 16 explosion sounds
             _audioHandler->loadSound(i + EXPLOSION_OFFSET, dir, pos);
         }
     }   
@@ -707,381 +1388,35 @@ void ElevatorRoom::loadModels()
     pat->addChild(geode);
     PluginHelper::getScene()->addChild(pat);
 
-
     // Crosshair
-    
-    osg::ref_ptr<osg::Vec3Array> _verts;
-    osg::ref_ptr<osg::Vec4Array> _colors;
-    osg::ref_ptr<osg::Vec3Array> _normals;
-    osg::ref_ptr<osg::DrawArrays> _primitive;
-    osg::ref_ptr<osg::Geometry> _geometry;
-    osg::Geode * chGeode = new osg::Geode();
+    width = 4;
+    height = 0.3;
+    pos = osg::Vec3(0, -2500, 0);
+    pos = osg::Vec3(-25, 200, 0) + PluginHelper::getHeadMat().getTrans();
+    osg::Vec4 color(0.8, 0.0, 0.0, 1.0);
+    osg::Geode *chGeode = new osg::Geode();
+    _crosshairPat = new osg::PositionAttitudeTransform();
+    _crosshairPat->setPosition(pos);
+    pos = osg::Vec3(0,0,0);
 
-    _verts = new osg::Vec3Array(0);
-    _colors = new osg::Vec4Array(1);
-    _normals = new osg::Vec3Array(0);
-    _primitive = new osg::DrawArrays(osg::PrimitiveSet::QUADS, 0, 0);
-    _geometry = new osg::Geometry();
-
-    _geometry->setVertexArray(_verts.get());
-    _geometry->setColorArray(_colors.get());
-    _geometry->setColorBinding(osg::Geometry::BIND_OVERALL);
-    _geometry->setNormalArray(_normals.get());
-    _geometry->setNormalBinding(osg::Geometry::BIND_PER_VERTEX);
-    _geometry->setUseDisplayList(false);
-    _geometry->addPrimitiveSet(_primitive.get());
-
-    _verts->clear();
-    _normals->clear();
-    
-    float y = 1;
-    width = 200;
-    height = 50;
-    osg::Vec3 normal = osg::Vec3(0, -1, 0);
-
-    quad = makeQuad(width, height, 
-        osg::Vec4(1.0,1.0,1.0,0.5), osg::Vec3(0,0,0) - osg::Vec3(10, 0, 25));
-    
+    // horizontal
+    quad = makeQuad(width, height, color, pos - osg::Vec3(width/2, 0, height/2));
     chGeode->addDrawable(quad);
 
-    PluginHelper::getScene()->addChild(pat);
+    // vertical
+    quad = makeQuad(height, width, color, pos - osg::Vec3(height/2, 0, width/2));
+    chGeode->addDrawable(quad);
+
+    chGeode->getOrCreateStateSet()->setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
+    _crosshairPat->addChild(chGeode); 
+    PluginHelper::getScene()->addChild(_crosshairPat);
 
     _loaded = true;
 }
 
 void ElevatorRoom::clear()
 {
-}
 
-void ElevatorRoom::menuCallback(MenuItem * item)
-{
-    if(item == _loadButton)
-    {
-        if (!_loaded)
-        {
-            loadModels();
-            _loaded = true;
-        }
-    }
-
-    else if (item == _clearButton)
-    {
-        if (_loaded)
-        {
-            clear();
-            _loaded = false;
-        }
-    }
-
-    else if(item == _checkerSpeedRV)
-    {
-        _checkSpeed = (int)_checkerSpeedRV->getValue();
-    }
-
-    else if(item == _alienChanceRV)
-    {
-        int newVal = _alienChanceRV->getValue();
-        if (_alienChance + _allyChance + _checkChance <= 100 &&
-            newVal > -1  && 100 - newVal - _checkChance > -1  && _checkChance > -1)
-        {
-            _alienChance = newVal;
-            _allyChance = 100 - _alienChance - _checkChance;
-
-            char str[50];
-            sprintf(str, "Alien: %d  Astro: %d  Checker: %d", _alienChance, _allyChance, _checkChance);
-            _chancesText->setText(str);
-        }
-
-    }
-
-}
-
-void ElevatorRoom::preFrame()
-{
-    if (!_loaded)
-        return;
-    
-    // Pick a door to open 
-    if (_activeDoor < 0)
-    {
-        if ((PluginHelper::getProgramDuration() - _pauseStart) > _pauseLength)
-        {
-            if (_audioHandler)
-            {
-                _audioHandler->playSound(_activeDoor + DING_OFFSET, "ding");
-            }
-
-            _activeDoor = rand() % NUM_DOORS;
-
-            int num = rand() % 10;
-
-            if (num <= 3)
-            {
-                if (_debug)
-                {
-                    std::cout << _activeDoor << " - alien" << std::endl;
-                }
-
-                _aliensSwitch[_activeDoor]->setSingleChildOn(0);
-
-                _alliesSwitch[_activeDoor]->setAllChildrenOff();
-                _checkersSwitch[_activeDoor]->setAllChildrenOff();
-
-                _mode = ALIEN;
-
-                osg::ref_ptr<osg::Geode > geode;
-                geode = dynamic_cast<osg::Geode *>(_aliensSwitch[_activeDoor]->getChild(0));
-                if (geode)
-                {
-                    _activeObject = geode;
-                }
-            }
-            else if (num <= 7)
-            {
-                if (_debug)
-                {
-                    std::cout << _activeDoor << " - ally" << std::endl;
-                }
-
-                _alliesSwitch[_activeDoor]->setSingleChildOn(0);
-
-                _aliensSwitch[_activeDoor]->setAllChildrenOff();
-                _checkersSwitch[_activeDoor]->setAllChildrenOff();
-
-                _mode = ALLY;
-
-                osg::ref_ptr<osg::Geode > geode;
-                geode = dynamic_cast<osg::Geode *>(_alliesSwitch[_activeDoor]->getChild(0));
-                if (geode)
-                {
-                    _activeObject = geode;
-                }
-            }
-            else
-            {
-                if (_debug)
-                {
-                    std::cout << _activeDoor << " - checker " << std::endl;
-                }
-
-                _checkersSwitch[_activeDoor]->setSingleChildOn(0);
-
-                _alliesSwitch[_activeDoor]->setAllChildrenOff();
-                _aliensSwitch[_activeDoor]->setAllChildrenOff();
-
-                _mode = CHECKER;
-
-                osg::ref_ptr<osg::Geode > geode;
-                geode = dynamic_cast<osg::Geode *>(_checkersSwitch[_activeDoor]->getChild(0));
-                if (geode)
-                {
-                    _activeObject = geode;
-                }
-            }
-            _flashCount = 0;
-        }
-
-        if (_activeDoor <= _lights.size())
-        {
-            _lightSwitch[_activeDoor]->setValue((int)_mode, true);
-            _flashStartTime = PluginHelper::getProgramDuration();
-            _pauseStart = PluginHelper::getProgramDuration();
-            _pauseLength = LIGHT_PAUSE_LENGTH;
-        }
-
-    }
-    
-    // Handle light flashes
-    if (_activeDoor >= 0 && _activeDoor < NUM_DOORS &&
-        (PluginHelper::getProgramDuration() - _pauseStart) < _pauseLength)
-    {
-        if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _lightFlashPerSec)
-        {
-            if (_lightSwitch[_activeDoor]->getValue(_mode))
-            {
-                _lightSwitch[_activeDoor]->setSingleChildOn(NONE);
-                _flashStartTime = PluginHelper::getProgramDuration();
-            }
-            else
-            {
-                _lightSwitch[_activeDoor]->setSingleChildOn(_mode);
-                _flashStartTime = PluginHelper::getProgramDuration();
-            }
-        }
-    }
-   
-    // Handle door movement and animation
-    if (_activeDoor >= 0 && _activeDoor < NUM_DOORS &&
-        (PluginHelper::getProgramDuration() - _pauseStart) > _pauseLength)
-    {
-        _lightSwitch[_activeDoor]->setValue((int)_mode, true);
-        
-        // Flashing avatars
-       
-        if (_mode == CHECKER)
-        {
-            if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _checkSpeed)
-            {
-                if (_checkersSwitch[_activeDoor]->getValue(0))
-                {
-                    _checkersSwitch[_activeDoor]->setValue(0, false);
-                    _checkersSwitch[_activeDoor]->setValue(1, true);
-
-                    osg::ref_ptr<osg::Geode > geode;
-                    geode = dynamic_cast<osg::Geode *>(_checkersSwitch[_activeDoor]->getChild(1));
-                    if (geode)
-                    {
-                        _activeObject = geode;
-                    }
-                }
-                else
-                {
-                    _checkersSwitch[_activeDoor]->setValue(0, true);
-                    _checkersSwitch[_activeDoor]->setValue(1, false);
-
-                    osg::ref_ptr<osg::Geode > geode;
-                    geode = dynamic_cast<osg::Geode *>(_checkersSwitch[_activeDoor]->getChild(0));
-                    if (geode)
-                    {
-                        _activeObject = geode;
-                    }
-                }
-                _flashCount++;
-                _flashStartTime = PluginHelper::getProgramDuration();
-            }
-        }
-
-        else if (_mode == ALIEN)
-        {
-            if (_hit)
-            {
-                if (_flashCount > NUM_ALIEN_FLASH)
-                {
-                        _aliensSwitch[_activeDoor]->setValue(0, false);
-                        _aliensSwitch[_activeDoor]->setValue(1, false);
-                }
-
-                else if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _avatarFlashPerSec)
-                {
-                    if (_aliensSwitch[_activeDoor]->getValue(0))
-                    {
-                        _aliensSwitch[_activeDoor]->setValue(0, false);
-                        _aliensSwitch[_activeDoor]->setValue(1, true);
-
-                        osg::ref_ptr<osg::Geode > geode;
-                        geode = dynamic_cast<osg::Geode *>(_aliensSwitch[_activeDoor]->getChild(1));
-                        if (geode)
-                        {
-                            _activeObject = geode;
-                        }
-                    }
-                    else
-                    {
-                        _aliensSwitch[_activeDoor]->setValue(0, true);
-                        _aliensSwitch[_activeDoor]->setValue(1, false);
-
-                        osg::ref_ptr<osg::Geode > geode;
-                        geode = dynamic_cast<osg::Geode *>(_aliensSwitch[_activeDoor]->getChild(0));
-                        if (geode)
-                        {
-                            _activeObject = geode;
-                        }
-                    }
-                    _flashCount++; 
-                    _flashStartTime = PluginHelper::getProgramDuration();
-                }
-            }
-        }
-
-        else if (_mode == ALLY)
-        {
-            if (_hit)
-            {
-                if (_flashCount > NUM_ALLY_FLASH)
-                {
-                        _alliesSwitch[_activeDoor]->setValue(0, true);
-                        _alliesSwitch[_activeDoor]->setValue(1, false);
-                }
-
-                else if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _avatarFlashPerSec)
-                {
-                    if (_alliesSwitch[_activeDoor]->getValue(0))
-                    {
-                        _alliesSwitch[_activeDoor]->setValue(0, false);
-                        _alliesSwitch[_activeDoor]->setValue(1, true);
-
-                        osg::ref_ptr<osg::Geode > geode;
-                        geode = dynamic_cast<osg::Geode *>(_alliesSwitch[_activeDoor]->getChild(1));
-                        if (geode)
-                        {
-                            _activeObject = geode;
-                        }
-                    }
-                    else
-                    {
-                        _alliesSwitch[_activeDoor]->setValue(0, true);
-                        _alliesSwitch[_activeDoor]->setValue(1, false);
-
-                        osg::ref_ptr<osg::Geode > geode;
-                        geode = dynamic_cast<osg::Geode *>(_alliesSwitch[_activeDoor]->getChild(0));
-                        if (geode)
-                        {
-                            _activeObject = geode;
-                        }
-                    }
-                    _flashCount++; 
-                    _flashStartTime = PluginHelper::getProgramDuration();
-                }
-            }
-        }
-
-        if (_isOpening)
-        {
-            openDoor(_activeDoor);
-            if (_doorDist > 0.8)
-            {
-                _isOpening = false;
-            }
-        }
-        else
-        {
-            closeDoor(_activeDoor);
-            if (_doorDist < DOOR_SPEED)
-            {
-                if (_activeDoor <= _lightSwitch.size())
-                {
-                    _lightSwitch[_activeDoor]->setValue(NONE, true);
-                }
-                
-                _isOpening = true;
-                _activeDoor = -1;
-                _doorDist = 0;
-                _pauseStart = PluginHelper::getProgramDuration();
-                _pauseLength = 1 + rand() % 5;
-                _hit = false;
-
-                if (_debug)
-                {
-                    std::cout << "Pause for " << _pauseLength << " seconds" << std::endl;
-                }
-            }
-        }
-    }
-    
-    // Update sound
-    if (_audioHandler)
-    {
-        osg::Vec3 handPos, headPos, headDir, handDir;
-        handPos = cvr::PluginHelper::getHandMat().getTrans();
-        headPos = cvr::PluginHelper::getHeadMat().getTrans();
-        headDir = osg::Vec3(0, 0, -1); 
-        handDir = handPos - headPos;
-
-        // user position
-        _audioHandler->update(0, headDir, headPos);
-        // laser sound
-        _audioHandler->update(17, handDir, handPos);
-    }
 }
 
 void ElevatorRoom::openDoor(int doorNum)
@@ -1116,172 +1451,6 @@ void ElevatorRoom::closeDoor(int doorNum)
     rpat->setPosition(rpat->getPosition() + rpat->getAttitude() * osg::Vec3(DOOR_SPEED,0,0));
 
     _doorDist -= DOOR_SPEED;
-}
-
-bool ElevatorRoom::processEvent(InteractionEvent * event)
-{
-    if (!_loaded)
-        return false;
-
-    TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
-
-    if(!tie)
-    {
-        return true;
-    }
-
-    if(tie->getHand() == 0 && tie->getButton() == 0)
-    {
-        if (tie->getInteraction() == BUTTON_DOWN)
-        {
-            osg::Vec3 pointerStart, pointerEnd;
-            std::vector<IsectInfo> isecvec;
-            
-            osg::Matrix pointerMat = tie->getTransform();
-            pointerStart = pointerMat.getTrans();
-            pointerEnd.set(0.0f, 10000.0f, 0.0f);
-            pointerEnd = pointerEnd * pointerMat;
-
-            isecvec = getObjectIntersection(cvr::PluginHelper::getScene(),
-                    pointerStart, pointerEnd);
-
-            _eventRot = tie->getTransform().getRotate();
-            _eventPos = tie->getTransform().getTrans();
-
-            if (isecvec.size() == 0)
-            {
-                return true;
-            }
-            else
-            {
-                if (_activeDoor >= 0)
-                {
-                    if (isecvec[0].geode == _activeObject && _doorDist > 0)
-                    {
-                        /*if (_laser)
-                        {
-                            _laser->play();
-                        }*/
-                        if (_audioHandler)
-                        {
-                            _audioHandler->playSound(LASER_OFFSET, "laser");
-                        }
-
-                        if (_mode == ALIEN && !_hit)
-                        {
-                            /*if (_hitSound)
-                            {
-                                _hitSound->play();
-                            }*/
-                            if (_audioHandler)
-                            {
-                                _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
-                            }
-
-                            std::cout << "Hit!" << std::endl; 
-                            _score++;
-
-                            char buf[10];
-                            sprintf(buf, "%d", _score);
-                            std::string text = "Score: ";
-                            text += buf;
-                            _scoreText->setText(text);
-
-                            std::cout << "Score: " << _score << std::endl;
-                            _hit = true;
-                        }
-                        else if (_mode == ALLY && !_hit)
-                        {
-                            /*if (_hitSound)
-                            {
-                                _hitSound->play();
-                            }*/
-                            if (_audioHandler)
-                            {
-                                _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
-                            }
-
-                            std::cout << "Whoops!" << std::endl;
-                            if (_score > 0)
-                            {
-                                _score--;
-                            }
-
-                            char buf[10];
-                            sprintf(buf, "%d", _score);
-                            std::string text = "Score: ";
-                            text += buf;
-                            _scoreText->setText(text);
-
-                            std::cout << "Score: " << _score << std::endl;
-                            _hit = true;
-                        }
-                        return true;
-                    }
-                }
-            }
-        }
-        else if (tie->getInteraction() == BUTTON_DRAG)
-        {
-            osg::Matrix mat = tie->getTransform();
-
-            osg::Vec3 pos, offset;
-            SceneManager::instance()->getPointOnTiledWall(mat,pos);
-            offset.y() = -(pos.z() - _eventPos.z()) * 50.0 / SceneManager::instance()->getTiledWallHeight();
-            offset = offset * Navigation::instance()->getScale();
-            offset = osg::Vec3(0,0,0);
-            osg::Matrix m;
-
-            osg::Matrix r;
-            r.makeRotate(_eventRot);
-            osg::Vec3 pointInit = osg::Vec3(0,1,0);
-            pointInit = pointInit * r;
-            pointInit.z() = 0.0;
-
-            r.makeRotate(mat.getRotate());
-            osg::Vec3 pointFinal = osg::Vec3(0,1,0);
-            pointFinal = pointFinal * r;
-            pointFinal.z() = 0.0;
-
-            osg::Matrix turn;
-            
-            if(pointInit.length2() > 0 && pointFinal.length2() > 0)
-            {
-                pointInit.normalize();
-                pointFinal.normalize();
-                float dot = pointInit * pointFinal;
-                float angle = acos(dot) / 15.0;
-
-                if(dot > 1.0 || dot < -1.0)
-                {
-                    angle = 0.0;
-                }
-                else if((pointInit ^ pointFinal).z() < 0)
-                {
-                    angle = -angle;
-                }
-                turn.makeRotate(-angle, osg::Vec3(0, 0, 1));
-            }
-
-            osg::Matrix objmat =
-                    SceneManager::instance()->getObjectTransform()->getMatrix();
-            
-            osg::Vec3 origin = mat.getTrans();
-            origin = _geoRoot->getMatrix().getTrans();
-
-            m.makeTranslate(origin + offset);
-            m = objmat * osg::Matrix::translate(-(origin+offset)) * turn * m;
-            SceneManager::instance()->setObjectMatrix(m);
-
-            return true;
-        }
-        else if (tie->getInteraction() == BUTTON_UP)
-        {
-            return true;
-        }
-        return true;
-    }
-    return true;
 }
 
 osg::ref_ptr<osg::Geometry> ElevatorRoom::drawBox(osg::Vec3 center, float x, 

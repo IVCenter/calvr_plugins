@@ -39,8 +39,8 @@
 
 namespace CAVEAnimationModeler
 {
-    #define ANIM_TEXTURE_PALLETTE_ENTRY_SPHERE_RADIUS		0.1f
-    #define ANIM_TEXTURE_PALLETTE_ANIMATION_TIME		1.0f
+    #define ANIM_TEXTURE_PALLETTE_ENTRY_SPHERE_RADIUS 0.1f
+    #define ANIM_TEXTURE_PALLETTE_ANIMATION_TIME 1.0f
 
 
     /***************************************************************
@@ -76,7 +76,7 @@ namespace CAVEAnimationModeler
         osg::AnimationPathCallback **mStateAnimationArray;
         osg::Geode *mEntryGeode;
 
-        /* sets & gets functions */
+        // sets & gets functions
         void setDiffuse(const osg::Vec3 &diffuse) { mDiffuse = diffuse; }
         void setSpecular(const osg::Vec3 &specular) { mSpecular = specular; }
         void setTexFilename(const std::string &texfilename) { mTexFilename = texfilename; }
@@ -94,17 +94,29 @@ namespace CAVEAnimationModeler
     };
 
 
-    /* function called by 'DSTexturePallette' */
+    // function called by 'DSTexturePallette'
     void ANIMLoadTexturePalletteRoot(osg::PositionAttitudeTransform** xformScaleFwd,
-				     osg::PositionAttitudeTransform** xformScaleBwd);
+                                     osg::PositionAttitudeTransform** xformScaleBwd,
+                                     osg::PositionAttitudeTransform** buttonScaleFwd,
+                                     osg::PositionAttitudeTransform** buttonScaleBwd);
+
     void ANIMLoadTexturePalletteIdle(osg::Switch **idleStateSwitch, ANIMTexturePalletteIdleEntry **textureStateIdelEntry);
     void ANIMLoadTexturePalletteSelect( osg::Switch **selectStateSwitch, osg::Switch **alphaTurnerSwitch,
 					int &numTexs, ANIMTexturePalletteSelectEntry ***textureStatesEntryArray);
 
-    /* local function calls by 'ANIMLoadTexturePalletteSelect' */
+    // local function calls by 'ANIMLoadTexturePalletteSelect'
     void ANIMCreateTextureEntryGeode(const osg::Vec3 &showUpPos, const osg::Vec3 &diffuse, const osg::Vec3 &specular,
 				     const std::string &texfilename, ANIMTexturePalletteSelectEntry **textureEntry);
     void ANIMCreateRandomShowupPosArray(const int &numTexs, osg::Vec3 **showUpPosArray);
+
+    void ANIMLoadColorEntries(osg::Switch **selectStateSwitch, osg::Switch **alphaTurnerSwitch,
+        std::vector<osg::Vec3> *colors, std::vector<ANIMTexturePalletteSelectEntry*> *colorEntries);
+    void ANIMLoadTextureEntries(osg::Switch **selectStateSwitch, osg::Switch **alphaTurnerSwitch,
+        std::vector<std::string> *filenames, std::vector<ANIMTexturePalletteSelectEntry*> *textureEntries);
+
+    void ANIMAddColorEntry(osg::Switch **mSelectStateSwitch, osg::Switch **mAlphaTurnerSwitch,
+        osg::Vec3 color, std::vector<ANIMTexturePalletteSelectEntry*> *colorEntries);
+
 };
 
 

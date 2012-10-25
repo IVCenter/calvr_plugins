@@ -13,18 +13,18 @@ using namespace std;
 using namespace osg;
 
 
-/* 'gSnappingUnitDist' is the default minimum sensible distance in CAVE design space, or the size of unit grid. 
-    could define different snapping unit distance in other derived classes of CAVEGeode */
+// 'gSnappingUnitDist' is the default minimum sensible distance in CAVE design space, or the size of unit grid. 
+//  could define different snapping unit distance in other derived classes of CAVEGeode
 const float CAVEGeodeSnapWireframe::gSnappingUnitDist(0.05f);
 
 const int CAVEGeodeSnapWireframeCylinder::gMinFanSegments(18);
 int CAVEGeodeSnapWireframeCylinder::gCurFanSegments(18);
 
 
-//Constructor: CAVEGeodeSnapWireframe
+// Constructor: CAVEGeodeSnapWireframe
 CAVEGeodeSnapWireframe::CAVEGeodeSnapWireframe()
 {
-    /* unit grid size 'mSnappingUnitDist' will inherit the default value 'gSnappingUnitDist' unless modified */
+    // unit grid size 'mSnappingUnitDist' will inherit the default value 'gSnappingUnitDist' unless modified
     mSnappingUnitDist = gSnappingUnitDist;
 
     mInitPosition = Vec3(0, 0, 0);
@@ -50,25 +50,24 @@ CAVEGeodeSnapWireframe::CAVEGeodeSnapWireframe()
     setStateSet(stateset);
 }
 
-//Destructor: CAVEGeodeSnapWireframe
+// Destructor: CAVEGeodeSnapWireframe
 CAVEGeodeSnapWireframe::~CAVEGeodeSnapWireframe()
 {
 }
 
 
-//Constructor: CAVEGeodeSnapWireframeBox
+// Constructor: CAVEGeodeSnapWireframeBox
 CAVEGeodeSnapWireframeBox::CAVEGeodeSnapWireframeBox()
 {
     initBaseGeometry();
 }
 
 
-//Constructor: CAVEGeodeSnapWireframeCylinder
+// Constructor: CAVEGeodeSnapWireframeCylinder
 CAVEGeodeSnapWireframeCylinder::CAVEGeodeSnapWireframeCylinder()
 {
     initBaseGeometry();
 }
-
 
 
 /***************************************************************
@@ -148,7 +147,7 @@ void CAVEGeodeSnapWireframeBox::resize(osg::Vec3 &gridVect)
     roundedVect.z() = zSeg * snapUnitZ;		gridVect.z() = roundedVect.z() / mSnappingUnitDist;
     mDiagonalVect = roundedVect;
 
-    /* update box corners in 'mBaseGeometry' */
+    // update box corners in 'mBaseGeometry'
     float xMin, yMin, zMin, xMax, yMax, zMax;
     xMin = mInitPosition.x();	xMax = xMin + roundedVect.x();
     yMin = mInitPosition.y();	yMax = yMin + roundedVect.y();
@@ -170,7 +169,7 @@ void CAVEGeodeSnapWireframeBox::resize(osg::Vec3 &gridVect)
     mBaseGeometry->dirtyDisplayList();
     mBaseGeometry->dirtyBound();
 
-    /* update snapping wire geometry */
+    // update snapping wire geometry
     if (mSnapwireGeometry) 
         removeDrawable(mSnapwireGeometry);
 
@@ -246,7 +245,7 @@ void CAVEGeodeSnapWireframeCylinder::initBaseGeometry()
     Vec3Array* vertices = new Vec3Array;
     float rad = 1.0f, height = 1.0f, intvl = M_PI * 2 / gMinFanSegments;
 
-    /* BaseGeometry contains (gMinFanSegments * 2) vertices */
+    // BaseGeometry contains (gMinFanSegments * 2) vertices
     for (int i = 0; i < gMinFanSegments; i++) 
     {
         vertices->push_back(Vec3(rad * cos(i * intvl), rad * sin(i * intvl), height));
@@ -281,7 +280,7 @@ void CAVEGeodeSnapWireframeCylinder::initBaseGeometry()
 ***************************************************************/
 void CAVEGeodeSnapWireframeCylinder::resize(osg::Vec3 &gridVect)
 {
-    /* calculate rounded vector */
+    // calculate rounded vector
     float height = mScaleVect.z(), 
           rad = sqrt(mScaleVect.x() * mScaleVect.x() + mScaleVect.y() * mScaleVect.y());
     int hSeg, radSeg, fanSeg, hDir = 1;
@@ -307,7 +306,7 @@ void CAVEGeodeSnapWireframeCylinder::resize(osg::Vec3 &gridVect)
 
     gCurFanSegments = fanSeg;	// update number of fan segment, this parameter is passed to 'CAVEGeodeShape'
 
-    /* update 'mSnapwireGeometry' geometry, do not use 'mBaseGeometry' anymore */
+    // update 'mSnapwireGeometry' geometry, do not use 'mBaseGeometry' anymore
     if (mBaseGeometry)
     {
         removeDrawable(mBaseGeometry);
@@ -320,7 +319,7 @@ void CAVEGeodeSnapWireframeCylinder::resize(osg::Vec3 &gridVect)
     Vec3Array* snapvertices = new Vec3Array;
     int vertoffset = 0;
 
-    /* create vertical edges, cap radiating edges and ring strips on side surface */
+    // create vertical edges, cap radiating edges and ring strips on side surface
     for (int i = 0; i <= hSeg; i++)
     {
         for (int j = 0; j < fanSeg; j++)
@@ -359,7 +358,7 @@ void CAVEGeodeSnapWireframeCylinder::resize(osg::Vec3 &gridVect)
     mSnapwireGeometry->addPrimitiveSet(capRadiatingEdges);
     vertoffset += (hSeg + 1) * fanSeg + 2;
 
-    /* create ring strips on two caps */
+    // create ring strips on two caps
     for (int i = 1; i < radSeg; i++)
     {
         float r = i * mSnappingUnitDist;

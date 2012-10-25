@@ -15,15 +15,15 @@ using namespace osg;
 
 
 // Constructor
-VirtualScenicHandler::VirtualScenicHandler(Group* nonIntersectableSceneGraphPtr, osg::Group* intersectableSceneGraphPtr): 
-					mFloorplanIdx(-1)
+VirtualScenicHandler::VirtualScenicHandler(Group* nonIntersectableSceneGraphPtr,    
+    osg::Group* intersectableSceneGraphPtr): mFloorplanIdx(-1)
 {
     intersectableSceneGraphPtr->addChild(createSunLight(intersectableSceneGraphPtr->getOrCreateStateSet()));
     nonIntersectableSceneGraphPtr->addChild(createPointLight(nonIntersectableSceneGraphPtr->getOrCreateStateSet()));
-    
+
     mWaterEnabled = false;
 
-    /* load reference plane and sky dome */
+    // load reference plane and sky dome
     mXYPlaneSwitch = new Switch();
     mSkyDomeSwitch = new Switch();
     mFloorplanSwitch = new Switch();
@@ -46,7 +46,6 @@ VirtualScenicHandler::VirtualScenicHandler(Group* nonIntersectableSceneGraphPtr,
         intersectableSceneGraphPtr->addChild(mWaterSurfSwitch);
         mWaterSurfSwitch->setAllChildrenOff();
     }
-
 }
 
 
@@ -320,7 +319,7 @@ void VirtualScenicHandler::createFloorplanGeometry(const int numPages,
 
     for (int i = 0; i < numPages; i++)
     {
-        /* create floorplan geometry */
+        // create floorplan geometry
         float length = pageEntryArray[i]->mLength;
         float width = pageEntryArray[i]->mWidth;
         float altitude = pageEntryArray[i]->mAlti;
