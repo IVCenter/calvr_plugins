@@ -74,7 +74,7 @@ void AudioHandler::disconnectServer()
 
 void AudioHandler::loadSound(int soundID, osg::Vec3 &dir, osg::Vec3 &pos)
 {
-     if (!_isConnected)
+    if (!_isConnected)
         return;
 
     uint8_t packet[256];
@@ -124,7 +124,6 @@ void AudioHandler::loadSound(int soundID, osg::Vec3 &dir, osg::Vec3 &pos)
     {
         //std::cerr << "AudioHandler  Viewer's info: " << viewPos.x() << " " << viewPos.y() << " " << viewPos.z() << std::endl;	
     }
-
 }
 
 void AudioHandler::playSound(int soundID, std::string sound)
