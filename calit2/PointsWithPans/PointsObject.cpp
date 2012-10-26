@@ -29,8 +29,9 @@ PointsObject::PointsObject(std::string name, bool navigation, bool movable, bool
     }
 
     _root->getOrCreateStateSet()->setMode(GL_BLEND,osg::StateAttribute::ON);
-    std::string bname = "Points";
-    _root->getOrCreateStateSet()->setRenderBinDetails(1,bname);
+    std::string bname = "StateSortedBin";
+    _root->getOrCreateStateSet()->setRenderBinDetails(11,bname);
+    _root->getOrCreateStateSet()->setNestRenderBins(false);
     //_root->getOrCreateStateSet()->setBinNumber(1);
 }
 
@@ -228,7 +229,7 @@ void PointsObject::update()
 
 	    setAlpha(1.0f - (_fadeTime / _totalFadeTime));
 	    float panAlpha = _fadeTime / _totalFadeTime;
-	    panAlpha *= 1.6;
+	    panAlpha *= 1.0;
 	    panAlpha = std::min(panAlpha,1.0f);
 	    PluginHelper::sendMessageByName("PanoViewLOD",PAN_SET_ALPHA,(char*)&panAlpha);
 
@@ -249,7 +250,7 @@ void PointsObject::update()
 	}
 
 	float pointAlpha = _fadeTime / _totalFadeTime;
-	pointAlpha *= 2.0;
+	pointAlpha *= 1.0;
 	pointAlpha = std::min(pointAlpha,1.0f);
 
 	setAlpha(pointAlpha);
