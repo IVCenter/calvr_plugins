@@ -414,7 +414,6 @@ void ElevatorRoom::preFrame()
                         _aliensSwitch[_activeDoor]->setValue(0, true);
                         _aliensSwitch[_activeDoor]->setValue(1, false);
 
-<<<<<<< HEAD
                         osg::ref_ptr<osg::Geode > geode;
                         geode = dynamic_cast<osg::Geode *>(_aliensSwitch[_activeDoor]->getChild(0));
                         if (geode)
@@ -444,31 +443,6 @@ void ElevatorRoom::preFrame()
                     {
                         _alliesSwitch[_activeDoor]->setValue(0, false);
                         _alliesSwitch[_activeDoor]->setValue(1, true);
-=======
-        _lights.push_back(drawable);
-        
-        
-        // Sound
-        
-        if (_audioHandler)
-        {
-            osg::Vec3 pos, center, dir;
-            osg::Matrix o2w, local2o;
-            o2w = PluginHelper::getObjectMatrix();
-            local2o = _geoRoot->getInverseMatrix();
-
-            pos = osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0);
-            pos = pos * local2o * o2w;
-            center = _geoRoot->getMatrix().getTrans();
-            center = center * local2o * o2w;
-            dir = pos - center;
-
-            // 1 - 8 ding sounds
-            _audioHandler->loadSound(i + DING_OFFSET, dir, pos);
-        }
-    }
->>>>>>> 85785cfe26d13bcaf6117a54cafed5f6891f8791
-
                         osg::ref_ptr<osg::Geode > geode;
                         geode = dynamic_cast<osg::Geode *>(_alliesSwitch[_activeDoor]->getChild(1));
                         if (geode)
@@ -558,7 +532,6 @@ void ElevatorRoom::preFrame()
     {
         spnav_event sev;
 
-<<<<<<< HEAD
         double x, y, z;
         x = y = z = 0.0;
         double rx, ry, rz;
