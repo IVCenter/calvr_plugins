@@ -270,6 +270,19 @@ void GroupedBarGraph::setHover(osg::Vec3 intersect)
     }
 }
 
+void GroupedBarGraph::clearHoverText()
+{
+    if(!_hoverGeode)
+    {
+	return;
+    }
+
+    if(_hoverGeode->getNumParents())
+    {
+	_root->removeChild(_hoverGeode);
+    }
+}
+
 void GroupedBarGraph::selectItems(std::string & group, std::vector<std::string> & keys)
 {
     float graphLeft = _width * (_leftPaddingMult - 0.5);

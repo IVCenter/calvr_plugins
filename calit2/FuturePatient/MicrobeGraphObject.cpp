@@ -141,6 +141,14 @@ void MicrobeGraphObject::updateCallback(int handID, const osg::Matrix & mat)
     }
 }
 
+void MicrobeGraphObject::leaveCallback(int handID)
+{
+    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER)
+    {
+	_graph->clearHoverText();
+    }
+}
+
 bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, int microbes)
 {
     _graphTitle = title;
