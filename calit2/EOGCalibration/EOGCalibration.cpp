@@ -18,6 +18,8 @@ EOGCalibration::EOGCalibration(): mFlagConnected(false), mFlagMaster(false)
     string DataDir = ConfigManager::getEntry("Plugin.EOGCalibration.DataDir");
     
     _rootGroup = new osg::Group();
+    PluginHelper::getObjectsRoot()->addChild(_rootGroup);
+
     mCaliController = new CalibrationController(_rootGroup, DataDir);
     mCaliController->stopCalibration();
 
@@ -47,7 +49,7 @@ bool EOGCalibration::init()
     mainMenu->addItem(connectToServerCheckbox);
 
     connectionStatusLabel = new MenuText("Connection Status");
-    connectionStatusLabel->setText("   Disconnected from Data Server.");
+    connectionStatusLabel->setText("Disconnected from Data Server.");
     mainMenu->addItem(connectionStatusLabel);
 
     startStopCalibrationCheckbox = new MenuCheckbox("Start/Stop Calibration", false);
@@ -134,11 +136,11 @@ void EOGCalibration::menuCallback(cvr::MenuItem *item)
 	    	connectionStatusLabel->setText("   Connecting to Data Server.");
 	    	if(mFlagMaster) 
                 connectServer();
-	    	connectionStatusLabel->setText("   Connected to Data Server.");
+	    	connectionStatusLabel->setText("       Connected to Data Server.");
       	} 
         else 
         {
-	    	connectionStatusLabel->setText("   Disconnected from Data Server.");
+	    	connectionStatusLabel->setText("Disconnected from Data Server.");
 	    	if(mFlagMaster) disconnectServer();
 		}
     } 
