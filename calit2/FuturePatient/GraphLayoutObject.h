@@ -9,6 +9,7 @@
 
 #include "GraphObject.h"
 #include "MicrobeGraphObject.h"
+#include "MicrobeBarGraphObject.h"
 
 #include <osg/Geometry>
 #include <osg/Geode>
@@ -30,6 +31,9 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         void addMicrobeGraphObject(MicrobeGraphObject * object);
         void removeMicrobeGraphObject(MicrobeGraphObject * object);
         void selectMicrobes(std::string & group, std::vector<std::string> & keys);
+
+        void addMicrobeBarGraphObject(MicrobeBarGraphObject * object);
+        void removeMicrobeBarGraphObject(MicrobeBarGraphObject * object);
 
         void removeAll();
         void perFrame();
@@ -59,6 +63,9 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
 
         std::vector<MicrobeGraphObject *> _microbeObjectList;
         std::map<MicrobeGraphObject *, cvr::MenuButton *> _microbeDeleteButtonMap;
+
+        std::vector<MicrobeBarGraphObject *> _microbeBarObjectList;
+        std::map<MicrobeBarGraphObject *,cvr::MenuButton *> _microbeBarDeleteButtonMap;
 
         std::string _currentSelectedMicrobeGroup;
         std::vector<std::string> _currentSelectedMicrobes;

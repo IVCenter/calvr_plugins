@@ -25,6 +25,13 @@ class StackedBarGraph
 
         bool addBar(SBGData * dataRoot, std::vector<std::string> & dataLabels, std::string dataUnits);
 
+        void setDisplaySize(float width, float height);
+        void setHover(osg::Vec3 intersect);
+        void clearHoverText();
+
+        void selectItems(std::string & group, std::vector<std::string> & keys);
+        bool processClick(osg::Vec3 & intersect, std::vector<std::string> & selectedKeys, bool & selectValid);
+
         osg::Group * getRoot()
         {
             return _root;
@@ -32,12 +39,14 @@ class StackedBarGraph
 
     protected:
         void makeBG();
+        void makeHover();
         osg::Geometry * makeGeometry(int elements);
         void update();
         void updateAxis();
         void updateGraph();
 
         osgText::Text * makeText(std::string text, osg::Vec4 color);
+        void makeTextFit(osgText::Text * text, float maxSize);
 
         std::string _title;
         float _width;
@@ -60,12 +69,20 @@ class StackedBarGraph
         osg::ref_ptr<osg::Geometry> _lineGeometry;
         osg::ref_ptr<osg::DrawArrays> _linePrimitive;
 
+        osg::ref_ptr<osg::Geode> _hoverGeode;
+        osg::ref_ptr<osg::Geometry> _hoverBGGeom;
+        osg::ref_ptr<osgText::Text> _hoverText;
+        std::string _currentHoverValue;
+
         osg::ref_ptr<osgText::Font> _font;
 
         float _leftPaddingMult, _rightPaddingMult, _topPaddingMult, _bottomPaddingMult;
         float _barToConnectorRatio;
 
         float _topTitleMult,_topLevelMult,_topCatHeaderMult;
+
+        std::string _lastSelectGroup;
+        std::vector<std::string> _lastSelectKeys;
 };
 
 #endif

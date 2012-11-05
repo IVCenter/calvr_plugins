@@ -9,6 +9,7 @@
 #include <mysql++/mysql++.h>
 
 #include "StackedBarGraph.h"
+#include "MicrobeGraphObject.h"
 
 class MicrobeBarGraphObject : public cvr::TiledWallSceneObject
 {
@@ -17,8 +18,19 @@ class MicrobeBarGraphObject : public cvr::TiledWallSceneObject
         virtual ~MicrobeBarGraphObject();
 
         bool addGraph(std::string label, int patientid, std::string testLabel);
+        bool addSpecialGraph(SpecialMicrobeGraphType smgt);
+
+        void setGraphSize(float width, float height);
+
+        void selectMicrobes(std::string & group, std::vector<std::string> & keys);
+
+        virtual bool processEvent(cvr::InteractionEvent * ie);
+        virtual void updateCallback(int handID, const osg::Matrix & mat);
+        virtual void leaveCallback(int handID);
 
     protected:
+        bool addGraph(std::string & label, std::string query);
+
         mysqlpp::Connection * _conn;
 
         float _width, _height;

@@ -1,6 +1,9 @@
 #include "MicrobeBarGraphObject.h"
+#include "GraphLayoutObject.h"
 
 #include <cvrKernel/ComController.h>
+#include <cvrInput/TrackingManager.h>
+#include <cvrUtil/OsgMath.h>
 
 #include <iostream>
 #include <sstream>
@@ -19,6 +22,10 @@ MicrobeBarGraphObject::MicrobeBarGraphObject(mysqlpp::Connection * conn, float w
     _height = height;
 
     addChild(_graph->getRoot());
+
+    setBoundsCalcMode(SceneObject::MANUAL);
+    osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
+    setBoundingBox(bb);
 }
 
 MicrobeBarGraphObject::~MicrobeBarGraphObject()
@@ -26,6 +33,78 @@ MicrobeBarGraphObject::~MicrobeBarGraphObject()
 }
 
 bool MicrobeBarGraphObject::addGraph(std::string label, int patientid, std::string testLabel)
+{
+    std::stringstream qss;
+    qss << "select Microbes.species, Microbe_Measurement.value from Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \""<< testLabel << "\";";
+
+    return addGraph(label,qss.str());
+}
+
+bool MicrobeBarGraphObject::addSpecialGraph(SpecialMicrobeGraphType smgt)
+{
+    std::stringstream queryss;
+    std::string label;
+    
+    switch(smgt)
+    {
+	case SMGT_AVERAGE:
+	case SMGT_HEALTHY_AVERAGE:
+	case SMGT_CROHNS_AVERAGE:
+	    {
+
+		std::string field;
+
+		switch(smgt)
+		{
+		    case SMGT_AVERAGE:
+			field = "average";
+			label = "Average";
+			break;
+		    case SMGT_HEALTHY_AVERAGE:
+			field = "average_healthy";
+			label = "Healthy Average";
+			break;
+		    case SMGT_CROHNS_AVERAGE:
+			field = "average_crohns";
+			label = "Crohns Average";
+			break;
+		    default:
+			break;
+		}
+		
+		queryss << "select species, " << field << " as value from Microbes;";
+		break;
+	    }
+	case SMGT_SRS_AVERAGE:
+	case SMGT_SRX_AVERAGE:
+	{
+
+	    std::string regexp;
+	    switch(smgt)
+	    {
+		case SMGT_SRS_AVERAGE:
+		    regexp = "^SRS";
+		    label = "SRS Average";
+		    break;
+		case SMGT_SRX_AVERAGE:
+		    regexp = "^SRX";
+		    label = "SRX Average";
+		    break;
+		default:
+		    break;
+	    }
+
+	    queryss << "select Microbes.species, avg(Microbe_Measurement.value) as value from Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id inner join Patient on Microbe_Measurement.patient_id = Patient.patient_id where Patient.last_name regexp '" << regexp << "' group by species;";
+	    break;
+	}
+	default:
+	    return false;
+    }
+
+    return addGraph(label,queryss.str());
+}
+
+bool MicrobeBarGraphObject::addGraph(std::string & label, std::string query)
 {
     if(!_conn)
     {
@@ -121,10 +200,7 @@ bool MicrobeBarGraphObject::addGraph(std::string label, int patientid, std::stri
 
     if(ComController::instance()->isMaster())
     {
-	std::stringstream qss;
-	qss << "select Microbes.species, Microbe_Measurement.value from Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \""<< testLabel << "\";";
-
-	mysqlpp::Query q = _conn->query(qss.str());
+	mysqlpp::Query q = _conn->query(query);
 	mysqlpp::StoreQueryResult res = q.store();
 
 	dataSize = res.num_rows();
@@ -159,7 +235,7 @@ bool MicrobeBarGraphObject::addGraph(std::string label, int patientid, std::stri
 
     if(!dataSize)
     {
-	std::cerr << "Warning MicrobeBarGraphObject: add Graph " << patientid << " " << testLabel << ": zero data size" << std::endl;
+	std::cerr << "Warning MicrobeBarGraphObject: add Graph, query: " << query << ": zero data size" << std::endl;
     }
 
     for(int i = 0; i < dataSize; ++i)
@@ -179,13 +255,6 @@ bool MicrobeBarGraphObject::addGraph(std::string label, int patientid, std::stri
     {
 	delete[] data;
     }
-
-    /*float testval = 0.0;
-    for(std::map<std::string,StackedBarGraph::SBGData*>::iterator it = speciesMap.begin(); it != speciesMap.end(); ++it)
-    {
-	testval += it->second->value;
-    }
-    std::cerr << "Species sum: " << testval << std::endl;*/
 
     // for sanity
     typedef std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,std::map<std::string,bool> > > > > > >::iterator kingdomIt;
@@ -321,96 +390,104 @@ bool MicrobeBarGraphObject::addGraph(std::string label, int patientid, std::stri
     groupLabels.push_back("Species");
 
     return _graph->addBar(dataRoot,groupLabels,"");
+}
 
-    /*std::map<std::string,StackedBarGraph::SBGData*> linkMap;
-    std::map<std::string,StackedBarGraph::SBGData*> nextLinkMap;
+void MicrobeBarGraphObject::setGraphSize(float width, float height)
+{
+    osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
+    setBoundingBox(bb);
 
-    // link genus
-    for(std::map<std::string,std::map<std::string,bool> >::iterator it = connectivity[5].begin(); it != connectivity[5].end(); ++it)
+    _graph->setDisplaySize(width,height);
+}
+
+void MicrobeBarGraphObject::selectMicrobes(std::string & group, std::vector<std::string> & keys)
+{
+    _graph->selectItems(group,keys);
+}
+
+bool MicrobeBarGraphObject::processEvent(InteractionEvent * ie)
+{
+    if(ie->asTrackedButtonEvent() && ie->asTrackedButtonEvent()->getButton() == 0 && (ie->getInteraction() == BUTTON_DOWN || ie->getInteraction() == BUTTON_DOUBLE_CLICK))
     {
-	StackedBarGraph::SBGData * myData = new StackedBarGraph::SBGData;
-	myData->name = it->first;
-	linkMap[myData->name] = myData;
+	TrackedButtonInteractionEvent * tie = (TrackedButtonInteractionEvent*)ie;
 
-	for(std::map<std::string,bool>::iterator itt = it->second.begin(); itt != it->second.end(); ++itt)
+	GraphLayoutObject * layout = dynamic_cast<GraphLayoutObject*>(_parent);
+	if(!layout)
 	{
-	    if(speciesMap.find(itt->first) == speciesMap.end())
+	    return false;
+	}
+
+	std::string selectedGroup;
+	std::vector<std::string> selectedKeys;
+
+	osg::Vec3 start, end(0,1000,0);
+	start = start * tie->getTransform() * getWorldToObjectMatrix();
+	end = end * tie->getTransform() * getWorldToObjectMatrix();
+
+	osg::Vec3 planePoint;
+	osg::Vec3 planeNormal(0,-1,0);
+	osg::Vec3 intersect;
+	float w;
+
+	bool clickUsed = false;
+	bool selectValid = false;
+
+	if(linePlaneIntersectionRef(start,end,planePoint,planeNormal,intersect,w))
+	{
+	    if(_graph->processClick(intersect,selectedKeys,selectValid))
 	    {
-		std::cerr << "Warning: species " << itt->first << " not found." << std::endl;
-	    }
-	    else
-	    {
-		myData->groups.push_back(speciesMap[itt->first]);
+		clickUsed = true;
 	    }
 	}
 
-	myData->value = 0.0;
-
-	for(int i = 0; i < myData->groups.size(); ++i)
+	if(selectValid && _microbeCount)
 	{
-	    myData->value += myData->groups[i]->value;
-	}
-    }
-
-    testval = 0.0;
-    for(std::map<std::string,StackedBarGraph::SBGData*>::iterator it = linkMap.begin(); it != linkMap.end(); ++it)
-    {
-	testval += it->second->value;
-    }
-    std::cerr << "Genus sum: " << testval << std::endl;
-
-    for(int j = 4; j >= 0; --j)
-    {
-	std::cerr << std::endl << std::endl;
-	for(std::map<std::string,std::map<std::string,bool> >::iterator it = connectivity[j].begin(); it != connectivity[j].end(); ++it)
-	{
-	    StackedBarGraph::SBGData * myData = new StackedBarGraph::SBGData;
-	    myData->name = it->first;
-	    nextLinkMap[myData->name] = myData;
-
-	    for(std::map<std::string,bool>::iterator itt = it->second.begin(); itt != it->second.end(); ++itt)
+	    if(selectedKeys.size())
 	    {
-		if(linkMap.find(itt->first) == linkMap.end())
+		for(int i = 0; i < _microbeCount; ++i)
 		{
-		    std::cerr << "Warning: entry " << itt->first << " not found." << std::endl;
-		}
-		else
-		{
-		    myData->groups.push_back(linkMap[itt->first]);
+		    if(!strcmp(selectedKeys[0].c_str(),_microbeList[i].species))
+		    {
+			selectedGroup = _microbeList[i].phylum;
+			break;
+		    }
 		}
 	    }
-
-	    myData->value = 0.0;
-
-	    for(int i = 0; i < myData->groups.size(); ++i)
-	    {
-		myData->value += myData->groups[i]->value;
-	    }
-	    std::cerr << myData->name << ": " << myData->value << std::endl;
+	    layout->selectMicrobes(selectedGroup,selectedKeys);
 	}
-	linkMap = nextLinkMap;
-	nextLinkMap.clear();
-
-	testval = 0.0;
-	for(std::map<std::string,StackedBarGraph::SBGData*>::iterator it = linkMap.begin(); it != linkMap.end(); ++it)
+	if(clickUsed)
 	{
-	    testval += it->second->value;
+	    return true;
 	}
-	std::cerr << "Next sum: " << testval << std::endl;
     }
 
-    StackedBarGraph::SBGData * dataRoot = new StackedBarGraph::SBGData;
-    dataRoot->name = label;
-    dataRoot->value = 0.0;
+    return TiledWallSceneObject::processEvent(ie);
+}
 
-    for(std::map<std::string,StackedBarGraph::SBGData*>::iterator it = linkMap.begin(); it != linkMap.end(); ++it)
+void MicrobeBarGraphObject::updateCallback(int handID, const osg::Matrix & mat)
+{
+    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::MOUSE)
     {
-	dataRoot->groups.push_back(it->second);
-	dataRoot->value += it->second->value;
-	std::cerr << it->first << ": " << it->second->value << std::endl;
+	osg::Vec3 start, end(0,1000,0);
+	start = start * mat * getWorldToObjectMatrix();
+	end = end * mat * getWorldToObjectMatrix();
+
+	osg::Vec3 planePoint;
+	osg::Vec3 planeNormal(0,-1,0);
+	osg::Vec3 intersect;
+	float w;
+
+	if(linePlaneIntersectionRef(start,end,planePoint,planeNormal,intersect,w))
+	{
+	    _graph->setHover(intersect);
+	}
     }
+}
 
-    std::cerr << "Data Loaded: root value: " << dataRoot->value << std::endl;*/
-
-    return true;
+void MicrobeBarGraphObject::leaveCallback(int handID)
+{
+    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::MOUSE)
+    {
+	_graph->clearHoverText();
+    }
 }

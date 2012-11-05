@@ -184,6 +184,53 @@ void GraphLayoutObject::selectMicrobes(std::string & group, std::vector<std::str
     {
 	_microbeObjectList[i]->selectMicrobes(group,keys);
     }
+
+    for(int i = 0; i < _microbeBarObjectList.size(); ++i)
+    {
+	_microbeBarObjectList[i]->selectMicrobes(group,keys);
+    }
+}
+
+void GraphLayoutObject::addMicrobeBarGraphObject(MicrobeBarGraphObject * object)
+{
+    //std::cerr << "Adding graph object" << std::endl;
+
+    for(int i = 0; i < _microbeBarObjectList.size(); ++i)
+    {
+	if(_microbeBarObjectList[i] == object)
+	{
+	    return;
+	}
+    }
+
+    _microbeBarObjectList.push_back(object);
+
+    MenuButton * button = new MenuButton("Delete");
+    button->setCallback(this);
+    object->addMenuItem(button);
+
+    _microbeBarDeleteButtonMap[object] = button;
+
+    addChild(object);
+
+    updateLayout();
+}
+
+void GraphLayoutObject::removeMicrobeBarGraphObject(MicrobeBarGraphObject * object)
+{
+    for(std::vector<MicrobeBarGraphObject *>::iterator it = _microbeBarObjectList.begin(); it != _microbeBarObjectList.end(); ++it)
+    {
+	if((*it) == object)
+	{
+	    removeChild(*it);
+	    delete _microbeBarDeleteButtonMap[*it];
+	    _microbeBarDeleteButtonMap.erase(*it);
+	    _microbeBarObjectList.erase(it);
+	    break;
+	}
+    }
+
+    updateLayout();
 }
 
 void GraphLayoutObject::removeAll()
@@ -203,6 +250,11 @@ void GraphLayoutObject::removeAll()
 	removeChild(_microbeObjectList[i]);
     }
 
+    for(int i = 0; i < _microbeBarObjectList.size(); ++i)
+    {
+	removeChild(_microbeBarObjectList[i]);
+    }
+
     for(std::map<GraphObject *,cvr::MenuButton *>::iterator it = _deleteButtonMap.begin(); it != _deleteButtonMap.end(); it++)
     {
 	it->first->removeMenuItem(it->second);
@@ -215,13 +267,21 @@ void GraphLayoutObject::removeAll()
 	 delete it->second;
     }
 
+    for(std::map<MicrobeBarGraphObject *, cvr::MenuButton *>::iterator it = _microbeBarDeleteButtonMap.begin(); it != _microbeBarDeleteButtonMap.end(); ++it)
+    {
+	 it->first->removeMenuItem(it->second);
+	 delete it->second;
+    }
+
     _deleteButtonMap.clear();
     _microbeDeleteButtonMap.clear();
+    _microbeBarDeleteButtonMap.clear();
     _perGraphActiveHand.clear();
     _perGraphActiveHandType.clear();
 
     _objectList.clear();
     _microbeObjectList.clear();
+    _microbeBarObjectList.clear();
 }
 
 void GraphLayoutObject::perFrame()
@@ -465,6 +525,16 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	{
 	    it->first->closeMenu();
 	    removeMicrobeGraphObject(it->first);
+	    return;
+	}
+    }
+
+    for(std::map<MicrobeBarGraphObject *, cvr::MenuButton *>::iterator it = _microbeBarDeleteButtonMap.begin(); it != _microbeBarDeleteButtonMap.end(); ++it)
+    {
+	if(it->second == item)
+	{
+	    it->first->closeMenu();
+	    removeMicrobeBarGraphObject(it->first);
 	    return;
 	}
     }
@@ -776,7 +846,7 @@ void GraphLayoutObject::updateGeometry()
 
 void GraphLayoutObject::updateLayout()
 {
-    int totalGraphs = _objectList.size() + _microbeObjectList.size();
+    int totalGraphs = _objectList.size() + _microbeObjectList.size() + _microbeBarObjectList.size();
 
     if(!totalGraphs)
     {
@@ -821,6 +891,19 @@ void GraphLayoutObject::updateLayout()
 	_microbeObjectList[i]->setPosition(osg::Vec3(posX,0,posZ));
 	_microbeObjectList[i]->setColor(ColorGenerator::makeColor(i,_microbeObjectList.size()));
 	_microbeObjectList[i]->selectMicrobes(_currentSelectedMicrobeGroup,_currentSelectedMicrobes);
+	posZ -= graphHeight;
+	if(posZ < -(_height*0.5))
+	{
+	    posX += graphWidth;
+	    posZ = (_height*0.5) - (graphHeight*0.5);
+	}
+    }
+
+    for(int i = 0; i < _microbeBarObjectList.size(); ++i)
+    {
+	_microbeBarObjectList[i]->setGraphSize(graphWidth,graphHeight);
+	_microbeBarObjectList[i]->setPosition(osg::Vec3(posX,0,posZ));
+	_microbeBarObjectList[i]->selectMicrobes(_currentSelectedMicrobeGroup,_currentSelectedMicrobes);
 	posZ -= graphHeight;
 	if(posZ < -(_height*0.5))
 	{

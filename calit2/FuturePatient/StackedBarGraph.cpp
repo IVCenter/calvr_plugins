@@ -6,6 +6,7 @@
 #include <osg/Geometry>
 
 #include <iostream>
+#include <sstream>
 #include <cfloat>
 
 using namespace cvr;
@@ -33,11 +34,19 @@ StackedBarGraph::StackedBarGraph(std::string title, float width, float height)
     osg::StateSet * stateset = _root->getOrCreateStateSet();
     stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
 
-    _leftPaddingMult = 0.1;
-    _rightPaddingMult = 0.05;
+    stateset = _graphGeode->getOrCreateStateSet();
+    stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
+    stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+
+    _leftPaddingMult = 0.08;
+    _rightPaddingMult = 0.04;
     _topPaddingMult = 0.15;
-    _bottomPaddingMult = 0.1;
-    _barToConnectorRatio = 1.5;
+    _bottomPaddingMult = 0.05;
+    _barToConnectorRatio = 1.1;
+
+    _topTitleMult = 0.4;
+    _topLevelMult = 0.35;
+    _topCatHeaderMult = 0.25;
 
     _lineGeometry = new osg::Geometry();
     _lineGeometry->setUseDisplayList(false);
@@ -54,6 +63,7 @@ StackedBarGraph::StackedBarGraph(std::string title, float width, float height)
     _font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
 
     makeBG();
+    makeHover();
 
     update();
 }
@@ -79,6 +89,517 @@ bool StackedBarGraph::addBar(SBGData * dataRoot, std::vector<std::string> & data
     update();
 }
 
+void StackedBarGraph::setDisplaySize(float width, float height)
+{
+    _width = width;
+    _height = height;
+
+    update();
+}
+
+void StackedBarGraph::setHover(osg::Vec3 intersect)
+{
+    //std::cerr << "Set Hover" << std::endl;
+    if(!_hoverGeode)
+    {
+	return;
+    }
+
+    float graphLeft = _width * (_leftPaddingMult - 0.5);
+    float graphRight = _width * (0.5 - _rightPaddingMult);
+    float graphBottom = _height * (_bottomPaddingMult - 0.5);
+    float graphTop = _height * (0.5 - _topPaddingMult);
+
+    if(intersect.x() < graphLeft || intersect.x() > graphRight || intersect.z() < graphBottom || intersect.z() > graphTop)
+    {
+	clearHoverText();
+	return;
+    }
+
+    //std::cerr << "Intersect x: " << intersect.x() << " y: " << intersect.y() << " z: " << intersect.z() << std::endl;
+
+    float total = ((float)_dataList.size())*_barToConnectorRatio + ((float)_dataList.size()) - 1.0f;
+
+    float barHeight = (_barToConnectorRatio / total) * (graphTop - graphBottom);
+    float connectorHeight = (1.0 / total) * (graphTop - graphBottom);
+
+    std::vector<SBGData*> currentNodes;
+
+    // find root nodes for current level in all datasets
+    int index = 0;
+    for(int i = 0; i < _dataList.size(); ++i)
+    {
+	SBGData * myNode = _dataList[i];
+
+	for(int j = 0; j < _currentPath.size(); ++j)
+	{
+	    bool found = false;
+	    for(int k = 0; k < myNode->groups.size(); ++k)
+	    {
+		if(_currentPath[j] == myNode->groups[k]->name)
+		{
+		    found = true;
+		    myNode = myNode->groups[k];
+		    break;
+		}
+		else
+		{
+		    index += myNode->groups[k]->flat.size();
+		}
+	    }
+	    if(!found)
+	    {
+		std::cerr << "Unable to find current node" << std::endl;
+		clearHoverText();
+		return;
+	    }
+	}
+	currentNodes.push_back(myNode);
+    }
+
+    float maxSize = FLT_MIN;
+    for(int i = 0; i < currentNodes.size(); ++i)
+    {
+	maxSize = std::max(maxSize,currentNodes[i]->value);
+    }
+
+    bool graphHit = false;
+    bool connectorHit = false;
+
+    int graphIndex = 0;
+    int connectorIndex = 0;
+
+    float graphHeight = graphTop;
+
+    while(graphHeight > graphBottom)
+    {
+	graphHeight -= barHeight;
+	if(intersect.z() > graphHeight)
+	{
+	    graphHit = true;
+	    break;
+	}
+	graphIndex++;
+
+	graphHeight -= connectorHeight;
+	if(intersect.z() > graphHeight)
+	{
+	    connectorHit = true;
+	    break;
+	}
+	connectorIndex++;
+    }
+
+    if(graphHit)
+    {
+	if(graphIndex >= currentNodes.size())
+	{
+	    clearHoverText();
+	    return;
+	}
+
+	float myLeft = graphLeft + ((1.0 - (currentNodes[graphIndex]->value / maxSize)) * (graphRight-graphLeft)) / 2.0;
+	bool found = false;
+	int foundIndex;
+
+	for(int i = 0; i < currentNodes[graphIndex]->flat.size(); ++i)
+	{
+	    if(intersect.x() < myLeft)
+	    {
+		break;
+	    }
+
+	    myLeft += (currentNodes[graphIndex]->flat[i]->value / maxSize) * (graphRight - graphLeft);
+
+	    if(intersect.x() < myLeft)
+	    {
+		found = true;
+		foundIndex = i;
+		break;
+	    }
+	}
+
+	if(!found)
+	{
+	    clearHoverText();
+	    return;
+	}
+	else
+	{
+	    int tempIndex = foundIndex;
+	    std::string hoverGroup;
+	    for(int i = 0; i < currentNodes[graphIndex]->groups.size(); ++i)
+	    {
+		if(tempIndex < currentNodes[graphIndex]->groups[i]->flat.size())
+		{
+		    hoverGroup = currentNodes[graphIndex]->groups[i]->name;
+		    break;
+		}
+		tempIndex -= currentNodes[graphIndex]->groups[i]->flat.size();
+	    }
+
+	    std::stringstream hoverss;
+	    hoverss << hoverGroup << std::endl;
+	    hoverss << currentNodes[graphIndex]->flat[foundIndex]->name << std::endl;
+	    hoverss << "Value: " << currentNodes[graphIndex]->flat[foundIndex]->value;
+	    if(!_dataUnitsList[graphIndex].empty())
+	    {
+		hoverss << " " << _dataUnitsList[graphIndex];
+	    }
+
+	    _hoverText->setCharacterSize(1.0);
+	    _hoverText->setText(hoverss.str());
+	    _hoverText->setAlignment(osgText::Text::LEFT_TOP);
+	    osg::BoundingBox bb = _hoverText->getBound();
+	    float csize = 150.0 / (bb.zMax() - bb.zMin());
+	    _hoverText->setCharacterSize(csize);
+	    _hoverText->setPosition(osg::Vec3(intersect.x(),-2.5,intersect.z()));
+
+	    float bgheight = (bb.zMax() - bb.zMin()) * csize;
+	    float bgwidth = (bb.xMax() - bb.xMin()) * csize;
+	    osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(_hoverBGGeom->getVertexArray());
+	    if(verts)
+	    {
+		verts->at(0) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z()-bgheight);
+		verts->at(1) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z());
+		verts->at(2) = osg::Vec3(intersect.x(),-2,intersect.z());
+		verts->at(3) = osg::Vec3(intersect.x(),-2,intersect.z()-bgheight);
+		verts->dirty();
+	    }
+
+	    _currentHoverValue = currentNodes[graphIndex]->flat[foundIndex]->name;
+	}
+    }
+    else if(connectorHit)
+    {
+	if(connectorIndex >= _connectionGeometryList.size())
+	{
+	    clearHoverText();
+	    return;
+	}
+
+	float ratio = (intersect.z() - graphHeight) / connectorHeight;
+
+	float graphUpLeft = graphLeft + ((1.0 - (currentNodes[connectorIndex]->value / maxSize)) * (graphRight-graphLeft)) / 2.0;
+	float graphDownLeft = graphLeft + ((1.0 - (currentNodes[connectorIndex+1]->value / maxSize)) * (graphRight-graphLeft)) / 2.0;
+
+	float myLeft = graphUpLeft * ratio + graphDownLeft * (1.0 - ratio);
+	bool found = false;
+	int foundIndex = -1;
+
+	for(int i = 0; i < currentNodes[connectorIndex]->flat.size(); ++i)
+	{
+	    if(intersect.x() < myLeft)
+	    {
+		break;
+	    }
+
+	    graphUpLeft += (currentNodes[connectorIndex]->flat[i]->value / maxSize) * (graphRight - graphLeft);
+	    graphDownLeft += (currentNodes[connectorIndex+1]->flat[i]->value / maxSize) * (graphRight - graphLeft);
+
+	    myLeft = graphUpLeft * ratio + graphDownLeft * (1.0 - ratio);
+
+	    if(intersect.x() < myLeft)
+	    {
+		found = true;
+		foundIndex = i;
+		break;
+	    }
+	}
+
+	if(!found)
+	{
+	    clearHoverText();
+	    return;
+	}
+	else
+	{
+	    int tempIndex = foundIndex;
+	    std::string hoverGroup;
+	    for(int i = 0; i < currentNodes[connectorIndex]->groups.size(); ++i)
+	    {
+		if(tempIndex < currentNodes[connectorIndex]->groups[i]->flat.size())
+		{
+		    hoverGroup = currentNodes[connectorIndex]->groups[i]->name;
+		    break;
+		}
+		tempIndex -= currentNodes[connectorIndex]->groups[i]->flat.size();
+	    }
+
+	    std::stringstream hoverss;
+	    //hoverss << currentNodes[connectorIndex]->name << " - " << currentNodes[connectorIndex+1]->name << std::endl;
+	    hoverss << hoverGroup << std::endl;
+	    hoverss << currentNodes[connectorIndex]->flat[foundIndex]->name << std::endl;
+	    hoverss << "Value:";
+
+	    _hoverText->setCharacterSize(1.0);
+	    _hoverText->setText(hoverss.str());
+	    _hoverText->setAlignment(osgText::Text::LEFT_TOP);
+	    osg::BoundingBox bb = _hoverText->getBound();
+	    float csize = 150.0 / (bb.zMax() - bb.zMin());
+	    _hoverText->setCharacterSize(csize);
+	    _hoverText->setPosition(osg::Vec3(intersect.x(),-2.5,intersect.z()));
+
+	    float bgheight = (bb.zMax() - bb.zMin()) * csize;
+	    float bgwidth = (bb.xMax() - bb.xMin()) * csize;
+	    osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(_hoverBGGeom->getVertexArray());
+	    if(verts)
+	    {
+		verts->at(0) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z()-bgheight);
+		verts->at(1) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z());
+		verts->at(2) = osg::Vec3(intersect.x(),-2,intersect.z());
+		verts->at(3) = osg::Vec3(intersect.x(),-2,intersect.z()-bgheight);
+		verts->dirty();
+	    }
+
+	    _currentHoverValue = currentNodes[connectorIndex]->flat[foundIndex]->name;
+	}
+    }
+    else
+    {
+	clearHoverText();
+	return;
+    }
+
+    if(!_hoverGeode->getNumParents())
+    {
+	_root->addChild(_hoverGeode);
+    }
+}
+
+void StackedBarGraph::clearHoverText()
+{
+    if(!_hoverGeode)
+    {
+	return;
+    }
+
+    _currentHoverValue = "";
+
+    if(_hoverGeode->getNumParents())
+    {
+	_root->removeChild(_hoverGeode);
+    }
+}
+
+void StackedBarGraph::selectItems(std::string & group, std::vector<std::string> & keys)
+{
+    _lastSelectGroup = group;
+    _lastSelectKeys = keys;
+
+    if(!_dataList.size())
+    {
+	return;
+    }
+
+    SBGData * myNode = _dataList[0];
+
+    for(int j = 0; j < _currentPath.size(); ++j)
+    {
+	bool found = false;
+	for(int k = 0; k < myNode->groups.size(); ++k)
+	{
+	    if(_currentPath[j] == myNode->groups[k]->name)
+	    {
+		found = true;
+		myNode = myNode->groups[k];
+		break;
+	    }
+	}
+	if(!found)
+	{
+	    std::cerr << "Unable to find current node" << std::endl;
+	    return;
+	}
+    }
+
+    std::vector<int> indexList;
+    for(int i = 0; i < keys.size(); ++i)
+    {
+	//std::cerr << "Input key: " << keys[i] << std::endl;
+	for(int j = 0; j < myNode->flat.size(); ++j)
+	{
+	    if(keys[i] == myNode->flat[j]->name)
+	    {
+		//std::cerr << "Found index: " << j << std::endl;
+		indexList.push_back(j);
+		break;
+	    }
+	}
+    }
+
+    float selectedAlpha = 1.0;
+    float notSelectedAlpha;
+
+    if(keys.size())
+    { 
+	notSelectedAlpha = 0.3;
+    }
+    else
+    {
+	notSelectedAlpha = 1.0;
+    }
+
+    for(int i = 0; i < _geometryList.size(); ++i)
+    {
+	osg::Vec4Array * colors = dynamic_cast<osg::Vec4Array*>(_geometryList[i]->getColorArray());
+	if(!colors)
+	{
+	    continue;
+	}
+
+	for(int j = 0; j < colors->size(); ++j)
+	{
+	    colors->at(j).w() = notSelectedAlpha;
+	}
+
+	for(int j = 0; j < indexList.size(); ++j)
+	{
+	    colors->at(indexList[j]*4).w() = selectedAlpha;
+	    colors->at(indexList[j]*4+1).w() = selectedAlpha;
+	    colors->at(indexList[j]*4+2).w() = selectedAlpha;
+	    colors->at(indexList[j]*4+3).w() = selectedAlpha;
+	}
+	colors->dirty();
+    }
+
+    for(int i = 0; i < _connectionGeometryList.size(); ++i)
+    {
+	osg::Vec4Array * colors = dynamic_cast<osg::Vec4Array*>(_connectionGeometryList[i]->getColorArray());
+	if(!colors)
+	{
+	    continue;
+	}
+
+	for(int j = 0; j < colors->size(); ++j)
+	{
+	    colors->at(j).w() = notSelectedAlpha;
+	}
+
+	for(int j = 0; j < indexList.size(); ++j)
+	{
+	    colors->at(indexList[j]*4).w() = selectedAlpha;
+	    colors->at(indexList[j]*4+1).w() = selectedAlpha;
+	    colors->at(indexList[j]*4+2).w() = selectedAlpha;
+	    colors->at(indexList[j]*4+3).w() = selectedAlpha;
+	}
+	colors->dirty();
+    }
+}
+
+bool StackedBarGraph::processClick(osg::Vec3 & intersect, std::vector<std::string> & selectedKeys, bool & selectValid)
+{
+    if(!_dataList.size())
+    {
+	return false;
+    }
+
+    float graphLeft = _width * (_leftPaddingMult - 0.5);
+    float graphRight = _width * (0.5 - _rightPaddingMult);
+    float graphBottom = _height * (_bottomPaddingMult - 0.5);
+    float graphTop = _height * (0.5 - _topPaddingMult);
+
+    // see if intersect is in graph
+    if(intersect.x() >= graphLeft && intersect.x() <= graphRight && intersect.z() >= graphBottom && intersect.z() <= graphTop)
+    {
+	if(!_currentHoverValue.empty())
+	{
+	    selectedKeys.push_back(_currentHoverValue);
+	}
+	selectValid = true;
+	return true;
+    }
+
+    // find if intersect is in group label
+    float groupLabelHeight = _height * _topPaddingMult * _topCatHeaderMult;
+    if(intersect.z() > graphTop && intersect.z() - graphTop < groupLabelHeight)
+    {
+	std::vector<SBGData*> currentNodes;
+
+	// find root nodes for current level in all datasets
+	int index = 0;
+	for(int i = 0; i < _dataList.size(); ++i)
+	{
+	    SBGData * myNode = _dataList[i];
+
+	    for(int j = 0; j < _currentPath.size(); ++j)
+	    {
+		bool found = false;
+		for(int k = 0; k < myNode->groups.size(); ++k)
+		{
+		    if(_currentPath[j] == myNode->groups[k]->name)
+		    {
+			found = true;
+			myNode = myNode->groups[k];
+			break;
+		    }
+		    else
+		    {
+			index += myNode->groups[k]->flat.size();
+		    }
+		}
+		if(!found)
+		{
+		    std::cerr << "Unable to find current node" << std::endl;
+		    return false;
+		}
+	    }
+	    currentNodes.push_back(myNode);
+	}
+
+	float maxSize = FLT_MIN;
+	for(int i = 0; i < currentNodes.size(); ++i)
+	{
+	    maxSize = std::max(maxSize,currentNodes[i]->value);
+	}
+
+	if(!currentNodes[0]->groups.size() || !currentNodes[0]->groups[0]->groups.size())
+	{
+	    return false;
+	}
+
+	// find intersected group
+
+	float myLeft = graphLeft + ((1.0 - (currentNodes[0]->value / maxSize)) * (graphRight-graphLeft)) / 2.0;
+	float myRight = myLeft + (currentNodes[0]->value / maxSize) * (graphRight-graphLeft);
+	float mySize = myRight - myLeft;
+	
+	for(int i = 0; i < currentNodes[0]->groups.size(); ++i)
+	{
+	    if(intersect.x() < myLeft)
+	    {
+		return false;
+	    }
+
+	    myLeft += (currentNodes[0]->groups[i]->value / currentNodes[0]->value) * mySize;
+
+	    if(intersect.x() < myLeft)
+	    {
+		_currentPath.push_back(currentNodes[0]->groups[i]->name);
+		update();
+		break;
+	    }
+	}
+
+	return true;
+    }
+
+    // find if intersect should pop path
+    // TODO: do this better, maybe add a back button
+    if(intersect.z() > graphTop)
+    {
+	if(_currentPath.size())
+	{
+	    _currentPath.pop_back();
+	    update();
+	}
+	return true;
+    }
+
+    selectValid = true;
+    return false;
+}
+
 void StackedBarGraph::makeBG()
 {
     osg::Geometry * geom = new osg::Geometry();
@@ -100,6 +621,25 @@ void StackedBarGraph::makeBG()
     geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLE_STRIP,0,4));
 
     _bgGeode->addDrawable(geom);
+}
+
+void StackedBarGraph::makeHover()
+{
+    _hoverGeode = new osg::Geode();
+    _hoverBGGeom = new osg::Geometry();
+    _hoverBGGeom->setUseDisplayList(false);
+    _hoverText = makeText("",osg::Vec4(1,1,1,1));
+    _hoverGeode->addDrawable(_hoverBGGeom);
+    _hoverGeode->addDrawable(_hoverText);
+
+    osg::Vec3Array * verts = new osg::Vec3Array(4);
+    osg::Vec4Array * colors = new osg::Vec4Array(1);
+    colors->at(0) = osg::Vec4(0,0,0,1);
+
+    _hoverBGGeom->setVertexArray(verts);
+    _hoverBGGeom->setColorArray(colors);
+    _hoverBGGeom->setColorBinding(osg::Geometry::BIND_OVERALL);
+    _hoverBGGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
 }
 
 osg::Geometry * StackedBarGraph::makeGeometry(int elements)
@@ -134,6 +674,10 @@ void StackedBarGraph::updateAxis()
 {
     _axisGeode->removeDrawables(0,_axisGeode->getNumDrawables());
 
+    if(!_dataList.size())
+    {
+	return;
+    }
 
     // TODO: move this into update function and pass down to both levels
     std::vector<SBGData*> currentNodes;
@@ -211,7 +755,156 @@ void StackedBarGraph::updateAxis()
 	myTop -= barHeight + connectorHeight;
     }
 
+    float groupLabelHeight = _height * _topPaddingMult * _topCatHeaderMult;
 
+    osg::ref_ptr<osgText::Text> tempText = makeText("Ay",osg::Vec4(0,0,0,1));
+    osg::BoundingBox bb = tempText->getBound();
+    float groupLabelCharSize = (_topCatHeaderMult * 0.7 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
+
+    // draw current group outlines
+    for(int i = 0; i < currentNodes[0]->groups.size(); ++i)
+    {
+	myTop = graphTop;
+	for(int j = 0; j < currentNodes.size(); ++j)
+	{
+	    // find start/end offsets
+	    float offsetStart = 0;
+	    float offsetEnd;
+	    for(int k = 0; k < i; ++k)
+	    {
+		offsetStart += currentNodes[j]->groups[k]->value;
+	    }
+	    offsetEnd = offsetStart + currentNodes[j]->groups[i]->value;
+	    //std::cerr << "offsetStart: " << offsetStart << " end: " << offsetEnd << std::endl;
+
+	    // turn into absolute pos
+	    float mySize = (currentNodes[j]->value / maxSize) * (graphRight-graphLeft);
+	    float myLeft = graphLeft + ((1.0 - (currentNodes[j]->value / maxSize)) * (graphRight-graphLeft)) / 2.0;
+
+	    offsetStart = myLeft + (offsetStart / currentNodes[j]->value) * mySize;
+	    offsetEnd = myLeft + (offsetEnd / currentNodes[j]->value) * mySize;
+
+	    // draw top labels if first graph
+	    if(j == 0)
+	    {
+		lineVertArray->push_back(osg::Vec3(offsetStart,-1,graphTop+groupLabelHeight));
+		lineVertArray->push_back(osg::Vec3(offsetStart,-1,graphTop));
+		//if(i+1 == currentNodes[0]->groups.size())
+		//{
+		    //std::cerr << "offsetStart: " << offsetStart << " end: " << offsetEnd << std::endl;
+		    //std::cerr << "Drawing end line" << std::endl;
+		    //lineVertArray->push_back(osg::Vec3(offsetEnd,-1,graphTop+groupLabelHeight));
+		    //lineVertArray->push_back(osg::Vec3(offsetEnd,-1,graphTop));
+		//}
+
+		// add group text
+		osgText::Text * text = makeText(currentNodes[0]->groups[i]->name,osg::Vec4(0,0,0,1));
+		text->setAlignment(osgText::Text::CENTER_CENTER);
+		text->setCharacterSize(groupLabelCharSize);
+		text->setPosition(osg::Vec3(offsetStart+((offsetEnd-offsetStart)/2.0),-1,graphTop+(groupLabelHeight/2.0)));
+		makeTextFit(text,offsetEnd-offsetStart);
+
+		_axisGeode->addDrawable(text);
+	    }
+
+	    if(j)
+	    {
+		lineVertArray->push_back(osg::Vec3(offsetStart,-1,myTop));
+	    }
+
+	    lineVertArray->push_back(osg::Vec3(offsetStart,-1,myTop));
+	    lineVertArray->push_back(osg::Vec3(offsetStart,-1,myTop-barHeight));
+
+	    if(j+1 != currentNodes.size())
+	    {
+		lineVertArray->push_back(osg::Vec3(offsetStart,-1,myTop-barHeight));
+	    }
+
+	    myTop -= barHeight + connectorHeight;
+	}
+    }
+
+    // draw right lines
+    myTop = graphTop;
+    for(int i = 0; i < currentNodes.size(); ++i)
+    {
+	float myLeft = graphLeft + ((1.0 - (currentNodes[i]->value / maxSize)) * (graphRight-graphLeft)) / 2.0;
+	float myRight = myLeft + (currentNodes[i]->value / maxSize) * (graphRight-graphLeft);
+    
+	if(i == 0)
+	{
+	    lineVertArray->push_back(osg::Vec3(myRight,-1,myTop+groupLabelHeight));
+	    lineVertArray->push_back(osg::Vec3(myRight,-1,myTop));
+	}
+
+	if(i != 0)
+	{
+	    lineVertArray->push_back(osg::Vec3(myRight,-1,myTop));
+	}
+
+	lineVertArray->push_back(osg::Vec3(myRight,-1,myTop));
+	lineVertArray->push_back(osg::Vec3(myRight,-1,myTop-barHeight));
+
+	if(i+1 != currentNodes.size())
+	{
+	    lineVertArray->push_back(osg::Vec3(myRight,-1,myTop-barHeight));
+	}
+	myTop -= barHeight + connectorHeight;
+    }
+
+    // make title
+    osgText::Text * titleText = makeText(_title,osg::Vec4(0,0,0,1));
+    bb = titleText->getBound();
+    float csize1 = (_topTitleMult * 0.8 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
+    float csize2 = (_width * 0.9) / (bb.xMax() - bb.xMin());
+    titleText->setCharacterSize(std::min(csize1,csize2));
+    titleText->setAlignment(osgText::Text::CENTER_CENTER);
+    titleText->setPosition(osg::Vec3(0,-1,(_height/2.0)-(_topTitleMult*_topPaddingMult*_height)/2.0));
+    _axisGeode->addDrawable(titleText);
+
+    // make path text
+    std::stringstream pathss;
+    for(int i = 0; i < _currentPath.size(); ++i)
+    {
+	pathss << _currentPath[i];
+	if(i+1 != _currentPath.size())
+	{
+	    pathss << " - ";
+	}
+    }
+    if(!pathss.str().empty())
+    {
+	osgText::Text * pathText = makeText(pathss.str(),osg::Vec4(0,0,0,1));
+	bb = pathText->getBound();
+
+	csize1 = (_topLevelMult * 0.8 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
+	csize2 = (_width * 0.8) / (bb.xMax() - bb.xMin());
+	pathText->setCharacterSize(std::min(csize1,csize2));
+	pathText->setAlignment(osgText::Text::CENTER_CENTER);
+	pathText->setPosition(osg::Vec3(0,-1,(_height/2.0)-((_topTitleMult+(_topLevelMult/2.0))*_topPaddingMult*_height)));
+	_axisGeode->addDrawable(pathText);
+    }
+
+    osg::Quat q;
+    q.makeRotate(M_PI/2.0,osg::Vec3(1.0,0,0));
+    q = q * osg::Quat(-M_PI/2.0,osg::Vec3(0,1.0,0));
+
+    // make data labels
+    float dlHeight = graphTop - (barHeight / 2.0);
+    for(int i = 0; i < _dataList.size(); ++i)
+    {
+	osgText::Text * dlText = makeText(_dataList[i]->name,osg::Vec4(0,0,0,1));
+	dlText->setRotation(q);
+	dlText->setAlignment(osgText::Text::CENTER_CENTER);
+	bb = dlText->getBound();
+	csize1 = (_leftPaddingMult * _width * 0.8) / (bb.xMax() - bb.xMin());
+	csize2 = (barHeight * 0.9) / (bb.zMax() - bb.zMin());
+	dlText->setCharacterSize(std::min(csize1,csize2));
+	dlText->setPosition(osg::Vec3((-_width/2.0)+(_width*_leftPaddingMult/2.0),-1,dlHeight));
+	_axisGeode->addDrawable(dlText);
+
+	dlHeight -= barHeight + connectorHeight;
+    }
 
     lineGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES,0,lineVertArray->size()));
 }
@@ -229,6 +922,7 @@ void StackedBarGraph::updateGraph()
     int index = 0;
     for(int i = 0; i < _dataList.size(); ++i)
     {
+	index = 0;
 	SBGData * myNode = _dataList[i];
 
 	for(int j = 0; j < _currentPath.size(); ++j)
@@ -262,6 +956,8 @@ void StackedBarGraph::updateGraph()
 	maxSize = std::max(maxSize,currentNodes[i]->value);
     }
 
+
+    float totalElements = _dataList[0]->flat.size();
     float numElements = currentNodes[0]->flat.size();
 
     //std::cerr << "Current Nodes size: " << currentNodes.size() << " elements: " << numElements << std::endl;
@@ -336,17 +1032,17 @@ void StackedBarGraph::updateGraph()
 	    myVerts->at(4*j+2) = ll;
 	    myVerts->at(4*j+3) = lr;
 
-	    int colorNum;
-	    if(j % 2)
+	    int colorNum = j + index;
+	    if(colorNum % 2)
 	    {
-		colorNum = j / 2 + numElements / 2;
+		colorNum = colorNum / 2 + totalElements / 2;
 	    }
 	    else
 	    {
-		colorNum = j / 2;
+		colorNum = colorNum / 2;
 	    }
 
-	    osg::Vec4 color = ColorGenerator::makeColor(colorNum,numElements);
+	    osg::Vec4 color = ColorGenerator::makeColor(colorNum,totalElements);
 	    myColors->at(4*j) = color;
 	    myColors->at(4*j+1) = color;
 	    myColors->at(4*j+2) = color;
@@ -397,6 +1093,11 @@ void StackedBarGraph::updateGraph()
 	    }
 	}
     }
+
+    if(_lastSelectKeys.size())
+    {
+	selectItems(_lastSelectGroup,_lastSelectKeys);
+    }
 }
 
 osgText::Text * StackedBarGraph::makeText(std::string text, osg::Vec4 color)
@@ -414,3 +1115,35 @@ osgText::Text * StackedBarGraph::makeText(std::string text, osg::Vec4 color)
     }
     return textNode;
 }
+
+void StackedBarGraph::makeTextFit(osgText::Text * text, float maxSize)
+{
+    osg::BoundingBox bb = text->getBound();
+    float width = bb.xMax() - bb.xMin();
+    if(width <= maxSize)
+    {
+	return;
+    }
+
+    std::string str = text->getText().createUTF8EncodedString();
+    if(!str.length())
+    {
+	return;
+    }
+
+    while(str.length() > 1)
+    {
+	str = str.substr(0,str.length()-1);
+	text->setText(str + "..");
+	bb = text->getBound();
+	width = bb.xMax() - bb.xMin();
+	if(width <= maxSize)
+	{
+	    return;
+	}
+    }
+
+    str += ".";
+    text->setText(str);
+}
+

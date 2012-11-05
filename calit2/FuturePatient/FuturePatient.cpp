@@ -476,6 +476,11 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    _layoutObject->removeAll();
 	}
+	if(_currentSBGraph && _microbeGraphType->getIndex() == 1)
+	{
+	    _currentSBGraph = NULL;
+	    _microbeMenu->removeItem(_microbeDone);
+	}
 	menuCallback(_multiAddCB);
     }
 
@@ -512,9 +517,10 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    if(!_currentSBGraph)
 	    {
 		_currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-		//TODO: Layout
-		PluginHelper::registerSceneObject(_currentSBGraph,"FuturePatient");
-		_currentSBGraph->attachToScene();
+		//PluginHelper::registerSceneObject(_currentSBGraph,"FuturePatient");
+		//_currentSBGraph->attachToScene();
+		checkLayout();
+		_layoutObject->addMicrobeBarGraphObject(_currentSBGraph);
 		_microbeMenu->addItem(_microbeDone);
 	    }
 	    _currentSBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue());
@@ -544,8 +550,6 @@ void FuturePatient::menuCallback(MenuItem * item)
 
     if(item == _microbeLoadAverage || item == _microbeLoadHealthyAverage || item == _microbeLoadCrohnsAverage || item == _microbeLoadSRSAverage || item == _microbeLoadSRXAverage)
     {
-	MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-
 	SpecialMicrobeGraphType mgt;
 	if(item == _microbeLoadAverage)
 	{
@@ -568,17 +572,34 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    mgt = SMGT_SRX_AVERAGE;
 	}
 
-	if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue()))
+	// Bar Graph
+	if(_microbeGraphType->getIndex() == 0)
 	{
-	    //PluginHelper::registerSceneObject(mgo,"FuturePatient");
-	    //mgo->attachToScene();
-	    //_microbeGraphList.push_back(mgo);
-	    checkLayout();
-	    _layoutObject->addMicrobeGraphObject(mgo);
+	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+
+	    if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue()))
+	    {
+		//PluginHelper::registerSceneObject(mgo,"FuturePatient");
+		//mgo->attachToScene();
+		//_microbeGraphList.push_back(mgo);
+		checkLayout();
+		_layoutObject->addMicrobeGraphObject(mgo);
+	    }
+	    else
+	    {
+		delete mgo;
+	    }
 	}
-	else
+	else if(_microbeGraphType->getIndex() == 1)
 	{
-	    delete mgo;
+	    if(!_currentSBGraph)
+	    {
+		_currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+		checkLayout();
+		_layoutObject->addMicrobeBarGraphObject(_currentSBGraph);
+		_microbeMenu->addItem(_microbeDone);
+	    }
+	    _currentSBGraph->addSpecialGraph(mgt);
 	}
     }
 }
