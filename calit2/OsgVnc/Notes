@@ -1,0 +1,12 @@
+Useage:
+-------
+
+CalVR 127.0.0.1.vnc
+
+Note:
+-----
+
+Need to modify VncClient.cpp under OpenSceneGraph
+
+//pictureQuad->setEventCallback(new osgViewer::InteractiveImageHandler(_vncImage.get()));
+pictureQuad->setCullCallback(new osgViewer::InteractiveImageHandler(_vncImage.get())); // needed to trigger updates
