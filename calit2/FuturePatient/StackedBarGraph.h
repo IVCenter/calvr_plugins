@@ -4,6 +4,7 @@
 #include <osg/Group>
 #include <osg/MatrixTransform>
 #include <osg/Geode>
+#include <osg/LineWidth>
 #include <osgText/Text>
 
 #include <string>
@@ -74,6 +75,7 @@ class StackedBarGraph
         osg::ref_ptr<osgText::Text> _hoverText;
         std::string _currentHoverValue;
 
+        osg::ref_ptr<osg::LineWidth> _lineWidth;
         osg::ref_ptr<osgText::Font> _font;
 
         float _leftPaddingMult, _rightPaddingMult, _topPaddingMult, _bottomPaddingMult;

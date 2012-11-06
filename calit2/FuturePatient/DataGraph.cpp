@@ -1163,9 +1163,16 @@ void DataGraph::update()
     //std::cerr << "Point size set to: " << _point->getSize() << std::endl;
     _lineWidth->setWidth(_glScale * avglen * 0.05 * _pointLineScale * _pointLineScale);
 
+    // vroom tile node workaround, who know why
+    float tempval;
+    _pointSizeUniform->get(tempval);
+    _pointSizeUniform->set(tempval*0.31f);
+
     if(ComController::instance()->isMaster())
     {
 	_point->setSize(_point->getSize() * _masterPointScale);
+	_pointSizeUniform->set((float)_point->getSize());
+	_pointActionPoint->setSize(1.3*_point->getSize());
 	_lineWidth->setWidth(_lineWidth->getWidth() * _masterLineScale);
     }
 

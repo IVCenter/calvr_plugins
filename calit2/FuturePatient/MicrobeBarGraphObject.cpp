@@ -106,40 +106,38 @@ bool MicrobeBarGraphObject::addSpecialGraph(SpecialMicrobeGraphType smgt)
 
 bool MicrobeBarGraphObject::addGraph(std::string & label, std::string query)
 {
-    if(!_conn)
-    {
-	return false;
-    }
-
     if(!_microbeList)
     {
 	if(ComController::instance()->isMaster())
 	{
-	    mysqlpp::Query microbeQuery = _conn->query("select * from Microbes;");
-	    mysqlpp::StoreQueryResult microbeRes = microbeQuery.store();
-
-	    _microbeCount = microbeRes.num_rows();
-
-	    if(_microbeCount)
+	    if(_conn)
 	    {
-		_microbeList = new Microbe[_microbeCount];
+		mysqlpp::Query microbeQuery = _conn->query("select * from Microbes;");
+		mysqlpp::StoreQueryResult microbeRes = microbeQuery.store();
 
-		for(int i = 0; i < _microbeCount; ++i)
+		_microbeCount = microbeRes.num_rows();
+
+		if(_microbeCount)
 		{
-		    strncpy(_microbeList[i].superkingdom,microbeRes[i]["superkingdom"].c_str(),127);
-		    _microbeList[i].superkingdom[127] = '\0';
-		    strncpy(_microbeList[i].phylum,microbeRes[i]["phylum"].c_str(),127);
-		    _microbeList[i].phylum[127] = '\0';
-		    strncpy(_microbeList[i].mclass,microbeRes[i]["class"].c_str(),127);
-		    _microbeList[i].mclass[127] = '\0';
-		    strncpy(_microbeList[i].order,microbeRes[i]["order"].c_str(),127);
-		    _microbeList[i].order[127] = '\0';
-		    strncpy(_microbeList[i].family,microbeRes[i]["family"].c_str(),127);
-		    _microbeList[i].family[127] = '\0';
-		    strncpy(_microbeList[i].genus,microbeRes[i]["genus"].c_str(),127);
-		    _microbeList[i].genus[127] = '\0';
-		    strncpy(_microbeList[i].species,microbeRes[i]["species"].c_str(),127);
-		    _microbeList[i].species[127] = '\0';
+		    _microbeList = new Microbe[_microbeCount];
+
+		    for(int i = 0; i < _microbeCount; ++i)
+		    {
+			strncpy(_microbeList[i].superkingdom,microbeRes[i]["superkingdom"].c_str(),127);
+			_microbeList[i].superkingdom[127] = '\0';
+			strncpy(_microbeList[i].phylum,microbeRes[i]["phylum"].c_str(),127);
+			_microbeList[i].phylum[127] = '\0';
+			strncpy(_microbeList[i].mclass,microbeRes[i]["class"].c_str(),127);
+			_microbeList[i].mclass[127] = '\0';
+			strncpy(_microbeList[i].order,microbeRes[i]["order"].c_str(),127);
+			_microbeList[i].order[127] = '\0';
+			strncpy(_microbeList[i].family,microbeRes[i]["family"].c_str(),127);
+			_microbeList[i].family[127] = '\0';
+			strncpy(_microbeList[i].genus,microbeRes[i]["genus"].c_str(),127);
+			_microbeList[i].genus[127] = '\0';
+			strncpy(_microbeList[i].species,microbeRes[i]["species"].c_str(),127);
+			_microbeList[i].species[127] = '\0';
+		    }
 		}
 	    }
 
@@ -158,6 +156,11 @@ bool MicrobeBarGraphObject::addGraph(std::string & label, std::string query)
 		ComController::instance()->readMaster(_microbeList,_microbeCount*sizeof(struct Microbe));
 	    }
 	}
+    }
+
+    if(!_microbeList)
+    {
+	return false;
     }
 
     // ugly, but needed to avoid name collisions
@@ -466,7 +469,7 @@ bool MicrobeBarGraphObject::processEvent(InteractionEvent * ie)
 
 void MicrobeBarGraphObject::updateCallback(int handID, const osg::Matrix & mat)
 {
-    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::MOUSE)
+    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER)
     {
 	osg::Vec3 start, end(0,1000,0);
 	start = start * mat * getWorldToObjectMatrix();
@@ -486,7 +489,7 @@ void MicrobeBarGraphObject::updateCallback(int handID, const osg::Matrix & mat)
 
 void MicrobeBarGraphObject::leaveCallback(int handID)
 {
-    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::MOUSE)
+    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER)
     {
 	_graph->clearHoverText();
     }

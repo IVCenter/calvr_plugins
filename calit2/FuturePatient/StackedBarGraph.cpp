@@ -2,6 +2,8 @@
 #include "ColorGenerator.h"
 
 #include <cvrKernel/CalVR.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/ComController.h>
 
 #include <osg/Geometry>
 
@@ -31,8 +33,17 @@ StackedBarGraph::StackedBarGraph(std::string title, float width, float height)
     _root->addChild(_axisGeode);
     _root->addChild(_graphGeode);
 
+    _lineWidth = new osg::LineWidth();
+    _lineWidth->setWidth(ConfigManager::getFloat("value","Plugin.FuturePatient.StackedBarLineWidth",1.0));
+
+    if(ComController::instance()->isMaster())
+    {
+	_lineWidth->setWidth(_lineWidth->getWidth()*ConfigManager::getFloat("value","Plugin.FuturePatient.MasterLineScale",1.0));
+    }
+
     osg::StateSet * stateset = _root->getOrCreateStateSet();
     stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+    stateset->setAttributeAndModes(_lineWidth,osg::StateAttribute::ON);
 
     stateset = _graphGeode->getOrCreateStateSet();
     stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
@@ -631,6 +642,7 @@ void StackedBarGraph::makeHover()
     _hoverText = makeText("",osg::Vec4(1,1,1,1));
     _hoverGeode->addDrawable(_hoverBGGeom);
     _hoverGeode->addDrawable(_hoverText);
+    _hoverGeode->setCullingActive(false);
 
     osg::Vec3Array * verts = new osg::Vec3Array(4);
     osg::Vec4Array * colors = new osg::Vec4Array(1);
