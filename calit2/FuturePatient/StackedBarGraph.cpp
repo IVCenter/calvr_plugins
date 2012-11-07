@@ -472,6 +472,7 @@ void StackedBarGraph::selectItems(std::string & group, std::vector<std::string> 
 	    colors->at(indexList[j]*4+3).w() = selectedAlpha;
 	}
 	colors->dirty();
+	_geometryList[i]->dirtyDisplayList();
     }
 
     for(int i = 0; i < _connectionGeometryList.size(); ++i)
@@ -495,6 +496,7 @@ void StackedBarGraph::selectItems(std::string & group, std::vector<std::string> 
 	    colors->at(indexList[j]*4+3).w() = selectedAlpha;
 	}
 	colors->dirty();
+	_connectionGeometryList[i]->dirtyDisplayList();
     }
 }
 
@@ -665,6 +667,7 @@ osg::Geometry * StackedBarGraph::makeGeometry(int elements)
     geometry->setColorArray(colors);
     geometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
     geometry->setUseDisplayList(false);
+    geometry->setUseVertexBufferObjects(true);
 
     geometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,0));
 
@@ -1091,6 +1094,10 @@ void StackedBarGraph::updateGraph()
 	    std::cerr << "Unable to get geometry DrawArrays." << std::endl;
 	}
 
+        myVerts->dirty();
+	myColors->dirty();
+	_geometryList[i]->dirtyDisplayList();
+
 	if(upVerts)
 	{
 	    da = dynamic_cast<osg::DrawArrays*>(_connectionGeometryList[i-1]->getPrimitiveSet(0));
@@ -1103,6 +1110,9 @@ void StackedBarGraph::updateGraph()
 	    {
 		std::cerr << "Unable to get connection geometry DrawArrays" << std::endl;
 	    }
+	    upVerts->dirty();
+	    upColors->dirty();
+            _connectionGeometryList[i-1]->dirtyDisplayList();
 	}
     }
 
