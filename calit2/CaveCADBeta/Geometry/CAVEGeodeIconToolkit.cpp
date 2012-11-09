@@ -40,7 +40,8 @@ const float CAVEGeodeIconToolkitManipulate::gCtrlPtSize(0.04f);
 //Constructor
 CAVEGeodeIconToolkit::CAVEGeodeIconToolkit()
 {
-    applyColorTexture(gDiffuseColor, gSpecularColor, gAlphaNormal, "");
+    applyColor(gDiffuseColor, gSpecularColor, gAlphaNormal);
+    applyTexture("");
 }
 
 //Destructor
@@ -113,9 +114,21 @@ void CAVEGeodeIconToolkitMove::initBaseGeometry()
     addDrawable(mCylinderDrawableDown);
 
     /* apply discrimitive colors to different types of icons */
-    if (mFaceOrient == FRONT_BACK) applyColorTexture(Vec3(1, 0, 0), Vec3(1, 0, 0), gAlphaNormal, "");
-    else if (mFaceOrient == LEFT_RIGHT) applyColorTexture(Vec3(0, 1, 0), Vec3(0, 1, 0), gAlphaNormal, "");
-    else if (mFaceOrient == UP_DOWN) applyColorTexture(Vec3(0, 0, 1), Vec3(0, 0, 1), gAlphaNormal, "");
+    if (mFaceOrient == FRONT_BACK) 
+    {
+        applyColor(Vec3(1, 0, 0), Vec3(1, 0, 0), gAlphaNormal);
+        applyTexture("");
+    }
+    else if (mFaceOrient == LEFT_RIGHT) 
+    {
+        applyColor(Vec3(0, 1, 0), Vec3(0, 1, 0), gAlphaNormal);
+        applyTexture("");
+    }
+    else if (mFaceOrient == UP_DOWN) 
+    {
+        applyColor(Vec3(0, 0, 1), Vec3(0, 0, 1), gAlphaNormal);
+        applyTexture("");
+    }
 }
 
 
@@ -183,7 +196,8 @@ CAVEGeodeIconToolkitRotate::CAVEGeodeIconToolkitRotate(const AxisAlignment &typ)
     addDrawable(mPanelDrawable);
 
     /* use texture map for round rotation panels */
-    applyColorTexture(Vec3(0.8, 0.8, 0.8), Vec3(0.8, 0.8, 0.8), gAlphaNormal, getDataDir() + "Textures/RoundRuler.JPG");
+    applyColor(Vec3(0.8, 0.8, 0.8), Vec3(0.8, 0.8, 0.8), gAlphaNormal);
+    applyTexture(getDataDir() + "Textures/RoundRuler.JPG");
 }
 
 
@@ -222,9 +236,21 @@ CAVEGeodeIconToolkitManipulate::CAVEGeodeIconToolkitManipulate(const Vec3 &scali
     addDrawable(mCtrlPtBoxDrawable);
 
     /* set color texture to discriminate between types of control points */
-    if (ctrlPtTyp == CORNER) applyColorTexture(Vec3(1, 0, 0), Vec3(1, 0, 0), gAlphaNormal, "");
-    else if (ctrlPtTyp == EDGE) applyColorTexture(Vec3(0, 1, 0), Vec3(0, 1, 0), gAlphaNormal, "");
-    else if (ctrlPtTyp == FACE) applyColorTexture(Vec3(0, 0, 1), Vec3(0, 0, 1), gAlphaNormal, "");
+    if (ctrlPtTyp == CORNER) 
+    {
+        applyColor(Vec3(1, 0, 0), Vec3(1, 0, 0), gAlphaNormal);
+        applyTexture("");
+    }
+    else if (ctrlPtTyp == EDGE) 
+    {
+        applyColor(Vec3(0, 1, 0), Vec3(0, 1, 0), gAlphaNormal);
+        applyTexture("");
+    }
+    else if (ctrlPtTyp == FACE) 
+    {
+        applyColor(Vec3(0, 0, 1), Vec3(0, 0, 1), gAlphaNormal);
+        applyTexture("");
+    }
 }
 
 
@@ -236,14 +262,4 @@ void CAVEGeodeIconToolkitManipulate::setMatrixTrans(MatrixTransform *matTrans)
 				 mScalingDir.z() * mBoundingVect.z()));
     matTrans->setMatrix(offsetMat);
 }
-
-
-
-
-
-
-
-
-
-
 

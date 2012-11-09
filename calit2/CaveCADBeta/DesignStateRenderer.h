@@ -105,5 +105,5 @@ class DesignStateRenderer
     static DesignStateRenderer *gDSRendererPtr;
 };
 
-
 #endif
+

@@ -61,7 +61,14 @@ void ANIMLoadTexturePalletteRoot(osg::PositionAttitudeTransform** xformScaleFwd,
     osg::ShapeDrawable *saveSD = new osg::ShapeDrawable(saveSphere);
     saveSD->setColor(osg::Vec4(1.0, 1.0, 1.0, 0.5));
     saveGeode->addDrawable(saveSD);
-    
+
+    // Open/close color selector
+    osg::Geode *csGeode = new osg::Geode();
+    osg::Shape *csSphere = new osg::Sphere(osg::Vec3(0, 0, -0.5), 0.20);
+    osg::ShapeDrawable *csSD = new osg::ShapeDrawable(csSphere);
+    csSD->setColor(osg::Vec4(1.0, 0.0, 0.0, 0.5));
+    csGeode->addDrawable(csSD);
+   
     animationPathScaleFwd = new AnimationPath();
     animationPathScaleBwd = new AnimationPath();
 
@@ -102,6 +109,10 @@ void ANIMLoadTexturePalletteRoot(osg::PositionAttitudeTransform** xformScaleFwd,
 
     (*buttonScaleFwd)->addChild(saveGeode);
     (*buttonScaleBwd)->addChild(saveGeode);
+
+    (*buttonScaleFwd)->addChild(csGeode);
+    (*buttonScaleBwd)->addChild(csGeode);
+
 }
 
 

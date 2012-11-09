@@ -35,7 +35,6 @@ DSGeometryCreator::DSGeometryCreator(): mShapeSwitchIdx(0), mNumShapeSwitches(0)
     prevGeode = NULL;
 }
 
-
 // Destructor
 DSGeometryCreator::~DSGeometryCreator()
 {
@@ -200,30 +199,28 @@ void DSGeometryCreator::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg
                 {
                     mDOGeometryCreator->setSnapPos(pointerPos);
                 }*/
-                
                 }
             }
 
             osg::Matrixf w2o = cvr::PluginHelper::getWorldToObjectTransform();
             osg::Matrixd scaleMat;
-            scaleMat.makeScale(osg::Vec3(1.5, 1.5, 1.5));
+            scaleMat.makeScale(osg::Vec3(0.001, 0.001, 0.001));
             //scaleMat.invert(scaleMat);
             osg::Matrixd o2cad = scaleMat;
 
             if (snap)
             {
-                center = center * o2cad;
-
+                center = center * w2o * o2cad;// * o2cad * w2o;
                 mDOGeometryCreator->setSnapPos(center, false);
-                std::cout << "snap " << center[0] << " " << center[1] << " " << center[2] << std::endl;
+                //std::cout << "snap " << center[0] << " " << center[1] << " " << center[2] << std::endl;
             }
             else
             {
                 osg::Vec3 pos = pointerPos;
-                pos = pos * o2cad;
+                pos = pos * w2o * o2cad;// * o2cad * w2o;
 
                 mDOGeometryCreator->setSnapPos(pos);
-                std::cout << "no snap " << pos[0] << " " << pos[1] << " " << pos[2] << std::endl;
+                //std::cout << "no snap " << pos[0] << " " << pos[1] << " " << pos[2] << std::endl;
             }
             mDOGeometryCreator->updateReferenceAxis();
         }
@@ -240,6 +237,10 @@ void DSGeometryCreator::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg
             if (mDOIntersector->test(pointerOrg, pointerPos))
             {
                 osg::Vec3 hit = mDOIntersector->getWorldHitPosition();
+
+                osg::Matrixd scaleMat;
+                scaleMat.makeScale(osg::Vec3(0.001, 0.001, 0.001));
+                hit = hit * cvr::PluginHelper::getWorldToObjectTransform() * scaleMat;// * scaleMat * cvr::PluginHelper::getWorldToObjectTransform();
 
                 CAVEGeodeShape *hitCAVEGeode = dynamic_cast <CAVEGeodeShape*>(mDOIntersector->getHitNode());
                 if (hitCAVEGeode)
@@ -359,7 +360,12 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
             if (hitCAVEGeode)
             {
                 osg::Vec3 center = osg::Vec3();
-                if (hitCAVEGeode->snapToVertex(mDOIntersector->getWorldHitPosition(), &center))
+                osg::Vec3 hit = mDOIntersector->getWorldHitPosition();
+                osg::Matrixd scaleMat;
+                scaleMat.makeScale(osg::Vec3(0.001, 0.001, 0.001));
+                hit = hit * cvr::PluginHelper::getWorldToObjectTransform() * scaleMat;// * scaleMat * cvr::PluginHelper::getWorldToObjectTransform();
+
+                if (hitCAVEGeode->snapToVertex(hit, &center))//mDOIntersector->getWorldHitPosition(), &center))
                 {
                     mDOGeometryCreator->setSolidshapeInitPos(center, false);
                 } 

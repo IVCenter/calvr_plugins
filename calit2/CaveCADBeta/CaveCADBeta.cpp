@@ -55,6 +55,10 @@ bool CaveCADBeta::init()
     setToolkitVisibleCheckbox->setCallback(this);
     mainMenu->addItem(setToolkitVisibleCheckbox);
 
+    mSkydomeCheckbox = new MenuCheckbox("Skydome", true);
+    mSkydomeCheckbox->setCallback(this);
+    mainMenu->addItem(mSkydomeCheckbox);
+
     // CaveCADBeta local objects
     osg::Group *root = new osg::Group();
 
@@ -67,7 +71,7 @@ bool CaveCADBeta::init()
     Matrixd intObeMat = Matrixd(1, 0, 0, 0, 
                                 0, 1, 0, 0, 
                                 0, 0, 1, 0, 
-                                0, 0,-.500, 1);
+                                0, 0, 1, 1);//-.500, 1);
 //    mat.postMult(intObeMat);
     mat.preMult(intObeMat);
 
@@ -164,6 +168,13 @@ void CaveCADBeta::menuCallback(MenuItem *item)
 		if (mCAVEDesigner) 
             mCAVEDesigner->getStateHandler()->setVisible(flag);
     }
+
+    if (item == mSkydomeCheckbox)
+    {
+        mCAVEDesigner->setSkydomeVisible(mSkydomeCheckbox->getValue());
+        std::cout << "skydome checkbox" << std::endl;
+    }
+
 }
 
 
