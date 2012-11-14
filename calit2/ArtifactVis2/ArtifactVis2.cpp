@@ -1868,7 +1868,7 @@ if(tHandIntersect)
                                         artifacts[i]->lockedType = M_LHAND;
                                         //it->second.cylinder.locked = true;
                                         // XXX XXX XXX Turn on, but then it is in front of artifa
-                                        //_artifactPanel->setVisible(true);
+                                        _artifactPanel->setVisible(true);
                                         //printf("Intersecting Hand with artifact %d \n", i);
                                        // break;
                                     }
@@ -2159,11 +2159,11 @@ if(tHandIntersect)
                     panelPos.y() *= 1000;
                     panelPos.z() *= 1000;
                     panelPos.y() += 3000;
-                   _artifactPanel->setPosition(panelPos);
+                   //_artifactPanel->setPosition(panelPos);
                     //	printf("Panel Pos = %g,%g,%g\n",panelPos.x(),panelPos.y(),panelPos.z());
                     //_artifactPanel->setRotation(rot);
                     //_artifactPanel->setScale(scale);
-                    _artifactPanel->setVisible(_selectArtifactCB->getValue());
+                    _artifactPanel->setVisible(true);
 		    }
 	            //kLockPos = true;
                     if(!kLockPos)
@@ -2659,7 +2659,7 @@ void ArtifactVis2::setActiveArtifact(int _lockedTo, int _lockedType, int art, in
         if (!modelExists(modelPath.c_str()))
         {
             modelPath = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("photos/" + basket + "/frame.obj");
-            _snum = 0.1;
+            _snum = 0.005;
             xrot = 90;
 
             if (modelExists(modelPath.c_str()))

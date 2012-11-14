@@ -1,0 +1,8 @@
+recording
+
+meshing
+
+move color map to boxes?
+fix color map
+add depth map
+hand open/closed
