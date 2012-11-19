@@ -35,7 +35,47 @@ const string CAVEGeode::getDataDir()
 /***************************************************************
 * Function: applyColorTexture()
 ***************************************************************/
-void CAVEGeode::applyColorTexture(const Vec3 &diffuse, const Vec3 &specular, const float &alpha, const string &texFilename)
+void CAVEGeode::applyTexture(const string &texFilename)
+{
+    StateSet *stateset = getOrCreateStateSet();
+
+    /* update material parameters */
+    Material *material = dynamic_cast <Material*> (stateset->getAttribute(StateAttribute::MATERIAL)); 
+    if (!material) 
+        material = new Material;
+    /*material->setDiffuse(Material::FRONT_AND_BACK, Vec4(diffuse, 1.f));
+    material->setSpecular(Material::FRONT_AND_BACK, Vec4(specular, 1.f));
+    material->setAlpha(Material::FRONT_AND_BACK, alpha);
+    stateset->setAttributeAndModes(material, StateAttribute::ON);*/
+
+    /* update texture image */
+    if (texFilename != "")
+    {
+        Texture2D *texture = dynamic_cast <Texture2D*> (stateset->getAttribute(StateAttribute::TEXTURE));
+        if (!texture) 
+            texture = new Texture2D;
+        Image* texImage = osgDB::readImageFile(texFilename);
+        texture->setImage(texImage); 
+        texture->setWrap(Texture::WRAP_S,Texture::REPEAT);
+        texture->setWrap(Texture::WRAP_T,Texture::REPEAT);
+        texture->setDataVariance(Object::DYNAMIC);
+        stateset->setTextureAttributeAndModes(0, texture, StateAttribute::ON);
+        stateset->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
+        stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
+    }
+
+    /* update of color & texture properties */
+    /*mDiffuse = diffuse;
+    mSpecular = specular;
+    mAlpha = alpha;*/
+    mTexFilename = texFilename;
+}
+
+
+/***************************************************************
+* Function: applyColorTexture()
+***************************************************************/
+void CAVEGeode::applyColor(const Vec3 &diffuse, const Vec3 &specular, const float &alpha)
 {
     StateSet *stateset = getOrCreateStateSet();
 
@@ -49,23 +89,25 @@ void CAVEGeode::applyColorTexture(const Vec3 &diffuse, const Vec3 &specular, con
     stateset->setAttributeAndModes(material, StateAttribute::ON);
 
     /* update texture image */
-    Texture2D *texture = dynamic_cast <Texture2D*> (stateset->getAttribute(StateAttribute::TEXTURE));
-    if (!texture) 
-        texture = new Texture2D;
-    Image* texImage = osgDB::readImageFile(texFilename);
-    texture->setImage(texImage); 
-    texture->setWrap(Texture::WRAP_S,Texture::REPEAT);
-    texture->setWrap(Texture::WRAP_T,Texture::REPEAT);
-    texture->setDataVariance(Object::DYNAMIC);
-    stateset->setTextureAttributeAndModes(0, texture, StateAttribute::ON);
-    stateset->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
-    stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
-
+/*    if (texFilename != "")
+    {
+        Texture2D *texture = dynamic_cast <Texture2D*> (stateset->getAttribute(StateAttribute::TEXTURE));
+        if (!texture) 
+            texture = new Texture2D;
+        Image* texImage = osgDB::readImageFile(texFilename);
+        texture->setImage(texImage); 
+        texture->setWrap(Texture::WRAP_S,Texture::REPEAT);
+        texture->setWrap(Texture::WRAP_T,Texture::REPEAT);
+        texture->setDataVariance(Object::DYNAMIC);
+        stateset->setTextureAttributeAndModes(0, texture, StateAttribute::ON);
+        stateset->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
+        stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
+    }*/
     /* update of color & texture properties */
     mDiffuse = diffuse;
     mSpecular = specular;
     mAlpha = alpha;
-    mTexFilename = texFilename;
+    //mTexFilename = texFilename;
 }
 
 

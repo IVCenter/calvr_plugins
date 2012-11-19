@@ -34,8 +34,9 @@ class CAVEGeode: public osg::Geode
     ~CAVEGeode();
 
     /* change color, texture and transparency values for all geode types */
-    void applyColorTexture( const osg::Vec3 &diffuse, const osg::Vec3 &specular, const float &alpha,
-			    const std::string &texFilename);
+    void applyTexture(const std::string &texFilename);
+    void applyColor(const osg::Vec3 &diffuse, const osg::Vec3 &specular, const float &alpha);
+
     void applyAlpha(const float &alpha);
 
     void applyAudioInfo(const std::string &audioInfo) { mAudioInfo = audioInfo; }

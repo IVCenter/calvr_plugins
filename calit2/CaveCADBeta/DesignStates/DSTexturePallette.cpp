@@ -179,7 +179,7 @@ void DSTexturePallette::setObjectEnabled(bool flag)
             animCallback->reset();
 
         resetIntersectionRootTarget();
-        mColorSelector->setVisible(true);
+        //mColorSelector->setVisible(true);
     }
     else // close menu
     {
@@ -187,7 +187,7 @@ void DSTexturePallette::setObjectEnabled(bool flag)
         mIsOpen = false;
 
         // reset all texture buttons
-/*        for (int i = 0; i < mNumTexs; i++)
+        /*for (int i = 0; i < mNumTexs; i++)
         {
             mTextureStatesSelectEntryArray[i]->mStateAnimationArray[1]->reset();
             mTextureStatesSelectEntryArray[i]->mEntrySwitch->setSingleChildOn(1);
@@ -213,7 +213,6 @@ void DSTexturePallette::setObjectEnabled(bool flag)
             animCallback->reset();
 
         resetIntersectionRootTarget();
-        mColorSelector->setVisible(false);
     }
 }
 
@@ -312,7 +311,8 @@ bool DSTexturePallette::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
     mDevPressedFlag = true;
     if (mIsOpen)
     {
-        mColorSelector->buttonEvent(cvr::BUTTON_DOWN, cvr::TrackingManager::instance()->getHandMat(0));
+        if (mColorSelector->buttonEvent(cvr::BUTTON_DOWN, cvr::TrackingManager::instance()->getHandMat(0)))
+            return true;
         
         // Save Color button
         mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mButtonFwd->getChild(0));
@@ -331,6 +331,14 @@ bool DSTexturePallette::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
             return true;
         }
 
+        // Color selector open/close button
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mButtonFwd->getChild(1));
+        if (mDSIntersector->test(pointerOrg, pointerPos))
+        {
+            mColorSelector->setVisible(!mColorSelector->isVisible());
+            return true;
+        }
+
         // test all submenus for intersection
         /*for (int i = 0; i < mNumTexs; ++i)
         {
@@ -343,8 +351,8 @@ bool DSTexturePallette::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
             }
         }*/
         
-        mTexIndex = -1;
-        mColorIndex = -1;
+        //mTexIndex = -1;
+        //mColorIndex = -1;
         for (int i = 0; i < mColorEntries.size(); ++i)
         {
             mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mColorEntries[i]->mEntryGeode);
@@ -367,12 +375,12 @@ bool DSTexturePallette::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
                 return true;
             }
         }
-
         resetIntersectionRootTarget();
 
         // test world geometry for intersection
         if (mTexturingState == APPLY_TEXTURE)
         {
+            mDOIntersector->loadRootTargetNode(gDesignObjectRootGroup, NULL);
             if (mDOIntersector->test(pointerOrg, pointerPos))
             {
                 // adjust texture transparency or apply texture to geode
@@ -384,13 +392,13 @@ bool DSTexturePallette::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
                     {
                         Vec3 diffuse = mColorEntries[mColorIndex]->getDiffuse();
                         Vec3 specular = mColorEntries[mColorIndex]->getSpecular();
-                        geode->applyColorTexture(diffuse, specular, 1.0f, "");
+                        geode->applyColor(diffuse, specular, 1.0f);
                     } 
                     else if (mTexIndex > -1)
                     {
                         string filename = mTextureEntries[mTexIndex]->getTexFilename();
                         string audioinfo = mTextureEntries[mTexIndex]->getAudioInfo();
-                        geode->applyColorTexture(osg::Vec3(1,1,1), osg::Vec3(1,1,1), 1.0f, filename);
+                        geode->applyTexture(filename);
                         geode->applyAudioInfo(audioinfo);
                     }
 

@@ -109,5 +109,5 @@ class DesignStateBase: public osg::Switch
     static osg::Matrixd gDesignStateBaseRotMat;
 };
 
-
 #endif
+

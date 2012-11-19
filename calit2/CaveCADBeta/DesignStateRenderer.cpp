@@ -134,11 +134,21 @@ void DesignStateRenderer::setVisible(bool flag)
 {
     mFlagVisible = flag;
     // mActiveDSPtr->setObjectEnabled(flag);
-
-    for (DesignStateList::iterator itrDS = mDSList.begin(); itrDS != mDSList.end(); itrDS++)
+    
+    if (flag)
     {
-        (*itrDS)->setObjectEnabled(flag);
-        (*itrDS)->setObjectEnabled(!flag);
+        for (DesignStateList::iterator itrDS = mDSList.begin(); itrDS != mDSList.end(); itrDS++)
+        {
+            (*itrDS)->setObjectEnabled(flag);
+            (*itrDS)->setObjectEnabled(!flag);
+        }
+    }
+    else
+    {
+        for (DesignStateList::iterator itrDS = mDSList.begin(); itrDS != mDSList.end(); itrDS++)
+        {
+            (*itrDS)->setObjectEnabled(false);
+        }
     }
 
     // align state spheres with viewer's position and front orientation
@@ -367,7 +377,7 @@ void DesignStateRenderer::resetPose()
        to XY plane and use that as front orientation, to make sure 
        all design tools are aligned straight up when showing up. */
 
-    float height = 0.5;
+    float height = 0.8;
 
     Vec3 pos = mViewOrg + mViewDir * ANIM_VIRTUAL_SPHERE_DISTANCE * 0.5;
     pos[2] += height;

@@ -71,6 +71,5 @@ class DOGeometryCreator: public DesignObjectBase
     CAVEGeodeSnapSolidshape *mSolidshapeGeode;
 };
 
-
 #endif
 
