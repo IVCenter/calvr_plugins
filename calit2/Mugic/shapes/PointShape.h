@@ -12,14 +12,14 @@ public:
 
     PointShape(std::string command = "", std::string name = "");
 	virtual ~PointShape();
-    virtual void update(std::string);
-    virtual void update(osg::NodeVisitor*, osg::Drawable*);
+    void update(std::string);
 
 protected:
     PointShape();
     void setPosition(osg::Vec3);
     void setColor(osg::Vec4);
     void setSize(float);
+    void update();
     osg::Point* _point;
 };
 

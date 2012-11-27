@@ -4,6 +4,7 @@
 #include <queue>
 #include <OpenThreads/Mutex>
 #include <OpenThreads/ScopedLock>
+#include <OpenThreads/Condition>
 
 using namespace std;
 
@@ -13,6 +14,7 @@ class ThreadQueue
     private:
 	    OpenThreads::Mutex _lock;
         std::queue<T> _queue;
+		OpenThreads::Condition * _waiting;
 
     public:
 	    ThreadQueue();
@@ -21,5 +23,7 @@ class ThreadQueue
         bool get(T&);
         int size();
         void add(T);
+		void setCondition(OpenThreads::Condition*);
+        OpenThreads::Condition* getCondition();
 };
 #endif

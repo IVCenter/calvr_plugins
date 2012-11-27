@@ -33,7 +33,10 @@ bool Mugic::init()
 	std::cerr << "Mugic init\n";
     _st = NULL;
     _parser = NULL;
+	_parserSignal = new OpenThreads::Condition();
+    
     _commands = new ThreadQueue<std::string> ();
+    _commands->setCondition(_parserSignal);
 
 	_st = new SocketThread(_commands);
 

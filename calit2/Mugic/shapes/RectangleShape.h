@@ -11,13 +11,13 @@ public:
 
     RectangleShape(std::string command = "", std::string name = "");
 	virtual ~RectangleShape();
-    void update(osg::NodeVisitor*, osg::Drawable*);
     void update(std::string);
 
 protected:
     RectangleShape();
     void setPosition(osg::Vec3, float width, float height);
     void setColor(osg::Vec4);
+    void update();
 };
 
 #endif

@@ -8,7 +8,7 @@
 
 RectangleShape::RectangleShape(std::string command, std::string name) 
 {
-    _type = RECTANGLE;
+    _type = SimpleShape::RECTANGLE;
 
     setName(name);
     
@@ -59,7 +59,7 @@ void RectangleShape::update(std::string command)
     addParameter(command, "a");
 }
 
-void RectangleShape::update(osg::NodeVisitor*, osg::Drawable*)
+void RectangleShape::update()
 {
     OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
     if( !_dirty )

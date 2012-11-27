@@ -12,7 +12,6 @@ public:
 
     LineShape(std::string command = "", std::string name ="");
 	virtual ~LineShape();
-    void update(osg::NodeVisitor*, osg::Drawable*);
     void update(std::string);
 
 protected:
@@ -20,6 +19,7 @@ protected:
     void setPosition(osg::Vec3, osg::Vec3);
     void setColor(osg::Vec4, osg::Vec4);
     void setWidth(float);
+    void update();
     osg::LineWidth* _width;
 };
 #endif

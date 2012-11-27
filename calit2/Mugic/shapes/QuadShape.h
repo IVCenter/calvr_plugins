@@ -13,12 +13,12 @@ public:
     QuadShape(std::string command, std::string name);
     virtual ~QuadShape();
     void update(std::string);
-    void update(osg::NodeVisitor*, osg::Drawable*);
 
 protected:
     QuadShape();
     void setPosition(osg::Vec3, osg::Vec3, osg::Vec3, osg::Vec3);
     void setColor(osg::Vec4, osg::Vec4, osg::Vec4, osg::Vec4);
+    void update();
 };
 
 #endif

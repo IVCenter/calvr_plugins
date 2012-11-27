@@ -12,12 +12,12 @@ public:
 
     TriangleShape(std::string command = "", std::string name ="");
 	virtual ~TriangleShape();
-    void update(osg::NodeVisitor*, osg::Drawable*);
-    void update(std::string);
+    void update(std::string command);
 
 protected:
     TriangleShape();
     void setPosition(osg::Vec3, osg::Vec3, osg::Vec3);
     void setColor(osg::Vec4, osg::Vec4, osg::Vec4);
+    void update();
 };
 #endif

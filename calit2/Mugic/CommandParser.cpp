@@ -6,6 +6,7 @@
 #include "shapes/CircleShape.h"
 #include "shapes/LineShape.h"
 #include "shapes/RectangleShape.h"
+#include "shapes/TextShape.h"
 
 #include <iostream>
 #include <sstream>
@@ -24,6 +25,12 @@ CommandParser::CommandParser(ThreadQueue<std::string>* queue, osg::Group* root) 
     _shapeDefinitions["circle"] = new Factory<CircleShape>();
     _shapeDefinitions["line"] = new Factory<LineShape>();
     _shapeDefinitions["rectangle"] = new Factory<RectangleShape>();
+    _shapeDefinitions["text"] = new Factory<TextShape>();
+
+    // init mutex 
+    _mutex.lock();
+
+    _condition = _queue->getCondition();
         
 	start(); //starts the thread
 }
@@ -32,11 +39,14 @@ void CommandParser::run()
 {
 	while ( ! _mkill ) 
 	{
+		// wait for queue addition signal
+        _condition->wait(&_mutex);
+
         std::string command;
-        if( _queue->get(command) )
+        while( _queue->get(command) )
+        {
             parseCommand(command);
-        //else
-        //    sleep(1);
+        }
 	}
 }
 
@@ -78,6 +88,10 @@ void CommandParser::parseCommand(std::string command)
             _shapes[elementName]->update(command);
         }
    }
+   else if( commandType.compare("delete") == 0)
+   {
+       remove(elementName);
+   }
 /*
    else if( commandType.compare("var") == 0 && !elementName.empty()) // check for variable
    {
@@ -87,25 +101,7 @@ void CommandParser::parseCommand(std::string command)
    else // new object defined need to create
    {
        // create a new object if it doesnt exist or override old one
-       std::map<std::string, BasicShape* >::iterator it = _shapes.find(elementName);
-       if( it != _shapes.end() )
-       {
-            osg::Geode* geode = NULL;
-            // get geode drawable is attached too
-            while( (geode = it->second->getParent(0)->asGeode()) != NULL)
-            {
-                osg::Group* parent = NULL;
-
-                // access all the parents of the attached geode
-                while( (parent = geode->getParent(0)->asGroup()) != NULL)
-                {
-                    parent->removeChild(geode);
-                }
-            }
-            
-            // remove old shape from map and scenegraph
-            _shapes.erase(it);
-       }
+       remove(elementName);
 
        // make sure shape exists in table to create
        if( _shapeDefinitions.find(commandType) != _shapeDefinitions.end() )
@@ -123,6 +119,30 @@ void CommandParser::parseCommand(std::string command)
             _root->addChild(geode.get());
        }
    }
+}
+
+void CommandParser::remove(std::string elementName)
+{
+       // create a new object if it doesnt exist or override old one
+       std::map<std::string, BasicShape* >::iterator it = _shapes.find(elementName);
+       if( it != _shapes.end() )
+       {
+            osg::Geode* geode = NULL;
+            // get geode drawable is attached too
+            if( (geode = it->second->getParent(0)->asGeode()) != NULL)
+            {
+                osg::Group* parent = NULL;
+
+                // access all the parents of the attached geode
+                if( (parent = geode->getParent(0)->asGroup()) != NULL)
+                {
+                    parent->removeChild(geode);
+                }
+            }
+
+            // remove old shape from map and scenegraph
+            _shapes.erase(it);
+       }
 }
 
 std::string CommandParser::getParameter(std::string command, std::string param)

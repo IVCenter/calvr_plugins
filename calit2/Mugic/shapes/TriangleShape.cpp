@@ -7,7 +7,7 @@
 
 TriangleShape::TriangleShape(std::string command, std::string name) 
 {
-    _type = TRIANGLE;
+    _type = SimpleShape::TRIANGLE;
 
     setName(name);
     
@@ -73,7 +73,7 @@ void TriangleShape::update(std::string command)
     addParameter(command, "a3");
 }
 
-void TriangleShape::update(osg::NodeVisitor*, osg::Drawable* drawable)
+void TriangleShape::update()
 {
 	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
     if( !_dirty )

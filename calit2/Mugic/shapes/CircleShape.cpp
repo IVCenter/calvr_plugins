@@ -8,7 +8,7 @@
 
 CircleShape::CircleShape(std::string command, std::string name) 
 {
-    _type = CIRCLE;
+    _type = SimpleShape::CIRCLE;
 
     setName(name);
     _numFaces = 20;
@@ -32,8 +32,6 @@ CircleShape::~CircleShape()
 
 void CircleShape::setPosition(osg::Vec3 p, float radius)
 {
-    //std::cerr << "Name: " << getName() << std::endl;
-    //std::cerr << "Set position called " << p.x() << " " << p.y() << " " << p.z() << " radius " << radius << std::endl;
     // first point center
     (*_vertices)[0].set(p[0], p[1], p[2]);
     
@@ -83,7 +81,7 @@ void CircleShape::update(std::string command)
     }
 }
 
-void CircleShape::update(osg::NodeVisitor*, osg::Drawable*)
+void CircleShape::update()
 {
     OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
     if( !_dirty )
@@ -102,10 +100,10 @@ void CircleShape::update(osg::NodeVisitor*, osg::Drawable*)
     setParameter("g1", c1.g()); 
     setParameter("b1", c1.b()); 
     setParameter("a1", c1.a()); 
-    setParameter("r2", c1.r()); 
-    setParameter("g2", c1.g()); 
-    setParameter("b2", c1.b()); 
-    setParameter("a2", c1.a()); 
+    setParameter("r2", c2.r()); 
+    setParameter("g2", c2.g()); 
+    setParameter("b2", c2.b()); 
+    setParameter("a2", c2.a()); 
 
     setPosition(p1, radius);
     setColor(c1, c2);
@@ -116,4 +114,3 @@ void CircleShape::update(osg::NodeVisitor*, osg::Drawable*)
     // reset flag
     _dirty = false;
 }
-

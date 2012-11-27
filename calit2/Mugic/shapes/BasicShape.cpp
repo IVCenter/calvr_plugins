@@ -15,18 +15,20 @@ BasicShape::BasicShape(): _dirty(false)
     getOrCreateVertexBufferObject()->setUsage(GL_STREAM_DRAW);
     setUseDisplayList(false);
     setUseVertexBufferObjects(true);
-    setUpdateCallback(this);
+    setUpdateCallback(new ShapeUpdateCallback());
 }
 
 BasicShape::~BasicShape()
 {
 }
 
+
 bool BasicShape::isDirty()
 {
     OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
     return _dirty;
 }
+
 
 void BasicShape::addParameter(std::string command, std::string param)
 {
@@ -58,6 +60,15 @@ void BasicShape::addLocalParam(std::string varName, std::string param)
     {
         _localParams[varName] = param;
     }
+}
+
+void BasicShape::setParameter(std::string varName, std::string& value)
+{
+   std::map<std::string, std::string>::iterator it = _localParams.find(varName);
+   if( it != _localParams.end() ) // check local params
+   {
+        value = it->second;
+   }
 }
 
 

@@ -17,6 +17,7 @@ SET(PLUGIN_HEADERS
     shapes/CircleShape.h
     shapes/LineShape.h
     shapes/RectangleShape.h
+    shapes/TextShape.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -35,6 +36,7 @@ ADD_LIBRARY(${LIB_NAME}
     shapes/CircleShape.cpp
     shapes/LineShape.cpp
     shapes/RectangleShape.cpp
+    shapes/TextShape.cpp
 )
 
 FIND_PACKAGE(ZMQ REQUIRED)

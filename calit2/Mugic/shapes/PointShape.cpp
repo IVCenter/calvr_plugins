@@ -8,7 +8,7 @@
 
 PointShape::PointShape(std::string command, std::string name) 
 {
-    _type = POINT;
+    _type = SimpleShape::POINT;
 
     setName(name);
     
@@ -63,35 +63,31 @@ void PointShape::update(std::string command)
     addParameter(command, "size");
 }
 
-void PointShape::update(osg::NodeVisitor*, osg::Drawable*)
+void PointShape::update()
 {
 	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
     if( !_dirty )
         return;
 
-    PointShape* point = dynamic_cast<PointShape* > (this);        
-    if( point )
-    {
-        osg::Vec3 p((*_vertices)[0]);
-        osg::Vec4 c((*_colors)[0]);
+    osg::Vec3 p((*_vertices)[0]);
+    osg::Vec4 c((*_colors)[0]);
     
-        setParameter("x", p.x()); 
-        setParameter("y", p.y()); 
-        setParameter("z", p.z()); 
-        setParameter("r", c.r()); 
-        setParameter("g", c.b()); 
-        setParameter("b", c.g()); 
-        setParameter("a", c.a());
+    setParameter("x", p.x()); 
+    setParameter("y", p.y()); 
+    setParameter("z", p.z()); 
+    setParameter("r", c.r()); 
+    setParameter("g", c.b()); 
+    setParameter("b", c.g()); 
+    setParameter("a", c.a());
         
-        float size = _point->getSize();
-        setParameter("size", size);
-        _point->setSize(size);
-        setPosition(p);
-        setColor(c);
+    float size = _point->getSize();
+    setParameter("size", size);
+    _point->setSize(size);
+    setPosition(p);
+    setColor(c);
 
-		_colors->dirty();
-		_vertices->dirty();
-    }
+	_colors->dirty();
+	_vertices->dirty();
 
 	// reset flag
     _dirty = false;

@@ -7,7 +7,7 @@
 
 QuadShape::QuadShape(std::string command, std::string name) 
 {
-    _type = QUAD; 
+    _type = SimpleShape::QUAD; 
     
     setName(name);
 
@@ -83,7 +83,7 @@ void QuadShape::update(std::string command)
     addParameter(command, "a4");
 }
 
-void QuadShape::update(osg::NodeVisitor*, osg::Drawable*)
+void QuadShape::update()
 {
 	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
     if( !_dirty )

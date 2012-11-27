@@ -7,7 +7,7 @@
 
 LineShape::LineShape(std::string command, std::string name) 
 {
-    _type = LINE;
+    _type = SimpleShape::LINE;
 
     setName(name);
     
@@ -73,7 +73,7 @@ void LineShape::update(std::string command)
     addParameter(command, "width");
 }
 
-void LineShape::update(osg::NodeVisitor*, osg::Drawable* drawable)
+void LineShape::update()
 {
 	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
     if( !_dirty )

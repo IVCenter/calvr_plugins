@@ -5,6 +5,7 @@
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrKernel/PluginHelper.h>
+#include <OpenThreads/Condition>
 
 #include "SocketThread.h"
 #include "CommandParser.h"
@@ -26,6 +27,7 @@ public:
 	void preFrame();
 
 protected:
+	OpenThreads::Condition* _parserSignal;
     osg::Group * _root;
 	SocketThread * _st;
 	CommandParser * _parser;

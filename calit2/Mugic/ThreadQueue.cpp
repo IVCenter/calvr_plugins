@@ -3,7 +3,7 @@
 #include <osg/Node>
 
 template <typename T>
-ThreadQueue<T>::ThreadQueue() 
+ThreadQueue<T>::ThreadQueue() : _waiting (NULL)
 {}
 
 // override and do nothing
@@ -45,7 +45,24 @@ template <typename T>
 void ThreadQueue<T>::add(T object)
 {
     OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_lock);
-    _queue.push(object); 
+    _queue.push(object);
+
+	if( _waiting )
+        _waiting->signal();
+}
+
+template <typename T>
+void ThreadQueue<T>::setCondition(OpenThreads::Condition* condition)
+{
+    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_lock);
+    _waiting = condition;    
+}
+
+template <typename T>
+OpenThreads::Condition* ThreadQueue<T>::getCondition()
+{
+    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_lock);
+    return _waiting;
 }
 
 template class ThreadQueue<std::string>;
