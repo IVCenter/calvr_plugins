@@ -7,6 +7,7 @@
 #include <cvrKernel/ComController.h>
 #include <cvrUtil/CVRSocket.h>
 #include <cvrKernel/SceneObject.h>
+#include <cvrKernel/NodeMask.h>
 
 #include <fcntl.h>
 #include <iostream>
@@ -38,9 +39,11 @@ bool Mugic::init()
     _commands = new ThreadQueue<std::string> ();
     _commands->setCondition(_parserSignal);
 
-	_st = new SocketThread(_commands);
+    std::string routerAddress = ConfigManager::getEntry("value", "Plugin.Mugic.Router", "127.0.0.1");
+	_st = new SocketThread(_commands, routerAddress);
 
     _root = new osg::Group();
+    _root->setNodeMask(_root->getNodeMask() & ~DISABLE_FIRST_CULL & ~INTERSECT_MASK);
 
     // set default stateset to _root node
     osg::StateSet* state = _root->getOrCreateStateSet();

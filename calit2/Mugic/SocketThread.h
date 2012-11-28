@@ -38,7 +38,7 @@ protected:
     void seperateCommands(char *);
 
 public:
-	SocketThread(ThreadQueue<std::string>* commands);
+	SocketThread(ThreadQueue<std::string>* commands, std::string address);
 	~SocketThread();
 
 };

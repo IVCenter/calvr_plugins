@@ -35,7 +35,6 @@ class CommandParser : public OpenThreads::Thread
         std::string getParameter(std::string command, std::string param);
         void remove(std::string elementName);
 
-
     public:
     	CommandParser(ThreadQueue<std::string>* queue, osg::Group* root);
 	    ~CommandParser();
