@@ -114,7 +114,7 @@ bool FuturePatient::init()
     _microbeSpecialMenu = new SubMenu("Special");
     _microbeMenu->addItem(_microbeSpecialMenu);
 
-    _microbeLoadAverage = new MenuButton("Average");
+    _microbeLoadAverage = new MenuButton("UC Average");
     _microbeLoadAverage->setCallback(this);
     _microbeSpecialMenu->addItem(_microbeLoadAverage);
 
@@ -128,11 +128,11 @@ bool FuturePatient::init()
 
     _microbeLoadSRSAverage = new MenuButton("SRS Average");
     _microbeLoadSRSAverage->setCallback(this);
-    _microbeSpecialMenu->addItem(_microbeLoadSRSAverage);
+    //_microbeSpecialMenu->addItem(_microbeLoadSRSAverage);
 
     _microbeLoadSRXAverage = new MenuButton("SRX Average");
     _microbeLoadSRXAverage->setCallback(this);
-    _microbeSpecialMenu->addItem(_microbeLoadSRXAverage);
+    //_microbeSpecialMenu->addItem(_microbeLoadSRXAverage);
 
     _microbeGraphType = new MenuList();
     _microbeGraphType->setCallback(this);
@@ -151,7 +151,8 @@ bool FuturePatient::init()
     _microbeTest->setCallback(this);
     _microbeMenu->addItem(_microbeTest);
 
-    _microbeNumBars = new MenuRangeValueCompact("Microbes",1,100,25);
+    //_microbeNumBars = new MenuRangeValueCompact("Microbes",1,100,25);
+    _microbeNumBars = new MenuRangeValueCompact("Microbes",1,2330,25);
     _microbeNumBars->setCallback(this);
     _microbeMenu->addItem(_microbeNumBars);
 
