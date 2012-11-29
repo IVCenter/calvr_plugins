@@ -25,15 +25,10 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         GraphLayoutObject(float width, float height, int maxRows, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~GraphLayoutObject();
 
-        void addGraphObject(GraphObject * object);
-        void removeGraphObject(GraphObject * object);
+        void addGraphObject(LayoutTypeObject * object);
+        void removeGraphObject(LayoutTypeObject * object);
 
-        void addMicrobeGraphObject(MicrobeGraphObject * object);
-        void removeMicrobeGraphObject(MicrobeGraphObject * object);
         void selectMicrobes(std::string & group, std::vector<std::string> & keys);
-
-        void addMicrobeBarGraphObject(MicrobeBarGraphObject * object);
-        void removeMicrobeBarGraphObject(MicrobeBarGraphObject * object);
 
         void removeAll();
         void perFrame();
@@ -58,14 +53,8 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
 
         bool _minimized;
 
-        std::vector<GraphObject *> _objectList;
-        std::map<GraphObject *,cvr::MenuButton *> _deleteButtonMap;
-
-        std::vector<MicrobeGraphObject *> _microbeObjectList;
-        std::map<MicrobeGraphObject *, cvr::MenuButton *> _microbeDeleteButtonMap;
-
-        std::vector<MicrobeBarGraphObject *> _microbeBarObjectList;
-        std::map<MicrobeBarGraphObject *,cvr::MenuButton *> _microbeBarDeleteButtonMap;
+        std::vector<LayoutTypeObject *> _objectList;
+        std::map<LayoutTypeObject *,cvr::MenuButton *> _deleteButtonMap;
 
         std::string _currentSelectedMicrobeGroup;
         std::vector<std::string> _currentSelectedMicrobes;

@@ -22,6 +22,7 @@ FuturePatient::FuturePatient()
     _layoutObject = NULL;
     _multiObject = NULL;
     _currentSBGraph = NULL;
+    _currentSymptomGraph = NULL;
 }
 
 FuturePatient::~FuturePatient()
@@ -78,35 +79,46 @@ bool FuturePatient::init()
     
     _fpMenu = new SubMenu("FuturePatient");
 
+    _chartMenu = new SubMenu("Charts");
+    _fpMenu->addItem(_chartMenu);
+
     _presetMenu = new SubMenu("Presets");
-    _fpMenu->addItem(_presetMenu);
+    _chartMenu->addItem(_presetMenu);
 
     _inflammationButton = new MenuButton("Big 4");
     _inflammationButton->setCallback(this);
     _presetMenu->addItem(_inflammationButton);
+
+    _cholesterolButton = new MenuButton("Cholesterol");
+    _cholesterolButton->setCallback(this);
+    _presetMenu->addItem(_cholesterolButton);
+
+    _insGluButton = new MenuButton("Insulin/Glucose");
+    _insGluButton->setCallback(this);
+    _presetMenu->addItem(_insGluButton);
+
+    _inflammationImmuneButton = new MenuButton("Inflammation (Immune)");
+    _inflammationImmuneButton->setCallback(this);
+    _presetMenu->addItem(_inflammationImmuneButton);
 
     _loadAll = new MenuButton("All");
     _loadAll->setCallback(this);
     _presetMenu->addItem(_loadAll);
 
     _groupLoadMenu = new SubMenu("Group Load");
-    _fpMenu->addItem(_groupLoadMenu);
+    _chartMenu->addItem(_groupLoadMenu);
 
     _testList = new MenuList();
     _testList->setCallback(this);
-    _fpMenu->addItem(_testList);
+    _chartMenu->addItem(_testList);
 
     _loadButton = new MenuButton("Load");
     _loadButton->setCallback(this);
-    _fpMenu->addItem(_loadButton);
-
-    _removeAllButton = new MenuButton("Remove All");
-    _removeAllButton->setCallback(this);
-    _fpMenu->addItem(_removeAllButton);
+    _chartMenu->addItem(_loadButton);
 
     _multiAddCB = new MenuCheckbox("Multi Add", false);
     _multiAddCB->setCallback(this);
-    _fpMenu->addItem(_multiAddCB);
+    _chartMenu->addItem(_multiAddCB);
 
     _microbeMenu = new SubMenu("Microbe Data");
     _fpMenu->addItem(_microbeMenu);
@@ -162,6 +174,28 @@ bool FuturePatient::init()
 
     _microbeDone = new MenuButton("Done");
     _microbeDone->setCallback(this);
+
+    _eventMenu = new SubMenu("Events");
+    _fpMenu->addItem(_eventMenu);
+
+    _eventName = new MenuList();
+    _eventName->setCallback(this);
+    _eventMenu->addItem(_eventName);
+
+    _eventLoad = new MenuButton("Load");
+    _eventLoad->setCallback(this);
+    _eventMenu->addItem(_eventLoad);
+
+    _eventLoadAll = new MenuButton("Load All");
+    _eventLoadAll->setCallback(this);
+    _eventMenu->addItem(_eventLoadAll);
+
+    _eventDone = new MenuButton("Done");
+    _eventDone->setCallback(this);
+
+    _removeAllButton = new MenuButton("Remove All");
+    _removeAllButton->setCallback(this);
+    _fpMenu->addItem(_removeAllButton);
 
     PluginHelper::addRootMenuItem(_fpMenu);
 
@@ -375,13 +409,57 @@ bool FuturePatient::init()
 	updateMicrobeTests(_microbePatients->getIndex() + 1);
     }
 
-    /*if(_conn)
+    lfList = NULL;
+    listEntries = 0;
+
+    if(ComController::instance()->isMaster())
     {
-	GraphObject * gobject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
-	gobject->addGraph("LDL");
-	PluginHelper::registerSceneObject(gobject,"FuturePatient");
-	gobject->attachToScene();
-    }*/
+	if(_conn)
+	{
+	    mysqlpp::Query q = _conn->query("select distinct name from Event where patient_id = \"1\" order by name;");
+	    mysqlpp::StoreQueryResult res = q.store();
+
+	    listEntries = res.num_rows();
+
+	    if(listEntries)
+	    {
+		lfList = new struct listField[listEntries];
+
+		for(int i = 0; i < listEntries; i++)
+		{
+		    strncpy(lfList[i].entry,res[i]["name"].c_str(),255);
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&listEntries,sizeof(int));
+	if(listEntries)
+	{
+	    ComController::instance()->sendSlaves(lfList,sizeof(struct listField)*listEntries);
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&listEntries,sizeof(int));
+	if(listEntries)
+	{
+	    lfList = new struct listField[listEntries];
+	    ComController::instance()->readMaster(lfList,sizeof(struct listField)*listEntries);
+	}
+    }
+
+    stringlist.clear();
+    for(int i = 0; i < listEntries; i++)
+    {
+	stringlist.push_back(lfList[i].entry);
+    }
+
+    _eventName->setValues(stringlist);
+
+    if(lfList)
+    {
+	delete[] lfList;
+    }
 
     return true;
 }
@@ -451,6 +529,36 @@ void FuturePatient::menuCallback(MenuItem * item)
 	loadGraph("Lactoferrin");
     }
 
+    if(item == _cholesterolButton)
+    {
+	loadGraph("Total Cholesterol");
+	loadGraph("LDL");
+	loadGraph("HDL");
+	loadGraph("TG");
+	loadGraph("TG/HDL");
+	loadGraph("Total LDL3+LDL-4");
+    }
+
+    if(item == _insGluButton)
+    {
+	loadGraph("Fasting Glucose");
+	loadGraph("Insulin");
+	loadGraph("Hemoglobin a1c");
+	loadGraph("Homocysteine");
+	loadGraph("Vitamin D, 25-Hydroxy");
+    }
+
+    if(item == _inflammationImmuneButton)
+    {
+	loadGraph("hs-CRP");
+	loadGraph("Lysozyme");
+	loadGraph("SIgA");
+	loadGraph("Lactoferrin");
+	loadGraph("Calprotectin");
+	loadGraph("WBC-");
+	loadGraph("NEU %");
+    }
+
     if(item == _multiAddCB)
     {
 	if(_multiObject)
@@ -482,6 +590,13 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    _currentSBGraph = NULL;
 	    _microbeMenu->removeItem(_microbeDone);
 	}
+
+	if(_currentSymptomGraph)
+	{
+	    _currentSymptomGraph = NULL;
+	    _eventMenu->removeItem(_eventDone);
+	}
+
 	menuCallback(_multiAddCB);
     }
 
@@ -505,7 +620,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		//mgo->attachToScene();
 		//_microbeGraphList.push_back(mgo);
 		checkLayout();
-		_layoutObject->addMicrobeGraphObject(mgo);
+		_layoutObject->addGraphObject(mgo);
 	    }
 	    else
 	    {
@@ -521,7 +636,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		//PluginHelper::registerSceneObject(_currentSBGraph,"FuturePatient");
 		//_currentSBGraph->attachToScene();
 		checkLayout();
-		_layoutObject->addMicrobeBarGraphObject(_currentSBGraph);
+		_layoutObject->addGraphObject(_currentSBGraph);
 		_microbeMenu->addItem(_microbeDone);
 	    }
 	    _currentSBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue());
@@ -584,7 +699,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		//mgo->attachToScene();
 		//_microbeGraphList.push_back(mgo);
 		checkLayout();
-		_layoutObject->addMicrobeGraphObject(mgo);
+		_layoutObject->addGraphObject(mgo);
 	    }
 	    else
 	    {
@@ -597,11 +712,44 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    {
 		_currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 		checkLayout();
-		_layoutObject->addMicrobeBarGraphObject(_currentSBGraph);
+		_layoutObject->addGraphObject(_currentSBGraph);
 		_microbeMenu->addItem(_microbeDone);
 	    }
 	    _currentSBGraph->addSpecialGraph(mgt);
 	}
+    }
+
+    if(item == _eventLoad && _eventName->getListSize())
+    {
+	if(!_currentSymptomGraph)
+	{
+	    _currentSymptomGraph = new SymptomGraphObject(_conn, 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
+	    checkLayout();
+	    _layoutObject->addGraphObject(_currentSymptomGraph);
+	    _eventMenu->addItem(_eventDone);
+	}
+	_currentSymptomGraph->addGraph(_eventName->getValue());
+    }
+
+    if(item == _eventLoadAll && _eventName->getListSize())
+    {
+	if(!_currentSymptomGraph)
+	{
+	    _currentSymptomGraph = new SymptomGraphObject(_conn, 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
+	    checkLayout();
+	    _layoutObject->addGraphObject(_currentSymptomGraph);
+	    _eventMenu->addItem(_eventDone);
+	}
+	for(int i = 0; i < _eventName->getListSize(); ++i)
+	{
+	    _currentSymptomGraph->addGraph(_eventName->getValue(i));
+	}
+    }
+
+    if(item == _eventDone)
+    {
+	_currentSymptomGraph = NULL;
+	_eventMenu->removeItem(_eventDone);
     }
 }
 
