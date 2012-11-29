@@ -1,6 +1,6 @@
 #include "ColorGenerator.h"
 
-osg::Vec4 ColorGenerator::_defaultColors[7] = { osg::Vec4(0.89412,0.10196,0.109804,1.0), osg::Vec4(0.21569,0.49412,0.72157,1.0), osg::Vec4(0.302,0.6863,0.2902,1.0), osg::Vec4(0.59608,0.305882,0.63922,1.0), osg::Vec4(1.0,0.5,0,1.0), osg::Vec4(1.0,1.0,0.2,1.0), osg::Vec4(0.6510,0.3373,0.15686,1.0) };
+osg::Vec4 ColorGenerator::_defaultColors[7] = { osg::Vec4(0.89412,0.10196,0.109804,1.0), osg::Vec4(0.21569,0.49412,0.72157,1.0), osg::Vec4(0.302,0.6863,0.2902,1.0), osg::Vec4(0.59608,0.305882,0.63922,1.0), osg::Vec4(1.0,0.5,0,1.0), osg::Vec4(0.9,0.0,1.0,1.0), osg::Vec4(0.6510,0.3373,0.15686,1.0) };
 
 osg::Vec4 ColorGenerator::makeColor(int colorNum, int totalColors)
 {
