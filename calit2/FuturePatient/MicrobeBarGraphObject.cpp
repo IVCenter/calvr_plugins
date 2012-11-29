@@ -14,7 +14,7 @@ using namespace cvr;
 MicrobeBarGraphObject::Microbe * MicrobeBarGraphObject::_microbeList = NULL;
 int MicrobeBarGraphObject::_microbeCount = 0;
 
-MicrobeBarGraphObject::MicrobeBarGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : TiledWallSceneObject(name,navigation,movable,clip,contextMenu,showBounds)
+MicrobeBarGraphObject::MicrobeBarGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
 {
     _conn = conn;
     _graph = new StackedBarGraph("Microbe Graph",width,height);
@@ -37,7 +37,8 @@ bool MicrobeBarGraphObject::addGraph(std::string label, int patientid, std::stri
     std::stringstream qss;
     qss << "select Microbes.species, Microbe_Measurement.value from Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \""<< testLabel << "\";";
 
-    return addGraph(label,qss.str());
+    std::string title = label + "\n" + testLabel;
+    return addGraph(title,qss.str());
 }
 
 bool MicrobeBarGraphObject::addSpecialGraph(SpecialMicrobeGraphType smgt)
@@ -58,7 +59,7 @@ bool MicrobeBarGraphObject::addSpecialGraph(SpecialMicrobeGraphType smgt)
 		{
 		    case SMGT_AVERAGE:
 			field = "average";
-			label = "Average";
+			label = "UC Average";
 			break;
 		    case SMGT_HEALTHY_AVERAGE:
 			field = "average_healthy";
