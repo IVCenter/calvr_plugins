@@ -61,17 +61,18 @@ bool Mugic::init()
 
 Mugic::~Mugic() 
 {
+    std::cerr << "Destructor called\n";
     if( _st )
         delete _st;
     _st = NULL;
     
-    if( _parser )
-        delete _parser;
-    _parser = NULL;
-
     if( _commands )
         delete _commands;
     _commands = NULL;
+    
+    if( _parser )
+        delete _parser;
+    _parser = NULL;
 }
 
 void Mugic::preFrame() 

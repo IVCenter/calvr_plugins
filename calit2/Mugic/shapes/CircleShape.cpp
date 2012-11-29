@@ -56,6 +56,17 @@ void CircleShape::setColor(osg::Vec4 c0, osg::Vec4 c1)
     {
         (*_colors)[i].set(c1[0], c1[1], c1[2], c1[3]);
     }
+
+    if( c0[3] != 1.0 || c1[3] != 1.0)
+    {
+        getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN); 
+    }
+    else
+    {
+        getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::OFF);
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::OPAQUE_BIN); 
+    }
 }
 
 void CircleShape::update(std::string command)

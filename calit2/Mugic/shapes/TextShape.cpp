@@ -15,8 +15,7 @@ TextShape::TextShape(std::string command, std::string name)
     setCharacterSize(10.0f);
     setFontResolution(40,40);
     setAxisAlignment(osgText::TextBase::XZ_PLANE);
-    setFont("/home/pweber/extern_libs/OpenSceneGraph-Data/fonts/arial.ttf");
-    //setText("HELLO");
+    setBackdropType(osgText::Text::NONE);
     
     update(command);
 }
@@ -63,12 +62,23 @@ void TextShape::update()
     setParameter("size", size);
     setParameter("label", text);
     
-    std::cerr << "text value " << text << std::endl;
-    
     setText(text);
     setCharacterSize(size);
     setPosition(p);
     setColor(c);
+
+    if(c[3] != 1.0)
+    {
+        osgText::Text::getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
+        osgText::Text::getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    }
+    else
+    {
+        osgText::Text::getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::OFF);
+        osgText::Text::getOrCreateStateSet()->setRenderingHint(osg::StateSet::OPAQUE_BIN);
+    }
+
+    osgText::Text::dirtyBound();
 
 	// reset flag
     _dirty = false;

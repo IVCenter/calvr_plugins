@@ -39,7 +39,18 @@ void PointShape::setPosition(osg::Vec3 p0)
 
 void PointShape::setColor(osg::Vec4 c0)
 {
-    (*_colors)[0].set(c0[0], c0[1], c0[2], c0[3]);    
+    (*_colors)[0].set(c0[0], c0[1], c0[2], c0[3]);
+
+    if( c0[3] != 1.0)
+    {
+        getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    }
+    else
+    {
+        getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::OFF);
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::OPAQUE_BIN);
+    }
 }
 
 void PointShape::setSize(float size)
@@ -88,6 +99,7 @@ void PointShape::update()
 
 	_colors->dirty();
 	_vertices->dirty();
+    dirtyBound();
 
 	// reset flag
     _dirty = false;

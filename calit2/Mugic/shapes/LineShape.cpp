@@ -110,6 +110,7 @@ void LineShape::update()
 
 	_colors->dirty();
 	_vertices->dirty();
+    dirtyBound();
     
 	// reset flag
     _dirty = false;

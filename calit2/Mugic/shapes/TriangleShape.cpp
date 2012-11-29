@@ -39,7 +39,18 @@ void TriangleShape::setColor(osg::Vec4 c0, osg::Vec4 c1, osg::Vec4 c2)
 {
     (*_colors)[0].set(c0[0], c0[1], c0[2], c0[3]);    
     (*_colors)[1].set(c1[0], c1[1], c1[2], c1[3]);    
-    (*_colors)[2].set(c2[0], c2[1], c2[2], c2[3]);    
+    (*_colors)[2].set(c2[0], c2[1], c2[2], c2[3]);
+    
+    if( c0[3] != 1.0 || c1[3] != 1.0 || c2[3] != 1.0)
+    {
+        getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    }
+    else
+    {
+        getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::OFF);
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::OPAQUE_BIN);
+    }
 }
 
 void TriangleShape::update(std::string command)
@@ -117,6 +128,7 @@ void TriangleShape::update()
 
 	_colors->dirty();
 	_vertices->dirty();
+    dirtyBound();
     
 	// reset flag
     _dirty = false;

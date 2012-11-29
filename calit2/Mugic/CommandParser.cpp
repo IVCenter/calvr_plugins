@@ -37,10 +37,12 @@ CommandParser::CommandParser(ThreadQueue<std::string>* queue, osg::Group* root) 
 
 void CommandParser::run() 
 {
-	while ( ! _mkill ) 
+	while ( true ) 
 	{
 		// wait for queue addition signal
         _condition->wait(&_mutex);
+        if( _mkill )
+            return;
 
         std::string command;
         while( _queue->get(command) )
@@ -163,5 +165,7 @@ std::string CommandParser::getParameter(std::string command, std::string param)
 CommandParser::~CommandParser() 
 {
 	_mkill = true;
+    _condition->signal();
+
 	join();
 }

@@ -19,7 +19,7 @@ ThreadQueue<T>::~ThreadQueue()
     {
         T object = _queue.front();
         _queue.pop();   
-    }    
+    }
 }
 
 template <typename T>

@@ -21,7 +21,7 @@ RectangleShape::RectangleShape(std::string command, std::string name)
     
     setVertexArray(_vertices); 
     setColorArray(_colors); 
-    setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+    setColorBinding(osg::Geometry::BIND_OVERALL);
     addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
 }
 
@@ -32,9 +32,9 @@ RectangleShape::~RectangleShape()
 void RectangleShape::setPosition(osg::Vec3 p, float width, float height)
 {
     (*_vertices)[0].set(p[0], p[1], p[2]);
-	(*_vertices)[0].set(p[0] + width, p[1], p[2]);
-	(*_vertices)[0].set(p[0] + width, p[1], p[2] + height);
-	(*_vertices)[0].set(p[0], p[1], p[2] + height);
+	(*_vertices)[1].set(p[0] + width, p[1], p[2]);
+	(*_vertices)[2].set(p[0] + width, p[1], p[2] + height);
+	(*_vertices)[3].set(p[0], p[1], p[2] + height);
 }
 
 void RectangleShape::setColor(osg::Vec4 c0)
@@ -84,6 +84,7 @@ void RectangleShape::update()
     setColor(c1);
     _vertices->dirty();
     _colors->dirty();
+    dirtyBound();
 
     // reset flag
     _dirty = false;
