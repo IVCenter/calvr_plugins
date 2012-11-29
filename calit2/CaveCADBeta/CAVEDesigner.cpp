@@ -144,3 +144,8 @@ void CAVEDesigner::inputDevButtonEvent(const float spinX, const float spinY, con
     DesignStateHandler::InputDevButtonType btnTyp = DesignStateHandler::TOGGLE;
 }
 
+void CAVEDesigner::setSkydomeVisible(bool flag)
+{
+    mDesignObjectHandler->setActive(flag);
+}
+

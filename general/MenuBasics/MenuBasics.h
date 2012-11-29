@@ -33,6 +33,7 @@ class MenuBasics : public cvr::CVRPlugin, public cvr::MenuCallback
 
         cvr::MenuCheckbox * stopHeadTracking;
         cvr::MenuCheckbox * eyeSeparation;
+        cvr::MenuCheckbox * omniStereo;
         bool changeSep;
         float sepStep;
 

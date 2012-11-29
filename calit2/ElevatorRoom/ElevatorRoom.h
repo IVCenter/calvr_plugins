@@ -74,6 +74,17 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
             CHECKER
         };
 
+        enum GameMode
+        {
+            ONE,
+            TWO,
+            THREE,
+            FOUR,
+            FIVE
+        };
+
+        GameMode _gameMode;
+
         cvr::SubMenu * _elevatorMenu;
         cvr::MenuButton * _loadButton, * _clearButton;
         cvr::MenuRangeValue * _checkerSpeedRV, * _alienChanceRV;
@@ -107,6 +118,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         int _sockfd; // for EOG syncer communication
         int _flashCount; // number of times active avatar has flashed
         int _alienChance, _allyChance, _checkChance;
+        int _lightColor;
 
         bool _isOpening; // whether the active door is opening or closing
         bool _loaded; // whether the model has finished loading
@@ -136,3 +148,4 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
 };
 
 #endif
+

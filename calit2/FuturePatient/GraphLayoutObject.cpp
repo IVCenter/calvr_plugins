@@ -103,8 +103,7 @@ void GraphLayoutObject::removeGraphObject(GraphObject * object)
 	    _objectList.erase(it);
 	    if(object->getLayoutDoesDelete())
 	    {
-		//TODO fix scene object delete
-		//delete object;
+		delete object;
 	    }
 	    break;
 	}
@@ -240,8 +239,7 @@ void GraphLayoutObject::removeAll()
 	removeChild(_objectList[i]);
 	if(_objectList[i]->getLayoutDoesDelete())
 	{
-	    //TODO fix scene object delete
-	    //delete _objectList[i];
+	    delete _objectList[i];
 	}
     }
 

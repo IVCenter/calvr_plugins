@@ -13,8 +13,8 @@ using namespace std;
 using namespace osg;
 
 
-//const float CAVEGeodeShape::gTextureTileSize(0.3048f);
-const float CAVEGeodeShape::gTextureTileSize(304.8f);
+const float CAVEGeodeShape::gTextureTileSize(0.3048f);
+//const float CAVEGeodeShape::gTextureTileSize(304.8f);
 
 // Constructor
 CAVEGeodeShape::CAVEGeodeShape(const Type &typ, const Vec3 &initVect, const Vec3 &sVect):
@@ -143,8 +143,11 @@ CAVEGeodeShape::CAVEGeodeShape(CAVEGeodeShape *geodeShapeRef): mDOCollectorIndex
     mVertexMaskingVector.resize(mNumVertices, false);
 
     // apply color texture to virtual surface
-    applyColorTexture(geodeShapeRef->mDiffuse, geodeShapeRef->mSpecular, geodeShapeRef->mAlpha,
-			geodeShapeRef->mTexFilename);
+    //applyColorTexture(geodeShapeRef->mDiffuse, geodeShapeRef->mSpecular, geodeShapeRef->mAlpha,
+    //   geodeShapeRef->mTexFilename);
+    applyColor(geodeShapeRef->mDiffuse, geodeShapeRef->mSpecular, geodeShapeRef->mAlpha);
+    applyTexture(geodeShapeRef->mTexFilename);
+
 }
 
 

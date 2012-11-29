@@ -74,7 +74,7 @@ class CaveCADBeta : public cvr::MenuCallback, public cvr::CVRPlugin
 
     // Main row menu items
 	cvr::SubMenu *mainMenu;
-    cvr::MenuCheckbox *enablePluginCheckbox, *setToolkitVisibleCheckbox;
+    cvr::MenuCheckbox *enablePluginCheckbox, *setToolkitVisibleCheckbox, *mSkydomeCheckbox;
 
     // CaveCAD local objects
     CAVEDesigner *mCAVEDesigner;

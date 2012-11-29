@@ -32,6 +32,9 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
+void setReflData(void * data, int size);
+void setInjData(void * data, int size);
+
 void launchPoint1(float3* pos, float4* color, float * pdata,float * debugData ,unsigned int width,
     unsigned int height, int max_age,int disappear_age,float alphaControl, float time, float gravity, float colorFreq, float r3);
 
