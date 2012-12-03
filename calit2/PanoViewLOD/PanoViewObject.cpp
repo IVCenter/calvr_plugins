@@ -472,7 +472,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
     {
 	TrackedButtonInteractionEvent * tie = ie->asTrackedButtonEvent();
 
-	if(_removeOnClick)
+	if(_removeOnClick && tie->getButton() == 0)
 	{
 	    PluginHelper::sendMessageByName("PanoViewLOD",PAN_UNLOAD,NULL);
 

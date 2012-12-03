@@ -238,11 +238,13 @@ void GroupedBarGraph::setHover(osg::Vec3 intersect)
 			osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(_hoverBGGeom->getVertexArray());
 			if(verts)
 			{
+			    //std::cerr << "Setting bg x: " << intersect.x() << " z: " << intersect.z() << " width: " << bgwidth << " height: " << bgheight << std::endl;
 			    verts->at(0) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z()-bgheight);
 			    verts->at(1) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z());
 			    verts->at(2) = osg::Vec3(intersect.x(),-2,intersect.z());
 			    verts->at(3) = osg::Vec3(intersect.x(),-2,intersect.z()-bgheight);
 			    verts->dirty();
+			    _hoverBGGeom->dirtyDisplayList();
 			}
 
 			hoverSet = true;
@@ -265,6 +267,19 @@ void GroupedBarGraph::setHover(osg::Vec3 intersect)
 	_root->addChild(_hoverGeode);
     }
     else if(!hoverSet && _hoverGeode->getNumParents())
+    {
+	_root->removeChild(_hoverGeode);
+    }
+}
+
+void GroupedBarGraph::clearHoverText()
+{
+    if(!_hoverGeode)
+    {
+	return;
+    }
+
+    if(_hoverGeode->getNumParents())
     {
 	_root->removeChild(_hoverGeode);
     }
@@ -523,8 +538,10 @@ void GroupedBarGraph::makeGraph()
 void GroupedBarGraph::makeHover()
 {
     _hoverGeode = new osg::Geode();
+    _hoverGeode->setCullingActive(false);
     _hoverBGGeom = new osg::Geometry();
     _hoverBGGeom->setUseDisplayList(false);
+    _hoverBGGeom->setUseVertexBufferObjects(true);
     _hoverText = makeText("",osg::Vec4(1,1,1,1));
     _hoverGeode->addDrawable(_hoverBGGeom);
     _hoverGeode->addDrawable(_hoverText);

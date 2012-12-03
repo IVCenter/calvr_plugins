@@ -68,6 +68,7 @@ class GroupedBarGraph
         }
 
         void setHover(osg::Vec3 intersect);
+        void clearHoverText();
 
         void selectItems(std::string & group, std::vector<std::string> & keys);
 

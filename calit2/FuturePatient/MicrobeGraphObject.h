@@ -44,6 +44,7 @@ class MicrobeGraphObject : public cvr::TiledWallSceneObject
 
         virtual bool processEvent(cvr::InteractionEvent * ie);
         virtual void updateCallback(int handID, const osg::Matrix & mat);
+        virtual void leaveCallback(int handID);
 
     protected:
         bool loadGraphData(std::string valueQuery, std::string orderQuery);

@@ -352,7 +352,7 @@ bool GraphObject::addGraph(std::string name)
 	delete[] annotations;
     }
 
-    std::cerr << "Graph added with " << gd.numAnnotations << " annotations" << std::endl;
+    //std::cerr << "Graph added with " << gd.numAnnotations << " annotations" << std::endl;
 
     return gd.valid;
 }
