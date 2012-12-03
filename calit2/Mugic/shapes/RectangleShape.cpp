@@ -1,6 +1,7 @@
 #include "RectangleShape.h"
 
 #include <osg/Geometry>
+#include <osg/Material>
 
 #include <string>
 #include <vector>
@@ -23,6 +24,12 @@ RectangleShape::RectangleShape(std::string command, std::string name)
     setColorArray(_colors); 
     setColorBinding(osg::Geometry::BIND_OVERALL);
     addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
+
+    osg::StateSet* state = getOrCreateStateSet();
+    state->setMode(GL_BLEND, osg::StateAttribute::ON);
+    osg::Material* mat = new osg::Material();
+    mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
+    state->setAttributeAndModes(mat, osg::StateAttribute::ON);
 }
 
 RectangleShape::~RectangleShape()
@@ -76,8 +83,8 @@ void RectangleShape::update()
     setParameter("width", width); 
     setParameter("height", height); 
     setParameter("r", c1.r()); 
-    setParameter("g", c1.b()); 
-    setParameter("b", c1.g()); 
+    setParameter("g", c1.g()); 
+    setParameter("b", c1.b()); 
     setParameter("a", c1.a()); 
 
     setPosition(p1, width, height);

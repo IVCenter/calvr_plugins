@@ -10,6 +10,7 @@
 #include "SocketThread.h"
 #include "CommandParser.h"
 #include "ThreadQueue.h"
+#include "MainNode.h"
 
 #include <sstream>
 #include <fstream>
@@ -28,7 +29,8 @@ public:
 
 protected:
 	OpenThreads::Condition* _parserSignal;
-    osg::Group * _root;
+    //osg::Group * _root;
+    MainNode * _root;
 	SocketThread * _st;
 	CommandParser * _parser;
     ThreadQueue<std::string> * _commands;

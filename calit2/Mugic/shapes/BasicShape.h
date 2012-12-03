@@ -26,7 +26,8 @@ class BasicShape : public osg::Geometry
             virtual void update(osg::NodeVisitor*, osg::Drawable* drawable)
             {
                 BasicShape* shape = dynamic_cast<BasicShape*> (drawable);
-                shape->update();
+                if( shape )
+                    shape->update();
             }
         };
 

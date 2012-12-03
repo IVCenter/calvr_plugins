@@ -56,8 +56,8 @@ void TextShape::update()
     setParameter("y", p.y()); 
     setParameter("z", p.z()); 
     setParameter("r", c.r()); 
-    setParameter("g", c.b()); 
-    setParameter("b", c.g()); 
+    setParameter("g", c.g()); 
+    setParameter("b", c.b()); 
     setParameter("a", c.a());
     setParameter("size", size);
     setParameter("label", text);

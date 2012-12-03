@@ -1,6 +1,7 @@
 #include "PointShape.h"
 
 #include <osg/Geometry>
+#include <osg/Material>
 
 #include <string>
 #include <vector>
@@ -26,6 +27,13 @@ PointShape::PointShape(std::string command, std::string name)
     setColorArray(_colors); 
     setColorBinding(osg::Geometry::BIND_PER_VERTEX);
     addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,1));
+
+    osg::StateSet* state = getOrCreateStateSet();
+    osg::Material* mat = new osg::Material();
+    mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
+    state->setAttributeAndModes(mat, osg::StateAttribute::ON);
+    state->setAttribute(_point);
+
 }
 
 PointShape::~PointShape()
@@ -40,17 +48,6 @@ void PointShape::setPosition(osg::Vec3 p0)
 void PointShape::setColor(osg::Vec4 c0)
 {
     (*_colors)[0].set(c0[0], c0[1], c0[2], c0[3]);
-
-    if( c0[3] != 1.0)
-    {
-        getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
-        getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-    }
-    else
-    {
-        getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::OFF);
-        getOrCreateStateSet()->setRenderingHint(osg::StateSet::OPAQUE_BIN);
-    }
 }
 
 void PointShape::setSize(float size)
@@ -87,13 +84,13 @@ void PointShape::update()
     setParameter("y", p.y()); 
     setParameter("z", p.z()); 
     setParameter("r", c.r()); 
-    setParameter("g", c.b()); 
-    setParameter("b", c.g()); 
+    setParameter("g", c.g()); 
+    setParameter("b", c.b()); 
     setParameter("a", c.a());
         
     float size = _point->getSize();
     setParameter("size", size);
-    _point->setSize(size);
+    setSize(size);
     setPosition(p);
     setColor(c);
 
