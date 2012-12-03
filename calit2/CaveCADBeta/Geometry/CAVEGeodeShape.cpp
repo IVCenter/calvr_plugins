@@ -353,10 +353,11 @@ bool CAVEGeodeShape::snapToVertex(const osg::Vec3 point, osg::Vec3 *ctr)
                    (point[1] - center[1]) * (point[1] - center[1]) +
                    (point[2] - center[2]) * (point[2] - center[2]);
         distance = pow(distance, 0.5);
-
+    
+        // if pointer position inside sphere
         if (distance <= 0.2)
         {
-            *ctr = center; 
+            *ctr = center;
 
             mat = new Material;
             mat->setDiffuse(Material::FRONT_AND_BACK, showColor);
