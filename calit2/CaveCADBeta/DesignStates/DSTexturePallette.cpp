@@ -113,7 +113,13 @@ DSTexturePallette::DSTexturePallette(): mTexIndex(0), mTexturingState(IDLE), mAu
 
     mColorSelector = new ColorSelector(osg::Vec4(0.5,0.5,0.5,1));
     mColorSelector->setVisible(false);
-    mColorSelector->setPosition(osg::Vec3(-300,0,0));
+    int x, y, z;
+    path = "Plugin.CaveCADBeta.ColorSelectorPosition";
+    x = cvr::ConfigManager::getInt("x", path, -300);
+    y = cvr::ConfigManager::getInt("y", path, 0);
+    z = cvr::ConfigManager::getInt("z", path, 0);
+
+    mColorSelector->setPosition(osg::Vec3(x,y,z));
 }
 
 

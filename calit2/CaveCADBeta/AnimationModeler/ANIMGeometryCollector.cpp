@@ -45,11 +45,11 @@ void ANIMLoadGeometryCollectorIconSurfaces(PositionAttitudeTransform** surfacesP
     float step = 1.f / ANIM_GEOMETRY_COLLECTOR_SURFACE_PICKUP_SAMPS;
     for (int i = 0; i < ANIM_GEOMETRY_COLLECTOR_SURFACE_PICKUP_SAMPS + 1; i++)
     {
-	float val = i * step;
-	float scale = (scaleVal - 1.f) * val + 1.f; 
-	scaleFwd = Vec3(scale, scale, scale);
-	transFwd = shapeCenter + (iconCenter - shapeCenter) * val;
-	surfacesAnim->insert(val, AnimationPath::ControlPoint(transFwd, Quat(), scaleFwd));
+        float val = i * step;
+        float scale = (scaleVal - 1.f) * val + 1.f; 
+        scaleFwd = Vec3(scale, scale, scale);
+        transFwd = shapeCenter + (iconCenter - shapeCenter) * val;
+        surfacesAnim->insert(val, AnimationPath::ControlPoint(transFwd, Quat(), scaleFwd));
     }
 
     AnimationPathCallback *surfacesAnimCallback = new AnimationPathCallback(surfacesAnim, 

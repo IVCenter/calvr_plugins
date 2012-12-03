@@ -63,7 +63,8 @@ class DSGeometryCreator: public DesignStateBase
     CAVEAnimationModeler::ANIMShapeSwitchEntry **mShapeSwitchEntryArray;
     bool mIsOpen, mIsHighlighted;
     std::vector<osg::PositionAttitudeTransform*> fwdVec, bwdVec;
-
+    osg::Vec3 mEditorOffset;
+    
     CAVEGeodeShape *prevGeode;
 
     DrawingState mDrawingState;

@@ -87,19 +87,25 @@ void CAVEGroupIconSurface::acceptCAVEGeodeShape(CAVEGeodeShape *shapeGeode, CAVE
 
     /* convert vertex coordinates from CAVEGeodeShape space to CAVEGeodeIcon space */
     int nVerts = shapeGeode->mNumVertices;
-    for (int i = 0; i < nVerts; i++) mSurfVertexArray->push_back(geodeVertexDataPtr[i]);
+    for (int i = 0; i < nVerts; i++) 
+    {
+        mSurfVertexArray->push_back(geodeVertexDataPtr[i]);
+    }
 
     /* preserve the same normals and texture coordinates */
     int nNormals = shapeGeode->mNumNormals;
     for (int i = 0; i < nNormals; i++)
     {
-	mSurfNormalArray->push_back(geodeNormalDataPtr[i]);
-	mSurfUDirArray->push_back(geodeUDirDataPtr[i]);
-	mSurfVDirArray->push_back(geodeVDirDataPtr[i]);
+        mSurfNormalArray->push_back(geodeNormalDataPtr[i]);
+        mSurfUDirArray->push_back(geodeUDirDataPtr[i]);
+        mSurfVDirArray->push_back(geodeVDirDataPtr[i]);
     }
 
     int nTexcoords = shapeGeode->mNumTexcoords;
-    for (int i = 0; i < nTexcoords; i++) mSurfTexcoordArray->push_back(geodeTexcoordDataPtr[i]);
+    for (int i = 0; i < nTexcoords; i++) 
+    {
+        mSurfTexcoordArray->push_back(geodeTexcoordDataPtr[i]);
+    }
 
     /* apply offset from 'gShapeCenter' to Vec3(0, 0, 0) on root level */
     Matrixf transMat;
@@ -109,12 +115,12 @@ void CAVEGroupIconSurface::acceptCAVEGeodeShape(CAVEGeodeShape *shapeGeode, CAVE
     /* copy CAVEGeometry objects into separate 'CAVEGeodeIconSurface' */
     for (int i = 0; i < nGeoms; i++)
     {
-	CAVEGeodeIconSurface *iconSurface = new CAVEGeodeIconSurface(&mSurfVertexArray, &mSurfNormalArray,
-					&mSurfTexcoordArray, &(orgGeomVector[i]), &(refGeomVector[i]));
+        CAVEGeodeIconSurface *iconSurface = new CAVEGeodeIconSurface(&mSurfVertexArray, &mSurfNormalArray,
+                        &mSurfTexcoordArray, &(orgGeomVector[i]), &(refGeomVector[i]));
 
-	/* 1) take record of 'iconSurface' in mCAVEGeodeIconVector; 2) add it to 'this' group */
-	mCAVEGeodeIconVector.push_back(iconSurface);
-	mRootTrans->addChild(iconSurface);
+        /* 1) take record of 'iconSurface' in mCAVEGeodeIconVector; 2) add it to 'this' group */
+        mCAVEGeodeIconVector.push_back(iconSurface);
+        mRootTrans->addChild(iconSurface);
     }
 }
 
@@ -125,11 +131,15 @@ void CAVEGroupIconSurface::acceptCAVEGeodeShape(CAVEGeodeShape *shapeGeode, CAVE
 void CAVEGroupIconSurface::setHighlightNormal()
 {
     int nIconSurface = mCAVEGeodeIconVector.size();
-    if (nIconSurface <= 0) return;
+    if (nIconSurface <= 0) 
+        return;
     for (int i = 0; i < nIconSurface; i++)
     {
-	CAVEGeodeIconSurface *iconSurfPtr = dynamic_cast <CAVEGeodeIconSurface*> (mCAVEGeodeIconVector[i]);
-	if (iconSurfPtr) iconSurfPtr->setHighlightNormal();
+        CAVEGeodeIconSurface *iconSurfPtr = dynamic_cast <CAVEGeodeIconSurface*> (mCAVEGeodeIconVector[i]);
+        if (iconSurfPtr) 
+        {
+            iconSurfPtr->setHighlightNormal();
+        }
     }
 }
 
@@ -140,11 +150,15 @@ void CAVEGroupIconSurface::setHighlightNormal()
 void CAVEGroupIconSurface::setHighlightSelected()
 {
     int nIconSurface = mCAVEGeodeIconVector.size();
-    if (nIconSurface <= 0) return;
+    if (nIconSurface <= 0) 
+        return;
     for (int i = 0; i < nIconSurface; i++)
     {
-	CAVEGeodeIconSurface *iconSurfPtr = dynamic_cast <CAVEGeodeIconSurface*> (mCAVEGeodeIconVector[i]);
-	if (iconSurfPtr) iconSurfPtr->setHighlightSelected();
+        CAVEGeodeIconSurface *iconSurfPtr = dynamic_cast <CAVEGeodeIconSurface*> (mCAVEGeodeIconVector[i]);
+        if (iconSurfPtr) 
+        {
+            iconSurfPtr->setHighlightSelected();
+        }
     }
 }
 
@@ -155,11 +169,15 @@ void CAVEGroupIconSurface::setHighlightSelected()
 void CAVEGroupIconSurface::setHighlightUnselected()
 {
     int nIconSurface = mCAVEGeodeIconVector.size();
-    if (nIconSurface <= 0) return;
+    if (nIconSurface <= 0) 
+        return;
     for (int i = 0; i < nIconSurface; i++)
     {
-	CAVEGeodeIconSurface *iconSurfPtr = dynamic_cast <CAVEGeodeIconSurface*> (mCAVEGeodeIconVector[i]);
-	if (iconSurfPtr) iconSurfPtr->setHighlightUnselected();
+        CAVEGeodeIconSurface *iconSurfPtr = dynamic_cast <CAVEGeodeIconSurface*> (mCAVEGeodeIconVector[i]);
+        if (iconSurfPtr) 
+        {
+            iconSurfPtr->setHighlightUnselected();
+        }
     }
 }
 
@@ -178,15 +196,15 @@ void CAVEGroupIconSurface::applyEditingFinishes(CAVEGeodeShape::EditorInfo **inf
     const int nIconSurfs = mCAVEGeodeIconVector.size();
     if (nIconSurfs > 0)
     {
-	for (int i = 0; i < nIconSurfs; i++)
-	{
-	    CAVEGeodeIconSurface *geodeIconSurfacePtr = dynamic_cast <CAVEGeodeIconSurface*> (mCAVEGeodeIconVector[i]);
-	    if (geodeIconSurfacePtr)
-	    {
-		geodeIconSurfacePtr->getGeometry()->dirtyDisplayList();
-		geodeIconSurfacePtr->getGeometry()->dirtyBound();
-	    }
-	}
+        for (int i = 0; i < nIconSurfs; i++)
+        {
+            CAVEGeodeIconSurface *geodeIconSurfacePtr = dynamic_cast <CAVEGeodeIconSurface*> (mCAVEGeodeIconVector[i]);
+            if (geodeIconSurfacePtr)
+            {
+                geodeIconSurfacePtr->getGeometry()->dirtyDisplayList();
+                geodeIconSurfacePtr->getGeometry()->dirtyBound();
+            }
+        }
     }
 }
 
@@ -236,6 +254,4 @@ const float &CAVEGroupIconSurface::getSurfaceScalingHint()
 {
     return gScaleVal;
 }
-
-
 
