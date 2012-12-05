@@ -47,6 +47,12 @@ void RectangleShape::setPosition(osg::Vec3 p, float width, float height)
 void RectangleShape::setColor(osg::Vec4 c0)
 {
     (*_colors)[0].set(c0[0], c0[1], c0[2], c0[3]);
+    
+    if(c0[3] != 1.0)
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    else
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::DEFAULT_BIN);
+
 }
 
 void RectangleShape::update(std::string command)
