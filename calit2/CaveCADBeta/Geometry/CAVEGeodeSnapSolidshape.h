@@ -90,16 +90,20 @@ class CAVEGeodeSnapSolidshapeCylinder: public CAVEGeodeSnapSolidshape
 };
 
 
+/***************************************************************
+* Class: CAVEGeodeSnapSolidshapeCone
+***************************************************************/
+class CAVEGeodeSnapSolidshapeCone: public CAVEGeodeSnapSolidshape
+{
+  public:
+    CAVEGeodeSnapSolidshapeCone();
+
+    virtual void resize(const osg::Vec3 &gridVect, bool snap);
+
+  protected:
+    osg::Cone* mCone;
+};
+
+
 #endif
-
-
-
-
-
-
-
-
-
-
-
 

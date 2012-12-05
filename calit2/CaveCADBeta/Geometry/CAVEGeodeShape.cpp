@@ -32,6 +32,7 @@ CAVEGeodeShape::CAVEGeodeShape(const Type &typ, const Vec3 &initVect, const Vec3
     {
         case BOX: initGeometryBox(initVect, sVect); break;
         case CYLINDER: initGeometryCylinder(initVect, sVect); break;
+        case CONE: initGeometryCone(initVect, sVect); break;
         default: break;
     }
 
@@ -760,6 +761,213 @@ void CAVEGeodeShape::initGeometryCylinder(const Vec3 &initVect, const Vec3 &sVec
         mTexcoordArray->push_back(Vec2(rad * cost, rad * sint) / gTextureTileSize);
         mTexcoordArray->push_back(Vec2(rad * intvl * i, height) / gTextureTileSize);
         mTexcoordArray->push_back(Vec2(rad * intvl * i, 0.0f) / gTextureTileSize);
+    }
+
+
+    // Snapping bounds
+    float radius = 0.2;
+    float snapSphereRadius = 0.1, snapSphereOpacity = 1.0;
+    osg::Vec4 snapSphereColor = osg::Vec4(1, 0, 1, 1); 
+
+
+    // Add edge bounding cylinders 
+    std::vector<osg::Cylinder*> cylVec;
+    float width = (mVertexArray->at(4) - mVertexArray->at(0)).length();
+
+    for (int i = 0; i < numFanSegs; ++i)
+    {
+        // vertical edges
+        osg::Vec3 center = mVertexArray->at(i*4) + osg::Vec3(0, 0, -height/2);
+        osg::Cylinder *cyl = new osg::Cylinder(center, radius, height);
+        cylVec.push_back(cyl);
+        
+        // horizontal edges
+        float rot = intvl * i;
+        center = mVertexArray->at(i*4 + 4) - mVertexArray->at(i*4);
+        center[2] = 0;
+        cyl = new osg::Cylinder(center, 0.1, width);
+/*        cyl->setRotation(osg::Quat(0,      osg::Vec3(1, 0, 0),
+                                   M_PI/2, osg::Vec3(0, 1, 0),
+                                   rad*intvl*i,    osg::Vec3(0, 0, 1)));
+                                   */
+        cylVec.push_back(cyl);
+
+        center[2] = height;
+        cyl = new osg::Cylinder(center, 0.1, width);
+/*        cyl->setRotation(osg::Quat(0,      osg::Vec3(1, 0, 0),
+                                   M_PI/2, osg::Vec3(0, 1, 0),
+                                   rad*intvl*i,    osg::Vec3(0, 0, 1)));
+                                   */
+        cylVec.push_back(cyl);
+    }
+
+    osg::StateSet *ss;
+    osg::ShapeDrawable *shpDrawable;
+    osg::Material *mat;
+    osg::Geode *geode;
+    for (int i = 0; i < cylVec.size(); ++i)
+    {
+        shpDrawable = new osg::ShapeDrawable(cylVec[i]);
+
+        mat = new Material;
+        mat->setDiffuse(Material::FRONT_AND_BACK, snapSphereColor);
+
+        ss = shpDrawable->getOrCreateStateSet();
+        ss->setMode(GL_BLEND, StateAttribute::PROTECTED | StateAttribute::ON );
+        ss->setRenderingHint(StateAttribute::PROTECTED | StateSet::TRANSPARENT_BIN);
+        ss->setAttributeAndModes(mat, StateAttribute::PROTECTED | StateAttribute::ON);
+        ss->setMode(GL_CULL_FACE, StateAttribute::PROTECTED| StateAttribute::ON);
+
+        addDrawable(shpDrawable);
+
+        mEdgeDrawableMap[cylVec[i]] = shpDrawable; 
+        geode = new osg::Geode();
+        geode->addDrawable(shpDrawable);
+        mEdgeGeodeMap[cylVec[i]] = geode;
+    }
+
+
+    // Add vertex bounding spheres
+    for (int i = 0; i <= numFanSegs; ++i)
+    {
+        for (int j = 0; j < 2; ++j)
+        {
+            osg::Sphere *sph = new osg::Sphere(mVertexArray->at((i*4) + j), snapSphereRadius);
+            osg::ShapeDrawable *shpDraw = new osg::ShapeDrawable(sph);
+
+            mat = new Material;
+            mat->setDiffuse(Material::FRONT_AND_BACK, snapSphereColor);
+
+            StateSet *ss = shpDraw->getOrCreateStateSet();
+            ss->setMode(GL_BLEND, StateAttribute::PROTECTED | StateAttribute::ON );
+            ss->setRenderingHint(StateAttribute::PROTECTED | StateSet::TRANSPARENT_BIN);
+            ss->setAttributeAndModes(mat, StateAttribute::PROTECTED | StateAttribute::ON);
+            ss->setMode(GL_CULL_FACE, StateAttribute::PROTECTED| StateAttribute::ON);
+
+            addDrawable(shpDraw);
+            mVertBoundingSpheres.push_back(sph);
+            mShapeDrawableMap[sph] = shpDraw;
+        }
+    }
+
+    // Top center bounding sphere
+    {
+        osg::Sphere *sph = new osg::Sphere(mCenterVect = Vec3(cx, cy, cz + height), snapSphereRadius);
+        osg::ShapeDrawable *shpDraw = new osg::ShapeDrawable(sph);
+
+        mat = new Material;
+        mat->setDiffuse(Material::FRONT_AND_BACK, snapSphereColor);
+
+        StateSet *ss = shpDraw->getOrCreateStateSet();
+        ss->setMode(GL_BLEND, StateAttribute::PROTECTED | StateAttribute::ON );
+        ss->setRenderingHint(StateAttribute::PROTECTED | StateSet::TRANSPARENT_BIN);
+        ss->setAttributeAndModes(mat, StateAttribute::PROTECTED | StateAttribute::ON);
+        ss->setMode(GL_CULL_FACE, StateAttribute::PROTECTED| StateAttribute::ON);
+
+        addDrawable(shpDraw);
+        mVertBoundingSpheres.push_back(sph);
+        mShapeDrawableMap[sph] = shpDraw;
+    }
+
+    // create geometries for each surface
+    CAVEGeometry **geometryArrayPtr = new CAVEGeometry*[3];
+    for (int i = 0; i < 3; i++)
+    {
+        geometryArrayPtr[i] = new CAVEGeometry;
+        geometryArrayPtr[i]->setVertexArray(mVertexArray);
+        geometryArrayPtr[i]->setNormalArray(mNormalArray);
+        geometryArrayPtr[i]->setTexCoordArray(0, mTexcoordArray);
+        geometryArrayPtr[i]->setNormalBinding(Geometry::BIND_PER_VERTEX);
+
+        mGeometryVector.push_back(geometryArrayPtr[i]);
+        addDrawable(geometryArrayPtr[i]);
+    }
+
+    // write primitive set and index clusters
+    DrawElementsUInt* topSurface = new DrawElementsUInt(PrimitiveSet::POLYGON, 0);  
+    DrawElementsUInt* bottomSurface = new DrawElementsUInt(PrimitiveSet::POLYGON, 0);
+
+    for (int i = 0; i <= numFanSegs; i++)
+    {
+        topSurface->push_back(i * 4);
+        bottomSurface->push_back((numFanSegs - i) * 4 + 1);
+    }
+    geometryArrayPtr[0]->addPrimitiveSet(topSurface);
+    geometryArrayPtr[1]->addPrimitiveSet(bottomSurface);
+
+    for (int i = 0; i < numFanSegs; i++)
+    {
+        DrawElementsUInt* sideSurface = new DrawElementsUInt(PrimitiveSet::POLYGON, 0);
+        sideSurface->push_back(i * 4 + 2);	sideSurface->push_back(i * 4 + 3);
+        sideSurface->push_back(i * 4 + 7);	sideSurface->push_back(i * 4 + 6);
+        geometryArrayPtr[2]->addPrimitiveSet(sideSurface);
+    }
+
+    for (int i = 0; i <= numFanSegs; i++)
+    {
+        geometryArrayPtr[0]->addIndexCluster(i * 4    , i * 4 + 2);
+        geometryArrayPtr[1]->addIndexCluster(i * 4 + 1, i * 4 + 3);
+        geometryArrayPtr[2]->addIndexCluster(i * 4    , i * 4 + 2);
+        geometryArrayPtr[2]->addIndexCluster(i * 4 + 1, i * 4 + 3);
+    }
+}
+
+
+/***************************************************************
+* Function: initGeometryCylinder()
+***************************************************************/
+void CAVEGeodeShape::initGeometryCone(const Vec3 &initVect, const Vec3 &sVect)
+{
+    int numFanSegs = CAVEGeodeSnapWireframeCylinder::gCurFanSegments;
+    float cx = initVect.x(), cy = initVect.y(), cz = initVect.z();
+    float rad = sVect.x(), height = sVect.z();
+
+    if (rad < 0) 
+    {
+        rad = -rad;
+    }
+    if (height < 0) 
+    { 
+        cz = initVect.z() + height;  
+        height = -height; 
+    }
+
+    // take record of center vector and number of vertices, normals, texcoords
+    mCenterVect = Vec3(cx, cy, cz + height * 0.5);
+    mNumVertices = mNumNormals = mNumTexcoords = (numFanSegs + 1) * 4;
+
+    // create vertical edges, cap radiating edges and ring strips on side surface
+    float intvl = M_PI * 2 / numFanSegs;
+    for (int i = 0; i <= numFanSegs; i++)
+    {
+        const float theta = i * intvl;
+        const float cost = cos(theta);
+        const float sint = sin(theta);
+
+        mVertexArray->push_back(Vec3(cx, cy, cz) + Vec3(/*rad * cost, rad * sint*/0,0, height));	// top surface
+        mVertexArray->push_back(Vec3(cx, cy, cz) + Vec3(rad * cost, rad * sint, 0));		// bottom surface
+        mVertexArray->push_back(Vec3(cx, cy, cz) + Vec3(/*rad * cost, rad * sint*/0,0, height));	// upper side
+        mVertexArray->push_back(Vec3(cx, cy, cz) + Vec3(rad * cost, rad * sint, 0));		// lower side
+
+        mNormalArray->push_back(Vec3(0, 0, 1));		
+        mNormalArray->push_back(Vec3(0, 0, -1));
+        mNormalArray->push_back(Vec3(cost, sint, 0));	
+        mNormalArray->push_back(Vec3(cost, sint, 0));	
+
+        mUDirArray->push_back(Vec3(1, 0, 0));	mVDirArray->push_back(Vec3(0, 1, 0));		// top surface
+        mUDirArray->push_back(Vec3(1, 0, 0));	mVDirArray->push_back(Vec3(0, 1, 0));		// bottom surface
+        mUDirArray->push_back(Vec3(0, 0, 0));	mVDirArray->push_back(Vec3(0, 0, 1));		// upper side
+        mUDirArray->push_back(Vec3(0, 0, 0));	mVDirArray->push_back(Vec3(0, 0, 1));		// lower side
+
+//        mTexcoordArray->push_back(Vec2(0,0/*rad * cost, height*/ /*rad * sint*/) / gTextureTileSize);
+//        mTexcoordArray->push_back(Vec2(rad * cost, rad * sint) / gTextureTileSize);
+//        mTexcoordArray->push_back(Vec2(0,0/*rad * intvl * i, height*/) / gTextureTileSize);
+//        mTexcoordArray->push_back(Vec2(rad * cost, rad * sint/*0.0f*/) / gTextureTileSize);
+
+        mTexcoordArray->push_back(Vec2(rad * intvl * i + (0.5 * rad * intvl), height) / gTextureTileSize);
+        mTexcoordArray->push_back(Vec2(rad * intvl * i, 0) / gTextureTileSize);
+        mTexcoordArray->push_back(Vec2(rad * intvl * i + (0.5 * rad * intvl), height) / gTextureTileSize);
+        mTexcoordArray->push_back(Vec2(rad * intvl * i, 0) / gTextureTileSize);
     }
 
 

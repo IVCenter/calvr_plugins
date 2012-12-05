@@ -35,6 +35,7 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
     *sphereExteriorSwitch = new Switch;
     Switch *createBoxSwitch = new Switch;
     Switch *createCylinderSwitch = new Switch;
+    Switch *createConeSwitch = new Switch;
 
     (*xformScaleFwd)->addChild(geomCreatorTrans);
     (*xformScaleBwd)->addChild(geomCreatorTrans);
@@ -42,15 +43,15 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
     geomCreatorTrans->addChild(*sphereExteriorSwitch);
     geomCreatorTrans->addChild(createBoxSwitch);
     geomCreatorTrans->addChild(createCylinderSwitch);
-    
+    geomCreatorTrans->addChild(createConeSwitch);
+   
     osg::Vec3 pos(-1, 0, 0);
 
-    // create drawables, geodes and attach them to animation switches
+    // create top icon drawables, geodes and attach them to animation switches
     *sphereExteriorGeode = new Geode();
     Sphere *sphere = new Sphere(osg::Vec3(), ANIM_VIRTUAL_SPHERE_RADIUS);
     ShapeDrawable *sphereDrawable = new ShapeDrawable(sphere);
     (*sphereExteriorGeode)->addDrawable(sphereDrawable);
-
 
     Box *box = new Box(osg::Vec3(0.1, 0, 0), ANIM_VIRTUAL_SPHERE_RADIUS / 1.9);
     (*sphereExteriorGeode)->addDrawable(new ShapeDrawable(box));
@@ -82,15 +83,18 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
     (*sphereExteriorSwitch)->setAllChildrenOn();
 
     // write into shape switch entry array record
-    numTypes = 2;
+    numTypes = 3;
     *shapeSwitchEntryArray = new ANIMShapeSwitchEntry*[numTypes];
     (*shapeSwitchEntryArray)[0] = new ANIMShapeSwitchEntry;
     (*shapeSwitchEntryArray)[1] = new ANIMShapeSwitchEntry;
+    (*shapeSwitchEntryArray)[2] = new ANIMShapeSwitchEntry;
     (*shapeSwitchEntryArray)[0]->mSwitch = createBoxSwitch;
     (*shapeSwitchEntryArray)[1]->mSwitch = createCylinderSwitch;
+    (*shapeSwitchEntryArray)[2]->mSwitch = createConeSwitch;
 
     ANIMCreateSingleShapeSwitchAnimation(&((*shapeSwitchEntryArray)[0]), CAVEGeodeShape::BOX);
     ANIMCreateSingleShapeSwitchAnimation(&((*shapeSwitchEntryArray)[1]), CAVEGeodeShape::CYLINDER);
+    ANIMCreateSingleShapeSwitchAnimation(&((*shapeSwitchEntryArray)[2]), CAVEGeodeShape::CONE);
 
     // set up the forward / backward scale animation paths for geometry creator
     AnimationPath* animationPathScaleFwd = new AnimationPath;
@@ -149,6 +153,13 @@ void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, con
         Cylinder *cylinder = new Cylinder(osg::Vec3(), r, r * 2);
         shapeGeode->addDrawable(new ShapeDrawable(cylinder));
     }
+    else if (typ == CAVEGeodeShape::CONE)
+    {
+        float r = ANIM_VIRTUAL_SPHERE_RADIUS / 1.5;
+        Cone *cone = new Cone(osg::Vec3(), r, r * 2);
+        shapeGeode->addDrawable(new ShapeDrawable(cone));
+    }
+
     flipUpFwdTrans->addChild(shapeGeode);
     flipDownFwdTrans->addChild(shapeGeode);
     flipUpBwdTrans->addChild(shapeGeode);
@@ -174,6 +185,8 @@ void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, con
         pos[2] -= 0.5;
     else if (typ == CAVEGeodeShape::CYLINDER)
         pos[2] -= 1.0;
+    else if (typ == CAVEGeodeShape::CONE)
+        pos[2] -= 1.5;
 
     osg::Vec3 diff, startPos(0,0,0), fwd, bwd;
 
@@ -236,14 +249,17 @@ void ANIMLoadGeometryCreatorReference(Switch **snapWireframeSwitch, Switch **sna
     *snapWireframeSwitch = new Switch();
     CAVEGeodeSnapWireframeBox *snapWireframeBox = new CAVEGeodeSnapWireframeBox();
     CAVEGeodeSnapWireframeCylinder * snapWireframeCylinder = new CAVEGeodeSnapWireframeCylinder();
+    CAVEGeodeSnapWireframeCone * snapWireframeCone = new CAVEGeodeSnapWireframeCone();
 
     (*snapWireframeSwitch)->addChild(snapWireframeBox);
     (*snapWireframeSwitch)->addChild(snapWireframeCylinder);
+    (*snapWireframeSwitch)->addChild(snapWireframeCone);
     (*snapWireframeSwitch)->setAllChildrenOff();
 
     *snapSolidshapeSwitch = new Switch();
     (*snapSolidshapeSwitch)->addChild(new CAVEGeodeSnapSolidshapeBox());
     (*snapSolidshapeSwitch)->addChild(new CAVEGeodeSnapSolidshapeCylinder());
+    (*snapSolidshapeSwitch)->addChild(new CAVEGeodeSnapSolidshapeCone());
     (*snapSolidshapeSwitch)->setAllChildrenOff();
 }
 

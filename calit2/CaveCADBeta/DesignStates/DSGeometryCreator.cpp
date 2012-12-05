@@ -329,7 +329,7 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
         {
             mDrawingState = START_DRAWING;
             DrawingStateTransitionHandle(READY_TO_DRAW, START_DRAWING);
-     
+
             mDOGeometryCreator->setWireframeInitPos(pointerPos);
             mDOGeometryCreator->setSolidshapeActiveID(mShapeSwitchIdx);
             mDOGeometryCreator->setPointerDir(pointerPos - pointerOrg);

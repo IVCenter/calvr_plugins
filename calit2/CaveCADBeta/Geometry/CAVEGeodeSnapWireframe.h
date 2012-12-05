@@ -88,5 +88,21 @@ class CAVEGeodeSnapWireframeCylinder: public CAVEGeodeSnapWireframe
 };
 
 
+/***************************************************************
+* Class: CAVEGeodeSnapWireframeCone
+***************************************************************/
+class CAVEGeodeSnapWireframeCone: public CAVEGeodeSnapWireframe
+{
+  public:
+    CAVEGeodeSnapWireframeCone();
+
+    virtual void resize(osg::Vec3 &gridVect);
+    virtual void initBaseGeometry();
+
+    static const int gMinFanSegments;
+    static int gCurFanSegments;
+};
+
+
 #endif
 
