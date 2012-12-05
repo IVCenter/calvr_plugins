@@ -7,6 +7,7 @@ SET(PLUGIN_HEADERS
     ThreadMap.h
     #Variables.h
     CommandParser.h
+    MainNode.h
     zhelpers.h
     shapes/BasicShape.h
     shapes/Factory.h
@@ -29,6 +30,7 @@ ADD_LIBRARY(${LIB_NAME}
     ThreadMap.cpp
     #Variables.cpp
     CommandParser.cpp
+    MainNode.cpp
     shapes/BasicShape.cpp
     shapes/PointShape.cpp
     shapes/QuadShape.cpp

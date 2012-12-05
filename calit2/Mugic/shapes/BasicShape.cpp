@@ -20,6 +20,9 @@ BasicShape::BasicShape(): _dirty(false)
 
 BasicShape::~BasicShape()
 {
+    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
+    setUpdateCallback(NULL);
+    _dirty = false;
 }
 
 

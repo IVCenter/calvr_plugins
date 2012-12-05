@@ -1,6 +1,7 @@
 #include "LineShape.h"
 
 #include <osg/Geometry>
+#include <osg/Material>
 
 #include <string>
 #include <vector>
@@ -24,7 +25,12 @@ LineShape::LineShape(std::string command, std::string name)
     setColorBinding(osg::Geometry::BIND_PER_VERTEX);
     addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES,0,2));
 
-    getOrCreateStateSet()->setAttribute(_width);
+    osg::StateSet* state = getOrCreateStateSet();
+    osg::Material* mat = new osg::Material();
+    state->setMode(GL_BLEND, osg::StateAttribute::ON);
+    mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
+    state->setAttributeAndModes(mat, osg::StateAttribute::ON);
+    state->setAttribute(_width);
 }
 
 LineShape::~LineShape()
@@ -87,8 +93,8 @@ void LineShape::update()
     setParameter("y1", p1.y()); 
     setParameter("z1", p1.z()); 
     setParameter("r1", c1.r()); 
-    setParameter("g1", c1.b()); 
-    setParameter("b1", c1.g()); 
+    setParameter("g1", c1.g()); 
+    setParameter("b1", c1.b()); 
     setParameter("a1", c1.a()); 
 
 	osg::Vec3 p2((*_vertices)[1]);
@@ -98,8 +104,8 @@ void LineShape::update()
     setParameter("y2", p2.y()); 
     setParameter("z2", p2.z()); 
     setParameter("r2", c2.r()); 
-    setParameter("g2", c2.b()); 
-    setParameter("b2", c2.g()); 
+    setParameter("g2", c2.g()); 
+    setParameter("b2", c2.b()); 
     setParameter("a2", c2.a()); 
 
     setParameter("width", width);

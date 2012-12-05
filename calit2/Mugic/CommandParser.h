@@ -8,6 +8,7 @@
 #include <osg/Geode>
 
 #include "ThreadQueue.h"
+#include "MainNode.h"
 //#include "Variables.h"
 #include "shapes/BasicShape.h"
 #include "shapes/Factory.h"
@@ -22,7 +23,8 @@ class CommandParser : public OpenThreads::Thread
         virtual void run();
 
         ThreadQueue<std::string> * _queue;
-        osg::Group* _root;
+        //osg::Group* _root;
+        MainNode* _root;
 
         // shape definitions
         std::map<std::string, ShapeFactory* > _shapeDefinitions;
@@ -34,9 +36,11 @@ class CommandParser : public OpenThreads::Thread
         void parseCommand(std::string command);
         std::string getParameter(std::string command, std::string param);
         void remove(std::string elementName);
+        void removeAll();
 
     public:
-    	CommandParser(ThreadQueue<std::string>* queue, osg::Group* root);
+    	//CommandParser(ThreadQueue<std::string>* queue, osg::Group* root);
+    	CommandParser(ThreadQueue<std::string>* queue, MainNode* root);
 	    ~CommandParser();
 };
 #endif

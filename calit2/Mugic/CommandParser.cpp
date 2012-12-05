@@ -14,7 +14,7 @@
 #include <algorithm>
 
 // command thread constructor
-CommandParser::CommandParser(ThreadQueue<std::string>* queue, osg::Group* root) : _queue(queue), _root(root)
+CommandParser::CommandParser(ThreadQueue<std::string>* queue, MainNode* root) : _queue(queue), _root(root)
 {
 	_mkill = false;
 
@@ -68,17 +68,15 @@ void CommandParser::parseCommand(std::string command)
         tokens.push_back(value);
    }
 
-   // smallest number of params needed is 1
-   if(tokens.size() < 1)
+   // smallest number of params needed is 2
+   if(tokens.size() < 2)
        return;
 
    // check initial command
    std::transform(tokens[0].begin(), tokens[0].end(), tokens[0].begin(), ::tolower);
 
    std::string commandType = tokens[0]; 
-   std::string elementName;
-   if( tokens.size() > 1 )
-       elementName.append(tokens[1]);
+   std::string elementName = tokens[1];
   
    // look for an update command for an existing object 
    if( commandType.compare("update") == 0)
@@ -92,7 +90,14 @@ void CommandParser::parseCommand(std::string command)
    }
    else if( commandType.compare("delete") == 0)
    {
-       remove(elementName);
+       if(elementName.compare("all") == 0)
+       {
+            removeAll();     
+       }
+       else
+       {
+            remove(elementName);
+       }
    }
 /*
    else if( commandType.compare("var") == 0 && !elementName.empty()) // check for variable
@@ -100,7 +105,7 @@ void CommandParser::parseCommand(std::string command)
         Variables::getInstance()->add(elementName, getParameter(command, "value"));
    }
 */
-   else // new object defined need to create
+   else // new object defined need to create TODO test for valid commands
    {
        // create a new object if it doesnt exist or override old one
        remove(elementName);
@@ -111,17 +116,39 @@ void CommandParser::parseCommand(std::string command)
             // object created
             BasicShape* newShape = _shapeDefinitions[commandType]->createInstance(command, elementName);
 
-            // get name from object created and add to table 
-            _shapes[newShape->getName()] = newShape;
-
             // create a new geode to add to scenegraph
-            osg::ref_ptr<osg::Geode> geode = new osg::Geode();
+            //osg::ref_ptr<osg::Geode> geode = new osg::Geode();
+            osg::Geode* geode = new osg::Geode();
             geode->setDataVariance(osg::Object::DYNAMIC);
             geode->addDrawable(newShape);
-            _root->addChild(geode.get());
+            _root->addElement(geode);
+            
+            // get name from object created and add to table 
+            _shapes[newShape->getName()] = newShape;
        }
    }
 }
+
+void CommandParser::removeAll()
+{
+       // create a new object if it doesnt exist or override old one
+       std::map<std::string, BasicShape* >::iterator it;
+       while( _shapes.begin() != _shapes.end() )
+       {
+            it = _shapes.begin();
+
+            osg::Geode* geode = NULL;
+            // get geode drawable is attached too
+            if( (geode = it->second->getParent(0)->asGeode()) != NULL)
+            {
+                _root->removeElement(geode);
+            }
+
+            // remove old shape from map and scenegraph
+            _shapes.erase(it);
+       }
+}
+
 
 void CommandParser::remove(std::string elementName)
 {
@@ -133,13 +160,7 @@ void CommandParser::remove(std::string elementName)
             // get geode drawable is attached too
             if( (geode = it->second->getParent(0)->asGeode()) != NULL)
             {
-                osg::Group* parent = NULL;
-
-                // access all the parents of the attached geode
-                if( (parent = geode->getParent(0)->asGroup()) != NULL)
-                {
-                    parent->removeChild(geode);
-                }
+                _root->removeElement(geode);
             }
 
             // remove old shape from map and scenegraph

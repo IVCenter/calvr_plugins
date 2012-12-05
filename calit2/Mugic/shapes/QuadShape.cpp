@@ -1,6 +1,7 @@
 #include "QuadShape.h"
 
 #include <osg/Geometry>
+#include <osg/Material>
 
 #include <string>
 #include <vector>
@@ -22,6 +23,12 @@ QuadShape::QuadShape(std::string command, std::string name)
     setColorArray(_colors); 
     setColorBinding(osg::Geometry::BIND_PER_VERTEX);
     addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
+
+    osg::StateSet* state = getOrCreateStateSet();
+    osg::Material* mat = new osg::Material();
+    state->setMode(GL_BLEND, osg::StateAttribute::ON);
+    mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
+    state->setAttributeAndModes(mat, osg::StateAttribute::ON);
 }
 
 QuadShape::~QuadShape()
@@ -42,17 +49,6 @@ void QuadShape::setColor(osg::Vec4 c0, osg::Vec4 c1, osg::Vec4 c2, osg::Vec4 c3)
     (*_colors)[1].set(c1[0], c1[1], c1[2], c1[3]);    
     (*_colors)[2].set(c2[0], c2[1], c2[2], c2[3]);    
     (*_colors)[3].set(c3[0], c3[1], c3[2], c3[3]);
-    
-    if( c0[3] != 1.0 || c1[3] != 1.0 || c2[3] != 1.0 || c3[4] != 1.0)
-    {
-        getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
-        getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-    }
-    else
-    {
-        getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::OFF);
-        getOrCreateStateSet()->setRenderingHint(osg::StateSet::OPAQUE_BIN);
-    }
 }
 
 void QuadShape::update(std::string command)
