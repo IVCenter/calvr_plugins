@@ -33,6 +33,8 @@ DSGeometryCreator::DSGeometryCreator(): mShapeSwitchIdx(0), mNumShapeSwitches(0)
     mDevPressedFlag = false;
 
     prevGeode = NULL;
+
+    mEditorOffset = osg::Vec3(1,0,1);
 }
 
 // Destructor
@@ -188,39 +190,18 @@ void DSGeometryCreator::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg
                     if (hitCAVEGeode->snapToVertex(hit, &center))
                     {
                         snap = true;
-                        //mDOGeometryCreator->setSnapPos(center, false);
                     }
-                    /*else
-                    {
-                        mDOGeometryCreator->setSnapPos(pointerPos);
-                    }
-                }
-                else
-                {
-                    mDOGeometryCreator->setSnapPos(pointerPos);
-                }*/
                 }
             }
-
-            osg::Matrixf w2o = cvr::PluginHelper::getWorldToObjectTransform();
-            osg::Matrixd scaleMat;
-            scaleMat.makeScale(osg::Vec3(0.001, 0.001, 0.001));
-            //scaleMat.invert(scaleMat);
-            osg::Matrixd o2cad = scaleMat;
 
             if (snap)
             {
-                center = center * w2o * o2cad;// * o2cad * w2o;
                 mDOGeometryCreator->setSnapPos(center, false);
-                //std::cout << "snap " << center[0] << " " << center[1] << " " << center[2] << std::endl;
             }
             else
             {
-                osg::Vec3 pos = pointerPos;
-                pos = pos * w2o * o2cad;// * o2cad * w2o;
-
-                mDOGeometryCreator->setSnapPos(pos);
-                //std::cout << "no snap " << pos[0] << " " << pos[1] << " " << pos[2] << std::endl;
+                mDOGeometryCreator->setSnapPos(pointerPos);
+                //std::cout << pointerPos[0] << " " << pointerPos[1] << " " << pointerPos[2] << std::endl;
             }
             mDOGeometryCreator->updateReferenceAxis();
         }
@@ -237,10 +218,9 @@ void DSGeometryCreator::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg
             if (mDOIntersector->test(pointerOrg, pointerPos))
             {
                 osg::Vec3 hit = mDOIntersector->getWorldHitPosition();
-
-                osg::Matrixd scaleMat;
-                scaleMat.makeScale(osg::Vec3(0.001, 0.001, 0.001));
-                hit = hit * cvr::PluginHelper::getWorldToObjectTransform() * scaleMat;// * scaleMat * cvr::PluginHelper::getWorldToObjectTransform();
+                /*osg::Matrixd scaleMat;
+                scaleMat.makeScale(osg::Vec3(0.001,0.001,0.001));
+                hit = hit * cvr::PluginHelper::getWorldToObjectTransform() * scaleMat;*/
 
                 CAVEGeodeShape *hitCAVEGeode = dynamic_cast <CAVEGeodeShape*>(mDOIntersector->getHitNode());
                 if (hitCAVEGeode)
@@ -254,21 +234,25 @@ void DSGeometryCreator::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg
                     else
                     {
                         mDOGeometryCreator->updateReferencePlane(hit);
-                        mDOGeometryCreator->setReferencePlaneMasking(true, true, true);
+                        //mDOGeometryCreator->setReferencePlaneMasking(true, true, true);
+                        mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
                     }
                     prevGeode = hitCAVEGeode;
                 }
                 else
                 {
-                    mDOGeometryCreator->setReferencePlaneMasking(true, true, true);
+                    //mDOGeometryCreator->setReferencePlaneMasking(true, true, true);
+                    mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
                     mDOGeometryCreator->updateReferencePlane(hit);
                 }
+                mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
             }
             else 
             {
                 mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
             }
         }
+        mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
     }
 }
 
@@ -330,7 +314,7 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
             CAVEGeodeShape *hitCAVEGeode = dynamic_cast <CAVEGeodeShape*>(mDOIntersector->getHitNode());
             if (hitCAVEGeode)
             {
-                mDOGeometryCollector->setSurfaceCollectionHints(hitCAVEGeode, gDesignStateCenterPos);
+                mDOGeometryCollector->setSurfaceCollectionHints(hitCAVEGeode, gDesignStateCenterPos - mEditorOffset);//osg::Vec3(1,0,1));
                 mDOGeometryCollector->toggleCAVEGeodeShape(hitCAVEGeode);
 
                 switchToLowerDesignState(0);
@@ -345,7 +329,7 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
         {
             mDrawingState = START_DRAWING;
             DrawingStateTransitionHandle(READY_TO_DRAW, START_DRAWING);
-     
+
             mDOGeometryCreator->setWireframeInitPos(pointerPos);
             mDOGeometryCreator->setSolidshapeActiveID(mShapeSwitchIdx);
             mDOGeometryCreator->setPointerDir(pointerPos - pointerOrg);
@@ -361,11 +345,8 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
             {
                 osg::Vec3 center = osg::Vec3();
                 osg::Vec3 hit = mDOIntersector->getWorldHitPosition();
-                osg::Matrixd scaleMat;
-                scaleMat.makeScale(osg::Vec3(0.001, 0.001, 0.001));
-                hit = hit * cvr::PluginHelper::getWorldToObjectTransform() * scaleMat;// * scaleMat * cvr::PluginHelper::getWorldToObjectTransform();
 
-                if (hitCAVEGeode->snapToVertex(hit, &center))//mDOIntersector->getWorldHitPosition(), &center))
+                if (hitCAVEGeode->snapToVertex(hit, &center))
                 {
                     mDOGeometryCreator->setSolidshapeInitPos(center, false);
                 } 
@@ -379,7 +360,7 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
                 mDOGeometryCreator->setSolidshapeInitPos(mDOIntersector->getWorldHitPosition());
             }
             mDOGeometryCreator->setSnapPos(pointerPos);
-            mDOGeometryCreator->setReferencePlaneMasking(true, true, true);
+            mDOGeometryCreator->setReferencePlaneMasking(false, false, false);
         } 
         else 
         {

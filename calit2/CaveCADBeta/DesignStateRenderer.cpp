@@ -336,6 +336,7 @@ bool DesignStateRenderer::inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 
 {
     for (DesignStateList::iterator it = mDSList.begin(); it != mDSList.end(); ++it)
     {
+        // if intersects a menu item
         if ((*it)->test(pointerOrg, pointerPos))
         {
             if (mActiveDSPtr != (*it) && (mActiveDSPtr)->isEnabled()) // turn off the previous state
@@ -344,6 +345,7 @@ bool DesignStateRenderer::inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 
             }
             mActiveDSPtr = (*it);
             
+            // open if closed, close if open
             if (mActiveDSPtr->isEnabled())
             {
                 mActiveDSPtr->setObjectEnabled(false);
