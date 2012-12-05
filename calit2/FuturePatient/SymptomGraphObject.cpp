@@ -1,6 +1,8 @@
 #include "SymptomGraphObject.h"
 
 #include <cvrKernel/ComController.h>
+#include <cvrInput/TrackingManager.h>
+#include <cvrUtil/OsgMath.h>
 
 #include <iostream>
 #include <sstream>
@@ -104,6 +106,33 @@ void SymptomGraphObject::setGraphSize(float width, float height)
     setBoundingBox(bb);
 }
 
+void SymptomGraphObject::setBarVisible(bool vis)
+{
+    _graph->setBarVisible(vis);
+}
+
+float SymptomGraphObject::getBarPosition()
+{
+    return _graph->getBarPosition();
+}
+
+void SymptomGraphObject::setBarPosition(float pos)
+{
+    _graph->setBarPosition(pos);
+}
+
+bool SymptomGraphObject::getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point)
+{
+    osg::Matrix m;
+    m = mat * getWorldToObjectMatrix();
+    return _graph->getGraphSpacePoint(m,point);
+}
+
+void SymptomGraphObject::setGLScale(float scale)
+{
+    _graph->setGLScale(scale);
+}
+
 void SymptomGraphObject::setGraphDisplayRange(time_t start, time_t end)
 {
     _graph->setDisplayRange(start,end);
@@ -130,4 +159,32 @@ time_t SymptomGraphObject::getMaxTimestamp()
 time_t SymptomGraphObject::getMinTimestamp()
 {
     return _graph->getMinTimestamp();
+}
+
+void SymptomGraphObject::updateCallback(int handID, const osg::Matrix & mat)
+{
+    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::MOUSE)
+    {
+	osg::Vec3 start, end(0,1000,0);
+	start = start * mat * getWorldToObjectMatrix();
+	end = end * mat * getWorldToObjectMatrix();
+
+	osg::Vec3 planePoint;
+	osg::Vec3 planeNormal(0,-1,0);
+	osg::Vec3 intersect;
+	float w;
+
+	if(linePlaneIntersectionRef(start,end,planePoint,planeNormal,intersect,w))
+	{
+	    _graph->setHover(intersect);
+	}
+    }
+}
+
+void SymptomGraphObject::leaveCallback(int handID)
+{
+    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER)
+    {
+	_graph->clearHoverText();
+    }
 }

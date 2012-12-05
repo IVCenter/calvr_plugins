@@ -546,7 +546,7 @@ void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
 	osg::Vec3 graphPoint;
 	for(int i = 0; i < _objectList.size(); i++)
 	{
-	    if(!_objectList[i]->getGraphSpacePoint(mat,graphPoint) || graphPoint.x() < 0 || graphPoint.x() > 1.0 || graphPoint.z() < 0 || graphPoint.z() > 1.0)
+	    if(!_objectList[i]->getGraphSpacePoint(mat,graphPoint) || graphPoint.z() < 0 || graphPoint.z() > 1.0)
 	    {
 		continue;
 	    }
@@ -569,6 +569,9 @@ void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
 	{
 	    return;
 	}
+
+	graphPoint.x() = std::max(graphPoint.x(),0.0f);
+	graphPoint.x() = std::min(graphPoint.x(),1.0f);
 
 	if(_activeHand == -1)
 	{
@@ -599,7 +602,7 @@ void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
 	    }
 
 	    osg::Vec3 graphPoint;
-	    if(!_objectList[i]->getGraphSpacePoint(mat,graphPoint) || graphPoint.x() < 0 || graphPoint.x() > 1.0 || graphPoint.z() < 0 || graphPoint.z() > 1.0)
+	    if(!_objectList[i]->getGraphSpacePoint(mat,graphPoint) || graphPoint.z() < 0 || graphPoint.z() > 1.0)
 	    {
 		if(handID == _perGraphActiveHand[i])
 		{
@@ -609,6 +612,9 @@ void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
 		}
 		continue;
 	    }
+
+	    graphPoint.x() = std::max(graphPoint.x(),0.0f);
+	    graphPoint.x() = std::min(graphPoint.x(),1.0f);
 
 	    if(_perGraphActiveHand[i] == -1)
 	    {
