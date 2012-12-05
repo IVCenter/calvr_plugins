@@ -30,6 +30,7 @@ PointShape::PointShape(std::string command, std::string name)
 
     osg::StateSet* state = getOrCreateStateSet();
     osg::Material* mat = new osg::Material();
+    state->setMode(GL_BLEND, osg::StateAttribute::ON);
     mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
     state->setAttributeAndModes(mat, osg::StateAttribute::ON);
     state->setAttribute(_point);

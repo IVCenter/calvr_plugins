@@ -121,7 +121,6 @@ void CommandParser::parseCommand(std::string command)
             osg::Geode* geode = new osg::Geode();
             geode->setDataVariance(osg::Object::DYNAMIC);
             geode->addDrawable(newShape);
-            //_root->addElement(geode.get());
             _root->addElement(geode);
             
             // get name from object created and add to table 
@@ -142,13 +141,7 @@ void CommandParser::removeAll()
             // get geode drawable is attached too
             if( (geode = it->second->getParent(0)->asGeode()) != NULL)
             {
-                MainNode* parent = NULL;
-
-                // access all the parents of the attached geode
-                if( (parent = dynamic_cast<MainNode* >(geode->getParent(0))) != NULL)
-                {
-                    parent->removeElement(geode);
-                }
+                _root->removeElement(geode);
             }
 
             // remove old shape from map and scenegraph
@@ -167,13 +160,7 @@ void CommandParser::remove(std::string elementName)
             // get geode drawable is attached too
             if( (geode = it->second->getParent(0)->asGeode()) != NULL)
             {
-                MainNode* parent = NULL;
-
-                // access all the parents of the attached geode
-                if( (parent = dynamic_cast<MainNode* >(geode->getParent(0))) != NULL)
-                {
-                    parent->removeElement(geode);
-                }
+                _root->removeElement(geode);
             }
 
             // remove old shape from map and scenegraph
