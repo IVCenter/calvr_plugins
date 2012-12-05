@@ -97,6 +97,14 @@ CAVEGeodeSnapSolidshapeCylinder::CAVEGeodeSnapSolidshapeCylinder()
     addDrawable(cylinderDrawable);
 }
 
+// Constructor: CAVEGeodeSnapSolidshapeCone
+CAVEGeodeSnapSolidshapeCone::CAVEGeodeSnapSolidshapeCone()
+{
+    mCone = new Cone(Vec3(0, 0, 0), 1.0, 1.0);
+    Drawable* coneDrawable = new ShapeDrawable(mCone);
+    addDrawable(coneDrawable);
+}
+
 
 /***************************************************************
 * Function: resize()
@@ -138,3 +146,19 @@ void CAVEGeodeSnapSolidshapeCylinder::resize(const osg::Vec3 &gridVect, bool sna
     setDrawable(0, cylinderDrawable);
 }
 
+
+/***************************************************************
+* Function: resize()
+***************************************************************/
+void CAVEGeodeSnapSolidshapeCone::resize(const osg::Vec3 &gridVect, bool snap)
+{
+    mScaleVect = gridVect * mSnappingUnitDist;
+    float rad = sqrt(mScaleVect.x() * mScaleVect.x() + mScaleVect.y() * mScaleVect.y());
+    mCone = new Cone;
+
+    mCone->setCenter(mInitPosition + Vec3(0, 0, mScaleVect.z() * 0.5));
+    mCone->setRadius(rad);
+    mCone->setHeight(mScaleVect.z());
+    Drawable* coneDrawable = new ShapeDrawable(mCone);
+    setDrawable(0, coneDrawable);
+}

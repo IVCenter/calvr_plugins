@@ -78,6 +78,5 @@ class DSGeometryCreator: public DesignStateBase
     void DrawingStateTransitionHandle(const DrawingState& prevState, const DrawingState& nextState);
 };
 
-
 #endif
 

@@ -562,6 +562,10 @@ bool DataGraph::getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point)
 
     if(linePlaneIntersectionRef(point1,point2,planePoint,planeNormal,intersect,w))
     {
+	if(fabs(intersect.x()) > (_width/2.0) || fabs(intersect.z()) > (_height / 2.0))
+	{
+	    return false;
+	}
 	intersect.x() /= dataWidth;
 	intersect.z() /= dataHeight;
 	intersect.x() += 0.5;
