@@ -102,31 +102,62 @@ bool ElevatorRoom::init()
     _lightFlashPerSec = 7;
     _gameMode = THREE;
 
-    srand(time(NULL));
+    srand(10);//time(NULL));
 
     // Sound
-    
+    osg::Vec3 handPos, headPos, headDir, handDir;
+    handPos = cvr::PluginHelper::getHandMat().getTrans();
+    headPos = cvr::PluginHelper::getHeadMat().getTrans();
+    headDir = osg::Vec3(0, 0, -1); 
+    handDir = handPos - headPos;
+
     if (ComController::instance()->isMaster())
     {
         _audioHandler = new AudioHandler();
         _audioHandler->connectServer();
-        osg::Vec3 handPos, headPos, headDir, handDir;
-        handPos = cvr::PluginHelper::getHandMat().getTrans();
-        headPos = cvr::PluginHelper::getHeadMat().getTrans();
-        headDir = osg::Vec3(0, 0, -1); 
-        handDir = handPos - headPos;
-
         // user position
         _audioHandler->loadSound(0, headDir, headPos);
         // laser sound
         _audioHandler->loadSound(17, handDir, handPos);
     }
+    
+
+    // Sound directional representation
+    osg::Cone *headCone, *handCone;
+    osg::ShapeDrawable *headSD, *handSD;
+    osg::Geode *headGeode, *handGeode;
+    _headsoundPAT = new osg::PositionAttitudeTransform();
+    _handsoundPAT = new osg::PositionAttitudeTransform();
+
+    headGeode = new osg::Geode(); 
+    handGeode = new osg::Geode(); 
+
+    headSD = new osg::ShapeDrawable();
+    handSD = new osg::ShapeDrawable();
+
+    headCone = new osg::Cone(osg::Vec3(0,0,0), 20, 3000);
+    handCone = new osg::Cone(osg::Vec3(0,0,0), 20, 3000);
+
+    headSD = new osg::ShapeDrawable(headCone);
+    headSD->setColor(osg::Vec4(0,0,1,1));
+    headGeode->addDrawable(headSD);
+
+    handSD = new osg::ShapeDrawable(handCone);
+    handSD->setColor(osg::Vec4(1,0,0,1));
+    handGeode->addDrawable(handSD);
+    
+    _headsoundPAT->addChild(headGeode);
+    _handsoundPAT->addChild(handGeode);
+
+    //_geoRoot->addChild(geode);
+    //PluginHelper::getObjectsRoot()->addChild(_headsoundPAT);
+    //PluginHelper::getObjectsRoot()->addChild(_handsoundPAT);
 
     // Spacenav
     _transMult = ConfigManager::getFloat("Plugin.SpaceNavigator.TransMult", 1.0);
     _rotMult = ConfigManager::getFloat("Plugin.SpaceNavigator.RotMult", 1.0);
     _transcale = -0.05 * _transMult;
-    _rotscale = -0.00500 * _rotMult;//-0.000009 * _rotMult;
+    _rotscale = -0.005 * _rotMult;//-0.000009 * _rotMult;
 
     bool status = false;
     if(ComController::instance()->isMaster())
@@ -141,74 +172,6 @@ bool ElevatorRoom::init()
         }
     }
 
-
-/*    if (ComController::instance()->isMaster())
-    {
-        std::string server = ConfigManager::getEntry("value", "Plugin.ElevatorRoom.Server", "");
-        int port = ConfigManager::getInt("value","Plugin.ElevatorRoom.Port", 0);
-    
-        if (!oasclient::ClientInterface::isInitialized())
-        {
-            if (!oasclient::ClientInterface::initialize(server, port))
-            {
-                std::cerr << "Could not set up connection to sound server!\n" << std::endl;
-                _soundEnabled = false;
-            }
-        }
-        else
-        {
-            std::cerr << "Sound server already initialized!" << std::endl;
-        }
-        
-        oasclient::Listener::getInstance().setGlobalRenderingParameters(
-            oasclient::Listener::DEFAULT_REFERENCE_DISTANCE, 1000);
-
-        oasclient::Listener::getInstance().setGlobalRenderingParameters(
-            oasclient::Listener::DEFAULT_ROLLOFF, 0.001);
-
-        oasclient::Listener::getInstance().setOrientation(0, 1, 0, 0, 0, 1);
-
-        oasclient::Listener::getInstance().setGlobalRenderingParameters(
-            oasclient::Listener::DOPPLER_FACTOR, 0);
-
-        std::string path, file;
-        osg::PositionAttitudeTransform * pat = new osg::PositionAttitudeTransform();
-
-        file = ConfigManager::getEntry("file", "Plugin.ElevatorRoom.DingSound", "");
-        _ding = new oasclient::Sound(_dataDir, file);
-        if (!_ding->isValid())
-        {
-            std::cerr << "Could not create click sound!\n" << std::endl;
-            _soundEnabled = false;
-        }
-        _ding->setGain(1.5);
-
-        file = ConfigManager::getEntry("file", "Plugin.ElevatorRoom.LaserSound", "");
-        _laser= new oasclient::Sound(_dataDir, file);
-        if (!_laser->isValid())
-        {
-            std::cerr << "Could not create click sound!\n" << std::endl;
-            _soundEnabled = false;
-        }
-
-        file = ConfigManager::getEntry("file", "Plugin.ElevatorRoom.HitSound", "");
-        _hitSound = new oasclient::Sound(_dataDir, file);
-        if (!_hitSound->isValid())
-        {
-            std::cerr << "Could not create click sound!\n" << std::endl;
-            _soundEnabled = false;
-        }
-
-
-        PluginHelper::getObjectsRoot()->addChild(pat);
-        pat->setPosition(osg::Vec3(0,0,0));
-        pat->addChild(_ding);
-//        pat->setUpdateCallback(new oasclient::SoundUpdateCallback(_ding));
-        osg::NodeCallback *cb = new oasclient::SoundUpdateCallback(_ding);
-        _ding->setUpdateCallback(cb);
-        
-    }
-    */
     return true;
 }
 
@@ -246,7 +209,7 @@ void ElevatorRoom::preFrame()
 
             int num = rand() % 10;
 
-            if (num <= 10)
+            if (num <= 4)
             {
                 if (_debug)
                 {
@@ -513,29 +476,44 @@ void ElevatorRoom::preFrame()
         }
     }
     
+    // Update sound
+    osg::Vec3 handPos, headPos, headDir, handDir;
+    Matrixf w2o = PluginHelper::getWorldToObjectTransform(),
+            head2w = PluginHelper::getHeadMat(),
+            hand2w = PluginHelper::getHandMat();
+    /*handPos = cvr::PluginHelper::getHandMat().getTrans();
+    headPos = cvr::PluginHelper::getHeadMat().getTrans();
+    headDir = osg::Vec3(0, 0, -1); 
+    handDir = handPos - headPos;*/
+
+    headPos = osg::Vec3(0, 1, 0) * head2w * w2o;
+    headDir = headPos - (head2w.getTrans() * w2o);
+    headDir.normalize();
+
+    handPos = osg::Vec3(0, 1, 0) * hand2w * w2o;
+    handDir = handPos - (hand2w.getTrans() * w2o);
+    handDir.normalize();
+
+    osg::Matrix mat;
+    osg::Vec3 vec = _headsoundPAT->getAttitude().asVec3();//_headCone->getRotation().asVec3();
+    mat.makeRotate(vec, headDir);
+    _headsoundPAT->setAttitude(mat.getRotate());
+    //_headsoundPAT->setPosition(headPos);
+
+    vec = _handsoundPAT->getAttitude().asVec3();//_handCone->getRotation().asVec3();
+    mat.makeRotate(vec, handDir);
+    _handsoundPAT->setAttitude(mat.getRotate());
+    //_handsoundPAT->setPosition(handPos);
+
+
     if (_audioHandler)
     {
-        // Update sound
-        osg::Vec3 handPos, headPos, headDir, handDir;
-/*        handPos = cvr::PluginHelper::getHandMat().getTrans();
-        headPos = cvr::PluginHelper::getHeadMat().getTrans();
-        headDir = osg::Vec3(0, 0, -1); 
-        handDir = handPos - headPos;*/
-
-        headPos = osg::Vec3(0, 1, 0) * cvr::PluginHelper::getObjectMatrix();//cvr::PluginHelper::getHeadMat(0);
-        headDir = headPos - cvr::PluginHelper::getObjectMatrix().getTrans();//cvr::PluginHelper::getHeadMat(0).getTrans();
-        headDir.normalize();
-
-        handPos = osg::Vec3(0, 1, 0) * cvr::PluginHelper::getHandMat();
-        handDir = handPos - cvr::PluginHelper::getHandMat().getTrans();//headPos;
-        handDir.normalize();
- 
         // user position
         _audioHandler->update(0, headDir, headPos);
         // laser sound
         _audioHandler->update(17, handDir, handPos);
-
     }
+
 
     // Spacenav
     Matrixd finalmat;
@@ -710,6 +688,7 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                 {
                     if (_activeDoor >= 0)
                     {
+                        // intersect the character and door is still open
                         if (isecvec[0].geode == _activeObject && _doorDist > 0)
                         {
                             /*if (_laser)
@@ -720,7 +699,8 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                             {
                                 _audioHandler->playSound(LASER_OFFSET, "laser");
                             }
-
+                            
+                            // if haven't already hit the alien
                             if (_mode == ALIEN && !_hit)
                             {
                                 /*if (_hitSound)
@@ -840,7 +820,7 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
     KeyboardInteractionEvent * kie = event->asKeyboardEvent();
     if (kie)
     {
-        if (kie->getInteraction() == KEY_UP && kie->getKey() == 'y')
+        if (kie->getInteraction() == KEY_UP && kie->getKey() == 'o')
         {
             if (_gameMode == THREE)
             {
@@ -904,6 +884,45 @@ void ElevatorRoom::connectToServer()
 
     cerr << "Maze2::ECGClient::Successfully connected to EOG Data Server." << endl;
     _connected = true;
+}
+
+void ElevatorRoom::clear()
+{
+    PluginHelper::getObjectsRoot()->removeChild(_geoRoot);
+}
+
+void ElevatorRoom::openDoor(int doorNum)
+{
+    if (doorNum < 0 || doorNum >= (int)_leftdoorPat.size() || doorNum >= (int)_rightdoorPat.size())
+    {
+        return;
+    }
+
+    osg::PositionAttitudeTransform *lpat, *rpat;
+    lpat = _leftdoorPat[doorNum];
+    rpat = _rightdoorPat[doorNum];
+
+    lpat->setPosition(lpat->getPosition() + lpat->getAttitude() * osg::Vec3(DOOR_SPEED,0,0));
+    rpat->setPosition(rpat->getPosition() + rpat->getAttitude() * osg::Vec3(-DOOR_SPEED,0,0));
+
+    _doorDist += DOOR_SPEED;
+}
+
+void ElevatorRoom::closeDoor(int doorNum)
+{
+    if (doorNum < 0 || doorNum >= (int)_leftdoorPat.size() || doorNum >= (int)_rightdoorPat.size())
+    {
+        return;
+    }
+    
+    osg::PositionAttitudeTransform *lpat, *rpat;
+    lpat = _leftdoorPat[doorNum];
+    rpat = _rightdoorPat[doorNum];
+
+    lpat->setPosition(lpat->getPosition() + lpat->getAttitude() * osg::Vec3(-DOOR_SPEED,0,0));
+    rpat->setPosition(rpat->getPosition() + rpat->getAttitude() * osg::Vec3(DOOR_SPEED,0,0));
+
+    _doorDist -= DOOR_SPEED;
 }
 
 void ElevatorRoom::loadModels()
@@ -1384,7 +1403,9 @@ void ElevatorRoom::loadModels()
     pat->addChild(geode);
     PluginHelper::getScene()->addChild(pat);
 
+
     // Crosshair
+
     width = 4;
     height = 0.3;
     pos = osg::Vec3(0, -2500, 0);
@@ -1405,48 +1426,13 @@ void ElevatorRoom::loadModels()
 
     chGeode->getOrCreateStateSet()->setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
     _crosshairPat->addChild(chGeode); 
-    PluginHelper::getScene()->addChild(_crosshairPat);
+
+    if (ConfigManager::getEntry("Plugin.ElevatorRoom.Crosshair") == "on" )
+    {
+        PluginHelper::getScene()->addChild(_crosshairPat);
+    }
 
     _loaded = true;
-}
-
-void ElevatorRoom::clear()
-{
-
-}
-
-void ElevatorRoom::openDoor(int doorNum)
-{
-    if (doorNum < 0 || doorNum >= (int)_leftdoorPat.size() || doorNum >= (int)_rightdoorPat.size())
-    {
-        return;
-    }
-
-    osg::PositionAttitudeTransform *lpat, *rpat;
-    lpat = _leftdoorPat[doorNum];
-    rpat = _rightdoorPat[doorNum];
-
-    lpat->setPosition(lpat->getPosition() + lpat->getAttitude() * osg::Vec3(DOOR_SPEED,0,0));
-    rpat->setPosition(rpat->getPosition() + rpat->getAttitude() * osg::Vec3(-DOOR_SPEED,0,0));
-
-    _doorDist += DOOR_SPEED;
-}
-
-void ElevatorRoom::closeDoor(int doorNum)
-{
-    if (doorNum < 0 || doorNum >= (int)_leftdoorPat.size() || doorNum >= (int)_rightdoorPat.size())
-    {
-        return;
-    }
-    
-    osg::PositionAttitudeTransform *lpat, *rpat;
-    lpat = _leftdoorPat[doorNum];
-    rpat = _rightdoorPat[doorNum];
-
-    lpat->setPosition(lpat->getPosition() + lpat->getAttitude() * osg::Vec3(-DOOR_SPEED,0,0));
-    rpat->setPosition(rpat->getPosition() + rpat->getAttitude() * osg::Vec3(DOOR_SPEED,0,0));
-
-    _doorDist -= DOOR_SPEED;
 }
 
 osg::ref_ptr<osg::Geometry> ElevatorRoom::drawBox(osg::Vec3 center, float x, 
