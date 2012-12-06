@@ -1,6 +1,7 @@
 #include "TextShape.h"
 
 #include <osg/Geometry>
+#include <osg/Material>
 
 #include <string>
 #include <vector>
@@ -14,9 +15,16 @@ TextShape::TextShape(std::string command, std::string name)
     setColor(osg::Vec4(1.0, 1.0, 1.0, 1.0));
     setCharacterSize(10.0f);
     setFontResolution(40,40);
+    setFont ("/usr/share/fonts/liberation/LiberationSans-Regular.ttf");
     setAxisAlignment(osgText::TextBase::XZ_PLANE);
-    setFont("/home/pweber/extern_libs/OpenSceneGraph-Data/fonts/arial.ttf");
-    //setText("HELLO");
+    setBackdropType(osgText::Text::NONE);
+
+    osg::StateSet* state = osgText::Text::getOrCreateStateSet();
+    state->setMode(GL_BLEND, osg::StateAttribute::ON);
+    state->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    //osg::Material* mat = new osg::Material();
+    //mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
+    //state->setAttributeAndModes(mat, osg::StateAttribute::ON);
     
     update(command);
 }
@@ -57,18 +65,24 @@ void TextShape::update()
     setParameter("y", p.y()); 
     setParameter("z", p.z()); 
     setParameter("r", c.r()); 
-    setParameter("g", c.b()); 
-    setParameter("b", c.g()); 
+    setParameter("g", c.g()); 
+    setParameter("b", c.b()); 
     setParameter("a", c.a());
     setParameter("size", size);
     setParameter("label", text);
-    
-    std::cerr << "text value " << text << std::endl;
     
     setText(text);
     setCharacterSize(size);
     setPosition(p);
     setColor(c);
+
+    osgText::Text::dirtyBound();
+    osg::Geometry::setBound(osgText::Text::computeBound());
+
+    if(c[3] != 1.0)
+        osgText::Text::getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    else
+        osgText::Text::getOrCreateStateSet()->setRenderingHint(osg::StateSet::DEFAULT_BIN);
 
 	// reset flag
     _dirty = false;

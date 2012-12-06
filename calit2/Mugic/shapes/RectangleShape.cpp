@@ -1,6 +1,7 @@
 #include "RectangleShape.h"
 
 #include <osg/Geometry>
+#include <osg/Material>
 
 #include <string>
 #include <vector>
@@ -21,8 +22,14 @@ RectangleShape::RectangleShape(std::string command, std::string name)
     
     setVertexArray(_vertices); 
     setColorArray(_colors); 
-    setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+    setColorBinding(osg::Geometry::BIND_OVERALL);
     addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
+
+    osg::StateSet* state = getOrCreateStateSet();
+    state->setMode(GL_BLEND, osg::StateAttribute::ON);
+    osg::Material* mat = new osg::Material();
+    mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
+    state->setAttributeAndModes(mat, osg::StateAttribute::ON);
 }
 
 RectangleShape::~RectangleShape()
@@ -32,14 +39,20 @@ RectangleShape::~RectangleShape()
 void RectangleShape::setPosition(osg::Vec3 p, float width, float height)
 {
     (*_vertices)[0].set(p[0], p[1], p[2]);
-	(*_vertices)[0].set(p[0] + width, p[1], p[2]);
-	(*_vertices)[0].set(p[0] + width, p[1], p[2] + height);
-	(*_vertices)[0].set(p[0], p[1], p[2] + height);
+	(*_vertices)[1].set(p[0] + width, p[1], p[2]);
+	(*_vertices)[2].set(p[0] + width, p[1], p[2] + height);
+	(*_vertices)[3].set(p[0], p[1], p[2] + height);
 }
 
 void RectangleShape::setColor(osg::Vec4 c0)
 {
     (*_colors)[0].set(c0[0], c0[1], c0[2], c0[3]);
+    
+    if(c0[3] != 1.0)
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    else
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::DEFAULT_BIN);
+
 }
 
 void RectangleShape::update(std::string command)
@@ -76,14 +89,15 @@ void RectangleShape::update()
     setParameter("width", width); 
     setParameter("height", height); 
     setParameter("r", c1.r()); 
-    setParameter("g", c1.b()); 
-    setParameter("b", c1.g()); 
+    setParameter("g", c1.g()); 
+    setParameter("b", c1.b()); 
     setParameter("a", c1.a()); 
 
     setPosition(p1, width, height);
     setColor(c1);
     _vertices->dirty();
     _colors->dirty();
+    dirtyBound();
 
     // reset flag
     _dirty = false;

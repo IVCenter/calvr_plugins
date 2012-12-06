@@ -223,24 +223,3 @@ void CAVEGeodeReferencePlane::setAlpha(const float &alpha)
     stateset->setAttributeAndModes(material, StateAttribute::ON);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

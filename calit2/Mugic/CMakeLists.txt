@@ -7,6 +7,7 @@ SET(PLUGIN_HEADERS
     ThreadMap.h
     #Variables.h
     CommandParser.h
+    MainNode.h
     zhelpers.h
     shapes/BasicShape.h
     shapes/Factory.h
@@ -29,6 +30,7 @@ ADD_LIBRARY(${LIB_NAME}
     ThreadMap.cpp
     #Variables.cpp
     CommandParser.cpp
+    MainNode.cpp
     shapes/BasicShape.cpp
     shapes/PointShape.cpp
     shapes/QuadShape.cpp
@@ -41,11 +43,11 @@ ADD_LIBRARY(${LIB_NAME}
 
 FIND_PACKAGE(ZMQ REQUIRED)
 
-INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})
-TARGET_LINK_LIBRARIES(${LIB_NAME} ${OSG_LIBRARIES})
-
 INCLUDE_DIRECTORIES( ${ZMQ_INCLUDE_DIR})
 TARGET_LINK_LIBRARIES(${LIB_NAME} ${ZMQ_LIBRARY})
+
+INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${OSG_LIBRARIES})
 
 ADD_CALVR_LIBRARIES(${LIB_NAME})
 

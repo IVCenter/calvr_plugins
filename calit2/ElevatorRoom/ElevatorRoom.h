@@ -131,6 +131,10 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         osg::Quat _eventRot;
         osg::Vec3 _eventPos;
         osg::PositionAttitudeTransform *_crosshairPat;
+        //osg::Cone *_headCone, *_handCone;
+        //osg::Geode *_soundGeode;
+        //osg::ShapeDrawable *_headSD, *_handSD;
+        osg::PositionAttitudeTransform *_headsoundPAT, *_handsoundPAT;
 
         float _transMult, _rotMult;
         float _transcale, _rotscale;

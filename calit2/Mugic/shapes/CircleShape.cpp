@@ -1,6 +1,7 @@
 #include "CircleShape.h"
 
 #include <osg/Geometry>
+#include <osg/Material>
 
 #include <string>
 #include <vector>
@@ -24,6 +25,13 @@ CircleShape::CircleShape(std::string command, std::string name)
     setColorArray(_colors); 
     setColorBinding(osg::Geometry::BIND_PER_VERTEX);
     addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLE_FAN,0,_numFaces + 2));
+
+    osg::StateSet* state = getOrCreateStateSet();
+    state->setMode(GL_BLEND, osg::StateAttribute::ON);
+    state->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    //osg::Material* mat = new osg::Material();
+    //mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
+    //state->setAttributeAndModes(mat, osg::StateAttribute::ON);
 }
 
 CircleShape::~CircleShape()
@@ -56,6 +64,11 @@ void CircleShape::setColor(osg::Vec4 c0, osg::Vec4 c1)
     {
         (*_colors)[i].set(c1[0], c1[1], c1[2], c1[3]);
     }
+
+    if( (c0[3] != 1.0) || (c1[3] != 1.0))
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    else
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::DEFAULT_BIN);
 }
 
 void CircleShape::update(std::string command)

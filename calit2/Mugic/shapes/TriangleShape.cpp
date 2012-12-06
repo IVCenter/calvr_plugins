@@ -1,6 +1,7 @@
 #include "TriangleShape.h"
 
 #include <osg/Geometry>
+#include <osg/Material>
 
 #include <string>
 #include <vector>
@@ -22,6 +23,12 @@ TriangleShape::TriangleShape(std::string command, std::string name)
     setColorArray(_colors); 
     setColorBinding(osg::Geometry::BIND_PER_VERTEX);
     addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES,0,3));
+
+    osg::StateSet* state = getOrCreateStateSet();
+    osg::Material* mat = new osg::Material();
+    state->setMode(GL_BLEND, osg::StateAttribute::ON);
+    mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
+    state->setAttributeAndModes(mat, osg::StateAttribute::ON);
 }
 
 TriangleShape::~TriangleShape()
@@ -39,7 +46,13 @@ void TriangleShape::setColor(osg::Vec4 c0, osg::Vec4 c1, osg::Vec4 c2)
 {
     (*_colors)[0].set(c0[0], c0[1], c0[2], c0[3]);    
     (*_colors)[1].set(c1[0], c1[1], c1[2], c1[3]);    
-    (*_colors)[2].set(c2[0], c2[1], c2[2], c2[3]);    
+    (*_colors)[2].set(c2[0], c2[1], c2[2], c2[3]);
+
+    if( (c0[3] != 1.0) || (c1[3] != 1.0) || (c2[3] != 1.0))
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    else
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::DEFAULT_BIN);
+
 }
 
 void TriangleShape::update(std::string command)
@@ -117,6 +130,7 @@ void TriangleShape::update()
 
 	_colors->dirty();
 	_vertices->dirty();
+    dirtyBound();
     
 	// reset flag
     _dirty = false;

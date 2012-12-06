@@ -19,6 +19,17 @@ static inline std::string &ltrim(std::string &s)
     return s;
 }
 
+static inline std::string &rtrim(std::string &s)
+{
+    s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+    return s;
+}
+
+static inline std::string &trim(std::string &s) 
+{
+    return ltrim(rtrim(s));
+}
+
 
 // socket thread constructor
 SocketThread::SocketThread(ThreadQueue<std::string>* commands, std::string address) : _commands(commands)
@@ -54,10 +65,6 @@ void SocketThread::run()
         }
         free(commands);
 	}
-
-    // clean up connection
-    zmq_close (_subscriber);
-    zmq_ctx_destroy (_context);
 }
 
 // parse commands and update nodequeue
@@ -77,5 +84,10 @@ void SocketThread::seperateCommands(char* commands)
 SocketThread::~SocketThread() 
 {
 	_mkill = true;
+
+    // clean up connection
+    zmq_close(_subscriber);
+    zmq_ctx_destroy (_context);
+
 	join();
 }

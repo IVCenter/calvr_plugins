@@ -42,18 +42,18 @@ bool Mugic::init()
     std::string routerAddress = ConfigManager::getEntry("value", "Plugin.Mugic.Router", "127.0.0.1");
 	_st = new SocketThread(_commands, routerAddress);
 
-    _root = new osg::Group();
+    _root = new MainNode();
     _root->setNodeMask(_root->getNodeMask() & ~DISABLE_FIRST_CULL & ~INTERSECT_MASK);
+    PluginHelper::getObjectsRoot()->addChild(_root);
 
     // set default stateset to _root node
-    osg::StateSet* state = _root->getOrCreateStateSet();
-    state->setMode(GL_BLEND, osg::StateAttribute::ON);
-    osg::Material* mat = new osg::Material();
-    mat->setAlpha(osg::Material::FRONT_AND_BACK, 0.1);
-    mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
-    state->setAttributeAndModes(mat, osg::StateAttribute::ON);
+    //osg::StateSet* state = _root->getOrCreateStateSet();
+    //state->setMode(GL_BLEND, osg::StateAttribute::ON);
+    //osg::Material* mat = new osg::Material();
+    //mat->setAlpha(osg::Material::FRONT_AND_BACK, 1.0);
+    //mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
+    //state->setAttributeAndModes(mat, osg::StateAttribute::ON);
 
-     PluginHelper::getObjectsRoot()->addChild(_root);
 	_parser = new CommandParser(_commands, _root);
 
 	return true;
@@ -61,17 +61,18 @@ bool Mugic::init()
 
 Mugic::~Mugic() 
 {
+    std::cerr << "Destructor called\n";
     if( _st )
         delete _st;
     _st = NULL;
     
-    if( _parser )
-        delete _parser;
-    _parser = NULL;
-
     if( _commands )
         delete _commands;
     _commands = NULL;
+    
+    if( _parser )
+        delete _parser;
+    _parser = NULL;
 }
 
 void Mugic::preFrame() 
