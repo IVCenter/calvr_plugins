@@ -9,8 +9,9 @@
 #include <mysql++/mysql++.h>
 
 #include "DataGraph.h"
+#include "LayoutInterfaces.h"
 
-class GraphObject : public cvr::TiledWallSceneObject
+class GraphObject : public LayoutTypeObject, public TimeRangeObject
 {
     public:
         GraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
@@ -23,12 +24,13 @@ class GraphObject : public cvr::TiledWallSceneObject
         }
 
         void setGraphSize(float width, float height);
+
         void setGraphDisplayRange(time_t start, time_t end);
         void resetGraphDisplayRange();
-
         void getGraphDisplayRange(time_t & start, time_t & end);
         time_t getMaxTimestamp();
         time_t getMinTimestamp();
+
         void setBarPosition(float pos);
         float getBarPosition();
         void setBarVisible(bool b);

@@ -11,6 +11,8 @@ SET(PLUGIN_HEADERS
     MicrobeBarGraphObject.h
     StackedBarGraph.h
     ColorGenerator.h
+    SymptomGraphObject.h
+    TimeRangeDataGraph.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -27,6 +29,8 @@ ADD_LIBRARY(${LIB_NAME}
     MicrobeBarGraphObject.cpp
     StackedBarGraph.cpp
     ColorGenerator.cpp
+    SymptomGraphObject.cpp
+    TimeRangeDataGraph.cpp
 )
 
 FIND_PACKAGE(Mysql)

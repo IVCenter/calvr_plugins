@@ -10,8 +10,9 @@
 
 #include "StackedBarGraph.h"
 #include "MicrobeGraphObject.h"
+#include "LayoutInterfaces.h"
 
-class MicrobeBarGraphObject : public cvr::TiledWallSceneObject
+class MicrobeBarGraphObject : public LayoutTypeObject, public MicrobeSelectObject
 {
     public:
         MicrobeBarGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);

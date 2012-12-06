@@ -17,6 +17,7 @@
 #include "GraphLayoutObject.h"
 #include "MicrobeGraphObject.h"
 #include "MicrobeBarGraphObject.h"
+#include "SymptomGraphObject.h"
 
 
 class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
@@ -54,8 +55,12 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         std::map<std::string,std::vector<std::string> > _groupTestMap;
 
+        cvr::SubMenu * _chartMenu;
         cvr::SubMenu * _presetMenu;
         cvr::MenuButton * _inflammationButton;
+        cvr::MenuButton * _cholesterolButton;
+        cvr::MenuButton * _insGluButton;
+        cvr::MenuButton * _inflammationImmuneButton;
         cvr::MenuButton * _loadAll;
 
         cvr::SubMenu * _microbeMenu;
@@ -73,7 +78,14 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeLoadSRSAverage;
         cvr::MenuButton * _microbeLoadSRXAverage;
 
+        cvr::SubMenu * _eventMenu;
+        cvr::MenuList * _eventName;
+        cvr::MenuButton * _eventLoad;
+        cvr::MenuButton * _eventLoadAll;
+        cvr::MenuButton * _eventDone;
+
         MicrobeBarGraphObject * _currentSBGraph;
+        SymptomGraphObject * _currentSymptomGraph;
 
         std::map<std::string,GraphObject*> _graphObjectMap;
         GraphObject * _multiObject;
