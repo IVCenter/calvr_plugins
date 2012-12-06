@@ -28,9 +28,10 @@ CircleShape::CircleShape(std::string command, std::string name)
 
     osg::StateSet* state = getOrCreateStateSet();
     state->setMode(GL_BLEND, osg::StateAttribute::ON);
-    osg::Material* mat = new osg::Material();
-    mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
-    state->setAttributeAndModes(mat, osg::StateAttribute::ON);
+    state->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    //osg::Material* mat = new osg::Material();
+    //mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
+    //state->setAttributeAndModes(mat, osg::StateAttribute::ON);
 }
 
 CircleShape::~CircleShape()
