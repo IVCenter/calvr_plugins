@@ -66,4 +66,4 @@ OpenThreads::Condition* ThreadQueue<T>::getCondition()
 }
 
 template class ThreadQueue<std::string>;
-template class ThreadQueue<osg::Node* >;
+template class ThreadQueue< std::pair<osg::Node*, bool> >;
