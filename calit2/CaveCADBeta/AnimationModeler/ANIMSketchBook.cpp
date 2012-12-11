@@ -118,7 +118,7 @@ void ANIMLoadSketchBook(PositionAttitudeTransform** xformScaleFwd, PositionAttit
 
 
     // FIX THIS - put sizes in the config file or something
-    float alt = -2.9f;
+    float alt = -2.99f;
     (*pageEntryArray)[0]->mLength = 32;		(*pageEntryArray)[0]->mWidth = 16;	(*pageEntryArray)[0]->mAlti = alt;
     (*pageEntryArray)[1]->mLength = 128;	(*pageEntryArray)[1]->mWidth = 128;	(*pageEntryArray)[1]->mAlti = alt;
     (*pageEntryArray)[2]->mLength = 32;		(*pageEntryArray)[2]->mWidth = 16;	(*pageEntryArray)[2]->mAlti = alt;
