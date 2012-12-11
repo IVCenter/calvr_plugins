@@ -5,7 +5,7 @@
 
 class ShapeFactory 
 {
-public:        
+public:
     virtual BasicShape* createInstance(std::string, std::string) = 0;
 };
 #endif

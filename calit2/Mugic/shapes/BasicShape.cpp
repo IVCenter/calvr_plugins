@@ -8,30 +8,19 @@
 
 using namespace std;
 
-unsigned int BasicShape::counter;
-
 BasicShape::BasicShape(): _dirty(false)
 {
-    getOrCreateVertexBufferObject()->setUsage(GL_STREAM_DRAW);
-    setUseDisplayList(false);
-    setUseVertexBufferObjects(true);
-    setUpdateCallback(new ShapeUpdateCallback());
 }
 
 BasicShape::~BasicShape()
 {
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-    setUpdateCallback(NULL);
-    _dirty = false;
 }
-
 
 bool BasicShape::isDirty()
 {
     OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
     return _dirty;
 }
-
 
 void BasicShape::addParameter(std::string command, std::string param)
 {
@@ -107,15 +96,7 @@ void BasicShape::setParameter(std::string varName, float& value)
 
 void BasicShape::setName(std::string name)
 {
-    if(name.empty())
-    {
-        std::stringstream ss;
-        ss << "element";
-        ss << counter;
-        counter++;
-        _name = ss.str();
-    }
-    else
+    if( !name.empty())
     {
         _name = name;
     }

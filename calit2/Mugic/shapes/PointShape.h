@@ -1,12 +1,12 @@
 #ifndef _POINTSHAPE_
 #define _POINTSHAPE_
 
-#include "BasicShape.h"
+#include "GeometryShape.h"
 
 #include <osg/Geometry>
 #include <osg/Point>
 
-class PointShape : public BasicShape
+class PointShape : public GeometryShape
 {
 public:        
 

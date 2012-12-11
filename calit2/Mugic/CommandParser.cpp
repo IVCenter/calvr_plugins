@@ -120,10 +120,10 @@ void CommandParser::parseCommand(std::string command)
             //osg::ref_ptr<osg::Geode> geode = new osg::Geode();
             osg::Geode* geode = new osg::Geode();
             geode->setDataVariance(osg::Object::DYNAMIC);
-            geode->addDrawable(newShape);
+            geode->addDrawable(newShape->asDrawable());
             _root->addElement(geode);
             
-            // get name from object created and add to table 
+            // get name from object created and add to table
             _shapes[newShape->getName()] = newShape;
        }
    }
@@ -139,7 +139,7 @@ void CommandParser::removeAll()
 
             osg::Geode* geode = NULL;
             // get geode drawable is attached too
-            if( (geode = it->second->getParent(0)->asGeode()) != NULL)
+            if( (geode = it->second->getParent()) != NULL)
             {
                 _root->removeElement(geode);
             }
@@ -158,7 +158,7 @@ void CommandParser::remove(std::string elementName)
        {
             osg::Geode* geode = NULL;
             // get geode drawable is attached too
-            if( (geode = it->second->getParent(0)->asGeode()) != NULL)
+            if( (geode = it->second->getParent()) != NULL)
             {
                 _root->removeElement(geode);
             }

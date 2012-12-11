@@ -10,7 +10,7 @@ QuadShape::QuadShape(std::string command, std::string name)
 {
     _type = SimpleShape::QUAD; 
     
-    setName(name);
+    BasicShape::setName(name);
 
     _vertices = new osg::Vec3Array(4);
     _colors = new osg::Vec4Array(4);

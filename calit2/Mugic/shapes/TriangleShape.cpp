@@ -10,7 +10,7 @@ TriangleShape::TriangleShape(std::string command, std::string name)
 {
     _type = SimpleShape::TRIANGLE;
 
-    setName(name);
+    BasicShape::setName(name);
     
     _vertices = new osg::Vec3Array(3);
     _colors = new osg::Vec4Array(3);
