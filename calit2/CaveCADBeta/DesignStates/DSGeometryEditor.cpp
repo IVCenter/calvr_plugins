@@ -45,29 +45,32 @@ void DSGeometryEditor::setObjectEnabled(bool flag)
     mObjEnabledFlag = flag;
     mDSParticleSystemPtr->setEmitterEnabled(false);
 
-    if (flag) setAllChildrenOn();
+    if (flag) 
+        setAllChildrenOn();
 
     if (flag)
     {
-	/* switched from upper state 'DSGeometryCreator' and perform pointer test right after being active */
-	mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, NULL);
-	mDOIntersector->loadRootTargetNode(gDesignObjectRootGroup, NULL);
+        /* switched from upper state 'DSGeometryCreator' and perform pointer test right after being active */
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, NULL);
+        mDOIntersector->loadRootTargetNode(gDesignObjectRootGroup, NULL);
 
-	mEdittingState = READY_TO_EDIT;
-	mDOGeometryEditor->setToolkitEnabled(true);
-	mDOGeometryEditor->setActiveIconToolkit(NULL);
+        mEdittingState = READY_TO_EDIT;
+        mDOGeometryEditor->setToolkitEnabled(true);
+        mDOGeometryEditor->setActiveIconToolkit(NULL);
 
-	/* using the locked flag to gurantee that no state switch is allowed when geometries are selected,
-	   the flag is released when the CAVEGeodeShape vector of 'DOGeometryCollector' is empty.  */
-	setLocked(true);
-    } else {
-	/* release all intersector targets */
-	mDSIntersector->loadRootTargetNode(NULL, NULL);
-	mDOIntersector->loadRootTargetNode(NULL, NULL);
+        /* using the locked flag to gurantee that no state switch is allowed when geometries are selected,
+           the flag is released when the CAVEGeodeShape vector of 'DOGeometryCollector' is empty.  */
+        setLocked(true);
+    } 
+    else 
+    {
+        /* release all intersector targets */
+        mDSIntersector->loadRootTargetNode(NULL, NULL);
+        mDOIntersector->loadRootTargetNode(NULL, NULL);
 
-	mEdittingState = IDLE;
-	mDOGeometryEditor->setToolkitEnabled(false);
-	mDOGeometryEditor->setActiveIconToolkit(NULL);
+        mEdittingState = IDLE;
+        mDOGeometryEditor->setToolkitEnabled(false);
+        mDOGeometryEditor->setActiveIconToolkit(NULL);
     }
 }
 
@@ -79,12 +82,12 @@ void DSGeometryEditor::switchToPrevSubState()
 {
     if (mEdittingState == IDLE || mEdittingState == READY_TO_EDIT)
     {
-	mDOGeometryEditor->setPrevToolkit();
+        mDOGeometryEditor->setPrevToolkit();
     }
     else if (mEdittingState == START_EDITTING)
     {
-	mSnapLevelController->switchToUpperLevel();
-	mDOGeometryEditor->setScalePerUnit(&mSnapLevelController);
+        mSnapLevelController->switchToUpperLevel();
+        mDOGeometryEditor->setScalePerUnit(&mSnapLevelController);
     }
 }
 
@@ -96,12 +99,12 @@ void DSGeometryEditor::switchToNextSubState()
 {
     if (mEdittingState == IDLE || mEdittingState == READY_TO_EDIT)
     {
-	mDOGeometryEditor->setNextToolkit();
+        mDOGeometryEditor->setNextToolkit();
     }
     else if (mEdittingState == START_EDITTING)
     {
-	mSnapLevelController->switchToLowerLevel();
-	mDOGeometryEditor->setScalePerUnit(&mSnapLevelController);
+        mSnapLevelController->switchToLowerLevel();
+        mDOGeometryEditor->setScalePerUnit(&mSnapLevelController);
     }
 }
 
@@ -113,7 +116,7 @@ void DSGeometryEditor::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg:
 {	
     if (mDevPressedFlag && mEdittingState == START_EDITTING)
     {
-	mDOGeometryEditor->setSnapUpdate(pointerPos);
+        mDOGeometryEditor->setSnapUpdate(pointerPos);
     }
 }
 
@@ -130,73 +133,73 @@ bool DSGeometryEditor::inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg
     */
     if (mEdittingState == READY_TO_EDIT)
     {
-	if (mDOIntersector->test(pointerOrg, pointerPos))
-	{
-	    /* 1) If hit node is 'CAVEGeodeIconToolkit' change state to 'START_EDITTING' */
-	    CAVEGeodeIconToolkit *hitIconToolkit = dynamic_cast <CAVEGeodeIconToolkit*>(mDOIntersector->getHitNode());
-	    if (hitIconToolkit)
-	    {
-		mEdittingState = START_EDITTING;
-		mDOGeometryEditor->setActiveIconToolkit(hitIconToolkit);
-		mDOGeometryEditor->setSnapStarted(pointerPos);
-		mDOGeometryEditor->setPointerDir(pointerPos - pointerOrg);
+        if (mDOIntersector->test(pointerOrg, pointerPos))
+        {
+            /* 1) If hit node is 'CAVEGeodeIconToolkit' change state to 'START_EDITTING' */
+            CAVEGeodeIconToolkit *hitIconToolkit = dynamic_cast <CAVEGeodeIconToolkit*>(mDOIntersector->getHitNode());
+            if (hitIconToolkit)
+            {
+                mEdittingState = START_EDITTING;
+                mDOGeometryEditor->setActiveIconToolkit(hitIconToolkit);
+                mDOGeometryEditor->setSnapStarted(pointerPos);
+                mDOGeometryEditor->setPointerDir(pointerPos - pointerOrg);
 
-		return true;
-	    }
+                return true;
+            }
 
-	    /* 2) If hit node is 'CAVEGeodeIconSurface', modify geometry selections. Before toggle function call,
-	       if geometry list is empty, set all surface highlights as 'unselected'; after toggle function call,
-	       if geometry geometry list is empty, reset all surface hightlights back to 'normal'. */
+            /* 2) If hit node is 'CAVEGeodeIconSurface', modify geometry selections. Before toggle function call,
+               if geometry list is empty, set all surface highlights as 'unselected'; after toggle function call,
+               if geometry geometry list is empty, reset all surface hightlights back to 'normal'. */
 
-	    CAVEGeodeIconSurface *hitIconSurface = dynamic_cast <CAVEGeodeIconSurface*>(mDOIntersector->getHitNode());
-	    if (hitIconSurface)
-	    {
-		if (mDOGeometryCollector->isGeometryVectorEmpty())
-		    mDOGeometryCollector->setAllIconSurfaceHighlightsUnselected();
+            CAVEGeodeIconSurface *hitIconSurface = dynamic_cast <CAVEGeodeIconSurface*>(mDOIntersector->getHitNode());
+            if (hitIconSurface)
+            {
+                if (mDOGeometryCollector->isGeometryVectorEmpty())
+                    mDOGeometryCollector->setAllIconSurfaceHighlightsUnselected();
 
-		mDOGeometryCollector->toggleCAVEGeodeIconSurface(hitIconSurface);
+                mDOGeometryCollector->toggleCAVEGeodeIconSurface(hitIconSurface);
 
-		if (mDOGeometryCollector->isGeometryVectorEmpty())
-		    mDOGeometryCollector->setAllIconSurfaceHighlightsNormal();
+                if (mDOGeometryCollector->isGeometryVectorEmpty())
+                    mDOGeometryCollector->setAllIconSurfaceHighlightsNormal();
 
-		return false;
-	    }
+                return false;
+            }
 
-	    /* if hit node is 'CAVEGeodeShape', modify geometry selections, there is a chance that all
-	       CAVEGeodeShape are cleared from collector, if so, switch back to 'DSGeometryCreator' */
-	    CAVEGeodeShape *hitShape = dynamic_cast <CAVEGeodeShape*>(mDOIntersector->getHitNode());
-	    if (hitShape)
-	    {
-		mDOGeometryCollector->toggleCAVEGeodeShape(hitShape);
-		if (mDOGeometryCollector->isGeodeShapeVectorEmpty())
-		{
-		    /* need to release the locked flag before 'switchToUpperDesignState()', 
-		       otherwise the function 'setObjectEnabled' will not be called */
-		    setLocked(false);
-		    switchToUpperDesignState(0);
-		}
-		return false;
-	    }
-	}
-	else
-	{
-	    /* 3) If hit nothing: clear 'mGeometryVector' if it is not clear, or else, clear  'mGeodeShapeVector'
-	       and return to upper state */
-	    if (!mDOGeometryCollector->isGeometryVectorEmpty())
-	    {
-		mDOGeometryCollector->clearGeometryVector();
-	    }
-	    else
-	    {
-		mDOGeometryCollector->clearGeodeShapeVector();
+            /* if hit node is 'CAVEGeodeShape', modify geometry selections, there is a chance that all
+               CAVEGeodeShape are cleared from collector, if so, switch back to 'DSGeometryCreator' */
+            CAVEGeodeShape *hitShape = dynamic_cast <CAVEGeodeShape*>(mDOIntersector->getHitNode());
+            if (hitShape)
+            {
+                mDOGeometryCollector->toggleCAVEGeodeShape(hitShape);
+                if (mDOGeometryCollector->isGeodeShapeVectorEmpty())
+                {
+                    /* need to release the locked flag before 'switchToUpperDesignState()', 
+                       otherwise the function 'setObjectEnabled' will not be called */
+                    setLocked(false);
+                    switchToUpperDesignState(0);
+                }
+                return false;
+            }
+        }
+        else
+        {
+            /* 3) If hit nothing: clear 'mGeometryVector' if it is not clear, or else, clear  'mGeodeShapeVector'
+               and return to upper state */
+            if (!mDOGeometryCollector->isGeometryVectorEmpty())
+            {
+                mDOGeometryCollector->clearGeometryVector();
+            }
+            else
+            {
+                mDOGeometryCollector->clearGeodeShapeVector();
 
-		/* need to release the locked flag before 'switchToUpperDesignState()', 
-		   otherwise the function 'setObjectEnabled' will not be called */
-		setLocked(false);
-		switchToUpperDesignState(0);
-		return false;
-	    }
-	}
+                /* need to release the locked flag before 'switchToUpperDesignState()', 
+                   otherwise the function 'setObjectEnabled' will not be called */
+                setLocked(false);
+                switchToUpperDesignState(0);
+                return false;
+            }
+        }
     }
 
     return false;
@@ -211,14 +214,14 @@ bool DSGeometryEditor::inputDevReleaseEvent()
     mDevPressedFlag = false;
     if (mEdittingState == START_EDITTING)
     {
-	mDOGeometryEditor->setActiveIconToolkit(NULL);
-	mDOGeometryEditor->setSnapFinished();
-	mEdittingState = READY_TO_EDIT;
+        mDOGeometryEditor->setActiveIconToolkit(NULL);
+        mDOGeometryEditor->setSnapFinished();
+        mEdittingState = READY_TO_EDIT;
 
-	/* update audio parameters */
-	mAudioConfigHandler->updateShapes();
+        /* update audio parameters */
+        mAudioConfigHandler->updateShapes();
 
-	return true;
+        return true;
     }
 
     return false;
@@ -243,8 +246,8 @@ void DSGeometryEditor::setDesignObjectHandlerPtr(DesignObjectHandler *designObje
 }
 
 
+void DSGeometryEditor::setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) 
+{
 
-
-
-
+}
 

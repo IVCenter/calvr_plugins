@@ -5,14 +5,18 @@
 *
 ***************************************************************/
 
-#ifndef _DS_VIRTUAL_SPHERE_H_
-#define _DS_VIRTUAL_SPHERE_H_
+#ifndef _DS_VIRTUAL_SPHERE_H
+#define _DS_VIRTUAL_SPHERE_H
 
 
 // Local include
 #include "DesignStateBase.h"
 #include "../AnimationModeler/ANIMVirtualSphere.h"
 
+#include "DSVirtualEarth.h"
+#include "DSParamountSwitch.h"
+#include "DSSketchBook.h"
+#include <list>
 
 /***************************************************************
 * Class: DSVirtualSphere
@@ -27,10 +31,19 @@ class DSVirtualSphere: public DesignStateBase
     virtual void switchToPrevSubState();
     virtual void switchToNextSubState();
 
-    void inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) {}
-    bool inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) { mDevPressedFlag = true; return false; }
-    bool inputDevReleaseEvent() { mDevPressedFlag = false; return false; }
-    void update() {}
+    void inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
+    bool inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
+    bool inputDevReleaseEvent();
+    void update();// {}
+    void addChildState(DesignStateBase* ds);
+    void setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
+
+  protected:
+    std::list<DesignStateBase*> mChildStates;
+    bool mIsOpen;
+    std::vector<osg::PositionAttitudeTransform*> fwdVec, bwdVec;
+    DesignStateBase *mActiveSubState;
+    osg::Geode *mHighlightGeode;
 };
 
 

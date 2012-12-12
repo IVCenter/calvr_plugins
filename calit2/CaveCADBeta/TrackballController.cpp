@@ -25,8 +25,10 @@ TrackballController::TrackballController(): mActiveFlag(false), mInitialPickFlag
 ***************************************************************/
 void TrackballController::triggerInitialPick()
 {
-    if (mActiveFlag) mInitialPickFlag = true; 
-    else mInitialPickFlag = false; 
+    if (mActiveFlag) 
+        mInitialPickFlag = true; 
+    else 
+        mInitialPickFlag = false; 
 }
 
 
@@ -39,13 +41,13 @@ void TrackballController::updateCtrPoint(const Vec3 &ctrPoint)
 
     if (mInitialPickFlag)
     {
-	mRefPoint = mCtrPoint = ctrPoint;
-	mInitialPickFlag = false; 
+        mRefPoint = mCtrPoint = ctrPoint;
+        mInitialPickFlag = false; 
     }
     else
     {
-	mRefPoint = mCtrPoint;
-	mCtrPoint = ctrPoint;	
+        mRefPoint = mCtrPoint;
+        mCtrPoint = ctrPoint;	
     }
 }
 
@@ -60,35 +62,26 @@ void TrackballController::updateCtrPoint(const Vec3 &ctrPoint)
 ***************************************************************/
 float TrackballController::getAngularOffset()
 {
-    if (!mActiveFlag) return 0.f;
+    if (!mActiveFlag) 
+        return 0.f;
 
     Vec3f refProj = mRefPoint - mAxis * (mRefPoint * mAxis);
     Vec3f ctrProj = mCtrPoint - mAxis * (mCtrPoint * mAxis);
-    if (refProj.length2() == 0 || ctrProj.length2() == 0) return 0.f;
+    if (refProj.length2() == 0 || ctrProj.length2() == 0) 
+        return 0.f;
     refProj.normalize();
     ctrProj.normalize();
 
     float dotproduct = refProj * ctrProj;
-    if (dotproduct >= 1.0f || dotproduct <= -1.0f) return 0.f;
+    if (dotproduct >= 1.0f || dotproduct <= -1.0f) 
+        return 0.f;
 
     float angle = acos(dotproduct);
 
     Vec3 rotDirAxis = refProj ^ ctrProj;
-    if (mAxis * (refProj ^ ctrProj) < 0) angle = -angle;
+    if (mAxis * (refProj ^ ctrProj) < 0) 
+        angle = -angle;
 
     return angle;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 

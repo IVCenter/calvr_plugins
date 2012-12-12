@@ -47,25 +47,26 @@ void DOGeometryEditor::setToolkitEnabled(bool flag)
     AnimationPathCallback* toolkitsAnimCallback = NULL;
     if (flag)
     {
-	/* get translation hint from 'CAVEGroupIconSurface', apply offset to all icon grpus */
-	Vec3 iconCenter;
-	CAVEGroupIconSurface::getSurfaceTranslationIconCenterHint(iconCenter);
-	Matrixd transMat;
-	transMat.makeTranslate(iconCenter);
-	mMatrixTrans->setMatrix(transMat);
+        /* get translation hint from 'CAVEGroupIconSurface', apply offset to all icon groups */
+        Vec3 iconCenter;
+        CAVEGroupIconSurface::getSurfaceTranslationIconCenterHint(iconCenter);
+        Matrixd transMat;
+        transMat.makeTranslate(iconCenter);
+        mMatrixTrans->setMatrix(transMat);
 
-	mIconToolkitSwitchEntryArray[mToolkitActiveIdx]->mSwitch->setSingleChildOn(0);
-	toolkitsAnimCallback = dynamic_cast <AnimationPathCallback*> 
-		(mIconToolkitSwitchEntryArray[mToolkitActiveIdx]->mFwdAnimCallback);
+        mIconToolkitSwitchEntryArray[mToolkitActiveIdx]->mSwitch->setSingleChildOn(0);
+        toolkitsAnimCallback = dynamic_cast <AnimationPathCallback*> 
+            (mIconToolkitSwitchEntryArray[mToolkitActiveIdx]->mFwdAnimCallback);
     }
     else
     {
-	mIconToolkitSwitchEntryArray[mToolkitActiveIdx]->mSwitch->setSingleChildOn(1);
-	toolkitsAnimCallback = dynamic_cast <AnimationPathCallback*> 
-		(mIconToolkitSwitchEntryArray[mToolkitActiveIdx]->mBwdAnimCallback);
+        mIconToolkitSwitchEntryArray[mToolkitActiveIdx]->mSwitch->setSingleChildOn(1);
+        toolkitsAnimCallback = dynamic_cast <AnimationPathCallback*> 
+            (mIconToolkitSwitchEntryArray[mToolkitActiveIdx]->mBwdAnimCallback);
     }
     setSubToolkitEnabled(flag);
-    if (toolkitsAnimCallback) toolkitsAnimCallback->reset();
+    if (toolkitsAnimCallback) 
+        toolkitsAnimCallback->reset();
 }
 
 
@@ -78,12 +79,15 @@ void DOGeometryEditor::setSubToolkitEnabled(bool flag)
 
     if (toolkitTyp == CAVEGeodeIconToolkit::CLONE)
     {
-	if (flag) mDOGeometryClonerPtr->setToolkitEnabled(true);
-	else
+        if (flag) 
         {
-	    mDOGeometryClonerPtr->popClonedObjects();
-	    mDOGeometryClonerPtr->setToolkitEnabled(false);
-	}
+            mDOGeometryClonerPtr->setToolkitEnabled(true);
+        }
+        else
+        {
+            mDOGeometryClonerPtr->popClonedObjects();
+            mDOGeometryClonerPtr->setToolkitEnabled(false);
+        }
     }
 }
 
@@ -97,17 +101,20 @@ void DOGeometryEditor::setPrevToolkit()
     mIconToolkitSwitchEntryArray[mToolkitActiveIdx]->mSwitch->setSingleChildOn(1);
     AnimationPathCallback* pastCallback = dynamic_cast <AnimationPathCallback*> 
 	(mIconToolkitSwitchEntryArray[mToolkitActiveIdx]->mBwdAnimCallback);
-    if (pastCallback) pastCallback->reset();
+    if (pastCallback) 
+        pastCallback->reset();
 
     setSubToolkitEnabled(false);
-    if (--mToolkitActiveIdx < 0) mToolkitActiveIdx = mNumToolkits - 1;
+    if (--mToolkitActiveIdx < 0) 
+        mToolkitActiveIdx = mNumToolkits - 1;
     setSubToolkitEnabled(true);
 
     /* enable new toolkit icons */
     mIconToolkitSwitchEntryArray[mToolkitActiveIdx]->mSwitch->setSingleChildOn(0);
     AnimationPathCallback* curCallback = dynamic_cast <AnimationPathCallback*> 
 	(mIconToolkitSwitchEntryArray[mToolkitActiveIdx]->mFwdAnimCallback);
-    if (curCallback) curCallback->reset();
+    if (curCallback) 
+        curCallback->reset();
 }
 
 
@@ -120,17 +127,20 @@ void DOGeometryEditor::setNextToolkit()
     mIconToolkitSwitchEntryArray[mToolkitActiveIdx]->mSwitch->setSingleChildOn(1);
     AnimationPathCallback* pastCallback = dynamic_cast <AnimationPathCallback*> 
 	(mIconToolkitSwitchEntryArray[mToolkitActiveIdx]->mBwdAnimCallback);
-    if (pastCallback) pastCallback->reset();
+    if (pastCallback) 
+        pastCallback->reset();
 
     setSubToolkitEnabled(false);
-    if (++mToolkitActiveIdx >= mNumToolkits) mToolkitActiveIdx = 0;
+    if (++mToolkitActiveIdx >= mNumToolkits) 
+        mToolkitActiveIdx = 0;
     setSubToolkitEnabled(true);
 
     /* enable new toolkit icons */
     mIconToolkitSwitchEntryArray[mToolkitActiveIdx]->mSwitch->setSingleChildOn(0);
     AnimationPathCallback* curCallback = dynamic_cast <AnimationPathCallback*> 
 	(mIconToolkitSwitchEntryArray[mToolkitActiveIdx]->mFwdAnimCallback);
-    if (curCallback) curCallback->reset();
+    if (curCallback) 
+        curCallback->reset();
 }
 
 
@@ -170,19 +180,24 @@ void DOGeometryEditor::setSnapStarted(const osg::Vec3 &pos)
        arrays in actual 'CAVEGeode' are applied with editing info with reference to these backup data. 
     */
     if (mDOGeometryCollectorPtr->mMode == DOGeometryCollector::COLLECT_GEODE)
-	mDOGeometryCollectorPtr->mDOShapeRefSwitch->setAllChildrenOn();
+    {
+        mDOGeometryCollectorPtr->mDOShapeRefSwitch->setAllChildrenOn();
+    }
     else if (mDOGeometryCollectorPtr->mMode == DOGeometryCollector::COLLECT_GEOMETRY)
-	mDOGeometryCollectorPtr->mDOShapeRefSwitch->setAllChildrenOff();
+    {
+        mDOGeometryCollectorPtr->mDOShapeRefSwitch->setAllChildrenOff();
+    }
 
     /* clone selected geometry the first time when 'CLONE' icon is clicked */
-    if (!mActiveIconToolkit) return;
+    if (!mActiveIconToolkit) 
+        return;
     if (mActiveIconToolkit->getType() == CAVEGeodeIconToolkit::CLONE)
     {
-	if (mDOGeometryClonerPtr->isToolkitEnabled())
-	{
-	    mDOGeometryClonerPtr->pushClonedObjects();
-	    mDOGeometryClonerPtr->setToolkitEnabled(false);
-	}
+        if (mDOGeometryClonerPtr->isToolkitEnabled())
+        {
+            mDOGeometryClonerPtr->pushClonedObjects();
+            mDOGeometryClonerPtr->setToolkitEnabled(false);
+        }
     }
 }
 
@@ -198,45 +213,63 @@ void DOGeometryEditor::setSnapUpdate(const osg::Vec3 &pos)
 
     /* translate offset value with respect to MOVE or CLONE toolkit */
     if (mActiveIconToolkit->getType() == CAVEGeodeIconToolkit::MOVE ||
-	mActiveIconToolkit->getType() == CAVEGeodeIconToolkit::CLONE)
+        mActiveIconToolkit->getType() == CAVEGeodeIconToolkit::CLONE)
     {
-	CAVEGeodeIconToolkitMove *toolkitMove = dynamic_cast <CAVEGeodeIconToolkitMove*> (mActiveIconToolkit);
-	if (!toolkitMove) return;
+        CAVEGeodeIconToolkitMove *toolkitMove = dynamic_cast <CAVEGeodeIconToolkitMove*> (mActiveIconToolkit);
+        if (!toolkitMove) 
+            return;
 
-	CAVEGeodeIconToolkitMove::FaceOrientation faceorient = toolkitMove->getFaceOrientation();
-	switch (faceorient)
-	{
-	    case CAVEGeodeIconToolkitMove::FRONT_BACK: applyTranslation(Vec3(0, offset.y(), 0)); break;
-	    case CAVEGeodeIconToolkitMove::LEFT_RIGHT: applyTranslation(Vec3(offset.x(), 0, 0)); break; 
-	    case CAVEGeodeIconToolkitMove::UP_DOWN: applyTranslation(Vec3(0, 0, offset.z())); break;
-	    default: break;
-	}
+        CAVEGeodeIconToolkitMove::FaceOrientation faceorient = toolkitMove->getFaceOrientation();
+        switch (faceorient)
+        {
+            case CAVEGeodeIconToolkitMove::FRONT_BACK: 
+            {
+                applyTranslation(Vec3(0, offset.y(), 0));
+                break;
+            }
+            case CAVEGeodeIconToolkitMove::LEFT_RIGHT: 
+            {
+                applyTranslation(Vec3(offset.x(), 0, 0)); 
+                break; 
+            }
+            case CAVEGeodeIconToolkitMove::UP_DOWN: 
+            {
+                applyTranslation(Vec3(0, 0, offset.z())); 
+                break;
+            }
+            default: 
+            {
+                break;
+            }
+        }
     }
 
     /* translate offset value with respect to ROTATE toolkit */
     else if (mActiveIconToolkit->getType() == CAVEGeodeIconToolkit::ROTATE)
     {
-	CAVEGeodeIconToolkitRotate *toolkitRotate = dynamic_cast <CAVEGeodeIconToolkitRotate*> (mActiveIconToolkit);
-	if (!toolkitRotate) return;
+        CAVEGeodeIconToolkitRotate *toolkitRotate = dynamic_cast <CAVEGeodeIconToolkitRotate*> (mActiveIconToolkit);
+        if (!toolkitRotate) 
+            return;
 
-	CAVEGeodeIconToolkitRotate::AxisAlignment axisalignment = toolkitRotate->getAxisAlignment();
-	switch (axisalignment)
-	{
-	    case CAVEGeodeIconToolkitRotate::X_AXIS: applyRotation(Vec3(1, 0, 0), offset); break;
-	    case CAVEGeodeIconToolkitRotate::Y_AXIS: applyRotation(Vec3(0, 1, 0), offset); break; 
-	    case CAVEGeodeIconToolkitRotate::Z_AXIS: applyRotation(Vec3(0, 0, 1), offset); break; 
-	    default: break;
-	}
+        CAVEGeodeIconToolkitRotate::AxisAlignment axisalignment = toolkitRotate->getAxisAlignment();
+        switch (axisalignment)
+        {
+            case CAVEGeodeIconToolkitRotate::X_AXIS: applyRotation(Vec3(1, 0, 0), offset); break;
+            case CAVEGeodeIconToolkitRotate::Y_AXIS: applyRotation(Vec3(0, 1, 0), offset); break; 
+            case CAVEGeodeIconToolkitRotate::Z_AXIS: applyRotation(Vec3(0, 0, 1), offset); break; 
+            default: break;
+        }
     }
 
     /* translate offset value with respect to MANIPULATE toolkit */
     else if (mActiveIconToolkit->getType() == CAVEGeodeIconToolkit::MANIPULATE)
     {
-	CAVEGeodeIconToolkitManipulate *toolkitManipulate = 
-		dynamic_cast <CAVEGeodeIconToolkitManipulate*> (mActiveIconToolkit);
-	if (!toolkitManipulate) return;
+        CAVEGeodeIconToolkitManipulate *toolkitManipulate = 
+            dynamic_cast <CAVEGeodeIconToolkitManipulate*> (mActiveIconToolkit);
+        if (!toolkitManipulate) 
+            return;
 
-	applyManipulation(toolkitManipulate->getScalingDir(), toolkitManipulate->getBoundingVect(), offset);
+        applyManipulation(toolkitManipulate->getScalingDir(), toolkitManipulate->getBoundingVect(), offset);
     }
 }
 
@@ -268,16 +301,24 @@ void DOGeometryEditor::setPointerDir(const Vec3 &pointerDir)
     CAVEGroupEditGeodeWireframeVector::iterator itrGeodeWireframe;
     if (geodeWireframeVector.size() > 0)
     {
-	for (itrGeodeWireframe = geodeWireframeVector.begin(); itrGeodeWireframe != geodeWireframeVector.end();
-		itrGeodeWireframe++) (*itrGeodeWireframe)->resetInfoOrientation();
+        for (itrGeodeWireframe = geodeWireframeVector.begin(); 
+             itrGeodeWireframe != geodeWireframeVector.end();
+             itrGeodeWireframe++) 
+        {
+            (*itrGeodeWireframe)->resetInfoOrientation();
+        }
     }
 
     CAVEGroupEditGeometryWireframeVector& geomWireframeVector = mDOGeometryCollectorPtr->getEditGeometryWireframeVector();
     CAVEGroupEditGeometryWireframeVector::iterator itrGeomWireframe;
     if (geomWireframeVector.size() > 0)
     {
-	for (itrGeomWireframe = geomWireframeVector.begin(); itrGeomWireframe != geomWireframeVector.end();
-		itrGeomWireframe++) (*itrGeomWireframe)->resetInfoOrientation();
+        for (itrGeomWireframe = geomWireframeVector.begin(); 
+             itrGeomWireframe != geomWireframeVector.end();
+             itrGeomWireframe++) 
+        {
+            (*itrGeomWireframe)->resetInfoOrientation();
+        }
     }
 }
 
@@ -287,8 +328,10 @@ void DOGeometryEditor::setPointerDir(const Vec3 &pointerDir)
 ***************************************************************/
 void DOGeometryEditor::setActiveIconToolkit(CAVEGeodeIconToolkit *iconToolkit)
 {
-    if (iconToolkit) iconToolkit->pressed();
-    else if (mActiveIconToolkit) mActiveIconToolkit->released();
+    if (iconToolkit) 
+        iconToolkit->pressed();
+    else if (mActiveIconToolkit) 
+        mActiveIconToolkit->released();
 
     mActiveIconToolkit = iconToolkit;
 }
@@ -320,12 +363,21 @@ void DOGeometryEditor::applyTranslation(const osg::Vec3 &offset)
     /* calculate numbers of snapping units along 'offset' and the actual length it represents for */
     const float unit = CAVEGeodeEditWireframe::gSnappingUnitDist;
     short nSegX, nSegY, nSegZ;
-    if (offset.x() > 0) nSegX = (short)(offset.x() / unit + 0.5f);
-    else nSegX = (short)(offset.x() / unit - 0.5f);
-    if (offset.y() > 0) nSegY = (short)(offset.y() / unit + 0.5f);
-    else nSegY = (short)(offset.y() / unit - 0.5f);
-    if (offset.z() > 0) nSegZ = (short)(offset.z() / unit + 0.5f);
-    else nSegZ = (short)(offset.z() / unit - 0.5f);
+    if (offset.x() > 0) 
+        nSegX = (short)(offset.x() / unit + 0.5f);
+    else 
+        nSegX = (short)(offset.x() / unit - 0.5f);
+
+    if (offset.y() > 0) 
+        nSegY = (short)(offset.y() / unit + 0.5f);
+    else 
+        nSegY = (short)(offset.y() / unit - 0.5f);
+
+    if (offset.z() > 0) 
+        nSegZ = (short)(offset.z() / unit + 0.5f);
+    else 
+        nSegZ = (short)(offset.z() / unit - 0.5f);
+
     const Vec3s gridIntVect = Vec3s(nSegX, nSegY, nSegZ);
 
     /* update translation portion of 'mEditorInfo' */
@@ -333,36 +385,42 @@ void DOGeometryEditor::applyTranslation(const osg::Vec3 &offset)
 
     if (mDOGeometryCollectorPtr->mMode == DOGeometryCollector::COLLECT_GEODE)
     {
-	/* update wireframe vector */
-	CAVEGroupEditGeodeWireframeVector& geodeWireframeVector = mDOGeometryCollectorPtr->getEditGeodeWireframeVector();
-	CAVEGroupEditGeodeWireframeVector::iterator itrGeodeWireframe;
-	if (geodeWireframeVector.size() > 0)
-	{
-	    for (itrGeodeWireframe = geodeWireframeVector.begin(); itrGeodeWireframe != geodeWireframeVector.end();
-		 itrGeodeWireframe++) 
-		(*itrGeodeWireframe)->applyTranslation(gridIntVect, mLengthPerUnit, mLengthPerUnitInfo);
-	}
+        /* update wireframe vector */
+        CAVEGroupEditGeodeWireframeVector& geodeWireframeVector = mDOGeometryCollectorPtr->getEditGeodeWireframeVector();
+        CAVEGroupEditGeodeWireframeVector::iterator itrGeodeWireframe;
+        if (geodeWireframeVector.size() > 0)
+        {
+            for (itrGeodeWireframe = geodeWireframeVector.begin(); 
+                 itrGeodeWireframe != geodeWireframeVector.end();
+                 itrGeodeWireframe++) 
+            {
+                (*itrGeodeWireframe)->applyTranslation(gridIntVect, mLengthPerUnit, mLengthPerUnitInfo);
+            }
+        }
 
-	/* reflect temporary editing effects on 'mDOShapeRefMatrixTrans' */
-	Matrixd transMat;
-	transMat.makeTranslate(Vec3(nSegX, nSegY, nSegZ) * mLengthPerUnit);
-	mDOGeometryCollectorPtr->mDOShapeRefMatrixTrans->setMatrix(transMat);
+        /* reflect temporary editing effects on 'mDOShapeRefMatrixTrans' */
+        Matrixd transMat;
+        transMat.makeTranslate(Vec3(nSegX, nSegY, nSegZ) * mLengthPerUnit);
+        mDOGeometryCollectorPtr->mDOShapeRefMatrixTrans->setMatrix(transMat);
     }
     else if (mDOGeometryCollectorPtr->mMode == DOGeometryCollector::COLLECT_GEOMETRY)
     {
-	/* update wireframe vector */
-	CAVEGroupEditGeometryWireframeVector &geomWireframeVector = 
-		mDOGeometryCollectorPtr->getEditGeometryWireframeVector();
-	CAVEGroupEditGeometryWireframeVector::iterator itrGeomWireframe;
-	if (geomWireframeVector.size() > 0)
-	{
-	    for (itrGeomWireframe = geomWireframeVector.begin(); itrGeomWireframe != geomWireframeVector.end();
-		 itrGeomWireframe++)
-		(*itrGeomWireframe)->applyTranslation(gridIntVect, mLengthPerUnit, mLengthPerUnitInfo);
-	}
+        /* update wireframe vector */
+        CAVEGroupEditGeometryWireframeVector &geomWireframeVector = 
+            mDOGeometryCollectorPtr->getEditGeometryWireframeVector();
+        CAVEGroupEditGeometryWireframeVector::iterator itrGeomWireframe;
+        if (geomWireframeVector.size() > 0)
+        {
+            for (itrGeomWireframe = geomWireframeVector.begin(); 
+                 itrGeomWireframe != geomWireframeVector.end();
+                 itrGeomWireframe++)
+            {
+                (*itrGeomWireframe)->applyTranslation(gridIntVect, mLengthPerUnit, mLengthPerUnitInfo);
+            }
+        }
 
-	/* reflect temporary editing effects on 'CAVEGeodeShapes' */
-	applyEditingUpdates();
+        /* reflect temporary editing effects on 'CAVEGeodeShapes' */
+        applyEditingUpdates();
     }
 }
 
@@ -376,8 +434,11 @@ void DOGeometryEditor::applyRotation(const osg::Vec3 &axis, const osg::Vec3 &off
     const float unit = CAVEGeodeEditWireframe::gSnappingUnitDist;
     const float len = (offset ^ axis) * mInitRadiusVector;
     short nGrids = 0;
-    if (len > 0) nGrids = (short)(len / unit + 0.5f);
-    else nGrids = (short)(len / unit - 0.5f);
+    if (len > 0) 
+        nGrids = (short)(len / unit + 0.5f);
+    else 
+        nGrids = (short)(len / unit - 0.5f);
+
     Vec3s axisSVect = Vec3s((short)axis.x(), (short)axis.y(), (short)axis.z()) * nGrids;
 
     /* update rotation portion of 'mEditorInfo' */
@@ -385,38 +446,44 @@ void DOGeometryEditor::applyRotation(const osg::Vec3 &axis, const osg::Vec3 &off
 
     if (mDOGeometryCollectorPtr->mMode == DOGeometryCollector::COLLECT_GEODE)
     {
-	CAVEGroupEditGeodeWireframeVector& geodeWireframeVector = mDOGeometryCollectorPtr->getEditGeodeWireframeVector();
-	CAVEGroupEditGeodeWireframeVector::iterator itrGeodeWireframe;
-	if (geodeWireframeVector.size() > 0)
-	{
-	    for (itrGeodeWireframe = geodeWireframeVector.begin(); itrGeodeWireframe != geodeWireframeVector.end();
-			itrGeodeWireframe++) 
-		(*itrGeodeWireframe)->applyRotation(axisSVect, mAnglePerUnit, mAnglePerUnitInfo);
-	}
+        CAVEGroupEditGeodeWireframeVector& geodeWireframeVector = mDOGeometryCollectorPtr->getEditGeodeWireframeVector();
+        CAVEGroupEditGeodeWireframeVector::iterator itrGeodeWireframe;
+        if (geodeWireframeVector.size() > 0)
+        {
+            for (itrGeodeWireframe = geodeWireframeVector.begin(); 
+                 itrGeodeWireframe != geodeWireframeVector.end();
+                 itrGeodeWireframe++) 
+            {
+                (*itrGeodeWireframe)->applyRotation(axisSVect, mAnglePerUnit, mAnglePerUnitInfo);
+            }
+        }
 
-	/* reflect temporary editing effects on 'mDOShapeRefMatrixTrans' */
-	const Vec3 rotCenter = mDOGeometryCollectorPtr->mShapeCenter;
-	Matrixd rotateMat, transMat, revTransMat;
-	rotateMat.makeRotate(mAnglePerUnit * nGrids, axis);
-	transMat.makeTranslate(rotCenter);
-	revTransMat.makeTranslate(-rotCenter);
-	mDOGeometryCollectorPtr->mDOShapeRefMatrixTrans->setMatrix(revTransMat * rotateMat * transMat);
+        /* reflect temporary editing effects on 'mDOShapeRefMatrixTrans' */
+        const Vec3 rotCenter = mDOGeometryCollectorPtr->mShapeCenter;
+        Matrixd rotateMat, transMat, revTransMat;
+        rotateMat.makeRotate(mAnglePerUnit * nGrids, axis);
+        transMat.makeTranslate(rotCenter);
+        revTransMat.makeTranslate(-rotCenter);
+        mDOGeometryCollectorPtr->mDOShapeRefMatrixTrans->setMatrix(revTransMat * rotateMat * transMat);
     }
     else if (mDOGeometryCollectorPtr->mMode == DOGeometryCollector::COLLECT_GEOMETRY)
     {
-	/* update wireframe vector */
-	CAVEGroupEditGeometryWireframeVector &geomWireframeVector = 
-		mDOGeometryCollectorPtr->getEditGeometryWireframeVector();
-	CAVEGroupEditGeometryWireframeVector::iterator itrGeomWireframe;
-	if (geomWireframeVector.size() > 0)
-	{
-	    for (itrGeomWireframe = geomWireframeVector.begin(); itrGeomWireframe != geomWireframeVector.end();
-		 itrGeomWireframe++)
-		(*itrGeomWireframe)->applyRotation(axisSVect, mAnglePerUnit, mAnglePerUnitInfo);
-	}
+        /* update wireframe vector */
+        CAVEGroupEditGeometryWireframeVector &geomWireframeVector = 
+            mDOGeometryCollectorPtr->getEditGeometryWireframeVector();
+        CAVEGroupEditGeometryWireframeVector::iterator itrGeomWireframe;
+        if (geomWireframeVector.size() > 0)
+        {
+            for (itrGeomWireframe = geomWireframeVector.begin();    
+                 itrGeomWireframe != geomWireframeVector.end();
+                 itrGeomWireframe++)
+            {
+                (*itrGeomWireframe)->applyRotation(axisSVect, mAnglePerUnit, mAnglePerUnitInfo);
+            }
+        }
 
-	/* reflect temporary editing effects on 'CAVEGeodeShapes' */
-	applyEditingUpdates();
+        /* reflect temporary editing effects on 'CAVEGeodeShapes' */
+        applyEditingUpdates();
     }
 }
 
@@ -436,8 +503,10 @@ void DOGeometryEditor::applyManipulation(const osg::Vec3 &dir, const osg::Vec3 &
     const float unit = CAVEGeodeEditWireframe::gSnappingUnitDist;
     float offsetval = offset * dirControlPoint;
     short nOffsetSegs = 0;
-    if (offsetval > 0) nOffsetSegs = (short)(offsetval / unit + 0.5f);
-    else nOffsetSegs = (short)(offsetval / unit - 0.5f);
+    if (offsetval > 0) 
+        nOffsetSegs = (short)(offsetval / unit + 0.5f);
+    else 
+        nOffsetSegs = (short)(offsetval / unit - 0.5f);
     const float scaleVal = nOffsetSegs * mScalePerUnit;
 
     /* update scaling portion of 'mEditorInfo' */
@@ -450,37 +519,43 @@ void DOGeometryEditor::applyManipulation(const osg::Vec3 &dir, const osg::Vec3 &
 
     if (mDOGeometryCollectorPtr->mMode == DOGeometryCollector::COLLECT_GEODE)
     {
-	CAVEGroupEditGeodeWireframeVector& geodeWireframeVector = mDOGeometryCollectorPtr->getEditGeodeWireframeVector();
-	CAVEGroupEditGeodeWireframeVector::iterator itrGeodeWireframe;
-	if (geodeWireframeVector.size() > 0)
-	{
-	    for (itrGeodeWireframe = geodeWireframeVector.begin(); itrGeodeWireframe != geodeWireframeVector.end();
-			itrGeodeWireframe++) 
-		(*itrGeodeWireframe)->applyScaling(nOffsetSegs, dirabs * mScalePerUnit, mScalePerUnitInfo);
-	}
+        CAVEGroupEditGeodeWireframeVector& geodeWireframeVector = mDOGeometryCollectorPtr->getEditGeodeWireframeVector();
+        CAVEGroupEditGeodeWireframeVector::iterator itrGeodeWireframe;
+        if (geodeWireframeVector.size() > 0)
+        {
+            for (itrGeodeWireframe = geodeWireframeVector.begin(); 
+                 itrGeodeWireframe != geodeWireframeVector.end();
+                 itrGeodeWireframe++) 
+            {
+                (*itrGeodeWireframe)->applyScaling(nOffsetSegs, dirabs * mScalePerUnit, mScalePerUnitInfo);
+            }
+        }
 
-	/* reflect temporary editing effects on 'mDOShapeRefMatrixTrans' */
-	Matrixd scalingMat, transMat, revTransMat;
-	scalingMat.makeScale(scaleVect);
-	transMat.makeTranslate(scaleCenter);
-	revTransMat.makeTranslate(-scaleCenter);
-	mDOGeometryCollectorPtr->mDOShapeRefMatrixTrans->setMatrix(revTransMat * scalingMat * transMat);
+        /* reflect temporary editing effects on 'mDOShapeRefMatrixTrans' */
+        Matrixd scalingMat, transMat, revTransMat;
+        scalingMat.makeScale(scaleVect);
+        transMat.makeTranslate(scaleCenter);
+        revTransMat.makeTranslate(-scaleCenter);
+        mDOGeometryCollectorPtr->mDOShapeRefMatrixTrans->setMatrix(revTransMat * scalingMat * transMat);
     }
     else if (mDOGeometryCollectorPtr->mMode == DOGeometryCollector::COLLECT_GEOMETRY)
     {
-	/* update wireframe vector */
-	CAVEGroupEditGeometryWireframeVector &geomWireframeVector = 
-		mDOGeometryCollectorPtr->getEditGeometryWireframeVector();
-	CAVEGroupEditGeometryWireframeVector::iterator itrGeomWireframe;
-	if (geomWireframeVector.size() > 0)
-	{
-	    for (itrGeomWireframe = geomWireframeVector.begin(); itrGeomWireframe != geomWireframeVector.end();
-		 itrGeomWireframe++)
-		(*itrGeomWireframe)->applyScaling(nOffsetSegs, dirabs * mScalePerUnit, mScalePerUnitInfo);
-	}
+        /* update wireframe vector */
+        CAVEGroupEditGeometryWireframeVector &geomWireframeVector = 
+            mDOGeometryCollectorPtr->getEditGeometryWireframeVector();
+        CAVEGroupEditGeometryWireframeVector::iterator itrGeomWireframe;
+        if (geomWireframeVector.size() > 0)
+        {
+            for (itrGeomWireframe = geomWireframeVector.begin(); 
+                 itrGeomWireframe != geomWireframeVector.end();
+                 itrGeomWireframe++)
+            {
+                (*itrGeomWireframe)->applyScaling(nOffsetSegs, dirabs * mScalePerUnit, mScalePerUnitInfo);
+            }
+        }
 
-	/* reflect temporary editing effects on 'CAVEGeodeShapes' */
-	applyEditingUpdates();
+        /* reflect temporary editing effects on 'CAVEGeodeShapes' */
+        applyEditingUpdates();
     }
 }
 
@@ -492,28 +567,34 @@ void DOGeometryEditor::applyGridUnitUpdates()
 {
     if (mDOGeometryCollectorPtr->mMode == DOGeometryCollector::COLLECT_GEODE)
     {
-	/* reset inter distances & offsets between geode wireframes */
-	CAVEGroupEditGeodeWireframeVector& geodeWireframeVector = mDOGeometryCollectorPtr->getEditGeodeWireframeVector();
-	CAVEGroupEditGeodeWireframeVector::iterator itrGeodeWireframe;
-	if (geodeWireframeVector.size() > 0)
-	{
-	    for (itrGeodeWireframe = geodeWireframeVector.begin(); itrGeodeWireframe != geodeWireframeVector.end();
-			itrGeodeWireframe++) 
-		(*itrGeodeWireframe)->updateGridUnits(mLengthPerUnit, mAnglePerUnit, mScalePerUnit);
-	}
+        /* reset inter distances & offsets between geode wireframes */
+        CAVEGroupEditGeodeWireframeVector& geodeWireframeVector = mDOGeometryCollectorPtr->getEditGeodeWireframeVector();
+        CAVEGroupEditGeodeWireframeVector::iterator itrGeodeWireframe;
+        if (geodeWireframeVector.size() > 0)
+        {
+            for (itrGeodeWireframe = geodeWireframeVector.begin(); 
+                 itrGeodeWireframe != geodeWireframeVector.end();
+                 itrGeodeWireframe++) 
+            {
+                (*itrGeodeWireframe)->updateGridUnits(mLengthPerUnit, mAnglePerUnit, mScalePerUnit);
+            }
+        }
     }
     else if (mDOGeometryCollectorPtr->mMode == DOGeometryCollector::COLLECT_GEOMETRY)
     {
-	/* reset inter distances & offsets between geometry wireframes */
-	CAVEGroupEditGeometryWireframeVector &geomWireframeVector = 
-		mDOGeometryCollectorPtr->getEditGeometryWireframeVector();
-	CAVEGroupEditGeometryWireframeVector::iterator itrGeomWireframe;
-	if (geomWireframeVector.size() > 0)
-	{
-	    for (itrGeomWireframe = geomWireframeVector.begin(); itrGeomWireframe != geomWireframeVector.end();
-		 itrGeomWireframe++)
-		(*itrGeomWireframe)->updateGridUnits(mLengthPerUnit, mAnglePerUnit, mScalePerUnit);
-	}
+        /* reset inter distances & offsets between geometry wireframes */
+        CAVEGroupEditGeometryWireframeVector &geomWireframeVector = 
+            mDOGeometryCollectorPtr->getEditGeometryWireframeVector();
+        CAVEGroupEditGeometryWireframeVector::iterator itrGeomWireframe;
+        if (geomWireframeVector.size() > 0)
+        {
+            for (itrGeomWireframe = geomWireframeVector.begin(); 
+                 itrGeomWireframe != geomWireframeVector.end();
+                 itrGeomWireframe++)
+            {
+                (*itrGeomWireframe)->updateGridUnits(mLengthPerUnit, mAnglePerUnit, mScalePerUnit);
+            }
+        }
     }
 }
 
@@ -571,83 +652,69 @@ void DOGeometryEditor::applyEditingFinishes()
     CAVEGroupIconSurfaceVector& groupIconSurfaceVector = mDOGeometryCollectorPtr->getGroupIconSurfaceVector();
     if (groupIconSurfaceVector.size() > 0)
     {
-	for (int i = 0; i < groupIconSurfaceVector.size(); i++) 
-	    groupIconSurfaceVector[i]->applyEditingFinishes(&mEditorInfo);
+        for (int i = 0; i < groupIconSurfaceVector.size(); i++) 
+        {
+            groupIconSurfaceVector[i]->applyEditingFinishes(&mEditorInfo);
+        }
     }
 
     /* unified application of editor info to two sets of 'CAVEGeodes', with reference to vertex masking array */
     if (nGeodes > 0)
     {
-	for (int i = 0; i < nGeodes; i++)
-	{
-	    CAVEGeodeShape *refGeode = dynamic_cast <CAVEGeodeShape*>
-		(mDOGeometryCollectorPtr->mDOShapeRefMatrixTrans->getChild(i));
-	    if (refGeode)
-	    {
-		geodeShapeVector[i]->applyEditorInfo(&mEditorInfo, refGeode);	// modify selected CAVEGeode first
-		refGeode->applyEditorInfo(&mEditorInfo);			// modify cloned reference CAVEGeode
-	    }
-	}   
+        for (int i = 0; i < nGeodes; i++)
+        {
+            CAVEGeodeShape *refGeode = dynamic_cast <CAVEGeodeShape*>
+            (mDOGeometryCollectorPtr->mDOShapeRefMatrixTrans->getChild(i));
+            if (refGeode)
+            {
+                geodeShapeVector[i]->applyEditorInfo(&mEditorInfo, refGeode);	// modify selected CAVEGeode first
+                refGeode->applyEditorInfo(&mEditorInfo);			// modify cloned reference CAVEGeode
+            }
+        }   
     }
 
     if (mDOGeometryCollectorPtr->mMode == DOGeometryCollector::COLLECT_GEODE)
     {
-	/* 'groupIconSurfaceVector', 'geodeWireframeVector', 'geodeShapeVector' and 'mDOShapeRefMatrixTrans' 
-	    must have the same size through editing process. After each snapping step, indicator geodes, 
-	    actual geodes and references geodes will be modified in parallel.
-	 */
-	if (nGeodeWireframes > 0)
-	{
-	    for (int i = 0; i < nGeodeWireframes; i++)
-	    {
-		geodeWireframeVector[i]->applyEditorInfo(&mEditorInfo);
-		geodeWireframeVector[i]->clearActiveWireframes();
-	    }
-	}
+        /* 'groupIconSurfaceVector', 'geodeWireframeVector', 'geodeShapeVector' and 'mDOShapeRefMatrixTrans' 
+            must have the same size through editing process. After each snapping step, indicator geodes, 
+            actual geodes and references geodes will be modified in parallel.
+         */
+        if (nGeodeWireframes > 0)
+        {
+            for (int i = 0; i < nGeodeWireframes; i++)
+            {
+                geodeWireframeVector[i]->applyEditorInfo(&mEditorInfo);
+                geodeWireframeVector[i]->clearActiveWireframes();
+            }
+        }
 
-	/* use the first geode in 'mGeodeShapeVector' as hint to update manipulator sizes, notice that there is 
-	   a chance that the first geode is not the same as the first selected geode, thus, the manipulator might
-	   be resized with 'bb.radius()' of the first selected geode and 'bb' of the first geode in the vector. 
-	   This is not strictly following the visual resizing rules, however, does not affect its usability.
-	*/
-	CAVEGroupIconToolkit::setManipulatorBound(mDOGeometryCollectorPtr->mGeodeShapeVector[0]->getBoundingBox());
+        /* use the first geode in 'mGeodeShapeVector' as hint to update manipulator sizes, notice that there is 
+           a chance that the first geode is not the same as the first selected geode, thus, the manipulator might
+           be resized with 'bb.radius()' of the first selected geode and 'bb' of the first geode in the vector. 
+           This is not strictly following the visual resizing rules, however, does not affect its usability.
+        */
+        CAVEGroupIconToolkit::setManipulatorBound(mDOGeometryCollectorPtr->mGeodeShapeVector[0]->getBoundingBox());
     }
     else if (mDOGeometryCollectorPtr->mMode == DOGeometryCollector::COLLECT_GEOMETRY)
     {
-	/* 'geomWireframeVector' and 'geometryVector' sizes the same with respect to number of active surfaces. */
-	if (nGeometryWireframes > 0)
-	{
-	    for (int i = 0; i < nGeometryWireframes; i++)
-	    {
-		geomWireframeVector[i]->updateCAVEGeometry();
-		geomWireframeVector[i]->clearActiveWireframes();
-	    }
-	}
+        /* 'geomWireframeVector' and 'geometryVector' sizes the same with respect to number of active surfaces. */
+        if (nGeometryWireframes > 0)
+        {
+            for (int i = 0; i < nGeometryWireframes; i++)
+            {
+                geomWireframeVector[i]->updateCAVEGeometry();
+                geomWireframeVector[i]->clearActiveWireframes();
+            }
+        }
 
-	/* bounding boxes of geode wierframes are subject to changes in geometry level editing */
-	if (nGeodeWireframes > 0)
-	{
-	    for (int i = 0; i < nGeodeWireframes; i++)
-	    {
-		geodeWireframeVector[i]->updateCAVEGeodeShape(geodeShapeVector[i]);
-	    }
-	}
+        /* bounding boxes of geode wierframes are subject to changes in geometry level editing */
+        if (nGeodeWireframes > 0)
+        {
+            for (int i = 0; i < nGeodeWireframes; i++)
+            {
+                geodeWireframeVector[i]->updateCAVEGeodeShape(geodeShapeVector[i]);
+            }
+        }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

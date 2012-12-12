@@ -7,6 +7,16 @@ dan Sandin 8-22-10
 __constant__ float  refldata[REFL_DATA_MUNB][REFL_DATA_ROWS][REFL_DATA_ROW_ELEM];
 __constant__ float  injdata[INJT_DATA_MUNB][INJT_DATA_ROWS][INJT_DATA_ROW_ELEM];
 
+void setReflData(void * data, int size)
+{
+    cudaMemcpyToSymbol(refldata,data,size);
+}
+
+void setInjData(void * data, int size)
+{
+    cudaMemcpyToSymbol(injdata,data,size);
+}
+
 void launchPoint1(float3* pos, float4* color, float * pdata,float * debugData ,unsigned int width,
     unsigned int height, int max_age,int disappear_age,float alphaControl, float time, float gravity, float colorFreq, float r3)
 {

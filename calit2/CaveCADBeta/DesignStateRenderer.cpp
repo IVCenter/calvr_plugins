@@ -10,6 +10,7 @@
 *
 ***************************************************************/
 #include "DesignStateRenderer.h"
+#include <cvrKernel/PluginHelper.h>
 
 using namespace std;
 using namespace osg;
@@ -17,44 +18,52 @@ using namespace osg;
 
 DesignStateRenderer *DesignStateRenderer::gDSRendererPtr(NULL);
 
-//Constructor
+// Constructor
 DesignStateRenderer::DesignStateRenderer(osg::Group* designStateRootGroup): mFlagVisible(false),
 				mViewOrg(Vec3(0, -0.5, 0)), mViewDir(Vec3(0, 1, 0))
 {
-    /* initialize design state objects that registered in 'mDSList'*/
+    // initialize design state objects that registered in 'mDSList'
     mDSParticleSystem = new DesignStateParticleSystem();
+
     mDSVirtualSphere = new DSVirtualSphere();
     mDSVirtualEarth = new DSVirtualEarth();
     mDSParamountSwitch = new DSParamountSwitch();
     mDSSketchBook = new DSSketchBook();
+
+    mDSVirtualSphere->addChildState(mDSVirtualEarth);
+    mDSVirtualSphere->addChildState(mDSParamountSwitch);
+    mDSVirtualSphere->addChildState(mDSSketchBook);
+
     mDSGeometryCreator = new DSGeometryCreator();
     mDSTexturePallette = new DSTexturePallette();
+    mDSViewpoints = new DSViewpoints();
+    mDSObjectPlacer = new DSObjectPlacer();
     mActiveDSPtr = mDSVirtualSphere;
 
-    /* push state object transforms to list, attach them to scene graph */
+    // push state object transforms to list, attach them to scene graph 
     mDSList.clear();
     mDSList.push_back(mDSVirtualSphere);
-    mDSList.push_back(mDSVirtualEarth);
-    mDSList.push_back(mDSParamountSwitch);
-    mDSList.push_back(mDSSketchBook);
     mDSList.push_back(mDSGeometryCreator);
     mDSList.push_back(mDSTexturePallette);
+    //mDSList.push_back(mDSVirtualEarth);
+    //mDSList.push_back(mDSParamountSwitch);
+    //mDSList.push_back(mDSSketchBook);
+    mDSList.push_back(mDSViewpoints);
+    mDSList.push_back(mDSObjectPlacer);
     mActiveDSItr = mDSList.begin();
 
     mDSRootTrans = new MatrixTransform();
-    mDSRootTrans->addChild(mDSParticleSystem);
     mDSRootTrans->addChild(mDSVirtualSphere);
-    mDSRootTrans->addChild(mDSVirtualEarth);
-    mDSRootTrans->addChild(mDSParamountSwitch);
-    mDSRootTrans->addChild(mDSSketchBook);
     mDSRootTrans->addChild(mDSGeometryCreator);
     mDSRootTrans->addChild(mDSTexturePallette);
+    //mDSRootTrans->addChild(mDSVirtualEarth);
+    //mDSRootTrans->addChild(mDSParamountSwitch);
+    //mDSRootTrans->addChild(mDSSketchBook);
+    mDSRootTrans->addChild(mDSViewpoints);
+    mDSRootTrans->addChild(mDSObjectPlacer);
     designStateRootGroup->addChild(mDSRootTrans);
 
-    for (DesignStateList::iterator itrDS = mDSList.begin(); itrDS != mDSList.end(); itrDS++)
-	(*itrDS)->setParticleSystemPtr(mDSParticleSystem);
-
-    /* initialize design state objects that NOT registered in 'mDSList'*/
+    // initialize design state objects that NOT registered in 'mDSList'
     mDSGeometryEditor = new DSGeometryEditor();
     mDSGeometryEditor->setParticleSystemPtr(mDSParticleSystem);
     mDSRootTrans->addChild(mDSGeometryEditor);
@@ -64,23 +73,23 @@ DesignStateRenderer::DesignStateRenderer(osg::Group* designStateRootGroup): mFla
     mDSGeometryCreator->addLowerDesignState(mDSGeometryEditor);
     mDSGeometryCreator->setLowerStateSwitchCallback(switchToLowerDesignState);
 
-    /* disable all virtual objects */
-    mDSParticleSystem->setEmitterEnabled(false);
-    mActiveDSPtr->setObjectEnabled(false);
+//    mColorSelector = new ColorSelector(osg::Vec4(1,1,1,1));
+//    mColorSelector->setVisible(false);
 
-    /* create two directional light sources for all DS objects */
+    // create two directional light sources for all DS objects 
     designStateRootGroup->addChild(createDirectionalLights(designStateRootGroup->getOrCreateStateSet()));
 
-    /* set instance pointer to 'this', which will be used in all static callbacks */
+    // set instance pointer to 'this', which will be used in all static callbacks 
     gDSRendererPtr = this;
 
     DesignStateBase::setDesignStateRootGroupPtr(designStateRootGroup);
 }
 
 
-//Destructor
+// Destructor
 DesignStateRenderer::~DesignStateRenderer()
 {
+
 }
 
 
@@ -124,10 +133,27 @@ void DesignStateRenderer::setAudioConfigHandlerPtr(AudioConfigHandler *audioConf
 void DesignStateRenderer::setVisible(bool flag)
 {
     mFlagVisible = flag;
-    mActiveDSPtr->setObjectEnabled(flag);
+    // mActiveDSPtr->setObjectEnabled(flag);
+    
+    if (flag)
+    {
+        for (DesignStateList::iterator itrDS = mDSList.begin(); itrDS != mDSList.end(); itrDS++)
+        {
+            (*itrDS)->setObjectEnabled(flag);
+            (*itrDS)->setObjectEnabled(!flag);
+        }
+    }
+    else
+    {
+        for (DesignStateList::iterator itrDS = mDSList.begin(); itrDS != mDSList.end(); itrDS++)
+        {
+            (*itrDS)->setObjectEnabled(false);
+        }
+    }
 
-    /* align state spheres with viewer's position and front orientation */
-    if (flag) resetPose();
+    // align state spheres with viewer's position and front orientation
+    if (flag) 
+        resetPose();
 }
 
 
@@ -149,18 +175,22 @@ void DesignStateRenderer::toggleDSVisibility()
 ***************************************************************/
 void DesignStateRenderer::switchToPrevState()
 {
-    if (!mFlagVisible || mDSList.size() <= 0) return;
+    if (!mFlagVisible || mDSList.size() <= 0) 
+        return;
 
     if (!mActiveDSPtr->isLocked())
     {
-	mActiveDSPtr->setObjectEnabled(false);
-	if (++mActiveDSItr == mDSList.end()) mActiveDSItr = mDSList.begin();
-	mActiveDSPtr = dynamic_cast <DesignStateBase*> (*mActiveDSItr);
-	if (mActiveDSPtr)
-	{
-	    mActiveDSPtr->setObjectEnabled(true);
-	    resetPose();
-	}
+        mActiveDSPtr->setObjectEnabled(false);
+        if (++mActiveDSItr == mDSList.end()) 
+        {
+            mActiveDSItr = mDSList.begin();
+        }
+        mActiveDSPtr = dynamic_cast <DesignStateBase*> (*mActiveDSItr);
+        if (mActiveDSPtr)
+        {
+            mActiveDSPtr->setObjectEnabled(true);
+            resetPose();
+        }
     }
     // else: pass the button event to existing rendering state
 }
@@ -178,15 +208,18 @@ void DesignStateRenderer::switchToNextState()
 
     if (!mActiveDSPtr->isLocked())
     {
-	mActiveDSPtr->setObjectEnabled(false);
-	if (mActiveDSItr == mDSList.begin()) mActiveDSItr = mDSList.end();
-	mActiveDSItr--;
-	mActiveDSPtr = dynamic_cast <DesignStateBase*> (*mActiveDSItr);
-	if (mActiveDSPtr)
-	{
-	    mActiveDSPtr->setObjectEnabled(true);
-	    resetPose();
-	}
+        mActiveDSPtr->setObjectEnabled(false);
+        if (mActiveDSItr == mDSList.begin()) 
+        {
+            mActiveDSItr = mDSList.end();
+        }
+        mActiveDSItr--;
+        mActiveDSPtr = dynamic_cast <DesignStateBase*> (*mActiveDSItr);
+        if (mActiveDSPtr)
+        {
+            mActiveDSPtr->setObjectEnabled(true);
+            resetPose();
+        }
     }
     // else: pass the button event to existing rendering state
 }
@@ -201,9 +234,11 @@ void DesignStateRenderer::switchToNextState()
 ***************************************************************/
 void DesignStateRenderer::switchToLowerDesignState(const int &idx)
 {
-    if (!gDSRendererPtr) return;
+    if (!gDSRendererPtr) 
+        return;
     if (!(gDSRendererPtr->mFlagVisible) || gDSRendererPtr->mDSList.size() <= 0 
-	|| gDSRendererPtr->mActiveDSPtr->isLocked()) return;
+	|| gDSRendererPtr->mActiveDSPtr->isLocked()) 
+        return;
 
     DesignStateBase **dsPtr = &(gDSRendererPtr->mActiveDSPtr);
     (*dsPtr)->setObjectEnabled(false);
@@ -254,7 +289,27 @@ void DesignStateRenderer::switchToNextSubState()
 ***************************************************************/
 void DesignStateRenderer::inputDevMoveEvent(const Vec3 &pointerOrg, const Vec3 &pointerPos)
 {
+    for (DesignStateList::iterator it = mDSList.begin(); it != mDSList.end(); ++it)
+    {
+        if ((*it)->test(pointerOrg, pointerPos))
+        {
+            (*it)->setHighlight(true, pointerOrg, pointerPos);
+            mHighlighted = (*it);
+            break;
+        }
+        else
+        {
+            if (mHighlighted)
+            {
+                //mHighlighted->setHighlight(false, pointerOrg, pointerPos);
+                mHighlighted = NULL;
+            }
+        }
+    }
+
+    (mActiveDSPtr)->setHighlight(true, pointerOrg, pointerPos);
     mActiveDSPtr->inputDevMoveEvent(pointerOrg, pointerPos); 
+    resetPose();
 }
 
 
@@ -267,7 +322,10 @@ void DesignStateRenderer::update(const osg::Vec3 &viewDir, const osg::Vec3 &view
     mViewDir = viewDir;
 
     mActiveDSPtr->update();
-    if (mDSVirtualEarth) mDSVirtualEarth->updateVSParameters(viewDir, viewPos);
+    if (mDSVirtualEarth)
+    {
+        mDSVirtualEarth->updateVSParameters(viewDir, viewPos);
+    }
 }
 
 
@@ -276,6 +334,29 @@ void DesignStateRenderer::update(const osg::Vec3 &viewDir, const osg::Vec3 &view
 ***************************************************************/
 bool DesignStateRenderer::inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 &pointerPos)
 {
+    for (DesignStateList::iterator it = mDSList.begin(); it != mDSList.end(); ++it)
+    {
+        // if intersects a menu item
+        if ((*it)->test(pointerOrg, pointerPos))
+        {
+            if (mActiveDSPtr != (*it) && (mActiveDSPtr)->isEnabled()) // turn off the previous state
+            {
+                mActiveDSPtr->setObjectEnabled(false);
+            }
+            mActiveDSPtr = (*it);
+            
+            // open if closed, close if open
+            if (mActiveDSPtr->isEnabled())
+            {
+                mActiveDSPtr->setObjectEnabled(false);
+            }
+            else
+            {
+                mActiveDSPtr->setObjectEnabled(true);
+            }
+            break;
+        }
+    }
     return (mActiveDSPtr->inputDevPressEvent(pointerOrg, pointerPos));
 }
 
@@ -297,21 +378,26 @@ void DesignStateRenderer::resetPose()
     /* calculate position and front direction: project viewer's front 
        to XY plane and use that as front orientation, to make sure 
        all design tools are aligned straight up when showing up. */
+
+    float height = 0.8;
+
     Vec3 pos = mViewOrg + mViewDir * ANIM_VIRTUAL_SPHERE_DISTANCE * 0.5;
+    pos[2] += height;
+
     Vec3 front = mViewDir;
     front.z() = 0;
     front.normalize();
 
-    Matrixf transMat, rotMat;
+    Matrixf transMat, rotMat, scaleMat;
     transMat.makeTranslate(pos);
     rotMat.makeRotate(Vec3(0, 1, 0), front);
     mDSRootTrans->setMatrix(rotMat * transMat);
 
-    /* pass new position & orientation to static members of design state base */
+    // pass new position & orientation to static members of design state base
     DesignStateBase::setDesignStateCenterPos(pos);
     DesignStateBase::setDesignStateFrontVect(front);
 
-    /* update two directional lights' position */
+    // update two directional lights' position
     Vec4 leftDir = Vec4(1.0f, -1.0f, 1.0f, 0.0f);
     Vec4 rightDir = Vec4(-1.0f, -1.0f, 1.0f, 0.0f);
     leftDir = leftDir * rotMat;
@@ -332,14 +418,14 @@ Group *DesignStateRenderer::createDirectionalLights(osg::StateSet *stateset)
     mLeftDirLight = new Light;
     mRightDirLight = new Light;
 
-    /* Directional vector = (1.0f, -1.0f, 1.0f) in relative to viewer's position */
+    // Directional vector = (1.0f, -1.0f, 1.0f) in relative to viewer's position
     mLeftDirLight->setLightNum(6);
     mLeftDirLight->setPosition(Vec4(1.0f, -1.0f, 1.0f, 0.0f));
-    mLeftDirLight->setDiffuse(Vec4(1.0f,1.0f,1.0f,1.0f));
-    mLeftDirLight->setSpecular(Vec4(0.0f,0.0f,0.0f,1.0f));
-    mLeftDirLight->setAmbient(Vec4(0.5f,0.5f,0.5f,1.0f));
+    mLeftDirLight->setDiffuse(Vec4( 1.0f, 1.0f, 1.0f, 1.0f));
+    mLeftDirLight->setSpecular(Vec4(0.0f, 0.0f, 0.0f, 1.0f));
+    mLeftDirLight->setAmbient(Vec4( 0.5f, 0.5f, 0.5f, 1.0f));
 
-    /* Directional vector = (-1.0f, -1.0f, 1.0f) in relative to viewer's position */
+    // Directional vector = (-1.0f, -1.0f, 1.0f) in relative to viewer's position
     mRightDirLight->setLightNum(7);
     mRightDirLight->setPosition(Vec4(-1.0f, -1.0f, 1.0f, 0.0f));
     mRightDirLight->setDiffuse(Vec4(1.0f,1.0f,1.0f,1.0f));
@@ -359,20 +445,4 @@ Group *DesignStateRenderer::createDirectionalLights(osg::StateSet *stateset)
 
     return lightGroup;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

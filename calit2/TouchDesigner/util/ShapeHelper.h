@@ -4,6 +4,7 @@
 #include <osg/MatrixTransform>
 #include <osg/Vec3d>
 #include <osg/Vec4>
+#include <osg/Group>
 
 #include "vvtokenizer.h"
 #include "../shapes/BasicShape.h"
@@ -16,14 +17,16 @@
 #include <math.h>
 #include <limits>
 
+#include "TrackerTree.h"
+
 using namespace std;
 using namespace osg;
 
 
 class ShapeHelper  
 {
-public:        
-	ShapeHelper(Geode *);
+public:        	
+	ShapeHelper(Group *);
 	ShapeHelper();
 
 
@@ -36,24 +39,14 @@ public:
 	// determines whether to add or update a shape to current geode
 	// this method is the ideal way to handle most data packets
 	void processData(char*);
+	
+	void setObjectRoot(Group *);
 
-	
+	Group * getGroup();
 
-	// generates a shape from data given
-	BasicShape * genShape(char*);
-	BasicShape * genShape();	
 
-	// update shape from data given
-	void updateShape(char*);
-	void updateShape();
-	
-	// get the number of shapes managed by this shape helper
-	int getShapeCount();
-	
-	Geode * getGeode();
-	
 	bool processedAll;
-	int updateIndex;
+	bool debug;
 
 protected:
 
@@ -66,45 +59,38 @@ protected:
 	char* getCharParamC(char*);	
 
 	vvTokenizer * tok;
-	
-	
-	
-	// the geode we're managing
-	Geode * geode;
+
+
+	// setting up the more complex parameters
+	Vec3d getCenter();
+	Vec3d getP1();
+	Vec3d getP2();
+	Vec3d getP3();
+	Vec3d getP4();
+
+	Vec4d getC1();
+	Vec4d getC2();
+	Vec4d getC3();
+
+	// instead of separate gen/update, we're going to group by shape
+	void handleCircle(int);
+	void handleTriangle(int);
+	void handleRect(int);
+
+	// the group/scene we're managing
+	Group * group;
+
+ //Tree to store geodes of the group
+ TrackerTree* tree;
 
 	double random();
 	double random(double,double);
 
-
-	// shape generating
-	CircleShape * genCircle();
-	RectShape * genRectP();
-	RectShape * genRectC();
-	TriangleShape * genTriangleP();
-	TriangleShape * genTriangleC();
-
-
-	// shape updating
-	void updateCircle();
-	void updateCircle(int);
-	void updateRectP();
-	void updateRectC();
-	void updateTriangleP();
-	void updateTriangleC();
-		
-	void updateCircle(CircleShape*);
-	void updateRectP(RectShape*);
-	void updateRectC(RectShape*);
-	void updateTriangleP(TriangleShape*);
-	void updateTriangleC(TriangleShape*);
-	
-	void updateShape(BasicShape*);
-
-
 	// other handlers
-	int shapeCount;
-	int updateType;
+	int shapeCount;	
+	bool genAll;
 
+	int updateIndex;	
 };
 
 #endif

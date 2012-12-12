@@ -24,65 +24,89 @@ void ANIMLoadParamountPaintFrames(PositionAttitudeTransform** xformScaleFwd, Pos
     *xformScaleFwd = new PositionAttitudeTransform;
     *xformScaleBwd = new PositionAttitudeTransform;
 
-    /* create tree structured paramount switch entry array */
-    numParas = 9;
+    // Load panorama filenames from config file
+    bool isFile = true;
+    int i = 0;
+    std::string filename = "", dir, path, thumb;
+    std::vector<std::string> filenames, thumbFiles;
+    
+    dir = cvr::ConfigManager::getEntry("dir", "Plugin.CaveCADBeta.Panoramas", "/home/cehughes");
+    dir = dir + "/";
+    path = "Plugin.CaveCADBeta.Panoramas.0";
+    filename = cvr::ConfigManager::getEntry(path, "", &isFile);
+    thumb = cvr::ConfigManager::getEntry("thumb", path, "");
+
+    while (isFile)
+    {
+        filenames.push_back(dir + filename);
+        thumbFiles.push_back(dir + thumb);
+
+        i++;
+        char buf[50];
+        sprintf(buf, "Plugin.CaveCADBeta.Panoramas.%d", i);
+        std::string path = std::string(buf);
+        filename = cvr::ConfigManager::getEntry(path, "", &isFile);
+        thumb = cvr::ConfigManager::getEntry("thumb", path, "");
+    }
+
+    numParas = i;
+
+    // create tree structured paramount switch entry array 
     *paraEntryArray = new ANIMParamountSwitchEntry*[numParas];
     for (int i = 0; i < numParas; i++)
     {
-	(*paraEntryArray)[i] = new ANIMParamountSwitchEntry;
-	MatrixTransform *matTrans = new MatrixTransform;
-	(*xformScaleFwd)->addChild(matTrans);
-	(*xformScaleBwd)->addChild(matTrans);
+        (*paraEntryArray)[i] = new ANIMParamountSwitchEntry;
+        MatrixTransform *matTrans = new MatrixTransform;
+        (*xformScaleFwd)->addChild(matTrans);
+        (*xformScaleBwd)->addChild(matTrans);
 
-	(*paraEntryArray)[i]->mMatrixTrans = matTrans;
+        (*paraEntryArray)[i]->mMatrixTrans = matTrans;
     }
 
-    /* load frame node from VRML file */
-    Node* frameNode = osgDB::readNodeFile(ANIMDataDir() + "VRMLFiles/ParamountFrame.WRL"); 
-    paraswitchRadius = frameNode->getBound().radius() * numParas * 0.5 / M_PI;
-
-    /* set initial position of paint frame arrays */
-    string texFilenamePrefix = ANIMDataDir() + string("VRMLFiles/Textures/Paramount");
+    // set initial position of paint frame arrays 
     Matrixd transMat;
     float intvlAngle = M_PI * 2 / numParas;
+
+    // load frame node from VRML file 
+    Node* frameNode = osgDB::readNodeFile(ANIMDataDir() + "VRMLFiles/ParamountFrame.WRL"); 
+    paraswitchRadius = frameNode->getBound().radius() * numParas * 0.5 / M_PI;
+  
     for (int i = 0; i < numParas; i++)
     {
-	char idxStr[16];
-	if (i < 10) sprintf(idxStr, "0%d", i);
-	else if (i < 100) sprintf(idxStr, "%d", i);
-	string filename = texFilenamePrefix + string(idxStr) + string(".JPG");
-	Geode* paintGeode = ANIMCreateParamountPaintGeode(filename);
+        Geode* paintGeode = ANIMCreateParamountPaintGeode(thumbFiles[i]);
 
-	float phi = i * intvlAngle;
-	Vec3 transVec = Vec3(0, -cos(phi), sin(phi)) * paraswitchRadius;
-	transMat.makeTranslate(transVec);
-	(*paraEntryArray)[i]->mMatrixTrans->setMatrix(transMat);
+        float phi = i * intvlAngle;
+        Vec3 transVec = Vec3(0, -cos(phi) * paraswitchRadius, sin(phi) * paraswitchRadius);
+        transMat.makeTranslate(transVec);
+        (*paraEntryArray)[i]->mMatrixTrans->setMatrix(transMat);
 
-	Switch *singleParaSwitch = new Switch;
-	PositionAttitudeTransform *zoominTrans = new PositionAttitudeTransform;
-	PositionAttitudeTransform *zoomoutTrans = new PositionAttitudeTransform; 
+        Switch *singleParaSwitch = new Switch;
+        PositionAttitudeTransform *zoominTrans = new PositionAttitudeTransform;
+        PositionAttitudeTransform *zoomoutTrans = new PositionAttitudeTransform; 
 
-	zoominTrans->addChild(frameNode);	zoomoutTrans->addChild(frameNode);
-	zoominTrans->addChild(paintGeode);	zoomoutTrans->addChild(paintGeode);
-	singleParaSwitch->addChild(zoominTrans);
-	singleParaSwitch->addChild(zoomoutTrans);
-	(*paraEntryArray)[i]->mMatrixTrans->addChild(singleParaSwitch);
-	if (i == 0) singleParaSwitch->setSingleChildOn(0);
-	else singleParaSwitch->setSingleChildOn(1);
+        zoominTrans->addChild(frameNode);	zoomoutTrans->addChild(frameNode);
+        zoominTrans->addChild(paintGeode);	zoomoutTrans->addChild(paintGeode);
+        singleParaSwitch->addChild(zoominTrans);
+        singleParaSwitch->addChild(zoomoutTrans);
+        (*paraEntryArray)[i]->mMatrixTrans->addChild(singleParaSwitch);
+        if (i == 0) 
+            singleParaSwitch->setSingleChildOn(0);
+        else 
+            singleParaSwitch->setSingleChildOn(1);
 
-	/* set up zoom in / zoom out animation paths for each paramount paint & frame */
-	AnimationPathCallback *zoomInCallback, *zoomOutCallback;
-	ANIMCreateParamountPaintFrameAnimation(&zoomInCallback, &zoomOutCallback);
-	zoominTrans->setUpdateCallback(zoomInCallback);
-	zoomoutTrans->setUpdateCallback(zoomOutCallback);
+        /* set up zoom in / zoom out animation paths for each paramount paint & frame */
+        AnimationPathCallback *zoomInCallback, *zoomOutCallback;
+        ANIMCreateParamountPaintFrameAnimation(&zoomInCallback, &zoomOutCallback);
+        zoominTrans->setUpdateCallback(zoomInCallback);
+        zoomoutTrans->setUpdateCallback(zoomOutCallback);
 
-	/* write into paramount switch entry array record */
-	(*paraEntryArray)[i]->mSwitch = singleParaSwitch;
-	(*paraEntryArray)[i]->mZoomInAnim = zoomInCallback;
-	(*paraEntryArray)[i]->mZoomOutAnim = zoomOutCallback;
-	(*paraEntryArray)[i]->mPaintGeode = paintGeode;
-	(*paraEntryArray)[i]->mTexFilename = ANIMDataDir() + string("Textures/Paramounts/Paramount") 
-							   + string(idxStr) + string(".JPG");
+        /* write into paramount switch entry array record */
+        (*paraEntryArray)[i]->mSwitch = singleParaSwitch;
+        (*paraEntryArray)[i]->mZoomInAnim = zoomInCallback;
+        (*paraEntryArray)[i]->mZoomOutAnim = zoomOutCallback;
+        (*paraEntryArray)[i]->mPaintGeode = paintGeode;
+        (*paraEntryArray)[i]->mTexFilename = filenames[i];//ANIMDataDir() + string("Textures/Paramounts/Paramount") 
+                                   //+ filenames[i];//+ string(idxStr) + string(".JPG");
     }
 
     /* set up the forward / backward scale animation paths for paramount root switch */
@@ -95,11 +119,11 @@ void ANIMLoadParamountPaintFrames(PositionAttitudeTransform** xformScaleFwd, Pos
     float step = 1.f / ANIM_VIRTUAL_SPHERE_NUM_SAMPS;
     for (int i = 0; i < ANIM_VIRTUAL_SPHERE_NUM_SAMPS + 1; i++)
     {
-	float val = i * step;
-	scaleFwd = Vec3(val, val, val);
-	scaleBwd = Vec3(1-val, 1-val, 1-val);
-	animationPathScaleFwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleFwd));
-	animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleBwd));
+        float val = i * step;
+        scaleFwd = Vec3(val, val, val);
+        scaleBwd = Vec3(1-val, 1-val, 1-val);
+        animationPathScaleFwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleFwd));
+        animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(Vec3(),Quat(), scaleBwd));
     }
 
     AnimationPathCallback *animCallbackFwd = new AnimationPathCallback(animationPathScaleFwd, 
@@ -128,20 +152,19 @@ void ANIMCreateParamountPaintFrameAnimation(AnimationPathCallback **zoomInCallba
     float timestep = 1.0f / ANIM_PARA_PAINT_FRAME_ZOOM_SAMPS;
     for (int i = 0; i < ANIM_PARA_PAINT_FRAME_ZOOM_SAMPS + 1; i++)
     {
-	float val = i * zoomstep;
-	zoomInVect = Vec3(val + 1.0f, val + 1.0f, val + 1.0f);
-	zoomOutVect = Vec3(ANIM_PARA_PAINT_FRAME_ZOOM_FACTOR - val, 
-			ANIM_PARA_PAINT_FRAME_ZOOM_FACTOR - val, 
-			ANIM_PARA_PAINT_FRAME_ZOOM_FACTOR - val);
-	animationPathZoomIn->insert(i * timestep, AnimationPath::ControlPoint(Vec3(), Quat(), zoomInVect));
-	animationPathZoomOut->insert(i * timestep, AnimationPath::ControlPoint(Vec3(), Quat(), zoomOutVect));
+        float val = i * zoomstep;
+        zoomInVect = Vec3(val + 1.0f, val + 1.0f, val + 1.0f);
+        zoomOutVect = Vec3(ANIM_PARA_PAINT_FRAME_ZOOM_FACTOR - val, 
+                ANIM_PARA_PAINT_FRAME_ZOOM_FACTOR - val, 
+                ANIM_PARA_PAINT_FRAME_ZOOM_FACTOR - val);
+        animationPathZoomIn->insert(i * timestep, AnimationPath::ControlPoint(Vec3(0,0,0), Quat(), zoomInVect));
+        animationPathZoomOut->insert(i * timestep, AnimationPath::ControlPoint(Vec3(0,0,0), Quat(), zoomOutVect));
     }
     *zoomInCallback = new AnimationPathCallback(animationPathZoomIn, 
 						0.0, 1.f / ANIM_PARA_PAINT_FRAME_LAPSE_TIME);
     *zoomOutCallback = new AnimationPathCallback(animationPathZoomOut, 
 						0.0, 1.f / ANIM_PARA_PAINT_FRAME_LAPSE_TIME);
 }
-
 
 
 /***************************************************************
@@ -167,7 +190,10 @@ Geode *ANIMCreateParamountPaintGeode(const string &texfilename)
     vertices->push_back(bottomright);	(*texcoords)[2].set(1, 0);
     vertices->push_back(topright);	(*texcoords)[3].set(1, 1);
     
-    for (int i = 0; i < 4; i++) normals->push_back(Vec3(0, -1, 0));
+    for (int i = 0; i < 4; i++) 
+    {
+        normals->push_back(Vec3(0, -1, 0));
+    }
 
     DrawElementsUInt* rectangle = new DrawElementsUInt(PrimitiveSet::POLYGON, 0);
     rectangle->push_back(0);	rectangle->push_back(1);
@@ -199,14 +225,4 @@ Geode *ANIMCreateParamountPaintGeode(const string &texfilename)
 
 
 };
-
-
-
-
-
-
-
-
-
-
 

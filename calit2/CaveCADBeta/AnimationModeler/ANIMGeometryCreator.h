@@ -49,14 +49,14 @@ namespace CAVEAnimationModeler
     class ANIMShapeSwitchEntry
     {
       public:
-	osg::Switch *mSwitch;
-	osg::AnimationPathCallback *mFlipUpFwdAnim, *mFlipDownFwdAnim;
-	osg::AnimationPathCallback *mFlipUpBwdAnim, *mFlipDownBwdAnim;
+        osg::Switch *mSwitch;
+        osg::AnimationPathCallback *mFlipUpFwdAnim, *mFlipDownFwdAnim;
+        osg::AnimationPathCallback *mFlipUpBwdAnim, *mFlipDownBwdAnim;
     };
 
     /* Functions called by 'DSGeometryCreator' */
     void ANIMLoadGeometryCreator(osg::PositionAttitudeTransform** xformScaleFwd, 
-			    	 osg::PositionAttitudeTransform** xformScaleBwd,
+			  	 osg::PositionAttitudeTransform** xformScaleBwd,
 				 osg::Switch **sphereExteriorSwitch, osg::Geode **sphereExteriorGeode,
 				 int &numTypes, ANIMShapeSwitchEntry ***shapeSwitchEntryArray);
     void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, const CAVEGeodeShape::Type &typ);
@@ -67,6 +67,4 @@ namespace CAVEAnimationModeler
 
 
 #endif
-
-
 

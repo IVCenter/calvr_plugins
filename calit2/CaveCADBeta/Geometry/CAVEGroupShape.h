@@ -57,8 +57,3 @@ class CAVEGroupShape: public CAVEGroup
 
 #endif
 
-
-
-
-
-

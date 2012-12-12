@@ -34,16 +34,17 @@ class DSVirtualEarth: public DesignStateBase
     bool inputDevReleaseEvent();
     void update() {}
     void updateVSParameters(const osg::Vec3 &viewDir, const osg::Vec3 &viewPos);
+    void setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
 
     void setScenicHandlerPtr(VirtualScenicHandler *vsHandlerPtr) { mVirtualScenicHandler = vsHandlerPtr; }
 
     /* sub states definition */
     enum DSVirtualEarthState
     {
-	SET_NULL = 0,
-	SET_PIN,
-	SET_TIME,
-	SET_DATE
+        SET_NULL = 0,
+        SET_PIN,
+        SET_TIME,
+        SET_DATE
     };
 
   protected:

@@ -64,7 +64,8 @@ class VirtualScenicHandler
     osg::Switch *mXYPlaneSwitch, *mSkyDomeSwitch, *mWaterSurfSwitch, *mFloorplanSwitch;
     osg::StateSet *mSkyDomeStateset, *mWatersurfStateset;
     osg::Geometry *mWatersurfGeometry;
-
+    
+    bool mWaterEnabled;
     int mFloorplanIdx;
     osg::Light *mSunLight, *mPointLight;
     osg::LightSource *mSunLightSource, *mPointLightSource;
@@ -81,6 +82,4 @@ class VirtualScenicHandler
 };
 
 #endif
-
-
 

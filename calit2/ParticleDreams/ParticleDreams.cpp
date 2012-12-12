@@ -367,8 +367,10 @@ void ParticleDreams::perContextCallback(int contextid) const
     //	cudacopystart = osg::Timer::instance()->delta_s(CVRViewer::instance()->getStartTick(), osg::Timer::instance()->tick());
     //}
 
-    cudaMemcpyToSymbol("injdata",h_injectorData,sizeof(h_injectorData));
-    cudaMemcpyToSymbol("refldata",h_reflectorData,sizeof(h_reflectorData));
+    //cudaMemcpyToSymbol("injdata",h_injectorData,sizeof(h_injectorData));
+    //cudaMemcpyToSymbol("refldata",h_reflectorData,sizeof(h_reflectorData));
+    setReflData((void*)h_reflectorData,sizeof(h_reflectorData));
+    setInjData((void*)h_injectorData,sizeof(h_injectorData));
 
     //if(stats)
     //{

@@ -3,6 +3,7 @@
 
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/NodeMask.h>
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuCheckbox.h>

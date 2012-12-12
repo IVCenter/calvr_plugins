@@ -1,0 +1,21 @@
+Notes
+-----
+
+Status
+------
+
+Need to add condition to trigger second Parser (completed)
+Need to fix delete and recreating a new shape with an old name (complete)
+Added delete e.g delete dd;
+Added text e.g text dd label=hello size=30; (NOTE parser does not currenty deal with label=hello world (spaces between words))
+Fixed Circle color;
+
+Current
+-------
+fix PointShape (not showing up)
+test all shapes
+load/performance testing
+
+Later
+-----
+Work on Variables

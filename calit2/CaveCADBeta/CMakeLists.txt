@@ -16,6 +16,8 @@ SET(PLUGIN_HEADERS
 	DesignStates/DSGeometryCreator.h
 	DesignStates/DSGeometryEditor.h
 	DesignStates/DSTexturePallette.h
+	DesignStates/DSViewpoints.h
+	DesignStates/DSObjectPlacer.h
 	DesignStateIntersector.h
 	DesignObjectHandler.h
 	DesignObjectIntersector.h
@@ -28,6 +30,7 @@ SET(PLUGIN_HEADERS
 	TrackballController.h
 	SnapLevelController.h
 	VirtualScenicHandler.h
+	ColorSelector.h
 
 	Geometry/CAVEGeometry.h
 	Geometry/CAVEGroup.h
@@ -50,6 +53,7 @@ SET(PLUGIN_HEADERS
 	AnimationModeler/AnimationModelerBase.h
 	AnimationModeler/ANIMDSParticleSystem.h
 	AnimationModeler/ANIMVirtualSphere.h
+	AnimationModeler/ANIMViewpoints.h
 	AnimationModeler/ANIMVirtualEarth.h
 	AnimationModeler/ANIMRefXYPlane.h
 	AnimationModeler/ANIMRefSkyDome.h
@@ -61,6 +65,8 @@ SET(PLUGIN_HEADERS
 	AnimationModeler/ANIMGeometryEditor.h
 	AnimationModeler/ANIMTexturePallette.h
 	AnimationModeler/ANIMObjectHandler.h
+	AnimationModeler/ANIMObjectPlacer.h
+
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -82,6 +88,8 @@ ADD_LIBRARY(${LIB_NAME}
 	DesignStates/DSGeometryCreator.cpp
 	DesignStates/DSGeometryEditor.cpp
 	DesignStates/DSTexturePallette.cpp
+	DesignStates/DSViewpoints.cpp
+	DesignStates/DSObjectPlacer.cpp
 	DesignStateIntersector.cpp
 	DesignObjectHandler.cpp
 	DesignObjectIntersector.cpp
@@ -94,6 +102,8 @@ ADD_LIBRARY(${LIB_NAME}
 	TrackballController.cpp
 	SnapLevelController.cpp
 	VirtualScenicHandler.cpp
+	ColorSelector.cpp
+
 	Geometry/CAVEGeometry.cpp	
 	Geometry/CAVEGroupReference.cpp
 	Geometry/CAVEGroupShape.cpp
@@ -111,9 +121,11 @@ ADD_LIBRARY(${LIB_NAME}
 	Geometry/CAVEGeodeSnapWireframe.cpp
 	Geometry/CAVEGeodeSnapSolidshape.cpp
 	Geometry/CAVEGeodeEditWireframe.cpp
+
 	AnimationModeler/AnimationModelerBase.cpp
 	AnimationModeler/ANIMDSParticleSystem.cpp
 	AnimationModeler/ANIMVirtualSphere.cpp
+	AnimationModeler/ANIMViewpoints.cpp
 	AnimationModeler/ANIMVirtualEarth.cpp
 	AnimationModeler/ANIMRefXYPlane.cpp
 	AnimationModeler/ANIMRefSkyDome.cpp
@@ -125,6 +137,7 @@ ADD_LIBRARY(${LIB_NAME}
 	AnimationModeler/ANIMGeometryEditor.cpp
 	AnimationModeler/ANIMTexturePallette.cpp
 	AnimationModeler/ANIMObjectHandler.cpp
+	AnimationModeler/ANIMObjectPlacer.cpp
 )
 
 INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})

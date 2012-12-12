@@ -1,0 +1,20 @@
+SET(LIB_NAME OsgChromosome)
+SET(PLUGIN_HEADERS
+    OsgChromosome.h
+    vvtokenizer.h
+)
+
+ADD_LIBRARY(${LIB_NAME}
+    "SHARED"
+    ${PLUGIN_HEADERS}
+    OsgChromosome.cpp
+    vvtokenizer.cpp
+)
+
+
+INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${OSG_LIBRARIES})
+
+ADD_CALVR_LIBRARIES(${LIB_NAME})
+
+INSTALL(TARGETS ${LIB_NAME} DESTINATION lib/plugins)

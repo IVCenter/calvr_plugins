@@ -91,19 +91,16 @@ void ECGClient::initCVRMenu(SubMenu *mainMenuMaze2)
     depthRangeSlider->setValue(5);
     mainMenu->addItem(depthRangeSlider);
 
-    horizontalFreqSlider = new MenuRangeValue("Horizontal Frequency", 0, 1.0, 0.1);
+    horizontalFreqSlider = new MenuRangeValue("Horizontal Frequency", 0, 0.2, 0.1);//1.0, 0.1);
     horizontalFreqSlider->setCallback(this);
-    horizontalFreqSlider->setValue(1);
     mainMenu->addItem(horizontalFreqSlider);
 
-    verticalFreqSlider = new MenuRangeValue("Vertical Frequency", 0, 1.0, 0.1);
+    verticalFreqSlider = new MenuRangeValue("Vertical Frequency", 0, 0.2, 0.1);//1.0, 0.1);
     verticalFreqSlider->setCallback(this);
-    verticalFreqSlider->setValue(1);
     mainMenu->addItem(verticalFreqSlider);
 
-    depthFreqSlider = new MenuRangeValue("Depth Frequency", 0, 1.0, 0.1);
+    depthFreqSlider = new MenuRangeValue("Depth Frequency", 0, 0.2, 0.1);//1.0, 0.1);
     depthFreqSlider->setCallback(this);
-    depthFreqSlider->setValue(1);
     mainMenu->addItem(depthFreqSlider);
 }
 
@@ -248,21 +245,4 @@ void ECGClient::menuCallback(MenuItem *item)
 		mCaliController->updateCaliParam(CalibrationController::DEPTH_FREQ, val);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -6,6 +6,7 @@
 #include <PluginMessageType.h>
 
 #include <iostream>
+#include <sstream>
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
@@ -42,7 +43,32 @@ bool PanoViewLOD::init()
 {
     _panObject = NULL;
 
-    _defaultConfigDir = ConfigManager::getEntry("value","Plugin.PanoViewLOD.DefaultConfigDir","");
+    std::string paths = ConfigManager::getEntryConcat("value","Plugin.PanoViewLOD.DefaultConfigDir",':',"");
+    size_t position = 0;
+    
+    while(position < paths.size())
+    {
+	size_t lastPosition = position;
+	position = paths.find_first_of(':', position);
+	if(position == std::string::npos)
+	{
+	    size_t length = paths.size() - lastPosition;
+	    if(length)
+	    {
+		_defaultConfigDirs.push_back(paths.substr(lastPosition,length));
+		break;
+	    }
+	}
+	else
+	{
+	    size_t length = position - lastPosition;
+	    if(length)
+	    {
+		_defaultConfigDirs.push_back(paths.substr(lastPosition,length));
+	    }
+	    position++;
+	}
+    }
 
     std::vector<std::string> tagList;
     ConfigManager::getChildren("Plugin.PanoViewLOD.Pans", tagList);
@@ -85,6 +111,11 @@ bool PanoViewLOD::init()
 
 void PanoViewLOD::preFrame()
 {
+
+    if(_panObject)
+    {
+	_panObject->preFrameUpdate();
+    }
 
 #ifdef PRINT_TIMING
 
@@ -140,12 +171,15 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 
 	    _panObject = new PanoViewObject(_panButtonList[i]->getText(),_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size,_pans[i]->height,_pans[i]->vertFile,_pans[i]->fragFile);
 
+	    _panObject->setTransition(_pans[i]->transitionType,_pans[i]->transitionDirectory,_pans[i]->leftTransitionFiles,_pans[i]->rightTransitionFiles,_pans[i]->configTag);
+
 	    PluginHelper::registerSceneObject(_panObject,"PanoViewLOD");
 	    _panObject->attachToScene();
 
 	    if(_loadRequest)
 	    {
 		_panObject->addMenuItem(_returnButton);
+		_panObject->setRemoveOnClick(true);
 	    }
 
 	    break;
@@ -287,11 +321,48 @@ void PanoViewLOD::createLoadMenu(std::string tagBase, std::string tag, SubMenu *
 
 	if(info)
 	{
+	    info->configTag = tag;
+
 	    //put here for now since the values are not in the xml files
 	    info->radius = ConfigManager::getFloat("radius",tag,6000);
 	    _panButtonList.push_back(temp);
 	    _pans.push_back(info);
 	    menu->addItem(temp);
+
+	    //get transition data
+	    std::string transitionstr = ConfigManager::getEntry("transitionType",tag,"NORMAL");
+	    if(transitionstr == "MORPH" || transitionstr == "ZOOM")
+	    {
+		if(transitionstr == "MORPH")
+		{
+		    info->transitionType = MORPH;
+		}
+		else
+		{
+		    info->transitionType = ZOOM;
+		}
+
+		//read in transition file values
+		info->transitionDirectory = ConfigManager::getEntry("transitionFilesDir",tag,"");
+
+		for(int i = 0; i < info->leftFiles.size(); i++)
+		{
+		    std::stringstream ss;
+		    ss << "transition" << i << "FileL";
+		    info->leftTransitionFiles.push_back(ConfigManager::getEntry(ss.str(),tag,""));
+		}
+
+		for(int i = 0; i < info->rightFiles.size(); i++)
+		{
+		    std::stringstream ss;
+		    ss << "transition" << i << "FileR";
+		    info->rightTransitionFiles.push_back(ConfigManager::getEntry(ss.str(),tag,""));
+		}
+	    }
+	    else
+	    {
+		 info->transitionType = NORMAL;
+	    }
 	}
 	else
 	{
@@ -303,17 +374,25 @@ void PanoViewLOD::createLoadMenu(std::string tagBase, std::string tag, SubMenu *
 
 PanoViewLOD::PanInfo * PanoViewLOD::loadInfoFromXML(std::string file)
 {
-    FILE * fp;
+    FILE * fp = NULL;
     mxml_node_t * tree;
-
     fp = fopen(file.c_str(), "r");
+
     if(!fp)
     {
-	fp = fopen((_defaultConfigDir + "/" + file).c_str(),"r");
-	if(!fp)
+	for(int i = 0; i < _defaultConfigDirs.size(); i++)
 	{
-	    return NULL;
+	    fp = fopen((_defaultConfigDirs[i] + "/" + file).c_str(),"r");
+	    if(fp)
+	    {
+		break;
+	    }
 	}
+    }
+
+    if(!fp)
+    {
+	return NULL;
     }
 
     tree = mxmlLoadFile(NULL, fp,

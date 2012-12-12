@@ -55,8 +55,10 @@ DSVirtualEarth::DSVirtualEarth(): mState(SET_NULL), mLongi(-117.17f), mLati(32.7
     setAllChildrenOff();
 
     /* transform matrix that flip shader world plain to vertical earth model */
-    mUnitspaceMat = Matrixd::inverse(Matrixd( 0,  0, -1,  0, -1,  0,  0,  0,		
-			     		      0,  1,  0,  0,  0,  0,  0,  1));
+    mUnitspaceMat = Matrixd::inverse(Matrixd( 0,  0, -1,  0, 
+                                             -1,  0,  0,  0,		
+			     		                      0,  1,  0,  0,  
+                                              0,  0,  0,  1));
 
     /* create instance of intersector */
     mDSIntersector = new DSIntersector();
@@ -74,30 +76,41 @@ DSVirtualEarth::DSVirtualEarth(): mState(SET_NULL), mLongi(-117.17f), mLati(32.7
 void DSVirtualEarth::setObjectEnabled(bool flag)
 {
     mObjEnabledFlag = flag;
-    mDSParticleSystemPtr->setEmitterEnabled(flag);
+//    mDSParticleSystemPtr->setEmitterEnabled(flag);
 
     /* set geometry switches when state is enabled / diabled */
-    if (flag) stateSwitchHandler();
+    if (flag) 
+    {
+        stateSwitchHandler();
+    }
     else 
     {
-	mState = SET_NULL;
-	this->setSingleChildOn(0);
-	mEclipticSwitch->setAllChildrenOff();
-	mTrackballController->setActive(false);
-	mDSIntersector->loadRootTargetNode(NULL, NULL);
+        mState = SET_NULL;
+        this->setSingleChildOn(0);
+        mEclipticSwitch->setAllChildrenOff();
+        mTrackballController->setActive(false);
+        mDSIntersector->loadRootTargetNode(NULL, NULL);
+        
     }
-    if (!mPATransFwd || !mPATransBwd) return;
+
+    if (!mPATransFwd || !mPATransBwd) 
+        return;
 
     AnimationPathCallback* animCallback = NULL;
     if (flag)
     {
-	mEquatorSwitch->setSingleChildOn(1);	//  child #1: Load Forward Animation
-	animCallback = dynamic_cast <AnimationPathCallback*> (mPATransFwd->getUpdateCallback());
-    } else {
-	mEquatorSwitch->setSingleChildOn(2);	//  child #2: Load Backward Animation
-	animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
+        mEquatorSwitch->setSingleChildOn(1);	//  child #1: Load Forward Animation
+        animCallback = dynamic_cast <AnimationPathCallback*> (mPATransFwd->getUpdateCallback());
+    } 
+    else 
+    {
+    /*    mEquatorSwitch->setSingleChildOn(2);	//  child #2: Load Backward Animation
+        animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
+        */
     }
-    if (animCallback) animCallback->reset();
+
+    if (animCallback) 
+        animCallback->reset();
 }
 
 
@@ -109,14 +122,14 @@ void DSVirtualEarth::switchToPrevSubState()
     /* prev state look up */
     switch (mState)
     {
-	case SET_NULL: mState = SET_DATE; break;
-	case SET_PIN:  mState = SET_NULL; break;
-	case SET_TIME: mState = SET_PIN;  break;
-	case SET_DATE: mState = SET_TIME; break;
-	default: break;
+        case SET_NULL: mState = SET_DATE; break;
+        case SET_PIN:  mState = SET_NULL; break;
+        case SET_TIME: mState = SET_PIN;  break;
+        case SET_DATE: mState = SET_TIME; break;
+        default: break;
     }
     stateSwitchHandler();
-    mDSParticleSystemPtr->setEmitterEnabled(false);
+//    mDSParticleSystemPtr->setEmitterEnabled(false);
 }
 
 
@@ -128,14 +141,14 @@ void DSVirtualEarth::switchToNextSubState()
     /* next state look up */
     switch (mState)
     {
-	case SET_NULL: mState = SET_PIN; break;
-	case SET_PIN:  mState = SET_TIME; break;
-	case SET_TIME: mState = SET_DATE;  break;
-	case SET_DATE: mState = SET_NULL; break;
-	default: break;
+        case SET_NULL: mState = SET_PIN; break;
+        case SET_PIN:  mState = SET_TIME; break;
+        case SET_TIME: mState = SET_DATE;  break;
+        case SET_DATE: mState = SET_NULL; break;
+        default: break;
     }
     stateSwitchHandler();
-    mDSParticleSystemPtr->setEmitterEnabled(false);
+//    mDSParticleSystemPtr->setEmitterEnabled(false);
 }
 
 
@@ -149,45 +162,45 @@ void DSVirtualEarth::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg::V
 {
     if (mDevPressedFlag)
     {
-	if (mDSIntersector->test(pointerOrg, pointerPos))
-	{
-	    /* use 'hitNormalWorld' as input to track ball controller in order to avoid shaking effects */
-	    Vec3 hitNormalWorld = mDSIntersector->getWorldHitNormal();
-	    mTrackballController->updateCtrPoint(hitNormalWorld);
-	    float offset = mTrackballController->getAngularOffset();
+        if (mDSIntersector->test(pointerOrg, pointerPos))
+        {
+            /* use 'hitNormalWorld' as input to track ball controller in order to avoid shaking effects */
+            Vec3 hitNormalWorld = mDSIntersector->getWorldHitNormal();
+            mTrackballController->updateCtrPoint(hitNormalWorld);
+            float offset = mTrackballController->getAngularOffset();
 
-	    /* translate offset value to time & date changes and apply them to earth object */
-	    if (mState == SET_PIN)
-	    {
-		/* convert world hit normal to localized vector before setting pin position */
-		Vec3 hitNormalLocal;
-		transcoordWorldToEquator(hitNormalWorld, hitNormalLocal);
+            /* translate offset value to time & date changes and apply them to earth object */
+            if (mState == SET_PIN)
+            {
+                /* convert world hit normal to localized vector before setting pin position */
+                Vec3 hitNormalLocal;
+                transcoordWorldToEquator(hitNormalWorld, hitNormalLocal);
 
-		setFixedPinPos(hitNormalLocal * ANIM_VIRTUAL_SPHERE_RADIUS);
-		cartesianToLongilati(hitNormalLocal * ANIM_VIRTUAL_SPHERE_RADIUS, mLongi, mLati);
-		setPinIndicatorPos(mLongi);
-		updateEstimatedTime();
-	    }
-	    else if (mState == SET_TIME)
-	    {
-		mTimeLapseSpeed =  offset * 12.f / M_PI;
-		mTime += mTimeLapseSpeed;
-		setEquatorPos(mTime);
-	    }
-	    else if (mState == SET_DATE)
-	    {
-		mDate += offset / (2 * M_PI);
-		setEclipticPos(mDate);
+                setFixedPinPos(hitNormalLocal * ANIM_VIRTUAL_SPHERE_RADIUS);
+                cartesianToLongilati(hitNormalLocal * ANIM_VIRTUAL_SPHERE_RADIUS, mLongi, mLati);
+                setPinIndicatorPos(mLongi);
+                updateEstimatedTime();
+            }
+            else if (mState == SET_TIME)
+            {
+                mTimeLapseSpeed =  offset * 12.f / M_PI;
+                mTime += mTimeLapseSpeed;
+                setEquatorPos(mTime);
+            }
+            else if (mState == SET_DATE)
+            {
+                mDate += offset / (2 * M_PI);
+                setEclipticPos(mDate);
 
-		updateEstimatedTime();
-	    }
-	}
-
-    } else {
-
-	/* update self rotation around earth axis */
-	mTime += mTimeLapseSpeed;
-	setEquatorPos(mTime);
+                updateEstimatedTime();
+            }
+        }
+    } 
+    else 
+    {
+        /* update self rotation around earth axis */
+        mTime += mTimeLapseSpeed;
+        setEquatorPos(mTime);
     } 
 }
 
@@ -203,17 +216,19 @@ bool DSVirtualEarth::inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg::
     /* switch on instant highlight geometries */
     if (mState == SET_TIME)
     {
-	mEquatorSwitch->setValue(0, true);
-	mEquatorSwitch->setValue(3, true);
+        mEquatorSwitch->setValue(0, true);
+        mEquatorSwitch->setValue(3, true);
     }
     else if (mState == SET_DATE)
     {
-	mEclipticSwitch->setValue(0, true);
-	mEclipticSwitch->setValue(1, true);
+        mEclipticSwitch->setValue(0, true);
+        mEclipticSwitch->setValue(1, true);
     }
 
-    if (mState == SET_NULL) return false;
-    else return true;
+    if (mState == SET_NULL)
+        return false;
+    else 
+        return true;
 }
 
 
@@ -226,17 +241,19 @@ bool DSVirtualEarth::inputDevReleaseEvent()
 
     if (mState == SET_TIME)
     {
-	mEquatorSwitch->setValue(0, false);
-	mEquatorSwitch->setValue(3, false);
+        mEquatorSwitch->setValue(0, false);
+        mEquatorSwitch->setValue(3, false);
     }
     else if (mState == SET_DATE)
     {
-	mEclipticSwitch->setValue(0, false);
-	mEclipticSwitch->setValue(1, false);
+        mEclipticSwitch->setValue(0, false);
+        mEclipticSwitch->setValue(1, false);
     }
 
-    if (mState == SET_NULL) return false;
-    else return true;
+    if (mState == SET_NULL) 
+        return false;
+    else 
+        return true;
 }
 
 
@@ -245,21 +262,24 @@ bool DSVirtualEarth::inputDevReleaseEvent()
 ***************************************************************/
 void DSVirtualEarth::updateVSParameters(const Vec3 &viewDir, const Vec3 &viewPos)
 {
-    if (!mVirtualScenicHandler) return;
+    if (!mVirtualScenicHandler) 
+    {
+        return;
+    }
 
-    /*  compute sun direction in world space: apply transforms resulted by viewer's orientation change, 
-	guarantee that from the viewer's position, the virtual earth is always half illuminated. */
+    // compute sun direction in world space: apply transforms resulted by viewer's orientation change, 
+	// guarantee that from the viewer's position, the virtual earth is always half illuminated.
     Matrixd baserotMat;
     baserotMat.makeRotate(Vec3(0, 1, 0), gDesignStateFrontVect);
     Vec3 sunDirWorld = (CAVEAnimationModeler::ANIMVirtualEarthLightDir()) * baserotMat;
     StateSet *stateset = mEarthGeode->getStateSet();
     if (stateset)
     {
-	Uniform *lightposUniform = stateset->getOrCreateUniform("LightPos", Uniform::FLOAT_VEC4);
-	lightposUniform->set(Vec4(sunDirWorld, 0.0));
+        Uniform *lightposUniform = stateset->getOrCreateUniform("LightPos", Uniform::FLOAT_VEC4);
+        lightposUniform->set(Vec4(sunDirWorld, 0.0));
     }
 
-    /* compute matrix combination that transforms a vector from shader space into world space */
+    // compute matrix combination that transforms a vector from shader space into world space
     Matrixd latiMat;
     latiMat.makeRotate(mLati / 180.f * M_PI, Vec3(0, 1, 0));
     Matrixd equatorMat;   
@@ -268,7 +288,7 @@ void DSVirtualEarth::updateVSParameters(const Vec3 &viewDir, const Vec3 &viewPos
     Matrixd eclipticMat = mEclipticTrans->getMatrix();
     Matrixd transMat = mUnitspaceMat * latiMat * equatorMat * tiltaxisMat * eclipticMat * baserotMat;
 
-    /* updata environment rendering by passing parameters to VirtualScenicHandler */
+    // updata environment rendering by passing parameters to VirtualScenicHandler
     mVirtualScenicHandler->updateVSParameters(transMat, sunDirWorld, viewDir, viewPos);
 }
 
@@ -279,24 +299,24 @@ void DSVirtualEarth::updateVSParameters(const Vec3 &viewDir, const Vec3 &viewPos
 * This function adapts geometries when new state is changed to
 * by setting children of the following two switches:
 *
-*				I-Test -0--1--2--3-
+*                       I-Test -0--1--2--3-
 * 'this' Switch
-* child #0: Ecliptic trans		Y  Y  Y  Y
-* child #1: Seasons map			N  N  N  Y
-* child #2: Ecliptic ruler		N  N  N  Y	
+* child #0: Ecliptic trans      Y  Y  Y  Y
+* child #1: Seasons map         N  N  N  Y
+* child #2: Ecliptic ruler      N  N  N  Y	
 *
 * mEclipticSwitch:
-* child #0: Wired geode 	  T3	-  -  -  -
-* child #1: Season indicator	  T3	-  -  -  -
-* child #2: Earth axis			N  N  Y  Y
-* child #3: Equator ruler		N  N  Y  N
+* child #0: Wired geode      T3	-  -  -  -
+* child #1: Season indicator T3	-  -  -  -
+* child #2: Earth axis          N  N  Y  Y
+* child #3: Equator ruler       N  N  Y  N
 *
 * mEquatorSwitch:
-* child #0: Wired geode	  	  T2	-  -  -  -
-* child #1: Forward animation		Y  Y  Y  Y
-* child #2: Backward animation		-  -  -  -
-* child #3: Fixed pin indicator	  T2	-  -  -  -
-* child #4: Fixed pin trans		N  Y  Y  Y
+* child #0: Wired geode          T2 -  -  -  -
+* child #1: Forward animation       Y  Y  Y  Y
+* child #2: Backward animation      -  -  -  -
+* child #3: Fixed pin indicator  T2 -  -  -  -
+* child #4: Fixed pin trans         N  Y  Y  Y
 *
 ***************************************************************/
 void DSVirtualEarth::stateSwitchHandler()
@@ -304,76 +324,74 @@ void DSVirtualEarth::stateSwitchHandler()
     /* switch on/off visible geometries' */
     switch (mState)
     {
-	case SET_NULL:
-	{
-	    this->setSingleChildOn(0);
-	    mEclipticSwitch->setAllChildrenOff();
-	    mEquatorSwitch->setSingleChildOn(1);
-	    break;
-	}
-	case SET_PIN:
-	{
-	    this->setSingleChildOn(0);
-	    mEclipticSwitch->setAllChildrenOff();
-	    mEquatorSwitch->setAllChildrenOff();
-	    mEquatorSwitch->setValue(1, true);
-	    mEquatorSwitch->setValue(4, true);
-	    break;
-	}
-	case SET_TIME:
-	{
-	    this->setSingleChildOn(0);
-	    mEclipticSwitch->setAllChildrenOff();
-	    mEclipticSwitch->setValue(2, true);
-	    mEclipticSwitch->setValue(3, true);
-	    mEquatorSwitch->setAllChildrenOff();
-	    mEquatorSwitch->setValue(1, true);
-	    mEquatorSwitch->setValue(4, true);
-	    break;
-	}
-	case SET_DATE:
-	{
-	    this->setAllChildrenOn();
-	    mEclipticSwitch->setAllChildrenOff();
-	    mEclipticSwitch->setValue(2, true);
-	    mEquatorSwitch->setAllChildrenOff();
-	    mEquatorSwitch->setValue(1, true);
-	    mEquatorSwitch->setValue(4, true);
-	    break;
-	}
-	default: break;
+        case SET_NULL:
+        {
+            this->setSingleChildOn(0);
+            mEclipticSwitch->setAllChildrenOff();
+            mEquatorSwitch->setSingleChildOn(1);
+            break;
+        }
+        case SET_PIN:
+        {
+            this->setSingleChildOn(0);
+            mEclipticSwitch->setAllChildrenOff();
+            mEquatorSwitch->setAllChildrenOff();
+            mEquatorSwitch->setValue(1, true);
+            mEquatorSwitch->setValue(4, true);
+            break;
+        }
+        case SET_TIME:
+        {
+            this->setSingleChildOn(0);
+            mEclipticSwitch->setAllChildrenOff();
+            mEclipticSwitch->setValue(2, true);
+            mEclipticSwitch->setValue(3, true);
+            mEquatorSwitch->setAllChildrenOff();
+            mEquatorSwitch->setValue(1, true);
+            mEquatorSwitch->setValue(4, true);
+            break;
+        }
+        case SET_DATE:
+        {
+            this->setAllChildrenOn();
+            mEclipticSwitch->setAllChildrenOff();
+            mEclipticSwitch->setValue(2, true);
+            mEquatorSwitch->setAllChildrenOff();
+            mEquatorSwitch->setValue(1, true);
+            mEquatorSwitch->setValue(4, true);
+            break;
+        }
+        default: break;
     }
 
     /* reset intersection properties & trackball axis */
     if (mState == SET_NULL)
     {
-	mDSIntersector->loadRootTargetNode(NULL, NULL);
+//        mDSIntersector->loadRootTargetNode(NULL, NULL);
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mEarthGeode);
 
-	mTrackballController->setActive(false);
+        mTrackballController->setActive(false);
     }
     else if (mState == SET_PIN)
     {
-	mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mEarthGeode);
-
-	mTrackballController->setActive(false);
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mEarthGeode);
+        mTrackballController->setActive(false);
     }
     else if (mState == SET_TIME)
     {
-	mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mEarthGeode);
-
-	Vec3 equatorAxis;
-	transcoordEquatorToWorld(Vec3(0, 0, 1), equatorAxis);
-	mTrackballController->setAxis(equatorAxis);
-	mTrackballController->setActive(true);
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mEarthGeode);
+        Vec3 equatorAxis;
+        transcoordEquatorToWorld(Vec3(0, 0, 1), equatorAxis);
+        mTrackballController->setAxis(equatorAxis);
+        mTrackballController->setActive(true);
     }
     else if (mState == SET_DATE)
     {
-	mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSeasonsMapGeode);
-
-	Vec3 eclipticAxis;
-	transcoordEclipticToWorld(Vec3(0, 0, 1), eclipticAxis);
-	mTrackballController->setAxis(eclipticAxis);
-	mTrackballController->setActive(true);
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSeasonsMapGeode);
+        Vec3 eclipticAxis;
+        transcoordEclipticToWorld(Vec3(0, 0, 1), eclipticAxis);
+        mTrackballController->setAxis(eclipticAxis);
+        mTrackballController->setActive(true);
     }
 }
 
@@ -408,6 +426,9 @@ void DSVirtualEarth::setFixedPinPos(const float &longi, const float &lati)
 }
 
 
+/***************************************************************
+* Function: setFixedPinPos()
+***************************************************************/
 void DSVirtualEarth::setFixedPinPos(const Vec3 &pinPos)
 {
     Matrixd transMat, rotMat;
@@ -536,27 +557,8 @@ void DSVirtualEarth::cartesianToLongilati(const Vec3 &coord, float &longi, float
 }
 
 
+void DSVirtualEarth::setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) 
+{
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+}
 

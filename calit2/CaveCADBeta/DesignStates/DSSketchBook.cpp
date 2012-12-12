@@ -25,7 +25,7 @@ DSSketchBook::DSSketchBook(): mPageIdx(0), mNumPages(1), mFlipStepsCount(0)
     mSignalAnimation = NULL;
     mSignalActivatedSwitch = NULL;
 
-    /* create instance of intersector */
+    // create instance of intersector
     mDSIntersector = new DSIntersector();
     mDSIntersector->loadRootTargetNode(NULL, NULL);
 
@@ -36,7 +36,10 @@ DSSketchBook::DSSketchBook(): mPageIdx(0), mNumPages(1), mFlipStepsCount(0)
 // Destructor
 DSSketchBook::~DSSketchBook()
 {
-    for (int i = 0; i < mNumPages; i++) delete mPageEntryArray[i];
+    for (int i = 0; i < mNumPages; i++) 
+    {
+        delete mPageEntryArray[i];
+    }
     delete mPageEntryArray;
 }
 
@@ -56,15 +59,19 @@ void DSSketchBook::setObjectEnabled(bool flag)
     AnimationPathCallback* animCallback = NULL;
     if (flag)
     {
-	setSingleChildOn(0);
-	mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPageEntryArray[mPageIdx]->mPageGeode);
-	animCallback = dynamic_cast <AnimationPathCallback*> (mPATransFwd->getUpdateCallback());
-    } else {
-	setSingleChildOn(1);
-	mDSIntersector->loadRootTargetNode(NULL, NULL);
-	animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
+        setSingleChildOn(0);
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPageEntryArray[mPageIdx]->mPageGeode);
+        animCallback = dynamic_cast <AnimationPathCallback*> (mPATransFwd->getUpdateCallback());
+    } 
+    else 
+    {
+
     }
-    if (animCallback) animCallback->reset();
+
+    if (animCallback) 
+    {
+        animCallback->reset();
+    }
 }
 
 
@@ -73,18 +80,30 @@ void DSSketchBook::setObjectEnabled(bool flag)
 ***************************************************************/
 void DSSketchBook::switchToPrevSubState()
 {
-    if (mFlipLockState != RELEASED) return;
-    else mFlipLockState = FLIP_UPWARD;
+    if (mFlipLockState != RELEASED) 
+    {
+        return;
+    }
+    else 
+    {
+        mFlipLockState = FLIP_UPWARD;
+    }
 
     int idxNext = mPageIdx + 1;
-    if (idxNext >= mNumPages) idxNext = 0;
+    if (idxNext >= mNumPages) 
+    {
+        idxNext = 0;
+    }
     mSignalActivatedSwitch = mPageEntryArray[idxNext]->mSwitch;
 
     mPageEntryArray[mPageIdx]->mSwitch->setSingleChildOn(0);
     mPageEntryArray[mPageIdx]->mFlipUpAnim->reset();
     mSignalAnimation = mPageEntryArray[mPageIdx]->mFlipUpAnim;
 
-    if (--mPageIdx < 0) mPageIdx = mNumPages - 1;
+    if (--mPageIdx < 0)
+    {
+        mPageIdx = mNumPages - 1;
+    }
 
     mPageEntryArray[mPageIdx]->mSwitch->setSingleChildOn(1);
     mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mPageEntryArray[mPageIdx]->mPageGeode);
@@ -96,15 +115,27 @@ void DSSketchBook::switchToPrevSubState()
 ***************************************************************/
 void DSSketchBook::switchToNextSubState()
 {
-    if (mFlipLockState != RELEASED) return;
-    else mFlipLockState = FLIP_DOWNWARD;
+    if (mFlipLockState != RELEASED) 
+    {
+        return;
+    }
+    else 
+    {
+        mFlipLockState = FLIP_DOWNWARD;
+    }
 
     mSignalActivatedSwitch = mPageEntryArray[mPageIdx]->mSwitch;
 
-    if (++mPageIdx >= mNumPages) mPageIdx = 0;
+    if (++mPageIdx >= mNumPages) 
+    {
+        mPageIdx = 0;
+    }
 
     int idxNext = mPageIdx + 1;
-    if (idxNext >= mNumPages) idxNext = 0;
+    if (idxNext >= mNumPages) 
+    {
+        idxNext = 0;
+    }
     mPageEntryArray[idxNext]->mSwitch->setSingleChildOn(0);
 
     mPageEntryArray[mPageIdx]->mSwitch->setSingleChildOn(1);
@@ -121,32 +152,36 @@ void DSSketchBook::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg::Vec
 {	
     if (mDevPressedFlag)
     {
-	if (!mReadyToPlaceFlag)
-	{
-	    mReadyToPlaceFlag = mDSIntersector->test(pointerOrg, pointerPos);
-	    if (mReadyToPlaceFlag) 
-		mVirtualScenicHandler->setFloorplanPreviewHighlight(true, mPageEntryArray[mPageIdx]->mPageGeode);
-	}
-	else 
-	{
-	    if (!mDSIntersector->test(pointerOrg, pointerPos))
-	    {
-		mVirtualScenicHandler->switchFloorplan(mPageIdx, VirtualScenicHandler::TRANSPARENT);
-	    } else {
-		mVirtualScenicHandler->switchFloorplan(mPageIdx, VirtualScenicHandler::INVISIBLE);
-	    }
-	}
+        if (!mReadyToPlaceFlag)
+        {
+            mReadyToPlaceFlag = mDSIntersector->test(pointerOrg, pointerPos);
+            if (mReadyToPlaceFlag) 
+            {
+                mVirtualScenicHandler->setFloorplanPreviewHighlight(true, mPageEntryArray[mPageIdx]->mPageGeode);
+            }
+        }
+        else 
+        {
+            if (!mDSIntersector->test(pointerOrg, pointerPos))
+            {
+                mVirtualScenicHandler->switchFloorplan(mPageIdx, VirtualScenicHandler::TRANSPARENT);
+            } 
+            else 
+            {
+                mVirtualScenicHandler->switchFloorplan(mPageIdx, VirtualScenicHandler::INVISIBLE);
+            }
+        }
     }
     else if (!mDevPressedFlag)
     {
-	if (mReadyToPlaceFlag)
-	{
-	    if (!mDSIntersector->test(pointerOrg, pointerPos))
-	    {
-		mVirtualScenicHandler->switchFloorplan(mPageIdx, VirtualScenicHandler::SOLID);
-	    }
-	}
-	mReadyToPlaceFlag = false;
+        if (mReadyToPlaceFlag)
+        {
+            if (!mDSIntersector->test(pointerOrg, pointerPos))
+            {
+                mVirtualScenicHandler->switchFloorplan(mPageIdx, VirtualScenicHandler::SOLID);
+            }
+        }
+        mReadyToPlaceFlag = false;
     }
 }
 
@@ -180,14 +215,14 @@ void DSSketchBook::update()
     if (mFlipLockState == RELEASED) return;
     if (mSignalAnimation && mSignalActivatedSwitch)
     {
-	float animTime = mSignalAnimation->getAnimationTime();
-	if (animTime >= 0.9)
-	{
-	    mSignalActivatedSwitch->setAllChildrenOff();
-	    mFlipLockState = RELEASED;
-	    mSignalAnimation = NULL;
-	    mSignalActivatedSwitch = NULL;
-	}
+        float animTime = mSignalAnimation->getAnimationTime();
+        if (animTime >= 0.9)
+        {
+            mSignalActivatedSwitch->setAllChildrenOff();
+            mFlipLockState = RELEASED;
+            mSignalAnimation = NULL;
+            mSignalActivatedSwitch = NULL;
+        }
     }
 }
 
@@ -202,20 +237,7 @@ void DSSketchBook::setScenicHandlerPtr(VirtualScenicHandler *vsHandlerPtr)
 }
 
 
+void DSSketchBook::setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) 
+{
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+}

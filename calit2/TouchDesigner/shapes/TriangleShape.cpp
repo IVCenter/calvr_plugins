@@ -11,22 +11,10 @@
 using namespace osg;
 using namespace std;
 
-
-
-
-
 TriangleShape::TriangleShape()
 {
-	name = "";
-	center = Vec3d(0,0,0);
-	length = 10;
-	color1 = Vec4d(0.6,0.2,0.8,0.3);		
-	type = 1;
-	genVer= true;
-	generate();
+	TriangleShape("def");
 }
-
-
 
 TriangleShape::~TriangleShape()
 {
@@ -35,10 +23,11 @@ TriangleShape::~TriangleShape()
 
 TriangleShape::TriangleShape(string _name)
 {
-	name = "";
+	setUseVertexBufferObjects(true);
+	name = _name;
 	center = Vec3d(0,0,0);
-	length = 10;
-	color1 = Vec4d(0.6,0.2,0.8,0.3);		
+	length = 100;
+	color1 = Vec4d(62/255, 180/255, 137/255,0.8);		
 	type = 1;
 	genVer= true;
 	generate();
@@ -48,6 +37,7 @@ TriangleShape::TriangleShape(string _name)
 // name, p1, p2, p3, color1, color2, color3
 TriangleShape::TriangleShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec4d& _c1, Vec4d& _c2, Vec4d& _c3)
 {
+	setUseVertexBufferObjects(true);
 	name = _name;
 	p1 = _p1;
 	p2 = _p2;
@@ -63,65 +53,28 @@ TriangleShape::TriangleShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, V
 // name, p1, p2, p3, color1, color2
 TriangleShape::TriangleShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec4d& _c1, Vec4d& _c2)
 {
-	name = _name;
-	p1 = _p1;
-	p2 = _p2;
-	p3 = _p3;
-	color1 = _c1;
-	color2 = _c2;
-	color3 = _c2;
-	type = 2;
-	genVer= false;
-	generate();
+	TriangleShape( _name, _p1, _p2, _p3, _c1, _c2, _c2);
 }
 
 // name, p1, p2, p3, color
 TriangleShape::TriangleShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3, Vec4d& _c1)
 {
-	name = _name;
-	p1 = _p1;
-	p2 = _p2;
-	p3 = _p3;
-	color1 = _c1;
-	color2 = _c1;
-	color3 = _c1;
-	type = 2;
-	genVer= false;
-	generate();
+	TriangleShape( _name, _p1, _p2, _p3, _c1, _c1, _c1);
 }
 
 
 // name, p1, p2, p3
 TriangleShape::TriangleShape(string _name, Vec3d& _p1, Vec3d& _p2, Vec3d& _p3)
 {
-	name = _name;
-	p1 = _p1;
-	p2 = _p2;
-	p3 = _p3;
-	color1 = Vec4d(0.6,0.2,0.8,0.3);
-	color2 = color1;
-	color3 = color1;
-	type = 2;
-	genVer= false;
-	generate();
+	Vec4d _c1(62/255, 180/255, 137/255,0.8);
+	TriangleShape( _name, _p1, _p2, _p3, _c1);
 }
 
-// name, center, length, color
-TriangleShape::TriangleShape(string _name, Vec3d& _center, int _length, Vec4d& _color)
-{
-	name = _name;
-	center = _center;
-	length = _length;
-	color1 = _color;	
-	color2 = _color;	
-	type = 1;
-	genVer= true;
-	generate();
-}
 
 // name, center, length, color, gradient
-TriangleShape::TriangleShape(string _name, Vec3d& _center, int _length, Vec4d& _color, Vec4d& _c2)
+TriangleShape::TriangleShape(string _name, Vec3d& _center, double _length, Vec4d& _color, Vec4d& _c2)
 {
+	setUseVertexBufferObjects(true);
 	name = _name;
 	center = _center;
 	length = _length;
@@ -132,18 +85,19 @@ TriangleShape::TriangleShape(string _name, Vec3d& _center, int _length, Vec4d& _
 	generate();
 }
 
+// name, center, length, color
+TriangleShape::TriangleShape(string _name, Vec3d& _center, double _length, Vec4d& _color)
+{
+	TriangleShape(_name,_center,_length,_color,_color);
+}
+
 
 // name, center, length
-TriangleShape::TriangleShape(string _name, Vec3d& _center, int _length)
+TriangleShape::TriangleShape(string _name, Vec3d& _center, double _length)
 {
-	name = _name;
-	center = _center;
-	length = _length;
-	color1 = Vec4d(0.6,0.2,0.8,0.3);
-	color2 = color1;		
-	type = 1;
-	genVer= true;
-	generate();
+	// nice minty green
+	Vec4d _color(62/255, 180/255, 137/255,0.8);
+	TriangleShape(_name,_center,_length,_color);
 }
 
 
@@ -152,12 +106,12 @@ void TriangleShape::setCenter(Vec3d& _center)
 	center = _center;
 }
 
-void TriangleShape::setLength(int _length)
+void TriangleShape::setLength(double _length)
 {
 	length = _length;
 }
 
-int TriangleShape::getLength()
+double TriangleShape::getLength()
 {
 	return length;
 }

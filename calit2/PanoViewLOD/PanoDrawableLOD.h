@@ -11,11 +11,41 @@
 #include <vector>
 #include <map>
 
+enum PanTransitionType
+{
+    NORMAL,
+    ZOOM,
+    MORPH
+};
+
+struct PanoDrawableInfo
+{
+    std::vector<std::string> leftEyeFiles;
+    std::map<int,std::vector<int> > leftFileIDs;
+    std::vector<std::string> rightEyeFiles;
+    std::map<int,std::vector<int> > rightFileIDs;
+    std::map<int,bool> updateDoneMap;
+
+    std::map<int,int> initMap;
+    OpenThreads::Mutex initLock;
+
+    std::map<int,OpenThreads::Mutex*> updateLock;
+
+    static std::map<int,sph_cache*> cacheMap;
+    static std::map<int,std::vector<std::pair<bool,sph_model*> > > currentModels;
+    static OpenThreads::Mutex staticLock;
+    std::map<int,sph_model*> modelMap;
+    std::map<int,sph_model*> transitionModelMap;
+
+    osg::Matrix fromTransitionTransform;
+    osg::Matrix toTransitionTransform;
+    float transitionFade;
+};
+
 class PanoDrawableLOD : public osg::Drawable
 {
     public:
-        PanoDrawableLOD(std::string leftEyeFile, std::string rightEyeFile, float radius, int mesh, int depth, int size, std::string vertFile = "sph-zoomer.vert", std::string fragFile = "sph-render.frag");
-        PanoDrawableLOD(std::vector<std::string> & leftEyeFiles, std::vector<std::string> & rightEyeFiles, float radius, int mesh, int depth, int size, std::string vertFile = "sph-zoomer.vert", std::string fragFile = "sph-render.frag");
+        PanoDrawableLOD(PanoDrawableInfo * pdi, float radius, int mesh, int depth, int size, std::string vertFile = "sph-zoomer.vert", std::string fragFile = "sph-render.frag");
         PanoDrawableLOD(const PanoDrawableLOD&,const osg::CopyOp& copyop=osg::CopyOp::SHALLOW_COPY);
         virtual ~PanoDrawableLOD();
  
@@ -23,6 +53,9 @@ class PanoDrawableLOD : public osg::Drawable
 
         void next();
         void previous();
+
+        void transitionDone();
+
         void setZoom(osg::Vec3 dir, float k);
         void setRadius(float radius) { _radius = radius; }
        
@@ -41,6 +74,25 @@ class PanoDrawableLOD : public osg::Drawable
 
         virtual void drawImplementation(osg::RenderInfo&) const;
 
+        void setTransitionType(PanTransitionType transitionType)
+        {
+            _transitionType = transitionType;
+        }
+
+        int getSetSize();
+        int getCurrentIndex()
+        {
+            return _currentIndex;
+        }
+        int getLastIndex()
+        {
+            return _lastIndex;
+        }
+        int getNextIndex()
+        {
+            return _nextIndex;
+        }
+
     protected:
         struct PanoUpdate : public osg::Drawable::UpdateCallback
         {
@@ -53,12 +105,7 @@ class PanoDrawableLOD : public osg::Drawable
             DRAW_RIGHT = 2
         };
 
-        std::vector<std::string> _leftEyeFiles;
-        static std::map<int,std::vector<int> > _leftFileIDs;
-        std::vector<std::string> _rightEyeFiles;
-        static std::map<int,std::vector<int> > _rightFileIDs;
-
-        static std::map<int,bool> _updateDoneMap;
+        PanoDrawableInfo * _pdi;
 
         float _radius;
         float _alpha;
@@ -75,15 +122,11 @@ class PanoDrawableLOD : public osg::Drawable
         float _currentFadeTime;
         mutable bool _badInit;
 
-        static std::map<int,int> _initMap;
-        static OpenThreads::Mutex _initLock;
-
-        static std::map<int,OpenThreads::Mutex*> _updateLock;
-
-        static std::map<int,sph_cache*> _cacheMap;
-        static std::map<int,sph_model*> _modelMap;
+        mutable bool _transitionActive;
 
         mutable osg::BoundingBox _boundingBox;
+
+        PanTransitionType _transitionType;
 };
 
 #endif

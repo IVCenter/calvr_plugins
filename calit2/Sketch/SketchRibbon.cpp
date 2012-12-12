@@ -127,7 +127,9 @@ bool SketchRibbon::buttonEvent(int type, const osg::Matrix & mat)
 	double timediff = (currentTime.tv_sec - _lastPointTime.tv_sec) + 
         ((currentTime.tv_usec - _lastPointTime.tv_usec) / 1000000.0);
 
-	if(timediff > 0.75 || (newpoint1 - _lastPoint1).length2() > 10.0 || (newpoint2 - _lastPoint2).length2() > 10.0)
+//	if(timediff > 0.75 || (newpoint1 - _lastPoint1).length2() > 10.0 || (newpoint2 - _lastPoint2).length2() > 10.0)
+	if(timediff > 0.75 || (newpoint1 - _lastPoint1).length2() > 0.001 || (newpoint2 - _lastPoint2).length2() > 0.001)
+
 	{
 	    _valid = true;
 

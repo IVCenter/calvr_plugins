@@ -13,7 +13,8 @@ using namespace std;
 using namespace osg;
 
 
-/* 'gSnappingUnitDist' is the default minimum sensible distance in CAVE geometry editting */
+// 'gSnappingUnitDist' is the default minimum sensible distance in CAVE geometry editing
+//const float CAVEGeodeEditWireframe::gSnappingUnitDist(0.06f);
 const float CAVEGeodeEditWireframe::gSnappingUnitDist(0.06f);
 
 
@@ -125,23 +126,23 @@ CAVEGeodeEditWireframeRotate::CAVEGeodeEditWireframeRotate()
     const int numSegs = 36;
     const float stepTheta = M_PI * 2 / numSegs;
 
-    /* create 72 vertices and normals in three planes */
+    // create 72 vertices and normals in three planes
     Vec3Array* vertices = new Vec3Array;
     Vec3Array* normals = new Vec3Array;
 
     for (int i = 0; i < numSegs; i++)
     {
-	float theta = stepTheta * i;
-	float cosT = cos(theta);
-	float sinT = sin(theta);
+        float theta = stepTheta * i;
+        float cosT = cos(theta);
+        float sinT = sin(theta);
 
-	vertices->push_back(Vec3(cosT, sinT, 0));	// vertex in XY plane
-	vertices->push_back(Vec3(cosT, 0, sinT));	// vertex in XZ plane
-	vertices->push_back(Vec3(0, cosT, sinT));	// vertex in YZ plane
+        vertices->push_back(Vec3(cosT, sinT, 0));	// vertex in XY plane
+        vertices->push_back(Vec3(cosT, 0, sinT));	// vertex in XZ plane
+        vertices->push_back(Vec3(0, cosT, sinT));	// vertex in YZ plane
 
-	normals->push_back(Vec3(cosT, sinT, 0));	// vertex in XY plane
-	normals->push_back(Vec3(cosT, 0, sinT));	// vertex in XZ plane
-	normals->push_back(Vec3(0, cosT, sinT));	// vertex in YZ plane
+        normals->push_back(Vec3(cosT, sinT, 0));	// vertex in XY plane
+        normals->push_back(Vec3(cosT, 0, sinT));	// vertex in XZ plane
+        normals->push_back(Vec3(0, cosT, sinT));	// vertex in YZ plane
     }
 
     DrawElementsUInt* xyPlaneEdges = new DrawElementsUInt(PrimitiveSet::LINE_STRIP, 0);
@@ -149,9 +150,9 @@ CAVEGeodeEditWireframeRotate::CAVEGeodeEditWireframeRotate()
     DrawElementsUInt* xzPlaneEdges = new DrawElementsUInt(PrimitiveSet::LINE_STRIP, 0);
     for (int i = 0; i < numSegs; i++)
     {
-	xyPlaneEdges->push_back(i * 3);
-	yzPlaneEdges->push_back(i * 3 + 1);
-	xzPlaneEdges->push_back(i * 3 + 2);
+        xyPlaneEdges->push_back(i * 3);
+        yzPlaneEdges->push_back(i * 3 + 1);
+        xzPlaneEdges->push_back(i * 3 + 2);
     }
     xyPlaneEdges->push_back(0);
     yzPlaneEdges->push_back(1);
@@ -192,36 +193,27 @@ CAVEGeodeEditGeometryWireframe::CAVEGeodeEditGeometryWireframe(CAVEGeometry *geo
     Array *geodeNormalArray = geometry->getNormalArray(); 
     Array *geodeTexcoordArray = geometry->getTexCoordArray(0);
 
-    /* clone the field of primitive sets, set all modes to 'LINE_STRIP' */
+    // clone the field of primitive sets, set all modes to 'LINE_STRIP'
     mCAVEGeometry = new CAVEGeometry(geometry);
     mCAVEGeometry->setPrimitiveSetModes(PrimitiveSet::LINE_STRIP);
     addDrawable(mCAVEGeometry);
 
-    /* check the valid status of all data field from 'CAVEGeodeShape', refer them to 'this' geode */
+    // check the valid status of all data field from 'CAVEGeodeShape', refer them to 'this' geode
     if (geodeVertexArray->getType() == Array::Vec3ArrayType)
-	mCAVEGeometry->setVertexArray((Vec3Array*) geodeVertexArray);
-    else return;
+        mCAVEGeometry->setVertexArray((Vec3Array*) geodeVertexArray);
+    else 
+        return;
 
     if (geodeNormalArray->getType() == Array::Vec3ArrayType)
-	mCAVEGeometry->setNormalArray((Vec3Array*) geodeNormalArray);
-    else return;
+        mCAVEGeometry->setNormalArray((Vec3Array*) geodeNormalArray);
+    else 
+        return;
 
     if (geodeTexcoordArray->getType() == Array::Vec2ArrayType)
         mCAVEGeometry->setTexCoordArray(0, (Vec2Array*) geodeTexcoordArray);
-    else return;
+    else 
+        return;
 
     mCAVEGeometry->setNormalBinding(Geometry::BIND_PER_VERTEX);
 }
-
-
-
-
-
-
-
-
-
-
-
-
 

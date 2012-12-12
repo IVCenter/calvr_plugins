@@ -35,19 +35,21 @@ class DesignStateBase: public osg::Switch
   public:
     DesignStateBase();
 
-    /* 'setObjectEnabled' is called when the current state is switched on/off,
-	triggered by left/right button or state toggle button event. */
+    // 'setObjectEnabled' is called when the current state is switched on/off,
+	// triggered by left/right button or state toggle button event.
     virtual void setObjectEnabled(bool flag) = 0;
 
-    /* switch functions for sub states, triggered by up/down buttons */
+    // switch functions for sub states, triggered by up/down buttons
     virtual void switchToPrevSubState() = 0;
     virtual void switchToNextSubState() = 0;
 
-    /* pointer responses and update functions: all functions are stemmed from 'preFrame' function */
+    // pointer responses and update functions: all functions are stemmed from 'preFrame' function
     virtual void inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) = 0;
     virtual bool inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos) = 0;
     virtual bool inputDevReleaseEvent() = 0;
     virtual void update() = 0;
+    bool test(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
+
 
     void setParticleSystemPtr(DesignStateParticleSystem *psPtr) { mDSParticleSystemPtr = psPtr; }
 
@@ -68,12 +70,16 @@ class DesignStateBase: public osg::Switch
     DesignStateBase *getUpperDesignState(const int &idx) { return mUpperDSVector.at(idx); }
     DesignStateBase *getLowerDesignState(const int &idx) { return mLowerDSVector.at(idx); }
 
-    /* Lock function: Setup flag that enables/disables switch between different design states */
+    // Lock function: Setup flag that enables/disables switch between different design states
     void setLocked(bool flag) { mLockedFlag = flag; }
     bool isLocked() { return mLockedFlag; }
+    bool isEnabled() { return mObjEnabledFlag; }
 
-    /* static member functions: called within 'DesignStateRenderer' where global information for
-	root groups are written, including group pointer, position and orientation. */
+    virtual void setHighlight(bool isHighlighted, const osg::Vec3 &pointerOrg, 
+        const osg::Vec3 &pointerPos) = 0;
+
+    // static member functions: called within 'DesignStateRenderer' where global information for
+	// root groups are written, including group pointer, position and orientation.
     static void setDesignStateRootGroupPtr(osg::Group *designStateRootGroup);
     static void setDesignObjectRootGroupPtr(osg::Group *designObjectRootGroup);
     static void setDesignStateCenterPos(const osg::Vec3 &pos);
@@ -84,17 +90,18 @@ class DesignStateBase: public osg::Switch
     DesignStateParticleSystem *mDSParticleSystemPtr;
     osg::PositionAttitudeTransform *mPATransFwd, *mPATransBwd;
 
-    /* for each design state, two intersectors are defined to perform intersection test with
-      'DesignState' root and 'DesignObject' root respectively*/
+    // for each design state, two intersectors are defined to perform intersection test with
+    // 'DesignState' root and 'DesignObject' root respectively
     DSIntersector *mDSIntersector;
     DOIntersector *mDOIntersector;
 
-    /* upper & lower design states vectors and switch callback functions */
+    // upper & lower design states vectors and switch callback functions
     DesignStateVector mUpperDSVector, mLowerDSVector;
     void (*mUpperDSSwitchFuncPtr)(const int &idx);
     void (*mLowerDSSwitchFuncPtr)(const int &idx);
 
-    /* static members: root group of design state & design object, position and front orientation of state sphere*/
+    // static members: root group of design state & design object, position
+    // and front orientation of state sphere
     static osg::Group *gDesignStateRootGroup;
     static osg::Group *gDesignObjectRootGroup;
     static osg::Vec3 gDesignStateCenterPos;
@@ -102,5 +109,5 @@ class DesignStateBase: public osg::Switch
     static osg::Matrixd gDesignStateBaseRotMat;
 };
 
-
 #endif
+

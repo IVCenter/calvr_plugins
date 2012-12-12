@@ -89,19 +89,11 @@ void DesignStateBase::setDesignStateFrontVect(const Vec3 &front)
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/***************************************************************
+* Function: test()
+***************************************************************/
+bool DesignStateBase::test(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos)
+{
+    return mDSIntersector->test(pointerOrg, pointerPos);
+}
 

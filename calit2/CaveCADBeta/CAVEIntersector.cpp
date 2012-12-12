@@ -40,9 +40,10 @@ CAVEIntersector::~CAVEIntersector()
 ***************************************************************/
 bool CAVEIntersector::test(const osg::Vec3 pointerOrg, const osg::Vec3 pointerPos)
 {
-    if (!mRootNode) return false;
+    if (!mRootNode) 
+        return false;
 
-    /* generate eye ray */
+    // generate eye ray
     LineSegment* eyeRay = new osg::LineSegment();
     Vec3 eyeVect = pointerPos - pointerOrg;
     eyeVect.normalize();
@@ -51,21 +52,25 @@ bool CAVEIntersector::test(const osg::Vec3 pointerOrg, const osg::Vec3 pointerPo
     osgUtil::IntersectVisitor findIntersectVisitor;
     osgUtil::IntersectVisitor::HitList hitList;
 
-    /* preform intersection test */
+    // preform intersection test
     findIntersectVisitor.addLineSegment(eyeRay);
     mRootNode->accept(findIntersectVisitor);  
     hitList = findIntersectVisitor.getHitList(eyeRay);
   
     if (!hitList.empty()) 
     {
-	mHit = hitList.front();
+        mHit = hitList.front();
 
-	/* Intersection test returns true value on the following two conditions:
-	   There is no target node, or hit node is the same as target node.
-	*/
-	if (!mTargetNode) return true;
-	Node *hitNode = dynamic_cast <Node*> (mHit.getGeode());
-	if (hitNode == mTargetNode) return true;
+        // Intersection test returns true value on the following two conditions:
+        // There is no target node, or hit node is the same as target node.
+
+        if (!mTargetNode) 
+            return true;
+
+        Node *hitNode = dynamic_cast <Node*> (mHit.getGeode());
+
+        if (hitNode == mTargetNode) 
+            return true;
     }
     return false;
 }
@@ -79,10 +84,4 @@ Node *CAVEIntersector::getHitNode()
     Node *hitNode = dynamic_cast <Node*> (mHit.getGeode());
     return hitNode;
 }
-
-
-
-
-
-
 

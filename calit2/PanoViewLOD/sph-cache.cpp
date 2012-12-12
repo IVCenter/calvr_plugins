@@ -507,7 +507,7 @@ void sph_set::draw()
 
 //------------------------------------------------------------------------------
 
-sph_cache::sph_cache(int n) : pages(n), waits(n), needs(32), loads(100)
+sph_cache::sph_cache(int n) : pages(n), waits(n), needs(32), loads()
 {
     GLuint b;
     int    i;

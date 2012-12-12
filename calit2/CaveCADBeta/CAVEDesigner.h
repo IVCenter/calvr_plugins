@@ -11,6 +11,8 @@
 // Open scene graph
 #include <osg/Group>
 
+#include <cvrKernel/PluginHelper.h>
+
 // local includes
 #include "DesignStateHandler.h"
 #include "DesignObjectHandler.h"
@@ -29,11 +31,12 @@ class CAVEDesigner
     void setActive(bool flag);
 
     void inputDevMoveEvent(const osg::Vec3 pointerOrg, const osg::Vec3 pointerPos);
-    bool inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 &pointerPos);
+    bool inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 &pointerPos, int button = 0);
     bool inputDevReleaseEvent();
     void update(const osg::Vec3 &viewDir, const osg::Vec3 &viewPos);
     void inputDevButtonEvent(const int keySym);
     void inputDevButtonEvent(const float spinX, const float spinY, const int btnStat);
+    void setSkydomeVisible(bool flag);
 
     DesignStateHandler *getStateHandler() { return mDesignStateHandler; }
     DesignObjectHandler *getObjectHandler() { return mDesignObjectHandler; }

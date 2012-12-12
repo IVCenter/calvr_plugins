@@ -68,32 +68,32 @@
  */
 class vvTokenizer
 {
-  public:
+public:
     enum TokenType                                /// token types
     {
-      VV_EOF,                                     ///< end of file has been read
-      VV_EOL,                                     ///< end of line has been read
-      VV_NUMBER,                                  ///< a number token has been read
-      VV_WORD,                                    ///< a word token has been read
-      VV_NOTHING                                  ///< no token has been read (used for initialization)
+        VV_EOF,                                     ///< end of file has been read
+        VV_EOL,                                     ///< end of line has been read
+        VV_NUMBER,                                  ///< a number token has been read
+        VV_WORD,                                    ///< a word token has been read
+        VV_NOTHING                                  ///< no token has been read (used for initialization)
     };
 
     enum CaseType                                 /// attributes for setCaseConversion()
     {
-      VV_NONE,                                    ///< no case conversion
-      VV_UPPER,                                   ///< force uppercase letters
-      VV_LOWER                                    ///< force lowercase letters
+        VV_NONE,                                    ///< no case conversion
+        VV_UPPER,                                   ///< force uppercase letters
+        VV_LOWER                                    ///< force lowercase letters
     };
 
-  private:
+private:
     static const int BLOCK_SIZE;                  ///< data block size to be read at once [bytes]
     static const int MAX_TOKEN_LEN;               ///< maximum token length [characters]
     enum CharacterType                            /// character types for character parsing
     {
-      VV_WHITESPACE = 0,                          ///< whitespace character: to be ignored, separates words and numbers
-      VV_DIGIT      = 1,                          ///< character numbers can start with
-      VV_ALPHA      = 2,                          ///< character words start with
-      VV_COMMENT    = 3                           ///< character comments start with
+        VV_WHITESPACE = 0,                          ///< whitespace character: to be ignored, separates words and numbers
+        VV_DIGIT      = 1,                          ///< character numbers can start with
+        VV_ALPHA      = 2,                          ///< character words start with
+        VV_COMMENT    = 3                           ///< character comments start with
     };
     FILE* fp;                                     ///< input file
     int   blockUsed;                              ///< number of data block bytes used
@@ -110,7 +110,7 @@ class vvTokenizer
     int  readChar();
     bool isNumberToken(char*);
 
-  public:
+public:
     TokenType ttype;                              ///< After a call to the <CODE>nextToken</CODE> method, this field
     ///< contains the type of the token just read.
     ///< Its value is one of the following:
