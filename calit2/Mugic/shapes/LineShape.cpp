@@ -10,7 +10,7 @@ LineShape::LineShape(std::string command, std::string name)
 {
     _type = SimpleShape::LINE;
 
-    setName(name);
+    BasicShape::setName(name);
     
     _vertices = new osg::Vec3Array(2);
     _colors = new osg::Vec4Array(2);
@@ -28,8 +28,9 @@ LineShape::LineShape(std::string command, std::string name)
     osg::StateSet* state = getOrCreateStateSet();
     osg::Material* mat = new osg::Material();
     state->setMode(GL_BLEND, osg::StateAttribute::ON);
-    mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
-    state->setAttributeAndModes(mat, osg::StateAttribute::ON);
+    state->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    //mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
+    //state->setAttributeAndModes(mat, osg::StateAttribute::ON);
     state->setAttribute(_width);
 }
 
@@ -52,6 +53,13 @@ void LineShape::setColor(osg::Vec4 c0, osg::Vec4 c1)
 {
     (*_colors)[0].set(c0[0], c0[1], c0[2], c0[3]);    
     (*_colors)[1].set(c1[0], c1[1], c1[2], c1[3]);    
+
+    if( (c0[3] != 1.0) || (c1[3] != 1.0))
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    else
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::DEFAULT_BIN);
+
+
 }
 
 void LineShape::update(std::string command)

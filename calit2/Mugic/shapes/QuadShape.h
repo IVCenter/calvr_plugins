@@ -1,12 +1,12 @@
 #ifndef _QUADSHAPE_
 #define _QUADSHAPE_
 
-#include "BasicShape.h"
+#include "GeometryShape.h"
 
 #include <osg/Geometry>
 #include <osg/Point>
 
-class QuadShape : public BasicShape
+class QuadShape : public GeometryShape
 {
 public:        
 

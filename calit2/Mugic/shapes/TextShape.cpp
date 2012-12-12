@@ -15,16 +15,30 @@ TextShape::TextShape(std::string command, std::string name)
     setColor(osg::Vec4(1.0, 1.0, 1.0, 1.0));
     setCharacterSize(10.0f);
     setFontResolution(40,40);
+    setFont ("/usr/share/fonts/liberation/LiberationSans-Regular.ttf");
     setAxisAlignment(osgText::TextBase::XZ_PLANE);
     setBackdropType(osgText::Text::NONE);
 
     osg::StateSet* state = osgText::Text::getOrCreateStateSet();
     state->setMode(GL_BLEND, osg::StateAttribute::ON);
-    osg::Material* mat = new osg::Material();
-    mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
-    state->setAttributeAndModes(mat, osg::StateAttribute::ON);
+    state->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    //osg::Material* mat = new osg::Material();
+    //mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
+    //state->setAttributeAndModes(mat, osg::StateAttribute::ON);
+   
+    setUpdateCallback(new TextUpdateCallback());
     
     update(command);
+}
+
+osg::Geode* TextShape::getParent()
+{
+    return osgText::Text::getParent(0)->asGeode();
+}
+
+osg::Drawable* TextShape::asDrawable()
+{
+    return dynamic_cast<osg::Drawable*>(this);
 }
 
 TextShape::~TextShape()
@@ -74,19 +88,13 @@ void TextShape::update()
     setPosition(p);
     setColor(c);
 
-    osgText::Text::dirtyBound();
-    osg::Geometry::setBound(osgText::Text::computeBound());
+    dirtyBound();
 
-    //if(c[3] != 1.0)
-    //    osgText::Text::getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-    //else
-    //    osgText::Text::getOrCreateStateSet()->setRenderingHint(osg::StateSet::OPAQUE_BIN);
+    if(c[3] != 1.0)
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    else
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::DEFAULT_BIN);
 
 	// reset flag
     _dirty = false;
-}
-
-void TextShape::drawImplementation(osg::RenderInfo &renderInfo) const
-{
-    osgText::Text::drawImplementation(renderInfo);    
 }

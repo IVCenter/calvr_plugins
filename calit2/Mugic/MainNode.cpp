@@ -7,12 +7,14 @@ void UpdateCallback::operator()(osg::Node* node, osg::NodeVisitor* nv)
     MainNode* mainNode = dynamic_cast<MainNode*> (node);
     if( mainNode )
     {
-        osg::Node* child = NULL;
-        while( mainNode->_additionNodes.get(child) )
-            mainNode->addChild(child);
-
-        while( mainNode->_removalNodes.get(child) )
-            mainNode->removeChild(child);
+        std::pair<osg::Node*, bool> element;
+        while( mainNode->_nodes.get(element) )
+        {
+            if( element.second == true ) // add node
+                mainNode->addChild(element.first);
+            else
+                mainNode->removeChild(element.first);
+        }
     }
 
     traverse(node,nv);
@@ -30,10 +32,10 @@ MainNode::~MainNode()
 
 void MainNode::addElement(osg::Node* node)
 {
-    _additionNodes.add(node);    
+    _nodes.add(std::pair<osg::Node* , bool> (node, true));    
 }
 
 void MainNode::removeElement(osg::Node* node)
 {
-    _removalNodes.add(node);    
+    _nodes.add(std::pair<osg::Node* , bool> (node, false));    
 }
