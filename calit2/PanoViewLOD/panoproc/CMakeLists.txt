@@ -1,3 +1,4 @@
+cmake_minimum_required(VERSION 2.8)
 SET(EXE_NAME panoproc)
 SET(PANOPROC_HEADERS
     error.hpp
