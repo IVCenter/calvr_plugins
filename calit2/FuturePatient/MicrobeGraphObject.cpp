@@ -1,6 +1,7 @@
 #include "MicrobeGraphObject.h"
 #include "GraphLayoutObject.h"
 
+#include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/ComController.h>
 #include <cvrInput/TrackingManager.h>
 #include <cvrUtil/OsgMath.h>
@@ -21,6 +22,8 @@ MicrobeGraphObject::MicrobeGraphObject(mysqlpp::Connection * conn, float width, 
 
     _width = width;
     _height = height;
+
+    _desktopMode = ConfigManager::getBool("Plugin.FuturePatient.DesktopMode",false);
 
     _graph = new GroupedBarGraph(width,height);
 }
@@ -123,7 +126,8 @@ bool MicrobeGraphObject::processEvent(InteractionEvent * ie)
 
 void MicrobeGraphObject::updateCallback(int handID, const osg::Matrix & mat)
 {
-    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER)
+    if((_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::MOUSE) ||
+	(!_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER))
     {
 	osg::Vec3 start, end(0,1000,0);
 	start = start * mat * getWorldToObjectMatrix();
@@ -143,7 +147,8 @@ void MicrobeGraphObject::updateCallback(int handID, const osg::Matrix & mat)
 
 void MicrobeGraphObject::leaveCallback(int handID)
 {
-    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER)
+    if((_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::MOUSE) ||
+	(!_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER))
     {
 	_graph->clearHoverText();
     }

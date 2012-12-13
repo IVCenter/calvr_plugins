@@ -1,12 +1,12 @@
 #ifndef _LINESHAPE_
 #define _LINESHAPE_
 
-#include "BasicShape.h"
+#include "GeometryShape.h"
 
 #include <osg/Geometry>
 #include <osg/LineWidth>
 
-class LineShape : public BasicShape
+class LineShape : public GeometryShape
 {
 public:        
 

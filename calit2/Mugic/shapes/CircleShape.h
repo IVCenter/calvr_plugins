@@ -1,11 +1,11 @@
 #ifndef _CIRCLESHAPE_
 #define _CIRCLESHAPE_
 
-#include "BasicShape.h"
+#include "GeometryShape.h"
 
 #include <osg/Geometry>
 
-class CircleShape : public BasicShape
+class CircleShape : public GeometryShape
 {
 public:        
 

@@ -17,8 +17,7 @@ class MainNode : public osg::Group
     friend class UpdateCallback;
 
     private:
-        ThreadQueue<osg::Node* > _additionNodes;
-        ThreadQueue<osg::Node* > _removalNodes;
+        ThreadQueue< std::pair<osg::Node* , bool> > _nodes;
 
     public:
         MainNode();

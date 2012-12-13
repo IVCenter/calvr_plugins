@@ -13,10 +13,22 @@ public:
     TextShape(std::string command = "", std::string name = "");
 	virtual ~TextShape();
     void update(std::string);
+    osg::Geode* getParent();
+    osg::Drawable* asDrawable();
+
+    struct TextUpdateCallback : public osg::Drawable::UpdateCallback
+    {
+        virtual void update(osg::NodeVisitor*, osg::Drawable* drawable)
+        {
+            TextShape* shape = dynamic_cast<TextShape*> (drawable);
+            if( shape )
+                shape->update();
+        }
+    };
+
 
 protected:
     TextShape();
-    virtual void drawImplementation(osg::RenderInfo &renderInfo) const;
     void update();
 };
 

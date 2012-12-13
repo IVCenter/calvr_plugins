@@ -34,7 +34,13 @@ DSGeometryCreator::DSGeometryCreator(): mShapeSwitchIdx(0), mNumShapeSwitches(0)
 
     prevGeode = NULL;
 
-    mEditorOffset = osg::Vec3(1,0,1);
+    int x, y, z;
+    std::string path = "Plugin.CaveCADBeta.GeometryEditorOffset";
+    x = cvr::ConfigManager::getInt("x", path, 1);
+    y = cvr::ConfigManager::getInt("y", path, 0);
+    z = cvr::ConfigManager::getInt("z", path, 1);
+
+    mEditorOffset = osg::Vec3(x,y,z);//1,0,1);
 }
 
 // Destructor

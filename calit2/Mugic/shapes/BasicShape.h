@@ -11,38 +11,26 @@ namespace SimpleShape
 {
     enum ShapeType {POINT, TRIANGLE, QUAD, RECTANGLE, CIRCLE, LINE, TEXT};
 }
-    
-class BasicShape : public osg::Geometry
+
+class BasicShape
 {
     public:        
 
         virtual void update(std::string command) = 0;
+        virtual osg::Geode* getParent() = 0;
+        virtual osg::Drawable* asDrawable() = 0;
 	    SimpleShape::ShapeType getType() { return _type; };
         std::string getName();
         bool isDirty();
-
-        struct ShapeUpdateCallback : public osg::Drawable::UpdateCallback
-        {
-            virtual void update(osg::NodeVisitor*, osg::Drawable* drawable)
-            {
-                BasicShape* shape = dynamic_cast<BasicShape*> (drawable);
-                if( shape )
-                    shape->update();
-            }
-        };
-
 
     protected:
         BasicShape();
 	    virtual ~BasicShape();
 	    SimpleShape::ShapeType _type;
-        osg::Vec3Array* _vertices;
-        osg::Vec4Array* _colors;
 
         virtual void update() = 0;
 
         // counter used to naming objects
-        static unsigned int counter;
         bool _dirty;
         std::string _name;
         mutable OpenThreads::Mutex _mutex;

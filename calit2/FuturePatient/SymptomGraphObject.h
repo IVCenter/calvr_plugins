@@ -37,9 +37,12 @@ class SymptomGraphObject : public LayoutTypeObject, public TimeRangeObject
 
         TimeRangeDataGraph * _graph;
 
+        std::map<int,std::string> _intensityLabels;
+
         float _width;
         float _height;
 
+        bool _desktopMode;
 };
 
 #endif

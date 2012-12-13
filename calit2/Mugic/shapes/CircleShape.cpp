@@ -11,7 +11,7 @@ CircleShape::CircleShape(std::string command, std::string name)
 {
     _type = SimpleShape::CIRCLE;
 
-    setName(name);
+    BasicShape::setName(name);
     _numFaces = 20;
     
     _vertices = new osg::Vec3Array(_numFaces + 2);
@@ -28,9 +28,10 @@ CircleShape::CircleShape(std::string command, std::string name)
 
     osg::StateSet* state = getOrCreateStateSet();
     state->setMode(GL_BLEND, osg::StateAttribute::ON);
-    osg::Material* mat = new osg::Material();
-    mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
-    state->setAttributeAndModes(mat, osg::StateAttribute::ON);
+    state->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    //osg::Material* mat = new osg::Material();
+    //mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
+    //state->setAttributeAndModes(mat, osg::StateAttribute::ON);
 }
 
 CircleShape::~CircleShape()
@@ -64,10 +65,10 @@ void CircleShape::setColor(osg::Vec4 c0, osg::Vec4 c1)
         (*_colors)[i].set(c1[0], c1[1], c1[2], c1[3]);
     }
 
-    //if( (c0[3] != 1.0) || (c1[3] != 1.0))
-    //    getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-    //else
-    //    getOrCreateStateSet()->setRenderingHint(osg::StateSet::OPAQUE_BIN);
+    if( (c0[3] != 1.0) || (c1[3] != 1.0))
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    else
+        getOrCreateStateSet()->setRenderingHint(osg::StateSet::DEFAULT_BIN);
 }
 
 void CircleShape::update(std::string command)
