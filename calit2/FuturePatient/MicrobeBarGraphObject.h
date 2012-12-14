@@ -52,6 +52,8 @@ class MicrobeBarGraphObject : public LayoutTypeObject, public MicrobeSelectObjec
 
         static Microbe* _microbeList;
         static int _microbeCount;
+
+        bool _desktopMode;
 };
 
 #endif

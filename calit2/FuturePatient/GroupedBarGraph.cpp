@@ -187,78 +187,129 @@ void GroupedBarGraph::setHover(osg::Vec3 intersect)
 
     bool hoverSet = false;
 
-    float barLeft = graphLeft + (barWidth / 2.0) - halfWidth;
-    float barRight = graphLeft + (barWidth / 2.0) + halfWidth;
-    for(int i = 0; i < _groupOrder.size(); ++i)
-    {
-	std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it;
-	if((it = _data.find(_groupOrder[i])) == _data.end())
-	{
-	    continue;
-	}
+    float groupTop = graphTop + _height * _topPaddingMult * _groupLabelMult;
+    float groupBottom = graphTop;
 
-	bool breakOut = false;
-	for(int j = 0; j < it->second.size(); ++j)
-	{ 
-	    if(intersect.x() < barLeft)
+    float targetHeight = 150.0;
+
+    if(intersect.z() > groupBottom && intersect.z() <= groupTop)
+    {
+	float myLeft = graphLeft;
+	for(int i = 0; i < _groupOrder.size(); ++i)
+	{
+	    std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it;
+	    if((it = _data.find(_groupOrder[i])) == _data.end())
 	    {
-		breakOut = true;
+		continue;
+	    }
+
+	    float myRight = myLeft + ((float)it->second.size()) * barWidth;
+
+	    if(intersect.x() < myLeft)
+	    {
 		break;
 	    }
 
-	    if(intersect.x() < barRight)
+	    if(intersect.x() <= myRight)
 	    {
-		breakOut = true;
-
-		if(intersect.z() <= graphTop && intersect.z() >= graphBottom)
+		float totalValue = 0.0;
+		for(int j = 0; j < it->second.size(); ++j)
 		{
-		    float hitValue = (intersect.z() - graphBottom) / (graphTop - graphBottom);
-		    hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
-		    hitValue += log10(_minDisplayRange);
-		    hitValue = pow(10.0,hitValue);
-
-		    if(hitValue <= it->second[j].second)
-		    {
-			std::stringstream hoverss;
-			hoverss << it->first << std::endl;
-			hoverss << it->second[j].first << std::endl;
-			hoverss << "Value: " << it->second[j].second << " " << _axisUnits;
-
-			_hoverText->setCharacterSize(1.0);
-			_hoverText->setText(hoverss.str());
-			_hoverText->setAlignment(osgText::Text::LEFT_TOP);
-			osg::BoundingBox bb = _hoverText->getBound();
-			//TODO: don't hardcode this
-			float csize = 150.0 / (bb.zMax() - bb.zMin());
-			_hoverText->setCharacterSize(csize);
-			_hoverText->setPosition(osg::Vec3(intersect.x(),-2.5,intersect.z()));
-
-			float bgheight = (bb.zMax() - bb.zMin()) * csize;
-			float bgwidth = (bb.xMax() - bb.xMin()) * csize;
-			osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(_hoverBGGeom->getVertexArray());
-			if(verts)
-			{
-			    //std::cerr << "Setting bg x: " << intersect.x() << " z: " << intersect.z() << " width: " << bgwidth << " height: " << bgheight << std::endl;
-			    verts->at(0) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z()-bgheight);
-			    verts->at(1) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z());
-			    verts->at(2) = osg::Vec3(intersect.x(),-2,intersect.z());
-			    verts->at(3) = osg::Vec3(intersect.x(),-2,intersect.z()-bgheight);
-			    verts->dirty();
-			    _hoverBGGeom->dirtyDisplayList();
-			}
-
-			hoverSet = true;
-		    }
+		    totalValue += it->second[j].second;
 		}
+
+		std::stringstream hoverss;
+		hoverss << it->first << std::endl;
+		hoverss << "Total Value: " << totalValue << " " << _axisUnits;
+
+		_hoverText->setText(hoverss.str());
+
+		hoverSet = true;
+		targetHeight *= 0.66;
+		break;
+	    }
+	    
+	    myLeft = myRight;
+	}
+    }
+    else if(intersect.z() <= graphTop && intersect.z() >= graphBottom)
+    {
+	float barLeft = graphLeft + (barWidth / 2.0) - halfWidth;
+	float barRight = graphLeft + (barWidth / 2.0) + halfWidth;
+	for(int i = 0; i < _groupOrder.size(); ++i)
+	{
+	    std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it;
+	    if((it = _data.find(_groupOrder[i])) == _data.end())
+	    {
+		continue;
 	    }
 
-	    barLeft += barWidth;
-	    barRight += barWidth;
-	}
+	    bool breakOut = false;
+	    for(int j = 0; j < it->second.size(); ++j)
+	    { 
+		if(intersect.x() < barLeft)
+		{
+		    breakOut = true;
+		    break;
+		}
 
-	if(breakOut)
+		if(intersect.x() < barRight)
+		{
+		    breakOut = true;
+
+		    if(intersect.z() <= graphTop && intersect.z() >= graphBottom)
+		    {
+			float hitValue = (intersect.z() - graphBottom) / (graphTop - graphBottom);
+			hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
+			hitValue += log10(_minDisplayRange);
+			hitValue = pow(10.0,hitValue);
+
+			if(hitValue <= it->second[j].second)
+			{
+			    std::stringstream hoverss;
+			    hoverss << it->first << std::endl;
+			    hoverss << it->second[j].first << std::endl;
+			    hoverss << "Value: " << it->second[j].second << " " << _axisUnits;
+
+			    _hoverText->setText(hoverss.str());
+
+			    hoverSet = true;
+			}
+		    }
+		}
+
+		barLeft += barWidth;
+		barRight += barWidth;
+	    }
+
+	    if(breakOut)
+	    {
+		break;
+	    }
+	}
+    }
+
+    if(hoverSet)
+    {
+	_hoverText->setCharacterSize(1.0);
+	_hoverText->setAlignment(osgText::Text::LEFT_TOP);
+	osg::BoundingBox bb = _hoverText->getBound();
+	float csize = targetHeight / (bb.zMax() - bb.zMin());
+	_hoverText->setCharacterSize(csize);
+	_hoverText->setPosition(osg::Vec3(intersect.x(),-2.5,intersect.z()));
+
+	float bgheight = (bb.zMax() - bb.zMin()) * csize;
+	float bgwidth = (bb.xMax() - bb.xMin()) * csize;
+	osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(_hoverBGGeom->getVertexArray());
+	if(verts)
 	{
-	    break;
+	    //std::cerr << "Setting bg x: " << intersect.x() << " z: " << intersect.z() << " width: " << bgwidth << " height: " << bgheight << std::endl;
+	    verts->at(0) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z()-bgheight);
+	    verts->at(1) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z());
+	    verts->at(2) = osg::Vec3(intersect.x(),-2,intersect.z());
+	    verts->at(3) = osg::Vec3(intersect.x(),-2,intersect.z()-bgheight);
+	    verts->dirty();
+	    _hoverBGGeom->dirtyDisplayList();
 	}
     }
 

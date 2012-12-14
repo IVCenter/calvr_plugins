@@ -25,7 +25,12 @@ class TimeRangeDataGraph
         bool getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point);
         void setGLScale(float scale);
 
-        void addGraph(std::string name, std::vector<std::pair<time_t,time_t> > & rangeList);
+        void addGraph(std::string name, std::vector<std::pair<time_t,time_t> > & rangeList, std::vector<int> & valueList, int maxValue);
+
+        void setValueLabelMap(std::map<int,std::string> & labelMap)
+        {
+            _labelMap = labelMap;
+        }
 
         void setDisplayRange(time_t & start, time_t & end);
         void getDisplayRange(time_t & start, time_t & end);
@@ -42,7 +47,10 @@ class TimeRangeDataGraph
         {
             std::string name;
             std::vector<std::pair<time_t,time_t> > ranges;
+            std::vector<int> values;
+            int maxValue;
             osg::ref_ptr<osg::Geometry> barGeometry;
+            osg::ref_ptr<osg::Geometry> barOutlineGeometry;
         };
 
         float calcPadding();
@@ -62,6 +70,7 @@ class TimeRangeDataGraph
         float _barHeight, _barPadding;
 
         std::vector<RangeDataInfo *> _graphList;
+        std::map<int,std::string> _labelMap;
 
         time_t _displayMin;
         time_t _displayMax;

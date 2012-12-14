@@ -1,11 +1,11 @@
 #ifndef _RECTANGLESHAPE_
 #define _RECTANGLESHAPE_
 
-#include "BasicShape.h"
+#include "GeometryShape.h"
 
 #include <osg/Geometry>
 
-class RectangleShape : public BasicShape
+class RectangleShape : public GeometryShape
 {
 public:        
 

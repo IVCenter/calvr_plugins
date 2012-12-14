@@ -11,7 +11,7 @@ CircleShape::CircleShape(std::string command, std::string name)
 {
     _type = SimpleShape::CIRCLE;
 
-    setName(name);
+    BasicShape::setName(name);
     _numFaces = 20;
     
     _vertices = new osg::Vec3Array(_numFaces + 2);
