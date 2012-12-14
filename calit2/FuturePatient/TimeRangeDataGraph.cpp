@@ -48,6 +48,10 @@ TimeRangeDataGraph::TimeRangeDataGraph()
     makeHover();
     makeBar();
 
+    _graphGeode->getOrCreateStateSet()->setAttributeAndModes(_barLineWidth,osg::StateAttribute::ON);
+    _graphGeode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    _graphGeode->getOrCreateStateSet()->setMode(GL_BLEND,osg::StateAttribute::ON);
+
     update();
 }
 
@@ -144,7 +148,7 @@ void TimeRangeDataGraph::setGLScale(float scale)
     update();
 }
 
-void TimeRangeDataGraph::addGraph(std::string name, std::vector<std::pair<time_t,time_t> > & rangeList)
+void TimeRangeDataGraph::addGraph(std::string name, std::vector<std::pair<time_t,time_t> > & rangeList, std::vector<int> & valueList, int maxValue)
 {
     if(!rangeList.size())
     {
@@ -192,8 +196,12 @@ void TimeRangeDataGraph::addGraph(std::string name, std::vector<std::pair<time_t
     RangeDataInfo * rdi = new RangeDataInfo;
     rdi->name = name;
     rdi->ranges = rangeList;
+    rdi->values = valueList;
+    rdi->maxValue = maxValue;
     rdi->barGeometry = new osg::Geometry();
+    rdi->barOutlineGeometry = new osg::Geometry();
     _graphGeode->addDrawable(rdi->barGeometry);
+    _graphGeode->addDrawable(rdi->barOutlineGeometry);
 
     _graphList.push_back(rdi);
 
@@ -255,8 +263,11 @@ void TimeRangeDataGraph::setHover(osg::Vec3 intersect)
 	    {
 		if(intersectTime >= _graphList[i]->ranges[j].first && intersectTime <= _graphList[i]->ranges[j].second)
 		{
-		    graph = i;
-		    index = j;
+		    if(_graphList[i]->values[j] != 0)
+		    {
+			graph = i;
+			index = j;
+		    }
 		    break;
 		}
 	    }
@@ -277,6 +288,14 @@ void TimeRangeDataGraph::setHover(osg::Vec3 intersect)
 	ss << _graphList[graph]->name << std::endl;
 	ss << "Start: " << ctime(&_graphList[graph]->ranges[index].first);
 	ss << "End: " << ctime(&_graphList[graph]->ranges[index].second);
+	if(_labelMap.find(_graphList[graph]->values[index]) != _labelMap.end())
+	{
+	    ss << "Value: " << _labelMap[_graphList[graph]->values[index]];
+	}
+	else
+	{
+	    ss << "Value: " << _graphList[graph]->values[index];
+	}
 
 	_hoverText->setCharacterSize(1.0);
 	_hoverText->setText(ss.str());
@@ -333,19 +352,58 @@ float TimeRangeDataGraph::calcPadding()
 
 void TimeRangeDataGraph::initGeometry(RangeDataInfo * rdi)
 {
-    rdi->barGeometry->setUseDisplayList(false);
-    rdi->barGeometry->setUseVertexBufferObjects(true);
+    int validCount = 0;
+    for(int i = 0; i < rdi->values.size(); ++i)
+    {
+	if(rdi->values[i] != 0)
+	{
+	    validCount++;
+	}
+    }
+
+    rdi->barOutlineGeometry->setUseDisplayList(false);
+    rdi->barOutlineGeometry->setUseVertexBufferObjects(true);
 
     osg::Vec3Array * verts = new osg::Vec3Array(4*rdi->ranges.size());
     osg::Vec4Array * colors = new osg::Vec4Array(1);
 
     colors->at(0) = osg::Vec4(1.0,1.0,1.0,1.0);
 
+    rdi->barOutlineGeometry->setVertexArray(verts);
+    rdi->barOutlineGeometry->setColorArray(colors);
+    rdi->barOutlineGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+
+    rdi->barOutlineGeometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES,0,4*rdi->ranges.size()));
+
+    rdi->barGeometry->setUseDisplayList(false);
+    rdi->barGeometry->setUseVertexBufferObjects(true);
+
+    verts = new osg::Vec3Array(4*validCount);
+    colors = new osg::Vec4Array(4*validCount);
+
     rdi->barGeometry->setVertexArray(verts);
     rdi->barGeometry->setColorArray(colors);
-    rdi->barGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+    rdi->barGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
 
-    rdi->barGeometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4*rdi->ranges.size()));
+    rdi->barGeometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4*validCount));
+
+    int colorIndex = 0;
+    for(int i = 0; i < rdi->values.size(); ++i)
+    {
+	if(rdi->values[i] == 0)
+	{
+	    continue;
+	}
+    
+	float alpha = rdi->values[i] / ((float)rdi->maxValue);
+	colors->at(colorIndex).w() = alpha;
+	colors->at(colorIndex+1).w() = alpha;
+	colors->at(colorIndex+2).w() = alpha;
+	colors->at(colorIndex+3).w() = alpha;
+	
+	colorIndex += 4;
+    }
+    colors->dirty();
 }
 
 void TimeRangeDataGraph::makeBG()
@@ -416,6 +474,8 @@ void TimeRangeDataGraph::makeBar()
 
     _barLineWidth = new osg::LineWidth();
     _barGeode->getOrCreateStateSet()->setAttributeAndModes(_barLineWidth,osg::StateAttribute::ON);
+    _barGeode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    _barGeode->getOrCreateStateSet()->setMode(GL_BLEND,osg::StateAttribute::ON);
 }
 
 void TimeRangeDataGraph::update()
@@ -454,10 +514,23 @@ void TimeRangeDataGraph::updateGraphs()
     //update bar colors
     for(int i = 0; i < _graphList.size(); ++i)
     {
-	osg::Vec4Array * colors = dynamic_cast<osg::Vec4Array*>(_graphList[i]->barGeometry->getColorArray());
+	osg::Vec4Array * colors = dynamic_cast<osg::Vec4Array*>(_graphList[i]->barOutlineGeometry->getColorArray());
+	osg::Vec4 myColor = ColorGenerator::makeColor(i,_graphList.size());
 	if(colors)
 	{
-	    colors->at(0) = ColorGenerator::makeColor(i,_graphList.size());
+	    colors->at(0) = myColor;
+	    colors->dirty();
+	}
+
+	colors = dynamic_cast<osg::Vec4Array*>(_graphList[i]->barGeometry->getColorArray());
+	if(colors)
+	{
+	    for(int j = 0; j < colors->size(); ++j)
+	    {
+		colors->at(j).x() = myColor.x();
+		colors->at(j).y() = myColor.y();
+		colors->at(j).z() = myColor.z();
+	    }
 	    colors->dirty();
 	}
     }
@@ -466,11 +539,13 @@ void TimeRangeDataGraph::updateGraphs()
     float myTop = _graphTop;
     for(int i = 0; i < _graphList.size(); ++i)
     {
-
 	osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(_graphList[i]->barGeometry->getVertexArray());
-	if(verts)
+	osg::Vec3Array * outlineVerts = dynamic_cast<osg::Vec3Array*>(_graphList[i]->barOutlineGeometry->getVertexArray());
+
+	if(verts && outlineVerts)
 	{
 	    int index = 0;
+	    int validIndex = 0;
 	    for(int j = 0; j < _graphList[i]->ranges.size(); ++j)
 	    {
 		time_t start = _graphList[i]->ranges[j].first;
@@ -497,22 +572,41 @@ void TimeRangeDataGraph::updateGraphs()
 		{
 		    float barLeft = (((double)(start - _displayMin)) / ((double)(_displayMax-_displayMin))) * (_graphRight-_graphLeft) + _graphLeft;
 		    float barRight = (((double)(end - _displayMin)) / ((double)(_displayMax-_displayMin))) * (_graphRight-_graphLeft) + _graphLeft;
-		    verts->at(index) = osg::Vec3(barRight,0,myTop);
-		    verts->at(index+1) = osg::Vec3(barLeft,0,myTop);
-		    verts->at(index+2) = osg::Vec3(barLeft,0,myTop-_barHeight);
-		    verts->at(index+3) = osg::Vec3(barRight,0,myTop-_barHeight);
+		    outlineVerts->at(index) = osg::Vec3(barRight,-0.5,myTop);
+		    outlineVerts->at(index+1) = osg::Vec3(barLeft,-0.5,myTop);
+		    outlineVerts->at(index+2) = osg::Vec3(barLeft,-0.5,myTop-_barHeight);
+		    outlineVerts->at(index+3) = osg::Vec3(barRight,-0.5,myTop-_barHeight);
+
+		    if(_graphList[i]->values[j] != 0)
+		    {
+			verts->at(validIndex) = osg::Vec3(barRight,0,myTop);
+			verts->at(validIndex+1) = osg::Vec3(barLeft,0,myTop);
+			verts->at(validIndex+2) = osg::Vec3(barLeft,0,myTop-_barHeight);
+			verts->at(validIndex+3) = osg::Vec3(barRight,0,myTop-_barHeight);
+			validIndex += 4;
+		    }
 		}
 		else
 		{
-		    verts->at(index) = osg::Vec3(0,0,0);
-		    verts->at(index+1) = osg::Vec3(0,0,0);
-		    verts->at(index+2) = osg::Vec3(0,0,0);
-		    verts->at(index+3) = osg::Vec3(0,0,0);
+		    outlineVerts->at(index) = osg::Vec3(0,0,0);
+		    outlineVerts->at(index+1) = osg::Vec3(0,0,0);
+		    outlineVerts->at(index+2) = osg::Vec3(0,0,0);
+		    outlineVerts->at(index+3) = osg::Vec3(0,0,0);
+
+		    if(_graphList[i]->values[j] != 0)
+		    {
+			verts->at(validIndex) = osg::Vec3(0,0,0);
+			verts->at(validIndex+1) = osg::Vec3(0,0,0);
+			verts->at(validIndex+2) = osg::Vec3(0,0,0);
+			verts->at(validIndex+3) = osg::Vec3(0,0,0);
+			validIndex += 4;
+		    }
 		}
 
 		index += 4;
 	    }
 	    verts->dirty();
+	    outlineVerts->dirty();
 	}
 
 	myTop -= _barHeight + _barPadding;
@@ -579,8 +673,13 @@ void TimeRangeDataGraph::updateSizes()
     _graphBottom = -_height / 2.0 + padding;
 
     _barHeight = (_graphTop - _graphBottom) / ((float)_graphList.size());
-    _barPadding = 0.1 * _barHeight;
-    _barHeight *= 0.95;
+    _barPadding = 0.0;
+
+    if(_graphList.size() > 1)
+    {
+	_barPadding = 0.1 * _barHeight;
+	_barHeight *= 0.95;
+    }
 }
 
 osgText::Text * TimeRangeDataGraph::makeText(std::string text, osg::Vec4 color)

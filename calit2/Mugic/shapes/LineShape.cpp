@@ -10,7 +10,7 @@ LineShape::LineShape(std::string command, std::string name)
 {
     _type = SimpleShape::LINE;
 
-    setName(name);
+    BasicShape::setName(name);
     
     _vertices = new osg::Vec3Array(2);
     _colors = new osg::Vec4Array(2);

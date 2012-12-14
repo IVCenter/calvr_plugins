@@ -11,6 +11,7 @@
 #include "MainNode.h"
 //#include "Variables.h"
 #include "shapes/BasicShape.h"
+#include "shapes/ShapeFactory.h"
 #include "shapes/Factory.h"
 
 
@@ -27,6 +28,7 @@ class CommandParser : public OpenThreads::Thread
         MainNode* _root;
 
         // shape definitions
+        //ShapeRegistry<ShapeFactory*, std::string > _shapeDefinitions;
         std::map<std::string, ShapeFactory* > _shapeDefinitions;
 
         // map for object creation
@@ -39,7 +41,6 @@ class CommandParser : public OpenThreads::Thread
         void removeAll();
 
     public:
-    	//CommandParser(ThreadQueue<std::string>* queue, osg::Group* root);
     	CommandParser(ThreadQueue<std::string>* queue, MainNode* root);
 	    ~CommandParser();
 };

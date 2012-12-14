@@ -195,6 +195,8 @@ class CAVEGeodeShape: public CAVEGeode
 
     // actual side length of each texture image pattern in geometry
     static const float gTextureTileSize;
+    static const float gSnapRadius;
+
 };
 
 

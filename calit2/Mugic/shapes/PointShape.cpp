@@ -11,7 +11,7 @@ PointShape::PointShape(std::string command, std::string name)
 {
     _type = SimpleShape::POINT;
 
-    setName(name);
+    BasicShape::setName(name);
     
     _point = new osg::Point();
     

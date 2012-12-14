@@ -1,12 +1,12 @@
 #ifndef _TRIANGLESHAPE_
 #define _TRIANGLESHAPE_
 
-#include "BasicShape.h"
+#include "GeometryShape.h"
 
 #include <osg/Geometry>
 #include <osg/Point>
 
-class TriangleShape : public BasicShape
+class TriangleShape : public GeometryShape
 {
 public:        
 

@@ -379,7 +379,7 @@ bool Volume::loadFile(std::string filename)
 
     osg::Geode * geode = new osg::Geode();
     osg::Geometry* boxgeom = new osg::Geometry();
-    osg::Vec3Array * vertices = new osg::Vec3Array(16);
+    osg::Vec3Array * vertices = new osg::Vec3Array(24);
 
     (*vertices)[0].set(0.0, 0.0, 0.0);
     (*vertices)[1].set(0.0, 1.0, 0.0);
@@ -393,12 +393,23 @@ bool Volume::loadFile(std::string filename)
 
     (*vertices)[8].set(0.0, 0.0, 0.0);
     (*vertices)[9].set(0.0, 0.0, 1.0);
-    (*vertices)[10].set(0.0, 1.0, 0.0);
-    (*vertices)[11].set(0.0, 1.0, 1.0);
-    (*vertices)[12].set(1.0, 1.0, 0.0);
-    (*vertices)[13].set(1.0, 1.0, 1.0);
-    (*vertices)[14].set(1.0, 0.0, 0.0);
-    (*vertices)[15].set(1.0, 0.0, 1.0);
+    (*vertices)[10].set(1.0, 0.0, 1.0);
+    (*vertices)[11].set(1.0, 0.0, 0.0);
+
+    (*vertices)[12].set(0.0, 1.0, 0.0);
+    (*vertices)[13].set(0.0, 1.0, 1.0);
+    (*vertices)[14].set(0.0, 0.0, 1.0);
+    (*vertices)[15].set(0.0, 0.0, 0.0);
+
+    (*vertices)[16].set(1.0, 1.0, 0.0);
+    (*vertices)[17].set(1.0, 1.0, 1.0);
+    (*vertices)[18].set(0.0, 1.0, 1.0);
+    (*vertices)[19].set(0.0, 1.0, 0.0);
+
+    (*vertices)[20].set(1.0, 0.0, 0.0);
+    (*vertices)[21].set(1.0, 0.0, 1.0);
+    (*vertices)[22].set(1.0, 1.0, 1.0);
+    (*vertices)[23].set(1.0, 1.0, 0.0);
 
     boxgeom->setVertexArray(vertices);
 
@@ -408,10 +419,12 @@ bool Volume::loadFile(std::string filename)
     boxgeom->setColorArray(colors);
     boxgeom->setColorBinding(osg::Geometry::BIND_OVERALL);
 
-    boxgeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_LOOP,0,4));
-    boxgeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_LOOP,4,4));
-    boxgeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES,8,8));
+    boxgeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,24));
     boxgeom->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    
+    osg::PolygonMode* polyModeObj = new osg::PolygonMode();
+    polyModeObj->setMode(  osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE );
+    boxgeom->getOrCreateStateSet()->setAttribute( polyModeObj );
 
     geode->setNodeMask(geode->getNodeMask() & ~INTERSECT_MASK);
     geode->addDrawable(boxgeom);

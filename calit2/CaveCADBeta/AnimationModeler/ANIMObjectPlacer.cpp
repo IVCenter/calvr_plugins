@@ -37,6 +37,8 @@ void ANIMCreateObjectPlacer(std::vector<osg::PositionAttitudeTransform*>* fwdVec
     stateset->setMode(GL_CULL_FACE, StateAttribute::OVERRIDE | StateAttribute::ON);
     stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
     sphereGeode->setStateSet(stateset);
+        osgDB::ReaderWriter::Options *options = new osgDB::ReaderWriter::Options();
+        options->setObjectCacheHint(osgDB::ReaderWriter::Options::CACHE_NONE);
 
     osg::Node *node;
     osg::MatrixTransform *objScale;
@@ -49,45 +51,51 @@ void ANIMCreateObjectPlacer(std::vector<osg::PositionAttitudeTransform*>* fwdVec
         virtualSphere = new osg::Sphere(osg::Vec3(), ANIM_VIRTUAL_SPHERE_RADIUS);
         sphereDrawable = new osg::ShapeDrawable(virtualSphere);
 
-        osgDB::ReaderWriter::Options *options = new osgDB::ReaderWriter::Options();
-        options->setObjectCacheHint(osgDB::ReaderWriter::Options::CACHE_NONE);
 
         osg::Vec4 color;
         if (i == 0)
         {
             color = osg::Vec4(1, 0, 1, 0.5);
-            
-            std::string dir, path, filename;
-            bool isFile;
-            dir = cvr::ConfigManager::getEntry("dir", "Plugin.CaveCADBeta.Objects", "/home/cehughes");
-            dir = dir + "/";
-            path = "Plugin.CaveCADBeta.Objects.0";
-            filename = cvr::ConfigManager::getEntry(path, "", &isFile);
-            filename = dir + filename; 
-            
-            /*node = osgDB::readNodeFile(filename);
-            
-            osg::Matrixf mat = osg::Matrixf();
-            //mat.makeScale(0.01, 0.01, 0.01);
-            mat.makeScale(1, 1, 1);
-            
-            objScale = new osg::MatrixTransform();
-            objScale->setMatrix(mat);
-            objScale->addChild(node);
-            */
-            /*
-            std::cout << "filename = " << filename << std::endl;
-            if (node)
-            {
-                std::cout << filename << std::endl;
-            }
-           */ 
+            node = NULL; 
+            objScale = NULL;
         }
         else
         {
             color = osg::Vec4(0, 0, 1, 0.5);
-            node = NULL;
-            objScale = NULL;
+
+            std::string dir, path, filename;
+            bool isFile;
+            dir = cvr::ConfigManager::getEntry("dir", "Plugin.CaveCADBeta.Objects", "/home/cehughes");
+            dir = dir + "/";
+
+            char buf[50];
+            sprintf(buf, "Plugin.CaveCADBeta.Objects.%d", i-1);
+            path = std::string(buf);
+
+            filename = cvr::ConfigManager::getEntry(path, "", &isFile);
+            filename = dir + filename; 
+            float scale = cvr::ConfigManager::getFloat("iconscale", path, 1, &isFile);
+            float zoffset = cvr::ConfigManager::getFloat("zoffset", path, 0, &isFile);
+            
+            if (!isFile)
+                break;
+            
+            node = osgDB::readNodeFile(filename, options);
+            
+            osg::Matrixf mat = osg::Matrixf();
+            mat.makeScale(scale, scale, scale);
+            mat.setTrans(osg::Vec3(0, 0, zoffset));
+            //mat.makeScale(1, 1, 1);
+            
+            objScale = new osg::MatrixTransform();
+            objScale->setMatrix(mat);
+            objScale->addChild(node);
+            
+            /*std::cout << "filename = " << filename << std::endl;
+            if (node)
+            {
+                std::cout << filename << std::endl;
+            }*/
         }
 
         stateset = sphereDrawable->getOrCreateStateSet();
