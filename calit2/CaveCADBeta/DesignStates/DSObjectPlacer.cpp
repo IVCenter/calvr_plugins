@@ -30,8 +30,10 @@ DSObjectPlacer::DSObjectPlacer()
 
     setAllChildrenOff();
     mDevPressedFlag = false;
+    mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mFwdVec[0]->getChild(0));
 
     prevGeode = NULL;
+    mDrawingState = IDLE;
 }
 
 
@@ -131,14 +133,21 @@ void DSObjectPlacer::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg::V
 {	
     if (mDevPressedFlag)
     {
-        if (mDrawingState == START_DRAWING)
+        if (mDrawingState == PLACE_OBJECT && _activeObject)
         {
-
+            osg::Vec3 pos = osg::Vec3(0,1000,0) * cvr::PluginHelper::getHandMat() 
+                * cvr::PluginHelper::getWorldToObjectTransform();
+            _activeObject->setPosition(pos);//pointerPos); 
         }
     }
     if (!mDevPressedFlag)
     {
-
+        if (mDrawingState == PLACE_OBJECT && _activeObject)
+        {
+            osg::Vec3 pos = osg::Vec3(0,1000,0) * cvr::PluginHelper::getHandMat() 
+                * cvr::PluginHelper::getWorldToObjectTransform();
+            _activeObject->setPosition(pos);//pointerPos); 
+        }
     }
 }
 
@@ -148,22 +157,67 @@ void DSObjectPlacer::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg::V
 ***************************************************************/
 bool DSObjectPlacer::inputDevPressEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos)
 {
+//std::cout << "ObjectPlacer press" << std::endl;
     mDevPressedFlag = true;
 
-    if (mDrawingState == IDLE)
+    for (int i = 0; i < mFwdVec.size(); ++i)
     {
+        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mFwdVec[i]->getChild(0));
+        //setChildValue(fwdVec[i], true);
 
+        if (mDSIntersector->test(pointerOrg, pointerPos))
+        {
+            if (i > 0) // not the top menu item
+            {
+                _activeObject = new osg::PositionAttitudeTransform();
+
+                string dir = cvr::ConfigManager::getEntry("dir", "Plugin.CaveCADBeta.Objects", "/home/cehughes");
+                dir = dir + "/";
+
+                char buf[50];
+                sprintf(buf, "Plugin.CaveCADBeta.Objects.%d", i-1);
+                string path = std::string(buf);
+                
+                bool isFile;
+                string filename = cvr::ConfigManager::getEntry(path, "", &isFile);
+                filename = dir + filename; 
+                float scale = cvr::ConfigManager::getFloat("scale", path, 1, &isFile);
+                float zoffset = cvr::ConfigManager::getFloat("zoffset", path, 0, &isFile);
+
+                if (isFile)
+                {
+                    osgDB::ReaderWriter::Options *options = new osgDB::ReaderWriter::Options();
+                    options->setObjectCacheHint(osgDB::ReaderWriter::Options::CACHE_NONE);
+
+                    osg::Node *node = osgDB::readNodeFile(filename, options);
+                    //_activeObject->addChild(node);
+                    _activeObject->setScale(osg::Vec3(scale, scale, scale));
+                    osg::PositionAttitudeTransform *pat = new osg::PositionAttitudeTransform();
+                    pat->setPosition(osg::Vec3(0,0,scale*zoffset));
+                    pat->addChild(node);
+                    _activeObject->addChild(pat);
+                    cvr::PluginHelper::getObjectsRoot()->addChild(_activeObject); 
+                    mDrawingState = PLACE_OBJECT;
+                    return true;
+                }
+                //std::cout << "intersecting " << i << std::endl;    
+            }
+        }
     }
 
-    else if (mDrawingState == READY_TO_DRAW)
+    mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mFwdVec[0]->getChild(0));
+
+
+    if (mDrawingState == PLACE_OBJECT)
     {
-
-    }
-
-    if (mDrawingState == START_DRAWING) 
+        if (_activeObject)
+        {
+            _activeObject = NULL;
+            mDrawingState = IDLE;
+        }
         return true;
-    else 
-        return false;
+    }
+    return false;
 }
 
 
@@ -174,9 +228,9 @@ bool DSObjectPlacer::inputDevReleaseEvent()
 {
     mDevPressedFlag = false;
 
-    if (mDrawingState == START_DRAWING)
+    if (mDrawingState == PLACE_OBJECT)
     {
-
+        //mDrawingState = IDLE;
         return true;
     }
     return false;
@@ -209,22 +263,7 @@ void DSObjectPlacer::setDesignObjectHandlerPtr(DesignObjectHandler *designObject
 ***************************************************************/
 void DSObjectPlacer::DrawingStateTransitionHandle(const DrawingState& prevState, const DrawingState& nextState)
 {
-    if (prevState == IDLE && nextState == READY_TO_DRAW)
-    {
 
-    }
-
-    else if (prevState == READY_TO_DRAW && nextState == START_DRAWING)
-    {
-
-    }
-
-    else if ((prevState == READY_TO_DRAW && nextState == IDLE) ||
-	         (prevState == START_DRAWING && nextState == IDLE) ||
-	         (prevState == IDLE          && nextState == IDLE))
-    {
-
-    }
 }
 
 
@@ -233,7 +272,7 @@ void DSObjectPlacer::setHighlight(bool isHighlighted, const osg::Vec3 &pointerOr
     int idx = -1;
     mIsHighlighted = isHighlighted;
 
-
     mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
+    mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mFwdVec[0]->getChild(0));
 }
  

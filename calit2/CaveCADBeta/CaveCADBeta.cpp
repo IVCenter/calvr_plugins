@@ -8,6 +8,8 @@
 *
 ***************************************************************/
 #include "CaveCADBeta.h"
+#include <osgShadow/ShadowedScene>
+#include <osgShadow/ShadowMap>
 
 CVRPLUGIN(CaveCADBeta)
 
@@ -78,10 +80,21 @@ bool CaveCADBeta::init()
     scaleMat->setMatrix(mat);
     scaleMat->addChild(root);
 
-    SceneManager::instance()->getObjectsRoot()->addChild(scaleMat);//root);
+    
+//    SceneManager::instance()->getObjectsRoot()->addChild(scaleMat);//root);
     mCAVEDesigner = new CAVEDesigner(root);
+    
+    osgShadow::ShadowedScene *shadowedScene = new osgShadow::ShadowedScene();
+    //shadowedScene->setReceivesShadowTraversalMask(0x1);
+    //shadowedScene->setCastsShadowTraversalMask(0x1);
+    
+    osgShadow::ShadowMap *sm = new osgShadow::ShadowMap();
+    shadowedScene->setShadowTechnique(sm);
+    sm->setTextureSize(osg::Vec2s(1024,1024));
+    
+    shadowedScene->addChild(scaleMat);
+    SceneManager::instance()->getObjectsRoot()->addChild(shadowedScene);
 
-    //mCAVEDesigner = new CAVEDesigner(SceneManager::instance()->getObjectsRoot());
     if(ComController::instance()->isMaster())
     {
 		mCAVEDesigner->getAudioConfigHandler()->setMasterFlag(true);
