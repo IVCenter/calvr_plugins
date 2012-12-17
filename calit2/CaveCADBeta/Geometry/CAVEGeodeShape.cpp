@@ -15,6 +15,7 @@ using namespace osg;
 
 const float CAVEGeodeShape::gTextureTileSize(0.3048f);
 //const float CAVEGeodeShape::gTextureTileSize(304.8f);
+const float CAVEGeodeShape::gSnapRadius(0.10f);
 
 // Constructor
 CAVEGeodeShape::CAVEGeodeShape(const Type &typ, const Vec3 &initVect, const Vec3 &sVect):
@@ -309,8 +310,6 @@ void CAVEGeodeShape::hideSnapBounds()
         osg::StateSet *ss = sd->getOrCreateStateSet();
         ss->setAttributeAndModes(mat, StateAttribute::PROTECTED | StateAttribute::ON);
     }
-
-
 }
 
 
@@ -370,7 +369,7 @@ bool CAVEGeodeShape::snapToVertex(const osg::Vec3 point, osg::Vec3 *ctr)
     }
     
     // check edge intersection
-    for (it = mEdgeDrawableMap.begin(); it != mEdgeDrawableMap.end(); ++it)
+/*    for (it = mEdgeDrawableMap.begin(); it != mEdgeDrawableMap.end(); ++it)
     {
         osg::Cylinder *cyl = it->first;
         osg::Geode *node = mEdgeGeodeMap[cyl];
@@ -403,7 +402,7 @@ bool CAVEGeodeShape::snapToVertex(const osg::Vec3 point, osg::Vec3 *ctr)
             }
             return true;
         }
-    }
+    }*/
     return false;
 }
 
@@ -454,8 +453,8 @@ void CAVEGeodeShape::initGeometryBox(const Vec3 &initVect, const Vec3 &sVect)
     
     // Bounding cylinders for edges
 
-    float radius = 0.2;
-    float snapSphereRadius = 0.2, snapSphereOpacity = 0.5;
+    float radius = gSnapRadius;//0.1;
+    float snapSphereRadius = gSnapRadius, snapSphereOpacity = 0.5;
     osg::Vec4 snapSphereColor = osg::Vec4(1, 0, 1, 0); 
 
     osg::Vec3 center, ulfront, urfront, llfront, lrfront, ulback, urback, llback, lrback;
@@ -711,6 +710,7 @@ void CAVEGeodeShape::initGeometryBox(const Vec3 &initVect, const Vec3 &sVect)
     geometryArrayPtr[5]->addIndexCluster(3, 8, 21);
     geometryArrayPtr[5]->addIndexCluster(7, 11, 22);
     geometryArrayPtr[5]->addIndexCluster(4, 15, 23);
+hideSnapBounds();
 }
 
 
@@ -765,8 +765,8 @@ void CAVEGeodeShape::initGeometryCylinder(const Vec3 &initVect, const Vec3 &sVec
 
 
     // Snapping bounds
-    float radius = 0.2;
-    float snapSphereRadius = 0.1, snapSphereOpacity = 1.0;
+    float radius = gSnapRadius;//0.1;
+    float snapSphereRadius = gSnapRadius, snapSphereOpacity = 1.0;
     osg::Vec4 snapSphereColor = osg::Vec4(1, 0, 1, 1); 
 
 
@@ -910,6 +910,7 @@ void CAVEGeodeShape::initGeometryCylinder(const Vec3 &initVect, const Vec3 &sVec
         geometryArrayPtr[2]->addIndexCluster(i * 4    , i * 4 + 2);
         geometryArrayPtr[2]->addIndexCluster(i * 4 + 1, i * 4 + 3);
     }
+hideSnapBounds();
 }
 
 
@@ -972,8 +973,8 @@ void CAVEGeodeShape::initGeometryCone(const Vec3 &initVect, const Vec3 &sVect)
 
 
     // Snapping bounds
-    float radius = 0.2;
-    float snapSphereRadius = 0.2, snapSphereOpacity = 0.5;
+    float radius = gSnapRadius;//0.1;
+    float snapSphereRadius = gSnapRadius, snapSphereOpacity = 0.5;
     osg::Vec4 snapSphereColor = osg::Vec4(1, 0, 1, 0); 
 
 
@@ -1100,6 +1101,7 @@ void CAVEGeodeShape::initGeometryCone(const Vec3 &initVect, const Vec3 &sVect)
         geometryArrayPtr[2]->addIndexCluster(i * 4    , i * 4 + 2);
         geometryArrayPtr[2]->addIndexCluster(i * 4 + 1, i * 4 + 3);
     }
+hideSnapBounds();
 }
 
 

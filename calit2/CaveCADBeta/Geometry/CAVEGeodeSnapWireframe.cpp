@@ -15,7 +15,7 @@ using namespace osg;
 
 // 'gSnappingUnitDist' is the default minimum sensible distance in CAVE design space, or the size of unit grid. 
 //  could define different snapping unit distance in other derived classes of CAVEGeode
-const float CAVEGeodeSnapWireframe::gSnappingUnitDist(0.008f);
+const float CAVEGeodeSnapWireframe::gSnappingUnitDist(0.050f);
 
 const int CAVEGeodeSnapWireframeCylinder::gMinFanSegments(18);
 int CAVEGeodeSnapWireframeCylinder::gCurFanSegments(18);
@@ -473,7 +473,7 @@ void CAVEGeodeSnapWireframeCone::resize(osg::Vec3 &gridVect)
 
     mDiagonalVect = Vec3(rad, rad, height * hDir);
 
-    gCurFanSegments = fanSeg;	// update number of fan segment, this parameter is passed to 'CAVEGeodeShape'
+    gCurFanSegments = 10;//fanSeg;	// update number of fan segment, this parameter is passed to 'CAVEGeodeShape'
 
     // update 'mSnapwireGeometry' geometry, do not use 'mBaseGeometry' anymore
     if (mBaseGeometry)

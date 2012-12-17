@@ -9,6 +9,7 @@ SET(PLUGIN_HEADERS
     CommandParser.h
     MainNode.h
     zhelpers.h
+    shapes/GeometryShape.h
     shapes/BasicShape.h
     shapes/Factory.h
     shapes/PointShape.h
@@ -31,6 +32,7 @@ ADD_LIBRARY(${LIB_NAME}
     #Variables.cpp
     CommandParser.cpp
     MainNode.cpp
+    shapes/GeometryShape.cpp
     shapes/BasicShape.cpp
     shapes/PointShape.cpp
     shapes/QuadShape.cpp

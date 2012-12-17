@@ -32,7 +32,7 @@ CaveCADBeta::~CaveCADBeta()
 bool CaveCADBeta::init()
 {
     mIsEnabled = false;
-    mValCutoff = 0.5;
+    mValCutoff = 1.0;
     mValDownTime = PluginHelper::getProgramDuration();
     mValPressed = false;
     pointerPressFlag = false;
@@ -245,7 +245,7 @@ bool CaveCADBeta::processEvent(cvr::InteractionEvent *event)
         int id = vie->getValuator();
         int valID = 0;
         int left = 65361, up = 65362, right = 65363, down = 65364;
-        mValPressed = false;
+        //mValPressed = false;
 
         if (id == valID)
         {
@@ -271,6 +271,31 @@ bool CaveCADBeta::processEvent(cvr::InteractionEvent *event)
                 }
             }
         }
+        else if (id == 1)
+        {
+            float val = vie->getValue();
+            // RIGHT 
+            if (val == 1)
+            {
+                if (!mValPressed)
+                {
+                    mValPressed = true;
+                    mCAVEDesigner->inputDevButtonEvent(right);
+                    mValDownTime = PluginHelper::getProgramDuration();
+                }
+            }
+            // LEFT
+            else if(val == -1)
+            {
+                if (!mValPressed)
+                {
+                    mValPressed = true;
+                    mCAVEDesigner->inputDevButtonEvent(left);
+                    mValDownTime = PluginHelper::getProgramDuration();
+                }
+            }
+        }
+
     }
 	return false;
 }
