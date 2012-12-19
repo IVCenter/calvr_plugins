@@ -156,7 +156,7 @@ void CAVEGeodeSnapSolidshapeCone::resize(const osg::Vec3 &gridVect, bool snap)
     float rad = sqrt(mScaleVect.x() * mScaleVect.x() + mScaleVect.y() * mScaleVect.y());
     mCone = new Cone;
 
-    mCone->setCenter(mInitPosition + Vec3(0, 0, mScaleVect.z() * 0.5));
+    mCone->setCenter(mInitPosition + Vec3(0, 0, (mScaleVect.z() * 0.5) / 3));
     mCone->setRadius(rad);
     mCone->setHeight(mScaleVect.z());
     Drawable* coneDrawable = new ShapeDrawable(mCone);

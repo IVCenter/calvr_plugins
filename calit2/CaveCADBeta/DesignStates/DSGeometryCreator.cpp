@@ -200,7 +200,7 @@ void DSGeometryCreator::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg
                 }
             }
 
-            if (snap)
+            if (0)//snap) // take out snap on drag for now, should fix infinite radius issue
             {
                 mDOGeometryCreator->setSnapPos(center, false);
             }
@@ -306,7 +306,42 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
                 break;
             }
         }
-        
+        // highlight
+        if (hit)
+	{
+	    int idx = mShapeSwitchIdx;
+	    for (int i = 0; i < mNumShapeSwitches; i++)
+	    {
+ 
+		((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->removeChild(mHighlightGeode);
+		mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, 
+		    ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->getChild(0));
+
+		if (mDSIntersector->test(pointerOrg, pointerPos))
+		{
+		    idx = i;
+		}
+	    }	    
+
+		if (idx > -1)
+		{
+			osg::Sphere *sphere = new osg::Sphere();
+			mSD = new osg::ShapeDrawable(sphere);
+			mHighlightGeode = new osg::Geode();
+			mHighlightGeode->addDrawable(mSD);
+			sphere->setRadius(0.25);
+			mSD->setColor(osg::Vec4(1, 1, 1, 0.5));
+
+			StateSet *stateset = mSD->getOrCreateStateSet();
+			stateset->setMode(GL_BLEND, StateAttribute::OVERRIDE | StateAttribute::ON);
+			stateset->setMode(GL_CULL_FACE, StateAttribute::OVERRIDE | StateAttribute::ON);
+			stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
+
+			((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[idx]->mSwitch->getChild(0)))->addChild(mHighlightGeode);
+		}
+		mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
+	}
+
         // combine
         if (hit && mShapeSwitchIdx == 3)
         {

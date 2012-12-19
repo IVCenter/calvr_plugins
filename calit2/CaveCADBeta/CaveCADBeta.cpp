@@ -85,7 +85,7 @@ bool CaveCADBeta::init()
     
 //    SceneManager::instance()->getObjectsRoot()->addChild(scaleMat);//root);
     mCAVEDesigner = new CAVEDesigner(root);
-   
+    mShadowedScene = NULL; 
 /*
     osgShadow::ShadowedScene *shadowedScene = new osgShadow::ShadowedScene();
 //    shadowedScene->setReceivesShadowTraversalMask(0x2);
@@ -199,8 +199,10 @@ void CaveCADBeta::menuCallback(MenuItem *item)
         if (mShadowCheckbox->getValue())
         {
             //osgShadow::ShadowedScene *shadowedScene = new osgShadow::ShadowedScene();
-            mShadowedScene = new osgShadow::ShadowedScene();
-
+            if (!mShadowedScene)
+            {
+                mShadowedScene = new osgShadow::ShadowedScene();
+            }
         //    shadowedScene->setReceivesShadowTraversalMask(0x2);
         //    shadowedScene->setCastsShadowTraversalMask(0x3);
         //    scaleMat->setNodeMask(0xFFFFFF | (0x2 | 0x3) | osg::StateAttribute::OVERRIDE);

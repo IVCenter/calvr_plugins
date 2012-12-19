@@ -85,6 +85,7 @@ void ANIMCreateViewpoints(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
 
         sphereGeode->addDrawable(text);
 
+
  
         AnimationPath* animationPathScaleFwd = new AnimationPath;
         AnimationPath* animationPathScaleBwd = new AnimationPath;
@@ -123,6 +124,11 @@ void ANIMCreateViewpoints(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
 
         fwd->addChild(sphereGeode);
         bwd->addChild(sphereGeode);     
+
+	Node* frameNode = osgDB::readNodeFile(ANIMDataDir() + "VRMLFiles/ParamountFrame.WRL"); 
+	fwd->addChild(frameNode);
+	bwd->addChild(frameNode);
+
 
         fwd->setUpdateCallback(animCallbackFwd);
         bwd->setUpdateCallback(animCallbackBwd);
