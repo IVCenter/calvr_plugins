@@ -202,23 +202,27 @@ void CaveCADBeta::menuCallback(MenuItem *item)
             if (!mShadowedScene)
             {
                 mShadowedScene = new osgShadow::ShadowedScene();
+                mShadowedScene->addChild(scaleMat);
             }
         //    shadowedScene->setReceivesShadowTraversalMask(0x2);
         //    shadowedScene->setCastsShadowTraversalMask(0x3);
         //    scaleMat->setNodeMask(0xFFFFFF | (0x2 | 0x3) | osg::StateAttribute::OVERRIDE);
             
-            osgShadow::ShadowVolume *sv = new osgShadow::ShadowVolume();
-            osgShadow::ShadowTexture *st = new osgShadow::ShadowTexture();
             osgShadow::ShadowMap *sm = new osgShadow::ShadowMap();
             mShadowedScene->setShadowTechnique(sm);
             sm->setTextureSize(osg::Vec2s(1024,1024));
-            
-            mShadowedScene->addChild(scaleMat);
+
             SceneManager::instance()->getObjectsRoot()->removeChild(scaleMat);
             SceneManager::instance()->getObjectsRoot()->addChild(mShadowedScene);
         }
         else
         {
+            if (!mShadowedScene)
+            {
+                mShadowedScene = new osgShadow::ShadowedScene();
+                mShadowedScene->addChild(scaleMat);
+            }
+
             SceneManager::instance()->getObjectsRoot()->removeChild(mShadowedScene);
             SceneManager::instance()->getObjectsRoot()->addChild(scaleMat);
         }

@@ -266,6 +266,106 @@ void CAVEGeodeShape::applyEditorInfo(EditorInfo **infoPtr, CAVEGeodeShape *refGe
                     refGeodePtr->mUDirArray, refGeodePtr->mVDirArray, refGeodePtr->mTexcoordArray, 
                     mNumVertices, infoPtr, mVertexMaskingVector);
 
+
+
+    if ((*infoPtr)->getTypeMasking() == EditorInfo::MOVE)
+    {
+        const Vec3 offset = (*infoPtr)->getMoveOffset();
+ 
+        for (int i = 0; i < mVertBoundingSpheres.size(); ++i)
+        {
+            osg::Sphere *sphere = mVertBoundingSpheres.at(i);
+            sphere->setCenter(sphere->getCenter() + offset);
+
+            osg::ShapeDrawable * sd = mShapeDrawableMap[mVertBoundingSpheres[i]];
+            removeDrawable(sd);
+
+            osg::Vec4 snapSphereColor = osg::Vec4(1, 0, 1, 0); 
+            Material *mat = new Material;
+            mat->setDiffuse(Material::FRONT_AND_BACK, snapSphereColor);
+
+            StateSet *ss = sd->getOrCreateStateSet();
+            ss->setMode(GL_BLEND, StateAttribute::PROTECTED | StateAttribute::ON );
+            ss->setRenderingHint(StateAttribute::PROTECTED | StateSet::TRANSPARENT_BIN);
+            ss->setAttributeAndModes(mat, StateAttribute::PROTECTED | StateAttribute::ON);
+            ss->setMode(GL_CULL_FACE, StateAttribute::PROTECTED| StateAttribute::ON);
+
+            sd = new ShapeDrawable(sphere);
+            mShapeDrawableMap[mVertBoundingSpheres[i]] = sd;
+            addDrawable(sd);
+        }
+        hideSnapBounds();
+    }
+
+    else if ((*infoPtr)->getTypeMasking() == EditorInfo::ROTATE)
+    {
+        const Vec3 center = (*infoPtr)->getRotateCenter();
+        const Vec3 axis = (*infoPtr)->getRotateAxis();
+        const float angle = (*infoPtr)->getRotateAngle();
+
+        Matrixf rotMat;
+        rotMat.makeRotate(angle, axis);
+
+        for (int i = 0; i < mVertBoundingSpheres.size(); ++i)
+        {
+            // update vertex list: 'translation' -> 'rotation' -> 'reversed translation'
+            osg::Sphere *sphere = mVertBoundingSpheres.at(i);
+            sphere->setCenter((sphere->getCenter() - center) * rotMat + center);
+
+            osg::ShapeDrawable * sd = mShapeDrawableMap[mVertBoundingSpheres[i]];
+            removeDrawable(sd);
+
+            osg::Vec4 snapSphereColor = osg::Vec4(1, 0, 1, 0); 
+            Material *mat = new Material;
+            mat->setDiffuse(Material::FRONT_AND_BACK, snapSphereColor);
+
+            StateSet *ss = sd->getOrCreateStateSet();
+            ss->setMode(GL_BLEND, StateAttribute::PROTECTED | StateAttribute::ON );
+            ss->setRenderingHint(StateAttribute::PROTECTED | StateSet::TRANSPARENT_BIN);
+            ss->setAttributeAndModes(mat, StateAttribute::PROTECTED | StateAttribute::ON);
+            ss->setMode(GL_CULL_FACE, StateAttribute::PROTECTED| StateAttribute::ON);
+
+            sd = new ShapeDrawable(sphere);
+            mShapeDrawableMap[mVertBoundingSpheres[i]] = sd;
+            addDrawable(sd);
+        }
+        hideSnapBounds();
+    }
+
+    else if ((*infoPtr)->getTypeMasking() == EditorInfo::SCALE)
+    {
+        const Vec3 center = (*infoPtr)->getScaleCenter();
+        const Vec3 scale = (*infoPtr)->getScaleVect();
+
+        Matrixf scaleMat;
+        scaleMat.makeScale(scale);
+
+        for (int i = 0; i < mVertBoundingSpheres.size(); ++i)
+        {
+            // update vertex list: 'translation' -> 'rotation' -> 'reversed translation'
+            osg::Sphere *sphere = mVertBoundingSpheres.at(i);
+            sphere->setCenter((sphere->getCenter() - center) * scaleMat + center);
+
+            osg::ShapeDrawable * sd = mShapeDrawableMap[mVertBoundingSpheres[i]];
+            removeDrawable(sd);
+
+            osg::Vec4 snapSphereColor = osg::Vec4(1, 0, 1, 0); 
+            Material *mat = new Material;
+            mat->setDiffuse(Material::FRONT_AND_BACK, snapSphereColor);
+
+            StateSet *ss = sd->getOrCreateStateSet();
+            ss->setMode(GL_BLEND, StateAttribute::PROTECTED | StateAttribute::ON );
+            ss->setRenderingHint(StateAttribute::PROTECTED | StateSet::TRANSPARENT_BIN);
+            ss->setAttributeAndModes(mat, StateAttribute::PROTECTED | StateAttribute::ON);
+            ss->setMode(GL_CULL_FACE, StateAttribute::PROTECTED| StateAttribute::ON);
+
+            sd = new ShapeDrawable(sphere);
+            mShapeDrawableMap[mVertBoundingSpheres[i]] = sd;
+            addDrawable(sd);
+        }
+        hideSnapBounds();
+    }
+
     // dirty display list and bound for all geometries
     const int nGeoms = mGeometryVector.size();
     if (nGeoms > 0)
@@ -355,7 +455,8 @@ bool CAVEGeodeShape::snapToVertex(const osg::Vec3 point, osg::Vec3 *ctr)
         distance = pow(distance, 0.5);
     
         // if pointer position inside sphere
-        if (distance <= 0.2)
+
+        if (distance <= 0.2) // CHANGE HERE for distance allowance of snapping
         {
             *ctr = center;
 
@@ -1153,6 +1254,7 @@ void CAVEGeodeShape::applyEditorInfo(Vec3Array **vertexArrayPtr, Vec3Array **nor
                 geodeTexcoordDataPtr[i] = refGeodeTexcoordDataPtr[i] + texoffset;
             }
         }
+        
     }
 
     else if ((*infoPtr)->getTypeMasking() == EditorInfo::ROTATE)

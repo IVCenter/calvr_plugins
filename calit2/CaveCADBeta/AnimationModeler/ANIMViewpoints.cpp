@@ -73,18 +73,18 @@ void ANIMCreateViewpoints(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
 
         sphereDrawable->setColor(color);
         sphereGeode = new osg::Geode();
-        sphereGeode->addDrawable(sphereDrawable);
+        //sphereGeode->addDrawable(sphereDrawable);
 
         osg::ref_ptr<osgText::Text> text = new osgText::Text();
         text->setText(str);
         text->setCharacterSize(0.1);
         text->setDrawMode(osgText::Text::TEXT);
         text->setAxisAlignment(osgText::Text::XZ_PLANE);
-        text->setPosition(osg::Vec3(0,0,0));
+        text->setPosition(osg::Vec3(-0.1, -0.4, 0));
         text->setColor(osg::Vec4(1,1,1,1));
+        text->setFont("/home/cehughes/CalVR/resources/arial.ttf");
 
         sphereGeode->addDrawable(text);
-
 
  
         AnimationPath* animationPathScaleFwd = new AnimationPath;
@@ -125,10 +125,9 @@ void ANIMCreateViewpoints(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
         fwd->addChild(sphereGeode);
         bwd->addChild(sphereGeode);     
 
-	Node* frameNode = osgDB::readNodeFile(ANIMDataDir() + "VRMLFiles/ParamountFrame.WRL"); 
-	fwd->addChild(frameNode);
-	bwd->addChild(frameNode);
-
+        Node* frameNode = osgDB::readNodeFile(ANIMDataDir() + "VRMLFiles/ParamountFrame.WRL"); 
+        fwd->addChild(frameNode);
+        bwd->addChild(frameNode);
 
         fwd->setUpdateCallback(animCallbackFwd);
         bwd->setUpdateCallback(animCallbackBwd);
@@ -221,20 +220,23 @@ void ANIMAddViewpoint(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
 
         sphereDrawable->setColor(color);
         sphereGeode = new osg::Geode();
-        sphereGeode->addDrawable(sphereDrawable);
+        //sphereGeode->addDrawable(sphereDrawable);
 
         osg::ref_ptr<osgText::Text> text = new osgText::Text();
         text->setText(str);
         text->setCharacterSize(0.1);
         text->setDrawMode(osgText::Text::TEXT);
         text->setAxisAlignment(osgText::Text::XZ_PLANE);
-        text->setPosition(osg::Vec3(0,0,0));
+        text->setPosition(osg::Vec3(-0.1, -0.4, 0));
         text->setColor(osg::Vec4(1,1,1,1));
 
+        text->setFont("/home/cehughes/CalVR/resources/arial.ttf");
+        if (i != 0 && i != numViews)
+            text->setPosition(osg::Vec3(-0.03, -0.4, 0));
         sphereGeode->addDrawable(text);
 
        
-        if (i != 0 && i != numViews)
+/*        if (i != 0 && i != numViews)
         {
             osgText::Text3D * textNode = new osgText::Text3D();
             char buf[2];
@@ -261,7 +263,7 @@ void ANIMAddViewpoint(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
             //ss->setRenderBinDetails(0, "Render Bin");
 
             //sphereGeode->addDrawable(textNode);
-        }
+        }*/
 
         AnimationPath* animationPathScaleFwd = new AnimationPath();
         AnimationPath* animationPathScaleBwd = new AnimationPath();
@@ -300,6 +302,10 @@ void ANIMAddViewpoint(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
 
         fwd->addChild(sphereGeode);
         bwd->addChild(sphereGeode);
+
+        Node* frameNode = osgDB::readNodeFile(ANIMDataDir() + "VRMLFiles/ParamountFrame.WRL"); 
+        fwd->addChild(frameNode);
+        bwd->addChild(frameNode);
 
         fwd->setUpdateCallback(animCallbackFwd);
         bwd->setUpdateCallback(animCallbackBwd);

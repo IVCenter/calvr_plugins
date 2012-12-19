@@ -117,7 +117,7 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
     text->setDrawMode(osgText::Text::TEXT);
     text->setAxisAlignment(osgText::Text::XZ_PLANE);
     text->setColor(osg::Vec4(1,1,1,1));
-    combineGeode->addDrawable(text);
+//    combineGeode->addDrawable(text);
 
     ANIMCreateSingleSwitchAnimation(&((*shapeSwitchEntryArray)[3]), combineGeode, 2);
     
@@ -135,7 +135,7 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
     rightX->setColor(osg::Vec4(1,0,0,1));
     deleteGeode->addDrawable(rightX);
 
-    ANIMCreateSingleSwitchAnimation(&((*shapeSwitchEntryArray)[4]), deleteGeode, 2.5);
+    ANIMCreateSingleSwitchAnimation(&((*shapeSwitchEntryArray)[4]), deleteGeode, 2);
 
     // set up the forward / backward scale animation paths for geometry creator
     AnimationPath* animationPathScaleFwd = new AnimationPath;
@@ -185,18 +185,18 @@ void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, con
     Geode *shapeGeode = new Geode;
     if (typ == CAVEGeodeShape::BOX)
     {
-        Box *box = new Box(osg::Vec3(), ANIM_VIRTUAL_SPHERE_RADIUS / 0.9);
+        Box *box = new Box(osg::Vec3(), ANIM_VIRTUAL_SPHERE_RADIUS / 1.1);
         shapeGeode->addDrawable(new ShapeDrawable(box));
     }
     else if (typ == CAVEGeodeShape::CYLINDER)
     {
-        float r = ANIM_VIRTUAL_SPHERE_RADIUS / 1.5;
+        float r = ANIM_VIRTUAL_SPHERE_RADIUS / 1.8;
         Cylinder *cylinder = new Cylinder(osg::Vec3(), r, r * 2);
         shapeGeode->addDrawable(new ShapeDrawable(cylinder));
     }
     else if (typ == CAVEGeodeShape::CONE)
     {
-        float r = ANIM_VIRTUAL_SPHERE_RADIUS / 1.5;
+        float r = ANIM_VIRTUAL_SPHERE_RADIUS / 1.6;
         Cone *cone = new Cone(osg::Vec3(), r, r * 2);
         shapeGeode->addDrawable(new ShapeDrawable(cone));
     }
