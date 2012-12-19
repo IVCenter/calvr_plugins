@@ -15,7 +15,7 @@ using namespace osg;
 
 // 'gSnappingUnitDist' is the default minimum sensible distance in CAVE design space, or the size of unit grid. 
 //  could define different snapping unit distance in other derived classes of CAVEGeode
-const float CAVEGeodeSnapWireframe::gSnappingUnitDist(0.050f);
+const float CAVEGeodeSnapWireframe::gSnappingUnitDist(0.010f);
 
 const int CAVEGeodeSnapWireframeCylinder::gMinFanSegments(18);
 int CAVEGeodeSnapWireframeCylinder::gCurFanSegments(18);

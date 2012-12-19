@@ -37,8 +37,9 @@ void ANIMCreateObjectPlacer(std::vector<osg::PositionAttitudeTransform*>* fwdVec
     stateset->setMode(GL_CULL_FACE, StateAttribute::OVERRIDE | StateAttribute::ON);
     stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
     sphereGeode->setStateSet(stateset);
-        osgDB::ReaderWriter::Options *options = new osgDB::ReaderWriter::Options();
-        options->setObjectCacheHint(osgDB::ReaderWriter::Options::CACHE_NONE);
+
+    osgDB::ReaderWriter::Options *options = new osgDB::ReaderWriter::Options();
+    options->setObjectCacheHint(osgDB::ReaderWriter::Options::CACHE_NONE);
 
     osg::Node *node;
     osg::MatrixTransform *objScale;

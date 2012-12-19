@@ -347,3 +347,21 @@ void DOGeometryCollector::updateVertexMaskingVector()
     }
 }
 
+
+/***************************************************************
+* Function: deleteSelected()
+***************************************************************/
+void DOGeometryCollector::deleteSelected()
+{
+    std::cout << mGeodeShapeVector.size() << std::endl;
+}
+
+
+/***************************************************************
+* Function: combineSelected()
+***************************************************************/
+void DOGeometryCollector::combineSelected()
+{
+
+}
+

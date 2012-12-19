@@ -262,9 +262,9 @@ void CAVEGeodeShape::applyEditorInfo(EditorInfo **infoPtr, CAVEGeodeShape *refGe
 {
     // call generic static function to adapt 'EditorInfo' changes into array data
     applyEditorInfo(&mVertexArray, &mNormalArray, &mUDirArray, &mVDirArray, &mTexcoordArray,
-		    	refGeodePtr->mVertexArray, refGeodePtr->mNormalArray,
-			refGeodePtr->mUDirArray, refGeodePtr->mVDirArray, refGeodePtr->mTexcoordArray, 
-		    mNumVertices, infoPtr, mVertexMaskingVector);
+                    refGeodePtr->mVertexArray, refGeodePtr->mNormalArray,
+                    refGeodePtr->mUDirArray, refGeodePtr->mVDirArray, refGeodePtr->mTexcoordArray, 
+                    mNumVertices, infoPtr, mVertexMaskingVector);
 
     // dirty display list and bound for all geometries
     const int nGeoms = mGeometryVector.size();
@@ -910,7 +910,7 @@ void CAVEGeodeShape::initGeometryCylinder(const Vec3 &initVect, const Vec3 &sVec
         geometryArrayPtr[2]->addIndexCluster(i * 4    , i * 4 + 2);
         geometryArrayPtr[2]->addIndexCluster(i * 4 + 1, i * 4 + 3);
     }
-hideSnapBounds();
+    hideSnapBounds();
 }
 
 
@@ -1101,7 +1101,7 @@ void CAVEGeodeShape::initGeometryCone(const Vec3 &initVect, const Vec3 &sVect)
         geometryArrayPtr[2]->addIndexCluster(i * 4    , i * 4 + 2);
         geometryArrayPtr[2]->addIndexCluster(i * 4 + 1, i * 4 + 3);
     }
-hideSnapBounds();
+    hideSnapBounds();
 }
 
 

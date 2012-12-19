@@ -274,6 +274,12 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
     {
         // test for sub shape intersection
         bool hit = false;
+        // 0 root
+        // 1 box
+        // 2 cylinder
+        // 3 cone
+        // 4 combine
+        // 5 delete
         for (int i = 0; i < mNumShapeSwitches; i++)
         {
             mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, 
@@ -300,6 +306,22 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
                 break;
             }
         }
+        
+        // combine
+        if (hit && mShapeSwitchIdx == 3)
+        {
+            std::cout << "combine" << std::endl;
+            mDOGeometryCollector->combineSelected();
+            return false;
+        }
+
+        // delete
+        else if (hit && mShapeSwitchIdx == 4)
+        {
+            mDOGeometryCollector->deleteSelected();
+            return false;
+        }
+
 
         mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
         if (hit)
@@ -323,7 +345,7 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
                 mDOGeometryCollector->setSurfaceCollectionHints(hitCAVEGeode, gDesignStateCenterPos - mEditorOffset);//osg::Vec3(1,0,1));
                 mDOGeometryCollector->toggleCAVEGeodeShape(hitCAVEGeode);
 
-                switchToLowerDesignState(0);
+                //switchToLowerDesignState(0);
                 return false;
             }
         }

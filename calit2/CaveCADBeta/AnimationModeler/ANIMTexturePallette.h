@@ -32,6 +32,7 @@
 #include <osg/Texture2D>
 #include <osg/Vec3>
 #include <osgDB/ReadFile>
+#include <osgText/Text>
 
 // Local includes
 #include "AnimationModelerBase.h"
