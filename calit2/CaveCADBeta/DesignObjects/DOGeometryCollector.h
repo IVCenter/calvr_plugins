@@ -26,6 +26,7 @@
 #include "../Geometry/CAVEGeometry.h"
 
 #include "../AnimationModeler/ANIMGeometryCollector.h"
+#include <cvrKernel/PluginHelper.h>
 
 
 /***************************************************************
