@@ -36,6 +36,7 @@
 
 // Local includes
 #include "AnimationModelerBase.h"
+#include <cvrKernel/CalVR.h>
 
 
 namespace CAVEAnimationModeler

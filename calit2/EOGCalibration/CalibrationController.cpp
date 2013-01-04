@@ -184,9 +184,9 @@ void CalibrationController::resetCaliBall()
 void CalibrationController::resetCaliField(const Matrixf &invBaseMat)
 {
     Matrixf scaleMat = Matrixf( 1400.f, 0.f, 0.f, 0.f, 
-				0.f, 1400.f, 0.f, 0.f, 
-				0.f, 0.f, 1400.f, 0.f, 
-				0.f, 0.f, 0.f, 1.f);
+                                0.f, 1400.f, 0.f, 0.f, 
+                                0.f, 0.f, 1400.f, 0.f, 
+                                0.f, 0.f, 0.f,    1.f);
     mViewerAlignmentTrans->setMatrix(scaleMat * invBaseMat);
 
     /* update field position & orientations */
@@ -286,7 +286,7 @@ void CalibrationController::updateCaliParam(const CaliFieldParameter& typ, const
     /* update geometry object handlers */
     if (typ >= LEFT_RANGE && typ <= DEPTH_RANGE)
     {
-	mCaliFieldHandler->updateWireFrames(mLeftRange, mRightRange, mUpwardRange, mDownwardRange, mMaxDepthRange);
+        mCaliFieldHandler->updateWireFrames(mLeftRange, mRightRange, mUpwardRange, mDownwardRange, mMaxDepthRange);
     }
 }
 

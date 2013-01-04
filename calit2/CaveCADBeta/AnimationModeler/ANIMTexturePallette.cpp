@@ -73,17 +73,13 @@ void ANIMLoadTexturePalletteRoot(osg::PositionAttitudeTransform** xformScaleFwd,
     saveGeode->addDrawable(saveSD);
 
     osg::ref_ptr<osgText::Text> text = new osgText::Text();
-
-    //osg::ref_ptr<osgText::Font> font = osgText::readRefFontFile(fontFile, options);
-//    text->setFont(font);
-
     text->setText("Save");
     text->setCharacterSize(0.1);
     text->setDrawMode(osgText::Text::TEXT);
     text->setAxisAlignment(osgText::Text::XZ_PLANE);
     text->setPosition(osg::Vec3(-0.15,0,0));
     text->setColor(osg::Vec4(1,1,1,1));
-    text->setFont("/home/cehughes/CalVR/resources/arial.ttf");
+    text->setFont(cvr::CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
 
     saveGeode->addDrawable(text);
 
@@ -102,16 +98,13 @@ void ANIMLoadTexturePalletteRoot(osg::PositionAttitudeTransform** xformScaleFwd,
 
     osg::ref_ptr<osgText::Text> text2 = new osgText::Text();
 
-//    osg::ref_ptr<osgText::Font> font2 = osgText::readRefFontFile(fontFile, options);
-//    text2->setFont(font2);
-
     text2->setText("Selector");
     text2->setCharacterSize(0.1);
     text2->setDrawMode(osgText::Text::TEXT);
     text2->setAxisAlignment(osgText::Text::XZ_PLANE);
     text2->setPosition(osg::Vec3(-0.2, 0, -0.5));
     text2->setColor(osg::Vec4(1,1,1,1));
-    text2->setFont("/home/cehughes/CalVR/resources/arial.ttf");
+    text2->setFont(cvr::CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
 
     csGeode->addDrawable(text2);
 
