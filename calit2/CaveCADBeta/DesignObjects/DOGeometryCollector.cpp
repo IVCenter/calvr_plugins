@@ -54,6 +54,12 @@ void DOGeometryCollector::setSurfaceCollectionHints(CAVEGeodeShape *shapeGeode, 
     mShapeCenter = shapeGeode->getCAVEGeodeCenter();
     mIconCenter = iconCenter;
 
+    osg::Matrixf w2o = cvr::PluginHelper::getWorldToObjectTransform();
+    osg::Matrixd o2cad;
+    o2cad.makeScale(0.001, 0.001, 0.001);//
+
+    mIconCenter = osg::Vec3(0,2000,0) * cvr::PluginHelper::getHeadMat() * w2o * o2cad;
+   
     /* set origin of the two coordinate systems: using center of first hit 'CAVEGeodeShape' and 
        center of current design state sphere. */
     CAVEGroupIconSurface::setSurfaceScalingHint(shapeGeode->getBoundingBox());
@@ -79,41 +85,43 @@ void DOGeometryCollector::toggleCAVEGeodeShape(CAVEGeodeShape *shapeGeode)
        assign an index value associates with its position in 'mGeodeShapeVector' */
     if (vectorIdx < 0)
     {
-	/* assign an incremental collector index */
-	shapeGeode->mDOCollectorIndex = mGeodeShapeVector.size();
-	mGeodeShapeVector.push_back(shapeGeode);
+        /* assign an incremental collector index */
+        shapeGeode->mDOCollectorIndex = mGeodeShapeVector.size();
+        mGeodeShapeVector.push_back(shapeGeode);
 
-	/* make a instance clone of toggled geode, asign the same vector index to it */
-	CAVEGeodeShape *shapeGeodeRef = new CAVEGeodeShape(shapeGeode);
-	shapeGeodeRef->mDOCollectorIndex = shapeGeode->mDOCollectorIndex;
-	shapeGeodeRef->applyAlpha(0.5f);
-	mDOShapeRefMatrixTrans->addChild(shapeGeodeRef);
+        /* make a instance clone of toggled geode, asign the same vector index to it */
+        CAVEGeodeShape *shapeGeodeRef = new CAVEGeodeShape(shapeGeode);
+        shapeGeodeRef->mDOCollectorIndex = shapeGeode->mDOCollectorIndex;
+        shapeGeodeRef->applyAlpha(0.5f);
+        mDOShapeRefMatrixTrans->addChild(shapeGeodeRef);
 
-	/* create icon surfaces and toolkits objects & animations at central position of state sphere:
-	   1) generate a vector of 'CAVEGeodeIconSurface' objects and add them to 'surfacesPATrans'
-	   2) add 'surfacesPATrans' to 'mDOIconSurfaceSwitch'
-	   3) reset pick up animations for surface icon
-	*/
-	PositionAttitudeTransform *surfacesPATrans;
-	CAVEGroupIconSurface *iconSurfaceGroup;
-	CAVEAnimationModeler::ANIMLoadGeometryCollectorIconSurfaces(&surfacesPATrans, &iconSurfaceGroup, 
-									shapeGeode, shapeGeodeRef);
-	mGroupIconSurfaceVector.push_back(iconSurfaceGroup);
-	mDOIconSurfaceSwitch->addChild(surfacesPATrans);
+        /* create icon surfaces and toolkits objects & animations at central position of state sphere:
+           1) generate a vector of 'CAVEGeodeIconSurface' objects and add them to 'surfacesPATrans'
+           2) add 'surfacesPATrans' to 'mDOIconSurfaceSwitch'
+           3) reset pick up animations for surface icon
+        */
+        PositionAttitudeTransform *surfacesPATrans;
+        CAVEGroupIconSurface *iconSurfaceGroup;
+        CAVEAnimationModeler::ANIMLoadGeometryCollectorIconSurfaces(&surfacesPATrans, &iconSurfaceGroup, 
+                                        shapeGeode, shapeGeodeRef);
+        mGroupIconSurfaceVector.push_back(iconSurfaceGroup);
+        mDOIconSurfaceSwitch->addChild(surfacesPATrans);
 
-	AnimationPathCallback* surfacesAnimCallback = dynamic_cast <AnimationPathCallback*>
-		(surfacesPATrans->getUpdateCallback());
-	if (surfacesAnimCallback) surfacesAnimCallback->reset();
+        AnimationPathCallback* surfacesAnimCallback = dynamic_cast <AnimationPathCallback*>
+            (surfacesPATrans->getUpdateCallback());
+        if (surfacesAnimCallback) 
+            surfacesAnimCallback->reset();
 
-	/* create geode wireframe, add it to reference switch and push back to wireframe vector */
-	MatrixTransform *wireframeTrans;
-	CAVEGroupEditGeodeWireframe *editGeodeWireframe;
-	CAVEAnimationModeler::ANIMLoadGeometryCollectorGeodeWireframe(&wireframeTrans, &editGeodeWireframe, shapeGeode);
-	mEditGeodeWireframeVector.push_back(editGeodeWireframe);
-	mDOGeodeWireframeSwitch->addChild(wireframeTrans);
+        /* create geode wireframe, add it to reference switch and push back to wireframe vector */
+        MatrixTransform *wireframeTrans;
+        CAVEGroupEditGeodeWireframe *editGeodeWireframe;
+        CAVEAnimationModeler::ANIMLoadGeometryCollectorGeodeWireframe(&wireframeTrans, &editGeodeWireframe, shapeGeode);
+        mEditGeodeWireframeVector.push_back(editGeodeWireframe);
+        mDOGeodeWireframeSwitch->addChild(wireframeTrans);
 
-	/* mark 'editGeodeWireframe' as primary wireframe group if this geode shape is the first one selected */
-	if (shapeGeode->mDOCollectorIndex == 0) editGeodeWireframe->setPrimaryFlag(true);
+        /* mark 'editGeodeWireframe' as primary wireframe group if this geode shape is the first one selected */
+        if (shapeGeode->mDOCollectorIndex == 0) 
+            editGeodeWireframe->setPrimaryFlag(true);
     }
 
     /* mDOCollectorIndex > 0, 'shapeGeode' has already been selected, erase it from vector
@@ -122,30 +130,33 @@ void DOGeometryCollector::toggleCAVEGeodeShape(CAVEGeodeShape *shapeGeode)
        selected in the vector. */
     else
     {
-	/* remove the clone instance from 'mDOShapeRefMatrixTrans' */
-	mDOShapeRefMatrixTrans->removeChild(shapeGeode->mDOCollectorIndex);
+        /* remove the clone instance from 'mDOShapeRefMatrixTrans' */
+        mDOShapeRefMatrixTrans->removeChild(shapeGeode->mDOCollectorIndex);
 
-	mGeodeShapeVector.erase(mGeodeShapeVector.begin() + vectorIdx);
-	mEditGeodeWireframeVector.erase(mEditGeodeWireframeVector.begin() + vectorIdx);
-	mGroupIconSurfaceVector.erase(mGroupIconSurfaceVector.begin() + vectorIdx);
+        mGeodeShapeVector.erase(mGeodeShapeVector.begin() + vectorIdx);
+        mEditGeodeWireframeVector.erase(mEditGeodeWireframeVector.begin() + vectorIdx);
+        mGroupIconSurfaceVector.erase(mGroupIconSurfaceVector.begin() + vectorIdx);
 
-	mDOGeodeWireframeSwitch->removeChild(shapeGeode->mDOCollectorIndex);
-	mDOIconSurfaceSwitch->removeChild(shapeGeode->mDOCollectorIndex);
-	shapeGeode->mDOCollectorIndex = -1;
+        mDOGeodeWireframeSwitch->removeChild(shapeGeode->mDOCollectorIndex);
+        mDOIconSurfaceSwitch->removeChild(shapeGeode->mDOCollectorIndex);
+        shapeGeode->mDOCollectorIndex = -1;
 
-	/* 'mDOCollectorIndex' is a hint to trace all object instances in 'mGeodeShapeVector', 
-	   'mEditGeodeWireframeVector' and 'mGroupIconSurfaceVector'. Need to be re-ordered after erase operation. */
-	if (mGeodeShapeVector.size() > 0)
-	{
-	    CAVEGeodeShapeVector::iterator itrGeodeShape;
-	    for (itrGeodeShape = mGeodeShapeVector.begin() + vectorIdx; itrGeodeShape != mGeodeShapeVector.end();
-		 itrGeodeShape++)
-		(*itrGeodeShape)->mDOCollectorIndex--;
-	}
+        /* 'mDOCollectorIndex' is a hint to trace all object instances in 'mGeodeShapeVector', 
+           'mEditGeodeWireframeVector' and 'mGroupIconSurfaceVector'. Need to be re-ordered after erase operation. */
+        if (mGeodeShapeVector.size() > 0)
+        {
+            CAVEGeodeShapeVector::iterator itrGeodeShape;
+            for (itrGeodeShape = mGeodeShapeVector.begin() + vectorIdx; itrGeodeShape != mGeodeShapeVector.end();
+             itrGeodeShape++)
+            (*itrGeodeShape)->mDOCollectorIndex--;
+        }
     }
 
-    if (mGeodeShapeVector.size() > 0) mMode = COLLECT_GEODE;
-    else mMode = COLLECT_NONE;
+    if (mGeodeShapeVector.size() > 0) 
+        mMode = COLLECT_GEODE;
+    else 
+        mMode = COLLECT_NONE;
+
     updateVertexMaskingVector();
 }
 
@@ -164,22 +175,23 @@ void DOGeometryCollector::toggleCAVEGeodeIconSurface(CAVEGeodeIconSurface *iconG
        assign an index value associates with its position in 'mGeometryVector' */
     if (vectorIdx < 0)
     {
-	/* assign an incremental collector index */
-	orgGeometry->mDOCollectorIndex = mGeometryVector.size();
-	mGeometryVector.push_back(orgGeometry);
+        /* assign an incremental collector index */
+        orgGeometry->mDOCollectorIndex = mGeometryVector.size();
+        mGeometryVector.push_back(orgGeometry);
 
-	/* set highlight of 'iconGeodeSurface' as 'selected' */
-	iconGeodeSurface->setHighlightSelected();
+        /* set highlight of 'iconGeodeSurface' as 'selected' */
+        iconGeodeSurface->setHighlightSelected();
 
-	/* create geometry wireframe, add it to reference switch and push back to wireframe vector */
-	MatrixTransform *wireframeTrans;
-	CAVEGroupEditGeometryWireframe *editGeometryWireframe;
-	CAVEAnimationModeler::ANIMLoadGeometryCollectorGeometryWireframe(&wireframeTrans, &editGeometryWireframe, 										refGeometry);
-	mEditGeometryWireframeVector.push_back(editGeometryWireframe);
-	mDOGeometryWireframeSwitch->addChild(wireframeTrans);
+        /* create geometry wireframe, add it to reference switch and push back to wireframe vector */
+        MatrixTransform *wireframeTrans;
+        CAVEGroupEditGeometryWireframe *editGeometryWireframe;
+        CAVEAnimationModeler::ANIMLoadGeometryCollectorGeometryWireframe(&wireframeTrans, &editGeometryWireframe, 										refGeometry);
+        mEditGeometryWireframeVector.push_back(editGeometryWireframe);
+        mDOGeometryWireframeSwitch->addChild(wireframeTrans);
 
-	/* mark 'editGeometryWireframe' as primary wireframe group if this geometry is the first one selected */
-	if (orgGeometry->mDOCollectorIndex == 0) editGeometryWireframe->setPrimaryFlag(true);
+        /* mark 'editGeometryWireframe' as primary wireframe group if this geometry is the first one selected */
+        if (orgGeometry->mDOCollectorIndex == 0) 
+            editGeometryWireframe->setPrimaryFlag(true);
     }
 
     /* mDOCollectorIndex > 0, 'orgGeometry' has already been selected, erase it from vector
@@ -187,20 +199,20 @@ void DOGeometryCollector::toggleCAVEGeodeIconSurface(CAVEGeodeIconSurface *iconG
        by decreasing 1. */
     else
     {
-	/* set highlight of 'iconGeodeSurface' as 'unselected' */
-	iconGeodeSurface->setHighlightUnselected();
+        /* set highlight of 'iconGeodeSurface' as 'unselected' */
+        iconGeodeSurface->setHighlightUnselected();
 
-	mGeometryVector.erase(mGeometryVector.begin() + vectorIdx);
-	mEditGeometryWireframeVector.erase(mEditGeometryWireframeVector.begin() + vectorIdx);
-	mDOGeometryWireframeSwitch->removeChild(vectorIdx);
-	orgGeometry->mDOCollectorIndex = -1;
+        mGeometryVector.erase(mGeometryVector.begin() + vectorIdx);
+        mEditGeometryWireframeVector.erase(mEditGeometryWireframeVector.begin() + vectorIdx);
+        mDOGeometryWireframeSwitch->removeChild(vectorIdx);
+        orgGeometry->mDOCollectorIndex = -1;
 
-	if (mGeometryVector.size() > 0)
-	{
-	    CAVEGeometryVector::iterator itrGeometry;
-	    for (itrGeometry = mGeometryVector.begin() + vectorIdx; itrGeometry != mGeometryVector.end(); itrGeometry++)
-		(*itrGeometry)->mDOCollectorIndex--;
-	}
+        if (mGeometryVector.size() > 0)
+        {
+            CAVEGeometryVector::iterator itrGeometry;
+            for (itrGeometry = mGeometryVector.begin() + vectorIdx; itrGeometry != mGeometryVector.end(); itrGeometry++)
+            (*itrGeometry)->mDOCollectorIndex--;
+        }
     }
 
     if (mGeometryVector.size() > 0) mMode = COLLECT_GEOMETRY;
@@ -237,16 +249,16 @@ void DOGeometryCollector::clearGeometryVector()
     /* clear 'mDOCollectorIndex' of all 'CAVEGeometry' objects that have been selected */
     if (mGeometryVector.size() > 0)
     {
-	CAVEGeometryVector::iterator itrGeometry;
-	for (itrGeometry = mGeometryVector.begin(); itrGeometry != mGeometryVector.end(); itrGeometry++)
-	{
-	    (*itrGeometry)->mDOCollectorIndex = -1;
+        CAVEGeometryVector::iterator itrGeometry;
+        for (itrGeometry = mGeometryVector.begin(); itrGeometry != mGeometryVector.end(); itrGeometry++)
+        {
+            (*itrGeometry)->mDOCollectorIndex = -1;
 
-	    /* set highlights of all selected surfaces in 'mGeometryVector' as normal */
-	    setAllIconSurfaceHighlightsNormal();
-	}
-	mMode = COLLECT_GEODE;
-	updateVertexMaskingVector();
+            /* set highlights of all selected surfaces in 'mGeometryVector' as normal */
+            setAllIconSurfaceHighlightsNormal();
+        }
+        mMode = COLLECT_GEODE;
+        updateVertexMaskingVector();
     }
 
     mEditGeometryWireframeVector.clear();
@@ -262,14 +274,15 @@ void DOGeometryCollector::clearGeodeShapeVector()
 {
     /* remove all 'CAVEGeodeShape' instances on an empty click of the input device */
     int numChildrenToRemove = mDOShapeRefMatrixTrans->getNumChildren();
-    if (numChildrenToRemove > 0) mDOShapeRefMatrixTrans->removeChildren(0, numChildrenToRemove);
+    if (numChildrenToRemove > 0) 
+        mDOShapeRefMatrixTrans->removeChildren(0, numChildrenToRemove);
 
     /* clear 'mDOCollectorIndex' of all 'CAVEGeodeShape' objects that have been selected */
     if (mGeodeShapeVector.size() > 0)
     {
-	CAVEGeodeShapeVector::iterator itrGeodeShape;
-	for (itrGeodeShape = mGeodeShapeVector.begin(); itrGeodeShape != mGeodeShapeVector.end(); itrGeodeShape++)
-	    (*itrGeodeShape)->mDOCollectorIndex = -1;
+        CAVEGeodeShapeVector::iterator itrGeodeShape;
+        for (itrGeodeShape = mGeodeShapeVector.begin(); itrGeodeShape != mGeodeShapeVector.end(); itrGeodeShape++)
+            (*itrGeodeShape)->mDOCollectorIndex = -1;
     }
     mMode = COLLECT_NONE;
     updateVertexMaskingVector();
@@ -295,7 +308,7 @@ void DOGeometryCollector::setAllIconSurfaceHighlightsNormal()
     if (nGroupIconSurface <= 0) return;
     for (int i = 0; i < nGroupIconSurface; i++)
     {
-	mGroupIconSurfaceVector[i]->setHighlightNormal();
+        mGroupIconSurfaceVector[i]->setHighlightNormal();
     }
 }
 
@@ -306,7 +319,7 @@ void DOGeometryCollector::setAllIconSurfaceHighlightsUnselected()
     if (nGroupIconSurface <= 0) return;
     for (int i = 0; i < nGroupIconSurface; i++)
     {
-	mGroupIconSurfaceVector[i]->setHighlightUnselected();
+        mGroupIconSurfaceVector[i]->setHighlightUnselected();
     }
 }
 
@@ -322,49 +335,39 @@ void DOGeometryCollector::updateVertexMaskingVector()
     /* update vertex masking vector for each 'CAVEGeodeShape' object */
     for (int i = 0; i < numGeodeShapes; i++)
     {
-	CAVEGeodeShape *orgGeodePtr = mGeodeShapeVector[i];
-	CAVEGeodeShape *refGeodePtr = dynamic_cast <CAVEGeodeShape*> (mDOShapeRefMatrixTrans->getChild(i));
+        CAVEGeodeShape *orgGeodePtr = mGeodeShapeVector[i];
+        CAVEGeodeShape *refGeodePtr = dynamic_cast <CAVEGeodeShape*> (mDOShapeRefMatrixTrans->getChild(i));
 
-	/* 'COLLECT_NONE': nothing has been selected, set all vertice inactive */
-	if (mMode == COLLECT_NONE) orgGeodePtr->updateVertexMaskingVector(false);
+        /* 'COLLECT_NONE': nothing has been selected, set all vertice inactive */
+        if (mMode == COLLECT_NONE) orgGeodePtr->updateVertexMaskingVector(false);
 
-	/* 'COLLECT_GEODE': no specific surface selected, set all vertices active */
-	else if (mMode == COLLECT_GEODE) orgGeodePtr->updateVertexMaskingVector(true);
+        /* 'COLLECT_GEODE': no specific surface selected, set all vertices active */
+        else if (mMode == COLLECT_GEODE) orgGeodePtr->updateVertexMaskingVector(true);
 
-	/* 'COLLECT_GEOMETRY': some surfaces selected, set affiliated vertices active */
-	else if (mMode == COLLECT_GEOMETRY) orgGeodePtr->updateVertexMaskingVector();
+        /* 'COLLECT_GEOMETRY': some surfaces selected, set affiliated vertices active */
+        else if (mMode == COLLECT_GEOMETRY) orgGeodePtr->updateVertexMaskingVector();
 
-	/* synchronize the 'mVertexMaskingVector' field of actual 'CAVEGeode' and the cloned reference. */
-	if (refGeodePtr) refGeodePtr->updateVertexMaskingVector(orgGeodePtr->getVertexMaskingVector());
+        /* synchronize the 'mVertexMaskingVector' field of actual 'CAVEGeode' and the cloned reference. */
+        if (refGeodePtr) 
+            refGeodePtr->updateVertexMaskingVector(orgGeodePtr->getVertexMaskingVector());
     }
 }
 
 
+/***************************************************************
+* Function: deleteSelected()
+***************************************************************/
+void DOGeometryCollector::deleteSelected()
+{
+    std::cout << mGeodeShapeVector.size() << std::endl;
+}
 
 
+/***************************************************************
+* Function: combineSelected()
+***************************************************************/
+void DOGeometryCollector::combineSelected()
+{
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+}
 

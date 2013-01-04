@@ -3,6 +3,7 @@ SET(PLUGIN_HEADERS
     PointsWithPans.h
     PointsObject.h
     PanMarkerObject.h
+    TexturedSphere.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -11,6 +12,7 @@ ADD_LIBRARY(${LIB_NAME}
     PointsWithPans.cpp
     PointsObject.cpp
     PanMarkerObject.cpp
+    TexturedSphere.cpp
 )
 
 

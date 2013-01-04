@@ -22,7 +22,6 @@ void ANIMLoadGeometryEditorIconToolkits(osg::MatrixTransform **iconToolkitTrans,
 				int &numToolkits, ANIMIconToolkitSwitchEntry ***iconToolkitSwitchEntryArray)
 {
     *iconToolkitTrans = new MatrixTransform;
-
     /* with reference to the number of editting types defined in 'CAVEGroupIconToolkit' */
     numToolkits = 4;
 
@@ -30,12 +29,12 @@ void ANIMLoadGeometryEditorIconToolkits(osg::MatrixTransform **iconToolkitTrans,
     *iconToolkitSwitchEntryArray = new ANIMIconToolkitSwitchEntry*[numToolkits];
     for (int i = 0; i < numToolkits; i++)
     {
-	(*iconToolkitSwitchEntryArray)[i] = new ANIMIconToolkitSwitchEntry;
-	ANIMCreateSingleIconToolkitSwitchAnimation(i, &((*iconToolkitSwitchEntryArray)[i]));
+        (*iconToolkitSwitchEntryArray)[i] = new ANIMIconToolkitSwitchEntry;
+        ANIMCreateSingleIconToolkitSwitchAnimation(i, &((*iconToolkitSwitchEntryArray)[i]));
 
-	/* each type of editting tool contains one 'CAVEGroupIconToolkit' instance, which will be
-	   added to the root group of 'iconToolkitSwitch' on top */
-	(*iconToolkitTrans)->addChild((*iconToolkitSwitchEntryArray)[i]->mSwitch);
+        /* each type of editting tool contains one 'CAVEGroupIconToolkit' instance, which will be
+           added to the root group of 'iconToolkitSwitch' on top */
+        (*iconToolkitTrans)->addChild((*iconToolkitSwitchEntryArray)[i]->mSwitch);
     }
 }
 
@@ -70,11 +69,11 @@ void ANIMCreateSingleIconToolkitSwitchAnimation(int idx, ANIMIconToolkitSwitchEn
     float step = 1.f / ANIM_GEOMETRY_EDITOR_TOOLKIT_SHOWUP_SAMPS;
     for (int i = 0; i < ANIM_GEOMETRY_EDITOR_TOOLKIT_SHOWUP_SAMPS + 1; i++)
     {
-	float val = i * step;
-	scaleFwd = Vec3(val, val, val);
-	scaleBwd = Vec3(1.f-val, 1.f-val, 1.f-val);
-	animScaleFwd->insert(val, AnimationPath::ControlPoint(Vec3(), Quat(), scaleFwd));
-	animScaleBwd->insert(val, AnimationPath::ControlPoint(Vec3(), Quat(), scaleBwd));
+        float val = i * step;
+        scaleFwd = Vec3(val, val, val);
+        scaleBwd = Vec3(1.f-val, 1.f-val, 1.f-val);
+        animScaleFwd->insert(val, AnimationPath::ControlPoint(Vec3(0,0,0), Quat(), scaleFwd));
+        animScaleBwd->insert(val, AnimationPath::ControlPoint(Vec3(0,0,0), Quat(), scaleBwd));
     }
 
     (*iconToolkitEntry)->mFwdAnimCallback = new AnimationPathCallback(animScaleFwd, 
@@ -87,10 +86,4 @@ void ANIMCreateSingleIconToolkitSwitchAnimation(int idx, ANIMIconToolkitSwitchEn
 
 
 };
-
-
-
-
-
-
 

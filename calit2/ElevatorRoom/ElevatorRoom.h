@@ -2,8 +2,16 @@
 #define ELEVATORROOM_PLUGIN_H
 
 
+#include <cvrKernel/ComController.h>
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrKernel/FileHandler.h>
+#include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/SceneObject.h>
+
+#include <cvrUtil/Intersection.h>
+#include <cvrConfig/ConfigManager.h>
 
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuRangeValue.h>
@@ -13,18 +21,28 @@
 
 #include <osg/Geode>
 #include <osg/Geometry>
+#include <osg/Material>
 #include <osg/MatrixTransform>
 #include <osg/PositionAttitudeTransform>
 #include <osg/ShapeDrawable>
 #include <osg/Switch>
 #include <osg/Texture2D>
 #include <osgText/Text>
+#include <osgDB/ReadFile>
 
 #include <string.h>
 #include <vector>
 #include <map>
 
-#include "OAS/OASClient.h"
+#include <iostream>
+#include <stdio.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <X11/Xlib.h>
+#include <spnav.h>
+
+#include "AudioHandler.h"
+//#include "OAS/OASClient.h"
 
 #define NUM_DOORS 8
 #define DOOR_SPEED 0.007
@@ -46,6 +64,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
 
     protected:
         static ElevatorRoom * _myPtr;
+        AudioHandler * _audioHandler; 
 
         enum Mode
         {
@@ -54,6 +73,17 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
             ALLY,
             CHECKER
         };
+
+        enum GameMode
+        {
+            ONE,
+            TWO,
+            THREE,
+            FOUR,
+            FIVE
+        };
+
+        GameMode _gameMode;
 
         cvr::SubMenu * _elevatorMenu;
         cvr::MenuButton * _loadButton, * _clearButton;
@@ -74,22 +104,21 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         std::vector<osg::ref_ptr<osg::Switch> > _aliensSwitch, _alliesSwitch, 
             _checkersSwitch, _lightSwitch;
         
-        oasclient::Sound * _ding, * _hitSound, * _laser;
+        //oasclient::Sound * _ding, * _hitSound, * _laser;
 
         float _modelScale; // scale of entire scene
         float _pauseLength; // length in seconds of time between door close and next lighting up
         float _pauseStart; // start time of the current pause
         float _doorDist; // distance doors are currently translated
         float _checkSpeed; // number of checkerboard flashes per second
-        float _flashStartTime;
-        float _avatarFlashPerSec;
-        float _lightFlashPerSec;
+        float _flashStartTime, _avatarFlashPerSec, _lightFlashPerSec;
 
         int _activeDoor; // which door is currently opening/closing
         int _score; // current score (should be > 0)
         int _sockfd; // for EOG syncer communication
         int _flashCount; // number of times active avatar has flashed
         int _alienChance, _allyChance, _checkChance;
+        int _lightColor;
 
         bool _isOpening; // whether the active door is opening or closing
         bool _loaded; // whether the model has finished loading
@@ -99,7 +128,17 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         bool _soundEnabled;
 
         Mode _mode; // which kind of avatar is currently active
-        
+        osg::Quat _eventRot;
+        osg::Vec3 _eventPos;
+        osg::PositionAttitudeTransform *_crosshairPat;
+        //osg::Cone *_headCone, *_handCone;
+        //osg::Geode *_soundGeode;
+        //osg::ShapeDrawable *_headSD, *_handSD;
+        osg::PositionAttitudeTransform *_headsoundPAT, *_handsoundPAT;
+
+        float _transMult, _rotMult;
+        float _transcale, _rotscale;
+
         void connectToServer();
         void openDoor(int doorNum);
         void closeDoor(int doorNum);
@@ -113,3 +152,4 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
 };
 
 #endif
+

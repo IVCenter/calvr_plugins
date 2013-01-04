@@ -23,12 +23,14 @@ namespace CAVEAnimationModeler
 *
 ***************************************************************/
 void ANIMLoadTexturePalletteRoot(osg::PositionAttitudeTransform** xformScaleFwd,
-				 osg::PositionAttitudeTransform** xformScaleBwd)
+                                 osg::PositionAttitudeTransform** xformScaleBwd,
+                                 osg::PositionAttitudeTransform** buttonScaleFwd,
+                                 osg::PositionAttitudeTransform** buttonScaleBwd)
 {
     *xformScaleFwd = new PositionAttitudeTransform;
     *xformScaleBwd = new PositionAttitudeTransform;
 
-    /* create zoom in & out animations for 'DSTexturePallette' root switch */
+    // create zoom in & out animations for 'DSTexturePallette' root switch
     AnimationPath* animationPathScaleFwd = new AnimationPath;
     AnimationPath* animationPathScaleBwd = new AnimationPath;
     animationPathScaleFwd->setLoopMode(AnimationPath::NO_LOOPING);
@@ -51,25 +53,125 @@ void ANIMLoadTexturePalletteRoot(osg::PositionAttitudeTransform** xformScaleFwd,
 						0.0, 1.f / ANIM_VIRTUAL_SPHERE_LAPSE_TIME); 
     (*xformScaleFwd)->setUpdateCallback(animCallbackFwd);
     (*xformScaleBwd)->setUpdateCallback(animCallbackBwd);
+
+    
+    std::string fontFile = cvr::ConfigManager::getEntry("value", "Plugin.CaveCADBeta.Font", "");
+    osgDB::ReaderWriter::Options *options = new osgDB::ReaderWriter::Options();
+    options->setObjectCacheHint(osgDB::ReaderWriter::Options::CACHE_NONE);
+
+    // create Save Color button
+    osg::Geode *saveGeode = new osg::Geode();
+    osg::Shape *saveSphere = new osg::Sphere(osg::Vec3(0, 0, 0), 0.20);
+    osg::ShapeDrawable *saveSD = new osg::ShapeDrawable(saveSphere);
+
+    osg::StateSet * stateset = saveSD->getOrCreateStateSet();
+    stateset->setMode(GL_BLEND, StateAttribute::ON);
+    stateset->setMode(GL_CULL_FACE, StateAttribute::ON);
+    stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
+
+    saveSD->setColor(osg::Vec4(1.0, 1.0, 1.0, 0.5));
+    saveGeode->addDrawable(saveSD);
+
+    osg::ref_ptr<osgText::Text> text = new osgText::Text();
+    text->setText("Save");
+    text->setCharacterSize(0.1);
+    text->setDrawMode(osgText::Text::TEXT);
+    text->setAxisAlignment(osgText::Text::XZ_PLANE);
+    text->setPosition(osg::Vec3(-0.15,0,0));
+    text->setColor(osg::Vec4(1,1,1,1));
+    text->setFont(cvr::CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
+
+    saveGeode->addDrawable(text);
+
+
+   // Open/close color selector
+    osg::Geode *csGeode = new osg::Geode();
+    osg::Shape *csSphere = new osg::Sphere(osg::Vec3(0, 0, -0.5), 0.20);
+    osg::ShapeDrawable *csSD = new osg::ShapeDrawable(csSphere);
+    stateset = csSD->getOrCreateStateSet();
+    stateset->setMode(GL_BLEND, StateAttribute::ON);
+    stateset->setMode(GL_CULL_FACE, StateAttribute::ON);
+    stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
+
+    csSD->setColor(osg::Vec4(1.0, 0.0, 0.0, 0.5));
+    csGeode->addDrawable(csSD);
+
+    osg::ref_ptr<osgText::Text> text2 = new osgText::Text();
+
+    text2->setText("Selector");
+    text2->setCharacterSize(0.1);
+    text2->setDrawMode(osgText::Text::TEXT);
+    text2->setAxisAlignment(osgText::Text::XZ_PLANE);
+    text2->setPosition(osg::Vec3(-0.2, 0, -0.5));
+    text2->setColor(osg::Vec4(1,1,1,1));
+    text2->setFont(cvr::CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
+
+    csGeode->addDrawable(text2);
+
+  
+    animationPathScaleFwd = new AnimationPath();
+    animationPathScaleBwd = new AnimationPath();
+
+    animationPathScaleFwd->setLoopMode(AnimationPath::NO_LOOPING);
+    animationPathScaleBwd->setLoopMode(AnimationPath::NO_LOOPING);
+
+    step = 1.f / ANIM_VIRTUAL_SPHERE_NUM_SAMPS;
+    osg::Vec3 startPos, endPos;
+    startPos = osg::Vec3(-0.5, 0, 0);
+    endPos = osg::Vec3(-0.5, 0, -2.0);
+    for (int i = 0; i < ANIM_VIRTUAL_SPHERE_NUM_SAMPS + 1; i++)
+    {
+        float val = i * step;
+        scaleFwd = Vec3(val, val, val);
+        scaleBwd = Vec3(1.f-val, 1.f-val, 1.f-val);
+
+        osg::Vec3 diff, fwd, bwd;
+        diff = osg::Vec3(endPos - startPos);
+
+        for (int j = 0; j < 3; ++j)
+        {
+            fwd[j] = startPos[j] + val * diff[j];
+            bwd[j] = startPos[j] + (1 - val) * diff[j];
+        }
+
+        animationPathScaleFwd->insert(val, AnimationPath::ControlPoint(fwd, Quat(), scaleFwd));
+        animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(bwd, Quat(), scaleBwd));
+    }
+
+    animCallbackFwd = new AnimationPathCallback(animationPathScaleFwd, 0.0, 1.f / ANIM_VIRTUAL_SPHERE_LAPSE_TIME);
+    animCallbackBwd = new AnimationPathCallback(animationPathScaleBwd, 0.0, 1.f / ANIM_VIRTUAL_SPHERE_LAPSE_TIME); 
+    
+    (*buttonScaleFwd) = new osg::PositionAttitudeTransform();
+    (*buttonScaleBwd) = new osg::PositionAttitudeTransform();
+
+    (*buttonScaleFwd)->setUpdateCallback(animCallbackFwd);
+    (*buttonScaleBwd)->setUpdateCallback(animCallbackBwd);
+
+    (*buttonScaleFwd)->addChild(saveGeode);
+    (*buttonScaleBwd)->addChild(saveGeode);
+
+    (*buttonScaleFwd)->addChild(csGeode);
+    (*buttonScaleBwd)->addChild(csGeode);
+
 }
 
 
 /***************************************************************
 * Function: ANIMLoadTexturePalletteIdle()
 ***************************************************************/
-void ANIMLoadTexturePalletteIdle(osg::Switch **idleStateSwitch, ANIMTexturePalletteIdleEntry **textureStateIdelEntry)
+void ANIMLoadTexturePalletteIdle(osg::Switch **idleStateSwitch, ANIMTexturePalletteIdleEntry **textureStateIdleEntry)
 {
     *idleStateSwitch = new Switch;
     (*idleStateSwitch)->setAllChildrenOn();
 
-    *textureStateIdelEntry = new ANIMTexturePalletteIdleEntry;
-    (*textureStateIdelEntry)->mEntrySwitch = new Switch;
+    *textureStateIdleEntry = new ANIMTexturePalletteIdleEntry;
+    (*textureStateIdleEntry)->mEntrySwitch = new Switch;
 
-    /* create drawables, geodes and texture mapping */
-    (*textureStateIdelEntry)->mEntryGeode = new Geode();
+    // create drawables, geodes and texture mapping
+    (*textureStateIdleEntry)->mEntryGeode = new Geode();
     Sphere *idleSphere = new Sphere(Vec3(0, 0, 0), ANIM_VIRTUAL_SPHERE_RADIUS);
     ShapeDrawable *idleSphereDrawable = new ShapeDrawable(idleSphere);
-    ((*textureStateIdelEntry)->mEntryGeode)->addDrawable(idleSphereDrawable);
+    ((*textureStateIdleEntry)->mEntryGeode)->addDrawable(idleSphereDrawable);
 
     Material *material = new Material;
     material->setDiffuse(Material::FRONT_AND_BACK, Vec4(1, 1, 1, 1));
@@ -79,13 +181,13 @@ void ANIMLoadTexturePalletteIdle(osg::Switch **idleStateSwitch, ANIMTexturePalle
     Image *idleImage = osgDB::readImageFile(ANIMDataDir() + "Textures/Pallette/PalletteSigniture.BMP");
     Texture2D* idleTexture = new Texture2D(idleImage);    
     
-    StateSet *idleStateSet = ((*textureStateIdelEntry)->mEntryGeode)->getOrCreateStateSet();
+    StateSet *idleStateSet = ((*textureStateIdleEntry)->mEntryGeode)->getOrCreateStateSet();
     idleStateSet->setMode(GL_BLEND, StateAttribute::OVERRIDE | StateAttribute::ON );
     idleStateSet->setRenderingHint(StateSet::TRANSPARENT_BIN);
     idleStateSet->setAttributeAndModes(material, StateAttribute::OVERRIDE | StateAttribute::ON);
     idleStateSet->setTextureAttributeAndModes(0, idleTexture, StateAttribute::ON);
 
-    /* create zoom in & out animations for 'DSTexturePallette': 'IDLE' state */
+    // create zoom in & out animations for 'DSTexturePallette': 'IDLE' state
     PositionAttitudeTransform *idleStatePATransFwd = new PositionAttitudeTransform;
     PositionAttitudeTransform *idleStatePATransBwd = new PositionAttitudeTransform;
 
@@ -93,7 +195,7 @@ void ANIMLoadTexturePalletteIdle(osg::Switch **idleStateSwitch, ANIMTexturePalle
     AnimationPath* animationPathScaleBwd = new AnimationPath;
     animationPathScaleFwd->setLoopMode(AnimationPath::NO_LOOPING);
     animationPathScaleBwd->setLoopMode(AnimationPath::NO_LOOPING);
-   
+    
     Vec3 scaleFwd, scaleBwd;
     float step = 1.f / ANIM_VIRTUAL_SPHERE_NUM_SAMPS;
     for (int i = 0; i < ANIM_VIRTUAL_SPHERE_NUM_SAMPS + 1; i++)
@@ -105,22 +207,22 @@ void ANIMLoadTexturePalletteIdle(osg::Switch **idleStateSwitch, ANIMTexturePalle
         animationPathScaleBwd->insert(val, AnimationPath::ControlPoint(Vec3(0, 0, 0), Quat(), scaleBwd));
     }
 
-    (*textureStateIdelEntry)->mFwdAnim = new AnimationPathCallback(animationPathScaleFwd, 
+    (*textureStateIdleEntry)->mFwdAnim = new AnimationPathCallback(animationPathScaleFwd, 
 						0.0, 1.f / ANIM_VIRTUAL_SPHERE_LAPSE_TIME);
-    (*textureStateIdelEntry)->mBwdAnim = new AnimationPathCallback(animationPathScaleBwd, 
+    (*textureStateIdleEntry)->mBwdAnim = new AnimationPathCallback(animationPathScaleBwd, 
 						0.0, 1.f / ANIM_VIRTUAL_SPHERE_LAPSE_TIME); 
 
-    /* setup scene graph tree */
-    (*idleStateSwitch)->addChild((*textureStateIdelEntry)->mEntrySwitch);
+    // setup scene graph tree
+    (*idleStateSwitch)->addChild((*textureStateIdleEntry)->mEntrySwitch);
 
-    (*textureStateIdelEntry)->mEntrySwitch->addChild(idleStatePATransFwd);
-    (*textureStateIdelEntry)->mEntrySwitch->addChild(idleStatePATransBwd);
+    (*textureStateIdleEntry)->mEntrySwitch->addChild(idleStatePATransFwd);
+    (*textureStateIdleEntry)->mEntrySwitch->addChild(idleStatePATransBwd);
 
-    idleStatePATransFwd->addChild((*textureStateIdelEntry)->mEntryGeode);
-    idleStatePATransBwd->addChild((*textureStateIdelEntry)->mEntryGeode);
+    idleStatePATransFwd->addChild((*textureStateIdleEntry)->mEntryGeode);
+    idleStatePATransBwd->addChild((*textureStateIdleEntry)->mEntryGeode);
 
-    idleStatePATransFwd->setUpdateCallback((*textureStateIdelEntry)->mFwdAnim);
-    idleStatePATransBwd->setUpdateCallback((*textureStateIdelEntry)->mBwdAnim);
+    idleStatePATransFwd->setUpdateCallback((*textureStateIdleEntry)->mFwdAnim);
+    idleStatePATransBwd->setUpdateCallback((*textureStateIdleEntry)->mBwdAnim);
 }
 
 
@@ -142,7 +244,7 @@ void ANIMLoadTexturePalletteSelect(Switch **selectStateSwitch, Switch **alphaTur
     (*selectStateSwitch)->setAllChildrenOn();
     (*alphaTurnerSwitch)->setAllChildrenOn();
 
-    /* load alpha turner nodes for 'APPLY_TEXTURE' state */
+    // load alpha turner nodes for 'APPLY_TEXTURE' state
     MatrixTransform *horizontalTrans = new MatrixTransform;
     MatrixTransform *verticalTrans = new MatrixTransform;
 
@@ -154,7 +256,7 @@ void ANIMLoadTexturePalletteSelect(Switch **selectStateSwitch, Switch **alphaTur
     (*alphaTurnerSwitch)->addChild(horizontalTrans);
     (*alphaTurnerSwitch)->addChild(verticalTrans);
 
-    /* initialize texture state entry record array and randomly generated showing up positions array*/
+    // initialize texture state entry record array and randomly generated showing up positions array
     numTexs = 24;
     *textureStatesEntryArray = new ANIMTexturePalletteSelectEntry*[numTexs];
     for (int i = 0; i < numTexs; i++) 
@@ -164,7 +266,7 @@ void ANIMLoadTexturePalletteSelect(Switch **selectStateSwitch, Switch **alphaTur
     Vec3 *showUpPosArray = new Vec3[numTexs];
     ANIMCreateRandomShowupPosArray(numTexs, &showUpPosArray);
 
-    /* plain white texture and color */
+    // plain white texture and color
     Vec3 voidColor = Vec3(1, 1, 1);
     string voidTex = ANIMDataDir() + "Textures/White.JPG";
 
@@ -198,11 +300,9 @@ void ANIMLoadTexturePalletteSelect(Switch **selectStateSwitch, Switch **alphaTur
     {
         ANIMCreateTextureEntryGeode(showUpPosArray[i] + subpos, voidColor, voidColor, filenames[i],
 				&((*textureStatesEntryArray)[i]));
-
     }
 
-    /* create 10 texture entries */
-    string headerTex = ANIMDataDir() + "Textures/Pallette/";
+    // create 10 texture entries
 /*    ANIMCreateTextureEntryGeode(showUpPosArray[0], voidColor, voidColor, headerTex + "00.JPG", 
 				&((*textureStatesEntryArray)[0]));
     ANIMCreateTextureEntryGeode(showUpPosArray[1], voidColor, voidColor, headerTex + "01.JPG", 
@@ -225,7 +325,8 @@ void ANIMLoadTexturePalletteSelect(Switch **selectStateSwitch, Switch **alphaTur
 				&((*textureStatesEntryArray)[9]));
 */
 
-    /* create 14 color entries */
+    string headerTex = ANIMDataDir() + "Textures/Pallette/";
+    // create 14 color entries
     std::vector<osg::Vec3> colors;
     colors.push_back(osg::Vec3(0.0, 0.0, 0.0)); // black
     colors.push_back(osg::Vec3(0.5, 0.5, 0.5)); // grey
@@ -249,7 +350,6 @@ void ANIMLoadTexturePalletteSelect(Switch **selectStateSwitch, Switch **alphaTur
     {
         ANIMCreateTextureEntryGeode(showUpPosArray[i] + subpos, colors[i], colors[i], voidTex,
 				&((*textureStatesEntryArray)[i+10]));
-
     }
 
 /*    ANIMCreateTextureEntryGeode(showUpPosArray[10], Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 0.0), voidTex,
@@ -281,17 +381,21 @@ void ANIMLoadTexturePalletteSelect(Switch **selectStateSwitch, Switch **alphaTur
     ANIMCreateTextureEntryGeode(showUpPosArray[23], Vec3(1.0, 1.0, 0.5), Vec3(1.0, 1.0, 0.5), voidTex,
 				&((*textureStatesEntryArray)[23]));
 */
-    /* add entry animation objects to 'selectStateSwitch' */
+    // add entry animation objects to 'selectStateSwitch'
     for (int i = 0; i < numTexs; i++) 
     {
         (*selectStateSwitch)->addChild((*textureStatesEntryArray)[i]->mEntrySwitch);
     }
 
-    /* get audio parameters of each material from audio configuration file */
+    //ANIMCreateTextureEntryGeode(subpos + osg::Vec3(0, 0, -1.75), osg::Vec3(1,1,1), osg::Vec3(1,1,1),
+    //    voidTex, &((*textureStatesEntryArray)[24]));
+    //(*selectStateSwitch)->addChild((*textureStatesEntryArray)[24]->mEntrySwitch);
+
+    // get audio parameters of each material from audio configuration file
     FILE *audioInfoFilePtr = fopen((headerTex + string("AudioInfo.cfg")).c_str(), "r");
     if (!audioInfoFilePtr)
     {
-        cerr << "CaveCADBeta ANIMLoadTexturePalletteSelect: Error openning audio config file." << endl;
+        cerr << "CaveCADBeta ANIMLoadTexturePalletteSelect: Error opening audio config file." << endl;
         return;
     }
 
@@ -323,16 +427,16 @@ void ANIMLoadTexturePalletteSelect(Switch **selectStateSwitch, Switch **alphaTur
 void ANIMCreateTextureEntryGeode(const Vec3 &showUpPos, const Vec3 &diffuse, const Vec3 &specular,
 				 const string &texfilename, ANIMTexturePalletteSelectEntry **textureEntry)
 {
-    (*textureEntry)->mEntrySwitch = new Switch;
+    (*textureEntry)->mEntrySwitch = new Switch();
     (*textureEntry)->mEntrySwitch->setAllChildrenOn();
-    (*textureEntry)->mEntryGeode = new Geode;
+    (*textureEntry)->mEntryGeode = new Geode();
 
-    /* set data record in protected field */
+    // set data record in protected field
     (*textureEntry)->setDiffuse(diffuse);
     (*textureEntry)->setSpecular(specular);
     (*textureEntry)->setTexFilename(texfilename);
 
-    /* create drawables, geodes and texture mapping */
+    // create drawables, geodes and texture mapping
     Sphere *texEntrySphere = new Sphere(Vec3(0, 0, 0), ANIM_TEXTURE_PALLETTE_ENTRY_SPHERE_RADIUS);
     ShapeDrawable *texEntryDrawable = new ShapeDrawable(texEntrySphere);
     (*textureEntry)->mEntryGeode->addDrawable(texEntryDrawable);
@@ -351,7 +455,7 @@ void ANIMCreateTextureEntryGeode(const Vec3 &showUpPos, const Vec3 &diffuse, con
     idleStateSet->setAttributeAndModes(entryMaterial, StateAttribute::OVERRIDE | StateAttribute::ON);
     idleStateSet->setTextureAttributeAndModes(0, entryTexture, StateAttribute::ON);
 
-    /* create three way animations */
+    // create three way animations
     PositionAttitudeTransform **statePATransArray = new PositionAttitudeTransform*[8];
     for (int i = 0; i < 8; i++)
     {
@@ -361,7 +465,7 @@ void ANIMCreateTextureEntryGeode(const Vec3 &showUpPos, const Vec3 &diffuse, con
         statePATransArray[i]->addChild((*textureEntry)->mEntryGeode);
     }
 
-    /* set up animation paths for four way transitions */
+    // set up animation paths for four way transitions
     AnimationPath **animationPathsArray = new AnimationPath*[8];
     for (int i = 0; i < 8; i++)
     {
@@ -419,7 +523,7 @@ void ANIMCreateTextureEntryGeode(const Vec3 &showUpPos, const Vec3 &diffuse, con
 ***************************************************************/
 void ANIMCreateRandomShowupPosArray(const int &numTexs, Vec3 **showUpPosArray)
 {
-    /*  The reason of using pre-generated integer sequence rather than running online
+    /*  The reason for using a pre-generated integer sequence rather than running a
 	random generator is that different sequences might be generated on parallel
 	rendering systems due to asynchronized clocks.
     */
@@ -440,7 +544,7 @@ void ANIMCreateRandomShowupPosArray(const int &numTexs, Vec3 **showUpPosArray)
 				18978, 3479, 26762, 18081, 13884, 27917, 13467, 19624, 
 				7122, 30076, 8907, 30103, 20067, 13712, 20447, 30425 };
 
-    /* Showing up positions are evenly distributed with the spherical region with radius 3R. */
+    // Showing up positions are evenly distributed with the spherical region with radius 3R.
     for (int i = 0; i < numTexs; i++)
     {
         Vec3 pos = Vec3(randIntArray[i * 3], randIntArray[i * 3 + 1], randIntArray[i * 3 + 2]);
@@ -448,6 +552,99 @@ void ANIMCreateRandomShowupPosArray(const int &numTexs, Vec3 **showUpPosArray)
         (*showUpPosArray)[i] = pos;
     }
 }
+
+
+void ANIMLoadColorEntries(osg::Switch **selectStateSwitch, osg::Switch **alphaTurnerSwitch,
+    std::vector<osg::Vec3> *colors, std::vector<ANIMTexturePalletteSelectEntry*> *colorEntries)
+{
+    (*selectStateSwitch)->setAllChildrenOn();
+    (*alphaTurnerSwitch)->setAllChildrenOn();
+
+    // load alpha turner nodes for 'APPLY_TEXTURE' state
+    MatrixTransform *horizontalTrans = new MatrixTransform;
+    MatrixTransform *verticalTrans = new MatrixTransform;
+
+    Node* alphaTurnerNode = osgDB::readNodeFile(ANIMDataDir() + "VRMLFiles/AlphaTurner.WRL");
+
+    horizontalTrans->addChild(alphaTurnerNode);
+    verticalTrans->addChild(alphaTurnerNode);
+
+    (*alphaTurnerSwitch)->addChild(horizontalTrans);
+    (*alphaTurnerSwitch)->addChild(verticalTrans);
+
+ 
+    Vec3 *showUpPosArray = new Vec3[colors->size()];
+    ANIMCreateRandomShowupPosArray(colors->size(), &showUpPosArray);
+
+    // plain white texture and color
+    string voidTex = ANIMDataDir() + "Textures/White.JPG";
+
+    osg::Vec3 subpos = osg::Vec3(0, 0, -1.5);
+    for (int i = 0; i < colors->size(); ++i)
+    {
+        colorEntries->push_back(new ANIMTexturePalletteSelectEntry());
+ 
+        ANIMCreateTextureEntryGeode(showUpPosArray[i] + subpos, (*colors)[i], (*colors)[i], voidTex,
+				&((*colorEntries)[i]));
+
+        (*selectStateSwitch)->addChild((*colorEntries)[i]->mEntrySwitch);
+    }
+}
+
+void ANIMLoadTextureEntries(osg::Switch **selectStateSwitch, osg::Switch **alphaTurnerSwitch,
+    std::vector<std::string> *filenames, std::vector<ANIMTexturePalletteSelectEntry*> *textureEntries)
+{
+    (*selectStateSwitch)->setAllChildrenOn();
+    (*alphaTurnerSwitch)->setAllChildrenOn();
+
+    // load alpha turner nodes for 'APPLY_TEXTURE' state
+    MatrixTransform *horizontalTrans = new MatrixTransform;
+    MatrixTransform *verticalTrans = new MatrixTransform;
+
+    Node* alphaTurnerNode = osgDB::readNodeFile(ANIMDataDir() + "VRMLFiles/AlphaTurner.WRL");
+
+    horizontalTrans->addChild(alphaTurnerNode);
+    verticalTrans->addChild(alphaTurnerNode);
+
+    (*alphaTurnerSwitch)->addChild(horizontalTrans);
+    (*alphaTurnerSwitch)->addChild(verticalTrans);
+
+ 
+    Vec3 *showUpPosArray = new Vec3[filenames->size()];
+    ANIMCreateRandomShowupPosArray(filenames->size(), &showUpPosArray);
+
+    Vec3 voidColor = Vec3(1, 1, 1);
+    osg::Vec3 subpos(0, 0, -0.5);
+    for (int i = 0; i < filenames->size(); ++i)
+    {
+        textureEntries->push_back(new ANIMTexturePalletteSelectEntry());
+
+        ANIMCreateTextureEntryGeode(showUpPosArray[i] + subpos, voidColor, voidColor, (*filenames)[i],
+				&((*textureEntries)[i]));
+
+        (*selectStateSwitch)->addChild((*textureEntries)[i]->mEntrySwitch);
+    }
+
+}
+
+void ANIMAddColorEntry(osg::Switch **selectStateSwitch, osg::Switch **alphaTurnerSwitch,
+    osg::Vec3 color, std::vector<ANIMTexturePalletteSelectEntry*> *colorEntries)
+{
+    int size = colorEntries->size();
+    osg::Vec3 *showUpPosArray = new osg::Vec3[size + 1];
+    ANIMCreateRandomShowupPosArray(size + 1, &showUpPosArray);
+
+    string voidTex = ANIMDataDir() + "Textures/White.JPG";
+    osg::Vec3 subpos = osg::Vec3(0, 0, -1.5);
+
+    colorEntries->push_back(new ANIMTexturePalletteSelectEntry());
+
+    ANIMCreateTextureEntryGeode(showUpPosArray[size] + subpos, color, color, voidTex,
+            &((*colorEntries)[size]));
+
+    (*selectStateSwitch)->addChild((*colorEntries)[size]->mEntrySwitch);
+}
+
 
 };
 

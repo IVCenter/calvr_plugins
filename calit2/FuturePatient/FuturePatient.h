@@ -16,6 +16,8 @@
 #include "GraphObject.h"
 #include "GraphLayoutObject.h"
 #include "MicrobeGraphObject.h"
+#include "MicrobeBarGraphObject.h"
+#include "SymptomGraphObject.h"
 
 
 class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
@@ -44,6 +46,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _testList;
         cvr::MenuButton * _loadButton;
         cvr::MenuButton * _removeAllButton;
+        cvr::MenuButton * _closeLayoutButton;
         
         cvr::SubMenu * _groupLoadMenu;
         cvr::MenuList * _groupList;
@@ -53,15 +56,21 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         std::map<std::string,std::vector<std::string> > _groupTestMap;
 
+        cvr::SubMenu * _chartMenu;
         cvr::SubMenu * _presetMenu;
         cvr::MenuButton * _inflammationButton;
+        cvr::MenuButton * _cholesterolButton;
+        cvr::MenuButton * _insGluButton;
+        cvr::MenuButton * _inflammationImmuneButton;
         cvr::MenuButton * _loadAll;
 
         cvr::SubMenu * _microbeMenu;
+        cvr::MenuList * _microbeGraphType;
         cvr::MenuList * _microbePatients;
         cvr::MenuList * _microbeTest;
         cvr::MenuButton * _microbeLoad;
         cvr::MenuRangeValueCompact * _microbeNumBars;
+        cvr::MenuButton * _microbeDone;
 
         cvr::SubMenu * _microbeSpecialMenu;
         cvr::MenuButton * _microbeLoadAverage;
@@ -70,7 +79,15 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeLoadSRSAverage;
         cvr::MenuButton * _microbeLoadSRXAverage;
 
-        //Temp until layout so is created
+        cvr::SubMenu * _eventMenu;
+        cvr::MenuList * _eventName;
+        cvr::MenuButton * _eventLoad;
+        cvr::MenuButton * _eventLoadAll;
+        cvr::MenuButton * _eventDone;
+
+        MicrobeBarGraphObject * _currentSBGraph;
+        SymptomGraphObject * _currentSymptomGraph;
+
         std::map<std::string,GraphObject*> _graphObjectMap;
         GraphObject * _multiObject;
 

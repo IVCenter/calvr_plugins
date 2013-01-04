@@ -9,6 +9,7 @@
 #include <mysql++/mysql++.h>
 
 #include "GroupedBarGraph.h"
+#include "LayoutInterfaces.h"
 
 enum SpecialMicrobeGraphType
 {
@@ -19,7 +20,7 @@ enum SpecialMicrobeGraphType
     SMGT_SRX_AVERAGE
 };
 
-class MicrobeGraphObject : public cvr::TiledWallSceneObject
+class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, public ValueRangeObject
 {
     public:
         MicrobeGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
@@ -44,6 +45,7 @@ class MicrobeGraphObject : public cvr::TiledWallSceneObject
 
         virtual bool processEvent(cvr::InteractionEvent * ie);
         virtual void updateCallback(int handID, const osg::Matrix & mat);
+        virtual void leaveCallback(int handID);
 
     protected:
         bool loadGraphData(std::string valueQuery, std::string orderQuery);
@@ -57,6 +59,8 @@ class MicrobeGraphObject : public cvr::TiledWallSceneObject
         float _width, _height;
 
         GroupedBarGraph * _graph;
+
+        bool _desktopMode;
 };
 
 #endif

@@ -40,7 +40,8 @@ CAVEGeodeIconSurface::CAVEGeodeIconSurface(Vec3Array **surfVertexArray, Vec3Arra
     mGeometry->setNormalBinding(Geometry::BIND_PER_VERTEX);
 
     /* apply color texture to virtual surface */
-    applyColorTexture(gDiffuseColorNormal, gSpecularColor, gAlphaNormal, "");
+    applyColor(gDiffuseColorNormal, gSpecularColor, gAlphaNormal);
+    applyTexture("");
 }
 
 //Destructor
@@ -54,7 +55,8 @@ CAVEGeodeIconSurface::~CAVEGeodeIconSurface()
 ***************************************************************/
 void CAVEGeodeIconSurface::setHighlightNormal()
 {
-    applyColorTexture(gDiffuseColorNormal, gSpecularColor, gAlphaNormal, "");
+    applyColor(gDiffuseColorNormal, gSpecularColor, gAlphaNormal);
+    applyTexture("");
 }
 
 
@@ -63,7 +65,8 @@ void CAVEGeodeIconSurface::setHighlightNormal()
 ***************************************************************/
 void CAVEGeodeIconSurface::setHighlightSelected()
 {
-    applyColorTexture(gDiffuseColorSelected, gSpecularColor, gAlphaSelected, "");
+    applyColor(gDiffuseColorSelected, gSpecularColor, gAlphaSelected);
+    applyTexture("");
 }
 
 
@@ -72,18 +75,7 @@ void CAVEGeodeIconSurface::setHighlightSelected()
 ***************************************************************/
 void CAVEGeodeIconSurface::setHighlightUnselected()
 {
-    applyColorTexture(gDiffuseColorUnselected, gSpecularColor, gAlphaUnselected, "");
+    applyColor(gDiffuseColorUnselected, gSpecularColor, gAlphaUnselected);
+    applyTexture("");
 }
-
-
-
-
-
-
-
-
-
-
-
-
 

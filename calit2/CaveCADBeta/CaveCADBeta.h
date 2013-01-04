@@ -22,6 +22,12 @@
 #include <osg/Switch>
 #include <osgDB/ReadFile>
 
+#include <osgShadow/ShadowedScene>
+#include <osgShadow/ShadowMap>
+#include <osgShadow/ShadowTexture>
+#include <osgShadow/ShadowVolume>
+
+
 // CalVR plugin support
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/ComController.h>
@@ -48,7 +54,7 @@ class CaveCADBeta : public cvr::MenuCallback, public cvr::CVRPlugin
     CaveCADBeta();
     ~CaveCADBeta();
 
-    /* OpenCOVER plugin functions */
+    // OpenCOVER plugin functions
 	virtual bool init();
 	virtual void preFrame();
 	virtual void menuCallback(cvr::MenuItem * item);
@@ -56,7 +62,7 @@ class CaveCADBeta : public cvr::MenuCallback, public cvr::CVRPlugin
 	void message(int type, char * data);
 	int getPriority() { return 51; }
 
-    /* pointer functions */
+    // pointer functions
     void spinWheelEvent(const float spinX, const float spinY, const int pointerStat);
     void pointerMoveEvent(const osg::Vec3 pointerOrg, const osg::Vec3 pointerPos);
     void pointerPressEvent(const osg::Vec3 pointerOrg, const osg::Vec3 pointerPos);
@@ -64,20 +70,24 @@ class CaveCADBeta : public cvr::MenuCallback, public cvr::CVRPlugin
 
   private:
 
-    /* use flag to ensure that each click event is only handled once */
+    // use flag to ensure that each click event is only handled once
     bool pointerPressFlag, mValPressed, mIsEnabled;
     int frameCnt;
     string mDataDir;
     float mMenuDistance, mValDownTime, mValCutoff;
-  
+    osgShadow::ShadowedScene *mShadowedScene;
+
   protected:
 
-    /* Main row menu items */
+    // Main row menu items
 	cvr::SubMenu *mainMenu;
-    cvr::MenuCheckbox *enablePluginCheckbox, *setToolkitVisibleCheckbox;
+    cvr::MenuCheckbox *enablePluginCheckbox, *setToolkitVisibleCheckbox, 
+        *mSkydomeCheckbox, *mShadowCheckbox;
 
-    /* CaveCAD local objects */
+    // CaveCAD local objects
     CAVEDesigner *mCAVEDesigner;
+
+    osg::MatrixTransform *scaleMat;
 };
 
 #endif

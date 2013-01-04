@@ -267,8 +267,8 @@ void DSVirtualEarth::updateVSParameters(const Vec3 &viewDir, const Vec3 &viewPos
         return;
     }
 
-    /*  compute sun direction in world space: apply transforms resulted by viewer's orientation change, 
-	guarantee that from the viewer's position, the virtual earth is always half illuminated. */
+    // compute sun direction in world space: apply transforms resulted by viewer's orientation change, 
+	// guarantee that from the viewer's position, the virtual earth is always half illuminated.
     Matrixd baserotMat;
     baserotMat.makeRotate(Vec3(0, 1, 0), gDesignStateFrontVect);
     Vec3 sunDirWorld = (CAVEAnimationModeler::ANIMVirtualEarthLightDir()) * baserotMat;
@@ -279,7 +279,7 @@ void DSVirtualEarth::updateVSParameters(const Vec3 &viewDir, const Vec3 &viewPos
         lightposUniform->set(Vec4(sunDirWorld, 0.0));
     }
 
-    /* compute matrix combination that transforms a vector from shader space into world space */
+    // compute matrix combination that transforms a vector from shader space into world space
     Matrixd latiMat;
     latiMat.makeRotate(mLati / 180.f * M_PI, Vec3(0, 1, 0));
     Matrixd equatorMat;   
@@ -288,7 +288,7 @@ void DSVirtualEarth::updateVSParameters(const Vec3 &viewDir, const Vec3 &viewPos
     Matrixd eclipticMat = mEclipticTrans->getMatrix();
     Matrixd transMat = mUnitspaceMat * latiMat * equatorMat * tiltaxisMat * eclipticMat * baserotMat;
 
-    /* updata environment rendering by passing parameters to VirtualScenicHandler */
+    // updata environment rendering by passing parameters to VirtualScenicHandler
     mVirtualScenicHandler->updateVSParameters(transMat, sunDirWorld, viewDir, viewPos);
 }
 
@@ -299,24 +299,24 @@ void DSVirtualEarth::updateVSParameters(const Vec3 &viewDir, const Vec3 &viewPos
 * This function adapts geometries when new state is changed to
 * by setting children of the following two switches:
 *
-*				I-Test -0--1--2--3-
+*                       I-Test -0--1--2--3-
 * 'this' Switch
-* child #0: Ecliptic trans		Y  Y  Y  Y
-* child #1: Seasons map			N  N  N  Y
-* child #2: Ecliptic ruler		N  N  N  Y	
+* child #0: Ecliptic trans      Y  Y  Y  Y
+* child #1: Seasons map         N  N  N  Y
+* child #2: Ecliptic ruler      N  N  N  Y	
 *
 * mEclipticSwitch:
-* child #0: Wired geode 	  T3	-  -  -  -
-* child #1: Season indicator	  T3	-  -  -  -
-* child #2: Earth axis			N  N  Y  Y
-* child #3: Equator ruler		N  N  Y  N
+* child #0: Wired geode      T3	-  -  -  -
+* child #1: Season indicator T3	-  -  -  -
+* child #2: Earth axis          N  N  Y  Y
+* child #3: Equator ruler       N  N  Y  N
 *
 * mEquatorSwitch:
-* child #0: Wired geode	  	  T2	-  -  -  -
-* child #1: Forward animation		Y  Y  Y  Y
-* child #2: Backward animation		-  -  -  -
-* child #3: Fixed pin indicator	  T2	-  -  -  -
-* child #4: Fixed pin trans		N  Y  Y  Y
+* child #0: Wired geode          T2 -  -  -  -
+* child #1: Forward animation       Y  Y  Y  Y
+* child #2: Backward animation      -  -  -  -
+* child #3: Fixed pin indicator  T2 -  -  -  -
+* child #4: Fixed pin trans         N  Y  Y  Y
 *
 ***************************************************************/
 void DSVirtualEarth::stateSwitchHandler()
@@ -426,6 +426,9 @@ void DSVirtualEarth::setFixedPinPos(const float &longi, const float &lati)
 }
 
 
+/***************************************************************
+* Function: setFixedPinPos()
+***************************************************************/
 void DSVirtualEarth::setFixedPinPos(const Vec3 &pinPos)
 {
     Matrixd transMat, rotMat;
@@ -558,3 +561,4 @@ void DSVirtualEarth::setHighlight(bool isHighlighted, const osg::Vec3 &pointerOr
 {
 
 }
+

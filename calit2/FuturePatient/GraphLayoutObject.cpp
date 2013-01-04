@@ -51,7 +51,7 @@ GraphLayoutObject::~GraphLayoutObject()
 {
 }
 
-void GraphLayoutObject::addGraphObject(GraphObject * object)
+void GraphLayoutObject::addGraphObject(LayoutTypeObject * object)
 {
     for(int i = 0; i < _objectList.size(); i++)
     {
@@ -63,15 +63,18 @@ void GraphLayoutObject::addGraphObject(GraphObject * object)
 
     _objectList.push_back(object);
 
-    if(_syncTimeCB->getValue())
+    TimeRangeObject * tro = dynamic_cast<TimeRangeObject*>(object);
+    ValueRangeObject * vro = dynamic_cast<ValueRangeObject*>(object);
+
+    if((tro || vro) && _syncTimeCB->getValue())
     {
 	if(!_zoomCB->getValue())
 	{
 	    menuCallback(_syncTimeCB);
 	}
-	else
+	else if(tro)
 	{
-	    object->setGraphDisplayRange(_currentMinX,_currentMaxX);
+	    tro->setGraphDisplayRange(_currentMinX,_currentMaxX);
 	}
     }
 
@@ -89,10 +92,10 @@ void GraphLayoutObject::addGraphObject(GraphObject * object)
     updateLayout();
 }
 
-void GraphLayoutObject::removeGraphObject(GraphObject * object)
+void GraphLayoutObject::removeGraphObject(LayoutTypeObject * object)
 {
     int index = 0;
-    for(std::vector<GraphObject *>::iterator it = _objectList.begin(); it != _objectList.end(); it++, index++)
+    for(std::vector<LayoutTypeObject *>::iterator it = _objectList.begin(); it != _objectList.end(); it++, index++)
     {
 	if((*it) == object)
 	{
@@ -103,8 +106,7 @@ void GraphLayoutObject::removeGraphObject(GraphObject * object)
 	    _objectList.erase(it);
 	    if(object->getLayoutDoesDelete())
 	    {
-		//TODO fix scene object delete
-		//delete object;
+		delete object;
 	    }
 	    break;
 	}
@@ -127,62 +129,19 @@ void GraphLayoutObject::removeGraphObject(GraphObject * object)
     updateLayout();
 }
 
-void GraphLayoutObject::addMicrobeGraphObject(MicrobeGraphObject * object)
-{
-    //std::cerr << "Adding graph object" << std::endl;
-
-    for(int i = 0; i < _microbeObjectList.size(); ++i)
-    {
-	if(_microbeObjectList[i] == object)
-	{
-	    return;
-	}
-    }
-
-    _microbeObjectList.push_back(object);
-
-    if(_syncTimeCB->getValue())
-    {
-	menuCallback(_syncTimeCB);
-    }
-
-    MenuButton * button = new MenuButton("Delete");
-    button->setCallback(this);
-    object->addMenuItem(button);
-
-    _microbeDeleteButtonMap[object] = button;
-
-    addChild(object);
-
-    updateLayout();
-}
-
-void GraphLayoutObject::removeMicrobeGraphObject(MicrobeGraphObject * object)
-{
-    for(std::vector<MicrobeGraphObject *>::iterator it = _microbeObjectList.begin(); it != _microbeObjectList.end(); ++it)
-    {
-	if((*it) == object)
-	{
-	    removeChild(*it);
-	    delete _microbeDeleteButtonMap[*it];
-	    _microbeDeleteButtonMap.erase(*it);
-	    _microbeObjectList.erase(it);
-	    break;
-	}
-    }
-
-    updateLayout();
-}
-
 void GraphLayoutObject::selectMicrobes(std::string & group, std::vector<std::string> & keys)
 {
     // make copy to apply to new graphs when added
     _currentSelectedMicrobeGroup = group;
     _currentSelectedMicrobes = keys;
 
-    for(int i = 0; i < _microbeObjectList.size(); ++i)
+    for(int i = 0; i < _objectList.size(); ++i)
     {
-	_microbeObjectList[i]->selectMicrobes(group,keys);
+	MicrobeSelectObject * mso = dynamic_cast<MicrobeSelectObject *>(_objectList[i]);
+	if(mso)
+	{
+	    mso->selectMicrobes(group,keys);
+	}
     }
 }
 
@@ -193,35 +152,22 @@ void GraphLayoutObject::removeAll()
 	removeChild(_objectList[i]);
 	if(_objectList[i]->getLayoutDoesDelete())
 	{
-	    //TODO fix scene object delete
-	    //delete _objectList[i];
+	    delete _objectList[i];
 	}
     }
 
-    for(int i = 0; i < _microbeObjectList.size(); ++i)
-    {
-	removeChild(_microbeObjectList[i]);
-    }
-
-    for(std::map<GraphObject *,cvr::MenuButton *>::iterator it = _deleteButtonMap.begin(); it != _deleteButtonMap.end(); it++)
+    for(std::map<LayoutTypeObject *,cvr::MenuButton *>::iterator it = _deleteButtonMap.begin(); it != _deleteButtonMap.end(); it++)
     {
 	it->first->removeMenuItem(it->second);
 	delete it->second;
     }
 
-    for(std::map<MicrobeGraphObject *, cvr::MenuButton *>::iterator it = _microbeDeleteButtonMap.begin(); it != _microbeDeleteButtonMap.end(); ++it)
-    {
-	 it->first->removeMenuItem(it->second);
-	 delete it->second;
-    }
 
     _deleteButtonMap.clear();
-    _microbeDeleteButtonMap.clear();
     _perGraphActiveHand.clear();
     _perGraphActiveHandType.clear();
 
     _objectList.clear();
-    _microbeObjectList.clear();
 }
 
 void GraphLayoutObject::perFrame()
@@ -361,7 +307,13 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	    _maxX = _minX = 0;
 	    for(int i = 0; i < _objectList.size(); i++)
 	    {
-		time_t value = _objectList[i]->getMaxTimestamp();
+		TimeRangeObject * tro = dynamic_cast<TimeRangeObject *>(_objectList[i]);
+		if(!tro)
+		{
+		    continue;
+		}
+
+		time_t value = tro->getMaxTimestamp();
 		if(value)
 		{
 		    if(!_maxX || value > _maxX)
@@ -370,7 +322,7 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 		    }
 		}
 
-		value = _objectList[i]->getMinTimestamp();
+		value = tro->getMinTimestamp();
 		if(value)
 		{
 		    if(!_minX || value < _minX)
@@ -387,7 +339,13 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	    {
 		for(int i = 0; i < _objectList.size(); i++)
 		{
-		    _objectList[i]->setGraphDisplayRange(_minX,_maxX);
+		    TimeRangeObject * tro = dynamic_cast<TimeRangeObject *>(_objectList[i]);
+		    if(!tro)
+		    {
+			continue;
+		    }
+
+		    tro->setGraphDisplayRange(_minX,_maxX);
 		}
 	    }
 
@@ -405,30 +363,48 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	    float dataMin = FLT_MAX;
 	    float dataMax = FLT_MIN;
 
-	    for(int i = 0; i < _microbeObjectList.size(); ++i)
+	    for(int i = 0; i < _objectList.size(); ++i)
 	    {
-		float temp = _microbeObjectList[i]->getGraphDisplayRangeMax();
+		ValueRangeObject * vro = dynamic_cast<ValueRangeObject *>(_objectList[i]);
+		if(!vro)
+		{
+		    continue;
+		}
+
+		float temp = vro->getGraphDisplayRangeMax();
 		if(temp > dataMax)
 		{
 		    dataMax = temp;
 		}
-		temp = _microbeObjectList[i]->getGraphDisplayRangeMin();
+		temp = vro->getGraphDisplayRangeMin();
 		if(temp < dataMin)
 		{
 		    dataMin = temp;
 		}
 	    }
 
-	    for(int i = 0; i < _microbeObjectList.size(); ++i)
+	    for(int i = 0; i < _objectList.size(); ++i)
 	    {
-		_microbeObjectList[i]->setGraphDisplayRange(dataMin,dataMax);
+		ValueRangeObject * vro = dynamic_cast<ValueRangeObject *>(_objectList[i]);
+		if(!vro)
+		{
+		    continue;
+		}
+
+		vro->setGraphDisplayRange(dataMin,dataMax);
 	    }
 	}
 	else
 	{
 	    for(int i = 0; i < _objectList.size(); i++)
 	    {
-		_objectList[i]->resetGraphDisplayRange();
+		TimeRangeObject * tro = dynamic_cast<TimeRangeObject *>(_objectList[i]);
+		if(!tro)
+		{
+		    continue;
+		}
+
+		tro->resetGraphDisplayRange();
 	    }
 
 	    if(_zoomCB->getValue())
@@ -441,30 +417,26 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 		}
 	    }
 
-	    for(int i = 0; i < _microbeObjectList.size(); ++i)
+	    for(int i = 0; i < _objectList.size(); ++i)
 	    {
-		_microbeObjectList[i]->resetGraphDisplayRange();
+		ValueRangeObject * vro = dynamic_cast<ValueRangeObject *>(_objectList[i]);
+		if(!vro)
+		{
+		    continue;
+		}
+
+		vro->resetGraphDisplayRange();
 	    }
 	}
 	return;
     }
 
-    for(std::map<GraphObject *,cvr::MenuButton *>::iterator it = _deleteButtonMap.begin(); it != _deleteButtonMap.end(); it++)
+    for(std::map<LayoutTypeObject *,cvr::MenuButton *>::iterator it = _deleteButtonMap.begin(); it != _deleteButtonMap.end(); it++)
     {
 	if(it->second == item)
 	{
 	    it->first->closeMenu();
 	    removeGraphObject(it->first);
-	    return;
-	}
-    }
-
-    for(std::map<MicrobeGraphObject *, cvr::MenuButton *>::iterator it = _microbeDeleteButtonMap.begin(); it != _microbeDeleteButtonMap.end(); ++it)
-    {
-	if(it->second == item)
-	{
-	    it->first->closeMenu();
-	    removeMicrobeGraphObject(it->first);
 	    return;
 	}
     }
@@ -484,35 +456,63 @@ bool GraphLayoutObject::processEvent(InteractionEvent * event)
 		if(_objectList.size() && vie->getHand() == _activeHand)
 		{
 		    double pos = _objectList[0]->getBarPosition();
-		    time_t change = (time_t)(difftime(_currentMaxX,_currentMinX)*0.03);
-		    _currentMinX += change * pos * vie->getValue();
-		    _currentMaxX -= change * (1.0 - pos) * vie->getValue();
-		    _currentMinX = std::max(_currentMinX,_minX);
-		    _currentMaxX = std::min(_currentMaxX,_maxX);
+		    bool found = false;
 
 		    for(int i = 0; i < _objectList.size(); i++)
 		    {
-			_objectList[i]->setGraphDisplayRange(_currentMinX,_currentMaxX);
+			TimeRangeObject * tro = dynamic_cast<TimeRangeObject *>(_objectList[i]);
+			if(tro)
+			{
+			    pos = _objectList[i]->getBarPosition();
+			    found = true;
+			    break;
+			}
 		    }
-		    return true;
+
+		    if(found)
+		    {
+			time_t change = (time_t)(difftime(_currentMaxX,_currentMinX)*0.03);
+			_currentMinX += change * pos * vie->getValue();
+			_currentMaxX -= change * (1.0 - pos) * vie->getValue();
+			_currentMinX = std::max(_currentMinX,_minX);
+			_currentMaxX = std::min(_currentMaxX,_maxX);
+
+			for(int i = 0; i < _objectList.size(); i++)
+			{
+			    TimeRangeObject * tro = dynamic_cast<TimeRangeObject *>(_objectList[i]);
+			    if(!tro)
+			    {
+				continue;
+			    }
+
+			    tro->setGraphDisplayRange(_currentMinX,_currentMaxX);
+			}
+			return true;
+		    }
 		}
 	    }
 	    else
 	    {
 		for(int i = 0; i < _objectList.size(); i++)
 		{
+		    TimeRangeObject * tro = dynamic_cast<TimeRangeObject *>(_objectList[i]);
+		    if(!tro)
+		    {
+			continue;
+		    }
+
 		    if(_perGraphActiveHand[i] == vie->getHand())
 		    {
 			time_t currentStart,currentEnd;
-			_objectList[i]->getGraphDisplayRange(currentStart,currentEnd);
+			tro->getGraphDisplayRange(currentStart,currentEnd);
 			double pos = _objectList[i]->getBarPosition();
 
 			time_t change = (time_t)(difftime(currentEnd,currentStart)*0.03);
 			currentStart += change * pos * vie->getValue();
 			currentEnd -= change * (1.0 - pos) * vie->getValue();
-			currentStart = std::max(currentStart,_objectList[i]->getMinTimestamp());
-			currentEnd = std::min(currentEnd,_objectList[i]->getMaxTimestamp());
-			_objectList[i]->setGraphDisplayRange(currentStart,currentEnd);
+			currentStart = std::max(currentStart,tro->getMinTimestamp());
+			currentEnd = std::min(currentEnd,tro->getMaxTimestamp());
+			tro->setGraphDisplayRange(currentStart,currentEnd);
 
 			return true;
 		    }
@@ -546,7 +546,7 @@ void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
 	osg::Vec3 graphPoint;
 	for(int i = 0; i < _objectList.size(); i++)
 	{
-	    if(!_objectList[i]->getGraphSpacePoint(mat,graphPoint) || graphPoint.x() < 0 || graphPoint.x() > 1.0 || graphPoint.z() < 0 || graphPoint.z() > 1.0)
+	    if(!_objectList[i]->getGraphSpacePoint(mat,graphPoint) || graphPoint.z() < 0 || graphPoint.z() > 1.0)
 	    {
 		continue;
 	    }
@@ -569,6 +569,9 @@ void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
 	{
 	    return;
 	}
+
+	graphPoint.x() = std::max(graphPoint.x(),0.0f);
+	graphPoint.x() = std::min(graphPoint.x(),1.0f);
 
 	if(_activeHand == -1)
 	{
@@ -599,7 +602,7 @@ void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
 	    }
 
 	    osg::Vec3 graphPoint;
-	    if(!_objectList[i]->getGraphSpacePoint(mat,graphPoint) || graphPoint.x() < 0 || graphPoint.x() > 1.0 || graphPoint.z() < 0 || graphPoint.z() > 1.0)
+	    if(!_objectList[i]->getGraphSpacePoint(mat,graphPoint) || graphPoint.z() < 0 || graphPoint.z() > 1.0)
 	    {
 		if(handID == _perGraphActiveHand[i])
 		{
@@ -609,6 +612,9 @@ void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
 		}
 		continue;
 	    }
+
+	    graphPoint.x() = std::max(graphPoint.x(),0.0f);
+	    graphPoint.x() = std::min(graphPoint.x(),1.0f);
 
 	    if(_perGraphActiveHand[i] == -1)
 	    {
@@ -776,7 +782,7 @@ void GraphLayoutObject::updateGeometry()
 
 void GraphLayoutObject::updateLayout()
 {
-    int totalGraphs = _objectList.size() + _microbeObjectList.size();
+    int totalGraphs = _objectList.size();
 
     if(!totalGraphs)
     {
@@ -802,6 +808,8 @@ void GraphLayoutObject::updateLayout()
     float posX = -(_width*0.5) + (graphWidth*0.5);
     float posZ = (_height*0.5) - (graphHeight*0.5);
 
+    int microbeGraphCount = 0;
+
     for(int i = 0; i < _objectList.size(); i++)
     {
 	_objectList[i]->setGraphSize(graphWidth,graphHeight);
@@ -812,20 +820,30 @@ void GraphLayoutObject::updateLayout()
 	    posX += graphWidth;
 	    posZ = (_height*0.5) - (graphHeight*0.5);
 	}
+
+	MicrobeSelectObject * mso = dynamic_cast<MicrobeSelectObject*>(_objectList[i]);
+	if(mso)
+	{
+	    mso->selectMicrobes(_currentSelectedMicrobeGroup,_currentSelectedMicrobes);
+	}
+
+	if(dynamic_cast<MicrobeGraphObject*>(_objectList[i]))
+	{
+	    microbeGraphCount++;
+	}
     }
 
-    for(int i = 0; i < _microbeObjectList.size(); ++i)
+    if(microbeGraphCount)
     {
-	//std::cerr << "Setting microbe graph width: " << graphWidth << " height: " << graphHeight << " X: " << posX << " Z: " << posZ << std::endl;
-	_microbeObjectList[i]->setGraphSize(graphWidth,graphHeight);
-	_microbeObjectList[i]->setPosition(osg::Vec3(posX,0,posZ));
-	_microbeObjectList[i]->setColor(ColorGenerator::makeColor(i,_microbeObjectList.size()));
-	_microbeObjectList[i]->selectMicrobes(_currentSelectedMicrobeGroup,_currentSelectedMicrobes);
-	posZ -= graphHeight;
-	if(posZ < -(_height*0.5))
+	int currentCount = 0;
+	for(int i = 0; i < _objectList.size(); ++i)
 	{
-	    posX += graphWidth;
-	    posZ = (_height*0.5) - (graphHeight*0.5);
+	    MicrobeGraphObject * mgo = dynamic_cast<MicrobeGraphObject*>(_objectList[i]);
+	    if(mgo)
+	    {
+		mgo->setColor(ColorGenerator::makeColor(currentCount,microbeGraphCount));
+		currentCount++;
+	    }
 	}
     }
 }

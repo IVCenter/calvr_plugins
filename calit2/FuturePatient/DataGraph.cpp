@@ -102,7 +102,7 @@ DataGraph::DataGraph()
     _glScale = 1.0;
 
     _pointActionPoint = new osg::Point();
-    _pointActionAlpha = 1.0;
+    _pointActionAlpha = 0.9;
     _pointActionAlphaDir = false;
 
     _pointLineScale = ConfigManager::getFloat("value","Plugin.FuturePatient.PointLineScale",1.0);
@@ -455,6 +455,20 @@ bool DataGraph::displayHoverText(osg::Matrix & mat)
 	    osg::BoundingBox bb = _hoverText->getBound();
 	    _hoverText->setCharacterSize(targetHeight / (bb.zMax() - bb.zMin()));
 
+	    std::map<std::string,std::map<int,PointAction*> >::iterator it = _pointActionMap.find(selectedGraph);
+	    if(it != _pointActionMap.end())
+	    {
+		std::map<int,PointAction*>::iterator itt;
+		if((itt = it->second.find(selectedPoint)) != it->second.end())
+		{
+		    if(!itt->second->getActionText().empty())
+		    {
+			textss << std::endl << itt->second->getActionText();
+			_hoverText->setText(textss.str());
+		    }
+		}
+	    }
+
 	    bb = _hoverText->getBound();
 	    osg::Matrix bgScale;
 	    bgScale.makeScale(osg::Vec3((bb.xMax() - bb.xMin()),1.0,(bb.zMax() - bb.zMin())));
@@ -548,6 +562,10 @@ bool DataGraph::getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point)
 
     if(linePlaneIntersectionRef(point1,point2,planePoint,planeNormal,intersect,w))
     {
+	if(fabs(intersect.x()) > (_width/2.0) || fabs(intersect.z()) > (_height / 2.0))
+	{
+	    return false;
+	}
 	intersect.x() /= dataWidth;
 	intersect.z() /= dataHeight;
 	intersect.x() += 0.5;
@@ -711,7 +729,7 @@ void DataGraph::setPointActions(std::string graphname, std::map<int,PointAction*
 
 void DataGraph::updatePointAction()
 {
-    static const float flashingTime = 3.0;
+    static const float flashingTime = 2.5;
     
     float deltaAlpha = PluginHelper::getLastFrameDuration() / flashingTime;
     if(!_pointActionAlphaDir)
@@ -725,9 +743,9 @@ void DataGraph::updatePointAction()
 	_pointActionAlpha = 0.0;
 	_pointActionAlphaDir = true;
     }
-    else if(_pointActionAlpha > 1.0)
+    else if(_pointActionAlpha > 0.9)
     {
-	_pointActionAlpha = 1.0;
+	_pointActionAlpha = 0.9;
 	_pointActionAlphaDir = false;
     }
 
@@ -1145,13 +1163,20 @@ void DataGraph::update()
     float avglen = (_width + _height) / 2.0;
     _point->setSize(_glScale * avglen * 0.04 * _pointLineScale);
     _pointSizeUniform->set((float)_point->getSize());
-    _pointActionPoint->setSize(1.4*_point->getSize());
+    _pointActionPoint->setSize(1.3*_point->getSize());
     //std::cerr << "Point size set to: " << _point->getSize() << std::endl;
     _lineWidth->setWidth(_glScale * avglen * 0.05 * _pointLineScale * _pointLineScale);
+
+    // vroom tile node workaround, who know why
+    float tempval;
+    _pointSizeUniform->get(tempval);
+    _pointSizeUniform->set(tempval*0.31f);
 
     if(ComController::instance()->isMaster())
     {
 	_point->setSize(_point->getSize() * _masterPointScale);
+	_pointSizeUniform->set((float)_point->getSize());
+	_pointActionPoint->setSize(1.3*_point->getSize());
 	_lineWidth->setWidth(_lineWidth->getWidth() * _masterLineScale);
     }
 

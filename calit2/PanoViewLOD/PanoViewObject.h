@@ -45,6 +45,11 @@ class PanoViewObject : public cvr::SceneObject
         void setRotate(float rotate);
         float getRotate();
 
+        void setRemoveOnClick(bool b)
+        {
+            _removeOnClick = b;
+        }
+
         virtual void menuCallback(cvr::MenuItem * item);
         virtual void updateCallback(int handID, const osg::Matrix & mat);
         virtual bool eventCallback(cvr::InteractionEvent * ie);
@@ -56,6 +61,7 @@ class PanoViewObject : public cvr::SceneObject
         void startTransition();
 
         bool _printValues;
+        bool _removeOnClick;
 
         PanTransitionType _transitionType;
         std::vector<std::string> _leftTransitionFiles;

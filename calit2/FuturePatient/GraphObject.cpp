@@ -9,7 +9,7 @@
 
 using namespace cvr;
 
-GraphObject::GraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : TiledWallSceneObject(name,navigation,movable,clip,contextMenu,showBounds)
+GraphObject::GraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
 {
     _conn = conn;
     _graph = new DataGraph();
@@ -230,7 +230,7 @@ bool GraphObject::addGraph(std::string name)
 				    float sizeMult = (log10(mult)*multipleIncrease) + 1.0;
 				    sizeMult = std::max(sizeMult,0.1f);
 				    secondary->at(i).x() = sizeMult;
-				    colors->at(i) = osg::Vec4(1.0,0,1.0,1.0);
+				    colors->at(i) = osg::Vec4(0.21569,0.49412,0.72157,1.0);
 				    //secondary->at(i).x() = 0.75;
 				}
 			    }
@@ -343,7 +343,7 @@ bool GraphObject::addGraph(std::string name)
 		actionMap[annotations[i].point] = new PointActionPDF(_pdfDir + "/" + annotations[i].url);
 	    }
 
-	    _graph->setPointActions(gd.displayName,actionMap);
+	    //_graph->setPointActions(gd.displayName,actionMap);
 	}
     }
 
@@ -352,7 +352,7 @@ bool GraphObject::addGraph(std::string name)
 	delete[] annotations;
     }
 
-    std::cerr << "Graph added with " << gd.numAnnotations << " annotations" << std::endl;
+    //std::cerr << "Graph added with " << gd.numAnnotations << " annotations" << std::endl;
 
     return gd.valid;
 }

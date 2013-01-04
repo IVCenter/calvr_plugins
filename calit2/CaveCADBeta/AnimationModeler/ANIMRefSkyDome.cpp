@@ -47,6 +47,8 @@ MatrixTransform *ANIMCreateRefSkyDome(StateSet **stateset)
     (*stateset)->setRenderingHint(StateSet::TRANSPARENT_BIN);
     skyGeode->setStateSet(*stateset);
 
+//    skyGeode->setNodeMask(0xFFFFFF & ~(0x2 | 0x3));
+
     // load sky dome shader
     Uniform* sunrUniform = new Uniform("hazeRadisuMin", 0.975f);
     (*stateset)->addUniform(sunrUniform);

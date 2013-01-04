@@ -1,6 +1,7 @@
 #include "MicrobeGraphObject.h"
 #include "GraphLayoutObject.h"
 
+#include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/ComController.h>
 #include <cvrInput/TrackingManager.h>
 #include <cvrUtil/OsgMath.h>
@@ -11,7 +12,7 @@
 
 using namespace cvr;
 
-MicrobeGraphObject::MicrobeGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : TiledWallSceneObject(name,navigation,movable,clip,contextMenu,showBounds)
+MicrobeGraphObject::MicrobeGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
 {
     _conn = conn;
 
@@ -21,6 +22,8 @@ MicrobeGraphObject::MicrobeGraphObject(mysqlpp::Connection * conn, float width, 
 
     _width = width;
     _height = height;
+
+    _desktopMode = ConfigManager::getBool("Plugin.FuturePatient.DesktopMode",false);
 
     _graph = new GroupedBarGraph(width,height);
 }
@@ -123,7 +126,8 @@ bool MicrobeGraphObject::processEvent(InteractionEvent * ie)
 
 void MicrobeGraphObject::updateCallback(int handID, const osg::Matrix & mat)
 {
-    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER)
+    if((_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::MOUSE) ||
+	(!_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER))
     {
 	osg::Vec3 start, end(0,1000,0);
 	start = start * mat * getWorldToObjectMatrix();
@@ -141,9 +145,18 @@ void MicrobeGraphObject::updateCallback(int handID, const osg::Matrix & mat)
     }
 }
 
+void MicrobeGraphObject::leaveCallback(int handID)
+{
+    if((_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::MOUSE) ||
+	(!_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER))
+    {
+	_graph->clearHoverText();
+    }
+}
+
 bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, int microbes)
 {
-    _graphTitle = title;
+    _graphTitle = title + " - " + testLabel;
     std::stringstream valuess, orderss;
 
     valuess << "select * from (select Microbes.description, Microbes.phylum, Microbes.species, Microbe_Measurement.value from  Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \""<< testLabel << "\" order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
@@ -170,7 +183,7 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int micro
 		{
 		    case SMGT_AVERAGE:
 			field = "average";
-			_graphTitle = "Average";
+			_graphTitle = "UC Average";
 			break;
 		    case SMGT_HEALTHY_AVERAGE:
 			field = "average_healthy";
