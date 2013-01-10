@@ -82,8 +82,8 @@ class PanoViewObject : public cvr::SceneObject
 
         osg::Matrix _heightMat;
         osg::Matrix _spinMat;
+        osg::Matrix _tiltMat;
         osg::Matrix _coordChangeMat;
-        osg::Matrix _tbMat;
 
         osg::Matrix _lastZoomMat;
 
@@ -146,6 +146,11 @@ class PanoViewObject : public cvr::SceneObject
         
         float _fadeStartDelay;
         float _fadeInterval; 
+
+        bool _upArrow;
+        bool _downArrow;
+        bool _leftArrow;
+        bool _rightArrow;
 };
 
 #endif
