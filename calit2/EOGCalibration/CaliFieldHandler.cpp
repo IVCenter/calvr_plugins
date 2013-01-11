@@ -86,25 +86,25 @@ void CaliFieldHandler::initWireFrames(MatrixTransform *rootViewerTrans)
     float rad, phi, theta;
     for (int i = 0; i < gNumRadSample; i++)
     {
-	rad = gRadMin + RAD_RES * i;;
-	for (int j = 0; j < gNumPhiSample; j++)
-	{
-	    phi = gPhiMin + PHI_RES * j;
-	    for (int k = 0; k < gNumThetaSample; k++)
-	    {
-		theta = gThetaMin + THETA_RES * k;
+        rad = gRadMin + RAD_RES * i;;
+        for (int j = 0; j < gNumPhiSample; j++)
+        {
+            phi = gPhiMin + PHI_RES * j;
+            for (int k = 0; k < gNumThetaSample; k++)
+            {
+                theta = gThetaMin + THETA_RES * k;
 
-		Vec3 pos;
-		sphericToCartetion(phi, theta, rad, pos);
-		vertices->push_back(pos);
-		normals->push_back(Vec3(0, 0, 1));
+                Vec3 pos;
+                sphericToCartesian(phi, theta, rad, pos);
+                vertices->push_back(pos);
+                normals->push_back(Vec3(0, 0, 1));
 
-		/* put boxes to eliminate edge flashing effects */
-		Box *box = new Box(pos, 0.01);
-		Drawable *boxDrawable = new ShapeDrawable(box);
-		mWireframeGeode->addDrawable(boxDrawable); 
-	    }
-	}
+                /* put boxes to eliminate edge flashing effects */
+                Box *box = new Box(pos, 0.01);
+                Drawable *boxDrawable = new ShapeDrawable(box);
+                mWireframeGeode->addDrawable(boxDrawable); 
+            }
+        }
     }
     mWireframeGeometry->setVertexArray(vertices);
     mWireframeGeometry->setNormalArray(normals);
@@ -161,51 +161,41 @@ DrawElementsUInt *CaliFieldHandler::createEdgePrimitiveSet()
     int quad_rad = gNumPhiSample * gNumThetaSample;
     for (int i = gRadSampleMin; i < gRadSampleMax; i++)
     {
-	for (int j = gPhiSampleMin; j < gPhiSampleMax + 1; j++)
-	{
-	    for (int k = gThetaSampleMin; k < gThetaSampleMax + 1; k++)
-	    {
-		int idx = i * quad_rad + j * gNumThetaSample + k;
-		edges->push_back(idx);
-		edges->push_back(idx+quad_rad);
-	    }
-	}
+        for (int j = gPhiSampleMin; j < gPhiSampleMax + 1; j++)
+        {
+            for (int k = gThetaSampleMin; k < gThetaSampleMax + 1; k++)
+            {
+                int idx = i * quad_rad + j * gNumThetaSample + k;
+                edges->push_back(idx);
+                edges->push_back(idx+quad_rad);
+            }
+        }
     }
     for (int i = gRadSampleMin; i < gRadSampleMax + 1; i++)
     {
-	for (int j = gPhiSampleMin; j < gPhiSampleMax; j++)
-	{
-	    for (int k = gThetaSampleMin; k < gThetaSampleMax + 1; k++)
-	    {
-		int idx = i * quad_rad + j * gNumThetaSample + k;
-		edges->push_back(idx);
-		edges->push_back(idx+gNumThetaSample);
-	    }
-	}
+        for (int j = gPhiSampleMin; j < gPhiSampleMax; j++)
+        {
+            for (int k = gThetaSampleMin; k < gThetaSampleMax + 1; k++)
+            {
+                int idx = i * quad_rad + j * gNumThetaSample + k;
+                edges->push_back(idx);
+                edges->push_back(idx+gNumThetaSample);
+            }
+        }
     }
     for (int i = gRadSampleMin; i < gRadSampleMax + 1; i++)
     {
-	for (int j = gPhiSampleMin; j < gPhiSampleMax + 1; j++)
-	{
-	    for (int k = gThetaSampleMin; k < gThetaSampleMax; k++)
-	    {
-		int idx = i * quad_rad + j * gNumThetaSample + k;
-		edges->push_back(idx);
-		edges->push_back(idx+1);
-	    }
-	}
+        for (int j = gPhiSampleMin; j < gPhiSampleMax + 1; j++)
+        {
+            for (int k = gThetaSampleMin; k < gThetaSampleMax; k++)
+            {
+                int idx = i * quad_rad + j * gNumThetaSample + k;
+                edges->push_back(idx);
+                edges->push_back(idx+1);
+            }
+        }
     }
 
     return edges;
 }
-
-
-
-
-
-
-
-
-
-
 

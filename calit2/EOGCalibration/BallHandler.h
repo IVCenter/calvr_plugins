@@ -42,9 +42,7 @@ class BallHandler
 
     virtual void setVisible(bool flag);
     virtual bool isVisible() { return mFlagVisible; }
-
     virtual void updateCaliBall(const float &phi, const float &theta, const float &rad);
-
 	static void setDataDir(const std::string &datadir) { gDataDir = datadir; }
 
   protected:
@@ -65,7 +63,7 @@ class BallHandler
 
 	static std::string gDataDir;
 
-    static inline void sphericToCartetion(const float &phi, const float &theta, const float &rad, Vec3 &pos)
+    static inline void sphericToCartesian(const float &phi, const float &theta, const float &rad, Vec3 &pos)
     {
 		pos.x() = rad * sin(theta) * cos(phi);
 		pos.y() = rad * sin(theta) * sin(phi);
@@ -111,7 +109,7 @@ class PlaybackBallHandler: public BallHandler
 	PlaybackEntryVector mEntryVector;
 
 	/* additional geometries */
-	Switch *mHeadSwitch;
+	Switch *mHeadSwitch, *mGhostBallSwitch;
 	Node *mEyeBallNode;
 	MatrixTransform *mHeadTrans, *mPoleTrans, *mEyeBallTrans, *mGhostBallTrans;
 	Geode *mPoleGeode;
@@ -121,9 +119,4 @@ class PlaybackBallHandler: public BallHandler
 };
 
 #endif
-
-
-
-
-
 

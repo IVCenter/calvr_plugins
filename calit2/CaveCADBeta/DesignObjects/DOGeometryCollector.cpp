@@ -58,7 +58,7 @@ void DOGeometryCollector::setSurfaceCollectionHints(CAVEGeodeShape *shapeGeode, 
     osg::Matrixd o2cad;
     o2cad.makeScale(0.001, 0.001, 0.001);//
     mIconCenter = osg::Vec3(0,4000,0) * cvr::PluginHelper::getHeadMat() * w2o * o2cad;
-
+   
     /* set origin of the two coordinate systems: using center of first hit 'CAVEGeodeShape' and 
        center of current design state sphere. */
     CAVEGroupIconSurface::setSurfaceScalingHint(shapeGeode->getBoundingBox());
