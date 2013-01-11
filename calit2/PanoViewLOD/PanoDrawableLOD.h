@@ -1,10 +1,18 @@
 #ifndef PANO_DRAWABLE_LOD_H
 #define PANO_DRAWABLE_LOD_H
 
+#include <GL/glew.h>
+
+// hack for compile on dan's mac
+#ifndef GL_DOUBLE_VEC2
+#undef GL_ARB_gpu_shader_fp64
+#endif
+
+#include <osg/Drawable>
+
 #include "sph-cache.hpp"
 #include "sph-model.hpp"
 
-#include <osg/Drawable>
 #include <OpenThreads/Mutex>
 
 #include <string>
