@@ -54,6 +54,11 @@ void DOGeometryCollector::setSurfaceCollectionHints(CAVEGeodeShape *shapeGeode, 
     mShapeCenter = shapeGeode->getCAVEGeodeCenter();
     mIconCenter = iconCenter;
 
+    osg::Matrixf w2o = cvr::PluginHelper::getWorldToObjectTransform();
+    osg::Matrixd o2cad;
+    o2cad.makeScale(0.001, 0.001, 0.001);//
+    mIconCenter = osg::Vec3(0,4000,0) * cvr::PluginHelper::getHeadMat() * w2o * o2cad;
+
     /* set origin of the two coordinate systems: using center of first hit 'CAVEGeodeShape' and 
        center of current design state sphere. */
     CAVEGroupIconSurface::setSurfaceScalingHint(shapeGeode->getBoundingBox());
@@ -354,6 +359,13 @@ void DOGeometryCollector::updateVertexMaskingVector()
 void DOGeometryCollector::deleteSelected()
 {
     std::cout << mGeodeShapeVector.size() << std::endl;
+    for (int i = 0; i < mGeodeShapeVector.size(); ++i)
+    {
+        mGeodeShapeVector[i]->setNodeMask(0x0);
+    }
+    clearGeometryVector();
+    clearGeodeShapeVector();
+
 }
 
 

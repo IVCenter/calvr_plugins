@@ -80,7 +80,7 @@ void ANIMCreateViewpoints(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
         text->setCharacterSize(0.1);
         text->setDrawMode(osgText::Text::TEXT);
         text->setAxisAlignment(osgText::Text::XZ_PLANE);
-        text->setPosition(osg::Vec3(-0.1, -0.4, 0));
+        text->setPosition(osg::Vec3(-0.1, -0.4, -0.1));
         text->setColor(osg::Vec4(1,1,1,1));
         text->setFont("/home/cehughes/CalVR/resources/arial.ttf");
 
@@ -122,12 +122,12 @@ void ANIMCreateViewpoints(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
         fwd = new osg::PositionAttitudeTransform();
         bwd = new osg::PositionAttitudeTransform();
 
-        fwd->addChild(sphereGeode);
-        bwd->addChild(sphereGeode);     
-
         Node* frameNode = osgDB::readNodeFile(ANIMDataDir() + "VRMLFiles/ParamountFrame.WRL"); 
         fwd->addChild(frameNode);
         bwd->addChild(frameNode);
+
+        fwd->addChild(sphereGeode);
+        bwd->addChild(sphereGeode);     
 
         fwd->setUpdateCallback(animCallbackFwd);
         bwd->setUpdateCallback(animCallbackBwd);
@@ -227,12 +227,12 @@ void ANIMAddViewpoint(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
         text->setCharacterSize(0.1);
         text->setDrawMode(osgText::Text::TEXT);
         text->setAxisAlignment(osgText::Text::XZ_PLANE);
-        text->setPosition(osg::Vec3(-0.1, -0.4, 0));
+        text->setPosition(osg::Vec3(-0.1, -0.4, -0.1));
         text->setColor(osg::Vec4(1,1,1,1));
 
         text->setFont("/home/cehughes/CalVR/resources/arial.ttf");
         if (i != 0 && i != numViews)
-            text->setPosition(osg::Vec3(-0.03, -0.4, 0));
+            text->setPosition(osg::Vec3(-0.03, -0.4, -0.1));
         sphereGeode->addDrawable(text);
 
        
@@ -300,12 +300,12 @@ void ANIMAddViewpoint(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
         fwd = new osg::PositionAttitudeTransform();
         bwd = new osg::PositionAttitudeTransform();
 
-        fwd->addChild(sphereGeode);
-        bwd->addChild(sphereGeode);
-
         Node* frameNode = osgDB::readNodeFile(ANIMDataDir() + "VRMLFiles/ParamountFrame.WRL"); 
         fwd->addChild(frameNode);
         bwd->addChild(frameNode);
+
+        fwd->addChild(sphereGeode);
+        bwd->addChild(sphereGeode);
 
         fwd->setUpdateCallback(animCallbackFwd);
         bwd->setUpdateCallback(animCallbackBwd);

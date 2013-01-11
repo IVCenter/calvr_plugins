@@ -135,7 +135,7 @@ void DSObjectPlacer::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg::V
     {
         if (mDrawingState == PLACE_OBJECT && _activeObject)
         {
-            osg::Vec3 pos = osg::Vec3(0,1000,0) * cvr::PluginHelper::getHandMat() 
+            osg::Vec3 pos = osg::Vec3(0,5000,0) * cvr::PluginHelper::getHandMat() 
                 * cvr::PluginHelper::getWorldToObjectTransform();
             _activeObject->setPosition(pos);//pointerPos); 
         }
@@ -144,7 +144,7 @@ void DSObjectPlacer::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg::V
     {
         if (mDrawingState == PLACE_OBJECT && _activeObject)
         {
-            osg::Vec3 pos = osg::Vec3(0,1000,0) * cvr::PluginHelper::getHandMat() 
+            osg::Vec3 pos = osg::Vec3(0,3000,0) * cvr::PluginHelper::getHandMat() 
                 * cvr::PluginHelper::getWorldToObjectTransform();
             _activeObject->setPosition(pos);//pointerPos); 
         }

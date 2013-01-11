@@ -34,11 +34,11 @@ DSGeometryCreator::DSGeometryCreator(): mShapeSwitchIdx(0), mNumShapeSwitches(0)
 
     prevGeode = NULL;
 
-    int x, y, z;
+    float x, y, z;
     std::string path = "Plugin.CaveCADBeta.GeometryEditorOffset";
-    x = cvr::ConfigManager::getInt("x", path, 1);
-    y = cvr::ConfigManager::getInt("y", path, 0);
-    z = cvr::ConfigManager::getInt("z", path, 1);
+    x = cvr::ConfigManager::getFloat("x", path, 1);
+    y = cvr::ConfigManager::getFloat("y", path, 0);
+    z = cvr::ConfigManager::getFloat("z", path, 1);
 
     mEditorOffset = osg::Vec3(x,y,z);//1,0,1);
     mHighlightedIdx = -1;
