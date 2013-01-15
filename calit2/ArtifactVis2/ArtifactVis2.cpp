@@ -13,7 +13,6 @@
 #include <vector>
 #include <sys/stat.h>
 #include <time.h>
-
 #include <cstdlib>
 
 #ifndef WIN32
@@ -26,12 +25,16 @@
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/PluginManager.h>
 #include <cvrKernel/SceneManager.h>
-#include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/SceneObject.h>
+//#include <cvrKernel/InteractionManager.h>
 #include <cvrMenu/MenuSystem.h>
-#include <cvrUtil/LocalToWorldVisitor.h>
+//#include <cvrUtil/LocalToWorldVisitor.h>
+#include <cvrUtil/TextureVisitors.h>
 #include <PluginMessageType.h>
 #include <cvrKernel/ComController.h>
 #include <cvrKernel/CVRViewer.h>
+//#include "DesignStateIntersector.h"
+//#include "DesignObjectIntersector.h"
 //#include <cvrKernel/SceneManager.h>
 
 #include <osg/Vec4>
@@ -71,25 +74,6 @@ ArtifactVis2::ArtifactVis2()
 }
 ArtifactVis2::~ArtifactVis2()
 {
-    if (skel_socket) {
-        delete skel_socket;
-        skel_socket = NULL;
-    }
-
-    if (depth_socket) {
-        delete depth_socket;
-        depth_socket = NULL;
-    }
-
-    if (cloud_socket) {
-        delete cloud_socket;
-        cloud_socket = NULL;
-    }
-
-    if (color_socket) {
-        delete color_socket;
-        color_socket = NULL;
-    }
 }
 /*
 * Returns an instance for use with other programs.
@@ -119,205 +103,62 @@ void ArtifactVis2::message(int type, char* data)
 
 bool ArtifactVis2::init()
 {
+    lineGroupsEditing = false;
 
-    navSphereTimer = 0;
+    modelDropped = false; 
+    ArtifactVis2On = false;
+     newFileAvailable = false;
+    secondInitComplete = false;
     pointGeode = new osg::Geode();
     _modelFileNode = NULL;
-    useKinect = ConfigManager::getBool("Plugin.ArtifactVis2.KinectDefaultOn");
-    useKColor = false;
     std::cerr << "ArtifactVis2 init\n";
     _root = new osg::MatrixTransform();
     _tablesMenu = NULL;
-    loadModels();
+    _shiftActive = false;
+    _grabActive = false;
+    _rotActive = false;
 
-    //Algorithm for generating colors based on DC.
-    for (int i = 0; i < 729; i++)
-    {
-        _colors[i] = Vec4(1 - float((i % 9) * 0.125), 1 - float(((i / 9) % 9) * 0.125), 1 - float(((i / 81) % 9) * 0.125), 1);
-    }
-
-    //Menu Setup:
-    _avMenu = new SubMenu("ArtifactVis2", "ArtifactVis2");
-    _avMenu->setCallback(this);
-    _displayMenu = new SubMenu("Display");
-    _avMenu->addItem(_displayMenu);
-    //Generates the menu for selecting models to load
-    setupSiteMenu();
-    //Generates the menus to toggle each query on/off.
-    setupQuerySelectMenu();
-    //Generates the menus to query each table.
-    setupTablesMenu();
-
-    for (int i = 0; i < _tables.size(); i++)
-    {
-        setupQueryMenu(_tables[i]);
-    }
-
-    if (_tablesMenu)
-    {
-        _avMenu->addItem(_tablesMenu);
-    }
-    //Generates the menus to fly to coordinates.
-    setupFlyToMenu();
-    _bookmarkLoc = new MenuButton("Save Location");
-    _bookmarkLoc->setCallback(this);
-    _avMenu->addItem(_bookmarkLoc);
-    _selectArtifactCB = new MenuCheckbox("Select Artifact", false);
-    _selectArtifactCB->setCallback(this);
-    _avMenu->addItem(_selectArtifactCB);
-    _manipArtifactCB = new MenuCheckbox("Manipulate Artifact", false);
-    _manipArtifactCB->setCallback(this);
-    _avMenu->addItem(_manipArtifactCB);
-    _scaleBar = new MenuCheckbox("Scale Bar", false);  //new
-    _scaleBar->setCallback(this);
-    _avMenu->addItem(_scaleBar);
-    _kinectOn = new MenuCheckbox("Use Kinect", useKinect);  //new
-    _kinectOn->setCallback(this);
-    _avMenu->addItem(_kinectOn);
-    _kinectMenu = new SubMenu("Kinect Options");
-    _avMenu->addItem(_kinectMenu);
-    _selectKinectCB = new MenuCheckbox("Select Kinect Point", kSelectKinect);
-    _selectKinectCB->setCallback(this);
-    _kShowColor = new MenuCheckbox("Show Color Map", kShowColor);  //new
-    _kShowColor->setCallback(this);
-    _kLockRot = new MenuCheckbox("Lock Artifact Rot", kLockRot);
-    _kLockRot->setCallback(this);
-    kLockScale = true;
-    _kLockScale = new MenuCheckbox("Lock Artifact Scale", kLockScale);
-    _kLockScale->setCallback(this);
-    _kLockPos = new MenuCheckbox("Lock Artifact Pos", kLockPos);
-    _kLockPos->setCallback(this);
-    _kShowArtifactPanel = new MenuCheckbox("Lock Artifact Pos",kShowArtifactPanel );
-    _kShowArtifactPanel->setCallback(this);
-    _kMoveWithCam = new MenuCheckbox("Move skeleton with camera", kMoveWithCam);
-    _kMoveWithCam->setCallback(this);
-    colorfps = 100;
-    _kColorFPS = new MenuRangeValue("Color Map 1/FPS", 1, 300, colorfps);
-    _kColorFPS->setCallback(this);
-    //   _avMenu->addItem(_kColorFPS);
-    _kShowPCloud = new MenuCheckbox("Show Point Cloud", kShowPCloud);  //new
-    _kShowPCloud->setCallback(this);
-    _kShowInfoPanel = new MenuCheckbox("Show Info Panel", kShowInfoPanel);  //new
-    _kShowInfoPanel->setCallback(this);
-    //   _avMenu->addItem(_kShowPCloud);
-    _kColorOn = new MenuCheckbox("Show Real Colors on Point Cloud", useKColor);  //new
-    _kColorOn->setCallback(this);
-    _kNavSpheres = new MenuCheckbox("Navigation Spheres", kNavSpheres);
-    _kNavSpheres->setCallback(this);
-    _kUseGestures = new MenuCheckbox("Use Finger Tracking", kUseGestures);
-    _kUseGestures->setCallback(this);
-    _kinectMenu->addItem(_selectKinectCB);
-    _kinectMenu->addItem(_kShowColor);
-    _kinectMenu->addItem(_kLockRot);
-    _kinectMenu->addItem(_kLockScale);
-    _kinectMenu->addItem(_kLockPos);
-    _kinectMenu->addItem(_kColorFPS);
-    _kinectMenu->addItem(_kShowPCloud);
-    _kinectMenu->addItem(_kColorOn);
-    _kinectMenu->addItem(_kNavSpheres);
-    _kinectMenu->addItem(_kUseGestures);
-    _kinectMenu->addItem(_kMoveWithCam);
-    _kinectMenu->addItem(_kShowArtifactPanel);
-    _kinectMenu->addItem(_kShowInfoPanel);
-    //   _avMenu->addItem(_kColorOn);
-    _selectCB = new MenuCheckbox("Select box", false);
-    _selectCB->setCallback(this);
-    //_avMenu->addItem(_selectCB);  //Removed for now until fixed.
     _defaultMaterial = new Material();
     _defaultMaterial->setColorMode(Material::AMBIENT_AND_DIFFUSE);
     _defaultMaterial->setDiffuse(Material::FRONT, osg::Vec4(1.0, 1.0, 1.0, 1.0));
-    //create wireframe selection box
-    osg::Box* sbox = new osg::Box(osg::Vec3(0, 0, 0), 1.0, 1.0, 1.0);
-    osg::ShapeDrawable* sd = new osg::ShapeDrawable(sbox);
-    osg::StateSet* stateset = sd->getOrCreateStateSet();
-    osg::PolygonMode* polymode = new osg::PolygonMode;
-    polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
-    stateset->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
-    osg::Geode* geo = new osg::Geode();
-    geo->addDrawable(sd);
-    _selectBox = new osg::MatrixTransform();
-    _selectBox->addChild(geo);
-    // create select mark for wand
-    osg::Sphere* ssph = new osg::Sphere(osg::Vec3(0, 0, 0), 10);
-    sd = new osg::ShapeDrawable(ssph);
-    sd->setColor(osg::Vec4(1.0, 0, 0, 1.0));
-    stateset = sd->getOrCreateStateSet();
-    stateset->setMode(GL_LIGHTING, osg::StateAttribute::ON);
-    stateset->setAttributeAndModes(_defaultMaterial, osg::StateAttribute::ON);
-    geo = new osg::Geode();
-    geo->addDrawable(sd);
-    _selectMark = new osg::MatrixTransform();
-    _selectMark->addChild(geo);
+    //Create Basic Menu
+
+    _avMenu = new SubMenu("ArtifactVis2", "ArtifactVis2");
+    _avMenu->setCallback(this);
+    _turnOnArtifactVis2 = new MenuCheckbox("Turn On", false);
+    _turnOnArtifactVis2->setCallback(this);
+    _avMenu->addItem(_turnOnArtifactVis2);
     MenuSystem::instance()->addMenuItem(_avMenu);
+
     SceneManager::instance()->getObjectsRoot()->addChild(_root);
     _sphereRadius = 0.03;
+    _vertexRadius = 0.01;
     _activeArtifact  = -1;
-    _picFolder = ConfigManager::getEntry("value", "Plugin.ArtifactVis2.PicFolder", "");
-    //Tabbed dialog for selecting artifacts
-    _artifactPanel = new TabbedDialogPanel(400, 30, 4, "Selected Artifact", "Plugin.ArtifactVis2.ArtifactPanel");
-    _artifactPanel->addTextTab("Info", "");
-    _artifactPanel->addTextureTab("Side", "");
-    _artifactPanel->addTextureTab("Top", "");
-    _artifactPanel->addTextureTab("Bottom", "");
-    _artifactPanel->setVisible(false);
-    _artifactPanel->setActiveTab("Info");
-    _infoPanel = new TabbedDialogPanel(400, 30, 4, "Info Panel", "Plugin.ArtifactVis2.InfoPanel");
-    _infoPanel->addTextTab("Info", "");
-    _infoPanel->setVisible(false);
-    _infoPanel->setActiveTab("Info");
-    _selectionStatsPanel = new DialogPanel(450, "Selection Stats", "Plugin.ArtifactVis2.SelectionStatsPanel");
-    _selectionStatsPanel->setVisible(false);
-    //_testA = 0;
-    //std::cerr << selectArtifactSelected() << "\n";
-    //SpaceNavigator Included
-    statusSpnav = false; //made global
 
-    if (ComController::instance()->isMaster())
-    {
-        if (spnav_open() == -1)
-        {
-            cerr << "SpaceNavigator: Failed to connect to the space navigator daemon" << endl;
-        }
-        else
-        {
-            statusSpnav = true;
-        }
 
-        ComController::instance()->sendSlaves((char*) &statusSpnav, sizeof(bool));
-    }
-    else
-    {
-        ComController::instance()->readMaster((char*) &statusSpnav, sizeof(bool));
-    }
-
-    transMult = ConfigManager::getFloat("Plugin.SpaceNavigator.TransMult", 1.0);
-    rotMult = ConfigManager::getFloat("Plugin.SpaceNavigator.RotMult", 1.0);
-    cout << "Sp:" << transMult;
-    transcale = -0.05 * transMult;
-    rotscale = -0.000009 * rotMult;
-
-    //........................................................................
-    //Check if Hand Tracking is active for Model Manipulation
-    if (PluginHelper::getNumHands() > 0)
-    {
-        _handOn = true;
-        cerr << "Hand Tracking is Activated\n";
-    }
-    else
-    {
-        _handOn = false;
-        cerr << "Hand Tracking is Not Activated\n";
-    }
-
-    _handOn = false; //Hand Tracking for Artifacts is currently disabled until Stereo problem fixed
-
-    // kinect initialization
-    if (useKinect) kinectInit();
-
-    //........................................................................
-    //float minval = ConfigManager::getFloat("value","Near",0.0f);
-    //std::cerr << "Min Dist:"<< minval << "\n";
     std::cerr << "ArtifactVis2 init done.\n";
+
+    if(ConfigManager::getBool("Plugin.ArtifactVis2.StartArtifactVis2"))
+    {
+      secondInit();
+    }
+if(true)
+{
+/*
+    for (unsigned int k = 0; k < entries.size(); k++)
+    {
+        cout << k << ".\t" << entries[k]->filename << endl;
+          struct stat info;
+        string origDir = entries[k]->path;
+        origDir.append(entries[k]);
+        lstat(origDir.c_str(), &info);
+        if(S_ISDIR(info.st_mode))
+        {
+         cout << entries[k] << "is a directory\n"; 
+        }
+    }
+*/
+}
     return true;
 }
 
@@ -328,6 +169,9 @@ bool ArtifactVis2::init()
 */
 void ArtifactVis2::loadModels()
 {
+     string dc = "ZZ"; 
+     string modelPathDefault = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("dcode_models/" + dc + "/" + dc + ".obj");
+    defaultDcModel = osgDB::readNodeFile(modelPathDefault);
     for (int i = 0; i < 26; i++)
     {
         for (int j = 0 ; j < 26; j++)
@@ -344,20 +188,77 @@ void ArtifactVis2::loadModels()
                 //cout << "Model " << modelPath << " Exists \n";
                 _models[i * 26 + j] = osgDB::readNodeFile(modelPath);
                 _modelLoaded[i * 26 + j] = _models[i * 26 + j].valid();
+                
             }
             else
             {
                 //cout << "Model " << modelPath << " Not Exists \n";
                 _models[i * 26 + j] = NULL;
                 _modelLoaded[i * 26 + j] = false;
+               // _models[i * 26 + j] = defaultDcModel;
+               // _modelLoaded[i * 26 + j] = _models[i * 26 + j].valid();
             }
         }
     }
+
 }
 bool ArtifactVis2::processEvent(InteractionEvent* event)
 {
     TrackedButtonInteractionEvent* tie = event->asTrackedButtonEvent();
+    KeyboardInteractionEvent* keyTie = event->asKeyboardEvent();
+if(ArtifactVis2On)
+{
+if(event->asKeyboardEvent() && ArtifactVis2On)
+{
+/*
+	bool keyPressed = true;
+	if(keyTie->getMod()==2 && keyTie->getKey() == 65506)
+	{	
+	_shiftActive = true;	
+	cerr << "Key: " << keyTie->getKey()  << " " << keyTie->getMod() <<" Pressed\n";
+	}
+	else if(keyTie->getKey() == 65506)
+	{
+	_shiftActive = false;
+	cerr << "Key: " << keyTie->getKey()  << " " << keyTie->getMod() <<" UnPressed\n";
+	}
+*/  
+        if(keyTie->getKey() != currentKey)
+          {
+          int inc = findActiveAnnot();
+          if(inc != -1)
+          {
+	  //cerr << "Key: " << keyTie->getKey()  <<" \n";
+          int code = keyTie->getKey();
+          string character = getCharacterAscii(code);
+          
+          string oldText = _annotations[inc]->textNode->getText().createUTF8EncodedString();
+          //cerr << "Old Text: " << oldText << " " << keyTie->getKey() << "\n";
+          string newText;
+          if(code == 65288)
+          {
+            oldText.erase(oldText.length()-1,1);
+            newText = oldText;
+          }
+          else
+          {
+          newText = oldText.append(character);
+          }
+          _annotations[inc]->textNode->setText(newText);
+          currentKey = keyTie->getKey();
+          }
+          else
+          {
 
+          currentKey = NULL;
+          }
+          }
+          else
+          {
+          currentKey = NULL;
+          }
+          
+          }                 
     if (!tie)
     {
         return false;
@@ -367,27 +268,264 @@ bool ArtifactVis2::processEvent(InteractionEvent* event)
     {
         //bang
     }
+        if(false)
+            {
+/*
+        osg::Vec3 pointerOrg, pointerPos;
+        osg::Matrixd w2o = PluginHelper::getWorldToObjectTransform();
+
+        //pointerOrg = osg::Vec3(0, 0, 0) * TrackingManager::instance()->getHandMat(0) * w2o;
+        //pointerOrg = osg::Vec3(0, 0, 0) * TrackingManager::instance()->getHandMat(0) * w2o;
+        pointerPos = osg::Vec3(0, 1000, 0) * TrackingManager::instance()->getHandMat(0);
+        pointerOrg = osg::Vec3(0, 0, 0) * TrackingManager::instance()->getHandMat(0);
+
+    DSIntersector::DSIntersector* mDSIntersector = new DSIntersector();
+    DOIntersector* mDOIntersector = new DOIntersector();
+    mDOIntersector = new DOIntersector();
+    mDSIntersector->loadRootTargetNode(SceneManager::instance()->getScene(), NULL);
+    mDOIntersector->loadRootTargetNode(NULL, NULL);
+        if (tie->getHand() == 0 && tie->getButton() == 0)
+        {
+
+            if (tie->getInteraction() == BUTTON_DOWN || tie->getInteraction() == BUTTON_DRAG)
+            {
+          if(_shiftActive && _grabActive)
+	  {
+             Vec3 rotVector;
+             if(!_rotActive)
+             {
+               _grabCurrentRot = pointerPos;
+               _rotActive = true;
+               //rhit = mDSIntersector->getWorldHitPosition();
+               cerr << "Rot Started\n";
+	     }
+             else
+             {
+		rotVector = _grabCurrentRot - pointerPos;
+                rotVector.y() = 0;
+                rotVector.z() /= 50;
+                rotVector.x() /= 50;
+               _grabCurrentRot = pointerPos;
+		//For hand orientation info
+		osg::Quat handRot = TrackingManager::instance()->getHandMat(0).getRotate();
+  		//  cerr << "rx: " << handRot.x() << " ry : " << handRot.y() << " rz : " << handRot.z() << " rw : " << handRot.w()  << "\n"; 
+    		Matrix tmat;
+    		Vec3 center = _hudRoot[0]->getBound().center();
+    		center = rhit;
+    		if(rhit.x() < 0)
+    		{
+			rhit.x() *= -1;
+    		}
+    		if(rhit.z() < 0)
+    		{
+			rhit.z() *= -1;
+    		}
+    		cerr << "x: " << center.x() << " y: " << center.y() << " z: " << center.z() << "\n"; 
+    		tmat.makeTranslate(Vec3(0,0,0));
+    		double rx = rotVector.z();
+    		double ry = rotVector.y();
+    		double rz = rotVector.x();
+   		// cerr << "rx: " << rx << " ry: " << ry << " rz: " << rz << "\n";
+        	Vec3 xa = Vec3(1.0, 0.0, 0.0);
+        	Vec3 ya = Vec3(0.0, 1.0, 0.0);
+        	Vec3 za = Vec3(0.0, 0.0, 1.0);
+        	Matrix rot;
+        	rot.makeRotate(rx, xa, ry, ya, rz, za);
+        	Matrixd gotoMat = osg::Matrix::translate(-center)  * rot * osg::Matrix::translate(center);
+                osg::Matrix inverseMatrix = osg::Matrix::inverse(gotoMat);
+
+		  _hudRoot[0]->setMatrix(inverseMatrix * _hudRoot[0]->getMatrix());
+                  Matrix ctrans = _hudRoot[0]->getMatrix();
+                  Vec3 trans = ctrans.getTrans();
+                 // cerr << "x: " << trans.x() << " y: " << trans.y() << " z: " << trans.z() << "\n"; 
+
+             }
+	  }
+          else
+	  {
+            if (mDSIntersector->test(pointerOrg, pointerPos))
+            {
+	      if(!_shiftActive)
+	      {
+                 updateSceneObjectMovement(mDSIntersector, tie);
+	     }
+             else
+            {
+		  _grabActive = true;
+        //mWireframeGeode->setScaleVect(snapPos - mWireframeGeode->getInitPosition());
+	     }
+	    }
+            }
+           
+} 
+            else if (tie->getInteraction() == BUTTON_UP)
+            {
+                //bool res = mCAVEDesigner->inputDevReleaseEvent();
+                //return res;
+                cerr << "-";
+                _hudActive = false;
+		_grabActive = false;
+                _rotActive = false;
+            }
+	}
+  */   
+/*
+		int i = 0;
+		if(i == 0)
+		{
+		cerr << "Started:\n";
+                    std::map<int,osg::Vec3> _currentPoint;
+                    osg::Vec3 ray;
+                    ray = _currentPoint[tie->getHand()]
+                            - tie->getTransform().getTrans();
+
+                    float _moveDistance;
+                    osg::Vec3 _menuPoint;
+                    _moveDistance = ray.length();
+                   / _menuP/int = _currentPoint[tie->getHand()]
+                            * osg::Matrix::inverse(_hudRoot[i]->getMatrix());
+                   
+		     updateHudMovement(i,tie,_moveDistance,_menuPoint);
+                
+                //return true;
+                }
+            
+*/
+            //return false;
+   }
+
+    if ((event->getInteraction() == BUTTON_DOWN || event->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getHand() == 0 && tie->getButton() == 0)
+    {
+
+        if (newFileAvailable)
+        {
+            if(newSelectedFile != "" && newSelectedName != "")
+            {
+               //int index = _models3d.size(); 
+
+      		if (!modelExists(newSelectedFile.c_str()))
+      		{
+        		std::cerr << "Unable to open file: " << newSelectedFile << std::endl;
+        		//return;
+      		}
+                else
+                {
+                bool useHandPos = true;
+			if(newSelectedType == "ply")
+			{
+                          cerr << "parsing Ply\n";
+			  parsePCXml(useHandPos);
+
+			}
+			else
+			{
+			  parseModelXml(useHandPos);
+			}
+                }
+            }
+	 
+             
+            newFileAvailable = false;
+          }
+
+
+    }
+    if ((event->getInteraction() == BUTTON_DOWN || event->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getHand() == 0 && tie->getButton() == 0)
+    {
+
+        if (_createAnnotations->getValue())
+        {
+	   _createAnnotations->setValue(false);
+           createAnnotationFile(tie->getTransform());
+
+        }
+
+
+    }
+    if ((event->getInteraction() == BUTTON_DOWN || event->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getHand() == 0 && tie->getButton() == 1)
+    {
+        //Turn Off Editing with Right Click
+        if(lineGroupsEditing)
+        {
+        lineGroupsEditing = false;
+	  if(_lineGroups.size() > 0)
+	  {
+	    for (int i = 0; i < _lineGroups.size(); i++)
+	    {
+	    if(_lineGroups[i]->editing)
+	    {
+	      _lineGroups[i]->editing = false;
+               closeLineVertex(i);
+	    }
+            }
+
+          }
+
+	}
+
+
+    }
+    if ((event->getInteraction() == BUTTON_DOWN || event->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getHand() == 0 && tie->getButton() == 0)
+    {
+        if(lineGroupsEditing)
+        {
+	  if(_lineGroups.size() > 0)
+	  {
+	    for (int i = 0; i < _lineGroups.size(); i++)
+	    {
+	    if(_lineGroups[i]->editing)
+	    {
+              lineGroupsEditing = false;   
+	      _lineGroups[i]->editing = false;
+              addLineVertex(i);
+              break;
+	    }
+            }
+
+          }
+
+	}
+
+
+    }
+    if ((event->getInteraction() == BUTTON_DOWN || event->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getHand() == 0 && tie->getButton() == 0)
+    {
+
+        if (_createMarkup->getValue())
+        {
+	   _createMarkup->setValue(false);
+           startLineObject();
+           
+        }
+
+
+    }
 
     if ((event->getInteraction() == BUTTON_DOWN || event->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getHand() == 0 && tie->getButton() == 0)
     {
         //Artifact Selection
+            cerr << "Select On\n";
         if (_selectArtifactCB->getValue())
         {
-            if (!_selectCB->getValue())
+            cerr << "Select On\n";
+            if (true)
             {
                 osg::Matrix w2l = PluginHelper::getWorldToObjectTransform();
                 osg::Vec3 start(0, 0, 0);
                 osg::Vec3 end(0, 1000000, 0);
                 start = start * tie->getTransform() * w2l;
+                cerr << "Hand=" << start.x() << " " << start.z() << "\n";
                 end = end * tie->getTransform() * w2l;
                 int index = -1;
                 int queryIndex = -1;
                 double distance;
                 cerr << "got Interaction\n";
+
                 for (int q = 0; q < _query.size(); q++)
                 {
+                   // int n = _querySfIndex[q];
                     vector<Artifact*> artifacts = _query[q]->artifacts;
-
+                    if(_query[q]->active) cerr << "Query Active\n";
                     if (_query[q]->active)
                     {
                         for (int i = 0; i < artifacts.size(); i++)
@@ -419,139 +557,6 @@ bool ArtifactVis2::processEvent(InteractionEvent* event)
                 }
             }
         }
-
-        if (_selectKinectCB->getValue())
-        {
-            if (!_selectCB->getValue())
-            {
-                osg::Matrix w2l = PluginHelper::getWorldToObjectTransform();
-                int index = -1;
-                int queryIndex = -1;
-                double distance;
-                double scale = PluginHelper::getObjectScale();
-                osg::Vec3Array* vertices;
-                osg::Vec4dArray* colours;
-                Matrixd camMat = PluginHelper::getWorldToObjectTransform();
-                float cscale = 1; //Want to keep scale to actual Kinect
-                Vec3 camTrans = camMat.getTrans();
-                Quat camQuad = camMat.getRotate();  //Rotation of cam will cause skeleton to be off center--need Fix!!
-                double xOffset = (camTrans.x() / cscale) + skelOffsetX;
-                double yOffset = (camTrans.y() / cscale) + skelOffsetY; //Added 5 meter offset of skeleton from Camera (this only works when properly scaled, ofcourse
-                double zOffset = (camTrans.z() / cscale) + skelOffsetZ;
-
-                //printf("%g,%g,%g\n", xOffset,yOffset,zOffset);
-                if (kShowPCloud)
-                {
-                    printf("Triggered\n");
-                    vertices = kinectVertices;
-                    colours = kinectColours;
-                    Vec3 start = Vec3(1, 1, 1);
-                    osg::Vec3 end(0, 10000, 0);
-                    //start = start * tie->getTransform() *  PluginHelper::getHeadMat();
-                    //Vec3 test = start + camTrans;
-                    //Vec3 camera = PluginHelper:getHeadMat();
-                    //Vec3 test2 = start * w2l;
-                    //end = end * tie->getTransform();
-                    //printf(" Kinect Point: %g, %g, %g", x, y, z);
-                    FILE* pFile;
-                    string file = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("kinectDump.ply");
-                    pFile = fopen(file.c_str(), "w");
-                    fprintf(pFile, "ply\nformat ascii 1.0\ncomment VCGLIB generated\n");
-                    fprintf(pFile, "element vertex %i\n", vertices->size());
-                    fprintf(pFile, "property float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\nproperty uchar alpha\nelement face 0\nproperty list uchar int vertex_indices\nend_header\n");
-
-                    for (int i = 0; i < vertices->size() ; i++)
-                    {
-                        double x = (vertices->at(i).x() - xOffset); // * 1000;
-                        double y = (vertices->at(i).y() - yOffset);// * 1000;
-                        double z = (vertices->at(i).z() - zOffset);//* 1000;
-                        //x /= 1000;
-                        double r = colours->at(i).r() * 255;
-                        double g = colours->at(i).g() * 255;
-                        double b = colours->at(i).b() * 255;
-                        double a = colours->at(i).a();
-                        int ri = int (r);
-                        int gi = int (g);
-                        int bi = int (b);
-                        int ai = int (a);
-                        fprintf(pFile, "%f %f %f %i %i %i %i\n", x, y, z, ri, gi, bi, ai);
-
-                        if (x != 0)
-                        {
-                            //printf("%g,%g,%g,%g,%g,%g,%g\n", x,y,z,r,g,b,a);
-                            //fprintf (pFile, "%f %f %f %f %f %f %f\n", x,y,z,r,g,b,a);
-                        }
-
-                        /*
-                        osgUtil::LineSegmentIntersector* picker;
-                        if (!_useWindowCoordinates)
-                        {
-                        // use non dimensional coordinates - in projection/clip space
-                        picker = new osgUtil::LineSegmentIntersector( osgUtil::Intersector::PROJECTION, ea.getXnormalized(),ea.getYnormalized() );
-                        } else {
-                        // use window coordinates
-                        // remap the mouse x,y into viewport coordinates.
-                        osg::Viewport* viewport = viewer->getCamera()->getViewport();
-                        float mx = viewport->x() + (int)((float)viewport->width()*(ea.getXnormalized()*0.5f+0.5f));
-                        float my = viewport->y() + (int)((float)viewport->height()*(ea.getYnormalized()*0.5f+0.5f));
-                        picker = new osgUtil::LineSegmentIntersector( osgUtil::Intersector::WINDOW, mx, my );
-                        }
-                        osgUtil::IntersectionVisitor iv(picker);
-
-                        viewer->getCamera()->accept(iv);
-
-                        if (picker->containsIntersections())
-                        {
-                        osgUtil::LineSegmentIntersector::Intersection intersection = picker->getFirstIntersection();
-                        osg::notify(osg::NOTICE)<<"Picked "<<intersection.localIntersectionPoint<<std::endl;
-
-                        osg::NodePath& nodePath = intersection.nodePath;
-                        node = (nodePath.size()>=1)?nodePath[nodePath.size()-1]:0;
-                        parent = (nodePath.size()>=2)?dynamic_cast<osg::Group*>(nodePath[nodePath.size()-2]):0;
-
-                        if (node) std::cout<<"  Hits "<<node->className()<<" nodePath size"<<nodePath.size()<<std::endl;
-                        toggleScribe(parent, node);
-                        }
-                        osg::Vec3 num = (vertices->at(i) - start) ^ (vertices->at(i) - end);
-                        osg::Vec3 denom = end - start;
-                        double point2line = num.length() / denom.length();
-
-                        if (point2line <= 0.05)
-                        {
-                            double point2start = (vertices->at(i) - start).length2();
-
-                            if (index == -1 || point2start < distance)
-                            {
-                                distance = point2start;
-                                index = i;
-                                //printf("Found at %i\n",i);
-                                //queryIndex = q;
-                            }
-                        }
-                        */
-                    }
-
-                    fclose(pFile);
-                }
-
-                //vertices->empty();
-                if (index != -1)
-                {
-                    string color = "DD";
-                    Box* sphereShape = new Box(vertices->at(index), 0.05);
-                    ShapeDrawable* ggg2 = new ShapeDrawable(sphereShape);
-                    ggg2->setColor(_colors[ArtifactVis2::dc2Int(color)]);
-                    osg::Geode* boxGeode = new osg::Geode;
-                    boxGeode->addDrawable(ggg2);
-                    _root->addChild(boxGeode);
-                    float x = vertices->at(index).x();
-                    float y = vertices->at(index).y();
-                    float z = vertices->at(index).z();
-                    printf("Selected Kinect Point: %g, %g, %g \n", x, y, z);
-                    return true;
-                }
-            }
-        }
         //Box selection
         else if (_selectCB->getValue() && tie->getInteraction() == BUTTON_DOUBLE_CLICK)
         {
@@ -573,7 +578,7 @@ bool ArtifactVis2::processEvent(InteractionEvent* event)
             return true;
         }
     }
-
+}
     return false;
 }
 
@@ -623,45 +628,763 @@ std::string ArtifactVis2::getCurrentQuery(Table* t)
 
 void ArtifactVis2::menuCallback(MenuItem* menuItem)
 {
-    /*
-    #ifdef WITH_OSSIMPLANET
-
-    if(!_ossim&&OssimPlanet::instance())
+    if (menuItem == _turnOnArtifactVis2)
     {
-        _ossim = true;
-        _sphereRadius /= 1000;
-        cout << "Loaded into OssimPlanet." << endl;
+       if(_turnOnArtifactVis2->getValue())
+       {
+          if(!secondInitComplete)
+          {
+		secondInit();
+   
+                ArtifactVis2On = true;
+          }
+          else
+          {
+
+             _infoPanel->setVisible(true);
+             ArtifactVis2On = true;
+
+          }
+       }
+       else
+       {
+           //TODO:Turns Off PreFrame and entire Plugin
+             _infoPanel->setVisible(false);
+             ArtifactVis2On = false;
+       }
     }
-    #endif
-    */
-    //_ossim=false;
+    if (menuItem == _artifactsDropDown)
+    {
+       if(!artifactsDropped)
+       {
+        
+         artifactsDropped = true;
+         updateDropDowns();
+       }
+       else
+       {
+
+         artifactsDropped = false;
+         updateDropDowns();
+       }
+       return;
+    }
+    if (menuItem == _lociDropDown)
+    {
+       if(!lociDropped)
+       {
+        
+         lociDropped = true;
+         updateDropDowns();
+       }
+       else
+       {
+
+         lociDropped = false;
+         updateDropDowns();
+       }
+    }
+    if (menuItem == _modelDropDown)
+    {
+       if(!modelDropped)
+       {
+        
+         modelDropped = true;
+         updateDropDowns();
+       }
+       else
+       {
+
+         modelDropped = false;
+         updateDropDowns();
+       }
+    }
+    if (menuItem == _pcDropDown)
+    {
+       if(!pcDropped)
+       {
+        
+         pcDropped = true;
+         updateDropDowns();
+       }
+       else
+       {
+
+         pcDropped = false;
+         updateDropDowns();
+       }
+    }
+    if (menuItem == _bookmarksMenu)
+    {
+            if (_bookmarksMenu->getValue())
+            {
+                _bookmarkPanel->setVisible(true);
+	    }
+            else
+            {
+                _bookmarkPanel->setVisible(false);
+	    }
+
+    }
+    if (menuItem == _utilsMenu)
+    {
+            if (_utilsMenu->getValue())
+            {
+                _utilsPanel->setVisible(true);
+	    }
+            else
+            {
+                _utilsPanel->setVisible(false);
+	    }
+
+    }
+    if (menuItem == _fileMenu)
+    {
+            if (_fileMenu->getValue())
+            {
+                _filePanel->setVisible(true);
+	    }
+            else
+            {
+                _filePanel->setVisible(false);
+	    }
+
+    }
+    if (menuItem == _qsMenu)
+    {
+            if (_qsMenu->getValue())
+            {
+                _qsPanel->setVisible(true);
+	    }
+            else
+            {
+                _qsPanel->setVisible(false);
+	    }
+
+    }
+    if (menuItem == _resetFileManager)
+    {
+             string dir = ConfigManager::getEntry("Plugin.ArtifactVis2.ArchInterfaceFolder");
+             updateFileMenu(dir);
+
+    }
+    for (int i = 0; i < fileButton.size(); i++)
+    {
+        if (menuItem == fileButton[i])
+        {
+           if(entries[i]->filename == "..")
+           {
+             //Go up one folder
+            string dir = entries[i]->path;
+            dir.erase(dir.length()-1);
+            cout << dir << endl;
+            size_t found=dir.find_last_of("/");
+            if (found!=string::npos)
+	    {
+                 int start = int(found);
+                 int length = dir.length();
+                 length -= start;
+                 dir.erase(start);  
+                 dir.append("/");
+                 cout << dir << endl;               
+                 updateFileMenu(dir);
+            }
+             break;
+           } 
+           else if(entries[i]->filetype == "folder")
+           {
+             //Switch to New Folder
+             string dir = entries[i]->path;
+             //dir.append("/");
+             dir.append(entries[i]->filename);
+             dir.append("/");
+             cout << dir << endl;               
+             updateFileMenu(dir);
+             break;
+           }
+           else
+           {
+             //Load File
+
+             newSelectedFile = entries[i]->path;
+             newSelectedName = entries[i]->filename;
+             newSelectedType = entries[i]->filetype;
+            // newSelectedFile.append("/");
+             newSelectedFile.append(newSelectedName);
+             newFileAvailable = true;
+             break;
+           }
+
+
+
+	}
+    }
+    for (int i = 0; i < _annotations.size(); i++)
+    {
+        if (menuItem == _annotations[i]->saveMap)
+        {
+	        std::cerr << "Save." << std::endl;
+                Vec3 pos = _annotations[i]->so->getPosition();
+          //      Quat rot = _annotations[i]->so->getRotation();
+          //      float scale = _annotations[i]->so->getScale();
+          //      verts = (osg::Vec3Array *) _annotations[i]->geo->getVertexArray();
+            //    pos = verts->at(0);
+
+
+                cerr << "x: " << pos.x() << " y: " << pos.y() << " z: " << pos.z() << std::endl;
+                saveAnnotationGraph();
+                //cerr << "rx: " << rot.x() << " ry: " << rot.y() << " rz: " << rot.z() << " rw: " << rot.w() << std::endl;
+                //cerr << "Scale: " << scale << std::endl;
+	}
+        if (menuItem == _annotations[i]->activeMap)
+        {
+            if (_annotations[i]->activeMap->getValue())
+            {
+	        std::cerr << "Active." << std::endl;
+                 deactivateAllAnno();
+                 _annotations[i]->active = true;
+                 _annotations[i]->so->setMovable(true);
+                 _annotations[i]->activeMap->setValue(true);
+                //Vec3 pos = _annotations[i]->so->getPosition();
+            }
+            else
+            {
+
+                 deactivateAllAnno();
+	        std::cerr << "DeActive." << std::endl;
+            }
+	}
+    }
+    for (int i = 0; i < _pointClouds.size(); i++)
+    {
+        if (menuItem == _pointClouds[i]->saveMap)
+        {
+	        std::cerr << "Save." << std::endl;
+                 saveModelConfig(_pointClouds[i], false);
+	}
+        if (menuItem == _pointClouds[i]->saveNewMap)
+        {
+	        std::cerr << "Save New." << std::endl;
+                 saveModelConfig(_pointClouds[i], true);
+	}
+        else if (menuItem == _pointClouds[i]->resetMap)
+        {
+	        std::cerr << "Reset." << std::endl;
+               
+	}
+        else if (menuItem == _pointClouds[i]->activeMap)
+        {
+            if (_pointClouds[i]->activeMap->getValue())
+            {
+	        std::cerr << "Active." << std::endl;
+                 _pointClouds[i]->active = true;
+                 _pointClouds[i]->so->setMovable(true);
+                 _pointClouds[i]->activeMap->setValue(true);
+            }
+            else
+            {
+                 _pointClouds[i]->active = false;
+                 _pointClouds[i]->so->setMovable(false);
+                 _pointClouds[i]->activeMap->setValue(false);
+
+	        std::cerr << "DeActive." << std::endl;
+            }
+	}
+        else if (menuItem == _pointClouds[i]->visibleMap)
+        {
+            if (_pointClouds[i]->visibleMap->getValue())
+            {
+	        std::cerr << "Visible." << std::endl;
+                 _pointClouds[i]->active = true;
+                if(!_pointClouds[i]->visible)
+                {
+                 _pointClouds[i]->so->attachToScene();
+		}
+                 _pointClouds[i]->visibleMap->setValue(true);
+            }
+            else
+            {
+                 _pointClouds[i]->active = false;
+                 _pointClouds[i]->so->setMovable(false);
+                 _pointClouds[i]->activeMap->setValue(false);
+                 _pointClouds[i]->so->detachFromScene();
+                 _pointClouds[i]->visible = false;
+	        std::cerr << "NotVisible." << std::endl;
+            }
+	}
+        else if (menuItem == _pointClouds[i]->rxMap)
+        {
+	        //std::cerr << "Rotate." << std::endl;
+                Quat mSo = _pointClouds[i]->so->getRotation();
+                Quat mRot;
+                float deg = _pointClouds[i]->rxMap->getValue();
+                if(_pointClouds[i]->rxMap->getValue() > 0)
+                {
+		  mRot = osg::Quat(0.05, osg::Vec3d(1,0,0),0, osg::Vec3d(0,1,0),0, osg::Vec3d(0,0,1)); 
+                }
+                else
+                {
+		  mRot = osg::Quat(-0.05, osg::Vec3d(1,0,0),0, osg::Vec3d(0,1,0),0, osg::Vec3d(0,0,1)); 
+                }
+                mSo *= mRot;
+                 _pointClouds[i]->so->setRotation(mSo);
+                _pointClouds[i]->rxMap->setValue(0);
+	}
+        else if (menuItem == _pointClouds[i]->ryMap)
+        {
+	        //std::cerr << "Rotate." << std::endl;
+                Quat mSo = _pointClouds[i]->so->getRotation();
+                Quat mRot;
+                float deg = _pointClouds[i]->ryMap->getValue();
+                if(_pointClouds[i]->ryMap->getValue() > 0)
+                {
+		  mRot = osg::Quat(0, osg::Vec3d(1,0,0),0.05, osg::Vec3d(0,1,0),0, osg::Vec3d(0,0,1)); 
+                }
+                else
+                {
+		  mRot = osg::Quat(0, osg::Vec3d(1,0,0),-0.05, osg::Vec3d(0,1,0),0, osg::Vec3d(0,0,1)); 
+                }
+                mSo *= mRot;
+                 _pointClouds[i]->so->setRotation(mSo);
+                _pointClouds[i]->ryMap->setValue(0);
+	}
+        else if (menuItem == _pointClouds[i]->rzMap)
+        {
+	       // std::cerr << "Rotate." << std::endl;
+                Quat mSo = _pointClouds[i]->so->getRotation();
+                Quat mRot;
+                float deg = _pointClouds[i]->rzMap->getValue();
+                if(_pointClouds[i]->rzMap->getValue() > 0)
+                {
+		  mRot = osg::Quat(0, osg::Vec3d(1,0,0),0, osg::Vec3d(0,1,0),0.05, osg::Vec3d(0,0,1)); 
+                }
+                else
+                {
+		  mRot = osg::Quat(0, osg::Vec3d(1,0,0),0, osg::Vec3d(0,1,0),-0.05, osg::Vec3d(0,0,1)); 
+                }
+                mSo *= mRot;
+                 _pointClouds[i]->so->setRotation(mSo);
+                _pointClouds[i]->rzMap->setValue(0);
+	}
+    }
+    for (int i = 0; i < _models3d.size(); i++)
+    {
+        if (menuItem == _models3d[i]->saveMap)
+        {
+	        std::cerr << "Save." << std::endl;
+                 saveModelConfig(_models3d[i], false);
+	}
+        if (menuItem == _models3d[i]->saveNewMap)
+        {
+	        std::cerr << "Save New." << std::endl;
+                 saveModelConfig(_models3d[i], true);
+	}
+        else if (menuItem == _models3d[i]->resetMap)
+        {
+	        std::cerr << "Reset." << std::endl;
+               
+	}
+        else if (menuItem == _models3d[i]->activeMap)
+        {
+            if (_models3d[i]->activeMap->getValue())
+            {
+	        std::cerr << "Active." << std::endl;
+                 _models3d[i]->active = true;
+                 _models3d[i]->so->setMovable(true);
+                 _models3d[i]->activeMap->setValue(true);
+            }
+            else
+            {
+                 _models3d[i]->active = false;
+                 _models3d[i]->so->setMovable(false);
+                 _models3d[i]->activeMap->setValue(false);
+
+	        std::cerr << "DeActive." << std::endl;
+            }
+	}
+        else if (menuItem == _models3d[i]->visibleMap)
+        {
+            if (_models3d[i]->visibleMap->getValue())
+            {
+	        std::cerr << "Visible." << std::endl;
+                 _models3d[i]->active = true;
+                if(!_models3d[i]->visible)
+                {
+                 _models3d[i]->so->attachToScene();
+		}
+                 _models3d[i]->visibleMap->setValue(true);
+            }
+            else
+            {
+                 _models3d[i]->active = false;
+                 _models3d[i]->so->setMovable(false);
+                 _models3d[i]->activeMap->setValue(false);
+                 _models3d[i]->so->detachFromScene();
+                 _models3d[i]->visible = false;
+	        std::cerr << "NotVisible." << std::endl;
+            }
+	}
+        else if (menuItem == _models3d[i]->rxMap)
+        {
+	        //std::cerr << "Rotate." << std::endl;
+                Quat mSo = _models3d[i]->so->getRotation();
+                Quat mRot;
+                float deg = _models3d[i]->rxMap->getValue();
+                if(_models3d[i]->rxMap->getValue() > 0)
+                {
+		  mRot = osg::Quat(0.05, osg::Vec3d(1,0,0),0, osg::Vec3d(0,1,0),0, osg::Vec3d(0,0,1)); 
+                }
+                else
+                {
+		  mRot = osg::Quat(-0.05, osg::Vec3d(1,0,0),0, osg::Vec3d(0,1,0),0, osg::Vec3d(0,0,1)); 
+                }
+                mSo *= mRot;
+                 _models3d[i]->so->setRotation(mSo);
+                _models3d[i]->rxMap->setValue(0);
+	}
+        else if (menuItem == _models3d[i]->ryMap)
+        {
+	        //std::cerr << "Rotate." << std::endl;
+                Quat mSo = _models3d[i]->so->getRotation();
+                Quat mRot;
+                float deg = _models3d[i]->ryMap->getValue();
+                if(_models3d[i]->ryMap->getValue() > 0)
+                {
+		  mRot = osg::Quat(0, osg::Vec3d(1,0,0),0.05, osg::Vec3d(0,1,0),0, osg::Vec3d(0,0,1)); 
+                }
+                else
+                {
+		  mRot = osg::Quat(0, osg::Vec3d(1,0,0),-0.05, osg::Vec3d(0,1,0),0, osg::Vec3d(0,0,1)); 
+                }
+                mSo *= mRot;
+                 _models3d[i]->so->setRotation(mSo);
+                _models3d[i]->ryMap->setValue(0);
+	}
+        else if (menuItem == _models3d[i]->rzMap)
+        {
+	       // std::cerr << "Rotate." << std::endl;
+                Quat mSo = _models3d[i]->so->getRotation();
+                Quat mRot;
+                float deg = _models3d[i]->rzMap->getValue();
+                if(_models3d[i]->rzMap->getValue() > 0)
+                {
+		  mRot = osg::Quat(0, osg::Vec3d(1,0,0),0, osg::Vec3d(0,1,0),0.05, osg::Vec3d(0,0,1)); 
+                }
+                else
+                {
+		  mRot = osg::Quat(0, osg::Vec3d(1,0,0),0, osg::Vec3d(0,1,0),-0.05, osg::Vec3d(0,0,1)); 
+                }
+                mSo *= mRot;
+                 _models3d[i]->so->setRotation(mSo);
+                _models3d[i]->rzMap->setValue(0);
+	}
+    }
+    for (int i = 0; i < _artifactAnnoTrack.size(); i++)
+    {
+       int q = _artifactAnnoTrack[i]->q;
+       int art = _artifactAnnoTrack[i]->art;
+        if (menuItem == _query[q]->artifacts[art]->annotation->saveMap)
+        {
+	        std::cerr << "Save." << std::endl;
+                Vec3 pos = _query[q]->artifacts[art]->annotation->so->getPosition();
+
+               // saveAnnotationGraph();
+	}
+        if (menuItem == _query[q]->artifacts[art]->annotation->activeMap)
+        {
+            if (_query[q]->artifacts[art]->annotation->activeMap->getValue())
+            {
+	        std::cerr << "Active." << std::endl;
+                // deactivateAllArtifactAnno();
+                 _query[q]->artifacts[art]->annotation->active = true;
+                 _query[q]->artifacts[art]->annotation->so->setMovable(true);
+                 _query[q]->artifacts[art]->annotation->activeMap->setValue(true);
+                 _artifactAnnoTrack[i]->active = true;
+                //Vec3 pos = _annotations[i]->so->getPosition();
+            }
+            else
+            {
+                 _query[q]->artifacts[art]->annotation->active = false;
+                 _query[q]->artifacts[art]->annotation->so->setMovable(false);
+                 _query[q]->artifacts[art]->annotation->activeMap->setValue(false);
+                 _artifactAnnoTrack[i]->active = false;
+
+                // deactivateAllArtifactAnno();
+	        std::cerr << "DeActive." << std::endl;
+            }
+	}
+        if (menuItem == _query[q]->artifacts[art]->annotation->visibleMap)
+        {
+            if (_query[q]->artifacts[art]->annotation->visibleMap->getValue())
+            {
+	        std::cerr << "Visible." << std::endl;
+                // deactivateAllArtifactAnno();
+                 _query[q]->artifacts[art]->annotation->active = true;
+                if(!_query[q]->artifacts[art]->annotation->visible)
+                {
+                 _query[q]->artifacts[art]->annotation->so->attachToScene();
+		}
+                 _query[q]->artifacts[art]->annotation->visibleMap->setValue(true);
+               //  _artifactAnnoTrack[i]->active = true;
+            }
+            else
+            {
+                 _query[q]->artifacts[art]->model->pVisibleMap->setValue(false);
+                 _query[q]->artifacts[art]->annotation->active = false;
+                 _query[q]->artifacts[art]->annotation->so->setMovable(false);
+                 _query[q]->artifacts[art]->annotation->activeMap->setValue(false);
+                 _artifactAnnoTrack[i]->active = false;
+                 _query[q]->artifacts[art]->annotation->so->detachFromScene();
+                 _query[q]->artifacts[art]->annotation->connectorNode->setNodeMask(0);
+                // _root->removeChild(_query[q]->artifacts[art]->annotation->connectorGeode);
+                 _query[q]->artifacts[art]->annotation->visible = false;
+	        std::cerr << "NotVisible." << std::endl;
+            }
+	}
+    }
+    for (int i = 0; i < _artifactModelTrack.size(); i++)
+    {
+       int q = _artifactModelTrack[i]->q;
+       int art = _artifactModelTrack[i]->art;
+        if (menuItem == _query[q]->artifacts[art]->model->saveMap)
+        {
+	        std::cerr << "Save." << std::endl;
+                Vec3 pos = _query[q]->artifacts[art]->model->so->getPosition();
+
+               // saveAnnotationGraph();
+	}
+        if (menuItem == _query[q]->artifacts[art]->model->resetMap)
+        {
+	        std::cerr << "Reset." << std::endl;
+                resetArtifactModelOrig(q, art);
+               
+	}
+        if (menuItem == _query[q]->artifacts[art]->model->activeMap)
+        {
+            if (_query[q]->artifacts[art]->model->activeMap->getValue())
+            {
+	        std::cerr << "Active." << std::endl;
+                 deactivateAllArtifactModel();
+                 _query[q]->artifacts[art]->model->active = true;
+                 _query[q]->artifacts[art]->model->so->setMovable(true);
+                 _query[q]->artifacts[art]->model->activeMap->setValue(true);
+                 _artifactModelTrack[i]->active = true;
+            }
+            else
+            {
+
+                 deactivateAllArtifactModel();
+	        std::cerr << "DeActive." << std::endl;
+            }
+	}
+        if (menuItem == _query[q]->artifacts[art]->model->visibleMap)
+        {
+            if (_query[q]->artifacts[art]->model->visibleMap->getValue())
+            {
+                /*
+	        std::cerr << "Visible." << std::endl;
+                 _query[q]->artifacts[art]->model->active = true;
+                if(!_query[q]->artifacts[art]->model->visible)
+                {
+                 _query[q]->artifacts[art]->model->so->attachToScene();
+		}
+                 _query[q]->artifacts[art]->model->visibleMap->setValue(true);
+		*/
+            }
+            else
+            {
+		/*
+                 _query[q]->artifacts[art]->model->active = false;
+                 _query[q]->artifacts[art]->model->so->setMovable(false);
+                 _query[q]->artifacts[art]->model->activeMap->setValue(false);
+                 _artifactModelTrack[i]->active = false;
+                 _query[q]->artifacts[art]->model->so->detachFromScene();
+                 _query[q]->artifacts[art]->model->visible = false;
+	        std::cerr << "NotVisible." << std::endl;
+		*/
+            }
+	}
+        if (menuItem == _query[q]->artifacts[art]->model->pVisibleMap)
+        {
+            if (_query[q]->artifacts[art]->model->pVisibleMap->getValue())
+            {
+	        std::cerr << "Visible." << std::endl;
+                if(!_query[q]->artifacts[art]->annotation->visible)
+                {
+                 _query[q]->artifacts[art]->annotation->so->attachToScene();
+		}
+                 _query[q]->artifacts[art]->annotation->connectorNode->setNodeMask(0xffffffff);
+                 _query[q]->artifacts[art]->model->pVisibleMap->setValue(true);
+                 _query[q]->artifacts[art]->annotation->visibleMap->setValue(true);
+                 _query[q]->artifacts[art]->annotation->visible = true;
+                 _query[q]->artifacts[art]->annotation->activeMap->setValue(true);
+                 _query[q]->artifacts[art]->annotation->so->setMovable(true);
+                 _query[q]->artifacts[art]->annotation->active = true;
+                 _artifactAnnoTrack[i]->active = true;
+            }
+            else
+            {
+                 _query[q]->artifacts[art]->annotation->active = false;
+                 _query[q]->artifacts[art]->annotation->so->setMovable(false);
+                 _query[q]->artifacts[art]->annotation->connectorNode->setNodeMask(0);
+                 _query[q]->artifacts[art]->annotation->activeMap->setValue(false);
+                 _query[q]->artifacts[art]->annotation->visibleMap->setValue(false);
+                 _artifactAnnoTrack[i]->active = false;
+                 _query[q]->artifacts[art]->annotation->so->detachFromScene();
+                 _query[q]->artifacts[art]->annotation->visible = false;
+	        std::cerr << "NotVisible." << std::endl;
+            }
+	}
+        if (menuItem == _query[q]->artifacts[art]->model->dcMap)
+        {
+            if (_query[q]->artifacts[art]->model->dcMap->getValue())
+            {
+                 switchModelType("dc",q,art);
+	    }
+            else
+            {
+                 switchModelType("dc",q,art);
+	    }
+        }
+        if (menuItem == _query[q]->artifacts[art]->model->scanMap)
+        {
+            if (_query[q]->artifacts[art]->model->dcMap->getValue())
+            {
+                 switchModelType("scan",q,art);
+	    }
+            else
+            {
+                 switchModelType("dc",q,art);
+	    }
+        }
+        if (menuItem == _query[q]->artifacts[art]->model->cubeMap)
+        {
+            if (_query[q]->artifacts[art]->model->dcMap->getValue())
+            {
+                 switchModelType("cube",q,art);
+	    }
+            else
+            {
+                 switchModelType("dc",q,art);
+	    }
+        }
+       for (int n = 0; n < _query[q]->artifacts[art]->model->photoMap.size(); n++)
+       {
+        if (menuItem == _query[q]->artifacts[art]->model->photoMap[n])
+        {
+            if (_query[q]->artifacts[art]->model->photoMap[n]->getValue())
+            {
+                 switchModelType("frame",q,art);
+	    }
+            else
+            {
+                 switchModelType("dc",q,art);
+	    }
+        }
+       }
+
+    }
+/*
+    for(std::map<SceneObject*,MenuButton*>::iterator it = _annotations[0]saveMap.begin(); it != _saveMap.end(); it++)
+    {
+	    if(menuItem == it->second)
+	    {
+	        std::cerr << "Save." << std::endl;
+
+	        bool nav;
+	        nav = it->first->getNavigationOn();
+	        it->first->setNavigationOn(false);
+
+	        locInit[it->first->getName()] = std::pair<float, osg::Matrix>(1.0,it->first->getTransform());
+
+	        it->first->setNavigationOn(nav);
+
+	        writeConfigFile(); 
+
+	    }
+    }
+*/
+
     for (int i = 0; i < _showModelCB.size(); i++)
     {
+        
         if (menuItem == _showModelCB[i])
         {
             if (_showModelCB[i]->getValue())
             {
-                if (_siteRoot[i]->getNumChildren() == 0)
-                    readSiteFile(i);
-
-                if (!_ossim)
-                    _root->addChild(_siteRoot[i]);
+               //cerr << "Found Model\n" << endl;
+               if(!_models3d[i]->loaded)
+               {
+                //Model* newModel = new Model();
+               addNewModel(i);
+               }
+               else
+               {
+		_models3d[i]->so->attachToScene();
+		_models3d[i]->visible = true;
+		_models3d[i]->active = true;
+		_models3d[i]->visibleMap->setValue(true);
+		_models3d[i]->activeMap->setValue(true);
+               }
             }
             else
             {
-                _root->removeChild(_siteRoot[i]);
+               if(_models3d[i]->visible)
+               {
+		_models3d[i]->so->detachFromScene();
+		_models3d[i]->visible = false;
+		_models3d[i]->active = false;
+		_models3d[i]->visibleMap->setValue(false);
+		_models3d[i]->activeMap->setValue(false);
+
+               }
+
+
             }
         }
-
-        if (menuItem == _reloadModel[i])
+        
+    }
+    for (int i = 0; i < _showPointCloudCB.size(); i++)
+    {
+        
+        if (menuItem == _showPointCloudCB[i])
         {
-            _root->removeChild(_siteRoot[i].get());
-            reloadSite(i);
-            readSiteFile(i);
-            _root->addChild(_siteRoot[i].get());
+            if (_showPointCloudCB[i]->getValue())
+            {
+               //cerr << "Found Model\n" << endl;
+               if(!_pointClouds[i]->loaded)
+               {
+                //Model* newModel = new Model();
+               addNewPC(i);
+               }
+               else
+               {
+		_pointClouds[i]->so->attachToScene();
+		_pointClouds[i]->visible = true;
+		_pointClouds[i]->active = true;
+		_pointClouds[i]->visibleMap->setValue(true);
+		_pointClouds[i]->activeMap->setValue(true);
+               }
+            }
+            else
+            {
+               if(_pointClouds[i]->visible)
+               {
+		_pointClouds[i]->so->detachFromScene();
+		_pointClouds[i]->visible = false;
+		_pointClouds[i]->active = false;
+		_pointClouds[i]->visibleMap->setValue(false);
+		_pointClouds[i]->activeMap->setValue(false);
+
+               }
+
+
+            }
         }
+        
     }
 
+/*
     for (int i = 0; i < _showPCCB.size(); i++)
     {
         if (menuItem == _showPCCB[i])
@@ -687,7 +1410,35 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
             _root->addChild(_pcRoot[i].get());
         }
     }
+    for (int i = 0; i < _showHudCB.size(); i++)
+    {
+        if (menuItem == _showHudCB[i])
+        {
+            if (_showHudCB[i]->getValue())
+            {
+                if (_hudRoot[i]->getNumChildren() == 0)
+                    readHudFile(i);
+                SceneManager::instance()->getScene()->addChild(_hudRoot[i]);
+//                    _root->addChild(_hudRoot[i]);
+            }
+            else
+            {
+                SceneManager::instance()->getScene()->removeChild(_hudRoot[i]);
+             //   _root->removeChild(_hudRoot[i]);
+            }
+        }
 
+        if (menuItem == _reloadHud[i])
+        {
+            //SceneManager::instance()->getScene()->removeChild(_hudRoot[i]);
+            //_root->removeChild(_hudRoot[i].get());
+            //reloadSite(i);
+            //readHudFile(i);
+            // SceneManager::instance()->getScene()->addChild(_hudRoot[i]);
+            //_root->addChild(_hudRoot[i].get());
+        }
+    }
+*/
     std::vector<Table*>::iterator t = _tables.begin();
 
     for (; t < _tables.end(); t++)
@@ -838,28 +1589,53 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
         }
     }
 
-    for (int i = 0; i < _queryOption.size(); i++)
+    for (int i = 0; i < _queryOptionLoci.size(); i++)
     {
-        if (menuItem == _queryOption.at(i))
+        if (menuItem == _queryOptionLoci[i])
         {
-            _query[i]->active = _queryOption[i]->getValue();
+            _query[i]->active = _queryOptionLoci[i]->getValue();
 
-            if (_queryOption[i]->getValue())
+            int n = _queryLociIndex[i];
+            if (_queryOptionLoci[i]->getValue())
             {
-                if (_query[i]->updated)
+                if (_query[n]->updated)
                 {
-                    if (_query[i]->sf)
-                        displayArtifacts(_query[i]);
-                    //_root->addChild(_query[i]->sphereRoot);
-                    printf("Query Updated\n");
-                    _query[i]->updated = false;
+                    printf("Query Updated2\n");
+                    _query[n]->updated = false;
                 }
 
-                _query[i]->sphereRoot->setNodeMask(0xffffffff);
+                _query[n]->sphereRoot->setNodeMask(0xffffffff);
             }
             else
             {
-                _query[i]->sphereRoot->setNodeMask(0);
+                _query[n]->sphereRoot->setNodeMask(0);
+            }
+        }
+    }
+    for (int i = 0; i < _queryOption.size(); i++)
+    {
+        if (menuItem == _queryOption[i])
+        {
+            //cerr << "Query Index: " << i << "Active\n";
+            int n = _querySfIndex[i];
+            _query[n]->active = _queryOption[i]->getValue();
+            //cerr << "Query Index is: " << n << "Active\n";
+            if (_queryOption[i]->getValue())
+            {
+                if (_query[n]->updated)
+                {
+                    if (_query[n]->sf)
+                        displayArtifacts(_query[n]);
+                    //_root->addChild(_query[i]->sphereRoot);
+                    printf("Query Updated\n");
+                    _query[n]->updated = false;
+                }
+                cerr << "i: " << n << "\n";
+                _query[n]->sphereRoot->setNodeMask(0xffffffff);
+            }
+            else
+            {
+                _query[n]->sphereRoot->setNodeMask(0);
             }
         }
 
@@ -1065,205 +1841,24 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
         cerr << "Hand Set Matrix: " << (camTrans.x() / cscale) << "," << (camTrans.y() / cscale) << "," << (camTrans.z() / cscale) << " Scale:" << cscale << " Rot:" << camQuad.x() << "," << camQuad.y() << "," << camQuad.z() << "\n";
     }
 
-    if (menuItem == _kinectOn)
-    {
-        if (useKinect) kinectOff();
-        else kinectInit();
-
-        useKinect = !useKinect;
-    }
-
-    if (menuItem == _kColorFPS)
-    {
-        colorfps = _kColorFPS->getValue();
-    }
-
-    if (menuItem == _kMoveWithCam)
-    {
-        if (_kMoveWithCam->getValue())
-        {
-            moveWithCamOn();
-            kMoveWithCam = true;
-        }
-        else
-        {
-            moveWithCamOff();
-            kMoveWithCam = false;
-        }
-    }
-
-    if (menuItem == _kShowPCloud)
-    {
-        if (_kShowPCloud->getValue())
-        {
-            cloudOn();
-            kShowPCloud = true;
-        }
-        else
-        {
-            cloudOff();
-            kShowPCloud = false;
-        }
-    }
-
-    if (menuItem == _kUseGestures)
-    {
-        if (_kUseGestures->getValue())
-        {
-            gesturesOn();
-            kUseGestures = true;
-        }
-        else
-        {
-            gesturesOff();
-            kUseGestures = false;
-        }
-    }
-
-    if (menuItem == _kNavSpheres)
-    {
-        if (_kNavSpheres->getValue())
-        {
-            navOn();
-            kNavSpheres = true;
-        }
-        else
-        {
-            navOff();
-            kNavSpheres = false;
-        }
-    }
-
-    if (menuItem == _kShowColor)
-    {
-        if (_kShowColor->getValue())
-        {
-            colorOn();
-            kShowColor = true;
-        }
-        else
-        {
-            colorOff();
-            kShowColor = false;
-        }
-    }
-    if (menuItem == _kLockRot)
-    {
-        if (_kLockRot->getValue())
-        {
-            kLockRot = true;
-        }
-        else
-        {
-            kLockRot = false;
-        }
-    }
-    if (menuItem == _kLockScale)
-    {
-        if (_kLockScale->getValue())
-        {
-            kLockScale = true;
-        }
-        else
-        {
-            kLockScale = false;
-        }
-    }
-    if (menuItem == _kLockPos)
-    {
-        if (_kLockPos->getValue())
-        {
-            kLockPos = true;
-        }
-        else
-        {
-            kLockPos = false;
-        }
-    }
-
-    if (menuItem == _kColorOn)
-    {
-        if (_kColorOn->getValue())
-        {
-            useKColor = true;
-        }
-        else
-        {
-            useKColor = false;
-        }
-    }
-    if (menuItem == _kShowArtifactPanel)
-    {
-        if (_kShowArtifactPanel->getValue())
-        {
-            kShowArtifactPanel = true;
-        }
-        else
-        {
-            kShowArtifactPanel = false;
-        }
-    }
-    if (menuItem == _kShowInfoPanel)
-    {
-        if (_kShowInfoPanel->getValue())
-        {
-            kShowInfoPanel = true;
-            _infoPanel->setVisible(true);
-        }
-        else
-        {
-            kShowInfoPanel = false;
-            _infoPanel->setVisible(false);
-        }
-    }
-
     for (int i = 0; i < _goto.size(); i++)
     {
         if (menuItem == _goto[i])
         {
-/*        
-    double x, y, z, rx, ry, rz, rw;
-            x = y = z = rx = ry = rz = rw = 0.0;
-            double bscale;
-            bscale = _flyplace->scale[i];
-            //x=-2231700;
-            //y=-4090410;
-            //z=-81120.3;
-            x = _flyplace->x[i]/bscale;
-            y = _flyplace->y[i]/bscale;
-            z = _flyplace->z[i]/bscale;
-            rx = _flyplace->rx[i];
-            ry = _flyplace->ry[i];
-            rz = _flyplace->rz[i];
-            rw = _flyplace->rw[i];
-
-            moveCam(bscale,x,y,z,rx,ry,rz,rw);
-*/
 		flyTo(i);
-//    moveCam(218.641, -39943.9, -73211.9, -1451.93, 0, 0, 0, 0);
-
-            //-2.2317e+06,-4.09041e+06,-81120.3 Scale:55.8708
-            /*
-                       Vec3 trans = Vec3(x, y, z);
-                        Matrix tmat;
-                        tmat.makeTranslate(trans);
-                        Vec3 xa = Vec3(1.0, 0.0, 0.0);
-                        Vec3 ya = Vec3(0.0, 1.0, 0.0);
-                        Vec3 za = Vec3(0.0, 0.0, 1.0);
-                        Matrix rot;
-                        rot.makeRotate(rx, xa, ry, ya, rz, za);
-                        Matrixd gotoMat = rot * tmat;
-                        Matrixd camMat = PluginHelper::getObjectMatrix();
-                        float cscale = PluginHelper::getObjectScale();
-                        Vec3 camTrans = camMat.getTrans();
-                        Quat camQuad = camMat.getRotate();
-                        cerr << (camTrans.x() / cscale) << "," << (camTrans.y() / cscale) << "," << (camTrans.z() / cscale) << " Scale:" << cscale << " Rot:" << camQuad.x() << "," << camQuad.y() << "," << camQuad.z() << "\n";
-                        PluginHelper::setObjectMatrix(gotoMat);
-                        PluginHelper::setObjectScale(bscale*4);
-            */
         }
     }
 
+    if (menuItem == _createAnnotations)
+    {
+      /*
+            if (_createAnnotations->getValue())
+            {
+                _createAnnotations->setValue(false);
+                menuCallback(_selectCB);
+            }
+      */
+    }
     if (menuItem == _bookmarkLoc)
     {
         //Matrixd camMat = PluginHelper::getHeadMat();
@@ -1294,17 +1889,6 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
         }
     }
 
-    if (menuItem == _selectKinectCB)
-    {
-        if (_selectKinectCB->getValue())
-        {
-            kSelectKinect = true;
-        }
-        else
-        {
-            kSelectKinect = false;
-        }
-    }
 
     if (menuItem == _selectCB)
     {
@@ -1436,19 +2020,15 @@ std::string ArtifactVis2::getTimeModified(std::string file)
 }
 void ArtifactVis2::preFrame()
 {
-//            Matrixd camMat = PluginHelper::getObjectMatrix();
-//            Vec3 camTrans = camMat.getTrans();
-//            Quat camQuad = camMat.getRotate();
-//            float cscale = PluginHelper::getObjectScale();
-//
-//		printf("<scale>%f</scale><x>%f</x><y>%f</y><z>%f</z><rx>%f</rx><ry>%f</ry><rz>%f</rz>\n",cscale,camTrans.x()/cscale,camTrans.y()/cscale,camTrans.z()/cscale,camQuad.x(),camQuad.y(),camQuad.z(),camQuad.w());
-//
-////		cout << camQuad.x() << "," << camQuad.y() << "," << camQuad.z() << "," << camQuad.w() << "  pos  ";
-//  //          cout << camTrans.x() << " " << camTrans.y() << " " << camTrans.z();
-//            cout << "scale" << cscale << endl;
-    // MARCIN XXX Does this block need to be created and sorted every frame? Also I tried commenting whole block out and nothing changed
-    std::vector<Artifact*> allArtifacts;
+if(ArtifactVis2On)
+{
+updateAnnoLine();
+updateArtifactLine();
+updateArtifactModel();
+updateLineGroup();
+}
     /*
+    std::vector<Artifact*> allArtifacts;
         for (int i = 0; i < _query.size(); i++)
         {
             if (_queryDynamicUpdate[i]->getValue())
@@ -1482,1051 +2062,13 @@ void ArtifactVis2::preFrame()
 
         }
     */
-    /*
-        std::sort(allArtifacts.begin(), allArtifacts.end(), compare());
-        Matrixd viewOffsetM;
-        Vec3f viewOffset = Vec3f(ConfigManager::getFloat("x", "ViewerPosition", 0.0f),
-                                 ConfigManager::getFloat("y", "ViewerPosition", 0.0f),
-                                 ConfigManager::getFloat("z", "ViewerPosition", 0.0f)) * -1;
-        viewOffsetM.makeTranslate(viewOffset);
-        Matrixd objMat =  PluginHelper::getObjectMatrix() * viewOffsetM;
-        Vec3f vec = objMat * Vec3f(0, 0, 1);
-        double norm = vec.length();
-
-        //for(int i = 0; i < allArtifacts.size(); i++) allArtifacts[i]->showLabel = true;
-        for (int i = 0; i < allArtifacts.size(); i++)
-        {
-            string dc = allArtifacts[i]->dc;
-            Vec4 color = _colors[dc2Int(dc)];
-            color.x() = std::min((double) 1.0, color.x() + .25);
-            color.y() = std::min((double) 1.0, color.y() + .25);
-            color.z() = std::min((double) 1.0, color.z() + .25);
-            Vec3d vec1 = allArtifacts[i]->modelPos * objMat;
-            allArtifacts[i]->distToCam = (vec1).length();
-    */
-    /*
-          if(vec1.y() > 0)
-            for(int j = i+1; j < allArtifacts.size(); j++)
-            {
-              if(allArtifacts[i]->showLabel)
-              {
-                  Vec3f vec2 = allArtifacts[j]->modelPos*objMat;
-                  double angle = acos(vec1*vec2/(vec1.length()*vec2.length()));
-                  if(angle  < atan2(1.0f,24.0f))
-                  {
-                      allArtifacts[j]->showLabel = false;
-                  }
-              }
-            }
-      */
-    /*
-            allArtifacts[i]->label->setColor(color * int (allArtifacts[i]->showLabel));
-            allArtifacts[i]->label->setPosition(allArtifacts[i]->modelPos + vec / norm * 1.2 * _sphereRadius);
-
-        }
-    */
-    // MARCIN XXX End of the block in question
-
+/*
     if (_selectCB->getValue())
     {
         updateSelect();
     }
-
-    //......................................................................
-    //SpaceNavigator Add
-    //......................................................................
-    if (statusSpnav)
-    {
-        Matrixd finalmat;
-
-        if (ComController::instance()->isMaster())
-        {
-            //static double transcale = -0.03;
-            //static double rotscale = -0.00006;
-            spnav_event sev;
-            double x, y, z;
-            x = y = z = 0.0;
-            double rx, ry, rz;
-            rx = ry = rz = 0.0;
-            double rx2, ry2, rz2;
-            rx2 = ry2 = rz2 = 0.0;
-
-            while (spnav_poll_event(&sev))
-            {
-                if (sev.type == SPNAV_EVENT_MOTION)
-                {
-                    x += sev.motion.x;
-                    y += sev.motion.z;
-                    z += sev.motion.y;
-                    rx += sev.motion.rx;
-                    ry += sev.motion.rz;
-                    rz += sev.motion.ry;
-                    rx2 += sev.motion.rx;
-                    ry2 += sev.motion.rz;
-                    rz2 += sev.motion.ry;
-                    // printf("got motion event: t(%d, %d, %d) ", sev.motion.x, sev.motion.y, sev.motion.z);
-                    // printf("r(%d, %d, %d)\n", sev.motion.rx, sev.motion.ry, sev.motion.rz);
-                }
-                else
-                {   /* SPNAV_EVENT_BUTTON */
-                    //printf("got button %s event b(%d)\n", sev.button.press ? "press" : "release", sev.button.bnum);
-                    if (sev.button.press)
-                    {
-                        /*switch(sev.button.bnum)
-                        {
-                        case 0:
-                            transcale *= 1.1;
-                            break;
-                        case 1:
-                            transcale *= 0.9;
-                            break;
-                        case 2:
-                            rotscale *= 1.1;
-                            break;
-                        case 3:
-                            rotscale *= 0.9;
-                            break;
-                        default:
-                            break;
-
-                        }
-                        cerr << "Translate Scale: " << transcale << " Rotate Scale: " << rotscale << endl;
-                        */
-                    }
-                }
-            }
-//bango
-            x *= transcale;
-            y *= transcale;
-            z *= transcale;
-            rx *= rotscale;
-            ry *= rotscale;
-            rz *= rotscale;
-            // cout << "Trans: " << x << "," << y << "," << z << " Rotation: " << rx << "," << ry << "," << rz << "\n";
-            Matrix view = PluginHelper::getHeadMat();
-            Vec3 campos = view.getTrans();
-            Vec3 trans = Vec3(x, y, z);
-            trans = (trans * view) - campos;
-            Matrix tmat;
-            tmat.makeTranslate(trans);
-            Vec3 xa = Vec3(1.0, 0.0, 0.0);
-            Vec3 ya = Vec3(0.0, 1.0, 0.0);
-            Vec3 za = Vec3(0.0, 0.0, 1.0);
-            xa = (xa * view) - campos;
-            ya = (ya * view) - campos;
-            za = (za * view) - campos;
-            Matrix rot;
-            rot.makeRotate(rx, xa, ry, ya, rz, za);
-            Matrix ctrans, nctrans;
-            ctrans.makeTranslate(campos);
-            nctrans.makeTranslate(-campos);
-
-            if (_selectModelLoad && _selectArtifactCB->getValue() && false)
-            {
-                double rotscale2 = 0.01;
-                rx2 *= rotscale2;
-                ry2 *= rotscale2;
-                rz2 *= rotscale2;
-                rotateModel(rx2, ry2, rz2);
-            }
-            else
-            {
-                finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
-                ComController::instance()->sendSlaves((char*) finalmat.ptr(), sizeof(double[16]));
-            }
-        }
-        else
-        {
-            ComController::instance()->readMaster((char*) finalmat.ptr(), sizeof(double[16]));
-        }
-
-        if (_selectModelLoad && _selectArtifactCB->getValue() && false)
-        {
-            //Disables movement
-        }
-        else
-        {
-            PluginHelper::setObjectMatrix(finalmat);
-        }
-    }
-    else
-    {
-        //Manipulate Artifact Using Mouse bang
-        if (_selectModelLoad && _selectArtifactCB->getValue())
-        {
-            double rx2, ry2, rz2;
-            rx2 = ry2 = rz2 = 0.0;
-            int tempX = PluginHelper::getMouseX();
-            int tempY = PluginHelper::getMouseY();
-            int tempZ = 0;
-
-            //cout << tempX << "," << tempY << "," << tempZ << "\n";
-            if (tempX == 0)
-            {
-            }
-            else if (_xRotMouse == 0)
-            {
-                rx2 = 1;
-                _xRotMouse = tempX;
-            }
-            else
-            {
-                rx2 = _xRotMouse - tempX;
-                _xRotMouse = tempX;
-            }
-
-            if (tempY == 0)
-            {
-            }
-            else if (_yRotMouse == 0)
-            {
-                ry2 = 1;
-                _yRotMouse = tempY;
-            }
-            else
-            {
-                ry2 = _yRotMouse - tempY;
-                _yRotMouse = tempY;
-            }
-
-            double rotscale2 = 0.5;
-            rx2 *= rotscale2;
-            ry2 *= rotscale2;
-            rz2 *= rotscale2;
-
-            if (rx2 != 0 && ry2 != 0)
-            {
-                //cout << rx2 << "," << ry2 << "," << rz2 << "\n";
-                rotateModel(rx2, ry2, rz2);
-            }
-        }
-    }
-
-    /******************************************************************************
-     *
-     *  Kinect
-     *
-     ******************************************************************************/
-    //int headno = 0;
-    //osg::Matrix mmm = TrackingManager::instance()->getHeadMat(headno);
-    //TrackingManager::instance()->_lastUpdatedHeadMatList[headno]=mmm;
-
-    if (useKinect)
-    {
-        if (kShowColor)
-        {
-            bcounter = ++bcounter % (int)colorfps;
-
-            if (bcounter == (int)colorfps - 1)
-            {
-                // draw color_pixels somewhere
-                osg::ref_ptr<osg::Image> image = new osg::Image;
-                image->setImage(640, 480, 1, GL_RGBA16, GL_RGBA, GL_UNSIGNED_BYTE, (unsigned char*) &color_pixels[0], osg::Image::NO_DELETE);
-                osg::Texture2D* pTex = new osg::Texture2D;
-                pTex->setImage(image);
-                osg::Geode* pGeode = new osg::Geode;
-                osg::StateSet* pStateSet = pGeode->getOrCreateStateSet();
-                pStateSet->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-                pStateSet->setTextureAttributeAndModes(0, pTex, osg::StateAttribute::ON);
-                pGeode->setStateSet(pStateSet);
-                osg::ref_ptr<osg::Geometry> geometry = new osg::Geometry();
-                pGeode->addDrawable(geometry);
-                osg::ref_ptr<osg::Vec3Array> vertexArray = new osg::Vec3Array();
-                vertexArray->push_back(osg::Vec3(0, 0, 0));
-                vertexArray->push_back(osg::Vec3(640 * rec2mm, 0, 0));
-                vertexArray->push_back(osg::Vec3(640 * rec2mm, 480 * rec2mm, 0));
-                vertexArray->push_back(osg::Vec3(0, 480 * rec2mm, 0));
-                geometry->setVertexArray(vertexArray);
-                osg::ref_ptr<osg::Vec4Array> colorArray = new osg::Vec4Array();
-                colorArray->push_back(osg::Vec4(1.f, 1.f, 1.f, 1.f));
-                geometry->setColorArray(colorArray);
-                geometry->setColorBinding(osg::Geometry::BIND_OVERALL);
-                osg::ref_ptr<osg::Vec2Array> texCoordArray = new osg::Vec2Array();
-                texCoordArray->push_back(osg::Vec2(0.f, 0.f));
-                texCoordArray->push_back(osg::Vec2(1.f, 0.f));
-                texCoordArray->push_back(osg::Vec2(1.f, 1.f));
-                texCoordArray->push_back(osg::Vec2(0.f, 1.f));
-                geometry->setTexCoordArray(0, texCoordArray);
-                geometry->addPrimitiveSet(new osg::DrawArrays(GL_TRIANGLE_FAN, 0, 4));
-                osg::Vec3 pos(0, 0, 0);
-
-                for (std::map<int, Skeleton>::iterator it = mapIdSkel.begin(); it != mapIdSkel.end(); ++it)
-                {
-                    pos = Vec3(it->second.joints[1].position.x() , it->second.joints[1].position.y() , it->second.joints[1].position.z());
-                }
-
-                osg::Matrixd tmat;
-                tmat.makeTranslate(pos);
-                osg::Matrixd rmat;
-                rmat.makeRotate(90, 1, 0, 0);
-                osg::Matrix combined;
-                combined.makeIdentity();
-                combined.preMult(tmat);
-                combined.preMult(rmat);
-                bitmaptransform->setMatrix(combined);
-                bitmaptransform->removeChildren(0, 2);
-                bitmaptransform->addChild(pGeode);
-            }
-        }
-
-        //        float tessellation = ConfigManager::getFloat("Plugin.ArtifactVis2.Tessellation", .2);
-        ThirdLoop();
-        std::map< osg::ref_ptr<osg::Geode>, int >::iterator iter;
-        
-        
-        for (std::map<int, Skeleton>::iterator it = mapIdSkel.begin(); it != mapIdSkel.end(); ++it)
-        {
-
-            if (kNavSpheres)
-            {
-                // if boundingbox of a sphere intersects cylinder, lock
-                // move the sphere to where the head is
-                if(it->second.navSphere.lock == -1)
-                {
-                    Vec3 navPos = it->second.joints[3].position;
-                    navPos.y() += 0.3;
-                    it->second.navSphere.update(navPos, Vec4(0, 0, 0, 1));
-                }
-                // if previous position was empty or jump is unreasonably big
-                // int unreasonablyBig = 0.5;
-                /*
-                                if (it->second.navSphere.prevPosition.x() == 0 || it->second.navSphere.prevPosition.x() > unreasonablyBig || it->second.navSphere.prevPosition.y() > unreasonablyBig || it->second.navSphere.prevPosition.z() > unreasonablyBig) it->second.navSphere.prevPosition.set(it->second.navSphere.position + it->second.offset);
-                */
-                // if (it->second.navSphere.lock == it->first)
-                // {
-                // calculate difference between previous and current position
-                //   Vec3 diff = it->second.cylinder.center - it->second.navSphere.position;
-
-                //                  diff.set(diff.x(),diff.y(),-diff.z()); // z=-z so that moving hands in front of the head brings the skeleton forward
-
-                //it->second.navSphere.position - it->second.offset - it->second.navSphere.prevPosition; ////////NEW CHANGE TO VERIFY
-
-                //                    diff/=3;
-
-                //                    printf("-- %g %g %g \n",diff.x(),diff.y(),diff.z());
-
-                //move every skeleton by diff
-                //  for (std::map<int, Skeleton>::iterator it2 = mapIdSkel.begin(); it2 != mapIdSkel.end(); ++it2)
-                //  {
-                // it2->second.addOffset(diff);
-                //  }
-                // }
-            }
-
-            Vec3 StartPoint = it->second.joints[M_LHAND].position;
-            Vec3 EndPoint = it->second.joints[M_RHAND].position;
-            float headZ = it->second.joints[M_HEAD].position.z();
-            float lhandZ = it->second.joints[M_LHAND].position.z();
-            // if cylinder would be >distanceMIN && <distanceMAX, draw it and check for collisions
-            double distance = (StartPoint - EndPoint).length();
-
-                            if (lhandZ > headZ)
-			    {
-			      if(navSphereTimer != 3.00)
-			      {
-                                 navSphereTimer += PluginHelper::getLastFrameDuration();
-				if(navSphereTimer > 1.00)
-				{
-				  navSphereTimer = 3.00;
-				}
-			      }
-			    }
-//Test Single Hand Intersect
-bool tHandIntersect = true;
-if(tHandIntersect)
-{
-
-                        //const osg::BoundingBox& bboxCyl = it->second.cylinder.geode->getDrawable(0)->getBound();
-                                    Box* handSphere = new Box(it->second.joints[M_LHAND].position, _sphereRadius * 3);
-                                    ShapeDrawable* ggg3 = new ShapeDrawable(handSphere);
-                                    const osg::BoundingBox& bboxCyl = ggg3->getBound();
-
-                                    handSphere = new Box(it->second.joints[M_RHAND].position, _sphereRadius * 3);
-                                    ggg3 = new ShapeDrawable(handSphere);
-                                    const osg::BoundingBox& bboxCyl2 = ggg3->getBound();
-			
-                        for (int q = 0; q < _query.size(); q++)
-                        {
-
-                            if (_query[q]->active)
-                            {
-                                //printf("Running2 through Artifacts\n");
-                                vector<Artifact*> artifacts = _query[q]->artifacts;
-                                for (int i = 0; i < artifacts.size(); i++)
-                                {
-                                   // if (artifacts[i]->lockedTo != -1) continue;
-
-                                    Box* fakeSphere = new Box(artifacts[i]->modelPos, _sphereRadius * 3);
-                                    ShapeDrawable* ggg2 = new ShapeDrawable(fakeSphere);
-                                    const osg::BoundingBox& fakeBbox = ggg2->getBound();
-
-                                    if (bboxCyl.intersects(fakeBbox))
-                                    {
-                                        setActiveArtifact(it->first, M_LHAND, i, q);
-
-                                        artifacts[i]->lockedTo = it->first;
-                                        artifacts[i]->lockedType = M_LHAND;
-                                        //it->second.cylinder.locked = true;
-                                        // XXX XXX XXX Turn on, but then it is in front of artifa
-                                        _artifactPanel->setVisible(true);
-                                        //printf("Intersecting Hand with artifact %d \n", i);
-                                       // break;
-                                    }
-				    else
-				    {
-				        //Unlocks artifacts no longer intersecting
-					if(artifacts[i]->lockedTo == it->first && artifacts[i]->lockedType == M_LHAND)
-					{
-                                          artifacts[i]->lockedTo = -1;
-                                          artifacts[i]->lockedType = -1;
-                                    	  artifacts[i]->selected = false;
-					   artifacts[i]->modelPos = artifacts[i]->modelOriginalPos;
-                                           artifacts[i]->patmt->setPosition(artifacts[i]->modelOriginalPos);
-                                    	  _selectArtifactCB->setValue(false);
-                                    	  _artifactPanel->setVisible(_selectArtifactCB->getValue());
-					  //printf("Deselected Artifact %d \n",i);
-					}
-				    }
-                                    if (bboxCyl2.intersects(fakeBbox) && !bboxCyl.intersects(fakeBbox))
-                                    {
-                                        setActiveArtifact(it->first, M_RHAND, i, q);
-
-                                        artifacts[i]->lockedTo = it->first;
-                                        artifacts[i]->lockedType = M_RHAND;
-                                        //it->second.cylinder.locked = true;
-                                        // XXX XXX XXX Turn on, but then it is in front of artifa
-                                        //_artifactPanel->setVisible(true);
-                                        //printf("Intersecting Hand with artifact %d \n", i);
-                                       // break;
-                                    }
-				    else
-				    {
-				        //Unlocks artifacts no longer intersecting
-					if(artifacts[i]->lockedTo == it->first && artifacts[i]->lockedType == M_RHAND)
-					{
-                                          artifacts[i]->lockedTo = -1;
-                                          artifacts[i]->lockedType = -1;
-                                    	  artifacts[i]->selected = false;
-					   artifacts[i]->modelPos = artifacts[i]->modelOriginalPos;
-                                           artifacts[i]->patmt->setPosition(artifacts[i]->modelOriginalPos);
-                                    	  _selectArtifactCB->setValue(false);
-                                    	  _artifactPanel->setVisible(_selectArtifactCB->getValue());
-					  //printf("Deselected Artifact %d \n",i);
-					}
-				    }
-                                }
-                            }
-
-                            // /selectableartifacts
-                        }
-}
-
-
-
-
-
-            //printf("Distance Cylinder: %g \n",distance);
-            if (((it->second.joints[9].position.z() - it->second.joints[7].position.z() > 0) && (it->second.joints[15].position.z() - it->second.joints[13].position.z() > 0))) it->second.cylinder.handsBeenAboveElbows = true;
-
-            it->second.cylinder.update(StartPoint, EndPoint);
-
-            if (it->second.cylinder.attached)
-            {
-                //printf("Cylinder is attached\n");
-                //
-                bool detachC = false;
-/*
-                if (it->second.cylinder.locked && ((it->second.joints[9].position.z() - it->second.joints[7].position.z() < 0) && (it->second.joints[15].position.z() - it->second.joints[13].position.z() < 0)))
-                    detachC = true;
 */
-                // navSphere gets special treatment and unlocks when cylinder is smaller
-                /*
-                if (it->second.navSphere.lock == it->first)
-                             {
-                                 if (distance > distanceMAX / 4 * m2mm)
-                                 {
-                                     it->second.cylinder.detach(_root);
-                                     it->second.navSphere.lock = -1; // extra for NavSphere
-                                     it->second.cylinder.locked = false;
-                		navLock = -1;
-                                 }
-                             }
-                	*/
 
-                if (it->second.cylinder.handsBeenAboveElbows && (distance > distanceMAX  * m2mm || distance < distanceMIN * m2mm || detachC))
-                {
-                    // removes cylinder
-                    it->second.cylinder.detach(_root);
-
-                    // unlock all the objects that were locked by this cylinder
-                    for (int j = 0; j < selectableItems.size(); j++)
-                    {
-                        if (selectableItems[j].lock == it->first) selectableItems[j].unlock();
-                    }
-
-                    // and artifacts
-                    for (int q = 0; q < _query.size(); q++)
-                    {
-                        vector<Artifact*> artifacts = _query[q]->artifacts;
-                        //printf("Running1 through Artifacts\n");
-                        if (_query[q]->active)
-                        {
-                            for (int i = 0; i < artifacts.size(); i++)
-                            {
-                                if (artifacts[i]->lockedTo == it->first && artifacts[i]->lockedType == CYLINDER)
-                                {
-                                    artifacts[i]->lockedTo = -1;
-                                    artifacts[i]->lockedType = -1;
-                                    artifacts[i]->selected = false;
-                                    _selectArtifactCB->setValue(false);
-                                    _artifactPanel->setVisible(_selectArtifactCB->getValue());
-                                }
-                            }
-                        }
-                    }
-                    // and NavSpheres
-                    it->second.navSphere.lock = -1;
-                    navLock = -1;
-                    navSphereTimer = 0;
-                    it->second.navSphere.activated = false;
-
-                    it->second.cylinder.locked = false;
-                }
-                else
-                {
-                    // if skeleton's cylinder is locked to some object, do not lock any more
-                    if (it->second.cylinder.locked == false)
-                    {
-                        // for every selectable item, check if it intersects with the current cylinder
-                        const osg::BoundingBox& bboxCyl = it->second.cylinder.geode->getDrawable(0)->getBound();
-
-                        // NavSphere
-                        if (kNavSpheres) {
-                            Sphere* tempNav = new Sphere(it->second.navSphere.position, 0.03 * 2);
-                            ShapeDrawable* ggg3 = new ShapeDrawable(tempNav);
-                            const osg::BoundingBox& fakenav = ggg3->getBound();
-			    float cylinderZ = it->second.cylinder.center.z();
-                            float headZ = it->second.joints[M_HEAD].position.z();
-                            if (bboxCyl.intersects(fakenav) && it->second.navSphere.lock == -1 && false)
-                            {
-                                it->second.navSphere.lock = it->first;
-                                navLock = it->first;
-                                it->second.cylinder.locked = true;
-                                //printf("Intersecting with NavSphere\n");
-                                it->second.cylinder.prevVec = (it->second.joints[M_LHAND].position - osg::Vec3d((StartPoint.x() + EndPoint.x()) / 2, (StartPoint.y() + EndPoint.y()) / 2, (StartPoint.z() + EndPoint.z()) / 2));
-                                it->second.cylinder.handsBeenAboveElbows = true;
-                                break;
-                                // save previous position
-                                //it->second.navSphere.prevPosition.set(it->second.navSphere.position);  //XXX I don't think this is ever used
-                            }
-                            else if (navSphereTimer == 3.00)
-			    {
-				  navLock = it->first;
-                                  it->second.cylinder.locked = true;
-                                //printf("Intersecting with NavSphere\n");
-                                it->second.cylinder.prevVec = (it->second.joints[M_LHAND].position - osg::Vec3d((StartPoint.x() + EndPoint.x()) / 2, (StartPoint.y() + EndPoint.y()) / 2, (StartPoint.z() + EndPoint.z()) / 2));
-                                it->second.cylinder.handsBeenAboveElbows = true;
-                                
-				
-			      
-
-			    }
-                        }
-
-                        for (int j = 0; j < selectableItems.size(); j++)
-                        {
-                            // fake sphere to easily calculate boundary
-                            Vec3 center2 = Vec3(0, 0, 0) * (selectableItems[j].mt->getMatrix());
-                            Box* fakeSphere = new Box(center2, _sphereRadius * 10 * m2mm * selectableItems[j].scale);
-                            ShapeDrawable* ggg2 = new ShapeDrawable(fakeSphere);
-                            const osg::BoundingBox& fakeBbox = ggg2->getBound();
-
-                            if (bboxCyl.intersects(fakeBbox) && selectableItems[j].lock == -1)
-                            {
-                                it->second.cylinder.locked = true;
-                                selectableItems[j].lockTo(it->first, CYLINDER);
-                                it->second.cylinder.prevVec = (it->second.joints[M_LHAND].position - osg::Vec3d((StartPoint.x() + EndPoint.x()) / 2, (StartPoint.y() + EndPoint.y()) / 2, (StartPoint.z() + EndPoint.z()) / 2));
-                                it->second.cylinder.handsBeenAboveElbows = false;
-                                break; // lock only one object
-                            }
-                        }
-
-                        /////////////
-
-                        // selectableartifacts
-                        for (int q = 0; q < _query.size(); q++)
-                        {
-
-                            if (_query[q]->active)
-                            {
-                                //printf("Running2 through Artifacts\n");
-                                vector<Artifact*> artifacts = _query[q]->artifacts;
-                                for (int i = 0; i < artifacts.size(); i++)
-                                {
-                                    if (artifacts[i]->lockedTo != -1) continue;
-
-                                    Box* fakeSphere = new Box(artifacts[i]->modelPos, _sphereRadius * 3);
-                                    ShapeDrawable* ggg2 = new ShapeDrawable(fakeSphere);
-                                    const osg::BoundingBox& fakeBbox = ggg2->getBound();
-
-                                    if (bboxCyl.intersects(fakeBbox))
-                                    {
-                                        setActiveArtifact(it->first, CYLINDER, i, q);
-
-                                        artifacts[i]->lockedTo = it->first;
-                                        artifacts[i]->lockedType = CYLINDER;
-                                        it->second.cylinder.locked = true;
-                                        // XXX XXX XXX Turn on, but then it is in front of artifa
-                                        //_artifactPanel->setVisible(true);
-                                        printf("iintersecting with artifact %d \n", i);
-                                        it->second.cylinder.prevVec = (it->second.joints[M_LHAND].position - osg::Vec3d((StartPoint.x() + EndPoint.x()) / 2, (StartPoint.y() + EndPoint.y()) / 2, (StartPoint.z() + EndPoint.z()) / 2));
-                                        it->second.cylinder.handsBeenAboveElbows = false;
-                                        break;
-                                    }
-                                }
-                            }
-
-                            // /selectableartifacts
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // printf("Cylinder is NOT attached\n");
-
-                // CONDITIONS TO CREATE CYLINDER
-                if (distance < distanceMAX / 2 * m2mm && distance > distanceMIN * m2mm && ((it->second.joints[9].position.z() - it->second.joints[7].position.z() > 0) && (it->second.joints[15].position.z() - it->second.joints[13].position.z() > 0)))
-                {
-                    // TODO don't attach and detach cylinder all the time, it can be updated
-                    it->second.cylinder.attach(_root);
-                }
-            }
-        }
-
-//End of Skeleton Iteration
-
-        // move all the locked artifacts ..
-
-        Matrix view = PluginHelper::getObjectToWorldTransform();
-        double vscale = PluginHelper::getObjectScale();
-//vscale = 1.0;
-        Vec3 headPos = view.getTrans();
-        Matrixd camMat = PluginHelper::getWorldToObjectTransform();
-        float cscale = 1; //Want to keep scale to actual Kinect
-        Vec3 camTrans = camMat.getTrans();
-        Quat camQuad = camMat.getRotate();  //Rotation of cam will cause skeleton to be off center--need Fix!!
-        double xOffset = (camTrans.x() / cscale) + skelOffsetX;
-        double yOffset = (camTrans.y() / cscale) + skelOffsetY; //Added 5 meter offset of skeleton from Camera (this only works when properly scaled, ofcourse
-        double zOffset = (camTrans.z() / cscale) + skelOffsetZ;
-        for (int q = 0; q < _query.size(); q++)
-        {
-            vector<Artifact*> artifacts = _query[q]->artifacts;
-
-            if (_query[q]->active)
-            {
-                for (int i = 0; i < artifacts.size(); i++)
-                {
-                    if (artifacts[i]->lockedTo == -1) continue;
-
-                    //                    _modelartPos = artifacts[i]->modelPos + position; // moving label XXX ?
-
-		    if(kShowArtifactPanel)
- 		    {
-                    _selectArtifactCB->setValue(true);
-                    osg::Vec3 panelPos;
-
-                    if(artifacts[i]->lockedType == M_LHAND)
-		    {
-                      
-                    panelPos = mapIdSkel[artifacts[i]->lockedTo].joints[M_LHAND].position;
-                    }
-                    else if(artifacts[i]->lockedType == M_RHAND)
-                    {
-                     
-                    panelPos = mapIdSkel[artifacts[i]->lockedTo].joints[M_RHAND].position;
-                    }
-                    else if(artifacts[i]->lockedType == CYLINDER)
-		    {
-                     
-                    panelPos = mapIdSkel[artifacts[i]->lockedTo].cylinder.center;
-                    }
-                    panelPos.x() -= xOffset;
-                    panelPos.y() -= yOffset;
-                    //panelPos.y() = 3000;
-                    panelPos.z() -= zOffset;
-                    panelPos.x() *= 1000;
-                    panelPos.y() *= 1000;
-                    panelPos.z() *= 1000;
-                    panelPos.y() += 3000;
-                   //_artifactPanel->setPosition(panelPos);
-                    //	printf("Panel Pos = %g,%g,%g\n",panelPos.x(),panelPos.y(),panelPos.z());
-                    //_artifactPanel->setRotation(rot);
-                    //_artifactPanel->setScale(scale);
-                    _artifactPanel->setVisible(true);
-		    }
-	            //kLockPos = true;
-                    if(!kLockPos)
-                    {
-
-                    if(artifacts[i]->lockedType == M_LHAND)
-		    {
-                      
-                        artifacts[i]->modelPos = mapIdSkel[artifacts[i]->lockedTo].joints[M_LHAND].position;
-                    }
-                    else if(artifacts[i]->lockedType == M_RHAND)
-                    {
-                     
-                        artifacts[i]->modelPos = mapIdSkel[artifacts[i]->lockedTo].joints[M_RHAND].position;
-                    }
-                    else if(artifacts[i]->lockedType == CYLINDER)
-		    {
-                     
-                        artifacts[i]->modelPos = mapIdSkel[artifacts[i]->lockedTo].cylinder.center;
-                    }
-                        artifacts[i]->patmt->setPosition(artifacts[i]->modelPos + artifacts[i]->kpos);
-                    }
-                    //kLockRot = true;
-                    if(!kLockRot)
-                    {
-                    if(artifacts[i]->lockedType == M_LHAND)
-		    {
-                      
-                    //Will use different type of interaction 
-                    }
-                    else if(artifacts[i]->lockedType == M_RHAND)
-                    {
-                    //Will use different type of interaction 
-                    }
-                    else if(artifacts[i]->lockedType == CYLINDER)
-		    {
-                     
-                        Matrix rotMat0;
-                        rotMat0.makeRotate(mapIdSkel[artifacts[i]->lockedTo].cylinder.prevVec, mapIdSkel[artifacts[i]->lockedTo].cylinder.currVec);
-                        artifacts[i]->rt->postMult(rotMat0);
-                    }
-                    }
-                    //kLockScale = true;
-                    if(!kLockScale)
-                    {
-                        double newscale = artifacts[i]->scale;
-                    if(artifacts[i]->lockedType == M_LHAND)
-		    {
-                      
-                    //Will use different type of interaction 
-                    }
-                    else if(artifacts[i]->lockedType == M_RHAND)
-                    {
-                     
-                    //Will use different type of interaction 
-                    }
-                    else if(artifacts[i]->lockedType == CYLINDER)
-		    {
-                        newscale *= (1 + ((mapIdSkel[artifacts[i]->lockedTo].cylinder.length - mapIdSkel[artifacts[i]->lockedTo].cylinder.prevLength) / (500 * (m2mm / 1000.0))));
-                     
-                    }
-
-                        if (newscale < 1 * m2mm / 1000.0)
-                        {
-                            //newscale = artifacts[i]->scale;
-                            newscale = 1 * m2mm / 1000.0;
-                        //    printf("Scale: %g\n", newscale);
-                        }
-                        artifacts[i]->setScale(newscale);
-                    }
-                }
-            }
-        }
-
-        // move all the objects that are locked to centers and rotate to centers rotation
-
-        for (int j = 0; j < selectableItems.size(); j++)
-        {
-            SelectableItem sel = selectableItems[j];
-            int cylinderId = sel.lock;
-
-            if (cylinderId == -1) continue;
-
-            Matrix rotMat0;
-            rotMat0.makeRotate(mapIdSkel[cylinderId].cylinder.prevVec, mapIdSkel[cylinderId].cylinder.currVec);
-            selectableItems[j].rt->postMult(rotMat0);
-            Matrix posMat;
-            posMat.setTrans(mapIdSkel[cylinderId].cylinder.center);
-            selectableItems[j].mt->setMatrix(posMat);
-            double newscale = selectableItems[j].scale;
-            newscale *= (1 + ((mapIdSkel[cylinderId].cylinder.length - mapIdSkel[cylinderId].cylinder.prevLength) / (500 * (m2mm / 1000.0))));
-
-            //            newscale=newscale*m2mm/1000.0;
-
-            //if (newscale > 0.75 || newscale < -0.75) newscale = 0; // if this is not enough, cylinder.prevLength should be set to cylinder.Length at the moment it gets attached (theoretically this is done) XXX
-
-            //         printf(" %g - %g =  %g \n",mapIdSkel[cylinderId].cylinder.length,mapIdSkel[cylinderId].cylinder.prevLength,newscale*100);
-            //            newscale += selectableItems[j].scale;
-
-            if (newscale < 1 * m2mm / 1000.0) newscale = 1 * m2mm / 1000.0;
-
-            selectableItems[j].setScale(newscale);
-        }
-	navSphereActivated = false;
-        if(kNavSpheres && navLock != -1)
-        {
-            int cylinderId = navLock;
-            Vec3 diff;
-	    if(navSphereTimer == 3.00)
-	    {
-		navSphereActivated = true;
-                Vec3 center2 = mapIdSkel[cylinderId].joints[3].position;
-                center2.y() += navSphereOffsetY;
-                center2.z() += navSphereOffsetZ;
-	        diff = mapIdSkel[cylinderId].cylinder.center - center2;
-                mapIdSkel[cylinderId].navSphere.update(mapIdSkel[cylinderId].cylinder.center, Vec4(0, 0, 0, 1));
-                mapIdSkel[cylinderId].navSphere.activated = true;
-	    }
-/*
-	    else if(navSphereTimer != 3.00)
-	    {
-	    diff = mapIdSkel[cylinderId].cylinder.center - mapIdSkel[cylinderId].navSphere.position;
-	    navSphereActivated = mapIdSkel[cylinderId].navSphere.activated;
-	    }
-
-
-            if (!navSphereActivated and navSphereTimer != 3.00)
-            {
-                const osg::BoundingBox& bboxCyl = mapIdSkel[cylinderId].cylinder.geode->getDrawable(0)->getBound();
-                //Vec3 navPos = mapIdSkel[cylinderId].joints[3].position; navbang
-                Vec3 center2 = mapIdSkel[cylinderId].joints[3].position;
-                center2.y() += 0.4;
-                //center2.z() += 0.2;
-                Box* fakeSphere = new Box(center2, _sphereRadius * 1);
-                ShapeDrawable* ggg2 = new ShapeDrawable(fakeSphere);
-                const osg::BoundingBox& fakeBbox = ggg2->getBound();
-
-                if (bboxCyl.intersects(fakeBbox))
-                {
-                    //printf("NavSphere Activated\n");
-                    navSphereActivated = true;
-                    mapIdSkel[cylinderId].navSphere.activated = true;
-                    mapIdSkel[cylinderId].navSphere.update(mapIdSkel[cylinderId].navSphere.position, Vec4(0, 0, 0, 1)); // does that line do anything?
-                }
-
-
-                if(!navSphereActivated)
-                {
-                    mapIdSkel[cylinderId].navSphere.activated = false;
-                    mapIdSkel[cylinderId].navSphere.update(mapIdSkel[cylinderId].cylinder.center, Vec4(0, 0, 0, 1));
-                }
-            }
-            else if (navSphereTimer != 3.00)
-            {
-                Vec3 center2 = mapIdSkel[cylinderId].joints[3].position;
-                center2.y() += 0.4;
-                //center2.z() += 0.2;
-                mapIdSkel[cylinderId].navSphere.update(center2, Vec4(0, 0, 0, 1));
-            }
-*/
-            if(navSphereActivated)
-            {
-
-
-	    
-
-		//Compute NavMovement
-                double x, y, z;
-                x = y = z = 0.0;
-                double rx, ry, rz;
-                rx = ry = rz = 0.0;
-                bool moved = false;
-
-                if(diff.x() > diffScaleX)
-                {
-                    //x = 0.1 * tranScaleX;
-                    rz = tranScaleX;
-                }
-                else if(diff.x() < diffScaleNegX)
-		{
-
-                    //x = -0.1 * tranScaleX;
-                    rz = -tranScaleX;
-		}
-		else
-		{
-	 		rz = 0.0;
-		}
-                if(diff.y() > diffScaleY)
-                {
-                    y = 0.1 * tranScaleY;
-                }
-                else if(diff.y() < diffScaleNegY)
-		{
-
-                    y = -0.1 * tranScaleY;
-
-		}
-                if(diff.z() > diffScaleZ)
-                {
-                    //z = 0.1 * tranScalez;
-                    rx = -0.003;
-                }
-                else if(diff.z() < diffScaleNegZ)
-		{
-
-                    //z = -0.1 * tranScalez;
-                    rx = 0.003;
-		}
-		else
-		{
-			rx = 0;
-		}
-	        
-               
-              
-                    Quat handQuad = mapIdSkel[cylinderId].cylinder.rotation;
-                    double rscale = 1;
-                    //rz = handQuad.asVec4().x();
-                    ry = handQuad.asVec4().y();
-                    //rz = handQuad.asVec4().z();
-                    double rw = handQuad.asVec4().w();
-                    //cerr << " Rot:" << rx << "," << ry << "," << rz << "," << rw <<"\n";
-                    if(rz > 0.3)
-                    {
-                      //  rz = -0.006;
-                    }
-                    else if(rz < -0.3)
-                    {
-                      //  rz = 0.006;
-                    }
-                    else
-                    {
-                      //  rz = 0.0;
-                    }
-                    if(ry > diffScaleRY)
-                    {
-                        //cerr << " Rot:" << rx << "," << ry << "," << rz << "\n";
-                        ry = -tranScaleRY;
-                    }
-                    else if(ry < diffScaleNegRY)
-                    {
-                        ry = tranScaleRY;
-                    }
-                    else
-                    {
-                        ry = 0.0;
-                    }
-                    Matrixd finalmat;
-                    Matrix view = PluginHelper::getHeadMat();
-                    Vec3 campos = view.getTrans();
-                    Vec3 trans = Vec3(x, y, z);
-                    trans = (trans * view) - campos;
-                    Matrix tmat;
-                    tmat.makeTranslate(trans);
-                    Vec3 xa = Vec3(1.0, 0.0, 0.0);
-                    Vec3 ya = Vec3(0.0, 1.0, 0.0);
-                    Vec3 za = Vec3(0.0, 0.0, 1.0);
-                    xa = (xa * view) - campos;
-                    ya = (ya * view) - campos;
-                    za = (za * view) - campos;
-                    Matrix rot;
-                    rot.makeRotate(rx, xa, ry, ya, rz, za);
-                    Matrix ctrans, nctrans;
-                    ctrans.makeTranslate(campos);
-                    nctrans.makeTranslate(-campos);
-                    finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
-                    PluginHelper::setObjectMatrix(finalmat);
-             
-            }
-        }
-
-
-    }
-
-    //Hand Tracking for Model Manipulation
-    if (_handOn)
-    {
-        if (_selectModelLoad && _manipArtifactCB->getValue())
-        {
-            Matrix handMat;
-            handMat = PluginHelper::getHandMat(0);
-            Vec3 handTrans = handMat.getTrans();
-            Quat handQuad = handMat.getRotate();
-            //cerr << "Hand Output: " << handTrans.x() << "," << handTrans.y() << "," << handTrans.z() << " Rot:" << handQuad.x() << "," << handQuad.y() << "," << handQuad.z() << "\n";
-            double rx, ry, rz;
-            rx = ry = rz = 0.0;
-            double rscale = 1;
-            rx = handQuad.x();
-            ry = handQuad.y();
-            rz = handQuad.z();
-
-            if (rx != 0 || ry != 0 || rz != 0)
-            {
-                rotateModel(rx, ry, rz);
-            }
-        }
-    }
-
-    ////...................compare head IR & kinect...................................
-    ////..............................................................................
-    ////Compare HandMat and HeadMat to Skeleton
-    //    bool ktest3 = false;
-    //
-    //    if (ktest3)
-    //    {
-    //        //Find Sensors' Origin and Rotation
-    //        //IR
-    //        Vec3 iOrigin;
-    //        Quat iOriginRot;
-    //        //Kinect
-    //        Vec3 kOrigin;
-    //        Quat kOriginRot;
-    //        //Kinect rotation comes in Upside down--will need to rotate all positions  according to origin and apply same offset so that it matches IR sensor.
-    //        //position[i][0]=0
-    //        //-------------------------------------------
-    //        double kinectX = position[0][0] * 1000 + 141;
-    //        double kinectY = -(position[0][2] * 1000 - 2000);
-    //        double kinectZ = position[0][1] * 1000 + 517;
-    //
-    //        //std::vector<TrackerBase::TrackedBody *> * tbList = (std::vector<TrackerBase::TrackedBody *> *) userdata;
-    //        //TrackerBase::TrackedBody * tb = tbList->at(0);
-    //        //tb->x = kinectX;
-    //        //tb->y = kinectY;
-    //        //tb->z = kinectZ;
-    //        //-------------------------------------------
-    //        //Get Kinect Head
-    //        if (position[0][0] != 0)
-    //        {
-    //            cout << "Head Kinect Output-Position: " << kinectX << "," << kinectY << "," << kinectZ<<"\n";
-    //// << "\nHead Kinect Output-Rotation:" << orientation[0][0] << "," << orientation[0][1] << "," << orientation[0][2] << "\n";
-    //        }
-    //
-    //        //Get IR Head
-    //        int heads = PluginHelper::getNumHeads();
-    //
-    //        if (heads > 0)
-    //        {
-    //            Matrix headIR = PluginHelper::getHeadMat();
-    //            Vec3 headIrTrans = headIR.getTrans();
-    //            Quat headIrRot = headIR.getRotate();
-    //
-    //            cout << "Head IR Output-Position: " << headIrTrans.x() << "," << headIrTrans.y() << "," << headIrTrans.z() << "\n";
-    ////Head IR Output-Rotation:" << headIrRot.x() << "," << headIrRot.y() << "," << headIrRot.z() << "\n";
-    //            //Get Difference between Kinect and IR
-    //            if ((position[0][0] != 0) && (heads > 0) && false)
-    //            {
-    //                double xdif, ydif, zdif, rxdif, rydif, rzdif;
-    //                xdif = ydif = zdif = rxdif = rydif = rzdif = 0.0;
-    //                xdif = headIrTrans.x() - kinectX;
-    //                ydif = headIrTrans.y() - kinectY;
-    //                zdif = headIrTrans.z() - kinectZ;
-    //
-    //                //rxdif = headIrRot.x() - orientation[0][0];
-    //                if (xdif > 250 || ydif > 250 || zdif > 250)
-    //                    cout << "diff: " << xdif << " " << ydif << " " << zdif << "\n";
-    //            }
-    //        }
-    //    }
-    //..............................................................................
-
-//Update Info Panel for PreFrame
-updateInfoPanel();
 
 }
 void ArtifactVis2::loadScaleBar(osg::Vec3d start)
@@ -2587,7 +2129,7 @@ void ArtifactVis2::setActiveArtifact(int _lockedTo, int _lockedType, int art, in
 
     if (art == _activeArtifact)
     {
-        return;
+       // return;
     }
 
     std::stringstream ss;
@@ -2601,7 +2143,17 @@ void ArtifactVis2::setActiveArtifact(int _lockedTo, int _lockedType, int art, in
     ss << "-Longitude: " << artifacts[art]->pos[0] << endl;
     ss << "-Latitude: " << artifacts[art]->pos[1] << endl;
     ss << "-Altitude: " << artifacts[art]->pos[2] << endl;
-    _artifactPanel->updateTabWithText("Info", ss.str());
+//    _artifactPanel->updateTabWithText("Info", ss.str());
+    //Generate New Detail Graph
+    createArtifactPanel(q,art,ss.str());
+    createArtifactModel(q, art, "");
+/*
+    if (art == _activeArtifact)
+    {
+        return;
+    }
+
+
     string picPath = ConfigManager::getEntry("Plugin.ArtifactVis2.PicFolder").append("photos/");
     string side = (picPath + artifacts[art]->values[1] + "/" + "SF.jpg");
     string top = (picPath + artifacts[art]->values[1] + "/" + "T.jpg");
@@ -2617,11 +2169,6 @@ void ArtifactVis2::setActiveArtifact(int _lockedTo, int _lockedType, int art, in
 
     cout << check << "\n";
     cout << top << "\n";
-    /*
-    side <<  _picFolder << "/" << artifacts[art]->values.at(0) << "_s.jpg";
-    top << _picFolder << "/" << artifacts[art]->values.at(0) << "_t.jpg";
-    bottom << _picFolder << "/" << artifacts[art]->values.at(0) << "_b.jpg";
-    */
     _artifactPanel->updateTabWithTexture("Side", side);
     _artifactPanel->updateTabWithTexture("Top", top);
     _artifactPanel->updateTabWithTexture("Bottom", bottom);
@@ -2631,178 +2178,7 @@ void ArtifactVis2::setActiveArtifact(int _lockedTo, int _lockedType, int art, in
 
     // XXX models not disappearing
     //_root->removeChild(_selectModelLoad.get());
-
-    if (true)
-    {   //bang
-        //Once an artifact is selected we search to see if a 3D model of that artifact is available, otherwise a default model is loaded
-        //The Basket number is used to load the appropriate arftifact.
-        //double snum;
-        cout << "Basket: " << artifacts[art]->values[1] << "\n";
-        string basket = artifacts[art]->values[1];
-        string modelPath = ConfigManager::getEntry("Plugin.ArtifactVis2.ScanFolder").append("" + basket + "/" + basket + ".ply");
-        string dc;
-        dc = artifacts[art]->dc;
-        cout << dc << "\n";
-        _snum = 0.001;
-        double xrot = 0;
-        double yrot = 0;
-        double zrot = 0;
-        Vec3d position;
-
-        if (!modelExists(modelPath.c_str()))
-        {
-            //dc = "ZZ";
-            modelPath = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("photos/" + basket + "/test.obj");
-            _snum = 0.01;
-        }
-
-        if (!modelExists(modelPath.c_str()))
-        {
-            modelPath = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("photos/" + basket + "/frame.obj");
-            _snum = 0.005;
-            xrot = 90;
-
-            if (modelExists(modelPath.c_str()))
-            {
-                string file = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("photos/" + basket + "/frame.xml");
-                FILE* fp = fopen(file.c_str(), "r");
-                mxml_node_t* tree;
-                tree = mxmlLoadFile(NULL, fp, MXML_TEXT_CALLBACK);
-                fclose(fp);
-                mxml_node_t* child;
-                double trans[3];
-                double scale[3];
-                //double rot[3];
-                child = mxmlFindElement(tree, tree, "easting", NULL, NULL, MXML_DESCEND);
-                trans[0] = atof(child->child->value.text.string);
-                child = mxmlFindElement(tree, tree, "northing", NULL, NULL, MXML_DESCEND);
-                trans[1] = atof(child->child->value.text.string);
-                child = mxmlFindElement(tree, tree, "elevation", NULL, NULL, MXML_DESCEND);
-                trans[2] = atof(child->child->value.text.string);
-                child = mxmlFindElement(tree, tree, "x", NULL, NULL, MXML_DESCEND);
-                scale[0] = atof(child->child->value.text.string);
-                child = mxmlFindElement(tree, tree, "y", NULL, NULL, MXML_DESCEND);
-                scale[1] = atof(child->child->value.text.string);
-                child = mxmlFindElement(tree, tree, "z", NULL, NULL, MXML_DESCEND);
-                scale[2] = atof(child->child->value.text.string);
-                child = mxmlFindElement(tree, tree, "heading", NULL, NULL, MXML_DESCEND);
-                xrot = atof(child->child->value.text.string);
-                child = mxmlFindElement(tree, tree, "tilt", NULL, NULL, MXML_DESCEND);
-                yrot = atof(child->child->value.text.string);
-                child = mxmlFindElement(tree, tree, "roll", NULL, NULL, MXML_DESCEND);
-                zrot = atof(child->child->value.text.string);
-                position = Vec3d(trans[0], trans[1], trans[2]);
-                artifacts[art]->kpos = position;
-                cout << "Read ZB XML: " << trans[2] << " " << scale[0] << " " << xrot << "\n";
-                _snum = scale[0];
-            }
-        }
-
-        if (!modelExists(modelPath.c_str()))
-        {
-            //dc = "ZZ";
-            //modelPath = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("photos/default/test.obj");
-            _snum = 0.1;
-        }
-
-        if (modelExists(modelPath.c_str()))
-        {
-            cout << "Select Model " << modelPath << " Exists \n";
-
-            if (objectMap.count(modelPath) == 0) objectMap[modelPath] = osgDB::readNodeFile(modelPath);
-
-            _selectRotx = _selectRoty = _selectRotz = 0;
-            Matrixd scale;
-            //scale.makeScale(_snum, _snum, _snum);
-            artifacts[art]->setScale(_snum);
-            MatrixTransform* scaleTrans = new MatrixTransform();
-            scaleTrans->setMatrix(scale);
-            scaleTrans->addChild(objectMap[modelPath]);
-            MatrixTransform* siteRote = new MatrixTransform();
-            Matrix pitchMat;
-            Matrix yawMat;
-            Matrix rollMat;
-            pitchMat.makeRotate(DegreesToRadians(xrot), 1, 0, 0);
-            yawMat.makeRotate(DegreesToRadians(yrot), 0, 1, 0);
-            rollMat.makeRotate(DegreesToRadians(zrot), 0, 0, 1);
-            siteRote->setMatrix(pitchMat * yawMat * rollMat);
-            siteRote->addChild(scaleTrans);
-            _modelartPos = artifacts[art]->modelPos + position;
-            artifacts[art]->patmt->setPosition(_modelartPos);
-            artifacts[art]->patmt->addChild(artifacts[art]->rt);
-            artifacts[art]->scalet->addChild(siteRote);
-            artifacts[art]->rt->addChild(artifacts[art]->scalet);
-            _selectModelLoad = new osg::MatrixTransform();
-            _selectModelLoad->addChild(artifacts[art]->patmt);
-            _root->addChild(_selectModelLoad.get());
-        }
-
-        //sphereGeode->addDrawable(artifacts[art]->drawable);
-        //root_node->addChild(sphereGeode);
-    }
-
-    _activeArtifact = art;
-}
-void ArtifactVis2::updateInfoPanel()
-{
-
-    std::stringstream ss;
-//kinectUsers
-    ss << "Info: " << endl;
-  //  ss << "FPS: " << navSphereTimer << endl;
-    ss << "Kinect Users: " << kinectUsers << endl;
-
-	//Should loope through users
-	bool lHand = false;
-	bool rHand = false;
-	bool rHandAssist = false;
-
-	string lHandOn = "Off";
-	string rHandOn = "Off";
-	string rHandAssisting = "Off";
-	if(lHand) lHandOn = "On";
-	if(rHand) rHandOn = "On";
-	if(rHandAssist) rHandAssisting = "On";
-        //navSphereTimer = 3.00;
-        string navSphereStatus = "Off";
-    	ss << "-Nav Sphere Status: ";
-        if(navSphereTimer != 0 && navSphereTimer < 3.00 &&  !navSphereActivated)
-	{
-          //Nav Sphere Activating
-          navSphereStatus = "Activating";
-    	  ss << navSphereStatus << ": " << navSphereTimer << endl;
-	}
-        if(navSphereTimer != 0 && navSphereTimer < 3.00 && navSphereActivated)
-	{
-          //Nav Sphere Deactivating
-          navSphereStatus = "Deactivating";
-    	  ss << navSphereStatus << ": " << navSphereTimer << endl;
-	}
-	else if (navSphereTimer == 3.00 && !navSphereActivated)
-	{
-          //Nav Sphere Ready
-          navSphereStatus = "navSphere Activated Create Cylinder to Move";
-    	  ss << navSphereStatus << endl;
-	}
-	else if (navSphereActivated)
-	{
-          //Nav Sphere Activated
-          navSphereStatus = "On";
-    	  ss << navSphereStatus << endl;
-	}
-	else 
-	{
-	//Nav Sphere Detection Off
-          navSphereStatus = "Off";
-    	  ss << navSphereStatus << endl;
-	}
-    	ss << "-Left Hand Selecting: " << lHandOn << endl;
-    	ss << "-Right Hand Selecting: " << rHandOn << endl;
-    	ss << "-Right Hand Assisting: " << rHandAssisting << endl;
-
-
-    _infoPanel->updateTabWithText("Info", ss.str());
-
+*/
 }
 
 void ArtifactVis2::readQuery(QueryGroup* query)
@@ -3121,7 +2497,8 @@ void ArtifactVis2::readPointCloud(int index)
         string line;
         bool read = false;
         cout << _pcFactor[index] << "\n";
-        int factor = _pcFactor[index];
+       // int factor = _pcFactor[index];
+        int factor = 1;
         if((type == "ply" || type == "xyb") && nvidia)
         {
             cout << "Reading XYB" << endl;
@@ -3374,8 +2751,8 @@ void ArtifactVis2::readPointCloud(int index)
     }
     if(!nvidia)
     {
-        coords = _coordsPC[index];
-        colors = _colorsPC[index];
+     //   coords = _coordsPC[index];
+       // colors = _colorsPC[index];
         _avgOffset[index] /= coords->size();
 
         Geometry* pointCloud = new Geometry();
@@ -3394,6 +2771,8 @@ void ArtifactVis2::readPointCloud(int index)
         pointGeode->addDrawable(pointCloud);
         StateSet* ss = pointGeode->getOrCreateStateSet();
         ss->setMode(GL_LIGHTING, StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+        if(true)
+        {
         MatrixTransform* rotTransform = new MatrixTransform();
         Matrix pitchMat;
         Matrix yawMat;
@@ -3424,6 +2803,126 @@ void ArtifactVis2::readPointCloud(int index)
         //_pcRoot[index]->addChild(inversMat);
         //_pcRoot[index]->addChild(pointGeode);
         //cout << _pcRoot[index][5].x() << "\n";
+        }
+        if(false)
+        {
+//bangPC
+//     19.6  18 89.23 
+            string name = "test";
+Vec3 arrScale = _pcScale[index];
+float currentScale = arrScale.x();
+	    SceneObject * so;
+	    so = new SceneObject(name, false, false, false, true, false);
+	    osg::Switch* switchNode = new osg::Switch();
+	    so->addChild(switchNode);
+	    PluginHelper::registerSceneObject(so,"Test");
+	    so->attachToScene();
+//Add currentNode to switchNode
+     // _models3d[i]->currentModelNode = modelNode;  
+	switchNode->addChild(pointGeode);
+     // _pointClouds[i]->switchNode = switchNode;
+
+     //_root->addChild(modelNode);
+//Add menu system
+	    so->setNavigationOn(true);
+	    so->setMovable(true);
+	    so->addMoveMenuItem();
+	    so->addNavigationMenuItem();
+            float min = 0.0001;
+            float max = 1;
+            so->addScaleMenuItem("Scale",min,max,currentScale);
+	    SubMenu * sm = new SubMenu("Position");
+	    so->addMenuItem(sm);
+
+	    MenuButton * mb;
+	    mb = new MenuButton("Load");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+
+	    SubMenu * savemenu = new SubMenu("Save");
+	    sm->addItem(savemenu);
+
+	    mb = new MenuButton("Save");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+          //  _pointClouds[i]->saveMap = mb;
+
+	    mb = new MenuButton("Save New Kml");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+           // _pointClouds[i]->saveNewMap = mb;
+
+	    mb = new MenuButton("Reset to Origin");
+	    mb->setCallback(this);
+	    so->addMenuItem(mb);
+           // _pointClouds[i]->resetMap = mb;
+
+            MenuCheckbox * mc;
+	    mc = new MenuCheckbox("Active",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+           // _pointClouds[i]->activeMap = mc;
+
+            
+	    mc = new MenuCheckbox("Visible",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+           // _pointCloudsi]->visibleMap = mc;
+           // _pointClouds[i]->visible = true;
+
+            float rValue = 0;
+            min = -1;
+            max = 1;
+            MenuRangeValue* rt = new MenuRangeValue("rx",min,max,rValue);
+            rt->setCallback(this);
+	    so->addMenuItem(rt);
+          //  _pointClouds[i]->rxMap = rt;
+
+            rt = new MenuRangeValue("ry",min,max,rValue);
+            rt->setCallback(this);
+	    so->addMenuItem(rt);
+          //  _pointClouds[i]->ryMap = rt;
+
+            rt = new MenuRangeValue("rz",min,max,rValue);
+            rt->setCallback(this);
+	    so->addMenuItem(rt);
+          //  _pointClouds[i]->rzMap = rt;
+/*
+	    mc = new MenuCheckbox("Panel Visible",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+ //           _query[q]->artifacts[inc]->model->pVisibleMap = mc;
+           // _query[q]->artifacts[inc]->model->pVisible = true;
+*/
+//_pcRot[index].x()
+float rotDegrees[3];
+rotDegrees[0] = _pcRot[index].x();
+rotDegrees[1] = _pcRot[index].y();
+rotDegrees[2] = _pcRot[index].z();
+Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(0,1,0),rotDegrees[2], osg::Vec3d(0,0,1)); 
+Quat currentRot = rot;
+Vec3 currentPos = _pcPos[index];
+
+//     19.6  18 89.23 
+
+
+Vec3 orig = currentPos; 
+cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
+
+ so->setPosition(currentPos);     
+ so->setScale(currentScale);
+ so->setRotation(currentRot);     
+
+orig = so->getPosition();
+currentScale = so->getScale();
+cerr << "So Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
+cerr << "So Scale: " << currentScale << endl;
+   // _pointClouds[i]->so = so;
+   // _pointClouds[i]->pos = so->getPosition();
+  //  _pointClouds[i]->rot = so->getRotation();
+  //  _pointClouds[i]->active = true;
+  //  _pointClouds[i]->loaded = true;
+        }
     }
 }
 void ArtifactVis2::readSiteFile(int index)
@@ -3449,7 +2948,8 @@ void ArtifactVis2::readSiteFile(int index)
         {
             MatrixTransform* siteScale = new MatrixTransform();
             Matrix scaleMat;
-            scaleMat.makeScale(_siteScale[index]*INCH_IN_MM);
+           // scaleMat.makeScale(_siteScale[index]*INCH_IN_MM);
+            scaleMat.makeScale(_siteScale[index]);
             siteScale->setMatrix(scaleMat);
             siteScale->addChild(modelFileNode);
 
@@ -3508,6 +3008,148 @@ void ArtifactVis2::readSiteFile(int index)
             mat->setDiffuse(Material::FRONT_AND_BACK, color_dif);
             ss->setAttribute(mat);
             ss->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+            cerr << "File read." << endl;
+        }
+    }
+    else
+    {
+        cerr << "Error: Plugin.ArtifactVis2.Topo needs to point to a .wrl 3D topography file" << endl;
+    }
+}
+void ArtifactVis2::readHudFile(int index)
+{
+    std::string modelFileName = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append(_showHudCB[index]->getText());   //Replaced
+    cerr << "Reading site file: " << modelFileName << " " << index << " ..." << endl;
+
+    if (!modelFileName.empty())
+    {
+        //cout << _modelSFileNode.size() << "\n";
+        if (!_hudFileNode[index])
+        {
+            _hudFileNode[index] = osgDB::readNodeFile(modelFileName);
+        }
+
+	    cerr << "Read\n";
+        Node* hudFileNode = _hudFileNode[index];
+
+        if (hudFileNode == NULL) cerr << "Error reading file" << endl;
+        else
+        {
+	    cerr << "Reading\n";
+            MatrixTransform* siteScale = new MatrixTransform();
+            Matrix scaleMat;
+            scaleMat.makeScale(_hudScale[index]);
+            siteScale->setMatrix(scaleMat);
+            siteScale->addChild(hudFileNode);
+
+                MatrixTransform* siteRot = new MatrixTransform();
+                Matrix pitchMat;
+                Matrix yawMat;
+                Matrix rollMat;
+                pitchMat.makeRotate(DegreesToRadians(_hudRot[index].x()), 1, 0, 0);
+                yawMat.makeRotate(DegreesToRadians(_hudRot[index].y()), 0, 1, 0);
+                rollMat.makeRotate(DegreesToRadians(_hudRot[index].z()), 0, 0, 1);
+                siteRot->setMatrix(pitchMat * yawMat * rollMat);
+                siteRot->addChild(siteScale);
+                MatrixTransform* siteTrans = new MatrixTransform();
+//Here              
+  Matrix transMat;
+                transMat.makeTranslate(_hudPos[index]);
+                siteTrans->setMatrix(transMat);
+                siteTrans->addChild(siteRot);
+                _hudRoot[index] = new MatrixTransform();
+                _hudRoot[index]->setMatrix(transMat);
+                _hudRoot[index]->addChild(siteRot);
+/*  
+          osg::Program* modelProgramObject = new osg::Program;
+            string shaderPath = "/home/calvr/osgdata/shaders";
+            string shaderVertexPath = ConfigManager::getEntry("Plugin.ArtifactVis2.ShaderVert");
+            string shaderFragmentPath = ConfigManager::getEntry("Plugin.ArtifactVis2.ShaderFrag");
+            modelProgramObject->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile(shaderVertexPath)));
+            modelProgramObject->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile(shaderFragmentPath)));
+*/
+        osg::Program *stProgram;
+        osg::Shader *stVertObj;
+        osg::Shader *stFragObj;
+
+        osg::Texture2D *aocct = new osg::Texture2D();
+        aocct->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+    aocct->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+        aocct->setWrap(osg::Texture::WRAP_R, osg::Texture::CLAMP_TO_EDGE);
+    aocct->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
+    aocct->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+
+        osg::Image *occi = osgDB::readImageFile("/home/calvr/tutorials/AmbientOcc/images/AmbientOcc.bmp");
+    aocct->setImage(occi);
+
+
+        osg::StateSet *hebeState = new osg::StateSet();
+        _hudRoot[index]->setStateSet(hebeState);
+
+    hebeState->addUniform( new osg::Uniform("/home/calvr/tutorials/AmbientOcc/images/AmbientOcclusion", 0) );
+        hebeState->setTextureAttribute(0, aocct);
+
+
+        osg::TextureCubeMap *aoccm = new osg::TextureCubeMap();
+    aoccm->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+    aoccm->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+    aoccm->setWrap(osg::Texture::WRAP_R, osg::Texture::CLAMP_TO_EDGE);
+    aoccm->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
+    aoccm->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+        osg::Image *occbi = osgDB::readImageFile("/home/calvr/tutorials/AmbientOcc/images/px_diff.bmp");
+    aoccm->setImage(osg::TextureCubeMap::POSITIVE_X, occbi);
+        occbi = osgDB::readImageFile("/home/calvr/tutorials/AmbientOcc/images/nx_diff.bmp");
+    aoccm->setImage(osg::TextureCubeMap::NEGATIVE_X, occbi);
+    occbi = osgDB::readImageFile("/home/calvr/tutorials/AmbientOcc/images/ny_diff.bmp");
+    aoccm->setImage(osg::TextureCubeMap::POSITIVE_Y, occbi);
+        occbi = osgDB::readImageFile("/home/calvr/tutorials/AmbientOcc/images/py_diff.bmp");
+    aoccm->setImage(osg::TextureCubeMap::NEGATIVE_Y, occbi);
+        occbi = osgDB::readImageFile("/home/calvr/tutorials/AmbientOcc/images/pz_diff.bmp");
+    aoccm->setImage(osg::TextureCubeMap::POSITIVE_Z, occbi);
+        occbi = osgDB::readImageFile("/home/calvr/tutorials/AmbientOcc/images/nz_diff.bmp");
+    aoccm->setImage(osg::TextureCubeMap::NEGATIVE_Z, occbi);
+
+        hebeState->addUniform( new osg::Uniform("DiffuseEnvironment", 1) );
+        hebeState->setTextureAttribute(1, aoccm);
+
+
+        stProgram = new osg::Program;
+    stProgram->setName( "statue" );
+   // stVertObj = new osg::Shader( osg::Shader::VERTEX, osgDB::findDataFile("/home/calvr/tutorials/AmbientOcc/shaders/st.vert"));
+   // stFragObj = new osg::Shader( osg::Shader::FRAGMENT, osgDB::findDataFile("/home/calvr/tutorials/AmbientOcc/shaders/st.frag"));
+string shaderVertexPath = "/home/calvr/tutorials/AmbientOcc/shaders/st.vert";
+string shaderFragmentPath = "/home/calvr/tutorials/AmbientOcc/shaders/st.frag";
+
+    stProgram->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile(shaderVertexPath)) );
+    stProgram->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile(shaderFragmentPath)) );
+    hebeState->setAttributeAndModes(stProgram, osg::StateAttribute::ON);
+/*
+            StateSet* ss = _hudRoot[index]->getOrCreateStateSet();
+            bool useStd;
+            useStd = false;
+            if(useStd)
+            {
+            ss->setMode(GL_LIGHTING, StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+            Material* mat = new Material();
+            mat->setColorMode(Material::AMBIENT_AND_DIFFUSE);
+            Vec4 color_dif(1, 1, 1, 1);
+            mat->setDiffuse(Material::FRONT_AND_BACK, color_dif);
+            ss->setAttribute(mat);
+            ss->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+            }
+            else
+            {
+            ss->setAttribute(modelProgramObject, osg::StateAttribute::ON);
+
+        ss->addUniform(new osg::Uniform("LightPosition",osg::Vec3(0,0,200)));
+        ss->addUniform(new osg::Uniform("SurfaceColor",osg::Vec3(0.75,0.75,0.75)));
+        ss->addUniform(new osg::Uniform("WarmColor",osg::Vec3(0.6,0,0)));
+        ss->addUniform(new osg::Uniform("CoolColor",osg::Vec3(0,0,0.6)));
+        ss->addUniform(new osg::Uniform("DiffuseWarm",0.45f));
+        ss->addUniform(new osg::Uniform("DiffuseCool", 0.45f));
+
+            }
+*/
             cerr << "File read." << endl;
         }
     }
@@ -3954,10 +3596,31 @@ void ArtifactVis2::readLocusFile(QueryGroup* query)
 }
 void ArtifactVis2::setupSiteMenu()
 {
+
+    _modelDropDown = new MenuButton("3D Models");
+    _modelDropDown->setCallback(this);
+    modelDropped = false; 
+   _infoPanel->addMenuItem(_modelDropDown);
+
+    _pcDropDown = new MenuButton("Point Clouds");
+    _pcDropDown->setCallback(this);
+    pcDropped = false; 
+   _infoPanel->addMenuItem(_pcDropDown);
+
+   // _hudDropDown = new MenuButton("HUD Models");
+   // _hudDropDown->setCallback(this);
+   // hudDropped = false; 
+  // _infoPanel->addMenuItem(_hudDropDown);
+
+/*
     _modelDisplayMenu = new SubMenu("Models");
     _displayMenu->addItem(_modelDisplayMenu);
     _pcDisplayMenu = new SubMenu("Point Clouds");
     _displayMenu->addItem(_pcDisplayMenu);
+    _hudDisplayMenu = new SubMenu("HUD");
+    _displayMenu->addItem(_hudDisplayMenu);
+*/
+return;
     cout << "Generating Model menu..." << endl;
     string file = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("models.kml");   //Replaced
     FILE* fp = fopen(file.c_str(), "r");
@@ -3991,8 +3654,19 @@ void ArtifactVis2::setupSiteMenu()
         mxml_node_t* child = mxmlFindElement(node, tree, "name", NULL, NULL, MXML_DESCEND);
         string child_text = child->child->value.text.string;
         bool isPC = child_text.find("PointCloud") != string::npos;
+        bool isSite = child_text.find("Model") != string::npos;
+        bool isHud = child_text.find("HUD") != string::npos;
+        if(isSite || isHud) continue;
         child = mxmlFindElement(node, tree, "href", NULL, NULL, MXML_DESCEND);
-        MenuCheckbox* site = new MenuCheckbox(child->child->value.text.string, false);
+        MenuCheckbox* site;
+	if(isHud)
+	{
+        site = new MenuCheckbox(child->child->value.text.string, true);
+	}
+	else
+	{
+        site = new MenuCheckbox(child->child->value.text.string, false);
+	}
         site->setCallback(this);
         MenuButton* reload = new MenuButton("-Reload");
         reload->setCallback(this);
@@ -4039,8 +3713,8 @@ void ArtifactVis2::setupSiteMenu()
         {
             _pcRoot.push_back(new MatrixTransform());
             Vec3d pos = Vec3d(0, 0, 0) * transMat;
-            _pcDisplayMenu->addItem(site);
-            _pcDisplayMenu->addItem(reload);
+           // _infoPanel->addMenuItem(site);
+           // _infoPanel->addMenuItem(reload);
             _showPCCB.push_back(site);
             _reloadPC.push_back(reload);
             _pcPos.push_back(pos);
@@ -4048,7 +3722,7 @@ void ArtifactVis2::setupSiteMenu()
             _pcRot.push_back(Vec3d(rot[0], rot[1], rot[2]));
             _pcFactor.push_back(factor[0]);
         }
-        else
+        else if(isSite)
         {
             _siteRoot.push_back(new MatrixTransform());
             Vec3d pos;
@@ -4065,22 +3739,40 @@ void ArtifactVis2::setupSiteMenu()
             }
 
             //cout << pos[0] << ", " << pos[1] << ", " << pos[2] << endl;
-            _modelDisplayMenu->addItem(site);
-            _modelDisplayMenu->addItem(reload);
-            _showModelCB.push_back(site);
+           // _infoPanel->addMenuItem(site);
+           // _infoPanel->addMenuItem(reload);
+           // _showModelCB.push_back(site);
             _reloadModel.push_back(reload);
             _sitePos.push_back(pos);
             _siteScale.push_back(Vec3d(scale[0], scale[1], scale[2]));
             _siteRot.push_back(Vec3d(rot[0], rot[1], rot[2]));
         }
+        else if(isHud)
+        {
+            _hudRoot.push_back(new MatrixTransform());
+            Vec3d pos;
+
+                pos = position;
+           // _hudDisplayMenu->addItem(site);
+           // _hudDisplayMenu->addItem(reload);
+            _showHudCB.push_back(site);
+            _reloadHud.push_back(reload);
+            _hudPos.push_back(pos);
+            _hudScale.push_back(Vec3d(scale[0], scale[1], scale[2]));
+            _hudRot.push_back(Vec3d(rot[0], rot[1], rot[2]));
+           // int curIndex = _hudRoot.size() - 1;
+        }
     }
 
-    int countMP = _pcRoot.size() + _siteRoot.size();
+    int countMP = _pcRoot.size() + _siteRoot.size() + _hudRoot.size();
     cout << "Total Models and PC loaded: " << countMP << "\n";
     _coordsPC.resize(countMP);
     _colorsPC.resize(countMP);
     _avgOffset.resize(countMP);
     _modelSFileNode.resize(countMP);
+    _hudFileNode.resize(countMP);
+    //readHudFile(0);
+    //SceneManager::instance()->getScene()->addChild(_hudRoot[0]);
     cout << "done." << endl;
 }
 void ArtifactVis2::reloadSite(int index)
@@ -4116,12 +3808,15 @@ void ArtifactVis2::reloadSite(int index)
     mxml_node_t* node = mxmlFindElement(tree, tree, "Placemark", NULL, NULL, MXML_DESCEND);
     int incPC = 0;
     int incModel = 0;
+    int incHud = 0;
 
     for (; node != NULL; node = mxmlFindElement(node, tree, "Placemark", NULL, NULL, MXML_DESCEND))
     {
         mxml_node_t* child = mxmlFindElement(node, tree, "name", NULL, NULL, MXML_DESCEND);
         string child_text = child->child->value.text.string;
         bool isPC = child_text.find("PointCloud") != string::npos;
+        bool isSite = child_text.find("Model") != string::npos;
+        bool isHud = child_text.find("HUD") != string::npos;
         child = mxmlFindElement(node, tree, "href", NULL, NULL, MXML_DESCEND);
         //MenuCheckbox * site = new MenuCheckbox(child->child->value.text.string,false);
         //site->setCallback(this);
@@ -4184,7 +3879,7 @@ void ArtifactVis2::reloadSite(int index)
 
             incPC++;
         }
-        else
+        else if (isSite)
         {
             //_siteRoot.push_back(new MatrixTransform());
             Vec3d pos;
@@ -4216,14 +3911,23 @@ void ArtifactVis2::reloadSite(int index)
 
             incModel++;
         }
+	else if(isHud)
+	{
+            Vec3d pos;
+
+                pos = position;
+
+            if (index == incHud)
+            {
+                _hudPos[incModel] = pos;
+                _hudScale[incModel] = Vec3d(scale[0], scale[1], scale[2]);
+                _hudRot[incModel] = Vec3d(rot[0], rot[1], rot[2]);
+            }
+
+            incHud++;
+	}
     }
 
-    //int countMP = _pcRoot.size() + _siteRoot.size();
-    //cout << "Total Models and PC loaded: " << countMP << "\n";
-    //_coordsPC.resize(countMP);
-    //_colorsPC.resize(countMP);
-    // _avgOffset.resize(countMP);
-    //_modelSFileNode.resize(countMP);
     cout << "done." << endl;
 }
 void ArtifactVis2::setupQuerySelectMenu()
@@ -4282,7 +3986,7 @@ void ArtifactVis2::setupQuerySelectMenu()
     }
 
     mxml_node_t* table = mxmlFindElement(tree, tree, "kmlfiles", NULL, NULL, MXML_DESCEND);
-
+int n = 0;
     for (mxml_node_t* child = table-> child; child != NULL; child = child->next)
     {
         std::string kmlName = child->value.text.string;
@@ -4333,7 +4037,7 @@ void ArtifactVis2::setupQuerySelectMenu()
 	}
         query->active = isActive;
         _query.push_back(query);
-        MenuCheckbox* queryOption = new MenuCheckbox("Use this Query", isActive);
+        MenuCheckbox* queryOption = new MenuCheckbox(kmlName, isActive);
         queryOption->setCallback(this);
         SubMenu* showInfo = new SubMenu("Show info");
         stringstream ss;
@@ -4349,22 +4053,37 @@ void ArtifactVis2::setupQuerySelectMenu()
         MenuCheckbox* toglabel = new MenuCheckbox("Labels OnOff", true);
         toglabel->setCallback(this);
         _queryOptionMenu.push_back(queryOptionMenu);
+        if(sf)
+        {
         _queryOption.push_back(queryOption);
+        _querySfIndex.push_back(n);
         _showQueryInfo.push_back(showInfo);
+        }
+        else
+        {
+        _queryOptionLoci.push_back(queryOption);
+        _showQueryInfoLoci.push_back(showInfo);
+        _queryLociIndex.push_back(n);
+
+        }
         _queryInfo.push_back(info);
         _queryDynamicUpdate.push_back(dynamic);
         _eraseQuery.push_back(erase);
         _centerQuery.push_back(center);
         _toggleLabel.push_back(toglabel);
-        queryOptionMenu->addItem(queryOption);
-        queryOptionMenu->addItem(showInfo);
-        queryOptionMenu->addItem(dynamic);
+       // queryOptionMenu->addItem(queryOption);
+       // queryOptionMenu->addItem(showInfo);
+        //_infoPanel->addMenuItem(queryOption);
+       // _infoPanel->addMenuItem(showInfo);
+       // queryOptionMenu->addItem(dynamic);
 
         if (kmlName != "query" && kmlName != "querp")
-            queryOptionMenu->addItem(erase);
+        {
+           // queryOptionMenu->addItem(erase);
+        }
 
-        queryOptionMenu->addItem(center);
-        queryOptionMenu->addItem(toglabel);  //new
+       // queryOptionMenu->addItem(center);
+       // queryOptionMenu->addItem(toglabel);  //new
         _root->addChild(query->sphereRoot);
 
         if (!isActive) query->sphereRoot->setNodeMask(0);
@@ -4374,6 +4093,7 @@ void ArtifactVis2::setupQuerySelectMenu()
             _artifactDisplayMenu->addItem(queryOptionMenu);
         else
             _locusDisplayMenu->addItem(queryOptionMenu);
+    n++;
     }
 
     cout << "Menu loaded." << endl;
@@ -4400,7 +4120,8 @@ void ArtifactVis2::setupTablesMenu()
         return;
     }
 
-    _tablesMenu = new SubMenu("Query Database");
+    _qsPanel = new TabbedDialogPanel(100, 30, 4, "QuerySystem", "Plugin.ArtifactVis2.InfoPanel");
+    _qsPanel->setVisible(false);
     mxml_node_t* table = mxmlFindElement(tree, tree, "tables", NULL, NULL, MXML_DESCEND);
 
     for (mxml_node_t* child = table-> child; child != NULL; child = child->next)
@@ -4410,7 +4131,8 @@ void ArtifactVis2::setupTablesMenu()
         table->name = tableName;
         SubMenu* tableMenu = new SubMenu(tableName);
         table->queryMenu = tableMenu;
-        _tablesMenu->addItem(tableMenu);
+        //_tablesMenu->addItem(tableMenu);
+        _qsPanel->addMenuItem(tableMenu);
         _tables.push_back(table);
     }
 
@@ -4554,7 +4276,8 @@ void ArtifactVis2::setupQueryMenu(Table* table)
     table->saveQuery = new MenuButton("Save Current Query");
     table->saveQuery->setCallback(this);
     table->queryMenu->addItem(table->saveQuery);
-    _tablesMenu->addItem(table->queryMenu);
+   // _tablesMenu->addItem(table->queryMenu);
+  // _qsPanel->addMenuItem(table->queryMenu);
 }
 void ArtifactVis2::setupFlyToMenu()
 {
@@ -4578,8 +4301,10 @@ void ArtifactVis2::setupFlyToMenu()
         return;
     }
 
-    _flyMenu = new SubMenu("Fly To");
-    _avMenu->addItem(_flyMenu);
+    _bookmarkPanel = new TabbedDialogPanel(100, 30, 4, "Bookmarks", "Plugin.ArtifactVis2.InfoPanel");
+    _bookmarkPanel->setVisible(false);
+  //  _flyMenu = new SubMenu("Fly To");
+  //  _avMenu->addItem(_flyMenu);
     mxml_node_t* fly_node = mxmlFindElement(tree, tree, "flyto", NULL, NULL, MXML_DESCEND);
     mxml_node_t* fly_child;
     _flyplace = new FlyPlace;
@@ -4591,7 +4316,7 @@ void ArtifactVis2::setupFlyToMenu()
         //cerr << "Fly: " << flyname << "\n";
         MenuButton* gotoP = new MenuButton(flyname);  //new
         gotoP->setCallback(this);
-        _flyMenu->addItem(gotoP);
+        _bookmarkPanel->addMenuItem(gotoP);
         _goto.push_back(gotoP);
         double scale;
         //double x;
@@ -4791,101 +4516,6 @@ void ArtifactVis2::rotateModel(double rx, double ry, double rz)
 }
 
 
-void ArtifactVis2::kinectInit()
-{
-    // moving from points to spheres in kinect point cloud
-    nvidia = ConfigManager::getBool("Plugin.ArtifactVis2.Nvidia");
-    initialPointScale = ConfigManager::getFloat("Plugin.Points.PointScale", 0.001f);
-
-    pgm1 = new osg::Program;
-    pgm1->setName( "Sphere" );
-    std::string shaderPath = ConfigManager::getEntry("Plugin.Points.ShaderPath");
-    pgm1->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile(shaderPath + "/Sphere.vert")));
-    pgm1->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile(shaderPath + "/Sphere.frag")));
-    pgm1->addShader(osg::Shader::readShaderFile(osg::Shader::GEOMETRY, osgDB::findDataFile(shaderPath + "/Sphere.geom")));
-    pgm1->setParameter( GL_GEOMETRY_VERTICES_OUT_EXT, 4 );
-    pgm1->setParameter( GL_GEOMETRY_INPUT_TYPE_EXT, GL_POINTS );
-    pgm1->setParameter( GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP );
-
-    //Set Default navSphere Settings
-    	
-                navSphereOffsetY = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.navSphereOffsetY");
-                navSphereOffsetZ = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.navSphereOffsetZ");
-
-            	diffScaleY = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.diffScaleY");
-	    	diffScaleNegY = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.diffScaleNegY");
-                tranScaleY = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.tranScaleY");
-
-            	diffScaleX = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.diffScaleX");
-	    	diffScaleNegX = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.diffScaleNegX");
-		tranScaleX = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.tranScaleX");
-
-            	diffScaleZ = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.diffScaleZ");
-	    	diffScaleNegZ = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.diffScaleNegZ");
-		tranScaleZ = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.tranScaleZ");
-
-            	diffScaleRY = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.diffScaleRY");
-	    	diffScaleNegRY = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.diffScaleNegRY");
-		tranScaleRY = ConfigManager::getFloat("Plugin.ArtifactVis2.KinectNavSphere.tranScaleRY");
-
-    // set default point scale
-    //   initialPointScale = ConfigManager::getFloat("Plugin.Points.PointScale", 0.001f);
-    //
-
-    //_picFolder = ConfigManager::getEntry("value", "Plugin.ArtifactVis2.PicFolder", "");
-            skelOffsetX = ConfigManager::getFloat("x","Plugin.ArtifactVis2.KinectSkeleton",0.0f);
-            skelOffsetY = ConfigManager::getFloat("y","Plugin.ArtifactVis2.KinectSkeleton",0.0f);
-            skelOffsetZ = ConfigManager::getFloat("z","Plugin.ArtifactVis2.KinectSkeleton",0.0f);
-cerr << "SkelOffset " << skelOffsetY << "\n";
-    //    TrackingManager::instance()->setUpdateHeadTracking(false);
-    distanceMAX = ConfigManager::getFloat("Plugin.ArtifactVis2.Cylinder.Max");
-    distanceMIN = ConfigManager::getFloat("Plugin.ArtifactVis2.Cylinder.Min");
-    Skeleton::navSpheres = false;
-    bitmaptransform = new osg::MatrixTransform();
-    bcounter = 0;
-    colorfps = 100;
-    ThirdInit();
-    //Should now replace with Artifacts at site for selecting
-    //createSelObj(Vec3(m2mm * 0.15, m2mm * 1.0, m2mm * -0.15), string("DD"), _sphereRadius * m2mm * 2);
-    //createSelObj(Vec3(m2mm * -0.15, m2mm * 2.0, m2mm * 0.15), string("DE"), _sphereRadius * m2mm * 1.5);
-    //createSelObj(Vec3(0.0, m2mm * 3.0, m2mm * -0.4), string("ED"), _sphereRadius * m2mm * 3);
-    // move camera to the kinect-person
-    //moveCam(1000, 19415.8, -81104.4, -1452.27, 0, 0, 0.359046, 0.93332);
-    //FlyToDefault
-
-            	int flyIndex = ConfigManager::getInt("Plugin.ArtifactVis2.KinectDefaultOn.FlyToDefault");
-    flyTo(flyIndex);
-    //moveCam(1000, -39943.9, -73211.9, -1451.93, 0, 0, 0, 1);
-//<placemark><name>3</name><scale>1000</scale><x>-39943.9</x><y>-73211.9</y><z>-1451.93</z><rx>0</rx><ry>0</ry><rz>0</rz><rw>1</rw></placemark>
-    //moveCam(355, -95.7394 / 355, 217.398 / 355, 21.6934 / 355, 0, 0, 0, 1); //0.685045, 0.140189, 0.144502, 0.700128);
-    _avMenu->addItem(_kinectMenu);
-    //if (_modelFileNode2 == NULL)
-    //    _modelFileNode2 = osgDB::readNodeFile(ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("/photos/50035/frame.obj"));
-
-    //KinectMoveDefault
-    kMoveWithCam = ConfigManager::getBool("Plugin.ArtifactVis2.KinectDefaultOn.MoveWithCam");
-    if(kMoveWithCam)
-    {
-      _kMoveWithCam->setValue(true);
-       moveWithCamOn();
-    }
-    kShowArtifactPanel = ConfigManager::getBool("Plugin.ArtifactVis2.KinectDefaultOn.ShowArtifactPanel");
-    if(kShowArtifactPanel)
-    {
-      _kShowArtifactPanel->setValue(true);
-    }
-    kShowInfoPanel = ConfigManager::getBool("Plugin.ArtifactVis2.KinectDefaultOn.ShowInfoPanel");
-    if(kShowInfoPanel)
-    {
-      _kShowInfoPanel->setValue(true);
-      _infoPanel->setVisible(true);
-    }
-    kNavSpheres = ConfigManager::getBool("Plugin.ArtifactVis2.KinectDefaultOn.NavSpheres");
-    if(kNavSpheres)
-    {
-      _kNavSpheres->setValue(true);
-    }
-}
 
 void ArtifactVis2::moveCam(double bscale, double x, double y, double z, double o1, double o2, double o3, double o4)
 {
@@ -4905,37 +4535,6 @@ void ArtifactVis2::moveCam(double bscale, double x, double y, double z, double o
     PluginHelper::setObjectScale(bscale);
 }
 
-void ArtifactVis2::kinectOff()
-{
-    //    TrackingManager::instance()->setUpdateHeadTracking(true);
-    printf("turning kinect off\n");
-
-    for (int i = 0; i < selectableItems.size(); i++)
-        _root->removeChild(selectableItems[i].mt);
-
-    cloudOff();
-    colorOff();
-
-    if (skel_socket) {
-        delete skel_socket;
-        skel_socket = NULL;
-    }
-
-    if (depth_socket) {
-        delete depth_socket;
-        depth_socket = NULL;
-    }
-
-    _kShowColor->setValue(false);
-    _kShowPCloud->setValue(false);
-    _kNavSpheres->setValue(false);
-    this->menuCallback(_kShowColor);
-    this->menuCallback(_kShowPCloud);
-    this->menuCallback(_kNavSpheres);
-    _avMenu->removeItem(_kinectMenu);
-    // TODO foreach in map detach and remove from map (?)
-    //      skeleton[i].detach(_root);
-}
 
 void ArtifactVis2::createSelObj(osg::Vec3 pos, string color, float radius)
 {
@@ -4977,564 +4576,6 @@ void ArtifactVis2::createSelObj(osg::Vec3 pos, string color, float radius)
     selectableItems.push_back(SelectableItem(boxGeode, modelScaleTrans, translate, rotate, snum));
 }
 
-void ArtifactVis2::ThirdInit()
-{
-    skel_socket = new SubSocket<RemoteKinect::SkeletonFrame> (context, ConfigManager::getEntry("Plugin.ArtifactVis2.KinectServer.Skeleton"));
-}
-
-void ArtifactVis2::ThirdLoop()
-{
-    // offset from camera
-    if (Skeleton::moveWithCam)
-    {
-        Matrixd camMat = PluginHelper::getWorldToObjectTransform(); //This will get us actual real world coordinates that the camera is at (not sure about how it does rotation)
-        float cscale2 = PluginHelper::getObjectScale();
-        float cscale = 1; //Want to keep scale to actual Kinect which is is meters
-        Vec3 camTrans = camMat.getTrans();
-        Quat camQuad = camMat.getRotate();  //Rotation of cam will cause skeleton to be off center--need Fix!!
-
-        double xOffset = (camTrans.x() / cscale) + skelOffsetX;
-        double yOffset = (camTrans.y() / cscale) + skelOffsetY; //Added Offset of Skeleton so see a little ways from camera (i.e. 5 meters, works at this scale,only)
-        double zOffset = (camTrans.z() / cscale) + skelOffsetZ;
-        Skeleton::camPos = Vec3d(xOffset, yOffset, zOffset);
-        Skeleton::camRot = camQuad;
-    }
-
-    RemoteKinect::SkeletonFrame sf;
-
-    while (skel_socket->recv(sf))
-    {
-        for (std::map<int, Skeleton>::iterator it2 = mapIdSkel.begin(); it2 != mapIdSkel.end(); ++it2)
-        {
-            bool found = false;
-
-            for (int i = 0; i < sf.skeletons_size(); i++)
-            {
-                if (sf.skeletons(i).skeleton_id() == it2->first)
-                {
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found)
-            {
-                mapIdSkel[it2->first].detach(_root);
-            }
-        }
-        kinectUsers = sf.skeletons_size();
-        for (int i = 0; i < sf.skeletons_size(); i++)
-        {
-            if (mapIdSkel.count(sf.skeletons(i).skeleton_id()) == 0)
-            {
-                mapIdSkel[sf.skeletons(i).skeleton_id()] = Skeleton();
-                mapIdSkel[sf.skeletons(i).skeleton_id()].attach(_root);
-            }
-
-            if (mapIdSkel[sf.skeletons(i).skeleton_id()].attached == false) mapIdSkel[sf.skeletons(i).skeleton_id()].attach(_root);
-
-            for (int j = 0; j < sf.skeletons(i).joints_size(); j++)
-            {
-                double ori[4] = {sf.skeletons(i).joints(j).qx(), sf.skeletons(i).joints(j).qz(), sf.skeletons(i).joints(j).qy(), sf.skeletons(i).joints(j).qw() };
-                mapIdSkel[sf.skeletons(i).skeleton_id()].update(sf.skeletons(i).joints(j).type(), Vec3d(sf.skeletons(i).joints(j).x() / 1000, sf.skeletons(i).joints(j).z() / -1000, sf.skeletons(i).joints(j).y() / 1000), ori);
-
-                // needed for finger tracking
-                if (kUseGestures)
-                {
-                    if (sf.skeletons(i).joints(j).type() == 9)
-                    {
-                        mapIdSkel[sf.skeletons(i).skeleton_id()].joints[9].image_x = sf.skeletons(i).joints(j).image_x();
-                        mapIdSkel[sf.skeletons(i).skeleton_id()].joints[9].image_y = sf.skeletons(i).joints(j).image_y();
-                    }
-
-                    if (sf.skeletons(i).joints(j).type() == 15)
-                    {
-                        mapIdSkel[sf.skeletons(i).skeleton_id()].joints[15].image_x = sf.skeletons(i).joints(j).image_x();
-                        mapIdSkel[sf.skeletons(i).skeleton_id()].joints[15].image_y = sf.skeletons(i).joints(j).image_y();
-                    }
-
-                    if (sf.skeletons(i).joints(j).type() == 7)
-                    {
-                        mapIdSkel[sf.skeletons(i).skeleton_id()].joints[7].image_x = sf.skeletons(i).joints(j).image_x();
-                        mapIdSkel[sf.skeletons(i).skeleton_id()].joints[7].image_y = sf.skeletons(i).joints(j).image_y();
-                    }
-                }
-            }
-        }
-
-        ///////////////// experimental hand gesture recognition (now for first two hands)
-
-        if (kUseGestures)
-        {
-            /*
-                    RemoteKinect::DepthMap dm;
-
-                    if (depth_socket->recv(dm))
-                    {
-                        for (int y = 0; y < 480; y++)
-                        {
-                            for (int x = 0; x < 640; x++)
-                            {
-                                float val = dm.depths(y * 640 + x);
-                                depth_pixels[640 * (479 - y) + x] = val;
-                            }
-                        }
-                    }
-
-                    int YRES = 480;
-                    int XRES = 640;
-                    int ROIOFFSET = 70;
-                    cv::Mat depthRaw(YRES, XRES, CV_16UC1);
-                    cv::Mat depthShow(YRES, XRES, CV_8UC1);
-                    uint16_t depth_c[640 * 480];
-
-                    for (int l = 0; l < 640 * 480; l++)
-                        depth_c[l] = depth_pixels[l];
-
-                    memcpy(depthRaw.data, depth_c, XRES * YRES * 2);
-                    depthRaw.convertTo(depthShow, CV_8U, DEPTH_SCALE_FACTOR);
-
-                    // for every skeleton
-
-                    for (int i = 0; i < sf.skeletons_size(); i++)
-                    {
-                        //-----------------------------------------------------------------------------
-                        cv::Rect roi;
-                        // Distances in 2D
-                        // We want 70 px around center of the hand when ~1.5 m away
-                        // Distance from elbow to wrist is 330 mm, hand is 170 mm, we want 130 mm around the center
-                        // 13/33 = 0.4
-                        osg::Vec3 realworldHandToElbow(mapIdSkel[sf.skeletons(i).skeleton_id()].joints[9].position.x() - mapIdSkel[sf.skeletons(i).skeleton_id()].joints[7].position.x(),
-                                                       mapIdSkel[sf.skeletons(i).skeleton_id()].joints[9].position.y() - mapIdSkel[sf.skeletons(i).skeleton_id()].joints[7].position.y(),
-                                                       0);
-                        osg::Vec3 projectiveHandToElbow(mapIdSkel[sf.skeletons(i).skeleton_id()].joints[9].image_x - mapIdSkel[sf.skeletons(i).skeleton_id()].joints[7].image_x,
-                                                        mapIdSkel[sf.skeletons(i).skeleton_id()].joints[9].image_y - mapIdSkel[sf.skeletons(i).skeleton_id()].joints[7].image_y,
-                                                        0);
-                        // x=330/realworld // because of lack of Z coordinate
-                        // projective*330/realworld*0.4
-                        //    printf("%g \n",projectiveHandToElbow.length()*0.5*330/realworldHandToElbow.length());
-                        ROIOFFSET = projectiveHandToElbow.length() * 0.5 * 330 / realworldHandToElbow.length();
-
-                        if (ROIOFFSET < 10 || ROIOFFSET > 80) ROIOFFSET = 70;
-
-                        roi.width = ROIOFFSET * 2;
-                        roi.height = ROIOFFSET * 2;
-                        int handDepth = mapIdSkel[sf.skeletons(i).skeleton_id()].joints[9].position.z() * (DEPTH_SCALE_FACTOR);
-                        double handx = mapIdSkel[sf.skeletons(i).skeleton_id()].joints[9].image_x;
-                        double handy = mapIdSkel[sf.skeletons(i).skeleton_id()].joints[9].image_y;
-
-                        if (!handApproachingDisplayPerimeter(handx, handy, ROIOFFSET))
-                        {
-                            roi.x = handx - ROIOFFSET;
-                            roi.y = handy - ROIOFFSET;
-                        }
-                        else handDepth = -1;
-
-                        if (handDepth != -1)
-                        {
-                            cv::Mat handCpy(depthShow, roi);
-                            mapIdSkel[sf.skeletons(i).skeleton_id()].checkHandOpen(9, handCpy.clone(), handDepth, ROIOFFSET);
-                        }
-
-                        //-----------------------------------------------------------------------------
-                        handDepth = mapIdSkel[sf.skeletons(i).skeleton_id()].joints[15].position.z() * (DEPTH_SCALE_FACTOR);
-                        handx = mapIdSkel[sf.skeletons(i).skeleton_id()].joints[15].image_x;
-                        handy = mapIdSkel[sf.skeletons(i).skeleton_id()].joints[15].image_y;
-
-                        if (!handApproachingDisplayPerimeter(handx, handy, ROIOFFSET))
-                        {
-                            roi.x = handx - ROIOFFSET;
-                            roi.y = handy - ROIOFFSET;
-                        }
-                        else handDepth = -1;
-
-                        if (handDepth != -1)
-                        {   cv::Mat handCpy2(depthShow, roi);
-                            mapIdSkel[sf.skeletons(i).skeleton_id()].checkHandOpen(15, handCpy2.clone(), handDepth, ROIOFFSET);
-                        }
-
-                        //-----------------------------------------------------------------------------
-                    }
-            */
-        }
-
-        if (kShowPCloud)
-        {
-            RemoteKinect::PointCloud packet;
-            float r = 0, g = 0, b = 0, a = 0;
-            kinectVertices = new osg::Vec3Array;
-            kinectVertices->empty();
-            osg::Vec3Array* normals = new osg::Vec3Array;
-            kinectColours = new osg::Vec4dArray;
-            kinectColours->empty();
-
-
-            if (cloud_socket->recv(packet))
-            {
-                if (nvidia)
-                {
-                    for (int i = 0; i < packet.points_size(); i++)
-                    {
-                        double xCam = (packet.points(i).x() / 1000);
-                        double yCam = (packet.points(i).z() / -1000);
-                        double zCam = (packet.points(i).y() / 1000);
-
-                        osg::Vec3 ppos(xCam, yCam, zCam);
-
-                        ppos += Skeleton::camPos;
-
-                        kinectVertices->push_back(ppos);
-
-                        if (useKColor)
-                        {
-                            //r = (packet.points(i).r() / 255.);
-                            //g = (packet.points(i).g() / 255.);
-                            //b = (packet.points(i).b() / 255.);
-                            r = (packet.points(i).r());
-                            g = (packet.points(i).g());
-                            b = (packet.points(i).b());
-                            a = 1;
-		//	    printf ("Color: %g\n", r);
-                        }
-                        else
-                        {
-                            float mindist = 1000;
-                            float maxdist = 5000;
-                            float h = depth_to_hue(mindist, packet.points(i).z(), maxdist);
-                            float rr, gg, bb;
-                            HSVtoRGB(&rr, &gg, &bb, h, 1, 1);
-                            r = (rr);
-                            g = (gg);
-                            b = (bb);
-                            a = 1;
-                        }
-                        kinectColours->push_back(osg::Vec4d(r, g, b, a));
-                    }
-                    osg::Geode* kgeode = new osg::Geode();
-                    kgeode->setCullingActive(false);
-                    osg::Geometry* nodeGeom = new osg::Geometry();
-                    osg::StateSet *state = nodeGeom->getOrCreateStateSet();
-                    nodeGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0, kinectVertices->size()));
-                    osg::VertexBufferObject* vboP = nodeGeom->getOrCreateVertexBufferObject();
-                    vboP->setUsage (GL_STREAM_DRAW);
-
-                    nodeGeom->setUseDisplayList (false);
-                    nodeGeom->setUseVertexBufferObjects(true);
-                    nodeGeom->setVertexArray(kinectVertices);
-                    nodeGeom->setColorArray(kinectColours);
-                    nodeGeom->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
-
-                    kgeode->addDrawable(nodeGeom);
-                    kgeode->dirtyBound();
-
-                    if (kinectgrp!=NULL) _root->removeChild(kinectgrp);
-                    kinectgrp = new osg::Group();
-
-// attach shader
-                    state = kinectgrp->getOrCreateStateSet();
-                    state->setAttribute(pgm1);
-                    state->addUniform(new osg::Uniform("pointScale", initialPointScale));
-                    state->addUniform(new osg::Uniform("globalAlpha",1.0f));
-
-                    kinectgrp->addChild(kgeode);
-
-//	printf("KINECT_PCLOUD num children: %d \n",grp->getNumChildren());
-
-                    float pscale = 1.0;
-
-                    osg::Uniform*  _scaleUni = new osg::Uniform("pointScale",1.0f * pscale);
-                    kinectgrp->getOrCreateStateSet()->addUniform(_scaleUni);
-
-
-                    _root->addChild(kinectgrp);
-
-                }
-
-
-                else
-                {   int targetNumVertices = 10000;
-                    osg::Geometry* geometry = new osg::Geometry;
-                    kinectVertices = new osg::Vec3Array;
-                    kinectVertices->empty();
-                    osg::Vec3Array* normals = new osg::Vec3Array;
-                    kinectColours = new osg::Vec4dArray;
-                    kinectColours->empty();
-                    osg::Vec3 pos;
-                    osg::Vec3 normal(0.0, 0.0, 1.0);
-                    float r = 0, g = 0, b = 0, a = 1;
-                    Matrixd camMat = PluginHelper::getWorldToObjectTransform();
-                    float cscale = 1; //Want to keep scale to actual Kinect
-                    Vec3 camTrans = camMat.getTrans();
-                    Quat camQuad = camMat.getRotate();  //Rotation of cam will cause skeleton to be off center--need Fix!!
-
-                    //                printf("cloud %d\n", packet.tick());
-                    //                _root->removeChild(pointGeode);
-                    //      pointGeode = new Geode();
-                    //std::stringstream tmpStrmBuffer;
-                    //osg::ref_ptr<osg::Node> node = osgDB::readNodeFile(packet.points);
-                    //osg::Geode* geodetest = node->asGeode();
-//	if( geodetest )
-//	{
-//	cerr << "Nodable\n";
-//	}
-
-                    osg::Vec3Array* arrVertices = new osg::Vec3Array;
-                    //arrVertices->assign(packet.points);i
-                    //printf("Size: %i\n", packet.points_size());
-                    for (int i = 0; i < packet.points_size(); i++)
-                    {
-                        double xCam = (packet.points(i).x() / 1000);
-                        double yCam = (packet.points(i).z() / -1000);
-                        double zCam = (packet.points(i).y() / 1000);
-			//printf ("%g\n", xCam);
-                        // XXX interesting why point cloud looks like if it is in the same place as the skeleton,
-                        //     but skeleton is offset by X meters from camera while point cloud is not
-
-                        osg::Vec3 ppos(xCam, yCam, zCam);
-                        ppos += Skeleton::camPos;
-                        kinectVertices->push_back(ppos);
-//useKColor = true;
-                        if (useKColor)
-                        {
-                            r = (packet.points(i).r() / 255.);
-                            g = (packet.points(i).g() / 255.);
-                            b = (packet.points(i).b() / 255.);
-                        //    r = packet.points(i).r();
-                          //  g = packet.points(i).g();
-                           // b = packet.points(i).b();
-                            a = 1;
-			    //printf ("Color: %g\n", packet.points(i).r());
-                        }
-                        else
-                        {
-                            float mindist = 700;
-                            float maxdist = 4000;
-                            float h = depth_to_hue(mindist, packet.points(i).z(), maxdist);
-                            float rr, gg, bb;
-                            HSVtoRGB(&rr, &gg, &bb, h, 1, 1);
-                            r = (rr);
-                            g = (gg);
-                            b = (bb);
-                            a = 1;
-                        }
-
-                        kinectColours->push_back(osg::Vec4d(r, g, b, a));
-                    }
-
-//
-                    geometry->setUseDisplayList(true);
-                    geometry->setUseVertexBufferObjects(true);
-                    // geometry->setVertexArray(kinectVertices);
-                    geometry->setVertexArray(kinectVertices);
-                    geometry->setNormalArray(normals);
-                    geometry->setNormalBinding(osg::Geometry::BIND_PER_VERTEX);
-                    geometry->setColorArray(kinectColours);
-                    geometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
-                    geometry->addPrimitiveSet(new osg::DrawArrays(GL_POINTS, 0, kinectVertices->size()));
-                    _root->removeChild(pointGeode);
-                    pointGeode = new Geode();
-                    StateSet* ss = pointGeode->getOrCreateStateSet();
-                    ss->setMode(GL_LIGHTING, StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
-                    pointGeode->addDrawable(geometry);
-                    _root->addChild(pointGeode);
-                    //printf("--b\n");
-                }
-            }
-        }
-    }
-/*
-    if (kShowColor)
-    {
-        RemoteKinect::ColorMap cm;
-
-        if (color_socket->recv(cm))
-        {
-            for (int y = 0; y < 480; y++)
-            {
-                for (int x = 0; x < 640; x++)
-                {
-                    uint32_t packed = cm.pixels(y * 640 + x);
-                    color_pixels[640 * (479 - y) + x] = packed;
-                }
-            }
-        }
-    }
-*/
-}
-
-
-
-// convert depth to hue angle in degrees
-double ArtifactVis2::depth_to_hue(double dmin, double depth, double dmax)
-{
-    double denom = dmax - dmin;
-    double numer = depth - dmin;
-
-    if (numer < 0)
-        numer = 0;
-    else if (numer > denom)
-        numer = denom;
-
-    double frac = numer / denom;
-    const double offset = 0;    // in degrees
-    return fmod(frac * 360 + offset, 360);
-}
-
-// http://www.cs.rit.edu/~ncs/color/t_convert.html
-void ArtifactVis2::HSVtoRGB(float* r, float* g, float* b, float h, float s, float v)
-{
-    int i;
-    float f, p, q, t;
-
-    if (s == 0) {
-        // achromatic (grey)
-        *r = *g = *b = v;
-        return;
-    }
-
-    h /= 60;            // sector 0 to 5
-    i = floor(h);
-    f = h - i;          // factorial part of h
-    p = v * (1 - s);
-    q = v * (1 - s * f);
-    t = v * (1 - s * (1 - f));
-
-    switch (i) {
-    case 0:
-        *r = v;
-        *g = t;
-        *b = p;
-        break;
-
-    case 1:
-        *r = q;
-        *g = v;
-        *b = p;
-        break;
-
-    case 2:
-        *r = p;
-        *g = v;
-        *b = t;
-        break;
-
-    case 3:
-        *r = p;
-        *g = q;
-        *b = v;
-        break;
-
-    case 4:
-        *r = t;
-        *g = p;
-        *b = v;
-        break;
-
-    default:        // case 5:
-        *r = v;
-        *g = p;
-        *b = q;
-        break;
-    }
-}
-
-
-
-bool ArtifactVis2::handApproachingDisplayPerimeter(float x, float y, int ROI)
-{   const int YRES = 480;
-    const int XRES = 640;
-    return (x > (XRES - ROI)) || (x < (ROI)) ||
-           (y > (YRES - ROI)) || (y < (ROI));
-}
-
-void ArtifactVis2::cloudOff()
-{
-    printf("cloud off\n");
-
-    if (cloud_socket) {
-        delete cloud_socket;
-        cloud_socket = NULL;
-    }
-
-    if (!nvidia) _root->removeChild(pointGeode);
-    else if (kinectgrp)
-    {
-//        kinectgrp->ref();
-        pgm1->ref();
-        _root->removeChild(kinectgrp);
-        kinectgrp=NULL;
-    }
-
-}
-
-void ArtifactVis2::cloudOn()
-{
-    printf("cloud on\n");
-    cloud_socket = new SubSocket<RemoteKinect::PointCloud> (context, ConfigManager::getEntry("Plugin.ArtifactVis2.KinectServer.PointCloud"));
-}
-
-void ArtifactVis2::colorOff()
-{
-    _root->removeChild(bitmaptransform);
-
-    if (color_socket) {
-        delete color_socket;
-        color_socket = NULL;
-    }
-}
-
-void ArtifactVis2::colorOn()
-{
-    color_socket = new SubSocket<RemoteKinect::ColorMap> (context, ConfigManager::getEntry("Plugin.ArtifactVis2.KinectServer.ColorMap"));
-    _root->addChild(bitmaptransform);
-}
-
-void ArtifactVis2::navOff()
-{
-    for (std::map<int, Skeleton>::iterator it = mapIdSkel.begin(); it != mapIdSkel.end(); ++it)
-    {
-        it->second.navSphere.translate->ref();
-        _root->removeChild(it->second.navSphere.translate);
-    }
-
-    Skeleton::navSpheres = false;
-}
-
-void ArtifactVis2::navOn()
-{
-    for (std::map<int, Skeleton>::iterator it = mapIdSkel.begin(); it != mapIdSkel.end(); ++it)
-    {
-        _root->addChild(it->second.navSphere.translate);
-    }
-
-    Skeleton::navSpheres = true;
-}
-
-void ArtifactVis2::gesturesOff()
-{
-    if (depth_socket) {
-        delete depth_socket;
-        depth_socket = NULL;
-    }
-}
-
-void ArtifactVis2::gesturesOn()
-{
-    depth_socket = new SubSocket<RemoteKinect::DepthMap> (context, ConfigManager::getEntry("Plugin.ArtifactVis2.KinectServer.DepthMap"));
-}
-
-void ArtifactVis2::moveWithCamOff()
-{
-    Skeleton::moveWithCam = false;
-    //moveCam(0.5, -254.941, 386.815, 360.947, 0.685045, 0.140189, 0.144502, 0.700128);
-    //moveCam(355, -95.7394 / 355, 217.398 / 355, 21.6934 / 355, 0, 0, 0, 1); //0.685045, 0.140189, 0.144502, 0.700128);
-}
-void ArtifactVis2::moveWithCamOn()
-{
-    //moveCam(218.641, -39943.9, -73211.9, -1451.93, 0, 0, 0, 0);
-    //moveCam(355, -95.7394 / 355, 217.398 / 355, 21.6934 / 355, 0, 0, 0, 1); //0.685045, 0.140189, 0.144502, 0.700128);
-    Skeleton::moveWithCam = true;
-}
 void ArtifactVis2::flyTo(int i)
 {
 
@@ -5559,3 +4600,4486 @@ void ArtifactVis2::flyTo(int i)
 	}
 }
 
+void ArtifactVis2::updateHudMovement(int i, TrackedButtonInteractionEvent * tie,float _moveDistance, osg::Vec3 _menuPoint)
+{
+    osg::Vec3 menuPoint = osg::Vec3(0,_moveDistance,0);
+    //std::cerr << "move dist: " << _moveDistance << std::endl;
+    menuPoint = menuPoint * tie->getTransform();
+
+    //TODO: add hand/head mapping
+    osg::Vec3 viewerPoint =
+            TrackingManager::instance()->getHeadMat(0).getTrans();
+
+    osg::Vec3 viewerDir = viewerPoint - menuPoint;
+    viewerDir.z() = 0.0;
+
+    osg::Matrix menuRot;
+    menuRot.makeRotate(osg::Vec3(0,-1,0),viewerDir);
+
+    _hudRoot[i]->setMatrix(
+            osg::Matrix::translate(-_menuPoint) * menuRot
+                    * osg::Matrix::translate(menuPoint));
+cerr << "Finished \n";
+}
+/*
+void ArtifactVis2::updateSceneObjectMovement(DSIntersector::DSIntersector* mDSIntersector, cvr::TrackedButtonInteractionEvent * tie)
+{
+                osg::Vec3 hit = mDSIntersector->getWorldHitPosition();
+                osg::Vec3 orig = _hudRoot[0]->getMatrix().getTrans();
+                rhit = hit - orig;
+                rhit.y() *= -1;
+                //rhit.z() -= 10;
+                osg::Vec3 normal = mDSIntersector->getWorldHitNormal();
+
+                osg::Node *hitCAVEGeode = mDSIntersector->getHitNode();
+              //  cerr << "Pointer:" << pointerPos.x()<< " " << pointerPos.y()<< " " << pointerPos.z();
+               osg::Vec3 geodeCenter = hitCAVEGeode->getBound().center();
+                cerr << "\nHit:" << hit.x()<< " " << hit.y()<< " " << hit.z() << "\n";
+                cerr << "\nRHit:" << rhit.x()<< " " << rhit.y()<< " " << rhit.z() << "\n";
+              //  cerr << "\nNormal:" << normal.x()<< " " << normal.y()<< " " << normal.z();
+                cerr << "\nGeodeCenter:" << geodeCenter.x()<< " " << geodeCenter.y()<< " " << geodeCenter.z();
+		if(hitCAVEGeode->asGeode())
+		{
+             //  osg::Transform* test  =  hitCAVEGeode->asTransform(); 
+		//	cerr << "Is Geode\n";
+		}
+                if(hitCAVEGeode == _hudRoot[0])
+		{
+		//	cerr << " Same";
+		}
+                osg::Vec3 oldPos = _hudRoot[0]->getMatrix().getTrans();
+//	cerr << oldPos.x() << " " << oldPos.y() << " "<< oldPos.z() << "\n";
+//printf("%g %g %g",oldPos.x(),oldPos.y(),oldPos.z());
+
+                    std::map<int,osg::Vec3> _currentPoint;
+		osg::Vec3 ray = _currentPoint[tie->getHand()]
+                            - tie->getTransform().getTrans();
+
+                    float _moveDistance;
+                    osg::Vec3 _menuPoint;
+                    _moveDistance = ray.length();
+		  // cerr << "Move: " <<_moveDistance << "\n";
+                    _menuPoint = _currentPoint[tie->getHand()]
+                            * osg::Matrix::inverse(_hudRoot[0]->getMatrix());
+                   
+		  //   updateHudMovement(0,tie,_moveDistance,_menuPoint);
+
+                if(!_hudActive)
+		{
+                 _hudActive = true;
+                  grabCurrentPos = hit;
+                  prevHandRot = TrackingManager::instance()->getHandMat(0).getRotate();
+		}
+                else
+		{
+                  osg::Matrix updateMatrix;
+                  osg::Vec3 _ray = grabCurrentPos - hit;
+                  osg::Vec3f _dist = _ray;
+                  if(_dist.x() != 0 || _dist.y() != 0 || _dist.z() != 0)
+		 {
+                //  cerr << "Move: " << _dist.x() << " " << _dist.y() << " " << _dist.z();
+		 }
+                 bool useMouse;
+                 useMouse = false;
+                 if(useMouse)
+		 {
+                   _dist.y() = 0;
+                 }
+                 // updateMatrix = _hudRoot[0]->getMatrix();
+	          updateMatrix.makeTranslate(_dist);
+                  osg::Matrix inverseMatrix = osg::Matrix::inverse(updateMatrix);
+
+                   if(tie->getButton() == 1)
+		   {
+                      cerr << "Button 2 Down\n";
+		   }
+                osg::Quat handRot = TrackingManager::instance()->getHandMat(0).getRotate();
+                osg::Quat distRot =  handRot - prevHandRot;
+                prevHandRot = handRot;
+  		//  cerr << "rx: " << handRot.x() << " ry : " << handRot.y() << " rz : " << handRot.z() << " rw : " << handRot.w()  << "\n"; 
+    		Matrix tmat;
+                //rhit = hit;
+    		osg::Vec3 center = hit;
+
+    		cerr << "x: " << center.x() << " y: " << center.y() << " z: " << center.z() << "\n"; 
+    		tmat.makeTranslate(Vec3(0,0,0));
+        	Matrix rot;
+        	//rot.makeRotate(rx, xa, ry, ya, rz, za);
+        	rot.makeRotate(distRot);
+        	Matrixd gotoMat = osg::Matrix::translate(-center)  * rot * osg::Matrix::translate(center);
+                osg::Matrix inverseRotMatrix = osg::Matrix::inverse(gotoMat);
+		
+
+                  _hudRoot[0]->setMatrix(_hudRoot[0]->getMatrix() * inverseMatrix );
+                  grabCurrentPos = hit;
+		  
+		  _grabActive = true;
+        	}
+	     
+
+}
+*/
+void ArtifactVis2::loadAnnotationGraph(int inc)
+{
+osg::Vec3 pos;
+ //   Vec4f color = Vec4f(0, (204/255), (204/255), 1);
+   // Vec4f color = Vec4f(1, 1, 1, 1);
+    Vec4f colorl = Vec4f(0, 0, 1, 0.4);
+    float r = 0;
+    float g = 107/255;
+    float b = 235/255;
+    Vec4f color = Vec4f(0, 0.42, 0.92, 1);
+
+//Create Quad Face
+float width = 300;
+float height = 500;
+pos = Vec3(-(width/2),0,-(height/2));
+
+//0 127 255 0.4
+    osg::Geometry * geo = new osg::Geometry();
+    osg::Vec3Array* verts = new osg::Vec3Array();
+  //  verts->push_back(pos);
+  //  verts->push_back(pos + osg::Vec3(width,0,0));
+  //  verts->push_back(pos + osg::Vec3(width,0,height));
+  //  verts->push_back(pos + osg::Vec3(0,0,height));
+   // pos -= Vec3(,0,0);
+    //pos -= Vec3(0,0,250);
+    verts->push_back(pos);
+    verts->push_back(pos + osg::Vec3(width,0,0));
+    verts->push_back(pos + osg::Vec3(width,0,height));
+    verts->push_back(pos + osg::Vec3(0,0,height));
+
+    geo->setVertexArray(verts);
+
+    osg::DrawElementsUInt * ele = new osg::DrawElementsUInt(
+            osg::PrimitiveSet::QUADS,0);
+
+    ele->push_back(0);
+    ele->push_back(1);
+    ele->push_back(2);
+    ele->push_back(3);
+    geo->addPrimitiveSet(ele);
+
+
+    Geode* fgeode = new Geode();
+    StateSet* state(fgeode->getOrCreateStateSet());
+    Material* mat(new Material);
+
+            mat->setColorMode(Material::DIFFUSE);
+            mat->setDiffuse(Material::FRONT_AND_BACK, color);
+            state->setAttribute(mat);
+            state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+            state->setMode(GL_BLEND, StateAttribute::ON);
+            state->setMode(GL_LIGHTING, StateAttribute::OFF);
+            osg::PolygonMode* polymode = new osg::PolygonMode;
+            polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::FILL);
+            state->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            fgeode->setStateSet(state);
+  
+            _annotations[inc]->geo = geo;
+            fgeode->addDrawable(_annotations[inc]->geo);
+
+//Line Geode
+
+    Geode* lgeode = new Geode();
+            StateSet* state2(lgeode->getOrCreateStateSet());
+            Material* mat2(new Material);
+            state2->setRenderingHint(StateSet::OPAQUE_BIN);
+            mat2->setColorMode(Material::DIFFUSE);
+            mat2->setDiffuse(Material::FRONT_AND_BACK, color);
+            state2->setAttribute(mat2);
+            state->setMode(GL_BLEND, StateAttribute::ON);
+            state2->setMode(GL_LIGHTING, StateAttribute::OFF);
+
+            osg::LineWidth* linewidth1 = new osg::LineWidth();
+            linewidth1->setWidth(2.0f); 
+            state2->setAttribute(linewidth1);
+
+            osg::PolygonMode* polymode2 = new osg::PolygonMode;
+            polymode2->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+            state2->setAttributeAndModes(polymode2, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            lgeode->setStateSet(state2);
+            lgeode->addDrawable(_annotations[inc]->geo);
+
+cerr << "Pass\n";
+
+//Text Geode
+   Geode* textGeode = new Geode();
+    float size = 25;
+   //std::string text = "Hello World this is just a test of the textbox wrap feature, which is Awesome"; 
+   std::string text = _annotations[inc]->desc; 
+
+ osgText::Text* textNode  = new osgText::Text();
+    textNode->setCharacterSize(size);
+    textNode->setAlignment(osgText::Text::LEFT_TOP);
+    Vec3 tPos = pos + osg::Vec3(5,-5,(height-5));
+   // Vec3 tPos = pos;
+    textNode->setPosition(tPos);
+    textNode->setColor(color);
+   // textNode->setBackdropColor(osg::Vec4(0,0,0,0));
+    textNode->setAxisAlignment(osgText::Text::XZ_PLANE);
+    textNode->setText(text);
+    textNode->setMaximumWidth(width);
+    textNode->setFont(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
+
+    textGeode->addDrawable(textNode);
+
+    _annotations[inc]->textNode = textNode;
+
+    string name = _annotations[inc]->name;
+
+
+
+
+
+
+
+	    SceneObject * so;
+	    so = new SceneObject(name, false, false, false, true, false);
+	   // so = new SceneObject(name, false, false, false, false, false);
+	    osg::Switch* switchNode = new osg::Switch();
+	    so->addChild(switchNode);
+	    PluginHelper::registerSceneObject(so,"Test");
+	    so->attachToScene();
+//Add geode to switchNode
+//	switchNode->addChild(fgeode);
+	switchNode->addChild(lgeode);
+	switchNode->addChild(textGeode);
+
+	    so->setNavigationOn(true);
+if(!_annotations[inc]->fromFile)
+{
+	    so->setMovable(true);
+}
+	    so->addMoveMenuItem();
+	    so->addNavigationMenuItem();
+
+	    SubMenu * sm = new SubMenu("Position");
+	    so->addMenuItem(sm);
+
+	    MenuButton * mb;
+	    mb = new MenuButton("Load");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+	    //_loadMap[so] = mb;
+
+	    SubMenu * savemenu = new SubMenu("Save");
+	    sm->addItem(savemenu);
+	    //_saveMenuMap[so] = savemenu;
+
+	    mb = new MenuButton("Save");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+            std::map<cvr::SceneObject*,cvr::MenuButton*> _saveMap;
+	  //  _saveMap[so] = mb;
+            _annotations[inc]->saveMap = mb;
+	    mb = new MenuButton("Reset");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+	    //_resetMap[so] = mb;
+
+	    mb = new MenuButton("Delete");
+	    mb->setCallback(this);
+	    so->addMenuItem(mb);
+	    //_deleteMap[so] = mb;
+            MenuCheckbox * mc;
+	    mc = new MenuCheckbox("Active",_annotations[inc]->active);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _annotations[inc]->activeMap = mc;
+
+if(_annotations[inc]->fromFile)
+{
+                so->setPosition(_annotations[inc]->pos);
+                so->setRotation(_annotations[inc]->rot);
+               // so->setScale(_annotations[inc]->scale);
+}
+else
+{
+
+                so->setPosition(_annotations[inc]->pos);
+
+}
+
+    _annotations[inc]->so = so;
+    _annotations[inc]->pos = _annotations[inc]->so->getPosition();
+    _annotations[inc]->rot = _annotations[inc]->so->getRotation();
+if(!_annotations[inc]->fromFile)
+{
+    _annotations[inc]->lStart = _annotations[inc]->so->getPosition();
+    _annotations[inc]->lEnd = _annotations[inc]->so->getPosition();
+}
+  //  _annotations[inc]->lEnd += Vec3(1,1,1);
+//Vec3 posl = _annotations[inc]->lStart;
+//                cerr << "x: " << posl.x() << " y: " << posl.y() << " z: " << posl.z() << std::endl;
+//posl = _annotations[inc]->pos;
+  //              cerr << "x: " << posl.x() << " y: " << posl.y() << " z: " << posl.z() << std::endl;
+
+   // _annotations[inc]->connector = new osg::Geometry();
+    osg:Geometry* connector = new osg::Geometry();
+    verts = new osg::Vec3Array();
+    verts->push_back(_annotations[inc]->lStart);
+    verts->push_back(_annotations[inc]->lEnd);
+
+  //  _annotations[inc]->connector->setVertexArray(verts);
+    connector->setVertexArray(verts);
+
+    ele = new osg::DrawElementsUInt(
+            osg::PrimitiveSet::LINES,0);
+
+    ele->push_back(0);
+    ele->push_back(1);
+  //  _annotations[inc]->connector->addPrimitiveSet(ele);
+   connector->addPrimitiveSet(ele);
+
+    osg::Vec4Array* colors = new osg::Vec4Array;
+    colors->push_back(color);
+
+    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
+    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
+            osg::Array::UIntArrayType,4,4>;
+    colorIndexArray->push_back(0);
+    colorIndexArray->push_back(0);
+   
+  //  _annotations[inc]->connector->setColorArray(colors);
+   connector->setColorArray(colors);
+//    _annotations[inc]->connector->setColorIndices(colorIndexArray);
+  // connector->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+   connector->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+
+    Geode* connectorGeode = new Geode();
+
+            StateSet* state3(connectorGeode->getOrCreateStateSet());
+           // Material* mat3(new Material);
+           // state3->setRenderingHint(StateSet::OPAQUE_BIN);
+           // mat2->setColorMode(Material::DIFFUSE);
+          //  mat2->setDiffuse(Material::FRONT_AND_BACK, colorl);
+           // state2->setAttribute(mat2);
+           // state->setMode(GL_BLEND, StateAttribute::ON);
+         //   state3->setMode(GL_LIGHTING, StateAttribute::OFF);
+          //  osg::PolygonMode* polymode2 = new osg::PolygonMode;
+
+            osg::LineWidth* linewidth = new osg::LineWidth();
+            linewidth->setWidth(2.0f); 
+          //  polymode2->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+            state3->setAttributeAndModes(linewidth, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            connectorGeode->setStateSet(state3);
+
+
+
+
+    _annotations[inc]->connector = connector;
+    connectorGeode->addDrawable(_annotations[inc]->connector);
+     _annotations[inc]->connectorGeode = connectorGeode;
+    
+    _root->addChild(_annotations[inc]->connectorGeode);
+
+
+
+
+
+
+}
+std::string ArtifactVis2::getCharacterAscii(int code)
+{
+
+string character = "";
+std::string ascii[] = {"a", "b", "c", "d", "e", "f", "g" , "h" , "i" , "j" , "k" , "l" , "m" , "n" , "o" , "p" , "q" , "r" , "s" , "t" , "u" , "v" , "w" , "x" , "y" , "z" };
+
+if(code > 96 && code < 123)
+{
+ //Is LowerCase letters
+ int n = 0;
+ for (int i = 97; i < 123; i++)
+ {
+   if(code == i)
+   {
+      character = ascii[n];
+      break;
+   }
+   n++;
+ }
+}
+else if(code > 64 && code < 91)
+{
+ //Is LowerCase letters
+ int n = 0;
+ for (int i = 65; i < 91; i++)
+ {
+   if(code == i)
+   {
+      ascii[n][0] = toupper(ascii[n][0]);
+      character = ascii[n];
+      
+      break;
+   }
+   n++;
+ }
+}
+else if(code > 39 && code < 65)
+{
+ std::string number[] = {"(",")","*","+",",","-",".","/","0","1","2","3","4","5","6","7","8","9",":",";","<","=",">","?","@"};
+ int n = 0;
+
+ for (int i = 40; i < 65; i++)
+ {
+   if(code == i)
+   {
+      character = number[n];
+      
+      break;
+   }
+   n++;
+ }
+
+}
+else if(code == 32)
+{
+ character = " ";
+}
+
+
+return character;
+}
+
+void ArtifactVis2::readAnnotationFile()
+{
+
+    cout << "Reading Annotation File..." << endl;
+string filename = ConfigManager::getEntry("Plugin.ArtifactVis2.Database").append("annotation.kml");
+    FILE* fp;
+    mxml_node_t* tree;
+    fp = fopen(filename.c_str(), "r");
+
+    if (fp == NULL)
+    {
+        std::cerr << "Unable to open file: " << filename << std::endl;
+        return;
+    }
+
+    tree = mxmlLoadFile(NULL, fp, MXML_TEXT_CALLBACK);
+    fclose(fp);
+
+    if (tree == NULL)
+    {
+        std::cerr << "Unable to parse XML file: "  << std::endl;
+        return;
+    }
+
+    mxml_node_t* node = mxmlFindElement(tree, tree, "Placemark", NULL, NULL, MXML_DESCEND);
+    int inc = 0;
+    for (; node != NULL; node = mxmlFindElement(node, tree, "Placemark", NULL, NULL, MXML_DESCEND))
+    {
+
+        deactivateAllAnno();
+       //Create Annotation Struc
+       Annotation* anno = new Annotation;
+
+        mxml_node_t* desc_node = mxmlFindElement(node, tree, "description", NULL, NULL, MXML_DESCEND);
+        mxml_node_t* desc_child;
+//        desc_child = desc_node->child;
+  //          char* desc_text = desc_child->value.text.string;
+            string desc = "";
+
+
+        for (desc_child = desc_node->child; desc_child != NULL; desc_child = desc_child->next)
+        {
+            string desc_text = desc_child->value.text.string;
+            desc.append(desc_text);
+            desc.append(" ");
+
+           // desc_child = desc_child->next;
+        }
+
+
+
+
+
+
+
+
+
+
+
+        anno->desc = desc;
+//Name
+        desc_node = mxmlFindElement(node, tree, "name", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+        char*    desc_text = desc_child->value.text.string;
+            string name = desc_text;
+        anno->name = name;
+//Type
+        desc_node = mxmlFindElement(node, tree, "type", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+            desc_text = desc_child->value.text.string;
+            string type = desc_text;
+        anno->type = type;
+//Graph Position and Orientation
+  string var;
+  float pos[3];
+  float rot[4];
+
+        desc_node = mxmlFindElement(node, tree, "longitude", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+            var = desc_child->value.text.string;
+            pos[0] = atof(var.c_str());           
+
+        desc_node = mxmlFindElement(node, tree, "latitude", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+            var = desc_child->value.text.string;
+            pos[1] = atof(var.c_str());           
+        
+        desc_node = mxmlFindElement(node, tree, "altitude", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+            var = desc_child->value.text.string;
+            pos[2] = atof(var.c_str());           
+
+        desc_node = mxmlFindElement(node, tree, "range", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+            var = desc_child->value.text.string;
+            rot[0] = atof(var.c_str());           
+
+        desc_node = mxmlFindElement(node, tree, "tilt", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+            var = desc_child->value.text.string;
+            rot[1] = atof(var.c_str());           
+
+        desc_node = mxmlFindElement(node, tree, "heading", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+            var = desc_child->value.text.string;
+            rot[2] = atof(var.c_str());           
+
+        desc_node = mxmlFindElement(node, tree, "w", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+            var = desc_child->value.text.string;
+            rot[3] = atof(var.c_str());          
+
+  osg::Vec3 coord = Vec3(pos[0],pos[1],pos[2]); 
+  osg::Quat quad = Quat(rot[0],rot[1],rot[2],rot[3]); 
+
+        anno->pos = coord;
+        anno->rot = quad;
+//Line Coords
+
+            mxml_node_t* line_node = mxmlFindElement(node, tree, "lineStart", NULL, NULL, MXML_DESCEND);
+            float posStart[3];
+            mxml_node_t* line_child = line_node->child;
+
+            for (int i = 0; i < 3; i++)
+            {
+                posStart[i] = atof(line_child->value.text.string);
+
+                line_child = line_child->next;
+            }
+
+
+            line_node = mxmlFindElement(node, tree, "lineEnd", NULL, NULL, MXML_DESCEND);
+            float posEnd[3];
+            line_child = line_node->child;
+
+            for (int i = 0; i < 3; i++)
+            {
+                posEnd[i] = atof(line_child->value.text.string);
+
+                line_child = line_child->next;
+            }
+
+  osg::Vec3 lStart = Vec3(posStart[0],posStart[1],posStart[2]); 
+  osg::Vec3 lEnd = Vec3(posEnd[0],posEnd[1],posEnd[2]); 
+        anno->lStart = lStart;
+        anno->lEnd = lEnd;
+
+   anno->active = false;
+   anno->scale = 0.001;
+
+
+  _annotations.push_back(anno);
+   loadAnnotationGraph(inc);
+  }
+}
+void ArtifactVis2::createAnnotationFile(osg::Matrix tie)
+{
+cerr << "Creating New Annotation\n";
+/*
+            Matrix handMat;
+
+        osg::Matrixd w2o = PluginHelper::getWorldToObjectTransform();
+
+        Vec3 handTrans = osg::Vec3(0, 0, 0) * TrackingManager::instance()->getHandMat(0) * w2o;
+          //  osg::Matrix w2l = PluginHelper::getWorldToObjectTransform();
+          //  handMat = PluginHelper::getHandMat(0) * w2l;
+            //handMat = tie * w2l;
+          //  Vec3 handTrans = handMat.getTrans();
+          //  Quat handQuad = handMat.getRotate();i
+          Quat handQuad = Vec4(0,0,0,1);
+            cerr << "Hand Output: " << handTrans.x() << "," << handTrans.y() << "," << handTrans.z() << " Rot:" << handQuad.x() << "," << handQuad.y() << "," << handQuad.z() << "\n";
+*/
+
+//Turn off any Active Annotations
+deactivateAllAnno();
+//Create new Annotation
+           Matrix handMat0 = TrackingManager::instance()->getHandMat(0);
+        osg::Matrixd w2o = PluginHelper::getWorldToObjectTransform();
+            Matrix handMat;
+          Vec3 handTrans = handMat0.getTrans();
+          Quat handQuad = handMat0.getRotate();
+           // cerr << "Hand Output: " << handTrans.x() << "," << handTrans.y() << "," << handTrans.z() << " Rot:" << handQuad.x() << "," << handQuad.y() << "," << handQuad.z() << "\n";
+     //     handTrans = tie.getTrans();
+       //   handQuad = tie.getRotate();
+         //   cerr << "Hand Output: " << handTrans.x() << "," << handTrans.y() << "," << handTrans.z() << " Rot:" << handQuad.x() << "," << handQuad.y() << "," << handQuad.z() << "\n";
+                if(true)
+                {
+                   // SceneManager::instance()->getMenuRoot()->addChild(       _menuRoot);
+
+                   float   _distance = ConfigManager::getFloat("distance", "MenuSystem.BoardMenu.Position",2000.0);
+                    osg::Vec3 menuPoint = osg::Vec3(0,2000,0);
+                    menuPoint = menuPoint * handMat0;
+
+                   // if(event->asMouseEvent())
+                    if(false)
+                    {
+                        osg::Vec3 menuOffset = osg::Vec3(0,0,0);
+                        osg::Matrix m;
+                        m.makeTranslate(menuPoint);
+                        handMat = m * w2o;
+                    }
+                    else
+                    {
+                        osg::Vec3 viewerPoint =
+                                TrackingManager::instance()->getHeadMat(0).getTrans();
+
+                        osg::Vec3 viewerDir = viewerPoint - menuPoint;
+                        viewerDir.z() = 0.0;
+
+                        osg::Matrix menuRot;
+                        menuRot.makeRotate(osg::Vec3(0,-1,0),viewerDir);
+
+                        osg::Vec3 menuOffset = osg::Vec3(0,0,0);
+                        handMat = (osg::Matrix::translate(-menuOffset) * menuRot * osg::Matrix::translate(menuPoint)) * w2o;
+                    }
+
+                    //_menuActive = true;
+                   // SceneManager::instance()->closeOpenObjectMenu();
+                   // return true;
+                }
+
+
+          handTrans = handMat.getTrans();
+          handQuad = handMat.getRotate();
+osg::Vec3 ball = osg::Vec3(0,0,0);
+            cerr << "Hand Output: " << handTrans.x() << "," << handTrans.y() << "," << handTrans.z() << " Rot:" << handQuad.x() << "," << handQuad.y() << "," << handQuad.z() << "\n";
+
+
+
+
+
+            Annotation* anno = new Annotation;
+
+
+int count = _annotations.size();
+std::stringstream ss;
+ss << count;
+string name = ss.str();
+
+        anno->name = name;
+        string desc = "Comment";
+        desc.append(name);
+        desc.append(": ");
+        anno->desc = desc;
+        anno->type = "Basic";
+        anno->active = true;
+        anno->fromFile = false;
+
+        anno->pos = handTrans;
+        anno->rot = handQuad;
+
+  osg::Vec3 lStart = Vec3(0,0,0); 
+  osg::Vec3 lEnd = Vec3(0,0,0); 
+        anno->lStart = lStart;
+        anno->lEnd = lEnd;
+
+   anno->scale = 0.001;
+
+
+  _annotations.push_back(anno);
+cerr << "Count: " << count << "\n";
+   loadAnnotationGraph(count);
+
+
+
+
+
+}
+void ArtifactVis2::deactivateAllAnno()
+{
+    for (int i = 0; i < _annotations.size(); i++)
+    {
+        _annotations[i]->active = false;
+        _annotations[i]->so->setMovable(false);
+        _annotations[i]->activeMap->setValue(false);
+    }
+  
+}
+void ArtifactVis2::deactivateAllArtifactAnno()
+{
+    for (int i = 0; i < _artifactAnnoTrack.size(); i++)
+    {
+        _artifactAnnoTrack[i]->active = false;
+       int q = _artifactAnnoTrack[i]->q;
+       int art = _artifactAnnoTrack[i]->art;
+        _query[q]->artifacts[art]->annotation->so->setMovable(false);
+        _query[q]->artifacts[art]->annotation->activeMap->setValue(false);
+    }
+  
+}
+void ArtifactVis2::deactivateAllArtifactModel()
+{
+    for (int i = 0; i < _artifactModelTrack.size(); i++)
+    {
+        _artifactModelTrack[i]->active = false;
+       int q = _artifactModelTrack[i]->q;
+       int art = _artifactModelTrack[i]->art;
+        _query[q]->artifacts[art]->model->so->setMovable(false);
+        _query[q]->artifacts[art]->model->activeMap->setValue(false);
+    }
+  
+}
+int ArtifactVis2::findActiveAnnot()
+{
+    int i;
+    bool  found = false;
+    for (i = 0; i < _annotations.size(); i++)
+    {
+       if( _annotations[i]->active) 
+       {
+         found = true;
+         break;
+       }
+    }
+    if(!found)
+    {
+      i = -1;
+    }
+    
+return i;
+}
+void ArtifactVis2::updateAnnoLine()
+{
+  int i;
+  if(_annotations.size() > 0)
+  {
+    for (i = 0; i < _annotations.size(); i++)
+    {
+    if(_annotations[i]->active)
+    {
+       Vec3 pos = _annotations[i]->so->getPosition();
+       if(_annotations[i]->pos != pos)
+       {
+ 	 _annotations[i]->pos = pos;
+         _annotations[i]->lEnd = pos;
+         //Update Line
+         //...
+                osg::Vec3Array* verts = new osg::Vec3Array();
+                //_annotations[i]->lEnd = pos;
+    		verts->push_back(_annotations[i]->lStart);
+    		verts->push_back(_annotations[i]->lEnd);
+
+                 _annotations[i]->connector->setVertexArray(verts);
+       }
+    break;
+    }
+    }
+ }
+}
+void ArtifactVis2::updateArtifactLine()
+{
+  int i;
+  if(_artifactAnnoTrack.size() > 0)
+  {
+    for (i = 0; i < _artifactAnnoTrack.size(); i++)
+    {
+    if(_artifactAnnoTrack[i]->active)
+    {
+//_query[q]->artifacts[art]->annotation->
+       int q = _artifactAnnoTrack[i]->q;
+       int art = _artifactAnnoTrack[i]->art;
+       Vec3 pos = _query[q]->artifacts[art]->annotation->so->getPosition();
+       if(_query[q]->artifacts[art]->annotation->pos != pos)
+       {
+ 	 _query[q]->artifacts[art]->annotation->pos = pos;
+         _query[q]->artifacts[art]->annotation->lEnd = pos;
+         //Update Line
+         //...
+                osg::Vec3Array* verts = new osg::Vec3Array();
+                //_annotations[i]->lEnd = pos;
+    		verts->push_back(_query[q]->artifacts[art]->annotation->lStart);
+    		verts->push_back(_query[q]->artifacts[art]->annotation->lEnd);
+
+                 _query[q]->artifacts[art]->annotation->connector->setVertexArray(verts);
+       }
+    
+    }
+    }
+ }
+}
+void ArtifactVis2::updateArtifactModel()
+{
+  int i;
+  if(_artifactModelTrack.size() > 0)
+  {
+    for (i = 0; i < _artifactModelTrack.size(); i++)
+    {
+    if(_artifactModelTrack[i]->active)
+    {
+       int q = _artifactModelTrack[i]->q;
+       int art = _artifactModelTrack[i]->art;
+       Vec3 pos = _query[q]->artifacts[art]->model->so->getPosition();
+       if(_query[q]->artifacts[art]->model->pos != pos)
+       {
+         Vec3 oldPos = _query[q]->artifacts[art]->model->pos;
+         Vec3 distance = pos - oldPos;
+ 	 _query[q]->artifacts[art]->model->pos = pos;
+         _query[q]->artifacts[art]->annotation->lStart = pos;
+         _query[q]->artifacts[art]->annotation->lEnd += distance;
+ 
+         //Update Line
+         //...
+                osg::Vec3Array* verts = new osg::Vec3Array();
+                //_annotations[i]->lEnd = pos;
+    		verts->push_back(_query[q]->artifacts[art]->annotation->lStart);
+    		verts->push_back(_query[q]->artifacts[art]->annotation->lEnd);
+
+                 _query[q]->artifacts[art]->annotation->connector->setVertexArray(verts);
+
+                 _query[q]->artifacts[art]->annotation->pos += distance;
+                 _query[q]->artifacts[art]->annotation->so->setPosition(_query[q]->artifacts[art]->annotation->pos);
+       }
+    
+    }
+    }
+ }
+}
+void ArtifactVis2::resetArtifactModelOrig(int q, int art)
+{
+       Vec3 pos = _query[q]->artifacts[art]->model->so->getPosition();
+       Vec3 orig = _query[q]->artifacts[art]->model->orig;
+       Quat rot = Quat(0,0,0,1);
+       if(orig != pos)
+       {
+       _query[q]->artifacts[art]->model->so->setPosition(orig);
+       if(_query[q]->artifacts[art]->model->currentModelType == "frame")
+       {
+       rot = _query[q]->artifacts[art]->model->frameRot;
+       }
+
+
+
+
+       _query[q]->artifacts[art]->model->so->setRotation(rot);
+
+       }
+/*
+         cerr << "Resetting\n";
+       Vec3 pos = _query[q]->artifacts[art]->model->so->getPosition();
+       Vec3 orig = _query[q]->artifacts[art]->model->orig;
+       if(orig != pos)
+       {
+         cerr << "Resetting\n";
+         Vec3 distance = orig - pos;
+         _query[q]->artifacts[art]->annotation->lEnd += distance;
+         _query[q]->artifacts[art]->annotation->pos += distance;
+ 
+ 	 _query[q]->artifacts[art]->model->pos = orig;
+         _query[q]->artifacts[art]->annotation->lStart = orig;
+         //Update Line
+         //...
+                osg::Vec3Array* verts = new osg::Vec3Array();
+                //_annotations[i]->lEnd = pos;
+    		verts->push_back(_query[q]->artifacts[art]->annotation->lStart);
+    		verts->push_back(_query[q]->artifacts[art]->annotation->lEnd);
+
+                 _query[q]->artifacts[art]->annotation->connector->setVertexArray(verts);
+                 _query[q]->artifacts[art]->annotation->so->setPosition(_query[q]->artifacts[art]->annotation->pos);
+       }
+*/
+}
+                
+void ArtifactVis2::saveAnnotationGraph()
+{
+
+    mxml_node_t *xml;    /* <?xml ... ?> */
+    mxml_node_t *kml;   /* <kml> */
+    mxml_node_t *document;   /* <Document> */
+    mxml_node_t *name;   /* <name> */
+    mxml_node_t *type;   /* <type> */
+    mxml_node_t *query;   /* <query> */
+    mxml_node_t *timestamp;   /* <timestamp> */
+
+    mxml_node_t *placemark;   /* <Placemark> */
+    mxml_node_t *description;   /* <description> */
+
+    mxml_node_t *lookat;   /* <LookAt> */
+    mxml_node_t *longitude;   /* <data> */
+    mxml_node_t *latitude;   /* <data> */
+    mxml_node_t *altitude;   /* <data> */
+    mxml_node_t *range;   /* <data> */
+    mxml_node_t *tilt;   /* <data> */
+    mxml_node_t *heading;   /* <data> */
+    mxml_node_t *w;   /* <data> */
+    mxml_node_t *styleurl;   /* <data> */
+    //mxml_node_t *point;   /* <data> */
+    mxml_node_t *altitudeMode;   /* <data> */
+    mxml_node_t *coordinates;   /* <data> */
+    mxml_node_t *polygon;
+    mxml_node_t *extrude;
+    mxml_node_t *tessellate;
+    mxml_node_t *outerBoundaryIs;
+    mxml_node_t *LinearRing;
+    mxml_node_t *line;
+    mxml_node_t *lineStart;
+    mxml_node_t *lineEnd;
+    mxml_node_t *color;
+
+//Create KML Container
+
+//KML Name
+    string q_name = "annotations";
+   // string g_timestamp = getTimeStamp();
+    string g_timestamp = "00";
+
+   const char* kml_name = q_name.c_str();
+   const char* kml_timestamp = g_timestamp.c_str();
+
+xml = mxmlNewXML("1.0");
+        kml = mxmlNewElement(xml, "kml");
+            document = mxmlNewElement(kml, "Document");
+                name = mxmlNewElement(document, "name");
+                  mxmlNewText(name, 0, kml_name);
+                timestamp = mxmlNewElement(document, "timestamp");
+                  mxmlNewText(timestamp, 0, kml_timestamp);
+//.................................................................
+//Get Placemarks
+int rows = _annotations.size();
+
+
+
+
+
+//Create Placemarks
+for(int m=0; m<rows; m++)
+{
+Vec3 pos = _annotations[m]->so->getPosition();
+Quat rot = _annotations[m]->so->getRotation();
+float scale = _annotations[m]->so->getScale();
+cerr << "Scale" << scale << "\n";
+Vec3 flStart = _annotations[m]->lStart;
+Vec3 flEnd = _annotations[m]->lEnd;
+   //Get Comments Description
+   string q_description = _annotations[m]->desc;
+
+stringstream buffer;
+buffer << m;
+   string e_name = buffer.str();
+   buffer.str("");
+   buffer << pos.x();
+   string q_coordinates = "0 0 0";
+   string q_longitude = buffer.str();
+   buffer.str("");
+   buffer << pos.y();
+   string q_latitude = buffer.str();
+   buffer.str("");
+   buffer << pos.z();
+   string q_altitude = buffer.str();
+   buffer.str("");
+   buffer << rot.x();
+   string q_range = buffer.str();
+   buffer.str("");
+   buffer << rot.y();
+   string q_tilt = buffer.str();
+   buffer.str("");
+   buffer << rot.z();
+   string q_heading = buffer.str();
+   buffer.str("");
+   buffer << rot.w();
+   string q_w = buffer.str();
+   buffer.str("");
+   buffer << flStart.x() << " " <<  flStart.y() << " " << flStart.z();
+   string lStart = buffer.str();
+   buffer.str("");
+   buffer << flEnd.x() << " " <<  flEnd.y() << " " << flEnd.z();
+   string lEnd = buffer.str();
+   string q_type = "Basic";
+
+                placemark = mxmlNewElement(document, "Placemark");
+                    name = mxmlNewElement(placemark, "name");
+                      mxmlNewText(name, 0, e_name.c_str());
+                    type = mxmlNewElement(placemark, "type");
+                      mxmlNewText(type, 0, q_type.c_str());
+
+                    description = mxmlNewElement(placemark, "description");
+                      mxmlNewText(description, 0, q_description.c_str());
+                    
+                    lookat = mxmlNewElement(placemark, "LookAt");
+                        longitude = mxmlNewElement(lookat, "longitude");
+                          mxmlNewText(longitude, 0, q_longitude.c_str());
+                        latitude = mxmlNewElement(lookat, "latitude");
+                          mxmlNewText(latitude, 0, q_latitude.c_str());
+                        altitude = mxmlNewElement(lookat, "altitude");
+                          mxmlNewText(altitude, 0, q_altitude.c_str());
+                        range = mxmlNewElement(lookat, "range");
+                          mxmlNewText(range, 0, q_range.c_str());
+                        tilt = mxmlNewElement(lookat, "tilt");
+                          mxmlNewText(tilt, 0, q_tilt.c_str());
+                        heading = mxmlNewElement(lookat, "heading");
+                          mxmlNewText(heading, 0, q_heading.c_str());
+                        w = mxmlNewElement(lookat, "w");
+                          mxmlNewText(w, 0, q_w.c_str());
+                    
+                    styleurl = mxmlNewElement(placemark, "styleUrl");
+                      mxmlNewText(styleurl, 0, "#msn_GR");
+                    polygon = mxmlNewElement(placemark, "Polygon");
+                        extrude = mxmlNewElement(polygon, "extrude");
+                          mxmlNewText(extrude, 0, "0");
+                        tessellate = mxmlNewElement(polygon, "tessellate");
+                          mxmlNewText(tessellate, 0, "1");
+                        altitudeMode = mxmlNewElement(polygon, "altitudeMode");
+                          mxmlNewText(altitudeMode, 0, "absolute");
+                        outerBoundaryIs = mxmlNewElement(polygon, "outerBoundaryIs");
+                            LinearRing = mxmlNewElement(outerBoundaryIs, "LinearRing");
+                                coordinates = mxmlNewElement(LinearRing, "coordinates");
+                                  mxmlNewText(coordinates, 0, q_coordinates.c_str());
+                    line = mxmlNewElement(placemark, "Line");
+                        lineStart = mxmlNewElement(line, "lineStart");
+                          mxmlNewText(lineStart, 0, lStart.c_str());
+                        lineEnd = mxmlNewElement(line, "lineEnd");
+                          mxmlNewText(lineEnd, 0, lEnd.c_str());
+}
+//.......................................................
+//Save File
+
+  const char *ptr;
+    ptr = "";
+  ptr = mxmlSaveAllocString(xml, MXML_NO_CALLBACK);
+    //cout << ptr;
+    FILE *fp;
+    
+    string filename = ConfigManager::getEntry("Plugin.ArtifactVis2.Database").append("annotation.kml");
+    
+    kml_name = filename.c_str();
+    fp = fopen(kml_name, "w");
+
+    fprintf(fp, ptr);
+
+    fclose(fp);
+ 
+
+}
+/*
+mxml_node_t ArtifactVis2::getTree(string filename)
+{
+    FILE * fp;
+  mxml_node_t * tree;
+  fp = fopen(filename.c_str(),"r");
+  if(fp == NULL){
+    std::cerr << "Unable to open file: " << filename << std::endl;
+    //return;
+  }
+  fclose(fp);
+
+
+  //tree = mxmlLoadFile(NULL, fp, MXML_TEXT_CALLBACK);
+
+
+ifstream in(filename.c_str());
+stringstream buffer;
+buffer << in.rdbuf();
+string contents(buffer.str());
+
+  tree = mxmlLoadString(NULL, contents.c_str(), MXML_NO_CALLBACK);
+  //char *ptr = mxmlSaveAllocString(xml, MXML_TEXT_CALLBACK);
+  //cout << "LoadingFile\n";
+  //fclose(fp);
+  if(tree == NULL){
+    std::cerr << "Unable to parse XML file: " << filename << std::endl;
+    //return;
+  }
+    return tree;
+}
+*/
+void ArtifactVis2::createArtifactPanel(int q, int art, string desc)
+{
+//deactivateAllArtifactAnno();
+cerr << "Triggered\n";
+if(artifactPanelExists(q, art))
+{
+   cerr << "Exists\n";
+   if(!_query[q]->artifacts[art]->annotation->visible)
+   {
+   cerr << "Not Visible\n";
+   _query[q]->artifacts[art]->annotation->so->attachToScene();
+   _query[q]->artifacts[art]->annotation->connectorNode->setNodeMask(0xffffffff);
+//recreateConnector(q, art);
+  // _root->addChild(_query[q]->artifacts[art]->annotation->connectorGeode);
+   _query[q]->artifacts[art]->annotation->visible = true;
+_query[q]->artifacts[art]->annotation->visibleMap->setValue(true);
+                 activateArtifactFromQuery(q, art);
+   }
+}
+else
+{
+osg::Vec3 pos;
+    Vec4f colorl = Vec4f(0, 0, 1, 0.4);
+    Vec4f color = Vec4f(0, 0.42, 0.92, 1);
+int inc = art;
+//Create Quad Face
+float width = 300;
+float height = 500;
+pos = Vec3(-(width/2),0,-(height/2));
+
+    osg::Geometry * geo = new osg::Geometry();
+    osg::Vec3Array* verts = new osg::Vec3Array();
+    verts->push_back(pos);
+    verts->push_back(pos + osg::Vec3(width,0,0));
+    verts->push_back(pos + osg::Vec3(width,0,height));
+    verts->push_back(pos + osg::Vec3(0,0,height));
+
+    geo->setVertexArray(verts);
+
+    osg::DrawElementsUInt * ele = new osg::DrawElementsUInt(
+            osg::PrimitiveSet::QUADS,0);
+
+    ele->push_back(0);
+    ele->push_back(1);
+    ele->push_back(2);
+    ele->push_back(3);
+    geo->addPrimitiveSet(ele);
+
+
+    Geode* fgeode = new Geode();
+    StateSet* state(fgeode->getOrCreateStateSet());
+    Material* mat(new Material);
+
+            mat->setColorMode(Material::DIFFUSE);
+            mat->setDiffuse(Material::FRONT_AND_BACK, color);
+            state->setAttribute(mat);
+            state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+            state->setMode(GL_BLEND, StateAttribute::ON);
+            state->setMode(GL_LIGHTING, StateAttribute::OFF);
+            osg::PolygonMode* polymode = new osg::PolygonMode;
+            polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::FILL);
+            state->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            fgeode->setStateSet(state);
+  
+//             _annotations[inc]->geo = geo;
+            fgeode->addDrawable(geo);
+
+//Line Geode
+
+    Geode* lgeode = new Geode();
+            StateSet* state2(lgeode->getOrCreateStateSet());
+            Material* mat2(new Material);
+            state2->setRenderingHint(StateSet::OPAQUE_BIN);
+            mat2->setColorMode(Material::DIFFUSE);
+            mat2->setDiffuse(Material::FRONT_AND_BACK, color);
+            state2->setAttribute(mat2);
+            state->setMode(GL_BLEND, StateAttribute::ON);
+            state2->setMode(GL_LIGHTING, StateAttribute::OFF);
+
+            osg::LineWidth* linewidth1 = new osg::LineWidth();
+            linewidth1->setWidth(2.0f); 
+            state2->setAttribute(linewidth1);
+
+            osg::PolygonMode* polymode2 = new osg::PolygonMode;
+            polymode2->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+            state2->setAttributeAndModes(polymode2, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            lgeode->setStateSet(state2);
+            lgeode->addDrawable(geo);
+
+cerr << "Pass\n";
+
+//Text Geode
+   Geode* textGeode = new Geode();
+    float size = 25;
+   //std::string text = "Hello World this is just a test of the textbox wrap feature, which is Awesome"; 
+cerr << "Query: " << q << " Artifact: " << inc << " Desc: " << desc << "\n";
+_query[q]->artifacts[inc]->annotation = new Annotation; 
+    _query[q]->artifacts[inc]->annotation->desc = desc;
+   std::string text = _query[q]->artifacts[inc]->annotation->desc; 
+
+ osgText::Text* textNode  = new osgText::Text();
+    textNode->setCharacterSize(size);
+    textNode->setAlignment(osgText::Text::LEFT_TOP);
+    Vec3 tPos = pos + osg::Vec3(5,-5,(height-5));
+   // Vec3 tPos = pos;
+    textNode->setPosition(tPos);
+    textNode->setColor(color);
+   // textNode->setBackdropColor(osg::Vec4(0,0,0,0));
+    textNode->setAxisAlignment(osgText::Text::XZ_PLANE);
+    textNode->setText(text);
+    textNode->setMaximumWidth(width);
+    textNode->setFont(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
+
+    textGeode->addDrawable(textNode);
+
+   // _annotations[inc]->textNode = textNode;
+     _query[q]->artifacts[inc]->annotation->name = _query[q]->artifacts[inc]->values[1];
+    string name = _query[q]->artifacts[inc]->annotation->name;
+
+
+
+
+
+
+
+	    SceneObject * so;
+	    so = new SceneObject(name, false, false, false, true, false);
+	   // so = new SceneObject(name, false, false, false, false, false);
+	    osg::Switch* switchNode = new osg::Switch();
+	    so->addChild(switchNode);
+	    PluginHelper::registerSceneObject(so,"Test");
+	    so->attachToScene();
+//Add geode to switchNode
+//	switchNode->addChild(fgeode);
+	switchNode->addChild(lgeode);
+	switchNode->addChild(textGeode);
+
+	    so->setNavigationOn(true);
+	    so->setMovable(true);
+	    so->addMoveMenuItem();
+	    so->addNavigationMenuItem();
+
+//cerr << "Pass1\n";
+	    SubMenu * sm = new SubMenu("Position");
+	    so->addMenuItem(sm);
+
+	    MenuButton * mb;
+	    mb = new MenuButton("Load");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+	    //_loadMap[so] = mb;
+
+	    SubMenu * savemenu = new SubMenu("Save");
+	    sm->addItem(savemenu);
+	    //_saveMenuMap[so] = savemenu;
+
+	    mb = new MenuButton("Save");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+         //   std::map<cvr::SceneObject*,cvr::MenuButton*> _saveMap;
+	  //  _saveMap[so] = mb;
+            _query[q]->artifacts[inc]->annotation->saveMap = mb;
+	    mb = new MenuButton("Reset");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+	    //_resetMap[so] = mb;
+
+	    mb = new MenuButton("Delete");
+	    mb->setCallback(this);
+	    so->addMenuItem(mb);
+	    //_deleteMap[so] = mb;
+
+            MenuCheckbox * mc;
+	    mc = new MenuCheckbox("Active",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _query[q]->artifacts[inc]->annotation->activeMap = mc;
+
+            
+	    mc = new MenuCheckbox("Visible",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _query[q]->artifacts[inc]->annotation->visibleMap = mc;
+            _query[q]->artifacts[inc]->annotation->visible = true;
+	//	double opos[3];
+	//	opos = _query[q]->artifacts[inc]->pos[0];
+//		Vec3 orig = Vec3(_query[q]->artifacts[inc]->pos[0],_query[q]->artifacts[inc]->pos[1],_query[q]->artifacts[inc]->pos[2]);
+Vec3 orig = _query[q]->artifacts[inc]->modelPos; 
+cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
+cerr << "Pass\n";
+		_query[q]->artifacts[inc]->annotation->pos = orig;
+     
+    so->setPosition(_query[q]->artifacts[inc]->annotation->pos);
+
+
+
+    _query[q]->artifacts[inc]->annotation->so = so;
+    _query[q]->artifacts[inc]->annotation->pos = so->getPosition();
+    _query[q]->artifacts[inc]->annotation->rot = so->getRotation();
+    _query[q]->artifacts[inc]->annotation->lStart = so->getPosition();
+    _query[q]->artifacts[inc]->annotation->lEnd = so->getPosition();
+
+cerr << "Pass\n";
+    osg:Geometry* connector = new osg::Geometry();
+    verts = new osg::Vec3Array();
+    verts->push_back(_query[q]->artifacts[inc]->annotation->lStart);
+    verts->push_back(_query[q]->artifacts[inc]->annotation->lEnd);
+
+    connector->setVertexArray(verts);
+
+    ele = new osg::DrawElementsUInt(
+            osg::PrimitiveSet::LINES,0);
+
+    ele->push_back(0);
+    ele->push_back(1);
+   connector->addPrimitiveSet(ele);
+
+    osg::Vec4Array* colors = new osg::Vec4Array;
+    colors->push_back(color);
+
+    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
+    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
+            osg::Array::UIntArrayType,4,4>;
+    colorIndexArray->push_back(0);
+    colorIndexArray->push_back(0);
+   
+   connector->setColorArray(colors);
+   connector->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+
+    Geode* connectorGeode = new Geode();
+
+            StateSet* state3(connectorGeode->getOrCreateStateSet());
+            osg::LineWidth* linewidth = new osg::LineWidth();
+            linewidth->setWidth(2.0f); 
+            state3->setAttributeAndModes(linewidth, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            connectorGeode->setStateSet(state3);
+
+
+
+
+    _query[q]->artifacts[inc]->annotation->connector = connector;
+    connectorGeode->addDrawable(_query[q]->artifacts[inc]->annotation->connector);
+
+     _query[q]->artifacts[inc]->annotation->connectorGeode = connectorGeode;
+    Group* connectorNode = new Group();
+    _query[q]->artifacts[inc]->annotation->connectorNode = connectorNode;
+    _query[q]->artifacts[inc]->annotation->connectorNode->addChild(_query[q]->artifacts[inc]->annotation->connectorGeode);
+    _root->addChild(_query[q]->artifacts[inc]->annotation->connectorNode);
+
+    ArtifactAnnoTrack* artifactAnnoTrack = new ArtifactAnnoTrack;
+    artifactAnnoTrack->active = true;
+     artifactAnnoTrack->q = q; 
+     artifactAnnoTrack->art = inc; 
+    _artifactAnnoTrack.push_back(artifactAnnoTrack);
+}
+
+
+
+
+
+}
+bool ArtifactVis2::artifactPanelExists(int q, int art)
+{
+bool exists = false;
+
+    for (int i = 0; i < _artifactAnnoTrack.size(); i++)
+    {
+        if(_artifactAnnoTrack[i]->q == q && _artifactAnnoTrack[i]->art == art)
+        {
+          exists = true;
+          break;
+        } 
+    }
+
+return exists;
+}
+bool ArtifactVis2::artifactModelExists(int q, int art)
+{
+bool exists = false;
+
+    for (int i = 0; i < _artifactModelTrack.size(); i++)
+    {
+        if(_artifactModelTrack[i]->q == q && _artifactModelTrack[i]->art == art)
+        {
+          exists = true;
+          break;
+        } 
+    }
+
+return exists;
+}
+void ArtifactVis2::activateArtifactFromQuery(int q, int art)
+{
+
+    for (int i = 0; i < _artifactAnnoTrack.size(); i++)
+    {
+        if(_artifactAnnoTrack[i]->q == q && _artifactAnnoTrack[i]->art == art)
+        { 
+                 _query[q]->artifacts[art]->annotation->active = true;
+                 _query[q]->artifacts[art]->annotation->so->setMovable(true);
+                 _query[q]->artifacts[art]->annotation->activeMap->setValue(true);
+                 _artifactAnnoTrack[i]->active = true;
+                 break;
+        }
+    }
+
+}
+void ArtifactVis2::activateModelFromQuery(int q, int art)
+{
+
+    for (int i = 0; i < _artifactModelTrack.size(); i++)
+    {
+        if(_artifactModelTrack[i]->q == q && _artifactModelTrack[i]->art == art)
+        { 
+                 _query[q]->artifacts[art]->model->active = true;
+                 _query[q]->artifacts[art]->model->so->setMovable(true);
+                 _query[q]->artifacts[art]->model->activeMap->setValue(true);
+                 _artifactModelTrack[i]->active = true;
+                 break;
+        }
+    }
+
+}
+void ArtifactVis2::recreateConnector(int q, int art)
+{
+int inc = art;
+    Vec4f color = Vec4f(0, 0.42, 0.92, 1);
+    osg:Geometry* connector = new osg::Geometry();
+osg::Vec3Array*    verts = new osg::Vec3Array();
+    verts->push_back(_query[q]->artifacts[inc]->annotation->lStart);
+    verts->push_back(_query[q]->artifacts[inc]->annotation->lEnd);
+
+    connector->setVertexArray(verts);
+
+ osg::DrawElementsUInt *   ele = new osg::DrawElementsUInt(
+            osg::PrimitiveSet::LINES,0);
+
+    ele->push_back(0);
+    ele->push_back(1);
+   connector->addPrimitiveSet(ele);
+
+    osg::Vec4Array* colors = new osg::Vec4Array;
+    colors->push_back(color);
+
+    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
+    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
+            osg::Array::UIntArrayType,4,4>;
+    colorIndexArray->push_back(0);
+    colorIndexArray->push_back(0);
+   
+   connector->setColorArray(colors);
+   connector->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+
+    Geode* connectorGeode = new Geode();
+
+            StateSet* state3(connectorGeode->getOrCreateStateSet());
+            osg::LineWidth* linewidth = new osg::LineWidth();
+            linewidth->setWidth(2.0f); 
+            state3->setAttributeAndModes(linewidth, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            connectorGeode->setStateSet(state3);
+
+
+
+
+    _query[q]->artifacts[inc]->annotation->connector = connector;
+    connectorGeode->addDrawable(_query[q]->artifacts[inc]->annotation->connector);
+
+     _query[q]->artifacts[inc]->annotation->connectorGeode = connectorGeode;
+    _root->addChild(_query[q]->artifacts[inc]->annotation->connectorGeode);
+
+}
+ 
+void ArtifactVis2::createArtifactModel(int q, int art, string desc)
+{
+cerr << "Triggered\n";
+if(artifactModelExists(q, art))
+{
+   cerr << "Exists\n";
+   if(!_query[q]->artifacts[art]->model->visible)
+   {
+   cerr << "Not Visible\n";
+   _query[q]->artifacts[art]->model->so->attachToScene();
+   _query[q]->artifacts[art]->model->visible = true;
+_query[q]->artifacts[art]->model->visibleMap->setValue(true);
+                 activateModelFromQuery(q, art);
+   }
+}
+else
+{
+int inc = art;
+//Load Model
+cerr << "Loading New\n";
+
+_query[q]->artifacts[art]->model = new SelectModel; 
+
+//Set Variables
+cerr << "Setting Variables\n";
+
+        string basket = _query[q]->artifacts[art]->values[1];
+        string modelPath = "";
+
+        _query[q]->artifacts[art]->model->pos = _query[q]->artifacts[art]->modelPos;
+        _query[q]->artifacts[art]->model->orig = _query[q]->artifacts[art]->modelPos;
+        _query[q]->artifacts[art]->model->rot = Quat(0,0,0,1);
+
+//Get Path for ScanModel
+cerr << "Get Path for ScanModel\n";
+        modelPath = ConfigManager::getEntry("Plugin.ArtifactVis2.ScanFolder").append("" + basket + "/" + basket + ".ply");
+
+        if (modelExists(modelPath.c_str()))
+        {
+	   _query[q]->artifacts[art]->model->scanModel = modelPath;
+	   _query[q]->artifacts[art]->model->scanScale = 0.005;       
+	}
+        else
+        {
+	   _query[q]->artifacts[art]->model->scanModel = "";
+	   _query[q]->artifacts[art]->model->scanScale = 1;       
+	}
+           _query[q]->artifacts[art]->model->scanPos = _query[q]->artifacts[art]->model->pos;
+           _query[q]->artifacts[art]->model->scanRot = _query[q]->artifacts[art]->model->rot;
+
+//Get Path for DCModel
+
+        string dc;
+        dc = _query[q]->artifacts[art]->dc;
+        dc.erase(2,dc.size());
+	   _query[q]->artifacts[art]->model->dcModel = dc;
+	   _query[q]->artifacts[art]->model->dcScale = 0.05;
+           _query[q]->artifacts[art]->model->dcPos = _query[q]->artifacts[art]->model->pos;
+           _query[q]->artifacts[art]->model->dcRot = _query[q]->artifacts[art]->model->rot;
+
+//Get Path for cubeModel
+            modelPath = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("photos/" + basket + "/test.obj");
+
+        if (modelExists(modelPath.c_str()))
+        {
+	   _query[q]->artifacts[art]->model->cubeModel = modelPath;
+	   _query[q]->artifacts[art]->model->cubeScale = 0.01;       
+	}
+        else
+        {
+	   _query[q]->artifacts[art]->model->cubeModel = "";
+	   _query[q]->artifacts[art]->model->cubeScale = 1;       
+	}
+           _query[q]->artifacts[art]->model->cubePos = _query[q]->artifacts[art]->model->pos;
+           _query[q]->artifacts[art]->model->cubeRot = _query[q]->artifacts[art]->model->rot;
+
+//Get Path for frameModel
+            modelPath = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("photos/" + basket + "/frame.obj");
+
+        if (modelExists(modelPath.c_str()))
+        {
+	   _query[q]->artifacts[art]->model->frameModel = modelPath;
+	   _query[q]->artifacts[art]->model->frameScale = 0.005;       
+	}
+        else
+        {
+	   _query[q]->artifacts[art]->model->frameModel = "";
+	   _query[q]->artifacts[art]->model->frameScale = 1;       
+	}
+	
+	if(_query[q]->artifacts[art]->model->frameModel != "")
+        {
+                string file = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("photos/" + basket + "/frame.xml");
+                FILE* fp = fopen(file.c_str(), "r");
+                if(fp != NULL)
+                {
+                mxml_node_t* tree;
+                tree = mxmlLoadFile(NULL, fp, MXML_TEXT_CALLBACK);
+                fclose(fp);
+                mxml_node_t* child;
+                float trans[3];
+                float scale[3];
+                float rotDegrees[3];
+                child = mxmlFindElement(tree, tree, "easting", NULL, NULL, MXML_DESCEND);
+                trans[0] = atof(child->child->value.text.string);
+                child = mxmlFindElement(tree, tree, "northing", NULL, NULL, MXML_DESCEND);
+                trans[1] = atof(child->child->value.text.string);
+                child = mxmlFindElement(tree, tree, "elevation", NULL, NULL, MXML_DESCEND);
+                trans[2] = atof(child->child->value.text.string);
+                child = mxmlFindElement(tree, tree, "x", NULL, NULL, MXML_DESCEND);
+                scale[0] = atof(child->child->value.text.string);
+                child = mxmlFindElement(tree, tree, "y", NULL, NULL, MXML_DESCEND);
+                scale[1] = atof(child->child->value.text.string);
+                child = mxmlFindElement(tree, tree, "z", NULL, NULL, MXML_DESCEND);
+                scale[2] = atof(child->child->value.text.string);
+                child = mxmlFindElement(tree, tree, "heading", NULL, NULL, MXML_DESCEND);
+                rotDegrees[0] = atof(child->child->value.text.string);
+                child = mxmlFindElement(tree, tree, "tilt", NULL, NULL, MXML_DESCEND);
+                rotDegrees[1] = atof(child->child->value.text.string);
+                child = mxmlFindElement(tree, tree, "roll", NULL, NULL, MXML_DESCEND);
+                rotDegrees[2] = atof(child->child->value.text.string);
+           if(trans[0] != 0)
+           {                 
+	   _query[q]->artifacts[art]->model->framePos = Vec3(trans[0], trans[1], trans[2]);       
+	   }
+           else
+           {
+           _query[q]->artifacts[art]->model->framePos = _query[q]->artifacts[art]->model->pos;
+           }
+           _query[q]->artifacts[art]->model->frameRot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(0,1,0),rotDegrees[2], osg::Vec3d(0,0,1));
+	   _query[q]->artifacts[art]->model->frameScale = scale[0];       
+
+         }
+	}
+        else
+        {
+           _query[q]->artifacts[art]->model->framePos = _query[q]->artifacts[art]->model->pos;
+           _query[q]->artifacts[art]->model->frameRot = _query[q]->artifacts[art]->model->rot;
+
+	}
+
+//Find Preferred Model
+//50674
+string currentModelPath;
+float currentScale;
+osg::Vec3 currentPos;     
+osg::Quat currentRot;     
+string currentModelType;
+
+if(_query[q]->artifacts[art]->model->scanModel != "" && false)
+{
+currentModelPath = _query[q]->artifacts[art]->model->scanModel;
+currentScale =  _query[q]->artifacts[art]->model->scanScale;
+currentPos =   _query[q]->artifacts[art]->model->scanPos;     
+currentRot =   _query[q]->artifacts[art]->model->scanRot;     
+currentModelType = "scan";
+_query[q]->artifacts[art]->model->currentModelType = currentModelType;
+}
+else if (_query[q]->artifacts[art]->model->cubeModel != "" && false)
+{
+currentModelPath = _query[q]->artifacts[art]->model->cubeModel;
+currentScale =  _query[q]->artifacts[art]->model->cubeScale;
+currentPos =   _query[q]->artifacts[art]->model->cubePos;     
+currentRot =   _query[q]->artifacts[art]->model->cubeRot;     
+currentModelType = "cube";
+_query[q]->artifacts[art]->model->currentModelType = currentModelType;
+}
+else if (_query[q]->artifacts[art]->model->frameModel != "")
+{
+currentModelPath = _query[q]->artifacts[art]->model->frameModel;
+currentScale =  _query[q]->artifacts[art]->model->frameScale;
+currentPos =   _query[q]->artifacts[art]->model->framePos;     
+currentRot =   _query[q]->artifacts[art]->model->frameRot;     
+currentModelType = "frame";
+_query[q]->artifacts[art]->model->currentModelType = currentModelType;
+
+}
+else
+{
+currentModelPath = _query[q]->artifacts[art]->model->dcModel;
+currentScale =  _query[q]->artifacts[art]->model->dcScale;
+currentPos =   _query[q]->artifacts[art]->model->dcPos;     
+currentRot =   _query[q]->artifacts[art]->model->dcRot;     
+currentModelType = "dc";
+_query[q]->artifacts[art]->model->currentModelType = currentModelType;
+}
+
+
+//Load Model into Node
+
+Node* modelNode;
+
+    int index = convertDCtoIndex(dc);
+    _query[q]->artifacts[art]->model->dcIndex = index;
+
+if(currentModelType == "dc")
+{
+
+    if(_modelLoaded[index])
+    {
+      modelNode = _models[index];
+
+    }
+    else
+    {
+	modelNode = defaultDcModel;
+    }
+}
+else
+{
+            if (objectMap.count(currentModelPath) == 0)
+	    {
+		 objectMap[currentModelPath] = osgDB::readNodeFile(currentModelPath);
+	    }
+            modelNode = objectMap[currentModelPath];
+}
+
+if(modelNode != NULL)
+{
+  cerr << "Model Loaded\n";
+}
+else
+{
+  cerr << "Model Failed to Load\n";
+
+}
+//Add Lighting and Culling
+
+		if(true)
+		{
+		    osg::StateSet* stateset = modelNode->getOrCreateStateSet();
+		    stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+		}
+		if(true)
+		{
+		    osg::StateSet * stateset = modelNode->getOrCreateStateSet();
+		    osg::CullFace * cf=new osg::CullFace();
+		    cf->setMode(osg::CullFace::BACK);
+		    stateset->setAttributeAndModes( cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+		}
+                if(true)
+		{
+		TextureResizeNonPowerOfTwoHintVisitor tr2v(false);
+		modelNode->accept(tr2v);
+                }
+
+//Add to SceneObject
+     _query[q]->artifacts[inc]->model->name = basket;
+    string name = basket;
+
+	    SceneObject * so;
+	    so = new SceneObject(name, false, false, false, true, false);
+	    osg::Switch* switchNode = new osg::Switch();
+	    so->addChild(switchNode);
+	    PluginHelper::registerSceneObject(so,"Test");
+	    so->attachToScene();
+//Add currentNode to switchNode
+      _query[q]->artifacts[inc]->model->currentModelNode = modelNode;  
+	switchNode->addChild(_query[q]->artifacts[inc]->model->currentModelNode);
+      _query[q]->artifacts[inc]->model->switchNode = switchNode;
+//Add menu system
+	    so->setNavigationOn(true);
+	    so->setMovable(true);
+	    so->addMoveMenuItem();
+	    so->addNavigationMenuItem();
+
+	    SubMenu * sm = new SubMenu("Position");
+	    so->addMenuItem(sm);
+
+	    MenuButton * mb;
+	    mb = new MenuButton("Load");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+
+	    SubMenu * savemenu = new SubMenu("Save");
+	    sm->addItem(savemenu);
+
+	    mb = new MenuButton("Save");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+            _query[q]->artifacts[inc]->model->saveMap = mb;
+
+	    mb = new MenuButton("Reset to Origin");
+	    mb->setCallback(this);
+	    so->addMenuItem(mb);
+            _query[q]->artifacts[inc]->model->resetMap = mb;
+
+            MenuCheckbox * mc;
+	    mc = new MenuCheckbox("Active",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _query[q]->artifacts[inc]->model->activeMap = mc;
+
+           /* 
+	    mc = new MenuCheckbox("Visible",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _query[q]->artifacts[inc]->model->visibleMap = mc;
+            _query[q]->artifacts[inc]->model->visible = true;
+*/
+	    mc = new MenuCheckbox("Panel Visible",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _query[q]->artifacts[inc]->model->pVisibleMap = mc;
+           // _query[q]->artifacts[inc]->model->pVisible = true;
+
+         if(_query[q]->artifacts[art]->model->dcModel != "")
+         {
+            bool checked = false;
+	    if(currentModelType == "dc") checked = true;
+	    mc = new MenuCheckbox("3D Symbol",checked);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _query[q]->artifacts[inc]->model->dcMap = mc;
+	 }
+
+         if(_query[q]->artifacts[art]->model->scanModel != "")
+         {
+            bool checked = false;
+	    if(currentModelType == "dc") checked = true;
+	    mc = new MenuCheckbox("3D Scan",checked);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _query[q]->artifacts[inc]->model->scanMap = mc;
+	 }
+
+         if(_query[q]->artifacts[art]->model->cubeModel != "")
+         {
+            bool checked = false;
+	    if(currentModelType == "dc") checked = true;
+	    mc = new MenuCheckbox("Photograph Cube",checked);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _query[q]->artifacts[inc]->model->cubeMap = mc;
+         }
+
+         if(_query[q]->artifacts[art]->model->frameModel != "")
+         {
+            bool checked = false;
+	    if(currentModelType == "dc") checked = true;
+
+	    SubMenu * photosmenu = new SubMenu("Photo Frames");
+	    so->addMenuItem(photosmenu);
+
+            //TODO:Turn into Array Loop
+            string photoName0 = "Testing";
+	    mc = new MenuCheckbox(photoName0,checked);
+	    mc->setCallback(this);
+	    photosmenu->addItem(mc);
+            _query[q]->artifacts[inc]->model->photoMap.push_back(mc);
+	 }
+
+Vec3 orig = currentPos; 
+cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
+
+//Mask artifact loaded by query 
+    _query[q]->artifacts[inc]->patmt->setNodeMask(0);
+ so->setPosition(currentPos);     
+ so->setScale(currentScale);
+ so->setRotation(currentRot);     
+
+
+
+    _query[q]->artifacts[inc]->model->so = so;
+    _query[q]->artifacts[inc]->model->pos = so->getPosition();
+    _query[q]->artifacts[inc]->model->rot = so->getRotation();
+
+cerr << "Pass\n";
+
+    ArtifactAnnoTrack* artifactModelTrack = new ArtifactAnnoTrack;
+    artifactModelTrack->active = true;
+     artifactModelTrack->q = q; 
+     artifactModelTrack->art = inc; 
+    _artifactModelTrack.push_back(artifactModelTrack);
+}
+}
+
+
+
+
+int ArtifactVis2::convertDCtoIndex(string dc)
+{
+int index = -1;
+
+string c1 = dc;
+c1.erase(1,1);
+cerr << c1 << "\n";
+string c2 = dc;
+c2.erase(0,1);
+cerr << c2 << "\n";
+
+
+
+std::string ascii[] = {"A", "B", "C", "D", "E", "F", "G" , "H" , "I" , "J" , "K" , "L" , "M" , "N" , "O" , "P" , "Q" , "R" , "S" , "T" , "U" , "V" , "W" , "X" , "Y" , "Z" };
+
+ int a = -1;
+ int b = -1;
+
+    for (int i = 0; i < 26; i++)
+    {
+   	if(c1 == ascii[i])
+   	{
+          a = i;	
+      	
+   	}
+   	if(c2 == ascii[i])
+   	{
+          b = i;	
+      	
+   	}
+
+    }
+
+    if(a != -1 && b != -1)
+    {
+       index = a * 26 + b;
+    }
+
+return index;
+}
+void ArtifactVis2::switchModelType(string type, int q, int art)
+{
+if(type != _query[q]->artifacts[art]->model->currentModelType)
+{
+    deactivateModelSwitches(q, art);
+   string oldType = _query[q]->artifacts[art]->model->currentModelType;
+
+   float currentScale = 0.1;
+   Quat currentRot;
+
+Node* modelNode;
+ if(type == "dc")
+ {
+
+    int index = _query[q]->artifacts[art]->model->dcIndex;
+    if(_modelLoaded[index])
+    {
+      modelNode = _models[index];
+
+    }
+    else
+    {
+	modelNode = defaultDcModel;
+    }
+   currentScale =  _query[q]->artifacts[art]->model->dcScale;
+   currentRot =  _query[q]->artifacts[art]->model->dcRot;
+   _query[q]->artifacts[art]->model->dcMap->setValue(true);
+ }
+ else
+ {
+     string currentModelPath; 
+     if(type == "scan")
+     {
+        currentScale =  _query[q]->artifacts[art]->model->scanScale;
+        _query[q]->artifacts[art]->model->scanMap->setValue(true);
+        currentModelPath = _query[q]->artifacts[art]->model->scanModel; 
+        currentRot =  _query[q]->artifacts[art]->model->scanRot;
+     }
+     if(type == "cube")
+     {
+	 currentScale =  _query[q]->artifacts[art]->model->cubeScale;
+        _query[q]->artifacts[art]->model->cubeMap->setValue(true);
+        currentModelPath = _query[q]->artifacts[art]->model->cubeModel; 
+        currentRot =  _query[q]->artifacts[art]->model->cubeRot;
+     }
+     if(type == "frame")
+     {
+	 currentScale =  _query[q]->artifacts[art]->model->frameScale;
+	//TODO: Handle for Array
+        _query[q]->artifacts[art]->model->photoMap[0]->setValue(true);
+        currentModelPath = _query[q]->artifacts[art]->model->frameModel; 
+        currentRot =  _query[q]->artifacts[art]->model->frameRot;
+     }
+
+            if (objectMap.count(currentModelPath) == 0)
+	    {
+		 objectMap[currentModelPath] = osgDB::readNodeFile(currentModelPath);
+	    }
+            modelNode = objectMap[currentModelPath];
+ }
+ if(modelNode != NULL)
+ {
+//Add Lighting and Culling
+
+		if(true)
+		{
+		    osg::StateSet* stateset = modelNode->getOrCreateStateSet();
+		    stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+		}
+		if(true)
+		{
+		    osg::StateSet * stateset = modelNode->getOrCreateStateSet();
+		    osg::CullFace * cf=new osg::CullFace();
+		    cf->setMode(osg::CullFace::BACK);
+		    stateset->setAttributeAndModes( cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+		}
+                if(true)
+		{
+		TextureResizeNonPowerOfTwoHintVisitor tr2v(false);
+		modelNode->accept(tr2v);
+                }
+
+    _query[q]->artifacts[art]->model->switchNode->removeChild(_query[q]->artifacts[art]->model->currentModelNode);
+    _query[q]->artifacts[art]->model->currentModelNode = modelNode;  
+    _query[q]->artifacts[art]->model->switchNode->addChild(_query[q]->artifacts[art]->model->currentModelNode);
+    _query[q]->artifacts[art]->model->so->setScale(currentScale);
+    _query[q]->artifacts[art]->model->so->setRotation(currentRot);
+
+    _query[q]->artifacts[art]->model->currentModelType = type;
+ }
+
+}  
+}
+void ArtifactVis2::deactivateModelSwitches(int q, int art)
+{
+
+        if(_query[q]->artifacts[art]->model->dcMap != NULL)
+        {   
+          _query[q]->artifacts[art]->model->dcMap->setValue(false);
+        }
+        if(_query[q]->artifacts[art]->model->scanMap != NULL)
+        {   
+          _query[q]->artifacts[art]->model->scanMap->setValue(false);
+        }
+        if(_query[q]->artifacts[art]->model->cubeMap != NULL)
+        {   
+          _query[q]->artifacts[art]->model->cubeMap->setValue(false);
+        }
+        if(_query[q]->artifacts[art]->model->photoMap.size() > 0)
+        {   
+          _query[q]->artifacts[art]->model->photoMap[0]->setValue(false);
+        }
+}
+void ArtifactVis2::menuSetup()
+{
+    //Menu Setup:
+
+    _infoPanel = new TabbedDialogPanel(300, 30, 4, "ArtifactVis2", "Plugin.ArtifactVis2.InfoPanel");
+    _infoPanel->setVisible(true);
+
+    _infoPanel->addTextTab("Default", "");
+    _infoPanel->addTextTab("Artifacts", "");
+    _infoPanel->addTextTab("Loci", "");
+    _infoPanel->addTextTab("BookMarks", "");
+    _infoPanel->setActiveTab("Default");
+
+
+    _displayMenu = new SubMenu("Display");
+
+
+    _utilsMenu = new MenuCheckbox("Utils", false);
+    _utilsMenu->setCallback(this);
+   _infoPanel->addMenuItem(_utilsMenu);
+    _qsMenu = new MenuCheckbox("Query System", false);
+    _qsMenu->setCallback(this);
+   _infoPanel->addMenuItem(_qsMenu);
+    _bookmarksMenu = new MenuCheckbox("Bookmarks", false);
+    _bookmarksMenu->setCallback(this);
+   _infoPanel->addMenuItem(_bookmarksMenu);
+    _fileMenu = new MenuCheckbox("FileManager", false);
+    _fileMenu->setCallback(this);
+   _infoPanel->addMenuItem(_fileMenu);
+    _artifactsDropDown = new MenuButton("Artifacts");
+    _artifactsDropDown->setCallback(this);
+    artifactsDropped = false; 
+   _infoPanel->addMenuItem(_artifactsDropDown);
+    _lociDropDown = new MenuButton("Loci");
+    _lociDropDown->setCallback(this);
+    lociDropped = false; 
+   _infoPanel->addMenuItem(_lociDropDown);
+   // setupHudMenu();
+    //Generates the menus to toggle each query on/off.
+    setupQuerySelectMenu();
+    //Generates the menu for selecting models to load
+    findAllModels();
+    setupSiteMenu();
+    //Generates the menus to query each table.
+    setupTablesMenu();
+    for (int i = 0; i < _tables.size(); i++)
+    {
+        setupQueryMenu(_tables[i]);
+    }
+    //Generates the menus to fly to coordinates.
+   setupFlyToMenu();
+   setupUtilsMenu();
+   setupFileMenu();
+    _picFolder = ConfigManager::getEntry("value", "Plugin.ArtifactVis2.PicFolder", "");
+    //Tabbed dialog for selecting artifacts
+    _artifactPanel = new TabbedDialogPanel(400, 30, 4, "Selected Artifact", "Plugin.ArtifactVis2.ArtifactPanel");
+    _artifactPanel->addTextTab("Info", "");
+    _artifactPanel->addTextureTab("Side", "");
+    _artifactPanel->addTextureTab("Top", "");
+    _artifactPanel->addTextureTab("Bottom", "");
+    _artifactPanel->setVisible(false);
+    _artifactPanel->setActiveTab("Info");
+    _selectionStatsPanel = new DialogPanel(450, "Selection Stats", "Plugin.ArtifactVis2.SelectionStatsPanel");
+    _selectionStatsPanel->setVisible(false);
+    
+
+}
+void ArtifactVis2::initSelectBox()
+{
+    //create wireframe selection box
+    osg::Box* sbox = new osg::Box(osg::Vec3(0, 0, 0), 1.0, 1.0, 1.0);
+    osg::ShapeDrawable* sd = new osg::ShapeDrawable(sbox);
+    osg::StateSet* stateset = sd->getOrCreateStateSet();
+    osg::PolygonMode* polymode = new osg::PolygonMode;
+    polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+    stateset->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+    osg::Geode* geo = new osg::Geode();
+    geo->addDrawable(sd);
+    _selectBox = new osg::MatrixTransform();
+    _selectBox->addChild(geo);
+
+    // create select mark for wand
+    osg::Sphere* ssph = new osg::Sphere(osg::Vec3(0, 0, 0), 10);
+    sd = new osg::ShapeDrawable(ssph);
+    sd->setColor(osg::Vec4(1.0, 0, 0, 1.0));
+    stateset = sd->getOrCreateStateSet();
+    stateset->setMode(GL_LIGHTING, osg::StateAttribute::ON);
+    stateset->setAttributeAndModes(_defaultMaterial, osg::StateAttribute::ON);
+    geo = new osg::Geode();
+    geo->addDrawable(sd);
+    _selectMark = new osg::MatrixTransform();
+    _selectMark->addChild(geo);
+
+
+}
+void ArtifactVis2::secondInit()
+{
+
+    loadModels();
+
+    //Algorithm for generating colors based on DC.
+    for (int i = 0; i < 729; i++)
+    {
+        _colors[i] = Vec4(1 - float((i % 9) * 0.125), 1 - float(((i / 9) % 9) * 0.125), 1 - float(((i / 81) % 9) * 0.125), 1);
+    }
+
+    menuSetup();
+
+
+    
+    if(ConfigManager::getBool("Plugin.ArtifactVis2.MoveCamera"))
+    {
+
+    int flyIndex = ConfigManager::getInt("Plugin.ArtifactVis2.FlyToDefault");
+    flyTo(flyIndex);
+    }
+
+    if(ConfigManager::getBool("Plugin.ArtifactVis2.MoveCamera") && true)
+    {
+   // readAnnotationFile();
+    }
+
+    secondInitComplete = true;
+    ArtifactVis2On = true;
+}
+void ArtifactVis2::addCheckBoxMenuItems(std::vector<cvr::MenuCheckbox*> checkBox)
+{
+    for (int i = 0; i < checkBox.size(); i++)
+    {
+        _infoPanel->addMenuItem(checkBox[i]);
+       // _infoPanel->addMenuItem(showInfo);
+    }
+
+}
+void ArtifactVis2::removeCheckBoxMenuItems(std::vector<cvr::MenuCheckbox*> checkBox)
+{
+    for (int i = 0; i < checkBox.size(); i++)
+    {
+        _infoPanel->removeMenuItem(checkBox[i]);
+       // _infoPanel->addMenuItem(showInfo);
+    }
+
+}
+void ArtifactVis2::addSubMenuItems(std::vector<cvr::SubMenu*> menu)
+{
+    for (int i = 0; i < menu.size(); i++)
+    {
+        _infoPanel->addMenuItem(menu[i]);
+       // _infoPanel->addMenuItem(showInfo);
+    }
+
+}
+void ArtifactVis2::removeSubMenuItems(std::vector<cvr::SubMenu*> menu)
+{
+    for (int i = 0; i < menu.size(); i++)
+    {
+        _infoPanel->removeMenuItem(menu[i]);
+       // _infoPanel->addMenuItem(showInfo);
+    }
+
+}
+void ArtifactVis2::updateDropDowns()
+{
+   
+  _infoPanel->removeMenuItem(_lociDropDown);
+  if(lociDropped)
+  {
+   removeCheckBoxMenuItems(_queryOptionLoci);
+  }
+  _infoPanel->removeMenuItem(_modelDropDown);
+  if(modelDropped)
+  {
+    removeSubMenuItems(_modelMenus);
+  }
+  _infoPanel->removeMenuItem(_pcDropDown);
+  if(pcDropped)
+  {
+    removeSubMenuItems(_pcMenus);
+  }
+
+
+  if(artifactsDropped)
+  {
+    addCheckBoxMenuItems(_queryOption);
+  }
+  else
+  {
+    removeCheckBoxMenuItems(_queryOption);
+  }
+  _infoPanel->addMenuItem(_lociDropDown);
+
+  if(lociDropped)
+  {
+    addCheckBoxMenuItems(_queryOptionLoci);
+  }
+  else
+  {
+    removeCheckBoxMenuItems(_queryOptionLoci);
+  }
+
+  _infoPanel->addMenuItem(_modelDropDown);
+  if(modelDropped)
+  {
+    addSubMenuItems(_modelMenus);
+  }
+  else
+  {
+    removeSubMenuItems(_modelMenus);
+  }
+  _infoPanel->addMenuItem(_pcDropDown);
+
+  if(pcDropped)
+  {
+    addSubMenuItems(_pcMenus);
+  }
+  else
+  {
+    removeSubMenuItems(_pcMenus);
+  }
+}
+void ArtifactVis2::setupUtilsMenu()
+{
+    _utilsPanel = new TabbedDialogPanel(100, 30, 4, "Utils", "Plugin.ArtifactVis2.InfoPanel");
+    _utilsPanel->setVisible(false);
+
+    _createAnnotations = new MenuCheckbox("Create Annotations", false);
+    _createAnnotations->setCallback(this);
+    _utilsPanel->addMenuItem(_createAnnotations);
+
+    _createMarkup = new MenuCheckbox("Create Markup", false);
+    _createMarkup->setCallback(this);
+    _utilsPanel->addMenuItem(_createMarkup);
+
+    _bookmarkLoc = new MenuButton("Save Location");
+    _bookmarkLoc->setCallback(this);
+    _utilsPanel->addMenuItem(_bookmarkLoc);
+    _selectArtifactCB = new MenuCheckbox("Select Artifact", true);
+    _selectArtifactCB->setCallback(this);
+    _utilsPanel->addMenuItem(_selectArtifactCB);
+    _manipArtifactCB = new MenuCheckbox("Manipulate Artifact", false);
+    _manipArtifactCB->setCallback(this);
+    _utilsPanel->addMenuItem(_manipArtifactCB);
+    _scaleBar = new MenuCheckbox("Scale Bar", false);  //new
+    _scaleBar->setCallback(this);
+    _utilsPanel->addMenuItem(_scaleBar);
+    _selectCB = new MenuCheckbox("Select box", false);
+    _selectCB->setCallback(this);
+    _utilsPanel->addMenuItem(_selectCB);
+}
+void ArtifactVis2::getDirFiles(const string& dirname, std::vector<DirFile*> & entries, string types)
+{
+
+    if(types == "")
+    {
+     types = ConfigManager::getEntry("Plugin.ArtifactVis2.FileManagerTypes"); 
+    }
+
+direct ** darray;
+    int entryCount = scandir(const_cast<char*>(dirname.c_str()),
+			     &darray, 0, alphasort);
+
+    for (int k = 0; k < entryCount; k++)
+    {
+        DirFile* entry = new DirFile();
+        string filename = darray[k]->d_name;
+        if(filename != ".")
+        {
+        //cout << "Filename: " << filename << endl;
+        entry->filename = filename; 
+        entry->path = dirname;
+        string origDir = dirname;
+        origDir.append(filename);
+        struct stat info;
+        lstat(origDir.c_str(), &info);
+        if(S_ISDIR(info.st_mode))
+        {
+         //cout << filename << " is a directory\n";
+         entry->filetype = "folder"; 
+        }
+        else
+        {
+            size_t found=filename.find(".");
+            if (found!=string::npos)
+	    {
+                 int start = int(found);
+                 string tempFile = filename;
+                 tempFile.erase(0,(start+1));                 
+                 entry->filetype = tempFile; 
+                 //cout <<" type: " << tempFile << endl;
+            }
+            else
+            {
+              entry->filetype = ""; 
+            }
+        }
+        if(types != "")
+        { 
+        	size_t found=types.find(entry->filetype);
+        	if(entry->filetype == "folder")
+        	{
+        	entries.push_back(entry);
+        	}
+        	else if (found!=string::npos)
+		{
+                 if(entry->filetype != "")
+                 { 
+        	   entries.push_back(entry);
+                 }
+        	}
+        }
+        else
+        {
+        entries.push_back(entry); 
+        }
+
+        }
+    }
+
+}
+void ArtifactVis2::setupFileMenu()
+{
+
+    string dir = ConfigManager::getEntry("Plugin.ArtifactVis2.ArchInterfaceFolder");
+
+    entries.clear();
+    string types = "";
+    getDirFiles(dir, entries,types);
+
+    _filePanel = new PopupMenu("FileManager", "Plugin.ArtifactVis2.FileManagerPanel");
+    _filePanel->setVisible(false);
+   
+    _resetFileManager = new MenuButton("Reset to Home Directory");
+    _resetFileManager->setCallback(this);
+    _filePanel->addMenuItem(_resetFileManager);
+
+
+    for (int i = 0; i < entries.size(); i++)
+    {
+    string filename = entries[i]->filename;
+    if(entries[i]->filetype == "folder")
+    {
+       filename.append("/");
+    }
+    cvr::MenuButton* entry = new MenuButton(filename);
+    entry->setCallback(this);
+    fileButton.push_back(entry);
+    _filePanel->addMenuItem(entry);
+
+    }
+}
+void ArtifactVis2::updateFileMenu(std::string dir)
+{
+
+    
+    for (int i = 0; i < fileButton.size(); i++)
+    {
+    _filePanel->removeMenuItem(fileButton[i]);
+    }
+    fileButton.clear();
+
+    entries.clear();
+    
+    string types = "";
+    getDirFiles(dir, entries, types);
+
+    for (int i = 0; i < entries.size(); i++)
+    {
+    string filename = entries[i]->filename;
+    if(entries[i]->filetype == "folder")
+    {
+       filename.append("/");
+    }
+    cvr::MenuButton* entry = new MenuButton(filename);
+    entry->setCallback(this);
+    fileButton.push_back(entry);
+    _filePanel->addMenuItem(entry);
+
+    }
+
+}
+void ArtifactVis2::addNewPC(int index)
+{
+    Vec3Array* coords;
+    Vec4Array* colors;
+ int i = index;
+ newFileAvailable = false;
+ string currentModelPath = _pointClouds[i]->fullpath;
+ string name = _pointClouds[i]->name;
+ newSelectedFile = "";
+ newSelectedName = "";
+
+    string filename = currentModelPath;
+   string type = filename;
+cerr << "Mark1\n";
+    bool nvidia = ConfigManager::getBool("Plugin.ArtifactVis2.Nvidia");
+            cout << "File: " << filename << endl;
+            PointsLoadInfo pli;
+            pli.file = filename;
+            pli.group = new osg::Group();
+    if (true)
+    {
+        coords = new Vec3Array();
+        colors = new Vec4Array();
+        cout << "Reading point cloud data from : " << filename <<  "..." << endl;
+        ifstream file(filename.c_str());
+        type.erase(0, (type.length() - 3));
+        cout << type << "\n";
+        string line;
+        bool read = false;
+       // cout << _pcFactor[index] << "\n";
+       // int factor = _pcFactor[index];
+       int factor = 1;
+        if((type == "ply" || type == "xyb") && nvidia)
+        {
+            cout << "Reading XYB" << endl;
+
+            //float x,y,z;
+            //bamop
+            float scale = 9;
+            //	osg::Vec3 offset(transx, transy, transz);
+            //_activeObject = new PointsObject("Points",true,false,false,true,true);
+
+
+
+            PluginHelper::sendMessageByName("Points",POINTS_LOAD_REQUEST,(char*)&pli);
+
+            if(!pli.group->getNumChildren())
+            {
+                std::cerr << "PointsWithPans: Error, no points loaded for file: " << pli.file << std::endl;
+                return;
+            }
+
+            float pscale;
+            if(type == "xyb")
+            {
+                pscale = 100;
+            }
+            else
+            {
+                pscale = 0.3;
+            }
+            pscale = ConfigManager::getFloat("Plugin.ArtifactVis2.scaleP", 0);
+            cerr << "Scale of P is " << pscale << "\n";
+//StartHereToday
+            osg::Uniform*  _scaleUni = new osg::Uniform("pointScale",1.0f * pscale);
+            pli.group->getOrCreateStateSet()->addUniform(_scaleUni);
+            //_activeObject->attachToScene();
+            //_activeObject->setNavigationOn(false);
+            //_activeObject->setScale(scale);
+            //_activeObject->setPosition(_pcPos[index]);
+            //_activeObject->setNavigationOn(true);
+            //_activeObject->addChild(pli.group.get());
+            /*
+            MatrixTransform* rotTransform = new MatrixTransform();
+            Matrix pitchMat;
+            Matrix yawMat;
+            Matrix rollMat;
+            pitchMat.makeRotate(DegreesToRadians(_pcRot[index].x()), 1, 0, 0);
+            yawMat.makeRotate(DegreesToRadians(_pcRot[index].y()), 0, 1, 0);
+            rollMat.makeRotate(DegreesToRadians(_pcRot[index].z()), 0, 0, 1);
+            rotTransform->setMatrix(pitchMat * yawMat * rollMat);
+            MatrixTransform* scaleTransform = new MatrixTransform();
+            Matrix scaleMat;
+            scaleMat.makeScale(_pcScale[index]);
+            scaleTransform->setMatrix(scaleMat);
+            MatrixTransform* posTransform = new MatrixTransform();
+            Matrix posMat;
+            Matrix invertMat;
+            posMat.makeTranslate(_pcPos[index]);
+            posTransform->setMatrix(posMat);
+            MatrixTransform* invTransform = new MatrixTransform();
+            rotTransform->addChild(pli.group.get());
+            cerr << "Num childs " << pli.group.get()->getNumChildren() << "\n";
+            scaleTransform->addChild(rotTransform);
+            posTransform->addChild(scaleTransform);
+
+            _pcRoot[index] = new MatrixTransform();
+            _pcRoot[index]->addChild(posTransform);
+            cout << "Loaded" << endl;
+            cerr << "Num childs2 " << _pcRoot[index]->getNumChildren() << "\n";
+            */
+        }
+        else
+        {
+            if (file.is_open())
+            {
+                int pcount = 0;
+                int bten = factor - 1;
+                int cptx = 0;
+                double transx = 0;
+                double transy = 0;
+                double transz = 0;
+
+                while (file.good())
+                {
+                    getline(file, line);
+                    string lineout = line;
+
+                    if (type == "ptx")
+                    {
+                        vector<string> entries;
+                        //vector<string>array;
+                        string token;
+                        //string tmp = "this@is@a@line";
+                        istringstream iss(line);
+                        char lim = ' ';
+
+                        while ( getline(iss, token, lim) )
+                        {
+                            entries.push_back(token);
+                        }
+
+                        if (entries.size() < 7)
+                        {
+                            cout << lineout << "\n";
+
+                            if (cptx == 9)
+                            {
+                                cptx = 0;
+                                //cout << lineout << "\n";
+                                std::stringstream ss;
+                                ss.precision(19);
+                                transx = atof(entries[0].c_str());
+                                transy = atof(entries[0].c_str());
+                                transz = atof(entries[0].c_str());
+                            }
+                            else
+                            {
+                                cptx++;
+                            }
+                        }
+                        else
+                        {
+                            std::stringstream ss;
+                            ss.precision(19);
+                            double x = atof(entries[0].c_str()) + transx;
+                            double y = atof(entries[1].c_str()) + transy;
+                            double z = atof(entries[2].c_str()) + transz;
+                            double r = atof(entries[4].c_str()) / 255;
+                            double g = atof(entries[5].c_str()) / 255;
+                            double b = atof(entries[6].c_str()) / 255;
+                            coords->push_back(Vec3d(x, y, z));
+                           // _avgOffset[index] += Vec3d(x, y, z);
+                            colors->push_back(Vec4d(r, g, b, 1.0));
+                            bten = 0;
+                            pcount++;
+                        }
+                    }
+
+                    if (line.empty()) break;
+
+                    if (read)
+                    {
+                        bten++;
+                        vector<string> entries;
+                        int ck = 0;
+
+                        /*
+                        while(true)
+                        {
+                            if(line.find(" ")==line.rfind(" "))
+                                break;
+                            else
+                            {
+                                entries.push_back(line.substr(0,line.find(" ")));
+                                line = line.substr(line.find(" ")+1);
+                                cout << line << "\n";
+                            }
+                        }
+                        */
+                        if (bten == factor)
+                        {
+                            while (ck < 7)
+                            {
+                                entries.push_back(line.substr(0, line.find(" ")));
+                                line = line.substr(line.find(" ") + 1);
+                                //cout << line << "\n";
+                                ck++;
+                            }
+                        }
+
+                        //cout << entries.size();
+                        if ((type == "ply") && (bten == factor))
+                        {
+                            float x = atof(entries[0].c_str());
+                            float y = atof(entries[1].c_str());
+                            float z = atof(entries[2].c_str());
+                            float r = atof(entries[3].c_str()) / 255;
+                            float g = atof(entries[4].c_str()) / 255;
+                            float b = atof(entries[5].c_str()) / 255;
+                            coords->push_back(Vec3d(x, y, z));
+                           // _avgOffset[index] += Vec3d(x, y, z);
+                            colors->push_back(Vec4f(r, g, b, 1.0));
+                            pcount++;
+                            bten = 0;
+                        }
+
+                        if ((type == "txt") && (bten == factor))
+                        {
+                            float x = atof(entries[0].c_str());
+                            float y = atof(entries[1].c_str());
+                            float z = atof(entries[2].c_str());
+                            float r = atof(entries[3].c_str()) / 255;
+                            float g = atof(entries[4].c_str()) / 255;
+                            float b = atof(entries[5].c_str()) / 255;
+                            coords->push_back(Vec3d(x, y, z));
+                           // _avgOffset[index] += Vec3d(x, y, z);
+                            colors->push_back(Vec4f(r, g, b, 1.0));
+                            pcount++;
+                            bten = 0;
+                        }
+                        else if ((type == "pts") && (bten == factor))
+                        {
+                            std::stringstream ss;
+                            ss.precision(19);
+                            double x = atof(entries[0].c_str());
+                            double y = atof(entries[1].c_str());
+                            double z = atof(entries[2].c_str());
+                            double r = atof(entries[4].c_str()) / 255;
+                            double g = atof(entries[5].c_str()) / 255;
+                            double b = atof(entries[6].c_str()) / 255;
+                            coords->push_back(Vec3d(x, y, z));
+                           // _avgOffset[index] += Vec3d(x, y, z);
+                            colors->push_back(Vec4d(r, g, b, 1.0));
+                            bten = 0;
+                            pcount++;
+
+                            if (pcount == 7216)
+                            {
+                                //std::stringstream ss;
+                                //ss.precision(19);
+                                printf("TOP %f %f %f\n", x, y, z);
+                                cout << "Coords: " << entries[0].c_str() << " " << entries[1].c_str() << " " << entries[2].c_str() << "\n";
+                                //cout << "Coords: " << coords[7216][0] << " " << coords[7216][1] << " " << coords[7216][2] << "\n";
+                            }
+                        }
+                    }
+
+                    if (type == "pts")
+                    {
+                        read = true;
+                    }
+
+                    if (line == "end_header")
+                        read = true;
+                }
+
+                cout << "Finished Loading, Total Vertices: " << pcount << "\n";
+            }
+            else
+            {
+                cout << "Unable to open file: " << filename << endl;
+                return;
+            }
+        }
+    }
+    Geode* pointGeode = new Geode();
+    if(!nvidia)
+    {
+
+
+        Geometry* pointCloud = new Geometry();
+        pointCloud->setVertexArray(coords);
+        pointCloud->setColorArray(colors);
+        pointCloud->setColorBinding(Geometry::BIND_PER_VERTEX);
+        DrawElementsUInt* points = new DrawElementsUInt(PrimitiveSet::POINTS, 0);
+
+        for (int n = 0; n < coords->size(); n++)
+        {
+            points->push_back(n);
+        }
+
+        pointCloud->addPrimitiveSet(points);
+        pointGeode->addDrawable(pointCloud);
+        StateSet* ss = pointGeode->getOrCreateStateSet();
+        ss->setMode(GL_LIGHTING, StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+     }
+        if(true)
+        {
+            i = index;
+float currentScale = _pointClouds[i]->scale;
+      
+	    SceneObject * so;
+	    so = new SceneObject(name, false, false, false, true, false);
+	    osg::Switch* switchNode = new osg::Switch();
+	    so->addChild(switchNode);
+	    PluginHelper::registerSceneObject(so,"Test");
+	    so->attachToScene();
+//Add currentNode to switchNode
+     // _models3d[i]->currentModelNode = modelNode;  
+        if(!nvidia)
+        {
+	switchNode->addChild(pointGeode);
+        }
+        else
+        {
+	switchNode->addChild(pli.group.get());
+
+        }
+     // _pointClouds[i]->switchNode = switchNode;
+
+//Add menu system
+	    so->setNavigationOn(true);
+	    so->setMovable(false);
+	    so->addMoveMenuItem();
+	    so->addNavigationMenuItem();
+            float min = 0.0001;
+            float max = 1;
+            so->addScaleMenuItem("Scale",min,max,currentScale);
+	    SubMenu * sm = new SubMenu("Position");
+	    so->addMenuItem(sm);
+
+	    MenuButton * mb;
+	    mb = new MenuButton("Load");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+
+	    SubMenu * savemenu = new SubMenu("Save");
+	    sm->addItem(savemenu);
+
+	    mb = new MenuButton("Save");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+            _pointClouds[i]->saveMap = mb;
+
+	    mb = new MenuButton("Save New Kml");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+            _pointClouds[i]->saveNewMap = mb;
+
+	    mb = new MenuButton("Reset to Origin");
+	    mb->setCallback(this);
+	    so->addMenuItem(mb);
+            _pointClouds[i]->resetMap = mb;
+
+            MenuCheckbox * mc;
+	    mc = new MenuCheckbox("Active",false);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _pointClouds[i]->activeMap = mc;
+
+            
+	    mc = new MenuCheckbox("Visible",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _pointClouds[i]->visibleMap = mc;
+            _pointClouds[i]->visible = true;
+
+            float rValue = 0;
+            min = -1;
+            max = 1;
+            MenuRangeValue* rt = new MenuRangeValue("rx",min,max,rValue);
+            rt->setCallback(this);
+	    so->addMenuItem(rt);
+            _pointClouds[i]->rxMap = rt;
+
+            rt = new MenuRangeValue("ry",min,max,rValue);
+            rt->setCallback(this);
+	    so->addMenuItem(rt);
+            _pointClouds[i]->ryMap = rt;
+
+            rt = new MenuRangeValue("rz",min,max,rValue);
+            rt->setCallback(this);
+	    so->addMenuItem(rt);
+            _pointClouds[i]->rzMap = rt;
+/*
+	    mc = new MenuCheckbox("Panel Visible",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+ //           _query[q]->artifacts[inc]->model->pVisibleMap = mc;
+           // _query[q]->artifacts[inc]->model->pVisible = true;
+*/
+Quat currentRot = _pointClouds[i]->rot;
+Vec3 currentPos = _pointClouds[i]->pos;
+Vec3 orig = currentPos; 
+cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
+
+ so->setPosition(currentPos);     
+ so->setScale(currentScale);
+ so->setRotation(currentRot);     
+
+    _pointClouds[i]->so = so;
+    _pointClouds[i]->pos = so->getPosition();
+    _pointClouds[i]->rot = so->getRotation();
+    _pointClouds[i]->active = false;
+    _pointClouds[i]->loaded = true;
+        }
+    
+}
+void ArtifactVis2::addNewModel(int i)
+{
+ newFileAvailable = false;
+ string currentModelPath = _models3d[i]->fullpath;
+ string name = _models3d[i]->name;
+ newSelectedFile = "";
+ newSelectedName = "";
+
+// Matrix handMat = getHandToObjectMatrix();
+         Vec3 currentPos = _models3d[i]->pos;
+        Quat  currentRot = _models3d[i]->rot;
+  //Check if ModelPath has been loaded
+  Node* modelNode;
+  
+            if (objectMap.count(currentModelPath) == 0)
+	    {
+		 objectMap[currentModelPath] = osgDB::readNodeFile(currentModelPath);
+	    }
+            modelNode = objectMap[currentModelPath];
+  
+//Add Lighting and Culling
+
+		if(true)
+		{
+		    osg::StateSet* stateset = modelNode->getOrCreateStateSet();
+		    stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+		}
+		if(true)
+		{
+		    osg::StateSet * stateset = modelNode->getOrCreateStateSet();
+		    osg::CullFace * cf=new osg::CullFace();
+		    cf->setMode(osg::CullFace::BACK);
+		    stateset->setAttributeAndModes( cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+		}
+                if(true)
+		{
+		TextureResizeNonPowerOfTwoHintVisitor tr2v(false);
+		modelNode->accept(tr2v);
+                }
+                if(false)
+                {
+                    StateSet* ss = modelNode->getOrCreateStateSet();
+                    ss->setMode(GL_LIGHTING, StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+                    Material* mat = new Material();
+                    mat->setColorMode(Material::AMBIENT_AND_DIFFUSE);
+                    Vec4 color_dif(1, 1, 1, 1);
+                    mat->setDiffuse(Material::FRONT_AND_BACK, color_dif);
+                    ss->setAttribute(mat);
+                    ss->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+                }
+
+//Add to SceneObject
+  //   _query[q]->artifacts[inc]->model->name = basket;
+    
+float currentScale = _models3d[i]->scale;
+
+	    SceneObject * so;
+	    so = new SceneObject(name, false, false, false, true, false);
+	    osg::Switch* switchNode = new osg::Switch();
+	    so->addChild(switchNode);
+	    PluginHelper::registerSceneObject(so,"Test");
+	    so->attachToScene();
+//Add currentNode to switchNode
+      _models3d[i]->currentModelNode = modelNode;  
+	switchNode->addChild(modelNode);
+      _models3d[i]->switchNode = switchNode;
+
+     //_root->addChild(modelNode);
+//Add menu system
+	    so->setNavigationOn(true);
+	    so->setMovable(false);
+	    so->addMoveMenuItem();
+	    so->addNavigationMenuItem();
+            float min = 0.0001;
+            float max = 1;
+            so->addScaleMenuItem("Scale",min,max,currentScale);
+	    SubMenu * sm = new SubMenu("Position");
+	    so->addMenuItem(sm);
+
+	    MenuButton * mb;
+	    mb = new MenuButton("Load");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+
+	    SubMenu * savemenu = new SubMenu("Save");
+	    sm->addItem(savemenu);
+
+	    mb = new MenuButton("Save");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+            _models3d[i]->saveMap = mb;
+
+	    mb = new MenuButton("Save New Kml");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+            _models3d[i]->saveNewMap = mb;
+
+	    mb = new MenuButton("Reset to Origin");
+	    mb->setCallback(this);
+	    so->addMenuItem(mb);
+            _models3d[i]->resetMap = mb;
+
+            MenuCheckbox * mc;
+	    mc = new MenuCheckbox("Active",false);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _models3d[i]->activeMap = mc;
+
+            
+	    mc = new MenuCheckbox("Visible",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _models3d[i]->visibleMap = mc;
+            _models3d[i]->visible = true;
+
+            float rValue = 0;
+            min = -1;
+            max = 1;
+            MenuRangeValue* rt = new MenuRangeValue("rx",min,max,rValue);
+            rt->setCallback(this);
+	    so->addMenuItem(rt);
+            _models3d[i]->rxMap = rt;
+
+            rt = new MenuRangeValue("ry",min,max,rValue);
+            rt->setCallback(this);
+	    so->addMenuItem(rt);
+            _models3d[i]->ryMap = rt;
+
+            rt = new MenuRangeValue("rz",min,max,rValue);
+            rt->setCallback(this);
+	    so->addMenuItem(rt);
+            _models3d[i]->rzMap = rt;
+/*
+	    mc = new MenuCheckbox("Panel Visible",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+ //           _query[q]->artifacts[inc]->model->pVisibleMap = mc;
+           // _query[q]->artifacts[inc]->model->pVisible = true;
+*/
+Vec3 orig = currentPos; 
+cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
+
+ so->setPosition(currentPos);     
+ so->setScale(currentScale);
+ so->setRotation(currentRot);     
+
+
+
+    _models3d[i]->so = so;
+    _models3d[i]->pos = so->getPosition();
+    _models3d[i]->rot = so->getRotation();
+    _models3d[i]->active = false;
+    _models3d[i]->loaded = true;
+
+
+    
+}
+void ArtifactVis2::parsePCXml(bool useHandPos)
+{
+    int index;
+     bool addNewMod = false;
+    if(newFileAvailable)
+    {
+      addNewMod = true;
+    }
+    if(newSelectedFile == "") return;
+    newFileAvailable = false;
+cerr << "Triggered\n";
+    Matrix handMat = getHandToObjectMatrix();
+    Vec3 pos = handMat.getTrans();
+
+    string file;
+    string filepath = newSelectedFile;
+    string filename = getFileFromFilePath(filepath);
+    size_t found=newSelectedFile.find(".");
+    string filetype;
+            if (found!=string::npos)
+	    {
+                 int start = int(found);
+                 filetype = newSelectedFile;
+                 filetype.erase(0,(start+1)); 
+                 file = newSelectedFile;
+                 file.erase((start+1),4);
+                 file.append("kml");                
+                 //cout <<" type: " << file << endl;
+            }
+string type = getKmlArray(file);
+if(type == "Model")
+{
+   index = _models3d.size() -1;
+   MenuCheckbox* site = new MenuCheckbox(_models3d[index]->name,true);
+   site->setCallback(this);
+   _showModelCB.push_back(site);
+   string group = _models3d[index]->group; 
+   addToModelDisplayMenu(group, site);
+   if(useHandPos)
+   {
+   _models3d[index]->pos = pos; 
+   }
+}
+else if(type == "PointCloud")
+{
+   index = _pointClouds.size() -1;
+   MenuCheckbox* site = new MenuCheckbox(_pointClouds[index]->name,true);
+   site->setCallback(this);
+   _showPointCloudCB.push_back(site);
+   string group = _pointClouds[index]->group; 
+   addToPcDisplayMenu(group, site);
+   if(useHandPos)
+   {
+   _pointClouds[index]->pos = pos; 
+   }
+}
+else
+ {
+	Model* newModel = new Model();
+	newModel->name = newSelectedName;
+	newModel->filename = newSelectedFile;
+	newModel->loaded = false;
+	_pointClouds.push_back(newModel);
+        index = _pointClouds.size() -1;
+	MenuCheckbox* site = new MenuCheckbox(newSelectedName,true);
+	site->setCallback(this);
+	_showPointCloudCB.push_back(site);
+    //Get Group
+    found=filepath.find_last_of("/");
+    string group;
+            if (found!=string::npos)
+	    {
+                 int start = int(found);
+                 group = filepath;
+                 group.erase(start,(group.length()-start)); 
+                 found=group.find_last_of("/");
+                 if (found!=string::npos)
+                 {
+                   start = int(found);
+                   group.erase(0,(start+1));
+                   cerr << "group: " << group << endl;
+		 }             
+                 //cout <<" type: " << file << endl;
+            }
+  // addToModelDisplayMenu(group, site);
+   //Generate generic attributes
+        Quat rot = osg::Quat(0, osg::Vec3d(1,0,0),0, osg::Vec3d(0,1,0),0, osg::Vec3d(0,0,1));
+        float scale = 9; 
+  //Fill Struct
+    _pointClouds[index]->name = newSelectedName;
+    _pointClouds[index]->filename = filename;
+    _pointClouds[index]->group = group;
+    _pointClouds[index]->filetype = filetype;
+    _pointClouds[index]->fullpath = filepath;
+    _pointClouds[index]->modelType = "PointCloud";
+    _pointClouds[index]->pos = pos; 
+    _pointClouds[index]->rot = rot;
+    _pointClouds[index]->origPos = pos; 
+    _pointClouds[index]->origRot = rot;
+    _pointClouds[index]->scale = scale; 
+    _pointClouds[index]->origScale = scale; 
+ }
+    
+addNewPC(index);
+
+ 
+ newSelectedFile = "";
+ newSelectedName = "";
+}
+void ArtifactVis2::parseModelXml(bool useHandPos)
+{
+    int index;
+     bool addNewMod = false;
+    if(newFileAvailable)
+    {
+      addNewMod = true;
+    }
+    if(newSelectedFile == "") return;
+    newFileAvailable = false;
+cerr << "Triggered\n";
+    Matrix handMat = getHandToObjectMatrix();
+    Vec3 pos = handMat.getTrans();
+
+    string file;
+    string filepath = newSelectedFile;
+    string filename = getFileFromFilePath(filepath);
+    size_t found=newSelectedFile.find(".");
+    string filetype;
+            if (found!=string::npos)
+	    {
+                 int start = int(found);
+                 filetype = newSelectedFile;
+                 filetype.erase(0,(start+1)); 
+                 file = newSelectedFile;
+                 file.erase((start+1),4);
+                 file.append("kml");                
+                 //cout <<" type: " << file << endl;
+            }
+string type = getKmlArray(file);
+if(type == "Model")
+{
+   index = _models3d.size() -1;
+   MenuCheckbox* site = new MenuCheckbox(_models3d[index]->name,true);
+   site->setCallback(this);
+   _showModelCB.push_back(site);
+   string group = _models3d[index]->group; 
+   addToModelDisplayMenu(group, site);
+   if(useHandPos)
+   {
+   _models3d[index]->pos = pos; 
+   }
+}
+else if(type == "PointCloud")
+{
+   index = _pointClouds.size() -1;
+   MenuCheckbox* site = new MenuCheckbox(_pointClouds[index]->name,true);
+   site->setCallback(this);
+   _showPointCloudCB.push_back(site);
+   string group = _pointClouds[index]->group; 
+   addToPcDisplayMenu(group, site);
+   if(useHandPos)
+   {
+   _pointClouds[index]->pos = pos; 
+   }
+}
+ else
+ {
+	Model* newModel = new Model();
+	newModel->name = newSelectedName;
+	newModel->filename = newSelectedFile;
+	newModel->loaded = false;
+	_models3d.push_back(newModel);
+        index = _models3d.size() -1;
+	MenuCheckbox* site = new MenuCheckbox(newSelectedName,true);
+	site->setCallback(this);
+	_showModelCB.push_back(site);
+    //Get Group
+    found=filepath.find_last_of("/");
+    string group;
+            if (found!=string::npos)
+	    {
+                 int start = int(found);
+                 group = filepath;
+                 group.erase(start,(group.length()-start)); 
+                 found=group.find_last_of("/");
+                 if (found!=string::npos)
+                 {
+                   start = int(found);
+                   group.erase(0,(start+1));
+                   cerr << "group: " << group << endl;
+		 }             
+                 //cout <<" type: " << file << endl;
+            }
+   addToModelDisplayMenu(group, site);
+   //Generate generic attributes
+        Quat rot = osg::Quat(0, osg::Vec3d(1,0,0),0, osg::Vec3d(0,1,0),0, osg::Vec3d(0,0,1));
+        float scale = 0.0001; 
+  //Fill Struct
+    _models3d[index]->name = newSelectedName;
+    _models3d[index]->filename = filename;
+    _models3d[index]->group = group;
+    _models3d[index]->filetype = filetype;
+    _models3d[index]->fullpath = filepath;
+    _models3d[index]->modelType = "Model";
+    _models3d[index]->pos = pos; 
+    _models3d[index]->rot = rot;
+    _models3d[index]->origPos = pos; 
+    _models3d[index]->origRot = rot;
+    _models3d[index]->scale = scale; 
+    _models3d[index]->origScale = scale; 
+ }
+    
+addNewModel(index);
+
+ 
+ newSelectedFile = "";
+ newSelectedName = "";
+}
+osg::Matrix ArtifactVis2::getHandToObjectMatrix()
+{
+
+           Matrix handMat0 = TrackingManager::instance()->getHandMat(0);
+           osg::Vec3 viewerPoint = TrackingManager::instance()->getHeadMat(0).getTrans();
+           osg::Matrixd w2o = PluginHelper::getWorldToObjectTransform();
+            Matrix handMat;
+                if(true)
+                {
+
+                   float   _distance = ConfigManager::getFloat("distance", "MenuSystem.BoardMenu.Position",2000.0);
+                    osg::Vec3 menuPoint = osg::Vec3(0,2000,0);
+                    menuPoint = menuPoint * handMat0;
+
+                   // if(event->asMouseEvent())
+                    if(false)
+                    {
+                        osg::Vec3 menuOffset = osg::Vec3(0,0,0);
+                        osg::Matrix m;
+                        m.makeTranslate(menuPoint);
+                        handMat = m * w2o;
+                    }
+                    else
+                    {
+
+                        osg::Vec3 viewerDir = viewerPoint - menuPoint;
+                        viewerDir.z() = 0.0;
+
+                        osg::Matrix menuRot;
+                        menuRot.makeRotate(osg::Vec3(0,-1,0),viewerDir);
+
+                        osg::Vec3 menuOffset = osg::Vec3(0,0,0);
+                        handMat = (osg::Matrix::translate(-menuOffset) * menuRot * osg::Matrix::translate(menuPoint)) * w2o;
+                    }
+
+                }
+return handMat;
+}
+osg::Matrix ArtifactVis2::getHandToSceneMatrix()
+{
+
+           Matrix handMat0 = TrackingManager::instance()->getHandMat(0);
+           osg::Vec3 viewerPoint = TrackingManager::instance()->getHeadMat(0).getTrans();
+//           osg::Matrixd w2o = PluginHelper::getWorldToObjectTransform();
+            Matrix handMat;
+                if(true)
+                {
+
+                   float   _distance = ConfigManager::getFloat("distance", "MenuSystem.BoardMenu.Position",2000.0);
+                    osg::Vec3 menuPoint = osg::Vec3(0,2000,0);
+                    menuPoint = menuPoint * handMat0;
+
+                   // if(event->asMouseEvent())
+                    if(false)
+                    {
+                        menuPoint = osg::Vec3(0,1405,0);
+                        menuPoint = menuPoint * handMat0;
+                        osg::Vec3 menuOffset = osg::Vec3(0,0,0);
+                        osg::Matrix m;
+                        m.makeTranslate(menuPoint);
+                        handMat = m;
+                    }
+                    else
+                    {
+
+                        osg::Vec3 viewerDir = viewerPoint - menuPoint;
+                        viewerDir.z() = 0.0;
+
+                        osg::Matrix menuRot;
+                        menuRot.makeRotate(osg::Vec3(0,-1,0),viewerDir);
+
+                        osg::Vec3 menuOffset = osg::Vec3(0,0,0);
+                        handMat = (osg::Matrix::translate(-menuOffset) * menuRot * osg::Matrix::translate(menuPoint));
+                    }
+
+                }
+return handMat;
+}
+void ArtifactVis2::startLineObject()
+{
+    //get handpos
+   Matrix handMat = getHandToObjectMatrix(); 
+   Vec3 currentPos = handMat.getTrans();
+       Vec3 scenePos = getHandToSceneMatrix().getTrans();
+    //Setup Colors
+
+    Vec4f color = Vec4f(0, 0.42, 0.92, 1);
+    Vec4f colorR = Vec4f(0.92, 0, 0, 1);
+    Vec4f colorG = Vec4f(0, 0.92, 0, 1);
+    //Setup Initial Pos
+
+    osg::Vec3 pos;
+    pos = Vec3(0,0,0);
+    //New LineGroup
+
+    LineGroup* lineGroup = new LineGroup();
+
+    lineGroup->scenePos = scenePos;
+    //make First cube geode
+    Sphere* cubeShape = new Sphere(pos, _vertexRadius);
+    ShapeDrawable* shapeDrawable = new ShapeDrawable(cubeShape);
+   // shapeDrawable->setTessellationHints(hints);
+    shapeDrawable->setColor(colorR);
+    osg::Geode* sphereGeode = new Geode();  
+    sphereGeode->addDrawable(shapeDrawable);
+
+    lineGroup->cubeGeode.push_back(sphereGeode);
+    lineGroup->cubeShape.push_back(cubeShape);
+    lineGroup->vertex.push_back(pos);
+
+    //make Second cube geode
+    Sphere*  cubeShape2 = new Sphere(pos, _vertexRadius);
+    lineGroup->cubeShape.push_back(cubeShape2);
+    ShapeDrawable* shapeDrawable2 = new ShapeDrawable(lineGroup->cubeShape[1]);
+   // shapeDrawable2->setTessellationHints(hints);
+    shapeDrawable2->setColor(colorG);
+    osg::Geode* sphereGeode2 = new Geode();  
+    sphereGeode2->addDrawable(shapeDrawable2);
+    lineGroup->cubeGeode.push_back(sphereGeode2);
+//    lineGroup->cubeShape.push_back(cubeShape2);
+    lineGroup->vertex.push_back(pos);
+
+    //make  line geode
+    osg:Geometry* connector = new osg::Geometry();
+    osg::Vec3Array* verts = new osg::Vec3Array();
+    verts->push_back(pos);
+    verts->push_back(pos);
+
+    connector->setVertexArray(verts);
+
+    osg::DrawElementsUInt* ele = new osg::DrawElementsUInt(
+            osg::PrimitiveSet::LINES,0);
+
+    ele->push_back(0);
+    ele->push_back(1);
+    connector->addPrimitiveSet(ele);
+
+    osg::Vec4Array* colors = new osg::Vec4Array;
+    colors->push_back(color);
+
+    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
+    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
+            osg::Array::UIntArrayType,4,4>;
+    colorIndexArray->push_back(0);
+    colorIndexArray->push_back(0);
+   
+   connector->setColorArray(colors);
+   connector->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+
+    Geode* connectorGeode = new Geode();
+
+            StateSet* state3(connectorGeode->getOrCreateStateSet());
+
+            osg::LineWidth* linewidth = new osg::LineWidth();
+            linewidth->setWidth(2.0f); 
+            state3->setAttributeAndModes(linewidth, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            connectorGeode->setStateSet(state3);
+
+
+
+
+    lineGroup->connector.push_back(connector);
+    connectorGeode->addDrawable(connector);
+
+
+//Create Text Drawable 1
+
+        osgText::Text* label = new osgText::Text();
+        label->setText("0");
+        label->setUseDisplayList(false);
+        label->setAxisAlignment(osgText::Text::SCREEN);
+        label->setPosition(pos + Vec3f(0, 0, _vertexRadius * 1.1));
+        label->setAlignment(osgText::Text::CENTER_CENTER);
+        label->setCharacterSize(15);
+        label->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+        lineGroup->label.push_back(label);
+        Geode* textGeode = new Geode();
+        textGeode->addDrawable(label);
+
+//Create Text Drawable 2
+
+        osgText::Text* label2 = new osgText::Text();
+        label2->setText("0");
+        label2->setUseDisplayList(false);
+        label2->setAxisAlignment(osgText::Text::SCREEN);
+        label2->setPosition(pos + Vec3f(0, 0, _vertexRadius * 1.1));
+        label2->setAlignment(osgText::Text::CENTER_CENTER);
+        label2->setCharacterSize(15);
+        label2->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+        lineGroup->label.push_back(label2);
+        Geode* textGeode2 = new Geode();
+        textGeode2->addDrawable(label2);
+
+
+  lineGroup->distanceTotal = 0;
+  lineGroup->distance.push_back(0);
+  lineGroup->distance.push_back(0);
+//Create sceneobject
+
+    string name = "start";
+	    SceneObject * so;
+	    so = new SceneObject(name, false, false, false, true, false);
+	    osg::Switch* switchNode = new osg::Switch();
+	    so->addChild(switchNode);
+	    PluginHelper::registerSceneObject(so,"Test");
+	    so->attachToScene();
+//Add currentNode to switchNode
+	switchNode->addChild(lineGroup->cubeGeode[0]);
+	switchNode->addChild(lineGroup->cubeGeode[1]);
+	switchNode->addChild(connectorGeode);
+	switchNode->addChild(textGeode);
+	switchNode->addChild(textGeode2);
+        lineGroup->switchNode = switchNode;
+
+
+//Add menu system
+	    so->setNavigationOn(true);
+	    so->setMovable(false);
+	    so->addMoveMenuItem();
+	    so->addNavigationMenuItem();
+
+	    SubMenu * sm = new SubMenu("Position");
+	    so->addMenuItem(sm);
+
+	    MenuButton * mb;
+	    mb = new MenuButton("Load");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+
+	    SubMenu * savemenu = new SubMenu("Save");
+	    sm->addItem(savemenu);
+
+	    mb = new MenuButton("Save");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+            lineGroup->saveMap = mb;
+/*
+	    mb = new MenuButton("Reset to Origin");
+	    mb->setCallback(this);
+	    so->addMenuItem(mb);
+            lineGroup->resetMap = mb;
+*/
+            MenuCheckbox * mc;
+	    mc = new MenuCheckbox("Active",false);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            lineGroup->activeMap = mc;
+
+	    mc = new MenuCheckbox("Editing",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            lineGroup->editingMap = mc;
+            
+	    mc = new MenuCheckbox("Visible",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            lineGroup->visibleMap = mc;
+            lineGroup->visible = true;
+
+
+float currentScale = 1;
+Vec3 orig = scenePos; 
+cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
+
+ so->setPosition(currentPos);     
+ so->setScale(currentScale);
+// so->setRotation(currentRot);     
+
+
+
+    lineGroup->so = so;
+    lineGroup->pos = so->getPosition();
+    lineGroup->rot = so->getRotation();
+    lineGroup->open = true;   
+    lineGroup->active = false;    
+    lineGroup->editing = true;    
+    lineGroupsEditing = true;
+    _lineGroups.push_back(lineGroup); 
+
+     //addtracker
+
+
+}
+
+void ArtifactVis2::closeLineVertex(int i)
+{
+                 _lineGroups[i]->editing = false;
+                 lineGroupsEditing = false;
+                 _lineGroups[i]->open = false;   
+
+       int lEndIndex = _lineGroups[i]->vertex.size() - 1;
+       int lStartIndex = lEndIndex -1;
+       
+    Vec4f color = Vec4f(0, 0.42, 0.92, 1);
+    Vec4f colorT = Vec4f(0, 0.42, 0.92, 0.5);
+
+    //make  line geode
+    osg:Geometry* connector = new osg::Geometry();
+    osg::Vec3Array* verts = new osg::Vec3Array();
+    		verts->push_back(_lineGroups[i]->vertex[lEndIndex]);
+    		verts->push_back(_lineGroups[i]->vertex[0]);
+
+    connector->setVertexArray(verts);
+
+    osg::DrawElementsUInt* ele = new osg::DrawElementsUInt(
+            osg::PrimitiveSet::LINES,0);
+
+    ele->push_back(0);
+    ele->push_back(1);
+    connector->addPrimitiveSet(ele);
+
+    osg::Vec4Array* colors = new osg::Vec4Array;
+    colors->push_back(color);
+
+    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
+    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
+            osg::Array::UIntArrayType,4,4>;
+    colorIndexArray->push_back(0);
+    colorIndexArray->push_back(0);
+   
+   connector->setColorArray(colors);
+   connector->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+
+    Geode* connectorGeode = new Geode();
+
+            StateSet* state3(connectorGeode->getOrCreateStateSet());
+
+            osg::LineWidth* linewidth = new osg::LineWidth();
+            linewidth->setWidth(2.0f); 
+            state3->setAttributeAndModes(linewidth, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            connectorGeode->setStateSet(state3);
+
+
+
+
+    _lineGroups[i]->connector.push_back(connector);
+    connectorGeode->addDrawable(connector);
+//Update Label Total
+
+       float distance = (_lineGroups[i]->vertex[lEndIndex] - _lineGroups[i]->vertex[0]).length();
+        
+       _lineGroups[i]->distanceTotal += distance;
+       stringstream ss;
+       ss << "Perimeter:" << _lineGroups[i]->distanceTotal << "m";
+            string distText = ss.str();
+        _lineGroups[i]->label[0]->setText(distText);
+
+
+
+
+//Make PolygonGeode
+            Vec3Array* coords = new Vec3Array();
+            for (int n = 0; n <_lineGroups[i]->vertex.size(); n++)
+            {
+              coords->push_back(_lineGroups[i]->vertex[n]);
+            }
+            //Add Bottom
+            float depthX = 0;
+            float depthY = 0;
+            float depthZ = 0;
+            for (int n = 0; n <_lineGroups[i]->vertex.size(); n++)
+            {
+              coords->push_back(_lineGroups[i]->vertex[n] + Vec3(depthX,depthY,depthZ));
+            }
+            
+            int size = coords->size() / 2;
+
+            Geometry* geom = new Geometry();
+            Geometry* tgeom = new Geometry();
+            Geode* fgeode = new Geode();
+            Geode* lgeode = new Geode();
+            geom->setVertexArray(coords);
+            tgeom->setVertexArray(coords);
+
+            for (int n = 0; n < size; n++)
+            {
+                DrawElementsUInt* face = new DrawElementsUInt(PrimitiveSet::QUADS, 0);
+                face->push_back(n);
+                face->push_back(n + size);
+                face->push_back(((n + 1) % size) + size);
+                face->push_back((n + 1) % size);
+                geom->addPrimitiveSet(face);
+
+                if (n < size - 1) //Commented out for now, adds caps to the polyhedra.
+                {
+                    face = new DrawElementsUInt(PrimitiveSet::TRIANGLES, 0);
+                    face->push_back(0);
+                    face->push_back(n);
+                    face->push_back(n + 1);
+                    geom->addPrimitiveSet(face);
+                    tgeom->addPrimitiveSet(face);
+                    face = new DrawElementsUInt(PrimitiveSet::TRIANGLES, 0);
+                    face->push_back(size);
+                    face->push_back(size + n);
+                    face->push_back(size + n + 1);
+                    geom->addPrimitiveSet(face);
+                    //tgeom->addPrimitiveSet(face);
+                }
+            }
+
+
+            StateSet* state(fgeode->getOrCreateStateSet());
+            Material* mat(new Material);
+            mat->setColorMode(Material::DIFFUSE);
+            mat->setDiffuse(Material::FRONT_AND_BACK, colorT);
+            state->setAttribute(mat);
+            state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+            state->setMode(GL_BLEND, StateAttribute::ON);
+            state->setMode(GL_LIGHTING, StateAttribute::OFF);
+            osg::PolygonMode* polymode = new osg::PolygonMode;
+            polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::FILL);
+            state->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            fgeode->setStateSet(state);
+            fgeode->addDrawable(geom);
+            StateSet* state2(lgeode->getOrCreateStateSet());
+            Material* mat2(new Material);
+            state2->setRenderingHint(StateSet::OPAQUE_BIN);
+            mat2->setColorMode(Material::DIFFUSE);
+            mat2->setDiffuse(Material::FRONT_AND_BACK, color);
+            state2->setAttribute(mat2);
+            state->setMode(GL_BLEND, StateAttribute::ON);
+            state2->setMode(GL_LIGHTING, StateAttribute::OFF);
+            osg::PolygonMode* polymode2 = new osg::PolygonMode;
+            polymode2->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+            state2->setAttributeAndModes(polymode2, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            lgeode->setStateSet(state2);
+            lgeode->addDrawable(geom);
+//Add geodes to switchNode
+
+_lineGroups[i]->switchNode->addChild(connectorGeode);
+_lineGroups[i]->switchNode->addChild(fgeode);
+if(false)
+{
+_lineGroups[i]->switchNode->addChild(lgeode);
+}
+}
+void ArtifactVis2::addLineVertex(int i)
+{
+       Vec3 pos = getHandToObjectMatrix().getTrans();
+       Vec3 orig = _lineGroups[i]->so->getPosition();
+       pos = pos - orig;
+       int lEndIndex = _lineGroups[i]->vertex.size();
+       int lStartIndex = lEndIndex -1;
+       int lineIndex = _lineGroups[i]->connector.size();
+
+         //Update Line
+    Vec4f color = Vec4f(0, 0.42, 0.92, 1);
+    Vec4f colorG = Vec4f(0, 0.92, 0, 1);
+    //make First cube geode
+    Sphere* cubeShape = new Sphere(pos, _vertexRadius);
+    ShapeDrawable* shapeDrawable = new ShapeDrawable(cubeShape);
+   // shapeDrawable->setTessellationHints(hints);
+    shapeDrawable->setColor(colorG);
+    osg::Geode* sphereGeode = new Geode();  
+    sphereGeode->addDrawable(shapeDrawable);
+
+    _lineGroups[i]->cubeGeode[lStartIndex] = sphereGeode;
+    _lineGroups[i]->cubeShape[lStartIndex] = cubeShape;
+    _lineGroups[i]->vertex[lStartIndex] =pos;
+
+    //make Second cube geode
+    Sphere*  cubeShape2 = new Sphere(pos, _vertexRadius);
+    ShapeDrawable* shapeDrawable2 = new ShapeDrawable(cubeShape2);
+   // shapeDrawable2->setTessellationHints(hints);
+    shapeDrawable2->setColor(colorG);
+    osg::Geode* sphereGeode2 = new Geode();  
+    sphereGeode2->addDrawable(shapeDrawable2);
+    _lineGroups[i]->cubeGeode.push_back(sphereGeode2);
+    _lineGroups[i]->cubeShape.push_back(cubeShape2);
+    _lineGroups[i]->vertex.push_back(pos);
+
+    //make  line geode
+    osg:Geometry* connector = new osg::Geometry();
+    osg::Vec3Array* verts = new osg::Vec3Array();
+    verts->push_back(pos);
+    verts->push_back(pos);
+
+    connector->setVertexArray(verts);
+
+    osg::DrawElementsUInt* ele = new osg::DrawElementsUInt(
+            osg::PrimitiveSet::LINES,0);
+
+    ele->push_back(0);
+    ele->push_back(1);
+    connector->addPrimitiveSet(ele);
+
+    osg::Vec4Array* colors = new osg::Vec4Array;
+    colors->push_back(color);
+
+    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
+    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
+            osg::Array::UIntArrayType,4,4>;
+    colorIndexArray->push_back(0);
+    colorIndexArray->push_back(0);
+   
+   connector->setColorArray(colors);
+   connector->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+
+    Geode* connectorGeode = new Geode();
+
+            StateSet* state3(connectorGeode->getOrCreateStateSet());
+
+            osg::LineWidth* linewidth = new osg::LineWidth();
+            linewidth->setWidth(2.0f); 
+            state3->setAttributeAndModes(linewidth, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            connectorGeode->setStateSet(state3);
+
+
+
+
+    _lineGroups[i]->connector.push_back(connector);
+    connectorGeode->addDrawable(connector);
+
+//Store Last Text Drawable 
+         
+       float distance = (pos - _lineGroups[i]->vertex[lStartIndex - 1]).length();
+        
+       _lineGroups[i]->distanceTotal += distance;
+       stringstream ss;
+       ss << distance << "m";
+            string distText = ss.str();
+        _lineGroups[i]->label[lStartIndex]->setText(distText);
+        _lineGroups[i]->label[lStartIndex]->setUseDisplayList(false);
+        _lineGroups[i]->label[lStartIndex]->setAxisAlignment(osgText::Text::SCREEN);
+        _lineGroups[i]->label[lStartIndex]->setPosition(pos + Vec3f(0, 0, _vertexRadius * 1.1));
+        _lineGroups[i]->label[lStartIndex]->setAlignment(osgText::Text::CENTER_CENTER);
+        _lineGroups[i]->label[lStartIndex]->setCharacterSize(15);
+        _lineGroups[i]->label[lStartIndex]->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+//Add new Text Geode
+
+
+        osgText::Text* label = new osgText::Text();
+        label->setText("0");
+        label->setUseDisplayList(false);
+        label->setAxisAlignment(osgText::Text::SCREEN);
+        label->setPosition(pos + Vec3f(0, 0, _vertexRadius * 1.1));
+        label->setAlignment(osgText::Text::CENTER_CENTER);
+        label->setCharacterSize(15);
+        label->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+        _lineGroups[i]->label.push_back(label);
+        Geode* textGeode = new Geode();
+        textGeode->addDrawable(label);
+
+
+ _lineGroups[i]->distance.push_back(0);
+//Add geodes to switchNode
+
+_lineGroups[i]->switchNode->removeChild(_lineGroups[i]->cubeGeode[lStartIndex]);
+_lineGroups[i]->switchNode->addChild(_lineGroups[i]->cubeGeode[lStartIndex]);
+_lineGroups[i]->switchNode->addChild(_lineGroups[i]->cubeGeode[lEndIndex]);
+_lineGroups[i]->switchNode->addChild(connectorGeode);
+_lineGroups[i]->switchNode->addChild(textGeode);
+
+                 _lineGroups[i]->editing = true;
+                 lineGroupsEditing = true;   
+
+
+}
+
+void ArtifactVis2::updateLineGroup()
+{
+  int i;
+
+if(lineGroupsEditing)
+{
+  if(_lineGroups.size() > 0)
+  {
+    for (i = 0; i < _lineGroups.size(); i++)
+    {
+    if(_lineGroups[i]->editing)
+    {
+
+       
+       Vec3 pos = getHandToObjectMatrix().getTrans();
+       Vec3 orig = _lineGroups[i]->so->getPosition();
+//cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
+       pos = pos - orig;
+//bangdist
+       int lEndIndex = _lineGroups[i]->vertex.size() - 1;
+       int lStartIndex = lEndIndex -1;
+       int lineIndex = lStartIndex;
+
+       
+       if(_lineGroups[i]->vertex[lEndIndex] != pos)
+       {
+          _lineGroups[i]->vertex[lEndIndex] = pos;
+
+       float distance = (pos - _lineGroups[i]->vertex[lStartIndex]).length();
+        _lineGroups[i]->distance[lEndIndex] = distance;
+
+       float distanceCrowFly = _lineGroups[i]->distanceTotal + distance;
+       
+       stringstream ss;
+       ss << distance << "m" << " (Total:" << distanceCrowFly << ")";
+            string distText = ss.str();
+         //Update Line
+         //...
+                osg::Vec3Array* verts = new osg::Vec3Array();
+    		verts->push_back(_lineGroups[i]->vertex[lStartIndex]);
+    		verts->push_back(_lineGroups[i]->vertex[lEndIndex]);
+
+    Vec4f color = Vec4f(0, 0.42, 0.92, 1);
+    Vec4f colorG = Vec4f(0, 0.92, 0, 1);
+    Sphere*  cubeShape2 = new Sphere(pos, _vertexRadius);
+    ShapeDrawable* shapeDrawable2 = new ShapeDrawable(cubeShape2);
+  //  shapeDrawable2->setTessellationHints(hints);
+    shapeDrawable2->setColor(colorG);
+    osg::Geode* sphereGeode2 = new Geode();  
+    sphereGeode2->addDrawable(shapeDrawable2);
+
+
+
+//Create Text Drawable Update
+
+      //  osgText::Text* label = new osgText::Text();
+        _lineGroups[i]->label[lEndIndex]->setText(distText);
+        _lineGroups[i]->label[lEndIndex]->setUseDisplayList(false);
+        _lineGroups[i]->label[lEndIndex]->setAxisAlignment(osgText::Text::SCREEN);
+        _lineGroups[i]->label[lEndIndex]->setPosition(pos + Vec3f(0, 0, _vertexRadius * 1.1));
+        _lineGroups[i]->label[lEndIndex]->setAlignment(osgText::Text::CENTER_CENTER);
+        _lineGroups[i]->label[lEndIndex]->setCharacterSize(15);
+        _lineGroups[i]->label[lEndIndex]->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+/*
+        lineGroup->label.push_back(label);
+        Geode* textGeode = new Geode();
+        textGeode->addDrawable(label);
+*/
+
+
+
+orig = pos;
+//cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
+_lineGroups[i]->switchNode->removeChild(_lineGroups[i]->cubeGeode[lEndIndex]);
+   _lineGroups[i]->cubeGeode[lEndIndex] = sphereGeode2;
+    _lineGroups[i]->cubeShape[lEndIndex] = cubeShape2;
+_lineGroups[i]->switchNode->addChild(_lineGroups[i]->cubeGeode[lEndIndex]);
+
+                 _lineGroups[i]->connector[lineIndex]->setVertexArray(verts);
+                 _lineGroups[i]->editing = true;
+       }
+    break;
+    }
+    }
+ }
+}
+} 
+void ArtifactVis2::saveModelConfig(Model* saveModel, bool newConfig)
+{
+    string name = saveModel->name;
+    string path = getPathFromFilePath(saveModel->fullpath);
+    string filename = saveModel->filename;
+    size_t found=name.find(".");
+    string filetype;
+    string file;
+            if (found!=string::npos)
+	    {
+                 int start = int(found);
+                 filetype = name;
+                 filetype.erase(0,(start+1)); 
+                 if(filetype == "kml")
+                 {
+                  filetype = saveModel->filetype;
+                  file = path;
+                  file.append(name);
+                 }
+                 else
+                 {
+                 filename = name;
+                 name.erase((start+1),4);
+                 name.append("kml");
+                 file = path;
+                 file.append(name);
+                 }                
+
+	     }
+if(newConfig)
+{
+  if(manualEnterName != "")
+  {
+     name = manualEnterName;
+  }
+     string newFile;
+     bool nameExists = true;
+     name.erase((name.length()-4),4);
+     cerr << "Name : " << name << "Path: " << path << endl;
+     string tempName = "";
+     int inc = 0;
+     while(nameExists)
+     {          
+                 tempName = name;
+                 std:stringstream ss;
+                 ss << inc;
+                 tempName.append("_");
+                 tempName.append(ss.str());
+                 tempName.append(".kml");
+                 newFile = path;
+                 newFile.append(tempName);
+                 inc++;
+       
+           if(!modelExists(newFile.c_str())) nameExists = false;
+     }
+     name = tempName;
+     file = newFile;
+
+}
+
+
+//Create Placemarks
+Vec3 pos = saveModel->so->getPosition();
+Quat rot = saveModel->so->getRotation();
+
+//TODO:Convert Quat to Euler
+//Matrix rMat = _models3d[i]->so->getTransform();
+//Vec3 rot = matrix_to_euler(rMat); 
+
+float scaleFloat = saveModel->so->getScale();
+string q_type = saveModel->modelType;
+string q_group = saveModel->group;
+
+cerr << "NewFile: " << file << endl;
+saveTo3Dkml(name, filename, file, filetype, pos, rot, scaleFloat, q_type, q_group);
+}
+
+
+void ArtifactVis2::saveTo3Dkml(string name,string filename, string file, string filetype, Vec3 pos, Quat rot, float scaleFloat,string q_type, string q_group) 
+{
+
+    mxml_node_t *xml;    /* <?xml ... ?> */
+    mxml_node_t *kml;   /* <kml> */
+    mxml_node_t *document;   /* <Document> */
+    mxml_node_t *nameKML;   /* <name> */
+    mxml_node_t *filetypeKML;   /* <name> */
+    mxml_node_t *open;   /* <name> */
+    mxml_node_t *type;   /* <type> */
+    mxml_node_t *timestamp;   /* <timestamp> */
+
+    mxml_node_t *placemark;   /* <Placemark> */
+    mxml_node_t *description;   /* <description> */
+
+    mxml_node_t *lookat;   /* <LookAt> */
+    mxml_node_t *longitude;   /* <data> */
+    mxml_node_t *latitude;   /* <data> */
+    mxml_node_t *altitude;   /* <data> */
+    mxml_node_t *range;   /* <data> */
+    mxml_node_t *tilt;   /* <data> */
+    mxml_node_t *heading;   /* <data> */
+    mxml_node_t *w;   /* <data> */
+    mxml_node_t *styleurl;   /* <data> */
+    mxml_node_t *altitudeMode;   /* <data> */
+    mxml_node_t *group;   /* <data> */
+    mxml_node_t *model;   /* <data> */
+    mxml_node_t *orientation;   /* <data> */
+    mxml_node_t *scale;   /* <data> */
+    mxml_node_t *x;   /* <data> */
+    mxml_node_t *y;   /* <data> */
+    mxml_node_t *z;   /* <data> */
+    mxml_node_t *link;   /* <data> */
+    mxml_node_t *href;   /* <data> */
+    mxml_node_t *resourceMap;   /* <data> */
+
+//Create KML Container
+
+//KML Name
+    string q_name = name;
+   // string g_timestamp = getTimeStamp();
+    string g_timestamp = "00";
+
+   const char* kml_name = q_name.c_str();
+   const char* kml_timestamp = g_timestamp.c_str();
+
+xml = mxmlNewXML("1.0");
+        kml = mxmlNewElement(xml, "kml");
+            document = mxmlNewElement(kml, "Document");
+                nameKML = mxmlNewElement(document, "name");
+                  mxmlNewText(nameKML, 0, kml_name);
+                open = mxmlNewElement(document, "open");
+                  mxmlNewText(open, 0, "1");
+                timestamp = mxmlNewElement(document, "timestamp");
+                  mxmlNewText(timestamp, 0, kml_timestamp);
+//.................................................................
+//Get Placemarks
+
+
+
+
+
+   //Get Comments Description
+   string q_description = "";
+
+stringstream buffer;
+   buffer << pos.x();
+   string q_longitude = buffer.str();
+   buffer.str("");
+   buffer << pos.y();
+   string q_latitude = buffer.str();
+   buffer.str("");
+   buffer << pos.z();
+   string q_altitude = buffer.str();
+   buffer.str("");
+   buffer << rot.x();
+   string q_x = buffer.str();
+   buffer.str("");
+   buffer << rot.y();
+   string q_y = buffer.str();
+   buffer.str("");
+   buffer << rot.z();
+   string q_z = buffer.str();
+   buffer.str("");
+   buffer << rot.w();
+   string q_w = buffer.str();
+   buffer.str("");
+   buffer << scaleFloat;
+   string scaleTemp = buffer.str();
+   buffer.str("");
+   string q_scaleX = scaleTemp;
+   string q_scaleY = scaleTemp;
+   string q_scaleZ = scaleTemp;
+
+   string q_href = filename;
+
+                placemark = mxmlNewElement(document, "Placemark");
+                    nameKML = mxmlNewElement(placemark, "name");
+                      mxmlNewText(nameKML, 0, q_name.c_str());
+                    type = mxmlNewElement(placemark, "type");
+                      mxmlNewText(type, 0, q_type.c_str());
+                    filetypeKML = mxmlNewElement(placemark, "filetype");
+                      mxmlNewText(filetypeKML, 0, filetype.c_str());
+                    group = mxmlNewElement(placemark, "group");
+                      mxmlNewText(group, 0, q_group.c_str());
+                    styleurl = mxmlNewElement(placemark, "styleUrl");
+                      mxmlNewText(styleurl, 0, "#msn_GR");
+
+                    description = mxmlNewElement(placemark, "description");
+                      mxmlNewText(description, 0, q_description.c_str());
+                    model = mxmlNewElement(placemark, "Model");
+                        altitudeMode = mxmlNewElement(model, "altitudeMode");
+                          mxmlNewText(altitudeMode, 0, "absolute");
+                    
+                    lookat = mxmlNewElement(model, "Location");
+                        longitude = mxmlNewElement(lookat, "longitude");
+                          mxmlNewText(longitude, 0, q_longitude.c_str());
+                        latitude = mxmlNewElement(lookat, "latitude");
+                          mxmlNewText(latitude, 0, q_latitude.c_str());
+                        altitude = mxmlNewElement(lookat, "altitude");
+                          mxmlNewText(altitude, 0, q_altitude.c_str());
+                    orientation = mxmlNewElement(model, "Orientation");
+                        range = mxmlNewElement(orientation, "heading");
+                          mxmlNewText(range, 0, q_x.c_str());
+                        tilt = mxmlNewElement(orientation, "tilt");
+                          mxmlNewText(tilt, 0, q_y.c_str());
+                        heading = mxmlNewElement(orientation, "roll");
+                          mxmlNewText(heading, 0, q_z.c_str());
+                        w = mxmlNewElement(orientation, "w");
+                          mxmlNewText(w, 0, q_w.c_str());
+                    scale = mxmlNewElement(model, "Orientation");
+                        x = mxmlNewElement(scale, "x");
+                          mxmlNewText(x, 0, q_scaleX.c_str());
+                        y = mxmlNewElement(scale, "y");
+                          mxmlNewText(y, 0, q_scaleY.c_str());
+                        z = mxmlNewElement(scale, "z");
+                          mxmlNewText(z, 0, q_scaleZ.c_str());
+                    link = mxmlNewElement(model, "Link");
+                        href = mxmlNewElement(link, "href");
+                          mxmlNewText(href, 0, q_href.c_str());
+//.......................................................
+//Save File
+
+  const char *ptr;
+    ptr = "";
+  ptr = mxmlSaveAllocString(xml, MXML_NO_CALLBACK);
+    //cout << ptr;
+    FILE *fp;
+    
+    filename = file;
+    kml_name = filename.c_str();
+    fp = fopen(kml_name, "w");
+
+    fprintf(fp, ptr);
+
+    fclose(fp);
+ 
+
+}
+Vec3 ArtifactVis2::matrix_to_euler(osg::Matrix colMatrix)
+{
+  //Taken from Quat/Matrix.c
+//Does not work
+#define  Q_EPSILON   (1e-10)
+
+   double sinPitch, cosPitch, sinRoll, cosRoll, sinYaw, cosYaw;
+
+
+   sinPitch = -colMatrix(2,0);
+   cosPitch = sqrt(1 - sinPitch*sinPitch);
+
+   if ( fabs(cosPitch) > Q_EPSILON ) 
+   {
+      sinRoll = colMatrix(2,1) / cosPitch;
+      cosRoll = colMatrix(2,2) / cosPitch;
+      sinYaw = colMatrix(1,0) / cosPitch;
+      cosYaw = colMatrix(0,0) / cosPitch;
+   } 
+   else 
+   {
+      sinRoll = -colMatrix(1,2);
+      cosRoll = colMatrix(1,1);
+      sinYaw = 0;
+      cosYaw = 1;
+   }
+   Vec3 radians;
+   Vec3 angles;
+   radians.x() = atan2(sinYaw, cosYaw);
+   angles.x() = osg::RadiansToDegrees(radians.x()); 
+   radians.y() = atan2(sinPitch, cosPitch);
+   angles.y() = osg::RadiansToDegrees(radians.y()); 
+
+   radians.z() = atan2(sinRoll, cosRoll);
+   angles.z() = osg::RadiansToDegrees(radians.z());
+   return angles;
+/*    
+   // implementation converted from plib's sg.cxx
+   // PLIB - A Suite of Portable Game Libraries
+   // Copyright (C) 1998,2002  Steve Baker
+   // For further information visit http://plib.sourceforge.net
+   osg::Vec3 hpr;
+   Matrix rotation = colMatrix; 
+   osg::Matrix mat;
+
+   osg::Vec3 col1(rotation(0, 0), rotation(0, 1), rotation(0, 2));
+   double s = col1.length();
+
+   const double magic_epsilon = 0.00001;
+   if (s <= magic_epsilon)
+   {
+      hpr.set(0.0f, 0.0f, 0.0f);
+      return hpr;
+   }
+
+
+   double oneOverS = 1.0f / s;
+   for (int i = 0; i < 3; ++i)
+   {
+      for (int j = 0; j < 3; ++j)
+      {
+         mat(i, j) = rotation(i, j) * oneOverS;
+      }
+   }
+
+
+   double sin_pitch = ClampUnity(mat(1, 2));
+   double pitch = asin(sin_pitch);
+   hpr[1] = osg::RadiansToDegrees(pitch);
+
+   double cp = cos(pitch);
+
+   if (cp > -magic_epsilon && cp < magic_epsilon)
+   {
+      double cr = ClampUnity(-mat(2,1));
+      double sr = ClampUnity(mat(0,1));
+
+      hpr[0] = 0.0f;
+      hpr[2] = osg::RadiansToDegrees(atan2(sr,cr));
+   }
+   else
+   {
+      double one_over_cp = 1.0 / cp;
+      double sr = ClampUnity(-mat(0,2) * one_over_cp);
+      double cr = ClampUnity( mat(2,2) * one_over_cp);
+      double sh = ClampUnity(-mat(1,0) * one_over_cp);
+      double ch = ClampUnity( mat(1,1) * one_over_cp);
+
+      if ((osg::equivalent(sh,0.0,magic_epsilon) && osg::equivalent(ch,0.0,magic_epsilon)) ||
+          (osg::equivalent(sr,0.0,magic_epsilon) && osg::equivalent(cr,0.0,magic_epsilon)) )
+      {
+         cr = ClampUnity(-mat(2,1));
+         sr = ClampUnity(mat(0,1));;
+
+         hpr[0] = 0.0f;
+      }
+      else
+      {
+        hpr[0] = osg::RadiansToDegrees(atan2(sh, ch));
+      }
+
+      hpr[2] = osg::RadiansToDegrees(atan2(sr, cr));
+   }
+   return hpr;
+*/
+}
+
+float ArtifactVis2::ClampUnity(float x)
+{
+   if (x >  1.0f) { return  1.0f; }
+   if (x < -1.0f) { return -1.0f; }
+   return x;
+}
+void ArtifactVis2::findAllModels()
+{
+string dir = ConfigManager::getEntry("Plugin.ArtifactVis2.ArchInterfaceFolder").append("data/"); 
+
+std::vector<DirFile*> entries0;
+
+    string types = "kml";
+getDirFiles(dir, entries0, types);
+cerr << "Entries " << entries0.size() << endl;
+
+    string lastGroup = "";
+    string lastGroup0 = "";
+for(int i=0; i<entries0.size(); i++)
+{
+
+  if(entries0[i]->filetype == "folder")
+  {
+    if( entries0[i]->filename != "..")
+    {
+    cerr << "Files: " << entries0[i]->filename << endl;
+    string dirSub = dir;
+    dirSub.append(entries0[i]->filename);
+    dirSub.append("/");
+    std::vector<DirFile*> entriesSub;
+    getDirFiles(dirSub, entriesSub, types);
+    for(int n=0; n<entriesSub.size(); n++)
+    {
+
+             if(entriesSub[n]->filetype == "kml" && entries0[i]->filename != "models.kml" && entries0[i]->filename != "default_models.kml")
+             {
+		     string path = entriesSub[n]->path;
+		     newSelectedFile = entriesSub[n]->path;
+		     string kmlFilename = entriesSub[n]->filename;
+		     path.append(kmlFilename);
+		     string type = getKmlArray(path);
+		     if(type == "Model")
+		     {
+			     int index = _models3d.size() - 1;
+			     string group = _models3d[index]->group;
+			     cerr << "Found SubFile: " << _models3d[index]->filename << endl;
+				MenuCheckbox* site = new MenuCheckbox(_models3d[index]->name,false);
+				site->setCallback(this);
+				_showModelCB.push_back(site);
+				 addToModelDisplayMenu(group, site);
+		     }
+		     else if(type == "PointCloud")
+		     {
+			     int index = _pointClouds.size() - 1;
+			     string group = _pointClouds[index]->group;
+			     cerr << "Found SubFile: " << _pointClouds[index]->filename << endl;
+				MenuCheckbox* site = new MenuCheckbox(_pointClouds[index]->name,false);
+				site->setCallback(this);
+				_showPointCloudCB.push_back(site);
+				 addToPcDisplayMenu(group, site);
+		     }
+             }
+    }
+    
+    }
+  }
+  else
+  { 
+             if(entries0[i]->filetype == "kml" && entries0[i]->filename != "models.kml" && entries0[i]->filename != "default_models.kml")
+             {
+             string path  = entries0[i]->path;
+             newSelectedFile = path;
+             string kmlFilename = entries0[i]->filename;
+            // cerr << "Found File: " << newSelectedName << endl;
+             path.append(kmlFilename);
+		     string type = getKmlArray(path);
+		     if(type == "Model")
+		     {
+			     int index = _models3d.size() - 1;
+			     string group = _models3d[index]->group;
+			     cerr << "Found SubFile: " << _models3d[index]->filename << endl;
+				MenuCheckbox* site = new MenuCheckbox(_models3d[index]->name,false);
+				site->setCallback(this);
+				_showModelCB.push_back(site);
+				 addToModelDisplayMenu(group, site);
+		     }
+		     else if(type == "PointCloud")
+		     {
+			     int index = _pointClouds.size() - 1;
+			     string group = _pointClouds[index]->group;
+			     cerr << "Found SubFile: " << _pointClouds[index]->filename << endl;
+				MenuCheckbox* site = new MenuCheckbox(_pointClouds[index]->name,false);
+				site->setCallback(this);
+				_showPointCloudCB.push_back(site);
+				 addToPcDisplayMenu(group, site);
+		     }
+             newSelectedFile = "";
+             newSelectedName = "";
+		}
+
+  }
+
+}
+
+}
+string ArtifactVis2::getKmlArray(string file)
+{
+    FILE* fp = fopen(file.c_str(), "r");
+ string completed = "";
+ if (fp == NULL)
+ {
+        std::cerr << "Unable to open file: " << file << std::endl;
+ }
+ else
+ {   
+        std::cerr << "Found file: " << file << std::endl;
+
+    mxml_node_t* tree;
+    tree = mxmlLoadFile(NULL, fp, MXML_TEXT_CALLBACK);
+    fclose(fp);
+
+   if (tree == NULL)
+   {
+        std::cerr << "Unable to parse XML file: " << file << std::endl;
+        
+   }
+   else
+   {
+        std::cerr << "Parsing XML: " << file << std::endl;
+
+    mxml_node_t* node = mxmlFindElement(tree, tree, "Placemark", NULL, NULL, MXML_DESCEND);
+
+    if (true)
+    {
+        mxml_node_t* child = mxmlFindElement(node, tree, "type", NULL, NULL, MXML_DESCEND);
+        string modelType = "";
+        modelType = child->child->value.text.string;
+        if(modelType == "Model" || modelType == "PointCloud")
+        {
+		child = mxmlFindElement(node, tree, "group", NULL, NULL, MXML_DESCEND);
+		string group = child->child->value.text.string;
+		child = mxmlFindElement(node, tree, "filetype", NULL, NULL, MXML_DESCEND);
+		string filetype = child->child->value.text.string;
+
+		child = mxmlFindElement(node, tree, "href", NULL, NULL, MXML_DESCEND);
+		string filename = child->child->value.text.string;
+
+		child = mxmlFindElement(node, tree, "name", NULL, NULL, MXML_DESCEND);
+		string name = child->child->value.text.string;
+		float trans[3];
+		float scale[3];
+		float rotDegrees[4];
+		child = mxmlFindElement(node, tree, "altitudeMode", NULL, NULL, MXML_DESCEND);
+		child = mxmlFindElement(node, tree, "longitude", NULL, NULL, MXML_DESCEND);
+		trans[0] = atof(child->child->value.text.string);
+		child = mxmlFindElement(node, tree, "latitude", NULL, NULL, MXML_DESCEND);
+		trans[1] = atof(child->child->value.text.string);
+		child = mxmlFindElement(node, tree, "altitude", NULL, NULL, MXML_DESCEND);
+		trans[2] = atof(child->child->value.text.string);
+		child = mxmlFindElement(node, tree, "x", NULL, NULL, MXML_DESCEND);
+		scale[0] = atof(child->child->value.text.string);
+		child = mxmlFindElement(node, tree, "y", NULL, NULL, MXML_DESCEND);
+		scale[1] = atof(child->child->value.text.string);
+		child = mxmlFindElement(node, tree, "z", NULL, NULL, MXML_DESCEND);
+		scale[2] = atof(child->child->value.text.string);
+		child = mxmlFindElement(node, tree, "heading", NULL, NULL, MXML_DESCEND);
+		rotDegrees[0] = atof(child->child->value.text.string);
+		child = mxmlFindElement(node, tree, "tilt", NULL, NULL, MXML_DESCEND);
+		rotDegrees[1] = atof(child->child->value.text.string);
+		child = mxmlFindElement(node, tree, "roll", NULL, NULL, MXML_DESCEND);
+		rotDegrees[2] = atof(child->child->value.text.string);
+		child = mxmlFindElement(node, tree, "w", NULL, NULL, MXML_DESCEND);
+		bool degrees = true;
+		if(child != NULL)
+		{
+		rotDegrees[3] = atof(child->child->value.text.string);
+		degrees = false;
+		}
+		Vec3 pos;
+		pos = Vec3(trans[0], trans[1], trans[2]);
+		Quat rot;
+		if(degrees)
+		{
+
+		rotDegrees[0] = DegreesToRadians(rotDegrees[0]);
+		rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
+		rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
+		rot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(0,1,0),rotDegrees[2], osg::Vec3d(0,0,1)); 
+		}
+		else
+		{
+		  cerr << "As Quats\n";
+		  rot = Quat(rotDegrees[0],rotDegrees[1],rotDegrees[2],rotDegrees[3]);
+		}
+	    Model* newModel = new Model();
+            newModel->loaded = false;
+	    newModel->name = name;
+	    newModel->filename = filename;
+            string fullpath = getPathFromFilePath(file);
+            fullpath.append(filename);
+	    newModel->fullpath = fullpath;
+	    newModel->group = group;
+	    newModel->filetype = filetype;
+	    newModel->modelType = modelType;
+	    newModel->pos = pos; 
+	    newModel->rot = rot;
+	    newModel->origPos = pos; 
+	    newModel->origRot = rot;
+	    newModel->scale = scale[0]; 
+	    newModel->origScale = scale[0];
+            if(modelType == "Model")
+            {
+	    _models3d.push_back(newModel);
+            }
+            else if(modelType == "PointCloud")
+            {
+	    _pointClouds.push_back(newModel);
+            }
+	    completed = modelType; 
+       }
+    }
+   }
+  }
+return completed;
+}
+void ArtifactVis2::addToModelDisplayMenu(string group, cvr::MenuCheckbox* site)
+{
+                   bool groupExists = false;
+                   int m = 0; 
+	    	   for (int z = 0; z < _modelGroup.size(); z++)
+	    	   {
+                      if(_modelGroup[z] == group)
+                      {
+			groupExists = true;
+ 			m = z;
+			break;
+                      }
+	 	   }
+                   if(groupExists)
+                   {
+		      _modelMenus[m]->addItem(site);
+
+
+                   }
+                   else
+                   {
+                   cerr << "group: " << group << endl;
+                     SubMenu*  newMenu = new SubMenu(group, group);
+                      newMenu->setCallback(this);
+                      newMenu->addItem(site);
+		      _modelMenus.push_back(newMenu);
+		      _modelGroup.push_back(group);
+	 	   
+		   }
+
+}
+void ArtifactVis2::addToPcDisplayMenu(string group, cvr::MenuCheckbox* site)
+{
+                   bool groupExists = false;
+                   int m = 0; 
+	    	   for (int z = 0; z < _pcGroup.size(); z++)
+	    	   {
+                      if(_pcGroup[z] == group)
+                      {
+			groupExists = true;
+ 			m = z;
+			break;
+                      }
+	 	   }
+                   if(groupExists)
+                   {
+		      _pcMenus[m]->addItem(site);
+
+
+                   }
+                   else
+                   {
+                   cerr << "group: " << group << endl;
+                     SubMenu*  newMenu = new SubMenu(group, group);
+                      newMenu->setCallback(this);
+                      newMenu->addItem(site);
+		      _pcMenus.push_back(newMenu);
+		      _pcGroup.push_back(group);
+	 	   
+		   }
+
+}
+std::string ArtifactVis2::getPathFromFilePath(string filepath)
+{
+
+                //Get Full path
+ size_t found=filepath.find_last_of("/");
+    string path;
+            if (found!=string::npos)
+	    {
+                 int start = int(found);
+                 path = filepath;
+                 path.erase(start,(path.length()-start));
+                 path.append("/"); 
+                   cerr << "path: " << path << endl;
+            }
+return path;
+}
+std::string ArtifactVis2::getFileFromFilePath(string filepath)
+{
+
+                //Get Full path
+ size_t found=filepath.find_last_of("/");
+    string path;
+            if (found!=string::npos)
+	    {
+                 int start = int(found);
+                 path = filepath;
+                 path.erase(0,(start+1)); 
+                   cerr << "filename: " << path << endl;
+            }
+return path;
+}

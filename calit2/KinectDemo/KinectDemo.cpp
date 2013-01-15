@@ -76,6 +76,15 @@ bool KinectDemo::init()
     _kColorFPS->setCallback(this);
     _kShowPCloud = new MenuCheckbox("Show Point Cloud", kShowPCloud);  //new
     _kShowPCloud->setCallback(this);
+
+
+    _kShowInfoPanel = new MenuCheckbox("Show Info Panel", kShowInfoPanel);  //new
+    _kShowInfoPanel->setCallback(this);
+    _infoPanel = new TabbedDialogPanel(1000, 30, 4, "Info Panel", "Plugin.ArtifactVis2.InfoPanel");
+    _infoPanel->addTextTab("Info", "");
+    _infoPanel->setVisible(false);
+    _infoPanel->setActiveTab("Info");
+
     _kColorOn = new MenuCheckbox("Show Real Colors on Point Cloud", useKColor);  //new
     _kColorOn->setCallback(this);
     _kNavSpheres = new MenuCheckbox("Navigation Spheres", kNavSpheres);
@@ -88,6 +97,7 @@ bool KinectDemo::init()
     _avMenu->addItem(_bookmarkLoc);
     _avMenu->addItem(_kMoveWithCam);
     _avMenu->addItem(_kNavSpheres);
+    _avMenu->addItem(_kShowInfoPanel);
     MenuSystem::instance()->addMenuItem(_avMenu);
     SceneManager::instance()->getObjectsRoot()->addChild(_root);
 
@@ -202,7 +212,28 @@ void KinectDemo::menuCallback(MenuItem* menuItem)
         Quat camQuad = camMat.getRotate();
         cerr << "Saved camera position: " << endl;
         cerr << cscale << ", " << (camTrans.x() / cscale) << ", " << (camTrans.y() / cscale) << ", " << (camTrans.z() / cscale) << ", " << camQuad.x() << ", " << camQuad.y() << ", " << camQuad.z() << ", " << camQuad.w() << endl;
+
+        bool savePointCloud = true;
+        if(savePointCloud && cloud_socket)
+        {
+          ExportPointCloud(); 
+        }
+
     }
+
+    if(menuItem == sliderX)
+    {
+        kinectX = sliderX->getValue();
+    }
+    if(menuItem == sliderY)
+    {
+        kinectY = sliderY->getValue();
+    }
+    if(menuItem == sliderZ)
+    {
+        kinectZ = sliderZ->getValue();
+    }
+
 }
 
 void KinectDemo::preFrame()
@@ -212,6 +243,7 @@ void KinectDemo::preFrame()
     // loop getting new data from Kinect server
     ThirdLoop();
 
+    updateInfoPanel();
     // show image from Kinect camera every ... frames
     if (kShowColor || kShowDepth)
     {
@@ -514,6 +546,55 @@ if(!kinectThreaded)
     pgm1->setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
     // move camera to the kinect-person
 }
+//Get KinectSkeleton Offset
+
+    kinectX = ConfigManager::getFloat("x","Plugin.KinectDemo.KinectSkeleton",0.0f);
+    kinectY = ConfigManager::getFloat("y","Plugin.KinectDemo.KinectSkeleton",0.0f);
+    kinectZ = ConfigManager::getFloat("z","Plugin.KinectDemo.KinectSkeleton",0.0f);
+    kinectRX = ConfigManager::getFloat("rx","Plugin.KinectDemo.KinectSkeleton",0.0f);
+    kinectRY = ConfigManager::getFloat("ry","Plugin.KinectDemo.KinectSkeleton",0.0f);
+    kinectRZ = ConfigManager::getFloat("rz","Plugin.KinectDemo.KinectSkeleton",0.0f);
+    kinectRW = ConfigManager::getFloat("rw","Plugin.KinectDemo.KinectSkeleton",0.0f);
+
+//Show info Panel
+
+
+    kShowInfoPanel = ConfigManager::getBool("Plugin.KinectDemo.KinectDefaultOn.ShowInfoPanel");
+    if(kShowInfoPanel)
+    {
+      _kShowInfoPanel->setValue(true);
+      _infoPanel->setVisible(true);
+
+      sliderX = new MenuRangeValue("X",-1000.0,1000.0,kinectX,0.01);
+      sliderX->setCallback(this);
+      _infoPanel->addMenuItem(sliderX);
+
+      sliderY = new MenuRangeValue("Y",-1000.0,1000.0,kinectY,0.01);
+      sliderY->setCallback(this);
+      _infoPanel->addMenuItem(sliderY);
+
+      sliderZ = new MenuRangeValue("Z",-1000.0,1000.0,kinectZ,0.01);
+      sliderZ->setCallback(this);
+      _infoPanel->addMenuItem(sliderZ);
+/*
+      sliderRX = new MenuRangeValue("RX",-1000.0,1000.0,kinectRX,0.01);
+      sliderRX->setCallback(this);
+      _infoPanel->addMenuItem(sliderRX);
+
+      sliderRY = new MenuRangeValue("RY",-1000.0,1000.0,kinectRY,0.01);
+      sliderRY->setCallback(this);
+      _infoPanel->addMenuItem(sliderRY);
+
+      sliderRZ = new MenuRangeValue("RZ",-1000.0,1000.0,kinectRZ,0.01);
+      sliderRZ->setCallback(this);
+      _infoPanel->addMenuItem(sliderRZ);
+
+      sliderRW = new MenuRangeValue("RW",-1000.0,1000.0,kinectRW,0.01);
+      sliderRW->setCallback(this);
+      _infoPanel->addMenuItem(sliderRW);
+*/
+    }
+
     float camX = ConfigManager::getFloat("x","Plugin.KinectDemo.CamStart",0.0f);
     float camY = ConfigManager::getFloat("y","Plugin.KinectDemo.CamStart",0.0f);
     float camZ = ConfigManager::getFloat("z","Plugin.KinectDemo.CamStart",0.0f);
@@ -523,7 +604,7 @@ if(!kinectThreaded)
     float camRZ = ConfigManager::getFloat("rz","Plugin.KinectDemo.CamStart",0.0f);
     float camRW = ConfigManager::getFloat("rw","Plugin.KinectDemo.CamStart",0.0f);
     //moveCam(273.923, 0.178878, -1.27967, 1.64388, -0.0247491, 0.294768, 0.952783, 0.0685912);
-    moveCam(camS, camX, camY, camZ, camRX, camRY, camRZ, camRW);
+    //moveCam(camS, camX, camY, camZ, camRX, camRY, camRZ, camRW);
 if(!skeletonThreaded)
 {
     distanceMAX = ConfigManager::getFloat("Plugin.KinectDemo.Cylinder.Max");
@@ -618,15 +699,22 @@ void KinectDemo::ThirdLoop()
 if(!skeletonThreaded)
 {
     // if skeletons are to be displayed in coorinates relative to the camera, position of the camera is saved in Skeleton::camPos,camRot (one for all skeletons)
+    Skeleton::camPos = Vec3d(kinectX, kinectY, kinectZ);
+    Skeleton::camRot = Vec4(kinectRX,kinectRY,kinectRZ,kinectRW);
+
     if (Skeleton::moveWithCam)
     {
-        Matrixd camMat = PluginHelper::getWorldToObjectTransform(); //This will get us actual real world coordinates that the camera is at (not sure about how it does rotation)
+        //Matrixd camMat = PluginHelper::getWorldToObjectTransform(); //This will get us actual real world coordinates that the camera is at (not sure about how it does rotation)
+        Matrixd camMat = PluginHelper::getHeadMat(0); //This will get us actual real world coordinates that the camera is at (not sure about how it does rotation)
         float cscale = 1; //Want to keep scale to actual Kinect which is is meters
         Vec3 camTrans = camMat.getTrans();
         Quat camQuad = camMat.getRotate();  //Rotation of cam will cause skeleton to be off center--need Fix!!
-        double xOffset = (camTrans.x() / cscale);
-        double yOffset = (camTrans.y() / cscale) + 3; //Added Offset of Skeleton so see a little ways from camera (i.e. 5 meters, works at this scale,only)
-        double zOffset = (camTrans.z() / cscale);
+        //double xOffset = (camTrans.x() / cscale);
+        //double yOffset = (camTrans.y() / cscale) + 3; //Added Offset of Skeleton so see a little ways from camera (i.e. 5 meters, works at this scale,only)
+        //double zOffset = (camTrans.z() / cscale);
+        double xOffset = camTrans.x() - kinectX;
+        double yOffset = camTrans.y(); //Added Offset of Skeleton so see a little ways from camera (i.e. 5 meters, works at this scale,only)
+        double zOffset = camTrans.z();
         Skeleton::camPos = Vec3d(xOffset, yOffset, zOffset);
         Skeleton::camRot = camQuad;
     }
@@ -697,9 +785,9 @@ if(!skeletonThreaded)
         {
             for (int i = 0; i < packet->points_size(); i++)
             {
-                osg::Vec3f ppos((packet->points(i).x() /  1000) + Skeleton::camPos.x(),
-                                (packet->points(i).z() / -1000) + Skeleton::camPos.y(),
-                                (packet->points(i).y() /  1000) + Skeleton::camPos.z());
+                osg::Vec3f ppos(packet->points(i).x() + Skeleton::camPos.x(),
+                                packet->points(i).z() + Skeleton::camPos.y(),
+                                packet->points(i).y() + Skeleton::camPos.z());
                 kinectVertices->push_back(ppos);
 
                 if (useKColor)
@@ -816,7 +904,8 @@ if(!kinectThreaded)
     {
         pgm1->ref();
         kinectgrp->removeChild(0, 1);
-        _root->removeChild(kinectgrp);
+       // _root->removeChild(kinectgrp);
+       SceneManager::instance()->getScene()->removeChild(kinectgrp);
         kinectgrp = NULL;
     }
 }
@@ -844,7 +933,8 @@ if(kShowPCloud)
     float pscale = initialPointScale;
     osg::Uniform*  _scaleUni = new osg::Uniform("pointScale", 1.0f * pscale);
     kinectgrp->getOrCreateStateSet()->addUniform(_scaleUni);
-    _root->addChild(kinectgrp);
+    SceneManager::instance()->getScene()->addChild(kinectgrp);
+   // _root->addChild(kinectgrp);
   }
   else
   {
@@ -1172,4 +1262,85 @@ void KinectDemo::checkHandsIntersections(int skel_id)
             }
         }
     }
+}
+
+void KinectDemo::updateInfoPanel()
+{
+
+    std::stringstream ss;
+//kinectUsers
+
+if(cloud_socket)
+{
+ if(cloud_socket->recv(*packet))
+ {
+
+
+
+ }
+
+
+
+}
+  //  ss << "FPS: " << navSphereTimer << endl;
+   // ss << "X: " << kinectX << endl;
+        Matrixd camMat = PluginHelper::getHeadMat(0); //This will get us actual real world coordinates that the camera is at (not sure about how it does rotation)
+        float cscale = 1; //Want to keep scale to actual Kinect which is is meters
+        Vec3 camTrans = camMat.getTrans();
+        Quat camQuad = camMat.getRotate();  //Rotation of cam will cause skeleton to be off center--need Fix!!
+        double xOffset = camTrans.x();
+        double yOffset = camTrans.y(); //Added Offset of Skeleton so see a little ways from camera (i.e. 5 meters, works at this scale,only)
+        double zOffset = camTrans.z();
+        double rxOffset = camQuad.x();
+        double ryOffset = camQuad.y();
+        double rzOffset = camQuad.z();
+        double rwOffset = camQuad.w();
+     ss << "HeadMat X:" << xOffset << " Y:" << yOffset << " Z:" << zOffset << " RX:" << rxOffset << " RY:" << ryOffset << " RZ:" << rzOffset << " RW:" << rwOffset << endl;
+        
+        Matrixd handMat = PluginHelper::getHandMat(0); //This will get us actual real world coordinates that the camera is at (not sure about how it does rotation)
+        Vec3 handTrans = handMat.getTrans();
+        Quat handQuad = handMat.getRotate();  //Rotation of cam will cause skeleton to be off center--need Fix!!
+        xOffset = handTrans.x();
+        yOffset = handTrans.y(); //Added Offset of Skeleton so see a little ways from camera (i.e. 5 meters, works at this scale,only)
+        zOffset = handTrans.z();
+        rxOffset = handQuad.x();
+        ryOffset = handQuad.y();
+        rzOffset = handQuad.z();
+        rwOffset = handQuad.w();
+
+     ss << "HandMat X:" << xOffset << " Y:" << yOffset << " Z:" << zOffset << " RX:" << rxOffset << " RY:" << ryOffset << " RZ:" << rzOffset << " RW:" << rwOffset << endl;
+    _infoPanel->updateTabWithText("Info", ss.str());
+}
+void KinectDemo::ExportPointCloud()
+{
+
+                    printf("Triggered\n");
+                    osg::Vec3Array* vertices = kinectVertices;
+                    osg::Vec4Array* colours = kinectColours;
+                    FILE* pFile;
+                    string file = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("kinectDump.ply");
+                    pFile = fopen(file.c_str(), "w");
+                    fprintf(pFile, "ply\nformat ascii 1.0\ncomment VCGLIB generated\n");
+                    fprintf(pFile, "element vertex %i\n", vertices->size());
+                    fprintf(pFile, "property float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\nproperty uchar alpha\nelement face 0\nproperty list uchar int vertex_indices\nend_header\n");
+
+                    for (int i = 0; i < vertices->size() ; i++)
+                    {
+                        double x = vertices->at(i).x(); // * 1000;
+                        double y = vertices->at(i).y();// * 1000;
+                        double z = vertices->at(i).z();//* 1000;
+                        double r = colours->at(i).r() * 255;
+                        double g = colours->at(i).g() * 255;
+                        double b = colours->at(i).b() * 255;
+                        double a = colours->at(i).a();
+                        int ri = int (r);
+                        int gi = int (g);
+                        int bi = int (b);
+                        int ai = int (a);
+                        fprintf(pFile, "%f %f %f %i %i %i %i\n", x, y, z, ri, gi, bi, ai);
+
+                    }
+
+                    fclose(pFile);
+                
 }

@@ -10,6 +10,8 @@
 #include <cvrMenu/MenuCheckbox.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuRangeValue.h>
+#include <cvrMenu/MenuRangeValueCompact.h>
+#include <cvrMenu/TabbedDialogPanel.h>
 
 //#include "Skeleton.h"
 //#include "PubSub.h"
@@ -83,6 +85,8 @@ public:
     bool kNavSpheres;
     bool kShowDepth;
     bool kMoveWithCam;
+    bool kShowArtifactPanel;
+    bool kShowInfoPanel;
     osg::Program* pgm1;
     osg::Group* kinectgrp;
     float initialPointScale;
@@ -95,6 +99,8 @@ public:
 
     void ThirdInit();
     void ThirdLoop();
+    void updateInfoPanel();
+    void ExportPointCloud();
     RemoteKinect::SkeletonFrame* sf;
     RemoteKinect::PointCloud* packet;
     RemoteKinect::ColorMap* cm;
@@ -159,6 +165,15 @@ protected:
     cvr::MenuRangeValue* _kColorFPS;
     cvr::MenuCheckbox* _kNavSpheres;
     cvr::MenuCheckbox* _kShowDepth;
+    cvr::MenuCheckbox* _kShowInfoPanel;
+    cvr::TabbedDialogPanel* _infoPanel;
+    cvr::MenuRangeValue* sliderX;
+    cvr::MenuRangeValue* sliderY;
+    cvr::MenuRangeValue* sliderZ;
+    cvr::MenuRangeValue* sliderRX;
+    cvr::MenuRangeValue* sliderRY;
+    cvr::MenuRangeValue* sliderRZ;
+    cvr::MenuRangeValue* sliderRW;
 
     float distanceMIN, distanceMAX;
     cvr::MenuButton* _bookmarkLoc;
@@ -172,6 +187,14 @@ protected:
     osg::Node* _modelFileNode5;
 
     float _sphereRadius;
+
+    float kinectX;
+    float kinectY;
+    float kinectZ;
+    float kinectRX;
+    float kinectRY;
+    float kinectRZ;
+    float kinectRW;
 
 };
 

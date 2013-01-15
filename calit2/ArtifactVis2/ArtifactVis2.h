@@ -10,10 +10,19 @@
 #include <cvrMenu/MenuRangeValue.h>
 #include <cvrMenu/MenuTextButtonSet.h>
 #include <cvrMenu/MenuList.h>
+//#include <cvrInput/TrackingManager.h>
+//#include <cvrKernel/InteractionManager.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/SceneObject.h>
 
 #include <osg/Material>
 #include <osg/MatrixTransform>
 #include <osgText/Text>
+#include <osg/TextureCubeMap>
+#include <osg/Texture2D>
+#include <osg/LineWidth>
+
+
 
 #include <string>
 #include <vector>
@@ -22,18 +31,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <sys/types.h>
+#include <sys/dir.h>
 #include <X11/Xlib.h>
-#include <spnav.h>
+//#include <spnav.h>
 
-#include "skeleton.h"
-#include <shared/PubSub.h>
-#include <protocol/skeletonframe.pb.h>
-#include <protocol/colormap.pb.h>
-#include <protocol/depthmap.pb.h>
-#include <protocol/pointcloud.pb.h>
-#include <zmq.hpp>
+//#include "skeleton.h"
+//#include <shared/PubSub.h>
+//#include <protocol/skeletonframe.pb.h>
+//#include <protocol/colormap.pb.h>
+//#include <protocol/depthmap.pb.h>
+//#include <protocol/pointcloud.pb.h>
+//#include <zmq.hpp>
+//#include "DesignStateIntersector.h"
+//#include "DesignObjectIntersector.h"
 
-
+using namespace std;
+using namespace osg;
+using namespace cvr;
 #define M_HEAD 1
 #define M_LHAND 9
 #define M_RHAND 15
@@ -42,20 +57,20 @@
 #define CYLINDER 50
 //cv::Mat depthRaw(480, 640, CV_16UC1);
 const float DEPTH_SCALE_FACTOR = 255. / 4096.;
-std::map<int, Skeleton> mapIdSkel;
+//std::map<int, Skeleton> mapIdSkel;
 
 std::map< std::string, osg::ref_ptr<osg::Node> > objectMap;
 
-zmq::context_t context(1);
-SubSocket<RemoteKinect::SkeletonFrame>* skel_socket;
+//zmq::context_t context(1);
+//SubSocket<RemoteKinect::SkeletonFrame>* skel_socket;
 
-uint32_t color_pixels[480 * 640];
-SubSocket<RemoteKinect::ColorMap>* color_socket;
+//uint32_t color_pixels[480 * 640];
+//SubSocket<RemoteKinect::ColorMap>* color_socket;
 
-float depth_pixels[640 * 480];
-SubSocket<RemoteKinect::DepthMap>* depth_socket;
+//float depth_pixels[640 * 480];
+//SubSocket<RemoteKinect::DepthMap>* depth_socket;
 
-SubSocket<RemoteKinect::PointCloud>* cloud_socket;
+//SubSocket<RemoteKinect::PointCloud>* cloud_socket;
 static osg::ref_ptr<osg::Geode> pointGeode;
 
 // move somewhere else?
@@ -161,6 +176,211 @@ struct NavItem
     }
 
 };
+
+struct Annotation
+{
+
+	std::string desc;
+        std::string name;
+        std::string type; 
+        float scale; 
+        osg::Vec3 pos;
+        osg::Quat rot;
+        osg::Vec3 lStart;
+        osg::Vec3 lEnd;
+        osg::Geode* text_geode;
+        osgText::Text* textNode;
+        cvr::SceneObject * so;
+        bool active;
+        bool visible;
+	bool fromFile;
+        //std::map<cvr::SceneObject*,cvr::MenuButton*> saveMap;
+        cvr::MenuButton* saveMap;
+        cvr::MenuCheckbox* activeMap;
+        cvr::MenuCheckbox* visibleMap;
+        osg::Geometry * connector;  
+        osg::Geode* connectorGeode;
+        osg::Group* connectorNode;
+        osg::Geometry * geo;  
+};
+struct LineGroup
+{
+
+        std::string name;
+        std::string type; 
+        float scale; 
+        osg::Vec3 pos;
+        osg::Vec3 scenePos;
+        osg::Quat rot;
+        std::vector<osg::Vec3> vertex;
+        std::vector<osg::Geometry*> connector;
+        std::vector<osg::Sphere*> cubeShape;
+        std::vector<osg::Geode*> cubeGeode;
+        std::vector<osg::Geode*> text_geode;
+        std::vector<osgText::Text*> label;
+        std::vector<float> distance;
+        float distanceTotal;
+        osg::Switch* switchNode;
+        //float distance;
+        float angle[3];
+        cvr::SceneObject * so;
+        bool active;
+        bool visible;
+        bool editing;
+	bool fromFile;
+        bool open;
+        cvr::MenuButton* saveMap;
+        cvr::MenuCheckbox* activeMap;
+        cvr::MenuCheckbox* editingMap;
+        cvr::MenuCheckbox* visibleMap;
+};
+struct ArtifactAnnoTrack
+{
+      bool active;
+      int q;
+      int art;
+
+};
+struct DirFile
+{
+  string filename;
+  string filetype;
+  string path;
+
+};
+struct SelectModel
+{
+	string name;
+        float scale; 
+        osg::Vec3 pos;
+        osg::Quat rot;
+        osg::Vec3 orig;
+        cvr::SceneObject * so;
+        bool active;
+        bool visible;
+        bool selected;
+        bool lockPos;
+        bool lockRot;
+        bool lockScale;
+        bool lockGraph;
+    osg::ref_ptr<osg::PositionAttitudeTransform> patmt;
+    osg::ref_ptr<osg::MatrixTransform> rt;
+    osg::ref_ptr<osg::MatrixTransform> scalet;
+    int lockedTo;
+    int lockedType;
+    osg::Vec3d kpos;
+        cvr::MenuButton* saveMap;
+        cvr::MenuButton* resetMap;
+        cvr::MenuCheckbox* activeMap;
+        cvr::MenuCheckbox* visibleMap;
+        cvr::MenuCheckbox* pVisibleMap;
+        cvr::MenuCheckbox* dcMap;
+        cvr::MenuCheckbox* scanMap;
+        cvr::MenuCheckbox* cubeMap;
+        std::vector<cvr::MenuCheckbox*> photoMap;
+	//Store Different Model Type Transforms
+	string currentModelType;
+        osg::Node* currentModelNode;
+	osg::Switch* switchNode;
+        string scanModel;
+        float scanScale;
+        osg::Vec3 scanPos;
+        osg::Quat scanRot;
+        string dcModel;
+        float dcScale;
+        int dcIndex;
+        osg::Vec3 dcPos;
+        osg::Quat dcRot;
+        string cubeModel;
+	float cubeScale;
+        osg::Vec3 cubePos;
+        osg::Quat cubeRot;
+        string frameModel;
+        float frameScale;
+        osg::Vec3 framePos;
+        osg::Quat frameRot;
+
+
+};
+struct Model
+{
+	string name;
+	string filename;
+        string fullpath;
+        string filetype;
+        string modelType;
+        string group;
+        float scale; 
+        osg::Vec3 pos;
+        osg::Quat rot;
+        osg::Vec3 origPos;
+        osg::Quat origRot;
+        float origScale;
+        cvr::SceneObject * so;
+	bool loaded;
+        bool active;
+        bool visible;
+        bool selected;
+        bool lockPos;
+        bool lockRot;
+        bool lockScale;
+        bool lockGraph;
+    int lockedTo;
+    int lockedType;
+        cvr::MenuButton* saveMap;
+        cvr::MenuButton* saveNewMap;
+        cvr::MenuButton* resetMap;
+        cvr::MenuCheckbox* activeMap;
+        cvr::MenuCheckbox* visibleMap;
+        cvr::MenuRangeValue* rxMap;
+        cvr::MenuRangeValue* ryMap;
+        cvr::MenuRangeValue* rzMap;
+	//Store Different Model Type Transforms
+        osg::Node* currentModelNode;
+	osg::Switch* switchNode;
+
+
+};
+struct PointCloud
+{
+	string name;
+	string filename;
+        string fullpath;
+        string filetype;
+        string modelType;
+        string group;
+        float scale; 
+        osg::Vec3 pos;
+        osg::Quat rot;
+        osg::Vec3 origPos;
+        osg::Quat origRot;
+        float origScale;
+        cvr::SceneObject * so;
+	bool loaded;
+        bool active;
+        bool visible;
+        bool selected;
+        bool lockPos;
+        bool lockRot;
+        bool lockScale;
+        bool lockGraph;
+    int lockedTo;
+    int lockedType;
+        cvr::MenuButton* saveMap;
+        cvr::MenuButton* saveNewMap;
+        cvr::MenuButton* resetMap;
+        cvr::MenuCheckbox* activeMap;
+        cvr::MenuCheckbox* visibleMap;
+        cvr::MenuRangeValue* rxMap;
+        cvr::MenuRangeValue* ryMap;
+        cvr::MenuRangeValue* rzMap;
+	//Store Different Model Type Transforms
+        osg::Node* currentModelNode;
+	osg::Switch* switchNode;
+
+
+};
+
 class Artifact
 {
 public:
@@ -200,7 +420,10 @@ public:
         scalem.makeScale(s, s, s);
         scalet->setMatrix(scalem);
     }
-
+    //Detail Graph
+    Annotation* annotation;
+    //Select Model
+    SelectModel* model;
 };
 
 
@@ -221,7 +444,7 @@ public:
     void message(int type, char* data);
 
     bool init();
-
+    void getDirFiles(const string& dirname, std::vector<DirFile* > & entries, std::string types);
     bool processEvent(cvr::InteractionEvent* event);
     bool statusSpnav;
     bool _handOn;
@@ -237,96 +460,30 @@ public:
     osg::Matrix getSelectMatrix();
     void setSelectMatrix(osg::Matrix& mat);
     bool _selectActive;
-
+    bool _shiftActive;
+    bool _rotActive;
+    bool _grabActive;
     int _activeArtifact;
-
+    int currentKey;
     void testSelected();
-
-    //Kinect
-    NavigationSphere navSphere;
-	    double navSphereOffsetY;
-	    double navSphereOffsetZ;
-	    //X
-            double diffScaleX;
-	    double diffScaleNegX;
-            double tranScaleX;
-	    //Y
-            double diffScaleY;
-	    double diffScaleNegY;
-            double tranScaleY;
-	    //Z
-            double diffScaleZ;
-	    double diffScaleNegZ;
-            double tranScaleZ;
-
-	    //RY
-            double diffScaleRY;
-	    double diffScaleNegRY;
-            double tranScaleRY;
-
-    osg::ref_ptr<osg::MatrixTransform> bitmaptransform;
-    int bcounter;
-    float colorfps;
-    float navSphereTimer;
-
-    float skelOffsetX;
-    float skelOffsetY;
-    float skelOffsetZ;
-
-    int kinectUsers;
-    bool handsBeenAbove;
-    bool navSphereActivated;
-    bool useKColor;
-    bool useKinect;
-    bool kSelectKinect;
-    bool kShowColor;
-    bool kShowPCloud;
-    bool kNavSpheres;
-    bool kUseGestures;
-    bool kMoveWithCam;
+    std::string getCharacterAscii(int code);
+    void readAnnotationFile();
     bool nvidia;
     osg::Program* pgm1;
-    osg::Group* kinectgrp;
     float initialPointScale;// = ConfigManager::getFloat("Plugin.Points.PointScale", 0.001f);
 
 
 
-    bool kLockRot;
-    bool kLockScale;
-    bool kLockPos;
-    bool kShowArtifactPanel;
-    bool kShowInfoPanel;
     std::vector<SelectableItem> selectableItems;
-    void kinectInit();
-    void kinectOff();
     void moveCam(double, double, double, double, double, double, double, double);
     void flyTo(int i);
     void createSelObj(osg::Vec3 pos, std::string, float radius);
-    void ThirdInit();
-    void ThirdLoop();
-    double depth_to_hue(double dmin, double depth, double dmax);
-    void HSVtoRGB(float* r, float* g, float* b, float h, float s, float v);
-    bool handApproachingDisplayPerimeter(float x, float y, int roi);
-    void cloudOff();
-    void navOff();
-    void navOn();
-    void cloudOn();
-    void colorOff();
-    void colorOn();
-    void gesturesOff();
-    void gesturesOn();
-    void moveWithCamOff();
-    void moveWithCamOn();
-    void updateInfoPanel();
-
-    osg::ref_ptr<osg::Vec4dArray> kinectColours;
-    osg::ref_ptr<osg::Vec3Array> kinectVertices;
-    ///Kinect
 protected:
 
     static ArtifactVis2* _artifactvis2;
     int _testA;
-
+    bool ArtifactVis2On;
+    bool secondInitComplete;
     struct Locus
     {
         std::vector<std::string> fields;
@@ -343,20 +500,6 @@ protected:
         std::vector<osg::Vec3d> coordsTop;
         std::vector<osg::Vec3d> coordsBot;
         osgText::Text* label;
-    };
-    struct QueryGroup
-    {
-        std::string name;
-        std::string query;
-        bool sf;
-        std::vector<Artifact*> artifacts;
-        std::vector<Locus*> loci;
-        bool active;
-        std::string timestamp;
-        std::string kmlPath;
-        osg::ref_ptr<osg::MatrixTransform> sphereRoot;
-        bool updated;
-        osg::Vec3d center;
     };
     struct Table
     {
@@ -391,21 +534,82 @@ protected:
         std::vector<double> rw;
 
     };
+
+    struct QueryGroup
+    {
+        std::string name;
+        std::string query;
+        bool sf;
+        std::vector<Artifact*> artifacts;
+        std::vector<Locus*> loci;
+        bool active;
+        std::string timestamp;
+        std::string kmlPath;
+        osg::ref_ptr<osg::MatrixTransform> sphereRoot;
+        bool updated;
+        osg::Vec3d center;
+    };
+    //eventually struct Annotation
+    osgText::Text* textNode;
+    std::vector<Annotation*> _annotations;
+    std::vector<ArtifactAnnoTrack*> _artifactAnnoTrack;
+    std::vector<ArtifactAnnoTrack*> _artifactModelTrack;
+    void deactivateAllAnno();
+    void deactivateAllArtifactAnno();
+    void deactivateAllArtifactModel();
+    bool artifactPanelExists(int q, int art);
+    bool artifactModelExists(int q, int art);
+    void activateArtifactFromQuery(int q, int art);
+    void activateModelFromQuery(int q, int art);
+    void recreateConnector(int q, int art);
+    int findActiveAnnot();
+    void updateAnnoLine();
+    void updateArtifactLine();
+    void updateArtifactModel();
+    void resetArtifactModelOrig(int q, int art);
+    void switchModelType(string type,int q, int art);
+    void deactivateModelSwitches(int q, int art);
+    int convertDCtoIndex(string dc);
+//    mxml_node_t  getTree(string filename);
+    void saveAnnotationGraph();
+    void createArtifactPanel(int q, int art, string desc);
+    void createArtifactModel(int q, int art, string desc);
+
+    bool lineGroupsEditing;
+    void startLineObject(); 
+    void addLineVertex(int i); 
+    void closeLineVertex(int i); 
+    void updateLineGroup(); 
+    std::vector<LineGroup*> _lineGroups;
+    std::vector<ArtifactAnnoTrack*> _lineGroupTrack;
+
+
+
     FlyPlace* _flyplace;
     osg::ref_ptr<osg::Node> _models[676];
+    osg::ref_ptr<osg::Node> defaultDcModel;
     bool _modelLoaded[676];
     cvr::SubMenu* _modelDisplayMenu;
-    std::vector<cvr::MenuCheckbox*> _showModelCB;
+    cvr::MenuCheckbox* _turnOnArtifactVis2;
     std::vector<cvr::MenuButton*> _reloadModel;
     cvr::SubMenu* _pcDisplayMenu;
-    std::vector<cvr::MenuCheckbox*> _showPCCB;
     std::vector<cvr::MenuButton*> _reloadPC;
+    cvr::SubMenu* _hudDisplayMenu;
+    std::vector<cvr::MenuButton*> _reloadHud;
     cvr::SubMenu* _avMenu;
     cvr::SubMenu* _displayMenu;
     cvr::SubMenu* _artifactDisplayMenu;
     std::vector<cvr::SubMenu*> _queryOptionMenu;
     std::vector<cvr::MenuCheckbox*> _queryOption;
+    std::vector<int> _querySfIndex;
+    std::vector<cvr::MenuCheckbox*> _queryOptionLoci;
+    std::vector<int> _queryLociIndex;
+    std::vector<cvr::MenuCheckbox*> _showPCCB;
+    std::vector<cvr::MenuCheckbox*> _showHudCB;
+    std::vector<cvr::MenuCheckbox*> _showModelCB;
+    std::vector<cvr::MenuCheckbox*> _showPointCloudCB;
     std::vector<cvr::SubMenu*> _showQueryInfo;
+    std::vector<cvr::SubMenu*> _showQueryInfoLoci;
     std::vector<cvr::MenuCheckbox*> _queryDynamicUpdate;
     std::vector<cvr::MenuText*> _queryInfo;
     std::vector<cvr::MenuButton*> _eraseQuery;
@@ -415,28 +619,11 @@ protected:
     cvr::MenuTextButtonSet* _locusDisplayMode;
     cvr::MenuCheckbox* _selectArtifactCB;
     cvr::MenuCheckbox* _manipArtifactCB;
+    cvr::MenuCheckbox* _createAnnotations;
+    cvr::MenuCheckbox* _createMarkup;
     //Kinect
-    cvr::MenuCheckbox* _selectKinectCB;
-    cvr::MenuCheckbox* _kColorOn;
-    cvr::MenuCheckbox* _kShowColor;
-    cvr::MenuCheckbox* _kShowPCloud;
-    cvr::MenuCheckbox* _kMoveWithCam;
     cvr::MenuCheckbox* _scaleBar;
-    cvr::MenuCheckbox* _kinectOn;
-    cvr::MenuRangeValue* _kColorFPS;
-    cvr::MenuCheckbox* _kNavSpheres;
-    cvr::MenuCheckbox* _kUseGestures;
-    cvr::MenuCheckbox* _kShowArtifactPanel;
-    cvr::MenuCheckbox* _kShowInfoPanel;
-    cvr::SubMenu* _kinectMenu;
 
-    cvr::MenuCheckbox* _kLockRot;
-    cvr::MenuCheckbox* _kLockScale;
-    cvr::MenuCheckbox* _kLockPos;
-
-    float distanceMIN, distanceMAX;
-
-    ///Kinect
     cvr::SubMenu* _flyMenu;
     std::vector<cvr::MenuButton*> _goto;
     cvr::MenuButton* _bookmarkLoc;
@@ -446,7 +633,31 @@ protected:
     osg::MatrixTransform* _root;
 
     cvr::TabbedDialogPanel* _artifactPanel;
+
     cvr::TabbedDialogPanel* _infoPanel;
+    cvr::TabbedDialogPanel* _utilsPanel;
+    cvr::TabbedDialogPanel* _qsPanel;
+    cvr::TabbedDialogPanel* _bookmarkPanel;
+
+     
+    std::vector<DirFile*> entries;
+    cvr::PopupMenu* _filePanel;
+    cvr::MenuCheckbox* _fileMenu;
+    std::vector<cvr::MenuButton*> fileButton;
+    cvr::MenuButton* _resetFileManager;
+
+    cvr::MenuCheckbox* _utilsMenu;
+    cvr::MenuCheckbox* _qsMenu;
+    cvr::MenuCheckbox* _bookmarksMenu;
+    cvr::MenuButton* _artifactsDropDown;
+    bool artifactsDropped;
+    cvr::MenuButton* _lociDropDown;
+    bool lociDropped;
+    cvr::MenuButton* _modelDropDown;
+    bool modelDropped;
+    cvr::MenuButton* _pcDropDown;
+    bool pcDropped;
+
     cvr::DialogPanel* _selectionStatsPanel;
 
     std::string _picFolder;
@@ -469,14 +680,30 @@ protected:
     std::vector<osg::Vec4Array* > _colorsPC;
     std::vector<osg::Vec3d> _avgOffset;
     std::vector<osg::Node* > _modelSFileNode;
+    std::vector<osg::Node* > _hudFileNode;
     std::vector<osg::ref_ptr<osg::MatrixTransform> > _siteRoot;
     std::vector<osg::ref_ptr<osg::MatrixTransform> > _pcRoot;
+    std::vector<osg::ref_ptr<osg::MatrixTransform> > _hudRoot;
+
+
+    std::vector<Model* > _models3d;
+    std::vector<Model* > _pointClouds;
+
+
+
     std::vector<osg::Vec3d> _sitePos;
     std::vector<osg::Vec3d> _siteScale;
     std::vector<osg::Vec3d> _siteRot;
     std::vector<osg::Vec3d> _pcPos;
     std::vector<osg::Vec3d> _pcScale;
     std::vector<osg::Vec3d> _pcRot;
+    std::vector<osg::Vec3d> _hudPos;
+    std::vector<osg::Vec3d> _hudScale;
+    std::vector<osg::Vec3d> _hudRot;
+    osg::Vec3 grabCurrentPos;
+    osg::Vec3 _grabCurrentRot;
+    osg::Vec3 rhit;
+    bool _hudActive;
     std::vector<int> _pcFactor; //New
     osg::ref_ptr<osg::MatrixTransform> _selectBox;
     osg::ref_ptr<osg::MatrixTransform> _selectMark;
@@ -495,6 +722,7 @@ protected:
     double _yRotMouse; //New Add
     //float _LODmaxRange;
     float _sphereRadius;
+    float _vertexRadius;
 
 
     bool _ossim;
@@ -512,24 +740,70 @@ protected:
     void clearConditions(Table* t);
     void readPointCloud(int index);
     void readSiteFile(int index);
+    void readHudFile(int index);
+    void reloadHudFile(int index);
     void readLocusFile(QueryGroup* query);
+
+    osg::Matrix getHandToObjectMatrix();
+    osg::Matrix getHandToSceneMatrix();
+    void parseModelXml(bool useHandPos);
+    void parsePCXml(bool useHandPos);
+    void saveModelConfig(Model* saveModel, bool newConfig);
+    std::string manualEnterName; 
+    void saveTo3Dkml(string name,string filename, string file, string filetype, Vec3 pos, Quat rot, float scaleFloat, string q_type, string q_group); 
+    void addNewModel(int i);
+    void addNewPC(int i);
+    Vec3 matrix_to_euler(osg::Matrix colMatrix);
+    float ClampUnity(float x);
+    std::string newSelectedFile;
+    std::string newSelectedName;
+    std::string newSelectedType;
+    bool newFileAvailable;
+    void findAllModels();
+//Menu System Functions
+
+    void secondInit();
+    void menuSetup();
+    void updateDropDowns();
+    void addCheckBoxMenuItems(std::vector<cvr::MenuCheckbox*> checkBox);
+    void removeCheckBoxMenuItems(std::vector<cvr::MenuCheckbox*> checkBox);
+    void addSubMenuItems(std::vector<cvr::SubMenu*> menu);
+    void removeSubMenuItems(std::vector<cvr::SubMenu*> menu);
+    std::vector<cvr::SubMenu*> _modelMenus;
+    std::vector<cvr::SubMenu*> _pcMenus;
+    std::vector<std::string> _modelGroup;
+    std::vector<std::string> _pcGroup;
+    std::string getKmlArray(string file);
+    void addToModelDisplayMenu(string group, cvr::MenuCheckbox* site);
+    void addToPcDisplayMenu(string group, cvr::MenuCheckbox* site);
+    std::string getPathFromFilePath(string filepath);
+    std::string getFileFromFilePath(string filepath);
+
     void setupSiteMenu();
+    void setupHudMenu();
     void reloadSite(int index);  //New
     void setupLocusMenu();
     void setupQuerySelectMenu();
     void setupTablesMenu();
     void setupQueryMenu(Table* table);
+    void setupUtilsMenu();
+    void setupFileMenu();
+    void updateFileMenu(std::string dir);
+    void initSelectBox();
     void updateSelect();
     std::string getCurrentQuery(Table* t);
     bool modelExists(const char* filename);
     void loadModels();
     void rotateModel(double rx, double ry, double rz);
     void setupFlyToMenu();
-
+void loadAnnotationGraph(int inc);
+void createAnnotationFile(osg::Matrix tie);
+void updateHudMovement(int i, cvr::TrackedButtonInteractionEvent * tie,float _moveDistance, osg::Vec3 _menuPoint);
     //Space Navigator
     float transMult, rotMult;
     float transcale, rotscale;
-
+//void updateSceneObjectMovement(DSIntersector::DSIntersector* mDSIntersector, cvr::TrackedButtonInteractionEvent * tie);
+	osg::Quat prevHandRot;
 };
 
 #endif
