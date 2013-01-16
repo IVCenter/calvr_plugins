@@ -43,6 +43,13 @@
 #include <osg/Camera>
 
 
+#include <osg/PointSprite>
+#include <osg/BlendFunc>
+#include <osg/StateAttribute>
+#include <osg/Point>
+#include <osg/TexEnv>
+#include <osg/GLExtensions>
+
 #include <osg/CullFace>
 #include <osg/Matrix>
 #include <osg/ShapeDrawable>
@@ -6995,6 +7002,9 @@ void ArtifactVis2::addNewPC(int index)
 {
     Vec3Array* coords;
     Vec4Array* colors;
+    std::vector<Vec3> coords2;
+    std::vector<Vec4> colors2;
+
  int i = index;
  newFileAvailable = false;
  string currentModelPath = _pointClouds[i]->fullpath;
@@ -7202,8 +7212,10 @@ cerr << "Mark1\n";
                             float g = atof(entries[4].c_str()) / 255;
                             float b = atof(entries[5].c_str()) / 255;
                             coords->push_back(Vec3d(x, y, z));
+                           // coords2.push_back(Vec3(x,y,z));
                            // _avgOffset[index] += Vec3d(x, y, z);
                             colors->push_back(Vec4f(r, g, b, 1.0));
+                           // colors2.push_back(Vec4(r,g,b,1.0));
                             pcount++;
                             bten = 0;
                         }
@@ -7268,25 +7280,78 @@ cerr << "Mark1\n";
         }
     }
     Geode* pointGeode = new Geode();
+    osg::Geode* sphereGeode = new Geode();  
     if(!nvidia)
     {
 
 
-        Geometry* pointCloud = new Geometry();
-        pointCloud->setVertexArray(coords);
-        pointCloud->setColorArray(colors);
-        pointCloud->setColorBinding(Geometry::BIND_PER_VERTEX);
-        DrawElementsUInt* points = new DrawElementsUInt(PrimitiveSet::POINTS, 0);
+//        Geometry* pointCloud = new Geometry();
+  //      pointCloud->setVertexArray(coords);
+    //    pointCloud->setColorArray(colors);
+      //  pointCloud->setColorBinding(Geometry::BIND_PER_VERTEX);
+      //  DrawElementsUInt* points = new DrawElementsUInt(PrimitiveSet::POINTS, 0);
 
-        for (int n = 0; n < coords->size(); n++)
-        {
-            points->push_back(n);
-        }
+//bangSph 
 
-        pointCloud->addPrimitiveSet(points);
-        pointGeode->addDrawable(pointCloud);
-        StateSet* ss = pointGeode->getOrCreateStateSet();
+   // Sphere* sphereShape;
+  //  ShapeDrawable* shapeDrawable;
+
+//        for (int n = 0; n < coords->size(); n++)
+  //      {
+            /*
+            Sphere* sphereShape =  new Sphere(coords2[n], _vertexRadius);
+            ShapeDrawable* shapeDrawable = new ShapeDrawable(sphereShape);
+            // shapeDrawable->setTessellationHints(hints);
+            shapeDrawable->setColor(colors2[n]);
+            sphereGeode->addDrawable(shapeDrawable);
+            */
+
+             
+       // pointCloud->addPrimitiveSet(points);
+         //   points->push_back(n);
+    //    }
+
+ //   pointCloud->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS, 0,coords->size()));
+     //   pointCloud->addPrimitiveSet(points);
+   //     pointGeode->addDrawable(pointCloud);
+     if(true)
+     {
+        StateSet* ss = pli.group->getOrCreateStateSet();
         ss->setMode(GL_LIGHTING, StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+    }
+    else
+    {
+    float size = 10;
+    osg::StateSet* set = pli.group->getOrCreateStateSet();
+
+    /// Setup cool blending
+   // set->setMode(GL_LIGHTING,  osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+    set->setMode(GL_BLEND, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+    osg::BlendFunc *fn = new osg::BlendFunc();
+   fn->setFunction(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::DST_ALPHA);
+  // fn->setFunction(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE);
+    //fn->setFunction(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA);
+    set->setAttributeAndModes(fn, osg::StateAttribute::ON);
+
+    /// Setup the point sprites
+    osg::PointSprite *sprite = new osg::PointSprite();
+    set->setTextureAttributeAndModes(0, sprite, osg::StateAttribute::ON);
+
+    /// Give some size to the points to be able to see the sprite
+    osg::Point *pointz = new osg::Point();
+    pointz->setSize(size);
+    set->setAttribute(pointz);
+
+    /// Disable depth test to avoid sort problems and Lighting
+    //set->setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
+    set->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+
+    /// The texture for the sprites
+    osg::Texture2D *tex = new osg::Texture2D();
+    tex->setImage(osgDB::readImageFile("/home/calvr/osgdata/Images/particle.rgb"));
+    set->setTextureAttributeAndModes(0, tex, osg::StateAttribute::ON);
+}
+
      }
         if(true)
         {
@@ -7300,13 +7365,18 @@ float currentScale = _pointClouds[i]->scale;
 	    PluginHelper::registerSceneObject(so,"Test");
 	    so->attachToScene();
 //Add currentNode to switchNode
-     // _models3d[i]->currentModelNode = modelNode;  
+     // _models3d[i]->currentModelNode = modelNode; 
+     cerr << "here\n"; 
         if(!nvidia)
         {
+	//switchNode->addChild(pointGeode);
 	switchNode->addChild(pointGeode);
         }
         else
         {
+        StateSet* ss = pli.group->getOrCreateStateSet();
+        ss->setMode(GL_LIGHTING, StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+          
 	switchNode->addChild(pli.group.get());
 
         }
@@ -9083,3 +9153,4 @@ std::string ArtifactVis2::getFileFromFilePath(string filepath)
             }
 return path;
 }
+
