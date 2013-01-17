@@ -52,10 +52,11 @@ bool KinectDemo::init()
     kShowPCloud = ConfigManager::getBool("Plugin.KinectDemo.KinectDefaultOn.ShowPCloud");
    // kShowPCloud = false;
     //kinectThreaded = false;
-    useKColor = false;
+    useKColor = ConfigManager::getBool("Plugin.KinectDemo.KinectDefaultOn.ShowColor");
     kShowDepth = false;
     kShowColor = false;
     kNavSpheres = false;
+    kMoveWithCam = false;
     std::cerr << "KinectDemo init\n";
     //Menu Setup:
     _avMenu = new SubMenu("Kinect Demo", "Kinect Demo");
@@ -611,14 +612,14 @@ if(!skeletonThreaded)
     distanceMIN = ConfigManager::getFloat("Plugin.KinectDemo.Cylinder.Min");
     Skeleton::navSpheres = false;
     bcounter = 0;
-    _modelFileNode1 = osgDB::readNodeFile(ConfigManager::getEntry("Plugin.KinectDemo.3DModelFolder").append("cessnafire.osg"));
-    _modelFileNode2 = osgDB::readNodeFile(ConfigManager::getEntry("Plugin.KinectDemo.3DModelFolder").append("dumptruck.osg"));
-    _modelFileNode5 = osgDB::readNodeFile(ConfigManager::getEntry("Plugin.KinectDemo.3DModelFolder").append("cessna.osg"));
-    _modelFileNode4 = osgDB::readNodeFile(ConfigManager::getEntry("Plugin.KinectDemo.3DModelFolder").append("cow.osg"));
-    _modelFileNode3 = osgDB::readNodeFile(ConfigManager::getEntry("Plugin.KinectDemo.3DModelFolder").append("robot.osg"));
+    _modelFileNode1 = osgDB::readNodeFile(ConfigManager::getEntry("Plugin.KinectDemo.3DModelFolder").append("kinect_mm.obj"));
+   // _modelFileNode2 = osgDB::readNodeFile(ConfigManager::getEntry("Plugin.KinectDemo.3DModelFolder").append("dumptruck.osg"));
+  //  _modelFileNode5 = osgDB::readNodeFile(ConfigManager::getEntry("Plugin.KinectDemo.3DModelFolder").append("cessna.osg"));
+  //  _modelFileNode4 = osgDB::readNodeFile(ConfigManager::getEntry("Plugin.KinectDemo.3DModelFolder").append("cow.osg"));
+  //  _modelFileNode3 = osgDB::readNodeFile(ConfigManager::getEntry("Plugin.KinectDemo.3DModelFolder").append("robot.osg"));
     _sphereRadius = 0.07;
-     Group* kinectgrp = new Group();
-     kinectgrp->addChild(_modelFileNode3);
+   //  Group* kinectgrp = new Group();
+   //  kinectgrp->addChild(_modelFileNode3);
     // createSceneObject(kinectgrp);
 
    // createSelObj(Vec3(-0.70,  -2.0,  0.15),   string("DD"), 0.002, _modelFileNode1);
@@ -1425,16 +1426,255 @@ cerr << "Creating SceneObject\n";
         {
 //	switchNode->addChild(_modelFileNode4);
 
+     if(false)
+     {
+	    Vec3d poz0(kinectX, kinectY, kinectZ);
+	    Box* sphereShape = new Box(poz0, 50.0);
+	    ShapeDrawable* ggg2 = new ShapeDrawable(sphereShape);
+	    ggg2->setColor(Vec4(1,1,1,1));
+	    osg::Geode* boxGeode = new osg::Geode;
+	    boxGeode->addDrawable(ggg2);
 
-    Vec3d poz0(kinectX, kinectY, kinectZ);
-    Box* sphereShape = new Box(poz0, 100.0);
-    ShapeDrawable* ggg2 = new ShapeDrawable(sphereShape);
-    ggg2->setColor(Vec4(1,1,1,1));
-    osg::Geode* boxGeode = new osg::Geode;
-    boxGeode->addDrawable(ggg2);
+	    switchNode->addChild(boxGeode);
+     }
 
-	switchNode->addChild(boxGeode);
+            if(ConfigManager::getBool("Plugin.KinectDemo.ShowKinectModel"))
+            {
+              //Loads Kinect Obj file
+		    Matrixd scale;
+		    double snum = 1;
+		    scale.makeScale(snum, snum, snum);
+		    MatrixTransform* modelScaleTrans = new MatrixTransform();
+		    modelScaleTrans->setMatrix(scale);
+		    modelScaleTrans->addChild(_modelFileNode1);
+		    MatrixTransform* rotate = new osg::MatrixTransform();
 
+
+                   float rotDegrees[3];
+		   rotDegrees[0] = -90;
+		   rotDegrees[1] = 0;
+		   rotDegrees[2] = 180;
+			rotDegrees[0] = DegreesToRadians(rotDegrees[0]);
+			rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
+			rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
+			Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(0,1,0),rotDegrees[2], osg::Vec3d(0,0,1)); 
+
+		    Matrix rotMat;
+		    rotMat.makeRotate(rot);
+		    rotate->setMatrix(rotMat);
+		    rotate->addChild(modelScaleTrans);
+		    MatrixTransform* translate = new osg::MatrixTransform();
+		    osg::Matrixd tmat;
+                    Vec3 pos = Vec3(kinectX,kinectY,kinectZ);
+		    tmat.makeTranslate(pos);
+		    translate->setMatrix(tmat);
+		    translate->addChild(rotate);
+	            switchNode->addChild(translate);
+
+
+
+            }
+            if(ConfigManager::getBool("Plugin.KinectDemo.ShowScreenFrames"))
+            {
+              //Draw Configured Screens
+              int numWindows =ScreenConfig::instance()->getNumWindows();
+              float width;
+              float height;
+              float h;
+              float p;
+              float r;
+              Vec3 offsetScreen;
+              cerr << "NumWindows: " << numWindows << endl;
+              for (int j = 0; j < numWindows; j++)
+              {
+                ScreenInfo* si = ScreenConfig::instance()->getScreenInfo(j);
+                 width = si->width;
+                 height = si->height;
+                 h = si->h;
+                 p = si->p;
+                 r = si->r;
+                 offsetScreen = si->xyz;
+              
+        	//Create Quad Face
+	//	float width = 300;
+	//	float height = 500;
+	         Vec3 pos = Vec3(-(width/2),0,-(height/2));
+                 Vec4f color = Vec4f(0, 0.42, 0.92, 1);
+                 //Ofset Pos
+                 pos += offsetScreen; 
+		    osg::Geometry * geo = new osg::Geometry();
+		    osg::Vec3Array* verts = new osg::Vec3Array();
+		    verts->push_back(pos);
+		    verts->push_back(pos + osg::Vec3(width,0,0));
+		    verts->push_back(pos + osg::Vec3(width,0,height));
+		    verts->push_back(pos + osg::Vec3(0,0,height));
+
+		    geo->setVertexArray(verts);
+
+		    osg::DrawElementsUInt * ele = new osg::DrawElementsUInt(
+			    osg::PrimitiveSet::QUADS,0);
+
+		    ele->push_back(0);
+		    ele->push_back(1);
+		    ele->push_back(2);
+		    ele->push_back(3);
+		    geo->addPrimitiveSet(ele);
+
+		    Geode* fgeode = new Geode();
+		    StateSet* state(fgeode->getOrCreateStateSet());
+		    Material* mat(new Material);
+
+		    mat->setColorMode(Material::DIFFUSE);
+		    mat->setDiffuse(Material::FRONT_AND_BACK, color);
+		    state->setAttribute(mat);
+		    state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+		    state->setMode(GL_BLEND, StateAttribute::ON);
+		    state->setMode(GL_LIGHTING, StateAttribute::OFF);
+		    osg::PolygonMode* polymode = new osg::PolygonMode;
+		    polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+		    state->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+		    fgeode->setStateSet(state);
+	  
+		   // _annotations[inc]->geo = geo;
+		    fgeode->addDrawable(geo);
+                   float rotDegrees[3];
+		   rotDegrees[0] = h;
+		   rotDegrees[1] = p;
+		   rotDegrees[2] = r;
+			rotDegrees[0] = DegreesToRadians(rotDegrees[0]);
+			rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
+			rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
+			Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(0,1,0),rotDegrees[2], osg::Vec3d(0,0,1)); 
+
+		    MatrixTransform* rotate = new osg::MatrixTransform();
+		    Matrix rotMat;
+		    rotMat.makeRotate(rot);
+		    rotate->setMatrix(rotMat);
+		    rotate->addChild(fgeode);
+
+	            switchNode->addChild(rotate);
+                 }
+            if(ConfigManager::getBool("Plugin.KinectDemo.ShowKinectFOV"))
+            {
+              //Draw Kinect FOV
+              float width;
+              float height;
+              Vec3 offsetScreen = Vec3(0,500,0);
+              Vec3 pos;
+              Vec4f color = Vec4f(0, 0.42, 0.92, 1);
+        	//Create Quad Face
+		width = 543;
+		height = 394;
+	        pos = Vec3(-(width/2),0,-(height/2));
+                 pos += Vec3(kinectX,kinectY,kinectZ); 
+                 pos += offsetScreen;
+		    osg::Geometry * geo = new osg::Geometry();
+		    osg::Vec3Array* verts = new osg::Vec3Array();
+		    verts->push_back(pos);
+		    verts->push_back(pos + osg::Vec3(width,0,0));
+		    verts->push_back(pos + osg::Vec3(width,0,height));
+		    verts->push_back(pos + osg::Vec3(0,0,height));
+                //do it Again
+		width = 3800.6;
+		height = 2756;
+                offsetScreen = Vec3(0,3500,0);
+	        pos = Vec3(-(width/2),0,-(height/2));
+                 pos += Vec3(kinectX,kinectY,kinectZ); 
+                 pos += offsetScreen;
+		    verts->push_back(pos);
+		    verts->push_back(pos + osg::Vec3(width,0,0));
+		    verts->push_back(pos + osg::Vec3(width,0,height));
+		    verts->push_back(pos + osg::Vec3(0,0,height));
+               //....................................
+
+
+                    int size = verts->size() / 2;
+                    
+            Geometry* geom = new Geometry();
+            Geometry* tgeom = new Geometry();
+            Geode* fgeode = new Geode();
+            Geode* lgeode = new Geode();
+            geom->setVertexArray(verts);
+            tgeom->setVertexArray(verts);
+
+            for (int n = 0; n < size; n++)
+            {
+                DrawElementsUInt* face = new DrawElementsUInt(PrimitiveSet::QUADS, 0);
+                face->push_back(n);
+                face->push_back(n + size);
+                face->push_back(((n + 1) % size) + size);
+                face->push_back((n + 1) % size);
+                geom->addPrimitiveSet(face);
+            }
+             
+            StateSet* state(fgeode->getOrCreateStateSet());
+            Material* mat(new Material);
+            mat->setColorMode(Material::DIFFUSE);
+            mat->setDiffuse(Material::FRONT_AND_BACK, color);
+            state->setAttribute(mat);
+            state->setRenderingHint(StateSet::OPAQUE_BIN);
+            state->setMode(GL_BLEND, StateAttribute::ON);
+            state->setMode(GL_LIGHTING, StateAttribute::OFF);
+            osg::PolygonMode* polymode = new osg::PolygonMode;
+            polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+            state->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            fgeode->setStateSet(state);
+            fgeode->addDrawable(geom);
+                    if(false)
+                    {
+		    geo->setVertexArray(verts);
+
+		    osg::DrawElementsUInt * ele = new osg::DrawElementsUInt(
+			    osg::PrimitiveSet::QUADS,0);
+
+		    ele->push_back(0);
+		    ele->push_back(1);
+		    ele->push_back(2);
+		    ele->push_back(3);
+
+
+		    ele->push_back(4);
+		    ele->push_back(5);
+		    ele->push_back(6);
+		    ele->push_back(7);
+		    geo->addPrimitiveSet(ele);
+
+		    Geode* fgeode = new Geode();
+		    StateSet* state(fgeode->getOrCreateStateSet());
+		    Material* mat(new Material);
+
+		    mat->setColorMode(Material::DIFFUSE);
+		    mat->setDiffuse(Material::FRONT_AND_BACK, color);
+		    state->setAttribute(mat);
+		    state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+		    state->setMode(GL_BLEND, StateAttribute::ON);
+		    state->setMode(GL_LIGHTING, StateAttribute::OFF);
+		    osg::PolygonMode* polymode = new osg::PolygonMode;
+		    polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+		    state->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+		    fgeode->setStateSet(state);
+	  
+		   // _annotations[inc]->geo = geo;
+		    fgeode->addDrawable(geo);
+                   }
+                   float rotDegrees[3];
+		   rotDegrees[0] = 0;
+		   rotDegrees[1] = 0;
+		   rotDegrees[2] = 0;
+			rotDegrees[0] = DegreesToRadians(rotDegrees[0]);
+			rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
+			rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
+			Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(0,1,0),rotDegrees[2], osg::Vec3d(0,0,1)); 
+
+		    MatrixTransform* rotate = new osg::MatrixTransform();
+		    Matrix rotMat;
+		    rotMat.makeRotate(rot);
+		    rotate->setMatrix(rotMat);
+		    rotate->addChild(fgeode);
+
+	            switchNode->addChild(rotate);
+                 }
+            }
 
 
 

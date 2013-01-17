@@ -3,8 +3,10 @@
 
 #include <osgDB/ReadFile>
 #include <osgDB/FileUtils>
+#include <osg/PolygonMode>
 #include <cvrKernel/SceneManager.h>
 #include <cvrKernel/SceneObject.h>
+#include <cvrKernel/ScreenConfig.h>
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/CVRPlugin.h>

@@ -9,9 +9,12 @@
             <Z value="0" />
           </Offset>
           <Tessellation value=".2" />
+          <ShowKinectModel value="true" />
+          <ShowScreenFrames value="true" />
+          <ShowKinectFOV value="true" />
           <ArtifactPanel x="-200" y="2000" z="100" scale="1.0" />
           <InfoPanel x="0" y="1000" z="0" scale="0.5" />
-          <KinectSkeleton x="0" y="-2500" z="0" rx="0" ry="0" rz="0" rw="1" />
+          <KinectSkeleton x="-150" y="1000" z="550" rx="0" ry="0" rz="0" rw="1" />
           <CamStart s="1000" x="0.0249151" y="3.41685" z="-0.191232" rx="0.0143035" ry="-0.0208855" rz="0.999386" rw="-0.0242437" />
 	 <KinectDefaultOn value="false" >
 	      <MoveWithCam value="false" />
@@ -19,7 +22,7 @@
 	      <FlyToDefault value="4" />
 	      <ShowPCloud value="false" />
 	      <KinectThreaded value="false" />
-	      <ShowColor value="false" />
+	      <ShowColor value="true" />
 	      <NavSpheres value="true" />
 	      <UseGestures value="false" />
 	      <LockPos value="false" />
