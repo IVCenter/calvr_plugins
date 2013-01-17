@@ -80,7 +80,7 @@ bool KinectDemo::init()
 
     _kShowInfoPanel = new MenuCheckbox("Show Info Panel", kShowInfoPanel);  //new
     _kShowInfoPanel->setCallback(this);
-    _infoPanel = new TabbedDialogPanel(1000, 30, 4, "Info Panel", "Plugin.ArtifactVis2.InfoPanel");
+    _infoPanel = new TabbedDialogPanel(500, 20, 4, "Info Panel", "Plugin.KinectDemo.InfoPanel");
     _infoPanel->addTextTab("Info", "");
     _infoPanel->setVisible(false);
     _infoPanel->setActiveTab("Info");
@@ -301,7 +301,7 @@ if(!skeletonThreaded)
 
             if (sk->cylinder.handsBeenAboveElbows && (distance > distanceMAX  || distance < distanceMIN || detachC))
             {
-                sk->cylinder.detach(_root);
+                sk->cylinder.detach(_pointClouds[0]->switchNode);
 
                 // unlock all the objects that were locked by this cylinder
                 for (int j = 0; j < selectableItems.size(); j++)
@@ -371,7 +371,7 @@ if(!skeletonThreaded)
                 // CONDITIONS TO CREATE CYLINDER
                 if (distance < distanceMAX / 2 && distance > distanceMIN && ((sk->joints[9].position.z() - sk->joints[7].position.z() > HAND_ELBOW_OFFSET) && (sk->joints[15].position.z() - sk->joints[13].position.z() > HAND_ELBOW_OFFSET)))
                 {
-                    sk->cylinder.attach(_root);
+                    sk->cylinder.attach(_pointClouds[0]->switchNode);
                 }
             }
         }
@@ -617,11 +617,20 @@ if(!skeletonThreaded)
     _modelFileNode4 = osgDB::readNodeFile(ConfigManager::getEntry("Plugin.KinectDemo.3DModelFolder").append("cow.osg"));
     _modelFileNode3 = osgDB::readNodeFile(ConfigManager::getEntry("Plugin.KinectDemo.3DModelFolder").append("robot.osg"));
     _sphereRadius = 0.07;
-    createSelObj(Vec3(-0.70,  -2.0,  0.15),   string("DD"), 0.002, _modelFileNode1);
-    createSelObj(Vec3(-0.40,  -2.0,  0.15),   string("FD"), 0.007, _modelFileNode2);
-    createSelObj(Vec3(0,      -2.0,  0.15),   string("GD"), 0.02,  _modelFileNode3);
-    createSelObj(Vec3(0.40,   -2.0,  0.15),   string("ED"), 0.02,  _modelFileNode4);
-    createSelObj(Vec3(0.70,   -2.0,  0.15),   string("ZD"), 0.002, _modelFileNode5);
+     Group* kinectgrp = new Group();
+     kinectgrp->addChild(_modelFileNode3);
+    // createSceneObject(kinectgrp);
+
+   // createSelObj(Vec3(-0.70,  -2.0,  0.15),   string("DD"), 0.002, _modelFileNode1);
+   // createSelObj(Vec3(-0.40,  -2.0,  0.15),   string("FD"), 0.007, _modelFileNode2);
+   // createSelObj(Vec3(0,      -2.0,  0.15),   string("GD"), 0.02,  _modelFileNode3);
+  //  createSelObj(Vec3(0.40,   -2.0,  0.15),   string("ED"), 0.02,  _modelFileNode4);
+  //  createSelObj(Vec3(0.70,   -2.0,  0.15),   string("ZD"), 0.002, _modelFileNode5);
+
+//CreateSceneObject for all Kinect Data
+
+    createSceneObject();
+
 }
     minDistHSV = 700;
     maxDistHSV = 5000;
@@ -699,8 +708,17 @@ void KinectDemo::ThirdLoop()
 if(!skeletonThreaded)
 {
     // if skeletons are to be displayed in coorinates relative to the camera, position of the camera is saved in Skeleton::camPos,camRot (one for all skeletons)
-    Skeleton::camPos = Vec3d(kinectX, kinectY, kinectZ);
-    Skeleton::camRot = Vec4(kinectRX,kinectRY,kinectRZ,kinectRW);
+    Skeleton::camPos = Vec3(kinectX, kinectY, kinectZ);
+  //  Skeleton::camPos = Vec3d(0, kinectY, 0);
+   float rotDegrees[3]; 
+   rotDegrees[0] = 0;
+   rotDegrees[1] = 0;
+   rotDegrees[2] = 0;
+		rotDegrees[0] = DegreesToRadians(rotDegrees[0]);
+		rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
+		rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
+Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(0,1,0),rotDegrees[2], osg::Vec3d(0,0,1)); 
+   // Skeleton::camRot = rot;
 
     if (Skeleton::moveWithCam)
     {
@@ -712,7 +730,7 @@ if(!skeletonThreaded)
         //double xOffset = (camTrans.x() / cscale);
         //double yOffset = (camTrans.y() / cscale) + 3; //Added Offset of Skeleton so see a little ways from camera (i.e. 5 meters, works at this scale,only)
         //double zOffset = (camTrans.z() / cscale);
-        double xOffset = camTrans.x() - kinectX;
+        double xOffset = camTrans.x();
         double yOffset = camTrans.y(); //Added Offset of Skeleton so see a little ways from camera (i.e. 5 meters, works at this scale,only)
         double zOffset = camTrans.z();
         Skeleton::camPos = Vec3d(xOffset, yOffset, zOffset);
@@ -738,7 +756,7 @@ if(!skeletonThreaded)
 
             if (!found)
             {
-                mapIdSkel[it2->first].detach(_root);
+                mapIdSkel[it2->first].detach(_pointClouds[0]->switchNode);
             }
         }
 
@@ -749,20 +767,22 @@ if(!skeletonThreaded)
             if (mapIdSkel.count(sf->skeletons(i).skeleton_id()) == 0)
             {
                 mapIdSkel[sf->skeletons(i).skeleton_id()] = Skeleton(); ///XXX remove Skeleton(); part
-                mapIdSkel[sf->skeletons(i).skeleton_id()].attach(_root);
+               // mapIdSkel[sf->skeletons(i).skeleton_id()].attach(_root);
+               cerr << "Found Skeleton\n";
+                mapIdSkel[sf->skeletons(i).skeleton_id()].attach(_pointClouds[0]->switchNode);
             }
 
             // Skeleton previously detached (stopped being reported), but is again reported -> reattach
             if (mapIdSkel[sf->skeletons(i).skeleton_id()].attached == false)
-                mapIdSkel[sf->skeletons(i).skeleton_id()].attach(_root);
+                mapIdSkel[sf->skeletons(i).skeleton_id()].attach(_pointClouds[0]->switchNode);
 
             for (int j = 0; j < sf->skeletons(i).joints_size(); j++)
             {
                 mapIdSkel[sf->skeletons(i).skeleton_id()].update(
                     sf->skeletons(i).joints(j).type(),
-                    sf->skeletons(i).joints(j).x() /  1000,
-                    sf->skeletons(i).joints(j).z() / -1000,
-                    sf->skeletons(i).joints(j).y() /  1000,
+                    sf->skeletons(i).joints(j).x(),
+                    sf->skeletons(i).joints(j).z(),
+                    sf->skeletons(i).joints(j).y(),
                     sf->skeletons(i).joints(j).qx(),
                     sf->skeletons(i).joints(j).qz(),
                     sf->skeletons(i).joints(j).qy(),
@@ -785,9 +805,14 @@ if(!skeletonThreaded)
         {
             for (int i = 0; i < packet->points_size(); i++)
             {
-                osg::Vec3f ppos(packet->points(i).x() + Skeleton::camPos.x(),
+                osg::Vec3 ppos(packet->points(i).x() + Skeleton::camPos.x(),
                                 packet->points(i).z() + Skeleton::camPos.y(),
                                 packet->points(i).y() + Skeleton::camPos.z());
+               // ppos *= 0.0001;
+               if(i == 200000)
+               {
+                // cerr << "Y=" << ppos.y() << endl;
+               }
                 kinectVertices->push_back(ppos);
 
                 if (useKColor)
@@ -810,6 +835,7 @@ if(!skeletonThreaded)
             kgeode->setCullingActive(false);
             osg::Geometry* nodeGeom = new osg::Geometry();
             osg::StateSet* state = nodeGeom->getOrCreateStateSet();
+            state->setMode(GL_LIGHTING, StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
             nodeGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS, 0, kinectVertices->size()));
             osg::VertexBufferObject* vboP = nodeGeom->getOrCreateVertexBufferObject();
             vboP->setUsage(GL_STREAM_DRAW);
@@ -933,7 +959,10 @@ if(kShowPCloud)
     float pscale = initialPointScale;
     osg::Uniform*  _scaleUni = new osg::Uniform("pointScale", 1.0f * pscale);
     kinectgrp->getOrCreateStateSet()->addUniform(_scaleUni);
-    SceneManager::instance()->getScene()->addChild(kinectgrp);
+    _pointClouds[0]->switchNode->addChild(kinectgrp);
+//bangKN
+
+   // SceneManager::instance()->getScene()->addChild(kinectgrp);
    // _root->addChild(kinectgrp);
   }
   else
@@ -1141,7 +1170,7 @@ void KinectDemo::kinectOff()
         skel_socket = NULL;
     }
 
-    _kShowColor->setValue(false);
+//    _kShowColor->setValue(false);
     _kShowDepth->setValue(false);
     _kShowPCloud->setValue(false);
     _kNavSpheres->setValue(false);
@@ -1152,7 +1181,7 @@ void KinectDemo::kinectOff()
 
     for (std::map<int, Skeleton>::iterator it = mapIdSkel.begin(); it != mapIdSkel.end(); ++it)
     {
-        it->second.detach(_root);
+        it->second.detach(_pointClouds[0]->switchNode);
     }
 
     mapIdSkel.clear();
@@ -1295,7 +1324,7 @@ if(cloud_socket)
         double ryOffset = camQuad.y();
         double rzOffset = camQuad.z();
         double rwOffset = camQuad.w();
-     ss << "HeadMat X:" << xOffset << " Y:" << yOffset << " Z:" << zOffset << " RX:" << rxOffset << " RY:" << ryOffset << " RZ:" << rzOffset << " RW:" << rwOffset << endl;
+   //  ss << "HeadMat X:" << xOffset << " Y:" << yOffset << " Z:" << zOffset << " RX:" << rxOffset << " RY:" << ryOffset << " RZ:" << rzOffset << " RW:" << rwOffset << endl;
         
         Matrixd handMat = PluginHelper::getHandMat(0); //This will get us actual real world coordinates that the camera is at (not sure about how it does rotation)
         Vec3 handTrans = handMat.getTrans();
@@ -1308,7 +1337,34 @@ if(cloud_socket)
         rzOffset = handQuad.z();
         rwOffset = handQuad.w();
 
-     ss << "HandMat X:" << xOffset << " Y:" << yOffset << " Z:" << zOffset << " RX:" << rxOffset << " RY:" << ryOffset << " RZ:" << rzOffset << " RW:" << rwOffset << endl;
+   //  ss << "HandMat X:" << xOffset << " Y:" << yOffset << " Z:" << zOffset << " RX:" << rxOffset << " RY:" << ryOffset << " RZ:" << rzOffset << " RW:" << rwOffset << endl;
+
+
+//GetSkel
+ss << "Skeletons Tracked: " << sf->skeletons_size() << endl;
+
+    std::map< osg::ref_ptr<osg::Geode>, int >::iterator iter;
+
+    for (std::map<int, Skeleton>::iterator it = mapIdSkel.begin(); it != mapIdSkel.end(); ++it)
+    {
+        int sk_id = it->first;
+        Skeleton* sk = &(it->second);
+        Vec3 lhand = sk->joints[M_LHAND].position;
+        Vec3 rhand = sk->joints[M_RHAND].position;
+        Vec3 head = sk->joints[M_HEAD].position;
+        ss << "kLeftHand\n" << "X:" << lhand.x() << "\n" << "Y:" << lhand.y() << "\n" << "Z:" << lhand.z() << "\n";
+        ss << "kRightHand\n" << "X:" << rhand.x() << "\n" << "Y:" << rhand.y() << "\n" << "Z:" << rhand.z() << "\n";
+        ss << "kHead\n" << "X:" << head.x() << "\n" << "Y:" << head.y() << "\n" << "Z:" << head.z() << "\n";
+        //TODO:Only first Skeleton for now!
+        break;
+    }
+
+
+
+
+
+
+
     _infoPanel->updateTabWithText("Info", ss.str());
 }
 void KinectDemo::ExportPointCloud()
@@ -1318,7 +1374,7 @@ void KinectDemo::ExportPointCloud()
                     osg::Vec3Array* vertices = kinectVertices;
                     osg::Vec4Array* colours = kinectColours;
                     FILE* pFile;
-                    string file = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("kinectDump.ply");
+                    string file = ConfigManager::getEntry("Plugin.KinectDemo.3DModelFolder").append("kinectDump.ply");
                     pFile = fopen(file.c_str(), "w");
                     fprintf(pFile, "ply\nformat ascii 1.0\ncomment VCGLIB generated\n");
                     fprintf(pFile, "element vertex %i\n", vertices->size());
@@ -1343,4 +1399,154 @@ void KinectDemo::ExportPointCloud()
 
                     fclose(pFile);
                 
+}
+void KinectDemo::createSceneObject()
+{
+cerr << "Creating SceneObject\n";           
+	    PointCloud* newModel = new PointCloud();
+            _pointClouds.push_back(newModel);
+            string name = "test";
+           int i = _pointClouds.size() -1;
+           if(i == -1) return;
+           // float currentScale = _pointClouds[i]->scale;
+            float currentScale = 1;
+      
+	    SceneObject * so;
+	    so = new SceneObject(name, false, false, false, true, false);
+	    osg::Switch* switchNode = new osg::Switch();
+	    so->addChild(switchNode);
+	    PluginHelper::registerSceneObject(so,"Test");
+	    so->attachToScene();
+//Add currentNode to switchNode
+     // _models3d[i]->currentModelNode = modelNode; 
+     cerr << "here\n"; 
+//	switchNode->addChild(kinectgrp);
+        if(i == 0)
+        {
+//	switchNode->addChild(_modelFileNode4);
+
+
+    Vec3d poz0(kinectX, kinectY, kinectZ);
+    Box* sphereShape = new Box(poz0, 100.0);
+    ShapeDrawable* ggg2 = new ShapeDrawable(sphereShape);
+    ggg2->setColor(Vec4(1,1,1,1));
+    osg::Geode* boxGeode = new osg::Geode;
+    boxGeode->addDrawable(ggg2);
+
+	switchNode->addChild(boxGeode);
+
+
+
+
+        }
+      _pointClouds[i]->switchNode = switchNode;
+
+//Add menu system
+	    so->setNavigationOn(true);
+	    so->setMovable(false);
+	    so->addMoveMenuItem();
+	    so->addNavigationMenuItem();
+            float min = 0.0001;
+            float max = 1;
+            so->addScaleMenuItem("Scale",min,max,currentScale);
+	    SubMenu * sm = new SubMenu("Position");
+	    so->addMenuItem(sm);
+
+	    MenuButton * mb;
+	    mb = new MenuButton("Load");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+
+	    SubMenu * savemenu = new SubMenu("Save");
+	    sm->addItem(savemenu);
+
+	    mb = new MenuButton("Save");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+            _pointClouds[i]->saveMap = mb;
+
+	    mb = new MenuButton("Save New Kml");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+            _pointClouds[i]->saveNewMap = mb;
+
+	    mb = new MenuButton("Reset to Origin");
+	    mb->setCallback(this);
+	    so->addMenuItem(mb);
+            _pointClouds[i]->resetMap = mb;
+
+            MenuCheckbox * mc;
+	    mc = new MenuCheckbox("Active",false);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _pointClouds[i]->activeMap = mc;
+
+            
+	    mc = new MenuCheckbox("Visible",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _pointClouds[i]->visibleMap = mc;
+            _pointClouds[i]->visible = true;
+
+            float rValue = 0;
+            min = -1;
+            max = 1;
+            MenuRangeValue* rt = new MenuRangeValue("rx",min,max,rValue);
+            rt->setCallback(this);
+	    so->addMenuItem(rt);
+            _pointClouds[i]->rxMap = rt;
+
+            rt = new MenuRangeValue("ry",min,max,rValue);
+            rt->setCallback(this);
+	    so->addMenuItem(rt);
+            _pointClouds[i]->ryMap = rt;
+
+            rt = new MenuRangeValue("rz",min,max,rValue);
+            rt->setCallback(this);
+	    so->addMenuItem(rt);
+            _pointClouds[i]->rzMap = rt;
+/*
+	    mc = new MenuCheckbox("Panel Visible",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+ //           _query[q]->artifacts[inc]->model->pVisibleMap = mc;
+           // _query[q]->artifacts[inc]->model->pVisible = true;
+*/
+//Quat currentRot = _pointClouds[i]->rot;
+//Vec3 currentPos = _pointClouds[i]->pos;
+//Vec3 orig = currentPos; 
+//cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
+
+// so->setPosition(currentPos);     
+ so->setScale(1);
+ if(i == 0)
+ {
+
+
+
+
+
+
+
+
+   Vec3 currentPos = Vec3(0,0,0);
+   float rotDegrees[3];
+   rotDegrees[0] = 0;
+   rotDegrees[1] = 0;
+   rotDegrees[2] = 180;
+		rotDegrees[0] = DegreesToRadians(rotDegrees[0]);
+		rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
+		rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
+Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(0,1,0),rotDegrees[2], osg::Vec3d(0,0,1)); 
+ //so->setRotation(rot);     
+//so->setPosition(currentPos);     
+ }
+    _pointClouds[i]->so = so;
+    _pointClouds[i]->pos = so->getPosition();
+    _pointClouds[i]->rot = so->getRotation();
+    _pointClouds[i]->active = false;
+    _pointClouds[i]->loaded = true;
+
+
+
 }

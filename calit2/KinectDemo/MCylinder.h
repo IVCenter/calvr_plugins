@@ -2,6 +2,7 @@
 #include <osg/MatrixTransform>
 #include <osgText/Text>
 #include <osg/ShapeDrawable>
+#include <cvrKernel/SceneObject.h>
 
 struct MCylinder
 {
@@ -17,8 +18,8 @@ struct MCylinder
     bool attached;
     bool locked;
     void update(osg::Vec3 startP, osg::Vec3 endP);
-    void attach(osg::MatrixTransform* parent);
-    void detach(osg::MatrixTransform* parent);
+    void attach(osg::Switch* parent);
+    void detach(osg::Switch* parent);
     float radius;
     osg::Vec4 CylinderColor;
     MCylinder(float _radius, osg::Vec4 _color);

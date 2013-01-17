@@ -78,7 +78,7 @@ void MCylinder::update(osg::Vec3 startP, osg::Vec3 endP)
     if (prevLength == 0) prevLength = length;
 }
 
-void MCylinder::attach(osg::MatrixTransform* parent)
+void MCylinder::attach(osg::Switch* parent)
 {
     if (attached) return;
 
@@ -87,7 +87,7 @@ void MCylinder::attach(osg::MatrixTransform* parent)
     prevLength = length;
 }
 
-void MCylinder::detach(osg::MatrixTransform* parent)
+void MCylinder::detach(osg::Switch* parent)
 {
     attached = false;
     parent->removeChild(geode);

@@ -43,7 +43,7 @@ void JointNode::makeDrawable(int _id)
         break;
     }
 
-    osg::Box* sphereShape = new osg::Box(osg::Vec3d(0, 0, 0), 0.03);
+    osg::Box* sphereShape = new osg::Box(osg::Vec3d(0, 0, 0), 20);
     osg::ShapeDrawable* shapeDrawable = new osg::ShapeDrawable(sphereShape);
     shapeDrawable->setColor(getColor(color));
     g = shapeDrawable;
@@ -140,7 +140,7 @@ Skeleton::Skeleton()
     }
 
     for (int i = 0; i < 15; i++)
-        bone[i] = MCylinder(0.003, osg::Vec4(0.3, 0.4, 0.2, 1.0));
+        bone[i] = MCylinder(10, osg::Vec4(0.3, 0.4, 0.2, 1.0));
 
     for (int i = 0; i < 25; i++)
     {
@@ -172,7 +172,8 @@ void Skeleton::update(int joint_id, float newx, float newy, float newz, float ne
     bone[13].update(joints[22].position, joints[24].position);
 }
 
-void Skeleton::attach(osg::MatrixTransform* parent)
+//void Skeleton::attach(osg::MatrixTransform* parent)
+void Skeleton::attach(osg::Switch* parent)
 {
     attached = true;
 
@@ -187,7 +188,8 @@ void Skeleton::attach(osg::MatrixTransform* parent)
     if (Skeleton::navSpheres) parent->addChild(navSphere.translate);
 }
 
-void Skeleton::detach(osg::MatrixTransform* parent)
+//void Skeleton::detach(osg::MatrixTransform* parent)
+void Skeleton::detach(osg::Switch* parent)
 {
     attached = false;
 

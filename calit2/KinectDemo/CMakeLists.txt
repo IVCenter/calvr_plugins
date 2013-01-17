@@ -31,7 +31,7 @@ ADD_LIBRARY(${LIB_NAME}
     kUtils.cpp
     SelectableItem.cpp
     CloudManager.cpp
-    SkeletonManager.cpp
+   # SkeletonManager.cpp
 )
 
 SET(CMAKE_BUILD_TYPE Release)

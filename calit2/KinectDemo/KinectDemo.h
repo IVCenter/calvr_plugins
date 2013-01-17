@@ -4,6 +4,7 @@
 #include <osgDB/ReadFile>
 #include <osgDB/FileUtils>
 #include <cvrKernel/SceneManager.h>
+#include <cvrKernel/SceneObject.h>
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/CVRPlugin.h>
@@ -13,7 +14,7 @@
 #include <cvrMenu/MenuRangeValueCompact.h>
 #include <cvrMenu/TabbedDialogPanel.h>
 
-//#include "Skeleton.h"
+#include "Skeleton.h"
 //#include "PubSub.h"
 #include <shared/PubSub.h>
 #include <protocol/skeletonframe.pb.h>
@@ -24,8 +25,11 @@
 #include "kUtils.h"
 #include "SelectableItem.h"
 #include "CloudManager.h"
-#include "SkeletonManager.h"
+//#include "SkeletonManager.h"
 #include <unordered_map>
+using namespace std;
+using namespace osg;
+using namespace cvr;
 
 #define M_HEAD 1
 #define M_LHAND 9
@@ -91,7 +95,49 @@ public:
     osg::Group* kinectgrp;
     float initialPointScale;
 
+struct PointCloud
+{
+	string name;
+	string filename;
+        string fullpath;
+        string filetype;
+        string modelType;
+        string group;
+        float scale; 
+        osg::Vec3 pos;
+        osg::Quat rot;
+        osg::Vec3 origPos;
+        osg::Quat origRot;
+        float origScale;
+        cvr::SceneObject * so;
+	bool loaded;
+        bool active;
+        bool visible;
+        bool selected;
+        bool lockPos;
+        bool lockRot;
+        bool lockScale;
+        bool lockGraph;
+    int lockedTo;
+    int lockedType;
+        cvr::MenuButton* saveMap;
+        cvr::MenuButton* saveNewMap;
+        cvr::MenuButton* resetMap;
+        cvr::MenuCheckbox* activeMap;
+        cvr::MenuCheckbox* visibleMap;
+        cvr::MenuRangeValue* rxMap;
+        cvr::MenuRangeValue* ryMap;
+        cvr::MenuRangeValue* rzMap;
+	//Store Different Model Type Transforms
+        osg::Node* currentModelNode;
+	osg::Switch* switchNode;
+
+
+};
+ 
+    std::vector<PointCloud* > _pointClouds;
     std::vector<SelectableItem> selectableItems;
+    void createSceneObject();
     void kinectInit();
     void kinectOff();
     void moveCam(double, double, double, double, double, double, double, double);
@@ -151,7 +197,7 @@ public:
     osg::ref_ptr<osg::Vec4Array> kinectColours;
     osg::ref_ptr<osg::Vec3Array> kinectVertices;
     CloudManager * _cloudThread;
-    SkeletonManager * _skeletonThread;
+   // SkeletonManager * _skeletonThread;
 protected:
 
     static KinectDemo* _kinectDemo;

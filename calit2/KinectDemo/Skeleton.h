@@ -1,6 +1,7 @@
 
 #include "MCylinder.h"
 #include <osg/ShapeDrawable>
+#include <cvrKernel/SceneObject.h>
 #include "kUtils.h"
 
 static bool colorsInitialized;
@@ -58,7 +59,7 @@ struct Skeleton
     Skeleton();
     JointNode joints[25];
     void update(int joint_id, float newx, float newy, float newz, float neworx, float newory, float neworz, float neworw);
-    void attach(osg::MatrixTransform* parent);
-    void detach(osg::MatrixTransform* parent);
+    void attach(osg::Switch* parent);
+    void detach(osg::Switch* parent);
 };
 

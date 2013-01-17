@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+<KinectDemo value="on" />
+ <KinectDemo>
+          <3DModelFolder value="/home/calvr/osgdata/" />
+          <MaxVisibleRange value="100000000000.0" />
+          <Offset>
+            <X value="-700000" />
+            <Y value="-3300000" />
+            <Z value="0" />
+          </Offset>
+          <Tessellation value=".2" />
+          <ArtifactPanel x="-200" y="2000" z="100" scale="1.0" />
+          <InfoPanel x="0" y="1000" z="0" scale="0.5" />
+          <KinectSkeleton x="0" y="-2500" z="0" rx="0" ry="0" rz="0" rw="1" />
+          <CamStart s="1000" x="0.0249151" y="3.41685" z="-0.191232" rx="0.0143035" ry="-0.0208855" rz="0.999386" rw="-0.0242437" />
+	 <KinectDefaultOn value="false" >
+	      <MoveWithCam value="false" />
+	      <KinectPointSize value="0.01" />
+	      <FlyToDefault value="4" />
+	      <ShowPCloud value="false" />
+	      <KinectThreaded value="false" />
+	      <ShowColor value="false" />
+	      <NavSpheres value="true" />
+	      <UseGestures value="false" />
+	      <LockPos value="false" />
+	      <LockRot value="false" />
+	      <LockScale value="true" />
+	      <ShowArtifactPanel value="false" />
+	      <ShowInfoPanel value="true" />
+	 </KinectDefaultOn>
+
+          <KinectServer>
+        <!--      <DepthMap value="tcp://67.58.33.1:9000" /> 
+              <ColorMap value="tcp://67.58.33.1:9001" />
+              <Skeleton value="tcp://67.58.33.1:9002" />
+              <PointCloud value="tcp://67.58.33.1:9003" />-->
+              <DepthMap value="tcp://localhost:9000" /> 
+              <ColorMap value="tcp://localhost:9001" />
+              <Skeleton value="tcp://localhost:9002" />
+              <PointCloud value="tcp://localhost:9003" />
+          </KinectServer>
+       
+          <KinectNavSphere>
+	        <navSphereOffsetY value="0.3" />
+	        <navSphereOffsetZ value="0.1" />
+	        <diffScaleY value="0.15" />
+	    	<diffScaleNegY value="-0.05" />
+                <tranScaleY value="-200" />
+            	<diffScaleX value="0.1" />
+	    	<diffScaleNegX value="-0.1" />
+		<tranScaleX value="0.006" />
+            	<diffScaleZ value="0.05" />
+	    	<diffScaleNegZ value="-0.05" />
+		<tranScaleZ value="-50" />
+            	<diffScaleRY value="-0.5" />
+	    	<diffScaleNegRY value="-0.8" />
+		<tranScaleRY value="0.005" />
+          </KinectNavSphere> 
+
+	  <Cylinder>
+            <Min value="0.2" />
+            <Max value="1.0" />
+          </Cylinder>
+
+	  <QueryTest value ="false">
+	      <Query value="zb" />
+	  </QueryTest>
+	  
+	  <Nvidia value="true" />
+	  <scaleP value="1.0" />
+</KinectDemo>
