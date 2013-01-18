@@ -297,7 +297,7 @@ bool AlgebraInMotion::processEvent(InteractionEvent * event)
     return false;
 }
 
-void AlgebraInMotion::perContextCallback(int contextid) const
+void AlgebraInMotion::perContextCallback(int contextid,PerContextCallback::PCCType type) const
 {
     if(CVRViewer::instance()->done())
     {

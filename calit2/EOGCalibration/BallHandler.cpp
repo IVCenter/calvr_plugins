@@ -38,7 +38,6 @@ BallHandler::BallHandler(): mFlagVisible(false),
 ***************************************************************/
 CaliBallHandler::CaliBallHandler(MatrixTransform *rootViewerTrans)
 {
-
     float r, g, b, a, innerSize, outerSize;
     osg::Vec4 innerBallColor, outerBallColor;
 
@@ -54,7 +53,6 @@ CaliBallHandler::CaliBallHandler(MatrixTransform *rootViewerTrans)
     a = cvr::ConfigManager::getFloat("a", "Plugin.EOGCalibration.OuterBall.Color", 0.5f);
     outerBallColor = osg::Vec4(r, g, b, a);
 
-	Vec4 exteriorBallColor = Vec4(outerBallColor);//1.0f, 1.0f, 0.0f, 1.0f);
     initCaliBallGeometry(rootViewerTrans, outerBallColor, innerBallColor);
 }
 
@@ -81,7 +79,10 @@ PlaybackBallHandler::PlaybackBallHandler(MatrixTransform *rootViewerTrans)
         mGhostBallTrans->addChild(mBoundingBallGeode);
     if (mCenterBallGeode)
         mGhostBallTrans->addChild(mCenterBallGeode);
-	rootViewerTrans->addChild(mGhostBallTrans);
+    mGhostBallSwitch = new Switch();
+    mGhostBallSwitch->addChild(mGhostBallTrans);
+    mGhostBallSwitch->setAllChildrenOff();
+	rootViewerTrans->addChild(mGhostBallSwitch);
 
 	mHeadSwitch = new Switch();
 	mHeadTrans = new MatrixTransform();
@@ -102,7 +103,7 @@ PlaybackBallHandler::PlaybackBallHandler(MatrixTransform *rootViewerTrans)
     Cone *poleShape = new Cone(Vec3(0, VISUAL_POLE_LENGTH * 0.75, 0), VISUAL_POLE_RADIUS, VISUAL_POLE_LENGTH);
 	poleShape->setRotation(Quat(M_PI * 0.5f, Vec3(1, 0, 0)));
     Drawable *poleDrawable = new ShapeDrawable(poleShape);
-//    mPoleGeode->addDrawable(poleDrawable);
+    mPoleGeode->addDrawable(poleDrawable);
 	mPoleTrans->addChild(mPoleGeode);
 
 	/* apply pole texture */
@@ -115,8 +116,8 @@ PlaybackBallHandler::PlaybackBallHandler(MatrixTransform *rootViewerTrans)
     poleMaterialStateSet->setRenderingHint(StateSet::TRANSPARENT_BIN);
     mPoleGeode->setStateSet(poleMaterialStateSet);
 
-	//mHeadTrans->addChild(mPoleTrans);
-	//mHeadSwitch->addChild(mHeadTrans);
+	mHeadTrans->addChild(mPoleTrans);
+	mHeadSwitch->addChild(mHeadTrans);
 	mHeadSwitch->setAllChildrenOff();
 
 	rootViewerTrans->addChild(mHeadSwitch);
@@ -157,12 +158,14 @@ void PlaybackBallHandler::setVisible(bool flag)
         if (mBallSwitch)
             mBallSwitch->setAllChildrenOn();
 		mHeadSwitch->setAllChildrenOn();
+        mGhostBallSwitch->setAllChildrenOn();
 	}
     else
 	{
         if (mBallSwitch)
             mBallSwitch->setAllChildrenOff();
 		mHeadSwitch->setAllChildrenOff();
+        mGhostBallSwitch->setAllChildrenOff();
 	}
 }
 
@@ -197,10 +200,10 @@ void BallHandler::initCaliBallGeometry(MatrixTransform *rootViewerTrans, const V
     //Material* bndSphereMaterial = new Material;
     //bndSphereMaterial->setDiffuse(Material::FRONT_AND_BACK, exteriorBallColor);
     //bndSphereMaterial->setAlpha(Material::FRONT_AND_BACK, 0.4f);
-    StateSet* bndSphereStateSet = new StateSet();
-   // bndSphereStateSet->setAttributeAndModes(bndSphereMaterial, StateAttribute::OVERRIDE | StateAttribute::ON);
-   // bndSphereStateSet->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
+    //bndSphereStateSet->setAttributeAndModes(bndSphereMaterial, StateAttribute::OVERRIDE | StateAttribute::ON);
+    //bndSphereStateSet->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
     
+    StateSet* bndSphereStateSet = new StateSet();
     ((ShapeDrawable*)bndSphereDrawable)->setColor(exteriorBallColor);
     bndSphereStateSet->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
     bndSphereStateSet->setMode(GL_BLEND, osg::StateAttribute::ON);
@@ -232,7 +235,6 @@ void BallHandler::initCaliBallGeometry(MatrixTransform *rootViewerTrans, const V
         ctrSphereStateSet->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
 
     mCenterBallGeode->setStateSet(ctrSphereStateSet);
-
 }
 
 
@@ -242,7 +244,7 @@ void BallHandler::initCaliBallGeometry(MatrixTransform *rootViewerTrans, const V
 void BallHandler::updateCaliBall(const float &phi, const float &theta, const float &rad)
 {
     Vec3 pos;
-    sphericToCartetion(phi, theta, rad, pos);
+    sphericToCartesian(phi, theta, rad, pos);
 
     Matrixf ballTransMat;
     ballTransMat.makeTranslate(pos);
@@ -318,11 +320,18 @@ void PlaybackBallHandler::updatePlaybackTime(const double &frameDuration)
 ***************************************************************/
 void PlaybackBallHandler::updatePlaybackBallPos()
 {
-	if (mEntryVector.size() == 0) return;
+	if (mEntryVector.size() == 0) 
+        return;
 
 	/* interpolate between entry 'mPlaybackItr' and 'mPlaybackItr + 1' */
-	if (mPlaybackItr == -1) mPlaybackItr++;
-	else if (mPlaybackItr + 1 >= mEntryVector.size()) mPlaybackItr = 0;
+	if (mPlaybackItr == -1) 
+    {
+        mPlaybackItr++;
+    }
+	else if (mPlaybackItr + 1 >= mEntryVector.size()) 
+    {
+        mPlaybackItr = 0;
+    }
 
 	const PlaybackEntry *frontEntry = mEntryVector[mPlaybackItr];
 	const PlaybackEntry *backEntry = mEntryVector[mPlaybackItr + 1];

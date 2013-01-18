@@ -34,7 +34,7 @@ class AlgebraInMotion : public cvr::CVRPlugin, public cvr::MenuCallback, public 
         void preFrame();
         bool processEvent(cvr::InteractionEvent * event);
 
-        virtual void perContextCallback(int contextid) const;
+        virtual void perContextCallback(int contextid, PerContextCallback::PCCType type) const;
     protected:
         void initPart();
         void initGeometry();
