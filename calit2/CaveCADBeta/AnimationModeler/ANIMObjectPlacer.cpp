@@ -56,13 +56,29 @@ void ANIMCreateObjectPlacer(std::vector<osg::PositionAttitudeTransform*>* fwdVec
         osg::Vec4 color;
         if (i == 0)
         {
-            color = osg::Vec4(1, 0, 1, 0.5);
+            color = osg::Vec4(0.2, 0.2, 1, 0.5);
             node = NULL; 
             objScale = NULL;
+            
+            float scale = 0.001;
+            osg::Matrixf mat = osg::Matrixf();
+            mat.makeScale(scale, scale, scale);
+            mat.setTrans(osg::Vec3(0, 0, 0));
+            //mat.makeScale(1, 1, 1);
+            
+            objScale = new osg::MatrixTransform();
+            objScale->setMatrix(mat);
+ 
+            node = osgDB::readNodeFile("/home/cehughes/data/CaveCAD/Objects/tree2.WRL", options);
+            objScale->addChild(node);
+
+            node = osgDB::readNodeFile("/home/cehughes/data/CaveCAD/Objects/tree3.WRL", options);
+            objScale->addChild(node);
+
         }
         else
         {
-            color = osg::Vec4(0, 0, 1, 0.5);
+            color = osg::Vec4(0.2, 0.2, 1, 0.5);
 
             std::string dir, path, filename;
             bool isFile;

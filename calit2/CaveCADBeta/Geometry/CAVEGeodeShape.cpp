@@ -13,7 +13,7 @@ using namespace std;
 using namespace osg;
 
 
-const float CAVEGeodeShape::gTextureTileSize(0.3048f);
+const float CAVEGeodeShape::gTextureTileSize(0.5048f);
 //const float CAVEGeodeShape::gTextureTileSize(304.8f);
 const float CAVEGeodeShape::gSnapRadius(0.10f);
 
@@ -274,10 +274,10 @@ void CAVEGeodeShape::applyEditorInfo(EditorInfo **infoPtr, CAVEGeodeShape *refGe
  
         for (int i = 0; i < mVertBoundingSpheres.size(); ++i)
         {
-            osg::Sphere *sphere = mVertBoundingSpheres.at(i);
+            osg::ref_ptr<osg::Sphere> sphere = mVertBoundingSpheres.at(i);
             sphere->setCenter(sphere->getCenter() + offset);
 
-            osg::ShapeDrawable * sd = mShapeDrawableMap[mVertBoundingSpheres[i]];
+            osg::ref_ptr<osg::ShapeDrawable> sd = mShapeDrawableMap[mVertBoundingSpheres[i]];
             removeDrawable(sd);
 
             osg::Vec4 snapSphereColor = osg::Vec4(1, 0, 1, 0); 
@@ -309,10 +309,10 @@ void CAVEGeodeShape::applyEditorInfo(EditorInfo **infoPtr, CAVEGeodeShape *refGe
         for (int i = 0; i < mVertBoundingSpheres.size(); ++i)
         {
             // update vertex list: 'translation' -> 'rotation' -> 'reversed translation'
-            osg::Sphere *sphere = mVertBoundingSpheres.at(i);
+            osg::ref_ptr<osg::Sphere> sphere = mVertBoundingSpheres.at(i);
             sphere->setCenter((sphere->getCenter() - center) * rotMat + center);
 
-            osg::ShapeDrawable * sd = mShapeDrawableMap[mVertBoundingSpheres[i]];
+            osg::ref_ptr<osg::ShapeDrawable> sd = mShapeDrawableMap[mVertBoundingSpheres[i]];
             removeDrawable(sd);
 
             osg::Vec4 snapSphereColor = osg::Vec4(1, 0, 1, 0); 
@@ -343,10 +343,10 @@ void CAVEGeodeShape::applyEditorInfo(EditorInfo **infoPtr, CAVEGeodeShape *refGe
         for (int i = 0; i < mVertBoundingSpheres.size(); ++i)
         {
             // update vertex list: 'translation' -> 'rotation' -> 'reversed translation'
-            osg::Sphere *sphere = mVertBoundingSpheres.at(i);
+            osg::ref_ptr<osg::Sphere> sphere = mVertBoundingSpheres.at(i);
             sphere->setCenter((sphere->getCenter() - center) * scaleMat + center);
 
-            osg::ShapeDrawable * sd = mShapeDrawableMap[mVertBoundingSpheres[i]];
+            osg::ref_ptr<osg::ShapeDrawable> sd = mShapeDrawableMap[mVertBoundingSpheres[i]];
             removeDrawable(sd);
 
             osg::Vec4 snapSphereColor = osg::Vec4(1, 0, 1, 0); 

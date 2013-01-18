@@ -244,7 +244,7 @@ bool ParticleDreams::processEvent(InteractionEvent * event)
     return false;
 }
 
-void ParticleDreams::perContextCallback(int contextid) const
+void ParticleDreams::perContextCallback(int contextid, PerContextCallback::PCCType type) const
 {
     if(CVRViewer::instance()->done())
     {
