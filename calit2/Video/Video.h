@@ -1,0 +1,53 @@
+#ifndef __VIDEO_H_
+#define __VIDEO_H_
+#include "videoplayerapi.h"
+#include <osg/Geometry>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrMenu/SubMenu.h>
+#include <cvrKernel/CVRViewer.h>
+#include <list>
+#include <string>
+#include <sstream>
+#include <map>
+#include <OpenThreads/Mutex>
+#include "texturemanager.h"
+//#include <cvrKernel/SceneObject.h>
+//
+
+class Video : public cvr::CVRPlugin, cvr::MenuCallback, cvr::PerContextCallback
+{
+public:
+	Video();
+	virtual ~Video();
+
+        void postFrame();
+	void preFrame();
+	bool init();
+        void menuCallback(cvr::MenuItem * item);
+	void perContextCallback(int contextid, cvr::PerContextCallback::PCCType type) const;
+protected:
+	int LoadVideoXML(const char* filename, std::list<std::string>& videoFilenames);
+	void loadMenuItems(cvr::SubMenu* menu, const char* xmlFilename);
+	std::list<std::string> ExplodeFilename(const char* filename);
+
+	cvr::SubMenu* MLMenu;	
+	cvr::SubMenu* loadMenu;	
+	mutable cvr::SubMenu* removeMenu;	
+
+	mutable VideoPlayerAPI m_videoplayer;
+	mutable std::string m_loadVideo;
+	mutable cvr::MenuItem* m_removeVideo;
+	mutable std::map<unsigned int, TextureManager*> m_gidMap;
+
+	mutable std::list<cvr::SceneObject*> m_sceneDelete;
+	mutable std::list<cvr::MenuItem*> m_menuDelete;
+	mutable std::list<cvr::SceneObject*> m_sceneAdd;
+	mutable std::list<cvr::MenuItem*> m_menuAdd;
+
+	mutable OpenThreads::Mutex m_initMutex;
+
+};
+	
+
+bool videoNotifyFunction(VIDEOPLAYER_NOTIFICATION msg, unsigned int gid, void* obj, unsigned int param1, unsigned int param2, double param3);
+#endif
