@@ -14,6 +14,14 @@
 //#include <cvrKernel/SceneObject.h>
 //
 
+struct PTSUpdate
+{
+	PTSUpdate() {}
+	PTSUpdate(unsigned int gid, double pts) : gid(gid), pts(pts) {}
+	unsigned int gid;
+	double pts;
+};
+
 class Video : public cvr::CVRPlugin, cvr::MenuCallback, cvr::PerContextCallback
 {
 public:
@@ -45,6 +53,10 @@ protected:
 	mutable std::list<cvr::MenuItem*> m_menuAdd;
 
 	mutable OpenThreads::Mutex m_initMutex;
+
+	mutable std::list<PTSUpdate> m_ptsUpdateList;
+
+	
 
 };
 	
