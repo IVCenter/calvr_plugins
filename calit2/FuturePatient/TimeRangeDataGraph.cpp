@@ -15,10 +15,12 @@ using namespace cvr;
 TimeRangeDataGraph::TimeRangeDataGraph()
 {
     _root = new osg::Group();
+    _root->setCullingActive(false);
     _bgScaleMT = new osg::MatrixTransform();
     _axisGeode = new osg::Geode();
     _bgGeode = new osg::Geode();
     _graphGeode = new osg::Geode();
+    _graphGeode->setCullingActive(false);
 
     _root->addChild(_bgScaleMT);
     _root->addChild(_axisGeode);
