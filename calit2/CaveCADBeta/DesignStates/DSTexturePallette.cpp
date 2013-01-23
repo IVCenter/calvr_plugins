@@ -543,7 +543,7 @@ void DSTexturePallette::setHighlight(bool isHighlighted, const osg::Vec3 &pointe
     {
         // test for intersection
         int idx = -1;
-/*        for (int i = 0; i < mNumTexs; ++i)
+/*        for (int i = 0 i < mNumTexs; ++i)
         {
             mTextureStatesSelectEntryArray[i]->mEntryGeode->removeDrawable(mSD);
             mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mTextureStatesSelectEntryArray[i]->mEntryGeode);
@@ -563,7 +563,7 @@ void DSTexturePallette::setHighlight(bool isHighlighted, const osg::Vec3 &pointe
             }
         }
         
-        if (idx > 0)
+        if (idx > -1)
         {
             osg::Sphere *sphere = new osg::Sphere();
             mSD = new osg::ShapeDrawable(sphere);
@@ -587,7 +587,7 @@ void DSTexturePallette::setHighlight(bool isHighlighted, const osg::Vec3 &pointe
             }
         }
         
-        if (idx > 0)
+        if (idx > -1)
         {
             osg::Sphere *sphere = new osg::Sphere();
             mSD = new osg::ShapeDrawable(sphere);

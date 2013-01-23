@@ -54,21 +54,61 @@ void ANIMLoadTexturePalletteRoot(osg::PositionAttitudeTransform** xformScaleFwd,
     (*xformScaleFwd)->setUpdateCallback(animCallbackFwd);
     (*xformScaleBwd)->setUpdateCallback(animCallbackBwd);
 
+    
+    std::string fontFile = cvr::ConfigManager::getEntry("value", "Plugin.CaveCADBeta.Font", "");
+    osgDB::ReaderWriter::Options *options = new osgDB::ReaderWriter::Options();
+    options->setObjectCacheHint(osgDB::ReaderWriter::Options::CACHE_NONE);
 
     // create Save Color button
     osg::Geode *saveGeode = new osg::Geode();
     osg::Shape *saveSphere = new osg::Sphere(osg::Vec3(0, 0, 0), 0.20);
     osg::ShapeDrawable *saveSD = new osg::ShapeDrawable(saveSphere);
+
+    osg::StateSet * stateset = saveSD->getOrCreateStateSet();
+    stateset->setMode(GL_BLEND, StateAttribute::ON);
+    stateset->setMode(GL_CULL_FACE, StateAttribute::ON);
+    stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
+
     saveSD->setColor(osg::Vec4(1.0, 1.0, 1.0, 0.5));
     saveGeode->addDrawable(saveSD);
 
-    // Open/close color selector
+    osg::ref_ptr<osgText::Text> text = new osgText::Text();
+    text->setText("Save");
+    text->setCharacterSize(0.1);
+    text->setDrawMode(osgText::Text::TEXT);
+    text->setAxisAlignment(osgText::Text::XZ_PLANE);
+    text->setPosition(osg::Vec3(-0.15,0,0));
+    text->setColor(osg::Vec4(1,1,1,1));
+    text->setFont(cvr::CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
+
+    saveGeode->addDrawable(text);
+
+
+   // Open/close color selector
     osg::Geode *csGeode = new osg::Geode();
     osg::Shape *csSphere = new osg::Sphere(osg::Vec3(0, 0, -0.5), 0.20);
     osg::ShapeDrawable *csSD = new osg::ShapeDrawable(csSphere);
+    stateset = csSD->getOrCreateStateSet();
+    stateset->setMode(GL_BLEND, StateAttribute::ON);
+    stateset->setMode(GL_CULL_FACE, StateAttribute::ON);
+    stateset->setRenderingHint(StateSet::TRANSPARENT_BIN);
+
     csSD->setColor(osg::Vec4(1.0, 0.0, 0.0, 0.5));
     csGeode->addDrawable(csSD);
-   
+
+    osg::ref_ptr<osgText::Text> text2 = new osgText::Text();
+
+    text2->setText("Selector");
+    text2->setCharacterSize(0.1);
+    text2->setDrawMode(osgText::Text::TEXT);
+    text2->setAxisAlignment(osgText::Text::XZ_PLANE);
+    text2->setPosition(osg::Vec3(-0.2, 0, -0.5));
+    text2->setColor(osg::Vec4(1,1,1,1));
+    text2->setFont(cvr::CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
+
+    csGeode->addDrawable(text2);
+
+  
     animationPathScaleFwd = new AnimationPath();
     animationPathScaleBwd = new AnimationPath();
 

@@ -8,9 +8,6 @@
 *
 ***************************************************************/
 #include "CaveCADBeta.h"
-#include <osgShadow/ShadowedScene>
-#include <osgShadow/ShadowMap>
-
 CVRPLUGIN(CaveCADBeta)
 
 using namespace std;
@@ -61,6 +58,11 @@ bool CaveCADBeta::init()
     mSkydomeCheckbox->setCallback(this);
     mainMenu->addItem(mSkydomeCheckbox);
 
+    mShadowCheckbox = new MenuCheckbox("Shadows", false);
+    mShadowCheckbox->setCallback(this);
+    mainMenu->addItem(mShadowCheckbox);
+
+
     // CaveCADBeta local objects
     osg::Group *root = new osg::Group();
 
@@ -83,17 +85,21 @@ bool CaveCADBeta::init()
     
 //    SceneManager::instance()->getObjectsRoot()->addChild(scaleMat);//root);
     mCAVEDesigner = new CAVEDesigner(root);
-    
+    mShadowedScene = NULL; 
+/*
     osgShadow::ShadowedScene *shadowedScene = new osgShadow::ShadowedScene();
-    //shadowedScene->setReceivesShadowTraversalMask(0x1);
-    //shadowedScene->setCastsShadowTraversalMask(0x1);
+//    shadowedScene->setReceivesShadowTraversalMask(0x2);
+//    shadowedScene->setCastsShadowTraversalMask(0x3);
+//    scaleMat->setNodeMask(0xFFFFFF | (0x2 | 0x3) | osg::StateAttribute::OVERRIDE);
     
+    osgShadow::ShadowVolume *sv = new osgShadow::ShadowVolume();
+    osgShadow::ShadowTexture *st = new osgShadow::ShadowTexture();
     osgShadow::ShadowMap *sm = new osgShadow::ShadowMap();
     shadowedScene->setShadowTechnique(sm);
     sm->setTextureSize(osg::Vec2s(1024,1024));
     
-    shadowedScene->addChild(scaleMat);
-    SceneManager::instance()->getObjectsRoot()->addChild(shadowedScene);
+    shadowedScene->addChild(scaleMat);*/
+    SceneManager::instance()->getObjectsRoot()->addChild(scaleMat);
 
     if(ComController::instance()->isMaster())
     {
@@ -185,7 +191,41 @@ void CaveCADBeta::menuCallback(MenuItem *item)
     if (item == mSkydomeCheckbox)
     {
         mCAVEDesigner->setSkydomeVisible(mSkydomeCheckbox->getValue());
-        std::cout << "skydome checkbox" << std::endl;
+ //       std::cout << "skydome checkbox" << std::endl;
+    }
+    
+    if (item == mShadowCheckbox)
+    {
+        if (mShadowCheckbox->getValue())
+        {
+            //osgShadow::ShadowedScene *shadowedScene = new osgShadow::ShadowedScene();
+            if (!mShadowedScene)
+            {
+                mShadowedScene = new osgShadow::ShadowedScene();
+                mShadowedScene->addChild(scaleMat);
+            }
+        //    shadowedScene->setReceivesShadowTraversalMask(0x2);
+        //    shadowedScene->setCastsShadowTraversalMask(0x3);
+        //    scaleMat->setNodeMask(0xFFFFFF | (0x2 | 0x3) | osg::StateAttribute::OVERRIDE);
+            
+            osgShadow::ShadowMap *sm = new osgShadow::ShadowMap();
+            mShadowedScene->setShadowTechnique(sm);
+            sm->setTextureSize(osg::Vec2s(1024,1024));
+
+            SceneManager::instance()->getObjectsRoot()->removeChild(scaleMat);
+            SceneManager::instance()->getObjectsRoot()->addChild(mShadowedScene);
+        }
+        else
+        {
+            if (!mShadowedScene)
+            {
+                mShadowedScene = new osgShadow::ShadowedScene();
+                mShadowedScene->addChild(scaleMat);
+            }
+
+            SceneManager::instance()->getObjectsRoot()->removeChild(mShadowedScene);
+            SceneManager::instance()->getObjectsRoot()->addChild(scaleMat);
+        }
     }
 
 }

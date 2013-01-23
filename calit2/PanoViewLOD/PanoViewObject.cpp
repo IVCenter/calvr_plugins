@@ -89,7 +89,7 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
     float offset = height - _floorOffset + DEFAULT_PAN_HEIGHT;
     osg::Vec3 ovec(0,0,offset);
     _heightMat.makeTranslate(ovec + _offset);
-    setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+    setTransform(_coordChangeMat * _spinMat * _tiltMat * _heightMat);
 
     _nextButton = _previousButton = NULL;
 
@@ -163,6 +163,8 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
     _fadeFrames = 0;
     _transitionType = NORMAL;
     _transitionStarted = false;
+
+    _upArrow = _downArrow = _leftArrow = _rightArrow = false;
 
     _printValues = ConfigManager::getBool("value","Plugin.PanoViewLOD.PrintValues",false,NULL);
 
@@ -343,7 +345,7 @@ float PanoViewObject::getAlpha()
 void PanoViewObject::setRotate(float rotate)
 {
     _spinMat.makeRotate(rotate, osg::Vec3(0,0,1));
-    setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+    setTransform(_coordChangeMat * _spinMat * _tiltMat * _heightMat);
 
     if(_currentZoom != 0.0)
     {
@@ -386,7 +388,7 @@ void PanoViewObject::menuCallback(cvr::MenuItem * item)
 	float offset = _heightRV->getValue() - _floorOffset + DEFAULT_PAN_HEIGHT;
 	osg::Vec3 ovec(0,0,offset);
 	_heightMat.makeTranslate(ovec + _offset);
-	setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+	setTransform(_coordChangeMat * _spinMat * _tiltMat * _heightMat);
     }
 
     if(item == _alphaRV)
@@ -450,7 +452,7 @@ void PanoViewObject::updateCallback(int handID, const osg::Matrix & mat)
 	osg::Matrix rot;
 	rot.makeRotate(val, osg::Vec3(0,0,1));
 	_spinMat = _spinMat * rot;
-	setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+	setTransform(_coordChangeMat * _spinMat * _tiltMat * _heightMat);
 
 	if(_currentZoom != 0.0)
 	{
@@ -492,7 +494,15 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 	}
 	if(_trackball->getValue() && tie->getButton() == 0 && tie->getInteraction() == BUTTON_DOWN)
 	{
-	    _tbDirValid = false;
+	    _tbDirValid = true;
+	    _tbHand = tie->getHand();
+
+	    osg::Vec3 start, end(0,100,0);
+	    start = start * tie->getTransform();
+	    end = end * tie->getTransform();
+	    _tbDir = end - start;
+	    _tbDir.normalize();
+	    /*_tbDirValid = false;
 	    osg::Vec3 startpoint(0,0,0), endpoint(0,1000.0,0), center(0,0,0);
 	    startpoint = startpoint * tie->getTransform() * getWorldToObjectMatrix();
 	    endpoint = endpoint * tie->getTransform() * getWorldToObjectMatrix();
@@ -524,7 +534,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 		_tbDirValid = true;
 		_tbDir = isec - center;
 		_tbDir.normalize();
-	    }
+	    }*/
 	    return true;
 	}
 	if(_trackball->getValue() && tie->getButton() == 0 && (tie->getInteraction() == BUTTON_DRAG || tie->getInteraction() == BUTTON_UP))
@@ -534,7 +544,52 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 		return false;
 	    }
 
-	    osg::Vec3 startpoint(0,0,0), endpoint(0,1000.0,0), center(0,0,0);
+	    osg::Vec3 start, end(0,100,0);
+	    start = start * tie->getTransform();
+	    end = end * tie->getTransform();
+	    osg::Vec3 newDir = end - start;
+	    newDir.normalize();
+
+	    if(_tbDir.z() < 0.999 && newDir.z() < 0.999)
+	    {
+		osg::Vec3 tvec1, tvec2;
+		tvec1 = _tbDir;
+		tvec1.z() = 0.0;
+		tvec1.normalize();
+
+		tvec2 = newDir;
+		tvec2.z() = 0.0;
+		tvec2.normalize();
+
+		osg::Matrix rot;
+		rot.makeRotate(tvec1,tvec2);
+		_spinMat = _spinMat * rot;
+	    }
+
+	    if(_tbDir.x() < 0.999 && newDir.x() < 0.999)
+	    {
+		osg::Vec3 tvec1, tvec2;
+		tvec1 = _tbDir;
+		tvec1.x() = 0.0;
+		tvec1.normalize();
+
+		tvec2 = newDir;
+		tvec2.x() = 0.0;
+		tvec2.normalize();
+
+		osg::Matrix rot;
+		rot.makeRotate(tvec1,tvec2);
+		_tiltMat = _tiltMat * rot;
+	    }
+
+	    setTransform(_coordChangeMat * _spinMat * _tiltMat * _heightMat);
+	    if(_currentZoom != 0.0)
+	    {
+		updateZoom(_lastZoomMat);
+	    }
+
+	    _tbDir = newDir;
+	    /*osg::Vec3 startpoint(0,0,0), endpoint(0,1000.0,0), center(0,0,0);
 	    startpoint = startpoint * tie->getTransform() * getWorldToObjectMatrix();
 	    endpoint = endpoint * tie->getTransform() * getWorldToObjectMatrix();
 
@@ -572,10 +627,43 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 
 		if(_tbDirValid)
 		{
-		    osg::Matrix rot;
-		    rot.makeRotate(_tbDir,newDir);
-		    _tbMat = rot * _tbMat;
-		    setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+		    if(_tbDir.y() < 0.999 && newDir.y() < 0.999)
+		    {
+			osg::Vec3 tvec1, tvec2;
+			tvec1 = _tbDir;
+			tvec1.y() = 0.0;
+			tvec1.normalize();
+
+			tvec2 = newDir;
+			tvec2.y() = 0.0;
+			tvec2.normalize();
+
+			osg::Matrix rot;
+			rot.makeRotate(tvec1,tvec2);
+			//_tbM1 = _tbM1 * rot;
+		    }
+
+		    if(_tbDir.x() < 0.999 && newDir.x() < 0.999)
+		    {
+			osg::Vec3 tvec1, tvec2;
+			tvec1 = _tbDir;
+			tvec1.x() = 0.0;
+			tvec1.normalize();
+
+			tvec2 = newDir;
+			tvec2.x() = 0.0;
+			tvec2.normalize();
+
+			osg::Matrix rot;
+			rot.makeRotate(tvec1,tvec2);
+			//_tbM2 = _tbM2 * rot;
+		    }
+
+		    //osg::Matrix rot;
+		    //rot.makeRotate(_tbDir,newDir);
+		    //_tbMat = rot * _tbMat;
+		    //_tbMat = _tbM1 * _tbM2;
+		    setTransform(_coordChangeMat * _spinMat * _tiltMat * _heightMat);
                     if(_currentZoom != 0.0)
                     {
                         updateZoom(_lastZoomMat);
@@ -586,7 +674,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 		    _tbDirValid = true;
 		    _tbDir = newDir;
 		}
-	    }
+	    }*/
 	    return true;
 	}
 	/*if(tie->getButton() == 0 && tie->getInteraction() == BUTTON_DOWN)
@@ -621,14 +709,32 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
     }
     else if(ie->asKeyboardEvent())
     {
-	osg::Matrix rot;
+	/*osg::Matrix rot;
 	rot.makeRotate((M_PI / 50.0) * 0.6, osg::Vec3(0,0,1));
 	_spinMat = _spinMat * rot;
-	setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+	setTransform(_tbM1 * _tbM2 * _coordChangeMat * _spinMat * _heightMat);
 
 	if(_currentZoom != 0.0)
 	{
 	    updateZoom(_lastZoomMat);
+	}*/
+
+	KeyboardInteractionEvent * kie = ie->asKeyboardEvent();
+	if(kie->getKey() == 65362)
+	{
+	    _upArrow = kie->getInteraction() == KEY_DOWN;
+	}
+	else if(kie->getKey() == 65364)
+	{
+	    _downArrow = kie->getInteraction() == KEY_DOWN;
+	}
+	else if(kie->getKey() == 65361)
+	{
+	    _leftArrow = kie->getInteraction() == KEY_DOWN;
+	}
+	else if(kie->getKey() == 65363)
+	{
+	    _rightArrow = kie->getInteraction() == KEY_DOWN;
 	}
     }
     else if(ie->asValuatorEvent())
@@ -667,7 +773,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 		osg::Matrix rot;
 		rot.makeRotate((M_PI / 50.0) * val * _spinScale, osg::Vec3(0,0,1));
 		_spinMat = _spinMat * rot;
-		setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+		setTransform(_coordChangeMat * _spinMat * _tiltMat * _heightMat);
 
 		if(_printValues)
 		{
@@ -703,6 +809,41 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 
 void PanoViewObject::preFrameUpdate()
 {
+    float spinChange = 0;
+    float tiltChange = 0;
+
+    static const float radsPerSec = 0.5;
+    if(_upArrow && !_downArrow)
+    {
+	tiltChange -= radsPerSec * PluginHelper::getLastFrameDuration();
+    }
+    if(_downArrow && !_upArrow)
+    {
+	tiltChange += radsPerSec * PluginHelper::getLastFrameDuration();
+    }
+
+    if(_rightArrow && !_leftArrow)
+    {
+	spinChange += radsPerSec * PluginHelper::getLastFrameDuration();
+    }
+    if(_leftArrow && !_rightArrow)
+    {
+	spinChange -= radsPerSec * PluginHelper::getLastFrameDuration();
+    }
+
+    osg::Matrix rot;
+    rot.makeRotate(spinChange, osg::Vec3(0,0,1));
+    _spinMat = _spinMat * rot;
+
+    rot.makeRotate(tiltChange, osg::Vec3(1,0,0));
+    _tiltMat = _tiltMat * rot;
+
+    setTransform(_coordChangeMat * _spinMat * _tiltMat * _heightMat);
+    if(_currentZoom != 0.0)
+    {
+	updateZoom(_lastZoomMat);
+    }
+
     if(_transitionType == ZOOM && _transitionStarted && !_transitionSkipFrames)
     {	
 	_transitionTime += PluginHelper::getLastFrameDuration();

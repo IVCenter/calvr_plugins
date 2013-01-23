@@ -80,62 +80,62 @@ bool ColorSelector::buttonEvent(int type, const osg::Matrix & mat)
 {
     if(type == BUTTON_DOWN)
     {
-	osg::Vec3 start, end(0,10000,0);
-	start = start * mat;
-	end = end * mat;
-	std::vector<IsectInfo> isec = getObjectIntersection(PluginHelper::getScene(), start, end);
-	bool found = false;
-	for(int i = 0; i < isec.size(); i++)
-	{
-	    if(isec[i].geode == _sphereGeode)
-	    {
-		found = true;
-		break;
-	    }
-	}
-	if(!found)
-	{
-	    return false;
-	}
+        osg::Vec3 start, end(0,10000,0);
+        start = start * mat;
+        end = end * mat;
+        std::vector<IsectInfo> isec = getObjectIntersection(PluginHelper::getScene(), start, end);
+        bool found = false;
+        for(int i = 0; i < isec.size(); i++)
+        {
+            if(isec[i].geode == _sphereGeode)
+            {
+                found = true;
+                break;
+            }
+        }
+        if(!found)
+        {
+            return false;
+        }
 
-	_moving = true;
-	_pointerSpaceCenter = osg::Vec3(0,0,0);
-	_pointerSpaceCenter = _pointerSpaceCenter * getLocalToWorldMatrix(_sphereGeode) * osg::Matrix::inverse(mat);
+        _moving = true;
+        _pointerSpaceCenter = osg::Vec3(0,0,0);
+        _pointerSpaceCenter = _pointerSpaceCenter * getLocalToWorldMatrix(_sphereGeode) * osg::Matrix::inverse(mat);
 
-	return true;
+        return true;
     }
     else if(_moving && (type == BUTTON_DRAG || type == BUTTON_UP))
     {
-	//osg::Matrix sphere2world = getLocalToWorldMatrix(_sphereGeode);
-	osg::Matrix world2root = getLocalToWorldMatrix(_root.get());
-	world2root = osg::Matrix::inverse(world2root);
-	
-	osg::Matrix m = _sphereTransform->getMatrix();
-	osg::Vec3 newPoint;
-	newPoint = _pointerSpaceCenter * mat * world2root;
+        //osg::Matrix sphere2world = getLocalToWorldMatrix(_sphereGeode);
+        osg::Matrix world2root = getLocalToWorldMatrix(_root.get());
+        world2root = osg::Matrix::inverse(world2root);
+        
+        osg::Matrix m = _sphereTransform->getMatrix();
+        osg::Vec3 newPoint;
+        newPoint = _pointerSpaceCenter * mat * world2root;
 
-	bool undef;
-	osg::Vec3 newColor = xyz2hcl(newPoint,undef);
-	//std::cerr << "New Color h: " << newColor.x() << " c: " << newColor.y() << " l: " << newColor.z() << std::endl;
-	newPoint = hcl2xyz(newColor);
-	newColor = hsl2rgb(newColor,undef);
-	//std::cerr << "New Color r: " << newColor.x() << " g: " << newColor.y() << " b: " << newColor.z() << std::endl;
+        bool undef;
+        osg::Vec3 newColor = xyz2hcl(newPoint,undef);
+        //std::cerr << "New Color h: " << newColor.x() << " c: " << newColor.y() << " l: " << newColor.z() << std::endl;
+        newPoint = hcl2xyz(newColor);
+        newColor = hsl2rgb(newColor,undef);
+        //std::cerr << "New Color r: " << newColor.x() << " g: " << newColor.y() << " b: " << newColor.z() << std::endl;
 
-	_color.x() = newColor.x();
-	_color.y() = newColor.y();
-	_color.z() = newColor.z();
-	setColor(_color);
+        _color.x() = newColor.x();
+        _color.y() = newColor.y();
+        _color.z() = newColor.z();
+        setColor(_color);
 
-	m.setTrans(newPoint);
-	_sphereTransform->setMatrix(m);
-	//_sphereTransform->setMatrix(sphere2world * _lastPointerInv * mat * world2root);
-	//_lastPointerInv = osg::Matrix::inverse(mat);
+        m.setTrans(newPoint);
+        _sphereTransform->setMatrix(m);
+        //_sphereTransform->setMatrix(sphere2world * _lastPointerInv * mat * world2root);
+        //_lastPointerInv = osg::Matrix::inverse(mat);
 
-	if(type == BUTTON_UP)
-	{
-	    _moving = false;
-	}
-	return true;
+        if(type == BUTTON_UP)
+        {
+            _moving = false;
+        }
+        return true;
     }
     return false;
 }

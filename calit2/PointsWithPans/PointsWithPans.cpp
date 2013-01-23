@@ -131,6 +131,7 @@ void PointsWithPans::menuCallback(MenuItem * item)
 	    _activeObject->setNavigationOn(false);
 	    _activeObject->setScale(_setList[i]->scale);
 	    _activeObject->setPosition(_setList[i]->offset);
+	    _activeObject->setRotation(osg::Quat());
 	    _activeObject->setNavigationOn(true);
 	    _activeObject->addChild(pli.group.get());
 	    _activeObject->setTransitionTimes(_setList[i]->moveTime,_setList[i]->fadeTime);
