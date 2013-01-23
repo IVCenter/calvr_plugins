@@ -651,13 +651,15 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    if(!_currentSBGraph)
 	    {
 		_currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-		//PluginHelper::registerSceneObject(_currentSBGraph,"FuturePatient");
-		//_currentSBGraph->attachToScene();
+		_currentSBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue());
 		checkLayout();
 		_layoutObject->addGraphObject(_currentSBGraph);
 		_microbeMenu->addItem(_microbeDone);
 	    }
-	    _currentSBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue());
+	    else
+	    {
+		_currentSBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue());
+	    }
 	}
     }
 
@@ -729,11 +731,15 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    if(!_currentSBGraph)
 	    {
 		_currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+		_currentSBGraph->addSpecialGraph(mgt);
 		checkLayout();
 		_layoutObject->addGraphObject(_currentSBGraph);
 		_microbeMenu->addItem(_microbeDone);
 	    }
-	    _currentSBGraph->addSpecialGraph(mgt);
+	    else
+	    {
+		_currentSBGraph->addSpecialGraph(mgt);
+	    }
 	}
     }
 
@@ -742,25 +748,35 @@ void FuturePatient::menuCallback(MenuItem * item)
 	if(!_currentSymptomGraph)
 	{
 	    _currentSymptomGraph = new SymptomGraphObject(_conn, 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
+	    _currentSymptomGraph->addGraph(_eventName->getValue());
 	    checkLayout();
 	    _layoutObject->addGraphObject(_currentSymptomGraph);
 	    _eventMenu->addItem(_eventDone);
 	}
-	_currentSymptomGraph->addGraph(_eventName->getValue());
+	else
+	{
+	    _currentSymptomGraph->addGraph(_eventName->getValue());
+	}
     }
 
     if(item == _eventLoadAll && _eventName->getListSize())
     {
+	bool addObject = false;
 	if(!_currentSymptomGraph)
 	{
 	    _currentSymptomGraph = new SymptomGraphObject(_conn, 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
 	    checkLayout();
-	    _layoutObject->addGraphObject(_currentSymptomGraph);
-	    _eventMenu->addItem(_eventDone);
+	    addObject = true;
 	}
 	for(int i = 0; i < _eventName->getListSize(); ++i)
 	{
 	    _currentSymptomGraph->addGraph(_eventName->getValue(i));
+	}
+
+	if(addObject)
+	{
+	    _layoutObject->addGraphObject(_currentSymptomGraph);
+	    _eventMenu->addItem(_eventDone);
 	}
     }
 

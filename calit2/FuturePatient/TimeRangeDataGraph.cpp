@@ -484,6 +484,8 @@ void TimeRangeDataGraph::update()
 {
     updateSizes();
 
+    float barHeight = _graphTop - _graphBottom;
+
     osg::Vec3 scale(_width,1.0,_height);
     osg::Matrix scaleMat;
     scaleMat.makeScale(scale);
@@ -492,7 +494,7 @@ void TimeRangeDataGraph::update()
     updateGraphs();
     updateAxis();
 
-    scaleMat.makeScale(osg::Vec3(1,1,_height));
+    scaleMat.makeScale(osg::Vec3(1,1,barHeight));
     _barTransform->setMatrix(scaleMat);
 
     setBarPosition(_barPos);
