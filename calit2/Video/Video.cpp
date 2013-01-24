@@ -61,59 +61,81 @@ void Video::loadMenuItems(cvr::SubMenu* menu, const char* xmlFilename)
 		
 }
 
+void Video::EncodePtsUpdates(const std::list<PTSUpdate>& updates, const size_t& buffSize, unsigned char* buffer) const
+{
+	size_t udsize = sizeof(unsigned int) * sizeof(double);
+	int i = 0;
+	for (std::list<PTSUpdate>::const_iterator iter = updates.begin(); iter != updates.end(); ++iter)
+	{
+		const PTSUpdate& update = *iter;
+		memcpy(&buffer[i*udsize], &update.gid, sizeof(update.gid));
+		memcpy(&buffer[i*udsize + sizeof(update.gid)], &update.pts, sizeof(update.pts));
+		i++;
+	}
+}
+
+void Video::DecodePtsUpdates(std::list<PTSUpdate>& updates, size_t buffSize, const unsigned char* buffer) const
+{
+	size_t udsize = sizeof(unsigned int) * sizeof(double);
+	const unsigned char* b = buffer;
+	while (b <= buffer + buffSize - udsize)
+	{
+		PTSUpdate update;
+		memcpy(&update.gid, b, sizeof(update.gid));
+		b+= sizeof(update.gid);
+		memcpy(&update.pts, b, sizeof(update.pts));
+		b+= sizeof(update.pts);
+		updates.push_back(update);
+	}
+}
+
 void Video::postFrame()
 {
-	std::list<double> ptsList;
-	double* ptsdata = 0;
+	std::list<PTSUpdate> ptsList;
+	unsigned char* ptsData = 0;
 	// alloc data for pts
-	unsigned int ptsCount = m_gidMap.size();
-	ptsdata = new double[ptsCount];
 	bool isHead = cvr::ComController::instance()->isMaster();
 	unsigned int i = 0;
 	if (isHead)
 	{
-	    for (std::map<unsigned int, TextureManager*>::iterator iter = m_gidMap.begin(); iter != m_gidMap.end(); ++iter)
-	    {
-		TextureManager* manager = iter->second;
-		unsigned int gid = manager->GetVideoID(0);
-		//printf("CheckUpdateVideo for video %x\n", gid);
-		// head node updates the video
-		// XXX split UpdateVideo into a call to just check if a new frame needs to be loaded, but not load the frame yet, just get the frame PTS, and then another call to actually load the texture (ideally preloaded)
-		bool videoUpdate = m_videoplayer.CheckUpdateVideo(gid, true);
-		double pts = m_videoplayer.GetVideoPts(gid);
-
-		if (videoUpdate)
+		for (std::map<unsigned int, TextureManager*>::iterator iter = m_gidMap.begin(); iter != m_gidMap.end(); ++iter)
 		{
-			printf("CheckUpdateVideo returned true\n");
+			TextureManager* manager = iter->second;
+			unsigned int gid = manager->GetVideoID(0);
+			//printf("CheckUpdateVideo for video %x\n", gid);
+			// head node updates the video
+			// XXX split UpdateVideo into a call to just check if a new frame needs to be loaded, but not load the frame yet, just get the frame PTS, and then another call to actually load the texture (ideally preloaded)
+			bool videoUpdate = m_videoplayer.CheckUpdateVideo(gid, true);
+
+			if (videoUpdate)
+			{
+				//printf("CheckUpdateVideo returned true\n");
+				PTSUpdate update(gid, m_videoplayer.GetVideoPts(gid));
+				ptsList.push_back(update);
+			}
 		}
 
-		if (videoUpdate)
-		    ptsList.push_back(pts);
 
-		ptsdata[i] = pts;
-
-		i++;
-
-	    }
-	
-	    cvr::ComController::instance()->sendSlaves((unsigned char*)ptsdata, ptsCount * sizeof(double));
+		size_t udsize = sizeof(unsigned int) * sizeof(double);
+		unsigned int buffSize = ptsList.size() * udsize;
+		unsigned char* buffer = new unsigned char[buffSize + sizeof(unsigned int)];
+		memcpy(buffer, &buffSize, sizeof(unsigned int));
+		EncodePtsUpdates(ptsList, buffSize, &buffer[sizeof(unsigned int)]);
+		cvr::ComController::instance()->sendSlaves(buffer, buffSize + sizeof(unsigned int));
 	}
 	else
 	{
-	    cvr::ComController::instance()->readMaster((unsigned char*)ptsdata, ptsCount * sizeof(double));
+		unsigned int buffSize;
+		cvr::ComController::instance()->readMaster((unsigned char*)&buffSize, sizeof(unsigned int));
+		unsigned char* buffer = new unsigned char[buffSize];
+		cvr::ComController::instance()->readMaster(buffer, buffSize);
+
+		DecodePtsUpdates(ptsList, buffSize, buffer);
 	}
 
 
 	m_ptsUpdateList.clear();
-	i = 0;	
-	for (std::map<unsigned int, TextureManager*>::iterator iter = m_gidMap.begin(); iter != m_gidMap.end(); ++iter)
-	{
-		TextureManager* manager = iter->second;
-		unsigned int gid = manager->GetVideoID(0);
-
-		m_ptsUpdateList.push_back(PTSUpdate(gid, ptsdata[i]));
-		i++;
-	}
+	m_ptsUpdateList.splice(m_ptsUpdateList.begin(), ptsList);
 
 }
 
@@ -274,9 +296,9 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			m_videoplayer.SetCurrentDrawPts(gid, update.pts);
 			//printf("Updating video %d with gid %x\n", i, gid);
 			bool isupdate = m_videoplayer.UpdateVideo(gid, false);
-			m_videoplayer.UpdateTexture(gid);
 			if (isupdate)
 			{
+				m_videoplayer.UpdateTexture(gid);
 		//		printf("Updated video %x to pts %.4lf\n", gid, update.pts);
 			}
 			else
@@ -285,6 +307,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			}
 		}
 	}
+	m_ptsUpdateList.clear();
 
 	/*
 	for (std::map<unsigned int, TextureManager*>::iterator iter = m_gidMap.begin(); iter != m_gidMap.end(); ++iter)

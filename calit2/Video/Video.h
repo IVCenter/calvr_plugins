@@ -36,6 +36,8 @@ public:
 protected:
 	int LoadVideoXML(const char* filename, std::list<std::string>& videoFilenames);
 	void loadMenuItems(cvr::SubMenu* menu, const char* xmlFilename);
+	void EncodePtsUpdates(const std::list<PTSUpdate>& updates, const size_t& buffSize, unsigned char* buffer) const;
+	void DecodePtsUpdates(std::list<PTSUpdate>& updates, size_t buffSize, const unsigned char* buffer) const;
 	std::list<std::string> ExplodeFilename(const char* filename);
 
 	cvr::SubMenu* MLMenu;	
@@ -55,6 +57,8 @@ protected:
 	mutable OpenThreads::Mutex m_initMutex;
 
 	mutable std::list<PTSUpdate> m_ptsUpdateList;
+
+	
 
 	
 
