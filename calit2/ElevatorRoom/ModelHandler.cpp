@@ -61,7 +61,7 @@ void ModelHandler::update()
 
     angle = acos(headForward * headToDoor);
     angle -= M_PI;
-    if (angle < 0) 
+    if (0)//angle < 0) 
         angle *= -1;
 
     if (angle < tolerance && !_doorInView)
@@ -844,16 +844,43 @@ void ModelHandler::setMode(Mode mode)
     _aliensSwitch[_activeDoor]->setAllChildrenOff();
     _checkersSwitch[_activeDoor]->setAllChildrenOff();
     
+    _mode = mode;
     if (mode == ALLY)
+    {
         _alliesSwitch[_activeDoor]->setSingleChildOn(0);
 
+        osg::Geode * geode;
+        geode = dynamic_cast<osg::Geode *>(_alliesSwitch[_activeDoor]->getChild(0));
+        if (geode)
+        {
+            _activeObject = geode;
+        }
+    }
+
     else if (mode == ALIEN)
+    {
         _aliensSwitch[_activeDoor]->setSingleChildOn(0);
 
+        osg::Geode * geode;
+        geode = dynamic_cast<osg::Geode *>(_aliensSwitch[_activeDoor]->getChild(0));
+        if (geode)
+        {
+            _activeObject = geode;
+        }
+    }
+
     else if (mode == CHECKER)
+    {
         _checkersSwitch[_activeDoor]->setSingleChildOn(0);
 
-    _mode = mode;
+        osg::Geode * geode;
+        geode = dynamic_cast<osg::Geode *>(_checkersSwitch[_activeDoor]->getChild(0));
+        if (geode)
+        {
+            _activeObject = geode;
+        }
+    }
+
     _lightColor = _lightSwitch[_activeDoor]->getNumChildren() - 1;
     _lightSwitch[_activeDoor]->setValue((int)_lightColor, true);
 }
@@ -885,7 +912,7 @@ void ModelHandler::flashCheckers()
         _checkersSwitch[_activeDoor]->setValue(0, false);
         _checkersSwitch[_activeDoor]->setValue(1, true);
 
-        osg::ref_ptr<osg::Geode> geode;
+        osg::Geode * geode;
         geode = dynamic_cast<osg::Geode *>(_checkersSwitch[_activeDoor]->getChild(1));
         if (geode)
         {
@@ -897,7 +924,7 @@ void ModelHandler::flashCheckers()
         _checkersSwitch[_activeDoor]->setValue(0, true);
         _checkersSwitch[_activeDoor]->setValue(1, false);
 
-        osg::ref_ptr<osg::Geode> geode;
+        osg::Geode * geode;
         geode = dynamic_cast<osg::Geode *>(_checkersSwitch[_activeDoor]->getChild(0));
         if (geode)
         {
@@ -914,7 +941,7 @@ void ModelHandler::flashAlien()
         _aliensSwitch[_activeDoor]->setValue(0, false);
         _aliensSwitch[_activeDoor]->setValue(1, true);
 
-        osg::ref_ptr<osg::Geode> geode;
+        osg::Geode * geode;
         geode = dynamic_cast<osg::Geode *>(_aliensSwitch[_activeDoor]->getChild(1));
         if (geode)
         {
@@ -926,7 +953,7 @@ void ModelHandler::flashAlien()
         _aliensSwitch[_activeDoor]->setValue(0, true);
         _aliensSwitch[_activeDoor]->setValue(1, false);
 
-        osg::ref_ptr<osg::Geode> geode;
+        osg::Geode * geode;
         geode = dynamic_cast<osg::Geode *>(_aliensSwitch[_activeDoor]->getChild(0));
         if (geode)
         {
@@ -943,7 +970,7 @@ void ModelHandler::flashAlly()
         _alliesSwitch[_activeDoor]->setValue(0, false);
         _alliesSwitch[_activeDoor]->setValue(1, true);
 
-        osg::ref_ptr<osg::Geode> geode;
+        osg::Geode * geode;
         geode = dynamic_cast<osg::Geode *>(_alliesSwitch[_activeDoor]->getChild(1));
         if (geode)
         {
@@ -955,7 +982,7 @@ void ModelHandler::flashAlly()
         _alliesSwitch[_activeDoor]->setValue(0, true);
         _alliesSwitch[_activeDoor]->setValue(1, false);
 
-        osg::ref_ptr<osg::Geode> geode;
+        osg::Geode * geode;
         geode = dynamic_cast<osg::Geode *>(_alliesSwitch[_activeDoor]->getChild(0));
         if (geode)
         {
@@ -969,6 +996,44 @@ void ModelHandler::flashAlly()
 void ModelHandler::setActiveDoor(int doorNum)
 {
     _activeDoor = doorNum;
+
+    if (_mode == ALLY)
+    {
+        _alliesSwitch[_activeDoor]->setSingleChildOn(0);
+
+        osg::Geode * geode;
+        geode = dynamic_cast<osg::Geode *>(_alliesSwitch[_activeDoor]->getChild(0));
+        if (geode)
+        {
+            _activeObject = geode;
+        }
+    }
+
+    else if (_mode == ALIEN)
+    {
+        _aliensSwitch[_activeDoor]->setSingleChildOn(0);
+
+        osg::Geode * geode;
+        geode = dynamic_cast<osg::Geode *>(_aliensSwitch[_activeDoor]->getChild(0));
+        if (geode)
+        {
+            _activeObject = geode;
+        }
+    }
+
+    else if (_mode == CHECKER)
+    {
+        _checkersSwitch[_activeDoor]->setSingleChildOn(0);
+
+        osg::Geode * geode;
+        geode = dynamic_cast<osg::Geode *>(_checkersSwitch[_activeDoor]->getChild(0));
+        if (geode)
+        {
+            _activeObject = geode;
+        }
+    }
+
+
 }
 
 
@@ -981,7 +1046,7 @@ void ModelHandler::setAlien(bool val)
     {
         _aliensSwitch[_activeDoor]->setValue(1, false);
 
-        osg::ref_ptr<osg::Geode> geode;
+        osg::Geode * geode;
         geode = dynamic_cast<osg::Geode *>(_aliensSwitch[_activeDoor]->getChild(0));
         if (geode)
         {
@@ -1000,7 +1065,7 @@ void ModelHandler::setAlly(bool val)
     {
         _alliesSwitch[_activeDoor]->setValue(1, false);
 
-        osg::ref_ptr<osg::Geode> geode;
+        osg::Geode * geode;
         geode = dynamic_cast<osg::Geode *>(_alliesSwitch[_activeDoor]->getChild(0));
         if (geode)
         {
@@ -1012,7 +1077,7 @@ void ModelHandler::setAlly(bool val)
 
 void ModelHandler::setLight(bool val)
 {
-    _lightColor = _mode;
+    _lightColor = (int)_mode;
     if (val)
     {
         _lightSwitch[_activeDoor]->setValue(0, false);
@@ -1036,7 +1101,6 @@ bool ModelHandler::doorInView()
 {
     return _doorInView;
 }
-
 
 };
 

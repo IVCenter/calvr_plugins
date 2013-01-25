@@ -104,6 +104,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _loadButton, * _clearButton;
         cvr::MenuRangeValue * _checkerSpeedRV, * _alienChanceRV;
         cvr::MenuText * _chancesText;
+        cvr::MenuCheckbox *_dingCheckbox;
 
         osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry
         std::string _dataDir;
@@ -115,6 +116,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         float _pauseStart; // start time of the current pause
         float _checkSpeed; // number of checkerboard flashes per second
         float _flashStartTime, _avatarFlashPerSec, _lightFlashPerSec;
+        float _dingStartTime, _dingInterval;
 
         int _activeDoor; // which door is currently opening/closing
         int _score; // current score (should be > 0)

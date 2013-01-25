@@ -75,9 +75,9 @@ class ModelHandler
         bool _loaded; // whether the model has finished loading
         float _doorDist; // distance doors are currently translated
         int _activeDoor;
-        int _lightColor, _mode;
+        int _lightColor;
         bool _doorInView;
-
+        Mode _mode;
 
         osg::ref_ptr<osg::Geometry> drawBox(osg::Vec3 center, float x, 
             float y, float z, osg::Vec4 color, float texScale = 1);

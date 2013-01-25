@@ -42,6 +42,10 @@ bool ElevatorRoom::init()
 
     PluginHelper::addRootMenuItem(_elevatorMenu);
 
+    _dingCheckbox = new MenuCheckbox("Ding Test", false);
+    _dingCheckbox->setCallback(this);
+    _elevatorMenu->addItem(_dingCheckbox);
+
     _loadButton = new MenuButton("Load");
     _loadButton->setCallback(this);
     _elevatorMenu->addItem(_loadButton);
@@ -96,7 +100,7 @@ bool ElevatorRoom::init()
     _geoRoot->setMatrix(mat);
     mat.makeTranslate(osg::Vec3(xpos, ypos, zpos));
     _geoRoot->postMult(mat);
-    
+
     PluginHelper::getObjectsRoot()->addChild(_geoRoot);
 
     _activeDoor = -1;
@@ -204,9 +208,29 @@ bool ElevatorRoom::init()
 
 void ElevatorRoom::preFrame()
 {
+    if (_dingCheckbox->getValue())
+    {
+        if ((PluginHelper::getProgramDuration() - _dingStartTime) > _dingInterval)
+        {
+            _audioHandler->playSound(0 + DING_OFFSET, "ding");
+
+            unsigned char buf[1];
+            buf[0] = '1';
+            write_SPP(sizeof(buf), buf);
+          
+            _dingStartTime = PluginHelper::getProgramDuration();
+            _dingInterval = (rand() % 3) + 1;
+            
+            std::cout << "Ding! Pause for " << _dingInterval << " seconds." << std::endl;
+        }
+        return;
+    }
+
+
     if (!_loaded)
         return;
     
+
     osg::Vec3 objMat, headmat;
     objMat = PluginHelper::getObjectMatrix().getTrans();
     headmat = PluginHelper::getHeadMat().getTrans();
@@ -218,7 +242,7 @@ void ElevatorRoom::preFrame()
     {
         if ((PluginHelper::getProgramDuration() - _pauseStart) > _pauseLength)
         {
-            _activeDoor = rand() % NUM_DOORS;
+            _activeDoor = 4; //rand() % NUM_DOORS;
             _modelHandler->setActiveDoor(_activeDoor);
 
             if (_audioHandler)
@@ -228,9 +252,9 @@ void ElevatorRoom::preFrame()
             
             unsigned char buf[1];
             buf[0] = '1';
-            write_SPP(sizeof(buf), buf);
+            // write_SPP(sizeof(buf), buf);
 
-            int num = rand() % 10;
+            int num = 9;  // rand() % 10;
 
             if (num <= 4)
             {
@@ -278,7 +302,6 @@ void ElevatorRoom::preFrame()
             {
                 _activeObject = geode;
             }
-
             _flashCount = 0;
         }
 
@@ -313,18 +336,24 @@ void ElevatorRoom::preFrame()
         {
             unsigned char buf[1];
             buf[0] = '5';
-            write_SPP(sizeof(buf), buf);
+            //write_SPP(sizeof(buf), buf);
 
-            if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _checkSpeed)
+            if (PluginHelper::getProgramDuration() - _flashStartTime > (1 / _checkSpeed))
             {
                 _modelHandler->flashCheckers();
+                
+                unsigned char buf[1];
+                buf[0] = '1';
+                write_SPP(sizeof(buf), buf);
+
 
                 osg::ref_ptr<osg::Geode > geode;
                 if (geode = _modelHandler->getActiveObject())
                 {
                     _activeObject = geode;
                 }
- 
+
+                _checkSpeed = ((rand() % 2) + 1); // .5 -> 1
                 _flashCount++;
                 _flashStartTime = PluginHelper::getProgramDuration();
             }
@@ -334,7 +363,7 @@ void ElevatorRoom::preFrame()
         {
             unsigned char buf[1];
             buf[0] = '4';
-            write_SPP(sizeof(buf), buf);
+            //write_SPP(sizeof(buf), buf);
 
             if (_hit)
             {
@@ -363,7 +392,7 @@ void ElevatorRoom::preFrame()
         {
             unsigned char buf[1];
             buf[0] = '3';
-            write_SPP(sizeof(buf), buf);
+            //write_SPP(sizeof(buf), buf);
 
             if (_hit)
             {
@@ -396,7 +425,7 @@ void ElevatorRoom::preFrame()
 
                 unsigned char buf[1];
                 buf[0] = '2';
-                write_SPP(sizeof(buf), buf);
+                //write_SPP(sizeof(buf), buf);
             }
 
             if (_modelHandler->getDoorDistance() > 0.8)
@@ -406,7 +435,7 @@ void ElevatorRoom::preFrame()
         }
         else
         {
-            _modelHandler->closeDoor();
+            // _modelHandler->closeDoor();
 
             if (_modelHandler->getDoorDistance() < DOOR_SPEED)
             {
@@ -599,6 +628,18 @@ void ElevatorRoom::menuCallback(MenuItem * item)
             _chancesText->setText(str);
         }
     }
+
+    else if (item == _dingCheckbox)
+    {
+        if (_audioHandler)
+        {
+            osg::Vec3 pos, dir;
+            pos = cvr::PluginHelper::getHeadMat().getTrans();
+            dir = osg::Vec3(0, 0, -1); 
+
+            _audioHandler->loadSound(0 + DING_OFFSET, dir, pos);
+        }
+    }
 }
 
 bool ElevatorRoom::processEvent(InteractionEvent * event)
@@ -630,15 +671,19 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
 
                 if (isecvec.size() == 0)
                 {
+//std::cout << "no intersection" << std::endl;
                     return true;
                 }
                 else
                 {
                     if (_activeDoor >= 0)
                     {
-                        // intersect the character and door is still open
-                        if (isecvec[0].geode == _activeObject && _modelHandler->getDoorDistance() > 0)
+//std::cout << "intersection and activeDoor" << std::endl;
+                        // intersect the character and door is still opens
+//std::cout << isecvec[0].geode << " " << _modelHandler->getActiveObject() << std::endl;
+                        if (isecvec[0].geode == _modelHandler->getActiveObject() && _modelHandler->getDoorDistance() > 0)
                         {
+//std::cout << "hit active object" << std::endl;
                             if (_audioHandler)
                             {
                                 _audioHandler->playSound(LASER_OFFSET, "laser");
@@ -846,6 +891,7 @@ int ElevatorRoom::init_SPP(int port)
     ftdi_setflowctrl(&_ftdic, SIO_DISABLE_FLOW_CTRL);
     ftdi_set_latency_timer(&_ftdic, 2);
     
+    std::cout << "Connected to FTDI device." << std::endl;
     _sppConnected = true;
     return 0;
 }
@@ -862,6 +908,7 @@ void ElevatorRoom::write_SPP(int bytes, unsigned char* buf)
 {
     if (!_sppConnected)
         return;
+    
 
     ftdi_write_data(&_ftdic, buf, bytes);
 }
