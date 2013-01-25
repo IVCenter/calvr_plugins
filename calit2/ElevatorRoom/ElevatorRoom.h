@@ -42,6 +42,7 @@
 #include <spnav.h>
 
 #include <ftdi.h>
+#include <ftd2xx.h>
 
 #include "AudioHandler.h"
 #include "ModelHandler.h"
@@ -145,7 +146,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         float _transcale, _rotscale;
 
         void connectToServer();
-     /*   HANDLE hSerial;
+        HANDLE hSerial;
         //COMMTIMEOUTS timeouts;
         FT_HANDLE ftHandle;
         FT_STATUS ftStatus;
@@ -153,7 +154,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         DWORD bytesWritten;
         char buf[16];
 
-*/
+
         int init_SPP(int port); 
         void close_SPP();
         void write_SPP(int bytes, unsigned char* buf);

@@ -115,7 +115,7 @@ bool ElevatorRoom::init()
     _lightFlashPerSec = 7;
     _gameMode = THREE;
 
-    if(ComController::instance()->isMaster())
+   /* if(ComController::instance()->isMaster())
     {
         int seed = time(NULL);
 		ComController::instance()->sendSlaves(&seed, sizeof(seed));
@@ -126,7 +126,8 @@ bool ElevatorRoom::init()
         int seed = 0;
 		ComController::instance()->readMaster(&seed, sizeof(seed));
         srand(seed);
-    }
+    }*/
+    srand(0);
 
     // Sound
     osg::Vec3 handPos, headPos, headDir, handDir;
@@ -216,7 +217,7 @@ void ElevatorRoom::preFrame()
 
             unsigned char buf[1];
             buf[0] = '1';
-            write_SPP(sizeof(buf), buf);
+            write_SPP(1, buf);
           
             _dingStartTime = PluginHelper::getProgramDuration();
             _dingInterval = (rand() % 3) + 1;
@@ -345,7 +346,6 @@ void ElevatorRoom::preFrame()
                 unsigned char buf[1];
                 buf[0] = '1';
                 write_SPP(sizeof(buf), buf);
-
 
                 osg::ref_ptr<osg::Geode > geode;
                 if (geode = _modelHandler->getActiveObject())
@@ -497,7 +497,7 @@ void ElevatorRoom::preFrame()
     // Spacenav
     Matrixd finalmat;
 
-    if(ComController::instance()->isMaster())
+/*    if(ComController::instance()->isMaster())
     {
         spnav_event sev;
 
@@ -520,11 +520,11 @@ void ElevatorRoom::preFrame()
                 // printf("r(%d, %d, %d)\n", sev.motion.rx, sev.motion.ry, sev.motion.rz);
             } 
             else 
-            {	/* SPNAV_EVENT_BUTTON */
+            {	// SPNAV_EVENT_BUTTON 
                 //printf("got button %s event b(%d)\n", sev.button.press ? "press" : "release", sev.button.bnum);
                 if(sev.button.press)
                 {
-                    /*switch(sev.button.bnum)
+                    switch(sev.button.bnum)
                     {
                     case 0:
                         transcale *= 1.1;
@@ -540,7 +540,7 @@ void ElevatorRoom::preFrame()
                         break;
                     default:
                         break;
-                    */
+                    
                 }
             }
         }
@@ -585,7 +585,7 @@ void ElevatorRoom::preFrame()
     {
         ComController::instance()->readMaster((char *)finalmat.ptr(), sizeof(double[16]));
     }
-
+*/
     PluginHelper::setObjectMatrix(finalmat);
 }
 
@@ -874,23 +874,39 @@ void ElevatorRoom::clear()
 
 int ElevatorRoom::init_SPP(int port)
 {
+    char com[100];
+
+    ftStatus = FT_Open(0, &ftHandle);
+    if (ftStatus != 0)
+    {
+        std::cout << "FT_Open failed. Error " << ftStatus << std::endl;
+        return -1;
+    }
+    FT_SetBaudRate(ftHandle, 57600);
+    FT_SetDataCharacteristics(ftHandle, FT_BITS_8, FT_STOP_BITS_1, FT_PARITY_NONE);
+    FT_SetFlowControl (ftHandle, FT_FLOW_NONE, 0, 0);
+    FT_SetLatencyTimer (ftHandle, 2);
+
+    /*
     if (ftdi_init(&_ftdic) < 0)
     {
         std::cout << "FTDI init failed." << std::endl;
         return -1;
     }
-
-    if ((ftdi_usb_open(&_ftdic, 0x0403, 0x6001)) < 0)
+    
+    int result = ftdi_usb_open(&_ftdic, 0x0403, 0x6001);
+    if (result < 0)
     {
+        std::cout << result << std::endl; 
         std::cout << "Unable to open FTDI device." << std::endl;
         return -1;
     }
     
-    ftdi_set_baudrate(&_ftdic, 1382400);
+    ftdi_set_baudrate(&_ftdic, 57600);
     ftdi_set_line_property(&_ftdic, BITS_8, STOP_BIT_1, (ftdi_parity_type)NONE);
     ftdi_setflowctrl(&_ftdic, SIO_DISABLE_FLOW_CTRL);
     ftdi_set_latency_timer(&_ftdic, 2);
-    
+   */ 
     std::cout << "Connected to FTDI device." << std::endl;
     _sppConnected = true;
     return 0;
@@ -901,16 +917,27 @@ void ElevatorRoom::close_SPP()
     if (!_sppConnected)
         return;
 
-    ftdi_deinit(&_ftdic);
+    FT_Close (ftHandle);
+    //ftdi_deinit(&_ftdic);
 }
 
 void ElevatorRoom::write_SPP(int bytes, unsigned char* buf)
 {
     if (!_sppConnected)
         return;
-    
+   
+    std::cout << "Writing " << buf[0] << std::endl;
 
-    ftdi_write_data(&_ftdic, buf, bytes);
+    DWORD BytesReceived;
+    DWORD bytesToWrite = 1;
+    int value;
+    value = FT_Write(ftHandle, buf, bytesToWrite, &BytesReceived);
+    int a = BytesReceived;
+
+    std::cout << "Wrote " << BytesReceived << " bytes." << std::endl;
+    std::cout << "Return value: " << value << std::endl;
+    return;
+    //ftdi_write_data(&_ftdic, buf, bytes);
 }
 
 };
