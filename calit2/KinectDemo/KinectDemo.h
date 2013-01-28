@@ -8,6 +8,8 @@
 #include <cvrKernel/SceneObject.h>
 #include <cvrKernel/ScreenConfig.h>
 #include <cvrConfig/ConfigManager.h>
+#include <cvrInput/TrackingManager.h>
+#include <cvrInput/TrackerBase.h>
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrMenu/MenuCheckbox.h>
@@ -16,6 +18,7 @@
 #include <cvrMenu/MenuRangeValueCompact.h>
 #include <cvrMenu/TabbedDialogPanel.h>
 
+#include <cvrInput/TrackerPlugin.h>
 #include "Skeleton.h"
 //#include "PubSub.h"
 #include <shared/PubSub.h>
@@ -72,6 +75,7 @@ public:
     bool init();
 
     void menuCallback(cvr::MenuItem* item);
+    bool processEvent(InteractionEvent* event);
     void preFrame();
 
     static KinectDemo* instance();
@@ -91,6 +95,7 @@ public:
     bool kNavSpheres;
     bool kShowDepth;
     bool kMoveWithCam;
+    bool kFreezeCloud;
     bool kShowArtifactPanel;
     bool kShowInfoPanel;
     osg::Program* pgm1;
@@ -140,6 +145,7 @@ struct PointCloud
     std::vector<PointCloud* > _pointClouds;
     std::vector<SelectableItem> selectableItems;
     void createSceneObject();
+    void sendEvents();
     void kinectInit();
     void kinectOff();
     void moveCam(double, double, double, double, double, double, double, double);
@@ -209,6 +215,7 @@ protected:
     cvr::MenuCheckbox* _kShowColor;
     cvr::MenuCheckbox* _kShowPCloud;
     cvr::MenuCheckbox* _kMoveWithCam;
+    cvr::MenuCheckbox* _kFreezeCloud;
     cvr::MenuCheckbox* _kinectOn;
     cvr::MenuRangeValue* _kColorFPS;
     cvr::MenuCheckbox* _kNavSpheres;
@@ -225,6 +232,7 @@ protected:
 
     float distanceMIN, distanceMAX;
     cvr::MenuButton* _bookmarkLoc;
+    cvr::MenuButton* _testInteract;
     osg::MatrixTransform* _root;
 
 

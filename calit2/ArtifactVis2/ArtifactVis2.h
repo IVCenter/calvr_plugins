@@ -34,6 +34,9 @@
 #include <sys/types.h>
 #include <sys/dir.h>
 #include <X11/Xlib.h>
+
+
+
 //#include <spnav.h>
 
 //#include "skeleton.h"
@@ -645,6 +648,8 @@ protected:
     cvr::MenuCheckbox* _fileMenu;
     std::vector<cvr::MenuButton*> fileButton;
     cvr::MenuButton* _resetFileManager;
+    cvr::MenuButton* _upFileManager;
+    cvr::MenuButton* _downFileManager;
 
     cvr::MenuCheckbox* _utilsMenu;
     cvr::MenuCheckbox* _qsMenu;
@@ -788,7 +793,9 @@ protected:
     void setupQueryMenu(Table* table);
     void setupUtilsMenu();
     void setupFileMenu();
-    void updateFileMenu(std::string dir);
+    void updateFileMenu(std::string dir, int scroll);
+    int _currentScroll;
+    std::string _currentDir;
     void initSelectBox();
     void updateSelect();
     std::string getCurrentQuery(Table* t);

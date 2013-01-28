@@ -57,12 +57,15 @@ bool KinectDemo::init()
     kShowColor = false;
     kNavSpheres = false;
     kMoveWithCam = false;
+    kFreezeCloud = false;
     std::cerr << "KinectDemo init\n";
     //Menu Setup:
     _avMenu = new SubMenu("Kinect Demo", "Kinect Demo");
     _avMenu->setCallback(this);
     _bookmarkLoc = new MenuButton("Save Location");
     _bookmarkLoc->setCallback(this);
+    _testInteract = new MenuButton("Send Interact");
+    _testInteract->setCallback(this);
     _kinectOn = new MenuCheckbox("Use Kinect", useKinect);  //new
     _kinectOn->setCallback(this);
     _avMenu->addItem(_kinectOn);
@@ -72,6 +75,8 @@ bool KinectDemo::init()
     _kShowDepth->setCallback(this);
     _kMoveWithCam = new MenuCheckbox("Move skeleton with camera", kMoveWithCam);
     _kMoveWithCam->setCallback(this);
+    _kFreezeCloud = new MenuCheckbox("Move skeleton with camera", kFreezeCloud);
+    _kFreezeCloud->setCallback(this);
     colorfps = 100;
     _kColorFPS = new MenuRangeValue("1/FPS for camera/depth", 1, 100, colorfps);
     _kColorFPS->setCallback(this);
@@ -96,7 +101,9 @@ bool KinectDemo::init()
     _avMenu->addItem(_kColorOn);
     _avMenu->addItem(_kColorFPS);
     _avMenu->addItem(_bookmarkLoc);
+    _avMenu->addItem(_testInteract);
     _avMenu->addItem(_kMoveWithCam);
+    _avMenu->addItem(_kFreezeCloud);
     _avMenu->addItem(_kNavSpheres);
     _avMenu->addItem(_kShowInfoPanel);
     MenuSystem::instance()->addMenuItem(_avMenu);
@@ -134,6 +141,17 @@ void KinectDemo::menuCallback(MenuItem* menuItem)
         {
             moveWithCamOff();
             kMoveWithCam = false;
+        }
+    }
+    if (menuItem == _kFreezeCloud)
+    {
+        if (_kFreezeCloud->getValue())
+        {
+            kFreezeCloud = true;
+        }
+        else
+        {
+            kFreezeCloud = false;
         }
     }
 
@@ -221,7 +239,10 @@ void KinectDemo::menuCallback(MenuItem* menuItem)
         }
 
     }
-
+    if (menuItem == _testInteract)
+    {
+       sendEvents();
+    }
     if(menuItem == sliderX)
     {
         kinectX = sliderX->getValue();
@@ -737,7 +758,8 @@ Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(
         Skeleton::camPos = Vec3d(xOffset, yOffset, zOffset);
         Skeleton::camRot = camQuad;
     }
-
+if(!kFreezeCloud)
+{
     while (skel_socket->recv(*sf))
     {
         //return;
@@ -792,7 +814,8 @@ Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(
         }
     }
 }
-    if (kShowPCloud && cloud_socket != NULL && !kinectThreaded)
+}
+    if (kShowPCloud && cloud_socket != NULL && !kinectThreaded && !kFreezeCloud)
     {
 //	cerr << ".";
         float r, g, b, a;
@@ -1485,6 +1508,7 @@ cerr << "Creating SceneObject\n";
               float r;
               Vec3 offsetScreen;
               cerr << "NumWindows: " << numWindows << endl;
+              //TODO:Get Screen Info from Config file
               for (int j = 0; j < numWindows; j++)
               {
                 ScreenInfo* si = ScreenConfig::instance()->getScreenInfo(j);
@@ -1790,3 +1814,100 @@ Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(
 
 
 }
+void KinectDemo::sendEvents()
+{
+    cerr << "Sending Event\n";
+    TrackingManager * tConfig = TrackingManager::instance();
+    TrackerPlugin::TrackerPlugin* _trackerSystem;
+    
+    cerr << "Total Tracking Systems=" << tConfig->getNumTrackingSystems() << "\n";
+    for (int i=1; i < tConfig->getNumTrackingSystems(); i++)
+    {
+      //TrackerBase
+      //Currently testing with first found tracking system
+       _trackerSystem = dynamic_cast<TrackerPlugin::TrackerPlugin *> (tConfig->getTrackingSystem(i));
+        if (_trackerSystem != NULL)
+            break;
+    }
+    if (_trackerSystem == NULL)
+    {
+        std::cerr<<"Cannot initialize tracker.\n";
+        
+    }
+    else
+    {
+       int numButtons = _trackerSystem->getNumButtons();
+       int numBodies = _trackerSystem->getNumBodies();
+       cerr << "Buttons=" << numButtons << " Bodies=" << numBodies << endl;
+
+        //Test updating Body
+        if(true)
+        {
+	TrackerBase::TrackedBody* body = _trackerSystem->getBody(0);
+        	
+                float x; ///< position x
+                float y; ///< position y
+                float z; ///< position z
+                float qx; ///< rotation x (quat)
+                float qy; ///< rotation y (quat)
+                float qz; ///< rotation z (quat)
+                float qw; ///< rotation w (quat)
+		  x = body->x;
+		  y = body->y;
+		  z = body->z;
+		  cerr << "Body:" << x << "," << y << "," << z << endl;
+		 float rotDegrees[3];
+		 rotDegrees[0] = 0; 
+		 rotDegrees[1] = 0; 
+		 rotDegrees[2] = 5; 
+                //Convert Degrees to Radians
+		rotDegrees[0] = DegreesToRadians(rotDegrees[0]);
+		rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
+		rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
+		osg::Quat q = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(0,1,0),rotDegrees[2], osg::Vec3d(0,0,1)); 
+               //Get old Bodies transform into quat
+               osg::Quat qOld = osg::Quat(body->qx,body->qy,body->qz,body->qw);
+               //Add new update to old Quat
+                qOld *= q;
+               //Set new quat for creating new TrackedBody
+                q = qOld;
+            //Setup tracked body TODO:Use a KinectSensor for trackedBody;
+	    TrackerBase::TrackedBody * tb = new TrackerBase::TrackedBody;
+	    tb->x = tb->y = tb->z = 0.0;
+	    tb->qx = q.x();
+	    tb->qy = q.y();
+	    tb->qz = q.z();
+	    tb->qw = q.w();
+            //Set Current Tracker System Body to new tb
+            _trackerSystem->setBody(0,tb);
+            delete tb;
+         }
+         //Test Button Interaction
+         if(true)
+         {
+            _trackerSystem->setButton(0,true);  
+        //    _trackerSystem->setButton(0,false); 
+         } 
+    }
+
+    cerr << "Finised\n";
+}
+
+bool KinectDemo::processEvent(InteractionEvent* event)
+{
+    TrackedButtonInteractionEvent* tie = event->asTrackedButtonEvent();
+
+    if ((event->getInteraction() == BUTTON_DOWN) && tie->getHand() == 3)
+    {
+        //For Testing Simulated Hand Interaction
+        cerr << "Hand 4 Button " << tie->getButton() << "\n";
+        
+    }
+    if ((event->getInteraction() == BUTTON_DOWN) && tie->getHand() == 0)
+    {
+        cerr << "Hand 1 Button 0\n";
+    }
+
+    return false;
+}
+

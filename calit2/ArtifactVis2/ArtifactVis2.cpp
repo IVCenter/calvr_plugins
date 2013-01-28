@@ -111,7 +111,7 @@ void ArtifactVis2::message(int type, char* data)
 bool ArtifactVis2::init()
 {
     lineGroupsEditing = false;
-
+    _currentScroll = 0;
     modelDropped = false; 
     ArtifactVis2On = false;
      newFileAvailable = false;
@@ -418,7 +418,7 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
                 else
                 {
                 bool useHandPos = true;
-			if(newSelectedType == "ply")
+			if(newSelectedType == "xyb")
 			{
                           cerr << "parsing Ply\n";
 			  parsePCXml(useHandPos);
@@ -772,17 +772,44 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
     if (menuItem == _resetFileManager)
     {
              string dir = ConfigManager::getEntry("Plugin.ArtifactVis2.ArchInterfaceFolder");
-             updateFileMenu(dir);
+             _currentScroll = 0;
+             _currentDir = dir;
+
+
+             updateFileMenu(dir,0);
+
+    }
+    if (menuItem == _downFileManager)
+    {
+           //  string dir = ConfigManager::getEntry("Plugin.ArtifactVis2.ArchInterfaceFolder");
+             _currentScroll++;
+             string dir = _currentDir;
+
+
+             updateFileMenu(dir,_currentScroll);
+
+
+    }
+    if (menuItem == _upFileManager)
+    {
+           //  string dir = ConfigManager::getEntry("Plugin.ArtifactVis2.ArchInterfaceFolder");
+             _currentScroll--;
+             if(_currentScroll < 0) _currentScroll = 0;
+             string dir = _currentDir;
+
+
+             updateFileMenu(dir,_currentScroll);
 
     }
     for (int i = 0; i < fileButton.size(); i++)
     {
+        int n = i + (_currentScroll * 10);
         if (menuItem == fileButton[i])
         {
-           if(entries[i]->filename == "..")
+           if(entries[n]->filename == "..")
            {
              //Go up one folder
-            string dir = entries[i]->path;
+            string dir = entries[n]->path;
             dir.erase(dir.length()-1);
             cout << dir << endl;
             size_t found=dir.find_last_of("/");
@@ -794,28 +821,32 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
                  dir.erase(start);  
                  dir.append("/");
                  cout << dir << endl;               
-                 updateFileMenu(dir);
+                 _currentScroll = 0;
+                 _currentDir = dir;
+                 updateFileMenu(dir,0);
             }
              break;
            } 
-           else if(entries[i]->filetype == "folder")
+           else if(entries[n]->filetype == "folder")
            {
              //Switch to New Folder
-             string dir = entries[i]->path;
+             string dir = entries[n]->path;
              //dir.append("/");
-             dir.append(entries[i]->filename);
+             dir.append(entries[n]->filename);
              dir.append("/");
              cout << dir << endl;               
-             updateFileMenu(dir);
+             _currentScroll = 0;
+             _currentDir = dir;
+             updateFileMenu(dir,0);
              break;
            }
            else
            {
              //Load File
 
-             newSelectedFile = entries[i]->path;
-             newSelectedName = entries[i]->filename;
-             newSelectedType = entries[i]->filetype;
+             newSelectedFile = entries[n]->path;
+             newSelectedName = entries[n]->filename;
+             newSelectedType = entries[n]->filetype;
             // newSelectedFile.append("/");
              newSelectedFile.append(newSelectedName);
              newFileAvailable = true;
@@ -6126,6 +6157,7 @@ cerr << "Get Path for ScanModel\n";
         {
 	   _query[q]->artifacts[art]->model->scanModel = modelPath;
 	   _query[q]->artifacts[art]->model->scanScale = 0.005;       
+           cerr << "Found Model\n";
 	}
         else
         {
@@ -6151,7 +6183,8 @@ cerr << "Get Path for ScanModel\n";
         if (modelExists(modelPath.c_str()))
         {
 	   _query[q]->artifacts[art]->model->cubeModel = modelPath;
-	   _query[q]->artifacts[art]->model->cubeScale = 0.01;       
+	   _query[q]->artifacts[art]->model->cubeScale = 0.05;       
+           cerr << "Found Photos\n";
 	}
         else
         {
@@ -6168,6 +6201,7 @@ cerr << "Get Path for ScanModel\n";
         {
 	   _query[q]->artifacts[art]->model->frameModel = modelPath;
 	   _query[q]->artifacts[art]->model->frameScale = 0.005;       
+           cerr << "Found Frame\n";
 	}
         else
         {
@@ -6187,7 +6221,7 @@ cerr << "Get Path for ScanModel\n";
                 mxml_node_t* child;
                 float trans[3];
                 float scale[3];
-                float rotDegrees[3];
+                float rotDegrees[4];
                 child = mxmlFindElement(tree, tree, "easting", NULL, NULL, MXML_DESCEND);
                 trans[0] = atof(child->child->value.text.string);
                 child = mxmlFindElement(tree, tree, "northing", NULL, NULL, MXML_DESCEND);
@@ -6206,6 +6240,27 @@ cerr << "Get Path for ScanModel\n";
                 rotDegrees[1] = atof(child->child->value.text.string);
                 child = mxmlFindElement(tree, tree, "roll", NULL, NULL, MXML_DESCEND);
                 rotDegrees[2] = atof(child->child->value.text.string);
+		child = mxmlFindElement(tree, tree, "w", NULL, NULL, MXML_DESCEND);
+		bool degrees = true;
+		if(child != NULL)
+		{
+		rotDegrees[3] = atof(child->child->value.text.string);
+		degrees = false;
+		}
+		Quat rot;
+		if(degrees)
+		{
+
+		rotDegrees[0] = DegreesToRadians(rotDegrees[0]);
+		rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
+		rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
+		rot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(0,1,0),rotDegrees[2], osg::Vec3d(0,0,1)); 
+		}
+		else
+		{
+		  cerr << "As Quats\n";
+		  rot = Quat(rotDegrees[0],rotDegrees[1],rotDegrees[2],rotDegrees[3]);
+		}
            if(trans[0] != 0)
            {                 
 	   _query[q]->artifacts[art]->model->framePos = Vec3(trans[0], trans[1], trans[2]);       
@@ -6214,7 +6269,7 @@ cerr << "Get Path for ScanModel\n";
            {
            _query[q]->artifacts[art]->model->framePos = _query[q]->artifacts[art]->model->pos;
            }
-           _query[q]->artifacts[art]->model->frameRot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(0,1,0),rotDegrees[2], osg::Vec3d(0,0,1));
+           _query[q]->artifacts[art]->model->frameRot = rot;
 	   _query[q]->artifacts[art]->model->frameScale = scale[0];       
 
          }
@@ -6234,7 +6289,7 @@ osg::Vec3 currentPos;
 osg::Quat currentRot;     
 string currentModelType;
 
-if(_query[q]->artifacts[art]->model->scanModel != "" && false)
+if(_query[q]->artifacts[art]->model->scanModel != "")
 {
 currentModelPath = _query[q]->artifacts[art]->model->scanModel;
 currentScale =  _query[q]->artifacts[art]->model->scanScale;
@@ -6243,7 +6298,7 @@ currentRot =   _query[q]->artifacts[art]->model->scanRot;
 currentModelType = "scan";
 _query[q]->artifacts[art]->model->currentModelType = currentModelType;
 }
-else if (_query[q]->artifacts[art]->model->cubeModel != "" && false)
+else if (_query[q]->artifacts[art]->model->cubeModel != "")
 {
 currentModelPath = _query[q]->artifacts[art]->model->cubeModel;
 currentScale =  _query[q]->artifacts[art]->model->cubeScale;
@@ -6282,7 +6337,6 @@ Node* modelNode;
 
 if(currentModelType == "dc")
 {
-
     if(_modelLoaded[index])
     {
       modelNode = _models[index];
@@ -6313,22 +6367,34 @@ else
 }
 //Add Lighting and Culling
 
-		if(true)
+		if(false)
 		{
 		    osg::StateSet* stateset = modelNode->getOrCreateStateSet();
 		    stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
 		}
-		if(true)
+		if(false)
 		{
 		    osg::StateSet * stateset = modelNode->getOrCreateStateSet();
 		    osg::CullFace * cf=new osg::CullFace();
 		    cf->setMode(osg::CullFace::BACK);
 		    stateset->setAttributeAndModes( cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
 		}
-                if(true)
+                if(false)
 		{
 		TextureResizeNonPowerOfTwoHintVisitor tr2v(false);
 		modelNode->accept(tr2v);
+                }
+
+                if(true)
+                {
+                    StateSet* ss = modelNode->getOrCreateStateSet();
+                    ss->setMode(GL_LIGHTING, StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+                    Material* mat = new Material();
+                    mat->setColorMode(Material::AMBIENT_AND_DIFFUSE);
+                    Vec4 color_dif(1, 1, 1, 1);
+                    mat->setDiffuse(Material::FRONT_AND_BACK, color_dif);
+                    ss->setAttribute(mat);
+                    ss->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
                 }
 
 //Add to SceneObject
@@ -6404,7 +6470,7 @@ else
          if(_query[q]->artifacts[art]->model->scanModel != "")
          {
             bool checked = false;
-	    if(currentModelType == "dc") checked = true;
+	    if(currentModelType == "scan") checked = true;
 	    mc = new MenuCheckbox("3D Scan",checked);
 	    mc->setCallback(this);
 	    so->addMenuItem(mc);
@@ -6414,7 +6480,7 @@ else
          if(_query[q]->artifacts[art]->model->cubeModel != "")
          {
             bool checked = false;
-	    if(currentModelType == "dc") checked = true;
+	    if(currentModelType == "cube") checked = true;
 	    mc = new MenuCheckbox("Photograph Cube",checked);
 	    mc->setCallback(this);
 	    so->addMenuItem(mc);
@@ -6424,7 +6490,7 @@ else
          if(_query[q]->artifacts[art]->model->frameModel != "")
          {
             bool checked = false;
-	    if(currentModelType == "dc") checked = true;
+	    if(currentModelType == "frame") checked = true;
 
 	    SubMenu * photosmenu = new SubMenu("Photo Frames");
 	    so->addMenuItem(photosmenu);
@@ -6942,6 +7008,7 @@ void ArtifactVis2::setupFileMenu()
 
     string dir = ConfigManager::getEntry("Plugin.ArtifactVis2.ArchInterfaceFolder");
 
+    _currentDir = dir;
     entries.clear();
     string types = "";
     getDirFiles(dir, entries,types);
@@ -6953,6 +7020,9 @@ void ArtifactVis2::setupFileMenu()
     _resetFileManager->setCallback(this);
     _filePanel->addMenuItem(_resetFileManager);
 
+    _upFileManager = new MenuButton("--Scroll Up--");
+    _upFileManager->setCallback(this);
+    _filePanel->addMenuItem(_upFileManager);
 
     for (int i = 0; i < entries.size(); i++)
     {
@@ -6967,11 +7037,16 @@ void ArtifactVis2::setupFileMenu()
     _filePanel->addMenuItem(entry);
 
     }
+    _downFileManager = new MenuButton("--Scroll Down--");
+    _downFileManager->setCallback(this);
+    _filePanel->addMenuItem(_downFileManager);
+
 }
-void ArtifactVis2::updateFileMenu(std::string dir)
+void ArtifactVis2::updateFileMenu(std::string dir, int scroll)
 {
 
     
+      _filePanel->removeMenuItem(_downFileManager);
     for (int i = 0; i < fileButton.size(); i++)
     {
     _filePanel->removeMenuItem(fileButton[i]);
@@ -6982,8 +7057,25 @@ void ArtifactVis2::updateFileMenu(std::string dir)
     
     string types = "";
     getDirFiles(dir, entries, types);
+     
+     int i = scroll * 10;
+     int count = entries.size();
+     
+     if(count > 10)
+     {
+       count = 10 + i;
+     }
+     else
+     {
+       i = 0;
 
-    for (int i = 0; i < entries.size(); i++)
+     }
+     if(count > entries.size())
+     {
+      count = entries.size();
+      i = count - 10;
+     }
+    for (i; i < count; i++)
     {
     string filename = entries[i]->filename;
     if(entries[i]->filetype == "folder")
@@ -6997,6 +7089,9 @@ void ArtifactVis2::updateFileMenu(std::string dir)
 
     }
 
+    _downFileManager = new MenuButton("--Scroll Down--");
+    _downFileManager->setCallback(this);
+    _filePanel->addMenuItem(_downFileManager);
 }
 void ArtifactVis2::addNewPC(int index)
 {
@@ -7492,7 +7587,7 @@ void ArtifactVis2::addNewModel(int i)
   
 //Add Lighting and Culling
 
-		if(true)
+		if(false)
 		{
 		    osg::StateSet* stateset = modelNode->getOrCreateStateSet();
 		    stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
@@ -7823,7 +7918,7 @@ else if(type == "PointCloud")
    addToModelDisplayMenu(group, site);
    //Generate generic attributes
         Quat rot = osg::Quat(0, osg::Vec3d(1,0,0),0, osg::Vec3d(0,1,0),0, osg::Vec3d(0,0,1));
-        float scale = 0.0001; 
+        float scale = 0.001; 
   //Fill Struct
     _models3d[index]->name = newSelectedName;
     _models3d[index]->filename = filename;
