@@ -42,6 +42,7 @@ bool Video::init()
 	MLMenu->addItem(removeMenu);
 	cvr::MenuSystem::instance()->addMenuItem(MLMenu);
 	cvr::CVRViewer::instance()->addPerContextPreDrawCallback(this);
+	//cvr::CVRViewer::instance()->addPerContextPostFinishCallback(this);
 	//cvr::CVRViewer::instance()->addPerContextFrameStartCallback(this);
 	return true;
 }
@@ -194,6 +195,8 @@ void Video::menuCallback(cvr::MenuItem* item)
 void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType type) const
 {
 	static int init = 0;
+	stopwatch cbt;
+	cbt.start();
 	if (init == 0)
 	{
 		m_initMutex.lock();
@@ -368,6 +371,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 		}
 	}
 	*/
+	printf("Full callback took %.4lfms\n", cbt.getTimeMS());
 }
  
 bool videoNotifyFunction(VIDEOPLAYER_NOTIFICATION msg, unsigned int gid, void* obj, unsigned int param1, unsigned int param2, double param3)
