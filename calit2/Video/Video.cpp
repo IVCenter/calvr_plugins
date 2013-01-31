@@ -97,6 +97,7 @@ void Video::postFrame()
 	// alloc data for pts
 	bool isHead = cvr::ComController::instance()->isMaster();
 	unsigned int i = 0;
+	//isHead = true;
 	if (isHead)
 	{
 		for (std::map<unsigned int, TextureManager*>::iterator iter = m_gidMap.begin(); iter != m_gidMap.end(); ++iter)
@@ -322,7 +323,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			}
 		}
 	}
-	printf("Updated %d videos, times took %.4lfms for video and %.4lfms for texture\n", m_ptsUpdateList.size(), videoTime, textureTime);
+	//printf("Updated %d videos, times took %.4lfms for video and %.4lfms for texture\n", m_ptsUpdateList.size(), videoTime, textureTime);
 	m_ptsUpdateList.clear();
 
 	/*
@@ -371,7 +372,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 		}
 	}
 	*/
-	printf("Full callback took %.4lfms\n", cbt.getTimeMS());
+	//printf("Full callback took %.4lfms\n", cbt.getTimeMS());
 }
  
 bool videoNotifyFunction(VIDEOPLAYER_NOTIFICATION msg, unsigned int gid, void* obj, unsigned int param1, unsigned int param2, double param3)
