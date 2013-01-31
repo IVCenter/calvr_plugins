@@ -21,6 +21,8 @@
 #include <string>
 #include <vector>
 
+#include "VncSceneObject.h"
+
 class OsgVnc : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::FileLoadCallback
 {
     public:        
@@ -36,12 +38,11 @@ class OsgVnc : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::File
 	    struct VncObject
         {
             std::string name;
-	        cvr::SceneObject * scene;
-	        osgWidget::VncClient * vnc;
+	        VncSceneObject * scene;
         };
 
         //std::map<struct VncObject*,cvr::MenuCheckbox*> _planeMap;
-        std::map<struct VncObject*,cvr::MenuButton*> _deleteMap;
+        std::map<struct VncObject* ,cvr::MenuButton*> _deleteMap;
         std::vector<struct VncObject*> _loadedVncs;
 };
 

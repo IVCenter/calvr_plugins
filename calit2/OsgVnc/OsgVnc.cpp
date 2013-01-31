@@ -1,10 +1,12 @@
 #include "OsgVnc.h"
 
 #include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/ComController.h>
 #include <cvrKernel/SceneManager.h>
 #include <cvrKernel/PluginManager.h>
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/NodeMask.h>
+#include <cvrKernel/InteractionManager.h>
 #include <cvrMenu/MenuSystem.h>
 #include <PluginMessageType.h>
 #include <iostream>
@@ -35,6 +37,42 @@ OsgVnc::OsgVnc() : FileLoadCallback("vnc")
 {
 }
 
+/*
+// check for intersection with vnc window and then forward correct information to the widget
+// ONLY do the one the master node
+bool OsgVnc::processEvent(InteractionEvent * event)
+{
+    // check for intersection with vncwindow
+    osg::Vec3 pointerStart, pointerEnd;
+    std::vector<IsectInfo> isecvec;
+
+    pointerStart = tie->getTransform().getTrans();
+    pointerEnd.set(0.0f, 10000.0f, 0.0f);
+    pointerEnd = pointerEnd * tie->getTransform();
+
+    isecvec = getObjectIntersection(cvr::PluginHelper::getScene(),
+                                    pointerStart, pointerEnd);
+
+    // If we didn't intersect, get out of here
+    if (isecvec.size() == 0)
+        return false;
+  
+    printf("Comparing geodes %d\n", isecvec.size()); 
+    // check if isec geode matches a vncWindow
+    for(std::vector<struct VncObject*>::iterator it = _loadedVncs.begin(); it != _loadedVncs.end(); it++)
+    {
+        // check for hit
+        if( (*it)->window->getChildNode(0) == isecvec[0].geode )
+        {
+            printf("Found a hit\n");     
+            return true;   
+        }    
+    } 
+
+    return false;
+}
+*/
+
 bool OsgVnc::loadFile(std::string filename)
 {
 
@@ -51,19 +89,19 @@ bool OsgVnc::loadFile(std::string filename)
     {
         struct VncObject * currentobject = new struct VncObject;
         currentobject->name = hostname;
-        currentobject->vnc = vncClient.get();
 
         // add to scene object
-        SceneObject * so = new SceneObject(currentobject->name,false,false,false,true,true);
-        PluginHelper::registerSceneObject(so,"OsgVnc");
-        so->addChild(vncClient.get());
-        so->attachToScene();
-        so->setNavigationOn(true);
-        so->addMoveMenuItem();
-        so->addNavigationMenuItem();
-        so->addScaleMenuItem("Scale", 0.1, 10.0, 1.0);
+        VncSceneObject * sot = new VncSceneObject(currentobject->name, vncClient.get(), ComController::instance()->isMaster(), false,false,false,true,true);
+        PluginHelper::registerSceneObject(sot,"OsgVnc");
 
-        currentobject->scene = so;
+        // set up SceneObject
+        sot->attachToScene();
+        sot->setNavigationOn(true);
+        sot->addMoveMenuItem();
+        sot->addNavigationMenuItem();
+        sot->addScaleMenuItem("Scale", 0.1, 10.0, 1.0);
+
+        currentobject->scene = sot;
         
         // add controls
         //MenuCheckbox * mcb = new MenuCheckbox("Plane lock", false);
@@ -71,10 +109,9 @@ bool OsgVnc::loadFile(std::string filename)
         //so->addMenuItem(mcb);
         //_planeMap[currentobject] = mb;
         
-        
         MenuButton * mb = new MenuButton("Delete");
         mb->setCallback(this);
-        so->addMenuItem(mb);
+        sot->addMenuItem(mb);
         _deleteMap[currentobject] = mb;
 
         _loadedVncs.push_back(currentobject);
@@ -99,13 +136,11 @@ void OsgVnc::menuCallback(MenuItem* menuItem)
             {
                 if((*delit) == it->first)
                 {
-                    // close the stream first
-                    it->first->vnc->close();
-
-		            // need to delete the SceneObject
+		            // need to delete title SceneObject
 		            if( it->first->scene )
 			            delete it->first->scene;
-
+                    it->first->scene = NULL; 
+    
                     _loadedVncs.erase(delit);
                     break;
                 }
@@ -126,16 +161,13 @@ bool OsgVnc::init()
     return true;
 }
 
-OsgVnc::~OsgVnc() // TODO destroy all connections cleanly
+OsgVnc::~OsgVnc()
 {
 
     while(_loadedVncs.size())
     {
          VncObject* it = _loadedVncs.at(0);
          
-         // close the stream first
-         it->vnc->close();
-
          // remove delete map item
          if(_deleteMap.find(it) != _deleteMap.end())
          {
@@ -143,10 +175,10 @@ OsgVnc::~OsgVnc() // TODO destroy all connections cleanly
             _deleteMap.erase(it);
          }
 
-		 // need to delete the SceneObject
 		 if( it->scene )
 		    delete it->scene;
+         it->scene = NULL;
 
-          _loadedVncs.erase(_loadedVncs.begin());
+         _loadedVncs.erase(_loadedVncs.begin());
     }
 }
