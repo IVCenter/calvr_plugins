@@ -1,0 +1,17 @@
+
+
+1 ding
+2 door enters view
+3 green light
+4 red light
+5 yellow light
+6 door opens - alien
+7 door opens - astronaut
+8 door opens - checkers 
+9 door closed - alien
+10 door closed - astronaut
+11 door closed - checkers 
+12 button pressed
+13 hit - alien
+14 hit - astronaut
+

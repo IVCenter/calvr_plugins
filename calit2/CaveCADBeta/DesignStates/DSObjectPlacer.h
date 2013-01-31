@@ -41,8 +41,7 @@ class DSObjectPlacer: public DesignStateBase
     enum DrawingState
     {
         IDLE,
-        READY_TO_DRAW,
-        START_DRAWING
+        PLACE_OBJECT,
     };
 
     /* link 'DesignObjectHandler->DOGeometryCreator' to 'DSObjectPlacer'
@@ -66,6 +65,7 @@ class DSObjectPlacer: public DesignStateBase
     CAVEGeodeShape *prevGeode;
 
     DrawingState mDrawingState;
+    osg::PositionAttitudeTransform *_activeObject;
 
     // interfaces to design object (DO) controllers
     DOGeometryCollector *mDOGeometryCollector;

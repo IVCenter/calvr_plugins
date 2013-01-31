@@ -46,6 +46,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _testList;
         cvr::MenuButton * _loadButton;
         cvr::MenuButton * _removeAllButton;
+        cvr::MenuButton * _closeLayoutButton;
         
         cvr::SubMenu * _groupLoadMenu;
         cvr::MenuList * _groupList;

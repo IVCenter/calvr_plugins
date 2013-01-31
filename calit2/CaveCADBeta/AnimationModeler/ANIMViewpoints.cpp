@@ -48,10 +48,23 @@ void ANIMCreateViewpoints(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
         sphereDrawable = new osg::ShapeDrawable(virtualSphere);
 
         osg::Vec4 color;
+        std::string str;
         if (i == 0)
+        {
             color = osg::Vec4(0, 0, 1, 0.5);
-        else
+            str = "Views";
+        }
+        else if (i == numViews - 1)
+        {
             color = osg::Vec4(1, 0, 0, 0.5);
+            str = "Save";
+        }
+        else
+        {
+            char buf[10];
+            sprintf(buf, "%d\0", i);
+            str = std::string(buf);
+        }
 
         stateset = sphereDrawable->getOrCreateStateSet();
         stateset->setMode(GL_BLEND, StateAttribute::ON);
@@ -60,7 +73,19 @@ void ANIMCreateViewpoints(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
 
         sphereDrawable->setColor(color);
         sphereGeode = new osg::Geode();
-        sphereGeode->addDrawable(sphereDrawable);
+        //sphereGeode->addDrawable(sphereDrawable);
+
+        osg::ref_ptr<osgText::Text> text = new osgText::Text();
+        text->setText(str);
+        text->setCharacterSize(0.1);
+        text->setDrawMode(osgText::Text::TEXT);
+        text->setAxisAlignment(osgText::Text::XZ_PLANE);
+        text->setPosition(osg::Vec3(-0.1, -0.4, -0.1));
+        text->setColor(osg::Vec4(1,1,1,1));
+        text->setFont(cvr::CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
+
+        sphereGeode->addDrawable(text);
+
  
         AnimationPath* animationPathScaleFwd = new AnimationPath;
         AnimationPath* animationPathScaleBwd = new AnimationPath;
@@ -96,6 +121,10 @@ void ANIMCreateViewpoints(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
         osg::PositionAttitudeTransform *fwd, *bwd;
         fwd = new osg::PositionAttitudeTransform();
         bwd = new osg::PositionAttitudeTransform();
+
+        Node* frameNode = osgDB::readNodeFile(ANIMDataDir() + "VRMLFiles/ParamountFrame.WRL"); 
+        fwd->addChild(frameNode);
+        bwd->addChild(frameNode);
 
         fwd->addChild(sphereGeode);
         bwd->addChild(sphereGeode);     
@@ -163,13 +192,24 @@ void ANIMAddViewpoint(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
         sphereDrawable = new osg::ShapeDrawable(virtualSphere);
 
         osg::Vec4 color;
-
+        std::string str;
         if (i == 0)
+        {
             color = osg::Vec4(0, 0, 1, 0.5); // blue
+            str = "Views";
+        }
         else if (i == numViews)
+        {
             color = osg::Vec4(1, 0, 0, 0.5); // red
+            str = "Save";
+        }
         else
+        {
             color = osg::Vec4(1, 1, 0, 0.5); // yellow
+            char buf[10];
+            sprintf(buf, "%d\0", i);
+            str = std::string(buf);
+        }
 
         StateSet* stateset;        
         stateset = sphereDrawable->getOrCreateStateSet();
@@ -180,9 +220,23 @@ void ANIMAddViewpoint(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
 
         sphereDrawable->setColor(color);
         sphereGeode = new osg::Geode();
-        sphereGeode->addDrawable(sphereDrawable);
-        
+        //sphereGeode->addDrawable(sphereDrawable);
+
+        osg::ref_ptr<osgText::Text> text = new osgText::Text();
+        text->setText(str);
+        text->setCharacterSize(0.1);
+        text->setDrawMode(osgText::Text::TEXT);
+        text->setAxisAlignment(osgText::Text::XZ_PLANE);
+        text->setPosition(osg::Vec3(-0.1, -0.4, -0.1));
+        text->setColor(osg::Vec4(1,1,1,1));
+
+        text->setFont(cvr::CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
         if (i != 0 && i != numViews)
+            text->setPosition(osg::Vec3(-0.03, -0.4, -0.1));
+        sphereGeode->addDrawable(text);
+
+       
+/*        if (i != 0 && i != numViews)
         {
             osgText::Text3D * textNode = new osgText::Text3D();
             char buf[2];
@@ -209,7 +263,7 @@ void ANIMAddViewpoint(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
             //ss->setRenderBinDetails(0, "Render Bin");
 
             //sphereGeode->addDrawable(textNode);
-        }
+        }*/
 
         AnimationPath* animationPathScaleFwd = new AnimationPath();
         AnimationPath* animationPathScaleBwd = new AnimationPath();
@@ -245,6 +299,10 @@ void ANIMAddViewpoint(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
         osg::PositionAttitudeTransform *fwd, *bwd;
         fwd = new osg::PositionAttitudeTransform();
         bwd = new osg::PositionAttitudeTransform();
+
+        Node* frameNode = osgDB::readNodeFile(ANIMDataDir() + "VRMLFiles/ParamountFrame.WRL"); 
+        fwd->addChild(frameNode);
+        bwd->addChild(frameNode);
 
         fwd->addChild(sphereGeode);
         bwd->addChild(sphereGeode);

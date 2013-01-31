@@ -59,6 +59,8 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
         float _width, _height;
 
         GroupedBarGraph * _graph;
+
+        bool _desktopMode;
 };
 
 #endif

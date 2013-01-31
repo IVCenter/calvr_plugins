@@ -26,6 +26,7 @@
 #include "../Geometry/CAVEGeometry.h"
 
 #include "../AnimationModeler/ANIMGeometryCollector.h"
+#include <cvrKernel/PluginHelper.h>
 
 
 /***************************************************************
@@ -56,15 +57,18 @@ class DOGeometryCollector: public DesignObjectBase
     void clearGeodeShapeVector();
     void setAllIconSurfaceHighlightsNormal();
     void setAllIconSurfaceHighlightsUnselected();
+    
+    void deleteSelected();
+    void combineSelected();
 
   protected:
 
     /* two level collection modes: only accessible by 'this' and 'DOGeometryEditor' */
     enum Mode
     {
-	COLLECT_NONE,
-	COLLECT_GEODE,
-	COLLECT_GEOMETRY
+        COLLECT_NONE,
+        COLLECT_GEODE,
+        COLLECT_GEOMETRY
     };
     Mode mMode;
 

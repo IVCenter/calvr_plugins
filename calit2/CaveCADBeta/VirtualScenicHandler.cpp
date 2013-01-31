@@ -38,7 +38,8 @@ VirtualScenicHandler::VirtualScenicHandler(Group* nonIntersectableSceneGraphPtr,
     mXYPlaneSwitch->setAllChildrenOff();
     mSkyDomeSwitch->setAllChildrenOff();
     mFloorplanSwitch->setAllChildrenOff();
-
+    
+    mWaterSurfSwitch = NULL;
     if (mWaterEnabled)
     {
         mWaterSurfSwitch = new Switch();
@@ -58,15 +59,19 @@ void VirtualScenicHandler::setGeometryVisible(bool flag)
     {
         mXYPlaneSwitch->setAllChildrenOn();
         mSkyDomeSwitch->setAllChildrenOn();
-        if (mWaterSurfSwitch)
+        if (mWaterEnabled)
+        {
             mWaterSurfSwitch->setAllChildrenOn();
+        }
     }
     else 
     {
         mXYPlaneSwitch->setAllChildrenOff();
         mSkyDomeSwitch->setAllChildrenOff();
-        if (mWaterSurfSwitch)
+        if (mWaterEnabled)
+        {
             mWaterSurfSwitch->setAllChildrenOff();
+        }
         mFloorplanSwitch->setAllChildrenOff();
     }
 }

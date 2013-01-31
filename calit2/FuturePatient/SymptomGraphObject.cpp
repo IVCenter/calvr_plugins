@@ -1,5 +1,6 @@
 #include "SymptomGraphObject.h"
 
+#include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/ComController.h>
 #include <cvrInput/TrackingManager.h>
 #include <cvrUtil/OsgMath.h>
@@ -17,9 +18,20 @@ SymptomGraphObject::SymptomGraphObject(mysqlpp::Connection * conn, float width, 
 
     addChild(_graph->getGraphRoot());
 
+    _intensityLabels[1] = "Mild";
+    _intensityLabels[2] = "Moderate";
+    _intensityLabels[3] = "Moderate to Severe";
+    _intensityLabels[4] = "Severe";
+    _intensityLabels[5] = "Fatal";
+
+    _graph->setValueLabelMap(_intensityLabels);
+
+
     setBoundsCalcMode(SceneObject::MANUAL);
     osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
     setBoundingBox(bb);
+
+    _desktopMode = ConfigManager::getBool("Plugin.FuturePatient.DesktopMode",false);
 }
 
 SymptomGraphObject::~SymptomGraphObject()
@@ -33,6 +45,7 @@ bool SymptomGraphObject::addGraph(std::string name)
     {
 	time_t start;
 	time_t end;
+	int intensity;
     };
 
     int numRanges = 0;
@@ -43,7 +56,7 @@ bool SymptomGraphObject::addGraph(std::string name)
 	if(_conn)
 	{
 	    std::stringstream qss;
-	    qss << "select unix_timestamp(start_timestamp) as start, unix_timestamp(end_timestamp) as end from Event where patient_id = \"1\" and name = \"" << name << "\";";
+	    qss << "select unix_timestamp(start_timestamp) as start, unix_timestamp(end_timestamp) as end, intensity from Event where patient_id = \"1\" and name = \"" << name << "\";";
 
 	    mysqlpp::Query query = _conn->query(qss.str().c_str());
 	    mysqlpp::StoreQueryResult result = query.store();
@@ -56,6 +69,7 @@ bool SymptomGraphObject::addGraph(std::string name)
 		{
 		    ranges[i].start = atol(result[i]["start"].c_str());
 		    ranges[i].end = atol(result[i]["end"].c_str());
+		    ranges[i].intensity = atoi(result[i]["intensity"].c_str());
 		}
 	    }
 	}
@@ -79,13 +93,15 @@ bool SymptomGraphObject::addGraph(std::string name)
     if(numRanges)
     {
 	std::vector<std::pair<time_t,time_t> > rangeList;
+	std::vector<int> intensityList;
 
 	for(int i = 0; i < numRanges; ++i)
 	{
 	    rangeList.push_back(std::pair<time_t,time_t>(ranges[i].start,ranges[i].end));
+	    intensityList.push_back(ranges[i].intensity);
 	}
 
-	_graph->addGraph(name,rangeList);
+	_graph->addGraph(name,rangeList,intensityList,5);
 
 	delete[] ranges;
 
@@ -163,7 +179,8 @@ time_t SymptomGraphObject::getMinTimestamp()
 
 void SymptomGraphObject::updateCallback(int handID, const osg::Matrix & mat)
 {
-    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::MOUSE)
+    if((_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::MOUSE) ||
+	(!_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER))
     {
 	osg::Vec3 start, end(0,1000,0);
 	start = start * mat * getWorldToObjectMatrix();
@@ -183,7 +200,8 @@ void SymptomGraphObject::updateCallback(int handID, const osg::Matrix & mat)
 
 void SymptomGraphObject::leaveCallback(int handID)
 {
-    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER)
+    if((_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::MOUSE) ||
+	(!_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER))
     {
 	_graph->clearHoverText();
     }

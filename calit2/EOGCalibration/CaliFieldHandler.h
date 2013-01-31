@@ -60,11 +60,11 @@ class CaliFieldHandler
     static float RIGHT_RANGE_MIN, LEFT_RANGE_MIN, UPWARD_RANGE_MIN, DOWNWARD_RANGE_MIN, DEPTH_RANGE_MIN;
     static float PHI_RES, THETA_RES, RAD_RES;
 
-    static inline void sphericToCartetion(const float &phi, const float &theta, const float &rad, Vec3 &pos)
+    static inline void sphericToCartesian(const float &phi, const float &theta, const float &rad, Vec3 &pos)
     {
-	pos.x() = rad * sin(theta) * cos(phi);
-	pos.y() = rad * sin(theta) * sin(phi);
-	pos.z() = rad * cos(theta);
+        pos.x() = rad * sin(theta) * cos(phi);
+        pos.y() = rad * sin(theta) * sin(phi);
+        pos.z() = rad * cos(theta);
     }
 };
 

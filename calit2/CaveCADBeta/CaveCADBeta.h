@@ -22,6 +22,12 @@
 #include <osg/Switch>
 #include <osgDB/ReadFile>
 
+#include <osgShadow/ShadowedScene>
+#include <osgShadow/ShadowMap>
+#include <osgShadow/ShadowTexture>
+#include <osgShadow/ShadowVolume>
+
+
 // CalVR plugin support
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/ComController.h>
@@ -69,12 +75,14 @@ class CaveCADBeta : public cvr::MenuCallback, public cvr::CVRPlugin
     int frameCnt;
     string mDataDir;
     float mMenuDistance, mValDownTime, mValCutoff;
-  
+    osgShadow::ShadowedScene *mShadowedScene;
+
   protected:
 
     // Main row menu items
 	cvr::SubMenu *mainMenu;
-    cvr::MenuCheckbox *enablePluginCheckbox, *setToolkitVisibleCheckbox, *mSkydomeCheckbox;
+    cvr::MenuCheckbox *enablePluginCheckbox, *setToolkitVisibleCheckbox, 
+        *mSkydomeCheckbox, *mShadowCheckbox;
 
     // CaveCAD local objects
     CAVEDesigner *mCAVEDesigner;

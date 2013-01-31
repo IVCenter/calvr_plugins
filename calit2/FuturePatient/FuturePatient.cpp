@@ -197,6 +197,9 @@ bool FuturePatient::init()
     _removeAllButton->setCallback(this);
     _fpMenu->addItem(_removeAllButton);
 
+    _closeLayoutButton = new MenuButton("Close Layout");
+    _closeLayoutButton->setCallback(this);
+
     PluginHelper::addRootMenuItem(_fpMenu);
 
     struct listField
@@ -600,6 +603,21 @@ void FuturePatient::menuCallback(MenuItem * item)
 	menuCallback(_multiAddCB);
     }
 
+    if(item == _closeLayoutButton)
+    {
+	menuCallback(_removeAllButton);
+
+	if(_layoutObject)
+	{
+	    _layoutObject->detachFromScene();
+	    PluginHelper::unregisterSceneObject(_layoutObject);
+
+	    delete _layoutObject;
+	    _layoutObject = NULL;
+	}
+	_fpMenu->removeItem(_closeLayoutButton);
+    }
+
     if(item == _microbePatients)
     {
 	if(_microbePatients->getListSize())
@@ -766,6 +784,7 @@ void FuturePatient::checkLayout()
 	_layoutObject->setPosition(pos);
 	PluginHelper::registerSceneObject(_layoutObject,"FuturePatient");
 	_layoutObject->attachToScene();
+	_fpMenu->addItem(_closeLayoutButton);
     }
 }
 

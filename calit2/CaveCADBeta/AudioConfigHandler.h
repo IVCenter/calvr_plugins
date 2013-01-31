@@ -15,6 +15,7 @@
 #include <iostream>
 #include <list>
 #include <netdb.h>
+#include <unistd.h>
 #include <sys/socket.h>
 
 // CalVR plugin support

@@ -121,6 +121,29 @@ bool EOGCalibration::init()
     depthFreqSlider->setCallback(this);
     mainMenu->addItem(depthFreqSlider);
 
+    float val = leftRangeSlider->getValue();
+    mCaliController->updateCaliParam(CalibrationController::LEFT_RANGE, val);
+
+    val = rightRangeSlider->getValue();
+    mCaliController->updateCaliParam(CalibrationController::RIGHT_RANGE, val);
+
+    val = upwardRangeSlider->getValue();
+    mCaliController->updateCaliParam(CalibrationController::UPWARD_RANGE, val);
+
+    val = downwardRangeSlider->getValue();
+    mCaliController->updateCaliParam(CalibrationController::DOWNWARD_RANGE, val);
+
+    val = depthRangeSlider->getValue();
+    mCaliController->updateCaliParam(CalibrationController::DEPTH_RANGE, val);
+
+    val = horizontalFreqSlider->getValue();
+    mCaliController->updateCaliParam(CalibrationController::HORIZONTAL_FREQ, val);
+
+    val = verticalFreqSlider->getValue();
+    mCaliController->updateCaliParam(CalibrationController::VERTICAL_FREQ, val);
+
+    val = depthFreqSlider->getValue();
+    mCaliController->updateCaliParam(CalibrationController::DEPTH_FREQ, val);
 }
 
 /***************************************************************
@@ -181,7 +204,7 @@ void EOGCalibration::menuCallback(cvr::MenuItem *item)
 		}
 	}
 
-    /* show / hide calibration ball */
+    // show / hide calibration ball
     else if (item == showCalibrationBallCheckbox)
     {
       	if (showCalibrationBallCheckbox->getValue())
@@ -195,7 +218,7 @@ void EOGCalibration::menuCallback(cvr::MenuItem *item)
 		}
     }
 
-	/* show / hide playback ball */
+	// show / hide playback ball
     else if (item == showPlaybackBallCheckbox)
     {
       	if (showPlaybackBallCheckbox->getValue())
@@ -208,7 +231,7 @@ void EOGCalibration::menuCallback(cvr::MenuItem *item)
 		}
     }
 
-    /* show / hide calibration filed */
+    // show / hide calibration filed
     else if (item == showCalibrationFieldCheckbox)
     {
       	if (showCalibrationFieldCheckbox->getValue())
@@ -221,7 +244,7 @@ void EOGCalibration::menuCallback(cvr::MenuItem *item)
 		}
     }
 
-    /* reset ball to its default position */
+    // reset ball to its default position
     else if (item == resetBallButtonMenuItem)
     {
 		mCaliController->resetCaliBall();

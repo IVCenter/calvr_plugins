@@ -59,9 +59,9 @@ class DSGeometryCreator: public DesignStateBase
     osg::Geode *mSphereExteriorGeode;		// exterior geode target for intersection test
     osg::Geode *mHighlightGeode;
     osg::ShapeDrawable *mSD;
-    int mShapeSwitchIdx, mNumShapeSwitches;
+    int mShapeSwitchIdx, mNumShapeSwitches, mHighlightedIdx;
     CAVEAnimationModeler::ANIMShapeSwitchEntry **mShapeSwitchEntryArray;
-    bool mIsOpen, mIsHighlighted;
+    bool mIsOpen, mIsHighlighted, mSaveHighlight;
     std::vector<osg::PositionAttitudeTransform*> fwdVec, bwdVec;
     osg::Vec3 mEditorOffset;
     
