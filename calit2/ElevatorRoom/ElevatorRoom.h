@@ -41,7 +41,7 @@
 #include <X11/Xlib.h>
 #include <spnav.h>
 
-#include <ftdi.h>
+//#include <ftdi.h>
 #include <ftd2xx.h>
 
 #include "AudioHandler.h"
