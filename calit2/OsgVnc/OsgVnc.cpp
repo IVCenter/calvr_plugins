@@ -26,9 +26,21 @@
 #include <osg/io_utils>
 #include <osgDB/Registry>
 
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
 using namespace osg;
 using namespace std;
 using namespace cvr;
+
+// browser query commands
+const std::string replHome = "repl.home();";
+const std::string baseQuery = "content.location.href = 'http://www.google.com/search?as_q=";
+const std::string replQuit = "repl.quit();";
 
 
 CVRPLUGIN(OsgVnc)
@@ -36,42 +48,6 @@ CVRPLUGIN(OsgVnc)
 OsgVnc::OsgVnc() : FileLoadCallback("vnc")
 {
 }
-
-/*
-// check for intersection with vnc window and then forward correct information to the widget
-// ONLY do the one the master node
-bool OsgVnc::processEvent(InteractionEvent * event)
-{
-    // check for intersection with vncwindow
-    osg::Vec3 pointerStart, pointerEnd;
-    std::vector<IsectInfo> isecvec;
-
-    pointerStart = tie->getTransform().getTrans();
-    pointerEnd.set(0.0f, 10000.0f, 0.0f);
-    pointerEnd = pointerEnd * tie->getTransform();
-
-    isecvec = getObjectIntersection(cvr::PluginHelper::getScene(),
-                                    pointerStart, pointerEnd);
-
-    // If we didn't intersect, get out of here
-    if (isecvec.size() == 0)
-        return false;
-  
-    printf("Comparing geodes %d\n", isecvec.size()); 
-    // check if isec geode matches a vncWindow
-    for(std::vector<struct VncObject*>::iterator it = _loadedVncs.begin(); it != _loadedVncs.end(); it++)
-    {
-        // check for hit
-        if( (*it)->window->getChildNode(0) == isecvec[0].geode )
-        {
-            printf("Found a hit\n");     
-            return true;   
-        }    
-    } 
-
-    return false;
-}
-*/
 
 bool OsgVnc::loadFile(std::string filename)
 {
@@ -104,10 +80,10 @@ bool OsgVnc::loadFile(std::string filename)
         currentobject->scene = sot;
         
         // add controls
-        //MenuCheckbox * mcb = new MenuCheckbox("Plane lock", false);
+        //MenuCheckbox * mcb = new MenuCheckbox("Plane lock", true);
         //mcb->setCallback(this);
-        //so->addMenuItem(mcb);
-        //_planeMap[currentobject] = mb;
+        //sot->addMenuItem(mcb);
+        //_planeMap[currentobject] = mcb;
         
         MenuButton * mb = new MenuButton("Delete");
         mb->setCallback(this);
@@ -159,6 +135,106 @@ bool OsgVnc::init()
 {
     std::cerr << "OsgVnc init\n";
     return true;
+}
+
+void OsgVnc::message(int type, char *&data, bool collaborative)
+{
+    if(type == VNC_GOOGLE_QUERY)
+    {
+        if(collaborative)
+        {
+            return;
+        }
+
+		std::string hostname = ConfigManager::getEntry("Plugin.OsgVnc.BrowserQueryServer");
+		int port = ConfigManager::getInt("Plugin.OsgVnc.Port", 4242);       
+
+		// try and send request to remote firefox browser running mozrepl plugin
+        OsgVncGoogleQueryRequest* request = (OsgVncGoogleQueryRequest*)data;        
+		launchQuery(hostname, port, request->query);
+    }
+}
+
+void OsgVnc::launchQuery(std::string& hostname, int portno, std::string& query)
+{
+	int sockfd, n;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (sockfd < 0)
+	{
+        std::cerr << "ERROR opening socket\n";
+		return;	
+	}
+
+    server = gethostbyname(hostname.c_str());
+
+    if (server == NULL) 
+	{
+        std::cerr << "ERROR, no such host\n";
+        return;
+    }
+
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr,
+          (char *)&serv_addr.sin_addr.s_addr,
+          server->h_length);
+    serv_addr.sin_port = htons(portno);
+
+    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
+	{
+        std::cerr << "ERROR connecting\n";
+		return;
+	}
+
+    std::stringstream ss;
+    ss << baseQuery;
+    ss << query;
+    ss << "';";
+
+    // write initial debug message
+    n = write(sockfd, replHome.c_str(), replHome.size());
+    if (n < 0)
+	{
+        std::cerr << "ERROR writing to socket\n";
+		return;
+	}
+
+    // read response
+    char buffer[1024];
+    bzero(buffer,1024);
+    n = read(sockfd,buffer,1024);
+
+	if(n < 0)
+	{
+        std::cerr << "ERROR reading from socket\n";
+		return;
+	}
+
+    n = write(sockfd, ss.str().c_str(),ss.str().size());
+    if (n < 0)
+	{
+        std::cerr << "ERROR writing to socket\n";
+		return;
+	}
+
+    bzero(buffer,1024);
+    n = read(sockfd,buffer,1024);
+
+    n = write(sockfd, replQuit.c_str(), replQuit.size());
+    if (n < 0)
+	{
+        std::cerr << "Error writing to socket\n";
+		return;
+	}
+
+    bzero(buffer,1024);
+    n = read(sockfd,buffer,1024);
+
+    close(sockfd);
 }
 
 OsgVnc::~OsgVnc()

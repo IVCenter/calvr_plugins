@@ -31,8 +31,12 @@ class OsgVnc : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::File
 	    bool init();
         virtual bool loadFile(std::string file);
 	    void menuCallback(cvr::MenuItem * item);
+        virtual void message(int type, char *&data, bool collaborative=false);
 
     protected:
+
+        // launch browser query
+        void launchQuery(std::string& hostname, int portno, std::string& query);
 
 	    // container to hold pdf data
 	    struct VncObject

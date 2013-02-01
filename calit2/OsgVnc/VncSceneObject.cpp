@@ -9,11 +9,8 @@
 
 
 VncSceneObject::VncSceneObject(std::string name, osgWidget::VncClient* client, bool vncEvents, bool navigation, bool movable, bool clip,
-                bool contextMenu, bool showBounds) : cvr::SceneObject(name, navigation, movable, clip, contextMenu, showBounds), _client(client), _vncEvents(vncEvents)
+                bool contextMenu, bool showBounds) : cvr::TiledWallSceneObject(name, navigation, movable, clip, contextMenu, showBounds), _client(client), _vncEvents(vncEvents)
 {
-
-    //cvr::PluginHelper::registerSceneObject(this,"OsgVnc");
-
     // init activity
     _active = false;
 
@@ -47,7 +44,7 @@ VncSceneObject::VncSceneObject(std::string name, osgWidget::VncClient* client, b
     (*vertices)[3].set(osg::Vec3(0.0f + _bound.xMax(), 0.0f, 0.0f + _bound.zMax() + (_bound.zMax() * 0.1)));
 
     osg::Vec4Array* colours = new osg::Vec4Array(1);
-    (*colours)[0].set(1.0f,1.0f,1.0,1.0f);
+    (*colours)[0].set(1.0f,0.0f,1.0,1.0f);
 
     osg::Geometry* geom = new osg::Geometry();
     geom->setVertexArray(vertices);
@@ -84,7 +81,7 @@ bool VncSceneObject::processEvent(cvr::InteractionEvent * ie)
             if( tie->getButton() == 2  )
                 buttonMask |= 2;
 
-            //check for double click (ignore double right click)
+            //check for double click (ignore double right click) //TODO add mouse wheel
             if ( tie->getInteraction() == cvr::BUTTON_DOUBLE_CLICK )
             {
                 _image->sendPointerEvent(_intersect.x(), _intersect.z(), buttonMask);
@@ -101,6 +98,10 @@ bool VncSceneObject::processEvent(cvr::InteractionEvent * ie)
                 _image->sendPointerEvent(_intersect.x(), _intersect.z(), buttonMask);
             }
 		}
+        else // mouse movement
+        {
+            _image->sendPointerEvent(_intersect.x(), _intersect.z(), 0);
+        }
 		return true;
 	}
 

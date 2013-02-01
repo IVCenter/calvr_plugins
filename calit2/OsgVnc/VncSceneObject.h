@@ -1,11 +1,11 @@
 #ifndef VNC_SCENE_OBJECT_H
 #define VNC_SCENE_OBJECT_H
 
-#include <cvrKernel/SceneObject.h>
+#include <cvrKernel/TiledWallSceneObject.h>
 #include <cvrKernel/InteractionManager.h>
 #include <osgWidget/VncClient>
 
-class VncSceneObject : public cvr::SceneObject
+class VncSceneObject : public cvr::TiledWallSceneObject
 {
     public:
         VncSceneObject(std::string name, osgWidget::VncClient * client, bool vncEvents, bool navigation, bool movable, bool clip,
