@@ -41,7 +41,7 @@
 #include <X11/Xlib.h>
 #include <spnav.h>
 
-#include <ftdi.h>
+//#include <ftdi.h>
 #include <ftd2xx.h>
 
 #include "AudioHandler.h"
@@ -159,7 +159,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         void close_SPP();
         void write_SPP(int bytes, unsigned char* buf);
 
-        struct ftdi_context _ftdic;
+        //struct ftdi_context _ftdic;
 
 
         float _doorDist; // distance doors are currently translated
