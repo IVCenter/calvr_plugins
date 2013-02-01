@@ -58,14 +58,6 @@ namespace ElevatorRoom
 #define NUM_ALIEN_FLASH 8
 #define LIGHT_PAUSE_LENGTH 5
 
-/*enum Mode
-{
-    NONE,
-    ALIEN,
-    ALLY,
-    CHECKER
-};*/
-
 class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
 {
     public:
@@ -78,18 +70,6 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         bool processEvent(cvr::InteractionEvent * event);
 
     protected:
-        static ElevatorRoom * _myPtr;
-        AudioHandler * _audioHandler; 
-        ModelHandler * _modelHandler;
-
-/*        enum Mode
-        {
-            NONE,
-            ALIEN,
-            ALLY,
-            CHECKER
-        };
-*/
         enum GameMode
         {
             ONE,
@@ -99,6 +79,21 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
             FIVE
         };
 
+
+        int init_SPP(int port); 
+        void close_SPP();
+        void write_SPP(int bytes, unsigned char* buf);
+        void loadModels();
+        void clear();
+        osg::ref_ptr<osg::Geometry> drawBox(osg::Vec3 center, float x, float y,
+            float z, osg::Vec4 color = osg::Vec4(1, 1, 1, 1), float texScale = 1.0);
+        osg::ref_ptr<osg::Geometry> makeQuad(float width, float height,
+            osg::Vec4 color, osg::Vec3 pos);
+
+
+        static ElevatorRoom * _myPtr;
+        AudioHandler * _audioHandler; 
+        ModelHandler * _modelHandler;
         GameMode _gameMode;
 
         cvr::SubMenu * _elevatorMenu;
@@ -110,8 +105,6 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry
         std::string _dataDir;
             
-        //oasclient::Sound * _ding, * _hitSound, * _laser;
-
         float _modelScale; // scale of entire scene
         float _pauseLength; // length in seconds of time between door close and next lighting up
         float _pauseStart; // start time of the current pause
@@ -124,7 +117,6 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         int _sockfd; // for EOG syncer communication
         int _flashCount; // number of times active avatar has flashed
         int _alienChance, _allyChance, _checkChance;
-        int _lightColor;
 
         bool _isOpening; // whether the active door is opening or closing
         bool _loaded; // whether the model has finished loading
@@ -133,63 +125,40 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         bool _connected; // for EOG syncer communication
         bool _soundEnabled;
         bool _sppConnected;
+        bool _staticMode, _staticDoor, _doorMovement;
 
         Mode _mode; // which kind of avatar is currently active
         osg::Quat _eventRot;
         osg::Vec3 _eventPos;
-        //osg::Cone *_headCone, *_handCone;
-        //osg::Geode *_soundGeode;
-        //osg::ShapeDrawable *_headSD, *_handSD;
         osg::PositionAttitudeTransform *_headsoundPAT, *_handsoundPAT;
 
         float _transMult, _rotMult;
         float _transcale, _rotscale;
-
+        
+        // USB to Serial communication
         void connectToServer();
         HANDLE hSerial;
-        //COMMTIMEOUTS timeouts;
         FT_HANDLE ftHandle;
         FT_STATUS ftStatus;
         DWORD devIndex;
         DWORD bytesWritten;
         char buf[16];
 
-
-        int init_SPP(int port); 
-        void close_SPP();
-        void write_SPP(int bytes, unsigned char* buf);
-
-        struct ftdi_context _ftdic;
-
-
-        float _doorDist; // distance doors are currently translated
-
-        osg::ref_ptr<osg::PositionAttitudeTransform> _crosshairPat;
-
-        osg::ref_ptr<osgText::Text> _scoreText; // GUI to display current score
-
-        std::vector<osg::ref_ptr<osg::PositionAttitudeTransform> > _leftdoorPat,    
-            _rightdoorPat;
-        std::vector<osg::ref_ptr<osg::ShapeDrawable> > _lights;
-
-
+        //COMMTIMEOUTS timeouts;
+        //oasclient::Sound * _ding, * _hitSound, * _laser;
+        //osg::Cone *_headCone, *_handCone;
+        //osg::Geode *_soundGeode;
+        //osg::ShapeDrawable *_headSD, *_handSD;
+        //struct ftdi_context _ftdic;
+        //osg::ref_ptr<osg::PositionAttitudeTransform> _crosshairPat;
+        //std::vector<osg::ref_ptr<osg::PositionAttitudeTransform> > _leftdoorPat,    
+        //    _rightdoorPat;
+        //std::vector<osg::ref_ptr<osg::ShapeDrawable> > _lights;
         // first node is regular geometry, second node is flashing geometry
-//        std::vector<osg::ref_ptr<osg::Switch> > _aliensSwitch, _alliesSwitch, 
-//            _checkersSwitch, _lightSwitch;
-
-        osg::ref_ptr<osg::Geode> _activeObject; // currently active avatar
-
-
-        void openDoor(int doorNum);
-        void closeDoor(int doorNum);
-
-        void loadModels();
-        void clear();
-        osg::ref_ptr<osg::Geometry> drawBox(osg::Vec3 center, float x, float y,
-            float z, osg::Vec4 color = osg::Vec4(1, 1, 1, 1), float texScale = 1.0);
-        osg::ref_ptr<osg::Geometry> makeQuad(float width, float height,
-            osg::Vec4 color, osg::Vec3 pos);
-
+        //std::vector<osg::ref_ptr<osg::Switch> > _aliensSwitch, _alliesSwitch, 
+        //_checkersSwitch, _lightSwitch;
+        //void openDoor(int doorNum);
+        //void closeDoor(int doorNum);
 };
 
 };

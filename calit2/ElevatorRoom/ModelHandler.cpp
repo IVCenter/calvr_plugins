@@ -1,6 +1,3 @@
-
-
-
 #include "ModelHandler.h"
 
 using namespace cvr;
@@ -28,12 +25,10 @@ ModelHandler::ModelHandler()
     _doorInView = false;
 }
 
-
 ModelHandler::~ModelHandler()
 {
 
 }
-
 
 void ModelHandler::update()
 {
@@ -75,7 +70,6 @@ void ModelHandler::update()
         _doorInView = false;
     }
 }
-
 
 void ModelHandler::loadModels(osg::MatrixTransform * root)
 {
@@ -604,7 +598,6 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     _loaded = true;
 }
 
-
 osg::ref_ptr<osg::Geometry> ModelHandler::drawBox(osg::Vec3 center, float x, 
     float y, float z, osg::Vec4 color, float texScale)
 {
@@ -754,7 +747,6 @@ osg::ref_ptr<osg::Geometry> ModelHandler::drawBox(osg::Vec3 center, float x,
     return geometry;
 }
 
-
 osg::ref_ptr<osg::Geometry> ModelHandler::makeQuad(float width, float height,
         osg::Vec4 color, osg::Vec3 pos)
 {
@@ -801,7 +793,6 @@ osg::ref_ptr<osg::Geometry> ModelHandler::makeQuad(float width, float height,
     return geo;
 }
 
-
 void ModelHandler::openDoor()
 {
     if (_activeDoor < 0 || _activeDoor >= (int)_leftdoorPat.size() || _activeDoor >= (int)_rightdoorPat.size())
@@ -819,7 +810,6 @@ void ModelHandler::openDoor()
     _doorDist += DOOR_SPEED;
 }
 
-
 void ModelHandler::closeDoor()
 {
     if (_activeDoor < 0 || _activeDoor >= (int)_leftdoorPat.size() || _activeDoor >= (int)_rightdoorPat.size())
@@ -836,7 +826,6 @@ void ModelHandler::closeDoor()
 
     _doorDist -= DOOR_SPEED;
 }
-
 
 void ModelHandler::setMode(Mode mode)
 {
@@ -885,12 +874,19 @@ void ModelHandler::setMode(Mode mode)
     _lightSwitch[_activeDoor]->setValue((int)_lightColor, true);
 }
 
-
-osg::Geode * ModelHandler::getActiveObject()
+osg::ref_ptr<osg::Geode> ModelHandler::getActiveObject()
 {
-    return _activeObject.get();
+    return _activeObject;
 }
 
+void ModelHandler::setScore(int score)
+{
+    char buf[10];
+    sprintf(buf, "%d", score);
+    std::string text = "Score: ";
+    text += buf;
+    _scoreText->setText(text);
+}
 
 void ModelHandler::flashActiveLight()
 {
@@ -903,7 +899,6 @@ void ModelHandler::flashActiveLight()
         _lightSwitch[_activeDoor]->setSingleChildOn(_lightColor);
     }
 }
-
 
 void ModelHandler::flashCheckers()
 {
@@ -933,7 +928,6 @@ void ModelHandler::flashCheckers()
     }
 }
 
-
 void ModelHandler::flashAlien()
 {
     if (_aliensSwitch[_activeDoor]->getValue(0))
@@ -961,7 +955,6 @@ void ModelHandler::flashAlien()
         }
     }
 }
-
 
 void ModelHandler::flashAlly()
 {
@@ -991,7 +984,6 @@ void ModelHandler::flashAlly()
 
     }
 }
-
 
 void ModelHandler::setActiveDoor(int doorNum)
 {
@@ -1036,7 +1028,6 @@ void ModelHandler::setActiveDoor(int doorNum)
 
 }
 
-
 void ModelHandler::setAlien(bool val)
 {
     _aliensSwitch[_activeDoor]->setValue(0, val);
@@ -1054,7 +1045,6 @@ void ModelHandler::setAlien(bool val)
         }
     }
 }
-
 
 void ModelHandler::setAlly(bool val)
 {
@@ -1074,7 +1064,6 @@ void ModelHandler::setAlly(bool val)
     }
 }
 
-
 void ModelHandler::setLight(bool val)
 {
     _lightColor = (int)_mode;
@@ -1090,12 +1079,10 @@ void ModelHandler::setLight(bool val)
     }
 }
 
-
 float ModelHandler::getDoorDistance()
 {
     return _doorDist;
 }
-
 
 bool ModelHandler::doorInView()
 {
