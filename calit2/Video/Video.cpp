@@ -92,6 +92,7 @@ void Video::DecodePtsUpdates(std::list<PTSUpdate>& updates, size_t buffSize, con
 
 void Video::postFrame()
 {
+#ifdef SYNC
 	std::list<PTSUpdate> ptsList;
 	unsigned char* ptsData = 0;
 	// alloc data for pts
@@ -138,6 +139,7 @@ void Video::postFrame()
 
 	m_ptsUpdateList.clear();
 	m_ptsUpdateList.splice(m_ptsUpdateList.begin(), ptsList);
+#endif
 
 }
 
@@ -207,8 +209,8 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			glewInit();
 			m_videoplayer.RegisterNotificationFunction(videoNotifyFunction, 0);
 			bool isHead = cvr::ComController::instance()->isMaster();
-			m_videoplayer.init(isHead, false);
-			//m_videoplayer.init(true, true);
+			//m_videoplayer.init(isHead, false);
+			m_videoplayer.init(true, true);
 			//m_videoplayer.init(false, false);
 			//gid = m_videoplayer.LoadVideoFile("/mnt/pointstar/cars_1080p.mov", true);
 			//printf("Loaded cars\n");
@@ -290,7 +292,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 		}
 	}
 
-
+#ifdef SYNC
 	stopwatch timer;
 	double videoTime = 0;
 	double textureTime = 0;
@@ -326,7 +328,9 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 	//printf("Updated %d videos, times took %.4lfms for video and %.4lfms for texture\n", m_ptsUpdateList.size(), videoTime, textureTime);
 	m_ptsUpdateList.clear();
 
-	/*
+#endif
+#define NOSYNC
+#ifdef NOSYNC
 	for (std::map<unsigned int, TextureManager*>::iterator iter = m_gidMap.begin(); iter != m_gidMap.end(); ++iter)
 	{
 		TextureManager* manager = iter->second;
@@ -371,7 +375,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			//printf("No update\n");
 		}
 	}
-	*/
+#endif
 	//printf("Full callback took %.4lfms\n", cbt.getTimeMS());
 }
  
