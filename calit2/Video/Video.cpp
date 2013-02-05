@@ -9,6 +9,9 @@
 #include <cvrKernel/SceneObject.h>
 #include <cvrKernel/PluginHelper.h>
 
+#define NOSYNC
+//#define SYNC
+
 CVRPLUGIN(Video)
 
 Video::Video() : m_removeVideo(0)
@@ -209,8 +212,8 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			glewInit();
 			m_videoplayer.RegisterNotificationFunction(videoNotifyFunction, 0);
 			bool isHead = cvr::ComController::instance()->isMaster();
-			//m_videoplayer.init(isHead, false);
-			m_videoplayer.init(true, true);
+			m_videoplayer.init(isHead, false);
+			//m_videoplayer.init(true, true);
 			//m_videoplayer.init(false, false);
 			//gid = m_videoplayer.LoadVideoFile("/mnt/pointstar/cars_1080p.mov", true);
 			//printf("Loaded cars\n");
@@ -329,7 +332,6 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 	m_ptsUpdateList.clear();
 
 #endif
-#define NOSYNC
 #ifdef NOSYNC
 	for (std::map<unsigned int, TextureManager*>::iterator iter = m_gidMap.begin(); iter != m_gidMap.end(); ++iter)
 	{

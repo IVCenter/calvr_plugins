@@ -225,7 +225,8 @@ bool FuturePatient::init()
 
 	if(_conn)
 	{
-	    mysqlpp::Query q = _conn->query("select distinct name from Measure order by name;");
+	    //mysqlpp::Query q = _conn->query("select distinct name from Measure order by name;");
+	    mysqlpp::Query q = _conn->query("select distinct Measure.name from Measure inner join Measurement on Measure.measure_id = Measurement.measure_id and Measurement.patient_id = \"1\" order by Measure.name;");
 	    mysqlpp::StoreQueryResult res = q.store();
 
 	    listEntries = res.num_rows();

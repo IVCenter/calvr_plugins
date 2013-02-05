@@ -362,6 +362,35 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
 	_graphOrder.push_back(order[i].group);
     }
     
+    // Hack to put phylums in order wanted by larry
+    std::vector<std::string> reorderVec;
+    reorderVec.push_back("Spirochaetes");
+    reorderVec.push_back("Tenericutes");
+    reorderVec.push_back("Cyanobacteria");
+    reorderVec.push_back("Planctomycetes");
+    reorderVec.push_back("Synergistetes");
+    reorderVec.push_back("Ascomycota");
+    reorderVec.push_back("Euryarchaeota");
+    reorderVec.push_back("Fusobacteria");
+    reorderVec.push_back("Actinobacteria");
+    reorderVec.push_back("Proteobacteria");
+    reorderVec.push_back("Verrucomicrobia");
+    reorderVec.push_back("Firmicutes");
+    reorderVec.push_back("Bacteroidetes");
+
+    for(int i = 0; i < reorderVec.size(); ++i)
+    {
+	for(std::vector<std::string>::iterator it = _graphOrder.begin(); it != _graphOrder.end(); ++it)
+	{
+	    if(*it == reorderVec[i])
+	    {
+		_graphOrder.erase(it);
+		_graphOrder.insert(_graphOrder.begin(),reorderVec[i]);
+		break;
+	    }
+	}
+    }
+
     bool graphValid = _graph->setGraph(_graphTitle, _graphData, _graphOrder, BGAT_LOG, "Value", "", "phylum / species",osg::Vec4(1.0,0,0,1));
 
     if(graphValid)
