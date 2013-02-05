@@ -9,8 +9,8 @@
 #include <cvrKernel/SceneObject.h>
 #include <cvrKernel/PluginHelper.h>
 
-#define NOSYNC
-//#define SYNC
+//#define NOSYNC
+#define SYNC
 
 CVRPLUGIN(Video)
 
