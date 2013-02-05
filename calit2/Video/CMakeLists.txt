@@ -22,11 +22,7 @@ find_library(SWSCALE_LIBRARY swscale)
 
 FIND_PACKAGE(RSVP)
 FIND_PACKAGE(GLEW)
-<<<<<<< HEAD
-include_directories("/home/calvr/development/rsvp/src")
-=======
 include_directories(${RSVP_INCLUDE_DIR})
->>>>>>> 240373108c6b8f51fc68d806a2a55ac11c797b05
 add_definitions( -D__STDC_CONSTANT_FORMATS -D__STDC_CONSTANT_MACROS)
 
 
