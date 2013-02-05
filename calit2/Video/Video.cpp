@@ -98,6 +98,7 @@ void Video::postFrame()
 	// alloc data for pts
 	bool isHead = cvr::ComController::instance()->isMaster();
 	unsigned int i = 0;
+	//isHead = true;
 	if (isHead)
 	{
 		for (std::map<unsigned int, TextureManager*>::iterator iter = m_gidMap.begin(); iter != m_gidMap.end(); ++iter)
