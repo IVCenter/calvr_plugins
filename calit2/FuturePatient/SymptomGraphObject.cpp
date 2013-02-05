@@ -18,11 +18,17 @@ SymptomGraphObject::SymptomGraphObject(mysqlpp::Connection * conn, float width, 
 
     addChild(_graph->getGraphRoot());
 
+    /*_intensityLabels[1] = "Mild";
+    _intensityLabels[2] = "Moderate";
+    _intensityLabels[3] = "Moderate to Severe";
+    _intensityLabels[4] = "Severe";
+    _intensityLabels[5] = "Fatal";*/
+
     _intensityLabels[1] = "Mild";
     _intensityLabels[2] = "Moderate";
     _intensityLabels[3] = "Moderate to Severe";
     _intensityLabels[4] = "Severe";
-    _intensityLabels[5] = "Fatal";
+    _intensityLabels[5] = "Very Severe";
 
     _graph->setValueLabelMap(_intensityLabels);
 
