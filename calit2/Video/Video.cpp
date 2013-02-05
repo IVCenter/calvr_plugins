@@ -9,6 +9,9 @@
 #include <cvrKernel/SceneObject.h>
 #include <cvrKernel/PluginHelper.h>
 
+//#define NOSYNC
+#define SYNC
+
 CVRPLUGIN(Video)
 
 Video::Video() : m_removeVideo(0)
@@ -329,7 +332,6 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 	m_ptsUpdateList.clear();
 
 #endif
-#define NOSYNC
 #ifdef NOSYNC
 	for (std::map<unsigned int, TextureManager*>::iterator iter = m_gidMap.begin(); iter != m_gidMap.end(); ++iter)
 	{
