@@ -109,6 +109,17 @@ struct OsgPdfLoadRequest
     cvr::SceneObject * object;
 };
 
+// OsgVnc
+enum OsgVncMessageType
+{
+    VNC_GOOGLE_QUERY=0
+};
+
+struct OsgVncGoogleQueryRequest
+{
+    std::string query;
+};
+
 // ModelLoader
  
 enum ModelLoaderMessageType
