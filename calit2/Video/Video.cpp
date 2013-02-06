@@ -9,6 +9,9 @@
 #include <cvrKernel/SceneObject.h>
 #include <cvrKernel/PluginHelper.h>
 
+//#define NOSYNC
+#define SYNC
+
 CVRPLUGIN(Video)
 
 Video::Video() : m_removeVideo(0)
@@ -42,6 +45,7 @@ bool Video::init()
 	MLMenu->addItem(removeMenu);
 	cvr::MenuSystem::instance()->addMenuItem(MLMenu);
 	cvr::CVRViewer::instance()->addPerContextPreDrawCallback(this);
+	//cvr::CVRViewer::instance()->addPerContextPostFinishCallback(this);
 	//cvr::CVRViewer::instance()->addPerContextFrameStartCallback(this);
 	return true;
 }
@@ -91,11 +95,13 @@ void Video::DecodePtsUpdates(std::list<PTSUpdate>& updates, size_t buffSize, con
 
 void Video::postFrame()
 {
+#ifdef SYNC
 	std::list<PTSUpdate> ptsList;
 	unsigned char* ptsData = 0;
 	// alloc data for pts
 	bool isHead = cvr::ComController::instance()->isMaster();
 	unsigned int i = 0;
+	//isHead = true;
 	if (isHead)
 	{
 		for (std::map<unsigned int, TextureManager*>::iterator iter = m_gidMap.begin(); iter != m_gidMap.end(); ++iter)
@@ -136,6 +142,7 @@ void Video::postFrame()
 
 	m_ptsUpdateList.clear();
 	m_ptsUpdateList.splice(m_ptsUpdateList.begin(), ptsList);
+#endif
 
 }
 
@@ -194,6 +201,8 @@ void Video::menuCallback(cvr::MenuItem* item)
 void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType type) const
 {
 	static int init = 0;
+	stopwatch cbt;
+	cbt.start();
 	if (init == 0)
 	{
 		m_initMutex.lock();
@@ -238,6 +247,8 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 				for (int x = 0; x < ncols; x++)
 				{
 					unsigned int myid = gid | (y << 13) | (x << 7); 
+					//XXX enable video on the head node.  This doesn't seem to work though
+					//m_videoplayer.EnableHeadVideo(true, myid);
 					int width = m_videoplayer.GetVideoWidth(myid);
 					int height = m_videoplayer.GetVideoHeight(myid);
 					GLuint tex = m_videoplayer.GetTextureID(myid);
@@ -284,6 +295,10 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 		}
 	}
 
+#ifdef SYNC
+	stopwatch timer;
+	double videoTime = 0;
+	double textureTime = 0;
 	for (std::list<PTSUpdate>::iterator iter = m_ptsUpdateList.begin(); iter != m_ptsUpdateList.end(); ++iter)
 	{
 		PTSUpdate update = *iter;
@@ -293,13 +308,18 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 		unsigned int gidcount = manager->GetVideoCount();
 		for (unsigned int i = 0; i < gidcount; i++)
 		{
+			timer.start();
 			unsigned int gid = manager->GetVideoID(i);
 			m_videoplayer.SetCurrentDrawPts(gid, update.pts);
 			//printf("Updating video %d with gid %x\n", i, gid);
 			bool isupdate = m_videoplayer.UpdateVideo(gid, false);
+			videoTime += timer.getTimeMS();
+			timer.start();
 			if (isupdate)
 			{
 				m_videoplayer.UpdateTexture(gid);
+				textureTime += timer.getTimeMS();
+				timer.start();
 		//		printf("Updated video %x to pts %.4lf\n", gid, update.pts);
 			}
 			else
@@ -308,9 +328,11 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			}
 		}
 	}
+	//printf("Updated %d videos, times took %.4lfms for video and %.4lfms for texture\n", m_ptsUpdateList.size(), videoTime, textureTime);
 	m_ptsUpdateList.clear();
 
-	/*
+#endif
+#ifdef NOSYNC
 	for (std::map<unsigned int, TextureManager*>::iterator iter = m_gidMap.begin(); iter != m_gidMap.end(); ++iter)
 	{
 		TextureManager* manager = iter->second;
@@ -355,7 +377,8 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			//printf("No update\n");
 		}
 	}
-	*/
+#endif
+	//printf("Full callback took %.4lfms\n", cbt.getTimeMS());
 }
  
 bool videoNotifyFunction(VIDEOPLAYER_NOTIFICATION msg, unsigned int gid, void* obj, unsigned int param1, unsigned int param2, double param3)
