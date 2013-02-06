@@ -82,7 +82,7 @@ void MicrobeGraphObject::selectMicrobes(std::string & group, std::vector<std::st
 
 bool MicrobeGraphObject::processEvent(InteractionEvent * ie)
 {
-    if(ie->asTrackedButtonEvent() && (ie->getInteraction() == BUTTON_DOWN || ie->getInteraction() == BUTTON_DOUBLE_CLICK))
+    if(ie->asTrackedButtonEvent() && ie->asTrackedButtonEvent()->getButton() == 0 && (ie->getInteraction() == BUTTON_DOWN || ie->getInteraction() == BUTTON_DOUBLE_CLICK))
     {
 	TrackedButtonInteractionEvent * tie = (TrackedButtonInteractionEvent*)ie;
 

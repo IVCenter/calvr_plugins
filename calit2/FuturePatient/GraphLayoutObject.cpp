@@ -567,6 +567,12 @@ void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
 	return;
     }
 
+    // not using tracked wand at the moment, keeps it from holding the interaction
+    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::TRACKER)
+    {
+	return;
+    }
+
     if(_syncTimeCB->getValue())
     {
 	if(handID != _activeHand && _activeHandType <= TrackingManager::instance()->getHandTrackerType(handID))
