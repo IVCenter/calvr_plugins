@@ -108,6 +108,10 @@ bool FuturePatient::init()
     _groupLoadMenu = new SubMenu("Group Load");
     _chartMenu->addItem(_groupLoadMenu);
 
+    _chartPatientList = new MenuList();
+    _chartPatientList->setCallback(this);
+    _chartMenu->addItem(_chartPatientList);
+
     _testList = new MenuList();
     _testList->setCallback(this);
     _chartMenu->addItem(_testList);
@@ -162,11 +166,16 @@ bool FuturePatient::init()
     _microbeTest = new MenuList();
     _microbeTest->setCallback(this);
     _microbeMenu->addItem(_microbeTest);
+    _microbeTest->setSensitivity(2.0);
 
     //_microbeNumBars = new MenuRangeValueCompact("Microbes",1,100,25);
     _microbeNumBars = new MenuRangeValueCompact("Microbes",1,2330,25);
     _microbeNumBars->setCallback(this);
     _microbeMenu->addItem(_microbeNumBars);
+
+    _microbeOrdering = new MenuCheckbox("LS Ordering", true);
+    _microbeOrdering->setCallback(this);
+    _microbeMenu->addItem(_microbeOrdering);
 
     _microbeLoad = new MenuButton("Load");
     _microbeLoad->setCallback(this);
@@ -209,6 +218,8 @@ bool FuturePatient::init()
 
     struct listField * lfList = NULL;
     int listEntries = 0;
+    int * sizes = NULL;
+    listField ** groupLists = NULL;
 
     if(ComController::instance()->isMaster())
     {
@@ -225,7 +236,7 @@ bool FuturePatient::init()
 
 	if(_conn)
 	{
-	    mysqlpp::Query q = _conn->query("select distinct name from Measure order by name;");
+	    mysqlpp::Query q = _conn->query("select distinct Measurement.patient_id, Patient.last_name as name from Measurement inner join Patient on Measurement.patient_id = Patient.patient_id order by patient_id;");
 	    mysqlpp::StoreQueryResult res = q.store();
 
 	    listEntries = res.num_rows();
@@ -233,10 +244,36 @@ bool FuturePatient::init()
 	    if(listEntries)
 	    {
 		lfList = new struct listField[listEntries];
+		sizes = new int[listEntries];
+		groupLists = new listField*[listEntries];
 
 		for(int i = 0; i < listEntries; i++)
 		{
 		    strncpy(lfList[i].entry,res[i]["name"].c_str(),255);
+		}
+
+		for(int i = 0; i < listEntries; ++i)
+		{
+		    std::stringstream groupss;
+		    groupss << "select distinct Measure.name from Measure inner join Measurement on Measure.measure_id = Measurement.measure_id and Measurement.patient_id = \"" << res[i]["patient_id"].c_str() << "\" order by Measure.name;";
+
+		    mysqlpp::Query groupq = _conn->query(groupss.str().c_str());
+		    mysqlpp::StoreQueryResult groupRes = groupq.store();
+
+		    sizes[i] = groupRes.num_rows();
+		    if(groupRes.num_rows())
+		    {
+			groupLists[i] = new listField[groupRes.num_rows()];
+		    }
+		    else
+		    {
+			groupLists[i] = NULL;
+		    }
+
+		    for(int j = 0; j < groupRes.num_rows(); j++)
+		    {
+			strncpy(groupLists[i][j].entry,groupRes[j]["name"].c_str(),255);
+		    }
 		}
 	    }
 	}
@@ -245,6 +282,14 @@ bool FuturePatient::init()
 	if(listEntries)
 	{
 	    ComController::instance()->sendSlaves(lfList,sizeof(struct listField)*listEntries);
+	    ComController::instance()->sendSlaves(sizes,sizeof(int)*listEntries);
+	    for(int i = 0; i < listEntries; i++)
+	    {
+		if(sizes[i])
+		{
+		    ComController::instance()->sendSlaves(groupLists[i],sizeof(struct listField)*sizes[i]);
+		}
+	    }
 	}
     }
     else
@@ -254,6 +299,21 @@ bool FuturePatient::init()
 	{
 	    lfList = new struct listField[listEntries];
 	    ComController::instance()->readMaster(lfList,sizeof(struct listField)*listEntries);
+	    sizes = new int[listEntries];
+	    ComController::instance()->readMaster(sizes,sizeof(int)*listEntries);
+	    groupLists = new listField*[listEntries];
+	    for(int i = 0; i < listEntries; i++)
+	    {
+		if(sizes[i])
+		{
+		    groupLists[i] = new listField[sizes[i]];
+		    ComController::instance()->readMaster(groupLists[i],sizeof(struct listField)*sizes[i]);
+		}
+		else
+		{
+		    groupLists[i] = NULL;
+		}
+	    }
 	}
     }
 
@@ -261,13 +321,38 @@ bool FuturePatient::init()
     for(int i = 0; i < listEntries; i++)
     {
 	stringlist.push_back(lfList[i].entry);
+
+	_patientTestMap[lfList[i].entry] = std::vector<std::string>();
+	for(int j = 0; j < sizes[i]; j++)
+	{
+	    _patientTestMap[lfList[i].entry].push_back(groupLists[i][j].entry);
+	}
     }
 
-    _testList->setValues(stringlist);
+    _chartPatientList->setValues(stringlist);
+
+    if(_chartPatientList->getListSize())
+    {
+	_testList->setValues(_patientTestMap[_chartPatientList->getValue()]);
+    }
 
     if(lfList)
     {
 	delete[] lfList;
+    }
+
+    for(int i = 0; i < listEntries; i++)
+    {
+	if(groupLists[i])
+	{
+	    delete[] groupLists[i];
+	}
+    }
+
+    if(listEntries)
+    {
+	delete[] sizes;
+	delete[] groupLists;
     }
 
     _groupList = new MenuList();
@@ -280,8 +365,8 @@ bool FuturePatient::init()
 
     lfList = NULL;
     listEntries = 0;
-    int * sizes = NULL;
-    listField ** groupLists = NULL;
+    sizes = NULL;
+    groupLists = NULL;
 
     if(ComController::instance()->isMaster())
     {
@@ -479,7 +564,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 {
     if(item == _loadButton)
     {
-	loadGraph(_testList->getValue());
+	loadGraph(_chartPatientList->getValue(),_testList->getValue());
 	/*std::string value = _testList->getValue();
 	if(!value.empty())
 	{
@@ -520,46 +605,54 @@ void FuturePatient::menuCallback(MenuItem * item)
     {
 	for(int i = 0; i < _groupTestMap[_groupList->getValue()].size(); i++)
 	{
-	    loadGraph(_groupTestMap[_groupList->getValue()][i]);
+	    loadGraph("Smarr",_groupTestMap[_groupList->getValue()][i]);
+	}
+    }
+
+    if(item == _chartPatientList)
+    {
+	if(_chartPatientList->getListSize())
+	{
+	    _testList->setValues(_patientTestMap[_chartPatientList->getValue()]);
 	}
     }
 
     if(item == _inflammationButton)
     {
-	loadGraph("hs-CRP");
-	loadGraph("SIgA");
-	loadGraph("Lysozyme");
-	loadGraph("Lactoferrin");
+	loadGraph("Smarr","hs-CRP");
+	loadGraph("Smarr","SIgA");
+	loadGraph("Smarr","Lysozyme");
+	loadGraph("Smarr","Lactoferrin");
     }
 
     if(item == _cholesterolButton)
     {
-	loadGraph("Total Cholesterol");
-	loadGraph("LDL");
-	loadGraph("HDL");
-	loadGraph("TG");
-	loadGraph("TG/HDL");
-	loadGraph("Total LDL3+LDL-4");
+	loadGraph("Smarr","Total Cholesterol");
+	loadGraph("Smarr","LDL");
+	loadGraph("Smarr","HDL");
+	loadGraph("Smarr","TG");
+	loadGraph("Smarr","TG/HDL");
+	loadGraph("Smarr","Total LDL3+LDL-4");
     }
 
     if(item == _insGluButton)
     {
-	loadGraph("Fasting Glucose");
-	loadGraph("Insulin");
-	loadGraph("Hemoglobin a1c");
-	loadGraph("Homocysteine");
-	loadGraph("Vitamin D, 25-Hydroxy");
+	loadGraph("Smarr","Fasting Glucose");
+	loadGraph("Smarr","Insulin");
+	loadGraph("Smarr","Hemoglobin a1c");
+	loadGraph("Smarr","Homocysteine");
+	loadGraph("Smarr","Vitamin D, 25-Hydroxy");
     }
 
     if(item == _inflammationImmuneButton)
     {
-	loadGraph("hs-CRP");
-	loadGraph("Lysozyme");
-	loadGraph("SIgA");
-	loadGraph("Lactoferrin");
-	loadGraph("Calprotectin");
-	loadGraph("WBC-");
-	loadGraph("NEU %");
+	loadGraph("Smarr","hs-CRP");
+	loadGraph("Smarr","Lysozyme");
+	loadGraph("Smarr","SIgA");
+	loadGraph("Smarr","Lactoferrin");
+	loadGraph("Smarr","Calprotectin");
+	loadGraph("Smarr","WBC-");
+	loadGraph("Smarr","NEU %");
     }
 
     if(item == _multiAddCB)
@@ -576,9 +669,9 @@ void FuturePatient::menuCallback(MenuItem * item)
 
     if(item == _loadAll)
     {
-	for(int i = 0; i < _testList->getListSize(); i++)
+	for(int i = 0; i < _patientTestMap["Smarr"].size(); i++)
 	{
-	    loadGraph(_testList->getValue(i));
+	    loadGraph("Smarr",_patientTestMap["Smarr"][i]);
 	}
     }
 
@@ -632,7 +725,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	if(_microbeGraphType->getIndex() == 0)
 	{
 	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(),(int)_microbeNumBars->getValue()))
+	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(),(int)_microbeNumBars->getValue(),_microbeOrdering->getValue()))
 	    {
 		//PluginHelper::registerSceneObject(mgo,"FuturePatient");
 		//mgo->attachToScene();
@@ -713,7 +806,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 
-	    if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue()))
+	    if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue(),_microbeOrdering->getValue()))
 	    {
 		//PluginHelper::registerSceneObject(mgo,"FuturePatient");
 		//mgo->attachToScene();
@@ -804,19 +897,19 @@ void FuturePatient::checkLayout()
     }
 }
 
-void FuturePatient::loadGraph(std::string name)
+void FuturePatient::loadGraph(std::string patient, std::string test)
 {
     checkLayout();
 
-    std::string value = name;
-    if(!value.empty())
+    std::string value = patient + test;
+    if(!patient.empty() && !test.empty())
     {
 	if(!_multiAddCB->getValue())
 	{
 	    if(_graphObjectMap.find(value) == _graphObjectMap.end())
 	    {
 		GraphObject * gobject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
-		if(gobject->addGraph(value))
+		if(gobject->addGraph(patient,test))
 		{
 		    _graphObjectMap[value] = gobject;
 		}
@@ -838,7 +931,7 @@ void FuturePatient::loadGraph(std::string name)
 		_multiObject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
 	    }
 
-	    if(_multiObject->addGraph(value))
+	    if(_multiObject->addGraph(patient,test))
 	    {
 		if(_multiObject->getNumGraphs() == 1)
 		{

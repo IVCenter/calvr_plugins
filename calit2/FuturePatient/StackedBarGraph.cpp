@@ -909,7 +909,10 @@ void StackedBarGraph::updateAxis()
     for(int i = 0; i < _dataList.size(); ++i)
     {
 	osgText::Text * dlText = makeText(_dataList[i]->name,osg::Vec4(0,0,0,1));
-	dlText->setRotation(q);
+	if((barHeight * 0.9) >= (_leftPaddingMult * _width * 0.8))
+	{
+	    dlText->setRotation(q);
+	}
 	dlText->setAlignment(osgText::Text::CENTER_CENTER);
 	bb = dlText->getBound();
 	csize1 = (_leftPaddingMult * _width * 0.8) / (bb.xMax() - bb.xMin());

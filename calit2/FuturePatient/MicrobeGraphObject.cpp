@@ -154,7 +154,7 @@ void MicrobeGraphObject::leaveCallback(int handID)
     }
 }
 
-bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, int microbes)
+bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, int microbes, bool lsOrdering)
 {
     _graphTitle = title + " - " + testLabel;
     std::stringstream valuess, orderss;
@@ -163,10 +163,10 @@ bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string 
 
     orderss << "select t.phylum, sum(t.value) as total_value from (select Microbes.phylum, Microbe_Measurement.value from  Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
 
-    return loadGraphData(valuess.str(), orderss.str());
+    return loadGraphData(valuess.str(), orderss.str(), lsOrdering);
 }
 
-bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes)
+bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, bool lsOrdering)
 {
     std::stringstream valuess, orderss;
 
@@ -229,10 +229,10 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int micro
 	    return false;
     }
 
-    return loadGraphData(valuess.str(), orderss.str());
+    return loadGraphData(valuess.str(), orderss.str(), lsOrdering);
 }
 
-bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string orderQuery)
+bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string orderQuery, bool lsOrdering)
 {
     _graphData.clear();
     _graphOrder.clear();
@@ -360,6 +360,37 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
     for(int i = 0; i < header.numOrderValues; ++i)
     {
 	_graphOrder.push_back(order[i].group);
+    }
+
+    if(lsOrdering)
+    {
+	std::vector<std::string> reorderVec;
+	reorderVec.push_back("Spirochaetes");
+	reorderVec.push_back("Tenericutes");
+	reorderVec.push_back("Cyanobacteria");
+	reorderVec.push_back("Planctomycetes");
+	reorderVec.push_back("Synergistetes");
+	reorderVec.push_back("Ascomycota");
+	reorderVec.push_back("Euryarchaeota");
+	reorderVec.push_back("Fusobacteria");
+	reorderVec.push_back("Actinobacteria");
+	reorderVec.push_back("Proteobacteria");
+	reorderVec.push_back("Verrucomicrobia");
+	reorderVec.push_back("Firmicutes");
+	reorderVec.push_back("Bacteroidetes");
+
+	for(int i = 0; i < reorderVec.size(); ++i)
+	{
+	    for(std::vector<std::string>::iterator it = _graphOrder.begin(); it != _graphOrder.end(); ++it)
+	    {
+		if(*it == reorderVec[i])
+		{
+		    _graphOrder.erase(it);
+		    _graphOrder.insert(_graphOrder.begin(),reorderVec[i]);
+		    break;
+		}
+	    }
+	}
     }
     
     bool graphValid = _graph->setGraph(_graphTitle, _graphData, _graphOrder, BGAT_LOG, "Value", "", "phylum / species",osg::Vec4(1.0,0,0,1));

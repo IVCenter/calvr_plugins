@@ -43,7 +43,7 @@ GraphObject::~GraphObject()
 
 }
 
-bool GraphObject::addGraph(std::string name)
+bool GraphObject::addGraph(std::string patient, std::string name)
 {
     for(int i = 0; i < _nameList.size(); i++)
     {
@@ -88,6 +88,7 @@ bool GraphObject::addGraph(std::string name)
 	{
 	    std::stringstream mss;
 	    mss << "select * from Measure where name = \"" << name << "\";";
+	    //mss << "select Measure.* from Measurement inner join Patient on Patient.last_name = \"" << patient << "\" and Patient.patient_id = Measurement.patient_id inner join Measure on Measure.name = \"" << name << "\" and Measure.measure_id = Measurement.measure_id limit 1;";
 
 	    //std::cerr << "Query: " << mss.str() << std::endl;
 
@@ -105,7 +106,7 @@ bool GraphObject::addGraph(std::string name)
 		int measureId = atoi(metaRes[0]["measure_id"].c_str());
 
 		std::stringstream qss;
-		qss << "select Measurement.timestamp, unix_timestamp(Measurement.timestamp) as utime, Measurement.value, Measurement.has_annotation from Measurement inner join Measure on Measurement.measure_id = Measure.measure_id where Measure.measure_id = \"" << measureId << "\" order by utime;";
+		qss << "select Measurement.timestamp, unix_timestamp(Measurement.timestamp) as utime, Measurement.value, Measurement.has_annotation from Measurement inner join Measure on Measurement.measure_id = Measure.measure_id and Measure.measure_id = \"" << measureId << "\" inner join Patient on Measurement.patient_id = Patient.patient_id and Patient.last_name = \"" << patient << "\" order by utime;";
 
 		//std::cerr << "Query: " << qss.str() << std::endl;
 
@@ -114,7 +115,7 @@ bool GraphObject::addGraph(std::string name)
 		res = query.store();
 
 		std::stringstream annotationss;
-		annotationss << "select Annotation.text, Annotation.URL, unix_timestamp(Measurement.timestamp) as utime from Measurement inner join Annotation on Measurement.measurement_id = Annotation.measurement_id where Measurement.measure_id = \"" << measureId << "\" order by utime;";
+		annotationss << "select Annotation.text, Annotation.URL, unix_timestamp(Measurement.timestamp) as utime from Measurement inner join Annotation on Measurement.measurement_id = Annotation.measurement_id and Measurement.measure_id = \"" << measureId << "\" inner join Patient on Measurement.patient_id = Patient.patient_id and Patient.last_name = \"" << patient << "\" order by utime;";
 
 		mysqlpp::Query annotationQuery = _conn->query(annotationss.str().c_str());
 		mysqlpp::StoreQueryResult annotationRes = annotationQuery.store();
