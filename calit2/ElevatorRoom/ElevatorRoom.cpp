@@ -6,10 +6,10 @@ using namespace std;
 
 namespace ElevatorRoom
 {
+
 #define DING_OFFSET 1
 #define EXPLOSION_OFFSET 9
 #define LASER_OFFSET 17
-
 
 ElevatorRoom * ElevatorRoom::_myPtr = NULL;
 
@@ -105,7 +105,6 @@ bool ElevatorRoom::init()
 
     _activeDoor = -1;
     _isOpening = true;
-    _doorDist = 0;
     _pauseStart = PluginHelper::getProgramDuration();
     _pauseLength = -1;
     _mode = NONE;
@@ -115,7 +114,11 @@ bool ElevatorRoom::init()
     _lightFlashPerSec = 7;
     _gameMode = THREE;
 
-   /* if(ComController::instance()->isMaster())
+    _staticMode = (ConfigManager::getEntry("Plugin.ElevatorRoom.StaticMode") != "off");
+    _staticDoor = (ConfigManager::getInt("value", "Plugin.ElevatorRoom.StaticDoor", -1) != -1);
+    _doorMovement = (ConfigManager::getEntry("Plugin.ElevatorRoom.DoorMovement") != "off");
+   
+    if(ComController::instance()->isMaster())
     {
         int seed = time(NULL);
 		ComController::instance()->sendSlaves(&seed, sizeof(seed));
@@ -126,7 +129,7 @@ bool ElevatorRoom::init()
         int seed = 0;
 		ComController::instance()->readMaster(&seed, sizeof(seed));
         srand(seed);
-    }*/
+    }
     srand(0);
 
     // Sound
@@ -187,7 +190,7 @@ bool ElevatorRoom::init()
     bool status = false;
     if(ComController::instance()->isMaster())
     {
-        if(spnav_open()==-1) 
+        if(spnav_open() == -1) 
         {
             cerr << "SpaceNavigator: Failed to connect to the space navigator daemon" << endl;
         }
@@ -227,10 +230,8 @@ void ElevatorRoom::preFrame()
         return;
     }
 
-
     if (!_loaded)
         return;
-    
 
     osg::Vec3 objMat, headmat;
     objMat = PluginHelper::getObjectMatrix().getTrans();
@@ -243,7 +244,15 @@ void ElevatorRoom::preFrame()
     {
         if ((PluginHelper::getProgramDuration() - _pauseStart) > _pauseLength)
         {
-            _activeDoor = 4; //rand() % NUM_DOORS;
+            if (_staticDoor)
+            {
+                _activeDoor = ConfigManager::getInt("Plugin.ElevatorRoom.StaticDoor", 0); // constant door
+            }
+            else
+            {
+                _activeDoor = rand() % NUM_DOORS; // random door
+            }
+
             _modelHandler->setActiveDoor(_activeDoor);
 
             if (_audioHandler)
@@ -253,57 +262,62 @@ void ElevatorRoom::preFrame()
             
             unsigned char buf[1];
             buf[0] = '1';
-            // write_SPP(sizeof(buf), buf);
-
-            int num = 9;  // rand() % 10;
-
-            if (num <= 4)
+            write_SPP(sizeof(buf), buf);
+            
+            if (_staticMode)
             {
-                if (_debug)
-                {
-                    std::cout << _activeDoor << " - alien" << std::endl;
-                }
-                _mode = ALIEN;
-
-                int r = rand() % 2;
-
-                if (_gameMode == FOUR && r == 0)
-                {
-                    _lightColor = 4;
-                }
-                else
-                {
-                    _lightColor = _mode;
-                }
-
-            }
-            else if (num <= 7)
-            {
-                if (_debug)
-                {
-                    std::cout << _activeDoor << " - ally" << std::endl;
-                }
-                _mode = ALLY;
-                _lightColor = _mode;
+                string str;
+                str = ConfigManager::getEntry("Plugin.ElevatorRoom.StaticMode");
+                if (str == "Checker")
+                    _mode = CHECKER;
+                else if (str == "Ally")
+                    _mode = ALLY;
+                else if (str == "Alien")
+                    _mode = ALIEN;
             }
             else
             {
-                if (_debug)
+                int num = rand() % 10; // random mode
+
+                if (num <= 4)
                 {
-                    std::cout << _activeDoor << " - checker " << std::endl;
+                    if (_debug)
+                    {
+                        std::cout << _activeDoor << " - alien" << std::endl;
+                    }
+                    _mode = ALIEN;
+
+                    int r = rand() % 2;
+
+                    if (_gameMode == FOUR && r == 0)
+                    {
+
+                    }
+                    else
+                    {
+
+                    }
+
                 }
-                _mode = CHECKER;
-                _lightColor = _mode;
+                else if (num <= 7)
+                {
+                    if (_debug)
+                    {
+                        std::cout << _activeDoor << " - ally" << std::endl;
+                    }
+                    _mode = ALLY;
+                }
+                else
+                {
+                    if (_debug)
+                    {
+                        std::cout << _activeDoor << " - checker " << std::endl;
+                    }
+                    _mode = CHECKER;
+                }
             }
-
-            _modelHandler->setMode(_mode);
-
-            osg::ref_ptr<osg::Geode > geode;
-            if (geode = _modelHandler->getActiveObject())
-            {
-                _activeObject = geode;
-            }
-            _flashCount = 0;
+                _modelHandler->setMode(_mode);
+                _flashCount = 0;
         }
 
         if (_activeDoor > -1)
@@ -312,7 +326,6 @@ void ElevatorRoom::preFrame()
             _pauseStart = PluginHelper::getProgramDuration();
             _pauseLength = LIGHT_PAUSE_LENGTH;
         }
-
     }
 
     // Handle light flashes
@@ -337,7 +350,7 @@ void ElevatorRoom::preFrame()
         {
             unsigned char buf[1];
             buf[0] = '5';
-            //write_SPP(sizeof(buf), buf);
+            write_SPP(sizeof(buf), buf);
 
             if (PluginHelper::getProgramDuration() - _flashStartTime > (1 / _checkSpeed))
             {
@@ -346,12 +359,6 @@ void ElevatorRoom::preFrame()
                 unsigned char buf[1];
                 buf[0] = '1';
                 write_SPP(sizeof(buf), buf);
-
-                osg::ref_ptr<osg::Geode > geode;
-                if (geode = _modelHandler->getActiveObject())
-                {
-                    _activeObject = geode;
-                }
 
                 _checkSpeed = ((rand() % 2) + 1); // .5 -> 1
                 _flashCount++;
@@ -363,7 +370,7 @@ void ElevatorRoom::preFrame()
         {
             unsigned char buf[1];
             buf[0] = '4';
-            //write_SPP(sizeof(buf), buf);
+            write_SPP(sizeof(buf), buf);
 
             if (_hit)
             {
@@ -375,13 +382,6 @@ void ElevatorRoom::preFrame()
                 else if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _avatarFlashPerSec)
                 {
                     _modelHandler->flashAlien();
-
-                    osg::ref_ptr<osg::Geode > geode;
-                    if (geode = _modelHandler->getActiveObject())
-                    {
-                        _activeObject = geode;
-                    }
-
                     _flashCount++; 
                     _flashStartTime = PluginHelper::getProgramDuration();
                 }
@@ -392,7 +392,7 @@ void ElevatorRoom::preFrame()
         {
             unsigned char buf[1];
             buf[0] = '3';
-            //write_SPP(sizeof(buf), buf);
+            write_SPP(sizeof(buf), buf);
 
             if (_hit)
             {
@@ -404,13 +404,6 @@ void ElevatorRoom::preFrame()
                 else if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _avatarFlashPerSec)
                 {
                     _modelHandler->flashAlly();
-
-                    osg::ref_ptr<osg::Geode > geode;
-                    if (geode = _modelHandler->getActiveObject())
-                    {
-                        _activeObject = geode;
-                    }
- 
                     _flashCount++; 
                     _flashStartTime = PluginHelper::getProgramDuration();
                 }
@@ -425,7 +418,7 @@ void ElevatorRoom::preFrame()
 
                 unsigned char buf[1];
                 buf[0] = '2';
-                //write_SPP(sizeof(buf), buf);
+                write_SPP(sizeof(buf), buf);
             }
 
             if (_modelHandler->getDoorDistance() > 0.8)
@@ -435,7 +428,10 @@ void ElevatorRoom::preFrame()
         }
         else
         {
-            // _modelHandler->closeDoor();
+            if (_doorMovement)
+            { 
+                 _modelHandler->closeDoor();
+            }
 
             if (_modelHandler->getDoorDistance() < DOOR_SPEED)
             {
@@ -443,7 +439,6 @@ void ElevatorRoom::preFrame()
                
                 _isOpening = true;
                 _activeDoor = -1;
-                _doorDist = 0;
                 _pauseStart = PluginHelper::getProgramDuration();
                 _pauseLength = 1 + rand() % 5;
                 _hit = false;
@@ -494,10 +489,11 @@ void ElevatorRoom::preFrame()
         _audioHandler->update(17, handDir, handPos);
     }
 
-    // Spacenav
+
+    // Spacenav and update rotation-only navigation
     Matrixd finalmat;
 
-/*    if(ComController::instance()->isMaster())
+    if(ComController::instance()->isMaster())
     {
         spnav_event sev;
 
@@ -522,28 +518,9 @@ void ElevatorRoom::preFrame()
             else 
             {	// SPNAV_EVENT_BUTTON 
                 //printf("got button %s event b(%d)\n", sev.button.press ? "press" : "release", sev.button.bnum);
-                if(sev.button.press)
-                {
-                    switch(sev.button.bnum)
-                    {
-                    case 0:
-                        transcale *= 1.1;
-                        break;
-                    case 1:
-                        transcale *= 0.9;
-                        break;
-                    case 2:
-                        rotscale *= 1.1;
-                        break;
-                    case 3:
-                        rotscale *= 0.9;
-                        break;
-                    default:
-                        break;
-                    
-                }
             }
         }
+
 
         x *= 0;//_transcale;
         y *= 0;//_transcale;
@@ -552,13 +529,11 @@ void ElevatorRoom::preFrame()
         ry *= 0;//_rotscale;
         rz *= _rotscale;
 
-
         Matrix view = PluginHelper::getHeadMat();
-
-        Vec3 campos = view.getTrans();
+        Vec3 headpos = view.getTrans();
         Vec3 trans = Vec3(x, y, z);
 
-        trans = (trans * view) - campos;
+        trans = (trans * view) - headpos;
 
         Matrix tmat;
         tmat.makeTranslate(trans);
@@ -568,14 +543,14 @@ void ElevatorRoom::preFrame()
 
         xa = osg::Vec3();//(xa * view) - campos;
         ya = osg::Vec3();//(ya * view) - campos;
-        za = (za * view) - campos;
+        za = (za * view) - headpos;
 
         Matrix rot;
         rot.makeRotate(rx, xa, ry, ya, rz, za);
 
         Matrix ctrans, nctrans;
-        ctrans.makeTranslate(campos);
-        nctrans.makeTranslate(-campos);
+        ctrans.makeTranslate(headpos);
+        nctrans.makeTranslate(-headpos);
 
         finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
 
@@ -585,7 +560,7 @@ void ElevatorRoom::preFrame()
     {
         ComController::instance()->readMaster((char *)finalmat.ptr(), sizeof(double[16]));
     }
-*/
+
     PluginHelper::setObjectMatrix(finalmat);
 }
 
@@ -669,70 +644,53 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                 _eventRot = tie->getTransform().getRotate();
                 _eventPos = tie->getTransform().getTrans();
 
-                if (isecvec.size() == 0)
+                if (isecvec.size() == 0) // no intersection
                 {
-//std::cout << "no intersection" << std::endl;
                     return true;
                 }
-                else
+
+                if (_activeDoor >= 0)
                 {
-                    if (_activeDoor >= 0)
+                    // intersect the character and door is still open
+                    if (isecvec[0].geode == _modelHandler->getActiveObject().get() && _modelHandler->getDoorDistance() > 0)
                     {
-//std::cout << "intersection and activeDoor" << std::endl;
-                        // intersect the character and door is still opens
-//std::cout << isecvec[0].geode << " " << _modelHandler->getActiveObject() << std::endl;
-                        if (isecvec[0].geode == _modelHandler->getActiveObject() && _modelHandler->getDoorDistance() > 0)
+                        if (_audioHandler)
                         {
-//std::cout << "hit active object" << std::endl;
+                            _audioHandler->playSound(LASER_OFFSET, "laser");
+                        }
+                        
+                        // if haven't already hit the alien
+                        if (_mode == ALIEN && !_hit)
+                        {
                             if (_audioHandler)
                             {
-                                _audioHandler->playSound(LASER_OFFSET, "laser");
+                                _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
                             }
-                            
-                            // if haven't already hit the alien
-                            if (_mode == ALIEN && !_hit)
-                            {
-                                if (_audioHandler)
-                                {
-                                    _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
-                                }
 
-                                std::cout << "Hit!" << std::endl; 
-                                _score++;
+                            std::cout << "Hit!" << std::endl; 
+                            _score++;
+                            _modelHandler->setScore(_score);
 
-                                char buf[10];
-                                sprintf(buf, "%d", _score);
-                                std::string text = "Score: ";
-                                text += buf;
-                                _scoreText->setText(text);
-
-                                std::cout << "Score: " << _score << std::endl;
-                                _hit = true;
-                            }
-                            else if (_mode == ALLY && !_hit)
-                            {
-                                if (_audioHandler)
-                                {
-                                    _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
-                                }
-
-                                std::cout << "Whoops!" << std::endl;
-                                if (_score > 0)
-                                {
-                                    _score--;
-                                }
-
-                                char buf[10];
-                                sprintf(buf, "%d", _score);
-                                std::string text = "Score: ";
-                                text += buf;
-                                _scoreText->setText(text);
-
-                                std::cout << "Score: " << _score << std::endl;
-                                _hit = true;
-                            }
-                            return true;
+                            std::cout << "Score: " << _score << std::endl;
+                            _hit = true;
                         }
+                        else if (_mode == ALLY && !_hit)
+                        {
+                            if (_audioHandler)
+                            {
+                                _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
+                            }
+
+                            std::cout << "Whoops!" << std::endl;
+                            if (_score > 0)
+                            {
+                                _score--;
+                            }
+                            _modelHandler->setScore(_score);
+                            std::cout << "Score: " << _score << std::endl;
+                            _hit = true;
+                        }
+                        return true;
                     }
                 }
             }
@@ -884,8 +842,8 @@ int ElevatorRoom::init_SPP(int port)
     }
     FT_SetBaudRate(ftHandle, 57600);
     FT_SetDataCharacteristics(ftHandle, FT_BITS_8, FT_STOP_BITS_1, FT_PARITY_NONE);
-    FT_SetFlowControl (ftHandle, FT_FLOW_NONE, 0, 0);
-    FT_SetLatencyTimer (ftHandle, 2);
+    FT_SetFlowControl(ftHandle, FT_FLOW_NONE, 0, 0);
+    FT_SetLatencyTimer(ftHandle, 2);
 
     /*
     if (ftdi_init(&_ftdic) < 0)

@@ -32,7 +32,6 @@ enum Mode
     CHECKER
 };
 
-
 class ModelHandler
 {
     public:
@@ -51,11 +50,12 @@ class ModelHandler
 
         void setMode(Mode mode);
         void setActiveDoor(int doorNum);
+        void setScore(int score);
         void setAlien(bool val);
         void setAlly(bool val);
         void setLight(bool val);
 
-        osg::Geode * getActiveObject();
+        osg::ref_ptr<osg::Geode> getActiveObject();
         float getDoorDistance();
         bool doorInView();
 

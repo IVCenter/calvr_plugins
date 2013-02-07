@@ -15,10 +15,12 @@ using namespace cvr;
 TimeRangeDataGraph::TimeRangeDataGraph()
 {
     _root = new osg::Group();
+    _root->setCullingActive(false);
     _bgScaleMT = new osg::MatrixTransform();
     _axisGeode = new osg::Geode();
     _bgGeode = new osg::Geode();
     _graphGeode = new osg::Geode();
+    _graphGeode->setCullingActive(false);
 
     _root->addChild(_bgScaleMT);
     _root->addChild(_axisGeode);
@@ -482,6 +484,8 @@ void TimeRangeDataGraph::update()
 {
     updateSizes();
 
+    float barHeight = _graphTop - _graphBottom;
+
     osg::Vec3 scale(_width,1.0,_height);
     osg::Matrix scaleMat;
     scaleMat.makeScale(scale);
@@ -490,7 +494,7 @@ void TimeRangeDataGraph::update()
     updateGraphs();
     updateAxis();
 
-    scaleMat.makeScale(osg::Vec3(1,1,_height));
+    scaleMat.makeScale(osg::Vec3(1,1,barHeight));
     _barTransform->setMatrix(scaleMat);
 
     setBarPosition(_barPos);

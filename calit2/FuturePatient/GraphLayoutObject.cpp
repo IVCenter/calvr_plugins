@@ -126,6 +126,23 @@ void GraphLayoutObject::removeGraphObject(LayoutTypeObject * object)
 	_perGraphActiveHandType.erase(it);
     }
 
+    bool selectedObjects = false;
+
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	if(dynamic_cast<MicrobeSelectObject*>(_objectList[i]))
+	{
+	    selectedObjects = true;
+	    break;
+	}
+    }
+
+    if(selectedObjects)
+    {
+	_currentSelectedMicrobeGroup = "";
+	_currentSelectedMicrobes.clear();
+    }
+
     updateLayout();
 }
 
@@ -166,6 +183,9 @@ void GraphLayoutObject::removeAll()
     _deleteButtonMap.clear();
     _perGraphActiveHand.clear();
     _perGraphActiveHandType.clear();
+
+    _currentSelectedMicrobeGroup = "";
+    _currentSelectedMicrobes.clear();
 
     _objectList.clear();
 }
@@ -472,8 +492,14 @@ bool GraphLayoutObject::processEvent(InteractionEvent * event)
 		    if(found)
 		    {
 			time_t change = (time_t)(difftime(_currentMaxX,_currentMinX)*0.03);
-			_currentMinX += change * pos * vie->getValue();
-			_currentMaxX -= change * (1.0 - pos) * vie->getValue();
+			if(change <= 0.0 && vie->getValue() < 0.0)
+			{
+			    time_t diff = difftime(_currentMaxX,_currentMinX);
+			    change = std::max(diff >> 1, (time_t)1);
+			}
+
+			_currentMinX += change * pos * ((double)vie->getValue());
+			_currentMaxX -= change * (1.0 - pos) * ((double)vie->getValue());
 			_currentMinX = std::max(_currentMinX,_minX);
 			_currentMaxX = std::min(_currentMaxX,_maxX);
 
@@ -508,8 +534,14 @@ bool GraphLayoutObject::processEvent(InteractionEvent * event)
 			double pos = _objectList[i]->getBarPosition();
 
 			time_t change = (time_t)(difftime(currentEnd,currentStart)*0.03);
-			currentStart += change * pos * vie->getValue();
-			currentEnd -= change * (1.0 - pos) * vie->getValue();
+			if(change <= 0.0 && vie->getValue() < 0.0)
+			{
+			    time_t diff = difftime(currentEnd,currentStart);
+			    change = std::max(diff >> 2, (time_t)1);
+			}
+
+			currentStart += change * pos * ((double)vie->getValue());
+			currentEnd -= change * (1.0 - pos) * ((double)vie->getValue());
 			currentStart = std::max(currentStart,tro->getMinTimestamp());
 			currentEnd = std::min(currentEnd,tro->getMaxTimestamp());
 			tro->setGraphDisplayRange(currentStart,currentEnd);
@@ -531,6 +563,12 @@ void GraphLayoutObject::enterCallback(int handID, const osg::Matrix &mat)
 void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
 {
     if(!_zoomCB->getValue())
+    {
+	return;
+    }
+
+    // not using tracked wand at the moment, keeps it from holding the interaction
+    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::TRACKER)
     {
 	return;
     }
@@ -821,12 +859,6 @@ void GraphLayoutObject::updateLayout()
 	    posZ = (_height*0.5) - (graphHeight*0.5);
 	}
 
-	MicrobeSelectObject * mso = dynamic_cast<MicrobeSelectObject*>(_objectList[i]);
-	if(mso)
-	{
-	    mso->selectMicrobes(_currentSelectedMicrobeGroup,_currentSelectedMicrobes);
-	}
-
 	if(dynamic_cast<MicrobeGraphObject*>(_objectList[i]))
 	{
 	    microbeGraphCount++;
@@ -843,6 +875,12 @@ void GraphLayoutObject::updateLayout()
 	    {
 		mgo->setColor(ColorGenerator::makeColor(currentCount,microbeGraphCount));
 		currentCount++;
+	    }
+
+	    MicrobeSelectObject * mso = dynamic_cast<MicrobeSelectObject*>(_objectList[i]);
+	    if(mso)
+	    {
+		mso->selectMicrobes(_currentSelectedMicrobeGroup,_currentSelectedMicrobes);
 	    }
 	}
     }
