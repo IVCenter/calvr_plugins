@@ -112,12 +112,18 @@ struct OsgPdfLoadRequest
 // OsgVnc
 enum OsgVncMessageType
 {
-    VNC_GOOGLE_QUERY=0
+    VNC_GOOGLE_QUERY=0,
+    VNC_HIDE,
+    VNC_SCALE,
+    VNC_POSITION
 };
 
-struct OsgVncGoogleQueryRequest
+struct OsgVncRequest
 {
     std::string query;
+    bool hide;
+    float scale;
+    osg::Vec3f position;
 };
 
 // ModelLoader
