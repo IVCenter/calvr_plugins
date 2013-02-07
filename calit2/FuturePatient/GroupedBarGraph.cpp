@@ -224,6 +224,9 @@ void GroupedBarGraph::setHover(osg::Vec3 intersect)
 
 		_hoverText->setText(hoverss.str());
 
+		_hoverGroup = it->first;
+		_hoverItem = "";
+
 		hoverSet = true;
 		targetHeight *= 0.66;
 		break;
@@ -273,6 +276,9 @@ void GroupedBarGraph::setHover(osg::Vec3 intersect)
 
 			    _hoverText->setText(hoverss.str());
 
+			    _hoverGroup = it->first;
+			    _hoverItem = it->second[j].first;
+
 			    hoverSet = true;
 			}
 		    }
@@ -312,6 +318,11 @@ void GroupedBarGraph::setHover(osg::Vec3 intersect)
 	    _hoverBGGeom->dirtyDisplayList();
 	}
     }
+    else
+    {
+	_hoverGroup = "";
+	_hoverItem = "";
+    }
 
     if(hoverSet && !_hoverGeode->getNumParents())
     {
@@ -334,6 +345,9 @@ void GroupedBarGraph::clearHoverText()
     {
 	_root->removeChild(_hoverGeode);
     }
+
+    _hoverGroup = "";
+    _hoverItem = "";
 }
 
 void GroupedBarGraph::selectItems(std::string & group, std::vector<std::string> & keys)

@@ -70,6 +70,16 @@ class GroupedBarGraph
         void setHover(osg::Vec3 intersect);
         void clearHoverText();
 
+        const std::string & getHoverGroup()
+        {
+            return _hoverGroup;
+        }
+
+        const std::string & getHoverItem()
+        {
+            return _hoverItem;
+        }
+
         void selectItems(std::string & group, std::vector<std::string> & keys);
 
         bool processClick(osg::Vec3 & hitPoint, std::string & selectedGroup, std::vector<std::string> & selectedKeys);
@@ -111,6 +121,9 @@ class GroupedBarGraph
         osg::ref_ptr<osg::Geode> _hoverGeode;
         osg::ref_ptr<osg::Geometry> _hoverBGGeom;
         osg::ref_ptr<osgText::Text> _hoverText;
+
+        std::string _hoverGroup;
+        std::string _hoverItem;
 
         osg::ref_ptr<osgText::Font> _font;
 };

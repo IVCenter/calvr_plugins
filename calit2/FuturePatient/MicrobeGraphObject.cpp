@@ -3,8 +3,12 @@
 
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/ComController.h>
+#include <cvrKernel/PluginManager.h>
+#include <cvrKernel/PluginHelper.h>
 #include <cvrInput/TrackingManager.h>
 #include <cvrUtil/OsgMath.h>
+
+#include <PluginMessageType.h>
 
 #include <iostream>
 #include <sstream>
@@ -25,11 +29,34 @@ MicrobeGraphObject::MicrobeGraphObject(mysqlpp::Connection * conn, float width, 
 
     _desktopMode = ConfigManager::getBool("Plugin.FuturePatient.DesktopMode",false);
 
+    if(_myMenu)
+    {
+	_microbeText = new MenuText("");
+	_microbeText->setCallback(this);
+	_searchButton = new MenuButton("Web Search");
+	_searchButton->setCallback(this);
+    }
+    else
+    {
+	_microbeText = NULL;
+	_searchButton = NULL;
+    }
+    
+
     _graph = new GroupedBarGraph(width,height);
 }
 
 MicrobeGraphObject::~MicrobeGraphObject()
 {
+    if(_microbeText)
+    {
+	delete _microbeText;
+    }
+
+    if(_searchButton)
+    {
+	delete _searchButton;
+    }
 }
 
 void MicrobeGraphObject::setGraphSize(float width, float height)
@@ -121,6 +148,111 @@ bool MicrobeGraphObject::processEvent(InteractionEvent * ie)
 	}
     }
 
+    TrackedButtonInteractionEvent * tie = ie->asTrackedButtonEvent();
+
+    if(tie && _contextMenu && tie->getButton() == _menuButton)
+    {
+	if(tie->getInteraction() == BUTTON_DOWN)
+	{
+	    if(!_myMenu->isVisible() || !_graph->getHoverItem().empty())
+	    {
+		_myMenu->setVisible(true);
+		osg::Vec3 start(0,0,0), end(0,1000,0);
+		start = start * tie->getTransform();
+		end = end * tie->getTransform();
+
+		osg::Vec3 p1, p2;
+		bool n1, n2;
+		float dist = 0;
+
+		if(intersects(start,end,p1,n1,p2,n2))
+		{
+		    float d1 = (p1 - start).length();
+		    if(n1)
+		    {
+			d1 = -d1;
+		    }
+
+		    float d2 = (p2 - start).length();
+		    if(n2)
+		    {
+			d2 = -d2;
+		    }
+
+		    if(n1)
+		    {
+			dist = d2;
+		    }
+		    else if(n2)
+		    {
+			dist = d1;
+		    }
+		    else
+		    {
+			if(d1 < d2)
+			{
+			    dist = d1;
+			}
+			else
+			{
+			    dist = d2;
+			}
+		    }
+		}
+
+		dist = std::min(dist,
+			SceneManager::instance()->getDefaultContextMenuMaxDistance());
+		dist = std::max(dist,
+			SceneManager::instance()->getDefaultContextMenuMinDistance());
+
+		osg::Vec3 menuPoint(0,dist,0);
+		menuPoint = menuPoint * tie->getTransform();
+
+		osg::Vec3 viewerPoint =
+		    TrackingManager::instance()->getHeadMat(0).getTrans();
+		osg::Vec3 viewerDir = viewerPoint - menuPoint;
+		viewerDir.z() = 0.0;
+
+		osg::Matrix menuRot;
+
+		// point towards viewer if not on tiled wall
+		if(!ie->asPointerEvent())
+		{
+		    menuRot.makeRotate(osg::Vec3(0,-1,0),viewerDir);
+		}
+
+		osg::Matrix m;
+		m.makeTranslate(menuPoint);
+		_myMenu->setTransform(menuRot * m);
+
+		_myMenu->setScale(SceneManager::instance()->getDefaultContextMenuScale());
+
+		SceneManager::instance()->setMenuOpenObject(this);
+	    }
+            else
+	    {
+		SceneManager::instance()->closeOpenObjectMenu();
+		return true;
+	    }
+
+	    if(!_graph->getHoverItem().empty())
+	    {
+		_menuMicrobe = _graph->getHoverItem();
+		_microbeText->setText(std::string("Microbe: ") + _menuMicrobe);
+		_myMenu->addMenuItem(_microbeText);
+		_myMenu->addMenuItem(_searchButton);
+	    }
+	    else
+	    {
+		_myMenu->removeMenuItem(_microbeText);
+		_myMenu->removeMenuItem(_searchButton);
+		_menuMicrobe = "";
+	    }
+
+	    return true;
+	}
+    }
+
     return TiledWallSceneObject::processEvent(ie);
 }
 
@@ -152,6 +284,28 @@ void MicrobeGraphObject::leaveCallback(int handID)
     {
 	_graph->clearHoverText();
     }
+}
+
+void MicrobeGraphObject::menuCallback(MenuItem * item)
+{
+    if(item == _searchButton)
+    {
+	std::cerr << "Do search for microbe: " << _menuMicrobe << std::endl;
+	
+	if(PluginManager::instance()->getPluginLoaded("OsgVnc"))
+	{
+	    struct OsgVncGoogleQueryRequest gqr;
+	    gqr.query = _menuMicrobe;
+
+	    PluginHelper::sendMessageByName("OsgVnc",VNC_GOOGLE_QUERY,(char*)&gqr);
+	}
+	else
+	{
+	    std::cerr << "OsgVnc plugin not loaded." << std::endl;
+	}
+    }
+
+    TiledWallSceneObject::menuCallback(item);
 }
 
 bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, int microbes, bool lsOrdering)
