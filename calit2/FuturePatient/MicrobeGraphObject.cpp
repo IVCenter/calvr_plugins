@@ -294,7 +294,7 @@ void MicrobeGraphObject::menuCallback(MenuItem * item)
 	
 	if(PluginManager::instance()->getPluginLoaded("OsgVnc"))
 	{
-	    struct OsgVncGoogleQueryRequest gqr;
+	    struct OsgVncRequest gqr;
 	    gqr.query = _menuMicrobe;
 
 	    PluginHelper::sendMessageByName("OsgVnc",VNC_GOOGLE_QUERY,(char*)&gqr);
