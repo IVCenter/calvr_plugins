@@ -4,6 +4,7 @@
 #include <cvrKernel/InteractionEvent.h>
 #include <cvrUtil/OsgMath.h>
 
+#include <osgText/Text>
 #include <osg/Texture2D>
 #include <osg/Geometry>
 
@@ -44,7 +45,7 @@ VncSceneObject::VncSceneObject(std::string name, osgWidget::VncClient* client, b
     (*vertices)[3].set(osg::Vec3(0.0f + _bound.xMax(), 0.0f, 0.0f + _bound.zMax() + (_bound.zMax() * 0.1)));
 
     osg::Vec4Array* colours = new osg::Vec4Array(1);
-    (*colours)[0].set(1.0f,0.0f,1.0,1.0f);
+    (*colours)[0].set(135.0/255.0, 206.0/255.0, 250.0/255.0, 1.0f);
 
     osg::Geometry* geom = new osg::Geometry();
     geom->setVertexArray(vertices);
@@ -54,6 +55,16 @@ VncSceneObject::VncSceneObject(std::string name, osgWidget::VncClient* client, b
 
     title->addDrawable(geom);
 
+    // create text title
+    //osgText::Text* text = new osgText::Text();
+    //text->setColor(osg::Vec4(1.0, 1.0, 1.0, 1.0));
+    //text->setCharacterSize(10.0f);
+    //text->setFont ("/usr/share/fonts/liberation/LiberationSans-Regular.ttf");
+    //text->setAxisAlignment(osgText::TextBase::XZ_PLANE);
+    //text->setBackdropType(osgText::Text::NONE);
+    //text->setText(name);
+    //title->addDrawable(text);
+
 	// attach the geodes to the custom scene object
 	cvr::SceneObject::addChild(title);
 	cvr::SceneObject::addChild(_client);
@@ -62,50 +73,54 @@ VncSceneObject::VncSceneObject(std::string name, osgWidget::VncClient* client, b
 bool VncSceneObject::processEvent(cvr::InteractionEvent * ie)
 {
     // see if active and if should forward the event to the vnc server
-	if( _active  && _vncEvents)
+	if( _active )
 	{
-		//check for button event now
-		cvr::TrackedButtonInteractionEvent* tie = ie->asTrackedButtonEvent();
-   		if( tie )
-   		{
-            // init button mask
-            int buttonMask = 0;
-
-            // convert cvr button to rfb button //TODO clean up
-            if( tie->getButton() == 0  )
-                buttonMask |= 1;
-            
-            if( tie->getButton() == 1  )
-                buttonMask |= 4;
-            
-            if( tie->getButton() == 2  )
-                buttonMask |= 2;
-
-            //check for double click (ignore double right click) //TODO add mouse wheel
-            if ( tie->getInteraction() == cvr::BUTTON_DOUBLE_CLICK )
-            {
-                _image->sendPointerEvent(_intersect.x(), _intersect.z(), buttonMask);
-                _image->sendPointerEvent(_intersect.x(), _intersect.z(), 0);
-                _image->sendPointerEvent(_intersect.x(), _intersect.z(), buttonMask);
-                _image->sendPointerEvent(_intersect.x(), _intersect.z(), 0);
-            }
-            else if ( tie->getInteraction() == cvr::BUTTON_UP )
-            {
-                _image->sendPointerEvent(_intersect.x(), _intersect.z(), 0);
-            }
-            else 
-            {
-                _image->sendPointerEvent(_intersect.x(), _intersect.z(), buttonMask);
-            }
-		}
-        else // mouse movement
+        if( _vncEvents )
         {
-            _image->sendPointerEvent(_intersect.x(), _intersect.z(), 0);
+		    //check for button event now
+		    cvr::TrackedButtonInteractionEvent* tie = ie->asTrackedButtonEvent();
+   		    if( tie )
+   		    {
+                // init button mask
+                int buttonMask = 0;
+
+                // convert cvr button to rfb button //TODO clean up
+                if( tie->getButton() == 0  )
+                    buttonMask |= 1;
+            
+                if( tie->getButton() == 1  )
+                    buttonMask |= 4;
+            
+                if( tie->getButton() == 2  )
+                    buttonMask |= 2;
+
+                //check for double click (ignore double right click) //TODO add mouse wheel
+                if ( tie->getInteraction() == cvr::BUTTON_DOUBLE_CLICK )
+                {
+                    _image->sendPointerEvent(_intersect.x(), _intersect.z(), buttonMask);
+                    _image->sendPointerEvent(_intersect.x(), _intersect.z(), 0);
+                    _image->sendPointerEvent(_intersect.x(), _intersect.z(), buttonMask);
+                    _image->sendPointerEvent(_intersect.x(), _intersect.z(), 0);
+                }
+                else if ( tie->getInteraction() == cvr::BUTTON_UP )
+                {
+                    _image->sendPointerEvent(_intersect.x(), _intersect.z(), 0);
+                }
+                else 
+                {
+                    _image->sendPointerEvent(_intersect.x(), _intersect.z(), buttonMask);
+                }
+
+		    }
+            else // mouse movement
+            {
+                _image->sendPointerEvent(_intersect.x(), _intersect.z(), 0);
+            }
         }
 		return true;
 	}
 
-   	return SceneObject::processEvent(ie);
+   	return TiledWallSceneObject::processEvent(ie);
 }
 
 void VncSceneObject::updateCallback(int handID, const osg::Matrix & mat)

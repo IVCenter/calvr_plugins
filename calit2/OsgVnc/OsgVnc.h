@@ -37,6 +37,9 @@ class OsgVnc : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::File
 
         // launch browser query
         void launchQuery(std::string& hostname, int portno, std::string& query);
+		void writeConfigFile();
+        void removeAll();
+        void hideAll(bool);
 
 	    // container to hold pdf data
 	    struct VncObject
@@ -45,7 +48,19 @@ class OsgVnc : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::File
 	        VncSceneObject * scene;
         };
 
-        //std::map<struct VncObject*,cvr::MenuCheckbox*> _planeMap;
+ 		float _defaultScale;
+        float _defaultDepth;
+
+        std::string _configPath;
+
+        // menu objects
+        cvr::SubMenu* _vncMenu;
+        cvr::SubMenu * _sessionsMenu;
+        cvr::MenuButton* _removeButton;
+        cvr::MenuCheckbox* _hideCheckbox;
+
+        std::map<cvr::MenuItem*, std::string> _menuFileMap;
+        std::map<std::string, std::pair<float, osg::Vec3f> > _locInit;
         std::map<struct VncObject* ,cvr::MenuButton*> _deleteMap;
         std::vector<struct VncObject*> _loadedVncs;
 };
