@@ -453,7 +453,7 @@ public:
     bool _handOn;
     void menuCallback(cvr::MenuItem* item);
     void preFrame();
-
+    void turnOffAll();
     void setDCVisibleStatus(std::string dc, bool status);
     void updateVisibleStatus();
     std::string parseDate(std::string date);

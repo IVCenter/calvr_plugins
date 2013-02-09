@@ -647,6 +647,12 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
           }
           else
           {
+	    if(ConfigManager::getBool("Plugin.ArtifactVis2.MoveCamera"))
+	    {
+
+	    int flyIndex = ConfigManager::getInt("Plugin.ArtifactVis2.FlyToDefault");
+	    flyTo(flyIndex);
+	    }
 
              _infoPanel->setVisible(true);
              ArtifactVis2On = true;
@@ -658,6 +664,7 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
            //TODO:Turns Off PreFrame and entire Plugin
              _infoPanel->setVisible(false);
              ArtifactVis2On = false;
+             turnOffAll();
        }
     }
     if (menuItem == _artifactsDropDown)
@@ -1219,7 +1226,7 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
         {
             if (_query[q]->artifacts[art]->model->visibleMap->getValue())
             {
-                /*
+                
 	        std::cerr << "Visible." << std::endl;
                  _query[q]->artifacts[art]->model->active = true;
                 if(!_query[q]->artifacts[art]->model->visible)
@@ -1227,11 +1234,11 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
                  _query[q]->artifacts[art]->model->so->attachToScene();
 		}
                  _query[q]->artifacts[art]->model->visibleMap->setValue(true);
-		*/
+		
             }
             else
             {
-		/*
+		
                  _query[q]->artifacts[art]->model->active = false;
                  _query[q]->artifacts[art]->model->so->setMovable(false);
                  _query[q]->artifacts[art]->model->activeMap->setValue(false);
@@ -1239,7 +1246,7 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
                  _query[q]->artifacts[art]->model->so->detachFromScene();
                  _query[q]->artifacts[art]->model->visible = false;
 	        std::cerr << "NotVisible." << std::endl;
-		*/
+		
             }
 	}
         if (menuItem == _query[q]->artifacts[art]->model->pVisibleMap)
@@ -9248,4 +9255,119 @@ std::string ArtifactVis2::getFileFromFilePath(string filepath)
             }
 return path;
 }
+void ArtifactVis2::turnOffAll()
+{
 
+    _bookmarkPanel->setVisible(false);
+    _bookmarksMenu->setValue(false);
+    _utilsPanel->setVisible(false);
+    _utilsMenu->setValue(false);
+    _filePanel->setVisible(false);
+    _fileMenu->setValue(false);
+    _qsPanel->setVisible(false);
+    _qsMenu->setValue(false);
+    for (int i = 0; i < _annotations.size(); i++)
+    {
+        if(_annotations[i]->visible)
+        {
+        _annotations[i]->active = false;
+        _annotations[i]->visible = false;
+	_annotations[i]->visibleMap->setValue(false);
+        _annotations[i]->so->setMovable(false);
+        _annotations[i]->activeMap->setValue(false);
+	_annotations[i]->so->detachFromScene();
+        }
+    }
+    for (int i = 0; i < _lineGroups.size(); i++)
+    {
+        if(_lineGroups[i]->visible)
+        {
+        _lineGroups[i]->active = false;
+        _lineGroups[i]->visible = false;
+	_lineGroups[i]->visibleMap->setValue(false);
+        _lineGroups[i]->so->setMovable(false);
+        _lineGroups[i]->activeMap->setValue(false);
+	_lineGroups[i]->so->detachFromScene();
+        }
+    }
+    for (int i = 0; i < _artifactAnnoTrack.size(); i++)
+    {
+       int q = _artifactAnnoTrack[i]->q;
+       int art = _artifactAnnoTrack[i]->art;
+       if (!_query[q]->artifacts[art]->annotation->visibleMap->getValue())
+       {
+	 _query[q]->artifacts[art]->model->pVisibleMap->setValue(false);
+	 _query[q]->artifacts[art]->annotation->active = false;
+	 _query[q]->artifacts[art]->annotation->so->setMovable(false);
+	 _query[q]->artifacts[art]->annotation->activeMap->setValue(false);
+	 _artifactAnnoTrack[i]->active = false;
+	 _query[q]->artifacts[art]->annotation->so->detachFromScene();
+	 _query[q]->artifacts[art]->annotation->connectorNode->setNodeMask(0);
+	 _query[q]->artifacts[art]->annotation->visible = false;
+       }
+    }
+    for (int i = 0; i < _artifactModelTrack.size(); i++)
+    {
+       int q = _artifactModelTrack[i]->q;
+       int art = _artifactModelTrack[i]->art;
+       if (_query[q]->artifacts[art]->model->visible)
+       {
+	 _query[q]->artifacts[art]->model->active = false;
+	 _query[q]->artifacts[art]->model->so->setMovable(false);
+	 _query[q]->artifacts[art]->model->activeMap->setValue(false);
+	 _artifactModelTrack[i]->active = false;
+	 _query[q]->artifacts[art]->model->so->detachFromScene();
+	 _query[q]->artifacts[art]->model->visible = false;
+       }
+    }
+    for (int i = 0; i < _queryOption.size(); i++)
+    {
+      int n = _querySfIndex[i];
+      if (_queryOption[i]->getValue())
+      {
+	_query[n]->sphereRoot->setNodeMask(0);
+        _queryOption[i]->setValue(false);
+      }
+    }
+    for (int i = 0; i < _queryOptionLoci.size(); i++)
+    {
+      int n = _queryLociIndex[i];
+      if (_queryOptionLoci[i]->getValue())
+      {
+	_query[n]->sphereRoot->setNodeMask(0);
+        _queryOptionLoci[i]->setValue(false);
+      }
+    }
+    for (int i = 0; i < _showModelCB.size(); i++)
+    {
+        if (_showModelCB[i]->getValue())
+        {
+        _showModelCB[i]->setValue(false);
+	_models3d[i]->so->detachFromScene();
+	_models3d[i]->visible = false;
+	_models3d[i]->active = false;
+	_models3d[i]->visibleMap->setValue(false);
+	_models3d[i]->activeMap->setValue(false);
+       }
+    }
+    for (int i = 0; i < _showPointCloudCB.size(); i++)
+    {
+        if (_showPointCloudCB[i]->getValue())
+        {
+        _showPointCloudCB[i]->setValue(false);
+	_pointClouds[i]->so->detachFromScene();
+	_pointClouds[i]->visible = false;
+	_pointClouds[i]->active = false;
+	_pointClouds[i]->visibleMap->setValue(false);
+	_pointClouds[i]->activeMap->setValue(false);
+       }
+    }
+    //Resets View
+    if(true)
+    {
+	osg::Matrix m;
+	SceneManager::instance()->setObjectMatrix(m);
+	SceneManager::instance()->setObjectScale(1.0);
+    }
+
+}
