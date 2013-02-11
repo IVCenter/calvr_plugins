@@ -197,8 +197,10 @@ struct Annotation
         bool active;
         bool visible;
 	bool fromFile;
+        bool deleted;
         //std::map<cvr::SceneObject*,cvr::MenuButton*> saveMap;
         cvr::MenuButton* saveMap;
+        cvr::MenuButton* deleteMap;
         cvr::MenuCheckbox* activeMap;
         cvr::MenuCheckbox* visibleMap;
         osg::Geometry * connector;  
@@ -231,8 +233,10 @@ struct LineGroup
         bool visible;
         bool editing;
 	bool fromFile;
+        bool deleted;
         bool open;
         cvr::MenuButton* saveMap;
+        cvr::MenuButton* deleteMap;
         cvr::MenuCheckbox* activeMap;
         cvr::MenuCheckbox* editingMap;
         cvr::MenuCheckbox* visibleMap;

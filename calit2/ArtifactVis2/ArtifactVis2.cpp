@@ -132,7 +132,7 @@ bool ArtifactVis2::init()
 
     _avMenu = new SubMenu("ArtifactVis2", "ArtifactVis2");
     _avMenu->setCallback(this);
-    _turnOnArtifactVis2 = new MenuCheckbox("Turn On", false);
+    _turnOnArtifactVis2 = new MenuCheckbox("Turn On", ConfigManager::getBool("Plugin.ArtifactVis2.StartArtifactVis2"));
     _turnOnArtifactVis2->setCallback(this);
     _avMenu->addItem(_turnOnArtifactVis2);
     MenuSystem::instance()->addMenuItem(_avMenu);
@@ -149,23 +149,6 @@ bool ArtifactVis2::init()
     {
       secondInit();
     }
-if(true)
-{
-/*
-    for (unsigned int k = 0; k < entries.size(); k++)
-    {
-        cout << k << ".\t" << entries[k]->filename << endl;
-          struct stat info;
-        string origDir = entries[k]->path;
-        origDir.append(entries[k]);
-        lstat(origDir.c_str(), &info);
-        if(S_ISDIR(info.st_mode))
-        {
-         cout << entries[k] << "is a directory\n"; 
-        }
-    }
-*/
-}
     return true;
 }
 
@@ -449,7 +432,7 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
 
 
     }
-    if ((event->getInteraction() == BUTTON_DOWN || event->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getHand() == 0 && tie->getButton() == 1)
+    if ((event->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getHand() == 0 && tie->getButton() == 0)
     {
         //Turn Off Editing with Right Click
         if(lineGroupsEditing)
@@ -472,7 +455,7 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
 
 
     }
-    if ((event->getInteraction() == BUTTON_DOWN || event->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getHand() == 0 && tie->getButton() == 0)
+    if ((event->getInteraction() == BUTTON_DOWN) && tie->getHand() == 0 && tie->getButton() == 0)
     {
         if(lineGroupsEditing)
         {
@@ -495,7 +478,7 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
 
 
     }
-    if ((event->getInteraction() == BUTTON_DOWN || event->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getHand() == 0 && tie->getButton() == 0)
+    if ((event->getInteraction() == BUTTON_DOWN) && tie->getHand() == 0 && tie->getButton() == 0)
     {
 
         if (_createMarkup->getValue())
@@ -778,7 +761,7 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
     }
     if (menuItem == _resetFileManager)
     {
-             string dir = ConfigManager::getEntry("Plugin.ArtifactVis2.ArchInterfaceFolder");
+             string dir = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder");
              _currentScroll = 0;
              _currentDir = dir;
 
@@ -870,16 +853,8 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
         {
 	        std::cerr << "Save." << std::endl;
                 Vec3 pos = _annotations[i]->so->getPosition();
-          //      Quat rot = _annotations[i]->so->getRotation();
-          //      float scale = _annotations[i]->so->getScale();
-          //      verts = (osg::Vec3Array *) _annotations[i]->geo->getVertexArray();
-            //    pos = verts->at(0);
-
-
                 cerr << "x: " << pos.x() << " y: " << pos.y() << " z: " << pos.z() << std::endl;
                 saveAnnotationGraph();
-                //cerr << "rx: " << rot.x() << " ry: " << rot.y() << " rz: " << rot.z() << " rw: " << rot.w() << std::endl;
-                //cerr << "Scale: " << scale << std::endl;
 	}
         if (menuItem == _annotations[i]->activeMap)
         {
@@ -890,7 +865,6 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
                  _annotations[i]->active = true;
                  _annotations[i]->so->setMovable(true);
                  _annotations[i]->activeMap->setValue(true);
-                //Vec3 pos = _annotations[i]->so->getPosition();
             }
             else
             {
@@ -899,6 +873,105 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
 	        std::cerr << "DeActive." << std::endl;
             }
 	}
+        if (menuItem == _annotations[i]->visibleMap)
+        {
+            if (_annotations[i]->visibleMap->getValue())
+            {
+	        std::cerr << "Active." << std::endl;
+                 deactivateAllAnno();
+                 _annotations[i]->active = true;
+                 _annotations[i]->so->setMovable(true);
+                 _annotations[i]->activeMap->setValue(true);
+                if(!_annotations[i]->visible)
+                {
+                 _annotations[i]->so->attachToScene();
+		}
+            }
+            else
+            {
+
+                 deactivateAllAnno();
+                 _annotations[i]->so->detachFromScene();
+                 _annotations[i]->visible = false;
+                 _annotations[i]->connectorNode->setNodeMask(0);
+            }
+	}
+        if (menuItem == _annotations[i]->deleteMap)
+        {
+                 deactivateAllAnno();
+                 _annotations[i]->so->detachFromScene();
+                 _annotations[i]->visible = false;
+                 _annotations[i]->deleted = true;
+                 _annotations[i]->connectorNode->setNodeMask(0);
+                saveAnnotationGraph();
+
+        }
+    }
+    for (int i = 0; i < _lineGroups.size(); i++)
+    {
+        if (menuItem == _lineGroups[i]->saveMap)
+        {
+	        std::cerr << "Save." << std::endl;
+                Vec3 pos = _lineGroups[i]->so->getPosition();
+                cerr << "x: " << pos.x() << " y: " << pos.y() << " z: " << pos.z() << std::endl;
+               // saveAnnotationGraph();
+	}
+        if (menuItem == _lineGroups[i]->activeMap)
+        {
+            if (_lineGroups[i]->activeMap->getValue())
+            {
+	        std::cerr << "Active." << std::endl;
+               //  deactivateAllAnno();
+                 _lineGroups[i]->active = true;
+                 _lineGroups[i]->so->setMovable(true);
+                 _lineGroups[i]->activeMap->setValue(true);
+            }
+            else
+            {
+                 _lineGroups[i]->active = false;
+                 _lineGroups[i]->so->setMovable(false);
+                 _lineGroups[i]->activeMap->setValue(false);
+
+	        std::cerr << "DeActive." << std::endl;
+            }
+	}
+        if (menuItem == _lineGroups[i]->visibleMap)
+        {
+            if (_lineGroups[i]->visibleMap->getValue())
+            {
+	        std::cerr << "Active." << std::endl;
+                // deactivateAllAnno();
+                 _lineGroups[i]->active = true;
+                 _lineGroups[i]->so->setMovable(true);
+                 _lineGroups[i]->activeMap->setValue(true);
+                if(!_lineGroups[i]->visible)
+                {
+                 _lineGroups[i]->so->attachToScene();
+		}
+            }
+            else
+            {
+
+                // deactivateAllAnno();
+                 _lineGroups[i]->active = false;
+                 _lineGroups[i]->so->setMovable(false);
+                 _lineGroups[i]->activeMap->setValue(false);
+                 _lineGroups[i]->so->detachFromScene();
+                 _lineGroups[i]->visible = false;
+            }
+	}
+        if (menuItem == _lineGroups[i]->deleteMap)
+        {
+                 //deactivateAllAnno();
+                 _lineGroups[i]->active = false;
+                 _lineGroups[i]->so->setMovable(false);
+                 _lineGroups[i]->activeMap->setValue(false);
+                 _lineGroups[i]->so->detachFromScene();
+                 _lineGroups[i]->visible = false;
+                 _lineGroups[i]->deleted = true;
+               // saveAnnotationGraph();
+
+        }
     }
     for (int i = 0; i < _pointClouds.size(); i++)
     {
@@ -1238,7 +1311,8 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
             }
             else
             {
-		
+                resetArtifactModelOrig(q, art);
+		//Turn Off Model
                  _query[q]->artifacts[art]->model->active = false;
                  _query[q]->artifacts[art]->model->so->setMovable(false);
                  _query[q]->artifacts[art]->model->activeMap->setValue(false);
@@ -1246,7 +1320,18 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
                  _query[q]->artifacts[art]->model->so->detachFromScene();
                  _query[q]->artifacts[art]->model->visible = false;
 	        std::cerr << "NotVisible." << std::endl;
-		
+                 //Turn Off Annotation
+                 _query[q]->artifacts[art]->annotation->active = false;
+                 _query[q]->artifacts[art]->annotation->so->setMovable(false);
+                 _query[q]->artifacts[art]->annotation->connectorNode->setNodeMask(0);
+                 _query[q]->artifacts[art]->annotation->activeMap->setValue(false);
+                 _query[q]->artifacts[art]->annotation->visibleMap->setValue(false);
+                 _artifactAnnoTrack[i]->active = false;
+                 _query[q]->artifacts[art]->annotation->so->detachFromScene();
+                 _query[q]->artifacts[art]->annotation->visible = false;
+	        //Unmask Default Model
+                 
+                _query[q]->artifacts[art]->patmt->setNodeMask(0xffffffff);
             }
 	}
         if (menuItem == _query[q]->artifacts[art]->model->pVisibleMap)
@@ -1926,7 +2011,7 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
             }
         }
 
-        _artifactPanel->setVisible(_selectArtifactCB->getValue());
+       // _artifactPanel->setVisible(_selectArtifactCB->getValue());
 
         if (!_selectArtifactCB->getValue()) //New Add
         {
@@ -4165,7 +4250,7 @@ void ArtifactVis2::setupTablesMenu()
         return;
     }
 
-    _qsPanel = new TabbedDialogPanel(100, 30, 4, "QuerySystem", "Plugin.ArtifactVis2.InfoPanel");
+    _qsPanel = new TabbedDialogPanel(100, 30, 4, "QuerySystem", "Plugin.ArtifactVis2.QsPanel");
     _qsPanel->setVisible(false);
     mxml_node_t* table = mxmlFindElement(tree, tree, "tables", NULL, NULL, MXML_DESCEND);
 
@@ -4346,7 +4431,7 @@ void ArtifactVis2::setupFlyToMenu()
         return;
     }
 
-    _bookmarkPanel = new TabbedDialogPanel(100, 30, 4, "Bookmarks", "Plugin.ArtifactVis2.InfoPanel");
+    _bookmarkPanel = new TabbedDialogPanel(100, 30, 4, "Bookmarks", "Plugin.ArtifactVis2.BookmarkPanel");
     _bookmarkPanel->setVisible(false);
   //  _flyMenu = new SubMenu("Fly To");
   //  _avMenu->addItem(_flyMenu);
@@ -4583,6 +4668,7 @@ void ArtifactVis2::moveCam(double bscale, double x, double y, double z, double o
 
 void ArtifactVis2::createSelObj(osg::Vec3 pos, string color, float radius)
 {
+/*
     if (_modelFileNode == NULL)
         _modelFileNode = osgDB::readNodeFile(ConfigManager::getEntry("Plugin.ArtifactVis2.ScanFolder").append("/50563/50563.ply"));
 
@@ -4619,6 +4705,7 @@ void ArtifactVis2::createSelObj(osg::Vec3 pos, string color, float radius)
     translate->addChild(rotate);
     _root->addChild(translate);
     selectableItems.push_back(SelectableItem(boxGeode, modelScaleTrans, translate, rotate, snum));
+*/
 }
 
 void ArtifactVis2::flyTo(int i)
@@ -4927,11 +5014,17 @@ if(!_annotations[inc]->fromFile)
 	    mb->setCallback(this);
 	    so->addMenuItem(mb);
 	    //_deleteMap[so] = mb;
+            _annotations[inc]->deleteMap = mb;
             MenuCheckbox * mc;
 	    mc = new MenuCheckbox("Active",_annotations[inc]->active);
 	    mc->setCallback(this);
 	    so->addMenuItem(mc);
             _annotations[inc]->activeMap = mc;
+
+	    mc = new MenuCheckbox("Visible",_annotations[inc]->visible);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _annotations[inc]->visibleMap = mc;
 
 if(_annotations[inc]->fromFile)
 {
@@ -5017,7 +5110,10 @@ if(!_annotations[inc]->fromFile)
     connectorGeode->addDrawable(_annotations[inc]->connector);
      _annotations[inc]->connectorGeode = connectorGeode;
     
-    _root->addChild(_annotations[inc]->connectorGeode);
+    Group* connectorNode = new Group();
+    _annotations[inc]->connectorNode = connectorNode;
+    _annotations[inc]->connectorNode->addChild(_annotations[inc]->connectorGeode);
+    _root->addChild(_annotations[inc]->connectorNode);
 
 
 
@@ -5235,11 +5331,14 @@ string filename = ConfigManager::getEntry("Plugin.ArtifactVis2.Database").append
         anno->lEnd = lEnd;
 
    anno->active = false;
+   anno->visible = true;
    anno->scale = 0.001;
+   anno->fromFile = true;
 
 
   _annotations.push_back(anno);
    loadAnnotationGraph(inc);
+   inc++;
   }
 }
 void ArtifactVis2::createAnnotationFile(osg::Matrix tie)
@@ -5613,6 +5712,8 @@ int rows = _annotations.size();
 //Create Placemarks
 for(int m=0; m<rows; m++)
 {
+ if(!_annotations[m]->deleted)
+ {
 Vec3 pos = _annotations[m]->so->getPosition();
 Quat rot = _annotations[m]->so->getRotation();
 float scale = _annotations[m]->so->getScale();
@@ -5698,6 +5799,7 @@ buffer << m;
                           mxmlNewText(lineStart, 0, lStart.c_str());
                         lineEnd = mxmlNewElement(line, "lineEnd");
                           mxmlNewText(lineEnd, 0, lEnd.c_str());
+ }
 }
 //.......................................................
 //Save File
@@ -6132,6 +6234,7 @@ if(artifactModelExists(q, art))
    if(!_query[q]->artifacts[art]->model->visible)
    {
    cerr << "Not Visible\n";
+   _query[q]->artifacts[art]->patmt->setNodeMask(0);
    _query[q]->artifacts[art]->model->so->attachToScene();
    _query[q]->artifacts[art]->model->visible = true;
 _query[q]->artifacts[art]->model->visibleMap->setValue(true);
@@ -6158,7 +6261,7 @@ cerr << "Setting Variables\n";
 
 //Get Path for ScanModel
 cerr << "Get Path for ScanModel\n";
-        modelPath = ConfigManager::getEntry("Plugin.ArtifactVis2.ScanFolder").append("" + basket + "/" + basket + ".ply");
+        modelPath = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("data/scan_models/" + basket + "/" + basket + ".ply");
 
         if (modelExists(modelPath.c_str()))
         {
@@ -6451,13 +6554,13 @@ else
 	    so->addMenuItem(mc);
             _query[q]->artifacts[inc]->model->activeMap = mc;
 
-           /* 
+            
 	    mc = new MenuCheckbox("Visible",true);
 	    mc->setCallback(this);
 	    so->addMenuItem(mc);
             _query[q]->artifacts[inc]->model->visibleMap = mc;
             _query[q]->artifacts[inc]->model->visible = true;
-*/
+
 	    mc = new MenuCheckbox("Panel Visible",true);
 	    mc->setCallback(this);
 	    so->addMenuItem(mc);
@@ -6746,6 +6849,7 @@ void ArtifactVis2::menuSetup()
    setupFileMenu();
     _picFolder = ConfigManager::getEntry("value", "Plugin.ArtifactVis2.PicFolder", "");
     //Tabbed dialog for selecting artifacts
+    /*
     _artifactPanel = new TabbedDialogPanel(400, 30, 4, "Selected Artifact", "Plugin.ArtifactVis2.ArtifactPanel");
     _artifactPanel->addTextTab("Info", "");
     _artifactPanel->addTextureTab("Side", "");
@@ -6755,7 +6859,7 @@ void ArtifactVis2::menuSetup()
     _artifactPanel->setActiveTab("Info");
     _selectionStatsPanel = new DialogPanel(450, "Selection Stats", "Plugin.ArtifactVis2.SelectionStatsPanel");
     _selectionStatsPanel->setVisible(false);
-    
+    */
 
 }
 void ArtifactVis2::initSelectBox()
@@ -6810,7 +6914,7 @@ void ArtifactVis2::secondInit()
 
     if(ConfigManager::getBool("Plugin.ArtifactVis2.MoveCamera") && true)
     {
-   // readAnnotationFile();
+    readAnnotationFile();
     }
 
     secondInitComplete = true;
@@ -6913,7 +7017,7 @@ void ArtifactVis2::updateDropDowns()
 }
 void ArtifactVis2::setupUtilsMenu()
 {
-    _utilsPanel = new TabbedDialogPanel(100, 30, 4, "Utils", "Plugin.ArtifactVis2.InfoPanel");
+    _utilsPanel = new TabbedDialogPanel(100, 30, 4, "Utils", "Plugin.ArtifactVis2.UtilsPanel");
     _utilsPanel->setVisible(false);
 
     _createAnnotations = new MenuCheckbox("Create Annotations", false);
@@ -7013,7 +7117,7 @@ direct ** darray;
 void ArtifactVis2::setupFileMenu()
 {
 
-    string dir = ConfigManager::getEntry("Plugin.ArtifactVis2.ArchInterfaceFolder");
+    string dir = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder");
 
     _currentDir = dir;
     entries.clear();
@@ -7031,7 +7135,24 @@ void ArtifactVis2::setupFileMenu()
     _upFileManager->setCallback(this);
     _filePanel->addMenuItem(_upFileManager);
 
-    for (int i = 0; i < entries.size(); i++)
+     int i = 0;
+     int count = entries.size();
+     if(count > 10)
+     {
+       count = 10 + i;
+     }
+     else
+     {
+       i = 0;
+
+     }
+     if(count > entries.size())
+     {
+      count = entries.size();
+      i = count - 10;
+     }
+
+    for (i = 0; i < count; i++)
     {
     string filename = entries[i]->filename;
     if(entries[i]->filetype == "folder")
@@ -7809,7 +7930,7 @@ else
                  {
                    start = int(found);
                    group.erase(0,(start+1));
-                   cerr << "group: " << group << endl;
+                  // cerr << "group: " << group << endl;
 		 }             
                  //cout <<" type: " << file << endl;
             }
@@ -7918,7 +8039,7 @@ else if(type == "PointCloud")
                  {
                    start = int(found);
                    group.erase(0,(start+1));
-                   cerr << "group: " << group << endl;
+                  // cerr << "group: " << group << endl;
 		 }             
                  //cout <<" type: " << file << endl;
             }
@@ -8189,6 +8310,11 @@ void ArtifactVis2::startLineObject()
 	    so->addMenuItem(mb);
             lineGroup->resetMap = mb;
 */
+	    mb = new MenuButton("Delete");
+	    mb->setCallback(this);
+	    so->addMenuItem(mb);
+            lineGroup->deleteMap = mb;
+
             MenuCheckbox * mc;
 	    mc = new MenuCheckbox("Active",false);
 	    mc->setCallback(this);
@@ -8945,13 +9071,13 @@ float ArtifactVis2::ClampUnity(float x)
 }
 void ArtifactVis2::findAllModels()
 {
-string dir = ConfigManager::getEntry("Plugin.ArtifactVis2.ArchInterfaceFolder").append("data/"); 
+string dir = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder"); 
 
 std::vector<DirFile*> entries0;
 
     string types = "kml";
 getDirFiles(dir, entries0, types);
-cerr << "Entries " << entries0.size() << endl;
+//cerr << "Entries " << entries0.size() << endl;
 
     string lastGroup = "";
     string lastGroup0 = "";
@@ -8962,7 +9088,7 @@ for(int i=0; i<entries0.size(); i++)
   {
     if( entries0[i]->filename != "..")
     {
-    cerr << "Files: " << entries0[i]->filename << endl;
+  //  cerr << "Files: " << entries0[i]->filename << endl;
     string dirSub = dir;
     dirSub.append(entries0[i]->filename);
     dirSub.append("/");
@@ -8982,7 +9108,7 @@ for(int i=0; i<entries0.size(); i++)
 		     {
 			     int index = _models3d.size() - 1;
 			     string group = _models3d[index]->group;
-			     cerr << "Found SubFile: " << _models3d[index]->filename << endl;
+			   //  cerr << "Found SubFile: " << _models3d[index]->filename << endl;
 				MenuCheckbox* site = new MenuCheckbox(_models3d[index]->name,false);
 				site->setCallback(this);
 				_showModelCB.push_back(site);
@@ -8992,7 +9118,7 @@ for(int i=0; i<entries0.size(); i++)
 		     {
 			     int index = _pointClouds.size() - 1;
 			     string group = _pointClouds[index]->group;
-			     cerr << "Found SubFile: " << _pointClouds[index]->filename << endl;
+			   //  cerr << "Found SubFile: " << _pointClouds[index]->filename << endl;
 				MenuCheckbox* site = new MenuCheckbox(_pointClouds[index]->name,false);
 				site->setCallback(this);
 				_showPointCloudCB.push_back(site);
@@ -9017,7 +9143,7 @@ for(int i=0; i<entries0.size(); i++)
 		     {
 			     int index = _models3d.size() - 1;
 			     string group = _models3d[index]->group;
-			     cerr << "Found SubFile: " << _models3d[index]->filename << endl;
+			    // cerr << "Found SubFile: " << _models3d[index]->filename << endl;
 				MenuCheckbox* site = new MenuCheckbox(_models3d[index]->name,false);
 				site->setCallback(this);
 				_showModelCB.push_back(site);
@@ -9027,7 +9153,7 @@ for(int i=0; i<entries0.size(); i++)
 		     {
 			     int index = _pointClouds.size() - 1;
 			     string group = _pointClouds[index]->group;
-			     cerr << "Found SubFile: " << _pointClouds[index]->filename << endl;
+			    // cerr << "Found SubFile: " << _pointClouds[index]->filename << endl;
 				MenuCheckbox* site = new MenuCheckbox(_pointClouds[index]->name,false);
 				site->setCallback(this);
 				_showPointCloudCB.push_back(site);
@@ -9052,7 +9178,7 @@ string ArtifactVis2::getKmlArray(string file)
  }
  else
  {   
-        std::cerr << "Found file: " << file << std::endl;
+       // std::cerr << "Found file: " << file << std::endl;
 
     mxml_node_t* tree;
     tree = mxmlLoadFile(NULL, fp, MXML_TEXT_CALLBACK);
@@ -9065,7 +9191,7 @@ string ArtifactVis2::getKmlArray(string file)
    }
    else
    {
-        std::cerr << "Parsing XML: " << file << std::endl;
+      //  std::cerr << "Parsing XML: " << file << std::endl;
 
     mxml_node_t* node = mxmlFindElement(tree, tree, "Placemark", NULL, NULL, MXML_DESCEND);
 
@@ -9128,7 +9254,7 @@ string ArtifactVis2::getKmlArray(string file)
 		}
 		else
 		{
-		  cerr << "As Quats\n";
+		 // cerr << "As Quats\n";
 		  rot = Quat(rotDegrees[0],rotDegrees[1],rotDegrees[2],rotDegrees[3]);
 		}
 	    Model* newModel = new Model();
@@ -9183,7 +9309,7 @@ void ArtifactVis2::addToModelDisplayMenu(string group, cvr::MenuCheckbox* site)
                    }
                    else
                    {
-                   cerr << "group: " << group << endl;
+                 //  cerr << "group: " << group << endl;
                      SubMenu*  newMenu = new SubMenu(group, group);
                       newMenu->setCallback(this);
                       newMenu->addItem(site);
@@ -9214,7 +9340,7 @@ void ArtifactVis2::addToPcDisplayMenu(string group, cvr::MenuCheckbox* site)
                    }
                    else
                    {
-                   cerr << "group: " << group << endl;
+                  // cerr << "group: " << group << endl;
                      SubMenu*  newMenu = new SubMenu(group, group);
                       newMenu->setCallback(this);
                       newMenu->addItem(site);
@@ -9236,7 +9362,7 @@ std::string ArtifactVis2::getPathFromFilePath(string filepath)
                  path = filepath;
                  path.erase(start,(path.length()-start));
                  path.append("/"); 
-                   cerr << "path: " << path << endl;
+                  // cerr << "path: " << path << endl;
             }
 return path;
 }
@@ -9276,6 +9402,7 @@ void ArtifactVis2::turnOffAll()
         _annotations[i]->so->setMovable(false);
         _annotations[i]->activeMap->setValue(false);
 	_annotations[i]->so->detachFromScene();
+        _annotations[i]->connectorNode->setNodeMask(0);
         }
     }
     for (int i = 0; i < _lineGroups.size(); i++)

@@ -5,9 +5,7 @@
 
           <Database value="/home/ngsmith/ArchInterface/queries/" />
           <ArchInterfaceFolder value="/home/ngsmith/ArchInterface/" />
-          <PicFolder value="/home/ngsmith/ArchInterface/data/" />
           <3DModelFolder value="/home/ngsmith/ArchInterface/data/" />
-          <ScanFolder value="/home/ngsmith/ArchInterface/data/scan_models/" />
           <MaxVisibleRange value="100000000000.0" />
           <Offset>
             <X value="-700000" />
@@ -15,9 +13,11 @@
             <Z value="0" />
           </Offset>
           <Tessellation value=".2" />
-          <ArtifactPanel x="0" y="1000" z="0" scale="1.0" />
-          <InfoPanel x="0" y="1000" z="0" scale="1.0" />
-          <FileManagerPanel x="0" y="1000" z="0" scale="0.5" />
+          <InfoPanel x="-500" y="1000" z="300" scale="0.5" />
+          <FileManagerPanel x="-300" y="1000" z="300" scale="0.5" />
+          <BookmarkPanel x="300" y="1000" z="0" scale="0.5" />
+          <UtilsPanel x="400" y="1000" z="0" scale="0.5" />
+          <QsPanel x="400" y="1000" z="300" scale="0.5" />
           <FileManagerTypes value="ply,obj,wrl,pts,xyb,xyz,3ds,jpg,tif,png,kml,xml" />
          
 	  <QueryTest value ="false">
