@@ -2,9 +2,12 @@
 
 #include <osg/Geometry>
 #include <osg/Material>
+#include <osg/Texture2D>
+#include <osgDB/ReadFile>
 
 #include <string>
 #include <vector>
+#include <iostream>
 
 TriangleShape::TriangleShape(std::string command, std::string name) 
 {
@@ -14,13 +17,16 @@ TriangleShape::TriangleShape(std::string command, std::string name)
     
     _vertices = new osg::Vec3Array(3);
     _colors = new osg::Vec4Array(3);
+    _textures = new osg::Vec2Array(3);
    
-    setPosition(osg::Vec3(0.0, 0.0, 0.0), osg::Vec3(1.0, 0.0, 0.0), osg::Vec3(1.0, 0.0, 1.0));
-    setColor(osg::Vec4(1.0, 0.0, 0.0, 1.0),osg::Vec4(0.0, 1.0, 0.0, 1.0),osg::Vec4(0.0, 0.0, 1.0, 1.0));
+    setPosition(osg::Vec3(-0.5, 0.0, -0.5), osg::Vec3(0.5, 0.0, -0.5), osg::Vec3(0.0, 0.0, 0.5));
+    setColor(osg::Vec4(1.0, 1.0, 1.0, 1.0),osg::Vec4(1.0, 1.0, 1.0, 1.0),osg::Vec4(1.0, 1.0, 1.0, 1.0));
+    setTextureCoords(osg::Vec2(0.0, 0.0), osg::Vec2(1.0, 0.0), osg::Vec2(0.5, 1.0));
     update(command);
 
     setVertexArray(_vertices); 
-    setColorArray(_colors); 
+    setColorArray(_colors);
+    setTexCoordArray(0, _textures);
     setColorBinding(osg::Geometry::BIND_PER_VERTEX);
     addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES,0,3));
 
@@ -29,6 +35,9 @@ TriangleShape::TriangleShape(std::string command, std::string name)
     state->setMode(GL_BLEND, osg::StateAttribute::ON);
     mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
     state->setAttributeAndModes(mat, osg::StateAttribute::ON);
+
+    //additional texture setup
+    setTextureImage("");
 }
 
 TriangleShape::~TriangleShape()
@@ -52,6 +61,50 @@ void TriangleShape::setColor(osg::Vec4 c0, osg::Vec4 c1, osg::Vec4 c2)
         getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
     else
         getOrCreateStateSet()->setRenderingHint(osg::StateSet::DEFAULT_BIN);
+
+}
+
+void TriangleShape::setTextureCoords(osg::Vec2 t1, osg::Vec2 t2, osg::Vec2 t3)
+{
+
+	(*_textures)[0].set(t1[0], t1[1]);
+	(*_textures)[1].set(t2[0], t2[1]);
+	(*_textures)[2].set(t3[0], t3[1]);
+
+}
+
+void TriangleShape::setTextureImage(std::string tex_name)
+{
+
+	osg::StateSet* state = getOrCreateStateSet();
+	osg::Texture2D* tex = new osg::Texture2D;
+	osg::Image* image = new osg::Image;
+    	tex->setDataVariance(osg::Object::DYNAMIC);
+
+	//Whether to load an image or not
+	if(tex_name.empty())
+	{
+		_texture_name = "";
+		tex->setImage(image);
+		state->setTextureAttributeAndModes(0, tex, osg::StateAttribute::OFF);
+	}
+	else
+	{
+		_texture_name = std::string("/home/jalange/calvr_plugins/calit2/Mugic/shapes/textures/") + tex_name;
+		image = osgDB::readImageFile(_texture_name);
+
+    		//testing
+    		if(!image)
+		{
+			std::cout << "Image does not exist." << std::endl;
+			_texture_name = "";
+			state->setTextureAttributeAndModes(0, tex, osg::StateAttribute::OFF);
+			return;
+		}
+
+		tex->setImage(image);
+    		state->setTextureAttributeAndModes(0, tex, osg::StateAttribute::ON);
+	}
 
 }
 
@@ -84,6 +137,14 @@ void TriangleShape::update(std::string command)
     addParameter(command, "g3");
     addParameter(command, "b3");
     addParameter(command, "a3");
+
+    addParameter(command, "texture");
+    addParameter(command, "t1s");
+    addParameter(command, "t1t");
+    addParameter(command, "t2s");
+    addParameter(command, "t2t");
+    addParameter(command, "t3s");
+    addParameter(command, "t3t");
 }
 
 void TriangleShape::update()
@@ -94,6 +155,10 @@ void TriangleShape::update()
 
     osg::Vec3 p1((*_vertices)[0]);
     osg::Vec4 c1((*_colors)[0]);
+    osg::Vec2 t1((*_textures)[0]);
+    osg::Vec2 t2((*_textures)[1]);
+    osg::Vec2 t3((*_textures)[2]);
+    std::string tex_name = _texture_name;
 
     setParameter("x1", p1.x()); 
     setParameter("y1", p1.y()); 
@@ -125,11 +190,22 @@ void TriangleShape::update()
     setParameter("b3", c3.b()); 
     setParameter("a3", c3.a()); 
 
+    setParameter("texture", tex_name);
+    setParameter("t1s", t1[0]);
+    setParameter("t1t", t1[1]);
+    setParameter("t2s", t2[0]);
+    setParameter("t2t", t2[1]);
+    setParameter("t3s", t3[0]);
+    setParameter("t3t", t3[0]);
+
     setPosition(p1, p2, p3);
     setColor(c1, c2 ,c3);
+    setTextureCoords(t1, t2, t3);
+    setTextureImage(tex_name);
 
-	_colors->dirty();
-	_vertices->dirty();
+    _colors->dirty();
+    _vertices->dirty();
+    _textures->dirty();
     dirtyBound();
     
 	// reset flag

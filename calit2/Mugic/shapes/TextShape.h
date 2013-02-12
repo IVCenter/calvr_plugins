@@ -14,6 +14,7 @@ public:
 	virtual ~TextShape();
     void update(std::string);
     osg::Geode* getParent();
+    osg::MatrixTransform* getMatrixParent();
     osg::Drawable* asDrawable();
 
     struct TextUpdateCallback : public osg::Drawable::UpdateCallback

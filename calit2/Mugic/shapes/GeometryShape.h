@@ -5,12 +5,14 @@
 #include <osg/Geode>
 #include <osg/Geometry>
 #include <osg/Drawable>
+#include <osg/MatrixTransform>
 
 class GeometryShape : public BasicShape, public osg::Geometry
 {
     public:        
 
         virtual void update(std::string command) = 0;
+	osg::MatrixTransform* getMatrixParent();
         osg::Geode* getParent();
         osg::Drawable* asDrawable();
 
@@ -30,6 +32,8 @@ class GeometryShape : public BasicShape, public osg::Geometry
 	    virtual ~GeometryShape();
         osg::Vec3Array* _vertices;
         osg::Vec4Array* _colors;
+	osg::Vec2Array* _textures; //for texture coordinates
+	std::string _texture_name; //path to texture
 
         virtual void update() = 0;
 };

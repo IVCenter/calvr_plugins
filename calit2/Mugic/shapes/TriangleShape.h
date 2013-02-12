@@ -18,6 +18,8 @@ protected:
     TriangleShape();
     void setPosition(osg::Vec3, osg::Vec3, osg::Vec3);
     void setColor(osg::Vec4, osg::Vec4, osg::Vec4);
+    void setTextureCoords(osg::Vec2, osg::Vec2, osg::Vec2);
+    void setTextureImage(std::string);
     void update();
 };
 #endif

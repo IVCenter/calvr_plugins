@@ -36,6 +36,11 @@ osg::Geode* TextShape::getParent()
     return osgText::Text::getParent(0)->asGeode();
 }
 
+osg::MatrixTransform* TextShape::getMatrixParent()
+{
+	return (osgText::Text::getParent(0)->asGeode())->osg::Node::getParent(0)->asTransform()->asMatrixTransform();
+}
+
 osg::Drawable* TextShape::asDrawable()
 {
     return dynamic_cast<osg::Drawable*>(this);
