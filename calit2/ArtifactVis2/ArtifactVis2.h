@@ -475,6 +475,7 @@ public:
     void testSelected();
     std::string getCharacterAscii(int code);
     void readAnnotationFile();
+    void saveBookmark(osg::Matrix headMat, float scale);
     bool nvidia;
     osg::Program* pgm1;
     float initialPointScale;// = ConfigManager::getFloat("Plugin.Points.PointScale", 0.001f);

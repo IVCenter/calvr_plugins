@@ -1998,7 +1998,10 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
         Quat camQuad = camMat.getRotate();
         //<placemark><name>Dam View 2</name><scale>1.47141</scale><x>12569.2</x><y>17333.1</y><z>-42045.8</z><rx>0.0266129</rx><ry>-0.0024595</ry><rz>-0.491622</rz><rw>0.870398</rw></placemark>
         cerr << "<placemark><name></name><scale>" << cscale << "</scale><x>" << (camTrans.x() / cscale) << "</x><y>" << (camTrans.y() / cscale) << "</y><z>" << (camTrans.z() / cscale) << "</z><rx>" << camQuad.x() << "</rx><ry>" << camQuad.y() << "</ry><rz>" << camQuad.z() << "</rz><rw>" << camQuad.w() << "</rw></placemark>\n";
+
+        saveBookmark(camMat,cscale);
     }
+
 
     if (menuItem == _selectArtifactCB)
     {
@@ -2203,45 +2206,157 @@ updateLineGroup();
 }
 void ArtifactVis2::loadScaleBar(osg::Vec3d start)
 {
-    string modelPath = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("scale_5_m/scale_5_m.obj");
-    Node* modelFileNode = osgDB::readNodeFile(modelPath);
-    //_modelLoaded[i*26+j] = true;
-    PositionAttitudeTransform* modelTrans = new PositionAttitudeTransform();
-    Matrixd scale;
-    double snum = 0.58166;
-    scale.makeScale(snum, snum, snum);
-    MatrixTransform* scaleTrans = new MatrixTransform();
-    scaleTrans->setMatrix(scale);
-    scaleTrans->addChild(modelFileNode);
-    MatrixTransform* siteRote = new MatrixTransform();
-    //Matrixd rot2;
-    //rot2.makeRotate(osg::DegreesToRadians(1.0), 1, 0, 0);
-    Matrix pitchMat;
-    Matrix yawMat;
-    Matrix rollMat;
-    pitchMat.makeRotate(DegreesToRadians(0.0), 1, 0, 0);
-    yawMat.makeRotate(DegreesToRadians(0.0), 0, 1, 0);
-    rollMat.makeRotate(DegreesToRadians(0.0), 0, 0, 1);
-    siteRote->setMatrix(pitchMat * yawMat * rollMat);
-    siteRote->addChild(scaleTrans);
-    //_modelartPos = artifacts[art]->modelPos + position;
-    Vec3d position(39942.500, 73212.802, 1451.860);
-    modelTrans->setPosition(start);
-    //modelTrans->addChild(scaleTrans);
-    modelTrans->addChild(siteRote);
-    //root_node->addChild(modelTrans);
-    _scaleBarModel = new osg::MatrixTransform();
-    _scaleBarModel->addChild(modelTrans);
-    //_selectModelLoad->addChild(siteRote);
-    StateSet* ss = _scaleBarModel->getOrCreateStateSet();
-    ss->setMode(GL_LIGHTING, StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-    Material* mat = new Material();
-    mat->setColorMode(Material::AMBIENT_AND_DIFFUSE);
-    Vec4 color_dif(1, 1, 1, 1);
-    mat->setDiffuse(Material::FRONT_AND_BACK, color_dif);
-    ss->setAttribute(mat);
-    ss->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-    _root->addChild(_scaleBarModel);
+int i = 0;
+ string currentModelPath = _models3d[i]->fullpath;
+ string name = _models3d[i]->name;
+ newSelectedFile = "";
+ newSelectedName = "";
+
+// Matrix handMat = getHandToObjectMatrix();
+         Vec3 currentPos = _models3d[i]->pos;
+        Quat  currentRot = _models3d[i]->rot;
+  //Check if ModelPath has been loaded
+  Node* modelNode;
+  
+            if (objectMap.count(currentModelPath) == 0)
+	    {
+		 objectMap[currentModelPath] = osgDB::readNodeFile(currentModelPath);
+	    }
+            modelNode = objectMap[currentModelPath];
+  
+//Add Lighting and Culling
+
+		if(false)
+		{
+		    osg::StateSet* stateset = modelNode->getOrCreateStateSet();
+		    stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+		}
+		if(true)
+		{
+		    osg::StateSet * stateset = modelNode->getOrCreateStateSet();
+		    osg::CullFace * cf=new osg::CullFace();
+		    cf->setMode(osg::CullFace::BACK);
+		    stateset->setAttributeAndModes( cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+		}
+                if(true)
+		{
+		TextureResizeNonPowerOfTwoHintVisitor tr2v(false);
+		modelNode->accept(tr2v);
+                }
+                if(false)
+                {
+                    StateSet* ss = modelNode->getOrCreateStateSet();
+                    ss->setMode(GL_LIGHTING, StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+                    Material* mat = new Material();
+                    mat->setColorMode(Material::AMBIENT_AND_DIFFUSE);
+                    Vec4 color_dif(1, 1, 1, 1);
+                    mat->setDiffuse(Material::FRONT_AND_BACK, color_dif);
+                    ss->setAttribute(mat);
+                    ss->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+                }
+
+//Add to SceneObject
+  //   _query[q]->artifacts[inc]->model->name = basket;
+    
+float currentScale = _models3d[i]->scale;
+
+	    SceneObject * so;
+	    so = new SceneObject(name, false, false, false, true, false);
+	    osg::Switch* switchNode = new osg::Switch();
+	    so->addChild(switchNode);
+	    PluginHelper::registerSceneObject(so,"Test");
+	    so->attachToScene();
+//Add currentNode to switchNode
+      _models3d[i]->currentModelNode = modelNode;  
+	switchNode->addChild(modelNode);
+      _models3d[i]->switchNode = switchNode;
+
+     //_root->addChild(modelNode);
+//Add menu system
+	    so->setNavigationOn(true);
+	    so->setMovable(false);
+	    so->addMoveMenuItem();
+	    so->addNavigationMenuItem();
+            float min = 0.0001;
+            float max = 1;
+            so->addScaleMenuItem("Scale",min,max,currentScale);
+	    SubMenu * sm = new SubMenu("Position");
+	    so->addMenuItem(sm);
+
+	    MenuButton * mb;
+	    mb = new MenuButton("Load");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+
+	    SubMenu * savemenu = new SubMenu("Save");
+	    sm->addItem(savemenu);
+
+	    mb = new MenuButton("Save");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+            _models3d[i]->saveMap = mb;
+
+	    mb = new MenuButton("Save New Kml");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+            _models3d[i]->saveNewMap = mb;
+
+	    mb = new MenuButton("Reset to Origin");
+	    mb->setCallback(this);
+	    so->addMenuItem(mb);
+            _models3d[i]->resetMap = mb;
+
+            MenuCheckbox * mc;
+	    mc = new MenuCheckbox("Active",false);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _models3d[i]->activeMap = mc;
+
+            
+	    mc = new MenuCheckbox("Visible",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _models3d[i]->visibleMap = mc;
+            _models3d[i]->visible = true;
+
+            float rValue = 0;
+            min = -1;
+            max = 1;
+            MenuRangeValue* rt = new MenuRangeValue("rx",min,max,rValue);
+            rt->setCallback(this);
+	    so->addMenuItem(rt);
+            _models3d[i]->rxMap = rt;
+
+            rt = new MenuRangeValue("ry",min,max,rValue);
+            rt->setCallback(this);
+	    so->addMenuItem(rt);
+            _models3d[i]->ryMap = rt;
+
+            rt = new MenuRangeValue("rz",min,max,rValue);
+            rt->setCallback(this);
+	    so->addMenuItem(rt);
+            _models3d[i]->rzMap = rt;
+/*
+	    mc = new MenuCheckbox("Panel Visible",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+ //           _query[q]->artifacts[inc]->model->pVisibleMap = mc;
+           // _query[q]->artifacts[inc]->model->pVisible = true;
+*/
+Vec3 orig = currentPos; 
+cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
+
+ so->setPosition(currentPos);     
+ so->setScale(currentScale);
+ so->setRotation(currentRot);     
+
+
+
+    _models3d[i]->so = so;
+    _models3d[i]->pos = so->getPosition();
+    _models3d[i]->rot = so->getRotation();
+    _models3d[i]->active = false;
+    _models3d[i]->loaded = true;
 }
 void ArtifactVis2::setActiveArtifact(int _lockedTo, int _lockedType, int art, int q)
 {
@@ -8151,7 +8266,8 @@ void ArtifactVis2::startLineObject()
     //get handpos
    Matrix handMat = getHandToObjectMatrix(); 
    Vec3 currentPos = handMat.getTrans();
-       Vec3 scenePos = getHandToSceneMatrix().getTrans();
+       //Vec3 scenePos = getHandToSceneMatrix().getTrans();
+       Vec3 scenePos = currentPos;
     //Setup Colors
 
     Vec4f color = Vec4f(0, 0.42, 0.92, 1);
@@ -8511,9 +8627,10 @@ _lineGroups[i]->switchNode->addChild(lgeode);
 }
 void ArtifactVis2::addLineVertex(int i)
 {
-       Vec3 pos = getHandToObjectMatrix().getTrans();
+       //Vec3 pos = getHandToObjectMatrix().getTrans();
+       Vec3 pos = getHandToSceneMatrix().getTrans();
        Vec3 orig = _lineGroups[i]->so->getPosition();
-       pos = pos - orig;
+       //pos = pos + orig;
        int lEndIndex = _lineGroups[i]->vertex.size();
        int lStartIndex = lEndIndex -1;
        int lineIndex = _lineGroups[i]->connector.size();
@@ -8646,15 +8763,27 @@ if(lineGroupsEditing)
     {
 
        
-       Vec3 pos = getHandToObjectMatrix().getTrans();
-       Vec3 orig = _lineGroups[i]->so->getPosition();
-//cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
-       pos = pos - orig;
+           osg::Matrixd o2w = PluginHelper::getObjectToWorldTransform();
+        
+       Matrix poMat = getHandToObjectMatrix();
+       Vec3 pos;
+       
+       osg::Matrix soMat = _lineGroups[i]->so->getObjectToWorldMatrix();
+       Vec3 origSo = _lineGroups[i]->so->getPosition();
+      // poMat = poMat * soMat;
+      
+       pos = poMat.getTrans() - origSo;
+      // pos = ;
 //bangdist
        int lEndIndex = _lineGroups[i]->vertex.size() - 1;
        int lStartIndex = lEndIndex -1;
        int lineIndex = lStartIndex;
 
+      // Vec3 viewOrig = PluginHelper::getObjectTransform().getMatrix().getTrans(); 
+      // Vec3 viewOrig = PluginHelper::getHeadMat(0).getTrans() * w2o; 
+//cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
+      // viewOrig = viewOrig - orig;
+      // pos = pos - orig + viewOrig;
        
        if(_lineGroups[i]->vertex[lEndIndex] != pos)
        {
@@ -8703,7 +8832,7 @@ if(lineGroupsEditing)
 
 
 
-orig = pos;
+Vec3 orig = pos;
 //cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
 _lineGroups[i]->switchNode->removeChild(_lineGroups[i]->cubeGeode[lEndIndex]);
    _lineGroups[i]->cubeGeode[lEndIndex] = sphereGeode2;
@@ -9497,4 +9626,113 @@ void ArtifactVis2::turnOffAll()
 	SceneManager::instance()->setObjectScale(1.0);
     }
 
+}
+void ArtifactVis2::saveBookmark(osg::Matrix headMat, float scale)
+{
+    int newFly = _flyplace->name.size();
+
+    stringstream ss;
+    ss << newFly;
+    string flyname = ss.str();
+
+        _flyplace->name.push_back(flyname);
+        _flyplace->scale.push_back(scale);
+        _flyplace->x.push_back(headMat.getTrans().x());
+        _flyplace->y.push_back(headMat.getTrans().y());
+        _flyplace->z.push_back(headMat.getTrans().z());
+        _flyplace->rx.push_back(headMat.getRotate().x());
+        _flyplace->ry.push_back(headMat.getRotate().y());
+        _flyplace->rz.push_back(headMat.getRotate().z());
+        _flyplace->rw.push_back(headMat.getRotate().w());
+
+        MenuButton* gotoP = new MenuButton(flyname);  
+        gotoP->setCallback(this);
+        _bookmarkPanel->addMenuItem(gotoP);
+        _goto.push_back(gotoP);
+
+//Create Xml
+
+    mxml_node_t *xml;    /* <?xml ... ?> */
+    mxml_node_t *flyto;
+    mxml_node_t *placemark;
+    mxml_node_t *_name;   /* <name> */
+    mxml_node_t *_scale;
+    mxml_node_t *_x;
+    mxml_node_t *_y;
+    mxml_node_t *_z;
+    mxml_node_t *_rx;
+    mxml_node_t *_ry;
+    mxml_node_t *_rz;
+    mxml_node_t *_rw;
+
+xml = mxmlNewXML("1.0");
+            flyto = mxmlNewElement(xml, "flyto");
+
+    for (int i = 0; i < (newFly+1); i++)
+    {
+	stringstream buffer;
+	buffer << _flyplace->scale[i];
+        float c_scale = _flyplace->scale[i];
+	   string x_scale = buffer.str();
+	   buffer.str("");
+	   buffer << (_flyplace->x[i]/c_scale);
+	   string x = buffer.str();
+	   buffer.str("");
+	   buffer << (_flyplace->y[i]/c_scale);
+	   string y = buffer.str();
+	   buffer.str("");
+	   buffer << (_flyplace->z[i]/c_scale);
+	   string z = buffer.str();
+	   buffer.str("");
+	   buffer << (_flyplace->rx[i]);
+	   string rx = buffer.str();
+	   buffer.str("");
+	   buffer << (_flyplace->ry[i]);
+	   string ry = buffer.str();
+	   buffer.str("");
+	   buffer << (_flyplace->rz[i]);
+	   string rz = buffer.str();
+	   buffer.str("");
+	   buffer << (_flyplace->rw[i]);
+	   string rw = buffer.str();
+	   buffer.str("");
+         
+           string name = _flyplace->name[i]; 
+           placemark = mxmlNewElement(flyto, "Placemark");
+              _name = mxmlNewElement(placemark, "name");
+              mxmlNewText(_name, 0, name.c_str());
+              _scale = mxmlNewElement(placemark, "scale");
+              mxmlNewText(_scale, 0, x_scale.c_str());
+              _x = mxmlNewElement(placemark, "x");
+              mxmlNewText(_x, 0, x.c_str());
+              _y = mxmlNewElement(placemark, "y");
+              mxmlNewText(_y, 0, y.c_str());
+              _z = mxmlNewElement(placemark, "z");
+              mxmlNewText(_z, 0, z.c_str());
+              _rx = mxmlNewElement(placemark, "rx");
+              mxmlNewText(_rx, 0, rx.c_str());
+              _ry = mxmlNewElement(placemark, "ry");
+              mxmlNewText(_ry, 0, ry.c_str());
+              _rz = mxmlNewElement(placemark, "rz");
+              mxmlNewText(_rz, 0, rz.c_str());
+              _rw = mxmlNewElement(placemark, "rw");
+              mxmlNewText(_rw, 0, rw.c_str());
+    } 
+//.......................................................
+//Save File
+
+  const char *ptr;
+    ptr = "";
+  ptr = mxmlSaveAllocString(xml, MXML_NO_CALLBACK);
+    //cout << ptr;
+    FILE *fp;
+    
+    string filename = ConfigManager::getEntry("Plugin.ArtifactVis2.Database").append("flyto.xml");
+    
+    fp = fopen(filename.c_str(), "w");
+
+    fprintf(fp, ptr);
+
+    fclose(fp);
+ 
 }
