@@ -4,6 +4,7 @@
 #include <osg/Material>
 #include <osg/Texture2D>
 #include <osgDB/ReadFile>
+#include <cvrConfig/ConfigManager.h>
 
 #include <string>
 #include <vector>
@@ -132,7 +133,8 @@ void CircleShape::setTextureImage(std::string tex_name)
 	}
 	else
 	{
-		_texture_name = std::string("/home/jalange/calvr_plugins/calit2/Mugic/shapes/textures/") + tex_name;
+		std::string file_path = cvr::ConfigManager::getEntry("dir", "Plugin.Mugic.Texture", "");
+		_texture_name = file_path + tex_name;
 		image = osgDB::readImageFile(_texture_name);
 
     		//testing
