@@ -212,7 +212,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			glewInit();
 			m_videoplayer.RegisterNotificationFunction(videoNotifyFunction, 0);
 			bool isHead = cvr::ComController::instance()->isMaster();
-			m_videoplayer.init(isHead, false);
+			m_videoplayer.init(isHead, isHead);
 			//m_videoplayer.init(true, true);
 			//m_videoplayer.init(false, false);
 			//gid = m_videoplayer.LoadVideoFile("/mnt/pointstar/cars_1080p.mov", true);
