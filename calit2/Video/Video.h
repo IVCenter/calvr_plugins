@@ -46,7 +46,7 @@ protected:
 
 	mutable VideoPlayerAPI m_videoplayer;
 	mutable std::string m_loadVideo;
-	mutable cvr::MenuItem* m_removeVideo;
+	mutable std::list<cvr::MenuItem*> m_removeVideo;
 	mutable std::map<unsigned int, TextureManager*> m_gidMap;
 
 	mutable std::list<cvr::SceneObject*> m_sceneDelete;
