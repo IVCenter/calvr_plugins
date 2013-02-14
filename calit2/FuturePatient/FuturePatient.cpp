@@ -9,6 +9,9 @@
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <mysql++/mysql++.h>
 
@@ -79,15 +82,29 @@ bool FuturePatient::init()
     
     _fpMenu = new SubMenu("FuturePatient");
 
+    _layoutMenu = new SubMenu("Layouts");
+    _fpMenu->addItem(_layoutMenu);
+
+    _loadLayoutMenu = new SubMenu("Load");
+    _layoutMenu->addItem(_loadLayoutMenu);
+
+    _saveLayoutButton = new MenuButton("Save");
+    _saveLayoutButton->setCallback(this);
+    _layoutMenu->addItem(_saveLayoutButton);
+
     _chartMenu = new SubMenu("Charts");
     _fpMenu->addItem(_chartMenu);
 
     _presetMenu = new SubMenu("Presets");
     _chartMenu->addItem(_presetMenu);
 
-    _inflammationButton = new MenuButton("Big 4");
+    _inflammationButton = new MenuButton("Big 4 (Sep)");
     _inflammationButton->setCallback(this);
     _presetMenu->addItem(_inflammationButton);
+
+    _big4MultiButton = new MenuButton("Big 4 (Multi)");
+    _big4MultiButton->setCallback(this);
+    _presetMenu->addItem(_big4MultiButton);
 
     _cholesterolButton = new MenuButton("Cholesterol");
     _cholesterolButton->setCallback(this);
@@ -549,6 +566,79 @@ bool FuturePatient::init()
 	delete[] lfList;
     }
 
+    _layoutDirectory = ConfigManager::getEntry("value","Plugin.FuturePatient.LayoutDir","");
+
+    lfList = NULL;
+    listEntries = 0;
+
+    if(ComController::instance()->isMaster())
+    {
+	DIR * dir;
+
+	if ((dir = opendir(_layoutDirectory.c_str())) == NULL)
+	{
+	    std::cerr << "Unable to open directory: " << _layoutDirectory << std::endl;
+	}
+	else
+	{
+	    dirent * entry;
+	    struct stat st;
+	    while ((entry = readdir(dir)) != NULL)
+	    {
+		std::string fullPath(_layoutDirectory + "/" + entry->d_name);
+		stat(fullPath.c_str(), &st);
+		if(!S_ISDIR(st.st_mode))
+		{
+		    listEntries++;
+		}
+	    }
+
+	    if(listEntries)
+	    {
+		lfList = new listField[listEntries];
+		int listIndex = 0;
+		rewinddir(dir);
+		while ((entry = readdir(dir)) != NULL)
+		{
+		    std::string fullPath(_layoutDirectory + "/" + entry->d_name);
+		    stat(fullPath.c_str(), &st);
+		    if(!S_ISDIR(st.st_mode))
+		    {
+			strncpy(lfList[listIndex].entry,entry->d_name,255);
+			listIndex++;
+		    }
+		}
+	    }
+	}
+	ComController::instance()->sendSlaves(&listEntries,sizeof(int));
+	if(listEntries)
+	{
+	    ComController::instance()->sendSlaves(lfList,listEntries*sizeof(struct listField));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&listEntries,sizeof(int));
+	if(listEntries)
+	{
+	    lfList = new listField[listEntries];
+	    ComController::instance()->readMaster(lfList,listEntries*sizeof(struct listField));
+	}
+    }
+    
+    for(int i = 0; i < listEntries; ++i)
+    {
+	MenuButton * tempb = new MenuButton(lfList[i].entry);
+	tempb->setCallback(this);
+	_loadLayoutMenu->addItem(tempb);
+	_loadLayoutButtons.push_back(tempb);
+    }
+
+    if(lfList)
+    {
+	delete[] lfList;
+    }
+
     return true;
 }
 
@@ -619,10 +709,44 @@ void FuturePatient::menuCallback(MenuItem * item)
 
     if(item == _inflammationButton)
     {
+	checkLayout();
+
+	menuCallback(_removeAllButton);
+
+	if(_multiAddCB->getValue())
+	{
+	    _multiAddCB->setValue(false);
+	    menuCallback(_multiAddCB);
+	}
+
+	_layoutObject->setSyncTime(false);
 	loadGraph("Smarr","hs-CRP");
 	loadGraph("Smarr","SIgA");
 	loadGraph("Smarr","Lysozyme");
 	loadGraph("Smarr","Lactoferrin");
+	_layoutObject->setSyncTime(true);
+	_layoutObject->setRows(4.0);
+    }
+
+    if(item == _big4MultiButton)
+    {
+	checkLayout();
+
+	menuCallback(_removeAllButton);
+
+	if(!_multiAddCB->getValue())
+	{
+	    _multiAddCB->setValue(true);
+	    menuCallback(_multiAddCB);
+	}
+
+	_layoutObject->setSyncTime(false);
+	loadGraph("Smarr","hs-CRP");
+	loadGraph("Smarr","SIgA");
+	loadGraph("Smarr","Lysozyme");
+	loadGraph("Smarr","Lactoferrin");
+	_layoutObject->setSyncTime(true);
+	_layoutObject->setRows(4.0);
     }
 
     if(item == _cholesterolButton)

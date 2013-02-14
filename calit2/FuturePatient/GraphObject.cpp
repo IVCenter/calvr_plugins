@@ -29,6 +29,7 @@ GraphObject::GraphObject(mysqlpp::Connection * conn, float width, float height, 
 
     _mgdList = new MenuList();
     _mgdList->setValues(mgdText);
+    _mgdList->setIndex(3);
     _mgdList->setCallback(this);
     addMenuItem(_mgdList);
 

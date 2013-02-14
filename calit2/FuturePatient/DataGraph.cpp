@@ -114,7 +114,8 @@ DataGraph::DataGraph()
 
     _width = _height = 1000.0;
 
-    _multiGraphDisplayMode = _currentMultiGraphDisplayMode = MGDM_NORMAL;
+    _multiGraphDisplayMode = MGDM_COLOR_PT_SIZE;
+    _currentMultiGraphDisplayMode = MGDM_NORMAL;
 
     osg::Vec4 color(1.0,1.0,1.0,1.0);
 

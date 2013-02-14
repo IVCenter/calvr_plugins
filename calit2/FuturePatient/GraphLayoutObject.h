@@ -40,6 +40,9 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
             return _minimized;
         }
 
+        void setRows(float rows);
+        void setSyncTime(bool sync);
+
         virtual void menuCallback(cvr::MenuItem * item);
 
         virtual bool processEvent(cvr::InteractionEvent * event);

@@ -243,6 +243,21 @@ void GraphLayoutObject::maximize()
     _minimized = false;
 }
 
+void GraphLayoutObject::setRows(float rows)
+{
+    _rowsRV->setValue(rows);
+    menuCallback(_rowsRV);
+}
+
+void GraphLayoutObject::setSyncTime(bool sync)
+{
+    if(sync != _syncTimeCB->getValue())
+    {
+	_syncTimeCB->setValue(sync);
+	menuCallback(_syncTimeCB);
+    }
+}
+
 void GraphLayoutObject::menuCallback(MenuItem * item)
 {
     if(item == _resetLayoutButton)
