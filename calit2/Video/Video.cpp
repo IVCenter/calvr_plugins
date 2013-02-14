@@ -14,7 +14,7 @@
 
 CVRPLUGIN(Video)
 
-Video::Video() : m_removeVideo(0)
+Video::Video()
 {
 
 }
@@ -144,13 +144,9 @@ void Video::postFrame()
 	m_ptsUpdateList.splice(m_ptsUpdateList.begin(), ptsList);
 #endif
 
-}
-
-void Video::preFrame()
-{
 	while (m_sceneDelete.size())
 	{
-		m_sceneDelete.front()->detachFromScene();;
+		m_sceneDelete.front()->detachFromScene();
 		delete m_sceneDelete.front();
 		m_sceneDelete.pop_front();
 	}
@@ -171,6 +167,11 @@ void Video::preFrame()
 	}
 }
 
+void Video::preFrame()
+{
+
+}
+
 void Video::menuCallback(cvr::MenuItem* item)
 {
 	if (item->getType() == cvr::BUTTON)
@@ -182,7 +183,7 @@ void Video::menuCallback(cvr::MenuItem* item)
 		}
 		else if (item->getParent() == removeMenu)
 		{
-			m_removeVideo = item;
+			m_removeVideo.push_back(item);
 			removeMenu->removeItem(item);
 			//delete manager;
 			//delete item;
@@ -200,6 +201,15 @@ void Video::menuCallback(cvr::MenuItem* item)
 
 void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType type) const
 {
+	if (cvr::CVRViewer::instance()->done())
+	{
+		
+		for (int i = 0; i < removeMenu->getNumChildren(); i++)
+		{
+			m_removeVideo.push_back(removeMenu->getChild(i));
+		}
+		// CalVR is closing, delete all outstanding textures
+	}
 	static int init = 0;
 	stopwatch cbt;
 	cbt.start();
@@ -212,7 +222,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			glewInit();
 			m_videoplayer.RegisterNotificationFunction(videoNotifyFunction, 0);
 			bool isHead = cvr::ComController::instance()->isMaster();
-			m_videoplayer.init(isHead, false);
+			m_videoplayer.init(isHead, isHead);
 			//m_videoplayer.init(true, true);
 			//m_videoplayer.init(false, false);
 			//gid = m_videoplayer.LoadVideoFile("/mnt/pointstar/cars_1080p.mov", true);
@@ -275,9 +285,9 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 
 			m_loadVideo.clear();
 		}	
-		if (m_removeVideo)
+		while (m_removeVideo.size())
 		{
-			TextureManager* manager = static_cast<TextureManager*>(m_removeVideo->getExtraData());
+			TextureManager* manager = static_cast<TextureManager*>(m_removeVideo.front()->getExtraData());
 
 			unsigned int gidcount = manager->GetVideoCount();
 			for (unsigned int i = 0; i < gidcount; i++) // only update the first, it will update all
@@ -290,8 +300,8 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			m_gidMap.erase(manager->GetVideoGID());
 			m_sceneDelete.push_back(manager->GetSceneObject());
 			delete manager;
-			m_menuDelete.push_back(m_removeVideo);
-			m_removeVideo = 0;
+			m_menuDelete.push_back(m_removeVideo.front());
+			m_removeVideo.pop_front();
 		}
 	}
 
@@ -301,8 +311,12 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 	double textureTime = 0;
 	for (std::list<PTSUpdate>::iterator iter = m_ptsUpdateList.begin(); iter != m_ptsUpdateList.end(); ++iter)
 	{
+		TextureManager* manager = 0;
 		PTSUpdate update = *iter;
-		TextureManager* manager = m_gidMap[update.gid];
+		if (m_gidMap.find(update.gid) != m_gidMap.end())
+			manager = m_gidMap[update.gid];
+		else
+			continue;
 
 		//printf("PTSUpdate for video group %x\n", update.gid);
 		unsigned int gidcount = manager->GetVideoCount();
