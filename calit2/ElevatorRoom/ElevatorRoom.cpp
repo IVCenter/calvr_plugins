@@ -107,9 +107,12 @@ bool ElevatorRoom::init()
     _isOpening = true;
     _pauseStart = PluginHelper::getProgramDuration();
     _pauseLength = -1;
+    _doorPauseStart = PluginHelper::getProgramDuration();
+    _doorPauseLength = -1;
     _mode = NONE;
     _score = 0;
     _hit = false;
+    _doorClosed = true;
     _avatarFlashPerSec = 10;
     _lightFlashPerSec = 7;
     _gameMode = THREE;
@@ -266,7 +269,7 @@ void ElevatorRoom::preFrame()
             
             unsigned char buf[1];
             buf[0] = '1';
-            //write_SPP(sizeof(buf), buf);
+            write_SPP(sizeof(buf), buf);
             
             if (_staticMode)
             {
@@ -347,7 +350,37 @@ void ElevatorRoom::preFrame()
     if (_activeDoor >= 0 && _activeDoor < NUM_DOORS &&
         (PluginHelper::getProgramDuration() - _pauseStart) > _pauseLength)
     {
+        // Turn on light and start timer for door opening
         _modelHandler->setLight(true);        
+
+
+        if (_doorClosed)
+        {
+            _doorPauseStart = PluginHelper::getProgramDuration();
+            int x = rand() % 3;
+            unsigned char buf[1];
+            if (x == 0)
+            {
+                _doorPauseLength = .1;
+                buf[0] = '5';
+                std::cout << "Pausing 100 ms" << std::endl;
+            }
+            if (x == 1)
+            {
+                _doorPauseLength = .5;
+                buf[0] = '6';
+                std::cout << "Pausing 500 ms" << std::endl;
+            }
+            if (x == 2)
+            {
+                _doorPauseLength = .9;
+                buf[0] = '7';
+                std::cout << "Pausing 900 ms" << std::endl;
+            }
+            write_SPP(sizeof(buf), buf);
+            _doorClosed = false;
+        }
+
 
         // Flashing avatars
         if (_mode == CHECKER)
@@ -362,7 +395,7 @@ void ElevatorRoom::preFrame()
                 
                 unsigned char buf[1];
                 buf[0] = '2';
-                write_SPP(sizeof(buf), buf);
+                //write_SPP(sizeof(buf), buf);
 
                 _checkSpeed = ((rand() % 2) + 1); // .5 -> 1
                 _flashCount++;
@@ -374,7 +407,7 @@ void ElevatorRoom::preFrame()
         {
             unsigned char buf[1];
             buf[0] = '4';
-            //write_SPP(sizeof(buf), buf);
+            write_SPP(sizeof(buf), buf);
 
             if (_hit)
             {
@@ -396,7 +429,7 @@ void ElevatorRoom::preFrame()
         {
             unsigned char buf[1];
             buf[0] = '3';
-            //write_SPP(sizeof(buf), buf);
+            write_SPP(sizeof(buf), buf);
 
             if (_hit)
             {
@@ -416,18 +449,33 @@ void ElevatorRoom::preFrame()
 
         if (_isOpening)
         {
-            if (_modelHandler->doorInView())
+            if (_modelHandler->doorInView() && 
+                (PluginHelper::getProgramDuration() - _doorPauseStart) > _doorPauseLength)
             {
+                _doorPauseLength = -1;
                 _modelHandler->openDoor();
+                
+                if (_firstOpening)
+                {
+                    unsigned char buf[1];
+                    if (_mode == ALIEN)
+                    {
+                        buf[0] = '8';
+                    }
+                    else if (_mode == ALLY)
+                    {
+                        buf[0] = '9';
+                    }
 
-                unsigned char buf[1];
-                buf[0] = '2';
-                //write_SPP(sizeof(buf), buf);
+                    write_SPP(sizeof(buf), buf);
+                    _firstOpening = false;
+                }
             }
 
             if (_modelHandler->getDoorDistance() > 0.8)
             {
                 _isOpening = false;
+                _firstOpening = true;
             }
         }
         else
@@ -437,7 +485,7 @@ void ElevatorRoom::preFrame()
                  _modelHandler->closeDoor();
             }
 
-            if (_modelHandler->getDoorDistance() < DOOR_SPEED)
+            if (_modelHandler->getDoorDistance() < 0.001)//DOOR_SPEED)
             {
                 _modelHandler->setLight(false);
                
@@ -446,6 +494,7 @@ void ElevatorRoom::preFrame()
                 _pauseStart = PluginHelper::getProgramDuration();
                 _pauseLength = 1 + rand() % 5;
                 _hit = false;
+                _doorClosed = true;
 
                 if (_debug)
                 {
@@ -637,6 +686,11 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
         {
             if (tie->getInteraction() == BUTTON_DOWN)
             {
+                unsigned char buf[2];
+                buf[0] = '1';
+                buf[1] = '0';
+                write_SPP(sizeof(buf), buf);
+
                 osg::Vec3 pointerStart, pointerEnd;
                 std::vector<IsectInfo> isecvec;
                 
@@ -653,6 +707,10 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
 
                 if (isecvec.size() == 0) // no intersection
                 {
+                    unsigned char buf[2];
+                    buf[0] = '1';
+                    buf[1] = '2';
+                    write_SPP(sizeof(buf), buf);
                     return false;
                 }
 
@@ -678,6 +736,12 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                             _score++;
                             _modelHandler->setScore(_score);
 
+                            unsigned char buf[2];
+                            buf[0] = '1';
+                            buf[1] = '1';
+
+                            write_SPP(sizeof(buf), buf);
+
                             std::cout << "Score: " << _score << std::endl;
                             _hit = true;
                         }
@@ -687,6 +751,12 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                             {
                                 _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
                             }
+
+                            unsigned char buf[2];
+                            buf[0] = '1';
+                            buf[1] = '1';
+
+                            write_SPP(sizeof(buf), buf);
 
                             std::cout << "Whoops!" << std::endl;
                             if (_score > 0)

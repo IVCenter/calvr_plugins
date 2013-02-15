@@ -1,17 +1,38 @@
-
-
 1 ding
-2 door enters view
-3 green light
-4 red light
-5 yellow light
-6 door opens - alien
-7 door opens - astronaut
-8 door opens - checkers 
-9 door closed - alien
-10 door closed - astronaut
-11 door closed - checkers 
-12 button pressed
-13 hit - alien
-14 hit - astronaut
 
+2 door enters view
+
+3 blue light
+4 red light
+5 100 ms
+6 500 ms
+7 900 ms
+
+8 door opens - alien
+9 door opens - astronaut
+
+10 button pressed
+
+11 hit
+12 miss
+13 did not respond
+
+
+
+-Not Used-
+5 yellow light
+8 door opens - checkers 
+
+1 Initial Elevator sound
+1 Head in range detected
+2 Change in light-- we need a different code for each color,e red and blue)
+ (note that we do want the colors to be 80% valid, 20% invalid for
+ what is inside, but the validity doesn't need a specific code because
+ we can get that from what is behind the doors).
+3 Timing between light change and door opening-- let's go with [100 500 900]
+ ms
+2 doors start to open -- make the codes different for each different
+ element behind the door
+1 code for when to shoot
+3 code for feedback given-- correct hit, miss, did not respond in given
+ interval

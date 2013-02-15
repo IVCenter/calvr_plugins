@@ -117,7 +117,8 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
 
 
     // Lights
-    osg::ref_ptr<osg::Sphere> shape = new osg::Sphere(osg::Vec3(0,-4.75, 4.0), 0.2);
+    osg::ref_ptr<osg::Sphere> shape = new osg::Sphere(osg::Vec3(0,-4.75, 4.0), 0.3);
+
     for (int i = 0; i < NUM_DOORS; ++i)
     {
         pat = new osg::PositionAttitudeTransform();
@@ -137,7 +138,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         redGeode->addDrawable(redDrawable);
 
         greenDrawable = new osg::ShapeDrawable(shape);
-        greenDrawable->setColor(green);
+        greenDrawable->setColor(blue);
         greenGeode = new osg::Geode();
         greenGeode->addDrawable(greenDrawable);
 

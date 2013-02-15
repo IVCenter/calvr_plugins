@@ -52,7 +52,6 @@ namespace ElevatorRoom
 {
 
 #define NUM_DOORS 8
-#define DOOR_SPEED 0.007
 #define FLASH_SPEED 4
 #define NUM_ALLY_FLASH 3
 #define NUM_ALIEN_FLASH 8
@@ -106,8 +105,8 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         std::string _dataDir;
             
         float _modelScale; // scale of entire scene
-        float _pauseLength; // length in seconds of time between door close and next lighting up
-        float _pauseStart; // start time of the current pause
+        float _pauseLength, _doorPauseLength; // length in seconds of time between door close and next lighting up
+        float _pauseStart, _doorPauseStart; // start time of the current pause
         float _checkSpeed; // number of checkerboard flashes per second
         float _flashStartTime, _avatarFlashPerSec, _lightFlashPerSec;
         float _dingStartTime, _dingInterval;
@@ -126,6 +125,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         bool _soundEnabled;
         bool _sppConnected;
         bool _staticMode, _staticDoor, _doorMovement, _rotateOnly;
+        bool _firstOpening, _doorClosed;
 
         Mode _mode; // which kind of avatar is currently active
         osg::Quat _eventRot;
