@@ -17,7 +17,7 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
         GraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~GraphObject();
 
-        bool addGraph(std::string name);
+        bool addGraph(std::string patient, std::string name);
         int getNumGraphs()
         {
             return _graph->getNumGraphs();

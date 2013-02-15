@@ -33,7 +33,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
     protected:
         void checkLayout();
-        void loadGraph(std::string name);
+        void loadGraph(std::string patient, std::string test);
         //void makeGraph(std::string name);
         
         void setupMicrobePatients();
@@ -43,6 +43,11 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         mysqlpp::Connection * _conn;
 
         cvr::SubMenu * _fpMenu;
+        cvr::SubMenu * _layoutMenu;
+        cvr::MenuButton * _saveLayoutButton;
+        cvr::SubMenu * _loadLayoutMenu;
+        std::vector<cvr::MenuButton*> _loadLayoutButtons;
+        cvr::MenuList * _chartPatientList;
         cvr::MenuList * _testList;
         cvr::MenuButton * _loadButton;
         cvr::MenuButton * _removeAllButton;
@@ -54,11 +59,13 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         cvr::MenuCheckbox * _multiAddCB;
 
+        std::map<std::string,std::vector<std::string> > _patientTestMap;
         std::map<std::string,std::vector<std::string> > _groupTestMap;
 
         cvr::SubMenu * _chartMenu;
         cvr::SubMenu * _presetMenu;
         cvr::MenuButton * _inflammationButton;
+        cvr::MenuButton * _big4MultiButton;
         cvr::MenuButton * _cholesterolButton;
         cvr::MenuButton * _insGluButton;
         cvr::MenuButton * _inflammationImmuneButton;
@@ -69,6 +76,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _microbePatients;
         cvr::MenuList * _microbeTest;
         cvr::MenuButton * _microbeLoad;
+        cvr::MenuCheckbox * _microbeOrdering;
         cvr::MenuRangeValueCompact * _microbeNumBars;
         cvr::MenuButton * _microbeDone;
 
@@ -94,6 +102,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         GraphLayoutObject * _layoutObject;
 
         std::vector<MicrobeGraphObject *> _microbeGraphList;
+
+        std::string _layoutDirectory;
 };
 
 #endif
