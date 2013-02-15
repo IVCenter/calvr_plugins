@@ -125,7 +125,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         bool _connected; // for EOG syncer communication
         bool _soundEnabled;
         bool _sppConnected;
-        bool _staticMode, _staticDoor, _doorMovement;
+        bool _staticMode, _staticDoor, _doorMovement, _rotateOnly;
 
         Mode _mode; // which kind of avatar is currently active
         osg::Quat _eventRot;

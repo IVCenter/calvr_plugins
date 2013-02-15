@@ -117,7 +117,8 @@ bool ElevatorRoom::init()
     _staticMode = (ConfigManager::getEntry("Plugin.ElevatorRoom.StaticMode") != "off");
     _staticDoor = (ConfigManager::getInt("value", "Plugin.ElevatorRoom.StaticDoor", -1) != -1);
     _doorMovement = (ConfigManager::getEntry("Plugin.ElevatorRoom.DoorMovement") != "off");
-   
+    _rotateOnly = (ConfigManager::getEntry("Plugin.ElevatorRoom.RotateOnlyNavigation") != "off");
+
     if(ComController::instance()->isMaster())
     {
         int seed = time(NULL);
@@ -214,6 +215,9 @@ void ElevatorRoom::preFrame()
 {
     if (_dingCheckbox->getValue())
     {
+        if (!_audioHandler)
+            return;
+
         if ((PluginHelper::getProgramDuration() - _dingStartTime) > _dingInterval)
         {
             _audioHandler->playSound(0 + DING_OFFSET, "ding");
@@ -262,7 +266,7 @@ void ElevatorRoom::preFrame()
             
             unsigned char buf[1];
             buf[0] = '1';
-            write_SPP(sizeof(buf), buf);
+            //write_SPP(sizeof(buf), buf);
             
             if (_staticMode)
             {
@@ -350,14 +354,14 @@ void ElevatorRoom::preFrame()
         {
             unsigned char buf[1];
             buf[0] = '5';
-            write_SPP(sizeof(buf), buf);
+            //write_SPP(sizeof(buf), buf);
 
             if (PluginHelper::getProgramDuration() - _flashStartTime > (1 / _checkSpeed))
             {
                 _modelHandler->flashCheckers();
                 
                 unsigned char buf[1];
-                buf[0] = '1';
+                buf[0] = '2';
                 write_SPP(sizeof(buf), buf);
 
                 _checkSpeed = ((rand() % 2) + 1); // .5 -> 1
@@ -370,7 +374,7 @@ void ElevatorRoom::preFrame()
         {
             unsigned char buf[1];
             buf[0] = '4';
-            write_SPP(sizeof(buf), buf);
+            //write_SPP(sizeof(buf), buf);
 
             if (_hit)
             {
@@ -392,7 +396,7 @@ void ElevatorRoom::preFrame()
         {
             unsigned char buf[1];
             buf[0] = '3';
-            write_SPP(sizeof(buf), buf);
+            //write_SPP(sizeof(buf), buf);
 
             if (_hit)
             {
@@ -418,7 +422,7 @@ void ElevatorRoom::preFrame()
 
                 unsigned char buf[1];
                 buf[0] = '2';
-                write_SPP(sizeof(buf), buf);
+                //write_SPP(sizeof(buf), buf);
             }
 
             if (_modelHandler->getDoorDistance() > 0.8)
@@ -491,6 +495,9 @@ void ElevatorRoom::preFrame()
 
 
     // Spacenav and update rotation-only navigation
+    if (!_rotateOnly)
+        return;
+
     Matrixd finalmat;
 
     if(ComController::instance()->isMaster())
@@ -646,7 +653,7 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
 
                 if (isecvec.size() == 0) // no intersection
                 {
-                    return true;
+                    return false;
                 }
 
                 if (_activeDoor >= 0)
@@ -696,6 +703,9 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
             }
             else if (tie->getInteraction() == BUTTON_DRAG)
             {
+                if (!_rotateOnly)
+                    return false;
+
                 osg::Matrix mat = tie->getTransform();
 
                 osg::Vec3 pos, offset;
@@ -892,8 +902,8 @@ void ElevatorRoom::write_SPP(int bytes, unsigned char* buf)
     value = FT_Write(ftHandle, buf, bytesToWrite, &BytesReceived);
     int a = BytesReceived;
 
-    std::cout << "Wrote " << BytesReceived << " bytes." << std::endl;
-    std::cout << "Return value: " << value << std::endl;
+//    std::cout << "Wrote " << BytesReceived << " bytes." << std::endl;
+//    std::cout << "Return value: " << value << std::endl;
     return;
     //ftdi_write_data(&_ftdic, buf, bytes);
 }
