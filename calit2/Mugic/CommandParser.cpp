@@ -8,6 +8,7 @@
 #include "shapes/RectangleShape.h"
 #include "shapes/TextShape.h"
 #include "shapes/CubeShape.h"
+#include "shapes/ModelShape.h"
 
 #include <iostream>
 #include <sstream>
@@ -28,6 +29,7 @@ CommandParser::CommandParser(ThreadQueue<std::string>* queue, MainNode* root) : 
     _shapeDefinitions["rectangle"] = new Factory<RectangleShape>();
     _shapeDefinitions["text"] = new Factory<TextShape>();
     _shapeDefinitions["cube"] = new Factory<CubeShape>();
+    _shapeDefinitions["model"] = new Factory<ModelShape>();
 
     // init mutex 
     _mutex.lock();
@@ -136,6 +138,26 @@ void CommandParser::parseCommand(std::string command)
             remove(elementName);
        }
    }
+
+   //reading in model files
+   else if( commandType.compare("model") == 0)
+   {
+
+	//create a new object if it doesn't exist or override old one
+	remove(elementName);
+
+	//create basic shape that holds the node
+	ModelShape* newShape = new ModelShape(command, elementName);
+	
+	//take the node within the new shape and add it to scenegraph
+	osg::MatrixTransform* matrix = new osg::MatrixTransform();
+	matrix->addChild(newShape->getModelNode());
+	_root->addElement(matrix);
+
+	//get name from object, add to table
+	_shapes[newShape->BasicShape::getName()] = newShape; 
+   }
+
 /*
    else if( commandType.compare("var") == 0 && !elementName.empty()) // check for variable
    {

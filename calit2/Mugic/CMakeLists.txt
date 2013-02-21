@@ -20,6 +20,8 @@ SET(PLUGIN_HEADERS
     shapes/LineShape.h
     shapes/RectangleShape.h
     shapes/TextShape.h
+    shapes/CubeShape.h
+    shapes/ModelShape.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -41,6 +43,8 @@ ADD_LIBRARY(${LIB_NAME}
     shapes/LineShape.cpp
     shapes/RectangleShape.cpp
     shapes/TextShape.cpp
+    shapes/CubeShape.cpp
+    shapes/ModelShape.cpp
 )
 
 FIND_PACKAGE(ZMQ REQUIRED)

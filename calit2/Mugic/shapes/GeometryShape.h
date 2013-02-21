@@ -34,6 +34,8 @@ class GeometryShape : public BasicShape, public osg::Geometry
         osg::Vec4Array* _colors;
 	osg::Vec2Array* _textures; //for texture coordinates
 	std::string _texture_name; //path to texture
+	std::string _vertex_shader; //path to vertex shader
+	std::string _fragment_shader; //path to fragment shader
 
         virtual void update() = 0;
 };
