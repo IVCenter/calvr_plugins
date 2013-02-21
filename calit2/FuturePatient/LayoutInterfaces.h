@@ -38,6 +38,14 @@ class LayoutTypeObject : public cvr::TiledWallSceneObject
         {
             return false;
         }
+        virtual void dumpState(std::ostream & out)
+        {
+            out << "UNKNOWN" << std::endl;
+        }
+        virtual bool loadState(std::istream & in)
+        {
+            return true;
+        }
 };
 
 class TimeRangeObject

@@ -155,6 +155,16 @@ void SymptomGraphObject::setGLScale(float scale)
     _graph->setGLScale(scale);
 }
 
+void SymptomGraphObject::dumpState(std::ostream & out)
+{
+    out << "SYMPTOM_GRAPH" << std::endl;
+}
+
+bool SymptomGraphObject::loadState(std::istream & in)
+{
+    return true;
+}
+
 void SymptomGraphObject::setGraphDisplayRange(time_t start, time_t end)
 {
     _graph->setDisplayRange(start,end);

@@ -669,6 +669,16 @@ void DataGraph::setDisplayType(std::string graphName, GraphDisplayType displayTy
      update();
 }
 
+GraphDisplayType DataGraph::getDisplayType(std::string graphName)
+{
+    if(_dataInfoMap.find(graphName) == _dataInfoMap.end())
+    {
+	return GDT_NONE;
+    }
+
+    return _dataInfoMap[graphName].displayType;
+}
+
 void DataGraph::setGLScale(float scale)
 {
     _glScale = scale;

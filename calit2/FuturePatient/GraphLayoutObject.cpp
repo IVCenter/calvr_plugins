@@ -1,5 +1,6 @@
 #include "GraphLayoutObject.h"
 #include "ColorGenerator.h"
+#include "FuturePatient.h"
 
 #include <cvrInput/TrackingManager.h>
 #include <cvrConfig/ConfigManager.h>
@@ -68,7 +69,7 @@ void GraphLayoutObject::addGraphObject(LayoutTypeObject * object)
 
     if((tro || vro) && _syncTimeCB->getValue())
     {
-	if(!_zoomCB->getValue())
+	if(vro || !_zoomCB->getValue())
 	{
 	    menuCallback(_syncTimeCB);
 	}
@@ -256,6 +257,101 @@ void GraphLayoutObject::setSyncTime(bool sync)
 	_syncTimeCB->setValue(sync);
 	menuCallback(_syncTimeCB);
     }
+}
+
+bool GraphLayoutObject::dumpState(std::ostream & out)
+{
+    out << _objectList.size() << std::endl;
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	_objectList[i]->dumpState(out);
+    }
+
+    out << _width << " " << _height << " " << _maxRows << std::endl;
+    out << _syncTimeCB->getValue() << " " << _zoomCB->getValue() << std::endl;
+    out << _maxX << " " << _minX << " " << _currentMaxX << " " << _currentMinX << std::endl;
+    out << _minimized << std::endl;
+    out << !_currentSelectedMicrobeGroup.empty() << " " << _currentSelectedMicrobes.size() << std::endl;
+    if(!_currentSelectedMicrobeGroup.empty())
+    {
+	out << _currentSelectedMicrobeGroup << std::endl;
+    }
+    for(int i = 0; i < _currentSelectedMicrobes.size(); ++i)
+    {
+	out << _currentSelectedMicrobes[i] << std::endl;
+    }
+
+    return true;
+}
+
+bool GraphLayoutObject::loadState(std::istream & in)
+{
+    int numObjects;
+    in >> numObjects;
+
+    for(int i = 0; i < numObjects; ++i)
+    {
+	if(!loadObject(in))
+	{
+	    return false;
+	}
+    }
+
+    in >> _width >> _height >> _maxRows;
+    std::cerr << "Width: " << _width << " Height: " << _height << " MaxRows: " << _maxRows << std::endl;
+    _rowsRV->setValue(_maxRows);
+    _widthRV->setValue(_width);
+    _heightRV->setValue(_height);
+
+    bool sync, zoom;
+    in >> sync >> zoom;
+    std::cerr << "Sync: " << sync << " Zoom: " << zoom << std::endl;
+    _syncTimeCB->setValue(sync);
+    _zoomCB->setValue(zoom);
+
+    in >> _maxX >> _minX >> _currentMaxX >> _currentMinX;
+    std::cerr << "MaxX: " << _maxX << " MinX: " << _minX << " CMaxX: " << _currentMaxX << " CMinX: " << _currentMinX << std::endl;
+    bool minimized;
+    in >> minimized;
+    std::cerr << "Minimized: " << minimized << std::endl;
+    bool selectedGroup;
+    int selectedMicrobes;
+    in >> selectedGroup >> selectedMicrobes;
+    std::cerr << "Group: " << selectedGroup << " Microbes: " << selectedMicrobes << std::endl;
+    
+    char tempstr[1024];
+
+    if(selectedGroup || selectedMicrobes)
+    {
+	// call consume previous end line
+	in.getline(tempstr,1024);
+    }
+
+    if(selectedGroup)
+    {
+	in.getline(tempstr,1024);
+	_currentSelectedMicrobeGroup = tempstr;
+    }
+    else
+    {
+	_currentSelectedMicrobeGroup = "";
+    }
+
+    std::cerr << "Selected Group: " << _currentSelectedMicrobeGroup << std::endl;
+
+    _currentSelectedMicrobes.clear();
+
+    for(int i = 0; i < selectedMicrobes; ++i)
+    {
+	in.getline(tempstr,1024);
+	std::cerr << "Microbe: " << tempstr << std::endl;
+	_currentSelectedMicrobes.push_back(tempstr);
+    }
+
+    updateGeometry();
+    updateLayout();
+
+    return true;
 }
 
 void GraphLayoutObject::menuCallback(MenuItem * item)
@@ -899,4 +995,42 @@ void GraphLayoutObject::updateLayout()
 	    }
 	}
     }
+}
+
+bool GraphLayoutObject::loadObject(std::istream & in)
+{
+    char tempstr[1024];
+    std::string objectType;
+
+    do
+    {
+	in.getline(tempstr,1024);
+	objectType = tempstr;
+    }
+    while(objectType.empty() && !in.eof());
+
+    bool ret = true;
+
+    if(objectType == "GRAPH_OBJECT")
+    {
+	std::cerr << "Loading new GraphObject" << std::endl;
+	LayoutTypeObject * obj = new GraphObject(FuturePatient::getConnection(), 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
+	ret = obj->loadState(in);
+	addGraphObject(obj);
+    }
+    else if(objectType == "SYMPTOM_GRAPH")
+    {
+	std::cerr << "Loading new SymptomGraphObject" << std::endl;
+    }
+    else if(objectType == "UNKNOWN")
+    {
+	std::cerr << "Waring: unknown object type" << std::endl;
+	return true;
+    }
+    else
+    {
+	std::cerr << "Error: really unknown object type" << std::endl;
+	return false;
+    }
+    return ret;
 }

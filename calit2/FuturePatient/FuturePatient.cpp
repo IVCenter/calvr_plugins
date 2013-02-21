@@ -9,19 +9,23 @@
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
 #include <mysql++/mysql++.h>
 
+#define SAVED_LAYOUT_VERSION 1
+
 using namespace cvr;
 
 CVRPLUGIN(FuturePatient)
 
+mysqlpp::Connection * FuturePatient::_conn = NULL;
+
 FuturePatient::FuturePatient()
 {
-    _conn = NULL;
     _layoutObject = NULL;
     _multiObject = NULL;
     _currentSBGraph = NULL;
@@ -166,6 +170,18 @@ bool FuturePatient::init()
     _microbeLoadSRXAverage = new MenuButton("SRX Average");
     _microbeLoadSRXAverage->setCallback(this);
     //_microbeSpecialMenu->addItem(_microbeLoadSRXAverage);
+
+    _microbeLoadCrohnsAll = new MenuButton("Crohns All");
+    _microbeLoadCrohnsAll->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadCrohnsAll);
+
+    _microbeLoadHealthyAll = new MenuButton("Healthy All");
+    _microbeLoadHealthyAll->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadHealthyAll);
+
+    _microbeLoadUCAll = new MenuButton("UC All");
+    _microbeLoadUCAll->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadUCAll);
 
     _microbeGraphType = new MenuList();
     _microbeGraphType->setCallback(this);
@@ -851,9 +867,6 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(),(int)_microbeNumBars->getValue(),_microbeOrdering->getValue()))
 	    {
-		//PluginHelper::registerSceneObject(mgo,"FuturePatient");
-		//mgo->attachToScene();
-		//_microbeGraphList.push_back(mgo);
 		checkLayout();
 		_layoutObject->addGraphObject(mgo);
 	    }
@@ -898,6 +911,64 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    _currentSBGraph = NULL;
 	    _microbeMenu->removeItem(_microbeDone);
 	}
+	return;
+    }
+
+    if(item == _microbeLoadCrohnsAll || item == _microbeLoadHealthyAll || item == _microbeLoadUCAll)
+    {
+	std::vector<std::pair<int,int> > rangeList;
+
+	if(item == _microbeLoadCrohnsAll)
+	{
+	    rangeList.push_back(std::pair<int,int>(44,58));
+	}
+	else if(item == _microbeLoadHealthyAll)
+	{
+	    rangeList.push_back(std::pair<int,int>(65,99));
+	}
+	else
+	{
+	    rangeList.push_back(std::pair<int,int>(59,64));
+	}
+
+	for(int i = 0; i < rangeList.size(); ++i)
+	{
+	    int start = rangeList[i].first;
+	    while(start <= rangeList[i].second)
+	    {
+		if(_microbeGraphType->getIndex() == 0)
+		{
+		    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+		    if(mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0),(int)_microbeNumBars->getValue(),_microbeOrdering->getValue()))
+		    {
+			checkLayout();
+			_layoutObject->addGraphObject(mgo);
+		    }
+		    else
+		    {
+			delete mgo;
+		    }
+		}
+		else if(_microbeGraphType->getIndex() == 1)
+		{
+		    if(!_currentSBGraph)
+		    {
+			_currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+			_currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0));
+			checkLayout();
+			_layoutObject->addGraphObject(_currentSBGraph);
+			_microbeMenu->addItem(_microbeDone);
+		    }
+		    else
+		    {
+			_currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0));
+		    }
+		}
+
+		start++;
+	    }
+	}
+
 	return;
     }
 
@@ -1001,6 +1072,20 @@ void FuturePatient::menuCallback(MenuItem * item)
     {
 	_currentSymptomGraph = NULL;
 	_eventMenu->removeItem(_eventDone);
+    }
+
+    if(item == _saveLayoutButton)
+    {
+	saveLayout();
+	return;
+    }
+
+    for(int i = 0; i < _loadLayoutButtons.size(); ++i)
+    {
+	if(item == _loadLayoutButtons[i])
+	{
+	    loadLayout(_loadLayoutButtons[i]->getText());
+	}
     }
 }
 
@@ -1291,4 +1376,63 @@ void FuturePatient::updateMicrobeTests(int patientid)
     }
 
     _microbeTest->setValues(labelVec);
+}
+
+void FuturePatient::saveLayout()
+{
+    std::cerr << "Trying to save layout" << std::endl;
+    // TODO: create an automated file name creator
+    std::string outFile = _layoutDirectory + "/testfile.cfg";
+
+    if(!_layoutObject)
+    {
+	return;
+    }
+
+    std::ofstream outstream(outFile.c_str(),std::ios_base::out | std::ios_base::trunc);
+
+    if(outstream.fail())
+    {
+	std::cerr << "Failed to open file for writing: " << outFile << std::endl;
+	return;
+    }
+
+    outstream << ((int)SAVED_LAYOUT_VERSION) << std::endl;
+
+    _layoutObject->dumpState(outstream);
+
+    outstream.close();
+}
+
+void FuturePatient::loadLayout(const std::string & file)
+{
+    std::string fullPath = _layoutDirectory + "/" + file;
+
+    std::cerr << "Trying to load layout file: " << fullPath << std::endl;
+
+    checkLayout();
+
+    menuCallback(_removeAllButton);
+
+    std::ifstream instream(fullPath.c_str());
+
+    if(instream.fail())
+    {
+	std::cerr << "Unable to open layout file." << std::endl;
+	return;
+    }
+
+    int version;
+    instream >> version;
+
+    if(version != SAVED_LAYOUT_VERSION)
+    {
+	std::cerr << "Error loading layout, version too old." << std::endl;
+	instream.close();
+	return;
+    }
+
+    _layoutObject->loadState(instream);
+
+    instream.close();
 }

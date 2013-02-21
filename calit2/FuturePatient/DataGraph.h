@@ -97,6 +97,11 @@ class DataGraph
             start = _minDisplayXT;
             end = _maxDisplayXT;
         }
+        void getZDisplayRange(float & min, float & max)
+        {
+            min = _minDisplayZ;
+            max = _maxDisplayZ;
+        }
 
         float getDisplayWidth()
         {
@@ -124,6 +129,7 @@ class DataGraph
         }
 
         void setDisplayType(std::string graphName, GraphDisplayType displayType);
+        GraphDisplayType getDisplayType(std::string graphName);
 
         void setMultiGraphDisplayMode(MultiGraphDisplayMode mgdm)
         {

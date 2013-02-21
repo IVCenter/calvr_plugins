@@ -332,7 +332,10 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 	_graph->addGraph(gd.displayName, points, GDT_POINTS_WITH_LINES, "Time", gd.units, osg::Vec4(0,1.0,0,1.0),colors,secondary);
 	_graph->setZDataRange(gd.displayName,gd.minValue,gd.maxValue);
 	_graph->setXDataRangeTimestamp(gd.displayName,gd.minTime,gd.maxTime);
-	addChild(_graph->getGraphRoot());
+	if(!_graph->getGraphRoot()->getNumParents())
+	{
+	    addChild(_graph->getGraphRoot());
+	}
 	_nameList.push_back(name);
 
 	if(gd.numAnnotations)
@@ -347,6 +350,12 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 
 	    //_graph->setPointActions(gd.displayName,actionMap);
 	}
+
+	LoadData ld;
+	ld.patient = patient;
+	ld.name = name;
+	ld.displayName = gd.displayName;
+	_loadedGraphs.push_back(ld);
     }
 
     if(annotations)
@@ -469,6 +478,90 @@ bool GraphObject::getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point)
     osg::Matrix m;
     m = mat * getWorldToObjectMatrix();
     return _graph->getGraphSpacePoint(m,point);
+}
+
+void GraphObject::dumpState(std::ostream & out)
+{
+    out << "GRAPH_OBJECT" << std::endl;
+    out << _loadedGraphs.size() << std::endl;
+
+    for(int i = 0; i < _loadedGraphs.size(); ++i)
+    {
+	out << _loadedGraphs[i].patient << std::endl;
+	out << _loadedGraphs[i].name << std::endl;
+	out << _loadedGraphs[i].displayName << std::endl;
+    }
+
+    for(int i = 0; i < _loadedGraphs.size(); ++i)
+    {
+	out << _graph->getDisplayType(_loadedGraphs[i].displayName) << std::endl;
+    }
+
+    out << _graph->getMultiGraphDisplayMode() << std::endl;
+
+    float min, max;
+    _graph->getXDisplayRange(min,max);
+    out << min << " " << max << std::endl;
+
+    _graph->getZDisplayRange(min,max);
+    out << min << " " << max << std::endl;
+
+    time_t mint, maxt;
+    _graph->getXDisplayRangeTimestamp(mint, maxt);
+    out << mint << " " << maxt << std::endl;
+
+    _layoutDoesDelete = true;
+}
+
+bool GraphObject::loadState(std::istream & in)
+{
+    int graphs;
+    in >> graphs;
+
+    char tempstr[1024];
+    // consume endl
+    in.getline(tempstr,1024);
+
+    std::vector<std::string> displayNames;
+
+    for(int i = 0; i < graphs; ++i)
+    {
+	std::string patient, name;
+	in.getline(tempstr,1024);
+	patient = tempstr;
+	in.getline(tempstr,1024);
+	name = tempstr;
+	in.getline(tempstr,1024);
+	displayNames.push_back(tempstr);
+
+	addGraph(patient,name);
+    }
+
+    for(int i = 0; i < displayNames.size(); ++i)
+    {
+	int gdt;
+	in >> gdt;
+	_graph->setDisplayType(displayNames[i],(GraphDisplayType)gdt);
+    }
+
+    int mgdm;
+    in >> mgdm;
+    _graph->setMultiGraphDisplayMode((MultiGraphDisplayMode)mgdm);
+
+    _mgdList->setIndex(mgdm);
+
+    float min, max;
+    in >> min >> max;
+    _graph->setXDisplayRange(min,max);
+
+    in >> min >> max;
+    _graph->setZDisplayRange(min,max);
+
+    time_t mint, maxt;
+    in >> mint >> maxt;
+    _graph->setXDisplayRangeTimestamp(mint,maxt);
+
+    return true;
 }
 
 void GraphObject::setGLScale(float scale)

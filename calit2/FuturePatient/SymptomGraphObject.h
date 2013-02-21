@@ -22,6 +22,8 @@ class SymptomGraphObject : public LayoutTypeObject, public TimeRangeObject
         void setBarPosition(float pos);
         bool getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point);
         void setGLScale(float scale);
+        virtual void dumpState(std::ostream & out);
+        virtual bool loadState(std::istream & in);
 
         void setGraphDisplayRange(time_t start, time_t end);
         void resetGraphDisplayRange();
