@@ -1,5 +1,6 @@
 #include "GraphLayoutObject.h"
 #include "ColorGenerator.h"
+#include "FuturePatient.h"
 
 #include <cvrInput/TrackingManager.h>
 #include <cvrConfig/ConfigManager.h>
@@ -68,7 +69,7 @@ void GraphLayoutObject::addGraphObject(LayoutTypeObject * object)
 
     if((tro || vro) && _syncTimeCB->getValue())
     {
-	if(!_zoomCB->getValue())
+	if(vro || !_zoomCB->getValue())
 	{
 	    menuCallback(_syncTimeCB);
 	}
@@ -126,6 +127,23 @@ void GraphLayoutObject::removeGraphObject(LayoutTypeObject * object)
 	_perGraphActiveHandType.erase(it);
     }
 
+    bool selectedObjects = false;
+
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	if(dynamic_cast<MicrobeSelectObject*>(_objectList[i]))
+	{
+	    selectedObjects = true;
+	    break;
+	}
+    }
+
+    if(!selectedObjects)
+    {
+	_currentSelectedMicrobeGroup = "";
+	_currentSelectedMicrobes.clear();
+    }
+
     updateLayout();
 }
 
@@ -166,6 +184,9 @@ void GraphLayoutObject::removeAll()
     _deleteButtonMap.clear();
     _perGraphActiveHand.clear();
     _perGraphActiveHandType.clear();
+
+    _currentSelectedMicrobeGroup = "";
+    _currentSelectedMicrobes.clear();
 
     _objectList.clear();
 }
@@ -221,6 +242,133 @@ void GraphLayoutObject::maximize()
     }
 
     _minimized = false;
+}
+
+void GraphLayoutObject::setRows(float rows)
+{
+    _rowsRV->setValue(rows);
+    menuCallback(_rowsRV);
+}
+
+void GraphLayoutObject::setSyncTime(bool sync)
+{
+    if(sync != _syncTimeCB->getValue())
+    {
+	_syncTimeCB->setValue(sync);
+	menuCallback(_syncTimeCB);
+    }
+}
+
+bool GraphLayoutObject::dumpState(std::ostream & out)
+{
+    out << _objectList.size() << std::endl;
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	_objectList[i]->dumpState(out);
+    }
+
+    out << _width << " " << _height << " " << _maxRows << std::endl;
+    out << _syncTimeCB->getValue() << " " << _zoomCB->getValue() << std::endl;
+    out << _maxX << " " << _minX << " " << _currentMaxX << " " << _currentMinX << std::endl;
+    out << _minimized << std::endl;
+
+    osg::Vec3 pos = getPosition();
+    out << pos.x() << " " << pos.y() << " " << pos.z() << std::endl;
+    out << getScale() << std::endl;
+
+    out << !_currentSelectedMicrobeGroup.empty() << " " << _currentSelectedMicrobes.size() << std::endl;
+    if(!_currentSelectedMicrobeGroup.empty())
+    {
+	out << _currentSelectedMicrobeGroup << std::endl;
+    }
+    for(int i = 0; i < _currentSelectedMicrobes.size(); ++i)
+    {
+	out << _currentSelectedMicrobes[i] << std::endl;
+    }
+
+    return true;
+}
+
+bool GraphLayoutObject::loadState(std::istream & in)
+{
+    _syncTimeCB->setValue(false);
+    _zoomCB->setValue(false);
+
+    int numObjects;
+    in >> numObjects;
+
+    for(int i = 0; i < numObjects; ++i)
+    {
+	if(!loadObject(in))
+	{
+	    return false;
+	}
+    }
+
+    in >> _width >> _height >> _maxRows;
+    //std::cerr << "Width: " << _width << " Height: " << _height << " MaxRows: " << _maxRows << std::endl;
+    _rowsRV->setValue(_maxRows);
+    _widthRV->setValue(_width);
+    _heightRV->setValue(_height);
+
+    bool sync, zoom;
+    in >> sync >> zoom;
+    //std::cerr << "Sync: " << sync << " Zoom: " << zoom << std::endl;
+    _syncTimeCB->setValue(sync);
+    _zoomCB->setValue(zoom);
+
+    in >> _maxX >> _minX >> _currentMaxX >> _currentMinX;
+    //std::cerr << "MaxX: " << _maxX << " MinX: " << _minX << " CMaxX: " << _currentMaxX << " CMinX: " << _currentMinX << std::endl;
+    bool minimized;
+    in >> minimized;
+    //std::cerr << "Minimized: " << minimized << std::endl;
+    
+    float x,y,z;
+    in >> x >> y >> z;
+    float scale;
+    in >> scale;
+
+    setScale(scale);
+    setPosition(osg::Vec3(x,y,z));
+    
+    bool selectedGroup;
+    int selectedMicrobes;
+    in >> selectedGroup >> selectedMicrobes;
+    //std::cerr << "Group: " << selectedGroup << " Microbes: " << selectedMicrobes << std::endl;
+    
+    char tempstr[1024];
+
+    if(selectedGroup || selectedMicrobes)
+    {
+	// call consume previous end line
+	in.getline(tempstr,1024);
+    }
+
+    if(selectedGroup)
+    {
+	in.getline(tempstr,1024);
+	_currentSelectedMicrobeGroup = tempstr;
+    }
+    else
+    {
+	_currentSelectedMicrobeGroup = "";
+    }
+
+    //std::cerr << "Selected Group: " << _currentSelectedMicrobeGroup << std::endl;
+
+    _currentSelectedMicrobes.clear();
+
+    for(int i = 0; i < selectedMicrobes; ++i)
+    {
+	in.getline(tempstr,1024);
+	//std::cerr << "Microbe: " << tempstr << std::endl;
+	_currentSelectedMicrobes.push_back(tempstr);
+    }
+
+    updateGeometry();
+    updateLayout();
+
+    return true;
 }
 
 void GraphLayoutObject::menuCallback(MenuItem * item)
@@ -472,8 +620,14 @@ bool GraphLayoutObject::processEvent(InteractionEvent * event)
 		    if(found)
 		    {
 			time_t change = (time_t)(difftime(_currentMaxX,_currentMinX)*0.03);
-			_currentMinX += change * pos * vie->getValue();
-			_currentMaxX -= change * (1.0 - pos) * vie->getValue();
+			if(change <= 0.0 && vie->getValue() < 0.0)
+			{
+			    time_t diff = difftime(_currentMaxX,_currentMinX);
+			    change = std::max(diff >> 1, (time_t)1);
+			}
+
+			_currentMinX += change * pos * ((double)vie->getValue());
+			_currentMaxX -= change * (1.0 - pos) * ((double)vie->getValue());
 			_currentMinX = std::max(_currentMinX,_minX);
 			_currentMaxX = std::min(_currentMaxX,_maxX);
 
@@ -508,8 +662,14 @@ bool GraphLayoutObject::processEvent(InteractionEvent * event)
 			double pos = _objectList[i]->getBarPosition();
 
 			time_t change = (time_t)(difftime(currentEnd,currentStart)*0.03);
-			currentStart += change * pos * vie->getValue();
-			currentEnd -= change * (1.0 - pos) * vie->getValue();
+			if(change <= 0.0 && vie->getValue() < 0.0)
+			{
+			    time_t diff = difftime(currentEnd,currentStart);
+			    change = std::max(diff >> 2, (time_t)1);
+			}
+
+			currentStart += change * pos * ((double)vie->getValue());
+			currentEnd -= change * (1.0 - pos) * ((double)vie->getValue());
 			currentStart = std::max(currentStart,tro->getMinTimestamp());
 			currentEnd = std::min(currentEnd,tro->getMaxTimestamp());
 			tro->setGraphDisplayRange(currentStart,currentEnd);
@@ -531,6 +691,12 @@ void GraphLayoutObject::enterCallback(int handID, const osg::Matrix &mat)
 void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
 {
     if(!_zoomCB->getValue())
+    {
+	return;
+    }
+
+    // not using tracked wand at the moment, keeps it from holding the interaction
+    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::TRACKER)
     {
 	return;
     }
@@ -821,12 +987,6 @@ void GraphLayoutObject::updateLayout()
 	    posZ = (_height*0.5) - (graphHeight*0.5);
 	}
 
-	MicrobeSelectObject * mso = dynamic_cast<MicrobeSelectObject*>(_objectList[i]);
-	if(mso)
-	{
-	    mso->selectMicrobes(_currentSelectedMicrobeGroup,_currentSelectedMicrobes);
-	}
-
 	if(dynamic_cast<MicrobeGraphObject*>(_objectList[i]))
 	{
 	    microbeGraphCount++;
@@ -846,4 +1006,68 @@ void GraphLayoutObject::updateLayout()
 	    }
 	}
     }
+
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	MicrobeSelectObject * mso = dynamic_cast<MicrobeSelectObject*>(_objectList[i]);
+	if(mso)
+	{
+	    mso->selectMicrobes(_currentSelectedMicrobeGroup,_currentSelectedMicrobes);
+	}
+    }
+}
+
+bool GraphLayoutObject::loadObject(std::istream & in)
+{
+    char tempstr[1024];
+    std::string objectType;
+
+    do
+    {
+	in.getline(tempstr,1024);
+	objectType = tempstr;
+    }
+    while(objectType.empty() && !in.eof());
+
+    bool ret = true;
+
+    if(objectType == "GRAPH_OBJECT")
+    {
+	//std::cerr << "Loading new GraphObject" << std::endl;
+	LayoutTypeObject * obj = new GraphObject(FuturePatient::getConnection(), 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
+	ret = obj->loadState(in);
+	addGraphObject(obj);
+    }
+    else if(objectType == "SYMPTOM_GRAPH")
+    {
+	//std::cerr << "Loading new SymptomGraphObject" << std::endl;
+	LayoutTypeObject * obj = new SymptomGraphObject(FuturePatient::getConnection(), 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
+	ret = obj->loadState(in);
+	addGraphObject(obj);
+    }
+    else if(objectType == "MICROBE_GRAPH")
+    {
+	//std::cerr << "Loading new MicrobeGraphObject" << std::endl;
+	LayoutTypeObject * obj = new MicrobeGraphObject(FuturePatient::getConnection(), 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	ret = obj->loadState(in);
+	addGraphObject(obj);
+    }
+    else if(objectType == "MICROBE_BAR_GRAPH")
+    {
+	//std::cerr << "Loading new MicrobeBarGraphObject" << std::endl;
+	LayoutTypeObject * obj = new MicrobeBarGraphObject(FuturePatient::getConnection(), 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	ret = obj->loadState(in);
+	addGraphObject(obj);
+    }
+    else if(objectType == "UNKNOWN")
+    {
+	std::cerr << "Waring: unknown object type" << std::endl;
+	return true;
+    }
+    else
+    {
+	std::cerr << "Error: really unknown object type" << std::endl;
+	return false;
+    }
+    return ret;
 }

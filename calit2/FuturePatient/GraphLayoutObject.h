@@ -40,6 +40,12 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
             return _minimized;
         }
 
+        void setRows(float rows);
+        void setSyncTime(bool sync);
+
+        bool dumpState(std::ostream & out);
+        bool loadState(std::istream & in);
+
         virtual void menuCallback(cvr::MenuItem * item);
 
         virtual bool processEvent(cvr::InteractionEvent * event);
@@ -50,6 +56,8 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         void makeGeometry();
         void updateGeometry();
         void updateLayout();
+
+        bool loadObject(std::istream & in);
 
         bool _minimized;
 

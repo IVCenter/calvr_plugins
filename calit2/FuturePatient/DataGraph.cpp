@@ -114,7 +114,8 @@ DataGraph::DataGraph()
 
     _width = _height = 1000.0;
 
-    _multiGraphDisplayMode = _currentMultiGraphDisplayMode = MGDM_NORMAL;
+    _multiGraphDisplayMode = MGDM_COLOR_PT_SIZE;
+    _currentMultiGraphDisplayMode = MGDM_NORMAL;
 
     osg::Vec4 color(1.0,1.0,1.0,1.0);
 
@@ -668,6 +669,16 @@ void DataGraph::setDisplayType(std::string graphName, GraphDisplayType displayTy
      update();
 }
 
+GraphDisplayType DataGraph::getDisplayType(std::string graphName)
+{
+    if(_dataInfoMap.find(graphName) == _dataInfoMap.end())
+    {
+	return GDT_NONE;
+    }
+
+    return _dataInfoMap[graphName].displayType;
+}
+
 void DataGraph::setGLScale(float scale)
 {
     _glScale = scale;
@@ -894,6 +905,8 @@ void DataGraph::update()
     float dataWidth = _width - (2.0 * padding);
     float dataHeight = _height - (2.0 * padding);
 
+    //std::cerr << "Update mindispXT: " << _minDisplayXT << " maxdispXT: " << _maxDisplayXT << std::endl;
+
     osg::Matrix tran,scale;
     for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)
     {
@@ -930,7 +943,7 @@ void DataGraph::update()
 	int maxpoint = -1, minpoint = -1;
 	for(int j = 0; j < _dataInfoMap[it->first].data->size(); j++)
 	{
-	    if(_dataInfoMap[it->first].data->at(j).x() >= minxBound-0.001)
+	    if(_dataInfoMap[it->first].data->at(j).x() >= minxBound)
 	    {
 		minpoint = j;
 		break;
@@ -939,7 +952,7 @@ void DataGraph::update()
 
 	for(int j = _dataInfoMap[it->first].data->size() - 1; j >= 0; j--)
 	{
-	    if(_dataInfoMap[it->first].data->at(j).x() <= maxxBound+0.001)
+	    if(_dataInfoMap[it->first].data->at(j).x() <= maxxBound)
 	    {
 		maxpoint = j;
 		break;
@@ -1234,6 +1247,7 @@ void DataGraph::updateAxis()
 	    textColor = osg::Vec4(0.0,0.0,0.0,1.0);
 	    axisLabel = _dataInfoMap.begin()->second.xLabel;
 	    axisType = _dataInfoMap.begin()->second.xAxisType;
+	    //std::cerr << "MinTime: " << std::string(ctime(&minTime)) << " MaxTime: " << std::string(ctime(&maxTime)) << std::endl;
 	}
 	// z axis
 	else if(i == 1)
@@ -1343,6 +1357,8 @@ void DataGraph::updateAxis()
 		    SECOND
 		};
 
+		std::stringstream lowerTextss;
+
 		markInterval mi;
 		int intervalMult = 1;
 
@@ -1381,7 +1397,7 @@ void DataGraph::updateAxis()
 				    mi = MONTH;
 				    if(totalTime > 10.0)
 				    {
-					intervalMult = 2;
+					//intervalMult = 2;
 				    }
 				}
 				else
@@ -1398,43 +1414,90 @@ void DataGraph::updateAxis()
 		    }
 		}
 
-		bool printYear,printMonth,printDay,printHour,printMinute;
-		printYear = printMonth = printDay = printHour = printMinute = false;
-
 		struct tm starttm, endtm;
-		endtm = *gmtime(&maxTime);
-		starttm = *gmtime(&minTime);
+		endtm = *localtime(&maxTime);
+		starttm = *localtime(&minTime);
 
-		//std::cerr << "start year: " << starttm.tm_year << " end year: " << endtm.tm_year << std::endl;
-
-		if(starttm.tm_year != endtm.tm_year)
-		{
-		    printYear = printMonth = printDay = printHour = printMinute = true;
-		}
-		else if(starttm.tm_mon != endtm.tm_mon)
-		{
-		    printMonth = printDay = printHour = printMinute = true;
-		}
-		else if(starttm.tm_mday != endtm.tm_mday)
-		{
-		    printDay = printHour = printMinute = true;
-		}
-		else if(starttm.tm_hour != endtm.tm_hour)
-		{
-		    printHour = printMinute = true;
-		}
-		else if(starttm.tm_min != endtm.tm_min)
-		{
-		    printMinute = true;
-		}
-
-		struct tm currentStep;
-		double currentValue;
 		switch(mi)
 		{
 		    case YEAR:
 		    {
-			currentStep = *gmtime(&minTime);
+			break;
+		    }
+		    case MONTH:
+		    {
+			/*char tempC[1024];
+			strftime(tempC,1023,"%Y",&starttm);
+			lowerTextss << tempC;
+			if(starttm.tm_year != endtm.tm_year)
+			{
+			    strftime(tempC,1023,"%Y",&endtm);
+			    lowerTextss << " - " << tempC;
+			}*/
+			break;
+		    }
+		    case DAY:
+		    {
+			/*char tempC[1024];
+			strftime(tempC,1023,"%b %Y",&starttm);
+			lowerTextss << tempC;
+			if(starttm.tm_mon != endtm.tm_mon)
+			{
+			    strftime(tempC,1023,"%b %Y",&endtm);
+			    lowerTextss << " - " << tempC;
+			}*/
+			break;
+		    }
+		    case HOUR:
+		    {
+			char tempC[1024];
+			strftime(tempC,1023,"%b %d, %Y",&starttm);
+			lowerTextss << tempC;
+			if(starttm.tm_mday != endtm.tm_mday)
+			{
+			    strftime(tempC,1023,"%b %d, %Y",&endtm);
+			    lowerTextss << " - " << tempC;
+			}
+			break;
+		    }
+		    case MINUTE:
+		    {
+			char tempC[1024];
+			strftime(tempC,1023,"%b %d, %Y",&starttm);
+			lowerTextss << tempC;
+			if(starttm.tm_hour != endtm.tm_hour)
+			{
+			    strftime(tempC,1023,"%b %d, %Y",&endtm);
+			    lowerTextss << " - " << tempC;
+			}
+			break;	
+		    }
+		    case SECOND:
+		    {
+			char tempC[1024];
+			strftime(tempC,1023,"%b %d, %Y",&starttm);
+			lowerTextss << tempC;
+			if(starttm.tm_min != endtm.tm_min)
+			{
+			    strftime(tempC,1023,"%b %d, %Y",&endtm);
+			    lowerTextss << " - " << tempC;
+			}
+			break;
+		    }
+		    default:
+			break;
+		}
+
+
+		struct tm currentStep;
+		double currentValue;
+
+		currentStep = *localtime(&minTime);
+		switch(mi)
+		{
+		    case YEAR:
+		    {
+			currentStep.tm_isdst = 0;
 			currentStep.tm_sec = currentStep.tm_min = currentStep.tm_hour = currentStep.tm_mon = 0;
 			currentStep.tm_mday = 1;
 			currentStep.tm_year++;
@@ -1447,16 +1510,63 @@ void DataGraph::updateAxis()
 		    }
 		    case MONTH:
 		    {
-			currentStep = *gmtime(&minTime);
+			currentStep.tm_isdst = 0;
 			currentStep.tm_sec = currentStep.tm_min = currentStep.tm_hour = 0;
 			currentStep.tm_mday = 1;
 			
 			currentStep.tm_mon += intervalMult;
-			while(currentStep.tm_mon >= 12)
+			/*while(currentStep.tm_mon >= 12)
 			{
 			    currentStep.tm_year++;
 			    currentStep.tm_mon -= 12;
-			}
+			}*/
+
+			currentValue = difftime(mktime(&currentStep),minTime);
+			currentValue /= difftime(maxTime,minTime);
+			currentValue *= totalLength;
+			break;
+		    }
+		    case DAY:
+		    {
+			currentStep.tm_isdst = 0;
+			currentStep.tm_sec = currentStep.tm_min = currentStep.tm_hour = 0;
+			currentStep.tm_mday++;
+			// needed for some reason or the tick is off
+			//currentStep.tm_hour--;
+
+			currentValue = difftime(mktime(&currentStep),minTime);
+			currentValue /= difftime(maxTime,minTime);
+			currentValue *= totalLength;
+			break;
+		    }
+		    case HOUR:
+		    {
+			//std::cerr << "Min time: " << asctime(&currentStep) << std::endl;;
+			currentStep.tm_sec = currentStep.tm_min = 0;
+			currentStep.tm_hour++;
+
+			//std::cerr << "Current time: " << asctime(&currentStep) << std::endl;
+
+			currentValue = difftime(mktime(&currentStep),minTime);
+			currentValue /= difftime(maxTime,minTime);
+			//std::cerr << "currentVal ratio: " << currentValue << std::endl;
+			currentValue *= totalLength;
+
+			break;
+		    }
+		    case MINUTE:
+		    {
+			currentStep.tm_sec = 0;
+			currentStep.tm_min++;
+
+			currentValue = difftime(mktime(&currentStep),minTime);
+			currentValue /= difftime(maxTime,minTime);
+			currentValue *= totalLength;
+			break;
+		    }
+		    case SECOND:
+		    {
+			currentStep.tm_sec++;
 
 			currentValue = difftime(mktime(&currentStep),minTime);
 			currentValue /= difftime(maxTime,minTime);
@@ -1479,12 +1589,44 @@ void DataGraph::updateAxis()
 		    switch(mi)
 		    {
 			case YEAR:
-			    ss << currentStep.tm_year + 1900;
+			{
+			    char tlabel[256];
+			    strftime(tlabel,255,"%Y",&currentStep);
+			    ss << tlabel;
 			    break;
+			}
 			case MONTH:
 			{
 			    char tlabel[256];
 			    strftime(tlabel,255,"%m/%y",&currentStep);
+			    ss << tlabel;
+			    break;
+			}
+			case DAY:
+			{
+			    char tlabel[256];
+			    strftime(tlabel,255,"%m/%d/%y",&currentStep);
+			    ss << tlabel;
+			    break;
+			}
+			case HOUR:
+			{
+			    char tlabel[256];
+			    strftime(tlabel,255,"%H:00",&currentStep);
+			    ss << tlabel;
+			    break;
+			}
+			case MINUTE:
+			{
+			    char tlabel[256];
+			    strftime(tlabel,255,"%H:%M",&currentStep);
+			    ss << tlabel;
+			    break;
+			}
+			case SECOND:
+			{
+			    char tlabel[256];
+			    strftime(tlabel,255,"%H:%M:%S",&currentStep);
 			    ss << tlabel;
 			    break;
 			}
@@ -1518,12 +1660,44 @@ void DataGraph::updateAxis()
 			case MONTH:
 			{
 			    currentStep.tm_mon += intervalMult;
-			    while(currentStep.tm_mon >= 12)
+			    /*while(currentStep.tm_mon >= 12)
 			    {
 				currentStep.tm_year++;
 				currentStep.tm_mon -= 12;
-			    }
+			    }*/
 
+			    currentValue = difftime(mktime(&currentStep),minTime);
+			    currentValue /= difftime(maxTime,minTime);
+			    currentValue *= totalLength;
+			    break;
+			}
+			case DAY:
+			{
+			    currentStep.tm_mday++;
+			    currentValue = difftime(mktime(&currentStep),minTime);
+			    currentValue /= difftime(maxTime,minTime);
+			    currentValue *= totalLength;
+			    break;
+			}
+			case HOUR:
+			{
+			    currentStep.tm_hour++;
+			    currentValue = difftime(mktime(&currentStep),minTime);
+			    currentValue /= difftime(maxTime,minTime);
+			    currentValue *= totalLength;
+			    break;
+			}
+			case MINUTE:
+			{
+			    currentStep.tm_min++;
+			    currentValue = difftime(mktime(&currentStep),minTime);
+			    currentValue /= difftime(maxTime,minTime);
+			    currentValue *= totalLength;
+			    break;
+			}
+			case SECOND:
+			{
+			    currentStep.tm_sec++;
 			    currentValue = difftime(mktime(&currentStep),minTime);
 			    currentValue /= difftime(maxTime,minTime);
 			    currentValue *= totalLength;
@@ -1532,6 +1706,27 @@ void DataGraph::updateAxis()
 			default:
 			    break;
 		    }
+		}
+
+		if(lowerTextss.str().size())
+		{
+		    osgText::Text * text = makeText(lowerTextss.str(),textColor);
+
+		    float targetSize = padding * 0.67;
+		    osg::BoundingBox bb = text->getBound();
+		    float size1 = targetSize / (bb.zMax() - bb.zMin());
+		    float size2 = totalLength / (bb.xMax() - bb.xMin());
+		    text->setCharacterSize(std::min(size1,size2));
+		    text->setAxisAlignment(axisAlign);
+		    if(axisAlign == osgText::Text::USER_DEFINED_ROTATION)
+		    {
+			text->setRotation(q);
+		    }
+
+		    text->setPosition(startPoint + -tickDir * (padding * 0.65) + dir * 0.5 * totalLength + osg::Vec3(0,-1,0));
+
+		    _axisGeode->addDrawable(text);
+
 		}
 
 		break;

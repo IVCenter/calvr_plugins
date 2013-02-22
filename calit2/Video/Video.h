@@ -14,6 +14,14 @@
 //#include <cvrKernel/SceneObject.h>
 //
 
+struct PTSUpdate
+{
+	PTSUpdate() {}
+	PTSUpdate(unsigned int gid, double pts) : gid(gid), pts(pts) {}
+	unsigned int gid;
+	double pts;
+};
+
 class Video : public cvr::CVRPlugin, cvr::MenuCallback, cvr::PerContextCallback
 {
 public:
@@ -28,6 +36,8 @@ public:
 protected:
 	int LoadVideoXML(const char* filename, std::list<std::string>& videoFilenames);
 	void loadMenuItems(cvr::SubMenu* menu, const char* xmlFilename);
+	void EncodePtsUpdates(const std::list<PTSUpdate>& updates, const size_t& buffSize, unsigned char* buffer) const;
+	void DecodePtsUpdates(std::list<PTSUpdate>& updates, size_t buffSize, const unsigned char* buffer) const;
 	std::list<std::string> ExplodeFilename(const char* filename);
 
 	cvr::SubMenu* MLMenu;	
@@ -36,7 +46,7 @@ protected:
 
 	mutable VideoPlayerAPI m_videoplayer;
 	mutable std::string m_loadVideo;
-	mutable cvr::MenuItem* m_removeVideo;
+	mutable std::list<cvr::MenuItem*> m_removeVideo;
 	mutable std::map<unsigned int, TextureManager*> m_gidMap;
 
 	mutable std::list<cvr::SceneObject*> m_sceneDelete;
@@ -45,6 +55,12 @@ protected:
 	mutable std::list<cvr::MenuItem*> m_menuAdd;
 
 	mutable OpenThreads::Mutex m_initMutex;
+
+	mutable std::list<PTSUpdate> m_ptsUpdateList;
+
+	
+
+	
 
 };
 	

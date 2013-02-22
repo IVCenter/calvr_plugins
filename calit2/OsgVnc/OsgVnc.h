@@ -21,6 +21,8 @@
 #include <string>
 #include <vector>
 
+#include "VncSceneObject.h"
+
 class OsgVnc : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::FileLoadCallback
 {
     public:        
@@ -29,19 +31,37 @@ class OsgVnc : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::File
 	    bool init();
         virtual bool loadFile(std::string file);
 	    void menuCallback(cvr::MenuItem * item);
+        virtual void message(int type, char *&data, bool collaborative=false);
 
     protected:
+
+        // launch browser query
+        void launchQuery(std::string& hostname, int portno, std::string& query);
+		void writeConfigFile();
+        void removeAll();
+        void hideAll(bool);
 
 	    // container to hold pdf data
 	    struct VncObject
         {
             std::string name;
-	        cvr::SceneObject * scene;
-	        osgWidget::VncClient * vnc;
+	        VncSceneObject * scene;
         };
 
-        //std::map<struct VncObject*,cvr::MenuCheckbox*> _planeMap;
-        std::map<struct VncObject*,cvr::MenuButton*> _deleteMap;
+ 		float _defaultScale;
+        float _defaultDepth;
+
+        std::string _configPath;
+
+        // menu objects
+        cvr::SubMenu* _vncMenu;
+        cvr::SubMenu * _sessionsMenu;
+        cvr::MenuButton* _removeButton;
+        cvr::MenuCheckbox* _hideCheckbox;
+
+        std::map<cvr::MenuItem*, std::string> _menuFileMap;
+        std::map<std::string, std::pair<float, osg::Vec3f> > _locInit;
+        std::map<struct VncObject* ,cvr::MenuButton*> _deleteMap;
         std::vector<struct VncObject*> _loadedVncs;
 };
 

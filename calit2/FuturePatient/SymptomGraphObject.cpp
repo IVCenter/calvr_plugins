@@ -18,11 +18,17 @@ SymptomGraphObject::SymptomGraphObject(mysqlpp::Connection * conn, float width, 
 
     addChild(_graph->getGraphRoot());
 
+    /*_intensityLabels[1] = "Mild";
+    _intensityLabels[2] = "Moderate";
+    _intensityLabels[3] = "Moderate to Severe";
+    _intensityLabels[4] = "Severe";
+    _intensityLabels[5] = "Fatal";*/
+
     _intensityLabels[1] = "Mild";
     _intensityLabels[2] = "Moderate";
     _intensityLabels[3] = "Moderate to Severe";
     _intensityLabels[4] = "Severe";
-    _intensityLabels[5] = "Fatal";
+    _intensityLabels[5] = "Very Severe";
 
     _graph->setValueLabelMap(_intensityLabels);
 
@@ -105,6 +111,10 @@ bool SymptomGraphObject::addGraph(std::string name)
 
 	delete[] ranges;
 
+	struct LoadData ld;
+	ld.name = name;
+	_loadedGraphs.push_back(ld);
+
 	return true;
     }
     else
@@ -147,6 +157,44 @@ bool SymptomGraphObject::getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 &
 void SymptomGraphObject::setGLScale(float scale)
 {
     _graph->setGLScale(scale);
+}
+
+void SymptomGraphObject::dumpState(std::ostream & out)
+{
+    out << "SYMPTOM_GRAPH" << std::endl;
+
+    out << _loadedGraphs.size() << std::endl;
+
+    for(int i = 0; i < _loadedGraphs.size(); ++i)
+    {
+	out << _loadedGraphs[i].name << std::endl;
+    }
+
+    time_t start,end;
+    _graph->getDisplayRange(start,end);
+    out << start << " " << end << std::endl;
+}
+
+bool SymptomGraphObject::loadState(std::istream & in)
+{
+    int graphs;
+    in >> graphs;
+
+    char tempstr[1024];
+    // consume endl
+    in.getline(tempstr,1024);
+
+    for(int i = 0; i < graphs; ++i)
+    {
+	in.getline(tempstr,1024);
+	addGraph(tempstr);
+    }
+
+    time_t start,end;
+    in >> start >> end;
+    _graph->setDisplayRange(start,end);
+
+    return true;
 }
 
 void SymptomGraphObject::setGraphDisplayRange(time_t start, time_t end)

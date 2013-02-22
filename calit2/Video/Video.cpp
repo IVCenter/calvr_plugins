@@ -9,9 +9,12 @@
 #include <cvrKernel/SceneObject.h>
 #include <cvrKernel/PluginHelper.h>
 
+//#define NOSYNC
+#define SYNC
+
 CVRPLUGIN(Video)
 
-Video::Video() : m_removeVideo(0)
+Video::Video()
 {
 
 }
@@ -42,6 +45,7 @@ bool Video::init()
 	MLMenu->addItem(removeMenu);
 	cvr::MenuSystem::instance()->addMenuItem(MLMenu);
 	cvr::CVRViewer::instance()->addPerContextPreDrawCallback(this);
+	//cvr::CVRViewer::instance()->addPerContextPostFinishCallback(this);
 	//cvr::CVRViewer::instance()->addPerContextFrameStartCallback(this);
 	return true;
 }
@@ -61,47 +65,88 @@ void Video::loadMenuItems(cvr::SubMenu* menu, const char* xmlFilename)
 		
 }
 
+void Video::EncodePtsUpdates(const std::list<PTSUpdate>& updates, const size_t& buffSize, unsigned char* buffer) const
+{
+	size_t udsize = sizeof(unsigned int) * sizeof(double);
+	int i = 0;
+	for (std::list<PTSUpdate>::const_iterator iter = updates.begin(); iter != updates.end(); ++iter)
+	{
+		const PTSUpdate& update = *iter;
+		memcpy(&buffer[i*udsize], &update.gid, sizeof(update.gid));
+		memcpy(&buffer[i*udsize + sizeof(update.gid)], &update.pts, sizeof(update.pts));
+		i++;
+	}
+}
+
+void Video::DecodePtsUpdates(std::list<PTSUpdate>& updates, size_t buffSize, const unsigned char* buffer) const
+{
+	size_t udsize = sizeof(unsigned int) * sizeof(double);
+	const unsigned char* b = buffer;
+	while (b <= buffer + buffSize - udsize)
+	{
+		PTSUpdate update;
+		memcpy(&update.gid, b, sizeof(update.gid));
+		b+= sizeof(update.gid);
+		memcpy(&update.pts, b, sizeof(update.pts));
+		b+= sizeof(update.pts);
+		updates.push_back(update);
+	}
+}
+
 void Video::postFrame()
 {
-	std::list<double> ptsList;
-	unsigned char* ptsdata = 0;
+#ifdef SYNC
+	std::list<PTSUpdate> ptsList;
+	unsigned char* ptsData = 0;
 	// alloc data for pts
-	unsigned int ptssize = m_gidMap.size() * 8;
-	ptsdata = new unsigned char[ptssize];
 	bool isHead = cvr::ComController::instance()->isMaster();
 	unsigned int i = 0;
+	//isHead = true;
 	if (isHead)
 	{
-	    for (std::map<unsigned int, TextureManager*>::iterator iter = m_gidMap.begin(); iter != m_gidMap.end(); ++iter)
-	    {
-		TextureManager* manager = iter->second;
-		unsigned int gid = manager->GetVideoID(0);
-		//printf("Updating video %x\n", gid);
-		// head node updates the video
-		// XXX split UpdateVideo into a call to just check if a new frame needs to be loaded, but not load the frame yet, just get the frame PTS, and then another call to actually load the texture (ideally preloaded)
-		bool videoUpdate = m_videoplayer.UpdateVideo(gid, true);
-		double pts = m_videoplayer.GetVideoPts(gid);
+		for (std::map<unsigned int, TextureManager*>::iterator iter = m_gidMap.begin(); iter != m_gidMap.end(); ++iter)
+		{
+			TextureManager* manager = iter->second;
+			unsigned int gid = manager->GetVideoID(0);
+			//printf("CheckUpdateVideo for video %x\n", gid);
+			// head node updates the video
+			// XXX split UpdateVideo into a call to just check if a new frame needs to be loaded, but not load the frame yet, just get the frame PTS, and then another call to actually load the texture (ideally preloaded)
+			bool videoUpdate = m_videoplayer.CheckUpdateVideo(gid, true);
 
-		if (videoUpdate)
-		    ptsList.push_back(pts);
+			if (videoUpdate)
+			{
+				//printf("CheckUpdateVideo returned true\n");
+				PTSUpdate update(gid, m_videoplayer.GetVideoPts(gid));
+				ptsList.push_back(update);
+			}
+		}
 
-	    }
-	
-	    cvr::ComController::instance()->SendSlaves(ptsdata, ptssize);
+
+		size_t udsize = sizeof(unsigned int) * sizeof(double);
+		unsigned int buffSize = ptsList.size() * udsize;
+		unsigned char* buffer = new unsigned char[buffSize + sizeof(unsigned int)];
+		memcpy(buffer, &buffSize, sizeof(unsigned int));
+		EncodePtsUpdates(ptsList, buffSize, &buffer[sizeof(unsigned int)]);
+		cvr::ComController::instance()->sendSlaves(buffer, buffSize + sizeof(unsigned int));
 	}
 	else
 	{
-	    cvr::ComController::instance()->ReadMaster(ptsdata, ptssize);
+		unsigned int buffSize;
+		cvr::ComController::instance()->readMaster((unsigned char*)&buffSize, sizeof(unsigned int));
+		unsigned char* buffer = new unsigned char[buffSize];
+		cvr::ComController::instance()->readMaster(buffer, buffSize);
+
+		DecodePtsUpdates(ptsList, buffSize, buffer);
 	}
-	
 
-}
 
-void Video::preFrame()
-{
+	m_ptsUpdateList.clear();
+	m_ptsUpdateList.splice(m_ptsUpdateList.begin(), ptsList);
+#endif
+
 	while (m_sceneDelete.size())
 	{
-		m_sceneDelete.front()->detachFromScene();;
+		m_sceneDelete.front()->detachFromScene();
 		delete m_sceneDelete.front();
 		m_sceneDelete.pop_front();
 	}
@@ -122,6 +167,11 @@ void Video::preFrame()
 	}
 }
 
+void Video::preFrame()
+{
+
+}
+
 void Video::menuCallback(cvr::MenuItem* item)
 {
 	if (item->getType() == cvr::BUTTON)
@@ -133,7 +183,7 @@ void Video::menuCallback(cvr::MenuItem* item)
 		}
 		else if (item->getParent() == removeMenu)
 		{
-			m_removeVideo = item;
+			m_removeVideo.push_back(item);
 			removeMenu->removeItem(item);
 			//delete manager;
 			//delete item;
@@ -151,7 +201,18 @@ void Video::menuCallback(cvr::MenuItem* item)
 
 void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType type) const
 {
+	if (cvr::CVRViewer::instance()->done())
+	{
+		
+		for (int i = 0; i < removeMenu->getNumChildren(); i++)
+		{
+			m_removeVideo.push_back(removeMenu->getChild(i));
+		}
+		// CalVR is closing, delete all outstanding textures
+	}
 	static int init = 0;
+	stopwatch cbt;
+	cbt.start();
 	if (init == 0)
 	{
 		m_initMutex.lock();
@@ -161,7 +222,9 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			glewInit();
 			m_videoplayer.RegisterNotificationFunction(videoNotifyFunction, 0);
 			bool isHead = cvr::ComController::instance()->isMaster();
-			m_videoplayer.init(isHead, false);
+			m_videoplayer.init(isHead, isHead);
+			//m_videoplayer.init(true, true);
+			//m_videoplayer.init(false, false);
 			//gid = m_videoplayer.LoadVideoFile("/mnt/pointstar/cars_1080p.mov", true);
 			//printf("Loaded cars\n");
 		}
@@ -194,6 +257,8 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 				for (int x = 0; x < ncols; x++)
 				{
 					unsigned int myid = gid | (y << 13) | (x << 7); 
+					//XXX enable video on the head node.  This doesn't seem to work though
+					//m_videoplayer.EnableHeadVideo(true, myid);
 					int width = m_videoplayer.GetVideoWidth(myid);
 					int height = m_videoplayer.GetVideoHeight(myid);
 					GLuint tex = m_videoplayer.GetTextureID(myid);
@@ -220,9 +285,9 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 
 			m_loadVideo.clear();
 		}	
-		if (m_removeVideo)
+		while (m_removeVideo.size())
 		{
-			TextureManager* manager = static_cast<TextureManager*>(m_removeVideo->getExtraData());
+			TextureManager* manager = static_cast<TextureManager*>(m_removeVideo.front()->getExtraData());
 
 			unsigned int gidcount = manager->GetVideoCount();
 			for (unsigned int i = 0; i < gidcount; i++) // only update the first, it will update all
@@ -235,11 +300,53 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			m_gidMap.erase(manager->GetVideoGID());
 			m_sceneDelete.push_back(manager->GetSceneObject());
 			delete manager;
-			m_menuDelete.push_back(m_removeVideo);
-			m_removeVideo = 0;
+			m_menuDelete.push_back(m_removeVideo.front());
+			m_removeVideo.pop_front();
 		}
 	}
 
+#ifdef SYNC
+	stopwatch timer;
+	double videoTime = 0;
+	double textureTime = 0;
+	for (std::list<PTSUpdate>::iterator iter = m_ptsUpdateList.begin(); iter != m_ptsUpdateList.end(); ++iter)
+	{
+		TextureManager* manager = 0;
+		PTSUpdate update = *iter;
+		if (m_gidMap.find(update.gid) != m_gidMap.end())
+			manager = m_gidMap[update.gid];
+		else
+			continue;
+
+		//printf("PTSUpdate for video group %x\n", update.gid);
+		unsigned int gidcount = manager->GetVideoCount();
+		for (unsigned int i = 0; i < gidcount; i++)
+		{
+			timer.start();
+			unsigned int gid = manager->GetVideoID(i);
+			m_videoplayer.SetCurrentDrawPts(gid, update.pts);
+			//printf("Updating video %d with gid %x\n", i, gid);
+			bool isupdate = m_videoplayer.UpdateVideo(gid, false);
+			videoTime += timer.getTimeMS();
+			timer.start();
+			if (isupdate)
+			{
+				m_videoplayer.UpdateTexture(gid);
+				textureTime += timer.getTimeMS();
+				timer.start();
+		//		printf("Updated video %x to pts %.4lf\n", gid, update.pts);
+			}
+			else
+			{
+		//		printf("No update for video %x to pts %.4lf\n", gid, update.pts);
+			}
+		}
+	}
+	//printf("Updated %d videos, times took %.4lfms for video and %.4lfms for texture\n", m_ptsUpdateList.size(), videoTime, textureTime);
+	m_ptsUpdateList.clear();
+
+#endif
+#ifdef NOSYNC
 	for (std::map<unsigned int, TextureManager*>::iterator iter = m_gidMap.begin(); iter != m_gidMap.end(); ++iter)
 	{
 		TextureManager* manager = iter->second;
@@ -284,6 +391,8 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			//printf("No update\n");
 		}
 	}
+#endif
+	//printf("Full callback took %.4lfms\n", cbt.getTimeMS());
 }
  
 bool videoNotifyFunction(VIDEOPLAYER_NOTIFICATION msg, unsigned int gid, void* obj, unsigned int param1, unsigned int param2, double param3)

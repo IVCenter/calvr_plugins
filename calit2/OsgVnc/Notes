@@ -10,3 +10,24 @@ Need to modify VncClient.cpp under OpenSceneGraph
 
 //pictureQuad->setEventCallback(new osgViewer::InteractiveImageHandler(_vncImage.get()));
 pictureQuad->setCullCallback(new osgViewer::InteractiveImageHandler(_vncImage.get())); // needed to trigger updates
+
+To execute remote brower queries you need to set up firefox with remote control plugin and enable it, and add entries in the OsgVnc config       
+which will direct those queries to that browser.
+
+Plugin.OsgVnc.BrowserQueryServer = remote machine with brower running
+Plugin.OsgVnc.Port = port remote connection is configured for (if not specified 32000 is used)
+
+Config xml example
+------------------
+
+ <OsgVnc>
+        <DefaultSize value="2048" />
+        <DefaultPlane value="-10.0" />
+        <ConfigDir value="/home/calvr/data/OsgVnc/" />
+        <BrowserQueryServer value="67.58.41.58" />
+        <Port value="32000" />
+        <Sessions>
+            <Dwall value="67.58.41.39.vnc" />
+            <Vroom value="67.58.41.6.vnc" />
+        </Sessions>
+ </OsgVnc>

@@ -31,18 +31,30 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         virtual void menuCallback(cvr::MenuItem * item);
 
+        static mysqlpp::Connection * getConnection()
+        {
+            return _conn;
+        }
+
     protected:
         void checkLayout();
-        void loadGraph(std::string name);
+        void loadGraph(std::string patient, std::string test);
         //void makeGraph(std::string name);
         
         void setupMicrobePatients();
         void updateMicrobeTests(int patientid);
 
+        void saveLayout();
+        void loadLayout(const std::string & file);
 
-        mysqlpp::Connection * _conn;
+        static mysqlpp::Connection * _conn;
 
         cvr::SubMenu * _fpMenu;
+        cvr::SubMenu * _layoutMenu;
+        cvr::MenuButton * _saveLayoutButton;
+        cvr::SubMenu * _loadLayoutMenu;
+        std::vector<cvr::MenuButton*> _loadLayoutButtons;
+        cvr::MenuList * _chartPatientList;
         cvr::MenuList * _testList;
         cvr::MenuButton * _loadButton;
         cvr::MenuButton * _removeAllButton;
@@ -54,11 +66,13 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         cvr::MenuCheckbox * _multiAddCB;
 
+        std::map<std::string,std::vector<std::string> > _patientTestMap;
         std::map<std::string,std::vector<std::string> > _groupTestMap;
 
         cvr::SubMenu * _chartMenu;
         cvr::SubMenu * _presetMenu;
         cvr::MenuButton * _inflammationButton;
+        cvr::MenuButton * _big4MultiButton;
         cvr::MenuButton * _cholesterolButton;
         cvr::MenuButton * _insGluButton;
         cvr::MenuButton * _inflammationImmuneButton;
@@ -69,6 +83,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _microbePatients;
         cvr::MenuList * _microbeTest;
         cvr::MenuButton * _microbeLoad;
+        cvr::MenuCheckbox * _microbeOrdering;
         cvr::MenuRangeValueCompact * _microbeNumBars;
         cvr::MenuButton * _microbeDone;
 
@@ -78,6 +93,9 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeLoadCrohnsAverage;
         cvr::MenuButton * _microbeLoadSRSAverage;
         cvr::MenuButton * _microbeLoadSRXAverage;
+        cvr::MenuButton * _microbeLoadCrohnsAll;
+        cvr::MenuButton * _microbeLoadHealthyAll;
+        cvr::MenuButton * _microbeLoadUCAll;
 
         cvr::SubMenu * _eventMenu;
         cvr::MenuList * _eventName;
@@ -94,6 +112,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         GraphLayoutObject * _layoutObject;
 
         std::vector<MicrobeGraphObject *> _microbeGraphList;
+
+        std::string _layoutDirectory;
 };
 
 #endif
