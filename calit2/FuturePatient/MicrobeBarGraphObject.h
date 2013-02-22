@@ -25,6 +25,9 @@ class MicrobeBarGraphObject : public LayoutTypeObject, public MicrobeSelectObjec
 
         void selectMicrobes(std::string & group, std::vector<std::string> & keys);
 
+        virtual void dumpState(std::ostream & out);
+        virtual bool loadState(std::istream & in);
+
         virtual bool processEvent(cvr::InteractionEvent * ie);
         virtual void updateCallback(int handID, const osg::Matrix & mat);
         virtual void leaveCallback(int handID);
@@ -54,6 +57,17 @@ class MicrobeBarGraphObject : public LayoutTypeObject, public MicrobeSelectObjec
         static int _microbeCount;
 
         bool _desktopMode;
+
+        struct LoadData
+        {
+            bool special;
+            SpecialMicrobeGraphType type;
+            std::string label;
+            int patientid;
+            std::string testLabel;
+        };
+
+        std::vector<struct LoadData> _loadedGraphs;
 };
 
 #endif

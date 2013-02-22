@@ -7,6 +7,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -1085,6 +1086,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	if(item == _loadLayoutButtons[i])
 	{
 	    loadLayout(_loadLayoutButtons[i]->getText());
+	    return;
 	}
     }
 }
@@ -1380,9 +1382,17 @@ void FuturePatient::updateMicrobeTests(int patientid)
 
 void FuturePatient::saveLayout()
 {
-    std::cerr << "Trying to save layout" << std::endl;
-    // TODO: create an automated file name creator
-    std::string outFile = _layoutDirectory + "/testfile.cfg";
+    time_t now;
+    time(&now);
+
+    struct tm timeInfo;
+    timeInfo = *localtime(&now);
+    char file[1024];
+    strftime(file,1024,"%Y_%m_%d_%H_%M_%S.cfg",&timeInfo);
+
+    std::string outFile = _layoutDirectory + "/" + file;
+
+    std::cerr << "Trying to save layout file: " << outFile << std::endl;
 
     if(!_layoutObject)
     {
@@ -1402,6 +1412,12 @@ void FuturePatient::saveLayout()
     _layoutObject->dumpState(outstream);
 
     outstream.close();
+
+    MenuButton * button = new MenuButton(file);
+    button->setCallback(this);
+    _loadLayoutButtons.push_back(button);
+
+    _loadLayoutMenu->addItem(button);
 }
 
 void FuturePatient::loadLayout(const std::string & file)

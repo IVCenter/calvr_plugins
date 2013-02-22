@@ -905,6 +905,8 @@ void DataGraph::update()
     float dataWidth = _width - (2.0 * padding);
     float dataHeight = _height - (2.0 * padding);
 
+    //std::cerr << "Update mindispXT: " << _minDisplayXT << " maxdispXT: " << _maxDisplayXT << std::endl;
+
     osg::Matrix tran,scale;
     for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)
     {

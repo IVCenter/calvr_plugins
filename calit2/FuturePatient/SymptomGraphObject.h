@@ -45,6 +45,13 @@ class SymptomGraphObject : public LayoutTypeObject, public TimeRangeObject
         float _height;
 
         bool _desktopMode;
+
+        struct LoadData
+        {
+            std::string name;
+        };
+
+        std::vector<struct LoadData> _loadedGraphs;
 };
 
 #endif
