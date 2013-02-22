@@ -1,0 +1,61 @@
+check on where code to fill replector position array initulisation is called from
+move it to initPart()
+
+AlgebraInMotion::loadReflFrScr()
+
+601 void AlgebraInMotion::initGeometry()
+
+827 AlgebraInMotion::updateHand()
+1297 AlgebraInMotion::loadInjFountsFrScr()
+
+1748
+ educational section
+
+scene_data_4_host
+----------------------
+1055
+painting cube
+scene_data_0_host
+
+
+----------------------
+1145
+data1 sprial founts
+scene_data_1_host
+ 
+-------------------
+1333  
+starting scene
+scene_data_2_host
+ watterfals from screenes
+----------------
+1559
+scene_data_3_host()
+painting sky
+draw water ski
+
+------------------------------------
+write injsoundPlay  injsoundreleace
+injectorsoundPlace(x,y,z)
+
+reflect play
+reflectintencity(reflectnumb)
+write reflectSoundPlace x,y,z
+
+add momentum to injectors??
+
+do tidle slide
+get andrew to do code for
+slides xyz vextor slide name.
+on off.
+reset navagation
+navagate under program controll?
+
+need to fadeout sound 3
+texture_12
+
+
+
+
+
+
