@@ -11,14 +11,24 @@
 
 #include <osg/PointSprite>
 #include <osg/BlendFunc>
+
 #include <osg/Depth>
 #include <osg/ShapeDrawable>
 #include <osgDB/FileUtils>
 #include <osgDB/ReadFile>
-
+#include <string>
 #include <cuda_gl_interop.h>
+//ContextChange 2 lines below fr2 scr
+
+#include <cuda.h>
+#include <cudaGL.h>
 
 #include <sys/time.h>
+#include <osg/Texture2D>
+#include <osg/Material>
+#include <osgText/Font3D>
+#include <osgText/Text3D>
+#include <osg/io_utils>
 
 float ftToM(float feet)
 {
@@ -51,6 +61,9 @@ CVRPLUGIN(AlgebraInMotion)
 
 AlgebraInMotion::AlgebraInMotion()
 {
+    _pointerHeading = 0.0;
+    _pointerPitch = 0.0;
+    _pointerRoll = 0.0;
 }
 
 AlgebraInMotion::~AlgebraInMotion()
@@ -66,11 +79,17 @@ bool AlgebraInMotion::init()
     _enable->setCallback(this);
     _myMenu->addItem(_enable);
 
-    _gravityRV = new MenuRangeValue("Gravity",0.0,1.0,0.5);
+    _gravityRV = new MenuRangeValue("Gravity",0.0,0.1,.003);
     _gravityRV->setCallback(this);
 
-    _featureCB = new MenuCheckbox("Feature",false);
-    _featureCB->setCallback(this);
+    _speedRV = new MenuRangeValue("speed",0.0,0.4,.2);
+    _speedRV->setCallback(this);
+
+
+    _rotateInjCB = new MenuCheckbox("rotate injector",true);
+    _rotateInjCB->setCallback(this);
+    _reflectorCB = new MenuCheckbox("reflector on",true);
+    _reflectorCB->setCallback(this);
 
     _dataDir = ConfigManager::getEntry("value","Plugin.AlgebraInMotion.DataDir","") + "/";
 
@@ -78,7 +97,17 @@ bool AlgebraInMotion::init()
 
     hand_id = ConfigManager::getInt("value","Plugin.AlgebraInMotion.HandID",0);
 
-    return true;
+	_TargetSystem = ConfigManager::getEntry("value","Plugin.AlgebraInMotion.TargetSystem","TourCaveCalit2");
+	// TourCaveCalit2 TourCaveSaudi NexCaveCalit2 StarCave Cave2
+
+//	ContextChange block comented out id fr 1 screen version
+	
+	_DisplaySystem = ConfigManager::getEntry("value","Plugin.AlgebraInMotion.DisplaySystem","Simulator");
+//	_DisplaySystem = ConfigManager::getEntry("value","Plugin.AlgebraInMotion.DisplaySystem","TourCaveCalit2");
+	// TourCaveCalit2 TourCaveSaudi NexCaveCalit2 StarCave Cave2 Simulator
+	
+
+   return true;
 }
 
 void AlgebraInMotion::menuCallback(MenuItem * item)
@@ -98,29 +127,24 @@ void AlgebraInMotion::menuCallback(MenuItem * item)
 	    initSound();
 	}
 
-        if(item == _featureCB)
+/*
+        if(item == _rotateInjCB)
         {
-            if(_featureCB->getValue())
+            if(_rotateInjCB->getValue())
             {
             }
             else
             {
             }
         }
+*/
 
     }
 }
 
 void AlgebraInMotion::preFrame()
 {
-/*
-		for (int i =0;i<128;i++)
-		{
-			refl_hits[i] = h_debugData[i] - old_refl_hits[i];
-			if(refl_hits[i] <0){refl_hits[i]=0;}
-		}
-*/
- 
+
     if(_enable->getValue())
     {
 	//do driver thread part of step
@@ -154,18 +178,31 @@ void AlgebraInMotion::preFrame()
 
 	sceneChange =0;
 
-	if ((but4old ==0)&&(but4 == 1)&&(but1))
-	{
-	    sceneOrder =( sceneOrder+1)%5;sceneChange=1;
+	//if ((but2old ==0)&&(but2 == 1)&&(but1))
+	if (skipTonextScene ==1)
+	{	std::cout << "skipTonextScene ==1 " << std::endl;
+	    sceneOrder =( sceneOrder+1)%4;sceneChange=1;
+		skipTonextScene =0;
+		
 	}
-	if (nextSean ==1) { sceneOrder =( sceneOrder+1)%5;sceneChange=1;nextSean =0;}
+	if (nextSean ==1) { sceneOrder =( sceneOrder+1)%4;sceneChange=1;nextSean =0;}
 	//reordering seenes
-
+/*
 	if (sceneOrder ==0)sceneNum =4;
 	if (sceneOrder ==1)sceneNum =1;
 	if (sceneOrder ==2)sceneNum =2;
 	if (sceneOrder ==3)sceneNum =0;
 	if (sceneOrder ==4)sceneNum =3;
+
+	if (sceneOrder ==0)sceneNum =4;
+	if (sceneOrder ==1)sceneNum =2;
+	if (sceneOrder ==2)sceneNum =0;
+	if (sceneOrder ==3)sceneNum =3;
+*/
+	if (sceneOrder ==0)sceneNum =2;
+	if (sceneOrder ==1)sceneNum =0;
+	if (sceneOrder ==2)sceneNum =3;
+	if (sceneOrder ==3)sceneNum =4;
 
 	//if((sceneChange==1) && (witch_scene ==3)){scene_data_3_kill_audio();}
 	//if((sceneChange==1) && (witch_scene ==0)){scene_data_0_kill_audio();}
@@ -176,7 +213,7 @@ void AlgebraInMotion::preFrame()
 	if (sceneChange)
 	{
 		if (witch_scene == 0) 		scene_data_0_kill_audio();
-		else if (witch_scene == 1)	scene_data_1_kill_audio();
+		else if (witch_scene == 1)	scene_data_1_kill_audio();//not used
 		else if (witch_scene == 2)	scene_data_2_kill_audio();
 		else if (witch_scene == 3)	scene_data_3_kill_audio();
 		else if (witch_scene == 4)	scene_data_4_kill_audio();
@@ -243,10 +280,12 @@ bool AlgebraInMotion::processEvent(InteractionEvent * event)
 	if(tie->getHand() == hand_id)
 	{
 	    if((tie->getInteraction() == BUTTON_DOWN || tie->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getButton() <= 4)
-	    {
+	    { std::cout << " buttonPtresses " << (tie->getButton()) << std::endl;
 		if(tie->getButton() == 0)
 		{
-		    trigger = 1;
+			trigger = 1;
+			std::cout << " trigger but2 " << trigger << " " << but2 << std::endl;
+			if (but2 ==1){ skipTonextScene =1; ; return true;}
 		}
 		else if(tie->getButton() == 1)
 		{
@@ -256,6 +295,7 @@ bool AlgebraInMotion::processEvent(InteractionEvent * event)
 		{
 		    but2 = 1;
 			return true;
+			//captures but2 to prevent defalt navagation on but2
 		}
 		else if(tie->getButton() == 3)
 		{
@@ -294,10 +334,25 @@ bool AlgebraInMotion::processEvent(InteractionEvent * event)
 	}
     }
 
+    ValuatorInteractionEvent * vie = event->asValuatorEvent();
+    if(vie && vie->getHand() == hand_id)
+    {
+        if(vie->getValuator() == 0)
+        {
+            _pointerHeading += vie->getValue() * 0.5;
+            _pointerHeading = std::max(_pointerHeading,-90.0f);
+            _pointerHeading = std::min(_pointerHeading,90.0f);
+        }
+    }
+
     return false;
 }
-
+//ContextChange one below os fr 1 screen two below is from 2 scr
+#ifndef SCR2_PER_CARD
 void AlgebraInMotion::perContextCallback(int contextid,PerContextCallback::PCCType type) const
+#else
+void AlgebraInMotion::perContextCallback(int contextid) const
+#endif
 {
     if(CVRViewer::instance()->done())
     {
@@ -308,10 +363,30 @@ void AlgebraInMotion::perContextCallback(int contextid,PerContextCallback::PCCTy
     _callbackLock.lock();
     if(!_callbackInit[contextid])
     {
-
+// ContextChange if(1) is from 2 screen
 	int cudaDevice = ScreenConfig::instance()->getCudaDevice(contextid);
-	cudaGLSetGLDevice(cudaDevice);
-	cudaSetDevice(cudaDevice); 
+	#ifdef SCR2_PER_CARD
+	int scr2 =1;
+	#else
+	int scr2 =0;
+	#endif
+        if(scr2)
+	{
+            CUdevice device;
+            cuDeviceGet(&device,cudaDevice);
+            CUcontext cudaContext;
+ 	
+           cuGLCtxCreate(&cudaContext, 0, device);
+            cuGLInit();
+ 	
+           
+            cuCtxSetCurrent(cudaContext);
+	}
+        else
+        {
+	    cudaGLSetGLDevice(cudaDevice);
+	    cudaSetDevice(cudaDevice);
+        } 
 	//std::cerr << "CudaDevice: " << cudaDevice << std::endl;
 
 	printCudaErr();
@@ -411,7 +486,7 @@ void AlgebraInMotion::perContextCallback(int contextid,PerContextCallback::PCCTy
     }
 
     if (sceneNum ==4)
-    {//rain
+    {//educational
 	scene_data_4_context(contextid);
     }
 
@@ -508,14 +583,14 @@ void AlgebraInMotion::initPart()
     but3 =0;
     but2 =0;
     but1 =0;
-   
+   skipTonextScene=0;skipTOnextSceneOld=0;
 
     // init seenes
     scene0Start =0;
     scene1Start =0;
-    scene2Start =0;
+    scene2Start =1;//// must be set to starting
     scene3Start =0;
-    scene4Start =1;//// must be set to starting
+    scene4Start =0;
     scene0ContextStart =0;
     scene1ContextStart =0;
     scene2ContextStart =0;
@@ -524,7 +599,7 @@ void AlgebraInMotion::initPart()
     sceneNum =0;
     sceneOrder = 0;
     nextSean =0;
-    witch_scene =4;// must be set to starting
+    witch_scene =2;// must be set to starting
     old_witch_scene = -1;
     sceneChange =0;
     modulator[0] = 1.0;
@@ -600,10 +675,14 @@ void AlgebraInMotion::initPart()
 
 void AlgebraInMotion::initGeometry()
 {
+// init partical system
     _particleObject = new PDObject("Algebra In Motion",false,false,false,true,false);
 
     _particleObject->addMenuItem(_gravityRV);
-    _particleObject->addMenuItem(_featureCB);
+    _particleObject->addMenuItem(_rotateInjCB);
+	_particleObject->addMenuItem(_speedRV);
+	_particleObject->addMenuItem(_reflectorCB);
+ 
 
     _particleGeode = new osg::Geode();
     _particleGeo = new osg::Geometry();
@@ -659,8 +738,11 @@ void AlgebraInMotion::initGeometry()
     stateset->setMode(GL_VERTEX_PROGRAM_POINT_SIZE, osg::StateAttribute::ON);
 
     _spriteTexture = new osg::Texture2D();
-    osg::ref_ptr<osg::Image> image = osgDB::readImageFile(_dataDir + "glsl/sprite.png");
-    if(image)
+   // osg::ref_ptr<osg::Image> image = osgDB::readImageFile(_dataDir + "glsl/sprite.png");
+    osg::ref_ptr<osg::Image> image = osgDB::readImageFile(_dataDir + "images/sprite50_50.png");
+ 
+
+   if(image)
     {
 	_spriteTexture->setImage(image);
 	_spriteTexture->setWrap(osg::Texture::WRAP_S,osg::Texture::CLAMP_TO_EDGE);
@@ -674,13 +756,13 @@ void AlgebraInMotion::initGeometry()
     {
 	std::cerr << "Unable to read sprite texture: " << _dataDir + "glsl/sprite.png" << std::endl;
     }
-
+//  PluginHelper::getScene()->addChild(...)
     _particleGeode->addDrawable(_particleGeo);
     _particleObject->addChild(_particleGeode);
     PluginHelper::registerSceneObject(_particleObject);
     _particleObject->attachToScene();
     _particleObject->setNavigationOn(true);
-
+// init hand object injector reflector
     osg::Matrix m, ms, mt;
     m.makeRotate((90.0/180.0)*M_PI,osg::Vec3(1.0,0,0));
     ms.makeScale(osg::Vec3(1000.0,1000.0,1000.0));
@@ -693,7 +775,7 @@ void AlgebraInMotion::initGeometry()
     _handModelMT = new osg::MatrixTransform();
 	
     PluginHelper::getScene()->addChild(_handModelMT);
-
+/*
     osg::Geode * geode = new osg::Geode();
     
 	//reflector Visual
@@ -706,14 +788,106 @@ void AlgebraInMotion::initGeometry()
     geode->addDrawable(sd);
     sd->setColor(osg::Vec4(0,1,0,1));
 	_reflectorObjSwitch->setAllChildrenOff();
-
-// injector Vissual
+*/
+// injector Vissual read
 
 	osg::Node* particle_inj_face = NULL;
 	osg::Node* particle_inj_line = NULL;
 	particle_inj_face = osgDB::readNodeFile(_dataDir + "/models/particle-inj-face.obj");
+    if(!particle_inj_face){std::cerr << "Error reading /models/particle-inj-face.obj" << std::endl;} 
 	particle_inj_line = osgDB::readNodeFile(_dataDir + "/models/particle-inj-line.obj");
+    if(!particle_inj_line){std::cerr << "Error reading /models/particle-inj-line.obj" << std::endl;}
+// reflector Vissual read
+	osg::Node* particle_ref_face = NULL;
+	osg::Node* particle_ref_line = NULL;
+	particle_ref_face = osgDB::readNodeFile(_dataDir + "/models/particle-ref-face.obj");
+    if(!particle_ref_face){std::cerr << "Error reading /models/particle-ref-face.obj" << std::endl;} 
+	particle_ref_line = osgDB::readNodeFile(_dataDir + "/models/particle-ref-line.obj");
+    if(!particle_ref_line){std::cerr << "Error reading /models/particle-ref-line.obj" << std::endl;} 
 
+/* defined in .h	
+		osg::ref_ptr<osg::Switch> _refObjSwitchFace;
+		osg::ref_ptr<osg::Switch> _injObjSwitchFace;
+		osg::ref_ptr<osg::Switch> _refObjSwitchLine;
+		osg::ref_ptr<osg::Switch> _injObjSwitchLine;
+*/
+
+// make switches
+	_refObjSwitchFace = new osg::Switch;
+	_refObjSwitchLine = new osg::Switch;
+	_injObjSwitchFace = new osg::Switch;
+	_injObjSwitchLine = new osg::Switch;
+// atatch switches to hand position
+	_handModelMT->addChild(_refObjSwitchFace);
+	_handModelMT->addChild(_refObjSwitchLine);
+	_handModelMT->addChild(_injObjSwitchFace);
+	_handModelMT->addChild(_injObjSwitchLine);
+// scale modeles
+        osg::MatrixTransform * mt_ref_face = new osg::MatrixTransform();
+        osg::MatrixTransform * mt_ref_line = new osg::MatrixTransform();
+        osg::MatrixTransform * mt_inj_face = new osg::MatrixTransform();
+        osg::MatrixTransform * mt_inj_line = new osg::MatrixTransform();
+        osg::Matrix mm;
+        osg::Matrix mmr;
+		mm.makeScale(osg::Vec3(1000.0,1000.0,1000.0));
+        mmr.makeScale(osg::Vec3(100.0,100.0,100.0));
+
+        mt_ref_face->setMatrix(mmr);
+        mt_ref_line->setMatrix(mmr);
+        mt_inj_face->setMatrix(mm);
+        mt_inj_line->setMatrix(mm);
+
+// attatch modeles to matrix xforms
+        mt_inj_face->addChild(particle_inj_face);
+        mt_inj_line->addChild(particle_inj_line);
+        mt_ref_face->addChild(particle_ref_face);
+        mt_ref_line->addChild(particle_ref_line);
+
+// atatch scaled models to switches
+        _refObjSwitchFace->addChild(mt_ref_face);
+		_refObjSwitchLine->addChild(mt_ref_line);
+       	_injObjSwitchFace->addChild(mt_inj_face);
+		_injObjSwitchLine->addChild(mt_inj_line);
+
+// loadata for screen positions for placement of stuff on screenes.
+		//int i =loadPhysicalScreensArrayTourCaveCalit2();
+		//int i =loadPhysicalScreensArrayTourCaveCalit2_5lowerScr();
+	std::string str2 = ("TourCaveSaudi"); 
+	if (_DisplaySystem.compare(str2) == 0)
+		{
+			std::cout << "TourCaveSaudi" << std::endl;
+			int i =loadPhysicalScreensArrayTourCaveSaudi();
+			std::cout << "loadPhysicalScreens " << i <<" " << _PhScAr[i-1].index << " " << std::endl;
+		}
+	else
+		{
+			std::cout << "TourCavecalit2" << std::endl;
+			int i =loadPhysicalScreensArrayTourCaveCalit2_5lowerScr();
+			std::cout << "loadPhysicalScreens " << i <<" " << _PhScAr[i-1].index << " " << std::endl;
+
+
+		}
+
+
+
+	initGeoEdSection();
+
+/*
+		_quad1 = createQuad();
+ 
+		SceneObject * so = new SceneObject("anything",false,false,false,false,false);
+        osg::Geode * qgeode = new osg::Geode();
+        qgeode->setCullingActive(false);
+        qgeode->addDrawable(_quad1);
+        so->addChild(qgeode);
+        PluginHelper::registerSceneObject(so,"AlgebraInMotion");
+        so->setPosition(osg::Vec3(0,1000,0));
+        so->setScale(1000);
+        so->attachToScene();
+		so->setNavigationOn(true);
+
+*/
+/*
     _injecttorObjSwitch = new osg::Switch;
 
     _injFaceProgram = new osg::Program();
@@ -760,7 +934,7 @@ void AlgebraInMotion::initGeometry()
 
 	_injecttorObjSwitch->setAllChildrenOn();
   	_handModelMT->addChild(_injecttorObjSwitch);
-
+*/
 }
 
 void AlgebraInMotion::initSound()
@@ -801,6 +975,17 @@ void AlgebraInMotion::initSound()
 
     short_sound_01a.initialize(pathToAudioFiles, "dan_short_sound_01a.wav");
     short_sound_01a.play(1);
+    short_sound_01a1.initialize(pathToAudioFiles, "dan_short_sound_01a.wav");
+    short_sound_01a2.initialize(pathToAudioFiles, "dan_short_sound_01a.wav");
+    short_sound_01a3.initialize(pathToAudioFiles, "dan_short_sound_01a.wav");
+    short_sound_01a4.initialize(pathToAudioFiles, "dan_short_sound_01a.wav");
+    short_sound_01a5.initialize(pathToAudioFiles, "dan_short_sound_01a.wav");
+    short_sound_01a.setGain(10);
+    short_sound_01a1.setGain(10);
+    short_sound_01a2.setGain(10);
+    short_sound_01a3.setGain(10);
+    short_sound_01a4.setGain(10);
+    short_sound_01a5.setGain(10);
 
     texture_17_swirls3.initialize(pathToAudioFiles, "dan_texture_17_swirls3.wav");
     rain_at_sea.initialize(pathToAudioFiles, "dan_texture_18_rain_at_sea.wav");
@@ -824,18 +1009,32 @@ void AlgebraInMotion::initSound()
 
 void AlgebraInMotion::updateHand()
 {
-    osg::Vec3 offset(0.0,0.150,0.0);
+// set offsetfor injector and reflectormodeles
+   osg::Vec3 offset(0.0,200,100.0);// tourcave
+//	  osg::Vec3 offset(0.0,600,-100);// simulator
+	
+	std::string str2 = ("Simulator"); 
+//	if (_DisplaySystem.compare(str2) == 0){ std::cout << "Simulator" << std::endl;}
+	
+	
+    osg::Matrix hMat;
+    hMat.makeRotate(_pointerHeading * M_PI / 180.0, osg::Vec3(0,0,1));
+    osg::Matrix pMat;
+    pMat.makeRotate(_pointerPitch * M_PI / 180.0, osg::Vec3(1,0,0));
+    osg::Matrix rMat;
+    rMat.makeRotate(_pointerRoll * M_PI / 180.0, osg::Vec3(0,1,0));
+    osg::Matrix oMat = rMat * pMat * hMat;
 
     osg::Matrix m = PluginHelper::getHandMat(hand_id) * _particleObject->getWorldToObjectMatrix();
-    osg::Vec3 handdir = osg::Vec3(0,1.0,0) * m;
+    osg::Vec3 handdir = osg::Vec3(0,1.0,0) * oMat * m;
     handdir = handdir - m.getTrans();
     handdir.normalize();
 
-    osg::Vec3 handup = osg::Vec3(0,0,1.0) * m;
+    osg::Vec3 handup = osg::Vec3(0,0,1.0) * oMat * m;
     handup = handup - m.getTrans();
     handup.normalize();
 
-    osg::Vec3 handpos = m.getTrans() + offset;
+    osg::Vec3 handpos = offset * m;
     m.setTrans(handpos);
 
     wandPos[0] = handpos.x();
@@ -848,9 +1047,12 @@ void AlgebraInMotion::updateHand()
     wandMat[5] = handup.y();
     wandMat[6] = handup.z();
 
+
+
     osg::Matrix handm;
     handm = PluginHelper::getHandMat(hand_id);
-    osg::Vec3 modelPos = osg::Vec3(0,150,0) * handm;
+    osg::Vec3 modelPos = offset * handm;
+    handm = oMat * handm;
     handm.setTrans(modelPos);
     _handModelMT->setMatrix(handm);
 }
@@ -916,6 +1118,8 @@ void AlgebraInMotion::copy_injector( int sorce, int destination)
     //printf("\n");
 }
 
+
+
 int AlgebraInMotion::load6wallcaveWalls(int firstRefNum)
 {
     float caverad = ftToM(5.0);
@@ -969,6 +1173,577 @@ int AlgebraInMotion::load6wallcaveWalls(int firstRefNum)
 
 }
 
+
+int AlgebraInMotion::loadPhysicalScreensArrayTourCaveCalit2()
+{
+_PhScAr = new _PhSc [128];
+
+float height, h, width, p, originX, originY,r,name,originZ, screen;
+int i=0;
+
+// _PhScAr[i].index  -1 is sentannel for end of list
+     height= 805 ;h=  74.0; width= 1432 ;  p= 0.0    ;originX= -1949  ; originY= 577  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
+ 	_PhScAr[i].index =i; 
+  	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 
+  	std::cout << " i , originX,originY, originZ _PhScAr[i].originX ,_PhScAr[i].originY ,  _PhScAr[i].originX " <<  i << " " << originX << " " << originY<< " " << originZ  << " " << _PhScAr[i].originX << " " <<_PhScAr[i].originY << " " <<  _PhScAr[i].originZ << std::endl; 
+ 	i++;
+
+     height= 805 ;h=  74.0; width= 1432 ;  p= 0.0    ;originX= -1997  ; originY= 592  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
+ 	_PhScAr[i].index =i;
+  	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+     height= 805 ;h=  50.0; width= 1432 ;  p= 0.0    ;originX= -1489  ; originY= 1236  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
+ 	_PhScAr[i].index =i;
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width; 
+ 	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+ 
+     height= 805 ;h=  50.0; width= 1432 ;  p= 0.0    ;originX= -1527  ; originY= 1268  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
+ 	_PhScAr[i].index =i; 
+  	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+     height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -802  ; originY= 1657  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
+  	_PhScAr[i].index =i;
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+  	_PhScAr[i].p = p;
+ 	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+ 
+     height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -823  ; originY= 1702  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
+  	_PhScAr[i].index =i; 
+  	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+     height= 805 ;h=  0.0; width= 1432 ;  p= 0.0    ;originX= 0  ; originY= 1750  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;  
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+     height= 805 ;h=  0.0; width= 1432 ;  p= 0.0    ;originX= 0  ; originY= 1800  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
+ 	_PhScAr[i].index =i;
+  	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+     height= 805 ;h=  -26.0; width= 1432 ;  p= 0.0    ;originX= 738  ; originY= 1481  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
+  	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+     height= 805 ;h=  -26.0; width= 1432 ;  p= 0.0    ;originX= 760  ; originY= 1526  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
+ 	_PhScAr[i].index =i; 
+  	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+     height= 805 ;h=  -55.0; width= 1432 ;  p= 0.0    ;originX= 1276  ; originY= 904  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
+  	_PhScAr[i].index =i;
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+ 
+     height= 805 ;h=  -55.0; width= 1432 ;  p= 0.0    ;originX= 1317  ; originY= 932  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
+ 	_PhScAr[i].index =i; 
+  	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+     height= 805 ;h=  -85.0; width= 1432 ;  p= 0.0    ;originX= 1471  ; originY= 135  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
+  	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+     height= 805 ;h=  -85.0; width= 1432 ;  p= 0.0    ;originX= 1521  ; originY= 139  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
+ 	_PhScAr[i].index =i; 
+  	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+ 	
+ 	 _PhScAr[i].index =-1;
+ 	// clearly dont have this correct
+ 	// probibly need to xform positions and vectors from z up to z forward
+ 	for (int j=0;j<i;j++)
+ 		{
+ 			
+ 			//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl;
+
+	 		osg::Matrix hMat;
+	   		hMat.makeRotate(_PhScAr[j].h * M_PI / 180.0, osg::Vec3(0,0,1));
+	   	   	osg::Matrix pMat;
+				pMat.makeRotate(_PhScAr[i].p* M_PI / 180.0, osg::Vec3(1,0,0));
+				osg::Matrix rMat;
+				rMat.makeRotate(_PhScAr[i].r * M_PI / 180.0, osg::Vec3(0,1,0));
+	//    	osg::Matrix oMat = rMat* pMat * hMat;
+				osg::Matrix oMat = hMat;
+
+	   		osg::Vec3 test = oMat * osg::Vec3(0,-1,0);
+	   		//std::cout << "test.x,y,z " << _PhScAr[j].h << " " << test[0] << " " << test[1] << " " << test[2] << std::endl;
+	 		_PhScAr[j].vx = test[0] * -1;
+	 		_PhScAr[j].vy = test[1];
+			_PhScAr[j].vz = test[2];
+			// rotatefrom z up ti z back
+			// x stays same
+	   		// y =z
+	   		//z = -y
+			_PhScAr[j].originZ = _PhScAr[j].originZ  + Navigation::instance()->getFloorOffset();
+			float ytemp;
+	   		if ( 1 == 1)
+		   		{
+	   				// process position
+			   		ytemp = _PhScAr[j].originY;
+			   		_PhScAr[j].originY = _PhScAr[j].originZ;
+			   		_PhScAr[j].originZ = -ytemp;
+			   		
+			   		// vector
+			   		ytemp = _PhScAr[j].vy;
+			   		_PhScAr[j].vy = _PhScAr[j].vz;
+			   		_PhScAr[j].vz = -ytemp;
+					
+		   		}
+ 			//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl<< std::endl;
+			
+		 	}
+
+ return i;
+}
+
+
+int AlgebraInMotion::loadPhysicalScreensArrayTourCaveCalit2_5lowerScr()
+{
+_PhScAr = new _PhSc [128];
+
+float height, h, width, p, originX, originY,r,name,originZ, screen;
+int i=0;
+
+// _PhScAr[i].index  -1 is sentannel for end of list
+
+     height= 805 ;h=  50.0; width= 1432 ;  p= 0.0    ;originX= -1489  ; originY= 1236  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
+ 	_PhScAr[i].index =i;
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+ 
+     height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -802  ; originY= 1657  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
+  	_PhScAr[i].index =i;
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+  	_PhScAr[i].p = p;
+ 	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+ 
+ 
+     height= 805 ;h=  0.0; width= 1432 ;  p= 0.0    ;originX= 0  ; originY= 1750  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;  
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+ 
+     height= 805 ;h=  -26.0; width= 1432 ;  p= 0.0    ;originX= 738  ; originY= 1481  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
+  	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+ 
+     height= 805 ;h=  -55.0; width= 1432 ;  p= 0.0    ;originX= 1276  ; originY= 904  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
+  	_PhScAr[i].index =i;
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+ 
+
+ 
+ 	 _PhScAr[i].index =-1;
+ 	// clearly dont have this correct
+ 	// probibly need to xform positions and vectors from z up to z forward
+ 	for (int j=0;j<i;j++)
+ 		{
+ 			
+ 			//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl;
+
+	 		osg::Matrix hMat;
+	   		hMat.makeRotate(_PhScAr[j].h * M_PI / 180.0, osg::Vec3(0,0,1));
+	   	   	osg::Matrix pMat;
+				pMat.makeRotate(_PhScAr[i].p* M_PI / 180.0, osg::Vec3(1,0,0));
+				osg::Matrix rMat;
+				rMat.makeRotate(_PhScAr[i].r * M_PI / 180.0, osg::Vec3(0,1,0));
+	//    	osg::Matrix oMat = rMat* pMat * hMat;
+				osg::Matrix oMat = hMat;
+
+	   		osg::Vec3 test = oMat * osg::Vec3(0,-1,0);
+	   		//std::cout << "test.x,y,z " << _PhScAr[j].h << " " << test[0] << " " << test[1] << " " << test[2] << std::endl;
+	 		_PhScAr[j].vx = test[0] * -1;
+	 		_PhScAr[j].vy = test[1];
+			_PhScAr[j].vz = test[2];
+			// rotatefrom z up ti z back
+			// x stays same
+	   		// y =z
+	   		//z = -y
+			_PhScAr[j].originZ = _PhScAr[j].originZ  + Navigation::instance()->getFloorOffset();
+			float ytemp;
+	   		if ( 1 == 1)
+		   		{
+	   				// process position
+			   		ytemp = _PhScAr[j].originY;
+			   		_PhScAr[j].originY = _PhScAr[j].originZ;
+			   		_PhScAr[j].originZ = -ytemp;
+			   		
+			   		// vector
+			   		ytemp = _PhScAr[j].vy;
+			   		_PhScAr[j].vy = _PhScAr[j].vz;
+			   		_PhScAr[j].vz = -ytemp;
+					
+		   		}
+ 			//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl<< std::endl;
+			
+		 	}
+
+ return i;
+}
+
+int AlgebraInMotion::loadPhysicalScreensArrayTourCaveSaudi()
+{
+// not dune yet
+//based on tourcaveLG-screens-5.xml
+//   <Screen height="805" h="63.0" width="1432" p="0.0"   originX="-1415"  comment="S_A" originY="721"  r="-90.0" name="0" originZ="0"    screen="0" />
+//    <Screen height="805" h="32.0" width="1432" p="0.0"   originX="-816"  comment="S_A" originY="1308"  r="-90.0" name="1" originZ="0"    screen="1" />
+ //   <Screen height="805" h="0.0" width="1432" p="0.0"   originX="0"  comment="S_A" originY="1500"      r="-90.0" name="2" originZ="0"    screen="2" />
+ //   <Screen height="805" h="-32.0" width="1432" p="0.0"   originX="774"  comment="S_A" originY="1235"  r="-90.0" name="3" originZ="0"    screen="3" />
+//    <Screen height="805" h="-65.0" width="1432" p="0.0"   originX="1283"  comment="S_A" originY="598"  r="-90.0" name="4" originZ="0"    screen="4" />
+ 
+_PhScAr = new _PhSc [128];
+
+float height, h, width, p, originX, originY,r,name,originZ, screen;
+int i=0;
+
+// _PhScAr[i].index  -1 is sentannel for end of list
+
+//   <Screen height="805" h="63.0" width="1432" p="0.0"   originX="-1415"  comment="S_A" originY="721"  r="-90.0" name="0" originZ="0"    screen="0" />
+     height= 805 ;h=  63.0; width= 1432 ;  p= 0.0    ;originX= -1415  ; originY= 721  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
+ 	_PhScAr[i].index =i;
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+//    <Screen height="805" h="32.0" width="1432" p="0.0"   originX="-816"  comment="S_A" originY="1308"  r="-90.0" name="1" originZ="0"    screen="1" />
+ 
+     height= 805 ;h= 32.0; width= 1432 ;  p= 0.0    ;originX= -816  ; originY= 1308  ;  r= -90.0 ;   name= 1 ;  originZ= 0   ;   screen= 0;
+  	_PhScAr[i].index =i;
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+  	_PhScAr[i].p = p;
+ 	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+ 
+  //   <Screen height="805" h="0.0" width="1432" p="0.0"   originX="0"  comment="S_A" originY="1500"      r="-90.0" name="2" originZ="0"    screen="2" />
+
+     height= 805 ;h=  0.0; width= 1432 ;  p= 0.0    ;originX= 0  ; originY= 1500  ;  r= -90.0 ;   name= 2 ;  originZ= 0   ;   screen= 0;  
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+ //   <Screen height="805" h="-32.0" width="1432" p="0.0"   originX="774"  comment="S_A" originY="1235"  r="-90.0" name="3" originZ="0"    screen="3" />
+ 
+     height= 805 ;h=  -32.0; width= 1432 ;  p= 0.0    ;originX= 774  ; originY= 1235  ;  r= -90.0 ;   name= 3 ;  originZ= 0   ;   screen= 0; 
+  	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+ //    <Screen height="805" h="-65.0" width="1432" p="0.0"   originX="1283"  comment="S_A" originY="598"  r="-90.0" name="4" originZ="0"    screen="4" />
+ 
+     height= 805 ;h=  -65.0; width= 1432 ;  p= 0.0    ;originX= 1283  ; originY= 598  ;  r= -90.0 ;   name= 4 ;  originZ= 0   ;   screen= 0;
+  	_PhScAr[i].index =i;
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+ 
+
+ 
+ 	 _PhScAr[i].index =-1;
+ 	// clearly dont have this correct
+ 	// probibly need to xform positions and vectors from z up to z forward
+ 	for (int j=0;j<i;j++)
+ 		{
+ 			
+ 			//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl;
+
+	 		osg::Matrix hMat;
+	   		hMat.makeRotate(_PhScAr[j].h * M_PI / 180.0, osg::Vec3(0,0,1));
+	   	   	osg::Matrix pMat;
+				pMat.makeRotate(_PhScAr[i].p* M_PI / 180.0, osg::Vec3(1,0,0));
+				osg::Matrix rMat;
+				rMat.makeRotate(_PhScAr[i].r * M_PI / 180.0, osg::Vec3(0,1,0));
+	//    	osg::Matrix oMat = rMat* pMat * hMat;
+				osg::Matrix oMat = hMat;
+
+	   		osg::Vec3 test = oMat * osg::Vec3(0,-1,0);
+	   		//std::cout << "test.x,y,z " << _PhScAr[j].h << " " << test[0] << " " << test[1] << " " << test[2] << std::endl;
+	 		_PhScAr[j].vx = test[0] * -1;
+	 		_PhScAr[j].vy = test[1];
+			_PhScAr[j].vz = test[2];
+			// rotatefrom z up ti z back
+			// x stays same
+	   		// y =z
+	   		//z = -y
+			_PhScAr[j].originZ = _PhScAr[j].originZ  + Navigation::instance()->getFloorOffset();
+			float ytemp;
+	   		if ( 1 == 1)
+		   		{
+	   				// process position
+			   		ytemp = _PhScAr[j].originY;
+			   		_PhScAr[j].originY = _PhScAr[j].originZ;
+			   		_PhScAr[j].originZ = -ytemp;
+			   		
+			   		// vector
+			   		ytemp = _PhScAr[j].vy;
+			   		_PhScAr[j].vy = _PhScAr[j].vz;
+			   		_PhScAr[j].vz = -ytemp;
+					
+		   		}
+ 			//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl<< std::endl;
+			
+		 	}
+
+ return i;
+}
+
+
+int AlgebraInMotion::loadInjFountsFrScr(float dx,float dy,float dz,float speed)
+	{
+		// in z back space
+		// in meters
+		int injNum;
+		
+		
+		//h_injectorData[0][0][0] =0;
+		int firstInjNum = h_injectorData[0][0][0]+1 ;
+		int i=0;
+		while ( (_PhScAr[i].index) !=( -1)) 
+			{
+				injNum=firstInjNum +i;
+				//std::cout << " injNum _PhScAr[i].originX /1000.0 .originY /1000.0 .originY /1000.0 " <<  injNum << " " << _PhScAr[i].originX /1000.0 << " " << _PhScAr[i].originY /1000.0 << " " << _PhScAr[i].originZ /1000.0 << std::endl;
+				h_injectorData[injNum][1][0]=2;h_injectorData[injNum][1][1]=1.0;// type, injection ratio ie streem volume, ~
+				h_injectorData[injNum][2][0]=_PhScAr[i].originX /1000.0 +dx;h_injectorData[injNum][2][1]=_PhScAr[i].originY / 1000.0+dy;h_injectorData[injNum][2][2]=_PhScAr[i].originZ /1000.0 + dz;//x,y,z position
+				h_injectorData[injNum][3][0]=_PhScAr[i].vx * speed;h_injectorData[injNum][3][1]=_PhScAr[i].vy * speed;h_injectorData[injNum][3][2]=_PhScAr[i].vz * speed;//x,y,z velocity drection
+				h_injectorData[injNum][4][0]=ftToM(0.25);h_injectorData[injNum][4][1]=ftToM(0.25);h_injectorData[injNum][4][2]=ftToM(0.25);//x,y,z size
+				h_injectorData[injNum][5][0]=0.000;h_injectorData[injNum][5][1]=0.000;h_injectorData[injNum][5][2]=0.000;//t,u,v jiter v not implimented = speed 
+				h_injectorData[injNum][6][0]=0.2000;h_injectorData[injNum][6][1]=0.0;h_injectorData[injNum][6][2]=0.0;//speed jiter ~ ~
+				h_injectorData[injNum][7][0]=5;h_injectorData[injNum][7][1]=5;h_injectorData[injNum][7][2]=5;//centrality of rnd distribution speed dt tu ~
+						
+				i++;
+			}  
+			
+		 h_injectorData[0][0][0]=injNum;
+		return injNum;
+	}
+
+int AlgebraInMotion::loadReflFrScr()
+
+{
+		// in z back space
+		// in meters
+
+   float screenrad = ftToM(5.0);
+    int reflNum;
+    float damping =.5;
+    float no_traping =0;
+    float firstRefNum = h_reflectorData[0][0][0] + 1;
+    reflNum = firstRefNum;
+	int i=0;
+	while ( (_PhScAr[i].index) !=( -1))
+		{
+			float xpos =  _PhScAr[i].originX /1000.0;
+			float ypos =  _PhScAr[i].originY /1000.0;
+			float zpos =  _PhScAr[i].originZ /1000.0;
+			float vx = _PhScAr[i].vx;
+			float vy = _PhScAr[i].vy;
+			float vz = _PhScAr[i].vz;
+			reflNum = firstRefNum +i;
+  
+			h_reflectorData[reflNum ][0][0]=1;h_reflectorData[reflNum ][0][1]=0;// type, age ie colormod, ~  0 is off 1 is plane reflector
+			h_reflectorData[reflNum ][1][0]=xpos;    h_reflectorData[reflNum ][1][1]= ypos;h_reflectorData[reflNum ][1][2]=zpos;//x,y,z position
+			h_reflectorData[reflNum ][2][0]= vx;  h_reflectorData[reflNum ][2][1]=vy;    h_reflectorData[reflNum ][2][2]=vz;//x,y,z normal
+			h_reflectorData[reflNum ][3][0]=screenrad; h_reflectorData[reflNum ][3][1]=0.00; h_reflectorData[reflNum ][3][2]=0;//reflector radis ,~,~ 
+			h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implimented = speed 
+			h_reflectorData[reflNum ][5][0]= damping; h_reflectorData[reflNum ][5][1]=no_traping;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
+			h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
+			i++;
+
+		}
+  			 h_reflectorData[0][0][0]= reflNum;
+
+		
+	return reflNum ;
+}
+
 void AlgebraInMotion::scene_data_0_host()
 {
     gravity = .1;
@@ -990,6 +1765,11 @@ void AlgebraInMotion::scene_data_0_host()
 	//cuMemcpyHtoD(d_particleData, h_particleData, size);
 	time_in_sean =0 * TARGET_FR_RATE;
 	//::user->home();
+	_refObjSwitchFace->setAllChildrenOff();
+	_refObjSwitchLine->setAllChildrenOff();
+	_injObjSwitchLine->setAllChildrenOn();
+    h_reflectorData[0][0][0] =0;//turn off all reflectors
+    h_injectorData[0][0][0] =0;// turn off all injectors ~ ~   ~ means dont care
 
 	if (DEBUG_PRINT >0)printf("scene0Start \n");
 	/*if ((SOUND_SERV ==1)&& (::host->root() == 1))
@@ -1016,33 +1796,19 @@ void AlgebraInMotion::scene_data_0_host()
     anim = showFrameNo * .001;
 
     draw_water_sky =0;
-    
+    if(but2==1)	_injObjSwitchFace->setAllChildrenOn();
+	
+	if(but2==0)	_injObjSwitchFace->setAllChildrenOff();
+	
+
     int injNum ;	
     h_injectorData[0][0][0] =1;// number of injectors ~ ~   ~ means dont care
     //injector 1
     injNum =1;
 
-    /*if ((SOUND_SERV ==1)&& (::host->root() == 1))
-    {
-	//audioGain(texture_12,but1);
-	//if ((but1old == 0) && (but1 ==1)){audioPlay(short_sound_01a,0.1);audioGain(texture_12,1);}
-	if ((but1old == 0) && (but1 ==1)){audioFadeUp( texture_12, 1, 1, short_sound_01a);}
-	if ((but1old == 1) && (but1 ==0)){audioFadeOut( texture_12, 10, -1);}
+ 
+    if (soundEnabled)injSoundUpdate(injNum);
 
-    }*/
-
-    if (soundEnabled)
-    {
-    	if (but2old == 0 && but2 == 1)
-    	{
-    		short_sound_01a.play();
-    		texture_12.fade(1, 1);
-    	}
-    	else if (but2old == 1 && but2 == 0)
-    	{
-    		texture_12.fade(0, 10);
-    	}
-    }
     injNum =1;
     h_injectorData[injNum][1][0]=1;h_injectorData[injNum][1][1]=but2;// type, injection ratio ie streem volume, ~
     h_injectorData[injNum][2][0]=wandPos[0];h_injectorData[injNum][2][1]=wandPos[1];h_injectorData[injNum][2][2]=wandPos[2];//x,y,z position
@@ -1053,8 +1819,14 @@ void AlgebraInMotion::scene_data_0_host()
     h_injectorData[injNum][7][0]=5;h_injectorData[injNum][7][1]=5;h_injectorData[injNum][7][2]=5;//centrality of rnd distribution speed dt tu ~
     //if (but1){printf (" wandPos[0 ,1,2] wandVec[0,1,2] %f %f %f    %f %f %f \n", wandPos[0],wandPos[1],wandPos[2],wandVec[0],wandVec[1],wandVec[2]);}
     // load starcave wall reflectors
-    //h_reflectorData[0][0][0] =loadStarcaveWalls(1);
-    if (time_in_sean >5)h_reflectorData[0][0][0] =load6wallcaveWalls(1);
+   // h_reflectorData[0][0][0] = loadStarcaveWalls(1);
+    if (time_in_sean >5)
+		{
+			h_reflectorData[0][0][0] =load6wallcaveWalls(1);
+			//h_reflectorData[0][0][0] =0;
+ 			//int numRef =loadReflFrScr();
+			
+		}
 
     scene0Start =0;
 }
@@ -1080,6 +1852,12 @@ void AlgebraInMotion::scene_data_1_host()
         //pdata_init_velocity(-10000, -10000, -10000);
         //pdata_init_rand();
         //cuMemcpyHtoD(d_particleData, h_particleData, size);
+		_injObjSwitchFace->setAllChildrenOff();
+		_injObjSwitchLine->setAllChildrenOff();
+		_refObjSwitchLine->setAllChildrenOn();
+    h_reflectorData[0][0][0] =0;//turn off all reflectors
+    h_injectorData[0][0][0] =0;// turn off all injectors ~ ~   ~ means dont care
+
         time_in_sean =0 * TARGET_FR_RATE;
         //::user->home();
         //printf( "in start sean3 \n");
@@ -1104,7 +1882,8 @@ void AlgebraInMotion::scene_data_1_host()
     }
 
 //printf ("time_in_sean 1 %f\n",time_in_sean);
-    if (time_in_sean >110)nextSean=1;
+//    if (time_in_sean >110)nextSean=1;
+    if (time_in_sean >10)nextSean=1;// short time
     if (DEBUG_PRINT >0)printf( "in sean1 \n");
 //printf( "in sean1 \n"); 
 
@@ -1201,10 +1980,10 @@ void AlgebraInMotion::scene_data_1_host()
     dx = wandMat[4];
     dy = wandMat[5];
     dz = wandMat[6];
-
-   if(but2==1)_reflectorObjSwitch->setAllChildrenOn();
-   if(but2==0)_reflectorObjSwitch->setAllChildrenOff();
-
+// reflector obj switch
+  if(but2==1) 
+   if(but2==0)_refObjSwitchFace->setAllChildrenOff();
+ 
     h_reflectorData[reflNum ][0][0]=but2;h_reflectorData[reflNum ][0][1]=1;// type, age ie colormod, ~  0 is off 1 is plane reflector  0 is off 1 is plane reflector
     h_reflectorData[reflNum ][1][0]=x;    h_reflectorData[reflNum ][1][1]= y;h_reflectorData[reflNum ][1][2]=z;//x,y,z position
     h_reflectorData[reflNum ][2][0]=dx;  h_reflectorData[reflNum ][2][1]=dy;    h_reflectorData[reflNum ][2][2]=dz;//x,y,z normal
@@ -1213,33 +1992,9 @@ void AlgebraInMotion::scene_data_1_host()
     h_reflectorData[reflNum ][5][0]= 1; h_reflectorData[reflNum ][5][1]= 1.00;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
     h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
      
-    /*if ((SOUND_SERV ==1)&& (::host->root() == 1))
-    {
 
-        if ((REFL_HITS ==1 ) && (but1))
-        {
-               float ag =h_debugData[reflNum]/500.0;
-               if (ag >.5) ag=.5;
-            audioGain(dan_10122606_sound_spray,ag);
-            //printf ("spiral Fountens hits in scene 1 %f  ln hits %f\n",h_debugData[reflNum],log((h_debugData[reflNum])));
-        }
-        if ((but1old ==1) && (but1 ==0)) audioGain(dan_10122606_sound_spray,0);
 
-    }*/
-
-    if (soundEnabled)
-    {
-    	if ((REFL_HITS == 1) && but2)
-    	{
-    		float newGain = _refl_hits[reflNum]/500.0;
-			//if (newGain >0) printf ("reflHits %f\n",newGain);
-    		if (newGain > 0.5) newGain = 0.5;
-    		dan_10122606_sound_spray.setGain(newGain);
-    	}
-    	if ((but2old == 1) && (but2 == 0))
-    		dan_10122606_sound_spray.setGain(0);
-    }
-
+    if (soundEnabled)reflSoundUpdate( reflNum);
 
     scene1Start =0;
 }
@@ -1247,14 +2002,15 @@ void AlgebraInMotion::scene_data_1_host()
 void AlgebraInMotion::scene_data_2_host()
 {
     //4 waterFalls
+    // waterFallsFrom screenes
 
     draw_water_sky =0;
     // particalsysparamiteres--------------
     gravity = .005;	
-    gravity = .0001;	
+    gravity = .001;	
     max_age = 2000;
     disappear_age =2000;
-    colorFreq =64 *max_age/2000.0 ;
+    colorFreq =128 *max_age/2000.0 ;
     alphaControl =0;//turns alph to transparent beloy y=0
     static float time_in_sean;
     time_in_sean = time_in_sean + 1.0/TARGET_FR_RATE;
@@ -1267,17 +2023,20 @@ void AlgebraInMotion::scene_data_2_host()
 	//pdata_init_age( max_age);
 	//pdata_init_velocity(-10000, -10000, -10000);
 	//pdata_init_rand();
+   std::cout << " init particals in seen2 " << std::endl;
 	//cuMemcpyHtoD(d_particleData, h_particleData, size);
+	_injObjSwitchFace->setAllChildrenOff();
+	_injObjSwitchLine->setAllChildrenOff();
+	_refObjSwitchLine->setAllChildrenOn();
+    h_reflectorData[0][0][0] =0;//turn off all reflectors
+    h_injectorData[0][0][0] =0;// turn off all injectors ~ ~   ~ means dont care
+
+
+
 	if (DEBUG_PRINT >0)printf( "in start sean2 \n");
 	time_in_sean =0 * TARGET_FR_RATE;
 	//::user->home();
 	if (DEBUG_PRINT >0)printf("scene0Start \n");
-	/*if ((SOUND_SERV ==1)&& (::host->root() == 1))
-	{
-	    //audioFadeUp( harmonicAlgorithm, 15, 1, -1);
-	    audioPlay(harmonicAlgorithm,1.0);audioGain(harmonicAlgorithm,1);
-
-	}*/
 
 	if (soundEnabled)
 	{
@@ -1295,7 +2054,8 @@ void AlgebraInMotion::scene_data_2_host()
 
 
     if (time_in_sean >90)nextSean=1;
-    //printf ("time_in_sean 2 %f\n",time_in_sean);
+//     if (time_in_sean >8)nextSean=1;//short time
+   //printf ("time_in_sean 2 %f\n",time_in_sean);
     if (DEBUG_PRINT >0)printf( "in sean2 \n");
     //printf( "in sean2 \n");
 
@@ -1315,95 +2075,15 @@ void AlgebraInMotion::scene_data_2_host()
 
     //	 injector data 
     int injNum ;	
-    h_injectorData[0][0][0] =1;// number of injectors ~ ~   ~ means dont care
-    //injector 1
-    /*
-       injNum =1;
 
-       h_injectorData[injNum][1][0]=1;h_injectorData[injNum][1][1]=1.0;// type, injection ratio ie streem volume, ~
-       h_injectorData[injNum][2][0]=0;h_injectorData[injNum][2][1]=ftToM(0.00);h_injectorData[injNum][2][2]=0;//x,y,z position
-       h_injectorData[injNum][3][0]=0.02 * (sin(anim));h_injectorData[injNum][3][1]=10;h_injectorData[injNum][3][2]=0.02 * (cos(anim));//x,y,z velocity
-    //h_injectorData[injNum][3][0]=0.02 *0.0;h_injectorData[injNum][3][1]=0;h_injectorData[injNum][3][2]=0.02 * -1;//x,y,z velocity
 
-    h_injectorData[injNum][4][0]=0.00;h_injectorData[injNum][4][1]=0.00;h_injectorData[injNum][4][2]=.0;//x,y,z size
-    h_injectorData[injNum][5][0]=0.0010;h_injectorData[injNum][5][1]=0.0010;h_injectorData[injNum][5][2]=0.000;//t,u,v jiter v not implimented = speed 
-    //h_injectorData[injNum][5][0]=0.000;h_injectorData[injNum][5][1]=0.000;h_injectorData[injNum][5][2]=0.000;//t,u,v jiter v not implimented = speed 
-    h_injectorData[injNum][6][0]= 1.1;h_injectorData[injNum][6][1]=0.0;h_injectorData[injNum][6][2]=0.0;//speed jiter ~ ~
-    h_injectorData[injNum][7][0]=5;h_injectorData[injNum][7][1]=5;h_injectorData[injNum][7][2]=5;//centrality of rnd distribution speed dt tu ~
-
-    if ((SOUND_SERV ==1)&& (::host->root() == 1))
-    {
-    audioPos (texture_17_swirls3, 30* h_injectorData[injNum][3][0], 0, -30* h_injectorData[injNum][3][2]);
-
-    }
-     */
-
-    h_injectorData[0][0][0] =4;// number of injectors ~ ~   ~ means dont care
+    h_injectorData[0][0][0] =0;// number of injectors ~ ~   ~ means dont care
 //
+	float speed = 0.2;
+	loadInjFountsFrScr(0 ,.5,0,speed);
+ 
+	
 
-    // injector 1
-    injNum =1;//front
-    h_injectorData[injNum][1][0]=2;h_injectorData[injNum][1][1]=1.0;// type, injection ratio ie streem volume, ~
-    h_injectorData[injNum][2][0]=0;h_injectorData[injNum][2][1]=ftToM(6);h_injectorData[injNum][2][2]=ftToM(-2);//x,y,z position
-    h_injectorData[injNum][3][0]=0.0;h_injectorData[injNum][3][1]=0.010;h_injectorData[injNum][3][2]=0.01;//x,y,z velocity drection
-    h_injectorData[injNum][4][0]=ftToM(0.25);h_injectorData[injNum][4][1]=ftToM(0.25);h_injectorData[injNum][4][2]=ftToM(0.0);//x,y,z size
-    h_injectorData[injNum][5][0]=0.000;h_injectorData[injNum][5][1]=0.000;h_injectorData[injNum][5][2]=0.000;//t,u,v jiter v not implimented = speed 
-    h_injectorData[injNum][6][0]=0.2000;h_injectorData[injNum][6][1]=0.0;h_injectorData[injNum][6][2]=0.0;//speed jiter ~ ~
-    h_injectorData[injNum][7][0]=5;h_injectorData[injNum][7][1]=5;h_injectorData[injNum][7][2]=5;//centrality of rnd distribution speed dt tu ~
-
-    copy_injector(1, 2);
-    injNum =2;//back
-    h_injectorData[injNum][2][0]=0;h_injectorData[injNum][2][1]=ftToM(6);h_injectorData[injNum][2][2]=ftToM(2);//x,y,z position
-    h_injectorData[injNum][3][0]=0.0;h_injectorData[injNum][3][1]=0.010;h_injectorData[injNum][3][2]=-0.01;//x,y,z velocity drection
-
-    copy_injector(1, 3);
-    injNum =3;//back
-    h_injectorData[injNum][2][0]=ftToM(2);h_injectorData[injNum][2][1]=ftToM(6);h_injectorData[injNum][2][2]=ftToM(0);//x,y,z position
-    h_injectorData[injNum][3][0]=-0.010;h_injectorData[injNum][3][1]=0.010;h_injectorData[injNum][3][2]=0;//x,y,z velocity drection
-    h_injectorData[injNum][4][0]=ftToM(0.25);h_injectorData[injNum][4][1]=ftToM(0.25);h_injectorData[injNum][4][2]=ftToM(0.25);//x,y,z size
-    copy_injector(1, 4);
-    injNum =4;//back
-    h_injectorData[injNum][2][0]=ftToM(-2);h_injectorData[injNum][2][1]=ftToM(6);h_injectorData[injNum][2][2]=ftToM(0);//x,y,z position
-    h_injectorData[injNum][3][0]=0.010;h_injectorData[injNum][3][1]=0.010;h_injectorData[injNum][3][2]=0;//x,y,z velocity drection
-    h_injectorData[injNum][4][0]=ftToM(0.25);h_injectorData[injNum][4][1]=ftToM(0.25);h_injectorData[injNum][4][2]=ftToM(0.25);//x,y,z size
-
-
-    /*
-    //injector 3
-    //sound for inj3
-    injNum =3;
-
-    if ((SOUND_SERV ==1)&& (::host->root() == 1))
-    {
-    //audioGain(texture_12,but1);
-
-    //if ((but1old == 0) && (but1 ==1)){audioPlay(short_sound_01a,0.1);audioGain(texture_12,1);}
-
-    if ((but1old == 0) && (but1 ==1)){audioGain(short_sound_01a,10.0);audioFadeUp( texture_12, 1, 1, short_sound_01a);}
-    if ((but1old == 1) && (but1 ==0)){audioFadeOut( texture_12, 10, -1);}
-    audioPos (texture_12, 1* h_injectorData[injNum][2][0], 1* h_injectorData[injNum][1][0], -1* h_injectorData[injNum][2][2]);
-    audioPos (short_sound_01a, 1* h_injectorData[injNum][2][0], 1* h_injectorData[injNum][1][0], -1* h_injectorData[injNum][2][2]);
-
-
-    }
-    h_injectorData[injNum][1][0]=1;h_injectorData[injNum][1][1]=but1*4.0;// type, injection ratio ie streem volume, ~
-    h_injectorData[injNum][2][0]=wandPos[0];h_injectorData[injNum][2][1]=wandPos[1];h_injectorData[injNum][2][2]=wandPos[2];//x,y,z position
-    h_injectorData[injNum][3][0]=wandVec[0];h_injectorData[injNum][3][1]=wandVec[1];h_injectorData[injNum][3][2]=wandVec[2];//x,y,z velocity direction
-    //h_injectorData[injNum][3][0]=0.02 * (sin(anim));h_injectorData[injNum][3][1]=0;h_injectorData[injNum][3][2]=0.02 * (cos(anim));//x,y,z velocity
-    //h_injectorData[injNum][3][0]=0.02 *0.0;h_injectorData[injNum][3][1]=0;h_injectorData[injNum][3][2]=0.02 * -1;//x,y,z velocity
-    h_injectorData[injNum][4][0]=0.00;h_injectorData[injNum][4][1]=0.00;h_injectorData[injNum][4][2]=.0;//x,y,z size
-    h_injectorData[injNum][5][0]=0.010;h_injectorData[injNum][5][1]=0.010;h_injectorData[injNum][5][2]=0.000;//t,u,v jiter v not implimented = speed 
-    h_injectorData[injNum][6][0]=0.1;h_injectorData[injNum][6][1]=0.0;h_injectorData[injNum][6][2]=0.0;//speed jiter ~ ~
-    h_injectorData[injNum][7][0]=5;h_injectorData[injNum][7][1]=5;h_injectorData[injNum][7][2]=5;//centrality of rnd distribution speed dt tu ~
-    //
-    if (but1){if (DEBUG_PRINT >0) {printf(" wandPos[0 ,1,2] wandVec[0,1,2] %f %f %f    %f %f %f \n", wandPos[0],wandPos[1],wandPos[2],wandVec[0],wandVec[1],wandVec[2]);}}
-
-    //cuMemcpyHtoD(d_injectorData, h_injectorData, sizei);
-    ///	 injector data 
-    //float reflectorNum =0;
-    //int reflectI;
-    //reflectI = (int) reflectorNum *3*8;//8 sets of 3 vallues
-     */
     h_reflectorData[0][0][0] =1;// number of reflectors ~ ~   ~ means dont care
     int reflNum;
     reflNum = 1;
@@ -1413,13 +2093,17 @@ void AlgebraInMotion::scene_data_2_host()
     float dx = wandVec[0]/2;
     float dy = wandVec[1]/2;
     float dz = wandVec[2]/2;
-
+    
     dx = wandMat[4];
     dy = wandMat[5];
     dz = wandMat[6];
 
-   if(but2==1)_reflectorObjSwitch->setAllChildrenOn();
-   if(but2==0)_reflectorObjSwitch->setAllChildrenOff();
+//   if(but2==1)_reflectorObjSwitch->setAllChildrenOn();
+//   if(but2==0)_reflectorObjSwitch->setAllChildrenOff();
+// paddel reflector
+   if(but2==1)_refObjSwitchFace->setAllChildrenOn();
+   if(but2==0)_refObjSwitchFace->setAllChildrenOff();
+
 
     h_reflectorData[reflNum ][0][0]=but2;h_reflectorData[reflNum ][0][1]=1;// type, age ie colormod, ~  0 is off 1 is plane reflector  0 is off 1 is plane reflector
     h_reflectorData[reflNum ][1][0]=x;    h_reflectorData[reflNum ][1][1]= y;h_reflectorData[reflNum ][1][2]=z;//x,y,z position
@@ -1428,38 +2112,50 @@ void AlgebraInMotion::scene_data_2_host()
     h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implimented = speed 
     h_reflectorData[reflNum ][5][0]= 1; h_reflectorData[reflNum ][5][1]= 1.00;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
     h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
+	int reflectOn;
+	if (time_in_sean > 15)
+		{
+			 reflectOn =1;
+		}
+	else
+		{
+			 reflectOn =0;
 
-    /*if ((SOUND_SERV ==1)&& (::host->root() == 1))
-    {
+		}
+   if (soundEnabled)reflSoundUpdate(reflNum);
 
-	if ((REFL_HITS ==1 ) && (but1))
-	{
-	    float ag =h_debugData[reflNum]/500.0;
-	    if (ag >.5) ag=.5;
-	    audioGain(dan_10122606_sound_spray,ag);
 
-	    audioGain(dan_10122606_sound_spray,ag);
-	    //printf ("4 waterFalls hits in scene %f  ln hits %f\n",h_debugData[reflNum],log((h_debugData[reflNum])));
-	}
-	if ((but1old ==1) && (but1 ==0)) audioGain(dan_10122606_sound_spray,0);
+	float dvx,dvy,dvz; dvx =0;dvy =0;dvx =-0;
+	float rotSp = time_in_sean*2*M_PI /2;
+		dvy = .1 * sin(rotSp);
+		dvx =  .1 * cos(rotSp);
 
-    }*/
+		//(sin(time_in_sean*2*M_PI))
+// persone reflector
+	  	h_reflectorData[0][0][0] =2;// number of reflectors ~ ~   ~ means dont care
+		reflNum = 2;
+		h_reflectorData[reflNum ][0][0]=reflectOn;h_reflectorData[reflNum ][0][1]=1;// type, age ie colormod, ~  0 is off 1 is plane reflector  0 is off 1 is plane reflector
+		h_reflectorData[reflNum ][1][0]=0;    h_reflectorData[reflNum ][1][1]= 0;h_reflectorData[reflNum ][1][2]=0;//x,y,z position
+		h_reflectorData[reflNum ][2][0]=0 + dvx;  h_reflectorData[reflNum ][2][1]=1 + dvy;    h_reflectorData[reflNum ][2][2]= -1 +dvz;//x,y,z normal
+		h_reflectorData[reflNum ][3][0]=1; h_reflectorData[reflNum ][3][1]=0.00; h_reflectorData[reflNum ][3][2]=0;//reflector radis ,~,~ 
+		h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implimented = speed 
+		h_reflectorData[reflNum ][5][0]= 1; h_reflectorData[reflNum ][5][1]= 1.00;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
+		h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
 
-    if (soundEnabled)
-    {
-    	if ((REFL_HITS == 1) && but2)
-    	{
-    		float newGain = _refl_hits[reflNum]/500.0;
-			//if (newGain >0) printf ("reflHits %f\n",newGain);;
-    		if (newGain > 0.5) newGain = 0.5;
+//large floor reflector
+		  	h_reflectorData[0][0][0] =3;// number of reflectors ~ ~   ~ means dont care
+		reflNum = 3;
+		h_reflectorData[reflNum ][0][0]=reflectOn;h_reflectorData[reflNum ][0][1]=1;// type, age ie colormod, ~  0 is off 1 is plane reflector  0 is off 1 is plane reflector
+		h_reflectorData[reflNum ][1][0]=0;    h_reflectorData[reflNum ][1][1]= 0;h_reflectorData[reflNum ][1][2]=0;//x,y,z position
+		h_reflectorData[reflNum ][2][0]=0;  h_reflectorData[reflNum ][2][1]=1;    h_reflectorData[reflNum ][2][2]=0;//x,y,z normal
+		h_reflectorData[reflNum ][3][0]=30; h_reflectorData[reflNum ][3][1]=0.00; h_reflectorData[reflNum ][3][2]=0;//reflector radis ,~,~ 
+		h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implimented = speed 
+		h_reflectorData[reflNum ][5][0]= 1; h_reflectorData[reflNum ][5][1]= 1.00;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
+		h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
 
-    		dan_10122606_sound_spray.setGain(newGain);
-    	}
 
-    	if (but2old == 1 && !but2)
-    		dan_10122606_sound_spray.setGain(0);
-    }
 
+ 
     scene2Start =0;
 }
 
@@ -1467,13 +2163,13 @@ void AlgebraInMotion::scene_data_3_host()
 {
     //painting skys
 
-    draw_water_sky =1;
+    //draw_water_sky =1;
     // particalsysparamiteres--------------
     gravity = .000005;	
     max_age = 2000;
     disappear_age =2000;
     colorFreq =64 *max_age/2000.0 ;
-    alphaControl =1;//turns alph to transparent beloy y=0
+    alphaControl =0;//turns alph to transparent beloy y=0 1 transparenrt
     static float time_in_sean;
     static float rotRate;
 
@@ -1484,9 +2180,15 @@ void AlgebraInMotion::scene_data_3_host()
     if (scene3Start == 1)
     {
 		size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
-		pdata_init_age( max_age);
-		pdata_init_velocity(-10000, -10000, -10000);
+		//pdata_init_age( max_age);
+		//pdata_init_velocity(-10000, -10000, -10000);
 		pdata_init_rand();
+		_refObjSwitchFace->setAllChildrenOff();
+		_refObjSwitchLine->setAllChildrenOff();
+		_injObjSwitchLine->setAllChildrenOn();
+    h_reflectorData[0][0][0] =0;//turn off all reflectors
+    h_injectorData[0][0][0] =0;// turn off all injectors ~ ~   ~ means dont care
+
 		///cuMemcpyHtoD(d_particleData, h_particleData, size);
 		if (DEBUG_PRINT >0)printf( "in start sean3 \n");
 		time_in_sean =0 * TARGET_FR_RATE;
@@ -1526,6 +2228,10 @@ void AlgebraInMotion::scene_data_3_host()
 	scene3ContextStart = 0;
     }
     //printf ("time_in_sean 3 %f\n",time_in_sean);
+    float maxTime_in_sean = 90;
+ 
+    if (time_in_sean >maxTime_in_sean) nextSean=1;
+
 
     if (DEBUG_PRINT >0)printf( "in sean3 \n");
     // printf ( "seantime time %f %f\n",time_in_sean,::user->get_t());
@@ -1552,8 +2258,13 @@ void AlgebraInMotion::scene_data_3_host()
     //	 injector data 
 
     //	 injector data 
+
+	if(but2==1)	_injObjSwitchFace->setAllChildrenOn();
+
+	if(but2==0)	_injObjSwitchFace->setAllChildrenOff();
+
     int injNum ;	
-    h_injectorData[0][0][0] =3;// number of injectors ~ ~   ~ means dont care
+    h_injectorData[0][0][0] =2;// number of injectors ~ ~   ~ means dont care
     //injector 1
     injNum =1;
 
@@ -1577,7 +2288,7 @@ void AlgebraInMotion::scene_data_3_host()
 
     if (soundEnabled && ENABLE_SOUND_POS_UPDATES)
     {
-    	texture_17_swirls3.setPosition(30 * h_injectorData[injNum][3][0], 0, -30 * h_injectorData[injNum][3][2]);
+    	texture_17_swirls3.setPosition(3 * h_injectorData[injNum][3][0], 0, -3 * h_injectorData[injNum][3][2]);
     }
 
     //
@@ -1591,51 +2302,24 @@ void AlgebraInMotion::scene_data_3_host()
     h_injectorData[injNum][6][0]=.00;h_injectorData[injNum][6][1]=0.5;h_injectorData[injNum][6][2]=0.0;//speed jiter ~ ~
     h_injectorData[injNum][7][0]=5;h_injectorData[injNum][7][1]=5;h_injectorData[injNum][7][2]=5;//centrality of rnd distribution speed dt tu ~
 
-    //injector 3
-    //sound for inj3
-    injNum =3;
+// floor reflector
 
-    /*if ((SOUND_SERV ==1)&& (::host->root() == 1))
-    {
-	//audioGain(texture_12,but1);
+/*
+	int reflNum =1;
+	h_reflectorData[0][0][0]=1;
 
-	//if ((but1old == 0) && (but1 ==1)){audioPlay(short_sound_01a,0.1);audioGain(texture_12,1);}
+    h_reflectorData[reflNum ][0][0]=1;h_reflectorData[reflNum ][0][1] =1;// type, age ie colormod, ~  0 is off 1 is plane reflector  0 is off 1 is plane reflector
+    h_reflectorData[reflNum ][1][0]=0;    h_reflectorData[reflNum ][1][1]= 0;h_reflectorData[reflNum ][1][2]=0;//x,y,z position
+    h_reflectorData[reflNum ][2][0]=0;  h_reflectorData[reflNum ][2][1]=1;    h_reflectorData[reflNum ][2][2]=0;//x,y,z normal
+    h_reflectorData[reflNum ][3][0]=10; h_reflectorData[reflNum ][3][1]=0.00; h_reflectorData[reflNum ][3][2]=0;//reflector radis ,~,~ 
+    h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implimented = speed 
+    h_reflectorData[reflNum ][5][0]= 1; h_reflectorData[reflNum ][5][1]= 1.00;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
+    h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
 
-	if ((but1old == 0) && (but1 ==1)){audioGain(short_sound_01a,10.0);audioFadeUp( texture_12, 1, 1, short_sound_01a);}
-	if ((but1old == 1) && (but1 ==0)){audioFadeOut( texture_12, 10, -1);}
 
-	if (ENABLE_SOUND_POS_UPDATES)
-	{  
-	    audioPos (texture_12, 1* h_injectorData[injNum][2][0], 1* h_injectorData[injNum][1][0], -1* h_injectorData[injNum][2][2]);
-	    audioPos (short_sound_01a, 1* h_injectorData[injNum][2][0], 1* h_injectorData[injNum][1][0], -1* h_injectorData[injNum][2][2]);
-	} 
+ 
 
-    }*/
-
-    if (soundEnabled)
-    {
-    	if (but2old == 0 && but2 == 1)
-    	{
-    		short_sound_01a.setGain(10);
-    		short_sound_01a.play();
-    		texture_12.fade(1, 1);
-    	}
-    	if (but2old == 1 && but2 == 0)
-    	{
-    		texture_12.fade(0, 10);
-    	}
-
-    	if (ENABLE_SOUND_POS_UPDATES)
-    	{
-    		texture_12.setPosition(	1 * h_injectorData[injNum][2][0],
-    								1 * h_injectorData[injNum][1][0],
-    							   -1 * h_injectorData[injNum][2][2]);
-
-    		short_sound_01a.setPosition(1 * h_injectorData[injNum][2][0],
-    									1 * h_injectorData[injNum][1][0],
-    								   -1 * h_injectorData[injNum][2][2]);
-    	}
-    }
+*/
 
     h_injectorData[injNum][1][0]=1;h_injectorData[injNum][1][1]=but2*4.0;// type, injection ratio ie streem volume, ~
     h_injectorData[injNum][2][0]=wandPos[0];h_injectorData[injNum][2][1]=wandPos[1];h_injectorData[injNum][2][2]=wandPos[2];//x,y,z position
@@ -1648,70 +2332,159 @@ void AlgebraInMotion::scene_data_3_host()
     h_injectorData[injNum][7][0]=5;h_injectorData[injNum][7][1]=5;h_injectorData[injNum][7][2]=5;//centrality of rnd distribution speed dt tu ~
     //
     if (but2){if (DEBUG_PRINT >0) {printf(" wandPos[0 ,1,2] wandVec[0,1,2] %f %f %f    %f %f %f \n", wandPos[0],wandPos[1],wandPos[2],wandVec[0],wandVec[1],wandVec[2]);}}
+    if (soundEnabled)injSoundUpdate(injNum);
+
 
     scene3Start =0;
 }
 
 void AlgebraInMotion::scene_data_4_host()
 {
-    //falling rain
+    //educational
 
     draw_water_sky =0;
     // particalsysparamiteres--------------
     //std::cerr << "Gravity: " << _gravityRV->getValue() << std::endl;
-    gravity = .001;	
-    gravity = .00003;	
-    max_age = 2000;
+    gravity = .01;	
+    gravity = .003;	
+	  max_age = 2000;
     disappear_age =2000;
     colorFreq =64 *max_age/2000.0 ;
     alphaControl =0;//turns alph to transparent beloy y=0
     static float time_in_sean;
     time_in_sean = time_in_sean + 1.0/TARGET_FR_RATE;
+	static float in_rot_time = 0;
+		    static int subsceanStep;
+    			static int suboldseanStep;
+    			static int subseanCnangeTo;
 
     // reload  rnd < max_age in to pdata
 
     if (scene4Start == 1)
-    {
-	//size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
-	//pdata_init_age( max_age);
-	//pdata_init_velocity(-10000, -10000, -10000);
-	//pdata_init_rand();
-	//cuMemcpyHtoD(d_particleData, h_particleData, size);
+		{
+		    subsceanStep =-1;
+    			suboldseanStep  = -1;
+    			subseanCnangeTo = -1;
 
-	//::user->home();
-	if (DEBUG_PRINT >0)printf( "in start sean4 \n");
-	time_in_sean =0 * TARGET_FR_RATE;
-	/*if ((SOUND_SERV ==1)&& (::host->root() == 1))
-	{
+		//size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
+		//pdata_init_age( max_age);
+		//pdata_init_velocity(-10000, -10000, -10000);
+		//pdata_init_rand();
+		//cuMemcpyHtoD(d_particleData, h_particleData, size);
 
-	    audioLoop(dan_rain_at_sea_loop,1);
-	    audioPlay(dan_rain_at_sea_loop,1.0);audioGain(dan_rain_at_sea_loop,1.0);
-	    //printf(" playcode exicuted\n");
-	}*/
+		//::user->home();
+		_injObjSwitchFace->setAllChildrenOff();
+		_injObjSwitchLine->setAllChildrenOff();
+		_refObjSwitchLine->setAllChildrenOn();
+		h_reflectorData[0][0][0] =0;//turn off all reflectorsstatic oldGravity =0; 
+		h_injectorData[0][0][0] =0;// turn off all injectors ~ ~   ~ means dont care
+		texture_12.fade(0, 1);// cludge to stop shound from injector on skip to end
 
-	if (soundEnabled)
-	{
-		dan_rain_at_sea_loop.setLoop(1);
-		dan_rain_at_sea_loop.setGain(1);
-		dan_rain_at_sea_loop.play();
-	}
-	//printf( " time %f \n", ::user->get_t());
-	scene4ContextStart = 1;
-    }
-    else
-    {
-	scene4ContextStart = 0;
-    }
-    if (time_in_sean >20)nextSean=1;
+		_EdSecSwitchSlid1->setAllChildrenOn();
+		in_rot_time = 10;
+
+/*		_EdSecSwitchAxis->setAllChildrenOn();
+*/	
+		if (DEBUG_PRINT >0)printf( "in start sean4 \n");
+		time_in_sean =0 * TARGET_FR_RATE;
+		/*if ((SOUND_SERV ==1)&& (::host->root() == 1))
+		{
+
+			audioLoop(dan_rain_at_sea_loop,1);
+			audioPlay(dan_rain_at_sea_loop,1.0);audioGain(dan_rain_at_sea_loop,1.0);
+			//printf(" playcode exicuted\n");
+		}*/
+
+		if (soundEnabled)
+		{
+			dan_rain_at_sea_loop.setLoop(1);
+			dan_rain_at_sea_loop.setGain(1);
+
+			dan_rain_at_sea_loop.play();
+		}
+		//printf( " time %f \n", ::user->get_t());
+		scene4ContextStart = 1;
+		}
+		else
+		{
+		scene4ContextStart = 0;
+		}
+		
+    float maxTime_in_sean = 90;
+ 
+    if (time_in_sean >maxTime_in_sean) nextSean=1;
+    float fract_of_max_time_in_sean =time_in_sean/maxTime_in_sean;
+    // creates seanCnangeTo varable 
+    
+    
+    subsceanStep = fract_of_max_time_in_sean * 20;//10 steps	float rotTime =30;
+
+    if (subsceanStep > suboldseanStep) { subseanCnangeTo = subsceanStep;suboldseanStep = subsceanStep;} else {subseanCnangeTo =-1;}
+    if (subseanCnangeTo !=-1) std::cout << "subseanCnangeTo " << subseanCnangeTo << std::endl; 
+    
+    
+    //std::cout << "time_in_sean , maxTime_in_sean , fract_of_max_time_in_sean , fract_of_max_time_in_sean " << time_in_sean << maxTime_in_sean << fract_of_max_time_in_sean << fract_of_max_time_in_sean << std::endl;
     //printf ("time_in_sean 4 %f\n",time_in_sean);
     if (DEBUG_PRINT >0)printf( "in sean4 \n");
     //printf( "in sean4 \n");
+/*	static int oldGravity =0;
+	int gravityChanged;
+    gravity = _gravityRV->getValue();
+	if (gravity != oldGravity) {gravityChanged =1;} else {gravityChanged =0;}
+
+	if (gravityChanged){turnAllEduSlidsOff(); _EdSecSwitchSlid2->setAllChildrenOn();}
+	oldGravity = gravity;
+
+	int reflectorOnChanged;
+	static int oldReflectorOn =0;
+	int reflectorOn = (int) _reflectorCB->getValue();
+	if (reflectorOn != oldReflectorOn ) {reflectorOnChanged =1;} else {reflectorOnChanged =0;}
+	if (reflectorOnChanged &&  (reflectorOn ==1)){turnAllEduSlidsOff(); _EdSecSwitchSlid3->setAllChildrenOn();std::cout << "turning slide3 on \n";}
+	oldReflectorOn = reflectorOn;
+*/
+    gravity = _gravityRV->getValue();
+	std::cout << " sin refl grav " << _rotateInjCB->getValue() << " " <<  _reflectorCB->getValue() << " " << _gravityRV->getValue() << "\n";
+	turnAllEduSlidsOff();
+	if (_rotateInjCB->getValue())
+		{
+		if ((_gravityRV->getValue() >= .0001) && ( _reflectorCB->getValue() == 1)){ _EdSecSwitchSlid6->setAllChildrenOn()   ;std::cout << "rot on grav on reflector on \n";}
+		if ((_gravityRV->getValue() >= .0001) && (! _reflectorCB->getValue())){_EdSecSwitchSlid5->setAllChildrenOn()    ;std::cout << "rot on grav on reflector off \n";}
+		if ((_gravityRV->getValue() < .0001) && (! _reflectorCB->getValue())){_EdSecSwitchSlid4->setAllChildrenOn()    ;std::cout << "rot on grav off reflector off \n";}
+		if ((_gravityRV->getValue() < .0001) && ( _reflectorCB->getValue())){_EdSecSwitchSlid8->setAllChildrenOn()    ;std::cout << "rot on grav off reflector on \n";}// need to change new slide
+
+		}
+	else
+		{
+		if ((_gravityRV->getValue() >= .0001) && ( _reflectorCB->getValue() == 1)){_EdSecSwitchSlid3->setAllChildrenOn()    ;std::cout << "rot off grav on reflector on \n";}
+		if ((_gravityRV->getValue() >= .0001) && (! _reflectorCB->getValue())){ _EdSecSwitchSlid2->setAllChildrenOn()   ;std::cout << "rot off grav on reflector off \n";}
+		if (( _gravityRV->getValue() < .0001) && (! _reflectorCB->getValue())){_EdSecSwitchSlid1->setAllChildrenOn()    ;std::cout << "rot off grav off reflector off \n";}
+		if (( _gravityRV->getValue() < .0001) && (_reflectorCB->getValue())){_EdSecSwitchSlid7->setAllChildrenOn()    ;std::cout << "rot off grav off reflector on \n";}// need to make a new slide
+
+		}
+
+
 
     // anim += 0.001;// .0001
     static float rotRate = .05;
     anim = showFrameNo * rotRate;
     rotRate += .000001;
+/*
+//   		xballPos[0]= 0;xballPos[1]= 0;xballPos[2]= 0;
+//		yballPos[0]= 0;yballPos[1]= 0;yballPos[2]= 0;
+//		zballPos[0]= 0;zballPos[1]= 0;zballPos[2]=0;
 
+//		if (sceanStep >= 0){xballPos[0]= 300;yballPos[1]= 0;zballPos[2]= 0;}
+ //		if (sceanStep > 1){xballPos[0]= 500;}
+ //		if (sceanStep > 2){xballPos[0]= 900;}
+ 	if (subseanCnangeTo == 0) {xballPos[0]= 0;yballPos[1] = 0;zballPos[2] = 0;}
+
+	if (subseanCnangeTo == 0) {_EdSecXballObjSwitch->setAllChildrenOn();_EdSecXboxObjSwitch->setAllChildrenOn();}
+	if (subseanCnangeTo == 1) {xballPos[0]= 500;}
+	if (subseanCnangeTo == 2) {xballPos[0]= 900;}
+	
+	if (subseanCnangeTo == 3) {_EdSecYballObjSwitch->setAllChildrenOn();_EdSecXYZballObjSwitch->setAllChildrenOn();}
+
+*/
     //anim += 3.14159/4;
     //tracker data
     //printf("  devid %d \n",devid );
@@ -1724,58 +2497,30 @@ void AlgebraInMotion::scene_data_4_host()
 
     //	 injector data 
     int injNum ;	
-    h_injectorData[0][0][0] =1;// number of injectors ~ ~   ~ means dont care
-    //injector 1
-    /*
-       injNum =1;
-
-       h_injectorData[injNum][1][0]=1;h_injectorData[injNum][1][1]=1.0;// type, injection ratio ie streem volume, ~
-       h_injectorData[injNum][2][0]=0;h_injectorData[injNum][2][1]=ftToM(0.00);h_injectorData[injNum][2][2]=0;//x,y,z position
-       h_injectorData[injNum][3][0]=0.02 * (sin(anim));h_injectorData[injNum][3][1]=10;h_injectorData[injNum][3][2]=0.02 * (cos(anim));//x,y,z velocity
-    //h_injectorData[injNum][3][0]=0.02 *0.0;h_injectorData[injNum][3][1]=0;h_injectorData[injNum][3][2]=0.02 * -1;//x,y,z velocity
-
-    h_injectorData[injNum][4][0]=0.00;h_injectorData[injNum][4][1]=0.00;h_injectorData[injNum][4][2]=.0;//x,y,z size
-    h_injectorData[injNum][5][0]=0.0010;h_injectorData[injNum][5][1]=0.0010;h_injectorData[injNum][5][2]=0.000;//t,u,v jiter v not implimented = speed 
-    //h_injectorData[injNum][5][0]=0.000;h_injectorData[injNum][5][1]=0.000;h_injectorData[injNum][5][2]=0.000;//t,u,v jiter v not implimented = speed 
-    h_injectorData[injNum][6][0]= 1.1;h_injectorData[injNum][6][1]=0.0;h_injectorData[injNum][6][2]=0.0;//speed jiter ~ ~
-    h_injectorData[injNum][7][0]=5;h_injectorData[injNum][7][1]=5;h_injectorData[injNum][7][2]=5;//centrality of rnd distribution speed dt tu ~
-
-    if ((SOUND_SERV ==1)&& (::host->root() == 1))
-    {
-    audioPos (texture_17_swirls3, 30* h_injectorData[injNum][3][0], 0, -30* h_injectorData[injNum][3][2]);
-
-    }
-     */
-
-    h_injectorData[0][0][0] =1;// number of injectors ~ ~   ~ means dont care
+ 
+    h_injectorData[0][0][0] =1;// number of injectors 
 
     // injector 1
-    injNum =1;
+	float speed =.2;
+	speed = _speedRV->getValue();
+	float xvos,zvos;
+	float rotTime = 15;
+	if (_rotateInjCB->getValue()){in_rot_time = in_rot_time + 1.0/TARGET_FR_RATE;}
+			xvos = (sin(in_rot_time*2*M_PI/rotTime))*speed;
+			zvos = (cos(in_rot_time*2*M_PI/rotTime))*speed;
+
+		
+	//std::cout << " speed " << speed << std::endl;
+    injNum =1;	
     h_injectorData[injNum][1][0]=2;h_injectorData[injNum][1][1]=1.0;// type, injection ratio ie streem volume, ~
-    h_injectorData[injNum][2][0]=0;h_injectorData[injNum][2][1]=ftToM(10);h_injectorData[injNum][2][2]=ftToM(-2);//x,y,z position
-    h_injectorData[injNum][3][0]=0.0;h_injectorData[injNum][3][1]=0.001;h_injectorData[injNum][3][2]=0.00;//x,y,z velocity drection
-    h_injectorData[injNum][4][0]=ftToM(1);h_injectorData[injNum][4][1]=ftToM(1);h_injectorData[injNum][4][2]=ftToM(1);//x,y,z size
-    h_injectorData[injNum][5][0]=0.000;h_injectorData[injNum][5][1]=0.000;h_injectorData[injNum][5][2]=0.000;//t,u,v jiter v not implimented = speed 
-    h_injectorData[injNum][6][0]=0.2000;h_injectorData[injNum][6][1]=0.0;h_injectorData[injNum][6][2]=0.0;//speed jiter ~ ~
-    h_injectorData[injNum][7][0]=5;h_injectorData[injNum][7][1]=5;h_injectorData[injNum][7][2]=5;//centrality of rnd distribution speed dt tu ~
+    h_injectorData[injNum][2][0]=0;h_injectorData[injNum][2][1]=2;h_injectorData[injNum][2][2]= -1.5;//x,y,z position
+    h_injectorData[injNum][3][0]=xvos;h_injectorData[injNum][3][1]=0.00;h_injectorData[injNum][3][2]=zvos;//x,y,z velocity drection
+	h_injectorData[injNum][4][0]=ftToM(0.25);h_injectorData[injNum][4][1]=ftToM(0.25);h_injectorData[injNum][4][2]=ftToM(0.25);//x,y,z size
+	h_injectorData[injNum][5][0]=0.000;h_injectorData[injNum][5][1]=0.000;h_injectorData[injNum][5][2]=0.000;//t,u,v jiter v not implimented = speed 
+	h_injectorData[injNum][6][0]=0.2000;h_injectorData[injNum][6][1]=0.0;h_injectorData[injNum][6][2]=0.0;//speed jiter ~ ~
+	h_injectorData[injNum][7][0]=2;h_injectorData[injNum][7][1]=2;h_injectorData[injNum][7][2]=2;//centrality of rnd distribution speed dt tu ~
 
-    copy_injector(1, 2);
-    injNum =2;//back
-    h_injectorData[injNum][2][0]=0;h_injectorData[injNum][2][1]=ftToM(6);h_injectorData[injNum][2][2]=ftToM(2);//x,y,z position
-    h_injectorData[injNum][3][0]=0.0;h_injectorData[injNum][3][1]=0.010;h_injectorData[injNum][3][2]=-0.01;//x,y,z velocity drection
-
-    copy_injector(1, 3);
-    injNum =3;//back
-    h_injectorData[injNum][2][0]=ftToM(2);h_injectorData[injNum][2][1]=ftToM(6);h_injectorData[injNum][2][2]=ftToM(0);//x,y,z position
-    h_injectorData[injNum][3][0]=-0.010;h_injectorData[injNum][3][1]=0.010;h_injectorData[injNum][3][2]=0;//x,y,z velocity drection
-    h_injectorData[injNum][4][0]=ftToM(0.25);h_injectorData[injNum][4][1]=ftToM(0.25);h_injectorData[injNum][4][2]=ftToM(0.25);//x,y,z size
-    copy_injector(1, 4);
-    injNum =4;//back
-    h_injectorData[injNum][2][0]=ftToM(-2);h_injectorData[injNum][2][1]=ftToM(6);h_injectorData[injNum][2][2]=ftToM(0);//x,y,z position
-    h_injectorData[injNum][3][0]=0.010;h_injectorData[injNum][3][1]=0.010;h_injectorData[injNum][3][2]=0;//x,y,z velocity drection
-    h_injectorData[injNum][4][0]=ftToM(0.25);h_injectorData[injNum][4][1]=ftToM(0.25);h_injectorData[injNum][4][2]=ftToM(0.25);//x,y,z size
-
-
+ 
 
     h_reflectorData[0][0][0] =1;// number of reflectors ~ ~   ~ means dont care
     int reflNum;
@@ -1790,8 +2535,12 @@ void AlgebraInMotion::scene_data_4_host()
     dx = wandMat[4];
     dy = wandMat[5];
     dz = wandMat[6];
-   if(but2==1)_reflectorObjSwitch->setAllChildrenOn();
-   if(but2==0)_reflectorObjSwitch->setAllChildrenOff();
+//   if(but2==1)_reflectorObjSwitch->setAllChildrenOn();
+//   if(but2==0)_reflectorObjSwitch->setAllChildrenOff();
+   if(but2==1)_refObjSwitchFace->setAllChildrenOn();
+   if(but2==0)_refObjSwitchFace->setAllChildrenOff();
+
+
 
     h_reflectorData[reflNum ][0][0]=but2;h_reflectorData[reflNum ][0][1] =1;// type, age ie colormod, ~  0 is off 1 is plane reflector  0 is off 1 is plane reflector
     h_reflectorData[reflNum ][1][0]=x;    h_reflectorData[reflNum ][1][1]= y;h_reflectorData[reflNum ][1][2]=z;//x,y,z position
@@ -1801,34 +2550,28 @@ void AlgebraInMotion::scene_data_4_host()
     h_reflectorData[reflNum ][5][0]= 1; h_reflectorData[reflNum ][5][1]= 1.00;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
     h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
 
-    /*if ((SOUND_SERV ==1)&& (::host->root() == 1))
-    {
+   
 
-	if ((REFL_HITS ==1 ) && (but1))
-	{
-	    float ag =h_debugData[reflNum]/500.0;
-	    if (ag >.5) ag=.5;
+    if (soundEnabled) reflSoundUpdate(reflNum);
 
-	    audioGain(dan_10122606_sound_spray,ag);
-	    //printf ("falling rain hits in scene %f  ln hits %f\n",h_debugData[reflNum],log((h_debugData[reflNum])));
-	}
-	if ((but1old ==1) && (but1 ==0)) audioGain(dan_10122606_sound_spray,0);
-    }*/
 
-    if (soundEnabled)
-    {
-    	if (REFL_HITS == 1 && but2)
-    	{
-    		float newGain = _refl_hits[reflNum]/500.0;
-			//if (newGain >0) printf ("reflHits %f\n",newGain);
-    		if (newGain > 0.5) newGain = 0.5;
+//florr reflector
+    reflNum = 2;
+	int floorReflectOn;
+	
+	if ((time_in_sean > 5) && _reflectorCB->getValue())	{floorReflectOn =1;}
+	else					{floorReflectOn =0;}
+    h_reflectorData[0][0][0] =reflNum;// number of reflectors ~ 1.0/TARGET_FR_RATE;~   ~ means dont care
 
-    		dan_10122606_sound_spray.setGain(newGain);
-    	}
+    h_reflectorData[reflNum ][0][0]=floorReflectOn;h_reflectorData[reflNum ][0][1] =1;// type, age ie colormod, ~  0 is off 1 is plane reflector  0 is off 1 is plane reflector
+    h_reflectorData[reflNum ][1][0]=0;    h_reflectorData[reflNum ][1][1]= 0;h_reflectorData[reflNum ][1][2]=0;//x,y,z position
+    h_reflectorData[reflNum ][2][0]=0;  h_reflectorData[reflNum ][2][1]=1;    h_reflectorData[reflNum ][2][2]=0;//x,y,z normal
+    h_reflectorData[reflNum ][3][0]=10; h_reflectorData[reflNum ][3][1]=0.00; h_reflectorData[reflNum ][3][2]=0;//reflector radis ,~,~ 
+    h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implimented = speed 
+    h_reflectorData[reflNum ][5][0]= 1; h_reflectorData[reflNum ][5][1]= 1.00;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
+    h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
 
-    	if (but2old == 1 && !but2)
-    		dan_10122606_sound_spray.setGain(0);
-    }
+
     scene4Start =0;
 }
 
@@ -1839,6 +2582,7 @@ void AlgebraInMotion::scene_data_0_context(int contextid) const
 	size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
 	cuMemcpyHtoD(d_particleDataMap[contextid], h_particleData, size);
     }
+
 }
 
 void AlgebraInMotion::scene_data_1_context(int contextid) const
@@ -1861,6 +2605,7 @@ void AlgebraInMotion::scene_data_3_context(int contextid) const
     {
 	size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
 	cuMemcpyHtoD(d_particleDataMap[contextid], h_particleData, size);
+
     }
 }
 
@@ -1887,7 +2632,7 @@ void AlgebraInMotion::scene_data_1_kill_audio()
 {
 	h_reflectorData[0][0][0] = 0;
 	h_injectorData[0][0][0] = 0;
-
+	std::cout << "scene_data_1_kill_audio() " << std::endl;
 	if (soundEnabled)
 	{
 		dan_5min_ostinato.fade(0, 1.50);
@@ -1895,10 +2640,12 @@ void AlgebraInMotion::scene_data_1_kill_audio()
 	}
 }
 
+
 void AlgebraInMotion::scene_data_2_kill_audio()
 {
 	h_reflectorData[0][0][0] = 0;
 	h_injectorData[0][0][0] = 0;
+	std::cout << "scene_data_2_kill_audio() " << std::endl;
 
 	if (soundEnabled)
 	{
@@ -1911,12 +2658,13 @@ void AlgebraInMotion::scene_data_3_kill_audio()
 {
 	h_reflectorData[0][0][0] = 0;
 	h_injectorData[0][0][0] = 0;
-
+	std::cout << "scene_data_3_kill_audio() " << std::endl;
 	if (soundEnabled)
 	{
 		rain_at_sea.fade(0, 1.50);
 		texture_17_swirls3.fade(0, 1.50);
 		dan_10122606_sound_spray.setGain(0);
+
 		dan_10120600_rezS3_rez2.setGain(0);
 	}
 }
@@ -1926,9 +2674,275 @@ void AlgebraInMotion::scene_data_4_kill_audio()
 	h_reflectorData[0][0][0] = 0;
 	h_injectorData[0][0][0] = 0;
 
+	turnAllEduSlidsOff();
+	std::cout << "scene_data_4_kill_audio() " << std::endl;
+
 	if (soundEnabled)
 	{
 		dan_rain_at_sea_loop.fade(0, 1.50);
 		dan_10122606_sound_spray.setGain(0);
 	}
 }
+
+
+float AlgebraInMotion::reflSoundUpdate(int reflNum)
+	{
+		static float OldReflectOn =0;
+		float ReflectOn = h_reflectorData[reflNum ][0][0];
+
+		float x,y,z;
+	    	if (ReflectOn >0)
+			{
+				float newGain = _refl_hits[reflNum]/500.0;
+				//if (newGain >0) printf ("reflHits %f\n",newGain);;
+				if (newGain > 0.5) newGain = 0.5;
+
+				dan_10122606_sound_spray.setGain(newGain);
+				x = h_reflectorData[reflNum ][1][0];   y= h_reflectorData[reflNum ][1][1];z = h_reflectorData[reflNum ][1][2];
+				if (ENABLE_SOUND_POS_UPDATES) dan_10122606_sound_spray.setPosition(x*4, -z*0, y*0);//convert from z bzck to z up
+
+			}
+
+    		if ((ReflectOn == 0) && (OldReflectOn > 0))
+			{
+		
+ 		   		dan_10122606_sound_spray.setGain(0);
+    		}
+	OldReflectOn = ReflectOn;
+	return 	_refl_hits[reflNum];
+
+    }
+	
+
+
+//    h_injectorData[injNum][1][0]=2;h_injectorData[injNum][1][1]=1.0;// type, injection ratio ie streem volume, ~
+//    h_injectorData[injNum][2][0]=0;h_injectorData[injNum][2][1]=ftToM(10);h_injectorData[injNum][2][2]=ftToM(-2);//x,y,z position
+
+
+void	AlgebraInMotion::injSoundUpdate(int injNum)
+
+    {
+		static float OldInjOn =0;
+		float injOn = h_injectorData[injNum][1][1];
+		float x,y,z;
+			x = h_injectorData[injNum][2][0];
+			y = h_injectorData[injNum][2][1];
+
+			z = h_injectorData[injNum][2][2];
+			y =0;z =0;
+			x = x*4;
+ 
+		static int roundRobenSound = 0;
+		int roundRobenMod =5;
+
+    	if (OldInjOn == 0 && (injOn > 0))
+    	{
+			roundRobenSound = roundRobenSound +1;
+			roundRobenSound = roundRobenSound%roundRobenMod;
+			if (ENABLE_SOUND_POS_UPDATES)
+				{
+					if (roundRobenSound ==0 ){short_sound_01a.play();short_sound_01a.setPosition(x, -z, y);}
+					if (roundRobenSound ==1 ){short_sound_01a1.play();short_sound_01a1.setPosition(x, -z, y);}
+					if (roundRobenSound ==2 ){short_sound_01a2.play();short_sound_01a2.setPosition(x, -z, y);}
+					if (roundRobenSound ==3 ){short_sound_01a3.play();short_sound_01a3.setPosition(x, -z, y);}
+					if (roundRobenSound ==4 ){short_sound_01a4.play();short_sound_01a4.setPosition(x, -z, y);}
+				}
+
+			if (! ENABLE_SOUND_POS_UPDATES)
+				{
+					if (roundRobenSound ==0 ){short_sound_01a.play();}
+					if (roundRobenSound ==1 ){short_sound_01a1.play();}
+					if (roundRobenSound ==2 ){short_sound_01a2.play();}
+					if (roundRobenSound ==3 ){short_sound_01a3.play();}
+					if (roundRobenSound ==4 ){short_sound_01a4.play();}
+				}
+
+
+    		texture_12.fade(4, 1);
+
+    	}
+		
+    	if (OldInjOn > 0 && injOn == 0)
+    	{
+    		texture_12.fade(0, 1);
+    	}
+		if 	((injOn > 0) && (ENABLE_SOUND_POS_UPDATES))
+
+		{
+			x = h_injectorData[injNum][2][0];
+			y = h_injectorData[injNum][2][1];
+			z = h_injectorData[injNum][2][2];
+    		texture_12.setPosition(x, -z, y);
+    		short_sound_01a.setPosition(x, -z, y);
+
+		}
+	OldInjOn = injOn;
+	}
+
+osg::Geometry* AlgebraInMotion::createQuad()
+	{
+	osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D;
+	osg::ref_ptr<osg::Image> image = osgDB::readImageFile("/data-nfs/ParticleDreams/images/8lineblonwhitecopy.png");
+    if(!image)
+    {
+       std::cerr << "Failed to read quad texture." << std::endl;
+    }
+	//texture->setImage(image.get());
+	osg::ref_ptr<osg::Geometry> quad =
+			osg::createTexturedQuadGeometry(
+											osg::Vec3(-0.5f,0.0f,-0.5f),
+											osg::Vec3(1.0f,0.0f,0.0f),
+											osg::Vec3(0.0f,0.0f,1.0f) );
+	osg::StateSet* ss = quad->getOrCreateStateSet() ;
+	//ss->setTextureAttributeAndModes(0 , texture.get());
+    ss->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+	return quad.get();
+	}
+
+void AlgebraInMotion::turnAllEduSlidsOff()
+	{
+       _EdSecSwitchSlid1->setAllChildrenOff();
+       _EdSecSwitchSlid2->setAllChildrenOff();
+       _EdSecSwitchSlid3->setAllChildrenOff();
+       _EdSecSwitchSlid4->setAllChildrenOff();
+       _EdSecSwitchSlid5->setAllChildrenOff();
+       _EdSecSwitchSlid6->setAllChildrenOff();
+       _EdSecSwitchSlid7->setAllChildrenOff();
+       _EdSecSwitchSlid8->setAllChildrenOff();
+	}
+
+void	AlgebraInMotion::initGeoEdSection()
+	{
+
+osg::Node* tidleSlide1 = NULL;
+	tidleSlide1 = osgDB::readNodeFile(_dataDir + "/models/frameS1.obj");//xyz
+    if(!tidleSlide1){std::cerr << "Error reading /models/frameS1.obj" << std::endl;}
+osg::Node* tidleSlide2 = NULL;
+	tidleSlide2 = osgDB::readNodeFile(_dataDir + "/models/frameS2.obj");//;xyza
+    if(!tidleSlide2){std::cerr << "Error reading /models/frameS2.obj" << std::endl;}
+osg::Node* tidleSlide3 = NULL;
+	tidleSlide3 = osgDB::readNodeFile(_dataDir + "/models/frameS3.obj");//xyzar
+    if(!tidleSlide3){std::cerr << "Error reading /models/frameS3.obj" << std::endl;}
+osg::Node* tidleSlide4 = NULL;
+	tidleSlide4 = osgDB::readNodeFile(_dataDir + "/models/frameS4.obj");//sinxyz
+    if(!tidleSlide4){std::cerr << "Error reading /models/frameS4.obj" << std::endl;}
+osg::Node* tidleSlide5 = NULL;
+	tidleSlide5 = osgDB::readNodeFile(_dataDir + "/models/frameS5.obj");//sinxyza
+    if(!tidleSlide5){std::cerr << "Error reading /models/frameS5.obj" << std::endl;}
+osg::Node* tidleSlide6 = NULL;
+	tidleSlide6 = osgDB::readNodeFile(_dataDir + "/models/frameS6.obj");//sin xyzar
+    if(!tidleSlide6){std::cerr << "Error reading /models/frameS6.obj" << std::endl;}
+
+osg::Node* tidleSlide7 = NULL;
+	tidleSlide7 = osgDB::readNodeFile(_dataDir + "/models/frameS7.obj");//sin xyzr
+    if(!tidleSlide7){std::cerr << "Error reading /models/frameS7.obj" << std::endl;}
+osg::Node* tidleSlide8 = NULL;
+	tidleSlide8 = osgDB::readNodeFile(_dataDir + "/models/frameS8.obj");// xyz
+    if(!tidleSlide8){std::cerr << "Error reading /models/frameS8.obj" << std::endl;}
+
+std::cout << " loading slides " << "\n" ;
+//creat switchnode
+	_EdSecSwitchSlid1 = new osg::Switch;
+	_EdSecSwitchSlid2 = new osg::Switch;
+	_EdSecSwitchSlid3 = new osg::Switch;
+	_EdSecSwitchSlid4 = new osg::Switch;
+	_EdSecSwitchSlid5 = new osg::Switch;
+	_EdSecSwitchSlid6 = new osg::Switch;
+	_EdSecSwitchSlid7 = new osg::Switch;
+	_EdSecSwitchSlid8 = new osg::Switch;
+	AlgebraInMotion::turnAllEduSlidsOff();
+
+// creat fixes xform on slides
+        osg::Matrix ms;
+        osg::MatrixTransform * mtSlide1 = new osg::MatrixTransform();
+        osg::MatrixTransform * mtSlide2 = new osg::MatrixTransform();
+        osg::MatrixTransform * mtSlide3 = new osg::MatrixTransform();
+        osg::MatrixTransform * mtSlide4 = new osg::MatrixTransform();
+        osg::MatrixTransform * mtSlide5 = new osg::MatrixTransform();
+        osg::MatrixTransform * mtSlide6 = new osg::MatrixTransform();
+        osg::MatrixTransform * mtSlide7 = new osg::MatrixTransform();
+        osg::MatrixTransform * mtSlide8 = new osg::MatrixTransform();
+//matrices for interdediat computations
+        osg::Matrix mss;
+        osg::Matrix msr;
+
+        osg::Matrix msrh;
+        osg::Matrix mst;
+
+        osg::Matrix mresult;
+
+
+ 
+//    height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -802  ; originY= 1657  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
+		int i =1;
+		std::cout << " i, _PhScAr[i].originX  ,_PhScAr[i].originY _PhScAr[i].h "<< i<< " " << _PhScAr[i].originX  << " " << _PhScAr[i].originY << " " << _PhScAr[i].h << "\n";
+ 
+      mst.makeTranslate(osg::Vec3(_PhScAr[i].originX,_PhScAr[i].originY +150,450));
+     // mst.makeTranslate(osg::Vec3(-802,1657,450));
+		ms.makeScale(osg::Vec3(40.0,25,1.0));
+       msr.makeRotate(osg::DegreesToRadians(90.0), osg::Vec3(1,0,0));
+       msrh.makeRotate(osg::DegreesToRadians(25.0), osg::Vec3(0,0,1));
+      msrh.makeRotate(osg::DegreesToRadians(_PhScAr[i].h), osg::Vec3(0,0,1));
+
+
+ 
+	mresult.set ( ms*msr*msrh * mst);
+	mtSlide1->setMatrix(mresult);
+	mtSlide2->setMatrix(mresult);
+	mtSlide3->setMatrix(mresult);
+	mtSlide4->setMatrix(mresult);
+	mtSlide5->setMatrix(mresult);
+	mtSlide6->setMatrix(mresult);
+	mtSlide7->setMatrix(mresult);
+	mtSlide8->setMatrix(mresult);
+
+
+//atatch tidleSlide to matrix transform
+		mtSlide1->addChild(tidleSlide1);
+		mtSlide2->addChild(tidleSlide2);
+		mtSlide3->addChild(tidleSlide3);
+		mtSlide4->addChild(tidleSlide4);
+		mtSlide5->addChild(tidleSlide5);
+		mtSlide6->addChild(tidleSlide6);
+		mtSlide7->addChild(tidleSlide7);
+		mtSlide8->addChild(tidleSlide8);
+
+
+// atatch scaled model to switch 
+        _EdSecSwitchSlid1->addChild(mtSlide1);
+        _EdSecSwitchSlid2->addChild(mtSlide2);
+        _EdSecSwitchSlid3->addChild(mtSlide3);
+        _EdSecSwitchSlid4->addChild(mtSlide4);
+        _EdSecSwitchSlid5->addChild(mtSlide5);
+        _EdSecSwitchSlid6->addChild(mtSlide6);
+        _EdSecSwitchSlid7->addChild(mtSlide7);
+        _EdSecSwitchSlid8->addChild(mtSlide8);
+
+		turnAllEduSlidsOff(); 
+       
+// atatch switch to scene
+ 
+
+// addTidle screene.
+		SceneObject * so = new SceneObject("EdSlide1",false,false,false,false,false);
+      so->addChild(_EdSecSwitchSlid1);
+      so->addChild(_EdSecSwitchSlid2);
+      so->addChild(_EdSecSwitchSlid3);
+      so->addChild(_EdSecSwitchSlid4);
+      so->addChild(_EdSecSwitchSlid5);
+      so->addChild(_EdSecSwitchSlid6);
+      so->addChild(_EdSecSwitchSlid7);
+      so->addChild(_EdSecSwitchSlid8);
+
+        PluginHelper::registerSceneObject(so,"AlgebraInMotion");
+
+        so->setPosition(osg::Vec3(0,0,0));
+
+        so->setScale(1);
+        so->attachToScene();
+		so->setNavigationOn(true);
+
+	}
+
+
+
