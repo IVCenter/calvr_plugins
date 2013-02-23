@@ -1382,42 +1382,66 @@ void FuturePatient::updateMicrobeTests(int patientid)
 
 void FuturePatient::saveLayout()
 {
-    time_t now;
-    time(&now);
-
-    struct tm timeInfo;
-    timeInfo = *localtime(&now);
+    bool ok = true;
     char file[1024];
-    strftime(file,1024,"%Y_%m_%d_%H_%M_%S.cfg",&timeInfo);
-
-    std::string outFile = _layoutDirectory + "/" + file;
-
-    std::cerr << "Trying to save layout file: " << outFile << std::endl;
-
-    if(!_layoutObject)
+    if(ComController::instance()->isMaster())
     {
-	return;
+	time_t now;
+	time(&now);
+
+	struct tm timeInfo;
+	timeInfo = *localtime(&now);
+	strftime(file,1024,"%Y_%m_%d_%H_%M_%S.cfg",&timeInfo);
+
+	std::string outFile = _layoutDirectory + "/" + file;
+
+	std::cerr << "Trying to save layout file: " << outFile << std::endl;
+
+	if(_layoutObject)
+	{
+	    std::ofstream outstream(outFile.c_str(),std::ios_base::out | std::ios_base::trunc);
+
+	    if(!outstream.fail())
+	    {
+		outstream << ((int)SAVED_LAYOUT_VERSION) << std::endl;
+
+		_layoutObject->dumpState(outstream);
+
+		outstream.close();
+	    }
+	    else
+	    {
+		std::cerr << "Failed to open file for writing: " << outFile << std::endl;
+		ok = false;
+	    }
+	}
+	else
+	{
+	    ok = false;
+	}
+	ComController::instance()->sendSlaves(&ok,sizeof(bool));
+	if(ok)
+	{
+	    ComController::instance()->sendSlaves(file,1024*sizeof(char));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&ok,sizeof(bool));
+	if(ok)
+	{
+	    ComController::instance()->readMaster(file,1024*sizeof(char));
+	}
     }
 
-    std::ofstream outstream(outFile.c_str(),std::ios_base::out | std::ios_base::trunc);
-
-    if(outstream.fail())
+    if(ok)
     {
-	std::cerr << "Failed to open file for writing: " << outFile << std::endl;
-	return;
+	MenuButton * button = new MenuButton(file);
+	button->setCallback(this);
+	_loadLayoutButtons.push_back(button);
+
+	_loadLayoutMenu->addItem(button);
     }
-
-    outstream << ((int)SAVED_LAYOUT_VERSION) << std::endl;
-
-    _layoutObject->dumpState(outstream);
-
-    outstream.close();
-
-    MenuButton * button = new MenuButton(file);
-    button->setCallback(this);
-    _loadLayoutButtons.push_back(button);
-
-    _loadLayoutMenu->addItem(button);
 }
 
 void FuturePatient::loadLayout(const std::string & file)
