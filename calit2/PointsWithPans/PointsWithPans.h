@@ -13,6 +13,8 @@
 
 #include "PointsObject.h"
 
+//#define USE_POINTS_NODE
+
 struct PWPPan
 {
     osg::Vec3 location;
@@ -34,6 +36,11 @@ struct PWPSet
     std::vector<PWPPan> panList;
 };
 
+namespace cvr
+{
+class PointsNode;
+}
+
 class PointsWithPans : public cvr::CVRPlugin, public cvr::MenuCallback
 {
     public:
@@ -48,6 +55,8 @@ class PointsWithPans : public cvr::CVRPlugin, public cvr::MenuCallback
         void message(int type, char *&data, bool collaborative=false);
 
     protected:
+        cvr::PointsNode * createPointsNode(std::string file, float pointSize, float pointRadius);
+
         cvr::SubMenu * _pwpMenu;
         cvr::SubMenu * _setMenu;
 

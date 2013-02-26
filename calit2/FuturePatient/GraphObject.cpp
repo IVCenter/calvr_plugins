@@ -64,6 +64,8 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 	char units[256];
 	float minValue;
 	float maxValue;
+	float normalLow;
+	float normalHigh;
 	time_t minTime;
 	time_t maxTime;
 	int numPoints;
@@ -140,8 +142,12 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 		    if(strcmp(metaRes[0]["good_low"].c_str(),"NULL") && metaRes[0]["good_high"].c_str())
 		    {
 			hasGoodRange = true;
-			goodLow = atof(metaRes[0]["good_low"].c_str());
-			goodHigh = atof(metaRes[0]["good_high"].c_str());
+			gd.normalLow = goodLow = atof(metaRes[0]["good_low"].c_str());
+			gd.normalHigh = goodHigh = atof(metaRes[0]["good_high"].c_str());
+		    }
+		    else
+		    {
+			gd.normalLow = gd.normalHigh = 0.0;
 		    }
 
 		    //find min/max values
@@ -338,6 +344,60 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 	}
 	_nameList.push_back(name);
 
+	std::vector<std::pair<float,float> > ranges;
+	std::vector<osg::Vec4> colors;
+
+	if(gd.normalLow != 0.0 || gd.normalHigh != 0.0)
+	{
+	    float range = gd.maxValue - gd.minValue;
+	    float val = 0.0;
+	    if(gd.minValue < gd.normalLow)
+	    {
+		float val = (gd.normalLow - gd.minValue) / range;
+		val = std::min(val,1.0f);
+		ranges.push_back(std::pair<float,float>(0.0,val));
+		colors.push_back(osg::Vec4(0.1,0.25,0.3,1.0));
+	    }
+
+	    if(val < 1.0)
+	    {
+		float nextVal = (gd.normalHigh - gd.minValue) / range;
+		nextVal = std::max(nextVal,0.0f);
+		nextVal = std::min(nextVal,1.0f);
+		ranges.push_back(std::pair<float,float>(val,nextVal));
+		colors.push_back(osg::Vec4(0,0.5,0,1.0));
+		val = nextVal;
+	    }
+
+	    if(val < 1.0)
+	    {
+		float nextVal = (10.0*gd.normalHigh - gd.minValue) / range;
+		nextVal = std::max(nextVal,0.0f);
+		nextVal = std::min(nextVal,1.0f);
+		ranges.push_back(std::pair<float,float>(val,nextVal));
+		colors.push_back(osg::Vec4(0.7,0.25,0.1,1.0));
+		val = nextVal;
+	    }
+
+	    if(val < 1.0)
+	    {
+		float nextVal = (100.0*gd.normalHigh - gd.minValue) / range;
+		nextVal = std::max(nextVal,0.0f);
+		nextVal = std::min(nextVal,1.0f);
+		ranges.push_back(std::pair<float,float>(val,nextVal));
+		colors.push_back(osg::Vec4(0.5,0,0,1.0));
+		val = nextVal;
+	    }
+
+	    if(val < 1.0)
+	    {
+		ranges.push_back(std::pair<float,float>(val,1.0));
+		colors.push_back(osg::Vec4(0.5,0,0.5,1.0));
+	    }
+	}
+
+	_graph->setBGRanges(ranges,colors);
+	
 	if(gd.numAnnotations)
 	{
 	    std::map<int,PointAction*> actionMap;

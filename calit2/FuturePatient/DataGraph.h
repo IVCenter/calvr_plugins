@@ -123,6 +123,9 @@ class DataGraph
         bool getBarVisible();
 
         bool getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point);
+
+        void setBGRanges(std::vector<std::pair<float,float> > & ranges, std::vector<osg::Vec4> & colors);
+
         int getNumGraphs()
         {
             return _dataInfoMap.size();
@@ -156,6 +159,7 @@ class DataGraph
         void updateAxis();
         void updateBar();
         void updateClip();
+        void updateBGRanges();
         float calcPadding();
 
         osg::Vec4 makeColor(float f);
@@ -178,6 +182,11 @@ class DataGraph
         osg::ref_ptr<osg::Geode> _hoverBGGeode;
         osg::ref_ptr<osg::Geode> _hoverTextGeode;
         osg::ref_ptr<osgText::Text> _hoverText;
+
+        osg::ref_ptr<osg::Geode> _bgRangesGeode;
+        
+        std::vector<std::pair<float,float> > _bgRanges;
+        std::vector<osg::Vec4> _bgRangesColors;
 
         std::string _hoverGraph;
         int _hoverPoint;

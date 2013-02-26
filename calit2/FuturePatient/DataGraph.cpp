@@ -86,14 +86,17 @@ DataGraph::DataGraph()
     _axisGeode = new osg::Geode();
     _axisGeometry = new osg::Geometry();
     _bgGeometry = new osg::Geometry();
+    _bgRangesGeode = new osg::Geode();
 
     _root->addChild(_axisGeode);
     _root->addChild(_graphTransform);
     _root->addChild(_clipNode);
     _graphTransform->addChild(_graphGeode);
+    _graphTransform->addChild(_bgRangesGeode);
     _graphGeode->addDrawable(_bgGeometry);
     _axisGeode->addDrawable(_axisGeometry);
 
+    _bgRangesGeode->setCullingActive(false);
     _clipNode->setCullingActive(false);
 
     _point = new osg::Point();
@@ -171,6 +174,7 @@ DataGraph::DataGraph()
     setupMultiGraphDisplayModes();
     makeHover();
     makeBar();
+    updateBGRanges();
 }
 
 DataGraph::~DataGraph()
@@ -579,6 +583,18 @@ bool DataGraph::getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point)
     }
 
     return true;
+}
+
+void DataGraph::setBGRanges(std::vector<std::pair<float,float> > & ranges, std::vector<osg::Vec4> & colors)
+{
+    if(ranges.size() != colors.size())
+    {
+	std::cerr << "Range list and color list sizes do no match." << std::endl;
+	return;
+    }
+    _bgRanges = ranges;
+    _bgRangesColors = colors;
+    updateBGRanges();
 }
 
 void DataGraph::setDisplayType(std::string graphName, GraphDisplayType displayType)
@@ -1023,6 +1039,8 @@ void DataGraph::update()
 		{
 		    case MGDM_NORMAL:
 			{
+			    it->second.connectorGeometry->setColorArray(it->second.colorArray);
+			    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
 			    break;
 			}
 		    case MGDM_COLOR:
@@ -1168,6 +1186,15 @@ void DataGraph::update()
 	    _currentMultiGraphDisplayMode = _multiGraphDisplayMode;
 	}
     }
+    else
+    {
+	for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)
+	{
+	    it->second.singleColorArray->at(0) = osg::Vec4(0.1,0.1,0.1,1);
+	    it->second.connectorGeometry->setColorArray(it->second.singleColorArray);
+	    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+	}
+    }
 
     tran.makeTranslate(osg::Vec3(-0.5,0,-0.5));
     scale.makeScale(osg::Vec3(_width,1.0,_height));
@@ -1196,6 +1223,7 @@ void DataGraph::update()
     updateAxis();
     updateBar();
     //updateClip();
+    updateBGRanges();
 }
 
 void DataGraph::updateAxis()
@@ -1958,6 +1986,55 @@ void DataGraph::updateClip()
     _clipNode->getClipPlane(3)->setClipPlane(plane);
 
     _clipNode->setLocalStateSetModes(); 
+}
+
+void DataGraph::updateBGRanges()
+{
+    _bgRangesGeode->removeDrawables(0,_bgRangesGeode->getNumDrawables());
+
+    osg::Geometry * geom = new osg::Geometry();
+    osg::Vec3Array * verts = new osg::Vec3Array();
+    osg::Vec4Array * colors = new osg::Vec4Array();
+    geom->setVertexArray(verts);
+    geom->setColorArray(colors);
+    geom->setUseDisplayList(false);
+    geom->setUseVertexBufferObjects(true);
+    
+    float padding = calcPadding();
+    float wpadding = padding / _width;
+    float hpadding = padding / _height;
+    float dataWidth = (_width - (2.0 * padding)) / _width;
+    float dataHeight = (_height - (2.0 * padding)) / _height;
+
+    if(getNumGraphs() != 1 || !_bgRanges.size())
+    {
+	osg::Vec4 defaultColor(0.4,0.4,0.4,1.0);
+	verts->push_back(osg::Vec3(wpadding,0.5,hpadding));
+	verts->push_back(osg::Vec3(wpadding+dataWidth,0.5,hpadding));
+	verts->push_back(osg::Vec3(wpadding+dataWidth,0.5,hpadding+dataHeight));
+	verts->push_back(osg::Vec3(wpadding,0.5,hpadding+dataHeight));
+	colors->push_back(defaultColor);
+	geom->setColorBinding(osg::Geometry::BIND_OVERALL);
+	geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
+    }
+    else
+    {
+	for(int i = 0; i < _bgRanges.size(); ++i)
+	{
+	    verts->push_back(osg::Vec3(wpadding,0.5,hpadding+(_bgRanges[i].first*dataHeight)));
+	    verts->push_back(osg::Vec3(wpadding+dataWidth,0.5,hpadding+(_bgRanges[i].first*dataHeight)));
+	    verts->push_back(osg::Vec3(wpadding+dataWidth,0.5,hpadding+(_bgRanges[i].second*dataHeight)));
+	    verts->push_back(osg::Vec3(wpadding,0.5,hpadding+(_bgRanges[i].second*dataHeight)));
+	    colors->push_back(_bgRangesColors[i]);
+	    colors->push_back(_bgRangesColors[i]);
+	    colors->push_back(_bgRangesColors[i]);
+	    colors->push_back(_bgRangesColors[i]);
+	}
+	geom->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+	geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,_bgRanges.size()*4));
+    }
+
+    _bgRangesGeode->addDrawable(geom);
 }
 
 void DataGraph::updateBar()

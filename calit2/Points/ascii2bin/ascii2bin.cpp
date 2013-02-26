@@ -90,7 +90,6 @@ int main(int argc, char** argv)
 
         string value, values;
         stringstream ss;
-        stringstream ssdouble;
 	float point[3];
 	float color[3];
 	unsigned int linecount = 0;
@@ -105,22 +104,29 @@ int main(int argc, char** argv)
 
                 ss << values;
 
+		//std::cerr << "Line: " << values << std::endl;
+
                 int index = 0;
                 while(ss >> value)
                 {
+			stringstream ssdouble;
                         ssdouble << value;
 
-                        if( index < 3 )
+			//std::cerr << "Index: " << index << " value: " << ssdouble.str() << std::endl;
+
+			if(index < 2)
+			{
+			}
+                        else if(index < 5)
                         {
-                                ssdouble >> point[index];
+                                ssdouble >> point[index-2];
                         }
                         else
                         {
-                                ssdouble >> color[index - 3];
-                                color[index - 3]/=255.0;
+                                ssdouble >> color[index - 5];
+                                color[index - 5]/=255.0;
                         }
 
-                        ssdouble.clear();
                         index++;
 
                 }

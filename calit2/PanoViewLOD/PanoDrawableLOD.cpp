@@ -450,6 +450,7 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	    int cachesize = ConfigManager::getInt("value","Plugin.PanoViewLOD.CacheSize",256);
 	    _pdi->cacheMap[context] = new sph_cache(cachesize);
 	    _pdi->cacheMap[context]->set_debug(false);
+	    std::cerr << "Pan cache created, context: " << context << std::endl;
 	}
 
 	int time = 1;
