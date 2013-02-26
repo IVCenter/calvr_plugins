@@ -33,7 +33,7 @@ PluginTest::PluginTest()
 PluginTest::~PluginTest()
 {
     std::cerr << "PluginTest destroyed." << std::endl;
-    //delete testButton1;
+    delete testButton1;
     delete testButton2;
     delete testButton3;
     delete testButton4;
@@ -172,8 +172,12 @@ void PluginTest::menuCallback(MenuItem * item)
     if(item == testButton1)
     {
 	std::cerr << "Test Button 1" << std::endl;
-	menu1->removeItem(testButton1);
-	delete testButton1;
+	if(_loading)
+	{
+	    ThreadedLoader::instance()->remove(_job);
+	}
+	_job = ThreadedLoader::instance()->readNodeFile("/home/covise/data/falko/se_building.obj");
+	_loading = true;
     }
     else if(item == testButton2)
     {

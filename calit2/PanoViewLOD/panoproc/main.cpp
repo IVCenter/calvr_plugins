@@ -22,7 +22,6 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "image_cylinder.hpp"
 #include "image_rect.hpp"
 #include "image_pds.hpp"
 
@@ -51,7 +50,6 @@ image_data *imag(const char *arg)
 {
     if (!strncmp(arg, "rect", 4)) return new image_rect(arg + 4);
     if (!strncmp(arg, "pds",  3)) return new image_pds();
-    if (!strncmp(arg, "cylinder", 8)) return new image_cylinder(arg + 8);
     return 0;
 }
 

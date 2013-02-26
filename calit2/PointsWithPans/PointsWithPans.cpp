@@ -3,14 +3,10 @@
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/PluginManager.h>
-#include <cvrUtil/PointsNode.h>
 #include <PluginMessageType.h>
 
 #include <sstream>
 #include <iostream>
-#include <fstream>
-#include <algorithm>
-#include <sys/stat.h>
 
 #include "PanMarkerObject.h"
 
@@ -119,7 +115,6 @@ void PointsWithPans::menuCallback(MenuItem * item)
 		return;
 	    }
 
-#ifndef USE_POINTS_NODE
 	    PointsLoadInfo pli;
 	    pli.file = _setList[i]->file;
 	    pli.group = new osg::Group();
@@ -131,14 +126,6 @@ void PointsWithPans::menuCallback(MenuItem * item)
 		std::cerr << "PointsWithPans: Error, no points loaded for file: " << pli.file << std::endl;
 		return;
 	    }
-#else
-	    PointsNode * node = createPointsNode(_setList[i]->file,1.0f,_setList[i]->pointSize);
-	    if(!node)
-	    {
-		std::cerr << "PointsWithPans: Error, no points loaded for file: " << _setList[i]->file << std::endl;
-		return;
-	    }
-#endif
 
 	    _activeObject->attachToScene();
 	    _activeObject->setNavigationOn(false);
@@ -146,18 +133,17 @@ void PointsWithPans::menuCallback(MenuItem * item)
 	    _activeObject->setPosition(_setList[i]->offset);
 	    _activeObject->setRotation(osg::Quat());
 	    _activeObject->setNavigationOn(true);
-#ifndef USE_POINTS_NODE
 	    _activeObject->addChild(pli.group.get());
-#else
-	    _activeObject->addChild(node);
-#endif
 	    _activeObject->setTransitionTimes(_setList[i]->moveTime,_setList[i]->fadeTime);
 
-#ifndef USE_POINTS_NODE
+	    /*_sizeUni = pli.group->getOrCreateStateSet()->getUniform("pointSize");
+	    if(_sizeUni)
+	    {
+		_sizeUni->set(_setList[i]->pointSize);
+	    }*/
 	    _scaleUni = new osg::Uniform("pointScale",1.0f * _setList[i]->pointSize);
 	    pli.group->getOrCreateStateSet()->addUniform(_scaleUni);
 	    _scaleUni->set((float)_activeObject->getObjectToWorldMatrix().getScale().x());
-#endif
 
 	    for(int j = 0; j < _setList[i]->panList.size(); j++)
 	    {
@@ -177,12 +163,10 @@ void PointsWithPans::menuCallback(MenuItem * item)
 
 void PointsWithPans::preFrame()
 {
-#ifndef USE_POINTS_NODE
     if(_loadedSetIndex >= 0 && _scaleUni && _activeObject)
     {
 	_scaleUni->set((float)(_activeObject->getObjectToWorldMatrix().getScale().x()*_setList[_loadedSetIndex]->pointSize));
     }
-#endif
 
     if(_loadedSetIndex >= 0)
     {
@@ -200,77 +184,4 @@ void PointsWithPans::message(int type, char *&data, bool collaborative)
 	    _activeObject->panUnloaded(rotation);
 	}
     }
-}
-
-PointsNode * PointsWithPans::createPointsNode(std::string file, float pointSize, float pointRadius)
-{
-    size_t pos = file.find_last_of('.');
-    if(pos == std::string::npos || pos + 1 == file.length())
-    {
-	std::cerr << "Unable to determine extension for file: " << file << std::endl;
-	return NULL;
-    }
-
-    std::string ext = file.substr(pos+1);
-    std::transform(ext.begin(),ext.end(),ext.begin(),::tolower);
-
-    osg::ref_ptr<osg::Vec3Array> verts;
-    osg::ref_ptr<osg::Vec4ubArray> colors;
-
-    if(ext == "ply")
-    {
-    }
-    else if(ext == "xyz")
-    {
-    }
-    else if(ext == "xyb")
-    {
-	std::ifstream inFile;
-	inFile.open(file.c_str(),std::ios::in|std::ios::binary);
-	if(inFile.fail())
-	{
-	    std::cerr << "Unable to open file: " << file << std::endl;
-	    return NULL;
-	}
-
-	struct stat fileStat;
-	stat(file.c_str(), &fileStat);
-	int numPoints = fileStat.st_size / (sizeof(float)*6);
-	if(!numPoints)
-	{
-	    return NULL;
-	}
-
-	verts = new osg::Vec3Array(numPoints);
-	colors = new osg::Vec4ubArray(numPoints);
-
-	float xyzrgb[6];
-	for(int i = 0; i < numPoints; ++i)
-	{
-	    inFile.read((char*)xyzrgb,sizeof(float)*6);
-	    verts->at(i).x() = xyzrgb[0];
-	    verts->at(i).y() = xyzrgb[1];
-	    verts->at(i).z() = xyzrgb[2];
-	    colors->at(i).r() = (unsigned char)(xyzrgb[3]*255.0);
-	    colors->at(i).g() = (unsigned char)(xyzrgb[4]*255.0);
-	    colors->at(i).b() = (unsigned char)(xyzrgb[5]*255.0);
-	    colors->at(i).a() = (unsigned char)255;
-	}
-    }
-    else
-    {
-	std::cerr << "No point parser for file: " << file << std::endl;
-	return NULL;
-    }
-
-    if(!verts || !colors)
-    {
-	return NULL;
-    }
-
-    PointsNode * pNode = new PointsNode(PointsNode::POINTS_SHADED_SPHERES,0,pointSize,pointRadius,osg::Vec4(1.0,1.0,1.0,1.0),PointsNode::POINTS_OVERALL,PointsNode::POINTS_OVERALL);
-    pNode->setVertexArray(verts);
-    pNode->setColorArray(colors);
-
-    return pNode;
 }

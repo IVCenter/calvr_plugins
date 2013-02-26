@@ -5,7 +5,6 @@ SET(PANOPROC_HEADERS
     image_basic.hpp
     image_data.hpp
     image.hpp
-    image_cylinder.hpp
     image_pds.hpp
     image_rect.hpp
     panoproc.hpp
@@ -27,7 +26,6 @@ SET(PANOPROC_SRC
     image_basic.cpp
     image.cpp
     image_data.cpp
-    image_cylinder.cpp
     image_pds.cpp
     image_rect.cpp
     main.cpp
