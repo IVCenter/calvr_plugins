@@ -65,6 +65,7 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
         DataGraph * _graph;
 
         cvr::MenuList * _mgdList;
+        cvr::MenuList * _ldmList;
 
         std::string _pdfDir;
 

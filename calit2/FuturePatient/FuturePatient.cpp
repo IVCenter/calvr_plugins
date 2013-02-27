@@ -1100,7 +1100,7 @@ void FuturePatient::checkLayout()
 	width = ConfigManager::getFloat("width","Plugin.FuturePatient.Layout",1500.0);
 	height = ConfigManager::getFloat("height","Plugin.FuturePatient.Layout",1000.0);
 	pos = ConfigManager::getVec3("Plugin.FuturePatient.Layout");
-	_layoutObject = new GraphLayoutObject(width,height,3,"GraphLayout",false,true,false,true,false);
+	_layoutObject = new GraphLayoutObject(width,height,3,"FuturePatient",false,true,false,true,false);
 	_layoutObject->setPosition(pos);
 	PluginHelper::registerSceneObject(_layoutObject,"FuturePatient");
 	_layoutObject->attachToScene();

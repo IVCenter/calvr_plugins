@@ -33,6 +33,16 @@ GraphObject::GraphObject(mysqlpp::Connection * conn, float width, float height, 
     _mgdList->setCallback(this);
     addMenuItem(_mgdList);
 
+    std::vector<std::string> ldmText;
+    ldmText.push_back("None");
+    ldmText.push_back("Min/Max");
+    ldmText.push_back("All");
+
+    _ldmList = new MenuList();
+    _ldmList->setValues(ldmText);
+    _ldmList->setCallback(this);
+    addMenuItem(_ldmList);
+
     _pdfDir = ConfigManager::getEntry("value","Plugin.FuturePatient.PDFDir","");
 
     _activeHand = -1;
@@ -640,6 +650,12 @@ void GraphObject::menuCallback(MenuItem * item)
     {
 	//std::cerr << "Got index: " << _mgdList->getIndex() << std::endl;
 	_graph->setMultiGraphDisplayMode((MultiGraphDisplayMode)_mgdList->getIndex());
+	return;
+    }
+
+    if(item == _ldmList)
+    {
+	_graph->setLabelDisplayMode((LabelDisplayMode)_ldmList->getIndex());
 	return;
     }
 

@@ -87,10 +87,12 @@ DataGraph::DataGraph()
     _axisGeometry = new osg::Geometry();
     _bgGeometry = new osg::Geometry();
     _bgRangesGeode = new osg::Geode();
+    _labelGroup = new osg::Group();
 
     _root->addChild(_axisGeode);
     _root->addChild(_graphTransform);
     _root->addChild(_clipNode);
+    _root->addChild(_labelGroup);
     _graphTransform->addChild(_graphGeode);
     _graphTransform->addChild(_bgRangesGeode);
     _graphGeode->addDrawable(_bgGeometry);
@@ -119,6 +121,7 @@ DataGraph::DataGraph()
 
     _multiGraphDisplayMode = MGDM_COLOR_PT_SIZE;
     _currentMultiGraphDisplayMode = MGDM_NORMAL;
+    _labelDisplayMode = LDM_NONE;
 
     osg::Vec4 color(1.0,1.0,1.0,1.0);
 
@@ -227,6 +230,7 @@ void DataGraph::addGraph(std::string name, osg::Vec3Array * points, GraphDisplay
 
     gdi.pointGeode = new osg::Geode();
     gdi.connectorGeode = new osg::Geode();
+    gdi.labelGeode = new osg::Geode();
 
     _dataInfoMap[name] = gdi;
 
@@ -242,6 +246,8 @@ void DataGraph::addGraph(std::string name, osg::Vec3Array * points, GraphDisplay
     _graphTransformMap[name]->addChild(gdi.connectorGeode);
     _graphTransformMap[name]->setCullingActive(false);
     _clipNode->addChild(_graphTransformMap[name]);
+
+    _labelGroup->addChild(gdi.labelGeode);
 
     setDisplayType(name, displayType);
 
@@ -693,6 +699,109 @@ GraphDisplayType DataGraph::getDisplayType(std::string graphName)
     }
 
     return _dataInfoMap[graphName].displayType;
+}
+
+void DataGraph::setLabelDisplayMode(LabelDisplayMode ldm)
+{
+    for(std::map<std::string,GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); ++it)
+    {
+	it->second.labelGeode->removeDrawables(0,it->second.labelGeode->getNumDrawables());
+
+	osg::Vec4 textColor(1.0,0.1,0.8,1.0);
+
+	switch(ldm)
+	{
+	    case LDM_NONE:
+		break;
+	    case LDM_MIN_MAX:
+	    {
+		float min = FLT_MAX;
+		float max = FLT_MIN;
+		int minIndex = -1, maxIndex = -1;
+		//find min/max value/index
+		for(int i = 0; i < it->second.data->size(); ++i)
+		{
+		    if(it->second.data->at(i).z() > max)
+		    {
+			max = it->second.data->at(i).z();
+			maxIndex = i;
+		    }
+		    if(it->second.data->at(i).z() < min)
+		    {
+			min = it->second.data->at(i).z();
+			minIndex = i;
+		    }
+		}
+
+		if(minIndex < 0 || maxIndex < 0)
+		{
+		    break;
+		}
+
+		osg::Vec3 minPoint = it->second.data->at(minIndex) * _graphTransformMap[it->first]->getMatrix();
+		osg::Vec3 maxPoint = it->second.data->at(maxIndex) * _graphTransformMap[it->first]->getMatrix();
+
+		float textHeight = ((_width + _height) / 2.0) * 0.03;
+		maxPoint = maxPoint - osg::Vec3(0,0,textHeight) + osg::Vec3(0,-1,0);
+		minPoint = minPoint + osg::Vec3(0,0,textHeight) + osg::Vec3(0,-1,0);
+
+		std::stringstream minss;
+		minss << (it->second.zMin + (it->second.data->at(minIndex).z() * (it->second.zMax-it->second.zMin))) << " " << it->second.zLabel;
+		osgText::Text * text = makeText(minss.str(),textColor);
+		text->setAlignment(osgText::Text::CENTER_CENTER);
+		osg::BoundingBox bb = text->getBound();
+		float csize = textHeight / (bb.zMax() - bb.zMin());
+		text->setCharacterSize(csize);
+		text->setPosition(minPoint);
+		it->second.labelGeode->addDrawable(text);
+
+		std::stringstream maxss;
+		maxss << (it->second.zMin + (it->second.data->at(maxIndex).z() * (it->second.zMax-it->second.zMin))) << " " << it->second.zLabel;
+		text = makeText(maxss.str(),textColor);
+		text->setAlignment(osgText::Text::CENTER_CENTER);
+		bb = text->getBound();
+		csize = textHeight / (bb.zMax() - bb.zMin());
+		text->setCharacterSize(csize);
+		text->setPosition(maxPoint);
+		it->second.labelGeode->addDrawable(text);
+
+		break;
+	    }
+	    case LDM_ALL:
+	    {
+		for(int i = 0; i < it->second.data->size(); ++i)
+		{
+		    osg::Vec3 point = it->second.data->at(i) * _graphTransformMap[it->first]->getMatrix();
+		    float textHeight = ((_width + _height) / 2.0) * 0.02;
+
+		    if(fabs(point.z() - 1.5 * textHeight) > (_height/2.0) - calcPadding())
+		    {
+			point = point + osg::Vec3(0,0,textHeight) + osg::Vec3(0,-1,0);
+		    }
+		    else
+		    {
+			point = point - osg::Vec3(0,0,textHeight) + osg::Vec3(0,-1,0);
+		    }
+
+		    std::stringstream ss;
+		    ss << (it->second.zMin + (it->second.data->at(i).z() * (it->second.zMax-it->second.zMin)));
+		    osgText::Text * text = makeText(ss.str(),textColor);
+		    text->setAlignment(osgText::Text::CENTER_CENTER);
+		    osg::BoundingBox bb = text->getBound();
+		    float csize = textHeight / (bb.zMax() - bb.zMin());
+		    text->setCharacterSize(csize);
+		    text->setPosition(point);
+		    it->second.labelGeode->addDrawable(text);
+		}
+
+		break;
+	    }
+	    default:
+		break;
+	}
+    }
+
+    _labelDisplayMode = ldm;
 }
 
 void DataGraph::setGLScale(float scale)
@@ -1224,6 +1333,7 @@ void DataGraph::update()
     updateBar();
     //updateClip();
     updateBGRanges();
+    setLabelDisplayMode(_labelDisplayMode);
 }
 
 void DataGraph::updateAxis()

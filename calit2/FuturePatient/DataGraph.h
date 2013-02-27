@@ -42,6 +42,13 @@ enum MultiGraphDisplayMode
     MGDM_COLOR_SHAPE
 };
 
+enum LabelDisplayMode
+{
+    LDM_NONE=0,
+    LDM_MIN_MAX,
+    LDM_ALL
+};
+
 struct GraphDataInfo
 {
     std::string name;
@@ -53,6 +60,7 @@ struct GraphDataInfo
     osg::ref_ptr<osg::Geometry> pointGeometry;
     osg::ref_ptr<osg::Geode> connectorGeode;
     osg::ref_ptr<osg::Geometry> connectorGeometry;
+    osg::ref_ptr<osg::Geode> labelGeode;
     osg::Vec4 color;
     GraphDisplayType displayType;
     std::string xLabel;
@@ -145,6 +153,12 @@ class DataGraph
             return _multiGraphDisplayMode;
         }
 
+        void setLabelDisplayMode(LabelDisplayMode ldm);
+        LabelDisplayMode getLabelDisplayMode()
+        {
+            return _labelDisplayMode;
+        }
+
         void setGLScale(float scale);
 
         void setPointActions(std::string graphname, std::map<int,PointAction*> & actionMap);
@@ -176,6 +190,7 @@ class DataGraph
         osg::ref_ptr<osg::MatrixTransform> _graphTransform;
         osg::ref_ptr<osg::ClipNode> _clipNode;
         osg::ref_ptr<osg::MatrixTransform> _root;
+        osg::ref_ptr<osg::Group> _labelGroup;
 
         osg::ref_ptr<osg::MatrixTransform> _hoverTransform;
         osg::ref_ptr<osg::MatrixTransform> _hoverBGScale;
@@ -230,6 +245,8 @@ class DataGraph
         osg::ref_ptr<osg::Point> _pointActionPoint;
         float _pointActionAlpha;
         bool _pointActionAlphaDir;
+
+        LabelDisplayMode _labelDisplayMode;
 };
 
 #endif
