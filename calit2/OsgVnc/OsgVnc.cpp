@@ -51,7 +51,7 @@ bool OsgVnc::loadFile(std::string filename)
 {
 	// set defaultScale and position
     float scale = _defaultScale;
-    osg::Vec3f pos(0.0, _defaultDepth, 0.0);
+    osg::Vec3f pos;
 
     osgWidget::GeometryHints hints(osg::Vec3(0.0f,0.0f,0.0f),
                                    osg::Vec3(1.0f,0.0f,0.0f),
@@ -80,11 +80,12 @@ bool OsgVnc::loadFile(std::string filename)
 
 		// set up SceneObject
         sot->setNavigationOn(false);
+        sot->setMovable(true);
         sot->addMoveMenuItem();
         // will allow to resize to a 10th of a default size and 10 times default size
         sot->addScaleMenuItem("Scale", scale * 0.1, scale * 10.0, scale);
-        sot->setScale(scale);
         sot->setPosition(pos);
+        sot->setScale(scale);
         sot->attachToScene();
 
         currentobject->scene = sot;
@@ -177,7 +178,6 @@ bool OsgVnc::init()
 
     // read in default values
     _defaultScale = ConfigManager::getFloat("Plugin.OsgVnc.DefaultScale", 2048.0);
-    _defaultDepth = ConfigManager::getFloat("Plugin.OsgVnc.DefaultDepth", -10.0);
 
     // read in configurations
     _configPath = ConfigManager::getEntry("Plugin.OsgVnc.ConfigDir");
@@ -404,4 +404,5 @@ void OsgVnc::removeAll()
 
 OsgVnc::~OsgVnc()
 {
+    removeAll();
 }

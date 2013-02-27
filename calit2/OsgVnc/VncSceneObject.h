@@ -9,7 +9,7 @@ class VncSceneObject : public cvr::TiledWallSceneObject
 {
     public:
         VncSceneObject(std::string name, osgWidget::VncClient * client, bool vncEvents, bool navigation, bool movable, bool clip,
-                bool contextMenu, bool showBounds = false);
+                bool contextMenu, bool showBounds = false, float depth = -0.0005);
         ~VncSceneObject();
         
         virtual bool processEvent(cvr::InteractionEvent * ie);
@@ -21,7 +21,8 @@ class VncSceneObject : public cvr::TiledWallSceneObject
         osg::Vec3 _intersect;   // intersection point (translated into screen co-ordinates)
         float _width;           // width of vnc window texture
         float _height;          // height of vnc window texture
-        float _windowScale;           // the scale used to compute window co-ordinates
+        float _windowScale;     // the scale used to compute window co-ordinates
+        float _depth;           // offset of the screen
 
         osgWidget::VncClient * _client;
         osgWidget::VncImage * _image;   // image to forward events too
