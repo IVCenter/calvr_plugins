@@ -121,7 +121,7 @@ DataGraph::DataGraph()
 
     _multiGraphDisplayMode = MGDM_COLOR_PT_SIZE;
     _currentMultiGraphDisplayMode = MGDM_NORMAL;
-    _labelDisplayMode = LDM_NONE;
+    _labelDisplayMode = LDM_MIN_MAX;
 
     osg::Vec4 color(1.0,1.0,1.0,1.0);
 
@@ -707,7 +707,7 @@ void DataGraph::setLabelDisplayMode(LabelDisplayMode ldm)
     {
 	it->second.labelGeode->removeDrawables(0,it->second.labelGeode->getNumDrawables());
 
-	osg::Vec4 textColor(1.0,0.1,0.8,1.0);
+	osg::Vec4 textColor(0.1,0.1,0.1,1.0);
 
 	switch(ldm)
 	{
@@ -741,12 +741,12 @@ void DataGraph::setLabelDisplayMode(LabelDisplayMode ldm)
 		osg::Vec3 minPoint = it->second.data->at(minIndex) * _graphTransformMap[it->first]->getMatrix();
 		osg::Vec3 maxPoint = it->second.data->at(maxIndex) * _graphTransformMap[it->first]->getMatrix();
 
-		float textHeight = ((_width + _height) / 2.0) * 0.03;
+		float textHeight = ((_width + _height) / 2.0) * 0.02;
 		maxPoint = maxPoint - osg::Vec3(0,0,textHeight) + osg::Vec3(0,-1,0);
 		minPoint = minPoint + osg::Vec3(0,0,textHeight) + osg::Vec3(0,-1,0);
 
 		std::stringstream minss;
-		minss << (it->second.zMin + (it->second.data->at(minIndex).z() * (it->second.zMax-it->second.zMin))) << " " << it->second.zLabel;
+		minss << (it->second.zMin + (it->second.data->at(minIndex).z() * (it->second.zMax-it->second.zMin)));
 		osgText::Text * text = makeText(minss.str(),textColor);
 		text->setAlignment(osgText::Text::CENTER_CENTER);
 		osg::BoundingBox bb = text->getBound();
@@ -756,7 +756,7 @@ void DataGraph::setLabelDisplayMode(LabelDisplayMode ldm)
 		it->second.labelGeode->addDrawable(text);
 
 		std::stringstream maxss;
-		maxss << (it->second.zMin + (it->second.data->at(maxIndex).z() * (it->second.zMax-it->second.zMin))) << " " << it->second.zLabel;
+		maxss << (it->second.zMin + (it->second.data->at(maxIndex).z() * (it->second.zMax-it->second.zMin)));
 		text = makeText(maxss.str(),textColor);
 		text->setAlignment(osgText::Text::CENTER_CENTER);
 		bb = text->getBound();
@@ -772,7 +772,7 @@ void DataGraph::setLabelDisplayMode(LabelDisplayMode ldm)
 		for(int i = 0; i < it->second.data->size(); ++i)
 		{
 		    osg::Vec3 point = it->second.data->at(i) * _graphTransformMap[it->first]->getMatrix();
-		    float textHeight = ((_width + _height) / 2.0) * 0.02;
+		    float textHeight = ((_width + _height) / 2.0) * 0.01;
 
 		    if(fabs(point.z() - 1.5 * textHeight) > (_height/2.0) - calcPadding())
 		    {
