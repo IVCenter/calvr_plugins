@@ -31,6 +31,11 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         virtual void menuCallback(cvr::MenuItem * item);
 
+        static mysqlpp::Connection * getConnection()
+        {
+            return _conn;
+        }
+
     protected:
         void checkLayout();
         void loadGraph(std::string patient, std::string test);
@@ -39,8 +44,10 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         void setupMicrobePatients();
         void updateMicrobeTests(int patientid);
 
+        void saveLayout();
+        void loadLayout(const std::string & file);
 
-        mysqlpp::Connection * _conn;
+        static mysqlpp::Connection * _conn;
 
         cvr::SubMenu * _fpMenu;
         cvr::SubMenu * _layoutMenu;
@@ -86,6 +93,9 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeLoadCrohnsAverage;
         cvr::MenuButton * _microbeLoadSRSAverage;
         cvr::MenuButton * _microbeLoadSRXAverage;
+        cvr::MenuButton * _microbeLoadCrohnsAll;
+        cvr::MenuButton * _microbeLoadHealthyAll;
+        cvr::MenuButton * _microbeLoadUCAll;
 
         cvr::SubMenu * _eventMenu;
         cvr::MenuList * _eventName;
