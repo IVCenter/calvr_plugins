@@ -568,6 +568,7 @@ void GraphObject::dumpState(std::ostream & out)
     }
 
     out << _graph->getMultiGraphDisplayMode() << std::endl;
+    out << _graph->getLabelDisplayMode() << std::endl;
 
     float min, max;
     _graph->getXDisplayRange(min,max);
@@ -619,6 +620,12 @@ bool GraphObject::loadState(std::istream & in)
     _graph->setMultiGraphDisplayMode((MultiGraphDisplayMode)mgdm);
 
     _mgdList->setIndex(mgdm);
+
+    int ldm;
+    in >> ldm;
+    _graph->setLabelDisplayMode((LabelDisplayMode)ldm);
+
+    _ldmList->setIndex(ldm);
 
     float min, max;
     in >> min >> max;

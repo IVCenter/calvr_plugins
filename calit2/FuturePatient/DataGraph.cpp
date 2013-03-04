@@ -1299,7 +1299,7 @@ void DataGraph::update()
     {
 	for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)
 	{
-	    it->second.singleColorArray->at(0) = osg::Vec4(0.1,0.1,0.1,1);
+	    it->second.singleColorArray->at(0) = osg::Vec4(0.21569,0.49412,0.72157,1.0);
 	    it->second.connectorGeometry->setColorArray(it->second.singleColorArray);
 	    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
 	}
