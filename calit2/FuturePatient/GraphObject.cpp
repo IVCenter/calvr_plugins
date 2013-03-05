@@ -426,6 +426,12 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 	ld.name = name;
 	ld.displayName = gd.displayName;
 	_loadedGraphs.push_back(ld);
+
+	if(_loadedGraphs.size() == 2)
+	{
+	    _ldmList->setIndex(0);
+	    _graph->setLabelDisplayMode(LDM_NONE);
+	}
     }
 
     if(annotations)
