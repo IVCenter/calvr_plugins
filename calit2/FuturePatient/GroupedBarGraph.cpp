@@ -109,12 +109,14 @@ bool GroupedBarGraph::setGraph(std::string title, std::map<std::string, std::vec
 	_axisGeode = new osg::Geode();
 	_bgGeode = new osg::Geode();
 	_selectGeode = new osg::Geode();
+	_shadingGeode = new osg::Geode();
 
 	_bgScaleMT->addChild(_bgGeode);
 	_root->addChild(_bgScaleMT);
 	_root->addChild(_barGeode);
 	_root->addChild(_axisGeode);
 	_root->addChild(_selectGeode);
+	_root->addChild(_shadingGeode);
 
 	osg::StateSet * stateset = _selectGeode->getOrCreateStateSet();
 	stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
@@ -654,6 +656,7 @@ void GroupedBarGraph::update()
 
     updateAxis();
     updateGraph();
+    updateShading();
 }
 
 void GroupedBarGraph::updateGraph()
@@ -1023,6 +1026,35 @@ void GroupedBarGraph::updateAxis()
     }
 
     lineGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES,0,lineVerts->size()));
+}
+
+void GroupedBarGraph::updateShading()
+{
+    _shadingGeode->removeDrawables(0,_shadingGeode->getNumDrawables());
+
+    osg::Geometry * geom = new osg::Geometry();
+    osg::Vec3Array * verts = new osg::Vec3Array();
+    osg::Vec4Array * colors = new osg::Vec4Array();
+    geom->setVertexArray(verts);
+    geom->setColorArray(colors);
+    geom->setUseDisplayList(false);
+    geom->setUseVertexBufferObjects(true);
+
+    float graphLeft = (-_width / 2.0) + (_width * _leftPaddingMult);
+    float graphRight = (_width / 2.0) - (_width * _rightPaddingMult);
+    float graphTop = (_height / 2.0) - (_height * _topPaddingMult);
+    float graphBottom = (-_height / 2.0) + (_height * _currentBottomPaddingMult);
+
+    osg::Vec4 defaultColor(0.4,0.4,0.4,1.0);
+    verts->push_back(osg::Vec3(graphLeft,0.6,graphBottom));
+    verts->push_back(osg::Vec3(graphRight,0.6,graphBottom));
+    verts->push_back(osg::Vec3(graphRight,0.6,graphTop));
+    verts->push_back(osg::Vec3(graphLeft,0.6,graphTop));
+    colors->push_back(defaultColor);
+    geom->setColorBinding(osg::Geometry::BIND_OVERALL);
+    geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
+
+    _shadingGeode->addDrawable(geom);
 }
 
 osgText::Text * GroupedBarGraph::makeText(std::string text, osg::Vec4 color)

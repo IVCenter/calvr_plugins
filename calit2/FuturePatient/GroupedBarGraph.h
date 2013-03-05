@@ -91,6 +91,7 @@ class GroupedBarGraph
         void update();
         void updateGraph();
         void updateAxis();
+        void updateShading();
 
         osgText::Text * makeText(std::string text, osg::Vec4 color);
         void makeTextFit(osgText::Text * text, float maxSize);
@@ -117,6 +118,7 @@ class GroupedBarGraph
         osg::ref_ptr<osg::Geode> _bgGeode;
         osg::ref_ptr<osg::Geode> _selectGeode;
         osg::ref_ptr<osg::Geometry> _barGeom;
+        osg::ref_ptr<osg::Geode> _shadingGeode;
 
         osg::ref_ptr<osg::Geode> _hoverGeode;
         osg::ref_ptr<osg::Geometry> _hoverBGGeom;

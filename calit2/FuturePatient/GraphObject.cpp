@@ -426,6 +426,12 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 	ld.name = name;
 	ld.displayName = gd.displayName;
 	_loadedGraphs.push_back(ld);
+
+	if(_loadedGraphs.size() == 2)
+	{
+	    _ldmList->setIndex(0);
+	    _graph->setLabelDisplayMode(LDM_NONE);
+	}
     }
 
     if(annotations)
@@ -568,6 +574,7 @@ void GraphObject::dumpState(std::ostream & out)
     }
 
     out << _graph->getMultiGraphDisplayMode() << std::endl;
+    out << _graph->getLabelDisplayMode() << std::endl;
 
     float min, max;
     _graph->getXDisplayRange(min,max);
@@ -619,6 +626,12 @@ bool GraphObject::loadState(std::istream & in)
     _graph->setMultiGraphDisplayMode((MultiGraphDisplayMode)mgdm);
 
     _mgdList->setIndex(mgdm);
+
+    int ldm;
+    in >> ldm;
+    _graph->setLabelDisplayMode((LabelDisplayMode)ldm);
+
+    _ldmList->setIndex(ldm);
 
     float min, max;
     in >> min >> max;
