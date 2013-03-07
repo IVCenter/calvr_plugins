@@ -32,6 +32,7 @@ class GeometryShape : public BasicShape, public osg::Geometry
 	    virtual ~GeometryShape();
         osg::Vec3Array* _vertices;
         osg::Vec4Array* _colors;
+	osg::Vec3Array* _normals; //normals for proper lighting/shading
 	osg::Vec2Array* _textures; //for texture coordinates
 	std::string _texture_name; //path to texture
 	std::string _vertex_shader; //path to vertex shader

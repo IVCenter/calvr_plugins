@@ -7,6 +7,8 @@
 #include <osg/Texture2D>
 #include <osgDB/ReadFile>
 #include <osg/PolygonMode>
+#include <osg/Program>
+#include <osg/Shader>
 #include <cvrConfig/ConfigManager.h>
 
 #include <string>
@@ -23,15 +25,19 @@ CubeShape::CubeShape(std::string command, std::string name)
 	_vertices = new osg::Vec3Array(24);
 	_colors = new osg::Vec4Array(24);
 	_textures = new osg::Vec2Array(24);
+	_normals = new osg::Vec3Array(24);
 
 	setPosition( osg::Vec3(0.0, 0.0, 0.0), 1.0, 1.0, 1.0 );
 	setColor( osg::Vec4(1.0, 1.0, 1.0, 1.0), osg::Vec4(1.0, 1.0, 1.0, 1.0), osg::Vec4(1.0, 1.0, 1.0, 1.0), osg::Vec4(1.0, 1.0, 1.0, 1.0),
 		  osg::Vec4(1.0, 1.0, 1.0, 1.0), osg::Vec4(1.0, 1.0, 1.0, 1.0), osg::Vec4(1.0, 1.0, 1.0, 1.0), osg::Vec4(1.0, 1.0, 1.0, 1.0));
 	setTextureCoords(); //only happens once
+	setNormals(); //also only happens once
 	update(command);
 	
 	setVertexArray(_vertices);
 	setColorArray(_colors);
+	setNormalArray(_normals);
+	setNormalBinding(osg::Geometry::BIND_PER_VERTEX);
 	setTexCoordArray(0, _textures);
 	setColorBinding(osg::Geometry::BIND_PER_VERTEX);
 	
@@ -63,6 +69,7 @@ CubeShape::CubeShape(std::string command, std::string name)
 	state ->  setAttributeAndModes(mat, osg::StateAttribute::ON);
 
 	setTextureImage("");
+	setShaders("", "");
 
 }
 
@@ -131,7 +138,7 @@ void CubeShape::setColor(osg::Vec4 c0, osg::Vec4 c1, osg::Vec4 c2, osg::Vec4 c3,
 	(*_colors)[4].set( c1[0], c1[1], c1[2], c1[3] ); //bottom right front
 	(*_colors)[5].set( c2[0], c2[1], c2[2], c2[3] ); //bottom right back
 
-	(*_colors)[6].set( c6[0], c6[1], c6[2], c6[3] ); //top right back
+	(*_colors)[6].set( c6[0], c6[1], c6[2], c6[3] ); //topenscenegraph setting normalsop right back
 	(*_colors)[7].set( c5[0], c5[1], c5[2], c5[3] ); //top right front
 
 	//back face
@@ -155,7 +162,7 @@ void CubeShape::setColor(osg::Vec4 c0, osg::Vec4 c1, osg::Vec4 c2, osg::Vec4 c3,
 	//bottom face
 	(*_colors)[20].set( c3[0], c3[1], c3[2], c3[3] ); //bottom left back
 	(*_colors)[21].set( c2[0], c2[1], c2[2], c2[3] ); //bottom right back
-	(*_colors)[22].set( c1[0], c1[1], c1[2], c1[3] ); //bottom right front
+	(*_colors)[22].set( c1[0], c1[1], c1[2], c1[3] ); //openscenegraph setting normalsbottom right front
 	(*_colors)[23].set( c0[0], c0[1], c0[2], c0[3] ); //bottom left front
 
 	//if w is not 1.0, then opacity in effect?
@@ -164,6 +171,47 @@ void CubeShape::setColor(osg::Vec4 c0, osg::Vec4 c1, osg::Vec4 c2, osg::Vec4 c3,
 		getOrCreateStateSet() -> setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
 	else
 		getOrCreateStateSet() -> setRenderingHint(osg::StateSet::DEFAULT_BIN);
+
+}
+
+void CubeShape::setNormals()
+{
+
+	//front face
+	(*_normals)[0].set(0.0, -1.0, 0.0);
+	(*_normals)[1].set(0.0, -1.0, 0.0);
+	(*_normals)[2].set(0.0, -1.0, 0.0);
+	(*_normals)[3].set(0.0, -1.0, 0.0);
+
+	//right face
+	(*_normals)[4].set(1.0, 0.0, 0.0);
+	(*_normals)[5].set(1.0, 0.0, 0.0);
+	(*_normals)[6].set(1.0, 0.0, 0.0);
+	(*_normals)[7].set(1.0, 0.0, 0.0);
+
+	//back face
+	(*_normals)[8].set(0.0, 1.0, 0.0);
+	(*_normals)[9].set(0.0, 1.0, 0.0);
+	(*_normals)[10].set(0.0, 1.0, 0.0);
+	(*_normals)[11].set(0.0, 1.0, 0.0);
+	
+	//left face
+	(*_normals)[12].set(-1.0, 0.0, 0.0);
+	(*_normals)[13].set(-1.0, 0.0, 0.0);
+	(*_normals)[14].set(-1.0, 0.0, 0.0);
+	(*_normals)[15].set(-1.0, 0.0, 0.0);
+
+	//top face
+	(*_normals)[16].set(0.0, 0.0, 1.0);
+	(*_normals)[17].set(0.0, 0.0, 1.0);
+	(*_normals)[18].set(0.0, 0.0, 1.0);
+	(*_normals)[19].set(0.0, 0.0, 1.0);
+	
+	//bottom face
+	(*_normals)[20].set(0.0, 0.0, -1.0);
+	(*_normals)[21].set(0.0, 0.0, -1.0);
+	(*_normals)[22].set(0.0, 0.0, -1.0);
+	(*_normals)[23].set(0.0, 0.0, -1.0);
 
 }
 
@@ -247,6 +295,58 @@ void CubeShape::setTextureImage(std::string tex_name)
 
 }
 
+void CubeShape::setShaders(std::string vert_file, std::string frag_file)
+{
+
+	if(vert_file.compare(_vertex_shader) == 0 && frag_file.compare(_fragment_shader) == 0)
+		return;
+
+	osg::StateSet* state = getOrCreateStateSet();
+	osg::Program* prog = new osg::Program();
+	osg::Shader* vert = new osg::Shader(osg::Shader::VERTEX);
+	osg::Shader* frag = new osg::Shader(osg::Shader::FRAGMENT);
+
+	_vertex_shader = vert_file;
+	_fragment_shader = frag_file;
+
+	//try to load shader files
+	std::string file_path = cvr::ConfigManager::getEntry("dir", "Plugin.Mugic.Shader", "");
+	if(!_vertex_shader.empty())
+	{
+		
+		bool loaded = vert->loadShaderSourceFromFile(file_path + _vertex_shader);
+		if(!loaded)
+		{
+			std::cout << "could not load vertex shader." << std::endl;
+			_vertex_shader = "";
+		}
+		else
+		{
+			prog->addShader(vert);
+		}
+
+	}
+
+	if(!_fragment_shader.empty())
+	{
+
+		bool loaded = frag->loadShaderSourceFromFile(file_path + _fragment_shader);
+		if(!loaded)
+		{
+			std::cout << "could not load fragment shader." << std::endl;
+			_fragment_shader = "";
+		}
+		else
+		{
+			prog->addShader(frag);
+		}
+
+	}
+
+	state->setAttributeAndModes(prog, osg::StateAttribute::ON);
+
+}
+
 /* update Cube with passed command */
 void CubeShape::update(std::string command)
 {
@@ -305,6 +405,9 @@ void CubeShape::update(std::string command)
 
 	addParameter(command, "texture");
 
+	addParameter(command, "vertex");
+	addParameter(command, "fragment");
+
 }
 
 /* update Cube if parameters have changed recently */
@@ -330,6 +433,8 @@ void CubeShape::update()
 	float depth = (*_vertices)[5].y() - (*_vertices)[0].y();
 
 	std::string tex_name = _texture_name;
+	std::string vert_name = _vertex_shader;
+	std::string frag_name = _fragment_shader;
 
 	//adjust center position
 	p1.x() = p1.x() + (width/2);
@@ -387,10 +492,14 @@ void CubeShape::update()
 
 	setParameter("texture", tex_name);
 
+	setParameter("vertex", vert_name);
+	setParameter("fragment", frag_name);
+
 	setPosition( p1, width, height, depth );
 	//std::cout << width << " " << height << " " << depth << "\n";
 	setColor( c1, c2, c3, c4, c5, c6, c7, c8 );
 	setTextureImage(tex_name);
+	setShaders(vert_name, frag_name);
 	_vertices -> dirty();
 	_colors -> dirty();
 	_textures -> dirty();

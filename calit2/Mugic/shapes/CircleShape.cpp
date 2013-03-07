@@ -20,6 +20,10 @@ CircleShape::CircleShape(std::string command, std::string name)
     _vertices = new osg::Vec3Array(_numFaces + 2);
     _colors = new osg::Vec4Array(_numFaces + 2);
     _textures = new osg::Vec2Array (_numFaces + 2);
+
+    //normal setup here
+    _normals = new osg::Vec3Array(1);
+    (*_normals)[0].set(0.0, -1.0, 0.0);
     
     setPosition(osg::Vec3(0.0, 0.0, 0.0), 1.0);
     setColor(osg::Vec4(1.0, 1.0, 1.0, 1.0),osg::Vec4(1.0, 1.0, 1.0, 1.0));
@@ -29,6 +33,8 @@ CircleShape::CircleShape(std::string command, std::string name)
     setVertexArray(_vertices); 
     setColorArray(_colors);
     setTexCoordArray(0, _textures);
+    setNormalArray(_normals);
+    setNormalBinding(osg::Geometry::BIND_OVERALL);
     setColorBinding(osg::Geometry::BIND_PER_VERTEX);
     addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLE_FAN,0,_numFaces + 2));
 
@@ -40,6 +46,7 @@ CircleShape::CircleShape(std::string command, std::string name)
     //state->setAttributeAndModes(mat, osg::StateAttribute::ON);
 
     setTextureImage("");
+    setShaders("", "");
 }
 
 CircleShape::~CircleShape()
@@ -152,6 +159,58 @@ void CircleShape::setTextureImage(std::string tex_name)
 
 }
 
+void CircleShape::setShaders(std::string vert_file, std::string frag_file)
+{
+
+	if(vert_file.compare(_vertex_shader) == 0 && frag_file.compare(_fragment_shader) == 0)
+		return;
+
+	osg::StateSet* state = getOrCreateStateSet();
+	osg::Program* prog = new osg::Program();
+	osg::Shader* vert = new osg::Shader(osg::Shader::VERTEX);
+	osg::Shader* frag = new osg::Shader(osg::Shader::FRAGMENT);
+
+	_vertex_shader = vert_file;
+	_fragment_shader = frag_file;
+
+	//try to load shader files
+	std::string file_path = cvr::ConfigManager::getEntry("dir", "Plugin.Mugic.Shader", "");
+	if(!_vertex_shader.empty())
+	{
+		
+		bool loaded = vert->loadShaderSourceFromFile(file_path + _vertex_shader);
+		if(!loaded)
+		{
+			std::cout << "could not load vertex shader." << std::endl;
+			_vertex_shader = "";
+		}
+		else
+		{
+			prog->addShader(vert);
+		}
+
+	}
+
+	if(!_fragment_shader.empty())
+	{
+
+		bool loaded = frag->loadShaderSourceFromFile(file_path + _fragment_shader);
+		if(!loaded)
+		{
+			std::cout << "could not load fragment shader." << std::endl;
+			_fragment_shader = "";
+		}
+		else
+		{
+			prog->addShader(frag);
+		}
+
+	}
+
+	state->setAttributeAndModes(prog, osg::StateAttribute::ON);
+
+}
+
 void CircleShape::update(std::string command)
 {
     OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
@@ -176,6 +235,8 @@ void CircleShape::update(std::string command)
 	addParameter(command, "texcenters");
 	addParameter(command, "texcentert");
 	addParameter(command, "texrad");
+	addParameter(command, "vertex");
+	addParameter(command, "fragment");
     }
 }
 
@@ -192,6 +253,8 @@ void CircleShape::update()
     osg::Vec2 texCenter((*_textures)[0]);
     float texRad = _texRadius;
     std::string tex_name = _texture_name;
+    std::string vert_name = _vertex_shader;
+    std::string frag_name = _fragment_shader;
 
     setParameter("x", p1.x()); 
     setParameter("y", p1.y()); 
@@ -209,11 +272,14 @@ void CircleShape::update()
     setParameter("texcenters", texCenter[0]);
     setParameter("texcentert", texCenter[1]);
     setParameter("texrad", texRad);
+    setParameter("vertex", vert_name);
+    setParameter("fragment", frag_name);
 
     setPosition(p1, radius);
     setColor(c1, c2);
     setTextureCoords(texCenter, texRad);
     setTextureImage(tex_name);
+    setShaders(vert_name, frag_name);
     _vertices->dirty();
     _colors->dirty();
     _textures->dirty();

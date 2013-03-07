@@ -17,8 +17,10 @@ class CubeShape : public GeometryShape
 		CubeShape();
 		void setPosition( osg::Vec3, float width, float height, float depth);
 		void setColor( osg::Vec4, osg::Vec4, osg::Vec4, osg::Vec4, osg::Vec4, osg::Vec4, osg::Vec4, osg::Vec4 );
+		void setNormals();
 		void setTextureCoords();
 		void setTextureImage(std::string);
+		void setShaders(std::string, std::string);
 		void update();
 
 };

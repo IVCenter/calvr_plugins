@@ -38,6 +38,7 @@ QuadShape::QuadShape(std::string command, std::string name)
     state->setAttributeAndModes(mat, osg::StateAttribute::ON);
 
     setTextureImage("");
+    setShaders("", "");
 }
 
 QuadShape::~QuadShape()
@@ -113,6 +114,58 @@ void QuadShape::setTextureImage(std::string tex_name)
 
 }
 
+void QuadShape::setShaders(std::string vert_file, std::string frag_file)
+{
+
+	if(vert_file.compare(_vertex_shader) == 0 && frag_file.compare(_fragment_shader) == 0)
+		return;
+
+	osg::StateSet* state = getOrCreateStateSet();
+	osg::Program* prog = new osg::Program();
+	osg::Shader* vert = new osg::Shader(osg::Shader::VERTEX);
+	osg::Shader* frag = new osg::Shader(osg::Shader::FRAGMENT);
+
+	_vertex_shader = vert_file;
+	_fragment_shader = frag_file;
+
+	//try to load shader files
+	std::string file_path = cvr::ConfigManager::getEntry("dir", "Plugin.Mugic.Shader", "");
+	if(!_vertex_shader.empty())
+	{
+		
+		bool loaded = vert->loadShaderSourceFromFile(file_path + _vertex_shader);
+		if(!loaded)
+		{
+			std::cout << "could not load vertex shader." << std::endl;
+			_vertex_shader = "";
+		}
+		else
+		{
+			prog->addShader(vert);
+		}
+
+	}
+
+	if(!_fragment_shader.empty())
+	{
+
+		bool loaded = frag->loadShaderSourceFromFile(file_path + _fragment_shader);
+		if(!loaded)
+		{
+			std::cout << "could not load fragment shader." << std::endl;
+			_fragment_shader = "";
+		}
+		else
+		{
+			prog->addShader(frag);
+		}
+
+	}
+
+	state->setAttributeAndModes(prog, osg::StateAttribute::ON);
+
+}
+
 void QuadShape::update(std::string command)
 {
 	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
@@ -160,6 +213,9 @@ void QuadShape::update(std::string command)
     addParameter(command, "t3t");
     addParameter(command, "t4s");
     addParameter(command, "t4t");
+
+    addParameter(command, "vertex");
+    addParameter(command, "fragment");
 }
 
 void QuadShape::update()
@@ -175,6 +231,8 @@ void QuadShape::update()
     osg::Vec2 t3((*_textures)[2]);
     osg::Vec2 t4((*_textures)[3]);
     std::string tex_name = _texture_name;
+    std::string vert_name = _vertex_shader;
+    std::string frag_name = _fragment_shader;
 
     setParameter("x1", p1.x()); 
     setParameter("y1", p1.y()); 
@@ -227,10 +285,14 @@ void QuadShape::update()
     setParameter("t4s", t4[0]);
     setParameter("t4t", t4[1]); 
 
+    setParameter("vertex", vert_name);
+    setParameter("fragment", frag_name);
+
     setPosition(p1, p2, p3, p4);
     setColor(c1, c2 ,c3, c4);
     setTextureCoords(t1, t2, t3, t4);
     setTextureImage(tex_name);
+    setShaders(vert_name, frag_name);
     
 	_colors->dirty();
 	_vertices->dirty();

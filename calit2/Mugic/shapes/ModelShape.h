@@ -18,9 +18,9 @@ public:
 
 protected:
 	ModelShape();
-	void setModel(std::string);;
+	void setModel(std::string);
+	void setShaders(std::string, std::string);
 	void update();
-	std::string _model_name; //name of model file
 	osg::Node* _modelNode; //actual model node
 
 

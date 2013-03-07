@@ -32,7 +32,8 @@ ModelShape::ModelShape(std::string command, std::string name)
 
 	//read in the model and return a node
 	setModel(value);
-	//update(command);
+	setShaders("", "");
+	update(command);
 
 }
 
@@ -51,12 +52,10 @@ void ModelShape::setModel(std::string file)
 	{
 		//give default?
 		std::cout << "No model file specified; reading in default model" << std::endl;
-		_model_name = def;
 		_modelNode = osgDB::readNodeFile(file_path + def);
 	}
 	else
 	{
-		_model_name = file;
 		_modelNode = osgDB::readNodeFile(file_path + file);
 		
     		//testing
@@ -64,7 +63,6 @@ void ModelShape::setModel(std::string file)
 		{
 			std::cout << "Could not load model. Either does not exist or is incorrect file name." << std::endl;
 			std::cout << "reading in default model..." << std::endl;
-			_model_name = def;
 			_modelNode = osgDB::readNodeFile(file_path + def);
 
 			return;
@@ -91,33 +89,90 @@ osg::MatrixTransform* ModelShape::getMatrixParent()
 	return _modelNode->osg::Node::getParent(0)->asTransform()->asMatrixTransform();
 }
 
-//for now, update does nothing, as there's nothing to update
+void ModelShape::setShaders(std::string vert_file, std::string frag_file)
+{
+	std::cout << "inside setShader call" << std::endl;
+
+	if(vert_file.compare(_vertex_shader) == 0 && frag_file.compare(_fragment_shader) == 0)
+		return;
+
+	osg::StateSet* state = _modelNode->getOrCreateStateSet();
+	osg::Program* prog = new osg::Program();
+	osg::Shader* vert = new osg::Shader(osg::Shader::VERTEX);
+	osg::Shader* frag = new osg::Shader(osg::Shader::FRAGMENT);
+
+	_vertex_shader = vert_file;
+	_fragment_shader = frag_file;
+
+	//try to load shader files
+	std::string file_path = cvr::ConfigManager::getEntry("dir", "Plugin.Mugic.Shader", "");
+	if(!_vertex_shader.empty())
+	{
+
+		bool loaded = vert->loadShaderSourceFromFile(file_path + _vertex_shader);
+		if(!loaded)
+		{
+			std::cout << "could not load vertex shader." << std::endl;
+			_vertex_shader = "";
+		}
+		else
+		{
+			std::cout << "adding vertex shader" << std::endl;
+			prog->addShader(vert);
+		}
+
+	}
+
+	if(!_fragment_shader.empty())
+	{
+
+		bool loaded = frag->loadShaderSourceFromFile(file_path + _fragment_shader);
+		if(!loaded)
+		{
+			std::cout << "could not load fragment shader." << std::endl;
+			_fragment_shader = "";
+		}
+		else
+		{
+			prog->addShader(frag);
+		}
+
+	}
+
+	state->setAttributeAndModes(prog, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+
+}
+
+//only update shaders
 void ModelShape::update(std::string command)
 {
 	
-	/*OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
+	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
 	_dirty = true;
 
 	//check for changed values
-	addParameter(command, "file"); */
+	addParameter(command, "vertex");
+	addParameter(command, "fragment");
 
 }
 
 void ModelShape::update()
 {
 
-	/*OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
+	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
 	if(!_dirty)
 		return;
 
-	std::string modelName = _model_name;
+	std::string vert_name = _vertex_shader;
+	std::string frag_name = _fragment_shader;
 
-	setParameter("file", modelName);
+	setParameter("vertex", vert_name);
+	setParameter("fragment", frag_name);
 
-	setModel(modelName);
+	setShaders(vert_name, frag_name);
 	dirtyBound();
 
 	//reset flag
-	_dirty = false; */
+	_dirty = false; 
 
 }
