@@ -31,7 +31,7 @@ class OsgEarth : public cvr::CVRPlugin, public cvr::MenuCallback
         OsgEarth();
         virtual ~OsgEarth();
         
-	bool init();
+	    bool init();
         int getPriority() { return 51; }
         void preFrame();
         bool processEvent(cvr::InteractionEvent * event);
@@ -41,6 +41,8 @@ class OsgEarth : public cvr::CVRPlugin, public cvr::MenuCallback
         double getSpeed(double distance);
         void processNav(double speed);
         void processMouseNav(double speed);
+        virtual void message(int type, char *&data, bool collaborative=false);
+
 
 
     protected:
