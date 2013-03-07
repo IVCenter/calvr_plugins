@@ -22,9 +22,13 @@ TimeRangeDataGraph::TimeRangeDataGraph()
     _graphGeode = new osg::Geode();
     _graphGeode->setCullingActive(false);
 
+    _shadingGeode = new osg::Geode();
+    _shadingGeode->setCullingActive(false);
+
     _root->addChild(_bgScaleMT);
     _root->addChild(_axisGeode);
     _root->addChild(_graphGeode);
+    _root->addChild(_shadingGeode);
     _bgScaleMT->addChild(_bgGeode);
 
     _width = _height = 1000.0;
@@ -493,6 +497,7 @@ void TimeRangeDataGraph::update()
 
     updateGraphs();
     updateAxis();
+    updateShading();
 
     scaleMat.makeScale(osg::Vec3(1,1,barHeight));
     _barTransform->setMatrix(scaleMat);
@@ -667,6 +672,30 @@ void TimeRangeDataGraph::updateAxis()
     _axisGeode->addDrawable(lineGeom);
 }
 
+void TimeRangeDataGraph::updateShading()
+{
+    _shadingGeode->removeDrawables(0,_shadingGeode->getNumDrawables());
+
+    osg::Geometry * geom = new osg::Geometry();
+    osg::Vec3Array * verts = new osg::Vec3Array();
+    osg::Vec4Array * colors = new osg::Vec4Array();
+    geom->setVertexArray(verts);
+    geom->setColorArray(colors);
+    geom->setUseDisplayList(false);
+    geom->setUseVertexBufferObjects(true);
+
+    osg::Vec4 defaultColor(0.4,0.4,0.4,1.0);
+    verts->push_back(osg::Vec3(_graphLeft,0.6,_graphBottom));
+    verts->push_back(osg::Vec3(_graphRight,0.6,_graphBottom));
+    verts->push_back(osg::Vec3(_graphRight,0.6,_graphTop));
+    verts->push_back(osg::Vec3(_graphLeft,0.6,_graphTop));
+    colors->push_back(defaultColor);
+    geom->setColorBinding(osg::Geometry::BIND_OVERALL);
+    geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
+
+    _shadingGeode->addDrawable(geom);
+}
+
 void TimeRangeDataGraph::updateSizes()
 {
     float padding = calcPadding();
@@ -681,7 +710,7 @@ void TimeRangeDataGraph::updateSizes()
 
     if(_graphList.size() > 1)
     {
-	_barPadding = 0.1 * _barHeight;
+	_barPadding = (0.05 * (_graphTop - _graphBottom)) / ((float)(_graphList.size()-1));
 	_barHeight *= 0.95;
     }
 }

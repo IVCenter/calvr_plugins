@@ -32,9 +32,20 @@ enum Mode
     CHECKER
 };
 
-class ModelHandler
+enum Colors
 {
-    public:
+    WHITE,
+    RED,
+    BLUE,
+    ORANGE,
+    YELLOW,
+    GREEN,
+    BROWN,
+    GREY
+};
+
+class ModelHandler
+{ public:
         ModelHandler();
         ~ModelHandler();
         
@@ -50,6 +61,8 @@ class ModelHandler
 
         void setMode(Mode mode);
         void setActiveDoor(int doorNum);
+        void setSwitched(bool switched);
+
         void setScore(int score);
         void setAlien(bool val);
         void setAlly(bool val);
@@ -65,7 +78,7 @@ class ModelHandler
 
         // child 1 non-flashing, child 2 flashing
         std::vector<osg::ref_ptr<osg::Switch> > _aliensSwitch, _alliesSwitch, 
-            _checkersSwitch, _lightSwitch;
+            _checkersSwitch, _lightSwitch, _leftdoorSwitch;
 
         osg::ref_ptr<osg::Geode> _activeObject;
         osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry
@@ -76,8 +89,10 @@ class ModelHandler
         float _doorDist; // distance doors are currently translated
         int _activeDoor;
         int _lightColor;
-        bool _doorInView;
+        bool _doorInView, _switched;
         Mode _mode;
+
+        std::vector<osg::Vec4> _colors;
 
         osg::ref_ptr<osg::Geometry> drawBox(osg::Vec3 center, float x, 
             float y, float z, osg::Vec4 color, float texScale = 1);

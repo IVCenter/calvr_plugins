@@ -37,6 +37,9 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
         bool getBarVisible();
         bool getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point);
 
+        virtual void dumpState(std::ostream & out);
+        virtual bool loadState(std::istream & in);
+
         void setLayoutDoesDelete(bool b)
         {
             _layoutDoesDelete = b;
@@ -62,11 +65,21 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
         DataGraph * _graph;
 
         cvr::MenuList * _mgdList;
+        cvr::MenuList * _ldmList;
 
         std::string _pdfDir;
 
         int _activeHand;
         bool _layoutDoesDelete;
+
+        struct LoadData
+        {
+            std::string patient;
+            std::string name;
+            std::string displayName;
+        };
+
+        std::vector<LoadData> _loadedGraphs;
 };
 
 #endif

@@ -62,6 +62,7 @@ class TimeRangeDataGraph
         void update();
         void updateGraphs();
         void updateAxis();
+        void updateShading();
 
         void updateSizes();
         osgText::Text * makeText(std::string text, osg::Vec4 color);
@@ -86,6 +87,7 @@ class TimeRangeDataGraph
         osg::ref_ptr<osg::Geode> _bgGeode;
         osg::ref_ptr<osg::MatrixTransform> _bgScaleMT;
         osg::ref_ptr<osg::Geode> _graphGeode;
+        osg::ref_ptr<osg::Geode> _shadingGeode;
 
         osg::ref_ptr<osg::Geode> _hoverGeode;
         osg::ref_ptr<osg::Geometry> _hoverBGGeom;

@@ -9,7 +9,8 @@
 // therefore there is extivily 1 less row and 1 les injector refl that the number indicates.
 #define CUDA_MESH_WIDTH 1024
 #define CUDA_MESH_HEIGHT 1024
-
+#define TARGET_FR_RATE 30
+// only 256 512 1024 2048 have been tested
 
 //#define CUDA_MESH_WIDTH 256
 //#define CUDA_MESH_HEIGHT 256
@@ -23,7 +24,6 @@
 #define INJT_DATA_ROW_ELEM 3
 #define ENABLE_SOUND_SERV 1
 #define ENABLE_SOUND_POS_UPDATES 1
-#define TARGET_FR_RATE 30
 #define SHOW_MARKERS 0
 
 #define DEBUG_PRINT 0
