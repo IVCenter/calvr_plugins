@@ -35,19 +35,16 @@ class AlgebraInMotion : public cvr::CVRPlugin, public cvr::MenuCallback, public 
         void preFrame();
         bool processEvent(cvr::InteractionEvent * event);
 
-		//ContextChabge fr 2 scr
-		#ifdef SCR2_PER_CARD
-        virtual void perContextCallback(int contextid) const;
-        
-        //ContestChange from 1 scr
-        #else
-		virtual void perContextCallback(int contextid, PerContextCallback::PCCType type) const;
-        #endif
+	virtual void perContextCallback(int contextid, PerContextCallback::PCCType type) const;
 		
     protected:
         void initPart();
         void initGeometry();
         void initSound();
+
+        void cleanupPart();
+        void cleanupGeometry();
+        void cleanupSound();
 
         void updateHand();
 
@@ -89,6 +86,9 @@ class AlgebraInMotion : public cvr::CVRPlugin, public cvr::MenuCallback, public 
         osg::ref_ptr<osg::Vec3Array> _positionArray;
         osg::ref_ptr<osg::Vec4Array> _colorArray;
         osg::ref_ptr<osg::DrawArrays> _primitive;
+
+        bool _callbackAdded;
+        bool _callbackActive;
 
         float * h_particleData;
         float h_injectorData[INJT_DATA_MUNB][INJT_DATA_ROWS][INJT_DATA_ROW_ELEM];
@@ -198,6 +198,7 @@ class AlgebraInMotion : public cvr::CVRPlugin, public cvr::MenuCallback, public 
         mutable std::map<int,bool> _callbackInit;
         mutable std::map<int,CUdeviceptr> d_debugDataMap;
         mutable std::map<int,CUdeviceptr> d_particleDataMap;
+        mutable std::map<int,CUcontext> _cudaContextMap;
 
         float _pointerHeading, _pointerPitch, _pointerRoll;
 		int loadPhysicalScreensArrayTourCaveCalit2();
@@ -231,6 +232,7 @@ class AlgebraInMotion : public cvr::CVRPlugin, public cvr::MenuCallback, public 
 	std::string _TargetSystem;
 	std::string _DisplaySystem;
 	void initGeoEdSection();
+        void cleanupGeoEdSection();
 		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid1;
 		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid2;
 		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid3;
@@ -239,6 +241,8 @@ class AlgebraInMotion : public cvr::CVRPlugin, public cvr::MenuCallback, public 
 		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid6;
 		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid7;
 		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid8;
+
+        cvr::SceneObject * _EdSceneObject;
 
 	void turnAllEduSlidsOff();
 /*	
