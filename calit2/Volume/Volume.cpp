@@ -634,6 +634,18 @@ bool Volume::loadFile(std::string filename)
     so->addNavigationMenuItem();
     so->addScaleMenuItem("Scale", 0.1, 10.0, 1.0);
 
+    // check if there exits a preset configuration
+    bool nav;
+    nav = so->getNavigationOn();
+    so->setNavigationOn(false);
+
+    if(_locInit.find(name) != _locInit.end())
+    {
+         so->setTransform(_locInit[name].second);
+         so->setScale(so->getScale());
+    }
+    so->setNavigationOn(nav);
+
     _volumeMap[so] = info;
 
     return true;
