@@ -1472,27 +1472,32 @@ void Volume::removeAll()
 
 void Volume::writeConfigFile()
 {
-    ofstream cfile;
-    cfile.open((_configPath + "/Init.cfg").c_str(), ios::trunc);
-
-    if(!cfile.fail())
+    // only write on head node
+    if(cvr::ComController::instance()->isMaster())
     {
-    	for(map<std::string, std::pair<float, osg::Matrix> >::iterator it = _locInit.begin();
-        	it != _locInit.end(); it++)
-    	{
-        	//cerr << "Writing entry for " << it->first << endl;
-        	cfile << it->first << " " << it->second.first << " ";
-        	for(int i = 0; i < 4; i++)
-        	{
-        		for(int j = 0; j < 4; j++)
-        		{
-            		cfile << it->second.second(i, j) << " ";
-        		}
-        	}
-        	cfile << endl;
-    	}
+
+        ofstream cfile;
+        cfile.open((_configPath + "/Init.cfg").c_str(), ios::trunc);
+
+        if(!cfile.fail())
+        {
+    	    for(map<std::string, std::pair<float, osg::Matrix> >::iterator it = _locInit.begin();
+        	    it != _locInit.end(); it++)
+    	    {
+        	    //cerr << "Writing entry for " << it->first << endl;
+        	    cfile << it->first << " " << it->second.first << " ";
+        	    for(int i = 0; i < 4; i++)
+        	    {
+        		    for(int j = 0; j < 4; j++)
+        		    {
+            		    cfile << it->second.second(i, j) << " ";
+        		    }
+        	    }
+        	    cfile << endl;
+    	    }
+        }
+        cfile.close();
     }
-    cfile.close();
 }
 
 
