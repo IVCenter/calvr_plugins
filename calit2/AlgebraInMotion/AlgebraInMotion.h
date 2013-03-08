@@ -198,7 +198,7 @@ class AlgebraInMotion : public cvr::CVRPlugin, public cvr::MenuCallback, public 
         mutable std::map<int,bool> _callbackInit;
         mutable std::map<int,CUdeviceptr> d_debugDataMap;
         mutable std::map<int,CUdeviceptr> d_particleDataMap;
-        mutable std::map<int,CUcontext> _cudaContextMap;
+        mutable std::map<int,bool> _cudaContextSet;
 
         float _pointerHeading, _pointerPitch, _pointerRoll;
 		int loadPhysicalScreensArrayTourCaveCalit2();

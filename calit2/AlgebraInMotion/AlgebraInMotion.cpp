@@ -359,7 +359,7 @@ bool AlgebraInMotion::processEvent(InteractionEvent * event)
 
     return false;
 }
-//ContextChange one below os fr 1 screen two below is from 2 scr
+
 void AlgebraInMotion::perContextCallback(int contextid,PerContextCallback::PCCType type) const
 {
     if(CVRViewer::instance()->done() || !_callbackActive)
@@ -394,7 +394,7 @@ void AlgebraInMotion::perContextCallback(int contextid,PerContextCallback::PCCTy
 	#endif
         if(scr2)
 	{
-	    if(!_cudaContextMap[contextid])
+	    if(!_cudaContextSet[contextid])
 	    {
 		CUdevice device;
 		cuDeviceGet(&device,cudaDevice);
@@ -402,25 +402,32 @@ void AlgebraInMotion::perContextCallback(int contextid,PerContextCallback::PCCTy
 
 		cuGLCtxCreate(&cudaContext, 0, device);
 		cuGLInit();
-		_cudaContextMap[contextid] = cudaContext;
-		cuCtxSetCurrent(_cudaContextMap[contextid]);
+		cuCtxSetCurrent(cudaContext);
 	    }
            
             //cuCtxSetCurrent(_cudaContextMap[contextid]);
 	}
         else
         {
-	    cudaGLSetGLDevice(cudaDevice);
-	    cudaSetDevice(cudaDevice);
+	    if(!_cudaContextSet[contextid])
+	    {
+		cudaGLSetGLDevice(cudaDevice);
+		cudaSetDevice(cudaDevice);
+	    }
         } 
 	//std::cerr << "CudaDevice: " << cudaDevice << std::endl;
 
-	printCudaErr();
-	osg::VertexBufferObject * vbo = _particleGeo->getOrCreateVertexBufferObject();
-	vbo->setUsage(GL_DYNAMIC_DRAW);
-	osg::GLBufferObject * glbo = vbo->getOrCreateGLBufferObject(contextid);
-	//std::cerr << "Context: " << contextid << " VBO id: " << glbo->getGLObjectID() << " size: " << vbo->computeRequiredBufferSize() << std::endl;
-	checkRegBufferObj(glbo->getGLObjectID());
+
+	if(!_cudaContextSet[contextid])
+	{
+	    printCudaErr();
+	    osg::VertexBufferObject * vbo = _particleGeo->getOrCreateVertexBufferObject();
+	    vbo->setUsage(GL_DYNAMIC_DRAW);
+	    osg::GLBufferObject * glbo = vbo->getOrCreateGLBufferObject(contextid);
+	    //std::cerr << "Context: " << contextid << " VBO id: " << glbo->getGLObjectID() << " size: " << vbo->computeRequiredBufferSize() << std::endl;
+	    checkRegBufferObj(glbo->getGLObjectID());
+	    _cudaContextSet[contextid] = true;
+	}
 	printCudaErr();
 
 	if(cuMemAlloc(&d_debugDataMap[contextid], 128 * sizeof(float)) == CUDA_SUCCESS)
@@ -717,35 +724,52 @@ void AlgebraInMotion::initGeometry()
  
 
     _particleGeode = new osg::Geode();
-    _particleGeo = new osg::Geometry();
 
-    _particleGeo->setUseDisplayList(false);
-    _particleGeo->setUseVertexBufferObjects(true);
-
-    MyComputeBounds * mcb = new MyComputeBounds();
-    _particleGeo->setComputeBoundingBoxCallback(mcb);
-    mcb->_bound = osg::BoundingBox(osg::Vec3(-100000,-100000,-100000),osg::Vec3(100000,100000,100000));
-
-    _positionArray = new osg::Vec3Array(CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT);
-    for(int i = 0; i < CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT; i++)
+    if(!_particleGeo)
     {
-	//_positionArray->at(i) = osg::Vec3((rand()%2000)-1000.0,(rand()%2000)-1000.0,(rand()%2000)-1000.0);
-	_positionArray->at(i) = osg::Vec3(0,0,0);
-    }
+	_particleGeo = new osg::Geometry();
 
-    _colorArray = new osg::Vec4Array(CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT);
-    for(int i = 0; i < CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT; i++)
+	_particleGeo->setUseDisplayList(false);
+	_particleGeo->setUseVertexBufferObjects(true);
+
+	MyComputeBounds * mcb = new MyComputeBounds();
+	_particleGeo->setComputeBoundingBoxCallback(mcb);
+	mcb->_bound = osg::BoundingBox(osg::Vec3(-100000,-100000,-100000),osg::Vec3(100000,100000,100000));
+
+	_positionArray = new osg::Vec3Array(CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT);
+	for(int i = 0; i < CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT; i++)
+	{
+	    //_positionArray->at(i) = osg::Vec3((rand()%2000)-1000.0,(rand()%2000)-1000.0,(rand()%2000)-1000.0);
+	    _positionArray->at(i) = osg::Vec3(0,0,0);
+	}
+
+	_colorArray = new osg::Vec4Array(CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT);
+	for(int i = 0; i < CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT; i++)
+	{
+	    _colorArray->at(i) = osg::Vec4(0.0,0.0,0.0,0.0);
+	}
+
+	_particleGeo->setVertexArray(_positionArray);
+	_particleGeo->setColorArray(_colorArray);
+	_particleGeo->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+	_particleGeo->dirtyBound();
+
+	_primitive = new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT);
+	_particleGeo->addPrimitiveSet(_primitive);
+    }
+    else
     {
-	_colorArray->at(i) = osg::Vec4(0.0,0.0,0.0,0.0);
+	for(int i = 0; i < _positionArray->size(); ++i)
+	{
+	    _positionArray->at(i) = osg::Vec3(0,0,0);
+	}
+	_positionArray->dirty();
+	for(int i = 0; i < _colorArray->size(); ++i)
+	{
+	    _colorArray->at(i) = osg::Vec4(0,0,0,0);
+	}
+	_colorArray->dirty();
     }
-
-    _particleGeo->setVertexArray(_positionArray);
-    _particleGeo->setColorArray(_colorArray);
-    _particleGeo->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
-    _particleGeo->dirtyBound();
-
-    _primitive = new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT);
-    _particleGeo->addPrimitiveSet(_primitive);
 
     osg::PointSprite * sprite = new osg::PointSprite();
     osg::BlendFunc * blend = new osg::BlendFunc();
@@ -793,13 +817,8 @@ void AlgebraInMotion::initGeometry()
     _particleObject->addChild(_particleGeode);
     PluginHelper::registerSceneObject(_particleObject);
     _particleObject->attachToScene();
-    _particleObject->setNavigationOn(true);
+    _particleObject->resetPosition();
 // init hand object injector reflector
-    osg::Matrix m, ms, mt;
-    m.makeRotate((90.0/180.0)*M_PI,osg::Vec3(1.0,0,0));
-    ms.makeScale(osg::Vec3(1000.0,1000.0,1000.0));
-    mt.makeTranslate(osg::Vec3(0,0,-Navigation::instance()->getFloorOffset()));
-    _particleObject->setTransform(m*ms*mt);
 
     stateset = _particleGeode->getOrCreateStateSet();
     stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
@@ -1071,10 +1090,7 @@ void AlgebraInMotion::cleanupGeometry()
     _spriteProgram = NULL;
     _primitive = NULL;
 
-    _colorArray = NULL;
-    _positionArray = NULL;
     _particleGeode = NULL;
-    _particleGeo = NULL;
 
     delete _particleObject;
 }
