@@ -609,7 +609,6 @@ void AlgebraInMotion::initPart()
     colorFreq = 16;
     draw_water_sky = 1;
     //TODO: get from config file
-    hand_id = 0;
     state =0;
     trigger =0;
     but4 =0;
