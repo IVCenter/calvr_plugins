@@ -6,7 +6,6 @@
 #include <osg/Material>
 #include <osg/Texture2D>
 #include <osgDB/ReadFile>
-#include <osg/PolygonMode>
 #include <osg/Program>
 #include <osg/Shader>
 #include <cvrConfig/ConfigManager.h>
@@ -58,11 +57,6 @@ CubeShape::CubeShape(std::string command, std::string name)
 
 	osg::StateSet* state = getOrCreateStateSet();
 	state -> setMode(GL_BLEND, osg::StateAttribute::ON);
-
-	//possibly needed?
-	/*osg::PolygonMode* polyMode = new osg::PolygonMode();
-	polyMode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
-	state->setAttribute(polyMode);*/
 
 	osg::Material* mat = new osg::Material();
 	mat -> setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);

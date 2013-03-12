@@ -9,6 +9,10 @@
 #include "shapes/TextShape.h"
 #include "shapes/CubeShape.h"
 #include "shapes/ModelShape.h"
+#include "shapes/CapsuleShape.h"
+#include "shapes/SphereShape.h"
+#include "shapes/ConeShape.h"
+#include "shapes/CylinderShape.h"
 
 #include <iostream>
 #include <sstream>
@@ -29,6 +33,10 @@ CommandParser::CommandParser(ThreadQueue<std::string>* queue, MainNode* root) : 
     _shapeDefinitions["rectangle"] = new Factory<RectangleShape>();
     _shapeDefinitions["text"] = new Factory<TextShape>();
     _shapeDefinitions["cube"] = new Factory<CubeShape>();
+    _shapeDefinitions["capsule"] = new Factory<CapsuleShape>();
+    _shapeDefinitions["sphere"] = new Factory<SphereShape>();
+    _shapeDefinitions["cone"] = new Factory<ConeShape>();
+    _shapeDefinitions["cylinder"] = new Factory<CylinderShape>();
     _shapeDefinitions["model"] = new Factory<ModelShape>();
 
     // init mutex 

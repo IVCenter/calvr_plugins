@@ -9,7 +9,7 @@
 
 namespace SimpleShape 
 {
-    enum ShapeType {POINT, TRIANGLE, QUAD, RECTANGLE, CIRCLE, LINE, TEXT, CUBE, MODEL};
+    enum ShapeType {POINT, TRIANGLE, QUAD, RECTANGLE, CIRCLE, LINE, TEXT, CUBE, CAPSULE, SPHERE, CONE, CYLINDER, MODEL};
 }
 
 class BasicShape
