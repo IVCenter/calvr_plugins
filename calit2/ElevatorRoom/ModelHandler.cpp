@@ -7,7 +7,6 @@ using namespace std;
 namespace ElevatorRoom
 {
 
-
 ModelHandler::ModelHandler()
 {
     _activeObject = NULL;
@@ -23,6 +22,25 @@ ModelHandler::ModelHandler()
     _activeDoor = 0;
     _lightColor = 0;
     _doorInView = false;
+/*
+    WHITE,
+    RED,
+    BLUE,
+    ORANGE,
+    YELLOW,
+    GREEN,
+    BROWN, 
+    GREY
+*/
+    _colors.push_back(osg::Vec4(1, 1, 1, 1));   // WHITE
+    _colors.push_back(osg::Vec4(1, 0, 0, 1));   // RED
+    _colors.push_back(osg::Vec4(0, 0, 1, 1));   // BLUE
+    _colors.push_back(osg::Vec4(1, 0.5, 0, 1)); // ORANGE
+    _colors.push_back(osg::Vec4(1, 1, 0, 1));   // YELLOW
+    _colors.push_back(osg::Vec4(0, 1, 0, 1));   // GREEN
+    _colors.push_back(osg::Vec4(0.3, 0.15, 0.0, 1.0)); // BROWN
+    _colors.push_back(osg::Vec4(0.7, 0.7, 0.7, 1.0));  // GREY
+
 }
 
 ModelHandler::~ModelHandler()
@@ -41,7 +59,6 @@ void ModelHandler::update()
     pos = PluginHelper::getHeadMat(0).getTrans() + (osg::Vec3(-32, 200, 0) * rotMat);
 
     _crosshairPat->setPosition(pos); 
-
 
 
     float angle = 0, tolerance = 15 * (M_PI / 180), roomRad = 6;
@@ -93,17 +110,6 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     _checkTex1 = ConfigManager::getEntry("Plugin.ElevatorRoom.CheckerTexture1");
     _checkTex2 = ConfigManager::getEntry("Plugin.ElevatorRoom.CheckerTexture2");
 
-
-    osg::Vec4 grey     = osg::Vec4(0.7, 0.7, 0.7, 1.0),
-              brown    = osg::Vec4(0.3, 0.15, 0.0, 1.0),
-              darkgrey = osg::Vec4(0.3, 0.3, 0.3, 1.0),
-              red      = osg::Vec4(1, 0, 0, 1), 
-              blue     = osg::Vec4(0, 0, 1, 1),
-              green    = osg::Vec4(0, 1, 0, 1),
-              yellow   = osg::Vec4(1, 1, 0, 1),
-              orange   = osg::Vec4(1, 0.5, 0, 1),
-              white    = osg::Vec4(1, 1, 1, 1);
-
     float roomRad = 6.0, angle = 2 * M_PI / NUM_DOORS;
 
     osg::ref_ptr<osg::PositionAttitudeTransform> pat;
@@ -115,65 +121,39 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     osg::ref_ptr<osg::Image> img;
     osg::ref_ptr<osg::StateSet> state;
 
+    osg::ref_ptr<osg::ShapeDrawable> redDrawable, greenDrawable, yellowDrawable,
+        orangeDrawable, whiteDrawable;
+    osg::ref_ptr<osg::Geode> redGeode, greenGeode, yellowGeode, orangeGeode,
+        whiteGeode, blueGeode;
+
+
 
     // Lights
+    {
     osg::ref_ptr<osg::Sphere> shape = new osg::Sphere(osg::Vec3(0,-4.75, 4.0), 0.3);
 
     for (int i = 0; i < NUM_DOORS; ++i)
     {
         pat = new osg::PositionAttitudeTransform();
-        drawable = new osg::ShapeDrawable(shape);
-        drawable->setColor(osg::Vec4(0.5, 0.5, 0.5, 1.0));
-        geode = new osg::Geode();
-        geode->addDrawable(drawable);
-
-        osg::ref_ptr<osg::ShapeDrawable> redDrawable, greenDrawable, yellowDrawable,
-            orangeDrawable, whiteDrawable;
-        osg::ref_ptr<osg::Geode> redGeode, greenGeode, yellowGeode, orangeGeode,
-            whiteGeode;
-
-        redDrawable = new osg::ShapeDrawable(shape);
-        redDrawable->setColor(red);
-        redGeode = new osg::Geode();
-        redGeode->addDrawable(redDrawable);
-
-        greenDrawable = new osg::ShapeDrawable(shape);
-        greenDrawable->setColor(blue);
-        greenGeode = new osg::Geode();
-        greenGeode->addDrawable(greenDrawable);
-
-        yellowDrawable = new osg::ShapeDrawable(shape);
-        yellowDrawable->setColor(yellow);
-        yellowGeode = new osg::Geode();
-        yellowGeode->addDrawable(yellowDrawable);
-
-        orangeDrawable = new osg::ShapeDrawable(shape);
-        orangeDrawable->setColor(orange);
-        orangeGeode = new osg::Geode();
-        orangeGeode->addDrawable(orangeDrawable);
-
-        whiteDrawable = new osg::ShapeDrawable(shape);
-        whiteDrawable->setColor(white);
-        whiteGeode = new osg::Geode();
-        whiteGeode->addDrawable(whiteDrawable);
-
         pat->setAttitude(osg::Quat(i * angle, osg::Vec3(0.0, 0.0, 1.0)));
         pat->setPosition(osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0));
 
         osg::ref_ptr<osg::Switch> switchNode;
         switchNode = new osg::Switch();
-        
-        switchNode->addChild(geode, true);
-        switchNode->addChild(redGeode, false);
-        switchNode->addChild(greenGeode, false);
-        switchNode->addChild(yellowGeode, false);
-        switchNode->addChild(orangeGeode, false);
-        switchNode->addChild(whiteGeode, false);
-
+ 
+        for (int j = 0; j < _colors.size(); ++j)
+        {
+            drawable = new osg::ShapeDrawable(shape);
+            drawable->setColor(_colors[j]);
+            geode = new osg::Geode();
+            geode->addDrawable(drawable);
+            switchNode->addChild(geode, false);
+        }
+        switchNode->setValue(0, true);
         pat->addChild(switchNode);
-        _geoRoot->addChild(pat);
+        //_geoRoot->addChild(pat);
 
-        _lightSwitch.push_back(switchNode);
+    //    _lightSwitch.push_back(switchNode);
         _lights.push_back(drawable);
         
         
@@ -198,15 +178,16 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         }
 */
     }
-
+    }
 
     // Aliens 
+    {
     geode = new osg::Geode();
-    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, grey);
+    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, _colors[GREY]);
     geode->addDrawable(geo);
 
     osg::ref_ptr<osg::Geode> redGeode = new Geode();
-    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, red);
+    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, _colors[RED]);
     redGeode->addDrawable(geo);
 
     tex = new osg::Texture2D();
@@ -259,15 +240,16 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         }
    */
     }   
-
+    }
 
     // Allies 
+    {
     geode = new osg::Geode();
-    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, grey);
+    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, _colors[GREY]);
     geode->addDrawable(geo);
     
     redGeode = new osg::Geode();
-    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, red);
+    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, _colors[RED]);
     redGeode->addDrawable(geo);
 
     tex = new osg::Texture2D();
@@ -306,11 +288,12 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
 
         _alliesSwitch.push_back(switchNode);
     }   
-
+    }
 
     // Checkerboards 
+    {
     geode = new osg::Geode();
-    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, grey);
+    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, _colors[GREY]);
     geode->addDrawable(geo);
 
     osg::ref_ptr<osg::Geode> geode2 = new osg::Geode();
@@ -363,9 +346,10 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
 
         _checkersSwitch.push_back(switchNode);
     }   
+    }
 
     // Walls
-    
+    {    
     geode = new osg::Geode();
     tex = new osg::Texture2D();
     img = osgDB::readImageFile(_dataDir + _wallTex);
@@ -384,20 +368,20 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     float wallTexScale = 0.5;
 
     // Left front
-    geo = drawBox(osg::Vec3(3.0, -5.0, 1.0), 3.25, 0.5, 4.0, grey, wallTexScale); 
+    geo = drawBox(osg::Vec3(3.0, -5.0, 1.0), 3.25, 0.5, 4.0, _colors[GREY], wallTexScale); 
     geode->addDrawable(geo);
     
     // Right front
-    geo = drawBox(osg::Vec3(-3.0, -5.0, 1.0), 3.25, 0.5, 4.0, grey, wallTexScale);
+    geo = drawBox(osg::Vec3(-3.0, -5.0, 1.0), 3.25, 0.5, 4.0, _colors[GREY], wallTexScale);
     geode->addDrawable(geo);
 
     // Top
-    geo = drawBox(osg::Vec3(0.0, -5.0, 4.5), 9.0, 0.5, 3.0, grey, wallTexScale);
+    geo = drawBox(osg::Vec3(0.0, -5.0, 4.5), 9.0, 0.5, 3.0, _colors[GREY], wallTexScale);
     geode->addDrawable(geo);
-
+    }
     
     // Elevator
-    
+    { 
     osg::ref_ptr<osg::Geode> elevatorGeode = new osg::Geode();
     tex = new osg::Texture2D();
     img = osgDB::readImageFile(_dataDir + _elevTex);
@@ -415,19 +399,19 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
 
 
     // Left side 
-    geo = drawBox(osg::Vec3( 1.25, -7.0, 1.5), 0.5, 4.0, 5.0, grey);
+    geo = drawBox(osg::Vec3( 1.25, -7.0, 1.5), 0.5, 4.0, 5.0, _colors[GREY]);
     elevatorGeode->addDrawable(geo);
 
     // Right side 
-    geo = drawBox(osg::Vec3(-1.25, -7.0, 1.5), 0.5, 4.0, 5.0, grey);
+    geo = drawBox(osg::Vec3(-1.25, -7.0, 1.5), 0.5, 4.0, 5.0, _colors[GREY]);
     elevatorGeode->addDrawable(geo);
 
     // Back
-    geo = drawBox(osg::Vec3(0.0, -9.25, 1.5), 3.0, 0.5, 5.0, grey);
+    geo = drawBox(osg::Vec3(0.0, -9.25, 1.5), 3.0, 0.5, 5.0, _colors[GREY]);
     elevatorGeode->addDrawable(geo);
 
     // Elevator floor
-    geo = drawBox(osg::Vec3(0.0, -7.0, -1.15), 3.0, 3.75, 0.5, grey);
+    geo = drawBox(osg::Vec3(0.0, -7.0, -1.15), 3.0, 3.75, 0.5, _colors[GREY]);
     elevatorGeode->addDrawable(geo);
 
     for (int i = 0; i < NUM_DOORS; ++i)
@@ -439,13 +423,13 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         pat->addChild(elevatorGeode);
         _geoRoot->addChild(pat);
     }
-
+    }
 
     // Ceiling 
-    
+    { 
     geode = new osg::Geode();
 
-    geo = drawBox(osg::Vec3(0.0, 0.0, 5.0), 40.0, 40.0, 0.1, grey);
+    geo = drawBox(osg::Vec3(0.0, 0.0, 5.0), 40.0, 40.0, 0.1, _colors[GREY]);
     geode->addDrawable(geo);
 
     tex = new osg::Texture2D();
@@ -463,13 +447,13 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
 
     _geoRoot->addChild(geode);
-    
+    } 
 
     // Floor
-
+    {
     geode = new osg::Geode();
 
-    geo = drawBox(osg::Vec3(0.0, 0.0, -1.0), 40.0, 40.0, 0.1, grey);
+    geo = drawBox(osg::Vec3(0.0, 0.0, -1.0), 40.0, 40.0, 0.1, _colors[GREY]);
     geode->addDrawable(geo);
 
     tex = new osg::Texture2D();
@@ -487,20 +471,17 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);   
 
     _geoRoot->addChild(geode);
-
+    }
 
     // Doors
-    
+    { 
     osg::ref_ptr<osg::Geometry> ldoorGeo, rdoorGeo;
 
-    ldoorGeo = drawBox(osg::Vec3( 0.75, -5.2, 1.0), 1.5, 0.5, 4.0, grey);
-    rdoorGeo = drawBox(osg::Vec3(-0.75, -5.2, 1.0), 1.5, 0.5, 4.0, grey);
+    ldoorGeo = drawBox(osg::Vec3( 0.75, -5.2, 1.0), 1.5, 0.5, 4.0, _colors[GREY]);
+    rdoorGeo = drawBox(osg::Vec3(-0.75, -5.2, 1.0), 1.5, 0.5, 4.0, _colors[GREY]);
 
     for (int i = 0; i < NUM_DOORS; ++i)
     {
-        pat = new osg::PositionAttitudeTransform();
-        geode = new osg::Geode();
-
         tex = new osg::Texture2D();
         img = osgDB::readImageFile(_dataDir + _doorTex);
         if (img)
@@ -510,20 +491,164 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
             tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
             tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
         }
+        
 
+        // Right door
+        pat = new osg::PositionAttitudeTransform();
+        pat->setAttitude(osg::Quat(i * angle, osg::Vec3(0, 0, 1)));
+        pat->setPosition(osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0));
+        _rightdoorPat.push_back(pat);
+        _geoRoot->addChild(pat);
+        
+        osg::ref_ptr<osg::Switch> switchNode = new osg::Switch();
+        osg::ref_ptr<osg::Geometry> geometry;
+
+
+        /*geode = new osg::Geode();
         state = geode->getOrCreateStateSet();
         state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
         state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
-
         geode->addDrawable(rdoorGeo);
+        pat->addChild(geode);*/
+
+
+        for (int j = 0; j < _colors.size(); ++j)
+        {
+            geometry = drawBox(osg::Vec3(-0.75, -5.2, 1.0), 1.5, 0.5, 4.0, _colors[j]);
+            geode = new osg::Geode();
+            geode->addDrawable(geometry);
+
+            osg::Material * mat = new osg::Material(); 
+            mat->setDiffuse(Material::FRONT_AND_BACK, _colors[j]);
+            mat->setSpecular(Material::FRONT_AND_BACK, _colors[j]);
+            mat->setAlpha(Material::FRONT_AND_BACK, 0.5);
+
+            state = geode->getOrCreateStateSet();
+            state->setTextureAttributeAndModes(0, tex, osg::StateAttribute::ON);
+            state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+            state->setAttribute(mat, osg::StateAttribute::ON);
+            state->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
+            state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+
+            switchNode->addChild(geode, false);
+        }
+
+        switchNode->setValue(GREY, true);
+        _lightSwitch.push_back(switchNode);
+        pat->addChild(switchNode);
+        _geoRoot->addChild(pat);
+
+/*        osg::ref_ptr<osg::Geometry> redRdoorGeo, blueRdoorGeo, yellowRdoorGeo, 
+            orangeRdoorGeo, whiteRdoorGeo;
+        redRdoorGeo    = drawBox(osg::Vec3(-0.75, -5.2, 1.0), 1.5, 0.5, 4.0, osg::Vec4(1,0,0,0.1));//red);;
+        blueRdoorGeo   = drawBox(osg::Vec3(-0.75, -5.2, 1.0), 1.5, 0.5, 4.0, osg::Vec4(1,0,0,0.1));//blue);
+        yellowRdoorGeo = drawBox(osg::Vec3(-0.75, -5.2, 1.0), 1.5, 0.5, 4.0, osg::Vec4(1,0,0,0.1));//yellow);
+        orangeRdoorGeo = drawBox(osg::Vec3(-0.75, -5.2, 1.0), 1.5, 0.5, 4.0, osg::Vec4(1,0,0,0.1));//orange);
+        whiteRdoorGeo  = drawBox(osg::Vec3(-0.75, -5.2, 1.0), 1.5, 0.5, 4.0, osg::Vec4(1,0,0,0.1));//white);
+
+        switchNode->addChild(geode, true);
+        redGeode = new osg::Geode();
+        redGeode->addDrawable(redRdoorGeo);
+        state = redGeode->getOrCreateStateSet();
+        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+        state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+        state->setAttribute(mat, osg::StateAttribute::ON);
+        state->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
+        state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+        switchNode->addChild(redGeode, false);
+
+        blueGeode = new osg::Geode();
+        blueGeode->addDrawable(blueRdoorGeo);
+        state = blueGeode->getOrCreateStateSet();
+        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+        state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+        state->setAttribute(mat, osg::StateAttribute::ON);
+        state->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
+        state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+        switchNode->addChild(blueGeode, false);
+
+        yellowGeode = new osg::Geode();
+        yellowGeode->addDrawable(yellowRdoorGeo);
+        state = yellowGeode->getOrCreateStateSet();
+        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+        state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+        state->setAttribute(mat, osg::StateAttribute::ON);
+        state->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
+        state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+        switchNode->addChild(yellowGeode, false);
+
+        orangeGeode = new osg::Geode();
+        orangeGeode->addDrawable(orangeRdoorGeo);
+        state = orangeGeode->getOrCreateStateSet();
+        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+        state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+        state->setAttribute(mat, osg::StateAttribute::ON);
+        state->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
+        state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+        switchNode->addChild(orangeGeode, false);
+
+        whiteGeode = new osg::Geode();
+        whiteGeode->addDrawable(whiteRdoorGeo);
+        state = whiteGeode->getOrCreateStateSet();
+        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+        state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+        state->setAttribute(mat, osg::StateAttribute::ON);
+        state->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
+        state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+        switchNode->addChild(whiteGeode, false);
+
+        //switchNode->addChild(blueRdoorGeo, false);
+        //switchNode->addChild(yellowRdoorGeo, false);
+        //switchNode->addChild(orangeRdoorGeo, false);
+        //switchNode->addChild(whiteRdoorGeo, false);
+*/
+
+ 
+        // Left door
+        pat = new osg::PositionAttitudeTransform();
         pat->setAttitude(osg::Quat(i * angle, osg::Vec3(0, 0, 1)));
         pat->setPosition(osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0));
-        pat->addChild(geode);
-        _rightdoorPat.push_back(pat);
+        _leftdoorPat.push_back(pat);
+        _geoRoot->addChild(pat);
+        
+        switchNode = new osg::Switch();
+
+        for (int j = 0; j < _colors.size(); ++j)
+        {
+            geometry = drawBox(osg::Vec3(0.75, -5.2, 1.0), 1.5, 0.5, 4.0, _colors[j]);
+            geode = new osg::Geode();
+            geode->addDrawable(geometry);
+
+            osg::Material * mat = new osg::Material(); 
+            mat->setDiffuse(Material::FRONT_AND_BACK, _colors[j]);
+            mat->setSpecular(Material::FRONT_AND_BACK, _colors[j]);
+            mat->setAlpha(Material::FRONT_AND_BACK, 0.5);
+
+            state = geode->getOrCreateStateSet();
+            state->setTextureAttributeAndModes(0, tex, osg::StateAttribute::ON);
+            state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+            state->setAttribute(mat, osg::StateAttribute::ON);
+            state->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
+            state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+
+            switchNode->addChild(geode, false);
+        }
+
+        switchNode->setValue(GREY, true);
+        _leftdoorSwitch.push_back(switchNode);
+        pat->addChild(switchNode);
         _geoRoot->addChild(pat);
 
 
-        pat = new osg::PositionAttitudeTransform();
+/*
+geode = new osg::Geode();
+state = geode->getOrCreateStateSet();
+state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+geode->addDrawable(rdoorGeo);
+pat->addChild(geode);
+*/
+/*        pat = new osg::PositionAttitudeTransform();
         geode = new osg::Geode();
 
         state = geode->getOrCreateStateSet();
@@ -536,11 +661,53 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         pat->addChild(geode);
         _leftdoorPat.push_back(pat);
         _geoRoot->addChild(pat);
+
+        switchNode = new osg::Switch();
+
+        osg::ref_ptr<osg::Geometry> redLdoorGeo, blueLdoorGeo, yellowLdoorGeo,
+            orangeLdoorGeo, whiteLdoorGeo;
+
+        redLdoorGeo    = drawBox(osg::Vec3(0.75, -5.2, 1.0), 1.5, 0.5, 4.0, red);
+        blueLdoorGeo   = drawBox(osg::Vec3(0.75, -5.2, 1.0), 1.5, 0.5, 4.0, blue);
+        yellowLdoorGeo = drawBox(osg::Vec3(0.75, -5.2, 1.0), 1.5, 0.5, 4.0, yellow);
+        orangeLdoorGeo = drawBox(osg::Vec3(0.75, -5.2, 1.0), 1.5, 0.5, 4.0, orange);
+        whiteLdoorGeo  = drawBox(osg::Vec3(0.75, -5.2, 1.0), 1.5, 0.5, 4.0, white);
+        
+        switchNode->addChild(geode, true);
+
+        redGeode = new osg::Geode();
+        redGeode->addDrawable(redLdoorGeo);
+        switchNode->addChild(redGeode, false);
+
+        blueGeode = new osg::Geode();
+        blueGeode->addDrawable(blueLdoorGeo);
+        switchNode->addChild(blueGeode, false);
+
+        yellowGeode = new osg::Geode();
+        yellowGeode->addDrawable(yellowLdoorGeo);
+        switchNode->addChild(yellowGeode, false);
+
+        orangeGeode = new osg::Geode();
+        orangeGeode->addDrawable(orangeLdoorGeo);
+        switchNode->addChild(orangeGeode, false);
+
+        whiteGeode = new osg::Geode();
+        whiteGeode->addDrawable(whiteLdoorGeo);
+        switchNode->addChild(whiteGeode, false);
+
+
+        //switchNode->addChild(redLdoorGeo, false);
+        //switchNode->addChild(blueLdoorGeo, false);
+        //switchNode->addChild(yellowLdoorGeo, false);
+        //switchNode->addChild(orangeLdoorGeo, false);
+        //switchNode->addChild(whiteLdoorGeo, false);
+*/
+
+    }
     }
 
-
     // Score text
-    
+    { 
     osg::Vec3 pos = osg::Vec3(-500, 0, 300);
     _scoreText = new osgText::Text();
     _scoreText->setText("Score: 0");
@@ -566,13 +733,13 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
     pat->addChild(geode);
     PluginHelper::getScene()->addChild(pat);
-
+    }
 
     // Crosshair
-
-    width = 4;
-    height = 0.3;
-    pos = osg::Vec3(0, -2500, 0);
+    {
+    float width = 4;
+    float height = 0.3;
+    osg::Vec3 pos = osg::Vec3(0, -2500, 0);
     pos = osg::Vec3(-25, 200, 0) + PluginHelper::getHeadMat().getTrans();
     osg::Vec4 color(0.8, 0.0, 0.0, 1.0);
     osg::Geode *chGeode = new osg::Geode();
@@ -581,7 +748,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     pos = osg::Vec3(0,0,0);
 
     // horizontal
-    quad = makeQuad(width, height, color, pos - osg::Vec3(width/2, 0, height/2));
+    osg::ref_ptr<osg::Geometry> quad = makeQuad(width, height, color, pos - osg::Vec3(width/2, 0, height/2));
     chGeode->addDrawable(quad);
 
     // vertical
@@ -594,6 +761,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     if (ConfigManager::getEntry("Plugin.ElevatorRoom.Crosshair") == "on" )
     {
         PluginHelper::getScene()->addChild(_crosshairPat);
+    }
     }
 
     _loaded = true;
@@ -871,8 +1039,15 @@ void ModelHandler::setMode(Mode mode)
         }
     }
 
-    _lightColor = _lightSwitch[_activeDoor]->getNumChildren() - 1;
+/*    _lightColor = _lightSwitch[_activeDoor]->getNumChildren() - 1;
     _lightSwitch[_activeDoor]->setValue((int)_lightColor, true);
+    _leftdoorSwitch[_activeDoor]->setValue((int)_lightColor, true);
+*/
+}
+
+void ModelHandler::setSwitched(bool switched)
+{
+    _switched = switched;
 }
 
 osg::ref_ptr<osg::Geode> ModelHandler::getActiveObject()
@@ -891,13 +1066,15 @@ void ModelHandler::setScore(int score)
 
 void ModelHandler::flashActiveLight()
 {
-    if (_lightSwitch[_activeDoor]->getValue(_lightColor))
+    if (_lightSwitch[_activeDoor]->getValue(WHITE))
     {
-        _lightSwitch[_activeDoor]->setSingleChildOn(NONE);
+        _lightSwitch[_activeDoor]->setSingleChildOn(GREY);
+        _leftdoorSwitch[_activeDoor]->setSingleChildOn(GREY);
     }
     else
     {
-        _lightSwitch[_activeDoor]->setSingleChildOn(_lightColor);
+        _lightSwitch[_activeDoor]->setSingleChildOn(WHITE);
+        _leftdoorSwitch[_activeDoor]->setSingleChildOn(WHITE);
     }
 }
 
@@ -1067,16 +1244,44 @@ void ModelHandler::setAlly(bool val)
 
 void ModelHandler::setLight(bool val)
 {
-    _lightColor = (int)_mode;
-    if (val)
+    //_lightColor = _lightSwitch[_activeDoor]->getNumChildren() - 1;
+    //_lightSwitch[_activeDoor]->setValue((int)_lightColor, true);
+    //_leftdoorSwitch[_activeDoor]->setValue((int)_lightColor, true);
+
+    if (val && _switched && _mode == ALIEN)
     {
-        _lightSwitch[_activeDoor]->setValue(0, false);
-        _lightSwitch[_activeDoor]->setValue(_lightColor, true);
+        Mode mode = ALLY;
+        _lightColor = BLUE;
+    }
+    else if (val && _switched && _mode == ALLY)
+    {
+        Mode mode = ALIEN;
+        _lightColor = RED;
     }
     else
     {
-        _lightSwitch[_activeDoor]->setValue(0, true);
+        _lightColor = (int)_mode;
+    }
+
+    if (val)
+    {
+        _lightSwitch[_activeDoor]->setValue(0, false);
+        _lightSwitch[_activeDoor]->setAllChildrenOff();
+        _lightSwitch[_activeDoor]->setValue(_lightColor, true);
+
+        _leftdoorSwitch[_activeDoor]->setValue(0, false);
+        _leftdoorSwitch[_activeDoor]->setAllChildrenOff();
+        _leftdoorSwitch[_activeDoor]->setValue(_lightColor, true);
+    }
+    else
+    {
+        _lightSwitch[_activeDoor]->setAllChildrenOff();
+        _lightSwitch[_activeDoor]->setValue(GREY, true);
         _lightSwitch[_activeDoor]->setValue(_lightColor, false);
+
+        _leftdoorSwitch[_activeDoor]->setAllChildrenOff();
+        _leftdoorSwitch[_activeDoor]->setValue(GREY, true);
+        _leftdoorSwitch[_activeDoor]->setValue(_lightColor, false);
     }
 }
 

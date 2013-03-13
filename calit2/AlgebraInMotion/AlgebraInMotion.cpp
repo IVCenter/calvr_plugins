@@ -64,6 +64,8 @@ AlgebraInMotion::AlgebraInMotion()
     _pointerHeading = 0.0;
     _pointerPitch = 0.0;
     _pointerRoll = 0.0;
+    _callbackAdded = false;
+    _callbackActive = false;
 }
 
 AlgebraInMotion::~AlgebraInMotion()
@@ -120,11 +122,21 @@ void AlgebraInMotion::menuCallback(MenuItem * item)
 	    CVRViewer::instance()->getStatsHandler()->addStatTimeBar(CVRStatsHandler::CAMERA_STAT,"AIMCuda Time:","PD Cuda duration","PD Cuda start","PD Cuda end",osg::Vec3(0,1,0),"PD stats");
 	    //CVRViewer::instance()->getStatsHandler()->addStatTimeBar(CVRStatsHandler::CAMERA_STAT,"PDCuda Copy:","PD Cuda Copy duration","PD Cuda Copy start","PD Cuda Copy end",osg::Vec3(0,0,1),"PD stats");
 
-        SceneManager::instance()->setHidePointer(true);
+	    SceneManager::instance()->setHidePointer(true);
 
 	    initPart();
 	    initGeometry();
 	    initSound();
+	}
+	else
+	{
+	    cleanupSound();
+	    cleanupGeometry();
+	    cleanupPart();
+	    
+	    SceneManager::instance()->setHidePointer(false);
+
+	    CVRViewer::instance()->getStatsHandler()->removeStatTimeBar("PD Cuda duration");
 	}
 
 /*
@@ -280,11 +292,11 @@ bool AlgebraInMotion::processEvent(InteractionEvent * event)
 	if(tie->getHand() == hand_id)
 	{
 	    if((tie->getInteraction() == BUTTON_DOWN || tie->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getButton() <= 4)
-	    { std::cout << " buttonPtresses " << (tie->getButton()) << std::endl;
+	    { //std::cout << " buttonPtresses " << (tie->getButton()) << std::endl;
 		if(tie->getButton() == 0)
 		{
 			trigger = 1;
-			std::cout << " trigger but2 " << trigger << " " << but2 << std::endl;
+			//std::cout << " trigger but2 " << trigger << " " << but2 << std::endl;
 			if (but2 ==1){ skipTonextScene =1; ; return true;}
 		}
 		else if(tie->getButton() == 1)
@@ -347,16 +359,26 @@ bool AlgebraInMotion::processEvent(InteractionEvent * event)
 
     return false;
 }
-//ContextChange one below os fr 1 screen two below is from 2 scr
-#ifndef SCR2_PER_CARD
+
 void AlgebraInMotion::perContextCallback(int contextid,PerContextCallback::PCCType type) const
-#else
-void AlgebraInMotion::perContextCallback(int contextid) const
-#endif
 {
-    if(CVRViewer::instance()->done())
+    if(CVRViewer::instance()->done() || !_callbackActive)
     {
-	//TODO: add cuda cleanup
+	_callbackLock.lock();
+
+	if(_callbackInit[contextid])
+	{
+	    cuMemFree(d_particleDataMap[contextid]);
+	    cuMemFree(d_debugDataMap[contextid]);
+
+#ifdef SCR2_PER_CARD
+	    //cuCtxSetCurrent(NULL);
+#endif
+
+	    _callbackInit[contextid] = false;
+	}
+
+	_callbackLock.unlock();
 	return;
     }
     //std::cerr << "ContextID: " << contextid << std::endl;
@@ -372,29 +394,40 @@ void AlgebraInMotion::perContextCallback(int contextid) const
 	#endif
         if(scr2)
 	{
-            CUdevice device;
-            cuDeviceGet(&device,cudaDevice);
-            CUcontext cudaContext;
- 	
-           cuGLCtxCreate(&cudaContext, 0, device);
-            cuGLInit();
- 	
+	    if(!_cudaContextSet[contextid])
+	    {
+		CUdevice device;
+		cuDeviceGet(&device,cudaDevice);
+		CUcontext cudaContext;
+
+		cuGLCtxCreate(&cudaContext, 0, device);
+		cuGLInit();
+		cuCtxSetCurrent(cudaContext);
+	    }
            
-            cuCtxSetCurrent(cudaContext);
+            //cuCtxSetCurrent(_cudaContextMap[contextid]);
 	}
         else
         {
-	    cudaGLSetGLDevice(cudaDevice);
-	    cudaSetDevice(cudaDevice);
+	    if(!_cudaContextSet[contextid])
+	    {
+		cudaGLSetGLDevice(cudaDevice);
+		cudaSetDevice(cudaDevice);
+	    }
         } 
 	//std::cerr << "CudaDevice: " << cudaDevice << std::endl;
 
-	printCudaErr();
-	osg::VertexBufferObject * vbo = _particleGeo->getOrCreateVertexBufferObject();
-	vbo->setUsage(GL_DYNAMIC_DRAW);
-	osg::GLBufferObject * glbo = vbo->getOrCreateGLBufferObject(contextid);
-	//std::cerr << "Context: " << contextid << " VBO id: " << glbo->getGLObjectID() << " size: " << vbo->computeRequiredBufferSize() << std::endl;
-	checkRegBufferObj(glbo->getGLObjectID());
+
+	if(!_cudaContextSet[contextid])
+	{
+	    printCudaErr();
+	    osg::VertexBufferObject * vbo = _particleGeo->getOrCreateVertexBufferObject();
+	    vbo->setUsage(GL_DYNAMIC_DRAW);
+	    osg::GLBufferObject * glbo = vbo->getOrCreateGLBufferObject(contextid);
+	    //std::cerr << "Context: " << contextid << " VBO id: " << glbo->getGLObjectID() << " size: " << vbo->computeRequiredBufferSize() << std::endl;
+	    checkRegBufferObj(glbo->getGLObjectID());
+	    _cudaContextSet[contextid] = true;
+	}
 	printCudaErr();
 
 	if(cuMemAlloc(&d_debugDataMap[contextid], 128 * sizeof(float)) == CUDA_SUCCESS)
@@ -576,7 +609,6 @@ void AlgebraInMotion::initPart()
     colorFreq = 16;
     draw_water_sky = 1;
     //TODO: get from config file
-    hand_id = 0;
     state =0;
     trigger =0;
     but4 =0;
@@ -670,7 +702,13 @@ void AlgebraInMotion::initPart()
         //printf ( "rnd num %f %f %f \n", h_particleData[PDATA_ROW_SIZE * i +4],h_particleData[PDATA_ROW_SIZE * i +5],h_particleData[PDATA_ROW_SIZE * i +6]);
     }
 
-    CVRViewer::instance()->addPerContextPostFinishCallback(this);
+    if(!_callbackAdded)
+    {
+	CVRViewer::instance()->addPerContextPostFinishCallback(this);
+	_callbackAdded = true;
+    }
+
+    _callbackActive = true;
 }
 
 void AlgebraInMotion::initGeometry()
@@ -685,35 +723,52 @@ void AlgebraInMotion::initGeometry()
  
 
     _particleGeode = new osg::Geode();
-    _particleGeo = new osg::Geometry();
 
-    _particleGeo->setUseDisplayList(false);
-    _particleGeo->setUseVertexBufferObjects(true);
-
-    MyComputeBounds * mcb = new MyComputeBounds();
-    _particleGeo->setComputeBoundingBoxCallback(mcb);
-    mcb->_bound = osg::BoundingBox(osg::Vec3(-100000,-100000,-100000),osg::Vec3(100000,100000,100000));
-
-    _positionArray = new osg::Vec3Array(CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT);
-    for(int i = 0; i < CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT; i++)
+    if(!_particleGeo)
     {
-	//_positionArray->at(i) = osg::Vec3((rand()%2000)-1000.0,(rand()%2000)-1000.0,(rand()%2000)-1000.0);
-	_positionArray->at(i) = osg::Vec3(0,0,0);
-    }
+	_particleGeo = new osg::Geometry();
 
-    _colorArray = new osg::Vec4Array(CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT);
-    for(int i = 0; i < CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT; i++)
+	_particleGeo->setUseDisplayList(false);
+	_particleGeo->setUseVertexBufferObjects(true);
+
+	MyComputeBounds * mcb = new MyComputeBounds();
+	_particleGeo->setComputeBoundingBoxCallback(mcb);
+	mcb->_bound = osg::BoundingBox(osg::Vec3(-100000,-100000,-100000),osg::Vec3(100000,100000,100000));
+
+	_positionArray = new osg::Vec3Array(CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT);
+	for(int i = 0; i < CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT; i++)
+	{
+	    //_positionArray->at(i) = osg::Vec3((rand()%2000)-1000.0,(rand()%2000)-1000.0,(rand()%2000)-1000.0);
+	    _positionArray->at(i) = osg::Vec3(0,0,0);
+	}
+
+	_colorArray = new osg::Vec4Array(CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT);
+	for(int i = 0; i < CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT; i++)
+	{
+	    _colorArray->at(i) = osg::Vec4(0.0,0.0,0.0,0.0);
+	}
+
+	_particleGeo->setVertexArray(_positionArray);
+	_particleGeo->setColorArray(_colorArray);
+	_particleGeo->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+	_particleGeo->dirtyBound();
+
+	_primitive = new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT);
+	_particleGeo->addPrimitiveSet(_primitive);
+    }
+    else
     {
-	_colorArray->at(i) = osg::Vec4(0.0,0.0,0.0,0.0);
+	for(int i = 0; i < _positionArray->size(); ++i)
+	{
+	    _positionArray->at(i) = osg::Vec3(0,0,0);
+	}
+	_positionArray->dirty();
+	for(int i = 0; i < _colorArray->size(); ++i)
+	{
+	    _colorArray->at(i) = osg::Vec4(0,0,0,0);
+	}
+	_colorArray->dirty();
     }
-
-    _particleGeo->setVertexArray(_positionArray);
-    _particleGeo->setColorArray(_colorArray);
-    _particleGeo->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
-    _particleGeo->dirtyBound();
-
-    _primitive = new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT);
-    _particleGeo->addPrimitiveSet(_primitive);
 
     osg::PointSprite * sprite = new osg::PointSprite();
     osg::BlendFunc * blend = new osg::BlendFunc();
@@ -761,13 +816,8 @@ void AlgebraInMotion::initGeometry()
     _particleObject->addChild(_particleGeode);
     PluginHelper::registerSceneObject(_particleObject);
     _particleObject->attachToScene();
-    _particleObject->setNavigationOn(true);
+    _particleObject->resetPosition();
 // init hand object injector reflector
-    osg::Matrix m, ms, mt;
-    m.makeRotate((90.0/180.0)*M_PI,osg::Vec3(1.0,0,0));
-    ms.makeScale(osg::Vec3(1000.0,1000.0,1000.0));
-    mt.makeTranslate(osg::Vec3(0,0,-Navigation::instance()->getFloorOffset()));
-    _particleObject->setTransform(m*ms*mt);
 
     stateset = _particleGeode->getOrCreateStateSet();
     stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
@@ -944,7 +994,7 @@ void AlgebraInMotion::initSound()
     std::string pathToAudioFiles;
 
     ipAddrStr =  ConfigManager::getEntry("ipAddr","Plugin.AlgebraInMotion.SoundServer","127.0.0.1");
-;
+
     port = ConfigManager::getInt("port", "Plugin.AlgebraInMotion.SoundServer", 31231);
 
     if (!oasclient::ClientInterface::initialize(ipAddrStr, port))
@@ -1005,6 +1055,88 @@ void AlgebraInMotion::initSound()
 
     dan_10122608_sound_spray_low.initialize(pathToAudioFiles, "dan_10122608_sound_spray_low.wav");
     dan_10120600_rezS3_rez2.initialize(pathToAudioFiles, "dan_10120600_RezS.3_Rez.2.wav");
+}
+
+void AlgebraInMotion::cleanupPart()
+{
+    delete[] h_particleData;
+    delete[] _old_refl_hits;
+    delete[] h_debugData;
+    delete[] _refl_hits;
+
+    _callbackActive = false;
+}
+
+void AlgebraInMotion::cleanupGeometry()
+{
+    cleanupGeoEdSection();
+
+    delete[] _PhScAr;
+
+    _refObjSwitchFace = NULL;
+    _refObjSwitchLine = NULL;
+    _injObjSwitchFace = NULL;
+    _injObjSwitchLine = NULL;
+
+    PluginHelper::getScene()->removeChild(_handModelMT);
+
+    _handModelMT = NULL;
+
+    _spriteTexture = NULL;
+
+    _spriteVert = NULL;
+    _spriteFrag = NULL;
+    _spriteProgram = NULL;
+    _primitive = NULL;
+
+    _particleGeode = NULL;
+
+    delete _particleObject;
+}
+
+void AlgebraInMotion::cleanupSound()
+{
+    if(!soundEnabled)
+    {
+	return;
+    }
+
+    soundEnabled = false;
+
+    chimes.release();
+
+    pinkNoise.release();
+
+    dan_texture_09.release();
+
+    texture_12.release();
+
+    short_sound_01a.release();
+    short_sound_01a1.release();
+    short_sound_01a2.release();
+    short_sound_01a3.release();
+    short_sound_01a4.release();
+    short_sound_01a5.release();
+
+    texture_17_swirls3.release();
+    rain_at_sea.release();
+    dan_texture_13.release();
+    dan_texture_05.release();
+    dan_short_sound_04.release();
+    dan_ambiance_2.release();
+    dan_ambiance_1.release();
+    dan_5min_ostinato.release();
+    dan_10120603_Rez1.release();
+    dan_mel_amb_slower.release();
+    harmonicAlgorithm.release();
+    dan_rain_at_sea_loop.release();
+
+    dan_10122606_sound_spray.release();
+
+    dan_10122608_sound_spray_low.release();
+    dan_10120600_rezS3_rez2.release();
+
+    oasclient::ClientInterface::shutdown();
 }
 
 void AlgebraInMotion::updateHand()
@@ -1176,364 +1308,364 @@ int AlgebraInMotion::load6wallcaveWalls(int firstRefNum)
 
 int AlgebraInMotion::loadPhysicalScreensArrayTourCaveCalit2()
 {
-_PhScAr = new _PhSc [128];
+    _PhScAr = new _PhSc [128];
 
-float height, h, width, p, originX, originY,r,name,originZ, screen;
-int i=0;
+    float height, h, width, p, originX, originY,r,name,originZ, screen;
+    int i=0;
 
-// _PhScAr[i].index  -1 is sentannel for end of list
-     height= 805 ;h=  74.0; width= 1432 ;  p= 0.0    ;originX= -1949  ; originY= 577  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
- 	_PhScAr[i].index =i; 
-  	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 
-  	std::cout << " i , originX,originY, originZ _PhScAr[i].originX ,_PhScAr[i].originY ,  _PhScAr[i].originX " <<  i << " " << originX << " " << originY<< " " << originZ  << " " << _PhScAr[i].originX << " " <<_PhScAr[i].originY << " " <<  _PhScAr[i].originZ << std::endl; 
- 	i++;
+    // _PhScAr[i].index  -1 is sentannel for end of list
+    height= 805 ;h=  74.0; width= 1432 ;  p= 0.0    ;originX= -1949  ; originY= 577  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
+    _PhScAr[i].index =i; 
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 
+    std::cout << " i , originX,originY, originZ _PhScAr[i].originX ,_PhScAr[i].originY ,  _PhScAr[i].originX " <<  i << " " << originX << " " << originY<< " " << originZ  << " " << _PhScAr[i].originX << " " <<_PhScAr[i].originY << " " <<  _PhScAr[i].originZ << std::endl; 
+    i++;
 
-     height= 805 ;h=  74.0; width= 1432 ;  p= 0.0    ;originX= -1997  ; originY= 592  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
- 	_PhScAr[i].index =i;
-  	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
+    height= 805 ;h=  74.0; width= 1432 ;  p= 0.0    ;originX= -1997  ; originY= 592  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
+    _PhScAr[i].index =i;
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
 
-     height= 805 ;h=  50.0; width= 1432 ;  p= 0.0    ;originX= -1489  ; originY= 1236  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
- 	_PhScAr[i].index =i;
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width; 
- 	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
- 
-     height= 805 ;h=  50.0; width= 1432 ;  p= 0.0    ;originX= -1527  ; originY= 1268  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
- 	_PhScAr[i].index =i; 
-  	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
+    height= 805 ;h=  50.0; width= 1432 ;  p= 0.0    ;originX= -1489  ; originY= 1236  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
+    _PhScAr[i].index =i;
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width; 
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
 
-     height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -802  ; originY= 1657  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
-  	_PhScAr[i].index =i;
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
-  	_PhScAr[i].p = p;
- 	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
- 
-     height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -823  ; originY= 1702  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
-  	_PhScAr[i].index =i; 
-  	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
+    height= 805 ;h=  50.0; width= 1432 ;  p= 0.0    ;originX= -1527  ; originY= 1268  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
+    _PhScAr[i].index =i; 
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
 
-     height= 805 ;h=  0.0; width= 1432 ;  p= 0.0    ;originX= 0  ; originY= 1750  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;  
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
+    height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -802  ; originY= 1657  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
+    _PhScAr[i].index =i;
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
 
-     height= 805 ;h=  0.0; width= 1432 ;  p= 0.0    ;originX= 0  ; originY= 1800  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
- 	_PhScAr[i].index =i;
-  	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
+    height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -823  ; originY= 1702  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
+    _PhScAr[i].index =i; 
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
 
-     height= 805 ;h=  -26.0; width= 1432 ;  p= 0.0    ;originX= 738  ; originY= 1481  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
-  	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
+    height= 805 ;h=  0.0; width= 1432 ;  p= 0.0    ;originX= 0  ; originY= 1750  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;  
+    _PhScAr[i].index =i; 
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
 
-     height= 805 ;h=  -26.0; width= 1432 ;  p= 0.0    ;originX= 760  ; originY= 1526  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
- 	_PhScAr[i].index =i; 
-  	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
+    height= 805 ;h=  0.0; width= 1432 ;  p= 0.0    ;originX= 0  ; originY= 1800  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
+    _PhScAr[i].index =i;
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
 
-     height= 805 ;h=  -55.0; width= 1432 ;  p= 0.0    ;originX= 1276  ; originY= 904  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
-  	_PhScAr[i].index =i;
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
- 
-     height= 805 ;h=  -55.0; width= 1432 ;  p= 0.0    ;originX= 1317  ; originY= 932  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
- 	_PhScAr[i].index =i; 
-  	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
+    height= 805 ;h=  -26.0; width= 1432 ;  p= 0.0    ;originX= 738  ; originY= 1481  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
+    _PhScAr[i].index =i; 
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
 
-     height= 805 ;h=  -85.0; width= 1432 ;  p= 0.0    ;originX= 1471  ; originY= 135  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
-  	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
+    height= 805 ;h=  -26.0; width= 1432 ;  p= 0.0    ;originX= 760  ; originY= 1526  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
+    _PhScAr[i].index =i; 
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
 
-     height= 805 ;h=  -85.0; width= 1432 ;  p= 0.0    ;originX= 1521  ; originY= 139  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
- 	_PhScAr[i].index =i; 
-  	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
- 	
- 	 _PhScAr[i].index =-1;
- 	// clearly dont have this correct
- 	// probibly need to xform positions and vectors from z up to z forward
- 	for (int j=0;j<i;j++)
- 		{
- 			
- 			//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl;
+    height= 805 ;h=  -55.0; width= 1432 ;  p= 0.0    ;originX= 1276  ; originY= 904  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
+    _PhScAr[i].index =i;
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
 
-	 		osg::Matrix hMat;
-	   		hMat.makeRotate(_PhScAr[j].h * M_PI / 180.0, osg::Vec3(0,0,1));
-	   	   	osg::Matrix pMat;
-				pMat.makeRotate(_PhScAr[i].p* M_PI / 180.0, osg::Vec3(1,0,0));
-				osg::Matrix rMat;
-				rMat.makeRotate(_PhScAr[i].r * M_PI / 180.0, osg::Vec3(0,1,0));
+    height= 805 ;h=  -55.0; width= 1432 ;  p= 0.0    ;originX= 1317  ; originY= 932  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
+    _PhScAr[i].index =i; 
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
+
+    height= 805 ;h=  -85.0; width= 1432 ;  p= 0.0    ;originX= 1471  ; originY= 135  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
+    _PhScAr[i].index =i; 
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
+
+    height= 805 ;h=  -85.0; width= 1432 ;  p= 0.0    ;originX= 1521  ; originY= 139  ;  r= -90.0 ;   name= 1 ;  originZ= 1490   ;   screen= 1;   
+    _PhScAr[i].index =i; 
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
+
+    _PhScAr[i].index =-1;
+    // clearly dont have this correct
+    // probibly need to xform positions and vectors from z up to z forward
+    for (int j=0;j<i;j++)
+    {
+
+	//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl;
+
+	osg::Matrix hMat;
+	hMat.makeRotate(_PhScAr[j].h * M_PI / 180.0, osg::Vec3(0,0,1));
+	osg::Matrix pMat;
+	pMat.makeRotate(_PhScAr[i].p* M_PI / 180.0, osg::Vec3(1,0,0));
+	osg::Matrix rMat;
+	rMat.makeRotate(_PhScAr[i].r * M_PI / 180.0, osg::Vec3(0,1,0));
 	//    	osg::Matrix oMat = rMat* pMat * hMat;
-				osg::Matrix oMat = hMat;
+	osg::Matrix oMat = hMat;
 
-	   		osg::Vec3 test = oMat * osg::Vec3(0,-1,0);
-	   		//std::cout << "test.x,y,z " << _PhScAr[j].h << " " << test[0] << " " << test[1] << " " << test[2] << std::endl;
-	 		_PhScAr[j].vx = test[0] * -1;
-	 		_PhScAr[j].vy = test[1];
-			_PhScAr[j].vz = test[2];
-			// rotatefrom z up ti z back
-			// x stays same
-	   		// y =z
-	   		//z = -y
-			_PhScAr[j].originZ = _PhScAr[j].originZ  + Navigation::instance()->getFloorOffset();
-			float ytemp;
-	   		if ( 1 == 1)
-		   		{
-	   				// process position
-			   		ytemp = _PhScAr[j].originY;
-			   		_PhScAr[j].originY = _PhScAr[j].originZ;
-			   		_PhScAr[j].originZ = -ytemp;
-			   		
-			   		// vector
-			   		ytemp = _PhScAr[j].vy;
-			   		_PhScAr[j].vy = _PhScAr[j].vz;
-			   		_PhScAr[j].vz = -ytemp;
-					
-		   		}
- 			//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl<< std::endl;
-			
-		 	}
+	osg::Vec3 test = oMat * osg::Vec3(0,-1,0);
+	//std::cout << "test.x,y,z " << _PhScAr[j].h << " " << test[0] << " " << test[1] << " " << test[2] << std::endl;
+	_PhScAr[j].vx = test[0] * -1;
+	_PhScAr[j].vy = test[1];
+	_PhScAr[j].vz = test[2];
+	// rotatefrom z up ti z back
+	// x stays same
+	// y =z
+	//z = -y
+	_PhScAr[j].originZ = _PhScAr[j].originZ  + Navigation::instance()->getFloorOffset();
+	float ytemp;
+	if ( 1 == 1)
+	{
+	    // process position
+	    ytemp = _PhScAr[j].originY;
+	    _PhScAr[j].originY = _PhScAr[j].originZ;
+	    _PhScAr[j].originZ = -ytemp;
 
- return i;
+	    // vector
+	    ytemp = _PhScAr[j].vy;
+	    _PhScAr[j].vy = _PhScAr[j].vz;
+	    _PhScAr[j].vz = -ytemp;
+
+	}
+	//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl<< std::endl;
+
+    }
+
+    return i;
 }
 
 
 int AlgebraInMotion::loadPhysicalScreensArrayTourCaveCalit2_5lowerScr()
 {
-_PhScAr = new _PhSc [128];
+    _PhScAr = new _PhSc [128];
 
-float height, h, width, p, originX, originY,r,name,originZ, screen;
-int i=0;
+    float height, h, width, p, originX, originY,r,name,originZ, screen;
+    int i=0;
 
-// _PhScAr[i].index  -1 is sentannel for end of list
+    // _PhScAr[i].index  -1 is sentannel for end of list
 
-     height= 805 ;h=  50.0; width= 1432 ;  p= 0.0    ;originX= -1489  ; originY= 1236  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
- 	_PhScAr[i].index =i;
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
- 
-     height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -802  ; originY= 1657  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
-  	_PhScAr[i].index =i;
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
-  	_PhScAr[i].p = p;
- 	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
- 
- 
-     height= 805 ;h=  0.0; width= 1432 ;  p= 0.0    ;originX= 0  ; originY= 1750  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;  
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
+    height= 805 ;h=  50.0; width= 1432 ;  p= 0.0    ;originX= -1489  ; originY= 1236  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
+    _PhScAr[i].index =i;
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
 
- 
-     height= 805 ;h=  -26.0; width= 1432 ;  p= 0.0    ;originX= 738  ; originY= 1481  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
-  	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
+    height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -802  ; originY= 1657  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
+    _PhScAr[i].index =i;
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
 
- 
-     height= 805 ;h=  -55.0; width= 1432 ;  p= 0.0    ;originX= 1276  ; originY= 904  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
-  	_PhScAr[i].index =i;
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
- 
 
- 
- 	 _PhScAr[i].index =-1;
- 	// clearly dont have this correct
- 	// probibly need to xform positions and vectors from z up to z forward
- 	for (int j=0;j<i;j++)
- 		{
- 			
- 			//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl;
+    height= 805 ;h=  0.0; width= 1432 ;  p= 0.0    ;originX= 0  ; originY= 1750  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;  
+    _PhScAr[i].index =i; 
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
 
-	 		osg::Matrix hMat;
-	   		hMat.makeRotate(_PhScAr[j].h * M_PI / 180.0, osg::Vec3(0,0,1));
-	   	   	osg::Matrix pMat;
-				pMat.makeRotate(_PhScAr[i].p* M_PI / 180.0, osg::Vec3(1,0,0));
-				osg::Matrix rMat;
-				rMat.makeRotate(_PhScAr[i].r * M_PI / 180.0, osg::Vec3(0,1,0));
+
+    height= 805 ;h=  -26.0; width= 1432 ;  p= 0.0    ;originX= 738  ; originY= 1481  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0; 
+    _PhScAr[i].index =i; 
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
+
+
+    height= 805 ;h=  -55.0; width= 1432 ;  p= 0.0    ;originX= 1276  ; originY= 904  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
+    _PhScAr[i].index =i;
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
+
+
+
+    _PhScAr[i].index =-1;
+    // clearly dont have this correct
+    // probibly need to xform positions and vectors from z up to z forward
+    for (int j=0;j<i;j++)
+    {
+
+	//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl;
+
+	osg::Matrix hMat;
+	hMat.makeRotate(_PhScAr[j].h * M_PI / 180.0, osg::Vec3(0,0,1));
+	osg::Matrix pMat;
+	pMat.makeRotate(_PhScAr[i].p* M_PI / 180.0, osg::Vec3(1,0,0));
+	osg::Matrix rMat;
+	rMat.makeRotate(_PhScAr[i].r * M_PI / 180.0, osg::Vec3(0,1,0));
 	//    	osg::Matrix oMat = rMat* pMat * hMat;
-				osg::Matrix oMat = hMat;
+	osg::Matrix oMat = hMat;
 
-	   		osg::Vec3 test = oMat * osg::Vec3(0,-1,0);
-	   		//std::cout << "test.x,y,z " << _PhScAr[j].h << " " << test[0] << " " << test[1] << " " << test[2] << std::endl;
-	 		_PhScAr[j].vx = test[0] * -1;
-	 		_PhScAr[j].vy = test[1];
-			_PhScAr[j].vz = test[2];
-			// rotatefrom z up ti z back
-			// x stays same
-	   		// y =z
-	   		//z = -y
-			_PhScAr[j].originZ = _PhScAr[j].originZ  + Navigation::instance()->getFloorOffset();
-			float ytemp;
-	   		if ( 1 == 1)
-		   		{
-	   				// process position
-			   		ytemp = _PhScAr[j].originY;
-			   		_PhScAr[j].originY = _PhScAr[j].originZ;
-			   		_PhScAr[j].originZ = -ytemp;
-			   		
-			   		// vector
-			   		ytemp = _PhScAr[j].vy;
-			   		_PhScAr[j].vy = _PhScAr[j].vz;
-			   		_PhScAr[j].vz = -ytemp;
-					
-		   		}
- 			//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl<< std::endl;
-			
-		 	}
+	osg::Vec3 test = oMat * osg::Vec3(0,-1,0);
+	//std::cout << "test.x,y,z " << _PhScAr[j].h << " " << test[0] << " " << test[1] << " " << test[2] << std::endl;
+	_PhScAr[j].vx = test[0] * -1;
+	_PhScAr[j].vy = test[1];
+	_PhScAr[j].vz = test[2];
+	// rotatefrom z up ti z back
+	// x stays same
+	// y =z
+	//z = -y
+	_PhScAr[j].originZ = _PhScAr[j].originZ  + Navigation::instance()->getFloorOffset();
+	float ytemp;
+	if ( 1 == 1)
+	{
+	    // process position
+	    ytemp = _PhScAr[j].originY;
+	    _PhScAr[j].originY = _PhScAr[j].originZ;
+	    _PhScAr[j].originZ = -ytemp;
 
- return i;
+	    // vector
+	    ytemp = _PhScAr[j].vy;
+	    _PhScAr[j].vy = _PhScAr[j].vz;
+	    _PhScAr[j].vz = -ytemp;
+
+	}
+	//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl<< std::endl;
+
+    }
+
+    return i;
 }
 
 int AlgebraInMotion::loadPhysicalScreensArrayTourCaveSaudi()
@@ -2812,137 +2944,150 @@ void AlgebraInMotion::turnAllEduSlidsOff()
 	}
 
 void	AlgebraInMotion::initGeoEdSection()
-	{
+{
 
-osg::Node* tidleSlide1 = NULL;
-	tidleSlide1 = osgDB::readNodeFile(_dataDir + "/models/frameS1.obj");//xyz
+    osg::Node* tidleSlide1 = NULL;
+    tidleSlide1 = osgDB::readNodeFile(_dataDir + "/models/frameS1.obj");//xyz
     if(!tidleSlide1){std::cerr << "Error reading /models/frameS1.obj" << std::endl;}
-osg::Node* tidleSlide2 = NULL;
-	tidleSlide2 = osgDB::readNodeFile(_dataDir + "/models/frameS2.obj");//;xyza
+    osg::Node* tidleSlide2 = NULL;
+    tidleSlide2 = osgDB::readNodeFile(_dataDir + "/models/frameS2.obj");//;xyza
     if(!tidleSlide2){std::cerr << "Error reading /models/frameS2.obj" << std::endl;}
-osg::Node* tidleSlide3 = NULL;
-	tidleSlide3 = osgDB::readNodeFile(_dataDir + "/models/frameS3.obj");//xyzar
+    osg::Node* tidleSlide3 = NULL;
+    tidleSlide3 = osgDB::readNodeFile(_dataDir + "/models/frameS3.obj");//xyzar
     if(!tidleSlide3){std::cerr << "Error reading /models/frameS3.obj" << std::endl;}
-osg::Node* tidleSlide4 = NULL;
-	tidleSlide4 = osgDB::readNodeFile(_dataDir + "/models/frameS4.obj");//sinxyz
+    osg::Node* tidleSlide4 = NULL;
+    tidleSlide4 = osgDB::readNodeFile(_dataDir + "/models/frameS4.obj");//sinxyz
     if(!tidleSlide4){std::cerr << "Error reading /models/frameS4.obj" << std::endl;}
-osg::Node* tidleSlide5 = NULL;
-	tidleSlide5 = osgDB::readNodeFile(_dataDir + "/models/frameS5.obj");//sinxyza
+    osg::Node* tidleSlide5 = NULL;
+    tidleSlide5 = osgDB::readNodeFile(_dataDir + "/models/frameS5.obj");//sinxyza
     if(!tidleSlide5){std::cerr << "Error reading /models/frameS5.obj" << std::endl;}
-osg::Node* tidleSlide6 = NULL;
-	tidleSlide6 = osgDB::readNodeFile(_dataDir + "/models/frameS6.obj");//sin xyzar
+    osg::Node* tidleSlide6 = NULL;
+    tidleSlide6 = osgDB::readNodeFile(_dataDir + "/models/frameS6.obj");//sin xyzar
     if(!tidleSlide6){std::cerr << "Error reading /models/frameS6.obj" << std::endl;}
 
-osg::Node* tidleSlide7 = NULL;
-	tidleSlide7 = osgDB::readNodeFile(_dataDir + "/models/frameS7.obj");//sin xyzr
+    osg::Node* tidleSlide7 = NULL;
+    tidleSlide7 = osgDB::readNodeFile(_dataDir + "/models/frameS7.obj");//sin xyzr
     if(!tidleSlide7){std::cerr << "Error reading /models/frameS7.obj" << std::endl;}
-osg::Node* tidleSlide8 = NULL;
-	tidleSlide8 = osgDB::readNodeFile(_dataDir + "/models/frameS8.obj");// xyz
+    osg::Node* tidleSlide8 = NULL;
+    tidleSlide8 = osgDB::readNodeFile(_dataDir + "/models/frameS8.obj");// xyz
     if(!tidleSlide8){std::cerr << "Error reading /models/frameS8.obj" << std::endl;}
 
-std::cout << " loading slides " << "\n" ;
-//creat switchnode
-	_EdSecSwitchSlid1 = new osg::Switch;
-	_EdSecSwitchSlid2 = new osg::Switch;
-	_EdSecSwitchSlid3 = new osg::Switch;
-	_EdSecSwitchSlid4 = new osg::Switch;
-	_EdSecSwitchSlid5 = new osg::Switch;
-	_EdSecSwitchSlid6 = new osg::Switch;
-	_EdSecSwitchSlid7 = new osg::Switch;
-	_EdSecSwitchSlid8 = new osg::Switch;
-	AlgebraInMotion::turnAllEduSlidsOff();
+    std::cout << " loading slides " << "\n" ;
+    //creat switchnode
+    _EdSecSwitchSlid1 = new osg::Switch;
+    _EdSecSwitchSlid2 = new osg::Switch;
+    _EdSecSwitchSlid3 = new osg::Switch;
+    _EdSecSwitchSlid4 = new osg::Switch;
+    _EdSecSwitchSlid5 = new osg::Switch;
+    _EdSecSwitchSlid6 = new osg::Switch;
+    _EdSecSwitchSlid7 = new osg::Switch;
+    _EdSecSwitchSlid8 = new osg::Switch;
+    AlgebraInMotion::turnAllEduSlidsOff();
 
-// creat fixes xform on slides
-        osg::Matrix ms;
-        osg::MatrixTransform * mtSlide1 = new osg::MatrixTransform();
-        osg::MatrixTransform * mtSlide2 = new osg::MatrixTransform();
-        osg::MatrixTransform * mtSlide3 = new osg::MatrixTransform();
-        osg::MatrixTransform * mtSlide4 = new osg::MatrixTransform();
-        osg::MatrixTransform * mtSlide5 = new osg::MatrixTransform();
-        osg::MatrixTransform * mtSlide6 = new osg::MatrixTransform();
-        osg::MatrixTransform * mtSlide7 = new osg::MatrixTransform();
-        osg::MatrixTransform * mtSlide8 = new osg::MatrixTransform();
-//matrices for interdediat computations
-        osg::Matrix mss;
-        osg::Matrix msr;
+    // creat fixes xform on slides
+    osg::Matrix ms;
+    osg::MatrixTransform * mtSlide1 = new osg::MatrixTransform();
+    osg::MatrixTransform * mtSlide2 = new osg::MatrixTransform();
+    osg::MatrixTransform * mtSlide3 = new osg::MatrixTransform();
+    osg::MatrixTransform * mtSlide4 = new osg::MatrixTransform();
+    osg::MatrixTransform * mtSlide5 = new osg::MatrixTransform();
+    osg::MatrixTransform * mtSlide6 = new osg::MatrixTransform();
+    osg::MatrixTransform * mtSlide7 = new osg::MatrixTransform();
+    osg::MatrixTransform * mtSlide8 = new osg::MatrixTransform();
+    //matrices for interdediat computations
+    osg::Matrix mss;
+    osg::Matrix msr;
 
-        osg::Matrix msrh;
-        osg::Matrix mst;
+    osg::Matrix msrh;
+    osg::Matrix mst;
 
-        osg::Matrix mresult;
-
-
- 
-//    height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -802  ; originY= 1657  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
-		int i =1;
-		std::cout << " i, _PhScAr[i].originX  ,_PhScAr[i].originY _PhScAr[i].h "<< i<< " " << _PhScAr[i].originX  << " " << _PhScAr[i].originY << " " << _PhScAr[i].h << "\n";
- 
-      mst.makeTranslate(osg::Vec3(_PhScAr[i].originX,_PhScAr[i].originY +150,450));
-     // mst.makeTranslate(osg::Vec3(-802,1657,450));
-		ms.makeScale(osg::Vec3(40.0,25,1.0));
-       msr.makeRotate(osg::DegreesToRadians(90.0), osg::Vec3(1,0,0));
-       msrh.makeRotate(osg::DegreesToRadians(25.0), osg::Vec3(0,0,1));
-      msrh.makeRotate(osg::DegreesToRadians(_PhScAr[i].h), osg::Vec3(0,0,1));
+    osg::Matrix mresult;
 
 
- 
-	mresult.set ( ms*msr*msrh * mst);
-	mtSlide1->setMatrix(mresult);
-	mtSlide2->setMatrix(mresult);
-	mtSlide3->setMatrix(mresult);
-	mtSlide4->setMatrix(mresult);
-	mtSlide5->setMatrix(mresult);
-	mtSlide6->setMatrix(mresult);
-	mtSlide7->setMatrix(mresult);
-	mtSlide8->setMatrix(mresult);
+
+    //    height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -802  ; originY= 1657  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
+    int i =1;
+    std::cout << " i, _PhScAr[i].originX  ,_PhScAr[i].originY _PhScAr[i].h "<< i<< " " << _PhScAr[i].originX  << " " << _PhScAr[i].originY << " " << _PhScAr[i].h << "\n";
+
+    mst.makeTranslate(osg::Vec3(_PhScAr[i].originX,_PhScAr[i].originY +150,450));
+    // mst.makeTranslate(osg::Vec3(-802,1657,450));
+    ms.makeScale(osg::Vec3(40.0,25,1.0));
+    msr.makeRotate(osg::DegreesToRadians(90.0), osg::Vec3(1,0,0));
+    msrh.makeRotate(osg::DegreesToRadians(25.0), osg::Vec3(0,0,1));
+    msrh.makeRotate(osg::DegreesToRadians(_PhScAr[i].h), osg::Vec3(0,0,1));
 
 
-//atatch tidleSlide to matrix transform
-		mtSlide1->addChild(tidleSlide1);
-		mtSlide2->addChild(tidleSlide2);
-		mtSlide3->addChild(tidleSlide3);
-		mtSlide4->addChild(tidleSlide4);
-		mtSlide5->addChild(tidleSlide5);
-		mtSlide6->addChild(tidleSlide6);
-		mtSlide7->addChild(tidleSlide7);
-		mtSlide8->addChild(tidleSlide8);
+
+    mresult.set ( ms*msr*msrh * mst);
+    mtSlide1->setMatrix(mresult);
+    mtSlide2->setMatrix(mresult);
+    mtSlide3->setMatrix(mresult);
+    mtSlide4->setMatrix(mresult);
+    mtSlide5->setMatrix(mresult);
+    mtSlide6->setMatrix(mresult);
+    mtSlide7->setMatrix(mresult);
+    mtSlide8->setMatrix(mresult);
 
 
-// atatch scaled model to switch 
-        _EdSecSwitchSlid1->addChild(mtSlide1);
-        _EdSecSwitchSlid2->addChild(mtSlide2);
-        _EdSecSwitchSlid3->addChild(mtSlide3);
-        _EdSecSwitchSlid4->addChild(mtSlide4);
-        _EdSecSwitchSlid5->addChild(mtSlide5);
-        _EdSecSwitchSlid6->addChild(mtSlide6);
-        _EdSecSwitchSlid7->addChild(mtSlide7);
-        _EdSecSwitchSlid8->addChild(mtSlide8);
-
-		turnAllEduSlidsOff(); 
-       
-// atatch switch to scene
- 
-
-// addTidle screene.
-		SceneObject * so = new SceneObject("EdSlide1",false,false,false,false,false);
-      so->addChild(_EdSecSwitchSlid1);
-      so->addChild(_EdSecSwitchSlid2);
-      so->addChild(_EdSecSwitchSlid3);
-      so->addChild(_EdSecSwitchSlid4);
-      so->addChild(_EdSecSwitchSlid5);
-      so->addChild(_EdSecSwitchSlid6);
-      so->addChild(_EdSecSwitchSlid7);
-      so->addChild(_EdSecSwitchSlid8);
-
-        PluginHelper::registerSceneObject(so,"AlgebraInMotion");
-
-        so->setPosition(osg::Vec3(0,0,0));
-
-        so->setScale(1);
-        so->attachToScene();
-		so->setNavigationOn(true);
-
-	}
+    //atatch tidleSlide to matrix transform
+    mtSlide1->addChild(tidleSlide1);
+    mtSlide2->addChild(tidleSlide2);
+    mtSlide3->addChild(tidleSlide3);
+    mtSlide4->addChild(tidleSlide4);
+    mtSlide5->addChild(tidleSlide5);
+    mtSlide6->addChild(tidleSlide6);
+    mtSlide7->addChild(tidleSlide7);
+    mtSlide8->addChild(tidleSlide8);
 
 
+    // atatch scaled model to switch 
+    _EdSecSwitchSlid1->addChild(mtSlide1);
+    _EdSecSwitchSlid2->addChild(mtSlide2);
+    _EdSecSwitchSlid3->addChild(mtSlide3);
+    _EdSecSwitchSlid4->addChild(mtSlide4);
+    _EdSecSwitchSlid5->addChild(mtSlide5);
+    _EdSecSwitchSlid6->addChild(mtSlide6);
+    _EdSecSwitchSlid7->addChild(mtSlide7);
+    _EdSecSwitchSlid8->addChild(mtSlide8);
+
+    turnAllEduSlidsOff(); 
+
+    // atatch switch to scene
+
+
+    // addTidle screene.
+    SceneObject * so = new SceneObject("EdSlide1",false,false,false,false,false);
+    so->addChild(_EdSecSwitchSlid1);
+    so->addChild(_EdSecSwitchSlid2);
+    so->addChild(_EdSecSwitchSlid3);
+    so->addChild(_EdSecSwitchSlid4);
+    so->addChild(_EdSecSwitchSlid5);
+    so->addChild(_EdSecSwitchSlid6);
+    so->addChild(_EdSecSwitchSlid7);
+    so->addChild(_EdSecSwitchSlid8);
+    _EdSceneObject = so;
+
+    PluginHelper::registerSceneObject(so,"AlgebraInMotion");
+
+    so->setPosition(osg::Vec3(0,0,0));
+
+    so->setScale(1);
+    so->attachToScene();
+    so->setNavigationOn(true);
+
+}
+
+void AlgebraInMotion::cleanupGeoEdSection()
+{
+    _EdSecSwitchSlid1 = NULL;
+    _EdSecSwitchSlid2 = NULL;
+    _EdSecSwitchSlid3 = NULL;
+    _EdSecSwitchSlid4 = NULL;
+    _EdSecSwitchSlid5 = NULL;
+    _EdSecSwitchSlid6 = NULL;
+    _EdSecSwitchSlid7 = NULL;
+    _EdSecSwitchSlid8 = NULL;
+
+    delete _EdSceneObject;
+}
 
