@@ -41,6 +41,7 @@ GraphObject::GraphObject(mysqlpp::Connection * conn, float width, float height, 
     _ldmList = new MenuList();
     _ldmList->setValues(ldmText);
     _ldmList->setCallback(this);
+    _ldmList->setIndex(1);
     addMenuItem(_ldmList);
 
     _pdfDir = ConfigManager::getEntry("value","Plugin.FuturePatient.PDFDir","");

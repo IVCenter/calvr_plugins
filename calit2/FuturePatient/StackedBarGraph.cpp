@@ -624,7 +624,7 @@ void StackedBarGraph::makeBG()
     verts->at(3) = osg::Vec3(-0.5,1,-0.5);
 
     osg::Vec4Array * colors = new osg::Vec4Array(1);
-    colors->at(0) = osg::Vec4(1.0,1.0,1.0,1.0);
+    colors->at(0) = osg::Vec4(0.9,0.9,0.9,1.0);
 
     geom->setColorArray(colors);
     geom->setColorBinding(osg::Geometry::BIND_OVERALL);
