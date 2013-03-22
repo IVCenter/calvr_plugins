@@ -208,6 +208,42 @@ struct Annotation
         osg::Group* connectorNode;
         osg::Geometry * geo;  
 };
+struct QueryGraph
+{
+        std::string name;
+        std::string parent; 
+        float scale; 
+        osg::Vec3 pos;
+        osg::Quat rot;
+        osg::Vec3 lStart;
+        osg::Vec3 lEnd;
+        osg::Geode* text_geode;
+        osgText::Text* textNode;
+        cvr::SceneObject * so;
+        bool active;
+        bool visible;
+	bool fromFile;
+        bool deleted;
+        cvr::MenuButton* saveMap;
+        cvr::MenuButton* deleteMap;
+        cvr::MenuCheckbox* activeMap;
+        cvr::MenuCheckbox* visibleMap;
+        osg::Geometry * connector;  
+        osg::Geode* connectorGeode;
+        osg::Group* connectorNode;
+        osg::Geometry * geo;  
+
+};
+struct ScreenSetup
+{
+
+              float width;
+              float height;
+              float h;
+              float p;
+              float r;
+              osg::Vec3 offsetScreen;
+};
 struct LineGroup
 {
 
@@ -526,8 +562,11 @@ protected:
         std::vector<cvr::MenuCheckbox*> querySlider;
         std::vector<std::vector<std::string> > sliderEntry;
         std::vector<cvr::MenuList*> queryOptionsSlider;
+	std::vector<std::vector<std::string> > uniqueByColumn;
+        std::vector<std::string> columns;
         cvr::MenuText* query_view;
         std::string current_query;
+        std::vector<QueryGraph*> query_graph; 
     };
     struct FlyPlace
     {
@@ -798,6 +837,10 @@ protected:
     void setupQueryMenu(Table* table);
     void setupUtilsMenu();
     void setupFileMenu();
+    void setupVisualQuery();
+    void newQueryGraph(int tableIndex,std::string parent, std::string name, int order);
+    void generateScreen();
+    std::vector<ScreenSetup*>  readScreenConfig(std::string filename);
     void updateFileMenu(std::string dir, int scroll);
     int _currentScroll;
     std::string _currentDir;

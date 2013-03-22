@@ -4438,6 +4438,7 @@ void ArtifactVis2::setupQueryMenu(Table* table)
     for (; node != NULL; node = mxmlFindElement(node, tree, NULL, NULL, NULL, MXML_DESCEND))
     {
         string name(node->value.element.name);
+        table->columns.push_back(name);
         SubMenu* menu = new SubMenu(name);
         mxml_node_t* child;
         int childcount = 0;
@@ -4467,6 +4468,7 @@ void ArtifactVis2::setupQueryMenu(Table* table)
             {
                 optionSet->addButton(children[i]);
             }
+            table->uniqueByColumn.push_back(children);
 
             optionSet->setCallback(this);
             table->queryOptions.push_back(optionSet);
@@ -4487,6 +4489,7 @@ void ArtifactVis2::setupQueryMenu(Table* table)
             }
 
             sort(children.begin(), children.end());
+            table->uniqueByColumn.push_back(children);
             table->sliderEntry.push_back(children);
             MenuList* slider = new MenuList();
             slider->setValues(children);
@@ -6958,6 +6961,7 @@ void ArtifactVis2::menuSetup()
     {
         setupQueryMenu(_tables[i]);
     }
+   // setupVisualQuery();
     //Generates the menus to fly to coordinates.
    setupFlyToMenu();
    setupUtilsMenu();
@@ -9735,4 +9739,471 @@ xml = mxmlNewXML("1.0");
 
     fclose(fp);
  
+}
+void ArtifactVis2::setupVisualQuery()
+{
+    generateScreen(); 
+    for (int i = 0; i < _tables.size(); i++)
+    {
+     if(_tables[i]->name == "kis2010d_a")
+     {
+       cout << _tables[i]->name << "\n";
+
+
+       for (int n = 0; n < _tables[i]->columns.size(); n++)
+       {
+          cout << "--" << _tables[i]->columns[n] << "\n";
+          newQueryGraph(i,_tables[i]->name, _tables[i]->columns[n],n);
+
+
+          if(_tables[i]->name == "kis2010d_a" && false)
+          {
+	     std::vector<std::string> unique =  _tables[i]->uniqueByColumn[n];
+             for(int m = 0; m < unique.size(); m++)
+             {
+               cout << "----" << unique[m] << "\n";
+             }
+          }
+       }
+       cout << "\n";
+     }
+    }
+
+
+}
+void ArtifactVis2::newQueryGraph(int tableIndex, std::string parent, std::string name, int order)
+{
+    QueryGraph* graph = new QueryGraph;
+     osg::Vec3 pos;
+ //   Vec4f color = Vec4f(0, (204/255), (204/255), 1);
+   // Vec4f color = Vec4f(1, 1, 1, 1);
+    Vec4f colorl = Vec4f(0, 0, 1, 0.4);
+    float r = 0;
+    float g = 107/255;
+    float b = 235/255;
+    Vec4f color = Vec4f(0, 0.42, 0.92, 1);
+
+//Create Quad Face
+float width = 100;
+if(name.length() > 7)
+{
+  width += ((name.length() - 7)*10);
+
+}
+float height = 30;
+//Set position according to order from Parent Node Position
+   pos = Vec3(-500,1000,(300 - (order * 35)));
+//
+//pos = Vec3(-(width/2),0,-(height/2));
+
+    osg::Geometry * geo = new osg::Geometry();
+    osg::Vec3Array* verts = new osg::Vec3Array();
+    verts->push_back(pos);
+    verts->push_back(pos + osg::Vec3(width,0,0));
+    verts->push_back(pos + osg::Vec3(width,0,height));
+    verts->push_back(pos + osg::Vec3(0,0,height));
+
+    geo->setVertexArray(verts);
+
+    osg::DrawElementsUInt * ele = new osg::DrawElementsUInt(
+            osg::PrimitiveSet::QUADS,0);
+
+    ele->push_back(0);
+    ele->push_back(1);
+    ele->push_back(2);
+    ele->push_back(3);
+    geo->addPrimitiveSet(ele);
+
+
+    Geode* fgeode = new Geode();
+    StateSet* state(fgeode->getOrCreateStateSet());
+    Material* mat(new Material);
+
+            mat->setColorMode(Material::DIFFUSE);
+            mat->setDiffuse(Material::FRONT_AND_BACK, color);
+            state->setAttribute(mat);
+            state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+            state->setMode(GL_BLEND, StateAttribute::ON);
+            state->setMode(GL_LIGHTING, StateAttribute::OFF);
+            osg::PolygonMode* polymode = new osg::PolygonMode;
+            polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::FILL);
+            state->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            fgeode->setStateSet(state);
+  
+            graph->geo = geo;
+            fgeode->addDrawable(graph->geo);
+
+//Line Geode
+
+    Geode* lgeode = new Geode();
+            StateSet* state2(lgeode->getOrCreateStateSet());
+            Material* mat2(new Material);
+            state2->setRenderingHint(StateSet::OPAQUE_BIN);
+            mat2->setColorMode(Material::DIFFUSE);
+            mat2->setDiffuse(Material::FRONT_AND_BACK, color);
+            state2->setAttribute(mat2);
+            state->setMode(GL_BLEND, StateAttribute::ON);
+            state2->setMode(GL_LIGHTING, StateAttribute::OFF);
+
+            osg::LineWidth* linewidth1 = new osg::LineWidth();
+            linewidth1->setWidth(2.0f); 
+            state2->setAttribute(linewidth1);
+
+            osg::PolygonMode* polymode2 = new osg::PolygonMode;
+            polymode2->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+            state2->setAttributeAndModes(polymode2, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            lgeode->setStateSet(state2);
+            lgeode->addDrawable(graph->geo);
+
+cerr << "Pass\n";
+
+//Text Geode
+   Geode* textGeode = new Geode();
+    float size = 25;
+   //std::string text = "Hello World this is just a test of the textbox wrap feature, which is Awesome"; 
+   std::string text = name; 
+
+ osgText::Text* textNode  = new osgText::Text();
+    textNode->setCharacterSize(size);
+    textNode->setAlignment(osgText::Text::LEFT_TOP);
+    Vec3 tPos = pos + osg::Vec3(5,-5,(height-5));
+   // Vec3 tPos = pos;
+    textNode->setPosition(tPos);
+    textNode->setColor(color);
+   // textNode->setBackdropColor(osg::Vec4(0,0,0,0));
+    textNode->setAxisAlignment(osgText::Text::XZ_PLANE);
+    textNode->setText(text);
+    textNode->setMaximumWidth(width);
+    textNode->setFont(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
+
+    textGeode->addDrawable(textNode);
+
+    graph->textNode = textNode;
+
+
+	    SceneObject * so;
+	    so = new SceneObject(name, false, false, false, true, false);
+	    osg::Switch* switchNode = new osg::Switch();
+	    so->addChild(switchNode);
+	    PluginHelper::registerSceneObject(so,"Test");
+	    so->attachToScene();
+//Add geode to switchNode
+//	switchNode->addChild(fgeode);
+	switchNode->addChild(lgeode);
+	switchNode->addChild(textGeode);
+
+	   // so->setNavigationOn(false);
+	    so->setMovable(true);
+	    so->addMoveMenuItem();
+	    so->addNavigationMenuItem();
+
+	    SubMenu * sm = new SubMenu("Position");
+	    so->addMenuItem(sm);
+
+	    MenuButton * mb;
+	    mb = new MenuButton("Load");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+	    //_loadMap[so] = mb;
+
+	    SubMenu * savemenu = new SubMenu("Save");
+	    sm->addItem(savemenu);
+	    //_saveMenuMap[so] = savemenu;
+
+	    mb = new MenuButton("Save");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+            std::map<cvr::SceneObject*,cvr::MenuButton*> _saveMap;
+	  //  _saveMap[so] = mb;
+            graph->saveMap = mb;
+	    mb = new MenuButton("Reset");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+	    //_resetMap[so] = mb;
+
+	    mb = new MenuButton("Delete");
+	    mb->setCallback(this);
+	    so->addMenuItem(mb);
+	    //_deleteMap[so] = mb;
+            graph->deleteMap = mb;
+            MenuCheckbox * mc;
+	    mc = new MenuCheckbox("Active",graph->active);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            graph->activeMap = mc;
+
+	    mc = new MenuCheckbox("Visible",graph->visible);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            graph->visibleMap = mc;
+    
+            Vec3 setZero = Vec3(0,0,0);
+            graph->pos = setZero;
+               // so->setPosition(graph->pos);
+
+    graph->so = so;
+    graph->pos = graph->so->getPosition();
+    graph->rot = graph->so->getRotation();
+
+    _tables[tableIndex]->query_graph.push_back(graph);
+/*
+    osg:Geometry* connector = new osg::Geometry();
+    verts = new osg::Vec3Array();
+    verts->push_back(_annotations[inc]->lStart);
+    verts->push_back(_annotations[inc]->lEnd);
+
+  //  _annotations[inc]->connector->setVertexArray(verts);
+    connector->setVertexArray(verts);
+
+    ele = new osg::DrawElementsUInt(
+            osg::PrimitiveSet::LINES,0);
+
+    ele->push_back(0);
+    ele->push_back(1);
+  //  _annotations[inc]->connector->addPrimitiveSet(ele);
+   connector->addPrimitiveSet(ele);
+
+    osg::Vec4Array* colors = new osg::Vec4Array;
+    colors->push_back(color);
+
+    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
+    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
+            osg::Array::UIntArrayType,4,4>;
+    colorIndexArray->push_back(0);
+    colorIndexArray->push_back(0);
+   
+  //  _annotations[inc]->connector->setColorArray(colors);
+   connector->setColorArray(colors);
+//    _annotations[inc]->connector->setColorIndices(colorIndexArray);
+  // connector->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+   connector->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+
+    Geode* connectorGeode = new Geode();
+
+            StateSet* state3(connectorGeode->getOrCreateStateSet());
+           // Material* mat3(new Material);
+           // state3->setRenderingHint(StateSet::OPAQUE_BIN);
+           // mat2->setColorMode(Material::DIFFUSE);
+          //  mat2->setDiffuse(Material::FRONT_AND_BACK, colorl);
+           // state2->setAttribute(mat2);
+           // state->setMode(GL_BLEND, StateAttribute::ON);
+         //   state3->setMode(GL_LIGHTING, StateAttribute::OFF);
+          //  osg::PolygonMode* polymode2 = new osg::PolygonMode;
+
+            osg::LineWidth* linewidth = new osg::LineWidth();
+            linewidth->setWidth(2.0f); 
+          //  polymode2->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+            state3->setAttributeAndModes(linewidth, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            connectorGeode->setStateSet(state3);
+
+
+
+
+    _annotations[inc]->connector = connector;
+    connectorGeode->addDrawable(_annotations[inc]->connector);
+     _annotations[inc]->connectorGeode = connectorGeode;
+    
+    Group* connectorNode = new Group();
+    _annotations[inc]->connectorNode = connectorNode;
+    _annotations[inc]->connectorNode->addChild(_annotations[inc]->connectorGeode);
+    _root->addChild(_annotations[inc]->connectorNode);
+*/
+}
+void ArtifactVis2::generateScreen()
+{
+
+            if(ConfigManager::getBool("Plugin.KinectDemo.ShowScreenFrames"))
+            {
+	    SceneObject * so;
+	    so = new SceneObject("screens", false, false, false, true, false);
+	    osg::Switch* switchNode = new osg::Switch();
+	    so->addChild(switchNode);
+	    PluginHelper::registerSceneObject(so,"Test");
+	    so->attachToScene();
+	    so->setNavigationOn(true);
+	    so->setMovable(false);
+	    so->addMoveMenuItem();
+	    so->addNavigationMenuItem();
+             string filename = "/home/calvr/CalVR/config/lenovotest.xml";
+            readScreenConfig(filename);
+              //Draw Configured Screens
+              int numWindows =ScreenConfig::instance()->getNumWindows();
+              float width;
+              float height;
+              float h;
+              float p;
+              float r;
+              Vec3 offsetScreen;
+              cerr << "NumWindows: " << numWindows << endl;
+              //TODO:Get Screen Info from Config file
+              for (int j = 0; j < numWindows; j++)
+              {
+                ScreenInfo* si = ScreenConfig::instance()->getScreenInfo(j);
+                 width = si->width;
+                 height = si->height;
+                 h = si->h;
+                 p = si->p;
+                 r = si->r;
+                 offsetScreen = si->xyz;
+              
+        	//Create Quad Face
+	//	float width = 300;
+	//	float height = 500;
+	         Vec3 pos = Vec3(-(width/2),0,-(height/2));
+                 Vec4f color = Vec4f(0, 0.42, 0.92, 1);
+                 //Ofset Pos
+                 pos += offsetScreen; 
+		    osg::Geometry * geo = new osg::Geometry();
+		    osg::Vec3Array* verts = new osg::Vec3Array();
+		    verts->push_back(pos);
+		    verts->push_back(pos + osg::Vec3(width,0,0));
+		    verts->push_back(pos + osg::Vec3(width,0,height));
+		    verts->push_back(pos + osg::Vec3(0,0,height));
+
+		    geo->setVertexArray(verts);
+
+		    osg::DrawElementsUInt * ele = new osg::DrawElementsUInt(
+			    osg::PrimitiveSet::QUADS,0);
+
+		    ele->push_back(0);
+		    ele->push_back(1);
+		    ele->push_back(2);
+		    ele->push_back(3);
+		    geo->addPrimitiveSet(ele);
+
+		    Geode* fgeode = new Geode();
+		    StateSet* state(fgeode->getOrCreateStateSet());
+		    Material* mat(new Material);
+
+		    mat->setColorMode(Material::DIFFUSE);
+		    mat->setDiffuse(Material::FRONT_AND_BACK, color);
+		    state->setAttribute(mat);
+		    state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+		    state->setMode(GL_BLEND, StateAttribute::ON);
+		    state->setMode(GL_LIGHTING, StateAttribute::OFF);
+		    osg::PolygonMode* polymode = new osg::PolygonMode;
+		    polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+		    state->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+		    fgeode->setStateSet(state);
+	  
+		   // _annotations[inc]->geo = geo;
+		    fgeode->addDrawable(geo);
+                   float rotDegrees[3];
+		   rotDegrees[0] = h;
+		   rotDegrees[1] = p;
+		   rotDegrees[2] = r;
+			rotDegrees[0] = DegreesToRadians(rotDegrees[0]);
+			rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
+			rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
+			Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(0,1,0),rotDegrees[2], osg::Vec3d(0,0,1)); 
+
+		    MatrixTransform* rotate = new osg::MatrixTransform();
+		    Matrix rotMat;
+		    rotMat.makeRotate(rot);
+		    rotate->setMatrix(rotMat);
+		    rotate->addChild(fgeode);
+
+	            switchNode->addChild(rotate);
+                 }
+             }
+}
+std::vector<ScreenSetup*> ArtifactVis2::readScreenConfig(std::string filename)
+{
+     std::vector<ScreenSetup*> screens; 
+              int numWindows;
+              float width;
+              float height;
+              float h;
+              float p;
+              float r;
+              Vec3 offsetScreen;
+ FILE* fp = fopen(filename.c_str(), "r");
+ string completed = "";
+ if (fp == NULL)
+ {
+        std::cerr << "Unable to open file: " << filename << std::endl;
+ }
+ else
+ {   
+       // std::cerr << "Found file: " << file << std::endl;
+
+    mxml_node_t* tree;
+    tree = mxmlLoadFile(NULL, fp, MXML_TEXT_CALLBACK);
+    fclose(fp);
+
+   if (tree == NULL)
+   {
+        std::cerr << "Unable to parse XML file: " << filename << std::endl;
+        
+   }
+   else
+   {
+      //  std::cerr << "Parsing XML: " << file << std::endl;
+
+    mxml_node_t* node; 
+    for (node = mxmlFindElement(tree, tree, "ScreenConfig", NULL, NULL, MXML_DESCEND); node != NULL; node = mxmlFindElement(node, tree, "ScreenConfig", NULL, NULL, MXML_DESCEND))
+    {
+
+    if (true)
+    {
+         ScreenSetup* screen = new ScreenSetup; 
+         mxml_node_t* child = mxmlFindElement(node, tree, "Screen", NULL, NULL, MXML_DESCEND);
+
+         string attribute = "width";
+         const char * attr = mxmlElementGetAttr(child, attribute.c_str());
+         string result = attr;
+         screen->width = atof(result.c_str());
+
+         attribute = "height";
+         attr = mxmlElementGetAttr(child, attribute.c_str());
+         screen->height = atof(attr);
+
+         attribute = "h";
+         attr = mxmlElementGetAttr(child, attribute.c_str());
+         screen->h = atof(attr);
+
+         attribute = "p";
+         attr = mxmlElementGetAttr(child, attribute.c_str());
+         screen->p = atof(attr);
+
+         attribute = "r";
+         attr = mxmlElementGetAttr(child, attribute.c_str());
+         screen->r = atof(attr);
+ 
+         float x,y,z;
+
+         attribute = "originX";
+         attr = mxmlElementGetAttr(child, attribute.c_str());
+         x = atof(attr);
+
+         attribute = "originY";
+         attr = mxmlElementGetAttr(child, attribute.c_str());
+         x = atof(attr);
+
+         attribute = "originZ";
+         attr = mxmlElementGetAttr(child, attribute.c_str());
+         x = atof(attr);
+
+         screen->offsetScreen = Vec3(x,y,z);
+         screens.push_back(screen);
+        // cout << result << "\n";
+//<ScreenConfig>
+    //<Screen width="1100" comment="FRONT" h="0.0" originX="-1100" originY="1000" originZ="0" height="660" p="0.0" r="0.0" name="2" screen="2" />
+       // string modelType = "";
+       // modelType = child->child->value.text.string;
+        //string result = 
+        //atof(result.c_str());
+    }
+   }
+   }
+}
+
+
+cout << "Screens: " << screens.size() << "\n";
+
+
+
+
+
+return screens;
 }
