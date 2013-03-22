@@ -1,7 +1,7 @@
         <ArtifactVis2>
           <StartArtifactVis2 value="false" />
           <MoveCamera value="true" />
-          <FlyToDefault value="4" />
+          <FlyToDefault value="0" />
 
           <Database value="/home/ngsmith/ArchInterface/queries/" />
           <ArchInterfaceFolder value="/home/ngsmith/ArchInterface/" />
@@ -28,5 +28,5 @@
           <ShaderFrag value="/home/calvr/osgdata/shaders/gooch.frag" />
 
 	  <Nvidia value="true" />
-	  <scaleP value="1.0" />
+	  <scaleP value="5.0" />
            </ArtifactVis2>
