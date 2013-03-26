@@ -31,7 +31,7 @@ TimeRangeDataGraph::TimeRangeDataGraph()
     _root->addChild(_shadingGeode);
     _bgScaleMT->addChild(_bgGeode);
 
-    _colorOffset = 0;
+    _colorOffset = 0.0;
 
     _width = _height = 1000.0;
 
@@ -75,9 +75,10 @@ void TimeRangeDataGraph::setDisplaySize(float width, float height)
     update();
 }
 
-void TimeRangeDataGraph::setColorOffset(int offset)
+void TimeRangeDataGraph::setColorOffset(float offset)
 {
-    _colorOffset = offset;
+    if( offset > 0.0 && offset < 1.0 )
+	_colorOffset = offset;
 }
 
 bool TimeRangeDataGraph::getBarVisible()
@@ -528,10 +529,10 @@ void TimeRangeDataGraph::updateGraphs()
     }
 
     //update bar colors
-    for(int i = _colorOffset; i < _graphList.size() + _colorOffset; ++i)
+    for(int i = 0; i < _graphList.size(); ++i)
     {
 	osg::Vec4Array * colors = dynamic_cast<osg::Vec4Array*>(_graphList[i]->barOutlineGeometry->getColorArray());
-	osg::Vec4 myColor = ColorGenerator::makeColor(i,_graphList.size());
+	osg::Vec4 myColor = ColorGenerator::makeColor(i,_graphList.size(), _colorOffset);
 	if(colors)
 	{
 	    colors->at(0) = myColor;

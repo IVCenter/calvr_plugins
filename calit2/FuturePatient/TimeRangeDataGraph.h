@@ -24,7 +24,7 @@ class TimeRangeDataGraph
         void setBarPosition(float pos);
         bool getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point);
         void setGLScale(float scale);
-        void setColorOffset(int offset);
+        void setColorOffset(float offset);
 
         void addGraph(std::string name, std::vector<std::pair<time_t,time_t> > & rangeList, std::vector<int> & valueList, int maxValue);
 
@@ -83,7 +83,7 @@ class TimeRangeDataGraph
         float _width;
         float _height;
 
-        int _colorOffset;
+        float _colorOffset;
 
         osg::ref_ptr<osg::Group> _root;
         osg::ref_ptr<osg::Geode> _axisGeode;
