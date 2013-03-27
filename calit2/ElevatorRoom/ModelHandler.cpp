@@ -22,16 +22,7 @@ ModelHandler::ModelHandler()
     _activeDoor = 0;
     _lightColor = 0;
     _doorInView = false;
-/*
-    WHITE,
-    RED,
-    BLUE,
-    ORANGE,
-    YELLOW,
-    GREEN,
-    BROWN, 
-    GREY
-*/
+
     _colors.push_back(osg::Vec4(1, 1, 1, 1));   // WHITE
     _colors.push_back(osg::Vec4(1, 0, 0, 1));   // RED
     _colors.push_back(osg::Vec4(0, 0, 1, 1));   // BLUE
@@ -153,7 +144,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         pat->addChild(switchNode);
         //_geoRoot->addChild(pat);
 
-    //    _lightSwitch.push_back(switchNode);
+        //_lightSwitch.push_back(switchNode);
         _lights.push_back(drawable);
         
         
@@ -538,71 +529,6 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         pat->addChild(switchNode);
         _geoRoot->addChild(pat);
 
-/*        osg::ref_ptr<osg::Geometry> redRdoorGeo, blueRdoorGeo, yellowRdoorGeo, 
-            orangeRdoorGeo, whiteRdoorGeo;
-        redRdoorGeo    = drawBox(osg::Vec3(-0.75, -5.2, 1.0), 1.5, 0.5, 4.0, osg::Vec4(1,0,0,0.1));//red);;
-        blueRdoorGeo   = drawBox(osg::Vec3(-0.75, -5.2, 1.0), 1.5, 0.5, 4.0, osg::Vec4(1,0,0,0.1));//blue);
-        yellowRdoorGeo = drawBox(osg::Vec3(-0.75, -5.2, 1.0), 1.5, 0.5, 4.0, osg::Vec4(1,0,0,0.1));//yellow);
-        orangeRdoorGeo = drawBox(osg::Vec3(-0.75, -5.2, 1.0), 1.5, 0.5, 4.0, osg::Vec4(1,0,0,0.1));//orange);
-        whiteRdoorGeo  = drawBox(osg::Vec3(-0.75, -5.2, 1.0), 1.5, 0.5, 4.0, osg::Vec4(1,0,0,0.1));//white);
-
-        switchNode->addChild(geode, true);
-        redGeode = new osg::Geode();
-        redGeode->addDrawable(redRdoorGeo);
-        state = redGeode->getOrCreateStateSet();
-        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
-        state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
-        state->setAttribute(mat, osg::StateAttribute::ON);
-        state->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
-        state->setRenderingHint(StateSet::TRANSPARENT_BIN);
-        switchNode->addChild(redGeode, false);
-
-        blueGeode = new osg::Geode();
-        blueGeode->addDrawable(blueRdoorGeo);
-        state = blueGeode->getOrCreateStateSet();
-        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
-        state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
-        state->setAttribute(mat, osg::StateAttribute::ON);
-        state->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
-        state->setRenderingHint(StateSet::TRANSPARENT_BIN);
-        switchNode->addChild(blueGeode, false);
-
-        yellowGeode = new osg::Geode();
-        yellowGeode->addDrawable(yellowRdoorGeo);
-        state = yellowGeode->getOrCreateStateSet();
-        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
-        state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
-        state->setAttribute(mat, osg::StateAttribute::ON);
-        state->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
-        state->setRenderingHint(StateSet::TRANSPARENT_BIN);
-        switchNode->addChild(yellowGeode, false);
-
-        orangeGeode = new osg::Geode();
-        orangeGeode->addDrawable(orangeRdoorGeo);
-        state = orangeGeode->getOrCreateStateSet();
-        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
-        state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
-        state->setAttribute(mat, osg::StateAttribute::ON);
-        state->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
-        state->setRenderingHint(StateSet::TRANSPARENT_BIN);
-        switchNode->addChild(orangeGeode, false);
-
-        whiteGeode = new osg::Geode();
-        whiteGeode->addDrawable(whiteRdoorGeo);
-        state = whiteGeode->getOrCreateStateSet();
-        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
-        state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
-        state->setAttribute(mat, osg::StateAttribute::ON);
-        state->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
-        state->setRenderingHint(StateSet::TRANSPARENT_BIN);
-        switchNode->addChild(whiteGeode, false);
-
-        //switchNode->addChild(blueRdoorGeo, false);
-        //switchNode->addChild(yellowRdoorGeo, false);
-        //switchNode->addChild(orangeRdoorGeo, false);
-        //switchNode->addChild(whiteRdoorGeo, false);
-*/
-
  
         // Left door
         pat = new osg::PositionAttitudeTransform();
@@ -638,70 +564,6 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         _leftdoorSwitch.push_back(switchNode);
         pat->addChild(switchNode);
         _geoRoot->addChild(pat);
-
-
-/*
-geode = new osg::Geode();
-state = geode->getOrCreateStateSet();
-state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
-state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
-geode->addDrawable(rdoorGeo);
-pat->addChild(geode);
-*/
-/*        pat = new osg::PositionAttitudeTransform();
-        geode = new osg::Geode();
-
-        state = geode->getOrCreateStateSet();
-        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
-        state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
-
-        geode->addDrawable(ldoorGeo);
-        pat->setAttitude(osg::Quat(i * angle, osg::Vec3(0, 0, 1)));
-        pat->setPosition(osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0));
-        pat->addChild(geode);
-        _leftdoorPat.push_back(pat);
-        _geoRoot->addChild(pat);
-
-        switchNode = new osg::Switch();
-
-        osg::ref_ptr<osg::Geometry> redLdoorGeo, blueLdoorGeo, yellowLdoorGeo,
-            orangeLdoorGeo, whiteLdoorGeo;
-
-        redLdoorGeo    = drawBox(osg::Vec3(0.75, -5.2, 1.0), 1.5, 0.5, 4.0, red);
-        blueLdoorGeo   = drawBox(osg::Vec3(0.75, -5.2, 1.0), 1.5, 0.5, 4.0, blue);
-        yellowLdoorGeo = drawBox(osg::Vec3(0.75, -5.2, 1.0), 1.5, 0.5, 4.0, yellow);
-        orangeLdoorGeo = drawBox(osg::Vec3(0.75, -5.2, 1.0), 1.5, 0.5, 4.0, orange);
-        whiteLdoorGeo  = drawBox(osg::Vec3(0.75, -5.2, 1.0), 1.5, 0.5, 4.0, white);
-        
-        switchNode->addChild(geode, true);
-
-        redGeode = new osg::Geode();
-        redGeode->addDrawable(redLdoorGeo);
-        switchNode->addChild(redGeode, false);
-
-        blueGeode = new osg::Geode();
-        blueGeode->addDrawable(blueLdoorGeo);
-        switchNode->addChild(blueGeode, false);
-
-        yellowGeode = new osg::Geode();
-        yellowGeode->addDrawable(yellowLdoorGeo);
-        switchNode->addChild(yellowGeode, false);
-
-        orangeGeode = new osg::Geode();
-        orangeGeode->addDrawable(orangeLdoorGeo);
-        switchNode->addChild(orangeGeode, false);
-
-        whiteGeode = new osg::Geode();
-        whiteGeode->addDrawable(whiteLdoorGeo);
-        switchNode->addChild(whiteGeode, false);
-
-
-        //switchNode->addChild(redLdoorGeo, false);
-        //switchNode->addChild(blueLdoorGeo, false);
-        //switchNode->addChild(yellowLdoorGeo, false);
-        //switchNode->addChild(orangeLdoorGeo, false);
-        //switchNode->addChild(whiteLdoorGeo, false);
-*/
 
     }
     }
@@ -989,11 +851,21 @@ void ModelHandler::closeDoor()
     osg::PositionAttitudeTransform *lpat, *rpat;
     lpat = _leftdoorPat[_activeDoor];
     rpat = _rightdoorPat[_activeDoor];
+    
+    if (_doorDist - DOOR_SPEED < 0)
+    {
+        _doorDist = 0;
+        lpat->setPosition(lpat->getPosition() + lpat->getAttitude() * osg::Vec3(-_doorDist,0,0));
+        rpat->setPosition(rpat->getPosition() + rpat->getAttitude() * osg::Vec3( _doorDist,0,0));
+    }
+    else
+    {
+        _doorDist -= DOOR_SPEED;
+        lpat->setPosition(lpat->getPosition() + lpat->getAttitude() * osg::Vec3(-DOOR_SPEED,0,0));
+        rpat->setPosition(rpat->getPosition() + rpat->getAttitude() * osg::Vec3(DOOR_SPEED,0,0));
+    }
 
-    lpat->setPosition(lpat->getPosition() + lpat->getAttitude() * osg::Vec3(-DOOR_SPEED,0,0));
-    rpat->setPosition(rpat->getPosition() + rpat->getAttitude() * osg::Vec3(DOOR_SPEED,0,0));
 
-    _doorDist -= DOOR_SPEED;
 }
 
 void ModelHandler::setMode(Mode mode)

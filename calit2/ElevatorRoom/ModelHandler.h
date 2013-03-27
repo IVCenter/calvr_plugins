@@ -16,7 +16,7 @@
 #include <osgDB/ReadFile>
 
 #define NUM_DOORS 8
-#define DOOR_SPEED 0.012
+#define DOOR_SPEED 0.040
 #define FLASH_SPEED 4
 #define NUM_ALLY_FLASH 3
 #define NUM_ALIEN_FLASH 8
