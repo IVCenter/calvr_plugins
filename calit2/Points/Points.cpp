@@ -71,7 +71,14 @@ bool Points::loadFile(std::string filename)
 	    so->setNavigationOn(true);
 	    so->addMoveMenuItem();
 	    so->addNavigationMenuItem();
+        so->setShowBounds(false);
+
 	    currentobject->scene = so;
+
+        MenuCheckbox * cb = new MenuCheckbox("Show Bounds", false);
+        cb->setCallback(this);
+        so->addMenuItem(cb);
+        _boundsMap[currentobject] = cb;
 
 	    if(_locInit.find(name) != _locInit.end())
 	    {
@@ -108,7 +115,7 @@ bool Points::loadFile(std::string filename)
 	    mb->setCallback(this);
 	    so->addMenuItem(mb);
 	    _saveMap[currentobject] = mb;
-    
+
 	    //attach shader and uniform
 	    osg::StateSet *state = points->getOrCreateStateSet();
 	    state->setAttribute(pgm1);
@@ -241,6 +248,19 @@ void Points::menuCallback(MenuItem* menuItem)
         }
     }
 
+    // show bounding box
+    for(std::map<struct PointObject*,MenuCheckbox*>::iterator it = _boundsMap.begin(); 
+        it != _boundsMap.end(); it++)
+    {
+        if(menuItem == it->second)
+        {
+            if (it->first->scene)
+            {
+                it->first->scene->setShowBounds(it->second->getValue());
+            }
+        }
+    }
+ 
     //check map for a delete
     for(std::map<struct PointObject*, MenuButton*>::iterator it = _deleteMap.begin(); it != _deleteMap.end(); it++)
     {
