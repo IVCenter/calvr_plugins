@@ -115,20 +115,20 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
 
         cvr::SubMenu * _elevatorMenu;
         cvr::MenuButton * _loadButton, * _clearButton;
-        cvr::MenuRangeValue * _checkerSpeedRV, * _alienChanceRV;
+        cvr::MenuRangeValue *_timeScaleRV;
         cvr::MenuText * _chancesText;
         cvr::MenuCheckbox *_dingCheckbox;
 
         osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry
         
         // Timing 
-        float _startTime, _pauseTime, _flashStartTime;
+        float _startTime, _pauseTime, _flashStartTime, _timeScale;
         float _avatarFlashPerSec, _lightFlashPerSec, _checkSpeed, _doorFlashSpeed;
-        float _modelScale; // scale of entire scene
         float _pauseMin, _pauseMax, _flashNeutralMin, _flashNeutralMax,
         _solidColorMin, _solidColorMax, _doorOpenMin, _doorOpenMax;
 
 
+        float _modelScale; // scale of entire scene
         int _flashCount; // number of times active avatar has flashed
         int _activeDoor; // which door is currently opening/closing
         int _score; // current score (should be > 0)

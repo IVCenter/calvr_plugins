@@ -54,24 +54,8 @@ bool ElevatorRoom::init()
     _clearButton->setCallback(this);
     _elevatorMenu->addItem(_clearButton);
 
-/*
-    _checkerSpeedRV = new MenuRangeValue("Checker flash speed: ", 10, 30, 15);
-    _checkerSpeedRV->setCallback(this);
-    _elevatorMenu->addItem(_checkerSpeedRV);
-
-    _alienChanceRV = new MenuRangeValue("Chance of alien: ", 0, 100, 50);
-    _alienChanceRV->setCallback(this);
-    _elevatorMenu->addItem(_alienChanceRV);
-
-    char str[50];
-    sprintf(str, "Alien: %d  Astro: %d  Checker: %d", _alienChance, _allyChance, _checkerChance);
-    _chancesText = new MenuText(str);
-    _elevatorMenu->addItem(_chancesText);
-*/ 
-    
 
     /*** Load from config ***/
-    
 
     // extra output messages
     _debug = (ConfigManager::getEntry("Plugin.ElevatorRoom.Debug") == "on");
@@ -120,11 +104,6 @@ bool ElevatorRoom::init()
     _score = 0;
     _hit = false;
 
-    // TODO: read these from config
-//    _avatarFlashPerSec = 10;
-//    _lightFlashPerSec = 7;
-
-
     // Timing values
     _avatarFlashPerSec = ConfigManager::getInt("value", "Plugin.ElevatorRoom.AvatarFlashSpeed", 10);
     _doorFlashSpeed = ConfigManager::getInt("value", "Plugin.ElevatorRoom.DoorFlashSpeed", 20);
@@ -135,12 +114,16 @@ bool ElevatorRoom::init()
     _solidColorMin   = 1.0; _solidColorMax   = 2.0;
     _doorOpenMin     = 1.0; _doorOpenMax     = 2.0;
 
-
-
     _staticMode = (ConfigManager::getEntry("Plugin.ElevatorRoom.StaticMode") != "off");
     _staticDoor = (ConfigManager::getInt("value", "Plugin.ElevatorRoom.StaticDoor", -1) != -1);
     _doorMovement = (ConfigManager::getEntry("Plugin.ElevatorRoom.DoorMovement") != "off");
     _rotateOnly = (ConfigManager::getEntry("Plugin.ElevatorRoom.RotateOnlyNavigation") != "off");
+
+    _timeScale = 1;
+    _timeScaleRV = new MenuRangeValue("Game speed: ", .25, 2, 1);
+    _timeScaleRV->setCallback(this);
+    _elevatorMenu->addItem(_timeScaleRV);
+
 
 
     if(ComController::instance()->isMaster())
@@ -279,7 +262,7 @@ void ElevatorRoom::preFrame()
             _phase = FLASHNEUTRAL;
             _startTime = PluginHelper::getProgramDuration();
             _flashStartTime = PluginHelper::getProgramDuration();
-            _pauseTime = randomFloat(_flashNeutralMin, _flashNeutralMax);
+            _pauseTime = _timeScale * randomFloat(_flashNeutralMin, _flashNeutralMax);
         }
     }
 
@@ -327,7 +310,7 @@ void ElevatorRoom::preFrame()
                 _pauseTime = 2;
             }
             sendChar(c);
-
+            
             _phase = DOORCOLOR;
             _startTime = PluginHelper::getProgramDuration();
         }
@@ -352,7 +335,7 @@ void ElevatorRoom::preFrame()
         {
             _phase = DOOROPEN;
             _startTime = PluginHelper::getProgramDuration();
-            _pauseTime = randomFloat(_doorOpenMin, _doorOpenMax);
+            _pauseTime = _timeScale * randomFloat(_doorOpenMin, _doorOpenMax);
         }
         _modelHandler->openDoor();
     }
@@ -418,7 +401,7 @@ void ElevatorRoom::preFrame()
         {
             _phase = PAUSE;
             _startTime = PluginHelper::getProgramDuration();
-            _pauseTime = randomFloat(_pauseMin, _pauseMax);
+            _pauseTime = _timeScale * randomFloat(_pauseMin, _pauseMax);
             _modelHandler->setLight(false);
 
             if (_noResponse)
@@ -431,6 +414,7 @@ void ElevatorRoom::preFrame()
         }
         _modelHandler->closeDoor();
     }
+
 
     // Update sound
     osg::Vec3 handPos, headPos, headDir, handDir;
@@ -567,24 +551,9 @@ void ElevatorRoom::menuCallback(MenuItem * item)
         }
     }
 
-    else if(item == _checkerSpeedRV)
+    else if (item == _timeScaleRV)
     {
-        _checkSpeed = (int)_checkerSpeedRV->getValue();
-    }
-
-    else if(item == _alienChanceRV)
-    {
-        int newVal = _alienChanceRV->getValue();
-        if (_alienChance + _allyChance + _checkerChance <= 100 &&
-            newVal > -1  && 100 - newVal - _checkerChance > -1  && _checkerChance > -1)
-        {
-            _alienChance = newVal;
-            _allyChance = 100 - _alienChance - _checkerChance;
-
-            char str[50];
-            sprintf(str, "Alien: %d  Astro: %d  Checker: %d", _alienChance, _allyChance, _checkerChance);
-            _chancesText->setText(str);
-        }
+        _timeScale = _timeScaleRV->getValue();
     }
 
     else if (item == _dingCheckbox)
