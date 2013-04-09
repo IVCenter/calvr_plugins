@@ -68,6 +68,9 @@ class ModelHandler
         void setAlly(bool val);
         void setLight(bool val);
 
+        void setLevel(std::string level);
+        void clear();
+
         osg::ref_ptr<osg::Geode> getActiveObject();
         float getDoorDistance();
         bool doorInView();
@@ -75,10 +78,16 @@ class ModelHandler
     protected:
         std::vector<osg::ref_ptr<osg::PositionAttitudeTransform> > _leftdoorPat, _rightdoorPat;
         std::vector<osg::ref_ptr<osg::ShapeDrawable> > _lights;
+        
+        std::vector<osg::ref_ptr<osg::Geode> > _walls, _elevators, _floors, 
+            _doors, _ceilings;
 
         // child 1 non-flashing, child 2 flashing
         std::vector<osg::ref_ptr<osg::Switch> > _aliensSwitch, _alliesSwitch, 
             _checkersSwitch, _lightSwitch, _leftdoorSwitch;
+
+        std::string _wallTex, _floorTex, _ceilingTex, _doorTex,
+            _alienTex, _allyTex, _checkTex1, _checkTex2, _elevTex;
 
         osg::ref_ptr<osg::Geode> _activeObject;
         osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry

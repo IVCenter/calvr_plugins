@@ -57,6 +57,23 @@ bool ElevatorRoom::init()
 
     /*** Load from config ***/
 
+    // Texture sets
+    std::vector<std::string> tagList;
+    ConfigManager::getChildren("Plugin.ElevatorRoom.Levels", tagList);
+    for(int i = 0; i < tagList.size(); i++)
+    {
+        std::string tag = "Plugin.ElevatorRoom.Levels." + tagList[i];
+        std::cout << tagList[i] << std::endl;;
+        
+        cvr::MenuCheckbox * cb = new cvr::MenuCheckbox(tagList[i], false);
+        _levelMap[tagList[i]] = cb;
+        cb->setCallback(this);
+        _elevatorMenu->addItem(cb);
+    }
+
+    _levelMap[tagList[0]]->setValue(true);
+
+
     // extra output messages
     _debug = (ConfigManager::getEntry("Plugin.ElevatorRoom.Debug") == "on");
     
@@ -565,6 +582,32 @@ void ElevatorRoom::menuCallback(MenuItem * item)
             dir = osg::Vec3(0, 0, -1); 
 
             _audioHandler->loadSound(0 + DING_OFFSET, dir, pos);
+        }
+    }
+
+    std::map<std::string, cvr::MenuCheckbox*>::iterator it;
+    bool found = false;
+    for (it = _levelMap.begin(); it != _levelMap.end(); ++it)
+    {
+        if (item == it->second)
+        {
+            _modelHandler->setLevel(it->first);
+            found = true;
+        }
+    }
+
+    if (found)
+    {
+        for (it = _levelMap.begin(); it != _levelMap.end(); ++it)
+        {
+            if (item != it->second)
+            {
+                it->second->setValue(false);
+            }
+            else
+            {
+                it->second->setValue(true);
+            }
         }
     }
 }

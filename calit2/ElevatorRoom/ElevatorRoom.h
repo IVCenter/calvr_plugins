@@ -119,6 +119,8 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuText * _chancesText;
         cvr::MenuCheckbox *_dingCheckbox;
 
+        std::map<std::string, cvr::MenuCheckbox*> _levelMap;
+
         osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry
         
         // Timing 
