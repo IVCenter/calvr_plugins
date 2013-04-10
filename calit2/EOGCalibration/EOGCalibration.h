@@ -36,16 +36,18 @@ using namespace osg;
 /***************************************************************
 *  Class: EOGCalibration
 ***************************************************************/
-class EOGCalibration : public cvr::MenuCallback, public cvr::CVRPlugin
+class EOGCalibration : public cvr::CVRPlugin, public cvr::MenuCallback
 {
   public:
     EOGCalibration();
-    ~EOGCalibration();
+    virtual ~EOGCalibration();
+    static EOGCalibration * instance();
 
-    virtual bool init();
+    bool init();
 	virtual void preFrame();
-	virtual void menuCallback(cvr::MenuItem *item);
-	virtual bool processEvent(cvr::InteractionEvent *event);
+
+	void menuCallback(cvr::MenuItem *item);
+	bool processEvent(cvr::InteractionEvent *event);
 
     void connectServer();
     void disconnectServer();
@@ -74,9 +76,10 @@ class EOGCalibration : public cvr::MenuCallback, public cvr::CVRPlugin
     };
 
     /* CalVR Menu Items */
-    cvr::SubMenu *mainMenu;
+    cvr::SubMenu *mainMenu, *optionsMenu;
     cvr::MenuCheckbox 	*connectToServerCheckbox, *startStopCalibrationCheckbox, *startStopPlaybackCheckbox,
-						*showCalibrationBallCheckbox, *showPlaybackBallCheckbox, *showCalibrationFieldCheckbox;
+						*showCalibrationBallCheckbox, *showPlaybackBallCheckbox, *showCalibrationFieldCheckbox,
+                        *appearTestCheckbox;
     cvr::MenuText *connectionStatusLabel, *playbackTimerLabel;
     cvr::MenuButton *resetBallButtonMenuItem, *alignWithViewerButtonMenuItem;
     cvr::MenuRangeValue *leftRangeSlider, *rightRangeSlider, *upwardRangeSlider, *downwardRangeSlider, *depthRangeSlider, *horizontalFreqSlider, *verticalFreqSlider, *depthFreqSlider;
@@ -85,7 +88,7 @@ class EOGCalibration : public cvr::MenuCallback, public cvr::CVRPlugin
     CalibrationController *mCaliController;
     Matrixf mInvBaseMat;
     osg::Group * _rootGroup;
-
+    static EOGCalibration * _myPtr;
     bool mFlagConnected, mFlagMaster;
     int mSockfd;
     double mClkBuf[2];

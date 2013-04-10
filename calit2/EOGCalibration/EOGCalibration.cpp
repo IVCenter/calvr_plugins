@@ -8,13 +8,14 @@
 using namespace std;
 using namespace cvr;
 
+EOGCalibration * EOGCalibration::_myPtr = NULL;
+
 CVRPLUGIN(EOGCalibration)
 
-/***************************************************************
-*  Constructor: EOGCalibration()
-***************************************************************/
 EOGCalibration::EOGCalibration(): mFlagConnected(false), mFlagMaster(false)
 {
+    _myPtr = this;
+
     string DataDir = ConfigManager::getEntry("Plugin.EOGCalibration.DataDir");
     
     _rootGroup = new osg::Group();
@@ -22,35 +23,38 @@ EOGCalibration::EOGCalibration(): mFlagConnected(false), mFlagMaster(false)
 
     mCaliController = new CalibrationController(_rootGroup, DataDir);
     mCaliController->stopCalibration();
+    mCaliController->setAppearFlag(false);
 
     if (cvr::ComController::instance()->isMaster())
+    {
         mFlagMaster = true;
+    }
 }
 
-/***************************************************************
-*  Destrutor: ~EOGCalibration()
-***************************************************************/
+
 EOGCalibration::~EOGCalibration()
 {
     if (mSockfd) 
         close(mSockfd);
 }
 
-/***************************************************************
-*  Function: init()
-***************************************************************/
+
+EOGCalibration * EOGCalibration::instance()
+{
+    return _myPtr;
+}
+
+
 bool EOGCalibration::init()
 {
 	mainMenu = new SubMenu("EOGCalibration", "EOGCalibration");
-	MenuSystem::instance()->addMenuItem(mainMenu);
+	//MenuSystem::instance()->addMenuItem(mainMenu);
+    PluginHelper::addRootMenuItem(mainMenu);
 
-    connectToServerCheckbox = new MenuCheckbox("Connect to Data Server", false);
-    connectToServerCheckbox->setCallback(this);
-    mainMenu->addItem(connectToServerCheckbox);
 
-    connectionStatusLabel = new MenuText("Connection Status");
-    connectionStatusLabel->setText("Disconnected from Data Server.");
-    mainMenu->addItem(connectionStatusLabel);
+    appearTestCheckbox = new MenuCheckbox("Appear Test", false);
+    appearTestCheckbox->setCallback(this);
+    mainMenu->addItem(appearTestCheckbox);
 
     startStopCalibrationCheckbox = new MenuCheckbox("Start/Stop Calibration", false);
     startStopCalibrationCheckbox->setCallback(this);
@@ -58,10 +62,10 @@ bool EOGCalibration::init()
 
 	startStopPlaybackCheckbox = new MenuCheckbox("Start/Stop Playback", false);
 	startStopPlaybackCheckbox->setCallback(this);
-	mainMenu->addItem(startStopPlaybackCheckbox);
+	//mainMenu->addItem(startStopPlaybackCheckbox);
 
 	playbackTimerLabel = new MenuText("Time = 00.000 s");
-	mainMenu->addItem(playbackTimerLabel);
+	//mainMenu->addItem(playbackTimerLabel);
 
     showCalibrationBallCheckbox = new MenuCheckbox("Show Calibration Ball", false);
     showCalibrationBallCheckbox->setCallback(this);
@@ -69,57 +73,72 @@ bool EOGCalibration::init()
 
 	showPlaybackBallCheckbox = new MenuCheckbox("Show Playback Ball", false);
     showPlaybackBallCheckbox->setCallback(this);
-    mainMenu->addItem(showPlaybackBallCheckbox);
-
-    showCalibrationFieldCheckbox = new MenuCheckbox("Show Calibration Field", false);
-    showCalibrationFieldCheckbox->setCallback(this);
-    mainMenu->addItem(showCalibrationFieldCheckbox);
+    //mainMenu->addItem(showPlaybackBallCheckbox);
 
     resetBallButtonMenuItem = new MenuButton("Reset Ball Position");
     resetBallButtonMenuItem->setCallback(this);
     mainMenu->addItem(resetBallButtonMenuItem);
+   
+
+
+    // Options Menu
+
+    optionsMenu = new SubMenu("Options", "Options");
+    mainMenu->addItem(optionsMenu);
+
+    connectToServerCheckbox = new MenuCheckbox("Connect to Data Server", false);
+    connectToServerCheckbox->setCallback(this);
+    optionsMenu->addItem(connectToServerCheckbox);
+
+    connectionStatusLabel = new MenuText("Connection Status");
+    connectionStatusLabel->setText("Disconnected from Data Server.");
+    optionsMenu->addItem(connectionStatusLabel);
 
     alignWithViewerButtonMenuItem = new MenuButton("Align with Viewer's Position");
     alignWithViewerButtonMenuItem->setCallback(this);
-    mainMenu->addItem(alignWithViewerButtonMenuItem);
+    optionsMenu->addItem(alignWithViewerButtonMenuItem);
+
+    showCalibrationFieldCheckbox = new MenuCheckbox("Show Calibration Field", false);
+    showCalibrationFieldCheckbox->setCallback(this);
+    optionsMenu->addItem(showCalibrationFieldCheckbox);
 
     /* Main row menu items: Slider bars */
     leftRangeSlider = new MenuRangeValue("Left Side Range", 0, 20, 0.5);
     leftRangeSlider->setCallback(this);
     leftRangeSlider->setValue(20);
-    mainMenu->addItem(leftRangeSlider);
+    optionsMenu->addItem(leftRangeSlider);
 
     rightRangeSlider = new MenuRangeValue("Right Side Range", 0, 20, 0.5);
     rightRangeSlider->setCallback(this);
     rightRangeSlider->setValue(20);
-    mainMenu->addItem(rightRangeSlider);
+    optionsMenu->addItem(rightRangeSlider);
 
     upwardRangeSlider = new MenuRangeValue("Upward Range", 0, 20, 0.5);
     upwardRangeSlider->setCallback(this);
     upwardRangeSlider->setValue(20);
-    mainMenu->addItem(upwardRangeSlider);
+    optionsMenu->addItem(upwardRangeSlider);
 
     downwardRangeSlider = new MenuRangeValue("Downward Range", 0, 20, 0.5);
     downwardRangeSlider->setCallback(this);
     downwardRangeSlider->setValue(20);
-    mainMenu->addItem(downwardRangeSlider);
+    optionsMenu->addItem(downwardRangeSlider);
 
     depthRangeSlider = new MenuRangeValue("Depth Range", 0.5, 5, 0.5);
     depthRangeSlider->setCallback(this);
     depthRangeSlider->setValue(5);
-    mainMenu->addItem(depthRangeSlider);
+    optionsMenu->addItem(depthRangeSlider);
 
     horizontalFreqSlider = new MenuRangeValue("Horizontal Frequency", 0, 0.2, 0.1);//1.0, 0.1);
     horizontalFreqSlider->setCallback(this);
-    mainMenu->addItem(horizontalFreqSlider);
+    optionsMenu->addItem(horizontalFreqSlider);
 
     verticalFreqSlider = new MenuRangeValue("Vertical Frequency", 0, 0.2, 0.1);//1.0, 0.1);
     verticalFreqSlider->setCallback(this);
-    mainMenu->addItem(verticalFreqSlider);
+    optionsMenu->addItem(verticalFreqSlider);
 
     depthFreqSlider = new MenuRangeValue("Depth Frequency", 0, 0.2, 0.1);//1.0, 0.1);
     depthFreqSlider->setCallback(this);
-    mainMenu->addItem(depthFreqSlider);
+    optionsMenu->addItem(depthFreqSlider);
 
     float val = leftRangeSlider->getValue();
     mCaliController->updateCaliParam(CalibrationController::LEFT_RANGE, val);
@@ -144,11 +163,11 @@ bool EOGCalibration::init()
 
     val = depthFreqSlider->getValue();
     mCaliController->updateCaliParam(CalibrationController::DEPTH_FREQ, val);
+
+    return true;
 }
 
-/***************************************************************
-*  Function: menuCallback()
-***************************************************************/
+
 void EOGCalibration::menuCallback(cvr::MenuItem *item)
 {
     // connect / disconnect from data server
@@ -178,12 +197,33 @@ void EOGCalibration::menuCallback(cvr::MenuItem *item)
 				startStopPlaybackCheckbox->setValue(false);
 				mCaliController->stopPlayback();
 			}
+
+            appearTestCheckbox->setValue(false);
+            mCaliController->setAppearFlag(false);
+
 	    	mCaliController->startCalibration();
       	} 
         else 
         {
 	    	mCaliController->stopCalibration();
 		}
+    }
+    
+    // start / stop appear test
+    else if (item == appearTestCheckbox)
+    {
+      	if (appearTestCheckbox->getValue())
+        {
+            startStopCalibrationCheckbox->setValue(false);
+
+            mCaliController->setAppearFlag(appearTestCheckbox->getValue());
+	    	mCaliController->startCalibration();
+        }
+        else
+        {
+            mCaliController->setAppearFlag(appearTestCheckbox->getValue());
+	    	mCaliController->stopCalibration();
+        }
     }
 
 	// start / stop data playback
@@ -301,9 +341,7 @@ void EOGCalibration::menuCallback(cvr::MenuItem *item)
 
 }
 
-/***************************************************************
-*  Function: preFrame()
-***************************************************************/
+
 void EOGCalibration::preFrame()
 {
     Matrixf invBaseMat = PluginHelper::getWorldToObjectTransform();
@@ -320,7 +358,6 @@ void EOGCalibration::preFrame()
     //mNaviHandler->updateNaviStates(Navigation::instance()->getScale(), viewDir, viewPos);
     //mNaviHandler->updateButtonStates();
     //mNaviHandler->updateXformMat();
-
     /* ECGClient: Master-Slave operations: Read current time for update */
     double frameDuration;
     if(ComController::instance()->isMaster())
@@ -392,17 +429,13 @@ void EOGCalibration::preFrame()
 
 }
 
-/***************************************************************
-*  Function: processEvent()
-***************************************************************/
+
 bool EOGCalibration::processEvent(cvr::InteractionEvent *event)
 {
     return false;
 }
 
-/***************************************************************
-*  Function: connectServer()
-***************************************************************/
+
 void EOGCalibration::connectServer()
 {
     /* get server address and port number */
@@ -449,9 +482,7 @@ void EOGCalibration::connectServer()
     mFlagConnected = true;
 }
 
-/***************************************************************
-*  Function: disconnectServer()
-***************************************************************/
+
 void EOGCalibration::disconnectServer()
 {
     close(mSockfd);

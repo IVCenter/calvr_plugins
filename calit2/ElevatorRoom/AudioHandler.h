@@ -8,6 +8,7 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <unistd.h>
 
 // open scene graph
 #include <osg/Vec3>
