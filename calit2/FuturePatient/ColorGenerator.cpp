@@ -19,6 +19,20 @@ osg::Vec4 ColorGenerator::makeColor(int colorNum, int totalColors)
     }
 }
 
+osg::Vec4 ColorGenerator::makeColor(int colorNum, int totalColors, float offset)
+{
+    if( offset < 0.0 || offset > 1.0 )
+	return makeColor(colorNum, totalColors);
+
+    if(colorNum >= totalColors)
+    {
+	return osg::Vec4(1,1,1,1);
+    }
+
+    return makeColor(((float)colorNum + offset)/((float)totalColors + 1.0));
+}
+
+
 osg::Vec4 ColorGenerator::makeColor(float f)
 {
     if(f < 0)
