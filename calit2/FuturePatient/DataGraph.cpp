@@ -858,7 +858,8 @@ void DataGraph::setPointActions(std::string graphname, std::map<int,PointAction*
 
 	osg::Vec3Array * verts = new osg::Vec3Array(actionMap.size());
 	osg::Vec4Array * colors = new osg::Vec4Array(1);
-	colors->at(0) = osg::Vec4(1.0,0,0,_pointActionAlpha);
+	//colors->at(0) = osg::Vec4(1.0,0,0,_pointActionAlpha);
+	colors->at(0) = osg::Vec4(0,0,0,1.0);
 	it->second.pointActionGeometry->setVertexArray(verts);
 	it->second.pointActionGeometry->setColorArray(colors);
 	it->second.pointActionGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
@@ -880,6 +881,7 @@ void DataGraph::setPointActions(std::string graphname, std::map<int,PointAction*
 
 void DataGraph::updatePointAction()
 {
+    return;
     static const float flashingTime = 2.5;
     
     float deltaAlpha = PluginHelper::getLastFrameDuration() / flashingTime;
@@ -1327,7 +1329,8 @@ void DataGraph::update()
     float avglen = (_width + _height) / 2.0;
     _point->setSize(_glScale * avglen * 0.04 * _pointLineScale);
     _pointSizeUniform->set((float)_point->getSize());
-    _pointActionPoint->setSize(1.3*_point->getSize());
+    //_pointActionPoint->setSize(1.3*_point->getSize());
+_pointActionPoint->setSize(0.4*_point->getSize());
     //std::cerr << "Point size set to: " << _point->getSize() << std::endl;
     _lineWidth->setWidth(_glScale * avglen * 0.05 * _pointLineScale * _pointLineScale);
 
@@ -1340,7 +1343,7 @@ void DataGraph::update()
     {
 	_point->setSize(_point->getSize() * _masterPointScale);
 	_pointSizeUniform->set((float)_point->getSize());
-	_pointActionPoint->setSize(1.3*_point->getSize());
+	_pointActionPoint->setSize(0.4*_point->getSize());
 	_lineWidth->setWidth(_lineWidth->getWidth() * _masterLineScale);
     }
 

@@ -419,7 +419,7 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 		actionMap[annotations[i].point] = new PointActionPDF(_pdfDir + "/" + annotations[i].url);
 	    }
 
-	    //_graph->setPointActions(gd.displayName,actionMap);
+	    _graph->setPointActions(gd.displayName,actionMap);
 	}
 
 	LoadData ld;
