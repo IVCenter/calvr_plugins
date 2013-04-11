@@ -6,6 +6,8 @@
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuRangeValueCompact.h>
 #include <cvrMenu/SubMenu.h>
+#include <cvrUtil/MultiListenSocket.h>
+#include <cvrUtil/CVRSocket.h>
 
 #include <string>
 #include <map>
@@ -48,6 +50,9 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         void loadLayout(const std::string & file);
 
         static mysqlpp::Connection * _conn;
+
+        void checkSockets(std::vector<int> & messageList);
+        bool processSocketInput(cvr::CVRSocket * socket, std::vector<int> & messageList);
 
         cvr::SubMenu * _fpMenu;
         cvr::SubMenu * _layoutMenu;
@@ -113,7 +118,9 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         std::vector<MicrobeGraphObject *> _microbeGraphList;
 
-        std::string _layoutDirectory;
+        std::string _layoutDirectory;   
+        cvr::MultiListenSocket * _mls;
+        std::vector<cvr::CVRSocket*> _socketList;
 };
 
 #endif
