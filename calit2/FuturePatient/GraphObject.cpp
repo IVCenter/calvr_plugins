@@ -150,7 +150,7 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 		    bool hasGoodRange = false;
 		    float goodLow, goodHigh;
 
-		    if(strcmp(metaRes[0]["good_low"].c_str(),"NULL") && metaRes[0]["good_high"].c_str())
+		    if(strcmp(metaRes[0]["good_low"].c_str(),"NULL") && strcmp(metaRes[0]["good_high"].c_str(),"NULL"))
 		    {
 			hasGoodRange = true;
 			gd.normalLow = goodLow = atof(metaRes[0]["good_low"].c_str());
