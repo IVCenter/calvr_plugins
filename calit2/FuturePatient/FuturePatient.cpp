@@ -31,10 +31,15 @@ FuturePatient::FuturePatient()
     _multiObject = NULL;
     _currentSBGraph = NULL;
     _currentSymptomGraph = NULL;
+    _mls = NULL;
 }
 
 FuturePatient::~FuturePatient()
 {
+    if(_mls)
+    {
+        delete _mls;
+    }
 }
 
 bool FuturePatient::init()
@@ -84,6 +89,18 @@ bool FuturePatient::init()
     //PluginHelper::getObjectsRoot()->addChild(dg->getGraphRoot());
 
     //makeGraph("SIga");
+    
+    if(ComController::instance()->isMaster())
+    {
+        int port = ConfigManager::getInt("value","Plugin.FuturePatient.PresetListenPort",12012);
+        _mls = new MultiListenSocket(port);
+        if(!_mls->setup())
+        {
+            std::cerr << "Error setting up MultiListen Socket on port " << port << " ." << std::endl;
+            delete _mls;
+            _mls = NULL;
+        }
+    }
     
     _fpMenu = new SubMenu("FuturePatient");
 
@@ -661,10 +678,153 @@ bool FuturePatient::init()
 
 void FuturePatient::preFrame()
 {
+    int numCommands = 0;
+    int * commands = NULL;
+    if(ComController::instance()->isMaster())
+    {
+        if(_mls)
+        {
+            CVRSocket * con;
+            if((con = _mls->accept()))
+            {
+                std::cerr << "Adding socket." << std::endl;
+                con->setNoDelay(true);
+                _socketList.push_back(con);
+            }
+        }
+
+        std::vector<int> messageList;
+        checkSockets(messageList);
+
+        numCommands = messageList.size();
+
+        ComController::instance()->sendSlaves(&numCommands, sizeof(int));
+
+        if(numCommands)
+        {
+            commands = new int[numCommands];
+            for(int i = 0; i < numCommands; i++)
+            {
+                commands[i] = messageList[i];
+            }
+            ComController::instance()->sendSlaves(commands,numCommands * sizeof(int));
+        }
+    }
+    else
+    {
+        ComController::instance()->readMaster(&numCommands, sizeof(int));
+        if(numCommands)
+        {
+            commands = new int[numCommands];
+            ComController::instance()->readMaster(commands,numCommands * sizeof(int));
+        }
+    }
+
+   if(numCommands)
+    {
+        std::stringstream filess;
+        filess << "Preset" << commands[numCommands-1] << ".cfg";
+        std::string file = filess.str();
+
+        bool loaded = false;
+        for(int i = 0; i < _loadLayoutButtons.size(); ++i)
+        {
+            if(_loadLayoutButtons[i]->getText() == file)
+            {
+                loaded = true;
+                menuCallback(_loadLayoutButtons[i]);
+                break;
+            }
+        }
+
+        if(!loaded)
+        {
+            std::cerr << "Unable to find preset config: " << file << std::endl;
+        }
+
+        delete[] commands;
+    }
+
     if(_layoutObject)
     {
 	_layoutObject->perFrame();
     }
+}
+
+void FuturePatient::checkSockets(std::vector<int> & messageList)
+{
+    if(!_socketList.size())
+    {
+        return;
+    }
+
+    int maxfd = 0;
+
+    fd_set socketsetR;
+    FD_ZERO(&socketsetR);
+
+    for(int i = 0; i < _socketList.size(); i++)
+    {
+        FD_SET((unsigned int)_socketList[i]->getSocketFD(),&socketsetR);
+        if(_socketList[i]->getSocketFD() > maxfd)
+        {
+            maxfd = _socketList[i]->getSocketFD();
+        }
+    }
+
+    struct timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 0;
+
+    select(maxfd+1,&socketsetR,NULL,NULL,&tv);
+
+    for(std::vector<CVRSocket*>::iterator it = _socketList.begin(); it != _socketList.end(); )
+    {
+        if(FD_ISSET((*it)->getSocketFD(),&socketsetR))
+        {
+            if(!processSocketInput(*it,messageList))
+            {
+                std::cerr << "Removing socket." << std::endl;
+                delete *it;
+                it = _socketList.erase(it);
+            }
+            else
+            {
+                it++;
+            }
+        }
+        else
+        {
+            it++;
+        }
+    }
+}
+
+bool FuturePatient::processSocketInput(CVRSocket * socket, std::vector<int> & messageList)
+{
+    /*char c;
+    if(!socket->recv(&c,sizeof(char)))
+    {
+        return false;
+    }
+
+    std::cerr << "Char: " << (int)c << std::endl;*/
+    int i;
+    if(!socket->recv(&i,sizeof(int)))
+    {
+        return false;
+    }
+
+    //std::cerr << "int: " << i << std::endl;
+    messageList.push_back(i);
+
+    char resp[1024];
+    memset(resp,'\0',1024);
+    resp[0] = 'o';
+    resp[1] = 'k';
+    socket->send(resp,1024);
+
+    return true;
 }
 
 void FuturePatient::menuCallback(MenuItem * item)
