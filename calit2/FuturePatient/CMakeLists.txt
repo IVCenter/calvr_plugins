@@ -8,7 +8,9 @@ SET(PLUGIN_HEADERS
     PointActions.h
     MicrobeGraphObject.h
     GroupedBarGraph.h
+    GroupedScatterPlot.h
     MicrobeBarGraphObject.h
+    MicrobeScatterGraphObject.h
     StackedBarGraph.h
     ColorGenerator.h
     SymptomGraphObject.h
@@ -26,7 +28,9 @@ ADD_LIBRARY(${LIB_NAME}
     PointActions.cpp
     MicrobeGraphObject.cpp
     GroupedBarGraph.cpp
+    GroupedScatterPlot.cpp
     MicrobeBarGraphObject.cpp
+    MicrobeScatterGraphObject.cpp
     StackedBarGraph.cpp
     ColorGenerator.cpp
     SymptomGraphObject.cpp

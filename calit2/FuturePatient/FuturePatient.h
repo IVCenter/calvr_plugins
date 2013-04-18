@@ -19,6 +19,7 @@
 #include "GraphLayoutObject.h"
 #include "MicrobeGraphObject.h"
 #include "MicrobeBarGraphObject.h"
+#include "MicrobeScatterGraphObject.h"
 #include "SymptomGraphObject.h"
 
 
@@ -107,6 +108,14 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _eventLoad;
         cvr::MenuButton * _eventLoadAll;
         cvr::MenuButton * _eventDone;
+
+        cvr::SubMenu * _scatterMenu;
+        cvr::MenuText * _scatterFirstLabel;
+        cvr::MenuText * _scatterSecondLabel;
+        cvr::MenuList * _scatterFirstList;
+        cvr::MenuList * _scatterSecondList;
+        cvr::MenuButton * _scatterLoad;
+        cvr::MenuButton * _scatterLoadAll;
 
         MicrobeBarGraphObject * _currentSBGraph;
         SymptomGraphObject * _currentSymptomGraph;

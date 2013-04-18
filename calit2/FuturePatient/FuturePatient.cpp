@@ -253,6 +253,29 @@ bool FuturePatient::init()
     _eventDone = new MenuButton("Done");
     _eventDone->setCallback(this);
 
+    _scatterMenu = new SubMenu("Scatter Plots");
+    _fpMenu->addItem(_scatterMenu);
+
+    _scatterFirstLabel = new MenuText("Primary Phylum:",1.0,false);
+    _scatterMenu->addItem(_scatterFirstLabel);
+
+    _scatterFirstList = new MenuList();
+    _scatterMenu->addItem(_scatterFirstList);
+
+    _scatterSecondLabel = new MenuText("Secondary Phylum:",1.0,false);
+    _scatterMenu->addItem(_scatterSecondLabel);
+
+    _scatterSecondList = new MenuList();
+    _scatterMenu->addItem(_scatterSecondList);
+
+    _scatterLoad = new MenuButton("Load");
+    _scatterLoad->setCallback(this);
+    _scatterMenu->addItem(_scatterLoad);
+
+    _scatterLoadAll = new MenuButton("Load All");
+    _scatterLoadAll->setCallback(this);
+    _scatterMenu->addItem(_scatterLoadAll);
+
     _removeAllButton = new MenuButton("Remove All");
     _removeAllButton->setCallback(this);
     _fpMenu->addItem(_removeAllButton);
@@ -672,6 +695,59 @@ bool FuturePatient::init()
     {
 	delete[] lfList;
     }
+
+    lfList = NULL;
+    listEntries = 0;
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    mysqlpp::Query q = _conn->query("select distinct phylum from Microbes order by phylum;");
+	    mysqlpp::StoreQueryResult res = q.store();
+
+	    listEntries = res.num_rows();
+
+	    if(listEntries)
+	    {
+		lfList = new struct listField[listEntries];
+
+		for(int i = 0; i < listEntries; i++)
+		{
+		    strncpy(lfList[i].entry,res[i]["phylum"].c_str(),255);
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&listEntries,sizeof(int));
+	if(listEntries)
+	{
+	    ComController::instance()->sendSlaves(lfList,sizeof(struct listField)*listEntries);
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&listEntries,sizeof(int));
+	if(listEntries)
+	{
+	    lfList = new struct listField[listEntries];
+	    ComController::instance()->readMaster(lfList,sizeof(struct listField)*listEntries);
+	}
+    }
+
+    stringlist.clear();
+    for(int i = 0; i < listEntries; i++)
+    {
+	stringlist.push_back(lfList[i].entry);
+    }
+
+    _scatterFirstList->setValues(stringlist);
+    _scatterSecondList->setValues(stringlist);
+
+    if(lfList)
+    {
+	delete[] lfList;
+    } 
 
     return true;
 }
@@ -1233,6 +1309,49 @@ void FuturePatient::menuCallback(MenuItem * item)
     {
 	_currentSymptomGraph = NULL;
 	_eventMenu->removeItem(_eventDone);
+    }
+
+    if(item == _scatterLoad)
+    {
+	if(_scatterFirstList->getListSize() && _scatterFirstList->getIndex() != _scatterSecondList->getIndex())
+	{
+	    MicrobeScatterGraphObject * msgo = new MicrobeScatterGraphObject(_conn, 1000.0, 1000.0, "Scatter Plot", false, true, false, true);
+	    if(msgo->setGraph(_scatterSecondList->getValue() + " vs " + _scatterFirstList->getValue(),_scatterFirstList->getValue(),_scatterSecondList->getValue()))
+	    {
+		checkLayout();
+		_layoutObject->addGraphObject(msgo);
+	    }
+	    else
+	    {
+		delete msgo;
+	    }
+	}
+	return;
+    }
+
+    if(item == _scatterLoadAll)
+    {
+	if(_scatterFirstList->getListSize())
+	{
+	    for(int i = 0; i < _scatterSecondList->getListSize(); ++i)
+	    {
+		if(_scatterFirstList->getIndex() == i)
+		{
+		    continue;
+		}
+		MicrobeScatterGraphObject * msgo = new MicrobeScatterGraphObject(_conn, 1000.0, 1000.0, "Scatter Plot", false, true, false, true);
+		if(msgo->setGraph(_scatterSecondList->getValue(i) + " vs " + _scatterFirstList->getValue(),_scatterFirstList->getValue(),_scatterSecondList->getValue(i)))
+		{
+		    checkLayout();
+		    _layoutObject->addGraphObject(msgo);
+		}
+		else
+		{
+		    delete msgo;
+		}
+	    }
+	}
+	return;
     }
 
     if(item == _saveLayoutButton)
