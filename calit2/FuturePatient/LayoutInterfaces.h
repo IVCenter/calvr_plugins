@@ -71,10 +71,33 @@ class ValueRangeObject
         virtual void resetGraphDisplayRange() = 0;
 };
 
+class LogValueRangeObject
+{
+    public:
+        virtual float getGraphXMaxValue() = 0;
+        virtual float getGraphXMinValue() = 0;
+        virtual float getGraphZMaxValue() = 0;
+        virtual float getGraphZMinValue() = 0;
+
+        virtual float getGraphXDisplayRangeMax() = 0;
+        virtual float getGraphXDisplayRangeMin() = 0;
+        virtual float getGraphZDisplayRangeMax() = 0;
+        virtual float getGraphZDisplayRangeMin() = 0;
+
+        virtual void setGraphXDisplayRange(float min, float max) = 0;
+        virtual void setGraphZDisplayRange(float min, float max) = 0;
+        virtual void resetGraphDisplayRange() = 0;
+};
+
 class MicrobeSelectObject
 {
     public:
         virtual void selectMicrobes(std::string & group, std::vector<std::string> & keys) = 0;
 };
 
+class PatientSelectObject
+{
+    public:
+        virtual void selectPatients(std::vector<std::string> & patients) = 0;
+};
 #endif

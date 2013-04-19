@@ -34,18 +34,17 @@ GroupedScatterPlot::GroupedScatterPlot(float width, float height)
     _pointLineScale = ConfigManager::getFloat("value","Plugin.FuturePatient.PointLineScale",1.0);
     _masterPointScale = ConfigManager::getFloat("value","Plugin.FuturePatient.MasterPointScale",1.0);
 
+    _currentHoverIndex = -1;
+    _currentHoverOffset = -1;
+
     _root = new osg::Group();
     _bgScaleMT = new osg::MatrixTransform();
     _bgGeode = new osg::Geode();
-    _pointsGeode = new osg::Geode();
-    _pointsGeom = new osg::Geometry();
     _axisGeode = new osg::Geode();
     _dataGeode = new osg::Geode();
 
     _root->addChild(_bgScaleMT);
     _bgScaleMT->addChild(_bgGeode);
-    _root->addChild(_pointsGeode);
-    _pointsGeode->addDrawable(_pointsGeom);
     _root->addChild(_axisGeode);
     _root->addChild(_dataGeode);
 
@@ -57,6 +56,8 @@ GroupedScatterPlot::GroupedScatterPlot(float width, float height)
     _point = new osg::Point();
     stateset = _dataGeode->getOrCreateStateSet();
     stateset->setAttributeAndModes(_point,osg::StateAttribute::ON);
+    stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
+    stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
 
     _leftPaddingMult = 0.15;
     _rightPaddingMult = 0.05;
@@ -65,6 +66,7 @@ GroupedScatterPlot::GroupedScatterPlot(float width, float height)
     _labelPaddingMult = 0.06;
 
     makeBG();
+    makeHover();
 }
 
 GroupedScatterPlot::~GroupedScatterPlot()
@@ -88,7 +90,7 @@ void GroupedScatterPlot::setAxisTypes(GSPAxisType first, GSPAxisType second)
     update();
 }
 
-bool GroupedScatterPlot::addGroup(int index, std::vector<std::pair<float,float> > & data)
+bool GroupedScatterPlot::addGroup(int index, std::string indexLabel, std::vector<std::pair<float,float> > & data, std::vector<std::string> & dataLabels)
 {
     if(_plotData.find(index) != _plotData.end())
     {
@@ -102,6 +104,8 @@ bool GroupedScatterPlot::addGroup(int index, std::vector<std::pair<float,float> 
     }
 
     _plotData[index] = data;
+    _indexLabels[index] = indexLabel;
+    _pointLabels[index] = dataLabels;
 
     for(int i = 0; i < data.size(); ++i)
     {
@@ -180,6 +184,11 @@ bool GroupedScatterPlot::addGroup(int index, std::vector<std::pair<float,float> 
 	}
     }
 
+    _myFirstDisplayMin = _firstDisplayMin;
+    _myFirstDisplayMax = _firstDisplayMax;
+    _mySecondDisplayMin = _secondDisplayMin;
+    _mySecondDisplayMax = _secondDisplayMax;
+
     if(index > _maxIndex)
     {
 	_maxIndex = index;
@@ -202,6 +211,153 @@ void GroupedScatterPlot::setGLScale(float scale)
 {
     _glScale = scale;
     update();
+}
+
+void GroupedScatterPlot::setFirstDisplayRange(float min, float max)
+{
+    _firstDisplayMin = min;
+    _firstDisplayMax = max;
+    update();
+}
+
+void GroupedScatterPlot::setSecondDisplayRange(float min, float max)
+{
+    _secondDisplayMin = min;
+    _secondDisplayMax = max;
+    update();
+}
+
+void GroupedScatterPlot::resetDisplayRange()
+{
+    _firstDisplayMin = _myFirstDisplayMin;
+    _firstDisplayMax = _myFirstDisplayMax;
+    _secondDisplayMin = _mySecondDisplayMin;
+    _secondDisplayMax = _mySecondDisplayMax;
+    update();
+}
+
+bool GroupedScatterPlot::processClick(std::vector<std::string> & labels)
+{
+    if(_currentHoverIndex < 0 || _currentHoverOffset < 0)
+    {
+	return false;
+    }
+
+    labels.push_back(_pointLabels[_currentHoverIndex][_currentHoverOffset]);
+
+    return true;
+}
+
+void GroupedScatterPlot::selectPoints(std::vector<std::string> & labels)
+{
+    _selectedLabels = labels;
+
+    updateGraph();
+}
+
+void GroupedScatterPlot::setHover(osg::Vec3 intersect)
+{
+    if(!_hoverGeode || !_dataGeode || !_dataGeode->getNumDrawables())
+    {
+	return;
+    }
+
+    int index = -1;
+    int offset = -1;
+
+    int pointIndex = -1;
+
+    std::list<std::pair<int,int> >::iterator it = _pointMapping.begin();
+
+    osg::Geometry * geom = dynamic_cast<osg::Geometry*>(_dataGeode->getDrawable(0));
+
+    if(!geom)
+    {
+	std::cerr << "Invalid geometry." << std::endl;
+	return;
+    }
+
+    osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(geom->getVertexArray());
+
+    if(!verts)
+    {
+	std::cerr << "Invalid point array." << std::endl;
+	return;
+    }
+
+    // min distance^2
+    float distance = std::min(_width,_height)*0.04;
+    distance *= distance;
+
+    for(int i = 0; i < verts->size(); ++i, ++it)
+    {
+	float pointDist2 = (intersect.x()-verts->at(i).x())*(intersect.x()-verts->at(i).x()) + (intersect.z()-verts->at(i).z())*(intersect.z()-verts->at(i).z());
+	if(pointDist2 < distance)
+	{
+	    distance = pointDist2;
+	    index = it->first;
+	    offset = it->second;
+	    pointIndex = i;
+	}
+    }
+
+    if(index < 0 || offset < 0)
+    {
+	clearHoverText();
+    }
+    else if(index != _currentHoverIndex || offset != _currentHoverOffset)
+    {
+	std::stringstream ss;
+	ss << "Group: " << _indexLabels[index] << std::endl;
+	ss << _pointLabels[index][offset] << std::endl;
+	ss << "Value X: " << _plotData[index][offset].first << " Y: " << _plotData[index][offset].second;
+
+	_hoverText->setCharacterSize(1.0);
+	_hoverText->setText(ss.str());
+	_hoverText->setAlignment(osgText::Text::LEFT_TOP);
+	osg::BoundingBox bb = _hoverText->getBound();
+	float csize = 150.0 / (bb.zMax() - bb.zMin());
+	_hoverText->setCharacterSize(csize);
+	_hoverText->setPosition(osg::Vec3(verts->at(pointIndex).x(),-2.5,verts->at(pointIndex).z()));
+
+	float bgheight = (bb.zMax() - bb.zMin()) * csize;
+	float bgwidth = (bb.xMax() - bb.xMin()) * csize;
+	osg::Vec3Array * hverts = dynamic_cast<osg::Vec3Array*>(_hoverBGGeom->getVertexArray());
+
+	if(verts)
+	{
+	    hverts->at(0) = osg::Vec3(verts->at(pointIndex).x()+bgwidth,-2,verts->at(pointIndex).z()-bgheight);
+	    hverts->at(1) = osg::Vec3(verts->at(pointIndex).x()+bgwidth,-2,verts->at(pointIndex).z());
+	    hverts->at(2) = osg::Vec3(verts->at(pointIndex).x(),-2,verts->at(pointIndex).z());
+	    hverts->at(3) = osg::Vec3(verts->at(pointIndex).x(),-2,verts->at(pointIndex).z()-bgheight);
+	    hverts->dirty();
+	    _hoverBGGeom->getBound();
+	}
+
+	_currentHoverIndex = index;
+	_currentHoverOffset = offset;
+
+	if(!_hoverGeode->getNumParents())
+	{
+	    _root->addChild(_hoverGeode);
+	}
+    }
+}
+
+void GroupedScatterPlot::clearHoverText()
+{
+    if(!_hoverGeode)
+    {
+	return;
+    }
+
+    _currentHoverIndex = -1;
+    _currentHoverOffset = -1;
+
+    if(_hoverGeode->getNumParents())
+    {
+	_root->removeChild(_hoverGeode);
+    }
 }
 
 void GroupedScatterPlot::makeBG()
@@ -243,6 +399,25 @@ void GroupedScatterPlot::makeBG()
     _bgGeode->addDrawable(geom);
 }
 
+void GroupedScatterPlot::makeHover()
+{
+    _hoverGeode = new osg::Geode();
+    _hoverBGGeom = new osg::Geometry();
+    _hoverBGGeom->setUseDisplayList(false);
+    _hoverText = makeText("",osg::Vec4(1,1,1,1));
+    _hoverGeode->addDrawable(_hoverBGGeom);
+    _hoverGeode->addDrawable(_hoverText);
+
+    osg::Vec3Array * verts = new osg::Vec3Array(4);
+    osg::Vec4Array * colors = new osg::Vec4Array(1);
+    colors->at(0) = osg::Vec4(0,0,0,1);
+
+    _hoverBGGeom->setVertexArray(verts);
+    _hoverBGGeom->setColorArray(colors);
+    _hoverBGGeom->setColorBinding(osg::Geometry::BIND_OVERALL);
+    _hoverBGGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
+    _hoverBGGeom->getBound();
+}
 
 void GroupedScatterPlot::update()
 {
@@ -279,10 +454,10 @@ void GroupedScatterPlot::updateAxis()
 	float csize1,csize2;
 
 	osg::BoundingBox bb = text->getBound();
-	csize1 = (0.90*_width) / (bb.xMax() - bb.xMin());
+	csize1 = (_graphRight-_graphLeft) / (bb.xMax() - bb.xMin());
 	csize2 = (0.90*_height*_topPaddingMult) / (bb.zMax() - bb.zMin());
 	text->setCharacterSize(std::min(csize1,csize2));
-	text->setPosition(osg::Vec3(0,0,(_height/2.0)-(0.5*_topPaddingMult*_height)));
+	text->setPosition(osg::Vec3(_graphLeft + (_graphRight-_graphLeft)/2.0,0,(_height/2.0)-(0.5*_topPaddingMult*_height)));
 
 	//std::cerr << "Made title text: " << _title << " csize1: " << csize1 << " csize2: " << csize2 << std::endl;
 
@@ -376,7 +551,10 @@ void GroupedScatterPlot::updateAxis()
 		osg::BoundingBox testbb = testText->getBound();
 		float testHeight = testbb.zMax() - testbb.zMin();
 
-		tickCharacterSize = (labelBottomSize * 0.95 - 2.0 * tickSize) / testHeight;
+		float csize1, csize2;
+		csize1 = (labelBottomSize * 0.95 - 2.0 * tickSize) / testHeight;
+		csize2 = interval / (testbb.xMax()-testbb.xMin());
+		tickCharacterSize = std::min(csize1,csize2);
 	    }
 
 	    while(tickLoc >= _graphLeft)
@@ -518,6 +696,8 @@ void GroupedScatterPlot::updateGraph()
     }
 
     _dataGeode->removeDrawables(0,_dataGeode->getNumDrawables());
+    clearHoverText();
+    _pointMapping.clear();
 
     osg::Geometry * geom = new osg::Geometry();
 
@@ -529,6 +709,9 @@ void GroupedScatterPlot::updateGraph()
     geom->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
     geom->setUseDisplayList(false);
     geom->setUseVertexBufferObjects(true);
+
+    float selectedAlpha = 1.0;
+    float unselectedAlpha = 0.3;
 
     float firstLogMin = log10(_firstDisplayMin);
     float firstLogMax = log10(_firstDisplayMax);
@@ -599,8 +782,37 @@ void GroupedScatterPlot::updateGraph()
 
 	    if(addPoint)
 	    {
-		verts->push_back(osg::Vec3(pointX,0,pointZ));
+		if(!_selectedLabels.size())
+		{
+		    color.w() = 1.0;
+		    verts->push_back(osg::Vec3(pointX,0,pointZ));
+		}
+		else
+		{
+		    bool selected = false;
+		    for(int j = 0; j < _selectedLabels.size(); ++j)
+		    {
+			if(_pointLabels[it->first][i] == _selectedLabels[j])
+			{
+			    selected = true;
+			}
+		    }
+
+		    if(selected)
+		    {
+			color.w() = selectedAlpha;
+			verts->push_back(osg::Vec3(pointX,-0.1,pointZ));
+		    }
+		    else
+		    {
+			color.w() = unselectedAlpha;
+			verts->push_back(osg::Vec3(pointX,0,pointZ));
+		    }
+		}
+
 		colors->push_back(color);
+		//save group and position
+		_pointMapping.push_back(std::pair<int,int>(it->first,i));
 	    }
 	}
     }

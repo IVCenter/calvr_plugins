@@ -1,6 +1,10 @@
 #include "MicrobeScatterGraphObject.h"
+#include "GraphLayoutObject.h"
 
 #include <cvrKernel/ComController.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrInput/TrackingManager.h>
+#include <cvrUtil/OsgMath.h>
 
 #include <iostream>
 #include <sstream>
@@ -12,6 +16,8 @@ MicrobeScatterGraphObject::MicrobeScatterGraphObject(mysqlpp::Connection * conn,
 {
     _graph = new GroupedScatterPlot(width,height);
     _conn = conn;
+
+    _desktopMode = ConfigManager::getBool("Plugin.FuturePatient.DesktopMode",false);
 
     setBoundsCalcMode(SceneObject::MANUAL);
     osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
@@ -43,6 +49,12 @@ bool MicrobeScatterGraphObject::setGraph(std::string title, std::string primaryP
 	sizes[i] = 0;
 	data[i] = NULL;
     }
+
+    std::vector<std::string> groupLabels;
+    groupLabels.push_back("Smarr");
+    groupLabels.push_back("Crohns");
+    groupLabels.push_back("UC");
+    groupLabels.push_back("Healthy");
 
     if(ComController::instance()->isMaster())
     {
@@ -135,16 +147,19 @@ bool MicrobeScatterGraphObject::setGraph(std::string title, std::string primaryP
     for(int i = 0; i < numGroups; ++i)
     {
 	std::vector<std::pair<float,float> > dataList;
+	std::vector<std::string> labels;
 	for(int j = 0; j < sizes[i]; ++j)
 	{
 	    if(data[i][j].firstValue > 0.0 && data[i][j].secondValue > 0.0)
 	    {
 		dataList.push_back(std::pair<float,float>(data[i][j].firstValue,data[i][j].secondValue));
+		//TODO add timestamp
+		labels.push_back(data[i][j].name);
 	    }
 	}
 	if(dataList.size())
 	{
-	    _graph->addGroup(i,dataList);
+	    _graph->addGroup(i,groupLabels[i],dataList,labels);
 	}
     }
 
@@ -169,3 +184,122 @@ void MicrobeScatterGraphObject::setGraphSize(float width, float height)
 
     _graph->setDisplaySize(width,height);
 }
+
+void MicrobeScatterGraphObject::selectPatients(std::vector<std::string> & patients)
+{
+    _graph->selectPoints(patients);
+}
+
+float MicrobeScatterGraphObject::getGraphXMaxValue()
+{
+    return _graph->getFirstMax();
+}
+
+float MicrobeScatterGraphObject::getGraphXMinValue()
+{
+    return _graph->getFirstMin();
+}
+
+float MicrobeScatterGraphObject::getGraphZMaxValue()
+{
+    return _graph->getSecondMax();
+}
+
+float MicrobeScatterGraphObject::getGraphZMinValue()
+{
+    return _graph->getSecondMin();
+}
+
+float MicrobeScatterGraphObject::getGraphXDisplayRangeMax()
+{
+    return _graph->getFirstDisplayMax();
+}
+
+float MicrobeScatterGraphObject::getGraphXDisplayRangeMin()
+{
+    return _graph->getFirstDisplayMin();
+}
+
+float MicrobeScatterGraphObject::getGraphZDisplayRangeMax()
+{
+    return _graph->getSecondDisplayMax();
+}
+
+float MicrobeScatterGraphObject::getGraphZDisplayRangeMin()
+{
+    return _graph->getSecondDisplayMin();
+}
+
+void MicrobeScatterGraphObject::setGraphXDisplayRange(float min, float max)
+{
+    _graph->setFirstDisplayRange(min,max);
+}
+
+void MicrobeScatterGraphObject::setGraphZDisplayRange(float min, float max)
+{
+    _graph->setSecondDisplayRange(min,max);
+}
+
+void MicrobeScatterGraphObject::resetGraphDisplayRange()
+{
+    _graph->resetDisplayRange();
+}
+
+bool MicrobeScatterGraphObject::processEvent(cvr::InteractionEvent * ie)
+{
+    if(ie->asTrackedButtonEvent() && ie->asTrackedButtonEvent()->getButton() == 0 && (ie->getInteraction() == BUTTON_DOWN || ie->getInteraction() == BUTTON_DOUBLE_CLICK))
+    {
+	GraphLayoutObject * layout = dynamic_cast<GraphLayoutObject*>(_parent);
+	if(!layout)
+	{
+	    return false;
+	}
+
+	std::vector<std::string> selectedPatients;
+
+	bool clickUsed = false;
+	if(_graph->processClick(selectedPatients))
+	{
+	    clickUsed = true;
+	}
+
+	layout->selectPatients(selectedPatients);
+	if(clickUsed)
+	{
+	    return true;
+	}
+    }
+
+    return TiledWallSceneObject::processEvent(ie);
+}
+
+void MicrobeScatterGraphObject::updateCallback(int handID, const osg::Matrix & mat)
+{
+    if((_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::MOUSE) ||
+	(!_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER))
+    {
+	osg::Vec3 start, end(0,1000,0);
+	start = start * mat * getWorldToObjectMatrix();
+	end = end * mat * getWorldToObjectMatrix();
+
+	osg::Vec3 planePoint;
+	osg::Vec3 planeNormal(0,-1,0);
+	osg::Vec3 intersect;
+	float w;
+
+	if(linePlaneIntersectionRef(start,end,planePoint,planeNormal,intersect,w))
+	{
+	    _graph->setHover(intersect);
+	}
+    }
+}
+
+void MicrobeScatterGraphObject::leaveCallback(int handID)
+{
+    if((_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::MOUSE) ||
+	(!_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER))
+    {
+	_graph->clearHoverText();
+    }
+}
+
