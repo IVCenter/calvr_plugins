@@ -404,6 +404,8 @@ void GroupedScatterPlot::makeHover()
     _hoverGeode = new osg::Geode();
     _hoverBGGeom = new osg::Geometry();
     _hoverBGGeom->setUseDisplayList(false);
+    _hoverBGGeom->setUseVertexBufferObjects(true);
+    _hoverGeode->setCullingActive(false);
     _hoverText = makeText("",osg::Vec4(1,1,1,1));
     _hoverGeode->addDrawable(_hoverBGGeom);
     _hoverGeode->addDrawable(_hoverText);
