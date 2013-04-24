@@ -5,6 +5,11 @@
 AudioHandler::AudioHandler()
 {
     _isConnected = false;
+
+    std::string name = "Server name";
+    std::string dir = "/home/ryiah/Work/data/";
+//    ColliderPlusPlus::Client_Server * server = 
+//        new ColliderPlusPlus::Client_Server(name, "127.0.0.1", "1234", dir);
 }
 
 AudioHandler::~AudioHandler()
