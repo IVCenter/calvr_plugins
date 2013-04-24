@@ -39,10 +39,22 @@ class MicrobeScatterGraphObject : public LayoutTypeObject, public LogValueRangeO
         virtual void leaveCallback(int handID);
 
     protected:
+        void initData();
+
         mysqlpp::Connection * _conn;
         GroupedScatterPlot * _graph;
 
         bool _desktopMode;
+
+        static bool _dataInit;
+        struct DataEntry
+        {
+            std::string name;
+            time_t timestamp;
+            float value;
+        };
+        static std::vector<std::vector<struct DataEntry> > _data;
+        static std::map<std::string,int> _phylumIndexMap;
 };
 
 #endif

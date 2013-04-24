@@ -10,6 +10,13 @@
 #include <sstream>
 #include <cstring>
 
+// can be removed later
+#include <sys/time.h>
+
+bool MicrobeScatterGraphObject::_dataInit = false;
+std::vector<std::vector<struct MicrobeScatterGraphObject::DataEntry> > MicrobeScatterGraphObject::_data;
+std::map<std::string,int> MicrobeScatterGraphObject::_phylumIndexMap;
+
 using namespace cvr;
 
 MicrobeScatterGraphObject::MicrobeScatterGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
@@ -30,24 +37,19 @@ MicrobeScatterGraphObject::~MicrobeScatterGraphObject()
 
 bool MicrobeScatterGraphObject::setGraph(std::string title, std::string primaryPhylum, std::string secondaryPhylum)
 {
-    struct DataPoint
+    if(!_dataInit)
     {
-	char name[1024];
-	time_t timestamp;
-	float firstValue;
-	float secondValue;
-    };
+	initData();
+    }
 
-    // Data order: Smarr, CD, UC, HE
-
-    int numGroups = 4;
-    int * sizes = new int[numGroups];
-    struct DataPoint ** data = new struct DataPoint*[numGroups];
-
-    for(int i = 0; i < numGroups; ++i)
+    if(!_dataInit)
     {
-	sizes[i] = 0;
-	data[i] = NULL;
+	return false;
+    }
+
+    if(_phylumIndexMap.find(primaryPhylum) == _phylumIndexMap.end() || _phylumIndexMap.find(secondaryPhylum) == _phylumIndexMap.end())
+    {
+	return false;
     }
 
     std::vector<std::string> groupLabels;
@@ -56,123 +58,56 @@ bool MicrobeScatterGraphObject::setGraph(std::string title, std::string primaryP
     groupLabels.push_back("UC");
     groupLabels.push_back("Healthy");
 
-    if(ComController::instance()->isMaster())
-    {
-	if(_conn)
-	{
-	    std::string queryPart1 = "SELECT Patient.last_name, unix_timestamp(Microbe_Measurement.timestamp) as timestamp, sum(Microbe_Measurement.value) as value FROM Microbe_Measurement INNER JOIN Patient ON Microbe_Measurement.patient_id = Patient.patient_id AND Patient.last_name regexp '";
-	    std::string queryPart2 = "' INNER JOIN Microbes ON Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id WHERE Microbes.phylum = '";
-	    std::string queryPart3 = "' GROUP BY Patient.last_name, Microbe_Measurement.timestamp ORDER BY Patient.last_name, Microbe_Measurement.timestamp;";
-	    
-	    for(int i = 0; i < numGroups; ++i)
-	    {
-		std::string regexp = "None";
-
-		switch(i)
-		{
-		    case 0:
-			regexp = "^Smarr";
-			break;
-		    case 1:
-			regexp = "^CD-";
-			break;
-		    case 2:
-			regexp = "^UC-";
-			break;
-		    case 3:
-			regexp = "^HE-";
-			break;
-		    default:
-			break;
-		}
-
-		std::stringstream queryPriSS, querySecSS;
-		queryPriSS << queryPart1 << regexp << queryPart2 << primaryPhylum << queryPart3;
-		querySecSS << queryPart1 << regexp << queryPart2 << secondaryPhylum << queryPart3;
-
-		mysqlpp::Query queryPri = _conn->query(queryPriSS.str().c_str());
-		mysqlpp::Query querySec = _conn->query(querySecSS.str().c_str());
-		mysqlpp::StoreQueryResult resPri = queryPri.store();
-		mysqlpp::StoreQueryResult resSec = querySec.store();
-
-		if(resPri.num_rows() == resSec.num_rows())
-		{
-		    sizes[i] = resPri.num_rows();
-
-		    if(resPri.num_rows())
-		    {
-			data[i] = new struct DataPoint[resPri.num_rows()];
-			for(int j = 0; j < resPri.num_rows(); ++j)
-			{
-			    strncpy(data[i][j].name,resPri[j]["last_name"].c_str(),1023);
-			    data[i][j].timestamp = atol(resPri[j]["timestamp"].c_str());
-			    data[i][j].firstValue = atof(resPri[j]["value"].c_str());
-			    data[i][j].secondValue = atof(resSec[j]["value"].c_str());
-			}
-		    }
-		}
-		else
-		{
-		    std::cerr << "Number of rows do not match!?" << std::endl;
-		}
-	    }
-	}
-
-	ComController::instance()->sendSlaves(sizes,sizeof(int)*4);
-	for(int i = 0; i < numGroups; ++i)
-	{
-	    if(sizes[i])
-	    {
-		ComController::instance()->sendSlaves(data[i],sizeof(struct DataPoint)*sizes[i]);
-	    }
-	}
-    }
-    else
-    {
-	ComController::instance()->readMaster(sizes,sizeof(int)*4);
-
-	for(int i = 0; i < numGroups; ++i)
-	{
-	    if(sizes[i])
-	    {
-		data[i] = new struct DataPoint[sizes[i]];
-		ComController::instance()->readMaster(data[i],sizeof(struct DataPoint)*sizes[i]);
-	    }
-	}
-    }
+    std::vector<std::string> matchList;
+    matchList.push_back("Smarr");
+    matchList.push_back("CD-");
+    matchList.push_back("UC-");
+    matchList.push_back("HE-");
 
     _graph->setLabels(title,primaryPhylum,secondaryPhylum);
     _graph->setAxisTypes(GSP_LOG,GSP_LOG);
 
-    for(int i = 0; i < numGroups; ++i)
+    for(int i = 0; i < groupLabels.size(); ++i)
     {
-	std::vector<std::pair<float,float> > dataList;
-	std::vector<std::string> labels;
-	for(int j = 0; j < sizes[i]; ++j)
+	std::map<std::string,std::pair<float,float> > groupDataMap;
+
+	int index = _phylumIndexMap[primaryPhylum];
+
+	for(int j = 0; j < _data[index].size(); ++j)
 	{
-	    if(data[i][j].firstValue > 0.0 && data[i][j].secondValue > 0.0)
+	    if(!strncmp((char*)_data[index][j].name.c_str(),matchList[i].c_str(),matchList[i].size()))
 	    {
-		dataList.push_back(std::pair<float,float>(data[i][j].firstValue,data[i][j].secondValue));
-		//TODO add timestamp
-		labels.push_back(data[i][j].name);
+		std::string label = _data[index][j].name + " - " + ctime(&_data[index][j].timestamp);
+		groupDataMap[label].first = _data[index][j].value;
 	    }
 	}
-	if(dataList.size())
+	
+	index = _phylumIndexMap[secondaryPhylum];
+
+	for(int j = 0; j < _data[index].size(); ++j)
 	{
-	    _graph->addGroup(i,groupLabels[i],dataList,labels);
+	    if(!strncmp((char*)_data[index][j].name.c_str(),matchList[i].c_str(),matchList[i].size()))
+	    {
+		std::string label = _data[index][j].name + " - " + ctime(&_data[index][j].timestamp);
+		groupDataMap[label].second = _data[index][j].value;
+	    }
 	}
+
+	std::vector<std::pair<float,float> > dataList;
+	std::vector<std::string> labels;
+	for(std::map<std::string,std::pair<float,float> >::iterator it = groupDataMap.begin(); it != groupDataMap.end(); ++it)
+	{
+	    if(it->second.first > 0.0 && it->second.second > 0.0)
+	    {
+		labels.push_back(it->first);
+		dataList.push_back(it->second);
+	    }
+	}
+
+	_graph->addGroup(i,groupLabels[i],dataList,labels);
     }
 
     addChild(_graph->getRootNode());
-
-    for(int i = 0; i < numGroups; ++i)
-    {
-	if(data[i])
-	{
-	    delete[] data[i];
-	}
-    }
-    delete[] data;
 
     return true;
 }
@@ -303,3 +238,179 @@ void MicrobeScatterGraphObject::leaveCallback(int handID)
     }
 }
 
+void MicrobeScatterGraphObject::initData()
+{
+    int numPhylum = 0;
+    struct phylumEntry
+    {
+	char name[1024];
+    };
+    struct phylumEntry * phylums = NULL;
+
+    int * orderSizes = NULL;
+    int orderTotal = 0;
+    struct orderEntry
+    {
+	char name[1024];
+	time_t timestamp;
+    };
+    struct orderEntry * order = NULL;
+
+    float * data = NULL;
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    std::string sizesQuery = "SELECT q.phylum, count(q.value) as count from (SELECT Microbes.phylum, Patient.last_name, unix_timestamp(Microbe_Measurement.timestamp) as timestamp, sum(Microbe_Measurement.value) as value FROM Microbe_Measurement INNER JOIN Patient ON Microbe_Measurement.patient_id = Patient.patient_id INNER JOIN Microbes ON Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id GROUP BY Patient.last_name, Microbe_Measurement.timestamp, Microbes.phylum ORDER BY Microbes.phylum, Patient.last_name, Microbe_Measurement.timestamp)q group by q.phylum order by q.phylum;";
+	    std::string orderQuery = "SELECT q.phylum, q.last_name, q.timestamp from (SELECT Microbes.phylum, Patient.last_name, unix_timestamp(Microbe_Measurement.timestamp) as timestamp, sum(Microbe_Measurement.value) as value FROM Microbe_Measurement INNER JOIN Patient ON Microbe_Measurement.patient_id = Patient.patient_id INNER JOIN Microbes ON Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id GROUP BY Patient.last_name, Microbe_Measurement.timestamp, Microbes.phylum ORDER BY Microbes.phylum, Patient.last_name, Microbe_Measurement.timestamp)q order by q.phylum, q.last_name, q.timestamp;";
+	    std::string query = "SELECT Microbes.phylum, Patient.last_name, unix_timestamp(Microbe_Measurement.timestamp) as timestamp, sum(Microbe_Measurement.value) as value FROM Microbe_Measurement INNER JOIN Patient ON Microbe_Measurement.patient_id = Patient.patient_id INNER JOIN Microbes ON Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id GROUP BY Patient.last_name, Microbe_Measurement.timestamp, Microbes.phylum ORDER BY Microbes.phylum, Patient.last_name, Microbe_Measurement.timestamp;";
+
+	    std::cerr << "Starting first query." << std::endl;
+
+	    mysqlpp::Query sQuery = _conn->query(sizesQuery.c_str());
+	    mysqlpp::StoreQueryResult sRes = sQuery.store();
+
+	    numPhylum = sRes.num_rows();
+
+	    std::cerr << "Num Phylum: " << numPhylum << std::endl;
+
+	    if(numPhylum)
+	    {
+		phylums = new struct phylumEntry[numPhylum];
+		orderSizes = new int[numPhylum];
+		for(int i = 0; i < numPhylum; ++i)
+		{
+		    strncpy(phylums[i].name,sRes[i]["phylum"].c_str(),1023);
+		    orderSizes[i] = atoi(sRes[i]["count"].c_str());
+		    orderTotal += orderSizes[i];
+		}
+
+		std::cerr << "OrderTotal: " << orderTotal << std::endl;
+
+		mysqlpp::Query oQuery = _conn->query(orderQuery.c_str());
+		mysqlpp::StoreQueryResult oRes = oQuery.store();
+
+		std::cerr << "Second done." << std::endl;
+
+		if(oRes.num_rows() == orderTotal)
+		{
+		    order = new struct orderEntry[orderTotal];
+		    for(int i = 0; i < orderTotal; ++i)
+		    {
+			strncpy(order[i].name,oRes[i]["last_name"].c_str(),1023);
+			order[i].timestamp = atol(oRes[i]["timestamp"].c_str());
+		    }
+		}
+		else
+		{
+		    std::cerr << "Number of order rows different than expected. Wanted: " << orderTotal << " Got: " << oRes.num_rows() << std::endl;
+		    orderTotal = 0;
+		}
+
+		std::cerr << "Last started." << std::endl;
+
+		mysqlpp::Query vQuery = _conn->query(query.c_str());
+		mysqlpp::StoreQueryResult vRes = vQuery.store();
+
+		std::cerr << "Last done." << std::endl;
+
+		if(vRes.num_rows() == orderTotal)
+		{
+		    data = new float[orderTotal];
+		    for(int i = 0; i < orderTotal; ++i)
+		    {
+			data[i] = atof(vRes[i]["value"].c_str());
+		    }
+		}
+		else
+		{
+		    std::cerr << "Number of values different than expected. Wanted: " << orderTotal << " Got: " << vRes.num_rows() << std::endl;
+		    orderTotal = 0;
+		}
+	    }
+	    else
+	    {
+		std::cerr << "No Phylum found." << std::endl;
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&numPhylum,sizeof(int));
+	ComController::instance()->sendSlaves(&orderTotal,sizeof(int));
+
+	if(numPhylum)
+	{
+	    ComController::instance()->sendSlaves(phylums,sizeof(struct phylumEntry)*numPhylum);
+	    ComController::instance()->sendSlaves(orderSizes,sizeof(int)*numPhylum);
+
+	    if(orderTotal)
+	    {
+		ComController::instance()->sendSlaves(order,sizeof(struct orderEntry)*orderTotal);
+		ComController::instance()->sendSlaves(data,sizeof(float)*orderTotal);
+	    }
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&numPhylum,sizeof(int));
+	ComController::instance()->readMaster(&orderTotal,sizeof(int));
+
+	if(numPhylum)
+	{
+	    phylums = new struct phylumEntry[numPhylum];
+	    orderSizes = new int[numPhylum];
+	    ComController::instance()->readMaster(phylums,sizeof(struct phylumEntry)*numPhylum);
+	    ComController::instance()->readMaster(orderSizes,sizeof(int)*numPhylum);
+
+	    if(orderTotal)
+	    {
+		order = new struct orderEntry[orderTotal];
+		data = new float[orderTotal];
+		ComController::instance()->readMaster(order,sizeof(struct orderEntry)*orderTotal);
+		ComController::instance()->readMaster(data,sizeof(float)*orderTotal);
+	    }
+	}
+    }
+
+    std::cerr << "Loading data." << std::endl;
+
+    if(numPhylum && orderTotal)
+    {
+	int offset = 0;
+	for(int i = 0; i < numPhylum; ++i)
+	{
+	    _phylumIndexMap[phylums[i].name] = i;
+	    _data.push_back(std::vector<struct DataEntry>());
+	    for(int j = 0; j < orderSizes[i]; ++j)
+	    {
+		struct DataEntry de;
+		de.name = order[offset+j].name;
+		de.timestamp = order[offset+j].timestamp;
+		de.value = data[offset+j];
+		_data.back().push_back(de);
+	    }
+	    offset += orderSizes[i];
+	}
+
+	_dataInit = true;
+    }
+
+    std::cerr << "Done." << std::endl;
+
+    if(phylums)
+    {
+	delete[] phylums;
+    }
+    if(orderSizes)
+    {
+	delete[] orderSizes;
+    }
+    if(order)
+    {
+	delete[] order;
+    }
+    if(data)
+    {
+	delete[] data;
+    }
+}
