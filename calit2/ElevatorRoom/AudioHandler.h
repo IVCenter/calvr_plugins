@@ -20,6 +20,7 @@
 // local includes
 #include "OSCPack.h"
 
+// #include <ColliderPlusPlus/Sound.hpp>
 class AudioHandler
 {
   public:
@@ -38,6 +39,7 @@ class AudioHandler
   protected:
     bool _isConnected;
     int _sock;
+    //ColliderPlusPlus::Sound * sound;
 };
 
 

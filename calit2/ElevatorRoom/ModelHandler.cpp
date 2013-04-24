@@ -29,6 +29,7 @@ ModelHandler::ModelHandler()
     _viewedDoor = 0;
     _lightColor = 0;
     _doorInView = false;
+    _totalAngle = 0;
 
     _colors.push_back(osg::Vec4(1, 1, 1, 1));   // WHITE
     _colors.push_back(osg::Vec4(1, 0, 0, 1));   // RED
@@ -102,6 +103,54 @@ void ModelHandler::update()
     {
         std::cout << "Door leaving view" << std::endl;
         _doorInView = false;
+    }
+
+
+    if (_turningLeft)
+    {
+        osg::Matrix objmat = PluginHelper::getObjectMatrix();
+        
+        float angle = -(M_PI / 4) / 10;
+        osg::Matrix turnMat;
+        turnMat.makeRotate(angle, osg::Vec3(0, 0, 1));
+
+        osg::Vec3 origin = _root->getMatrix().getTrans();
+
+        osg::Matrix m;
+        m = objmat * osg::Matrix::translate(-origin) * turnMat * 
+            osg::Matrix::translate(origin);
+
+        SceneManager::instance()->setObjectMatrix(m);
+
+        _totalAngle += angle;
+        if (_totalAngle < -M_PI / 4)
+        {
+            _turningLeft = false;
+            _totalAngle = 0;
+        }
+    }
+    if (_turningRight)
+    {
+        osg::Matrix objmat = PluginHelper::getObjectMatrix();
+        
+        float angle = (M_PI / 4) / 10;
+        osg::Matrix turnMat;
+        turnMat.makeRotate(angle, osg::Vec3(0, 0, 1));
+
+        osg::Vec3 origin = _root->getMatrix().getTrans();
+
+        osg::Matrix m;
+        m = objmat * osg::Matrix::translate(-origin) * turnMat * 
+            osg::Matrix::translate(origin);
+
+        SceneManager::instance()->setObjectMatrix(m);
+
+        _totalAngle += angle;
+        if (_totalAngle > M_PI / 4)
+        {
+            _turningRight = false;
+            _totalAngle = 0;
+        }
     }
 }
 
@@ -278,6 +327,7 @@ void ModelHandler::setLevel(string level)
 
 void ModelHandler::loadModels(osg::MatrixTransform * root)
 {
+    _root = root;
     if (root && _geoRoot)
     {
         root->addChild(_geoRoot.get());
@@ -1354,6 +1404,16 @@ float ModelHandler::getDoorDistance()
 bool ModelHandler::doorInView()
 {
     return _doorInView;
+}
+
+void ModelHandler::turnLeft()
+{
+    _turningLeft = true;
+}
+
+void ModelHandler::turnRight()
+{
+    _turningRight = true;
 }
 
 };

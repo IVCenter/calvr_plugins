@@ -627,6 +627,7 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
         {
             if (tie->getInteraction() == BUTTON_DOWN)
             {
+            /*
                 unsigned char c = 'j';
                 sendChar(c);
 
@@ -701,9 +702,13 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                         return true;
                     }
                 }
+                */
             }
             else if (tie->getInteraction() == BUTTON_DRAG)
             {
+                return true;
+                /*
+
                 if (!_rotateOnly)
                     return false;
 
@@ -758,6 +763,8 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                 SceneManager::instance()->setObjectMatrix(m);
 
                 return true;
+
+                */
             }
             else if (tie->getInteraction() == BUTTON_UP)
             {
@@ -765,18 +772,117 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
             }
             return true;
         }
+
+
+        // Shoot button
+        if(tie->getHand() == 0 && tie->getButton() == 0)
+        {
+            if (tie->getInteraction() == BUTTON_DOWN)
+            {
+                shoot();
+                return true;
+            }
+        }
+
+        // Left arrow on D-pad
+        if(tie->getHand() == 0 && tie->getButton() == 1)
+        {
+            if (tie->getInteraction() == BUTTON_DOWN)
+            {
+                turnLeft();
+                return true;
+            }
+        }
+
+        // Right arrow on D-pad
+        if(tie->getHand() == 0 && tie->getButton() == 2)
+        {
+            if (tie->getInteraction() == BUTTON_DOWN)
+            {
+                turnRight();
+                return true;
+            }
+        }
     }
 
     KeyboardInteractionEvent * kie = event->asKeyboardEvent();
     if (kie)
     {
-       /* if (kie->getInteraction() == KEY_UP && kie->getKey() == 'o')
+        if (kie->getInteraction() == KEY_UP && kie->getKey() == 65361)
         {
-            return true;
-        }*/
+            turnLeft();
+        }
+        if (kie->getInteraction() == KEY_UP && kie->getKey() == 65363)
+        {
+            turnRight();
+        }
+        if (kie->getInteraction() == KEY_UP && kie->getKey() == ' ')
+        {
+            shoot();
+        }
     }
 
     return true;
+}
+
+void ElevatorRoom::turnLeft()
+{
+    _modelHandler->turnLeft();
+}
+
+void ElevatorRoom::turnRight()
+{
+    _modelHandler->turnRight();
+}
+
+void ElevatorRoom::shoot()
+{
+    if (_phase == OPENINGDOOR || _phase == DOOROPEN || _phase == CLOSINGDOOR)
+    {
+        // intersect the character and door is still open
+        if (_audioHandler)
+        {
+            _audioHandler->playSound(LASER_OFFSET, "laser");
+        }
+        
+        // if haven't already hit the alien
+        if (_mode == ALIEN && !_hit)
+        {
+            if (_audioHandler)
+            {
+                _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
+            }
+
+            std::cout << "Hit!" << std::endl; 
+            _score++;
+            _modelHandler->setScore(_score);
+
+            unsigned char c = 'k';
+            sendChar(c);
+
+            std::cout << "Score: " << _score << std::endl;
+            _hit = true;
+        }
+        else if (_mode == ALLY && !_hit)
+        {
+            if (_audioHandler)
+            {
+                _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
+            }
+
+            unsigned char c = 'k';
+            sendChar(c);
+
+            std::cout << "Whoops!" << std::endl;
+            if (_score > 0)
+            {
+                _score--;
+            }
+            _modelHandler->setScore(_score);
+            std::cout << "Score: " << _score << std::endl;
+            _hit = true;
+        }
+    }
 }
 
 void ElevatorRoom::chooseGameParameters(int &door, Mode &mode, bool &switched)

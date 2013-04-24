@@ -56,6 +56,9 @@ class ModelHandler
         void closeDoor();
         void setAudioHandler(AudioHandler * handler);
 
+        void turnLeft();
+        void turnRight();
+
         void flashActiveLight();
         void flashCheckers();
         void flashAlien();
@@ -92,15 +95,16 @@ class ModelHandler
             _alienTex, _allyTex, _checkTex1, _checkTex2, _elevTex;
 
         osg::ref_ptr<osg::Geode> _activeObject;
-        osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry
+        osg::ref_ptr<osg::MatrixTransform> _geoRoot, _root; // root of all non-GUI plugin geometry
         osg::ref_ptr<osg::PositionAttitudeTransform> _crosshairPat;
         osg::ref_ptr<osgText::Text> _scoreText; // GUI to display current score
         std::string _dataDir;
         bool _loaded; // whether the model has finished loading
         float _doorDist; // distance doors are currently translated
         int _activeDoor, _viewedDoor;
+        float _totalAngle;
         int _lightColor;
-        bool _doorInView, _switched;
+        bool _doorInView, _switched, _turningLeft, _turningRight;
         Mode _mode;
 
         AudioHandler * _audioHandler;

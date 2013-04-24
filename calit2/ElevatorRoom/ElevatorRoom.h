@@ -93,6 +93,9 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         void chooseGameParameters(int &door, Mode &mode, bool &switched);
         void sendChar(unsigned char c);
         void dingTest();
+        void turnLeft();
+        void turnRight();
+        void shoot();
 
         int init_SPP(int port); 
         void close_SPP();
