@@ -25,6 +25,7 @@ WaterMaze::WaterMaze()
     mat.makeTranslate(0, -3000, -heightOffset);
     _geoRoot->setMatrix(mat);
     PluginHelper::getObjectsRoot()->addChild(_geoRoot);
+    _loaded = false;
 }
 
 WaterMaze::~WaterMaze()
@@ -79,7 +80,6 @@ bool WaterMaze::init()
         init_SPP(port);
     }
 
-    // Set up models
     widthTile = ConfigManager::getFloat("value", "Plugin.WaterMaze.WidthTile", 2000.0);
     heightTile = ConfigManager::getFloat("value", "Plugin.WaterMaze.HeightTile", 2000.0);
     numWidth = ConfigManager::getFloat("value", "Plugin.WaterMaze.NumWidth", 10.0);
@@ -87,6 +87,13 @@ bool WaterMaze::init()
     depth = ConfigManager::getFloat("value", "Plugin.WaterMaze.Depth", 10.0);
     wallHeight = ConfigManager::getFloat("value", "Plugin.WaterMaze.WallHeight", 2500.0);
     gridWidth = ConfigManager::getFloat("value", "Plugin.WaterMaze.GridWidth", 5.0);
+
+    return true;
+}
+
+void WaterMaze::load()
+{
+    // Set up models
 
     // Tiles
     osg::Box * box = new osg::Box(osg::Vec3(0,0,0), widthTile, heightTile, depth);
@@ -230,8 +237,7 @@ bool WaterMaze::init()
     geode->addDrawable(sd);
     _geoRoot->addChild(geode);
 
-
-    return true;
+    _loaded = true;
 }
 
 void WaterMaze::preFrame()
@@ -301,12 +307,15 @@ void WaterMaze::menuCallback(MenuItem * item)
 {
     if(item == _loadButton)
     {
+        if (!_loaded)
+            load();
 
+        PluginHelper::getObjectsRoot()->addChild(_geoRoot);
     }
 
     else if (item == _clearButton)
     {
-
+        clear();
     }
 
     else if (item == _gridCB)
@@ -353,6 +362,7 @@ bool WaterMaze::processEvent(InteractionEvent * event)
 void WaterMaze::clear()
 {
     PluginHelper::getObjectsRoot()->removeChild(_geoRoot);
+    _loaded = false;
 }
 
 

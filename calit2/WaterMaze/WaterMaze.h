@@ -57,6 +57,7 @@ class WaterMaze: public cvr::CVRPlugin, public cvr::MenuCallback
         void menuCallback(cvr::MenuItem * item);
         void preFrame();
         bool processEvent(cvr::InteractionEvent * event);
+        void load();
 
     protected:
         void loadModels();
@@ -92,7 +93,7 @@ class WaterMaze: public cvr::CVRPlugin, public cvr::MenuCallback
             gridWidth;
         int _hiddenTile;
        
-        bool _debug; // turns on debug messages to command line
+        bool _debug, _loaded; // turns on debug messages to command line
 
         // USB to Serial communication
         HANDLE hSerial;
