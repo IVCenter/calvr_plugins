@@ -22,8 +22,11 @@ ElevatorRoom::ElevatorRoom()
     _loaded = false;
     _audioHandler = NULL;
     _sppConnected = false;
+    _valEvent = false;
     _geoRoot = new osg::MatrixTransform();
     _modelHandler = new ModelHandler();
+    _valEventTime = 0;
+    _valEventCutoff = 0.5;
 }
 
 ElevatorRoom::~ElevatorRoom()
@@ -63,7 +66,7 @@ bool ElevatorRoom::init()
     for(int i = 0; i < tagList.size(); i++)
     {
         std::string tag = "Plugin.ElevatorRoom.Levels." + tagList[i];
-        std::cout << tagList[i] << std::endl;;
+        //std::cout << tagList[i] << std::endl;;
         
         cvr::MenuCheckbox * cb = new cvr::MenuCheckbox(tagList[i], false);
         _levelMap[tagList[i]] = cb;
@@ -117,7 +120,7 @@ bool ElevatorRoom::init()
     _pauseTime = -1;
     _mode = NONE;
     _phase = PAUSE;
-    _activeDoor = -1;
+    _activeDoor = 0;
     _score = 0;
     _hit = false;
 
@@ -618,12 +621,43 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
 {
     if (!_loaded)
         return false;
+    ValuatorInteractionEvent * vie = event->asValuatorEvent();
+    if (vie)
+    {
+        //std::cout << "Valuator: " << vie->getValuator() << std::endl;
+
+        // Left 
+        if(vie->getHand() == 0 && vie->getValuator() == 0)
+        {
+            //std::cout << vie->getValue() << std::endl;
+            if (vie->getValue() == -1 && !_valEvent)
+            {
+                turnLeft();
+                _valEvent = true;
+                _valEventTime = PluginHelper::getProgramDuration();
+                return true;
+            }
+            else if (vie->getValue() == 1 && !_valEvent)
+            {
+                turnRight();
+                _valEvent = true;
+                _valEventTime = PluginHelper::getProgramDuration();
+                return true;
+            }
+            else if (PluginHelper::getProgramDuration() - _valEventTime > _valEventCutoff)
+            {
+                _valEvent = false;
+                return true;
+            }
+        }
+    }
+
 
     TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
-
+    
     if (tie)
     {
-        if(tie->getHand() == 0 && tie->getButton() == 0)
+        if(0)//tie->getHand() == 0 && tie->getButton() == 0)
         {
             if (tie->getInteraction() == BUTTON_DOWN)
             {
@@ -773,9 +807,8 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
             return true;
         }
 
-
         // Shoot button
-        if(tie->getHand() == 0 && tie->getButton() == 0)
+        if(tie->getHand() == 0 && tie->getButton() == 1)
         {
             if (tie->getInteraction() == BUTTON_DOWN)
             {
@@ -783,7 +816,8 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                 return true;
             }
         }
-
+        
+        /*
         // Left arrow on D-pad
         if(tie->getHand() == 0 && tie->getButton() == 1)
         {
@@ -803,6 +837,7 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                 return true;
             }
         }
+        */
     }
 
     KeyboardInteractionEvent * kie = event->asKeyboardEvent();

@@ -26,7 +26,7 @@ ModelHandler::ModelHandler()
     _loaded = false;
     _doorDist = 0;
     _activeDoor = 0;
-    _viewedDoor = 0;
+    _viewedDoor = 4;
     _lightColor = 0;
     _doorInView = false;
     _totalAngle = 0;
@@ -398,7 +398,8 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         
         if (_audioHandler)
         {
-            _audioHandler->loadSound(i + DING_OFFSET, dir, pos);
+            _audioHandler->loadSound(i + DING_OFFSET, i * angle);
+            _audioHandler->loadSound(i + EXPLOSION_OFFSET, i * angle);
         }
 
     }
@@ -460,7 +461,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
    
         if (_audioHandler)
         {
-            _audioHandler->loadSound(i + EXPLOSION_OFFSET, dir, pos);
+//            _audioHandler->loadSound(i + EXPLOSION_OFFSET, i * angle);
         }
    
     }   
@@ -1409,11 +1410,39 @@ bool ModelHandler::doorInView()
 void ModelHandler::turnLeft()
 {
     _turningLeft = true;
+    _viewedDoor = (_viewedDoor + 1) % NUM_DOORS;
+
+    if (_viewedDoor == -1) _viewedDoor += NUM_DOORS;
+
+    
+    float angle = 2 * M_PI / NUM_DOORS;
+    float offset = (_viewedDoor - 4);
+    for (int i = 0; i < NUM_DOORS; ++i)
+    {
+        if (_audioHandler)
+        {
+            _audioHandler->update(i + DING_OFFSET, (i - offset) * angle);
+            _audioHandler->update(i + EXPLOSION_OFFSET, (i - offset) * angle);
+        }
+    }
 }
 
 void ModelHandler::turnRight()
 {
     _turningRight = true;
+    _viewedDoor = (_viewedDoor - 1) % NUM_DOORS;
+    if (_viewedDoor == -1) _viewedDoor += NUM_DOORS;
+
+    float angle = 2 * M_PI / NUM_DOORS;
+    float offset = (_viewedDoor - 4);
+    for (int i = 0; i < NUM_DOORS; ++i)
+    {
+        if (_audioHandler)
+        {
+            _audioHandler->update(i + DING_OFFSET, (i - offset) * angle);
+            _audioHandler->update(i + EXPLOSION_OFFSET, (i - offset) * angle);
+        }
+    }
 }
 
 };
