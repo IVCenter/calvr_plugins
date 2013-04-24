@@ -1,5 +1,6 @@
 #include "ModelHandler.h"
 
+
 using namespace cvr;
 using namespace osg;
 using namespace std;
@@ -7,8 +8,13 @@ using namespace std;
 namespace ElevatorRoom
 {
 
+#define DING_OFFSET 1
+#define EXPLOSION_OFFSET 9
+#define LASER_OFFSET 17
+
 ModelHandler::ModelHandler()
 {
+    _audioHandler = NULL;
     _activeObject = NULL;
     _geoRoot = new osg::MatrixTransform();
     _crosshairPat = NULL;
@@ -20,6 +26,7 @@ ModelHandler::ModelHandler()
     _loaded = false;
     _doorDist = 0;
     _activeDoor = 0;
+    _viewedDoor = 0;
     _lightColor = 0;
     _doorInView = false;
 
@@ -48,6 +55,14 @@ ModelHandler::ModelHandler()
 ModelHandler::~ModelHandler()
 {
 
+}
+
+void ModelHandler::setAudioHandler(AudioHandler * handler)
+{
+    if (ComController::instance()->isMaster())
+    {
+        _audioHandler = handler;
+    }
 }
 
 void ModelHandler::update()
@@ -243,18 +258,18 @@ void ModelHandler::setLevel(string level)
     }
 
     // Doors 
+    tex = new osg::Texture2D();
+    img = osgDB::readImageFile(_dataDir + _doorTex);
+    if (img)
+    {
+        tex->setImage(img);
+        tex->setResizeNonPowerOfTwoHint(false);
+        tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+        tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+    }
+
     for (geoIt = _doors.begin(); geoIt != _doors.end(); ++geoIt)
     {
-        tex = new osg::Texture2D();
-        img = osgDB::readImageFile(_dataDir + _doorTex);
-        if (img)
-        {
-            tex->setImage(img);
-            tex->setResizeNonPowerOfTwoHint(false);
-            tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
-            tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
-        }
-    
         osg::ref_ptr<osg::StateSet> state;
         state = (*geoIt)->getOrCreateStateSet();
         state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
@@ -330,12 +345,12 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         dir = pos - center;
 
         // 1 - 8 ding sounds
-/*        
+        
         if (_audioHandler)
         {
             _audioHandler->loadSound(i + DING_OFFSET, dir, pos);
         }
-*/
+
     }
     }
 
@@ -392,12 +407,12 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         osg::Vec3 dir = pos - osg::Vec3(0,0,0);
 
         // 9 - 16 explosion sounds
-   /*
+   
         if (_audioHandler)
         {
             _audioHandler->loadSound(i + EXPLOSION_OFFSET, dir, pos);
         }
-   */
+   
     }   
     }
 

@@ -3,7 +3,7 @@
 
 #include <cvrKernel/PluginHelper.h>
 #include <cvrConfig/ConfigManager.h>
-
+#include <cvrKernel/ComController.h>
 #include <osg/Geode>
 #include <osg/Geometry>
 #include <osg/Material>
@@ -14,6 +14,7 @@
 #include <osg/Texture2D>
 #include <osgText/Text>
 #include <osgDB/ReadFile>
+#include "AudioHandler.h"
 
 #define NUM_DOORS 8
 #define DOOR_SPEED 0.040
@@ -53,6 +54,7 @@ class ModelHandler
         void loadModels(osg::MatrixTransform* root);
         void openDoor();
         void closeDoor();
+        void setAudioHandler(AudioHandler * handler);
 
         void flashActiveLight();
         void flashCheckers();
@@ -96,10 +98,12 @@ class ModelHandler
         std::string _dataDir;
         bool _loaded; // whether the model has finished loading
         float _doorDist; // distance doors are currently translated
-        int _activeDoor;
+        int _activeDoor, _viewedDoor;
         int _lightColor;
         bool _doorInView, _switched;
         Mode _mode;
+
+        AudioHandler * _audioHandler;
 
         std::vector<osg::Vec4> _colors;
 

@@ -171,6 +171,7 @@ bool ElevatorRoom::init()
         _audioHandler->loadSound(0, headDir, headPos);
         // laser sound
         _audioHandler->loadSound(17, handDir, handPos);
+        _modelHandler->setAudioHandler(_audioHandler);
     }
     
 
@@ -428,6 +429,7 @@ void ElevatorRoom::preFrame()
             }
             _noResponse = true;
             _hit = false;
+            _flashCount = 0;
         }
         _modelHandler->closeDoor();
     }
