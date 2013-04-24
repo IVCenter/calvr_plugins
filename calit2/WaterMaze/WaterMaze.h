@@ -57,10 +57,13 @@ class WaterMaze: public cvr::CVRPlugin, public cvr::MenuCallback
         void menuCallback(cvr::MenuItem * item);
         void preFrame();
         bool processEvent(cvr::InteractionEvent * event);
+        void load();
 
     protected:
         void loadModels();
         void clear();
+        void reset();
+        void newHiddenTile();
 
         int init_SPP(int port); 
         void close_SPP();
@@ -80,7 +83,7 @@ class WaterMaze: public cvr::CVRPlugin, public cvr::MenuCallback
         static WaterMaze * _myPtr;
 
         cvr::SubMenu * _WaterMazeMenu;
-        cvr::MenuButton * _loadButton, * _clearButton;
+        cvr::MenuButton * _loadButton, * _clearButton, *_newTileButton;
         cvr::MenuCheckbox * _gridCB;
 
         osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry
@@ -92,7 +95,7 @@ class WaterMaze: public cvr::CVRPlugin, public cvr::MenuCallback
             gridWidth;
         int _hiddenTile;
        
-        bool _debug; // turns on debug messages to command line
+        bool _debug, _loaded; // turns on debug messages to command line
 
         // USB to Serial communication
         HANDLE hSerial;

@@ -25,6 +25,7 @@ WaterMaze::WaterMaze()
     mat.makeTranslate(0, -3000, -heightOffset);
     _geoRoot->setMatrix(mat);
     PluginHelper::getObjectsRoot()->addChild(_geoRoot);
+    _loaded = false;
 }
 
 WaterMaze::~WaterMaze()
@@ -51,7 +52,11 @@ bool WaterMaze::init()
     _clearButton->setCallback(this);
     _WaterMazeMenu->addItem(_clearButton);
 
-    _gridCB = new MenuCheckbox("Show Grid", true);
+    _newTileButton = new MenuButton("New Tile");
+    _newTileButton->setCallback(this);
+    _WaterMazeMenu->addItem(_newTileButton);
+
+    _gridCB = new MenuCheckbox("Show Grid", false);
     _gridCB->setCallback(this);
     _WaterMazeMenu->addItem(_gridCB);
 
@@ -79,7 +84,6 @@ bool WaterMaze::init()
         init_SPP(port);
     }
 
-    // Set up models
     widthTile = ConfigManager::getFloat("value", "Plugin.WaterMaze.WidthTile", 2000.0);
     heightTile = ConfigManager::getFloat("value", "Plugin.WaterMaze.HeightTile", 2000.0);
     numWidth = ConfigManager::getFloat("value", "Plugin.WaterMaze.NumWidth", 10.0);
@@ -87,6 +91,13 @@ bool WaterMaze::init()
     depth = ConfigManager::getFloat("value", "Plugin.WaterMaze.Depth", 10.0);
     wallHeight = ConfigManager::getFloat("value", "Plugin.WaterMaze.WallHeight", 2500.0);
     gridWidth = ConfigManager::getFloat("value", "Plugin.WaterMaze.GridWidth", 5.0);
+
+    return true;
+}
+
+void WaterMaze::load()
+{
+    // Set up models
 
     // Tiles
     osg::Box * box = new osg::Box(osg::Vec3(0,0,0), widthTile, heightTile, depth);
@@ -150,6 +161,7 @@ bool WaterMaze::init()
         geode->addDrawable(sd);
         _gridSwitch->addChild(geode);
     }
+    _gridSwitch->setAllChildrenOff();
     _geoRoot->addChild(_gridSwitch); 
 
 
@@ -164,8 +176,10 @@ bool WaterMaze::init()
                     wallHeight / 2);
     box = new osg::Box(pos, widthTile * numWidth, 4, wallHeight);
     sd = new osg::ShapeDrawable(box);
+    sd->setColor(osg::Vec4(1.0, 0.8, 0.8, 1));
     geode = new osg::Geode();
     geode->addDrawable(sd);
+    geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
     _geoRoot->addChild(geode);
      
     // near horizontal
@@ -174,8 +188,10 @@ bool WaterMaze::init()
                     wallHeight / 2);
     box = new osg::Box(pos, widthTile * numWidth, 4, wallHeight);
     sd = new osg::ShapeDrawable(box);
+    sd->setColor(osg::Vec4(1.0, 1.0, 0.8, 1));
     geode = new osg::Geode();
     geode->addDrawable(sd);
+    geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
     _geoRoot->addChild(geode);
 
     // left vertical
@@ -184,8 +200,10 @@ bool WaterMaze::init()
                     wallHeight/2);
     box = new osg::Box(pos, 4, heightTile * numHeight, wallHeight);
     sd = new osg::ShapeDrawable(box);
+    sd->setColor(osg::Vec4(0.8, 1.0, 0.8, 1));
     geode = new osg::Geode();
     geode->addDrawable(sd);
+    geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
     _geoRoot->addChild(geode);
 
     // right vertical
@@ -194,8 +212,10 @@ bool WaterMaze::init()
                     wallHeight/2);
     box = new osg::Box(pos, 4, heightTile * numHeight, wallHeight);
     sd = new osg::ShapeDrawable(box);
+    sd->setColor(osg::Vec4(0.8, 0.8, 1.0, 1));
     geode = new osg::Geode();
     geode->addDrawable(sd);
+    geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
     _geoRoot->addChild(geode);
 
     // ceiling
@@ -206,6 +226,7 @@ bool WaterMaze::init()
     sd = new osg::ShapeDrawable(box);
     geode = new osg::Geode();
     geode->addDrawable(sd);
+    geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
     _geoRoot->addChild(geode);
     
     // floor plane
@@ -230,8 +251,7 @@ bool WaterMaze::init()
     geode->addDrawable(sd);
     _geoRoot->addChild(geode);
 
-
-    return true;
+    _loaded = true;
 }
 
 void WaterMaze::preFrame()
@@ -265,7 +285,8 @@ void WaterMaze::preFrame()
         xmax = center[0] + widthTile/2;
         ymin = center[1] - heightTile/2;
         ymax = center[1] + heightTile/2;
-
+        
+        // Occupied tile
         if (pos[0] > xmin && pos[0] < xmax &&
             pos[1] > ymin && pos[1] < ymax)
         {
@@ -273,15 +294,18 @@ void WaterMaze::preFrame()
             it->second->setSingleChildOn(2);
             if (i == _hiddenTile)
             {
-                _hiddenTile = -1;
+                //_hiddenTile = -1;
+                it->second->setSingleChildOn(1);
             }
         }
+        // Unoccupied tile
         else
         {
             it->second->setSingleChildOn(0);
         }
-
-        if (i == _hiddenTile)
+        
+        // Hidden tile
+        if (0)//i == _hiddenTile)
         {
             it->second->setSingleChildOn(1);
         }
@@ -301,12 +325,20 @@ void WaterMaze::menuCallback(MenuItem * item)
 {
     if(item == _loadButton)
     {
+        if (!_loaded)
+            load();
 
+        PluginHelper::getObjectsRoot()->addChild(_geoRoot);
     }
 
     else if (item == _clearButton)
     {
+        clear();
+    }
 
+    else if (item == _newTileButton)
+    {
+        newHiddenTile();
     }
 
     else if (item == _gridCB)
@@ -353,9 +385,18 @@ bool WaterMaze::processEvent(InteractionEvent * event)
 void WaterMaze::clear()
 {
     PluginHelper::getObjectsRoot()->removeChild(_geoRoot);
+    _loaded = false;
 }
 
+void WaterMaze::reset()
+{
 
+}
+
+void WaterMaze::newHiddenTile()
+{
+    _hiddenTile = -1;
+}
 
 /*** Server Functions ***/
 

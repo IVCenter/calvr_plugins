@@ -93,6 +93,9 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         void chooseGameParameters(int &door, Mode &mode, bool &switched);
         void sendChar(unsigned char c);
         void dingTest();
+        void turnLeft();
+        void turnRight();
+        void shoot();
 
         int init_SPP(int port); 
         void close_SPP();
@@ -128,7 +131,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         float _avatarFlashPerSec, _lightFlashPerSec, _checkSpeed, _doorFlashSpeed;
         float _pauseMin, _pauseMax, _flashNeutralMin, _flashNeutralMax,
         _solidColorMin, _solidColorMax, _doorOpenMin, _doorOpenMax;
-
+        float _valEventTime, _valEventCutoff;
 
         float _modelScale; // scale of entire scene
         int _flashCount; // number of times active avatar has flashed
@@ -142,6 +145,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         bool _debug; // turns on debug messages to command line
         bool _connected; // for EOG syncer communication
         bool _soundEnabled;
+        bool _valEvent;
 
         Mode _mode; // which kind of avatar is currently active
         Phase _phase;

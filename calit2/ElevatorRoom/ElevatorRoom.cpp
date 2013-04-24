@@ -22,8 +22,11 @@ ElevatorRoom::ElevatorRoom()
     _loaded = false;
     _audioHandler = NULL;
     _sppConnected = false;
+    _valEvent = false;
     _geoRoot = new osg::MatrixTransform();
     _modelHandler = new ModelHandler();
+    _valEventTime = 0;
+    _valEventCutoff = 0.5;
 }
 
 ElevatorRoom::~ElevatorRoom()
@@ -63,7 +66,7 @@ bool ElevatorRoom::init()
     for(int i = 0; i < tagList.size(); i++)
     {
         std::string tag = "Plugin.ElevatorRoom.Levels." + tagList[i];
-        std::cout << tagList[i] << std::endl;;
+        //std::cout << tagList[i] << std::endl;;
         
         cvr::MenuCheckbox * cb = new cvr::MenuCheckbox(tagList[i], false);
         _levelMap[tagList[i]] = cb;
@@ -117,7 +120,7 @@ bool ElevatorRoom::init()
     _pauseTime = -1;
     _mode = NONE;
     _phase = PAUSE;
-    _activeDoor = -1;
+    _activeDoor = 0;
     _score = 0;
     _hit = false;
 
@@ -171,6 +174,7 @@ bool ElevatorRoom::init()
         _audioHandler->loadSound(0, headDir, headPos);
         // laser sound
         _audioHandler->loadSound(17, handDir, handPos);
+        _modelHandler->setAudioHandler(_audioHandler);
     }
     
 
@@ -428,6 +432,7 @@ void ElevatorRoom::preFrame()
             }
             _noResponse = true;
             _hit = false;
+            _flashCount = 0;
         }
         _modelHandler->closeDoor();
     }
@@ -616,15 +621,47 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
 {
     if (!_loaded)
         return false;
+    ValuatorInteractionEvent * vie = event->asValuatorEvent();
+    if (vie)
+    {
+        //std::cout << "Valuator: " << vie->getValuator() << std::endl;
+
+        // Left 
+        if(vie->getHand() == 0 && vie->getValuator() == 0)
+        {
+            //std::cout << vie->getValue() << std::endl;
+            if (vie->getValue() == -1 && !_valEvent)
+            {
+                turnLeft();
+                _valEvent = true;
+                _valEventTime = PluginHelper::getProgramDuration();
+                return true;
+            }
+            else if (vie->getValue() == 1 && !_valEvent)
+            {
+                turnRight();
+                _valEvent = true;
+                _valEventTime = PluginHelper::getProgramDuration();
+                return true;
+            }
+            else if (PluginHelper::getProgramDuration() - _valEventTime > _valEventCutoff)
+            {
+                _valEvent = false;
+                return true;
+            }
+        }
+    }
+
 
     TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
-
+    
     if (tie)
     {
-        if(tie->getHand() == 0 && tie->getButton() == 0)
+        if(0)//tie->getHand() == 0 && tie->getButton() == 0)
         {
             if (tie->getInteraction() == BUTTON_DOWN)
             {
+            /*
                 unsigned char c = 'j';
                 sendChar(c);
 
@@ -699,9 +736,13 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                         return true;
                     }
                 }
+                */
             }
             else if (tie->getInteraction() == BUTTON_DRAG)
             {
+                return true;
+                /*
+
                 if (!_rotateOnly)
                     return false;
 
@@ -756,6 +797,8 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                 SceneManager::instance()->setObjectMatrix(m);
 
                 return true;
+
+                */
             }
             else if (tie->getInteraction() == BUTTON_UP)
             {
@@ -763,18 +806,118 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
             }
             return true;
         }
+
+        // Shoot button
+        if(tie->getHand() == 0 && tie->getButton() == 1)
+        {
+            if (tie->getInteraction() == BUTTON_DOWN)
+            {
+                shoot();
+                return true;
+            }
+        }
+        
+        /*
+        // Left arrow on D-pad
+        if(tie->getHand() == 0 && tie->getButton() == 1)
+        {
+            if (tie->getInteraction() == BUTTON_DOWN)
+            {
+                turnLeft();
+                return true;
+            }
+        }
+
+        // Right arrow on D-pad
+        if(tie->getHand() == 0 && tie->getButton() == 2)
+        {
+            if (tie->getInteraction() == BUTTON_DOWN)
+            {
+                turnRight();
+                return true;
+            }
+        }
+        */
     }
 
     KeyboardInteractionEvent * kie = event->asKeyboardEvent();
     if (kie)
     {
-       /* if (kie->getInteraction() == KEY_UP && kie->getKey() == 'o')
+        if (kie->getInteraction() == KEY_UP && kie->getKey() == 65361)
         {
-            return true;
-        }*/
+            turnLeft();
+        }
+        if (kie->getInteraction() == KEY_UP && kie->getKey() == 65363)
+        {
+            turnRight();
+        }
+        if (kie->getInteraction() == KEY_UP && kie->getKey() == ' ')
+        {
+            shoot();
+        }
     }
 
     return true;
+}
+
+void ElevatorRoom::turnLeft()
+{
+    _modelHandler->turnLeft();
+}
+
+void ElevatorRoom::turnRight()
+{
+    _modelHandler->turnRight();
+}
+
+void ElevatorRoom::shoot()
+{
+    if (_phase == OPENINGDOOR || _phase == DOOROPEN || _phase == CLOSINGDOOR)
+    {
+        // intersect the character and door is still open
+        if (_audioHandler)
+        {
+            _audioHandler->playSound(LASER_OFFSET, "laser");
+        }
+        
+        // if haven't already hit the alien
+        if (_mode == ALIEN && !_hit)
+        {
+            if (_audioHandler)
+            {
+                _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
+            }
+
+            std::cout << "Hit!" << std::endl; 
+            _score++;
+            _modelHandler->setScore(_score);
+
+            unsigned char c = 'k';
+            sendChar(c);
+
+            std::cout << "Score: " << _score << std::endl;
+            _hit = true;
+        }
+        else if (_mode == ALLY && !_hit)
+        {
+            if (_audioHandler)
+            {
+                _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
+            }
+
+            unsigned char c = 'k';
+            sendChar(c);
+
+            std::cout << "Whoops!" << std::endl;
+            if (_score > 0)
+            {
+                _score--;
+            }
+            _modelHandler->setScore(_score);
+            std::cout << "Score: " << _score << std::endl;
+            _hit = true;
+        }
+    }
 }
 
 void ElevatorRoom::chooseGameParameters(int &door, Mode &mode, bool &switched)
