@@ -219,6 +219,7 @@ bool WaterMaze::init()
     sd = new osg::ShapeDrawable(box);
     geode = new osg::Geode();
     geode->addDrawable(sd);
+    geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
     _geoRoot->addChild(geode);
     
     // floor plane
