@@ -455,6 +455,7 @@ void MicrobeScatterGraphObject::makeSelect()
     _selectGeode = new osg::Geode();
     _selectGeom = new osg::Geometry();
     _selectGeode->addDrawable(_selectGeom);
+    _selectGeode->setCullingActive(false);
 
     osg::Vec3Array * verts = new osg::Vec3Array(16);
     osg::Vec4Array * colors = new osg::Vec4Array();
