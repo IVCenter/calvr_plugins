@@ -89,6 +89,7 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         cvr::MenuRangeValueCompact * _rowsRV;
         cvr::MenuRangeValueCompact * _widthRV;
         cvr::MenuRangeValueCompact * _heightRV;
+        cvr::MenuButton * _removeUnselected;
 
         int _activeHand;
         cvr::TrackerBase::TrackerType _activeHandType;

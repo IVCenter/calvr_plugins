@@ -4,6 +4,7 @@ SET(PLUGIN_HEADERS
     DataGraph.h
     GraphObject.h
     GraphLayoutObject.h
+    LayoutInterfaces.h
     ShapeTextureGenerator.h
     PointActions.h
     MicrobeGraphObject.h
@@ -24,6 +25,7 @@ ADD_LIBRARY(${LIB_NAME}
     DataGraph.cpp
     GraphObject.cpp
     GraphLayoutObject.cpp
+    LayoutInterfaces.cpp
     ShapeTextureGenerator.cpp
     PointActions.cpp
     MicrobeGraphObject.cpp

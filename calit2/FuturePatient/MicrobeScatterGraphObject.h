@@ -3,12 +3,15 @@
 
 #include <string>
 
+#include <osg/Geode>
+#include <osg/Geometry>
+
 #include <mysql++/mysql++.h>
 
 #include "LayoutInterfaces.h"
 #include "GroupedScatterPlot.h"
 
-class MicrobeScatterGraphObject : public LayoutTypeObject, public LogValueRangeObject, public PatientSelectObject
+class MicrobeScatterGraphObject : public LayoutTypeObject, public LogValueRangeObject, public PatientSelectObject, public SelectableObject
 {
     public:
         MicrobeScatterGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
@@ -38,8 +41,12 @@ class MicrobeScatterGraphObject : public LayoutTypeObject, public LogValueRangeO
         virtual void updateCallback(int handID, const osg::Matrix & mat);
         virtual void leaveCallback(int handID);
 
+        virtual void menuCallback(cvr::MenuItem * item);
+
     protected:
         void initData();
+        void makeSelect();
+        void updateSelect();
 
         mysqlpp::Connection * _conn;
         GroupedScatterPlot * _graph;
@@ -55,6 +62,9 @@ class MicrobeScatterGraphObject : public LayoutTypeObject, public LogValueRangeO
         };
         static std::vector<std::vector<struct DataEntry> > _data;
         static std::map<std::string,int> _phylumIndexMap;
+
+        osg::ref_ptr<osg::Geode> _selectGeode;
+        osg::ref_ptr<osg::Geometry> _selectGeom;
 };
 
 #endif

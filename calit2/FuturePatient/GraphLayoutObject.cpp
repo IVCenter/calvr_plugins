@@ -42,6 +42,10 @@ GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std
     _minmaxButton->setCallback(this);
     addMenuItem(_minmaxButton);
 
+    _removeUnselected = new MenuButton("Remove Unselected");
+    _removeUnselected->setCallback(this);
+    addMenuItem(_removeUnselected);
+
     _activeHand = -1;
     _activeHandType = TrackerBase::INVALID;
 
@@ -679,6 +683,27 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	    removeGraphObject(it->first);
 	    return;
 	}
+    }
+
+    if(item == _removeUnselected)
+    {
+	std::vector<LayoutTypeObject*> removeList;
+
+	for(int i = 0; i < _objectList.size(); ++i)
+	{
+	    SelectableObject * so = dynamic_cast<SelectableObject*>(_objectList[i]);
+	    if(!so || !so->isSelected())
+	    {
+		removeList.push_back(_objectList[i]);
+	    }
+	}
+
+	for(int i = 0; i < removeList.size(); ++i)
+	{
+	    removeGraphObject(removeList[i]);
+	}
+
+	return;
     }
 
     TiledWallSceneObject::menuCallback(item);

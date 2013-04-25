@@ -2,6 +2,9 @@
 #define FP_LAYOUT_INTERFACES_H
 
 #include <cvrKernel/TiledWallSceneObject.h>
+#include <cvrMenu/MenuCheckbox.h>
+
+#include <map>
 
 class LayoutTypeObject : public cvr::TiledWallSceneObject
 {
@@ -46,6 +49,26 @@ class LayoutTypeObject : public cvr::TiledWallSceneObject
         {
             return true;
         }
+};
+
+class LayoutLineObject : public cvr::TiledWallSceneObject
+{
+    public:
+        LayoutLineObject(std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false) : TiledWallSceneObject(name,navigation,movable,clip,contextMenu,showBounds)
+        {
+        }
+        virtual ~LayoutLineObject()
+        {
+        }
+
+        virtual void setSize(float width, float height) = 0;
+
+        void ref(LayoutTypeObject * object);
+        void unref(LayoutTypeObject * object);
+        bool hasRef();
+
+    protected:
+        std::map<LayoutTypeObject*,bool> _refMap;
 };
 
 class TimeRangeObject
@@ -99,5 +122,26 @@ class PatientSelectObject
 {
     public:
         virtual void selectPatients(std::vector<std::string> & patients) = 0;
+};
+
+class SelectableObject
+{
+    public:
+        SelectableObject()
+        {
+            _selectCB = NULL;
+        }
+
+        bool isSelected()
+        {
+            if(_selectCB && _selectCB->getValue())
+            {
+                return true;
+            }
+            return false;
+        }
+
+    protected:
+        cvr::MenuCheckbox * _selectCB;
 };
 #endif
