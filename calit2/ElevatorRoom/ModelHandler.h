@@ -75,6 +75,7 @@ class ModelHandler
 
         void setLevel(std::string level);
         void clear();
+        void showScore(bool b);
 
         osg::ref_ptr<osg::Geode> getActiveObject();
         float getDoorDistance();
@@ -98,6 +99,7 @@ class ModelHandler
         osg::ref_ptr<osg::MatrixTransform> _geoRoot, _root; // root of all non-GUI plugin geometry
         osg::ref_ptr<osg::PositionAttitudeTransform> _crosshairPat;
         osg::ref_ptr<osgText::Text> _scoreText; // GUI to display current score
+        osg::ref_ptr<osg::Switch> _scoreSwitch;
         std::string _dataDir;
         bool _loaded; // whether the model has finished loading
         float _doorDist; // distance doors are currently translated

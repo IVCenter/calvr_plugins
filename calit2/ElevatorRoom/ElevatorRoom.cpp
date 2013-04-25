@@ -27,6 +27,9 @@ ElevatorRoom::ElevatorRoom()
     _modelHandler = new ModelHandler();
     _valEventTime = 0;
     _valEventCutoff = 0.5;
+    _trialCount = 0;
+    _trialPauseTime = 0;
+    _trialPause = false;
 }
 
 ElevatorRoom::~ElevatorRoom()
@@ -45,18 +48,27 @@ bool ElevatorRoom::init()
 
     PluginHelper::addRootMenuItem(_elevatorMenu);
 
+    _optionsMenu = new SubMenu("Options");
+
     _dingCheckbox = new MenuCheckbox("Ding Test", false);
     _dingCheckbox->setCallback(this);
-    _elevatorMenu->addItem(_dingCheckbox);
+    _optionsMenu->addItem(_dingCheckbox);
 
     _loadButton = new MenuButton("Load");
     _loadButton->setCallback(this);
     _elevatorMenu->addItem(_loadButton);
 
+    _pauseCB = new MenuCheckbox("Pause", true);
+    _pauseCB->setCallback(this);
+    _elevatorMenu->addItem(_pauseCB);
+
     _clearButton = new MenuButton("Clear");
     _clearButton->setCallback(this);
     _elevatorMenu->addItem(_clearButton);
 
+    _elevatorMenu->addItem(_optionsMenu);
+
+    _paused = true;
 
     /*** Load from config ***/
 
@@ -71,10 +83,31 @@ bool ElevatorRoom::init()
         cvr::MenuCheckbox * cb = new cvr::MenuCheckbox(tagList[i], false);
         _levelMap[tagList[i]] = cb;
         cb->setCallback(this);
-        _elevatorMenu->addItem(cb);
+        _optionsMenu->addItem(cb);
     }
 
     _levelMap[tagList[0]]->setValue(true);
+
+
+    int count;
+    float pauseLength;
+    std::string theme;
+
+    tagList.clear();
+    ConfigManager::getChildren("Plugin.ElevatorRoom.Phases", tagList);
+    for(int i = 0; i < tagList.size(); i++)
+    {
+        std::string tag = "Plugin.ElevatorRoom.Phases." + tagList[i];
+        
+        count = ConfigManager::getInt("trials", tag, 10);
+        pauseLength = ConfigManager::getFloat("pause", tag, 30);
+        theme = ConfigManager::getEntry("theme", tag, "Space");
+
+        _trialCounts.push_back(count);
+        _trialPauseLengths.push_back(pauseLength);
+        _trialThemes.push_back(theme);
+    }
+    _trialPhase = 0;
 
 
     // extra output messages
@@ -142,8 +175,7 @@ bool ElevatorRoom::init()
     _timeScale = 1;
     _timeScaleRV = new MenuRangeValue("Game speed: ", .25, 2, 1);
     _timeScaleRV->setCallback(this);
-    _elevatorMenu->addItem(_timeScaleRV);
-
+    _optionsMenu->addItem(_timeScaleRV);
 
 
     if(ComController::instance()->isMaster())
@@ -254,7 +286,36 @@ void ElevatorRoom::preFrame()
     
     // Game logic independent updates (e.g. crosshair position)
     _modelHandler->update();
-   
+    
+    if (_paused)
+        return;
+
+    if (_trialPause)
+    {
+        _modelHandler->showScore(true);
+        if (PluginHelper::getProgramDuration() - _trialPauseTime >
+            _trialPauseLengths[_trialPhase])
+        {
+            _trialPause = false;
+            _trialCount = 0;
+            _trialPhase++;
+
+            if (_trialPhase == _trialCounts.size())
+            {
+                std::cout << "Trials complete!" << std::endl;
+                _paused = true;
+                return;
+            }
+
+            _modelHandler->showScore(false);
+            _modelHandler->setLevel(_trialThemes[_trialPhase]);
+            return; 
+        }
+        else
+        {
+            return;
+        }
+    }
 
     if (_phase == PAUSE)
     {
@@ -359,6 +420,7 @@ void ElevatorRoom::preFrame()
             _pauseTime = _timeScale * randomFloat(_doorOpenMin, _doorOpenMax);
         }
         _modelHandler->openDoor();
+        flashAvatars();
     }
 
     else if (_phase == DOOROPEN)
@@ -367,53 +429,7 @@ void ElevatorRoom::preFrame()
         {
             _phase = CLOSINGDOOR;
         }
-
-        // Flashing avatars - checkers always flash, alien and ally flash when hit
-        if (_mode == CHECKER)
-        {
-            if (PluginHelper::getProgramDuration() - _flashStartTime > (1 / _checkSpeed))
-            {
-                _modelHandler->flashCheckers();
-                _flashCount++;
-                _flashStartTime = PluginHelper::getProgramDuration();
-            }
-        }
-
-        else if (_mode == ALIEN)
-        {
-            if (_hit)
-            {
-                if (_flashCount > NUM_ALIEN_FLASH)
-                {
-                    _modelHandler->setAlien(false);
-                }
-
-                else if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _avatarFlashPerSec)
-                {
-                    _modelHandler->flashAlien();
-                    _flashCount++; 
-                    _flashStartTime = PluginHelper::getProgramDuration();
-                }
-            }
-        }
-
-        else if (_mode == ALLY)
-        {
-            if (_hit)
-            {
-                if (_flashCount > NUM_ALLY_FLASH)
-                {
-                    _modelHandler->setAlly(true);
-                }
-
-                else if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _avatarFlashPerSec)
-                {
-                    _modelHandler->flashAlly();
-                    _flashCount++; 
-                    _flashStartTime = PluginHelper::getProgramDuration();
-                }
-            }
-        }
+        flashAvatars();
     }
 
     else if (_phase == CLOSINGDOOR)
@@ -433,8 +449,17 @@ void ElevatorRoom::preFrame()
             _noResponse = true;
             _hit = false;
             _flashCount = 0;
+
+            _trialCount++;
+
+            if (_trialCount == _trialCounts[_trialPhase])
+            {
+                _trialPauseTime = PluginHelper::getProgramDuration();
+                _trialPause = true;
+            }
         }
         _modelHandler->closeDoor();
+        flashAvatars();
     }
 
 
@@ -560,6 +585,7 @@ void ElevatorRoom::menuCallback(MenuItem * item)
         if (!_loaded)
         {
             _modelHandler->loadModels(_geoRoot);
+            _modelHandler->showScore(false);
             _loaded = true;
         }
     }
@@ -571,6 +597,11 @@ void ElevatorRoom::menuCallback(MenuItem * item)
             clear();
             _loaded = false;
         }
+    }
+
+    else if (item == _pauseCB)
+    {
+        _paused = _pauseCB->getValue();
     }
 
     else if (item == _timeScaleRV)
@@ -916,6 +947,56 @@ void ElevatorRoom::shoot()
             _modelHandler->setScore(_score);
             std::cout << "Score: " << _score << std::endl;
             _hit = true;
+        }
+    }
+}
+
+void ElevatorRoom::flashAvatars()
+{
+    // Flashing avatars - checkers always flash, alien and ally flash when hit
+    if (_mode == CHECKER)
+    {
+        if (PluginHelper::getProgramDuration() - _flashStartTime > (1 / _checkSpeed))
+        {
+            _modelHandler->flashCheckers();
+            _flashCount++;
+            _flashStartTime = PluginHelper::getProgramDuration();
+        }
+    }
+
+    else if (_mode == ALIEN)
+    {
+        if (_hit)
+        {
+            if (_flashCount > NUM_ALIEN_FLASH)
+            {
+                _modelHandler->setAlien(false);
+            }
+
+            else if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _avatarFlashPerSec)
+            {
+                _modelHandler->flashAlien();
+                _flashCount++; 
+                _flashStartTime = PluginHelper::getProgramDuration();
+            }
+        }
+    }
+
+    else if (_mode == ALLY)
+    {
+        if (_hit)
+        {
+            if (_flashCount > NUM_ALLY_FLASH)
+            {
+                _modelHandler->setAlly(true);
+            }
+
+            else if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _avatarFlashPerSec)
+            {
+                _modelHandler->flashAlly();
+                _flashCount++; 
+                _flashStartTime = PluginHelper::getProgramDuration();
+            }
         }
     }
 }
