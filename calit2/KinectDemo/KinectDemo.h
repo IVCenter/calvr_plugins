@@ -17,8 +17,9 @@
 #include <cvrMenu/MenuRangeValue.h>
 #include <cvrMenu/MenuRangeValueCompact.h>
 #include <cvrMenu/TabbedDialogPanel.h>
+#include <cvrKernel/ComController.h>
 
-#include <cvrInput/TrackerPlugin.h>
+//#include <cvrInput/TrackerPlugin.h>
 #include "Skeleton.h"
 //#include "PubSub.h"
 #include <shared/PubSub.h>
@@ -30,8 +31,10 @@
 #include "kUtils.h"
 #include "SelectableItem.h"
 #include "CloudManager.h"
+#include "KinectObject.h"
 //#include "SkeletonManager.h"
 #include <unordered_map>
+
 using namespace std;
 using namespace osg;
 using namespace cvr;
@@ -42,7 +45,8 @@ using namespace cvr;
 #define M_LFOOT 20
 #define M_RFOOT 24
 
-std::map<int, Skeleton> mapIdSkel;
+
+//std::map<int, Skeleton> mapIdSkel;
 std::unordered_map<float, osg::Vec4f> distanceColorMap;
 std::unordered_map<float, osg::Vec4f> distanceColorMapDepth;
 std::unordered_map<float, uint32_t> dpmap;
@@ -53,6 +57,7 @@ zmq::context_t context(1);
 SubSocket<RemoteKinect::SkeletonFrame>* skel_socket;
 SubSocket<RemoteKinect::DepthMap>* depth_socket;
 SubSocket<RemoteKinect::PointCloud>* cloud_socket;
+SubSocket<RemoteKinect::PointCloud>* cloud_socket2;
 SubSocket<RemoteKinect::ColorMap>* color_socket;
 
 //zmq::context_t contextCloud(1);
@@ -91,6 +96,7 @@ public:
     bool kShowColor;
     bool kShowPCloud;
     bool kinectThreaded;
+    bool _firstRun;
     bool skeletonThreaded;
     bool kNavSpheres;
     bool kShowDepth;
@@ -99,25 +105,33 @@ public:
     bool kShowArtifactPanel;
     bool kShowInfoPanel;
     osg::Program* pgm1;
-    osg::Group* kinectgrp;
+    osg::ref_ptr<osg::Group> kinectgrp;
+    osg::Geometry* knodeGeom;
+    //    osg::Geometry* kinectGeom;
+    //    osg::DrawArrays* kinectDrawArrays;
+    osg::Group* kinectgrp2;
+    //    osg::Geometry* kinectgeo2;
+    //    osg::DrawArrays* kinectDrawArrays2;
     float initialPointScale;
 
-struct PointCloud
-{
-	string name;
-	string filename;
+    std::vector<KinectObject*>* kinects;
+
+    struct PointCloud
+    {
+        string name;
+        string filename;
         string fullpath;
         string filetype;
         string modelType;
         string group;
-        float scale; 
+        float scale;
         osg::Vec3 pos;
         osg::Quat rot;
         osg::Vec3 origPos;
         osg::Quat origRot;
         float origScale;
-        cvr::SceneObject * so;
-	bool loaded;
+        cvr::SceneObject* so;
+        bool loaded;
         bool active;
         bool visible;
         bool selected;
@@ -125,8 +139,8 @@ struct PointCloud
         bool lockRot;
         bool lockScale;
         bool lockGraph;
-    int lockedTo;
-    int lockedType;
+        int lockedTo;
+        int lockedType;
         cvr::MenuButton* saveMap;
         cvr::MenuButton* saveNewMap;
         cvr::MenuButton* resetMap;
@@ -135,16 +149,17 @@ struct PointCloud
         cvr::MenuRangeValue* rxMap;
         cvr::MenuRangeValue* ryMap;
         cvr::MenuRangeValue* rzMap;
-	//Store Different Model Type Transforms
+        //Store Different Model Type Transforms
         osg::Node* currentModelNode;
-	osg::Switch* switchNode;
+        osg::Switch* switchNode;
 
 
-};
- 
+    };
+
     std::vector<PointCloud* > _pointClouds;
     std::vector<SelectableItem> selectableItems;
     void createSceneObject();
+    void createSceneObject2();
     void sendEvents();
     void kinectInit();
     void kinectOff();
@@ -164,7 +179,6 @@ struct PointCloud
     osg::Vec4f getColorRGB(int dist);
     osg::Vec4f getColorRGBDepth(int dist);
 
-
     void cloudOff();
     void navOff();
     void navOn();
@@ -175,10 +189,12 @@ struct PointCloud
     void depthOn();
     void moveWithCamOff();
     void moveWithCamOn();
-    void checkHandsIntersections(int skel_id);
+    void checkHandsIntersections(int skel_id, std::map<int, Skeleton>* skel_map);
 
     void showCameraImage();
     void showDepthImage();
+
+    void saveEnvironment();
 
     //camera image things
     osg::ref_ptr<osg::MatrixTransform> bitmaptransform;
@@ -204,8 +220,11 @@ struct PointCloud
 
     osg::ref_ptr<osg::Vec4Array> kinectColours;
     osg::ref_ptr<osg::Vec3Array> kinectVertices;
-    CloudManager * _cloudThread;
-   // SkeletonManager * _skeletonThread;
+    osg::ref_ptr<osg::Vec4Array> kinectColours2;
+    osg::ref_ptr<osg::Vec3Array> kinectVertices2;
+    osg::ref_ptr<osg::Geode> kgeode;
+    CloudManager* _cloudThread;
+    // SkeletonManager * _skeletonThread;
 protected:
 
     static KinectDemo* _kinectDemo;
@@ -225,10 +244,40 @@ protected:
     cvr::MenuRangeValue* sliderX;
     cvr::MenuRangeValue* sliderY;
     cvr::MenuRangeValue* sliderZ;
+    cvr::MenuRangeValue* slider2X;
+    cvr::MenuRangeValue* slider2Y;
+    cvr::MenuRangeValue* slider2Z;
     cvr::MenuRangeValue* sliderRX;
     cvr::MenuRangeValue* sliderRY;
     cvr::MenuRangeValue* sliderRZ;
     cvr::MenuRangeValue* sliderRW;
+
+    int NPIX;
+    int NFRAMES;
+    float* X;
+    float* Y;
+    float* Z;
+    float* environmentX;
+    float* environmentY;
+    float* environmentZ;
+    float** frameXMinus;
+    float** frameYMinus;
+    float** frameZMinus;
+    cvr::SubMenu* _devMenu;
+    cvr::MenuCheckbox* _devFixXY;
+    bool fixXY;
+    cvr::MenuCheckbox* _devIgnoreZeros;
+    bool ignoreZeros;
+    cvr::MenuCheckbox* _devFilterBackground;
+    bool filterBackground;
+    cvr::MenuCheckbox* _devAssignPointsToSkeletons;
+    bool assignPointsToSkeletons;
+    cvr::MenuCheckbox* _devClassifyPoints;
+    bool classifyPoints;
+    cvr::MenuCheckbox* _devDenoise;
+    bool denoise;
+
+    void showPointCloud();
 
     float distanceMIN, distanceMAX;
     cvr::MenuButton* _bookmarkLoc;
@@ -247,10 +296,17 @@ protected:
     float kinectX;
     float kinectY;
     float kinectZ;
+    float kinect2X;
+    float kinect2Y;
+    float kinect2Z;
     float kinectRX;
     float kinectRY;
     float kinectRZ;
     float kinectRW;
+    float kinect2RX;
+    float kinect2RY;
+    float kinect2RZ;
+    float kinect2RW;
 
 };
 

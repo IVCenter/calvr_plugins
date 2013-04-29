@@ -11,37 +11,23 @@
 using namespace cvr;
 using namespace std;
 
-CloudManager::CloudManager()
+CloudManager::CloudManager(std::string server)
 {
     useKColor = true;
+    pause = false;
     should_quit = false;
-
-    //initialPointScale = 0.001;
-    initialPointScale = ConfigManager::getFloat("Plugin.KinectDemo.KinectDefaultOn.KinectPointSize",0.0f);
-    pgm1 = new osg::Program;
-    pgm1->setName("Sphere");
-    std::string shaderPath = ConfigManager::getEntry("Plugin.Points.ShaderPath");
-    pgm1->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile(shaderPath + "/Sphere.vert")));
-    pgm1->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile(shaderPath + "/Sphere.frag")));
-    pgm1->addShader(osg::Shader::readShaderFile(osg::Shader::GEOMETRY, osgDB::findDataFile(shaderPath + "/Sphere.geom")));
-    pgm1->setParameter(GL_GEOMETRY_VERTICES_OUT_EXT, 4);
-    pgm1->setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_POINTS);
-    pgm1->setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
     minDistHSV = 700;
     maxDistHSV = 5000;
 
-    kinectgrp = new osg::Group();
-    osg::StateSet* state = kinectgrp->getOrCreateStateSet();
-    state->setAttribute(pgm1);
-    state->addUniform(new osg::Uniform("pointScale", initialPointScale));
-    state->addUniform(new osg::Uniform("globalAlpha", 1.0f));
-    float pscale = 1.0;
-    osg::Uniform*  _scaleUni = new osg::Uniform("pointScale", 1.0f * pscale);
-    kinectgrp->getOrCreateStateSet()->addUniform(_scaleUni);
+    kinectVertices = new osg::Vec3Array;
+    kinectNormals = new osg::Vec3Array;
+    kinectColours = new osg::Vec4Array;
 
-    _root = new osg::MatrixTransform();
-    SceneManager::instance()->getObjectsRoot()->addChild(_root);
-    _root->addChild(kinectgrp);
+    _firstRun = 0;
+    _next = true;
+    kinectServer = server;
+// precomputing colors for heat coloring
+    for (int i=0;i<10000;i++) getColorRGB(i);
 
 }
 
@@ -51,170 +37,239 @@ CloudManager::~CloudManager()
 
 bool CloudManager::isCacheDone()
 {
-    return _cacheDone;
+    return _next;
 }
-
+int CloudManager::firstRunStatus()
+{
+    return _firstRun;
+}
 void CloudManager::update()
 {
     static bool frameLoading = false;
-	bool cDone;
-if(true)
-{ 
-        if(cvr::ComController::instance()->isMaster())
+    bool cDone;
+
+/*
+        if (cvr::ComController::instance()->isMaster())
         {
-          cDone = _cacheDone;
-          int numSlaves = cvr::ComController::instance()->getNumSlaves();
-          bool sDone[numSlaves];
-          cvr::ComController::instance()->readSlaves(sDone,sizeof(bool));
-          for(int i = 0; i < numSlaves; i++)
-          {
-            cDone = cDone && sDone[i];
-          }
-          cvr::ComController::instance()->sendSlaves(&cDone,sizeof(bool));
+            cDone = _cacheDone;
+            int numSlaves = cvr::ComController::instance()->getNumSlaves();
+            bool sDone[numSlaves];
+            cvr::ComController::instance()->readSlaves(sDone, sizeof(bool));
+
+            for (int i = 0; i < numSlaves; i++)
+            {
+                cDone = cDone && sDone[i];
+            }
+
+            cvr::ComController::instance()->sendSlaves(&cDone, sizeof(bool));
         }
         else
         {
-          cDone = _cacheDone;
-          cvr::ComController::instance()->sendMaster(&cDone,sizeof(bool));
-          cvr::ComController::instance()->readMaster(&cDone,sizeof(bool));
+            cDone = _cacheDone;
+            cvr::ComController::instance()->sendMaster(&cDone, sizeof(bool));
+            cvr::ComController::instance()->readMaster(&cDone, sizeof(bool));
         }
 
-	if(!cDone)
+   cDone = _cacheDone;
+       // run();
+       
+        if (!cDone)
         {
-          //std::cerr << "Waiting for load to finish." << std::endl;
-          return;
+            //std::cerr << "Waiting for load to finish." << std::endl;
+           // return;
         }
 
-        cvr::ComController::instance()->sync();
-//Add not here?
+       // cvr::ComController::instance()->sync();
+        //Add not here?
+            //kinectVertices = newVertices;
+            //kinectNormals = newNormals;
+            //kinectColours = newColours;
+   //     return;
+        _next = true;
+       // run();
+    }
 
-
-	return;
-}
-    if(cDone)
+    if (cDone)
     {
-	std::cerr << "Load Finished." << std::endl;
-	//Add loaded node to root
-
+        std::cerr << "Load Finished." << std::endl;
+        //Add loaded node to root
     }
     else
     {
-//	std::cerr << "Waiting for GPU load finish." << std::endl;
+          std::cerr << "Waiting for GPU load finish." << std::endl;
     }
-
+*/
 }
 
 void CloudManager::run()
 {
-//Do functions
-cerr << ".";
-if(kinectgrp != NULL)
-{
+    //Do functions
+    _cacheDone = false;
+    bool cDone = false;
 
-    zmq::context_t context2(1);    
-    cloudT_socket = NULL;
-    cloudT_socket = new SubSocket<RemoteKinect::PointCloud> (context2, ConfigManager::getEntry("Plugin.KinectDemo.KinectServer.PointCloud"));
-
-    packet = new RemoteKinect::PointCloud();
-    while(!should_quit)
+    if (true)
     {
-	
-        //printf("."); 
-       if(cloudT_socket != NULL)
-{ 
-//        printf("NotNull"); 
+        //TODO:ZMQ does not want to be in init with the cloud socket-should only initialize this at the very beginning.
+        zmq::context_t context2(1);
+        
+        cloudT_socket = new SubSocket<RemoteKinect::PointCloud> (context2, kinectServer);
+        packet = new RemoteKinect::PointCloud();
+        int biggest = 0;    
 
-        if (cloudT_socket->recv(*packet))
+        while (!should_quit)
         {
-        float r, g, b, a;
-        osg::Vec3Array* kinectVertices = new osg::Vec3Array;
-//        kinectVertices->empty();
-        osg::Vec3Array* normals = new osg::Vec3Array;
-        osg::Vec4Array* kinectColours = new osg::Vec4Array;
-  //      kinectColours->empty();
- //       cerr << ".";
-        //int size = packet->points_size();	
-        //printf("Points %i\n",size);
-        if(true)
-        {
-            for (int i = 0; i < packet->points_size(); i++)
+
+            if(!_next)
             {
-/*
-                osg::Vec3f ppos((packet->points(i).x() /  1000) + Skeleton::camPos.x(),
-                                (packet->points(i).z() / -1000) + Skeleton::camPos.y(),
-                                (packet->points(i).y() /  1000) + Skeleton::camPos.z());
-*/
-                osg::Vec3f ppos((packet->points(i).x() /  1000),
-                                (packet->points(i).z() / -1000),
-                                (packet->points(i).y() /  1000));
-                kinectVertices->push_back(ppos);
-		//useKColor
-                if (useKColor)
+             // printf("X");
+            }
+            else
+            {
+             // printf("O");
+
+            if (cloudT_socket != NULL)
+            {
+                        //printf("NotNull");
+                if (cloudT_socket->recv(*packet))
                 {
-                    r = (packet->points(i).r() / 255.);
-                    g = (packet->points(i).g() / 255.);
-                    b = (packet->points(i).b() / 255.);
-                    a = 1;
-                    kinectColours->push_back(osg::Vec4f(r, g, b, a));
+                    float r, g, b, a;
+                      if(biggest == 0)
+                      {
+                              biggest = packet->points_size();
+			      newVertices = new osg::Vec3Array(biggest);
+			      newNormals = new osg::Vec3Array;
+			      newColours = new osg::Vec4Array(biggest);
+                      }
+                      //cerr << "Size:" << biggest << "\n";
+                        if(packet->points_size() <= biggest)
+                        {
+				for (int i = 0; i < biggest; i++)
+				{
+				    if(i < packet->points_size())
+				    {
+				    osg::Vec3 ppos((packet->points(i).x()),
+						    (packet->points(i).z()),
+						    (packet->points(i).y()));
+				    newVertices->at(i) = ppos;
+				    //if(i == 150000)
+				    //cerr << newVertices->at(i).z() << "\n";
+				    if (useKColor)
+				    {
+					r = (packet->points(i).r() / 255.);
+					g = (packet->points(i).g() / 255.);
+					b = (packet->points(i).b() / 255.);
+					a = 1;
+					newColours->at(i) = osg::Vec4(r, g, b, a);
+				    }
+				    else
+				    {
+					newColours->at(i) = getColorRGB(packet->points(i).z());
+				    }
+				    }
+				    else
+				    {
+				       newVertices->at(i) = osg::Vec3(0,0,0);
+				       newColours->at(i) = osg::Vec4(0,0,0,0);
+				    }
+				}
+                        }
+                        else
+                        {
+				for (int i = 0; i < packet->points_size(); i++)
+				{
+				    if(i < biggest)
+				    {
+				    osg::Vec3 ppos((packet->points(i).x()),
+						    (packet->points(i).z()),
+						    (packet->points(i).y()));
+				    newVertices->at(i) = ppos;
+				    //if(i == 150000)
+				    //cerr << newVertices->at(i).z() << "\n";
+				    if (useKColor)
+				    {
+					r = (packet->points(i).r() / 255.);
+					g = (packet->points(i).g() / 255.);
+					b = (packet->points(i).b() / 255.);
+					a = 1;
+					newColours->at(i) = osg::Vec4(r, g, b, a);
+				    }
+				    else
+				    {
+					newColours->at(i) = getColorRGB(packet->points(i).z());
+				    }
+				    }
+				    else
+				    {
+				    osg::Vec3 ppos((packet->points(i).x()),
+						    (packet->points(i).z()),
+						    (packet->points(i).y()));
+				    newVertices->push_back(ppos);
+				    //if(i == 150000)
+				    //cerr << newVertices->at(i).z() << "\n";
+				    if (useKColor)
+				    {
+					r = (packet->points(i).r() / 255.);
+					g = (packet->points(i).g() / 255.);
+					b = (packet->points(i).b() / 255.);
+					a = 1;
+					newColours->push_back(osg::Vec4(r, g, b, a));
+				    }
+				    else
+				    {
+					newColours->push_back(getColorRGB(packet->points(i).z()));
+				    }
+					
+				    }
+				}
+				biggest = packet->points_size();
+                        }
+          kinectVertices = newVertices;
+          kinectColours = newColours;       
+          kinectVertices->dirty();
+          kinectColours->dirty();
                 }
                 else
                 {
-                    kinectColours->push_back(getColorRGB(packet->points(i).z()));
+
+                  //cerr << "PointCloud " << kinectServer << " Empty\n";
                 }
             }
-//cerr << kinectVertices->size();            
 
-            osg::Geode* kgeode = new osg::Geode();
-            kgeode->setCullingActive(false);
-            osg::Geometry* nodeGeom = new osg::Geometry();
-            osg::StateSet* state = nodeGeom->getOrCreateStateSet();
-            nodeGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS, 0, kinectVertices->size()));
-            osg::VertexBufferObject* vboP = nodeGeom->getOrCreateVertexBufferObject();
-            vboP->setUsage(GL_STREAM_DRAW);
-            nodeGeom->setUseDisplayList(true);
-            nodeGeom->setUseVertexBufferObjects(true);
-            nodeGeom->setVertexArray(kinectVertices);
-            nodeGeom->setColorArray(kinectColours);
-            nodeGeom->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
-            kgeode->addDrawable(nodeGeom);
-            kgeode->dirtyBound();
-            //if (kinectgrp != NULL) _root->removeChild(kinectgrp);
-            kinectgrp->removeChild(0, 1);
-            kinectgrp->addChild(kgeode);
+                _next = false;
+                _cacheDone = true;
+            }
 
-        
-      }
-     }    
-if(should_quit)
-{
-        pgm1->ref();
-        kinectgrp->removeChild(0, 1);
-        _root->removeChild(kinectgrp);
-        kinectgrp = NULL;
-
-}
-}    
-}
-}
-//When Finished 
-	_cacheDone = true;
+          
+          //This is the initial Function that runs any type of processing on Kinect PointCloud sets before overwriting old!
+          //processNewCloud();
 
 
+           if(_firstRun == 1)
+           {
+             _firstRun = 2;
+           }
+           else if (_firstRun == 0)
+           {
+           _firstRun = 1;
+           }
+           _cacheDone = false;
+           _next = true;
 
 
-	std::cerr << "All frames loaded." << std::endl;
+        }
+    }
 
+    delete cloudT_socket;
+    cloudT_socket = NULL;
+
+
+    //When Finished
+    std::cerr << "All frames loaded." << std::endl;
 }
 
 void  CloudManager::quit()
 {
-
-        should_quit = true;
-     //   pgm1->ref();
-     //   kinectgrp->removeChild(0, 1);
-     //   _root->removeChild(kinectgrp);
-     //   kinectgrp = NULL;
-	
+    should_quit = true;
 }
 
 osg::Vec4f CloudManager::getColorRGB(int dist)
@@ -228,4 +283,9 @@ osg::Vec4f CloudManager::getColorRGB(int dist)
     }
 
     return distanceColorMap[dist];
+}
+void CloudManager::processNewCloud()
+{
+  //Here is where we could run ICP or do checking against original cloud.
+
 }

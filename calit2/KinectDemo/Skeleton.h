@@ -1,3 +1,5 @@
+#ifndef _SKEL_LOADED
+#define _SKEL_LOADED
 
 #include "MCylinder.h"
 #include <osg/ShapeDrawable>
@@ -45,7 +47,9 @@ struct Skeleton
 {
     static bool moveWithCam;
     static osg::Vec3d camPos;
+    static osg::Vec3d camPos2;
     static osg::Quat camRot;
+    static osg::Quat camRot2;
     static bool navSpheres;
 
     // are hands holding objects?
@@ -63,3 +67,4 @@ struct Skeleton
     void detach(osg::Switch* parent);
 };
 
+#endif

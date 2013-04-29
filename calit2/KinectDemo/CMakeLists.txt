@@ -14,6 +14,7 @@ SET(PLUGIN_HEADERS
     SelectableItem.h
     CloudManager.h
     SkeletonManager.h
+    KinectObject.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -31,6 +32,7 @@ ADD_LIBRARY(${LIB_NAME}
     kUtils.cpp
     SelectableItem.cpp
     CloudManager.cpp
+    KinectObject.cpp
    # SkeletonManager.cpp
 )
 

@@ -29,28 +29,28 @@
 #include <OpenThreads/Thread>
 
 
-//	zmq::context_t contextCloud(1);
+//  zmq::context_t contextCloud(1);
 
 class SkeletonManager : public OpenThreads::Thread {
 
-    public:
+public:
 
-	SkeletonManager();
-        ~SkeletonManager();
-	//contextCloud(1);
-SubSocket<RemoteKinect::SkeletonFrame>* skelT_socket;
-        void update();
-        bool isCacheDone();
+    SkeletonManager();
+    ~SkeletonManager();
+    //contextCloud(1);
+    SubSocket<RemoteKinect::SkeletonFrame>* skelT_socket;
+    void update();
+    bool isCacheDone();
 
-        RemoteKinect::SkeletonFrame* sf2;
-        virtual void run();
-        void quit();
-    protected:
+    RemoteKinect::SkeletonFrame* sf2;
+    virtual void run();
+    void quit();
+protected:
 
     std::map<int, Skeleton> mapIdSkel;
     bool kNavSpheres;
     bool kMoveWithCam;
-        bool _cacheDone;
+    bool _cacheDone;
     bool should_quit;
     osg::MatrixTransform* _root;
 };

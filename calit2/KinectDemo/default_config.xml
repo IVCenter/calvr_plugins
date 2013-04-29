@@ -2,6 +2,7 @@
 <KinectDemo value="on" />
  <KinectDemo>
           <3DModelFolder value="/home/calvr/osgdata/" />
+          <ShaderPath value="/home/calvr/CVRPlugins/calit2/KinectDemo/shaders" />
           <MaxVisibleRange value="100000000000.0" />
           <Offset>
             <X value="-700000" />
@@ -14,14 +15,14 @@
           <ShowKinectFOV value="true" />
           <ArtifactPanel x="-200" y="2000" z="100" scale="1.0" />
           <InfoPanel x="0" y="1000" z="0" scale="0.5" />
-          <KinectSkeleton x="-150" y="1000" z="550" rx="0" ry="0" rz="0" rw="1" />
+          <KinectSkeleton x="0" y="1000" z="400" rx="0" ry="0" rz="0" rw="1" />
           <CamStart s="1000" x="0.0249151" y="3.41685" z="-0.191232" rx="0.0143035" ry="-0.0208855" rz="0.999386" rw="-0.0242437" />
-	 <KinectDefaultOn value="false" >
+	 <KinectDefaultOn value="true" >
 	      <MoveWithCam value="false" />
-	      <KinectPointSize value="0.01" />
+	      <KinectPointSize value="1" />
 	      <FlyToDefault value="4" />
-	      <ShowPCloud value="false" />
-	      <KinectThreaded value="false" />
+	      <ShowPCloud value="true" />
+	      <KinectThreaded value="true" />
 	      <ShowColor value="true" />
 	      <NavSpheres value="true" />
 	      <UseGestures value="false" />
@@ -33,14 +34,12 @@
 	 </KinectDefaultOn>
 
           <KinectServer>
-        <!--      <DepthMap value="tcp://67.58.33.1:9000" /> 
-              <ColorMap value="tcp://67.58.33.1:9001" />
-              <Skeleton value="tcp://67.58.33.1:9002" />
-              <PointCloud value="tcp://67.58.33.1:9003" />-->
-              <DepthMap value="tcp://localhost:9000" /> 
-              <ColorMap value="tcp://localhost:9001" />
-              <Skeleton value="tcp://localhost:9002" />
-              <PointCloud value="tcp://localhost:9003" />
+             <DepthMap value="tcp://127.0.0.1:9000" /> 
+              <ColorMap value="tcp://127.0.0.1:9001" />
+              <Skeleton value="tcp://127.0.0.1:9002" />
+              <Skeleton2 value="tcp://109.171.138.130:9002" />
+              <PointCloud value="tcp://127.0.0.1:9003" />
+              <PointCloud2 value="tcp://109.171.138.130:9003" />
           </KinectServer>
        
           <KinectNavSphere>
@@ -61,8 +60,8 @@
           </KinectNavSphere> 
 
 	  <Cylinder>
-            <Min value="0.2" />
-            <Max value="1.0" />
+            <Min value="200" />
+            <Max value="1000" />
           </Cylinder>
 
 	  <QueryTest value ="false">

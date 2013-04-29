@@ -2,6 +2,7 @@
 
 bool Skeleton::moveWithCam;
 osg::Vec3d Skeleton::camPos;
+osg::Vec3d Skeleton::camPos2;
 osg::Quat Skeleton::camRot;
 bool Skeleton::navSpheres;
 

@@ -1,11 +1,13 @@
         <ArtifactVis2>
           <StartArtifactVis2 value="false" />
+          <ShowScreens value="true" />
           <MoveCamera value="true" />
           <FlyToDefault value="0" />
 
           <Database value="/home/ngsmith/ArchInterface/queries/" />
           <ArchInterfaceFolder value="/home/ngsmith/ArchInterface/" />
           <3DModelFolder value="/home/ngsmith/ArchInterface/data/" />
+          <ScreenConfigLocation value="/home/calvr/CalVR/config/tourcaveLG-screens-2level.xml" />
           <MaxVisibleRange value="100000000000.0" />
           <Offset>
             <X value="-700000" />

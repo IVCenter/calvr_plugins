@@ -32,14 +32,15 @@ using namespace cvr;
 
 CVRPLUGIN(OsgMovie)
 
-OsgMovie::OsgMovie() : FileLoadCallback("mov,mpeg,wmv,flv,avi,mp4")
+OsgMovie::OsgMovie() : FileLoadCallback("mov,mpeg,wmv,flv,avi,mp4,mkv")
 {
 }
 
 bool OsgMovie::loadFile(std::string filename)
 {
-
-    osgDB::Registry::instance()->loadLibrary("osgdb_ffmpeg.so");
+    string libName = osgDB::Registry::instance()->createLibraryNameForExtension("ffmpeg");
+    osgDB::Registry::instance()->loadLibrary(libName);
+    //osgDB::Registry::instance()->loadLibrary("osgdb_ffmpeg.so");
 
     //create shaders for left and right eye (use uniform to set mode, and also set which eye)
     // int eye 0 right eye, 1 left eye
@@ -138,6 +139,7 @@ bool OsgMovie::loadFile(std::string filename)
     osg::ref_ptr<osg::MatrixTransform> group = new osg::MatrixTransform;
     osg::ref_ptr<osg::Geode> geodeL = new osg::Geode;
     osg::ref_ptr<osg::Geode> geodeR = new osg::Geode;
+    osg::ref_ptr<osg::Node> nodeL = new osg::Node;
 
     //get state for left geode
     osg::StateSet* stateset = geodeL->getOrCreateStateSet();
@@ -150,8 +152,16 @@ bool OsgMovie::loadFile(std::string filename)
     geodeR->setNodeMask(geodeR->getNodeMask() & ~(CULL_MASK));
     stateset->addUniform(new osg::Uniform("eye",1));
 
-    group->addChild(geodeR);
     group->addChild(geodeL);
+    group->addChild(geodeR);
+
+
+    //get state for left node
+    stateset = nodeL->getOrCreateStateSet();
+    nodeL->setNodeMask(nodeL->getNodeMask() & ~(CULL_MASK_RIGHT));
+    stateset->addUniform(new osg::Uniform("eye",0));
+
+
 
     // add shader to group node
     osg::Program* program = new osg::Program;
@@ -169,6 +179,7 @@ bool OsgMovie::loadFile(std::string filename)
     struct VideoObject * currentobject = new struct VideoObject;
     currentobject->name = name;
     currentobject->stream = NULL;
+    currentobject->streamR = NULL;
     currentobject->scene = NULL;
     currentobject->firstPlay = false;
     currentobject->modeUniform = new osg::Uniform("mode",0);
@@ -197,11 +208,31 @@ bool OsgMovie::loadFile(std::string filename)
 		#ifdef FMOD_FOUND
         	osg::AudioStream* audioStream = audioStreams[0].get();
         	audioStream->setAudioSink(new FmodAudioSink(audioStream));
-		currentobject->stream->setVolume(1.0);
+		currentobject->stream->setVolume(90.0);
 		#endif
     	}
     }
 
+    string filenameR = "/home/ngsmith/ArchInterface/dat/3D_R0004.mp4";
+    osg::Image* imageR = osgDB::readImageFile(filenameR.c_str());
+    osg::ImageStream* imagestreamR = dynamic_cast<osg::ImageStream*>(imageR);
+    if (imagestreamR)
+    {
+        printf("Loaded ImageStream\n");
+	currentobject->streamR = imagestreamR;
+	currentobject->streamR->pause();
+       /*
+	 osg::ImageStream::AudioStreams& audioStreams = currentobject->stream->getAudioStreams();
+    	if ( !audioStreams.empty() )
+    	{
+		#ifdef FMOD_FOUND
+        	osg::AudioStream* audioStream = audioStreams[0].get();
+        	audioStream->setAudioSink(new FmodAudioSink(audioStream));
+		currentobject->stream->setVolume(1.0);
+		#endif
+    	}
+       */ 
+    }
     if (image)
     {
 	float width = image->s() * image->getPixelAspectRatio();
@@ -215,16 +246,48 @@ bool OsgMovie::loadFile(std::string filename)
 		currentobject->splitUniform->set(1); // indicate double image
 	}
 
-	osg::ref_ptr<osg::Drawable> drawable = myCreateTexturedQuadGeometry(osg::Vec3(0.0,0.0,0.0), width * widthFactor, height,image);
+	osg::ref_ptr<osg::Drawable> drawable;
+	if(true)
+        {
+          drawable = myCreateTexturedQuadGeometry(osg::Vec3(0.0,0.0,0.0), width * widthFactor, height,image);
+        }
+	else
+ 	{
+	  drawable = myCreateTexturedModel(osg::Vec3(0.0,0.0,0.0), width * widthFactor, height,image);
+
+	}
 
 	if (image->isImageTranslucent())
 	{
 	    drawable->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
 	    drawable->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
 	}
-
-	geodeR->addDrawable(drawable.get());
 	geodeL->addDrawable(drawable.get());
+	geodeR->addDrawable(drawable.get());
+        if(true)
+        {
+          printf("No Right Stereo Image Available, defaulting to Mono!\n");
+        }
+        else
+        {
+          printf("Adding image to geodeR\n");
+	  osg::ref_ptr<osg::Drawable> drawableR = myCreateTexturedQuadGeometry(osg::Vec3(0.0,0.0,0.0), width * widthFactor, height,imageR);
+	  if (imageR->isImageTranslucent())
+	  {
+	    drawableR->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
+	    drawableR->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+	  }
+	  geodeR->addDrawable(drawableR.get());
+
+
+
+
+        }
+          if(false)
+          {
+            nodeL = myCreateTexturedLoadedModel(osg::Vec3(0.0,0.0,0.0), width * widthFactor, height,image);
+
+          }
 
 	// set bound
 	group->dirtyBound();
@@ -305,12 +368,15 @@ void OsgMovie::menuCallback(MenuItem* menuItem)
 			if( !it->first->firstPlay )
 			{
 			    it->first->stream->seek(0);
+			   // it->first->streamR->seek(0);
 			    it->first->firstPlay = true;
 			}
+            	//	it->first->streamR->play();
             		it->first->stream->play();
 		}
 	    	else
             		it->first->stream->pause();
+            	//	it->first->streamR->pause();
 
 		return;
 	    }
@@ -324,6 +390,7 @@ void OsgMovie::menuCallback(MenuItem* menuItem)
         {
             if( it->first->stream )
                it->first->stream->seek(0);
+               it->first->streamR->seek(0);
 
 	    return;
         }
@@ -549,6 +616,55 @@ osg::Geometry* OsgMovie::myCreateTexturedQuadGeometry(osg::Vec3 pos, float width
                                                               texture,
                                                               osg::StateAttribute::ON);
         return pictureQuad;
+}
+osg::ShapeDrawable* OsgMovie::myCreateTexturedModel(osg::Vec3 pos, float width,float height, osg::Image* image)
+{
+/*
+        bool flip = image->getOrigin()==osg::Image::TOP_LEFT;
+        osg::Geometry* pictureQuad = osg::createTexturedQuadGeometry(pos + osg::Vec3(-width / 2.0f, 0.0f, -height / 2.0f),
+								    osg::Vec3(width,0.0f,0.0f),
+								    osg::Vec3(0.0f,0.0f,height),
+								    0.0f, flip ? image->t() : 0.0, image->s(), flip ? 0.0 : image->t());
+
+        osg::TextureRectangle* texture = new osg::TextureRectangle(image);
+        texture->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+        texture->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+
+
+        pictureQuad->getOrCreateStateSet()->setTextureAttributeAndModes(0,
+                                                              texture,
+                                                              osg::StateAttribute::ON);
+*/
+      osg::ShapeDrawable* pictureQuad = new ShapeDrawable(new Sphere(pos,width/2.0f));  
+        osg::TextureRectangle* texture = new osg::TextureRectangle(image);
+
+       //  osg::Texture2D* texture = new osg::Texture2D(image);
+      //   texture->setResizeNonPowerOfTwoHint(false);
+        // texture->setFilter(osg::Texture::MIN_FILTER,osg::Texture::LINEAR);
+         texture->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP);
+         texture->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP);
+
+       // pictureQuad->getOrCreateStateSet()->setTextureAttributeAndModes(0, texture, osg::StateAttribute::ON);
+      return pictureQuad;
+}
+osg::Node* OsgMovie::myCreateTexturedLoadedModel(osg::Vec3 pos, float width,float height, osg::Image* image)
+{
+        string modelFileName = "/home/ngsmith/ArchInterface/data/asky/skytop.obj";
+        osg::Node* pictureQuad = osgDB::readNodeFile(modelFileName.c_str());
+        if(pictureQuad == NULL)
+        {
+          printf("Failed load\n");
+        }
+
+        osg::TextureRectangle* texture = new osg::TextureRectangle(image);
+        texture->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+        texture->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+
+
+        pictureQuad->getOrCreateStateSet()->setTextureAttributeAndModes(0,
+                                                              texture,
+                                                              osg::StateAttribute::ON);
+      return pictureQuad;
 }
 
 

@@ -1,5 +1,5 @@
-//#ifndef _ANIMATION_MANAGER_MULT
-//#define _ANIMATION_MANAGER_MULT
+#ifndef _ANIMATION_MANAGER_MULT
+#define _ANIMATION_MANAGER_MULT
 
 #include <osgDB/ReadFile>
 #include <osgDB/FileUtils>
@@ -21,7 +21,6 @@
 //#include "Skeleton.h"
 #include <unordered_map>
 
-
 #include <iostream>
 #include <string>
 #include <map>
@@ -29,39 +28,45 @@
 #include <OpenThreads/Thread>
 
 
-//	zmq::context_t contextCloud(1);
+//  zmq::context_t contextCloud(1);
 
 class CloudManager : public OpenThreads::Thread {
 
-    public:
+public:
 
-	CloudManager();
-        ~CloudManager();
-	//contextCloud(1);
-        SubSocket<RemoteKinect::PointCloud>* cloudT_socket;
-        void update();
-        bool isCacheDone();
-        RemoteKinect::PointCloud* packet;
+    CloudManager(std::string server);
+    ~CloudManager();
+    //contextCloud(1);
+    SubSocket<RemoteKinect::PointCloud>* cloudT_socket;
+    void update();
+    bool isCacheDone();
+    RemoteKinect::PointCloud* packet;
 
-        virtual void run();
-        void quit();
-    protected:
+    virtual void run();
+    void quit();
+    int firstRunStatus();
+    osg::ref_ptr<osg::Vec4Array> kinectColours;
+    osg::ref_ptr<osg::Vec3Array> kinectVertices;
+    osg::ref_ptr<osg::Vec3Array> kinectNormals;
+    osg::ref_ptr<osg::Geometry> tnodeGeom;
+    osg::ref_ptr<osg::Vec4Array> newColours;
+    osg::ref_ptr<osg::Vec3Array> newVertices;
+    osg::ref_ptr<osg::Vec3Array> newNormals;
 
-       // osg::ref_ptr<osg::Vec4Array> kinectColours;
-       // osg::ref_ptr<osg::Vec3Array> kinectVertices;
-        bool _cacheDone;
     bool useKColor;
     bool should_quit;
-    osg::Program* pgm1;
-    osg::Group* kinectgrp;
-    osg::MatrixTransform* _root;
-    float initialPointScale;
+protected:
+
+    bool _cacheDone;
+    bool _next;
+    bool pause;
+    int _firstRun;
     int minDistHSV, maxDistHSV;
     int minDistHSVDepth, maxDistHSVDepth;
     std::unordered_map<float, osg::Vec4f> distanceColorMap;
     osg::Vec4f getColorRGB(int dist);
-    float distanceMIN, distanceMAX;
-    float _sphereRadius;
+    void processNewCloud();
+    std::string kinectServer;
 };
 
-//#endif
+#endif

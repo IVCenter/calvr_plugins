@@ -1,6 +1,7 @@
 #ifndef _ARTIFACTVIS2_
 #define _ARTIFACTVIS2_
 
+#include <PointCloudObject.h>
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuCheckbox.h>
@@ -801,6 +802,7 @@ protected:
     std::string manualEnterName; 
     void saveTo3Dkml(string name,string filename, string file, string filetype, Vec3 pos, Quat rot, float scaleFloat, string q_type, string q_group); 
     void addNewModel(int i);
+    void addNewPCTest(int index);
     void addNewPC(int i);
     Vec3 matrix_to_euler(osg::Matrix colMatrix);
     float ClampUnity(float x);
@@ -837,6 +839,7 @@ protected:
     void setupQueryMenu(Table* table);
     void setupUtilsMenu();
     void setupFileMenu();
+    void tempStackPhotos();
     void setupVisualQuery();
     void newQueryGraph(int tableIndex,std::string parent, std::string name, int order);
     void generateScreen();

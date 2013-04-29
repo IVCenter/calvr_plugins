@@ -1485,7 +1485,8 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
                if(!_pointClouds[i]->loaded)
                {
                 //Model* newModel = new Model();
-               addNewPC(i);
+               //addNewPC(i);
+               addNewPCTest(i);
                }
                else
                {
@@ -6979,7 +6980,8 @@ void ArtifactVis2::menuSetup()
     _selectionStatsPanel = new DialogPanel(450, "Selection Stats", "Plugin.ArtifactVis2.SelectionStatsPanel");
     _selectionStatsPanel->setVisible(false);
     */
-
+//tempStackPhotos();
+   // generateScreen(); 
 }
 void ArtifactVis2::initSelectBox()
 {
@@ -7033,7 +7035,7 @@ void ArtifactVis2::secondInit()
 
     if(ConfigManager::getBool("Plugin.ArtifactVis2.MoveCamera") && true)
     {
-    readAnnotationFile();
+    //readAnnotationFile();
     }
 
     secondInitComplete = true;
@@ -7339,6 +7341,19 @@ void ArtifactVis2::updateFileMenu(std::string dir, int scroll)
     _downFileManager = new MenuButton("--Scroll Down--");
     _downFileManager->setCallback(this);
     _filePanel->addMenuItem(_downFileManager);
+}
+void ArtifactVis2::addNewPCTest(int index)
+{
+ string filename = _pointClouds[index]->fullpath;
+ string name = _pointClouds[index]->name;
+ Quat pcRot = _pointClouds[index]->rot;
+ Vec3 pcPos = _pointClouds[index]->pos;
+ float pcScale = _pointClouds[index]->scale;
+ PointCloudObject * pcObject = new PointCloudObject(name,filename,pcRot,pcScale,pcPos);
+ PluginHelper::registerSceneObject(pcObject,"pcObject");
+ pcObject->attachToScene();
+ cout << "This is from new PC test!!!!!\n";
+ 
 }
 void ArtifactVis2::addNewPC(int index)
 {
@@ -8072,8 +8087,8 @@ else
     _pointClouds[index]->origScale = scale; 
  }
     
-addNewPC(index);
-
+//addNewPC(index);
+addNewPCTest(index);
  
  newSelectedFile = "";
  newSelectedName = "";
@@ -9742,7 +9757,6 @@ xml = mxmlNewXML("1.0");
 }
 void ArtifactVis2::setupVisualQuery()
 {
-    generateScreen(); 
     for (int i = 0; i < _tables.size(); i++)
     {
      if(_tables[i]->name == "kis2010d_a")
@@ -10012,7 +10026,7 @@ cerr << "Pass\n";
 void ArtifactVis2::generateScreen()
 {
 
-            if(ConfigManager::getBool("Plugin.KinectDemo.ShowScreenFrames"))
+            if(ConfigManager::getBool("Plugin.ArtifactVis2.ShowScreens"))
             {
 	    SceneObject * so;
 	    so = new SceneObject("screens", false, false, false, true, false);
@@ -10024,10 +10038,12 @@ void ArtifactVis2::generateScreen()
 	    so->setMovable(false);
 	    so->addMoveMenuItem();
 	    so->addNavigationMenuItem();
-             string filename = "/home/calvr/CalVR/config/lenovotest.xml";
-            readScreenConfig(filename);
+            string filename = ConfigManager::getEntry("Plugin.ArtifactVis2.ScreenConfigLocation");
+            std::vector<ScreenSetup*> screens;
+            screens = readScreenConfig(filename);
               //Draw Configured Screens
-              int numWindows =ScreenConfig::instance()->getNumWindows();
+              //int numWindows =ScreenConfig::instance()->getNumWindows();
+              int numWindows = screens.size();
               float width;
               float height;
               float h;
@@ -10038,13 +10054,17 @@ void ArtifactVis2::generateScreen()
               //TODO:Get Screen Info from Config file
               for (int j = 0; j < numWindows; j++)
               {
-                ScreenInfo* si = ScreenConfig::instance()->getScreenInfo(j);
+                //ScreenInfo* si = ScreenConfig::instance()->getScreenInfo(j);
+                ScreenSetup* si = screens[j];
                  width = si->width;
                  height = si->height;
                  h = si->h;
-                 p = si->p;
-                 r = si->r;
-                 offsetScreen = si->xyz;
+                 r = si->p;
+                 p = si->r;
+                // h = 0;
+               //  p = 0;
+               //  r = 0;
+                 offsetScreen = si->offsetScreen;
               
         	//Create Quad Face
 	//	float width = 300;
@@ -10052,7 +10072,7 @@ void ArtifactVis2::generateScreen()
 	         Vec3 pos = Vec3(-(width/2),0,-(height/2));
                  Vec4f color = Vec4f(0, 0.42, 0.92, 1);
                  //Ofset Pos
-                 pos += offsetScreen; 
+                 //pos += offsetScreen; 
 		    osg::Geometry * geo = new osg::Geometry();
 		    osg::Vec3Array* verts = new osg::Vec3Array();
 		    verts->push_back(pos);
@@ -10096,14 +10116,21 @@ void ArtifactVis2::generateScreen()
 			rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
 			rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
 			Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(0,1,0),rotDegrees[2], osg::Vec3d(0,0,1)); 
+			Quat rot0 = osg::Quat(0, 0, 0, 1); 
 
 		    MatrixTransform* rotate = new osg::MatrixTransform();
 		    Matrix rotMat;
 		    rotMat.makeRotate(rot);
 		    rotate->setMatrix(rotMat);
 		    rotate->addChild(fgeode);
-
-	            switchNode->addChild(rotate);
+		  //  rotMat.makeRotate(rot);
+		  //  rotate->setMatrix(rotMat);
+            Matrix posMat;
+            posMat.makeTranslate(offsetScreen);
+            MatrixTransform* posTransform = new osg::MatrixTransform();
+            posTransform->setMatrix(posMat);
+            posTransform->addChild(rotate);
+	            switchNode->addChild(posTransform);
                  }
              }
 }
@@ -10141,13 +10168,14 @@ std::vector<ScreenSetup*> ArtifactVis2::readScreenConfig(std::string filename)
       //  std::cerr << "Parsing XML: " << file << std::endl;
 
     mxml_node_t* node; 
-    for (node = mxmlFindElement(tree, tree, "ScreenConfig", NULL, NULL, MXML_DESCEND); node != NULL; node = mxmlFindElement(node, tree, "ScreenConfig", NULL, NULL, MXML_DESCEND))
+    for (node = mxmlFindElement(tree, tree, "Screen", NULL, NULL, MXML_DESCEND); node != NULL; node = mxmlFindElement(node, tree, "Screen", NULL, NULL, MXML_DESCEND))
     {
 
     if (true)
     {
          ScreenSetup* screen = new ScreenSetup; 
-         mxml_node_t* child = mxmlFindElement(node, tree, "Screen", NULL, NULL, MXML_DESCEND);
+        // mxml_node_t* child = mxmlFindElement(node, tree, "Screen", NULL, NULL, MXML_DESCEND);
+         mxml_node_t* child = node; 
 
          string attribute = "width";
          const char * attr = mxmlElementGetAttr(child, attribute.c_str());
@@ -10178,11 +10206,11 @@ std::vector<ScreenSetup*> ArtifactVis2::readScreenConfig(std::string filename)
 
          attribute = "originY";
          attr = mxmlElementGetAttr(child, attribute.c_str());
-         x = atof(attr);
+         y = atof(attr);
 
          attribute = "originZ";
          attr = mxmlElementGetAttr(child, attribute.c_str());
-         x = atof(attr);
+         z = atof(attr);
 
          screen->offsetScreen = Vec3(x,y,z);
          screens.push_back(screen);
@@ -10206,4 +10234,75 @@ cout << "Screens: " << screens.size() << "\n";
 
 
 return screens;
+}
+void ArtifactVis2::tempStackPhotos()
+{
+
+    string dir = "";
+
+    string types = "JPG";
+    dir = "/home/calvr/panotest1/3/";
+    std::vector<DirFile*> entries3;
+    getDirFiles(dir, entries3, types);
+
+    dir = "/home/calvr/panotest1/4/";
+    std::vector<DirFile*> entries4;
+    getDirFiles(dir, entries4, types);
+
+    dir = "/home/calvr/panotest1/5/";
+    std::vector<DirFile*> entries5;
+    getDirFiles(dir, entries5, types);
+
+    dir = "/home/calvr/panotest1/6/";
+    std::vector<DirFile*> entries6;
+    getDirFiles(dir, entries6, types);
+
+    dir = "/home/calvr/panotest1/7/";
+    std::vector<DirFile*> entries7;
+    getDirFiles(dir, entries7, types);
+    std::vector<std::vector<DirFile*> > folders;
+    folders.push_back(entries3);
+    folders.push_back(entries4);
+    folders.push_back(entries5);
+    folders.push_back(entries6);
+    folders.push_back(entries7);
+    int m = 0;
+    for(int n=0; n<entries3.size(); n++)
+    {
+       for(int i=0; i<folders.size(); i++)
+       {
+       std::vector<DirFile*> files = folders[i];
+       stringstream ss;
+       string digit;
+       string filename = files[n]->filename;
+       string path = files[n]->path;
+       if(m < 10)
+       {
+          digit = "00000";
+       }
+       else if (m < 100)
+       {
+          digit = "0000";
+
+       }
+       else
+       {
+          digit = "000";
+       
+       }
+       ss << digit << m << ".jpg";
+       string ending = ss.str();
+       ss.str("");
+       string newName = "/home/calvr/panoStack/";
+       newName.append(ending);
+       if(filename != "..")
+       {
+         string oldfile = path;
+         oldfile.append(filename);
+         rename(oldfile.c_str(),newName.c_str());
+       cout << oldfile << "--" << newName << "\n";
+	}
+       m++; 
+       }
+    }
 }

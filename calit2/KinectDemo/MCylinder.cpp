@@ -13,7 +13,7 @@ MCylinder::MCylinder()
     attached = false;
     locked = false;
     translate->addChild(geode);
-    radius = 0.01;
+    radius = 0.01*1000;
     CylinderColor = osg::Vec4(1.0, 0.4, 0.2, 1.0);
     osg::ref_ptr<osg::Material> pMaterial;
     pMaterial = new osg::Material;
