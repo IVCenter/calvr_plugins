@@ -19,6 +19,7 @@ ModelHandler::ModelHandler()
     _geoRoot = new osg::MatrixTransform();
     _crosshairPat = NULL;
     _scoreText = NULL;
+    _scoreSwitch = NULL;
 
     _dataDir = ConfigManager::getEntry("Plugin.ElevatorRoom.DataDir");
     _dataDir = _dataDir + "/";
@@ -810,10 +811,12 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
 
     // Score text
     { 
-    osg::Vec3 pos = osg::Vec3(-500, 0, 300);
+    osg::Vec3 pos = osg::Vec3(0, 100, 0);
+    _scoreSwitch = new osg::Switch();
+
     _scoreText = new osgText::Text();
     _scoreText->setText("Score: 0");
-    _scoreText->setCharacterSize(20);
+    _scoreText->setCharacterSize(40);
     _scoreText->setAlignment(osgText::Text::LEFT_CENTER);
     _scoreText->setPosition(pos);
     _scoreText->setColor(osg::Vec4(1,1,1,1));
@@ -822,7 +825,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
 
     float width = 200, height = 50;
     osg::ref_ptr<osg::Geometry> quad = makeQuad(width, height, 
-        osg::Vec4(1.0,1.0,1.0,0.5), pos - osg::Vec3(10, 0, 25));
+        osg::Vec4(0.8,0.8,0.8,1.0), pos - osg::Vec3(10, 0, 25));
 
     pat = new osg::PositionAttitudeTransform();
     geode = new osg::Geode();
@@ -834,7 +837,10 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
     pat->addChild(geode);
-    PluginHelper::getScene()->addChild(pat);
+  //  PluginHelper::getScene()->addChild(pat);
+
+    _scoreSwitch->addChild(pat);
+    PluginHelper::getScene()->addChild(_scoreSwitch);
     }
 
     // Crosshair
@@ -1442,6 +1448,18 @@ void ModelHandler::turnRight()
             _audioHandler->update(i + DING_OFFSET, (i - offset) * angle);
             _audioHandler->update(i + EXPLOSION_OFFSET, (i - offset) * angle);
         }
+    }
+}
+
+void ModelHandler::showScore(bool b)
+{
+    if (b)
+    {
+        _scoreSwitch->setAllChildrenOn();
+    }
+    else
+    {
+        _scoreSwitch->setAllChildrenOff();
     }
 }
 

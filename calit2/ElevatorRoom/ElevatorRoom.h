@@ -96,6 +96,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         void turnLeft();
         void turnRight();
         void shoot();
+        void flashAvatars();
 
         int init_SPP(int port); 
         void close_SPP();
@@ -116,11 +117,11 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         AudioHandler * _audioHandler; 
         ModelHandler * _modelHandler;
 
-        cvr::SubMenu * _elevatorMenu;
+        cvr::SubMenu * _elevatorMenu, *_optionsMenu;
         cvr::MenuButton * _loadButton, * _clearButton;
         cvr::MenuRangeValue *_timeScaleRV;
         cvr::MenuText * _chancesText;
-        cvr::MenuCheckbox *_dingCheckbox;
+        cvr::MenuCheckbox *_dingCheckbox, *_pauseCB;
 
         std::map<std::string, cvr::MenuCheckbox*> _levelMap;
 
@@ -140,7 +141,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         int _sockfd; // for EOG syncer communication
         int _alienChance, _allyChance, _checkerChance, _errorChance;
 
-        bool _loaded; // whether the model has finished loading
+        bool _loaded, _paused; // whether the model has finished loading
         bool _hit, _noResponse; // whether a hit has been made on the active avatar
         bool _debug; // turns on debug messages to command line
         bool _connected; // for EOG syncer communication
@@ -149,8 +150,13 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
 
         Mode _mode; // which kind of avatar is currently active
         Phase _phase;
-
-
+        
+        int _trialPhase, _trialCount;
+        float _trialPauseTime;
+        bool _trialPause;
+        std::vector<int> _trialCounts;
+        std::vector<float> _trialPauseLengths;
+        std::vector<std::string> _trialThemes;
 
         // Config options
         bool _staticMode, _staticDoor, _doorMovement, _rotateOnly;
