@@ -70,10 +70,12 @@ void GraphLayoutObject::addGraphObject(LayoutTypeObject * object)
 
     TimeRangeObject * tro = dynamic_cast<TimeRangeObject*>(object);
     ValueRangeObject * vro = dynamic_cast<ValueRangeObject*>(object);
+    LogValueRangeObject * lvro = dynamic_cast<LogValueRangeObject*>(object);
 
-    if((tro || vro) && _syncTimeCB->getValue())
+
+    if((tro || vro || lvro) && _syncTimeCB->getValue())
     {
-	if(vro || !_zoomCB->getValue())
+	if(vro || lvro || !_zoomCB->getValue())
 	{
 	    menuCallback(_syncTimeCB);
 	}
