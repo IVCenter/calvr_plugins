@@ -15,6 +15,7 @@ SymptomGraphObject::SymptomGraphObject(mysqlpp::Connection * conn, float width, 
     _conn = conn;
     _graph = new TimeRangeDataGraph();
     _graph->setDisplaySize(width,height);
+    _graph->setColorOffset(0.5);
 
     addChild(_graph->getGraphRoot());
 

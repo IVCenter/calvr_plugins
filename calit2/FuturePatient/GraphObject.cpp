@@ -41,6 +41,7 @@ GraphObject::GraphObject(mysqlpp::Connection * conn, float width, float height, 
     _ldmList = new MenuList();
     _ldmList->setValues(ldmText);
     _ldmList->setCallback(this);
+    _ldmList->setIndex(1);
     addMenuItem(_ldmList);
 
     _pdfDir = ConfigManager::getEntry("value","Plugin.FuturePatient.PDFDir","");
@@ -149,11 +150,26 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 		    bool hasGoodRange = false;
 		    float goodLow, goodHigh;
 
-		    if(strcmp(metaRes[0]["good_low"].c_str(),"NULL") && metaRes[0]["good_high"].c_str())
+		    if(strcmp(metaRes[0]["good_low"].c_str(),"NULL") || strcmp(metaRes[0]["good_high"].c_str(),"NULL"))
 		    {
 			hasGoodRange = true;
-			gd.normalLow = goodLow = atof(metaRes[0]["good_low"].c_str());
-			gd.normalHigh = goodHigh = atof(metaRes[0]["good_high"].c_str());
+			if(strcmp(metaRes[0]["good_low"].c_str(),"NULL"))
+			{
+			    gd.normalLow = goodLow = atof(metaRes[0]["good_low"].c_str());
+			}
+			else
+			{
+			    gd.normalLow = goodLow = FLT_MIN;
+			}
+
+			if(strcmp(metaRes[0]["good_high"].c_str(),"NULL"))
+			{
+			    gd.normalHigh = goodHigh = atof(metaRes[0]["good_high"].c_str());
+			}
+			else
+			{
+			    gd.normalHigh = goodHigh = FLT_MAX;
+			}
 		    }
 		    else
 		    {
@@ -418,7 +434,7 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 		actionMap[annotations[i].point] = new PointActionPDF(_pdfDir + "/" + annotations[i].url);
 	    }
 
-	    //_graph->setPointActions(gd.displayName,actionMap);
+	    _graph->setPointActions(gd.displayName,actionMap);
 	}
 
 	LoadData ld;

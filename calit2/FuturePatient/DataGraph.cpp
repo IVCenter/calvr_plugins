@@ -123,7 +123,7 @@ DataGraph::DataGraph()
     _currentMultiGraphDisplayMode = MGDM_NORMAL;
     _labelDisplayMode = LDM_MIN_MAX;
 
-    osg::Vec4 color(1.0,1.0,1.0,1.0);
+    osg::Vec4 color(0.9,0.9,0.9,1.0);
 
     osg::Geometry * geo = _bgGeometry.get();
     osg::Vec3Array* verts = new osg::Vec3Array();
@@ -703,6 +703,9 @@ GraphDisplayType DataGraph::getDisplayType(std::string graphName)
 
 void DataGraph::setLabelDisplayMode(LabelDisplayMode ldm)
 {
+    float padding = calcPadding();
+    float widthCheck = (_width / 2.0) - padding;
+
     for(std::map<std::string,GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); ++it)
     {
 	it->second.labelGeode->removeDrawables(0,it->second.labelGeode->getNumDrawables());
@@ -745,25 +748,34 @@ void DataGraph::setLabelDisplayMode(LabelDisplayMode ldm)
 		maxPoint = maxPoint - osg::Vec3(0,0,textHeight) + osg::Vec3(0,-1,0);
 		minPoint = minPoint + osg::Vec3(0,0,textHeight) + osg::Vec3(0,-1,0);
 
-		std::stringstream minss;
-		minss << (it->second.zMin + (it->second.data->at(minIndex).z() * (it->second.zMax-it->second.zMin)));
-		osgText::Text * text = makeText(minss.str(),textColor);
-		text->setAlignment(osgText::Text::CENTER_CENTER);
-		osg::BoundingBox bb = text->getBound();
-		float csize = textHeight / (bb.zMax() - bb.zMin());
-		text->setCharacterSize(csize);
-		text->setPosition(minPoint);
-		it->second.labelGeode->addDrawable(text);
+		osgText::Text * text;
+		osg::BoundingBox bb;
+		float csize;
+		if(fabs(minPoint.x()) < widthCheck)
+		{
+		    std::stringstream minss;
+		    minss << (it->second.zMin + (it->second.data->at(minIndex).z() * (it->second.zMax-it->second.zMin)));
+		    text = makeText(minss.str(),textColor);
+		    text->setAlignment(osgText::Text::CENTER_CENTER);
+		    bb = text->getBound();
+		    csize = textHeight / (bb.zMax() - bb.zMin());
+		    text->setCharacterSize(csize);
+		    text->setPosition(minPoint);
+		    it->second.labelGeode->addDrawable(text);
+		}
 
-		std::stringstream maxss;
-		maxss << (it->second.zMin + (it->second.data->at(maxIndex).z() * (it->second.zMax-it->second.zMin)));
-		text = makeText(maxss.str(),textColor);
-		text->setAlignment(osgText::Text::CENTER_CENTER);
-		bb = text->getBound();
-		csize = textHeight / (bb.zMax() - bb.zMin());
-		text->setCharacterSize(csize);
-		text->setPosition(maxPoint);
-		it->second.labelGeode->addDrawable(text);
+		if(fabs(maxPoint.x()) < widthCheck)
+		{
+		    std::stringstream maxss;
+		    maxss << (it->second.zMin + (it->second.data->at(maxIndex).z() * (it->second.zMax-it->second.zMin)));
+		    text = makeText(maxss.str(),textColor);
+		    text->setAlignment(osgText::Text::CENTER_CENTER);
+		    bb = text->getBound();
+		    csize = textHeight / (bb.zMax() - bb.zMin());
+		    text->setCharacterSize(csize);
+		    text->setPosition(maxPoint);
+		    it->second.labelGeode->addDrawable(text);
+		}
 
 		break;
 	    }
@@ -783,15 +795,18 @@ void DataGraph::setLabelDisplayMode(LabelDisplayMode ldm)
 			point = point - osg::Vec3(0,0,textHeight) + osg::Vec3(0,-1,0);
 		    }
 
-		    std::stringstream ss;
-		    ss << (it->second.zMin + (it->second.data->at(i).z() * (it->second.zMax-it->second.zMin)));
-		    osgText::Text * text = makeText(ss.str(),textColor);
-		    text->setAlignment(osgText::Text::CENTER_CENTER);
-		    osg::BoundingBox bb = text->getBound();
-		    float csize = textHeight / (bb.zMax() - bb.zMin());
-		    text->setCharacterSize(csize);
-		    text->setPosition(point);
-		    it->second.labelGeode->addDrawable(text);
+		    if(fabs(point.x()) < widthCheck)
+		    {
+			std::stringstream ss;
+			ss << (it->second.zMin + (it->second.data->at(i).z() * (it->second.zMax-it->second.zMin)));
+			osgText::Text * text = makeText(ss.str(),textColor);
+			text->setAlignment(osgText::Text::CENTER_CENTER);
+			osg::BoundingBox bb = text->getBound();
+			float csize = textHeight / (bb.zMax() - bb.zMin());
+			text->setCharacterSize(csize);
+			text->setPosition(point);
+			it->second.labelGeode->addDrawable(text);
+		    }
 		}
 
 		break;
@@ -843,7 +858,8 @@ void DataGraph::setPointActions(std::string graphname, std::map<int,PointAction*
 
 	osg::Vec3Array * verts = new osg::Vec3Array(actionMap.size());
 	osg::Vec4Array * colors = new osg::Vec4Array(1);
-	colors->at(0) = osg::Vec4(1.0,0,0,_pointActionAlpha);
+	//colors->at(0) = osg::Vec4(1.0,0,0,_pointActionAlpha);
+	colors->at(0) = osg::Vec4(0,0,0,1.0);
 	it->second.pointActionGeometry->setVertexArray(verts);
 	it->second.pointActionGeometry->setColorArray(colors);
 	it->second.pointActionGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
@@ -865,6 +881,7 @@ void DataGraph::setPointActions(std::string graphname, std::map<int,PointAction*
 
 void DataGraph::updatePointAction()
 {
+    return;
     static const float flashingTime = 2.5;
     
     float deltaAlpha = PluginHelper::getLastFrameDuration() / flashingTime;
@@ -1312,7 +1329,8 @@ void DataGraph::update()
     float avglen = (_width + _height) / 2.0;
     _point->setSize(_glScale * avglen * 0.04 * _pointLineScale);
     _pointSizeUniform->set((float)_point->getSize());
-    _pointActionPoint->setSize(1.3*_point->getSize());
+    //_pointActionPoint->setSize(1.3*_point->getSize());
+    _pointActionPoint->setSize(0.4*_point->getSize());
     //std::cerr << "Point size set to: " << _point->getSize() << std::endl;
     _lineWidth->setWidth(_glScale * avglen * 0.05 * _pointLineScale * _pointLineScale);
 
@@ -1325,7 +1343,7 @@ void DataGraph::update()
     {
 	_point->setSize(_point->getSize() * _masterPointScale);
 	_pointSizeUniform->set((float)_point->getSize());
-	_pointActionPoint->setSize(1.3*_point->getSize());
+	_pointActionPoint->setSize(0.4*_point->getSize());
 	_lineWidth->setWidth(_lineWidth->getWidth() * _masterLineScale);
     }
 

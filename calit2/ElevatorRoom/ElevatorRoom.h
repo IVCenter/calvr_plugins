@@ -93,11 +93,24 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         void chooseGameParameters(int &door, Mode &mode, bool &switched);
         void sendChar(unsigned char c);
         void dingTest();
+        void turnLeft();
+        void turnRight();
+        void shoot();
 
         int init_SPP(int port); 
         void close_SPP();
         void write_SPP(int bytes, unsigned char* buf);
         void connectToServer();
+
+        float randomFloat(float min, float max)
+        {
+            if (max < min) return 0;
+
+            float random = ((float) rand()) / (float) RAND_MAX;
+            float diff = max - min;
+            float r = random * diff;
+            return min + r;
+        };
 
         static ElevatorRoom * _myPtr;
         AudioHandler * _audioHandler; 
@@ -105,17 +118,22 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
 
         cvr::SubMenu * _elevatorMenu;
         cvr::MenuButton * _loadButton, * _clearButton;
-        cvr::MenuRangeValue * _checkerSpeedRV, * _alienChanceRV;
+        cvr::MenuRangeValue *_timeScaleRV;
         cvr::MenuText * _chancesText;
         cvr::MenuCheckbox *_dingCheckbox;
+
+        std::map<std::string, cvr::MenuCheckbox*> _levelMap;
 
         osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry
         
         // Timing 
-        float _startTime, _pauseTime, _flashStartTime;
+        float _startTime, _pauseTime, _flashStartTime, _timeScale;
         float _avatarFlashPerSec, _lightFlashPerSec, _checkSpeed, _doorFlashSpeed;
-        float _modelScale; // scale of entire scene
+        float _pauseMin, _pauseMax, _flashNeutralMin, _flashNeutralMax,
+        _solidColorMin, _solidColorMax, _doorOpenMin, _doorOpenMax;
+        float _valEventTime, _valEventCutoff;
 
+        float _modelScale; // scale of entire scene
         int _flashCount; // number of times active avatar has flashed
         int _activeDoor; // which door is currently opening/closing
         int _score; // current score (should be > 0)
@@ -127,6 +145,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         bool _debug; // turns on debug messages to command line
         bool _connected; // for EOG syncer communication
         bool _soundEnabled;
+        bool _valEvent;
 
         Mode _mode; // which kind of avatar is currently active
         Phase _phase;
@@ -151,36 +170,6 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         DWORD bytesWritten;
         unsigned char buf[16];
         bool _sppConnected;
-
-
-        // Disused 
-        //float _pauseStart, _pauseLength; // length in seconds of time between door close and next lighting up
-        //float _doorPauseStart, _doorPauseLength; // start time of the current pause
-        //float _dingStartTime,  _dingInterval;
-        //bool _firstOpening, _doorClosed;
-        //bool _isOpening; // whether the active door is opening or closing
-        //std::string _dataDir;
-
-        //COMMTIMEOUTS timeouts;
-        //oasclient::Sound * _ding, * _hitSound, * _laser;
-        //osg::Cone *_headCone, *_handCone;
-        //osg::Geode *_soundGeode;
-        //osg::ShapeDrawable *_headSD, *_handSD;
-        //struct ftdi_context _ftdic;
-        //osg::ref_ptr<osg::PositionAttitudeTransform> _crosshairPat;
-        //std::vector<osg::ref_ptr<osg::PositionAttitudeTransform> > _leftdoorPat,    
-        //    _rightdoorPat;
-        //std::vector<osg::ref_ptr<osg::ShapeDrawable> > _lights;
-        // first node is regular geometry, second node is flashing geometry
-        //std::vector<osg::ref_ptr<osg::Switch> > _aliensSwitch, _alliesSwitch, 
-        //_checkersSwitch, _lightSwitch;
-        //void openDoor(int doorNum);
-        //void closeDoor(int doorNum);
-/*        osg::ref_ptr<osg::Geometry> drawBox(osg::Vec3 center, float x, float y,
-            float z, osg::Vec4 color = osg::Vec4(1, 1, 1, 1), float texScale = 1.0);
-        osg::ref_ptr<osg::Geometry> makeQuad(float width, float height,
-            osg::Vec4 color, osg::Vec3 pos);
-*/
 };
 
 };

@@ -23,6 +23,11 @@ CalibrationController::CalibrationController(Group *rootGroup, const string &dat
 	mFieldRight(Vec3(1, 0, 0)), mFieldFront(Vec3(0, 1, 0)), mFieldUp(Vec3(0, 0, 1)), mFieldPos(Vec3(0, 0, 0))
 {
     mTimer = 0.0;
+    mLastAppear = 0.0; 
+    mAppearInterval = cvr::ConfigManager::getFloat("value", "Plugin.EOGCalibration.AppearTestInterval", 5);
+    mPhi = 0;
+    mTheta = 0;
+    mRad = 0;
 
     mViewerAlignmentTrans = new MatrixTransform();
     rootGroup->addChild(mViewerAlignmentTrans);
@@ -58,11 +63,11 @@ void CalibrationController::startCalibration()
         cout << "CaveCAD::CalibrationController: Unable to open file " << filename << endl;
         return;
     }
-    
+
     /* get current local time */
     time_t rawtime;
     time(&rawtime);
-    
+
     outFile << endl;
     outFile << "Current local time: " << ctime(&rawtime) << endl;
     outFile << "Horizontal Range: " << mLeftRange << " " << mRightRange << endl;
@@ -108,6 +113,10 @@ void CalibrationController::stopPlayback()
 	mPlaybackBallHandler->resertVirtualTimer();
 }
 
+void CalibrationController::setAppearFlag(bool flag)
+{
+    mAppearFlag = flag;
+}
 
 /***************************************************************
 *  Function: setCaliBallVisible()
@@ -247,14 +256,52 @@ void CalibrationController::updatePlaybackTime(const double &frameDuration)
 void CalibrationController::updateCaliBallPos(float &phi, float &theta, float &rad)
 {
     /* calculate phase parameters */
-    phi = 	0.5 * (mLeftRange - mRightRange) + M_PI / 2 + 
-		0.5 * (mRightRange + mLeftRange) * sin(2 * M_PI * mHorFreq * mTimer);
-    theta = 	0.5 * (mDownwardRange - mUpwardRange) + M_PI / 2 +  
-		0.5 * (mUpwardRange + mDownwardRange) * sin(2 * M_PI * mVerFreq * mTimer);
-    rad = 	0.5 * (mMinDepthRange + mMaxDepthRange) + 
-		0.5 * (mMaxDepthRange - mMinDepthRange) * sin(2 * M_PI * mDepFreq * mTimer);
+    if (!mAppearFlag)
+    {
+        phi = 	0.5 * (mLeftRange - mRightRange) + M_PI / 2 + 
+            0.5 * (mRightRange + mLeftRange) * sin(2 * M_PI * mHorFreq * mTimer);
+        theta = 	0.5 * (mDownwardRange - mUpwardRange) + M_PI / 2 +  
+            0.5 * (mUpwardRange + mDownwardRange) * sin(2 * M_PI * mVerFreq * mTimer);
+        rad = 	0.5 * (mMinDepthRange + mMaxDepthRange) + 
+            0.5 * (mMaxDepthRange - mMinDepthRange) * sin(2 * M_PI * mDepFreq * mTimer);
 
-    mCaliBallHandler->updateCaliBall(phi, theta, rad);
+        mCaliBallHandler->updateCaliBall(phi, theta, rad);
+    }
+
+    else if (mAppearFlag && mTimer - mLastAppear > mAppearInterval)
+    {
+        mLastAppear = mTimer;
+        // center + random offset within range
+        float offset = (double) rand() / (RAND_MAX);
+        if (rand() % 2 == 0)
+            offset *= -1;
+        phi = 0.5 * (mLeftRange - mRightRange) + M_PI / 2 + 
+            0.5 * (mRightRange + mLeftRange) * offset;
+
+        offset = (double) rand() / (RAND_MAX);
+        if (rand() % 2 == 0)
+            offset *= -1;
+        theta = 	0.5 * (mDownwardRange - mUpwardRange) + M_PI / 2 +  
+            0.5 * (mUpwardRange + mDownwardRange) * offset;
+
+        offset = (double) rand() / (RAND_MAX);
+        if (rand() % 2 == 0)
+            offset *= -1;
+        rad = 	0.5 * (mMinDepthRange + mMaxDepthRange) + 
+            0.5 * (mMaxDepthRange - mMinDepthRange) * offset;
+
+
+        mPhi = phi;
+        mTheta = theta;
+        mRad = rad;
+    }
+    else
+    {
+        phi = mPhi; 
+        theta = mTheta;
+        rad = mRad;
+        mCaliBallHandler->updateCaliBall(phi, theta, rad);
+    }
 }
 
 
