@@ -18,7 +18,7 @@ GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std
     _resetLayoutButton->setCallback(this);
     addMenuItem(_resetLayoutButton);
 
-    _syncTimeCB = new MenuCheckbox("Sync Time",false);
+    _syncTimeCB = new MenuCheckbox("Sync",false);
     _syncTimeCB->setCallback(this);
     addMenuItem(_syncTimeCB);
 
@@ -86,6 +86,7 @@ void GraphLayoutObject::addGraphObject(LayoutTypeObject * object)
     }
 
     addChild(object);
+    object->objectAdded();
 
     _perGraphActiveHand.push_back(-1);
     _perGraphActiveHandType.push_back(TrackerBase::INVALID);
@@ -110,6 +111,7 @@ void GraphLayoutObject::removeGraphObject(LayoutTypeObject * object)
 	    delete _deleteButtonMap[object];
 	    _deleteButtonMap.erase(object);
 	    removeChild(object);
+	    object->objectRemoved();
 	    _objectList.erase(it);
 	    if(object->getLayoutDoesDelete())
 	    {
@@ -118,6 +120,8 @@ void GraphLayoutObject::removeGraphObject(LayoutTypeObject * object)
 	    break;
 	}
     }
+
+    checkLineRefs();
 
     if(index < _perGraphActiveHand.size())
     {
@@ -169,6 +173,43 @@ void GraphLayoutObject::removeGraphObject(LayoutTypeObject * object)
     updateLayout();
 }
 
+void GraphLayoutObject::addLineObject(LayoutLineObject * object)
+{
+    if(!object)
+    {
+	return;
+    }
+
+    for(int i = 0; i < _lineObjectList.size(); ++i)
+    {
+	if(_lineObjectList[i] == object)
+	{
+	    return;
+	}
+    }
+
+    _lineObjectList.push_back(object);
+
+    addChild(object);
+
+    updateLayout();
+}
+
+void GraphLayoutObject::removeLineObject(LayoutLineObject * object)
+{
+    for(std::vector<LayoutLineObject *>::iterator it = _lineObjectList.begin(); it != _lineObjectList.end(); ++it)
+    {
+	if((*it) == object)
+	{
+	    removeChild(object);
+	    _lineObjectList.erase(it);
+	    break;
+	}
+    }
+
+    updateLayout();
+}
+
 void GraphLayoutObject::selectMicrobes(std::string & group, std::vector<std::string> & keys)
 {
     // make copy to apply to new graphs when added
@@ -204,6 +245,7 @@ void GraphLayoutObject::removeAll()
     for(int i = 0; i < _objectList.size(); i++)
     {
 	removeChild(_objectList[i]);
+	_objectList[i]->objectRemoved();
 	if(_objectList[i]->getLayoutDoesDelete())
 	{
 	    delete _objectList[i];
@@ -216,6 +258,7 @@ void GraphLayoutObject::removeAll()
 	delete it->second;
     }
 
+    checkLineRefs();
 
     _deleteButtonMap.clear();
     _perGraphActiveHand.clear();
@@ -1074,15 +1117,24 @@ void GraphLayoutObject::updateLayout()
 	return;
     }
 
+    float lineHeightMult = 0.1;
+    float maxLineMult = 0.33;
+    float layoutLineHeight;
+    float layoutGraphHeight;
+
+    layoutLineHeight = _height * std::min(((float)_lineObjectList.size())*lineHeightMult,maxLineMult);
+
+    layoutGraphHeight = _height - layoutLineHeight;
+
     float graphWidth, graphHeight;
 
     if(totalGraphs >= _maxRows)
     {
-	graphHeight = _height / (float)_maxRows;
+	graphHeight = layoutGraphHeight / (float)_maxRows;
     }
     else
     {
-	graphHeight = _height / (float)totalGraphs;
+	graphHeight = layoutGraphHeight / (float)totalGraphs;
     }
 
     float div = (float)((totalGraphs-1) / _maxRows);
@@ -1100,7 +1152,7 @@ void GraphLayoutObject::updateLayout()
 	_objectList[i]->setGraphSize(graphWidth,graphHeight);
 	_objectList[i]->setPosition(osg::Vec3(posX,0,posZ));
 	posZ -= graphHeight;
-	if(posZ < -(_height*0.5))
+	if(posZ < -(_height*0.5) + layoutLineHeight)
 	{
 	    posX += graphWidth;
 	    posZ = (_height*0.5) - (graphHeight*0.5);
@@ -1109,6 +1161,19 @@ void GraphLayoutObject::updateLayout()
 	if(dynamic_cast<MicrobeGraphObject*>(_objectList[i]))
 	{
 	    microbeGraphCount++;
+	}
+    }
+
+    if(_lineObjectList.size())
+    {
+	float lineHeight = layoutLineHeight / ((float)_lineObjectList.size());
+	posZ = (-_height / 2.0) + layoutLineHeight - (lineHeight / 2.0);
+	for(int i = 0; i < _lineObjectList.size(); ++i)
+	{
+	    _lineObjectList[i]->setSize(_width,lineHeight);
+	    _lineObjectList[i]->setPosition(osg::Vec3(0,0,posZ));
+
+	    posZ -= lineHeight;
 	}
     }
 
@@ -1142,6 +1207,24 @@ void GraphLayoutObject::updateLayout()
 	{
 	    pso->selectPatients(_currentSelectedPatients);
 	}
+    }
+}
+
+void GraphLayoutObject::checkLineRefs()
+{
+    std::vector<LayoutLineObject*> removeList;
+
+    for(int i = 0; i < _lineObjectList.size(); ++i)
+    {
+	if(!_lineObjectList[i]->hasRef())
+	{
+	    removeList.push_back(_lineObjectList[i]);
+	}
+    }
+
+    for(int i = 0; i < removeList.size(); ++i)
+    {
+	removeLineObject(removeList[i]);
     }
 }
 

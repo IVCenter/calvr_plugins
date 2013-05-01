@@ -16,6 +16,7 @@ SET(PLUGIN_HEADERS
     ColorGenerator.h
     SymptomGraphObject.h
     TimeRangeDataGraph.h
+    GraphKeyObject.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -37,6 +38,7 @@ ADD_LIBRARY(${LIB_NAME}
     ColorGenerator.cpp
     SymptomGraphObject.cpp
     TimeRangeDataGraph.cpp
+    GraphKeyObject.cpp
 )
 
 FIND_PACKAGE(Mysql)

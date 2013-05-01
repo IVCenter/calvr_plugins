@@ -16,6 +16,14 @@ class LayoutTypeObject : public cvr::TiledWallSceneObject
         {
         }
 
+        virtual void objectAdded()
+        {
+        }
+
+        virtual void objectRemoved()
+        {
+        }
+
         virtual void setGraphSize(float width, float height) = 0;
         virtual bool getLayoutDoesDelete()
         {
@@ -65,6 +73,7 @@ class LayoutLineObject : public cvr::TiledWallSceneObject
 
         void ref(LayoutTypeObject * object);
         void unref(LayoutTypeObject * object);
+        void unrefAll();
         bool hasRef();
 
     protected:
