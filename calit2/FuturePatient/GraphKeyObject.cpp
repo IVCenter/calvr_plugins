@@ -44,6 +44,9 @@ GraphKeyObject::GraphKeyObject(std::string name, bool navigation, bool movable, 
     setBoundingBox(bb);
 
     _font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
+
+    osg::StateSet * stateset = _geode->getOrCreateStateSet();
+    stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
 }
 
 GraphKeyObject::~GraphKeyObject()
