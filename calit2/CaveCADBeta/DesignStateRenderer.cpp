@@ -38,6 +38,7 @@ DesignStateRenderer::DesignStateRenderer(osg::Group* designStateRootGroup): mFla
     mDSTexturePallette = new DSTexturePallette();
     mDSViewpoints = new DSViewpoints();
     mDSObjectPlacer = new DSObjectPlacer();
+    mDSLights = new DSLights();
     mActiveDSPtr = mDSVirtualSphere;
 
     // push state object transforms to list, attach them to scene graph 
@@ -50,6 +51,7 @@ DesignStateRenderer::DesignStateRenderer(osg::Group* designStateRootGroup): mFla
     //mDSList.push_back(mDSSketchBook);
     mDSList.push_back(mDSViewpoints);
     mDSList.push_back(mDSObjectPlacer);
+    mDSList.push_back(mDSLights);
     mActiveDSItr = mDSList.begin();
 
     mDSRootTrans = new MatrixTransform();
@@ -61,6 +63,7 @@ DesignStateRenderer::DesignStateRenderer(osg::Group* designStateRootGroup): mFla
     //mDSRootTrans->addChild(mDSSketchBook);
     mDSRootTrans->addChild(mDSViewpoints);
     mDSRootTrans->addChild(mDSObjectPlacer);
+    mDSRootTrans->addChild(mDSLights);
     designStateRootGroup->addChild(mDSRootTrans);
 
     // initialize design state objects that NOT registered in 'mDSList'

@@ -1049,9 +1049,9 @@ void ElevatorRoom::shoot()
         {
             if (_audioHandler)
             {
-                _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
                 unsigned char c = 29;
                 sendChar(c);
+                _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "buzz");
             }
 
             unsigned char c = 'k';

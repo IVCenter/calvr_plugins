@@ -30,6 +30,8 @@ CaveCADBeta::~CaveCADBeta()
 ***************************************************************/
 bool CaveCADBeta::init()
 {
+    std::cout << "CaveCADBeta init." << std::endl;
+
     mIsEnabled = false;
     mValCutoff = 1.0;
     mValDownTime = PluginHelper::getProgramDuration();
@@ -107,6 +109,7 @@ bool CaveCADBeta::init()
 		mCAVEDesigner->getAudioConfigHandler()->connectServer();
     }
 
+    std::cout << "CaveCADBeta done." << std::endl;
     return true;
 }
 
@@ -204,13 +207,10 @@ void CaveCADBeta::menuCallback(MenuItem *item)
                 mShadowedScene = new osgShadow::ShadowedScene();
                 mShadowedScene->addChild(scaleMat);
             }
-        //    shadowedScene->setReceivesShadowTraversalMask(0x2);
-        //    shadowedScene->setCastsShadowTraversalMask(0x3);
-        //    scaleMat->setNodeMask(0xFFFFFF | (0x2 | 0x3) | osg::StateAttribute::OVERRIDE);
             
             osgShadow::ShadowMap *sm = new osgShadow::ShadowMap();
             mShadowedScene->setShadowTechnique(sm);
-            sm->setTextureSize(osg::Vec2s(1024,1024));
+           // sm->setTextureSize(osg::Vec2s(1024,1024));
 
             SceneManager::instance()->getObjectsRoot()->removeChild(scaleMat);
             SceneManager::instance()->getObjectsRoot()->addChild(mShadowedScene);
@@ -220,9 +220,9 @@ void CaveCADBeta::menuCallback(MenuItem *item)
             if (!mShadowedScene)
             {
                 mShadowedScene = new osgShadow::ShadowedScene();
-                mShadowedScene->addChild(scaleMat);
             }
 
+            mShadowedScene->removeChild(scaleMat);
             SceneManager::instance()->getObjectsRoot()->removeChild(mShadowedScene);
             SceneManager::instance()->getObjectsRoot()->addChild(scaleMat);
         }

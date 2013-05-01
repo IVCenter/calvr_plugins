@@ -90,7 +90,7 @@ MatrixTransform *ANIMCreateRefSkyDome(StateSet **stateset)
     (*stateset)->addUniform(paraImageTextureSampler);
 
     Program* programSky = new Program;
-    (*stateset)->setAttribute(programSky);
+   (*stateset)->setAttribute(programSky);
     programSky->addShader(Shader::readShaderFile(Shader::VERTEX, ANIMDataDir() + "Shaders/EnvSky.vert"));
     programSky->addShader(Shader::readShaderFile(Shader::FRAGMENT, ANIMDataDir() + "Shaders/EnvSky.frag"));
 

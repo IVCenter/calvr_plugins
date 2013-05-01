@@ -53,9 +53,13 @@ class Points : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
     std::map<struct PointObject*,cvr::MenuButton*> _saveMap;
     std::map<struct PointObject*,cvr::MenuCheckbox*> _boundsMap;
     std::vector<struct PointObject*> _loadedPoints;
-    
+
     std::map<std::string, std::pair<float, osg::Matrix> > _locInit;
     std::string _configPath;
+
+    cvr::SubMenu * _mainMenu, * _loadMenu;
+    cvr::MenuButton * _removeButton;
+    std::vector<cvr::MenuButton*> menuFileList;
 
     osg::Uniform* objectScale;
 

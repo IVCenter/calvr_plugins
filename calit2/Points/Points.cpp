@@ -414,6 +414,37 @@ bool Points::init()
   // set default point scale
   initialPointScale = ConfigManager::getFloat("Plugin.Points.PointScale", 0.001f);
 
+  _mainMenu = new SubMenu("Points", "Points");
+  _mainMenu->setCallback(this);
+
+  _loadMenu = new SubMenu("Load","Load");
+  _loadMenu->setCallback(this);
+  _mainMenu->addItem(_loadMenu);
+
+  _removeButton = new MenuButton("Remove All");
+  _removeButton->setCallback(this);
+  _mainMenu->addItem(_removeButton);
+
+  MenuSystem::instance()->addMenuItem(_mainMenu);
+
+
+
+
+
+  vector<string> list;
+
+  string configBase = "Plugin.Points.Files";
+
+  ConfigManager::getChildren(configBase, list);
+
+  for(int i = 0; i < list.size(); i++)
+  {
+	MenuButton * button = new MenuButton(list[i]);
+	button->setCallback(this);
+	_loadMenu->addItem(button);
+
+	std::string path = ConfigManager::getEntry("path", configBase + "." + list[i],"");
+  }
 
 
   // load saved initial scales and locations

@@ -1330,7 +1330,7 @@ void DataGraph::update()
     _point->setSize(_glScale * avglen * 0.04 * _pointLineScale);
     _pointSizeUniform->set((float)_point->getSize());
     //_pointActionPoint->setSize(1.3*_point->getSize());
-_pointActionPoint->setSize(0.4*_point->getSize());
+    _pointActionPoint->setSize(0.4*_point->getSize());
     //std::cerr << "Point size set to: " << _point->getSize() << std::endl;
     _lineWidth->setWidth(_glScale * avglen * 0.05 * _pointLineScale * _pointLineScale);
 

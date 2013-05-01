@@ -42,6 +42,10 @@ GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std
     _minmaxButton->setCallback(this);
     addMenuItem(_minmaxButton);
 
+    _removeUnselected = new MenuButton("Remove Unselected");
+    _removeUnselected->setCallback(this);
+    addMenuItem(_removeUnselected);
+
     _activeHand = -1;
     _activeHandType = TrackerBase::INVALID;
 
@@ -144,6 +148,22 @@ void GraphLayoutObject::removeGraphObject(LayoutTypeObject * object)
 	_currentSelectedMicrobes.clear();
     }
 
+    bool selectedPatients = false;
+
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	if(dynamic_cast<PatientSelectObject*>(_objectList[i]))
+	{
+	    selectedPatients = true;
+	    break;
+	}
+    }
+
+    if(!selectedPatients)
+    {
+	_currentSelectedPatients.clear();
+    }
+
     updateLayout();
 }
 
@@ -159,6 +179,20 @@ void GraphLayoutObject::selectMicrobes(std::string & group, std::vector<std::str
 	if(mso)
 	{
 	    mso->selectMicrobes(group,keys);
+	}
+    }
+}
+
+void GraphLayoutObject::selectPatients(std::vector<std::string> & patients)
+{
+    _currentSelectedPatients = patients;
+
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	PatientSelectObject * pso = dynamic_cast<PatientSelectObject*>(_objectList[i]);
+	if(pso)
+	{
+	    pso->selectPatients(patients);
 	}
     }
 }
@@ -541,6 +575,57 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 
 		vro->setGraphDisplayRange(dataMin,dataMax);
 	    }
+
+	    float xMax = FLT_MIN;
+	    float xMin = FLT_MAX;
+	    float zMax = FLT_MIN;
+	    float zMin = FLT_MAX;
+
+	    for(int i = 0; i < _objectList.size(); ++i)
+	    {
+		LogValueRangeObject * lvro = dynamic_cast<LogValueRangeObject *>(_objectList[i]);
+		if(!lvro)
+		{
+		    continue;
+		}
+
+		float temp = lvro->getGraphXDisplayRangeMax();
+		if(temp > xMax)
+		{
+		    xMax = temp;
+		}
+		temp = lvro->getGraphXDisplayRangeMin();
+		if(temp < xMin)
+		{
+		    xMin = temp;
+		}
+
+		temp = lvro->getGraphZDisplayRangeMax();
+		if(temp > zMax)
+		{
+		    zMax = temp;
+		}
+		temp = lvro->getGraphZDisplayRangeMin();
+		if(temp < zMin)
+		{
+		    zMin = temp;
+		}
+	    }
+
+	    // sorta a hack for now
+	    xMax = zMax = 1.0;
+
+	    for(int i = 0; i < _objectList.size(); ++i)
+	    {
+		LogValueRangeObject * lvro = dynamic_cast<LogValueRangeObject *>(_objectList[i]);
+		if(!lvro)
+		{
+		    continue;
+		}
+
+		lvro->setGraphXDisplayRange(xMin,xMax);
+		lvro->setGraphZDisplayRange(zMin,zMax);
+	    }
 	}
 	else
 	{
@@ -575,6 +660,17 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 
 		vro->resetGraphDisplayRange();
 	    }
+
+	    for(int i = 0; i < _objectList.size(); ++i)
+	    {
+		LogValueRangeObject * lvro = dynamic_cast<LogValueRangeObject*>(_objectList[i]);
+		if(!lvro)
+		{
+		    continue;
+		}
+
+		lvro->resetGraphDisplayRange();
+	    }
 	}
 	return;
     }
@@ -587,6 +683,27 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	    removeGraphObject(it->first);
 	    return;
 	}
+    }
+
+    if(item == _removeUnselected)
+    {
+	std::vector<LayoutTypeObject*> removeList;
+
+	for(int i = 0; i < _objectList.size(); ++i)
+	{
+	    SelectableObject * so = dynamic_cast<SelectableObject*>(_objectList[i]);
+	    if(!so || !so->isSelected())
+	    {
+		removeList.push_back(_objectList[i]);
+	    }
+	}
+
+	for(int i = 0; i < removeList.size(); ++i)
+	{
+	    removeGraphObject(removeList[i]);
+	}
+
+	return;
     }
 
     TiledWallSceneObject::menuCallback(item);
@@ -1013,6 +1130,15 @@ void GraphLayoutObject::updateLayout()
 	if(mso)
 	{
 	    mso->selectMicrobes(_currentSelectedMicrobeGroup,_currentSelectedMicrobes);
+	}
+    }
+
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	PatientSelectObject * pso = dynamic_cast<PatientSelectObject*>(_objectList[i]);
+	if(pso)
+	{
+	    pso->selectPatients(_currentSelectedPatients);
 	}
     }
 }

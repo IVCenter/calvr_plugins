@@ -29,6 +29,7 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         void removeGraphObject(LayoutTypeObject * object);
 
         void selectMicrobes(std::string & group, std::vector<std::string> & keys);
+        void selectPatients(std::vector<std::string> & patients);
 
         void removeAll();
         void perFrame();
@@ -66,6 +67,7 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
 
         std::string _currentSelectedMicrobeGroup;
         std::vector<std::string> _currentSelectedMicrobes;
+        std::vector<std::string> _currentSelectedPatients;
 
         float _width;
         float _height;
@@ -87,6 +89,7 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         cvr::MenuRangeValueCompact * _rowsRV;
         cvr::MenuRangeValueCompact * _widthRV;
         cvr::MenuRangeValueCompact * _heightRV;
+        cvr::MenuButton * _removeUnselected;
 
         int _activeHand;
         cvr::TrackerBase::TrackerType _activeHandType;
