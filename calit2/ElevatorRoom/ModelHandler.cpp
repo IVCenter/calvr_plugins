@@ -1413,6 +1413,11 @@ bool ModelHandler::doorInView()
     return _doorInView;
 }
 
+int ModelHandler::getViewedDoor()
+{
+    return _viewedDoor;
+}
+
 void ModelHandler::turnLeft()
 {
     _turningLeft = true;
