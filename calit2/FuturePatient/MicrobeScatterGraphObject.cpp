@@ -164,9 +164,9 @@ void MicrobeScatterGraphObject::setGraphSize(float width, float height)
     _graph->setDisplaySize(width,height);
 }
 
-void MicrobeScatterGraphObject::selectPatients(std::vector<std::string> & patients)
+void MicrobeScatterGraphObject::selectPatients(std::string & group, std::vector<std::string> & patients)
 {
-    _graph->selectPoints(patients);
+    _graph->selectPoints(group,patients);
 }
 
 float MicrobeScatterGraphObject::getGraphXMaxValue()
@@ -234,15 +234,16 @@ bool MicrobeScatterGraphObject::processEvent(cvr::InteractionEvent * ie)
 	    return false;
 	}
 
+	std::string patientGroup;
 	std::vector<std::string> selectedPatients;
 
 	bool clickUsed = false;
-	if(_graph->processClick(selectedPatients))
+	if(_graph->processClick(patientGroup,selectedPatients))
 	{
 	    clickUsed = true;
 	}
 
-	layout->selectPatients(selectedPatients);
+	layout->selectPatients(patientGroup,selectedPatients);
 	if(clickUsed)
 	{
 	    return true;

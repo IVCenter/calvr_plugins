@@ -236,20 +236,22 @@ void GroupedScatterPlot::resetDisplayRange()
     update();
 }
 
-bool GroupedScatterPlot::processClick(std::vector<std::string> & labels)
+bool GroupedScatterPlot::processClick(std::string & group, std::vector<std::string> & labels)
 {
     if(_currentHoverIndex < 0 || _currentHoverOffset < 0)
     {
 	return false;
     }
 
+    group = _indexLabels[_currentHoverIndex];
     labels.push_back(_pointLabels[_currentHoverIndex][_currentHoverOffset]);
 
     return true;
 }
 
-void GroupedScatterPlot::selectPoints(std::vector<std::string> & labels)
+void GroupedScatterPlot::selectPoints(std::string & group, std::vector<std::string> & labels)
 {
+    _selectedGroup = group;
     _selectedLabels = labels;
 
     updateGraph();
@@ -784,7 +786,7 @@ void GroupedScatterPlot::updateGraph()
 
 	    if(addPoint)
 	    {
-		if(!_selectedLabels.size())
+		if(_selectedGroup.empty() && !_selectedLabels.size())
 		{
 		    color.w() = 1.0;
 		    verts->push_back(osg::Vec3(pointX,0,pointZ));
@@ -792,9 +794,19 @@ void GroupedScatterPlot::updateGraph()
 		else
 		{
 		    bool selected = false;
-		    for(int j = 0; j < _selectedLabels.size(); ++j)
+		    if(_selectedLabels.size())
 		    {
-			if(_pointLabels[it->first][i] == _selectedLabels[j])
+			for(int j = 0; j < _selectedLabels.size(); ++j)
+			{
+			    if(_pointLabels[it->first][i] == _selectedLabels[j])
+			    {
+				selected = true;
+			    }
+			}
+		    }
+		    else
+		    {
+			if(_selectedGroup == _indexLabels[it->first])
 			{
 			    selected = true;
 			}

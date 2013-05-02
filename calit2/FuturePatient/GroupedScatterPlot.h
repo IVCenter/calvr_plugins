@@ -68,8 +68,8 @@ class GroupedScatterPlot
         void setSecondDisplayRange(float min, float max);
         void resetDisplayRange();
 
-        bool processClick(std::vector<std::string> & labels);
-        void selectPoints(std::vector<std::string> & labels);
+        bool processClick(std::string & group, std::vector<std::string> & labels);
+        void selectPoints(std::string & group, std::vector<std::string> & labels);
 
         void setHover(osg::Vec3 intersect);
         void clearHoverText();
@@ -139,6 +139,7 @@ class GroupedScatterPlot
         float _pointLineScale;
         float _masterPointScale;
 
+        std::string _selectedGroup;
         std::vector<std::string> _selectedLabels;
 };
 

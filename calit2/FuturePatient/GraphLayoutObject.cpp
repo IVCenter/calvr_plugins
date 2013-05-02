@@ -167,6 +167,7 @@ void GraphLayoutObject::removeGraphObject(LayoutTypeObject * object)
 
     if(!selectedPatients)
     {
+	_currentSelectedPatientGroup = "";
 	_currentSelectedPatients.clear();
     }
 
@@ -226,8 +227,9 @@ void GraphLayoutObject::selectMicrobes(std::string & group, std::vector<std::str
     }
 }
 
-void GraphLayoutObject::selectPatients(std::vector<std::string> & patients)
+void GraphLayoutObject::selectPatients(std::string & group, std::vector<std::string> & patients)
 {
+    _currentSelectedPatientGroup = group;
     _currentSelectedPatients = patients;
 
     for(int i = 0; i < _objectList.size(); ++i)
@@ -235,7 +237,7 @@ void GraphLayoutObject::selectPatients(std::vector<std::string> & patients)
 	PatientSelectObject * pso = dynamic_cast<PatientSelectObject*>(_objectList[i]);
 	if(pso)
 	{
-	    pso->selectPatients(patients);
+	    pso->selectPatients(group,patients);
 	}
     }
 }
@@ -266,6 +268,9 @@ void GraphLayoutObject::removeAll()
 
     _currentSelectedMicrobeGroup = "";
     _currentSelectedMicrobes.clear();
+
+    _currentSelectedPatientGroup = "";
+    _currentSelectedPatients.clear();
 
     _objectList.clear();
 }
@@ -1205,7 +1210,7 @@ void GraphLayoutObject::updateLayout()
 	PatientSelectObject * pso = dynamic_cast<PatientSelectObject*>(_objectList[i]);
 	if(pso)
 	{
-	    pso->selectPatients(_currentSelectedPatients);
+	    pso->selectPatients(_currentSelectedPatientGroup,_currentSelectedPatients);
 	}
     }
 }

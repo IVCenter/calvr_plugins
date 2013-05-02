@@ -21,6 +21,8 @@ class GraphKeyObject : public LayoutLineObject
 
         virtual void setSize(float width, float height);
 
+        virtual bool eventCallback(cvr::InteractionEvent * ie);
+
     protected:
         void update();
 
@@ -33,6 +35,8 @@ class GraphKeyObject : public LayoutLineObject
         osg::ref_ptr<osg::Geometry> _bgGeom;
         osg::ref_ptr<osg::Geometry> _boxGeom;
         std::vector<osg::ref_ptr<osgText::Text> > _textList;
+
+        std::vector<std::pair<float,float> > _rangeList;
 
         osg::ref_ptr<osgText::Font> _font;
 };

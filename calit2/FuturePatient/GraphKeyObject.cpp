@@ -1,6 +1,8 @@
 #include "GraphKeyObject.h"
+#include "GraphLayoutObject.h"
 
 #include <cvrKernel/CalVR.h>
+#include <cvrUtil/OsgMath.h>
 
 using namespace cvr;
 
@@ -67,6 +69,8 @@ void GraphKeyObject::setKeys(std::vector<osg::Vec4> & colors, std::vector<std::s
     _boxGeom->setColorArray(NULL);
     _boxGeom->removePrimitiveSet(0,_boxGeom->getNumPrimitiveSets());
 
+    _rangeList.clear();
+
     _colors = colors;
     _labels = labels;
 
@@ -112,7 +116,49 @@ void GraphKeyObject::setSize(float width, float height)
     _width = width;
     _height = height;
 
+    osg::BoundingBox bb(-(_width*0.5),-2,-(_height*0.5),_width*0.5,0,_height*0.5);
+    setBoundingBox(bb);
+
     update();
+}
+
+bool GraphKeyObject::eventCallback(InteractionEvent * ie)
+{
+    TrackedButtonInteractionEvent * tie = ie->asTrackedButtonEvent();
+    if(tie)
+    {
+	if(tie->getButton() == 0 && (tie->getInteraction() == BUTTON_DOWN || tie->getInteraction() == BUTTON_DOUBLE_CLICK))
+	{
+	    osg::Vec3 point1, point2(0,1000.0,0);
+	    point1 = point1 * tie->getTransform() * getWorldToObjectMatrix();
+	    point2 = point2 * tie->getTransform() * getWorldToObjectMatrix();
+
+	    osg::Vec3 planePoint, planeNormal(0,-1,0), intersect;
+	    float w;
+
+	    if(linePlaneIntersectionRef(point1,point2,planePoint,planeNormal,intersect,w))
+	    {
+		for(int i = 0; i < _rangeList.size(); ++i)
+		{
+		    if(intersect.x() >= _rangeList[i].first && intersect.x() <= _rangeList[i].second)
+		    {
+			std::string group = _labels[i];
+			std::vector<std::string> emptyList;
+
+			GraphLayoutObject * layout = dynamic_cast<GraphLayoutObject*>(_parent);
+			if(layout)
+			{
+			    layout->selectPatients(group,emptyList);
+			}
+
+			return true;
+		    }
+		}
+	    }
+	}
+    }
+
+    return false;
 }
 
 void GraphKeyObject::update()
@@ -122,8 +168,10 @@ void GraphKeyObject::update()
 	return;
     }
 
+    _rangeList.clear();
+
     float space = 0.01*_width;
-    float boxSize = 0.9*_height;
+    float boxSize = 0.85*_height;
 
     float maxTextSpace = _width - (3.0*space+boxSize)*((float)_colors.size());
 
@@ -171,6 +219,9 @@ void GraphKeyObject::update()
     {
 	for(int i = 0; i < _textList.size(); ++i)
 	{
+	    float start,end;
+	    start = position;
+
 	    verts->at(vertIndex+0) = osg::Vec3(position,0,boxSize/2.0);
 	    verts->at(vertIndex+1) = osg::Vec3(position,0,-boxSize/2.0);
 	    verts->at(vertIndex+2) = osg::Vec3(position+boxSize,0,-boxSize/2.0);
@@ -180,6 +231,9 @@ void GraphKeyObject::update()
 
 	    _textList[i]->setPosition(osg::Vec3(position,0,0));
 	    osg::BoundingBox bb = _textList[i]->getBound();
+
+	    end = position + bb.xMax() - bb.xMin();
+	    _rangeList.push_back(std::pair<float,float>(start,end));
 
 	    position += bb.xMax() - bb.xMin() + space + space;
 	}
