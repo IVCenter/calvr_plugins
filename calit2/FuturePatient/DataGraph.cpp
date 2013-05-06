@@ -1,6 +1,7 @@
 #include "DataGraph.h"
 #include "ShapeTextureGenerator.h"
 #include "ColorGenerator.h"
+#include "GraphGlobals.h"
 
 #include <cvrKernel/CalVR.h>
 #include <cvrKernel/SceneManager.h>
@@ -123,7 +124,7 @@ DataGraph::DataGraph()
     _currentMultiGraphDisplayMode = MGDM_NORMAL;
     _labelDisplayMode = LDM_MIN_MAX;
 
-    osg::Vec4 color(0.9,0.9,0.9,1.0);
+    osg::Vec4 color = GraphGlobals::getBackgroundColor();
 
     osg::Geometry * geo = _bgGeometry.get();
     osg::Vec3Array* verts = new osg::Vec3Array();
@@ -171,8 +172,6 @@ DataGraph::DataGraph()
     //_clipNode->addClipPlane(new osg::ClipPlane(1));
     //_clipNode->addClipPlane(new osg::ClipPlane(2));
     //_clipNode->addClipPlane(new osg::ClipPlane(3));
-
-    _font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
 
     setupMultiGraphDisplayModes();
     makeHover();
@@ -755,7 +754,7 @@ void DataGraph::setLabelDisplayMode(LabelDisplayMode ldm)
 		{
 		    std::stringstream minss;
 		    minss << (it->second.zMin + (it->second.data->at(minIndex).z() * (it->second.zMax-it->second.zMin)));
-		    text = makeText(minss.str(),textColor);
+		    text = GraphGlobals::makeText(minss.str(),textColor);
 		    text->setAlignment(osgText::Text::CENTER_CENTER);
 		    bb = text->getBound();
 		    csize = textHeight / (bb.zMax() - bb.zMin());
@@ -768,7 +767,7 @@ void DataGraph::setLabelDisplayMode(LabelDisplayMode ldm)
 		{
 		    std::stringstream maxss;
 		    maxss << (it->second.zMin + (it->second.data->at(maxIndex).z() * (it->second.zMax-it->second.zMin)));
-		    text = makeText(maxss.str(),textColor);
+		    text = GraphGlobals::makeText(maxss.str(),textColor);
 		    text->setAlignment(osgText::Text::CENTER_CENTER);
 		    bb = text->getBound();
 		    csize = textHeight / (bb.zMax() - bb.zMin());
@@ -799,7 +798,7 @@ void DataGraph::setLabelDisplayMode(LabelDisplayMode ldm)
 		    {
 			std::stringstream ss;
 			ss << (it->second.zMin + (it->second.data->at(i).z() * (it->second.zMax-it->second.zMin)));
-			osgText::Text * text = makeText(ss.str(),textColor);
+			osgText::Text * text = GraphGlobals::makeText(ss.str(),textColor);
 			text->setAlignment(osgText::Text::CENTER_CENTER);
 			osg::BoundingBox bb = text->getBound();
 			float csize = textHeight / (bb.zMax() - bb.zMin());
@@ -996,7 +995,7 @@ void DataGraph::makeHover()
 
     _hoverBGGeode->addDrawable(geo);
 
-    _hoverText = makeText("",osg::Vec4(1.0,1.0,1.0,1.0));
+    _hoverText = GraphGlobals::makeText("",osg::Vec4(1.0,1.0,1.0,1.0));
     _hoverTextGeode->addDrawable(_hoverText);
     _hoverText->setAlignment(osgText::Text::LEFT_TOP);
     osg::Vec3 pos(0,-4,0);
@@ -1238,8 +1237,6 @@ void DataGraph::update()
 			}
 		    case MGDM_COLOR:
 			{
-			    //float f = ((float)count) / ((float)_dataInfoMap.size());
-			    //osg::Vec4 color = makeColor(f);
 			    osg::Vec4 color = ColorGenerator::makeColor(count, _dataInfoMap.size());
 			    it->second.singleColorArray->at(0) = color;
 			    it->second.connectorGeometry->setColorArray(it->second.singleColorArray);
@@ -1289,8 +1286,6 @@ void DataGraph::update()
 			}
 		    case MGDM_COLOR_SHAPE:
 			{
-			    //float f = ((float)count) / ((float)_dataInfoMap.size());
-			    //osg::Vec4 color = makeColor(f);
 			    osg::Vec4 color = ColorGenerator::makeColor(count, _dataInfoMap.size());
 			    it->second.singleColorArray->at(0) = color;
 			    it->second.connectorGeometry->setColorArray(it->second.singleColorArray);
@@ -1790,7 +1785,7 @@ void DataGraph::updateAxis()
 			    break;
 		    }
 
-		    osgText::Text * text = makeText(ss.str(),textColor);
+		    osgText::Text * text = GraphGlobals::makeText(ss.str(),textColor);
 
 		    float targetSize = padding * 0.27;
 		    osg::BoundingBox bb = text->getBound();
@@ -1866,7 +1861,7 @@ void DataGraph::updateAxis()
 
 		if(lowerTextss.str().size())
 		{
-		    osgText::Text * text = makeText(lowerTextss.str(),textColor);
+		    osgText::Text * text = GraphGlobals::makeText(lowerTextss.str(),textColor);
 
 		    float targetSize = padding * 0.67;
 		    osg::BoundingBox bb = text->getBound();
@@ -1924,7 +1919,7 @@ void DataGraph::updateAxis()
 		    std::stringstream ss;
 		    ss << tickValue;
 
-		    osgText::Text * text = makeText(ss.str(),textColor);
+		    osgText::Text * text = GraphGlobals::makeText(ss.str(),textColor);
 
 		    float targetSize = padding * 0.27;
 		    osg::BoundingBox bb = text->getBound();
@@ -1945,7 +1940,7 @@ void DataGraph::updateAxis()
 
 		if(!axisLabel.empty())
 		{
-		    osgText::Text * text = makeText(axisLabel,textColor);
+		    osgText::Text * text = GraphGlobals::makeText(axisLabel,textColor);
 
 		    float targetSize = padding * 0.67;
 		    osg::BoundingBox bb = text->getBound();
@@ -1973,7 +1968,7 @@ void DataGraph::updateAxis()
 
     if(_dataInfoMap.size() == 1)
     {
-	osgText::Text * text = makeText(_dataInfoMap.begin()->second.name,osg::Vec4(0.0,0.0,0.0,1.0));
+	osgText::Text * text = GraphGlobals::makeText(_dataInfoMap.begin()->second.name,osg::Vec4(0.0,0.0,0.0,1.0));
 
 	float targetHeight = padding * 0.95;
 	float targetWidth = _width - (2.0 * padding);
@@ -1994,8 +1989,8 @@ void DataGraph::updateAxis()
 
 	if(!sizeCalibrated)
 	{
-	    osg::ref_ptr<osgText::Text> spacerText1 = makeText(": - :",osg::Vec4(0.0,0.0,0.0,1.0));
-	    osg::ref_ptr<osgText::Text> spacerText2 = makeText("::",osg::Vec4(0.0,0.0,0.0,1.0));
+	    osg::ref_ptr<osgText::Text> spacerText1 = GraphGlobals::makeText(": - :",osg::Vec4(0.0,0.0,0.0,1.0));
+	    osg::ref_ptr<osgText::Text> spacerText2 = GraphGlobals::makeText("::",osg::Vec4(0.0,0.0,0.0,1.0));
 
 	    float size1, size2;
 
@@ -2020,7 +2015,7 @@ void DataGraph::updateAxis()
 	    }
 	}
 
-	osg::ref_ptr<osgText::Text> text = makeText(titless.str(),osg::Vec4(0.0,0.0,0.0,1.0));
+	osg::ref_ptr<osgText::Text> text = GraphGlobals::makeText(titless.str(),osg::Vec4(0.0,0.0,0.0,1.0));
 	
 	float targetHeight = padding * 0.95;
 	float targetWidth = _width - (2.0 * padding);
@@ -2043,7 +2038,7 @@ void DataGraph::updateAxis()
 		float position = -((bb.xMax() - bb.xMin()) * csize) / 2.0;
 		for(std::map<std::string,GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end();)
 		{
-		    osgText::Text * ttext = makeText(it->second.name,it->second.singleColorArray->at(0));
+		    osgText::Text * ttext = GraphGlobals::makeText(it->second.name,it->second.singleColorArray->at(0));
 		    ttext->setCharacterSize(csize);
 		    ttext->setAxisAlignment(osgText::Text::XZ_PLANE);
 		    ttext->setAlignment(osgText::Text::LEFT_CENTER);
@@ -2054,7 +2049,7 @@ void DataGraph::updateAxis()
 		    it++;
 		    if(it != _dataInfoMap.end())
 		    {
-			ttext = makeText("-",osg::Vec4(0,0,0,1));
+			ttext = GraphGlobals::makeText("-",osg::Vec4(0,0,0,1));
 			ttext->setCharacterSize(csize);
 			ttext->setAxisAlignment(osgText::Text::XZ_PLANE);
 			ttext->setAlignment(osgText::Text::CENTER_CENTER);
@@ -2136,7 +2131,7 @@ void DataGraph::updateBGRanges()
 
     if(getNumGraphs() != 1 || !_bgRanges.size())
     {
-	osg::Vec4 defaultColor(0.4,0.4,0.4,1.0);
+	osg::Vec4 defaultColor = GraphGlobals::getDataBackgroundColor();
 	verts->push_back(osg::Vec3(wpadding,0.5,hpadding));
 	verts->push_back(osg::Vec3(wpadding+dataWidth,0.5,hpadding));
 	verts->push_back(osg::Vec3(wpadding+dataWidth,0.5,hpadding+dataHeight));
@@ -2184,69 +2179,3 @@ float DataGraph::calcPadding()
 
     return 0.07 * minD;
 }
-
-osgText::Text * DataGraph::makeText(std::string text, osg::Vec4 color)
-{
-    osgText::Text * textNode = new osgText::Text();
-    textNode->setCharacterSize(1.0);
-    textNode->setAlignment(osgText::Text::CENTER_CENTER);
-    textNode->setColor(color);
-    textNode->setBackdropColor(osg::Vec4(0,0,0,0));
-    textNode->setAxisAlignment(osgText::Text::XZ_PLANE);
-    textNode->setText(text);
-    if(_font)
-    {
-	textNode->setFont(_font);
-    }
-    return textNode;
-}
-
-osg::Vec4 DataGraph::makeColor(float f)
-{
-    if(f < 0)
-    {
-        f = 0;
-    }
-    else if(f > 1.0)
-    {
-        f = 1.0;
-    }
-
-    osg::Vec4 color;
-    color.w() = 1.0;
-
-    if(f <= 0.33)
-    {
-        float part = f / 0.33;
-        float part2 = 1.0 - part;
-
-        color.x() = part2;
-        color.y() = part;
-        color.z() = 0;
-    }
-    else if(f <= 0.66)
-    {
-        f = f - 0.33;
-        float part = f / 0.33;
-        float part2 = 1.0 - part;
-
-        color.x() = 0;
-        color.y() = part2;
-        color.z() = part;
-    }
-    else if(f <= 1.0)
-    {
-        f = f - 0.66;
-        float part = f / 0.33;
-        float part2 = 1.0 - part;
-
-        color.x() = part;
-        color.y() = 0;
-        color.z() = part2;
-    }
-
-    //std::cerr << "Color x: " << color.x() << " y: " << color.y() << " z: " << color.z() << std::endl;
-
-    return color;
-}
-

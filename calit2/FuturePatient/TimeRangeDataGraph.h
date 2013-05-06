@@ -66,7 +66,6 @@ class TimeRangeDataGraph
         void updateShading();
 
         void updateSizes();
-        osgText::Text * makeText(std::string text, osg::Vec4 color);
 
         float _graphLeft, _graphRight, _graphTop, _graphBottom;
         float _barHeight, _barPadding;
@@ -107,8 +106,6 @@ class TimeRangeDataGraph
         float _pointLineScale;
         float _glScale;
         float _masterLineScale;
-
-        osg::ref_ptr<osgText::Font> _font;
 };
 
 #endif

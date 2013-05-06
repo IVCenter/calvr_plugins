@@ -1,5 +1,6 @@
 #include "GroupedScatterPlot.h"
 #include "ColorGenerator.h"
+#include "GraphGlobals.h"
 
 #include <cvrKernel/CalVR.h>
 #include <cvrKernel/ComController.h>
@@ -47,8 +48,6 @@ GroupedScatterPlot::GroupedScatterPlot(float width, float height)
     _bgScaleMT->addChild(_bgGeode);
     _root->addChild(_axisGeode);
     _root->addChild(_dataGeode);
-
-    _font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
 
     osg::StateSet * stateset = _root->getOrCreateStateSet();
     stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
@@ -376,8 +375,8 @@ void GroupedScatterPlot::makeBG()
     verts->at(7) = osg::Vec3(-0.5+_leftPaddingMult,0.5,0.5-_topPaddingMult);
     verts->at(6) = osg::Vec3(-0.5+_leftPaddingMult,0.5,-0.5+_bottomPaddingMult);
 
-    osg::Vec4 bgColor(0.9,0.9,0.9,1.0);
-    osg::Vec4 dataBGColor(0.4,0.4,0.4,1.0);
+    osg::Vec4 bgColor = GraphGlobals::getBackgroundColor();
+    osg::Vec4 dataBGColor = GraphGlobals::getDataBackgroundColor();
 
     osg::Vec4Array * colors = new osg::Vec4Array(8);
     colors->at(0) = bgColor;
@@ -408,7 +407,7 @@ void GroupedScatterPlot::makeHover()
     _hoverBGGeom->setUseDisplayList(false);
     _hoverBGGeom->setUseVertexBufferObjects(true);
     _hoverGeode->setCullingActive(false);
-    _hoverText = makeText("",osg::Vec4(1,1,1,1));
+    _hoverText = GraphGlobals::makeText("",osg::Vec4(1,1,1,1));
     _hoverGeode->addDrawable(_hoverBGGeom);
     _hoverGeode->addDrawable(_hoverText);
 
@@ -454,7 +453,7 @@ void GroupedScatterPlot::updateAxis()
 
     //title text
     {
-	osgText::Text * text = makeText(_title, osg::Vec4(0,0,0,1));
+	osgText::Text * text = GraphGlobals::makeText(_title, osg::Vec4(0,0,0,1));
 	float csize1,csize2;
 
 	osg::BoundingBox bb = text->getBound();
@@ -481,7 +480,7 @@ void GroupedScatterPlot::updateAxis()
     {
 	float csize1,csize2;
 
-	osgText::Text * text = makeText(_firstLabel,osg::Vec4(0,0,0,1));
+	osgText::Text * text = GraphGlobals::makeText(_firstLabel,osg::Vec4(0,0,0,1));
 	
 	osg::BoundingBox bb = text->getBound();
 	csize1 = (0.80*_width) / (bb.xMax() - bb.xMin());
@@ -491,7 +490,7 @@ void GroupedScatterPlot::updateAxis()
 
 	_axisGeode->addDrawable(text);
 
-	text = makeText(_secondLabel,osg::Vec4(0,0,0,1));
+	text = GraphGlobals::makeText(_secondLabel,osg::Vec4(0,0,0,1));
 	text->setRotation(q);
 
 	bb = text->getBound();
@@ -551,7 +550,7 @@ void GroupedScatterPlot::updateAxis()
 		    maxExp--;
 		}
 
-		osg::ref_ptr<osgText::Text> testText = makeText(testss.str(),osg::Vec4(0,0,0,1));
+		osg::ref_ptr<osgText::Text> testText = GraphGlobals::makeText(testss.str(),osg::Vec4(0,0,0,1));
 		osg::BoundingBox testbb = testText->getBound();
 		float testHeight = testbb.zMax() - testbb.zMin();
 
@@ -568,7 +567,7 @@ void GroupedScatterPlot::updateAxis()
 
 		std::stringstream tss;
 		tss << currentTickValue;
-		osgText::Text * tickText = makeText(tss.str(),osg::Vec4(0,0,0,1));
+		osgText::Text * tickText = GraphGlobals::makeText(tss.str(),osg::Vec4(0,0,0,1));
 		tickText->setAlignment(osgText::Text::CENTER_TOP);
 		tickText->setCharacterSize(tickCharacterSize);
 		tickText->setPosition(osg::Vec3(tickLoc,-1,_graphBottom - 2.0*tickSize));
@@ -633,7 +632,7 @@ void GroupedScatterPlot::updateAxis()
 		    maxExp--;
 		}
 
-		osg::ref_ptr<osgText::Text> testText = makeText(testss.str(),osg::Vec4(0,0,0,1));
+		osg::ref_ptr<osgText::Text> testText = GraphGlobals::makeText(testss.str(),osg::Vec4(0,0,0,1));
 		osg::BoundingBox testbb = testText->getBound();
 		float testWidth = testbb.xMax() - testbb.xMin();
 
@@ -647,7 +646,7 @@ void GroupedScatterPlot::updateAxis()
 
 		std::stringstream tss;
 		tss << currentTickValue;
-		osgText::Text * tickText = makeText(tss.str(),osg::Vec4(0,0,0,1));
+		osgText::Text * tickText = GraphGlobals::makeText(tss.str(),osg::Vec4(0,0,0,1));
 		tickText->setAlignment(osgText::Text::RIGHT_CENTER);
 		tickText->setCharacterSize(tickCharacterSize);
 		tickText->setPosition(osg::Vec3(_graphLeft - 2.0*tickSize,-1,tickLoc));
@@ -844,20 +843,4 @@ void GroupedScatterPlot::updateSizes()
     _graphRight = (_width / 2.0) - (_rightPaddingMult * _width);
     _graphTop = (_height / 2.0) - (_topPaddingMult * _height);
     _graphBottom = -(_height / 2.0) + (_bottomPaddingMult * _height);
-}
-
-osgText::Text * GroupedScatterPlot::makeText(std::string text, osg::Vec4 color)
-{
-    osgText::Text * textNode = new osgText::Text();
-    textNode->setCharacterSize(1.0);
-    textNode->setAlignment(osgText::Text::CENTER_CENTER);
-    textNode->setColor(color);
-    textNode->setBackdropColor(osg::Vec4(0,0,0,0));
-    textNode->setAxisAlignment(osgText::Text::XZ_PLANE);
-    textNode->setText(text);
-    if(_font)
-    {
-	textNode->setFont(_font);
-    }
-    return textNode;
 }

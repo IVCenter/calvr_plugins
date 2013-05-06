@@ -37,8 +37,6 @@ class GraphKeyObject : public LayoutLineObject
         std::vector<osg::ref_ptr<osgText::Text> > _textList;
 
         std::vector<std::pair<float,float> > _rangeList;
-
-        osg::ref_ptr<osgText::Font> _font;
 };
 
 #endif

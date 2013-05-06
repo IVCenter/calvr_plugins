@@ -1,5 +1,6 @@
 #include "GraphKeyObject.h"
 #include "GraphLayoutObject.h"
+#include "GraphGlobals.h"
 
 #include <cvrKernel/CalVR.h>
 #include <cvrUtil/OsgMath.h>
@@ -30,7 +31,7 @@ GraphKeyObject::GraphKeyObject(std::string name, bool navigation, bool movable, 
     verts->at(2) = osg::Vec3(_width/2.0,1,-_height/2.0);
     verts->at(3) = osg::Vec3(_width/2.0,1,_height/2.0);
 
-    colors->at(0) = osg::Vec4(0.9,0.9,0.9,1.0);
+    colors->at(0) = GraphGlobals::getBackgroundColor();
 
     _bgGeom->setVertexArray(verts);
     _bgGeom->setColorArray(colors);
@@ -44,8 +45,6 @@ GraphKeyObject::GraphKeyObject(std::string name, bool navigation, bool movable, 
 
     osg::BoundingBox bb(-(_width*0.5),-2,-(_height*0.5),_width*0.5,0,_height*0.5);
     setBoundingBox(bb);
-
-    _font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
 
     osg::StateSet * stateset = _geode->getOrCreateStateSet();
     stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
@@ -96,17 +95,8 @@ void GraphKeyObject::setKeys(std::vector<osg::Vec4> & colors, std::vector<std::s
 
     for(int i = 0; i < _labels.size(); ++i)
     {
-	osgText::Text * text = new osgText::Text();
-	text->setCharacterSize(1.0);
+	osgText::Text * text = GraphGlobals::makeText(_labels[i],osg::Vec4(0,0,0,1));
 	text->setAlignment(osgText::Text::LEFT_CENTER);
-	text->setColor(osg::Vec4(0,0,0,1));
-	text->setBackdropColor(osg::Vec4(0,0,0,0));
-	text->setAxisAlignment(osgText::Text::XZ_PLANE);
-	text->setText(_labels[i]);
-	if(_font)
-	{
-	    text->setFont(_font);
-	}
 	_textList.push_back(text);
 	_geode->addDrawable(text);
     }

@@ -4,6 +4,7 @@
 #include <cvrKernel/TiledWallSceneObject.h>
 #include <cvrMenu/MenuText.h>
 #include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuList.h>
 
 #include <string>
 #include <map>
@@ -63,6 +64,7 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
         std::map<std::string, std::vector<std::pair<std::string, float> > > _graphData;
         std::vector<std::string> _graphOrder;
 
+        cvr::MenuList * _colorModeML;
         cvr::MenuText * _microbeText;
         cvr::MenuButton * _searchButton;
         std::string _menuMicrobe;
