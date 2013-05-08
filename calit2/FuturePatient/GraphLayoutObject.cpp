@@ -1,6 +1,7 @@
 #include "GraphLayoutObject.h"
 #include "ColorGenerator.h"
 #include "FuturePatient.h"
+#include "GraphGlobals.h"
 
 #include <cvrInput/TrackingManager.h>
 #include <cvrConfig/ConfigManager.h>
@@ -389,11 +390,13 @@ bool GraphLayoutObject::loadState(std::istream & in)
 	}
     }
 
-    in >> _width >> _height >> _maxRows;
+    // not using these for the moment
+    float width, height;
+    in >> width >> height >> _maxRows;
     //std::cerr << "Width: " << _width << " Height: " << _height << " MaxRows: " << _maxRows << std::endl;
     _rowsRV->setValue(_maxRows);
-    _widthRV->setValue(_width);
-    _heightRV->setValue(_height);
+    //_widthRV->setValue(_width);
+    //_heightRV->setValue(_height);
 
     bool sync, zoom;
     in >> sync >> zoom;
@@ -412,8 +415,9 @@ bool GraphLayoutObject::loadState(std::istream & in)
     float scale;
     in >> scale;
 
-    setScale(scale);
-    setPosition(osg::Vec3(x,y,z));
+    // not used for the moment
+    //setScale(scale);
+    //setPosition(osg::Vec3(x,y,z));
     
     bool selectedGroup;
     int selectedMicrobes;
@@ -1058,18 +1062,7 @@ void GraphLayoutObject::makeGeometry()
     float targetWidth = _width;
     float targetHeight = _height * 0.1 * 0.9;
 
-    _text = new osgText::Text();
-    _text->setCharacterSize(1.0);
-    _text->setAlignment(osgText::Text::CENTER_CENTER);
-    _text->setColor(osg::Vec4(1.0,1.0,1.0,1.0));
-    _text->setBackdropColor(osg::Vec4(0,0,0,0));
-    _text->setAxisAlignment(osgText::Text::XZ_PLANE);
-    _text->setText(getName());
-    osgText::Font * font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
-    if(font)
-    {
-	_text->setFont(font);
-    }
+    _text = GraphGlobals::makeText(getName(),osg::Vec4(1.0,1.0,1.0,1.0));
 
     osg::BoundingBox bb = _text->getBound();
     float hsize = targetHeight / (bb.zMax() - bb.zMin());

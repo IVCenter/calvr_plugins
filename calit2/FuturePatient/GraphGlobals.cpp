@@ -23,6 +23,7 @@ osgText::Text * GraphGlobals::makeText(std::string text, osg::Vec4 color)
     textNode->setBackdropColor(osg::Vec4(0,0,0,0));
     textNode->setAxisAlignment(osgText::Text::XZ_PLANE);
     textNode->setText(text);
+    textNode->setFontResolution(128,128);
     if(_font)
     {
 	textNode->setFont(_font);
@@ -99,6 +100,11 @@ void GraphGlobals::checkInit()
 void GraphGlobals::init()
 {
     _font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
+    if(_font)
+    {
+	_font->setTextureSizeHint(2048,2048);
+    }
+
     _bgColor = osg::Vec4(0.9,0.9,0.9,1.0);
     _dataBGColor = osg::Vec4(0.7,0.7,0.7,1.0);
 
