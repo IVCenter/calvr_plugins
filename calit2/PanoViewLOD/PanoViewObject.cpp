@@ -20,6 +20,7 @@ using namespace cvr;
 
 PanoViewObject::PanoViewObject(std::string name, std::string leftEyeFile, std::string rightEyeFile, float radius, int mesh, int depth, int size, float height, std::string vertFile, std::string fragFile) : SceneObject(name,false,false,false,true,false)
 {
+    _name = name;
     std::vector<std::string> left;
     std::vector<std::string> right;
     left.push_back(leftEyeFile);
@@ -30,6 +31,7 @@ PanoViewObject::PanoViewObject(std::string name, std::string leftEyeFile, std::s
 
 PanoViewObject::PanoViewObject(std::string name, std::vector<std::string> & leftEyeFiles, std::vector<std::string> & rightEyeFiles, float radius, int mesh, int depth, int size, float height, std::string vertFile, std::string fragFile) : SceneObject(name,false,false,false,true,false)
 {
+    _name = name;
     init(leftEyeFiles,rightEyeFiles,radius,mesh,depth,size,height,vertFile,fragFile);
 }
 
@@ -173,6 +175,50 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
     _root->getOrCreateStateSet()->setAttributeAndModes(wdepth,osg::StateAttribute::ON);
 
     _transitionSkipFrames = 0;
+
+
+    // load saved initial scales and locations
+    _configPath = ConfigManager::getEntry("Plugin.PanoViewLOD.ConfigDir");
+
+    _saveButton = new MenuButton("Save");
+    _saveButton->setCallback(this);
+    addMenuItem(_saveButton);
+
+    std::ifstream cfile;
+    cfile.open((_configPath + "/Init.cfg").c_str(), std::ios::in);
+
+    if(!cfile.fail())
+    {
+      std::string line;
+      while(!cfile.eof())
+      {
+         float rotate, zoom;
+         char name[150];
+         cfile >> name;
+         if(cfile.eof())
+         {
+           break;
+         }
+         cfile >> rotate;
+         cfile >> zoom;
+         _locInit[std::string(name)] = std::pair<float, float>(rotate, zoom);
+      }
+    }
+    cfile.close();
+
+    if(_locInit.find(_name) != _locInit.end())
+    {
+        setRotate(_locInit[_name].first);
+
+        float zoom = _locInit[_name].second;
+	
+        _currentZoom += zoom;
+        if(_currentZoom < -2.0) _currentZoom = -2.0;
+        if(_currentZoom > 0.5) _currentZoom = 0.5;
+
+		updateZoom(PluginHelper::getHandMat(0));
+    }
+
 }
 
 void PanoViewObject::setTransition(PanTransitionType transitionType, std::string transitionFilesDir, std::vector<std::string> & leftTransitionFiles, std::vector<std::string> & rightTransitionFiles, std::string configTag)
@@ -403,6 +449,15 @@ void PanoViewObject::menuCallback(cvr::MenuItem * item)
 
 	_leftDrawable->setZoom(osg::Vec3(0,1,0),pow(10.0, _currentZoom));
 	_rightDrawable->setZoom(osg::Vec3(0,1,0),pow(10.0, _currentZoom));
+    }
+
+    if(item == _saveButton)
+    {
+        float zoom = 1;
+
+        _locInit[_name] = std::make_pair(getRotate(), _currentZoom);
+
+        writeConfig();
     }
 
     if(item == _spinCB)
@@ -1086,4 +1141,27 @@ void PanoViewObject::startTransition()
 	_rotateAmp = 1.0 / (_rotateRampUp*ratio + (_rotateInterval - _rotateRampUp - _rotateRampDown) + _rotateRampDown*ratio);
 	_zoomAmp = 1.0 / (_zoomRampUp*ratio + (_zoomInterval - _zoomRampUp - _zoomRampDown) + _zoomRampDown*ratio);
     }
+}
+
+void PanoViewObject::writeConfig()
+{
+    if (!cvr::ComController::instance()->isMaster())
+    {
+        return;
+    }
+
+    std::ofstream cfile;
+    cfile.open((_configPath + "/Init.cfg").c_str(), std::ios::trunc);
+
+    if(!cfile.fail())
+    {
+        for(std::map<std::string, std::pair<float, float> >::iterator it = _locInit.begin();
+        it != _locInit.end(); it++)
+        {
+            std::cout << "Saving " << it->first << " " << std::endl;
+            cfile << it->first << " ";
+            cfile << it->second.first << " " << it->second.second << " " << std::endl;;
+        }
+    }
+    cfile.close();
 }

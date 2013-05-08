@@ -3,6 +3,8 @@
 
 #include <queue>
 #include <vector>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 // CVR
 #include <cvrKernel/CVRPlugin.h>
@@ -46,6 +48,8 @@ class Points : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
     void readXYZ(std::string& filename, osg::Vec3Array* points, osg::Vec4Array* colors);
     void readXYB(std::string& filename, osg::Vec3Array* points, osg::Vec4Array* colors);
     void writeConfigFile();
+    bool isFile(const char* filename);
+    void removeAll();
 
     // context map
     std::map<struct PointObject*,cvr::MenuRangeValue*> _sliderMap;
@@ -59,7 +63,8 @@ class Points : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
 
     cvr::SubMenu * _mainMenu, * _loadMenu;
     cvr::MenuButton * _removeButton;
-    std::vector<cvr::MenuButton*> menuFileList;
+    std::vector<cvr::MenuButton*> _menuFileList;
+    std::vector<std::string> _filePaths;
 
     osg::Uniform* objectScale;
 
