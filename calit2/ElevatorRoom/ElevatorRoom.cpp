@@ -18,6 +18,7 @@ CVRPLUGIN(ElevatorRoom)
 
 ElevatorRoom::ElevatorRoom()
 {
+    _c = 0;
     _myPtr = this;
     _loaded = false;
     _audioHandler = NULL;
@@ -991,14 +992,20 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
         if (kie->getInteraction() == KEY_UP && kie->getKey() == 65361)
         {
             turnLeft();
+            unsigned char c = 1;
+            sendChar(c);
         }
         if (kie->getInteraction() == KEY_UP && kie->getKey() == 65363)
         {
             turnRight();
+            unsigned char c = 2;
+            sendChar(c);
         }
         if (kie->getInteraction() == KEY_UP && kie->getKey() == ' ')
         {
             shoot();
+            unsigned char c = 5;
+            sendChar(c);
         }
     }
 
@@ -1210,8 +1217,10 @@ void ElevatorRoom::dingTest()
 
     if ((PluginHelper::getProgramDuration() - _startTime) > _pauseTime)
     {
-        _audioHandler->playSound(0 + DING_OFFSET, "ding");
+        //_audioHandler->playSound(0 + DING_OFFSET, "ding");
 
+        sendChar(_c);
+        _c++;
         //sendChar('a');      
 
         _startTime = PluginHelper::getProgramDuration();
@@ -1308,7 +1317,8 @@ void ElevatorRoom::write_SPP(int bytes, unsigned char* buf)
 {
     if (!_sppConnected)
         return;
-   
+
+    std::string str(reinterpret_cast<const char *>(buf), 1);   
     std::cout << "Writing " << buf[0] << std::endl;
 
     DWORD BytesReceived;

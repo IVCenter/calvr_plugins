@@ -87,7 +87,9 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
             DOOROPEN,
             CLOSINGDOOR
         };
- 
+
+        unsigned char _c;
+
         void loadModels();
         void clear();
         void chooseGameParameters(int &door, Mode &mode, bool &switched);
