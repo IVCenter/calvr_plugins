@@ -52,7 +52,7 @@ bool CaveCADBeta::init()
 
     setToolkitVisibleCheckbox = new MenuCheckbox("Set toolkit visible", false);
     setToolkitVisibleCheckbox->setCallback(this);
-    mainMenu->addItem(setToolkitVisibleCheckbox);
+    //mainMenu->addItem(setToolkitVisibleCheckbox);
 
     mSkydomeCheckbox = new MenuCheckbox("Skydome", true);
     mSkydomeCheckbox->setCallback(this);
@@ -69,7 +69,7 @@ bool CaveCADBeta::init()
     // set initial scale and viewport
     // Note: Originally this was rescaling the global objects root, so this is a substitute
     // until I can extract and change all the hardcoded sizes and distances
-    scaleMat = new osg::MatrixTransform();
+    mScaleMat = new osg::MatrixTransform();
     osg::Matrixd mat;
     mat.makeScale(osg::Vec3(1000, 1000, 1000));
     Matrixd intObeMat = Matrixd(1, 0, 0, 0, 
@@ -79,8 +79,8 @@ bool CaveCADBeta::init()
 //    mat.postMult(intObeMat);
     mat.preMult(intObeMat);
 
-    scaleMat->setMatrix(mat);
-    scaleMat->addChild(root);
+    mScaleMat->setMatrix(mat);
+    mScaleMat->addChild(root);
 
     
 //    SceneManager::instance()->getObjectsRoot()->addChild(scaleMat);//root);
@@ -99,7 +99,7 @@ bool CaveCADBeta::init()
     sm->setTextureSize(osg::Vec2s(1024,1024));
     
     shadowedScene->addChild(scaleMat);*/
-    SceneManager::instance()->getObjectsRoot()->addChild(scaleMat);
+//    SceneManager::instance()->getObjectsRoot()->addChild(mScaleMat);
 
     if(ComController::instance()->isMaster())
     {
@@ -119,7 +119,7 @@ void CaveCADBeta::preFrame()
     if (mIsEnabled)
     {
         osg::Matrixf w2o = PluginHelper::getWorldToObjectTransform();
-        osg::Matrixd o2cad = scaleMat->getInverseMatrix();
+        osg::Matrixd o2cad = mScaleMat->getInverseMatrix();
         Matrixf viewMat;
                 
         float x, y, z;
@@ -162,6 +162,10 @@ void CaveCADBeta::menuCallback(MenuItem *item)
     {
       	if (enablePluginCheckbox->getValue())
       	{
+            SceneManager::instance()->getObjectsRoot()->addChild(mScaleMat);
+            if (mCAVEDesigner)
+                mCAVEDesigner->getStateHandler()->setVisible(true);
+
             //mainMenu->setVisible(false);
 	    	if (mCAVEDesigner) 
                 mCAVEDesigner->setActive(true);
@@ -174,6 +178,8 @@ void CaveCADBeta::menuCallback(MenuItem *item)
       	} 
         else 
         {
+            SceneManager::instance()->getObjectsRoot()->removeChild(mScaleMat);
+
             //mainMenu->setVisible(true);
             mIsEnabled = false;
 	    	if (mCAVEDesigner) 
@@ -196,13 +202,13 @@ void CaveCADBeta::menuCallback(MenuItem *item)
     
     if (item == mShadowCheckbox)
     {
-        if (mShadowCheckbox->getValue())
+        if (mShadowCheckbox->getValue() && enablePluginCheckbox->getValue())
         {
             //osgShadow::ShadowedScene *shadowedScene = new osgShadow::ShadowedScene();
             if (!mShadowedScene)
             {
                 mShadowedScene = new osgShadow::ShadowedScene();
-                mShadowedScene->addChild(scaleMat);
+                mShadowedScene->addChild(mScaleMat);
             }
         //    shadowedScene->setReceivesShadowTraversalMask(0x2);
         //    shadowedScene->setCastsShadowTraversalMask(0x3);
@@ -212,7 +218,7 @@ void CaveCADBeta::menuCallback(MenuItem *item)
             mShadowedScene->setShadowTechnique(sm);
             sm->setTextureSize(osg::Vec2s(1024,1024));
 
-            SceneManager::instance()->getObjectsRoot()->removeChild(scaleMat);
+            SceneManager::instance()->getObjectsRoot()->removeChild(mScaleMat);
             SceneManager::instance()->getObjectsRoot()->addChild(mShadowedScene);
         }
         else
@@ -220,11 +226,11 @@ void CaveCADBeta::menuCallback(MenuItem *item)
             if (!mShadowedScene)
             {
                 mShadowedScene = new osgShadow::ShadowedScene();
-                mShadowedScene->addChild(scaleMat);
+                mShadowedScene->addChild(mScaleMat);
             }
 
             SceneManager::instance()->getObjectsRoot()->removeChild(mShadowedScene);
-            SceneManager::instance()->getObjectsRoot()->addChild(scaleMat);
+            SceneManager::instance()->getObjectsRoot()->addChild(mScaleMat);
         }
     }
 
@@ -255,7 +261,7 @@ bool CaveCADBeta::processEvent(cvr::InteractionEvent *event)
         osg::Vec3 pointerOrg, pointerPos;
         osg::Matrixd w2o = PluginHelper::getWorldToObjectTransform();
         
-        osg::Matrixd o2cad = scaleMat->getInverseMatrix();
+        osg::Matrixd o2cad = mScaleMat->getInverseMatrix();
         pointerOrg = osg::Vec3(0, 0, 0) * TrackingManager::instance()->getHandMat(0) * w2o * o2cad;
         pointerPos = osg::Vec3(0, 100, 0) * TrackingManager::instance()->getHandMat(0) * w2o * o2cad;
 
