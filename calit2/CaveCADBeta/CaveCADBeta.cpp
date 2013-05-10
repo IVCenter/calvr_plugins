@@ -229,7 +229,7 @@ void CaveCADBeta::menuCallback(MenuItem *item)
                 //mShadowedScene->addChild(mScaleMat);
             }
 
-            mShadowedScene->removeChild(scaleMat);
+            //mShadowedScene->removeChild(scaleMat);
             SceneManager::instance()->getObjectsRoot()->removeChild(mShadowedScene);
             SceneManager::instance()->getObjectsRoot()->addChild(mScaleMat);
         }
