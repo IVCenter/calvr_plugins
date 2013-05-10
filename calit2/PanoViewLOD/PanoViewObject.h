@@ -4,6 +4,7 @@
 #include "PanoDrawableLOD.h"
 
 #include <cvrKernel/SceneObject.h>
+#include <cvrKernel/ComController.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuCheckbox.h>
 #include <cvrMenu/MenuRangeValue.h>
@@ -12,6 +13,7 @@
 #include <osg/Uniform>
 
 #include <string>
+#include <map>
 
 struct ZoomTransitionInfo
 {
@@ -59,6 +61,7 @@ class PanoViewObject : public cvr::SceneObject
     protected:
         void updateZoom(osg::Matrix & mat);
         void startTransition();
+        void writeConfig();
 
         bool _printValues;
         bool _removeOnClick;
@@ -101,6 +104,7 @@ class PanoViewObject : public cvr::SceneObject
         cvr::MenuCheckbox * _spinCB;
         cvr::MenuCheckbox * _zoomCB;
         cvr::MenuButton * _zoomResetButton;
+        cvr::MenuButton * _saveButton;
         cvr::MenuCheckbox * _demoMode;
         cvr::MenuCheckbox * _trackball;
 
@@ -151,6 +155,9 @@ class PanoViewObject : public cvr::SceneObject
         bool _downArrow;
         bool _leftArrow;
         bool _rightArrow;
+        
+        std::string _name, _configPath;
+        std::map<std::string, std::pair<float, float> > _locInit;
 };
 
 #endif

@@ -32,6 +32,7 @@
 #include "DesignStates/DSTexturePallette.h"
 #include "DesignStates/DSViewpoints.h"
 #include "DesignStates/DSObjectPlacer.h"
+#include "DesignStates/DSLights.h"
 #include "ColorSelector.h"
 
 #include <cvrInput/TrackingManager.h>
@@ -92,6 +93,7 @@ class DesignStateRenderer
     DSTexturePallette *mDSTexturePallette;
     DSViewpoints *mDSViewpoints;
     DSObjectPlacer *mDSObjectPlacer;
+    DSLights *mDSLights;
 
     // design states that NOT registered in 'mDSList'
     DSGeometryEditor *mDSGeometryEditor;

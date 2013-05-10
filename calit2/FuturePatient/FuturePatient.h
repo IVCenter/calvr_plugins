@@ -6,6 +6,8 @@
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuRangeValueCompact.h>
 #include <cvrMenu/SubMenu.h>
+#include <cvrUtil/MultiListenSocket.h>
+#include <cvrUtil/CVRSocket.h>
 
 #include <string>
 #include <map>
@@ -17,6 +19,7 @@
 #include "GraphLayoutObject.h"
 #include "MicrobeGraphObject.h"
 #include "MicrobeBarGraphObject.h"
+#include "MicrobeScatterGraphObject.h"
 #include "SymptomGraphObject.h"
 
 
@@ -48,6 +51,9 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         void loadLayout(const std::string & file);
 
         static mysqlpp::Connection * _conn;
+
+        void checkSockets(std::vector<int> & messageList);
+        bool processSocketInput(cvr::CVRSocket * socket, std::vector<int> & messageList);
 
         cvr::SubMenu * _fpMenu;
         cvr::SubMenu * _layoutMenu;
@@ -103,6 +109,14 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _eventLoadAll;
         cvr::MenuButton * _eventDone;
 
+        cvr::SubMenu * _scatterMenu;
+        cvr::MenuText * _scatterFirstLabel;
+        cvr::MenuText * _scatterSecondLabel;
+        cvr::MenuList * _scatterFirstList;
+        cvr::MenuList * _scatterSecondList;
+        cvr::MenuButton * _scatterLoad;
+        cvr::MenuButton * _scatterLoadAll;
+
         MicrobeBarGraphObject * _currentSBGraph;
         SymptomGraphObject * _currentSymptomGraph;
 
@@ -113,7 +127,9 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         std::vector<MicrobeGraphObject *> _microbeGraphList;
 
-        std::string _layoutDirectory;
+        std::string _layoutDirectory;   
+        cvr::MultiListenSocket * _mls;
+        std::vector<cvr::CVRSocket*> _socketList;
 };
 
 #endif

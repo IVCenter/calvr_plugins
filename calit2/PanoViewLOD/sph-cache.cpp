@@ -14,6 +14,7 @@
 #include <cassert>
 #include <sstream>
 #include <iostream>
+#include <unistd.h>
 
 #include "sph-cache.hpp"
 #include "cube.hpp"
@@ -816,7 +817,7 @@ int up(TIFF *T, int i)
 
 int dn(TIFF *T, int i)
 {
-    uint64 *v;
+    uint64_t *v;
     uint16  n;
     
     if (TIFFGetField(T, TIFFTAG_SUBIFD, &n, &v))

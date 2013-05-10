@@ -121,7 +121,6 @@ void WaterMaze::load()
 {
     // Set up models
 
-
     // Tiles
     osg::Box * box = new osg::Box(osg::Vec3(0,0,0), widthTile, heightTile, depth);
     for (int i = 0; i < numWidth; ++i)

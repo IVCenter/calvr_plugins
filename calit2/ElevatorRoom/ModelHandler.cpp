@@ -1,5 +1,6 @@
 #include "ModelHandler.h"
 
+
 using namespace cvr;
 using namespace osg;
 using namespace std;
@@ -7,12 +8,18 @@ using namespace std;
 namespace ElevatorRoom
 {
 
+#define DING_OFFSET 1
+#define EXPLOSION_OFFSET 9
+#define LASER_OFFSET 17
+
 ModelHandler::ModelHandler()
 {
+    _audioHandler = NULL;
     _activeObject = NULL;
     _geoRoot = new osg::MatrixTransform();
     _crosshairPat = NULL;
     _scoreText = NULL;
+    _scoreSwitch = NULL;
 
     _dataDir = ConfigManager::getEntry("Plugin.ElevatorRoom.DataDir");
     _dataDir = _dataDir + "/";
@@ -20,8 +27,10 @@ ModelHandler::ModelHandler()
     _loaded = false;
     _doorDist = 0;
     _activeDoor = 0;
+    _viewedDoor = 4;
     _lightColor = 0;
     _doorInView = false;
+    _totalAngle = 0;
 
     _colors.push_back(osg::Vec4(1, 1, 1, 1));   // WHITE
     _colors.push_back(osg::Vec4(1, 0, 0, 1));   // RED
@@ -48,6 +57,14 @@ ModelHandler::ModelHandler()
 ModelHandler::~ModelHandler()
 {
 
+}
+
+void ModelHandler::setAudioHandler(AudioHandler * handler)
+{
+    if (ComController::instance()->isMaster())
+    {
+        _audioHandler = handler;
+    }
 }
 
 void ModelHandler::update()
@@ -87,6 +104,54 @@ void ModelHandler::update()
     {
         std::cout << "Door leaving view" << std::endl;
         _doorInView = false;
+    }
+
+
+    if (_turningLeft)
+    {
+        osg::Matrix objmat = PluginHelper::getObjectMatrix();
+        
+        float angle = -(M_PI / 4) / 10;
+        osg::Matrix turnMat;
+        turnMat.makeRotate(angle, osg::Vec3(0, 0, 1));
+
+        osg::Vec3 origin = _root->getMatrix().getTrans();
+
+        osg::Matrix m;
+        m = objmat * osg::Matrix::translate(-origin) * turnMat * 
+            osg::Matrix::translate(origin);
+
+        SceneManager::instance()->setObjectMatrix(m);
+
+        _totalAngle += angle;
+        if (_totalAngle < -M_PI / 4)
+        {
+            _turningLeft = false;
+            _totalAngle = 0;
+        }
+    }
+    if (_turningRight)
+    {
+        osg::Matrix objmat = PluginHelper::getObjectMatrix();
+        
+        float angle = (M_PI / 4) / 10;
+        osg::Matrix turnMat;
+        turnMat.makeRotate(angle, osg::Vec3(0, 0, 1));
+
+        osg::Vec3 origin = _root->getMatrix().getTrans();
+
+        osg::Matrix m;
+        m = objmat * osg::Matrix::translate(-origin) * turnMat * 
+            osg::Matrix::translate(origin);
+
+        SceneManager::instance()->setObjectMatrix(m);
+
+        _totalAngle += angle;
+        if (_totalAngle > M_PI / 4)
+        {
+            _turningRight = false;
+            _totalAngle = 0;
+        }
     }
 }
 
@@ -243,18 +308,18 @@ void ModelHandler::setLevel(string level)
     }
 
     // Doors 
+    tex = new osg::Texture2D();
+    img = osgDB::readImageFile(_dataDir + _doorTex);
+    if (img)
+    {
+        tex->setImage(img);
+        tex->setResizeNonPowerOfTwoHint(false);
+        tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+        tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+    }
+
     for (geoIt = _doors.begin(); geoIt != _doors.end(); ++geoIt)
     {
-        tex = new osg::Texture2D();
-        img = osgDB::readImageFile(_dataDir + _doorTex);
-        if (img)
-        {
-            tex->setImage(img);
-            tex->setResizeNonPowerOfTwoHint(false);
-            tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
-            tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
-        }
-    
         osg::ref_ptr<osg::StateSet> state;
         state = (*geoIt)->getOrCreateStateSet();
         state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
@@ -263,6 +328,7 @@ void ModelHandler::setLevel(string level)
 
 void ModelHandler::loadModels(osg::MatrixTransform * root)
 {
+    _root = root;
     if (root && _geoRoot)
     {
         root->addChild(_geoRoot.get());
@@ -330,12 +396,13 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         dir = pos - center;
 
         // 1 - 8 ding sounds
-/*        
+        
         if (_audioHandler)
         {
-            _audioHandler->loadSound(i + DING_OFFSET, dir, pos);
+            _audioHandler->loadSound(i + DING_OFFSET, i * angle);
+            _audioHandler->loadSound(i + EXPLOSION_OFFSET, i * angle);
         }
-*/
+
     }
     }
 
@@ -392,12 +459,12 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         osg::Vec3 dir = pos - osg::Vec3(0,0,0);
 
         // 9 - 16 explosion sounds
-   /*
+   
         if (_audioHandler)
         {
-            _audioHandler->loadSound(i + EXPLOSION_OFFSET, dir, pos);
+//            _audioHandler->loadSound(i + EXPLOSION_OFFSET, i * angle);
         }
-   */
+   
     }   
     }
 
@@ -744,19 +811,21 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
 
     // Score text
     { 
-    osg::Vec3 pos = osg::Vec3(-500, 0, 300);
+    osg::Vec3 pos = osg::Vec3(-100, 1000, -200);
+    _scoreSwitch = new osg::Switch();
+
     _scoreText = new osgText::Text();
     _scoreText->setText("Score: 0");
-    _scoreText->setCharacterSize(20);
+    _scoreText->setCharacterSize(40);
     _scoreText->setAlignment(osgText::Text::LEFT_CENTER);
     _scoreText->setPosition(pos);
     _scoreText->setColor(osg::Vec4(1,1,1,1));
     _scoreText->setBackdropColor(osg::Vec4(0,0,0,0));
     _scoreText->setAxisAlignment(osgText::Text::XZ_PLANE);
 
-    float width = 200, height = 50;
+    float width = 400, height = 100;
     osg::ref_ptr<osg::Geometry> quad = makeQuad(width, height, 
-        osg::Vec4(1.0,1.0,1.0,0.5), pos - osg::Vec3(10, 0, 25));
+        osg::Vec4(0.8,0.8,0.8,1.0), pos - osg::Vec3(20, 0, 50));
 
     pat = new osg::PositionAttitudeTransform();
     geode = new osg::Geode();
@@ -768,7 +837,10 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
     pat->addChild(geode);
-    PluginHelper::getScene()->addChild(pat);
+  //  PluginHelper::getScene()->addChild(pat);
+
+    _scoreSwitch->addChild(pat);
+    PluginHelper::getScene()->addChild(_scoreSwitch);
     }
 
     // Crosshair
@@ -1338,7 +1410,62 @@ float ModelHandler::getDoorDistance()
 
 bool ModelHandler::doorInView()
 {
-    return _doorInView;
+    return (_viewedDoor == _activeDoor);//_doorInView;
+}
+
+int ModelHandler::getViewedDoor()
+{
+    return _viewedDoor;
+}
+
+void ModelHandler::turnLeft()
+{
+    _turningLeft = true;
+    _viewedDoor = (_viewedDoor + 1) % NUM_DOORS;
+
+    if (_viewedDoor == -1) _viewedDoor += NUM_DOORS;
+
+    
+    float angle = 2 * M_PI / NUM_DOORS;
+    float offset = (_viewedDoor - 4);
+    for (int i = 0; i < NUM_DOORS; ++i)
+    {
+        if (_audioHandler)
+        {
+            _audioHandler->update(i + DING_OFFSET, (i - offset) * angle);
+            _audioHandler->update(i + EXPLOSION_OFFSET, (i - offset) * angle);
+        }
+    }
+}
+
+void ModelHandler::turnRight()
+{
+    _turningRight = true;
+    _viewedDoor = (_viewedDoor - 1) % NUM_DOORS;
+    if (_viewedDoor == -1) _viewedDoor += NUM_DOORS;
+
+    float angle = 2 * M_PI / NUM_DOORS;
+    float offset = (_viewedDoor - 4);
+    for (int i = 0; i < NUM_DOORS; ++i)
+    {
+        if (_audioHandler)
+        {
+            _audioHandler->update(i + DING_OFFSET, (i - offset) * angle);
+            _audioHandler->update(i + EXPLOSION_OFFSET, (i - offset) * angle);
+        }
+    }
+}
+
+void ModelHandler::showScore(bool b)
+{
+    if (b)
+    {
+        _scoreSwitch->setAllChildrenOn();
+    }
+    else
+    {
+        _scoreSwitch->setAllChildrenOff();
+    }
 }
 
 };
