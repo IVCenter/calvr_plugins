@@ -39,10 +39,6 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <X11/Xlib.h>
-#include <spnav.h>
-
-//#include <ftdi.h>
-#include <ftd2xx.h>
 
 namespace WaterMaze
 {
@@ -57,17 +53,13 @@ class WaterMaze: public cvr::CVRPlugin, public cvr::MenuCallback
         void menuCallback(cvr::MenuItem * item);
         void preFrame();
         bool processEvent(cvr::InteractionEvent * event);
+        void load();
 
     protected:
         void loadModels();
         void clear();
         void reset();
         void newHiddenTile();
-
-        int init_SPP(int port); 
-        void close_SPP();
-        void write_SPP(int bytes, unsigned char* buf);
-        void connectToServer();
 
         float randomFloat(float min, float max)
         {
@@ -81,29 +73,23 @@ class WaterMaze: public cvr::CVRPlugin, public cvr::MenuCallback
 
         static WaterMaze * _myPtr;
 
-        cvr::SubMenu * _WaterMazeMenu;
+        cvr::SubMenu * _WaterMazeMenu, * _positionMenu;
         cvr::MenuButton * _loadButton, * _clearButton, *_newTileButton;
         cvr::MenuCheckbox * _gridCB;
+        std::vector<cvr::MenuButton *> _positionButtons;
 
         osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry
         osg::ref_ptr<osg::Switch> _gridSwitch; // grid on floor
         std::map<osg::Vec3, osg::Switch *> _tileSwitches;
-
+        
+        std::vector<osg::MatrixTransform *> _tilePositions;
 
         float widthTile, heightTile, numWidth, numHeight, depth, wallHeight,
-            gridWidth;
+            gridWidth, _heightOffset;
         int _hiddenTile;
        
-        bool _debug; // turns on debug messages to command line
+        bool _debug, _loaded; // turns on debug messages to command line
 
-        // USB to Serial communication
-        HANDLE hSerial;
-        FT_HANDLE ftHandle;
-        FT_STATUS ftStatus;
-        DWORD devIndex;
-        DWORD bytesWritten;
-        unsigned char buf[16];
-        bool _sppConnected;
 };
 
 };
