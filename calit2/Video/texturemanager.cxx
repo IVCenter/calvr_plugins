@@ -20,7 +20,10 @@ unsigned int TextureManager::GetVideoGID()
 {
 	return m_gid;
 }
-
+void TextureManager::AddGID(unsigned int gid)
+{
+	m_gidList.push_back(gid);
+}
 
 osg::Geode* TextureManager::AddTexture(unsigned int gid, GLuint tid, unsigned int width, unsigned int height)
 {
@@ -63,7 +66,6 @@ osg::Geode* TextureManager::AddTexture(unsigned int gid, GLuint tid, unsigned in
 
 	geode->addDrawable(picture_quad);
 
-	m_gidList.push_back(gid);
 	m_texidMap[gid] = tid;
 
 	return geode;
@@ -82,5 +84,4 @@ unsigned int TextureManager::GetVideoID(unsigned int idx) const
 	else
 		return -1;
 }
-
 
