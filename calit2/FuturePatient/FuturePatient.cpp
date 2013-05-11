@@ -7,29 +7,39 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
 #include <mysql++/mysql++.h>
 
+#define SAVED_LAYOUT_VERSION 2
+
 using namespace cvr;
 
 CVRPLUGIN(FuturePatient)
 
+mysqlpp::Connection * FuturePatient::_conn = NULL;
+
 FuturePatient::FuturePatient()
 {
-    _conn = NULL;
     _layoutObject = NULL;
     _multiObject = NULL;
     _currentSBGraph = NULL;
     _currentSymptomGraph = NULL;
+    _mls = NULL;
 }
 
 FuturePatient::~FuturePatient()
 {
+    if(_mls)
+    {
+        delete _mls;
+    }
 }
 
 bool FuturePatient::init()
@@ -79,6 +89,18 @@ bool FuturePatient::init()
     //PluginHelper::getObjectsRoot()->addChild(dg->getGraphRoot());
 
     //makeGraph("SIga");
+    
+    if(ComController::instance()->isMaster())
+    {
+        int port = ConfigManager::getInt("value","Plugin.FuturePatient.PresetListenPort",12012);
+        _mls = new MultiListenSocket(port);
+        if(!_mls->setup())
+        {
+            std::cerr << "Error setting up MultiListen Socket on port " << port << " ." << std::endl;
+            delete _mls;
+            _mls = NULL;
+        }
+    }
     
     _fpMenu = new SubMenu("FuturePatient");
 
@@ -167,6 +189,18 @@ bool FuturePatient::init()
     _microbeLoadSRXAverage->setCallback(this);
     //_microbeSpecialMenu->addItem(_microbeLoadSRXAverage);
 
+    _microbeLoadCrohnsAll = new MenuButton("Crohns All");
+    _microbeLoadCrohnsAll->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadCrohnsAll);
+
+    _microbeLoadHealthyAll = new MenuButton("Healthy All");
+    _microbeLoadHealthyAll->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadHealthyAll);
+
+    _microbeLoadUCAll = new MenuButton("UC All");
+    _microbeLoadUCAll->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadUCAll);
+
     _microbeGraphType = new MenuList();
     _microbeGraphType->setCallback(this);
     _microbeMenu->addItem(_microbeGraphType);
@@ -218,6 +252,29 @@ bool FuturePatient::init()
 
     _eventDone = new MenuButton("Done");
     _eventDone->setCallback(this);
+
+    _scatterMenu = new SubMenu("Scatter Plots");
+    _fpMenu->addItem(_scatterMenu);
+
+    _scatterFirstLabel = new MenuText("Primary Phylum:",1.0,false);
+    _scatterMenu->addItem(_scatterFirstLabel);
+
+    _scatterFirstList = new MenuList();
+    _scatterMenu->addItem(_scatterFirstList);
+
+    _scatterSecondLabel = new MenuText("Secondary Phylum:",1.0,false);
+    _scatterMenu->addItem(_scatterSecondLabel);
+
+    _scatterSecondList = new MenuList();
+    _scatterMenu->addItem(_scatterSecondList);
+
+    _scatterLoad = new MenuButton("Load");
+    _scatterLoad->setCallback(this);
+    _scatterMenu->addItem(_scatterLoad);
+
+    _scatterLoadAll = new MenuButton("Load All");
+    _scatterLoadAll->setCallback(this);
+    _scatterMenu->addItem(_scatterLoadAll);
 
     _removeAllButton = new MenuButton("Remove All");
     _removeAllButton->setCallback(this);
@@ -639,15 +696,211 @@ bool FuturePatient::init()
 	delete[] lfList;
     }
 
+    lfList = NULL;
+    listEntries = 0;
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    mysqlpp::Query q = _conn->query("select distinct phylum from Microbes order by phylum;");
+	    mysqlpp::StoreQueryResult res = q.store();
+
+	    listEntries = res.num_rows();
+
+	    if(listEntries)
+	    {
+		lfList = new struct listField[listEntries];
+
+		for(int i = 0; i < listEntries; i++)
+		{
+		    strncpy(lfList[i].entry,res[i]["phylum"].c_str(),255);
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&listEntries,sizeof(int));
+	if(listEntries)
+	{
+	    ComController::instance()->sendSlaves(lfList,sizeof(struct listField)*listEntries);
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&listEntries,sizeof(int));
+	if(listEntries)
+	{
+	    lfList = new struct listField[listEntries];
+	    ComController::instance()->readMaster(lfList,sizeof(struct listField)*listEntries);
+	}
+    }
+
+    stringlist.clear();
+    for(int i = 0; i < listEntries; i++)
+    {
+	stringlist.push_back(lfList[i].entry);
+    }
+
+    _scatterFirstList->setValues(stringlist);
+    _scatterSecondList->setValues(stringlist);
+
+    if(lfList)
+    {
+	delete[] lfList;
+    } 
+
     return true;
 }
 
 void FuturePatient::preFrame()
 {
+    int numCommands = 0;
+    int * commands = NULL;
+    if(ComController::instance()->isMaster())
+    {
+        if(_mls)
+        {
+            CVRSocket * con;
+            if((con = _mls->accept()))
+            {
+                std::cerr << "Adding socket." << std::endl;
+                con->setNoDelay(true);
+                _socketList.push_back(con);
+            }
+        }
+
+        std::vector<int> messageList;
+        checkSockets(messageList);
+
+        numCommands = messageList.size();
+
+        ComController::instance()->sendSlaves(&numCommands, sizeof(int));
+
+        if(numCommands)
+        {
+            commands = new int[numCommands];
+            for(int i = 0; i < numCommands; i++)
+            {
+                commands[i] = messageList[i];
+            }
+            ComController::instance()->sendSlaves(commands,numCommands * sizeof(int));
+        }
+    }
+    else
+    {
+        ComController::instance()->readMaster(&numCommands, sizeof(int));
+        if(numCommands)
+        {
+            commands = new int[numCommands];
+            ComController::instance()->readMaster(commands,numCommands * sizeof(int));
+        }
+    }
+
+   if(numCommands)
+    {
+        std::stringstream filess;
+        filess << "Preset" << commands[numCommands-1] << ".cfg";
+        std::string file = filess.str();
+
+        bool loaded = false;
+        for(int i = 0; i < _loadLayoutButtons.size(); ++i)
+        {
+            if(_loadLayoutButtons[i]->getText() == file)
+            {
+                loaded = true;
+                menuCallback(_loadLayoutButtons[i]);
+                break;
+            }
+        }
+
+        if(!loaded)
+        {
+            std::cerr << "Unable to find preset config: " << file << std::endl;
+        }
+
+        delete[] commands;
+    }
+
     if(_layoutObject)
     {
 	_layoutObject->perFrame();
     }
+}
+
+void FuturePatient::checkSockets(std::vector<int> & messageList)
+{
+    if(!_socketList.size())
+    {
+        return;
+    }
+
+    int maxfd = 0;
+
+    fd_set socketsetR;
+    FD_ZERO(&socketsetR);
+
+    for(int i = 0; i < _socketList.size(); i++)
+    {
+        FD_SET((unsigned int)_socketList[i]->getSocketFD(),&socketsetR);
+        if(_socketList[i]->getSocketFD() > maxfd)
+        {
+            maxfd = _socketList[i]->getSocketFD();
+        }
+    }
+
+    struct timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 0;
+
+    select(maxfd+1,&socketsetR,NULL,NULL,&tv);
+
+    for(std::vector<CVRSocket*>::iterator it = _socketList.begin(); it != _socketList.end(); )
+    {
+        if(FD_ISSET((*it)->getSocketFD(),&socketsetR))
+        {
+            if(!processSocketInput(*it,messageList))
+            {
+                std::cerr << "Removing socket." << std::endl;
+                delete *it;
+                it = _socketList.erase(it);
+            }
+            else
+            {
+                it++;
+            }
+        }
+        else
+        {
+            it++;
+        }
+    }
+}
+
+bool FuturePatient::processSocketInput(CVRSocket * socket, std::vector<int> & messageList)
+{
+    /*char c;
+    if(!socket->recv(&c,sizeof(char)))
+    {
+        return false;
+    }
+
+    std::cerr << "Char: " << (int)c << std::endl;*/
+    int i;
+    if(!socket->recv(&i,sizeof(int)))
+    {
+        return false;
+    }
+
+    //std::cerr << "int: " << i << std::endl;
+    messageList.push_back(i);
+
+    char resp[1024];
+    memset(resp,'\0',1024);
+    resp[0] = 'o';
+    resp[1] = 'k';
+    socket->send(resp,1024);
+
+    return true;
 }
 
 void FuturePatient::menuCallback(MenuItem * item)
@@ -851,9 +1104,6 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(),(int)_microbeNumBars->getValue(),_microbeOrdering->getValue()))
 	    {
-		//PluginHelper::registerSceneObject(mgo,"FuturePatient");
-		//mgo->attachToScene();
-		//_microbeGraphList.push_back(mgo);
 		checkLayout();
 		_layoutObject->addGraphObject(mgo);
 	    }
@@ -898,6 +1148,64 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    _currentSBGraph = NULL;
 	    _microbeMenu->removeItem(_microbeDone);
 	}
+	return;
+    }
+
+    if(item == _microbeLoadCrohnsAll || item == _microbeLoadHealthyAll || item == _microbeLoadUCAll)
+    {
+	std::vector<std::pair<int,int> > rangeList;
+
+	if(item == _microbeLoadCrohnsAll)
+	{
+	    rangeList.push_back(std::pair<int,int>(44,58));
+	}
+	else if(item == _microbeLoadHealthyAll)
+	{
+	    rangeList.push_back(std::pair<int,int>(65,99));
+	}
+	else
+	{
+	    rangeList.push_back(std::pair<int,int>(59,64));
+	}
+
+	for(int i = 0; i < rangeList.size(); ++i)
+	{
+	    int start = rangeList[i].first;
+	    while(start <= rangeList[i].second)
+	    {
+		if(_microbeGraphType->getIndex() == 0)
+		{
+		    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+		    if(mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0),(int)_microbeNumBars->getValue(),_microbeOrdering->getValue()))
+		    {
+			checkLayout();
+			_layoutObject->addGraphObject(mgo);
+		    }
+		    else
+		    {
+			delete mgo;
+		    }
+		}
+		else if(_microbeGraphType->getIndex() == 1)
+		{
+		    if(!_currentSBGraph)
+		    {
+			_currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+			_currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0));
+			checkLayout();
+			_layoutObject->addGraphObject(_currentSBGraph);
+			_microbeMenu->addItem(_microbeDone);
+		    }
+		    else
+		    {
+			_currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0));
+		    }
+		}
+
+		start++;
+	    }
+	}
+
 	return;
     }
 
@@ -1002,6 +1310,64 @@ void FuturePatient::menuCallback(MenuItem * item)
 	_currentSymptomGraph = NULL;
 	_eventMenu->removeItem(_eventDone);
     }
+
+    if(item == _scatterLoad)
+    {
+	if(_scatterFirstList->getListSize() && _scatterFirstList->getIndex() != _scatterSecondList->getIndex())
+	{
+	    MicrobeScatterGraphObject * msgo = new MicrobeScatterGraphObject(_conn, 1000.0, 1000.0, "Scatter Plot", false, true, false, true);
+	    if(msgo->setGraph(_scatterSecondList->getValue() + " vs " + _scatterFirstList->getValue(),_scatterFirstList->getValue(),_scatterSecondList->getValue()))
+	    {
+		checkLayout();
+		_layoutObject->addGraphObject(msgo);
+	    }
+	    else
+	    {
+		delete msgo;
+	    }
+	}
+	return;
+    }
+
+    if(item == _scatterLoadAll)
+    {
+	if(_scatterFirstList->getListSize())
+	{
+	    for(int i = 0; i < _scatterSecondList->getListSize(); ++i)
+	    {
+		if(_scatterFirstList->getIndex() == i)
+		{
+		    continue;
+		}
+		MicrobeScatterGraphObject * msgo = new MicrobeScatterGraphObject(_conn, 1000.0, 1000.0, "Scatter Plot", false, true, false, true);
+		if(msgo->setGraph(_scatterSecondList->getValue(i) + " vs " + _scatterFirstList->getValue(),_scatterFirstList->getValue(),_scatterSecondList->getValue(i)))
+		{
+		    checkLayout();
+		    _layoutObject->addGraphObject(msgo);
+		}
+		else
+		{
+		    delete msgo;
+		}
+	    }
+	}
+	return;
+    }
+
+    if(item == _saveLayoutButton)
+    {
+	saveLayout();
+	return;
+    }
+
+    for(int i = 0; i < _loadLayoutButtons.size(); ++i)
+    {
+	if(item == _loadLayoutButtons[i])
+	{
+	    loadLayout(_loadLayoutButtons[i]->getText());
+	    return;
+	}
+    }
 }
 
 void FuturePatient::checkLayout()
@@ -1013,7 +1379,7 @@ void FuturePatient::checkLayout()
 	width = ConfigManager::getFloat("width","Plugin.FuturePatient.Layout",1500.0);
 	height = ConfigManager::getFloat("height","Plugin.FuturePatient.Layout",1000.0);
 	pos = ConfigManager::getVec3("Plugin.FuturePatient.Layout");
-	_layoutObject = new GraphLayoutObject(width,height,3,"GraphLayout",false,true,false,true,false);
+	_layoutObject = new GraphLayoutObject(width,height,3,"FuturePatient",false,true,false,true,false);
 	_layoutObject->setPosition(pos);
 	PluginHelper::registerSceneObject(_layoutObject,"FuturePatient");
 	_layoutObject->attachToScene();
@@ -1291,4 +1657,101 @@ void FuturePatient::updateMicrobeTests(int patientid)
     }
 
     _microbeTest->setValues(labelVec);
+}
+
+void FuturePatient::saveLayout()
+{
+    bool ok = true;
+    char file[1024];
+    if(ComController::instance()->isMaster())
+    {
+	time_t now;
+	time(&now);
+
+	struct tm timeInfo;
+	timeInfo = *localtime(&now);
+	strftime(file,1024,"%Y_%m_%d_%H_%M_%S.cfg",&timeInfo);
+
+	std::string outFile = _layoutDirectory + "/" + file;
+
+	std::cerr << "Trying to save layout file: " << outFile << std::endl;
+
+	if(_layoutObject)
+	{
+	    std::ofstream outstream(outFile.c_str(),std::ios_base::out | std::ios_base::trunc);
+
+	    if(!outstream.fail())
+	    {
+		outstream << ((int)SAVED_LAYOUT_VERSION) << std::endl;
+
+		_layoutObject->dumpState(outstream);
+
+		outstream.close();
+	    }
+	    else
+	    {
+		std::cerr << "Failed to open file for writing: " << outFile << std::endl;
+		ok = false;
+	    }
+	}
+	else
+	{
+	    ok = false;
+	}
+	ComController::instance()->sendSlaves(&ok,sizeof(bool));
+	if(ok)
+	{
+	    ComController::instance()->sendSlaves(file,1024*sizeof(char));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&ok,sizeof(bool));
+	if(ok)
+	{
+	    ComController::instance()->readMaster(file,1024*sizeof(char));
+	}
+    }
+
+    if(ok)
+    {
+	MenuButton * button = new MenuButton(file);
+	button->setCallback(this);
+	_loadLayoutButtons.push_back(button);
+
+	_loadLayoutMenu->addItem(button);
+    }
+}
+
+void FuturePatient::loadLayout(const std::string & file)
+{
+    std::string fullPath = _layoutDirectory + "/" + file;
+
+    std::cerr << "Trying to load layout file: " << fullPath << std::endl;
+
+    checkLayout();
+
+    menuCallback(_removeAllButton);
+
+    std::ifstream instream(fullPath.c_str());
+
+    if(instream.fail())
+    {
+	std::cerr << "Unable to open layout file." << std::endl;
+	return;
+    }
+
+    int version;
+    instream >> version;
+
+    if(version != SAVED_LAYOUT_VERSION)
+    {
+	std::cerr << "Error loading layout, version too old." << std::endl;
+	instream.close();
+	return;
+    }
+
+    _layoutObject->loadState(instream);
+
+    instream.close();
 }

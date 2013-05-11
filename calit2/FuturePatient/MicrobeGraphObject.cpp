@@ -1,5 +1,6 @@
 #include "MicrobeGraphObject.h"
 #include "GraphLayoutObject.h"
+#include "GraphGlobals.h"
 
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/ComController.h>
@@ -31,6 +32,16 @@ MicrobeGraphObject::MicrobeGraphObject(mysqlpp::Connection * conn, float width, 
 
     if(_myMenu)
     {
+	_colorModeML = new MenuList();
+	_colorModeML->setCallback(this);
+	addMenuItem(_colorModeML);
+
+	std::vector<std::string> listItems;
+	listItems.push_back("Solid Color");
+	listItems.push_back("Group Colors");
+	_colorModeML->setValues(listItems);
+	_colorModeML->setIndex(0);
+
 	_microbeText = new MenuText("");
 	_microbeText->setCallback(this);
 	_searchButton = new MenuButton("Web Search");
@@ -40,10 +51,13 @@ MicrobeGraphObject::MicrobeGraphObject(mysqlpp::Connection * conn, float width, 
     {
 	_microbeText = NULL;
 	_searchButton = NULL;
+	_colorModeML = NULL;
     }
     
 
     _graph = new GroupedBarGraph(width,height);
+    _graph->setColorMapping(GraphGlobals::getDefaultPhylumColor(),GraphGlobals::getPhylumColorMap());
+    _graph->setColorMode(_colorModeML ? (BarGraphColorMode)_colorModeML->getIndex() : BGCM_SOLID);
 }
 
 MicrobeGraphObject::~MicrobeGraphObject()
@@ -105,6 +119,59 @@ void MicrobeGraphObject::resetGraphDisplayRange()
 void MicrobeGraphObject::selectMicrobes(std::string & group, std::vector<std::string> & keys)
 {
     _graph->selectItems(group,keys);
+}
+
+void MicrobeGraphObject::dumpState(std::ostream & out)
+{
+    out << "MICROBE_GRAPH" << std::endl;
+    out << _specialGraph << std::endl;
+
+    out << _microbes << std::endl;
+    out << _lsOrdered << std::endl;
+
+    if(_specialGraph)
+    {
+	out << _specialType << std::endl;
+    }
+    else
+    {
+	out << _graphTitle << std::endl;
+	out << _testLabel << std::endl;
+	out << _patientid << std::endl;
+    }
+}
+
+bool MicrobeGraphObject::loadState(std::istream & in)
+{
+    bool special, lsOrder;
+    int microbes;
+    in >> special >> microbes >> lsOrder;
+
+    if(special)
+    {
+	int stype;
+	in >> stype;
+	setSpecialGraph((SpecialMicrobeGraphType)stype,microbes,lsOrder);
+    }
+    else
+    {
+	char tempstr[1024];
+	// consume endl
+	in.getline(tempstr,1024);
+
+	std::string title, tlabel;
+	in.getline(tempstr,1024);
+	title = tempstr;
+	in.getline(tempstr,1024);
+	tlabel = tempstr;
+
+	int patientid;
+	in >> patientid;
+
+	setGraph(title,patientid,tlabel,microbes,lsOrder);
+    }
+
+    return true;
 }
 
 bool MicrobeGraphObject::processEvent(InteractionEvent * ie)
@@ -305,6 +372,11 @@ void MicrobeGraphObject::menuCallback(MenuItem * item)
 	}
     }
 
+    if(item == _colorModeML)
+    {
+	_graph->setColorMode((BarGraphColorMode)_colorModeML->getIndex());
+    }
+
     TiledWallSceneObject::menuCallback(item);
 }
 
@@ -316,6 +388,12 @@ bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string 
     valuess << "select * from (select Microbes.description, Microbes.phylum, Microbes.species, Microbe_Measurement.value from  Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \""<< testLabel << "\" order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
 
     orderss << "select t.phylum, sum(t.value) as total_value from (select Microbes.phylum, Microbe_Measurement.value from  Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
+
+    _specialGraph = false;
+    _patientid = patientid;
+    _testLabel = testLabel;
+    _microbes = microbes;
+    _lsOrdered = lsOrdering;
 
     return loadGraphData(valuess.str(), orderss.str(), lsOrdering);
 }
@@ -382,6 +460,11 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int micro
 	default:
 	    return false;
     }
+
+    _specialGraph = true;
+    _specialType = smgt;
+    _microbes = microbes;
+    _lsOrdered = lsOrdering;
 
     return loadGraphData(valuess.str(), orderss.str(), lsOrdering);
 }

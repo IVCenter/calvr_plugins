@@ -7,6 +7,7 @@ class ColorGenerator
 {
     public:
         static osg::Vec4 makeColor(int colorNum, int totalColors);
+        static osg::Vec4 makeColor(int colorNum, int totalColors, float offset);
 
     protected:
         static osg::Vec4 makeColor(float f);

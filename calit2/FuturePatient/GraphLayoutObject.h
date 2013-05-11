@@ -28,7 +28,11 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         void addGraphObject(LayoutTypeObject * object);
         void removeGraphObject(LayoutTypeObject * object);
 
+        void addLineObject(LayoutLineObject * object);
+        void removeLineObject(LayoutLineObject * object);
+
         void selectMicrobes(std::string & group, std::vector<std::string> & keys);
+        void selectPatients(std::string & group, std::vector<std::string> & patients);
 
         void removeAll();
         void perFrame();
@@ -43,6 +47,9 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         void setRows(float rows);
         void setSyncTime(bool sync);
 
+        bool dumpState(std::ostream & out);
+        bool loadState(std::istream & in);
+
         virtual void menuCallback(cvr::MenuItem * item);
 
         virtual bool processEvent(cvr::InteractionEvent * event);
@@ -53,14 +60,20 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         void makeGeometry();
         void updateGeometry();
         void updateLayout();
+        void checkLineRefs();
+
+        bool loadObject(std::istream & in);
 
         bool _minimized;
 
         std::vector<LayoutTypeObject *> _objectList;
         std::map<LayoutTypeObject *,cvr::MenuButton *> _deleteButtonMap;
+        std::vector<LayoutLineObject *> _lineObjectList;
 
         std::string _currentSelectedMicrobeGroup;
         std::vector<std::string> _currentSelectedMicrobes;
+        std::string _currentSelectedPatientGroup;
+        std::vector<std::string> _currentSelectedPatients;
 
         float _width;
         float _height;
@@ -82,6 +95,7 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         cvr::MenuRangeValueCompact * _rowsRV;
         cvr::MenuRangeValueCompact * _widthRV;
         cvr::MenuRangeValueCompact * _heightRV;
+        cvr::MenuButton * _removeUnselected;
 
         int _activeHand;
         cvr::TrackerBase::TrackerType _activeHandType;

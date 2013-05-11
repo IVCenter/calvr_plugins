@@ -49,8 +49,6 @@ class OsgVnc : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::File
         };
 
  		float _defaultScale;
-        float _defaultDepth;
-
         std::string _configPath;
 
         // menu objects

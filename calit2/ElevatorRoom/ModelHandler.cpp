@@ -1,5 +1,6 @@
 #include "ModelHandler.h"
 
+
 using namespace cvr;
 using namespace osg;
 using namespace std;
@@ -7,13 +8,18 @@ using namespace std;
 namespace ElevatorRoom
 {
 
+#define DING_OFFSET 1
+#define EXPLOSION_OFFSET 9
+#define LASER_OFFSET 17
 
 ModelHandler::ModelHandler()
 {
+    _audioHandler = NULL;
     _activeObject = NULL;
     _geoRoot = new osg::MatrixTransform();
     _crosshairPat = NULL;
     _scoreText = NULL;
+    _scoreSwitch = NULL;
 
     _dataDir = ConfigManager::getEntry("Plugin.ElevatorRoom.DataDir");
     _dataDir = _dataDir + "/";
@@ -21,13 +27,44 @@ ModelHandler::ModelHandler()
     _loaded = false;
     _doorDist = 0;
     _activeDoor = 0;
+    _viewedDoor = 4;
     _lightColor = 0;
     _doorInView = false;
+    _totalAngle = 0;
+
+    _colors.push_back(osg::Vec4(1, 1, 1, 1));   // WHITE
+    _colors.push_back(osg::Vec4(1, 0, 0, 1));   // RED
+    _colors.push_back(osg::Vec4(0, 0, 1, 1));   // BLUE
+    _colors.push_back(osg::Vec4(1, 0.5, 0, 1)); // ORANGE
+    _colors.push_back(osg::Vec4(1, 1, 0, 1));   // YELLOW
+    _colors.push_back(osg::Vec4(0, 1, 0, 1));   // GREEN
+    _colors.push_back(osg::Vec4(0.3, 0.15, 0.0, 1.0)); // BROWN
+    _colors.push_back(osg::Vec4(0.7, 0.7, 0.7, 1.0));  // GREY
+
+    _wallTex = ConfigManager::getEntry("Plugin.ElevatorRoom.WallTexture");
+    _floorTex = ConfigManager::getEntry("Plugin.ElevatorRoom.FloorTexture");
+    _ceilingTex = ConfigManager::getEntry("Plugin.ElevatorRoom.CeilingTexture");
+    _doorTex = ConfigManager::getEntry("Plugin.ElevatorRoom.DoorTexture");
+    _elevTex = ConfigManager::getEntry("Plugin.ElevatorRoom.ElevatorTexture");
+
+    _alienTex = ConfigManager::getEntry("Plugin.ElevatorRoom.AlienTexture");
+    _allyTex = ConfigManager::getEntry("Plugin.ElevatorRoom.AllyTexture");
+
+    _checkTex1 = ConfigManager::getEntry("Plugin.ElevatorRoom.CheckerTexture1");
+    _checkTex2 = ConfigManager::getEntry("Plugin.ElevatorRoom.CheckerTexture2");
 }
 
 ModelHandler::~ModelHandler()
 {
 
+}
+
+void ModelHandler::setAudioHandler(AudioHandler * handler)
+{
+    if (ComController::instance()->isMaster())
+    {
+        _audioHandler = handler;
+    }
 }
 
 void ModelHandler::update()
@@ -41,7 +78,6 @@ void ModelHandler::update()
     pos = PluginHelper::getHeadMat(0).getTrans() + (osg::Vec3(-32, 200, 0) * rotMat);
 
     _crosshairPat->setPosition(pos); 
-
 
 
     float angle = 0, tolerance = 15 * (M_PI / 180), roomRad = 6;
@@ -69,40 +105,235 @@ void ModelHandler::update()
         std::cout << "Door leaving view" << std::endl;
         _doorInView = false;
     }
+
+
+    if (_turningLeft)
+    {
+        osg::Matrix objmat = PluginHelper::getObjectMatrix();
+        
+        float angle = -(M_PI / 4) / 10;
+        osg::Matrix turnMat;
+        turnMat.makeRotate(angle, osg::Vec3(0, 0, 1));
+
+        osg::Vec3 origin = _root->getMatrix().getTrans();
+
+        osg::Matrix m;
+        m = objmat * osg::Matrix::translate(-origin) * turnMat * 
+            osg::Matrix::translate(origin);
+
+        SceneManager::instance()->setObjectMatrix(m);
+
+        _totalAngle += angle;
+        if (_totalAngle < -M_PI / 4)
+        {
+            _turningLeft = false;
+            _totalAngle = 0;
+        }
+    }
+    if (_turningRight)
+    {
+        osg::Matrix objmat = PluginHelper::getObjectMatrix();
+        
+        float angle = (M_PI / 4) / 10;
+        osg::Matrix turnMat;
+        turnMat.makeRotate(angle, osg::Vec3(0, 0, 1));
+
+        osg::Vec3 origin = _root->getMatrix().getTrans();
+
+        osg::Matrix m;
+        m = objmat * osg::Matrix::translate(-origin) * turnMat * 
+            osg::Matrix::translate(origin);
+
+        SceneManager::instance()->setObjectMatrix(m);
+
+        _totalAngle += angle;
+        if (_totalAngle > M_PI / 4)
+        {
+            _turningRight = false;
+            _totalAngle = 0;
+        }
+    }
+}
+
+void ModelHandler::clear()
+{
+    _lights.clear();
+    _aliensSwitch.clear();
+    _alliesSwitch.clear();
+    _checkersSwitch.clear();
+    _lightSwitch.clear();
+    _leftdoorSwitch.clear();
+}
+
+void ModelHandler::setLevel(string level)
+{
+    std::string tag = "Plugin.ElevatorRoom.Levels." + level;
+
+    _wallTex = ConfigManager::getEntry(tag + ".WallTexture");
+    _floorTex = ConfigManager::getEntry(tag + ".FloorTexture");
+    _ceilingTex = ConfigManager::getEntry(tag + ".CeilingTexture");
+    _doorTex = ConfigManager::getEntry(tag + ".DoorTexture");
+    _elevTex = ConfigManager::getEntry(tag + ".ElevatorTexture");
+
+    _alienTex = ConfigManager::getEntry(tag + ".AlienTexture");
+    _allyTex = ConfigManager::getEntry(tag + ".AllyTexture");
+
+    _checkTex1 = ConfigManager::getEntry(tag + ".CheckerTexture1");
+    _checkTex2 = ConfigManager::getEntry(tag + ".CheckerTexture2");
+
+
+    osg::ref_ptr<osg::Texture2D> tex;
+    std::vector<osg::ref_ptr<osg::Switch> >::iterator it;
+    osg::ref_ptr<osg::Image> img;
+
+    img = osgDB::readImageFile(_dataDir + _alienTex);
+    if (!img) 
+    {
+        std::cout << "Failed to load image " << _alienTex << "." << std::endl;
+    }
+    
+    // Enemy
+    for (it = _aliensSwitch.begin(); it != _aliensSwitch.end(); ++it)
+    {
+        tex = new osg::Texture2D();
+        if (img)
+        {
+            tex->setImage(img);
+            tex->setResizeNonPowerOfTwoHint(false);
+            tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+            tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+        }
+    
+        for (int i = 0; i < (*it)->getNumChildren(); ++i)
+        {
+            osg::ref_ptr<osg::StateSet> state;
+            state = (*it)->getChild(i)->getOrCreateStateSet();
+            state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+        }
+    }
+    
+    // Ally
+    for (it = _alliesSwitch.begin(); it != _alliesSwitch.end(); ++it)
+    {
+        tex = new osg::Texture2D();
+        img = osgDB::readImageFile(_dataDir + _allyTex);
+        if (img)
+        {
+            tex->setImage(img);
+            tex->setResizeNonPowerOfTwoHint(false);
+            tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+            tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+        }
+    
+        for (int i = 0; i < (*it)->getNumChildren(); ++i)
+        {
+            osg::ref_ptr<osg::StateSet> state;
+            state = (*it)->getChild(i)->getOrCreateStateSet();
+            state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+        }
+    }
+    
+    std::vector<osg::ref_ptr<osg::Geode> >::iterator geoIt;
+
+    // Walls
+    for (geoIt = _walls.begin(); geoIt != _walls.end(); ++geoIt)
+    {
+        tex = new osg::Texture2D();
+        img = osgDB::readImageFile(_dataDir + _wallTex);
+        if (img)
+        {
+            tex->setImage(img);
+            tex->setResizeNonPowerOfTwoHint(false);
+            tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+            tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+        }
+    
+        osg::ref_ptr<osg::StateSet> state;
+        state = (*geoIt)->getOrCreateStateSet();
+        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    }
+    
+    // Elevator doors/interior
+    for (geoIt = _elevators.begin(); geoIt != _elevators.end(); ++geoIt)
+    {
+        tex = new osg::Texture2D();
+        img = osgDB::readImageFile(_dataDir + _elevTex);
+        if (img)
+        {
+            tex->setImage(img);
+            tex->setResizeNonPowerOfTwoHint(false);
+            tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+            tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+        }
+    
+        osg::ref_ptr<osg::StateSet> state;
+        state = (*geoIt)->getOrCreateStateSet();
+        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    }
+    
+    // Floor
+    for (geoIt = _floors.begin(); geoIt != _floors.end(); ++geoIt)
+    {
+        tex = new osg::Texture2D();
+        img = osgDB::readImageFile(_dataDir + _floorTex);
+        if (img)
+        {
+            tex->setImage(img);
+            tex->setResizeNonPowerOfTwoHint(false);
+            tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+            tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+        }
+    
+        osg::ref_ptr<osg::StateSet> state;
+        state = (*geoIt)->getOrCreateStateSet();
+        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    }
+
+    // Ceiling
+    for (geoIt = _ceilings.begin(); geoIt != _ceilings.end(); ++geoIt)
+    {
+        tex = new osg::Texture2D();
+        img = osgDB::readImageFile(_dataDir + _ceilingTex);
+        if (img)
+        {
+            tex->setImage(img);
+            tex->setResizeNonPowerOfTwoHint(false);
+            tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+            tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+        }
+    
+        osg::ref_ptr<osg::StateSet> state;
+        state = (*geoIt)->getOrCreateStateSet();
+        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    }
+
+    // Doors 
+    tex = new osg::Texture2D();
+    img = osgDB::readImageFile(_dataDir + _doorTex);
+    if (img)
+    {
+        tex->setImage(img);
+        tex->setResizeNonPowerOfTwoHint(false);
+        tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+        tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+    }
+
+    for (geoIt = _doors.begin(); geoIt != _doors.end(); ++geoIt)
+    {
+        osg::ref_ptr<osg::StateSet> state;
+        state = (*geoIt)->getOrCreateStateSet();
+        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    }
 }
 
 void ModelHandler::loadModels(osg::MatrixTransform * root)
 {
+    _root = root;
     if (root && _geoRoot)
     {
         root->addChild(_geoRoot.get());
     }
 
-    std::string _wallTex, _floorTex, _ceilingTex, _doorTex,
-            _alienTex, _allyTex, _checkTex1, _checkTex2, _elevTex;
-
-    _wallTex = ConfigManager::getEntry("Plugin.ElevatorRoom.WallTexture");
-    _floorTex = ConfigManager::getEntry("Plugin.ElevatorRoom.FloorTexture");
-    _ceilingTex = ConfigManager::getEntry("Plugin.ElevatorRoom.CeilingTexture");
-    _doorTex = ConfigManager::getEntry("Plugin.ElevatorRoom.DoorTexture");
-    _elevTex = ConfigManager::getEntry("Plugin.ElevatorRoom.ElevatorTexture");
-
-    _alienTex = ConfigManager::getEntry("Plugin.ElevatorRoom.AlienTexture");
-    _allyTex = ConfigManager::getEntry("Plugin.ElevatorRoom.AllyTexture");
-
-    _checkTex1 = ConfigManager::getEntry("Plugin.ElevatorRoom.CheckerTexture1");
-    _checkTex2 = ConfigManager::getEntry("Plugin.ElevatorRoom.CheckerTexture2");
-
-
-    osg::Vec4 grey     = osg::Vec4(0.7, 0.7, 0.7, 1.0),
-              brown    = osg::Vec4(0.3, 0.15, 0.0, 1.0),
-              darkgrey = osg::Vec4(0.3, 0.3, 0.3, 1.0),
-              red      = osg::Vec4(1, 0, 0, 1), 
-              blue     = osg::Vec4(0, 0, 1, 1),
-              green    = osg::Vec4(0, 1, 0, 1),
-              yellow   = osg::Vec4(1, 1, 0, 1),
-              orange   = osg::Vec4(1, 0.5, 0, 1),
-              white    = osg::Vec4(1, 1, 1, 1);
 
     float roomRad = 6.0, angle = 2 * M_PI / NUM_DOORS;
 
@@ -115,64 +346,39 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     osg::ref_ptr<osg::Image> img;
     osg::ref_ptr<osg::StateSet> state;
 
+    osg::ref_ptr<osg::ShapeDrawable> redDrawable, greenDrawable, yellowDrawable,
+        orangeDrawable, whiteDrawable;
+    osg::ref_ptr<osg::Geode> redGeode, greenGeode, yellowGeode, orangeGeode,
+        whiteGeode, blueGeode;
+
+
 
     // Lights
-    osg::ref_ptr<osg::Sphere> shape = new osg::Sphere(osg::Vec3(0,-4.75, 4.0), 0.2);
+    {
+    osg::ref_ptr<osg::Sphere> shape = new osg::Sphere(osg::Vec3(0,-4.75, 4.0), 0.3);
+
     for (int i = 0; i < NUM_DOORS; ++i)
     {
         pat = new osg::PositionAttitudeTransform();
-        drawable = new osg::ShapeDrawable(shape);
-        drawable->setColor(osg::Vec4(0.5, 0.5, 0.5, 1.0));
-        geode = new osg::Geode();
-        geode->addDrawable(drawable);
-
-        osg::ref_ptr<osg::ShapeDrawable> redDrawable, greenDrawable, yellowDrawable,
-            orangeDrawable, whiteDrawable;
-        osg::ref_ptr<osg::Geode> redGeode, greenGeode, yellowGeode, orangeGeode,
-            whiteGeode;
-
-        redDrawable = new osg::ShapeDrawable(shape);
-        redDrawable->setColor(red);
-        redGeode = new osg::Geode();
-        redGeode->addDrawable(redDrawable);
-
-        greenDrawable = new osg::ShapeDrawable(shape);
-        greenDrawable->setColor(green);
-        greenGeode = new osg::Geode();
-        greenGeode->addDrawable(greenDrawable);
-
-        yellowDrawable = new osg::ShapeDrawable(shape);
-        yellowDrawable->setColor(yellow);
-        yellowGeode = new osg::Geode();
-        yellowGeode->addDrawable(yellowDrawable);
-
-        orangeDrawable = new osg::ShapeDrawable(shape);
-        orangeDrawable->setColor(orange);
-        orangeGeode = new osg::Geode();
-        orangeGeode->addDrawable(orangeDrawable);
-
-        whiteDrawable = new osg::ShapeDrawable(shape);
-        whiteDrawable->setColor(white);
-        whiteGeode = new osg::Geode();
-        whiteGeode->addDrawable(whiteDrawable);
-
         pat->setAttitude(osg::Quat(i * angle, osg::Vec3(0.0, 0.0, 1.0)));
         pat->setPosition(osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0));
 
         osg::ref_ptr<osg::Switch> switchNode;
         switchNode = new osg::Switch();
-        
-        switchNode->addChild(geode, true);
-        switchNode->addChild(redGeode, false);
-        switchNode->addChild(greenGeode, false);
-        switchNode->addChild(yellowGeode, false);
-        switchNode->addChild(orangeGeode, false);
-        switchNode->addChild(whiteGeode, false);
-
+ 
+        for (int j = 0; j < _colors.size(); ++j)
+        {
+            drawable = new osg::ShapeDrawable(shape);
+            drawable->setColor(_colors[j]);
+            geode = new osg::Geode();
+            geode->addDrawable(drawable);
+            switchNode->addChild(geode, false);
+        }
+        switchNode->setValue(0, true);
         pat->addChild(switchNode);
-        _geoRoot->addChild(pat);
+        //_geoRoot->addChild(pat);
 
-        _lightSwitch.push_back(switchNode);
+        //_lightSwitch.push_back(switchNode);
         _lights.push_back(drawable);
         
         
@@ -190,22 +396,24 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         dir = pos - center;
 
         // 1 - 8 ding sounds
-/*        
+        
         if (_audioHandler)
         {
-            _audioHandler->loadSound(i + DING_OFFSET, dir, pos);
+            _audioHandler->loadSound(i + DING_OFFSET, i * angle);
+            _audioHandler->loadSound(i + EXPLOSION_OFFSET, i * angle);
         }
-*/
+
+    }
     }
 
-
     // Aliens 
+    {
     geode = new osg::Geode();
-    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, grey);
+    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, _colors[GREY]);
     geode->addDrawable(geo);
 
     osg::ref_ptr<osg::Geode> redGeode = new Geode();
-    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, red);
+    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, _colors[RED]);
     redGeode->addDrawable(geo);
 
     tex = new osg::Texture2D();
@@ -251,22 +459,23 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         osg::Vec3 dir = pos - osg::Vec3(0,0,0);
 
         // 9 - 16 explosion sounds
-   /*
+   
         if (_audioHandler)
         {
-            _audioHandler->loadSound(i + EXPLOSION_OFFSET, dir, pos);
+//            _audioHandler->loadSound(i + EXPLOSION_OFFSET, i * angle);
         }
-   */
+   
     }   
-
+    }
 
     // Allies 
+    {
     geode = new osg::Geode();
-    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, grey);
+    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, _colors[GREY]);
     geode->addDrawable(geo);
     
     redGeode = new osg::Geode();
-    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, red);
+    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, _colors[RED]);
     redGeode->addDrawable(geo);
 
     tex = new osg::Texture2D();
@@ -305,11 +514,12 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
 
         _alliesSwitch.push_back(switchNode);
     }   
-
+    }
 
     // Checkerboards 
+    {
     geode = new osg::Geode();
-    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, grey);
+    geo = drawBox(osg::Vec3(0, -6, 0.5), 1.0, 0.01, 1.0, _colors[GREY]);
     geode->addDrawable(geo);
 
     osg::ref_ptr<osg::Geode> geode2 = new osg::Geode();
@@ -362,9 +572,11 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
 
         _checkersSwitch.push_back(switchNode);
     }   
+    }
 
     // Walls
-    
+    // Elevator
+    {    
     geode = new osg::Geode();
     tex = new osg::Texture2D();
     img = osgDB::readImageFile(_dataDir + _wallTex);
@@ -383,19 +595,16 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     float wallTexScale = 0.5;
 
     // Left front
-    geo = drawBox(osg::Vec3(3.0, -5.0, 1.0), 3.25, 0.5, 4.0, grey, wallTexScale); 
+    geo = drawBox(osg::Vec3(3.0, -5.0, 1.0), 3.25, 0.5, 4.0, _colors[GREY], wallTexScale); 
     geode->addDrawable(geo);
     
     // Right front
-    geo = drawBox(osg::Vec3(-3.0, -5.0, 1.0), 3.25, 0.5, 4.0, grey, wallTexScale);
+    geo = drawBox(osg::Vec3(-3.0, -5.0, 1.0), 3.25, 0.5, 4.0, _colors[GREY], wallTexScale);
     geode->addDrawable(geo);
 
     // Top
-    geo = drawBox(osg::Vec3(0.0, -5.0, 4.5), 9.0, 0.5, 3.0, grey, wallTexScale);
+    geo = drawBox(osg::Vec3(0.0, -5.0, 4.5), 9.0, 0.5, 3.0, _colors[GREY], wallTexScale);
     geode->addDrawable(geo);
-
-    
-    // Elevator
     
     osg::ref_ptr<osg::Geode> elevatorGeode = new osg::Geode();
     tex = new osg::Texture2D();
@@ -414,19 +623,19 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
 
 
     // Left side 
-    geo = drawBox(osg::Vec3( 1.25, -7.0, 1.5), 0.5, 4.0, 5.0, grey);
+    geo = drawBox(osg::Vec3( 1.25, -7.0, 1.5), 0.5, 4.0, 5.0, _colors[GREY]);
     elevatorGeode->addDrawable(geo);
 
     // Right side 
-    geo = drawBox(osg::Vec3(-1.25, -7.0, 1.5), 0.5, 4.0, 5.0, grey);
+    geo = drawBox(osg::Vec3(-1.25, -7.0, 1.5), 0.5, 4.0, 5.0, _colors[GREY]);
     elevatorGeode->addDrawable(geo);
 
     // Back
-    geo = drawBox(osg::Vec3(0.0, -9.25, 1.5), 3.0, 0.5, 5.0, grey);
+    geo = drawBox(osg::Vec3(0.0, -9.25, 1.5), 3.0, 0.5, 5.0, _colors[GREY]);
     elevatorGeode->addDrawable(geo);
 
     // Elevator floor
-    geo = drawBox(osg::Vec3(0.0, -7.0, -1.15), 3.0, 3.75, 0.5, grey);
+    geo = drawBox(osg::Vec3(0.0, -7.0, -1.15), 3.0, 3.75, 0.5, _colors[GREY]);
     elevatorGeode->addDrawable(geo);
 
     for (int i = 0; i < NUM_DOORS; ++i)
@@ -437,14 +646,17 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         pat->addChild(geode);
         pat->addChild(elevatorGeode);
         _geoRoot->addChild(pat);
+
+        _walls.push_back(geode);
+        _elevators.push_back(elevatorGeode);
+    }
     }
 
-
     // Ceiling 
-    
+    { 
     geode = new osg::Geode();
 
-    geo = drawBox(osg::Vec3(0.0, 0.0, 5.0), 40.0, 40.0, 0.1, grey);
+    geo = drawBox(osg::Vec3(0.0, 0.0, 5.0), 40.0, 40.0, 0.1, _colors[GREY]);
     geode->addDrawable(geo);
 
     tex = new osg::Texture2D();
@@ -462,13 +674,14 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
 
     _geoRoot->addChild(geode);
-    
+    _ceilings.push_back(geode);
+    } 
 
     // Floor
-
+    {
     geode = new osg::Geode();
 
-    geo = drawBox(osg::Vec3(0.0, 0.0, -1.0), 40.0, 40.0, 0.1, grey);
+    geo = drawBox(osg::Vec3(0.0, 0.0, -1.0), 40.0, 40.0, 0.1, _colors[GREY]);
     geode->addDrawable(geo);
 
     tex = new osg::Texture2D();
@@ -486,20 +699,18 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);   
 
     _geoRoot->addChild(geode);
-
+    _floors.push_back(geode);
+    }
 
     // Doors
-    
+    { 
     osg::ref_ptr<osg::Geometry> ldoorGeo, rdoorGeo;
 
-    ldoorGeo = drawBox(osg::Vec3( 0.75, -5.2, 1.0), 1.5, 0.5, 4.0, grey);
-    rdoorGeo = drawBox(osg::Vec3(-0.75, -5.2, 1.0), 1.5, 0.5, 4.0, grey);
+    ldoorGeo = drawBox(osg::Vec3( 0.75, -5.2, 1.0), 1.5, 0.5, 4.0, _colors[GREY]);
+    rdoorGeo = drawBox(osg::Vec3(-0.75, -5.2, 1.0), 1.5, 0.5, 4.0, _colors[GREY]);
 
     for (int i = 0; i < NUM_DOORS; ++i)
     {
-        pat = new osg::PositionAttitudeTransform();
-        geode = new osg::Geode();
-
         tex = new osg::Texture2D();
         img = osgDB::readImageFile(_dataDir + _doorTex);
         if (img)
@@ -509,41 +720,103 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
             tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
             tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
         }
+        
 
-        state = geode->getOrCreateStateSet();
-        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
-        state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
-
-        geode->addDrawable(rdoorGeo);
+        // Right door
+        pat = new osg::PositionAttitudeTransform();
         pat->setAttitude(osg::Quat(i * angle, osg::Vec3(0, 0, 1)));
         pat->setPosition(osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0));
-        pat->addChild(geode);
         _rightdoorPat.push_back(pat);
         _geoRoot->addChild(pat);
+        
+        osg::ref_ptr<osg::Switch> switchNode = new osg::Switch();
+        osg::ref_ptr<osg::Geometry> geometry;
 
 
-        pat = new osg::PositionAttitudeTransform();
-        geode = new osg::Geode();
-
+        /*geode = new osg::Geode();
         state = geode->getOrCreateStateSet();
         state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
         state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+        geode->addDrawable(rdoorGeo);
+        pat->addChild(geode);*/
 
-        geode->addDrawable(ldoorGeo);
+
+        for (int j = 0; j < _colors.size(); ++j)
+        {
+            geometry = drawBox(osg::Vec3(-0.75, -5.2, 1.0), 1.5, 0.5, 4.0, _colors[j]);
+            geode = new osg::Geode();
+            geode->addDrawable(geometry);
+
+            osg::Material * mat = new osg::Material(); 
+            mat->setDiffuse(Material::FRONT_AND_BACK, _colors[j]);
+            mat->setSpecular(Material::FRONT_AND_BACK, _colors[j]);
+            mat->setAlpha(Material::FRONT_AND_BACK, 0.5);
+
+            state = geode->getOrCreateStateSet();
+            state->setTextureAttributeAndModes(0, tex, osg::StateAttribute::ON);
+            state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+            state->setAttribute(mat, osg::StateAttribute::ON);
+            state->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
+            state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+
+            switchNode->addChild(geode, false);
+
+            _doors.push_back(geode);
+        }
+
+        switchNode->setValue(GREY, true);
+        _lightSwitch.push_back(switchNode);
+        pat->addChild(switchNode);
+        _geoRoot->addChild(pat);
+
+ 
+        // Left door
+        pat = new osg::PositionAttitudeTransform();
         pat->setAttitude(osg::Quat(i * angle, osg::Vec3(0, 0, 1)));
         pat->setPosition(osg::Quat(i * angle, osg::Vec3(0, 0, 1)) * osg::Vec3(0.0, -roomRad, 0.0));
-        pat->addChild(geode);
         _leftdoorPat.push_back(pat);
         _geoRoot->addChild(pat);
+        
+        switchNode = new osg::Switch();
+
+        for (int j = 0; j < _colors.size(); ++j)
+        {
+            geometry = drawBox(osg::Vec3(0.75, -5.2, 1.0), 1.5, 0.5, 4.0, _colors[j]);
+            geode = new osg::Geode();
+            geode->addDrawable(geometry);
+
+            osg::Material * mat = new osg::Material(); 
+            mat->setDiffuse(Material::FRONT_AND_BACK, _colors[j]);
+            mat->setSpecular(Material::FRONT_AND_BACK, _colors[j]);
+            mat->setAlpha(Material::FRONT_AND_BACK, 0.5);
+
+            state = geode->getOrCreateStateSet();
+            state->setTextureAttributeAndModes(0, tex, osg::StateAttribute::ON);
+            state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+            state->setAttribute(mat, osg::StateAttribute::ON);
+            state->setMode(GL_BLEND, StateAttribute::OVERRIDE | osg::StateAttribute::ON );
+            state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+
+            switchNode->addChild(geode, false);
+            _doors.push_back(geode);
+        }
+
+        switchNode->setValue(GREY, true);
+        _leftdoorSwitch.push_back(switchNode);
+        pat->addChild(switchNode);
+        _geoRoot->addChild(pat);
+
+    }
     }
 
-
     // Score text
-    
-    osg::Vec3 pos = osg::Vec3(-500, 0, 300);
+    { 
+    osg::Vec3 pos = osg::Vec3(0, 100, 0);
+    _scoreSwitch = new osg::Switch();
+
     _scoreText = new osgText::Text();
     _scoreText->setText("Score: 0");
-    _scoreText->setCharacterSize(20);
+    _scoreText->setCharacterSize(40);
     _scoreText->setAlignment(osgText::Text::LEFT_CENTER);
     _scoreText->setPosition(pos);
     _scoreText->setColor(osg::Vec4(1,1,1,1));
@@ -552,7 +825,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
 
     float width = 200, height = 50;
     osg::ref_ptr<osg::Geometry> quad = makeQuad(width, height, 
-        osg::Vec4(1.0,1.0,1.0,0.5), pos - osg::Vec3(10, 0, 25));
+        osg::Vec4(0.8,0.8,0.8,1.0), pos - osg::Vec3(10, 0, 25));
 
     pat = new osg::PositionAttitudeTransform();
     geode = new osg::Geode();
@@ -564,14 +837,17 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
     pat->addChild(geode);
-    PluginHelper::getScene()->addChild(pat);
+  //  PluginHelper::getScene()->addChild(pat);
 
+    _scoreSwitch->addChild(pat);
+    PluginHelper::getScene()->addChild(_scoreSwitch);
+    }
 
     // Crosshair
-
-    width = 4;
-    height = 0.3;
-    pos = osg::Vec3(0, -2500, 0);
+    {
+    float width = 4;
+    float height = 0.3;
+    osg::Vec3 pos = osg::Vec3(0, -2500, 0);
     pos = osg::Vec3(-25, 200, 0) + PluginHelper::getHeadMat().getTrans();
     osg::Vec4 color(0.8, 0.0, 0.0, 1.0);
     osg::Geode *chGeode = new osg::Geode();
@@ -580,7 +856,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     pos = osg::Vec3(0,0,0);
 
     // horizontal
-    quad = makeQuad(width, height, color, pos - osg::Vec3(width/2, 0, height/2));
+    osg::ref_ptr<osg::Geometry> quad = makeQuad(width, height, color, pos - osg::Vec3(width/2, 0, height/2));
     chGeode->addDrawable(quad);
 
     // vertical
@@ -593,6 +869,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     if (ConfigManager::getEntry("Plugin.ElevatorRoom.Crosshair") == "on" )
     {
         PluginHelper::getScene()->addChild(_crosshairPat);
+    }
     }
 
     _loaded = true;
@@ -820,11 +1097,21 @@ void ModelHandler::closeDoor()
     osg::PositionAttitudeTransform *lpat, *rpat;
     lpat = _leftdoorPat[_activeDoor];
     rpat = _rightdoorPat[_activeDoor];
+    
+    if (_doorDist - DOOR_SPEED < 0)
+    {
+        _doorDist = 0;
+        lpat->setPosition(lpat->getPosition() + lpat->getAttitude() * osg::Vec3(-_doorDist,0,0));
+        rpat->setPosition(rpat->getPosition() + rpat->getAttitude() * osg::Vec3( _doorDist,0,0));
+    }
+    else
+    {
+        _doorDist -= DOOR_SPEED;
+        lpat->setPosition(lpat->getPosition() + lpat->getAttitude() * osg::Vec3(-DOOR_SPEED,0,0));
+        rpat->setPosition(rpat->getPosition() + rpat->getAttitude() * osg::Vec3(DOOR_SPEED,0,0));
+    }
 
-    lpat->setPosition(lpat->getPosition() + lpat->getAttitude() * osg::Vec3(-DOOR_SPEED,0,0));
-    rpat->setPosition(rpat->getPosition() + rpat->getAttitude() * osg::Vec3(DOOR_SPEED,0,0));
 
-    _doorDist -= DOOR_SPEED;
 }
 
 void ModelHandler::setMode(Mode mode)
@@ -870,8 +1157,15 @@ void ModelHandler::setMode(Mode mode)
         }
     }
 
-    _lightColor = _lightSwitch[_activeDoor]->getNumChildren() - 1;
+/*    _lightColor = _lightSwitch[_activeDoor]->getNumChildren() - 1;
     _lightSwitch[_activeDoor]->setValue((int)_lightColor, true);
+    _leftdoorSwitch[_activeDoor]->setValue((int)_lightColor, true);
+*/
+}
+
+void ModelHandler::setSwitched(bool switched)
+{
+    _switched = switched;
 }
 
 osg::ref_ptr<osg::Geode> ModelHandler::getActiveObject()
@@ -890,13 +1184,15 @@ void ModelHandler::setScore(int score)
 
 void ModelHandler::flashActiveLight()
 {
-    if (_lightSwitch[_activeDoor]->getValue(_lightColor))
+    if (_lightSwitch[_activeDoor]->getValue(WHITE))
     {
-        _lightSwitch[_activeDoor]->setSingleChildOn(NONE);
+        _lightSwitch[_activeDoor]->setSingleChildOn(GREY);
+        _leftdoorSwitch[_activeDoor]->setSingleChildOn(GREY);
     }
     else
     {
-        _lightSwitch[_activeDoor]->setSingleChildOn(_lightColor);
+        _lightSwitch[_activeDoor]->setSingleChildOn(WHITE);
+        _leftdoorSwitch[_activeDoor]->setSingleChildOn(WHITE);
     }
 }
 
@@ -1066,16 +1362,44 @@ void ModelHandler::setAlly(bool val)
 
 void ModelHandler::setLight(bool val)
 {
-    _lightColor = (int)_mode;
-    if (val)
+    //_lightColor = _lightSwitch[_activeDoor]->getNumChildren() - 1;
+    //_lightSwitch[_activeDoor]->setValue((int)_lightColor, true);
+    //_leftdoorSwitch[_activeDoor]->setValue((int)_lightColor, true);
+
+    if (val && _switched && _mode == ALIEN)
     {
-        _lightSwitch[_activeDoor]->setValue(0, false);
-        _lightSwitch[_activeDoor]->setValue(_lightColor, true);
+        Mode mode = ALLY;
+        _lightColor = BLUE;
+    }
+    else if (val && _switched && _mode == ALLY)
+    {
+        Mode mode = ALIEN;
+        _lightColor = RED;
     }
     else
     {
-        _lightSwitch[_activeDoor]->setValue(0, true);
+        _lightColor = (int)_mode;
+    }
+
+    if (val)
+    {
+        _lightSwitch[_activeDoor]->setValue(0, false);
+        _lightSwitch[_activeDoor]->setAllChildrenOff();
+        _lightSwitch[_activeDoor]->setValue(_lightColor, true);
+
+        _leftdoorSwitch[_activeDoor]->setValue(0, false);
+        _leftdoorSwitch[_activeDoor]->setAllChildrenOff();
+        _leftdoorSwitch[_activeDoor]->setValue(_lightColor, true);
+    }
+    else
+    {
+        _lightSwitch[_activeDoor]->setAllChildrenOff();
+        _lightSwitch[_activeDoor]->setValue(GREY, true);
         _lightSwitch[_activeDoor]->setValue(_lightColor, false);
+
+        _leftdoorSwitch[_activeDoor]->setAllChildrenOff();
+        _leftdoorSwitch[_activeDoor]->setValue(GREY, true);
+        _leftdoorSwitch[_activeDoor]->setValue(_lightColor, false);
     }
 }
 
@@ -1087,6 +1411,56 @@ float ModelHandler::getDoorDistance()
 bool ModelHandler::doorInView()
 {
     return _doorInView;
+}
+
+void ModelHandler::turnLeft()
+{
+    _turningLeft = true;
+    _viewedDoor = (_viewedDoor + 1) % NUM_DOORS;
+
+    if (_viewedDoor == -1) _viewedDoor += NUM_DOORS;
+
+    
+    float angle = 2 * M_PI / NUM_DOORS;
+    float offset = (_viewedDoor - 4);
+    for (int i = 0; i < NUM_DOORS; ++i)
+    {
+        if (_audioHandler)
+        {
+            _audioHandler->update(i + DING_OFFSET, (i - offset) * angle);
+            _audioHandler->update(i + EXPLOSION_OFFSET, (i - offset) * angle);
+        }
+    }
+}
+
+void ModelHandler::turnRight()
+{
+    _turningRight = true;
+    _viewedDoor = (_viewedDoor - 1) % NUM_DOORS;
+    if (_viewedDoor == -1) _viewedDoor += NUM_DOORS;
+
+    float angle = 2 * M_PI / NUM_DOORS;
+    float offset = (_viewedDoor - 4);
+    for (int i = 0; i < NUM_DOORS; ++i)
+    {
+        if (_audioHandler)
+        {
+            _audioHandler->update(i + DING_OFFSET, (i - offset) * angle);
+            _audioHandler->update(i + EXPLOSION_OFFSET, (i - offset) * angle);
+        }
+    }
+}
+
+void ModelHandler::showScore(bool b)
+{
+    if (b)
+    {
+        _scoreSwitch->setAllChildrenOn();
+    }
+    else
+    {
+        _scoreSwitch->setAllChildrenOff();
+    }
 }
 
 };

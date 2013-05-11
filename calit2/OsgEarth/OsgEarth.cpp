@@ -48,7 +48,7 @@ OsgEarth::OsgEarth()
 
 }
 
-void OsgEarth::message(int type, char * data)
+void OsgEarth::message(int type, char *&data, bool collaborative=false);
 {
     // data needs to include the plugin name and also the lat,lon and height
     if(type == OE_ADD_MODEL)
@@ -101,7 +101,7 @@ bool OsgEarth::init()
 
     // get the map to use for elevation
     _mapNode = MapNode::findMapNode( earth );
-    _mapNode->setNodeMask(~2);
+    _mapNode->setNodeMask(_mapNode->getNodeMask() & ~INTERSECT_MASK);
     _map = _mapNode->getMap();
 
     // loop through the configuration and add models to the planet

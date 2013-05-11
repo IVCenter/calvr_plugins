@@ -15,6 +15,12 @@ enum BarGraphAxisType
     BGAT_LOG
 };
 
+enum BarGraphColorMode
+{
+    BGCM_SOLID=0,
+    BGCM_GROUP
+};
+
 class GroupedBarGraph
 {
     public:
@@ -56,6 +62,14 @@ class GroupedBarGraph
             return _minGraphValue;
         }
 
+        void setColorMode(BarGraphColorMode bgcm);
+        BarGraphColorMode getColorMode()
+        {
+            return _colorMode;
+        }
+
+        void setColorMapping(osg::Vec4 def, const std::map<std::string,osg::Vec4> & colorMap);
+
         void setColor(osg::Vec4 color);
         const osg::Vec4 & getColor()
         {
@@ -91,9 +105,8 @@ class GroupedBarGraph
         void update();
         void updateGraph();
         void updateAxis();
-
-        osgText::Text * makeText(std::string text, osg::Vec4 color);
-        void makeTextFit(osgText::Text * text, float maxSize);
+        void updateShading();
+        void updateColors();
 
         float _width, _height;
         float _maxGraphValue, _minGraphValue;
@@ -110,6 +123,9 @@ class GroupedBarGraph
         std::vector<std::string> _groupOrder;
         osg::Vec4 _color;
 
+        osg::Vec4 _defaultGroupColor;
+        std::map<std::string,osg::Vec4> _groupColorMap;
+
         osg::ref_ptr<osg::Group> _root;
         osg::ref_ptr<osg::MatrixTransform> _bgScaleMT;
         osg::ref_ptr<osg::Geode> _barGeode;
@@ -117,6 +133,7 @@ class GroupedBarGraph
         osg::ref_ptr<osg::Geode> _bgGeode;
         osg::ref_ptr<osg::Geode> _selectGeode;
         osg::ref_ptr<osg::Geometry> _barGeom;
+        osg::ref_ptr<osg::Geode> _shadingGeode;
 
         osg::ref_ptr<osg::Geode> _hoverGeode;
         osg::ref_ptr<osg::Geometry> _hoverBGGeom;
@@ -125,7 +142,7 @@ class GroupedBarGraph
         std::string _hoverGroup;
         std::string _hoverItem;
 
-        osg::ref_ptr<osgText::Font> _font;
+        BarGraphColorMode _colorMode;
 };
 
 #endif

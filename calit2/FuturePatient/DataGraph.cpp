@@ -1,6 +1,7 @@
 #include "DataGraph.h"
 #include "ShapeTextureGenerator.h"
 #include "ColorGenerator.h"
+#include "GraphGlobals.h"
 
 #include <cvrKernel/CalVR.h>
 #include <cvrKernel/SceneManager.h>
@@ -86,14 +87,19 @@ DataGraph::DataGraph()
     _axisGeode = new osg::Geode();
     _axisGeometry = new osg::Geometry();
     _bgGeometry = new osg::Geometry();
+    _bgRangesGeode = new osg::Geode();
+    _labelGroup = new osg::Group();
 
     _root->addChild(_axisGeode);
     _root->addChild(_graphTransform);
     _root->addChild(_clipNode);
+    _root->addChild(_labelGroup);
     _graphTransform->addChild(_graphGeode);
+    _graphTransform->addChild(_bgRangesGeode);
     _graphGeode->addDrawable(_bgGeometry);
     _axisGeode->addDrawable(_axisGeometry);
 
+    _bgRangesGeode->setCullingActive(false);
     _clipNode->setCullingActive(false);
 
     _point = new osg::Point();
@@ -116,8 +122,9 @@ DataGraph::DataGraph()
 
     _multiGraphDisplayMode = MGDM_COLOR_PT_SIZE;
     _currentMultiGraphDisplayMode = MGDM_NORMAL;
+    _labelDisplayMode = LDM_MIN_MAX;
 
-    osg::Vec4 color(1.0,1.0,1.0,1.0);
+    osg::Vec4 color = GraphGlobals::getBackgroundColor();
 
     osg::Geometry * geo = _bgGeometry.get();
     osg::Vec3Array* verts = new osg::Vec3Array();
@@ -166,11 +173,10 @@ DataGraph::DataGraph()
     //_clipNode->addClipPlane(new osg::ClipPlane(2));
     //_clipNode->addClipPlane(new osg::ClipPlane(3));
 
-    _font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
-
     setupMultiGraphDisplayModes();
     makeHover();
     makeBar();
+    updateBGRanges();
 }
 
 DataGraph::~DataGraph()
@@ -223,6 +229,7 @@ void DataGraph::addGraph(std::string name, osg::Vec3Array * points, GraphDisplay
 
     gdi.pointGeode = new osg::Geode();
     gdi.connectorGeode = new osg::Geode();
+    gdi.labelGeode = new osg::Geode();
 
     _dataInfoMap[name] = gdi;
 
@@ -238,6 +245,8 @@ void DataGraph::addGraph(std::string name, osg::Vec3Array * points, GraphDisplay
     _graphTransformMap[name]->addChild(gdi.connectorGeode);
     _graphTransformMap[name]->setCullingActive(false);
     _clipNode->addChild(_graphTransformMap[name]);
+
+    _labelGroup->addChild(gdi.labelGeode);
 
     setDisplayType(name, displayType);
 
@@ -581,6 +590,18 @@ bool DataGraph::getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point)
     return true;
 }
 
+void DataGraph::setBGRanges(std::vector<std::pair<float,float> > & ranges, std::vector<osg::Vec4> & colors)
+{
+    if(ranges.size() != colors.size())
+    {
+	std::cerr << "Range list and color list sizes do no match." << std::endl;
+	return;
+    }
+    _bgRanges = ranges;
+    _bgRangesColors = colors;
+    updateBGRanges();
+}
+
 void DataGraph::setDisplayType(std::string graphName, GraphDisplayType displayType)
 {
     if(_dataInfoMap.find(graphName) == _dataInfoMap.end())
@@ -669,6 +690,134 @@ void DataGraph::setDisplayType(std::string graphName, GraphDisplayType displayTy
      update();
 }
 
+GraphDisplayType DataGraph::getDisplayType(std::string graphName)
+{
+    if(_dataInfoMap.find(graphName) == _dataInfoMap.end())
+    {
+	return GDT_NONE;
+    }
+
+    return _dataInfoMap[graphName].displayType;
+}
+
+void DataGraph::setLabelDisplayMode(LabelDisplayMode ldm)
+{
+    float padding = calcPadding();
+    float widthCheck = (_width / 2.0) - padding;
+
+    for(std::map<std::string,GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); ++it)
+    {
+	it->second.labelGeode->removeDrawables(0,it->second.labelGeode->getNumDrawables());
+
+	osg::Vec4 textColor(0.1,0.1,0.1,1.0);
+
+	switch(ldm)
+	{
+	    case LDM_NONE:
+		break;
+	    case LDM_MIN_MAX:
+	    {
+		float min = FLT_MAX;
+		float max = FLT_MIN;
+		int minIndex = -1, maxIndex = -1;
+		//find min/max value/index
+		for(int i = 0; i < it->second.data->size(); ++i)
+		{
+		    if(it->second.data->at(i).z() > max)
+		    {
+			max = it->second.data->at(i).z();
+			maxIndex = i;
+		    }
+		    if(it->second.data->at(i).z() < min)
+		    {
+			min = it->second.data->at(i).z();
+			minIndex = i;
+		    }
+		}
+
+		if(minIndex < 0 || maxIndex < 0)
+		{
+		    break;
+		}
+
+		osg::Vec3 minPoint = it->second.data->at(minIndex) * _graphTransformMap[it->first]->getMatrix();
+		osg::Vec3 maxPoint = it->second.data->at(maxIndex) * _graphTransformMap[it->first]->getMatrix();
+
+		float textHeight = ((_width + _height) / 2.0) * 0.02;
+		maxPoint = maxPoint - osg::Vec3(0,0,textHeight) + osg::Vec3(0,-1,0);
+		minPoint = minPoint + osg::Vec3(0,0,textHeight) + osg::Vec3(0,-1,0);
+
+		osgText::Text * text;
+		osg::BoundingBox bb;
+		float csize;
+		if(fabs(minPoint.x()) < widthCheck)
+		{
+		    std::stringstream minss;
+		    minss << (it->second.zMin + (it->second.data->at(minIndex).z() * (it->second.zMax-it->second.zMin)));
+		    text = GraphGlobals::makeText(minss.str(),textColor);
+		    text->setAlignment(osgText::Text::CENTER_CENTER);
+		    bb = text->getBound();
+		    csize = textHeight / (bb.zMax() - bb.zMin());
+		    text->setCharacterSize(csize);
+		    text->setPosition(minPoint);
+		    it->second.labelGeode->addDrawable(text);
+		}
+
+		if(fabs(maxPoint.x()) < widthCheck)
+		{
+		    std::stringstream maxss;
+		    maxss << (it->second.zMin + (it->second.data->at(maxIndex).z() * (it->second.zMax-it->second.zMin)));
+		    text = GraphGlobals::makeText(maxss.str(),textColor);
+		    text->setAlignment(osgText::Text::CENTER_CENTER);
+		    bb = text->getBound();
+		    csize = textHeight / (bb.zMax() - bb.zMin());
+		    text->setCharacterSize(csize);
+		    text->setPosition(maxPoint);
+		    it->second.labelGeode->addDrawable(text);
+		}
+
+		break;
+	    }
+	    case LDM_ALL:
+	    {
+		for(int i = 0; i < it->second.data->size(); ++i)
+		{
+		    osg::Vec3 point = it->second.data->at(i) * _graphTransformMap[it->first]->getMatrix();
+		    float textHeight = ((_width + _height) / 2.0) * 0.01;
+
+		    if(fabs(point.z() - 1.5 * textHeight) > (_height/2.0) - calcPadding())
+		    {
+			point = point + osg::Vec3(0,0,textHeight) + osg::Vec3(0,-1,0);
+		    }
+		    else
+		    {
+			point = point - osg::Vec3(0,0,textHeight) + osg::Vec3(0,-1,0);
+		    }
+
+		    if(fabs(point.x()) < widthCheck)
+		    {
+			std::stringstream ss;
+			ss << (it->second.zMin + (it->second.data->at(i).z() * (it->second.zMax-it->second.zMin)));
+			osgText::Text * text = GraphGlobals::makeText(ss.str(),textColor);
+			text->setAlignment(osgText::Text::CENTER_CENTER);
+			osg::BoundingBox bb = text->getBound();
+			float csize = textHeight / (bb.zMax() - bb.zMin());
+			text->setCharacterSize(csize);
+			text->setPosition(point);
+			it->second.labelGeode->addDrawable(text);
+		    }
+		}
+
+		break;
+	    }
+	    default:
+		break;
+	}
+    }
+
+    _labelDisplayMode = ldm;
+}
+
 void DataGraph::setGLScale(float scale)
 {
     _glScale = scale;
@@ -708,7 +857,8 @@ void DataGraph::setPointActions(std::string graphname, std::map<int,PointAction*
 
 	osg::Vec3Array * verts = new osg::Vec3Array(actionMap.size());
 	osg::Vec4Array * colors = new osg::Vec4Array(1);
-	colors->at(0) = osg::Vec4(1.0,0,0,_pointActionAlpha);
+	//colors->at(0) = osg::Vec4(1.0,0,0,_pointActionAlpha);
+	colors->at(0) = osg::Vec4(0,0,0,1.0);
 	it->second.pointActionGeometry->setVertexArray(verts);
 	it->second.pointActionGeometry->setColorArray(colors);
 	it->second.pointActionGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
@@ -730,6 +880,7 @@ void DataGraph::setPointActions(std::string graphname, std::map<int,PointAction*
 
 void DataGraph::updatePointAction()
 {
+    return;
     static const float flashingTime = 2.5;
     
     float deltaAlpha = PluginHelper::getLastFrameDuration() / flashingTime;
@@ -844,7 +995,7 @@ void DataGraph::makeHover()
 
     _hoverBGGeode->addDrawable(geo);
 
-    _hoverText = makeText("",osg::Vec4(1.0,1.0,1.0,1.0));
+    _hoverText = GraphGlobals::makeText("",osg::Vec4(1.0,1.0,1.0,1.0));
     _hoverTextGeode->addDrawable(_hoverText);
     _hoverText->setAlignment(osgText::Text::LEFT_TOP);
     osg::Vec3 pos(0,-4,0);
@@ -894,6 +1045,8 @@ void DataGraph::update()
     float padding = calcPadding();
     float dataWidth = _width - (2.0 * padding);
     float dataHeight = _height - (2.0 * padding);
+
+    //std::cerr << "Update mindispXT: " << _minDisplayXT << " maxdispXT: " << _maxDisplayXT << std::endl;
 
     osg::Matrix tran,scale;
     for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)
@@ -1011,6 +1164,8 @@ void DataGraph::update()
 		{
 		    case MGDM_NORMAL:
 			{
+			    it->second.connectorGeometry->setColorArray(it->second.colorArray);
+			    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
 			    break;
 			}
 		    case MGDM_COLOR:
@@ -1082,8 +1237,6 @@ void DataGraph::update()
 			}
 		    case MGDM_COLOR:
 			{
-			    //float f = ((float)count) / ((float)_dataInfoMap.size());
-			    //osg::Vec4 color = makeColor(f);
 			    osg::Vec4 color = ColorGenerator::makeColor(count, _dataInfoMap.size());
 			    it->second.singleColorArray->at(0) = color;
 			    it->second.connectorGeometry->setColorArray(it->second.singleColorArray);
@@ -1133,8 +1286,6 @@ void DataGraph::update()
 			}
 		    case MGDM_COLOR_SHAPE:
 			{
-			    //float f = ((float)count) / ((float)_dataInfoMap.size());
-			    //osg::Vec4 color = makeColor(f);
 			    osg::Vec4 color = ColorGenerator::makeColor(count, _dataInfoMap.size());
 			    it->second.singleColorArray->at(0) = color;
 			    it->second.connectorGeometry->setColorArray(it->second.singleColorArray);
@@ -1156,6 +1307,15 @@ void DataGraph::update()
 	    _currentMultiGraphDisplayMode = _multiGraphDisplayMode;
 	}
     }
+    else
+    {
+	for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)
+	{
+	    it->second.singleColorArray->at(0) = osg::Vec4(0.21569,0.49412,0.72157,1.0);
+	    it->second.connectorGeometry->setColorArray(it->second.singleColorArray);
+	    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+	}
+    }
 
     tran.makeTranslate(osg::Vec3(-0.5,0,-0.5));
     scale.makeScale(osg::Vec3(_width,1.0,_height));
@@ -1164,7 +1324,8 @@ void DataGraph::update()
     float avglen = (_width + _height) / 2.0;
     _point->setSize(_glScale * avglen * 0.04 * _pointLineScale);
     _pointSizeUniform->set((float)_point->getSize());
-    _pointActionPoint->setSize(1.3*_point->getSize());
+    //_pointActionPoint->setSize(1.3*_point->getSize());
+    _pointActionPoint->setSize(0.4*_point->getSize());
     //std::cerr << "Point size set to: " << _point->getSize() << std::endl;
     _lineWidth->setWidth(_glScale * avglen * 0.05 * _pointLineScale * _pointLineScale);
 
@@ -1177,13 +1338,15 @@ void DataGraph::update()
     {
 	_point->setSize(_point->getSize() * _masterPointScale);
 	_pointSizeUniform->set((float)_point->getSize());
-	_pointActionPoint->setSize(1.3*_point->getSize());
+	_pointActionPoint->setSize(0.4*_point->getSize());
 	_lineWidth->setWidth(_lineWidth->getWidth() * _masterLineScale);
     }
 
     updateAxis();
     updateBar();
     //updateClip();
+    updateBGRanges();
+    setLabelDisplayMode(_labelDisplayMode);
 }
 
 void DataGraph::updateAxis()
@@ -1622,7 +1785,7 @@ void DataGraph::updateAxis()
 			    break;
 		    }
 
-		    osgText::Text * text = makeText(ss.str(),textColor);
+		    osgText::Text * text = GraphGlobals::makeText(ss.str(),textColor);
 
 		    float targetSize = padding * 0.27;
 		    osg::BoundingBox bb = text->getBound();
@@ -1698,7 +1861,7 @@ void DataGraph::updateAxis()
 
 		if(lowerTextss.str().size())
 		{
-		    osgText::Text * text = makeText(lowerTextss.str(),textColor);
+		    osgText::Text * text = GraphGlobals::makeText(lowerTextss.str(),textColor);
 
 		    float targetSize = padding * 0.67;
 		    osg::BoundingBox bb = text->getBound();
@@ -1756,7 +1919,7 @@ void DataGraph::updateAxis()
 		    std::stringstream ss;
 		    ss << tickValue;
 
-		    osgText::Text * text = makeText(ss.str(),textColor);
+		    osgText::Text * text = GraphGlobals::makeText(ss.str(),textColor);
 
 		    float targetSize = padding * 0.27;
 		    osg::BoundingBox bb = text->getBound();
@@ -1777,7 +1940,7 @@ void DataGraph::updateAxis()
 
 		if(!axisLabel.empty())
 		{
-		    osgText::Text * text = makeText(axisLabel,textColor);
+		    osgText::Text * text = GraphGlobals::makeText(axisLabel,textColor);
 
 		    float targetSize = padding * 0.67;
 		    osg::BoundingBox bb = text->getBound();
@@ -1805,7 +1968,7 @@ void DataGraph::updateAxis()
 
     if(_dataInfoMap.size() == 1)
     {
-	osgText::Text * text = makeText(_dataInfoMap.begin()->second.name,osg::Vec4(0.0,0.0,0.0,1.0));
+	osgText::Text * text = GraphGlobals::makeText(_dataInfoMap.begin()->second.name,osg::Vec4(0.0,0.0,0.0,1.0));
 
 	float targetHeight = padding * 0.95;
 	float targetWidth = _width - (2.0 * padding);
@@ -1826,8 +1989,8 @@ void DataGraph::updateAxis()
 
 	if(!sizeCalibrated)
 	{
-	    osg::ref_ptr<osgText::Text> spacerText1 = makeText(": - :",osg::Vec4(0.0,0.0,0.0,1.0));
-	    osg::ref_ptr<osgText::Text> spacerText2 = makeText("::",osg::Vec4(0.0,0.0,0.0,1.0));
+	    osg::ref_ptr<osgText::Text> spacerText1 = GraphGlobals::makeText(": - :",osg::Vec4(0.0,0.0,0.0,1.0));
+	    osg::ref_ptr<osgText::Text> spacerText2 = GraphGlobals::makeText("::",osg::Vec4(0.0,0.0,0.0,1.0));
 
 	    float size1, size2;
 
@@ -1852,7 +2015,7 @@ void DataGraph::updateAxis()
 	    }
 	}
 
-	osg::ref_ptr<osgText::Text> text = makeText(titless.str(),osg::Vec4(0.0,0.0,0.0,1.0));
+	osg::ref_ptr<osgText::Text> text = GraphGlobals::makeText(titless.str(),osg::Vec4(0.0,0.0,0.0,1.0));
 	
 	float targetHeight = padding * 0.95;
 	float targetWidth = _width - (2.0 * padding);
@@ -1875,7 +2038,7 @@ void DataGraph::updateAxis()
 		float position = -((bb.xMax() - bb.xMin()) * csize) / 2.0;
 		for(std::map<std::string,GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end();)
 		{
-		    osgText::Text * ttext = makeText(it->second.name,it->second.singleColorArray->at(0));
+		    osgText::Text * ttext = GraphGlobals::makeText(it->second.name,it->second.singleColorArray->at(0));
 		    ttext->setCharacterSize(csize);
 		    ttext->setAxisAlignment(osgText::Text::XZ_PLANE);
 		    ttext->setAlignment(osgText::Text::LEFT_CENTER);
@@ -1886,7 +2049,7 @@ void DataGraph::updateAxis()
 		    it++;
 		    if(it != _dataInfoMap.end())
 		    {
-			ttext = makeText("-",osg::Vec4(0,0,0,1));
+			ttext = GraphGlobals::makeText("-",osg::Vec4(0,0,0,1));
 			ttext->setCharacterSize(csize);
 			ttext->setAxisAlignment(osgText::Text::XZ_PLANE);
 			ttext->setAlignment(osgText::Text::CENTER_CENTER);
@@ -1948,6 +2111,55 @@ void DataGraph::updateClip()
     _clipNode->setLocalStateSetModes(); 
 }
 
+void DataGraph::updateBGRanges()
+{
+    _bgRangesGeode->removeDrawables(0,_bgRangesGeode->getNumDrawables());
+
+    osg::Geometry * geom = new osg::Geometry();
+    osg::Vec3Array * verts = new osg::Vec3Array();
+    osg::Vec4Array * colors = new osg::Vec4Array();
+    geom->setVertexArray(verts);
+    geom->setColorArray(colors);
+    geom->setUseDisplayList(false);
+    geom->setUseVertexBufferObjects(true);
+    
+    float padding = calcPadding();
+    float wpadding = padding / _width;
+    float hpadding = padding / _height;
+    float dataWidth = (_width - (2.0 * padding)) / _width;
+    float dataHeight = (_height - (2.0 * padding)) / _height;
+
+    if(getNumGraphs() != 1 || !_bgRanges.size())
+    {
+	osg::Vec4 defaultColor = GraphGlobals::getDataBackgroundColor();
+	verts->push_back(osg::Vec3(wpadding,0.5,hpadding));
+	verts->push_back(osg::Vec3(wpadding+dataWidth,0.5,hpadding));
+	verts->push_back(osg::Vec3(wpadding+dataWidth,0.5,hpadding+dataHeight));
+	verts->push_back(osg::Vec3(wpadding,0.5,hpadding+dataHeight));
+	colors->push_back(defaultColor);
+	geom->setColorBinding(osg::Geometry::BIND_OVERALL);
+	geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
+    }
+    else
+    {
+	for(int i = 0; i < _bgRanges.size(); ++i)
+	{
+	    verts->push_back(osg::Vec3(wpadding,0.5,hpadding+(_bgRanges[i].first*dataHeight)));
+	    verts->push_back(osg::Vec3(wpadding+dataWidth,0.5,hpadding+(_bgRanges[i].first*dataHeight)));
+	    verts->push_back(osg::Vec3(wpadding+dataWidth,0.5,hpadding+(_bgRanges[i].second*dataHeight)));
+	    verts->push_back(osg::Vec3(wpadding,0.5,hpadding+(_bgRanges[i].second*dataHeight)));
+	    colors->push_back(_bgRangesColors[i]);
+	    colors->push_back(_bgRangesColors[i]);
+	    colors->push_back(_bgRangesColors[i]);
+	    colors->push_back(_bgRangesColors[i]);
+	}
+	geom->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+	geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,_bgRanges.size()*4));
+    }
+
+    _bgRangesGeode->addDrawable(geom);
+}
+
 void DataGraph::updateBar()
 {
     float padding = calcPadding();
@@ -1967,69 +2179,3 @@ float DataGraph::calcPadding()
 
     return 0.07 * minD;
 }
-
-osgText::Text * DataGraph::makeText(std::string text, osg::Vec4 color)
-{
-    osgText::Text * textNode = new osgText::Text();
-    textNode->setCharacterSize(1.0);
-    textNode->setAlignment(osgText::Text::CENTER_CENTER);
-    textNode->setColor(color);
-    textNode->setBackdropColor(osg::Vec4(0,0,0,0));
-    textNode->setAxisAlignment(osgText::Text::XZ_PLANE);
-    textNode->setText(text);
-    if(_font)
-    {
-	textNode->setFont(_font);
-    }
-    return textNode;
-}
-
-osg::Vec4 DataGraph::makeColor(float f)
-{
-    if(f < 0)
-    {
-        f = 0;
-    }
-    else if(f > 1.0)
-    {
-        f = 1.0;
-    }
-
-    osg::Vec4 color;
-    color.w() = 1.0;
-
-    if(f <= 0.33)
-    {
-        float part = f / 0.33;
-        float part2 = 1.0 - part;
-
-        color.x() = part2;
-        color.y() = part;
-        color.z() = 0;
-    }
-    else if(f <= 0.66)
-    {
-        f = f - 0.33;
-        float part = f / 0.33;
-        float part2 = 1.0 - part;
-
-        color.x() = 0;
-        color.y() = part2;
-        color.z() = part;
-    }
-    else if(f <= 1.0)
-    {
-        f = f - 0.66;
-        float part = f / 0.33;
-        float part2 = 1.0 - part;
-
-        color.x() = part;
-        color.y() = 0;
-        color.z() = part2;
-    }
-
-    //std::cerr << "Color x: " << color.x() << " y: " << color.y() << " z: " << color.z() << std::endl;
-
-    return color;
-}
-

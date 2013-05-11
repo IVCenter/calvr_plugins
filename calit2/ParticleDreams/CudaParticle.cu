@@ -260,7 +260,9 @@ __device__ void  planeReflector1(float posX,float posY,float posZ,unsigned int a
 	    //pdata[arrayLoc] = 0;// temp set age to 0
 	    if ((noTraping ==1)&& (refldata[reflNum][0][1]) == 1 )
 	    {
-		pdata[arrayLoc] = pdata[arrayLoc]/2.0;
+		//pdata[arrayLoc] = pdata[arrayLoc]/2.0;// chnage color
+
+		pdata[arrayLoc] = pdata[arrayLoc] * 1.5;// chnage color
 	    }
 	}
     }

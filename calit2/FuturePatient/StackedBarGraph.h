@@ -46,9 +46,6 @@ class StackedBarGraph
         void updateAxis();
         void updateGraph();
 
-        osgText::Text * makeText(std::string text, osg::Vec4 color);
-        void makeTextFit(osgText::Text * text, float maxSize);
-
         std::string _title;
         float _width;
         float _height;
@@ -76,7 +73,6 @@ class StackedBarGraph
         std::string _currentHoverValue;
 
         osg::ref_ptr<osg::LineWidth> _lineWidth;
-        osg::ref_ptr<osgText::Font> _font;
 
         float _leftPaddingMult, _rightPaddingMult, _topPaddingMult, _bottomPaddingMult;
         float _barToConnectorRatio;
