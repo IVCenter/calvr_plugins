@@ -361,7 +361,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			timer.start();
 			if (isupdate)
 			{
-				m_videoplayer.UpdateTexture(gid);
+				m_videoplayer.UpdateTexture(gid, contextid);
 				textureTime += timer.getTimeMS();
 				timer.start();
 		//		printf("Updated video %x to pts %.4lf\n", gid, update.pts);
