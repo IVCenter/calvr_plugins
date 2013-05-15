@@ -139,9 +139,10 @@ void Video::postFrame()
 		DecodePtsUpdates(ptsList, buffSize, buffer);
 	}
 
-
+	m_updateMutex.lock();
 	m_ptsUpdateList.clear();
 	m_ptsUpdateList.splice(m_ptsUpdateList.begin(), ptsList);
+	m_updateMutex.unlock();
 #endif
 
 	while (m_sceneDelete.size())
@@ -339,6 +340,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 	stopwatch timer;
 	double videoTime = 0;
 	double textureTime = 0;
+	m_updateMutex.lock();
 	for (std::list<PTSUpdate>::iterator iter = m_ptsUpdateList.begin(); iter != m_ptsUpdateList.end(); ++iter)
 	{
 		TextureManager* manager = 0;
@@ -374,6 +376,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 	}
 	//printf("Updated %d videos, times took %.4lfms for video and %.4lfms for texture\n", m_ptsUpdateList.size(), videoTime, textureTime);
 	m_ptsUpdateList.clear();
+	m_updateMutex.unlock();
 
 #endif
 #ifdef NOSYNC
