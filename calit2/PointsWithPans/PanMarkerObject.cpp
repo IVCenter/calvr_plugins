@@ -8,6 +8,10 @@
 
 #include <osg/CullFace>
 
+#ifdef WIN32
+#define M_PI 3.141592653589793238462643
+#endif
+
 using namespace cvr;
 
 PanMarkerObject::PanMarkerObject(float scale, float rotationOffset, float radius, float selectDistance, std::string name, std::string textureFile, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : SceneObject(name,navigation,movable,clip,contextMenu,showBounds)
@@ -235,7 +239,7 @@ void PanMarkerObject::leaveCallback(int handID)
     if(handID == _activeHand)
     {
 	_activeHand = -1;
-	_activeHandType == TrackerBase::INVALID;
+	_activeHandType = TrackerBase::INVALID;
 	setSphereScale(1.0);
 	_pulseTime = 0.0;
 	_pulseDir = true;

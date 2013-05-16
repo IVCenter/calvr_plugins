@@ -14,6 +14,10 @@
 #include <fstream>
 #include <cmath>
 
+#ifdef WIN32
+#define M_PI 3.141592653589793238462643
+#endif
+
 //#define PRINT_TIMING
 
 using namespace cvr;
@@ -43,7 +47,11 @@ PanoViewObject::~PanoViewObject()
 
 void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<std::string> & rightEyeFiles, float radius, int mesh, int depth, int size, float height, std::string vertFile, std::string fragFile)
 {
+#ifndef WIN32
     _imageSearchPath = ConfigManager::getEntryConcat("value","Plugin.PanoViewLOD.ImageSearchPath",':',"");
+#else
+	_imageSearchPath = ConfigManager::getEntryConcat("value","Plugin.PanoViewLOD.ImageSearchPath",';',"");
+#endif
     _floorOffset = ConfigManager::getFloat("value","Plugin.PanoViewLOD.FloorOffset",1500);
 
     std::string temp("PANOPATH=");

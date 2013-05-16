@@ -45,7 +45,7 @@ bool Points::loadFile(std::string filename)
     if( result )
     {
 	    cerr << "found points" << endl;
-	    osg:Geode* points = group->getChild(0)->asGeode();
+	    osg::Geode* points = group->getChild(0)->asGeode();
 	    
 
 	    // get name of file
