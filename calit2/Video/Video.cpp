@@ -139,9 +139,10 @@ void Video::postFrame()
 		DecodePtsUpdates(ptsList, buffSize, buffer);
 	}
 
-
+	m_updateMutex.lock();
 	m_ptsUpdateList.clear();
 	m_ptsUpdateList.splice(m_ptsUpdateList.begin(), ptsList);
+	m_updateMutex.unlock();
 #endif
 
 	while (m_sceneDelete.size())
@@ -155,10 +156,36 @@ void Video::postFrame()
 		delete m_menuDelete.front();
 		m_menuDelete.pop_front();
 	}
-	while (m_sceneAdd.size())
+	while (m_managerUpdate.size())
 	{
-		m_sceneAdd.front()->attachToScene();
-		m_sceneAdd.pop_front();
+		TextureManager* manager = m_managerUpdate.front();
+		bool hasTexture = false;
+
+		for (unsigned int i = 0; i < manager->GetVideoCount(); i++)
+		{
+			unsigned int myid = manager->GetVideoID(i);
+			int width = m_videoplayer.GetVideoWidth(myid);
+			int height = m_videoplayer.GetVideoHeight(myid);
+			GLuint tex = m_videoplayer.GetTextureID(myid);
+			if (tex)
+				hasTexture = true;
+			else
+			{
+				printf("NO TEXTURE\n");
+				hasTexture = false;
+				break;
+			}
+			std::cout << "Texture id: " << tex << std::endl;
+			osg::Geode* to = manager->AddTexture(myid, tex, width, height);
+			printf("added manager with gid %d, width %d, height %d\n", myid, width, height);
+			manager->GetSceneObject()->addChild(to);
+		}
+		cvr::PluginHelper::registerSceneObject(manager->GetSceneObject(), "Video");
+		manager->GetSceneObject()->attachToScene();
+		if(hasTexture)		
+			m_managerUpdate.pop_front();
+		else
+			break;
 	}
 	while (m_menuAdd.size())
 	{
@@ -257,6 +284,10 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 				for (int x = 0; x < ncols; x++)
 				{
 					unsigned int myid = gid | (y << 13) | (x << 7); 
+					// must add the ID for this tile so that it gets its texture added later in postFrame
+					manager->AddGID(myid);
+					/*
+ 						All moved to post frame after the texture ID has been generated in a draw call
 					//XXX enable video on the head node.  This doesn't seem to work though
 					//m_videoplayer.EnableHeadVideo(true, myid);
 					int width = m_videoplayer.GetVideoWidth(myid);
@@ -266,6 +297,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 					osg::Geode* to = manager->AddTexture(myid, tex, width, height);
 					printf("added manager with gid %d, width %d, height %d\n", gid, width, height);
 					scene->addChild(to);
+					*/
 				}
 			}
 
@@ -273,9 +305,8 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			m_gidMap[gid] = manager;
 
 
-			cvr::PluginHelper::registerSceneObject(scene, "Video");
 			manager->SetSceneObject(scene);
-			m_sceneAdd.push_back(scene);
+			m_managerUpdate.push_back(manager);
 
 			cvr::MenuButton* button = new cvr::MenuButton(m_loadVideo);
 			button->setExtraData(manager);
@@ -309,6 +340,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 	stopwatch timer;
 	double videoTime = 0;
 	double textureTime = 0;
+	m_updateMutex.lock();
 	for (std::list<PTSUpdate>::iterator iter = m_ptsUpdateList.begin(); iter != m_ptsUpdateList.end(); ++iter)
 	{
 		TextureManager* manager = 0;
@@ -331,7 +363,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			timer.start();
 			if (isupdate)
 			{
-				m_videoplayer.UpdateTexture(gid);
+				m_videoplayer.UpdateTexture(gid, contextid);
 				textureTime += timer.getTimeMS();
 				timer.start();
 		//		printf("Updated video %x to pts %.4lf\n", gid, update.pts);
@@ -344,6 +376,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 	}
 	//printf("Updated %d videos, times took %.4lfms for video and %.4lfms for texture\n", m_ptsUpdateList.size(), videoTime, textureTime);
 	m_ptsUpdateList.clear();
+	m_updateMutex.unlock();
 
 #endif
 #ifdef NOSYNC

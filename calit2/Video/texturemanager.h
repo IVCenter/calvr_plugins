@@ -27,6 +27,10 @@ public:
 	{
 
 	}
+	void UpdateTexture(GLuint tid)
+	{
+		_tid = tid;
+	}
 private:
 	void load( const osg::Texture2D& texture, osg::State& state) const
 	{
@@ -61,9 +65,12 @@ public:
 	void SetSceneObject(cvr::SceneObject* scene);
 	cvr::SceneObject* GetSceneObject();
 
+	void AddGID(unsigned int gid);
+
 	osg::Geode* AddTexture(unsigned int gid, GLuint tid, unsigned int width, unsigned int height);
 	unsigned int GetVideoCount() const;
 	unsigned int GetVideoID(unsigned int idx) const;
+	
 	
 private:
 	cvr::SceneObject* _scene;
