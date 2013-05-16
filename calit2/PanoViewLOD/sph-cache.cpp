@@ -14,6 +14,7 @@
 #include <cassert>
 #include <sstream>
 #include <iostream>
+#include <unistd.h>
 
 #include "sph-cache.hpp"
 #include "cube.hpp"
@@ -836,7 +837,7 @@ int up(TIFF *T, int i)
 int dn(TIFF *T, int i)
 {
 #ifndef WIN32
-    uint64 *v;
+    uint64_t *v;
 #else
 	unsigned __int64 *v;
 #endif

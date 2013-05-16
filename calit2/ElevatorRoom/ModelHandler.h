@@ -80,6 +80,7 @@ class ModelHandler
         osg::ref_ptr<osg::Geode> getActiveObject();
         float getDoorDistance();
         bool doorInView();
+        int getViewedDoor();
 
     protected:
         std::vector<osg::ref_ptr<osg::PositionAttitudeTransform> > _leftdoorPat, _rightdoorPat;

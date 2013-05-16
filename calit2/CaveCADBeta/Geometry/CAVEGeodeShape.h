@@ -50,7 +50,8 @@ class CAVEGeodeShape: public CAVEGeode
     {
         BOX,
         CYLINDER,
-        CONE
+        CONE,
+        LINE
     };
 
     /***************************************************************
@@ -192,6 +193,7 @@ class CAVEGeodeShape: public CAVEGeode
     void initGeometryBox(const osg::Vec3 &initVect, const osg::Vec3 &sVect);
     void initGeometryCylinder(const osg::Vec3 &initVect, const osg::Vec3 &sVect);
     void initGeometryCone(const osg::Vec3 &initVect, const osg::Vec3 &sVect);
+    void initGeometryLine(const osg::Vec3 &initVect, const osg::Vec3 &sVect);
 
     // actual side length of each texture image pattern in geometry
     static const float gTextureTileSize;

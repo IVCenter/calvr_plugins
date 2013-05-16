@@ -318,9 +318,9 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
         // combine
         if (hit && mShapeSwitchIdx == 3)
         {
-            std::cout << "combine" << std::endl;
-            mDOGeometryCollector->combineSelected();
-            return false;
+            std::cout << "line" << std::endl;
+//            mDOGeometryCollector->combineSelected();
+//            return false;
         }
 
         // delete

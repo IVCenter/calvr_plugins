@@ -87,7 +87,9 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
             DOOROPEN,
             CLOSINGDOOR
         };
- 
+
+        unsigned char _c;
+
         void loadModels();
         void clear();
         void chooseGameParameters(int &door, Mode &mode, bool &switched);
@@ -141,7 +143,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         int _sockfd; // for EOG syncer communication
         int _alienChance, _allyChance, _checkerChance, _errorChance;
 
-        bool _loaded, _paused; // whether the model has finished loading
+        bool _loaded, _paused, _switched; // whether the model has finished loading
         bool _hit, _noResponse; // whether a hit has been made on the active avatar
         bool _debug; // turns on debug messages to command line
         bool _connected; // for EOG syncer communication
