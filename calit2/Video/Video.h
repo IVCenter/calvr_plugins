@@ -5,6 +5,7 @@
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrMenu/SubMenu.h>
 #include <cvrKernel/CVRViewer.h>
+#include <PluginMessageType.h>
 #include <list>
 #include <string>
 #include <sstream>
@@ -33,6 +34,8 @@ public:
 	bool init();
         void menuCallback(cvr::MenuItem * item);
 	void perContextCallback(int contextid, cvr::PerContextCallback::PCCType type) const;
+	void message(int type, char*& data, bool collaborative);
+	
 protected:
 	int LoadVideoXML(const char* filename, std::list<std::string>& videoFilenames);
 	void loadMenuItems(cvr::SubMenu* menu, const char* xmlFilename);
@@ -45,6 +48,7 @@ protected:
 	mutable cvr::SubMenu* removeMenu;	
 
 	mutable VideoPlayerAPI m_videoplayer;
+	mutable std::list<VideoMessageData> m_actionQueue;
 	mutable std::string m_loadVideo;
 	mutable std::list<cvr::MenuItem*> m_removeVideo;
 	mutable std::map<unsigned int, TextureManager*> m_gidMap;

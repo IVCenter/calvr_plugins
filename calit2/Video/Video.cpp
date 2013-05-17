@@ -8,6 +8,7 @@
 #include <cvrKernel/ComController.h>
 #include <cvrKernel/SceneObject.h>
 #include <cvrKernel/PluginHelper.h>
+#include <iostream>
 
 //#define NOSYNC
 #define SYNC
@@ -205,7 +206,15 @@ void Video::menuCallback(cvr::MenuItem* item)
 	{
 		if (item->getParent() == loadMenu)
 		{
-			m_loadVideo = static_cast<cvr::MenuButton*>(item)->getText();
+			//m_loadVideo = static_cast<cvr::MenuButton*>(item)->getText();
+			std::string path = static_cast<cvr::MenuButton*>(item)->getText();
+
+			VideoMessageData vmd;
+			vmd.why = VIDEO_LOAD;
+			vmd.path = path;
+			char* ref = (char*)&vmd;
+			message(0, ref, false);
+			
 			std::cout << "Load video file " << m_loadVideo.c_str() << std::endl;
 		}
 		else if (item->getParent() == removeMenu)
@@ -261,61 +270,69 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 	if (contextid == 0)
 	{
 
-		if (m_loadVideo.size())
+		//if (m_loadVideo.size())
+		m_updateMutex.lock();
+		while(m_actionQueue.size())
 		{
-			unsigned int gid = 0;
-			std::cout << "Trying to load video " << m_loadVideo << std::endl;
-			gid = m_videoplayer.LoadVideoFile(m_loadVideo.c_str(), true);
+		    VideoMessageData vmd = m_actionQueue.front();
+		    m_actionQueue.pop_front();
+		    
+		    if(vmd.why == VIDEO_LOAD)
+		    {
+		        m_loadVideo = vmd.path;
+			    unsigned int gid = 0;
+    			std::cout << "Trying to load video " << m_loadVideo << std::endl;
+    			gid = m_videoplayer.LoadVideoFile(m_loadVideo.c_str(), true);
 
-			TextureManager* manager = new TextureManager(gid);
-			int nrows = 1;
-			int ncols = 1;
-			if (gid & 0x80000000) // multi-tile video
-			{
-				nrows = ((gid & 0x7E000000) >> 25) + 1;
-				ncols = ((gid & 0x01F80000) >> 19) + 1;
+	    		TextureManager* manager = new TextureManager(gid);
+	    		int nrows = 1;
+	    		int ncols = 1;
+	    		if (gid & 0x80000000) // multi-tile video
+	    		{
+	    			nrows = ((gid & 0x7E000000) >> 25) + 1;
+	    			ncols = ((gid & 0x01F80000) >> 19) + 1;
+	    		}
+
+	    		std::cout << "Loading video gid " << gid << ", with " << nrows << " rows and " << ncols << " cols." << std::endl;
+	    		//cvr::SceneObject* scene = new cvr::SceneObject("Video Scene", true, true, false, false, true);
+	    		cvr::SceneObject* scene = vmd.obj;
+
+			    for (int y = 0; y < nrows; y++)
+			    {
+				    for (int x = 0; x < ncols; x++)
+				    {
+					    unsigned int myid = gid | (y << 13) | (x << 7); 
+					    // must add the ID for this tile so that it gets its texture added later in postFrame
+					    manager->AddGID(myid);
+					    /*
+     						All moved to post frame after the texture ID has been generated in a draw call
+					    //XXX enable video on the head node.  This doesn't seem to work though
+					    //m_videoplayer.EnableHeadVideo(true, myid);
+					    int width = m_videoplayer.GetVideoWidth(myid);
+					    int height = m_videoplayer.GetVideoHeight(myid);
+					    GLuint tex = m_videoplayer.GetTextureID(myid);
+					    std::cout << "Texture id: " << tex << std::endl;
+					    osg::Geode* to = manager->AddTexture(myid, tex, width, height);
+					    printf("added manager with gid %d, width %d, height %d\n", gid, width, height);
+					    scene->addChild(to);
+					    */
+				    }
+			    }
+
+
+			    m_gidMap[gid] = manager;
+
+
+			    manager->SetSceneObject(scene);
+			    m_managerUpdate.push_back(manager);
+
+			    cvr::MenuButton* button = new cvr::MenuButton(m_loadVideo);
+			    button->setExtraData(manager);
+			    button->setCallback(const_cast<Video*>(this));
+			    m_menuAdd.push_back(button);
 			}
-
-			std::cout << "Loading video gid " << gid << ", with " << nrows << " rows and " << ncols << " cols." << std::endl;
-			cvr::SceneObject* scene = new cvr::SceneObject("Video Scene", true, true, false, false, true);
-
-			for (int y = 0; y < nrows; y++)
-			{
-				for (int x = 0; x < ncols; x++)
-				{
-					unsigned int myid = gid | (y << 13) | (x << 7); 
-					// must add the ID for this tile so that it gets its texture added later in postFrame
-					manager->AddGID(myid);
-					/*
- 						All moved to post frame after the texture ID has been generated in a draw call
-					//XXX enable video on the head node.  This doesn't seem to work though
-					//m_videoplayer.EnableHeadVideo(true, myid);
-					int width = m_videoplayer.GetVideoWidth(myid);
-					int height = m_videoplayer.GetVideoHeight(myid);
-					GLuint tex = m_videoplayer.GetTextureID(myid);
-					std::cout << "Texture id: " << tex << std::endl;
-					osg::Geode* to = manager->AddTexture(myid, tex, width, height);
-					printf("added manager with gid %d, width %d, height %d\n", gid, width, height);
-					scene->addChild(to);
-					*/
-				}
-			}
-
-
-			m_gidMap[gid] = manager;
-
-
-			manager->SetSceneObject(scene);
-			m_managerUpdate.push_back(manager);
-
-			cvr::MenuButton* button = new cvr::MenuButton(m_loadVideo);
-			button->setExtraData(manager);
-			button->setCallback(const_cast<Video*>(this));
-			m_menuAdd.push_back(button);
-
-
-			m_loadVideo.clear();
 		}	
+		
 		while (m_removeVideo.size())
 		{
 			TextureManager* manager = static_cast<TextureManager*>(m_removeVideo.front()->getExtraData());
@@ -334,6 +351,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			m_menuDelete.push_back(m_removeVideo.front());
 			m_removeVideo.pop_front();
 		}
+		m_updateMutex.unlock();
 	}
 
 #ifdef SYNC
@@ -590,3 +608,53 @@ int Video::LoadVideoXML(const char* filename, std::list<std::string>& videoFilen
 	return 0;
 
 } 
+
+class VideoSceneObjectImpl : public VideoSceneObject
+{
+    Video* m_videoPlugin;
+    
+  public:
+    explicit VideoSceneObjectImpl(Video* plugin) : 
+        VideoSceneObject("Video Scene", true, true, false, false, true)
+    {
+        m_videoPlugin = plugin;
+    }
+    
+    virtual void play()
+    {
+        // FIXME
+    }
+    
+    virtual void stop()
+    {
+        // FIXME
+    }
+};
+
+void Video::message(int type, char*& data, bool collaborative)
+{
+    if(collaborative)
+    {
+        std::cerr << "Video plugin: collaborative messages are not supported\n";
+        return;
+    }
+    
+    VideoMessageData* vmd = reinterpret_cast<VideoMessageData*>(data);
+    
+    switch(vmd->why)
+    {
+        case VIDEO_LOAD:
+        {
+        	vmd->obj = new VideoSceneObjectImpl(this);
+        }
+        break;
+        
+        default:
+            break;
+    }
+    
+    m_updateMutex.lock();
+    m_actionQueue.push_back(*vmd);
+    m_updateMutex.unlock();
+}
+
