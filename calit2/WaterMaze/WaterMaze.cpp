@@ -15,8 +15,6 @@ WaterMaze::WaterMaze()
 {
     _myPtr = this;
     _geoRoot = new osg::MatrixTransform();
-    _sppConnected = false;
-    _hiddenTile = -1;
 
     _heightOffset = ConfigManager::getFloat("value", 
         "Plugin.WaterMaze.StartingHeight", 300.0);
@@ -80,6 +78,21 @@ bool WaterMaze::init()
     button->setCallback(this);
     _positionMenu->addItem(button);
     _positionButtons.push_back(button);
+    
+    _detailsMenu = new SubMenu("Levels of Detail");
+    _WaterMazeMenu->addItem(_detailsMenu);
+
+    _wallColorCB = new MenuCheckbox("Colored Walls", true);
+    _wallColorCB->setCallback(this);
+    _detailsMenu->addItem(_wallColorCB);
+
+    _shapesCB = new MenuCheckbox("Shapes", true);
+    _shapesCB->setCallback(this);
+    _detailsMenu->addItem(_shapesCB);
+
+    _furnitureCB = new MenuCheckbox("Furniture", true);
+    _furnitureCB->setCallback(this);
+    _detailsMenu->addItem(_furnitureCB);
 
 
     // extra output messages
@@ -99,12 +112,6 @@ bool WaterMaze::init()
         srand(seed);
     }
 
-    // EEG device communication
-    if (ComController::instance()->isMaster())
-    {
-        int port = 12345;
-        init_SPP(port);
-    }
 
     widthTile = ConfigManager::getFloat("value", "Plugin.WaterMaze.WidthTile", 2000.0);
     heightTile = ConfigManager::getFloat("value", "Plugin.WaterMaze.HeightTile", 2000.0);
@@ -113,6 +120,8 @@ bool WaterMaze::init()
     depth = ConfigManager::getFloat("value", "Plugin.WaterMaze.Depth", 10.0);
     wallHeight = ConfigManager::getFloat("value", "Plugin.WaterMaze.WallHeight", 2500.0);
     gridWidth = ConfigManager::getFloat("value", "Plugin.WaterMaze.GridWidth", 5.0);
+
+    chooseNewTile();
 
     return true;
 }
@@ -132,39 +141,76 @@ void WaterMaze::load()
                                            (heightTile*j) - (heightTile/2),
                                             0));
             
+            // Save four corners and center for starting positions
+
+            // bottom left
             if (i == 0 && j == 0)
             {
                 osg::MatrixTransform * tileMat = new osg::MatrixTransform();
-                osg::Matrixd mat;
-                mat.makeTranslate((tilePat->getPosition() + osg::Vec3(0, -3000, -_heightOffset)));
+                osg::Matrixd mat, rotMat, transMat;
+
+                mat.makeTranslate(osg::Vec3(0,0,0));
+                rotMat.makeRotate(M_PI/4, osg::Vec3(0, 0, 1));
+                transMat.makeTranslate((-tilePat->getPosition() + 
+                    osg::Vec3(-widthTile, -heightTile, -_heightOffset)));
+
+                mat.preMult(rotMat);
+                mat.preMult(transMat);
+
                 tileMat->setMatrix(mat);
                 _tilePositions.push_back(tileMat);
             }
+            // top left 
             else if (i == 0 && j == numHeight - 1)
             {
                 osg::MatrixTransform * tileMat = new osg::MatrixTransform();
-                osg::Matrixd mat;
-                mat.makeTranslate((tilePat->getPosition()  + osg::Vec3(0, -3000, -_heightOffset)));
+                osg::Matrixd mat, rotMat, transMat;
+                
+                mat.makeTranslate(osg::Vec3(0,0,0));
+                rotMat.makeRotate(3*M_PI/4, osg::Vec3(0, 0, 1));
+                transMat.makeTranslate((-tilePat->getPosition()  + 
+                    osg::Vec3(-widthTile, heightTile, -_heightOffset)));
+
+                mat.preMult(rotMat);
+                mat.preMult(transMat);
+
                 tileMat->setMatrix(mat);
                 _tilePositions.push_back(tileMat);
             }
+            // bottom right
             else if (i == numWidth - 1 && j == 0)
             {
                 osg::MatrixTransform * tileMat = new osg::MatrixTransform();
-                osg::Matrixd mat;
-                mat.makeTranslate((tilePat->getPosition() + osg::Vec3(0, -3000, -_heightOffset)));
+                osg::Matrixd mat, rotMat, transMat;
+
+                mat.makeTranslate(osg::Vec3(0,0,0));
+                rotMat.makeRotate(7*M_PI/4, osg::Vec3(0, 0, 1));
+                transMat.makeTranslate((-tilePat->getPosition() + 
+                    osg::Vec3(widthTile, -heightTile, -_heightOffset)));
+
+                mat.preMult(rotMat);
+                mat.preMult(transMat);
+
                 tileMat->setMatrix(mat);
                 _tilePositions.push_back(tileMat);
             }
+            // top right
             else if (i == numWidth - 1 && j == numHeight - 1)
             {
                 osg::MatrixTransform * tileMat = new osg::MatrixTransform();
-                osg::Matrixd mat;
-                mat.makeTranslate((tilePat->getPosition() + osg::Vec3(0, -3000, -_heightOffset)));
+                osg::Matrixd mat, rotMat, transMat;
+
+                mat.makeTranslate(osg::Vec3(0,0,0));
+                rotMat.makeRotate(5*M_PI/4, osg::Vec3(0, 0, 1));
+                transMat.makeTranslate((-tilePat->getPosition() + 
+                    osg::Vec3(widthTile, heightTile, -_heightOffset)));
+
+                mat.preMult(rotMat);
+                mat.preMult(transMat);
+
                 tileMat->setMatrix(mat);
                 _tilePositions.push_back(tileMat);
             }
-
 
             osg::Switch * boxSwitch = new osg::Switch();
             osg::ShapeDrawable * sd = new osg::ShapeDrawable(box);
@@ -193,6 +239,18 @@ void WaterMaze::load()
             _tileSwitches[center] = boxSwitch;
         }
     }
+
+    // center position
+    osg::MatrixTransform * tileMat = new osg::MatrixTransform();
+    osg::Matrixd transMat;
+    
+    transMat.makeTranslate(osg::Vec3(-(widthTile*numWidth*0.5), 
+                                -(heightTile*numHeight*0.5),
+                                -_heightOffset));
+
+    tileMat->setMatrix(transMat);
+    _tilePositions.push_back(tileMat);
+
     
     // Grid
     _gridSwitch = new osg::Switch();
@@ -225,7 +283,12 @@ void WaterMaze::load()
     osg::ShapeDrawable * sd;
     osg::Geode * geode;
     osg::Vec3 pos;
-    
+
+    _wallWhiteSwitch = new osg::Switch();
+    _wallColorSwitch = new osg::Switch();
+    _shapeSwitch = new osg::Switch();
+    _furnitureSwitch = new osg::Switch();
+
     // far horizontal
     pos = osg::Vec3(widthTile * (numWidth-2) * 0.5, 
                    (numHeight-1) * heightTile , 
@@ -236,8 +299,15 @@ void WaterMaze::load()
     geode = new osg::Geode();
     geode->addDrawable(sd);
     geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-    _geoRoot->addChild(geode);
-     
+    _wallColorSwitch->addChild(geode);
+
+    sd = new osg::ShapeDrawable(box);
+    sd->setColor(osg::Vec4(1.0, 1.0, 1.0, 1));
+    geode = new osg::Geode();
+    geode->addDrawable(sd);
+    geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    _wallWhiteSwitch->addChild(geode);
+
     // near horizontal
     pos = osg::Vec3(widthTile * (numWidth-2) * 0.5, 
                     (-1) * heightTile, 
@@ -248,7 +318,14 @@ void WaterMaze::load()
     geode = new osg::Geode();
     geode->addDrawable(sd);
     geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-    _geoRoot->addChild(geode);
+    _wallColorSwitch->addChild(geode);
+
+    sd = new osg::ShapeDrawable(box);
+    sd->setColor(osg::Vec4(1.0, 1.0, 1.0, 1));
+    geode = new osg::Geode();
+    geode->addDrawable(sd);
+    geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    _wallWhiteSwitch->addChild(geode);
 
     // left vertical
     pos = osg::Vec3((numWidth-1) * widthTile, 
@@ -260,7 +337,14 @@ void WaterMaze::load()
     geode = new osg::Geode();
     geode->addDrawable(sd);
     geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-    _geoRoot->addChild(geode);
+    _wallColorSwitch->addChild(geode);
+
+    sd = new osg::ShapeDrawable(box);
+    sd->setColor(osg::Vec4(1.0, 1.0, 1.0, 1));
+    geode = new osg::Geode();
+    geode->addDrawable(sd);
+    geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    _wallWhiteSwitch->addChild(geode);
 
     // right vertical
     pos = osg::Vec3((-1) * widthTile, 
@@ -272,7 +356,21 @@ void WaterMaze::load()
     geode = new osg::Geode();
     geode->addDrawable(sd);
     geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-    _geoRoot->addChild(geode);
+    _wallColorSwitch->addChild(geode);
+
+    sd = new osg::ShapeDrawable(box);
+    sd->setColor(osg::Vec4(1.0, 1.0, 1.0, 1));
+    geode = new osg::Geode();
+    geode->addDrawable(sd);
+    geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    _wallWhiteSwitch->addChild(geode);
+
+    _geoRoot->addChild(_wallColorSwitch);
+    _geoRoot->addChild(_wallWhiteSwitch);
+    
+    _wallColorSwitch->setAllChildrenOn();
+    _wallWhiteSwitch->setAllChildrenOff();
+
 
     // ceiling
     pos = osg::Vec3((numWidth-2) * widthTile * .5, 
@@ -308,14 +406,17 @@ void WaterMaze::load()
     _geoRoot->addChild(geode);
 
     _loaded = true;
+
+    osg::Matrixd mat;
+    mat = _tilePositions[0]->getMatrix();
+    PluginHelper::setObjectMatrix(mat);
 }
 
 void WaterMaze::preFrame()
 {
     if (_hiddenTile < 0)
     {
-        _hiddenTile = rand() % (int)(numWidth * numHeight);
-        std::cout << "Hidden tile = " << _hiddenTile << std::endl;
+
     }
 
     osg::Vec3 pos = osg::Vec3(0,0,0) * cvr::PluginHelper::getHeadMat() * 
@@ -389,12 +490,15 @@ void WaterMaze::menuCallback(MenuItem * item)
 
     else if (item == _clearButton)
     {
-        clear();
+        if (!_loaded)
+            return;
+
+        PluginHelper::getObjectsRoot()->removeChild(_geoRoot);
     }
 
     else if (item == _newTileButton)
     {
-        newHiddenTile();
+        chooseNewTile();
     }
 
     else if (item == _gridCB)
@@ -406,6 +510,44 @@ void WaterMaze::menuCallback(MenuItem * item)
         else
         {
             _gridSwitch->setAllChildrenOff();
+        }
+    }
+
+    else if (item == _wallColorCB)
+    {
+        if (_wallColorCB->getValue())
+        {
+            _wallColorSwitch->setAllChildrenOn();
+            _wallWhiteSwitch->setAllChildrenOff();
+        }
+        else
+        {
+            _wallColorSwitch->setAllChildrenOff();
+            _wallWhiteSwitch->setAllChildrenOn();
+        }
+    }
+
+    else if (item == _shapesCB)
+    {
+        if (_shapesCB->getValue())
+        {
+            _shapeSwitch->setAllChildrenOn();
+        }
+        else
+        {
+            _shapeSwitch->setAllChildrenOn();
+        }
+    }
+
+    else if (item == _furnitureCB)
+    {
+        if (_furnitureCB->getValue())
+        {
+            _furnitureSwitch->setAllChildrenOn();
+        }
+        else
+        {
+            _furnitureSwitch->setAllChildrenOn();
         }
     }
 
@@ -480,9 +622,10 @@ void WaterMaze::reset()
 
 }
 
-void WaterMaze::newHiddenTile()
+void WaterMaze::chooseNewTile()
 {
-    _hiddenTile = -1;
+    _hiddenTile = rand() % (int)(numWidth * numHeight);
+    std::cout << "Hidden tile = " << _hiddenTile << std::endl;
 }
 
 };
