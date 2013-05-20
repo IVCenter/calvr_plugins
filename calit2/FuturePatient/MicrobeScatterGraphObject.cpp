@@ -1,5 +1,6 @@
 #include "MicrobeScatterGraphObject.h"
 #include "GraphLayoutObject.h"
+#include "ColorGenerator.h"
 
 #include <cvrKernel/ComController.h>
 #include <cvrConfig/ConfigManager.h>
@@ -16,6 +17,7 @@
 bool MicrobeScatterGraphObject::_dataInit = false;
 std::vector<std::vector<struct MicrobeScatterGraphObject::DataEntry> > MicrobeScatterGraphObject::_data;
 std::map<std::string,int> MicrobeScatterGraphObject::_phylumIndexMap;
+GraphKeyObject * MicrobeScatterGraphObject::_graphKey = NULL;
 
 using namespace cvr;
 
@@ -32,6 +34,11 @@ MicrobeScatterGraphObject::MicrobeScatterGraphObject(mysqlpp::Connection * conn,
 
     makeSelect();
     updateSelect();
+
+    if(!_graphKey)
+    {
+	makeGraphKey();
+    }
 
     if(contextMenu)
     {
@@ -127,6 +134,26 @@ bool MicrobeScatterGraphObject::setGraph(std::string title, std::string primaryP
     return true;
 }
 
+void MicrobeScatterGraphObject::objectAdded()
+{
+    bool addKey = !_graphKey->hasRef();
+    _graphKey->ref(this);
+
+    if(addKey)
+    {
+	GraphLayoutObject * layout = dynamic_cast<GraphLayoutObject*>(_parent);
+	if(layout)
+	{
+	    layout->addLineObject(_graphKey);
+	}
+    }
+}
+
+void MicrobeScatterGraphObject::objectRemoved()
+{
+    _graphKey->unref(this);
+}
+
 void MicrobeScatterGraphObject::setGraphSize(float width, float height)
 {
     osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
@@ -137,9 +164,9 @@ void MicrobeScatterGraphObject::setGraphSize(float width, float height)
     _graph->setDisplaySize(width,height);
 }
 
-void MicrobeScatterGraphObject::selectPatients(std::vector<std::string> & patients)
+void MicrobeScatterGraphObject::selectPatients(std::string & group, std::vector<std::string> & patients)
 {
-    _graph->selectPoints(patients);
+    _graph->selectPoints(group,patients);
 }
 
 float MicrobeScatterGraphObject::getGraphXMaxValue()
@@ -207,15 +234,16 @@ bool MicrobeScatterGraphObject::processEvent(cvr::InteractionEvent * ie)
 	    return false;
 	}
 
+	std::string patientGroup;
 	std::vector<std::string> selectedPatients;
 
 	bool clickUsed = false;
-	if(_graph->processClick(selectedPatients))
+	if(_graph->processClick(patientGroup,selectedPatients))
 	{
 	    clickUsed = true;
 	}
 
-	layout->selectPatients(selectedPatients);
+	layout->selectPatients(patientGroup,selectedPatients);
 	if(clickUsed)
 	{
 	    return true;
@@ -524,4 +552,24 @@ void MicrobeScatterGraphObject::updateSelect()
 
     verts->dirty();
     _selectGeom->getBound();
+}
+
+void MicrobeScatterGraphObject::makeGraphKey()
+{
+    _graphKey = new GraphKeyObject("Scatter Graph Key",false,false,false,false,false);
+
+    std::vector<osg::Vec4> colors;
+    std::vector<std::string> labels;
+
+    labels.push_back("Smarr");
+    labels.push_back("Crohns");
+    labels.push_back("UC");
+    labels.push_back("Healthy");
+
+    for(int i = 0; i < labels.size(); ++i)
+    {
+	colors.push_back(ColorGenerator::makeColor(i,labels.size()));
+    }
+
+    _graphKey->setKeys(colors,labels);
 }

@@ -16,6 +16,11 @@ void LayoutLineObject::unref(LayoutTypeObject * object)
     }
 }
 
+void LayoutLineObject::unrefAll()
+{
+    _refMap.clear();
+}
+
 bool LayoutLineObject::hasRef()
 {
     return _refMap.size();

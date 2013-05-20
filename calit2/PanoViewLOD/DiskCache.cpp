@@ -5,10 +5,15 @@
 
 #include <queue>
 #include <iostream>
-#include <unistd.h>
 #include <time.h>
 #include <cstring>
 #include <climits>
+
+#ifndef WIN32
+#include <unistd.h>
+#else
+#include <Windows.h>
+#endif
 
 //#define DC_PRINT_DEBUG
 
@@ -300,12 +305,16 @@ void JobThread::copy()
     }
     else
     {
+#ifndef WIN32
 	struct timespec ts;
 	ts.tv_sec = 0;
 	ts.tv_nsec = 2000000;
 
 	nanosleep(&ts,NULL);
-    }
+#else
+	    Sleep(2);
+#endif
+	}
 }
 
 

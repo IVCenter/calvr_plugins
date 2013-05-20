@@ -1,4 +1,5 @@
 #include "GroupedBarGraph.h"
+#include "GraphGlobals.h"
 
 #include <cvrKernel/CalVR.h>
 #include <cvrConfig/ConfigManager.h>
@@ -15,8 +16,6 @@ GroupedBarGraph::GroupedBarGraph(float width, float height)
     _width = width;
     _height = height;
 
-    _font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
-
     _topPaddingMult = 0.15;
     _leftPaddingMult = 0.05;
     _rightPaddingMult = 0.01;
@@ -25,6 +24,8 @@ GroupedBarGraph::GroupedBarGraph(float width, float height)
     _titleMult = 0.4;
     _topLabelMult = 0.25;
     _groupLabelMult = 0.35;
+
+    _colorMode = BGCM_SOLID;
 }
 
 GroupedBarGraph::~GroupedBarGraph()
@@ -155,11 +156,31 @@ void GroupedBarGraph::setDisplayRange(float min, float max)
     update();
 }
 
+void GroupedBarGraph::setColorMode(BarGraphColorMode bgcm)
+{
+    if(bgcm != _colorMode)
+    {
+	_colorMode = bgcm;
+	updateColors();
+    }
+}
+
+void GroupedBarGraph::setColorMapping(osg::Vec4 def, const std::map<std::string,osg::Vec4> & colorMap)
+{
+    _defaultGroupColor = def;
+    _groupColorMap = colorMap;
+
+    if(_colorMode == BGCM_GROUP)
+    {
+	updateColors();
+    }
+}
+
 void GroupedBarGraph::setColor(osg::Vec4 color)
 {
     _color = color;
 
-    if(_barGeom)
+    if(_barGeom && _colorMode == BGCM_SOLID)
     {
 	osg::Vec4Array * colors = dynamic_cast<osg::Vec4Array*>(_barGeom->getColorArray());
 	if(colors)
@@ -600,6 +621,8 @@ void GroupedBarGraph::makeGraph()
 
     stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
     stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
+
+    updateColors();
 }
 
 void GroupedBarGraph::makeHover()
@@ -609,7 +632,7 @@ void GroupedBarGraph::makeHover()
     _hoverBGGeom = new osg::Geometry();
     _hoverBGGeom->setUseDisplayList(false);
     _hoverBGGeom->setUseVertexBufferObjects(true);
-    _hoverText = makeText("",osg::Vec4(1,1,1,1));
+    _hoverText = GraphGlobals::makeText("",osg::Vec4(1,1,1,1));
     _hoverGeode->addDrawable(_hoverBGGeom);
     _hoverGeode->addDrawable(_hoverText);
 
@@ -634,7 +657,7 @@ void GroupedBarGraph::makeBG()
     verts->at(3) = osg::Vec3(-0.5,1,-0.5);
 
     osg::Vec4Array * colors = new osg::Vec4Array(1);
-    colors->at(0) = osg::Vec4(0.9,0.9,0.9,1.0);
+    colors->at(0) = GraphGlobals::getBackgroundColor();
 
     geom->setColorArray(colors);
     geom->setColorBinding(osg::Geometry::BIND_OVERALL);
@@ -754,7 +777,7 @@ void GroupedBarGraph::updateAxis()
 	}
 	for(int j = 0; j < _data[_groupOrder[i]].size(); ++j)
 	{
-	    osgText::Text * text = makeText(_data[_groupOrder[i]][j].first,osg::Vec4(0,0,0,1));
+	    osgText::Text * text = GraphGlobals::makeText(_data[_groupOrder[i]][j].first,osg::Vec4(0,0,0,1));
 	    text->setRotation(q);
 	    text->setAlignment(osgText::Text::RIGHT_CENTER);
 	    textList.push_back(text);
@@ -903,7 +926,7 @@ void GroupedBarGraph::updateAxis()
 		maxExp--;
 	    }
 
-	    osg::ref_ptr<osgText::Text> testText = makeText(testss.str(),osg::Vec4(0,0,0,1));
+	    osg::ref_ptr<osgText::Text> testText = GraphGlobals::makeText(testss.str(),osg::Vec4(0,0,0,1));
 	    osg::BoundingBox testbb = testText->getBound();
 	    float testWidth = testbb.xMax() - testbb.xMin();
 
@@ -916,7 +939,7 @@ void GroupedBarGraph::updateAxis()
 
 		std::stringstream tss;
 		tss << currentTickValue;
-		osgText::Text * tickText = makeText(tss.str(),osg::Vec4(0,0,0,1));
+		osgText::Text * tickText = GraphGlobals::makeText(tss.str(),osg::Vec4(0,0,0,1));
 		tickText->setAlignment(osgText::Text::RIGHT_CENTER);
 		tickText->setCharacterSize(tickCharacterSize);
 		tickText->setPosition(osg::Vec3(graphLeft - 2.0*tickSize,-1,tickHeight));
@@ -969,7 +992,7 @@ void GroupedBarGraph::updateAxis()
 	valueAxisss << " (" << _axisUnits << ")";
     }
 
-    osgText::Text * vaText = makeText(valueAxisss.str(),osg::Vec4(0,0,0,1));
+    osgText::Text * vaText = GraphGlobals::makeText(valueAxisss.str(),osg::Vec4(0,0,0,1));
     vaText->setRotation(q);
     osg::BoundingBox bb = vaText->getBound();
     float csize = (0.4 * 0.85 * _leftPaddingMult * _width) / (bb.xMax() - bb.xMin());
@@ -980,7 +1003,7 @@ void GroupedBarGraph::updateAxis()
     _axisGeode->addDrawable(vaText);
 
     // graphTitle
-    osgText::Text * titleText = makeText(_title,osg::Vec4(0,0,0,1));
+    osgText::Text * titleText = GraphGlobals::makeText(_title,osg::Vec4(0,0,0,1));
     titleText->setAlignment(osgText::Text::CENTER_CENTER);
     bb = titleText->getBound();
     csize = (_titleMult * 0.85 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
@@ -990,7 +1013,7 @@ void GroupedBarGraph::updateAxis()
     _axisGeode->addDrawable(titleText);
 
     // group label
-    titleText = makeText(_groupLabel,osg::Vec4(0,0,0,1));
+    titleText = GraphGlobals::makeText(_groupLabel,osg::Vec4(0,0,0,1));
     titleText->setAlignment(osgText::Text::CENTER_CENTER);
     bb = titleText->getBound();
     csize = (_topLabelMult * 0.85 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
@@ -999,7 +1022,7 @@ void GroupedBarGraph::updateAxis()
     titleText->setPosition(osg::Vec3(graphLeft + (graphRight - graphLeft) / 2.0,-1,(_height / 2.0) - ((_titleMult+(_topLabelMult/2.0)) * _topPaddingMult * _height)));
     _axisGeode->addDrawable(titleText);
 
-    osg::ref_ptr<osgText::Text> tempText = makeText("Ay",osg::Vec4(0,0,0,1));
+    osg::ref_ptr<osgText::Text> tempText = GraphGlobals::makeText("Ay",osg::Vec4(0,0,0,1));
     bb = tempText->getBound();
     csize = (_groupLabelMult * 0.7 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
 
@@ -1011,7 +1034,7 @@ void GroupedBarGraph::updateAxis()
 	{
 	    continue;
 	}
-	osgText::Text * text = makeText(_groupOrder[i],osg::Vec4(0,0,0,1));
+	osgText::Text * text = GraphGlobals::makeText(_groupOrder[i],osg::Vec4(0,0,0,1));
 	text->setAlignment(osgText::Text::CENTER_CENTER);
 	//bb = text->getBound();
 	//csize = (_groupLabelMult * 0.7 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
@@ -1019,7 +1042,7 @@ void GroupedBarGraph::updateAxis()
 
 	float halfWidth = _data[_groupOrder[i]].size() * barWidth * 0.5;
 	text->setPosition(osg::Vec3(groupStart + halfWidth,-1,graphTop + (_groupLabelMult * 0.5 * _topPaddingMult * _height)));
-	makeTextFit(text,2.0*halfWidth * 0.95);
+	GraphGlobals::makeTextFit(text,2.0*halfWidth * 0.95);
 	_axisGeode->addDrawable(text);
 
 	groupStart += 2.0 * halfWidth;
@@ -1045,7 +1068,7 @@ void GroupedBarGraph::updateShading()
     float graphTop = (_height / 2.0) - (_height * _topPaddingMult);
     float graphBottom = (-_height / 2.0) + (_height * _currentBottomPaddingMult);
 
-    osg::Vec4 defaultColor(0.4,0.4,0.4,1.0);
+    osg::Vec4 defaultColor = GraphGlobals::getDataBackgroundColor();
     verts->push_back(osg::Vec3(graphLeft,0.6,graphBottom));
     verts->push_back(osg::Vec3(graphRight,0.6,graphBottom));
     verts->push_back(osg::Vec3(graphRight,0.6,graphTop));
@@ -1057,50 +1080,63 @@ void GroupedBarGraph::updateShading()
     _shadingGeode->addDrawable(geom);
 }
 
-osgText::Text * GroupedBarGraph::makeText(std::string text, osg::Vec4 color)
+void GroupedBarGraph::updateColors()
 {
-    osgText::Text * textNode = new osgText::Text();
-    textNode->setCharacterSize(1.0);
-    textNode->setAlignment(osgText::Text::CENTER_CENTER);
-    textNode->setColor(color);
-    textNode->setBackdropColor(osg::Vec4(0,0,0,0));
-    textNode->setAxisAlignment(osgText::Text::XZ_PLANE);
-    textNode->setText(text);
-    if(_font)
-    {
-	textNode->setFont(_font);
-    }
-    return textNode;
-}
-
-void GroupedBarGraph::makeTextFit(osgText::Text * text, float maxSize)
-{
-    osg::BoundingBox bb = text->getBound();
-    float width = bb.xMax() - bb.xMin();
-    if(width <= maxSize)
+    if(!_barGeom)
     {
 	return;
     }
 
-    std::string str = text->getText().createUTF8EncodedString();
-    if(!str.length())
+    osg::Vec4Array * colors = dynamic_cast<osg::Vec4Array*>(_barGeom->getColorArray());
+    if(!colors)
     {
+	std::cerr << "Invalid color array." << std::endl;
 	return;
     }
 
-    while(str.length() > 1)
+    switch(_colorMode)
     {
-	str = str.substr(0,str.length()-1);
-	text->setText(str + "..");
-	bb = text->getBound();
-	width = bb.xMax() - bb.xMin();
-	if(width <= maxSize)
+	case BGCM_SOLID:
 	{
-	    return;
+	    for(int i = 0; i < colors->size(); ++i)
+	    {
+		colors->at(i) = _color;
+	    }
+	    break;
 	}
+	case BGCM_GROUP:
+	{
+	    int colorIndex = 0;
+	    for(int i = 0; i < _groupOrder.size(); ++i)
+	    {
+		osg::Vec4 groupColor;
+		if(_groupColorMap.find(_groupOrder[i]) != _groupColorMap.end())
+		{
+		    groupColor = _groupColorMap[_groupOrder[i]];
+		}
+		else
+		{
+		    groupColor = _defaultGroupColor;
+		}
+		std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = _data.find(_groupOrder[i]);
+		if(it != _data.end())
+		{
+		    for(int j = 0; j < it->second.size(); ++j)
+		    {
+			colors->at(colorIndex+0) = groupColor;
+			colors->at(colorIndex+1) = groupColor;
+			colors->at(colorIndex+2) = groupColor;
+			colors->at(colorIndex+3) = groupColor;
+			colorIndex += 4;
+		    }
+		}
+	    }
+	    break;
+	}
+	default:
+	    return;
     }
 
-    str += ".";
-    text->setText(str);
+    colors->dirty();
+    _barGeom->dirtyDisplayList();
 }
-
