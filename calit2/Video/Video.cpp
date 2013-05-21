@@ -284,67 +284,67 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 		m_updateMutex.lock();
 		while(m_actionQueue.size())
 		{
-		    VideoMessageData vmd = m_actionQueue.front();
-		    m_actionQueue.pop_front();
+			VideoMessageData vmd = m_actionQueue.front();
+			m_actionQueue.pop_front();
 
-		    if(vmd.why == VIDEO_LOAD)
-		    {
-			m_loadVideo = vmd.path;
-			unsigned int gid = 0;
-			std::cerr << "Trying to load video " << m_loadVideo << std::endl;
-			gid = m_videoplayer.LoadVideoFile(m_loadVideo.c_str(), true);
-
-			TextureManager* manager = new TextureManager(gid);
-			int nrows = 1;
-			int ncols = 1;
-			if (gid & 0x80000000) // multi-tile video
+			if(vmd.why == VIDEO_LOAD)
 			{
-			    nrows = ((gid & 0x7E000000) >> 25) + 1;
-			    ncols = ((gid & 0x01F80000) >> 19) + 1;
+				m_loadVideo = vmd.path;
+				unsigned int gid = 0;
+				std::cerr << "Trying to load video " << m_loadVideo << std::endl;
+				gid = m_videoplayer.LoadVideoFile(m_loadVideo.c_str(), true);
+
+				TextureManager* manager = new TextureManager(gid);
+				int nrows = 1;
+				int ncols = 1;
+				if (gid & 0x80000000) // multi-tile video
+				{
+					nrows = ((gid & 0x7E000000) >> 25) + 1;
+					ncols = ((gid & 0x01F80000) >> 19) + 1;
+				}
+
+				std::cout << "Loading video gid " << gid << ", with " << nrows << " rows and " << ncols << " cols." << std::endl;
+				//cvr::SceneObject* scene = new cvr::SceneObject("Video Scene", true, true, false, false, true);
+				cvr::SceneObject* scene = vmd.obj;
+
+				for (int y = 0; y < nrows; y++)
+				{
+					for (int x = 0; x < ncols; x++)
+					{
+						unsigned int myid = gid | (y << 13) | (x << 7); 
+						// must add the ID for this tile so that it gets its texture added later in postFrame
+						manager->AddGID(myid);
+						/*
+						   All moved to post frame after the texture ID has been generated in a draw call
+						//XXX enable video on the head node.  This doesn't seem to work though
+						//m_videoplayer.EnableHeadVideo(true, myid);
+						int width = m_videoplayer.GetVideoWidth(myid);
+						int height = m_videoplayer.GetVideoHeight(myid);
+						GLuint tex = m_videoplayer.GetTextureID(myid);
+						std::cout << "Texture id: " << tex << std::endl;
+						osg::Geode* to = manager->AddTexture(myid, tex, width, height);
+						printf("added manager with gid %d, width %d, height %d\n", gid, width, height);
+						scene->addChild(to);
+						*/
+					}
+				}
+
+
+				m_gidMap[gid] = manager;
+
+
+				manager->SetSceneObject(scene);
+
+				m_managerAdd.push_back(manager);
+
+				cvr::MenuButton* button = new cvr::MenuButton(m_loadVideo);
+				button->setExtraData(manager);
+				button->setCallback(const_cast<Video*>(this));
+				m_menuAdd.push_back(button);
+
+
+				m_loadVideo.clear();
 			}
-
-			std::cout << "Loading video gid " << gid << ", with " << nrows << " rows and " << ncols << " cols." << std::endl;
-			//cvr::SceneObject* scene = new cvr::SceneObject("Video Scene", true, true, false, false, true);
-			cvr::SceneObject* scene = vmd.obj;
-
-			for (int y = 0; y < nrows; y++)
-			{
-			    for (int x = 0; x < ncols; x++)
-			    {
-				unsigned int myid = gid | (y << 13) | (x << 7); 
-				// must add the ID for this tile so that it gets its texture added later in postFrame
-				manager->AddGID(myid);
-				/*
-				   All moved to post frame after the texture ID has been generated in a draw call
-				//XXX enable video on the head node.  This doesn't seem to work though
-				//m_videoplayer.EnableHeadVideo(true, myid);
-				int width = m_videoplayer.GetVideoWidth(myid);
-				int height = m_videoplayer.GetVideoHeight(myid);
-				GLuint tex = m_videoplayer.GetTextureID(myid);
-				std::cout << "Texture id: " << tex << std::endl;
-				osg::Geode* to = manager->AddTexture(myid, tex, width, height);
-				printf("added manager with gid %d, width %d, height %d\n", gid, width, height);
-				scene->addChild(to);
-				*/
-			    }
-			}
-
-
-			m_gidMap[gid] = manager;
-
-
-			manager->SetSceneObject(scene);
-
-			m_managerAdd.push_back(manager);
-
-			cvr::MenuButton* button = new cvr::MenuButton(m_loadVideo);
-			button->setExtraData(manager);
-			button->setCallback(const_cast<Video*>(this));
-			m_menuAdd.push_back(button);
-
-
-			m_loadVideo.clear();
-		    }
 
 
 		}	
