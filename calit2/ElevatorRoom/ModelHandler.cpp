@@ -811,7 +811,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
 
     // Score text
     { 
-    osg::Vec3 pos = osg::Vec3(0, 100, 0);
+    osg::Vec3 pos = osg::Vec3(-100, 1000, -200);
     _scoreSwitch = new osg::Switch();
 
     _scoreText = new osgText::Text();
@@ -823,9 +823,9 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     _scoreText->setBackdropColor(osg::Vec4(0,0,0,0));
     _scoreText->setAxisAlignment(osgText::Text::XZ_PLANE);
 
-    float width = 200, height = 50;
+    float width = 400, height = 100;
     osg::ref_ptr<osg::Geometry> quad = makeQuad(width, height, 
-        osg::Vec4(0.8,0.8,0.8,1.0), pos - osg::Vec3(10, 0, 25));
+        osg::Vec4(0.8,0.8,0.8,1.0), pos - osg::Vec3(20, 0, 50));
 
     pat = new osg::PositionAttitudeTransform();
     geode = new osg::Geode();
@@ -1410,7 +1410,12 @@ float ModelHandler::getDoorDistance()
 
 bool ModelHandler::doorInView()
 {
-    return _doorInView;
+    return (_viewedDoor == _activeDoor);//_doorInView;
+}
+
+int ModelHandler::getViewedDoor()
+{
+    return _viewedDoor;
 }
 
 void ModelHandler::turnLeft()

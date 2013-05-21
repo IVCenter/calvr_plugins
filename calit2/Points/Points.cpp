@@ -45,7 +45,7 @@ bool Points::loadFile(std::string filename)
     if( result )
     {
 	    cerr << "found points" << endl;
-	    osg:Geode* points = group->getChild(0)->asGeode();
+	    osg::Geode* points = group->getChild(0)->asGeode();
 	    
 
 	    // get name of file
@@ -125,7 +125,6 @@ bool Points::loadFile(std::string filename)
 	    _loadedPoints.push_back(currentobject);
 
 	    group->removeChild(0, 1);
-
     }
 
     return result;
@@ -233,9 +232,48 @@ bool Points::loadFile(std::string filename, osg::Group * grp)
   return false; 
 }
 
+
+bool Points::isFile(const char* filename)
+{
+  struct stat buf;
+  if (stat(filename, &buf) == 0)
+  {
+    if (S_ISREG(buf.st_mode)) return true;
+  }
+  return false;
+}
+
+
+void Points::removeAll()
+{
+    for(std::vector<struct PointObject*>::iterator delit = _loadedPoints.begin(); delit != _loadedPoints.end(); delit++)
+    {
+        (*delit)->scene->detachFromScene();
+    }
+}
+
+
 void Points::menuCallback(MenuItem* menuItem)
 {
-   //slider
+    // load file
+    for(int i = 0; i < _menuFileList.size(); i++)
+    {
+	    if(_menuFileList[i] == menuItem)
+        {
+            removeAll();
+            if (!isFile(_filePaths[i].c_str()))
+            {
+                std::cerr << "Points: file not found: " << 
+                    _filePaths[i] << endl;
+                return;
+            }
+
+            loadFile(_filePaths[i]);
+        }
+    }
+
+
+   // slider
     for(std::map<struct PointObject*,MenuRangeValue*>::iterator it = _sliderMap.begin(); it != _sliderMap.end(); it++)
     {
         if(menuItem == it->second)
@@ -261,7 +299,7 @@ void Points::menuCallback(MenuItem* menuItem)
         }
     }
  
-    //check map for a delete
+    // check map for a delete
     for(std::map<struct PointObject*, MenuButton*>::iterator it = _deleteMap.begin(); it != _deleteMap.end(); it++)
     {
         if(menuItem == it->second)
@@ -414,6 +452,38 @@ bool Points::init()
   // set default point scale
   initialPointScale = ConfigManager::getFloat("Plugin.Points.PointScale", 0.001f);
 
+  _mainMenu = new SubMenu("Points", "Points");
+  _mainMenu->setCallback(this);
+
+  _loadMenu = new SubMenu("Load","Load");
+  _loadMenu->setCallback(this);
+  _mainMenu->addItem(_loadMenu);
+
+  _removeButton = new MenuButton("Remove All");
+  _removeButton->setCallback(this);
+  _mainMenu->addItem(_removeButton);
+
+  MenuSystem::instance()->addMenuItem(_mainMenu);
+
+
+  vector<string> list;
+
+  string configBase = "Plugin.Points.Files";
+
+  ConfigManager::getChildren(configBase, list);
+
+  for(int i = 0; i < list.size(); i++)
+  {
+	MenuButton * button = new MenuButton(list[i]);
+	button->setCallback(this);
+	_loadMenu->addItem(button);
+    _menuFileList.push_back(button);
+
+	std::string path = ConfigManager::getEntry("path", 
+        configBase + "." + list[i], "");
+    _filePaths.push_back(path);
+    std::cout << path << std::endl;
+  }
 
 
   // load saved initial scales and locations
@@ -466,25 +536,24 @@ void Points::message(int type, char *&data, bool collaborative)
 {
     if(type == POINTS_LOAD_REQUEST)
     {
-	if(collaborative)
-	{
-	    return;
-	}
+        if(collaborative)
+        {
+            return;
+        }
 
-	PointsLoadInfo * pli = (PointsLoadInfo*) data;
-	if(!pli->group)
-	{
-	    return;
-	}
+        PointsLoadInfo * pli = (PointsLoadInfo*) data;
+        if(!pli->group)
+        {
+            return;
+        }
 
-	loadFile(pli->file,pli->group.get());
+        loadFile(pli->file,pli->group.get());
 
-	//attach shader and uniform
-	osg::StateSet *state = pli->group->getOrCreateStateSet();
-	state->setAttribute(pgm1);
-	state->addUniform(new osg::Uniform("pointScale", initialPointScale));
-	state->addUniform(new osg::Uniform("globalAlpha",1.0f));
-
+        //attach shader and uniform
+        osg::StateSet *state = pli->group->getOrCreateStateSet();
+        state->setAttribute(pgm1);
+        state->addUniform(new osg::Uniform("pointScale", initialPointScale));
+        state->addUniform(new osg::Uniform("globalAlpha",1.0f));
     }
 }
 

@@ -18,6 +18,7 @@ CVRPLUGIN(ElevatorRoom)
 
 ElevatorRoom::ElevatorRoom()
 {
+    _c = 0;
     _myPtr = this;
     _loaded = false;
     _audioHandler = NULL;
@@ -326,6 +327,7 @@ void ElevatorRoom::preFrame()
             bool switched = false;
             chooseGameParameters(door, mode, switched);
 
+            _switched = switched;
             _activeDoor = door;
             _mode = mode;
             
@@ -333,13 +335,84 @@ void ElevatorRoom::preFrame()
             _modelHandler->setMode(_mode);
             _modelHandler->setSwitched(switched);
 
+            unsigned char c;
             if (_audioHandler)
             {
                 _audioHandler->playSound(_activeDoor + DING_OFFSET, "ding");
+                switch (_activeDoor)
+                {
+                    case 0:
+                        c = 6;
+                        sendChar(c);                       
+                        break;
+                    case 1:
+                        c = 7;
+                        sendChar(c);                       
+                        break;
+                    case 2:
+                        c = 8;
+                        sendChar(c);                       
+                        break;
+                    case 3:
+                        c = 9;
+                        sendChar(c);                       
+                        break;
+                    case 4:
+                        c = 10;
+                        sendChar(c);                       
+                        break;
+                    case 5:
+                        c = 11;
+                        sendChar(c);                       
+                        break;
+                    case 6:
+                        c = 12;
+                        sendChar(c);                       
+                        break;
+                    case 7:
+                        c = 13;
+                        sendChar(c);                       
+                        break;
+                }
             }
 
-            unsigned char c = 'a';
-            sendChar(c);
+            int viewedDoor;
+            viewedDoor = _modelHandler->getViewedDoor();
+            switch (viewedDoor)
+            {
+                case 0:
+                    c = 14;
+                    sendChar(c);                       
+                    break;
+                case 1:
+                    c = 15;
+                    sendChar(c);                       
+                    break;
+                case 2:
+                    c = 16;
+                    sendChar(c);                       
+                    break;
+                case 3:
+                    c = 17;
+                    sendChar(c);                       
+                    break;
+                case 4:
+                    c = 18;
+                    sendChar(c);                       
+                    break;
+                case 5:
+                    c = 19;
+                    sendChar(c);                       
+                    break;
+                case 6:
+                    c = 20;
+                    sendChar(c);                       
+                    break;
+                case 7:
+                    c = 21;
+                    sendChar(c);                       
+                    break;
+            }
 
             _phase = FLASHNEUTRAL;
             _startTime = PluginHelper::getProgramDuration();
@@ -359,17 +432,37 @@ void ElevatorRoom::preFrame()
         if (PluginHelper::getProgramDuration() - _startTime > _pauseTime && _modelHandler->doorInView())
         {
             _modelHandler->setLight(true);        
+            
+            // Blue door
+            if (_mode == ALLY && !_switched)
+            {
+                unsigned char c = 23;
+                sendChar(c);
+            }
+            else if (_mode == ALIEN && _switched)
+            {
+                unsigned char c = 23;
+                sendChar(c);
+            }
+            // Red door
+            else if (_mode == ALIEN && !_switched)
+            {
+                unsigned char c = 22;
+                sendChar(c);
+            }
+            else if (_mode == ALLY && _switched)
+            {
+                unsigned char c = 22;
+                sendChar(c);
+            }
+            // Orange door
+            else if (_mode == CHECKER)
+            {
+                unsigned char c = 24;
+                sendChar(c);
+            }
 
-            if (_mode == ALLY)
-            {
-                unsigned char c = 'c';
-                sendChar(c);
-            }
-            else if (_mode == ALIEN)
-            {
-                unsigned char c = 'd';
-                sendChar(c);
-            }
+
 
             // Choose solid door time and transmit code
 
@@ -391,7 +484,7 @@ void ElevatorRoom::preFrame()
                 c = 'g';
                 _pauseTime = 2;
             }
-            sendChar(c);
+            //sendChar(c);
             
             _phase = DOORCOLOR;
             _startTime = PluginHelper::getProgramDuration();
@@ -405,9 +498,20 @@ void ElevatorRoom::preFrame()
             _phase = OPENINGDOOR;
 
             if (_mode == ALIEN)
-                sendChar('h');
+            {
+                unsigned char c = 25;
+                sendChar(c);
+            }
             else if (_mode == ALLY)
-                sendChar('i');
+            {
+                unsigned char c = 26;
+                sendChar(c);
+            }
+            else if (_mode == CHECKER)
+            {
+                unsigned char c = 27;
+                sendChar(c);
+            }
         }
     }
 
@@ -444,7 +548,7 @@ void ElevatorRoom::preFrame()
             if (_noResponse)
             {
                 unsigned char c = 'm';
-                sendChar(c);
+                //sendChar(c);
             }
             _noResponse = true;
             _hit = false;
@@ -652,6 +756,7 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
 {
     if (!_loaded)
         return false;
+
     ValuatorInteractionEvent * vie = event->asValuatorEvent();
     if (vie)
     {
@@ -666,6 +771,10 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                 turnLeft();
                 _valEvent = true;
                 _valEventTime = PluginHelper::getProgramDuration();
+
+                unsigned char c = 1;
+                sendChar(c);
+
                 return true;
             }
             else if (vie->getValue() == 1 && !_valEvent)
@@ -673,6 +782,10 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                 turnRight();
                 _valEvent = true;
                 _valEventTime = PluginHelper::getProgramDuration();
+
+                unsigned char c = 2;
+                sendChar(c);
+
                 return true;
             }
             else if (PluginHelper::getProgramDuration() - _valEventTime > _valEventCutoff)
@@ -844,6 +957,8 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
             if (tie->getInteraction() == BUTTON_DOWN)
             {
                 shoot();
+                unsigned char c = 5;
+                sendChar(c);
                 return true;
             }
         }
@@ -877,14 +992,20 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
         if (kie->getInteraction() == KEY_UP && kie->getKey() == 65361)
         {
             turnLeft();
+            unsigned char c = 1;
+            sendChar(c);
         }
         if (kie->getInteraction() == KEY_UP && kie->getKey() == 65363)
         {
             turnRight();
+            unsigned char c = 2;
+            sendChar(c);
         }
         if (kie->getInteraction() == KEY_UP && kie->getKey() == ' ')
         {
             shoot();
+            unsigned char c = 5;
+            sendChar(c);
         }
     }
 
@@ -917,6 +1038,8 @@ void ElevatorRoom::shoot()
             if (_audioHandler)
             {
                 _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
+                unsigned char c = 28;
+                sendChar(c);
             }
 
             std::cout << "Hit!" << std::endl; 
@@ -924,7 +1047,7 @@ void ElevatorRoom::shoot()
             _modelHandler->setScore(_score);
 
             unsigned char c = 'k';
-            sendChar(c);
+            //sendChar(c);
 
             std::cout << "Score: " << _score << std::endl;
             _hit = true;
@@ -933,11 +1056,13 @@ void ElevatorRoom::shoot()
         {
             if (_audioHandler)
             {
-                _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
+                unsigned char c = 29;
+                sendChar(c);
+                _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "buzz");
             }
 
             unsigned char c = 'k';
-            sendChar(c);
+            //sendChar(c);
 
             std::cout << "Whoops!" << std::endl;
             if (_score > 0)
@@ -1092,9 +1217,11 @@ void ElevatorRoom::dingTest()
 
     if ((PluginHelper::getProgramDuration() - _startTime) > _pauseTime)
     {
-        _audioHandler->playSound(0 + DING_OFFSET, "ding");
+        //_audioHandler->playSound(0 + DING_OFFSET, "ding");
 
-        sendChar('a');      
+        sendChar(_c);
+        _c++;
+        //sendChar('a');      
 
         _startTime = PluginHelper::getProgramDuration();
         _pauseTime = (rand() % 3) + 1;
@@ -1190,7 +1317,8 @@ void ElevatorRoom::write_SPP(int bytes, unsigned char* buf)
 {
     if (!_sppConnected)
         return;
-   
+
+    std::string str(reinterpret_cast<const char *>(buf), 1);   
     std::cout << "Writing " << buf[0] << std::endl;
 
     DWORD BytesReceived;
