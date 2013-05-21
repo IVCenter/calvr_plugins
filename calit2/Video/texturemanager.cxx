@@ -25,7 +25,7 @@ void TextureManager::AddGID(unsigned int gid)
 	m_gidList.push_back(gid);
 }
 
-osg::Geode* TextureManager::AddTexture(unsigned int gid, GLuint tid, unsigned int width, unsigned int height)
+osg::Geode* TextureManager::AddTexture(unsigned int gid, std::map<unsigned int, GLuint> texmap, unsigned int width, unsigned int height)
 {
 	double xstart, ystart;
 	double nrows, ncols, myrow, mycol;
@@ -47,7 +47,7 @@ osg::Geode* TextureManager::AddTexture(unsigned int gid, GLuint tid, unsigned in
 
 	xstart = mycol * width;
 	ystart = myrow * height;
-	TextureObject* to = new TextureObject(tid);
+	TextureObject* to = new TextureObject(texmap);
 	osg::Geometry* picture_quad = osg::createTexturedQuadGeometry(osg::Vec3(xstart, 0., ystart), osg::Vec3(width, 0., 0.), osg::Vec3(0., 0., height));
 	osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D;
 	osg::Geode* geode = new osg::Geode;
@@ -66,7 +66,6 @@ osg::Geode* TextureManager::AddTexture(unsigned int gid, GLuint tid, unsigned in
 
 	geode->addDrawable(picture_quad);
 
-	m_texidMap[gid] = tid;
 
 	return geode;
 

@@ -51,7 +51,8 @@ protected:
 
 	mutable std::list<cvr::SceneObject*> m_sceneDelete;
 	mutable std::list<cvr::MenuItem*> m_menuDelete;
-	mutable std::list<TextureManager*> m_managerUpdate;
+	mutable std::list<TextureManager*> m_managerAdd;
+	mutable std::list<TextureManager*> m_managerLoad;
 	mutable std::list<cvr::MenuItem*> m_menuAdd;
 
         mutable OpenThreads::Mutex m_updateMutex;
