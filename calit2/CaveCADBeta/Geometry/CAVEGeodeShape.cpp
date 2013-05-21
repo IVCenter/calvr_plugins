@@ -34,6 +34,7 @@ CAVEGeodeShape::CAVEGeodeShape(const Type &typ, const Vec3 &initVect, const Vec3
         case BOX: initGeometryBox(initVect, sVect); break;
         case CYLINDER: initGeometryCylinder(initVect, sVect); break;
         case CONE: initGeometryCone(initVect, sVect); break;
+        case LINE: initGeometryLine(initVect, sVect); break;
         default: break;
     }
 
@@ -1202,6 +1203,74 @@ void CAVEGeodeShape::initGeometryCone(const Vec3 &initVect, const Vec3 &sVect)
         geometryArrayPtr[2]->addIndexCluster(i * 4    , i * 4 + 2);
         geometryArrayPtr[2]->addIndexCluster(i * 4 + 1, i * 4 + 3);
     }
+    hideSnapBounds();
+}
+
+
+/***************************************************************
+* Function: initGeometryLine()
+***************************************************************/
+void CAVEGeodeShape::initGeometryLine(const Vec3 &initVect, const Vec3 &sVect)
+{
+    float cx = initVect.x(), cy = initVect.y(), cz = initVect.z();
+
+    // take record of center vector and number of vertices, normals, texcoords
+    mCenterVect = Vec3(cx, cy, cz);
+    mNumVertices = 2;
+
+    // create vertical edges, cap radiating edges and ring strips on side surface
+
+    mVertexArray->push_back(initVect);
+    mVertexArray->push_back(initVect + sVect);
+
+/*        mVertexArray->push_back(Vec3(cx, cy, cz) + Vec3(rad * cost, rad * sint, height));	// top surface
+        mVertexArray->push_back(Vec3(cx, cy, cz) + Vec3(rad * cost, rad * sint, 0));		// bottom surface
+        mVertexArray->push_back(Vec3(cx, cy, cz) + Vec3(rad * cost, rad * sint, height));	// upper side
+        mVertexArray->push_back(Vec3(cx, cy, cz) + Vec3(rad * cost, rad * sint, 0));		// lower side
+
+        mNormalArray->push_back(Vec3(0, 0, 1));		
+        mNormalArray->push_back(Vec3(0, 0, -1));
+        mNormalArray->push_back(Vec3(cost, sint, 0));	
+        mNormalArray->push_back(Vec3(cost, sint, 0));	
+
+        mUDirArray->push_back(Vec3(1, 0, 0));	mVDirArray->push_back(Vec3(0, 1, 0));		// top surface
+        mUDirArray->push_back(Vec3(1, 0, 0));	mVDirArray->push_back(Vec3(0, 1, 0));		// bottom surface
+        mUDirArray->push_back(Vec3(0, 0, 0));	mVDirArray->push_back(Vec3(0, 0, 1));		// upper side
+        mUDirArray->push_back(Vec3(0, 0, 0));	mVDirArray->push_back(Vec3(0, 0, 1));		// lower side
+
+        mTexcoordArray->push_back(Vec2(rad * cost, rad * sint) / gTextureTileSize);
+        mTexcoordArray->push_back(Vec2(rad * cost, rad * sint) / gTextureTileSize);
+        mTexcoordArray->push_back(Vec2(rad * intvl * i, height) / gTextureTileSize);
+        mTexcoordArray->push_back(Vec2(rad * intvl * i, 0.0f) / gTextureTileSize);
+*/
+
+
+    // create geometries for each surface
+    CAVEGeometry **geometryArrayPtr = new CAVEGeometry*[1];
+    geometryArrayPtr[0] = new CAVEGeometry;
+    geometryArrayPtr[0]->setVertexArray(mVertexArray);
+
+    mGeometryVector.push_back(geometryArrayPtr[0]);
+    addDrawable(geometryArrayPtr[0]);
+
+    // write primitive set and index clusters
+    DrawElementsUInt* surface = new DrawElementsUInt(PrimitiveSet::LINES, 0);  
+    osg::ref_ptr<osg::DrawArrays> primitive = new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP, 0, 0);
+    primitive->setCount(2);
+    geometryArrayPtr[0]->addPrimitiveSet(primitive.get());
+
+    osg::StateSet * stateset = getOrCreateStateSet();
+    stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+//    _lineWidth = new osg::LineWidth();
+//    _lineWidth->setWidth(_size);
+//    stateset->setAttributeAndModes(_lineWidth,osg::StateAttribute::ON);
+
+
+
+    //surface->push_back(2);
+    //geometryArrayPtr[0]->addPrimitiveSet(surface);
+    //surface->setCount(2);
+    //geometryArrayPtr[0]->addIndexCluster(2, 2);
     hideSnapBounds();
 }
 

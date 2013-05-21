@@ -14,6 +14,7 @@
 #include <cassert>
 #include <sstream>
 #include <iostream>
+#include <unistd.h>
 
 #include "sph-cache.hpp"
 #include "cube.hpp"
@@ -22,7 +23,12 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifndef WIN32
 #include <sys/time.h>
+#else
+#include <cvrUtil/TimeOfDay.h>
+#include <Windows.h>
+#endif
 
 #include <OpenThreads/ScopedLock>
 #include <cvrConfig/ConfigManager.h>
@@ -179,7 +185,11 @@ void pbotiming(GLuint pbo)
 	int copied = 0;
 	for(int i = 0; i < segments; i++)
 	{
+#ifndef WIN32
 	    int copy = std::min(size - copied,ssize);
+#else
+		int copy = min(size - copied,ssize);
+#endif
 	    
 	    std::cerr << "Offset: " << copied << " length: " << copy << std::endl;
 
@@ -195,7 +205,11 @@ void pbotiming(GLuint pbo)
 	    std::cerr << "Segment flush time: " << (fend.tv_sec - fstart.tv_sec) + ((fend.tv_usec - fstart.tv_usec)/ 1000000.0) << std::endl;
 
 	    copied += copy;
+#ifndef WIN32
 	    sleep(1);
+#else
+		Sleep(1000);
+#endif
 	}
 
 	gettimeofday(&start,NULL);
@@ -355,7 +369,13 @@ sph_file::sph_file(const std::string& tiff)
         std::string       path;
         std::string       temp;
         
-        while (std::getline(list, path, ':'))
+#ifndef WIN32
+		char sep = ':';
+#else
+		char sep = ';';
+#endif
+
+        while (std::getline(list, path, sep))
         {
             temp = path + "/" + tiff;
 
@@ -533,7 +553,7 @@ sph_cache::sph_cache(int n) : pages(n), waits(n), needs(32), loads()
     float targetFPS = cvr::ConfigManager::getFloat("value","Plugin.PanoViewLOD.TargetFPS",60.0);
     _maxTime = 1.0f / targetFPS;
     // give some time for other things
-    _maxTime *= 0.9;
+    _maxTime *= 0.9f;
     
     // Launch the image loader threads.
     
@@ -816,7 +836,11 @@ int up(TIFF *T, int i)
 
 int dn(TIFF *T, int i)
 {
-    uint64 *v;
+#ifndef WIN32
+    uint64_t *v;
+#else
+	unsigned __int64 *v;
+#endif
     uint16  n;
     
     if (TIFFGetField(T, TIFFTAG_SUBIFD, &n, &v))

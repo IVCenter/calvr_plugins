@@ -87,7 +87,7 @@ class CaveCADBeta : public cvr::MenuCallback, public cvr::CVRPlugin
     // CaveCAD local objects
     CAVEDesigner *mCAVEDesigner;
 
-    osg::MatrixTransform *scaleMat;
+    osg::MatrixTransform *mScaleMat;
 };
 
 #endif

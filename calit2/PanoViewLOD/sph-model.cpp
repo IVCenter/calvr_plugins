@@ -24,6 +24,11 @@
 
 #include "sph-model.hpp"
 
+#ifdef WIN32
+#define M_PI 3.141592653589793238462643
+#pragma comment(lib, "OpenGL32.Lib")
+#endif
+
 //------------------------------------------------------------------------------
 
 sph_model::sph_model(sph_cache& cache,

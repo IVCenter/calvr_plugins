@@ -18,12 +18,12 @@ WaterMaze::WaterMaze()
     _sppConnected = false;
     _hiddenTile = -1;
 
-    float heightOffset = ConfigManager::getFloat("value", 
+    _heightOffset = ConfigManager::getFloat("value", 
         "Plugin.WaterMaze.StartingHeight", 300.0);
 
-    osg::Matrixd mat;
-    mat.makeTranslate(0, -3000, -heightOffset);
-    _geoRoot->setMatrix(mat);
+//    osg::Matrixd mat;
+//    mat.makeTranslate(0, -3000, -_heightOffset);
+//   _geoRoot->setMatrix(mat);
     PluginHelper::getObjectsRoot()->addChild(_geoRoot);
     _loaded = false;
 }
@@ -59,6 +59,28 @@ bool WaterMaze::init()
     _gridCB = new MenuCheckbox("Show Grid", false);
     _gridCB->setCallback(this);
     _WaterMazeMenu->addItem(_gridCB);
+
+
+    _positionMenu = new SubMenu("Reset position");
+    _WaterMazeMenu->addItem(_positionMenu);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        char buffer[50];
+        sprintf(buffer, "Corner %d", i + 1);
+
+        MenuButton * button = new MenuButton(buffer);
+        button->setCallback(this);
+        _positionMenu->addItem(button);
+
+        _positionButtons.push_back(button);
+    }
+
+    MenuButton * button = new MenuButton("Center");
+    button->setCallback(this);
+    _positionMenu->addItem(button);
+    _positionButtons.push_back(button);
+
 
     // extra output messages
     _debug = (ConfigManager::getEntry("Plugin.WaterMaze.Debug") == "on");
@@ -109,6 +131,40 @@ void WaterMaze::load()
             tilePat->setPosition(osg::Vec3((widthTile*i) - (widthTile/2), 
                                            (heightTile*j) - (heightTile/2),
                                             0));
+            
+            if (i == 0 && j == 0)
+            {
+                osg::MatrixTransform * tileMat = new osg::MatrixTransform();
+                osg::Matrixd mat;
+                mat.makeTranslate((tilePat->getPosition() + osg::Vec3(0, -3000, -_heightOffset)));
+                tileMat->setMatrix(mat);
+                _tilePositions.push_back(tileMat);
+            }
+            else if (i == 0 && j == numHeight - 1)
+            {
+                osg::MatrixTransform * tileMat = new osg::MatrixTransform();
+                osg::Matrixd mat;
+                mat.makeTranslate((tilePat->getPosition()  + osg::Vec3(0, -3000, -_heightOffset)));
+                tileMat->setMatrix(mat);
+                _tilePositions.push_back(tileMat);
+            }
+            else if (i == numWidth - 1 && j == 0)
+            {
+                osg::MatrixTransform * tileMat = new osg::MatrixTransform();
+                osg::Matrixd mat;
+                mat.makeTranslate((tilePat->getPosition() + osg::Vec3(0, -3000, -_heightOffset)));
+                tileMat->setMatrix(mat);
+                _tilePositions.push_back(tileMat);
+            }
+            else if (i == numWidth - 1 && j == numHeight - 1)
+            {
+                osg::MatrixTransform * tileMat = new osg::MatrixTransform();
+                osg::Matrixd mat;
+                mat.makeTranslate((tilePat->getPosition() + osg::Vec3(0, -3000, -_heightOffset)));
+                tileMat->setMatrix(mat);
+                _tilePositions.push_back(tileMat);
+            }
+
 
             osg::Switch * boxSwitch = new osg::Switch();
             osg::ShapeDrawable * sd = new osg::ShapeDrawable(box);
@@ -352,6 +408,37 @@ void WaterMaze::menuCallback(MenuItem * item)
             _gridSwitch->setAllChildrenOff();
         }
     }
+
+    int i = 0;
+    for (std::vector<MenuButton*>::iterator it = _positionButtons.begin();
+         it != _positionButtons.end(); ++it)
+    {
+        if ((*it) == item)
+        {
+            std::cout << (*it)->getText() << std::endl;
+
+/*            osg::Matrixd mat, multMat;
+
+            osg::Vec3 newPos =  _tilePositions[i]->getPosition() * _geoRoot->getInverseMatrix();
+            osg::Vec3 origPos = PluginHelper::getObjectMatrix().getTrans();
+            osg::Vec3 transVec = newPos - origPos;
+
+            std::cout << "newPos = " << newPos[0] << " " << newPos[1] << " " << newPos[2] << std::endl;
+            std::cout << "origPos = " << origPos[0] << " " << origPos[1] << " " << origPos[2] << std::endl;
+            std::cout << "transVec = " << transVec[0] << " " << transVec[1] << " " << transVec[2] << std::endl;
+
+            mat = PluginHelper::getObjectMatrix();
+            multMat.makeTranslate(transVec[0], transVec[1], 0);
+
+            //mat.setTrans(multMat * );
+            mat = multMat * mat; */
+            
+            osg::Matrixd mat;
+            mat = _tilePositions[i]->getMatrix();
+            PluginHelper::setObjectMatrix(mat);
+        }
+        ++i;
+    }
 }
 
 bool WaterMaze::processEvent(InteractionEvent * event)
@@ -396,57 +483,6 @@ void WaterMaze::reset()
 void WaterMaze::newHiddenTile()
 {
     _hiddenTile = -1;
-}
-
-/*** Server Functions ***/
-
-void WaterMaze::connectToServer()
-{
-
-}
-
-int WaterMaze::init_SPP(int port)
-{
-    char com[100];
-
-    ftStatus = FT_Open(0, &ftHandle);
-    if (ftStatus != 0)
-    {
-        std::cout << "FT_Open failed. Error " << ftStatus << std::endl;
-        return -1;
-    }
-    FT_SetBaudRate(ftHandle, 57600);
-    FT_SetDataCharacteristics(ftHandle, FT_BITS_8, FT_STOP_BITS_1, FT_PARITY_NONE);
-    FT_SetFlowControl(ftHandle, FT_FLOW_NONE, 0, 0);
-    FT_SetLatencyTimer(ftHandle, 2);
-
-    std::cout << "Connected to FTDI device." << std::endl;
-    _sppConnected = true;
-    return 0;
-}
-
-void WaterMaze::close_SPP()
-{
-    if (!_sppConnected)
-        return;
-
-    FT_Close (ftHandle);
-}
-
-void WaterMaze::write_SPP(int bytes, unsigned char* buf)
-{
-    if (!_sppConnected)
-        return;
-   
-    std::cout << "Writing " << buf[0] << std::endl;
-
-    DWORD BytesReceived;
-    DWORD bytesToWrite = 1;
-    int value;
-    value = FT_Write(ftHandle, buf, bytesToWrite, &BytesReceived);
-    int a = BytesReceived;
-
-    return;
 }
 
 };

@@ -8,6 +8,12 @@ AudioHandler::AudioHandler()
 
     std::string name = "Server name";
     std::string dir = "/home/ryiah/Work/data/";
+
+    uint8_t packet[256];
+    int32_t size;
+    size = oscpack(packet, "/sc.elevators/mastervol", "f", -1.0);
+    send(_sock, (char *) packet, size, 0);
+
 //    ColliderPlusPlus::Client_Server * server = 
 //        new ColliderPlusPlus::Client_Server(name, "127.0.0.1", "1234", dir);
 }
