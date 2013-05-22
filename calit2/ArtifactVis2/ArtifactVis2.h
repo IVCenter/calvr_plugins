@@ -11,6 +11,7 @@
 #include <cvrMenu/MenuRangeValue.h>
 #include <cvrMenu/MenuTextButtonSet.h>
 #include <cvrMenu/MenuList.h>
+#include <cvrKernel/Navigation.h>
 //#include <cvrInput/TrackingManager.h>
 //#include <cvrKernel/InteractionManager.h>
 #include <cvrKernel/SceneManager.h>

@@ -213,7 +213,80 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
 	cerr << "Key: " << keyTie->getKey()  << " " << keyTie->getMod() <<" UnPressed\n";
 	}
 */  
-        if(keyTie->getKey() != currentKey)
+	//cerr << "Key: " << keyTie->getKey()  << "\n";
+	if(true)
+	{
+          int code = keyTie->getKey();
+
+            osg::Matrix m;
+
+            osg::Matrix m2;
+	    float yOffset = 100.0;
+
+            osg::Vec3 viewerPos = TrackingManager::instance()->getHeadMat().getTrans();
+
+            osg::Matrix objmat =SceneManager::instance()->getObjectTransform()->getMatrix();
+            NavMode mode = cvr::Navigation::instance()->getButtonMode(0);
+
+	  if(code == 65362)
+          {
+		//Up
+//		cerr << "Up\n";
+            if(mode == DRIVE || mode == FLY)
+	    {
+	    osg::Quat rot = Quat(-0.03,0,0,1);
+	    m.makeRotate(rot);
+            m2.makeTranslate(osg::Vec3(0,0,0));
+
+	    }
+	    else
+	    {
+            m2.makeTranslate(osg::Vec3(0,-yOffset * Navigation::instance()->getScale(),0));
+	    }
+            objmat = objmat * osg::Matrix::translate(-viewerPos) * m * m2 * osg::Matrix::translate(viewerPos);
+            SceneManager::instance()->setObjectMatrix(objmat);
+	  }
+	  else if(code == 65364)
+          {
+		//Down
+	//	cerr << "Down\n";
+            if(mode == DRIVE || mode == FLY)
+	    {
+	    osg::Quat rot = Quat(0.03,0,0,1);
+	    m.makeRotate(rot);
+            m2.makeTranslate(osg::Vec3(0,0,0));
+
+	    }
+	    else
+	    {
+            m2.makeTranslate(osg::Vec3(0,yOffset * Navigation::instance()->getScale(),0));
+	    }
+            objmat = objmat * osg::Matrix::translate(-viewerPos) * m * m2 * osg::Matrix::translate(viewerPos);
+            SceneManager::instance()->setObjectMatrix(objmat);
+	  }
+	  else if(code == 65361)
+          {
+		//Left
+	//	cerr << "Left\n";
+	    osg::Quat rot = Quat(0,0.03,0,1);
+	    m.makeRotate(rot);
+            m2.makeTranslate(osg::Vec3(0,0,0));
+            objmat = objmat * osg::Matrix::translate(-viewerPos) * m * m2 * osg::Matrix::translate(viewerPos);
+            SceneManager::instance()->setObjectMatrix(objmat);
+	  }
+	  else if(code == 65363)
+          {
+		//Right
+	//	cerr << "Right\n";
+	    osg::Quat rot = Quat(0,-0.03,0,1);
+	    m.makeRotate(rot);
+            m2.makeTranslate(osg::Vec3(0,0,0));
+            objmat = objmat * osg::Matrix::translate(-viewerPos) * m * m2 * osg::Matrix::translate(viewerPos);
+            SceneManager::instance()->setObjectMatrix(objmat);
+	  }
+	}
+	bool annotationsOn = false;
+        if(keyTie->getKey() != currentKey && annotationsOn)
           {
           int inc = findActiveAnnot();
           if(inc != -1)
@@ -1619,7 +1692,11 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
             if (ComController::instance()->isMaster())
             {
                 std::stringstream ss;
+#ifdef WIN32
+                ss <<  "ArchInterface -b ";
+#else
                 ss <<  "./ArchInterface -b ";
+#endif
                 ss << "\"";
                 ss << (*t)->name;
                 ss << "\" ";
@@ -7217,7 +7294,7 @@ entryCount = scandir(const_cast<char*>(dirname.c_str()),&darray, 0, alphasort);
 #endif
 	if(checkIfDir)
         {
-         cout << filename << " is a directory\n";
+         //cout << filename << " is a directory\n";
          entry->filetype = "folder"; 
         }
         else
