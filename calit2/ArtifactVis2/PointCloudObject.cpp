@@ -1,19 +1,6 @@
 #include "PointCloudObject.h"
 //#include "PanoViewLOD.h"
 
-#include <cvrKernel/CVRPlugin.h>
-#include <cvrConfig/ConfigManager.h>
-#include <cvrKernel/NodeMask.h>
-#include <cvrKernel/PluginHelper.h>
-#include <cvrUtil/OsgMath.h>
-#include <PluginMessageType.h>
-
-#include <osg/Depth>
-
-#include <iostream>
-#include <cstdio>
-#include <fstream>
-#include <cmath>
 
 //#define PRINT_TIMING
 
@@ -42,7 +29,7 @@ void PointCloudObject::init(std::string name, std::string filename, osg::Quat pc
     bool nvidia = ConfigManager::getBool("Plugin.ArtifactVis2.Nvidia");
 
         cout << "Reading point cloud data from : " << filename <<  "..." << endl;
-        ifstream file(filename.c_str());
+       // std::ifstream file(filename.c_str());
         type.erase(0, (type.length() - 3));
         cout << type << "\n";
         string line;
@@ -99,7 +86,7 @@ void PointCloudObject::init(std::string name, std::string filename, osg::Quat pc
 	switchNode->addChild(pli.group);
 //Add menu system
 	    setNavigationOn(true);
-	    setMovable(true);
+	    setMovable(false);
 	    addMoveMenuItem();
 	    addNavigationMenuItem();
             float min = 0.0001;

@@ -32,9 +32,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#ifdef WIN32
+//#include <ndir.h>
+#include <direct.h>
 #include <sys/types.h>
+#include <windows.h>
+#else
 #include <sys/dir.h>
-#include <X11/Xlib.h>
+#include <sys/types.h>
+#endif
+//#include <X11/Xlib.h>
 
 
 
@@ -361,6 +368,7 @@ struct Model
         osg::Quat origRot;
         float origScale;
         cvr::SceneObject * so;
+	PointCloudObject * pcObject;
 	bool loaded;
         bool active;
         bool visible;
@@ -862,6 +870,8 @@ void updateHudMovement(int i, cvr::TrackedButtonInteractionEvent * tie,float _mo
     float transcale, rotscale;
 //void updateSceneObjectMovement(DSIntersector::DSIntersector* mDSIntersector, cvr::TrackedButtonInteractionEvent * tie);
 	osg::Quat prevHandRot;
+        std::vector<std::string> scanDirectory(const char *sDir);
+	
 };
 
 #endif

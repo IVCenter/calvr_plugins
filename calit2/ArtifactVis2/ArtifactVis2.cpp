@@ -1490,22 +1490,22 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
                }
                else
                {
-		_pointClouds[i]->so->attachToScene();
+		_pointClouds[i]->pcObject->attachToScene();
 		_pointClouds[i]->visible = true;
-		_pointClouds[i]->active = true;
-		_pointClouds[i]->visibleMap->setValue(true);
-		_pointClouds[i]->activeMap->setValue(true);
+	//	_pointClouds[i]->active = true;
+	//	_pointClouds[i]->visibleMap->setValue(true);
+	//	_pointClouds[i]->activeMap->setValue(true);
                }
             }
             else
             {
                if(_pointClouds[i]->visible)
                {
-		_pointClouds[i]->so->detachFromScene();
+		_pointClouds[i]->pcObject->detachFromScene();
 		_pointClouds[i]->visible = false;
-		_pointClouds[i]->active = false;
-		_pointClouds[i]->visibleMap->setValue(false);
-		_pointClouds[i]->activeMap->setValue(false);
+	//	_pointClouds[i]->active = false;
+	//	_pointClouds[i]->visibleMap->setValue(false);
+	//	_pointClouds[i]->activeMap->setValue(false);
 
                }
 
@@ -4613,12 +4613,12 @@ void ArtifactVis2::updateSelect()
     {
         osg::BoundingBox bb;
         osg::Vec3 minvec, maxvec;
-        minvec.x() = std::min(_selectStart.x(), _selectCurrent.x());
-        minvec.y() = std::min(_selectStart.y(), _selectCurrent.y());
-        minvec.z() = std::min(_selectStart.z(), _selectCurrent.z());
-        maxvec.x() = std::max(_selectStart.x(), _selectCurrent.x());
-        maxvec.y() = std::max(_selectStart.y(), _selectCurrent.y());
-        maxvec.z() = std::max(_selectStart.z(), _selectCurrent.z());
+        minvec.x() = min(_selectStart.x(), _selectCurrent.x());
+        minvec.y() = min(_selectStart.y(), _selectCurrent.y());
+        minvec.z() = min(_selectStart.z(), _selectCurrent.z());
+        maxvec.x() = max(_selectStart.x(), _selectCurrent.x());
+        maxvec.y() = max(_selectStart.y(), _selectCurrent.y());
+        maxvec.z() = max(_selectStart.z(), _selectCurrent.z());
         bb.set(minvec, maxvec);
         osg::Matrix scale, trans;
         trans.makeTranslate(bb.center());
@@ -7172,27 +7172,52 @@ void ArtifactVis2::getDirFiles(const string& dirname, std::vector<DirFile*> & en
     {
      types = ConfigManager::getEntry("Plugin.ArtifactVis2.FileManagerTypes"); 
     }
-
+int entryCount = 0;
+#ifdef WIN32
+std::vector<std::string> darray;
+darray = scanDirectory(dirname.c_str());
+entryCount = darray.size();
+#else
 direct ** darray;
-    int entryCount = scandir(const_cast<char*>(dirname.c_str()),
-			     &darray, 0, alphasort);
+entryCount = scandir(const_cast<char*>(dirname.c_str()),&darray, 0, alphasort);
+#endif
 
     for (int k = 0; k < entryCount; k++)
     {
         DirFile* entry = new DirFile();
+#ifdef WIN32
+        string filename = darray[k];
+#else
         string filename = darray[k]->d_name;
+#endif
+
         if(filename != ".")
         {
-        //cout << "Filename: " << filename << endl;
+  //      cout << "Filename: " << filename << endl;
         entry->filename = filename; 
         entry->path = dirname;
         string origDir = dirname;
         origDir.append(filename);
+	bool checkIfDir = false;
+#ifdef WIN32
+	string cFile = filename;
+	cFile.erase(0,cFile.length()-1);
+//	cout << cFile << endl;
+	if(cFile == "/" || cFile == "\\")
+	{
+           checkIfDir = true;
+	}
+#else
         struct stat info;
         lstat(origDir.c_str(), &info);
-        if(S_ISDIR(info.st_mode))
+	if(S_ISDIR(info.st_mode))
         {
-         //cout << filename << " is a directory\n";
+	   checkIfDir = true;
+	}
+#endif
+	if(checkIfDir)
+        {
+         cout << filename << " is a directory\n";
          entry->filetype = "folder"; 
         }
         else
@@ -7352,7 +7377,10 @@ void ArtifactVis2::addNewPCTest(int index)
  PointCloudObject * pcObject = new PointCloudObject(name,filename,pcRot,pcScale,pcPos);
  PluginHelper::registerSceneObject(pcObject,"pcObject");
  pcObject->attachToScene();
- cout << "This is from new PC test!!!!!\n";
+ _pointClouds[index]->pcObject = pcObject;
+ _pointClouds[index]->visible = true;
+ _pointClouds[index]->loaded = true;
+ //cout << "This is from new PC test!!!!!\n";
  
 }
 void ArtifactVis2::addNewPC(int index)
@@ -10305,4 +10333,53 @@ void ArtifactVis2::tempStackPhotos()
        m++; 
        }
     }
+}
+std::vector<std::string> ArtifactVis2::scanDirectory(const char *sDir)
+{
+	
+	std::vector<std::string> darray;
+#ifdef WIN32
+        WIN32_FIND_DATA fdFile;
+        HANDLE hFind = NULL;
+
+        char sPath[2048];
+	sprintf(sPath, "%s\\*.*", sDir);
+
+ if((hFind = FindFirstFile(sPath, &fdFile)) == INVALID_HANDLE_VALUE)
+	     {
+		     return darray;
+	     }
+
+     do
+     {
+
+
+        if(strcmp(fdFile.cFileName, ".") != 0 && strcmp(fdFile.cFileName, "..") != 0)
+		         {
+	                //sprintf(sPath, "%s\\%s", sDir, fdFile.cFileName);
+	                sprintf(sPath, "%s", fdFile.cFileName);
+			if(fdFile.dwFileAttributes &FILE_ATTRIBUTE_DIRECTORY)
+			{
+			  string result = string(sPath);
+			  result.append("/");
+			  darray.push_back(result);
+			 // printf("Directory: %s\n", sPath);
+			  //ListDirectoryContents(sPath); //Recursion, I love it!
+		        }
+			else
+			{
+			//  printf("File: %s\n", sPath);
+			  string result = string(sPath);
+			  darray.push_back(result);
+			}		
+			 
+			 
+			 
+			 }
+     }
+         while(FindNextFile(hFind, &fdFile)); //Find the next file.
+
+         FindClose(hFind); //Always, Always, clean things up!
+#endif
+return darray;     
 }
