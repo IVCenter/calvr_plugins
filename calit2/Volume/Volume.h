@@ -80,10 +80,17 @@ class Volume : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::File
 	    bool init();
     	virtual bool loadFile(std::string file);
 	    void menuCallback(cvr::MenuItem * item);
-	    //bool processEvent(cvr::InteractionEvent * event);
 	    void preFrame();
 
     protected:
+
+        // menu items
+        std::string _configPath;
+
+        // menu objects
+        cvr::SubMenu* _volumeMenu;
+        cvr::SubMenu * _filesMenu;
+        cvr::MenuButton* _removeButton;
    
         static int id;
     
@@ -94,6 +101,9 @@ class Volume : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::File
         std::map<cvr::SceneObject*,cvr::MenuCheckbox*> _transferFuncMap;
         std::map<cvr::SceneObject*,cvr::MenuRangeValue*> _isosurfaceValueMap;
         std::map<cvr::SceneObject*,cvr::MenuRangeValue*> _transparencyValueMap;
+
+        // delete and save position controls
+        std::map<cvr::SceneObject*,cvr::MenuButton*> _saveMap;
         std::map<cvr::SceneObject*,cvr::MenuButton*> _deleteMap;
 
         // animation controls
@@ -109,6 +119,8 @@ class Volume : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::File
         std::map<cvr::SceneObject*,cvr::MenuCheckbox*> _transferHueMap;
         std::map<cvr::SceneObject*,cvr::MenuCheckbox*> _transferGrayMap;
 
+		std::map<cvr::MenuItem*, std::string> _menuFileMap;
+        std::map<std::string, std::pair<float, osg::Matrix> > _locInit;
         std::map<cvr::SceneObject*,volumeinfo*> _volumeMap;
 
         // different load operators
@@ -124,6 +136,11 @@ class Volume : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::File
         osg::Image* allocateVolume(int x, int y, int z, int &sizeS, int &sizeT, int &sizeR, int numberBytesPerComponent, GLenum &datatype); 
 	    void clampToNearestValidPowerOfTwo(int& sizeX, int& sizeY, int& sizeZ, 
         int s_maximumTextureSize, int t_maximumTextureSize, int r_maximumTextureSize);
+
+		// persist configuration updates
+		void writeConfigFile();
+		void removeAll();
+        void deleteVolume(cvr::SceneObject* vol);
 };
 
 #endif

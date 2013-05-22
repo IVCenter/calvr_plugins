@@ -111,15 +111,15 @@ void ANIMLoadGeometryCreator(PositionAttitudeTransform** xformScaleFwd, Position
     osg::Box *leftBox, *rightBox;
 
     osg::ref_ptr<osgText::Text> text = new osgText::Text();
-    text->setText("Combine");
+    text->setText("Line");
     text->setCharacterSize(0.1);
     text->setPosition(osg::Vec3(-0.4, 0, 0));
     text->setDrawMode(osgText::Text::TEXT);
     text->setAxisAlignment(osgText::Text::XZ_PLANE);
     text->setColor(osg::Vec4(1,1,1,1));
-//    combineGeode->addDrawable(text);
+    combineGeode->addDrawable(text);
 
-    ANIMCreateSingleSwitchAnimation(&((*shapeSwitchEntryArray)[3]), combineGeode, 2);
+    ANIMCreateSingleSwitchAnimation(&((*shapeSwitchEntryArray)[3]), combineGeode, 2.5);
     
     // Make geometry for delete button
     osg::Geode * deleteGeode = new osg::Geode();
@@ -378,16 +378,19 @@ void ANIMLoadGeometryCreatorReference(Switch **snapWireframeSwitch, Switch **sna
     CAVEGeodeSnapWireframeBox *snapWireframeBox = new CAVEGeodeSnapWireframeBox();
     CAVEGeodeSnapWireframeCylinder * snapWireframeCylinder = new CAVEGeodeSnapWireframeCylinder();
     CAVEGeodeSnapWireframeCone * snapWireframeCone = new CAVEGeodeSnapWireframeCone();
+    CAVEGeodeSnapWireframeLine * snapWireframeLine = new CAVEGeodeSnapWireframeLine();
 
     (*snapWireframeSwitch)->addChild(snapWireframeBox);
     (*snapWireframeSwitch)->addChild(snapWireframeCylinder);
     (*snapWireframeSwitch)->addChild(snapWireframeCone);
+    (*snapWireframeSwitch)->addChild(snapWireframeLine);
     (*snapWireframeSwitch)->setAllChildrenOff();
 
     *snapSolidshapeSwitch = new Switch();
     (*snapSolidshapeSwitch)->addChild(new CAVEGeodeSnapSolidshapeBox());
     (*snapSolidshapeSwitch)->addChild(new CAVEGeodeSnapSolidshapeCylinder());
     (*snapSolidshapeSwitch)->addChild(new CAVEGeodeSnapSolidshapeCone());
+    (*snapSolidshapeSwitch)->addChild(new CAVEGeodeSnapSolidshapeLine());
     (*snapSolidshapeSwitch)->setAllChildrenOff();
 }
 

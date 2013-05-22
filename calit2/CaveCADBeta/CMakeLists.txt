@@ -18,6 +18,7 @@ SET(PLUGIN_HEADERS
 	DesignStates/DSTexturePallette.h
 	DesignStates/DSViewpoints.h
 	DesignStates/DSObjectPlacer.h
+	DesignStates/DSLights.h
 	DesignStateIntersector.h
 	DesignObjectHandler.h
 	DesignObjectIntersector.h
@@ -66,7 +67,7 @@ SET(PLUGIN_HEADERS
 	AnimationModeler/ANIMTexturePallette.h
 	AnimationModeler/ANIMObjectHandler.h
 	AnimationModeler/ANIMObjectPlacer.h
-
+	AnimationModeler/ANIMLights.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -90,6 +91,7 @@ ADD_LIBRARY(${LIB_NAME}
 	DesignStates/DSTexturePallette.cpp
 	DesignStates/DSViewpoints.cpp
 	DesignStates/DSObjectPlacer.cpp
+	DesignStates/DSLights.cpp
 	DesignStateIntersector.cpp
 	DesignObjectHandler.cpp
 	DesignObjectIntersector.cpp
@@ -138,6 +140,7 @@ ADD_LIBRARY(${LIB_NAME}
 	AnimationModeler/ANIMTexturePallette.cpp
 	AnimationModeler/ANIMObjectHandler.cpp
 	AnimationModeler/ANIMObjectPlacer.cpp
+	AnimationModeler/ANIMLights.cpp
 )
 
 INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})

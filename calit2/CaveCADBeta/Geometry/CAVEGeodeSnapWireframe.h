@@ -104,5 +104,18 @@ class CAVEGeodeSnapWireframeCone: public CAVEGeodeSnapWireframe
 };
 
 
+/***************************************************************
+* Class: CAVEGeodeSnapWireframeLine
+***************************************************************/
+class CAVEGeodeSnapWireframeLine: public CAVEGeodeSnapWireframe
+{
+  public:
+    CAVEGeodeSnapWireframeLine();
+
+    virtual void resize(osg::Vec3 &gridVect);
+    virtual void initBaseGeometry();
+};
+
+
 #endif
 

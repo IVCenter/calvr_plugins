@@ -17,7 +17,7 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
         GraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~GraphObject();
 
-        bool addGraph(std::string name);
+        bool addGraph(std::string patient, std::string name);
         int getNumGraphs()
         {
             return _graph->getNumGraphs();
@@ -36,6 +36,9 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
         void setBarVisible(bool b);
         bool getBarVisible();
         bool getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point);
+
+        virtual void dumpState(std::ostream & out);
+        virtual bool loadState(std::istream & in);
 
         void setLayoutDoesDelete(bool b)
         {
@@ -62,11 +65,21 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
         DataGraph * _graph;
 
         cvr::MenuList * _mgdList;
+        cvr::MenuList * _ldmList;
 
         std::string _pdfDir;
 
         int _activeHand;
         bool _layoutDoesDelete;
+
+        struct LoadData
+        {
+            std::string patient;
+            std::string name;
+            std::string displayName;
+        };
+
+        std::vector<LoadData> _loadedGraphs;
 };
 
 #endif
