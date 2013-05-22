@@ -49,6 +49,7 @@ class TextureManager
 {
 public:
 	TextureManager(unsigned int gid);
+	~TextureManager();
 	void Draw();
 	void DrawBorder();
 	void MoveTo(double x, double y);

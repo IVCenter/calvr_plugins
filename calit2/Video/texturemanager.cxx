@@ -6,6 +6,12 @@ TextureManager::TextureManager(unsigned int gid) : m_gid(gid), _scene(0)
 {
 
 }
+
+TextureManager::~TextureManager()
+{
+	printf("Deleting a texture manager\n");
+}
+
 void TextureManager::SetSceneObject(cvr::SceneObject* scene)
 {
 	_scene = scene;

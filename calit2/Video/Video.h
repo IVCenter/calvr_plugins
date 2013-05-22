@@ -53,7 +53,6 @@ protected:
 	mutable std::list<cvr::MenuItem*> m_removeVideo;
 	mutable std::map<unsigned int, TextureManager*> m_gidMap;
 
-	mutable std::list<cvr::SceneObject*> m_sceneDelete;
 	mutable std::list<cvr::MenuItem*> m_menuDelete;
 	mutable std::list<TextureManager*> m_managerAdd;
 	mutable std::list<TextureManager*> m_managerLoad;
