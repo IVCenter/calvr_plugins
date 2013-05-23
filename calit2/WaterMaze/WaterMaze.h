@@ -5,12 +5,9 @@
 #include <cvrKernel/ComController.h>
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrKernel/FileHandler.h>
-#include <cvrKernel/InteractionManager.h>
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/SceneManager.h>
 #include <cvrKernel/SceneObject.h>
-
-#include <cvrUtil/Intersection.h>
 #include <cvrConfig/ConfigManager.h>
 
 #include <cvrMenu/SubMenu.h>
@@ -30,15 +27,12 @@
 #include <osgText/Text>
 #include <osgDB/ReadFile>
 
-#include <string.h>
 #include <vector>
 #include <map>
 
+#include <string.h>
 #include <iostream>
 #include <stdio.h>
-#include <netdb.h>
-#include <sys/socket.h>
-#include <X11/Xlib.h>
 
 namespace WaterMaze
 {
@@ -59,7 +53,7 @@ protected:
     void loadModels();
     void clear();
     void reset();
-    void newHiddenTile();
+    void chooseNewTile();
 
     float randomFloat(float min, float max)
     {
@@ -73,13 +67,15 @@ protected:
 
     static WaterMaze * _myPtr;
 
-    cvr::SubMenu * _WaterMazeMenu, * _positionMenu;
+    cvr::SubMenu * _WaterMazeMenu, * _positionMenu, * _detailsMenu;
     cvr::MenuButton * _loadButton, * _clearButton, *_newTileButton;
-    cvr::MenuCheckbox * _gridCB;
+    cvr::MenuCheckbox * _gridCB, * _wallColorCB, * _shapesCB, * _furnitureCB;
     std::vector<cvr::MenuButton *> _positionButtons;
 
     osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry
-    osg::ref_ptr<osg::Switch> _gridSwitch; // grid on floor
+
+    osg::ref_ptr<osg::Switch> _gridSwitch, _wallColorSwitch, _wallWhiteSwitch,
+        _shapeSwitch, _furnitureSwitch;
     std::map<osg::Vec3, osg::Switch *> _tileSwitches;
     
     std::vector<osg::MatrixTransform *> _tilePositions;
