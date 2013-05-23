@@ -14,7 +14,6 @@
 #include <cassert>
 #include <sstream>
 #include <iostream>
-#include <unistd.h>
 
 #include "sph-cache.hpp"
 #include "cube.hpp"
@@ -25,6 +24,7 @@
 #include <sys/stat.h>
 #ifndef WIN32
 #include <sys/time.h>
+#include <unistd.h>
 #else
 #include <cvrUtil/TimeOfDay.h>
 #include <Windows.h>
