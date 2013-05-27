@@ -27,22 +27,6 @@ struct JointNode
     osg::Vec4 getColor(std::string dc);
 };
 
-struct NavigationSphere
-{
-    osg::MatrixTransform*   translate;
-    osg::MatrixTransform*   rotate;
-    osg::Geode*             geode;
-
-    osg::Vec3 position;
-    osg::Vec3 prevPosition;
-
-    int lock;
-    bool activated;
-    NavigationSphere();
-
-    void update(osg::Vec3d position2, osg::Vec4f orientation);
-};
-
 struct Skeleton
 {
     static bool moveWithCam;
@@ -50,7 +34,6 @@ struct Skeleton
     static osg::Vec3d camPos2;
     static osg::Quat camRot;
     static osg::Quat camRot2;
-    static bool navSpheres;
 
     // are hands holding objects?
     bool leftHandBusy;
@@ -59,7 +42,6 @@ struct Skeleton
     bool attached;
     MCylinder bone[15];
     MCylinder cylinder;
-    NavigationSphere navSphere;
     Skeleton();
     JointNode joints[25];
     void update(int joint_id, float newx, float newy, float newz, float neworx, float newory, float neworz, float neworw);

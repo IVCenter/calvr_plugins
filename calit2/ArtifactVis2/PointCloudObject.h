@@ -6,6 +6,19 @@
 #include <cvrMenu/MenuCheckbox.h>
 
 #include <osg/Uniform>
+#include <cvrKernel/CVRPlugin.h>
+#include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/NodeMask.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrUtil/OsgMath.h>
+#include <PluginMessageType.h>
+
+#include <osg/Depth>
+
+#include <iostream>
+#include <cstdio>
+#include <fstream>
+#include <cmath>
 
 #include <string>
 

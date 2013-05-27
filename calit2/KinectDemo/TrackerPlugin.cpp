@@ -1,4 +1,4 @@
-#include <TrackerPlugin.h>
+#include <cvrInput/TrackerPlugin.h>
 
 #include <cvrConfig/ConfigManager.h>
 
@@ -18,6 +18,8 @@ TrackerPlugin::TrackerPlugin()
     _numBodies = 0;
     _numButtons = 0;
     _numVal = 0;
+ //
+
     _buttonMask = 0;
 }
 
@@ -27,52 +29,56 @@ TrackerPlugin::~TrackerPlugin()
 
 bool TrackerPlugin::init(std::string tag)
 {
-    _numBodies = 1;
+        _numBodies = 4;
+        for(int i = 0; i < _numBodies; i++)
+	{
+	    TrackedBody * tb = new TrackedBody;
+	    tb->x = tb->y = tb->z = 0.0;
+	    osg::Quat q;
+	    tb->qx = q.x();
+	    tb->qy = q.y();
+	    tb->qz = q.z();
+	    tb->qw = q.w();
+	    _bodyList.push_back(tb);
+	    _bodyListMem.push_back(tb);
+	}
+    
 
-    for (int i = 0; i < _numBodies; i++)
-    {
-        TrackedBody* tb = new TrackedBody;
-        tb->x = tb->y = tb->z = 0.0;
-        osg::Quat q;
-        tb->qx = q.x();
-        tb->qy = q.y();
-        tb->qz = q.z();
-        tb->qw = q.w();
-        _bodyList.push_back(tb);
-        _bodyListMem.push_back(tb);
-    }
+        _numButtons = 2;
 
-    _numButtons = 2;
-    _numVal = 0;
-
-    for (int i = 0; i < _numVal; i++)
-    {
-        _valList.push_back(0.0);
-        _valListMem.push_back(0.0);
-    }
+        _numVal = 0;
+        for(int i = 0; i < _numVal; i++)
+        {
+            _valList.push_back(0.0);
+            _valListMem.push_back(0.0);
+        }
+    
 
     _buttonMask = 0;
     _buttonMaskMem = 0;
+
     return true;
 }
 
-TrackerBase::TrackedBody* TrackerPlugin::getBody(int index)
+TrackerBase::TrackedBody * TrackerPlugin::getBody(int index)
 {
-    if (index < 0 || index >= _numBodies)
+    if(index < 0 || index >= _numBodies)
     {
         return NULL;
     }
 
     return _bodyList[index];
 }
-void TrackerPlugin::setBody(int index, TrackedBody* tb)
+void TrackerPlugin::setBody(int index, TrackedBody * tb)
 {
-    if (index < 0 || index >= _numBodies)
+    if(index < 0 || index >= _numBodies)
     {
+
     }
     else
     {
-        _bodyListMem[index] = tb;
+
+    *_bodyListMem[index] = *tb;
     }
 }
 
@@ -83,12 +89,20 @@ unsigned int TrackerPlugin::getButtonMask()
 
 void TrackerPlugin::setButtonMask(int buttonMask)
 {
-    _buttonMaskMem = buttonMask;
+  _buttonMaskMem = buttonMask;
 }
+void TrackerPlugin::setButton(int buttonNum, bool state)
+{
+  unsigned int buttonMask = 1 << buttonNum;
+  if(state)
+  _buttonMaskMem |= buttonMask;
+  else
+  _buttonMaskMem &= (~buttonMask);
 
+}
 float TrackerPlugin::getValuator(int index)
 {
-    if (index < 0 || index >= _numVal)
+    if(index < 0 || index >= _numVal)
     {
         return 0.0;
     }
@@ -96,9 +110,10 @@ float TrackerPlugin::getValuator(int index)
     return _valList[index];
 }
 
-void TrackerPlugin::setValuator(int index, float val)
+void TrackerPlugin::setValuator(int index,float val)
 {
-    _valListMem[index] = val;
+  _valListMem[index] = val; 
+
 }
 
 int TrackerPlugin::getNumBodies()
@@ -117,34 +132,33 @@ int TrackerPlugin::getNumButtons()
 }
 
 void TrackerPlugin::update(
-    std::map<int, std::list<InteractionEvent*> >& eventMap)
+        std::map<int,std::list<InteractionEvent*> > & eventMap)
 {
-    if (_numButtons)
+    if(_numButtons)
     {
-        _buttonMask = 0;
-
-        for (int i = 0; i < _numButtons; i++)
-        {
-            _buttonMask = _buttonMask | _buttonMaskMem;
-        }
+            _buttonMask = _buttonMaskMem;
     }
 
-    if (_numVal)
+    if(_numVal)
     {
-        for (int i = 0; i < _numVal; i++)
+        for(int i = 0; i < _numVal; i++)
         {
             _valList[i] = _valListMem[i];
         }
     }
 
-    for (int i = 0; i < _numBodies; i++)
+
+    for(int i = 0; i < _numBodies; i++)
     {
         _bodyList[i]->x = _bodyListMem[i]->x;
         _bodyList[i]->y = _bodyListMem[i]->y;
         _bodyList[i]->z = _bodyListMem[i]->z;
+
+
         _bodyList[i]->qx = _bodyListMem[i]->qx;
         _bodyList[i]->qy = _bodyListMem[i]->qy;
         _bodyList[i]->qz = _bodyListMem[i]->qz;
         _bodyList[i]->qw = _bodyListMem[i]->qw;
+
     }
 }

@@ -1,7 +1,4 @@
 #include "ArtifactVis2.h"
-#ifdef WITH_OSSIMPLANET
-#include "../OssimPlanet/OssimPlanet.h"
-#endif
 
 #include <iostream>
 #include <sstream>
@@ -213,7 +210,80 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
 	cerr << "Key: " << keyTie->getKey()  << " " << keyTie->getMod() <<" UnPressed\n";
 	}
 */  
-        if(keyTie->getKey() != currentKey)
+	//cerr << "Key: " << keyTie->getKey()  << "\n";
+	if(true)
+	{
+          int code = keyTie->getKey();
+
+            osg::Matrix m;
+
+            osg::Matrix m2;
+	    float yOffset = 100.0;
+
+            osg::Vec3 viewerPos = TrackingManager::instance()->getHeadMat().getTrans();
+
+            osg::Matrix objmat =SceneManager::instance()->getObjectTransform()->getMatrix();
+            NavMode mode = cvr::Navigation::instance()->getButtonMode(0);
+
+	  if(code == 65362)
+          {
+		//Up
+//		cerr << "Up\n";
+            if(mode == DRIVE || mode == FLY)
+	    {
+	    osg::Quat rot = Quat(-0.03,0,0,1);
+	    m.makeRotate(rot);
+            m2.makeTranslate(osg::Vec3(0,0,0));
+
+	    }
+	    else
+	    {
+            m2.makeTranslate(osg::Vec3(0,-yOffset * Navigation::instance()->getScale(),0));
+	    }
+            objmat = objmat * osg::Matrix::translate(-viewerPos) * m * m2 * osg::Matrix::translate(viewerPos);
+            SceneManager::instance()->setObjectMatrix(objmat);
+	  }
+	  else if(code == 65364)
+          {
+		//Down
+	//	cerr << "Down\n";
+            if(mode == DRIVE || mode == FLY)
+	    {
+	    osg::Quat rot = Quat(0.03,0,0,1);
+	    m.makeRotate(rot);
+            m2.makeTranslate(osg::Vec3(0,0,0));
+
+	    }
+	    else
+	    {
+            m2.makeTranslate(osg::Vec3(0,yOffset * Navigation::instance()->getScale(),0));
+	    }
+            objmat = objmat * osg::Matrix::translate(-viewerPos) * m * m2 * osg::Matrix::translate(viewerPos);
+            SceneManager::instance()->setObjectMatrix(objmat);
+	  }
+	  else if(code == 65361)
+          {
+		//Left
+	//	cerr << "Left\n";
+	    osg::Quat rot = Quat(0,0.03,0,1);
+	    m.makeRotate(rot);
+            m2.makeTranslate(osg::Vec3(0,0,0));
+            objmat = objmat * osg::Matrix::translate(-viewerPos) * m * m2 * osg::Matrix::translate(viewerPos);
+            SceneManager::instance()->setObjectMatrix(objmat);
+	  }
+	  else if(code == 65363)
+          {
+		//Right
+	//	cerr << "Right\n";
+	    osg::Quat rot = Quat(0,-0.03,0,1);
+	    m.makeRotate(rot);
+            m2.makeTranslate(osg::Vec3(0,0,0));
+            objmat = objmat * osg::Matrix::translate(-viewerPos) * m * m2 * osg::Matrix::translate(viewerPos);
+            SceneManager::instance()->setObjectMatrix(objmat);
+	  }
+	}
+	bool annotationsOn = false;
+        if(keyTie->getKey() != currentKey && annotationsOn)
           {
           int inc = findActiveAnnot();
           if(inc != -1)
@@ -497,7 +567,7 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
             cerr << "Select On\n";
         if (_selectArtifactCB->getValue())
         {
-            cerr << "Select On\n";
+           // cerr << "Select On\n";
             if (true)
             {
                 osg::Matrix w2l = PluginHelper::getWorldToObjectTransform();
@@ -509,13 +579,12 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
                 int index = -1;
                 int queryIndex = -1;
                 double distance;
-                cerr << "got Interaction\n";
+               // cerr << "got Interaction\n";
 
                 for (int q = 0; q < _query.size(); q++)
                 {
                    // int n = _querySfIndex[q];
                     vector<Artifact*> artifacts = _query[q]->artifacts;
-                    if(_query[q]->active) cerr << "Query Active\n";
                     if (_query[q]->active)
                     {
                         for (int i = 0; i < artifacts.size(); i++)
@@ -541,7 +610,7 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
 
                 if (index != -1)
                 {
-                    std::cerr << "Got sphere intersection with index " << index << std::endl;
+                    //std::cerr << "Got sphere intersection with index " << index << std::endl;
                     setActiveArtifact(100, CYLINDER, index, queryIndex);
                     return true;
                 }
@@ -1484,28 +1553,26 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
                //cerr << "Found Model\n" << endl;
                if(!_pointClouds[i]->loaded)
                {
-                //Model* newModel = new Model();
-               //addNewPC(i);
-               addNewPCTest(i);
+               addNewPC(i);
                }
                else
                {
-		_pointClouds[i]->so->attachToScene();
+		_pointClouds[i]->pcObject->attachToScene();
 		_pointClouds[i]->visible = true;
-		_pointClouds[i]->active = true;
-		_pointClouds[i]->visibleMap->setValue(true);
-		_pointClouds[i]->activeMap->setValue(true);
+	//	_pointClouds[i]->active = true;
+	//	_pointClouds[i]->visibleMap->setValue(true);
+	//	_pointClouds[i]->activeMap->setValue(true);
                }
             }
             else
             {
                if(_pointClouds[i]->visible)
                {
-		_pointClouds[i]->so->detachFromScene();
+		_pointClouds[i]->pcObject->detachFromScene();
 		_pointClouds[i]->visible = false;
-		_pointClouds[i]->active = false;
-		_pointClouds[i]->visibleMap->setValue(false);
-		_pointClouds[i]->activeMap->setValue(false);
+	//	_pointClouds[i]->active = false;
+	//	_pointClouds[i]->visibleMap->setValue(false);
+	//	_pointClouds[i]->activeMap->setValue(false);
 
                }
 
@@ -1515,61 +1582,6 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
         
     }
 
-/*
-    for (int i = 0; i < _showPCCB.size(); i++)
-    {
-        if (menuItem == _showPCCB[i])
-        {
-            if (_showPCCB[i]->getValue())
-            {
-                if (_pcRoot[i]->getNumChildren() == 0)
-                    readPointCloud(i);
-
-                _root->addChild(_pcRoot[i].get());
-            }
-            else
-            {
-                _root->removeChild(_pcRoot[i].get());
-            }
-        }
-
-        if (menuItem == _reloadPC[i])
-        {
-            _root->removeChild(_pcRoot[i].get());
-            reloadSite(i);
-            readPointCloud(i);
-            _root->addChild(_pcRoot[i].get());
-        }
-    }
-    for (int i = 0; i < _showHudCB.size(); i++)
-    {
-        if (menuItem == _showHudCB[i])
-        {
-            if (_showHudCB[i]->getValue())
-            {
-                if (_hudRoot[i]->getNumChildren() == 0)
-                    readHudFile(i);
-                SceneManager::instance()->getScene()->addChild(_hudRoot[i]);
-//                    _root->addChild(_hudRoot[i]);
-            }
-            else
-            {
-                SceneManager::instance()->getScene()->removeChild(_hudRoot[i]);
-             //   _root->removeChild(_hudRoot[i]);
-            }
-        }
-
-        if (menuItem == _reloadHud[i])
-        {
-            //SceneManager::instance()->getScene()->removeChild(_hudRoot[i]);
-            //_root->removeChild(_hudRoot[i].get());
-            //reloadSite(i);
-            //readHudFile(i);
-            // SceneManager::instance()->getScene()->addChild(_hudRoot[i]);
-            //_root->addChild(_hudRoot[i].get());
-        }
-    }
-*/
     std::vector<Table*>::iterator t = _tables.begin();
 
     for (; t < _tables.end(); t++)
@@ -1619,7 +1631,11 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
             if (ComController::instance()->isMaster())
             {
                 std::stringstream ss;
+#ifdef WIN32
+                ss <<  "ArchInterface -b ";
+#else
                 ss <<  "./ArchInterface -b ";
+#endif
                 ss << "\"";
                 ss << (*t)->name;
                 ss << "\" ";
@@ -1914,22 +1930,7 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
     }
 
     if (menuItem == _scaleBar)
-    {   /*
-           if (_scaleBar->getValue())
-           {
-               osg::Matrix w2l = PluginHelper::getWorldToObjectTransform();
-               osg::Vec3d start(0, 0, 0);
-               start = start * w2l;
-               cout << start.x() << " " << start.y() << " " << start.z() << "\n";
-               std::cerr << selectArtifactSelected() << "\n";
-               loadScaleBar(start);
-           }
-           else
-           {
-               _root->removeChild(_scaleBarModel);
-           }
-        */
-//bangHand
+    {   
 
         Matrixd camMat = PluginHelper::getHandMat(0);
         float cscale = 1; //PluginHelper::getObjectScale();
@@ -2700,17 +2701,7 @@ void ArtifactVis2::displayArtifacts(QueryGroup* query)
     cf->setMode(osg::CullFace::BACK);
     ss->setAttributeAndModes(cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
 
-    // cout << center.x() << ", " << center.y() << endl;
-    if (_ossim)
-    {
-#ifdef WITH_OSSIMPLANET
-        OssimPlanet::instance()->addModel(sphereGeode, center.y(), center.x(), Vec3(1.0, 1.0, 1.0), 10, 0, 0, 0);
-#endif
-    }
-    else
-    {
         root_node->addChild(sphereGeode);
-    }
 
 }
 
@@ -2723,686 +2714,6 @@ osg::Drawable* ArtifactVis2::createObject(std::string dc, float tessellation, Ve
     shapeDrawable->setTessellationHints(hints);
     shapeDrawable->setColor(_colors[dc2Int(dc)]);
     return shapeDrawable;
-}
-void ArtifactVis2::readPointCloud(int index)
-{
-    Vec3Array* coords;
-    Vec4Array* colors;
-    string filename = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append(_showPCCB[index]->getText()); //Replaced
-    string type = filename;
-
-    bool nvidia = ConfigManager::getBool("Plugin.ArtifactVis2.Nvidia");
-    if (!_coordsPC[index])
-    {
-        coords = new Vec3Array();
-        colors = new Vec4Array();
-        cout << "Reading point cloud data from : " << filename <<  "..." << endl;
-        ifstream file(filename.c_str());
-        type.erase(0, (type.length() - 3));
-        cout << type << "\n";
-        string line;
-        bool read = false;
-        cout << _pcFactor[index] << "\n";
-       // int factor = _pcFactor[index];
-        int factor = 1;
-        if((type == "ply" || type == "xyb") && nvidia)
-        {
-            cout << "Reading XYB" << endl;
-
-            //float x,y,z;
-            //bamop
-            float scale = 9;
-            //	osg::Vec3 offset(transx, transy, transz);
-            //_activeObject = new PointsObject("Points",true,false,false,true,true);
-
-
-            cout << "File: " << filename << endl;
-            PointsLoadInfo pli;
-            pli.file = filename;
-            pli.group = new osg::Group();
-
-            PluginHelper::sendMessageByName("Points",POINTS_LOAD_REQUEST,(char*)&pli);
-
-            if(!pli.group->getNumChildren())
-            {
-                std::cerr << "PointsWithPans: Error, no points loaded for file: " << pli.file << std::endl;
-                return;
-            }
-
-            float pscale;
-            if(type == "xyb")
-            {
-                pscale = 100;
-            }
-            else
-            {
-                pscale = 0.3;
-            }
-            pscale = ConfigManager::getFloat("Plugin.ArtifactVis2.scaleP", 0);
-            cerr << "Scale of P is " << pscale << "\n";
-
-            osg::Uniform*  _scaleUni = new osg::Uniform("pointScale",1.0f * pscale);
-            pli.group->getOrCreateStateSet()->addUniform(_scaleUni);
-            //_activeObject->attachToScene();
-            //_activeObject->setNavigationOn(false);
-            //_activeObject->setScale(scale);
-            //_activeObject->setPosition(_pcPos[index]);
-            //_activeObject->setNavigationOn(true);
-            //_activeObject->addChild(pli.group.get());
-
-            MatrixTransform* rotTransform = new MatrixTransform();
-            Matrix pitchMat;
-            Matrix yawMat;
-            Matrix rollMat;
-            pitchMat.makeRotate(DegreesToRadians(_pcRot[index].x()), 1, 0, 0);
-            yawMat.makeRotate(DegreesToRadians(_pcRot[index].y()), 0, 1, 0);
-            rollMat.makeRotate(DegreesToRadians(_pcRot[index].z()), 0, 0, 1);
-            rotTransform->setMatrix(pitchMat * yawMat * rollMat);
-            MatrixTransform* scaleTransform = new MatrixTransform();
-            Matrix scaleMat;
-            scaleMat.makeScale(_pcScale[index]);
-            scaleTransform->setMatrix(scaleMat);
-            MatrixTransform* posTransform = new MatrixTransform();
-            Matrix posMat;
-            Matrix invertMat;
-            posMat.makeTranslate(_pcPos[index]);
-            posTransform->setMatrix(posMat);
-            MatrixTransform* invTransform = new MatrixTransform();
-            rotTransform->addChild(pli.group.get());
-            cerr << "Num childs " << pli.group.get()->getNumChildren() << "\n";
-            scaleTransform->addChild(rotTransform);
-            posTransform->addChild(scaleTransform);
-
-            _pcRoot[index] = new MatrixTransform();
-            _pcRoot[index]->addChild(posTransform);
-            cout << "Loaded" << endl;
-            cerr << "Num childs2 " << _pcRoot[index]->getNumChildren() << "\n";
-        }
-        else
-        {
-            if (file.is_open())
-            {
-                int pcount = 0;
-                int bten = factor - 1;
-                int cptx = 0;
-                double transx = 0;
-                double transy = 0;
-                double transz = 0;
-
-                while (file.good())
-                {
-                    getline(file, line);
-                    string lineout = line;
-
-                    if (type == "ptx")
-                    {
-                        vector<string> entries;
-                        //vector<string>array;
-                        string token;
-                        //string tmp = "this@is@a@line";
-                        istringstream iss(line);
-                        char lim = ' ';
-
-                        while ( getline(iss, token, lim) )
-                        {
-                            entries.push_back(token);
-                        }
-
-                        if (entries.size() < 7)
-                        {
-                            cout << lineout << "\n";
-
-                            if (cptx == 9)
-                            {
-                                cptx = 0;
-                                //cout << lineout << "\n";
-                                std::stringstream ss;
-                                ss.precision(19);
-                                transx = atof(entries[0].c_str());
-                                transy = atof(entries[0].c_str());
-                                transz = atof(entries[0].c_str());
-                            }
-                            else
-                            {
-                                cptx++;
-                            }
-                        }
-                        else
-                        {
-                            std::stringstream ss;
-                            ss.precision(19);
-                            double x = atof(entries[0].c_str()) + transx;
-                            double y = atof(entries[1].c_str()) + transy;
-                            double z = atof(entries[2].c_str()) + transz;
-                            double r = atof(entries[4].c_str()) / 255;
-                            double g = atof(entries[5].c_str()) / 255;
-                            double b = atof(entries[6].c_str()) / 255;
-                            coords->push_back(Vec3d(x, y, z));
-                            _avgOffset[index] += Vec3d(x, y, z);
-                            colors->push_back(Vec4d(r, g, b, 1.0));
-                            bten = 0;
-                            pcount++;
-                        }
-                    }
-
-                    if (line.empty()) break;
-
-                    if (read)
-                    {
-                        bten++;
-                        vector<string> entries;
-                        int ck = 0;
-
-                        /*
-                        while(true)
-                        {
-                            if(line.find(" ")==line.rfind(" "))
-                                break;
-                            else
-                            {
-                                entries.push_back(line.substr(0,line.find(" ")));
-                                line = line.substr(line.find(" ")+1);
-                                cout << line << "\n";
-                            }
-                        }
-                        */
-                        if (bten == factor)
-                        {
-                            while (ck < 7)
-                            {
-                                entries.push_back(line.substr(0, line.find(" ")));
-                                line = line.substr(line.find(" ") + 1);
-                                //cout << line << "\n";
-                                ck++;
-                            }
-                        }
-
-                        //cout << entries.size();
-                        if ((type == "ply") && (bten == factor))
-                        {
-                            float x = atof(entries[0].c_str());
-                            float y = atof(entries[1].c_str());
-                            float z = atof(entries[2].c_str());
-                            float r = atof(entries[3].c_str()) / 255;
-                            float g = atof(entries[4].c_str()) / 255;
-                            float b = atof(entries[5].c_str()) / 255;
-                            coords->push_back(Vec3d(x, y, z));
-                            _avgOffset[index] += Vec3d(x, y, z);
-                            colors->push_back(Vec4f(r, g, b, 1.0));
-                            pcount++;
-                            bten = 0;
-                        }
-
-                        if ((type == "txt") && (bten == factor))
-                        {
-                            float x = atof(entries[0].c_str());
-                            float y = atof(entries[1].c_str());
-                            float z = atof(entries[2].c_str());
-                            float r = atof(entries[3].c_str()) / 255;
-                            float g = atof(entries[4].c_str()) / 255;
-                            float b = atof(entries[5].c_str()) / 255;
-                            coords->push_back(Vec3d(x, y, z));
-                            _avgOffset[index] += Vec3d(x, y, z);
-                            colors->push_back(Vec4f(r, g, b, 1.0));
-                            pcount++;
-                            bten = 0;
-                        }
-                        else if ((type == "pts") && (bten == factor))
-                        {
-                            std::stringstream ss;
-                            ss.precision(19);
-                            double x = atof(entries[0].c_str());
-                            double y = atof(entries[1].c_str());
-                            double z = atof(entries[2].c_str());
-                            double r = atof(entries[4].c_str()) / 255;
-                            double g = atof(entries[5].c_str()) / 255;
-                            double b = atof(entries[6].c_str()) / 255;
-                            coords->push_back(Vec3d(x, y, z));
-                            _avgOffset[index] += Vec3d(x, y, z);
-                            colors->push_back(Vec4d(r, g, b, 1.0));
-                            bten = 0;
-                            pcount++;
-
-                            if (pcount == 7216)
-                            {
-                                //std::stringstream ss;
-                                //ss.precision(19);
-                                printf("TOP %f %f %f\n", x, y, z);
-                                cout << "Coords: " << entries[0].c_str() << " " << entries[1].c_str() << " " << entries[2].c_str() << "\n";
-                                //cout << "Coords: " << coords[7216][0] << " " << coords[7216][1] << " " << coords[7216][2] << "\n";
-                            }
-                        }
-                    }
-
-                    if (type == "pts")
-                    {
-                        read = true;
-                    }
-
-                    if (line == "end_header")
-                        read = true;
-                }
-
-                _coordsPC[index] = coords;
-                _colorsPC[index] = colors;
-                cout << "Finished Loading, Total Vertices: " << pcount << "\n";
-                //cout << "Coords: " << coords<< " " << y << " " << z << "\n";
-            }
-            else
-            {
-                cout << "Unable to open file: " << filename << endl;
-                return;
-            }
-        }
-    }
-    if(!nvidia)
-    {
-     //   coords = _coordsPC[index];
-       // colors = _colorsPC[index];
-        _avgOffset[index] /= coords->size();
-
-        Geometry* pointCloud = new Geometry();
-        Geode* pointGeode = new Geode();
-        pointCloud->setVertexArray(coords);
-        pointCloud->setColorArray(colors);
-        pointCloud->setColorBinding(Geometry::BIND_PER_VERTEX);
-        DrawElementsUInt* points = new DrawElementsUInt(PrimitiveSet::POINTS, 0);
-
-        for (int i = 0; i < coords->size(); i++)
-        {
-            points->push_back(i);
-        }
-
-        pointCloud->addPrimitiveSet(points);
-        pointGeode->addDrawable(pointCloud);
-        StateSet* ss = pointGeode->getOrCreateStateSet();
-        ss->setMode(GL_LIGHTING, StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
-        if(true)
-        {
-        MatrixTransform* rotTransform = new MatrixTransform();
-        Matrix pitchMat;
-        Matrix yawMat;
-        Matrix rollMat;
-        pitchMat.makeRotate(DegreesToRadians(_pcRot[index].x()), 1, 0, 0);
-        yawMat.makeRotate(DegreesToRadians(_pcRot[index].y()), 0, 1, 0);
-        rollMat.makeRotate(DegreesToRadians(_pcRot[index].z()), 0, 0, 1);
-        rotTransform->setMatrix(pitchMat * yawMat * rollMat);
-        MatrixTransform* scaleTransform = new MatrixTransform();
-        Matrix scaleMat;
-        scaleMat.makeScale(_pcScale[index]);
-        scaleTransform->setMatrix(scaleMat);
-        MatrixTransform* posTransform = new MatrixTransform();
-        Matrix posMat;
-        Matrix invertMat;
-        //invertMat.invert()
-        posMat.makeTranslate(_pcPos[index]);
-        posTransform->setMatrix(posMat);
-        MatrixTransform* invTransform = new MatrixTransform();
-        rotTransform->addChild(pointGeode);
-        scaleTransform->addChild(rotTransform);
-        posTransform->addChild(scaleTransform);
-        //invertMat = posTransform->getInverseMatrix();
-        //posTransform.invert(posTransform);
-        //invTransform->setMatrix()
-        _pcRoot[index] = new MatrixTransform();
-        _pcRoot[index]->addChild(posTransform);
-        //_pcRoot[index]->addChild(inversMat);
-        //_pcRoot[index]->addChild(pointGeode);
-        //cout << _pcRoot[index][5].x() << "\n";
-        }
-        if(false)
-        {
-//bangPC
-//     19.6  18 89.23 
-            string name = "test";
-Vec3 arrScale = _pcScale[index];
-float currentScale = arrScale.x();
-	    SceneObject * so;
-	    so = new SceneObject(name, false, false, false, true, false);
-	    osg::Switch* switchNode = new osg::Switch();
-	    so->addChild(switchNode);
-	    PluginHelper::registerSceneObject(so,"Test");
-	    so->attachToScene();
-//Add currentNode to switchNode
-     // _models3d[i]->currentModelNode = modelNode;  
-	switchNode->addChild(pointGeode);
-     // _pointClouds[i]->switchNode = switchNode;
-
-     //_root->addChild(modelNode);
-//Add menu system
-	    so->setNavigationOn(true);
-	    so->setMovable(true);
-	    so->addMoveMenuItem();
-	    so->addNavigationMenuItem();
-            float min = 0.0001;
-            float max = 1;
-            so->addScaleMenuItem("Scale",min,max,currentScale);
-	    SubMenu * sm = new SubMenu("Position");
-	    so->addMenuItem(sm);
-
-	    MenuButton * mb;
-	    mb = new MenuButton("Load");
-	    mb->setCallback(this);
-	    sm->addItem(mb);
-
-	    SubMenu * savemenu = new SubMenu("Save");
-	    sm->addItem(savemenu);
-
-	    mb = new MenuButton("Save");
-	    mb->setCallback(this);
-	    savemenu->addItem(mb);
-          //  _pointClouds[i]->saveMap = mb;
-
-	    mb = new MenuButton("Save New Kml");
-	    mb->setCallback(this);
-	    savemenu->addItem(mb);
-           // _pointClouds[i]->saveNewMap = mb;
-
-	    mb = new MenuButton("Reset to Origin");
-	    mb->setCallback(this);
-	    so->addMenuItem(mb);
-           // _pointClouds[i]->resetMap = mb;
-
-            MenuCheckbox * mc;
-	    mc = new MenuCheckbox("Active",true);
-	    mc->setCallback(this);
-	    so->addMenuItem(mc);
-           // _pointClouds[i]->activeMap = mc;
-
-            
-	    mc = new MenuCheckbox("Visible",true);
-	    mc->setCallback(this);
-	    so->addMenuItem(mc);
-           // _pointCloudsi]->visibleMap = mc;
-           // _pointClouds[i]->visible = true;
-
-            float rValue = 0;
-            min = -1;
-            max = 1;
-            MenuRangeValue* rt = new MenuRangeValue("rx",min,max,rValue);
-            rt->setCallback(this);
-	    so->addMenuItem(rt);
-          //  _pointClouds[i]->rxMap = rt;
-
-            rt = new MenuRangeValue("ry",min,max,rValue);
-            rt->setCallback(this);
-	    so->addMenuItem(rt);
-          //  _pointClouds[i]->ryMap = rt;
-
-            rt = new MenuRangeValue("rz",min,max,rValue);
-            rt->setCallback(this);
-	    so->addMenuItem(rt);
-          //  _pointClouds[i]->rzMap = rt;
-/*
-	    mc = new MenuCheckbox("Panel Visible",true);
-	    mc->setCallback(this);
-	    so->addMenuItem(mc);
- //           _query[q]->artifacts[inc]->model->pVisibleMap = mc;
-           // _query[q]->artifacts[inc]->model->pVisible = true;
-*/
-//_pcRot[index].x()
-float rotDegrees[3];
-rotDegrees[0] = _pcRot[index].x();
-rotDegrees[1] = _pcRot[index].y();
-rotDegrees[2] = _pcRot[index].z();
-Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(0,1,0),rotDegrees[2], osg::Vec3d(0,0,1)); 
-Quat currentRot = rot;
-Vec3 currentPos = _pcPos[index];
-
-//     19.6  18 89.23 
-
-
-Vec3 orig = currentPos; 
-cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
-
- so->setPosition(currentPos);     
- so->setScale(currentScale);
- so->setRotation(currentRot);     
-
-orig = so->getPosition();
-currentScale = so->getScale();
-cerr << "So Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
-cerr << "So Scale: " << currentScale << endl;
-   // _pointClouds[i]->so = so;
-   // _pointClouds[i]->pos = so->getPosition();
-  //  _pointClouds[i]->rot = so->getRotation();
-  //  _pointClouds[i]->active = true;
-  //  _pointClouds[i]->loaded = true;
-        }
-    }
-}
-void ArtifactVis2::readSiteFile(int index)
-{
-    const double INCH_IN_MM = 25.4f;
-    const double M_TO_MM = 1.0f;
-    //std::string modelFileName = ConfigManager::getEntry("Plugin.ArtifactVis2.ArchInterfaceFolder").append("Model/").append(_showModelCB[index]->getText());
-    std::string modelFileName = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append(_showModelCB[index]->getText());   //Replaced
-    cerr << "Reading site file: " << modelFileName << " " << index << " ..." << endl;
-
-    if (!modelFileName.empty())
-    {
-        //cout << _modelSFileNode.size() << "\n";
-        if (!_modelSFileNode[index])
-        {
-            _modelSFileNode[index] = osgDB::readNodeFile(modelFileName);
-        }
-
-        Node* modelFileNode = _modelSFileNode[index];
-
-        if (modelFileNode == NULL) cerr << "Error reading file" << endl;
-        else
-        {
-            MatrixTransform* siteScale = new MatrixTransform();
-            Matrix scaleMat;
-           // scaleMat.makeScale(_siteScale[index]*INCH_IN_MM);
-            scaleMat.makeScale(_siteScale[index]);
-            siteScale->setMatrix(scaleMat);
-            siteScale->addChild(modelFileNode);
-
-            if (_ossim)
-            {
-                _siteRoot[index]->addChild(siteScale);
-#ifdef WITH_OSSIMPLANET
-                OssimPlanet::instance()->addModel(_siteRoot[index], _sitePos[index].y(), _sitePos[index].x(), Vec3f(1, 1, 1), 0, 0, 0, 0);
-#endif
-                cout << _sitePos[index].y() << ", " << _sitePos[index].x() << endl;
-            }
-            /*
-                        else if(_osgearth)
-                        {
-                    _siteRoot[index]->addChild(siteScale);
-                            OsgEarthRequest request;
-                        request.lat = _sitePos[index].y();
-                        request.lon = _sitePos[index].x();
-                        cout << "Lat, Lon: " << _sitePos[index].y() << ", " << _sitePos[index].x() << endl;
-                        request.height = 30000.0f;
-                        request.trans = _siteRoot[index];
-                        PluginManager::instance()->sendMessageByName("OsgEarth",OE_ADD_MODEL,(char *) &request);
-
-                        }
-            */
-            else
-            {
-                MatrixTransform* siteRot = new MatrixTransform();
-                //Matrixd rot1;
-                //rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
-                //Matrixd rot2;
-                //rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
-                Matrix pitchMat;
-                Matrix yawMat;
-                Matrix rollMat;
-                pitchMat.makeRotate(DegreesToRadians(_siteRot[index].x()), 1, 0, 0);
-                yawMat.makeRotate(DegreesToRadians(_siteRot[index].y()), 0, 1, 0);
-                rollMat.makeRotate(DegreesToRadians(_siteRot[index].z()), 0, 0, 1);
-                siteRot->setMatrix(pitchMat * yawMat * rollMat);
-                //siteRot->setMatrix(rot2);
-                siteRot->addChild(siteScale);
-                MatrixTransform* siteTrans = new MatrixTransform();
-                Matrix transMat;
-                transMat.makeTranslate(_sitePos[index]);
-                siteTrans->setMatrix(transMat);
-                siteTrans->addChild(siteRot);
-                _siteRoot[index] = new MatrixTransform();
-                _siteRoot[index]->addChild(siteTrans);
-            }
-
-            StateSet* ss = _siteRoot[index]->getOrCreateStateSet();
-            ss->setMode(GL_LIGHTING, StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-            Material* mat = new Material();
-            mat->setColorMode(Material::AMBIENT_AND_DIFFUSE);
-            Vec4 color_dif(1, 1, 1, 1);
-            mat->setDiffuse(Material::FRONT_AND_BACK, color_dif);
-            ss->setAttribute(mat);
-            ss->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-            cerr << "File read." << endl;
-        }
-    }
-    else
-    {
-        cerr << "Error: Plugin.ArtifactVis2.Topo needs to point to a .wrl 3D topography file" << endl;
-    }
-}
-void ArtifactVis2::readHudFile(int index)
-{
-    std::string modelFileName = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append(_showHudCB[index]->getText());   //Replaced
-    cerr << "Reading site file: " << modelFileName << " " << index << " ..." << endl;
-
-    if (!modelFileName.empty())
-    {
-        //cout << _modelSFileNode.size() << "\n";
-        if (!_hudFileNode[index])
-        {
-            _hudFileNode[index] = osgDB::readNodeFile(modelFileName);
-        }
-
-	    cerr << "Read\n";
-        Node* hudFileNode = _hudFileNode[index];
-
-        if (hudFileNode == NULL) cerr << "Error reading file" << endl;
-        else
-        {
-	    cerr << "Reading\n";
-            MatrixTransform* siteScale = new MatrixTransform();
-            Matrix scaleMat;
-            scaleMat.makeScale(_hudScale[index]);
-            siteScale->setMatrix(scaleMat);
-            siteScale->addChild(hudFileNode);
-
-                MatrixTransform* siteRot = new MatrixTransform();
-                Matrix pitchMat;
-                Matrix yawMat;
-                Matrix rollMat;
-                pitchMat.makeRotate(DegreesToRadians(_hudRot[index].x()), 1, 0, 0);
-                yawMat.makeRotate(DegreesToRadians(_hudRot[index].y()), 0, 1, 0);
-                rollMat.makeRotate(DegreesToRadians(_hudRot[index].z()), 0, 0, 1);
-                siteRot->setMatrix(pitchMat * yawMat * rollMat);
-                siteRot->addChild(siteScale);
-                MatrixTransform* siteTrans = new MatrixTransform();
-//Here              
-  Matrix transMat;
-                transMat.makeTranslate(_hudPos[index]);
-                siteTrans->setMatrix(transMat);
-                siteTrans->addChild(siteRot);
-                _hudRoot[index] = new MatrixTransform();
-                _hudRoot[index]->setMatrix(transMat);
-                _hudRoot[index]->addChild(siteRot);
-/*  
-          osg::Program* modelProgramObject = new osg::Program;
-            string shaderPath = "/home/calvr/osgdata/shaders";
-            string shaderVertexPath = ConfigManager::getEntry("Plugin.ArtifactVis2.ShaderVert");
-            string shaderFragmentPath = ConfigManager::getEntry("Plugin.ArtifactVis2.ShaderFrag");
-            modelProgramObject->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile(shaderVertexPath)));
-            modelProgramObject->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile(shaderFragmentPath)));
-*/
-        osg::Program *stProgram;
-        osg::Shader *stVertObj;
-        osg::Shader *stFragObj;
-
-        osg::Texture2D *aocct = new osg::Texture2D();
-        aocct->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
-    aocct->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
-        aocct->setWrap(osg::Texture::WRAP_R, osg::Texture::CLAMP_TO_EDGE);
-    aocct->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
-    aocct->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
-
-        osg::Image *occi = osgDB::readImageFile("/home/calvr/tutorials/AmbientOcc/images/AmbientOcc.bmp");
-    aocct->setImage(occi);
-
-
-        osg::StateSet *hebeState = new osg::StateSet();
-        _hudRoot[index]->setStateSet(hebeState);
-
-    hebeState->addUniform( new osg::Uniform("/home/calvr/tutorials/AmbientOcc/images/AmbientOcclusion", 0) );
-        hebeState->setTextureAttribute(0, aocct);
-
-
-        osg::TextureCubeMap *aoccm = new osg::TextureCubeMap();
-    aoccm->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
-    aoccm->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
-    aoccm->setWrap(osg::Texture::WRAP_R, osg::Texture::CLAMP_TO_EDGE);
-    aoccm->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
-    aoccm->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
-        osg::Image *occbi = osgDB::readImageFile("/home/calvr/tutorials/AmbientOcc/images/px_diff.bmp");
-    aoccm->setImage(osg::TextureCubeMap::POSITIVE_X, occbi);
-        occbi = osgDB::readImageFile("/home/calvr/tutorials/AmbientOcc/images/nx_diff.bmp");
-    aoccm->setImage(osg::TextureCubeMap::NEGATIVE_X, occbi);
-    occbi = osgDB::readImageFile("/home/calvr/tutorials/AmbientOcc/images/ny_diff.bmp");
-    aoccm->setImage(osg::TextureCubeMap::POSITIVE_Y, occbi);
-        occbi = osgDB::readImageFile("/home/calvr/tutorials/AmbientOcc/images/py_diff.bmp");
-    aoccm->setImage(osg::TextureCubeMap::NEGATIVE_Y, occbi);
-        occbi = osgDB::readImageFile("/home/calvr/tutorials/AmbientOcc/images/pz_diff.bmp");
-    aoccm->setImage(osg::TextureCubeMap::POSITIVE_Z, occbi);
-        occbi = osgDB::readImageFile("/home/calvr/tutorials/AmbientOcc/images/nz_diff.bmp");
-    aoccm->setImage(osg::TextureCubeMap::NEGATIVE_Z, occbi);
-
-        hebeState->addUniform( new osg::Uniform("DiffuseEnvironment", 1) );
-        hebeState->setTextureAttribute(1, aoccm);
-
-
-        stProgram = new osg::Program;
-    stProgram->setName( "statue" );
-   // stVertObj = new osg::Shader( osg::Shader::VERTEX, osgDB::findDataFile("/home/calvr/tutorials/AmbientOcc/shaders/st.vert"));
-   // stFragObj = new osg::Shader( osg::Shader::FRAGMENT, osgDB::findDataFile("/home/calvr/tutorials/AmbientOcc/shaders/st.frag"));
-string shaderVertexPath = "/home/calvr/tutorials/AmbientOcc/shaders/st.vert";
-string shaderFragmentPath = "/home/calvr/tutorials/AmbientOcc/shaders/st.frag";
-
-    stProgram->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile(shaderVertexPath)) );
-    stProgram->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile(shaderFragmentPath)) );
-    hebeState->setAttributeAndModes(stProgram, osg::StateAttribute::ON);
-/*
-            StateSet* ss = _hudRoot[index]->getOrCreateStateSet();
-            bool useStd;
-            useStd = false;
-            if(useStd)
-            {
-            ss->setMode(GL_LIGHTING, StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-            Material* mat = new Material();
-            mat->setColorMode(Material::AMBIENT_AND_DIFFUSE);
-            Vec4 color_dif(1, 1, 1, 1);
-            mat->setDiffuse(Material::FRONT_AND_BACK, color_dif);
-            ss->setAttribute(mat);
-            ss->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-            }
-            else
-            {
-            ss->setAttribute(modelProgramObject, osg::StateAttribute::ON);
-
-        ss->addUniform(new osg::Uniform("LightPosition",osg::Vec3(0,0,200)));
-        ss->addUniform(new osg::Uniform("SurfaceColor",osg::Vec3(0.75,0.75,0.75)));
-        ss->addUniform(new osg::Uniform("WarmColor",osg::Vec3(0.6,0,0)));
-        ss->addUniform(new osg::Uniform("CoolColor",osg::Vec3(0,0,0.6)));
-        ss->addUniform(new osg::Uniform("DiffuseWarm",0.45f));
-        ss->addUniform(new osg::Uniform("DiffuseCool", 0.45f));
-
-            }
-*/
-            cerr << "File read." << endl;
-        }
-    }
-    else
-    {
-        cerr << "Error: Plugin.ArtifactVis2.Topo needs to point to a .wrl 3D topography file" << endl;
-    }
 }
 
 void ArtifactVis2::readLocusFile(QueryGroup* query)
@@ -3832,12 +3143,6 @@ void ArtifactVis2::readLocusFile(QueryGroup* query)
 
     //center/=query->loci.size();
     // query->center = center;
-#ifdef WITH_OSSIMPLANET
-
-    if (_ossim)
-        OssimPlanet::instance()->addModel(query->sphereRoot, center.y(), center.x(), Vec3(1, 1, 1), 10, 0, 0, 0);
-
-#endif
     std::cerr << "Loci Loaded." << std::endl;
 }
 void ArtifactVis2::setupSiteMenu()
@@ -3853,328 +3158,9 @@ void ArtifactVis2::setupSiteMenu()
     pcDropped = false; 
    _infoPanel->addMenuItem(_pcDropDown);
 
-   // _hudDropDown = new MenuButton("HUD Models");
-   // _hudDropDown->setCallback(this);
-   // hudDropped = false; 
-  // _infoPanel->addMenuItem(_hudDropDown);
-
-/*
-    _modelDisplayMenu = new SubMenu("Models");
-    _displayMenu->addItem(_modelDisplayMenu);
-    _pcDisplayMenu = new SubMenu("Point Clouds");
-    _displayMenu->addItem(_pcDisplayMenu);
-    _hudDisplayMenu = new SubMenu("HUD");
-    _displayMenu->addItem(_hudDisplayMenu);
-*/
-return;
-    cout << "Generating Model menu..." << endl;
-    string file = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("models.kml");   //Replaced
-    FILE* fp = fopen(file.c_str(), "r");
-
-    if (fp == NULL)
-    {
-        std::cerr << "Unable to open file: " << file << std::endl;
-        return;
-    }
-
-    const double M_TO_MM = 1.0f;
-    // const double LATLONG_FACTOR = 100000.0f;
-    Vec3d offset = Vec3d(
-                       ConfigManager::getFloat("Plugin.ArtifactVis2.Offset.X", 0),
-                       ConfigManager::getFloat("Plugin.ArtifactVis2.Offset.Y", 0),
-                       ConfigManager::getFloat("Plugin.ArtifactVis2.Offset.Z", 0));
-    mxml_node_t* tree;
-    tree = mxmlLoadFile(NULL, fp, MXML_TEXT_CALLBACK);
-    fclose(fp);
-
-    if (tree == NULL)
-    {
-        std::cerr << "Unable to parse XML file: " << file << std::endl;
-        return;
-    }
-
-    mxml_node_t* node = mxmlFindElement(tree, tree, "Placemark", NULL, NULL, MXML_DESCEND);
-
-    for (; node != NULL; node = mxmlFindElement(node, tree, "Placemark", NULL, NULL, MXML_DESCEND))
-    {
-        mxml_node_t* child = mxmlFindElement(node, tree, "name", NULL, NULL, MXML_DESCEND);
-        string child_text = child->child->value.text.string;
-        bool isPC = child_text.find("PointCloud") != string::npos;
-        bool isSite = child_text.find("Model") != string::npos;
-        bool isHud = child_text.find("HUD") != string::npos;
-        if(isSite || isHud) continue;
-        child = mxmlFindElement(node, tree, "href", NULL, NULL, MXML_DESCEND);
-        MenuCheckbox* site;
-	if(isHud)
-	{
-        site = new MenuCheckbox(child->child->value.text.string, true);
-	}
-	else
-	{
-        site = new MenuCheckbox(child->child->value.text.string, false);
-	}
-        site->setCallback(this);
-        MenuButton* reload = new MenuButton("-Reload");
-        reload->setCallback(this);
-        int factor[1];
-        double trans[3];
-        double scale[3];
-        double rot[3];
-        child = mxmlFindElement(node, tree, "altitudeMode", NULL, NULL, MXML_DESCEND);
-        factor[0] = atoi(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "longitude", NULL, NULL, MXML_DESCEND);
-        trans[0] = atof(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "latitude", NULL, NULL, MXML_DESCEND);
-        trans[1] = atof(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "altitude", NULL, NULL, MXML_DESCEND);
-        trans[2] = atof(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "x", NULL, NULL, MXML_DESCEND);
-        scale[0] = atof(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "y", NULL, NULL, MXML_DESCEND);
-        scale[1] = atof(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "z", NULL, NULL, MXML_DESCEND);
-        scale[2] = atof(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "tilt", NULL, NULL, MXML_DESCEND);
-        rot[0] = atof(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "heading", NULL, NULL, MXML_DESCEND);
-        rot[1] = atof(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "roll", NULL, NULL, MXML_DESCEND);
-        rot[2] = atof(child->child->value.text.string);
-        Vec3d position(trans[0], trans[1], trans[2]);
-        Matrixd transMat;
-        transMat.makeTranslate(position);
-        Matrixd scaleMat;
-        //scaleMat.makeScale(M_TO_MM*LATLONG_FACTOR, M_TO_MM*LATLONG_FACTOR, M_TO_MM);
-        scaleMat.makeScale(M_TO_MM, M_TO_MM, M_TO_MM);
-        Matrixd rot1;
-        rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
-        Matrixd rot2;
-        rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
-        Matrixd mirror;
-        mirror.makeScale(1, -1, 1);
-        Matrixd offsetMat;
-        offsetMat.makeTranslate(offset);
-
-        if (isPC)
-        {
-            _pcRoot.push_back(new MatrixTransform());
-            Vec3d pos = Vec3d(0, 0, 0) * transMat;
-           // _infoPanel->addMenuItem(site);
-           // _infoPanel->addMenuItem(reload);
-            _showPCCB.push_back(site);
-            _reloadPC.push_back(reload);
-            _pcPos.push_back(pos);
-            _pcScale.push_back(Vec3d(scale[0], scale[1], scale[2]));
-            _pcRot.push_back(Vec3d(rot[0], rot[1], rot[2]));
-            _pcFactor.push_back(factor[0]);
-        }
-        else if(isSite)
-        {
-            _siteRoot.push_back(new MatrixTransform());
-            Vec3d pos;
-
-            //if(_ossim)
-            if (true)
-            {
-                pos = position;
-                //cout << "Ossim position: ";
-            }
-            else
-            {
-                //pos = Vec3d(0,0,0) * mirror * transMat * scaleMat * mirror * rot2 * rot1 * offsetMat;
-            }
-
-            //cout << pos[0] << ", " << pos[1] << ", " << pos[2] << endl;
-           // _infoPanel->addMenuItem(site);
-           // _infoPanel->addMenuItem(reload);
-           // _showModelCB.push_back(site);
-            _reloadModel.push_back(reload);
-            _sitePos.push_back(pos);
-            _siteScale.push_back(Vec3d(scale[0], scale[1], scale[2]));
-            _siteRot.push_back(Vec3d(rot[0], rot[1], rot[2]));
-        }
-        else if(isHud)
-        {
-            _hudRoot.push_back(new MatrixTransform());
-            Vec3d pos;
-
-                pos = position;
-           // _hudDisplayMenu->addItem(site);
-           // _hudDisplayMenu->addItem(reload);
-            _showHudCB.push_back(site);
-            _reloadHud.push_back(reload);
-            _hudPos.push_back(pos);
-            _hudScale.push_back(Vec3d(scale[0], scale[1], scale[2]));
-            _hudRot.push_back(Vec3d(rot[0], rot[1], rot[2]));
-           // int curIndex = _hudRoot.size() - 1;
-        }
-    }
-
-    int countMP = _pcRoot.size() + _siteRoot.size() + _hudRoot.size();
-    cout << "Total Models and PC loaded: " << countMP << "\n";
-    _coordsPC.resize(countMP);
-    _colorsPC.resize(countMP);
-    _avgOffset.resize(countMP);
-    _modelSFileNode.resize(countMP);
-    _hudFileNode.resize(countMP);
-    //readHudFile(0);
-    //SceneManager::instance()->getScene()->addChild(_hudRoot[0]);
-    cout << "done." << endl;
 }
 void ArtifactVis2::reloadSite(int index)
 {
-    //string file = ConfigManager::getEntry("Plugin.ArtifactVis2.ArchInterfaceFolder").append("Model/KISterrain2.kml");
-    string file = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("models.kml");   //Replaced
-    FILE* fp = fopen(file.c_str(), "r");
-
-    if (fp == NULL)
-    {
-        std::cerr << "Unable to open file: " << file << std::endl;
-        return;
-    }
-
-    const double M_TO_MM = 1.0f;
-    //const double LATLONG_FACTOR = 100000.0f;
-    //const double LATLONG_FACTOR = 1000.0f;
-    Vec3d offset = Vec3d(
-                       ConfigManager::getFloat("Plugin.ArtifactVis2.Offset.X", 0),
-                       ConfigManager::getFloat("Plugin.ArtifactVis2.Offset.Y", 0),
-                       ConfigManager::getFloat("Plugin.ArtifactVis2.Offset.Z", 0));
-    //bang1
-    mxml_node_t* tree;
-    tree = mxmlLoadFile(NULL, fp, MXML_TEXT_CALLBACK);
-    fclose(fp);
-
-    if (tree == NULL)
-    {
-        std::cerr << "Unable to parse XML file: " << file << std::endl;
-        return;
-    }
-
-    mxml_node_t* node = mxmlFindElement(tree, tree, "Placemark", NULL, NULL, MXML_DESCEND);
-    int incPC = 0;
-    int incModel = 0;
-    int incHud = 0;
-
-    for (; node != NULL; node = mxmlFindElement(node, tree, "Placemark", NULL, NULL, MXML_DESCEND))
-    {
-        mxml_node_t* child = mxmlFindElement(node, tree, "name", NULL, NULL, MXML_DESCEND);
-        string child_text = child->child->value.text.string;
-        bool isPC = child_text.find("PointCloud") != string::npos;
-        bool isSite = child_text.find("Model") != string::npos;
-        bool isHud = child_text.find("HUD") != string::npos;
-        child = mxmlFindElement(node, tree, "href", NULL, NULL, MXML_DESCEND);
-        //MenuCheckbox * site = new MenuCheckbox(child->child->value.text.string,false);
-        //site->setCallback(this);
-        //MenuButton * reload = new MenuButton("-Reload");
-        //reload->setCallback(this);
-        int factor[1];
-        double trans[3];
-        double scale[3];
-        double rot[3];
-        child = mxmlFindElement(node, tree, "altitudeMode", NULL, NULL, MXML_DESCEND);
-        factor[0] = atoi(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "longitude", NULL, NULL, MXML_DESCEND);
-        trans[0] = atof(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "latitude", NULL, NULL, MXML_DESCEND);
-        trans[1] = atof(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "altitude", NULL, NULL, MXML_DESCEND);
-        trans[2] = atof(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "x", NULL, NULL, MXML_DESCEND);
-        scale[0] = atof(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "y", NULL, NULL, MXML_DESCEND);
-        scale[1] = atof(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "z", NULL, NULL, MXML_DESCEND);
-        scale[2] = atof(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "tilt", NULL, NULL, MXML_DESCEND);
-        rot[0] = atof(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "heading", NULL, NULL, MXML_DESCEND);
-        rot[1] = atof(child->child->value.text.string);
-        child = mxmlFindElement(node, tree, "roll", NULL, NULL, MXML_DESCEND);
-        rot[2] = atof(child->child->value.text.string);
-        Vec3d position(trans[0], trans[1], trans[2]);
-        Matrixd transMat;
-        transMat.makeTranslate(position);
-        Matrixd scaleMat;
-        //scaleMat.makeScale(M_TO_MM*LATLONG_FACTOR, M_TO_MM*LATLONG_FACTOR, M_TO_MM);
-        scaleMat.makeScale(M_TO_MM, M_TO_MM, M_TO_MM);
-        Matrixd rot1;
-        rot1.makeRotate(osg::DegreesToRadians(-90.0), 0, 1, 0);
-        Matrixd rot2;
-        rot2.makeRotate(osg::DegreesToRadians(90.0), 1, 0, 0);
-        Matrixd mirror;
-        mirror.makeScale(1, -1, 1);
-        Matrixd offsetMat;
-        offsetMat.makeTranslate(offset);
-
-        if (isPC)
-        {
-            if (index == incPC)
-            {
-                //_pcRoot.push_back(new MatrixTransform());
-                Vec3d pos = Vec3d(0, 0, 0) * transMat;
-                //_pcDisplayMenu->addItem(site);
-                //_pcDisplayMenu->addItem(reload);
-                //_showPCCB.push_back(site);
-                //_reloadPC.push_back(reload);
-                _pcPos[incPC] = pos;
-                _pcScale[incPC] = Vec3d(scale[0], scale[1], scale[2]);
-                _pcRot[incPC] = Vec3d(rot[0], rot[1], rot[2]);
-                _pcFactor[incPC] = factor[0];
-            }
-
-            incPC++;
-        }
-        else if (isSite)
-        {
-            //_siteRoot.push_back(new MatrixTransform());
-            Vec3d pos;
-
-            //if(_ossim)
-            if (true)
-            {
-                pos = position;
-                //cout << "Ossim position: ";
-            }
-            else
-            {
-                //pos = Vec3d(0,0,0) * mirror * transMat * scaleMat * mirror * rot2 * rot1 * offsetMat;
-            }
-
-            if (index == incModel)
-            {
-                //cout << pos[0] << ", " << pos[1] << ", " << pos[2] << endl;
-                //_modelDisplayMenu->addItem(site);
-                //_modelDisplayMenu->addItem(reload);
-                //_showModelCB.push_back(site);
-                //_reloadModel.push_back(reload);
-                //cout << "Reset _SiteRoot\n";
-                //_siteRoot[incModel] = new MatrixTransform();
-                _sitePos[incModel] = pos;
-                _siteScale[incModel] = Vec3d(scale[0], scale[1], scale[2]);
-                _siteRot[incModel] = Vec3d(rot[0], rot[1], rot[2]);
-            }
-
-            incModel++;
-        }
-	else if(isHud)
-	{
-            Vec3d pos;
-
-                pos = position;
-
-            if (index == incHud)
-            {
-                _hudPos[incModel] = pos;
-                _hudScale[incModel] = Vec3d(scale[0], scale[1], scale[2]);
-                _hudRot[incModel] = Vec3d(rot[0], rot[1], rot[2]);
-            }
-
-            incHud++;
-	}
-    }
-
-    cout << "done." << endl;
 }
 void ArtifactVis2::setupQuerySelectMenu()
 {
@@ -4613,12 +3599,12 @@ void ArtifactVis2::updateSelect()
     {
         osg::BoundingBox bb;
         osg::Vec3 minvec, maxvec;
-        minvec.x() = std::min(_selectStart.x(), _selectCurrent.x());
-        minvec.y() = std::min(_selectStart.y(), _selectCurrent.y());
-        minvec.z() = std::min(_selectStart.z(), _selectCurrent.z());
-        maxvec.x() = std::max(_selectStart.x(), _selectCurrent.x());
-        maxvec.y() = std::max(_selectStart.y(), _selectCurrent.y());
-        maxvec.z() = std::max(_selectStart.z(), _selectCurrent.z());
+        minvec.x() = min(_selectStart.x(), _selectCurrent.x());
+        minvec.y() = min(_selectStart.y(), _selectCurrent.y());
+        minvec.z() = min(_selectStart.z(), _selectCurrent.z());
+        maxvec.x() = max(_selectStart.x(), _selectCurrent.x());
+        maxvec.y() = max(_selectStart.y(), _selectCurrent.y());
+        maxvec.z() = max(_selectStart.z(), _selectCurrent.z());
         bb.set(minvec, maxvec);
         osg::Matrix scale, trans;
         trans.makeTranslate(bb.center());
@@ -4787,44 +3773,6 @@ void ArtifactVis2::moveCam(double bscale, double x, double y, double z, double o
 
 void ArtifactVis2::createSelObj(osg::Vec3 pos, string color, float radius)
 {
-/*
-    if (_modelFileNode == NULL)
-        _modelFileNode = osgDB::readNodeFile(ConfigManager::getEntry("Plugin.ArtifactVis2.ScanFolder").append("/50563/50563.ply"));
-
-    if (_modelFileNode2 == NULL)
-        _modelFileNode2 = osgDB::readNodeFile(ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder").append("/photos/50035/frame.obj"));
-
-    Matrixd scale;
-    double snum = 0.002 * m2mm;
-
-    if (color == "DD") snum *= 10;
-
-    scale.makeScale(snum, snum, snum);
-    MatrixTransform* modelScaleTrans = new MatrixTransform();
-    modelScaleTrans->setMatrix(scale);
-
-    if (color == "DD") modelScaleTrans->addChild(_modelFileNode2);
-    else modelScaleTrans->addChild(_modelFileNode);
-
-    Vec3d poz0(0, 0, 0);  //(0.15,-0.15,1.1);
-    Box* sphereShape = new Box(poz0, radius);
-    ShapeDrawable* ggg2 = new ShapeDrawable(sphereShape);
-    ggg2->setColor(_colors[ArtifactVis2::dc2Int(color)]);
-    osg::Geode* boxGeode = new osg::Geode;
-    boxGeode->addDrawable(ggg2);
-    MatrixTransform* rotate = new osg::MatrixTransform();
-    Matrix rotMat;
-    rotMat.makeRotate(0, 1, 0, 1);
-    rotate->setMatrix(rotMat);
-    rotate->addChild(boxGeode);
-    MatrixTransform* translate = new osg::MatrixTransform();
-    osg::Matrixd tmat;
-    tmat.makeTranslate(pos);
-    translate->setMatrix(tmat);
-    translate->addChild(rotate);
-    _root->addChild(translate);
-    selectableItems.push_back(SelectableItem(boxGeode, modelScaleTrans, translate, rotate, snum));
-*/
 }
 
 void ArtifactVis2::flyTo(int i)
@@ -4853,123 +3801,7 @@ void ArtifactVis2::flyTo(int i)
 
 void ArtifactVis2::updateHudMovement(int i, TrackedButtonInteractionEvent * tie,float _moveDistance, osg::Vec3 _menuPoint)
 {
-    osg::Vec3 menuPoint = osg::Vec3(0,_moveDistance,0);
-    //std::cerr << "move dist: " << _moveDistance << std::endl;
-    menuPoint = menuPoint * tie->getTransform();
-
-    //TODO: add hand/head mapping
-    osg::Vec3 viewerPoint =
-            TrackingManager::instance()->getHeadMat(0).getTrans();
-
-    osg::Vec3 viewerDir = viewerPoint - menuPoint;
-    viewerDir.z() = 0.0;
-
-    osg::Matrix menuRot;
-    menuRot.makeRotate(osg::Vec3(0,-1,0),viewerDir);
-
-    _hudRoot[i]->setMatrix(
-            osg::Matrix::translate(-_menuPoint) * menuRot
-                    * osg::Matrix::translate(menuPoint));
-cerr << "Finished \n";
 }
-/*
-void ArtifactVis2::updateSceneObjectMovement(DSIntersector::DSIntersector* mDSIntersector, cvr::TrackedButtonInteractionEvent * tie)
-{
-                osg::Vec3 hit = mDSIntersector->getWorldHitPosition();
-                osg::Vec3 orig = _hudRoot[0]->getMatrix().getTrans();
-                rhit = hit - orig;
-                rhit.y() *= -1;
-                //rhit.z() -= 10;
-                osg::Vec3 normal = mDSIntersector->getWorldHitNormal();
-
-                osg::Node *hitCAVEGeode = mDSIntersector->getHitNode();
-              //  cerr << "Pointer:" << pointerPos.x()<< " " << pointerPos.y()<< " " << pointerPos.z();
-               osg::Vec3 geodeCenter = hitCAVEGeode->getBound().center();
-                cerr << "\nHit:" << hit.x()<< " " << hit.y()<< " " << hit.z() << "\n";
-                cerr << "\nRHit:" << rhit.x()<< " " << rhit.y()<< " " << rhit.z() << "\n";
-              //  cerr << "\nNormal:" << normal.x()<< " " << normal.y()<< " " << normal.z();
-                cerr << "\nGeodeCenter:" << geodeCenter.x()<< " " << geodeCenter.y()<< " " << geodeCenter.z();
-		if(hitCAVEGeode->asGeode())
-		{
-             //  osg::Transform* test  =  hitCAVEGeode->asTransform(); 
-		//	cerr << "Is Geode\n";
-		}
-                if(hitCAVEGeode == _hudRoot[0])
-		{
-		//	cerr << " Same";
-		}
-                osg::Vec3 oldPos = _hudRoot[0]->getMatrix().getTrans();
-//	cerr << oldPos.x() << " " << oldPos.y() << " "<< oldPos.z() << "\n";
-//printf("%g %g %g",oldPos.x(),oldPos.y(),oldPos.z());
-
-                    std::map<int,osg::Vec3> _currentPoint;
-		osg::Vec3 ray = _currentPoint[tie->getHand()]
-                            - tie->getTransform().getTrans();
-
-                    float _moveDistance;
-                    osg::Vec3 _menuPoint;
-                    _moveDistance = ray.length();
-		  // cerr << "Move: " <<_moveDistance << "\n";
-                    _menuPoint = _currentPoint[tie->getHand()]
-                            * osg::Matrix::inverse(_hudRoot[0]->getMatrix());
-                   
-		  //   updateHudMovement(0,tie,_moveDistance,_menuPoint);
-
-                if(!_hudActive)
-		{
-                 _hudActive = true;
-                  grabCurrentPos = hit;
-                  prevHandRot = TrackingManager::instance()->getHandMat(0).getRotate();
-		}
-                else
-		{
-                  osg::Matrix updateMatrix;
-                  osg::Vec3 _ray = grabCurrentPos - hit;
-                  osg::Vec3f _dist = _ray;
-                  if(_dist.x() != 0 || _dist.y() != 0 || _dist.z() != 0)
-		 {
-                //  cerr << "Move: " << _dist.x() << " " << _dist.y() << " " << _dist.z();
-		 }
-                 bool useMouse;
-                 useMouse = false;
-                 if(useMouse)
-		 {
-                   _dist.y() = 0;
-                 }
-                 // updateMatrix = _hudRoot[0]->getMatrix();
-	          updateMatrix.makeTranslate(_dist);
-                  osg::Matrix inverseMatrix = osg::Matrix::inverse(updateMatrix);
-
-                   if(tie->getButton() == 1)
-		   {
-                      cerr << "Button 2 Down\n";
-		   }
-                osg::Quat handRot = TrackingManager::instance()->getHandMat(0).getRotate();
-                osg::Quat distRot =  handRot - prevHandRot;
-                prevHandRot = handRot;
-  		//  cerr << "rx: " << handRot.x() << " ry : " << handRot.y() << " rz : " << handRot.z() << " rw : " << handRot.w()  << "\n"; 
-    		Matrix tmat;
-                //rhit = hit;
-    		osg::Vec3 center = hit;
-
-    		cerr << "x: " << center.x() << " y: " << center.y() << " z: " << center.z() << "\n"; 
-    		tmat.makeTranslate(Vec3(0,0,0));
-        	Matrix rot;
-        	//rot.makeRotate(rx, xa, ry, ya, rz, za);
-        	rot.makeRotate(distRot);
-        	Matrixd gotoMat = osg::Matrix::translate(-center)  * rot * osg::Matrix::translate(center);
-                osg::Matrix inverseRotMatrix = osg::Matrix::inverse(gotoMat);
-		
-
-                  _hudRoot[0]->setMatrix(_hudRoot[0]->getMatrix() * inverseMatrix );
-                  grabCurrentPos = hit;
-		  
-		  _grabActive = true;
-        	}
-	     
-
-}
-*/
 void ArtifactVis2::loadAnnotationGraph(int inc)
 {
 osg::Vec3 pos;
@@ -7172,25 +6004,50 @@ void ArtifactVis2::getDirFiles(const string& dirname, std::vector<DirFile*> & en
     {
      types = ConfigManager::getEntry("Plugin.ArtifactVis2.FileManagerTypes"); 
     }
-
+int entryCount = 0;
+#ifdef WIN32
+std::vector<std::string> darray;
+darray = scanDirectory(dirname.c_str());
+entryCount = darray.size();
+#else
 direct ** darray;
-    int entryCount = scandir(const_cast<char*>(dirname.c_str()),
-			     &darray, 0, alphasort);
+entryCount = scandir(const_cast<char*>(dirname.c_str()),&darray, 0, alphasort);
+#endif
 
     for (int k = 0; k < entryCount; k++)
     {
         DirFile* entry = new DirFile();
+#ifdef WIN32
+        string filename = darray[k];
+#else
         string filename = darray[k]->d_name;
+#endif
+
         if(filename != ".")
         {
-        //cout << "Filename: " << filename << endl;
+  //      cout << "Filename: " << filename << endl;
         entry->filename = filename; 
         entry->path = dirname;
         string origDir = dirname;
         origDir.append(filename);
+	bool checkIfDir = false;
+#ifdef WIN32
+	string cFile = filename;
+	cFile.erase(0,cFile.length()-1);
+//	cout << cFile << endl;
+	if(cFile == "/" || cFile == "\\")
+	{
+           checkIfDir = true;
+	}
+#else
         struct stat info;
         lstat(origDir.c_str(), &info);
-        if(S_ISDIR(info.st_mode))
+	if(S_ISDIR(info.st_mode))
+        {
+	   checkIfDir = true;
+	}
+#endif
+	if(checkIfDir)
         {
          //cout << filename << " is a directory\n";
          entry->filetype = "folder"; 
@@ -7342,7 +6199,7 @@ void ArtifactVis2::updateFileMenu(std::string dir, int scroll)
     _downFileManager->setCallback(this);
     _filePanel->addMenuItem(_downFileManager);
 }
-void ArtifactVis2::addNewPCTest(int index)
+void ArtifactVis2::addNewPC(int index)
 {
  string filename = _pointClouds[index]->fullpath;
  string name = _pointClouds[index]->name;
@@ -7352,480 +6209,11 @@ void ArtifactVis2::addNewPCTest(int index)
  PointCloudObject * pcObject = new PointCloudObject(name,filename,pcRot,pcScale,pcPos);
  PluginHelper::registerSceneObject(pcObject,"pcObject");
  pcObject->attachToScene();
- cout << "This is from new PC test!!!!!\n";
+ _pointClouds[index]->pcObject = pcObject;
+ _pointClouds[index]->visible = true;
+ _pointClouds[index]->loaded = true;
+ //cout << "This is from new PC test!!!!!\n";
  
-}
-void ArtifactVis2::addNewPC(int index)
-{
-    Vec3Array* coords;
-    Vec4Array* colors;
-    std::vector<Vec3> coords2;
-    std::vector<Vec4> colors2;
-
- int i = index;
- newFileAvailable = false;
- string currentModelPath = _pointClouds[i]->fullpath;
- string name = _pointClouds[i]->name;
- newSelectedFile = "";
- newSelectedName = "";
-
-    string filename = currentModelPath;
-   string type = filename;
-cerr << "Mark1\n";
-    bool nvidia = ConfigManager::getBool("Plugin.ArtifactVis2.Nvidia");
-            cout << "File: " << filename << endl;
-            PointsLoadInfo pli;
-            pli.file = filename;
-            pli.group = new osg::Group();
-    if (true)
-    {
-        coords = new Vec3Array();
-        colors = new Vec4Array();
-        cout << "Reading point cloud data from : " << filename <<  "..." << endl;
-        ifstream file(filename.c_str());
-        type.erase(0, (type.length() - 3));
-        cout << type << "\n";
-        string line;
-        bool read = false;
-       // cout << _pcFactor[index] << "\n";
-       // int factor = _pcFactor[index];
-       int factor = 1;
-        if((type == "ply" || type == "xyb") && nvidia)
-        {
-            cout << "Reading XYB" << endl;
-
-            //float x,y,z;
-            //bamop
-            float scale = 9;
-            //	osg::Vec3 offset(transx, transy, transz);
-            //_activeObject = new PointsObject("Points",true,false,false,true,true);
-
-
-
-            PluginHelper::sendMessageByName("Points",POINTS_LOAD_REQUEST,(char*)&pli);
-
-            if(!pli.group->getNumChildren())
-            {
-                std::cerr << "PointsWithPans: Error, no points loaded for file: " << pli.file << std::endl;
-                return;
-            }
-
-            float pscale;
-            if(type == "xyb")
-            {
-                pscale = 100;
-            }
-            else
-            {
-                pscale = 0.3;
-            }
-            pscale = ConfigManager::getFloat("Plugin.ArtifactVis2.scaleP", 0);
-            cerr << "Scale of P is " << pscale << "\n";
-//StartHereToday
-            osg::Uniform*  _scaleUni = new osg::Uniform("pointScale",1.0f * pscale);
-            pli.group->getOrCreateStateSet()->addUniform(_scaleUni);
-            //_activeObject->attachToScene();
-            //_activeObject->setNavigationOn(false);
-            //_activeObject->setScale(scale);
-            //_activeObject->setPosition(_pcPos[index]);
-            //_activeObject->setNavigationOn(true);
-            //_activeObject->addChild(pli.group.get());
-            /*
-            MatrixTransform* rotTransform = new MatrixTransform();
-            Matrix pitchMat;
-            Matrix yawMat;
-            Matrix rollMat;
-            pitchMat.makeRotate(DegreesToRadians(_pcRot[index].x()), 1, 0, 0);
-            yawMat.makeRotate(DegreesToRadians(_pcRot[index].y()), 0, 1, 0);
-            rollMat.makeRotate(DegreesToRadians(_pcRot[index].z()), 0, 0, 1);
-            rotTransform->setMatrix(pitchMat * yawMat * rollMat);
-            MatrixTransform* scaleTransform = new MatrixTransform();
-            Matrix scaleMat;
-            scaleMat.makeScale(_pcScale[index]);
-            scaleTransform->setMatrix(scaleMat);
-            MatrixTransform* posTransform = new MatrixTransform();
-            Matrix posMat;
-            Matrix invertMat;
-            posMat.makeTranslate(_pcPos[index]);
-            posTransform->setMatrix(posMat);
-            MatrixTransform* invTransform = new MatrixTransform();
-            rotTransform->addChild(pli.group.get());
-            cerr << "Num childs " << pli.group.get()->getNumChildren() << "\n";
-            scaleTransform->addChild(rotTransform);
-            posTransform->addChild(scaleTransform);
-
-            _pcRoot[index] = new MatrixTransform();
-            _pcRoot[index]->addChild(posTransform);
-            cout << "Loaded" << endl;
-            cerr << "Num childs2 " << _pcRoot[index]->getNumChildren() << "\n";
-            */
-        }
-        else
-        {
-            if (file.is_open())
-            {
-                int pcount = 0;
-                int bten = factor - 1;
-                int cptx = 0;
-                double transx = 0;
-                double transy = 0;
-                double transz = 0;
-
-                while (file.good())
-                {
-                    getline(file, line);
-                    string lineout = line;
-
-                    if (type == "ptx")
-                    {
-                        vector<string> entries;
-                        //vector<string>array;
-                        string token;
-                        //string tmp = "this@is@a@line";
-                        istringstream iss(line);
-                        char lim = ' ';
-
-                        while ( getline(iss, token, lim) )
-                        {
-                            entries.push_back(token);
-                        }
-
-                        if (entries.size() < 7)
-                        {
-                            cout << lineout << "\n";
-
-                            if (cptx == 9)
-                            {
-                                cptx = 0;
-                                //cout << lineout << "\n";
-                                std::stringstream ss;
-                                ss.precision(19);
-                                transx = atof(entries[0].c_str());
-                                transy = atof(entries[0].c_str());
-                                transz = atof(entries[0].c_str());
-                            }
-                            else
-                            {
-                                cptx++;
-                            }
-                        }
-                        else
-                        {
-                            std::stringstream ss;
-                            ss.precision(19);
-                            double x = atof(entries[0].c_str()) + transx;
-                            double y = atof(entries[1].c_str()) + transy;
-                            double z = atof(entries[2].c_str()) + transz;
-                            double r = atof(entries[4].c_str()) / 255;
-                            double g = atof(entries[5].c_str()) / 255;
-                            double b = atof(entries[6].c_str()) / 255;
-                            coords->push_back(Vec3d(x, y, z));
-                           // _avgOffset[index] += Vec3d(x, y, z);
-                            colors->push_back(Vec4d(r, g, b, 1.0));
-                            bten = 0;
-                            pcount++;
-                        }
-                    }
-
-                    if (line.empty()) break;
-
-                    if (read)
-                    {
-                        bten++;
-                        vector<string> entries;
-                        int ck = 0;
-
-                        /*
-                        while(true)
-                        {
-                            if(line.find(" ")==line.rfind(" "))
-                                break;
-                            else
-                            {
-                                entries.push_back(line.substr(0,line.find(" ")));
-                                line = line.substr(line.find(" ")+1);
-                                cout << line << "\n";
-                            }
-                        }
-                        */
-                        if (bten == factor)
-                        {
-                            while (ck < 7)
-                            {
-                                entries.push_back(line.substr(0, line.find(" ")));
-                                line = line.substr(line.find(" ") + 1);
-                                //cout << line << "\n";
-                                ck++;
-                            }
-                        }
-
-                        //cout << entries.size();
-                        if ((type == "ply") && (bten == factor))
-                        {
-                            float x = atof(entries[0].c_str());
-                            float y = atof(entries[1].c_str());
-                            float z = atof(entries[2].c_str());
-                            float r = atof(entries[3].c_str()) / 255;
-                            float g = atof(entries[4].c_str()) / 255;
-                            float b = atof(entries[5].c_str()) / 255;
-                            coords->push_back(Vec3d(x, y, z));
-                           // coords2.push_back(Vec3(x,y,z));
-                           // _avgOffset[index] += Vec3d(x, y, z);
-                            colors->push_back(Vec4f(r, g, b, 1.0));
-                           // colors2.push_back(Vec4(r,g,b,1.0));
-                            pcount++;
-                            bten = 0;
-                        }
-
-                        if ((type == "txt") && (bten == factor))
-                        {
-                            float x = atof(entries[0].c_str());
-                            float y = atof(entries[1].c_str());
-                            float z = atof(entries[2].c_str());
-                            float r = atof(entries[3].c_str()) / 255;
-                            float g = atof(entries[4].c_str()) / 255;
-                            float b = atof(entries[5].c_str()) / 255;
-                            coords->push_back(Vec3d(x, y, z));
-                           // _avgOffset[index] += Vec3d(x, y, z);
-                            colors->push_back(Vec4f(r, g, b, 1.0));
-                            pcount++;
-                            bten = 0;
-                        }
-                        else if ((type == "pts") && (bten == factor))
-                        {
-                            std::stringstream ss;
-                            ss.precision(19);
-                            double x = atof(entries[0].c_str());
-                            double y = atof(entries[1].c_str());
-                            double z = atof(entries[2].c_str());
-                            double r = atof(entries[4].c_str()) / 255;
-                            double g = atof(entries[5].c_str()) / 255;
-                            double b = atof(entries[6].c_str()) / 255;
-                            coords->push_back(Vec3d(x, y, z));
-                           // _avgOffset[index] += Vec3d(x, y, z);
-                            colors->push_back(Vec4d(r, g, b, 1.0));
-                            bten = 0;
-                            pcount++;
-
-                            if (pcount == 7216)
-                            {
-                                //std::stringstream ss;
-                                //ss.precision(19);
-                                printf("TOP %f %f %f\n", x, y, z);
-                                cout << "Coords: " << entries[0].c_str() << " " << entries[1].c_str() << " " << entries[2].c_str() << "\n";
-                                //cout << "Coords: " << coords[7216][0] << " " << coords[7216][1] << " " << coords[7216][2] << "\n";
-                            }
-                        }
-                    }
-
-                    if (type == "pts")
-                    {
-                        read = true;
-                    }
-
-                    if (line == "end_header")
-                        read = true;
-                }
-
-                cout << "Finished Loading, Total Vertices: " << pcount << "\n";
-            }
-            else
-            {
-                cout << "Unable to open file: " << filename << endl;
-                return;
-            }
-        }
-    }
-    Geode* pointGeode = new Geode();
-    osg::Geode* sphereGeode = new Geode();  
-    if(!nvidia)
-    {
-
-
-//        Geometry* pointCloud = new Geometry();
-  //      pointCloud->setVertexArray(coords);
-    //    pointCloud->setColorArray(colors);
-      //  pointCloud->setColorBinding(Geometry::BIND_PER_VERTEX);
-      //  DrawElementsUInt* points = new DrawElementsUInt(PrimitiveSet::POINTS, 0);
-
-//bangSph 
-
-   // Sphere* sphereShape;
-  //  ShapeDrawable* shapeDrawable;
-
-//        for (int n = 0; n < coords->size(); n++)
-  //      {
-            /*
-            Sphere* sphereShape =  new Sphere(coords2[n], _vertexRadius);
-            ShapeDrawable* shapeDrawable = new ShapeDrawable(sphereShape);
-            // shapeDrawable->setTessellationHints(hints);
-            shapeDrawable->setColor(colors2[n]);
-            sphereGeode->addDrawable(shapeDrawable);
-            */
-
-             
-       // pointCloud->addPrimitiveSet(points);
-         //   points->push_back(n);
-    //    }
-
- //   pointCloud->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS, 0,coords->size()));
-     //   pointCloud->addPrimitiveSet(points);
-   //     pointGeode->addDrawable(pointCloud);
-     if(true)
-     {
-        StateSet* ss = pli.group->getOrCreateStateSet();
-        ss->setMode(GL_LIGHTING, StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
-    }
-    else
-    {
-    float size = 10;
-    osg::StateSet* set = pli.group->getOrCreateStateSet();
-
-    /// Setup cool blending
-   // set->setMode(GL_LIGHTING,  osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-    set->setMode(GL_BLEND, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-    osg::BlendFunc *fn = new osg::BlendFunc();
-   fn->setFunction(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::DST_ALPHA);
-  // fn->setFunction(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE);
-    //fn->setFunction(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA);
-    set->setAttributeAndModes(fn, osg::StateAttribute::ON);
-
-    /// Setup the point sprites
-    osg::PointSprite *sprite = new osg::PointSprite();
-    set->setTextureAttributeAndModes(0, sprite, osg::StateAttribute::ON);
-
-    /// Give some size to the points to be able to see the sprite
-    osg::Point *pointz = new osg::Point();
-    pointz->setSize(size);
-    set->setAttribute(pointz);
-
-    /// Disable depth test to avoid sort problems and Lighting
-    //set->setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
-    set->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-
-    /// The texture for the sprites
-    osg::Texture2D *tex = new osg::Texture2D();
-    tex->setImage(osgDB::readImageFile("/home/calvr/osgdata/Images/particle.rgb"));
-    set->setTextureAttributeAndModes(0, tex, osg::StateAttribute::ON);
-}
-
-     }
-        if(true)
-        {
-            i = index;
-float currentScale = _pointClouds[i]->scale;
-      
-	    SceneObject * so;
-	    so = new SceneObject(name, false, false, false, true, false);
-	    osg::Switch* switchNode = new osg::Switch();
-	    so->addChild(switchNode);
-	    PluginHelper::registerSceneObject(so,"Test");
-	    so->attachToScene();
-//Add currentNode to switchNode
-     // _models3d[i]->currentModelNode = modelNode; 
-     cerr << "here\n"; 
-        if(!nvidia)
-        {
-	//switchNode->addChild(pointGeode);
-	switchNode->addChild(pointGeode);
-        }
-        else
-        {
-        StateSet* ss = pli.group->getOrCreateStateSet();
-        ss->setMode(GL_LIGHTING, StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
-          
-	switchNode->addChild(pli.group.get());
-
-        }
-     // _pointClouds[i]->switchNode = switchNode;
-
-//Add menu system
-	    so->setNavigationOn(true);
-	    so->setMovable(false);
-	    so->addMoveMenuItem();
-	    so->addNavigationMenuItem();
-            float min = 0.0001;
-            float max = 1;
-            so->addScaleMenuItem("Scale",min,max,currentScale);
-	    SubMenu * sm = new SubMenu("Position");
-	    so->addMenuItem(sm);
-
-	    MenuButton * mb;
-	    mb = new MenuButton("Load");
-	    mb->setCallback(this);
-	    sm->addItem(mb);
-
-	    SubMenu * savemenu = new SubMenu("Save");
-	    sm->addItem(savemenu);
-
-	    mb = new MenuButton("Save");
-	    mb->setCallback(this);
-	    savemenu->addItem(mb);
-            _pointClouds[i]->saveMap = mb;
-
-	    mb = new MenuButton("Save New Kml");
-	    mb->setCallback(this);
-	    savemenu->addItem(mb);
-            _pointClouds[i]->saveNewMap = mb;
-
-	    mb = new MenuButton("Reset to Origin");
-	    mb->setCallback(this);
-	    so->addMenuItem(mb);
-            _pointClouds[i]->resetMap = mb;
-
-            MenuCheckbox * mc;
-	    mc = new MenuCheckbox("Active",false);
-	    mc->setCallback(this);
-	    so->addMenuItem(mc);
-            _pointClouds[i]->activeMap = mc;
-
-            
-	    mc = new MenuCheckbox("Visible",true);
-	    mc->setCallback(this);
-	    so->addMenuItem(mc);
-            _pointClouds[i]->visibleMap = mc;
-            _pointClouds[i]->visible = true;
-
-            float rValue = 0;
-            min = -1;
-            max = 1;
-            MenuRangeValue* rt = new MenuRangeValue("rx",min,max,rValue);
-            rt->setCallback(this);
-	    so->addMenuItem(rt);
-            _pointClouds[i]->rxMap = rt;
-
-            rt = new MenuRangeValue("ry",min,max,rValue);
-            rt->setCallback(this);
-	    so->addMenuItem(rt);
-            _pointClouds[i]->ryMap = rt;
-
-            rt = new MenuRangeValue("rz",min,max,rValue);
-            rt->setCallback(this);
-	    so->addMenuItem(rt);
-            _pointClouds[i]->rzMap = rt;
-/*
-	    mc = new MenuCheckbox("Panel Visible",true);
-	    mc->setCallback(this);
-	    so->addMenuItem(mc);
- //           _query[q]->artifacts[inc]->model->pVisibleMap = mc;
-           // _query[q]->artifacts[inc]->model->pVisible = true;
-*/
-Quat currentRot = _pointClouds[i]->rot;
-Vec3 currentPos = _pointClouds[i]->pos;
-Vec3 orig = currentPos; 
-cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
-
- so->setPosition(currentPos);     
- so->setScale(currentScale);
- so->setRotation(currentRot);     
-
-    _pointClouds[i]->so = so;
-    _pointClouds[i]->pos = so->getPosition();
-    _pointClouds[i]->rot = so->getRotation();
-    _pointClouds[i]->active = false;
-    _pointClouds[i]->loaded = true;
-        }
-    
 }
 void ArtifactVis2::addNewModel(int i)
 {
@@ -8087,8 +6475,7 @@ else
     _pointClouds[index]->origScale = scale; 
  }
     
-//addNewPC(index);
-addNewPCTest(index);
+addNewPC(index);
  
  newSelectedFile = "";
  newSelectedName = "";
@@ -10305,4 +8692,53 @@ void ArtifactVis2::tempStackPhotos()
        m++; 
        }
     }
+}
+std::vector<std::string> ArtifactVis2::scanDirectory(const char *sDir)
+{
+	
+	std::vector<std::string> darray;
+#ifdef WIN32
+        WIN32_FIND_DATA fdFile;
+        HANDLE hFind = NULL;
+
+        char sPath[2048];
+	sprintf(sPath, "%s\\*.*", sDir);
+
+ if((hFind = FindFirstFile(sPath, &fdFile)) == INVALID_HANDLE_VALUE)
+	     {
+		     return darray;
+	     }
+
+     do
+     {
+
+
+        if(strcmp(fdFile.cFileName, ".") != 0 && strcmp(fdFile.cFileName, "..") != 0)
+		         {
+	                //sprintf(sPath, "%s\\%s", sDir, fdFile.cFileName);
+	                sprintf(sPath, "%s", fdFile.cFileName);
+			if(fdFile.dwFileAttributes &FILE_ATTRIBUTE_DIRECTORY)
+			{
+			  string result = string(sPath);
+			  result.append("/");
+			  darray.push_back(result);
+			 // printf("Directory: %s\n", sPath);
+			  //ListDirectoryContents(sPath); //Recursion, I love it!
+		        }
+			else
+			{
+			//  printf("File: %s\n", sPath);
+			  string result = string(sPath);
+			  darray.push_back(result);
+			}		
+			 
+			 
+			 
+			 }
+     }
+         while(FindNextFile(hFind, &fdFile)); //Find the next file.
+
+         FindClose(hFind); //Always, Always, clean things up!
+#endif
+return darray;     
 }
