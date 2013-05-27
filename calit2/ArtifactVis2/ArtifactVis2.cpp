@@ -1,4 +1,7 @@
 #include "ArtifactVis2.h"
+#ifdef WITH_OSSIMPLANET
+#include "../OssimPlanet/OssimPlanet.h"
+#endif
 
 #include <iostream>
 #include <sstream>
@@ -324,135 +327,6 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
         return false;
     }
 
-    if ((event->getInteraction() == BUTTON_DOWN) && tie->getHand() == 0 && tie->getButton() == 0)
-    {
-        //bang
-    }
-        if(false)
-            {
-/*
-        osg::Vec3 pointerOrg, pointerPos;
-        osg::Matrixd w2o = PluginHelper::getWorldToObjectTransform();
-
-        //pointerOrg = osg::Vec3(0, 0, 0) * TrackingManager::instance()->getHandMat(0) * w2o;
-        //pointerOrg = osg::Vec3(0, 0, 0) * TrackingManager::instance()->getHandMat(0) * w2o;
-        pointerPos = osg::Vec3(0, 1000, 0) * TrackingManager::instance()->getHandMat(0);
-        pointerOrg = osg::Vec3(0, 0, 0) * TrackingManager::instance()->getHandMat(0);
-
-    DSIntersector::DSIntersector* mDSIntersector = new DSIntersector();
-    DOIntersector* mDOIntersector = new DOIntersector();
-    mDOIntersector = new DOIntersector();
-    mDSIntersector->loadRootTargetNode(SceneManager::instance()->getScene(), NULL);
-    mDOIntersector->loadRootTargetNode(NULL, NULL);
-        if (tie->getHand() == 0 && tie->getButton() == 0)
-        {
-
-            if (tie->getInteraction() == BUTTON_DOWN || tie->getInteraction() == BUTTON_DRAG)
-            {
-          if(_shiftActive && _grabActive)
-	  {
-             Vec3 rotVector;
-             if(!_rotActive)
-             {
-               _grabCurrentRot = pointerPos;
-               _rotActive = true;
-               //rhit = mDSIntersector->getWorldHitPosition();
-               cerr << "Rot Started\n";
-	     }
-             else
-             {
-		rotVector = _grabCurrentRot - pointerPos;
-                rotVector.y() = 0;
-                rotVector.z() /= 50;
-                rotVector.x() /= 50;
-               _grabCurrentRot = pointerPos;
-		//For hand orientation info
-		osg::Quat handRot = TrackingManager::instance()->getHandMat(0).getRotate();
-  		//  cerr << "rx: " << handRot.x() << " ry : " << handRot.y() << " rz : " << handRot.z() << " rw : " << handRot.w()  << "\n"; 
-    		Matrix tmat;
-    		Vec3 center = _hudRoot[0]->getBound().center();
-    		center = rhit;
-    		if(rhit.x() < 0)
-    		{
-			rhit.x() *= -1;
-    		}
-    		if(rhit.z() < 0)
-    		{
-			rhit.z() *= -1;
-    		}
-    		cerr << "x: " << center.x() << " y: " << center.y() << " z: " << center.z() << "\n"; 
-    		tmat.makeTranslate(Vec3(0,0,0));
-    		double rx = rotVector.z();
-    		double ry = rotVector.y();
-    		double rz = rotVector.x();
-   		// cerr << "rx: " << rx << " ry: " << ry << " rz: " << rz << "\n";
-        	Vec3 xa = Vec3(1.0, 0.0, 0.0);
-        	Vec3 ya = Vec3(0.0, 1.0, 0.0);
-        	Vec3 za = Vec3(0.0, 0.0, 1.0);
-        	Matrix rot;
-        	rot.makeRotate(rx, xa, ry, ya, rz, za);
-        	Matrixd gotoMat = osg::Matrix::translate(-center)  * rot * osg::Matrix::translate(center);
-                osg::Matrix inverseMatrix = osg::Matrix::inverse(gotoMat);
-
-		  _hudRoot[0]->setMatrix(inverseMatrix * _hudRoot[0]->getMatrix());
-                  Matrix ctrans = _hudRoot[0]->getMatrix();
-                  Vec3 trans = ctrans.getTrans();
-                 // cerr << "x: " << trans.x() << " y: " << trans.y() << " z: " << trans.z() << "\n"; 
-
-             }
-	  }
-          else
-	  {
-            if (mDSIntersector->test(pointerOrg, pointerPos))
-            {
-	      if(!_shiftActive)
-	      {
-                 updateSceneObjectMovement(mDSIntersector, tie);
-	     }
-             else
-            {
-		  _grabActive = true;
-        //mWireframeGeode->setScaleVect(snapPos - mWireframeGeode->getInitPosition());
-	     }
-	    }
-            }
-           
-} 
-            else if (tie->getInteraction() == BUTTON_UP)
-            {
-                //bool res = mCAVEDesigner->inputDevReleaseEvent();
-                //return res;
-                cerr << "-";
-                _hudActive = false;
-		_grabActive = false;
-                _rotActive = false;
-            }
-	}
-  */   
-/*
-		int i = 0;
-		if(i == 0)
-		{
-		cerr << "Started:\n";
-                    std::map<int,osg::Vec3> _currentPoint;
-                    osg::Vec3 ray;
-                    ray = _currentPoint[tie->getHand()]
-                            - tie->getTransform().getTrans();
-
-                    float _moveDistance;
-                    osg::Vec3 _menuPoint;
-                    _moveDistance = ray.length();
-                   / _menuP/int = _currentPoint[tie->getHand()]
-                            * osg::Matrix::inverse(_hudRoot[i]->getMatrix());
-                   
-		     updateHudMovement(i,tie,_moveDistance,_menuPoint);
-                
-                //return true;
-                }
-            
-*/
-            //return false;
-   }
 
     if ((event->getInteraction() == BUTTON_DOWN || event->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getHand() == 0 && tie->getButton() == 0)
     {
@@ -567,7 +441,7 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
             cerr << "Select On\n";
         if (_selectArtifactCB->getValue())
         {
-           // cerr << "Select On\n";
+            cerr << "Select On\n";
             if (true)
             {
                 osg::Matrix w2l = PluginHelper::getWorldToObjectTransform();
@@ -579,12 +453,13 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
                 int index = -1;
                 int queryIndex = -1;
                 double distance;
-               // cerr << "got Interaction\n";
+                cerr << "got Interaction\n";
 
                 for (int q = 0; q < _query.size(); q++)
                 {
                    // int n = _querySfIndex[q];
                     vector<Artifact*> artifacts = _query[q]->artifacts;
+                    if(_query[q]->active) cerr << "Query Active\n";
                     if (_query[q]->active)
                     {
                         for (int i = 0; i < artifacts.size(); i++)
@@ -610,7 +485,7 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
 
                 if (index != -1)
                 {
-                    //std::cerr << "Got sphere intersection with index " << index << std::endl;
+                    std::cerr << "Got sphere intersection with index " << index << std::endl;
                     setActiveArtifact(100, CYLINDER, index, queryIndex);
                     return true;
                 }
@@ -1553,6 +1428,7 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
                //cerr << "Found Model\n" << endl;
                if(!_pointClouds[i]->loaded)
                {
+                //Model* newModel = new Model();
                addNewPC(i);
                }
                else
@@ -1930,7 +1806,22 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
     }
 
     if (menuItem == _scaleBar)
-    {   
+    {   /*
+           if (_scaleBar->getValue())
+           {
+               osg::Matrix w2l = PluginHelper::getWorldToObjectTransform();
+               osg::Vec3d start(0, 0, 0);
+               start = start * w2l;
+               cout << start.x() << " " << start.y() << " " << start.z() << "\n";
+               std::cerr << selectArtifactSelected() << "\n";
+               loadScaleBar(start);
+           }
+           else
+           {
+               _root->removeChild(_scaleBarModel);
+           }
+        */
+//bangHand
 
         Matrixd camMat = PluginHelper::getHandMat(0);
         float cscale = 1; //PluginHelper::getObjectScale();
@@ -2701,7 +2592,17 @@ void ArtifactVis2::displayArtifacts(QueryGroup* query)
     cf->setMode(osg::CullFace::BACK);
     ss->setAttributeAndModes(cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
 
+    // cout << center.x() << ", " << center.y() << endl;
+    if (_ossim)
+    {
+#ifdef WITH_OSSIMPLANET
+        OssimPlanet::instance()->addModel(sphereGeode, center.y(), center.x(), Vec3(1.0, 1.0, 1.0), 10, 0, 0, 0);
+#endif
+    }
+    else
+    {
         root_node->addChild(sphereGeode);
+    }
 
 }
 
@@ -3143,6 +3044,12 @@ void ArtifactVis2::readLocusFile(QueryGroup* query)
 
     //center/=query->loci.size();
     // query->center = center;
+#ifdef WITH_OSSIMPLANET
+
+    if (_ossim)
+        OssimPlanet::instance()->addModel(query->sphereRoot, center.y(), center.x(), Vec3(1, 1, 1), 10, 0, 0, 0);
+
+#endif
     std::cerr << "Loci Loaded." << std::endl;
 }
 void ArtifactVis2::setupSiteMenu()
@@ -3706,52 +3613,6 @@ void ArtifactVis2::setSelectMatrix(osg::Matrix& mat)
 {
     _selectModelLoad.get()->setMatrix(mat);
 }
-void ArtifactVis2::rotateModel(double rx, double ry, double rz)
-{
-    //cout << rx << "," << ry << "," << rz << "\n";
-    //cout << _selectRotx << "," << _selectRoty << "," << _selectRotz << "\n";
-    if (_handOn)
-    {
-        rx *= 10;
-        ry *= 10;
-        rz *= 10;
-        _selectRotx += rx;
-        _selectRoty += ry;
-        _selectRotz += rz;
-    }
-    else
-    {
-        _selectRotx += rx;
-        _selectRoty += ry;
-        _selectRotz += rz;
-    }
-
-    //cout << _selectRotx << "," << _selectRoty << "," << _selectRotz << "\n";
-    _root->removeChild(_selectModelLoad.get());
-    Matrixd scale;
-    scale.makeScale(_snum, _snum, _snum);
-    MatrixTransform* scaleTrans = new MatrixTransform();
-    scaleTrans->setMatrix(scale);
-    scaleTrans->addChild(_modelFileNode);
-    MatrixTransform* siteRote = new MatrixTransform();   //Andrew here it works, with no problem
-    Matrixd rotx;
-    rotx.makeRotate(osg::DegreesToRadians(_selectRotx), 1, 0, 0);   //Rotating it 10 degrees
-    Matrixd roty;
-    roty.makeRotate(osg::DegreesToRadians(_selectRoty), 0, 1, 0);   //Rotating it 10 degrees
-    Matrixd rotz;
-    rotz.makeRotate(osg::DegreesToRadians(_selectRotz), 0, 1, 0);   //Rotating it 10 degrees
-    siteRote->setMatrix(rotx * roty * rotz);
-    siteRote->addChild(scaleTrans);
-    PositionAttitudeTransform* modelTrans = new PositionAttitudeTransform();
-    modelTrans->setPosition(_modelartPos);
-    modelTrans->addChild(siteRote);
-    _selectModelLoad = new osg::MatrixTransform();
-    _selectModelLoad->addChild(modelTrans);
-    _root->addChild(_selectModelLoad.get());  //reattach the transform matrix.
-}
-
-
-
 void ArtifactVis2::moveCam(double bscale, double x, double y, double z, double o1, double o2, double o3, double o4)
 {
     Vec3 trans = Vec3(x, y, z) * bscale;
@@ -3769,12 +3630,6 @@ void ArtifactVis2::moveCam(double bscale, double x, double y, double z, double o
     PluginHelper::setObjectMatrix(gotoMat);
     PluginHelper::setObjectScale(bscale);
 }
-
-
-void ArtifactVis2::createSelObj(osg::Vec3 pos, string color, float radius)
-{
-}
-
 void ArtifactVis2::flyTo(int i)
 {
 
@@ -3799,9 +3654,6 @@ void ArtifactVis2::flyTo(int i)
 	}
 }
 
-void ArtifactVis2::updateHudMovement(int i, TrackedButtonInteractionEvent * tie,float _moveDistance, osg::Vec3 _menuPoint)
-{
-}
 void ArtifactVis2::loadAnnotationGraph(int inc)
 {
 osg::Vec3 pos;
@@ -3910,12 +3762,6 @@ cerr << "Pass\n";
     _annotations[inc]->textNode = textNode;
 
     string name = _annotations[inc]->name;
-
-
-
-
-
-
 
 	    SceneObject * so;
 	    so = new SceneObject(name, false, false, false, true, false);
@@ -4182,17 +4028,6 @@ string filename = ConfigManager::getEntry("Plugin.ArtifactVis2.Database").append
 
            // desc_child = desc_child->next;
         }
-
-
-
-
-
-
-
-
-
-
-
         anno->desc = desc;
 //Name
         desc_node = mxmlFindElement(node, tree, "name", NULL, NULL, MXML_DESCEND);
