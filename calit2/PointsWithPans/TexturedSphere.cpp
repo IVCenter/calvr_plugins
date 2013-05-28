@@ -7,6 +7,10 @@
 #include <iostream>
 #include <cmath>
 
+#ifdef WIN32
+#define M_PI 3.141592653589793238462643
+#endif
+
 osg::Geode * TexturedSphere::makeSphere(std::string file, float radius, float tfactor, bool flipS)
 {
     osg::Geometry * geom = new osg::Geometry();

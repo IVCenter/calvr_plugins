@@ -1,5 +1,6 @@
 #include "TimeRangeDataGraph.h"
 #include "ColorGenerator.h"
+#include "GraphGlobals.h"
 
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/CalVR.h>
@@ -41,8 +42,6 @@ TimeRangeDataGraph::TimeRangeDataGraph()
 
     osg::StateSet * stateset = _root->getOrCreateStateSet();
     stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
-
-    _font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
 
     _currentHoverIndex = -1;
     _currentHoverGraph = -1;
@@ -431,7 +430,7 @@ void TimeRangeDataGraph::makeBG()
     verts->at(3) = osg::Vec3(-0.5,1,-0.5);
 
     osg::Vec4Array * colors = new osg::Vec4Array(1);
-    colors->at(0) = osg::Vec4(0.9,0.9,0.9,1.0);
+    colors->at(0) = GraphGlobals::getBackgroundColor();
 
     geom->setColorArray(colors);
     geom->setColorBinding(osg::Geometry::BIND_OVERALL);
@@ -448,7 +447,7 @@ void TimeRangeDataGraph::makeHover()
     _hoverGeode = new osg::Geode();
     _hoverBGGeom = new osg::Geometry();
     _hoverBGGeom->setUseDisplayList(false);
-    _hoverText = makeText("",osg::Vec4(1,1,1,1));
+    _hoverText = GraphGlobals::makeText("",osg::Vec4(1,1,1,1));
     _hoverGeode->addDrawable(_hoverBGGeom);
     _hoverGeode->addDrawable(_hoverText);
     _hoverGeode->setCullingActive(false);
@@ -663,7 +662,7 @@ void TimeRangeDataGraph::updateAxis()
     float myCenter = _graphTop - (_barHeight / 2.0);
     for(int i = 0; i < _graphList.size(); ++i)
     {
-	osgText::Text * text = makeText(_graphList[i]->name,osg::Vec4(0,0,0,1));
+	osgText::Text * text = GraphGlobals::makeText(_graphList[i]->name,osg::Vec4(0,0,0,1));
 	text->setRotation(q);
 	text->setAlignment(osgText::Text::CENTER_CENTER);
 	osg::BoundingBox bb = text->getBound();
@@ -692,7 +691,7 @@ void TimeRangeDataGraph::updateShading()
     geom->setUseDisplayList(false);
     geom->setUseVertexBufferObjects(true);
 
-    osg::Vec4 defaultColor(0.4,0.4,0.4,1.0);
+    osg::Vec4 defaultColor = GraphGlobals::getDataBackgroundColor();
     verts->push_back(osg::Vec3(_graphLeft,0.6,_graphBottom));
     verts->push_back(osg::Vec3(_graphRight,0.6,_graphBottom));
     verts->push_back(osg::Vec3(_graphRight,0.6,_graphTop));
@@ -721,20 +720,4 @@ void TimeRangeDataGraph::updateSizes()
 	_barPadding = (0.05 * (_graphTop - _graphBottom)) / ((float)(_graphList.size()-1));
 	_barHeight *= 0.95;
     }
-}
-
-osgText::Text * TimeRangeDataGraph::makeText(std::string text, osg::Vec4 color)
-{
-    osgText::Text * textNode = new osgText::Text();
-    textNode->setCharacterSize(1.0);
-    textNode->setAlignment(osgText::Text::CENTER_CENTER);
-    textNode->setColor(color);
-    textNode->setBackdropColor(osg::Vec4(0,0,0,0));
-    textNode->setAxisAlignment(osgText::Text::XZ_PLANE);
-    textNode->setText(text);
-    if(_font)
-    {
-	textNode->setFont(_font);
-    }
-    return textNode;
 }
