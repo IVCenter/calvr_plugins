@@ -94,6 +94,9 @@ bool WaterMaze::init()
     _furnitureCB->setCallback(this);
     _detailsMenu->addItem(_furnitureCB);
 
+    _lightingCB = new MenuCheckbox("Lighting", true);
+    _lightingCB->setCallback(this);
+    _detailsMenu->addItem(_lightingCB);
 
     // extra output messages
     _debug = (ConfigManager::getEntry("Plugin.WaterMaze.Debug") == "on");
@@ -405,6 +408,68 @@ void WaterMaze::load()
     geode->addDrawable(sd);
     _geoRoot->addChild(geode);
 
+
+
+
+    // furniture
+
+    osg::Node *painting, *desertpainting, *bookshelf, *chair;
+    std::string dataDir = ConfigManager::getEntry("Plugin.WaterMaze.DataDir");
+
+    painting = osgDB::readNodeFile(dataDir + ConfigManager::getEntry("Plugin.WaterMaze.Models.Painting"));
+    if (painting)
+    {
+        osg::PositionAttitudeTransform * pat = new osg::PositionAttitudeTransform();
+        float scale = 6.0;
+        pat->setScale(osg::Vec3(scale, scale, scale));
+        pat->setAttitude(osg::Quat(M_PI/2, osg::Vec3(0, 0, 1)));
+        pat->setPosition(osg::Vec3(-widthTile*.75, (numHeight-2) * heightTile/2, wallHeight/3));
+        pat->addChild(painting);
+        _furnitureSwitch->addChild(pat);
+    }
+
+    desertpainting = osgDB::readNodeFile(dataDir + ConfigManager::getEntry("Plugin.WaterMaze.Models.Clock"));
+    if (desertpainting)
+    {
+        osg::PositionAttitudeTransform * pat = new osg::PositionAttitudeTransform();
+        float scale = 12.0;
+        pat->setScale(osg::Vec3(scale, scale, scale));
+        pat->setAttitude(osg::Quat(M_PI/2, osg::Vec3(1, 0, 0),
+                                   0,      osg::Vec3(0, 1, 0),
+                                   -M_PI/2, osg::Vec3(0, 0, 1)));
+        pat->setPosition(osg::Vec3(widthTile * (numWidth-2), (numHeight-2) * heightTile/2, wallHeight/3));
+        pat->addChild(desertpainting);
+        _furnitureSwitch->addChild(pat);
+    }
+
+    bookshelf = osgDB::readNodeFile(dataDir + ConfigManager::getEntry("Plugin.WaterMaze.Models.Bookshelf"));
+    if (bookshelf)
+    {
+        osg::PositionAttitudeTransform * pat = new osg::PositionAttitudeTransform();
+        float scale = 6.0;
+        pat->setScale(osg::Vec3(scale, scale, scale));
+        pat->setPosition(osg::Vec3(widthTile * (numWidth-2) * 0.5,
+                        ((numHeight-2) * heightTile) + 0.5*heightTile,
+                         0));
+        pat->addChild(bookshelf);
+        _furnitureSwitch->addChild(pat);
+    }
+
+    chair = osgDB::readNodeFile(dataDir + ConfigManager::getEntry("Plugin.WaterMaze.Models.Chair"));
+    if (chair)
+    {
+        osg::PositionAttitudeTransform * pat = new osg::PositionAttitudeTransform();
+        float scale = 6.0;
+        pat->setScale(osg::Vec3(scale, scale, scale));
+        pat->setAttitude(osg::Quat(3*M_PI/4, osg::Vec3(0, 0, 1)));
+        pat->setPosition(osg::Vec3(-widthTile/2, -heightTile/2, 0));
+        pat->addChild(chair);
+        _furnitureSwitch->addChild(pat);
+    }
+    
+    _geoRoot->addChild(_furnitureSwitch);
+
+
     _loaded = true;
 
     osg::Matrixd mat;
@@ -547,7 +612,19 @@ void WaterMaze::menuCallback(MenuItem * item)
         }
         else
         {
-            _furnitureSwitch->setAllChildrenOn();
+            _furnitureSwitch->setAllChildrenOff();
+        }
+    }
+
+    else if (item == _lightingCB)
+    {
+        if (_lightingCB->getValue())
+        {
+
+        }
+        else
+        {
+
         }
     }
 
