@@ -99,7 +99,7 @@ void GraphGlobals::checkInit()
 
 void GraphGlobals::init()
 {
-    _font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
+    _font = osgText::readFontFile(CalVR::instance()->getResourceDir() + "/resources/arial.ttf");
     if(_font)
     {
 	_font->setTextureSizeHint(2048,2048);
