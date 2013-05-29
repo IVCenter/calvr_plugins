@@ -20,29 +20,28 @@
 class TextureObject : public osg::Texture2D::Texture2D::SubloadCallback
 {
 public:
-	TextureObject(GLuint tid) : _tid(tid)
+	TextureObject(std::map<unsigned int, GLuint> tid) : _tid(tid)
 	{
 	}
 	virtual ~TextureObject()
 	{
 
 	}
-	void UpdateTexture(GLuint tid)
-	{
-		_tid = tid;
-	}
 private:
 	void load( const osg::Texture2D& texture, osg::State& state) const
 	{
-		glBindTexture(GL_TEXTURE_2D, _tid);
+		unsigned int context = state.getContextID();
+		glBindTexture(GL_TEXTURE_2D, _tid[context]);
+		//printf("load %d\n", _tid[context]);
 	}
 
 	void subload( const osg::Texture2D& texture, osg::State& state) const
 	{
-		glBindTexture(GL_TEXTURE_2D, _tid);
+		unsigned int context = state.getContextID();
+		glBindTexture(GL_TEXTURE_2D, _tid[context]);
+		//printf("subload %d for state %u\n", _tid[context], state.getContextID());
 	}
-
-	GLuint _tid;
+	mutable std::map<unsigned int, GLuint> _tid; 
 
 };
 
@@ -50,6 +49,7 @@ class TextureManager
 {
 public:
 	TextureManager(unsigned int gid);
+	~TextureManager();
 	void Draw();
 	void DrawBorder();
 	void MoveTo(double x, double y);
@@ -67,7 +67,7 @@ public:
 
 	void AddGID(unsigned int gid);
 
-	osg::Geode* AddTexture(unsigned int gid, GLuint tid, unsigned int width, unsigned int height);
+	osg::Geode* AddTexture(unsigned int gid, std::map<unsigned int, GLuint> texmap, unsigned int width, unsigned int height);
 	unsigned int GetVideoCount() const;
 	unsigned int GetVideoID(unsigned int idx) const;
 	
@@ -76,7 +76,6 @@ private:
 	cvr::SceneObject* _scene;
 
 	std::vector<unsigned int> m_gidList;
-	std::map<unsigned int, GLuint> m_texidMap;
 
 	unsigned int m_gid;
 
