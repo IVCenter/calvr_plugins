@@ -1,0 +1,6 @@
+        <Points2 value="on" />
+    <Points2>
+       <UseShader value="true" />
+       <ShaderPath value="/home/calvr/CVRPlugins/calit2/Points/shaders" />
+       <ColorTable value="/home/calvr/CVRPlugins/calit2/Points/shaders/colortable.rgb" />
+    </Points2>
