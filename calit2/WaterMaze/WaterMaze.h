@@ -69,7 +69,7 @@ protected:
 
     cvr::SubMenu * _WaterMazeMenu, * _positionMenu, * _detailsMenu;
     cvr::MenuButton * _loadButton, * _clearButton, *_newTileButton;
-    cvr::MenuCheckbox * _gridCB, * _wallColorCB, * _shapesCB, * _furnitureCB;
+    cvr::MenuCheckbox * _gridCB, * _wallColorCB, * _shapesCB, * _furnitureCB, *_lightingCB;
     std::vector<cvr::MenuButton *> _positionButtons;
 
     osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry

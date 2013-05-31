@@ -1,11 +1,11 @@
-FIND_PATH(Collider_pp_DIR ColliderPlusPlus.hpp
+FIND_PATH(Collider_pp_DIR libcollider.hpp
   PATHS
   $ENV{COLLIDER_HOME}
   NO_DEFAULT_PATH
-    PATH_SUFFIXES include/ColliderPlusPlus
+    PATH_SUFFIXES include/libcollider
 )
 
-FIND_PATH(Collider_pp_DIR ColliderPlusPlus.hpp
+FIND_PATH(Collider_pp_DIR libcollider.hpp
   PATHS
   /usr/local/include
   /usr/include
@@ -13,16 +13,17 @@ FIND_PATH(Collider_pp_DIR ColliderPlusPlus.hpp
   /opt/local/include # DarwinPorts
   /opt/csw/include # Blastwave
   /opt/include
+  PATH_SUFFIXES libcollider
 )
 
 FIND_LIBRARY(Collider_pp_LIBRARY 
-  NAMES collider++
+  NAMES collider
   PATHS $ENV{COLLIDER_HOME}
     NO_DEFAULT_PATH
     PATH_SUFFIXES lib64 lib
 )
 FIND_LIBRARY(Collider_pp_LIBRARY 
-  NAMES collider++
+  NAMES collider
   PATHS
     /usr/local
     /usr

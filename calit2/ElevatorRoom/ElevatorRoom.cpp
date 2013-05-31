@@ -547,7 +547,7 @@ void ElevatorRoom::preFrame()
 
             if (_noResponse)
             {
-                unsigned char c = 'm';
+                //unsigned char c = 'm';
                 //sendChar(c);
             }
             _noResponse = true;
@@ -1046,7 +1046,7 @@ void ElevatorRoom::shoot()
             _score++;
             _modelHandler->setScore(_score);
 
-            unsigned char c = 'k';
+            //unsigned char c = 'k';
             //sendChar(c);
 
             std::cout << "Score: " << _score << std::endl;
@@ -1061,7 +1061,7 @@ void ElevatorRoom::shoot()
                 _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "buzz");
             }
 
-            unsigned char c = 'k';
+            //unsigned char c = 'k';
             //sendChar(c);
 
             std::cout << "Whoops!" << std::endl;
@@ -1218,15 +1218,15 @@ void ElevatorRoom::dingTest()
     if ((PluginHelper::getProgramDuration() - _startTime) > _pauseTime)
     {
         //_audioHandler->playSound(0 + DING_OFFSET, "ding");
-
+        _c = 255;
         sendChar(_c);
-        _c++;
+        //_c++;
         //sendChar('a');      
 
         _startTime = PluginHelper::getProgramDuration();
-        _pauseTime = (rand() % 3) + 1;
+        _pauseTime = .5;//(rand() % 3) + 1;
         
-        std::cout << "Ding! Pause for " << _pauseTime << " seconds." << std::endl;
+        //std::cout << "Ding! Pause for " << _pauseTime << " seconds." << std::endl;
     }
 }
 
@@ -1318,8 +1318,7 @@ void ElevatorRoom::write_SPP(int bytes, unsigned char* buf)
     if (!_sppConnected)
         return;
 
-    std::string str(reinterpret_cast<const char *>(buf), 1);   
-    std::cout << "Writing " << buf[0] << std::endl;
+    printf("Writing: %d\n", buf[0]);
 
     DWORD BytesReceived;
     DWORD bytesToWrite = 1;
