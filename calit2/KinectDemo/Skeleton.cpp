@@ -4,7 +4,6 @@ bool Skeleton::moveWithCam;
 osg::Vec3d Skeleton::camPos;
 osg::Vec3d Skeleton::camPos2;
 osg::Quat Skeleton::camRot;
-bool Skeleton::navSpheres;
 
 JointNode::JointNode()
 {
@@ -74,57 +73,6 @@ void JointNode::update(int joint_id, float newx, float newy, float newz, float n
     translate->setMatrix(camSkel);
 }
 
-NavigationSphere::NavigationSphere()
-{
-    position = osg::Vec3();
-    prevPosition = osg::Vec3();
-    osg::Vec3d poz0(0, 0, 0);
-    osg::Sphere* sphereShape = new osg::Sphere(poz0, 0.1);
-    osg::ShapeDrawable* ggg2 = new osg::ShapeDrawable(sphereShape);
-    ggg2->setColor(osg::Vec4(0.1, 0.4, 0.3, 0.9));
-    geode = new osg::Geode;
-    geode->addDrawable(ggg2);
-    rotate = new osg::MatrixTransform();
-    osg::Matrix rotMat;
-    rotMat.makeRotate(0, 1, 0, 1);
-    rotate->setMatrix(rotMat);
-    rotate->addChild(geode);
-    translate = new osg::MatrixTransform();
-    osg::Matrixd tmat;
-    tmat.makeTranslate(poz0);
-    translate->setMatrix(tmat);
-    translate->addChild(rotate);
-    lock = -1;
-    activated = false;
-}
-
-void NavigationSphere::update(osg::Vec3d position2, osg::Vec4f orientation)
-{
-    osg::ShapeDrawable* newColor = (osg::ShapeDrawable*) geode->getDrawable(0);
-
-    // XXX do this only when it actually changes (locks/unlocks)
-    if (lock == -1)
-    {
-        newColor->setColor(osg::Vec4(0.3, 0.4, 0.2, 0.9));
-    }
-    else if (activated)
-    {
-        newColor->setColor(osg::Vec4(0.3, 0.4, 0.2, 0.9));
-    }
-    else
-    {
-        newColor->setColor(osg::Vec4(0.1, 0.4, 0.3, 0.9));
-    }
-
-    geode->setDrawable(0, newColor);
-    position.set(position2);
-    osg::Matrix rotMat;
-    rotMat.makeRotate(orientation);
-    rotate->setMatrix(rotMat);
-    osg::Matrix posMat;
-    posMat.makeTranslate(position2);
-    translate->setMatrix(posMat);
-}
 
 Skeleton::Skeleton()
 {
@@ -150,7 +98,6 @@ Skeleton::Skeleton()
     }
 
     cylinder = MCylinder();
-    navSphere = NavigationSphere();
     attached = false;
 }
 
@@ -185,8 +132,6 @@ void Skeleton::attach(osg::Switch* parent)
     {
         parent->addChild(joints[i].translate);
     }
-
-    if (Skeleton::navSpheres) parent->addChild(navSphere.translate);
 }
 
 //void Skeleton::detach(osg::MatrixTransform* parent)
@@ -200,8 +145,6 @@ void Skeleton::detach(osg::Switch* parent)
         parent->removeChild(joints[i].translate);
     }
 
-    navSphere.translate->ref(); // XXX ugly hack
-    parent->removeChild(navSphere.translate);
     parent->removeChild(cylinder.geode);
 
     for (int i = 0; i < 15; i++)    parent->removeChild(bone[i].geode);

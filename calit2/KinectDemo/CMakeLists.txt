@@ -15,7 +15,10 @@ SET(PLUGIN_HEADERS
     CloudManager.h
     SkeletonManager.h
     KinectObject.h
-)
+    CalibrateKinect.h
+    InputManager.h
+    KinectInteractions.h
+    helmparms3d/svdm.h)
 
 ADD_LIBRARY(${LIB_NAME}
     "SHARED"
@@ -33,6 +36,11 @@ ADD_LIBRARY(${LIB_NAME}
     SelectableItem.cpp
     CloudManager.cpp
     KinectObject.cpp
+    CalibrateKinect.cpp
+    InputManager.cpp
+    KinectInteractions.cpp
+    helmparms3d/helmparms3d.cpp
+    helmparms3d/svdm.cpp
    # SkeletonManager.cpp
 )
 

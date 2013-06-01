@@ -51,7 +51,7 @@ void PointCloudObject::init(std::string name, std::string filename, osg::Quat pc
             pli.file = filename;
             pli.group = new osg::Group();
 
-            PluginHelper::sendMessageByName("Points",POINTS_LOAD_REQUEST,(char*)&pli);
+            PluginHelper::sendMessageByName("Points2",POINTS_LOAD_REQUEST,(char*)&pli);
 
             if(!pli.group->getNumChildren())
             {
