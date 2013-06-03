@@ -2,6 +2,7 @@
 #define PANO_DRAWABLE_LOD_H
 
 #include <GL/glew.h>
+#include <unistd.h>
 
 // hack for compile on dan's mac
 #ifndef GL_DOUBLE_VEC2
