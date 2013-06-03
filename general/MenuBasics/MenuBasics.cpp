@@ -5,6 +5,7 @@
 #include <cvrKernel/CVRViewer.h>
 #include <cvrKernel/ScreenConfig.h>
 #include <cvrKernel/ComController.h>
+#include <cvrKernel/ScreenBase.h>
 #include <cvrInput/TrackingManager.h>
 #include <cvrMenu/MenuSystem.h>
 #include <cvrConfig/ConfigManager.h>
@@ -40,7 +41,7 @@ bool MenuBasics::init()
     drive->setCallback(this);
     fly = new MenuCheckbox("Fly",false);
     fly->setCallback(this);
-    snap = new MenuCheckbox("Snap",false);
+    snap = new MenuCheckbox("Snap",Navigation::instance()->getSnapToGround());
     snap->setCallback(this);
     navScale = new MenuRangeValueCompact("Nav Scale",0.01,100.0,1.0,true,1.5);
     navScale->setCallback(this);
@@ -76,6 +77,15 @@ bool MenuBasics::init()
     MenuSystem::instance()->addMenuItem(eyeSeparation);
 
     sceneSize = ConfigManager::getFloat("SceneSize",1500.0);
+
+    bool found = false;
+    ConfigManager::getBool("omniStereo","Stereo",false,&found);
+    omniStereo = new MenuCheckbox("Omni Stereo",ScreenBase::getOmniStereoActive());
+    omniStereo->setCallback(this);
+    if(found)
+    {
+	MenuSystem::instance()->addMenuItem(omniStereo);
+    }
 
     return true;
 }
@@ -214,6 +224,10 @@ void MenuBasics::menuCallback(MenuItem * item)
     else if(item == navScale)
     {
 	Navigation::instance()->setScale(navScale->getValue());
+    }
+    else if(item == omniStereo)
+    {
+	ScreenBase::setOmniStereoActive(omniStereo->getValue());
     }
 }
 

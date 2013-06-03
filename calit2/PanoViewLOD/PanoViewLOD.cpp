@@ -43,7 +43,11 @@ bool PanoViewLOD::init()
 {
     _panObject = NULL;
 
+#ifndef WIN32
     std::string paths = ConfigManager::getEntryConcat("value","Plugin.PanoViewLOD.DefaultConfigDir",':',"");
+#else
+	std::string paths = ConfigManager::getEntryConcat("value","Plugin.PanoViewLOD.DefaultConfigDir",';',"");
+#endif
     size_t position = 0;
     
     while(position < paths.size())
@@ -171,7 +175,7 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 
 	    _panObject = new PanoViewObject(_panButtonList[i]->getText(),_pans[i]->leftFiles,_pans[i]->rightFiles,_pans[i]->radius,_pans[i]->mesh,_pans[i]->depth,_pans[i]->size,_pans[i]->height,_pans[i]->vertFile,_pans[i]->fragFile);
 
-	    _panObject->setTransition(_pans[i]->transitionType,_pans[i]->transitionDirectory,_pans[i]->leftTransitionFiles,_pans[i]->rightTransitionFiles);
+	    _panObject->setTransition(_pans[i]->transitionType,_pans[i]->transitionDirectory,_pans[i]->leftTransitionFiles,_pans[i]->rightTransitionFiles,_pans[i]->configTag);
 
 	    PluginHelper::registerSceneObject(_panObject,"PanoViewLOD");
 	    _panObject->attachToScene();
@@ -179,6 +183,7 @@ void PanoViewLOD::menuCallback(MenuItem * item)
 	    if(_loadRequest)
 	    {
 		_panObject->addMenuItem(_returnButton);
+		_panObject->setRemoveOnClick(true);
 	    }
 
 	    break;
@@ -320,6 +325,8 @@ void PanoViewLOD::createLoadMenu(std::string tagBase, std::string tag, SubMenu *
 
 	if(info)
 	{
+	    info->configTag = tag;
+
 	    //put here for now since the values are not in the xml files
 	    info->radius = ConfigManager::getFloat("radius",tag,6000);
 	    _panButtonList.push_back(temp);

@@ -13,7 +13,8 @@ using namespace std;
 using namespace osg;
 
 
-/* 'gSnappingUnitDist' is the default minimum sensible distance in CAVE geometry editting */
+// 'gSnappingUnitDist' is the default minimum sensible distance in CAVE geometry editing
+//const float CAVEGeodeEditWireframe::gSnappingUnitDist(0.06f);
 const float CAVEGeodeEditWireframe::gSnappingUnitDist(0.06f);
 
 
@@ -125,7 +126,7 @@ CAVEGeodeEditWireframeRotate::CAVEGeodeEditWireframeRotate()
     const int numSegs = 36;
     const float stepTheta = M_PI * 2 / numSegs;
 
-    /* create 72 vertices and normals in three planes */
+    // create 72 vertices and normals in three planes
     Vec3Array* vertices = new Vec3Array;
     Vec3Array* normals = new Vec3Array;
 
@@ -192,12 +193,12 @@ CAVEGeodeEditGeometryWireframe::CAVEGeodeEditGeometryWireframe(CAVEGeometry *geo
     Array *geodeNormalArray = geometry->getNormalArray(); 
     Array *geodeTexcoordArray = geometry->getTexCoordArray(0);
 
-    /* clone the field of primitive sets, set all modes to 'LINE_STRIP' */
+    // clone the field of primitive sets, set all modes to 'LINE_STRIP'
     mCAVEGeometry = new CAVEGeometry(geometry);
     mCAVEGeometry->setPrimitiveSetModes(PrimitiveSet::LINE_STRIP);
     addDrawable(mCAVEGeometry);
 
-    /* check the valid status of all data field from 'CAVEGeodeShape', refer them to 'this' geode */
+    // check the valid status of all data field from 'CAVEGeodeShape', refer them to 'this' geode
     if (geodeVertexArray->getType() == Array::Vec3ArrayType)
         mCAVEGeometry->setVertexArray((Vec3Array*) geodeVertexArray);
     else 
@@ -215,16 +216,4 @@ CAVEGeodeEditGeometryWireframe::CAVEGeodeEditGeometryWireframe(CAVEGeometry *geo
 
     mCAVEGeometry->setNormalBinding(Geometry::BIND_PER_VERTEX);
 }
-
-
-
-
-
-
-
-
-
-
-
-
 

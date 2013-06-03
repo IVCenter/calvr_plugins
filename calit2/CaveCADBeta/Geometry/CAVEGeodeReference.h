@@ -115,19 +115,3 @@ class CAVEGeodeReferencePlane: public CAVEGeodeReference
 
 #endif
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -90,16 +90,35 @@ class CAVEGeodeSnapSolidshapeCylinder: public CAVEGeodeSnapSolidshape
 };
 
 
+/***************************************************************
+* Class: CAVEGeodeSnapSolidshapeCone
+***************************************************************/
+class CAVEGeodeSnapSolidshapeCone: public CAVEGeodeSnapSolidshape
+{
+  public:
+    CAVEGeodeSnapSolidshapeCone();
+
+    virtual void resize(const osg::Vec3 &gridVect, bool snap);
+
+  protected:
+    osg::Cone* mCone;
+};
+
+
+/***************************************************************
+* Class: CAVEGeodeSnapSolidshapeLine
+***************************************************************/
+class CAVEGeodeSnapSolidshapeLine: public CAVEGeodeSnapSolidshape
+{
+  public:
+    CAVEGeodeSnapSolidshapeLine();
+
+    virtual void resize(const osg::Vec3 &gridVect, bool snap);
+
+  protected:
+    osg::Box* mBox;
+};
+
+
 #endif
-
-
-
-
-
-
-
-
-
-
-
 

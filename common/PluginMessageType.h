@@ -109,4 +109,82 @@ struct OsgPdfLoadRequest
     cvr::SceneObject * object;
 };
 
+// OsgVnc
+enum OsgVncMessageType
+{
+    VNC_GOOGLE_QUERY=0,
+    VNC_HIDE,
+    VNC_SCALE,
+    VNC_POSITION
+};
+
+struct OsgVncRequest
+{
+    std::string query;
+    bool hide;
+    float scale;
+    osg::Vec3f position;
+};
+
+// ModelLoader
+ 
+enum ModelLoaderMessageType
+{
+    ML_LOAD_REQUEST=0,
+    ML_REMOVE_ALL
+};
+
+struct ModelLoaderLoadRequest
+{
+    char fileLabel[1024];
+    osg::Matrixd transform;
+};
+
+// StructView
+
+enum StructViewMessageType
+{
+    SV_ENABLE=0,
+    SV_DISABLE,
+    SV_LAYER_ON,
+    SV_LAYER_OFF
+};
+
+// Video
+enum VideoMessageType
+{
+    VIDEO_LOAD,
+    VIDEO_STOP
+};
+
+
+struct VideoSceneObject : public cvr::SceneObject
+{
+    virtual void play() = 0;
+    virtual void stop() = 0;
+    
+    VideoSceneObject(
+        std::string name, bool navigation, bool movable, bool clip, 
+        bool contextMenu, bool showBounds) : cvr::SceneObject(
+            name, navigation, movable, clip, contextMenu, showBounds) {}
+            
+    virtual ~VideoSceneObject() {}
+};
+
+struct VideoMessageData
+{
+    // why == VIDEO_LOAD:
+    //  - input: path (path to video file to load)
+    //  - output: obj (allocated by plugin)
+    
+    // why == VIDEO_STOP:
+    //  - input: obj (as provided by an earlier VIDEO_LOAD)
+    //  - unused: path
+    
+    VideoMessageType why;
+    std::string path;   
+    VideoSceneObject* obj;
+};
+
+
 #endif

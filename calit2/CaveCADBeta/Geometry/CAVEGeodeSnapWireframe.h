@@ -39,7 +39,7 @@ class CAVEGeodeSnapWireframe: public CAVEGeode
 
     virtual void resize(osg::Vec3 &gridVect) = 0;
 
-    /* shape morphing functions: 'dirtyBound()' is called with in 'resize()' */
+    // shape morphing functions: 'dirtyBound()' is called with in 'resize()'
     void setInitPosition(const osg::Vec3 &initVect) { mInitPosition = initVect; }
     void setScaleVect(const osg::Vec3 &scaleVect) { mScaleVect = scaleVect; }
 
@@ -88,19 +88,34 @@ class CAVEGeodeSnapWireframeCylinder: public CAVEGeodeSnapWireframe
 };
 
 
+/***************************************************************
+* Class: CAVEGeodeSnapWireframeCone
+***************************************************************/
+class CAVEGeodeSnapWireframeCone: public CAVEGeodeSnapWireframe
+{
+  public:
+    CAVEGeodeSnapWireframeCone();
+
+    virtual void resize(osg::Vec3 &gridVect);
+    virtual void initBaseGeometry();
+
+    static const int gMinFanSegments;
+    static int gCurFanSegments;
+};
+
+
+/***************************************************************
+* Class: CAVEGeodeSnapWireframeLine
+***************************************************************/
+class CAVEGeodeSnapWireframeLine: public CAVEGeodeSnapWireframe
+{
+  public:
+    CAVEGeodeSnapWireframeLine();
+
+    virtual void resize(osg::Vec3 &gridVect);
+    virtual void initBaseGeometry();
+};
+
+
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

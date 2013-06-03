@@ -1,4 +1,3 @@
-#include <GL/glew.h>
 #include "PanoDrawableLOD.h"
 
 #include <cvrConfig/ConfigManager.h>
@@ -18,7 +17,16 @@
 
 //#define PRINT_TIMING
 
+#ifndef WIN32
 #include <sys/time.h>
+#else
+#include <cvrUtil/TimeOfDay.h>
+#include <io.h>
+#endif
+
+std::map<int,sph_cache*> PanoDrawableInfo::cacheMap;
+std::map<int,std::vector<std::pair<bool,sph_model*> > > PanoDrawableInfo::currentModels;
+OpenThreads::Mutex PanoDrawableInfo::staticLock;
 
 using namespace cvr;
 
@@ -166,8 +174,14 @@ char * loadShaderFile(std::string file)
     }
 
     fileBuffer = new char[st.st_size+1];
-    fileBuffer[st.st_size] = '\0';
-    read(filefd,fileBuffer,st.st_size);
+    int bytesRead = read(filefd,fileBuffer,st.st_size);
+
+	// fix for odd windows issue
+#ifndef WIN32
+	fileBuffer[st.st_size] = '\0';
+#else
+	fileBuffer[bytesRead] = '\0';
+#endif
 
     close(filefd);
 
@@ -194,7 +208,7 @@ PanoDrawableLOD::PanoDrawableLOD(PanoDrawableInfo * pdi, float radius, int mesh,
     _fragData = loadShaderFile(shaderDir + "/" + fragFile);
 
     //std::cerr << "Vertfile: " << vertFile << " fragFile: " << fragFile << std::endl;
-
+	
     if(!_vertData)
     {
 	std::cerr << "Error loading shader file: " << shaderDir + "/" + vertFile << std::endl;
@@ -257,6 +271,21 @@ void PanoDrawableLOD::cleanup()
     //}
     //_cacheMap.clear();
     //_modelMap.clear();
+    
+    _pdi->staticLock.lock();
+
+    for(std::map<int,std::vector<std::pair<bool,sph_model*> > >::iterator it = _pdi->currentModels.begin(); it != _pdi->currentModels.end(); it++)
+    {
+	for(int i = 0; i < it->second.size(); ++i)
+	{
+	    if(it->second[i].second == _pdi->modelMap[it->first] || it->second[i].second == _pdi->transitionModelMap[it->first])
+	    {
+		it->second[i].first = false;
+	    }
+	}
+    }
+
+    _pdi->staticLock.unlock();
 }
 
 void PanoDrawableLOD::next()
@@ -346,6 +375,11 @@ void PanoDrawableLOD::setZoom(osg::Vec3 dir, float k)
     {
 	it->second->set_zoom(dir.x(),dir.y(),dir.z(),k);
     }
+
+    for(std::map<int,sph_model*>::iterator it = _pdi->transitionModelMap.begin(); it!= _pdi->transitionModelMap.end(); it++)
+    {
+	it->second->set_zoom(dir.x(),dir.y(),dir.z(),k);
+    }
 }
 
 osg::BoundingBox PanoDrawableLOD::computeBound() const
@@ -411,6 +445,7 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 
     if(!_pdi->initMap[context])
     {
+	_pdi->staticLock.lock();
 	if(!_pdi->cacheMap[context])
 	{
 	    GLenum err = glewInit();
@@ -418,6 +453,7 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	    {
 		std::cerr << "Error on glew init: " << glewGetErrorString(err) << std::endl;
 		_badInit = true;
+		_pdi->staticLock.unlock();
 		_pdi->initLock.unlock();
 		glPopAttrib();
 		return;
@@ -425,29 +461,58 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	    int cachesize = ConfigManager::getInt("value","Plugin.PanoViewLOD.CacheSize",256);
 	    _pdi->cacheMap[context] = new sph_cache(cachesize);
 	    _pdi->cacheMap[context]->set_debug(false);
-
-	    _pdi->updateLock[context] = new OpenThreads::Mutex();
 	}
 
 	int time = 1;
-	if(_pdi->modelMap[context])
+
+	std::map<int,std::vector<std::pair<bool,sph_model*> > >::iterator it = _pdi->currentModels.find(context);
+
+	if(it != _pdi->currentModels.end())
 	{
-	    time = _pdi->modelMap[context]->get_time();
-	    delete _pdi->modelMap[context];
-	    delete _pdi->transitionModelMap[context];
+	    for(std::vector<std::pair<bool,sph_model*> >::iterator vit = it->second.begin(); vit != it->second.end();)
+	    {
+#ifndef WIN32
+		time = std::max(time,vit->second->get_time());
+#else
+		time = max(time,vit->second->get_time());
+#endif
+		if(!vit->first)
+		{
+		    delete vit->second;
+		    vit = it->second.erase(vit);
+		}
+		else
+		{
+		    vit++;
+		}
+	    }
 	}
+	else
+	{
+	    _pdi->currentModels[context] = std::vector<std::pair<bool,sph_model*> >();
+	}
+
 	GLint buffer,ebuffer;
 	glGetIntegerv(GL_ARRAY_BUFFER_BINDING,&buffer);
 	glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,&ebuffer);
 
 	_pdi->modelMap[context] = new sph_model(*_pdi->cacheMap[context],_vertData,_fragData,_mesh,_depth,_size);
 	_pdi->transitionModelMap[context] = new sph_model(*_pdi->cacheMap[context],_vertData,_fragData,_mesh,_depth,_size);
+	_pdi->currentModels[context].push_back(std::pair<bool,sph_model*>(true,_pdi->modelMap[context]));
+	_pdi->currentModels[context].push_back(std::pair<bool,sph_model*>(true,_pdi->transitionModelMap[context]));
 	// Set start time to last model's time since timestamps are used by the disk cache
 	_pdi->modelMap[context]->set_time(time);
 	_pdi->transitionModelMap[context]->set_time(time);
 
 	glBindBuffer(GL_ARRAY_BUFFER, buffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebuffer);
+
+	_pdi->staticLock.unlock();
+
+	if(!_pdi->updateLock[context])
+	{
+	    _pdi->updateLock[context] = new OpenThreads::Mutex();
+	}
 
 	_pdi->leftFileIDs[context] = std::vector<int>();
 	_pdi->rightFileIDs[context] = std::vector<int>();

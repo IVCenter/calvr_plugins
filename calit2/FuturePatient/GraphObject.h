@@ -9,31 +9,36 @@
 #include <mysql++/mysql++.h>
 
 #include "DataGraph.h"
+#include "LayoutInterfaces.h"
 
-class GraphObject : public cvr::TiledWallSceneObject
+class GraphObject : public LayoutTypeObject, public TimeRangeObject
 {
     public:
         GraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~GraphObject();
 
-        bool addGraph(std::string name);
+        bool addGraph(std::string patient, std::string name);
         int getNumGraphs()
         {
             return _graph->getNumGraphs();
         }
 
         void setGraphSize(float width, float height);
+
         void setGraphDisplayRange(time_t start, time_t end);
         void resetGraphDisplayRange();
-
         void getGraphDisplayRange(time_t & start, time_t & end);
         time_t getMaxTimestamp();
         time_t getMinTimestamp();
+
         void setBarPosition(float pos);
         float getBarPosition();
         void setBarVisible(bool b);
         bool getBarVisible();
         bool getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point);
+
+        virtual void dumpState(std::ostream & out);
+        virtual bool loadState(std::istream & in);
 
         void setLayoutDoesDelete(bool b)
         {
@@ -43,6 +48,10 @@ class GraphObject : public cvr::TiledWallSceneObject
         {
             return _layoutDoesDelete;
         }
+
+        void setGLScale(float scale);
+
+        void perFrame();
 
         virtual void menuCallback(cvr::MenuItem * item);
 
@@ -56,11 +65,21 @@ class GraphObject : public cvr::TiledWallSceneObject
         DataGraph * _graph;
 
         cvr::MenuList * _mgdList;
+        cvr::MenuList * _ldmList;
 
         std::string _pdfDir;
 
         int _activeHand;
         bool _layoutDoesDelete;
+
+        struct LoadData
+        {
+            std::string patient;
+            std::string name;
+            std::string displayName;
+        };
+
+        std::vector<LoadData> _loadedGraphs;
 };
 
 #endif

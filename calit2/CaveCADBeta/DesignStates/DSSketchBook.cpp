@@ -25,7 +25,7 @@ DSSketchBook::DSSketchBook(): mPageIdx(0), mNumPages(1), mFlipStepsCount(0)
     mSignalAnimation = NULL;
     mSignalActivatedSwitch = NULL;
 
-    /* create instance of intersector */
+    // create instance of intersector
     mDSIntersector = new DSIntersector();
     mDSIntersector->loadRootTargetNode(NULL, NULL);
 
@@ -65,10 +65,7 @@ void DSSketchBook::setObjectEnabled(bool flag)
     } 
     else 
     {
-/*        setSingleChildOn(1);
-        mDSIntersector->loadRootTargetNode(NULL, NULL);
-        animCallback = dynamic_cast <AnimationPathCallback*> (mPATransBwd->getUpdateCallback());
-        */
+
     }
 
     if (animCallback) 

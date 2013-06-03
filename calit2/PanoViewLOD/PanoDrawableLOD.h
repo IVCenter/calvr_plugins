@@ -1,10 +1,18 @@
 #ifndef PANO_DRAWABLE_LOD_H
 #define PANO_DRAWABLE_LOD_H
 
+#include <GL/glew.h>
+
+// hack for compile on dan's mac
+#ifndef GL_DOUBLE_VEC2
+#undef GL_ARB_gpu_shader_fp64
+#endif
+
+#include <osg/Drawable>
+
 #include "sph-cache.hpp"
 #include "sph-model.hpp"
 
-#include <osg/Drawable>
 #include <OpenThreads/Mutex>
 
 #include <string>
@@ -31,7 +39,9 @@ struct PanoDrawableInfo
 
     std::map<int,OpenThreads::Mutex*> updateLock;
 
-    std::map<int,sph_cache*> cacheMap;
+    static std::map<int,sph_cache*> cacheMap;
+    static std::map<int,std::vector<std::pair<bool,sph_model*> > > currentModels;
+    static OpenThreads::Mutex staticLock;
     std::map<int,sph_model*> modelMap;
     std::map<int,sph_model*> transitionModelMap;
 

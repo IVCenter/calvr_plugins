@@ -137,6 +137,23 @@ void DOGeometryCreator::resetWireframeGeodes(const osg::Vec3 &centerPos)
             mWireframeGeode->setInitPosition(centerPos + Vec3(0, 0, -rad));
             mWireframeGeode->setScaleVect(scaleCylinder);
         }
+        else if (mWireframeActiveID == CAVEGeodeShape::CONE)
+        {
+            float rad = ANIM_VIRTUAL_SPHERE_RADIUS / 1.5 * zoomfact;
+            rad = ((int) (rad / unit)) * unit;
+            Vec3 scaleCylinder = Vec3(rad, 0, rad * 2);
+            mWireframeGeode->setInitPosition(centerPos + Vec3(0, 0, -rad));
+            mWireframeGeode->setScaleVect(scaleCylinder);
+        }
+        else if (mWireframeActiveID == CAVEGeodeShape::LINE)
+        {
+            float rad = ANIM_VIRTUAL_SPHERE_RADIUS / 1.5 * zoomfact;
+            rad = ((int) (rad / unit)) * unit;
+            Vec3 scaleLine = Vec3(rad, 0, rad * 2);
+            mWireframeGeode->setInitPosition(centerPos);
+            mWireframeGeode->setScaleVect(scaleLine);
+        }
+
         mWireframeGeode->resize(wireframeGridVect);
     }
 }
@@ -274,8 +291,8 @@ void DOGeometryCreator::registerSolidShape()
 {
     if (mSolidshapeGeode->isValid())
     {
-        /* 'mDOShapeSwitch -> CAVEGroupShape -> CAVEGeodeShape' each CAVEGroupShape contains
-            only one instance of 'CAVEGeodeShape' at the time of being created. */
+        // 'mDOShapeSwitch -> CAVEGroupShape -> CAVEGeodeShape' each CAVEGroupShape contains
+        //  only one instance of 'CAVEGeodeShape' at the time of being created.
         CAVEGeodeShape *shape = new CAVEGeodeShape((CAVEGeodeShape::Type) mSolidShapeActiveID, 
                 mSolidshapeGeode->getInitPosition(), mSolidshapeGeode->getScaleVect());
         CAVEGroupShape *group = new CAVEGroupShape(shape);

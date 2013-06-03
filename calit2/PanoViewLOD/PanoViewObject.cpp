@@ -5,10 +5,18 @@
 #include <cvrKernel/NodeMask.h>
 #include <cvrKernel/PluginHelper.h>
 #include <cvrUtil/OsgMath.h>
+#include <PluginMessageType.h>
+
+#include <osg/Depth>
 
 #include <iostream>
 #include <cstdio>
 #include <fstream>
+#include <cmath>
+
+#ifdef WIN32
+#define M_PI 3.141592653589793238462643
+#endif
 
 //#define PRINT_TIMING
 
@@ -16,6 +24,7 @@ using namespace cvr;
 
 PanoViewObject::PanoViewObject(std::string name, std::string leftEyeFile, std::string rightEyeFile, float radius, int mesh, int depth, int size, float height, std::string vertFile, std::string fragFile) : SceneObject(name,false,false,false,true,false)
 {
+    _name = name;
     std::vector<std::string> left;
     std::vector<std::string> right;
     left.push_back(leftEyeFile);
@@ -26,6 +35,7 @@ PanoViewObject::PanoViewObject(std::string name, std::string leftEyeFile, std::s
 
 PanoViewObject::PanoViewObject(std::string name, std::vector<std::string> & leftEyeFiles, std::vector<std::string> & rightEyeFiles, float radius, int mesh, int depth, int size, float height, std::string vertFile, std::string fragFile) : SceneObject(name,false,false,false,true,false)
 {
+    _name = name;
     init(leftEyeFiles,rightEyeFiles,radius,mesh,depth,size,height,vertFile,fragFile);
 }
 
@@ -39,7 +49,11 @@ PanoViewObject::~PanoViewObject()
 
 void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<std::string> & rightEyeFiles, float radius, int mesh, int depth, int size, float height, std::string vertFile, std::string fragFile)
 {
+#ifndef WIN32
     _imageSearchPath = ConfigManager::getEntryConcat("value","Plugin.PanoViewLOD.ImageSearchPath",':',"");
+#else
+	_imageSearchPath = ConfigManager::getEntryConcat("value","Plugin.PanoViewLOD.ImageSearchPath",';',"");
+#endif
     _floorOffset = ConfigManager::getFloat("value","Plugin.PanoViewLOD.FloorOffset",1500);
 
     std::string temp("PANOPATH=");
@@ -78,12 +92,14 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
     _demoTime = 0.0;
     _demoChangeTime = ConfigManager::getDouble("value","Plugin.PanoViewLOD.DemoChangeTime",90.0);
 
+    _removeOnClick = false;
+
     _coordChangeMat.makeRotate(M_PI/2.0,osg::Vec3(1,0,0));
     _spinMat.makeIdentity();
     float offset = height - _floorOffset + DEFAULT_PAN_HEIGHT;
     osg::Vec3 ovec(0,0,offset);
     _heightMat.makeTranslate(ovec + _offset);
-    setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+    setTransform(_coordChangeMat * _spinMat * _tiltMat * _heightMat);
 
     _nextButton = _previousButton = NULL;
 
@@ -156,11 +172,64 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
     _fadeActive = false;
     _fadeFrames = 0;
     _transitionType = NORMAL;
+    _transitionStarted = false;
+
+    _upArrow = _downArrow = _leftArrow = _rightArrow = false;
 
     _printValues = ConfigManager::getBool("value","Plugin.PanoViewLOD.PrintValues",false,NULL);
+
+    osg::Depth * wdepth = new osg::Depth();
+    wdepth->setWriteMask(false);
+    _root->getOrCreateStateSet()->setAttributeAndModes(wdepth,osg::StateAttribute::ON);
+
+    _transitionSkipFrames = 0;
+
+
+    // load saved initial scales and locations
+    _configPath = ConfigManager::getEntry("Plugin.PanoViewLOD.ConfigDir");
+
+    _saveButton = new MenuButton("Save");
+    _saveButton->setCallback(this);
+    addMenuItem(_saveButton);
+
+    std::ifstream cfile;
+    cfile.open((_configPath + "/Init.cfg").c_str(), std::ios::in);
+
+    if(!cfile.fail())
+    {
+      std::string line;
+      while(!cfile.eof())
+      {
+         float rotate, zoom;
+         char name[150];
+         cfile >> name;
+         if(cfile.eof())
+         {
+           break;
+         }
+         cfile >> rotate;
+         cfile >> zoom;
+         _locInit[std::string(name)] = std::pair<float, float>(rotate, zoom);
+      }
+    }
+    cfile.close();
+
+    if(_locInit.find(_name) != _locInit.end())
+    {
+        setRotate(_locInit[_name].first);
+
+        float zoom = _locInit[_name].second;
+	
+        _currentZoom += zoom;
+        if(_currentZoom < -2.0) _currentZoom = -2.0;
+        if(_currentZoom > 0.5) _currentZoom = 0.5;
+
+		updateZoom(PluginHelper::getHandMat(0));
+    }
+
 }
 
-void PanoViewObject::setTransition(PanTransitionType transitionType, std::string transitionFilesDir, std::vector<std::string> & leftTransitionFiles, std::vector<std::string> & rightTransitionFiles)
+void PanoViewObject::setTransition(PanTransitionType transitionType, std::string transitionFilesDir, std::vector<std::string> & leftTransitionFiles, std::vector<std::string> & rightTransitionFiles, std::string configTag)
 {
     _transitionType = transitionType;
     _leftTransitionFiles = leftTransitionFiles;
@@ -170,11 +239,35 @@ void PanoViewObject::setTransition(PanTransitionType transitionType, std::string
     if(transitionType == ZOOM)
     {
 	_rotateStartDelay = ConfigManager::getFloat("rotateStart","Plugin.PanoViewLOD.ZoomTransition",0.0);
+	_rotateStartDelay = ConfigManager::getFloat("rotateStart",configTag,_rotateStartDelay);
 	_rotateInterval = ConfigManager::getFloat("rotateInterval","Plugin.PanoViewLOD.ZoomTransition",4.0);
+	_rotateInterval = ConfigManager::getFloat("rotateInterval",configTag,_rotateInterval);
 	_zoomStartDelay = ConfigManager::getFloat("zoomStart","Plugin.PanoViewLOD.ZoomTransition",4.0);
+	_zoomStartDelay = ConfigManager::getFloat("zoomStart",configTag,_zoomStartDelay);
 	_zoomInterval = ConfigManager::getFloat("zoomInterval","Plugin.PanoViewLOD.ZoomTransition",4.0);
+	_zoomInterval = ConfigManager::getFloat("zoomInterval",configTag,_zoomInterval);
 	_fadeStartDelay = ConfigManager::getFloat("fadeStart","Plugin.PanoViewLOD.ZoomTransition",8.0);
+	_fadeStartDelay = ConfigManager::getFloat("fadeStart",configTag,_fadeStartDelay);
 	_fadeInterval = ConfigManager::getFloat("fadeInterval","Plugin.PanoViewLOD.ZoomTransition",4.0);
+	_fadeInterval = ConfigManager::getFloat("fadeInterval",configTag,_fadeInterval);
+	_rotateRampUp = ConfigManager::getFloat("rotateRampUp","Plugin.PanoViewLOD.ZoomTransition",0.1*_rotateInterval);
+	_rotateRampUp = ConfigManager::getFloat("rotateRampUp",configTag,_rotateRampUp);
+	_rotateRampDown = ConfigManager::getFloat("rotateRampDown","Plugin.PanoViewLOD.ZoomTransition",0.1*_rotateInterval);
+	_rotateRampDown = ConfigManager::getFloat("rotateRampDown",configTag,_rotateRampDown);
+	_zoomRampUp = ConfigManager::getFloat("zoomRampUp","Plugin.PanoViewLOD.ZoomTransition",0.1*_zoomInterval);
+	_zoomRampUp = ConfigManager::getFloat("zoomRampUp",configTag,_zoomRampUp);
+	_zoomRampDown = ConfigManager::getFloat("zoomRampDown","Plugin.PanoViewLOD.ZoomTransition",0.1*_zoomInterval);
+	_zoomRampDown = ConfigManager::getFloat("zoomRampDown",configTag,_zoomRampDown);
+
+	if(_rotateRampUp + _rotateRampDown > _rotateInterval)
+	{
+	    _rotateRampUp = _rotateRampDown = 0.5 * _rotateInterval;
+	}
+
+	if(_zoomRampUp + _zoomRampDown > _zoomInterval)
+	{
+	    _zoomRampUp = _zoomRampDown = 0.5 * _zoomInterval;
+	}
 
 	_transitionStarted = _rotateDone = _zoomDone = _fadeDone = false;
 
@@ -306,7 +399,7 @@ float PanoViewObject::getAlpha()
 void PanoViewObject::setRotate(float rotate)
 {
     _spinMat.makeRotate(rotate, osg::Vec3(0,0,1));
-    setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+    setTransform(_coordChangeMat * _spinMat * _tiltMat * _heightMat);
 
     if(_currentZoom != 0.0)
     {
@@ -349,7 +442,7 @@ void PanoViewObject::menuCallback(cvr::MenuItem * item)
 	float offset = _heightRV->getValue() - _floorOffset + DEFAULT_PAN_HEIGHT;
 	osg::Vec3 ovec(0,0,offset);
 	_heightMat.makeTranslate(ovec + _offset);
-	setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+	setTransform(_coordChangeMat * _spinMat * _tiltMat * _heightMat);
     }
 
     if(item == _alphaRV)
@@ -364,6 +457,15 @@ void PanoViewObject::menuCallback(cvr::MenuItem * item)
 
 	_leftDrawable->setZoom(osg::Vec3(0,1,0),pow(10.0, _currentZoom));
 	_rightDrawable->setZoom(osg::Vec3(0,1,0),pow(10.0, _currentZoom));
+    }
+
+    if(item == _saveButton)
+    {
+        float zoom = 1;
+
+        _locInit[_name] = std::make_pair(getRotate(), _currentZoom);
+
+        writeConfig();
     }
 
     if(item == _spinCB)
@@ -413,7 +515,7 @@ void PanoViewObject::updateCallback(int handID, const osg::Matrix & mat)
 	osg::Matrix rot;
 	rot.makeRotate(val, osg::Vec3(0,0,1));
 	_spinMat = _spinMat * rot;
-	setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+	setTransform(_coordChangeMat * _spinMat * _tiltMat * _heightMat);
 
 	if(_currentZoom != 0.0)
 	{
@@ -434,6 +536,15 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
     if(ie->asTrackedButtonEvent())
     {
 	TrackedButtonInteractionEvent * tie = ie->asTrackedButtonEvent();
+
+	if(_removeOnClick && tie->getButton() == 0)
+	{
+	    PluginHelper::sendMessageByName("PanoViewLOD",PAN_UNLOAD,NULL);
+
+	    _removeOnClick = false;
+	    return true;
+	}
+
 	if(tie->getButton() == 2 && tie->getInteraction() == BUTTON_DOWN)
 	{
 	    next();
@@ -446,7 +557,15 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 	}
 	if(_trackball->getValue() && tie->getButton() == 0 && tie->getInteraction() == BUTTON_DOWN)
 	{
-	    _tbDirValid = false;
+	    _tbDirValid = true;
+	    _tbHand = tie->getHand();
+
+	    osg::Vec3 start, end(0,100,0);
+	    start = start * tie->getTransform();
+	    end = end * tie->getTransform();
+	    _tbDir = end - start;
+	    _tbDir.normalize();
+	    /*_tbDirValid = false;
 	    osg::Vec3 startpoint(0,0,0), endpoint(0,1000.0,0), center(0,0,0);
 	    startpoint = startpoint * tie->getTransform() * getWorldToObjectMatrix();
 	    endpoint = endpoint * tie->getTransform() * getWorldToObjectMatrix();
@@ -478,7 +597,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 		_tbDirValid = true;
 		_tbDir = isec - center;
 		_tbDir.normalize();
-	    }
+	    }*/
 	    return true;
 	}
 	if(_trackball->getValue() && tie->getButton() == 0 && (tie->getInteraction() == BUTTON_DRAG || tie->getInteraction() == BUTTON_UP))
@@ -488,7 +607,52 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 		return false;
 	    }
 
-	    osg::Vec3 startpoint(0,0,0), endpoint(0,1000.0,0), center(0,0,0);
+	    osg::Vec3 start, end(0,100,0);
+	    start = start * tie->getTransform();
+	    end = end * tie->getTransform();
+	    osg::Vec3 newDir = end - start;
+	    newDir.normalize();
+
+	    if(_tbDir.z() < 0.999 && newDir.z() < 0.999)
+	    {
+		osg::Vec3 tvec1, tvec2;
+		tvec1 = _tbDir;
+		tvec1.z() = 0.0;
+		tvec1.normalize();
+
+		tvec2 = newDir;
+		tvec2.z() = 0.0;
+		tvec2.normalize();
+
+		osg::Matrix rot;
+		rot.makeRotate(tvec1,tvec2);
+		_spinMat = _spinMat * rot;
+	    }
+
+	    if(_tbDir.x() < 0.999 && newDir.x() < 0.999)
+	    {
+		osg::Vec3 tvec1, tvec2;
+		tvec1 = _tbDir;
+		tvec1.x() = 0.0;
+		tvec1.normalize();
+
+		tvec2 = newDir;
+		tvec2.x() = 0.0;
+		tvec2.normalize();
+
+		osg::Matrix rot;
+		rot.makeRotate(tvec1,tvec2);
+		_tiltMat = _tiltMat * rot;
+	    }
+
+	    setTransform(_coordChangeMat * _spinMat * _tiltMat * _heightMat);
+	    if(_currentZoom != 0.0)
+	    {
+		updateZoom(_lastZoomMat);
+	    }
+
+	    _tbDir = newDir;
+	    /*osg::Vec3 startpoint(0,0,0), endpoint(0,1000.0,0), center(0,0,0);
 	    startpoint = startpoint * tie->getTransform() * getWorldToObjectMatrix();
 	    endpoint = endpoint * tie->getTransform() * getWorldToObjectMatrix();
 
@@ -526,10 +690,43 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 
 		if(_tbDirValid)
 		{
-		    osg::Matrix rot;
-		    rot.makeRotate(_tbDir,newDir);
-		    _tbMat = rot * _tbMat;
-		    setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+		    if(_tbDir.y() < 0.999 && newDir.y() < 0.999)
+		    {
+			osg::Vec3 tvec1, tvec2;
+			tvec1 = _tbDir;
+			tvec1.y() = 0.0;
+			tvec1.normalize();
+
+			tvec2 = newDir;
+			tvec2.y() = 0.0;
+			tvec2.normalize();
+
+			osg::Matrix rot;
+			rot.makeRotate(tvec1,tvec2);
+			//_tbM1 = _tbM1 * rot;
+		    }
+
+		    if(_tbDir.x() < 0.999 && newDir.x() < 0.999)
+		    {
+			osg::Vec3 tvec1, tvec2;
+			tvec1 = _tbDir;
+			tvec1.x() = 0.0;
+			tvec1.normalize();
+
+			tvec2 = newDir;
+			tvec2.x() = 0.0;
+			tvec2.normalize();
+
+			osg::Matrix rot;
+			rot.makeRotate(tvec1,tvec2);
+			//_tbM2 = _tbM2 * rot;
+		    }
+
+		    //osg::Matrix rot;
+		    //rot.makeRotate(_tbDir,newDir);
+		    //_tbMat = rot * _tbMat;
+		    //_tbMat = _tbM1 * _tbM2;
+		    setTransform(_coordChangeMat * _spinMat * _tiltMat * _heightMat);
                     if(_currentZoom != 0.0)
                     {
                         updateZoom(_lastZoomMat);
@@ -540,7 +737,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 		    _tbDirValid = true;
 		    _tbDir = newDir;
 		}
-	    }
+	    }*/
 	    return true;
 	}
 	/*if(tie->getButton() == 0 && tie->getInteraction() == BUTTON_DOWN)
@@ -575,14 +772,32 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
     }
     else if(ie->asKeyboardEvent())
     {
-	osg::Matrix rot;
+	/*osg::Matrix rot;
 	rot.makeRotate((M_PI / 50.0) * 0.6, osg::Vec3(0,0,1));
 	_spinMat = _spinMat * rot;
-	setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+	setTransform(_tbM1 * _tbM2 * _coordChangeMat * _spinMat * _heightMat);
 
 	if(_currentZoom != 0.0)
 	{
 	    updateZoom(_lastZoomMat);
+	}*/
+
+	KeyboardInteractionEvent * kie = ie->asKeyboardEvent();
+	if(kie->getKey() == 65362)
+	{
+	    _upArrow = kie->getInteraction() == KEY_DOWN;
+	}
+	else if(kie->getKey() == 65364)
+	{
+	    _downArrow = kie->getInteraction() == KEY_DOWN;
+	}
+	else if(kie->getKey() == 65361)
+	{
+	    _leftArrow = kie->getInteraction() == KEY_DOWN;
+	}
+	else if(kie->getKey() == 65363)
+	{
+	    _rightArrow = kie->getInteraction() == KEY_DOWN;
 	}
     }
     else if(ie->asValuatorEvent())
@@ -621,7 +836,7 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 		osg::Matrix rot;
 		rot.makeRotate((M_PI / 50.0) * val * _spinScale, osg::Vec3(0,0,1));
 		_spinMat = _spinMat * rot;
-		setTransform(_tbMat * _coordChangeMat * _spinMat * _heightMat);
+		setTransform(_coordChangeMat * _spinMat * _tiltMat * _heightMat);
 
 		if(_printValues)
 		{
@@ -657,7 +872,42 @@ bool PanoViewObject::eventCallback(cvr::InteractionEvent * ie)
 
 void PanoViewObject::preFrameUpdate()
 {
-    if(_transitionType == ZOOM && _transitionStarted)
+    float spinChange = 0;
+    float tiltChange = 0;
+
+    static const float radsPerSec = 0.5;
+    if(_upArrow && !_downArrow)
+    {
+	tiltChange -= radsPerSec * PluginHelper::getLastFrameDuration();
+    }
+    if(_downArrow && !_upArrow)
+    {
+	tiltChange += radsPerSec * PluginHelper::getLastFrameDuration();
+    }
+
+    if(_rightArrow && !_leftArrow)
+    {
+	spinChange += radsPerSec * PluginHelper::getLastFrameDuration();
+    }
+    if(_leftArrow && !_rightArrow)
+    {
+	spinChange -= radsPerSec * PluginHelper::getLastFrameDuration();
+    }
+
+    osg::Matrix rot;
+    rot.makeRotate(spinChange, osg::Vec3(0,0,1));
+    _spinMat = _spinMat * rot;
+
+    rot.makeRotate(tiltChange, osg::Vec3(1,0,0));
+    _tiltMat = _tiltMat * rot;
+
+    setTransform(_coordChangeMat * _spinMat * _tiltMat * _heightMat);
+    if(_currentZoom != 0.0)
+    {
+	updateZoom(_lastZoomMat);
+    }
+
+    if(_transitionType == ZOOM && _transitionStarted && !_transitionSkipFrames)
     {	
 	_transitionTime += PluginHelper::getLastFrameDuration();
 
@@ -675,8 +925,41 @@ void PanoViewObject::preFrameUpdate()
 	    }
 	    else
 	    {
-		value = (_transitionTime - _rotateStartDelay) / _rotateInterval;
+		//removed to add rampup/down
+		//value = (_transitionTime - _rotateStartDelay) / _rotateInterval;
+		value = 0.0;
+
+		float ratio = (2.0 * _rotateRampUp / M_PI);
+
+		if(_transitionTime < _rotateStartDelay + _rotateRampUp)
+		{
+		    //std::cerr << "RampUp: ";
+		    float angle = ((_transitionTime - _rotateStartDelay) / _rotateRampUp) * (M_PI / 2.0);
+		    value += _rotateAmp * (1.0 - cos(angle)) * ratio;
+		}
+		else
+		{
+		    value += _rotateAmp * ratio;
+		    if(_transitionTime < (_rotateStartDelay + _rotateInterval - _rotateRampDown))
+		    {
+			//std::cerr << "Middle: ";
+			float length = _transitionTime - _rotateStartDelay - _rotateRampUp;
+			value += _rotateAmp * length;
+		    }
+		    else
+		    {
+			//std::cerr << "RampDown: ";
+			value += _rotateAmp * (_rotateInterval - _rotateRampUp - _rotateRampDown);
+			float angle = ((_transitionTime - _rotateStartDelay - (_rotateInterval - _rotateRampDown)) / _rotateRampDown) * (M_PI / 2.0);
+			value += _rotateAmp * sin(angle) * ratio;
+		    }
+		}
 	    }
+
+	    //if(value > 0.0)
+	    //{
+	    //	std::cerr << "Rotate Transition Value: " << value << " Time Value: " << (_transitionTime - _rotateStartDelay) / _rotateInterval << std::endl;
+	    //}
 
 	    float rotateValue = _rotateStart + value * (_rotateEnd - _rotateStart);
 
@@ -697,8 +980,41 @@ void PanoViewObject::preFrameUpdate()
 	    }
 	    else
 	    {
-		value = (_transitionTime - _zoomStartDelay) / _zoomInterval;
+		//removed to add rampup/down
+		//value = (_transitionTime - _zoomStartDelay) / _zoomInterval;
+		value = 0.0;
+
+		float ratio = (2.0 * _zoomRampUp / M_PI);
+
+		if(_transitionTime < _zoomStartDelay + _zoomRampUp)
+		{
+		    //std::cerr << "RampUp: ";
+		    float angle = ((_transitionTime - _zoomStartDelay) / _zoomRampUp) * (M_PI / 2.0);
+		    value += _zoomAmp * (1.0 - cos(angle)) * ratio;
+		}
+		else
+		{
+		    value += _zoomAmp * ratio;
+		    if(_transitionTime < (_zoomStartDelay + _zoomInterval - _zoomRampDown))
+		    {
+			//std::cerr << "Middle: ";
+			float length = _transitionTime - _zoomStartDelay - _zoomRampUp;
+			value += _zoomAmp * length;
+		    }
+		    else
+		    {
+			//std::cerr << "RampDown: ";
+			value += _zoomAmp * (_zoomInterval - _zoomRampUp - _zoomRampDown);
+			float angle = ((_transitionTime - _zoomStartDelay - (_zoomInterval - _zoomRampDown)) / _zoomRampDown) * (M_PI / 2.0);
+			value += _zoomAmp * sin(angle) * ratio;
+		    }
+		}
 	    }
+
+	    //if(value > 0.0)
+	    //{
+	    //	std::cerr << "Zoom Transition Value: " << value << " Time Value: " << (_transitionTime - _zoomStartDelay) / _zoomInterval << std::endl;
+	    //}
 
 	    float zoomValue = value * _zoomEnd;
 
@@ -744,6 +1060,10 @@ void PanoViewObject::preFrameUpdate()
 	    setRotate(_finalRotate);
 	}
     }
+    else if(_transitionSkipFrames)
+    {
+	_transitionSkipFrames--;
+    }
 }
 
 void PanoViewObject::updateZoom(osg::Matrix & mat)
@@ -788,6 +1108,7 @@ void PanoViewObject::startTransition()
 	_pdi->transitionFade = 0.0;
 
 	_transitionStarted = true;
+	_transitionSkipFrames = 4;
 	_transitionTime = 0.0;
 	_rotateDone = _zoomDone = _fadeDone = false;
 
@@ -823,5 +1144,32 @@ void PanoViewObject::startTransition()
 	_rightDrawable->setZoom(osg::Vec3(0,1,0),pow(10.0, _currentZoom));
 	_zoomEnd = _zoomTransitionInfo[fromIndex].zoomValue;
 	_zoomTransitionDir = _zoomTransitionInfo[fromIndex].zoomDir;
+
+	static float ratio = 2.0 / M_PI;
+	_rotateAmp = 1.0 / (_rotateRampUp*ratio + (_rotateInterval - _rotateRampUp - _rotateRampDown) + _rotateRampDown*ratio);
+	_zoomAmp = 1.0 / (_zoomRampUp*ratio + (_zoomInterval - _zoomRampUp - _zoomRampDown) + _zoomRampDown*ratio);
     }
+}
+
+void PanoViewObject::writeConfig()
+{
+    if (!cvr::ComController::instance()->isMaster())
+    {
+        return;
+    }
+
+    std::ofstream cfile;
+    cfile.open((_configPath + "/Init.cfg").c_str(), std::ios::trunc);
+
+    if(!cfile.fail())
+    {
+        for(std::map<std::string, std::pair<float, float> >::iterator it = _locInit.begin();
+        it != _locInit.end(); it++)
+        {
+            std::cout << "Saving " << it->first << " " << std::endl;
+            cfile << it->first << " ";
+            cfile << it->second.first << " " << it->second.second << " " << std::endl;;
+        }
+    }
+    cfile.close();
 }

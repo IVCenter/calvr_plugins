@@ -18,7 +18,7 @@ using namespace osg;
 
 DesignStateRenderer *DesignStateRenderer::gDSRendererPtr(NULL);
 
-//Constructor
+// Constructor
 DesignStateRenderer::DesignStateRenderer(osg::Group* designStateRootGroup): mFlagVisible(false),
 				mViewOrg(Vec3(0, -0.5, 0)), mViewDir(Vec3(0, 1, 0))
 {
@@ -37,6 +37,8 @@ DesignStateRenderer::DesignStateRenderer(osg::Group* designStateRootGroup): mFla
     mDSGeometryCreator = new DSGeometryCreator();
     mDSTexturePallette = new DSTexturePallette();
     mDSViewpoints = new DSViewpoints();
+    mDSObjectPlacer = new DSObjectPlacer();
+    mDSLights = new DSLights();
     mActiveDSPtr = mDSVirtualSphere;
 
     // push state object transforms to list, attach them to scene graph 
@@ -48,10 +50,11 @@ DesignStateRenderer::DesignStateRenderer(osg::Group* designStateRootGroup): mFla
     //mDSList.push_back(mDSParamountSwitch);
     //mDSList.push_back(mDSSketchBook);
     mDSList.push_back(mDSViewpoints);
+    mDSList.push_back(mDSObjectPlacer);
+    mDSList.push_back(mDSLights);
     mActiveDSItr = mDSList.begin();
 
     mDSRootTrans = new MatrixTransform();
-    //mDSRootTrans->addChild(mDSParticleSystem);
     mDSRootTrans->addChild(mDSVirtualSphere);
     mDSRootTrans->addChild(mDSGeometryCreator);
     mDSRootTrans->addChild(mDSTexturePallette);
@@ -59,18 +62,9 @@ DesignStateRenderer::DesignStateRenderer(osg::Group* designStateRootGroup): mFla
     //mDSRootTrans->addChild(mDSParamountSwitch);
     //mDSRootTrans->addChild(mDSSketchBook);
     mDSRootTrans->addChild(mDSViewpoints);
+    mDSRootTrans->addChild(mDSObjectPlacer);
+    mDSRootTrans->addChild(mDSLights);
     designStateRootGroup->addChild(mDSRootTrans);
-
-   /* osg::Vec3 pos(0, 1000, 0);
-    osg::Matrixf transMat;
-    transMat.makeTranslate(pos);
-    mDSRootTrans->setMatrix(transMat);//rotMat * transMat);
-   */
-
-    for (DesignStateList::iterator itrDS = mDSList.begin(); itrDS != mDSList.end(); itrDS++)
-    {
-        //(*itrDS)->setParticleSystemPtr(mDSParticleSystem);
-    }
 
     // initialize design state objects that NOT registered in 'mDSList'
     mDSGeometryEditor = new DSGeometryEditor();
@@ -82,9 +76,8 @@ DesignStateRenderer::DesignStateRenderer(osg::Group* designStateRootGroup): mFla
     mDSGeometryCreator->addLowerDesignState(mDSGeometryEditor);
     mDSGeometryCreator->setLowerStateSwitchCallback(switchToLowerDesignState);
 
-    // disable all virtual objects 
-    // mDSParticleSystem->setEmitterEnabled(false);
-    //mActiveDSPtr->setObjectEnabled(false);
+//    mColorSelector = new ColorSelector(osg::Vec4(1,1,1,1));
+//    mColorSelector->setVisible(false);
 
     // create two directional light sources for all DS objects 
     designStateRootGroup->addChild(createDirectionalLights(designStateRootGroup->getOrCreateStateSet()));
@@ -96,9 +89,10 @@ DesignStateRenderer::DesignStateRenderer(osg::Group* designStateRootGroup): mFla
 }
 
 
-//Destructor
+// Destructor
 DesignStateRenderer::~DesignStateRenderer()
 {
+
 }
 
 
@@ -142,22 +136,23 @@ void DesignStateRenderer::setAudioConfigHandlerPtr(AudioConfigHandler *audioConf
 void DesignStateRenderer::setVisible(bool flag)
 {
     mFlagVisible = flag;
-//    mActiveDSPtr->setObjectEnabled(flag);
-
-    for (DesignStateList::iterator itrDS = mDSList.begin(); itrDS != mDSList.end(); itrDS++)
+    // mActiveDSPtr->setObjectEnabled(flag);
+    
+    if (flag)
     {
-        (*itrDS)->setObjectEnabled(flag);
-        (*itrDS)->setObjectEnabled(!flag);
+        for (DesignStateList::iterator itrDS = mDSList.begin(); itrDS != mDSList.end(); itrDS++)
+        {
+            (*itrDS)->setObjectEnabled(flag);
+            (*itrDS)->setObjectEnabled(!flag);
+        }
     }
-/*
-    mDSVirtualSphere->setObjectEnabled(flag);
-    mDSVirtualEarth->setObjectEnabled(flag);
-    mDSParamountSwitch->setObjectEnabled(flag);
-    mDSSketchBook->setObjectEnabled(flag);
-    mDSGeometryCreator->setObjectEnabled(flag);
-    mDSTexturePallette->setObjectEnabled(flag);
-    mDSViewpoints->setObjectEnabled(flag);
-*/
+    else
+    {
+        for (DesignStateList::iterator itrDS = mDSList.begin(); itrDS != mDSList.end(); itrDS++)
+        {
+            (*itrDS)->setObjectEnabled(false);
+        }
+    }
 
     // align state spheres with viewer's position and front orientation
     if (flag) 
@@ -302,7 +297,6 @@ void DesignStateRenderer::inputDevMoveEvent(const Vec3 &pointerOrg, const Vec3 &
         if ((*it)->test(pointerOrg, pointerPos))
         {
             (*it)->setHighlight(true, pointerOrg, pointerPos);
-            //std::cout << "intersect" << std::endl;
             mHighlighted = (*it);
             break;
         }
@@ -310,7 +304,7 @@ void DesignStateRenderer::inputDevMoveEvent(const Vec3 &pointerOrg, const Vec3 &
         {
             if (mHighlighted)
             {
-                mHighlighted->setHighlight(false, pointerOrg, pointerPos);
+                //mHighlighted->setHighlight(false, pointerOrg, pointerPos);
                 mHighlighted = NULL;
             }
         }
@@ -345,6 +339,7 @@ bool DesignStateRenderer::inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 
 {
     for (DesignStateList::iterator it = mDSList.begin(); it != mDSList.end(); ++it)
     {
+        // if intersects a menu item
         if ((*it)->test(pointerOrg, pointerPos))
         {
             if (mActiveDSPtr != (*it) && (mActiveDSPtr)->isEnabled()) // turn off the previous state
@@ -353,6 +348,7 @@ bool DesignStateRenderer::inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 
             }
             mActiveDSPtr = (*it);
             
+            // open if closed, close if open
             if (mActiveDSPtr->isEnabled())
             {
                 mActiveDSPtr->setObjectEnabled(false);
@@ -386,25 +382,25 @@ void DesignStateRenderer::resetPose()
        to XY plane and use that as front orientation, to make sure 
        all design tools are aligned straight up when showing up. */
 
-    float height = 0.5;
+    float height = 0.8;
 
     Vec3 pos = mViewOrg + mViewDir * ANIM_VIRTUAL_SPHERE_DISTANCE * 0.5;
- //osg::Vec3(0, 2, 0);//mViewOrg + mViewDir * ANIM_VIRTUAL_SPHERE_DISTANCE * 0.5;
     pos[2] += height;
+
     Vec3 front = mViewDir;
     front.z() = 0;
     front.normalize();
 
-    Matrixf transMat, rotMat;
+    Matrixf transMat, rotMat, scaleMat;
     transMat.makeTranslate(pos);
     rotMat.makeRotate(Vec3(0, 1, 0), front);
     mDSRootTrans->setMatrix(rotMat * transMat);
 
-    /* pass new position & orientation to static members of design state base */
+    // pass new position & orientation to static members of design state base
     DesignStateBase::setDesignStateCenterPos(pos);
     DesignStateBase::setDesignStateFrontVect(front);
 
-    /* update two directional lights' position */
+    // update two directional lights' position
     Vec4 leftDir = Vec4(1.0f, -1.0f, 1.0f, 0.0f);
     Vec4 rightDir = Vec4(-1.0f, -1.0f, 1.0f, 0.0f);
     leftDir = leftDir * rotMat;
@@ -425,14 +421,14 @@ Group *DesignStateRenderer::createDirectionalLights(osg::StateSet *stateset)
     mLeftDirLight = new Light;
     mRightDirLight = new Light;
 
-    /* Directional vector = (1.0f, -1.0f, 1.0f) in relative to viewer's position */
+    // Directional vector = (1.0f, -1.0f, 1.0f) in relative to viewer's position
     mLeftDirLight->setLightNum(6);
     mLeftDirLight->setPosition(Vec4(1.0f, -1.0f, 1.0f, 0.0f));
-    mLeftDirLight->setDiffuse(Vec4(1.0f,1.0f,1.0f,1.0f));
-    mLeftDirLight->setSpecular(Vec4(0.0f,0.0f,0.0f,1.0f));
-    mLeftDirLight->setAmbient(Vec4(0.5f,0.5f,0.5f,1.0f));
+    mLeftDirLight->setDiffuse(Vec4( 1.0f, 1.0f, 1.0f, 1.0f));
+    mLeftDirLight->setSpecular(Vec4(0.0f, 0.0f, 0.0f, 1.0f));
+    mLeftDirLight->setAmbient(Vec4( 0.5f, 0.5f, 0.5f, 1.0f));
 
-    /* Directional vector = (-1.0f, -1.0f, 1.0f) in relative to viewer's position */
+    // Directional vector = (-1.0f, -1.0f, 1.0f) in relative to viewer's position
     mRightDirLight->setLightNum(7);
     mRightDirLight->setPosition(Vec4(-1.0f, -1.0f, 1.0f, 0.0f));
     mRightDirLight->setDiffuse(Vec4(1.0f,1.0f,1.0f,1.0f));

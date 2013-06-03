@@ -120,4 +120,89 @@ template <typename T> bool queue<T>::full()
 
 //------------------------------------------------------------------------------
 
+template <typename T> class queueNoCap
+{
+public:
+
+    queueNoCap();
+   ~queueNoCap();
+
+    void insert(T);
+    T    remove( );
+    T    peek( );
+    bool empty ( );
+    bool full  ( );
+    
+private:
+
+    SDL_sem   *full_slots;
+    SDL_mutex *data_mutex;
+
+    std::set<T> S;
+};
+
+//------------------------------------------------------------------------------
+
+template <typename T> queueNoCap<T>::queueNoCap()
+{
+    full_slots = SDL_CreateSemaphore(0);
+    data_mutex = SDL_CreateMutex();
+}
+
+template <typename T> queueNoCap<T>::~queueNoCap()
+{
+    SDL_DestroyMutex(data_mutex);
+    SDL_DestroySemaphore(full_slots);
+}
+
+//------------------------------------------------------------------------------
+
+template <typename T> void queueNoCap<T>::insert(T d)
+{
+    SDL_mutexP(data_mutex);
+    {
+        S.insert(d);
+    }
+    SDL_mutexV(data_mutex);
+    SDL_SemPost(full_slots);
+}
+
+template <typename T> T queueNoCap<T>::remove()
+{
+    T d;
+    
+    SDL_SemWait(full_slots);
+    SDL_mutexP(data_mutex);
+    {
+        d   = *(S.begin());
+        S.erase(S.begin());
+    }
+    SDL_mutexV(data_mutex);
+    
+    return d;
+}
+
+template <typename T> T queueNoCap<T>::peek()
+{
+    T d;
+    
+    SDL_mutexP(data_mutex);
+    {
+        d   = *(S.begin());
+    }
+    SDL_mutexV(data_mutex);
+    
+    return d;
+}
+
+template <typename T> bool queueNoCap<T>::empty()
+{
+    return (SDL_SemValue(full_slots) == 0);
+}
+
+template <typename T> bool queueNoCap<T>::full()
+{
+    return false;
+}
+
 #endif

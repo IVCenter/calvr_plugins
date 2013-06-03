@@ -17,6 +17,8 @@ SET(PLUGIN_HEADERS
 	DesignStates/DSGeometryEditor.h
 	DesignStates/DSTexturePallette.h
 	DesignStates/DSViewpoints.h
+	DesignStates/DSObjectPlacer.h
+	DesignStates/DSLights.h
 	DesignStateIntersector.h
 	DesignObjectHandler.h
 	DesignObjectIntersector.h
@@ -29,6 +31,7 @@ SET(PLUGIN_HEADERS
 	TrackballController.h
 	SnapLevelController.h
 	VirtualScenicHandler.h
+	ColorSelector.h
 
 	Geometry/CAVEGeometry.h
 	Geometry/CAVEGroup.h
@@ -63,7 +66,8 @@ SET(PLUGIN_HEADERS
 	AnimationModeler/ANIMGeometryEditor.h
 	AnimationModeler/ANIMTexturePallette.h
 	AnimationModeler/ANIMObjectHandler.h
-
+	AnimationModeler/ANIMObjectPlacer.h
+	AnimationModeler/ANIMLights.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -86,6 +90,8 @@ ADD_LIBRARY(${LIB_NAME}
 	DesignStates/DSGeometryEditor.cpp
 	DesignStates/DSTexturePallette.cpp
 	DesignStates/DSViewpoints.cpp
+	DesignStates/DSObjectPlacer.cpp
+	DesignStates/DSLights.cpp
 	DesignStateIntersector.cpp
 	DesignObjectHandler.cpp
 	DesignObjectIntersector.cpp
@@ -98,6 +104,8 @@ ADD_LIBRARY(${LIB_NAME}
 	TrackballController.cpp
 	SnapLevelController.cpp
 	VirtualScenicHandler.cpp
+	ColorSelector.cpp
+
 	Geometry/CAVEGeometry.cpp	
 	Geometry/CAVEGroupReference.cpp
 	Geometry/CAVEGroupShape.cpp
@@ -115,6 +123,7 @@ ADD_LIBRARY(${LIB_NAME}
 	Geometry/CAVEGeodeSnapWireframe.cpp
 	Geometry/CAVEGeodeSnapSolidshape.cpp
 	Geometry/CAVEGeodeEditWireframe.cpp
+
 	AnimationModeler/AnimationModelerBase.cpp
 	AnimationModeler/ANIMDSParticleSystem.cpp
 	AnimationModeler/ANIMVirtualSphere.cpp
@@ -130,6 +139,8 @@ ADD_LIBRARY(${LIB_NAME}
 	AnimationModeler/ANIMGeometryEditor.cpp
 	AnimationModeler/ANIMTexturePallette.cpp
 	AnimationModeler/ANIMObjectHandler.cpp
+	AnimationModeler/ANIMObjectPlacer.cpp
+	AnimationModeler/ANIMLights.cpp
 )
 
 INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})

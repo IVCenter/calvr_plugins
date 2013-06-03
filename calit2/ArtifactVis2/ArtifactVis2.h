@@ -268,6 +268,11 @@ public:
     int bcounter;
     float colorfps;
     float navSphereTimer;
+
+    float skelOffsetX;
+    float skelOffsetY;
+    float skelOffsetZ;
+
     int kinectUsers;
     bool handsBeenAbove;
     bool navSphereActivated;
@@ -295,6 +300,7 @@ public:
     void kinectInit();
     void kinectOff();
     void moveCam(double, double, double, double, double, double, double, double);
+    void flyTo(int i);
     void createSelObj(osg::Vec3 pos, std::string, float radius);
     void ThirdInit();
     void ThirdLoop();

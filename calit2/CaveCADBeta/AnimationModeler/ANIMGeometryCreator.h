@@ -31,6 +31,7 @@
 #include <osg/Texture2D>
 #include <osg/Vec3>
 #include <osgDB/ReadFile>
+#include <osgText/Text>
 
 // Local includes
 #include "AnimationModelerBase.h"
@@ -60,6 +61,7 @@ namespace CAVEAnimationModeler
 				 osg::Switch **sphereExteriorSwitch, osg::Geode **sphereExteriorGeode,
 				 int &numTypes, ANIMShapeSwitchEntry ***shapeSwitchEntryArray);
     void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, const CAVEGeodeShape::Type &typ);
+    void ANIMCreateSingleSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, osg::Geode *shapeGeode, float offset);
 
     /* Function called by 'DOGeometryCreator' */
     void ANIMLoadGeometryCreatorReference(osg::Switch **snapWireframeSwitch, osg::Switch **snapSolidshapeSwitch);

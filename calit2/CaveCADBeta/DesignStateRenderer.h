@@ -31,7 +31,12 @@
 #include "DesignStates/DSGeometryEditor.h"
 #include "DesignStates/DSTexturePallette.h"
 #include "DesignStates/DSViewpoints.h"
+#include "DesignStates/DSObjectPlacer.h"
+#include "DesignStates/DSLights.h"
+#include "ColorSelector.h"
 
+#include <cvrInput/TrackingManager.h>
+#include <cvrKernel/InteractionManager.h>
 
 /***************************************************************
 * Class: DesignStateRenderer
@@ -46,7 +51,7 @@ class DesignStateRenderer
     void setScenicHandlerPtr(VirtualScenicHandler *virtualScenicHandler);
     void setAudioConfigHandlerPtr(AudioConfigHandler *audioConfigHandler);
 
-    /* functions activated by button input events */
+    // functions activated by button input events
     void toggleDSVisibility();
     void setVisible(bool flag);
     void switchToPrevState();
@@ -54,12 +59,12 @@ class DesignStateRenderer
     void switchToPrevSubState();
     void switchToNextSubState();
 
-    /* switch between lower/upper states: static callback functions called from separate 
-       design states, which enables design states that not registered in 'mDSList'. */
+    // switch between lower/upper states: static callback functions called from separate 
+    // design states, which enables design states that not registered in 'mDSList'.
     static void switchToLowerDesignState(const int &idx);
     static void switchToUpperDesignState(const int &idx);
 
-    /* functions triggered by pointers */
+    // functions triggered by pointers
     void inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg::Vec3 &pointerPos);
     bool inputDevPressEvent(const Vec3 &pointerOrg, const Vec3 &pointerPos);
     bool inputDevReleaseEvent();
@@ -72,13 +77,13 @@ class DesignStateRenderer
     osg::Vec3 mViewOrg, mViewDir;
     osg::Light *mLeftDirLight, *mRightDirLight;
 
-    /* design state objects */
+    // design state objects
     DesignStateParticleSystem *mDSParticleSystem;
     DesignStateList::iterator mActiveDSItr;
     DesignStateList mDSList;
     DesignStateBase *mHighlighted;
 
-    /* design states that registered in 'mDSList' */
+    // design states that registered in 'mDSList'
     DesignStateBase *mActiveDSPtr;
     DSVirtualSphere *mDSVirtualSphere;
     DSVirtualEarth *mDSVirtualEarth;
@@ -87,11 +92,14 @@ class DesignStateRenderer
     DSGeometryCreator *mDSGeometryCreator;
     DSTexturePallette *mDSTexturePallette;
     DSViewpoints *mDSViewpoints;
+    DSObjectPlacer *mDSObjectPlacer;
+    DSLights *mDSLights;
 
-    /* design states that NOT registered in 'mDSList' */
+    // design states that NOT registered in 'mDSList'
     DSGeometryEditor *mDSGeometryEditor;
+    ColorSelector *mColorSelector;
 
-    /* reset position and rotation of DSRootTrans based on viewer's viewport */
+    // reset position and rotation of DSRootTrans based on viewer's viewport
     void resetPose();
 
     osg::Group *createDirectionalLights(osg::StateSet *stateset);
@@ -99,5 +107,5 @@ class DesignStateRenderer
     static DesignStateRenderer *gDSRendererPtr;
 };
 
-
 #endif
+

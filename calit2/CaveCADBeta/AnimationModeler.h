@@ -83,7 +83,7 @@ namespace CAVEAnimationModeler
 
     typedef std::list<osgParticle::Emitter*> ANIMEmitterList;
 
-    /* Data directory, earth light direction */
+    // Data directory, earth light direction
     const std::string ANIMDataDir();
     const osg::Vec3 ANIMVirtualEarthLightDir();
 
@@ -194,6 +194,12 @@ namespace CAVEAnimationModeler
 				 int &numTypes, ANIMShapeSwitchEntry ***shapeSwitchEntryArray);
     void ANIMCreateSingleShapeSwitchAnimation(ANIMShapeSwitchEntry **shapeEntry, const CAVEGeodeShape::Type &typ);
     void ANIMLoadObjectHandler(osg::Switch **snapWireframeSwitch, osg::Switch **snapSolidshapeSwitch);
+
+
+    // Object Placer
+    void ANIMCreateObjectPlacer(std::vector<osg::PositionAttitudeTransform*>* fwdVec, 
+                                std::vector<osg::PositionAttitudeTransform*>* bwdVec);
+
 };
 
 #endif

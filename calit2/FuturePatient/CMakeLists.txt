@@ -4,8 +4,20 @@ SET(PLUGIN_HEADERS
     DataGraph.h
     GraphObject.h
     GraphLayoutObject.h
+    LayoutInterfaces.h
     ShapeTextureGenerator.h
     PointActions.h
+    MicrobeGraphObject.h
+    GroupedBarGraph.h
+    GroupedScatterPlot.h
+    MicrobeBarGraphObject.h
+    MicrobeScatterGraphObject.h
+    StackedBarGraph.h
+    ColorGenerator.h
+    SymptomGraphObject.h
+    TimeRangeDataGraph.h
+    GraphKeyObject.h
+    GraphGlobals.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -15,8 +27,20 @@ ADD_LIBRARY(${LIB_NAME}
     DataGraph.cpp
     GraphObject.cpp
     GraphLayoutObject.cpp
+    LayoutInterfaces.cpp
     ShapeTextureGenerator.cpp
     PointActions.cpp
+    MicrobeGraphObject.cpp
+    GroupedBarGraph.cpp
+    GroupedScatterPlot.cpp
+    MicrobeBarGraphObject.cpp
+    MicrobeScatterGraphObject.cpp
+    StackedBarGraph.cpp
+    ColorGenerator.cpp
+    SymptomGraphObject.cpp
+    TimeRangeDataGraph.cpp
+    GraphKeyObject.cpp
+    GraphGlobals.cpp
 )
 
 FIND_PACKAGE(Mysql)

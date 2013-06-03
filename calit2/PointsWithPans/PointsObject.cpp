@@ -29,8 +29,10 @@ PointsObject::PointsObject(std::string name, bool navigation, bool movable, bool
     }
 
     _root->getOrCreateStateSet()->setMode(GL_BLEND,osg::StateAttribute::ON);
-    std::string bname = "Points";
-    _root->getOrCreateStateSet()->setRenderBinDetails(1,bname);
+    std::string bname = "StateSortedBin";
+    _root->getOrCreateStateSet()->setRenderBinDetails(11,bname);
+    _root->getOrCreateStateSet()->setNestRenderBins(false);
+    //_root->getOrCreateStateSet()->setBinNumber(1);
 }
 
 PointsObject::~PointsObject()
@@ -69,6 +71,7 @@ void PointsObject::panUnloaded(float rotation)
 	}
 	attachToScene();
 	_fadeInActive = true;
+	_fadeActive = false;
 	float panAlpha = 1.0f;
 	PluginHelper::sendMessageByName("PanoViewLOD",PAN_SET_ALPHA,(char*)&panAlpha);
 	_fadeTime = 0.0;
@@ -89,9 +92,36 @@ void PointsObject::panUnloaded(float rotation)
 
 void PointsObject::clear()
 {
-    _root->removeChildren(0,_root->getNumChildren());
+    while(getNumChildNodes())
+    {
+	removeChild(getChildNode(0));
+    }
     setTransform(osg::Matrix::identity());
     _alphaUni = NULL;
+    _activePanMarker = NULL;
+    _transitionActive = false;
+    _fadeActive = false;
+    _fadeInActive = false;
+    _transitionTime = 4.0;
+    _totalFadeTime = 5.0;
+
+    while(getNumChildObjects())
+    {
+	SceneObject * so = getChildObject(0);
+	removeChild(so);
+	// TODO: fix nested delete
+	//delete so;
+    }
+
+    detachFromScene();
+    PluginHelper::sendMessageByName("PanoViewLOD",PAN_UNLOAD,NULL);
+    PluginHelper::sendMessageByName("PanoViewLOD",PAN_UNLOAD,NULL);
+}
+
+void PointsObject::setTransitionTimes(float moveTime, float fadeTime)
+{
+    _transitionTime = moveTime;
+    _totalFadeTime = fadeTime;
 }
 
 void PointsObject::setAlpha(float alpha)
@@ -199,6 +229,8 @@ void PointsObject::update()
 
 	    setAlpha(1.0f - (_fadeTime / _totalFadeTime));
 	    float panAlpha = _fadeTime / _totalFadeTime;
+	    panAlpha *= 1.0;
+	    panAlpha = std::min(panAlpha,1.0f);
 	    PluginHelper::sendMessageByName("PanoViewLOD",PAN_SET_ALPHA,(char*)&panAlpha);
 
 	    if(_fadeTime == _totalFadeTime)
@@ -217,7 +249,11 @@ void PointsObject::update()
 	    _fadeTime = _totalFadeTime;
 	}
 
-	setAlpha(_fadeTime / _totalFadeTime);
+	float pointAlpha = _fadeTime / _totalFadeTime;
+	pointAlpha *= 1.0;
+	pointAlpha = std::min(pointAlpha,1.0f);
+
+	setAlpha(pointAlpha);
 	float panAlpha = 1.0f - (_fadeTime / _totalFadeTime);
 	PluginHelper::sendMessageByName("PanoViewLOD",PAN_SET_ALPHA,(char*)&panAlpha);
 

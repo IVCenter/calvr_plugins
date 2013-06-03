@@ -3,6 +3,8 @@
 
 #include <queue>
 #include <vector>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 // CVR
 #include <cvrKernel/CVRPlugin.h>
@@ -11,6 +13,7 @@
 #include <cvrKernel/SceneObject.h>
 #include <cvrKernel/Navigation.h>
 #include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/ComController.h>
 #include <cvrMenu/MenuSystem.h>
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuButton.h>
@@ -29,7 +32,7 @@
 class Points : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::FileLoadCallback
 {
   protected:
-    osg::Program* pgm1;
+    osg::ref_ptr<osg::Program> pgm1;
     float initialPointScale;
  
     // container to hold pdf data
@@ -44,11 +47,24 @@ class Points : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
 
     void readXYZ(std::string& filename, osg::Vec3Array* points, osg::Vec4Array* colors);
     void readXYB(std::string& filename, osg::Vec3Array* points, osg::Vec4Array* colors);
+    void writeConfigFile();
+    bool isFile(const char* filename);
+    void removeAll();
 
     // context map
     std::map<struct PointObject*,cvr::MenuRangeValue*> _sliderMap;
     std::map<struct PointObject*,cvr::MenuButton*> _deleteMap;
+    std::map<struct PointObject*,cvr::MenuButton*> _saveMap;
+    std::map<struct PointObject*,cvr::MenuCheckbox*> _boundsMap;
     std::vector<struct PointObject*> _loadedPoints;
+
+    std::map<std::string, std::pair<float, osg::Matrix> > _locInit;
+    std::string _configPath;
+
+    cvr::SubMenu * _mainMenu, * _loadMenu;
+    cvr::MenuButton * _removeButton;
+    std::vector<cvr::MenuButton*> _menuFileList;
+    std::vector<std::string> _filePaths;
 
     osg::Uniform* objectScale;
 

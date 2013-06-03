@@ -246,20 +246,3 @@ void ECGClient::menuCallback(MenuItem *item)
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

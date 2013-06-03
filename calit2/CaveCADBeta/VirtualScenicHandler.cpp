@@ -15,15 +15,15 @@ using namespace osg;
 
 
 // Constructor
-VirtualScenicHandler::VirtualScenicHandler(Group* nonIntersectableSceneGraphPtr, osg::Group* intersectableSceneGraphPtr): 
-					mFloorplanIdx(-1)
+VirtualScenicHandler::VirtualScenicHandler(Group* nonIntersectableSceneGraphPtr,    
+    osg::Group* intersectableSceneGraphPtr): mFloorplanIdx(-1)
 {
     intersectableSceneGraphPtr->addChild(createSunLight(intersectableSceneGraphPtr->getOrCreateStateSet()));
     nonIntersectableSceneGraphPtr->addChild(createPointLight(nonIntersectableSceneGraphPtr->getOrCreateStateSet()));
-    
+
     mWaterEnabled = false;
 
-    /* load reference plane and sky dome */
+    // load reference plane and sky dome
     mXYPlaneSwitch = new Switch();
     mSkyDomeSwitch = new Switch();
     mFloorplanSwitch = new Switch();
@@ -38,7 +38,8 @@ VirtualScenicHandler::VirtualScenicHandler(Group* nonIntersectableSceneGraphPtr,
     mXYPlaneSwitch->setAllChildrenOff();
     mSkyDomeSwitch->setAllChildrenOff();
     mFloorplanSwitch->setAllChildrenOff();
-
+    
+    mWaterSurfSwitch = NULL;
     if (mWaterEnabled)
     {
         mWaterSurfSwitch = new Switch();
@@ -46,7 +47,6 @@ VirtualScenicHandler::VirtualScenicHandler(Group* nonIntersectableSceneGraphPtr,
         intersectableSceneGraphPtr->addChild(mWaterSurfSwitch);
         mWaterSurfSwitch->setAllChildrenOff();
     }
-
 }
 
 
@@ -59,15 +59,19 @@ void VirtualScenicHandler::setGeometryVisible(bool flag)
     {
         mXYPlaneSwitch->setAllChildrenOn();
         mSkyDomeSwitch->setAllChildrenOn();
-        if (mWaterSurfSwitch)
+        if (mWaterEnabled)
+        {
             mWaterSurfSwitch->setAllChildrenOn();
+        }
     }
     else 
     {
         mXYPlaneSwitch->setAllChildrenOff();
         mSkyDomeSwitch->setAllChildrenOff();
-        if (mWaterSurfSwitch)
+        if (mWaterEnabled)
+        {
             mWaterSurfSwitch->setAllChildrenOff();
+        }
         mFloorplanSwitch->setAllChildrenOff();
     }
 }
@@ -200,8 +204,8 @@ void VirtualScenicHandler::updateVSParameters(const Matrixd &matShaderToWorld,
        of viewer's head so all reference geometries are illuminated evenly.
     */
     mSunLight->setPosition(Vec4(sunDirShader, 0.0f));
-    mSunLight->setDiffuse(sunColor);
-    mSunLight->setAmbient(Vec4(0.5f,0.5f,0.5f,1.0f));
+    mSunLight->setDiffuse(osg::Vec4(0,0,0,0));//sunColor);
+    mSunLight->setAmbient(Vec4(0,0,0,0));//0.5f,0.5f,0.5f,1.0f));
 
     mPointLight->setPosition(Vec4(viewPos, 0.0f));
 
@@ -320,7 +324,7 @@ void VirtualScenicHandler::createFloorplanGeometry(const int numPages,
 
     for (int i = 0; i < numPages; i++)
     {
-        /* create floorplan geometry */
+        // create floorplan geometry
         float length = pageEntryArray[i]->mLength;
         float width = pageEntryArray[i]->mWidth;
         float altitude = pageEntryArray[i]->mAlti;
@@ -384,9 +388,9 @@ Group *VirtualScenicHandler::createSunLight(osg::StateSet *stateset)
 
     mSunLight->setLightNum(4);
     mSunLight->setPosition(Vec4(0.0f, 1.0f, 1.0f, 0.0f));
-    mSunLight->setDiffuse(Vec4(1.0f,1.0f,1.0f,1.0f));
-    mSunLight->setSpecular(Vec4(0.0f,0.0f,0.0f,1.0f));
-    mSunLight->setAmbient(Vec4(0.5f,0.5f,0.5f,1.0f));
+    mSunLight->setDiffuse(Vec4( 0.0f, 0.0f, 0.0f, 1.0f));
+    mSunLight->setSpecular(Vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    mSunLight->setAmbient(Vec4( 0.0f, 0.0f, 0.0f, 1.0f));
   
     mSunLightSource->setLight(mSunLight);
     mSunLightSource->setLocalStateSetModes(StateAttribute::ON);
@@ -409,9 +413,9 @@ Group *VirtualScenicHandler::createPointLight(osg::StateSet *stateset)
 
     mPointLight->setLightNum(5);
     mPointLight->setPosition(Vec4(0.0f, 0.0f, -0.5f, 1.0f));
-    mPointLight->setDiffuse(Vec4(1.0f,1.0f,1.0f,1.0f));
-    mPointLight->setSpecular(Vec4(0.0f,0.0f,0.0f,1.0f));
-    mPointLight->setAmbient(Vec4(0.2f,0.2f,0.2f,1.0f));
+    mPointLight->setDiffuse( Vec4(0.0f,0.0f,0.0f,1.0f));
+    mPointLight->setSpecular(Vec4(1.0f,1.0f,1.0f,1.0f));
+    mPointLight->setAmbient( Vec4(0.0f,0.0f,0.0f,1.0f));
   
     mPointLightSource->setLight(mPointLight);
     mPointLightSource->setLocalStateSetModes(StateAttribute::ON);

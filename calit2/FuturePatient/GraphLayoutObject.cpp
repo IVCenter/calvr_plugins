@@ -1,6 +1,10 @@
 #include "GraphLayoutObject.h"
+#include "ColorGenerator.h"
+#include "FuturePatient.h"
+#include "GraphGlobals.h"
 
 #include <cvrInput/TrackingManager.h>
+#include <cvrConfig/ConfigManager.h>
 
 using namespace cvr;
 
@@ -15,7 +19,7 @@ GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std
     _resetLayoutButton->setCallback(this);
     addMenuItem(_resetLayoutButton);
 
-    _syncTimeCB = new MenuCheckbox("Sync Time",false);
+    _syncTimeCB = new MenuCheckbox("Sync",false);
     _syncTimeCB->setCallback(this);
     addMenuItem(_syncTimeCB);
 
@@ -35,15 +39,25 @@ GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std
     _heightRV->setCallback(this);
     addMenuItem(_heightRV);
 
+    _minmaxButton = new MenuButton("Minimize");
+    _minmaxButton->setCallback(this);
+    addMenuItem(_minmaxButton);
+
+    _removeUnselected = new MenuButton("Remove Unselected");
+    _removeUnselected->setCallback(this);
+    addMenuItem(_removeUnselected);
+
     _activeHand = -1;
     _activeHandType = TrackerBase::INVALID;
+
+    _minimized = false;
 }
 
 GraphLayoutObject::~GraphLayoutObject()
 {
 }
 
-void GraphLayoutObject::addGraphObject(GraphObject * object)
+void GraphLayoutObject::addGraphObject(LayoutTypeObject * object)
 {
     for(int i = 0; i < _objectList.size(); i++)
     {
@@ -55,19 +69,25 @@ void GraphLayoutObject::addGraphObject(GraphObject * object)
 
     _objectList.push_back(object);
 
-    if(_syncTimeCB->getValue())
+    TimeRangeObject * tro = dynamic_cast<TimeRangeObject*>(object);
+    ValueRangeObject * vro = dynamic_cast<ValueRangeObject*>(object);
+    LogValueRangeObject * lvro = dynamic_cast<LogValueRangeObject*>(object);
+
+
+    if((tro || vro || lvro) && _syncTimeCB->getValue())
     {
-	if(!_zoomCB->getValue())
+	if(vro || lvro || !_zoomCB->getValue())
 	{
 	    menuCallback(_syncTimeCB);
 	}
-	else
+	else if(tro)
 	{
-	    object->setGraphDisplayRange(_currentMinX,_currentMaxX);
+	    tro->setGraphDisplayRange(_currentMinX,_currentMaxX);
 	}
     }
 
     addChild(object);
+    object->objectAdded();
 
     _perGraphActiveHand.push_back(-1);
     _perGraphActiveHandType.push_back(TrackerBase::INVALID);
@@ -81,10 +101,10 @@ void GraphLayoutObject::addGraphObject(GraphObject * object)
     updateLayout();
 }
 
-void GraphLayoutObject::removeGraphObject(GraphObject * object)
+void GraphLayoutObject::removeGraphObject(LayoutTypeObject * object)
 {
     int index = 0;
-    for(std::vector<GraphObject *>::iterator it = _objectList.begin(); it != _objectList.end(); it++, index++)
+    for(std::vector<LayoutTypeObject *>::iterator it = _objectList.begin(); it != _objectList.end(); it++, index++)
     {
 	if((*it) == object)
 	{
@@ -92,15 +112,17 @@ void GraphLayoutObject::removeGraphObject(GraphObject * object)
 	    delete _deleteButtonMap[object];
 	    _deleteButtonMap.erase(object);
 	    removeChild(object);
+	    object->objectRemoved();
 	    _objectList.erase(it);
 	    if(object->getLayoutDoesDelete())
 	    {
-		//TODO fix scene object delete
-		//delete object;
+		delete object;
 	    }
 	    break;
 	}
     }
+
+    checkLineRefs();
 
     if(index < _perGraphActiveHand.size())
     {
@@ -116,7 +138,109 @@ void GraphLayoutObject::removeGraphObject(GraphObject * object)
 	_perGraphActiveHandType.erase(it);
     }
 
+    bool selectedObjects = false;
+
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	if(dynamic_cast<MicrobeSelectObject*>(_objectList[i]))
+	{
+	    selectedObjects = true;
+	    break;
+	}
+    }
+
+    if(!selectedObjects)
+    {
+	_currentSelectedMicrobeGroup = "";
+	_currentSelectedMicrobes.clear();
+    }
+
+    bool selectedPatients = false;
+
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	if(dynamic_cast<PatientSelectObject*>(_objectList[i]))
+	{
+	    selectedPatients = true;
+	    break;
+	}
+    }
+
+    if(!selectedPatients)
+    {
+	_currentSelectedPatientGroup = "";
+	_currentSelectedPatients.clear();
+    }
+
     updateLayout();
+}
+
+void GraphLayoutObject::addLineObject(LayoutLineObject * object)
+{
+    if(!object)
+    {
+	return;
+    }
+
+    for(int i = 0; i < _lineObjectList.size(); ++i)
+    {
+	if(_lineObjectList[i] == object)
+	{
+	    return;
+	}
+    }
+
+    _lineObjectList.push_back(object);
+
+    addChild(object);
+
+    updateLayout();
+}
+
+void GraphLayoutObject::removeLineObject(LayoutLineObject * object)
+{
+    for(std::vector<LayoutLineObject *>::iterator it = _lineObjectList.begin(); it != _lineObjectList.end(); ++it)
+    {
+	if((*it) == object)
+	{
+	    removeChild(object);
+	    _lineObjectList.erase(it);
+	    break;
+	}
+    }
+
+    updateLayout();
+}
+
+void GraphLayoutObject::selectMicrobes(std::string & group, std::vector<std::string> & keys)
+{
+    // make copy to apply to new graphs when added
+    _currentSelectedMicrobeGroup = group;
+    _currentSelectedMicrobes = keys;
+
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	MicrobeSelectObject * mso = dynamic_cast<MicrobeSelectObject *>(_objectList[i]);
+	if(mso)
+	{
+	    mso->selectMicrobes(group,keys);
+	}
+    }
+}
+
+void GraphLayoutObject::selectPatients(std::string & group, std::vector<std::string> & patients)
+{
+    _currentSelectedPatientGroup = group;
+    _currentSelectedPatients = patients;
+
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	PatientSelectObject * pso = dynamic_cast<PatientSelectObject*>(_objectList[i]);
+	if(pso)
+	{
+	    pso->selectPatients(group,patients);
+	}
+    }
 }
 
 void GraphLayoutObject::removeAll()
@@ -124,23 +248,215 @@ void GraphLayoutObject::removeAll()
     for(int i = 0; i < _objectList.size(); i++)
     {
 	removeChild(_objectList[i]);
+	_objectList[i]->objectRemoved();
 	if(_objectList[i]->getLayoutDoesDelete())
 	{
-	    //TODO fix scene object delete
-	    //delete _objectList[i];
+	    delete _objectList[i];
 	}
     }
 
-    for(std::map<GraphObject *,cvr::MenuButton *>::iterator it = _deleteButtonMap.begin(); it != _deleteButtonMap.end(); it++)
+    for(std::map<LayoutTypeObject *,cvr::MenuButton *>::iterator it = _deleteButtonMap.begin(); it != _deleteButtonMap.end(); it++)
     {
 	it->first->removeMenuItem(it->second);
 	delete it->second;
     }
+
+    checkLineRefs();
+
     _deleteButtonMap.clear();
     _perGraphActiveHand.clear();
     _perGraphActiveHandType.clear();
 
+    _currentSelectedMicrobeGroup = "";
+    _currentSelectedMicrobes.clear();
+
+    _currentSelectedPatientGroup = "";
+    _currentSelectedPatients.clear();
+
     _objectList.clear();
+}
+
+void GraphLayoutObject::perFrame()
+{
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	_objectList[i]->perFrame();
+    }
+}
+
+void GraphLayoutObject::minimize()
+{
+    if(_minimized)
+    {
+	return;
+    }
+
+    osg::Vec3 pos = ConfigManager::getVec3("Plugin.FuturePatient.MinimizedLayout");
+    float scale = ConfigManager::getFloat("scale","Plugin.FuturePatient.MinimizedLayout",0.5);
+
+    setScale(scale);
+    setPosition(pos);
+
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	_objectList[i]->setGLScale(scale);
+    }
+
+    _minmaxButton->setText("Maximize");
+
+    _minimized = true;
+}
+
+void GraphLayoutObject::maximize()
+{
+    if(!_minimized)
+    {
+	return;
+    }
+
+    osg::Vec3 pos = ConfigManager::getVec3("Plugin.FuturePatient.Layout");
+
+    setScale(1.0);
+    setPosition(pos);
+
+    _minmaxButton->setText("Minimize");
+
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	_objectList[i]->setGLScale(1.0);
+    }
+
+    _minimized = false;
+}
+
+void GraphLayoutObject::setRows(float rows)
+{
+    _rowsRV->setValue(rows);
+    menuCallback(_rowsRV);
+}
+
+void GraphLayoutObject::setSyncTime(bool sync)
+{
+    if(sync != _syncTimeCB->getValue())
+    {
+	_syncTimeCB->setValue(sync);
+	menuCallback(_syncTimeCB);
+    }
+}
+
+bool GraphLayoutObject::dumpState(std::ostream & out)
+{
+    out << _objectList.size() << std::endl;
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	_objectList[i]->dumpState(out);
+    }
+
+    out << _width << " " << _height << " " << _maxRows << std::endl;
+    out << _syncTimeCB->getValue() << " " << _zoomCB->getValue() << std::endl;
+    out << _maxX << " " << _minX << " " << _currentMaxX << " " << _currentMinX << std::endl;
+    out << _minimized << std::endl;
+
+    osg::Vec3 pos = getPosition();
+    out << pos.x() << " " << pos.y() << " " << pos.z() << std::endl;
+    out << getScale() << std::endl;
+
+    out << !_currentSelectedMicrobeGroup.empty() << " " << _currentSelectedMicrobes.size() << std::endl;
+    if(!_currentSelectedMicrobeGroup.empty())
+    {
+	out << _currentSelectedMicrobeGroup << std::endl;
+    }
+    for(int i = 0; i < _currentSelectedMicrobes.size(); ++i)
+    {
+	out << _currentSelectedMicrobes[i] << std::endl;
+    }
+
+    return true;
+}
+
+bool GraphLayoutObject::loadState(std::istream & in)
+{
+    _syncTimeCB->setValue(false);
+    _zoomCB->setValue(false);
+
+    int numObjects;
+    in >> numObjects;
+
+    for(int i = 0; i < numObjects; ++i)
+    {
+	if(!loadObject(in))
+	{
+	    return false;
+	}
+    }
+
+    // not using these for the moment
+    float width, height;
+    in >> width >> height >> _maxRows;
+    //std::cerr << "Width: " << _width << " Height: " << _height << " MaxRows: " << _maxRows << std::endl;
+    _rowsRV->setValue(_maxRows);
+    //_widthRV->setValue(_width);
+    //_heightRV->setValue(_height);
+
+    bool sync, zoom;
+    in >> sync >> zoom;
+    //std::cerr << "Sync: " << sync << " Zoom: " << zoom << std::endl;
+    _syncTimeCB->setValue(sync);
+    _zoomCB->setValue(zoom);
+
+    in >> _maxX >> _minX >> _currentMaxX >> _currentMinX;
+    //std::cerr << "MaxX: " << _maxX << " MinX: " << _minX << " CMaxX: " << _currentMaxX << " CMinX: " << _currentMinX << std::endl;
+    bool minimized;
+    in >> minimized;
+    //std::cerr << "Minimized: " << minimized << std::endl;
+    
+    float x,y,z;
+    in >> x >> y >> z;
+    float scale;
+    in >> scale;
+
+    // not used for the moment
+    //setScale(scale);
+    //setPosition(osg::Vec3(x,y,z));
+    
+    bool selectedGroup;
+    int selectedMicrobes;
+    in >> selectedGroup >> selectedMicrobes;
+    //std::cerr << "Group: " << selectedGroup << " Microbes: " << selectedMicrobes << std::endl;
+    
+    char tempstr[1024];
+
+    if(selectedGroup || selectedMicrobes)
+    {
+	// call consume previous end line
+	in.getline(tempstr,1024);
+    }
+
+    if(selectedGroup)
+    {
+	in.getline(tempstr,1024);
+	_currentSelectedMicrobeGroup = tempstr;
+    }
+    else
+    {
+	_currentSelectedMicrobeGroup = "";
+    }
+
+    //std::cerr << "Selected Group: " << _currentSelectedMicrobeGroup << std::endl;
+
+    _currentSelectedMicrobes.clear();
+
+    for(int i = 0; i < selectedMicrobes; ++i)
+    {
+	in.getline(tempstr,1024);
+	//std::cerr << "Microbe: " << tempstr << std::endl;
+	_currentSelectedMicrobes.push_back(tempstr);
+    }
+
+    updateGeometry();
+    updateLayout();
+
+    return true;
 }
 
 void GraphLayoutObject::menuCallback(MenuItem * item)
@@ -157,6 +473,19 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	{
 	    _maxRows = (int)_rowsRV->getValue();
 	    updateLayout();
+	}
+	return;
+    }
+
+    if(item == _minmaxButton)
+    {
+	if(_minimized)
+	{
+	    maximize();
+	}
+	else
+	{
+	    minimize();
 	}
 	return;
     }
@@ -214,7 +543,13 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	    _maxX = _minX = 0;
 	    for(int i = 0; i < _objectList.size(); i++)
 	    {
-		time_t value = _objectList[i]->getMaxTimestamp();
+		TimeRangeObject * tro = dynamic_cast<TimeRangeObject *>(_objectList[i]);
+		if(!tro)
+		{
+		    continue;
+		}
+
+		time_t value = tro->getMaxTimestamp();
 		if(value)
 		{
 		    if(!_maxX || value > _maxX)
@@ -223,7 +558,7 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 		    }
 		}
 
-		value = _objectList[i]->getMinTimestamp();
+		value = tro->getMinTimestamp();
 		if(value)
 		{
 		    if(!_minX || value < _minX)
@@ -240,7 +575,13 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	    {
 		for(int i = 0; i < _objectList.size(); i++)
 		{
-		    _objectList[i]->setGraphDisplayRange(_minX,_maxX);
+		    TimeRangeObject * tro = dynamic_cast<TimeRangeObject *>(_objectList[i]);
+		    if(!tro)
+		    {
+			continue;
+		    }
+
+		    tro->setGraphDisplayRange(_minX,_maxX);
 		}
 	    }
 
@@ -253,12 +594,104 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 		    _objectList[i]->setBarVisible(false);
 		}
 	    }
+
+	    // sync grouped graph range
+	    float dataMin = FLT_MAX;
+	    float dataMax = FLT_MIN;
+
+	    for(int i = 0; i < _objectList.size(); ++i)
+	    {
+		ValueRangeObject * vro = dynamic_cast<ValueRangeObject *>(_objectList[i]);
+		if(!vro)
+		{
+		    continue;
+		}
+
+		float temp = vro->getGraphDisplayRangeMax();
+		if(temp > dataMax)
+		{
+		    dataMax = temp;
+		}
+		temp = vro->getGraphDisplayRangeMin();
+		if(temp < dataMin)
+		{
+		    dataMin = temp;
+		}
+	    }
+
+	    for(int i = 0; i < _objectList.size(); ++i)
+	    {
+		ValueRangeObject * vro = dynamic_cast<ValueRangeObject *>(_objectList[i]);
+		if(!vro)
+		{
+		    continue;
+		}
+
+		vro->setGraphDisplayRange(dataMin,dataMax);
+	    }
+
+	    float xMax = FLT_MIN;
+	    float xMin = FLT_MAX;
+	    float zMax = FLT_MIN;
+	    float zMin = FLT_MAX;
+
+	    for(int i = 0; i < _objectList.size(); ++i)
+	    {
+		LogValueRangeObject * lvro = dynamic_cast<LogValueRangeObject *>(_objectList[i]);
+		if(!lvro)
+		{
+		    continue;
+		}
+
+		float temp = lvro->getGraphXDisplayRangeMax();
+		if(temp > xMax)
+		{
+		    xMax = temp;
+		}
+		temp = lvro->getGraphXDisplayRangeMin();
+		if(temp < xMin)
+		{
+		    xMin = temp;
+		}
+
+		temp = lvro->getGraphZDisplayRangeMax();
+		if(temp > zMax)
+		{
+		    zMax = temp;
+		}
+		temp = lvro->getGraphZDisplayRangeMin();
+		if(temp < zMin)
+		{
+		    zMin = temp;
+		}
+	    }
+
+	    // sorta a hack for now
+	    xMax = zMax = 1.0;
+
+	    for(int i = 0; i < _objectList.size(); ++i)
+	    {
+		LogValueRangeObject * lvro = dynamic_cast<LogValueRangeObject *>(_objectList[i]);
+		if(!lvro)
+		{
+		    continue;
+		}
+
+		lvro->setGraphXDisplayRange(xMin,xMax);
+		lvro->setGraphZDisplayRange(zMin,zMax);
+	    }
 	}
 	else
 	{
 	    for(int i = 0; i < _objectList.size(); i++)
 	    {
-		_objectList[i]->resetGraphDisplayRange();
+		TimeRangeObject * tro = dynamic_cast<TimeRangeObject *>(_objectList[i]);
+		if(!tro)
+		{
+		    continue;
+		}
+
+		tro->resetGraphDisplayRange();
 	    }
 
 	    if(_zoomCB->getValue())
@@ -270,11 +703,33 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 		    _objectList[i]->setBarVisible(false);
 		}
 	    }
+
+	    for(int i = 0; i < _objectList.size(); ++i)
+	    {
+		ValueRangeObject * vro = dynamic_cast<ValueRangeObject *>(_objectList[i]);
+		if(!vro)
+		{
+		    continue;
+		}
+
+		vro->resetGraphDisplayRange();
+	    }
+
+	    for(int i = 0; i < _objectList.size(); ++i)
+	    {
+		LogValueRangeObject * lvro = dynamic_cast<LogValueRangeObject*>(_objectList[i]);
+		if(!lvro)
+		{
+		    continue;
+		}
+
+		lvro->resetGraphDisplayRange();
+	    }
 	}
 	return;
     }
 
-    for(std::map<GraphObject *,cvr::MenuButton *>::iterator it = _deleteButtonMap.begin(); it != _deleteButtonMap.end(); it++)
+    for(std::map<LayoutTypeObject *,cvr::MenuButton *>::iterator it = _deleteButtonMap.begin(); it != _deleteButtonMap.end(); it++)
     {
 	if(it->second == item)
 	{
@@ -282,6 +737,27 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	    removeGraphObject(it->first);
 	    return;
 	}
+    }
+
+    if(item == _removeUnselected)
+    {
+	std::vector<LayoutTypeObject*> removeList;
+
+	for(int i = 0; i < _objectList.size(); ++i)
+	{
+	    SelectableObject * so = dynamic_cast<SelectableObject*>(_objectList[i]);
+	    if(!so || !so->isSelected())
+	    {
+		removeList.push_back(_objectList[i]);
+	    }
+	}
+
+	for(int i = 0; i < removeList.size(); ++i)
+	{
+	    removeGraphObject(removeList[i]);
+	}
+
+	return;
     }
 
     TiledWallSceneObject::menuCallback(item);
@@ -299,35 +775,75 @@ bool GraphLayoutObject::processEvent(InteractionEvent * event)
 		if(_objectList.size() && vie->getHand() == _activeHand)
 		{
 		    double pos = _objectList[0]->getBarPosition();
-		    time_t change = (time_t)(difftime(_currentMaxX,_currentMinX)*0.03);
-		    _currentMinX += change * pos * vie->getValue();
-		    _currentMaxX -= change * (1.0 - pos) * vie->getValue();
-		    _currentMinX = std::max(_currentMinX,_minX);
-		    _currentMaxX = std::min(_currentMaxX,_maxX);
+		    bool found = false;
 
 		    for(int i = 0; i < _objectList.size(); i++)
 		    {
-			_objectList[i]->setGraphDisplayRange(_currentMinX,_currentMaxX);
+			TimeRangeObject * tro = dynamic_cast<TimeRangeObject *>(_objectList[i]);
+			if(tro)
+			{
+			    pos = _objectList[i]->getBarPosition();
+			    found = true;
+			    break;
+			}
 		    }
-		    return true;
+
+		    if(found)
+		    {
+			time_t change = (time_t)(difftime(_currentMaxX,_currentMinX)*0.03);
+			if(change <= 0.0 && vie->getValue() < 0.0)
+			{
+			    time_t diff = difftime(_currentMaxX,_currentMinX);
+			    change = std::max(diff >> 1, (time_t)1);
+			}
+
+			_currentMinX += change * pos * ((double)vie->getValue());
+			_currentMaxX -= change * (1.0 - pos) * ((double)vie->getValue());
+			_currentMinX = std::max(_currentMinX,_minX);
+			_currentMaxX = std::min(_currentMaxX,_maxX);
+
+			for(int i = 0; i < _objectList.size(); i++)
+			{
+			    TimeRangeObject * tro = dynamic_cast<TimeRangeObject *>(_objectList[i]);
+			    if(!tro)
+			    {
+				continue;
+			    }
+
+			    tro->setGraphDisplayRange(_currentMinX,_currentMaxX);
+			}
+			return true;
+		    }
 		}
 	    }
 	    else
 	    {
 		for(int i = 0; i < _objectList.size(); i++)
 		{
+		    TimeRangeObject * tro = dynamic_cast<TimeRangeObject *>(_objectList[i]);
+		    if(!tro)
+		    {
+			continue;
+		    }
+
 		    if(_perGraphActiveHand[i] == vie->getHand())
 		    {
 			time_t currentStart,currentEnd;
-			_objectList[i]->getGraphDisplayRange(currentStart,currentEnd);
+			tro->getGraphDisplayRange(currentStart,currentEnd);
 			double pos = _objectList[i]->getBarPosition();
 
 			time_t change = (time_t)(difftime(currentEnd,currentStart)*0.03);
-			currentStart += change * pos * vie->getValue();
-			currentEnd -= change * (1.0 - pos) * vie->getValue();
-			currentStart = std::max(currentStart,_objectList[i]->getMinTimestamp());
-			currentEnd = std::min(currentEnd,_objectList[i]->getMaxTimestamp());
-			_objectList[i]->setGraphDisplayRange(currentStart,currentEnd);
+			if(change <= 0.0 && vie->getValue() < 0.0)
+			{
+			    time_t diff = difftime(currentEnd,currentStart);
+			    change = std::max(diff >> 2, (time_t)1);
+			}
+
+			currentStart += change * pos * ((double)vie->getValue());
+			currentEnd -= change * (1.0 - pos) * ((double)vie->getValue());
+			currentStart = std::max(currentStart,tro->getMinTimestamp());
+			currentEnd = std::min(currentEnd,tro->getMaxTimestamp());
+			tro->setGraphDisplayRange(currentStart,currentEnd);
 
 			return true;
 		    }
@@ -350,6 +866,12 @@ void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
 	return;
     }
 
+    // not using tracked wand at the moment, keeps it from holding the interaction
+    if(TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::TRACKER)
+    {
+	return;
+    }
+
     if(_syncTimeCB->getValue())
     {
 	if(handID != _activeHand && _activeHandType <= TrackingManager::instance()->getHandTrackerType(handID))
@@ -361,7 +883,7 @@ void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
 	osg::Vec3 graphPoint;
 	for(int i = 0; i < _objectList.size(); i++)
 	{
-	    if(!_objectList[i]->getGraphSpacePoint(mat,graphPoint) || graphPoint.x() < 0 || graphPoint.x() > 1.0 || graphPoint.z() < 0 || graphPoint.z() > 1.0)
+	    if(!_objectList[i]->getGraphSpacePoint(mat,graphPoint) || graphPoint.z() < 0 || graphPoint.z() > 1.0)
 	    {
 		continue;
 	    }
@@ -384,6 +906,9 @@ void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
 	{
 	    return;
 	}
+
+	graphPoint.x() = std::max(graphPoint.x(),0.0f);
+	graphPoint.x() = std::min(graphPoint.x(),1.0f);
 
 	if(_activeHand == -1)
 	{
@@ -414,7 +939,7 @@ void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
 	    }
 
 	    osg::Vec3 graphPoint;
-	    if(!_objectList[i]->getGraphSpacePoint(mat,graphPoint) || graphPoint.x() < 0 || graphPoint.x() > 1.0 || graphPoint.z() < 0 || graphPoint.z() > 1.0)
+	    if(!_objectList[i]->getGraphSpacePoint(mat,graphPoint) || graphPoint.z() < 0 || graphPoint.z() > 1.0)
 	    {
 		if(handID == _perGraphActiveHand[i])
 		{
@@ -424,6 +949,9 @@ void GraphLayoutObject::updateCallback(int handID, const osg::Matrix &mat)
 		}
 		continue;
 	    }
+
+	    graphPoint.x() = std::max(graphPoint.x(),0.0f);
+	    graphPoint.x() = std::min(graphPoint.x(),1.0f);
 
 	    if(_perGraphActiveHand[i] == -1)
 	    {
@@ -534,18 +1062,7 @@ void GraphLayoutObject::makeGeometry()
     float targetWidth = _width;
     float targetHeight = _height * 0.1 * 0.9;
 
-    _text = new osgText::Text();
-    _text->setCharacterSize(1.0);
-    _text->setAlignment(osgText::Text::CENTER_CENTER);
-    _text->setColor(osg::Vec4(1.0,1.0,1.0,1.0));
-    _text->setBackdropColor(osg::Vec4(0,0,0,0));
-    _text->setAxisAlignment(osgText::Text::XZ_PLANE);
-    _text->setText(getName());
-    osgText::Font * font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
-    if(font)
-    {
-	_text->setFont(font);
-    }
+    _text = GraphGlobals::makeText(getName(),osg::Vec4(1.0,1.0,1.0,1.0));
 
     osg::BoundingBox bb = _text->getBound();
     float hsize = targetHeight / (bb.zMax() - bb.zMin());
@@ -591,23 +1108,34 @@ void GraphLayoutObject::updateGeometry()
 
 void GraphLayoutObject::updateLayout()
 {
-    if(!_objectList.size())
+    int totalGraphs = _objectList.size();
+
+    if(!totalGraphs)
     {
 	return;
     }
 
+    float lineHeightMult = 0.1;
+    float maxLineMult = 0.33;
+    float layoutLineHeight;
+    float layoutGraphHeight;
+
+    layoutLineHeight = _height * std::min(((float)_lineObjectList.size())*lineHeightMult,maxLineMult);
+
+    layoutGraphHeight = _height - layoutLineHeight;
+
     float graphWidth, graphHeight;
 
-    if(_objectList.size() >= _maxRows)
+    if(totalGraphs >= _maxRows)
     {
-	graphHeight = _height / (float)_maxRows;
+	graphHeight = layoutGraphHeight / (float)_maxRows;
     }
     else
     {
-	graphHeight = _height / (float)_objectList.size();
+	graphHeight = layoutGraphHeight / (float)totalGraphs;
     }
 
-    float div = (float)((_objectList.size()-1) / _maxRows);
+    float div = (float)((totalGraphs-1) / _maxRows);
     div += 1.0;
 
     graphWidth = _width / div;
@@ -615,15 +1143,140 @@ void GraphLayoutObject::updateLayout()
     float posX = -(_width*0.5) + (graphWidth*0.5);
     float posZ = (_height*0.5) - (graphHeight*0.5);
 
+    int microbeGraphCount = 0;
+
     for(int i = 0; i < _objectList.size(); i++)
     {
 	_objectList[i]->setGraphSize(graphWidth,graphHeight);
 	_objectList[i]->setPosition(osg::Vec3(posX,0,posZ));
 	posZ -= graphHeight;
-	if(posZ < -(_height*0.5))
+	if(posZ < -(_height*0.5) + layoutLineHeight)
 	{
 	    posX += graphWidth;
 	    posZ = (_height*0.5) - (graphHeight*0.5);
 	}
+
+	if(dynamic_cast<MicrobeGraphObject*>(_objectList[i]))
+	{
+	    microbeGraphCount++;
+	}
     }
+
+    if(_lineObjectList.size())
+    {
+	float lineHeight = layoutLineHeight / ((float)_lineObjectList.size());
+	posZ = (-_height / 2.0) + layoutLineHeight - (lineHeight / 2.0);
+	for(int i = 0; i < _lineObjectList.size(); ++i)
+	{
+	    _lineObjectList[i]->setSize(_width,lineHeight);
+	    _lineObjectList[i]->setPosition(osg::Vec3(0,0,posZ));
+
+	    posZ -= lineHeight;
+	}
+    }
+
+    if(microbeGraphCount)
+    {
+	int currentCount = 0;
+	for(int i = 0; i < _objectList.size(); ++i)
+	{
+	    MicrobeGraphObject * mgo = dynamic_cast<MicrobeGraphObject*>(_objectList[i]);
+	    if(mgo)
+	    {
+		mgo->setColor(ColorGenerator::makeColor(currentCount,microbeGraphCount));
+		currentCount++;
+	    }
+	}
+    }
+
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	MicrobeSelectObject * mso = dynamic_cast<MicrobeSelectObject*>(_objectList[i]);
+	if(mso)
+	{
+	    mso->selectMicrobes(_currentSelectedMicrobeGroup,_currentSelectedMicrobes);
+	}
+    }
+
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	PatientSelectObject * pso = dynamic_cast<PatientSelectObject*>(_objectList[i]);
+	if(pso)
+	{
+	    pso->selectPatients(_currentSelectedPatientGroup,_currentSelectedPatients);
+	}
+    }
+}
+
+void GraphLayoutObject::checkLineRefs()
+{
+    std::vector<LayoutLineObject*> removeList;
+
+    for(int i = 0; i < _lineObjectList.size(); ++i)
+    {
+	if(!_lineObjectList[i]->hasRef())
+	{
+	    removeList.push_back(_lineObjectList[i]);
+	}
+    }
+
+    for(int i = 0; i < removeList.size(); ++i)
+    {
+	removeLineObject(removeList[i]);
+    }
+}
+
+bool GraphLayoutObject::loadObject(std::istream & in)
+{
+    char tempstr[1024];
+    std::string objectType;
+
+    do
+    {
+	in.getline(tempstr,1024);
+	objectType = tempstr;
+    }
+    while(objectType.empty() && !in.eof());
+
+    bool ret = true;
+
+    if(objectType == "GRAPH_OBJECT")
+    {
+	//std::cerr << "Loading new GraphObject" << std::endl;
+	LayoutTypeObject * obj = new GraphObject(FuturePatient::getConnection(), 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
+	ret = obj->loadState(in);
+	addGraphObject(obj);
+    }
+    else if(objectType == "SYMPTOM_GRAPH")
+    {
+	//std::cerr << "Loading new SymptomGraphObject" << std::endl;
+	LayoutTypeObject * obj = new SymptomGraphObject(FuturePatient::getConnection(), 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
+	ret = obj->loadState(in);
+	addGraphObject(obj);
+    }
+    else if(objectType == "MICROBE_GRAPH")
+    {
+	//std::cerr << "Loading new MicrobeGraphObject" << std::endl;
+	LayoutTypeObject * obj = new MicrobeGraphObject(FuturePatient::getConnection(), 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	ret = obj->loadState(in);
+	addGraphObject(obj);
+    }
+    else if(objectType == "MICROBE_BAR_GRAPH")
+    {
+	//std::cerr << "Loading new MicrobeBarGraphObject" << std::endl;
+	LayoutTypeObject * obj = new MicrobeBarGraphObject(FuturePatient::getConnection(), 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	ret = obj->loadState(in);
+	addGraphObject(obj);
+    }
+    else if(objectType == "UNKNOWN")
+    {
+	std::cerr << "Waring: unknown object type" << std::endl;
+	return true;
+    }
+    else
+    {
+	std::cerr << "Error: really unknown object type" << std::endl;
+	return false;
+    }
+    return ret;
 }

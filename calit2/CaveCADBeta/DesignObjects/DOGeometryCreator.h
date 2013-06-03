@@ -39,7 +39,7 @@ class DOGeometryCreator: public DesignObjectBase
 
     virtual void initDesignObjects();
 
-    /* 'DSGeometryCreator' functions called by 'DSGeometryCreator' */
+    // 'DSGeometryCreator' functions called by 'DSGeometryCreator'
     void setWireframeActiveID(const int &idx);
     void setSolidshapeActiveID(const int &idx);
     void setWireframeInitPos(const osg::Vec3 &initPos);
@@ -64,16 +64,12 @@ class DOGeometryCreator: public DesignObjectBase
     int mWireframeActiveID, mSolidShapeActiveID;
     osg::Switch *mSnapWireframeSwitch, *mSnapSolidshapeSwitch;
 
-    /* CAVE objects that show up during geometry creation */
+    // CAVE objects that show up during geometry creation
     CAVEGroupReferencePlane *mCAVEGroupRefPlane;
     CAVEGroupReferenceAxis *mCAVEGroupRefAxis;
     CAVEGeodeSnapWireframe *mWireframeGeode;
     CAVEGeodeSnapSolidshape *mSolidshapeGeode;
 };
 
-
 #endif
-
-
-
 

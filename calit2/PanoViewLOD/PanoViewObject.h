@@ -4,6 +4,7 @@
 #include "PanoDrawableLOD.h"
 
 #include <cvrKernel/SceneObject.h>
+#include <cvrKernel/ComController.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuCheckbox.h>
 #include <cvrMenu/MenuRangeValue.h>
@@ -12,6 +13,7 @@
 #include <osg/Uniform>
 
 #include <string>
+#include <map>
 
 struct ZoomTransitionInfo
 {
@@ -34,7 +36,7 @@ class PanoViewObject : public cvr::SceneObject
 
         void init(std::vector<std::string> & leftEyeFiles, std::vector<std::string> & rightEyeFiles, float radius, int mesh, int depth, int size, float height, std::string vertFile, std::string fragFile);
 
-        void setTransition(PanTransitionType transitionType, std::string transitionFilesDir, std::vector<std::string> & leftTransitionFiles, std::vector<std::string> & rightTransitionFiles);
+        void setTransition(PanTransitionType transitionType, std::string transitionFilesDir, std::vector<std::string> & leftTransitionFiles, std::vector<std::string> & rightTransitionFiles, std::string configTag);
 
         void next();
         void previous();
@@ -45,6 +47,11 @@ class PanoViewObject : public cvr::SceneObject
         void setRotate(float rotate);
         float getRotate();
 
+        void setRemoveOnClick(bool b)
+        {
+            _removeOnClick = b;
+        }
+
         virtual void menuCallback(cvr::MenuItem * item);
         virtual void updateCallback(int handID, const osg::Matrix & mat);
         virtual bool eventCallback(cvr::InteractionEvent * ie);
@@ -54,8 +61,10 @@ class PanoViewObject : public cvr::SceneObject
     protected:
         void updateZoom(osg::Matrix & mat);
         void startTransition();
+        void writeConfig();
 
         bool _printValues;
+        bool _removeOnClick;
 
         PanTransitionType _transitionType;
         std::vector<std::string> _leftTransitionFiles;
@@ -76,8 +85,8 @@ class PanoViewObject : public cvr::SceneObject
 
         osg::Matrix _heightMat;
         osg::Matrix _spinMat;
+        osg::Matrix _tiltMat;
         osg::Matrix _coordChangeMat;
-        osg::Matrix _tbMat;
 
         osg::Matrix _lastZoomMat;
 
@@ -95,6 +104,7 @@ class PanoViewObject : public cvr::SceneObject
         cvr::MenuCheckbox * _spinCB;
         cvr::MenuCheckbox * _zoomCB;
         cvr::MenuButton * _zoomResetButton;
+        cvr::MenuButton * _saveButton;
         cvr::MenuCheckbox * _demoMode;
         cvr::MenuCheckbox * _trackball;
 
@@ -113,7 +123,8 @@ class PanoViewObject : public cvr::SceneObject
         int _fadeFrames;
 
         PanoDrawableInfo * _pdi;
-    
+
+        int _transitionSkipFrames;
         float _transitionTime;
         bool _transitionStarted;
         bool _rotateDone;
@@ -125,14 +136,28 @@ class PanoViewObject : public cvr::SceneObject
         float _rotateStart;
         float _rotateEnd;
         float _finalRotate;
+        float _rotateRampUp;
+        float _rotateRampDown;
+        float _rotateAmp;
 
         float _zoomStartDelay;
         float _zoomInterval;
         float _zoomEnd;
+        float _zoomRampUp;
+        float _zoomRampDown;
+        float _zoomAmp;
         osg::Vec3 _zoomTransitionDir;
         
         float _fadeStartDelay;
         float _fadeInterval; 
+
+        bool _upArrow;
+        bool _downArrow;
+        bool _leftArrow;
+        bool _rightArrow;
+        
+        std::string _name, _configPath;
+        std::map<std::string, std::pair<float, float> > _locInit;
 };
 
 #endif

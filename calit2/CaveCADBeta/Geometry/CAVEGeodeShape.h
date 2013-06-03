@@ -29,8 +29,8 @@
 
 
 class CAVEGeodeShape;
-typedef std::vector<CAVEGeodeShape*>	CAVEGeodeShapeVector;
-typedef std::vector<bool>		VertexMaskingVector;
+typedef std::vector<CAVEGeodeShape*> CAVEGeodeShapeVector;
+typedef std::vector<bool> VertexMaskingVector;
 
 
 /***************************************************************
@@ -49,7 +49,9 @@ class CAVEGeodeShape: public CAVEGeode
     enum Type
     {
         BOX,
-        CYLINDER
+        CYLINDER,
+        CONE,
+        LINE
     };
 
     /***************************************************************
@@ -190,9 +192,13 @@ class CAVEGeodeShape: public CAVEGeode
     // 'sticker' of the shape, since it can be anything after modification.
     void initGeometryBox(const osg::Vec3 &initVect, const osg::Vec3 &sVect);
     void initGeometryCylinder(const osg::Vec3 &initVect, const osg::Vec3 &sVect);
+    void initGeometryCone(const osg::Vec3 &initVect, const osg::Vec3 &sVect);
+    void initGeometryLine(const osg::Vec3 &initVect, const osg::Vec3 &sVect);
 
     // actual side length of each texture image pattern in geometry
     static const float gTextureTileSize;
+    static const float gSnapRadius;
+
 };
 
 

@@ -12,6 +12,10 @@
 using namespace osg;
 using namespace std;
 using namespace cvr;
+<<<<<<< HEAD
+=======
+using namespace sc;
+>>>>>>> upstream/master
 
 CVRPLUGIN(SoundTest)
 
@@ -36,6 +40,7 @@ bool SoundTest::init()
 
     std::string name = "Octo";
     std::string synthDir = "/Users/demo/workspace/git/colliderplusplus/synthdefs/mac";
+<<<<<<< HEAD
     _clientServer = new ColliderPlusPlus::Client_Server(name, "132.239.235.169", 
 	"57110", synthDir);
     _clientServer->dumpOSC(1);
@@ -44,6 +49,16 @@ bool SoundTest::init()
     _sound = new ColliderPlusPlus::Sound(_clientServer, filepath, 0);
     usleep(1000000);
     _sound->loop(1);
+=======
+    _AudioServer = new SCServer(name, "132.239.235.169", 
+	"57110", synthDir);
+    _AudioServer->dumpOSC(1);
+
+    std::string filepath = "/Users/demo/Desktop/plucky.wav";
+    _sound = new Sound(_AudioServer, filepath, 0);
+    usleep(1000000);
+    _sound->setLoop(1);
+>>>>>>> upstream/master
     _sound->play();
 
     float x, y, z;

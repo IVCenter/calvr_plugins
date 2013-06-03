@@ -36,6 +36,7 @@ class CAVEDesigner
     void update(const osg::Vec3 &viewDir, const osg::Vec3 &viewPos);
     void inputDevButtonEvent(const int keySym);
     void inputDevButtonEvent(const float spinX, const float spinY, const int btnStat);
+    void setSkydomeVisible(bool flag);
 
     DesignStateHandler *getStateHandler() { return mDesignStateHandler; }
     DesignObjectHandler *getObjectHandler() { return mDesignObjectHandler; }

@@ -13,6 +13,14 @@ using namespace cvr;
 PointActionPDF::PointActionPDF(std::string file)
 {
     _file = file;
+
+    size_t pos = file.find_last_of("\\/");
+    if(pos != std::string::npos && pos != file.size()-1)
+    {
+	std::string basename;
+	basename = file.substr(pos+1);
+	_text = std::string("Open ") + basename;
+    }
 }
 
 void PointActionPDF::action()
@@ -32,4 +40,9 @@ void PointActionPDF::action()
     pdflr.object = NULL;
 
     PluginHelper::sendMessageByName("OsgPdf",PDF_LOAD_REQUEST,(char*)&pdflr);
+}
+
+const std::string & PointActionPDF::getActionText()
+{
+    return _text;
 }

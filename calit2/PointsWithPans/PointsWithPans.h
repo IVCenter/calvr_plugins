@@ -17,7 +17,10 @@ struct PWPPan
 {
     osg::Vec3 location;
     std::string name;
+    std::string textureFile;
     float rotationOffset;
+    float sphereRadius;
+    float selectDistance;
 };
 
 struct PWPSet
@@ -26,6 +29,8 @@ struct PWPSet
     osg::Vec3 offset;
     std::string file;
     float pointSize;
+    float moveTime;
+    float fadeTime;
     std::vector<PWPPan> panList;
 };
 
@@ -45,6 +50,8 @@ class PointsWithPans : public cvr::CVRPlugin, public cvr::MenuCallback
     protected:
         cvr::SubMenu * _pwpMenu;
         cvr::SubMenu * _setMenu;
+
+        cvr::MenuButton * _removeButton;
 
         std::vector<cvr::MenuButton*> _buttonList;
         std::vector<PWPSet *> _setList;

@@ -6,6 +6,7 @@
 #include <cvrKernel/SceneObject.h>
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuButton.h>
+#include <cvrMenu/MenuCheckbox.h>
 
 #include <osg/MatrixTransform>
 
@@ -34,11 +35,13 @@ class ModelLoader : public cvr::MenuCallback, public cvr::CVRPlugin, public cvr:
         void menuCallback(cvr::MenuItem * item);
         void preFrame();
 
+        virtual void message(int type, char * &data, bool collaborative=false);
         virtual bool loadFile(std::string file);
 
     protected:
         cvr::SubMenu * MLMenu, * loadMenu;
         cvr::MenuButton * removeButton;
+        cvr::MenuCheckbox * _collabCB;
 
         std::vector<cvr::MenuButton*> menuFileList;
 
@@ -55,6 +58,8 @@ class ModelLoader : public cvr::MenuCallback, public cvr::CVRPlugin, public cvr:
         std::map<cvr::SceneObject*,cvr::SubMenu*> _saveMenuMap;
 
         std::vector<cvr::SceneObject*> _loadedObjects;
+
+        bool _collabLoading;
         
         // String manipulation routines from vvToolshed
         void strcpyTail(char*, const char*, char);

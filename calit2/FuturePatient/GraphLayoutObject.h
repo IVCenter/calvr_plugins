@@ -8,6 +8,8 @@
 #include <cvrInput/TrackerBase.h>
 
 #include "GraphObject.h"
+#include "MicrobeGraphObject.h"
+#include "MicrobeBarGraphObject.h"
 
 #include <osg/Geometry>
 #include <osg/Geode>
@@ -23,9 +25,30 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         GraphLayoutObject(float width, float height, int maxRows, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~GraphLayoutObject();
 
-        void addGraphObject(GraphObject * object);
-        void removeGraphObject(GraphObject * object);
+        void addGraphObject(LayoutTypeObject * object);
+        void removeGraphObject(LayoutTypeObject * object);
+
+        void addLineObject(LayoutLineObject * object);
+        void removeLineObject(LayoutLineObject * object);
+
+        void selectMicrobes(std::string & group, std::vector<std::string> & keys);
+        void selectPatients(std::string & group, std::vector<std::string> & patients);
+
         void removeAll();
+        void perFrame();
+
+        void minimize();
+        void maximize();
+        bool isMinimized()
+        {
+            return _minimized;
+        }
+
+        void setRows(float rows);
+        void setSyncTime(bool sync);
+
+        bool dumpState(std::ostream & out);
+        bool loadState(std::istream & in);
 
         virtual void menuCallback(cvr::MenuItem * item);
 
@@ -37,9 +60,20 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         void makeGeometry();
         void updateGeometry();
         void updateLayout();
+        void checkLineRefs();
 
-        std::vector<GraphObject *> _objectList;
-        std::map<GraphObject *,cvr::MenuButton *> _deleteButtonMap;
+        bool loadObject(std::istream & in);
+
+        bool _minimized;
+
+        std::vector<LayoutTypeObject *> _objectList;
+        std::map<LayoutTypeObject *,cvr::MenuButton *> _deleteButtonMap;
+        std::vector<LayoutLineObject *> _lineObjectList;
+
+        std::string _currentSelectedMicrobeGroup;
+        std::vector<std::string> _currentSelectedMicrobes;
+        std::string _currentSelectedPatientGroup;
+        std::vector<std::string> _currentSelectedPatients;
 
         float _width;
         float _height;
@@ -55,11 +89,13 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         osg::ref_ptr<osgText::Text> _text;
 
         cvr::MenuButton * _resetLayoutButton;
+        cvr::MenuButton * _minmaxButton;
         cvr::MenuCheckbox * _syncTimeCB;
         cvr::MenuCheckbox * _zoomCB;
         cvr::MenuRangeValueCompact * _rowsRV;
         cvr::MenuRangeValueCompact * _widthRV;
         cvr::MenuRangeValueCompact * _heightRV;
+        cvr::MenuButton * _removeUnselected;
 
         int _activeHand;
         cvr::TrackerBase::TrackerType _activeHandType;

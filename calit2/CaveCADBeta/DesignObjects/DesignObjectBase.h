@@ -27,9 +27,8 @@ class DesignObjectBase
 
     virtual ~DesignObjectBase() {}
 
-    /* virtual function calls as initialization process when instances are created,
-       make sure that 'initSceneGraphPtr' is called ahead of 'initDesignObjects'
-    */
+    // virtual function calls as initialization process when instances are created,
+    // make sure that 'initSceneGraphPtr' is called ahead of 'initDesignObjects'
     virtual void initSceneGraphPtr( osg::Group *nonInterSCPtr, osg::Group *interSCPtr,
 				    osg::Switch *shapeSwitch, osg::Switch *surfaceIconSwitch, 
 				    osg::Switch *toolkitIconSwitch);
@@ -37,7 +36,7 @@ class DesignObjectBase
 
   protected:
 
-    /* intersectable and non-intersectable root groups passed from 'DesignObjectHandler' */
+    // intersectable and non-intersectable root groups passed from 'DesignObjectHandler'
     osg::Group *mNonIntersectableSceneGraphPtr;
     osg::Group *mIntersectableSceneGraphPtr;
 

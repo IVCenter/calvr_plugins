@@ -5,10 +5,15 @@
 
 #include <queue>
 #include <iostream>
-#include <unistd.h>
 #include <time.h>
 #include <cstring>
 #include <climits>
+
+#ifndef WIN32
+#include <unistd.h>
+#else
+#include <Windows.h>
+#endif
 
 //#define DC_PRINT_DEBUG
 
@@ -300,12 +305,16 @@ void JobThread::copy()
     }
     else
     {
+#ifndef WIN32
 	struct timespec ts;
 	ts.tv_sec = 0;
 	ts.tv_nsec = 2000000;
 
 	nanosleep(&ts,NULL);
-    }
+#else
+	    Sleep(2);
+#endif
+	}
 }
 
 
@@ -601,7 +610,9 @@ int DiskCache::add_file(const std::string& name)
 
 void DiskCache::add_task(sph_task * task)
 {
-
+#ifdef DC_PRINT_DEBUG
+    std::cerr << "add_task Called f: " << task->f << " i: " << task->i << " t: " << task->timestamp << std::endl;
+#endif
     
     /*int curPages = 0;
     mapLock.lock();
@@ -612,10 +623,15 @@ void DiskCache::add_task(sph_task * task)
     mapLock.unlock();
     std::cerr << "Actual Current Pages: " << curPages << std::endl;*/
 
+    ejectLock.lock();
     cleanup();
+    ejectLock.unlock();
 
     if(!_running || (task->f != _currentFileL && task->f != _currentFileR))
     {
+#ifdef DC_PRINT_DEBUG
+	std::cerr << "add_task exit, not current file f: " << task->f << " i: " << task->i << " t: " << task->timestamp << std::endl;
+#endif
 	task->valid = false;
 	loadsLock.lock();
 	task->cache->loads.insert(*task);
@@ -744,6 +760,10 @@ void DiskCache::add_task(sph_task * task)
     }
 
     pageCountLock.unlock();
+
+#ifdef DC_PRINT_DEBUG
+    std::cerr << "add_task exit f: " << task->f << " i: " << task->i << " t: " << task->timestamp << std::endl;
+#endif
 }
 
 void DiskCache::kill_tasks(int file)
@@ -948,6 +968,10 @@ bool DiskCache::eject()
     _numPages--;
     pageCountLock.unlock();
 
+#ifdef DC_PRINT_DEBUG
+    std::cerr << "eject exit" << std::endl;
+#endif
+
     return true;
 }
 
@@ -983,6 +1007,9 @@ void DiskCache::setRightFiles(int prev, int curr, int next)
 
 void DiskCache::cleanup()
 {
+#ifdef DC_PRINT_DEBUG
+    std::cerr << "Cleanup start" << std::endl;
+#endif
     cleanupLock.lock();
     mapLock.lock();
 
@@ -1021,4 +1048,8 @@ void DiskCache::cleanup()
 
     mapLock.unlock();
     cleanupLock.unlock();
+
+#ifdef DC_PRINT_DEBUG
+    std::cerr << "Cleanup exit" << std::endl;
+#endif
 }

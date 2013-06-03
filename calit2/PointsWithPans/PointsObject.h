@@ -20,6 +20,7 @@ class PointsObject : public cvr::SceneObject
         void panUnloaded(float rotation);
         void clear();
 
+        void setTransitionTimes(float moveTime, float fadeTime);
         void setAlpha(float alpha);
         float getAlpha();
 

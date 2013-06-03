@@ -173,7 +173,7 @@ private:
     sph_set waits;
     
     queue<sph_task> needs;
-    queue<sph_task> loads;
+    queueNoCap<sph_task> loads;
 
     //std::list<sph_task> _delayList;
 

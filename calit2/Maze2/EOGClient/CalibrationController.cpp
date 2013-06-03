@@ -189,11 +189,35 @@ void CalibrationController::resetCaliField(const Matrixf &invBaseMat)
 				0.f, 0.f, 0.f, 1.f);
     mViewerAlignmentTrans->setMatrix(scaleMat * invBaseMat);
 
-    /* update fiedl position & orietations */
+    /* update field position & orientations */
     mFieldRight = Vec3(mViewMat(0, 0), mViewMat(0, 1), mViewMat(0, 2));
     mFieldFront = Vec3(mViewMat(1, 0), mViewMat(1, 1), mViewMat(1, 2));
     mFieldUp = Vec3(mViewMat(2, 0), mViewMat(2, 1), mViewMat(2, 2));
     mFieldPos = Vec3(mViewMat(3, 0), mViewMat(3, 1), mViewMat(3, 2)) / 1000.f + Vec3(0, 0, gNoseOffset);
+    
+    std::string filename;
+    bool isFound;
+
+    filename = cvr::ConfigManager::getEntry("Plugin.Maze2.CalibrationFieldFile", "", &isFound);
+    if (!isFound)
+        return;
+
+    std::string data = "";
+    char buf[1024];
+
+    sprintf(buf, "right %f %f %f\nfront %f %f %f\nup %f %f %f\nposition %f %f %f\n",
+        mFieldRight[0], mFieldRight[1], mFieldRight[2],
+        mFieldFront[0], mFieldFront[1], mFieldFront[2],
+        mFieldUp[0],    mFieldUp[1],    mFieldUp[2],
+        mFieldPos[0],   mFieldPos[1],   mFieldPos[2]);
+    
+    data.append(buf);
+    std::ofstream file;
+    file.open(filename.c_str());
+    file << data;
+    file.flush();
+    file.close();
+    std::cout << buf << std::endl;
 }
 
 
@@ -265,31 +289,4 @@ void CalibrationController::updateCaliParam(const CaliFieldParameter& typ, const
 	mCaliFieldHandler->updateWireFrames(mLeftRange, mRightRange, mUpwardRange, mDownwardRange, mMaxDepthRange);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

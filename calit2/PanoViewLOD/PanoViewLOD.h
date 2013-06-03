@@ -53,6 +53,7 @@ class PanoViewLOD : public cvr::CVRPlugin, public cvr::MenuCallback
             std::vector<std::string> leftTransitionFiles;
             std::vector<std::string> rightTransitionFiles;
             std::string transitionDirectory;
+            std::string configTag;
         };
 
         PanInfo * loadInfoFromXML(std::string file);

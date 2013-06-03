@@ -9,6 +9,7 @@
 #include <osg/Depth>
 #include <osg/PointSprite>
 #include <osg/Program>
+#include <osg/Uniform>
 #include <osgText/Text>
 
 #include <string>
@@ -26,17 +27,26 @@ enum AxisType
 
 enum GraphDisplayType
 {
-    NONE = 0,
-    POINTS,
-    POINTS_WITH_LINES
+    GDT_NONE = 0,
+    GDT_POINTS,
+    GDT_POINTS_WITH_LINES
 };
 
 enum MultiGraphDisplayMode
 {
     MGDM_NORMAL=0,
     MGDM_COLOR,
+    MGDM_COLOR_SOLID,
+    MGDM_COLOR_PT_SIZE,
     MGDM_SHAPE,
     MGDM_COLOR_SHAPE
+};
+
+enum LabelDisplayMode
+{
+    LDM_NONE=0,
+    LDM_MIN_MAX,
+    LDM_ALL
 };
 
 struct GraphDataInfo
@@ -50,6 +60,7 @@ struct GraphDataInfo
     osg::ref_ptr<osg::Geometry> pointGeometry;
     osg::ref_ptr<osg::Geode> connectorGeode;
     osg::ref_ptr<osg::Geometry> connectorGeometry;
+    osg::ref_ptr<osg::Geode> labelGeode;
     osg::Vec4 color;
     GraphDisplayType displayType;
     std::string xLabel;
@@ -62,6 +73,8 @@ struct GraphDataInfo
     time_t xMaxT;
     float zMin;
     float zMax;
+    osg::ref_ptr<osg::Geode> pointActionGeode;
+    osg::ref_ptr<osg::Geometry> pointActionGeometry;
 };
 
 class DataGraph
@@ -92,6 +105,11 @@ class DataGraph
             start = _minDisplayXT;
             end = _maxDisplayXT;
         }
+        void getZDisplayRange(float & min, float & max)
+        {
+            min = _minDisplayZ;
+            max = _maxDisplayZ;
+        }
 
         float getDisplayWidth()
         {
@@ -113,12 +131,16 @@ class DataGraph
         bool getBarVisible();
 
         bool getGraphSpacePoint(const osg::Matrix & mat, osg::Vec3 & point);
+
+        void setBGRanges(std::vector<std::pair<float,float> > & ranges, std::vector<osg::Vec4> & colors);
+
         int getNumGraphs()
         {
             return _dataInfoMap.size();
         }
 
         void setDisplayType(std::string graphName, GraphDisplayType displayType);
+        GraphDisplayType getDisplayType(std::string graphName);
 
         void setMultiGraphDisplayMode(MultiGraphDisplayMode mgdm)
         {
@@ -131,7 +153,16 @@ class DataGraph
             return _multiGraphDisplayMode;
         }
 
+        void setLabelDisplayMode(LabelDisplayMode ldm);
+        LabelDisplayMode getLabelDisplayMode()
+        {
+            return _labelDisplayMode;
+        }
+
+        void setGLScale(float scale);
+
         void setPointActions(std::string graphname, std::map<int,PointAction*> & actionMap);
+        void updatePointAction();
         bool pointClick();
 
     protected:
@@ -142,11 +173,8 @@ class DataGraph
         void updateAxis();
         void updateBar();
         void updateClip();
+        void updateBGRanges();
         float calcPadding();
-
-        osg::Vec4 makeColor(float f);
-
-        osgText::Text * makeText(std::string text, osg::Vec4 color);
 
         std::map<std::string, osg::ref_ptr<osg::MatrixTransform> > _graphTransformMap;
         //std::map<std::string, osg::ref_ptr<osg::Geometry> > _graphGeometryMap;
@@ -158,12 +186,18 @@ class DataGraph
         osg::ref_ptr<osg::MatrixTransform> _graphTransform;
         osg::ref_ptr<osg::ClipNode> _clipNode;
         osg::ref_ptr<osg::MatrixTransform> _root;
+        osg::ref_ptr<osg::Group> _labelGroup;
 
         osg::ref_ptr<osg::MatrixTransform> _hoverTransform;
         osg::ref_ptr<osg::MatrixTransform> _hoverBGScale;
         osg::ref_ptr<osg::Geode> _hoverBGGeode;
         osg::ref_ptr<osg::Geode> _hoverTextGeode;
         osg::ref_ptr<osgText::Text> _hoverText;
+
+        osg::ref_ptr<osg::Geode> _bgRangesGeode;
+        
+        std::vector<std::pair<float,float> > _bgRanges;
+        std::vector<osg::Vec4> _bgRangesColors;
 
         std::string _hoverGraph;
         int _hoverPoint;
@@ -186,10 +220,11 @@ class DataGraph
         float _masterPointScale;
         float _masterLineScale;
 
+        float _glScale;
+
         osg::ref_ptr<osg::Point> _point;
         osg::ref_ptr<osg::LineWidth> _lineWidth;
         float _pointLineScale;
-        osg::ref_ptr<osgText::Font> _font;
 
         MultiGraphDisplayMode _multiGraphDisplayMode;
         MultiGraphDisplayMode _currentMultiGraphDisplayMode;
@@ -198,7 +233,15 @@ class DataGraph
         osg::ref_ptr<osg::Depth> _shapeDepth;
         osg::ref_ptr<osg::Program> _shapeProgram;
 
+        osg::ref_ptr<osg::Program> _sizeProgram;
+        osg::ref_ptr<osg::Uniform> _pointSizeUniform;
+
         std::map<std::string,std::map<int,PointAction*> > _pointActionMap;
+        osg::ref_ptr<osg::Point> _pointActionPoint;
+        float _pointActionAlpha;
+        bool _pointActionAlphaDir;
+
+        LabelDisplayMode _labelDisplayMode;
 };
 
 #endif
