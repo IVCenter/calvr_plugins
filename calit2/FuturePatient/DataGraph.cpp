@@ -100,7 +100,7 @@ DataGraph::DataGraph()
     _axisGeode->addDrawable(_axisGeometry);
 
     _bgRangesGeode->setCullingActive(false);
-    _clipNode->setCullingActive(false);
+    //_clipNode->setCullingActive(false);
 
     _point = new osg::Point();
     _lineWidth = new osg::LineWidth();
@@ -237,13 +237,17 @@ void DataGraph::addGraph(std::string name, osg::Vec3Array * points, GraphDisplay
 
     gdi.pointGeode->addDrawable(gdi.pointGeometry);
     gdi.connectorGeode->addDrawable(gdi.connectorGeometry);
-    gdi.pointGeode->setCullingActive(false);
-    gdi.connectorGeode->setCullingActive(false);
+    // Hack for single point display
+    if(points->size() == 1)
+    {
+	gdi.pointGeode->setCullingActive(false);
+    }
+    //gdi.connectorGeode->setCullingActive(false);
 
     _graphTransformMap[name] = new osg::MatrixTransform();
     _graphTransformMap[name]->addChild(gdi.pointGeode);
     _graphTransformMap[name]->addChild(gdi.connectorGeode);
-    _graphTransformMap[name]->setCullingActive(false);
+    //_graphTransformMap[name]->setCullingActive(false);
     _clipNode->addChild(_graphTransformMap[name]);
 
     _labelGroup->addChild(gdi.labelGeode);
@@ -853,7 +857,7 @@ void DataGraph::setPointActions(std::string graphname, std::map<int,PointAction*
 	it->second.pointActionGeometry = new osg::Geometry();
 	it->second.pointActionGeometry->setUseDisplayList(false);
 	it->second.pointActionGeode->addDrawable(it->second.pointActionGeometry);
-	it->second.pointActionGeode->setCullingActive(false);
+	//it->second.pointActionGeode->setCullingActive(false);
 
 	osg::Vec3Array * verts = new osg::Vec3Array(actionMap.size());
 	osg::Vec4Array * colors = new osg::Vec4Array(1);

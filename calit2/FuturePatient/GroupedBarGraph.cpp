@@ -190,7 +190,6 @@ void GroupedBarGraph::setColor(osg::Vec4 color)
 		colors->at(i) = color;
 	    }
 	    colors->dirty();
-	    _barGeom->dirtyDisplayList();
 	}
     }
 }
@@ -474,7 +473,6 @@ void GroupedBarGraph::selectItems(std::string & group, std::vector<std::string> 
 	groupLeft += barWidth * it->second.size();
     }
     colors->dirty();
-    _barGeom->dirtyDisplayList();
 
     geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,verts->size()));
 }
@@ -595,6 +593,8 @@ void GroupedBarGraph::makeGraph()
     _barGeom->setVertexArray(verts);
     _barGeom->setColorArray(colors);
     _barGeom->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+    _barGeom->setUseDisplayList(false);
+    _barGeom->setUseVertexBufferObjects(true);
 
     std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = _data.begin();
     for(;it != _data.end(); it++)
@@ -615,7 +615,7 @@ void GroupedBarGraph::makeGraph()
 
     _barGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,verts->size()));
     _barGeode->addDrawable(_barGeom);
-    _barGeode->setCullingActive(false);
+    //_barGeode->setCullingActive(false);
 
     osg::StateSet * stateset = _barGeode->getOrCreateStateSet();
 
@@ -755,7 +755,6 @@ void GroupedBarGraph::updateGraph()
 	}
     }
     verts->dirty();
-    _barGeom->dirtyDisplayList();
 }
 
 void GroupedBarGraph::updateAxis()
@@ -1138,5 +1137,4 @@ void GroupedBarGraph::updateColors()
     }
 
     colors->dirty();
-    _barGeom->dirtyDisplayList();
 }
