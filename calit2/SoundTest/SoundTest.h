@@ -8,13 +8,8 @@
 
 #include <osg/MatrixTransform>
 
-<<<<<<< HEAD
-#include "ColliderPlusPlus/Sound.hpp"
-#include "ColliderPlusPlus/Client_Server.hpp"
-=======
 #include "libcollider/Sound.hpp"
 #include "libcollider/SCServer.hpp"
->>>>>>> upstream/master
 
 #include <string>
 #include <vector>
@@ -33,13 +28,8 @@ class SoundTest : public cvr::MenuCallback, public cvr::CVRPlugin
     protected:
         cvr::SubMenu * MLMenu, * loadMenu;
         cvr::MenuButton * removeButton;
-<<<<<<< HEAD
-	ColliderPlusPlus::Sound * _sound;
-	ColliderPlusPlus::Client_Server * _clientServer;
-=======
 	sc::Sound * _sound;
 	sc::SCServer * _AudioServer;
->>>>>>> upstream/master
 };
 
 #endif
