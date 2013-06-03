@@ -40,7 +40,7 @@ MicrobeGraphObject::MicrobeGraphObject(mysqlpp::Connection * conn, float width, 
 	listItems.push_back("Solid Color");
 	listItems.push_back("Group Colors");
 	_colorModeML->setValues(listItems);
-	_colorModeML->setIndex(0);
+	_colorModeML->setIndex(1);
 
 	_microbeText = new MenuText("");
 	_microbeText->setCallback(this);
