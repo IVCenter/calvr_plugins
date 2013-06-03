@@ -701,6 +701,14 @@ protected:
     cvr::PopupMenu* _filePanel;
     cvr::MenuCheckbox* _fileMenu;
     std::vector<cvr::MenuButton*> fileButton;
+    std::string _fileManagerType;
+    cvr::MenuCheckbox* _clickFileManager;
+    cvr::MenuCheckbox* _modelFileManager;
+    cvr::MenuCheckbox* _pcFileManager;
+    cvr::MenuCheckbox* _demFileManager;
+    cvr::MenuCheckbox* _shpFileManager;
+    cvr::MenuCheckbox* _artifactFileManager;
+    cvr::MenuCheckbox* _locusFileManager;
     cvr::MenuButton* _resetFileManager;
     cvr::MenuButton* _upFileManager;
     cvr::MenuButton* _downFileManager;
@@ -806,7 +814,7 @@ protected:
     osg::Matrix getHandToObjectMatrix();
     osg::Matrix getHandToSceneMatrix();
     void parseModelXml(bool useHandPos);
-    void parsePCXml(bool useHandPos);
+    void parsePCXml(bool useHandPos, std::string filepath, std::string type);
     void saveModelConfig(Model* saveModel, bool newConfig);
     std::string manualEnterName; 
     void saveTo3Dkml(string name,string filename, string file, string filetype, Vec3 pos, Quat rot, float scaleFloat, string q_type, string q_group); 
@@ -872,6 +880,8 @@ void updateHudMovement(int i, cvr::TrackedButtonInteractionEvent * tie,float _mo
 //void updateSceneObjectMovement(DSIntersector::DSIntersector* mDSIntersector, cvr::TrackedButtonInteractionEvent * tie);
 	osg::Quat prevHandRot;
         std::vector<std::string> scanDirectory(const char *sDir);
+        void newFileLoad(std::string filename, std::string type, bool useHandPos);
+        void newLoadedFileSetup(std::string name, std::string filetype, std::string filepath, std::string modelType, osg::Vec3 pos);
 	
 };
 

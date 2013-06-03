@@ -118,6 +118,7 @@ bool ArtifactVis2::init()
     secondInitComplete = false;
     pointGeode = new osg::Geode();
     _modelFileNode = NULL;
+    _fileManagerType = "model";
     std::cerr << "ArtifactVis2 init\n";
     _root = new osg::MatrixTransform();
     _tablesMenu = NULL;
@@ -333,35 +334,9 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
 
         if (newFileAvailable)
         {
-            if(newSelectedFile != "" && newSelectedName != "")
-            {
-               //int index = _models3d.size(); 
-
-      		if (!modelExists(newSelectedFile.c_str()))
-      		{
-        		std::cerr << "Unable to open file: " << newSelectedFile << std::endl;
-        		//return;
-      		}
-                else
-                {
-                bool useHandPos = true;
-			if(newSelectedType == "xyb")
-			{
-                          cerr << "parsing Ply\n";
-			  parsePCXml(useHandPos);
-
-			}
-			else
-			{
-			  parseModelXml(useHandPos);
-			}
-                }
-            }
-	 
-             
+            newFileLoad(newSelectedFile, _fileManagerType, true);
             newFileAvailable = false;
-          }
-
+        }
 
     }
     if ((event->getInteraction() == BUTTON_DOWN || event->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getHand() == 0 && tie->getButton() == 0)
@@ -703,6 +678,78 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
 	    }
 
     }
+    if (menuItem == _modelFileManager)
+    {
+             _fileManagerType = "model";
+             _modelFileManager->setValue(true);
+             _pcFileManager->setValue(false);
+             _demFileManager->setValue(false);
+             _shpFileManager->setValue(false);
+             _artifactFileManager->setValue(false);
+             _locusFileManager->setValue(false);
+
+
+    }
+    if (menuItem == _pcFileManager)
+    {
+             _fileManagerType = "pc";
+             _modelFileManager->setValue(false);
+             _pcFileManager->setValue(true);
+             _demFileManager->setValue(false);
+             _shpFileManager->setValue(false);
+             _artifactFileManager->setValue(false);
+             _locusFileManager->setValue(false);
+
+
+    }
+    if (menuItem == _demFileManager)
+    {
+             _fileManagerType = "dem";
+             _modelFileManager->setValue(false);
+             _pcFileManager->setValue(false);
+             _demFileManager->setValue(true);
+             _shpFileManager->setValue(false);
+             _artifactFileManager->setValue(false);
+             _locusFileManager->setValue(false);
+
+
+    }
+    if (menuItem == _shpFileManager)
+    {
+             _fileManagerType = "shp";
+             _modelFileManager->setValue(false);
+             _pcFileManager->setValue(false);
+             _demFileManager->setValue(false);
+             _shpFileManager->setValue(true);
+             _artifactFileManager->setValue(false);
+             _locusFileManager->setValue(false);
+
+
+    }
+    if (menuItem == _artifactFileManager)
+    {
+             _fileManagerType = "artifact";
+             _modelFileManager->setValue(false);
+             _pcFileManager->setValue(false);
+             _demFileManager->setValue(false);
+             _shpFileManager->setValue(false);
+             _artifactFileManager->setValue(true);
+             _locusFileManager->setValue(false);
+
+
+    }
+    if (menuItem == _locusFileManager)
+    {
+             _fileManagerType = "locus";
+             _modelFileManager->setValue(false);
+             _pcFileManager->setValue(false);
+             _demFileManager->setValue(false);
+             _shpFileManager->setValue(false);
+             _artifactFileManager->setValue(false);
+             _locusFileManager->setValue(true);
+
+
+    }
     if (menuItem == _resetFileManager)
     {
              string dir = ConfigManager::getEntry("Plugin.ArtifactVis2.3DModelFolder");
@@ -784,6 +831,12 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
             // newSelectedFile.append("/");
              newSelectedFile.append(newSelectedName);
              newFileAvailable = true;
+             bool loadWithoutPos = true;
+             if(!_clickFileManager->getValue())
+             {
+               newFileLoad(newSelectedFile, _fileManagerType, false);
+               newFileAvailable = false;
+             }
              break;
            }
 
@@ -5940,6 +5993,28 @@ void ArtifactVis2::setupFileMenu()
     _filePanel = new PopupMenu("FileManager", "Plugin.ArtifactVis2.FileManagerPanel");
     _filePanel->setVisible(false);
    
+    _clickFileManager = new MenuCheckbox("Use Hand Position",false);
+    _clickFileManager->setCallback(this);
+    _filePanel->addMenuItem(_clickFileManager);
+
+    _modelFileManager = new MenuCheckbox("Mesh",true);
+    _modelFileManager->setCallback(this);
+    _pcFileManager = new MenuCheckbox("Point Cloud",false);
+    _pcFileManager->setCallback(this);
+    _demFileManager = new MenuCheckbox("DEM",false);
+    _demFileManager->setCallback(this);
+    _shpFileManager = new MenuCheckbox("Shapefile",false);
+    _shpFileManager->setCallback(this);
+    _artifactFileManager = new MenuCheckbox("Artifacts",false);
+    _artifactFileManager->setCallback(this);
+    _locusFileManager = new MenuCheckbox("Loci",false);
+    _locusFileManager->setCallback(this);
+    _filePanel->addMenuItem(_modelFileManager);
+    _filePanel->addMenuItem(_pcFileManager);
+    _filePanel->addMenuItem(_demFileManager);
+    _filePanel->addMenuItem(_shpFileManager);
+    _filePanel->addMenuItem(_artifactFileManager);
+
     _resetFileManager = new MenuButton("Reset to Home Directory");
     _resetFileManager->setCallback(this);
     _filePanel->addMenuItem(_resetFileManager);
@@ -6207,9 +6282,10 @@ cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
 
     
 }
-void ArtifactVis2::parsePCXml(bool useHandPos)
+void ArtifactVis2::parsePCXml(bool useHandPos, std::string filepath, std::string type)
 {
     int index;
+    /*
      bool addNewMod = false;
     if(newFileAvailable)
     {
@@ -6218,27 +6294,39 @@ void ArtifactVis2::parsePCXml(bool useHandPos)
     if(newSelectedFile == "") return;
     newFileAvailable = false;
 cerr << "Triggered\n";
+    */
+    Vec3 pos = Vec3(0,0,0);
+    if(useHandPos)
+    {
     Matrix handMat = getHandToObjectMatrix();
-    Vec3 pos = handMat.getTrans();
+    pos = handMat.getTrans();
+    }
 
     string file;
-    string filepath = newSelectedFile;
+//    string filepath = newSelectedFile;
     string filename = getFileFromFilePath(filepath);
-    size_t found=newSelectedFile.find(".");
+    size_t found=filepath.find(".");
     string filetype;
             if (found!=string::npos)
 	    {
                  int start = int(found);
-                 filetype = newSelectedFile;
+                 filetype = filepath;
                  filetype.erase(0,(start+1)); 
-                 file = newSelectedFile;
+                 file = filepath;
                  file.erase((start+1),4);
                  file.append("kml");                
                  //cout <<" type: " << file << endl;
             }
-string type = getKmlArray(file);
-if(type == "Model")
+if(type == "model")
 {
+   if(modelExists(file.c_str()))
+   {
+    getKmlArray(file);
+   }
+   else
+   {
+    newLoadedFileSetup(filename,filetype,filepath,type,pos);
+   }
    index = _models3d.size() -1;
    MenuCheckbox* site = new MenuCheckbox(_models3d[index]->name,true);
    site->setCallback(this);
@@ -6249,9 +6337,19 @@ if(type == "Model")
    {
    _models3d[index]->pos = pos; 
    }
+   addNewModel(index);
+   saveModelConfig(_models3d[index], true);
 }
-else if(type == "PointCloud")
+else if(type == "pc")
 {
+   if(modelExists(file.c_str()))
+   {
+    getKmlArray(file);
+   }
+   else
+   {
+    newLoadedFileSetup(filename,filetype,filepath,type,pos);
+   }
    index = _pointClouds.size() -1;
    MenuCheckbox* site = new MenuCheckbox(_pointClouds[index]->name,true);
    site->setCallback(this);
@@ -6262,55 +6360,13 @@ else if(type == "PointCloud")
    {
    _pointClouds[index]->pos = pos; 
    }
+   addNewPC(index);
+   saveModelConfig(_pointClouds[index], true);
 }
 else
  {
-	Model* newModel = new Model();
-	newModel->name = newSelectedName;
-	newModel->filename = newSelectedFile;
-	newModel->loaded = false;
-	_pointClouds.push_back(newModel);
-        index = _pointClouds.size() -1;
-	MenuCheckbox* site = new MenuCheckbox(newSelectedName,true);
-	site->setCallback(this);
-	_showPointCloudCB.push_back(site);
-    //Get Group
-    found=filepath.find_last_of("/");
-    string group;
-            if (found!=string::npos)
-	    {
-                 int start = int(found);
-                 group = filepath;
-                 group.erase(start,(group.length()-start)); 
-                 found=group.find_last_of("/");
-                 if (found!=string::npos)
-                 {
-                   start = int(found);
-                   group.erase(0,(start+1));
-                  // cerr << "group: " << group << endl;
-		 }             
-                 //cout <<" type: " << file << endl;
-            }
-  // addToModelDisplayMenu(group, site);
-   //Generate generic attributes
-        Quat rot = osg::Quat(0, osg::Vec3d(1,0,0),0, osg::Vec3d(0,1,0),0, osg::Vec3d(0,0,1));
-        float scale = 9; 
-  //Fill Struct
-    _pointClouds[index]->name = newSelectedName;
-    _pointClouds[index]->filename = filename;
-    _pointClouds[index]->group = group;
-    _pointClouds[index]->filetype = filetype;
-    _pointClouds[index]->fullpath = filepath;
-    _pointClouds[index]->modelType = "PointCloud";
-    _pointClouds[index]->pos = pos; 
-    _pointClouds[index]->rot = rot;
-    _pointClouds[index]->origPos = pos; 
-    _pointClouds[index]->origRot = rot;
-    _pointClouds[index]->scale = scale; 
-    _pointClouds[index]->origScale = scale; 
  }
     
-addNewPC(index);
  
  newSelectedFile = "";
  newSelectedName = "";
@@ -6373,49 +6429,6 @@ else if(type == "PointCloud")
 }
  else
  {
-	Model* newModel = new Model();
-	newModel->name = newSelectedName;
-	newModel->filename = newSelectedFile;
-	newModel->loaded = false;
-	_models3d.push_back(newModel);
-        index = _models3d.size() -1;
-	MenuCheckbox* site = new MenuCheckbox(newSelectedName,true);
-	site->setCallback(this);
-	_showModelCB.push_back(site);
-    //Get Group
-    found=filepath.find_last_of("/");
-    string group;
-            if (found!=string::npos)
-	    {
-                 int start = int(found);
-                 group = filepath;
-                 group.erase(start,(group.length()-start)); 
-                 found=group.find_last_of("/");
-                 if (found!=string::npos)
-                 {
-                   start = int(found);
-                   group.erase(0,(start+1));
-                  // cerr << "group: " << group << endl;
-		 }             
-                 //cout <<" type: " << file << endl;
-            }
-   addToModelDisplayMenu(group, site);
-   //Generate generic attributes
-        Quat rot = osg::Quat(0, osg::Vec3d(1,0,0),0, osg::Vec3d(0,1,0),0, osg::Vec3d(0,0,1));
-        float scale = 0.001; 
-  //Fill Struct
-    _models3d[index]->name = newSelectedName;
-    _models3d[index]->filename = filename;
-    _models3d[index]->group = group;
-    _models3d[index]->filetype = filetype;
-    _models3d[index]->fullpath = filepath;
-    _models3d[index]->modelType = "Model";
-    _models3d[index]->pos = pos; 
-    _models3d[index]->rot = rot;
-    _models3d[index]->origPos = pos; 
-    _models3d[index]->origRot = rot;
-    _models3d[index]->scale = scale; 
-    _models3d[index]->origScale = scale; 
  }
     
 addNewModel(index);
@@ -7127,7 +7140,7 @@ if(newConfig)
      string newFile;
      bool nameExists = true;
      name.erase((name.length()-4),4);
-     cerr << "Name : " << name << "Path: " << path << endl;
+  //   cerr << "Name : " << name << "Path: " << path << endl;
      string tempName = "";
      int inc = 0;
      while(nameExists)
@@ -7146,21 +7159,30 @@ if(newConfig)
      }
      name = tempName;
      file = newFile;
+//cerr << "newFile: " << file << "\n";
 
 }
 
 
 //Create Placemarks
-Vec3 pos = saveModel->so->getPosition();
-Quat rot = saveModel->so->getRotation();
-
-//TODO:Convert Quat to Euler
-//Matrix rMat = _models3d[i]->so->getTransform();
-//Vec3 rot = matrix_to_euler(rMat); 
-
-float scaleFloat = saveModel->so->getScale();
 string q_type = saveModel->modelType;
 string q_group = saveModel->group;
+Vec3 pos;
+Quat rot;
+float scaleFloat;
+if(q_type == "Model")
+{
+pos = saveModel->so->getPosition();
+rot = saveModel->so->getRotation();
+scaleFloat = saveModel->so->getScale();
+}
+else
+{
+pos = saveModel->pcObject->getPosition();
+rot = saveModel->pcObject->getRotation();
+scaleFloat = saveModel->pcObject->getScale();
+
+}
 
 cerr << "NewFile: " << file << endl;
 saveTo3Dkml(name, filename, file, filetype, pos, rot, scaleFloat, q_type, q_group);
@@ -7309,7 +7331,6 @@ stringstream buffer;
                           mxmlNewText(href, 0, q_href.c_str());
 //.......................................................
 //Save File
-
   const char *ptr;
     ptr = "";
   ptr = mxmlSaveAllocString(xml, MXML_NO_CALLBACK);
@@ -7657,6 +7678,61 @@ string ArtifactVis2::getKmlArray(string file)
    }
   }
 return completed;
+}
+void ArtifactVis2::newLoadedFileSetup(std::string name, std::string filetype, std::string filepath, std::string modelType, osg::Vec3 pos)
+{
+
+    //Get Group
+ size_t found=filepath.find_last_of("/");
+    string group;
+            if (found!=string::npos)
+	    {
+                 int start = int(found);
+                 group = filepath;
+                 group.erase(start,(group.length()-start)); 
+                 found=group.find_last_of("/");
+                 if (found!=string::npos)
+                 {
+                   start = int(found);
+                   group.erase(0,(start+1));
+                  // cerr << "group: " << group << endl;
+		 }             
+                 //cout <<" type: " << file << endl;
+            }
+   //Generate generic attributes
+  //Fill Struct
+
+	    Model* newModel = new Model();
+            newModel->loaded = false;
+	    newModel->name = name;
+	    newModel->filename = filepath;
+            string fullpath = getPathFromFilePath(filepath);
+            fullpath.append(name);
+	    newModel->fullpath = fullpath;
+	    newModel->group = group;
+	    newModel->filetype = filetype;
+	    newModel->modelType = modelType;
+
+            float scale = 1.0;
+            osg::Quat rot = Quat(0,0,0,1);
+
+	    newModel->pos = pos; 
+	    newModel->rot = rot;
+	    newModel->origPos = pos; 
+	    newModel->origRot = rot;
+	    newModel->scale = scale; 
+	    newModel->origScale = scale;
+            if(modelType == "model")
+            {
+	    newModel->modelType = "Model";
+	    _models3d.push_back(newModel);
+            }
+            else if(modelType == "pc")
+            {
+	    newModel->modelType = "PointCloud";
+	    _pointClouds.push_back(newModel);
+            }
+
 }
 void ArtifactVis2::addToModelDisplayMenu(string group, cvr::MenuCheckbox* site)
 {
@@ -8576,4 +8652,31 @@ std::vector<std::string> ArtifactVis2::scanDirectory(const char *sDir)
          FindClose(hFind); //Always, Always, clean things up!
 #endif
 return darray;     
+}
+void ArtifactVis2::newFileLoad(std::string filename, std::string type, bool useHandPos)
+{
+            if(filename != "")
+            {
+
+      		if (!modelExists(filename.c_str()))
+      		{
+        		std::cerr << "Unable to open file: " << filename << std::endl;
+        		//return;
+      		}
+                else
+                {
+			if(type == "pc")
+			{
+                          cerr << "parsing Ply\n";
+			  parsePCXml(useHandPos,filename,type);
+
+			}
+			else if(type == "model")
+			{
+			  parsePCXml(useHandPos,filename,type);
+			  //parseModelXml(useHandPos);
+			}
+                }
+            }
+
 }
