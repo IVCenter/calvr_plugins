@@ -1,5 +1,6 @@
 #include "StackedBarGraph.h"
 #include "ColorGenerator.h"
+#include "GraphGlobals.h"
 
 #include <cvrKernel/CalVR.h>
 #include <cvrConfig/ConfigManager.h>
@@ -71,8 +72,6 @@ StackedBarGraph::StackedBarGraph(std::string title, float width, float height)
     _lineGeometry->addPrimitiveSet(_linePrimitive);
     _graphGeode->addDrawable(_lineGeometry);
     
-    _font = osgText::readFontFile(CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
-
     makeBG();
     makeHover();
 
@@ -624,7 +623,7 @@ void StackedBarGraph::makeBG()
     verts->at(3) = osg::Vec3(-0.5,1,-0.5);
 
     osg::Vec4Array * colors = new osg::Vec4Array(1);
-    colors->at(0) = osg::Vec4(1.0,1.0,1.0,1.0);
+    colors->at(0) = GraphGlobals::getBackgroundColor();
 
     geom->setColorArray(colors);
     geom->setColorBinding(osg::Geometry::BIND_OVERALL);
@@ -641,7 +640,7 @@ void StackedBarGraph::makeHover()
     _hoverGeode = new osg::Geode();
     _hoverBGGeom = new osg::Geometry();
     _hoverBGGeom->setUseDisplayList(false);
-    _hoverText = makeText("",osg::Vec4(1,1,1,1));
+    _hoverText = GraphGlobals::makeText("",osg::Vec4(1,1,1,1));
     _hoverGeode->addDrawable(_hoverBGGeom);
     _hoverGeode->addDrawable(_hoverText);
     _hoverGeode->setCullingActive(false);
@@ -772,7 +771,7 @@ void StackedBarGraph::updateAxis()
 
     float groupLabelHeight = _height * _topPaddingMult * _topCatHeaderMult;
 
-    osg::ref_ptr<osgText::Text> tempText = makeText("Ay",osg::Vec4(0,0,0,1));
+    osg::ref_ptr<osgText::Text> tempText = GraphGlobals::makeText("Ay",osg::Vec4(0,0,0,1));
     osg::BoundingBox bb = tempText->getBound();
     float groupLabelCharSize = (_topCatHeaderMult * 0.7 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
 
@@ -813,11 +812,11 @@ void StackedBarGraph::updateAxis()
 		//}
 
 		// add group text
-		osgText::Text * text = makeText(currentNodes[0]->groups[i]->name,osg::Vec4(0,0,0,1));
+		osgText::Text * text = GraphGlobals::makeText(currentNodes[0]->groups[i]->name,osg::Vec4(0,0,0,1));
 		text->setAlignment(osgText::Text::CENTER_CENTER);
 		text->setCharacterSize(groupLabelCharSize);
 		text->setPosition(osg::Vec3(offsetStart+((offsetEnd-offsetStart)/2.0),-1,graphTop+(groupLabelHeight/2.0)));
-		makeTextFit(text,offsetEnd-offsetStart);
+		GraphGlobals::makeTextFit(text,offsetEnd-offsetStart);
 
 		_axisGeode->addDrawable(text);
 	    }
@@ -868,7 +867,7 @@ void StackedBarGraph::updateAxis()
     }
 
     // make title
-    osgText::Text * titleText = makeText(_title,osg::Vec4(0,0,0,1));
+    osgText::Text * titleText = GraphGlobals::makeText(_title,osg::Vec4(0,0,0,1));
     bb = titleText->getBound();
     float csize1 = (_topTitleMult * 0.8 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
     float csize2 = (_width * 0.9) / (bb.xMax() - bb.xMin());
@@ -889,7 +888,7 @@ void StackedBarGraph::updateAxis()
     }
     if(!pathss.str().empty())
     {
-	osgText::Text * pathText = makeText(pathss.str(),osg::Vec4(0,0,0,1));
+	osgText::Text * pathText = GraphGlobals::makeText(pathss.str(),osg::Vec4(0,0,0,1));
 	bb = pathText->getBound();
 
 	csize1 = (_topLevelMult * 0.8 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
@@ -908,8 +907,11 @@ void StackedBarGraph::updateAxis()
     float dlHeight = graphTop - (barHeight / 2.0);
     for(int i = 0; i < _dataList.size(); ++i)
     {
-	osgText::Text * dlText = makeText(_dataList[i]->name,osg::Vec4(0,0,0,1));
-	dlText->setRotation(q);
+	osgText::Text * dlText = GraphGlobals::makeText(_dataList[i]->name,osg::Vec4(0,0,0,1));
+	if((barHeight * 0.9) >= (_leftPaddingMult * _width * 0.8))
+	{
+	    dlText->setRotation(q);
+	}
 	dlText->setAlignment(osgText::Text::CENTER_CENTER);
 	bb = dlText->getBound();
 	csize1 = (_leftPaddingMult * _width * 0.8) / (bb.xMax() - bb.xMin());
@@ -1121,51 +1123,3 @@ void StackedBarGraph::updateGraph()
 	selectItems(_lastSelectGroup,_lastSelectKeys);
     }
 }
-
-osgText::Text * StackedBarGraph::makeText(std::string text, osg::Vec4 color)
-{
-    osgText::Text * textNode = new osgText::Text();
-    textNode->setCharacterSize(1.0);
-    textNode->setAlignment(osgText::Text::CENTER_CENTER);
-    textNode->setColor(color);
-    textNode->setBackdropColor(osg::Vec4(0,0,0,0));
-    textNode->setAxisAlignment(osgText::Text::XZ_PLANE);
-    textNode->setText(text);
-    if(_font)
-    {
-	textNode->setFont(_font);
-    }
-    return textNode;
-}
-
-void StackedBarGraph::makeTextFit(osgText::Text * text, float maxSize)
-{
-    osg::BoundingBox bb = text->getBound();
-    float width = bb.xMax() - bb.xMin();
-    if(width <= maxSize)
-    {
-	return;
-    }
-
-    std::string str = text->getText().createUTF8EncodedString();
-    if(!str.length())
-    {
-	return;
-    }
-
-    while(str.length() > 1)
-    {
-	str = str.substr(0,str.length()-1);
-	text->setText(str + "..");
-	bb = text->getBound();
-	width = bb.xMax() - bb.xMin();
-	if(width <= maxSize)
-	{
-	    return;
-	}
-    }
-
-    str += ".";
-    text->setText(str);
-}
-

@@ -43,7 +43,11 @@ bool PanoViewLOD::init()
 {
     _panObject = NULL;
 
+#ifndef WIN32
     std::string paths = ConfigManager::getEntryConcat("value","Plugin.PanoViewLOD.DefaultConfigDir",':',"");
+#else
+	std::string paths = ConfigManager::getEntryConcat("value","Plugin.PanoViewLOD.DefaultConfigDir",';',"");
+#endif
     size_t position = 0;
     
     while(position < paths.size())

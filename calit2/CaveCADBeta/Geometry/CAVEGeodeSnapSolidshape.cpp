@@ -88,7 +88,6 @@ CAVEGeodeSnapSolidshapeBox::CAVEGeodeSnapSolidshapeBox()
     addDrawable(boxDrawable);
 }
 
-
 // Constructor: CAVEGeodeSnapSolidshapeCylinder
 CAVEGeodeSnapSolidshapeCylinder::CAVEGeodeSnapSolidshapeCylinder()
 {
@@ -104,6 +103,15 @@ CAVEGeodeSnapSolidshapeCone::CAVEGeodeSnapSolidshapeCone()
     Drawable* coneDrawable = new ShapeDrawable(mCone);
     addDrawable(coneDrawable);
 }
+
+// Constructor: CAVEGeodeSnapSolidshapeLine
+CAVEGeodeSnapSolidshapeLine::CAVEGeodeSnapSolidshapeLine()
+{
+    mBox = new Box(Vec3(0.5, 0.5, 0.5), 0.5);
+    Drawable* boxDrawable = new ShapeDrawable(mBox);
+    addDrawable(boxDrawable);
+}
+
 
 
 /***************************************************************
@@ -162,3 +170,29 @@ void CAVEGeodeSnapSolidshapeCone::resize(const osg::Vec3 &gridVect, bool snap)
     Drawable* coneDrawable = new ShapeDrawable(mCone);
     setDrawable(0, coneDrawable);
 }
+
+/***************************************************************
+* Function: resize()
+***************************************************************/
+void CAVEGeodeSnapSolidshapeLine::resize(const osg::Vec3 &gridVect, bool snap)
+{
+    if (snap)
+        mScaleVect = gridVect * mSnappingUnitDist;
+    else
+        mScaleVect = gridVect;
+
+    mBox = new Box;
+    
+    //std::cout << snap << std::endl;
+    //mBox->setCenter(mInitPosition + mScaleVect * 0.5);
+    
+    // Keep the initial position the same - snapping
+    mBox->setCenter(mInitPosition + mScaleVect * 0.5);
+
+    mBox->setHalfLengths(mScaleVect * 0.5);
+    Drawable* boxDrawable = new ShapeDrawable(mBox);
+    setDrawable(0, boxDrawable);
+
+}
+
+

@@ -136,7 +136,7 @@ GLuint glsl_init_shader(GLenum type, const char *text)
         glCompileShader(shader);
 
         /* If the shader is valid, return it.  Else, delete it. */
-
+		
         if (check_shader_log(shader))
             return shader;
         else

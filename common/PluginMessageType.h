@@ -110,6 +110,23 @@ struct OsgPdfLoadRequest
     cvr::SceneObject * object;
 };
 
+// OsgVnc
+enum OsgVncMessageType
+{
+    VNC_GOOGLE_QUERY=0,
+    VNC_HIDE,
+    VNC_SCALE,
+    VNC_POSITION
+};
+
+struct OsgVncRequest
+{
+    std::string query;
+    bool hide;
+    float scale;
+    osg::Vec3f position;
+};
+
 // ModelLoader
  
 enum ModelLoaderMessageType

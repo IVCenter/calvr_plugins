@@ -1,12 +1,14 @@
 SET(LIB_NAME OsgVnc)
 SET(PLUGIN_HEADERS
     OsgVnc.h
+    VncSceneObject.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
     "SHARED"
     ${PLUGIN_HEADERS}
     OsgVnc.cpp
+    VncSceneObject.cpp
 )
 
 INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})

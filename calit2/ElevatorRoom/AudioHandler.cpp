@@ -5,6 +5,17 @@
 AudioHandler::AudioHandler()
 {
     _isConnected = false;
+
+    std::string name = "Server name";
+    std::string dir = "/home/ryiah/Work/data/";
+
+    uint8_t packet[256];
+    int32_t size;
+    size = oscpack(packet, "/sc.elevators/mastervol", "f", -1.0);
+    send(_sock, (char *) packet, size, 0);
+
+//    ColliderPlusPlus::Client_Server * server = 
+//        new ColliderPlusPlus::Client_Server(name, "127.0.0.1", "1234", dir);
 }
 
 AudioHandler::~AudioHandler()
@@ -117,13 +128,31 @@ void AudioHandler::loadSound(int soundID, osg::Vec3 &dir, osg::Vec3 &pos)
     pitch = M_PI * 0.5 - atan(dir.z());
     roll = 0.0f;
 
-    size = oscpack(packet, "/sc.elevators/pose", "iffffff", soundID, 
-        pos.x() / 1000, pos.y() / 1000, pos.z() / 1000, yaw, pitch, roll);
+    // yaw in DEGREES
+    yaw = 0; 
+    std::cout << soundID << std::endl;
+    size = oscpack(packet, "/sc.elevators/poseaz", "if", soundID, yaw);
+
+//    size = oscpack(packet, "/sc.elevators/pose", "iffffff", soundID, 
+//        pos.x() / 1000, pos.y() / 1000, pos.z() / 1000, yaw, pitch, roll);
 
     if (send(_sock, (char *) packet, size, 0))
     {
         //std::cerr << "AudioHandler  Viewer's info: " << viewPos.x() << " " << viewPos.y() << " " << viewPos.z() << std::endl;	
     }
+}
+
+void AudioHandler::loadSound(int soundID, float az)
+{
+    if (!_isConnected)
+        return;
+
+    uint8_t packet[256];
+    int32_t size;
+
+    size = oscpack(packet, "/sc.elevators/poseaz", "if", soundID, az);
+
+    send(_sock, (char *) packet, size, 0);
 }
 
 void AudioHandler::playSound(int soundID, std::string sound)
@@ -183,12 +212,29 @@ void AudioHandler::update(int soundID, const osg::Vec3 &dir, const osg::Vec3 &po
 
     pitch = M_PI * 0.5 - atan(dir.z());
     roll = 0.0f;
+    
 
-    size = oscpack(packet, "/sc.elevators/pose", "iffffff", soundID, 
-        pos.x() / 1000, pos.y() / 1000, pos.z() / 1000, yaw, pitch, roll);
+    // yaw in DEGREES
+    yaw = 0;
+    size = oscpack(packet, "/sc.elevators/poseaz", "if", soundID, yaw);
+
+//  size = oscpack(packet, "/sc.elevators/pose", "iffffff", soundID, 
+//        pos.x() / 1000, pos.y() / 1000, pos.z() / 1000, yaw, pitch, roll);
     if (send(_sock, (char *) packet, size, 0))
     {
         //std::cerr << "AudioHandler  Viewer's info: " << viewPos.x() << " " << viewPos.y() << " " << viewPos.z() << std::endl;	
     }
 }
 
+void AudioHandler::update(int soundID, float az)
+{
+    if (!_isConnected)
+        return;
+
+    uint8_t packet[256];
+    int32_t size;
+
+    size = oscpack(packet, "/sc.elevators/poseaz", "if", soundID, az);
+
+    send(_sock, (char *) packet, size, 0);
+}
