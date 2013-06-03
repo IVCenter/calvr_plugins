@@ -121,7 +121,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
 
         cvr::SubMenu * _elevatorMenu, *_optionsMenu;
         cvr::MenuButton * _loadButton, * _clearButton;
-        cvr::MenuRangeValue *_timeScaleRV;
+        cvr::MenuRangeValue *_timeScaleRV, *_serialTestRV;
         cvr::MenuText * _chancesText;
         cvr::MenuCheckbox *_dingCheckbox, *_pauseCB;
 
@@ -155,7 +155,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         
         int _trialPhase, _trialCount;
         float _trialPauseTime;
-        bool _trialPause;
+        bool _trialPause, _nextTrial;
         std::vector<int> _trialCounts;
         std::vector<float> _trialPauseLengths;
         std::vector<std::string> _trialThemes;

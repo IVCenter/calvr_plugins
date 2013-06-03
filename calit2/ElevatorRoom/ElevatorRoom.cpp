@@ -55,6 +55,10 @@ bool ElevatorRoom::init()
     _dingCheckbox->setCallback(this);
     _optionsMenu->addItem(_dingCheckbox);
 
+    _serialTestRV = new MenuRangeValue("Serial pulse: ", 0, 255, 255);
+    _serialTestRV->setCallback(this);
+    _optionsMenu->addItem(_serialTestRV);
+
     _loadButton = new MenuButton("Load");
     _loadButton->setCallback(this);
     _elevatorMenu->addItem(_loadButton);
@@ -294,10 +298,11 @@ void ElevatorRoom::preFrame()
     if (_trialPause)
     {
         _modelHandler->showScore(true);
-        if (PluginHelper::getProgramDuration() - _trialPauseTime >
-            _trialPauseLengths[_trialPhase])
+        if (_nextTrial)//PluginHelper::getProgramDuration() - _trialPauseTime >
+            //_trialPauseLengths[_trialPhase])
         {
             _trialPause = false;
+            _nextTrial = false;
             _trialCount = 0;
             _trialPhase++;
 
@@ -1007,6 +1012,14 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
             unsigned char c = 5;
             sendChar(c);
         }
+        if (kie->getInteraction() == KEY_UP && kie->getKey() == 'n')
+        {
+            if (_trialPause)
+            {
+                _nextTrial = true;
+                std::cout << "Next trial" << std::endl;
+            }
+        }
     }
 
     return true;
@@ -1218,7 +1231,9 @@ void ElevatorRoom::dingTest()
     if ((PluginHelper::getProgramDuration() - _startTime) > _pauseTime)
     {
         //_audioHandler->playSound(0 + DING_OFFSET, "ding");
-        _c = 255;
+        _c = 63;
+        int i = (int)(_serialTestRV->getValue());
+        _c = i;
         sendChar(_c);
         //_c++;
         //sendChar('a');      
