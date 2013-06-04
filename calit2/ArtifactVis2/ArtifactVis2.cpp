@@ -787,6 +787,7 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
         int n = i + (_currentScroll * 10);
         if (menuItem == fileButton[i])
         {
+        cout << n << "\n";
            if(entries[n]->filename == "..")
            {
              //Go up one folder
@@ -825,6 +826,7 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
            {
              //Load File
 
+             cout << entries[n]->path << " " << entries[n]->filename << "\n";
              newSelectedFile = entries[n]->path;
              newSelectedName = entries[n]->filename;
              newSelectedType = entries[n]->filetype;
@@ -6068,7 +6070,6 @@ void ArtifactVis2::updateFileMenu(std::string dir, int scroll)
     _filePanel->removeMenuItem(fileButton[i]);
     }
     fileButton.clear();
-
     entries.clear();
     
     string types = "";
@@ -6089,7 +6090,6 @@ void ArtifactVis2::updateFileMenu(std::string dir, int scroll)
      if(count > entries.size())
      {
       count = entries.size();
-      i = count - 10;
      }
     for (i; i < count; i++)
     {
@@ -7472,28 +7472,73 @@ getDirFiles(dir, entries0, types);
 
     string lastGroup = "";
     string lastGroup0 = "";
-for(int i=0; i<entries0.size(); i++)
-{
+recursiveLoadMenu(entries0, types);
+/*
+	for(int i=0; i<entries0.size(); i++)
+	{
+	  if(entries0[i]->filetype == "folder")
+	  {
+	    if( entries0[i]->filename != "..")
+	    {
+		    string filename = entries0[i]->filename;
+		    std::vector<DirFile*> entriesSub;
+		    entriesSub = getSubDirFiles(dir, filename, types);
+		    for(int n=0; n<entriesSub.size(); n++)
+		    {
+		     updateLoadMenu(entriesSub[n]); 
+		    }
+	    }
+	  }
+	  else
+	  { 
+	     updateLoadMenu(entries0[i]); 
+	  }
 
-  if(entries0[i]->filetype == "folder")
-  {
-    if( entries0[i]->filename != "..")
-    {
-  //  cerr << "Files: " << entries0[i]->filename << endl;
+	}
+*/
+}
+void ArtifactVis2::recursiveLoadMenu(std::vector<DirFile*> entries, string types)
+{
+	for(int i=0; i<entries.size(); i++)
+	{
+	  if(entries[i]->filetype == "folder")
+	  {
+	    if( entries[i]->filename != "..")
+	    {
+		    string filename = entries[i]->filename;
+                    string dir = entries[i]->path;
+		    std::vector<DirFile*> entriesSub;
+		    entriesSub = getSubDirFiles(dir, filename, types);
+                    recursiveLoadMenu(entriesSub, types);
+	    }
+	  }
+	  else
+	  { 
+	     updateLoadMenu(entries[i]); 
+	  }
+
+	}
+
+}
+std::vector<DirFile*> ArtifactVis2::getSubDirFiles(string dir, string filename, string types)
+{
     string dirSub = dir;
-    dirSub.append(entries0[i]->filename);
+    dirSub.append(filename);
     dirSub.append("/");
     std::vector<DirFile*> entriesSub;
     getDirFiles(dirSub, entriesSub, types);
-    for(int n=0; n<entriesSub.size(); n++)
-    {
+    return entriesSub;
+}
+void ArtifactVis2::updateLoadMenu(DirFile* entry)
+{
 
-             if(entriesSub[n]->filetype == "kml" && entries0[i]->filename != "models.kml" && entries0[i]->filename != "default_models.kml")
+             if(entry->filetype == "kml" && entry->filename != "models.kml" && entry->filename != "default_models.kml")
              {
-		     string path = entriesSub[n]->path;
-		     newSelectedFile = entriesSub[n]->path;
-		     string kmlFilename = entriesSub[n]->filename;
+		     string path = entry->path;
+		   //  newSelectedFile = entry->path;
+		     string kmlFilename = entry->filename;
 		     path.append(kmlFilename);
+                     cout << "KML: " << path << "\n";
 		     string type = getKmlArray(path);
 		     if(type == "Model")
 		     {
@@ -7516,47 +7561,7 @@ for(int i=0; i<entries0.size(); i++)
 				 addToPcDisplayMenu(group, site);
 		     }
              }
-    }
-    
-    }
-  }
-  else
-  { 
-             if(entries0[i]->filetype == "kml" && entries0[i]->filename != "models.kml" && entries0[i]->filename != "default_models.kml")
-             {
-             string path  = entries0[i]->path;
-             newSelectedFile = path;
-             string kmlFilename = entries0[i]->filename;
-            // cerr << "Found File: " << newSelectedName << endl;
-             path.append(kmlFilename);
-		     string type = getKmlArray(path);
-		     if(type == "Model")
-		     {
-			     int index = _models3d.size() - 1;
-			     string group = _models3d[index]->group;
-			    // cerr << "Found SubFile: " << _models3d[index]->filename << endl;
-				MenuCheckbox* site = new MenuCheckbox(_models3d[index]->name,false);
-				site->setCallback(this);
-				_showModelCB.push_back(site);
-				 addToModelDisplayMenu(group, site);
-		     }
-		     else if(type == "PointCloud")
-		     {
-			     int index = _pointClouds.size() - 1;
-			     string group = _pointClouds[index]->group;
-			    // cerr << "Found SubFile: " << _pointClouds[index]->filename << endl;
-				MenuCheckbox* site = new MenuCheckbox(_pointClouds[index]->name,false);
-				site->setCallback(this);
-				_showPointCloudCB.push_back(site);
-				 addToPcDisplayMenu(group, site);
-		     }
-             newSelectedFile = "";
-             newSelectedName = "";
-		}
 
-  }
-
-}
 
 }
 string ArtifactVis2::getKmlArray(string file)

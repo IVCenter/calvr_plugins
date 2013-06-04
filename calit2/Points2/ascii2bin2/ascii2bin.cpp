@@ -17,6 +17,8 @@ int main(int argc, char** argv)
 
 	string filename;
 	string newFile;
+	string tempFile;
+        bool isPts = false;
 	int reductionFactor = 1;
 
 	int argindex = 1;
@@ -69,6 +71,14 @@ int main(int argc, char** argv)
 	    newFile.replace(found, 4, ".xyb");
 	}
 
+       tempFile = filename;
+       size_t found = tempFile.find(".xyz");
+       found = tempFile.find(".pts");
+       if(found != string::npos)
+       {
+         isPts = true;
+       }
+
 	std::cerr << "Input file: " << filename << std::endl;
 	std::cerr << "Output file: " << newFile << std::endl;
 
@@ -113,6 +123,15 @@ int main(int argc, char** argv)
                         if( index < 3 )
                         {
                                 ssdouble >> point[index];
+                        }
+                        else if(index == 3 && isPts)
+                        {
+                           //Skip PTS Intensity value;
+                        } 
+                        else if(isPts)
+                        {
+                                ssdouble >> color[index - 4];
+                                color[index - 4]/=255.0;
                         }
                         else
                         {

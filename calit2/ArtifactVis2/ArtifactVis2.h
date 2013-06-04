@@ -882,6 +882,9 @@ void updateHudMovement(int i, cvr::TrackedButtonInteractionEvent * tie,float _mo
         std::vector<std::string> scanDirectory(const char *sDir);
         void newFileLoad(std::string filename, std::string type, bool useHandPos);
         void newLoadedFileSetup(std::string name, std::string filetype, std::string filepath, std::string modelType, osg::Vec3 pos);
+        void updateLoadMenu(DirFile* entry);
+        std::vector<DirFile*> getSubDirFiles(string dir, string filename, string types);
+        void recursiveLoadMenu(std::vector<DirFile*> entries, string types);
 	
 };
 
