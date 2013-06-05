@@ -21,7 +21,7 @@ SoundPlayer::SoundPlayer()
 }
 
 bool SoundPlayer::init()
-{
+{ 
     std::cerr << "SoundPlayer init\n";
 
     MLMenu = new SubMenu("SoundPlayer", "SoundPlayer");
@@ -32,136 +32,99 @@ bool SoundPlayer::init()
     MLMenu->addItem(loadMenu);
 
     MenuSystem::instance()->addMenuItem(MLMenu);
-    
-    oneBtn = new MenuButton("Sound 1");
-    oneBtn->setCallback(this);
-    loadMenu->addItem(oneBtn);
 
-    twoBtn = new MenuButton("Sound 2");
-    twoBtn->setCallback(this);
-    loadMenu->addItem(twoBtn);
-
-    threeBtn = new MenuButton("Sound 3");
-    threeBtn->setCallback(this);
-    loadMenu->addItem(threeBtn);
-
-    vroomBtn = new MenuButton("Vroom");
-    vroomBtn->setCallback(this);
-    loadMenu->addItem(vroomBtn);
-
-    _volumeSlider = new MenuRangeValue("Volume", 0, 1, 0.5);
+    _volumeSlider = new MenuRangeValue("Volume", 0, 1, 0.01);
     _volumeSlider->setCallback(this);
     MLMenu->addItem(_volumeSlider);
 
-    std::string name = "Octo";
-    std::string synthDir = "/Users/demo/Desktop/workspace/svn/SonicaveHMC/libcollider";
-
+    std::string name = ConfigManager::getEntry("Plugin.SoundPlayer.Server.Name");
+    std::string synthDir = ConfigManager::getEntry("Plugin.SoundPlayer.Server.SynthDir");
+    std::string port = ConfigManager::getEntry("Plugin.SoundPlayer.Server.Port");
+    std::string address = ConfigManager::getEntry("Plugin.SoundPlayer.Server.Address");
 
     if (cvr::ComController::instance()->isMaster())
     {
-	_AudioServer = new SCServer(name, "137.110.116.10", 
-	    "57110", synthDir);
-	_AudioServer->dumpOSC(1);
-
-	std::string filepath = "/Users/demo/Desktop/plucky.wav";
-	//_sound = new Sound(_AudioServer, filepath, 0);
-	//usleep(1000000);
-	//_sound->setLoop(1);
-	//_sound->play();
-	 
-	filepath = "/Users/demo/Desktop/workspace/svn/SonicaveHMC/soundfiles/CAVEsnd1.wav";
-	oneSound = new Buffer(_AudioServer, _AudioServer->nextBufferNum());
-	oneSound->allocRead(filepath);
-
-	filepath = "/Users/demo/Desktop/workspace/svn/SonicaveHMC/soundfiles/CAVEsnd2.wav";
-	twoSound = new Buffer(_AudioServer, _AudioServer->nextBufferNum());
-	twoSound->allocRead(filepath);
-
-	filepath = "/Users/demo/Desktop/workspace/svn/SonicaveHMC/soundfiles/CAVEsnd3.wav";
-	threeSound = new Buffer(_AudioServer, _AudioServer->nextBufferNum());
-	threeSound->allocRead(filepath);
-
-	filepath = "/Users/demo/Desktop/workspace/svn/SonicaveHMC/soundfiles/InstLIST_VROOM.wav";
-	vroomSound = new Buffer(_AudioServer, _AudioServer->nextBufferNum());
-	vroomSound->allocRead(filepath);
-
-	oneSoundArgs["bufnum"] = oneSound->getBufNum();
-	twoSoundArgs["bufnum"] = twoSound->getBufNum();
-	threeSoundArgs["bufnum"] = threeSound->getBufNum();
-	vroomSoundArgs["bufnum"] = vroomSound->getBufNum();
+       // Address and port hacked in - to be fixed 
+        _AudioServer = new SCServer(name, "137.110.116.10", "57110", synthDir);
+        _AudioServer->dumpOSC(1);
     }
+    
+    std::string dataDir = ConfigManager::getEntry("Plugin.SoundPlayer.Files");
 
-    float x, y, z;
-    x = 2000;
-    y = 2000;
-    z = 0;
+    std::vector<std::string> filenames;
+    ConfigManager::getChildren("Plugin.SoundPlayer.Files", filenames);
 
-    //sound->setPosition(x, y, z);
+    for (int i = 0; i < filenames.size(); ++i)
+    {
+	std::string name = ConfigManager::getEntry("Plugin.SoundPlayer.Files." + filenames[i]);
+        std::string path = dataDir + "/" + name;
+        if (cvr::ComController::instance()->isMaster())
+        {
+	    int outarray [] = {0, 7};
+	    Sound * sound = new Sound(_AudioServer, path, outarray, 0);
+
+	    if(sound->isValid())
+	    {
+		sounds->setGain(_volumeSlider->getValue());
+		_sounds.push_back(sound);
+	    }
+
+	    }
+	    else
+	    {
+	        _sounds.push_back(NULL);
+		std::cout << "Unable to load sound " << path << std::endl;
+	    }
+        }
+
+	MenuButton * button = new MenuButton(filenames[i]);
+	button->setCallback(this);
+	loadMenu->addItem(button);
+	_soundButtons.push_back(button);
+    }
 
     std::cerr << "SoundPlayer init done.\n";
     return true;
 }
 
-
 SoundPlayer::~SoundPlayer()
 {
-//    delete _clientServer;
-    //delete _sound;
     if (cvr::ComController::instance()->isMaster())
     {
-	delete oneSound;
-	delete twoSound;
-	delete threeSound;
-	delete vroomSound;
+	for (int i = 0; i < _sounds.size(); ++i)
+	{
+	    if (_sounds[i])
+		delete _sounds[i];
+	}
 	delete _AudioServer;
     }
 }
 
 void SoundPlayer::menuCallback(MenuItem* menuItem)
 {
-    if (menuItem == oneBtn)
+    for (int i = 0; i < _soundButtons.size(); ++i)
     {
-	if (cvr::ComController::instance()->isMaster())
+	if (menuItem == _soundButtons[i])
 	{
-	    _AudioServer->createSynth("SoundFile_Event_Stereo_81", 1000,oneSoundArgs);
+	    if (_AudioServer)
+	    {
+		if (_sounds[i])
+		    _sounds[i]->play();
+	    }
 	}
     }
-    else if (menuItem == twoBtn)
-    {
-    if (cvr::ComController::instance()->isMaster())
-	{
-	    _AudioServer->createSynth("SoundFile_Event_Stereo_81", 1001,twoSoundArgs);
-	}
-    }
-    else if (menuItem == threeBtn)
-    {
-	if (cvr::ComController::instance()->isMaster())
-	{
-	    _AudioServer->createSynth("SoundFile_Event_Stereo_81", 1002,threeSoundArgs);
-	}
-    }
-    else if (menuItem == vroomBtn)
-    {
-	if (cvr::ComController::instance()->isMaster())
-	{
-	    _AudioServer->createSynth("SoundFile_Event_Stereo_81", 1003,vroomSoundArgs);
-	}
-    }
-    else if (menuItem == _volumeSlider)
-    {
-	if (cvr::ComController::instance()->isMaster())
-	{
-	oneSoundArgs["amp"] = _volumeSlider->getValue();
-	_AudioServer->setNodeControls(1000, oneSoundArgs);
 
-	twoSoundArgs["amp"] = _volumeSlider->getValue();
-	_AudioServer->setNodeControls(1001, oneSoundArgs);
-
-	threeSoundArgs["amp"] = _volumeSlider->getValue();
-	_AudioServer->setNodeControls(1002, oneSoundArgs);
-
-	vroomSoundArgs["amp"] = _volumeSlider->getValue();
-	_AudioServer->setNodeControls(1003, oneSoundArgs);
+    if (menuItem == _volumeSlider)
+    {
+	if (_AudioServer)
+	{
+	    for (int i = 0; i < _sounds.size(); ++i)
+	    {
+		if (_sounds[i])
+		{
+		    _sounds[i]->setGain(_volumeSlider->getValue());
+		}
+	    }
 	}
     }
 }

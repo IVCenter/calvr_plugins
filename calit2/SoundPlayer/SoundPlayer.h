@@ -10,8 +10,8 @@
 
 #include <osg/MatrixTransform>
 
-#include "Buffer.hpp"
 #include "SCServer.hpp"
+#include "Sound.hpp"
 
 #include <string>
 #include <vector>
@@ -20,21 +20,26 @@
 class SoundPlayer: public cvr::MenuCallback, public cvr::CVRPlugin
 {
     public:        
+
         SoundPlayer();
         virtual ~SoundPlayer();
 
-	bool init();
+        bool init();
         void menuCallback(cvr::MenuItem * item);
         void preFrame();
-	bool processEvent(cvr::InteractionEvent * event);
+        bool processEvent(cvr::InteractionEvent * event);
 
     protected:
+
         cvr::SubMenu * MLMenu, * loadMenu;
-        cvr::MenuButton * removeButton, *oneBtn, *twoBtn, *threeBtn, *vroomBtn;
+        cvr::MenuButton * removeButton;
         cvr::MenuRangeValue *_volumeSlider;
-        sc::Buffer *oneSound, *twoSound, *threeSound, *vroomSound;
-	sc::SCServer * _AudioServer;
-        std::map<std::string, float> oneSoundArgs,twoSoundArgs,threeSoundArgs,vroomSoundArgs;
+
+        // Sound
+        std::vector<cvr::MenuButton*> _soundButtons;
+        std::vector<sc::Sound *> _sounds;
+        sc::SCServer * _AudioServer;
+
 };
 
 #endif
