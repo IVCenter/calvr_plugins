@@ -15,16 +15,17 @@ using namespace std;
 using namespace cvr;
 
 
-// Constructor
 AudioConfigHandler::AudioConfigHandler(): mFlagConnected(false), mFlagMaster(false)
 {
+   _acoustiMaze = new AcoustiMaze(); 
+   _acoustiMaze->loadFile("/home/ryiah/Work/data/Maze2/MediumModel.MAZ");
 }
 
 
-// Destructor
 AudioConfigHandler::~AudioConfigHandler()
 {
-    if (mSockfd) close(mSockfd);
+    if (mSockfd) 
+        close(mSockfd);
 }
 
 
@@ -39,17 +40,27 @@ void AudioConfigHandler::connectServer()
 {
     if (!mFlagMaster) return;
 
-    /* check with configuration file to decide use audio server or not */
+
+    //TODO libcollider code here
+    
+
+
+
+    cerr << "Maze2::AudioConfigHandler::Successfully connected to Audio Server." << endl;
+    mFlagConnected = true;
+
+/*
+    // check with configuration file to decide use audio server or not
     string useASStr = ConfigManager::getEntry("Plugin.Maze2.AudioServer");
     if (useASStr.compare("on")) return;
 
-    /* get server address and port number */
+    // get server address and port number 
     string server_addr = ConfigManager::getEntry("Plugin.Maze2.AudioServerAddress");
     int port_number = ConfigManager::getInt("Plugin.Maze2.AudioServerPort", 15003);
 
     if( server_addr == "" ) server_addr = "127.0.0.1";
 
-    /* build up socket communications */
+    // build up socket communications 
     int portno = port_number, protocol = SOCK_DGRAM;
     struct sockaddr_in server;
     struct hostent *hp;
@@ -72,17 +83,14 @@ void AudioConfigHandler::connectServer()
     memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
     server.sin_port = htons((unsigned short)portno);
 
-    /* connect to audio server */ 
+    // connect to audio server  
     if (connect(mSockfd, (struct sockaddr *) &server, sizeof (server)) < 0)
     {
 	cerr << "Maze2::connect(): Failed connect to server" << endl;
         close(mSockfd);
         return;
     }
-
-    cerr << "Maze2::AudioConfigHandler::Successfully connected to Audio Server." << endl;
-
-    mFlagConnected = true;
+*/
 }
 
 
@@ -104,7 +112,7 @@ void AudioConfigHandler::disconnectServer()
 ***************************************************************/
 void AudioConfigHandler::loadSoundSource()
 {
-    uint8_t packet[256];
+/*    uint8_t packet[256];
     int32_t size;
     
     size = oscpack(packet, "/sc.environment/model", "s", "MediumModel.MAZ");
@@ -120,7 +128,22 @@ void AudioConfigHandler::loadSoundSource()
         // DEBUG MSG: 
         cerr << "AudioConfigHandler  Sound's info: " << 0 << " " << 0 << " " << 0 << endl;
     }
+*/
+
+
+
+    int type = 1;
+    float x, y, z, yaw, pitch, roll;
+    x = 9.0;
+    y = 9.0;
+    z = 0.0;
+    yaw = M_PI * 0.5;
+    pitch = M_PI * 0.5;
+    roll = 0.0;
+
+    _acoustiMaze->updatePoses(type, x, y, z, yaw, pitch, roll);
 }
+
 
 /***************************************************************
 * Function: updateGeometry()
@@ -143,39 +166,48 @@ void AudioConfigHandler::updatePoses(const osg::Vec3 &viewDir, const osg::Vec3 &
 {
     if (!(mFlagConnected && mFlagMaster)) return;
 
-    uint8_t packet[256];
+/*    uint8_t packet[256];
     int32_t size;
 
-    /* OSCPack Messenger: send pose info within every frame, typ = 0 for observer */
+    // OSCPack Messenger: send pose info within every frame, typ = 0 for observer 
     int typ = 0;
-    float yaw = acos(viewDir.x());
-    if (viewDir.y() < 0) yaw = M_PI * 2 - yaw;
-    yaw += M_PI * 0.5;
-    if (yaw > M_PI * 2) yaw -= M_PI * 2;
-    float pitch = M_PI * 0.5 - atan(viewDir.z());
-    float roll = 0.0f;
+
     size = oscpack(packet, "/sc.environment/pose", "iffffff", typ, viewPos.x(), viewPos.y(), viewPos.z(), yaw, pitch, roll);
     if (send(mSockfd, (char *) packet, size, 0))
     {
-	// DEBUG MSG: 
-	cerr << "AudioConfigHandler  Viewer's info: " << 
-	// DEBUG MSG:
-	viewPos.x() << " " << viewPos.y() << " " << viewPos.z() << endl;	
+        // DEBUG MSG: 
+        cerr << "AudioConfigHandler  Viewer's info: " << 
+        // DEBUG MSG:
+        viewPos.x() << " " << viewPos.y() << " " << viewPos.z() << endl;	
     }
+    
 
-    /* OSCPack Messenger: update others for sound sources here, typ > 0 for sound sources */
-    /* testing sound source 
-    size = oscpack(packet, "/sc.environment/pose", "iffffff", 1, 9.0f, 9.0f, 0.0f, M_PI * 0.5f, M_PI * 0.5f, 0.0f);
-    if (send(mSockfd, (char *) packet, size, 0))
-    {
-        // DEBUG MSG: cerr << "AudioConfigHandler  Sound's info: " << 0 << " " << 0 << " " << 0 << endl;
-    }
-    */
+// OSCPack Messenger: update others for sound sources here, typ > 0 for sound sources
+// testing sound source 
+size = oscpack(packet, "/sc.environment/pose", "iffffff", 1, 9.0f, 9.0f, 0.0f, M_PI * 0.5f, M_PI * 0.5f, 0.0f);
+if (send(mSockfd, (char *) packet, size, 0))
+{
+    // DEBUG MSG: cerr << "AudioConfigHandler  Sound's info: " << 0 << " " << 0 << " " << 0 << endl;
 }
+*/
 
 
+    float yaw = acos(viewDir.x());
+    if (viewDir.y() < 0) 
+        yaw = M_PI * 2 - yaw;
+    yaw += M_PI * 0.5;
+    if (yaw > M_PI * 2) 
+        yaw -= M_PI * 2;
+    float pitch = M_PI * 0.5 - atan(viewDir.z());
+    float roll = 0.0f;
 
+    float x, y, z;
+    int type;
+    x = viewPos.x();
+    y = viewPos.y();
+    z = viewPos.z();
+    type = 0;
+    _acoustiMaze->updatePoses(type, x, y, z, yaw, pitch, roll);
 
-
-
+}
 
