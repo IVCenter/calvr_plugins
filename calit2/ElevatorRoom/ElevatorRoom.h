@@ -103,7 +103,6 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         int init_SPP(int port); 
         void close_SPP();
         void write_SPP(int bytes, unsigned char* buf);
-        void connectToServer();
 
         float randomFloat(float min, float max)
         {
@@ -153,7 +152,7 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         Mode _mode; // which kind of avatar is currently active
         Phase _phase;
         
-        int _trialPhase, _trialCount;
+        int _trialPhase, _trialCount, _alienCount;
         float _trialPauseTime;
         bool _trialPause, _nextTrial;
         std::vector<int> _trialCounts;

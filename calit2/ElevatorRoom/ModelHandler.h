@@ -68,7 +68,7 @@ class ModelHandler
         void setActiveDoor(int doorNum);
         void setSwitched(bool switched);
 
-        void setScore(int score);
+        void setScore(int score, int total);
         void setAlien(bool val);
         void setAlly(bool val);
         void setLight(bool val);
