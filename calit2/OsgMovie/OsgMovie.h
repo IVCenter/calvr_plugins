@@ -34,17 +34,17 @@ class OsgMovie : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::Fi
 	struct VideoObject
         {
             std::string name;
-	    cvr::SceneObject * scene;
-	    osg::ImageStream * stream;
+            cvr::SceneObject * scene;
+            osg::ImageStream * stream;
             osg::Uniform * modeUniform;
             osg::Uniform * typeUniform;
             osg::Uniform * splitUniform;
-	    bool firstPlay;
+            bool firstPlay;
         };
 
-	bool init();
+        bool init();
         virtual bool loadFile(std::string file);
-	void menuCallback(cvr::MenuItem * item);
+        void menuCallback(cvr::MenuItem * item);
 
     protected:
         std::map<struct VideoObject*,cvr::MenuCheckbox*> _playMap;
@@ -56,10 +56,13 @@ class OsgMovie : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::Fi
         std::map<struct VideoObject*,cvr::MenuButton*> _loadMap;
         std::map<struct VideoObject*,cvr::MenuButton*> _deleteMap;
         std::vector<struct VideoObject*> _loadedVideos;
+        
+        cvr::SubMenu * _loadMenu;
+        std::vector<cvr::MenuButton*> _loadButtons;
 
         // config entry map
-	std::map<std::string , std::pair< int, osg::Matrix>  > _configMap;
-	std::string configPath;
+        std::map<std::string , std::pair< int, osg::Matrix>  > _configMap;
+        std::string configPath;
 
         osg::Geometry* myCreateTexturedQuadGeometry(osg::Vec3 pos, float width,float height, osg::Image* image);
         void writeConfigFile();
