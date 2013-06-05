@@ -1,0 +1,37 @@
+
+<WaterMaze value="on" >
+
+    <!-- All values in millimeters -->
+
+    <Trials>
+        <1 NumWidth="5" NumHeight="5" Time="5" />
+        <2 NumWidth="8" NumHeight="8" Time="10" />
+        <3 NumWidth="4" NumHeight="4" Time="8" />
+    </Trials>
+
+
+    <WidthTile  value="2000" />
+    <HeightTile value="2000" />
+    <Depth      value="10" />
+    <WallHeight value="2500" />
+    <StartingHeight value="300" /> <!-- adjust head up/down -->
+    <GridWidth  value="10" /> <!-- thickness of grid line -->
+
+
+    <DataDir value="/home/cehughes/data/WaterMaze/" />
+
+    <Textures> 
+        <Wall value="textures/DarkStucco.jpg" />
+    </Textures>
+
+    <Models> 
+        <Painting value="models/AbstractPainting/models/Sans.dae" />
+        <DesertPainting value="models/DesertPainting/models/DesertPainting.dae" />
+        <Bookshelf value="models/Bookshelf2/models/skpfile.dae" />
+        <Chair value="models/Chair/models/chair.dae" />
+        <Clock value="models/clockmodel/models/clock.dae" />
+    </Models>
+
+</WaterMaze>
+
+

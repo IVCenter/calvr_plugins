@@ -39,6 +39,7 @@ namespace WaterMaze
 
 class WaterMaze: public cvr::CVRPlugin, public cvr::MenuCallback
 {
+
 public:
     WaterMaze();
     virtual ~WaterMaze();
@@ -47,13 +48,17 @@ public:
     void menuCallback(cvr::MenuItem * item);
     void preFrame();
     bool processEvent(cvr::InteractionEvent * event);
-    void load();
 
 protected:
-    void loadModels();
+    void load(int numWidth, int numHeight);
     void clear();
     void reset();
     void chooseNewTile();
+
+    struct Trial
+    {
+        int width, height, timeSec;
+    };
 
     float randomFloat(float min, float max)
     {
@@ -71,20 +76,28 @@ protected:
     cvr::MenuButton * _loadButton, * _clearButton, *_newTileButton;
     cvr::MenuCheckbox * _gridCB, * _wallColorCB, * _shapesCB, * _furnitureCB, *_lightingCB;
     std::vector<cvr::MenuButton *> _positionButtons;
-
+    
+    // Geometry
     osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry
-
     osg::ref_ptr<osg::Switch> _gridSwitch, _wallColorSwitch, _wallWhiteSwitch,
         _shapeSwitch, _furnitureSwitch;
     std::map<osg::Vec3, osg::Switch *> _tileSwitches;
-    
     std::vector<osg::MatrixTransform *> _tilePositions;
 
-    float widthTile, heightTile, numWidth, numHeight, depth, wallHeight,
+    float widthTile, heightTile, depth, wallHeight,
         gridWidth, _heightOffset;
-    int _hiddenTile;
-   
+
+    // Game logic
+    std::vector<Trial> _trials;
+    int _hiddenTile, _currentTrial, _lastTimeLeft;
+    bool _runningTrial, _resetTime;
+    float _startTime;
+    
+
+
     bool _debug, _loaded; // turns on debug messages to command line
+    std::string _dataDir, _dataFile;
+    float _fileTick, _fileTimer;
 
 };
 
