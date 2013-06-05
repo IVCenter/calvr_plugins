@@ -464,7 +464,6 @@ void PanoViewObject::menuCallback(cvr::MenuItem * item)
         float zoom = 1;
 
         _locInit[_name] = std::make_pair(getRotate(), _currentZoom);
-
         writeConfig();
     }
 
@@ -1153,10 +1152,13 @@ void PanoViewObject::startTransition()
 
 void PanoViewObject::writeConfig()
 {
+
     if (!cvr::ComController::instance()->isMaster())
     {
         return;
     }
+
+    std::cout << "Saved." << std::endl;
 
     std::ofstream cfile;
     cfile.open((_configPath + "/Init.cfg").c_str(), std::ios::trunc);
@@ -1166,7 +1168,6 @@ void PanoViewObject::writeConfig()
         for(std::map<std::string, std::pair<float, float> >::iterator it = _locInit.begin();
         it != _locInit.end(); it++)
         {
-            std::cout << "Saving " << it->first << " " << std::endl;
             cfile << it->first << " ";
             cfile << it->second.first << " " << it->second.second << " " << std::endl;;
         }
