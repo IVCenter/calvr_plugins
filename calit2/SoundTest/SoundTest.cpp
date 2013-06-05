@@ -5,7 +5,7 @@
 #include <cvrKernel/PluginHelper.h>
 #include <PluginMessageType.h>
 #include <unistd.h>
-
+#include <stdio.h>
 
 #include <osg/Matrix>
 
@@ -18,42 +18,76 @@ CVRPLUGIN(SoundTest)
 
 SoundTest::SoundTest()
 {
+
+
 }
 
 bool SoundTest::init()
 {
     std::cerr << "SoundTest init\n";
 
+    std::string name = ConfigManager::getEntry("ColliderConfig.ServerName");
+    std::string synthDefDir = ConfigManager::getEntry("ColliderConfig.SynthDefDir");
+    std::string port = ConfigManager::getEntry("ColliderConfig.ServerPort");
+    std::string host = ConfigManager::getEntry("ColliderConfig.ServerIp");
+
+    const char * p = port.c_str();
+    const char * h = host.c_str();
+
+    _AudioServer = new SCServer(name,"127.0.0.1", "57110", synthDefDir);
+    //_AudioServer = new SCServer(name, h, p, synthDefDir);
+    _AudioServer->dumpOSC(1); // Commands the remote server to print incoming messages
+
+    std::string filename = "bermuda48.wav";
+    std::string fullfilepath = ConfigManager::getEntry("ColliderConfig.ResourceDir")+filename;
+
+    int outarray [] = {0, 1};
+
+    _sound = new Sound(_AudioServer, fullfilepath, outarray, 0);
+
+    if(!(_sound->isValid()))
+    {
+       std::cerr << "Error creating SoundTest. Sound is not valid." << std::endl;
+       return false;
+    }
+    
     MLMenu = new SubMenu("SoundTest", "SoundTest");
     MLMenu->setCallback(this);
 
-    loadMenu = new SubMenu("Load","Load");
-    loadMenu->setCallback(this);
-    MLMenu->addItem(loadMenu);
+    _playButton = new MenuButton("Play");
+    _playButton->setCallback(this);
+    MLMenu->addItem(_playButton);
 
-    MenuSystem::instance()->addMenuItem(MLMenu);
-    
+    _pauseButton = new MenuButton("Pause");
+    _pauseButton->setCallback(this);
+    MLMenu->addItem(_pauseButton);
 
+    _stopButton = new MenuButton("Stop");
+    _stopButton->setCallback(this);
+    MLMenu->addItem(_stopButton);
 
-    std::string name = "Octo";
-    std::string synthDir = "/Users/demo/workspace/git/colliderplusplus/synthdefs/mac";
-    _AudioServer = new SCServer(name, "132.239.235.169", 
-	"57110", synthDir);
-    _AudioServer->dumpOSC(1);
+    _resetButton = new MenuButton("Reset to Beginning");
+    _resetButton->setCallback(this);
+    MLMenu->addItem(_resetButton);
 
-    std::string filepath = "/Users/demo/Desktop/plucky.wav";
-    _sound = new Sound(_AudioServer, filepath, 0);
-    usleep(1000000);
-    _sound->setLoop(1);
-    _sound->play();
+    _loopCheckbox = new MenuCheckbox("Loop", true);
+    _loopCheckbox->setCallback(this);
+    MLMenu->addItem(_loopCheckbox);
 
-    float x, y, z;
-    x = 2000;
-    y = 2000;
-    z = 0;
+    _volumeRange = new MenuRangeValue("Volume", 0.0f, 1.0f, 0.5f);
+    _volumeRange->setCallback(this);
+    MLMenu->addItem(_volumeRange);
 
-    //sound->setPosition(x, y, z);
+    _startPos = new MenuRangeValue("Start Position", 0.0f, 1.0f, 0.0f);
+    _startPos->setCallback(this);
+    MLMenu->addItem(_startPos);
 
+    PluginHelper::addRootMenuItem(MLMenu);
+
+    _sound->setGain(_volumeRange->getValue()); 
+    _sound->setStartPosition(_startPos->getValue());
+    _sound->setLoop(true);
+   
     std::cerr << "SoundTest init done.\n";
     return true;
 }
@@ -61,13 +95,65 @@ bool SoundTest::init()
 
 SoundTest::~SoundTest()
 {
-//    delete _clientServer;
-    delete _sound;
+    if(_sound)
+    	delete _sound;
+
+    if(_AudioServer)
+    {
+        _AudioServer->dumpOSC(0);
+    	delete _AudioServer;
+    }
 }
 
-void SoundTest::menuCallback(MenuItem* menuItem)
+void SoundTest::menuCallback(MenuItem* item)
 {
+    if(item == _playButton)
+    {
+         _sound->play();
+    }
 
+    else if(item == _pauseButton)
+    {
+	 _sound->pause();
+    }
+
+    else if(item == _loopCheckbox)
+    {
+	 if(_loopCheckbox->getValue())
+              	_sound->setLoop(true);
+	 else
+	      	_sound->setLoop(false);
+    }
+
+    else if(item == _stopButton)
+    {
+	if(_sound->isPlaying())
+	{
+	 	_sound->jumpToStartPos();
+	 	_sound->pause();
+	}
+    }
+
+    else if(item == _resetButton)
+    {
+	if(_sound->isPlaying())
+        {
+		_startPos->setValue(0.0f);
+		_sound->setStartPosition(_startPos->getValue());
+	 	_sound->jumpToStartPos();
+		_sound->pause();
+	}
+    }
+
+    else if(item == _volumeRange)
+    {
+         _sound->setGain(_volumeRange->getValue());
+    }
+
+    else if(item == _startPos)
+    { 	 
+         _sound->setStartPosition(_startPos->getValue()); 
+    }
 }
 
 void SoundTest::preFrame()
@@ -77,6 +163,6 @@ void SoundTest::preFrame()
 
 bool SoundTest::processEvent(cvr::InteractionEvent * event)
 {
-
+  return true;
 }
 

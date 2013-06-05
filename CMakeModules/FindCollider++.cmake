@@ -1,5 +1,4 @@
 FIND_PATH(Collider_pp_DIR libcollider.hpp
-(
 PATHS
 $ENV{COLLIDER_HOME}
 NO_DEFAULT_PATH

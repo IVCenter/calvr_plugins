@@ -5,9 +5,12 @@
 #include <cvrKernel/ComController.h>
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrKernel/FileHandler.h>
+#include <cvrKernel/InteractionManager.h>
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/SceneManager.h>
 #include <cvrKernel/SceneObject.h>
+
+#include <cvrUtil/Intersection.h>
 #include <cvrConfig/ConfigManager.h>
 
 #include <cvrMenu/SubMenu.h>
@@ -27,65 +30,85 @@
 #include <osgText/Text>
 #include <osgDB/ReadFile>
 
+#include <string.h>
 #include <vector>
 #include <map>
 
-#include <string.h>
 #include <iostream>
 #include <stdio.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <X11/Xlib.h>
+
+#include "libcollider/SCServer.hpp"
+#include "libcollider/Buffer.hpp"
 
 namespace WaterMaze
 {
 
 class WaterMaze: public cvr::CVRPlugin, public cvr::MenuCallback
 {
-public:
-    WaterMaze();
-    virtual ~WaterMaze();
-    static WaterMaze * instance();
-    bool init();
-    void menuCallback(cvr::MenuItem * item);
-    void preFrame();
-    bool processEvent(cvr::InteractionEvent * event);
-    void load();
+    public:
+        WaterMaze();
+        virtual ~WaterMaze();
+        static WaterMaze * instance();
+        bool init();
+        void menuCallback(cvr::MenuItem * item);
+        void preFrame();
+        bool processEvent(cvr::InteractionEvent * event);
 
-protected:
-    void loadModels();
-    void clear();
-    void reset();
-    void chooseNewTile();
+    protected:
+        void loadModels();
+        void clear();
+        void reset();
+        void newHiddenTile();
 
-    float randomFloat(float min, float max)
-    {
-        if (max < min) return 0;
+        /*int init_SPP(int port); 
+        void close_SPP();
+        void write_SPP(int bytes, unsigned char* buf);
+        void connectToServer();
+*/
+        float randomFloat(float min, float max)
+        {
+            if (max < min) return 0;
 
-        float random = ((float) rand()) / (float) RAND_MAX;
-        float diff = max - min;
-        float r = random * diff;
-        return min + r;
-    };
+            float random = ((float) rand()) / (float) RAND_MAX;
+            float diff = max - min;
+            float r = random * diff;
+            return min + r;
+        };
 
-    static WaterMaze * _myPtr;
+        static WaterMaze * _myPtr;
 
-    cvr::SubMenu * _WaterMazeMenu, * _positionMenu, * _detailsMenu;
-    cvr::MenuButton * _loadButton, * _clearButton, *_newTileButton;
-    cvr::MenuCheckbox * _gridCB, * _wallColorCB, * _shapesCB, * _furnitureCB, *_lightingCB;
-    std::vector<cvr::MenuButton *> _positionButtons;
+        cvr::SubMenu * _WaterMazeMenu;
+        cvr::MenuButton * _loadButton, * _clearButton, *_newTileButton, *_resetButton;
+        cvr::MenuCheckbox * _gridCB;
 
-    osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry
+        osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry
+        osg::ref_ptr<osg::Switch> _gridSwitch; // grid on floor
+        std::map<osg::Vec3, osg::Switch *> _tileSwitches;
 
-    osg::ref_ptr<osg::Switch> _gridSwitch, _wallColorSwitch, _wallWhiteSwitch,
-        _shapeSwitch, _furnitureSwitch;
-    std::map<osg::Vec3, osg::Switch *> _tileSwitches;
-    
-    std::vector<osg::MatrixTransform *> _tilePositions;
+        float widthTile, heightTile, numWidth, numHeight, depth, wallHeight,
+            gridWidth;
+        int _hiddenTile;
+       
+        bool _debug; // turns on debug messages to command line
 
-    float widthTile, heightTile, numWidth, numHeight, depth, wallHeight,
-        gridWidth, _heightOffset;
-    int _hiddenTile;
-   
-    bool _debug, _loaded; // turns on debug messages to command line
-
+        // USB to Serial communication
+        /*HANDLE hSerial;
+        FT_HANDLE ftHandle;
+        FT_STATUS ftStatus;
+        DWORD devIndex;
+        DWORD bytesWritten;
+        unsigned char buf[16];
+        bool _sppConnected;
+*/
+	sc::SCServer * _aserver;
+	sc::Buffer * _regTileBuf;
+	sc::Buffer * _hiddenTileBuf;
+	std::map<std::string, float> _regTileArgs;
+	std::map<std::string, float> _hiddenTileArgs;
+	int _curTile;
 };
 
 };
