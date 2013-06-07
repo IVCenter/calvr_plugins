@@ -823,7 +823,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     _scoreText->setBackdropColor(osg::Vec4(0,0,0,0));
     _scoreText->setAxisAlignment(osgText::Text::XZ_PLANE);
 
-    float width = 400, height = 100;
+    float width = 500, height = 100;
     osg::ref_ptr<osg::Geometry> quad = makeQuad(width, height, 
         osg::Vec4(0.8,0.8,0.8,1.0), pos - osg::Vec3(20, 0, 50));
 
@@ -1173,10 +1173,10 @@ osg::ref_ptr<osg::Geode> ModelHandler::getActiveObject()
     return _activeObject;
 }
 
-void ModelHandler::setScore(int score)
+void ModelHandler::setScore(int score, int total)
 {
     char buf[10];
-    sprintf(buf, "%d", score);
+    sprintf(buf, "%d / %d", score, total);
     std::string text = "Score: ";
     text += buf;
     _scoreText->setText(text);

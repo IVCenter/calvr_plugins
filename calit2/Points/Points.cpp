@@ -256,7 +256,37 @@ void Points::removeAll()
 {
     for(std::vector<struct PointObject*>::iterator delit = _loadedPoints.begin(); delit != _loadedPoints.end(); delit++)
     {
-        (*delit)->scene->detachFromScene();
+        //(*delit)->scene->detachFromScene();
+
+        if(_sliderMap.find((*delit)) != _sliderMap.end())
+        {
+            delete _sliderMap[(*delit)];
+            _sliderMap.erase((*delit));
+        }
+
+        if(_deleteMap.find((*delit)) != _deleteMap.end())
+        {
+            delete _deleteMap[(*delit)];
+            _deleteMap.erase((*delit));
+        }
+
+        if(_saveMap.find((*delit)) != _saveMap.end())
+        {
+            delete _saveMap[(*delit)];
+            _saveMap.erase((*delit));
+        }
+
+        if(_boundsMap.find((*delit)) != _boundsMap.end())
+        {
+            delete _boundsMap[(*delit)];
+            _boundsMap.erase((*delit));
+        }
+
+        if ((*delit)->scene)
+            delete (*delit)->scene;
+
+        _loadedPoints.erase(delit);
+        break;
     }
 }
 

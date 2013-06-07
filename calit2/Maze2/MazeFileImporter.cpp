@@ -88,56 +88,56 @@ void MazeFileImporter::loadModel(const std::string &filename)
     string entryNameStr;
     while (inFile >> entryNameStr)
     {
-	EntryPosInfo *infoPtr = new EntryPosInfo();
-	EntryNodeList nodelist, hintlist, texturedNodeList, nonTexturedNodeList;
-	if (lookupEntryNode(entryNameStr, infoPtr, nodelist, hintlist, texturedNodeList, nonTexturedNodeList, &inFile));
-	{
-	    /* translate EntryPosInfo into matrix transforms */
-	    Matrixd localOffsetMat, rotMat, gridOffsetMat;
-	    localOffsetMat.makeTranslate(Vec3(gGridSize * 0.5f, 0, 0));
-	    rotMat.makeRotate((int)(infoPtr->eo) * M_PI * 0.5f, Vec3(0, 0, 1));
-	    gridOffsetMat.makeTranslate(Vec3(infoPtr->x, infoPtr->y, 0) * gGridSize);
-	    Matrixd transmat = localOffsetMat * rotMat * gridOffsetMat;
+        EntryPosInfo *infoPtr = new EntryPosInfo();
+        EntryNodeList nodelist, hintlist, texturedNodeList, nonTexturedNodeList;
+        if (lookupEntryNode(entryNameStr, infoPtr, nodelist, hintlist, texturedNodeList, nonTexturedNodeList, &inFile));
+        {
+            /* translate EntryPosInfo into matrix transforms */
+            Matrixd localOffsetMat, rotMat, gridOffsetMat;
+            localOffsetMat.makeTranslate(Vec3(gGridSize * 0.5f, 0, 0));
+            rotMat.makeRotate((int)(infoPtr->eo) * M_PI * 0.5f, Vec3(0, 0, 1));
+            gridOffsetMat.makeTranslate(Vec3(infoPtr->x, infoPtr->y, 0) * gGridSize);
+            Matrixd transmat = localOffsetMat * rotMat * gridOffsetMat;
 
-	    /* load component VRML files into switches of different categories */
-	    if (nodelist.size() > 0)
-	    {
-		MatrixTransform *matTrans = new MatrixTransform;
-		matTrans->setMatrix(transmat);
-		for (EntryNodeList::const_iterator itrNode = nodelist.begin(); itrNode != nodelist.end(); itrNode++)
-		    matTrans->addChild(*itrNode);
-		mStillModelSwitch->addChild(matTrans);
-	    }
-	    if (hintlist.size() > 0)
-	    {
-		MatrixTransform *matTrans = new MatrixTransform;
-		matTrans->setMatrix(transmat);
-		for (EntryNodeList::const_iterator itrNode = hintlist.begin(); itrNode != hintlist.end(); itrNode++)
-		    matTrans->addChild(*itrNode);
-		mLocalHintSwitch->addChild(matTrans);
-	    }
-	    if (texturedNodeList.size() > 0)
-	    {
-		MatrixTransform *matTrans = new MatrixTransform;
-		matTrans->setMatrix(transmat);
-		for (EntryNodeList::const_iterator itrNode = texturedNodeList.begin();
-			itrNode != texturedNodeList.end(); itrNode++)
-		    matTrans->addChild(*itrNode);
-		mTextureWallSwitch->addChild(matTrans);
-	    }
-	    if (nonTexturedNodeList.size() > 0)
-	    {
-		MatrixTransform *matTrans = new MatrixTransform;
-		matTrans->setMatrix(transmat);
-		for (EntryNodeList::const_iterator itrNode = nonTexturedNodeList.begin();
-			itrNode != nonTexturedNodeList.end(); itrNode++)
-		    matTrans->addChild(*itrNode);
-		mNonTextureWallSwitch->addChild(matTrans);
-	    }
-	}
-	delete infoPtr;
+            /* load component VRML files into switches of different categories */
+            if (nodelist.size() > 0)
+            {
+                MatrixTransform *matTrans = new MatrixTransform;
+                matTrans->setMatrix(transmat);
+                for (EntryNodeList::const_iterator itrNode = nodelist.begin(); itrNode != nodelist.end(); itrNode++)
+                    matTrans->addChild(*itrNode);
+                mStillModelSwitch->addChild(matTrans);
+            }
+            if (hintlist.size() > 0)
+            {
+                MatrixTransform *matTrans = new MatrixTransform;
+                matTrans->setMatrix(transmat);
+                for (EntryNodeList::const_iterator itrNode = hintlist.begin(); itrNode != hintlist.end(); itrNode++)
+                    matTrans->addChild(*itrNode);
+                mLocalHintSwitch->addChild(matTrans);
+            }
+            if (texturedNodeList.size() > 0)
+            {
+                MatrixTransform *matTrans = new MatrixTransform;
+                matTrans->setMatrix(transmat);
+                for (EntryNodeList::const_iterator itrNode = texturedNodeList.begin();
+                    itrNode != texturedNodeList.end(); itrNode++)
+                        matTrans->addChild(*itrNode);
+                mTextureWallSwitch->addChild(matTrans);
+            }
+            if (nonTexturedNodeList.size() > 0)
+            {
+                MatrixTransform *matTrans = new MatrixTransform;
+                matTrans->setMatrix(transmat);
+                for (EntryNodeList::const_iterator itrNode = nonTexturedNodeList.begin();
+                    itrNode != nonTexturedNodeList.end(); itrNode++)
+                        matTrans->addChild(*itrNode);
+                mNonTextureWallSwitch->addChild(matTrans);
+            }
+        }
+        delete infoPtr;
 
-	nodelist.clear();
+        nodelist.clear();
     }
     inFile.close();
 }
@@ -347,19 +347,4 @@ bool MazeFileImporter::lookupEntryNode(const string &entryname, EntryPosInfo *in
 
     return true;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

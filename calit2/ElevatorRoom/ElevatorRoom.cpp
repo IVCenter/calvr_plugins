@@ -298,6 +298,7 @@ void ElevatorRoom::preFrame()
     if (_trialPause)
     {
         _modelHandler->showScore(true);
+
         if (_nextTrial)//PluginHelper::getProgramDuration() - _trialPauseTime >
             //_trialPauseLengths[_trialPhase])
         {
@@ -565,6 +566,7 @@ void ElevatorRoom::preFrame()
             {
                 _trialPauseTime = PluginHelper::getProgramDuration();
                 _trialPause = true;
+                std::cout << "Trials complete. Hit 'n' to continue to the next set." << std::endl;
             }
         }
         _modelHandler->closeDoor();
@@ -1057,7 +1059,7 @@ void ElevatorRoom::shoot()
 
             std::cout << "Hit!" << std::endl; 
             _score++;
-            _modelHandler->setScore(_score);
+            _modelHandler->setScore(_score, _alienCount);
 
             //unsigned char c = 'k';
             //sendChar(c);
@@ -1082,7 +1084,7 @@ void ElevatorRoom::shoot()
             {
                 _score--;
             }
-            _modelHandler->setScore(_score);
+            _modelHandler->setScore(_score, _alienCount);
             std::cout << "Score: " << _score << std::endl;
             _hit = true;
         }
@@ -1182,6 +1184,7 @@ void ElevatorRoom::chooseGameParameters(int &door, Mode &mode, bool &switched)
                 std::cout << _activeDoor << " - alien" << std::endl;
             }
             mode = ALIEN;
+            _alienCount++;
             if (rand() % 100 <= _errorChance)
             {
                 switched = true;
@@ -1254,51 +1257,6 @@ void ElevatorRoom::sendChar(unsigned char c)
 
 
 /*** Server Functions ***/
-
-void ElevatorRoom::connectToServer()
-{
-    // get server address and port number
-    string server_addr = ConfigManager::getEntry("Plugin.Maze2.EOGDataServerAddress");
-    int port_number = ConfigManager::getInt("Plugin.Maze2.EOGDataServerPort", 8084);
-    if( server_addr == "" ) server_addr = "127.0.0.1";
-    
-    cerr << "Maze2::ECGClient::Server address: " << server_addr << endl;
-    cerr << "Maze2::ECGClient::Port number: " << port_number << endl;
-
-    // build up socket communications
-    int portno = port_number, protocol = SOCK_STREAM;
-    struct sockaddr_in server;
-    struct hostent *hp;
-
-    _sockfd = socket(AF_INET, protocol, 0);
-    if (_sockfd < 0)
-    {
-        cerr << "Maze2::ECGClient::connect(): Can't open socket." << endl;
-        return;
-    }
-
-    server.sin_family = AF_INET;
-    hp = gethostbyname(server_addr.c_str());
-    if (hp == 0)
-    {
-        cerr << "Maze2::ECGClient::connect(): Unknown host." << endl;
-        close(_sockfd);
-        return;
-    }
-    memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
-    server.sin_port = htons((unsigned short)portno);
-
-    // connect to ECG data server
-    if (connect(_sockfd, (struct sockaddr *) &server, sizeof (server)) < 0)
-    {
-	cerr << "Maze2::ECGClient::connect(): Failed connect to server" << endl;
-        close(_sockfd);
-        return;
-    }
-
-    cerr << "Maze2::ECGClient::Successfully connected to EOG Data Server." << endl;
-    _connected = true;
-}
 
 int ElevatorRoom::init_SPP(int port)
 {

@@ -16,6 +16,7 @@
 #include <list>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 // open scene graph
 #include <osg/Vec3>
@@ -26,6 +27,7 @@
 
 // local includes
 #include "Audio/OSCPack.h"
+#include "AcoustiMaze/AcoustiMaze.h"
 
 
 /***************************************************************
@@ -51,6 +53,7 @@ class AudioConfigHandler
   protected:
     bool mFlagConnected, mFlagMaster;
     int mSockfd;
+    AcoustiMaze * _acoustiMaze;
 };
 
 

@@ -45,6 +45,22 @@ WaterMaze::WaterMaze()
     mat.makeTranslate(0, -3000, -heightOffset);
     _geoRoot->setMatrix(mat);
     PluginHelper::getObjectsRoot()->addChild(_geoRoot);
+    
+    _loaded = false;
+    _currentTrial = 0;
+    _startTime = 0;
+    _lastTimeLeft = 0;
+    _resetTime = true;
+    _fileTick = .5;
+
+    std::cout << "Welcome to WaterMaze!\n" <<
+            "l - load geometry\n" <<
+            "n - next trial\n" <<
+            "r - repeat trial\n" <<
+            "b - back to previous trial\n" <<
+            "p - play/pause\n" << 
+            "h - help\n" << 
+            "1-9 - reset position" << std::endl;
 }
 
 WaterMaze::~WaterMaze()
@@ -92,10 +108,6 @@ bool WaterMaze::init()
     _gridCB->setCallback(this);
     _WaterMazeMenu->addItem(_gridCB);
 
-    _resetButton = new MenuButton("Reset");
-    _resetButton->setCallback(this);
-    _WaterMazeMenu->addItem(_resetButton);
-
     // extra output messages
     _debug = (ConfigManager::getEntry("Plugin.WaterMaze.Debug") == "on");
 
@@ -123,11 +135,50 @@ bool WaterMaze::init()
     // Set up models
     widthTile = ConfigManager::getFloat("value", "Plugin.WaterMaze.WidthTile", 2000.0);
     heightTile = ConfigManager::getFloat("value", "Plugin.WaterMaze.HeightTile", 2000.0);
-    numWidth = ConfigManager::getFloat("value", "Plugin.WaterMaze.NumWidth", 10.0);
-    numHeight = ConfigManager::getFloat("value", "Plugin.WaterMaze.NumHeight", 10.0);
+    //numWidth = ConfigManager::getFloat("value", "Plugin.WaterMaze.NumWidth", 10.0);
+    //numHeight = ConfigManager::getFloat("value", "Plugin.WaterMaze.NumHeight", 10.0);
     depth = ConfigManager::getFloat("value", "Plugin.WaterMaze.Depth", 10.0);
     wallHeight = ConfigManager::getFloat("value", "Plugin.WaterMaze.WallHeight", 2500.0);
     gridWidth = ConfigManager::getFloat("value", "Plugin.WaterMaze.GridWidth", 5.0);
+
+    _dataDir = ConfigManager::getEntry("Plugin.WaterMaze.DataDir");
+
+    std::vector<std::string> trialNames;
+    ConfigManager::getChildren("Plugin.WaterMaze.Trials", trialNames);
+    for (int i = 0; i < trialNames.size(); ++i)
+    {
+        float width, height, time;
+        width = ConfigManager::getFloat("NumWidth", "Plugin.WaterMaze.Trials." + 
+            trialNames[i]);
+        height = ConfigManager::getFloat("NumHeight", "Plugin.WaterMaze.Trials." + 
+            trialNames[i]);
+        time = ConfigManager::getFloat("Time", "Plugin.WaterMaze.Trials." + 
+            trialNames[i]);
+
+        Trial trial;
+        trial.width = width;
+        trial.height = height;
+        trial.timeSec = time;
+        _trials.push_back(trial);
+    }
+
+    for (int i = 0; i < _trials.size(); ++i)
+    {
+
+    }
+
+    _lastTimeLeft = _trials[_currentTrial].timeSec;
+
+    newHiddenTile();
+
+    return true;
+}
+
+void WaterMaze::load(int numWidth, int numHeight)
+{
+    _loaded = false;
+
+    // Set up models
 
     // Tiles
     osg::Box * box = new osg::Box(osg::Vec3(0,0,0), widthTile, heightTile, depth);
@@ -200,6 +251,26 @@ bool WaterMaze::init()
     osg::Geode * geode;
     osg::Vec3 pos;
     
+    _wallWhiteSwitch = new osg::Switch();
+    _wallColorSwitch = new osg::Switch();
+    _shapeSwitch = new osg::Switch();
+    _furnitureSwitch = new osg::Switch();
+
+    std::string wallTex = ConfigManager::getEntry("Plugin.WaterMaze.Textures.Wall");
+    osg::Texture2D* tex = new osg::Texture2D();
+    osg::ref_ptr<osg::Image> img;
+
+    img = osgDB::readImageFile(_dataDir + wallTex);
+    if (img)
+    {
+        tex->setImage(img);
+        tex->setResizeNonPowerOfTwoHint(false);
+        tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+        tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+    }
+
+
+
     // far horizontal
     pos = osg::Vec3(widthTile * (numWidth-2) * 0.5, 
                    (numHeight-1) * heightTile , 
@@ -210,8 +281,18 @@ bool WaterMaze::init()
     geode = new osg::Geode();
     geode->addDrawable(sd);
     geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-    _geoRoot->addChild(geode);
      
+    geode->getOrCreateStateSet()->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    _wallColorSwitch->addChild(geode);
+
+    sd = new osg::ShapeDrawable(box);
+    sd->setColor(osg::Vec4(1.0, 1.0, 1.0, 1));
+    geode = new osg::Geode();
+    geode->addDrawable(sd);
+    geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    geode->getOrCreateStateSet()->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    _wallWhiteSwitch->addChild(geode);
+
     // near horizontal
     pos = osg::Vec3(widthTile * (numWidth-2) * 0.5, 
                     (-1) * heightTile, 
@@ -222,7 +303,16 @@ bool WaterMaze::init()
     geode = new osg::Geode();
     geode->addDrawable(sd);
     geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-    _geoRoot->addChild(geode);
+    geode->getOrCreateStateSet()->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    _wallColorSwitch->addChild(geode);
+
+    sd = new osg::ShapeDrawable(box);
+    sd->setColor(osg::Vec4(1.0, 1.0, 1.0, 1));
+    geode = new osg::Geode();
+    geode->addDrawable(sd);
+    geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    geode->getOrCreateStateSet()->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    _wallWhiteSwitch->addChild(geode);
 
     // left vertical
     pos = osg::Vec3((numWidth-1) * widthTile, 
@@ -234,7 +324,16 @@ bool WaterMaze::init()
     geode = new osg::Geode();
     geode->addDrawable(sd);
     geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-    _geoRoot->addChild(geode);
+    geode->getOrCreateStateSet()->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    _wallColorSwitch->addChild(geode);
+
+    sd = new osg::ShapeDrawable(box);
+    sd->setColor(osg::Vec4(1.0, 1.0, 1.0, 1));
+    geode = new osg::Geode();
+    geode->addDrawable(sd);
+    geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    geode->getOrCreateStateSet()->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    _wallWhiteSwitch->addChild(geode);
 
     // right vertical
     pos = osg::Vec3((-1) * widthTile, 
@@ -246,7 +345,23 @@ bool WaterMaze::init()
     geode = new osg::Geode();
     geode->addDrawable(sd);
     geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-    _geoRoot->addChild(geode);
+    geode->getOrCreateStateSet()->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    _wallColorSwitch->addChild(geode);
+
+    sd = new osg::ShapeDrawable(box);
+    sd->setColor(osg::Vec4(1.0, 1.0, 1.0, 1));
+    geode = new osg::Geode();
+    geode->addDrawable(sd);
+    geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    geode->getOrCreateStateSet()->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    _wallWhiteSwitch->addChild(geode);
+
+    _geoRoot->addChild(_wallColorSwitch);
+    _geoRoot->addChild(_wallWhiteSwitch);
+    
+    _wallColorSwitch->setAllChildrenOn();
+    _wallWhiteSwitch->setAllChildrenOff();
+
 
     // ceiling
     pos = osg::Vec3((numWidth-2) * widthTile * .5, 
@@ -256,6 +371,8 @@ bool WaterMaze::init()
     sd = new osg::ShapeDrawable(box);
     geode = new osg::Geode();
     geode->addDrawable(sd);
+    geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    geode->getOrCreateStateSet()->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
     _geoRoot->addChild(geode);
     
     // floor plane
@@ -281,33 +398,74 @@ bool WaterMaze::init()
     _geoRoot->addChild(geode);
  
     _aserver->dumpOSC(0);
-
-    return true;
 }
+
 
 void WaterMaze::preFrame()
 {
-   // std::map<string, float> regTileArgs;
-   // std::map<string, float> hiddenTileArgs;
+    if (!_loaded)
+        return;
 
     _regTileArgs["bufnum"] = _regTileBuf->getBufNum();
     _hiddenTileArgs["bufnum"] = _hiddenTileBuf->getBufNum();
 
-    
-
-    if (_hiddenTile < 0)
+    if (_runningTrial && 
+        PluginHelper::getProgramDuration() - _startTime > _trials[_currentTrial].timeSec)
     {
-        _hiddenTile = rand() % (int)(numWidth * numHeight);
-        std::cout << "Hidden tile = " << _hiddenTile << std::endl;
+        std::cout << "Trial complete!  Press 'n' to continue to next trial." << std::endl;
+        _runningTrial = false;
+        _resetTime = true;
     }
+
+    if (!_runningTrial)
+        return;
+
+    int timeLeft;
+    timeLeft = _trials[_currentTrial].timeSec - 
+        ((int)(PluginHelper::getProgramDuration() - _startTime));
+    if (timeLeft < _lastTimeLeft)
+    {
+        _lastTimeLeft = timeLeft;
+        std::cout << timeLeft << " seconds left." << std::endl;
+    }
+
+
+
+
+    if (PluginHelper::getProgramDuration() - _fileTimer > _fileTick)
+    {
+        ofstream outFile;
+        outFile.open(_dataFile.c_str(), ios::app);
+
+        if (outFile) 
+        {
+            float elapsedTime = PluginHelper::getProgramDuration() - _startTime;
+            osg::Vec3 pos = PluginHelper::getHeadMat(0).getTrans();
+            outFile << elapsedTime << " " << pos.x() << " " << pos.y() << " " << endl;
+            outFile << std::endl;
+            outFile << flush;
+            outFile.close();
+
+            _fileTimer = PluginHelper::getProgramDuration();
+        }
+
+        else
+        {
+            cout << "WaterMaze: Unable to open file " << _dataFile << endl;
+        }
+    }
+
+
+
 
     osg::Vec3 pos = osg::Vec3(0,0,0) * cvr::PluginHelper::getHeadMat() * 
         PluginHelper::getWorldToObjectTransform() * _geoRoot->getInverseMatrix();
 
     osg::Vec3 bottomLeft, topRight;
     bottomLeft = osg::Vec3(0,0,0) * _geoRoot->getMatrix();
-    topRight = osg::Vec3(widthTile * numWidth, heightTile * numHeight, 0) * 
-        _geoRoot->getMatrix();
+    topRight = osg::Vec3(widthTile * _trials[_currentTrial].width, 
+                         heightTile * _trials[_currentTrial].height, 0) * 
+                         _geoRoot->getMatrix();
 
     float xmin, xmax, ymin, ymax;
     xmin = bottomLeft[0];
@@ -331,11 +489,14 @@ void WaterMaze::preFrame()
             pos[1] > ymin && pos[1] < ymax)
         {
             //std::cout << "Standing in tile " << i << std::endl;  
-            it->second->setSingleChildOn(2);
-            if (i == _hiddenTile)
+            if (it->second)
             {
-                //_hiddenTile = -1;
-                it->second->setSingleChildOn(1);
+                it->second->setSingleChildOn(2);
+                if (i == _hiddenTile)
+                {
+                    //_hiddenTile = -1;
+                    it->second->setSingleChildOn(1);
+                }
             }
 	
 	    if (i!=_curTile)
@@ -353,36 +514,31 @@ void WaterMaze::preFrame()
         // Unoccupied tile
         else
         {
-            it->second->setSingleChildOn(0);
+            if (it->second)
+                it->second->setSingleChildOn(0);
         }
         
         // Hidden tile
         if (0)//i == _hiddenTile)
         {
-            it->second->setSingleChildOn(1);
+            if (it->second)
+                it->second->setSingleChildOn(1);
         }
         i++;
-
-    //std::cout << "Position: " << pos[0] << " " << pos[1] << " " << pos[2] << std::endl;
-    //std::cout << "Min: " << xmin << " " << ymin << std::endl;
-    //std::cout << "Max: " << xmax << " " << ymax << std::endl;
     }
-    
-    //std::cout << "Position: " << pos[0] << " " << pos[1] << " " << pos[2] << std::endl;
-    //std::cout << "Min: " << xmin << " " << ymin << std::endl;
-    //std::cout << "Max: " << xmax << " " << ymax << std::endl;
 }
 
 void WaterMaze::menuCallback(MenuItem * item)
 {
     if(item == _loadButton)
     {
-
+        if (!_loaded)
+            load(_trials[0].width, _trials[0].height);
     }
 
     else if (item == _clearButton)
     {
-
+        clear();
     }
 
     else if (item == _newTileButton)
@@ -390,12 +546,6 @@ void WaterMaze::menuCallback(MenuItem * item)
         newHiddenTile();
     }
 
-    else if (item == _resetButton)
-    {
-	// Start timer sound
-	// float startTime = PluginHelper::getProgramDuration();
-	std::cout << "Start timer sound" << std::endl;
-    }
 
     else if (item == _gridCB)
     {
@@ -412,12 +562,198 @@ void WaterMaze::menuCallback(MenuItem * item)
 
 bool WaterMaze::processEvent(InteractionEvent * event)
 {
-    return false;
+    KeyboardInteractionEvent * kie = event->asKeyboardEvent();
+    if (kie)
+    {
+        if (kie->getInteraction() == KEY_UP && kie->getKey() == 'n')
+        {
+            // next trial
+            if (_runningTrial)
+            {
+                return true;
+            }
+
+            if (_currentTrial == _trials.size() - 1)
+            {
+                std::cout << "No more trials." << std::endl;
+                return true;
+            }
+
+            _currentTrial++;
+            
+            std::cout << "Loading next trial." << std::endl;
+            std::cout << _trials[_currentTrial].width << " x " << 
+                _trials[_currentTrial].height << ", " << _trials[_currentTrial].timeSec
+                << " seconds." << std::endl;
+
+            clear();
+            load(_trials[_currentTrial].width, _trials[_currentTrial].height); 
+
+            return true;
+        }
+
+        else if (kie->getInteraction() == KEY_UP && kie->getKey() == 'r')
+        {
+            // repeat last trial
+            if (_runningTrial)
+            {
+                return true;
+            }
+
+            std::cout << "Repeating last trial." << std::endl;
+            std::cout << _trials[_currentTrial].width << " x " << 
+                _trials[_currentTrial].height << ", " << _trials[_currentTrial].timeSec
+                << " seconds." << std::endl;
+
+            return true;
+        }
+
+        else if (kie->getInteraction() == KEY_UP && kie->getKey() == 'b')
+        {
+            // back to previous trial
+            if (_runningTrial)
+            {
+                return true;
+            }
+
+            if (_currentTrial - 1 < 0)
+            {
+                std::cout << "No previous trials." << std::endl;
+                return true;
+            }
+
+            _currentTrial--;
+            
+            std::cout << "Back to previous trial." << std::endl;
+            std::cout << _trials[_currentTrial].width << " x " << 
+                _trials[_currentTrial].height << ", " << _trials[_currentTrial].timeSec
+                << " seconds." << std::endl;
+
+            clear();
+            load(_trials[_currentTrial].width, _trials[_currentTrial].height); 
+            
+            return true;
+        }
+
+        else if (kie->getInteraction() == KEY_UP && kie->getKey() == 'p')
+        {
+            // pause/play
+            if (_runningTrial)
+            {
+                std::cout << "Paused." << std::endl; 
+                _runningTrial = false;
+            }
+            else
+            {
+                std::cout << "Play." << std::endl; 
+                _runningTrial = true;
+
+                if (_resetTime)
+                {
+                    _startTime = PluginHelper::getProgramDuration();
+                    _resetTime = false;
+                    _lastTimeLeft = _trials[_currentTrial].timeSec;
+
+
+                    // Setup write to data file
+                    time_t timet;
+                    time(&timet);
+                    char buf[100];
+
+                    sprintf(buf, "/Logs/%dx%d-%dsec-%ld.txt", _trials[_currentTrial].width, 
+                        _trials[_currentTrial].height, _trials[_currentTrial].timeSec, timet);
+                    _dataFile = _dataDir + buf;
+                    std::cout << "Recording trial to" << _dataFile << std::endl;
+
+                    _fileTimer = PluginHelper::getProgramDuration();
+                }
+            }
+        }
+
+        else if (kie->getInteraction() == KEY_UP && kie->getKey() == 's')
+        {
+            // start/stop
+            if (_runningTrial)
+            {
+                std::cout << "Stopping trial." << std::endl; 
+                _runningTrial = false;
+                _resetTime = true;
+            }
+            else
+            {
+                std::cout << "Starting trial." << std::endl; 
+                _runningTrial = true;
+            }
+        }
+
+        else if (kie->getInteraction() == KEY_UP && kie->getKey() == 'l')
+        {
+            std::cout << "Loading geometry." << std::endl;
+            load(_trials[_currentTrial].width, _trials[_currentTrial].height);
+        }
+
+        else if (kie->getInteraction() == KEY_UP && kie->getKey() == 'h')
+        {
+            std::cout << "Welcome to WaterMaze!\n" <<
+            "l - load geometry\n" <<
+            "n - next trial\n" <<
+            "r - repeat trial\n" <<
+            "b - back to previous trial\n" <<
+            "p - play/pause\n" << 
+            "h - help\n" << 
+            "1-9 - reset position" << std::endl;
+        }
+
+        else if (kie->getInteraction() == KEY_UP && kie->getKey() == '1')
+        {
+            if (_runningTrial)
+            {
+                return true;
+            }
+            osg::Matrixd mat;
+            mat = _tilePositions[0]->getMatrix();
+            PluginHelper::setObjectMatrix(mat);
+        }
+
+        else if (kie->getInteraction() == KEY_UP && kie->getKey() == '2')
+        {
+            if (_runningTrial)
+            {
+                return true;
+            }
+            osg::Matrixd mat;
+            mat = _tilePositions[1]->getMatrix();
+            PluginHelper::setObjectMatrix(mat);
+        }
+
+        else if (kie->getInteraction() == KEY_UP && kie->getKey() == '3')
+        {
+            if (_runningTrial)
+            {
+                return true;
+            }
+            osg::Matrixd mat;
+            mat = _tilePositions[2]->getMatrix();
+            PluginHelper::setObjectMatrix(mat);
+        }
+
+        else if (kie->getInteraction() == KEY_UP && kie->getKey() == '4')
+        {
+            if (_runningTrial)
+            {
+                return true;
+            }
+            osg::Matrixd mat;
+            mat = _tilePositions[3]->getMatrix();
+            PluginHelper::setObjectMatrix(mat);
+        }
+    }
+
 
     TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
-
     if (tie)
     {
+        return false;
         if(tie->getHand() == 0 && tie->getButton() == 0)
         {
             if (tie->getInteraction() == BUTTON_DOWN)
@@ -440,7 +776,14 @@ bool WaterMaze::processEvent(InteractionEvent * event)
 
 void WaterMaze::clear()
 {
+    _loaded = false;
     PluginHelper::getObjectsRoot()->removeChild(_geoRoot);
+
+    _tileSwitches.clear();
+    _tilePositions.clear();
+
+    _geoRoot = new osg::MatrixTransform();
+    PluginHelper::getObjectsRoot()->addChild(_geoRoot);
 }
 
 void WaterMaze::reset()
@@ -453,56 +796,5 @@ void WaterMaze::newHiddenTile()
     _hiddenTile = -1;
 }
 
-/*** Server Functions ***/
-/*
-void WaterMaze::connectToServer()
-{
-
-}
-
-int WaterMaze::init_SPP(int port)
-{
-    char com[100];
-
-    ftStatus = FT_Open(0, &ftHandle);
-    if (ftStatus != 0)
-    {
-        std::cout << "FT_Open failed. Error " << ftStatus << std::endl;
-        return -1;
-    }
-    FT_SetBaudRate(ftHandle, 57600);
-    FT_SetDataCharacteristics(ftHandle, FT_BITS_8, FT_STOP_BITS_1, FT_PARITY_NONE);
-    FT_SetFlowControl(ftHandle, FT_FLOW_NONE, 0, 0);
-    FT_SetLatencyTimer(ftHandle, 2);
-
-    std::cout << "Connected to FTDI device." << std::endl;
-    _sppConnected = true;
-    return 0;
-}
-
-void WaterMaze::close_SPP()
-{
-    if (!_sppConnected)
-        return;
-
-    FT_Close (ftHandle);
-}
-
-void WaterMaze::write_SPP(int bytes, unsigned char* buf)
-{
-    if (!_sppConnected)
-        return;
-   
-    std::cout << "Writing " << buf[0] << std::endl;
-
-    DWORD BytesReceived;
-    DWORD bytesToWrite = 1;
-    int value;
-    value = FT_Write(ftHandle, buf, bytesToWrite, &BytesReceived);
-    int a = BytesReceived;
-
-    return;
-}
-*/
 };
 
