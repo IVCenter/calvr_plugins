@@ -82,7 +82,7 @@ void ANIMCreateViewpoints(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
         text->setAxisAlignment(osgText::Text::XZ_PLANE);
         text->setPosition(osg::Vec3(-0.1, -0.4, -0.1));
         text->setColor(osg::Vec4(1,1,1,1));
-        text->setFont(cvr::CalVR::instance()->getResourceDir() + "/resources/arial.ttf");
+        text->setFont(cvr::CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
 
         sphereGeode->addDrawable(text);
 
@@ -230,7 +230,7 @@ void ANIMAddViewpoint(std::vector<osg::PositionAttitudeTransform*>* fwdVec,
         text->setPosition(osg::Vec3(-0.1, -0.4, -0.1));
         text->setColor(osg::Vec4(1,1,1,1));
 
-        text->setFont(cvr::CalVR::instance()->getResourceDir() + "/resources/arial.ttf");
+        text->setFont(cvr::CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
         if (i != 0 && i != numViews)
             text->setPosition(osg::Vec3(-0.03, -0.4, -0.1));
         sphereGeode->addDrawable(text);

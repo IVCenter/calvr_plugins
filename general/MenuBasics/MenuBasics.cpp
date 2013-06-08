@@ -41,7 +41,7 @@ bool MenuBasics::init()
     drive->setCallback(this);
     fly = new MenuCheckbox("Fly",false);
     fly->setCallback(this);
-    snap = new MenuCheckbox("Snap",false);
+    snap = new MenuCheckbox("Snap",Navigation::instance()->getSnapToGround());
     snap->setCallback(this);
     navScale = new MenuRangeValueCompact("Nav Scale",0.01,100.0,1.0,true,1.5);
     navScale->setCallback(this);

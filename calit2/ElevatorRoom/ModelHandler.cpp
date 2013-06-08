@@ -811,7 +811,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
 
     // Score text
     { 
-    osg::Vec3 pos = osg::Vec3(-100, 1000, -200);
+    osg::Vec3 pos = osg::Vec3(-100, 1000, -100);
     _scoreSwitch = new osg::Switch();
 
     _scoreText = new osgText::Text();
@@ -1420,6 +1420,8 @@ int ModelHandler::getViewedDoor()
 
 void ModelHandler::turnLeft()
 {
+    if (_turningRight) return;
+
     _turningLeft = true;
     _viewedDoor = (_viewedDoor + 1) % NUM_DOORS;
 
@@ -1440,6 +1442,8 @@ void ModelHandler::turnLeft()
 
 void ModelHandler::turnRight()
 {
+    if (_turningLeft) return;
+
     _turningRight = true;
     _viewedDoor = (_viewedDoor - 1) % NUM_DOORS;
     if (_viewedDoor == -1) _viewedDoor += NUM_DOORS;

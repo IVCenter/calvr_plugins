@@ -79,7 +79,7 @@ void ANIMLoadTexturePalletteRoot(osg::PositionAttitudeTransform** xformScaleFwd,
     text->setAxisAlignment(osgText::Text::XZ_PLANE);
     text->setPosition(osg::Vec3(-0.15,0,0));
     text->setColor(osg::Vec4(1,1,1,1));
-    text->setFont(cvr::CalVR::instance()->getResourceDir() + "/resources/arial.ttf");
+    text->setFont(cvr::CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
 
     saveGeode->addDrawable(text);
 
@@ -104,7 +104,7 @@ void ANIMLoadTexturePalletteRoot(osg::PositionAttitudeTransform** xformScaleFwd,
     text2->setAxisAlignment(osgText::Text::XZ_PLANE);
     text2->setPosition(osg::Vec3(-0.2, 0, -0.5));
     text2->setColor(osg::Vec4(1,1,1,1));
-    text2->setFont(cvr::CalVR::instance()->getResourceDir() + "/resources/arial.ttf");
+    text2->setFont(cvr::CalVR::instance()->getHomeDir() + "/resources/arial.ttf");
 
     csGeode->addDrawable(text2);
 
