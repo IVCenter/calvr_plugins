@@ -8,6 +8,7 @@
 #include <cvrKernel/ComController.h>
 #include <cvrKernel/SceneObject.h>
 #include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/NodeMask.h>
 #include <iostream>
 
 //#define NOSYNC
@@ -103,6 +104,22 @@ void Video::postFrame()
 	bool isHead = cvr::ComController::instance()->isMaster();
 	unsigned int i = 0;
 	//isHead = true;
+	for (std::list<PTSUpdate>::iterator iter = m_ptsUpdateList.begin(); iter != m_ptsUpdateList.end(); ++iter)
+	{
+		PTSUpdate update = *iter;
+		int ret = m_videoplayer.RemoveVideo(update.gid, update.pts);
+		if (ret != 0)
+		{
+			printf("Remove video for %u at pts %.4lf failed %d\n", update.gid, update.pts, ret);
+		}
+		else
+		{
+			printf("Remove video for %u at pts %.4lf succeeded \n", update.gid, update.pts);
+		}
+
+
+	}
+	m_ptsUpdateList.clear();
 	if (isHead)
 	{
 		for (std::map<unsigned int, TextureManager*>::iterator iter = m_gidMap.begin(); iter != m_gidMap.end(); ++iter)
@@ -119,6 +136,7 @@ void Video::postFrame()
 				//printf("CheckUpdateVideo returned true\n");
 				PTSUpdate update(gid, m_videoplayer.GetVideoPts(gid));
 				ptsList.push_back(update);
+				printf("Adding an update for video %x and time %.4lf\n", gid, update.pts);
 			}
 		}
 
@@ -141,7 +159,6 @@ void Video::postFrame()
 	}
 
 	m_updateMutex.lock();
-	m_ptsUpdateList.clear();
 	m_ptsUpdateList.splice(m_ptsUpdateList.begin(), ptsList);
 	m_updateMutex.unlock();
 #endif
@@ -184,6 +201,14 @@ void Video::postFrame()
 			std::map<unsigned int, GLuint> texmap = m_videoplayer.GetTextureIDContextMap(myid);
 			std::cout << "Texture id: " << tex << std::endl;
 			osg::Geode* to = manager->AddTexture(myid, texmap, width, height);
+			if (manager->IsStereo())
+			{
+				if (manager->GetStereo() == STEREO_LEFT)
+					to->setNodeMask(to->getNodeMask() & ~cvr::CULL_MASK_RIGHT); // left eye/mono
+				else if (manager->GetStereo() == STEREO_RIGHT)
+					to->setNodeMask(to->getNodeMask() & ~cvr::CULL_MASK_LEFT & ~cvr::CULL_MASK); // right eye only
+			}
+			
 			printf("added manager with gid %d, width %d, height %d\n", myid, width, height);
 			manager->GetSceneObject()->addChild(to);
 		}
@@ -417,7 +442,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 				m_videoplayer.UpdateTexture(gid, contextid);
 				textureTime += timer.getTimeMS();
 				timer.start();
-				//printf("Updated video %x to pts %.4lf for context %d\n", gid, update.pts, contextid);
+				printf("Updated video %x to pts %.4lf for context %d\n", gid, update.pts, contextid);
 			}
 			else
 			{
@@ -426,7 +451,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 		}
 	}
 	//printf("Updated %d videos, times took %.4lfms for video and %.4lfms for texture\n", m_ptsUpdateList.size(), videoTime, textureTime);
-	m_ptsUpdateList.clear();
+	//m_ptsUpdateList.clear();
 	m_updateMutex.unlock();
 
 #endif

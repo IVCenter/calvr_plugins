@@ -2,7 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-TextureManager::TextureManager(unsigned int gid) : m_gid(gid), _scene(0)
+TextureManager::TextureManager(unsigned int gid) : m_gid(gid), _scene(0), m_isStereo(false)
 {
 
 }
@@ -90,3 +90,18 @@ unsigned int TextureManager::GetVideoID(unsigned int idx) const
 		return -1;
 }
 
+void TextureManager::SetStereo(STEREO_EYE eye)
+{
+	m_isStereo = true;
+	m_eye = eye;
+}
+
+bool TextureManager::IsStereo()
+{
+	return m_isStereo;
+}
+
+STEREO_EYE TextureManager::GetStereo()
+{
+	return m_eye;
+}
