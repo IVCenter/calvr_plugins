@@ -31,11 +31,7 @@ bool SoundTest::init()
     std::string port = ConfigManager::getEntry("ColliderConfig.ServerPort");
     std::string host = ConfigManager::getEntry("ColliderConfig.ServerIp");
 
-    const char * p = port.c_str();
-    const char * h = host.c_str();
-
-    _AudioServer = new SCServer(name,"127.0.0.1", "57110", synthDefDir);
-    //_AudioServer = new SCServer(name, h, p, synthDefDir);
+    _AudioServer = new SCServer(name, "127.0.0.1", "57110", synthDefDir);
     _AudioServer->dumpOSC(1); // Commands the remote server to print incoming messages
 
     std::string filename = "bermuda48.wav";
@@ -46,50 +42,48 @@ bool SoundTest::init()
     _sound = new Sound(_AudioServer, fullfilepath, outarray, 0);
 
     if(!(_sound->isValid()))
-    {
-       std::cerr << "Error creating SoundTest. Sound is not valid." << std::endl;
-       return false;
-    }
+       std::cerr << "\nError: Sound -> " << fullfilepath
+	 << " is not valid. Unable to create Sound." << std::endl;
+        
+      	MLMenu = new SubMenu("SoundTest", "SoundTest");
+    	MLMenu->setCallback(this);
+
+   	 _playButton = new MenuButton("Play");
+    	_playButton->setCallback(this);
+    	MLMenu->addItem(_playButton);
+
+   	 _pauseButton = new MenuButton("Pause");
+   	 _pauseButton->setCallback(this);
+    	MLMenu->addItem(_pauseButton);
+
+    	_stopButton = new MenuButton("Stop");
+    	_stopButton->setCallback(this);
+   	 MLMenu->addItem(_stopButton);
+
+    	_resetButton = new MenuButton("Reset to Beginning");
+    	_resetButton->setCallback(this);
+    	MLMenu->addItem(_resetButton);
+
+    	_loopCheckbox = new MenuCheckbox("Loop", true);
+    	_loopCheckbox->setCallback(this);
+    	MLMenu->addItem(_loopCheckbox);
+
+    	_volumeRange = new MenuRangeValue("Volume", 0.0f, 1.0f, 0.5f);
+    	_volumeRange->setCallback(this);
+    	MLMenu->addItem(_volumeRange);
+
+    	_startPos = new MenuRangeValue("Start Position", 0.0f, 1.0f, 0.0f);
+    	_startPos->setCallback(this);
+    	MLMenu->addItem(_startPos);
+
+    	PluginHelper::addRootMenuItem(MLMenu);
+
+    	_sound->setGain(_volumeRange->getValue()); 
+    	_sound->setStartPosition(_startPos->getValue());
+    	_sound->setLoop(true);
+	std::cerr << "\nSoundTest init done.\n";
     
-    MLMenu = new SubMenu("SoundTest", "SoundTest");
-    MLMenu->setCallback(this);
-
-    _playButton = new MenuButton("Play");
-    _playButton->setCallback(this);
-    MLMenu->addItem(_playButton);
-
-    _pauseButton = new MenuButton("Pause");
-    _pauseButton->setCallback(this);
-    MLMenu->addItem(_pauseButton);
-
-    _stopButton = new MenuButton("Stop");
-    _stopButton->setCallback(this);
-    MLMenu->addItem(_stopButton);
-
-    _resetButton = new MenuButton("Reset to Beginning");
-    _resetButton->setCallback(this);
-    MLMenu->addItem(_resetButton);
-
-    _loopCheckbox = new MenuCheckbox("Loop", true);
-    _loopCheckbox->setCallback(this);
-    MLMenu->addItem(_loopCheckbox);
-
-    _volumeRange = new MenuRangeValue("Volume", 0.0f, 1.0f, 0.5f);
-    _volumeRange->setCallback(this);
-    MLMenu->addItem(_volumeRange);
-
-    _startPos = new MenuRangeValue("Start Position", 0.0f, 1.0f, 0.0f);
-    _startPos->setCallback(this);
-    MLMenu->addItem(_startPos);
-
-    PluginHelper::addRootMenuItem(MLMenu);
-
-    _sound->setGain(_volumeRange->getValue()); 
-    _sound->setStartPosition(_startPos->getValue());
-    _sound->setLoop(true);
-   
-    std::cerr << "SoundTest init done.\n";
-    return true;
+     return true;
 }
 
 
@@ -163,6 +157,6 @@ void SoundTest::preFrame()
 
 bool SoundTest::processEvent(cvr::InteractionEvent * event)
 {
-  return true;
+  return false;
 }
 

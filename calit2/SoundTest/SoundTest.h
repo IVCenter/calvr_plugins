@@ -11,8 +11,8 @@
 
 #include <osg/MatrixTransform>
 
-#include "libcollider/Sound.hpp"
-#include "libcollider/SCServer.hpp"
+#include "collider/Sound.hpp"
+#include "collider/SCServer.hpp"
 
 #include <string>
 #include <vector>
