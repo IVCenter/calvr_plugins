@@ -318,6 +318,8 @@ void Points2::readXYB(std::string& filename, osg::Vec3Array* points, osg::Vec4Ar
 		}
 		ifs.close();
 	}
+        int index = colors->size()/2;
+        cout << "Colors: " << colors->at(index).x() << " " << colors->at(index).y() << " " << colors->at(index).z() << "\n";
 }
 
 // intialize

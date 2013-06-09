@@ -77,8 +77,8 @@ int main(int argc, char** argv)
        if(found != string::npos)
        {
          isPts = true;
+         std::cerr << "isPts = true\n";
        }
-
 	std::cerr << "Input file: " << filename << std::endl;
 	std::cerr << "Output file: " << newFile << std::endl;
 
@@ -101,8 +101,10 @@ int main(int argc, char** argv)
         string value, values;
         stringstream ss;
         stringstream ssdouble;
+        ssdouble.precision(19);
 	float point[3];
 	float color[3];
+        float skip;
 	unsigned int linecount = 0;
 
         while( getline( ifs, values ) )
@@ -124,9 +126,10 @@ int main(int argc, char** argv)
                         {
                                 ssdouble >> point[index];
                         }
-                        else if(index == 3 && isPts)
+                        else if(index < 4 && isPts)
                         {
                            //Skip PTS Intensity value;
+                           ssdouble >> skip;
                         } 
                         else if(isPts)
                         {
