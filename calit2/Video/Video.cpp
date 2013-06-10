@@ -201,15 +201,24 @@ void Video::postFrame()
 			std::map<unsigned int, GLuint> texmap = m_videoplayer.GetTextureIDContextMap(myid);
 			std::cout << "Texture id: " << tex << std::endl;
 			osg::Geode* to = manager->AddTexture(myid, texmap, width, height);
-			if (manager->IsStereo())
+			//if (manager->IsStereo())
+			if (myid & 0x40000000)
 			{
-				if (manager->GetStereo() == STEREO_LEFT)
-					to->setNodeMask(to->getNodeMask() & ~cvr::CULL_MASK_RIGHT); // left eye/mono
-				else if (manager->GetStereo() == STEREO_RIGHT)
+				printf("STEREO MODE DETECTED\n");
+				//if (manager->GetStereo() == STEREO_RIGHT)
+				if (myid & 0x01000000)
+				{
+					printf("STEREO RIGHT\n");
 					to->setNodeMask(to->getNodeMask() & ~cvr::CULL_MASK_LEFT & ~cvr::CULL_MASK); // right eye only
+				}
+				else
+				{
+					printf("STEREO LEFT\n");
+					to->setNodeMask(to->getNodeMask() & ~cvr::CULL_MASK_RIGHT); // left eye/mono
+				}
 			}
 			
-			printf("added manager with gid %d, width %d, height %d\n", myid, width, height);
+			printf("added manager with gid %x, width %d, height %d\n", myid, width, height);
 			manager->GetSceneObject()->addChild(to);
 		}
 		cvr::PluginHelper::registerSceneObject(manager->GetSceneObject(), "Video");
@@ -251,10 +260,14 @@ void Video::preFrame()
 			TextureManager* manager = new TextureManager(gid);
 			int nrows = 1;
 			int ncols = 1;
+			bool isStereo;
 			if (gid & 0x80000000) // multi-tile video
 			{
-				nrows = ((gid & 0x7E000000) >> 25) + 1;
-				ncols = ((gid & 0x01F80000) >> 19) + 1;
+				//nrows = ((gid & 0x7E000000) >> 25) + 1;
+				//ncols = ((gid & 0x01F80000) >> 19) + 1;
+				nrows = ((gid & 0x3E000000) >> 25) + 1;
+				ncols = ((gid & 0x00F80000) >> 19) + 1;
+				isStereo = (gid & 0x40000000);
 			}
 
 			std::cout << "Loading video gid " << gid << ", with " << nrows << " rows and " << ncols << " cols." << std::endl;
@@ -268,6 +281,11 @@ void Video::preFrame()
 					unsigned int myid = gid | (y << 13) | (x << 7); 
 					// must add the ID for this tile so that it gets its texture added later in postFrame
 					manager->AddGID(myid);
+					if (isStereo)
+					{
+						myid |= 0x01000000;
+						manager->AddGID(myid);
+					}
 					/*
 					   All moved to post frame after the texture ID has been generated in a draw call
 					//XXX enable video on the head node.  This doesn't seem to work though
@@ -442,11 +460,11 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 				m_videoplayer.UpdateTexture(gid, contextid);
 				textureTime += timer.getTimeMS();
 				timer.start();
-				printf("Updated video %x to pts %.4lf for context %d\n", gid, update.pts, contextid);
+				//printf("Updated video %x to pts %.4lf for context %d\n", gid, update.pts, contextid);
 			}
 			else
 			{
-				printf("No update for video %x to pts %.4lf for context %d\n", gid, update.pts, contextid);
+				//printf("No update for video %x to pts %.4lf for context %d\n", gid, update.pts, contextid);
 			}
 		}
 	}

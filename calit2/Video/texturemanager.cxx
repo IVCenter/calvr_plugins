@@ -38,8 +38,8 @@ osg::Geode* TextureManager::AddTexture(unsigned int gid, std::map<unsigned int, 
 
 	if (gid & 0x80000000)
 	{
-		nrows = ((gid& 0x7E000000) >> 25) + 1.;
-        	ncols = ((gid& 0x01F80000) >> 19) + 1.;
+		nrows = ((gid& 0x3E000000) >> 25) + 1.;
+        	ncols = ((gid& 0x00F80000) >> 19) + 1.;
 		myrow = (gid & 0x0007E000) >> 13;
 		mycol = (gid & 0x00001F80) >> 7;
 	}
