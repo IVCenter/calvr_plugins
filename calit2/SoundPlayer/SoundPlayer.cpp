@@ -65,7 +65,7 @@ bool SoundPlayer::init()
 
 	    if(sound->isValid())
 	    {
-		sounds->setGain(_volumeSlider->getValue());
+		sound->setGain(_volumeSlider->getValue());
 		_sounds.push_back(sound);
 	    }
 
@@ -75,7 +75,7 @@ bool SoundPlayer::init()
 	        _sounds.push_back(NULL);
 		std::cout << "Unable to load sound " << path << std::endl;
 	    }
-        }
+        
 
 	MenuButton * button = new MenuButton(filenames[i]);
 	button->setCallback(this);
@@ -136,6 +136,6 @@ void SoundPlayer::preFrame()
 
 bool SoundPlayer::processEvent(cvr::InteractionEvent * event)
 {
-
+	return false;
 }
 
