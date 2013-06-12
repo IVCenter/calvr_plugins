@@ -39,7 +39,6 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <X11/Xlib.h>
-#include <spnav.h>
 
 //#include <ftdi.h>
 #include <ftd2xx.h>

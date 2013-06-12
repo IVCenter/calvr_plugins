@@ -247,26 +247,6 @@ bool ElevatorRoom::init()
     //PluginHelper::getObjectsRoot()->addChild(_handsoundPAT);
 
 
-    // Spacenav
-    _transMult = ConfigManager::getFloat("Plugin.SpaceNavigator.TransMult", 1.0);
-    _rotMult = ConfigManager::getFloat("Plugin.SpaceNavigator.RotMult", 1.0);
-    _transcale = -0.05 * _transMult;
-    _rotscale = -0.005 * _rotMult;//-0.000009 * _rotMult;
-
-    bool status = false;
-    if(ComController::instance()->isMaster())
-    {
-        if(spnav_open() == -1) 
-        {
-            cerr << "SpaceNavigator: Failed to connect to the space navigator daemon" << endl;
-        }
-        else
-        {
-            status = true;
-        }
-    }
-
-
     // Serial port communication
     if (ComController::instance()->isMaster())
     {
@@ -618,75 +598,6 @@ void ElevatorRoom::preFrame()
         return;
 
     Matrixd finalmat;
-
-    if(ComController::instance()->isMaster())
-    {
-        spnav_event sev;
-
-        double x, y, z;
-        x = y = z = 0.0;
-        double rx, ry, rz;
-        rx = ry = rz = 0.0;
-
-        while(spnav_poll_event(&sev)) 
-        {
-            if(sev.type == SPNAV_EVENT_MOTION) 
-            {
-                x += sev.motion.x;
-                y += sev.motion.z;
-                z += sev.motion.y;
-                rx += sev.motion.rx;
-                ry += sev.motion.rz;
-                rz += sev.motion.ry;
-                // printf("got motion event: t(%d, %d, %d) ", sev.motion.x, sev.motion.y, sev.motion.z);
-                // printf("r(%d, %d, %d)\n", sev.motion.rx, sev.motion.ry, sev.motion.rz);
-            } 
-            else 
-            {	// SPNAV_EVENT_BUTTON 
-                //printf("got button %s event b(%d)\n", sev.button.press ? "press" : "release", sev.button.bnum);
-            }
-        }
-
-        x *= 0;//_transcale;
-        y *= 0;//_transcale;
-        z *= 0;//_transcale;
-        rx *= 0;//_rotscale;
-        ry *= 0;//_rotscale;
-        rz *= _rotscale;
-
-        Matrix view = PluginHelper::getHeadMat();
-        Vec3 headpos = view.getTrans();
-        Vec3 trans = Vec3(x, y, z);
-
-        trans = (trans * view) - headpos;
-
-        Matrix tmat;
-        tmat.makeTranslate(trans);
-        Vec3 xa = Vec3(1.0, 0.0, 0.0);
-        Vec3 ya = Vec3(0.0, 1.0, 0.0);
-        Vec3 za = Vec3(0.0, 0.0, 1.0);
-
-        xa = osg::Vec3();//(xa * view) - campos;
-        ya = osg::Vec3();//(ya * view) - campos;
-        za = (za * view) - headpos;
-
-        Matrix rot;
-        rot.makeRotate(rx, xa, ry, ya, rz, za);
-
-        Matrix ctrans, nctrans;
-        ctrans.makeTranslate(headpos);
-        nctrans.makeTranslate(-headpos);
-
-        finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
-
-        ComController::instance()->sendSlaves((char *)finalmat.ptr(), sizeof(double[16]));
-    }
-    else
-    {
-        ComController::instance()->readMaster((char *)finalmat.ptr(), sizeof(double[16]));
-    }
-
-    PluginHelper::setObjectMatrix(finalmat);
 }
 
 void ElevatorRoom::menuCallback(MenuItem * item)
