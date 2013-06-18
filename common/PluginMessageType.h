@@ -168,7 +168,8 @@ struct LayoutManagerAddLayoutData
 
 enum LayoutManagerMessageType
 {
-    LM_ADD_LAYOUT = 0
+    LM_ADD_LAYOUT = 0,
+    LM_START_LAYOUT
 };
 
 #endif

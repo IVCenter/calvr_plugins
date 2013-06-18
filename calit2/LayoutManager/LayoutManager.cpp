@@ -39,23 +39,12 @@ LayoutManager::~LayoutManager()
 
 void LayoutManager::menuCallback(MenuItem* menuItem)
 {
-    if (!mActiveLayout)
+    for (ButtonLayoutMap::iterator i = mMenuLayoutsMap.begin();
+        mMenuLayoutsMap.end() != i;
+        ++i)
     {
-        for (ButtonLayoutMap::iterator i = mMenuLayoutsMap.begin();
-            mMenuLayoutsMap.end() != i;
-            ++i)
-        {
-            if(i->first == menuItem)
-            {
-                mActiveLayout = i->second;
-
-                if (!mActiveLayout->Start())
-                {
-                    std::cerr << "Failed to start layout:\t" << mActiveLayout->Name() << std::endl;
-                    mActiveLayout = NULL;
-                }
-	    }
-        }
+        if(i->first == menuItem)
+            triggerLayout( i->second );
     }
 }
 
@@ -87,6 +76,33 @@ void LayoutManager::message(int type, char * &data, bool collaborative)
 
         if (1 == mLMMenu->getNumChildren())
             MenuSystem::instance()->addMenuItem(mLMMenu);
+    }
+    else if (LM_START_LAYOUT == type)
+    {
+        std::string name(data);
+
+        for (ButtonLayoutMap::iterator i = mMenuLayoutsMap.begin();
+            mMenuLayoutsMap.end() != i;
+            ++i)
+	{
+            if (i->second->Name() == name)
+                triggerLayout( i->second );
+	}
+    }
+}
+
+void
+LayoutManager::triggerLayout(Layout* layout)
+{
+    if (!mActiveLayout)
+    {
+        mActiveLayout = layout;
+
+        if (!mActiveLayout->Start())
+        {
+            std::cerr << "Failed to start layout:\t" << mActiveLayout->Name() << std::endl;
+            mActiveLayout = NULL;
+        }
     }
 }
 

@@ -31,6 +31,8 @@ protected:
     ButtonLayoutMap mMenuLayoutsMap;
 
     Layout* mActiveLayout;
+
+    void triggerLayout(Layout* layout);
 };
 
 #endif /*_LAYOUT_MANAGER_H_*/
