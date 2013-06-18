@@ -139,6 +139,9 @@ void MicrobeGraphObject::dumpState(std::ostream & out)
 	out << _testLabel << std::endl;
 	out << _patientid << std::endl;
     }
+
+    out << _graph->getDisplayRangeMin() << std::endl;
+    out << _graph->getDisplayRangeMax() << std::endl;
 }
 
 bool MicrobeGraphObject::loadState(std::istream & in)
@@ -170,6 +173,11 @@ bool MicrobeGraphObject::loadState(std::istream & in)
 
 	setGraph(title,patientid,tlabel,microbes,lsOrder);
     }
+
+    float drmin, drmax;
+    in >> drmin >> drmax;
+
+    _graph->setDisplayRange(drmin,drmax);
 
     return true;
 }
@@ -467,6 +475,30 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int micro
     _lsOrdered = lsOrdering;
 
     return loadGraphData(valuess.str(), orderss.str(), lsOrdering);
+}
+
+void MicrobeGraphObject::objectAdded()
+{
+    GraphLayoutObject * layout = dynamic_cast<GraphLayoutObject*>(_parent);
+    if(layout && layout->getPhylumKeyObject())
+    {
+	bool addKey = !layout->getPhylumKeyObject()->hasRef();
+	layout->getPhylumKeyObject()->ref(this);
+
+	if(addKey)
+	{
+	    layout->addLineObject(layout->getPhylumKeyObject());
+	}
+    }
+}
+
+void MicrobeGraphObject::objectRemoved()
+{
+    GraphLayoutObject * layout = dynamic_cast<GraphLayoutObject*>(_parent);
+    if(layout && layout->getPhylumKeyObject())
+    {
+	layout->getPhylumKeyObject()->unref(this);
+    }
 }
 
 bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string orderQuery, bool lsOrdering)

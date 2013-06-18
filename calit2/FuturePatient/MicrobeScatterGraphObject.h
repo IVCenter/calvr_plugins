@@ -52,8 +52,6 @@ class MicrobeScatterGraphObject : public LayoutTypeObject, public LogValueRangeO
         void makeSelect();
         void updateSelect();
 
-        void makeGraphKey();
-
         mysqlpp::Connection * _conn;
         GroupedScatterPlot * _graph;
 
@@ -68,8 +66,6 @@ class MicrobeScatterGraphObject : public LayoutTypeObject, public LogValueRangeO
         };
         static std::vector<std::vector<struct DataEntry> > _data;
         static std::map<std::string,int> _phylumIndexMap;
-
-        static GraphKeyObject * _graphKey;
 
         osg::ref_ptr<osg::Geode> _selectGeode;
         osg::ref_ptr<osg::Geometry> _selectGeom;

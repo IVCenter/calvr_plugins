@@ -31,12 +31,21 @@ osgText::Text * GraphGlobals::makeText(std::string text, osg::Vec4 color)
     return textNode;
 }
 
-void GraphGlobals::makeTextFit(osgText::Text * text, float maxSize)
+void GraphGlobals::makeTextFit(osgText::Text * text, float maxSize, bool horizontal)
 {
     checkInit();
 
     osg::BoundingBox bb = text->getBound();
-    float width = bb.xMax() - bb.xMin();
+    float width;
+    if(horizontal)
+    {
+	width = bb.xMax() - bb.xMin();
+    }
+    else
+    {
+	width = bb.zMax() - bb.zMin();
+    }
+
     if(width <= maxSize)
     {
 	return;
@@ -53,7 +62,14 @@ void GraphGlobals::makeTextFit(osgText::Text * text, float maxSize)
 	str = str.substr(0,str.length()-1);
 	text->setText(str + "..");
 	bb = text->getBound();
-	width = bb.xMax() - bb.xMin();
+	if(horizontal)
+	{
+	    width = bb.xMax() - bb.xMin();
+	}
+	else
+	{
+	    width = bb.zMax() - bb.zMin();
+	}
 	if(width <= maxSize)
 	{
 	    return;

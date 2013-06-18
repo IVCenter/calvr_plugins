@@ -383,7 +383,7 @@ void GroupedBarGraph::selectItems(std::string & group, std::vector<std::string> 
     float selectedAlpha = 1.0;
     float notSelectedAlpha;
 
-    if(keys.size())
+    if(group.length())
     { 
 	notSelectedAlpha = 0.3;
     }
@@ -446,19 +446,31 @@ void GroupedBarGraph::selectItems(std::string & group, std::vector<std::string> 
 	    float alpha = notSelectedAlpha;
 	    if(selectGroup)
 	    {
-		for(int k = 0; k < keys.size(); ++k)
+		bool found = false;
+		if(!keys.size())
 		{
-		    if(keys[k] == it->second[j].first)
+		    found = true;
+		}
+		else
+		{
+		    for(int k = 0; k < keys.size(); ++k)
 		    {
-			alpha = selectedAlpha;
-
-			verts->push_back(osg::Vec3(barLeft + barWidth,-0.5,graphBottom));
-			verts->push_back(osg::Vec3(barLeft + barWidth,-0.5,-_height/2.0));
-			verts->push_back(osg::Vec3(barLeft,-0.5,-_height/2.0));
-			verts->push_back(osg::Vec3(barLeft,-0.5,graphBottom));
-
-			break;
+			if(keys[k] == it->second[j].first)
+			{
+			    found = true;
+			    break;
+			}
 		    }
+		}
+
+		if(found)
+		{
+		    alpha = selectedAlpha;
+
+		    verts->push_back(osg::Vec3(barLeft + barWidth,-0.5,graphBottom));
+		    verts->push_back(osg::Vec3(barLeft + barWidth,-0.5,-_height/2.0));
+		    verts->push_back(osg::Vec3(barLeft,-0.5,-_height/2.0));
+		    verts->push_back(osg::Vec3(barLeft,-0.5,graphBottom));
 		}
 	    }
 
@@ -826,9 +838,10 @@ void GroupedBarGraph::updateAxis()
     float charSize = targetWidth / maxWidthValue;
     float maxSize = _maxBottomPaddingMult * _height - 2.0 * tickSize;
 
+
     if(charSize * maxHeightValue > maxSize)
     {
-	charSize *= maxSize / (charSize * maxHeightValue);
+	//charSize *= maxSize / (charSize * maxHeightValue);
 	_currentBottomPaddingMult = _maxBottomPaddingMult;
     }
     else
@@ -850,6 +863,7 @@ void GroupedBarGraph::updateAxis()
 	//std::cerr << "text currentx: " << currentX << " z: " << zValue << std::endl;
 	textList[i]->setPosition(osg::Vec3(currentX,-1,zValue));
 	textList[i]->setCharacterSize(charSize);
+	GraphGlobals::makeTextFit(textList[i],maxSize,false);
 	_axisGeode->addDrawable(textList[i]);
 	currentX += barWidth;
     }

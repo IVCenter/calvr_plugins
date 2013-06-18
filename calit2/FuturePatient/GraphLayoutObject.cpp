@@ -14,6 +14,7 @@ GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std
     _height = height;
     _maxRows = maxRows;
     makeGeometry();
+    makeKeys();
 
     _resetLayoutButton = new MenuButton("Reset Layout");
     _resetLayoutButton->setCallback(this);
@@ -111,8 +112,8 @@ void GraphLayoutObject::removeGraphObject(LayoutTypeObject * object)
 	    object->removeMenuItem(_deleteButtonMap[object]);
 	    delete _deleteButtonMap[object];
 	    _deleteButtonMap.erase(object);
-	    removeChild(object);
 	    object->objectRemoved();
+	    removeChild(object);
 	    _objectList.erase(it);
 	    if(object->getLayoutDoesDelete())
 	    {
@@ -247,8 +248,8 @@ void GraphLayoutObject::removeAll()
 {
     for(int i = 0; i < _objectList.size(); i++)
     {
-	removeChild(_objectList[i]);
 	_objectList[i]->objectRemoved();
+	removeChild(_objectList[i]);
 	if(_objectList[i]->getLayoutDoesDelete())
 	{
 	    delete _objectList[i];
@@ -274,6 +275,8 @@ void GraphLayoutObject::removeAll()
     _currentSelectedPatients.clear();
 
     _objectList.clear();
+
+    setTitle(getName());
 }
 
 void GraphLayoutObject::perFrame()
@@ -346,6 +349,7 @@ void GraphLayoutObject::setSyncTime(bool sync)
 
 bool GraphLayoutObject::dumpState(std::ostream & out)
 {
+    out << getName() << std::endl;
     out << _objectList.size() << std::endl;
     for(int i = 0; i < _objectList.size(); ++i)
     {
@@ -378,6 +382,11 @@ bool GraphLayoutObject::loadState(std::istream & in)
 {
     _syncTimeCB->setValue(false);
     _zoomCB->setValue(false);
+
+    char tempstr[1024];
+    in.getline(tempstr,1024);
+    in.getline(tempstr,1024);
+    setTitle(tempstr);
 
     int numObjects;
     in >> numObjects;
@@ -424,8 +433,6 @@ bool GraphLayoutObject::loadState(std::istream & in)
     in >> selectedGroup >> selectedMicrobes;
     //std::cerr << "Group: " << selectedGroup << " Microbes: " << selectedMicrobes << std::endl;
     
-    char tempstr[1024];
-
     if(selectedGroup || selectedMicrobes)
     {
 	// call consume previous end line
@@ -1059,20 +1066,45 @@ void GraphLayoutObject::makeGeometry()
     osg::StateSet * stateset = _layoutGeode->getOrCreateStateSet();
     stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
 
-    float targetWidth = _width;
-    float targetHeight = _height * 0.1 * 0.9;
+    setTitle(getName());
+}
 
-    _text = GraphGlobals::makeText(getName(),osg::Vec4(1.0,1.0,1.0,1.0));
+void GraphLayoutObject::makeKeys()
+{
+    _patientKey = new GraphKeyObject("Patinet Key",false,false,false,false,false);
 
-    osg::BoundingBox bb = _text->getBound();
-    float hsize = targetHeight / (bb.zMax() - bb.zMin());
-    float wsize = targetWidth / (bb.xMax() - bb.xMin());
-    _text->setCharacterSize(std::min(hsize,wsize));
-    _text->setAxisAlignment(osgText::Text::XZ_PLANE);
+    std::vector<osg::Vec4> colors;
+    std::vector<std::string> labels;
 
-    _text->setPosition(osg::Vec3(0,1.5,halfh+(_height*0.05)));
+    labels.push_back("Smarr");
+    labels.push_back("Crohns");
+    labels.push_back("UC");
+    labels.push_back("Healthy");
 
-    _layoutGeode->addDrawable(_text);
+    for(int i = 0; i < labels.size(); ++i)
+    {
+	colors.push_back(ColorGenerator::makeColor(i,labels.size()));
+    }
+    
+    _patientKey->setCallbackType(KC_PATIENT_TYPE);
+    _patientKey->setKeys(colors,labels);
+
+    _phylumKey = new GraphKeyObject("Phylum Key",false,false,false,false,false);
+    
+    colors.clear();
+    labels.clear();
+
+    for(std::map<std::string,osg::Vec4>::const_iterator it = GraphGlobals::getPhylumColorMap().begin(); it != GraphGlobals::getPhylumColorMap().end(); ++it)
+    {
+	colors.push_back(it->second);
+	labels.push_back(it->first);
+    }
+
+    labels.push_back("Other");
+    colors.push_back(GraphGlobals::getDefaultPhylumColor());
+
+    _phylumKey->setCallbackType(KC_PHYLUM);
+    _phylumKey->setKeys(colors,labels);
 }
 
 void GraphLayoutObject::updateGeometry()
@@ -1091,7 +1123,7 @@ void GraphLayoutObject::updateGeometry()
 
     _verts->dirty();
 
-    float targetWidth = _width;
+    float targetWidth = _width * 0.9;
     float targetHeight = _height * 0.1 * 0.9;
     _text->setCharacterSize(1.0);
     osg::BoundingBox bb = _text->getBound();
@@ -1224,6 +1256,35 @@ void GraphLayoutObject::checkLineRefs()
     {
 	removeLineObject(removeList[i]);
     }
+}
+
+void GraphLayoutObject::setTitle(std::string title)
+{
+    if(!_layoutGeode)
+    {
+	return;
+    }
+
+    if(_text)
+    {
+	_layoutGeode->removeDrawable(_text);
+    }
+
+    float targetWidth = _width * 0.9;
+    float targetHeight = _height * 0.1 * 0.9;
+    float halfh = (_height * 1.05) / 2.0;
+
+    _text = GraphGlobals::makeText(title,osg::Vec4(1.0,1.0,1.0,1.0));
+
+    osg::BoundingBox bb = _text->getBound();
+    float hsize = targetHeight / (bb.zMax() - bb.zMin());
+    float wsize = targetWidth / (bb.xMax() - bb.xMin());
+    _text->setCharacterSize(std::min(hsize,wsize));
+    _text->setAxisAlignment(osgText::Text::XZ_PLANE);
+
+    _text->setPosition(osg::Vec3(0,1.5,halfh+(_height*0.05)));
+
+    _layoutGeode->addDrawable(_text);
 }
 
 bool GraphLayoutObject::loadObject(std::istream & in)

@@ -17,7 +17,7 @@
 
 #include <mysql++/mysql++.h>
 
-#define SAVED_LAYOUT_VERSION 2
+#define SAVED_LAYOUT_VERSION 3
 
 using namespace cvr;
 

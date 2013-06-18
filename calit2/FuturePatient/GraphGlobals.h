@@ -8,11 +8,17 @@
 #include <string>
 #include <map>
 
+enum FPAxisType
+{
+    FPAT_LINEAR=0,
+    FPAT_LOG
+};
+
 class GraphGlobals
 {
     public:
         static osgText::Text * makeText(std::string text, osg::Vec4 color);
-        static void makeTextFit(osgText::Text * text, float maxSize);
+        static void makeTextFit(osgText::Text * text, float maxSize, bool horizontal = true);
         
         static const osg::Vec4 & getBackgroundColor();
         static const osg::Vec4 & getDataBackgroundColor();

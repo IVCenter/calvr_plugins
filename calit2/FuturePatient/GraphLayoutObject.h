@@ -10,6 +10,7 @@
 #include "GraphObject.h"
 #include "MicrobeGraphObject.h"
 #include "MicrobeBarGraphObject.h"
+#include "GraphKeyObject.h"
 
 #include <osg/Geometry>
 #include <osg/Geode>
@@ -47,6 +48,16 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         void setRows(float rows);
         void setSyncTime(bool sync);
 
+        GraphKeyObject * getPatientKeyObject()
+        {
+            return _patientKey;
+        }
+
+        GraphKeyObject * getPhylumKeyObject()
+        {
+            return _phylumKey;
+        }
+
         bool dumpState(std::ostream & out);
         bool loadState(std::istream & in);
 
@@ -58,9 +69,11 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         virtual void leaveCallback(int handID);
     protected:
         void makeGeometry();
+        void makeKeys();
         void updateGeometry();
         void updateLayout();
         void checkLineRefs();
+        void setTitle(std::string title);
 
         bool loadObject(std::istream & in);
 
@@ -74,6 +87,9 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         std::vector<std::string> _currentSelectedMicrobes;
         std::string _currentSelectedPatientGroup;
         std::vector<std::string> _currentSelectedPatients;
+
+        GraphKeyObject * _phylumKey;
+        GraphKeyObject * _patientKey;
 
         float _width;
         float _height;
