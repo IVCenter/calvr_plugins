@@ -30,9 +30,9 @@ protected:
         struct TransitionState
         {
             osg::Vec3 startPos;
-            //float startScale;
+            float startScale;
             osg::Vec3 endPos;
-            //float endScale;
+            float endScale;
         };
 
         typedef std::map< cvr::SceneObject*, TransitionState > SceneObjTrans;

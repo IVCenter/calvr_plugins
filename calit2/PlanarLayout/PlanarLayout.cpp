@@ -63,7 +63,7 @@ PlanarLayout::PlanarLayoutAlgorithm::Start( void )
 
         for (unsigned int i = 0; i < scene_objects.size(); ++i)
         {
-            if (scene_objects[i]->getMovable())
+            if (scene_objects[i]->getMovable() && !scene_objects[i]->getNavigationOn())
                 movable_objects.push_back( scene_objects[i] );
         }
 
@@ -78,14 +78,14 @@ PlanarLayout::PlanarLayoutAlgorithm::Start( void )
         ;
 
     double x_inc = SceneManager::instance()->getTiledWallWidth() / cols;
-    double y_inc = SceneManager::instance()->getTiledWallHeight() / rows;
+    double z_inc = SceneManager::instance()->getTiledWallHeight() / rows;
 
     unsigned int m = 0;
 
     for (unsigned int r = 0; r < rows && m < movable_objects.size(); ++r)
     {
         double pos_z = SceneManager::instance()->getTiledWallHeight() / 2.0
-                    - (y_inc / 2.0) - (r * y_inc);
+                    - (z_inc / 2.0) - (r * z_inc);
 
         for (unsigned int c = 0; c < cols && m < movable_objects.size(); ++c)
         {
@@ -93,8 +93,16 @@ PlanarLayout::PlanarLayoutAlgorithm::Start( void )
                         + (x_inc / 2.0) + (c * x_inc);
 
             TransitionState trans;
+
+            trans.startScale = movable_objects[m]->getScale();
+            osg::BoundingBox box = movable_objects[m]->getOrComputeBoundingBox();
+            double x_scale = x_inc / (box.xMax()-box.xMin());
+            double z_scale = z_inc / (box.zMax()-box.zMin());
+            trans.endScale = (x_scale < z_scale) ? x_scale : z_scale;
+
             trans.startPos = movable_objects[m]->getPosition();
             trans.endPos = Vec3(pos_x, 0, pos_z);
+            trans.endPos -= box.center() * trans.endScale;
             trans.endPos = SceneManager::instance()->getTiledWallTransform() * trans.endPos;
 
             mObjTrans[ movable_objects[m] ] = trans;
@@ -124,9 +132,13 @@ PlanarLayout::PlanarLayoutAlgorithm::Update( void )
         if (mObjTrans.end() == it)
             continue;
 
-        Vec3 pos = it->second.endPos + (it->second.startPos - it->second.endPos) * (1.0 - mTimeElapsed / TOTAL_TIME);
+        double progress = 1.0 - mTimeElapsed / TOTAL_TIME;
+
+        Vec3 pos = it->second.endPos + (it->second.startPos - it->second.endPos) * progress;
+        float scale = it->second.endScale + (it->second.startScale - it->second.endScale) * progress;
 
         it->first->setPosition( pos );
+        it->first->setScale( scale );
     }
 
     return (TOTAL_TIME <= mTimeElapsed);
