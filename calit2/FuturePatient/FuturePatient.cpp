@@ -31,10 +31,15 @@ FuturePatient::FuturePatient()
     _multiObject = NULL;
     _currentSBGraph = NULL;
     _currentSymptomGraph = NULL;
+    _mls = NULL;
 }
 
 FuturePatient::~FuturePatient()
 {
+    if(_mls)
+    {
+        delete _mls;
+    }
 }
 
 bool FuturePatient::init()
@@ -84,6 +89,18 @@ bool FuturePatient::init()
     //PluginHelper::getObjectsRoot()->addChild(dg->getGraphRoot());
 
     //makeGraph("SIga");
+    
+    if(ComController::instance()->isMaster())
+    {
+        int port = ConfigManager::getInt("value","Plugin.FuturePatient.PresetListenPort",12012);
+        _mls = new MultiListenSocket(port);
+        if(!_mls->setup())
+        {
+            std::cerr << "Error setting up MultiListen Socket on port " << port << " ." << std::endl;
+            delete _mls;
+            _mls = NULL;
+        }
+    }
     
     _fpMenu = new SubMenu("FuturePatient");
 
@@ -235,6 +252,29 @@ bool FuturePatient::init()
 
     _eventDone = new MenuButton("Done");
     _eventDone->setCallback(this);
+
+    _scatterMenu = new SubMenu("Scatter Plots");
+    _fpMenu->addItem(_scatterMenu);
+
+    _scatterFirstLabel = new MenuText("Primary Phylum:",1.0,false);
+    _scatterMenu->addItem(_scatterFirstLabel);
+
+    _scatterFirstList = new MenuList();
+    _scatterMenu->addItem(_scatterFirstList);
+
+    _scatterSecondLabel = new MenuText("Secondary Phylum:",1.0,false);
+    _scatterMenu->addItem(_scatterSecondLabel);
+
+    _scatterSecondList = new MenuList();
+    _scatterMenu->addItem(_scatterSecondList);
+
+    _scatterLoad = new MenuButton("Load");
+    _scatterLoad->setCallback(this);
+    _scatterMenu->addItem(_scatterLoad);
+
+    _scatterLoadAll = new MenuButton("Load All");
+    _scatterLoadAll->setCallback(this);
+    _scatterMenu->addItem(_scatterLoadAll);
 
     _removeAllButton = new MenuButton("Remove All");
     _removeAllButton->setCallback(this);
@@ -656,15 +696,211 @@ bool FuturePatient::init()
 	delete[] lfList;
     }
 
+    lfList = NULL;
+    listEntries = 0;
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    mysqlpp::Query q = _conn->query("select distinct phylum from Microbes order by phylum;");
+	    mysqlpp::StoreQueryResult res = q.store();
+
+	    listEntries = res.num_rows();
+
+	    if(listEntries)
+	    {
+		lfList = new struct listField[listEntries];
+
+		for(int i = 0; i < listEntries; i++)
+		{
+		    strncpy(lfList[i].entry,res[i]["phylum"].c_str(),255);
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&listEntries,sizeof(int));
+	if(listEntries)
+	{
+	    ComController::instance()->sendSlaves(lfList,sizeof(struct listField)*listEntries);
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&listEntries,sizeof(int));
+	if(listEntries)
+	{
+	    lfList = new struct listField[listEntries];
+	    ComController::instance()->readMaster(lfList,sizeof(struct listField)*listEntries);
+	}
+    }
+
+    stringlist.clear();
+    for(int i = 0; i < listEntries; i++)
+    {
+	stringlist.push_back(lfList[i].entry);
+    }
+
+    _scatterFirstList->setValues(stringlist);
+    _scatterSecondList->setValues(stringlist);
+
+    if(lfList)
+    {
+	delete[] lfList;
+    } 
+
     return true;
 }
 
 void FuturePatient::preFrame()
 {
+    int numCommands = 0;
+    int * commands = NULL;
+    if(ComController::instance()->isMaster())
+    {
+        if(_mls)
+        {
+            CVRSocket * con;
+            if((con = _mls->accept()))
+            {
+                std::cerr << "Adding socket." << std::endl;
+                con->setNoDelay(true);
+                _socketList.push_back(con);
+            }
+        }
+
+        std::vector<int> messageList;
+        checkSockets(messageList);
+
+        numCommands = messageList.size();
+
+        ComController::instance()->sendSlaves(&numCommands, sizeof(int));
+
+        if(numCommands)
+        {
+            commands = new int[numCommands];
+            for(int i = 0; i < numCommands; i++)
+            {
+                commands[i] = messageList[i];
+            }
+            ComController::instance()->sendSlaves(commands,numCommands * sizeof(int));
+        }
+    }
+    else
+    {
+        ComController::instance()->readMaster(&numCommands, sizeof(int));
+        if(numCommands)
+        {
+            commands = new int[numCommands];
+            ComController::instance()->readMaster(commands,numCommands * sizeof(int));
+        }
+    }
+
+   if(numCommands)
+    {
+        std::stringstream filess;
+        filess << "Preset" << commands[numCommands-1] << ".cfg";
+        std::string file = filess.str();
+
+        bool loaded = false;
+        for(int i = 0; i < _loadLayoutButtons.size(); ++i)
+        {
+            if(_loadLayoutButtons[i]->getText() == file)
+            {
+                loaded = true;
+                menuCallback(_loadLayoutButtons[i]);
+                break;
+            }
+        }
+
+        if(!loaded)
+        {
+            std::cerr << "Unable to find preset config: " << file << std::endl;
+        }
+
+        delete[] commands;
+    }
+
     if(_layoutObject)
     {
 	_layoutObject->perFrame();
     }
+}
+
+void FuturePatient::checkSockets(std::vector<int> & messageList)
+{
+    if(!_socketList.size())
+    {
+        return;
+    }
+
+    int maxfd = 0;
+
+    fd_set socketsetR;
+    FD_ZERO(&socketsetR);
+
+    for(int i = 0; i < _socketList.size(); i++)
+    {
+        FD_SET((unsigned int)_socketList[i]->getSocketFD(),&socketsetR);
+        if(_socketList[i]->getSocketFD() > maxfd)
+        {
+            maxfd = _socketList[i]->getSocketFD();
+        }
+    }
+
+    struct timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 0;
+
+    select(maxfd+1,&socketsetR,NULL,NULL,&tv);
+
+    for(std::vector<CVRSocket*>::iterator it = _socketList.begin(); it != _socketList.end(); )
+    {
+        if(FD_ISSET((*it)->getSocketFD(),&socketsetR))
+        {
+            if(!processSocketInput(*it,messageList))
+            {
+                std::cerr << "Removing socket." << std::endl;
+                delete *it;
+                it = _socketList.erase(it);
+            }
+            else
+            {
+                it++;
+            }
+        }
+        else
+        {
+            it++;
+        }
+    }
+}
+
+bool FuturePatient::processSocketInput(CVRSocket * socket, std::vector<int> & messageList)
+{
+    /*char c;
+    if(!socket->recv(&c,sizeof(char)))
+    {
+        return false;
+    }
+
+    std::cerr << "Char: " << (int)c << std::endl;*/
+    int i;
+    if(!socket->recv(&i,sizeof(int)))
+    {
+        return false;
+    }
+
+    //std::cerr << "int: " << i << std::endl;
+    messageList.push_back(i);
+
+    char resp[1024];
+    memset(resp,'\0',1024);
+    resp[0] = 'o';
+    resp[1] = 'k';
+    socket->send(resp,1024);
+
+    return true;
 }
 
 void FuturePatient::menuCallback(MenuItem * item)
@@ -1073,6 +1309,49 @@ void FuturePatient::menuCallback(MenuItem * item)
     {
 	_currentSymptomGraph = NULL;
 	_eventMenu->removeItem(_eventDone);
+    }
+
+    if(item == _scatterLoad)
+    {
+	if(_scatterFirstList->getListSize() && _scatterFirstList->getIndex() != _scatterSecondList->getIndex())
+	{
+	    MicrobeScatterGraphObject * msgo = new MicrobeScatterGraphObject(_conn, 1000.0, 1000.0, "Scatter Plot", false, true, false, true);
+	    if(msgo->setGraph(_scatterSecondList->getValue() + " vs " + _scatterFirstList->getValue(),_scatterFirstList->getValue(),_scatterSecondList->getValue()))
+	    {
+		checkLayout();
+		_layoutObject->addGraphObject(msgo);
+	    }
+	    else
+	    {
+		delete msgo;
+	    }
+	}
+	return;
+    }
+
+    if(item == _scatterLoadAll)
+    {
+	if(_scatterFirstList->getListSize())
+	{
+	    for(int i = 0; i < _scatterSecondList->getListSize(); ++i)
+	    {
+		if(_scatterFirstList->getIndex() == i)
+		{
+		    continue;
+		}
+		MicrobeScatterGraphObject * msgo = new MicrobeScatterGraphObject(_conn, 1000.0, 1000.0, "Scatter Plot", false, true, false, true);
+		if(msgo->setGraph(_scatterSecondList->getValue(i) + " vs " + _scatterFirstList->getValue(),_scatterFirstList->getValue(),_scatterSecondList->getValue(i)))
+		{
+		    checkLayout();
+		    _layoutObject->addGraphObject(msgo);
+		}
+		else
+		{
+		    delete msgo;
+		}
+	    }
+	}
+	return;
     }
 
     if(item == _saveLayoutButton)

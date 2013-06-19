@@ -1,5 +1,6 @@
 #include "MicrobeGraphObject.h"
 #include "GraphLayoutObject.h"
+#include "GraphGlobals.h"
 
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/ComController.h>
@@ -31,6 +32,16 @@ MicrobeGraphObject::MicrobeGraphObject(mysqlpp::Connection * conn, float width, 
 
     if(_myMenu)
     {
+	_colorModeML = new MenuList();
+	_colorModeML->setCallback(this);
+	addMenuItem(_colorModeML);
+
+	std::vector<std::string> listItems;
+	listItems.push_back("Solid Color");
+	listItems.push_back("Group Colors");
+	_colorModeML->setValues(listItems);
+	_colorModeML->setIndex(1);
+
 	_microbeText = new MenuText("");
 	_microbeText->setCallback(this);
 	_searchButton = new MenuButton("Web Search");
@@ -40,10 +51,13 @@ MicrobeGraphObject::MicrobeGraphObject(mysqlpp::Connection * conn, float width, 
     {
 	_microbeText = NULL;
 	_searchButton = NULL;
+	_colorModeML = NULL;
     }
     
 
     _graph = new GroupedBarGraph(width,height);
+    _graph->setColorMapping(GraphGlobals::getDefaultPhylumColor(),GraphGlobals::getPhylumColorMap());
+    _graph->setColorMode(_colorModeML ? (BarGraphColorMode)_colorModeML->getIndex() : BGCM_SOLID);
 }
 
 MicrobeGraphObject::~MicrobeGraphObject()
@@ -356,6 +370,11 @@ void MicrobeGraphObject::menuCallback(MenuItem * item)
 	{
 	    std::cerr << "OsgVnc plugin not loaded." << std::endl;
 	}
+    }
+
+    if(item == _colorModeML)
+    {
+	_graph->setColorMode((BarGraphColorMode)_colorModeML->getIndex());
     }
 
     TiledWallSceneObject::menuCallback(item);

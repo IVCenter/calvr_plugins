@@ -18,12 +18,19 @@ CVRPLUGIN(ElevatorRoom)
 
 ElevatorRoom::ElevatorRoom()
 {
+    _c = 0;
     _myPtr = this;
     _loaded = false;
     _audioHandler = NULL;
     _sppConnected = false;
+    _valEvent = false;
     _geoRoot = new osg::MatrixTransform();
     _modelHandler = new ModelHandler();
+    _valEventTime = 0;
+    _valEventCutoff = 0.5;
+    _trialCount = 0;
+    _trialPauseTime = 0;
+    _trialPause = false;
 }
 
 ElevatorRoom::~ElevatorRoom()
@@ -42,36 +49,71 @@ bool ElevatorRoom::init()
 
     PluginHelper::addRootMenuItem(_elevatorMenu);
 
+    _optionsMenu = new SubMenu("Options");
+
     _dingCheckbox = new MenuCheckbox("Ding Test", false);
     _dingCheckbox->setCallback(this);
-    _elevatorMenu->addItem(_dingCheckbox);
+    _optionsMenu->addItem(_dingCheckbox);
+
+    _serialTestRV = new MenuRangeValue("Serial pulse: ", 0, 255, 255);
+    _serialTestRV->setCallback(this);
+    _optionsMenu->addItem(_serialTestRV);
 
     _loadButton = new MenuButton("Load");
     _loadButton->setCallback(this);
     _elevatorMenu->addItem(_loadButton);
 
+    _pauseCB = new MenuCheckbox("Pause", true);
+    _pauseCB->setCallback(this);
+    _elevatorMenu->addItem(_pauseCB);
+
     _clearButton = new MenuButton("Clear");
     _clearButton->setCallback(this);
     _elevatorMenu->addItem(_clearButton);
 
-/*
-    _checkerSpeedRV = new MenuRangeValue("Checker flash speed: ", 10, 30, 15);
-    _checkerSpeedRV->setCallback(this);
-    _elevatorMenu->addItem(_checkerSpeedRV);
+    _elevatorMenu->addItem(_optionsMenu);
 
-    _alienChanceRV = new MenuRangeValue("Chance of alien: ", 0, 100, 50);
-    _alienChanceRV->setCallback(this);
-    _elevatorMenu->addItem(_alienChanceRV);
-
-    char str[50];
-    sprintf(str, "Alien: %d  Astro: %d  Checker: %d", _alienChance, _allyChance, _checkerChance);
-    _chancesText = new MenuText(str);
-    _elevatorMenu->addItem(_chancesText);
-*/ 
-    
+    _paused = true;
 
     /*** Load from config ***/
-    
+
+    // Texture sets
+    std::vector<std::string> tagList;
+    ConfigManager::getChildren("Plugin.ElevatorRoom.Levels", tagList);
+    for(int i = 0; i < tagList.size(); i++)
+    {
+        std::string tag = "Plugin.ElevatorRoom.Levels." + tagList[i];
+        //std::cout << tagList[i] << std::endl;;
+        
+        cvr::MenuCheckbox * cb = new cvr::MenuCheckbox(tagList[i], false);
+        _levelMap[tagList[i]] = cb;
+        cb->setCallback(this);
+        _optionsMenu->addItem(cb);
+    }
+
+    _levelMap[tagList[0]]->setValue(true);
+
+
+    int count;
+    float pauseLength;
+    std::string theme;
+
+    tagList.clear();
+    ConfigManager::getChildren("Plugin.ElevatorRoom.Phases", tagList);
+    for(int i = 0; i < tagList.size(); i++)
+    {
+        std::string tag = "Plugin.ElevatorRoom.Phases." + tagList[i];
+        
+        count = ConfigManager::getInt("trials", tag, 10);
+        pauseLength = ConfigManager::getFloat("pause", tag, 30);
+        theme = ConfigManager::getEntry("theme", tag, "Space");
+
+        _trialCounts.push_back(count);
+        _trialPauseLengths.push_back(pauseLength);
+        _trialThemes.push_back(theme);
+    }
+    _trialPhase = 0;
+
 
     // extra output messages
     _debug = (ConfigManager::getEntry("Plugin.ElevatorRoom.Debug") == "on");
@@ -116,14 +158,9 @@ bool ElevatorRoom::init()
     _pauseTime = -1;
     _mode = NONE;
     _phase = PAUSE;
-    _activeDoor = -1;
+    _activeDoor = 0;
     _score = 0;
     _hit = false;
-
-    // TODO: read these from config
-//    _avatarFlashPerSec = 10;
-//    _lightFlashPerSec = 7;
-
 
     // Timing values
     _avatarFlashPerSec = ConfigManager::getInt("value", "Plugin.ElevatorRoom.AvatarFlashSpeed", 10);
@@ -135,12 +172,15 @@ bool ElevatorRoom::init()
     _solidColorMin   = 1.0; _solidColorMax   = 2.0;
     _doorOpenMin     = 1.0; _doorOpenMax     = 2.0;
 
-
-
     _staticMode = (ConfigManager::getEntry("Plugin.ElevatorRoom.StaticMode") != "off");
     _staticDoor = (ConfigManager::getInt("value", "Plugin.ElevatorRoom.StaticDoor", -1) != -1);
     _doorMovement = (ConfigManager::getEntry("Plugin.ElevatorRoom.DoorMovement") != "off");
     _rotateOnly = (ConfigManager::getEntry("Plugin.ElevatorRoom.RotateOnlyNavigation") != "off");
+
+    _timeScale = 1;
+    _timeScaleRV = new MenuRangeValue("Game speed: ", .25, 2, 1);
+    _timeScaleRV->setCallback(this);
+    _optionsMenu->addItem(_timeScaleRV);
 
 
     if(ComController::instance()->isMaster())
@@ -171,6 +211,7 @@ bool ElevatorRoom::init()
         _audioHandler->loadSound(0, headDir, headPos);
         // laser sound
         _audioHandler->loadSound(17, handDir, handPos);
+        _modelHandler->setAudioHandler(_audioHandler);
     }
     
 
@@ -206,26 +247,6 @@ bool ElevatorRoom::init()
     //PluginHelper::getObjectsRoot()->addChild(_handsoundPAT);
 
 
-    // Spacenav
-    _transMult = ConfigManager::getFloat("Plugin.SpaceNavigator.TransMult", 1.0);
-    _rotMult = ConfigManager::getFloat("Plugin.SpaceNavigator.RotMult", 1.0);
-    _transcale = -0.05 * _transMult;
-    _rotscale = -0.005 * _rotMult;//-0.000009 * _rotMult;
-
-    bool status = false;
-    if(ComController::instance()->isMaster())
-    {
-        if(spnav_open() == -1) 
-        {
-            cerr << "SpaceNavigator: Failed to connect to the space navigator daemon" << endl;
-        }
-        else
-        {
-            status = true;
-        }
-    }
-
-
     // Serial port communication
     if (ComController::instance()->isMaster())
     {
@@ -250,7 +271,38 @@ void ElevatorRoom::preFrame()
     
     // Game logic independent updates (e.g. crosshair position)
     _modelHandler->update();
-   
+    
+    if (_paused)
+        return;
+
+    if (_trialPause)
+    {
+        _modelHandler->showScore(true);
+
+        if (_nextTrial)//PluginHelper::getProgramDuration() - _trialPauseTime >
+            //_trialPauseLengths[_trialPhase])
+        {
+            _trialPause = false;
+            _nextTrial = false;
+            _trialCount = 0;
+            _trialPhase++;
+
+            if (_trialPhase == _trialCounts.size())
+            {
+                std::cout << "Trials complete!" << std::endl;
+                _paused = true;
+                return;
+            }
+
+            _modelHandler->showScore(false);
+            _modelHandler->setLevel(_trialThemes[_trialPhase]);
+            return; 
+        }
+        else
+        {
+            return;
+        }
+    }
 
     if (_phase == PAUSE)
     {
@@ -261,6 +313,7 @@ void ElevatorRoom::preFrame()
             bool switched = false;
             chooseGameParameters(door, mode, switched);
 
+            _switched = switched;
             _activeDoor = door;
             _mode = mode;
             
@@ -268,18 +321,89 @@ void ElevatorRoom::preFrame()
             _modelHandler->setMode(_mode);
             _modelHandler->setSwitched(switched);
 
+            unsigned char c;
             if (_audioHandler)
             {
                 _audioHandler->playSound(_activeDoor + DING_OFFSET, "ding");
+                switch (_activeDoor)
+                {
+                    case 0:
+                        c = 6;
+                        sendChar(c);                       
+                        break;
+                    case 1:
+                        c = 7;
+                        sendChar(c);                       
+                        break;
+                    case 2:
+                        c = 8;
+                        sendChar(c);                       
+                        break;
+                    case 3:
+                        c = 9;
+                        sendChar(c);                       
+                        break;
+                    case 4:
+                        c = 10;
+                        sendChar(c);                       
+                        break;
+                    case 5:
+                        c = 11;
+                        sendChar(c);                       
+                        break;
+                    case 6:
+                        c = 12;
+                        sendChar(c);                       
+                        break;
+                    case 7:
+                        c = 13;
+                        sendChar(c);                       
+                        break;
+                }
             }
 
-            unsigned char c = 'a';
-            sendChar(c);
+            int viewedDoor;
+            viewedDoor = _modelHandler->getViewedDoor();
+            switch (viewedDoor)
+            {
+                case 0:
+                    c = 14;
+                    sendChar(c);                       
+                    break;
+                case 1:
+                    c = 15;
+                    sendChar(c);                       
+                    break;
+                case 2:
+                    c = 16;
+                    sendChar(c);                       
+                    break;
+                case 3:
+                    c = 17;
+                    sendChar(c);                       
+                    break;
+                case 4:
+                    c = 18;
+                    sendChar(c);                       
+                    break;
+                case 5:
+                    c = 19;
+                    sendChar(c);                       
+                    break;
+                case 6:
+                    c = 20;
+                    sendChar(c);                       
+                    break;
+                case 7:
+                    c = 21;
+                    sendChar(c);                       
+                    break;
+            }
 
             _phase = FLASHNEUTRAL;
             _startTime = PluginHelper::getProgramDuration();
             _flashStartTime = PluginHelper::getProgramDuration();
-            _pauseTime = randomFloat(_flashNeutralMin, _flashNeutralMax);
+            _pauseTime = _timeScale * randomFloat(_flashNeutralMin, _flashNeutralMax);
         }
     }
 
@@ -294,17 +418,37 @@ void ElevatorRoom::preFrame()
         if (PluginHelper::getProgramDuration() - _startTime > _pauseTime && _modelHandler->doorInView())
         {
             _modelHandler->setLight(true);        
+            
+            // Blue door
+            if (_mode == ALLY && !_switched)
+            {
+                unsigned char c = 23;
+                sendChar(c);
+            }
+            else if (_mode == ALIEN && _switched)
+            {
+                unsigned char c = 23;
+                sendChar(c);
+            }
+            // Red door
+            else if (_mode == ALIEN && !_switched)
+            {
+                unsigned char c = 22;
+                sendChar(c);
+            }
+            else if (_mode == ALLY && _switched)
+            {
+                unsigned char c = 22;
+                sendChar(c);
+            }
+            // Orange door
+            else if (_mode == CHECKER)
+            {
+                unsigned char c = 24;
+                sendChar(c);
+            }
 
-            if (_mode == ALLY)
-            {
-                unsigned char c = 'c';
-                sendChar(c);
-            }
-            else if (_mode == ALIEN)
-            {
-                unsigned char c = 'd';
-                sendChar(c);
-            }
+
 
             // Choose solid door time and transmit code
 
@@ -326,8 +470,8 @@ void ElevatorRoom::preFrame()
                 c = 'g';
                 _pauseTime = 2;
             }
-            sendChar(c);
-
+            //sendChar(c);
+            
             _phase = DOORCOLOR;
             _startTime = PluginHelper::getProgramDuration();
         }
@@ -340,9 +484,20 @@ void ElevatorRoom::preFrame()
             _phase = OPENINGDOOR;
 
             if (_mode == ALIEN)
-                sendChar('h');
+            {
+                unsigned char c = 25;
+                sendChar(c);
+            }
             else if (_mode == ALLY)
-                sendChar('i');
+            {
+                unsigned char c = 26;
+                sendChar(c);
+            }
+            else if (_mode == CHECKER)
+            {
+                unsigned char c = 27;
+                sendChar(c);
+            }
         }
     }
 
@@ -352,9 +507,10 @@ void ElevatorRoom::preFrame()
         {
             _phase = DOOROPEN;
             _startTime = PluginHelper::getProgramDuration();
-            _pauseTime = randomFloat(_doorOpenMin, _doorOpenMax);
+            _pauseTime = _timeScale * randomFloat(_doorOpenMin, _doorOpenMax);
         }
         _modelHandler->openDoor();
+        flashAvatars();
     }
 
     else if (_phase == DOOROPEN)
@@ -363,53 +519,7 @@ void ElevatorRoom::preFrame()
         {
             _phase = CLOSINGDOOR;
         }
-
-        // Flashing avatars - checkers always flash, alien and ally flash when hit
-        if (_mode == CHECKER)
-        {
-            if (PluginHelper::getProgramDuration() - _flashStartTime > (1 / _checkSpeed))
-            {
-                _modelHandler->flashCheckers();
-                _flashCount++;
-                _flashStartTime = PluginHelper::getProgramDuration();
-            }
-        }
-
-        else if (_mode == ALIEN)
-        {
-            if (_hit)
-            {
-                if (_flashCount > NUM_ALIEN_FLASH)
-                {
-                    _modelHandler->setAlien(false);
-                }
-
-                else if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _avatarFlashPerSec)
-                {
-                    _modelHandler->flashAlien();
-                    _flashCount++; 
-                    _flashStartTime = PluginHelper::getProgramDuration();
-                }
-            }
-        }
-
-        else if (_mode == ALLY)
-        {
-            if (_hit)
-            {
-                if (_flashCount > NUM_ALLY_FLASH)
-                {
-                    _modelHandler->setAlly(true);
-                }
-
-                else if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _avatarFlashPerSec)
-                {
-                    _modelHandler->flashAlly();
-                    _flashCount++; 
-                    _flashStartTime = PluginHelper::getProgramDuration();
-                }
-            }
-        }
+        flashAvatars();
     }
 
     else if (_phase == CLOSINGDOOR)
@@ -418,19 +528,31 @@ void ElevatorRoom::preFrame()
         {
             _phase = PAUSE;
             _startTime = PluginHelper::getProgramDuration();
-            _pauseTime = randomFloat(_pauseMin, _pauseMax);
+            _pauseTime = _timeScale * randomFloat(_pauseMin, _pauseMax);
             _modelHandler->setLight(false);
 
             if (_noResponse)
             {
-                unsigned char c = 'm';
-                sendChar(c);
+                //unsigned char c = 'm';
+                //sendChar(c);
             }
             _noResponse = true;
             _hit = false;
+            _flashCount = 0;
+
+            _trialCount++;
+
+            if (_trialCount == _trialCounts[_trialPhase])
+            {
+                _trialPauseTime = PluginHelper::getProgramDuration();
+                _trialPause = true;
+                std::cout << "Trials complete. Hit 'n' to continue to the next set." << std::endl;
+            }
         }
         _modelHandler->closeDoor();
+        flashAvatars();
     }
+
 
     // Update sound
     osg::Vec3 handPos, headPos, headDir, handDir;
@@ -476,75 +598,6 @@ void ElevatorRoom::preFrame()
         return;
 
     Matrixd finalmat;
-
-    if(ComController::instance()->isMaster())
-    {
-        spnav_event sev;
-
-        double x, y, z;
-        x = y = z = 0.0;
-        double rx, ry, rz;
-        rx = ry = rz = 0.0;
-
-        while(spnav_poll_event(&sev)) 
-        {
-            if(sev.type == SPNAV_EVENT_MOTION) 
-            {
-                x += sev.motion.x;
-                y += sev.motion.z;
-                z += sev.motion.y;
-                rx += sev.motion.rx;
-                ry += sev.motion.rz;
-                rz += sev.motion.ry;
-                // printf("got motion event: t(%d, %d, %d) ", sev.motion.x, sev.motion.y, sev.motion.z);
-                // printf("r(%d, %d, %d)\n", sev.motion.rx, sev.motion.ry, sev.motion.rz);
-            } 
-            else 
-            {	// SPNAV_EVENT_BUTTON 
-                //printf("got button %s event b(%d)\n", sev.button.press ? "press" : "release", sev.button.bnum);
-            }
-        }
-
-        x *= 0;//_transcale;
-        y *= 0;//_transcale;
-        z *= 0;//_transcale;
-        rx *= 0;//_rotscale;
-        ry *= 0;//_rotscale;
-        rz *= _rotscale;
-
-        Matrix view = PluginHelper::getHeadMat();
-        Vec3 headpos = view.getTrans();
-        Vec3 trans = Vec3(x, y, z);
-
-        trans = (trans * view) - headpos;
-
-        Matrix tmat;
-        tmat.makeTranslate(trans);
-        Vec3 xa = Vec3(1.0, 0.0, 0.0);
-        Vec3 ya = Vec3(0.0, 1.0, 0.0);
-        Vec3 za = Vec3(0.0, 0.0, 1.0);
-
-        xa = osg::Vec3();//(xa * view) - campos;
-        ya = osg::Vec3();//(ya * view) - campos;
-        za = (za * view) - headpos;
-
-        Matrix rot;
-        rot.makeRotate(rx, xa, ry, ya, rz, za);
-
-        Matrix ctrans, nctrans;
-        ctrans.makeTranslate(headpos);
-        nctrans.makeTranslate(-headpos);
-
-        finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
-
-        ComController::instance()->sendSlaves((char *)finalmat.ptr(), sizeof(double[16]));
-    }
-    else
-    {
-        ComController::instance()->readMaster((char *)finalmat.ptr(), sizeof(double[16]));
-    }
-
-    PluginHelper::setObjectMatrix(finalmat);
 }
 
 void ElevatorRoom::menuCallback(MenuItem * item)
@@ -554,6 +607,7 @@ void ElevatorRoom::menuCallback(MenuItem * item)
         if (!_loaded)
         {
             _modelHandler->loadModels(_geoRoot);
+            _modelHandler->showScore(false);
             _loaded = true;
         }
     }
@@ -567,24 +621,14 @@ void ElevatorRoom::menuCallback(MenuItem * item)
         }
     }
 
-    else if(item == _checkerSpeedRV)
+    else if (item == _pauseCB)
     {
-        _checkSpeed = (int)_checkerSpeedRV->getValue();
+        _paused = _pauseCB->getValue();
     }
 
-    else if(item == _alienChanceRV)
+    else if (item == _timeScaleRV)
     {
-        int newVal = _alienChanceRV->getValue();
-        if (_alienChance + _allyChance + _checkerChance <= 100 &&
-            newVal > -1  && 100 - newVal - _checkerChance > -1  && _checkerChance > -1)
-        {
-            _alienChance = newVal;
-            _allyChance = 100 - _alienChance - _checkerChance;
-
-            char str[50];
-            sprintf(str, "Alien: %d  Astro: %d  Checker: %d", _alienChance, _allyChance, _checkerChance);
-            _chancesText->setText(str);
-        }
+        _timeScale = _timeScaleRV->getValue();
     }
 
     else if (item == _dingCheckbox)
@@ -598,6 +642,32 @@ void ElevatorRoom::menuCallback(MenuItem * item)
             _audioHandler->loadSound(0 + DING_OFFSET, dir, pos);
         }
     }
+
+    std::map<std::string, cvr::MenuCheckbox*>::iterator it;
+    bool found = false;
+    for (it = _levelMap.begin(); it != _levelMap.end(); ++it)
+    {
+        if (item == it->second)
+        {
+            _modelHandler->setLevel(it->first);
+            found = true;
+        }
+    }
+
+    if (found)
+    {
+        for (it = _levelMap.begin(); it != _levelMap.end(); ++it)
+        {
+            if (item != it->second)
+            {
+                it->second->setValue(false);
+            }
+            else
+            {
+                it->second->setValue(true);
+            }
+        }
+    }
 }
 
 bool ElevatorRoom::processEvent(InteractionEvent * event)
@@ -605,14 +675,55 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
     if (!_loaded)
         return false;
 
-    TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
+    ValuatorInteractionEvent * vie = event->asValuatorEvent();
+    if (vie)
+    {
+        //std::cout << "Valuator: " << vie->getValuator() << std::endl;
 
+        // Left 
+        if(vie->getHand() == 0 && vie->getValuator() == 0)
+        {
+            //std::cout << vie->getValue() << std::endl;
+            if (vie->getValue() == -1 && !_valEvent)
+            {
+                turnLeft();
+                _valEvent = true;
+                _valEventTime = PluginHelper::getProgramDuration();
+
+                unsigned char c = 1;
+                sendChar(c);
+
+                return true;
+            }
+            else if (vie->getValue() == 1 && !_valEvent)
+            {
+                turnRight();
+                _valEvent = true;
+                _valEventTime = PluginHelper::getProgramDuration();
+
+                unsigned char c = 2;
+                sendChar(c);
+
+                return true;
+            }
+            else if (PluginHelper::getProgramDuration() - _valEventTime > _valEventCutoff)
+            {
+                _valEvent = false;
+                return true;
+            }
+        }
+    }
+
+
+    TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
+    
     if (tie)
     {
-        if(tie->getHand() == 0 && tie->getButton() == 0)
+        if(0)//tie->getHand() == 0 && tie->getButton() == 0)
         {
             if (tie->getInteraction() == BUTTON_DOWN)
             {
+            /*
                 unsigned char c = 'j';
                 sendChar(c);
 
@@ -687,9 +798,13 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                         return true;
                     }
                 }
+                */
             }
             else if (tie->getInteraction() == BUTTON_DRAG)
             {
+                return true;
+                /*
+
                 if (!_rotateOnly)
                     return false;
 
@@ -744,6 +859,8 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
                 SceneManager::instance()->setObjectMatrix(m);
 
                 return true;
+
+                */
             }
             else if (tie->getInteraction() == BUTTON_UP)
             {
@@ -751,18 +868,188 @@ bool ElevatorRoom::processEvent(InteractionEvent * event)
             }
             return true;
         }
+
+        // Shoot button
+        if(tie->getHand() == 0 && tie->getButton() == 1)
+        {
+            if (tie->getInteraction() == BUTTON_DOWN)
+            {
+                shoot();
+                unsigned char c = 5;
+                sendChar(c);
+                return true;
+            }
+        }
+        
+        /*
+        // Left arrow on D-pad
+        if(tie->getHand() == 0 && tie->getButton() == 1)
+        {
+            if (tie->getInteraction() == BUTTON_DOWN)
+            {
+                turnLeft();
+                return true;
+            }
+        }
+
+        // Right arrow on D-pad
+        if(tie->getHand() == 0 && tie->getButton() == 2)
+        {
+            if (tie->getInteraction() == BUTTON_DOWN)
+            {
+                turnRight();
+                return true;
+            }
+        }
+        */
     }
 
     KeyboardInteractionEvent * kie = event->asKeyboardEvent();
     if (kie)
     {
-       /* if (kie->getInteraction() == KEY_UP && kie->getKey() == 'o')
+        if (kie->getInteraction() == KEY_UP && kie->getKey() == 65361)
         {
-            return true;
-        }*/
+            turnLeft();
+            unsigned char c = 1;
+            sendChar(c);
+        }
+        if (kie->getInteraction() == KEY_UP && kie->getKey() == 65363)
+        {
+            turnRight();
+            unsigned char c = 2;
+            sendChar(c);
+        }
+        if (kie->getInteraction() == KEY_UP && kie->getKey() == ' ')
+        {
+            shoot();
+            unsigned char c = 5;
+            sendChar(c);
+        }
+        if (kie->getInteraction() == KEY_UP && kie->getKey() == 'n')
+        {
+            if (_trialPause)
+            {
+                _nextTrial = true;
+                std::cout << "Next trial" << std::endl;
+            }
+        }
     }
 
     return true;
+}
+
+void ElevatorRoom::turnLeft()
+{
+    _modelHandler->turnLeft();
+}
+
+void ElevatorRoom::turnRight()
+{
+    _modelHandler->turnRight();
+}
+
+void ElevatorRoom::shoot()
+{
+    if (_phase == OPENINGDOOR || _phase == DOOROPEN || _phase == CLOSINGDOOR)
+    {
+        // intersect the character and door is still open
+        if (_audioHandler)
+        {
+            _audioHandler->playSound(LASER_OFFSET, "laser");
+        }
+        
+        // if haven't already hit the alien
+        if (_mode == ALIEN && !_hit)
+        {
+            if (_audioHandler)
+            {
+                _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "explosion");
+                unsigned char c = 28;
+                sendChar(c);
+            }
+
+            std::cout << "Hit!" << std::endl; 
+            _score++;
+            _modelHandler->setScore(_score, _alienCount);
+
+            //unsigned char c = 'k';
+            //sendChar(c);
+
+            std::cout << "Score: " << _score << std::endl;
+            _hit = true;
+        }
+        else if (_mode == ALLY && !_hit)
+        {
+            if (_audioHandler)
+            {
+                unsigned char c = 29;
+                sendChar(c);
+                _audioHandler->playSound(_activeDoor + EXPLOSION_OFFSET, "buzz");
+            }
+
+            //unsigned char c = 'k';
+            //sendChar(c);
+
+            std::cout << "Whoops!" << std::endl;
+            if (_score > 0)
+            {
+                _score--;
+            }
+            _modelHandler->setScore(_score, _alienCount);
+            std::cout << "Score: " << _score << std::endl;
+            _hit = true;
+        }
+    }
+}
+
+void ElevatorRoom::flashAvatars()
+{
+    // Flashing avatars - checkers always flash, alien and ally flash when hit
+    if (_mode == CHECKER)
+    {
+        if (PluginHelper::getProgramDuration() - _flashStartTime > (1 / _checkSpeed))
+        {
+            _modelHandler->flashCheckers();
+            _flashCount++;
+            _flashStartTime = PluginHelper::getProgramDuration();
+        }
+    }
+
+    else if (_mode == ALIEN)
+    {
+        if (_hit)
+        {
+            if (_flashCount > NUM_ALIEN_FLASH)
+            {
+                _modelHandler->setAlien(false);
+            }
+
+            else if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _avatarFlashPerSec)
+            {
+                _modelHandler->flashAlien();
+                _flashCount++; 
+                _flashStartTime = PluginHelper::getProgramDuration();
+            }
+        }
+    }
+
+    else if (_mode == ALLY)
+    {
+        if (_hit)
+        {
+            if (_flashCount > NUM_ALLY_FLASH)
+            {
+                _modelHandler->setAlly(true);
+            }
+
+            else if (PluginHelper::getProgramDuration() - _flashStartTime > 1 / _avatarFlashPerSec)
+            {
+                _modelHandler->flashAlly();
+                _flashCount++; 
+                _flashStartTime = PluginHelper::getProgramDuration();
+            }
+        }
+    }
 }
 
 void ElevatorRoom::chooseGameParameters(int &door, Mode &mode, bool &switched)
@@ -808,6 +1095,7 @@ void ElevatorRoom::chooseGameParameters(int &door, Mode &mode, bool &switched)
                 std::cout << _activeDoor << " - alien" << std::endl;
             }
             mode = ALIEN;
+            _alienCount++;
             if (rand() % 100 <= _errorChance)
             {
                 switched = true;
@@ -856,14 +1144,18 @@ void ElevatorRoom::dingTest()
 
     if ((PluginHelper::getProgramDuration() - _startTime) > _pauseTime)
     {
-        _audioHandler->playSound(0 + DING_OFFSET, "ding");
-
-        sendChar('a');      
+        //_audioHandler->playSound(0 + DING_OFFSET, "ding");
+        _c = 63;
+        int i = (int)(_serialTestRV->getValue());
+        _c = i;
+        sendChar(_c);
+        //_c++;
+        //sendChar('a');      
 
         _startTime = PluginHelper::getProgramDuration();
-        _pauseTime = (rand() % 3) + 1;
+        _pauseTime = .5;//(rand() % 3) + 1;
         
-        std::cout << "Ding! Pause for " << _pauseTime << " seconds." << std::endl;
+        //std::cout << "Ding! Pause for " << _pauseTime << " seconds." << std::endl;
     }
 }
 
@@ -876,51 +1168,6 @@ void ElevatorRoom::sendChar(unsigned char c)
 
 
 /*** Server Functions ***/
-
-void ElevatorRoom::connectToServer()
-{
-    // get server address and port number
-    string server_addr = ConfigManager::getEntry("Plugin.Maze2.EOGDataServerAddress");
-    int port_number = ConfigManager::getInt("Plugin.Maze2.EOGDataServerPort", 8084);
-    if( server_addr == "" ) server_addr = "127.0.0.1";
-    
-    cerr << "Maze2::ECGClient::Server address: " << server_addr << endl;
-    cerr << "Maze2::ECGClient::Port number: " << port_number << endl;
-
-    // build up socket communications
-    int portno = port_number, protocol = SOCK_STREAM;
-    struct sockaddr_in server;
-    struct hostent *hp;
-
-    _sockfd = socket(AF_INET, protocol, 0);
-    if (_sockfd < 0)
-    {
-        cerr << "Maze2::ECGClient::connect(): Can't open socket." << endl;
-        return;
-    }
-
-    server.sin_family = AF_INET;
-    hp = gethostbyname(server_addr.c_str());
-    if (hp == 0)
-    {
-        cerr << "Maze2::ECGClient::connect(): Unknown host." << endl;
-        close(_sockfd);
-        return;
-    }
-    memcpy((char *)&server.sin_addr, (char *)hp->h_addr, hp->h_length);
-    server.sin_port = htons((unsigned short)portno);
-
-    // connect to ECG data server
-    if (connect(_sockfd, (struct sockaddr *) &server, sizeof (server)) < 0)
-    {
-	cerr << "Maze2::ECGClient::connect(): Failed connect to server" << endl;
-        close(_sockfd);
-        return;
-    }
-
-    cerr << "Maze2::ECGClient::Successfully connected to EOG Data Server." << endl;
-    _connected = true;
-}
 
 int ElevatorRoom::init_SPP(int port)
 {
@@ -954,8 +1201,8 @@ void ElevatorRoom::write_SPP(int bytes, unsigned char* buf)
 {
     if (!_sppConnected)
         return;
-   
-    std::cout << "Writing " << buf[0] << std::endl;
+
+    printf("Writing: %d\n", buf[0]);
 
     DWORD BytesReceived;
     DWORD bytesToWrite = 1;

@@ -12,6 +12,11 @@ SET(PLUGIN_HEADERS
 	EOGClient/CaliFieldHandler.h
 	EOGClient/Playback.h
         Audio/OSCPack.h
+	AcoustiMaze/Pose.h
+	AcoustiMaze/AcoustiMaze.h
+	AcoustiMaze/CoordMatrix.h
+	AcoustiMaze/MazePath.h
+	AcoustiMaze/MazeSquare.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -30,6 +35,10 @@ ADD_LIBRARY(${LIB_NAME}
 	EOGClient/BallHandler.cpp
 	EOGClient/CaliFieldHandler.cpp
         Audio/OSCPack.cpp
+	AcoustiMaze/Pose.cpp
+	AcoustiMaze/AcoustiMaze.cpp
+	AcoustiMaze/MazePath.cpp
+	AcoustiMaze/MazeSquare.cpp
 )
 
 INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})

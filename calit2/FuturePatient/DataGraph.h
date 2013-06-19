@@ -176,10 +176,6 @@ class DataGraph
         void updateBGRanges();
         float calcPadding();
 
-        osg::Vec4 makeColor(float f);
-
-        osgText::Text * makeText(std::string text, osg::Vec4 color);
-
         std::map<std::string, osg::ref_ptr<osg::MatrixTransform> > _graphTransformMap;
         //std::map<std::string, osg::ref_ptr<osg::Geometry> > _graphGeometryMap;
         std::map<std::string, GraphDataInfo> _dataInfoMap;
@@ -229,7 +225,6 @@ class DataGraph
         osg::ref_ptr<osg::Point> _point;
         osg::ref_ptr<osg::LineWidth> _lineWidth;
         float _pointLineScale;
-        osg::ref_ptr<osgText::Font> _font;
 
         MultiGraphDisplayMode _multiGraphDisplayMode;
         MultiGraphDisplayMode _currentMultiGraphDisplayMode;

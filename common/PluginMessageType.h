@@ -172,5 +172,41 @@ enum LayoutManagerMessageType
     LM_START_LAYOUT
 };
 
+// Video
+enum VideoMessageType
+{
+    VIDEO_LOAD,
+    VIDEO_STOP
+};
+
+
+struct VideoSceneObject : public cvr::SceneObject
+{
+    virtual void play() = 0;
+    virtual void stop() = 0;
+    
+    VideoSceneObject(
+        std::string name, bool navigation, bool movable, bool clip, 
+        bool contextMenu, bool showBounds) : cvr::SceneObject(
+            name, navigation, movable, clip, contextMenu, showBounds) {}
+            
+    virtual ~VideoSceneObject() {}
+};
+
+struct VideoMessageData
+{
+    // why == VIDEO_LOAD:
+    //  - input: path (path to video file to load)
+    //  - output: obj (allocated by plugin)
+    
+    // why == VIDEO_STOP:
+    //  - input: obj (as provided by an earlier VIDEO_LOAD)
+    //  - unused: path
+    
+    VideoMessageType why;
+    std::string path;   
+    VideoSceneObject* obj;
+};
+
 #endif
 

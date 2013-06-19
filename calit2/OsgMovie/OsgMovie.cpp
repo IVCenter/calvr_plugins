@@ -467,13 +467,43 @@ void OsgMovie::menuCallback(MenuItem* menuItem)
             return;
         }
     }
+
+
+    // check for loading new movie
+    for (std::vector<MenuButton*>::iterator it = _loadButtons.begin(); it != _loadButtons.end(); ++it)
+    {
+        if (menuItem == (*it))
+        {
+            std::string path = ConfigManager::getEntry("Plugin.OsgMovie." + (*it)->getText());
+            std::cout << "Loading " << path << std::endl;
+            loadFile(path);
+        }
+    }
 }
 
 bool OsgMovie::init()
 {
     std::cerr << "OsgMovie init\n";
     //osg::setNotifyLevel( osg::INFO );
-    
+
+    _loadMenu = new SubMenu("OsgMovie");
+    _loadMenu->setCallback(this);
+    MenuSystem::instance()->addMenuItem(_loadMenu);
+
+    string configBase = "Plugin.OsgMovie";
+    std::vector<std::string> list;
+
+    ConfigManager::getChildren(configBase, list);
+
+    for(int i = 0; i < list.size(); i++)
+    {
+        MenuButton * button = new MenuButton(list[i]);
+        button->setCallback(this);
+        _loadMenu->addItem(button);
+        _loadButtons.push_back(button);
+    }
+
+
     configPath = ConfigManager::getEntry("Plugin.OsgMovie.ConfigDir");
 
     ifstream cfile;
@@ -550,8 +580,6 @@ osg::Geometry* OsgMovie::myCreateTexturedQuadGeometry(osg::Vec3 pos, float width
                                                               osg::StateAttribute::ON);
         return pictureQuad;
 }
-
-
 
 OsgMovie::~OsgMovie()
 {

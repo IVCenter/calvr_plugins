@@ -197,6 +197,10 @@ void EOGCalibration::menuCallback(cvr::MenuItem *item)
 				startStopPlaybackCheckbox->setValue(false);
 				mCaliController->stopPlayback();
 			}
+
+            appearTestCheckbox->setValue(false);
+            mCaliController->setAppearFlag(false);
+
 	    	mCaliController->startCalibration();
       	} 
         else 
@@ -210,11 +214,14 @@ void EOGCalibration::menuCallback(cvr::MenuItem *item)
     {
       	if (appearTestCheckbox->getValue())
         {
+            startStopCalibrationCheckbox->setValue(false);
+
             mCaliController->setAppearFlag(appearTestCheckbox->getValue());
 	    	mCaliController->startCalibration();
         }
         else
         {
+            mCaliController->setAppearFlag(appearTestCheckbox->getValue());
 	    	mCaliController->stopCalibration();
         }
     }

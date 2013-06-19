@@ -1,5 +1,6 @@
 #include "ModelHandler.h"
 
+
 using namespace cvr;
 using namespace osg;
 using namespace std;
@@ -7,12 +8,18 @@ using namespace std;
 namespace ElevatorRoom
 {
 
+#define DING_OFFSET 1
+#define EXPLOSION_OFFSET 9
+#define LASER_OFFSET 17
+
 ModelHandler::ModelHandler()
 {
+    _audioHandler = NULL;
     _activeObject = NULL;
     _geoRoot = new osg::MatrixTransform();
     _crosshairPat = NULL;
     _scoreText = NULL;
+    _scoreSwitch = NULL;
 
     _dataDir = ConfigManager::getEntry("Plugin.ElevatorRoom.DataDir");
     _dataDir = _dataDir + "/";
@@ -20,8 +27,10 @@ ModelHandler::ModelHandler()
     _loaded = false;
     _doorDist = 0;
     _activeDoor = 0;
+    _viewedDoor = 4;
     _lightColor = 0;
     _doorInView = false;
+    _totalAngle = 0;
 
     _colors.push_back(osg::Vec4(1, 1, 1, 1));   // WHITE
     _colors.push_back(osg::Vec4(1, 0, 0, 1));   // RED
@@ -32,11 +41,30 @@ ModelHandler::ModelHandler()
     _colors.push_back(osg::Vec4(0.3, 0.15, 0.0, 1.0)); // BROWN
     _colors.push_back(osg::Vec4(0.7, 0.7, 0.7, 1.0));  // GREY
 
+    _wallTex = ConfigManager::getEntry("Plugin.ElevatorRoom.WallTexture");
+    _floorTex = ConfigManager::getEntry("Plugin.ElevatorRoom.FloorTexture");
+    _ceilingTex = ConfigManager::getEntry("Plugin.ElevatorRoom.CeilingTexture");
+    _doorTex = ConfigManager::getEntry("Plugin.ElevatorRoom.DoorTexture");
+    _elevTex = ConfigManager::getEntry("Plugin.ElevatorRoom.ElevatorTexture");
+
+    _alienTex = ConfigManager::getEntry("Plugin.ElevatorRoom.AlienTexture");
+    _allyTex = ConfigManager::getEntry("Plugin.ElevatorRoom.AllyTexture");
+
+    _checkTex1 = ConfigManager::getEntry("Plugin.ElevatorRoom.CheckerTexture1");
+    _checkTex2 = ConfigManager::getEntry("Plugin.ElevatorRoom.CheckerTexture2");
 }
 
 ModelHandler::~ModelHandler()
 {
 
+}
+
+void ModelHandler::setAudioHandler(AudioHandler * handler)
+{
+    if (ComController::instance()->isMaster())
+    {
+        _audioHandler = handler;
+    }
 }
 
 void ModelHandler::update()
@@ -77,29 +105,235 @@ void ModelHandler::update()
         std::cout << "Door leaving view" << std::endl;
         _doorInView = false;
     }
+
+
+    if (_turningLeft)
+    {
+        osg::Matrix objmat = PluginHelper::getObjectMatrix();
+        
+        float angle = -(M_PI / 4) / 10;
+        osg::Matrix turnMat;
+        turnMat.makeRotate(angle, osg::Vec3(0, 0, 1));
+
+        osg::Vec3 origin = _root->getMatrix().getTrans();
+
+        osg::Matrix m;
+        m = objmat * osg::Matrix::translate(-origin) * turnMat * 
+            osg::Matrix::translate(origin);
+
+        SceneManager::instance()->setObjectMatrix(m);
+
+        _totalAngle += angle;
+        if (_totalAngle < -M_PI / 4)
+        {
+            _turningLeft = false;
+            _totalAngle = 0;
+        }
+    }
+    if (_turningRight)
+    {
+        osg::Matrix objmat = PluginHelper::getObjectMatrix();
+        
+        float angle = (M_PI / 4) / 10;
+        osg::Matrix turnMat;
+        turnMat.makeRotate(angle, osg::Vec3(0, 0, 1));
+
+        osg::Vec3 origin = _root->getMatrix().getTrans();
+
+        osg::Matrix m;
+        m = objmat * osg::Matrix::translate(-origin) * turnMat * 
+            osg::Matrix::translate(origin);
+
+        SceneManager::instance()->setObjectMatrix(m);
+
+        _totalAngle += angle;
+        if (_totalAngle > M_PI / 4)
+        {
+            _turningRight = false;
+            _totalAngle = 0;
+        }
+    }
+}
+
+void ModelHandler::clear()
+{
+    _lights.clear();
+    _aliensSwitch.clear();
+    _alliesSwitch.clear();
+    _checkersSwitch.clear();
+    _lightSwitch.clear();
+    _leftdoorSwitch.clear();
+}
+
+void ModelHandler::setLevel(string level)
+{
+    std::string tag = "Plugin.ElevatorRoom.Levels." + level;
+
+    _wallTex = ConfigManager::getEntry(tag + ".WallTexture");
+    _floorTex = ConfigManager::getEntry(tag + ".FloorTexture");
+    _ceilingTex = ConfigManager::getEntry(tag + ".CeilingTexture");
+    _doorTex = ConfigManager::getEntry(tag + ".DoorTexture");
+    _elevTex = ConfigManager::getEntry(tag + ".ElevatorTexture");
+
+    _alienTex = ConfigManager::getEntry(tag + ".AlienTexture");
+    _allyTex = ConfigManager::getEntry(tag + ".AllyTexture");
+
+    _checkTex1 = ConfigManager::getEntry(tag + ".CheckerTexture1");
+    _checkTex2 = ConfigManager::getEntry(tag + ".CheckerTexture2");
+
+
+    osg::ref_ptr<osg::Texture2D> tex;
+    std::vector<osg::ref_ptr<osg::Switch> >::iterator it;
+    osg::ref_ptr<osg::Image> img;
+
+    img = osgDB::readImageFile(_dataDir + _alienTex);
+    if (!img) 
+    {
+        std::cout << "Failed to load image " << _alienTex << "." << std::endl;
+    }
+    
+    // Enemy
+    for (it = _aliensSwitch.begin(); it != _aliensSwitch.end(); ++it)
+    {
+        tex = new osg::Texture2D();
+        if (img)
+        {
+            tex->setImage(img);
+            tex->setResizeNonPowerOfTwoHint(false);
+            tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+            tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+        }
+    
+        for (int i = 0; i < (*it)->getNumChildren(); ++i)
+        {
+            osg::ref_ptr<osg::StateSet> state;
+            state = (*it)->getChild(i)->getOrCreateStateSet();
+            state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+        }
+    }
+    
+    // Ally
+    for (it = _alliesSwitch.begin(); it != _alliesSwitch.end(); ++it)
+    {
+        tex = new osg::Texture2D();
+        img = osgDB::readImageFile(_dataDir + _allyTex);
+        if (img)
+        {
+            tex->setImage(img);
+            tex->setResizeNonPowerOfTwoHint(false);
+            tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+            tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+        }
+    
+        for (int i = 0; i < (*it)->getNumChildren(); ++i)
+        {
+            osg::ref_ptr<osg::StateSet> state;
+            state = (*it)->getChild(i)->getOrCreateStateSet();
+            state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+        }
+    }
+    
+    std::vector<osg::ref_ptr<osg::Geode> >::iterator geoIt;
+
+    // Walls
+    for (geoIt = _walls.begin(); geoIt != _walls.end(); ++geoIt)
+    {
+        tex = new osg::Texture2D();
+        img = osgDB::readImageFile(_dataDir + _wallTex);
+        if (img)
+        {
+            tex->setImage(img);
+            tex->setResizeNonPowerOfTwoHint(false);
+            tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+            tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+        }
+    
+        osg::ref_ptr<osg::StateSet> state;
+        state = (*geoIt)->getOrCreateStateSet();
+        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    }
+    
+    // Elevator doors/interior
+    for (geoIt = _elevators.begin(); geoIt != _elevators.end(); ++geoIt)
+    {
+        tex = new osg::Texture2D();
+        img = osgDB::readImageFile(_dataDir + _elevTex);
+        if (img)
+        {
+            tex->setImage(img);
+            tex->setResizeNonPowerOfTwoHint(false);
+            tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+            tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+        }
+    
+        osg::ref_ptr<osg::StateSet> state;
+        state = (*geoIt)->getOrCreateStateSet();
+        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    }
+    
+    // Floor
+    for (geoIt = _floors.begin(); geoIt != _floors.end(); ++geoIt)
+    {
+        tex = new osg::Texture2D();
+        img = osgDB::readImageFile(_dataDir + _floorTex);
+        if (img)
+        {
+            tex->setImage(img);
+            tex->setResizeNonPowerOfTwoHint(false);
+            tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+            tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+        }
+    
+        osg::ref_ptr<osg::StateSet> state;
+        state = (*geoIt)->getOrCreateStateSet();
+        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    }
+
+    // Ceiling
+    for (geoIt = _ceilings.begin(); geoIt != _ceilings.end(); ++geoIt)
+    {
+        tex = new osg::Texture2D();
+        img = osgDB::readImageFile(_dataDir + _ceilingTex);
+        if (img)
+        {
+            tex->setImage(img);
+            tex->setResizeNonPowerOfTwoHint(false);
+            tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+            tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+        }
+    
+        osg::ref_ptr<osg::StateSet> state;
+        state = (*geoIt)->getOrCreateStateSet();
+        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    }
+
+    // Doors 
+    tex = new osg::Texture2D();
+    img = osgDB::readImageFile(_dataDir + _doorTex);
+    if (img)
+    {
+        tex->setImage(img);
+        tex->setResizeNonPowerOfTwoHint(false);
+        tex->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+        tex->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+    }
+
+    for (geoIt = _doors.begin(); geoIt != _doors.end(); ++geoIt)
+    {
+        osg::ref_ptr<osg::StateSet> state;
+        state = (*geoIt)->getOrCreateStateSet();
+        state->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+    }
 }
 
 void ModelHandler::loadModels(osg::MatrixTransform * root)
 {
+    _root = root;
     if (root && _geoRoot)
     {
         root->addChild(_geoRoot.get());
     }
 
-    std::string _wallTex, _floorTex, _ceilingTex, _doorTex,
-            _alienTex, _allyTex, _checkTex1, _checkTex2, _elevTex;
-
-    _wallTex = ConfigManager::getEntry("Plugin.ElevatorRoom.WallTexture");
-    _floorTex = ConfigManager::getEntry("Plugin.ElevatorRoom.FloorTexture");
-    _ceilingTex = ConfigManager::getEntry("Plugin.ElevatorRoom.CeilingTexture");
-    _doorTex = ConfigManager::getEntry("Plugin.ElevatorRoom.DoorTexture");
-    _elevTex = ConfigManager::getEntry("Plugin.ElevatorRoom.ElevatorTexture");
-
-    _alienTex = ConfigManager::getEntry("Plugin.ElevatorRoom.AlienTexture");
-    _allyTex = ConfigManager::getEntry("Plugin.ElevatorRoom.AllyTexture");
-
-    _checkTex1 = ConfigManager::getEntry("Plugin.ElevatorRoom.CheckerTexture1");
-    _checkTex2 = ConfigManager::getEntry("Plugin.ElevatorRoom.CheckerTexture2");
 
     float roomRad = 6.0, angle = 2 * M_PI / NUM_DOORS;
 
@@ -162,12 +396,13 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         dir = pos - center;
 
         // 1 - 8 ding sounds
-/*        
+        
         if (_audioHandler)
         {
-            _audioHandler->loadSound(i + DING_OFFSET, dir, pos);
+            _audioHandler->loadSound(i + DING_OFFSET, i * angle);
+            _audioHandler->loadSound(i + EXPLOSION_OFFSET, i * angle);
         }
-*/
+
     }
     }
 
@@ -224,12 +459,12 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         osg::Vec3 dir = pos - osg::Vec3(0,0,0);
 
         // 9 - 16 explosion sounds
-   /*
+   
         if (_audioHandler)
         {
-            _audioHandler->loadSound(i + EXPLOSION_OFFSET, dir, pos);
+//            _audioHandler->loadSound(i + EXPLOSION_OFFSET, i * angle);
         }
-   */
+   
     }   
     }
 
@@ -340,6 +575,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     }
 
     // Walls
+    // Elevator
     {    
     geode = new osg::Geode();
     tex = new osg::Texture2D();
@@ -369,10 +605,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     // Top
     geo = drawBox(osg::Vec3(0.0, -5.0, 4.5), 9.0, 0.5, 3.0, _colors[GREY], wallTexScale);
     geode->addDrawable(geo);
-    }
     
-    // Elevator
-    { 
     osg::ref_ptr<osg::Geode> elevatorGeode = new osg::Geode();
     tex = new osg::Texture2D();
     img = osgDB::readImageFile(_dataDir + _elevTex);
@@ -413,6 +646,9 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
         pat->addChild(geode);
         pat->addChild(elevatorGeode);
         _geoRoot->addChild(pat);
+
+        _walls.push_back(geode);
+        _elevators.push_back(elevatorGeode);
     }
     }
 
@@ -438,6 +674,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
 
     _geoRoot->addChild(geode);
+    _ceilings.push_back(geode);
     } 
 
     // Floor
@@ -462,6 +699,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     state->setMode(GL_LIGHTING,osg::StateAttribute::OFF);   
 
     _geoRoot->addChild(geode);
+    _floors.push_back(geode);
     }
 
     // Doors
@@ -522,6 +760,8 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
             state->setRenderingHint(StateSet::TRANSPARENT_BIN);
 
             switchNode->addChild(geode, false);
+
+            _doors.push_back(geode);
         }
 
         switchNode->setValue(GREY, true);
@@ -558,6 +798,7 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
             state->setRenderingHint(StateSet::TRANSPARENT_BIN);
 
             switchNode->addChild(geode, false);
+            _doors.push_back(geode);
         }
 
         switchNode->setValue(GREY, true);
@@ -570,19 +811,21 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
 
     // Score text
     { 
-    osg::Vec3 pos = osg::Vec3(-500, 0, 300);
+    osg::Vec3 pos = osg::Vec3(-100, 1000, -100);
+    _scoreSwitch = new osg::Switch();
+
     _scoreText = new osgText::Text();
     _scoreText->setText("Score: 0");
-    _scoreText->setCharacterSize(20);
+    _scoreText->setCharacterSize(40);
     _scoreText->setAlignment(osgText::Text::LEFT_CENTER);
     _scoreText->setPosition(pos);
     _scoreText->setColor(osg::Vec4(1,1,1,1));
     _scoreText->setBackdropColor(osg::Vec4(0,0,0,0));
     _scoreText->setAxisAlignment(osgText::Text::XZ_PLANE);
 
-    float width = 200, height = 50;
+    float width = 500, height = 100;
     osg::ref_ptr<osg::Geometry> quad = makeQuad(width, height, 
-        osg::Vec4(1.0,1.0,1.0,0.5), pos - osg::Vec3(10, 0, 25));
+        osg::Vec4(0.8,0.8,0.8,1.0), pos - osg::Vec3(20, 0, 50));
 
     pat = new osg::PositionAttitudeTransform();
     geode = new osg::Geode();
@@ -594,7 +837,10 @@ void ModelHandler::loadModels(osg::MatrixTransform * root)
     geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
     pat->addChild(geode);
-    PluginHelper::getScene()->addChild(pat);
+  //  PluginHelper::getScene()->addChild(pat);
+
+    _scoreSwitch->addChild(pat);
+    PluginHelper::getScene()->addChild(_scoreSwitch);
     }
 
     // Crosshair
@@ -927,10 +1173,10 @@ osg::ref_ptr<osg::Geode> ModelHandler::getActiveObject()
     return _activeObject;
 }
 
-void ModelHandler::setScore(int score)
+void ModelHandler::setScore(int score, int total)
 {
     char buf[10];
-    sprintf(buf, "%d", score);
+    sprintf(buf, "%d / %d", score, total);
     std::string text = "Score: ";
     text += buf;
     _scoreText->setText(text);
@@ -1164,7 +1410,66 @@ float ModelHandler::getDoorDistance()
 
 bool ModelHandler::doorInView()
 {
-    return _doorInView;
+    return (_viewedDoor == _activeDoor);//_doorInView;
+}
+
+int ModelHandler::getViewedDoor()
+{
+    return _viewedDoor;
+}
+
+void ModelHandler::turnLeft()
+{
+    if (_turningRight) return;
+
+    _turningLeft = true;
+    _viewedDoor = (_viewedDoor + 1) % NUM_DOORS;
+
+    if (_viewedDoor == -1) _viewedDoor += NUM_DOORS;
+
+    
+    float angle = 2 * M_PI / NUM_DOORS;
+    float offset = (_viewedDoor - 4);
+    for (int i = 0; i < NUM_DOORS; ++i)
+    {
+        if (_audioHandler)
+        {
+            _audioHandler->update(i + DING_OFFSET, (i - offset) * angle);
+            _audioHandler->update(i + EXPLOSION_OFFSET, (i - offset) * angle);
+        }
+    }
+}
+
+void ModelHandler::turnRight()
+{
+    if (_turningLeft) return;
+
+    _turningRight = true;
+    _viewedDoor = (_viewedDoor - 1) % NUM_DOORS;
+    if (_viewedDoor == -1) _viewedDoor += NUM_DOORS;
+
+    float angle = 2 * M_PI / NUM_DOORS;
+    float offset = (_viewedDoor - 4);
+    for (int i = 0; i < NUM_DOORS; ++i)
+    {
+        if (_audioHandler)
+        {
+            _audioHandler->update(i + DING_OFFSET, (i - offset) * angle);
+            _audioHandler->update(i + EXPLOSION_OFFSET, (i - offset) * angle);
+        }
+    }
+}
+
+void ModelHandler::showScore(bool b)
+{
+    if (b)
+    {
+        _scoreSwitch->setAllChildrenOn();
+    }
+    else
+    {
+        _scoreSwitch->setAllChildrenOff();
+    }
 }
 
 };

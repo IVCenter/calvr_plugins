@@ -39,7 +39,6 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <X11/Xlib.h>
-#include <spnav.h>
 
 //#include <ftdi.h>
 #include <ftd2xx.h>
@@ -87,17 +86,22 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
             DOOROPEN,
             CLOSINGDOOR
         };
- 
+
+        unsigned char _c;
+
         void loadModels();
         void clear();
         void chooseGameParameters(int &door, Mode &mode, bool &switched);
         void sendChar(unsigned char c);
         void dingTest();
+        void turnLeft();
+        void turnRight();
+        void shoot();
+        void flashAvatars();
 
         int init_SPP(int port); 
         void close_SPP();
         void write_SPP(int bytes, unsigned char* buf);
-        void connectToServer();
 
         float randomFloat(float min, float max)
         {
@@ -113,38 +117,46 @@ class ElevatorRoom: public cvr::CVRPlugin, public cvr::MenuCallback
         AudioHandler * _audioHandler; 
         ModelHandler * _modelHandler;
 
-        cvr::SubMenu * _elevatorMenu;
+        cvr::SubMenu * _elevatorMenu, *_optionsMenu;
         cvr::MenuButton * _loadButton, * _clearButton;
-        cvr::MenuRangeValue * _checkerSpeedRV, * _alienChanceRV;
+        cvr::MenuRangeValue *_timeScaleRV, *_serialTestRV;
         cvr::MenuText * _chancesText;
-        cvr::MenuCheckbox *_dingCheckbox;
+        cvr::MenuCheckbox *_dingCheckbox, *_pauseCB;
+
+        std::map<std::string, cvr::MenuCheckbox*> _levelMap;
 
         osg::ref_ptr<osg::MatrixTransform> _geoRoot; // root of all non-GUI plugin geometry
         
         // Timing 
-        float _startTime, _pauseTime, _flashStartTime;
+        float _startTime, _pauseTime, _flashStartTime, _timeScale;
         float _avatarFlashPerSec, _lightFlashPerSec, _checkSpeed, _doorFlashSpeed;
-        float _modelScale; // scale of entire scene
         float _pauseMin, _pauseMax, _flashNeutralMin, _flashNeutralMax,
         _solidColorMin, _solidColorMax, _doorOpenMin, _doorOpenMax;
+        float _valEventTime, _valEventCutoff;
 
-
+        float _modelScale; // scale of entire scene
         int _flashCount; // number of times active avatar has flashed
         int _activeDoor; // which door is currently opening/closing
         int _score; // current score (should be > 0)
         int _sockfd; // for EOG syncer communication
         int _alienChance, _allyChance, _checkerChance, _errorChance;
 
-        bool _loaded; // whether the model has finished loading
+        bool _loaded, _paused, _switched; // whether the model has finished loading
         bool _hit, _noResponse; // whether a hit has been made on the active avatar
         bool _debug; // turns on debug messages to command line
         bool _connected; // for EOG syncer communication
         bool _soundEnabled;
+        bool _valEvent;
 
         Mode _mode; // which kind of avatar is currently active
         Phase _phase;
-
-
+        
+        int _trialPhase, _trialCount, _alienCount;
+        float _trialPauseTime;
+        bool _trialPause, _nextTrial;
+        std::vector<int> _trialCounts;
+        std::vector<float> _trialPauseLengths;
+        std::vector<std::string> _trialThemes;
 
         // Config options
         bool _staticMode, _staticDoor, _doorMovement, _rotateOnly;
