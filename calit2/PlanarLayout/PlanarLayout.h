@@ -21,6 +21,8 @@ protected:
     class PlanarLayoutAlgorithm : public Layout
     {
     public:
+        PlanarLayoutAlgorithm( std::string name, double animationDuration );
+
         virtual std::string Name( void );
         virtual void Cleanup( void );
         virtual bool Start( void );
@@ -35,16 +37,20 @@ protected:
             float endScale;
         };
 
+        std::string mName;
+
         typedef std::map< cvr::SceneObject*, TransitionState > SceneObjTrans;
         SceneObjTrans mObjTrans;
 
         double mTimeElapsed;
+        double mAnimationDuration;
 
         bool GetBestGrid(unsigned int &r, unsigned int &c, unsigned int cells) const;
         double Rate(unsigned int r, unsigned int c, unsigned int cells) const;
     };
 
-    PlanarLayoutAlgorithm* mLayoutAlgorithm;
+    PlanarLayoutAlgorithm* mLayoutAlgorithmAnimate;
+    PlanarLayoutAlgorithm* mLayoutAlgorithmSnap;
 };
 
 #endif /*_COPLANAR_LAYOUT_H_*/

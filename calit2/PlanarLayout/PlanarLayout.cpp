@@ -1,5 +1,6 @@
 #include "PlanarLayout.h"
 
+#include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/SceneManager.h>
 #include <cvrKernel/PluginHelper.h>
 #include <PluginMessageType.h>
@@ -19,11 +20,15 @@ bool PlanarLayout::init()
 
     if (SceneManager::instance()->getTiledWallValid())
     {
-        mLayoutAlgorithm = new PlanarLayoutAlgorithm;
+        mLayoutAlgorithmAnimate = new PlanarLayoutAlgorithm( "Planar Layout - Animate", ConfigManager::getDouble("Plugin.PlanarLayout.AnimationDuration", 2.0));
+        mLayoutAlgorithmSnap = new PlanarLayoutAlgorithm( "Planar Layout - Snap", 0.0);
 
         LayoutManagerAddLayoutData lmald;
-        lmald.layout = mLayoutAlgorithm;
 
+        lmald.layout = mLayoutAlgorithmAnimate;
+        PluginHelper::sendMessageByName( "LayoutManager", LM_ADD_LAYOUT, (char*)&lmald);
+
+        lmald.layout = mLayoutAlgorithmSnap;
         PluginHelper::sendMessageByName( "LayoutManager", LM_ADD_LAYOUT, (char*)&lmald);
     }
 
@@ -35,13 +40,19 @@ bool PlanarLayout::init()
 
 PlanarLayout::~PlanarLayout()
 {
-    delete mLayoutAlgorithm;
+    delete mLayoutAlgorithmAnimate;
+    delete mLayoutAlgorithmSnap;
+}
+
+PlanarLayout::PlanarLayoutAlgorithm::PlanarLayoutAlgorithm( string name, double animationDuration )
+: mName( name ), mAnimationDuration( animationDuration )
+{
 }
 
 /*virtual*/ string
 PlanarLayout::PlanarLayoutAlgorithm::Name( void )
 {
-    return "Planar Layout";
+    return mName;
 }
 
 /*virtual*/ void
@@ -116,12 +127,21 @@ PlanarLayout::PlanarLayoutAlgorithm::Start( void )
 /*virtual*/ bool
 PlanarLayout::PlanarLayoutAlgorithm::Update( void )
 {
-    double const TOTAL_TIME = 3.0;
+    double uncomplete;
 
-    mTimeElapsed += PluginHelper::getLastFrameDuration();
+    if (0.0 >= mAnimationDuration)
+    {
+        uncomplete = 0.0;
+    }
+    else
+    {
+        mTimeElapsed += PluginHelper::getLastFrameDuration();
 
-    if (mTimeElapsed > TOTAL_TIME)
-        mTimeElapsed = TOTAL_TIME;
+        if (mTimeElapsed > mAnimationDuration)
+            uncomplete = 0.0;
+        else
+            uncomplete = 1.0 - mTimeElapsed / mAnimationDuration;
+    }
 
     vector< SceneObject* > scene_objects = SceneManager::instance()->getSceneObjects();
 
@@ -132,16 +152,14 @@ PlanarLayout::PlanarLayoutAlgorithm::Update( void )
         if (mObjTrans.end() == it)
             continue;
 
-        double progress = 1.0 - mTimeElapsed / TOTAL_TIME;
-
-        Vec3 pos = it->second.endPos + (it->second.startPos - it->second.endPos) * progress;
-        float scale = it->second.endScale + (it->second.startScale - it->second.endScale) * progress;
+        Vec3 pos = it->second.endPos + (it->second.startPos - it->second.endPos) * uncomplete;
+        float scale = it->second.endScale + (it->second.startScale - it->second.endScale) * uncomplete;
 
         it->first->setPosition( pos );
         it->first->setScale( scale );
     }
 
-    return (TOTAL_TIME <= mTimeElapsed);
+    return (uncomplete <= 0.0);
 }
 
 bool
