@@ -150,6 +150,28 @@ enum StructViewMessageType
     SV_LAYER_OFF
 };
 
+// LayoutManager
+
+class Layout
+{
+public:
+    virtual std::string Name(void) = 0;
+    virtual void Cleanup(void) = 0;
+    virtual bool Start(void) = 0;
+    virtual bool Update(void) = 0;
+};
+
+struct LayoutManagerAddLayoutData
+{
+    Layout* layout;
+};
+
+enum LayoutManagerMessageType
+{
+    LM_ADD_LAYOUT = 0,
+    LM_START_LAYOUT
+};
+
 // Video
 enum VideoMessageType
 {
@@ -186,5 +208,5 @@ struct VideoMessageData
     VideoSceneObject* obj;
 };
 
-
 #endif
+
