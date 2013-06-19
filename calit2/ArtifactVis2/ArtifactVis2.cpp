@@ -2107,6 +2107,7 @@ updateAnnoLine();
 updateArtifactLine();
 updateArtifactModel();
 updateLineGroup();
+
 }
     /*
     std::vector<Artifact*> allArtifacts;
@@ -5736,6 +5737,7 @@ void ArtifactVis2::initSelectBox()
 void ArtifactVis2::secondInit()
 {
 
+    createShadowLighting();
     loadModels();
 
     //Algorithm for generating colors based on DC.
@@ -6150,27 +6152,42 @@ void ArtifactVis2::addNewModel(int i)
 		if(false)
 		{
 		    osg::StateSet* stateset = modelNode->getOrCreateStateSet();
-		    stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+		    //stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+		    stateset->setMode(GL_LIGHTING, osg::StateAttribute::ON);
 		}
 		if(true)
 		{
 		    osg::StateSet * stateset = modelNode->getOrCreateStateSet();
 		    osg::CullFace * cf=new osg::CullFace();
-		    cf->setMode(osg::CullFace::BACK);
-		    stateset->setAttributeAndModes( cf, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+		    //cf->setMode(osg::CullFace::BACK);
+		    cf->setMode(osg::CullFace::FRONT_AND_BACK);
+		    stateset->setAttributeAndModes( cf, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
 		}
-                if(true)
+                if(false)
 		{
 		TextureResizeNonPowerOfTwoHintVisitor tr2v(false);
 		modelNode->accept(tr2v);
                 }
-                if(false)
+                if(true)
                 {
+		TextureResizeNonPowerOfTwoHintVisitor tr2v(false);
+		modelNode->accept(tr2v);
                     StateSet* ss = modelNode->getOrCreateStateSet();
                     ss->setMode(GL_LIGHTING, StateAttribute::ON | osg::StateAttribute::OVERRIDE);
                     Material* mat = new Material();
                     mat->setColorMode(Material::AMBIENT_AND_DIFFUSE);
-                    Vec4 color_dif(1, 1, 1, 1);
+		    bool rgb_config = false;
+		    float r,g,b,a;
+                    r = g = b = a = 1;
+		    if(rgb_config)
+                    {
+			r = 51.0/255.0;
+			g = 25.0/255.0;
+			b = 0/255.0;
+			a = 255.0/255.0;
+
+                    }
+                    Vec4 color_dif(r, g, b, a);
                     mat->setDiffuse(Material::FRONT_AND_BACK, color_dif);
                     ss->setAttribute(mat);
                     ss->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
@@ -6186,7 +6203,9 @@ float currentScale = _models3d[i]->scale;
 	    osg::Switch* switchNode = new osg::Switch();
 	    so->addChild(switchNode);
 	    PluginHelper::registerSceneObject(so,"Test");
-	    so->attachToScene();
+//	    so->attachToScene();
+            _shadowRoot->addChild(so->_root);
+            so->updateMatrices();
 //Add currentNode to switchNode
       _models3d[i]->currentModelNode = modelNode;  
 	switchNode->addChild(modelNode);
@@ -6300,6 +6319,7 @@ cerr << "Triggered\n";
     {
     Matrix handMat = getHandToObjectMatrix();
     pos = handMat.getTrans();
+    cerr << "pos: " << pos.x() << " " << pos.y() << " " << pos.z() << "\n";
     }
 
     string file;
@@ -7345,7 +7365,7 @@ stringstream buffer;
 
     fclose(fp);
  
-
+cerr << "Saved File\n";
 }
 Vec3 ArtifactVis2::matrix_to_euler(osg::Matrix colMatrix)
 {
@@ -8684,4 +8704,154 @@ void ArtifactVis2::newFileLoad(std::string filename, std::string type, bool useH
                 }
             }
 
+}
+void ArtifactVis2::createShadowLighting()
+{
+unsigned int rcvShadowMask = 0x1;
+unsigned int castShadowMask = 0x2;
+    
+   // osg::Vec4 lightpos = osg::Vec4(4.0,4.0,10.0,0.0);
+   // lightpos = osg::Vec4(-2,10,20,0);
+ Quat pcRot = Quat(0,0,0,1);
+ float pcScale = 1.0;
+ Vec3 pcPos = Vec3(-2,10,20);
+ lightObject = new LightObject("light","",pcRot,pcScale,pcPos);
+ PluginHelper::registerSceneObject(lightObject,"lightObject");
+ lightObject->attachToScene();
+
+   // lightSource = new osg::LightSource;
+   // lightSource->getLight()->setPosition(lightpos);
+   // lightSource->getLight()->setAmbient(osg::Vec4(0.2, 0.2, 0.2, 1));
+  //  lightSource->getLight()->setDiffuse(osg::Vec4(0.8, 0.8, 0.8, 1));
+    int shadowsize = 4096;
+    //sm = new osgShadow::SoftShadowMap;
+    sm = new osgShadow::ShadowMap;
+    sm->setLight(lightObject->_lightSource.get());
+    sm->setTextureSize(osg::Vec2s(shadowsize, shadowsize));
+    sm->setTextureUnit(1);
+    //sm->setJitteringScale(16);
+    // Scene.
+    _shadowRoot = new osgShadow::ShadowedScene;
+    _shadowRoot->setShadowTechnique(sm.get());
+/*
+    // Ground.
+    osg::ref_ptr<osg::MatrixTransform> ground = new osg::MatrixTransform;
+    ground->addChild(osgDB::readNodeFile("/home/calvr/osgdata/lz.osg"));
+    ground->setMatrix(osg::Matrix::translate(0, 0, -150));
+    //ground->setNodeMask(rcvShadowMask);
+    // Cessna.
+    osg::ref_ptr<osg::MatrixTransform> cessna = new osg::MatrixTransform;
+    cessna->addChild(osgDB::readNodeFile("/home/calvr/osgdata/cessna.osg.0,0,90.rot"));
+    osg::ref_ptr<osg::AnimationPathCallback> apcb = new osg::AnimationPathCallback;
+//Animation Path
+    float radius = 50;
+    float time = 6;
+    osg::ref_ptr<osg::AnimationPath> path = new osg::AnimationPath;
+    path->setLoopMode(osg::AnimationPath::LOOP);
+    unsigned int numSamples = 32;
+    float delta_yaw = 2.0f * osg::PI / ((float)numSamples - 1.0f);
+    float delta_time = time / (float)numSamples;
+    for (unsigned int i = 0; i < numSamples; ++i)
+    {
+        float yaw = delta_yaw * (float)i;
+        osg::Vec3 pos(sinf(yaw)*radius, cosf(yaw)*radius, 0.0f);
+        osg::Quat rot(-yaw, osg::Z_AXIS);
+        path->insert(delta_time * (float)i,
+                     osg::AnimationPath::ControlPoint(pos, rot));
+    }
+    apcb->setAnimationPath(path.release());
+    cessna->setUpdateCallback(apcb.get());
+    //cessna->setNodeMask(castShadowMask);
+    // Truck.
+    osg::ref_ptr<osg::PositionAttitudeTransform> truck = new osg::PositionAttitudeTransform;
+    truck->addChild(osgDB::readNodeFile("/home/calvr/osgdata/dumptruck.osg"));
+    truck->setPosition(osg::Vec3(0, 0, -50));
+    //truck->setNodeMask(rcvShadowMask|castShadowMask);
+    // Box.
+    osg::ref_ptr<osg::MatrixTransform> box = new osg::MatrixTransform;
+    box->addChild(osgDB::readNodeFile("/home/calvr/SoftShadowMapping/box.osgt"));
+    box->setMatrix(osg::Matrix::translate(10, 2, -45));
+    std::string vert;
+    if(true)
+    {
+    const char* fileName = "/home/calvr/SoftShadowMapping/box.vert";
+    std::ifstream in(fileName);
+    std::string s;
+    std::string shaderCode;
+    while (getline (in, s))
+        shaderCode += s + "\n";
+    vert = shaderCode;
+    }
+    std::string frag;
+    if(true)
+    {
+    const char* fileName = "/home/calvr/SoftShadowMapping/box.frag";
+    std::ifstream in(fileName);
+    std::string s;
+    std::string shaderCode;
+    while (getline (in, s))
+        shaderCode += s + "\n";
+    frag = shaderCode;
+    }
+    if (vert.length() && frag.length())
+    {
+        osg::ref_ptr<osg::Program> prog = new osg::Program;
+        prog->setName("box shader");
+        prog->addShader(new osg::Shader(osg::Shader::VERTEX,   vert));
+        prog->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
+        osg::StateSet *ss = box->getChild(0)->getOrCreateStateSet();
+        ss->setAttributeAndModes(prog, osg::StateAttribute::ON);
+        std::cout << "set up box shader\n";
+        //osgDB::writeNodeFile(*box->getChild(0), "/home/calvr/SoftShadowMapping/box.osgx");
+    }
+
+    _shadowRoot->addChild(ground.get());
+    _shadowRoot->addChild(cessna.get());
+    _shadowRoot->addChild(truck.get());
+    _shadowRoot->addChild(box.get());
+*/
+    _shadowRoot->addChild(lightObject->_lightSource.get());
+    _root->addChild(_shadowRoot.get());
+
+//Default shapes for testing shading
+
+    Vec4f color = Vec4f(1, 1, 1, 1);
+    Vec4f colorR = Vec4f(0.92, 0, 0, 1);
+    Vec4f colorG = Vec4f(0, 0.92, 0, 1);
+    Vec4f colorY = Vec4f(1, 1, 0, 1);
+    //Setup Initial Pos
+
+    osg::Vec3 pos = Vec3(0,0,20);
+    //osg::Vec3 pos2 = Vec3(lightpos.x(),lightpos.y(),lightpos.z());
+    osg::Vec3 pos3 = Vec3(0,0,0);
+    //New LineGroup
+    float _vertexRadius = 1.0;
+
+    //make First cube geode
+/*
+    Sphere* cubeShape = new Sphere(pos2, _vertexRadius);
+    ShapeDrawable* shapeDrawable = new ShapeDrawable(cubeShape);
+   // shapeDrawable->setTessellationHints(hints);
+    shapeDrawable->setColor(colorY);
+    osg::ref_ptr<osg::Geode> sphereGeode = new Geode();  
+    sphereGeode->addDrawable(shapeDrawable);
+    //_shadowRoot->addChild(sphereGeode.get());
+*/
+/*
+    Sphere* cubeShape2 = new Sphere(pos2, 1.0);
+    shapeDrawable = new ShapeDrawable(cubeShape2);
+   // shapeDrawable->setTessellationHints(hints);
+    shapeDrawable->setColor(colorR);
+    osg::ref_ptr<osg::Geode> sphereGeode2 = new Geode();  
+    sphereGeode2->addDrawable(shapeDrawable);
+    _shadowRoot->addChild(sphereGeode2.get());
+    
+    Box* cubeShape3 = new Box(pos3, 20.0);
+    shapeDrawable = new ShapeDrawable(cubeShape3);
+   // shapeDrawable->setTessellationHints(hints);
+    shapeDrawable->setColor(color);
+    osg::ref_ptr<osg::Geode> sphereGeode3 = new Geode();  
+    sphereGeode3->addDrawable(shapeDrawable);
+    _shadowRoot->addChild(sphereGeode3.get());
+*/
 }

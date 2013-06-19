@@ -2,6 +2,7 @@
 #define _ARTIFACTVIS2_
 
 #include <PointCloudObject.h>
+#include <LightObject.h>
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuCheckbox.h>
@@ -17,12 +18,17 @@
 #include <cvrKernel/SceneManager.h>
 #include <cvrKernel/SceneObject.h>
 
+#include <osg/AnimationPath>
+#include <osg/PositionAttitudeTransform>
 #include <osg/Material>
 #include <osg/MatrixTransform>
 #include <osgText/Text>
 #include <osg/TextureCubeMap>
 #include <osg/Texture2D>
 #include <osg/LineWidth>
+#include <osgShadow/ShadowedScene>
+#include <osgShadow/SoftShadowMap>
+#include <osgShadow/ShadowMap>
 
 
 
@@ -743,6 +749,11 @@ protected:
     osg::Vec4 _colors[729];
 
     //osg::LOD * _my_own_root;
+    osg::ref_ptr<osgShadow::ShadowedScene>  _shadowRoot;
+    //osg::ref_ptr<osgShadow::SoftShadowMap>  sm;
+    osg::ref_ptr<osgShadow::ShadowMap>  sm;
+    LightObject* lightObject;
+
     std::vector<osg::Vec3Array* > _coordsPC;
     std::vector<osg::Vec4Array* > _colorsPC;
     std::vector<osg::Vec3d> _avgOffset;
@@ -831,6 +842,7 @@ protected:
 //Menu System Functions
 
     void secondInit();
+    void createShadowLighting();
     void menuSetup();
     void updateDropDowns();
     void addCheckBoxMenuItems(std::vector<cvr::MenuCheckbox*> checkBox);
