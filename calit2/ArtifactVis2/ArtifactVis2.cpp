@@ -98,6 +98,10 @@ ArtifactVis2* ArtifactVis2::instance()
 
 void ArtifactVis2::message(int type, char* data)
 {
+    if(type == 0)
+    {
+       
+    }
     /*
     if(type == OE_TRANSFORM_POINTER)
     {
@@ -1449,22 +1453,22 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
                }
                else
                {
-		_models3d[i]->so->attachToScene();
+		_models3d[i]->modelObject->attachToScene(_shadowRoot.get());
 		_models3d[i]->visible = true;
-		_models3d[i]->active = true;
-		_models3d[i]->visibleMap->setValue(true);
-		_models3d[i]->activeMap->setValue(true);
+		//_models3d[i]->active = true;
+		//_models3d[i]->visibleMap->setValue(true);
+		//_models3d[i]->activeMap->setValue(true);
                }
             }
             else
             {
                if(_models3d[i]->visible)
                {
-		_models3d[i]->so->detachFromScene();
+		_models3d[i]->modelObject->detachFromScene(_shadowRoot.get());
 		_models3d[i]->visible = false;
-		_models3d[i]->active = false;
-		_models3d[i]->visibleMap->setValue(false);
-		_models3d[i]->activeMap->setValue(false);
+	//	_models3d[i]->active = false;
+	//	_models3d[i]->visibleMap->setValue(false);
+	//	_models3d[i]->activeMap->setValue(false);
 
                }
 
@@ -1488,7 +1492,7 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
                }
                else
                {
-		_pointClouds[i]->pcObject->attachToScene();
+		_pointClouds[i]->pcObject->attachToScene(_shadowRoot.get());
 		_pointClouds[i]->visible = true;
 	//	_pointClouds[i]->active = true;
 	//	_pointClouds[i]->visibleMap->setValue(true);
@@ -1499,7 +1503,7 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
             {
                if(_pointClouds[i]->visible)
                {
-		_pointClouds[i]->pcObject->detachFromScene();
+		_pointClouds[i]->pcObject->detachFromScene(_shadowRoot.get());
 		_pointClouds[i]->visible = false;
 	//	_pointClouds[i]->active = false;
 	//	_pointClouds[i]->visibleMap->setValue(false);
@@ -6120,15 +6124,27 @@ void ArtifactVis2::addNewPC(int index)
  float pcScale = _pointClouds[index]->scale;
  PointCloudObject * pcObject = new PointCloudObject(name,filename,pcRot,pcScale,pcPos);
  PluginHelper::registerSceneObject(pcObject,"pcObject");
- pcObject->attachToScene();
+ pcObject->attachToScene(_shadowRoot.get());
  _pointClouds[index]->pcObject = pcObject;
  _pointClouds[index]->visible = true;
  _pointClouds[index]->loaded = true;
  //cout << "This is from new PC test!!!!!\n";
  
 }
-void ArtifactVis2::addNewModel(int i)
+void ArtifactVis2::addNewModel(int index)
 {
+ string filename = _models3d[index]->fullpath;
+ string name = _models3d[index]->name;
+ Quat pcRot = _models3d[index]->rot;
+ Vec3 pcPos = _models3d[index]->pos;
+ float pcScale = _models3d[index]->scale;
+ ModelObject * modelObject = new ModelObject(name,filename,pcRot,pcScale,pcPos,objectMap);
+ PluginHelper::registerSceneObject(modelObject,"modelObject");
+ modelObject->attachToScene(_shadowRoot.get());
+    _models3d[index]->modelObject = modelObject;
+    _models3d[index]->visible = true;
+    _models3d[index]->loaded = true;
+/*
  newFileAvailable = false;
  string currentModelPath = _models3d[i]->fullpath;
  string name = _models3d[i]->name;
@@ -6276,13 +6292,6 @@ float currentScale = _models3d[i]->scale;
             rt->setCallback(this);
 	    so->addMenuItem(rt);
             _models3d[i]->rzMap = rt;
-/*
-	    mc = new MenuCheckbox("Panel Visible",true);
-	    mc->setCallback(this);
-	    so->addMenuItem(mc);
- //           _query[q]->artifacts[inc]->model->pVisibleMap = mc;
-           // _query[q]->artifacts[inc]->model->pVisible = true;
-*/
 Vec3 orig = currentPos; 
 cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
 
@@ -6291,12 +6300,12 @@ cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
  so->setRotation(currentRot);     
 
 
-
     _models3d[i]->so = so;
     _models3d[i]->pos = so->getPosition();
     _models3d[i]->rot = so->getRotation();
     _models3d[i]->active = false;
     _models3d[i]->loaded = true;
+*/
 
 
     
@@ -8854,4 +8863,11 @@ unsigned int castShadowMask = 0x2;
     sphereGeode3->addDrawable(shapeDrawable);
     _shadowRoot->addChild(sphereGeode3.get());
 */
+}
+
+osgShadow::ShadowedScene* ArtifactVis2::getShadowRoot()
+{
+
+  return _shadowRoot.get();
+
 }

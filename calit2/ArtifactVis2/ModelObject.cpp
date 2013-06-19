@@ -1,4 +1,4 @@
-#include "PointCloudObject.h"
+#include "ModelObject.h"
 //#include "PanoViewLOD.h"
 
 
@@ -6,84 +6,94 @@
 
 using namespace cvr;
 using namespace std;
+using namespace osg;
 
-PointCloudObject::PointCloudObject(std::string name, std::string filename, osg::Quat pcRot, float pcScale, osg::Vec3 pcPos) : SceneObject(name,false,false,false,true,false)
+ModelObject::ModelObject(std::string name, std::string filename, osg::Quat pcRot, float pcScale, osg::Vec3 pcPos, std::map< std::string, osg::ref_ptr<osg::Node> > objectMap) : SceneObject(name,false,false,false,true,false)
+
 {
     _active = false;
     _loaded = false;
     _visible = false;
-
+    _shadow = true;
+    _objectMap = objectMap;
     init(name,filename,pcRot,pcScale,pcPos);
 }
 
 
-PointCloudObject::~PointCloudObject()
+ModelObject::~ModelObject()
 {
 
 }
 
-void PointCloudObject::init(std::string name, std::string filename, osg::Quat pcRot, float pcScale, osg::Vec3 pcPos)
+void ModelObject::init(std::string name, std::string filename, osg::Quat pcRot, float pcScale, osg::Vec3 pcPos)
 {
-    string type = filename;
+ string currentModelPath = filename;
 
-    bool nvidia = ConfigManager::getBool("Plugin.ArtifactVis2.Nvidia");
-
-        cout << "Reading point cloud data from : " << filename <<  "..." << endl;
-       // std::ifstream file(filename.c_str());
-        type.erase(0, (type.length() - 3));
-        cout << type << "\n";
-        string line;
-        bool read = false;
-        int factor = 1;
-        if((type == "ply" || type == "xyb") && nvidia)
-        {
-            cout << "Reading XYB" << endl;
-
-            //float x,y,z;
-            //bamop
-            float scale = 9;
-            //	osg::Vec3 offset(transx, transy, transz);
-            //_activeObject = new PointsObject("Points",true,false,false,true,true);
-
-
-            cout << "File: " << filename << endl;
-            PointsLoadInfo pli;
-            pli.file = filename;
-            pli.group = new osg::Group();
-
-            PluginHelper::sendMessageByName("Points2",POINTS_LOAD_REQUEST,(char*)&pli);
-
-            if(!pli.group->getNumChildren())
-            {
-                std::cerr << "PointsWithPans: Error, no points loaded for file: " << pli.file << std::endl;
-                return;
-            }
-
-            float pscale;
-            if(type == "xyb")
-            {
-                pscale = 100;
-            }
+         Vec3 currentPos = pcPos;
+        Quat  currentRot = pcRot;
+  //Check if ModelPath has been loaded
+  Node* modelNode;
+  
+            if (_objectMap.count(currentModelPath) == 0)
+	    {
+		 modelNode = osgDB::readNodeFile(currentModelPath);
+	    }
             else
             {
-                pscale = 0.3;
+            modelNode = _objectMap[currentModelPath];
             }
-            pscale = ConfigManager::getFloat("Plugin.ArtifactVis2.scaleP", 0);
-            cerr << "Scale of P is " << pscale << "\n";
+  
+//Add Lighting and Culling
 
-            osg::Uniform*  _scaleUni = new osg::Uniform("pointScale",1.0f * pscale);
-            pli.group->getOrCreateStateSet()->addUniform(_scaleUni);
-        osg::StateSet* ss = pli.group->getOrCreateStateSet();
-        ss->setMode(GL_LIGHTING, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+		if(false)
+		{
+		    osg::StateSet* stateset = modelNode->getOrCreateStateSet();
+		    //stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+		    stateset->setMode(GL_LIGHTING, osg::StateAttribute::ON);
+		}
+		if(true)
+		{
+		    osg::StateSet * stateset = modelNode->getOrCreateStateSet();
+		    osg::CullFace * cf=new osg::CullFace();
+		    //cf->setMode(osg::CullFace::BACK);
+		    cf->setMode(osg::CullFace::FRONT_AND_BACK);
+		    stateset->setAttributeAndModes( cf, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+		}
+                if(false)
+		{
+		TextureResizeNonPowerOfTwoHintVisitor tr2v(false);
+		modelNode->accept(tr2v);
+                }
+                if(true)
+                {
+		TextureResizeNonPowerOfTwoHintVisitor tr2v(false);
+		modelNode->accept(tr2v);
+                    StateSet* ss = modelNode->getOrCreateStateSet();
+                    ss->setMode(GL_LIGHTING, StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+                    Material* mat = new Material();
+                    mat->setColorMode(Material::AMBIENT_AND_DIFFUSE);
+		    bool rgb_config = false;
+		    float r,g,b,a;
+                    r = g = b = a = 1;
+		    if(rgb_config)
+                    {
+			r = 51.0/255.0;
+			g = 25.0/255.0;
+			b = 0/255.0;
+			a = 255.0/255.0;
+
+                    }
+                    Vec4 color_dif(r, g, b, a);
+                    mat->setDiffuse(Material::FRONT_AND_BACK, color_dif);
+                    ss->setAttribute(mat);
+                    ss->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+                }
         
             float currentScale = pcScale;
 	    osg::Switch* switchNode = new osg::Switch();
 	    addChild(switchNode);
-	   // PluginHelper::registerSceneObject(so,"Test");
-	   // so->attachToScene();
 //Add currentNode to switchNode
-     // _models3d[i]->currentModelNode = modelNode;  
-	switchNode->addChild(pli.group);
+	switchNode->addChild(modelNode);
 //Add menu system
 	    setNavigationOn(true);
 	    setMovable(false);
@@ -147,11 +157,6 @@ void PointCloudObject::init(std::string name, std::string filename, osg::Quat pc
 
 
 
-osg::Quat currentRot = pcRot;
-osg::Vec3 currentPos = pcPos;
-
-
-
 osg::Vec3 orig = currentPos; 
 cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
 
@@ -163,36 +168,22 @@ cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
  _loaded = true;
  _visible = true;
 
-//orig = so->getPosition();
-//currentScale = so->getScale();
-//cerr << "So Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
-//cerr << "So Scale: " << currentScale << endl;
-   // _pointClouds[i]->so = so;
-   // _pointClouds[i]->pos = so->getPosition();
-  //  _pointClouds[i]->rot = so->getRotation();
-  //  _pointClouds[i]->active = true;
-  //  _pointClouds[i]->loaded = true;
 
-      }
-      else
-      {
-         return;
-      }
 }
 
 
 
-void PointCloudObject::setRotate(float rotate)
+void ModelObject::setRotate(float rotate)
 {
 }
 
-float PointCloudObject::getRotate()
+float ModelObject::getRotate()
 {
     float angle;
     return angle;
 }
 
-void PointCloudObject::menuCallback(cvr::MenuItem * item)
+void ModelObject::menuCallback(cvr::MenuItem * item)
 {
         if (item == saveMap)
         {
@@ -307,7 +298,7 @@ void PointCloudObject::menuCallback(cvr::MenuItem * item)
     SceneObject::menuCallback(item);
 }
 
-void PointCloudObject::updateCallback(int handID, const osg::Matrix & mat)
+void ModelObject::updateCallback(int handID, const osg::Matrix & mat)
 {
 
     //std::cerr << "Update Callback." << std::endl;
@@ -320,7 +311,7 @@ void PointCloudObject::updateCallback(int handID, const osg::Matrix & mat)
     }
 }
 
-bool PointCloudObject::eventCallback(cvr::InteractionEvent * ie)
+bool ModelObject::eventCallback(cvr::InteractionEvent * ie)
 {
     if(ie->asTrackedButtonEvent())
     {
@@ -409,12 +400,11 @@ bool PointCloudObject::eventCallback(cvr::InteractionEvent * ie)
     return false;
 }
 
-void PointCloudObject::preFrameUpdate()
+void ModelObject::preFrameUpdate()
 {
 }
 
-
-void PointCloudObject::attachToScene(osgShadow::ShadowedScene* shadowRoot)
+void ModelObject::attachToScene(osgShadow::ShadowedScene* shadowRoot)
 {
     if(_attached)
     {
@@ -459,7 +449,7 @@ void PointCloudObject::attachToScene(osgShadow::ShadowedScene* shadowRoot)
     _attached = true;
 }
 
-void PointCloudObject::detachFromScene(osgShadow::ShadowedScene* shadowRoot)
+void ModelObject::detachFromScene(osgShadow::ShadowedScene* shadowRoot)
 {
     if(!_attached)
     {

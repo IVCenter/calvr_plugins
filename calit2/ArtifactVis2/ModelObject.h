@@ -10,10 +10,20 @@
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/NodeMask.h>
 #include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/PluginManager.h>
 #include <cvrUtil/OsgMath.h>
+#include <cvrUtil/TextureVisitors.h>
 #include <PluginMessageType.h>
 
 #include <osg/Depth>
+#include <osgDB/ReadFile>
+#include <osgDB/FileUtils>
+#include <osg/CullFace>
+#include <osg/TexEnv>
+#include <osg/GLExtensions>
+#include <osg/Material>
+#include <osg/TextureCubeMap>
+#include <osg/Texture2D>
 #include <osgShadow/ShadowedScene>
 #include <osgShadow/SoftShadowMap>
 #include <osgShadow/ShadowMap>
@@ -25,23 +35,11 @@
 
 #include <string>
 
-struct ZoomTransitionInfo
-{
-    float rotationFromImage;
-    float rotationToImage;
-    float zoomValue;
-    osg::Vec3 zoomDir;
-};
-
-struct MorphTransitionInfo
-{
-};
-
-class PointCloudObject : public cvr::SceneObject
+class ModelObject : public cvr::SceneObject
 {
     public:
-        PointCloudObject(std::string name, std::string filename, osg::Quat pcRot, float pcScale, osg::Vec3 pcPos);
-        virtual ~PointCloudObject();
+        ModelObject(std::string name, std::string filename, osg::Quat pcRot, float pcScale, osg::Vec3 pcPos, std::map< std::string, osg::ref_ptr<osg::Node> > objectMap);
+        virtual ~ModelObject();
 
         void init(std::string name, std::string filename, osg::Quat pcRot, float pcScale, osg::Vec3 pcPos);
 
@@ -63,6 +61,7 @@ class PointCloudObject : public cvr::SceneObject
         virtual void detachFromScene(osgShadow::ShadowedScene* shadowRoot);
 
         void preFrameUpdate();
+        std::map< std::string, osg::ref_ptr<osg::Node> > _objectMap;
 
     protected:
         void updateZoom(osg::Matrix & mat);
@@ -73,6 +72,7 @@ class PointCloudObject : public cvr::SceneObject
         bool _active;
         bool _loaded;
         bool _visible;
+        bool _shadow;
 
         cvr::MenuButton * loadMap;
         cvr::MenuButton * saveMap;

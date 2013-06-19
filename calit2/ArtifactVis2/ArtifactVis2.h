@@ -2,6 +2,7 @@
 #define _ARTIFACTVIS2_
 
 #include <PointCloudObject.h>
+#include <ModelObject.h>
 #include <LightObject.h>
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrMenu/SubMenu.h>
@@ -376,6 +377,7 @@ struct Model
         float origScale;
         cvr::SceneObject * so;
 	PointCloudObject * pcObject;
+	ModelObject * modelObject;
 	bool loaded;
         bool active;
         bool visible;
@@ -897,6 +899,7 @@ void updateHudMovement(int i, cvr::TrackedButtonInteractionEvent * tie,float _mo
         void updateLoadMenu(DirFile* entry);
         std::vector<DirFile*> getSubDirFiles(string dir, string filename, string types);
         void recursiveLoadMenu(std::vector<DirFile*> entries, string types);
+        osgShadow::ShadowedScene* getShadowRoot();
 	
 };
 

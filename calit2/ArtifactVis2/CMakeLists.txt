@@ -4,6 +4,7 @@ SET(PLUGIN_HEADERS
     ArtifactVis2.h
     PointCloudObject.h
     LightObject.h
+    ModelObject.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -12,6 +13,7 @@ ADD_LIBRARY(${LIB_NAME}
     ArtifactVis2.cpp
     PointCloudObject.cpp
     LightObject.cpp
+    ModelObject.cpp
 )
 
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-cpp")
