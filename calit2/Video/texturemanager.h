@@ -45,6 +45,12 @@ private:
 
 };
 
+enum STEREO_EYE
+{
+	STEREO_LEFT,
+	STEREO_RIGHT
+};
+
 class TextureManager
 {
 public:
@@ -66,6 +72,9 @@ public:
 	cvr::SceneObject* GetSceneObject();
 
 	void AddGID(unsigned int gid);
+	void SetStereo(STEREO_EYE eye);
+	bool IsStereo();
+	STEREO_EYE GetStereo();
 
 	osg::Geode* AddTexture(unsigned int gid, std::map<unsigned int, GLuint> texmap, unsigned int width, unsigned int height);
 	unsigned int GetVideoCount() const;
@@ -78,6 +87,8 @@ private:
 	std::vector<unsigned int> m_gidList;
 
 	unsigned int m_gid;
+	bool m_isStereo;
+	STEREO_EYE m_eye;
 
 };
 

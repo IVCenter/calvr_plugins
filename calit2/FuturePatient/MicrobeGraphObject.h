@@ -32,6 +32,9 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
         bool setGraph(std::string title, int patientid, std::string testLabel, int microbes, bool lsOrdering = true);
         bool setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, bool lsOrdering = true);
 
+        virtual void objectAdded();
+        virtual void objectRemoved();
+
         void setGraphSize(float width, float height);
         void setColor(osg::Vec4 color);
 

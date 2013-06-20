@@ -17,7 +17,6 @@
 bool MicrobeScatterGraphObject::_dataInit = false;
 std::vector<std::vector<struct MicrobeScatterGraphObject::DataEntry> > MicrobeScatterGraphObject::_data;
 std::map<std::string,int> MicrobeScatterGraphObject::_phylumIndexMap;
-GraphKeyObject * MicrobeScatterGraphObject::_graphKey = NULL;
 
 using namespace cvr;
 
@@ -34,11 +33,6 @@ MicrobeScatterGraphObject::MicrobeScatterGraphObject(mysqlpp::Connection * conn,
 
     makeSelect();
     updateSelect();
-
-    if(!_graphKey)
-    {
-	makeGraphKey();
-    }
 
     if(contextMenu)
     {
@@ -136,22 +130,26 @@ bool MicrobeScatterGraphObject::setGraph(std::string title, std::string primaryP
 
 void MicrobeScatterGraphObject::objectAdded()
 {
-    bool addKey = !_graphKey->hasRef();
-    _graphKey->ref(this);
-
-    if(addKey)
+    GraphLayoutObject * layout = dynamic_cast<GraphLayoutObject*>(_parent);
+    if(layout && layout->getPatientKeyObject())
     {
-	GraphLayoutObject * layout = dynamic_cast<GraphLayoutObject*>(_parent);
-	if(layout)
+	bool addKey = !layout->getPatientKeyObject()->hasRef();
+	layout->getPatientKeyObject()->ref(this);
+
+	if(addKey)
 	{
-	    layout->addLineObject(_graphKey);
+	    layout->addLineObject(layout->getPatientKeyObject());
 	}
     }
 }
 
 void MicrobeScatterGraphObject::objectRemoved()
 {
-    _graphKey->unref(this);
+    GraphLayoutObject * layout = dynamic_cast<GraphLayoutObject*>(_parent);
+    if(layout && layout->getPatientKeyObject())
+    {
+	layout->getPatientKeyObject()->unref(this);
+    }
 }
 
 void MicrobeScatterGraphObject::setGraphSize(float width, float height)
@@ -552,24 +550,4 @@ void MicrobeScatterGraphObject::updateSelect()
 
     verts->dirty();
     _selectGeom->getBound();
-}
-
-void MicrobeScatterGraphObject::makeGraphKey()
-{
-    _graphKey = new GraphKeyObject("Scatter Graph Key",false,false,false,false,false);
-
-    std::vector<osg::Vec4> colors;
-    std::vector<std::string> labels;
-
-    labels.push_back("Smarr");
-    labels.push_back("Crohns");
-    labels.push_back("UC");
-    labels.push_back("Healthy");
-
-    for(int i = 0; i < labels.size(); ++i)
-    {
-	colors.push_back(ColorGenerator::makeColor(i,labels.size()));
-    }
-
-    _graphKey->setKeys(colors,labels);
 }

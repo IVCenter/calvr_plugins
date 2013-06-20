@@ -8,6 +8,7 @@
 #include <cvrKernel/ComController.h>
 #include <cvrKernel/SceneObject.h>
 #include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/NodeMask.h>
 #include <iostream>
 
 //#define NOSYNC
@@ -103,6 +104,22 @@ void Video::postFrame()
 	bool isHead = cvr::ComController::instance()->isMaster();
 	unsigned int i = 0;
 	//isHead = true;
+	for (std::list<PTSUpdate>::iterator iter = m_ptsUpdateList.begin(); iter != m_ptsUpdateList.end(); ++iter)
+	{
+		PTSUpdate update = *iter;
+		int ret = m_videoplayer.RemoveVideo(update.gid, update.pts);
+		if (ret != 0)
+		{
+			printf("Remove video for %u at pts %.4lf failed %d\n", update.gid, update.pts, ret);
+		}
+		else
+		{
+			printf("Remove video for %u at pts %.4lf succeeded \n", update.gid, update.pts);
+		}
+
+
+	}
+	m_ptsUpdateList.clear();
 	if (isHead)
 	{
 		for (std::map<unsigned int, TextureManager*>::iterator iter = m_gidMap.begin(); iter != m_gidMap.end(); ++iter)
@@ -119,6 +136,7 @@ void Video::postFrame()
 				//printf("CheckUpdateVideo returned true\n");
 				PTSUpdate update(gid, m_videoplayer.GetVideoPts(gid));
 				ptsList.push_back(update);
+				printf("Adding an update for video %x and time %.4lf\n", gid, update.pts);
 			}
 		}
 
@@ -141,7 +159,6 @@ void Video::postFrame()
 	}
 
 	m_updateMutex.lock();
-	m_ptsUpdateList.clear();
 	m_ptsUpdateList.splice(m_ptsUpdateList.begin(), ptsList);
 	m_updateMutex.unlock();
 #endif
@@ -184,7 +201,24 @@ void Video::postFrame()
 			std::map<unsigned int, GLuint> texmap = m_videoplayer.GetTextureIDContextMap(myid);
 			std::cout << "Texture id: " << tex << std::endl;
 			osg::Geode* to = manager->AddTexture(myid, texmap, width, height);
-			printf("added manager with gid %d, width %d, height %d\n", myid, width, height);
+			//if (manager->IsStereo())
+			if (myid & 0x40000000)
+			{
+				printf("STEREO MODE DETECTED\n");
+				//if (manager->GetStereo() == STEREO_RIGHT)
+				if (myid & 0x01000000)
+				{
+					printf("STEREO RIGHT\n");
+					to->setNodeMask(to->getNodeMask() & ~cvr::CULL_MASK_LEFT & ~cvr::CULL_MASK); // right eye only
+				}
+				else
+				{
+					printf("STEREO LEFT\n");
+					to->setNodeMask(to->getNodeMask() & ~cvr::CULL_MASK_RIGHT); // left eye/mono
+				}
+			}
+			
+			printf("added manager with gid %x, width %d, height %d\n", myid, width, height);
 			manager->GetSceneObject()->addChild(to);
 		}
 		cvr::PluginHelper::registerSceneObject(manager->GetSceneObject(), "Video");
@@ -226,10 +260,14 @@ void Video::preFrame()
 			TextureManager* manager = new TextureManager(gid);
 			int nrows = 1;
 			int ncols = 1;
+			bool isStereo;
 			if (gid & 0x80000000) // multi-tile video
 			{
-				nrows = ((gid & 0x7E000000) >> 25) + 1;
-				ncols = ((gid & 0x01F80000) >> 19) + 1;
+				//nrows = ((gid & 0x7E000000) >> 25) + 1;
+				//ncols = ((gid & 0x01F80000) >> 19) + 1;
+				nrows = ((gid & 0x3E000000) >> 25) + 1;
+				ncols = ((gid & 0x00F80000) >> 19) + 1;
+				isStereo = (gid & 0x40000000);
 			}
 
 			std::cout << "Loading video gid " << gid << ", with " << nrows << " rows and " << ncols << " cols." << std::endl;
@@ -243,6 +281,11 @@ void Video::preFrame()
 					unsigned int myid = gid | (y << 13) | (x << 7); 
 					// must add the ID for this tile so that it gets its texture added later in postFrame
 					manager->AddGID(myid);
+					if (isStereo)
+					{
+						myid |= 0x01000000;
+						manager->AddGID(myid);
+					}
 					/*
 					   All moved to post frame after the texture ID has been generated in a draw call
 					//XXX enable video on the head node.  This doesn't seem to work though
@@ -421,12 +464,12 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			}
 			else
 			{
-				printf("No update for video %x to pts %.4lf for context %d\n", gid, update.pts, contextid);
+				//printf("No update for video %x to pts %.4lf for context %d\n", gid, update.pts, contextid);
 			}
 		}
 	}
 	//printf("Updated %d videos, times took %.4lfms for video and %.4lfms for texture\n", m_ptsUpdateList.size(), videoTime, textureTime);
-	m_ptsUpdateList.clear();
+	//m_ptsUpdateList.clear();
 	m_updateMutex.unlock();
 
 #endif

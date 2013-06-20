@@ -10,6 +10,7 @@ osg::ref_ptr<osgText::Font> GraphGlobals::_font;
 osg::Vec4 GraphGlobals::_bgColor;
 osg::Vec4 GraphGlobals::_dataBGColor;
 std::map<std::string,osg::Vec4> GraphGlobals::_phylumColorMap;
+std::map<std::string,osg::Vec4> GraphGlobals::_patientColorMap;
 osg::Vec4 GraphGlobals::_defaultPhylumColor;
 
 osgText::Text * GraphGlobals::makeText(std::string text, osg::Vec4 color)
@@ -31,12 +32,21 @@ osgText::Text * GraphGlobals::makeText(std::string text, osg::Vec4 color)
     return textNode;
 }
 
-void GraphGlobals::makeTextFit(osgText::Text * text, float maxSize)
+void GraphGlobals::makeTextFit(osgText::Text * text, float maxSize, bool horizontal)
 {
     checkInit();
 
     osg::BoundingBox bb = text->getBound();
-    float width = bb.xMax() - bb.xMin();
+    float width;
+    if(horizontal)
+    {
+	width = bb.xMax() - bb.xMin();
+    }
+    else
+    {
+	width = bb.zMax() - bb.zMin();
+    }
+
     if(width <= maxSize)
     {
 	return;
@@ -53,7 +63,14 @@ void GraphGlobals::makeTextFit(osgText::Text * text, float maxSize)
 	str = str.substr(0,str.length()-1);
 	text->setText(str + "..");
 	bb = text->getBound();
-	width = bb.xMax() - bb.xMin();
+	if(horizontal)
+	{
+	    width = bb.xMax() - bb.xMin();
+	}
+	else
+	{
+	    width = bb.zMax() - bb.zMin();
+	}
 	if(width <= maxSize)
 	{
 	    return;
@@ -88,6 +105,12 @@ osg::Vec4 GraphGlobals::getDefaultPhylumColor()
     return _defaultPhylumColor;
 }
 
+const std::map<std::string,osg::Vec4> & GraphGlobals::getPatientColorMap()
+{
+    checkInit();
+    return _patientColorMap;
+}
+
 void GraphGlobals::checkInit()
 {
     if(!_init)
@@ -117,4 +140,15 @@ void GraphGlobals::init()
     _phylumColorMap["Fusobacteria"] = ColorGenerator::makeColor(5,7);
     _phylumColorMap["Euryarchaeota"] = ColorGenerator::makeColor(6,7);
     _defaultPhylumColor = osg::Vec4(0.4,0.4,0.4,1.0);
+
+    std::vector<std::string> patientTypes;
+    patientTypes.push_back("Smarr");
+    patientTypes.push_back("Crohns");
+    patientTypes.push_back("UC");
+    patientTypes.push_back("Healthy");
+
+    for(int i = 0; i < patientTypes.size(); ++i)
+    {
+	_patientColorMap[patientTypes[i]] = ColorGenerator::makeColor(i,patientTypes.size());
+    }
 }

@@ -1,5 +1,6 @@
 #include "FuturePatient.h"
 #include "DataGraph.h"
+#include "StrainGraphObject.h"
 
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/ComController.h>
@@ -17,7 +18,7 @@
 
 #include <mysql++/mysql++.h>
 
-#define SAVED_LAYOUT_VERSION 2
+#define SAVED_LAYOUT_VERSION 3
 
 using namespace cvr;
 
@@ -234,6 +235,25 @@ bool FuturePatient::init()
 
     _microbeDone = new MenuButton("Done");
     _microbeDone->setCallback(this);
+
+    _strainMenu = new SubMenu("Strains");
+    _fpMenu->addItem(_strainMenu);
+
+    _strainGroupList = new MenuList();
+    _strainGroupList->setCallback(this);
+    _strainMenu->addItem(_strainGroupList);
+
+    _strainList = new MenuList();
+    _strainList->setCallback(this);
+    _strainMenu->addItem(_strainList);
+
+    _strainLoadButton = new MenuButton("Load");
+    _strainLoadButton->setCallback(this);
+    _strainMenu->addItem(_strainLoadButton);
+
+    _strainLoadAllButton = new MenuButton("Load All");
+    _strainLoadAllButton->setCallback(this);
+    _strainMenu->addItem(_strainLoadAllButton);
 
     _eventMenu = new SubMenu("Events");
     _fpMenu->addItem(_eventMenu);
@@ -565,6 +585,7 @@ bool FuturePatient::init()
     }
 
     setupMicrobePatients();
+    setupStrainMenu();
     
     if(_microbePatients->getListSize())
     {
@@ -1268,6 +1289,65 @@ void FuturePatient::menuCallback(MenuItem * item)
 	}
     }
 
+    if(item == _strainGroupList)
+    {
+	if(_strainGroupMap.find(_strainGroupList->getValue()) != _strainGroupMap.end())
+	{
+	    _strainList->setValues(_strainGroupMap[_strainGroupList->getValue()]);
+	}
+	return;
+    }
+
+    if(item == _strainLoadButton)
+    {
+	if(_strainGroupList->getListSize() && _strainList->getListSize())
+	{
+	    StrainGraphObject * sgo = new StrainGraphObject(_conn, 1000.0, 1000.0, "Strain Graph", false, true, false, true);
+
+	    if(sgo->setGraph(_strainList->getValue(),_strainIdMap[_strainList->getValue()]))
+	    {
+		checkLayout();
+		_layoutObject->addGraphObject(sgo);
+	    }
+	    else
+	    {
+		delete sgo;
+	    }
+	}
+
+	return;
+    }
+
+    if(item == _strainLoadAllButton)
+    {
+	//TODO: implement another ordering and maybe limit
+	if(_strainGroupList->getListSize() && _strainList->getListSize())
+	{
+	    std::map<std::string,std::vector<std::string> >::iterator it;
+	    it = _strainGroupMap.find(_strainGroupList->getValue());
+	    if(it != _strainGroupMap.end())
+	    {
+		std::cerr << "Loading " << it->second.size() << " strains." << std::endl;
+		for(int i = 0; i < it->second.size(); ++i)
+		{
+		    std::cerr << "Loading strain " << i << " id: " << _strainIdMap[it->second[i]] << std::endl;
+		    StrainGraphObject * sgo = new StrainGraphObject(_conn, 1000.0, 1000.0, "Strain Graph", false, true, false, true);
+
+		    if(sgo->setGraph(it->second[i],_strainIdMap[it->second[i]]))
+		    {
+			checkLayout();
+			_layoutObject->addGraphObject(sgo);
+		    }
+		    else
+		    {
+			delete sgo;
+		    }
+		}
+	    }
+	}
+	return;
+    }
+
     if(item == _eventLoad && _eventName->getListSize())
     {
 	if(!_currentSymptomGraph)
@@ -1596,6 +1676,128 @@ void FuturePatient::setupMicrobePatients()
     if(names)
     {
 	delete[] names;
+    }
+}
+
+void FuturePatient::setupStrainMenu()
+{
+    struct Data
+    {
+	char name[1024];
+	int value;
+    };
+
+    Data * names = NULL;
+    int numNames = 0;
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    mysqlpp::Query q = _conn->query("select distinct genus from TaxonomyId order by genus;");
+	    mysqlpp::StoreQueryResult res = q.store();
+
+	    numNames = res.num_rows();
+
+	    if(numNames)
+	    {
+		names = new struct Data[numNames];
+
+		for(int i = 0; i < numNames; ++i)
+		{
+		    strncpy(names[i].name,res[i]["genus"].c_str(),1000);
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&numNames,sizeof(int));
+	if(numNames)
+	{
+	    ComController::instance()->sendSlaves(names,numNames*sizeof(struct Data));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&numNames,sizeof(int));
+	if(numNames)
+	{
+	    names = new struct Data[numNames];
+	    ComController::instance()->readMaster(names,numNames*sizeof(struct Data));
+	}
+    }
+
+    std::vector<std::string> nameVec;
+    for(int i = 0; i < numNames; ++i)
+    {
+	nameVec.push_back(names[i].name);
+    }
+
+    _strainGroupList->setValues(nameVec);
+
+    if(names)
+    {
+	delete[] names;
+    }
+
+    for(int i = 0; i < nameVec.size(); ++i)
+    {
+	Data * names = NULL;
+	int numNames = 0;
+
+	if(ComController::instance()->isMaster())
+	{
+	    if(_conn)
+	    {
+		std::stringstream queryss;
+		queryss << "select description, taxonomy_id from TaxonomyId where genus = '" << nameVec[i] << "' order by description;";
+		mysqlpp::Query q = _conn->query(queryss.str().c_str());
+		mysqlpp::StoreQueryResult res = q.store();
+
+		numNames = res.num_rows();
+
+		if(numNames)
+		{
+		    names = new struct Data[numNames];
+
+		    for(int j = 0; j < numNames; ++j)
+		    {
+			strncpy(names[j].name,res[j]["description"].c_str(),1000);
+			names[j].value = atoi(res[j]["taxonomy_id"].c_str());
+		    }
+		}
+	    }
+
+	    ComController::instance()->sendSlaves(&numNames,sizeof(int));
+	    if(numNames)
+	    {
+		ComController::instance()->sendSlaves(names,numNames*sizeof(struct Data));
+	    }
+	}
+	else
+	{
+	    ComController::instance()->readMaster(&numNames,sizeof(int));
+	    if(numNames)
+	    {
+		names = new struct Data[numNames];
+		ComController::instance()->readMaster(names,numNames*sizeof(struct Data));
+	    }
+	}
+
+	for(int j = 0; j < numNames; ++j)
+	{
+	    _strainGroupMap[nameVec[i]].push_back(names[j].name);
+	    _strainIdMap[names[j].name] = names[j].value;
+	}
+
+	if(names)
+	{
+	    delete[] names;
+	}	
+    }
+
+    if(_strainGroupMap.find(_strainGroupList->getValue()) != _strainGroupMap.end())
+    {
+	_strainList->setValues(_strainGroupMap[_strainGroupList->getValue()]);
     }
 }
 

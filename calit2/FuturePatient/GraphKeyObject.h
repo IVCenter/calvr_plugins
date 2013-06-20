@@ -11,6 +11,13 @@
 
 #include "LayoutInterfaces.h"
 
+enum KeyCallbackType
+{
+    KC_NONE=0,
+    KC_PATIENT_TYPE,
+    KC_PHYLUM
+};
+
 class GraphKeyObject : public LayoutLineObject
 {
     public:
@@ -18,6 +25,8 @@ class GraphKeyObject : public LayoutLineObject
         virtual ~GraphKeyObject();
 
         void setKeys(std::vector<osg::Vec4> & colors, std::vector<std::string> & labels);
+
+        void setCallbackType(KeyCallbackType kct);
 
         virtual void setSize(float width, float height);
 
@@ -30,6 +39,8 @@ class GraphKeyObject : public LayoutLineObject
         std::vector<std::string> _labels;
 
         float _width, _height;
+
+        KeyCallbackType _callbackType;
 
         osg::ref_ptr<osg::Geode> _geode;
         osg::ref_ptr<osg::Geometry> _bgGeom;

@@ -6,6 +6,7 @@
 #include <osg/ClipNode>
 #include <osg/Point>
 #include <osg/LineWidth>
+#include <osg/LineStipple>
 #include <osg/Depth>
 #include <osg/PointSprite>
 #include <osg/Program>
@@ -47,6 +48,13 @@ enum LabelDisplayMode
     LDM_NONE=0,
     LDM_MIN_MAX,
     LDM_ALL
+};
+
+#define NUM_MATH_FUNCTIONS 1
+
+enum GraphMathFunction
+{
+    GMF_AVERAGE=1
 };
 
 struct GraphDataInfo
@@ -165,6 +173,9 @@ class DataGraph
         void updatePointAction();
         bool pointClick();
 
+        void addMathFunction(unsigned int functionMask);
+        void removeMathFunction(unsigned int functionMask);
+
     protected:
         void setupMultiGraphDisplayModes();
         void makeHover();
@@ -175,6 +186,9 @@ class DataGraph
         void updateClip();
         void updateBGRanges();
         float calcPadding();
+
+        void initMathFunction(GraphMathFunction gmf);
+        void cleanupMathFunction(GraphMathFunction gmf);
 
         std::map<std::string, osg::ref_ptr<osg::MatrixTransform> > _graphTransformMap;
         //std::map<std::string, osg::ref_ptr<osg::Geometry> > _graphGeometryMap;
@@ -242,6 +256,14 @@ class DataGraph
         bool _pointActionAlphaDir;
 
         LabelDisplayMode _labelDisplayMode;
+
+        unsigned int _mathFunctionMask;
+
+        // math average
+        osg::ref_ptr<osg::Geode> _averageGeode;
+        osg::ref_ptr<osg::Geometry> _averageGeometry;
+        osg::ref_ptr<osgText::Text> _averageText;
+        osg::ref_ptr<osg::LineStipple> _averageStipple;
 };
 
 #endif

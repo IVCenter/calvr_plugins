@@ -48,6 +48,8 @@ GraphKeyObject::GraphKeyObject(std::string name, bool navigation, bool movable, 
 
     osg::StateSet * stateset = _geode->getOrCreateStateSet();
     stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+
+    _callbackType = KC_NONE;
 }
 
 GraphKeyObject::~GraphKeyObject()
@@ -104,6 +106,11 @@ void GraphKeyObject::setKeys(std::vector<osg::Vec4> & colors, std::vector<std::s
     update();
 }
 
+void GraphKeyObject::setCallbackType(KeyCallbackType kct)
+{
+    _callbackType = kct;
+}
+
 void GraphKeyObject::setSize(float width, float height)
 {
     _width = width;
@@ -117,6 +124,11 @@ void GraphKeyObject::setSize(float width, float height)
 
 bool GraphKeyObject::eventCallback(InteractionEvent * ie)
 {
+    if(_callbackType == KC_NONE)
+    {
+	return false;
+    }
+
     TrackedButtonInteractionEvent * tie = ie->asTrackedButtonEvent();
     if(tie)
     {
@@ -141,9 +153,22 @@ bool GraphKeyObject::eventCallback(InteractionEvent * ie)
 			GraphLayoutObject * layout = dynamic_cast<GraphLayoutObject*>(_parent);
 			if(layout)
 			{
-			    layout->selectPatients(group,emptyList);
+			    switch(_callbackType)
+			    {
+				case KC_PATIENT_TYPE:
+				{
+				    layout->selectPatients(group,emptyList);
+				    break;
+				}
+				case KC_PHYLUM:
+				{
+				    layout->selectMicrobes(group,emptyList);
+				    break;
+				}
+				default:
+				    break;
+			    }
 			}
-
 			return true;
 		    }
 		}

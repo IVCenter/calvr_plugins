@@ -2,7 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-TextureManager::TextureManager(unsigned int gid) : m_gid(gid), _scene(0)
+TextureManager::TextureManager(unsigned int gid) : m_gid(gid), _scene(0), m_isStereo(false)
 {
 
 }
@@ -38,8 +38,8 @@ osg::Geode* TextureManager::AddTexture(unsigned int gid, std::map<unsigned int, 
 
 	if (gid & 0x80000000)
 	{
-		nrows = ((gid& 0x7E000000) >> 25) + 1.;
-        	ncols = ((gid& 0x01F80000) >> 19) + 1.;
+		nrows = ((gid& 0x3E000000) >> 25) + 1.;
+        	ncols = ((gid& 0x00F80000) >> 19) + 1.;
 		myrow = (gid & 0x0007E000) >> 13;
 		mycol = (gid & 0x00001F80) >> 7;
 	}
@@ -90,3 +90,18 @@ unsigned int TextureManager::GetVideoID(unsigned int idx) const
 		return -1;
 }
 
+void TextureManager::SetStereo(STEREO_EYE eye)
+{
+	m_isStereo = true;
+	m_eye = eye;
+}
+
+bool TextureManager::IsStereo()
+{
+	return m_isStereo;
+}
+
+STEREO_EYE TextureManager::GetStereo()
+{
+	return m_eye;
+}

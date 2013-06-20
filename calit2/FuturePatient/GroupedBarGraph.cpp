@@ -26,6 +26,7 @@ GroupedBarGraph::GroupedBarGraph(float width, float height)
     _groupLabelMult = 0.35;
 
     _colorMode = BGCM_SOLID;
+    _displayMode = BGDM_GROUPED;
 }
 
 GroupedBarGraph::~GroupedBarGraph()
@@ -41,7 +42,6 @@ bool GroupedBarGraph::setGraph(std::string title, std::map<std::string, std::vec
     _axisType = axisType;
     _color = color;
 
-    // bad, but for the moment I will assume the data sets to be small enough
     _data = data;
     _groupOrder = groupOrder;
 
@@ -156,6 +156,27 @@ void GroupedBarGraph::setDisplayRange(float min, float max)
     update();
 }
 
+void GroupedBarGraph::setCustomOrder(std::vector<std::pair<std::string,int> > & order)
+{
+    _customDataOrder = order;
+
+    if(_displayMode == BGDM_CUSTOM)
+    {
+	updateColors();
+	update();
+    }
+}
+
+void GroupedBarGraph::setDisplayMode(BarGraphDisplayMode bgdm)
+{
+    if(_displayMode != bgdm)
+    {
+	_displayMode = bgdm;
+	updateColors();
+	update();
+    }
+}
+
 void GroupedBarGraph::setColorMode(BarGraphColorMode bgcm)
 {
     if(bgcm != _colorMode)
@@ -201,22 +222,18 @@ void GroupedBarGraph::setHover(osg::Vec3 intersect)
 	return;
     }
 
-    float graphLeft = _width * (_leftPaddingMult - 0.5);
-    float graphBottom = _height * (_currentBottomPaddingMult - 0.5);
-    float graphTop = _height * (0.5 - _topPaddingMult);
-    float barWidth = (_width * (1.0 - _leftPaddingMult - _rightPaddingMult)) / ((float)_numBars);
-    float halfWidth = barWidth * 0.75 * 0.5;
+    float halfWidth = _barWidth * 0.75 * 0.5;
 
     bool hoverSet = false;
 
-    float groupTop = graphTop + _height * _topPaddingMult * _groupLabelMult;
-    float groupBottom = graphTop;
+    float groupTop = _graphTop + _height * _topPaddingMult * _groupLabelMult;
+    float groupBottom = _graphTop;
 
     float targetHeight = 150.0;
 
-    if(intersect.z() > groupBottom && intersect.z() <= groupTop)
+    if(intersect.z() > groupBottom && intersect.z() <= groupTop && _displayMode == BGDM_GROUPED)
     {
-	float myLeft = graphLeft;
+	float myLeft = _graphLeft;
 	for(int i = 0; i < _groupOrder.size(); ++i)
 	{
 	    std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it;
@@ -225,7 +242,7 @@ void GroupedBarGraph::setHover(osg::Vec3 intersect)
 		continue;
 	    }
 
-	    float myRight = myLeft + ((float)it->second.size()) * barWidth;
+	    float myRight = myLeft + ((float)it->second.size()) * _barWidth;
 
 	    if(intersect.x() < myLeft)
 	    {
@@ -257,63 +274,119 @@ void GroupedBarGraph::setHover(osg::Vec3 intersect)
 	    myLeft = myRight;
 	}
     }
-    else if(intersect.z() <= graphTop && intersect.z() >= graphBottom)
+    else if(intersect.z() <= _graphTop && intersect.z() >= _graphBottom)
     {
-	float barLeft = graphLeft + (barWidth / 2.0) - halfWidth;
-	float barRight = graphLeft + (barWidth / 2.0) + halfWidth;
-	for(int i = 0; i < _groupOrder.size(); ++i)
+	float barLeft = _graphLeft + (_barWidth / 2.0) - halfWidth;
+	float barRight = _graphLeft + (_barWidth / 2.0) + halfWidth;
+
+	switch(_displayMode)
 	{
-	    std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it;
-	    if((it = _data.find(_groupOrder[i])) == _data.end())
+	    case BGDM_GROUPED:
 	    {
-		continue;
-	    }
-
-	    bool breakOut = false;
-	    for(int j = 0; j < it->second.size(); ++j)
-	    { 
-		if(intersect.x() < barLeft)
+		for(int i = 0; i < _groupOrder.size(); ++i)
 		{
-		    breakOut = true;
-		    break;
-		}
-
-		if(intersect.x() < barRight)
-		{
-		    breakOut = true;
-
-		    if(intersect.z() <= graphTop && intersect.z() >= graphBottom)
+		    std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it;
+		    if((it = _data.find(_groupOrder[i])) == _data.end())
 		    {
-			float hitValue = (intersect.z() - graphBottom) / (graphTop - graphBottom);
-			hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
-			hitValue += log10(_minDisplayRange);
-			hitValue = pow(10.0,hitValue);
+			continue;
+		    }
 
-			if(hitValue <= it->second[j].second)
+		    bool breakOut = false;
+		    for(int j = 0; j < it->second.size(); ++j)
+		    { 
+			if(intersect.x() < barLeft)
 			{
-			    std::stringstream hoverss;
-			    hoverss << it->first << std::endl;
-			    hoverss << it->second[j].first << std::endl;
-			    hoverss << "Value: " << it->second[j].second << " " << _axisUnits;
-
-			    _hoverText->setText(hoverss.str());
-
-			    _hoverGroup = it->first;
-			    _hoverItem = it->second[j].first;
-
-			    hoverSet = true;
+			    breakOut = true;
+			    break;
 			}
+
+			if(intersect.x() < barRight)
+			{
+			    breakOut = true;
+
+			    if(intersect.z() <= _graphTop && intersect.z() >= _graphBottom)
+			    {
+				float hitValue = (intersect.z() - _graphBottom) / (_graphTop - _graphBottom);
+				hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
+				hitValue += log10(_minDisplayRange);
+				hitValue = pow(10.0,hitValue);
+
+				if(hitValue <= it->second[j].second)
+				{
+				    std::stringstream hoverss;
+				    hoverss << it->first << std::endl;
+				    hoverss << it->second[j].first << std::endl;
+				    hoverss << "Value: " << it->second[j].second << " " << _axisUnits;
+
+				    _hoverText->setText(hoverss.str());
+
+				    _hoverGroup = it->first;
+				    _hoverItem = it->second[j].first;
+
+				    hoverSet = true;
+				}
+			    }
+			}
+
+			barLeft += _barWidth;
+			barRight += _barWidth;
+		    }
+
+		    if(breakOut)
+		    {
+			break;
 		    }
 		}
-
-		barLeft += barWidth;
-		barRight += barWidth;
-	    }
-
-	    if(breakOut)
-	    {
 		break;
 	    }
+	    case BGDM_CUSTOM:
+	    {
+		for(int i = 0; i < _customDataOrder.size(); ++i)
+		{
+		    if(_data.find(_customDataOrder[i].first) == _data.end() || _customDataOrder[i].second >= _data[_customDataOrder[i].first].size())
+		    {
+			continue;
+		    }
+
+		    if(intersect.x() < barLeft)
+		    {
+			break;
+		    }
+
+		    if(intersect.x() < barRight)
+		    {
+			if(intersect.z() <= _graphTop && intersect.z() >= _graphBottom)
+			{
+			    float hitValue = (intersect.z() - _graphBottom) / (_graphTop - _graphBottom);
+			    hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
+			    hitValue += log10(_minDisplayRange);
+			    hitValue = pow(10.0,hitValue);
+
+			    if(hitValue <= _data[_customDataOrder[i].first][_customDataOrder[i].second].second)
+			    {
+				std::stringstream hoverss;
+				hoverss << _customDataOrder[i].first << std::endl;
+				hoverss << _data[_customDataOrder[i].first][_customDataOrder[i].second].first << std::endl;
+				hoverss << "Value: " << _data[_customDataOrder[i].first][_customDataOrder[i].second].second << " " << _axisUnits;
+
+				_hoverText->setText(hoverss.str());
+
+				_hoverGroup = _customDataOrder[i].first;
+				_hoverItem = _data[_customDataOrder[i].first][_customDataOrder[i].second].first;
+
+				hoverSet = true;
+			    }
+			    break;
+			}
+		    }
+
+		    barLeft += _barWidth;
+		    barRight += _barWidth;
+		}
+		break;
+	    }
+	    default:
+		break;
 	}
     }
 
@@ -374,16 +447,11 @@ void GroupedBarGraph::clearHoverText()
 
 void GroupedBarGraph::selectItems(std::string & group, std::vector<std::string> & keys)
 {
-    float graphLeft = _width * (_leftPaddingMult - 0.5);
-    float graphBottom = _height * (_currentBottomPaddingMult - 0.5);
-    float graphTop = _height * (0.5 - _topPaddingMult);
-    float groupLabelTop = graphTop + _height * _topPaddingMult * _groupLabelMult;
-    float barWidth = (_width * (1.0 - _leftPaddingMult - _rightPaddingMult)) / ((float)_numBars);
-
+    float groupLabelTop = _graphTop + _groupLabelMult * _topPaddingMult * _height;
     float selectedAlpha = 1.0;
     float notSelectedAlpha;
 
-    if(keys.size())
+    if(group.length())
     { 
 	notSelectedAlpha = 0.3;
     }
@@ -420,57 +488,127 @@ void GroupedBarGraph::selectItems(std::string & group, std::vector<std::string> 
     int colorIndex = 0;
 
     float groupLeft, barLeft;
-    groupLeft = barLeft = graphLeft;
+    groupLeft = barLeft = _graphLeft;
 
-    for(int i = 0; i < _groupOrder.size(); ++i)
+    switch(_displayMode)
     {
-	std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it;
-	if((it = _data.find(_groupOrder[i])) == _data.end())
+	case BGDM_GROUPED:
 	{
-	    continue;
-	}
-
-	bool selectGroup = (it->first == group);
-
-	if(selectGroup)
-	{
-	    float groupRight = groupLeft + barWidth * it->second.size();
-	    verts->push_back(osg::Vec3(groupRight,-0.5,groupLabelTop));
-	    verts->push_back(osg::Vec3(groupRight,-0.5,graphTop));
-	    verts->push_back(osg::Vec3(groupLeft,-0.5,graphTop));
-	    verts->push_back(osg::Vec3(groupLeft,-0.5,groupLabelTop));
-	}
-
-	for(int j = 0; j < it->second.size(); ++j)
-	{
-	    float alpha = notSelectedAlpha;
-	    if(selectGroup)
+	    for(int i = 0; i < _groupOrder.size(); ++i)
 	    {
-		for(int k = 0; k < keys.size(); ++k)
+		std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it;
+		if((it = _data.find(_groupOrder[i])) == _data.end())
 		{
-		    if(keys[k] == it->second[j].first)
+		    continue;
+		}
+
+		bool selectGroup = (it->first == group);
+
+		if(selectGroup)
+		{
+		    float groupRight = groupLeft + _barWidth * it->second.size();
+		    verts->push_back(osg::Vec3(groupRight,-0.5,groupLabelTop));
+		    verts->push_back(osg::Vec3(groupRight,-0.5,_graphTop));
+		    verts->push_back(osg::Vec3(groupLeft,-0.5,_graphTop));
+		    verts->push_back(osg::Vec3(groupLeft,-0.5,groupLabelTop));
+		}
+
+		for(int j = 0; j < it->second.size(); ++j)
+		{
+		    float alpha = notSelectedAlpha;
+		    if(selectGroup)
+		    {
+			bool found = false;
+			if(!keys.size())
+			{
+			    found = true;
+			}
+			else
+			{
+			    for(int k = 0; k < keys.size(); ++k)
+			    {
+				if(keys[k] == it->second[j].first)
+				{
+				    found = true;
+				    break;
+				}
+			    }
+			}
+
+			if(found)
+			{
+			    alpha = selectedAlpha;
+
+			    verts->push_back(osg::Vec3(barLeft + _barWidth,-0.5,_graphBottom));
+			    verts->push_back(osg::Vec3(barLeft + _barWidth,-0.5,-_height/2.0));
+			    verts->push_back(osg::Vec3(barLeft,-0.5,-_height/2.0));
+			    verts->push_back(osg::Vec3(barLeft,-0.5,_graphBottom));
+			}
+		    }
+
+		    colors->at(colorIndex).w() = alpha;
+		    colors->at(colorIndex+1).w() = alpha;
+		    colors->at(colorIndex+2).w() = alpha;
+		    colors->at(colorIndex+3).w() = alpha;
+		    colorIndex += 4;
+		    barLeft += _barWidth;
+		}
+
+		groupLeft += _barWidth * it->second.size();
+	    }
+	    break;
+	}
+	case BGDM_CUSTOM:
+	{
+	    for(int i = 0; i < _customDataOrder.size(); ++i)
+	    {
+		if(_data.find(_customDataOrder[i].first) == _data.end() || _customDataOrder[i].second >= _data[_customDataOrder[i].first].size())
+		{
+		    continue;
+		}
+
+		float alpha = notSelectedAlpha;
+		if(group == _customDataOrder[i].first)
+		{
+		    bool found = false;
+		    if(!keys.size())
+		    {
+			found = true;
+		    }
+		    else
+		    {
+			for(int k = 0; k < keys.size(); ++k)
+			{
+			    if(keys[k] == _data[_customDataOrder[i].first][_customDataOrder[i].second].first)
+			    {
+				found = true;
+				break;
+			    }
+			}
+		    }
+
+		    if(found)
 		    {
 			alpha = selectedAlpha;
 
-			verts->push_back(osg::Vec3(barLeft + barWidth,-0.5,graphBottom));
-			verts->push_back(osg::Vec3(barLeft + barWidth,-0.5,-_height/2.0));
+			verts->push_back(osg::Vec3(barLeft + _barWidth,-0.5,_graphBottom));
+			verts->push_back(osg::Vec3(barLeft + _barWidth,-0.5,-_height/2.0));
 			verts->push_back(osg::Vec3(barLeft,-0.5,-_height/2.0));
-			verts->push_back(osg::Vec3(barLeft,-0.5,graphBottom));
-
-			break;
+			verts->push_back(osg::Vec3(barLeft,-0.5,_graphBottom));
 		    }
 		}
+
+		colors->at(colorIndex).w() = alpha;
+		colors->at(colorIndex+1).w() = alpha;
+		colors->at(colorIndex+2).w() = alpha;
+		colors->at(colorIndex+3).w() = alpha;
+		colorIndex += 4;
+		barLeft += _barWidth;
 	    }
-
-	    colors->at(colorIndex).w() = alpha;
-	    colors->at(colorIndex+1).w() = alpha;
-	    colors->at(colorIndex+2).w() = alpha;
-	    colors->at(colorIndex+3).w() = alpha;
-	    colorIndex += 4;
-	    barLeft += barWidth;
+	    break;
 	}
-
-	groupLeft += barWidth * it->second.size();
+	default:
+	    break;
     }
     colors->dirty();
 
@@ -479,104 +617,147 @@ void GroupedBarGraph::selectItems(std::string & group, std::vector<std::string> 
 
 bool GroupedBarGraph::processClick(osg::Vec3 & hitPoint, std::string & selectedGroup, std::vector<std::string> & selectedKeys)
 {
-    float graphLeft = _width * (_leftPaddingMult - 0.5);
-    float graphRight = _width * (0.5 - _rightPaddingMult);
-    float graphBottom = _height * (_currentBottomPaddingMult - 0.5);
-    float graphTop = _height * (0.5 - _topPaddingMult);
-    float barWidth = (_width * (1.0 - _leftPaddingMult - _rightPaddingMult)) / ((float)_numBars);
-    float halfWidth = barWidth * 0.75 * 0.5;
+    float halfWidth = _barWidth * 0.75 * 0.5;
 
-    float groupLabelTop = graphTop + _groupLabelMult * _topPaddingMult * _height;
+    float groupLabelTop = _graphTop + _groupLabelMult * _topPaddingMult * _height;
 
-    if(hitPoint.x() < graphLeft || hitPoint.x() > graphRight || hitPoint.z() < graphBottom || hitPoint.z() > groupLabelTop)
+    if(hitPoint.x() < _graphLeft || hitPoint.x() > _graphRight || hitPoint.z() < _graphBottom || hitPoint.z() > groupLabelTop)
     {
 	return false;
     }
 
     bool clickUsed = false;
 
-    if(hitPoint.z() > graphTop)
+    if(hitPoint.z() > _graphTop)
     {
-	// do group hit
-	float groupRight = graphLeft;
-	for(int i = 0; i < _groupOrder.size(); ++i)
+	if(_displayMode == BGDM_GROUPED)
 	{
-	    std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it;
-	    if((it = _data.find(_groupOrder[i])) == _data.end())
+	    // do group hit
+	    float groupRight = _graphLeft;
+	    for(int i = 0; i < _groupOrder.size(); ++i)
 	    {
-		continue;
-	    }
-	    groupRight += it->second.size() * barWidth;
-	    if(hitPoint.x() < groupRight)
-	    {
-		//std::cerr << "Group hit: " << it->first << std::endl;
-		//std::cerr << "Items:" << std::endl;
-
-		selectedGroup = it->first;
-
-		for(int j = 0; j < it->second.size(); ++j)
+		std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it;
+		if((it = _data.find(_groupOrder[i])) == _data.end())
 		{
-		    //std::cerr << it->second[j].first << std::endl;
-		    selectedKeys.push_back(it->second[j].first);
+		    continue;
 		}
-		//std::cerr << std::endl;
-		clickUsed = true;
-		break;
+		groupRight += it->second.size() * _barWidth;
+		if(hitPoint.x() < groupRight)
+		{
+		    //std::cerr << "Group hit: " << it->first << std::endl;
+		    //std::cerr << "Items:" << std::endl;
+
+		    selectedGroup = it->first;
+
+		    for(int j = 0; j < it->second.size(); ++j)
+		    {
+			//std::cerr << it->second[j].first << std::endl;
+			selectedKeys.push_back(it->second[j].first);
+		    }
+		    //std::cerr << std::endl;
+		    clickUsed = true;
+		    break;
+		}
 	    }
 	}
     }
     else
     {
 	// do bar hit
-	float barLeft = graphLeft + (barWidth / 2.0) - halfWidth;
-	float barRight = graphLeft + (barWidth / 2.0) + halfWidth;
-	for(int i = 0; i < _groupOrder.size(); ++i)
+	float barLeft = _graphLeft + (_barWidth / 2.0) - halfWidth;
+	float barRight = _graphLeft + (_barWidth / 2.0) + halfWidth;
+
+	switch(_displayMode)
 	{
-	    std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it;
-	    if((it = _data.find(_groupOrder[i])) == _data.end())
+	    case BGDM_GROUPED:
 	    {
-		continue;
-	    }
-
-	    bool breakOut = false;
-	    for(int j = 0; j < it->second.size(); ++j)
-	    { 
-		if(hitPoint.x() < barLeft)
+		for(int i = 0; i < _groupOrder.size(); ++i)
 		{
-		    breakOut = true;
-		    break;
-		}
-		
-		if(hitPoint.x() < barRight)
-		{
-		    breakOut = true;
-
-		    float hitValue = (hitPoint.z() - graphBottom) / (graphTop - graphBottom);
-		    hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
-		    hitValue += log10(_minDisplayRange);
-		    hitValue = pow(10.0,hitValue);
-		    
-		    if(hitValue <= it->second[j].second)
+		    std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it;
+		    if((it = _data.find(_groupOrder[i])) == _data.end())
 		    {
-			//std::cerr << "Hit bar group: " << it->first << " key: " << it->second[j].first << std::endl;
-			selectedGroup = it->first;
-			selectedKeys.push_back(it->second[j].first);
-			clickUsed = true;
+			continue;
 		    }
-		    else
+
+		    bool breakOut = false;
+		    for(int j = 0; j < it->second.size(); ++j)
+		    { 
+			if(hitPoint.x() < barLeft)
+			{
+			    breakOut = true;
+			    break;
+			}
+
+			if(hitPoint.x() < barRight)
+			{
+			    breakOut = true;
+
+			    float hitValue = (hitPoint.z() - _graphBottom) / (_graphTop - _graphBottom);
+			    hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
+			    hitValue += log10(_minDisplayRange);
+			    hitValue = pow(10.0,hitValue);
+
+			    if(hitValue <= it->second[j].second)
+			    {
+				//std::cerr << "Hit bar group: " << it->first << " key: " << it->second[j].first << std::endl;
+				selectedGroup = it->first;
+				selectedKeys.push_back(it->second[j].first);
+				clickUsed = true;
+			    }
+			    else
+			    {
+				//std::cerr << "Value check fail" << std::endl;
+			    }
+			}
+
+			barLeft += _barWidth;
+			barRight += _barWidth;
+		    }
+
+		    if(breakOut)
 		    {
-			//std::cerr << "Value check fail" << std::endl;
+			break;
 		    }
 		}
-
-		barLeft += barWidth;
-		barRight += barWidth;
-	    }
-
-	    if(breakOut)
-	    {
 		break;
 	    }
+	    case BGDM_CUSTOM:
+	    {
+		for(int i = 0; i < _customDataOrder.size(); ++i)
+		{
+		    if(_data.find(_customDataOrder[i].first) == _data.end() || _customDataOrder[i].second >= _data[_customDataOrder[i].first].size())
+		    {
+			continue;
+		    }
+
+		    if(hitPoint.x() < barLeft)
+		    {
+			break;
+		    }
+
+		    if(hitPoint.x() < barRight)
+		    {
+			float hitValue = (hitPoint.z() - _graphBottom) / (_graphTop - _graphBottom);
+			hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
+			hitValue += log10(_minDisplayRange);
+			hitValue = pow(10.0,hitValue);
+
+			if(hitValue <= _data[_customDataOrder[i].first][_customDataOrder[i].second].second)
+			{
+			    selectedGroup = _customDataOrder[i].first;
+			    selectedKeys.push_back(_data[_customDataOrder[i].first][_customDataOrder[i].second].first);
+			    clickUsed = true;
+			}
+			break;
+		    }
+
+		    barLeft += _barWidth;
+		    barRight += _barWidth;
+		}
+		break;
+	    }
+	    default:
+		break;
 	}
     }
 
@@ -671,11 +852,15 @@ void GroupedBarGraph::makeBG()
 
 void GroupedBarGraph::update()
 {
+    updateSizes();
     // update bg scale
     osg::Vec3 scale(_width,1.0,_height);
     osg::Matrix scaleMat;
     scaleMat.makeScale(scale);
-    _bgScaleMT->setMatrix(scaleMat);
+    if(_bgScaleMT)
+    {
+	_bgScaleMT->setMatrix(scaleMat);
+    }
 
     updateAxis();
     updateGraph();
@@ -684,14 +869,13 @@ void GroupedBarGraph::update()
 
 void GroupedBarGraph::updateGraph()
 {
-    float graphLeft = _width * (_leftPaddingMult - 0.5);
-    float graphRight = _width * (0.5 - _rightPaddingMult);
-    float graphBottom = _height * (_currentBottomPaddingMult - 0.5);
-    float graphTop = _height * (0.5 - _topPaddingMult);
-    float barWidth = (_width * (1.0 - _leftPaddingMult - _rightPaddingMult)) / ((float)_numBars);
+    if(!_barGeom)
+    {
+	return;
+    }
 
-    float halfWidth = barWidth * 0.75 * 0.5;
-    float currentPos = graphLeft + (barWidth / 2.0);
+    float halfWidth = _barWidth * 0.75 * 0.5;
+    float currentPos = _graphLeft + (_barWidth / 2.0);
 
     osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(_barGeom->getVertexArray());
     if(!verts)
@@ -702,64 +886,136 @@ void GroupedBarGraph::updateGraph()
 
     int vertIndex = 0;
 
-    for(int i = 0; i < _groupOrder.size(); ++i)
+    switch(_displayMode)
     {
-	if(_data.find(_groupOrder[i]) == _data.end())
+	case BGDM_GROUPED:
 	{
-	    continue;
-	}
-	for(int j = 0; j < _data[_groupOrder[i]].size(); ++j)
-	{
-	    float value = _data[_groupOrder[i]][j].second;
-	    if(value > _maxDisplayRange)
+	    for(int i = 0; i < _groupOrder.size(); ++i)
 	    {
-		value = _maxDisplayRange;
-	    }
-	    if(value < _minDisplayRange)
-	    {
-		verts->at(vertIndex) = osg::Vec3(0,0,0);
-		verts->at(vertIndex+1) = osg::Vec3(0,0,0);
-		verts->at(vertIndex+2) = osg::Vec3(0,0,0);
-		verts->at(vertIndex+3) = osg::Vec3(0,0,0);
-	    }
-	    else
-	    {
-		switch(_axisType)
+		if(_data.find(_groupOrder[i]) == _data.end())
 		{
-		    case BGAT_LINEAR:
+		    continue;
+		}
+		for(int j = 0; j < _data[_groupOrder[i]].size(); ++j)
+		{
+		    float value = _data[_groupOrder[i]][j].second;
+		    if(value > _maxDisplayRange)
 		    {
-			break;
+			value = _maxDisplayRange;
 		    }
-		    case BGAT_LOG:
+		    if(value < _minDisplayRange)
 		    {
-			value = log10(value);
-			float logMin = log10(_minDisplayRange);
-			float logMax = log10(_maxDisplayRange);
-			float barHeight = ((value - logMin) / (logMax - logMin)) * (graphTop - graphBottom);
-			barHeight += graphBottom;
-
-			verts->at(vertIndex) = osg::Vec3(currentPos+halfWidth,-1,barHeight);
-			verts->at(vertIndex+1) = osg::Vec3(currentPos+halfWidth,-1,graphBottom);
-			verts->at(vertIndex+2) = osg::Vec3(currentPos-halfWidth,-1,graphBottom);
-			verts->at(vertIndex+3) = osg::Vec3(currentPos-halfWidth,-1,barHeight);
-
-			break;
+			verts->at(vertIndex) = osg::Vec3(0,0,0);
+			verts->at(vertIndex+1) = osg::Vec3(0,0,0);
+			verts->at(vertIndex+2) = osg::Vec3(0,0,0);
+			verts->at(vertIndex+3) = osg::Vec3(0,0,0);
 		    }
-		    default:
-			break;
+		    else
+		    {
+			switch(_axisType)
+			{
+			    case BGAT_LINEAR:
+				{
+				    break;
+				}
+			    case BGAT_LOG:
+				{
+				    value = log10(value);
+				    float logMin = log10(_minDisplayRange);
+				    float logMax = log10(_maxDisplayRange);
+				    float barHeight = ((value - logMin) / (logMax - logMin)) * (_graphTop - _graphBottom);
+				    barHeight += _graphBottom;
+
+				    verts->at(vertIndex) = osg::Vec3(currentPos+halfWidth,-1,barHeight);
+				    verts->at(vertIndex+1) = osg::Vec3(currentPos+halfWidth,-1,_graphBottom);
+				    verts->at(vertIndex+2) = osg::Vec3(currentPos-halfWidth,-1,_graphBottom);
+				    verts->at(vertIndex+3) = osg::Vec3(currentPos-halfWidth,-1,barHeight);
+
+				    break;
+				}
+			    default:
+				break;
+			}
+		    }
+
+		    vertIndex += 4;
+		    currentPos += _barWidth;
 		}
 	    }
-
-	    vertIndex += 4;
-	    currentPos += barWidth;
+	    break;
 	}
+	case BGDM_CUSTOM:
+	{
+	    for(int i = 0; i < _customDataOrder.size(); ++i)
+	    {
+		if(_data.find(_customDataOrder[i].first) == _data.end() || _customDataOrder[i].second >= _data[_customDataOrder[i].first].size())
+		{
+		    continue;
+		}
+
+		float value = _data[_customDataOrder[i].first][_customDataOrder[i].second].second;
+		if(value > _maxDisplayRange)
+		{
+		    value = _maxDisplayRange;
+		}
+		if(value < _minDisplayRange)
+		{
+		    verts->at(vertIndex) = osg::Vec3(0,0,0);
+		    verts->at(vertIndex+1) = osg::Vec3(0,0,0);
+		    verts->at(vertIndex+2) = osg::Vec3(0,0,0);
+		    verts->at(vertIndex+3) = osg::Vec3(0,0,0);
+		}
+		else
+		{
+		    switch(_axisType)
+		    {
+			case BGAT_LINEAR:
+			    {
+				break;
+			    }
+			case BGAT_LOG:
+			    {
+				value = log10(value);
+				float logMin = log10(_minDisplayRange);
+				float logMax = log10(_maxDisplayRange);
+				float barHeight = ((value - logMin) / (logMax - logMin)) * (_graphTop - _graphBottom);
+				barHeight += _graphBottom;
+
+				verts->at(vertIndex) = osg::Vec3(currentPos+halfWidth,-1,barHeight);
+				verts->at(vertIndex+1) = osg::Vec3(currentPos+halfWidth,-1,_graphBottom);
+				verts->at(vertIndex+2) = osg::Vec3(currentPos-halfWidth,-1,_graphBottom);
+				verts->at(vertIndex+3) = osg::Vec3(currentPos-halfWidth,-1,barHeight);
+
+				break;
+			    }
+			default:
+			    break;
+		    }
+
+		}
+
+		vertIndex += 4;
+		currentPos += _barWidth;
+	    }
+	    break;
+	}
+	default:
+	    break;
     }
+
     verts->dirty();
 }
 
 void GroupedBarGraph::updateAxis()
 {
-    _axisGeode->removeDrawables(0,_axisGeode->getNumDrawables());
+    if(_axisGeode)
+    {
+	_axisGeode->removeDrawables(0,_axisGeode->getNumDrawables());
+    }
+    else
+    {
+	return;
+    }
 
     //find value of bottom padding mult
     std::vector<osgText::Text*> textList;
@@ -768,19 +1024,43 @@ void GroupedBarGraph::updateAxis()
     q.makeRotate(M_PI/2.0,osg::Vec3(1.0,0,0));
     q = q * osg::Quat(-M_PI/2.0,osg::Vec3(0,1.0,0));
 
-    for(int i = 0; i < _groupOrder.size(); ++i)
+    switch(_displayMode)
     {
-	if(_data.find(_groupOrder[i]) == _data.end())
+	case BGDM_GROUPED:
 	{
-	    continue;
+	    for(int i = 0; i < _groupOrder.size(); ++i)
+	    {
+		if(_data.find(_groupOrder[i]) == _data.end())
+		{
+		    continue;
+		}
+		for(int j = 0; j < _data[_groupOrder[i]].size(); ++j)
+		{
+		    osgText::Text * text = GraphGlobals::makeText(_data[_groupOrder[i]][j].first,osg::Vec4(0,0,0,1));
+		    text->setRotation(q);
+		    text->setAlignment(osgText::Text::RIGHT_CENTER);
+		    textList.push_back(text);
+		}
+	    }
+	    break;
 	}
-	for(int j = 0; j < _data[_groupOrder[i]].size(); ++j)
+	case BGDM_CUSTOM:
 	{
-	    osgText::Text * text = GraphGlobals::makeText(_data[_groupOrder[i]][j].first,osg::Vec4(0,0,0,1));
-	    text->setRotation(q);
-	    text->setAlignment(osgText::Text::RIGHT_CENTER);
-	    textList.push_back(text);
+	    for(int i = 0; i < _customDataOrder.size(); ++i)
+	    {
+		if(_data.find(_customDataOrder[i].first) == _data.end() || _customDataOrder[i].second >= _data[_customDataOrder[i].first].size())
+		{
+		    continue;
+		}
+		osgText::Text * text = GraphGlobals::makeText(_data[_customDataOrder[i].first][_customDataOrder[i].second].first,osg::Vec4(0,0,0,1));
+		text->setRotation(q);
+		text->setAlignment(osgText::Text::RIGHT_CENTER);
+		textList.push_back(text);
+	    }
+	    break;
 	}
+	default:
+	    break;
     }
 
     float minWidthValue = FLT_MAX;
@@ -826,9 +1106,10 @@ void GroupedBarGraph::updateAxis()
     float charSize = targetWidth / maxWidthValue;
     float maxSize = _maxBottomPaddingMult * _height - 2.0 * tickSize;
 
+
     if(charSize * maxHeightValue > maxSize)
     {
-	charSize *= maxSize / (charSize * maxHeightValue);
+	//charSize *= maxSize / (charSize * maxHeightValue);
 	_currentBottomPaddingMult = _maxBottomPaddingMult;
     }
     else
@@ -836,12 +1117,11 @@ void GroupedBarGraph::updateAxis()
 	_currentBottomPaddingMult = (maxHeightValue * charSize + 2.0 * tickSize) / _height;
     }
 
-    float barWidth = (_width * (1.0 - _leftPaddingMult - _rightPaddingMult)) / ((float)_numBars);
     float currentX = (_width * _leftPaddingMult) - (_width / 2.0);
     float zValue = (_height * _currentBottomPaddingMult) - (_height / 2.0);
     zValue -= spacer;
 
-    currentX += barWidth / 2.0;
+    currentX += _barWidth / 2.0;
 
     //std::cerr << "CharSize: " << charSize << std::endl;
 
@@ -850,8 +1130,9 @@ void GroupedBarGraph::updateAxis()
 	//std::cerr << "text currentx: " << currentX << " z: " << zValue << std::endl;
 	textList[i]->setPosition(osg::Vec3(currentX,-1,zValue));
 	textList[i]->setCharacterSize(charSize);
+	GraphGlobals::makeTextFit(textList[i],maxSize,false);
 	_axisGeode->addDrawable(textList[i]);
-	currentX += barWidth;
+	currentX += _barWidth;
     }
 
     // lets make some lines
@@ -866,39 +1147,46 @@ void GroupedBarGraph::updateAxis()
     lineGeom->setColorArray(lineColors);
     lineGeom->setColorBinding(osg::Geometry::BIND_OVERALL);
 
-    float graphLeft = _width * (_leftPaddingMult - 0.5);
-    float graphRight = _width * (0.5 - _rightPaddingMult);
-    float graphBottom = _height * (_currentBottomPaddingMult - 0.5);
-    float graphTop = _height * (0.5 - _topPaddingMult);
-
     // graph top
-    lineVerts->push_back(osg::Vec3(graphLeft,-1,graphTop));
-    lineVerts->push_back(osg::Vec3(graphRight,-1,graphTop));
+    lineVerts->push_back(osg::Vec3(_graphLeft,-1,_graphTop));
+    lineVerts->push_back(osg::Vec3(_graphRight,-1,_graphTop));
 
     // graph bottom
-    lineVerts->push_back(osg::Vec3(graphLeft,-1,graphBottom));
-    lineVerts->push_back(osg::Vec3(graphRight,-1,graphBottom));
+    lineVerts->push_back(osg::Vec3(_graphLeft,-1,_graphBottom));
+    lineVerts->push_back(osg::Vec3(_graphRight,-1,_graphBottom));
 
-    float _titleMult = 0.4;
-    float _topLabelMult = 0.25;
-    float _groupLabelMult = 0.35;
-
-    float barTop = graphTop + _groupLabelMult * _topPaddingMult * _height;
-    float barPos = graphLeft;
-
-    lineVerts->push_back(osg::Vec3(barPos,-1,barTop));
-    lineVerts->push_back(osg::Vec3(barPos,-1,-_height/2.0));
-
-    for(int i = 0; i < _groupOrder.size(); i++)
+    switch(_displayMode)
     {
-	if(_data.find(_groupOrder[i]) == _data.end())
+	case BGDM_GROUPED:
 	{
-	    continue;
-	}
+	    float barTop = _graphTop + _groupLabelMult * _topPaddingMult * _height;
+	    float barPos = _graphLeft;
 
-	barPos += barWidth * _data[_groupOrder[i]].size();
-	lineVerts->push_back(osg::Vec3(barPos,-1,barTop));
-	lineVerts->push_back(osg::Vec3(barPos,-1,-_height/2.0));
+	    lineVerts->push_back(osg::Vec3(barPos,-1,barTop));
+	    lineVerts->push_back(osg::Vec3(barPos,-1,-_height/2.0));
+
+	    for(int i = 0; i < _groupOrder.size(); i++)
+	    {
+		if(_data.find(_groupOrder[i]) == _data.end())
+		{
+		    continue;
+		}
+
+		barPos += _barWidth * _data[_groupOrder[i]].size();
+		lineVerts->push_back(osg::Vec3(barPos,-1,barTop));
+		lineVerts->push_back(osg::Vec3(barPos,-1,-_height/2.0));
+	    }
+	    break;
+	}
+	case BGDM_CUSTOM:
+	default:
+	{
+	    lineVerts->push_back(osg::Vec3(_graphLeft,-1,_graphTop));
+	    lineVerts->push_back(osg::Vec3(_graphLeft,-1,-_height/2.0));
+	    lineVerts->push_back(osg::Vec3(_graphRight,-1,_graphTop));
+	    lineVerts->push_back(osg::Vec3(_graphRight,-1,-_height/2.0));
+	    break;
+	}
     }
 
     switch(_axisType)
@@ -910,9 +1198,9 @@ void GroupedBarGraph::updateAxis()
 	}
 	case BGAT_LOG:
 	{
-	    float tickHeight = graphTop;
+	    float tickHeight = _graphTop;
 	    float currentTickValue = _maxDisplayRange;
-	    float interval = (1.0 / (log10(_maxDisplayRange) - log10(_minDisplayRange))) * (graphTop - graphBottom);
+	    float interval = (1.0 / (log10(_maxDisplayRange) - log10(_minDisplayRange))) * (_graphTop - _graphBottom);
 
 	    float tickCharacterSize;
 	    int maxExp = (int)std::max(fabs(log10(_maxDisplayRange)),fabs(log10(_minDisplayRange)));
@@ -931,33 +1219,33 @@ void GroupedBarGraph::updateAxis()
 
 	    tickCharacterSize = (_leftPaddingMult * _width * 0.6 - 2.0 * tickSize) / testWidth;
 
-	    while(tickHeight >= graphBottom)
+	    while(tickHeight >= _graphBottom)
 	    {
-		lineVerts->push_back(osg::Vec3(graphLeft-tickSize,-1,tickHeight));
-		lineVerts->push_back(osg::Vec3(graphLeft,-1,tickHeight));
+		lineVerts->push_back(osg::Vec3(_graphLeft-tickSize,-1,tickHeight));
+		lineVerts->push_back(osg::Vec3(_graphLeft,-1,tickHeight));
 
 		std::stringstream tss;
 		tss << currentTickValue;
 		osgText::Text * tickText = GraphGlobals::makeText(tss.str(),osg::Vec4(0,0,0,1));
 		tickText->setAlignment(osgText::Text::RIGHT_CENTER);
 		tickText->setCharacterSize(tickCharacterSize);
-		tickText->setPosition(osg::Vec3(graphLeft - 2.0*tickSize,-1,tickHeight));
+		tickText->setPosition(osg::Vec3(_graphLeft - 2.0*tickSize,-1,tickHeight));
 		_axisGeode->addDrawable(tickText);
 
 		currentTickValue /= 10.0;
 		tickHeight -= interval;
 	    }
 
-	    tickHeight = graphTop;
+	    tickHeight = _graphTop;
 	    currentTickValue = _maxDisplayRange;
 
 	    int count = -1;
 	    float tickReduc = _maxDisplayRange / 10.0;
-	    while(tickHeight >= graphBottom)
+	    while(tickHeight >= _graphBottom)
 	    { 
 		count++;
-		lineVerts->push_back(osg::Vec3(graphLeft - 0.5*tickSize,-1,tickHeight));
-		lineVerts->push_back(osg::Vec3(graphLeft,-1,tickHeight));
+		lineVerts->push_back(osg::Vec3(_graphLeft - 0.5*tickSize,-1,tickHeight));
+		lineVerts->push_back(osg::Vec3(_graphLeft,-1,tickHeight));
 
 		//std::cerr << "CurrentTickValue: " << currentTickValue << " height: " << tickHeight << std::endl;
 
@@ -967,8 +1255,8 @@ void GroupedBarGraph::updateAxis()
 		    count++;
 		}
 		currentTickValue -= tickReduc;
-		tickHeight = ((log10(currentTickValue) - log10(_minDisplayRange)) / (log10(_maxDisplayRange) - log10(_minDisplayRange))) * (graphTop - graphBottom);
-		tickHeight += graphBottom;
+		tickHeight = ((log10(currentTickValue) - log10(_minDisplayRange)) / (log10(_maxDisplayRange) - log10(_minDisplayRange))) * (_graphTop - _graphBottom);
+		tickHeight += _graphBottom;
 
 		//std::cerr << "Post count: " << count << " tickRed: " << tickReduc << " CurrentTickValue: " << currentTickValue << " height: " << tickHeight << std::endl;
 	    }
@@ -995,10 +1283,10 @@ void GroupedBarGraph::updateAxis()
     vaText->setRotation(q);
     osg::BoundingBox bb = vaText->getBound();
     float csize = (0.4 * 0.85 * _leftPaddingMult * _width) / (bb.xMax() - bb.xMin());
-    float csize2 = (graphTop - graphBottom) / (bb.zMax() - bb.zMin());
+    float csize2 = (_graphTop - _graphBottom) / (bb.zMax() - bb.zMin());
     vaText->setCharacterSize(std::min(csize,csize2));
     vaText->setAlignment(osgText::Text::CENTER_CENTER);
-    vaText->setPosition(osg::Vec3(-(_width / 2.0) + (_width * _leftPaddingMult * 0.2),-1,(graphTop - graphBottom) / 2.0 + graphBottom));
+    vaText->setPosition(osg::Vec3(-(_width / 2.0) + (_width * _leftPaddingMult * 0.2),-1,(_graphTop - _graphBottom) / 2.0 + _graphBottom));
     _axisGeode->addDrawable(vaText);
 
     // graphTitle
@@ -1011,40 +1299,43 @@ void GroupedBarGraph::updateAxis()
     titleText->setPosition(osg::Vec3(0,-1,(_height / 2.0) - (_titleMult * _topPaddingMult * _height * 0.5)));
     _axisGeode->addDrawable(titleText);
 
-    // group label
-    titleText = GraphGlobals::makeText(_groupLabel,osg::Vec4(0,0,0,1));
-    titleText->setAlignment(osgText::Text::CENTER_CENTER);
-    bb = titleText->getBound();
-    csize = (_topLabelMult * 0.85 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
-    csize2 = (graphRight - graphLeft) / (bb.xMax() - bb.xMin());
-    titleText->setCharacterSize(std::min(csize,csize2));
-    titleText->setPosition(osg::Vec3(graphLeft + (graphRight - graphLeft) / 2.0,-1,(_height / 2.0) - ((_titleMult+(_topLabelMult/2.0)) * _topPaddingMult * _height)));
-    _axisGeode->addDrawable(titleText);
-
-    osg::ref_ptr<osgText::Text> tempText = GraphGlobals::makeText("Ay",osg::Vec4(0,0,0,1));
-    bb = tempText->getBound();
-    csize = (_groupLabelMult * 0.7 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
-
-    // group labels
-    float groupStart = graphLeft;
-    for(int i = 0; i < _groupOrder.size(); i++)
+    if(_displayMode == BGDM_GROUPED)
     {
-	if(_data.find(_groupOrder[i]) == _data.end())
+	// group label
+	titleText = GraphGlobals::makeText(_groupLabel,osg::Vec4(0,0,0,1));
+	titleText->setAlignment(osgText::Text::CENTER_CENTER);
+	bb = titleText->getBound();
+	csize = (_topLabelMult * 0.85 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
+	csize2 = (_graphRight - _graphLeft) / (bb.xMax() - bb.xMin());
+	titleText->setCharacterSize(std::min(csize,csize2));
+	titleText->setPosition(osg::Vec3(_graphLeft + (_graphRight - _graphLeft) / 2.0,-1,(_height / 2.0) - ((_titleMult+(_topLabelMult/2.0)) * _topPaddingMult * _height)));
+	_axisGeode->addDrawable(titleText);
+
+	osg::ref_ptr<osgText::Text> tempText = GraphGlobals::makeText("Ay",osg::Vec4(0,0,0,1));
+	bb = tempText->getBound();
+	csize = (_groupLabelMult * 0.7 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
+
+	// group labels
+	float groupStart = _graphLeft;
+	for(int i = 0; i < _groupOrder.size(); i++)
 	{
-	    continue;
+	    if(_data.find(_groupOrder[i]) == _data.end())
+	    {
+		continue;
+	    }
+	    osgText::Text * text = GraphGlobals::makeText(_groupOrder[i],osg::Vec4(0,0,0,1));
+	    text->setAlignment(osgText::Text::CENTER_CENTER);
+	    //bb = text->getBound();
+	    //csize = (_groupLabelMult * 0.7 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
+	    text->setCharacterSize(csize);
+
+	    float halfWidth = _data[_groupOrder[i]].size() * _barWidth * 0.5;
+	    text->setPosition(osg::Vec3(groupStart + halfWidth,-1,_graphTop + (_groupLabelMult * 0.5 * _topPaddingMult * _height)));
+	    GraphGlobals::makeTextFit(text,2.0*halfWidth * 0.95);
+	    _axisGeode->addDrawable(text);
+
+	    groupStart += 2.0 * halfWidth;
 	}
-	osgText::Text * text = GraphGlobals::makeText(_groupOrder[i],osg::Vec4(0,0,0,1));
-	text->setAlignment(osgText::Text::CENTER_CENTER);
-	//bb = text->getBound();
-	//csize = (_groupLabelMult * 0.7 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
-	text->setCharacterSize(csize);
-
-	float halfWidth = _data[_groupOrder[i]].size() * barWidth * 0.5;
-	text->setPosition(osg::Vec3(groupStart + halfWidth,-1,graphTop + (_groupLabelMult * 0.5 * _topPaddingMult * _height)));
-	GraphGlobals::makeTextFit(text,2.0*halfWidth * 0.95);
-	_axisGeode->addDrawable(text);
-
-	groupStart += 2.0 * halfWidth;
     }
 
     lineGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES,0,lineVerts->size()));
@@ -1052,7 +1343,14 @@ void GroupedBarGraph::updateAxis()
 
 void GroupedBarGraph::updateShading()
 {
-    _shadingGeode->removeDrawables(0,_shadingGeode->getNumDrawables());
+    if(_shadingGeode)
+    {
+	_shadingGeode->removeDrawables(0,_shadingGeode->getNumDrawables());
+    }
+    else
+    {
+	return;
+    }
 
     osg::Geometry * geom = new osg::Geometry();
     osg::Vec3Array * verts = new osg::Vec3Array();
@@ -1062,16 +1360,11 @@ void GroupedBarGraph::updateShading()
     geom->setUseDisplayList(false);
     geom->setUseVertexBufferObjects(true);
 
-    float graphLeft = (-_width / 2.0) + (_width * _leftPaddingMult);
-    float graphRight = (_width / 2.0) - (_width * _rightPaddingMult);
-    float graphTop = (_height / 2.0) - (_height * _topPaddingMult);
-    float graphBottom = (-_height / 2.0) + (_height * _currentBottomPaddingMult);
-
     osg::Vec4 defaultColor = GraphGlobals::getDataBackgroundColor();
-    verts->push_back(osg::Vec3(graphLeft,0.6,graphBottom));
-    verts->push_back(osg::Vec3(graphRight,0.6,graphBottom));
-    verts->push_back(osg::Vec3(graphRight,0.6,graphTop));
-    verts->push_back(osg::Vec3(graphLeft,0.6,graphTop));
+    verts->push_back(osg::Vec3(_graphLeft,0.6,_graphBottom));
+    verts->push_back(osg::Vec3(_graphRight,0.6,_graphBottom));
+    verts->push_back(osg::Vec3(_graphRight,0.6,_graphTop));
+    verts->push_back(osg::Vec3(_graphLeft,0.6,_graphTop));
     colors->push_back(defaultColor);
     geom->setColorBinding(osg::Geometry::BIND_OVERALL);
     geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
@@ -1106,29 +1399,64 @@ void GroupedBarGraph::updateColors()
 	case BGCM_GROUP:
 	{
 	    int colorIndex = 0;
-	    for(int i = 0; i < _groupOrder.size(); ++i)
+
+	    switch(_displayMode)
 	    {
-		osg::Vec4 groupColor;
-		if(_groupColorMap.find(_groupOrder[i]) != _groupColorMap.end())
+		case BGDM_GROUPED:
 		{
-		    groupColor = _groupColorMap[_groupOrder[i]];
-		}
-		else
-		{
-		    groupColor = _defaultGroupColor;
-		}
-		std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = _data.find(_groupOrder[i]);
-		if(it != _data.end())
-		{
-		    for(int j = 0; j < it->second.size(); ++j)
+		    for(int i = 0; i < _groupOrder.size(); ++i)
 		    {
+			osg::Vec4 groupColor;
+			if(_groupColorMap.find(_groupOrder[i]) != _groupColorMap.end())
+			{
+			    groupColor = _groupColorMap[_groupOrder[i]];
+			}
+			else
+			{
+			    groupColor = _defaultGroupColor;
+			}
+			std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = _data.find(_groupOrder[i]);
+			if(it != _data.end())
+			{
+			    for(int j = 0; j < it->second.size(); ++j)
+			    {
+				colors->at(colorIndex+0) = groupColor;
+				colors->at(colorIndex+1) = groupColor;
+				colors->at(colorIndex+2) = groupColor;
+				colors->at(colorIndex+3) = groupColor;
+				colorIndex += 4;
+			    }
+			}
+		    }
+		    break;
+		}
+		case BGDM_CUSTOM:
+		{
+		    for(int i = 0; i < _customDataOrder.size(); ++i)
+		    {
+			if(colorIndex >= colors->size())
+			{
+			    break;
+			}
+			osg::Vec4 groupColor;
+			if(_groupColorMap.find(_customDataOrder[i].first) != _groupColorMap.end())
+			{
+			    groupColor = _groupColorMap[_customDataOrder[i].first];
+			}
+			else
+			{
+			    groupColor = _defaultGroupColor;
+			}
 			colors->at(colorIndex+0) = groupColor;
 			colors->at(colorIndex+1) = groupColor;
 			colors->at(colorIndex+2) = groupColor;
 			colors->at(colorIndex+3) = groupColor;
 			colorIndex += 4;
 		    }
+		    break;
 		}
+		default:
+		    break;
 	    }
 	    break;
 	}
@@ -1137,4 +1465,26 @@ void GroupedBarGraph::updateColors()
     }
 
     colors->dirty();
+}
+
+void GroupedBarGraph::updateSizes()
+{
+    _graphLeft = _width * (_leftPaddingMult - 0.5);
+    _graphRight = _width * (0.5 - _rightPaddingMult);
+    _graphBottom = _height * (_currentBottomPaddingMult - 0.5);
+
+    switch(_displayMode)
+    {
+	case BGDM_GROUPED:
+	    _graphTop = _height * (0.5 - _topPaddingMult);
+	    break;
+	case BGDM_CUSTOM:
+	    _graphTop = _height * (0.5 - _topPaddingMult * _titleMult);
+	    break;
+	default:
+	    _graphTop = _height * (0.5 - _topPaddingMult);
+	    break;
+    }
+
+    _barWidth = (_width * (1.0 - _leftPaddingMult - _rightPaddingMult)) / ((float)_numBars);
 }

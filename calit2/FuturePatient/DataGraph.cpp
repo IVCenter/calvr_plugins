@@ -168,6 +168,8 @@ DataGraph::DataGraph()
     _masterPointScale = ConfigManager::getFloat("value","Plugin.FuturePatient.MasterPointScale",1.0);
     _masterLineScale = ConfigManager::getFloat("value","Plugin.FuturePatient.MasterLineScale",1.0);
 
+    _mathFunctionMask = 0;
+
     //_clipNode->addClipPlane(new osg::ClipPlane(0));
     //_clipNode->addClipPlane(new osg::ClipPlane(1));
     //_clipNode->addClipPlane(new osg::ClipPlane(2));
@@ -927,6 +929,52 @@ bool DataGraph::pointClick()
     }
 
     return false;
+}
+
+void DataGraph::addMathFunction(unsigned int functionMask)
+{
+    unsigned int mask = 1;
+    bool toUpdate = false;
+    for(int i = 0; i < NUM_MATH_FUNCTIONS; ++i)
+    {
+	if((mask & functionMask))
+	{
+	    if(!(mask & _mathFunctionMask))
+	    {
+		initMathFunction((GraphMathFunction)mask);
+		toUpdate = true;
+	    }
+	}
+	mask = mask << 1;
+    }
+
+    if(toUpdate)
+    {
+	update();
+    }
+}
+
+void DataGraph::removeMathFunction(unsigned int functionMask)
+{
+    unsigned int mask = 1;
+    bool toUpdate = false;
+    for(int i = 0; i < NUM_MATH_FUNCTIONS; ++i)
+    {
+	if((mask & functionMask))
+	{
+	    if(!(mask & _mathFunctionMask))
+	    {
+		cleanupMathFunction((GraphMathFunction)mask);
+		toUpdate = true;
+	    }
+	}
+	mask = mask << 1;
+    }
+
+    if(toUpdate)
+    {
+	update();
+    }
 }
 
 void DataGraph::setupMultiGraphDisplayModes()
@@ -2182,4 +2230,30 @@ float DataGraph::calcPadding()
     float minD = std::min(_width,_height);
 
     return 0.07 * minD;
+}
+
+void DataGraph::initMathFunction(GraphMathFunction gmf)
+{
+    switch(gmf)
+    {
+	case GMF_AVERAGE:
+	{
+	    break;
+	}
+	default:
+	    break;
+    }
+}
+
+void DataGraph::cleanupMathFunction(GraphMathFunction gmf)
+{
+    switch(gmf)
+    {
+	case GMF_AVERAGE:
+	{
+	    break;
+	}
+	default:
+	    break;
+    }
 }
