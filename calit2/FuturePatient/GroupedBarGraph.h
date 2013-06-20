@@ -21,6 +21,12 @@ enum BarGraphColorMode
     BGCM_GROUP
 };
 
+enum BarGraphDisplayMode
+{
+    BGDM_GROUPED=0,
+    BGDM_CUSTOM
+};
+
 class GroupedBarGraph
 {
     public:
@@ -60,6 +66,14 @@ class GroupedBarGraph
         float getDataMin()
         {
             return _minGraphValue;
+        }
+
+        void setCustomOrder(std::vector<std::pair<std::string,int> > & order);
+
+        void setDisplayMode(BarGraphDisplayMode bgdm);
+        BarGraphDisplayMode getDisplayMode()
+        {
+            return _displayMode;
         }
 
         void setColorMode(BarGraphColorMode bgcm);
@@ -107,6 +121,7 @@ class GroupedBarGraph
         void updateAxis();
         void updateShading();
         void updateColors();
+        void updateSizes();
 
         float _width, _height;
         float _maxGraphValue, _minGraphValue;
@@ -116,11 +131,13 @@ class GroupedBarGraph
         int _numBars;
         float _minDisplayRange;
         float _maxDisplayRange;
+        float _graphLeft, _graphRight, _graphTop, _graphBottom, _barWidth;
 
         std::string _title, _axisLabel, _axisUnits, _groupLabel;
         BarGraphAxisType _axisType;
         std::map<std::string, std::vector<std::pair<std::string, float> > > _data;
         std::vector<std::string> _groupOrder;
+        std::vector<std::pair<std::string,int> > _customDataOrder;
         osg::Vec4 _color;
 
         osg::Vec4 _defaultGroupColor;
@@ -143,6 +160,7 @@ class GroupedBarGraph
         std::string _hoverItem;
 
         BarGraphColorMode _colorMode;
+        BarGraphDisplayMode _displayMode;
 };
 
 #endif

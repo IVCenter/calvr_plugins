@@ -26,6 +26,8 @@ class GraphGlobals
         static const std::map<std::string,osg::Vec4> & getPhylumColorMap();
         static osg::Vec4 getDefaultPhylumColor();
 
+        static const std::map<std::string,osg::Vec4> & getPatientColorMap();
+
     protected:
         static void checkInit();
         static void init();
@@ -38,6 +40,8 @@ class GraphGlobals
 
         static std::map<std::string,osg::Vec4> _phylumColorMap;
         static osg::Vec4 _defaultPhylumColor;
+
+        static std::map<std::string,osg::Vec4> _patientColorMap;
 };
 
 #endif

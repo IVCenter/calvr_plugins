@@ -45,6 +45,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         //void makeGraph(std::string name);
         
         void setupMicrobePatients();
+        void setupStrainMenu();
         void updateMicrobeTests(int patientid);
 
         void saveLayout();
@@ -74,6 +75,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         std::map<std::string,std::vector<std::string> > _patientTestMap;
         std::map<std::string,std::vector<std::string> > _groupTestMap;
+        std::map<std::string,std::vector<std::string> > _strainGroupMap;
+        std::map<std::string,int> _strainIdMap;
 
         cvr::SubMenu * _chartMenu;
         cvr::SubMenu * _presetMenu;
@@ -104,6 +107,10 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeLoadUCAll;
 
         cvr::SubMenu * _strainMenu;
+        cvr::MenuList * _strainGroupList;
+        cvr::MenuList * _strainList;
+        cvr::MenuButton * _strainLoadButton;
+        cvr::MenuButton * _strainLoadAllButton;
 
         cvr::SubMenu * _eventMenu;
         cvr::MenuList * _eventName;
