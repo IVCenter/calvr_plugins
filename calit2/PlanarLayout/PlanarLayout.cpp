@@ -127,20 +127,20 @@ PlanarLayout::PlanarLayoutAlgorithm::Start( void )
 /*virtual*/ bool
 PlanarLayout::PlanarLayoutAlgorithm::Update( void )
 {
-    double uncomplete;
+    double progress;
 
     if (0.0 >= mAnimationDuration)
     {
-        uncomplete = 0.0;
+        progress = 1.0;
     }
     else
     {
         mTimeElapsed += PluginHelper::getLastFrameDuration();
 
-        if (mTimeElapsed > mAnimationDuration)
-            uncomplete = 0.0;
-        else
-            uncomplete = 1.0 - mTimeElapsed / mAnimationDuration;
+        progress = mTimeElapsed / mAnimationDuration;
+
+        if (1.0 < progress)
+            progress = 1.0;
     }
 
     vector< SceneObject* > scene_objects = SceneManager::instance()->getSceneObjects();
@@ -152,14 +152,14 @@ PlanarLayout::PlanarLayoutAlgorithm::Update( void )
         if (mObjTrans.end() == it)
             continue;
 
-        Vec3 pos = it->second.endPos + (it->second.startPos - it->second.endPos) * uncomplete;
-        float scale = it->second.endScale + (it->second.startScale - it->second.endScale) * uncomplete;
+        Vec3 pos = it->second.startPos * (1.0 - progress) + it->second.endPos * progress;
+        float scale = it->second.startScale * (1.0 - progress) + it->second.endScale * progress;
 
         it->first->setPosition( pos );
         it->first->setScale( scale );
     }
 
-    return (uncomplete <= 0.0);
+    return (progress >= 1.0);
 }
 
 bool
