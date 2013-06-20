@@ -9,6 +9,8 @@
 #include <string>
 #include <map>
 
+#include "GraphGlobals.h"
+
 enum BarGraphAxisType
 {
     BGAT_LINEAR=0,
@@ -161,6 +163,8 @@ class GroupedBarGraph
 
         BarGraphColorMode _colorMode;
         BarGraphDisplayMode _displayMode;
+
+        osg::ref_ptr<SetBoundsCallback> _graphBoundsCallback;
 };
 
 #endif

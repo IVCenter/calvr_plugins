@@ -4,6 +4,7 @@
 #include <osgText/Text>
 #include <osg/Vec3>
 #include <osg/Vec4>
+#include <osg/Drawable>
 
 #include <string>
 #include <map>
@@ -42,6 +43,15 @@ class GraphGlobals
         static osg::Vec4 _defaultPhylumColor;
 
         static std::map<std::string,osg::Vec4> _patientColorMap;
+};
+
+struct SetBoundsCallback : public osg::Drawable::ComputeBoundingBoxCallback
+{
+    osg::BoundingBox computeBound(const osg::Drawable &) const
+    {
+        return bbox;
+    }
+    osg::BoundingBox bbox;
 };
 
 #endif

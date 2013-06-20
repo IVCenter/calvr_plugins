@@ -27,6 +27,8 @@ GroupedBarGraph::GroupedBarGraph(float width, float height)
 
     _colorMode = BGCM_SOLID;
     _displayMode = BGDM_GROUPED;
+
+    _graphBoundsCallback = new SetBoundsCallback;
 }
 
 GroupedBarGraph::~GroupedBarGraph()
@@ -770,6 +772,7 @@ void GroupedBarGraph::makeGraph()
 
     osg::Vec3Array * verts = new osg::Vec3Array();
     osg::Vec4Array * colors = new osg::Vec4Array();
+    _barGeom->setComputeBoundingBoxCallback(_graphBoundsCallback.get());
 
     _barGeom->setVertexArray(verts);
     _barGeom->setColorArray(colors);
@@ -1370,6 +1373,8 @@ void GroupedBarGraph::updateShading()
     geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
 
     _shadingGeode->addDrawable(geom);
+
+    _graphBoundsCallback->bbox.set(_graphLeft,-3,_graphBottom,_graphRight,1,_graphTop);
 }
 
 void GroupedBarGraph::updateColors()
