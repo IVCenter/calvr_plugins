@@ -1120,8 +1120,10 @@ void GroupedBarGraph::updateAxis()
 	_currentBottomPaddingMult = (maxHeightValue * charSize + 2.0 * tickSize) / _height;
     }
 
+    updateSizes();
+
     float currentX = (_width * _leftPaddingMult) - (_width / 2.0);
-    float zValue = (_height * _currentBottomPaddingMult) - (_height / 2.0);
+    float zValue = ((_height * _currentBottomPaddingMult) - (_height / 2.0)) - tickSize;
     zValue -= spacer;
 
     currentX += _barWidth / 2.0;
@@ -1375,6 +1377,7 @@ void GroupedBarGraph::updateShading()
     _shadingGeode->addDrawable(geom);
 
     _graphBoundsCallback->bbox.set(_graphLeft,-3,_graphBottom,_graphRight,1,_graphTop);
+    _barGeom->getBound();
 }
 
 void GroupedBarGraph::updateColors()
