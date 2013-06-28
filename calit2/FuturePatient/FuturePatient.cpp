@@ -198,6 +198,10 @@ bool FuturePatient::init()
     _microbeLoadHealthyAll->setCallback(this);
     _microbeSpecialMenu->addItem(_microbeLoadHealthyAll);
 
+    _microbeLoadHealthy105All = new MenuButton("Healthy 119");
+    _microbeLoadHealthy105All->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadHealthy105All);
+
     _microbeLoadUCAll = new MenuButton("UC All");
     _microbeLoadUCAll->setCallback(this);
     _microbeSpecialMenu->addItem(_microbeLoadUCAll);
@@ -1172,7 +1176,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	return;
     }
 
-    if(item == _microbeLoadCrohnsAll || item == _microbeLoadHealthyAll || item == _microbeLoadUCAll)
+    if(item == _microbeLoadCrohnsAll || item == _microbeLoadHealthyAll || item == _microbeLoadUCAll || item == _microbeLoadHealthy105All)
     {
 	std::vector<std::pair<int,int> > rangeList;
 
@@ -1184,6 +1188,10 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    rangeList.push_back(std::pair<int,int>(65,99));
 	}
+	else if(item == _microbeLoadHealthy105All)
+	{
+	    rangeList.push_back(std::pair<int,int>(118,236));
+	}
 	else
 	{
 	    rangeList.push_back(std::pair<int,int>(59,64));
@@ -1194,6 +1202,8 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    int start = rangeList[i].first;
 	    while(start <= rangeList[i].second)
 	    {
+		std::cerr << "Loading graph " << start << std::endl;
+		updateMicrobeTests(start + 1);
 		if(_microbeGraphType->getIndex() == 0)
 		{
 		    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
@@ -1226,6 +1236,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		start++;
 	    }
 	}
+	updateMicrobeTests(_microbePatients->getIndex() + 1);
 
 	return;
     }

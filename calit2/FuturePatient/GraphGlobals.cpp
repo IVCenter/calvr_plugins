@@ -129,7 +129,8 @@ void GraphGlobals::init()
     }
 
     _bgColor = osg::Vec4(0.9,0.9,0.9,1.0);
-    _dataBGColor = osg::Vec4(0.7,0.7,0.7,1.0);
+    //_dataBGColor = osg::Vec4(0.7,0.7,0.7,1.0);
+    _dataBGColor = osg::Vec4(0.73,0.74,0.69,1.0);
 
     // TODO: get real phylum color mapping
     _phylumColorMap["Bacteroidetes"] = ColorGenerator::makeColor(0,7);

@@ -1377,7 +1377,8 @@ void GroupedBarGraph::updateShading()
     _shadingGeode->addDrawable(geom);
 
     _graphBoundsCallback->bbox.set(_graphLeft,-3,_graphBottom,_graphRight,1,_graphTop);
-    _barGeom->getBound();
+    _barGeom->dirtyBound();
+    osg::BoundingBox bb = _barGeom->getBound();
 }
 
 void GroupedBarGraph::updateColors()

@@ -104,6 +104,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeLoadSRXAverage;
         cvr::MenuButton * _microbeLoadCrohnsAll;
         cvr::MenuButton * _microbeLoadHealthyAll;
+        cvr::MenuButton * _microbeLoadHealthy105All;
         cvr::MenuButton * _microbeLoadUCAll;
 
         cvr::SubMenu * _strainMenu;

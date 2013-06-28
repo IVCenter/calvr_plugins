@@ -279,6 +279,7 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 			    colors->at(i) = osg::Vec4(0,0,1.0,1.0);
 			    secondary->at(i).x() = 1.0;
 			}
+			colors->at(i) = osg::Vec4(1.0,1.0,1.0,1.0);
 		    }
 		    gd.valid = true;
 
@@ -382,7 +383,8 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 		float val = (gd.normalLow - gd.minValue) / range;
 		val = std::min(val,1.0f);
 		ranges.push_back(std::pair<float,float>(0.0,val));
-		colors.push_back(osg::Vec4(0.1,0.25,0.3,1.0));
+		//colors.push_back(osg::Vec4(0.1,0.25,0.3,1.0));
+		colors.push_back(osg::Vec4(0.54,0.81,0.87,1.0));
 	    }
 
 	    if(val < 1.0)
@@ -391,7 +393,8 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 		nextVal = std::max(nextVal,0.0f);
 		nextVal = std::min(nextVal,1.0f);
 		ranges.push_back(std::pair<float,float>(val,nextVal));
-		colors.push_back(osg::Vec4(0,0.5,0,1.0));
+		//colors.push_back(osg::Vec4(0,0.5,0,1.0));
+		colors.push_back(osg::Vec4(0.63,0.67,0.40,1.0));
 		val = nextVal;
 	    }
 
@@ -401,7 +404,8 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 		nextVal = std::max(nextVal,0.0f);
 		nextVal = std::min(nextVal,1.0f);
 		ranges.push_back(std::pair<float,float>(val,nextVal));
-		colors.push_back(osg::Vec4(0.7,0.25,0.1,1.0));
+		//colors.push_back(osg::Vec4(0.7,0.25,0.1,1.0));
+		colors.push_back(osg::Vec4(0.86,0.61,0.0,1.0));
 		val = nextVal;
 	    }
 
@@ -411,14 +415,16 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 		nextVal = std::max(nextVal,0.0f);
 		nextVal = std::min(nextVal,1.0f);
 		ranges.push_back(std::pair<float,float>(val,nextVal));
-		colors.push_back(osg::Vec4(0.5,0,0,1.0));
+		//colors.push_back(osg::Vec4(0.5,0,0,1.0));
+		colors.push_back(osg::Vec4(0.86,0.31,0.0,1.0));
 		val = nextVal;
 	    }
 
 	    if(val < 1.0)
 	    {
 		ranges.push_back(std::pair<float,float>(val,1.0));
-		colors.push_back(osg::Vec4(0.5,0,0.5,1.0));
+		//colors.push_back(osg::Vec4(0.5,0,0.5,1.0));
+		colors.push_back(osg::Vec4(0.71,0.18,0.37,1.0));
 	    }
 	}
 
