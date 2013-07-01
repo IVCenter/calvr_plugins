@@ -2405,16 +2405,16 @@ void Volume::deleteVolume(cvr::SceneObject* vol)
         _standardMap.erase(vol);
     }
 
-    if(_isosurfaceValueMap.find(it->first) != _isosurfaceValueMap.end())
+    if(_isosurfaceValueMap.find(vol) != _isosurfaceValueMap.end())
     {
-        delete _isosurfaceValueMap[it->first];
-        _isosurfaceValueMap.erase(it->first);
+        delete _isosurfaceValueMap[vol];
+        _isosurfaceValueMap.erase(vol);
     }
 
-    if(_transparencyValueMap.find(it->first) != _transparencyValueMap.end())
+    if(_transparencyValueMap.find(vol) != _transparencyValueMap.end())
     {
-        delete _transparencyValueMap[it->first];
-        _transparencyValueMap.erase(it->first);
+        delete _transparencyValueMap[vol];
+        _transparencyValueMap.erase(vol);
     }
 
     if(_lightMap.find(vol) != _lightMap.end())
