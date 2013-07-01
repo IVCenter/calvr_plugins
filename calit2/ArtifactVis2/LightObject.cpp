@@ -34,7 +34,7 @@ void LightObject::init(std::string name, std::string filename, osg::Quat pcRot, 
     osg::Vec4f colorY = Vec4f(1, 1, 0, 1);
     Cone* cubeShape = new Cone(pcPos, 1.0, 2.0);
     float rotDegrees[3];
-		rotDegrees[0] = DegreesToRadians(-90.0);
+		rotDegrees[0] = DegreesToRadians(0.0);
 		rotDegrees[1] = DegreesToRadians(0.0);
 		rotDegrees[2] = DegreesToRadians(0.0);
 		osg::Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(0,1,0),rotDegrees[2], osg::Vec3d(0,0,1)); 
@@ -272,7 +272,7 @@ void LightObject::updateCallback(int handID, const osg::Matrix & mat)
   osg::Vec4 lpos = Vec4(pos.x(),pos.y(),pos.z(),0);
   _lightSource->getLight()->setPosition(lpos);
       //osg::Vec3 orig = getPosition();
-      cerr << "So Pos: " << pos.x() << " " << pos.y() << " " << pos.z() << "\n";
+//      cerr << "So Pos: " << pos.x() << " " << pos.y() << " " << pos.z() << "\n";
       //printf("moving\n");
     }
 }

@@ -1,9 +1,11 @@
 #ifndef _ARTIFACTVIS2_
 #define _ARTIFACTVIS2_
 
+//#include <ConvertTools.h>
 #include <PointCloudObject.h>
 #include <ModelObject.h>
 #include <LightObject.h>
+//#include <OsgBulletTest.h>
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuCheckbox.h>
@@ -30,9 +32,25 @@
 #include <osgShadow/ShadowedScene>
 #include <osgShadow/SoftShadowMap>
 #include <osgShadow/ShadowMap>
+/*
+//osgBullet
+#include <osgbDynamics/RigidBody.h>
+#include <osgbDynamics/MotionState.h>
+#include <osgbDynamics/GroundPlane.h>
+#include <osgbCollision/CollisionShapes.h>
+#include <osgbCollision/RefBulletObject.h>
+#include <osgbCollision/Utils.h>
+#include <osgbDynamics/TripleBuffer.h>
+#include <osgbDynamics/PhysicsThread.h>
+#include <osgbInteraction/DragHandler.h>
+#include <osgbInteraction/LaunchHandler.h>
+#include <osgbInteraction/SaveRestoreHandler.h>
 
+#include <osgwTools/Shapes.h>
 
-
+#include <btBulletDynamicsCommon.h>
+//..............................................
+*/
 #include <string>
 #include <vector>
 #include <map>
@@ -540,8 +558,19 @@ public:
     void moveCam(double, double, double, double, double, double, double, double);
     void flyTo(int i);
     void createSelObj(osg::Vec3 pos, std::string, float radius);
+/*
+	osgbDynamics::TripleBuffer tBuf;
+	osgbDynamics::MotionStateList msl;
+	osg::ref_ptr< osg::Node > modelNode;
+        osg::ref_ptr< osgbInteraction::SaveRestoreHandler > srh;
+        btDiscreteDynamicsWorld* bulletWorld;
+        osg::ref_ptr<osg::Group> bulletRoot;
+*/
+        double prevSimTime;
+        bool physicsOn;
 protected:
 
+    void testPhysics();
     static ArtifactVis2* _artifactvis2;
     int _testA;
     bool ArtifactVis2On;
@@ -755,6 +784,7 @@ protected:
     //osg::ref_ptr<osgShadow::SoftShadowMap>  sm;
     osg::ref_ptr<osgShadow::ShadowMap>  sm;
     LightObject* lightObject;
+    //OsgBulletTest* bulletTest; 
 
     std::vector<osg::Vec3Array* > _coordsPC;
     std::vector<osg::Vec4Array* > _colorsPC;
@@ -900,6 +930,11 @@ void updateHudMovement(int i, cvr::TrackedButtonInteractionEvent * tie,float _mo
         std::vector<DirFile*> getSubDirFiles(string dir, string filename, string types);
         void recursiveLoadMenu(std::vector<DirFile*> entries, string types);
         osgShadow::ShadowedScene* getShadowRoot();
+//	btDiscreteDynamicsWorld* initPhysics();
+
+//	osg::Transform* makeModel( const std::string& fileName, const int index, btDynamicsWorld* bw, osg::Vec3 pos, osgbInteraction::SaveRestoreHandler* srh );
+
+//	osg::MatrixTransform* makeCow( btDynamicsWorld* bw, osg::Vec3 pos, osgbInteraction::SaveRestoreHandler* srh );
 	
 };
 

@@ -114,6 +114,8 @@ void ArtifactVis2::message(int type, char* data)
 
 bool ArtifactVis2::init()
 {
+    physicsOn = false;
+    prevSimTime = 0.0;
     lineGroupsEditing = false;
     _currentScroll = 0;
     modelDropped = false; 
@@ -1453,7 +1455,7 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
                }
                else
                {
-		_models3d[i]->modelObject->attachToScene(_shadowRoot.get());
+		_models3d[i]->modelObject->attachToScene();
 		_models3d[i]->visible = true;
 		//_models3d[i]->active = true;
 		//_models3d[i]->visibleMap->setValue(true);
@@ -1464,7 +1466,7 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
             {
                if(_models3d[i]->visible)
                {
-		_models3d[i]->modelObject->detachFromScene(_shadowRoot.get());
+		_models3d[i]->modelObject->detachFromScene();
 		_models3d[i]->visible = false;
 	//	_models3d[i]->active = false;
 	//	_models3d[i]->visibleMap->setValue(false);
@@ -1492,7 +1494,7 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
                }
                else
                {
-		_pointClouds[i]->pcObject->attachToScene(_shadowRoot.get());
+		_pointClouds[i]->pcObject->attachToScene();
 		_pointClouds[i]->visible = true;
 	//	_pointClouds[i]->active = true;
 	//	_pointClouds[i]->visibleMap->setValue(true);
@@ -1503,7 +1505,7 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
             {
                if(_pointClouds[i]->visible)
                {
-		_pointClouds[i]->pcObject->detachFromScene(_shadowRoot.get());
+		_pointClouds[i]->pcObject->detachFromScene();
 		_pointClouds[i]->visible = false;
 	//	_pointClouds[i]->active = false;
 	//	_pointClouds[i]->visibleMap->setValue(false);
@@ -2111,7 +2113,30 @@ updateAnnoLine();
 updateArtifactLine();
 updateArtifactModel();
 updateLineGroup();
-
+/*
+if(physicsOn)
+{
+//TripleBufferMotionStateUpdate( msl, &tBuf );
+        const double currSimTime = CVRViewer::instance()->getProgramDuration();
+        bulletWorld->stepSimulation( currSimTime - prevSimTime );
+        prevSimTime = currSimTime;
+        for(int i=0; i<_models3d.size(); i++)
+        {
+        if(_models3d[i]->visible)
+        {
+          // cerr << _models3d[i]->name << "\n";
+         // _models3d[i]->modelObject->setTransform(_models3d[i]->modelObject->getTransform()*_models3d[i]->modelObject->rootPhysics->getMatrix());
+          osg::Vec3 pos = _models3d[i]->modelObject->rootPhysics->getMatrix().getTrans();
+          osg::Matrix m = _models3d[i]->modelObject->rootPhysics->getMatrix();
+          osg::Vec3 pos2 = _models3d[i]->modelObject->_root->getMatrix().getTrans();
+         // _models3d[i]->modelObject->setPosition(pos);
+         // _models3d[i]->modelObject->_root->setMatrix(m);
+         // cerr << "id:" << i << " Bull:" << _models3d[i]->name << " Pos:" << pos.x() << " " << pos.y() << " " << pos.z() << "\n";
+        //  cerr << "id:" << i << " Scen:" << _models3d[i]->name << " Pos:" << pos2.x() << " " << pos2.y() << " " << pos2.z() << "\n";
+        }
+        }
+}
+*/
 }
     /*
     std::vector<Artifact*> allArtifacts;
@@ -5709,6 +5734,7 @@ void ArtifactVis2::menuSetup()
     */
 //tempStackPhotos();
    // generateScreen(); 
+         testPhysics();
 }
 void ArtifactVis2::initSelectBox()
 {
@@ -6117,14 +6143,19 @@ void ArtifactVis2::updateFileMenu(std::string dir, int scroll)
 }
 void ArtifactVis2::addNewPC(int index)
 {
- string filename = _pointClouds[index]->fullpath;
+ string fullpath = _pointClouds[index]->fullpath;
+ string filename = _pointClouds[index]->filename;
  string name = _pointClouds[index]->name;
+ string path = getPathFromFilePath(_pointClouds[index]->fullpath);
+ string filetype = _pointClouds[index]->filetype;
+ string type = _pointClouds[index]->modelType;
+ string group = _pointClouds[index]->group;
  Quat pcRot = _pointClouds[index]->rot;
  Vec3 pcPos = _pointClouds[index]->pos;
  float pcScale = _pointClouds[index]->scale;
- PointCloudObject * pcObject = new PointCloudObject(name,filename,pcRot,pcScale,pcPos);
+ PointCloudObject * pcObject = new PointCloudObject(name,fullpath,filename,path,filetype,type,group,pcRot,pcScale,pcPos,_shadowRoot.get());
  PluginHelper::registerSceneObject(pcObject,"pcObject");
- pcObject->attachToScene(_shadowRoot.get());
+ pcObject->attachToScene();
  _pointClouds[index]->pcObject = pcObject;
  _pointClouds[index]->visible = true;
  _pointClouds[index]->loaded = true;
@@ -6133,14 +6164,21 @@ void ArtifactVis2::addNewPC(int index)
 }
 void ArtifactVis2::addNewModel(int index)
 {
- string filename = _models3d[index]->fullpath;
+ string fullpath = _models3d[index]->fullpath;
+ string filename = _models3d[index]->filename;
  string name = _models3d[index]->name;
+ string path =  getPathFromFilePath(_models3d[index]->fullpath);
+ string filetype =  _models3d[index]->filetype;
+ string type =  _models3d[index]->modelType;
+ string group =  _models3d[index]->group;
  Quat pcRot = _models3d[index]->rot;
  Vec3 pcPos = _models3d[index]->pos;
  float pcScale = _models3d[index]->scale;
- ModelObject * modelObject = new ModelObject(name,filename,pcRot,pcScale,pcPos,objectMap);
+ ModelObject * modelObject = new ModelObject(name,fullpath,filename,path,filetype,type,group,pcRot,pcScale,pcPos,objectMap,_shadowRoot.get());
  PluginHelper::registerSceneObject(modelObject,"modelObject");
- modelObject->attachToScene(_shadowRoot.get());
+ modelObject->attachToScene();
+ 
+// modelObject->attachToScene(_shadowRoot.get(),bulletWorld,srh.get(),bulletRoot.get());
     _models3d[index]->modelObject = modelObject;
     _models3d[index]->visible = true;
     _models3d[index]->loaded = true;
@@ -8870,4 +8908,68 @@ osgShadow::ShadowedScene* ArtifactVis2::getShadowRoot()
 
   return _shadowRoot.get();
 
+}
+
+void ArtifactVis2::testPhysics()
+{
+/*
+
+    OsgBulletTest* bulletTest = new OsgBulletTest("test");
+    bulletWorld = bulletTest->initPhysics();
+    bulletRoot = new osg::Group;
+
+//    osg::Group* launchHandlerAttachPoint = new osg::Group;
+//    rootP->addChild( launchHandlerAttachPoint );
+
+    srh = new osgbInteraction::SaveRestoreHandler;
+
+
+    // Make dice pyramid.
+    int xCount( 7 );
+    int yCount( 7 );
+    float xStart( -4. );
+    float yStart( -3. );
+    const float zInc( 2.5 );
+    float z( 1.75 );
+    int index( 0 );
+    std::string fileName( "/home/calvr/osgdata/dice.osg" );
+    if( !modelNode.valid() )
+	{
+        modelNode = osgDB::readNodeFile( fileName );
+        }
+    while( xCount && yCount )
+    {
+        float x, y;
+        int xIdx, yIdx;
+        for( y=yStart, yIdx=0; yIdx<yCount; y+=2.25, yIdx++ )
+        {
+            for( x=xStart, xIdx=0; xIdx<xCount; x+=2.25, xIdx++ )
+            {
+                osg::Vec3 pos( x, y, z );
+                bulletRoot->addChild( bulletTest->makeModel( fileName, index++, bulletWorld, pos, srh.get(),modelNode ) );
+            }
+        }
+        xStart += 1.25;
+        yStart += 1.25;
+        xCount--;
+        yCount--;
+        z += zInc;
+    }
+
+    // Add a cow
+    bulletRoot->addChild( bulletTest->makeCow( bulletWorld, osg::Vec3( -11., 6., 10. ), srh.get() ) );
+
+    // Make ground.
+    {
+        osg::Vec4 gp( 0, 0, 1, 0 );
+        bulletRoot->addChild( osgbDynamics::generateGroundPlane( gp, bulletWorld ) );
+    }
+
+
+    _shadowRoot->addChild(bulletRoot);
+
+
+    srh->capture();
+    physicsOn = true;
+*/
 }

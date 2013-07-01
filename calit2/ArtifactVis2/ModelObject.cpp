@@ -1,22 +1,44 @@
 #include "ModelObject.h"
-//#include "PanoViewLOD.h"
 
-
-//#define PRINT_TIMING
-
+#include <ConvertTools.h>
 using namespace cvr;
 using namespace std;
 using namespace osg;
 
-ModelObject::ModelObject(std::string name, std::string filename, osg::Quat pcRot, float pcScale, osg::Vec3 pcPos, std::map< std::string, osg::ref_ptr<osg::Node> > objectMap) : SceneObject(name,false,false,false,true,false)
+ModelObject::ModelObject(std::string name, std::string fullpath,std::string filename, std::string path, std::string filetype, std::string type, std::string group, osg::Quat pcRot, float pcScale, osg::Vec3 pcPos, std::map< std::string, osg::ref_ptr<osg::Node> > objectMap,osgShadow::ShadowedScene* shadowRoot) : SceneObject(name,false,false,false,true,false)
 
 {
     _active = false;
     _loaded = false;
     _visible = false;
-    _shadow = true;
+    _shadow = false;
+   _shadowRoot = shadowRoot;
     _objectMap = objectMap;
-    init(name,filename,pcRot,pcScale,pcPos);
+
+//For Saving
+_name = name;
+_path = path;
+_filename = filename;
+_q_filetype = filetype;
+_q_type = type;
+_q_group = group;
+_pos = pcPos;
+_rot = pcRot;
+_scaleFloat = pcScale;
+
+//For Reset
+_posOrig = pcPos;
+_rotOrig = pcRot;
+_scaleFloatOrig = pcScale;
+
+//For Bullet Physics
+//_constraint = NULL;
+// _constrainedMotionState = NULL;
+// dw = bw;
+_picked = false;
+firstPick = true;
+
+    init(name,fullpath,pcRot,pcScale,pcPos);
 }
 
 
@@ -96,11 +118,11 @@ void ModelObject::init(std::string name, std::string filename, osg::Quat pcRot, 
 	switchNode->addChild(modelNode);
 //Add menu system
 	    setNavigationOn(true);
-	    setMovable(false);
+	    setMovable(true);
 	    addMoveMenuItem();
 	    addNavigationMenuItem();
             float min = 0.0001;
-            float max = 1;
+            float max = 10;
             addScaleMenuItem("Scale",min,max,currentScale);
 	    SubMenu * sm = new SubMenu("Position");
 	    addMenuItem(sm);
@@ -124,21 +146,24 @@ void ModelObject::init(std::string name, std::string filename, osg::Quat pcRot, 
 	    resetMap->setCallback(this);
 	    addMenuItem(resetMap);
 
+	    shadowMap = new MenuCheckbox("Shadowing",false);
+	    shadowMap->setCallback(this);
+	    addMenuItem(shadowMap);
+
+	    bbMap = new MenuCheckbox("Bounding Box",false);
+	    bbMap->setCallback(this);
+	    addMenuItem(bbMap);
+
 	    activeMap = new MenuCheckbox("Active",true);
 	    activeMap->setCallback(this);
 	    addMenuItem(activeMap);
-           // _pointClouds[i]->activeMap = mc;
 
-            
 	    visibleMap = new MenuCheckbox("Visible",true);
 	    visibleMap->setCallback(this);
 	    addMenuItem(visibleMap);
 
 	    pVisibleMap = new MenuCheckbox("Panel Visible",true);
 	    pVisibleMap->setCallback(this);
-	   // addMenuItem(pVisibleMap);
- //           _query[q]->artifacts[inc]->model->pVisibleMap = mc;
-           // _query[q]->artifacts[inc]->model->pVisible = true;
 
             float rValue = 0;
             min = -1;
@@ -169,10 +194,33 @@ cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
  _visible = true;
 
 
+
+/*
+            m = getTransform();
+	    btCollisionShape* cs = osgbCollision::btConvexTriMeshCollisionShapeFromOSG(_root);
+	    osgbDynamics::MotionState* motion = new osgbDynamics::MotionState();
+	    motion->setTransform( rootPhysics );
+	   // motion->setTransform( _root );
+	    motion->setParentTransform( m );
+	    btScalar mass( 1. );
+	    btVector3 inertia( 0, 0, 0 );
+	    cs->calculateLocalInertia( mass, inertia );
+	    btRigidBody::btRigidBodyConstructionInfo rb( mass, motion, cs, inertia );
+
+
+	    body = new btRigidBody( rb );
+	    body->setActivationState( DISABLE_DEACTIVATION );
+	    bw->addRigidBody( body );
+
+            srh->add(_name, body );
+            //bulletRoot->addChild(rootPhysics);
+           // bulletRoot->addChild(_root);
+            shadowRoot->addChild(rootPhysics);
+    updateMatrices();
+
+    _attached = true;
+*/
 }
-
-
-
 void ModelObject::setRotate(float rotate)
 {
 }
@@ -187,24 +235,66 @@ void ModelObject::menuCallback(cvr::MenuItem * item)
 {
         if (item == saveMap)
         {
-	        std::cerr << "Save." << std::endl;
-                // saveModelConfig(_pointClouds[i], false);
+	        //std::cerr << "Save." << std::endl;
+                _pos = getPosition();
+                _rot = getRotation();
+                _scaleFloat = getScale();
+                ConvertTools* convertTools = new ConvertTools("test");
+                convertTools->saveModelConfig(_name,_path,_filename,_q_filetype,_q_type,_q_group,_pos,_rot,_scaleFloat, false);
 	}
         else if (item == saveNewMap)
         {
-	        std::cerr << "Save New." << std::endl;
-                // saveModelConfig(_pointClouds[i], true);
+	        //std::cerr << "Save New." << std::endl;
+                _pos = getPosition();
+                _rot = getRotation();
+                _scaleFloat = getScale();
+                ConvertTools* convertTools = new ConvertTools("test");
+                convertTools->saveModelConfig(_name,_path,_filename,_q_filetype,_q_type,_q_group,_pos,_rot,_scaleFloat, true);
 	}
         else if (item == resetMap)
         {
 	        std::cerr << "Reset." << std::endl;
+                setPosition(_posOrig);
+                setRotation(_rotOrig);
+                setScale(_scaleFloatOrig);
                
+	}
+        else if (item == shadowMap)
+        {
+	    //std::cerr << "Shadow." << std::endl;
+            if (shadowMap->getValue())
+            {
+              detachFromScene();
+              _shadow = true;
+              attachToScene();
+	    }
+	    else
+	    {
+
+              detachFromScene();
+              _shadow = false;
+              attachToScene();
+
+	    }
+	}
+        else if (item == bbMap)
+        {
+	    //std::cerr << "Bounding Box." << std::endl;
+            if (bbMap->getValue())
+            {
+             _root->addChild(_boundsTransform);
+	    }
+	    else
+	    {
+             _root->removeChild(_boundsTransform);
+	    }
+
 	}
         else if (item == activeMap)
         {
             if (activeMap->getValue())
             {
-	        std::cerr << "Active." << std::endl;
+	        //std::cerr << "Active." << std::endl;
                  _active = true;
                  setMovable(true);
                  activeMap->setValue(true);
@@ -215,9 +305,10 @@ void ModelObject::menuCallback(cvr::MenuItem * item)
                  setMovable(false);
                  activeMap->setValue(false);
 
-	        std::cerr << "DeActive." << std::endl;
+	        //std::cerr << "DeActive." << std::endl;
             }
 	}
+        /*
         else if (item == visibleMap)
         {
             if (visibleMap->getValue())
@@ -240,6 +331,7 @@ void ModelObject::menuCallback(cvr::MenuItem * item)
 	        std::cerr << "NotVisible." << std::endl;
             }
 	}
+        */
         else if (item == rxMap)
         {
 	        //std::cerr << "Rotate." << std::endl;
@@ -302,13 +394,29 @@ void ModelObject::updateCallback(int handID, const osg::Matrix & mat)
 {
 
     //std::cerr << "Update Callback." << std::endl;
+    /*
     if(_moving)
     {
 
       //osg::Vec3 orig = getPosition();
       //cerr << "So Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
-      //printf("moving\n");
+     // printf("moving\n");
+      updateDragging();
     }
+    else
+    {
+      if(_picked)
+      {
+        _picked = false;
+        dw->removeConstraint( _constraint );
+        delete _constraint;
+        _constraint = NULL;
+        _constrainedMotionState = NULL;
+        firstPick = true;
+       
+      }
+    }
+   */
 }
 
 bool ModelObject::eventCallback(cvr::InteractionEvent * ie)
@@ -404,7 +512,7 @@ void ModelObject::preFrameUpdate()
 {
 }
 
-void ModelObject::attachToScene(osgShadow::ShadowedScene* shadowRoot)
+void ModelObject::attachToScene()
 {
     if(_attached)
     {
@@ -427,12 +535,32 @@ void ModelObject::attachToScene(osgShadow::ShadowedScene* shadowRoot)
 
     if(_navigation)
     {
-        if(shadowRoot != NULL)
+        if(_shadow)
         {
-          //CVRPlugin * artifactVis2;
-          //std::string plugin = "ArtifactVis2";
-          //artifactVis2 = PluginManager::instance()->getPlugin(plugin);
-        shadowRoot->addChild(_root);
+/*
+            osg::Matrix m(getTransform());
+            rootPhysics = new osg::MatrixTransform( m );
+            rootPhysics->addChild(_root);
+	    btCollisionShape* cs = osgbCollision::btConvexTriMeshCollisionShapeFromOSG(_root);
+	    osgbDynamics::MotionState* motion = new osgbDynamics::MotionState();
+	   // motion->setTransform( rootPhysics );
+	    motion->setTransform( _root );
+	   // motion->setParentTransform( m );
+	    btScalar mass( 2. );
+	    btVector3 inertia( 0, 0, 0 );
+	    cs->calculateLocalInertia( mass, inertia );
+	    btRigidBody::btRigidBodyConstructionInfo rb( mass, motion, cs, inertia );
+
+
+	    body = new btRigidBody( rb );
+	    body->setActivationState( DISABLE_DEACTIVATION );
+	    bw->addRigidBody( body );
+
+            srh->add(_name, body );
+            //bulletRoot->addChild(rootPhysics);
+           // bulletRoot->addChild(_root);
+*/
+            _shadowRoot->addChild(_root);
         }
         else
         {
@@ -449,7 +577,7 @@ void ModelObject::attachToScene(osgShadow::ShadowedScene* shadowRoot)
     _attached = true;
 }
 
-void ModelObject::detachFromScene(osgShadow::ShadowedScene* shadowRoot)
+void ModelObject::detachFromScene()
 {
     if(!_attached)
     {
@@ -463,9 +591,9 @@ void ModelObject::detachFromScene(osgShadow::ShadowedScene* shadowRoot)
 
     if(_navigation)
     {
-        if(shadowRoot != NULL)
+        if(_shadow == true)
         {
-        shadowRoot->removeChild(_root);
+        _shadowRoot->removeChild(_root);
         }
         else
         {
@@ -478,4 +606,75 @@ void ModelObject::detachFromScene(osgShadow::ShadowedScene* shadowRoot)
     }
 
     _attached = false;
+}
+void ModelObject::processMove(osg::Matrix & mat)
+{
+   // std::cerr << "Process move." << std::endl;
+   /*
+    osg::Matrix m;
+    if(getNavigationOn())
+    {
+        m = PluginHelper::getWorldToObjectTransform();
+    }
+    rootPhysics->setMatrix(_lastobj2world * _lastHandInv * mat * m * _root2obj);
+
+    splitMatrix();
+*/
+  //  _lastHandMat = mat;
+  //  _lastHandInv = osg::Matrix::inverse(mat);
+ //   _lastobj2world = getObjectToWorldMatrix();
+   // updateDragging();
+}
+void ModelObject::updateDragging()
+{
+/*
+ if(firstPick)
+ {
+
+    osg::Matrix mat = currentHand;
+    lastHandMat = mat;
+    lastHandInv = osg::Matrix::inverse(mat);
+    lastobj2world = getObjectToWorldMatrix();
+    firstPick=false;
+
+ }
+ else
+ {
+    osg::Matrix mat = currentHand;
+    osg::MatrixTransform* pointM = new osg::MatrixTransform();
+    osg::Matrix wo = PluginHelper::getWorldToObjectTransform();
+    osg::Matrix handInv = osg::Matrix::inverse(currentHand);
+    pointM->setMatrix(lastobj2world * lastHandInv * mat * wo * _root2obj);
+    osg::Vec3 pointOnPlane = pointM->getMatrix().getTrans();
+   // std::cerr << pointOnPlane.x() << " " << pointOnPlane.y() << " " << pointOnPlane.z() << "\n";
+    lastHandMat = mat;
+    lastHandInv = osg::Matrix::inverse(mat);
+    lastobj2world = getObjectToWorldMatrix();
+   // pointOnPlane = Vec3(-pointOnPlane.x(),pointOnPlane.z(),-pointOnPlane.y());
+   // std::cerr << pointOnPlane.x() << " " << pointOnPlane.y() << " " << pointOnPlane.z() << "\n";
+if(_constrainedMotionState == NULL)
+{
+    _constrainedMotionState = dynamic_cast< osgbDynamics::MotionState* >( body->getMotionState() );
+    osg::Matrix ow2col;
+        ow2col = _constrainedMotionState->computeOsgWorldToCOLocal();
+    osg::Vec3d pickPointBulletOCLocal = pointOnPlane * ow2col;
+    
+    _constraint = new btPoint2PointConstraint( *body,
+        osgbCollision::asBtVector3( pickPointBulletOCLocal ) );
+    dw->addConstraint( _constraint );
+    _picked = true;
+   // std::cerr << "Drag move." << std::endl;
+}
+else
+{
+        osg::Matrix ow2bw;
+        if( _constrainedMotionState != NULL )
+            ow2bw = _constrainedMotionState->computeOsgWorldToBulletWorld();
+        osg::Vec3d bulletPoint = pointOnPlane * ow2bw;
+
+        _constraint->setPivotB( osgbCollision::asBtVector3( bulletPoint ) );
+   // std::cerr << "Drag moving." << std::endl;
+}
+}
+*/
 }

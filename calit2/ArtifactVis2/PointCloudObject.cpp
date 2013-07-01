@@ -1,5 +1,5 @@
 #include "PointCloudObject.h"
-//#include "PanoViewLOD.h"
+#include <ConvertTools.h>
 
 
 //#define PRINT_TIMING
@@ -7,13 +7,32 @@
 using namespace cvr;
 using namespace std;
 
-PointCloudObject::PointCloudObject(std::string name, std::string filename, osg::Quat pcRot, float pcScale, osg::Vec3 pcPos) : SceneObject(name,false,false,false,true,false)
+PointCloudObject::PointCloudObject(std::string name, std::string fullpath,std::string filename, std::string path, std::string filetype, std::string type, std::string group, osg::Quat pcRot, float pcScale, osg::Vec3 pcPos,osgShadow::ShadowedScene* shadowRoot) : SceneObject(name,false,false,false,true,false)
+
 {
     _active = false;
     _loaded = false;
     _visible = false;
+    _shadow = false;
+   _shadowRoot = shadowRoot;
 
-    init(name,filename,pcRot,pcScale,pcPos);
+//For Saving
+_name = name;
+_path = path;
+_filename = filename;
+_q_filetype = filetype;
+_q_type = type;
+_q_group = group;
+_pos = pcPos;
+_rot = pcRot;
+_scaleFloat = pcScale;
+
+//For Reset
+_posOrig = pcPos;
+_rotOrig = pcRot;
+_scaleFloatOrig = pcScale;
+
+    init(name,fullpath,pcRot,pcScale,pcPos);
 }
 
 
@@ -114,21 +133,24 @@ void PointCloudObject::init(std::string name, std::string filename, osg::Quat pc
 	    resetMap->setCallback(this);
 	    addMenuItem(resetMap);
 
+	    shadowMap = new MenuCheckbox("Shadowing",false);
+	    shadowMap->setCallback(this);
+	    addMenuItem(shadowMap);
+
+	    bbMap = new MenuCheckbox("Bounding Box",false);
+	    bbMap->setCallback(this);
+	    addMenuItem(bbMap);
+
 	    activeMap = new MenuCheckbox("Active",true);
 	    activeMap->setCallback(this);
 	    addMenuItem(activeMap);
-           // _pointClouds[i]->activeMap = mc;
 
-            
 	    visibleMap = new MenuCheckbox("Visible",true);
 	    visibleMap->setCallback(this);
 	    addMenuItem(visibleMap);
 
 	    pVisibleMap = new MenuCheckbox("Panel Visible",true);
 	    pVisibleMap->setCallback(this);
-	   // addMenuItem(pVisibleMap);
- //           _query[q]->artifacts[inc]->model->pVisibleMap = mc;
-           // _query[q]->artifacts[inc]->model->pVisible = true;
 
             float rValue = 0;
             min = -1;
@@ -196,24 +218,66 @@ void PointCloudObject::menuCallback(cvr::MenuItem * item)
 {
         if (item == saveMap)
         {
-	        std::cerr << "Save." << std::endl;
-                // saveModelConfig(_pointClouds[i], false);
+	        //std::cerr << "Save." << std::endl;
+                _pos = getPosition();
+                _rot = getRotation();
+                _scaleFloat = getScale();
+                ConvertTools* convertTools = new ConvertTools("test");
+                convertTools->saveModelConfig(_name,_path,_filename,_q_filetype,_q_type,_q_group,_pos,_rot,_scaleFloat, false);
 	}
         else if (item == saveNewMap)
         {
-	        std::cerr << "Save New." << std::endl;
-                // saveModelConfig(_pointClouds[i], true);
+	        //std::cerr << "Save New." << std::endl;
+                _pos = getPosition();
+                _rot = getRotation();
+                _scaleFloat = getScale();
+                ConvertTools* convertTools = new ConvertTools("test");
+                convertTools->saveModelConfig(_name,_path,_filename,_q_filetype,_q_type,_q_group,_pos,_rot,_scaleFloat, true);
 	}
         else if (item == resetMap)
         {
 	        std::cerr << "Reset." << std::endl;
+                setPosition(_posOrig);
+                setRotation(_rotOrig);
+                setScale(_scaleFloatOrig);
                
+	}
+        else if (item == shadowMap)
+        {
+	    //std::cerr << "Shadow." << std::endl;
+            if (shadowMap->getValue())
+            {
+              detachFromScene();
+              _shadow = true;
+              attachToScene();
+	    }
+	    else
+	    {
+
+              detachFromScene();
+              _shadow = false;
+              attachToScene();
+
+	    }
+	}
+        else if (item == bbMap)
+        {
+	    //std::cerr << "Bounding Box." << std::endl;
+            if (bbMap->getValue())
+            {
+             _root->addChild(_boundsTransform);
+	    }
+	    else
+	    {
+             _root->removeChild(_boundsTransform);
+	    }
+
 	}
         else if (item == activeMap)
         {
             if (activeMap->getValue())
             {
-	        std::cerr << "Active." << std::endl;
+	        //std::cerr << "Active." << std::endl;
                  _active = true;
                  setMovable(true);
                  activeMap->setValue(true);
@@ -224,9 +288,10 @@ void PointCloudObject::menuCallback(cvr::MenuItem * item)
                  setMovable(false);
                  activeMap->setValue(false);
 
-	        std::cerr << "DeActive." << std::endl;
+	        //std::cerr << "DeActive." << std::endl;
             }
 	}
+        /*
         else if (item == visibleMap)
         {
             if (visibleMap->getValue())
@@ -249,6 +314,7 @@ void PointCloudObject::menuCallback(cvr::MenuItem * item)
 	        std::cerr << "NotVisible." << std::endl;
             }
 	}
+        */
         else if (item == rxMap)
         {
 	        //std::cerr << "Rotate." << std::endl;
@@ -414,7 +480,7 @@ void PointCloudObject::preFrameUpdate()
 }
 
 
-void PointCloudObject::attachToScene(osgShadow::ShadowedScene* shadowRoot)
+void PointCloudObject::attachToScene()
 {
     if(_attached)
     {
@@ -437,12 +503,12 @@ void PointCloudObject::attachToScene(osgShadow::ShadowedScene* shadowRoot)
 
     if(_navigation)
     {
-        if(shadowRoot != NULL)
+        if(_shadow)
         {
           //CVRPlugin * artifactVis2;
           //std::string plugin = "ArtifactVis2";
           //artifactVis2 = PluginManager::instance()->getPlugin(plugin);
-        shadowRoot->addChild(_root);
+        _shadowRoot->addChild(_root);
         }
         else
         {
@@ -459,7 +525,7 @@ void PointCloudObject::attachToScene(osgShadow::ShadowedScene* shadowRoot)
     _attached = true;
 }
 
-void PointCloudObject::detachFromScene(osgShadow::ShadowedScene* shadowRoot)
+void PointCloudObject::detachFromScene()
 {
     if(!_attached)
     {
@@ -473,9 +539,9 @@ void PointCloudObject::detachFromScene(osgShadow::ShadowedScene* shadowRoot)
 
     if(_navigation)
     {
-        if(shadowRoot != NULL)
+        if(_shadow)
         {
-        shadowRoot->removeChild(_root);
+        _shadowRoot->removeChild(_root);
         }
         else
         {

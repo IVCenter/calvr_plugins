@@ -1,4 +1,5 @@
 
+
 #include <cvrKernel/SceneObject.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuCheckbox.h>
@@ -25,22 +26,11 @@
 
 #include <string>
 
-struct ZoomTransitionInfo
-{
-    float rotationFromImage;
-    float rotationToImage;
-    float zoomValue;
-    osg::Vec3 zoomDir;
-};
-
-struct MorphTransitionInfo
-{
-};
 
 class PointCloudObject : public cvr::SceneObject
 {
     public:
-        PointCloudObject(std::string name, std::string filename, osg::Quat pcRot, float pcScale, osg::Vec3 pcPos);
+        PointCloudObject(std::string name, std::string fullpath, std::string filename, std::string path, std::string filetype, std::string type, std::string group, osg::Quat pcRot, float pcScale, osg::Vec3 pcPos, osgShadow::ShadowedScene* shadowRoot);
         virtual ~PointCloudObject();
 
         void init(std::string name, std::string filename, osg::Quat pcRot, float pcScale, osg::Vec3 pcPos);
@@ -59,10 +49,25 @@ class PointCloudObject : public cvr::SceneObject
         virtual void menuCallback(cvr::MenuItem * item);
         virtual void updateCallback(int handID, const osg::Matrix & mat);
         virtual bool eventCallback(cvr::InteractionEvent * ie);
-        virtual void attachToScene(osgShadow::ShadowedScene* shadowRoot);
-        virtual void detachFromScene(osgShadow::ShadowedScene* shadowRoot);
+        virtual void attachToScene();
+        virtual void detachFromScene();
 
         void preFrameUpdate();
+
+         osgShadow::ShadowedScene* _shadowRoot;
+
+	std::string _name;
+	std::string _path;
+	std::string _filename;
+	std::string _q_filetype;
+	std::string _q_type;
+	std::string _q_group;
+	osg::Vec3 _pos;
+	osg::Quat _rot;
+	float _scaleFloat;
+	osg::Vec3 _posOrig;
+	osg::Quat _rotOrig;
+	float _scaleFloatOrig;
 
     protected:
         void updateZoom(osg::Matrix & mat);
@@ -73,11 +78,14 @@ class PointCloudObject : public cvr::SceneObject
         bool _active;
         bool _loaded;
         bool _visible;
+        bool _shadow;
 
         cvr::MenuButton * loadMap;
         cvr::MenuButton * saveMap;
         cvr::MenuButton * saveNewMap;
         cvr::MenuButton * resetMap;
+        cvr::MenuCheckbox * shadowMap;
+        cvr::MenuCheckbox * bbMap;
         cvr::MenuCheckbox * activeMap;
         cvr::MenuCheckbox * visibleMap;
         cvr::MenuCheckbox * pVisibleMap;
