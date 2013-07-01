@@ -1,4 +1,5 @@
 #include "GraphObject.h"
+#include "GraphGlobals.h"
 
 #include <cvrKernel/ComController.h>
 #include <cvrConfig/ConfigManager.h>
@@ -55,7 +56,7 @@ GraphObject::~GraphObject()
 
 }
 
-bool GraphObject::addGraph(std::string patient, std::string name)
+bool GraphObject::addGraph(std::string patient, std::string name, bool averageColor)
 {
     for(int i = 0; i < _nameList.size(); i++)
     {
@@ -77,6 +78,7 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 	float maxValue;
 	float normalLow;
 	float normalHigh;
+	float average;
 	time_t minTime;
 	time_t maxTime;
 	int numPoints;
@@ -180,11 +182,13 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 		    time_t mint, maxt;
 		    mint = maxt = atol(res[0]["utime"].c_str());
 		    float minval,maxval;
+		    float total = 0.0;;
 		    minval = maxval = atof(res[0]["value"].c_str());
 		    for(int i = 1; i < res.num_rows(); i++)
 		    {
 			time_t time = atol(res[i]["utime"].c_str());
 			float value = atof(res[i]["value"].c_str());
+			total += value;
 
 			if(time < mint)
 			{
@@ -203,6 +207,8 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 			    maxval = value;
 			}
 		    }
+
+		    gd.average = total / ((float)res.num_rows());
 
 		    //std::cerr << "Mintime: " << mint << " Maxtime: " << maxt << " MinVal: " << minval << " Maxval: " << maxval << std::endl;
 
@@ -376,55 +382,90 @@ bool GraphObject::addGraph(std::string patient, std::string name)
 
 	if(gd.normalLow != 0.0 || gd.normalHigh != 0.0)
 	{
-	    float range = gd.maxValue - gd.minValue;
-	    float val = 0.0;
-	    if(gd.minValue < gd.normalLow)
+	    if(averageColor)
 	    {
-		float val = (gd.normalLow - gd.minValue) / range;
-		val = std::min(val,1.0f);
-		ranges.push_back(std::pair<float,float>(0.0,val));
-		//colors.push_back(osg::Vec4(0.1,0.25,0.3,1.0));
-		colors.push_back(osg::Vec4(0.54,0.81,0.87,1.0));
-	    }
+		osg::Vec4 color;
+		ranges.push_back(std::pair<float,float>(0.0,1.0));
+		if(gd.average < gd.normalLow)
+		{
+		    color = GraphGlobals::getColorLow();
+		}
+		else if(gd.average <= gd.normalHigh)
+		{
+		    color = GraphGlobals::getColorNormal();
+		}
+		else if(gd.average < 10.0*gd.normalHigh)
+		{
+		    color = GraphGlobals::getColorHigh1();
+		}
+		else if(gd.average < 100.0*gd.normalHigh)
+		{
+		    color = GraphGlobals::getColorHigh10();
+		}
+		else
+		{
+		    color = GraphGlobals::getColorHigh100();
+		}
 
-	    if(val < 1.0)
-	    {
-		float nextVal = (gd.normalHigh - gd.minValue) / range;
-		nextVal = std::max(nextVal,0.0f);
-		nextVal = std::min(nextVal,1.0f);
-		ranges.push_back(std::pair<float,float>(val,nextVal));
-		//colors.push_back(osg::Vec4(0,0.5,0,1.0));
-		colors.push_back(osg::Vec4(0.63,0.67,0.40,1.0));
-		val = nextVal;
+		colors.push_back(color);
 	    }
-
-	    if(val < 1.0)
+	    else
 	    {
-		float nextVal = (10.0*gd.normalHigh - gd.minValue) / range;
-		nextVal = std::max(nextVal,0.0f);
-		nextVal = std::min(nextVal,1.0f);
-		ranges.push_back(std::pair<float,float>(val,nextVal));
-		//colors.push_back(osg::Vec4(0.7,0.25,0.1,1.0));
-		colors.push_back(osg::Vec4(0.86,0.61,0.0,1.0));
-		val = nextVal;
-	    }
+		float range = gd.maxValue - gd.minValue;
+		float val = 0.0;
+		if(gd.minValue < gd.normalLow)
+		{
+		    float val = (gd.normalLow - gd.minValue) / range;
+		    val = std::min(val,1.0f);
+		    ranges.push_back(std::pair<float,float>(0.0,val));
+		    //colors.push_back(osg::Vec4(0.1,0.25,0.3,1.0));
+		    //colors.push_back(osg::Vec4(0.54,0.81,0.87,1.0));
+		    colors.push_back(GraphGlobals::getColorLow());
+		}
 
-	    if(val < 1.0)
-	    {
-		float nextVal = (100.0*gd.normalHigh - gd.minValue) / range;
-		nextVal = std::max(nextVal,0.0f);
-		nextVal = std::min(nextVal,1.0f);
-		ranges.push_back(std::pair<float,float>(val,nextVal));
-		//colors.push_back(osg::Vec4(0.5,0,0,1.0));
-		colors.push_back(osg::Vec4(0.86,0.31,0.0,1.0));
-		val = nextVal;
-	    }
+		if(val < 1.0)
+		{
+		    float nextVal = (gd.normalHigh - gd.minValue) / range;
+		    nextVal = std::max(nextVal,0.0f);
+		    nextVal = std::min(nextVal,1.0f);
+		    ranges.push_back(std::pair<float,float>(val,nextVal));
+		    //colors.push_back(osg::Vec4(0,0.5,0,1.0));
+		    //colors.push_back(osg::Vec4(0.63,0.67,0.40,1.0));
+		    colors.push_back(GraphGlobals::getColorNormal());
+		    val = nextVal;
+		}
 
-	    if(val < 1.0)
-	    {
-		ranges.push_back(std::pair<float,float>(val,1.0));
-		//colors.push_back(osg::Vec4(0.5,0,0.5,1.0));
-		colors.push_back(osg::Vec4(0.71,0.18,0.37,1.0));
+		if(val < 1.0)
+		{
+		    float nextVal = (10.0*gd.normalHigh - gd.minValue) / range;
+		    nextVal = std::max(nextVal,0.0f);
+		    nextVal = std::min(nextVal,1.0f);
+		    ranges.push_back(std::pair<float,float>(val,nextVal));
+		    //colors.push_back(osg::Vec4(0.7,0.25,0.1,1.0));
+		    //colors.push_back(osg::Vec4(0.86,0.61,0.0,1.0));
+		    colors.push_back(GraphGlobals::getColorHigh1());
+		    val = nextVal;
+		}
+
+		if(val < 1.0)
+		{
+		    float nextVal = (100.0*gd.normalHigh - gd.minValue) / range;
+		    nextVal = std::max(nextVal,0.0f);
+		    nextVal = std::min(nextVal,1.0f);
+		    ranges.push_back(std::pair<float,float>(val,nextVal));
+		    //colors.push_back(osg::Vec4(0.5,0,0,1.0));
+		    //colors.push_back(osg::Vec4(0.86,0.31,0.0,1.0));
+		    colors.push_back(GraphGlobals::getColorHigh10());
+		    val = nextVal;
+		}
+
+		if(val < 1.0)
+		{
+		    ranges.push_back(std::pair<float,float>(val,1.0));
+		    //colors.push_back(osg::Vec4(0.5,0,0.5,1.0));
+		    //colors.push_back(osg::Vec4(0.71,0.18,0.37,1.0));
+		    colors.push_back(GraphGlobals::getColorHigh100());
+		}
 	    }
 	}
 

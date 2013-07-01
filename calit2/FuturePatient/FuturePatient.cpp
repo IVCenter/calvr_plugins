@@ -1073,7 +1073,7 @@ void FuturePatient::menuCallback(MenuItem * item)
     {
 	for(int i = 0; i < _patientTestMap["Smarr"].size(); i++)
 	{
-	    loadGraph("Smarr",_patientTestMap["Smarr"][i]);
+	    loadGraph("Smarr",_patientTestMap["Smarr"][i],true);
 	}
     }
 
@@ -1127,7 +1127,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	if(_microbeGraphType->getIndex() == 0)
 	{
 	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(),(int)_microbeNumBars->getValue(),_microbeOrdering->getValue()))
+	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(), _microbeTestTime[_microbeTest->getIndex()],(int)_microbeNumBars->getValue(),_microbeOrdering->getValue()))
 	    {
 		checkLayout();
 		_layoutObject->addGraphObject(mgo);
@@ -1207,7 +1207,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		if(_microbeGraphType->getIndex() == 0)
 		{
 		    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-		    if(mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0),(int)_microbeNumBars->getValue(),_microbeOrdering->getValue()))
+		    if(mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), _microbeTestTime[0],(int)_microbeNumBars->getValue(),_microbeOrdering->getValue()))
 		    {
 			checkLayout();
 			_layoutObject->addGraphObject(mgo);
@@ -1478,7 +1478,7 @@ void FuturePatient::checkLayout()
     }
 }
 
-void FuturePatient::loadGraph(std::string patient, std::string test)
+void FuturePatient::loadGraph(std::string patient, std::string test, bool averageColor)
 {
     checkLayout();
 
@@ -1487,12 +1487,14 @@ void FuturePatient::loadGraph(std::string patient, std::string test)
     {
 	if(!_multiAddCB->getValue())
 	{
-	    if(_graphObjectMap.find(value) == _graphObjectMap.end())
+	    //if(_graphObjectMap.find(value) == _graphObjectMap.end())
 	    {
 		GraphObject * gobject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
-		if(gobject->addGraph(patient,test))
+		if(gobject->addGraph(patient,test,averageColor))
 		{
-		    _graphObjectMap[value] = gobject;
+		    //_graphObjectMap[value] = gobject;
+		    gobject->setLayoutDoesDelete(true);
+		    _layoutObject->addGraphObject(gobject);
 		}
 		else
 		{
@@ -1500,10 +1502,10 @@ void FuturePatient::loadGraph(std::string patient, std::string test)
 		}
 	    }
 
-	    if(_graphObjectMap.find(value) != _graphObjectMap.end())
-	    {
-		_layoutObject->addGraphObject(_graphObjectMap[value]);
-	    }
+	    //if(_graphObjectMap.find(value) != _graphObjectMap.end())
+	    //{
+		//_layoutObject->addGraphObject(_graphObjectMap[value]);
+	    //}
 	}
 	else
 	{
@@ -1818,17 +1820,20 @@ void FuturePatient::updateMicrobeTests(int patientid)
     struct TestLabel
     {
 	char label[256];
+	time_t timestamp;
     };
 
     TestLabel * labels = NULL;
     int numTests = 0;
+
+    _microbeTestTime.clear();
 
     if(ComController::instance()->isMaster())
     {
 	if(_conn)
 	{
 	    std::stringstream qss;
-	    qss << "select distinct timestamp from Microbe_Measurement where patient_id = \"" << patientid << "\" order by timestamp;";
+	    qss << "select distinct timestamp, unix_timestamp(timestamp) as utimestamp from Microbe_Measurement where patient_id = \"" << patientid << "\" order by timestamp;";
 
 	    mysqlpp::Query q = _conn->query(qss.str().c_str());
 	    mysqlpp::StoreQueryResult res = q.store();
@@ -1842,6 +1847,7 @@ void FuturePatient::updateMicrobeTests(int patientid)
 		for(int i = 0; i < numTests; ++i)
 		{
 		    strncpy(labels[i].label,res[i]["timestamp"].c_str(),255);
+		    labels[i].timestamp = atol(res[i]["utimestamp"].c_str());
 		}
 	    }
 	}
@@ -1867,6 +1873,7 @@ void FuturePatient::updateMicrobeTests(int patientid)
     for(int i = 0; i < numTests; ++i)
     {
 	labelVec.push_back(labels[i].label);
+	_microbeTestTime.push_back(labels[i].timestamp);
     }
 
     _microbeTest->setValues(labelVec);

@@ -89,11 +89,13 @@ DataGraph::DataGraph()
     _bgGeometry = new osg::Geometry();
     _bgRangesGeode = new osg::Geode();
     _labelGroup = new osg::Group();
+    _mathGeode = new osg::Geode();
 
     _root->addChild(_axisGeode);
     _root->addChild(_graphTransform);
     _root->addChild(_clipNode);
     _root->addChild(_labelGroup);
+    _root->addChild(_mathGeode);
     _graphTransform->addChild(_graphGeode);
     _graphTransform->addChild(_bgRangesGeode);
     _graphGeode->addDrawable(_bgGeometry);
@@ -167,8 +169,6 @@ DataGraph::DataGraph()
 
     _masterPointScale = ConfigManager::getFloat("value","Plugin.FuturePatient.MasterPointScale",1.0);
     _masterLineScale = ConfigManager::getFloat("value","Plugin.FuturePatient.MasterLineScale",1.0);
-
-    _mathFunctionMask = 0;
 
     //_clipNode->addClipPlane(new osg::ClipPlane(0));
     //_clipNode->addClipPlane(new osg::ClipPlane(1));
@@ -931,49 +931,30 @@ bool DataGraph::pointClick()
     return false;
 }
 
-void DataGraph::addMathFunction(unsigned int functionMask)
+void DataGraph::addMathFunction(MathFunction * mf)
 {
-    unsigned int mask = 1;
-    bool toUpdate = false;
-    for(int i = 0; i < NUM_MATH_FUNCTIONS; ++i)
+    if(mf)
     {
-	if((mask & functionMask))
-	{
-	    if(!(mask & _mathFunctionMask))
-	    {
-		initMathFunction((GraphMathFunction)mask);
-		toUpdate = true;
-	    }
-	}
-	mask = mask << 1;
-    }
-
-    if(toUpdate)
-    {
+	_mathFunctions.push_back(mf);
+	//TODO call added
 	update();
     }
 }
 
-void DataGraph::removeMathFunction(unsigned int functionMask)
+void DataGraph::removeMathFunction(MathFunction * mf)
 {
-    unsigned int mask = 1;
-    bool toUpdate = false;
-    for(int i = 0; i < NUM_MATH_FUNCTIONS; ++i)
+    if(mf)
     {
-	if((mask & functionMask))
+	for(std::vector<MathFunction*>::iterator it = _mathFunctions.begin(); it != _mathFunctions.end(); ++it)
 	{
-	    if(!(mask & _mathFunctionMask))
+	    if((*it) == mf)
 	    {
-		cleanupMathFunction((GraphMathFunction)mask);
-		toUpdate = true;
+		_mathFunctions.erase(it);
+		//TODO call removed
+		update();
+		break;
 	    }
 	}
-	mask = mask << 1;
-    }
-
-    if(toUpdate)
-    {
-	update();
     }
 }
 
@@ -1363,7 +1344,8 @@ void DataGraph::update()
     {
 	for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)
 	{
-	    it->second.singleColorArray->at(0) = osg::Vec4(0.21569,0.49412,0.72157,1.0);
+	    //it->second.singleColorArray->at(0) = osg::Vec4(0.21569,0.49412,0.72157,1.0);
+	    it->second.singleColorArray->at(0) = osg::Vec4(1.0,1.0,1.0,1.0);
 	    it->second.connectorGeometry->setColorArray(it->second.singleColorArray);
 	    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
 	}
@@ -2230,30 +2212,4 @@ float DataGraph::calcPadding()
     float minD = std::min(_width,_height);
 
     return 0.07 * minD;
-}
-
-void DataGraph::initMathFunction(GraphMathFunction gmf)
-{
-    switch(gmf)
-    {
-	case GMF_AVERAGE:
-	{
-	    break;
-	}
-	default:
-	    break;
-    }
-}
-
-void DataGraph::cleanupMathFunction(GraphMathFunction gmf)
-{
-    switch(gmf)
-    {
-	case GMF_AVERAGE:
-	{
-	    break;
-	}
-	default:
-	    break;
-    }
 }

@@ -50,13 +50,6 @@ enum LabelDisplayMode
     LDM_ALL
 };
 
-#define NUM_MATH_FUNCTIONS 1
-
-enum GraphMathFunction
-{
-    GMF_AVERAGE=1
-};
-
 struct GraphDataInfo
 {
     std::string name;
@@ -84,6 +77,8 @@ struct GraphDataInfo
     osg::ref_ptr<osg::Geode> pointActionGeode;
     osg::ref_ptr<osg::Geometry> pointActionGeometry;
 };
+
+class MathFunction;
 
 class DataGraph
 {
@@ -173,8 +168,8 @@ class DataGraph
         void updatePointAction();
         bool pointClick();
 
-        void addMathFunction(unsigned int functionMask);
-        void removeMathFunction(unsigned int functionMask);
+        void addMathFunction(MathFunction * mf);
+        void removeMathFunction(MathFunction * mf);
 
     protected:
         void setupMultiGraphDisplayModes();
@@ -187,9 +182,6 @@ class DataGraph
         void updateBGRanges();
         float calcPadding();
 
-        void initMathFunction(GraphMathFunction gmf);
-        void cleanupMathFunction(GraphMathFunction gmf);
-
         std::map<std::string, osg::ref_ptr<osg::MatrixTransform> > _graphTransformMap;
         //std::map<std::string, osg::ref_ptr<osg::Geometry> > _graphGeometryMap;
         std::map<std::string, GraphDataInfo> _dataInfoMap;
@@ -201,6 +193,7 @@ class DataGraph
         osg::ref_ptr<osg::ClipNode> _clipNode;
         osg::ref_ptr<osg::MatrixTransform> _root;
         osg::ref_ptr<osg::Group> _labelGroup;
+        osg::ref_ptr<osg::Geode> _mathGeode;
 
         osg::ref_ptr<osg::MatrixTransform> _hoverTransform;
         osg::ref_ptr<osg::MatrixTransform> _hoverBGScale;
@@ -257,9 +250,28 @@ class DataGraph
 
         LabelDisplayMode _labelDisplayMode;
 
-        unsigned int _mathFunctionMask;
+        std::vector<MathFunction *> _mathFunctions;
+};
 
-        // math average
+class MathFunction
+{
+    public:
+        virtual void added(osg::Geode * geode) = 0;
+        virtual void removed(osg::Geode * geode) = 0;
+        virtual void update() = 0;
+};
+
+class AverageFunction : public MathFunction
+{
+    public:
+        AverageFunction();
+        virtual ~AverageFunction();
+
+        void added(osg::Geode * geode);
+        void removed(osg::Geode * geode);
+        void update();
+
+    protected:
         osg::ref_ptr<osg::Geode> _averageGeode;
         osg::ref_ptr<osg::Geometry> _averageGeometry;
         osg::ref_ptr<osgText::Text> _averageText;

@@ -12,6 +12,11 @@ osg::Vec4 GraphGlobals::_dataBGColor;
 std::map<std::string,osg::Vec4> GraphGlobals::_phylumColorMap;
 std::map<std::string,osg::Vec4> GraphGlobals::_patientColorMap;
 osg::Vec4 GraphGlobals::_defaultPhylumColor;
+osg::Vec4 GraphGlobals::_lowColor;
+osg::Vec4 GraphGlobals::_normColor;
+osg::Vec4 GraphGlobals::_high1Color;
+osg::Vec4 GraphGlobals::_high10Color;
+osg::Vec4 GraphGlobals::_high100Color;
 
 osgText::Text * GraphGlobals::makeText(std::string text, osg::Vec4 color)
 {
@@ -105,6 +110,36 @@ osg::Vec4 GraphGlobals::getDefaultPhylumColor()
     return _defaultPhylumColor;
 }
 
+osg::Vec4 GraphGlobals::getColorLow()
+{
+    checkInit();
+    return _lowColor;
+}
+
+osg::Vec4 GraphGlobals::getColorNormal()
+{
+    checkInit();
+    return _normColor;
+}
+
+osg::Vec4 GraphGlobals::getColorHigh1()
+{
+    checkInit();
+    return _high1Color;
+}
+
+osg::Vec4 GraphGlobals::getColorHigh10()
+{
+    checkInit();
+    return _high10Color;
+}
+
+osg::Vec4 GraphGlobals::getColorHigh100()
+{
+    checkInit();
+    return _high100Color;
+}
+
 const std::map<std::string,osg::Vec4> & GraphGlobals::getPatientColorMap()
 {
     checkInit();
@@ -152,4 +187,10 @@ void GraphGlobals::init()
     {
 	_patientColorMap[patientTypes[i]] = ColorGenerator::makeColor(i,patientTypes.size());
     }
+
+    _lowColor = osg::Vec4(0.54,0.81,0.87,1.0);
+    _normColor = osg::Vec4(0.63,0.67,0.40,1.0);
+    _high1Color = osg::Vec4(0.86,0.61,0.0,1.0);
+    _high10Color = osg::Vec4(0.86,0.31,0.0,1.0);
+    _high100Color = osg::Vec4(0.71,0.18,0.37,1.0);
 }

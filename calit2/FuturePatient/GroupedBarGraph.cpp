@@ -25,6 +25,8 @@ GroupedBarGraph::GroupedBarGraph(float width, float height)
     _topLabelMult = 0.25;
     _groupLabelMult = 0.35;
 
+    _showLabels = true;
+
     _colorMode = BGCM_SOLID;
     _displayMode = BGDM_GROUPED;
 
@@ -155,6 +157,17 @@ void GroupedBarGraph::setDisplayRange(float min, float max)
     _minDisplayRange = min;
     _maxDisplayRange = max;
 
+    update();
+}
+
+void GroupedBarGraph::setShowLabels(bool b)
+{
+    if(_showLabels == b)
+    {
+	return;
+    }
+
+    _showLabels = b;
     update();
 }
 
@@ -1020,124 +1033,128 @@ void GroupedBarGraph::updateAxis()
 	return;
     }
 
-    //find value of bottom padding mult
-    std::vector<osgText::Text*> textList;
-
     osg::Quat q;
     q.makeRotate(M_PI/2.0,osg::Vec3(1.0,0,0));
     q = q * osg::Quat(-M_PI/2.0,osg::Vec3(0,1.0,0));
 
-    switch(_displayMode)
-    {
-	case BGDM_GROUPED:
-	{
-	    for(int i = 0; i < _groupOrder.size(); ++i)
-	    {
-		if(_data.find(_groupOrder[i]) == _data.end())
-		{
-		    continue;
-		}
-		for(int j = 0; j < _data[_groupOrder[i]].size(); ++j)
-		{
-		    osgText::Text * text = GraphGlobals::makeText(_data[_groupOrder[i]][j].first,osg::Vec4(0,0,0,1));
-		    text->setRotation(q);
-		    text->setAlignment(osgText::Text::RIGHT_CENTER);
-		    textList.push_back(text);
-		}
-	    }
-	    break;
-	}
-	case BGDM_CUSTOM:
-	{
-	    for(int i = 0; i < _customDataOrder.size(); ++i)
-	    {
-		if(_data.find(_customDataOrder[i].first) == _data.end() || _customDataOrder[i].second >= _data[_customDataOrder[i].first].size())
-		{
-		    continue;
-		}
-		osgText::Text * text = GraphGlobals::makeText(_data[_customDataOrder[i].first][_customDataOrder[i].second].first,osg::Vec4(0,0,0,1));
-		text->setRotation(q);
-		text->setAlignment(osgText::Text::RIGHT_CENTER);
-		textList.push_back(text);
-	    }
-	    break;
-	}
-	default:
-	    break;
-    }
-
-    float minWidthValue = FLT_MAX;
-    float maxWidthValue = FLT_MIN;
-
-    float minHeightValue = FLT_MAX;
-    float maxHeightValue = FLT_MIN;
-
-    for(int i = 0; i < textList.size(); ++i)
-    {
-	osg::BoundingBox bb;
-	bb = textList[i]->getBound();
-
-	float width = bb.xMax() - bb.xMin();
-	float height = bb.zMax() - bb.zMin();
-
-	//std::cerr << "Width: " << width << " Height: " << height << std::endl;
-
-	if(width < minWidthValue)
-	{
-	    minWidthValue = width;
-	}
-	if(width > maxWidthValue)
-	{
-	    maxWidthValue = width;
-	}
-	if(height < minHeightValue)
-	{
-	    minHeightValue = height;
-	}
-	if(height > maxHeightValue)
-	{
-	    maxHeightValue = height;
-	}
-    }
-
     float tickSize = _height * 0.01;
 
-    //std::cerr << "Max width: " << maxWidthValue << " height: " << maxHeightValue << std::endl;
-    float targetWidth = ((_width * (1.0 - _leftPaddingMult - _rightPaddingMult)) / ((float)_numBars));
-    float spacer = targetWidth * 0.05;
-    targetWidth *= 0.9;
-    float charSize = targetWidth / maxWidthValue;
-    float maxSize = _maxBottomPaddingMult * _height - 2.0 * tickSize;
-
-
-    if(charSize * maxHeightValue > maxSize)
+    if(_showLabels)
     {
-	//charSize *= maxSize / (charSize * maxHeightValue);
-	_currentBottomPaddingMult = _maxBottomPaddingMult;
-    }
-    else
-    {
-	_currentBottomPaddingMult = (maxHeightValue * charSize + 2.0 * tickSize) / _height;
-    }
+	//find value of bottom padding mult
+	std::vector<osgText::Text*> textList;
 
-    updateSizes();
+	switch(_displayMode)
+	{
+	    case BGDM_GROUPED:
+		{
+		    for(int i = 0; i < _groupOrder.size(); ++i)
+		    {
+			if(_data.find(_groupOrder[i]) == _data.end())
+			{
+			    continue;
+			}
+			for(int j = 0; j < _data[_groupOrder[i]].size(); ++j)
+			{
+			    osgText::Text * text = GraphGlobals::makeText(_data[_groupOrder[i]][j].first,osg::Vec4(0,0,0,1));
+			    text->setRotation(q);
+			    text->setAlignment(osgText::Text::RIGHT_CENTER);
+			    textList.push_back(text);
+			}
+		    }
+		    break;
+		}
+	    case BGDM_CUSTOM:
+		{
+		    for(int i = 0; i < _customDataOrder.size(); ++i)
+		    {
+			if(_data.find(_customDataOrder[i].first) == _data.end() || _customDataOrder[i].second >= _data[_customDataOrder[i].first].size())
+			{
+			    continue;
+			}
+			osgText::Text * text = GraphGlobals::makeText(_data[_customDataOrder[i].first][_customDataOrder[i].second].first,osg::Vec4(0,0,0,1));
+			text->setRotation(q);
+			text->setAlignment(osgText::Text::RIGHT_CENTER);
+			textList.push_back(text);
+		    }
+		    break;
+		}
+	    default:
+		break;
+	}
 
-    float currentX = (_width * _leftPaddingMult) - (_width / 2.0);
-    float zValue = ((_height * _currentBottomPaddingMult) - (_height / 2.0)) - tickSize;
-    zValue -= spacer;
+	float minWidthValue = FLT_MAX;
+	float maxWidthValue = FLT_MIN;
 
-    currentX += _barWidth / 2.0;
+	float minHeightValue = FLT_MAX;
+	float maxHeightValue = FLT_MIN;
 
-    //std::cerr << "CharSize: " << charSize << std::endl;
+	for(int i = 0; i < textList.size(); ++i)
+	{
+	    osg::BoundingBox bb;
+	    bb = textList[i]->getBound();
 
-    for(int i = 0; i < textList.size(); ++i)
-    {
-	//std::cerr << "text currentx: " << currentX << " z: " << zValue << std::endl;
-	textList[i]->setPosition(osg::Vec3(currentX,-1,zValue));
-	textList[i]->setCharacterSize(charSize);
-	GraphGlobals::makeTextFit(textList[i],maxSize,false);
-	_axisGeode->addDrawable(textList[i]);
-	currentX += _barWidth;
+	    float width = bb.xMax() - bb.xMin();
+	    float height = bb.zMax() - bb.zMin();
+
+	    //std::cerr << "Width: " << width << " Height: " << height << std::endl;
+
+	    if(width < minWidthValue)
+	    {
+		minWidthValue = width;
+	    }
+	    if(width > maxWidthValue)
+	    {
+		maxWidthValue = width;
+	    }
+	    if(height < minHeightValue)
+	    {
+		minHeightValue = height;
+	    }
+	    if(height > maxHeightValue)
+	    {
+		maxHeightValue = height;
+	    }
+	}
+
+	//std::cerr << "Max width: " << maxWidthValue << " height: " << maxHeightValue << std::endl;
+	float targetWidth = ((_width * (1.0 - _leftPaddingMult - _rightPaddingMult)) / ((float)_numBars));
+	float spacer = targetWidth * 0.05;
+	targetWidth *= 0.9;
+	float charSize = targetWidth / maxWidthValue;
+	float maxSize = _maxBottomPaddingMult * _height - 2.0 * tickSize;
+
+
+	if(charSize * maxHeightValue > maxSize)
+	{
+	    //charSize *= maxSize / (charSize * maxHeightValue);
+	    _currentBottomPaddingMult = _maxBottomPaddingMult;
+	}
+	else
+	{
+	    _currentBottomPaddingMult = (maxHeightValue * charSize + 2.0 * tickSize) / _height;
+	}
+
+
+	updateSizes();
+
+	float currentX = (_width * _leftPaddingMult) - (_width / 2.0);
+	float zValue = ((_height * _currentBottomPaddingMult) - (_height / 2.0)) - tickSize;
+	zValue -= spacer;
+	currentX += _barWidth / 2.0;
+
+	//std::cerr << "CharSize: " << charSize << std::endl;
+
+	for(int i = 0; i < textList.size(); ++i)
+	{
+	    //std::cerr << "text currentx: " << currentX << " z: " << zValue << std::endl;
+	    textList[i]->setPosition(osg::Vec3(currentX,-1,zValue));
+	    textList[i]->setCharacterSize(charSize);
+	    GraphGlobals::makeTextFit(textList[i],maxSize,false);
+	    _axisGeode->addDrawable(textList[i]);
+	    currentX += _barWidth;
+	}
+
     }
 
     // lets make some lines
@@ -1480,7 +1497,15 @@ void GroupedBarGraph::updateSizes()
 {
     _graphLeft = _width * (_leftPaddingMult - 0.5);
     _graphRight = _width * (0.5 - _rightPaddingMult);
-    _graphBottom = _height * (_currentBottomPaddingMult - 0.5);
+
+    if(_showLabels)
+    {
+	_graphBottom = _height * (_currentBottomPaddingMult - 0.5);
+    }
+    else
+    {
+	_graphBottom = _height * (0.03 - 0.5);
+    }
 
     switch(_displayMode)
     {

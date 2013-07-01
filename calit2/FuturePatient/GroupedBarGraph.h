@@ -70,6 +70,12 @@ class GroupedBarGraph
             return _minGraphValue;
         }
 
+        void setShowLabels(bool b);
+        bool getShowLabels()
+        {
+            return _showLabels;
+        }
+
         void setCustomOrder(std::vector<std::pair<std::string,int> > & order);
 
         void setDisplayMode(BarGraphDisplayMode bgdm);
@@ -134,6 +140,8 @@ class GroupedBarGraph
         float _minDisplayRange;
         float _maxDisplayRange;
         float _graphLeft, _graphRight, _graphTop, _graphBottom, _barWidth;
+
+        bool _showLabels;
 
         std::string _title, _axisLabel, _axisUnits, _groupLabel;
         BarGraphAxisType _axisType;

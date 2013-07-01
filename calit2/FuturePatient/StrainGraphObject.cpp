@@ -154,6 +154,7 @@ bool StrainGraphObject::setGraph(std::string title, int taxId)
 	}
 	_graph->setCustomOrder(customOrder);
 	_graph->setDisplayMode(BGDM_CUSTOM);
+	_graph->setShowLabels(false);
     }
 
     if(sdata)

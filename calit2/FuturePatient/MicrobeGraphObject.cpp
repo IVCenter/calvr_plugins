@@ -14,6 +14,7 @@
 #include <iostream>
 #include <sstream>
 #include <cstdlib>
+#include <ctime>
 
 using namespace cvr;
 
@@ -388,9 +389,14 @@ void MicrobeGraphObject::menuCallback(MenuItem * item)
     TiledWallSceneObject::menuCallback(item);
 }
 
-bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, int microbes, bool lsOrdering)
+bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, bool lsOrdering)
 {
-    _graphTitle = title + " - " + testLabel;
+    struct tm timetm = *localtime(&testTime);
+    char timestr[256];
+    timestr[255] = '\0';
+    strftime(timestr, 255, "%F", &timetm);
+
+    _graphTitle = title + " - " + timestr;
     std::stringstream valuess, orderss;
 
     valuess << "select * from (select Microbes.description, Microbes.phylum, Microbes.species, Microbe_Measurement.value from  Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \""<< testLabel << "\" order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";

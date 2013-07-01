@@ -27,6 +27,12 @@ class GraphGlobals
         static const std::map<std::string,osg::Vec4> & getPhylumColorMap();
         static osg::Vec4 getDefaultPhylumColor();
 
+        static osg::Vec4 getColorLow();
+        static osg::Vec4 getColorNormal();
+        static osg::Vec4 getColorHigh1();
+        static osg::Vec4 getColorHigh10();
+        static osg::Vec4 getColorHigh100();
+
         static const std::map<std::string,osg::Vec4> & getPatientColorMap();
 
     protected:
@@ -38,6 +44,12 @@ class GraphGlobals
         static osg::ref_ptr<osgText::Font> _font;
         static osg::Vec4 _bgColor;
         static osg::Vec4 _dataBGColor;
+
+        static osg::Vec4 _lowColor;
+        static osg::Vec4 _normColor;
+        static osg::Vec4 _high1Color;
+        static osg::Vec4 _high10Color;
+        static osg::Vec4 _high100Color;
 
         static std::map<std::string,osg::Vec4> _phylumColorMap;
         static osg::Vec4 _defaultPhylumColor;
