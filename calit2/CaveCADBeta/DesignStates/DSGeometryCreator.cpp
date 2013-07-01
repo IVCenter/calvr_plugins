@@ -34,13 +34,15 @@ DSGeometryCreator::DSGeometryCreator(): mShapeSwitchIdx(0), mNumShapeSwitches(0)
 
     prevGeode = NULL;
 
-    int x, y, z;
+    float x, y, z;
     std::string path = "Plugin.CaveCADBeta.GeometryEditorOffset";
-    x = cvr::ConfigManager::getInt("x", path, 1);
-    y = cvr::ConfigManager::getInt("y", path, 0);
-    z = cvr::ConfigManager::getInt("z", path, 1);
+    x = cvr::ConfigManager::getFloat("x", path, 1);
+    y = cvr::ConfigManager::getFloat("y", path, 0);
+    z = cvr::ConfigManager::getFloat("z", path, 1);
 
     mEditorOffset = osg::Vec3(x,y,z);//1,0,1);
+    mHighlightedIdx = -1;
+    mSaveHighlight = false;
 }
 
 // Destructor
@@ -200,7 +202,7 @@ void DSGeometryCreator::inputDevMoveEvent(const osg::Vec3 &pointerOrg, const osg
                 }
             }
 
-            if (snap)
+            if (0)//snap) // take out snap on drag for now, should fix infinite radius issue
             {
                 mDOGeometryCreator->setSnapPos(center, false);
             }
@@ -274,6 +276,12 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
     {
         // test for sub shape intersection
         bool hit = false;
+        // 0 root
+        // 1 box
+        // 2 cylinder
+        // 3 cone
+        // 4 combine
+        // 5 delete
         for (int i = 0; i < mNumShapeSwitches; i++)
         {
             mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, 
@@ -300,6 +308,28 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
                 break;
             }
         }
+
+        // highlight
+        if (hit)
+        {
+            mSaveHighlight = true;
+        }
+
+        // combine
+        if (hit && mShapeSwitchIdx == 3)
+        {
+            std::cout << "line" << std::endl;
+//            mDOGeometryCollector->combineSelected();
+//            return false;
+        }
+
+        // delete
+        else if (hit && mShapeSwitchIdx == 4)
+        {
+            mDOGeometryCollector->deleteSelected();
+            return false;
+        }
+
 
         mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, mSphereExteriorGeode);
         if (hit)
@@ -377,6 +407,7 @@ bool DSGeometryCreator::inputDevPressEvent(const osg::Vec3 &pointerOrg, const os
             mDOGeometryCreator->setReferenceAxisMasking(false);
             mDOGeometryCreator->setWireframeActiveID(-1);
         }
+//        mSaveHighlight = false;
     }
 
     if (mDrawingState == START_DRAWING) 
@@ -407,6 +438,8 @@ bool DSGeometryCreator::inputDevReleaseEvent()
 
         // update audio parameters
         mAudioConfigHandler->updateShapes();
+
+        mSaveHighlight = false;
 
         return true;
     }
@@ -471,9 +504,12 @@ void DSGeometryCreator::setHighlight(bool isHighlighted, const osg::Vec3 &pointe
 
     for (int i = 0; i < mNumShapeSwitches; i++)
     {
-        ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->removeChild(mHighlightGeode);
-        mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, 
-            ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->getChild(0));
+        if (!mSaveHighlight)
+        {
+            ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->removeChild(mHighlightGeode);
+            mDSIntersector->loadRootTargetNode(gDesignStateRootGroup, 
+                ((osg::PositionAttitudeTransform*)(mShapeSwitchEntryArray[i]->mSwitch->getChild(0)))->getChild(0));
+        }
 
         if (mDSIntersector->test(pointerOrg, pointerPos))
         {
@@ -481,14 +517,14 @@ void DSGeometryCreator::setHighlight(bool isHighlighted, const osg::Vec3 &pointe
         }
     }
 
-    if (idx > -1)
+    if (idx > -1 && !mSaveHighlight)
     {
         osg::Sphere *sphere = new osg::Sphere();
         mSD = new osg::ShapeDrawable(sphere);
         mHighlightGeode = new osg::Geode();
         mHighlightGeode->addDrawable(mSD);
-        sphere->setRadius(0.25);
-        mSD->setColor(osg::Vec4(1, 1, 1, 0.5));
+        sphere->setRadius(0.2);
+        mSD->setColor(osg::Vec4(0.2, 1, 0.2, 0.6));
 
         StateSet *stateset = mSD->getOrCreateStateSet();
         stateset->setMode(GL_BLEND, StateAttribute::OVERRIDE | StateAttribute::ON);

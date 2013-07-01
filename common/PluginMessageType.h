@@ -109,6 +109,23 @@ struct OsgPdfLoadRequest
     cvr::SceneObject * object;
 };
 
+// OsgVnc
+enum OsgVncMessageType
+{
+    VNC_GOOGLE_QUERY=0,
+    VNC_HIDE,
+    VNC_SCALE,
+    VNC_POSITION
+};
+
+struct OsgVncRequest
+{
+    std::string query;
+    bool hide;
+    float scale;
+    osg::Vec3f position;
+};
+
 // ModelLoader
  
 enum ModelLoaderMessageType
@@ -133,4 +150,63 @@ enum StructViewMessageType
     SV_LAYER_OFF
 };
 
+// LayoutManager
+
+class Layout
+{
+public:
+    virtual std::string Name(void) = 0;
+    virtual void Cleanup(void) = 0;
+    virtual bool Start(void) = 0;
+    virtual bool Update(void) = 0;
+};
+
+struct LayoutManagerAddLayoutData
+{
+    Layout* layout;
+};
+
+enum LayoutManagerMessageType
+{
+    LM_ADD_LAYOUT = 0,
+    LM_START_LAYOUT
+};
+
+// Video
+enum VideoMessageType
+{
+    VIDEO_LOAD,
+    VIDEO_STOP
+};
+
+
+struct VideoSceneObject : public cvr::SceneObject
+{
+    virtual void play() = 0;
+    virtual void stop() = 0;
+    
+    VideoSceneObject(
+        std::string name, bool navigation, bool movable, bool clip, 
+        bool contextMenu, bool showBounds) : cvr::SceneObject(
+            name, navigation, movable, clip, contextMenu, showBounds) {}
+            
+    virtual ~VideoSceneObject() {}
+};
+
+struct VideoMessageData
+{
+    // why == VIDEO_LOAD:
+    //  - input: path (path to video file to load)
+    //  - output: obj (allocated by plugin)
+    
+    // why == VIDEO_STOP:
+    //  - input: obj (as provided by an earlier VIDEO_LOAD)
+    //  - unused: path
+    
+    VideoMessageType why;
+    std::string path;   
+    VideoSceneObject* obj;
+};
+
 #endif
+

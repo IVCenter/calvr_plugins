@@ -67,6 +67,7 @@ class CalibrationController
     bool isCaliFieldVisible();
     void resetCaliBall();
     void resetCaliField(const Matrixf &invBaseMat);
+    void setAppearFlag(bool flag);
 
     /* update functions: 1) System timer; 2) Preframe rendering; 3) UI listener. */
     void updateCaliTime(const double &frameDuration);
@@ -79,8 +80,8 @@ class CalibrationController
 	const std::string getPlaybackTimeLabel() { return mPlaybackBallHandler->getPlaybackTimeLabel(); }
 
   protected:
-    bool mCaliFlag, mPlaybackFlag;
-    double mTimer;
+    bool mCaliFlag, mPlaybackFlag, mAppearFlag;
+    double mTimer, mLastAppear, mAppearInterval, mPhi, mTheta, mRad;
     MatrixTransform *mViewerAlignmentTrans, *mNoseOffsetTrans;
 
     CaliBallHandler *mCaliBallHandler;

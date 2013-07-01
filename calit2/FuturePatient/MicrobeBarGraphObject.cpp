@@ -41,6 +41,15 @@ bool MicrobeBarGraphObject::addGraph(std::string label, int patientid, std::stri
     qss << "select Microbes.species, Microbe_Measurement.value from Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \""<< testLabel << "\";";
 
     std::string title = label + "\n" + testLabel;
+
+    struct LoadData ld;
+    ld.special = false;
+    ld.label = label;
+    ld.patientid = patientid;
+    ld.testLabel = testLabel;
+
+    _loadedGraphs.push_back(ld);
+
     return addGraph(title,qss.str());
 }
 
@@ -104,6 +113,12 @@ bool MicrobeBarGraphObject::addSpecialGraph(SpecialMicrobeGraphType smgt)
 	default:
 	    return false;
     }
+
+    struct LoadData ld;
+    ld.special = true;
+    ld.type = smgt;
+
+    _loadedGraphs.push_back(ld);
 
     return addGraph(label,queryss.str());
 }
@@ -409,7 +424,68 @@ void MicrobeBarGraphObject::setGraphSize(float width, float height)
 
 void MicrobeBarGraphObject::selectMicrobes(std::string & group, std::vector<std::string> & keys)
 {
+    //std::cerr << "Select microbes called group: " << group << " m: " << (keys.size() ? keys[0] : "") << std::endl;
     _graph->selectItems(group,keys);
+}
+
+void MicrobeBarGraphObject::dumpState(std::ostream & out)
+{
+    out << "MICROBE_BAR_GRAPH" << std::endl;
+
+    out << _loadedGraphs.size() << std::endl;
+
+    for(int i = 0; i < _loadedGraphs.size(); ++i)
+    {
+	out << _loadedGraphs[i].special << std::endl;
+	if(_loadedGraphs[i].special)
+	{
+	    out << _loadedGraphs[i].type << std::endl;
+	}
+	else
+	{
+	    out << _loadedGraphs[i].patientid << std::endl;
+	    out << _loadedGraphs[i].label << std::endl;
+	    out << _loadedGraphs[i].testLabel << std::endl;
+	}
+    }
+}
+
+bool MicrobeBarGraphObject::loadState(std::istream & in)
+{
+    int graphs;
+    in >> graphs;
+
+    for(int i = 0; i < graphs; ++i)
+    {
+	bool special;
+	in >> special;
+
+	if(special)
+	{
+	    int type;
+	    in >> type;
+	    addSpecialGraph((SpecialMicrobeGraphType)type);
+	}
+	else
+	{
+	    int id;
+	    in >> id;
+
+	    char tempstr[1024];
+	    // consume endl
+	    in.getline(tempstr,1024);
+
+	    std::string label, testLabel;
+	    in.getline(tempstr,1024);
+	    label = tempstr;
+	    in.getline(tempstr,1024);
+	    testLabel = tempstr;
+
+	    addGraph(label,id,testLabel);
+	}
+    }
+
+    return true;
 }
 
 bool MicrobeBarGraphObject::processEvent(InteractionEvent * ie)

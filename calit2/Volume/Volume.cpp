@@ -124,7 +124,7 @@ struct Volume::volumeinfo* Volume::loadXVF(std::string filename, int &x, int &y,
 
 	// create a new volume
 	volinfo = new struct volumeinfo;
-
+    
     vol->toggleEndianness();
 	x = vol->vox[0];
 	y = vol->vox[1];
@@ -142,7 +142,7 @@ struct Volume::volumeinfo* Volume::loadXVF(std::string filename, int &x, int &y,
     imageSequence->setLength(vol->getStoredFrames() * 0.4f);
     imageSequence->pause();
 
-    std::cerr << "Number of frames found " << vol->getStoredFrames() << std::endl;
+    //std::cerr << "Number of frames found " << vol->getStoredFrames() << std::endl;
 
     unsigned int r_offset = 0;
     unsigned int r_line = 0;
@@ -183,8 +183,20 @@ struct Volume::volumeinfo* Volume::loadXVF(std::string filename, int &x, int &y,
     // compute transferFunction make adjustemnt for scalar shift
     osg::Vec4 minValue, maxValue;
     osg::computeMinMax(volinfo->image.get(), minValue, maxValue);
-    std::cerr << "Min " << minValue.r() << " max value " << maxValue.r() << std::endl;
     
+    //float minValue, maxValue;
+    //vol->findMinMax(0, minValue, maxValue);
+    //minValue = convertValue(volinfo->datatype, (char*)&minValue); 
+    //maxValue = convertValue(volinfo->datatype, (char*)&maxValue); 
+
+    //std::cerr << "Osg Max " << maxValue[0] << " min " << minValue[0] << std::endl;
+    //std::cerr << "Osg Max " << max[0] << " min " << min[0] << std::endl;
+
+    float scale = 0.99f/(maxValue[0]-minValue[0]);
+    float offset = -minValue[0] * scale;
+
+    //std::cerr << "Scale " << scale << " offset " << offset << std::endl;
+
     // create a transferfunction
 	volinfo->tf = new osg::TransferFunction1D();
 
@@ -192,9 +204,6 @@ struct Volume::volumeinfo* Volume::loadXVF(std::string filename, int &x, int &y,
     // Looks only for PyramidWidgets
     int size = vol->tf._widgets.count();
     vol->tf._widgets.first();
-    float scalar = 1.0 / maxValue.r();
-
-    std::cerr << "Scale value " << scalar << std::endl;
 
     // temporary transferfunction table
     volinfo->defaultTransferFunc = new vvTransFunc();
@@ -205,27 +214,28 @@ struct Volume::volumeinfo* Volume::loadXVF(std::string filename, int &x, int &y,
 
         if( vvTFPyramid *pw = dynamic_cast<vvTFPyramid*>(w) )
         {
-            volinfo->center = pw->_pos[0];
-            volinfo->width = pw->_bottom[0];
-            //std::cerr << "Center value " << centerValue * scalar << " Full width value " << widthValue * scalar << std::endl;
-            volinfo->defaultTransferFunc->_widgets.append(new vvTFPyramid(vvColor(1.0f, 1.0f, 1.0f), false, 1.0f, volinfo->center * scalar, volinfo->width * scalar, 0.0f),  vvSLNode<vvTFWidget*>::NORMAL_DELETE);
+            volinfo->center = (pw->_pos[0] / scale) - offset;
+            volinfo->width = pw->_bottom[0] / scale;
+            volinfo->defaultTransferFunc->_widgets.append(new vvTFPyramid(vvColor(1.0f, 1.0f, 1.0f), false, 1.0f, volinfo->center, volinfo->width, 0.0f),  vvSLNode<vvTFWidget*>::NORMAL_DELETE);
         }
 
         // check color pin values
         if( vvTFColor *cw = dynamic_cast<vvTFColor*>(w) )
         {
-            float centerValue = cw->_pos[0];
+            float centerValue = (cw->_pos[0] / scale) - offset;
+            //std::cerr << "Color position " << centerValue << " initial " << cw->_pos[0] << std::endl;
             osg::Vec3f color(0.0, 0.0, 0.0);
             cw->_col.getRGB(color.x(), color.y(), color.z());
-            volinfo->defaultTransferFunc->_widgets.append(new vvTFColor(vvColor(color.x(), color.y(), color.z()), centerValue * scalar),  vvSLNode<vvTFWidget*>::NORMAL_DELETE);
-            //std::cerr << "Pin value " << centerValue * scalar << " r " << color.x() << " g " << color.y() << " b " << color.z() << std::endl;
+            volinfo->defaultTransferFunc->_widgets.append(new vvTFColor(vvColor(color.x(), color.y(), color.z()), centerValue),  vvSLNode<vvTFWidget*>::NORMAL_DELETE);
         }
 
         vol->tf._widgets.next();
     }
 
+    //std::cerr << "Center " << volinfo->center << " width " << volinfo->width << std::endl;
+        
     // add colormap to transfer function
-	volinfo->tf->assign(*(computeColorMap(volinfo->defaultTransferFunc, volinfo->center *  scalar, volinfo->width * scalar)));
+	volinfo->tf->assign(*(computeColorMap(volinfo->defaultTransferFunc, volinfo->center, volinfo->width)));
 
     // remove voldesc object
     if( vol )
@@ -1316,7 +1326,7 @@ bool Volume::loadFile(std::string filename)
     std::string name;
     int x, y ,z, sizeS, sizeT, sizeR;
 
-    std::cerr << "Load called on " << filename << std::endl;
+    //std::cerr << "Load called on " << filename << std::endl;
 
     volumeinfo *info = NULL;
 
@@ -1352,9 +1362,9 @@ bool Volume::loadFile(std::string filename)
     // average values and spread over range 
     {
         // compute range of values
-        osg::Vec4 minValue, maxValue;
-        osg::computeMinMax(info->image.get(), minValue, maxValue); //TODO
-        osg::modifyImage(info->image.get(),ScaleOperator(1.0f/maxValue.r()));
+        //osg::Vec4 minValue, maxValue;
+        //osg::computeMinMax(info->image.get(), minValue, maxValue); //TODO
+        //osg::modifyImage(info->image.get(),ScaleOperator(1.0f/maxValue.r()));
         //std::cerr << "Min xyz " << minValue.x() << " " << minValue.y() << " " << minValue.z() << std::endl; 
         //std::cerr << "Max xyz " << maxValue.x() << " " << maxValue.y() << " " << maxValue.z() << std::endl; 
     }
@@ -1652,7 +1662,6 @@ bool Volume::loadFile(std::string filename)
         _frameMap[so] = mrvfb;
     }
 
-
     // add point cluster controls
     {
         info->seedPoint = new SceneObject("SeedPoint", false, true, false, false, false);
@@ -1742,8 +1751,14 @@ bool Volume::loadFile(std::string filename)
         _removeSurfaceMap[so] = mrsb;
     }
 
+    // add save position button
+    MenuButton* mb = new MenuButton("Save position");
+    mb->setCallback(this);
+    so->addMenuItem(mb);
+    _saveMap[so] = mb;
+
     // add delete button
-    MenuButton* mb = new MenuButton("Delete");
+    mb = new MenuButton("Delete");
     mb->setCallback(this);
     so->addMenuItem(mb);
     _deleteMap[so] = mb;
@@ -1760,6 +1775,18 @@ bool Volume::loadFile(std::string filename)
     so->addNavigationMenuItem();
     so->addScaleMenuItem("Scale", 0.1, 10.0, 1.0);
 
+    // check if there exits a preset configuration
+    bool nav;
+    nav = so->getNavigationOn();
+    so->setNavigationOn(false);
+
+    if(_locInit.find(name) != _locInit.end())
+    {
+         so->setTransform(_locInit[name].second);
+         so->setScale(so->getScale());
+    }
+    so->setNavigationOn(nav);
+
     _volumeMap[so] = info;
 
     return true;
@@ -1767,6 +1794,22 @@ bool Volume::loadFile(std::string filename)
 
 void Volume::menuCallback(MenuItem* menuItem)
 {
+
+	//check for main menu selections
+    std::map< cvr::MenuItem* , std::string>::iterator it = _menuFileMap.find(menuItem);
+    if( it != _menuFileMap.end() )
+    {
+        loadFile(it->second);
+        return;
+    }
+
+    // check for remove all button
+    if( menuItem == _removeButton )
+    {
+        removeAll();
+		return;
+    }
+
     //check default button menus
     for(std::map<SceneObject*,MenuCheckbox*>::iterator it = _standardMap.begin(); it != _standardMap.end(); it++)
     {
@@ -2202,6 +2245,23 @@ void Volume::menuCallback(MenuItem* menuItem)
             return;
         }
     }
+    
+    for(std::map<SceneObject*,MenuButton*>::iterator it = _saveMap.begin(); it != _saveMap.end(); it++)
+    {
+        if(menuItem == it->second)
+        {
+            bool nav;
+            nav = it->first->getNavigationOn();
+            it->first->setNavigationOn(false);
+
+            _locInit[it->first->getName()] = std::pair<float, osg::Matrix>(1.0,it->first->getTransform());
+
+            it->first->setNavigationOn(nav);
+
+            writeConfigFile();
+            return;
+        }
+    }
 
     // check if seed has been turned on
     for(std::map<SceneObject*,MenuCheckbox*>::iterator it = _enableSeedMap.begin(); it != _enableSeedMap.end(); it++)
@@ -2330,106 +2390,127 @@ void Volume::menuCallback(MenuItem* menuItem)
     {
         if(menuItem == it->second)
         {
-            if(_standardMap.find(it->first) != _standardMap.end())
-            {
-                delete _standardMap[it->first];
-                _standardMap.erase(it->first);
-            }
-
-            if(_lightMap.find(it->first) != _lightMap.end())
-            {
-                delete _lightMap[it->first];
-                _lightMap.erase(it->first);
-            }
-
-            if(_isosurfaceMap.find(it->first) != _isosurfaceMap.end())
-            {
-                delete _isosurfaceMap[it->first];
-                _isosurfaceMap.erase(it->first);
-            }
-
-            if(_maxintensityMap.find(it->first) != _maxintensityMap.end())
-            {
-                delete _maxintensityMap[it->first];
-                _maxintensityMap.erase(it->first);
-            }
-
-            if(_isosurfaceValueMap.find(it->first) != _isosurfaceValueMap.end())
-            {
-                delete _isosurfaceValueMap[it->first];
-                _isosurfaceValueMap.erase(it->first);
-            }
-/*
-            if(_isosurfaceBandValueMap.find(it->first) != _isosurfaceBandValueMap.end())
-            {
-                delete _isosurfaceBandValueMap[it->first];
-                _isosurfaceBandValueMap.erase(it->first);
-            }
-*/
-            if(_transparencyValueMap.find(it->first) != _transparencyValueMap.end())
-            {
-                delete _transparencyValueMap[it->first];
-                _transparencyValueMap.erase(it->first);
-            }
-
-            if(_transferFuncMap.find(it->first) != _transferFuncMap.end())
-            {
-                delete _transferFuncMap[it->first];
-                _transferFuncMap.erase(it->first);
-            }
-
-            if(_transferPositionMap.find(it->first) != _transferPositionMap.end())
-            {
-                delete _transferPositionMap[it->first];
-                _transferPositionMap.erase(it->first);
-            }
-
-            if(_transferPositionMap.find(it->first) != _transferPositionMap.end())
-            {
-                delete _transferPositionMap[it->first];
-                _transferPositionMap.erase(it->first);
-            }
-
-            if(_transferBaseWidthMap.find(it->first) != _transferBaseWidthMap.end())
-            {
-                delete _transferBaseWidthMap[it->first];
-                _transferBaseWidthMap.erase(it->first);
-            }
-
-            if(_transferBrightMap.find(it->first) != _transferBrightMap.end())
-            {
-                delete _transferBrightMap[it->first];
-                _transferBrightMap.erase(it->first);
-            }
-
-            if(_transferHueMap.find(it->first) != _transferHueMap.end())
-            {
-                delete _transferHueMap[it->first];
-                _transferHueMap.erase(it->first);
-            }
-
-            if(_transferGrayMap.find(it->first) != _transferGrayMap.end())
-            {
-                delete _transferGrayMap[it->first];
-                _transferGrayMap.erase(it->first);
-            }
-
-            //TODO need to remove player controls
-
-            if(_volumeMap.find(it->first) != _volumeMap.end())
-            {
-                delete _volumeMap[it->first];
-                _volumeMap.erase(it->first);
-            }
-
-            delete it->first;
-            delete it->second;
-            _deleteMap.erase(it);
-
+            deleteVolume(it->first);
             return;
         }
     }
 
+}
+
+void Volume::deleteVolume(cvr::SceneObject* vol)
+{
+    if(_standardMap.find(vol) != _standardMap.end())
+    {
+        delete _standardMap[vol];
+        _standardMap.erase(vol);
+    }
+
+    if(_isosurfaceValueMap.find(it->first) != _isosurfaceValueMap.end())
+    {
+        delete _isosurfaceValueMap[it->first];
+        _isosurfaceValueMap.erase(it->first);
+    }
+
+    if(_transparencyValueMap.find(it->first) != _transparencyValueMap.end())
+    {
+        delete _transparencyValueMap[it->first];
+        _transparencyValueMap.erase(it->first);
+    }
+
+    if(_lightMap.find(vol) != _lightMap.end())
+    {
+        delete _lightMap[vol];
+        _lightMap.erase(vol);
+    }
+
+    if(_isosurfaceMap.find(vol) != _isosurfaceMap.end())
+    {
+        delete _isosurfaceMap[vol];
+        _isosurfaceMap.erase(vol);
+    }
+
+    if(_maxintensityMap.find(vol) != _maxintensityMap.end())
+    {
+        delete _maxintensityMap[vol];
+        _maxintensityMap.erase(vol);
+    }
+
+    if(_isosurfaceValueMap.find(vol) != _isosurfaceValueMap.end())
+    {
+        delete _isosurfaceValueMap[vol];
+        _isosurfaceValueMap.erase(vol);
+    }
+
+    if(_transparencyValueMap.find(vol) != _transparencyValueMap.end())
+    {
+        delete _transparencyValueMap[vol];
+        _transparencyValueMap.erase(vol);
+    }
+
+    if(_transferFuncMap.find(vol) != _transferFuncMap.end())
+    {
+        delete _transferFuncMap[vol];
+        _transferFuncMap.erase(vol);
+    }
+
+    if(_transferPositionMap.find(vol) != _transferPositionMap.end())
+    {
+        delete _transferPositionMap[vol];
+        _transferPositionMap.erase(vol);
+    }
+
+    if(_transferPositionMap.find(vol) != _transferPositionMap.end())
+    {
+        delete _transferPositionMap[vol];
+        _transferPositionMap.erase(vol);
+    }
+
+    if(_transferBaseWidthMap.find(vol) != _transferBaseWidthMap.end())
+    {
+        delete _transferBaseWidthMap[vol];
+        _transferBaseWidthMap.erase(vol);
+    }
+
+    if(_transferBrightMap.find(vol) != _transferBrightMap.end())
+    {
+        delete _transferBrightMap[vol];
+        _transferBrightMap.erase(vol);
+    }
+
+    if(_transferHueMap.find(vol) != _transferHueMap.end())
+    {
+        delete _transferHueMap[vol];
+        _transferHueMap.erase(vol);
+    }
+
+    if(_transferGrayMap.find(vol) != _transferGrayMap.end())
+    {
+        delete _transferGrayMap[vol];
+        _transferGrayMap.erase(vol);
+    }
+    
+    if(_saveMap.find(vol) != _saveMap.end())
+    {
+        delete _saveMap[vol];
+        _saveMap.erase(vol);
+    }
+
+    if(_deleteMap.find(vol) != _deleteMap.end())
+    {
+        delete _deleteMap[vol];
+        _deleteMap.erase(vol);
+    }
+
+    //TODO need to remove player controls
+
+    if(_volumeMap.find(vol) != _volumeMap.end())
+    {
+        delete _volumeMap[vol];
+        _volumeMap.erase(vol);
+
+        delete vol;
+        vol = NULL;
+    }
 }
 
 osg::TransferFunction1D::ColorMap* Volume::computeColorMap(vvTransFunc* transfunc, float center, float width)
@@ -2571,28 +2652,6 @@ bool Volume::processEvent(InteractionEvent * ie)
 
 void Volume::preFrame()
 {
-/*
-    if( _root )
-    {
-
-	//check if test for intersection with frame
-	if(_clipBoxMenuItem->getValue())
-	{
-		osg::Vec3 pStart(0,0,0);
-            	osg::Vec3 pEnd(0,100000,0);
-            	pStart = pStart * TrackingManager::instance()->getHandMat(0);
-                pEnd = pEnd * TrackingManager::instance()->getHandMat(0);
-                std::vector<IsectInfo> results = getObjectIntersection(_clipBox, pStart, pEnd);
-		if( results.size() )
-		{
-			osg::Vec3 point= results[0].point;	
-			printf("Point intersection %f %f %f\n", point.x(), point.y(), point.z());
-		}
-	}
-
-    }
-*/
-
     // exit preframe if no volumes
     if( ! _volumeMap.size() )
         return;
@@ -2699,8 +2758,115 @@ bool Volume::init()
     pgm1->setParameter( GL_GEOMETRY_INPUT_TYPE_EXT, GL_POINTS );
     pgm1->setParameter( GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP );
 
+	// create default menu
+    _volumeMenu = new SubMenu("Volume", "Volume");
+    _volumeMenu->setCallback(this);
+
+    _filesMenu = new SubMenu("Files","Files");
+    _filesMenu->setCallback(this);
+    _volumeMenu->addItem(_filesMenu);
+    
+    _removeButton = new MenuButton("Remove All");
+    _removeButton->setCallback(this);
+    _volumeMenu->addItem(_removeButton);
+
+    // read in configurations
+    _configPath = ConfigManager::getEntry("Plugin.Volume.ConfigDir");
+
+    ifstream cfile;
+    cfile.open((_configPath + "/Init.cfg").c_str(), ios::in);
+
+    if(!cfile.fail())
+    {
+        string line;
+        while(!cfile.eof())
+        {
+            osg::Matrix m;
+            float scale;
+            char name[150];
+            cfile >> name;
+            if(cfile.eof())
+            {
+                break;
+            }
+			cfile >> scale;
+			for(int i = 0; i < 4; i++)
+        	{
+        		for(int j = 0; j < 4; j++)
+        		{
+            		cfile >> m(i, j);
+        		}
+        	}
+            _locInit[string(name)] = pair<float, osg::Matrix>(scale, m);
+        }
+    }
+    cfile.close();
+
+    // read in configuartion files
+    vector<string> list;
+
+    string configBase = "Plugin.Volume.Files";
+
+    ConfigManager::getChildren(configBase,list);
+
+    for(int i = 0; i < list.size(); i++)
+    {
+        MenuButton * button = new MenuButton(list[i]);
+        button->setCallback(this);
+
+        // add mapping
+        _menuFileMap[button] = ConfigManager::getEntry("value",configBase + "." + list[i],"");
+
+        // add button
+        _filesMenu->addItem(button);
+    }
+
+    // add menu
+    cvr:MenuSystem::instance()->addMenuItem(_volumeMenu);
+
     return true;
 }
+
+void Volume::removeAll()
+{
+    std::map<cvr::SceneObject*,volumeinfo*>::iterator it;
+
+    while( (it = _volumeMap.begin())  != _volumeMap.end() )
+    {
+        deleteVolume(it->first);
+    }
+}
+
+void Volume::writeConfigFile()
+{
+    // only write on head node
+    if(cvr::ComController::instance()->isMaster())
+    {
+
+        ofstream cfile;
+        cfile.open((_configPath + "/Init.cfg").c_str(), ios::trunc);
+
+        if(!cfile.fail())
+        {
+    	    for(map<std::string, std::pair<float, osg::Matrix> >::iterator it = _locInit.begin();
+        	    it != _locInit.end(); it++)
+    	    {
+        	    //cerr << "Writing entry for " << it->first << endl;
+        	    cfile << it->first << " " << it->second.first << " ";
+        	    for(int i = 0; i < 4; i++)
+        	    {
+        		    for(int j = 0; j < 4; j++)
+        		    {
+            		    cfile << it->second.second(i, j) << " ";
+        		    }
+        	    }
+        	    cfile << endl;
+    	    }
+        }
+        cfile.close();
+    }
+}
+
 
 
 Volume::~Volume()

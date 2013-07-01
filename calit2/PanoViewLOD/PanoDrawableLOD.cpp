@@ -1,4 +1,3 @@
-#include <GL/glew.h>
 #include "PanoDrawableLOD.h"
 
 #include <cvrConfig/ConfigManager.h>
@@ -18,7 +17,12 @@
 
 //#define PRINT_TIMING
 
+#ifndef WIN32
 #include <sys/time.h>
+#else
+#include <cvrUtil/TimeOfDay.h>
+#include <io.h>
+#endif
 
 std::map<int,sph_cache*> PanoDrawableInfo::cacheMap;
 std::map<int,std::vector<std::pair<bool,sph_model*> > > PanoDrawableInfo::currentModels;
@@ -170,8 +174,14 @@ char * loadShaderFile(std::string file)
     }
 
     fileBuffer = new char[st.st_size+1];
-    fileBuffer[st.st_size] = '\0';
-    read(filefd,fileBuffer,st.st_size);
+    int bytesRead = read(filefd,fileBuffer,st.st_size);
+
+	// fix for odd windows issue
+#ifndef WIN32
+	fileBuffer[st.st_size] = '\0';
+#else
+	fileBuffer[bytesRead] = '\0';
+#endif
 
     close(filefd);
 
@@ -198,7 +208,7 @@ PanoDrawableLOD::PanoDrawableLOD(PanoDrawableInfo * pdi, float radius, int mesh,
     _fragData = loadShaderFile(shaderDir + "/" + fragFile);
 
     //std::cerr << "Vertfile: " << vertFile << " fragFile: " << fragFile << std::endl;
-
+	
     if(!_vertData)
     {
 	std::cerr << "Error loading shader file: " << shaderDir + "/" + vertFile << std::endl;
@@ -461,7 +471,11 @@ void PanoDrawableLOD::drawImplementation(osg::RenderInfo& ri) const
 	{
 	    for(std::vector<std::pair<bool,sph_model*> >::iterator vit = it->second.begin(); vit != it->second.end();)
 	    {
+#ifndef WIN32
 		time = std::max(time,vit->second->get_time());
+#else
+		time = max(time,vit->second->get_time());
+#endif
 		if(!vit->first)
 		{
 		    delete vit->second;

@@ -145,6 +145,15 @@ void DOGeometryCreator::resetWireframeGeodes(const osg::Vec3 &centerPos)
             mWireframeGeode->setInitPosition(centerPos + Vec3(0, 0, -rad));
             mWireframeGeode->setScaleVect(scaleCylinder);
         }
+        else if (mWireframeActiveID == CAVEGeodeShape::LINE)
+        {
+            float rad = ANIM_VIRTUAL_SPHERE_RADIUS / 1.5 * zoomfact;
+            rad = ((int) (rad / unit)) * unit;
+            Vec3 scaleLine = Vec3(rad, 0, rad * 2);
+            mWireframeGeode->setInitPosition(centerPos);
+            mWireframeGeode->setScaleVect(scaleLine);
+        }
+
         mWireframeGeode->resize(wireframeGridVect);
     }
 }

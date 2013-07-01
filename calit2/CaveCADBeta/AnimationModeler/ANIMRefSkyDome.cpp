@@ -47,6 +47,8 @@ MatrixTransform *ANIMCreateRefSkyDome(StateSet **stateset)
     (*stateset)->setRenderingHint(StateSet::TRANSPARENT_BIN);
     skyGeode->setStateSet(*stateset);
 
+//    skyGeode->setNodeMask(0xFFFFFF & ~(0x2 | 0x3));
+
     // load sky dome shader
     Uniform* sunrUniform = new Uniform("hazeRadisuMin", 0.975f);
     (*stateset)->addUniform(sunrUniform);
@@ -88,7 +90,7 @@ MatrixTransform *ANIMCreateRefSkyDome(StateSet **stateset)
     (*stateset)->addUniform(paraImageTextureSampler);
 
     Program* programSky = new Program;
-    (*stateset)->setAttribute(programSky);
+   (*stateset)->setAttribute(programSky);
     programSky->addShader(Shader::readShaderFile(Shader::VERTEX, ANIMDataDir() + "Shaders/EnvSky.vert"));
     programSky->addShader(Shader::readShaderFile(Shader::FRAGMENT, ANIMDataDir() + "Shaders/EnvSky.frag"));
 

@@ -1,0 +1,99 @@
+<ElevatorRoom value="on" >
+    
+    <!-- Trial Logic -->
+
+    <Phases>
+        <0 trials="3" pause="5" theme="Space" />
+        <1 trials="5" pause="10" theme="Farm" />
+        <2 trials="4" pause="5" theme="Forest" />
+    </Phases>
+
+    <Probabilities alien="50" ally="40" checker="10" /> <!-- should sum to 100 -->
+    <ErrorProbability value="5" />
+
+    <!-- flashes per second -->
+    <CheckerFlashSpeed value="20" />
+    <AvatarFlashSpeed value="10" />
+    <DoorFlashSpeed value="10" />
+
+    <SolidColorTime min="0.5" max="2" />
+    <DoorOpenTime  min="1" max="2" />
+
+    <Position x="0.0" y="-2957.0" z="-100.0" /><!-- change z to move up/down -->
+    <Scale x="100.0" y="100.0" z="50.0" />
+
+
+    <!-- Debug values -->
+
+    <Debug value="on" />
+    <StaticDoor value="-1" /> <!-- -1 for off -->
+    <StaticMode value="off" /> <!-- Checker, Alien, Ally, or off -->
+    <DoorMovement value="on" />
+    <RotateOnlyNavigation value="on" />
+    <Crosshair value="on"/>
+
+
+    <!-- Audio -->
+
+    <AudioServer value="on" />
+    <AudioServerAddress value="128.54.36.169" />
+    <AudioServerPort value="15003" />
+
+    <DingSound path="/home/cehughes/data/ElevatorData" file="elevator-ding.wav" />
+    <LaserSound file="pulsephaser.wav" />
+    <HitSound file="hullbreak30.wav" />
+
+
+    <!-- Textures -->
+
+    <DataDir         value="/home/cehughes/data/ElevatorData" />
+    <WallTexture     value="DarkGranite.jpg" />
+    <CeilingTexture  value="DarkGranite.jpg" />
+    <FloorTexture    value="Rusted_Iron_Grip_desaturated.jpg" />
+    <DoorTexture     value="Aluminum_Brush.jpg" />
+    <ElevatorTexture value="Needlepoint_Steel.jpg" />
+    <AllyTexture     value="Astronaut.jpg" />
+    <AlienTexture    value="Alien.jpg" />
+    <CheckerTexture1 value="checkboard1.jpg" />
+    <CheckerTexture2 value="checkboard2.jpg" />
+
+    <Levels>
+        <Space>
+            <WallTexture     value="DarkGranite.jpg" />
+            <CeilingTexture  value="DarkGranite.jpg" />
+            <FloorTexture    value="Rusted_Iron_Grip_desaturated.jpg" />
+            <DoorTexture     value="Aluminum_Brush.jpg" />
+            <ElevatorTexture value="Needlepoint_Steel.jpg" />
+            <AllyTexture     value="Astronaut.jpg" />
+            <AlienTexture    value="Alien.jpg" />
+            <CheckerTexture1 value="checkboard1.jpg" />
+            <CheckerTexture2 value="checkboard2.jpg" />
+        </Space>
+
+        <Farm>
+            <WallTexture     value="Woodplanks.jpg" />
+            <CeilingTexture  value="Woodplanks.jpg" />
+            <FloorTexture    value="Dirt.jpg" />
+            <DoorTexture     value="Woodplanks.jpg" />
+            <ElevatorTexture value="GreySlate.jpg" />
+            <AllyTexture     value="Pig.jpg" />
+            <AlienTexture    value="Sheep.jpg" />
+            <CheckerTexture1 value="checkboard1.jpg" />
+            <CheckerTexture2 value="checkboard2.jpg" />
+        </Farm>
+
+        <Forest>
+            <WallTexture     value="Woodplanks.jpg" />
+            <CeilingTexture  value="Santa_Fe_Stucco.jpg" />
+            <FloorTexture    value="Smudged_Dirt.jpg" />
+            <DoorTexture     value="Pink_Slate.jpg" />
+            <ElevatorTexture value="Slush.jpg" />
+            <AllyTexture     value="rabbit.jpg" />
+            <AlienTexture    value="bear.jpg" />
+            <CheckerTexture1 value="checkboard1.jpg" />
+            <CheckerTexture2 value="checkboard2.jpg" />
+        </Forest>
+    </Levels>
+
+</ElevatorRoom>
+

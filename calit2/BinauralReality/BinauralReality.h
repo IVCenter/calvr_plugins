@@ -12,6 +12,7 @@
 #include <cvrMenu/ScrollingDialogPanel.h>
 #include <cvrMenu/MenuText.h>
 
+#include <netinet/in.h>
 
 class BinauralReality: public cvr::CVRPlugin, public cvr::MenuCallback
 {
@@ -25,9 +26,13 @@ class BinauralReality: public cvr::CVRPlugin, public cvr::MenuCallback
         bool processEvent(cvr::InteractionEvent * event);
 
     protected:
+        void SendOSC(std::string address, osg::Vec3f& pos, osg::Vec3f& angle);
+
         static BinauralReality * _myPtr;
         cvr::SubMenu *_BinauralRealityMenu;
-
+        
+        int _udp_socket;
+        struct sockaddr_in si_other;
 };
 
 

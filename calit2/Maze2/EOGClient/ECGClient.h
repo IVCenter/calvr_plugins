@@ -10,6 +10,7 @@
 // C++
 #include <netdb.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 // Open Scene Graph
 #include <osg/Matrixf>

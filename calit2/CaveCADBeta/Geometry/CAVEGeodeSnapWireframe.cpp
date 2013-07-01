@@ -15,7 +15,7 @@ using namespace osg;
 
 // 'gSnappingUnitDist' is the default minimum sensible distance in CAVE design space, or the size of unit grid. 
 //  could define different snapping unit distance in other derived classes of CAVEGeode
-const float CAVEGeodeSnapWireframe::gSnappingUnitDist(0.050f);
+const float CAVEGeodeSnapWireframe::gSnappingUnitDist(0.010f);
 
 const int CAVEGeodeSnapWireframeCylinder::gMinFanSegments(18);
 int CAVEGeodeSnapWireframeCylinder::gCurFanSegments(18);
@@ -76,6 +76,13 @@ CAVEGeodeSnapWireframeCone::CAVEGeodeSnapWireframeCone()
 {
     initBaseGeometry();
 }
+
+// Constructor: CAVEGeodeSnapWireframeLine
+CAVEGeodeSnapWireframeLine::CAVEGeodeSnapWireframeLine()
+{
+    initBaseGeometry();
+}
+
 
 
 // Box
@@ -559,4 +566,175 @@ void CAVEGeodeSnapWireframeCone::resize(osg::Vec3 &gridVect)
     mSnapwireGeometry->setVertexArray(snapvertices);
     addDrawable(mSnapwireGeometry);
 }
+
+
+
+// Line
+
+/***************************************************************
+* Function: initBaseGeometry()
+***************************************************************/
+void CAVEGeodeSnapWireframeLine::initBaseGeometry()
+{
+    float xMin, yMin, zMin, xMax, yMax, zMax;
+    xMin = 0.0;		xMax = 1.0;
+    yMin = 0.0;		yMax = 1.0;
+    zMin = 0.0;		zMax = 1.0;
+
+    Vec3Array* vertices = new Vec3Array;
+    vertices->push_back(Vec3(xMax, yMax, zMax));
+    vertices->push_back(Vec3(xMin, yMax, zMax));
+    vertices->push_back(Vec3(xMin, yMin, zMax));
+    vertices->push_back(Vec3(xMax, yMin, zMax)); 
+    vertices->push_back(Vec3(xMax, yMax, zMin));
+    vertices->push_back(Vec3(xMin, yMax, zMin));
+    vertices->push_back(Vec3(xMin, yMin, zMin));
+    vertices->push_back(Vec3(xMax, yMin, zMin));
+    mBaseGeometry->setVertexArray(vertices);
+
+    DrawElementsUInt* topEdges = new DrawElementsUInt(PrimitiveSet::LINE_STRIP, 0);  
+    DrawElementsUInt* bottomEdges = new DrawElementsUInt(PrimitiveSet::LINE_STRIP, 0);
+    topEdges->push_back(0);    	bottomEdges->push_back(4);
+    topEdges->push_back(1);    	bottomEdges->push_back(5);
+    topEdges->push_back(2);    	bottomEdges->push_back(6);
+    topEdges->push_back(3);    	bottomEdges->push_back(7);
+    topEdges->push_back(0);    	bottomEdges->push_back(4);
+
+    DrawElementsUInt* sideEdges = new DrawElementsUInt(PrimitiveSet::LINES, 0);  
+    sideEdges->push_back(0);   	sideEdges->push_back(4);
+    sideEdges->push_back(1);   	sideEdges->push_back(5);
+    sideEdges->push_back(2);   	sideEdges->push_back(6);
+    sideEdges->push_back(3);   	sideEdges->push_back(7);
+
+    mBaseGeometry->addPrimitiveSet(topEdges);
+    mBaseGeometry->addPrimitiveSet(bottomEdges);
+    mBaseGeometry->addPrimitiveSet(sideEdges);
+}
+
+
+/***************************************************************
+* Function: resize()
+***************************************************************/
+void CAVEGeodeSnapWireframeLine::resize(osg::Vec3 &gridVect)
+{
+    /*
+    Material* material = new Material;
+    material->setAmbient(Material::FRONT_AND_BACK, Vec4(0.0, 1.0, 0.0, 1.0));
+    material->setDiffuse(Material::FRONT_AND_BACK, Vec4(1.0, 1.0, 0.0, 1.0));
+    material->setSpecular(Material::FRONT_AND_BACK, osg::Vec4( 1.f, 1.f, 1.f, 1.0f));
+    material->setAlpha(Material::FRONT_AND_BACK, 1.f);
+
+    StateSet* stateset = new StateSet();
+    stateset->setAttributeAndModes(material, StateAttribute::OVERRIDE | StateAttribute::ON);
+    setStateSet(stateset);
+    */
+    
+    // calculate grid vector 
+    float snapUnitX, snapUnitY, snapUnitZ;
+    snapUnitX = snapUnitY = snapUnitZ = mSnappingUnitDist;
+    if (mScaleVect.x() < 0) 
+        snapUnitX = -mSnappingUnitDist;
+    if (mScaleVect.y() < 0) 
+        snapUnitY = -mSnappingUnitDist;
+    if (mScaleVect.z() < 0) 
+        snapUnitZ = -mSnappingUnitDist;
+    int xSeg = (int)(abs((int)((mScaleVect.x() + 0.5 * snapUnitX) / mSnappingUnitDist)));
+    int ySeg = (int)(abs((int)((mScaleVect.y() + 0.5 * snapUnitY) / mSnappingUnitDist)));
+    int zSeg = (int)(abs((int)((mScaleVect.z() + 0.5 * snapUnitZ) / mSnappingUnitDist)));
+
+    Vec3 roundedVect;
+    roundedVect.x() = xSeg * snapUnitX;		gridVect.x() = roundedVect.x() / mSnappingUnitDist;
+    roundedVect.y() = ySeg * snapUnitY;		gridVect.y() = roundedVect.y() / mSnappingUnitDist;
+    roundedVect.z() = zSeg * snapUnitZ;		gridVect.z() = roundedVect.z() / mSnappingUnitDist;
+    mDiagonalVect = roundedVect;
+
+    // update box corners in 'mBaseGeometry'
+    float xMin, yMin, zMin, xMax, yMax, zMax;
+    xMin = mInitPosition.x();	xMax = xMin + roundedVect.x();
+    yMin = mInitPosition.y();	yMax = yMin + roundedVect.y();
+    zMin = mInitPosition.z();	zMax = zMin + roundedVect.z();
+
+    Array* baseVertArray = mBaseGeometry->getVertexArray();
+    if (baseVertArray->getType() == Array::Vec3ArrayType)
+    {
+        Vec3* vertexArrayDataPtr = (Vec3*) (baseVertArray->getDataPointer());
+        vertexArrayDataPtr[0] = Vec3(xMax, yMax, zMax);
+        vertexArrayDataPtr[1] = Vec3(xMin, yMax, zMax);
+        vertexArrayDataPtr[2] = Vec3(xMin, yMin, zMax);
+        vertexArrayDataPtr[3] = Vec3(xMax, yMin, zMax);
+        vertexArrayDataPtr[4] = Vec3(xMax, yMax, zMin);
+        vertexArrayDataPtr[5] = Vec3(xMin, yMax, zMin);
+        vertexArrayDataPtr[6] = Vec3(xMin, yMin, zMin);
+        vertexArrayDataPtr[7] = Vec3(xMax, yMin, zMin);
+    }
+    mBaseGeometry->dirtyDisplayList();
+    mBaseGeometry->dirtyBound();
+
+    // update snapping wire geometry
+    if (mSnapwireGeometry) 
+        removeDrawable(mSnapwireGeometry);
+
+    mSnapwireGeometry = new Geometry();
+    Vec3Array* snapvertices = new Vec3Array;
+    int vertoffset = 0;
+    if (xSeg > 1)	// (xSeg - 1) * 4 vertices
+    {
+        for (int i = 1; i <= xSeg - 1; i++)
+        {
+            snapvertices->push_back(Vec3(xMin + i * snapUnitX, yMin, zMin));
+            snapvertices->push_back(Vec3(xMin + i * snapUnitX, yMax, zMin));
+            snapvertices->push_back(Vec3(xMin + i * snapUnitX, yMax, zMax));
+            snapvertices->push_back(Vec3(xMin + i * snapUnitX, yMin, zMax));
+
+            DrawElementsUInt* edges = new DrawElementsUInt(PrimitiveSet::LINE_STRIP, 0);
+            edges->push_back(vertoffset + (i-1)*4);
+            edges->push_back(vertoffset + (i-1)*4 + 1);
+            edges->push_back(vertoffset + (i-1)*4 + 2);
+            edges->push_back(vertoffset + (i-1)*4 + 3);
+            edges->push_back(vertoffset + (i-1)*4);
+            mSnapwireGeometry->addPrimitiveSet(edges);
+        }
+        vertoffset += (xSeg - 1) * 4;
+    }
+    if (ySeg > 1)	// (ySeg - 1) * 4 vertices
+    {
+        for (int i = 1; i <= ySeg - 1; i++)
+        {
+            snapvertices->push_back(Vec3(xMin, yMin + i * snapUnitY, zMin));
+            snapvertices->push_back(Vec3(xMax, yMin + i * snapUnitY, zMin));
+            snapvertices->push_back(Vec3(xMax, yMin + i * snapUnitY, zMax));
+            snapvertices->push_back(Vec3(xMin, yMin + i * snapUnitY, zMax));
+
+            DrawElementsUInt* edges = new DrawElementsUInt(PrimitiveSet::LINE_STRIP, 0);
+            edges->push_back(vertoffset + (i-1)*4);
+            edges->push_back(vertoffset + (i-1)*4 + 1);
+            edges->push_back(vertoffset + (i-1)*4 + 2);
+            edges->push_back(vertoffset + (i-1)*4 + 3);
+            edges->push_back(vertoffset + (i-1)*4);
+            mSnapwireGeometry->addPrimitiveSet(edges);
+        }
+        vertoffset += (ySeg - 1) * 4;
+    }
+    if (zSeg > 1)	// (zSeg - 1) * 4 vertices
+    {
+        for (int i = 1; i <= zSeg - 1; i++)
+        {
+            snapvertices->push_back(Vec3(xMin, yMin, zMin + i * snapUnitZ));
+            snapvertices->push_back(Vec3(xMax, yMin, zMin + i * snapUnitZ));
+            snapvertices->push_back(Vec3(xMax, yMax, zMin + i * snapUnitZ));
+            snapvertices->push_back(Vec3(xMin, yMax, zMin + i * snapUnitZ));
+
+            DrawElementsUInt* edges = new DrawElementsUInt(PrimitiveSet::LINE_STRIP, 0);
+            edges->push_back(vertoffset + (i-1)*4);
+            edges->push_back(vertoffset + (i-1)*4 + 1);
+            edges->push_back(vertoffset + (i-1)*4 + 2);
+            edges->push_back(vertoffset + (i-1)*4 + 3);
+            edges->push_back(vertoffset + (i-1)*4);
+            mSnapwireGeometry->addPrimitiveSet(edges);
+        }
+    }
+    mSnapwireGeometry->setVertexArray(snapvertices);
+    addDrawable(mSnapwireGeometry);
+}
+
 

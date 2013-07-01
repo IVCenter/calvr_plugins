@@ -28,7 +28,7 @@ DesignObjectHandler::DesignObjectHandler(Group* rootGroup)
     rootGroup->addChild(mDesignObjectRoot);
     mDesignObjectRoot->addChild(mNonIntersectableSceneGraphPtr);
     mDesignObjectRoot->addChild(mIntersectableSceneGraphPtr);
-
+    
     mIntersectableSceneGraphPtr->addChild(mCAVEShapeSwitch);
     mIntersectableSceneGraphPtr->addChild(mCAVEIconSurfaceSwitch);
     mIntersectableSceneGraphPtr->addChild(mCAVEIconToolkitSwitch);
