@@ -1,0 +1,3 @@
+#cmakedefine VIRVO_FOUND
+#cmakedefine VTK_FOUND
+#cmakedefine ITK_FOUND
