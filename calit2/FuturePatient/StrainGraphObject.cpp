@@ -186,7 +186,7 @@ bool StrainGraphObject::setGraph(std::string title, int taxId, bool larryOnly)
 
 	    std::map<std::string,osg::Vec4> larryColors;
 
-	    float step = 0.5 / ((float)customOrder.size());
+	    float step = 0.75 / ((float)customOrder.size());
 
 	    for(int i = 0; i < customOrder.size(); ++i)
 	    {
