@@ -107,9 +107,21 @@ bool StrainGraphObject::setGraph(std::string title, int taxId, bool larryOnly)
 
     for(int i = 0; i < dataSize; ++i)
     {
-	if(sdata[i].value > 0.0)
+	if(!larryOnly)
 	{
-	    dataMap[condition2Group[sdata[i].group]].push_back(std::pair<std::string,float>(sdata[i].name,sdata[i].value));
+	    if(sdata[i].value > 0.0)
+	    {
+		dataMap[condition2Group[sdata[i].group]].push_back(std::pair<std::string,float>(sdata[i].name,sdata[i].value));
+	    }
+	}
+	else
+	{
+	    std::stringstream ss;
+	    ss << "Smarr" << (i+1);
+	    if(sdata[i].value > 0.0)
+	    {
+		dataMap[ss.str()].push_back(std::pair<std::string,float>(sdata[i].name,sdata[i].value));
+	    }
 	}
     }
 
@@ -171,6 +183,18 @@ bool StrainGraphObject::setGraph(std::string title, int taxId, bool larryOnly)
 		    customOrder.push_back(std::pair<std::string,int>(it->first,i));
 		}
 	    }
+
+	    std::map<std::string,osg::Vec4> larryColors;
+
+	    float step = 0.5 / ((float)customOrder.size());
+
+	    for(int i = 0; i < customOrder.size(); ++i)
+	    {
+		std::stringstream ss;
+		ss << "Smarr" << (i+1);
+		larryColors[ss.str()] = osg::Vec4(1.0-((float)i)*step,0.0,0.0,1.0);
+	    }
+	    _graph->setColorMapping(osg::Vec4(0.0,0.0,0.0,1.0),larryColors);
 	}
 
 	_graph->setCustomOrder(customOrder);
