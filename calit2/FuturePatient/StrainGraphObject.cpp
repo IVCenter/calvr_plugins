@@ -31,10 +31,17 @@ StrainGraphObject::~StrainGraphObject()
 {
 }
 
-bool StrainGraphObject::setGraph(std::string title, int taxId)
+bool StrainGraphObject::setGraph(std::string title, int taxId, bool larryOnly)
 {
     std::stringstream ss;
-    ss << "select Patient.last_name, Patient.p_condition, EcoliShigella_Measurement.value, EcoliShigella_Measurement.timestamp from EcoliShigella_Measurement inner join Patient on Patient.patient_id = EcoliShigella_Measurement.patient_id where EcoliShigella_Measurement.taxonomy_id = " << taxId << " order by Patient.p_condition, EcoliShigella_Measurement.value desc;";
+    if(!larryOnly)
+    {
+	ss << "select Patient.last_name, Patient.p_condition, EcoliShigella_Measurement.value, EcoliShigella_Measurement.timestamp from EcoliShigella_Measurement inner join Patient on Patient.patient_id = EcoliShigella_Measurement.patient_id where EcoliShigella_Measurement.taxonomy_id = " << taxId << " order by Patient.p_condition, EcoliShigella_Measurement.value desc;";
+    }
+    else
+    {
+	ss << "select \"Smarr\" as last_name, \"Larry\" as p_condition, value, timestamp from EcoliShigella_Measurement where patient_id = 1 and taxonomy_id = " << taxId << " order by timestamp;";
+    }
 
     struct StrainData
     {
@@ -123,35 +130,49 @@ bool StrainGraphObject::setGraph(std::string title, int taxId)
 	addChild(_graph->getRootNode());
 	std::vector<std::pair<std::string,int> > customOrder;
 
-	int totalEntries = 0;
-	for(std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = dataMap.begin(); it != dataMap.end(); ++it)
+	if(!larryOnly)
 	{
-	    totalEntries += it->second.size();
-	}
-
-	std::map<std::string,int> groupIndexMap;
-
-	while(customOrder.size() < totalEntries)
-	{
-	    float maxVal = FLT_MIN;
-	    std::string group;
+	    int totalEntries = 0;
 	    for(std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = dataMap.begin(); it != dataMap.end(); ++it)
 	    {
-		if(groupIndexMap[it->first] >= it->second.size())
-		{
-		    continue;
-		}
-
-		if(it->second[groupIndexMap[it->first]].second > maxVal)
-		{
-		    group = it->first;
-		    maxVal = it->second[groupIndexMap[it->first]].second;
-		}
+		totalEntries += it->second.size();
 	    }
 
-	    customOrder.push_back(std::pair<std::string,int>(group,groupIndexMap[group]));
-	    groupIndexMap[group]++;
+	    std::map<std::string,int> groupIndexMap;
+
+	    while(customOrder.size() < totalEntries)
+	    {
+		float maxVal = FLT_MIN;
+		std::string group;
+		for(std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = dataMap.begin(); it != dataMap.end(); ++it)
+		{
+		    if(groupIndexMap[it->first] >= it->second.size())
+		    {
+			continue;
+		    }
+
+		    if(it->second[groupIndexMap[it->first]].second > maxVal)
+		    {
+			group = it->first;
+			maxVal = it->second[groupIndexMap[it->first]].second;
+		    }
+		}
+
+		customOrder.push_back(std::pair<std::string,int>(group,groupIndexMap[group]));
+		groupIndexMap[group]++;
+	    }
 	}
+	else
+	{
+	    for(std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = dataMap.begin(); it != dataMap.end(); ++it)
+	    {
+		for(int i = 0; i < it->second.size(); ++i)
+		{
+		    customOrder.push_back(std::pair<std::string,int>(it->first,i));
+		}
+	    }
+	}
+
 	_graph->setCustomOrder(customOrder);
 	_graph->setDisplayMode(BGDM_CUSTOM);
 	_graph->setShowLabels(false);

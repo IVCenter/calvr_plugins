@@ -113,6 +113,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _strainList;
         cvr::MenuButton * _strainLoadButton;
         cvr::MenuButton * _strainLoadAllButton;
+        cvr::MenuCheckbox * _strainLarryOnlyCB;
 
         cvr::SubMenu * _eventMenu;
         cvr::MenuList * _eventName;

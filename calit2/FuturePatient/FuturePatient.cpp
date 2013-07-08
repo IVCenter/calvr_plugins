@@ -251,6 +251,10 @@ bool FuturePatient::init()
     _strainList->setCallback(this);
     _strainMenu->addItem(_strainList);
 
+    _strainLarryOnlyCB = new MenuCheckbox("Larry Only",false);
+    _strainLarryOnlyCB->setCallback(this);
+    _strainMenu->addItem(_strainLarryOnlyCB);
+
     _strainLoadButton = new MenuButton("Load");
     _strainLoadButton->setCallback(this);
     _strainMenu->addItem(_strainLoadButton);
@@ -1315,7 +1319,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    StrainGraphObject * sgo = new StrainGraphObject(_conn, 1000.0, 1000.0, "Strain Graph", false, true, false, true);
 
-	    if(sgo->setGraph(_strainList->getValue(),_strainIdMap[_strainList->getValue()]))
+	    if(sgo->setGraph(_strainList->getValue(),_strainIdMap[_strainList->getValue()],_strainLarryOnlyCB->getValue()))
 	    {
 		checkLayout();
 		_layoutObject->addGraphObject(sgo);
@@ -1344,7 +1348,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		    std::cerr << "Loading strain " << i << " id: " << _strainIdMap[it->second[i]] << std::endl;
 		    StrainGraphObject * sgo = new StrainGraphObject(_conn, 1000.0, 1000.0, "Strain Graph", false, true, false, true);
 
-		    if(sgo->setGraph(it->second[i],_strainIdMap[it->second[i]]))
+		    if(sgo->setGraph(it->second[i],_strainIdMap[it->second[i]],_strainLarryOnlyCB->getValue()))
 		    {
 			checkLayout();
 			_layoutObject->addGraphObject(sgo);

@@ -1127,7 +1127,7 @@ void GroupedBarGraph::updateAxis()
 
 	if(charSize * maxHeightValue > maxSize)
 	{
-	    //charSize *= maxSize / (charSize * maxHeightValue);
+	    charSize *= maxSize / (charSize * maxHeightValue);
 	    _currentBottomPaddingMult = _maxBottomPaddingMult;
 	}
 	else
@@ -1150,7 +1150,7 @@ void GroupedBarGraph::updateAxis()
 	    //std::cerr << "text currentx: " << currentX << " z: " << zValue << std::endl;
 	    textList[i]->setPosition(osg::Vec3(currentX,-1,zValue));
 	    textList[i]->setCharacterSize(charSize);
-	    GraphGlobals::makeTextFit(textList[i],maxSize,false);
+	    //GraphGlobals::makeTextFit(textList[i],maxSize,false);
 	    _axisGeode->addDrawable(textList[i]);
 	    currentX += _barWidth;
 	}
