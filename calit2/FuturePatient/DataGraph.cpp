@@ -1187,7 +1187,7 @@ void DataGraph::update()
 	scale.makeScale(osg::Vec3(dataWidth*myRangeSize,1.0,dataHeight));
 	_graphTransformMap[it->second.name]->setMatrix(tran*scale*centerm);
 
-	it->second.boundsCallback->bbox.set(minxBound,-3,-0.5,maxxBound,1,0.5);
+	it->second.boundsCallback->bbox.set(minxBound,-3,0.0,maxxBound,1,1.0);
 	it->second.pointGeometry->dirtyBound();
 	it->second.pointGeometry->getBound();
 	it->second.connectorGeometry->dirtyBound();
