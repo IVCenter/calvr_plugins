@@ -1077,7 +1077,7 @@ void FuturePatient::menuCallback(MenuItem * item)
     {
 	for(int i = 0; i < _patientTestMap["Smarr"].size(); i++)
 	{
-	    loadGraph("Smarr",_patientTestMap["Smarr"][i],true);
+	    loadGraph("Smarr",_patientTestMap["Smarr"][i]);
 	}
     }
 

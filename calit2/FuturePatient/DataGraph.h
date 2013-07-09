@@ -19,6 +19,7 @@
 #include <ctime>
 
 #include "PointActions.h"
+#include "GraphGlobals.h"
 
 enum AxisType
 {
@@ -62,6 +63,7 @@ struct GraphDataInfo
     osg::ref_ptr<osg::Geode> connectorGeode;
     osg::ref_ptr<osg::Geometry> connectorGeometry;
     osg::ref_ptr<osg::Geode> labelGeode;
+    osg::ref_ptr<SetBoundsCallback> boundsCallback;
     osg::Vec4 color;
     GraphDisplayType displayType;
     std::string xLabel;

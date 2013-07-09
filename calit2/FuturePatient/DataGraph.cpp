@@ -218,13 +218,17 @@ void DataGraph::addGraph(std::string name, osg::Vec3Array * points, GraphDisplay
     gdi.zMin = 0.0;
     gdi.zMax = 1.0;
 
+    gdi.boundsCallback = new SetBoundsCallback;
+
     gdi.pointGeometry = new osg::Geometry();
     gdi.pointGeometry->setUseDisplayList(false);
     gdi.pointGeometry->setUseVertexBufferObjects(true);
+    gdi.pointGeometry->setComputeBoundingBoxCallback(gdi.boundsCallback.get());
     
     gdi.connectorGeometry = new osg::Geometry();
     gdi.connectorGeometry->setUseDisplayList(false);
     gdi.connectorGeometry->setUseVertexBufferObjects(true);
+    gdi.connectorGeometry->setComputeBoundingBoxCallback(gdi.boundsCallback.get());
 
     gdi.singleColorArray = new osg::Vec4Array(1);
     gdi.singleColorArray->at(0) = osg::Vec4(0.0,0.0,0.0,1.0);
@@ -1182,6 +1186,12 @@ void DataGraph::update()
 	tran.makeTranslate(osg::Vec3(-0.5,0,-0.5));
 	scale.makeScale(osg::Vec3(dataWidth*myRangeSize,1.0,dataHeight));
 	_graphTransformMap[it->second.name]->setMatrix(tran*scale*centerm);
+
+	it->second.boundsCallback->bbox.set(minxBound,-3,-0.5,maxxBound,1,0.5);
+	it->second.pointGeometry->dirtyBound();
+	it->second.pointGeometry->getBound();
+	it->second.connectorGeometry->dirtyBound();
+	it->second.connectorGeometry->getBound();
     }
 
     if(_dataInfoMap.size() > 1)
