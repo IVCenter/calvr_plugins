@@ -8,7 +8,7 @@
 
 // CVR
 #include <cvrKernel/CVRPlugin.h>
-#include <cvrKernel/ScreenBase.h>
+#include <cvrKernel/Screens/ScreenBase.h>
 #include <cvrKernel/SceneManager.h>
 #include <cvrKernel/SceneObject.h>
 #include <cvrKernel/Navigation.h>

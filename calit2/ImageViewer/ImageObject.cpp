@@ -1,7 +1,7 @@
 #include "ImageObject.h"
 
 #include <cvrKernel/NodeMask.h>
-#include <cvrKernel/ScreenBase.h>
+#include <cvrKernel/Screens/ScreenBase.h>
 
 #include <osgDB/ReadFile>
 

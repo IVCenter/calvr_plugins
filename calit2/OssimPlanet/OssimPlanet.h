@@ -54,7 +54,7 @@
 #include <cvrKernel/PluginHelper.h>
 
 #include <cvrKernel/CVRPlugin.h>
-#include <cvrKernel/ScreenBase.h>
+#include <cvrKernel/Screens/Screens/ScreenBase.h>
 #include <cvrKernel/SceneManager.h>
 #include <cvrKernel/Navigation.h>
 #include <cvrKernel/ComController.h>

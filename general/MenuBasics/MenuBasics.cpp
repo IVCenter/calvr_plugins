@@ -5,7 +5,7 @@
 #include <cvrKernel/CVRViewer.h>
 #include <cvrKernel/ScreenConfig.h>
 #include <cvrKernel/ComController.h>
-#include <cvrKernel/ScreenBase.h>
+#include <cvrKernel/Screens/ScreenBase.h>
 #include <cvrInput/TrackingManager.h>
 #include <cvrMenu/MenuSystem.h>
 #include <cvrConfig/ConfigManager.h>
