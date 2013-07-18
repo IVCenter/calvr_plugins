@@ -61,7 +61,7 @@ bool SoundPlayer::init()
         if (cvr::ComController::instance()->isMaster())
         {
 	    int outarray [] = {0, 7};
-	    Sound * sound = new Sound(_AudioServer, path, outarray, 0);
+	    Sound * sound = new Sound(_AudioServer, path, 0);
 
 	    if(sound->isValid())
 	    {
