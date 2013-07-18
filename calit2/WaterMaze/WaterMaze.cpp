@@ -23,11 +23,13 @@ WaterMaze::WaterMaze()
     string synthdir = "/Users/administrator/git/collider/synthdefs/mac";
 
    //_aserver = new SCServer(name, "132.239.235.169" , "57110", synthdir); //Octo
-   _aserver = new SCServer(name, "127.0.0.1" , "57110", synthdir);
-   _regTileBuf = new Buffer(_aserver, _aserver->nextBufferNum());
-   _hiddenTileBuf = new Buffer(_aserver, _aserver->nextBufferNum());
-
-   _aserver->dumpOSC(1);
+   if (ConfigManager::getEntry("Plugin.WaterMaze.Sound") == "on")
+   {
+       _aserver = new SCServer(name, "127.0.0.1" , "57110", synthdir);
+       _regTileBuf = new Buffer(_aserver, _aserver->nextBufferNum());
+       _hiddenTileBuf = new Buffer(_aserver, _aserver->nextBufferNum());
+       _aserver->dumpOSC(1);
+   }
 
    _curTile=0;
 
@@ -81,12 +83,16 @@ WaterMaze * WaterMaze::instance()
 
 bool WaterMaze::init()
 {
-    
-    //_regTileBuf->allocRead("/Users/demo/workspace/svn/libSCresources/projects/watermaze/step.aiff");
-    _regTileBuf->allocRead("/Users/administrator/libSCresources/projects/watermaze/step.aiff");
+    if (ConfigManager::getEntry("Plugin.WaterMaze.Sound") == "on")
+    {
+        //_regTileBuf->allocRead("/Users/demo/workspace/svn/libSCresources/projects/watermaze/step.aiff");
+        _regTileBuf->allocRead("/Users/administrator/libSCresources/projects/watermaze/step.aiff");
 
-   // _hiddenTileBuf->allocRead("/Users/demo/workspace/svn/libSCresources/projects/watermaze/groove.aiff");
-      _hiddenTileBuf->allocRead("/Users/administrator/libSCresources/projects/watermaze/groove.aiff");
+       // _hiddenTileBuf->allocRead("/Users/demo/workspace/svn/libSCresources/projects/watermaze/groove.aiff");
+          _hiddenTileBuf->allocRead("/Users/administrator/libSCresources/projects/watermaze/groove.aiff");
+    }
+
+
     // Setup menus
     _WaterMazeMenu = new SubMenu("Water Maze");
 
@@ -216,6 +222,74 @@ void WaterMaze::load(int numWidth, int numHeight)
             osg::Vec3 center;
             center = tilePat->getPosition();
             _tileSwitches[center] = boxSwitch;
+            
+
+            // Save corner positions
+            if (i == 0 && j == 0)
+            {
+                osg::MatrixTransform * tileMat = new osg::MatrixTransform();
+                osg::Matrixd mat, rotMat, transMat;
+
+                mat.makeTranslate(osg::Vec3(0,0,0));
+                rotMat.makeRotate(M_PI/4, osg::Vec3(0, 0, 1));
+                transMat.makeTranslate((-tilePat->getPosition() +
+                osg::Vec3(-widthTile, -heightTile, -_heightOffset)));
+
+                mat.preMult(rotMat);
+                mat.preMult(transMat);
+
+                tileMat->setMatrix(mat);
+                _tilePositions.push_back(tileMat);
+            }
+            else if (i == 0 && j == numHeight - 1)
+            {
+                osg::MatrixTransform * tileMat = new osg::MatrixTransform();
+                osg::Matrixd mat, rotMat, transMat;
+
+                mat.makeTranslate(osg::Vec3(0,0,0));
+                rotMat.makeRotate(3*M_PI/4, osg::Vec3(0, 0, 1));
+                transMat.makeTranslate((-tilePat->getPosition()  +
+                osg::Vec3(-widthTile, heightTile, -_heightOffset)));
+
+                mat.preMult(rotMat);
+                mat.preMult(transMat);
+
+                tileMat->setMatrix(mat);
+                _tilePositions.push_back(tileMat);
+            }
+            else if (i == numWidth - 1 && j == 0)
+            {
+                osg::MatrixTransform * tileMat = new osg::MatrixTransform();
+                osg::Matrixd mat, rotMat, transMat;
+
+                mat.makeTranslate(osg::Vec3(0,0,0));
+                rotMat.makeRotate(7*M_PI/4, osg::Vec3(0, 0, 1));
+                transMat.makeTranslate((-tilePat->getPosition() +
+                osg::Vec3(widthTile, -heightTile, -_heightOffset)));
+
+                mat.preMult(rotMat);
+                mat.preMult(transMat);
+
+                tileMat->setMatrix(mat);
+                _tilePositions.push_back(tileMat);
+            }
+            else if (i == numWidth - 1 && j == numHeight - 1)
+            {
+                osg::MatrixTransform * tileMat = new osg::MatrixTransform();
+                osg::Matrixd mat, rotMat, transMat;
+
+                mat.makeTranslate(osg::Vec3(0,0,0));
+                rotMat.makeRotate(5*M_PI/4, osg::Vec3(0, 0, 1));
+                transMat.makeTranslate((-tilePat->getPosition() +
+                osg::Vec3(widthTile, heightTile, -_heightOffset)));
+
+                mat.preMult(rotMat);
+                mat.preMult(transMat);
+
+                tileMat->setMatrix(mat);
+                _tilePositions.push_back(tileMat);
+            }
+
         }
     }
     
@@ -396,8 +470,76 @@ void WaterMaze::load(int numWidth, int numHeight)
     geode = new osg::Geode();
     geode->addDrawable(sd);
     _geoRoot->addChild(geode);
- 
-    _aserver->dumpOSC(0);
+    
+    if (ConfigManager::getEntry("Plugin.WaterMaze.Sound") == "on")
+    {
+        if (_aserver)
+            _aserver->dumpOSC(0);
+    }
+
+    osg::Node *painting, *desertpainting, *bookshelf, *chair;
+
+
+    painting = osgDB::readNodeFile(_dataDir + ConfigManager::getEntry("Plugin.WaterMaze.Models.Painting"));
+    if (painting)
+    {
+    std::cout << "Painting loaded" << std::endl;
+        osg::PositionAttitudeTransform * pat = new osg::PositionAttitudeTransform();
+        float scale = 6.0;
+        pat->setScale(osg::Vec3(scale, scale, scale));
+        pat->setAttitude(osg::Quat(M_PI/2, osg::Vec3(0, 0, 1)));
+        pat->setPosition(osg::Vec3(-widthTile*.75, (numHeight-2) * heightTile/2, wallHeight/3));
+        pat->addChild(painting);
+        _furnitureSwitch->addChild(pat);
+    }
+
+    desertpainting = osgDB::readNodeFile(_dataDir + ConfigManager::getEntry("Plugin.WaterMaze.Models.Clock"));
+    if (desertpainting)
+    {
+        osg::PositionAttitudeTransform * pat = new osg::PositionAttitudeTransform();
+        float scale = 12.0;
+        pat->setScale(osg::Vec3(scale, scale, scale));
+        pat->setAttitude(osg::Quat(M_PI/2, osg::Vec3(1, 0, 0),
+        0,      osg::Vec3(0, 1, 0),
+        -M_PI/2, osg::Vec3(0, 0, 1)));
+        pat->setPosition(osg::Vec3(widthTile * (numWidth-2), (numHeight-2) * heightTile/2, wallHeight/3));
+        pat->addChild(desertpainting);
+        _furnitureSwitch->addChild(pat);
+    }
+
+    bookshelf = osgDB::readNodeFile(_dataDir + ConfigManager::getEntry("Plugin.WaterMaze.Models.Bookshelf"));
+    if (bookshelf)
+    {
+        osg::PositionAttitudeTransform * pat = new osg::PositionAttitudeTransform();
+        float scale = 6.0;
+        pat->setScale(osg::Vec3(scale, scale, scale));
+        pat->setPosition(osg::Vec3(widthTile * (numWidth-2) * 0.5,
+        ((numHeight-2) * heightTile) + 0.5*heightTile,
+        0));
+        pat->addChild(bookshelf);
+        _furnitureSwitch->addChild(pat);
+    }
+
+    chair = osgDB::readNodeFile(_dataDir + ConfigManager::getEntry("Plugin.WaterMaze.Models.Chair"));
+    if (chair)
+    {
+        osg::PositionAttitudeTransform * pat = new osg::PositionAttitudeTransform();
+        float scale = 6.0;
+        pat->setScale(osg::Vec3(scale, scale, scale));
+        pat->setAttitude(osg::Quat(3*M_PI/4, osg::Vec3(0, 0, 1)));
+        pat->setPosition(osg::Vec3(-widthTile/2, -heightTile/2, 0));
+        pat->addChild(chair);
+        _furnitureSwitch->addChild(pat);
+   }
+
+  _geoRoot->addChild(_furnitureSwitch);
+
+  osg::Matrixd mat;
+  mat = _tilePositions[0]->getMatrix();
+  PluginHelper::setObjectMatrix(mat);
+
+  _loaded = true;
+
 }
 
 
@@ -406,8 +548,12 @@ void WaterMaze::preFrame()
     if (!_loaded)
         return;
 
-    _regTileArgs["bufnum"] = _regTileBuf->getBufNum();
-    _hiddenTileArgs["bufnum"] = _hiddenTileBuf->getBufNum();
+    if (ConfigManager::getEntry("Plugin.WaterMaze.Sound") == "on")
+    {
+        _regTileArgs["bufnum"] = _regTileBuf->getBufNum();
+        _hiddenTileArgs["bufnum"] = _hiddenTileBuf->getBufNum();
+    }
+
 
     if (_runningTrial && 
         PluginHelper::getProgramDuration() - _startTime > _trials[_currentTrial].timeSec)
@@ -498,17 +644,23 @@ void WaterMaze::preFrame()
                     it->second->setSingleChildOn(1);
                 }
             }
-	
-	    if (i!=_curTile)
-	    {
-		 if (i == _hiddenTile) 
-		 _aserver->createSynth("SoundFile_Event_Stereo", 
-				_aserver->nextNodeId(), _hiddenTileArgs);
-	  	 else 
-		 _aserver->createSynth("SoundFile_Event_Stereo", 
-				   _aserver->nextNodeId(), _regTileArgs);
-	 
-                 _curTile=i;	
+
+            if (ConfigManager::getEntry("Plugin.WaterMaze.Sound") == "on")
+            {
+                if (i != _curTile)
+                {
+                    if (i == _hiddenTile && _aserver)
+                    {
+                        _aserver->createSynth("SoundFile_Event_Stereo", 
+                        _aserver->nextNodeId(), _hiddenTileArgs);
+                    }
+                    else if (_aserver)
+                    {
+                        _aserver->createSynth("SoundFile_Event_Stereo", 
+                            _aserver->nextNodeId(), _regTileArgs);
+                        _curTile=i;	
+                    }
+                }
             }
         }
         // Unoccupied tile
@@ -713,6 +865,16 @@ bool WaterMaze::processEvent(InteractionEvent * event)
             osg::Matrixd mat;
             mat = _tilePositions[0]->getMatrix();
             PluginHelper::setObjectMatrix(mat);
+            
+            // turn off all colored tiles
+            std::map<osg::Vec3, osg::Switch *>::iterator it;
+            for (it = _tileSwitches.begin(); it != _tileSwitches.end(); ++it)
+            {
+                if (it->second)
+                {
+                    it->second->setSingleChildOn(0);
+                }
+            }
         }
 
         else if (kie->getInteraction() == KEY_UP && kie->getKey() == '2')
@@ -724,6 +886,16 @@ bool WaterMaze::processEvent(InteractionEvent * event)
             osg::Matrixd mat;
             mat = _tilePositions[1]->getMatrix();
             PluginHelper::setObjectMatrix(mat);
+
+            // turn off all colored tiles
+            std::map<osg::Vec3, osg::Switch *>::iterator it;
+            for (it = _tileSwitches.begin(); it != _tileSwitches.end(); ++it)
+            {
+                if (it->second)
+                {
+                    it->second->setSingleChildOn(0);
+                }
+            }
         }
 
         else if (kie->getInteraction() == KEY_UP && kie->getKey() == '3')
@@ -735,6 +907,16 @@ bool WaterMaze::processEvent(InteractionEvent * event)
             osg::Matrixd mat;
             mat = _tilePositions[2]->getMatrix();
             PluginHelper::setObjectMatrix(mat);
+
+            // turn off all colored tiles
+            std::map<osg::Vec3, osg::Switch *>::iterator it;
+            for (it = _tileSwitches.begin(); it != _tileSwitches.end(); ++it)
+            {
+                if (it->second)
+                {
+                    it->second->setSingleChildOn(0);
+                }
+            }
         }
 
         else if (kie->getInteraction() == KEY_UP && kie->getKey() == '4')
@@ -746,6 +928,16 @@ bool WaterMaze::processEvent(InteractionEvent * event)
             osg::Matrixd mat;
             mat = _tilePositions[3]->getMatrix();
             PluginHelper::setObjectMatrix(mat);
+
+            // turn off all colored tiles
+            std::map<osg::Vec3, osg::Switch *>::iterator it;
+            for (it = _tileSwitches.begin(); it != _tileSwitches.end(); ++it)
+            {
+                if (it->second)
+                {
+                    it->second->setSingleChildOn(0);
+                }
+            }
         }
     }
 
@@ -753,25 +945,24 @@ bool WaterMaze::processEvent(InteractionEvent * event)
     TrackedButtonInteractionEvent * tie = event->asTrackedButtonEvent();
     if (tie)
     {
-        return false;
         if(tie->getHand() == 0 && tie->getButton() == 0)
         {
-            if (tie->getInteraction() == BUTTON_DOWN)
+            if (tie->getInteraction() == BUTTON_DOWN && !_runningTrial)
             {
                 return true;
             }
-            else if (tie->getInteraction() == BUTTON_DRAG)
+            else if (tie->getInteraction() == BUTTON_DRAG && !_runningTrial)
             {
                 return true;
             }
             else if (tie->getInteraction() == BUTTON_UP)
             {
-                return true;
+                return false;
             }
-            return true;
+            return false;
         }
     }
-    return true;
+    return false;
 }
 
 void WaterMaze::clear()
@@ -783,6 +974,12 @@ void WaterMaze::clear()
     _tilePositions.clear();
 
     _geoRoot = new osg::MatrixTransform();
+
+    float heightOffset = ConfigManager::getFloat("value", 
+        "Plugin.WaterMaze.StartingHeight", 300.0);
+    osg::Matrixd mat;
+    mat.makeTranslate(0, -3000, -heightOffset);
+    _geoRoot->setMatrix(mat);
     PluginHelper::getObjectsRoot()->addChild(_geoRoot);
 }
 

@@ -40,8 +40,8 @@
 #include <sys/socket.h>
 #include <X11/Xlib.h>
 
-#include "collider/SCServer.hpp"
-#include "collider/Buffer.hpp"
+#include "SCServer.hpp"
+#include "Buffer.hpp"
 
 namespace WaterMaze
 {
