@@ -67,6 +67,8 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         virtual void enterCallback(int handID, const osg::Matrix &mat);
         virtual void updateCallback(int handID, const osg::Matrix &mat);
         virtual void leaveCallback(int handID);
+
+        void forceUpdate();
     protected:
         void makeGeometry();
         void makeKeys();

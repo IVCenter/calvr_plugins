@@ -868,6 +868,11 @@ void GroupedBarGraph::makeBG()
 
 void GroupedBarGraph::update()
 {
+    if(GraphGlobals::getDeferUpdate())
+    {
+	return;
+    }
+
     updateSizes();
     // update bg scale
     osg::Vec3 scale(_width,1.0,_height);

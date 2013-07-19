@@ -18,6 +18,8 @@
 
 #include <mysql++/mysql++.h>
 
+#include <sys/time.h>
+
 #define SAVED_LAYOUT_VERSION 3
 
 using namespace cvr;
@@ -232,6 +234,10 @@ bool FuturePatient::init()
     _microbeOrdering = new MenuCheckbox("LS Ordering", true);
     _microbeOrdering->setCallback(this);
     _microbeMenu->addItem(_microbeOrdering);
+
+    _microbeGrouping = new MenuCheckbox("Group",true);
+    _microbeGrouping->setCallback(this);
+    _microbeMenu->addItem(_microbeGrouping);
 
     _microbeLoad = new MenuButton("Load");
     _microbeLoad->setCallback(this);
@@ -1075,9 +1081,15 @@ void FuturePatient::menuCallback(MenuItem * item)
 
     if(item == _loadAll)
     {
+	GraphGlobals::setDeferUpdate(true);
 	for(int i = 0; i < _patientTestMap["Smarr"].size(); i++)
 	{
 	    loadGraph("Smarr",_patientTestMap["Smarr"][i],true);
+	}
+	GraphGlobals::setDeferUpdate(false);
+	if(_layoutObject)
+	{
+	    _layoutObject->forceUpdate();
 	}
     }
 
@@ -1131,7 +1143,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	if(_microbeGraphType->getIndex() == 0)
 	{
 	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(), _microbeTestTime[_microbeTest->getIndex()],(int)_microbeNumBars->getValue(),_microbeOrdering->getValue()))
+	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(), _microbeTestTime[_microbeTest->getIndex()],(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue()))
 	    {
 		checkLayout();
 		_layoutObject->addGraphObject(mgo);
@@ -1201,6 +1213,10 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    rangeList.push_back(std::pair<int,int>(59,64));
 	}
 
+	struct timeval tstart,tend;
+	gettimeofday(&tstart,NULL);
+
+	GraphGlobals::setDeferUpdate(true);
 	for(int i = 0; i < rangeList.size(); ++i)
 	{
 	    int start = rangeList[i].first;
@@ -1211,7 +1227,8 @@ void FuturePatient::menuCallback(MenuItem * item)
 		if(_microbeGraphType->getIndex() == 0)
 		{
 		    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-		    if(mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), _microbeTestTime[0],(int)_microbeNumBars->getValue(),_microbeOrdering->getValue()))
+		    bool tb = mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), _microbeTestTime[0],(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue());
+		    if(tb)
 		    {
 			checkLayout();
 			_layoutObject->addGraphObject(mgo);
@@ -1241,6 +1258,15 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    }
 	}
 	updateMicrobeTests(_microbePatients->getIndex() + 1);
+
+	gettimeofday(&tend,NULL);
+	std::cerr << "Total load time: " << (tend.tv_sec - tstart.tv_sec) + ((tend.tv_usec - tstart.tv_usec) / 1000000.0) << std::endl;
+
+	GraphGlobals::setDeferUpdate(false);
+	if(_layoutObject)
+	{
+	    _layoutObject->forceUpdate();
+	}
 
 	return;
     }
@@ -1274,7 +1300,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 
-	    if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue(),_microbeOrdering->getValue()))
+	    if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue()))
 	    {
 		//PluginHelper::registerSceneObject(mgo,"FuturePatient");
 		//mgo->attachToScene();
@@ -1694,6 +1720,67 @@ void FuturePatient::setupMicrobePatients()
     {
 	delete[] names;
     }
+
+    struct TestLabel
+    {
+	int id;
+	char label[256];
+	time_t timestamp;
+    };
+
+    TestLabel * labels = NULL;
+    int numTests = 0;
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    std::stringstream qss;
+	    qss << "select patient_id, timestamp, unix_timestamp(timestamp) as utimestamp from Microbe_Measurement group by patient_id, timestamp order by patient_id, timestamp;";
+
+	    mysqlpp::Query q = _conn->query(qss.str().c_str());
+	    mysqlpp::StoreQueryResult res = q.store();
+
+	    numTests = res.num_rows();
+
+	    if(numTests)
+	    {
+		labels = new struct TestLabel[numTests];
+
+		for(int j = 0; j < numTests; ++j)
+		{
+		    labels[j].id = atoi(res[j]["patient_id"].c_str());
+		    strncpy(labels[j].label,res[j]["timestamp"].c_str(),255);
+		    labels[j].timestamp = atol(res[j]["utimestamp"].c_str());
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&numTests,sizeof(int));
+	if(numTests)
+	{
+	    ComController::instance()->sendSlaves(labels,numTests*sizeof(struct TestLabel));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&numTests,sizeof(int));
+	if(numTests)
+	{
+	    labels = new struct TestLabel[numTests];
+	    ComController::instance()->readMaster(labels,numTests*sizeof(struct TestLabel));
+	}
+    }
+
+    for(int j = 0; j < numTests; ++j)
+    {
+	_patientMicrobeTestMap[labels[j].id].push_back(labels[j].label);
+	_patientMicrobeTestTimeMap[labels[j].id].push_back(labels[j].timestamp);
+    }
+
+    if(labels)
+    {
+	delete[] labels;
+    }
 }
 
 void FuturePatient::setupStrainMenu()
@@ -1820,8 +1907,17 @@ void FuturePatient::setupStrainMenu()
 
 void FuturePatient::updateMicrobeTests(int patientid)
 {
+    //struct timeval start,end;
+    //gettimeofday(&start,NULL);
     //std::cerr << "Update Microbe Tests Patient: " << patientid << std::endl;
-    struct TestLabel
+    
+    if(_patientMicrobeTestMap.find(patientid) != _patientMicrobeTestMap.end())
+    {
+	_microbeTest->setValues(_patientMicrobeTestMap[patientid]);
+	_microbeTestTime = _patientMicrobeTestTimeMap[patientid];
+    }
+
+    /*struct TestLabel
     {
 	char label[256];
 	time_t timestamp;
@@ -1880,7 +1976,9 @@ void FuturePatient::updateMicrobeTests(int patientid)
 	_microbeTestTime.push_back(labels[i].timestamp);
     }
 
-    _microbeTest->setValues(labelVec);
+    _microbeTest->setValues(labelVec);*/
+    //gettimeofday(&end,NULL);
+    //std::cerr << "menu update: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) / 1000000.0) << std::endl;
 }
 
 void FuturePatient::saveLayout()

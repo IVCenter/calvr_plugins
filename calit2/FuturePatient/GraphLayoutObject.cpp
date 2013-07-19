@@ -1004,6 +1004,11 @@ void GraphLayoutObject::leaveCallback(int handID)
     }
 }
 
+void GraphLayoutObject::forceUpdate()
+{
+    updateLayout();
+}
+
 void GraphLayoutObject::makeGeometry()
 {
     _layoutGeode = new osg::Geode();
@@ -1140,6 +1145,11 @@ void GraphLayoutObject::updateGeometry()
 
 void GraphLayoutObject::updateLayout()
 {
+    if(GraphGlobals::getDeferUpdate())
+    {
+	return;
+    }
+
     int totalGraphs = _objectList.size();
 
     if(!totalGraphs)

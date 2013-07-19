@@ -16,6 +16,9 @@
 #include <cstdlib>
 #include <ctime>
 
+// for time debug
+#include <sys/time.h>
+
 using namespace cvr;
 
 MicrobeGraphObject::MicrobeGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
@@ -389,7 +392,7 @@ void MicrobeGraphObject::menuCallback(MenuItem * item)
     TiledWallSceneObject::menuCallback(item);
 }
 
-bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, bool lsOrdering)
+bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, bool group, bool lsOrdering)
 {
     struct tm timetm = *localtime(&testTime);
     char timestr[256];
@@ -399,7 +402,8 @@ bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string 
     _graphTitle = title + " - " + timestr;
     std::stringstream valuess, orderss;
 
-    valuess << "select * from (select Microbes.description, Microbes.phylum, Microbes.species, Microbe_Measurement.value from  Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \""<< testLabel << "\" order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
+    //valuess << "select * from (select Microbes.description, Microbes.phylum, Microbes.species, Microbe_Measurement.value from  Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \""<< testLabel << "\" order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
+    valuess << "select description, phylum, species, value from (select taxonomy_id, value from Microbe_Measurement where Microbe_Measurement.patient_id = " << patientid << " and Microbe_Measurement.timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")v inner join Microbes on v.taxonomy_id = Microbes.taxonomy_id order by phylum, value desc;";
 
     orderss << "select t.phylum, sum(t.value) as total_value from (select Microbes.phylum, Microbe_Measurement.value from  Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
 
@@ -409,10 +413,10 @@ bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string 
     _microbes = microbes;
     _lsOrdered = lsOrdering;
 
-    return loadGraphData(valuess.str(), orderss.str(), lsOrdering);
+    return loadGraphData(valuess.str(), orderss.str(), group, lsOrdering);
 }
 
-bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, bool lsOrdering)
+bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, bool group, bool lsOrdering)
 {
     std::stringstream valuess, orderss;
 
@@ -480,7 +484,7 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int micro
     _microbes = microbes;
     _lsOrdered = lsOrdering;
 
-    return loadGraphData(valuess.str(), orderss.str(), lsOrdering);
+    return loadGraphData(valuess.str(), orderss.str(), group, lsOrdering);
 }
 
 void MicrobeGraphObject::objectAdded()
@@ -507,8 +511,12 @@ void MicrobeGraphObject::objectRemoved()
     }
 }
 
-bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string orderQuery, bool lsOrdering)
+bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string orderQuery, bool group, bool lsOrdering)
 {
+    //std::cerr << "Query1: " << valueQuery << std::endl << "Query2: " << orderQuery << std::endl;
+    struct timeval start,end;
+    gettimeofday(&start,NULL);
+
     _graphData.clear();
     _graphOrder.clear();
 
@@ -544,10 +552,16 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
     {
 	if(_conn)
 	{
+	    struct timeval start,end;
+	    gettimeofday(&start,NULL);
 	    mysqlpp::Query valueq = _conn->query(valueQuery.c_str());
 	    mysqlpp::StoreQueryResult valuer = valueq.store();
+	    gettimeofday(&end,NULL);
+	    //std::cerr << "Query1: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) / 1000000.0) << std::endl;
 
 	    header.numDataValues = valuer.num_rows();
+
+	    std::map<std::string,float> totalMap;
 
 	    if(valuer.num_rows())
 	    {
@@ -559,11 +573,37 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
 		    strncpy(data[i].species,valuer[i]["species"].c_str(),1023);
 		    strncpy(data[i].description,valuer[i]["description"].c_str(),1023);
 		    data[i].value = atof(valuer[i]["value"]);
+		    totalMap[data[i].phylum] += data[i].value;
 		}
 	    }
 
+	    std::vector<std::pair<float,std::string> > orderList;
+	    for(std::map<std::string,float>::iterator it = totalMap.begin(); it != totalMap.end(); ++it)
+	    {
+		orderList.push_back(std::pair<float,std::string>(it->second,it->first));
+	    }
+
+	    header.numOrderValues = orderList.size();
+
+	    std::sort(orderList.begin(),orderList.end());
+	    if(orderList.size())
+	    {
+		order = new MicrobeOrderValue[orderList.size()];
+
+		//default sort is backwards, reverse add order
+		for(int i = 0; i < orderList.size(); ++i)
+		{
+		    strncpy(order[i].group,orderList[orderList.size()-i-1].second.c_str(),1023);
+		}
+	    }
+
+	    /*struct timeval start1, end1;
+	    gettimeofday(&start1,NULL);
+
 	    mysqlpp::Query orderq = _conn->query(orderQuery.c_str());
 	    mysqlpp::StoreQueryResult orderr = orderq.store();
+	    gettimeofday(&end1,NULL);
+	    //std::cerr << "Query2: " << (end1.tv_sec - start1.tv_sec) + ((end1.tv_usec - start1.tv_usec) / 1000000.0) << std::endl;
 
 	    header.numOrderValues = orderr.num_rows();
 
@@ -575,7 +615,7 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
 		{
 		    strncpy(order[i].group,orderr[i]["phylum"].c_str(),1023);
 		}
-	    }
+	    }*/
 
 	    header.valid = true;
 	}
@@ -673,6 +713,44 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
     if(graphValid)
     {
 	addChild(_graph->getRootNode());
+
+	if(!group)
+	{
+	    std::vector<std::pair<std::string,int> > customOrder;
+
+	    int totalEntries = 0;
+	    for(std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = _graphData.begin(); it != _graphData.end(); ++it)
+	    {
+		totalEntries += it->second.size();
+	    }
+
+	    std::map<std::string,int> groupIndexMap;
+
+	    while(customOrder.size() < totalEntries)
+	    {
+		float maxVal = FLT_MIN;
+		std::string group;
+		for(std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = _graphData.begin(); it != _graphData.end(); ++it)
+		{
+		    if(groupIndexMap[it->first] >= it->second.size())
+		    {
+			continue;
+		    }
+
+		    if(it->second[groupIndexMap[it->first]].second > maxVal)
+		    {
+			group = it->first;
+			maxVal = it->second[groupIndexMap[it->first]].second;
+		    }
+		}
+
+		customOrder.push_back(std::pair<std::string,int>(group,groupIndexMap[group]));
+		groupIndexMap[group]++;
+	    }
+
+	    _graph->setCustomOrder(customOrder);
+	    _graph->setDisplayMode(BGDM_CUSTOM);
+	}
     }
 
     if(data)
@@ -683,6 +761,10 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
     {
 	delete[] order;
     }
+
+    gettimeofday(&end,NULL);
+
+    std::cerr << "GraphLoadTime: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) / 1000000.0) << std::endl;
 
     return graphValid;
 }

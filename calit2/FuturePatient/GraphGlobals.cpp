@@ -6,6 +6,7 @@
 using namespace cvr;
 
 bool GraphGlobals::_init = false;
+bool GraphGlobals::_deferUpdate = false;
 osg::ref_ptr<osgText::Font> GraphGlobals::_font;
 osg::Vec4 GraphGlobals::_bgColor;
 osg::Vec4 GraphGlobals::_dataBGColor;
@@ -144,6 +145,18 @@ const std::map<std::string,osg::Vec4> & GraphGlobals::getPatientColorMap()
 {
     checkInit();
     return _patientColorMap;
+}
+
+bool GraphGlobals::getDeferUpdate()
+{
+    checkInit();
+    return _deferUpdate;
+}
+
+void GraphGlobals::setDeferUpdate(bool defer)
+{
+    checkInit();
+    _deferUpdate = defer;
 }
 
 void GraphGlobals::checkInit()

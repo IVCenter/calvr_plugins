@@ -35,11 +35,15 @@ class GraphGlobals
 
         static const std::map<std::string,osg::Vec4> & getPatientColorMap();
 
+        static bool getDeferUpdate();
+        static void setDeferUpdate(bool defer);
+
     protected:
         static void checkInit();
         static void init();
 
         static bool _init;
+        static bool _deferUpdate;
         
         static osg::ref_ptr<osgText::Font> _font;
         static osg::Vec4 _bgColor;
