@@ -2,6 +2,7 @@
 #include "ColorGenerator.h"
 
 #include <cvrKernel/CalVR.h>
+#include <cvrConfig/ConfigManager.h>
 
 using namespace cvr;
 
@@ -18,6 +19,9 @@ osg::Vec4 GraphGlobals::_normColor;
 osg::Vec4 GraphGlobals::_high1Color;
 osg::Vec4 GraphGlobals::_high10Color;
 osg::Vec4 GraphGlobals::_high100Color;
+float GraphGlobals::_pointLineScale;
+float GraphGlobals::_masterPointScale;
+float GraphGlobals::_masterLineScale;
 
 osgText::Text * GraphGlobals::makeText(std::string text, osg::Vec4 color)
 {
@@ -159,6 +163,24 @@ void GraphGlobals::setDeferUpdate(bool defer)
     _deferUpdate = defer;
 }
 
+float GraphGlobals::getPointLineScale()
+{
+    checkInit();
+    return _pointLineScale;
+}
+
+float GraphGlobals::getMasterPointScale()
+{
+    checkInit();
+    return _masterPointScale;
+}
+
+float GraphGlobals::getMasterLineScale()
+{
+    checkInit();
+    return _masterLineScale;
+}
+
 void GraphGlobals::checkInit()
 {
     if(!_init)
@@ -206,4 +228,8 @@ void GraphGlobals::init()
     _high1Color = osg::Vec4(0.86,0.61,0.0,1.0);
     _high10Color = osg::Vec4(0.86,0.31,0.0,1.0);
     _high100Color = osg::Vec4(0.71,0.18,0.37,1.0);
+
+    _pointLineScale = ConfigManager::getFloat("value","Plugin.FuturePatient.PointLineScale",1.0);
+    _masterPointScale = ConfigManager::getFloat("value","Plugin.FuturePatient.MasterPointScale",1.0);
+    _masterLineScale = ConfigManager::getFloat("value","Plugin.FuturePatient.MasterLineScale",1.0);
 }

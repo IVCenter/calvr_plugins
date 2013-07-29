@@ -38,6 +38,10 @@ class GraphGlobals
         static bool getDeferUpdate();
         static void setDeferUpdate(bool defer);
 
+        static float getPointLineScale();
+        static float getMasterPointScale();
+        static float getMasterLineScale();
+
     protected:
         static void checkInit();
         static void init();
@@ -59,6 +63,10 @@ class GraphGlobals
         static osg::Vec4 _defaultPhylumColor;
 
         static std::map<std::string,osg::Vec4> _patientColorMap;
+
+        static float _pointLineScale;
+        static float _masterPointScale;
+        static float _masterLineScale;
 };
 
 struct SetBoundsCallback : public osg::Drawable::ComputeBoundingBoxCallback

@@ -3,6 +3,7 @@
 
 #include <cvrKernel/TiledWallSceneObject.h>
 #include <cvrMenu/MenuList.h>
+#include <cvrMenu/MenuCheckbox.h>
 
 #include <string>
 
@@ -78,6 +79,9 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
             std::string name;
             std::string displayName;
         };
+
+        AverageFunction * _averageFunc;
+        cvr::MenuCheckbox * _averageCB;
 
         std::vector<LoadData> _loadedGraphs;
 };

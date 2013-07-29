@@ -45,6 +45,11 @@ GraphObject::GraphObject(mysqlpp::Connection * conn, float width, float height, 
     _ldmList->setIndex(1);
     addMenuItem(_ldmList);
 
+    _averageFunc = new AverageFunction();
+    _averageCB = new MenuCheckbox("Average",false);
+    _averageCB->setCallback(this);
+    addMenuItem(_averageCB);
+
     _pdfDir = ConfigManager::getEntry("value","Plugin.FuturePatient.PDFDir","");
 
     _activeHand = -1;
@@ -733,6 +738,18 @@ void GraphObject::menuCallback(MenuItem * item)
     {
 	_graph->setLabelDisplayMode((LabelDisplayMode)_ldmList->getIndex());
 	return;
+    }
+
+    if(item == _averageCB)
+    {
+	if(_averageCB->getValue())
+	{
+	    _graph->addMathFunction(_averageFunc);
+	}
+	else
+	{
+	    _graph->removeMathFunction(_averageFunc);
+	}
     }
 
     TiledWallSceneObject::menuCallback(item);
