@@ -260,7 +260,7 @@ class MathFunction
     public:
         virtual void added(osg::Geode * geode) = 0;
         virtual void removed(osg::Geode * geode) = 0;
-        virtual void update() = 0;
+        virtual void update(float width, float height, std::map<std::string, GraphDataInfo> & data, std::map<std::string, std::pair<float,float> > & displayRanges, std::map<std::string,std::pair<int,int> > & dataPointRanges) = 0;
 };
 
 class AverageFunction : public MathFunction
@@ -271,13 +271,13 @@ class AverageFunction : public MathFunction
 
         void added(osg::Geode * geode);
         void removed(osg::Geode * geode);
-        void update();
+        void update(float width, float height, std::map<std::string, GraphDataInfo> & data, std::map<std::string, std::pair<float,float> > & displayRanges, std::map<std::string,std::pair<int,int> > & dataPointRanges);
 
     protected:
-        osg::ref_ptr<osg::Geode> _averageGeode;
         osg::ref_ptr<osg::Geometry> _averageGeometry;
         osg::ref_ptr<osgText::Text> _averageText;
         osg::ref_ptr<osg::LineStipple> _averageStipple;
+        osg::ref_ptr<osg::LineWidth> _averageLineWidth;
 };
 
 #endif
