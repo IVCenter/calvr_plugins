@@ -278,6 +278,7 @@ class AverageFunction : public MathFunction
         osg::ref_ptr<osgText::Text> _averageText;
         osg::ref_ptr<osg::LineStipple> _averageStipple;
         osg::ref_ptr<osg::LineWidth> _averageLineWidth;
+        osg::ref_ptr<SetBoundsCallback> _boundsCallback;
 };
 
 #endif

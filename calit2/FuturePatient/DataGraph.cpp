@@ -2259,6 +2259,10 @@ AverageFunction::AverageFunction()
     _averageGeometry->getOrCreateStateSet()->setAttributeAndModes(_averageLineWidth,osg::StateAttribute::ON);
     _averageGeometry->getOrCreateStateSet()->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
     _averageText->getOrCreateStateSet()->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+
+    _boundsCallback = new SetBoundsCallback;
+
+    _averageGeometry->setComputeBoundingBoxCallback(_boundsCallback.get());
 }
 
 AverageFunction::~AverageFunction()
@@ -2337,4 +2341,12 @@ void AverageFunction::update(float width, float height, std::map<std::string, Gr
 
     float avglen = (width + height) / 2.0;
     _averageLineWidth->setWidth(avglen * 0.05 * GraphGlobals::getPointLineScale() * GraphGlobals::getPointLineScale());
+    if(ComController::instance()->isMaster())
+    {
+	_averageLineWidth->setWidth(_averageLineWidth->getWidth() * GraphGlobals::getMasterLineScale());
+    }
+
+    _boundsCallback->bbox.set(-width/2.0,-3,-height/2.0,width/2.0,1,height/2.0);
+    _averageGeometry->dirtyBound();
+    _averageGeometry->getBound();
 }
