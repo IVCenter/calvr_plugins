@@ -290,7 +290,7 @@ void AndroidNavigator::preFrame()
                         coord[2] += atof(split_str);
                     }
                     else if (tag == 3){
-                        velocity += atof(split_str);
+                        velocity = atof(split_str);
                         if(atof(split_str) == 0){
                             newMode = true;
                             velocity = 0;
