@@ -321,8 +321,10 @@ void AndroidNavigator::preFrame()
                 z += angle[2]; // For vertical movement                    
                 break;
             case 2:
-                // For ROTATE_WORLD movement
-                ry += angle[1];
+                // For ROTATE_WORLD movement // Rotate in this form is absurd, co-opting...
+                rx += angle[2];
+                ry -= angle[1];
+                y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
                 break;
             case 3:
                 // New fly mode -- moves like a plane
