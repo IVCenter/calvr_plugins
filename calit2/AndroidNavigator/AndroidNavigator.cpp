@@ -334,7 +334,7 @@ void AndroidNavigator::preFrame()
             case 0:
                 // For Manual movement
                 rx += angle[1];
-                rz += angle[2];
+                ry += angle[2];
                 if(angle[0] != 0)
                     old_ry = angle[0];
                 x -= coord[0];
