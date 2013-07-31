@@ -301,12 +301,16 @@ void AndroidNavigator::preFrame()
         }
         _mutex.unlock();
 
+        //angle[1] rot around x
+        //angle[2] rot around y
+        //angle[0] rot around z
+
         switch(_tagCommand)
         {
             case 0:
                 // For Manual movement
-                rx += angle[2];
-                rz += angle[1];
+                rx += angle[1];
+                rz += angle[2];
                 if(angle[0] != 0)
                     old_ry = angle[0];
                 x -= coord[0];
@@ -322,15 +326,15 @@ void AndroidNavigator::preFrame()
                 break;
             case 2:
                 // For Airplane movement
-                rx += angle[2];
-                ry -= angle[1];
+                rx += angle[1];
+                ry -= angle[2];
                 y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
                 break;
             case 3:
                 // Old fly mode
-                rx += angle[2];
+                rx += angle[1];
                 ry -= coord[0] * .5; // Fixes orientation 
-                rz += angle[1];
+                rz += angle[2];
                 y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
                 break;
             case 5:
