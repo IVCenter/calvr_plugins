@@ -18,7 +18,6 @@
 #include <unistd.h>
 #include <cvrKernel/ComController.h>
 #include <math.h>
-//#include "/home/bschlamp/CalVR/plugins/calit2/ArtifactVis/ArtifactVis.h"
 #include <algorithm>
 #include <cvrKernel/InteractionManager.h>
 #include <osg/Shape>
@@ -28,6 +27,7 @@
 #include "AndroidTransform.h"
 #include <sstream>
 #include <cstring>
+#include <cvrKernel/SceneManager.h>
 
 using namespace std;
 using namespace osg;
@@ -181,6 +181,7 @@ void AndroidNavigator::preFrame()
                * 5 = Gets back a selected AndroidTransform Node from phone, allows nodes to move.
                * 6 = Use Head Tracking
                * 7 = Use Device for Orientation Tracking
+               * 8 = reset view
                */
             else if(type == 3)
             {
@@ -245,6 +246,12 @@ void AndroidNavigator::preFrame()
                     sendto(sock, &tagNum, sizeof(int), 0, (struct sockaddr *)&client_addr, addr_len);
                     char *sPtr = strtok(NULL, " ");
                     useDeviceOrientationTracking = (0 == strcmp(sPtr, "true"));
+                }
+                else if(tag == 8){
+                	sendto(sock, &tagNum, sizeof(int), 0, (struct sockaddr *)&client_addr, addr_len);
+                	osg::Matrix m;
+                	SceneManager::instance()->setObjectMatrix(m);
+                	SceneManager::instance()->setObjectScale(1.0);
                 }
             }
             /** 
@@ -382,21 +389,37 @@ void AndroidNavigator::preFrame()
         if(newMode || ( (_tagCommand == 0) || (_tagCommand == 2) ) ){   
             newMode = false;
         }
-          //Adjust for head tracking? Currently, not done.
 
             
         // Gets translation
         Vec3 trans = Vec3(x, y, z);
-        trans = (trans * view) - campos;
+
+        //Test
+        if(useHeadTracking){
+        	trans = (trans * view) - campos;
+        }
+
+        if(useDeviceOrientationTracking){
+
+        }
+
         Matrix tmat;
         tmat.makeTranslate(trans);
 
         Vec3 xa = Vec3(1.0, 0.0, 0.0);
         Vec3 ya = Vec3(0.0, 1.0, 0.0);
         Vec3 za = Vec3(0.0, 0.0, 1.0);
-        xa = (xa * view) - campos;
-        ya = (ya * view) - campos;
-        za = (za * view) - campos;
+
+        //Test
+        if(useHeadTracking){
+        	xa = (xa * view) - campos;
+        	ya = (ya * view) - campos;
+        	za = (za * view) - campos;
+        }
+
+        if(useDeviceOrientationTracking){
+
+        }
 
         // Gets rotation
         Matrix rot;
