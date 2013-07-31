@@ -159,7 +159,7 @@ void AndroidNavigator::preFrame()
 
                /**
                 * Changes movement type to the tag: 
-                * 0 = Fly, 1 = Drive, 2 = Rotate World, 3 = New Fly
+                * 0 = Manual, 1 = Drive, 2 = Airplane, 3 = Old Fly
                 */ 
             if(type == 2){
                 _tagCommand = tag;
@@ -290,7 +290,7 @@ void AndroidNavigator::preFrame()
                         coord[2] += atof(split_str);
                     }
                     else if (tag == 3){
-                        velocity += atof(split_str);
+                        velocity = atof(split_str);
                         if(atof(split_str) == 0){
                             newMode = true;
                             velocity = 0;
@@ -301,12 +301,16 @@ void AndroidNavigator::preFrame()
         }
         _mutex.unlock();
 
+        //angle[1] rot around x
+        //angle[2] rot around y
+        //angle[0] rot around z
+
         switch(_tagCommand)
         {
             case 0:
-                // For FLY movement
-                rx += angle[2];
-                rz += angle[1];
+                // For Manual movement
+                rx += angle[1];
+                rz += angle[2];
                 if(angle[0] != 0)
                     old_ry = angle[0];
                 x -= coord[0];
@@ -321,14 +325,16 @@ void AndroidNavigator::preFrame()
                 z += angle[2]; // For vertical movement                    
                 break;
             case 2:
-                // For ROTATE_WORLD movement
-                ry += angle[1];
+                // For Airplane movement
+                rx += angle[1];
+                ry -= angle[2];
+                y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
                 break;
             case 3:
-                // New fly mode -- moves like a plane
-                rx += angle[2];
+                // Old fly mode
+                rx += angle[1];
                 ry -= coord[0] * .5; // Fixes orientation 
-                rz += angle[1];
+                rz += angle[2];
                 y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
                 break;
             case 5:
