@@ -159,7 +159,7 @@ void AndroidNavigator::preFrame()
 
                /**
                 * Changes movement type to the tag: 
-                * 0 = Fly, 1 = Drive, 2 = Rotate World, 3 = New Fly
+                * 0 = Manual, 1 = Drive, 2 = Airplane, 3 = Old Fly
                 */ 
             if(type == 2){
                 _tagCommand = tag;
@@ -304,7 +304,7 @@ void AndroidNavigator::preFrame()
         switch(_tagCommand)
         {
             case 0:
-                // For FLY movement
+                // For Manual movement
                 rx += angle[2];
                 rz += angle[1];
                 if(angle[0] != 0)
@@ -321,13 +321,13 @@ void AndroidNavigator::preFrame()
                 z += angle[2]; // For vertical movement                    
                 break;
             case 2:
-                // For ROTATE_WORLD movement // Rotate in this form is absurd, co-opting...
+                // For Airplane movement
                 rx += angle[2];
                 ry -= angle[1];
                 y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
                 break;
             case 3:
-                // New fly mode -- moves like a plane
+                // Old fly mode
                 rx += angle[2];
                 ry -= coord[0] * .5; // Fixes orientation 
                 rz += angle[1];
