@@ -35,6 +35,9 @@ using namespace cvr;
 
 //class ArtifactVis;
 
+bool useHeadTracking;
+bool useDeviceOrientationTracking;
+
 CVRPLUGIN(AndroidNavigator)
 
 AndroidNavigator::AndroidNavigator()
@@ -49,6 +52,8 @@ bool AndroidNavigator::init()
 {
     std::cerr << "Android Navigator init\n"; 
 
+    useHeadTracking = false;
+    useDeviceOrientationTracking = false;
     bool status = false;
     _root = new osg::MatrixTransform();
     char* name = "None";
@@ -174,6 +179,8 @@ void AndroidNavigator::preFrame()
                * 3 = Show Node
                * 4 = Find AndroidTransform Nodes (to send to phone)
                * 5 = Gets back a selected AndroidTransform Node from phone, allows nodes to move.
+               * 6 = Use Head Tracking
+               * 7 = Use Device for Orientation Tracking
                */
             else if(type == 3)
             {
@@ -227,7 +234,17 @@ void AndroidNavigator::preFrame()
                             found = true;
                         }
                     }                    
-                    if(!found) cout<<node_name<<" was not found..."<<endl;  
+                    if(!found) cout<<node_name<<" was not found..."<<endl;
+                }
+                else if(tag == 6){
+                    sendto(sock, &tagNum, sizeof(int), 0, (struct sockaddr *)&client_addr, addr_len);
+                    char *sPtr = strtok(NULL, " ");
+                    useHeadTracking = (0 == strcmp(sPtr, "true"));
+                }
+                else if(tag == 7){
+                    sendto(sock, &tagNum, sizeof(int), 0, (struct sockaddr *)&client_addr, addr_len);
+                    char *sPtr = strtok(NULL, " ");
+                    useDeviceOrientationTracking = (0 == strcmp(sPtr, "true"));
                 }
             }
             /** 
