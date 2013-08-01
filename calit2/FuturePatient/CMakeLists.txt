@@ -20,6 +20,8 @@ SET(PLUGIN_HEADERS
     GraphGlobals.h
     ComparativeBarChart.h
     StrainGraphObject.h
+    HeatMapGraph.h
+    StrainHMObject.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -45,6 +47,8 @@ ADD_LIBRARY(${LIB_NAME}
     GraphGlobals.cpp
     ComparativeBarChart.cpp
     StrainGraphObject.cpp
+    HeatMapGraph.cpp
+    StrainHMObject.cpp
 )
 
 FIND_PACKAGE(Mysql)

@@ -230,6 +230,20 @@ void GroupedBarGraph::setColor(osg::Vec4 color)
     }
 }
 
+void GroupedBarGraph::setBGColor(osg::Vec4 color)
+{
+    if(_bgGeom)
+    {
+	osg::Vec4Array * colors = dynamic_cast<osg::Vec4Array*>(_bgGeom->getColorArray());
+	if(colors && colors->size())
+	{
+	    colors->at(0) = color;
+	    colors->dirty();
+	    _bgGeom->dirtyDisplayList();
+	}
+    }
+}
+
 void GroupedBarGraph::setHover(osg::Vec3 intersect)
 {
     if(!_hoverGeode)
@@ -862,6 +876,7 @@ void GroupedBarGraph::makeBG()
     geom->setUseDisplayList(false);
 
     geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLE_STRIP,0,4));
+    _bgGeom = geom;
 
     _bgGeode->addDrawable(geom);
 }

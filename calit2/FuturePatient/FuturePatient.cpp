@@ -1,6 +1,7 @@
 #include "FuturePatient.h"
 #include "DataGraph.h"
 #include "StrainGraphObject.h"
+#include "StrainHMObject.h"
 
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/ComController.h>
@@ -47,52 +48,6 @@ FuturePatient::~FuturePatient()
 
 bool FuturePatient::init()
 {
-    /*DataGraph * dg = new DataGraph();
-    srand(0);
-    osg::Vec3Array * points = new osg::Vec3Array();
-    for(int i = 0; i < 20; i++)
-    {
-	osg::Vec3 point(i / 20.0,0,(rand() % 1000)/1000.0);
-	points->push_back(point);
-	//std::cerr << "Point x: " << point.x() << " y: " << point.y() << " z: " << point.z() << std::endl;
-    }
-
-    dg->addGraph("TestGraph", points, POINTS_WITH_LINES, "X - Axis", "Z - Axis", osg::Vec4(0,1.0,0,1.0));
-    dg->setZDataRange("TestGraph",-100,100);
-
-    struct tm timestart,timeend;
-    timestart.tm_year = 2007 - 1900;
-    timestart.tm_mon = 3;
-    timestart.tm_mday = 12;
-    timestart.tm_hour = 14;
-    timestart.tm_min = 20;
-    timestart.tm_sec = 1;
-
-    timeend.tm_year = 2008 - 1900;
-    timeend.tm_mon = 5;
-    timeend.tm_mday = 1;
-    timeend.tm_hour = 20;
-    timeend.tm_min = 4;
-    timeend.tm_sec = 58;
-
-    time_t tstart, tend;
-    tstart = mktime(&timestart);
-    tend = mktime(&timeend);
-
-    dg->setXDataRangeTimestamp("TestGraph",tstart,tend);
-
-    timestart.tm_year = 2003 - 1900;
-    timeend.tm_year = 2007 - 1900;
-    tstart = mktime(&timestart);
-    tend = mktime(&timeend);*/
-
-    //dg->setXDisplayRangeTimestamp(tstart,tend);
-
-    //dg->setXDisplayRange(0.25,0.8);
-    //PluginHelper::getObjectsRoot()->addChild(dg->getGraphRoot());
-
-    //makeGraph("SIga");
-    
     if(ComController::instance()->isMaster())
     {
         int port = ConfigManager::getInt("value","Plugin.FuturePatient.PresetListenPort",12012);
@@ -268,6 +223,10 @@ bool FuturePatient::init()
     _strainLoadAllButton = new MenuButton("Load All");
     _strainLoadAllButton->setCallback(this);
     _strainMenu->addItem(_strainLoadAllButton);
+
+    _strainLoadHeatMap = new MenuButton("Load Heat Map");
+    _strainLoadHeatMap->setCallback(this);
+    _strainMenu->addItem(_strainLoadHeatMap);
 
     _eventMenu = new SubMenu("Events");
     _fpMenu->addItem(_eventMenu);
@@ -1192,7 +1151,139 @@ void FuturePatient::menuCallback(MenuItem * item)
 	return;
     }
 
-    if(item == _microbeLoadCrohnsAll || item == _microbeLoadHealthyAll || item == _microbeLoadUCAll || item == _microbeLoadHealthy105All)
+    if(item == _microbeLoadCrohnsAll)
+    {
+	std::vector<std::pair<int,int> > rangeList;
+	rangeList.push_back(std::pair<int,int>(237,241));
+
+	struct timeval tstart,tend;
+	gettimeofday(&tstart,NULL);
+
+	GraphGlobals::setDeferUpdate(true);
+
+	int rows = 0;
+	int maxIndex = 0;
+
+	for(int i = 0; i < rangeList.size(); ++i)
+	{
+	    if(rangeList[i].second < rangeList[i].first)
+	    {
+		continue;
+	    }
+
+	    rows += rangeList[i].second - rangeList[i].first + 1;
+
+	    for(int j = rangeList[i].first; j <= rangeList[i].second; ++j)
+	    {
+		if(j > _microbePatients->getListSize())
+		{
+		    break;
+		}
+		std::map<int,std::vector<std::string> >::iterator it = _patientMicrobeTestMap.find(j+1);
+		if(it == _patientMicrobeTestMap.end())
+		{
+		    continue;
+		}
+
+		if(it->second.size() > maxIndex)
+		{
+		    maxIndex = it->second.size();
+		}
+	    }
+	}
+
+	float bgLight = 0.9;
+	float bgDark = 0.75;
+
+	bool graphAdded = false;
+	int index = 0;
+	do
+	{
+	    graphAdded = false;
+	    int pcount = 0;
+	    for(int i = 0; i < rangeList.size(); ++i)
+	    {
+		if(rangeList[i].second < rangeList[i].first)
+		{
+		    continue;
+		}
+
+		for(int j = rangeList[i].first; j <= rangeList[i].second; ++j)
+		{
+		    if(j > _microbePatients->getListSize())
+		    {
+			break;
+		    }
+		    std::map<int,std::vector<std::string> >::iterator it = _patientMicrobeTestMap.find(j+1);
+		    if(it == _patientMicrobeTestMap.end())
+		    {
+			continue;
+		    }
+
+		    if(index >= it->second.size())
+		    {
+			continue;
+		    }
+		    
+		    float bgColor = ((float)pcount) / ((float)(rows-1));
+		    bgColor = (1.0 - bgColor) * bgLight + bgColor * bgDark;
+		    pcount++;
+
+		    if(_microbeGraphType->getIndex() == 0)
+		    {
+			MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+			bool tb = mgo->setGraph(_microbePatients->getValue(j), j+1, it->second[index], _patientMicrobeTestTimeMap[it->first][index],(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue());
+			if(tb)
+			{
+			    checkLayout();
+			    _layoutObject->addGraphObject(mgo);
+			    mgo->setBGColor(osg::Vec4(bgColor,bgColor,bgColor,1.0));
+			}
+			else
+			{
+			    delete mgo;
+			}
+		    }
+		    else if(_microbeGraphType->getIndex() == 1)
+		    {
+			if(!_currentSBGraph)
+			{
+			    _currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+			    _currentSBGraph->addGraph(_microbePatients->getValue(j), j+1, it->second[index]);
+			    checkLayout();
+			    _layoutObject->addGraphObject(_currentSBGraph);
+			    _microbeMenu->addItem(_microbeDone);
+			}
+			else
+			{
+			    _currentSBGraph->addGraph(_microbePatients->getValue(j), j+1, it->second[index]);
+			}
+		    }
+		    graphAdded = true;
+		}
+	    }
+	    index++;
+	} while(graphAdded);	
+
+	if(_layoutObject)
+	{
+	    if(rows > 0)
+	    {
+		_layoutObject->setRows((float)rows);
+	    }
+	}
+
+	gettimeofday(&tend,NULL);
+	std::cerr << "Total load time: " << (tend.tv_sec - tstart.tv_sec) + ((tend.tv_usec - tstart.tv_usec) / 1000000.0) << std::endl;
+
+	GraphGlobals::setDeferUpdate(false);
+	if(_layoutObject)
+	{
+	    _layoutObject->forceUpdate();
+	}
+    }
+
+    if(item == _microbeLoadHealthyAll || item == _microbeLoadUCAll || item == _microbeLoadHealthy105All)
     {
 	std::vector<std::pair<int,int> > rangeList;
 
@@ -1387,6 +1478,34 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    }
 	}
 	return;
+    }
+
+    if(item == _strainLoadHeatMap)
+    {
+	if(_strainGroupList->getListSize() && _strainList->getListSize())
+	{
+	    std::map<std::string,std::vector<std::string> >::iterator it;
+	    it = _strainGroupMap.find(_strainGroupList->getValue());
+	    if(it != _strainGroupMap.end())
+	    {
+		std::cerr << "Loading " << it->second.size() << " strains." << std::endl;
+		for(int i = 0; i < it->second.size(); ++i)
+		{
+		    std::cerr << "Loading strain " << i << " id: " << _strainIdMap[it->second[i]] << std::endl;
+		    StrainHMObject * shmo = new StrainHMObject(_conn, 1000.0, 1000.0, "Strain Heat Map", false, true, false, true);
+
+		    if(shmo->setGraph(it->second[i],"Smarr",1,_strainIdMap[it->second[i]],osg::Vec4(1,0,0,1)))
+		    {
+			checkLayout();
+			_layoutObject->addGraphObject(shmo);
+		    }
+		    else
+		    {
+			delete shmo;
+		    }
+		}
+	    }
+	}
     }
 
     if(item == _eventLoad && _eventName->getListSize())

@@ -2249,7 +2249,7 @@ AverageFunction::AverageFunction()
     _averageGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
     _averageGeometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES,0,2));
 
-    _averageText = GraphGlobals::makeText("0.0",osg::Vec4(1,1,0,1));
+    _averageText = GraphGlobals::makeText("0.0",osg::Vec4(0.1,0.1,0.1,1));
     _averageText->setAlignment(osgText::Text::CENTER_BOTTOM);
     _averageStipple = new osg::LineStipple(ConfigManager::getInt("value","Plugin.FuturePatient.StippleFactor",10),0xAAAA);
 

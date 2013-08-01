@@ -28,7 +28,7 @@ GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std
     _zoomCB->setCallback(this);
     addMenuItem(_zoomCB);
 
-    _rowsRV = new MenuRangeValueCompact("Rows",1.0,10.0,maxRows);
+    _rowsRV = new MenuRangeValueCompact("Rows",1.0,40.0,maxRows);
     _rowsRV->setCallback(this);
     addMenuItem(_rowsRV);
 
@@ -614,12 +614,12 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 		    continue;
 		}
 
-		float temp = vro->getGraphDisplayRangeMax();
+		float temp = vro->getGraphMaxValue();
 		if(temp > dataMax)
 		{
 		    dataMax = temp;
 		}
-		temp = vro->getGraphDisplayRangeMin();
+		temp = vro->getGraphMinValue();
 		if(temp < dataMin)
 		{
 		    dataMin = temp;

@@ -98,6 +98,8 @@ class GroupedBarGraph
             return _color;
         }
 
+        void setBGColor(osg::Vec4 color);
+
         osg::Group * getRootNode()
         {
             return _root.get();
@@ -158,6 +160,7 @@ class GroupedBarGraph
         osg::ref_ptr<osg::Geode> _barGeode;
         osg::ref_ptr<osg::Geode> _axisGeode;
         osg::ref_ptr<osg::Geode> _bgGeode;
+        osg::ref_ptr<osg::Geometry> _bgGeom;
         osg::ref_ptr<osg::Geode> _selectGeode;
         osg::ref_ptr<osg::Geometry> _barGeom;
         osg::ref_ptr<osg::Geode> _shadingGeode;

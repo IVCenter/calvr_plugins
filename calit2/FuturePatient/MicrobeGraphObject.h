@@ -37,6 +37,7 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
 
         void setGraphSize(float width, float height);
         void setColor(osg::Vec4 color);
+        void setBGColor(osg::Vec4 color);
 
         float getGraphMaxValue();
         float getGraphMinValue();

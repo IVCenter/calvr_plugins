@@ -90,6 +90,11 @@ void MicrobeGraphObject::setColor(osg::Vec4 color)
     _graph->setColor(color);
 }
 
+void MicrobeGraphObject::setBGColor(osg::Vec4 color)
+{
+    _graph->setBGColor(color);
+}
+
 float MicrobeGraphObject::getGraphMaxValue()
 {
     return _graph->getDataMax();
@@ -524,6 +529,7 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
     {
 	int numDataValues;
 	int numOrderValues;
+	float totalValue;
 	bool valid;
     };
 
@@ -543,6 +549,7 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
     MicrobeDataHeader header;
     header.numDataValues = 0;
     header.numOrderValues = 0;
+    header.totalValue = 0;
     header.valid = false;
 
     MicrobeDataValue * data = NULL;
@@ -574,6 +581,7 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
 		    strncpy(data[i].description,valuer[i]["description"].c_str(),1023);
 		    data[i].value = atof(valuer[i]["value"]);
 		    totalMap[data[i].phylum] += data[i].value;
+		    header.totalValue += data[i].value;
 		}
 	    }
 
@@ -708,7 +716,10 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
 	}
     }
     
-    bool graphValid = _graph->setGraph(_graphTitle, _graphData, _graphOrder, BGAT_LOG, "Value", "", "phylum / species",osg::Vec4(1.0,0,0,1));
+    std::stringstream titless;
+    titless << _graphTitle << " - Count=" << header.numDataValues << " Total=" << header.totalValue;
+
+    bool graphValid = _graph->setGraph(titless.str(), _graphData, _graphOrder, BGAT_LOG, "Value", "", "phylum / species",osg::Vec4(1.0,0,0,1));
 
     if(graphValid)
     {
