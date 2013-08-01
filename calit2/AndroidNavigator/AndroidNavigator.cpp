@@ -37,6 +37,7 @@ using namespace cvr;
 
 bool useHeadTracking;
 bool useDeviceOrientationTracking;
+double orientation = 0.0;
 
 CVRPLUGIN(AndroidNavigator)
 
@@ -169,7 +170,6 @@ void AndroidNavigator::preFrame()
             if(type == 2){
                 _tagCommand = tag;
                 sendto(sock, &tagNum, sizeof(int), 0, (struct sockaddr *)&client_addr, addr_len);
-                newMode = true;
             }
               /** 
                * Process Commands from the android phone
@@ -261,6 +261,7 @@ void AndroidNavigator::preFrame()
              * 2 = Zcoord Translation
              * 3 = Velocity
              * 4 = Node Movement Data
+             * 5 = Orientation angle
              */ 
             else if (type == 1)
             {
@@ -307,6 +308,13 @@ void AndroidNavigator::preFrame()
                     position = atoi(split_str);
                 }
 
+                //Orientation
+                else if (tag == 5) {
+					// Angle
+					split_str = strtok(NULL, " ");
+					orientation = atof(split_str);
+				}
+
                 // Handles pinching movement (on touch screen) and drive velocity
                 else{
                     split_str = strtok(NULL, " ");
@@ -316,7 +324,6 @@ void AndroidNavigator::preFrame()
                     else if (tag == 3){
                         velocity = atof(split_str);
                         if(atof(split_str) == 0){
-                            newMode = true;
                             velocity = 0;
                         }
                     }
@@ -383,13 +390,14 @@ void AndroidNavigator::preFrame()
          *  this takes in a new headMat camera pos.
          * If not, this takes in the old position, with the exception
          *  of the z axis, which corresponds to moving your head up and down
-         *  to elimate conflict between phone and head tracker movement.
+         *  to eliminate conflict between phone and head tracker movement.
          */ 
         Matrix view = PluginHelper::getHeadMat(); 
         Vec3 campos = view.getTrans();
-        if(newMode || ( (_tagCommand == 0) || (_tagCommand == 2) ) ){   
-            newMode = false;
-        }
+
+        //if(newMode || ( (_tagCommand == 0) || (_tagCommand == 2) ) ){
+        //    newMode = false;
+        //}
 
             
         // Gets translation
