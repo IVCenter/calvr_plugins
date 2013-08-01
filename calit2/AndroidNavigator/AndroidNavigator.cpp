@@ -392,8 +392,10 @@ void AndroidNavigator::preFrame()
          *  of the z axis, which corresponds to moving your head up and down
          *  to eliminate conflict between phone and head tracker movement.
          */ 
-        Matrix view = PluginHelper::getHeadMat(); 
+        Matrix view = PluginHelper::getHeadMat();
+        //Matrix view; view.makeRotate(orientation,0,0,1);
         Vec3 campos = view.getTrans();
+        cout << campos[0] << " " << campos[1] << " " << campos[2] << endl;
 
         //if(newMode || ( (_tagCommand == 0) || (_tagCommand == 2) ) ){
         //    newMode = false;
@@ -433,15 +435,16 @@ void AndroidNavigator::preFrame()
         // Gets rotation
         Matrix rot;
         rot.makeRotate(rx, xa, ry, ya, rz, za);
-             
+
         Matrix ctrans, nctrans;
         ctrans.makeTranslate(campos);
         nctrans.makeTranslate(-campos);
 
         // Calculates new objectMatrix (will send to Slaves).
         finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
+        //finalmat = PluginHelper::getObjectMatrix() * rot * tmat;
         ComController::instance()->sendSlaves((char *)finalmat.ptr(), sizeof(double[16]));
-        PluginHelper::setObjectMatrix(finalmat);  
+        PluginHelper::setObjectMatrix(finalmat);
     
     }
     else
