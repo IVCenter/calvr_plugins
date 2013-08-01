@@ -55,11 +55,11 @@ class HeatMapGraph
 
         float getMaxDisplayValue()
         {
-            return _displayMax;
+            return _dataMax;
         }
         float getMinDisplayValue()
         {
-            return _displayMin;
+            return _dataMin;
         }
 
         void setDisplayRange(float min, float max);

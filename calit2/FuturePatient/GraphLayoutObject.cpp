@@ -614,12 +614,12 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 		    continue;
 		}
 
-		float temp = vro->getGraphMaxValue();
+		float temp = vro->getGraphDisplayRangeMax();
 		if(temp > dataMax)
 		{
 		    dataMax = temp;
 		}
-		temp = vro->getGraphMinValue();
+		temp = vro->getGraphDisplayRangeMin();
 		if(temp < dataMin)
 		{
 		    dataMin = temp;
