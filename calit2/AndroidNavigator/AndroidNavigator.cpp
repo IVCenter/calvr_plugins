@@ -394,22 +394,17 @@ void AndroidNavigator::preFrame()
          *  to eliminate conflict between phone and head tracker movement.
          */ 
         Matrix world2head = PluginHelper::getHeadMat();
-        cout << world2head << endl;
         Matrix view, mtrans;
 
         if(useDeviceOrientationTracking){
 
         	view.makeRotate(orientation,0,0,1);
-        	cerr << view << endl;
-            cerr << world2head.getTrans() << endl;
             mtrans.makeTranslate(world2head.getTrans());
         	view = view * mtrans;
         } else
         	view = world2head;
 
         Vec3 campos = view.getTrans();
-
-        cerr << view << endl;
 
         // Gets translation
         Vec3 trans = Vec3(x, y, z);
