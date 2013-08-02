@@ -28,6 +28,7 @@
 #include <sstream>
 #include <cstring>
 #include <cvrKernel/SceneManager.h>
+#include <osg/io_utils>
 
 using namespace std;
 using namespace osg;
@@ -392,26 +393,32 @@ void AndroidNavigator::preFrame()
          *  of the z axis, which corresponds to moving your head up and down
          *  to eliminate conflict between phone and head tracker movement.
          */ 
-        Matrix view = PluginHelper::getHeadMat();
-        //Matrix view; view.makeRotate(orientation,0,0,1);
+        Matrix world2head = PluginHelper::getHeadMat();
+        cout << world2head << endl;
+        Matrix view, mtrans;
+
+        if(useDeviceOrientationTracking){
+
+        	view.makeRotate(orientation,0,0,1);
+        	cerr << view << endl;
+            cerr << world2head.getTrans() << endl;
+            mtrans.makeTranslate(world2head.getTrans());
+        	view = view * mtrans;
+        } else
+        	view = world2head;
+
         Vec3 campos = view.getTrans();
-        cout << campos[0] << " " << campos[1] << " " << campos[2] << endl;
 
-        //if(newMode || ( (_tagCommand == 0) || (_tagCommand == 2) ) ){
-        //    newMode = false;
-        //}
+        cerr << view << endl;
 
-            
         // Gets translation
         Vec3 trans = Vec3(x, y, z);
 
         //Test
         if(useHeadTracking){
         	trans = (trans * view) - campos;
-        }
-
-        if(useDeviceOrientationTracking){
-
+        }else if(useDeviceOrientationTracking){
+        	trans = (trans * view) - campos;
         }
 
         Matrix tmat;
@@ -426,10 +433,10 @@ void AndroidNavigator::preFrame()
         	xa = (xa * view) - campos;
         	ya = (ya * view) - campos;
         	za = (za * view) - campos;
-        }
-
-        if(useDeviceOrientationTracking){
-
+        }else if(useDeviceOrientationTracking){
+        	xa = (xa * view) - campos;
+        	ya = (ya * view) - campos;
+        	za = (za * view) - campos;
         }
 
         // Gets rotation
@@ -441,8 +448,8 @@ void AndroidNavigator::preFrame()
         nctrans.makeTranslate(-campos);
 
         // Calculates new objectMatrix (will send to Slaves).
+        //finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
         finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
-        //finalmat = PluginHelper::getObjectMatrix() * rot * tmat;
         ComController::instance()->sendSlaves((char *)finalmat.ptr(), sizeof(double[16]));
         PluginHelper::setObjectMatrix(finalmat);
     
