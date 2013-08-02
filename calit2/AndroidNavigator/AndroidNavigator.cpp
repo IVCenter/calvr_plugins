@@ -354,21 +354,21 @@ void AndroidNavigator::preFrame()
                 // For DRIVE movement
                 rz += angle[2];
                 ry -= coord[0] * .5;  // Fixes orientation
-                y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
+                y += velocity;
                 z += angle[1]; // For vertical movement
                 break;
             case 2:
                 // For Airplane movement
                 rx += angle[1];
                 ry -= angle[2];
-                y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
+                y += velocity;  // allow velocity to scale
                 break;
             case 3:
                 // Old fly mode
                 rx += angle[1];
                 ry -= coord[0] * .5; // Fixes orientation 
                 rz += angle[2];
-                y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
+                y += velocity;  // allow velocity to scale
                 break;
             case 5:
                 if(node_name != NULL){
