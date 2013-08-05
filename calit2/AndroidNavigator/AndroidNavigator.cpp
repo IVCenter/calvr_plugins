@@ -18,7 +18,6 @@
 #include <unistd.h>
 #include <cvrKernel/ComController.h>
 #include <math.h>
-//#include "/home/bschlamp/CalVR/plugins/calit2/ArtifactVis/ArtifactVis.h"
 #include <algorithm>
 #include <cvrKernel/InteractionManager.h>
 #include <osg/Shape>
@@ -28,12 +27,18 @@
 #include "AndroidTransform.h"
 #include <sstream>
 #include <cstring>
+#include <cvrKernel/SceneManager.h>
+#include <osg/io_utils>
 
 using namespace std;
 using namespace osg;
 using namespace cvr;
 
 //class ArtifactVis;
+
+bool useHeadTracking;
+bool useDeviceOrientationTracking;
+double orientation = 0.0;
 
 CVRPLUGIN(AndroidNavigator)
 
@@ -49,6 +54,8 @@ bool AndroidNavigator::init()
 {
     std::cerr << "Android Navigator init\n"; 
 
+    useHeadTracking = false;
+    useDeviceOrientationTracking = false;
     bool status = false;
     _root = new osg::MatrixTransform();
     char* name = "None";
@@ -164,7 +171,6 @@ void AndroidNavigator::preFrame()
             if(type == 2){
                 _tagCommand = tag;
                 sendto(sock, &tagNum, sizeof(int), 0, (struct sockaddr *)&client_addr, addr_len);
-                newMode = true;
             }
               /** 
                * Process Commands from the android phone
@@ -174,6 +180,9 @@ void AndroidNavigator::preFrame()
                * 3 = Show Node
                * 4 = Find AndroidTransform Nodes (to send to phone)
                * 5 = Gets back a selected AndroidTransform Node from phone, allows nodes to move.
+               * 6 = Use Head Tracking
+               * 7 = Use Device for Orientation Tracking
+               * 8 = reset view
                */
             else if(type == 3)
             {
@@ -227,7 +236,23 @@ void AndroidNavigator::preFrame()
                             found = true;
                         }
                     }                    
-                    if(!found) cout<<node_name<<" was not found..."<<endl;  
+                    if(!found) cout<<node_name<<" was not found..."<<endl;
+                }
+                else if(tag == 6){
+                    sendto(sock, &tagNum, sizeof(int), 0, (struct sockaddr *)&client_addr, addr_len);
+                    char *sPtr = strtok(NULL, " ");
+                    useHeadTracking = (0 == strcmp(sPtr, "true"));
+                }
+                else if(tag == 7){
+                    sendto(sock, &tagNum, sizeof(int), 0, (struct sockaddr *)&client_addr, addr_len);
+                    char *sPtr = strtok(NULL, " ");
+                    useDeviceOrientationTracking = (0 == strcmp(sPtr, "true"));
+                }
+                else if(tag == 8){
+                	sendto(sock, &tagNum, sizeof(int), 0, (struct sockaddr *)&client_addr, addr_len);
+                	osg::Matrix m;
+                	SceneManager::instance()->setObjectMatrix(m);
+                	SceneManager::instance()->setObjectScale(1.0);
                 }
             }
             /** 
@@ -237,6 +262,7 @@ void AndroidNavigator::preFrame()
              * 2 = Zcoord Translation
              * 3 = Velocity
              * 4 = Node Movement Data
+             * 5 = Orientation angle
              */ 
             else if (type == 1)
             {
@@ -283,6 +309,13 @@ void AndroidNavigator::preFrame()
                     position = atoi(split_str);
                 }
 
+                //Orientation
+                else if (tag == 5) {
+					// Angle
+					split_str = strtok(NULL, " ");
+					orientation = atof(split_str);
+				}
+
                 // Handles pinching movement (on touch screen) and drive velocity
                 else{
                     split_str = strtok(NULL, " ");
@@ -292,7 +325,6 @@ void AndroidNavigator::preFrame()
                     else if (tag == 3){
                         velocity = atof(split_str);
                         if(atof(split_str) == 0){
-                            newMode = true;
                             velocity = 0;
                         }
                     }
@@ -309,8 +341,9 @@ void AndroidNavigator::preFrame()
         {
             case 0:
                 // For Manual movement
+            	rz += angle[0];
                 rx += angle[1];
-                rz += angle[2];
+                ry += angle[2];
                 if(angle[0] != 0)
                     old_ry = angle[0];
                 x -= coord[0];
@@ -319,23 +352,23 @@ void AndroidNavigator::preFrame()
                 break;
             case 1:
                 // For DRIVE movement
-                rz += angle[1];
+                rz += angle[2];
                 ry -= coord[0] * .5;  // Fixes orientation
-                y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
-                z += angle[2]; // For vertical movement                    
+                y += velocity;
+                z += angle[1]; // For vertical movement
                 break;
             case 2:
                 // For Airplane movement
                 rx += angle[1];
                 ry -= angle[2];
-                y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
+                y += velocity;  // allow velocity to scale
                 break;
             case 3:
                 // Old fly mode
                 rx += angle[1];
                 ry -= coord[0] * .5; // Fixes orientation 
                 rz += angle[2];
-                y += velocity * PluginHelper::getObjectScale();  // allow velocity to scale
+                y += velocity;  // allow velocity to scale
                 break;
             case 5:
                 if(node_name != NULL){
@@ -358,41 +391,62 @@ void AndroidNavigator::preFrame()
          *  this takes in a new headMat camera pos.
          * If not, this takes in the old position, with the exception
          *  of the z axis, which corresponds to moving your head up and down
-         *  to elimate conflict between phone and head tracker movement.
+         *  to eliminate conflict between phone and head tracker movement.
          */ 
-        Matrix view = PluginHelper::getHeadMat(); 
-        Vec3 campos = view.getTrans();
-        if(newMode || ( (_tagCommand == 0) || (_tagCommand == 2) ) ){   
-            newMode = false;
-        }
-          //Adjust for head tracking? Currently, not done.
+        Matrix world2head = PluginHelper::getHeadMat();
+        Matrix view, mtrans;
 
-            
+        if(useDeviceOrientationTracking){
+
+        	view.makeRotate(orientation,0,0,1);
+            mtrans.makeTranslate(world2head.getTrans());
+        	view = view * mtrans;
+        } else
+        	view = world2head;
+
+        Vec3 campos = view.getTrans();
+
         // Gets translation
         Vec3 trans = Vec3(x, y, z);
-        trans = (trans * view) - campos;
+
+        //Test
+        if(useHeadTracking){
+        	trans = (trans * view) - campos;
+        }else if(useDeviceOrientationTracking){
+        	trans = (trans * view) - campos;
+        }
+
         Matrix tmat;
         tmat.makeTranslate(trans);
 
         Vec3 xa = Vec3(1.0, 0.0, 0.0);
         Vec3 ya = Vec3(0.0, 1.0, 0.0);
         Vec3 za = Vec3(0.0, 0.0, 1.0);
-        xa = (xa * view) - campos;
-        ya = (ya * view) - campos;
-        za = (za * view) - campos;
+
+        //Test
+        if(useHeadTracking){
+        	xa = (xa * view) - campos;
+        	ya = (ya * view) - campos;
+        	za = (za * view) - campos;
+        }else if(useDeviceOrientationTracking){
+        	xa = (xa * view) - campos;
+        	ya = (ya * view) - campos;
+        	za = (za * view) - campos;
+        }
 
         // Gets rotation
         Matrix rot;
         rot.makeRotate(rx, xa, ry, ya, rz, za);
-             
+
         Matrix ctrans, nctrans;
         ctrans.makeTranslate(campos);
         nctrans.makeTranslate(-campos);
 
         // Calculates new objectMatrix (will send to Slaves).
+        //finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
         finalmat = PluginHelper::getObjectMatrix() * nctrans * rot * tmat * ctrans;
         ComController::instance()->sendSlaves((char *)finalmat.ptr(), sizeof(double[16]));
-        PluginHelper::setObjectMatrix(finalmat);  
+        PluginHelper::setObjectMatrix(finalmat);
     
     }
     else
