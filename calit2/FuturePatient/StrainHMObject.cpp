@@ -1,7 +1,10 @@
 #include "StrainHMObject.h"
 
+#include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/ComController.h>
 #include <cvrKernel/PluginHelper.h>
+#include <cvrInput/TrackingManager.h>
+#include <cvrUtil/OsgMath.h>
 
 #include <iostream>
 #include <sstream>
@@ -13,8 +16,14 @@ using namespace cvr;
 StrainHMObject::StrainHMObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
 {
     _conn = conn;
+
+    setBoundsCalcMode(SceneObject::MANUAL);
+    osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
+    setBoundingBox(bb);
+
     _graph = new HeatMapGraph(width,height);
     _graph->setScaleType(HMAS_LOG);
+    _desktopMode = ConfigManager::getBool("Plugin.FuturePatient.DesktopMode",false);
     addChild(_graph->getRootNode());
 }
 
@@ -24,6 +33,9 @@ StrainHMObject::~StrainHMObject()
 
 void StrainHMObject::setGraphSize(float width, float height)
 {
+    osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
+    setBoundingBox(bb);
+
     _graph->setDisplaySize(width,height);
 }
 
@@ -167,4 +179,34 @@ void StrainHMObject::setGraphDisplayRange(float min, float max)
 void StrainHMObject::resetGraphDisplayRange()
 {
     _graph->resetDisplayRange();
+}
+
+void StrainHMObject::updateCallback(int handID, const osg::Matrix & mat)
+{
+    if((_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::MOUSE) ||
+	(!_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER))
+    {
+	osg::Vec3 start, end(0,1000,0);
+	start = start * mat * getWorldToObjectMatrix();
+	end = end * mat * getWorldToObjectMatrix();
+
+	osg::Vec3 planePoint;
+	osg::Vec3 planeNormal(0,-1,0);
+	osg::Vec3 intersect;
+	float w;
+
+	if(linePlaneIntersectionRef(start,end,planePoint,planeNormal,intersect,w))
+	{
+	    _graph->setHover(intersect);
+	}
+    }
+}
+
+void StrainHMObject::leaveCallback(int handID)
+{
+    if((_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::MOUSE) ||
+	(!_desktopMode && TrackingManager::instance()->getHandTrackerType(handID) == TrackerBase::POINTER))
+    {
+	_graph->clearHoverText();
+    }
 }

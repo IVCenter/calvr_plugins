@@ -65,6 +65,9 @@ class HeatMapGraph
         void setDisplayRange(float min, float max);
         void resetDisplayRange();
 
+        void setHover(osg::Vec3 intersect);
+        void clearHoverText();
+
     protected:
         void initGeometry();
         void makeBG();
@@ -91,9 +94,17 @@ class HeatMapGraph
         osg::ref_ptr<osg::Geode> _bgGeode;
         osg::ref_ptr<osg::Geometry> _bgGeom;
 
+        osg::ref_ptr<osg::Geode> _hoverGeode;
+        osg::ref_ptr<osg::Geometry> _hoverBGGeom;
+        osg::ref_ptr<osgText::Text> _hoverText;
+
+        int _hoverIndex;
+
         osg::ref_ptr<SetBoundsCallback> _boundsCallback;
 
         HeatMapAlphaScale _scaleType;
+
+        float _lastPadding, _lastSpacing, _lastBoxSize;
 };
 
 #endif

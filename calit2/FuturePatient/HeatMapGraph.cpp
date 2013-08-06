@@ -3,6 +3,7 @@
 #include <cvrConfig/ConfigManager.h>
 
 #include <iostream>
+#include <sstream>
 #include <cmath>
 
 using namespace cvr;
@@ -11,6 +12,8 @@ HeatMapGraph::HeatMapGraph(float width, float height)
 {
     _width = width;
     _height = height;
+
+    _hoverIndex = -1;
 
     _scaleType = HMAS_LINEAR;
 
@@ -35,6 +38,24 @@ HeatMapGraph::HeatMapGraph(float width, float height)
     stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
 
     makeBG();
+
+    _hoverGeode = new osg::Geode();
+    _hoverGeode->setCullingActive(false);
+    _hoverBGGeom = new osg::Geometry();
+    _hoverBGGeom->setUseDisplayList(false);
+    _hoverBGGeom->setUseVertexBufferObjects(true);
+    _hoverText = GraphGlobals::makeText("",osg::Vec4(1,1,1,1));
+    _hoverGeode->addDrawable(_hoverBGGeom);
+    _hoverGeode->addDrawable(_hoverText);
+
+    osg::Vec3Array * verts = new osg::Vec3Array(4);
+    osg::Vec4Array * colors = new osg::Vec4Array(1);
+    colors->at(0) = osg::Vec4(0,0,0,1);
+
+    _hoverBGGeom->setVertexArray(verts);
+    _hoverBGGeom->setColorArray(colors);
+    _hoverBGGeom->setColorBinding(osg::Geometry::BIND_OVERALL);
+    _hoverBGGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
 }
 
 HeatMapGraph::~HeatMapGraph()
@@ -103,6 +124,117 @@ void HeatMapGraph::resetDisplayRange()
     {
 	update();
     }
+}
+
+void HeatMapGraph::setHover(osg::Vec3 intersect)
+{
+    if(!_values.size())
+    {
+	clearHoverText();
+	return;
+    }
+
+    if(!_hoverGeode)
+    {
+	return;
+    }
+
+    int newIndex = -1;
+
+    float right = (_width / 2.0) - _lastPadding;
+    for(int i = _values.size()-1; i >= 0; --i)
+    {
+	if(intersect.x() > right)
+	{
+	    break;
+	}
+
+	if(intersect.x() <= right && intersect.x() >= right - _lastBoxSize && fabs(intersect.z() <= _lastBoxSize / 2.0))
+	{
+	    newIndex = i;
+	    break;
+	}
+
+	right -= _lastBoxSize + _lastSpacing;
+    }
+
+    float targetHeight = 150.0;
+
+    if(newIndex != _hoverIndex)
+    {
+	if(newIndex == -1)
+	{
+	    _root->removeChild(_hoverGeode);
+	}
+	else
+	{
+	    if(!_hoverGeode->getNumParents())
+	    {
+		_root->addChild(_hoverGeode);
+	    }
+
+	    std::stringstream ss;
+	    ss << _labels[newIndex] << std::endl << "Value: " << _values[newIndex];
+
+	    _hoverText->setText(ss.str());
+	    _hoverText->setCharacterSize(1.0);
+	    _hoverText->setAlignment(osgText::Text::LEFT_TOP);
+
+	    osg::BoundingBox bb = _hoverText->getBound();
+	    float csize = targetHeight / (bb.zMax() - bb.zMin());
+	    _hoverText->setCharacterSize(csize);
+	    _hoverText->setPosition(osg::Vec3(intersect.x(),-2.5,intersect.z()));
+
+	    float bgheight = (bb.zMax() - bb.zMin()) * csize;
+	    float bgwidth = (bb.xMax() - bb.xMin()) * csize;
+	    osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(_hoverBGGeom->getVertexArray());
+	    if(verts)
+	    {
+		//std::cerr << "Setting bg x: " << intersect.x() << " z: " << intersect.z() << " width: " << bgwidth << " height: " << bgheight << std::endl;
+		verts->at(0) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z()-bgheight);
+		verts->at(1) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z());
+		verts->at(2) = osg::Vec3(intersect.x(),-2,intersect.z());
+		verts->at(3) = osg::Vec3(intersect.x(),-2,intersect.z()-bgheight);
+		verts->dirty();
+		_hoverBGGeom->dirtyDisplayList();
+	    }
+	}
+
+	_hoverIndex = newIndex;
+    }
+    else if(newIndex != -1)
+    {
+	_hoverText->setPosition(osg::Vec3(intersect.x(),-2.5,intersect.z()));
+	osg::BoundingBox bb = _hoverText->getBound();
+	float bgheight = (bb.zMax() - bb.zMin());
+	float bgwidth = (bb.xMax() - bb.xMin());
+	osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(_hoverBGGeom->getVertexArray());
+	if(verts)
+	{
+	    //std::cerr << "Setting bg x: " << intersect.x() << " z: " << intersect.z() << " width: " << bgwidth << " height: " << bgheight << std::endl;
+	    verts->at(0) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z()-bgheight);
+	    verts->at(1) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z());
+	    verts->at(2) = osg::Vec3(intersect.x(),-2,intersect.z());
+	    verts->at(3) = osg::Vec3(intersect.x(),-2,intersect.z()-bgheight);
+	    verts->dirty();
+	    _hoverBGGeom->dirtyDisplayList();
+	}
+    }
+}
+
+void HeatMapGraph::clearHoverText()
+{
+    if(!_hoverGeode)
+    {
+	return;
+    }
+
+    if(_hoverGeode->getNumParents())
+    {
+	_root->removeChild(_hoverGeode);
+    }
+
+    _hoverIndex = -1;
 }
 
 void HeatMapGraph::initGeometry()
@@ -187,6 +319,10 @@ void HeatMapGraph::update()
     float stepsize = boxSize + (_width * _leftPaddingMult);
 
     float right = _width * 0.5 - padding;
+
+    _lastBoxSize = boxSize;
+    _lastPadding = padding;
+    _lastSpacing = _width * _leftPaddingMult;
 
     osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(_graphGeometry->getVertexArray());
     osg::Vec4Array * colors = dynamic_cast<osg::Vec4Array*>(_graphGeometry->getColorArray());

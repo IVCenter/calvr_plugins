@@ -28,7 +28,11 @@ class StrainHMObject : public LayoutTypeObject, public ValueRangeObject
         void setGraphDisplayRange(float min, float max);
         void resetGraphDisplayRange();
 
+        virtual void updateCallback(int handID, const osg::Matrix & mat);
+        virtual void leaveCallback(int handID);
+
     protected:
+        bool _desktopMode;
         HeatMapGraph * _graph;
         mysqlpp::Connection * _conn;
 };
