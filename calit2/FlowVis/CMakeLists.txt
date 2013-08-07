@@ -1,12 +1,14 @@
 SET(LIB_NAME FlowVis)
 SET(PLUGIN_HEADERS
     FlowVis.h
+    FlowObject.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
     "SHARED"
     ${PLUGIN_HEADERS}
     FlowVis.cpp
+    FlowObject.cpp
 )
 
 

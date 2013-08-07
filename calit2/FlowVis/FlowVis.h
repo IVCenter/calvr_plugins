@@ -74,12 +74,10 @@ struct FlowDataSet
     FileInfo info;
     FlowDataType type;
     std::vector<VTKDataFrame*> frameList;
-    osg::ref_ptr<osg::Geode> geode;
-    osg::ref_ptr<osg::Geometry> geometry;
-    osg::ref_ptr<osg::StateSet> stateset;
-    osg::ref_ptr<osg::Geometry> isoGeometry;
     std::map<std::string,std::pair<float,float> > attribRanges;
 };
+
+class FlowObject;
 
 class FlowVis : public cvr::CVRPlugin, public cvr::MenuCallback
 {
@@ -97,35 +95,14 @@ class FlowVis : public cvr::CVRPlugin, public cvr::MenuCallback
         void extractSurfaceVTK(VTKDataFrame * frame);
         void deleteVTKFrame(VTKDataFrame * frame);
 
-        void initColorTable();
-
         cvr::SubMenu * _flowMenu;
         cvr::SubMenu * _loadMenu;
-        cvr::MenuRangeValueCompact * _targetFPSRV;
-        cvr::MenuRangeValue * _isoMaxRV;
         cvr::MenuButton * _removeButton;
         std::vector<cvr::MenuButton*> _loadButtons;
         std::vector<FileInfo*> _loadFiles;
 
         FlowDataSet * _loadedSet;
-        cvr::SceneObject * _loadedObject;
-        cvr::MenuList * _loadedAttribList;
-        std::string _lastAttribute;
-        int _currentFrame;
-        double _animationTime;
-
-        osg::ref_ptr<osg::Program> _normalProgram;
-        osg::ref_ptr<osg::Program> _normalFloatProgram;
-        osg::ref_ptr<osg::Program> _normalIntProgram;
-        osg::ref_ptr<osg::Program> _isoProgram;
-
-        osg::ref_ptr<osg::Uniform> _floatMinUni;
-        osg::ref_ptr<osg::Uniform> _floatMaxUni;
-        osg::ref_ptr<osg::Uniform> _intMinUni;
-        osg::ref_ptr<osg::Uniform> _intMaxUni;
-        osg::ref_ptr<osg::Uniform> _isoMaxUni;
-
-        osg::ref_ptr<osg::Texture1D> _lookupColorTable;
+        FlowObject * _loadedObject;
 };
 
 struct SetBoundsCallback : public osg::Drawable::ComputeBoundingBoxCallback

@@ -1,5 +1,5 @@
 #include "FlowVis.h"
-#include "NormalShader.h"
+#include "FlowObject.h"
 
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/PluginHelper.h>
@@ -26,10 +26,6 @@ FlowVis::FlowVis()
 {
     _loadedSet = NULL;
     _loadedObject = NULL;
-    _loadedAttribList = NULL;
-    _currentFrame = 0;
-    _animationTime = 0.0;
-    _isoMaxRV = NULL;
 }
 
 FlowVis::~FlowVis()
@@ -61,81 +57,18 @@ bool FlowVis::init()
 	_loadFiles.push_back(fi);
     }
 
-    _targetFPSRV = new MenuRangeValueCompact("Target FPS",1.0,60.0,10.0);
-    _targetFPSRV->setCallback(this);
-    _flowMenu->addItem(_targetFPSRV);
-
     _removeButton = new MenuButton("Remove");
     _removeButton->setCallback(this);
     _flowMenu->addItem(_removeButton);
-
-    _normalProgram = new osg::Program();
-    _normalProgram->setName("NormalProgram");
-    _normalProgram->addShader(new osg::Shader(osg::Shader::VERTEX,normalVertSrc));
-    _normalProgram->addShader(new osg::Shader(osg::Shader::GEOMETRY,normalGeomSrc));
-    _normalProgram->addShader(new osg::Shader(osg::Shader::FRAGMENT,normalFragSrc));
-    _normalProgram->setParameter(GL_GEOMETRY_VERTICES_OUT_EXT, 3);
-    _normalProgram->setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_TRIANGLES);
-    _normalProgram->setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
-
-    _normalFloatProgram = new osg::Program();
-    _normalFloatProgram->setName("NormalFloatProgram");
-    _normalFloatProgram->addShader(new osg::Shader(osg::Shader::VERTEX,normalFloatVertSrc));
-    _normalFloatProgram->addShader(new osg::Shader(osg::Shader::GEOMETRY,normalFloatGeomSrc));
-    _normalFloatProgram->addShader(new osg::Shader(osg::Shader::FRAGMENT,normalFloatFragSrc));
-    _normalFloatProgram->setParameter(GL_GEOMETRY_VERTICES_OUT_EXT, 3);
-    _normalFloatProgram->setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_TRIANGLES);
-    _normalFloatProgram->setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
-
-    _normalIntProgram = new osg::Program();
-    _normalIntProgram->setName("NormalIntProgram");
-    _normalIntProgram->addShader(new osg::Shader(osg::Shader::VERTEX,normalIntVertSrc));
-    // no change needed to geom and frag for ints
-    _normalIntProgram->addShader(new osg::Shader(osg::Shader::GEOMETRY,normalFloatGeomSrc));
-    _normalIntProgram->addShader(new osg::Shader(osg::Shader::FRAGMENT,normalFloatFragSrc));
-    _normalIntProgram->setParameter(GL_GEOMETRY_VERTICES_OUT_EXT, 3);
-    _normalIntProgram->setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_TRIANGLES);
-    _normalIntProgram->setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
-
-    _isoProgram = new osg::Program();
-    _isoProgram->setName("isoProgram");
-    _isoProgram->addShader(new osg::Shader(osg::Shader::VERTEX,isoFloatVertSrc));
-    _isoProgram->addShader(new osg::Shader(osg::Shader::GEOMETRY,isoGeomSrc));
-    _isoProgram->addShader(new osg::Shader(osg::Shader::FRAGMENT,isoFragSrc));
-    _isoProgram->setParameter(GL_GEOMETRY_VERTICES_OUT_EXT, 4);
-    _isoProgram->setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_LINES_ADJACENCY);
-    _isoProgram->setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
-
-    _floatMinUni = new osg::Uniform(osg::Uniform::FLOAT,"min");
-    _floatMaxUni = new osg::Uniform(osg::Uniform::FLOAT,"max");
-
-    _intMinUni = new osg::Uniform(osg::Uniform::INT,"min");
-    _intMaxUni = new osg::Uniform(osg::Uniform::INT,"max");
-
-    _isoMaxUni = new osg::Uniform(osg::Uniform::FLOAT,"isoMax");
-
-    initColorTable();
 
     return true;
 }
 
 void FlowVis::preFrame()
 {
-    if(_loadedSet && _loadedSet->frameList.size() && _loadedObject)
+    if(_loadedObject)
     {
-	_animationTime += PluginHelper::getLastFrameDuration();
-	if(_animationTime > 1.0 / _targetFPSRV->getValue())
-	{
-	    int lastFrame = _currentFrame;
-	    _currentFrame = (_currentFrame + 1) % _loadedSet->frameList.size();
-
-	    _loadedSet->geometry->removePrimitiveSet(_loadedSet->geometry->getPrimitiveSetIndex(_loadedSet->frameList[lastFrame]->surfaceInd));
-	    _loadedSet->geometry->addPrimitiveSet(_loadedSet->frameList[_currentFrame]->surfaceInd);
-	    _loadedSet->geometry->setVertexArray(_loadedSet->frameList[_currentFrame]->verts);
-
-	    menuCallback(_loadedAttribList);
-	    _animationTime = 0.0;
-	}
+	_loadedObject->perFrame();
     }
 }
 
@@ -156,140 +89,8 @@ void FlowVis::menuCallback(MenuItem * item)
 		delete _loadedSet;
 		_loadedSet = NULL;
 	    }
-
-	    if(_loadedAttribList)
-	    {
-		delete _loadedAttribList;
-		_loadedAttribList = NULL;
-	    }
 	}
 	return;
-    }
-
-    if(item == _isoMaxRV)
-    {
-	_isoMaxUni->set(_isoMaxRV->getValue());
-    }
-
-    if(item == _loadedAttribList && _loadedSet && _loadedSet->frameList.size() && _loadedObject)
-    {
-	bool found = false;
-	for(int i = 0; i < _loadedSet->frameList[_currentFrame]->pointData.size(); ++i)
-	{
-	    if(_loadedSet->frameList[_currentFrame]->pointData[i]->name == _loadedAttribList->getValue())
-	    {
-		if(_loadedSet->frameList[_currentFrame]->pointData[i]->attribType == VAT_SCALARS)
-		{
-		    switch(_loadedSet->frameList[_currentFrame]->pointData[i]->dataType)
-		    {
-			case VDT_INT:
-			    {
-				_loadedSet->stateset->setAttribute(_normalIntProgram);
-				_loadedSet->stateset->addUniform(_intMinUni);
-				_intMinUni->set(_loadedSet->frameList[_currentFrame]->pointData[i]->intMin);
-				_intMaxUni->set(_loadedSet->frameList[_currentFrame]->pointData[i]->intMax);
-				//std::cerr << "min: " << _loadedSet->frameList[0]->pointData[i]->intMin << " max: " << _loadedSet->frameList[0]->pointData[i]->intMax << std::endl;
-				_loadedSet->stateset->addUniform(_intMaxUni);
-				_loadedSet->geometry->setVertexAttribArray(4,_loadedSet->frameList[_currentFrame]->pointData[i]->intData);
-				_loadedSet->geometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
-				/*for(int j = 0; j < _loadedSet->frameList[0]->pointData[i]->intData->size(); ++j)
-				  {
-				  if(_loadedSet->frameList[0]->pointData[i]->intData->at(j) == -1)
-				  {
-				  std::cerr << "Got -1" << std::endl;
-				  }
-				  }*/
-				if(_lookupColorTable)
-				{
-				    _loadedSet->stateset->setTextureAttributeAndModes(0, _lookupColorTable, osg::StateAttribute::ON);
-				}
-
-				if(_isoMaxRV)
-				{
-				    delete _isoMaxRV;
-				    _isoMaxRV = NULL;
-				}
-
-				_loadedSet->geode->removeDrawable(_loadedSet->isoGeometry);
-				osg::StateSet * stateset = _loadedSet->isoGeometry->getOrCreateStateSet();
-				stateset->removeUniform(_isoMaxUni);
-				found = true;
-				break;
-			    }
-			case VDT_DOUBLE:
-			{
-			    _loadedSet->stateset->setAttribute(_normalFloatProgram);
-			    _loadedSet->stateset->addUniform(_floatMinUni);
-			    _floatMinUni->set(_loadedSet->frameList[_currentFrame]->pointData[i]->floatMin);
-			    _floatMaxUni->set(_loadedSet->frameList[_currentFrame]->pointData[i]->floatMax);
-			    _loadedSet->stateset->addUniform(_floatMaxUni);
-			    _loadedSet->geometry->setVertexAttribArray(4,_loadedSet->frameList[_currentFrame]->pointData[i]->floatData);
-			    _loadedSet->geometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
-			    if(_lookupColorTable)
-			    {
-				_loadedSet->stateset->setTextureAttributeAndModes(0, _lookupColorTable, osg::StateAttribute::ON);
-			    }
-
-			    if(_lastAttribute != _loadedAttribList->getValue())
-			    {
-				osg::StateSet * stateset = _loadedSet->isoGeometry->getOrCreateStateSet();
-				stateset->setAttribute(_isoProgram);
-				stateset->addUniform(_isoMaxUni);
-				_isoMaxUni->set(_loadedSet->attribRanges[_loadedSet->frameList[_currentFrame]->pointData[i]->name].second);
-
-				if(_isoMaxRV)
-				{
-				    delete _isoMaxRV;
-				}
-				_isoMaxRV = new MenuRangeValue("ISO Value",_loadedSet->attribRanges[_loadedSet->frameList[_currentFrame]->pointData[i]->name].first,_loadedSet->attribRanges[_loadedSet->frameList[_currentFrame]->pointData[i]->name].second,_loadedSet->attribRanges[_loadedSet->frameList[_currentFrame]->pointData[i]->name].second);
-				_isoMaxRV->setCallback(this);
-				_flowMenu->addItem(_isoMaxRV);	
-			    }
-
-			    if(!_loadedSet->isoGeometry->getNumParents())
-			    {
-				_loadedSet->geode->addDrawable(_loadedSet->isoGeometry);
-			    }
-			    _loadedSet->isoGeometry->setVertexAttribArray(4,_loadedSet->frameList[_currentFrame]->pointData[i]->floatData);
-			    _loadedSet->isoGeometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
-
-			    found = true;
-			    break;
-			}
-			default:
-			    break;
-		    }
-		}
-		_lastAttribute = _loadedAttribList->getValue();
-		break;
-	    }
-	}
-
-	if(!found)
-	{
-	    _loadedSet->geometry->setVertexAttribArray(4,NULL);
-	    _loadedSet->stateset->setAttribute(_normalProgram);
-	    _loadedSet->stateset->removeUniform(_floatMinUni);
-	    _loadedSet->stateset->removeUniform(_floatMaxUni);
-	    _loadedSet->stateset->removeUniform(_intMinUni);
-	    _loadedSet->stateset->removeUniform(_intMaxUni);
-	    if(_lookupColorTable)
-	    {
-		_loadedSet->stateset->removeAssociatedTextureModes(0,_lookupColorTable);
-		_loadedSet->stateset->removeTextureAttribute(0,osg::StateAttribute::TEXTURE);
-	    }
-
-	    if(_isoMaxRV)
-	    {
-		delete _isoMaxRV;
-		_isoMaxRV = NULL;
-	    }
-
-	    _lastAttribute = "";
-	    _loadedSet->geode->removeDrawable(_loadedSet->isoGeometry);
-	    osg::StateSet * stateset = _loadedSet->isoGeometry->getOrCreateStateSet();
-	    stateset->removeUniform(_isoMaxUni);
-	}
     }
 
     for(int i = 0; i < _loadButtons.size(); ++i)
@@ -308,12 +109,6 @@ void FlowVis::menuCallback(MenuItem * item)
 		    }
 		    delete _loadedSet;
 		    _loadedSet = NULL;
-		}
-
-		if(_loadedAttribList)
-		{
-		    delete _loadedAttribList;
-		    _loadedAttribList = NULL;
 		}
 	    }
 
@@ -337,95 +132,15 @@ void FlowVis::menuCallback(MenuItem * item)
 		    {
 			std::cerr << "Parsed VTK file(s)." << std::endl;
 
-			_currentFrame = 0;
-			_animationTime = 0.0;
-
 			if(set->frameList.size())
 			{
 			    _loadedSet = set;
-			    _loadedObject = new SceneObject(_loadFiles[i]->path,true,false,false,true,true);
+			    _loadedObject = new FlowObject(set,_loadFiles[i]->path,true,false,false,true,true);
 			    _loadedObject->setBoundsCalcMode(SceneObject::MANUAL);
 			    _loadedObject->setBoundingBox(set->frameList[0]->bb);
-			    
-			    osg::Geode * geode = new osg::Geode();
-			    osg::Geometry * geom = new osg::Geometry();
-
-			    geom->setUseVertexBufferObjects(true);
-			    geom->setUseDisplayList(false);
-
-			    osg::Vec4Array * colors = new osg::Vec4Array(1);
-			    colors->at(0) = osg::Vec4(1.0,1.0,1.0,1.0);
-			    geom->setColorArray(colors);
-			    geom->setColorBinding(osg::Geometry::BIND_OVERALL);
-			    
-			    SetBoundsCallback * sbc = new SetBoundsCallback;
-			    sbc->bbox = set->frameList[0]->bb;
-			    geom->setComputeBoundingBoxCallback(sbc);
-
-			    geom->setVertexArray(set->frameList[0]->verts);
-			    geom->addPrimitiveSet(set->frameList[0]->surfaceInd);
-			    //geom->addPrimitiveSet(set->frameList[0]->indices);
-			    //set->frameList[0]->indices->setMode(GL_LINES_ADJACENCY);
-
-			    set->geometry = geom;
-			    geode->addDrawable(geom);
-			    _loadedObject->addChild(geode);
-			    set->geode = geode;
-
-			    osg::StateSet * stateset = geom->getOrCreateStateSet();
-			    stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
-			    stateset->setAttribute(_normalProgram);
-			    osg::PolygonMode * pmode = new osg::PolygonMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::POINT);
-			    //stateset->setAttributeAndModes(pmode,osg::StateAttribute::ON);
-
-			    osg::CullFace * cf = new osg::CullFace();
-			    stateset->setAttributeAndModes(cf,osg::StateAttribute::ON);
-
-			    set->stateset = stateset;
 
 			    PluginHelper::registerSceneObject(_loadedObject,"FlowVis");
 			    _loadedObject->attachToScene();
-
-			    osg::Geometry * isoGeom = new osg::Geometry();
-			    isoGeom->setUseVertexBufferObjects(true);
-			    isoGeom->setUseDisplayList(false);
-
-			    colors = new osg::Vec4Array(1);
-			    colors->at(0) = osg::Vec4(0.0,0.0,1.0,1.0);
-			    isoGeom->setColorArray(colors);
-			    isoGeom->setColorBinding(osg::Geometry::BIND_OVERALL);
-			    isoGeom->setVertexArray(set->frameList[0]->verts);
-			    isoGeom->addPrimitiveSet(set->frameList[0]->indices);
-			    set->frameList[0]->indices->setMode(GL_LINES_ADJACENCY);
-
-			    //geode->addDrawable(isoGeom);
-
-			    set->isoGeometry = isoGeom;
-			    stateset = isoGeom->getOrCreateStateSet();
-			    stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
-
-			    _lastAttribute = "";
-			    std::vector<std::string> attribList;
-			    attribList.push_back("None");
-			    for(int i = 0; i < set->frameList[0]->pointData.size(); ++i)
-			    {
-				if(set->frameList[0]->pointData[i]->attribType == VAT_SCALARS)
-				{
-				    attribList.push_back(set->frameList[0]->pointData[i]->name);
-				}
-			    }
-
-			    _loadedAttribList = new MenuList();
-			    _loadedAttribList->setCallback(this);
-
-			    _loadedAttribList->setValues(attribList);
-
-			    _loadedObject->addMenuItem(_loadedAttribList);
-
-			    osg::Matrix rot,scale;
-			    scale.makeScale(osg::Vec3(1000.0,1000.0,1000.0));
-			    rot.makeRotate(90.0 * M_PI / 180.0,osg::Vec3(1,0,0));
-			    _loadedObject->setTransform(scale*rot);
 			}
 		    }
 		}
@@ -924,48 +639,4 @@ void FlowVis::deleteVTKFrame(VTKDataFrame * frame)
     }
 
     delete frame;
-}
-
-void FlowVis::initColorTable()
-{
-    int size = 32;
-    std::vector<osg::Vec3> colorList;
-    colorList.push_back(osg::Vec3(0,0,0.7));
-    colorList.push_back(osg::Vec3(0.7,0.7,0.7));
-    colorList.push_back(osg::Vec3(0.7,0,0));
-
-    osg::Image * image = new osg::Image();
-    image->allocateImage(size,1,1,GL_RGB,GL_UNSIGNED_BYTE);
-    image->setInternalTextureFormat(3);
-    
-    unsigned char * data = (unsigned char *)image->data();
-
-    for(int i = 0; i < size; ++i)
-    {
-	float pos = ((float)i) / ((float)(size-1));
-	pos = fmax(pos,0.0);
-	pos = fmin(pos,1.0);
-	pos = pos * ((float)(colorList.size()-1));
-	int topIndex = ceil(pos);
-	if(topIndex >= colorList.size())
-	{
-	    topIndex = colorList.size() - 1;
-	}
-	int bottomIndex = floor(pos);
-	if(bottomIndex < 0)
-	{
-	    bottomIndex = 0;
-	}
-
-	float ratio = pos - floor(pos);
-	data[(3*i)+0] = (unsigned char)((colorList[bottomIndex].x() * (1.0 - ratio) + colorList[topIndex].x() * ratio) * 255.0);
-	data[(3*i)+1] = (unsigned char)((colorList[bottomIndex].y() * (1.0 - ratio) + colorList[topIndex].y() * ratio) * 255.0);
-	data[(3*i)+2] = (unsigned char)((colorList[bottomIndex].z() * (1.0 - ratio) + colorList[topIndex].z() * ratio) * 255.0);
-	//std::cerr << "color: " << (int)data[(3*i)+0] << " " << (int)data[(3*i)+1] << " " << (int)data[(3*i)+2] << std::endl;
-    }
-
-    _lookupColorTable = new osg::Texture1D(image);
-    _lookupColorTable->setWrap(osg::Texture::WRAP_S,osg::Texture::CLAMP_TO_EDGE);
-    //_lookupColorTable->setFilter(osg::Texture::MAG_FILTER,osg::Texture::LINEAR);
-    //_lookupColorTable->setFilter(osg::Texture::MIN_FILTER,osg::Texture::LINEAR);
 }
