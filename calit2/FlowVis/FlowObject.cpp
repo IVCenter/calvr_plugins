@@ -43,7 +43,7 @@ void initColorTable()
 	data[(3*i)+0] = (unsigned char)((colorList[bottomIndex].x() * (1.0 - ratio) + colorList[topIndex].x() * ratio) * 255.0);
 	data[(3*i)+1] = (unsigned char)((colorList[bottomIndex].y() * (1.0 - ratio) + colorList[topIndex].y() * ratio) * 255.0);
 	data[(3*i)+2] = (unsigned char)((colorList[bottomIndex].z() * (1.0 - ratio) + colorList[topIndex].z() * ratio) * 255.0);
-	//std::cerr << "color: " << (int)data[(3*i)+0] << " " << (int)data[(3*i)+1] << " " << (int)data[(3*i)+2] << std::endl;
+	std::cerr << "color: " << (int)data[(3*i)+0] << " " << (int)data[(3*i)+1] << " " << (int)data[(3*i)+2] << std::endl;
     }
 
     lookupColorTable = new osg::Texture1D(image);
@@ -77,11 +77,15 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
     std::vector<std::string> visTypes;
     visTypes.push_back("None");
     visTypes.push_back("Iso Surface");
+    visTypes.push_back("Plane");
 
     _typeList = new MenuList();
     _typeList->setCallback(this);
     _typeList->setValues(visTypes);
     addMenuItem(_typeList);
+
+    _alphaRV = new MenuRangeValueCompact("Alpha",0.0,1.0,0.8);
+    _alphaRV->setCallback(this);
 
     _normalProgram = new osg::Program();
     _normalProgram->setName("NormalProgram");
@@ -120,13 +124,24 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
     _isoProgram->setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_LINES_ADJACENCY);
     _isoProgram->setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
 
+    _planeProgram = new osg::Program();
+    _planeProgram->setName("planeProgram");
+    _planeProgram->addShader(new osg::Shader(osg::Shader::VERTEX,planeFloatVertSrc));
+    _planeProgram->addShader(new osg::Shader(osg::Shader::GEOMETRY,planeGeomSrc));
+    _planeProgram->addShader(new osg::Shader(osg::Shader::FRAGMENT,planeFragSrc));
+    _planeProgram->setParameter(GL_GEOMETRY_VERTICES_OUT_EXT, 4);
+    _planeProgram->setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_LINES_ADJACENCY);
+    _planeProgram->setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
+
     _floatMinUni = new osg::Uniform(osg::Uniform::FLOAT,"min");
     _floatMaxUni = new osg::Uniform(osg::Uniform::FLOAT,"max");
-
     _intMinUni = new osg::Uniform(osg::Uniform::INT,"min");
     _intMaxUni = new osg::Uniform(osg::Uniform::INT,"max");
-
     _isoMaxUni = new osg::Uniform(osg::Uniform::FLOAT,"isoMax");
+    _planePointUni = new osg::Uniform(osg::Uniform::FLOAT_VEC3,"planePoint");
+    _planeNormalUni = new osg::Uniform(osg::Uniform::FLOAT_VEC3,"planeNormal");
+    _planeAlphaUni = new osg::Uniform(osg::Uniform::FLOAT,"alpha");
+    _planeAlphaUni->set(_alphaRV->getValue());
 
     _geode = new osg::Geode();
     osg::Geometry * geom = new osg::Geometry();
@@ -175,6 +190,21 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
     stateset = isoGeom->getOrCreateStateSet();
     stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
 
+    _planeGeometry = new osg::Geometry();
+    _planeGeometry->setUseVertexBufferObjects(true);
+    _planeGeometry->setUseDisplayList(false);
+
+    colors = new osg::Vec4Array(1);
+    colors->at(0) = osg::Vec4(1.0,1.0,1.0,1.0);
+    _planeGeometry->setColorArray(colors);
+    _planeGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+    _planeGeometry->setVertexArray(_set->frameList[0]->verts);
+    _planeGeometry->addPrimitiveSet(_set->frameList[0]->indices);
+    stateset = _planeGeometry->getOrCreateStateSet();
+    stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+    stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
+    stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+
     _lastAttribute = "";
     std::vector<std::string> attribList;
     attribList.push_back("None");
@@ -211,13 +241,28 @@ void FlowObject::perFrame()
 	    int nextFrame = (_currentFrame + 1) % _set->frameList.size();
 
 	    setFrame(nextFrame);
-	    //_surfaceGeometry->removePrimitiveSet(_surfaceGeometry->getPrimitiveSetIndex(_set->frameList[lastFrame]->surfaceInd));
-	    //_surfaceGeometry->addPrimitiveSet(_set->frameList[_currentFrame]->surfaceInd);
-	    //_surfaceGeometry->setVertexArray(_set->frameList[_currentFrame]->verts);
 
-	    //menuCallback(_loadedAttribList);
 	    _animationTime = 0.0;
 	}
+    }
+
+    switch(_visType)
+    {
+	case FVT_PLANE:
+	{
+	    // TODO: move to config or create better plane placing system
+	    osg::Vec3 point(0,1500,0), normal, origin;
+	    point = point * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
+	    origin = origin * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
+	    normal = origin - point;
+	    normal.normalize();
+
+	    _planePointUni->set(point);
+	    _planeNormalUni->set(normal);
+	    break;
+	}
+	default:
+	    break;
     }
 }
 
@@ -238,6 +283,11 @@ void FlowObject::menuCallback(MenuItem * item)
 	setVisType((FlowVisType)_typeList->getIndex());
     }
 
+    if(item == _alphaRV)
+    {
+	_planeAlphaUni->set(_alphaRV->getValue());
+    }
+
     SceneObject::menuCallback(item);
 }
 
@@ -246,6 +296,16 @@ void FlowObject::setFrame(int frame)
     _surfaceGeometry->removePrimitiveSet(_surfaceGeometry->getPrimitiveSetIndex(_set->frameList[_currentFrame]->surfaceInd));
     _surfaceGeometry->addPrimitiveSet(_set->frameList[frame]->surfaceInd);
     _surfaceGeometry->setVertexArray(_set->frameList[frame]->verts);
+
+    _set->frameList[frame]->indices->setMode(GL_LINES_ADJACENCY);
+
+    _isoGeometry->removePrimitiveSet(_isoGeometry->getPrimitiveSetIndex(_set->frameList[_currentFrame]->indices));
+    _isoGeometry->addPrimitiveSet(_set->frameList[frame]->indices);
+    _isoGeometry->setVertexArray(_set->frameList[frame]->verts);
+
+    _planeGeometry->removePrimitiveSet(_planeGeometry->getPrimitiveSetIndex(_set->frameList[_currentFrame]->indices));
+    _planeGeometry->addPrimitiveSet(_set->frameList[frame]->indices);
+    _planeGeometry->setVertexArray(_set->frameList[frame]->verts);
 
     _currentFrame = frame;
 
@@ -273,6 +333,11 @@ void FlowObject::setVisType(FlowVisType fvt)
 	{
 	    break;
 	}
+	case FVT_PLANE:
+	{
+	    removeMenuItem(_alphaRV);
+	    break;
+	}
 	default:
 	    break;
     }
@@ -288,6 +353,11 @@ void FlowObject::setVisType(FlowVisType fvt)
 	}
 	case FVT_ISO_SURFACE:
 	{
+	    break;
+	}
+	case FVT_PLANE:
+	{
+	    addMenuItem(_alphaRV);
 	    break;
 	}
 	default:
@@ -360,6 +430,14 @@ void FlowObject::setAttribute(std::string attrib)
 				    stateset->removeUniform(_isoMaxUni);
 				    break;
 				}
+				case FVT_PLANE:
+				{
+				    _geode->removeDrawable(_planeGeometry);
+				    osg::StateSet * stateset = _planeGeometry->getOrCreateStateSet();
+				    stateset->removeUniform(_planePointUni);
+				    stateset->removeUniform(_planeNormalUni);
+				    break;
+				}
 				default:
 				    break;
 			    }
@@ -394,7 +472,14 @@ void FlowObject::setAttribute(std::string attrib)
 					osg::StateSet * stateset = _isoGeometry->getOrCreateStateSet();
 					stateset->setAttribute(_isoProgram);
 					stateset->addUniform(_isoMaxUni);
+					stateset->addUniform(_floatMinUni);
+					stateset->addUniform(_floatMaxUni);
 					_isoMaxUni->set(_set->attribRanges[_set->frameList[_currentFrame]->pointData[i]->name].second);
+
+					if(lookupColorTable)
+					{
+					    stateset->setTextureAttributeAndModes(0, lookupColorTable, osg::StateAttribute::ON);
+					}
 
 					if(_isoMaxRV)
 					{
@@ -403,6 +488,17 @@ void FlowObject::setAttribute(std::string attrib)
 					_isoMaxRV = new MenuRangeValue("ISO Value",_set->attribRanges[_set->frameList[_currentFrame]->pointData[i]->name].first,_set->attribRanges[_set->frameList[_currentFrame]->pointData[i]->name].second,_set->attribRanges[_set->frameList[_currentFrame]->pointData[i]->name].second);
 					_isoMaxRV->setCallback(this);
 					addMenuItem(_isoMaxRV);
+					break;
+				    }
+				    case FVT_PLANE:
+				    {
+					osg::StateSet * stateset = _planeGeometry->getOrCreateStateSet();
+					stateset->setAttribute(_planeProgram);
+					stateset->addUniform(_planePointUni);
+					stateset->addUniform(_planeNormalUni);
+					stateset->addUniform(_floatMinUni);
+					stateset->addUniform(_floatMaxUni);
+					stateset->addUniform(_planeAlphaUni);
 					break;
 				    }
 				    default:
@@ -425,6 +521,15 @@ void FlowObject::setAttribute(std::string attrib)
 				    _isoGeometry->setVertexAttribArray(4,_set->frameList[_currentFrame]->pointData[i]->floatData);
 				    _isoGeometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
 				    break;
+				}
+				case FVT_PLANE:
+				{
+				    if(!_planeGeometry->getNumParents())
+				    {
+					_geode->addDrawable(_planeGeometry);
+				    }
+				    _planeGeometry->setVertexAttribArray(4,_set->frameList[_currentFrame]->pointData[i]->floatData);
+				    _planeGeometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
 				}
 				default:
 				    break;
@@ -481,5 +586,18 @@ void FlowObject::setAttribute(std::string attrib)
 	_geode->removeDrawable(_isoGeometry);
 	stateset = _isoGeometry->getOrCreateStateSet();
 	stateset->removeUniform(_isoMaxUni);
+
+	_geode->removeDrawable(_planeGeometry);
+	stateset = _planeGeometry->getOrCreateStateSet();
+	stateset->removeUniform(_planePointUni);
+	stateset->removeUniform(_planeNormalUni);
+	stateset->removeUniform(_floatMinUni);
+	stateset->removeUniform(_floatMaxUni);
+	stateset->removeUniform(_planeAlphaUni);
+	if(lookupColorTable)
+	{
+	    stateset->removeAssociatedTextureModes(0,lookupColorTable);
+	    stateset->removeTextureAttribute(0,osg::StateAttribute::TEXTURE);
+	}
     }
 }

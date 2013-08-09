@@ -12,7 +12,8 @@
 enum FlowVisType
 {
     FVT_NONE=0,
-    FVT_ISO_SURFACE
+    FVT_ISO_SURFACE,
+    FVT_PLANE
 };
 
 static osg::ref_ptr<osg::Texture1D> lookupColorTable = NULL;
@@ -44,21 +45,27 @@ class FlowObject : public cvr::SceneObject
         cvr::MenuList * _loadedAttribList;
         cvr::MenuRangeValue * _isoMaxRV;
         cvr::MenuCheckbox * _animateCB;
+        cvr::MenuRangeValueCompact * _alphaRV;
 
         osg::ref_ptr<osg::Program> _normalProgram;
         osg::ref_ptr<osg::Program> _normalFloatProgram;
         osg::ref_ptr<osg::Program> _normalIntProgram;
         osg::ref_ptr<osg::Program> _isoProgram;
+        osg::ref_ptr<osg::Program> _planeProgram;
 
         osg::ref_ptr<osg::Uniform> _floatMinUni;
         osg::ref_ptr<osg::Uniform> _floatMaxUni;
         osg::ref_ptr<osg::Uniform> _intMinUni;
         osg::ref_ptr<osg::Uniform> _intMaxUni;
         osg::ref_ptr<osg::Uniform> _isoMaxUni;
+        osg::ref_ptr<osg::Uniform> _planePointUni;
+        osg::ref_ptr<osg::Uniform> _planeNormalUni;
+        osg::ref_ptr<osg::Uniform> _planeAlphaUni;
 
         osg::ref_ptr<osg::Geode> _geode;
         osg::ref_ptr<osg::Geometry> _surfaceGeometry;
         osg::ref_ptr<osg::Geometry> _isoGeometry;
+        osg::ref_ptr<osg::Geometry> _planeGeometry;
 };
 
 #endif
