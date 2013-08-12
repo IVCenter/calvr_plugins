@@ -1195,44 +1195,34 @@ void FuturePatient::menuCallback(MenuItem * item)
 	float bgLight = 0.9;
 	float bgDark = 0.75;
 
-	bool graphAdded = false;
-	int index = 0;
-	do
+	for(int i = 0; i < rangeList.size(); ++i)
 	{
-	    graphAdded = false;
-	    int pcount = 0;
-	    for(int i = 0; i < rangeList.size(); ++i)
+	    if(rangeList[i].second < rangeList[i].first)
 	    {
-		if(rangeList[i].second < rangeList[i].first)
+		continue;
+	    }
+
+	    for(int j = rangeList[i].first; j <= rangeList[i].second; ++j)
+	    {
+		if(j > _microbePatients->getListSize())
+		{
+		    break;
+		}
+		std::map<int,std::vector<std::string> >::iterator it = _patientMicrobeTestMap.find(j+1);
+		if(it == _patientMicrobeTestMap.end())
 		{
 		    continue;
 		}
 
-		for(int j = rangeList[i].first; j <= rangeList[i].second; ++j)
+		float bgColor = ((float)(j - rangeList[i].first)) / ((float)(rows-1));
+		bgColor = (1.0 - bgColor) * bgLight + bgColor * bgDark;
+
+		for(int k = 0; k < it->second.size(); ++k)
 		{
-		    if(j > _microbePatients->getListSize())
-		    {
-			break;
-		    }
-		    std::map<int,std::vector<std::string> >::iterator it = _patientMicrobeTestMap.find(j+1);
-		    if(it == _patientMicrobeTestMap.end())
-		    {
-			continue;
-		    }
-
-		    if(index >= it->second.size())
-		    {
-			continue;
-		    }
-		    
-		    float bgColor = ((float)pcount) / ((float)(rows-1));
-		    bgColor = (1.0 - bgColor) * bgLight + bgColor * bgDark;
-		    pcount++;
-
 		    if(_microbeGraphType->getIndex() == 0)
 		    {
 			MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-			bool tb = mgo->setGraph(_microbePatients->getValue(j), j+1, it->second[index], _patientMicrobeTestTimeMap[it->first][index],(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue());
+			bool tb = mgo->setGraph(_microbePatients->getValue(j), j+1, it->second[k], _patientMicrobeTestTimeMap[it->first][k],(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue());
 			if(tb)
 			{
 			    checkLayout();
@@ -1249,27 +1239,25 @@ void FuturePatient::menuCallback(MenuItem * item)
 			if(!_currentSBGraph)
 			{
 			    _currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-			    _currentSBGraph->addGraph(_microbePatients->getValue(j), j+1, it->second[index]);
+			    _currentSBGraph->addGraph(_microbePatients->getValue(j), j+1, it->second[k]);
 			    checkLayout();
 			    _layoutObject->addGraphObject(_currentSBGraph);
 			    _microbeMenu->addItem(_microbeDone);
 			}
 			else
 			{
-			    _currentSBGraph->addGraph(_microbePatients->getValue(j), j+1, it->second[index]);
+			    _currentSBGraph->addGraph(_microbePatients->getValue(j), j+1, it->second[k]);
 			}
 		    }
-		    graphAdded = true;
 		}
 	    }
-	    index++;
-	} while(graphAdded);	
+	}
 
 	if(_layoutObject)
 	{
-	    if(rows > 0)
+	    if(maxIndex > 0)
 	    {
-		_layoutObject->setRows((float)rows);
+		_layoutObject->setRows((float)maxIndex);
 	    }
 	}
 

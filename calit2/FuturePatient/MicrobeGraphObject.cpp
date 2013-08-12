@@ -717,7 +717,7 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
     }
     
     std::stringstream titless;
-    titless << _graphTitle << " - Count=" << header.numDataValues << " Total=" << header.totalValue;
+    titless << _graphTitle << " - Count=" << header.numDataValues << " - " << round(header.totalValue * 100.0) << "%";
 
     bool graphValid = _graph->setGraph(titless.str(), _graphData, _graphOrder, BGAT_LOG, "Value", "", "phylum / species",osg::Vec4(1.0,0,0,1));
 
