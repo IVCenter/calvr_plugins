@@ -22,6 +22,7 @@ SET(PLUGIN_HEADERS
     StrainGraphObject.h
     HeatMapGraph.h
     StrainHMObject.h
+    FPTiledWallSceneObject.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -49,6 +50,7 @@ ADD_LIBRARY(${LIB_NAME}
     StrainGraphObject.cpp
     HeatMapGraph.cpp
     StrainHMObject.cpp
+    FPTiledWallSceneObject.cpp
 )
 
 FIND_PACKAGE(Mysql)

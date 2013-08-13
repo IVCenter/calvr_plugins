@@ -323,7 +323,7 @@ bool StrainGraphObject::processEvent(cvr::InteractionEvent * ie)
 	}
     }
 
-    return TiledWallSceneObject::processEvent(ie);
+    return FPTiledWallSceneObject::processEvent(ie);
 }
 
 void StrainGraphObject::updateCallback(int handID, const osg::Matrix & mat)

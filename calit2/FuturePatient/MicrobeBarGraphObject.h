@@ -1,8 +1,6 @@
 #ifndef MICROBE_BAR_GRAPH_OBJECT_H
 #define MICROBE_BAR_GRAPH_OBJECT_H
 
-#include <cvrKernel/TiledWallSceneObject.h>
-
 #include <string>
 #include <vector>
 

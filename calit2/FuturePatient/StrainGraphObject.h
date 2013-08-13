@@ -1,8 +1,6 @@
 #ifndef STRAIN_GRAPH_OBJECT_H
 #define STRAIN_GRAPH_OBJECT_H
 
-#include <cvrKernel/TiledWallSceneObject.h>
-
 #include <string>
 #include <vector>
 

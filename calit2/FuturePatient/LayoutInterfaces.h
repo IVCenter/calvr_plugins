@@ -1,15 +1,16 @@
 #ifndef FP_LAYOUT_INTERFACES_H
 #define FP_LAYOUT_INTERFACES_H
 
-#include <cvrKernel/TiledWallSceneObject.h>
 #include <cvrMenu/MenuCheckbox.h>
+
+#include "FPTiledWallSceneObject.h"
 
 #include <map>
 
-class LayoutTypeObject : public cvr::TiledWallSceneObject
+class LayoutTypeObject : public FPTiledWallSceneObject
 {
     public:
-        LayoutTypeObject(std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false) : TiledWallSceneObject(name,navigation,movable,clip,contextMenu,showBounds)
+        LayoutTypeObject(std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false) : FPTiledWallSceneObject(name,navigation,movable,clip,contextMenu,showBounds)
         {
         }
         virtual ~LayoutTypeObject()
@@ -59,10 +60,10 @@ class LayoutTypeObject : public cvr::TiledWallSceneObject
         }
 };
 
-class LayoutLineObject : public cvr::TiledWallSceneObject
+class LayoutLineObject : public FPTiledWallSceneObject
 {
     public:
-        LayoutLineObject(std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false) : TiledWallSceneObject(name,navigation,movable,clip,contextMenu,showBounds)
+        LayoutLineObject(std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false) : FPTiledWallSceneObject(name,navigation,movable,clip,contextMenu,showBounds)
         {
         }
         virtual ~LayoutLineObject()

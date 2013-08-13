@@ -1,7 +1,6 @@
 #ifndef FP_MICROBE_GRAPH_OBJECT_H
 #define FP_MICROBE_GRAPH_OBJECT_H
 
-#include <cvrKernel/TiledWallSceneObject.h>
 #include <cvrMenu/MenuText.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuList.h>

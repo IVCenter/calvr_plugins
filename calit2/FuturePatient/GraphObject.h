@@ -1,7 +1,6 @@
 #ifndef FP_GRAPH_OBJECT_H
 #define FP_GRAPH_OBJECT_H
 
-#include <cvrKernel/TiledWallSceneObject.h>
 #include <cvrMenu/MenuList.h>
 #include <cvrMenu/MenuCheckbox.h>
 

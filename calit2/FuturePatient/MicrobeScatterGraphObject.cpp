@@ -248,7 +248,7 @@ bool MicrobeScatterGraphObject::processEvent(cvr::InteractionEvent * ie)
 	}
     }
 
-    return TiledWallSceneObject::processEvent(ie);
+    return FPTiledWallSceneObject::processEvent(ie);
 }
 
 void MicrobeScatterGraphObject::updateCallback(int handID, const osg::Matrix & mat)
@@ -296,7 +296,7 @@ void MicrobeScatterGraphObject::menuCallback(MenuItem * item)
 	return;
     }
 
-    TiledWallSceneObject::menuCallback(item);
+    FPTiledWallSceneObject::menuCallback(item);
 }
 
 void MicrobeScatterGraphObject::initData()

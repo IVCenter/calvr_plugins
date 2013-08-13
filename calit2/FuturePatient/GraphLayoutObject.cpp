@@ -8,7 +8,7 @@
 
 using namespace cvr;
 
-GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : TiledWallSceneObject(name,navigation,movable,clip,true,showBounds)
+GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : FPTiledWallSceneObject(name,navigation,movable,clip,true,showBounds)
 {
     _width = width;
     _height = height;
@@ -767,7 +767,7 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	return;
     }
 
-    TiledWallSceneObject::menuCallback(item);
+    FPTiledWallSceneObject::menuCallback(item);
 }
 
 bool GraphLayoutObject::processEvent(InteractionEvent * event)
@@ -859,7 +859,7 @@ bool GraphLayoutObject::processEvent(InteractionEvent * event)
 	}
     }
 
-    return TiledWallSceneObject::processEvent(event);
+    return FPTiledWallSceneObject::processEvent(event);
 }
 
 void GraphLayoutObject::enterCallback(int handID, const osg::Matrix &mat)

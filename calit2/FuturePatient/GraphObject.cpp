@@ -752,7 +752,7 @@ void GraphObject::menuCallback(MenuItem * item)
 	}
     }
 
-    TiledWallSceneObject::menuCallback(item);
+    FPTiledWallSceneObject::menuCallback(item);
 }
 
 bool GraphObject::processEvent(InteractionEvent * ie)
@@ -765,7 +765,7 @@ bool GraphObject::processEvent(InteractionEvent * ie)
 	    return _graph->pointClick();
 	}
     }
-    return TiledWallSceneObject::processEvent(ie);
+    return FPTiledWallSceneObject::processEvent(ie);
 }
 
 void GraphObject::enterCallback(int handID, const osg::Matrix &mat)

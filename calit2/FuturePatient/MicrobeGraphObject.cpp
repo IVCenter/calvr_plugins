@@ -337,7 +337,7 @@ bool MicrobeGraphObject::processEvent(InteractionEvent * ie)
 	}
     }
 
-    return TiledWallSceneObject::processEvent(ie);
+    return FPTiledWallSceneObject::processEvent(ie);
 }
 
 void MicrobeGraphObject::updateCallback(int handID, const osg::Matrix & mat)
@@ -394,7 +394,7 @@ void MicrobeGraphObject::menuCallback(MenuItem * item)
 	_graph->setColorMode((BarGraphColorMode)_colorModeML->getIndex());
     }
 
-    TiledWallSceneObject::menuCallback(item);
+    FPTiledWallSceneObject::menuCallback(item);
 }
 
 bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, bool group, bool lsOrdering)

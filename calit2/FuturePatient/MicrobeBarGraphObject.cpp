@@ -544,7 +544,7 @@ bool MicrobeBarGraphObject::processEvent(InteractionEvent * ie)
 	}
     }
 
-    return TiledWallSceneObject::processEvent(ie);
+    return FPTiledWallSceneObject::processEvent(ie);
 }
 
 void MicrobeBarGraphObject::updateCallback(int handID, const osg::Matrix & mat)
