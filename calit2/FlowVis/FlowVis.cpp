@@ -247,6 +247,8 @@ FlowDataSet * FlowVis::parseVTK(std::string filePath, int start, int frames)
 			fscanf(fileptr,"%f %f %f",&frame->verts->at(i).x(),&frame->verts->at(i).y(),&frame->verts->at(i).z());
 			frame->bb.expandBy(frame->verts->at(i));
 		    }
+		    std::cerr << "Bounds: min x: " << frame->bb.xMin() << " y: " << frame->bb.yMin() << " z: " << frame->bb.zMin() << std::endl;
+		    std::cerr << "Bounds: max x: " << frame->bb.xMax() << " y: " << frame->bb.yMax() << " z: " << frame->bb.zMax() << std::endl;
 		}
 		else if(!strcmp(buffer,"CELLS"))
 		{
@@ -498,10 +500,21 @@ VTKDataAttrib * FlowVis::parseVTKAttrib(FILE * file, std::string type, int count
 	if(svalType == "double")
 	{
 	    attrib->dataType = VDT_DOUBLE;
+	    attrib->floatMin = FLT_MAX;
+	    attrib->floatMax = FLT_MIN;
 	    attrib->vecData = new osg::Vec3Array(count);
 	    for(int i = 0; i < count; ++i)
 	    {
 		fscanf(file,"%f %f %f",&attrib->vecData->at(i).x(),&attrib->vecData->at(i).y(),&attrib->vecData->at(i).z());
+		float mag = attrib->vecData->at(i).length();
+		if(mag > attrib->floatMax)
+		{
+		    attrib->floatMax = mag;
+		}
+		if(mag < attrib->floatMin)
+		{
+		    attrib->floatMin = mag;
+		}
 	    }
 	}
 	else

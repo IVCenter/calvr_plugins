@@ -1,8 +1,10 @@
 #include "FlowObject.h"
 #include "NormalShader.h"
+#include "PlaneVecShaders.h"
 
 #include <cvrKernel/PluginHelper.h>
 
+#include <osgDB/FileUtils>
 #include <osg/PolygonMode>
 #include <osg/CullFace>
 
@@ -78,6 +80,7 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
     visTypes.push_back("None");
     visTypes.push_back("Iso Surface");
     visTypes.push_back("Plane");
+    visTypes.push_back("Vector Plane");
 
     _typeList = new MenuList();
     _typeList->setCallback(this);
@@ -86,6 +89,9 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
 
     _alphaRV = new MenuRangeValueCompact("Alpha",0.0,1.0,0.8);
     _alphaRV->setCallback(this);
+
+    _planeVecSpacingRV = new MenuRangeValue("Spacing",0.05,1.0,0.1);
+    _planeVecSpacingRV->setCallback(this);
 
     _normalProgram = new osg::Program();
     _normalProgram->setName("NormalProgram");
@@ -104,6 +110,15 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
     _normalFloatProgram->setParameter(GL_GEOMETRY_VERTICES_OUT_EXT, 3);
     _normalFloatProgram->setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_TRIANGLES);
     _normalFloatProgram->setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
+
+    _normalVecProgram = new osg::Program();
+    _normalVecProgram->setName("NormalVecProgram");
+    _normalVecProgram->addShader(new osg::Shader(osg::Shader::VERTEX,normalVecVertSrc));
+    _normalVecProgram->addShader(new osg::Shader(osg::Shader::GEOMETRY,normalFloatGeomSrc));
+    _normalVecProgram->addShader(new osg::Shader(osg::Shader::FRAGMENT,normalFloatFragSrc));
+    _normalVecProgram->setParameter(GL_GEOMETRY_VERTICES_OUT_EXT, 3);
+    _normalVecProgram->setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_TRIANGLES);
+    _normalVecProgram->setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
 
     _normalIntProgram = new osg::Program();
     _normalIntProgram->setName("NormalIntProgram");
@@ -124,6 +139,15 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
     _isoProgram->setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_LINES_ADJACENCY);
     _isoProgram->setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
 
+    _isoVecProgram = new osg::Program();
+    _isoVecProgram->setName("isoVecProgram");
+    _isoVecProgram->addShader(new osg::Shader(osg::Shader::VERTEX,isoVecVertSrc));
+    _isoVecProgram->addShader(new osg::Shader(osg::Shader::GEOMETRY,isoGeomSrc));
+    _isoVecProgram->addShader(new osg::Shader(osg::Shader::FRAGMENT,isoFragSrc));
+    _isoVecProgram->setParameter(GL_GEOMETRY_VERTICES_OUT_EXT, 4);
+    _isoVecProgram->setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_LINES_ADJACENCY);
+    _isoVecProgram->setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
+
     _planeProgram = new osg::Program();
     _planeProgram->setName("planeProgram");
     _planeProgram->addShader(new osg::Shader(osg::Shader::VERTEX,planeFloatVertSrc));
@@ -133,6 +157,24 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
     _planeProgram->setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_LINES_ADJACENCY);
     _planeProgram->setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
 
+    _planeVecProgram = new osg::Program();
+    _planeVecProgram->setName("planeVecProgram");
+    _planeVecProgram->addShader(new osg::Shader(osg::Shader::VERTEX,vecPlaneVertSrc));
+    _planeVecProgram->addShader(new osg::Shader(osg::Shader::GEOMETRY,vecPlaneGeomSrc));
+    _planeVecProgram->addShader(new osg::Shader(osg::Shader::FRAGMENT,vecPlaneFragSrc));
+    _planeVecProgram->setParameter(GL_GEOMETRY_VERTICES_OUT_EXT, 200);
+    _planeVecProgram->setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_LINES_ADJACENCY);
+    _planeVecProgram->setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_LINE_STRIP);
+
+    _planeVecMagProgram = new osg::Program();
+    _planeVecMagProgram->setName("planeVecMagProgram");
+    _planeVecMagProgram->addShader(new osg::Shader(osg::Shader::VERTEX,planeVecVertSrc));
+    _planeVecMagProgram->addShader(new osg::Shader(osg::Shader::GEOMETRY,planeGeomSrc));
+    _planeVecMagProgram->addShader(new osg::Shader(osg::Shader::FRAGMENT,planeFragSrc));
+    _planeVecMagProgram->setParameter(GL_GEOMETRY_VERTICES_OUT_EXT, 4);
+    _planeVecMagProgram->setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_LINES_ADJACENCY);
+    _planeVecMagProgram->setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
+
     _floatMinUni = new osg::Uniform(osg::Uniform::FLOAT,"min");
     _floatMaxUni = new osg::Uniform(osg::Uniform::FLOAT,"max");
     _intMinUni = new osg::Uniform(osg::Uniform::INT,"min");
@@ -140,6 +182,9 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
     _isoMaxUni = new osg::Uniform(osg::Uniform::FLOAT,"isoMax");
     _planePointUni = new osg::Uniform(osg::Uniform::FLOAT_VEC3,"planePoint");
     _planeNormalUni = new osg::Uniform(osg::Uniform::FLOAT_VEC3,"planeNormal");
+    _planeUpUni = new osg::Uniform(osg::Uniform::FLOAT_VEC3,"planeUp");
+    _planeRightUni = new osg::Uniform(osg::Uniform::FLOAT_VEC3,"planeRight");
+    _planeBasisInvUni = new osg::Uniform(osg::Uniform::FLOAT_MAT3,"planeBasisInv");
     _planeAlphaUni = new osg::Uniform(osg::Uniform::FLOAT,"alpha");
     _planeAlphaUni->set(_alphaRV->getValue());
 
@@ -210,7 +255,7 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
     attribList.push_back("None");
     for(int i = 0; i < _set->frameList[0]->pointData.size(); ++i)
     {
-	if(_set->frameList[0]->pointData[i]->attribType == VAT_SCALARS)
+	//if(_set->frameList[0]->pointData[i]->attribType == VAT_SCALARS)
 	{
 	    attribList.push_back(_set->frameList[0]->pointData[i]->name);
 	}
@@ -248,9 +293,91 @@ void FlowObject::perFrame()
 
     switch(_visType)
     {
+	case FVT_PLANE_VEC:
+	{
+	    osg::Vec3 point(0,1500,0), normal, origin, right(1,1500,0), up(0,1500,1);
+	    point = point * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
+	    origin = origin * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
+	    right = right * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
+	    up = up * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
+	    normal = origin - point;
+	    normal.normalize();
+
+	    right = right - point;
+	    right.normalize();
+	    right = right * _planeVecSpacingRV->getValue();
+
+	    up = up - point;
+	    up.normalize();
+	    up = up * _planeVecSpacingRV->getValue();
+
+	    osg::Matrixf matf;
+	    matf(0,0) = up.x();
+	    matf(0,1) = up.y();
+	    matf(0,2) = up.z();
+	    matf(0,3) = 0;
+	    matf(1,0) = right.x();
+	    matf(1,1) = right.y();
+	    matf(1,2) = right.z();
+	    matf(1,3) = 0;
+	    matf(2,0) = 0;
+	    matf(2,1) = 0;
+	    matf(2,2) = 1;
+	    matf(2,3) = 0;
+	    matf(3,0) = 0;
+	    matf(3,1) = 0;
+	    matf(3,2) = 0;
+	    matf(3,3) = 1;
+
+	    /*std::cerr << "Matrix Before" << std::endl;
+	    for(int i = 0; i < 4; ++i)
+	    {
+		for(int j = 0; j < 4; ++j)
+		{
+		    std::cerr << matf(i,j) << " ";
+		}
+		std::cerr << std::endl;
+	    }*/
+
+	    matf = osg::Matrixf::inverse(matf);
+
+	    /*std::cerr << "Matrix After" << std::endl;
+	    for(int i = 0; i < 4; ++i)
+	    {
+		for(int j = 0; j < 4; ++j)
+		{
+		    std::cerr << matf(i,j) << " ";
+		}
+		std::cerr << std::endl;
+	    }
+
+	    std::cerr << "PlanePoint x: " << point.x() << " y: " << point.y() << " z: " << point.z() << std::endl;
+
+	    osg::Vec3 temp = point * matf;
+	    std::cerr << "Point basis x: " << temp.x() << " y: " << temp.y() << " z: " << temp.z() << std::endl;
+	    temp = up * matf;
+	    std::cerr << "Up basis x: " << temp.x() << " y: " << temp.y() << " z: " << temp.z() << std::endl;
+	    temp = right * matf;
+	    std::cerr << "Right basis x: " << temp.x() << " y: " << temp.y() << " z: " << temp.z() << std::endl;*/
+
+	    osg::Matrix3 m;
+	    for(int i = 0; i < 3; ++i)
+	    {
+		for(int j = 0; j < 3; ++j)
+		{
+		    m(i,j) = matf(i,j);
+		}
+	    }
+
+	    _planePointUni->set(point);
+	    _planeNormalUni->set(normal);
+	    _planeUpUni->set(up);
+	    _planeRightUni->set(right);
+	    _planeBasisInvUni->set(m);
+	    break;
+	}
 	case FVT_PLANE:
 	{
-	    // TODO: move to config or create better plane placing system
 	    osg::Vec3 point(0,1500,0), normal, origin;
 	    point = point * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
 	    origin = origin * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
@@ -338,6 +465,11 @@ void FlowObject::setVisType(FlowVisType fvt)
 	    removeMenuItem(_alphaRV);
 	    break;
 	}
+	case FVT_PLANE_VEC:
+	{
+	    removeMenuItem(_planeVecSpacingRV);
+	    break;
+	}
 	default:
 	    break;
     }
@@ -360,6 +492,11 @@ void FlowObject::setVisType(FlowVisType fvt)
 	    addMenuItem(_alphaRV);
 	    break;
 	}
+	case FVT_PLANE_VEC:
+	{
+	    addMenuItem(_planeVecSpacingRV);
+	    break;
+	}
 	default:
 	    break;
     }
@@ -372,12 +509,13 @@ void FlowObject::setVisType(FlowVisType fvt)
 
 void FlowObject::setAttribute(std::string attrib)
 {
+    //std::cerr << "setting attrib: " << attrib << std::endl;
     bool found = false;
     for(int i = 0; i < _set->frameList[_currentFrame]->pointData.size(); ++i)
     {
 	if(_set->frameList[_currentFrame]->pointData[i]->name == attrib)
 	{
-	    if(_set->frameList[_currentFrame]->pointData[i]->attribType == VAT_SCALARS)
+	    //if(_set->frameList[_currentFrame]->pointData[i]->attribType == VAT_SCALARS)
 	    {
 		switch(_set->frameList[_currentFrame]->pointData[i]->dataType)
 		{
@@ -430,6 +568,7 @@ void FlowObject::setAttribute(std::string attrib)
 				    stateset->removeUniform(_isoMaxUni);
 				    break;
 				}
+				case FVT_PLANE_VEC:
 				case FVT_PLANE:
 				{
 				    _geode->removeDrawable(_planeGeometry);
@@ -447,13 +586,22 @@ void FlowObject::setAttribute(std::string attrib)
 			}
 		    case VDT_DOUBLE:
 			{
-			    _surfaceGeometry->getOrCreateStateSet()->setAttribute(_normalFloatProgram);
+			    if(_set->frameList[_currentFrame]->pointData[i]->attribType == VAT_SCALARS)
+			    {
+				_surfaceGeometry->getOrCreateStateSet()->setAttribute(_normalFloatProgram);
+				_surfaceGeometry->setVertexAttribArray(4,_set->frameList[_currentFrame]->pointData[i]->floatData);
+				_surfaceGeometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
+			    }
+			    else
+			    {
+				_surfaceGeometry->getOrCreateStateSet()->setAttribute(_normalVecProgram);
+				_surfaceGeometry->setVertexAttribArray(4,_set->frameList[_currentFrame]->pointData[i]->vecData);
+				_surfaceGeometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
+			    }
 			    _surfaceGeometry->getOrCreateStateSet()->addUniform(_floatMinUni);
 			    _floatMinUni->set(_set->frameList[_currentFrame]->pointData[i]->floatMin);
 			    _floatMaxUni->set(_set->frameList[_currentFrame]->pointData[i]->floatMax);
 			    _surfaceGeometry->getOrCreateStateSet()->addUniform(_floatMaxUni);
-			    _surfaceGeometry->setVertexAttribArray(4,_set->frameList[_currentFrame]->pointData[i]->floatData);
-			    _surfaceGeometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
 			    if(lookupColorTable)
 			    {
 				_surfaceGeometry->getOrCreateStateSet()->setTextureAttributeAndModes(0, lookupColorTable, osg::StateAttribute::ON);
@@ -470,16 +618,18 @@ void FlowObject::setAttribute(std::string attrib)
 				    case FVT_ISO_SURFACE:
 				    {
 					osg::StateSet * stateset = _isoGeometry->getOrCreateStateSet();
-					stateset->setAttribute(_isoProgram);
+					if(_set->frameList[_currentFrame]->pointData[i]->attribType == VAT_SCALARS)
+					{
+					    stateset->setAttribute(_isoProgram);
+					}
+					else
+					{
+					    stateset->setAttribute(_isoVecProgram);
+					}
 					stateset->addUniform(_isoMaxUni);
 					stateset->addUniform(_floatMinUni);
 					stateset->addUniform(_floatMaxUni);
 					_isoMaxUni->set(_set->attribRanges[_set->frameList[_currentFrame]->pointData[i]->name].second);
-
-					if(lookupColorTable)
-					{
-					    stateset->setTextureAttributeAndModes(0, lookupColorTable, osg::StateAttribute::ON);
-					}
 
 					if(_isoMaxRV)
 					{
@@ -490,15 +640,48 @@ void FlowObject::setAttribute(std::string attrib)
 					addMenuItem(_isoMaxRV);
 					break;
 				    }
+				    case FVT_PLANE_VEC:
+				    {
+					osg::StateSet * stateset = _planeGeometry->getOrCreateStateSet();
+					if(_set->frameList[_currentFrame]->pointData[i]->attribType == VAT_VECTORS)
+					{
+					    stateset->setAttribute(_planeVecProgram);
+					    stateset->addUniform(_planePointUni);
+					    stateset->addUniform(_planeNormalUni);
+					    stateset->addUniform(_planeUpUni);
+					    stateset->addUniform(_planeRightUni);
+					    stateset->addUniform(_planeBasisInvUni);
+					    stateset->addUniform(_floatMinUni);
+					    stateset->addUniform(_floatMaxUni);
+					    if(lookupColorTable)
+					    {
+						stateset->setTextureAttributeAndModes(0, lookupColorTable, osg::StateAttribute::ON);
+					    }
+
+					}
+					break;
+				    }
 				    case FVT_PLANE:
 				    {
 					osg::StateSet * stateset = _planeGeometry->getOrCreateStateSet();
-					stateset->setAttribute(_planeProgram);
+					if(_set->frameList[_currentFrame]->pointData[i]->attribType == VAT_SCALARS)
+					{
+					    stateset->setAttribute(_planeProgram);
+					}
+					else
+					{
+					    stateset->setAttribute(_planeVecMagProgram);
+					}
 					stateset->addUniform(_planePointUni);
 					stateset->addUniform(_planeNormalUni);
 					stateset->addUniform(_floatMinUni);
 					stateset->addUniform(_floatMaxUni);
 					stateset->addUniform(_planeAlphaUni);
+					if(lookupColorTable)
+					{
+					    stateset->setTextureAttributeAndModes(0, lookupColorTable, osg::StateAttribute::ON);
+					}
+
 					break;
 				    }
 				    default:
@@ -518,8 +701,33 @@ void FlowObject::setAttribute(std::string attrib)
 				    {
 					_geode->addDrawable(_isoGeometry);
 				    }
-				    _isoGeometry->setVertexAttribArray(4,_set->frameList[_currentFrame]->pointData[i]->floatData);
-				    _isoGeometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
+				    if(_set->frameList[_currentFrame]->pointData[i]->attribType == VAT_SCALARS)
+				    {
+					_isoGeometry->setVertexAttribArray(4,_set->frameList[_currentFrame]->pointData[i]->floatData);
+					_isoGeometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
+				    }
+				    else
+				    {
+					_isoGeometry->setVertexAttribArray(4,_set->frameList[_currentFrame]->pointData[i]->vecData);
+					_isoGeometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
+				    }
+				    break;
+				}
+				case FVT_PLANE_VEC:
+				{
+				    if(_set->frameList[_currentFrame]->pointData[i]->attribType == VAT_VECTORS)
+				    {
+					if(!_planeGeometry->getNumParents())
+					{
+					    _geode->addDrawable(_planeGeometry);
+					}
+					_planeGeometry->setVertexAttribArray(4,_set->frameList[_currentFrame]->pointData[i]->vecData);
+					_planeGeometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
+				    }
+				    else
+				    {
+					//_geode->removeDrawable(_planeGeometry);
+				    }
 				    break;
 				}
 				case FVT_PLANE:
@@ -528,8 +736,16 @@ void FlowObject::setAttribute(std::string attrib)
 				    {
 					_geode->addDrawable(_planeGeometry);
 				    }
-				    _planeGeometry->setVertexAttribArray(4,_set->frameList[_currentFrame]->pointData[i]->floatData);
-				    _planeGeometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
+				    if(_set->frameList[_currentFrame]->pointData[i]->attribType == VAT_SCALARS)
+				    {
+					_planeGeometry->setVertexAttribArray(4,_set->frameList[_currentFrame]->pointData[i]->floatData);
+					_planeGeometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
+				    }
+				    else
+				    {
+					_planeGeometry->setVertexAttribArray(4,_set->frameList[_currentFrame]->pointData[i]->vecData);
+					_planeGeometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
+				    }
 				}
 				default:
 				    break;
@@ -591,6 +807,9 @@ void FlowObject::setAttribute(std::string attrib)
 	stateset = _planeGeometry->getOrCreateStateSet();
 	stateset->removeUniform(_planePointUni);
 	stateset->removeUniform(_planeNormalUni);
+	stateset->removeUniform(_planeUpUni);
+	stateset->removeUniform(_planeRightUni);
+	stateset->removeUniform(_planeBasisInvUni);
 	stateset->removeUniform(_floatMinUni);
 	stateset->removeUniform(_floatMaxUni);
 	stateset->removeUniform(_planeAlphaUni);

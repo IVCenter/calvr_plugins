@@ -53,6 +53,35 @@ std::string normalFloatVertSrc =
 "    gl_TexCoord[1].x = clamp((value - min) / (max - min), 0.0, 1.0); \n"
 "}                                                   \n";
 
+std::string normalVecVertSrc =
+"#version 150 compatibility                          \n"
+"#extension GL_ARB_gpu_shader5 : enable              \n"
+"#extension GL_ARB_explicit_attrib_location : enable \n"
+"                                                    \n"
+"layout(location = 4) in vec3 value;                \n"
+"uniform float min;                                  \n"
+"uniform float max;                                  \n"
+"                                                    \n"
+"out vec3 ls;                                        \n"
+"                                                    \n"
+"void main(void)                                     \n"
+"{                                                   \n"
+"    gl_FrontColor = gl_Color;                       \n"
+"                                                    \n"
+"    // get vertex coordinate in camera space        \n"
+"    vec4 npos = gl_ModelViewMatrix * gl_Vertex;     \n"
+"                                                    \n"
+"    // calculate normalized light source direction, send to geometry shader \n"
+"    ls = normalize(gl_LightSource[0].position.xyz - npos.xyz); \n"
+"                                                    \n"
+"    // transform the vertex fully                   \n"
+"    gl_Position = ftransform();                     \n"
+"                                                    \n"
+"    // pass vertex to geometry shader in output variable \n"
+"    gl_TexCoord[0]  = gl_Vertex;                    \n"
+"    gl_TexCoord[1].x = clamp((length(value) - min) / (max - min), 0.0, 1.0); \n"
+"}                                                   \n";
+
 std::string normalIntVertSrc =
 "#version 150 compatibility                          \n"
 "#extension GL_ARB_gpu_shader5 : enable              \n"
@@ -174,6 +203,31 @@ std::string isoFloatVertSrc =
 "    gl_Position = gl_Vertex;                     \n"
 "                                                    \n"
 "    gl_TexCoord[0].x = value; \n"
+"}                                                   \n";
+
+std::string isoVecVertSrc =
+"#version 150 compatibility                          \n"
+"#extension GL_ARB_gpu_shader5 : enable              \n"
+"#extension GL_ARB_explicit_attrib_location : enable \n"
+"                                                    \n"
+"layout(location = 4) in vec3 value;                \n"
+"                                                    \n"
+"out vec3 ls;                                        \n"
+"                                                    \n"
+"void main(void)                                     \n"
+"{                                                   \n"
+"    gl_FrontColor = gl_Color;                       \n"
+"                                                    \n"
+"    // get vertex coordinate in camera space        \n"
+"    vec4 npos = gl_ModelViewMatrix * gl_Vertex;     \n"
+"                                                    \n"
+"    // calculate normalized light source direction, send to geometry shader \n"
+"    ls = normalize(gl_LightSource[0].position.xyz - npos.xyz); \n"
+"                                                    \n"
+"    // transform the vertex fully                   \n"
+"    gl_Position = gl_Vertex;                     \n"
+"                                                    \n"
+"    gl_TexCoord[0].x = length(value); \n"
 "}                                                   \n";
 
 std::string isoGeomSrc =
@@ -309,6 +363,23 @@ std::string planeFloatVertSrc =
 "    gl_FrontColor = gl_Color;                       \n"
 "    gl_Position = gl_Vertex;                        \n"
 "    gl_TexCoord[0].x = clamp((value - min) / (max - min), 0.0, 1.0); \n"
+"}                                                   \n";
+
+std::string planeVecVertSrc =
+"#version 150 compatibility                          \n"
+"#extension GL_ARB_gpu_shader5 : enable              \n"
+"#extension GL_ARB_explicit_attrib_location : enable \n"
+"                                                    \n"
+"layout(location = 4) in vec3 value;                \n"
+"                                                    \n"
+"uniform float min;                                  \n"
+"uniform float max;                                  \n"
+"                                                    \n"
+"void main(void)                                     \n"
+"{                                                   \n"
+"    gl_FrontColor = gl_Color;                       \n"
+"    gl_Position = gl_Vertex;                        \n"
+"    gl_TexCoord[0].x = clamp((length(value) - min) / (max - min), 0.0, 1.0); \n"
 "}                                                   \n";
 
 std::string planeGeomSrc =
