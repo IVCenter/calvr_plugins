@@ -14,7 +14,9 @@ enum FlowVisType
     FVT_NONE=0,
     FVT_ISO_SURFACE,
     FVT_PLANE,
-    FVT_PLANE_VEC
+    FVT_PLANE_VEC,
+    FVT_VORTEX_CORES,
+    FVT_SEP_ATT_LINES
 };
 
 static osg::ref_ptr<osg::Texture1D> lookupColorTable = NULL;
@@ -58,6 +60,7 @@ class FlowObject : public cvr::SceneObject
         osg::ref_ptr<osg::Program> _planeProgram;
         osg::ref_ptr<osg::Program> _planeVecMagProgram;
         osg::ref_ptr<osg::Program> _planeVecProgram;
+        osg::ref_ptr<osg::Program> _vcoreAlphaProgram;
 
         osg::ref_ptr<osg::Uniform> _floatMinUni;
         osg::ref_ptr<osg::Uniform> _floatMaxUni;
@@ -70,11 +73,16 @@ class FlowObject : public cvr::SceneObject
         osg::ref_ptr<osg::Uniform> _planeRightUni;
         osg::ref_ptr<osg::Uniform> _planeBasisInvUni;
         osg::ref_ptr<osg::Uniform> _planeAlphaUni;
+        osg::ref_ptr<osg::Uniform> _vcoreMaxUni;
+        osg::ref_ptr<osg::Uniform> _vcoreMinUni;
 
         osg::ref_ptr<osg::Geode> _geode;
         osg::ref_ptr<osg::Geometry> _surfaceGeometry;
         osg::ref_ptr<osg::Geometry> _isoGeometry;
         osg::ref_ptr<osg::Geometry> _planeGeometry;
+        osg::ref_ptr<osg::Geometry> _vcoreGeometry;
+        osg::ref_ptr<osg::Geometry> _slineGeometry;
+        osg::ref_ptr<osg::Geometry> _alineGeometry;
 };
 
 #endif

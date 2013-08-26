@@ -40,6 +40,23 @@ enum VTKDataType
     VDT_UNKNOWN
 };
 
+struct VortexCoreData
+{
+    osg::ref_ptr<osg::Vec3Array> verts;
+    std::vector<osg::ref_ptr<osg::DrawArrays> > coreSegments;
+    osg::ref_ptr<osg::FloatArray> coreStr;
+    float min;
+    float max;
+};
+
+struct SepAttLineData
+{
+    osg::ref_ptr<osg::Vec3Array> sverts;
+    std::vector<osg::ref_ptr<osg::DrawArrays> > sSegments;
+    osg::ref_ptr<osg::Vec3Array> averts;
+    std::vector<osg::ref_ptr<osg::DrawArrays> > aSegments;
+};
+
 struct VTKDataAttrib
 {
     std::string name;
@@ -57,7 +74,11 @@ struct VTKDataFrame
     osg::ref_ptr<osg::Vec3Array> verts;
     osg::ref_ptr<osg::DrawElementsUInt> indices;
     osg::ref_ptr<osg::DrawElementsUInt> surfaceInd;
+    osg::ref_ptr<osg::Vec4iArray> surfaceFacets;
+    osg::ref_ptr<osg::IntArray> surfaceCells;
     osg::ref_ptr<osg::IntArray> cellTypes;
+    VortexCoreData * vcoreData;
+    SepAttLineData * sepAttData;
     osg::BoundingBox bb;
     std::vector<VTKDataAttrib*> cellData;
     std::vector<VTKDataAttrib*> pointData;
@@ -74,6 +95,8 @@ struct FlowDataSet
     FileInfo info;
     FlowDataType type;
     std::vector<VTKDataFrame*> frameList;
+    float vcoreMin;
+    float vcoreMax;
     std::map<std::string,std::pair<float,float> > attribRanges;
 };
 
@@ -94,6 +117,8 @@ class FlowVis : public cvr::CVRPlugin, public cvr::MenuCallback
         VTKDataAttrib * parseVTKAttrib(FILE * file, std::string type, int count);
         void extractSurfaceVTK(VTKDataFrame * frame);
         void deleteVTKFrame(VTKDataFrame * frame);
+
+        void processWithFX(FlowDataSet * set);
 
         cvr::SubMenu * _flowMenu;
         cvr::SubMenu * _loadMenu;

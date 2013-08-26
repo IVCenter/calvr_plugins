@@ -18,6 +18,11 @@
 #include <climits>
 #include <cmath>
 
+#ifdef WITH_FX_LIB
+#define UNDERSCORE
+#include <FX.h>
+#endif
+
 using namespace cvr;
 
 CVRPLUGIN(FlowVis)
@@ -134,6 +139,7 @@ void FlowVis::menuCallback(MenuItem * item)
 
 			if(set->frameList.size())
 			{
+			    processWithFX(set);
 			    _loadedSet = set;
 			    _loadedObject = new FlowObject(set,_loadFiles[i]->path,true,false,false,true,true);
 			    _loadedObject->setBoundsCalcMode(SceneObject::MANUAL);
@@ -241,8 +247,8 @@ FlowDataSet * FlowVis::parseVTK(std::string filePath, int start, int frames)
 		{
 		    fscanf(fileptr,"%d %*s",&points);
 		    //std::cerr << "Points: " << points << std::endl;
-		    frame->verts = new osg::Vec3Array(points);
-		    for(int i = 0; i < points; ++i)
+		    frame->verts = new osg::Vec3Array(points+1);
+		    for(int i = 1; i <= points; ++i)
 		    {
 			fscanf(fileptr,"%f %f %f",&frame->verts->at(i).x(),&frame->verts->at(i).y(),&frame->verts->at(i).z());
 			frame->bb.expandBy(frame->verts->at(i));
@@ -268,10 +274,10 @@ FlowDataSet * FlowVis::parseVTK(std::string filePath, int start, int frames)
 			}
 			int i1,i2,i3,i4;
 			fscanf(fileptr,"%d %d %d %d",&i1, &i2, &i3, &i4);
-			frame->indices->at((i*4)+0) = i1;
-			frame->indices->at((i*4)+1) = i2;
-			frame->indices->at((i*4)+2) = i3;
-			frame->indices->at((i*4)+3) = i4;
+			frame->indices->at((i*4)+0) = i1+1;
+			frame->indices->at((i*4)+1) = i2+1;
+			frame->indices->at((i*4)+2) = i3+1;
+			frame->indices->at((i*4)+3) = i4+1;
 		    }
 
 		    numIndices *= 4;
@@ -440,10 +446,10 @@ VTKDataAttrib * FlowVis::parseVTKAttrib(FILE * file, std::string type, int count
 	if(svalType == "int")
 	{
 	    attrib->dataType = VDT_INT;
-	    attrib->intData = new osg::IntArray(count);
+	    attrib->intData = new osg::IntArray(count+1);
 	    attrib->intMin = INT_MAX;
 	    attrib->intMax = INT_MIN;
-	    for(int i = 0; i < count; ++i)
+	    for(int i = 1; i <= count; ++i)
 	    {
 		fscanf(file,"%d",&attrib->intData->at(i));
 		if(attrib->intData->at(i) < attrib->intMin)
@@ -465,10 +471,10 @@ VTKDataAttrib * FlowVis::parseVTKAttrib(FILE * file, std::string type, int count
 	else if(svalType == "double")
 	{
 	    attrib->dataType = VDT_DOUBLE;
-	    attrib->floatData = new osg::FloatArray(count);
+	    attrib->floatData = new osg::FloatArray(count+1);
 	    attrib->floatMin = FLT_MAX;
 	    attrib->floatMax = FLT_MIN;
-	    for(int i = 0; i < count; ++i)
+	    for(int i = 1; i <= count; ++i)
 	    {
 		fscanf(file,"%f",&attrib->floatData->at(i));
 		if(attrib->floatData->at(i) < attrib->floatMin)
@@ -502,8 +508,8 @@ VTKDataAttrib * FlowVis::parseVTKAttrib(FILE * file, std::string type, int count
 	    attrib->dataType = VDT_DOUBLE;
 	    attrib->floatMin = FLT_MAX;
 	    attrib->floatMax = FLT_MIN;
-	    attrib->vecData = new osg::Vec3Array(count);
-	    for(int i = 0; i < count; ++i)
+	    attrib->vecData = new osg::Vec3Array(count+1);
+	    for(int i = 1; i <= count; ++i)
 	    {
 		fscanf(file,"%f %f %f",&attrib->vecData->at(i).x(),&attrib->vecData->at(i).y(),&attrib->vecData->at(i).z());
 		float mag = attrib->vecData->at(i).length();
@@ -547,6 +553,7 @@ struct face
 	indices[2] = c;
     }
     unsigned int indices[3];
+    int cell;
 };
 
 void FlowVis::extractSurfaceVTK(VTKDataFrame * frame)
@@ -565,6 +572,7 @@ void FlowVis::extractSurfaceVTK(VTKDataFrame * frame)
 
 	for(int j = 0; j < faceList.size(); ++j)
 	{
+	    faceList[j].cell = (i / 4) + 1;
 	    unsigned int first,second,third;
 	    if(faceList[j].indices[0] >= faceList[j].indices[1])
 	    {
@@ -615,6 +623,9 @@ void FlowVis::extractSurfaceVTK(VTKDataFrame * frame)
 	}
     }
 
+    frame->surfaceFacets = new osg::Vec4iArray();
+    frame->surfaceCells = new osg::IntArray();
+
     for(std::map<unsigned int, std::map<unsigned int, std::map<unsigned int, std::pair<face,int> > > >::iterator it = faces.begin(); it != faces.end(); ++it)
     {
 	for(std::map<unsigned int, std::map<unsigned int, std::pair<face,int> > >::iterator itt = it->second.begin(); itt != it->second.end(); ++itt)
@@ -626,6 +637,8 @@ void FlowVis::extractSurfaceVTK(VTKDataFrame * frame)
 		    frame->surfaceInd->push_back(ittt->second.first.indices[0]);
 		    frame->surfaceInd->push_back(ittt->second.first.indices[1]);
 		    frame->surfaceInd->push_back(ittt->second.first.indices[2]);
+		    frame->surfaceFacets->push_back(osg::Vec4i(ittt->second.first.indices[0],ittt->second.first.indices[1],ittt->second.first.indices[2],0));
+		    frame->surfaceCells->push_back(ittt->second.first.cell);
 		}
 	    }
 	}
@@ -653,3 +666,309 @@ void FlowVis::deleteVTKFrame(VTKDataFrame * frame)
 
     delete frame;
 }
+
+FlowDataSet * fxSet = NULL;
+int fxFrame = 0;
+
+void FlowVis::processWithFX(FlowDataSet * set)
+{
+#ifdef WITH_FX_LIB
+    std::cerr << "Processing set with FX library." << std::endl;
+
+    if(set)
+    {
+	for(int i = 0; i < set->frameList.size(); ++i)
+	{
+	    // init fx library
+
+	    // assuming dry air at 20c for the moment
+	    float gamma = 1.4;
+	    int iopt = 0;
+	    int knode = set->frameList[i]->verts->size()-1;
+	    int nhalo = 0, npyra = 0, nprism = 0, nhexa = 0, nblock = 0;
+	    int ntets = set->frameList[i]->indices->size() / 4;
+	    int * blocks = NULL;
+	    int nhcell = 0;
+	    int nfacet = set->frameList[i]->surfaceCells->size();
+	    int nbc = 1;
+	    int flag = 1 + 2 + 4 + 8;
+
+	    fxSet = set;
+	    fxFrame = i;
+
+	    FX_INIT(&gamma,&iopt,&knode,&nhalo,&ntets,&npyra,&nprism,&nhexa,&nblock,blocks,&nhcell,&nfacet,&nbc,&flag);
+	    std::cerr << "FX_Init return: " << flag << std::endl;
+
+	    int type = 0;
+	    int numSeg;
+	    int * segEnds;
+	    float * segPoints;
+	    float * coreStrength;
+
+	    std::cerr << "Finding vortex cores..." << std::endl;
+	    FX_VORTEXCORE(&type,&numSeg,&segEnds,&segPoints,&coreStrength);
+	    std::cerr << "Got " << numSeg << " segments" << std::endl;
+	    if(numSeg)
+	    {
+		VortexCoreData * vcore = new VortexCoreData;
+		set->frameList[i]->vcoreData = vcore;
+		
+		vcore->min = FLT_MAX;
+		vcore->max = FLT_MIN;
+
+		vcore->verts = new osg::Vec3Array(segEnds[numSeg-1]);
+		vcore->coreStr = new osg::FloatArray(segEnds[numSeg-1]);
+		for(int j = 0; j < segEnds[numSeg-1]; ++j)
+		{
+		    vcore->verts->at(j) = osg::Vec3(segPoints[(j*3)+0],segPoints[(j*3)+1],segPoints[(j*3)+2]);
+		    vcore->coreStr->at(j) = coreStrength[j];
+		    if(coreStrength[j] < vcore->min)
+		    {
+			vcore->min = coreStrength[j];
+		    }
+		    if(coreStrength[j] > vcore->max)
+		    {
+			vcore->max = coreStrength[j];
+		    }
+		}
+
+		int start = 0;
+		for(int j = 0; j < numSeg; ++j)
+		{
+		    vcore->coreSegments.push_back(new osg::DrawArrays(GL_LINE_STRIP,start,segEnds[j]-start));
+		    start = segEnds[j];
+		}
+
+		free(segEnds);
+		free(segPoints);
+		free(coreStrength);
+	    }
+	    else
+	    {
+		set->frameList[i]->vcoreData = NULL;
+	    }
+
+	    if(nbc)
+	    {
+		int sEnds[nbc];
+		float * sPoints;
+		int aEnds[nbc];
+		float * aPoints;
+
+		std::cerr << "Finding Sep/Att lines..." << std::endl;
+		FX_SEPNLINE(sEnds,&sPoints,aEnds,&aPoints);
+
+		SepAttLineData * saData = new SepAttLineData;
+		set->frameList[i]->sepAttData = saData;
+		saData->sverts = new osg::Vec3Array(sEnds[nbc-1]);
+		saData->averts = new osg::Vec3Array(aEnds[nbc-1]);
+
+		memcpy(&saData->sverts->at(0),sPoints,sEnds[nbc-1]*3*sizeof(float));
+		memcpy(&saData->averts->at(0),aPoints,aEnds[nbc-1]*3*sizeof(float));
+
+		int sStart = 0;
+		int aStart = 0;
+		for(int j = 0; j < nbc; ++j)
+		{
+		    saData->sSegments.push_back(new osg::DrawArrays(GL_LINES,sStart,sEnds[j]-sStart));
+		    saData->aSegments.push_back(new osg::DrawArrays(GL_LINES,aStart,aEnds[j]-aStart));
+		    sStart = sEnds[j];
+		    aStart = aEnds[j];
+		}
+
+		free(sPoints);
+		free(aPoints);
+	    }
+	    else
+	    {
+		set->frameList[i]->sepAttData = NULL;
+	    }
+
+	    std::cerr << "Getting shock info..." << std::endl;
+	    float * shock;
+	    FX_SHOCKFIND(&shock);
+
+	    if(shock)
+	    {
+		VTKDataAttrib * attr = new VTKDataAttrib;
+		attr->name = "Shock";
+		attr->attribType = VAT_SCALARS;
+		attr->dataType = VDT_DOUBLE;
+		attr->floatMin = FLT_MAX;
+		attr->floatMax = FLT_MIN;
+
+		attr->floatData = new osg::FloatArray(set->frameList[i]->verts->size());
+		for(int j = 1; j < attr->floatData->size(); ++j)
+		{
+		    attr->floatData->at(j) = shock[j-1];
+		    if(shock[j-1] < attr->floatMin)
+		    {
+			attr->floatMin = shock[j-1];
+		    }
+		    if(shock[j-1] > attr->floatMax)
+		    {
+			attr->floatMax = shock[j-1];
+		    }
+		}
+
+		set->frameList[i]->pointData.push_back(attr);
+
+		free(shock);
+	    }
+
+	    FX_CLOSE();
+	}
+
+	set->vcoreMin = FLT_MAX;
+	set->vcoreMax = FLT_MIN;
+	for(int i = 0; i < set->frameList.size(); ++i)
+	{
+	    if(!set->frameList[i]->vcoreData)
+	    {
+		continue;
+	    }
+	    if(set->frameList[i]->vcoreData->min < set->vcoreMin)
+	    {
+		set->vcoreMin = set->frameList[i]->vcoreData->min;
+	    }
+	    if(set->frameList[i]->vcoreData->max > set->vcoreMax)
+	    {
+		set->vcoreMax = set->frameList[i]->vcoreData->max;
+	    }
+	}
+
+	float min = FLT_MAX;
+	float max = FLT_MIN;
+	for(int i = 0; i < set->frameList.size(); ++i)
+	{
+	    for(int j = 0; j < set->frameList[i]->pointData.size(); ++j)
+	    {
+		if(set->frameList[i]->pointData[j]->name != "Shock")
+		{
+		    continue;
+		}
+		if(set->frameList[i]->pointData[j]->floatMin < min)
+		{
+		    min = set->frameList[i]->pointData[j]->floatMin;
+		}
+		if(set->frameList[i]->pointData[j]->floatMax < max)
+		{
+		    max = set->frameList[i]->pointData[j]->floatMax;
+		}
+	    }
+	}
+	set->attribRanges["Shock"] = std::pair<float,float>(min,max);
+    }
+    else
+    {
+	fxSet = NULL;
+    }
+    
+#else
+    if(set)
+    {
+	for(int i = 0; i < set->frameList.size(); ++i)
+	{
+	    set->frameList[i]->vcoreData = NULL;
+	    set->frameList[i]->sepAttData = NULL;
+	}
+    }
+    std::cerr << "Not built with FX library." << std::endl;
+#endif
+}
+
+#ifdef WITH_FX_LIB
+
+void FXCELLPTR(int **tets, int **pyras, int **prisms, int **hexas, int *halo)
+{
+    std::cerr << "cell ptr" << std::endl;
+    *pyras = NULL;
+    *prisms = NULL;
+    *hexas = NULL;
+    
+     if(fxSet)
+     {
+	 *tets = (int*)&fxSet->frameList[fxFrame]->indices->at(0);
+     }
+}
+
+void FXGRIDPTR(float **xyz, float *hxyz)
+{
+    std::cerr << "grid ptr" << std::endl;
+    if(fxSet)
+    {
+	// one biased arrays
+	*xyz = (float*)&fxSet->frameList[fxFrame]->verts->at(1);
+    }
+}
+
+void FXSURFACEPTR(int *nsurf, int **cell, int **facet)
+{
+    std::cerr << "surface ptr" << std::endl;
+  if(!fxSet)
+  {
+      return;
+  }
+  // hmm, is this one biased too? maybe
+  nsurf[0] = fxSet->frameList[fxFrame]->surfaceCells->size();
+  nsurf[1] = 6;
+
+  *cell = &fxSet->frameList[fxFrame]->surfaceCells->at(0);
+  *facet = (int*)&fxSet->frameList[fxFrame]->surfaceFacets->at(0);
+}
+
+void FXSCAL(int *type, float *s, float *hs)
+{
+    std::cerr << "scal type: " << *type << std::endl;
+
+    if(*type == 2)
+    {
+	// pressure
+	for(int i = 0; i < fxSet->frameList[fxFrame]->pointData.size(); ++i)
+	{
+	    if(fxSet->frameList[fxFrame]->pointData[i]->name == "Pressure")
+	    {
+		memcpy(s,&fxSet->frameList[fxFrame]->pointData[i]->floatData->at(1),(fxSet->frameList[fxFrame]->pointData[i]->floatData->size()-1)*sizeof(float));
+		break;
+	    }
+	}
+    }
+    else if(*type == 3)
+    {
+	// mach number
+	for(int i = 0; i < fxSet->frameList[fxFrame]->pointData.size(); ++i)
+	{
+	    if(fxSet->frameList[fxFrame]->pointData[i]->name == "Velocity")
+	    {
+		for(int j = 1; j < fxSet->frameList[fxFrame]->pointData[i]->vecData->size(); ++j)
+		{
+		    s[j-1] = fxSet->frameList[fxFrame]->pointData[i]->vecData->at(j).length() / 343.6;
+		}
+		break;
+	    }
+	}
+    }
+}
+
+void FXVELPTR(float **vel, float *hvel)
+{
+    std::cerr << "vel ptr" << std::endl;
+    if(!fxSet)
+    {
+	return;
+    }
+
+    for(int i = 0; i < fxSet->frameList[fxFrame]->pointData.size(); ++i)
+    {
+	if(fxSet->frameList[fxFrame]->pointData[i]->name == "Velocity" && fxSet->frameList[fxFrame]->pointData[i]->attribType == VAT_VECTORS && fxSet->frameList[fxFrame]->pointData[i]->dataType == VDT_DOUBLE)
+
+	{
+	    //std::cerr << "Found vel" << std::endl;
+	    // one biased
+	    *vel = (float*)&fxSet->frameList[fxFrame]->pointData[i]->vecData->at(1);
+	    break;
+	}
+    }
+}
+
+#endif

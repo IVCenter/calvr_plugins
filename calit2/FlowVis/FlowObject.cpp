@@ -1,6 +1,7 @@
 #include "FlowObject.h"
 #include "NormalShader.h"
 #include "PlaneVecShaders.h"
+#include "VortexCoreShaders.h"
 
 #include <cvrKernel/PluginHelper.h>
 
@@ -45,7 +46,7 @@ void initColorTable()
 	data[(3*i)+0] = (unsigned char)((colorList[bottomIndex].x() * (1.0 - ratio) + colorList[topIndex].x() * ratio) * 255.0);
 	data[(3*i)+1] = (unsigned char)((colorList[bottomIndex].y() * (1.0 - ratio) + colorList[topIndex].y() * ratio) * 255.0);
 	data[(3*i)+2] = (unsigned char)((colorList[bottomIndex].z() * (1.0 - ratio) + colorList[topIndex].z() * ratio) * 255.0);
-	std::cerr << "color: " << (int)data[(3*i)+0] << " " << (int)data[(3*i)+1] << " " << (int)data[(3*i)+2] << std::endl;
+	//std::cerr << "color: " << (int)data[(3*i)+0] << " " << (int)data[(3*i)+1] << " " << (int)data[(3*i)+2] << std::endl;
     }
 
     lookupColorTable = new osg::Texture1D(image);
@@ -81,6 +82,8 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
     visTypes.push_back("Iso Surface");
     visTypes.push_back("Plane");
     visTypes.push_back("Vector Plane");
+    visTypes.push_back("Vortex Cores");
+    visTypes.push_back("Sep Att Lines");
 
     _typeList = new MenuList();
     _typeList->setCallback(this);
@@ -175,6 +178,10 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
     _planeVecMagProgram->setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_LINES_ADJACENCY);
     _planeVecMagProgram->setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
 
+    _vcoreAlphaProgram = new osg::Program();
+    _vcoreAlphaProgram->setName("vcoreAlphaProgram");
+    _vcoreAlphaProgram->addShader(new osg::Shader(osg::Shader::VERTEX,vcoreAlphaVertSrc));
+
     _floatMinUni = new osg::Uniform(osg::Uniform::FLOAT,"min");
     _floatMaxUni = new osg::Uniform(osg::Uniform::FLOAT,"max");
     _intMinUni = new osg::Uniform(osg::Uniform::INT,"min");
@@ -187,6 +194,10 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
     _planeBasisInvUni = new osg::Uniform(osg::Uniform::FLOAT_MAT3,"planeBasisInv");
     _planeAlphaUni = new osg::Uniform(osg::Uniform::FLOAT,"alpha");
     _planeAlphaUni->set(_alphaRV->getValue());
+    _vcoreMaxUni = new osg::Uniform(osg::Uniform::FLOAT,"max");
+    _vcoreMaxUni->set(_set->vcoreMax);
+    _vcoreMinUni = new osg::Uniform(osg::Uniform::FLOAT,"min");
+    _vcoreMinUni->set(_set->vcoreMin);
 
     _geode = new osg::Geode();
     osg::Geometry * geom = new osg::Geometry();
@@ -249,6 +260,70 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
     stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
     stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
     stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+
+    _vcoreGeometry = new osg::Geometry();
+    _vcoreGeometry->setUseDisplayList(false);
+    _vcoreGeometry->setUseVertexBufferObjects(true);
+    colors = new osg::Vec4Array(1);
+    colors->at(0) = osg::Vec4(1.0,0,0,1.0);
+    _vcoreGeometry->setColorArray(colors);
+    _vcoreGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+
+    if(_set->frameList[0]->vcoreData)
+    {
+	//std::cerr << "Setting frame 0 vortex core data" << std::endl;
+	_vcoreGeometry->setVertexArray(_set->frameList[0]->vcoreData->verts);
+	for(int i = 0; i < _set->frameList[0]->vcoreData->coreSegments.size(); ++i)
+	{
+	    _vcoreGeometry->addPrimitiveSet(_set->frameList[0]->vcoreData->coreSegments[i]);
+	}
+	_vcoreGeometry->setVertexAttribArray(4,_set->frameList[0]->vcoreData->coreStr);
+	_vcoreGeometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
+    }
+
+    stateset = _vcoreGeometry->getOrCreateStateSet();
+    stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+    stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
+    stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+    stateset->addUniform(_vcoreMaxUni);
+    stateset->addUniform(_vcoreMinUni);
+    stateset->setAttribute(_vcoreAlphaProgram);
+
+    _slineGeometry = new osg::Geometry();
+    _slineGeometry->setUseDisplayList(false);
+    _slineGeometry->setUseVertexBufferObjects(true);
+    colors = new osg::Vec4Array(1);
+    colors->at(0) = osg::Vec4(1.0,0,0,1.0);
+    _slineGeometry->setColorArray(colors);
+    _slineGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+
+    stateset = _slineGeometry->getOrCreateStateSet();
+    stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+
+    _alineGeometry = new osg::Geometry();
+    _alineGeometry->setUseDisplayList(false);
+    _alineGeometry->setUseVertexBufferObjects(true);
+    colors = new osg::Vec4Array(1);
+    colors->at(0) = osg::Vec4(0,1.0,0,1.0);
+    _alineGeometry->setColorArray(colors);
+    _alineGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+
+    stateset = _alineGeometry->getOrCreateStateSet();
+    stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+
+    if(_set->frameList[0]->sepAttData)
+    {
+	_slineGeometry->setVertexArray(_set->frameList[0]->sepAttData->sverts);
+	for(int i = 0; i < _set->frameList[0]->sepAttData->sSegments.size(); ++i)
+	{
+	    _slineGeometry->addPrimitiveSet(_set->frameList[0]->sepAttData->sSegments[i]);
+	}
+	_alineGeometry->setVertexArray(_set->frameList[0]->sepAttData->averts);
+	for(int i = 0; i < _set->frameList[0]->sepAttData->aSegments.size(); ++i)
+	{
+	    _alineGeometry->addPrimitiveSet(_set->frameList[0]->sepAttData->aSegments[i]);
+	}
+    }
 
     _lastAttribute = "";
     std::vector<std::string> attribList;
@@ -329,36 +404,7 @@ void FlowObject::perFrame()
 	    matf(3,2) = 0;
 	    matf(3,3) = 1;
 
-	    /*std::cerr << "Matrix Before" << std::endl;
-	    for(int i = 0; i < 4; ++i)
-	    {
-		for(int j = 0; j < 4; ++j)
-		{
-		    std::cerr << matf(i,j) << " ";
-		}
-		std::cerr << std::endl;
-	    }*/
-
 	    matf = osg::Matrixf::inverse(matf);
-
-	    /*std::cerr << "Matrix After" << std::endl;
-	    for(int i = 0; i < 4; ++i)
-	    {
-		for(int j = 0; j < 4; ++j)
-		{
-		    std::cerr << matf(i,j) << " ";
-		}
-		std::cerr << std::endl;
-	    }
-
-	    std::cerr << "PlanePoint x: " << point.x() << " y: " << point.y() << " z: " << point.z() << std::endl;
-
-	    osg::Vec3 temp = point * matf;
-	    std::cerr << "Point basis x: " << temp.x() << " y: " << temp.y() << " z: " << temp.z() << std::endl;
-	    temp = up * matf;
-	    std::cerr << "Up basis x: " << temp.x() << " y: " << temp.y() << " z: " << temp.z() << std::endl;
-	    temp = right * matf;
-	    std::cerr << "Right basis x: " << temp.x() << " y: " << temp.y() << " z: " << temp.z() << std::endl;*/
 
 	    osg::Matrix3 m;
 	    for(int i = 0; i < 3; ++i)
@@ -434,6 +480,34 @@ void FlowObject::setFrame(int frame)
     _planeGeometry->addPrimitiveSet(_set->frameList[frame]->indices);
     _planeGeometry->setVertexArray(_set->frameList[frame]->verts);
 
+    _vcoreGeometry->removePrimitiveSet(0,_vcoreGeometry->getNumPrimitiveSets());
+    if(_set->frameList[frame]->vcoreData)
+    {
+	_vcoreGeometry->setVertexArray(_set->frameList[frame]->vcoreData->verts);
+	for(int i = 0; i < _set->frameList[frame]->vcoreData->coreSegments.size(); ++i)
+	{
+	    _vcoreGeometry->addPrimitiveSet(_set->frameList[frame]->vcoreData->coreSegments[i]);
+	}
+	_vcoreGeometry->setVertexAttribArray(4,_set->frameList[frame]->vcoreData->coreStr);
+	_vcoreGeometry->setVertexAttribBinding(4,osg::Geometry::BIND_PER_VERTEX);
+    }
+
+    _slineGeometry->removePrimitiveSet(0,_slineGeometry->getNumPrimitiveSets());
+    _alineGeometry->removePrimitiveSet(0,_alineGeometry->getNumPrimitiveSets());
+    if(_set->frameList[frame]->sepAttData)
+    {
+	_slineGeometry->setVertexArray(_set->frameList[frame]->sepAttData->sverts);
+	for(int i = 0; i < _set->frameList[frame]->sepAttData->sSegments.size(); ++i)
+	{
+	    _slineGeometry->addPrimitiveSet(_set->frameList[frame]->sepAttData->sSegments[i]);
+	}
+	_alineGeometry->setVertexArray(_set->frameList[frame]->sepAttData->averts);
+	for(int i = 0; i < _set->frameList[frame]->sepAttData->aSegments.size(); ++i)
+	{
+	    _alineGeometry->addPrimitiveSet(_set->frameList[frame]->sepAttData->aSegments[i]);
+	}
+    }
+
     _currentFrame = frame;
 
     setAttribute(_loadedAttribList->getValue());
@@ -470,6 +544,17 @@ void FlowObject::setVisType(FlowVisType fvt)
 	    removeMenuItem(_planeVecSpacingRV);
 	    break;
 	}
+	case FVT_VORTEX_CORES:
+	{
+	    _geode->removeDrawable(_vcoreGeometry);
+	    break;
+	}
+	case FVT_SEP_ATT_LINES:
+	{
+	    _geode->removeDrawable(_slineGeometry);
+	    _geode->removeDrawable(_alineGeometry);
+	    break;
+	}
 	default:
 	    break;
     }
@@ -495,6 +580,17 @@ void FlowObject::setVisType(FlowVisType fvt)
 	case FVT_PLANE_VEC:
 	{
 	    addMenuItem(_planeVecSpacingRV);
+	    break;
+	}
+	case FVT_VORTEX_CORES:
+	{
+	    _geode->addDrawable(_vcoreGeometry);
+	    break;
+	}
+	case FVT_SEP_ATT_LINES:
+	{
+	    _geode->addDrawable(_slineGeometry);
+	    _geode->addDrawable(_alineGeometry);
 	    break;
 	}
 	default:
