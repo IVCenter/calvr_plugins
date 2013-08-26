@@ -37,7 +37,7 @@ using namespace cvr;
 
 CVRPLUGIN(ModelLoader)
 
-ModelLoader::ModelLoader() : FileLoadCallback("iv,wrl,vrml,obj,osg,earth")
+ModelLoader::ModelLoader() : FileLoadCallback("iv,wrl,vrml,obj,osg,earth,3ds")
 {
 }
 
@@ -622,7 +622,7 @@ void ModelLoader::message(int type, char * &data, bool collaborative)
     }
 }
 
-bool ModelLoader::loadFile(std::string file)
+SceneObject* ModelLoader::loadFile(std::string file)
 {
     std::cerr << "ModelLoader: Loading file: " << file << std::endl;
 
@@ -630,7 +630,7 @@ bool ModelLoader::loadFile(std::string file)
     if(modelNode==NULL)
     {
 	cerr << "ModelLoader: Error reading file " << file << endl;
-	return false;
+	return NULL;
     }
     else
     {
@@ -661,30 +661,12 @@ bool ModelLoader::loadFile(std::string file)
     modelNode->accept(tr2v);
 
     SceneObject * so = new SceneObject(name,false,false,false,true,false);
-    PluginHelper::registerSceneObject(so,"ModelLoader");
-    osg::Switch * sNode = new osg::Switch();
-    sNode->addChild(modelNode);
-    so->addChild(sNode);
-    so->attachToScene();
+    so->addChild(modelNode);
     so->setNavigationOn(true);
     so->addMoveMenuItem();
     so->addNavigationMenuItem();
 
-    MenuButton * mb;
-
-    mb = new MenuButton("Reset Position");
-    mb->setCallback(this);
-    so->addMenuItem(mb);
-    _resetMap[so] = mb;
-
-    mb = new MenuButton("Delete");
-    mb->setCallback(this);
-    so->addMenuItem(mb);
-    _deleteMap[so] = mb;
-
-    _loadedObjects.push_back(so);
-
-    return true;
+    return so;
 }
 
 void ModelLoader::writeConfigFile()

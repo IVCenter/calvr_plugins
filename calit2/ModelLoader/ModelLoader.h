@@ -36,7 +36,7 @@ class ModelLoader : public cvr::MenuCallback, public cvr::CVRPlugin, public cvr:
         void preFrame();
 
         virtual void message(int type, char * &data, bool collaborative=false);
-        virtual bool loadFile(std::string file);
+        virtual cvr::SceneObject* loadFile(std::string file);
 
     protected:
         cvr::SubMenu * MLMenu, * loadMenu;
