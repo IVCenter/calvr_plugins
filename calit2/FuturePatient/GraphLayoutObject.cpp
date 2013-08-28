@@ -1050,20 +1050,13 @@ void GraphLayoutObject::makeGeometry()
 
     osg::Vec4Array* colors = new osg::Vec4Array;
     colors->push_back(color);
+    colors->push_back(color);
+    colors->push_back(color);
+    colors->push_back(color);
+    colors->push_back(osg::Vec4(1.0,1.0,1.0,1.0));
     colors->push_back(osg::Vec4(1.0,1.0,1.0,1.0));
 
-    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
-    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
-		    osg::Array::UIntArrayType,4,4>;
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(1);
-    colorIndexArray->push_back(1);
-
     geo->setColorArray(colors);
-    geo->setColorIndices(colorIndexArray);
     geo->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
 
     _layoutGeode->addDrawable(geo);

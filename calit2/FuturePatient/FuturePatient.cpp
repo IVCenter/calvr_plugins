@@ -163,6 +163,10 @@ bool FuturePatient::init()
     _microbeLoadUCAll->setCallback(this);
     _microbeSpecialMenu->addItem(_microbeLoadUCAll);
 
+    _microbeLoadPointLine = new MenuButton("Point Line Graph");
+    _microbeLoadPointLine->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadPointLine);
+
     _microbeGraphType = new MenuList();
     _microbeGraphType->setCallback(this);
     _microbeMenu->addItem(_microbeGraphType);
@@ -1406,6 +1410,20 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    {
 		_currentSBGraph->addSpecialGraph(mgt);
 	    }
+	}
+    }
+
+    if(item == _microbeLoadPointLine)
+    {
+	MicrobePointLineObject * mplo = new MicrobePointLineObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	if(mplo->setGraph())
+	{
+	    checkLayout();
+	    _layoutObject->addGraphObject(mplo);
+	}
+	else
+	{
+	    delete mplo;
 	}
     }
 

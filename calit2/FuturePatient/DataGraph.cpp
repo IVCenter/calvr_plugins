@@ -148,18 +148,8 @@ DataGraph::DataGraph()
 
     osg::Vec4Array* colors = new osg::Vec4Array;
     colors->push_back(color);
-
-    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
-    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
-		    osg::Array::UIntArrayType,4,4>;
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-
     geo->setColorArray(colors);
-    geo->setColorIndices(colorIndexArray);
-    geo->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+    geo->setColorBinding(osg::Geometry::BIND_OVERALL);
 
     _xAxisTimestamp = false;
     _minDisplayX = 0;
@@ -1017,18 +1007,8 @@ void DataGraph::makeHover()
 
     osg::Vec4Array* colors = new osg::Vec4Array;
     colors->push_back(color);
-
-    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
-    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
-		    osg::Array::UIntArrayType,4,4>;
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-
     geo->setColorArray(colors);
-    geo->setColorIndices(colorIndexArray);
-    geo->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+    geo->setColorBinding(osg::Geometry::BIND_OVERALL);
 
     _hoverBGGeode->addDrawable(geo);
 
@@ -1065,16 +1045,8 @@ void DataGraph::makeBar()
 
     osg::Vec4Array* colors = new osg::Vec4Array;
     colors->push_back(osg::Vec4(1.0,1.0,0,1.0));
-
-    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
-    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
-		    osg::Array::UIntArrayType,4,4>;
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-
     geo->setColorArray(colors);
-    geo->setColorIndices(colorIndexArray);
-    geo->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+    geo->setColorBinding(osg::Geometry::BIND_OVERALL);
 }
 
 void DataGraph::update()
@@ -1115,6 +1087,10 @@ void DataGraph::update()
 
 	float minxBound = ((0.5 * myRangeSize) - myRangeCenter) / myRangeSize;
 	float maxxBound = ((0.5 * myRangeSize) + (1.0 - myRangeCenter)) / myRangeSize;
+
+	float delta = (maxxBound - minxBound) * 0.00001;
+	minxBound -= delta;
+	maxxBound += delta;
 
 	displayRanges[it->first] = std::pair<float,float>(minxBound,maxxBound);
 

@@ -23,6 +23,8 @@ SET(PLUGIN_HEADERS
     HeatMapGraph.h
     StrainHMObject.h
     FPTiledWallSceneObject.h
+    MicrobePointLineObject.h
+    PointLineGraph.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -51,6 +53,8 @@ ADD_LIBRARY(${LIB_NAME}
     HeatMapGraph.cpp
     StrainHMObject.cpp
     FPTiledWallSceneObject.cpp
+    MicrobePointLineObject.cpp
+    PointLineGraph.cpp
 )
 
 FIND_PACKAGE(Mysql)

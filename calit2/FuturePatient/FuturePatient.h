@@ -21,7 +21,7 @@
 #include "MicrobeBarGraphObject.h"
 #include "MicrobeScatterGraphObject.h"
 #include "SymptomGraphObject.h"
-
+#include "MicrobePointLineObject.h"
 
 class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 {
@@ -111,6 +111,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeLoadHealthyAll;
         cvr::MenuButton * _microbeLoadHealthy105All;
         cvr::MenuButton * _microbeLoadUCAll;
+        cvr::MenuButton * _microbeLoadPointLine;
 
         cvr::SubMenu * _strainMenu;
         cvr::MenuList * _strainGroupList;
