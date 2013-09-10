@@ -50,13 +50,22 @@ struct patientData
 bool MicrobePointLineObject::setGraph()
 {
     std::vector<std::string> phylumOrder;
-    phylumOrder.push_back("Bacteroidetes");
+    // larry order
+    /*phylumOrder.push_back("Bacteroidetes");
     phylumOrder.push_back("Firmicutes");
     phylumOrder.push_back("Verrucomicrobia");
     phylumOrder.push_back("Proteobacteria");
     phylumOrder.push_back("Actinobacteria");
     phylumOrder.push_back("Fusobacteria");
+    phylumOrder.push_back("Euryarchaeota");*/
+
+    phylumOrder.push_back("Bacteroidetes");
+    phylumOrder.push_back("Firmicutes");
+    phylumOrder.push_back("Actinobacteria");
+    phylumOrder.push_back("Proteobacteria");
+    phylumOrder.push_back("Verrucomicrobia");
     phylumOrder.push_back("Euryarchaeota");
+    phylumOrder.push_back("Fusobacteria");
 
     int numPatients = 0;
     std::vector<patientData> data;
