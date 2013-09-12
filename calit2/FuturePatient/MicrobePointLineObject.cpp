@@ -47,7 +47,7 @@ struct patientData
     float data[7];
 };
 
-bool MicrobePointLineObject::setGraph()
+bool MicrobePointLineObject::setGraph(bool expandAxis)
 {
     std::vector<std::string> phylumOrder;
     // larry order
@@ -172,7 +172,14 @@ bool MicrobePointLineObject::setGraph()
     for(int i = 0; i < data.size(); ++i)
     {
 	int index = (int)data[i].type;
-	patientNames[index].push_back(data[i].name);
+
+	char timestamp[512];
+	std::string name = data[i].name;
+	name += " - ";
+	strftime(timestamp,511,"%F",localtime(&data[i].timestamp));
+	name += timestamp;
+
+	patientNames[index].push_back(name);
 	values[index].push_back(std::vector<float>());
 	for(int j = 0; j < 7; ++j)
 	{
@@ -180,7 +187,7 @@ bool MicrobePointLineObject::setGraph()
 	}
     }
 
-    bool tret = _graph->setGraph("Phylum Line Chart",groupNames,phylumOrder,patientNames,values);
+    bool tret = _graph->setGraph("Phylum Line Chart",groupNames,phylumOrder,patientNames,values,expandAxis);
 
     if(tret)
     {

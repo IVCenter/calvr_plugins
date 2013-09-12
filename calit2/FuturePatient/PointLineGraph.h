@@ -23,7 +23,7 @@ class PointLineGraph
         PointLineGraph(float width, float height);
         ~PointLineGraph();
 
-        bool setGraph(std::string title, std::vector<std::string> & groupNames, std::vector<std::string> & catNames, std::vector<std::vector<std::string> > & dataNames, std::vector<std::vector<std::vector<float> > > & data);
+        bool setGraph(std::string title, std::vector<std::string> & groupNames, std::vector<std::string> & catNames, std::vector<std::vector<std::string> > & dataNames, std::vector<std::vector<std::vector<float> > > & data, bool expandAxis = false);
 
         void setDisplaySize(float width, float height);
 
@@ -58,6 +58,8 @@ class PointLineGraph
         float _width;
         float _height;
 
+        bool _expandAxis;
+
         std::string _title;
         std::vector<std::string> _groupLabels;
         std::vector<std::string> _catLabels;
@@ -68,6 +70,11 @@ class PointLineGraph
         float _leftPaddingMult, _rightPaddingMult, _topPaddingMult, _bottomPaddingMult, _labelPaddingMult;
         float _titlePaddingMult, _catLabelPaddingMult;
         float _graphLeft, _graphRight, _graphTop, _graphBottom;
+
+        std::vector<std::pair<float,float> > _catLinRanges;
+        std::vector<std::pair<float,float> > _catLogRanges;
+        std::vector<std::pair<float,float> > _catLinDispRanges;
+        std::vector<std::pair<float,float> > _catLogDispRanges;
 
         float _minLin, _maxLin, _minLog, _maxLog;
         float _minDispLin, _minDispLog, _maxDispLin, _maxDispLog;

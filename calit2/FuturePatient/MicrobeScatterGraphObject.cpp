@@ -84,7 +84,7 @@ bool MicrobeScatterGraphObject::setGraph(std::string title, std::string primaryP
 
 	int index = _phylumIndexMap[primaryPhylum];
 
-	const char * format = "%b %d, %Y";
+	const char * format = "%F";
 	char buffer[256];
 
 	for(int j = 0; j < _data[index].size(); ++j)

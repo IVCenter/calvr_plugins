@@ -36,11 +36,11 @@ bool StrainGraphObject::setGraph(std::string title, int taxId, bool larryOnly)
     std::stringstream ss;
     if(!larryOnly)
     {
-	ss << "select Patient.last_name, Patient.p_condition, EcoliShigella_Measurement.value, EcoliShigella_Measurement.timestamp from EcoliShigella_Measurement inner join Patient on Patient.patient_id = EcoliShigella_Measurement.patient_id where EcoliShigella_Measurement.taxonomy_id = " << taxId << " order by Patient.p_condition, EcoliShigella_Measurement.value desc;";
+	ss << "select Patient.last_name, Patient.p_condition, EcoliShigella_Measurement.value, unix_timestamp(EcoliShigella_Measurement.timestamp) as timestamp from EcoliShigella_Measurement inner join Patient on Patient.patient_id = EcoliShigella_Measurement.patient_id where EcoliShigella_Measurement.taxonomy_id = " << taxId << " order by Patient.p_condition, EcoliShigella_Measurement.value desc;";
     }
     else
     {
-	ss << "select \"Smarr\" as last_name, \"Larry\" as p_condition, value, timestamp from EcoliShigella_Measurement where patient_id = 1 and taxonomy_id = " << taxId << " order by timestamp;";
+	ss << "select \"Smarr\" as last_name, \"Larry\" as p_condition, value, unix_timestamp(timestamp) as timestamp from EcoliShigella_Measurement where patient_id = 1 and taxonomy_id = " << taxId << " order by timestamp;";
     }
 
     struct StrainData
@@ -107,11 +107,17 @@ bool StrainGraphObject::setGraph(std::string title, int taxId, bool larryOnly)
 
     for(int i = 0; i < dataSize; ++i)
     {
+	char timestamp[512];
+	std::string name = sdata[i].name;
+	name += " - ";
+	strftime(timestamp,511,"%F",localtime(&sdata[i].timestamp));
+	name += timestamp;
+
 	if(!larryOnly)
 	{
 	    if(sdata[i].value > 0.0)
 	    {
-		dataMap[condition2Group[sdata[i].group]].push_back(std::pair<std::string,float>(sdata[i].name,sdata[i].value));
+		dataMap[condition2Group[sdata[i].group]].push_back(std::pair<std::string,float>(name,sdata[i].value));
 	    }
 	}
 	else
@@ -120,7 +126,7 @@ bool StrainGraphObject::setGraph(std::string title, int taxId, bool larryOnly)
 	    ss << "Smarr" << (i+1);
 	    if(sdata[i].value > 0.0)
 	    {
-		dataMap[ss.str()].push_back(std::pair<std::string,float>(sdata[i].name,sdata[i].value));
+		dataMap[ss.str()].push_back(std::pair<std::string,float>(name,sdata[i].value));
 	    }
 	}
     }

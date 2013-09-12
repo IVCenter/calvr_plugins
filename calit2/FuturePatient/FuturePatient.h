@@ -98,6 +98,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeLoad;
         cvr::MenuCheckbox * _microbeOrdering;
         cvr::MenuCheckbox * _microbeGrouping;
+        cvr::MenuCheckbox * _microbeFamilyLevel;
         cvr::MenuRangeValueCompact * _microbeNumBars;
         cvr::MenuButton * _microbeDone;
 
@@ -111,6 +112,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeLoadHealthyAll;
         cvr::MenuButton * _microbeLoadHealthy105All;
         cvr::MenuButton * _microbeLoadUCAll;
+        cvr::SubMenu * _microbePointLineMenu;
+        cvr::MenuCheckbox * _microbePointLineExpand;
         cvr::MenuButton * _microbeLoadPointLine;
 
         cvr::SubMenu * _strainMenu;

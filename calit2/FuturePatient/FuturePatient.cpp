@@ -163,9 +163,16 @@ bool FuturePatient::init()
     _microbeLoadUCAll->setCallback(this);
     _microbeSpecialMenu->addItem(_microbeLoadUCAll);
 
-    _microbeLoadPointLine = new MenuButton("Point Line Graph");
+    _microbePointLineMenu = new SubMenu("Point Line Graph");
+    _microbeMenu->addItem(_microbePointLineMenu);
+
+    _microbePointLineExpand = new MenuCheckbox("Expand Axis", false);
+    _microbePointLineExpand->setCallback(this);
+    _microbePointLineMenu->addItem(_microbePointLineExpand);
+
+    _microbeLoadPointLine = new MenuButton("Load");
     _microbeLoadPointLine->setCallback(this);
-    _microbeSpecialMenu->addItem(_microbeLoadPointLine);
+    _microbePointLineMenu->addItem(_microbeLoadPointLine);
 
     _microbeGraphType = new MenuList();
     _microbeGraphType->setCallback(this);
@@ -197,6 +204,10 @@ bool FuturePatient::init()
     _microbeGrouping = new MenuCheckbox("Group",true);
     _microbeGrouping->setCallback(this);
     _microbeMenu->addItem(_microbeGrouping);
+
+    _microbeFamilyLevel = new MenuCheckbox("Family Level",false);
+    _microbeFamilyLevel->setCallback(this);
+    _microbeMenu->addItem(_microbeFamilyLevel);
 
     _microbeLoad = new MenuButton("Load");
     _microbeLoad->setCallback(this);
@@ -1106,7 +1117,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	if(_microbeGraphType->getIndex() == 0)
 	{
 	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(), _microbeTestTime[_microbeTest->getIndex()],(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue()))
+	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(), _microbeTestTime[_microbeTest->getIndex()],(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue()))
 	    {
 		checkLayout();
 		_layoutObject->addGraphObject(mgo);
@@ -1226,7 +1237,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		    if(_microbeGraphType->getIndex() == 0)
 		    {
 			MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-			bool tb = mgo->setGraph(_microbePatients->getValue(j), j+1, it->second[k], _patientMicrobeTestTimeMap[it->first][k],(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue());
+			bool tb = mgo->setGraph(_microbePatients->getValue(j), j+1, it->second[k], _patientMicrobeTestTimeMap[it->first][k],(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue());
 			if(tb)
 			{
 			    checkLayout();
@@ -1310,7 +1321,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		if(_microbeGraphType->getIndex() == 0)
 		{
 		    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-		    bool tb = mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), _microbeTestTime[0],(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue());
+		    bool tb = mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), _microbeTestTime[0],(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue());
 		    if(tb)
 		    {
 			checkLayout();
@@ -1383,7 +1394,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 
-	    if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue()))
+	    if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue()))
 	    {
 		//PluginHelper::registerSceneObject(mgo,"FuturePatient");
 		//mgo->attachToScene();
@@ -1416,7 +1427,7 @@ void FuturePatient::menuCallback(MenuItem * item)
     if(item == _microbeLoadPointLine)
     {
 	MicrobePointLineObject * mplo = new MicrobePointLineObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	if(mplo->setGraph())
+	if(mplo->setGraph(_microbePointLineExpand->getValue()))
 	{
 	    checkLayout();
 	    _layoutObject->addGraphObject(mplo);

@@ -28,8 +28,8 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
         MicrobeGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~MicrobeGraphObject();
 
-        bool setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, bool group = true, bool lsOrdering = true);
-        bool setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, bool group = true, bool lsOrdering = true);
+        bool setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, bool group = true, bool lsOrdering = true, bool familyLevel = false);
+        bool setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, bool group = true, bool lsOrdering = true, bool familyLevel = false);
 
         virtual void objectAdded();
         virtual void objectRemoved();
@@ -59,7 +59,7 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
         virtual void menuCallback(cvr::MenuItem * item);
 
     protected:
-        bool loadGraphData(std::string valueQuery, std::string orderQuery, bool group, bool lsOrdering);
+        bool loadGraphData(std::string valueQuery, std::string orderQuery, bool group, bool lsOrdering, bool familyLevel);
 
         mysqlpp::Connection * _conn;
         

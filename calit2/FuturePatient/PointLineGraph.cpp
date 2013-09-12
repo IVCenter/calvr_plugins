@@ -55,7 +55,7 @@ PointLineGraph::~PointLineGraph()
 {
 }
 
-bool PointLineGraph::setGraph(std::string title, std::vector<std::string> & groupNames, std::vector<std::string> & catNames, std::vector<std::vector<std::string> > & dataNames, std::vector<std::vector<std::vector<float> > > & data)
+bool PointLineGraph::setGraph(std::string title, std::vector<std::string> & groupNames, std::vector<std::string> & catNames, std::vector<std::vector<std::string> > & dataNames, std::vector<std::vector<std::vector<float> > > & data, bool expandAxis)
 {
     if(!groupNames.size() || !data.size() || !catNames.size() || !dataNames.size())
     {
@@ -67,37 +67,93 @@ bool PointLineGraph::setGraph(std::string title, std::vector<std::string> & grou
     _catLabels = catNames;
     _dataLabels = dataNames;
     _data = data;
+    _expandAxis = expandAxis;
 
+    // find local ranges
+    for(int i = 0; i < catNames.size(); ++i)
+    {
+	float minLin = FLT_MAX;
+	float minLog = FLT_MAX;
+	float maxLin = FLT_MIN;
+	float maxLog = FLT_MIN;
+
+	for(int j = 0; j < data.size(); ++j)
+	{
+	    for(int k = 0; k < data[j].size(); ++k)
+	    {
+		if(data[j][k][i] < minLin)
+		{
+		    minLin = data[j][k][i];
+		}
+		if(data[j][k][i] > maxLin)
+		{
+		    maxLin = data[j][k][i];
+		}
+		if(data[j][k][i] > 0.0 && data[j][k][i] < minLog)
+		{
+		    minLog = data[j][k][i];
+		}
+		if(data[j][k][i] > 0.0 && data[j][k][i] > maxLog)
+		{
+		    maxLog = data[j][k][i];
+		}
+	    }
+	}
+	_catLinRanges.push_back(std::pair<float,float>(minLin,maxLin));
+	_catLogRanges.push_back(std::pair<float,float>(minLog,maxLog));
+    }
+
+    // find global ranges
     _minLin = _minLog = FLT_MAX;
     _maxLin = _maxLog = FLT_MIN;
 
-    for(int i = 0; i < data.size(); ++i)
+    for(int i = 0; i < _catLinRanges.size(); ++i)
     {
-	for(int j = 0; j < data[i].size(); ++j)
+	if(_catLinRanges[i].first < _minLin)
 	{
-	     for(int k = 0; k < data[i][j].size(); ++k)
-	     {
-		 if(data[i][j][k] < _minLin)
-		 {
-		     _minLin = data[i][j][k];
-		 }
-		 if(data[i][j][k] > _maxLin)
-		 {
-		     _maxLin = data[i][j][k];
-		 }
-		 if(data[i][j][k] > 0.0 && data[i][j][k] < _minLog)
-		 {
-		     _minLog = data[i][j][k];
-		 }
-		 if(data[i][j][k] > 0.0 && data[i][j][k] > _maxLog)
-		 {
-		     _maxLog = data[i][j][k];
-		 }
-	     }
+	    _minLin = _catLinRanges[i].first;
+	}
+	if(_catLinRanges[i].second > _maxLin)
+	{
+	    _maxLin = _catLinRanges[i].second;
+	}
+    }
+
+    for(int i = 0; i < _catLogRanges.size(); ++i)
+    {
+	if(_catLogRanges[i].first < _minLog)
+	{
+	    _minLog = _catLogRanges[i].first;
+	}
+	if(_catLogRanges[i].second > _maxLog)
+	{
+	    _maxLog = _catLogRanges[i].second;
 	}
     }
 
     float lowerPadding = 0.05;
+
+    for(int i = 0; i < _catLinRanges.size(); ++i)
+    {
+	float dmin, dmax;
+	dmin = _catLinRanges[i].first - lowerPadding * (_catLinRanges[i].second - _catLinRanges[i].first);
+	dmax = _catLinRanges[i].second;
+	_catLinDispRanges.push_back(std::pair<float,float>(dmin,dmax));
+    }
+
+    for(int i = 0; i < _catLogRanges.size(); ++i)
+    {
+	/*float dmin, dmax;
+	float logMax = log10(_catLogRanges[i].second);
+	logMax = ceil(logMax);
+	dmax = pow(10.0,logMax);
+
+	float logMin = log10(_catLogRanges[i].first);
+	logMin = logMin - lowerPadding * (logMax - logMin);
+	dmin = pow(10.0,logMin);
+	_catLogDispRanges.push_back(std::pair<float,float>(dmin,dmax));*/
+	_catLogDispRanges.push_back(_catLogRanges[i]);
+    }
 
     _maxDispLin = _maxLin;
     _minDispLin = _minLin - lowerPadding * (_maxLin - _minLin);
@@ -224,7 +280,20 @@ void PointLineGraph::setHover(osg::Vec3 intersect)
 			if(_data[i][j][k] > 0.0)
 			{
 			    float logVal = log10(_data[i][j][k]);
-			    osg::Vec3 pointv = osg::Vec3(left,0,_graphBottom + ((logVal - logMin) / (logMax - logMin)) * (_graphTop - _graphBottom));
+			    osg::Vec3 pointv;
+
+			    if(!_expandAxis)
+			    {
+				pointv = osg::Vec3(left,0,_graphBottom + ((logVal - logMin) / (logMax - logMin)) * (_graphTop - _graphBottom));
+			    }
+			    else
+			    {
+				float dmin, dmax;
+				dmin = log10(_catLogDispRanges[k].first);
+				dmax = log10(_catLogDispRanges[k].second);
+				pointv = osg::Vec3(left,0,_graphBottom + ((logVal - dmin) / (dmax - dmin)) * (_graphTop - _graphBottom));
+			    }
+
 			    if((pointv-intersect).length() < thresh)
 			    {
 				thresh = (pointv-intersect).length();
@@ -435,101 +504,104 @@ void PointLineGraph::updateAxis()
 	left += columnWidth;
     }
 
-    osg::Geometry * lineGeom = new osg::Geometry();
-    osg::Vec3Array * verts = new osg::Vec3Array();
-    osg::Vec4Array * colors = new osg::Vec4Array(1);
-    colors->at(0) = osg::Vec4(0,0,0,1);
-
-    lineGeom->setColorArray(colors);
-    lineGeom->setColorBinding(osg::Geometry::BIND_OVERALL);
-    lineGeom->setVertexArray(verts);
-    lineGeom->setUseDisplayList(false);
-    lineGeom->setUseVertexBufferObjects(true);
-
-    float tickSize = std::min(_width,_height) * 0.01;
-    float labelLeftSize = (_leftPaddingMult * _width) - (2.0 * tickSize);
-    switch(_axisType)
+    if(!_expandAxis)
     {
-	case PLG_LINEAR:
-	{
-	    std::cerr << "Linear graph label not yet implemented." << std::endl;
-	    break;
-	}
-	case PLG_LOG:
-	{
-	    float tickLoc = _graphTop;
-	    float currentTickValue = _maxDispLog;
-	    float interval = (1.0 / (log10(_maxDispLog) - log10(_minDispLog))) * (_graphTop - _graphBottom);
+	osg::Geometry * lineGeom = new osg::Geometry();
+	osg::Vec3Array * verts = new osg::Vec3Array();
+	osg::Vec4Array * colors = new osg::Vec4Array(1);
+	colors->at(0) = osg::Vec4(0,0,0,1);
 
-	    float tickCharacterSize;
-	    int maxExp = (int)std::max(fabs(log10(_maxDispLog)),fabs(log10(_minDispLog)));
-	    maxExp += 2;
+	lineGeom->setColorArray(colors);
+	lineGeom->setColorBinding(osg::Geometry::BIND_OVERALL);
+	lineGeom->setVertexArray(verts);
+	lineGeom->setUseDisplayList(false);
+	lineGeom->setUseVertexBufferObjects(true);
 
-	    {
-		std::stringstream testss;
-		while(maxExp > 0)
+	float tickSize = std::min(_width,_height) * 0.01;
+	float labelLeftSize = (_leftPaddingMult * _width) - (2.0 * tickSize);
+	switch(_axisType)
+	{
+	    case PLG_LINEAR:
 		{
-		    testss << "0";
-		    maxExp--;
+		    std::cerr << "Linear graph label not yet implemented." << std::endl;
+		    break;
 		}
-
-		osg::ref_ptr<osgText::Text> testText = GraphGlobals::makeText(testss.str(),osg::Vec4(0,0,0,1));
-		osg::BoundingBox testbb = testText->getBound();
-		float testWidth = testbb.xMax() - testbb.xMin();
-
-		tickCharacterSize = (labelLeftSize * 0.95 - 2.0 * tickSize) / testWidth;
-	    }
-
-	    while(tickLoc >= _graphBottom)
-	    {
-		verts->push_back(osg::Vec3(_graphLeft,-1,tickLoc));
-		verts->push_back(osg::Vec3(_graphLeft-tickSize,-1,tickLoc));
-
-		std::stringstream tss;
-		tss << currentTickValue;
-		osgText::Text * tickText = GraphGlobals::makeText(tss.str(),osg::Vec4(0,0,0,1));
-		tickText->setAlignment(osgText::Text::RIGHT_CENTER);
-		tickText->setCharacterSize(tickCharacterSize);
-		tickText->setPosition(osg::Vec3(_graphLeft - 2.0*tickSize,-1,tickLoc));
-		_axisGeode->addDrawable(tickText);
-
-		currentTickValue /= 10.0;
-		tickLoc -= interval;
-	    }
-
-	    tickLoc = _graphTop;
-	    currentTickValue = _maxDispLog;
-
-	    int count = -1;
-	    float tickReduc = _maxDispLog / 10.0;
-	    while(tickLoc >= _graphBottom)
-	    { 
-		count++;
-		verts->push_back(osg::Vec3(_graphLeft,-1,tickLoc));
-		verts->push_back(osg::Vec3(_graphLeft- 0.5*tickSize,-1,tickLoc));
-
-		if((count % 10) == 9)
+	    case PLG_LOG:
 		{
-		    tickReduc /= 10.0;
-		    count++;
-		}
-		currentTickValue -= tickReduc;
-		tickLoc = ((log10(currentTickValue) - log10(_minDispLog)) / (log10(_maxDispLog) - log10(_minDispLog))) * (_graphTop - _graphBottom);
-		tickLoc += _graphBottom;
-	    }
+		    float tickLoc = _graphTop;
+		    float currentTickValue = _maxDispLog;
+		    float interval = (1.0 / (log10(_maxDispLog) - log10(_minDispLog))) * (_graphTop - _graphBottom);
 
-	    break;
+		    float tickCharacterSize;
+		    int maxExp = (int)std::max(fabs(log10(_maxDispLog)),fabs(log10(_minDispLog)));
+		    maxExp += 2;
+
+		    {
+			std::stringstream testss;
+			while(maxExp > 0)
+			{
+			    testss << "0";
+			    maxExp--;
+			}
+
+			osg::ref_ptr<osgText::Text> testText = GraphGlobals::makeText(testss.str(),osg::Vec4(0,0,0,1));
+			osg::BoundingBox testbb = testText->getBound();
+			float testWidth = testbb.xMax() - testbb.xMin();
+
+			tickCharacterSize = (labelLeftSize * 0.95 - 2.0 * tickSize) / testWidth;
+		    }
+
+		    while(tickLoc >= _graphBottom)
+		    {
+			verts->push_back(osg::Vec3(_graphLeft,-1,tickLoc));
+			verts->push_back(osg::Vec3(_graphLeft-tickSize,-1,tickLoc));
+
+			std::stringstream tss;
+			tss << currentTickValue;
+			osgText::Text * tickText = GraphGlobals::makeText(tss.str(),osg::Vec4(0,0,0,1));
+			tickText->setAlignment(osgText::Text::RIGHT_CENTER);
+			tickText->setCharacterSize(tickCharacterSize);
+			tickText->setPosition(osg::Vec3(_graphLeft - 2.0*tickSize,-1,tickLoc));
+			_axisGeode->addDrawable(tickText);
+
+			currentTickValue /= 10.0;
+			tickLoc -= interval;
+		    }
+
+		    tickLoc = _graphTop;
+		    currentTickValue = _maxDispLog;
+
+		    int count = -1;
+		    float tickReduc = _maxDispLog / 10.0;
+		    while(tickLoc >= _graphBottom)
+		    { 
+			count++;
+			verts->push_back(osg::Vec3(_graphLeft,-1,tickLoc));
+			verts->push_back(osg::Vec3(_graphLeft- 0.5*tickSize,-1,tickLoc));
+
+			if((count % 10) == 9)
+			{
+			    tickReduc /= 10.0;
+			    count++;
+			}
+			currentTickValue -= tickReduc;
+			tickLoc = ((log10(currentTickValue) - log10(_minDispLog)) / (log10(_maxDispLog) - log10(_minDispLog))) * (_graphTop - _graphBottom);
+			tickLoc += _graphBottom;
+		    }
+
+		    break;
+		}
+	    default: 
+		{
+		    std::cerr << "Unknown axis type." << std::endl;
+		    break;
+		}
 	}
-	default: 
-	{
-	    std::cerr << "Unknown axis type." << std::endl;
-	    break;
-	}
+
+	lineGeom->addPrimitiveSet(new osg::DrawArrays(GL_LINES,0,verts->size()));
+	_axisGeode->addDrawable(lineGeom);
+	lineGeom->getBound();
     }
-
-    lineGeom->addPrimitiveSet(new osg::DrawArrays(GL_LINES,0,verts->size()));
-    _axisGeode->addDrawable(lineGeom);
-    lineGeom->getBound();
 }
 
 void PointLineGraph::updateGraph()
@@ -605,7 +677,17 @@ void PointLineGraph::updateGraph()
 			    }
 
 			    float logVal = log10(_data[i][j][k]);
-			    verts->at(index) = osg::Vec3(left,yval,_graphBottom + ((logVal - logMin) / (logMax - logMin)) * (_graphTop - _graphBottom));
+			    if(!_expandAxis)
+			    {
+				verts->at(index) = osg::Vec3(left,yval,_graphBottom + ((logVal - logMin) / (logMax - logMin)) * (_graphTop - _graphBottom));
+			    }
+			    else
+			    {
+				float dmin, dmax;
+				dmin = log10(_catLogDispRanges[k].first);
+				dmax = log10(_catLogDispRanges[k].second);
+				verts->at(index) = osg::Vec3(left,yval,_graphBottom + ((logVal - dmin) / (dmax - dmin)) * (_graphTop - _graphBottom));
+			    }
 			    _pointElements->push_back(index);
 
 			    if(lastValid)
@@ -637,7 +719,14 @@ void PointLineGraph::updateGraph()
 
 void PointLineGraph::updateSizes()
 {
-    _graphLeft = -(_width / 2.0) + (_leftPaddingMult * _width);
+    if(!_expandAxis)
+    {
+	_graphLeft = -(_width / 2.0) + (_leftPaddingMult * _width);
+    }
+    else
+    {
+	_graphLeft = -(_width / 2.0) + (_rightPaddingMult * _width);
+    }
     _graphRight = (_width / 2.0) - (_rightPaddingMult * _width);
     _graphTop = (_height / 2.0) - (_topPaddingMult * _height);
     _graphBottom = -(_height / 2.0) + (_bottomPaddingMult * _height);
