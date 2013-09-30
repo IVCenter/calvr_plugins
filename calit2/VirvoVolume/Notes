@@ -1,0 +1,23 @@
+Usage:
+------
+
+CalVR monkey.xvf
+
+Notes:
+------
+
+Needs Virvo libaries
+https://github.com/deskvox/deskvox/tree/dev
+
+Sample configuration entries:
+-----------------------------
+
+<VirvoVolume value="on" >
+    <ConfigDir value="/tmp/" /> <!-- directory default volume position and clip plane position is saved -->
+    <Files> <!-- creates a menu with volume files to select from -->
+        <Larry_colon value="/home/monkey/mri-series14-color-fill.xvf" />
+        <Skull value="/home/monkey/fctskull.xvf" />
+        <Jerrys_knee value="/home/monkey/jerrys-knee-fill.xvf" />
+    </Files>
+</VirvoVolume>
+
