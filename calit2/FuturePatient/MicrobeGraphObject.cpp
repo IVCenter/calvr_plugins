@@ -415,7 +415,7 @@ bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string 
     }
     else
     {
-	valuess << "select description, phylum, family, sum(value) as value from (select taxonomy_id, value as value from Microbe_Measurement where Microbe_Measurement.patient_id = " << patientid << " and Microbe_Measurement.timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")v inner join Microbes on v.taxonomy_id = Microbes.taxonomy_id group by family order by phylum, value desc;";
+	valuess << "select description, phylum, family, sum(value) as value from (select taxonomy_id, value from Microbe_Measurement where Microbe_Measurement.patient_id = " << patientid << " and Microbe_Measurement.timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")v inner join Microbes on v.taxonomy_id = Microbes.taxonomy_id group by family order by phylum, value desc;";
     }
 
     _specialGraph = false;
@@ -465,7 +465,7 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int micro
 		}
 		else
 		{
-		    valuess << "select description, phylum, family, sum(value) as value from (select description, phylum, family, " << field << " as value from Microbes order by value desc limit " << microbes << ")t group by t.family order by t.phylum, t.value desc;";
+		    valuess << "select description, phylum, family, sum(value) as value from (select description, phylum, family, " << field << " as value from Microbes order by value desc limit " << microbes << ")t group by t.family order by t.phylum, value desc;";
 		}
 		break;
 	    }
