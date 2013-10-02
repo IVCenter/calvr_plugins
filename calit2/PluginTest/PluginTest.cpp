@@ -345,15 +345,6 @@ void PluginTest::createSphereTexture()
     osg::Geode * geode = new osg::Geode();
     geode->addDrawable(geometry);
     PluginHelper::getScene()->addChild(geode);
-
-    if(geometry->areFastPathsUsed())
-    {
-	std::cerr << "Using GL fast path." << std::endl;
-    }
-    else
-    {
-	std::cerr << "Not using GL fast path." << std::endl;
-    }
 }
 
 void PluginTest::createPointsNode()

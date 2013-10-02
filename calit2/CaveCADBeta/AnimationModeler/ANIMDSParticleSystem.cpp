@@ -165,18 +165,13 @@ MatrixTransform* ANIMCreateVirtualSpherePointSprite()
     Geometry* ptGeometry = new Geometry();
     Vec3Array *vertices = new Vec3Array();
     Vec4Array *colors = new Vec4Array();
-    TemplateIndexArray <unsigned int, Array::UIntArrayType,4,4> *colorIndexArray;
-    colorIndexArray = new TemplateIndexArray<unsigned int, Array::UIntArrayType,4,4>;
 
     vertices->push_back(Vec3(0, 0, 0));
     vertices->push_back(Vec3(0, 0, 1));
     colors->push_back(Vec4(1, 0, 0, 1));
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
 
     ptGeometry->setVertexArray(vertices);
     ptGeometry->setColorArray(colors);
-    ptGeometry->setColorIndices(colorIndexArray);
     ptGeometry->setColorBinding(Geometry::BIND_OVERALL);
 
     DrawElementsUInt* points = new DrawElementsUInt(PrimitiveSet::POINTS, 0); 
