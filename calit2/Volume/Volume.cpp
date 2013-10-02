@@ -60,8 +60,10 @@
 using namespace std;
 using namespace cvr;
 
+#ifdef ITK_FOUND
 typedef itk::Image<float, 3> ImageType;
 typedef itk::GradientAnisotropicDiffusionImageFilter<ImageType, ImageType>  DiffusionFilterType;
+#endif
 
 // uid generator
 int Volume::id;
@@ -202,21 +204,21 @@ struct Volume::volumeinfo* Volume::loadXVF(std::string filename, int &x, int &y,
 
     // create colorMap (access widget and get center and min max ranges)
     // Looks only for PyramidWidgets
-    int size = vol->tf._widgets.count();
-    vol->tf._widgets.first();
+    int size = vol->tf._widgets.size();
+    //vol->tf._widgets.first();
 
     // temporary transferfunction table
     volinfo->defaultTransferFunc = new vvTransFunc();
 
     for(int i = 0; i < size; i++)
     {
-        vvTFWidget* w = vol->tf._widgets.getData();
+        vvTFWidget* w = vol->tf._widgets[i];
 
         if( vvTFPyramid *pw = dynamic_cast<vvTFPyramid*>(w) )
         {
             volinfo->center = (pw->_pos[0] / scale) - offset;
             volinfo->width = pw->_bottom[0] / scale;
-            volinfo->defaultTransferFunc->_widgets.append(new vvTFPyramid(vvColor(1.0f, 1.0f, 1.0f), false, 1.0f, volinfo->center, volinfo->width, 0.0f),  vvSLNode<vvTFWidget*>::NORMAL_DELETE);
+            volinfo->defaultTransferFunc->_widgets.push_back(new vvTFPyramid(vvColor(1.0f, 1.0f, 1.0f), false, 1.0f, volinfo->center, volinfo->width, 0.0f));
         }
 
         // check color pin values
@@ -226,10 +228,8 @@ struct Volume::volumeinfo* Volume::loadXVF(std::string filename, int &x, int &y,
             //std::cerr << "Color position " << centerValue << " initial " << cw->_pos[0] << std::endl;
             osg::Vec3f color(0.0, 0.0, 0.0);
             cw->_col.getRGB(color.x(), color.y(), color.z());
-            volinfo->defaultTransferFunc->_widgets.append(new vvTFColor(vvColor(color.x(), color.y(), color.z()), centerValue),  vvSLNode<vvTFWidget*>::NORMAL_DELETE);
+            volinfo->defaultTransferFunc->_widgets.push_back(new vvTFColor(vvColor(color.x(), color.y(), color.z()), centerValue));
         }
-
-        vol->tf._widgets.next();
     }
 
     //std::cerr << "Center " << volinfo->center << " width " << volinfo->width << std::endl;
@@ -457,6 +457,7 @@ void Volume::createPlyPoints(volumeinfo * info, osg::Vec3 position, float lowerB
 
 void Volume::diffuseVolume(volumeinfo* info)
 {
+#ifdef ITK_FOUND
     ImageType::Pointer image = ImageType::New();
     ImageType::SizeType size;
     size[0] = info->x; // size along X
@@ -523,6 +524,7 @@ void Volume::diffuseVolume(volumeinfo* info)
             }
         }
     }
+#endif
 }
 
 void Volume::smoothVoxelData(volumeinfo* info, std::map<osg::Vec3, float> & boundPoints, float percentageSurrounding)
@@ -530,7 +532,7 @@ void Volume::smoothVoxelData(volumeinfo* info, std::map<osg::Vec3, float> & boun
     std::queue<osg::Vec3> testVoxels;
 
     // do initial pass and add data to modifiedVoxels
-	for(int i = 0; i < info->z; i++)
+    for(int i = 0; i < info->z; i++)
     {
 	    for(int j = 0; j < info->y; j++)
 	    {
@@ -552,24 +554,24 @@ void Volume::smoothVoxelData(volumeinfo* info, std::map<osg::Vec3, float> & boun
 	    }
     }
 
-	std::cerr << "Total initial num of test voxels: " << testVoxels.size() << std::endl;
+    std::cerr << "Total initial num of test voxels: " << testVoxels.size() << std::endl;
    
     int counter = 0;
     
     // loop through modified Voxels checking average and add if required
-	while( !testVoxels.empty() )
-	{
-		osg::Vec3 point = testVoxels.front();
-		testVoxels.pop();
+    while( !testVoxels.empty() )
+    {
+	osg::Vec3 point = testVoxels.front();
+	testVoxels.pop();
 
-		float computedValue = averageSurroundingVoxels(info, boundPoints, point, percentageSurrounding, 1, 1, 1);
+	float computedValue = averageSurroundingVoxels(info, boundPoints, point, percentageSurrounding, 1, 1, 1);
         if( computedValue != 0.0 )
-		{
-        	boundPoints[point] = computedValue;
-			findSurroundingEmptyVoxels(info, boundPoints, point, testVoxels);
+	{
+	    boundPoints[point] = computedValue;
+	    findSurroundingEmptyVoxels(info, boundPoints, point, testVoxels);
             counter++;
-		}
 	}
+    }
 
     std::cerr << "Finished smoothing, number of times through loop: " << counter << std::endl;
 }
@@ -584,7 +586,7 @@ void Volume::findSurroundingEmptyVoxels(volumeinfo* info, std::map<osg::Vec3, fl
     std::vector<int> yValues;
     std::vector<int> xValues;
 
-	r = point.z();
+    r = point.z();
 	t = point.y();
 	s = point.x();
 
@@ -825,6 +827,9 @@ void Volume::fillInVolume(volumeinfo* info, std::map<osg::Vec3, float> & boundPo
 
 osg::Geode* Volume::createSurface(volumeinfo * info, osg::Vec3 position, float lowerBound, float upperBound, int steps)
 {
+    osg::Geode* geode = NULL;
+
+#ifdef VTK_FOUND
     osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array();
     osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array();
 
@@ -901,7 +906,7 @@ osg::Geode* Volume::createSurface(volumeinfo * info, osg::Vec3 position, float l
     vtkActor* actor = vtkActor::New();
     actor->SetMapper (surfaceMapper);
 
-    osg::Geode* geode = vtkActorToOSG(actor);
+    geode = vtkActorToOSG(actor);
 
     osg::StateSet* stateset = geode->getOrCreateStateSet();
     osg::Material* material = new osg::Material();
@@ -922,6 +927,7 @@ osg::Geode* Volume::createSurface(volumeinfo * info, osg::Vec3 position, float l
     simplifier.setDoTriStrip(false);
     simplifier.setSmoothing(true);
     simplifier.apply(*geode);
+#endif
 
     return geode;
 }
@@ -1665,7 +1671,7 @@ bool Volume::loadFile(std::string filename)
     // add point cluster controls
     {
         info->seedPoint = new SceneObject("SeedPoint", false, true, false, false, false);
-        PluginHelper::registerSceneObject(info->seedPoint,"VolumeSegment");
+        //PluginHelper::registerSceneObject(info->seedPoint,"VolumeSegment");
 
         // create seed point to move around
         osg::Vec3 seedPoint(info->x * 0.5, info->y * 0.5, info->z * 0.5);
@@ -1685,7 +1691,9 @@ bool Volume::loadFile(std::string filename)
 
         info->seedPoint->addChild(spoint);
         info->seedPoint->setPosition(locationPoint);
-        so->addChild(info->seedPoint);
+	info->seedPoint->setBoundsCalcMode(SceneObject::MANUAL);
+	info->seedPoint->setBoundingBox(shape->getBound());
+        // so->addChild(info->seedPoint); TODO
         //info->seedPoint->getChildNode(0)->setNodeMask(~0);
         //info->seedPoint->getChildNode(0)->setNodeMask(0);
 
@@ -1700,7 +1708,7 @@ bool Volume::loadFile(std::string filename)
         SubMenu* point = new SubMenu("Point");
         so->addMenuItem(point);
         
-        MenuCheckbox* mecb = new MenuCheckbox("Enable Seed", true);
+        MenuCheckbox* mecb = new MenuCheckbox("Enable Seed", false);
         mecb->setCallback(this);
         point->addItem(mecb);
         _enableSeedMap[so] = mecb;
@@ -2272,14 +2280,11 @@ void Volume::menuCallback(MenuItem* menuItem)
 
             if( it->second->getValue() )
             {
-                std::cerr << "enable\n";
-            	PluginHelper::registerSceneObject(info->seedPoint,"VolumeSegment");
-            	//info->seedPoint->attachToScene();
+		it->first->addChild(info->seedPoint);
             }
             else
             {
-                std::cerr << "disable\n";
-                PluginHelper::unregisterSceneObject(info->seedPoint);
+		it->first->removeChild(info->seedPoint);
             }
             return;
          }
@@ -2520,7 +2525,7 @@ osg::TransferFunction1D::ColorMap* Volume::computeColorMap(vvTransFunc* transfun
     {
         // remove old pyramidWidgets
         transfunc->deleteWidgets(vvTFWidget::TF_PYRAMID);
-        transfunc->_widgets.append(new vvTFPyramid(vvColor(1.0f, 1.0f, 1.0f), false, 1.0f, center, width, 0.0f), vvSLNode<vvTFWidget*>::NORMAL_DELETE);
+        transfunc->_widgets.push_back(new vvTFPyramid(vvColor(1.0f, 1.0f, 1.0f), false, 1.0f, center, width, 0.0f));
     }
 
     //check if transfer function and then convert
@@ -2550,7 +2555,7 @@ osg::TransferFunction1D::ColorMap* Volume::computeColorMap(int colorTable, float
 
     vvTransFunc transfunc;
     transfunc.setDefaultColors(colorTable, 0.0, 1.0);
-    transfunc._widgets.append(new vvTFPyramid(vvColor(1.0f, 1.0f, 1.0f), false, 1.0f, position, baseWidth, 0.0f), vvSLNode<vvTFWidget*>::NORMAL_DELETE);
+    transfunc._widgets.push_back(new vvTFPyramid(vvColor(1.0f, 1.0f, 1.0f), false, 1.0f, position, baseWidth, 0.0f));
    
     osg::TransferFunction1D::ColorMap* colorMap = computeColorMap(&transfunc, position - (baseWidth * 0.5), position + (baseWidth * 0.5));
     
@@ -2655,6 +2660,7 @@ void Volume::preFrame()
     // exit preframe if no volumes
     if( ! _volumeMap.size() )
         return;
+
 
     // check if point is enabled if so show value in volume
     for(std::map<SceneObject*,MenuCheckbox*>::iterator it = _enableSeedMap.begin(); it != _enableSeedMap.end(); it++)
