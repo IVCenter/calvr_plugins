@@ -33,8 +33,11 @@ class SymptomGraphObject : public LayoutTypeObject, public TimeRangeObject
 
         virtual void updateCallback(int handID, const osg::Matrix & mat);
         virtual void leaveCallback(int handID);
+        virtual bool eventCallback(cvr::InteractionEvent * ie);
 
     protected:
+        bool addGraphMicrobe(std::string name);
+
         mysqlpp::Connection * _conn;
 
         TimeRangeDataGraph * _graph;

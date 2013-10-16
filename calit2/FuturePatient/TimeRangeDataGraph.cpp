@@ -1,6 +1,7 @@
 #include "TimeRangeDataGraph.h"
 #include "ColorGenerator.h"
 #include "GraphGlobals.h"
+#include "TRGraphAction.h"
 
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/CalVR.h>
@@ -161,7 +162,7 @@ void TimeRangeDataGraph::setGLScale(float scale)
     update();
 }
 
-void TimeRangeDataGraph::addGraph(std::string name, std::vector<std::pair<time_t,time_t> > & rangeList, std::vector<int> & valueList, int maxValue)
+void TimeRangeDataGraph::addGraph(std::string name, std::vector<std::pair<time_t,time_t> > & rangeList, std::vector<int> & valueList, int maxValue, time_t bandPadding)
 {
     if(!rangeList.size())
     {
@@ -178,18 +179,18 @@ void TimeRangeDataGraph::addGraph(std::string name, std::vector<std::pair<time_t
 
     time_t min;
     time_t max;
-    min = rangeList[0].first;
-    max = rangeList[0].second;
+    min = rangeList[0].first - bandPadding;
+    max = rangeList[0].second + bandPadding;
 
     for(int i = 1; i < rangeList.size(); ++i)
     {
-	if(rangeList[i].first < min)
+	if(rangeList[i].first - bandPadding < min)
 	{
-	    min = rangeList[i].first;
+	    min = rangeList[i].first - bandPadding;
 	}
-	if(rangeList[i].second > max)
+	if(rangeList[i].second + bandPadding > max)
 	{
-	    max = rangeList[i].second;
+	    max = rangeList[i].second + bandPadding;
 	}
     }
 
@@ -203,13 +204,21 @@ void TimeRangeDataGraph::addGraph(std::string name, std::vector<std::pair<time_t
 	_timeMax = max;
     }
 
-    _displayMin = _timeMin;
-    _displayMax = _timeMax;
+    if(_displayMin == 0)
+    {
+	_displayMin = _timeMin;
+    }
+
+    if(_displayMax == 0)
+    {
+	_displayMax = _timeMax;
+    }
 
     RangeDataInfo * rdi = new RangeDataInfo;
     rdi->name = name;
     rdi->ranges = rangeList;
     rdi->values = valueList;
+    rdi->bandPadding = bandPadding;
     rdi->maxValue = maxValue;
     rdi->barGeometry = new osg::Geometry();
     rdi->barOutlineGeometry = new osg::Geometry();
@@ -221,6 +230,11 @@ void TimeRangeDataGraph::addGraph(std::string name, std::vector<std::pair<time_t
     initGeometry(rdi);
 
     update();
+}
+
+void TimeRangeDataGraph::setGraphAction(std::string name, TRGraphAction * action)
+{
+    _graphActionMap[name] = action;
 }
 
 void TimeRangeDataGraph::setDisplayRange(time_t & start, time_t & end)
@@ -274,7 +288,7 @@ void TimeRangeDataGraph::setHover(osg::Vec3 intersect)
 	    time_t intersectTime =  _displayMin + ((time_t)(((intersect.x() - _graphLeft) / (_graphRight - _graphLeft)) * ((double)(_displayMax-_displayMin))));
 	    for(int j = 0; j < _graphList[i]->ranges.size(); ++j)
 	    {
-		if(intersectTime >= _graphList[i]->ranges[j].first && intersectTime <= _graphList[i]->ranges[j].second)
+		if(intersectTime >= (_graphList[i]->ranges[j].first - _graphList[i]->bandPadding) && intersectTime <= (_graphList[i]->ranges[j].second + _graphList[i]->bandPadding))
 		{
 		    if(_graphList[i]->values[j] != 0)
 		    {
@@ -354,6 +368,23 @@ void TimeRangeDataGraph::clearHoverText()
     {
 	_root->removeChild(_hoverGeode);
     }
+}
+
+bool TimeRangeDataGraph::click()
+{
+    if(_currentHoverGraph >= 0 && _currentHoverIndex >= 0)
+    {
+	std::map<std::string,TRGraphAction*>::iterator it = _graphActionMap.find(_graphList[_currentHoverGraph]->name);
+	if(it != _graphActionMap.end())
+	{
+	    if(it->second)
+	    {
+		it->second->action(_graphList[_currentHoverGraph]->name,_graphList[_currentHoverGraph]->ranges[_currentHoverIndex].first,_graphList[_currentHoverGraph]->ranges[_currentHoverIndex].second,_graphList[_currentHoverGraph]->values[_currentHoverIndex]);
+		return true;
+	    }
+	}
+    }
+    return false;
 }
 
 float TimeRangeDataGraph::calcPadding()
@@ -564,8 +595,8 @@ void TimeRangeDataGraph::updateGraphs()
 	    int validIndex = 0;
 	    for(int j = 0; j < _graphList[i]->ranges.size(); ++j)
 	    {
-		time_t start = _graphList[i]->ranges[j].first;
-		time_t end = _graphList[i]->ranges[j].second;
+		time_t start = _graphList[i]->ranges[j].first - _graphList[i]->bandPadding;
+		time_t end = _graphList[i]->ranges[j].second + _graphList[i]->bandPadding;
 		if(start < _displayMin)
 		{
 		    start = _displayMin;

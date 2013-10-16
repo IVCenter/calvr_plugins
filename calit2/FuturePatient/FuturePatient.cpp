@@ -174,6 +174,15 @@ bool FuturePatient::init()
     _microbeLoadPointLine->setCallback(this);
     _microbePointLineMenu->addItem(_microbeLoadPointLine);
 
+    _microbeTable = new MenuList();
+    _microbeTable->setCallback(this);
+    _microbeMenu->addItem(_microbeTable);
+
+    std::vector<std::string> tableList;
+    tableList.push_back("V1");
+    tableList.push_back("V2");
+    _microbeTable->setValues(tableList);
+
     _microbeGraphType = new MenuList();
     _microbeGraphType->setCallback(this);
     _microbeMenu->addItem(_microbeGraphType);
@@ -257,6 +266,10 @@ bool FuturePatient::init()
     _eventLoadAll = new MenuButton("Load All");
     _eventLoadAll->setCallback(this);
     _eventMenu->addItem(_eventLoadAll);
+
+    _eventLoadMicrobe = new MenuButton("Load Microbe");
+    _eventLoadMicrobe->setCallback(this);
+    //_eventMenu->addItem(_eventLoadMicrobe);
 
     _eventDone = new MenuButton("Done");
     _eventDone->setCallback(this);
@@ -1103,6 +1116,14 @@ void FuturePatient::menuCallback(MenuItem * item)
 	_fpMenu->removeItem(_closeLayoutButton);
     }
 
+    if(item == _microbeTable)
+    {
+	if(_microbePatients->getListSize())
+	{
+	    updateMicrobeTests(_microbePatients->getIndex() + 1);
+	}
+    }
+
     if(item == _microbePatients)
     {
 	if(_microbePatients->getListSize())
@@ -1113,11 +1134,16 @@ void FuturePatient::menuCallback(MenuItem * item)
 
     if(item == _microbeLoad && _microbePatients->getListSize() && _microbeTest->getListSize())
     {
+	std::string tablesuffix;
+	if(_microbeTable->getIndex() == 1)
+	{
+	    tablesuffix = "_V2";
+	}
 	// Bar Graph
 	if(_microbeGraphType->getIndex() == 0)
 	{
 	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(), _microbeTestTime[_microbeTest->getIndex()],(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue()))
+	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(), _microbeTestTime[_microbeTest->getIndex()],(int)_microbeNumBars->getValue(),tablesuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue()))
 	    {
 		checkLayout();
 		_layoutObject->addGraphObject(mgo);
@@ -1133,14 +1159,14 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    if(!_currentSBGraph)
 	    {
 		_currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-		_currentSBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue());
+		_currentSBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(),tablesuffix);
 		checkLayout();
 		_layoutObject->addGraphObject(_currentSBGraph);
 		_microbeMenu->addItem(_microbeDone);
 	    }
 	    else
 	    {
-		_currentSBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue());
+		_currentSBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(),tablesuffix);
 	    }
 	}
     }
@@ -1168,6 +1194,12 @@ void FuturePatient::menuCallback(MenuItem * item)
 
     if(item == _microbeLoadCrohnsAll)
     {
+	std::string tablesuffix;
+	if(_microbeTable->getIndex() == 1)
+	{
+	    tablesuffix = "_V2";
+	}
+
 	std::vector<std::pair<int,int> > rangeList;
 	rangeList.push_back(std::pair<int,int>(237,241));
 
@@ -1237,7 +1269,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		    if(_microbeGraphType->getIndex() == 0)
 		    {
 			MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-			bool tb = mgo->setGraph(_microbePatients->getValue(j), j+1, it->second[k], _patientMicrobeTestTimeMap[it->first][k],(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue());
+			bool tb = mgo->setGraph(_microbePatients->getValue(j), j+1, it->second[k], _patientMicrobeTestTimeMap[it->first][k],(int)_microbeNumBars->getValue(),tablesuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue());
 			if(tb)
 			{
 			    checkLayout();
@@ -1254,14 +1286,14 @@ void FuturePatient::menuCallback(MenuItem * item)
 			if(!_currentSBGraph)
 			{
 			    _currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-			    _currentSBGraph->addGraph(_microbePatients->getValue(j), j+1, it->second[k]);
+			    _currentSBGraph->addGraph(_microbePatients->getValue(j), j+1, it->second[k],tablesuffix);
 			    checkLayout();
 			    _layoutObject->addGraphObject(_currentSBGraph);
 			    _microbeMenu->addItem(_microbeDone);
 			}
 			else
 			{
-			    _currentSBGraph->addGraph(_microbePatients->getValue(j), j+1, it->second[k]);
+			    _currentSBGraph->addGraph(_microbePatients->getValue(j), j+1, it->second[k], tablesuffix);
 			}
 		    }
 		}
@@ -1288,6 +1320,12 @@ void FuturePatient::menuCallback(MenuItem * item)
 
     if(item == _microbeLoadHealthyAll || item == _microbeLoadUCAll || item == _microbeLoadHealthy105All)
     {
+	std::string tablesuffix;
+	if(_microbeTable->getIndex() == 1)
+	{
+	    tablesuffix = "_V2";
+	}
+
 	std::vector<std::pair<int,int> > rangeList;
 
 	if(item == _microbeLoadCrohnsAll)
@@ -1321,7 +1359,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		if(_microbeGraphType->getIndex() == 0)
 		{
 		    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-		    bool tb = mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), _microbeTestTime[0],(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue());
+		    bool tb = mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), _microbeTestTime[0],(int)_microbeNumBars->getValue(),tablesuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue());
 		    if(tb)
 		    {
 			checkLayout();
@@ -1337,14 +1375,14 @@ void FuturePatient::menuCallback(MenuItem * item)
 		    if(!_currentSBGraph)
 		    {
 			_currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-			_currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0));
+			_currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0),tablesuffix);
 			checkLayout();
 			_layoutObject->addGraphObject(_currentSBGraph);
 			_microbeMenu->addItem(_microbeDone);
 		    }
 		    else
 		    {
-			_currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0));
+			_currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), tablesuffix);
 		    }
 		}
 
@@ -1367,6 +1405,12 @@ void FuturePatient::menuCallback(MenuItem * item)
 
     if(item == _microbeLoadAverage || item == _microbeLoadHealthyAverage || item == _microbeLoadCrohnsAverage || item == _microbeLoadSRSAverage || item == _microbeLoadSRXAverage)
     {
+	std::string tablesuffix;
+	if(_microbeTable->getIndex() == 1)
+	{
+	    tablesuffix = "_V2";
+	}
+
 	SpecialMicrobeGraphType mgt;
 	if(item == _microbeLoadAverage)
 	{
@@ -1394,7 +1438,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 
-	    if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue()))
+	    if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue(),tablesuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue()))
 	    {
 		//PluginHelper::registerSceneObject(mgo,"FuturePatient");
 		//mgo->attachToScene();
@@ -1412,22 +1456,28 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    if(!_currentSBGraph)
 	    {
 		_currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-		_currentSBGraph->addSpecialGraph(mgt);
+		_currentSBGraph->addSpecialGraph(mgt,tablesuffix);
 		checkLayout();
 		_layoutObject->addGraphObject(_currentSBGraph);
 		_microbeMenu->addItem(_microbeDone);
 	    }
 	    else
 	    {
-		_currentSBGraph->addSpecialGraph(mgt);
+		_currentSBGraph->addSpecialGraph(mgt,tablesuffix);
 	    }
 	}
     }
 
     if(item == _microbeLoadPointLine)
     {
+	std::string tablesuffix;
+	if(_microbeTable->getIndex() == 1)
+	{
+	    tablesuffix = "_V2";
+	}
+
 	MicrobePointLineObject * mplo = new MicrobePointLineObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	if(mplo->setGraph(_microbePointLineExpand->getValue()))
+	if(mplo->setGraph(tablesuffix,_microbePointLineExpand->getValue()))
 	{
 	    checkLayout();
 	    _layoutObject->addGraphObject(mplo);
@@ -1559,6 +1609,22 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    _layoutObject->addGraphObject(_currentSymptomGraph);
 	    _eventMenu->addItem(_eventDone);
+	}
+    }
+
+    if(item == _eventLoadMicrobe)
+    {
+	if(!_currentSymptomGraph)
+	{
+	    _currentSymptomGraph = new SymptomGraphObject(_conn, 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
+	    _currentSymptomGraph->addGraph("Microbe Test");
+	    checkLayout();
+	    _layoutObject->addGraphObject(_currentSymptomGraph);
+	    _eventMenu->addItem(_eventDone);
+	}
+	else
+	{
+	    _currentSymptomGraph->addGraph("Microbe Test");
 	}
     }
 
@@ -1917,6 +1983,60 @@ void FuturePatient::setupMicrobePatients()
     {
 	delete[] labels;
     }
+
+    labels = NULL;
+    numTests = 0;
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    std::stringstream qss;
+	    qss << "select patient_id, timestamp, unix_timestamp(timestamp) as utimestamp from Microbe_Measurement_V2 group by patient_id, timestamp order by patient_id, timestamp;";
+
+	    mysqlpp::Query q = _conn->query(qss.str().c_str());
+	    mysqlpp::StoreQueryResult res = q.store();
+
+	    numTests = res.num_rows();
+
+	    if(numTests)
+	    {
+		labels = new struct TestLabel[numTests];
+
+		for(int j = 0; j < numTests; ++j)
+		{
+		    labels[j].id = atoi(res[j]["patient_id"].c_str());
+		    strncpy(labels[j].label,res[j]["timestamp"].c_str(),255);
+		    labels[j].timestamp = atol(res[j]["utimestamp"].c_str());
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&numTests,sizeof(int));
+	if(numTests)
+	{
+	    ComController::instance()->sendSlaves(labels,numTests*sizeof(struct TestLabel));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&numTests,sizeof(int));
+	if(numTests)
+	{
+	    labels = new struct TestLabel[numTests];
+	    ComController::instance()->readMaster(labels,numTests*sizeof(struct TestLabel));
+	}
+    }
+
+    for(int j = 0; j < numTests; ++j)
+    {
+	_patientMicrobeV2TestMap[labels[j].id].push_back(labels[j].label);
+	_patientMicrobeV2TestTimeMap[labels[j].id].push_back(labels[j].timestamp);
+    }
+
+    if(labels)
+    {
+	delete[] labels;
+    }
 }
 
 void FuturePatient::setupStrainMenu()
@@ -2047,10 +2167,26 @@ void FuturePatient::updateMicrobeTests(int patientid)
     //gettimeofday(&start,NULL);
     //std::cerr << "Update Microbe Tests Patient: " << patientid << std::endl;
     
-    if(_patientMicrobeTestMap.find(patientid) != _patientMicrobeTestMap.end())
+    std::vector<std::string> emptyvec;
+    _microbeTest->setValues(emptyvec);
+
+    _microbeTestTime.clear();
+
+    if(_microbeTable->getIndex() == 0)
     {
-	_microbeTest->setValues(_patientMicrobeTestMap[patientid]);
-	_microbeTestTime = _patientMicrobeTestTimeMap[patientid];
+	if(_patientMicrobeTestMap.find(patientid) != _patientMicrobeTestMap.end())
+	{
+	    _microbeTest->setValues(_patientMicrobeTestMap[patientid]);
+	    _microbeTestTime = _patientMicrobeTestTimeMap[patientid];
+	}
+    }
+    else if(_microbeTable->getIndex() == 1)
+    {
+	if(_patientMicrobeV2TestMap.find(patientid) != _patientMicrobeV2TestMap.end())
+	{
+	    _microbeTest->setValues(_patientMicrobeV2TestMap[patientid]);
+	    _microbeTestTime = _patientMicrobeV2TestTimeMap[patientid];
+	}
     }
 
     /*struct TestLabel

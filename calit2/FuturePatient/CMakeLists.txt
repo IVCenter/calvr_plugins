@@ -25,6 +25,7 @@ SET(PLUGIN_HEADERS
     FPTiledWallSceneObject.h
     MicrobePointLineObject.h
     PointLineGraph.h
+    TRGraphAction.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -55,6 +56,7 @@ ADD_LIBRARY(${LIB_NAME}
     FPTiledWallSceneObject.cpp
     MicrobePointLineObject.cpp
     PointLineGraph.cpp
+    TRGraphAction.cpp
 )
 
 FIND_PACKAGE(Mysql)

@@ -82,6 +82,9 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         std::map<int,std::vector<std::string> > _patientMicrobeTestMap;
         std::map<int,std::vector<time_t> > _patientMicrobeTestTimeMap;
 
+        std::map<int,std::vector<std::string> > _patientMicrobeV2TestMap;
+        std::map<int,std::vector<time_t> > _patientMicrobeV2TestTimeMap;
+
         cvr::SubMenu * _chartMenu;
         cvr::SubMenu * _presetMenu;
         cvr::MenuButton * _inflammationButton;
@@ -92,6 +95,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _loadAll;
 
         cvr::SubMenu * _microbeMenu;
+        cvr::MenuList * _microbeTable;
         cvr::MenuList * _microbeGraphType;
         cvr::MenuList * _microbePatients;
         cvr::MenuList * _microbeTest;
@@ -128,6 +132,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _eventName;
         cvr::MenuButton * _eventLoad;
         cvr::MenuButton * _eventLoadAll;
+        cvr::MenuButton * _eventLoadMicrobe;
         cvr::MenuButton * _eventDone;
 
         cvr::SubMenu * _scatterMenu;

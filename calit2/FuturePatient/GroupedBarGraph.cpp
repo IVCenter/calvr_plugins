@@ -39,6 +39,11 @@ GroupedBarGraph::~GroupedBarGraph()
 
 bool GroupedBarGraph::setGraph(std::string title, std::map<std::string, std::vector<std::pair<std::string, float> > > & data, std::vector<std::string> & groupOrder, BarGraphAxisType axisType, std::string axisLabel, std::string axisUnits, std::string groupLabel, osg::Vec4 color)
 {
+    if(!data.size())
+    {
+	return false;
+    }
+
     _title = title;
     _axisLabel = axisLabel;
     _axisUnits = axisUnits;

@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+class TRGraphAction;
+
 class TimeRangeDataGraph
 {
     public:
@@ -26,12 +28,13 @@ class TimeRangeDataGraph
         void setGLScale(float scale);
         void setColorOffset(float offset);
 
-        void addGraph(std::string name, std::vector<std::pair<time_t,time_t> > & rangeList, std::vector<int> & valueList, int maxValue);
+        void addGraph(std::string name, std::vector<std::pair<time_t,time_t> > & rangeList, std::vector<int> & valueList, int maxValue, time_t bandPadding = 0);
 
         void setValueLabelMap(std::map<int,std::string> & labelMap)
         {
             _labelMap = labelMap;
         }
+        void setGraphAction(std::string name, TRGraphAction * action);
 
         void setDisplayRange(time_t & start, time_t & end);
         void getDisplayRange(time_t & start, time_t & end);
@@ -42,6 +45,7 @@ class TimeRangeDataGraph
 
         void setHover(osg::Vec3 intersect);
         void clearHoverText();
+        bool click();
 
     protected:
         struct RangeDataInfo
@@ -49,6 +53,7 @@ class TimeRangeDataGraph
             std::string name;
             std::vector<std::pair<time_t,time_t> > ranges;
             std::vector<int> values;
+            time_t bandPadding;
             int maxValue;
             osg::ref_ptr<osg::Geometry> barGeometry;
             osg::ref_ptr<osg::Geometry> barOutlineGeometry;
@@ -72,6 +77,7 @@ class TimeRangeDataGraph
 
         std::vector<RangeDataInfo *> _graphList;
         std::map<int,std::string> _labelMap;
+        std::map<std::string,TRGraphAction*> _graphActionMap;
 
         time_t _displayMin;
         time_t _displayMax;
