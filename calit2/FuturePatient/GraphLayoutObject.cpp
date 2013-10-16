@@ -262,8 +262,6 @@ void GraphLayoutObject::removeAll()
 	delete it->second;
     }
 
-    checkLineRefs();
-
     _deleteButtonMap.clear();
     _perGraphActiveHand.clear();
     _perGraphActiveHandType.clear();
@@ -275,6 +273,8 @@ void GraphLayoutObject::removeAll()
     _currentSelectedPatients.clear();
 
     _objectList.clear();
+
+    checkLineRefs();
 
     setTitle(getName());
 }
