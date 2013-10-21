@@ -29,14 +29,17 @@ GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std
     addMenuItem(_zoomCB);
 
     _rowsRV = new MenuRangeValueCompact("Rows",1.0,40.0,maxRows);
+    _rowsRV->setCallbackType(MenuRangeValueCompact::ON_RELEASE);
     _rowsRV->setCallback(this);
     addMenuItem(_rowsRV);
 
     _widthRV = new MenuRangeValueCompact("Width",100.0,width*1.5,width);
+    _widthRV->setCallbackType(MenuRangeValueCompact::ON_RELEASE);
     _widthRV->setCallback(this);
     addMenuItem(_widthRV);
 
     _heightRV = new MenuRangeValueCompact("Height",100.0,height*1.5,height);
+    _heightRV->setCallbackType(MenuRangeValueCompact::ON_RELEASE);
     _heightRV->setCallback(this);
     addMenuItem(_heightRV);
 

@@ -220,7 +220,7 @@ bool FuturePatient::init()
     _microbeTest->setSensitivity(2.0);
 
     //_microbeNumBars = new MenuRangeValueCompact("Microbes",1,100,25);
-    _microbeNumBars = new MenuRangeValueCompact("Microbes",1,2330,25);
+    _microbeNumBars = new MenuRangeValueCompact("Microbes",1,2000,25,true);
     _microbeNumBars->setCallback(this);
     _microbeMenu->addItem(_microbeNumBars);
 
