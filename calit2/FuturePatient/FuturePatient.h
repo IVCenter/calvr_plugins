@@ -43,7 +43,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         void checkLayout();
         void loadGraph(std::string patient, std::string test, bool averageColor=false);
         //void makeGraph(std::string name);
-        
+       
+        void setupMicrobes(); 
         void setupMicrobePatients();
         void setupStrainMenu();
         void updateMicrobeTests(int patientid);
@@ -85,6 +86,11 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         std::map<int,std::vector<std::string> > _patientMicrobeV2TestMap;
         std::map<int,std::vector<time_t> > _patientMicrobeV2TestTimeMap;
 
+        std::vector<std::string> _microbeList;
+        std::vector<int> _microbeIDList;
+        std::vector<std::string> _microbeV2List;
+        std::vector<int> _microbeV2IDList;
+
         cvr::SubMenu * _chartMenu;
         cvr::SubMenu * _presetMenu;
         cvr::MenuButton * _inflammationButton;
@@ -105,6 +111,10 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuCheckbox * _microbeFamilyLevel;
         cvr::MenuRangeValueCompact * _microbeNumBars;
         cvr::MenuButton * _microbeDone;
+
+        cvr::SubMenu * _sMicrobeMenu;
+        cvr::MenuList * _sMicrobes;
+        cvr::MenuButton * _sMicrobeLoad;
 
         cvr::SubMenu * _microbeSpecialMenu;
         cvr::MenuButton * _microbeLoadAverage;

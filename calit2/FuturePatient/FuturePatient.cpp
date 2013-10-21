@@ -2,6 +2,7 @@
 #include "DataGraph.h"
 #include "StrainGraphObject.h"
 #include "StrainHMObject.h"
+#include "SingleMicrobeObject.h"
 
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/ComController.h>
@@ -111,6 +112,7 @@ bool FuturePatient::init()
 
     _testList = new MenuList();
     _testList->setCallback(this);
+    _testList->setScrollingHint(MenuList::ONE_TO_ONE);
     _chartMenu->addItem(_testList);
 
     _loadButton = new MenuButton("Load");
@@ -174,8 +176,22 @@ bool FuturePatient::init()
     _microbeLoadPointLine->setCallback(this);
     _microbePointLineMenu->addItem(_microbeLoadPointLine);
 
+    _sMicrobeMenu = new SubMenu("Single Microbe");
+    _microbeMenu->addItem(_sMicrobeMenu);
+
+    _sMicrobes = new MenuList();
+    _sMicrobes->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobes);
+    _sMicrobes->setSensitivity(1.0);
+    _sMicrobes->setScrollingHint(MenuList::CONTINUOUS);
+
+    _sMicrobeLoad = new MenuButton("Load");
+    _sMicrobeLoad->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobeLoad);
+
     _microbeTable = new MenuList();
     _microbeTable->setCallback(this);
+    _microbeTable->setScrollingHint(MenuList::ONE_TO_ONE);
     _microbeMenu->addItem(_microbeTable);
 
     std::vector<std::string> tableList;
@@ -185,6 +201,7 @@ bool FuturePatient::init()
 
     _microbeGraphType = new MenuList();
     _microbeGraphType->setCallback(this);
+    _microbeGraphType->setScrollingHint(MenuList::ONE_TO_ONE);
     _microbeMenu->addItem(_microbeGraphType);
 
     std::vector<std::string> mGraphTypes;
@@ -198,6 +215,7 @@ bool FuturePatient::init()
 
     _microbeTest = new MenuList();
     _microbeTest->setCallback(this);
+    _microbeTest->setScrollingHint(MenuList::ONE_TO_ONE);
     _microbeMenu->addItem(_microbeTest);
     _microbeTest->setSensitivity(2.0);
 
@@ -230,10 +248,12 @@ bool FuturePatient::init()
 
     _strainGroupList = new MenuList();
     _strainGroupList->setCallback(this);
+    _strainGroupList->setScrollingHint(MenuList::ONE_TO_ONE);
     _strainMenu->addItem(_strainGroupList);
 
     _strainList = new MenuList();
     _strainList->setCallback(this);
+    _strainList->setScrollingHint(MenuList::CONTINUOUS);
     _strainMenu->addItem(_strainList);
 
     _strainLarryOnlyCB = new MenuCheckbox("Larry Only",false);
@@ -257,6 +277,7 @@ bool FuturePatient::init()
 
     _eventName = new MenuList();
     _eventName->setCallback(this);
+    _eventName->setScrollingHint(MenuList::ONE_TO_ONE);
     _eventMenu->addItem(_eventName);
 
     _eventLoad = new MenuButton("Load");
@@ -585,6 +606,7 @@ bool FuturePatient::init()
 	delete[] groupLists;
     }
 
+    setupMicrobes();
     setupMicrobePatients();
     setupStrainMenu();
     
@@ -1122,6 +1144,15 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    updateMicrobeTests(_microbePatients->getIndex() + 1);
 	}
+
+	if(_microbeTable->getIndex() == 0)
+	{
+	    _sMicrobes->setValues(_microbeList);
+	}
+	else if(_microbeTable->getIndex() == 1)
+	{
+	    _sMicrobes->setValues(_microbeV2List);
+	}
     }
 
     if(item == _microbePatients)
@@ -1486,6 +1517,33 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    delete mplo;
 	}
+    }
+
+    if(item == _sMicrobeLoad && _sMicrobes->getListSize())
+    {
+	std::string tablesuffix;
+	int taxid;
+	if(_microbeTable->getIndex() == 0)
+	{
+	    taxid = _microbeIDList[_sMicrobes->getIndex()];
+	}
+	else if(_microbeTable->getIndex() == 1)
+	{
+	    taxid = _microbeV2IDList[_sMicrobes->getIndex()];
+	    tablesuffix = "_V2";
+	}
+
+	SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	if(smo->setGraph(_sMicrobes->getValue(),taxid,tablesuffix))
+	{
+	    checkLayout();
+	    _layoutObject->addGraphObject(smo);
+	}
+	else
+	{
+	    delete smo;
+	}
+	return;
     }
 
     if(item == _strainGroupList)
@@ -1863,6 +1921,119 @@ void FuturePatient::loadGraph(std::string patient, std::string test, bool averag
     dg->setXDataRangeTimestamp(metaRes[0]["display_name"].c_str(),mint,maxt);
     PluginHelper::getObjectsRoot()->addChild(dg->getGraphRoot());
 }*/
+
+void FuturePatient::setupMicrobes()
+{
+    struct Microbes
+    {
+	char name[512];
+	int taxid;
+    };
+
+    Microbes * microbes = NULL;
+    int numMicrobes = 0;
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    mysqlpp::Query q = _conn->query("select distinct taxonomy_id, species from Microbes order by species;");
+	    mysqlpp::StoreQueryResult res = q.store();
+
+	    numMicrobes = res.num_rows();
+
+	    if(numMicrobes)
+	    {
+		microbes = new struct Microbes[numMicrobes];
+
+		for(int i = 0; i < numMicrobes; ++i)
+		{
+		    strncpy(microbes[i].name,res[i]["species"].c_str(),511);
+		    microbes[i].taxid = atoi(res[i]["taxonomy_id"].c_str());
+		}
+	    }
+
+	    ComController::instance()->sendSlaves(&numMicrobes,sizeof(int));
+	    if(numMicrobes)
+	    {
+		ComController::instance()->sendSlaves(microbes,numMicrobes*sizeof(struct Microbes));
+	    }
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&numMicrobes,sizeof(int));
+	if(numMicrobes)
+	{
+	    microbes = new struct Microbes[numMicrobes];
+	    ComController::instance()->readMaster(microbes,numMicrobes*sizeof(struct Microbes));
+	}
+    }
+
+    for(int i = 0; i < numMicrobes; ++i)
+    {
+	_microbeList.push_back(microbes[i].name);
+	_microbeIDList.push_back(microbes[i].taxid);
+    }
+
+    if(microbes)
+    {
+	delete[] microbes;
+    }
+
+    microbes = NULL;
+    numMicrobes = 0;
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    mysqlpp::Query q = _conn->query("select distinct taxonomy_id, species from Microbes_V2 order by species;");
+	    mysqlpp::StoreQueryResult res = q.store();
+
+	    numMicrobes = res.num_rows();
+
+	    if(numMicrobes)
+	    {
+		microbes = new struct Microbes[numMicrobes];
+
+		for(int i = 0; i < numMicrobes; ++i)
+		{
+		    strncpy(microbes[i].name,res[i]["species"].c_str(),511);
+		    microbes[i].taxid = atoi(res[i]["taxonomy_id"].c_str());
+		}
+	    }
+
+	    ComController::instance()->sendSlaves(&numMicrobes,sizeof(int));
+	    if(numMicrobes)
+	    {
+		ComController::instance()->sendSlaves(microbes,numMicrobes*sizeof(struct Microbes));
+	    }
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&numMicrobes,sizeof(int));
+	if(numMicrobes)
+	{
+	    microbes = new struct Microbes[numMicrobes];
+	    ComController::instance()->readMaster(microbes,numMicrobes*sizeof(struct Microbes));
+	}
+    }
+
+    for(int i = 0; i < numMicrobes; ++i)
+    {
+	_microbeV2List.push_back(microbes[i].name);
+	_microbeV2IDList.push_back(microbes[i].taxid);
+    }
+
+    if(microbes)
+    {
+	delete[] microbes;
+    }
+
+    _sMicrobes->setValues(_microbeList);
+}
 
 void FuturePatient::setupMicrobePatients()
 {

@@ -120,6 +120,7 @@ bool GroupedBarGraph::setGraph(std::string title, std::map<std::string, std::vec
 	_bgGeode = new osg::Geode();
 	_selectGeode = new osg::Geode();
 	_shadingGeode = new osg::Geode();
+	_mathGeode = new osg::Geode();
 
 	_bgScaleMT->addChild(_bgGeode);
 	_root->addChild(_bgScaleMT);
@@ -127,6 +128,7 @@ bool GroupedBarGraph::setGraph(std::string title, std::map<std::string, std::vec
 	_root->addChild(_axisGeode);
 	_root->addChild(_selectGeode);
 	_root->addChild(_shadingGeode);
+	_root->addChild(_mathGeode);
 
 	osg::StateSet * stateset = _selectGeode->getOrCreateStateSet();
 	stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
@@ -798,6 +800,33 @@ bool GroupedBarGraph::processClick(osg::Vec3 & hitPoint, std::string & selectedG
     return clickUsed;
 }
 
+void GroupedBarGraph::addMathFunction(MicrobeMathFunction * mf)
+{
+    if(mf)
+    {
+	_mathFunctionList.push_back(mf);
+	mf->added(_mathGeode);
+	update();
+    }
+}
+
+void GroupedBarGraph::removeMathFunction(MicrobeMathFunction * mf)
+{
+    if(mf)
+    {
+	for(std::vector<MicrobeMathFunction*>::iterator it = _mathFunctionList.begin(); it != _mathFunctionList.end(); ++it)
+	{
+	    if((*it) == mf)
+	    {
+		_mathFunctionList.erase(it);
+		mf->removed(_mathGeode);
+		update();
+		break;
+	    }
+	}
+    }
+}
+
 void GroupedBarGraph::makeGraph()
 {
     _barGeom = new osg::Geometry();
@@ -906,6 +935,7 @@ void GroupedBarGraph::update()
     updateAxis();
     updateGraph();
     updateShading();
+    updateMathFuncs();
 }
 
 void GroupedBarGraph::updateGraph()
@@ -1546,4 +1576,26 @@ void GroupedBarGraph::updateSizes()
     }
 
     _barWidth = (_width * (1.0 - _leftPaddingMult - _rightPaddingMult)) / ((float)_numBars);
+}
+
+void GroupedBarGraph::updateMathFuncs()
+{
+
+    std::vector<std::pair<float,float> > groupRanges;
+
+    if(_displayMode == BGDM_GROUPED)
+    {
+	float left = _graphLeft;
+	for(int i = 0; i < _groupOrder.size(); ++i)
+	{
+	    float width = _barWidth * ((float)_data[_groupOrder[i]].size());
+	    groupRanges.push_back(std::pair<float,float>(left,left+width));
+	    left += width;
+	}
+    }
+
+    for(int i = 0; i < _mathFunctionList.size(); ++i)
+    {
+	_mathFunctionList[i]->update(_graphLeft,_graphRight,_graphTop,_graphBottom,_barWidth,_data,_displayMode,_groupOrder,_customDataOrder,_minDisplayRange,_maxDisplayRange,_axisType,groupRanges);
+    }
 }
