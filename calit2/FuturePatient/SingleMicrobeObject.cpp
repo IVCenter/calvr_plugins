@@ -300,24 +300,41 @@ void BandingFunction::added(osg::Geode * geode)
 	stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
 	stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
 	stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+
+	_lineGeometry = new osg::Geometry();
+	_lineGeometry->setUseDisplayList(false);
+	_lineGeometry->setUseVertexBufferObjects(true);
+
+	stateset = _lineGeometry->getOrCreateStateSet();
+	stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+
+	_boundsCallback = new SetBoundsCallback;
+	_bandGeometry->setComputeBoundingBoxCallback(_boundsCallback.get());
+	_lineGeometry->setComputeBoundingBoxCallback(_boundsCallback.get());
     }
 
     geode->addDrawable(_bandGeometry);
+    geode->addDrawable(_lineGeometry);
 }
 
 void BandingFunction::removed(osg::Geode * geode)
 {
     geode->removeDrawable(_bandGeometry);
+    geode->removeDrawable(_lineGeometry);
 }
 
 void BandingFunction::update(float left, float right, float top, float bottom, float barWidth, std::map<std::string, std::vector<std::pair<std::string, float> > > & data, BarGraphDisplayMode displayMode, const std::vector<std::string> & groupOrder, const std::vector<std::pair<std::string,int> > & customOrder, float displayMin, float displayMax, BarGraphAxisType axisType, const std::vector<std::pair<float,float> > & groupRanges)
 {
     _bandGeometry->removePrimitiveSet(0,_bandGeometry->getNumPrimitiveSets());
+    _lineGeometry->removePrimitiveSet(0,_lineGeometry->getNumPrimitiveSets());
 
     if(displayMode == BGDM_GROUPED)
     {
 	osg::ref_ptr<osg::Vec3Array> verts = new osg::Vec3Array();
 	osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array();
+
+	osg::ref_ptr<osg::Vec3Array> lverts = new osg::Vec3Array();
+	osg::ref_ptr<osg::Vec4Array> lcolors = new osg::Vec4Array();
 
 	for(int i = 0; i < groupOrder.size(); ++i)
 	{
@@ -338,9 +355,7 @@ void BandingFunction::update(float left, float right, float top, float bottom, f
 	    dev /= ((float)data[groupOrder[i]].size());
 	    dev = sqrt(dev);
 
-	    float bTop = 0, bBottom = 0;
-
-	    std::cerr << "Avg: " << sum << " Dev: " << dev << std::endl;
+	    float bTop = 0, bBottom = 0, avg = 0;
 
 	    switch(axisType)
 	    {
@@ -350,14 +365,17 @@ void BandingFunction::update(float left, float right, float top, float bottom, f
 		}
 		case BGAT_LOG:
 		{
-		    bTop = sum + dev;
+		    avg = sum;
+		    bTop = sum + 1.0*dev;
 		    bTop = std::min(bTop,displayMax);
-		    bBottom = sum - dev;
+		    bBottom = sum - 1.0*dev;
 		    bBottom = std::max(bBottom,displayMin);
 		    float logMin = log10(displayMin);
 		    float logMax = log10(displayMax);
+		    avg = log10(avg);
 		    bTop = log10(bTop);
 		    bBottom = log10(bBottom);
+		    avg = bottom + ((avg-logMin)/(logMax-logMin))*(top-bottom);
 		    bBottom = bottom + ((bBottom-logMin)/(logMax-logMin))*(top-bottom);
 		    bTop = bottom + ((bTop-logMin)/(logMax-logMin))*(top-bottom);
 		    break;
@@ -376,6 +394,13 @@ void BandingFunction::update(float left, float right, float top, float bottom, f
 	    colors->push_back(color);
 	    colors->push_back(color);
 	    colors->push_back(color);
+
+	    lverts->push_back(osg::Vec3(groupRanges[i].first,-1.95,avg));
+	    lverts->push_back(osg::Vec3(groupRanges[i].second,-1.95,avg));
+
+	    osg::Vec4 lcolor(0,0,0,1);
+	    lcolors->push_back(lcolor);
+	    lcolors->push_back(lcolor);
 	}
 
 	_bandGeometry->setVertexArray(verts);
@@ -388,5 +413,20 @@ void BandingFunction::update(float left, float right, float top, float bottom, f
 	    drawArrays->setCount(verts->size());
 	    _bandGeometry->addPrimitiveSet(drawArrays);
 	}
+
+	_lineGeometry->setVertexArray(lverts);
+	_lineGeometry->setColorArray(lcolors);
+	_lineGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+
+	if(lverts->size())
+	{
+	    osg::ref_ptr<osg::DrawArrays> drawArrays = new osg::DrawArrays(osg::PrimitiveSet::LINES,0,lverts->size());
+	    _lineGeometry->addPrimitiveSet(drawArrays);
+	}
     }
+    _boundsCallback->bbox.set(left,-1.95,bottom,right,-1.75,top);
+    _bandGeometry->dirtyBound();
+    _lineGeometry->dirtyBound();
+    _bandGeometry->getBound();
+    _lineGeometry->getBound();
 }

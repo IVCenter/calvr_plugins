@@ -47,6 +47,8 @@ PointLineGraph::PointLineGraph(float width, float height)
     _currentHoverItem = -1;
     _currentHoverPoint = -1;
 
+    _graphBoundsCallback = new SetBoundsCallback;
+
     makeBG();
     makeHover();
 }
@@ -187,6 +189,8 @@ bool PointLineGraph::setGraph(std::string title, std::vector<std::string> & grou
     _dataGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
 
     _dataGeode->addDrawable(_dataGeometry);
+
+    _dataGeometry->setComputeBoundingBoxCallback(_graphBoundsCallback.get());
 
     update();
     updateColors();
@@ -730,6 +734,13 @@ void PointLineGraph::updateSizes()
     _graphRight = (_width / 2.0) - (_rightPaddingMult * _width);
     _graphTop = (_height / 2.0) - (_topPaddingMult * _height);
     _graphBottom = -(_height / 2.0) + (_bottomPaddingMult * _height);
+
+    _graphBoundsCallback->bbox.set(_graphLeft,-3,_graphBottom,_graphRight,1,_graphTop);
+    if(_dataGeometry)
+    {
+	_dataGeometry->dirtyBound();
+	_dataGeometry->getBound();
+    }
 }
 
 void PointLineGraph::updateColors()

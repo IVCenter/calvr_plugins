@@ -45,6 +45,8 @@ class BandingFunction : public MicrobeMathFunction
 
     protected:
         osg::ref_ptr<osg::Geometry> _bandGeometry;
+        osg::ref_ptr<osg::Geometry> _lineGeometry;
+        osg::ref_ptr<SetBoundsCallback> _boundsCallback;
 };
 
 #endif
