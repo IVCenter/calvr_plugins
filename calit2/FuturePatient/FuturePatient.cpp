@@ -185,9 +185,33 @@ bool FuturePatient::init()
     _sMicrobes->setSensitivity(1.0);
     _sMicrobes->setScrollingHint(MenuList::CONTINUOUS);
 
+    _sMicrobeRankOrder = new MenuCheckbox("Rank Order",false);
+    _sMicrobeRankOrder->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobeRankOrder);
+
+    _sMicrobeLabels = new MenuCheckbox("Labels",true);
+    _sMicrobeLabels->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobeLabels);
+
     _sMicrobeLoad = new MenuButton("Load");
     _sMicrobeLoad->setCallback(this);
     _sMicrobeMenu->addItem(_sMicrobeLoad);
+
+    _sMicrobePhenotypes = new MenuList();
+    _sMicrobePhenotypes->setCallback(this);
+    _sMicrobePhenotypes->setScrollingHint(MenuList::ONE_TO_ONE);
+    _sMicrobeMenu->addItem(_sMicrobePhenotypes);
+
+    std::vector<std::string> pheno;
+    pheno.push_back("Smarr");
+    pheno.push_back("Crohns");
+    pheno.push_back("UC");
+    pheno.push_back("Healthy");
+    _sMicrobePhenotypes->setValues(pheno);
+
+    _sMicrobePhenotypeLoad = new MenuButton("Load(Phenotype)");
+    _sMicrobePhenotypeLoad->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobePhenotypeLoad);
 
     _microbeTable = new MenuList();
     _microbeTable->setCallback(this);
@@ -1534,7 +1558,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	}
 
 	SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	if(smo->setGraph(_sMicrobes->getValue(),taxid,tablesuffix))
+	if(smo->setGraph(_sMicrobes->getValue(),taxid,tablesuffix,_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue()))
 	{
 	    checkLayout();
 	    _layoutObject->addGraphObject(smo);
@@ -1543,6 +1567,12 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    delete smo;
 	}
+	return;
+    }
+
+    if(item == _sMicrobePhenotypeLoad)
+    {
+	loadPhenotype();
 	return;
     }
 
@@ -2519,4 +2549,268 @@ void FuturePatient::loadLayout(const std::string & file)
     _layoutObject->loadState(instream);
 
     instream.close();
+}
+
+bool phenoDispSort(const std::pair<PhenoStats*,float> & first, const std::pair<PhenoStats*,float> & second)
+{
+    return first.second > second.second;
+}
+
+void FuturePatient::loadPhenotype()
+{
+    if(_microbeTable->getIndex() == 0 && !_microbeStatsMap.size())
+    {
+	initPhenoStats(_microbeStatsMap,"");
+    }
+    if(_microbeTable->getIndex() == 1 && !_microbeV2StatsMap.size())
+    {
+	initPhenoStats(_microbeV2StatsMap,"_V2");
+    }
+
+    std::vector<std::pair<PhenoStats*,float> > displayList;
+    std::string suffix;
+
+    if(_microbeTable->getIndex() == 0)
+    {
+	for(std::map<std::string,struct PhenoStats>::iterator it = _microbeStatsMap[_sMicrobePhenotypes->getValue()].begin(); it != _microbeStatsMap[_sMicrobePhenotypes->getValue()].end(); ++it)
+	{
+	    float refMax = it->second.avg + it->second.stdev;
+	    float refMin = it->second.avg - it->second.stdev;
+
+	    bool addGraph = true;
+	    float minGap = FLT_MAX;
+	    for(std::map<std::string,std::map<std::string,struct PhenoStats> >::iterator git = _microbeStatsMap.begin(); git != _microbeStatsMap.end(); ++git)
+	    {
+		if(git->first == _sMicrobePhenotypes->getValue())
+		{
+		    continue;
+		}
+
+		float localMax = git->second[it->first].avg + git->second[it->first].stdev;
+		float localMin = git->second[it->first].avg - git->second[it->first].stdev;
+		if(refMax < localMin)
+		{
+		    minGap = std::min(minGap,localMin-refMax);
+		}
+		else if(refMin > localMax)
+		{
+		    minGap = std::min(minGap,refMin-localMax);
+		}
+		else
+		{
+		    addGraph = false;
+		    break;
+		}
+	    }
+	    if(addGraph)
+	    {
+		displayList.push_back(std::pair<PhenoStats*,float>(&it->second,minGap));
+	    }
+	}
+    }
+    else if(_microbeTable->getIndex() == 1)
+    {
+	for(std::map<std::string,struct PhenoStats>::iterator it = _microbeV2StatsMap[_sMicrobePhenotypes->getValue()].begin(); it != _microbeV2StatsMap[_sMicrobePhenotypes->getValue()].end(); ++it)
+	{
+	    float refMax = it->second.avg + it->second.stdev;
+	    float refMin = it->second.avg - it->second.stdev;
+
+	    bool addGraph = true;
+	    float minGap = FLT_MAX;
+	    for(std::map<std::string,std::map<std::string,struct PhenoStats> >::iterator git = _microbeV2StatsMap.begin(); git != _microbeV2StatsMap.end(); ++git)
+	    {
+		if(git->first == _sMicrobePhenotypes->getValue())
+		{
+		    continue;
+		}
+
+		float localMax = git->second[it->first].avg + git->second[it->first].stdev;
+		float localMin = git->second[it->first].avg - git->second[it->first].stdev;
+		if(refMax < localMin)
+		{
+		    minGap = std::min(minGap,localMin-refMax);
+		}
+		else if(refMin > localMax)
+		{
+		    minGap = std::min(minGap,refMin-localMax);
+		}
+		else
+		{
+		    addGraph = false;
+		    break;
+		}
+	    }
+	    if(addGraph)
+	    {
+		displayList.push_back(std::pair<PhenoStats*,float>(&it->second,minGap));
+	    }
+	}
+	suffix = "_V2";
+    }
+
+    std::sort(displayList.begin(),displayList.end(),phenoDispSort);
+
+    std::cerr << "Got " << displayList.size() << " graphs in display list." << std::endl;
+
+    if(!displayList.size())
+    {
+	return;
+    }
+
+    GraphGlobals::setDeferUpdate(true);
+    for(int i = 0; i < displayList.size() && i < 20; ++i)
+    {
+	SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	if(smo->setGraph(displayList[i].first->name,displayList[i].first->taxid,suffix,_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue()))
+	{
+	    checkLayout();
+	    _layoutObject->addGraphObject(smo);
+	}
+	else
+	{
+	    delete smo;
+	}	
+    }
+    GraphGlobals::setDeferUpdate(false);
+    if(_layoutObject)
+    {
+	_layoutObject->forceUpdate();
+    }
+}
+
+void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::string tableSuffix)
+{
+    struct entry
+    {
+	char name[512];
+	int taxid;
+	float value;
+    };
+
+    struct entry * entries = NULL;
+    int numEntries[4];
+    numEntries[0] = numEntries[1] = numEntries[2] = numEntries[3] = 0;
+    int totalEntries = 0;
+
+    std::string measurementTable = "Microbe_Measurement";
+    measurementTable += tableSuffix;
+
+    std::string microbesTable = "Microbes";
+    microbesTable += tableSuffix;
+
+    std::stringstream queryhss, querycss, queryuss, querylss;
+    queryhss << "select " << microbesTable << ".species, t.taxonomy_id, t.value from (select " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"healthy\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
+
+    querycss << "select " << microbesTable << ".species, t.taxonomy_id, t.value from (select " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"CD\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
+
+    queryuss << "select " << microbesTable << ".species, t.taxonomy_id, t.value from (select " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"ulcerous colitis\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
+
+    querylss << "select " << microbesTable << ".species, t.taxonomy_id, t.value from (select " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"Larry\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    mysqlpp::StoreQueryResult res[4];
+
+	    mysqlpp::Query queryh = _conn->query(queryhss.str().c_str());
+	    res[0] = queryh.store();
+
+	    mysqlpp::Query queryc = _conn->query(querycss.str().c_str());
+	    res[1] = queryc.store();
+
+	    mysqlpp::Query queryu = _conn->query(queryuss.str().c_str());
+	    res[2] = queryu.store();
+
+	    mysqlpp::Query queryl = _conn->query(querylss.str().c_str());
+	    res[3] = queryl.store();
+
+	    for(int i = 0; i < 4; ++i)
+	    {
+		numEntries[i] = res[i].num_rows();
+	    }
+
+	    totalEntries += numEntries[0] + numEntries[1] + numEntries[2] + numEntries[3];
+
+	    if(totalEntries)
+	    {
+		entries = new struct entry[totalEntries];
+		int entryIndex = 0;
+
+		for(int i = 0; i < 4; ++i)
+		{
+		    for(int j = 0; j < numEntries[i]; ++j)
+		    {
+			entries[entryIndex+j].name[511] = '\0';
+			strncpy(entries[entryIndex+j].name,res[i][j]["species"].c_str(),511);
+			entries[entryIndex+j].taxid = atoi(res[i][j]["taxonomy_id"].c_str());
+			entries[entryIndex+j].value = atof(res[i][j]["value"].c_str());
+		    }
+		    entryIndex += numEntries[i];
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&totalEntries,sizeof(int));
+	ComController::instance()->sendSlaves(numEntries,4*sizeof(int));
+	if(totalEntries)
+	{
+	    ComController::instance()->sendSlaves(entries,totalEntries*sizeof(struct entry));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&totalEntries,sizeof(int));
+	ComController::instance()->readMaster(numEntries,4*sizeof(int));
+	if(totalEntries)
+	{
+	    entries = new struct entry[totalEntries];
+	    ComController::instance()->readMaster(entries,totalEntries*sizeof(struct entry));
+	}
+    }
+
+    std::vector<std::string> groupLabels;
+    groupLabels.push_back("Healthy");
+    groupLabels.push_back("Crohns");
+    groupLabels.push_back("UC");
+    groupLabels.push_back("Smarr");
+
+    int entryIndex = 0;
+    for(int i = 0; i < 4; ++i)
+    {
+	std::map<std::string,int> countMap;
+	for(int j = 0; j < numEntries[i]; ++j)
+	{
+	    int index = entryIndex + j;
+	    statMap[groupLabels[i]][entries[index].name].avg += entries[index].value;
+	    countMap[entries[index].name]++;
+	    statMap[groupLabels[i]][entries[index].name].taxid = entries[index].taxid;
+	    statMap[groupLabels[i]][entries[index].name].name = entries[index].name;
+	}
+
+	for(std::map<std::string,int>::iterator it = countMap.begin(); it != countMap.end(); ++it)
+	{
+	    statMap[groupLabels[i]][it->first].avg /= ((float)it->second);
+	}
+
+	for(int j = 0; j < numEntries[i]; ++j)
+	{
+	    int index = entryIndex + j;
+	    float val = entries[index].value - statMap[groupLabels[i]][entries[index].name].avg;
+	    val *= val;
+	    statMap[groupLabels[i]][entries[index].name].stdev += val;
+	}
+
+	for(std::map<std::string,int>::iterator it = countMap.begin(); it != countMap.end(); ++it)
+	{
+	    statMap[groupLabels[i]][it->first].stdev = sqrt(statMap[groupLabels[i]][it->first].stdev / ((float)it->second));
+	}
+
+	entryIndex += numEntries[i];
+    }
+
+    if(entries)
+    {
+	delete[] entries;
+    }
 }

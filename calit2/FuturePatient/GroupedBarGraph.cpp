@@ -64,6 +64,12 @@ bool GroupedBarGraph::setGraph(std::string title, std::map<std::string, std::vec
     {
 	for(int i = 0; i < it->second.size(); ++i)
 	{
+	    _numBars++;
+	    if(axisType == BGAT_LOG && it->second[i].second <= 0.0)
+	    {
+		continue;
+	    }
+
 	    if(it->second[i].second < minValue)
 	    {
 		minValue = it->second[i].second;
@@ -72,7 +78,6 @@ bool GroupedBarGraph::setGraph(std::string title, std::map<std::string, std::vec
 	    {
 		maxValue = it->second[i].second;
 	    }
-	    _numBars++;
 	}
     }
 

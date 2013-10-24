@@ -31,7 +31,12 @@ SingleMicrobeObject::~SingleMicrobeObject()
 {
 }
 
-bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string tableSuffix)
+bool rankOrderSort(const std::pair<std::string, float> & first, const std::pair<std::string, float> & second)
+{
+    return first.second > second.second;
+}
+
+bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string tableSuffix, bool rankOrder, bool labels)
 {
     std::string measurementTable = "Microbe_Measurement";
     measurementTable += tableSuffix;
@@ -104,7 +109,7 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string t
 	std::string condition = data[i].condition;
 	if(condition == "CD" || condition == "healthy" || condition == "Larry" || condition == "ulcerous colitis")
 	{
-	    if(data[i].value > 0.0)
+	    //if(data[i].value > 0.0)
 	    {
 		char timestamp[512];
 		timestamp[511] = '\0';
@@ -115,7 +120,7 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string t
 		std::string name = data[i].name;
 		name = name + " - " + timestamp;
 
-		if(condition == "CD")
+		/*if(condition == "CD")
 		{
 		    if(_cdCountMap.find(data[i].name) == _cdCountMap.end())
 		    {
@@ -125,6 +130,10 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string t
 		    std::stringstream groupss;
 		    groupss << "Crohns - " << _cdCountMap.size();
 		    group = groupss.str();
+		}*/
+		if(condition == "CD")
+		{
+		    group = "Crohns";
 		}
 		else if(condition == "healthy")
 		{
@@ -145,14 +154,14 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string t
     }
 
     orderList.push_back("Smarr");
-
-    for(int i = 0; i < _cdCountMap.size(); ++i)
+    orderList.push_back("Crohns");
+    /*for(int i = 0; i < _cdCountMap.size(); ++i)
     {
 	std::stringstream cdss;
 	cdss << "Crohns - " << (i+1);
 	colorMap[cdss.str()] = colorMap["Crohns"];
 	orderList.push_back(cdss.str());
-    }
+    }*/
 
     orderList.push_back("UC");
     orderList.push_back("Healthy");
@@ -165,12 +174,21 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string t
 	delete[] data;
     }
 
+    if(rankOrder)
+    {
+	for(std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = dataMap.begin(); it != dataMap.end(); ++it)
+	{
+	    std::sort(it->second.begin(),it->second.end(),rankOrderSort);
+	}
+    }
+
     bool status = _graph->setGraph(microbe,dataMap,orderList,BGAT_LOG,"Value","","condition / patient", osg::Vec4());
 
     if(status)
     {
 	addChild(_graph->getRootNode());
 	_graph->addMathFunction(new BandingFunction());
+	_graph->setShowLabels(labels);
     }
 
     return status;
@@ -372,10 +390,13 @@ void BandingFunction::update(float left, float right, float top, float bottom, f
 		    bBottom = std::max(bBottom,displayMin);
 		    float logMin = log10(displayMin);
 		    float logMax = log10(displayMax);
-		    avg = log10(avg);
+		    if(avg > 0.0)
+		    {
+			avg = log10(avg);
+			avg = bottom + ((avg-logMin)/(logMax-logMin))*(top-bottom);
+		    }
 		    bTop = log10(bTop);
 		    bBottom = log10(bBottom);
-		    avg = bottom + ((avg-logMin)/(logMax-logMin))*(top-bottom);
 		    bBottom = bottom + ((bBottom-logMin)/(logMax-logMin))*(top-bottom);
 		    bTop = bottom + ((bTop-logMin)/(logMax-logMin))*(top-bottom);
 		    break;
@@ -395,12 +416,15 @@ void BandingFunction::update(float left, float right, float top, float bottom, f
 	    colors->push_back(color);
 	    colors->push_back(color);
 
-	    lverts->push_back(osg::Vec3(groupRanges[i].first,-1.95,avg));
-	    lverts->push_back(osg::Vec3(groupRanges[i].second,-1.95,avg));
+	    if(sum > 0.0)
+	    {
+		lverts->push_back(osg::Vec3(groupRanges[i].first,-1.95,avg));
+		lverts->push_back(osg::Vec3(groupRanges[i].second,-1.95,avg));
 
-	    osg::Vec4 lcolor(0,0,0,1);
-	    lcolors->push_back(lcolor);
-	    lcolors->push_back(lcolor);
+		osg::Vec4 lcolor(0,0,0,1);
+		lcolors->push_back(lcolor);
+		lcolors->push_back(lcolor);
+	    }
 	}
 
 	_bandGeometry->setVertexArray(verts);

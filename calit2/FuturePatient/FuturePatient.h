@@ -23,6 +23,15 @@
 #include "SymptomGraphObject.h"
 #include "MicrobePointLineObject.h"
 
+struct PhenoStats
+{
+    std::string name;
+    float avg;
+    float stdev;
+    int taxid;
+};
+
+
 class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 {
     public:
@@ -56,6 +65,10 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         void checkSockets(std::vector<int> & messageList);
         bool processSocketInput(cvr::CVRSocket * socket, std::vector<int> & messageList);
+
+        void loadPhenotype();
+
+        void initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::string tableSuffix);
 
         cvr::SubMenu * _fpMenu;
         cvr::SubMenu * _layoutMenu;
@@ -115,6 +128,10 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::SubMenu * _sMicrobeMenu;
         cvr::MenuList * _sMicrobes;
         cvr::MenuButton * _sMicrobeLoad;
+        cvr::MenuCheckbox * _sMicrobeRankOrder;
+        cvr::MenuCheckbox * _sMicrobeLabels;
+        cvr::MenuList * _sMicrobePhenotypes;
+        cvr::MenuButton * _sMicrobePhenotypeLoad;
 
         cvr::SubMenu * _microbeSpecialMenu;
         cvr::MenuButton * _microbeLoadAverage;
@@ -162,6 +179,9 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         GraphLayoutObject * _layoutObject;
 
         std::vector<MicrobeGraphObject *> _microbeGraphList;
+
+        std::map<std::string,std::map<std::string,struct PhenoStats > > _microbeStatsMap;
+        std::map<std::string,std::map<std::string,struct PhenoStats > > _microbeV2StatsMap;
 
         std::string _layoutDirectory;   
         cvr::MultiListenSocket * _mls;
