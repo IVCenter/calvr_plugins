@@ -290,10 +290,14 @@ struct LineGroup
         std::vector<osg::Vec3> vertex;
         std::vector<osg::Geometry*> connector;
         std::vector<osg::Sphere*> cubeShape;
+        std::vector<osg::Geode*> connectorGeode;
         std::vector<osg::Geode*> cubeGeode;
         std::vector<osg::Geode*> text_geode;
+        std::vector<osg::Geode*> f_geode;
+        std::vector<osg::Geode*> l_geode;
         std::vector<osgText::Text*> label;
         std::vector<float> distance;
+        std::vector<int> selected;
         float distanceTotal;
         osg::Switch* switchNode;
         //float distance;
@@ -547,11 +551,21 @@ public:
     void testSelected();
     std::string getCharacterAscii(int code);
     void readAnnotationFile();
+    void readLineGroupFile();
     void saveBookmark(osg::Matrix headMat, float scale);
     bool nvidia;
     osg::Program* pgm1;
     float initialPointScale;// = ConfigManager::getFloat("Plugin.Points.PointScale", 0.001f);
 
+     cvr::MenuCheckbox* _createCylinderCB;
+     osg::Geode* createSelectSphere(osg::Vec3 currentPos);
+     osg::Vec3 findBestSelectedPoint(osg::Matrix handMat,osg::Vec3Array* points);
+     osg::Vec3Array* vecPoints;
+     void createCylinder();
+     std::vector<osg::Vec3> cylinderPoints;
+     osg::ref_ptr<osg::Geode> first_geode; 
+     osg::ref_ptr<osg::Geode> second_geode; 
+     osg::ref_ptr<osg::Geode> third_geode; 
 
 
     std::vector<SelectableItem> selectableItems;
@@ -666,12 +680,21 @@ protected:
     int convertDCtoIndex(string dc);
 //    mxml_node_t  getTree(string filename);
     void saveAnnotationGraph();
+    void saveLineGroup();
     void createArtifactPanel(int q, int art, string desc);
     void createArtifactModel(int q, int art, string desc);
 
     bool lineGroupsEditing;
-    void startLineObject(); 
-    void addLineVertex(int i); 
+    void startLineObject(int hand, int head); 
+    int _editingHand;
+    int _editingHead;
+    int selectClosestVertice(int n);
+    void updateClosedLine(int i,int index);
+    void addToLineSelection(int i,int index);
+    void removeFromLineSelection(int i,int index,int indexSelected);
+    int vertLineSelected(int i,int index);
+    void pullLineFace();
+    void addLineVertex(int i,int index); 
     void closeLineVertex(int i); 
     void updateLineGroup(); 
     std::vector<LineGroup*> _lineGroups;
@@ -855,6 +878,7 @@ protected:
     void readLocusFile(QueryGroup* query);
 
     osg::Matrix getHandToObjectMatrix();
+    osg::Matrix getHandToObjectMatrix2(int hand, int head);
     osg::Matrix getHandToSceneMatrix();
     void parseModelXml(bool useHandPos);
     void parsePCXml(bool useHandPos, std::string filepath, std::string type);
@@ -916,6 +940,7 @@ protected:
     void rotateModel(double rx, double ry, double rz);
     void setupFlyToMenu();
 void loadAnnotationGraph(int inc);
+void loadLineGroup(int i);
 void createAnnotationFile(osg::Matrix tie);
 void updateHudMovement(int i, cvr::TrackedButtonInteractionEvent * tie,float _moveDistance, osg::Vec3 _menuPoint);
     //Space Navigator

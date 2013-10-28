@@ -294,7 +294,7 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
 	}
 	bool annotationsOn = false;
         if(keyTie->getKey() != currentKey && annotationsOn)
-          {
+        {
           int inc = findActiveAnnot();
           if(inc != -1)
           {
@@ -322,18 +322,17 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
 
           currentKey = NULL;
           }
-          }
-          else
-          {
+        }
+        else
+        {
           currentKey = NULL;
-          }
+        }
           
-          }                 
+    }                 
     if (!tie)
     {
         return false;
     }
-
 
     if ((event->getInteraction() == BUTTON_DOWN || event->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getHand() == 0 && tie->getButton() == 0)
     {
@@ -342,6 +341,55 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
         {
             newFileLoad(newSelectedFile, _fileManagerType, true);
             newFileAvailable = false;
+        }
+
+    }
+    if ((event->getInteraction() == BUTTON_DOWN || event->getInteraction() == BUTTON_DOUBLE_CLICK))
+    {
+//bammmm
+        if (_createCylinderCB->getValue())
+        {
+          printf("Starting Cylinder\n");
+                osg::Matrix handMat = tie->getTransform();
+                osg::Vec3 currentPos;
+                currentPos = findBestSelectedPoint(handMat, vecPoints);
+                if (currentPos.x() == 0)
+                {
+                //    found = false;
+                }
+                else
+                {
+                    osg::Geode* newSelectPoint;
+                    newSelectPoint = createSelectSphere(currentPos);
+                    if(cylinderPoints.size() > 2)
+                    {
+			cylinderPoints.clear();
+                        _root->removeChild(first_geode);
+                        _root->removeChild(second_geode);
+                        _root->removeChild(third_geode);
+                        
+                        cout << "Points should be 0: " << cylinderPoints.size() << "\n";
+		    }
+                    cylinderPoints.push_back(currentPos);
+                    if(cylinderPoints.size() == 1)
+                    {
+			first_geode = newSelectPoint;
+                        _root->addChild(first_geode);
+		    }
+                    else if(cylinderPoints.size() == 2)
+                    {
+			second_geode = newSelectPoint;
+                        _root->addChild(second_geode);
+		    }
+                    else if(cylinderPoints.size() == 3)
+                    {
+			third_geode = newSelectPoint;
+                        _root->addChild(third_geode);
+			createCylinder();
+		    }
+                  //  found = true;
+                }
+
         }
 
     }
@@ -357,7 +405,7 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
 
 
     }
-    if ((event->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getHand() == 0 && tie->getButton() == 0)
+    if ((event->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getButton() == 0)
     {
         //Turn Off Editing with Right Click
         if(lineGroupsEditing)
@@ -371,6 +419,7 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
 	    {
 	      _lineGroups[i]->editing = false;
                closeLineVertex(i);
+	   //_createMarkup->setValue(false);
 	    }
             }
 
@@ -380,7 +429,24 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
 
 
     }
-    if ((event->getInteraction() == BUTTON_DOWN) && tie->getHand() == 0 && tie->getButton() == 0)
+    if ((event->getInteraction() == BUTTON_DRAG) && tie->getButton() == 0)
+    {
+        for (int i = 0; i < _lineGroups.size(); i++)
+        {
+		if(_lineGroups[i]->editing && !_lineGroups[i]->open)
+		{
+			int index = selectClosestVertice(i);
+                        if(index != -1)
+                        {
+                           int indexSelected = vertLineSelected(i,index);
+                           if(indexSelected > -1)
+				updateClosedLine(i, index);
+//Dubai
+			}
+		}
+	}
+    }
+    if ((event->getInteraction() == BUTTON_DOWN) && tie->getButton() == 0)
     {
         if(lineGroupsEditing)
         {
@@ -392,7 +458,7 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
 	    {
               lineGroupsEditing = false;   
 	      _lineGroups[i]->editing = false;
-              addLineVertex(i);
+              addLineVertex(i,-1);
               break;
 	    }
             }
@@ -400,16 +466,38 @@ if(event->asKeyboardEvent() && ArtifactVis2On)
           }
 
 	}
-
+        for (int i = 0; i < _lineGroups.size(); i++)
+        {
+		if(_lineGroups[i]->editing && !_lineGroups[i]->open)
+		{
+			int index = selectClosestVertice(i);
+                        if(index != -1)
+                        {
+                           int indexSelected = vertLineSelected(i,index);
+                           if(indexSelected == -1)
+                           {
+                           addToLineSelection(i,index);
+                           }
+                           else
+                           {
+                           //removeFromLineSelection(i,index,indexSelected);
+                           }
+                        }
+//Dubai
+		}
+        }
 
     }
-    if ((event->getInteraction() == BUTTON_DOWN) && tie->getHand() == 0 && tie->getButton() == 0)
+    if ((event->getInteraction() == BUTTON_DOWN) && tie->getButton() == 0)
     {
 
         if (_createMarkup->getValue())
         {
+	   cerr << "Starting Markup\n";
 	   _createMarkup->setValue(false);
-           startLineObject();
+           int hand = tie->getHand();
+           int head = 0;
+           startLineObject(hand, head);
            
         }
 
@@ -919,7 +1007,7 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
 	        std::cerr << "Save." << std::endl;
                 Vec3 pos = _lineGroups[i]->so->getPosition();
                 cerr << "x: " << pos.x() << " y: " << pos.y() << " z: " << pos.z() << std::endl;
-               // saveAnnotationGraph();
+                saveLineGroup();
 	}
         if (menuItem == _lineGroups[i]->activeMap)
         {
@@ -976,6 +1064,19 @@ void ArtifactVis2::menuCallback(MenuItem* menuItem)
                  _lineGroups[i]->deleted = true;
                // saveAnnotationGraph();
 
+        }
+        if (menuItem == _lineGroups[i]->editingMap)
+        {
+           if(_lineGroups[i]->editingMap->getValue())
+           {
+                 _lineGroups[i]->editing = true;
+                 lineGroupsEditing = false;
+           }
+           else
+           {
+                 _lineGroups[i]->editing = false;
+                 lineGroupsEditing = false;
+           }
         }
     }
     for (int i = 0; i < _pointClouds.size(); i++)
@@ -4064,7 +4165,151 @@ else if(code == 32)
 
 return character;
 }
+void ArtifactVis2::readLineGroupFile()
+{
 
+    cout << "Reading lineGroup File..." << endl;
+string filename = ConfigManager::getEntry("Plugin.ArtifactVis2.Database").append("lineGroups.kml");
+    FILE* fp;
+    mxml_node_t* tree;
+    fp = fopen(filename.c_str(), "r");
+
+    if (fp == NULL)
+    {
+        std::cerr << "Unable to open file: " << filename << std::endl;
+        return;
+    }
+
+    tree = mxmlLoadFile(NULL, fp, MXML_TEXT_CALLBACK);
+    fclose(fp);
+
+    if (tree == NULL)
+    {
+        std::cerr << "Unable to parse XML file: "  << std::endl;
+        return;
+    }
+
+    mxml_node_t* node = mxmlFindElement(tree, tree, "Placemark", NULL, NULL, MXML_DESCEND);
+    int inc = 0;
+    for (; node != NULL; node = mxmlFindElement(node, tree, "Placemark", NULL, NULL, MXML_DESCEND))
+    {
+
+       //Create Annotation Struc
+       LineGroup* lineGroup = new LineGroup;
+
+        mxml_node_t* desc_node = mxmlFindElement(node, tree, "description", NULL, NULL, MXML_DESCEND);
+        mxml_node_t* desc_child;
+//        desc_child = desc_node->child;
+  //          char* desc_text = desc_child->value.text.string;
+            string desc = "";
+
+
+        for (desc_child = desc_node->child; desc_child != NULL; desc_child = desc_child->next)
+        {
+            string desc_text = desc_child->value.text.string;
+            desc.append(desc_text);
+            desc.append(" ");
+
+           // desc_child = desc_child->next;
+        }
+       // anno->desc = desc;
+//Name
+        desc_node = mxmlFindElement(node, tree, "name", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+        char*    desc_text = desc_child->value.text.string;
+            string name = desc_text;
+        lineGroup->name = name;
+//Type
+        desc_node = mxmlFindElement(node, tree, "type", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+            desc_text = desc_child->value.text.string;
+            string type = desc_text;
+        lineGroup->type = type;
+//Graph Position and Orientation
+  string var;
+  float pos[3];
+  float rot[4];
+
+        desc_node = mxmlFindElement(node, tree, "longitude", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+            var = desc_child->value.text.string;
+            pos[0] = atof(var.c_str());           
+
+        desc_node = mxmlFindElement(node, tree, "latitude", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+            var = desc_child->value.text.string;
+            pos[1] = atof(var.c_str());           
+        
+        desc_node = mxmlFindElement(node, tree, "altitude", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+            var = desc_child->value.text.string;
+            pos[2] = atof(var.c_str());           
+
+        desc_node = mxmlFindElement(node, tree, "range", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+            var = desc_child->value.text.string;
+            rot[0] = atof(var.c_str());           
+
+        desc_node = mxmlFindElement(node, tree, "tilt", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+            var = desc_child->value.text.string;
+            rot[1] = atof(var.c_str());           
+
+        desc_node = mxmlFindElement(node, tree, "heading", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+            var = desc_child->value.text.string;
+            rot[2] = atof(var.c_str());           
+
+        desc_node = mxmlFindElement(node, tree, "w", NULL, NULL, MXML_DESCEND);
+        desc_child = desc_node->child;
+            var = desc_child->value.text.string;
+            rot[3] = atof(var.c_str());          
+
+  osg::Vec3 coord = Vec3(pos[0],pos[1],pos[2]); 
+  osg::Quat quad = Quat(rot[0],rot[1],rot[2],rot[3]); 
+
+        lineGroup->scenePos = coord;
+        lineGroup->pos = coord;
+        lineGroup->rot = quad;
+//Line Coords
+//coordinates Paris
+            mxml_node_t* line_node = mxmlFindElement(node, tree, "coordinates", NULL, NULL, MXML_DESCEND);
+            mxml_node_t* line_child = line_node->child;
+
+        for (line_child = line_node->child; line_child != NULL; line_child = line_child->next)
+        {
+            // std::istringstream ss;
+            //std::cout.precision(15);
+            double pos[3];
+            string coord;
+
+            for (int i = 0; i < 3; i++)
+            {
+                //   ss.str(child->value.text.string);
+                coord = line_child->value.text.string;
+                //coord = coord.erase(coord.find(".")+4);
+                pos[i] = atof(coord.c_str());
+                cerr << pos[i] << " ";
+
+                if (i != 2)
+                    line_child = line_child->next;
+            }
+            cerr << "\n";
+            Vec3 position = Vec3(pos[0], pos[1], pos[2]);
+            lineGroup->vertex.push_back(position);
+        }
+
+   lineGroup->active = false;
+   lineGroup->visible = true;
+   lineGroup->scale = 0.001;
+   lineGroup->fromFile = true;
+
+
+  _lineGroups.push_back(lineGroup);
+   loadLineGroup(inc);
+   inc++;
+  }
+}
 void ArtifactVis2::readAnnotationFile()
 {
 
@@ -4724,6 +4969,187 @@ string contents(buffer.str());
     return tree;
 }
 */
+void ArtifactVis2::saveLineGroup()
+{
+
+    mxml_node_t *xml;    /* <?xml ... ?> */
+    mxml_node_t *kml;   /* <kml> */
+    mxml_node_t *document;   /* <Document> */
+    mxml_node_t *name;   /* <name> */
+    mxml_node_t *type;   /* <type> */
+    mxml_node_t *query;   /* <query> */
+    mxml_node_t *timestamp;   /* <timestamp> */
+
+    mxml_node_t *placemark;   /* <Placemark> */
+    mxml_node_t *description;   /* <description> */
+
+    mxml_node_t *lookat;   /* <LookAt> */
+    mxml_node_t *longitude;   /* <data> */
+    mxml_node_t *latitude;   /* <data> */
+    mxml_node_t *altitude;   /* <data> */
+    mxml_node_t *range;   /* <data> */
+    mxml_node_t *tilt;   /* <data> */
+    mxml_node_t *heading;   /* <data> */
+    mxml_node_t *w;   /* <data> */
+    mxml_node_t *styleurl;   /* <data> */
+    //mxml_node_t *point;   /* <data> */
+    mxml_node_t *altitudeMode;   /* <data> */
+    mxml_node_t *coordinates;   /* <data> */
+    mxml_node_t *polygon;
+    mxml_node_t *extrude;
+    mxml_node_t *tessellate;
+    mxml_node_t *outerBoundaryIs;
+    mxml_node_t *LinearRing;
+    mxml_node_t *line;
+    mxml_node_t *lineStart;
+    mxml_node_t *lineEnd;
+    mxml_node_t *color;
+
+//Create KML Container
+
+//KML Name
+    string q_name = "lineGroup";
+   // string g_timestamp = getTimeStamp();
+    string g_timestamp = "00";
+
+   const char* kml_name = q_name.c_str();
+   const char* kml_timestamp = g_timestamp.c_str();
+
+xml = mxmlNewXML("1.0");
+        kml = mxmlNewElement(xml, "kml");
+            document = mxmlNewElement(kml, "Document");
+                name = mxmlNewElement(document, "name");
+                  mxmlNewText(name, 0, kml_name);
+                timestamp = mxmlNewElement(document, "timestamp");
+                  mxmlNewText(timestamp, 0, kml_timestamp);
+//.................................................................
+//Get Placemarks
+int rows = _lineGroups.size();
+
+
+
+
+
+//Create Placemarks
+for(int m=0; m<rows; m++)
+{
+ if(!_lineGroups[m]->deleted)
+ {
+Vec3 pos = _lineGroups[m]->so->getPosition();
+Quat rot = _lineGroups[m]->so->getRotation();
+float scale = _lineGroups[m]->so->getScale();
+cerr << "Scale" << scale << "\n";
+string q_description = "lines";
+stringstream buffer;
+buffer << m;
+   string e_name = buffer.str();
+   buffer.str("");
+   buffer << pos.x();
+   string q_longitude = buffer.str();
+   buffer.str("");
+   buffer << pos.y();
+   string q_latitude = buffer.str();
+   buffer.str("");
+   buffer << pos.z();
+   string q_altitude = buffer.str();
+   buffer.str("");
+   buffer << rot.x();
+   string q_range = buffer.str();
+   buffer.str("");
+   buffer << rot.y();
+   string q_tilt = buffer.str();
+   buffer.str("");
+   buffer << rot.z();
+   string q_heading = buffer.str();
+   buffer.str("");
+   buffer << rot.w();
+   string q_w = buffer.str();
+   buffer.str("");
+//   buffer << flStart.x() << " " <<  flStart.y() << " " << flStart.z();
+   string lStart = buffer.str();
+   buffer.str("");
+//   buffer << flEnd.x() << " " <<  flEnd.y() << " " << flEnd.z();
+   string lEnd = buffer.str();
+   string q_type = "Basic";
+//Outpus Vertices to String List
+   buffer.str("");
+  for(int i=0;i<_lineGroups[m]->vertex.size();i++)
+  {
+   if(i!=0)
+   {
+    buffer << "\n";
+   }
+   Vec3 pos = _lineGroups[m]->vertex[i];
+   buffer << pos.x() << " " << pos.y() << " " << pos.z();
+  }
+   string q_coordinates = buffer.str();
+//................................................................
+//
+                placemark = mxmlNewElement(document, "Placemark");
+                    name = mxmlNewElement(placemark, "name");
+                      mxmlNewText(name, 0, e_name.c_str());
+                    type = mxmlNewElement(placemark, "type");
+                      mxmlNewText(type, 0, q_type.c_str());
+
+                    description = mxmlNewElement(placemark, "description");
+                      mxmlNewText(description, 0, q_description.c_str());
+                    
+                    lookat = mxmlNewElement(placemark, "LookAt");
+                        longitude = mxmlNewElement(lookat, "longitude");
+                          mxmlNewText(longitude, 0, q_longitude.c_str());
+                        latitude = mxmlNewElement(lookat, "latitude");
+                          mxmlNewText(latitude, 0, q_latitude.c_str());
+                        altitude = mxmlNewElement(lookat, "altitude");
+                          mxmlNewText(altitude, 0, q_altitude.c_str());
+                        range = mxmlNewElement(lookat, "range");
+                          mxmlNewText(range, 0, q_range.c_str());
+                        tilt = mxmlNewElement(lookat, "tilt");
+                          mxmlNewText(tilt, 0, q_tilt.c_str());
+                        heading = mxmlNewElement(lookat, "heading");
+                          mxmlNewText(heading, 0, q_heading.c_str());
+                        w = mxmlNewElement(lookat, "w");
+                          mxmlNewText(w, 0, q_w.c_str());
+                    
+                    styleurl = mxmlNewElement(placemark, "styleUrl");
+                      mxmlNewText(styleurl, 0, "#msn_GR");
+                    polygon = mxmlNewElement(placemark, "Polygon");
+                        extrude = mxmlNewElement(polygon, "extrude");
+                          mxmlNewText(extrude, 0, "0");
+                        tessellate = mxmlNewElement(polygon, "tessellate");
+                          mxmlNewText(tessellate, 0, "1");
+                        altitudeMode = mxmlNewElement(polygon, "altitudeMode");
+                          mxmlNewText(altitudeMode, 0, "absolute");
+                        outerBoundaryIs = mxmlNewElement(polygon, "outerBoundaryIs");
+                            LinearRing = mxmlNewElement(outerBoundaryIs, "LinearRing");
+                                coordinates = mxmlNewElement(LinearRing, "coordinates");
+                                  mxmlNewText(coordinates, 0, q_coordinates.c_str());
+                    line = mxmlNewElement(placemark, "Line");
+                        lineStart = mxmlNewElement(line, "lineStart");
+                          mxmlNewText(lineStart, 0, lStart.c_str());
+                        lineEnd = mxmlNewElement(line, "lineEnd");
+                          mxmlNewText(lineEnd, 0, lEnd.c_str());
+ }
+}
+//.......................................................
+//Save File
+
+  const char *ptr;
+    ptr = "";
+  ptr = mxmlSaveAllocString(xml, MXML_NO_CALLBACK);
+    //cout << ptr;
+    FILE *fp;
+    
+    string filename = ConfigManager::getEntry("Plugin.ArtifactVis2.Database").append("lineGroups.kml");
+    
+    kml_name = filename.c_str();
+    fp = fopen(kml_name, "w");
+
+    fprintf(fp, ptr);
+
+    fclose(fp);
+ 
+
+}
 void ArtifactVis2::createArtifactPanel(int q, int art, string desc)
 {
 //deactivateAllArtifactAnno();
@@ -5735,6 +6161,18 @@ void ArtifactVis2::menuSetup()
 //tempStackPhotos();
    // generateScreen(); 
          testPhysics();
+/*
+         osg::Geode* newSelectPoint;
+         Vec3 origPos = Vec3(0,0,0);
+         newSelectPoint = createSelectSphere(origPos);
+         first_geode = newSelectPoint;
+         second_geode = newSelectPoint;
+         third_geode = newSelectPoint;
+         _root->addChild(first_geode);
+         _root->addChild(second_geode);
+         _root->addChild(third_geode);
+
+*/
 }
 void ArtifactVis2::initSelectBox()
 {
@@ -5791,7 +6229,7 @@ void ArtifactVis2::secondInit()
     {
     //readAnnotationFile();
     }
-
+    //readLineGroupFile();
     secondInitComplete = true;
     ArtifactVis2On = true;
 }
@@ -5893,8 +6331,8 @@ void ArtifactVis2::updateDropDowns()
 void ArtifactVis2::setupUtilsMenu()
 {
     _utilsPanel = new TabbedDialogPanel(100, 30, 4, "Utils", "Plugin.ArtifactVis2.UtilsPanel");
-    _utilsPanel->setVisible(false);
 
+    _utilsPanel->setVisible(ConfigManager::getBool("active","Plugin.ArtifactVis2.UtilsPanel",false,false));
     _createAnnotations = new MenuCheckbox("Create Annotations", false);
     _createAnnotations->setCallback(this);
     _utilsPanel->addMenuItem(_createAnnotations);
@@ -5902,6 +6340,10 @@ void ArtifactVis2::setupUtilsMenu()
     _createMarkup = new MenuCheckbox("Create Markup", false);
     _createMarkup->setCallback(this);
     _utilsPanel->addMenuItem(_createMarkup);
+
+    _createCylinderCB = new MenuCheckbox("Create Cylinder", false);
+    _createCylinderCB->setCallback(this);
+    _utilsPanel->addMenuItem(_createCylinderCB);
 
     _bookmarkLoc = new MenuButton("Save Location");
     _bookmarkLoc->setCallback(this);
@@ -6160,6 +6602,9 @@ void ArtifactVis2::addNewPC(int index)
  _pointClouds[index]->visible = true;
  _pointClouds[index]->loaded = true;
  //cout << "This is from new PC test!!!!!\n";
+               osg::Geode* points = _pointClouds[index]->pcObject->pli.group->getChild(0)->asGeode();
+                osg::Geometry* nodeGeom = points->getDrawable(0)->asGeometry();
+                vecPoints = dynamic_cast<Vec3Array*>(nodeGeom->getVertexArray());
  
 }
 void ArtifactVis2::addNewModel(int index)
@@ -6504,6 +6949,44 @@ addNewModel(index);
  newSelectedFile = "";
  newSelectedName = "";
 }
+osg::Matrix ArtifactVis2::getHandToObjectMatrix2(int hand,int head)
+{
+
+           Matrix handMat0 = TrackingManager::instance()->getHandMat(hand);
+           osg::Vec3 viewerPoint = TrackingManager::instance()->getHeadMat(head).getTrans();
+           osg::Matrixd w2o = PluginHelper::getWorldToObjectTransform();
+            Matrix handMat;
+                if(true)
+                {
+
+                   float   _distance = ConfigManager::getFloat("distance", "MenuSystem.BoardMenu.Position",2000.0);
+                    osg::Vec3 menuPoint = osg::Vec3(0,2000,0);
+                    menuPoint = menuPoint * handMat0;
+
+                   // if(event->asMouseEvent())
+                    if(false)
+                    {
+                        osg::Vec3 menuOffset = osg::Vec3(0,0,0);
+                        osg::Matrix m;
+                        m.makeTranslate(menuPoint);
+                        handMat = m * w2o;
+                    }
+                    else
+                    {
+
+                        osg::Vec3 viewerDir = viewerPoint - menuPoint;
+                        viewerDir.z() = 0.0;
+
+                        osg::Matrix menuRot;
+                        menuRot.makeRotate(osg::Vec3(0,-1,0),viewerDir);
+
+                        osg::Vec3 menuOffset = osg::Vec3(0,0,0);
+                        handMat = (osg::Matrix::translate(-menuOffset) * menuRot * osg::Matrix::translate(menuPoint)) * w2o;
+                    }
+
+                }
+return handMat;
+}
 osg::Matrix ArtifactVis2::getHandToObjectMatrix()
 {
 
@@ -6545,7 +7028,7 @@ return handMat;
 osg::Matrix ArtifactVis2::getHandToSceneMatrix()
 {
 
-           Matrix handMat0 = TrackingManager::instance()->getHandMat(0);
+           Matrix handMat0 = TrackingManager::instance()->getHandMat(_editingHand);
            osg::Vec3 viewerPoint = TrackingManager::instance()->getHeadMat(0).getTrans();
 //           osg::Matrixd w2o = PluginHelper::getWorldToObjectTransform();
             Matrix handMat;
@@ -6553,7 +7036,7 @@ osg::Matrix ArtifactVis2::getHandToSceneMatrix()
                 {
 
                    float   _distance = ConfigManager::getFloat("distance", "MenuSystem.BoardMenu.Position",2000.0);
-                    osg::Vec3 menuPoint = osg::Vec3(0,2000,0);
+                    osg::Vec3 menuPoint = osg::Vec3(0,1500,0);
                     menuPoint = menuPoint * handMat0;
 
                    // if(event->asMouseEvent())
@@ -6582,10 +7065,12 @@ osg::Matrix ArtifactVis2::getHandToSceneMatrix()
                 }
 return handMat;
 }
-void ArtifactVis2::startLineObject()
+void ArtifactVis2::startLineObject(int hand, int head)
 {
     //get handpos
-   Matrix handMat = getHandToObjectMatrix(); 
+   _editingHand = hand;
+   _editingHead = head;
+   Matrix handMat = getHandToObjectMatrix2(hand, head); 
    Vec3 currentPos = handMat.getTrans();
        //Vec3 scenePos = getHandToSceneMatrix().getTrans();
        Vec3 scenePos = currentPos;
@@ -6668,7 +7153,7 @@ void ArtifactVis2::startLineObject()
 
     lineGroup->connector.push_back(connector);
     connectorGeode->addDrawable(connector);
-
+    lineGroup->connectorGeode.push_back(connectorGeode);
 
 //Create Text Drawable 1
 
@@ -6683,6 +7168,7 @@ void ArtifactVis2::startLineObject()
         lineGroup->label.push_back(label);
         Geode* textGeode = new Geode();
         textGeode->addDrawable(label);
+        lineGroup->text_geode.push_back(textGeode);
 
 //Create Text Drawable 2
 
@@ -6697,6 +7183,7 @@ void ArtifactVis2::startLineObject()
         lineGroup->label.push_back(label2);
         Geode* textGeode2 = new Geode();
         textGeode2->addDrawable(label2);
+        lineGroup->text_geode.push_back(textGeode2);
 
 
   lineGroup->distanceTotal = 0;
@@ -6714,9 +7201,9 @@ void ArtifactVis2::startLineObject()
 //Add currentNode to switchNode
 	switchNode->addChild(lineGroup->cubeGeode[0]);
 	switchNode->addChild(lineGroup->cubeGeode[1]);
-	switchNode->addChild(connectorGeode);
-	switchNode->addChild(textGeode);
-	switchNode->addChild(textGeode2);
+	switchNode->addChild(lineGroup->connectorGeode[0]);
+	switchNode->addChild(lineGroup->text_geode[0]);
+	switchNode->addChild(lineGroup->text_geode[1]);
         lineGroup->switchNode = switchNode;
 
 
@@ -6794,23 +7281,44 @@ cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
 
 }
 
-void ArtifactVis2::closeLineVertex(int i)
+void ArtifactVis2::loadLineGroup(int i)
 {
-                 _lineGroups[i]->editing = false;
-                 lineGroupsEditing = false;
-                 _lineGroups[i]->open = false;   
 
-       int lEndIndex = _lineGroups[i]->vertex.size() - 1;
-       int lStartIndex = lEndIndex -1;
-       
     Vec4f color = Vec4f(0, 0.42, 0.92, 1);
-    Vec4f colorT = Vec4f(0, 0.42, 0.92, 0.5);
+    Vec4f colorR = Vec4f(0.92, 0, 0, 1);
+    Vec4f colorG = Vec4f(0, 0.92, 0, 1);
+    //Setup Initial Pos
+
+    osg::Vec3 pos = _lineGroups[i]->vertex[0];
+    osg::Vec3 pos2 = _lineGroups[i]->vertex[1];
+
+
+    //make First cube geode
+    Sphere* cubeShape = new Sphere(pos, _vertexRadius);
+    ShapeDrawable* shapeDrawable = new ShapeDrawable(cubeShape);
+   // shapeDrawable->setTessellationHints(hints);
+    shapeDrawable->setColor(colorR);
+    osg::Geode* sphereGeode = new Geode();  
+    sphereGeode->addDrawable(shapeDrawable);
+
+    _lineGroups[i]->cubeGeode.push_back(sphereGeode);
+    _lineGroups[i]->cubeShape.push_back(cubeShape);
+
+    //make Second cube geode
+    Sphere*  cubeShape2 = new Sphere(pos2, _vertexRadius);
+    _lineGroups[i]->cubeShape.push_back(cubeShape2);
+    ShapeDrawable* shapeDrawable2 = new ShapeDrawable(_lineGroups[i]->cubeShape[1]);
+   // shapeDrawable2->setTessellationHints(hints);
+    shapeDrawable2->setColor(colorG);
+    osg::Geode* sphereGeode2 = new Geode();  
+    sphereGeode2->addDrawable(shapeDrawable2);
+    _lineGroups[i]->cubeGeode.push_back(sphereGeode2);
 
     //make  line geode
     osg:Geometry* connector = new osg::Geometry();
     osg::Vec3Array* verts = new osg::Vec3Array();
-    		verts->push_back(_lineGroups[i]->vertex[lEndIndex]);
-    		verts->push_back(_lineGroups[i]->vertex[0]);
+    verts->push_back(pos);
+    verts->push_back(pos2);
 
     connector->setVertexArray(verts);
 
@@ -6847,6 +7355,182 @@ void ArtifactVis2::closeLineVertex(int i)
 
     _lineGroups[i]->connector.push_back(connector);
     connectorGeode->addDrawable(connector);
+    _lineGroups[i]->connectorGeode.push_back(connectorGeode);
+
+//Create Text Drawable 1
+
+        osgText::Text* label = new osgText::Text();
+        label->setText("0");
+        label->setUseDisplayList(false);
+        label->setAxisAlignment(osgText::Text::SCREEN);
+        label->setPosition(pos + Vec3f(0, 0, _vertexRadius * 1.1));
+        label->setAlignment(osgText::Text::CENTER_CENTER);
+        label->setCharacterSize(15);
+        label->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+        _lineGroups[i]->label.push_back(label);
+        Geode* textGeode = new Geode();
+        textGeode->addDrawable(label);
+        _lineGroups[i]->text_geode.push_back(textGeode);
+
+//Create Text Drawable 2
+  _lineGroups[i]->distanceTotal = 0;
+  _lineGroups[i]->distance.push_back(0);
+  _lineGroups[i]->distance.push_back(0);
+
+       float distance = (pos2 - pos).length();
+        _lineGroups[i]->distance[1] = distance;
+
+       float distanceCrowFly = _lineGroups[i]->distanceTotal + distance;
+       
+       stringstream ss;
+       ss << distance << "m";
+            string distText = ss.str();
+        osgText::Text* label2 = new osgText::Text();
+        label2->setText(distText);
+        label2->setUseDisplayList(false);
+        label2->setAxisAlignment(osgText::Text::SCREEN);
+        label2->setPosition(pos2 + Vec3f(0, 0, _vertexRadius * 1.1));
+        label2->setAlignment(osgText::Text::CENTER_CENTER);
+        label2->setCharacterSize(15);
+        label2->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+        _lineGroups[i]->label.push_back(label2);
+        Geode* textGeode2 = new Geode();
+        textGeode2->addDrawable(label2);
+        _lineGroups[i]->text_geode.push_back(textGeode2);
+
+
+//Create sceneobject
+
+    string name = "start";
+	    SceneObject * so;
+	    so = new SceneObject(name, false, false, false, true, false);
+	    osg::Switch* switchNode = new osg::Switch();
+	    so->addChild(switchNode);
+	    PluginHelper::registerSceneObject(so,"Test");
+	    so->attachToScene();
+//Add currentNode to switchNode
+	switchNode->addChild(_lineGroups[i]->cubeGeode[0]);
+	switchNode->addChild(_lineGroups[i]->cubeGeode[1]);
+	switchNode->addChild(_lineGroups[i]->connectorGeode[0]);
+	switchNode->addChild(_lineGroups[i]->text_geode[0]);
+	switchNode->addChild(_lineGroups[i]->text_geode[1]);
+        _lineGroups[i]->switchNode = switchNode;
+
+
+//Add menu system
+	    so->setNavigationOn(true);
+	    so->setMovable(false);
+	    so->addMoveMenuItem();
+	    so->addNavigationMenuItem();
+
+	    SubMenu * sm = new SubMenu("Position");
+	    so->addMenuItem(sm);
+
+	    MenuButton * mb;
+	    mb = new MenuButton("Load");
+	    mb->setCallback(this);
+	    sm->addItem(mb);
+
+	    SubMenu * savemenu = new SubMenu("Save");
+	    sm->addItem(savemenu);
+
+	    mb = new MenuButton("Save");
+	    mb->setCallback(this);
+	    savemenu->addItem(mb);
+            _lineGroups[i]->saveMap = mb;
+/*
+	    mb = new MenuButton("Reset to Origin");
+	    mb->setCallback(this);
+	    so->addMenuItem(mb);
+            lineGroup->resetMap = mb;
+*/
+	    mb = new MenuButton("Delete");
+	    mb->setCallback(this);
+	    so->addMenuItem(mb);
+            _lineGroups[i]->deleteMap = mb;
+
+            MenuCheckbox * mc;
+	    mc = new MenuCheckbox("Active",false);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _lineGroups[i]->activeMap = mc;
+
+	    mc = new MenuCheckbox("Editing",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _lineGroups[i]->editingMap = mc;
+            
+	    mc = new MenuCheckbox("Visible",true);
+	    mc->setCallback(this);
+	    so->addMenuItem(mc);
+            _lineGroups[i]->visibleMap = mc;
+            _lineGroups[i]->visible = true;
+
+
+float currentScale = 1;
+Vec3 orig = _lineGroups[i]->scenePos; 
+cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
+
+ so->setPosition(_lineGroups[i]->pos);     
+ so->setScale(currentScale);
+// so->setRotation(currentRot);     
+
+
+
+    _lineGroups[i]->so = so;
+    _lineGroups[i]->pos = so->getPosition();
+    _lineGroups[i]->rot = so->getRotation();
+    _lineGroups[i]->open = true;   
+    _lineGroups[i]->active = false;    
+    _lineGroups[i]->editing = true;    
+    //_lineGroupsEditing = false;
+
+     //addtracker
+    for(int n=1; n <_lineGroups[i]->vertex.size(); n++)
+    {
+      addLineVertex(i,n);
+    }
+}
+void ArtifactVis2::closeLineVertex(int i)
+{
+                 _lineGroups[i]->editing = false;
+                 _lineGroups[i]->editingMap->setValue(false);
+                 lineGroupsEditing = false;
+                 _lineGroups[i]->open = false;   
+
+       int lEndIndex = _lineGroups[i]->vertex.size() - 1;
+_lineGroups[i]->switchNode->removeChild(_lineGroups[i]->cubeGeode[lEndIndex]);
+   _lineGroups[i]->vertex.pop_back();
+   _lineGroups[i]->cubeGeode.pop_back();
+    _lineGroups[i]->cubeShape.pop_back();
+       lEndIndex = _lineGroups[i]->vertex.size() - 1;
+
+    int connectorIndex =_lineGroups[i]->connector.size() -1;
+    int textIndex =_lineGroups[i]->text_geode.size() -1;
+    _lineGroups[i]->switchNode->removeChild(_lineGroups[i]->connectorGeode[connectorIndex]);
+    _lineGroups[i]->switchNode->removeChild(_lineGroups[i]->text_geode[textIndex]);
+   _lineGroups[i]->text_geode.pop_back();
+   _lineGroups[i]->connectorGeode.pop_back();
+   _lineGroups[i]->connector.pop_back();
+_lineGroups[i]->switchNode->removeChild(_lineGroups[i]->cubeGeode[lEndIndex]);
+   _lineGroups[i]->vertex.pop_back();
+   _lineGroups[i]->cubeGeode.pop_back();
+    _lineGroups[i]->cubeShape.pop_back();
+    _lineGroups[i]->switchNode->removeChild(_lineGroups[i]->text_geode[textIndex-1]);
+   _lineGroups[i]->text_geode.pop_back();
+       lEndIndex = _lineGroups[i]->vertex.size() - 1;
+
+       int lStartIndex = lEndIndex -1;
+       int lineIndex = _lineGroups[i]->connector.size() -1;
+    Vec4f color = Vec4f(0, 0.42, 0.92, 1);
+    Vec4f colorT = Vec4f(0, 0.42, 0.92, 0.5);
+
+    //make  line geode
+    osg::Vec3Array* verts = new osg::Vec3Array();
+    		verts->push_back(_lineGroups[i]->vertex[lEndIndex]);
+    		verts->push_back(_lineGroups[i]->vertex[0]);
+
+    _lineGroups[i]->connector[lineIndex]->setVertexArray(verts);
 //Update Label Total
 
        float distance = (_lineGroups[i]->vertex[lEndIndex] - _lineGroups[i]->vertex[0]).length();
@@ -6938,24 +7622,333 @@ void ArtifactVis2::closeLineVertex(int i)
             lgeode->setStateSet(state2);
             lgeode->addDrawable(geom);
 //Add geodes to switchNode
+//_lineGroups[i]->switchNode->removeChild(_lineGroups[i]->f_geode[index]);
+    _lineGroups[i]->f_geode.push_back(fgeode);
+    _lineGroups[i]->l_geode.push_back(lgeode);
+    int index = _lineGroups[i]->f_geode.size() -1;
+    _lineGroups[i]->switchNode->addChild(_lineGroups[i]->f_geode[index]);
 
-_lineGroups[i]->switchNode->addChild(connectorGeode);
-_lineGroups[i]->switchNode->addChild(fgeode);
+
 if(false)
 {
 _lineGroups[i]->switchNode->addChild(lgeode);
 }
 }
-void ArtifactVis2::addLineVertex(int i)
+void ArtifactVis2::updateClosedLine(int i, int index)
 {
-       //Vec3 pos = getHandToObjectMatrix().getTrans();
-       Vec3 pos = getHandToSceneMatrix().getTrans();
-       Vec3 orig = _lineGroups[i]->so->getPosition();
-       //pos = pos + orig;
-       int lEndIndex = _lineGroups[i]->vertex.size();
+       osg::Matrix w2o = _lineGroups[i]->so->getWorldToObjectMatrix();
+       Matrix poMat = getHandToSceneMatrix();
+       Vec3 pos;
+       Vec3 orig = poMat.getTrans();
+      //cerr << "PosA: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
+       
+       pos = orig * w2o;  
+       orig = pos;
+      //cerr << "PosB2: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
+       int lEndIndex = index;
        int lStartIndex = lEndIndex -1;
-       int lineIndex = _lineGroups[i]->connector.size();
+       int lAfterIndex = lEndIndex +1;
+       int lineIndexA = lStartIndex;
+       int lineIndexB = lEndIndex;
+       bool contained = false;
+       if(_lineGroups[i]->vertex.size() > lAfterIndex)
+	contained = true;
+       if(lAfterIndex == _lineGroups[i]->vertex.size())
+	{
+		lAfterIndex = 0;
+                contained = true;
+	}
+       // cerr << "index=" << index << " finalIndex=" << lAfterIndex << " size=" << _lineGroups[i]->vertex.size() << " lineIndexB=" <<lineIndexB << " countIndexB=" << _lineGroups[i]->connector.size() << "\n";
+        
+       if(_lineGroups[i]->vertex[lEndIndex] != pos)
+       {
+          _lineGroups[i]->vertex[lEndIndex] = pos;
 
+       float distance = (pos - _lineGroups[i]->vertex[lStartIndex]).length();
+        _lineGroups[i]->distance[lEndIndex] = distance;
+
+       float distanceCrowFly = _lineGroups[i]->distanceTotal + distance;
+       
+       stringstream ss;
+       ss << distance << "m";
+            string distText = ss.str();
+
+         //Update Line
+         //...
+                osg::Vec3Array* vertsA = new osg::Vec3Array();
+    		vertsA->push_back(_lineGroups[i]->vertex[lStartIndex]);
+    		vertsA->push_back(_lineGroups[i]->vertex[lEndIndex]);
+                osg::Vec3Array* vertsB = new osg::Vec3Array();
+                if(contained)
+                {
+    		vertsB->push_back(_lineGroups[i]->vertex[lEndIndex]);
+    		vertsB->push_back(_lineGroups[i]->vertex[lAfterIndex]);
+		}
+    Vec4f colorG = Vec4f(0, 0.92, 0, 1);
+    Sphere*  cubeShape2 = new Sphere(pos, _vertexRadius);
+    ShapeDrawable* shapeDrawable2 = new ShapeDrawable(cubeShape2);
+  //  shapeDrawable2->setTessellationHints(hints);
+    shapeDrawable2->setColor(colorG);
+    osg::Geode* sphereGeode2 = new Geode();  
+    sphereGeode2->addDrawable(shapeDrawable2);
+
+
+
+//Create Text Drawable Update
+
+      //  osgText::Text* label = new osgText::Text();
+        _lineGroups[i]->label[lEndIndex]->setText(distText);
+        _lineGroups[i]->label[lEndIndex]->setUseDisplayList(false);
+        _lineGroups[i]->label[lEndIndex]->setAxisAlignment(osgText::Text::SCREEN);
+        _lineGroups[i]->label[lEndIndex]->setPosition(pos + Vec3f(0, 0, _vertexRadius * 1.1));
+        _lineGroups[i]->label[lEndIndex]->setAlignment(osgText::Text::CENTER_CENTER);
+        _lineGroups[i]->label[lEndIndex]->setCharacterSize(15);
+        _lineGroups[i]->label[lEndIndex]->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+
+/*
+        lineGroup->label.push_back(label);
+        Geode* textGeode = new Geode();
+        textGeode->addDrawable(label);
+*/
+
+
+
+Vec3 orig = pos;
+//cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
+_lineGroups[i]->switchNode->removeChild(_lineGroups[i]->cubeGeode[lEndIndex]);
+   _lineGroups[i]->cubeGeode[lEndIndex] = sphereGeode2;
+    _lineGroups[i]->cubeShape[lEndIndex] = cubeShape2;
+_lineGroups[i]->switchNode->addChild(_lineGroups[i]->cubeGeode[lEndIndex]);
+
+                 _lineGroups[i]->connector[lineIndexA]->setVertexArray(vertsA);
+		 if(contained)
+                 _lineGroups[i]->connector[lineIndexB]->setVertexArray(vertsB);
+
+//Make PolygonGeode
+            Vec3Array* coords = new Vec3Array();
+            for (int n = 0; n <_lineGroups[i]->vertex.size(); n++)
+            {
+              coords->push_back(_lineGroups[i]->vertex[n]);
+            }
+            //Add Bottom
+            float depthX = 0;
+            float depthY = 0;
+            float depthZ = 0;
+            for (int n = 0; n <_lineGroups[i]->vertex.size(); n++)
+            {
+              coords->push_back(_lineGroups[i]->vertex[n] + Vec3(depthX,depthY,depthZ));
+            }
+            
+            int size = coords->size() / 2;
+
+            Geometry* geom = new Geometry();
+            Geometry* tgeom = new Geometry();
+            Geode* fgeode = new Geode();
+            Geode* lgeode = new Geode();
+            geom->setVertexArray(coords);
+            tgeom->setVertexArray(coords);
+
+            for (int n = 0; n < size; n++)
+            {
+                DrawElementsUInt* face = new DrawElementsUInt(PrimitiveSet::QUADS, 0);
+                face->push_back(n);
+                face->push_back(n + size);
+                face->push_back(((n + 1) % size) + size);
+                face->push_back((n + 1) % size);
+                geom->addPrimitiveSet(face);
+
+                if (n < size - 1) //Commented out for now, adds caps to the polyhedra.
+                {
+                    face = new DrawElementsUInt(PrimitiveSet::TRIANGLES, 0);
+                    face->push_back(0);
+                    face->push_back(n);
+                    face->push_back(n + 1);
+                    geom->addPrimitiveSet(face);
+                    tgeom->addPrimitiveSet(face);
+                    face = new DrawElementsUInt(PrimitiveSet::TRIANGLES, 0);
+                    face->push_back(size);
+                    face->push_back(size + n);
+                    face->push_back(size + n + 1);
+                    geom->addPrimitiveSet(face);
+                    //tgeom->addPrimitiveSet(face);
+                }
+            }
+
+
+    Vec4f color = Vec4f(0, 0.42, 0.92, 1);
+    Vec4f colorT = Vec4f(0, 0.42, 0.92, 0.5);
+            StateSet* state(fgeode->getOrCreateStateSet());
+            Material* mat(new Material);
+            mat->setColorMode(Material::DIFFUSE);
+            mat->setDiffuse(Material::FRONT_AND_BACK, colorT);
+            state->setAttribute(mat);
+            state->setRenderingHint(StateSet::TRANSPARENT_BIN);
+            state->setMode(GL_BLEND, StateAttribute::ON);
+            state->setMode(GL_LIGHTING, StateAttribute::OFF);
+            osg::PolygonMode* polymode = new osg::PolygonMode;
+            polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::FILL);
+            state->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            fgeode->setStateSet(state);
+            fgeode->addDrawable(geom);
+            StateSet* state2(lgeode->getOrCreateStateSet());
+            Material* mat2(new Material);
+            state2->setRenderingHint(StateSet::OPAQUE_BIN);
+            mat2->setColorMode(Material::DIFFUSE);
+            mat2->setDiffuse(Material::FRONT_AND_BACK, color);
+            state2->setAttribute(mat2);
+            state->setMode(GL_BLEND, StateAttribute::ON);
+            state2->setMode(GL_LIGHTING, StateAttribute::OFF);
+            osg::PolygonMode* polymode2 = new osg::PolygonMode;
+            polymode2->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+            state2->setAttributeAndModes(polymode2, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            lgeode->setStateSet(state2);
+            lgeode->addDrawable(geom);
+//Add geodes to switchNode
+_lineGroups[i]->switchNode->removeChild(_lineGroups[i]->f_geode[0]);
+    _lineGroups[i]->f_geode[0] = fgeode;
+    _lineGroups[i]->l_geode[0] = lgeode;
+_lineGroups[i]->switchNode->addChild(_lineGroups[i]->f_geode[0]);
+
+if(false)
+{
+_lineGroups[i]->switchNode->addChild(lgeode);
+}
+}
+
+}
+int ArtifactVis2::selectClosestVertice(int n)
+{
+//Dubai
+    osg::Vec3Array* points = new osg::Vec3Array();
+    cerr << "Select On\n";
+    for(int i=0; i < _lineGroups[n]->vertex.size(); i++)
+    {
+      points->push_back(_lineGroups[n]->vertex[i]);
+    }
+    osg::Vec3 currentPos;
+    osg::Matrix w2l = _lineGroups[n]->so->getWorldToObjectMatrix();
+    osg::Vec3 start(0, 0, 0);
+    osg::Vec3 end(0, 1000000, 0);
+    Matrix handMat = getHandToSceneMatrix();
+    start = start * handMat * w2l;
+    cerr << "Hand=" << start.x() << " " << start.z() << "\n";
+    end = end * handMat * w2l;
+    int index = -1;
+    int queryIndex = -1;
+    double distance;
+    float _sphereRadius = 0.1;
+    cerr << "got Interaction\n";
+
+    for (int i = 0; i < points->size(); i++)
+    {
+/*
+        if (points->at(i).x() == 0 && points->at(i).y() == 0)
+        {
+        }
+*/
+        if(true)
+        {
+            // cerr << "Point:" << i << " " << points->at(i).x() << " " << points->at(i).y() << " " << points->at(i).z() << "\n";
+            osg::Vec3 num = (points->at(i) - start) ^ (points->at(i) - end);
+            osg::Vec3 denom = end - start;
+            double point2line = num.length() / denom.length();
+
+            if (point2line <= _sphereRadius)
+            {
+                double point2start = (points->at(i) - start).length2();
+
+                if (index == -1 || point2start < distance)
+                {
+                    distance = point2start;
+                    index = i;
+                }
+            }
+        }
+    }
+
+cout << "index " << index << endl;
+    if (index != -1)
+    {
+        std::cerr << "Got sphere intersection with index " << index << std::endl;
+        // setActiveArtifact(100, CYLINDER, index, queryIndex);
+        currentPos = points->at(index);
+    }
+
+    cout << "returning" <<  currentPos.x() << " " << currentPos.y() << endl;
+    return index;
+}
+void ArtifactVis2::addToLineSelection(int i,int index)
+{
+    Vec4f colorB = Vec4f(0, 0, 0.92, 1);
+    Vec3 pos = _lineGroups[i]->vertex[index];
+    Sphere* cubeShape = new Sphere(pos, _vertexRadius);
+    ShapeDrawable* shapeDrawable = new ShapeDrawable(cubeShape);
+    shapeDrawable->setColor(colorB);
+    osg::Geode* sphereGeode = new Geode();  
+    sphereGeode->addDrawable(shapeDrawable);
+
+_lineGroups[i]->switchNode->removeChild(_lineGroups[i]->cubeGeode[index]);
+    _lineGroups[i]->cubeGeode[index] = sphereGeode;
+    _lineGroups[i]->cubeShape[index] = cubeShape;
+_lineGroups[i]->switchNode->addChild(_lineGroups[i]->cubeGeode[index]);
+_lineGroups[i]->selected.push_back(index);
+}
+void ArtifactVis2::removeFromLineSelection(int i,int index,int indexSelected)
+{
+
+    Vec4f colorG = Vec4f(0, 0.92, 0, 1);
+    Vec3 pos = _lineGroups[i]->vertex[index];
+    Sphere* cubeShape = new Sphere(pos, _vertexRadius);
+    ShapeDrawable* shapeDrawable = new ShapeDrawable(cubeShape);
+    shapeDrawable->setColor(colorG);
+    osg::Geode* sphereGeode = new Geode();  
+    sphereGeode->addDrawable(shapeDrawable);
+
+_lineGroups[i]->switchNode->removeChild(_lineGroups[i]->cubeGeode[index]);
+    _lineGroups[i]->cubeGeode[index] = sphereGeode;
+    _lineGroups[i]->cubeShape[index] = cubeShape;
+_lineGroups[i]->switchNode->addChild(_lineGroups[i]->cubeGeode[index]);
+_lineGroups[i]->selected[indexSelected] = -2;
+}
+int ArtifactVis2::vertLineSelected(int i,int index)
+{
+   int selected = -1;
+   for(int n=0; n < _lineGroups[i]->selected.size(); n++)
+   {
+      if(_lineGroups[i]->selected[n] == index)
+      {
+        selected = n;
+        break;
+      }
+   }
+return selected;
+}
+void ArtifactVis2::pullLineFace()
+{
+
+}
+void ArtifactVis2::addLineVertex(int i,int index)
+{
+       int lEndIndex;
+       int lStartIndex;
+       int lineIndex;
+       if(index == -1)
+       {
+       lEndIndex = _lineGroups[i]->vertex.size();
+       lStartIndex = lEndIndex -1;
+       lineIndex = _lineGroups[i]->connector.size();
+       }
+       else
+       {
+       lEndIndex = index +1;
+       lStartIndex = lEndIndex -1;
+       lineIndex = lStartIndex;
+       cerr << "LoadedV\n";
+       }
+      Vec3 pos = _lineGroups[i]->vertex[lStartIndex];
+      Vec3 pos2 = _lineGroups[i]->vertex[lEndIndex];
+       Vec3 orig = pos;
+     // cerr << "PosB: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
          //Update Line
     Vec4f color = Vec4f(0, 0.42, 0.92, 1);
     Vec4f colorG = Vec4f(0, 0.92, 0, 1);
@@ -6967,12 +7960,16 @@ void ArtifactVis2::addLineVertex(int i)
     osg::Geode* sphereGeode = new Geode();  
     sphereGeode->addDrawable(shapeDrawable);
 
-    _lineGroups[i]->cubeGeode[lStartIndex] = sphereGeode;
-    _lineGroups[i]->cubeShape[lStartIndex] = cubeShape;
-    _lineGroups[i]->vertex[lStartIndex] =pos;
-
     //make Second cube geode
-    Sphere*  cubeShape2 = new Sphere(pos, _vertexRadius);
+    Sphere*  cubeShape2;
+    if(index == -1)
+    {
+    cubeShape2 = new Sphere(pos, _vertexRadius);
+    }
+    else
+    { 
+   cubeShape2 = new Sphere(pos2, _vertexRadius);
+    }
     ShapeDrawable* shapeDrawable2 = new ShapeDrawable(cubeShape2);
    // shapeDrawable2->setTessellationHints(hints);
     shapeDrawable2->setColor(colorG);
@@ -6980,13 +7977,24 @@ void ArtifactVis2::addLineVertex(int i)
     sphereGeode2->addDrawable(shapeDrawable2);
     _lineGroups[i]->cubeGeode.push_back(sphereGeode2);
     _lineGroups[i]->cubeShape.push_back(cubeShape2);
+    if(index == -1)
+    {
     _lineGroups[i]->vertex.push_back(pos);
+    }
 
     //make  line geode
     osg:Geometry* connector = new osg::Geometry();
     osg::Vec3Array* verts = new osg::Vec3Array();
     verts->push_back(pos);
+    if(index == -1)
+    {
     verts->push_back(pos);
+    }
+    else
+    {
+
+    verts->push_back(pos2);
+    }
 
     connector->setVertexArray(verts);
 
@@ -7026,7 +8034,7 @@ void ArtifactVis2::addLineVertex(int i)
 
 //Store Last Text Drawable 
          
-       float distance = (pos - _lineGroups[i]->vertex[lStartIndex - 1]).length();
+       float distance = (pos - _lineGroups[i]->vertex[lStartIndex-1]).length();
         
        _lineGroups[i]->distanceTotal += distance;
        stringstream ss;
@@ -7053,19 +8061,25 @@ void ArtifactVis2::addLineVertex(int i)
         _lineGroups[i]->label.push_back(label);
         Geode* textGeode = new Geode();
         textGeode->addDrawable(label);
-
+        _lineGroups[i]->text_geode.push_back(textGeode);
+        
 
  _lineGroups[i]->distance.push_back(0);
 //Add geodes to switchNode
 
-_lineGroups[i]->switchNode->removeChild(_lineGroups[i]->cubeGeode[lStartIndex]);
-_lineGroups[i]->switchNode->addChild(_lineGroups[i]->cubeGeode[lStartIndex]);
-_lineGroups[i]->switchNode->addChild(_lineGroups[i]->cubeGeode[lEndIndex]);
+//_lineGroups[i]->switchNode->removeChild(_lineGroups[i]->cubeGeode[lStartIndex]);
+//_lineGroups[i]->switchNode->addChild(_lineGroups[i]->cubeGeode[lStartIndex]);
+//_lineGroups[i]->switchNode->removeChild(_lineGroups[i]->cubeGeode[lEndIndex]);
+//_lineGroups[i]->switchNode->addChild(_lineGroups[i]->cubeGeode[lEndIndex]);
+    _lineGroups[i]->connectorGeode.push_back(connectorGeode);
 _lineGroups[i]->switchNode->addChild(connectorGeode);
 _lineGroups[i]->switchNode->addChild(textGeode);
 
+               if(index == -1)
+               {
                  _lineGroups[i]->editing = true;
                  lineGroupsEditing = true;   
+               }
 
 
 }
@@ -7083,29 +8097,21 @@ if(lineGroupsEditing)
     if(_lineGroups[i]->editing)
     {
 
-       
-           osg::Matrixd o2w = PluginHelper::getObjectToWorldTransform();
-        
-       Matrix poMat = getHandToObjectMatrix();
+    float _vertexRadius2 = 0.01;
+           osg::Matrix o2w = _lineGroups[i]->so->getWorldToObjectMatrix();
+       Matrix poMat = getHandToSceneMatrix();
        Vec3 pos;
+       Vec3 orig = poMat.getTrans();
+      //cerr << "PosA: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
        
-       osg::Matrix soMat = _lineGroups[i]->so->getObjectToWorldMatrix();
-       Vec3 origSo = _lineGroups[i]->so->getPosition();
-      // poMat = poMat * soMat;
-      
-       pos = poMat.getTrans() - origSo;
-      // pos = ;
-//bangdist
+       pos = orig * o2w;  
+       orig = pos;
+      //cerr << "PosB2: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
        int lEndIndex = _lineGroups[i]->vertex.size() - 1;
        int lStartIndex = lEndIndex -1;
        int lineIndex = lStartIndex;
 
-      // Vec3 viewOrig = PluginHelper::getObjectTransform().getMatrix().getTrans(); 
-      // Vec3 viewOrig = PluginHelper::getHeadMat(0).getTrans() * w2o; 
-//cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
-      // viewOrig = viewOrig - orig;
-      // pos = pos - orig + viewOrig;
-       
+        
        if(_lineGroups[i]->vertex[lEndIndex] != pos)
        {
           _lineGroups[i]->vertex[lEndIndex] = pos;
@@ -7126,7 +8132,7 @@ if(lineGroupsEditing)
 
     Vec4f color = Vec4f(0, 0.42, 0.92, 1);
     Vec4f colorG = Vec4f(0, 0.92, 0, 1);
-    Sphere*  cubeShape2 = new Sphere(pos, _vertexRadius);
+    Sphere*  cubeShape2 = new Sphere(pos, _vertexRadius2);
     ShapeDrawable* shapeDrawable2 = new ShapeDrawable(cubeShape2);
   //  shapeDrawable2->setTessellationHints(hints);
     shapeDrawable2->setColor(colorG);
@@ -8972,4 +9978,119 @@ void ArtifactVis2::testPhysics()
     srh->capture();
     physicsOn = true;
 */
+}
+osg::Vec3 ArtifactVis2::findBestSelectedPoint(osg::Matrix handMat, Vec3Array* points)
+{
+    osg::Vec3 currentPos;
+    cerr << "Select On\n";
+    osg::Matrix w2l = PluginHelper::getWorldToObjectTransform();
+    osg::Vec3 start(0, 0, 0);
+    osg::Vec3 end(0, 1000000, 0);
+    start = start * handMat * w2l;
+    cerr << "Hand=" << start.x() << " " << start.z() << "\n";
+    end = end * handMat * w2l;
+    int index = -1;
+    int queryIndex = -1;
+    double distance;
+    float _sphereRadius = 0.01;
+    cerr << "got Interaction\n";
+
+    for (int i = 0; i < points->size(); i++)
+    {
+        if (points->at(i).x() == 0 && points->at(i).y() == 0)
+        {
+        }
+        else
+        {
+            // cerr << "Point:" << i << " " << points->at(i).x() << " " << points->at(i).y() << " " << points->at(i).z() << "\n";
+            osg::Vec3 num = (points->at(i) - start) ^ (points->at(i) - end);
+            osg::Vec3 denom = end - start;
+            double point2line = num.length() / denom.length();
+
+            if (point2line <= _sphereRadius)
+            {
+                double point2start = (points->at(i) - start).length2();
+
+                if (index == -1 || point2start < distance)
+                {
+                    distance = point2start;
+                    index = i;
+                }
+            }
+        }
+    }
+
+cout << "index " << index << endl;
+    if (index != -1)
+    {
+        std::cerr << "Got sphere intersection with index " << index << std::endl;
+        // setActiveArtifact(100, CYLINDER, index, queryIndex);
+        currentPos = points->at(index);
+    }
+
+    cout << "returning" <<  currentPos.x() << " " << currentPos.y() << endl;
+    return currentPos;
+}
+osg::Geode* ArtifactVis2::createSelectSphere(osg::Vec3 currentPos)
+{
+    float _vertexRadius = 0.01;
+
+    if (false)
+    {
+        Matrix handMat = getHandToObjectMatrix();
+        currentPos = handMat.getTrans();
+    }
+
+    //Vec3 scenePos = getHandToSceneMatrix().getTrans();
+    Vec3 scenePos = currentPos;
+    //Setup Colors
+    Vec4f colorR = Vec4f(0.92, 0, 0, 1);
+    //make First cube geode
+    Sphere* cubeShape = new Sphere(currentPos, _vertexRadius);
+    ShapeDrawable* shapeDrawable = new ShapeDrawable(cubeShape);
+    // shapeDrawable->setTessellationHints(hints);
+    shapeDrawable->setColor(colorR);
+    osg::Geode* sphereGeode = new Geode();
+    sphereGeode->addDrawable(shapeDrawable);
+    return sphereGeode;
+}
+void ArtifactVis2::createCylinder()
+{
+
+    Vec3 StartPoint = cylinderPoints[0];
+    Vec3 EndPoint = cylinderPoints[1];
+    Vec3 RadPoint = cylinderPoints[2];
+    float radius = 0.1;
+    float height;
+    osg::ref_ptr<osg::Geode> geode = new osg::Geode();
+    osg::ref_ptr<osg::Cylinder> cylinder;
+    osg::ref_ptr<osg::ShapeDrawable> cylinderDrawable;
+    osg::Vec3 center = osg::Vec3d((StartPoint.x() + EndPoint.x()) / 2, (StartPoint.y() + EndPoint.y()) / 2, (StartPoint.z() + EndPoint.z()) / 2);
+    osg::Vec3d currVec = osg::Vec3d(StartPoint.x() - center.x(), StartPoint.y() - center.y(), StartPoint.z() - center.z());
+    // This is the default direction for the cylinders to face in OpenGL
+    osg::Vec3   z = osg::Vec3(0, 0, 1);
+    // Get diff between two points you want cylinder along
+    osg::Vec3 p = (StartPoint - EndPoint);
+    height = p.length();
+    osg::Vec3 r = (StartPoint - RadPoint);
+    float radius2 = r.length();
+    cerr << "Calc Radius is " << radius2 << "\n";
+    // Get CROSS product (the axis of rotation)
+    osg::Vec3   t = z ^  p;
+    // Get angle. length is magnitude of the vector
+    double angle = acos((z * p) / height);
+    //   Create a cylinder between the two points with the given radius
+    cylinder = new osg::Cylinder(center, radius2, height);
+    osg::Quat rotation = osg::Quat(angle, osg::Vec3(t.x(), t.y(), t.z()));
+    cylinder->setRotation(rotation);
+    //   A geode to hold our cylinder
+    cylinderDrawable = new osg::ShapeDrawable(cylinder);
+    geode->addDrawable(cylinderDrawable);
+
+    osg::Vec4 CylinderColor = osg::Vec4(0.8, 0.8, 0.8, 0.5);
+    osg::ref_ptr<osg::Material> pMaterial;
+    pMaterial = new osg::Material;
+    pMaterial->setDiffuse(osg::Material::FRONT, CylinderColor);
+    geode->getOrCreateStateSet()->setAttribute(pMaterial, osg::StateAttribute::OVERRIDE);
+    _root->addChild(geode);
 }
