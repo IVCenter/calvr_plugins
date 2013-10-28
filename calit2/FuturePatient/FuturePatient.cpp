@@ -976,40 +976,6 @@ void FuturePatient::menuCallback(MenuItem * item)
     if(item == _loadButton)
     {
 	loadGraph(_chartPatientList->getValue(),_testList->getValue());
-	/*std::string value = _testList->getValue();
-	if(!value.empty())
-	{
-	    if(_graphObjectMap.find(value) == _graphObjectMap.end())
-	    {
-		GraphObject * gobject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
-		if(gobject->addGraph(value))
-		{
-		    _graphObjectMap[value] = gobject;
-		}
-		else
-		{
-		    delete gobject;
-		}
-	    }
-
-	    if(_graphObjectMap.find(value) != _graphObjectMap.end())
-	    {
-		if(!_layoutObject)
-		{
-		    float width, height;
-		    osg::Vec3 pos;
-		    width = ConfigManager::getFloat("width","Plugin.FuturePatient.Layout",1500.0);
-		    height = ConfigManager::getFloat("height","Plugin.FuturePatient.Layout",1000.0);
-		    pos = ConfigManager::getVec3("Plugin.FuturePatient.Layout");
-		    _layoutObject = new GraphLayoutObject(width,height,3,"GraphLayout",false,true,false,true,false);
-		    _layoutObject->setPosition(pos);
-		    PluginHelper::registerSceneObject(_layoutObject,"FuturePatient");
-		    _layoutObject->attachToScene();
-		}
-
-		_layoutObject->addGraphObject(_graphObjectMap[value]);
-	    }
-	}*/
     }
 
     if(item == _groupLoadButton)
@@ -1846,112 +1812,6 @@ void FuturePatient::loadGraph(std::string patient, std::string test, bool averag
     }
 }
 
-/*void FuturePatient::makeGraph(std::string name)
-{
-    mysqlpp::Connection conn(false);
-    if(!conn.connect("futurepatient","palmsdev2.ucsd.edu","fpuser","FPp@ssw0rd"))
-    {
-	std::cerr << "Unable to connect to database." << std::endl;
-	return;
-    }
-
-    std::stringstream qss;
-    qss << "select Measurement.timestamp, unix_timestamp(Measurement.timestamp) as utime, Measurement.value from Measurement  inner join Measure  on Measurement.measure_id = Measure.measure_id  where Measure.name = \"" << name << "\" order by utime;";
-
-    mysqlpp::Query query = conn.query(qss.str().c_str());
-    mysqlpp::StoreQueryResult res;
-    res = query.store();
-    //std::cerr << "Num Rows: " << res.num_rows() << std::endl;
-    if(!res.num_rows())
-    {
-	std::cerr << "Empty query result." << std::endl;
-	return;
-    }
-
-    std::stringstream mss;
-    mss << "select * from Measure where name = \"" << name << "\";";
-
-    mysqlpp::Query metaQuery = conn.query(mss.str().c_str());
-    mysqlpp::StoreQueryResult metaRes = metaQuery.store();
-
-    if(!metaRes.num_rows())
-    {
-	std::cerr << "Meta Data query result empty." << std::endl;
-	return;
-    }
-
-    osg::Vec3Array * points = new osg::Vec3Array(res.num_rows());
-    osg::Vec4Array * colors = new osg::Vec4Array(res.num_rows());
-
-    bool hasGoodRange = false;
-    float goodLow, goodHigh;
-
-    if(strcmp(metaRes[0]["good_low"].c_str(),"NULL") && metaRes[0]["good_high"].c_str())
-    {
-	hasGoodRange = true;
-	goodLow = atof(metaRes[0]["good_low"].c_str());
-	goodHigh = atof(metaRes[0]["good_high"].c_str());
-    }
-
-    //find min/max values
-    time_t mint, maxt;
-    mint = maxt = atol(res[0]["utime"].c_str());
-    float minval,maxval;
-    minval = maxval = atof(res[0]["value"].c_str());
-    for(int i = 1; i < res.num_rows(); i++)
-    {
-	time_t time = atol(res[i]["utime"].c_str());
-	float value = atof(res[i]["value"].c_str());
-
-	if(time < mint)
-	{
-	    mint = time;
-	}
-	if(time > maxt)
-	{
-	    maxt = time;
-	}
-	if(value < minval)
-	{
-	    minval = value;
-	}
-	if(value > maxval)
-	{
-	    maxval = value;
-	}
-    }
-
-    //std::cerr << "Mintime: " << mint << " Maxtime: " << maxt << " MinVal: " << minval << " Maxval: " << maxval << std::endl;
-
-    for(int i = 0; i < res.num_rows(); i++)
-    {
-	time_t time = atol(res[i]["utime"].c_str());
-	float value = atof(res[i]["value"].c_str());
-	points->at(i) = osg::Vec3((time-mint) / (double)(maxt-mint),0,(value-minval) / (maxval-minval));
-	if(hasGoodRange)
-	{
-	    if(value < goodLow || value > goodHigh)
-	    {
-		colors->at(i) = osg::Vec4(1.0,0,0,1.0);
-	    }
-	    else
-	    {
-		colors->at(i) = osg::Vec4(0,1.0,0,1.0);
-	    }
-	}
-	else
-	{
-	    colors->at(i) = osg::Vec4(0,0,1.0,1.0);
-	}
-    }
-
-    DataGraph * dg = new DataGraph();
-    dg->addGraph(metaRes[0]["display_name"].c_str(), points, POINTS_WITH_LINES, "Time", metaRes[0]["units"].c_str(), osg::Vec4(0,1.0,0,1.0),colors);
-    dg->setZDataRange(metaRes[0]["display_name"].c_str(),minval,maxval);
-    dg->setXDataRangeTimestamp(metaRes[0]["display_name"].c_str(),mint,maxt);
-    PluginHelper::getObjectsRoot()->addChild(dg->getGraphRoot());
-}*/
-
 void FuturePatient::setupMicrobes()
 {
     struct Microbes
@@ -2364,10 +2224,6 @@ void FuturePatient::setupStrainMenu()
 
 void FuturePatient::updateMicrobeTests(int patientid)
 {
-    //struct timeval start,end;
-    //gettimeofday(&start,NULL);
-    //std::cerr << "Update Microbe Tests Patient: " << patientid << std::endl;
-    
     std::vector<std::string> emptyvec;
     _microbeTest->setValues(emptyvec);
 
@@ -2389,69 +2245,6 @@ void FuturePatient::updateMicrobeTests(int patientid)
 	    _microbeTestTime = _patientMicrobeV2TestTimeMap[patientid];
 	}
     }
-
-    /*struct TestLabel
-    {
-	char label[256];
-	time_t timestamp;
-    };
-
-    TestLabel * labels = NULL;
-    int numTests = 0;
-
-    _microbeTestTime.clear();
-
-    if(ComController::instance()->isMaster())
-    {
-	if(_conn)
-	{
-	    std::stringstream qss;
-	    qss << "select distinct timestamp, unix_timestamp(timestamp) as utimestamp from Microbe_Measurement where patient_id = \"" << patientid << "\" order by timestamp;";
-
-	    mysqlpp::Query q = _conn->query(qss.str().c_str());
-	    mysqlpp::StoreQueryResult res = q.store();
-
-	    numTests = res.num_rows();
-
-	    if(numTests)
-	    {
-		labels = new struct TestLabel[numTests];
-
-		for(int i = 0; i < numTests; ++i)
-		{
-		    strncpy(labels[i].label,res[i]["timestamp"].c_str(),255);
-		    labels[i].timestamp = atol(res[i]["utimestamp"].c_str());
-		}
-	    }
-	}
-
-	ComController::instance()->sendSlaves(&numTests,sizeof(int));
-	if(numTests)
-	{
-	    ComController::instance()->sendSlaves(labels,numTests*sizeof(struct TestLabel));
-	}
-    }
-    else
-    {
-	ComController::instance()->readMaster(&numTests,sizeof(int));
-	if(numTests)
-	{
-	    labels = new struct TestLabel[numTests];
-	    ComController::instance()->readMaster(labels,numTests*sizeof(struct TestLabel));
-	}
-    }
-
-    std::vector<std::string> labelVec;
-
-    for(int i = 0; i < numTests; ++i)
-    {
-	labelVec.push_back(labels[i].label);
-	_microbeTestTime.push_back(labels[i].timestamp);
-    }
-
-    _microbeTest->setValues(labelVec);*/
-    //gettimeofday(&end,NULL);
-    //std::cerr << "menu update: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) / 1000000.0) << std::endl;
 }
 
 void FuturePatient::saveLayout()

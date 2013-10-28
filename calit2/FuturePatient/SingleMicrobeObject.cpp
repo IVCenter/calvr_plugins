@@ -396,7 +396,11 @@ void BandingFunction::update(float left, float right, float top, float bottom, f
 			avg = bottom + ((avg-logMin)/(logMax-logMin))*(top-bottom);
 		    }
 		    bTop = log10(bTop);
+		    bTop = std::max(bTop,logMin);
+		    bTop = std::min(bTop,logMax);
 		    bBottom = log10(bBottom);
+		    bBottom = std::max(bBottom,logMin);
+		    bBottom = std::min(bBottom,logMax);
 		    bBottom = bottom + ((bBottom-logMin)/(logMax-logMin))*(top-bottom);
 		    bTop = bottom + ((bTop-logMin)/(logMax-logMin))*(top-bottom);
 		    break;
@@ -416,7 +420,7 @@ void BandingFunction::update(float left, float right, float top, float bottom, f
 	    colors->push_back(color);
 	    colors->push_back(color);
 
-	    if(sum > 0.0)
+	    if(sum > 0.0  && sum >= displayMin && sum <= displayMax)
 	    {
 		lverts->push_back(osg::Vec3(groupRanges[i].first,-1.95,avg));
 		lverts->push_back(osg::Vec3(groupRanges[i].second,-1.95,avg));
