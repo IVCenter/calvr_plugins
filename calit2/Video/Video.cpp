@@ -110,11 +110,11 @@ void Video::postFrame()
 		int ret = m_videoplayer.RemoveVideo(update.gid, update.pts);
 		if (ret != 0)
 		{
-			printf("Remove video for %u at pts %.4lf failed %d\n", update.gid, update.pts, ret);
+			//printf("Remove video for %u at pts %.4lf failed %d\n", update.gid, update.pts, ret);
 		}
 		else
 		{
-			printf("Remove video for %u at pts %.4lf succeeded \n", update.gid, update.pts);
+			//printf("Remove video for %u at pts %.4lf succeeded \n", update.gid, update.pts);
 		}
 
 
@@ -136,7 +136,7 @@ void Video::postFrame()
 				//printf("CheckUpdateVideo returned true\n");
 				PTSUpdate update(gid, m_videoplayer.GetVideoPts(gid));
 				ptsList.push_back(update);
-				printf("Adding an update for video %x and time %.4lf\n", gid, update.pts);
+				//printf("Adding an update for video %x and time %.4lf\n", gid, update.pts);
 			}
 		}
 
@@ -317,6 +317,18 @@ void Video::preFrame()
 
 			m_loadVideo.clear();
 		}
+		else if (vmd.why == VIDEO_STREAM)
+		{
+
+			TextureManager* manager = new TextureManager(vmd.gid);
+			manager->AddGID(vmd.gid);
+			m_gidMap[vmd.gid] = manager;
+
+			manager->SetSceneObject(vmd.obj);
+
+			m_managerAdd.push_back(manager);
+
+		}
 
 
 	}	
@@ -382,7 +394,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 		{
 			init = 1;
 			glewInit();
-			m_videoplayer.RegisterNotificationFunction(videoNotifyFunction, 0);
+			m_videoplayer.RegisterNotificationFunction(videoNotifyFunction, const_cast<Video*>(this));
 			bool isHead = cvr::ComController::instance()->isMaster();
 			m_videoplayer.init(isHead, isHead);
 			//m_videoplayer.init(true, true);
@@ -464,7 +476,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			}
 			else
 			{
-				//printf("No update for video %x to pts %.4lf for context %d\n", gid, update.pts, contextid);
+				printf("No update for video %x to pts %.4lf for context %d\n", gid, update.pts, contextid);
 			}
 		}
 	}
@@ -530,6 +542,11 @@ bool videoNotifyFunction(VIDEOPLAYER_NOTIFICATION msg, unsigned int gid, void* o
 
 		int width = param1;
 		int height = param2;
+
+		Video* video = static_cast<Video*>(obj);
+
+		video->newStream(gid, width, height);	
+
 		
 		/*
 		TextureManager* manager = new TextureManager(gid, width, height);
@@ -685,27 +702,6 @@ int Video::LoadVideoXML(const char* filename, std::list<std::string>& videoFilen
 
 } 
 
-class VideoSceneObjectImpl : public VideoSceneObject
-{
-    Video* m_videoPlugin;
-    
-  public:
-    explicit VideoSceneObjectImpl(Video* plugin) : 
-        VideoSceneObject("Video Scene", true, true, false, false, true)
-    {
-        m_videoPlugin = plugin;
-    }
-    
-    virtual void play()
-    {
-        // FIXME
-    }
-    
-    virtual void stop()
-    {
-        // FIXME
-    }
-};
 
 void Video::message(int type, char*& data, bool collaborative)
 {
@@ -736,3 +732,15 @@ void Video::message(int type, char*& data, bool collaborative)
     std::cerr << "Video::message called\n";
 }
 
+void Video::newStream(unsigned int gid, int width, int height)
+{
+	VideoMessageData vmd;
+	vmd.why = VIDEO_STREAM;
+        vmd.obj = new VideoSceneObjectImpl(this);
+	vmd.width = width;
+	vmd.height = height;
+	vmd.gid = gid;
+	m_updateMutex.lock();
+	m_actionQueue.push_back(vmd);
+	m_updateMutex.unlock();
+}

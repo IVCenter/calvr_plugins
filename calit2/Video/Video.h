@@ -35,6 +35,7 @@ public:
         void menuCallback(cvr::MenuItem * item);
 	void perContextCallback(int contextid, cvr::PerContextCallback::PCCType type) const;
 	void message(int type, char*& data, bool collaborative);
+	void newStream(unsigned int gid, int width, int height);
 	
 protected:
 	int LoadVideoXML(const char* filename, std::list<std::string>& videoFilenames);
@@ -67,6 +68,28 @@ protected:
 
 	
 
+};
+
+class VideoSceneObjectImpl : public VideoSceneObject
+{
+    Video* m_videoPlugin;
+    
+  public:
+    explicit VideoSceneObjectImpl(Video* plugin) : 
+        VideoSceneObject("Video Scene", true, true, false, false, true)
+    {
+        m_videoPlugin = plugin;
+    }
+    
+    virtual void play()
+    {
+        // FIXME
+    }
+    
+    virtual void stop()
+    {
+        // FIXME
+    }
 };
 	
 
