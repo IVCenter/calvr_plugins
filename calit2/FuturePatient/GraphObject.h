@@ -1,8 +1,8 @@
 #ifndef FP_GRAPH_OBJECT_H
 #define FP_GRAPH_OBJECT_H
 
-#include <cvrKernel/TiledWallSceneObject.h>
 #include <cvrMenu/MenuList.h>
+#include <cvrMenu/MenuCheckbox.h>
 
 #include <string>
 
@@ -17,7 +17,7 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
         GraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~GraphObject();
 
-        bool addGraph(std::string patient, std::string name);
+        bool addGraph(std::string patient, std::string name, bool averageColor = false);
         int getNumGraphs()
         {
             return _graph->getNumGraphs();
@@ -78,6 +78,9 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
             std::string name;
             std::string displayName;
         };
+
+        AverageFunction * _averageFunc;
+        cvr::MenuCheckbox * _averageCB;
 
         std::vector<LoadData> _loadedGraphs;
 };

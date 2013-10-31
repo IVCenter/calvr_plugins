@@ -14,6 +14,10 @@
 #include <iostream>
 #include <sstream>
 #include <cstdlib>
+#include <ctime>
+
+// for time debug
+#include <sys/time.h>
 
 using namespace cvr;
 
@@ -86,6 +90,11 @@ void MicrobeGraphObject::setColor(osg::Vec4 color)
     _graph->setColor(color);
 }
 
+void MicrobeGraphObject::setBGColor(osg::Vec4 color)
+{
+    _graph->setBGColor(color);
+}
+
 float MicrobeGraphObject::getGraphMaxValue()
 {
     return _graph->getDataMax();
@@ -154,7 +163,7 @@ bool MicrobeGraphObject::loadState(std::istream & in)
     {
 	int stype;
 	in >> stype;
-	setSpecialGraph((SpecialMicrobeGraphType)stype,microbes,lsOrder);
+	setSpecialGraph((SpecialMicrobeGraphType)stype,microbes,"",lsOrder);
     }
     else
     {
@@ -171,7 +180,7 @@ bool MicrobeGraphObject::loadState(std::istream & in)
 	int patientid;
 	in >> patientid;
 
-	setGraph(title,patientid,tlabel,microbes,lsOrder);
+	setGraph(title,patientid,tlabel,0,microbes,"",lsOrder);
     }
 
     float drmin, drmax;
@@ -328,7 +337,7 @@ bool MicrobeGraphObject::processEvent(InteractionEvent * ie)
 	}
     }
 
-    return TiledWallSceneObject::processEvent(ie);
+    return FPTiledWallSceneObject::processEvent(ie);
 }
 
 void MicrobeGraphObject::updateCallback(int handID, const osg::Matrix & mat)
@@ -385,17 +394,35 @@ void MicrobeGraphObject::menuCallback(MenuItem * item)
 	_graph->setColorMode((BarGraphColorMode)_colorModeML->getIndex());
     }
 
-    TiledWallSceneObject::menuCallback(item);
+    FPTiledWallSceneObject::menuCallback(item);
 }
 
-bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, int microbes, bool lsOrdering)
+bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, std::string tableSuffix, bool group, bool lsOrdering, bool familyLevel)
 {
-    _graphTitle = title + " - " + testLabel;
+    struct tm timetm = *localtime(&testTime);
+    char timestr[256];
+    timestr[255] = '\0';
+    strftime(timestr, 255, "%F", &timetm);
+
+    _graphTitle = title + " - " + timestr;
     std::stringstream valuess, orderss;
 
-    valuess << "select * from (select Microbes.description, Microbes.phylum, Microbes.species, Microbe_Measurement.value from  Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \""<< testLabel << "\" order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
+    std::string measurementTable = "Microbe_Measurement";
+    measurementTable += tableSuffix;
 
-    orderss << "select t.phylum, sum(t.value) as total_value from (select Microbes.phylum, Microbe_Measurement.value from  Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
+    std::string microbesTable = "Microbes";
+    microbesTable += tableSuffix;
+
+    if(!familyLevel)
+    {
+	valuess << "select description, phylum, species, value from (select taxonomy_id, value from " << measurementTable << " where " << measurementTable << ".patient_id = " << patientid << " and " << measurementTable << ".timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")v inner join " << microbesTable << " on v.taxonomy_id = " << microbesTable << ".taxonomy_id order by phylum, value desc;";
+
+	orderss << "select t.phylum, sum(t.value) as total_value from (select " << microbesTable << ".phylum, " << measurementTable << ".value from " << measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id where " << measurementTable << ".patient_id = \"" << patientid << "\" and " << measurementTable << ".timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
+    }
+    else
+    {
+	valuess << "select description, phylum, family, sum(value) as value from (select taxonomy_id, value from " << measurementTable << " where " << measurementTable << ".patient_id = " << patientid << " and " << measurementTable << ".timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")v inner join " << microbesTable << " on v.taxonomy_id = " << microbesTable << ".taxonomy_id group by family order by phylum, value desc;";
+    }
 
     _specialGraph = false;
     _patientid = patientid;
@@ -403,12 +430,18 @@ bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string 
     _microbes = microbes;
     _lsOrdered = lsOrdering;
 
-    return loadGraphData(valuess.str(), orderss.str(), lsOrdering);
+    return loadGraphData(valuess.str(), orderss.str(), group, lsOrdering, familyLevel);
 }
 
-bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, bool lsOrdering)
+bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, std::string tableSuffix, bool group, bool lsOrdering, bool familyLevel)
 {
     std::stringstream valuess, orderss;
+
+    std::string measurementTable = "Microbe_Measurement";
+    measurementTable += tableSuffix;
+
+    std::string microbesTable = "Microbes";
+    microbesTable += tableSuffix;
 
     switch(smgt)
     {
@@ -437,8 +470,15 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int micro
 			break;
 		}
 
-		valuess << "select * from (select description, phylum, species, " << field << " as value from Microbes order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
-		orderss << "select t.phylum, sum(t.value) as total_value from (select phylum, " << field << " as value from Microbes order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
+		if(!familyLevel)
+		{
+		    valuess << "select * from (select description, phylum, species, " << field << " as value from " << microbesTable << " order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
+		    orderss << "select t.phylum, sum(t.value) as total_value from (select phylum, " << field << " as value from " << microbesTable << " order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
+		}
+		else
+		{
+		    valuess << "select description, phylum, family, sum(value) as value from (select description, phylum, family, " << field << " as value from " << microbesTable << " order by value desc limit " << microbes << ")t group by t.family order by t.phylum, value desc;";
+		}
 		break;
 	    }
 	case SMGT_SRS_AVERAGE:
@@ -460,8 +500,15 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int micro
 		    break;
 	    }
 
-	    valuess << "select * from (select Microbes.description, Microbes.phylum, Microbes.species, avg(Microbe_Measurement.value) as value from Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id inner join Patient on Microbe_Measurement.patient_id = Patient.patient_id where Patient.last_name regexp '" << regexp << "' group by species order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
-	    orderss << "select t.phylum, sum(t.value) as total_value from (select Microbes.description, Microbes.phylum, Microbes.species, avg(Microbe_Measurement.value) as value from Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id inner join Patient on Microbe_Measurement.patient_id = Patient.patient_id where Patient.last_name regexp '" << regexp << "' group by species order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
+	    if(!familyLevel)
+	    {
+		valuess << "select * from (select " << microbesTable << ".description, " << microbesTable << ".phylum, " << microbesTable << ".species, avg(" << measurementTable << ".value) as value from " << measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id inner join Patient on " << measurementTable << ".patient_id = Patient.patient_id where Patient.last_name regexp '" << regexp << "' group by species order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
+		orderss << "select t.phylum, sum(t.value) as total_value from (select " << microbesTable << ".description, " << microbesTable << ".phylum, " << microbesTable << ".species, avg(" << measurementTable << ".value) as value from " << measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id inner join Patient on " << measurementTable << ".patient_id = Patient.patient_id where Patient.last_name regexp '" << regexp << "' group by species order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
+	    }
+	    else
+	    {
+		valuess << "select description, phylum, family, sum(value) as value from (select " << microbesTable << ".description, " << microbesTable << ".phylum, " << microbesTable << ".family, avg(" << measurementTable << ".value) as value from " << measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id inner join Patient on " << measurementTable << ".patient_id = Patient.patient_id where Patient.last_name regexp '" << regexp << "' group by species order by value desc limit " << microbes << ")t group by family order by t.phylum, t.value desc;";
+	    }
 
 	    break;
 	}
@@ -474,7 +521,7 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int micro
     _microbes = microbes;
     _lsOrdered = lsOrdering;
 
-    return loadGraphData(valuess.str(), orderss.str(), lsOrdering);
+    return loadGraphData(valuess.str(), orderss.str(), group, lsOrdering, familyLevel);
 }
 
 void MicrobeGraphObject::objectAdded()
@@ -501,8 +548,12 @@ void MicrobeGraphObject::objectRemoved()
     }
 }
 
-bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string orderQuery, bool lsOrdering)
+bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string orderQuery, bool group, bool lsOrdering, bool familyLevel)
 {
+    //std::cerr << "Query1: " << valueQuery << std::endl << "Query2: " << orderQuery << std::endl;
+    struct timeval start,end;
+    gettimeofday(&start,NULL);
+
     _graphData.clear();
     _graphOrder.clear();
 
@@ -510,6 +561,7 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
     {
 	int numDataValues;
 	int numOrderValues;
+	float totalValue;
 	bool valid;
     };
 
@@ -529,6 +581,7 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
     MicrobeDataHeader header;
     header.numDataValues = 0;
     header.numOrderValues = 0;
+    header.totalValue = 0;
     header.valid = false;
 
     MicrobeDataValue * data = NULL;
@@ -538,10 +591,16 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
     {
 	if(_conn)
 	{
+	    struct timeval start,end;
+	    gettimeofday(&start,NULL);
 	    mysqlpp::Query valueq = _conn->query(valueQuery.c_str());
 	    mysqlpp::StoreQueryResult valuer = valueq.store();
+	    gettimeofday(&end,NULL);
+	    //std::cerr << "Query1: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) / 1000000.0) << std::endl;
 
 	    header.numDataValues = valuer.num_rows();
+
+	    std::map<std::string,float> totalMap;
 
 	    if(valuer.num_rows())
 	    {
@@ -550,14 +609,48 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
 		for(int i = 0; i < valuer.num_rows(); ++i)
 		{
 		    strncpy(data[i].phylum,valuer[i]["phylum"].c_str(),1023);
-		    strncpy(data[i].species,valuer[i]["species"].c_str(),1023);
+		    if(!familyLevel)
+		    {
+			strncpy(data[i].species,valuer[i]["species"].c_str(),1023);
+		    }
+		    else
+		    {
+			strncpy(data[i].species,valuer[i]["family"].c_str(),1023);
+		    }
 		    strncpy(data[i].description,valuer[i]["description"].c_str(),1023);
 		    data[i].value = atof(valuer[i]["value"]);
+		    totalMap[data[i].phylum] += data[i].value;
+		    header.totalValue += data[i].value;
 		}
 	    }
 
+	    std::vector<std::pair<float,std::string> > orderList;
+	    for(std::map<std::string,float>::iterator it = totalMap.begin(); it != totalMap.end(); ++it)
+	    {
+		orderList.push_back(std::pair<float,std::string>(it->second,it->first));
+	    }
+
+	    header.numOrderValues = orderList.size();
+
+	    std::sort(orderList.begin(),orderList.end());
+	    if(orderList.size())
+	    {
+		order = new MicrobeOrderValue[orderList.size()];
+
+		//default sort is backwards, reverse add order
+		for(int i = 0; i < orderList.size(); ++i)
+		{
+		    strncpy(order[i].group,orderList[orderList.size()-i-1].second.c_str(),1023);
+		}
+	    }
+
+	    /*struct timeval start1, end1;
+	    gettimeofday(&start1,NULL);
+
 	    mysqlpp::Query orderq = _conn->query(orderQuery.c_str());
 	    mysqlpp::StoreQueryResult orderr = orderq.store();
+	    gettimeofday(&end1,NULL);
+	    //std::cerr << "Query2: " << (end1.tv_sec - start1.tv_sec) + ((end1.tv_usec - start1.tv_usec) / 1000000.0) << std::endl;
 
 	    header.numOrderValues = orderr.num_rows();
 
@@ -569,7 +662,7 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
 		{
 		    strncpy(order[i].group,orderr[i]["phylum"].c_str(),1023);
 		}
-	    }
+	    }*/
 
 	    header.valid = true;
 	}
@@ -662,11 +755,62 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
 	}
     }
     
-    bool graphValid = _graph->setGraph(_graphTitle, _graphData, _graphOrder, BGAT_LOG, "Value", "", "phylum / species",osg::Vec4(1.0,0,0,1));
+    std::stringstream titless;
+    titless << _graphTitle << " - Count=" << header.numDataValues << " - " << round(header.totalValue * 100.0) << "%";
+
+    std::string sublabel;
+    if(!familyLevel)
+    {
+	sublabel = "phylum / species";
+    }
+    else
+    {
+	sublabel = "phylum / family";
+    }
+
+    bool graphValid = _graph->setGraph(titless.str(), _graphData, _graphOrder, BGAT_LOG, "Value", "", sublabel,osg::Vec4(1.0,0,0,1));
 
     if(graphValid)
     {
 	addChild(_graph->getRootNode());
+
+	if(!group)
+	{
+	    std::vector<std::pair<std::string,int> > customOrder;
+
+	    int totalEntries = 0;
+	    for(std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = _graphData.begin(); it != _graphData.end(); ++it)
+	    {
+		totalEntries += it->second.size();
+	    }
+
+	    std::map<std::string,int> groupIndexMap;
+
+	    while(customOrder.size() < totalEntries)
+	    {
+		float maxVal = FLT_MIN;
+		std::string group;
+		for(std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = _graphData.begin(); it != _graphData.end(); ++it)
+		{
+		    if(groupIndexMap[it->first] >= it->second.size())
+		    {
+			continue;
+		    }
+
+		    if(it->second[groupIndexMap[it->first]].second > maxVal)
+		    {
+			group = it->first;
+			maxVal = it->second[groupIndexMap[it->first]].second;
+		    }
+		}
+
+		customOrder.push_back(std::pair<std::string,int>(group,groupIndexMap[group]));
+		groupIndexMap[group]++;
+	    }
+
+	    _graph->setCustomOrder(customOrder);
+	    _graph->setDisplayMode(BGDM_CUSTOM);
+	}
     }
 
     if(data)
@@ -677,6 +821,10 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
     {
 	delete[] order;
     }
+
+    gettimeofday(&end,NULL);
+
+    std::cerr << "GraphLoadTime: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) / 1000000.0) << std::endl;
 
     return graphValid;
 }

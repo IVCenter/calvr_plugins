@@ -8,7 +8,7 @@
 
 using namespace cvr;
 
-GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : TiledWallSceneObject(name,navigation,movable,clip,true,showBounds)
+GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : FPTiledWallSceneObject(name,navigation,movable,clip,true,showBounds)
 {
     _width = width;
     _height = height;
@@ -28,15 +28,18 @@ GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std
     _zoomCB->setCallback(this);
     addMenuItem(_zoomCB);
 
-    _rowsRV = new MenuRangeValueCompact("Rows",1.0,10.0,maxRows);
+    _rowsRV = new MenuRangeValueCompact("Rows",1.0,40.0,maxRows);
+    _rowsRV->setCallbackType(MenuRangeValueCompact::ON_RELEASE);
     _rowsRV->setCallback(this);
     addMenuItem(_rowsRV);
 
     _widthRV = new MenuRangeValueCompact("Width",100.0,width*1.5,width);
+    _widthRV->setCallbackType(MenuRangeValueCompact::ON_RELEASE);
     _widthRV->setCallback(this);
     addMenuItem(_widthRV);
 
     _heightRV = new MenuRangeValueCompact("Height",100.0,height*1.5,height);
+    _heightRV->setCallbackType(MenuRangeValueCompact::ON_RELEASE);
     _heightRV->setCallback(this);
     addMenuItem(_heightRV);
 
@@ -262,8 +265,6 @@ void GraphLayoutObject::removeAll()
 	delete it->second;
     }
 
-    checkLineRefs();
-
     _deleteButtonMap.clear();
     _perGraphActiveHand.clear();
     _perGraphActiveHandType.clear();
@@ -275,6 +276,8 @@ void GraphLayoutObject::removeAll()
     _currentSelectedPatients.clear();
 
     _objectList.clear();
+
+    checkLineRefs();
 
     setTitle(getName());
 }
@@ -767,7 +770,7 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	return;
     }
 
-    TiledWallSceneObject::menuCallback(item);
+    FPTiledWallSceneObject::menuCallback(item);
 }
 
 bool GraphLayoutObject::processEvent(InteractionEvent * event)
@@ -859,7 +862,7 @@ bool GraphLayoutObject::processEvent(InteractionEvent * event)
 	}
     }
 
-    return TiledWallSceneObject::processEvent(event);
+    return FPTiledWallSceneObject::processEvent(event);
 }
 
 void GraphLayoutObject::enterCallback(int handID, const osg::Matrix &mat)
@@ -1004,6 +1007,11 @@ void GraphLayoutObject::leaveCallback(int handID)
     }
 }
 
+void GraphLayoutObject::forceUpdate()
+{
+    updateLayout();
+}
+
 void GraphLayoutObject::makeGeometry()
 {
     _layoutGeode = new osg::Geode();
@@ -1045,20 +1053,13 @@ void GraphLayoutObject::makeGeometry()
 
     osg::Vec4Array* colors = new osg::Vec4Array;
     colors->push_back(color);
+    colors->push_back(color);
+    colors->push_back(color);
+    colors->push_back(color);
+    colors->push_back(osg::Vec4(1.0,1.0,1.0,1.0));
     colors->push_back(osg::Vec4(1.0,1.0,1.0,1.0));
 
-    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
-    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
-		    osg::Array::UIntArrayType,4,4>;
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(1);
-    colorIndexArray->push_back(1);
-
     geo->setColorArray(colors);
-    geo->setColorIndices(colorIndexArray);
     geo->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
 
     _layoutGeode->addDrawable(geo);
@@ -1140,6 +1141,11 @@ void GraphLayoutObject::updateGeometry()
 
 void GraphLayoutObject::updateLayout()
 {
+    if(GraphGlobals::getDeferUpdate())
+    {
+	return;
+    }
+
     int totalGraphs = _objectList.size();
 
     if(!totalGraphs)

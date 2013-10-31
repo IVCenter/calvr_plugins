@@ -21,6 +21,15 @@
 #include "MicrobeBarGraphObject.h"
 #include "MicrobeScatterGraphObject.h"
 #include "SymptomGraphObject.h"
+#include "MicrobePointLineObject.h"
+
+struct PhenoStats
+{
+    std::string name;
+    float avg;
+    float stdev;
+    int taxid;
+};
 
 
 class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
@@ -41,9 +50,10 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
     protected:
         void checkLayout();
-        void loadGraph(std::string patient, std::string test);
+        void loadGraph(std::string patient, std::string test, bool averageColor=false);
         //void makeGraph(std::string name);
-        
+       
+        void setupMicrobes(); 
         void setupMicrobePatients();
         void setupStrainMenu();
         void updateMicrobeTests(int patientid);
@@ -55,6 +65,10 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         void checkSockets(std::vector<int> & messageList);
         bool processSocketInput(cvr::CVRSocket * socket, std::vector<int> & messageList);
+
+        void loadPhenotype();
+
+        void initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::string tableSuffix);
 
         cvr::SubMenu * _fpMenu;
         cvr::SubMenu * _layoutMenu;
@@ -77,6 +91,18 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         std::map<std::string,std::vector<std::string> > _groupTestMap;
         std::map<std::string,std::vector<std::string> > _strainGroupMap;
         std::map<std::string,int> _strainIdMap;
+        std::vector<time_t> _microbeTestTime;
+
+        std::map<int,std::vector<std::string> > _patientMicrobeTestMap;
+        std::map<int,std::vector<time_t> > _patientMicrobeTestTimeMap;
+
+        std::map<int,std::vector<std::string> > _patientMicrobeV2TestMap;
+        std::map<int,std::vector<time_t> > _patientMicrobeV2TestTimeMap;
+
+        std::vector<std::string> _microbeList;
+        std::vector<int> _microbeIDList;
+        std::vector<std::string> _microbeV2List;
+        std::vector<int> _microbeV2IDList;
 
         cvr::SubMenu * _chartMenu;
         cvr::SubMenu * _presetMenu;
@@ -88,13 +114,24 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _loadAll;
 
         cvr::SubMenu * _microbeMenu;
+        cvr::MenuList * _microbeTable;
         cvr::MenuList * _microbeGraphType;
         cvr::MenuList * _microbePatients;
         cvr::MenuList * _microbeTest;
         cvr::MenuButton * _microbeLoad;
         cvr::MenuCheckbox * _microbeOrdering;
+        cvr::MenuCheckbox * _microbeGrouping;
+        cvr::MenuCheckbox * _microbeFamilyLevel;
         cvr::MenuRangeValueCompact * _microbeNumBars;
         cvr::MenuButton * _microbeDone;
+
+        cvr::SubMenu * _sMicrobeMenu;
+        cvr::MenuList * _sMicrobes;
+        cvr::MenuButton * _sMicrobeLoad;
+        cvr::MenuCheckbox * _sMicrobeRankOrder;
+        cvr::MenuCheckbox * _sMicrobeLabels;
+        cvr::MenuList * _sMicrobePhenotypes;
+        cvr::MenuButton * _sMicrobePhenotypeLoad;
 
         cvr::SubMenu * _microbeSpecialMenu;
         cvr::MenuButton * _microbeLoadAverage;
@@ -104,18 +141,25 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeLoadSRXAverage;
         cvr::MenuButton * _microbeLoadCrohnsAll;
         cvr::MenuButton * _microbeLoadHealthyAll;
+        cvr::MenuButton * _microbeLoadHealthy105All;
         cvr::MenuButton * _microbeLoadUCAll;
+        cvr::SubMenu * _microbePointLineMenu;
+        cvr::MenuCheckbox * _microbePointLineExpand;
+        cvr::MenuButton * _microbeLoadPointLine;
 
         cvr::SubMenu * _strainMenu;
         cvr::MenuList * _strainGroupList;
         cvr::MenuList * _strainList;
         cvr::MenuButton * _strainLoadButton;
         cvr::MenuButton * _strainLoadAllButton;
+        cvr::MenuCheckbox * _strainLarryOnlyCB;
+        cvr::MenuButton * _strainLoadHeatMap;
 
         cvr::SubMenu * _eventMenu;
         cvr::MenuList * _eventName;
         cvr::MenuButton * _eventLoad;
         cvr::MenuButton * _eventLoadAll;
+        cvr::MenuButton * _eventLoadMicrobe;
         cvr::MenuButton * _eventDone;
 
         cvr::SubMenu * _scatterMenu;
@@ -135,6 +179,9 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         GraphLayoutObject * _layoutObject;
 
         std::vector<MicrobeGraphObject *> _microbeGraphList;
+
+        std::map<std::string,std::map<std::string,struct PhenoStats > > _microbeStatsMap;
+        std::map<std::string,std::map<std::string,struct PhenoStats > > _microbeV2StatsMap;
 
         std::string _layoutDirectory;   
         cvr::MultiListenSocket * _mls;

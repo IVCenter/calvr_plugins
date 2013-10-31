@@ -20,6 +20,13 @@ SET(PLUGIN_HEADERS
     GraphGlobals.h
     ComparativeBarChart.h
     StrainGraphObject.h
+    HeatMapGraph.h
+    StrainHMObject.h
+    FPTiledWallSceneObject.h
+    MicrobePointLineObject.h
+    PointLineGraph.h
+    TRGraphAction.h
+    SingleMicrobeObject.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -45,6 +52,13 @@ ADD_LIBRARY(${LIB_NAME}
     GraphGlobals.cpp
     ComparativeBarChart.cpp
     StrainGraphObject.cpp
+    HeatMapGraph.cpp
+    StrainHMObject.cpp
+    FPTiledWallSceneObject.cpp
+    MicrobePointLineObject.cpp
+    PointLineGraph.cpp
+    TRGraphAction.cpp
+    SingleMicrobeObject.cpp
 )
 
 FIND_PACKAGE(Mysql)

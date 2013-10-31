@@ -9,6 +9,10 @@
 #undef GL_ARB_gpu_shader_fp64
 #endif
 
+#ifndef GL_DOUBLE_MAT3x2
+#undef GL_ARB_gpu_shader_fp64
+#endif
+
 #include <osg/Drawable>
 
 #include "sph-cache.hpp"

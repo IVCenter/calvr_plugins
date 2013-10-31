@@ -1,7 +1,6 @@
 #ifndef FP_GRAPH_LAYOUT_OBJECT_H
 #define FP_GRAPH_LAYOUT_OBJECT_H
 
-#include <cvrKernel/TiledWallSceneObject.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuCheckbox.h>
 #include <cvrMenu/MenuRangeValueCompact.h>
@@ -11,6 +10,7 @@
 #include "MicrobeGraphObject.h"
 #include "MicrobeBarGraphObject.h"
 #include "GraphKeyObject.h"
+#include "FPTiledWallSceneObject.h"
 
 #include <osg/Geometry>
 #include <osg/Geode>
@@ -20,7 +20,7 @@
 #include <vector>
 #include <map>
 
-class GraphLayoutObject : public cvr::TiledWallSceneObject
+class GraphLayoutObject : public FPTiledWallSceneObject
 {
     public:
         GraphLayoutObject(float width, float height, int maxRows, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
@@ -67,6 +67,8 @@ class GraphLayoutObject : public cvr::TiledWallSceneObject
         virtual void enterCallback(int handID, const osg::Matrix &mat);
         virtual void updateCallback(int handID, const osg::Matrix &mat);
         virtual void leaveCallback(int handID);
+
+        void forceUpdate();
     protected:
         void makeGeometry();
         void makeKeys();

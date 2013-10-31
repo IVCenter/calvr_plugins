@@ -19,6 +19,7 @@
 #include <ctime>
 
 #include "PointActions.h"
+#include "GraphGlobals.h"
 
 enum AxisType
 {
@@ -50,13 +51,6 @@ enum LabelDisplayMode
     LDM_ALL
 };
 
-#define NUM_MATH_FUNCTIONS 1
-
-enum GraphMathFunction
-{
-    GMF_AVERAGE=1
-};
-
 struct GraphDataInfo
 {
     std::string name;
@@ -69,6 +63,7 @@ struct GraphDataInfo
     osg::ref_ptr<osg::Geode> connectorGeode;
     osg::ref_ptr<osg::Geometry> connectorGeometry;
     osg::ref_ptr<osg::Geode> labelGeode;
+    osg::ref_ptr<SetBoundsCallback> boundsCallback;
     osg::Vec4 color;
     GraphDisplayType displayType;
     std::string xLabel;
@@ -84,6 +79,8 @@ struct GraphDataInfo
     osg::ref_ptr<osg::Geode> pointActionGeode;
     osg::ref_ptr<osg::Geometry> pointActionGeometry;
 };
+
+class MathFunction;
 
 class DataGraph
 {
@@ -173,8 +170,8 @@ class DataGraph
         void updatePointAction();
         bool pointClick();
 
-        void addMathFunction(unsigned int functionMask);
-        void removeMathFunction(unsigned int functionMask);
+        void addMathFunction(MathFunction * mf);
+        void removeMathFunction(MathFunction * mf);
 
     protected:
         void setupMultiGraphDisplayModes();
@@ -187,9 +184,6 @@ class DataGraph
         void updateBGRanges();
         float calcPadding();
 
-        void initMathFunction(GraphMathFunction gmf);
-        void cleanupMathFunction(GraphMathFunction gmf);
-
         std::map<std::string, osg::ref_ptr<osg::MatrixTransform> > _graphTransformMap;
         //std::map<std::string, osg::ref_ptr<osg::Geometry> > _graphGeometryMap;
         std::map<std::string, GraphDataInfo> _dataInfoMap;
@@ -201,6 +195,7 @@ class DataGraph
         osg::ref_ptr<osg::ClipNode> _clipNode;
         osg::ref_ptr<osg::MatrixTransform> _root;
         osg::ref_ptr<osg::Group> _labelGroup;
+        osg::ref_ptr<osg::Geode> _mathGeode;
 
         osg::ref_ptr<osg::MatrixTransform> _hoverTransform;
         osg::ref_ptr<osg::MatrixTransform> _hoverBGScale;
@@ -257,13 +252,33 @@ class DataGraph
 
         LabelDisplayMode _labelDisplayMode;
 
-        unsigned int _mathFunctionMask;
+        std::vector<MathFunction *> _mathFunctions;
+};
 
-        // math average
-        osg::ref_ptr<osg::Geode> _averageGeode;
+class MathFunction
+{
+    public:
+        virtual void added(osg::Geode * geode) = 0;
+        virtual void removed(osg::Geode * geode) = 0;
+        virtual void update(float width, float height, std::map<std::string, GraphDataInfo> & data, std::map<std::string, std::pair<float,float> > & displayRanges, std::map<std::string,std::pair<int,int> > & dataPointRanges) = 0;
+};
+
+class AverageFunction : public MathFunction
+{
+    public:
+        AverageFunction();
+        virtual ~AverageFunction();
+
+        void added(osg::Geode * geode);
+        void removed(osg::Geode * geode);
+        void update(float width, float height, std::map<std::string, GraphDataInfo> & data, std::map<std::string, std::pair<float,float> > & displayRanges, std::map<std::string,std::pair<int,int> > & dataPointRanges);
+
+    protected:
         osg::ref_ptr<osg::Geometry> _averageGeometry;
         osg::ref_ptr<osgText::Text> _averageText;
         osg::ref_ptr<osg::LineStipple> _averageStipple;
+        osg::ref_ptr<osg::LineWidth> _averageLineWidth;
+        osg::ref_ptr<SetBoundsCallback> _boundsCallback;
 };
 
 #endif

@@ -29,6 +29,8 @@ enum BarGraphDisplayMode
     BGDM_CUSTOM
 };
 
+class MicrobeMathFunction;
+
 class GroupedBarGraph
 {
     public:
@@ -70,6 +72,12 @@ class GroupedBarGraph
             return _minGraphValue;
         }
 
+        void setShowLabels(bool b);
+        bool getShowLabels()
+        {
+            return _showLabels;
+        }
+
         void setCustomOrder(std::vector<std::pair<std::string,int> > & order);
 
         void setDisplayMode(BarGraphDisplayMode bgdm);
@@ -91,6 +99,8 @@ class GroupedBarGraph
         {
             return _color;
         }
+
+        void setBGColor(osg::Vec4 color);
 
         osg::Group * getRootNode()
         {
@@ -114,6 +124,9 @@ class GroupedBarGraph
 
         bool processClick(osg::Vec3 & hitPoint, std::string & selectedGroup, std::vector<std::string> & selectedKeys);
 
+        void addMathFunction(MicrobeMathFunction * mf);
+        void removeMathFunction(MicrobeMathFunction * mf);
+
     protected:
         void makeGraph();
         void makeHover();
@@ -124,6 +137,7 @@ class GroupedBarGraph
         void updateShading();
         void updateColors();
         void updateSizes();
+        void updateMathFuncs();
 
         float _width, _height;
         float _maxGraphValue, _minGraphValue;
@@ -134,6 +148,8 @@ class GroupedBarGraph
         float _minDisplayRange;
         float _maxDisplayRange;
         float _graphLeft, _graphRight, _graphTop, _graphBottom, _barWidth;
+
+        bool _showLabels;
 
         std::string _title, _axisLabel, _axisUnits, _groupLabel;
         BarGraphAxisType _axisType;
@@ -150,6 +166,7 @@ class GroupedBarGraph
         osg::ref_ptr<osg::Geode> _barGeode;
         osg::ref_ptr<osg::Geode> _axisGeode;
         osg::ref_ptr<osg::Geode> _bgGeode;
+        osg::ref_ptr<osg::Geometry> _bgGeom;
         osg::ref_ptr<osg::Geode> _selectGeode;
         osg::ref_ptr<osg::Geometry> _barGeom;
         osg::ref_ptr<osg::Geode> _shadingGeode;
@@ -158,6 +175,8 @@ class GroupedBarGraph
         osg::ref_ptr<osg::Geometry> _hoverBGGeom;
         osg::ref_ptr<osgText::Text> _hoverText;
 
+        osg::ref_ptr<osg::Geode> _mathGeode;
+
         std::string _hoverGroup;
         std::string _hoverItem;
 
@@ -165,6 +184,16 @@ class GroupedBarGraph
         BarGraphDisplayMode _displayMode;
 
         osg::ref_ptr<SetBoundsCallback> _graphBoundsCallback;
+
+        std::vector<MicrobeMathFunction *> _mathFunctionList;
+};
+
+class MicrobeMathFunction
+{
+    public:
+        virtual void added(osg::Geode * geode) = 0;
+        virtual void removed(osg::Geode * geode) = 0;
+        virtual void update(float left, float right, float top, float bottom, float barWidth, std::map<std::string, std::vector<std::pair<std::string, float> > > & data, BarGraphDisplayMode displayMode, const std::vector<std::string> & groupOrder, const std::vector<std::pair<std::string,int> > & customOrder, float displayMin, float displayMax, BarGraphAxisType axisType, const std::vector<std::pair<float,float> > & groupRanges) = 0;
 };
 
 #endif

@@ -89,11 +89,13 @@ DataGraph::DataGraph()
     _bgGeometry = new osg::Geometry();
     _bgRangesGeode = new osg::Geode();
     _labelGroup = new osg::Group();
+    _mathGeode = new osg::Geode();
 
     _root->addChild(_axisGeode);
     _root->addChild(_graphTransform);
     _root->addChild(_clipNode);
     _root->addChild(_labelGroup);
+    _root->addChild(_mathGeode);
     _graphTransform->addChild(_graphGeode);
     _graphTransform->addChild(_bgRangesGeode);
     _graphGeode->addDrawable(_bgGeometry);
@@ -146,18 +148,8 @@ DataGraph::DataGraph()
 
     osg::Vec4Array* colors = new osg::Vec4Array;
     colors->push_back(color);
-
-    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
-    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
-		    osg::Array::UIntArrayType,4,4>;
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-
     geo->setColorArray(colors);
-    geo->setColorIndices(colorIndexArray);
-    geo->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+    geo->setColorBinding(osg::Geometry::BIND_OVERALL);
 
     _xAxisTimestamp = false;
     _minDisplayX = 0;
@@ -167,8 +159,6 @@ DataGraph::DataGraph()
 
     _masterPointScale = ConfigManager::getFloat("value","Plugin.FuturePatient.MasterPointScale",1.0);
     _masterLineScale = ConfigManager::getFloat("value","Plugin.FuturePatient.MasterLineScale",1.0);
-
-    _mathFunctionMask = 0;
 
     //_clipNode->addClipPlane(new osg::ClipPlane(0));
     //_clipNode->addClipPlane(new osg::ClipPlane(1));
@@ -218,13 +208,17 @@ void DataGraph::addGraph(std::string name, osg::Vec3Array * points, GraphDisplay
     gdi.zMin = 0.0;
     gdi.zMax = 1.0;
 
+    gdi.boundsCallback = new SetBoundsCallback;
+
     gdi.pointGeometry = new osg::Geometry();
     gdi.pointGeometry->setUseDisplayList(false);
     gdi.pointGeometry->setUseVertexBufferObjects(true);
+    gdi.pointGeometry->setComputeBoundingBoxCallback(gdi.boundsCallback.get());
     
     gdi.connectorGeometry = new osg::Geometry();
     gdi.connectorGeometry->setUseDisplayList(false);
     gdi.connectorGeometry->setUseVertexBufferObjects(true);
+    gdi.connectorGeometry->setComputeBoundingBoxCallback(gdi.boundsCallback.get());
 
     gdi.singleColorArray = new osg::Vec4Array(1);
     gdi.singleColorArray->at(0) = osg::Vec4(0.0,0.0,0.0,1.0);
@@ -931,49 +925,30 @@ bool DataGraph::pointClick()
     return false;
 }
 
-void DataGraph::addMathFunction(unsigned int functionMask)
+void DataGraph::addMathFunction(MathFunction * mf)
 {
-    unsigned int mask = 1;
-    bool toUpdate = false;
-    for(int i = 0; i < NUM_MATH_FUNCTIONS; ++i)
+    if(mf)
     {
-	if((mask & functionMask))
-	{
-	    if(!(mask & _mathFunctionMask))
-	    {
-		initMathFunction((GraphMathFunction)mask);
-		toUpdate = true;
-	    }
-	}
-	mask = mask << 1;
-    }
-
-    if(toUpdate)
-    {
+	_mathFunctions.push_back(mf);
+	mf->added(_mathGeode);
 	update();
     }
 }
 
-void DataGraph::removeMathFunction(unsigned int functionMask)
+void DataGraph::removeMathFunction(MathFunction * mf)
 {
-    unsigned int mask = 1;
-    bool toUpdate = false;
-    for(int i = 0; i < NUM_MATH_FUNCTIONS; ++i)
+    if(mf)
     {
-	if((mask & functionMask))
+	for(std::vector<MathFunction*>::iterator it = _mathFunctions.begin(); it != _mathFunctions.end(); ++it)
 	{
-	    if(!(mask & _mathFunctionMask))
+	    if((*it) == mf)
 	    {
-		cleanupMathFunction((GraphMathFunction)mask);
-		toUpdate = true;
+		_mathFunctions.erase(it);
+		mf->removed(_mathGeode);
+		update();
+		break;
 	    }
 	}
-	mask = mask << 1;
-    }
-
-    if(toUpdate)
-    {
-	update();
     }
 }
 
@@ -1032,18 +1007,8 @@ void DataGraph::makeHover()
 
     osg::Vec4Array* colors = new osg::Vec4Array;
     colors->push_back(color);
-
-    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
-    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
-		    osg::Array::UIntArrayType,4,4>;
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-
     geo->setColorArray(colors);
-    geo->setColorIndices(colorIndexArray);
-    geo->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+    geo->setColorBinding(osg::Geometry::BIND_OVERALL);
 
     _hoverBGGeode->addDrawable(geo);
 
@@ -1080,16 +1045,8 @@ void DataGraph::makeBar()
 
     osg::Vec4Array* colors = new osg::Vec4Array;
     colors->push_back(osg::Vec4(1.0,1.0,0,1.0));
-
-    osg::TemplateIndexArray<unsigned int,osg::Array::UIntArrayType,4,4> *colorIndexArray;
-    colorIndexArray = new osg::TemplateIndexArray<unsigned int,
-		    osg::Array::UIntArrayType,4,4>;
-    colorIndexArray->push_back(0);
-    colorIndexArray->push_back(0);
-
     geo->setColorArray(colors);
-    geo->setColorIndices(colorIndexArray);
-    geo->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+    geo->setColorBinding(osg::Geometry::BIND_OVERALL);
 }
 
 void DataGraph::update()
@@ -1099,6 +1056,9 @@ void DataGraph::update()
     float dataHeight = _height - (2.0 * padding);
 
     //std::cerr << "Update mindispXT: " << _minDisplayXT << " maxdispXT: " << _maxDisplayXT << std::endl;
+
+    std::map<std::string, std::pair<float,float> > displayRanges;
+    std::map<std::string,std::pair<int,int> > dataPointRanges;
 
     osg::Matrix tran,scale;
     for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)
@@ -1128,6 +1088,12 @@ void DataGraph::update()
 	float minxBound = ((0.5 * myRangeSize) - myRangeCenter) / myRangeSize;
 	float maxxBound = ((0.5 * myRangeSize) + (1.0 - myRangeCenter)) / myRangeSize;
 
+	float delta = (maxxBound - minxBound) * 0.00001;
+	minxBound -= delta;
+	maxxBound += delta;
+
+	displayRanges[it->first] = std::pair<float,float>(minxBound,maxxBound);
+
 	//std::cerr << "x bounds min: " << minxBound << " max: " << maxxBound << std::endl;
 
 	//std::cerr << "TotalPoint: " << _dataInfoMap[it->first].data->size() << std::endl;
@@ -1151,6 +1117,8 @@ void DataGraph::update()
 		break;
 	    }
 	}
+
+	dataPointRanges[it->first] = std::pair<int,int>(minpoint,maxpoint);
 
 	//std::cerr << "Minpoint: " << minpoint << " Maxpoint: " << maxpoint << std::endl;
 
@@ -1201,6 +1169,12 @@ void DataGraph::update()
 	tran.makeTranslate(osg::Vec3(-0.5,0,-0.5));
 	scale.makeScale(osg::Vec3(dataWidth*myRangeSize,1.0,dataHeight));
 	_graphTransformMap[it->second.name]->setMatrix(tran*scale*centerm);
+
+	it->second.boundsCallback->bbox.set(minxBound,-3,0.0,maxxBound,1,1.0);
+	it->second.pointGeometry->dirtyBound();
+	it->second.pointGeometry->getBound();
+	it->second.connectorGeometry->dirtyBound();
+	it->second.connectorGeometry->getBound();
     }
 
     if(_dataInfoMap.size() > 1)
@@ -1363,7 +1337,8 @@ void DataGraph::update()
     {
 	for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); it++)
 	{
-	    it->second.singleColorArray->at(0) = osg::Vec4(0.21569,0.49412,0.72157,1.0);
+	    //it->second.singleColorArray->at(0) = osg::Vec4(0.21569,0.49412,0.72157,1.0);
+	    it->second.singleColorArray->at(0) = osg::Vec4(1.0,1.0,1.0,1.0);
 	    it->second.connectorGeometry->setColorArray(it->second.singleColorArray);
 	    it->second.connectorGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
 	}
@@ -1392,6 +1367,11 @@ void DataGraph::update()
 	_pointSizeUniform->set((float)_point->getSize());
 	_pointActionPoint->setSize(0.4*_point->getSize());
 	_lineWidth->setWidth(_lineWidth->getWidth() * _masterLineScale);
+    }
+
+    for(int i = 0; i < _mathFunctions.size(); ++i)
+    {
+	_mathFunctions[i]->update(dataWidth,dataHeight,_dataInfoMap,displayRanges,dataPointRanges);
     }
 
     updateAxis();
@@ -2232,28 +2212,117 @@ float DataGraph::calcPadding()
     return 0.07 * minD;
 }
 
-void DataGraph::initMathFunction(GraphMathFunction gmf)
+AverageFunction::AverageFunction()
 {
-    switch(gmf)
-    {
-	case GMF_AVERAGE:
-	{
-	    break;
-	}
-	default:
-	    break;
-    }
+    _averageGeometry = new osg::Geometry();
+    _averageGeometry->setUseDisplayList(false);
+    _averageGeometry->setUseVertexBufferObjects(true);
+    osg::Vec3Array * verts = new osg::Vec3Array(2);
+    osg::Vec4Array * colors = new osg::Vec4Array(1);
+    colors->at(0) = osg::Vec4(1,1,0,1);
+    _averageGeometry->setVertexArray(verts);
+    _averageGeometry->setColorArray(colors);
+    _averageGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+    _averageGeometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES,0,2));
+
+    _averageText = GraphGlobals::makeText("0.0",osg::Vec4(0.1,0.1,0.1,1));
+    _averageText->setAlignment(osgText::Text::CENTER_BOTTOM);
+    _averageStipple = new osg::LineStipple(ConfigManager::getInt("value","Plugin.FuturePatient.StippleFactor",10),0xAAAA);
+
+    _averageLineWidth = new osg::LineWidth();
+
+    _averageGeometry->getOrCreateStateSet()->setAttributeAndModes(_averageStipple,osg::StateAttribute::ON);
+    _averageGeometry->getOrCreateStateSet()->setAttributeAndModes(_averageLineWidth,osg::StateAttribute::ON);
+    _averageGeometry->getOrCreateStateSet()->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+    _averageText->getOrCreateStateSet()->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+
+    _boundsCallback = new SetBoundsCallback;
+
+    _averageGeometry->setComputeBoundingBoxCallback(_boundsCallback.get());
 }
 
-void DataGraph::cleanupMathFunction(GraphMathFunction gmf)
+AverageFunction::~AverageFunction()
 {
-    switch(gmf)
+}
+
+void AverageFunction::added(osg::Geode * geode)
+{
+    geode->addDrawable(_averageGeometry);
+    geode->addDrawable(_averageText);
+}
+
+void AverageFunction::removed(osg::Geode * geode)
+{
+    geode->removeDrawable(_averageGeometry);
+    geode->removeDrawable(_averageText);
+}
+
+void AverageFunction::update(float width, float height, std::map<std::string, GraphDataInfo> & data, std::map<std::string, std::pair<float,float> > & displayRanges, std::map<std::string,std::pair<int,int> > & dataPointRanges)
+{
+    osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(_averageGeometry->getVertexArray());
+    if(!verts)
     {
-	case GMF_AVERAGE:
-	{
-	    break;
-	}
-	default:
-	    break;
+	_averageText->setText("");
+	verts->at(0) = osg::Vec3(0,0,0);
+	verts->at(1) = osg::Vec3(0,0,0);
+	verts->dirty();
+	return;
     }
+
+    if(!dataPointRanges.size() || dataPointRanges.begin()->second.first < 0 || dataPointRanges.begin()->second.second < 0 || dataPointRanges.begin()->second.first > dataPointRanges.begin()->second.second)
+    {
+	_averageText->setText("");
+	verts->at(0) = osg::Vec3(0,0,0);
+	verts->at(1) = osg::Vec3(0,0,0);
+	verts->dirty();
+	return;
+    }
+
+    std::map<std::string,std::pair<int,int> >::iterator pit = dataPointRanges.begin();
+    std::map<std::string, GraphDataInfo>::iterator dit = data.find(pit->first);
+    if(dit == data.end())
+    {
+	_averageText->setText("");
+	verts->at(0) = osg::Vec3(0,0,0);
+	verts->at(1) = osg::Vec3(0,0,0);
+	verts->dirty();
+	return;
+    }
+
+    float average = 0.0;
+    for(int i = pit->second.first; i <= pit->second.second; ++i)
+    {
+	average += dit->second.data->at(i).z();
+    }
+    average /= ((float)(pit->second.second - pit->second.first + 1));
+
+    //std::cerr << "range start: " << pit->second.first << " end: " << pit->second.second << " avg: " << average << std::endl;
+
+    float zpos = (average * height) - (height / 2.0);
+    
+    verts->at(0) = osg::Vec3(-width/2.0,-0.5,zpos);
+    verts->at(1) = osg::Vec3(width/2.0,-0.5,zpos);
+    verts->dirty();
+
+    std::stringstream ss;
+    ss << (average * (dit->second.zMax - dit->second.zMin) + dit->second.zMin);
+    _averageText->setText(ss.str());
+    _averageText->setCharacterSize(1.0);
+
+    float textHeight = ((width + height) / 2.0) * 0.015;
+    osg::BoundingBox bb = _averageText->getBound();
+    float csize = textHeight / (bb.zMax() - bb.zMin());
+    _averageText->setCharacterSize(csize);
+    _averageText->setPosition(osg::Vec3(0,-0.5,zpos+(textHeight*0.01)));
+
+    float avglen = (width + height) / 2.0;
+    _averageLineWidth->setWidth(avglen * 0.05 * GraphGlobals::getPointLineScale() * GraphGlobals::getPointLineScale());
+    if(ComController::instance()->isMaster())
+    {
+	_averageLineWidth->setWidth(_averageLineWidth->getWidth() * GraphGlobals::getMasterLineScale());
+    }
+
+    _boundsCallback->bbox.set(-width/2.0,-3,-height/2.0,width/2.0,1,height/2.0);
+    _averageGeometry->dirtyBound();
+    _averageGeometry->getBound();
 }

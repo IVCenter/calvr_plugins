@@ -1,6 +1,8 @@
 #include "FuturePatient.h"
 #include "DataGraph.h"
 #include "StrainGraphObject.h"
+#include "StrainHMObject.h"
+#include "SingleMicrobeObject.h"
 
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/ComController.h>
@@ -17,6 +19,8 @@
 #include <sys/types.h>
 
 #include <mysql++/mysql++.h>
+
+#include <sys/time.h>
 
 #define SAVED_LAYOUT_VERSION 3
 
@@ -45,52 +49,6 @@ FuturePatient::~FuturePatient()
 
 bool FuturePatient::init()
 {
-    /*DataGraph * dg = new DataGraph();
-    srand(0);
-    osg::Vec3Array * points = new osg::Vec3Array();
-    for(int i = 0; i < 20; i++)
-    {
-	osg::Vec3 point(i / 20.0,0,(rand() % 1000)/1000.0);
-	points->push_back(point);
-	//std::cerr << "Point x: " << point.x() << " y: " << point.y() << " z: " << point.z() << std::endl;
-    }
-
-    dg->addGraph("TestGraph", points, POINTS_WITH_LINES, "X - Axis", "Z - Axis", osg::Vec4(0,1.0,0,1.0));
-    dg->setZDataRange("TestGraph",-100,100);
-
-    struct tm timestart,timeend;
-    timestart.tm_year = 2007 - 1900;
-    timestart.tm_mon = 3;
-    timestart.tm_mday = 12;
-    timestart.tm_hour = 14;
-    timestart.tm_min = 20;
-    timestart.tm_sec = 1;
-
-    timeend.tm_year = 2008 - 1900;
-    timeend.tm_mon = 5;
-    timeend.tm_mday = 1;
-    timeend.tm_hour = 20;
-    timeend.tm_min = 4;
-    timeend.tm_sec = 58;
-
-    time_t tstart, tend;
-    tstart = mktime(&timestart);
-    tend = mktime(&timeend);
-
-    dg->setXDataRangeTimestamp("TestGraph",tstart,tend);
-
-    timestart.tm_year = 2003 - 1900;
-    timeend.tm_year = 2007 - 1900;
-    tstart = mktime(&timestart);
-    tend = mktime(&timeend);*/
-
-    //dg->setXDisplayRangeTimestamp(tstart,tend);
-
-    //dg->setXDisplayRange(0.25,0.8);
-    //PluginHelper::getObjectsRoot()->addChild(dg->getGraphRoot());
-
-    //makeGraph("SIga");
-    
     if(ComController::instance()->isMaster())
     {
         int port = ConfigManager::getInt("value","Plugin.FuturePatient.PresetListenPort",12012);
@@ -154,6 +112,7 @@ bool FuturePatient::init()
 
     _testList = new MenuList();
     _testList->setCallback(this);
+    _testList->setScrollingHint(MenuList::ONE_TO_ONE);
     _chartMenu->addItem(_testList);
 
     _loadButton = new MenuButton("Load");
@@ -198,12 +157,75 @@ bool FuturePatient::init()
     _microbeLoadHealthyAll->setCallback(this);
     _microbeSpecialMenu->addItem(_microbeLoadHealthyAll);
 
+    _microbeLoadHealthy105All = new MenuButton("Healthy 119");
+    _microbeLoadHealthy105All->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadHealthy105All);
+
     _microbeLoadUCAll = new MenuButton("UC All");
     _microbeLoadUCAll->setCallback(this);
     _microbeSpecialMenu->addItem(_microbeLoadUCAll);
 
+    _microbePointLineMenu = new SubMenu("Point Line Graph");
+    _microbeMenu->addItem(_microbePointLineMenu);
+
+    _microbePointLineExpand = new MenuCheckbox("Expand Axis", false);
+    _microbePointLineExpand->setCallback(this);
+    _microbePointLineMenu->addItem(_microbePointLineExpand);
+
+    _microbeLoadPointLine = new MenuButton("Load");
+    _microbeLoadPointLine->setCallback(this);
+    _microbePointLineMenu->addItem(_microbeLoadPointLine);
+
+    _sMicrobeMenu = new SubMenu("Single Microbe");
+    _microbeMenu->addItem(_sMicrobeMenu);
+
+    _sMicrobes = new MenuList();
+    _sMicrobes->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobes);
+    _sMicrobes->setSensitivity(1.0);
+    _sMicrobes->setScrollingHint(MenuList::CONTINUOUS);
+
+    _sMicrobeRankOrder = new MenuCheckbox("Rank Order",false);
+    _sMicrobeRankOrder->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobeRankOrder);
+
+    _sMicrobeLabels = new MenuCheckbox("Labels",true);
+    _sMicrobeLabels->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobeLabels);
+
+    _sMicrobeLoad = new MenuButton("Load");
+    _sMicrobeLoad->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobeLoad);
+
+    _sMicrobePhenotypes = new MenuList();
+    _sMicrobePhenotypes->setCallback(this);
+    _sMicrobePhenotypes->setScrollingHint(MenuList::ONE_TO_ONE);
+    _sMicrobeMenu->addItem(_sMicrobePhenotypes);
+
+    std::vector<std::string> pheno;
+    pheno.push_back("Smarr");
+    pheno.push_back("Crohns");
+    pheno.push_back("UC");
+    pheno.push_back("Healthy");
+    _sMicrobePhenotypes->setValues(pheno);
+
+    _sMicrobePhenotypeLoad = new MenuButton("Load(Phenotype)");
+    _sMicrobePhenotypeLoad->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobePhenotypeLoad);
+
+    _microbeTable = new MenuList();
+    _microbeTable->setCallback(this);
+    _microbeTable->setScrollingHint(MenuList::ONE_TO_ONE);
+    _microbeMenu->addItem(_microbeTable);
+
+    std::vector<std::string> tableList;
+    tableList.push_back("V1");
+    tableList.push_back("V2");
+    _microbeTable->setValues(tableList);
+
     _microbeGraphType = new MenuList();
     _microbeGraphType->setCallback(this);
+    _microbeGraphType->setScrollingHint(MenuList::ONE_TO_ONE);
     _microbeMenu->addItem(_microbeGraphType);
 
     std::vector<std::string> mGraphTypes;
@@ -217,17 +239,26 @@ bool FuturePatient::init()
 
     _microbeTest = new MenuList();
     _microbeTest->setCallback(this);
+    _microbeTest->setScrollingHint(MenuList::ONE_TO_ONE);
     _microbeMenu->addItem(_microbeTest);
     _microbeTest->setSensitivity(2.0);
 
     //_microbeNumBars = new MenuRangeValueCompact("Microbes",1,100,25);
-    _microbeNumBars = new MenuRangeValueCompact("Microbes",1,2330,25);
+    _microbeNumBars = new MenuRangeValueCompact("Microbes",1,2000,25,true);
     _microbeNumBars->setCallback(this);
     _microbeMenu->addItem(_microbeNumBars);
 
     _microbeOrdering = new MenuCheckbox("LS Ordering", true);
     _microbeOrdering->setCallback(this);
     _microbeMenu->addItem(_microbeOrdering);
+
+    _microbeGrouping = new MenuCheckbox("Group",true);
+    _microbeGrouping->setCallback(this);
+    _microbeMenu->addItem(_microbeGrouping);
+
+    _microbeFamilyLevel = new MenuCheckbox("Family Level",false);
+    _microbeFamilyLevel->setCallback(this);
+    _microbeMenu->addItem(_microbeFamilyLevel);
 
     _microbeLoad = new MenuButton("Load");
     _microbeLoad->setCallback(this);
@@ -241,11 +272,17 @@ bool FuturePatient::init()
 
     _strainGroupList = new MenuList();
     _strainGroupList->setCallback(this);
+    _strainGroupList->setScrollingHint(MenuList::ONE_TO_ONE);
     _strainMenu->addItem(_strainGroupList);
 
     _strainList = new MenuList();
     _strainList->setCallback(this);
+    _strainList->setScrollingHint(MenuList::CONTINUOUS);
     _strainMenu->addItem(_strainList);
+
+    _strainLarryOnlyCB = new MenuCheckbox("Larry Only",false);
+    _strainLarryOnlyCB->setCallback(this);
+    _strainMenu->addItem(_strainLarryOnlyCB);
 
     _strainLoadButton = new MenuButton("Load");
     _strainLoadButton->setCallback(this);
@@ -255,11 +292,16 @@ bool FuturePatient::init()
     _strainLoadAllButton->setCallback(this);
     _strainMenu->addItem(_strainLoadAllButton);
 
+    _strainLoadHeatMap = new MenuButton("Load Heat Map");
+    _strainLoadHeatMap->setCallback(this);
+    _strainMenu->addItem(_strainLoadHeatMap);
+
     _eventMenu = new SubMenu("Events");
     _fpMenu->addItem(_eventMenu);
 
     _eventName = new MenuList();
     _eventName->setCallback(this);
+    _eventName->setScrollingHint(MenuList::ONE_TO_ONE);
     _eventMenu->addItem(_eventName);
 
     _eventLoad = new MenuButton("Load");
@@ -269,6 +311,10 @@ bool FuturePatient::init()
     _eventLoadAll = new MenuButton("Load All");
     _eventLoadAll->setCallback(this);
     _eventMenu->addItem(_eventLoadAll);
+
+    _eventLoadMicrobe = new MenuButton("Load Microbe");
+    _eventLoadMicrobe->setCallback(this);
+    //_eventMenu->addItem(_eventLoadMicrobe);
 
     _eventDone = new MenuButton("Done");
     _eventDone->setCallback(this);
@@ -584,6 +630,7 @@ bool FuturePatient::init()
 	delete[] groupLists;
     }
 
+    setupMicrobes();
     setupMicrobePatients();
     setupStrainMenu();
     
@@ -929,40 +976,6 @@ void FuturePatient::menuCallback(MenuItem * item)
     if(item == _loadButton)
     {
 	loadGraph(_chartPatientList->getValue(),_testList->getValue());
-	/*std::string value = _testList->getValue();
-	if(!value.empty())
-	{
-	    if(_graphObjectMap.find(value) == _graphObjectMap.end())
-	    {
-		GraphObject * gobject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
-		if(gobject->addGraph(value))
-		{
-		    _graphObjectMap[value] = gobject;
-		}
-		else
-		{
-		    delete gobject;
-		}
-	    }
-
-	    if(_graphObjectMap.find(value) != _graphObjectMap.end())
-	    {
-		if(!_layoutObject)
-		{
-		    float width, height;
-		    osg::Vec3 pos;
-		    width = ConfigManager::getFloat("width","Plugin.FuturePatient.Layout",1500.0);
-		    height = ConfigManager::getFloat("height","Plugin.FuturePatient.Layout",1000.0);
-		    pos = ConfigManager::getVec3("Plugin.FuturePatient.Layout");
-		    _layoutObject = new GraphLayoutObject(width,height,3,"GraphLayout",false,true,false,true,false);
-		    _layoutObject->setPosition(pos);
-		    PluginHelper::registerSceneObject(_layoutObject,"FuturePatient");
-		    _layoutObject->attachToScene();
-		}
-
-		_layoutObject->addGraphObject(_graphObjectMap[value]);
-	    }
-	}*/
     }
 
     if(item == _groupLoadButton)
@@ -1067,9 +1080,15 @@ void FuturePatient::menuCallback(MenuItem * item)
 
     if(item == _loadAll)
     {
+	GraphGlobals::setDeferUpdate(true);
 	for(int i = 0; i < _patientTestMap["Smarr"].size(); i++)
 	{
-	    loadGraph("Smarr",_patientTestMap["Smarr"][i]);
+	    loadGraph("Smarr",_patientTestMap["Smarr"][i],true);
+	}
+	GraphGlobals::setDeferUpdate(false);
+	if(_layoutObject)
+	{
+	    _layoutObject->forceUpdate();
 	}
     }
 
@@ -1109,6 +1128,23 @@ void FuturePatient::menuCallback(MenuItem * item)
 	_fpMenu->removeItem(_closeLayoutButton);
     }
 
+    if(item == _microbeTable)
+    {
+	if(_microbePatients->getListSize())
+	{
+	    updateMicrobeTests(_microbePatients->getIndex() + 1);
+	}
+
+	if(_microbeTable->getIndex() == 0)
+	{
+	    _sMicrobes->setValues(_microbeList);
+	}
+	else if(_microbeTable->getIndex() == 1)
+	{
+	    _sMicrobes->setValues(_microbeV2List);
+	}
+    }
+
     if(item == _microbePatients)
     {
 	if(_microbePatients->getListSize())
@@ -1119,11 +1155,16 @@ void FuturePatient::menuCallback(MenuItem * item)
 
     if(item == _microbeLoad && _microbePatients->getListSize() && _microbeTest->getListSize())
     {
+	std::string tablesuffix;
+	if(_microbeTable->getIndex() == 1)
+	{
+	    tablesuffix = "_V2";
+	}
 	// Bar Graph
 	if(_microbeGraphType->getIndex() == 0)
 	{
 	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(),(int)_microbeNumBars->getValue(),_microbeOrdering->getValue()))
+	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(), _microbeTestTime[_microbeTest->getIndex()],(int)_microbeNumBars->getValue(),tablesuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue()))
 	    {
 		checkLayout();
 		_layoutObject->addGraphObject(mgo);
@@ -1139,14 +1180,14 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    if(!_currentSBGraph)
 	    {
 		_currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-		_currentSBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue());
+		_currentSBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(),tablesuffix);
 		checkLayout();
 		_layoutObject->addGraphObject(_currentSBGraph);
 		_microbeMenu->addItem(_microbeDone);
 	    }
 	    else
 	    {
-		_currentSBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue());
+		_currentSBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(),tablesuffix);
 	    }
 	}
     }
@@ -1172,8 +1213,140 @@ void FuturePatient::menuCallback(MenuItem * item)
 	return;
     }
 
-    if(item == _microbeLoadCrohnsAll || item == _microbeLoadHealthyAll || item == _microbeLoadUCAll)
+    if(item == _microbeLoadCrohnsAll)
     {
+	std::string tablesuffix;
+	if(_microbeTable->getIndex() == 1)
+	{
+	    tablesuffix = "_V2";
+	}
+
+	std::vector<std::pair<int,int> > rangeList;
+	rangeList.push_back(std::pair<int,int>(237,241));
+
+	struct timeval tstart,tend;
+	gettimeofday(&tstart,NULL);
+
+	GraphGlobals::setDeferUpdate(true);
+
+	int rows = 0;
+	int maxIndex = 0;
+
+	for(int i = 0; i < rangeList.size(); ++i)
+	{
+	    if(rangeList[i].second < rangeList[i].first)
+	    {
+		continue;
+	    }
+
+	    rows += rangeList[i].second - rangeList[i].first + 1;
+
+	    for(int j = rangeList[i].first; j <= rangeList[i].second; ++j)
+	    {
+		if(j > _microbePatients->getListSize())
+		{
+		    break;
+		}
+		std::map<int,std::vector<std::string> >::iterator it = _patientMicrobeTestMap.find(j+1);
+		if(it == _patientMicrobeTestMap.end())
+		{
+		    continue;
+		}
+
+		if(it->second.size() > maxIndex)
+		{
+		    maxIndex = it->second.size();
+		}
+	    }
+	}
+
+	float bgLight = 0.9;
+	float bgDark = 0.75;
+
+	for(int i = 0; i < rangeList.size(); ++i)
+	{
+	    if(rangeList[i].second < rangeList[i].first)
+	    {
+		continue;
+	    }
+
+	    for(int j = rangeList[i].first; j <= rangeList[i].second; ++j)
+	    {
+		if(j > _microbePatients->getListSize())
+		{
+		    break;
+		}
+		std::map<int,std::vector<std::string> >::iterator it = _patientMicrobeTestMap.find(j+1);
+		if(it == _patientMicrobeTestMap.end())
+		{
+		    continue;
+		}
+
+		float bgColor = ((float)(j - rangeList[i].first)) / ((float)(rows-1));
+		bgColor = (1.0 - bgColor) * bgLight + bgColor * bgDark;
+
+		for(int k = 0; k < it->second.size(); ++k)
+		{
+		    if(_microbeGraphType->getIndex() == 0)
+		    {
+			MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+			bool tb = mgo->setGraph(_microbePatients->getValue(j), j+1, it->second[k], _patientMicrobeTestTimeMap[it->first][k],(int)_microbeNumBars->getValue(),tablesuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue());
+			if(tb)
+			{
+			    checkLayout();
+			    _layoutObject->addGraphObject(mgo);
+			    mgo->setBGColor(osg::Vec4(bgColor,bgColor,bgColor,1.0));
+			}
+			else
+			{
+			    delete mgo;
+			}
+		    }
+		    else if(_microbeGraphType->getIndex() == 1)
+		    {
+			if(!_currentSBGraph)
+			{
+			    _currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+			    _currentSBGraph->addGraph(_microbePatients->getValue(j), j+1, it->second[k],tablesuffix);
+			    checkLayout();
+			    _layoutObject->addGraphObject(_currentSBGraph);
+			    _microbeMenu->addItem(_microbeDone);
+			}
+			else
+			{
+			    _currentSBGraph->addGraph(_microbePatients->getValue(j), j+1, it->second[k], tablesuffix);
+			}
+		    }
+		}
+	    }
+	}
+
+	if(_layoutObject)
+	{
+	    if(maxIndex > 0)
+	    {
+		_layoutObject->setRows((float)maxIndex);
+	    }
+	}
+
+	gettimeofday(&tend,NULL);
+	std::cerr << "Total load time: " << (tend.tv_sec - tstart.tv_sec) + ((tend.tv_usec - tstart.tv_usec) / 1000000.0) << std::endl;
+
+	GraphGlobals::setDeferUpdate(false);
+	if(_layoutObject)
+	{
+	    _layoutObject->forceUpdate();
+	}
+    }
+
+    if(item == _microbeLoadHealthyAll || item == _microbeLoadUCAll || item == _microbeLoadHealthy105All)
+    {
+	std::string tablesuffix;
+	if(_microbeTable->getIndex() == 1)
+	{
+	    tablesuffix = "_V2";
+	}
+
 	std::vector<std::pair<int,int> > rangeList;
 
 	if(item == _microbeLoadCrohnsAll)
@@ -1184,20 +1357,31 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    rangeList.push_back(std::pair<int,int>(65,99));
 	}
+	else if(item == _microbeLoadHealthy105All)
+	{
+	    rangeList.push_back(std::pair<int,int>(118,236));
+	}
 	else
 	{
 	    rangeList.push_back(std::pair<int,int>(59,64));
 	}
 
+	struct timeval tstart,tend;
+	gettimeofday(&tstart,NULL);
+
+	GraphGlobals::setDeferUpdate(true);
 	for(int i = 0; i < rangeList.size(); ++i)
 	{
 	    int start = rangeList[i].first;
 	    while(start <= rangeList[i].second)
 	    {
+		std::cerr << "Loading graph " << start << std::endl;
+		updateMicrobeTests(start + 1);
 		if(_microbeGraphType->getIndex() == 0)
 		{
 		    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-		    if(mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0),(int)_microbeNumBars->getValue(),_microbeOrdering->getValue()))
+		    bool tb = mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), _microbeTestTime[0],(int)_microbeNumBars->getValue(),tablesuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue());
+		    if(tb)
 		    {
 			checkLayout();
 			_layoutObject->addGraphObject(mgo);
@@ -1212,19 +1396,29 @@ void FuturePatient::menuCallback(MenuItem * item)
 		    if(!_currentSBGraph)
 		    {
 			_currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-			_currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0));
+			_currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0),tablesuffix);
 			checkLayout();
 			_layoutObject->addGraphObject(_currentSBGraph);
 			_microbeMenu->addItem(_microbeDone);
 		    }
 		    else
 		    {
-			_currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0));
+			_currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), tablesuffix);
 		    }
 		}
 
 		start++;
 	    }
+	}
+	updateMicrobeTests(_microbePatients->getIndex() + 1);
+
+	gettimeofday(&tend,NULL);
+	std::cerr << "Total load time: " << (tend.tv_sec - tstart.tv_sec) + ((tend.tv_usec - tstart.tv_usec) / 1000000.0) << std::endl;
+
+	GraphGlobals::setDeferUpdate(false);
+	if(_layoutObject)
+	{
+	    _layoutObject->forceUpdate();
 	}
 
 	return;
@@ -1232,6 +1426,12 @@ void FuturePatient::menuCallback(MenuItem * item)
 
     if(item == _microbeLoadAverage || item == _microbeLoadHealthyAverage || item == _microbeLoadCrohnsAverage || item == _microbeLoadSRSAverage || item == _microbeLoadSRXAverage)
     {
+	std::string tablesuffix;
+	if(_microbeTable->getIndex() == 1)
+	{
+	    tablesuffix = "_V2";
+	}
+
 	SpecialMicrobeGraphType mgt;
 	if(item == _microbeLoadAverage)
 	{
@@ -1259,7 +1459,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 
-	    if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue(),_microbeOrdering->getValue()))
+	    if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue(),tablesuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue()))
 	    {
 		//PluginHelper::registerSceneObject(mgo,"FuturePatient");
 		//mgo->attachToScene();
@@ -1277,16 +1477,69 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    if(!_currentSBGraph)
 	    {
 		_currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-		_currentSBGraph->addSpecialGraph(mgt);
+		_currentSBGraph->addSpecialGraph(mgt,tablesuffix);
 		checkLayout();
 		_layoutObject->addGraphObject(_currentSBGraph);
 		_microbeMenu->addItem(_microbeDone);
 	    }
 	    else
 	    {
-		_currentSBGraph->addSpecialGraph(mgt);
+		_currentSBGraph->addSpecialGraph(mgt,tablesuffix);
 	    }
 	}
+    }
+
+    if(item == _microbeLoadPointLine)
+    {
+	std::string tablesuffix;
+	if(_microbeTable->getIndex() == 1)
+	{
+	    tablesuffix = "_V2";
+	}
+
+	MicrobePointLineObject * mplo = new MicrobePointLineObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	if(mplo->setGraph(tablesuffix,_microbePointLineExpand->getValue()))
+	{
+	    checkLayout();
+	    _layoutObject->addGraphObject(mplo);
+	}
+	else
+	{
+	    delete mplo;
+	}
+    }
+
+    if(item == _sMicrobeLoad && _sMicrobes->getListSize())
+    {
+	std::string tablesuffix;
+	int taxid;
+	if(_microbeTable->getIndex() == 0)
+	{
+	    taxid = _microbeIDList[_sMicrobes->getIndex()];
+	}
+	else if(_microbeTable->getIndex() == 1)
+	{
+	    taxid = _microbeV2IDList[_sMicrobes->getIndex()];
+	    tablesuffix = "_V2";
+	}
+
+	SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	if(smo->setGraph(_sMicrobes->getValue(),taxid,tablesuffix,_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue()))
+	{
+	    checkLayout();
+	    _layoutObject->addGraphObject(smo);
+	}
+	else
+	{
+	    delete smo;
+	}
+	return;
+    }
+
+    if(item == _sMicrobePhenotypeLoad)
+    {
+	loadPhenotype();
+	return;
     }
 
     if(item == _strainGroupList)
@@ -1304,7 +1557,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    StrainGraphObject * sgo = new StrainGraphObject(_conn, 1000.0, 1000.0, "Strain Graph", false, true, false, true);
 
-	    if(sgo->setGraph(_strainList->getValue(),_strainIdMap[_strainList->getValue()]))
+	    if(sgo->setGraph(_strainList->getValue(),_strainIdMap[_strainList->getValue()],_strainLarryOnlyCB->getValue()))
 	    {
 		checkLayout();
 		_layoutObject->addGraphObject(sgo);
@@ -1333,7 +1586,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		    std::cerr << "Loading strain " << i << " id: " << _strainIdMap[it->second[i]] << std::endl;
 		    StrainGraphObject * sgo = new StrainGraphObject(_conn, 1000.0, 1000.0, "Strain Graph", false, true, false, true);
 
-		    if(sgo->setGraph(it->second[i],_strainIdMap[it->second[i]]))
+		    if(sgo->setGraph(it->second[i],_strainIdMap[it->second[i]],_strainLarryOnlyCB->getValue()))
 		    {
 			checkLayout();
 			_layoutObject->addGraphObject(sgo);
@@ -1346,6 +1599,34 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    }
 	}
 	return;
+    }
+
+    if(item == _strainLoadHeatMap)
+    {
+	if(_strainGroupList->getListSize() && _strainList->getListSize())
+	{
+	    std::map<std::string,std::vector<std::string> >::iterator it;
+	    it = _strainGroupMap.find(_strainGroupList->getValue());
+	    if(it != _strainGroupMap.end())
+	    {
+		std::cerr << "Loading " << it->second.size() << " strains." << std::endl;
+		for(int i = 0; i < it->second.size(); ++i)
+		{
+		    std::cerr << "Loading strain " << i << " id: " << _strainIdMap[it->second[i]] << std::endl;
+		    StrainHMObject * shmo = new StrainHMObject(_conn, 1000.0, 1000.0, "Strain Heat Map", false, true, false, true);
+
+		    if(shmo->setGraph(it->second[i],"Smarr",1,_strainIdMap[it->second[i]],osg::Vec4(1,0,0,1)))
+		    {
+			checkLayout();
+			_layoutObject->addGraphObject(shmo);
+		    }
+		    else
+		    {
+			delete shmo;
+		    }
+		}
+	    }
+	}
     }
 
     if(item == _eventLoad && _eventName->getListSize())
@@ -1382,6 +1663,22 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    _layoutObject->addGraphObject(_currentSymptomGraph);
 	    _eventMenu->addItem(_eventDone);
+	}
+    }
+
+    if(item == _eventLoadMicrobe)
+    {
+	if(!_currentSymptomGraph)
+	{
+	    _currentSymptomGraph = new SymptomGraphObject(_conn, 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
+	    _currentSymptomGraph->addGraph("Microbe Test");
+	    checkLayout();
+	    _layoutObject->addGraphObject(_currentSymptomGraph);
+	    _eventMenu->addItem(_eventDone);
+	}
+	else
+	{
+	    _currentSymptomGraph->addGraph("Microbe Test");
 	}
     }
 
@@ -1467,7 +1764,7 @@ void FuturePatient::checkLayout()
     }
 }
 
-void FuturePatient::loadGraph(std::string patient, std::string test)
+void FuturePatient::loadGraph(std::string patient, std::string test, bool averageColor)
 {
     checkLayout();
 
@@ -1476,12 +1773,14 @@ void FuturePatient::loadGraph(std::string patient, std::string test)
     {
 	if(!_multiAddCB->getValue())
 	{
-	    if(_graphObjectMap.find(value) == _graphObjectMap.end())
+	    //if(_graphObjectMap.find(value) == _graphObjectMap.end())
 	    {
 		GraphObject * gobject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
-		if(gobject->addGraph(patient,test))
+		if(gobject->addGraph(patient,test,averageColor))
 		{
-		    _graphObjectMap[value] = gobject;
+		    //_graphObjectMap[value] = gobject;
+		    gobject->setLayoutDoesDelete(true);
+		    _layoutObject->addGraphObject(gobject);
 		}
 		else
 		{
@@ -1489,10 +1788,10 @@ void FuturePatient::loadGraph(std::string patient, std::string test)
 		}
 	    }
 
-	    if(_graphObjectMap.find(value) != _graphObjectMap.end())
-	    {
-		_layoutObject->addGraphObject(_graphObjectMap[value]);
-	    }
+	    //if(_graphObjectMap.find(value) != _graphObjectMap.end())
+	    //{
+		//_layoutObject->addGraphObject(_graphObjectMap[value]);
+	    //}
 	}
 	else
 	{
@@ -1513,111 +1812,118 @@ void FuturePatient::loadGraph(std::string patient, std::string test)
     }
 }
 
-/*void FuturePatient::makeGraph(std::string name)
+void FuturePatient::setupMicrobes()
 {
-    mysqlpp::Connection conn(false);
-    if(!conn.connect("futurepatient","palmsdev2.ucsd.edu","fpuser","FPp@ssw0rd"))
+    struct Microbes
     {
-	std::cerr << "Unable to connect to database." << std::endl;
-	return;
-    }
+	char name[512];
+	int taxid;
+    };
 
-    std::stringstream qss;
-    qss << "select Measurement.timestamp, unix_timestamp(Measurement.timestamp) as utime, Measurement.value from Measurement  inner join Measure  on Measurement.measure_id = Measure.measure_id  where Measure.name = \"" << name << "\" order by utime;";
+    Microbes * microbes = NULL;
+    int numMicrobes = 0;
 
-    mysqlpp::Query query = conn.query(qss.str().c_str());
-    mysqlpp::StoreQueryResult res;
-    res = query.store();
-    //std::cerr << "Num Rows: " << res.num_rows() << std::endl;
-    if(!res.num_rows())
+    if(ComController::instance()->isMaster())
     {
-	std::cerr << "Empty query result." << std::endl;
-	return;
-    }
-
-    std::stringstream mss;
-    mss << "select * from Measure where name = \"" << name << "\";";
-
-    mysqlpp::Query metaQuery = conn.query(mss.str().c_str());
-    mysqlpp::StoreQueryResult metaRes = metaQuery.store();
-
-    if(!metaRes.num_rows())
-    {
-	std::cerr << "Meta Data query result empty." << std::endl;
-	return;
-    }
-
-    osg::Vec3Array * points = new osg::Vec3Array(res.num_rows());
-    osg::Vec4Array * colors = new osg::Vec4Array(res.num_rows());
-
-    bool hasGoodRange = false;
-    float goodLow, goodHigh;
-
-    if(strcmp(metaRes[0]["good_low"].c_str(),"NULL") && metaRes[0]["good_high"].c_str())
-    {
-	hasGoodRange = true;
-	goodLow = atof(metaRes[0]["good_low"].c_str());
-	goodHigh = atof(metaRes[0]["good_high"].c_str());
-    }
-
-    //find min/max values
-    time_t mint, maxt;
-    mint = maxt = atol(res[0]["utime"].c_str());
-    float minval,maxval;
-    minval = maxval = atof(res[0]["value"].c_str());
-    for(int i = 1; i < res.num_rows(); i++)
-    {
-	time_t time = atol(res[i]["utime"].c_str());
-	float value = atof(res[i]["value"].c_str());
-
-	if(time < mint)
+	if(_conn)
 	{
-	    mint = time;
-	}
-	if(time > maxt)
-	{
-	    maxt = time;
-	}
-	if(value < minval)
-	{
-	    minval = value;
-	}
-	if(value > maxval)
-	{
-	    maxval = value;
-	}
-    }
+	    mysqlpp::Query q = _conn->query("select distinct taxonomy_id, species from Microbes order by species;");
+	    mysqlpp::StoreQueryResult res = q.store();
 
-    //std::cerr << "Mintime: " << mint << " Maxtime: " << maxt << " MinVal: " << minval << " Maxval: " << maxval << std::endl;
+	    numMicrobes = res.num_rows();
 
-    for(int i = 0; i < res.num_rows(); i++)
-    {
-	time_t time = atol(res[i]["utime"].c_str());
-	float value = atof(res[i]["value"].c_str());
-	points->at(i) = osg::Vec3((time-mint) / (double)(maxt-mint),0,(value-minval) / (maxval-minval));
-	if(hasGoodRange)
-	{
-	    if(value < goodLow || value > goodHigh)
+	    if(numMicrobes)
 	    {
-		colors->at(i) = osg::Vec4(1.0,0,0,1.0);
+		microbes = new struct Microbes[numMicrobes];
+
+		for(int i = 0; i < numMicrobes; ++i)
+		{
+		    strncpy(microbes[i].name,res[i]["species"].c_str(),511);
+		    microbes[i].taxid = atoi(res[i]["taxonomy_id"].c_str());
+		}
 	    }
-	    else
+
+	    ComController::instance()->sendSlaves(&numMicrobes,sizeof(int));
+	    if(numMicrobes)
 	    {
-		colors->at(i) = osg::Vec4(0,1.0,0,1.0);
+		ComController::instance()->sendSlaves(microbes,numMicrobes*sizeof(struct Microbes));
 	    }
 	}
-	else
+    }
+    else
+    {
+	ComController::instance()->readMaster(&numMicrobes,sizeof(int));
+	if(numMicrobes)
 	{
-	    colors->at(i) = osg::Vec4(0,0,1.0,1.0);
+	    microbes = new struct Microbes[numMicrobes];
+	    ComController::instance()->readMaster(microbes,numMicrobes*sizeof(struct Microbes));
 	}
     }
 
-    DataGraph * dg = new DataGraph();
-    dg->addGraph(metaRes[0]["display_name"].c_str(), points, POINTS_WITH_LINES, "Time", metaRes[0]["units"].c_str(), osg::Vec4(0,1.0,0,1.0),colors);
-    dg->setZDataRange(metaRes[0]["display_name"].c_str(),minval,maxval);
-    dg->setXDataRangeTimestamp(metaRes[0]["display_name"].c_str(),mint,maxt);
-    PluginHelper::getObjectsRoot()->addChild(dg->getGraphRoot());
-}*/
+    for(int i = 0; i < numMicrobes; ++i)
+    {
+	_microbeList.push_back(microbes[i].name);
+	_microbeIDList.push_back(microbes[i].taxid);
+    }
+
+    if(microbes)
+    {
+	delete[] microbes;
+    }
+
+    microbes = NULL;
+    numMicrobes = 0;
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    mysqlpp::Query q = _conn->query("select distinct taxonomy_id, species from Microbes_V2 order by species;");
+	    mysqlpp::StoreQueryResult res = q.store();
+
+	    numMicrobes = res.num_rows();
+
+	    if(numMicrobes)
+	    {
+		microbes = new struct Microbes[numMicrobes];
+
+		for(int i = 0; i < numMicrobes; ++i)
+		{
+		    strncpy(microbes[i].name,res[i]["species"].c_str(),511);
+		    microbes[i].taxid = atoi(res[i]["taxonomy_id"].c_str());
+		}
+	    }
+
+	    ComController::instance()->sendSlaves(&numMicrobes,sizeof(int));
+	    if(numMicrobes)
+	    {
+		ComController::instance()->sendSlaves(microbes,numMicrobes*sizeof(struct Microbes));
+	    }
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&numMicrobes,sizeof(int));
+	if(numMicrobes)
+	{
+	    microbes = new struct Microbes[numMicrobes];
+	    ComController::instance()->readMaster(microbes,numMicrobes*sizeof(struct Microbes));
+	}
+    }
+
+    for(int i = 0; i < numMicrobes; ++i)
+    {
+	_microbeV2List.push_back(microbes[i].name);
+	_microbeV2IDList.push_back(microbes[i].taxid);
+    }
+
+    if(microbes)
+    {
+	delete[] microbes;
+    }
+
+    _sMicrobes->setValues(_microbeList);
+}
 
 void FuturePatient::setupMicrobePatients()
 {
@@ -1676,6 +1982,121 @@ void FuturePatient::setupMicrobePatients()
     if(names)
     {
 	delete[] names;
+    }
+
+    struct TestLabel
+    {
+	int id;
+	char label[256];
+	time_t timestamp;
+    };
+
+    TestLabel * labels = NULL;
+    int numTests = 0;
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    std::stringstream qss;
+	    qss << "select patient_id, timestamp, unix_timestamp(timestamp) as utimestamp from Microbe_Measurement group by patient_id, timestamp order by patient_id, timestamp;";
+
+	    mysqlpp::Query q = _conn->query(qss.str().c_str());
+	    mysqlpp::StoreQueryResult res = q.store();
+
+	    numTests = res.num_rows();
+
+	    if(numTests)
+	    {
+		labels = new struct TestLabel[numTests];
+
+		for(int j = 0; j < numTests; ++j)
+		{
+		    labels[j].id = atoi(res[j]["patient_id"].c_str());
+		    strncpy(labels[j].label,res[j]["timestamp"].c_str(),255);
+		    labels[j].timestamp = atol(res[j]["utimestamp"].c_str());
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&numTests,sizeof(int));
+	if(numTests)
+	{
+	    ComController::instance()->sendSlaves(labels,numTests*sizeof(struct TestLabel));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&numTests,sizeof(int));
+	if(numTests)
+	{
+	    labels = new struct TestLabel[numTests];
+	    ComController::instance()->readMaster(labels,numTests*sizeof(struct TestLabel));
+	}
+    }
+
+    for(int j = 0; j < numTests; ++j)
+    {
+	_patientMicrobeTestMap[labels[j].id].push_back(labels[j].label);
+	_patientMicrobeTestTimeMap[labels[j].id].push_back(labels[j].timestamp);
+    }
+
+    if(labels)
+    {
+	delete[] labels;
+    }
+
+    labels = NULL;
+    numTests = 0;
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    std::stringstream qss;
+	    qss << "select patient_id, timestamp, unix_timestamp(timestamp) as utimestamp from Microbe_Measurement_V2 group by patient_id, timestamp order by patient_id, timestamp;";
+
+	    mysqlpp::Query q = _conn->query(qss.str().c_str());
+	    mysqlpp::StoreQueryResult res = q.store();
+
+	    numTests = res.num_rows();
+
+	    if(numTests)
+	    {
+		labels = new struct TestLabel[numTests];
+
+		for(int j = 0; j < numTests; ++j)
+		{
+		    labels[j].id = atoi(res[j]["patient_id"].c_str());
+		    strncpy(labels[j].label,res[j]["timestamp"].c_str(),255);
+		    labels[j].timestamp = atol(res[j]["utimestamp"].c_str());
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&numTests,sizeof(int));
+	if(numTests)
+	{
+	    ComController::instance()->sendSlaves(labels,numTests*sizeof(struct TestLabel));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&numTests,sizeof(int));
+	if(numTests)
+	{
+	    labels = new struct TestLabel[numTests];
+	    ComController::instance()->readMaster(labels,numTests*sizeof(struct TestLabel));
+	}
+    }
+
+    for(int j = 0; j < numTests; ++j)
+    {
+	_patientMicrobeV2TestMap[labels[j].id].push_back(labels[j].label);
+	_patientMicrobeV2TestTimeMap[labels[j].id].push_back(labels[j].timestamp);
+    }
+
+    if(labels)
+    {
+	delete[] labels;
     }
 }
 
@@ -1803,62 +2224,27 @@ void FuturePatient::setupStrainMenu()
 
 void FuturePatient::updateMicrobeTests(int patientid)
 {
-    //std::cerr << "Update Microbe Tests Patient: " << patientid << std::endl;
-    struct TestLabel
+    std::vector<std::string> emptyvec;
+    _microbeTest->setValues(emptyvec);
+
+    _microbeTestTime.clear();
+
+    if(_microbeTable->getIndex() == 0)
     {
-	char label[256];
-    };
-
-    TestLabel * labels = NULL;
-    int numTests = 0;
-
-    if(ComController::instance()->isMaster())
-    {
-	if(_conn)
+	if(_patientMicrobeTestMap.find(patientid) != _patientMicrobeTestMap.end())
 	{
-	    std::stringstream qss;
-	    qss << "select distinct timestamp from Microbe_Measurement where patient_id = \"" << patientid << "\" order by timestamp;";
-
-	    mysqlpp::Query q = _conn->query(qss.str().c_str());
-	    mysqlpp::StoreQueryResult res = q.store();
-
-	    numTests = res.num_rows();
-
-	    if(numTests)
-	    {
-		labels = new struct TestLabel[numTests];
-
-		for(int i = 0; i < numTests; ++i)
-		{
-		    strncpy(labels[i].label,res[i]["timestamp"].c_str(),255);
-		}
-	    }
-	}
-
-	ComController::instance()->sendSlaves(&numTests,sizeof(int));
-	if(numTests)
-	{
-	    ComController::instance()->sendSlaves(labels,numTests*sizeof(struct TestLabel));
+	    _microbeTest->setValues(_patientMicrobeTestMap[patientid]);
+	    _microbeTestTime = _patientMicrobeTestTimeMap[patientid];
 	}
     }
-    else
+    else if(_microbeTable->getIndex() == 1)
     {
-	ComController::instance()->readMaster(&numTests,sizeof(int));
-	if(numTests)
+	if(_patientMicrobeV2TestMap.find(patientid) != _patientMicrobeV2TestMap.end())
 	{
-	    labels = new struct TestLabel[numTests];
-	    ComController::instance()->readMaster(labels,numTests*sizeof(struct TestLabel));
+	    _microbeTest->setValues(_patientMicrobeV2TestMap[patientid]);
+	    _microbeTestTime = _patientMicrobeV2TestTimeMap[patientid];
 	}
     }
-
-    std::vector<std::string> labelVec;
-
-    for(int i = 0; i < numTests; ++i)
-    {
-	labelVec.push_back(labels[i].label);
-    }
-
-    _microbeTest->setValues(labelVec);
 }
 
 void FuturePatient::saveLayout()
@@ -1956,4 +2342,268 @@ void FuturePatient::loadLayout(const std::string & file)
     _layoutObject->loadState(instream);
 
     instream.close();
+}
+
+bool phenoDispSort(const std::pair<PhenoStats*,float> & first, const std::pair<PhenoStats*,float> & second)
+{
+    return first.second > second.second;
+}
+
+void FuturePatient::loadPhenotype()
+{
+    if(_microbeTable->getIndex() == 0 && !_microbeStatsMap.size())
+    {
+	initPhenoStats(_microbeStatsMap,"");
+    }
+    if(_microbeTable->getIndex() == 1 && !_microbeV2StatsMap.size())
+    {
+	initPhenoStats(_microbeV2StatsMap,"_V2");
+    }
+
+    std::vector<std::pair<PhenoStats*,float> > displayList;
+    std::string suffix;
+
+    if(_microbeTable->getIndex() == 0)
+    {
+	for(std::map<std::string,struct PhenoStats>::iterator it = _microbeStatsMap[_sMicrobePhenotypes->getValue()].begin(); it != _microbeStatsMap[_sMicrobePhenotypes->getValue()].end(); ++it)
+	{
+	    float refMax = it->second.avg + it->second.stdev;
+	    float refMin = it->second.avg - it->second.stdev;
+
+	    bool addGraph = true;
+	    float minGap = FLT_MAX;
+	    for(std::map<std::string,std::map<std::string,struct PhenoStats> >::iterator git = _microbeStatsMap.begin(); git != _microbeStatsMap.end(); ++git)
+	    {
+		if(git->first == _sMicrobePhenotypes->getValue())
+		{
+		    continue;
+		}
+
+		float localMax = git->second[it->first].avg + git->second[it->first].stdev;
+		float localMin = git->second[it->first].avg - git->second[it->first].stdev;
+		if(refMax < localMin)
+		{
+		    minGap = std::min(minGap,localMin-refMax);
+		}
+		else if(refMin > localMax)
+		{
+		    minGap = std::min(minGap,refMin-localMax);
+		}
+		else
+		{
+		    addGraph = false;
+		    break;
+		}
+	    }
+	    if(addGraph)
+	    {
+		displayList.push_back(std::pair<PhenoStats*,float>(&it->second,minGap));
+	    }
+	}
+    }
+    else if(_microbeTable->getIndex() == 1)
+    {
+	for(std::map<std::string,struct PhenoStats>::iterator it = _microbeV2StatsMap[_sMicrobePhenotypes->getValue()].begin(); it != _microbeV2StatsMap[_sMicrobePhenotypes->getValue()].end(); ++it)
+	{
+	    float refMax = it->second.avg + it->second.stdev;
+	    float refMin = it->second.avg - it->second.stdev;
+
+	    bool addGraph = true;
+	    float minGap = FLT_MAX;
+	    for(std::map<std::string,std::map<std::string,struct PhenoStats> >::iterator git = _microbeV2StatsMap.begin(); git != _microbeV2StatsMap.end(); ++git)
+	    {
+		if(git->first == _sMicrobePhenotypes->getValue())
+		{
+		    continue;
+		}
+
+		float localMax = git->second[it->first].avg + git->second[it->first].stdev;
+		float localMin = git->second[it->first].avg - git->second[it->first].stdev;
+		if(refMax < localMin)
+		{
+		    minGap = std::min(minGap,localMin-refMax);
+		}
+		else if(refMin > localMax)
+		{
+		    minGap = std::min(minGap,refMin-localMax);
+		}
+		else
+		{
+		    addGraph = false;
+		    break;
+		}
+	    }
+	    if(addGraph)
+	    {
+		displayList.push_back(std::pair<PhenoStats*,float>(&it->second,minGap));
+	    }
+	}
+	suffix = "_V2";
+    }
+
+    std::sort(displayList.begin(),displayList.end(),phenoDispSort);
+
+    std::cerr << "Got " << displayList.size() << " graphs in display list." << std::endl;
+
+    if(!displayList.size())
+    {
+	return;
+    }
+
+    GraphGlobals::setDeferUpdate(true);
+    for(int i = 0; i < displayList.size() && i < 20; ++i)
+    {
+	SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	if(smo->setGraph(displayList[i].first->name,displayList[i].first->taxid,suffix,_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue()))
+	{
+	    checkLayout();
+	    _layoutObject->addGraphObject(smo);
+	}
+	else
+	{
+	    delete smo;
+	}	
+    }
+    GraphGlobals::setDeferUpdate(false);
+    if(_layoutObject)
+    {
+	_layoutObject->forceUpdate();
+    }
+}
+
+void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::string tableSuffix)
+{
+    struct entry
+    {
+	char name[512];
+	int taxid;
+	float value;
+    };
+
+    struct entry * entries = NULL;
+    int numEntries[4];
+    numEntries[0] = numEntries[1] = numEntries[2] = numEntries[3] = 0;
+    int totalEntries = 0;
+
+    std::string measurementTable = "Microbe_Measurement";
+    measurementTable += tableSuffix;
+
+    std::string microbesTable = "Microbes";
+    microbesTable += tableSuffix;
+
+    std::stringstream queryhss, querycss, queryuss, querylss;
+    queryhss << "select " << microbesTable << ".species, t.taxonomy_id, t.value from (select " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"healthy\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
+
+    querycss << "select " << microbesTable << ".species, t.taxonomy_id, t.value from (select " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"CD\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
+
+    queryuss << "select " << microbesTable << ".species, t.taxonomy_id, t.value from (select " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"ulcerous colitis\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
+
+    querylss << "select " << microbesTable << ".species, t.taxonomy_id, t.value from (select " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"Larry\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    mysqlpp::StoreQueryResult res[4];
+
+	    mysqlpp::Query queryh = _conn->query(queryhss.str().c_str());
+	    res[0] = queryh.store();
+
+	    mysqlpp::Query queryc = _conn->query(querycss.str().c_str());
+	    res[1] = queryc.store();
+
+	    mysqlpp::Query queryu = _conn->query(queryuss.str().c_str());
+	    res[2] = queryu.store();
+
+	    mysqlpp::Query queryl = _conn->query(querylss.str().c_str());
+	    res[3] = queryl.store();
+
+	    for(int i = 0; i < 4; ++i)
+	    {
+		numEntries[i] = res[i].num_rows();
+	    }
+
+	    totalEntries += numEntries[0] + numEntries[1] + numEntries[2] + numEntries[3];
+
+	    if(totalEntries)
+	    {
+		entries = new struct entry[totalEntries];
+		int entryIndex = 0;
+
+		for(int i = 0; i < 4; ++i)
+		{
+		    for(int j = 0; j < numEntries[i]; ++j)
+		    {
+			entries[entryIndex+j].name[511] = '\0';
+			strncpy(entries[entryIndex+j].name,res[i][j]["species"].c_str(),511);
+			entries[entryIndex+j].taxid = atoi(res[i][j]["taxonomy_id"].c_str());
+			entries[entryIndex+j].value = atof(res[i][j]["value"].c_str());
+		    }
+		    entryIndex += numEntries[i];
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&totalEntries,sizeof(int));
+	ComController::instance()->sendSlaves(numEntries,4*sizeof(int));
+	if(totalEntries)
+	{
+	    ComController::instance()->sendSlaves(entries,totalEntries*sizeof(struct entry));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&totalEntries,sizeof(int));
+	ComController::instance()->readMaster(numEntries,4*sizeof(int));
+	if(totalEntries)
+	{
+	    entries = new struct entry[totalEntries];
+	    ComController::instance()->readMaster(entries,totalEntries*sizeof(struct entry));
+	}
+    }
+
+    std::vector<std::string> groupLabels;
+    groupLabels.push_back("Healthy");
+    groupLabels.push_back("Crohns");
+    groupLabels.push_back("UC");
+    groupLabels.push_back("Smarr");
+
+    int entryIndex = 0;
+    for(int i = 0; i < 4; ++i)
+    {
+	std::map<std::string,int> countMap;
+	for(int j = 0; j < numEntries[i]; ++j)
+	{
+	    int index = entryIndex + j;
+	    statMap[groupLabels[i]][entries[index].name].avg += entries[index].value;
+	    countMap[entries[index].name]++;
+	    statMap[groupLabels[i]][entries[index].name].taxid = entries[index].taxid;
+	    statMap[groupLabels[i]][entries[index].name].name = entries[index].name;
+	}
+
+	for(std::map<std::string,int>::iterator it = countMap.begin(); it != countMap.end(); ++it)
+	{
+	    statMap[groupLabels[i]][it->first].avg /= ((float)it->second);
+	}
+
+	for(int j = 0; j < numEntries[i]; ++j)
+	{
+	    int index = entryIndex + j;
+	    float val = entries[index].value - statMap[groupLabels[i]][entries[index].name].avg;
+	    val *= val;
+	    statMap[groupLabels[i]][entries[index].name].stdev += val;
+	}
+
+	for(std::map<std::string,int>::iterator it = countMap.begin(); it != countMap.end(); ++it)
+	{
+	    statMap[groupLabels[i]][it->first].stdev = sqrt(statMap[groupLabels[i]][it->first].stdev / ((float)it->second));
+	}
+
+	entryIndex += numEntries[i];
+    }
+
+    if(entries)
+    {
+	delete[] entries;
+    }
 }

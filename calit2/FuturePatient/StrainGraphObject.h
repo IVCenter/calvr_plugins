@@ -1,8 +1,6 @@
 #ifndef STRAIN_GRAPH_OBJECT_H
 #define STRAIN_GRAPH_OBJECT_H
 
-#include <cvrKernel/TiledWallSceneObject.h>
-
 #include <string>
 #include <vector>
 
@@ -17,7 +15,7 @@ class StrainGraphObject: public LayoutTypeObject, public PatientSelectObject, pu
         StrainGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~StrainGraphObject();
 
-        bool setGraph(std::string title, int taxId);
+        bool setGraph(std::string title, int taxId, bool larryOnly = false);
 
         virtual void objectAdded();
         virtual void objectRemoved();

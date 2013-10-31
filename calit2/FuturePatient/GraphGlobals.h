@@ -27,22 +27,46 @@ class GraphGlobals
         static const std::map<std::string,osg::Vec4> & getPhylumColorMap();
         static osg::Vec4 getDefaultPhylumColor();
 
+        static osg::Vec4 getColorLow();
+        static osg::Vec4 getColorNormal();
+        static osg::Vec4 getColorHigh1();
+        static osg::Vec4 getColorHigh10();
+        static osg::Vec4 getColorHigh100();
+
         static const std::map<std::string,osg::Vec4> & getPatientColorMap();
+
+        static bool getDeferUpdate();
+        static void setDeferUpdate(bool defer);
+
+        static float getPointLineScale();
+        static float getMasterPointScale();
+        static float getMasterLineScale();
 
     protected:
         static void checkInit();
         static void init();
 
         static bool _init;
+        static bool _deferUpdate;
         
         static osg::ref_ptr<osgText::Font> _font;
         static osg::Vec4 _bgColor;
         static osg::Vec4 _dataBGColor;
 
+        static osg::Vec4 _lowColor;
+        static osg::Vec4 _normColor;
+        static osg::Vec4 _high1Color;
+        static osg::Vec4 _high10Color;
+        static osg::Vec4 _high100Color;
+
         static std::map<std::string,osg::Vec4> _phylumColorMap;
         static osg::Vec4 _defaultPhylumColor;
 
         static std::map<std::string,osg::Vec4> _patientColorMap;
+
+        static float _pointLineScale;
+        static float _masterPointScale;
+        static float _masterLineScale;
 };
 
 struct SetBoundsCallback : public osg::Drawable::ComputeBoundingBoxCallback

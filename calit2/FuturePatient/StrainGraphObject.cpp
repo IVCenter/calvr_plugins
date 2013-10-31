@@ -31,10 +31,17 @@ StrainGraphObject::~StrainGraphObject()
 {
 }
 
-bool StrainGraphObject::setGraph(std::string title, int taxId)
+bool StrainGraphObject::setGraph(std::string title, int taxId, bool larryOnly)
 {
     std::stringstream ss;
-    ss << "select Patient.last_name, Patient.p_condition, EcoliShigella_Measurement.value, EcoliShigella_Measurement.timestamp from EcoliShigella_Measurement inner join Patient on Patient.patient_id = EcoliShigella_Measurement.patient_id where EcoliShigella_Measurement.taxonomy_id = " << taxId << " order by Patient.p_condition, EcoliShigella_Measurement.value desc;";
+    if(!larryOnly)
+    {
+	ss << "select Patient.last_name, Patient.p_condition, EcoliShigella_Measurement.value, unix_timestamp(EcoliShigella_Measurement.timestamp) as timestamp from EcoliShigella_Measurement inner join Patient on Patient.patient_id = EcoliShigella_Measurement.patient_id where EcoliShigella_Measurement.taxonomy_id = " << taxId << " order by Patient.p_condition, EcoliShigella_Measurement.value desc;";
+    }
+    else
+    {
+	ss << "select \"Smarr\" as last_name, \"Larry\" as p_condition, value, unix_timestamp(timestamp) as timestamp from EcoliShigella_Measurement where patient_id = 1 and taxonomy_id = " << taxId << " order by timestamp;";
+    }
 
     struct StrainData
     {
@@ -100,9 +107,27 @@ bool StrainGraphObject::setGraph(std::string title, int taxId)
 
     for(int i = 0; i < dataSize; ++i)
     {
-	if(sdata[i].value > 0.0)
+	char timestamp[512];
+	std::string name = sdata[i].name;
+	name += " - ";
+	strftime(timestamp,511,"%F",localtime(&sdata[i].timestamp));
+	name += timestamp;
+
+	if(!larryOnly)
 	{
-	    dataMap[condition2Group[sdata[i].group]].push_back(std::pair<std::string,float>(sdata[i].name,sdata[i].value));
+	    if(sdata[i].value > 0.0)
+	    {
+		dataMap[condition2Group[sdata[i].group]].push_back(std::pair<std::string,float>(name,sdata[i].value));
+	    }
+	}
+	else
+	{
+	    std::stringstream ss;
+	    ss << "Smarr" << (i+1);
+	    if(sdata[i].value > 0.0)
+	    {
+		dataMap[ss.str()].push_back(std::pair<std::string,float>(name,sdata[i].value));
+	    }
 	}
     }
 
@@ -123,37 +148,64 @@ bool StrainGraphObject::setGraph(std::string title, int taxId)
 	addChild(_graph->getRootNode());
 	std::vector<std::pair<std::string,int> > customOrder;
 
-	int totalEntries = 0;
-	for(std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = dataMap.begin(); it != dataMap.end(); ++it)
+	if(!larryOnly)
 	{
-	    totalEntries += it->second.size();
-	}
-
-	std::map<std::string,int> groupIndexMap;
-
-	while(customOrder.size() < totalEntries)
-	{
-	    float maxVal = FLT_MIN;
-	    std::string group;
+	    int totalEntries = 0;
 	    for(std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = dataMap.begin(); it != dataMap.end(); ++it)
 	    {
-		if(groupIndexMap[it->first] >= it->second.size())
+		totalEntries += it->second.size();
+	    }
+
+	    std::map<std::string,int> groupIndexMap;
+
+	    while(customOrder.size() < totalEntries)
+	    {
+		float maxVal = FLT_MIN;
+		std::string group;
+		for(std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = dataMap.begin(); it != dataMap.end(); ++it)
 		{
-		    continue;
+		    if(groupIndexMap[it->first] >= it->second.size())
+		    {
+			continue;
+		    }
+
+		    if(it->second[groupIndexMap[it->first]].second > maxVal)
+		    {
+			group = it->first;
+			maxVal = it->second[groupIndexMap[it->first]].second;
+		    }
 		}
 
-		if(it->second[groupIndexMap[it->first]].second > maxVal)
+		customOrder.push_back(std::pair<std::string,int>(group,groupIndexMap[group]));
+		groupIndexMap[group]++;
+	    }
+	}
+	else
+	{
+	    for(std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = dataMap.begin(); it != dataMap.end(); ++it)
+	    {
+		for(int i = 0; i < it->second.size(); ++i)
 		{
-		    group = it->first;
-		    maxVal = it->second[groupIndexMap[it->first]].second;
+		    customOrder.push_back(std::pair<std::string,int>(it->first,i));
 		}
 	    }
 
-	    customOrder.push_back(std::pair<std::string,int>(group,groupIndexMap[group]));
-	    groupIndexMap[group]++;
+	    std::map<std::string,osg::Vec4> larryColors;
+
+	    float step = 0.75 / ((float)customOrder.size());
+
+	    for(int i = 0; i < customOrder.size(); ++i)
+	    {
+		std::stringstream ss;
+		ss << "Smarr" << (i+1);
+		larryColors[ss.str()] = osg::Vec4(1.0-((float)i)*step,0.0,0.0,1.0);
+	    }
+	    _graph->setColorMapping(osg::Vec4(0.0,0.0,0.0,1.0),larryColors);
 	}
+
 	_graph->setCustomOrder(customOrder);
 	_graph->setDisplayMode(BGDM_CUSTOM);
+	_graph->setShowLabels(false);
     }
 
     if(sdata)
@@ -277,7 +329,7 @@ bool StrainGraphObject::processEvent(cvr::InteractionEvent * ie)
 	}
     }
 
-    return TiledWallSceneObject::processEvent(ie);
+    return FPTiledWallSceneObject::processEvent(ie);
 }
 
 void StrainGraphObject::updateCallback(int handID, const osg::Matrix & mat)

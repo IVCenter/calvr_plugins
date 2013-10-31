@@ -1,7 +1,6 @@
 #ifndef FP_MICROBE_GRAPH_OBJECT_H
 #define FP_MICROBE_GRAPH_OBJECT_H
 
-#include <cvrKernel/TiledWallSceneObject.h>
 #include <cvrMenu/MenuText.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuList.h>
@@ -29,14 +28,15 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
         MicrobeGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~MicrobeGraphObject();
 
-        bool setGraph(std::string title, int patientid, std::string testLabel, int microbes, bool lsOrdering = true);
-        bool setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, bool lsOrdering = true);
+        bool setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, std::string tableSuffix, bool group = true, bool lsOrdering = true, bool familyLevel = false);
+        bool setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, std::string tableSuffix, bool group = true, bool lsOrdering = true, bool familyLevel = false);
 
         virtual void objectAdded();
         virtual void objectRemoved();
 
         void setGraphSize(float width, float height);
         void setColor(osg::Vec4 color);
+        void setBGColor(osg::Vec4 color);
 
         float getGraphMaxValue();
         float getGraphMinValue();
@@ -59,7 +59,7 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
         virtual void menuCallback(cvr::MenuItem * item);
 
     protected:
-        bool loadGraphData(std::string valueQuery, std::string orderQuery, bool lsOrdering);
+        bool loadGraphData(std::string valueQuery, std::string orderQuery, bool group, bool lsOrdering, bool familyLevel);
 
         mysqlpp::Connection * _conn;
         
