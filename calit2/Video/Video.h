@@ -35,7 +35,7 @@ public:
         void menuCallback(cvr::MenuItem * item);
 	void perContextCallback(int contextid, cvr::PerContextCallback::PCCType type) const;
 	void message(int type, char*& data, bool collaborative);
-	void newStream(unsigned int gid, int width, int height);
+	void newStream(unsigned int gid);
 	
 protected:
 	int LoadVideoXML(const char* filename, std::list<std::string>& videoFilenames);

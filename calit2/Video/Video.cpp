@@ -183,6 +183,7 @@ void Video::postFrame()
 		TextureManager* manager = m_managerLoad.front();
 		bool hasTexture = false;
 
+		printf("Loading texture manager with %d textures\n", manager->GetVideoCount());
 		for (unsigned int i = 0; i < manager->GetVideoCount(); i++)
 		{
 			unsigned int myid = manager->GetVideoID(i);
@@ -260,7 +261,7 @@ void Video::preFrame()
 			TextureManager* manager = new TextureManager(gid);
 			int nrows = 1;
 			int ncols = 1;
-			bool isStereo;
+			bool isStereo = false;
 			if (gid & 0x80000000) // multi-tile video
 			{
 				//nrows = ((gid & 0x7E000000) >> 25) + 1;
@@ -321,7 +322,21 @@ void Video::preFrame()
 		{
 
 			TextureManager* manager = new TextureManager(vmd.gid);
-			manager->AddGID(vmd.gid);
+			if (vmd.gid & 0x40000000)
+			{
+				unsigned int myid = vmd.gid;
+				myid &= 0xFEFFFFFF;
+				manager->AddGID(myid);
+				printf("added id %x to manager\n", myid);
+				myid |= 0x01000000;
+				manager->AddGID(myid);
+				printf("added id %x to manager\n", myid);
+			}
+			else
+			{
+				manager->AddGID(vmd.gid);
+			}
+			printf("setting m_gidMap for id %x\n", vmd.gid);
 			m_gidMap[vmd.gid] = manager;
 
 			manager->SetSceneObject(vmd.obj);
@@ -436,7 +451,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			unsigned int myid = manager->GetVideoID(i);
 
 			m_videoplayer.CreateVideoResources(myid, contextid);
-			printf("Creating texture resource for video %d and context %d\n", myid, contextid);
+			printf("Creating texture resource for video %x and context %d\n", myid, contextid);
 		}
 	}
 	m_updateMutex.unlock();
@@ -453,7 +468,10 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 		if (m_gidMap.find(update.gid) != m_gidMap.end())
 			manager = m_gidMap[update.gid];
 		else
+		{
+			printf("Manager %x not found\n", update.gid);
 			continue;
+		}
 
 		//printf("PTSUpdate for video group %x\n", update.gid);
 		unsigned int gidcount = manager->GetVideoCount();
@@ -462,7 +480,7 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
 			timer.start();
 			unsigned int gid = manager->GetVideoID(i);
 			m_videoplayer.SetCurrentDrawPts(gid, update.pts);
-			//printf("Updating video %d with gid %x\n", i, gid);
+			//printf("Updating video %d with gid %x at time %.4lf\n", i, gid, update.pts);
 			bool isupdate = m_videoplayer.UpdateVideo(gid, false, contextid);
 			videoTime += timer.getTimeMS();
 			timer.start();
@@ -536,6 +554,16 @@ void Video::perContextCallback(int contextid, cvr::PerContextCallback::PCCType t
  
 bool videoNotifyFunction(VIDEOPLAYER_NOTIFICATION msg, unsigned int gid, void* obj, unsigned int param1, unsigned int param2, double param3)
 {
+	if (msg == VIDEOSTREAM_OPEN)
+	{
+		int width = param1;
+		int height = param2;
+
+		Video* video = static_cast<Video*>(obj);
+
+		video->newStream(gid);	
+
+	}
 	if (msg == VIDEOPLAYER_OPEN)
 	{
 		printf("Video %d opened with size (%d, %d)\n", gid, param1, param2);
@@ -543,9 +571,6 @@ bool videoNotifyFunction(VIDEOPLAYER_NOTIFICATION msg, unsigned int gid, void* o
 		int width = param1;
 		int height = param2;
 
-		Video* video = static_cast<Video*>(obj);
-
-		video->newStream(gid, width, height);	
 
 		
 		/*
@@ -732,13 +757,11 @@ void Video::message(int type, char*& data, bool collaborative)
     std::cerr << "Video::message called\n";
 }
 
-void Video::newStream(unsigned int gid, int width, int height)
+void Video::newStream(unsigned int gid)
 {
 	VideoMessageData vmd;
 	vmd.why = VIDEO_STREAM;
         vmd.obj = new VideoSceneObjectImpl(this);
-	vmd.width = width;
-	vmd.height = height;
 	vmd.gid = gid;
 	m_updateMutex.lock();
 	m_actionQueue.push_back(vmd);
