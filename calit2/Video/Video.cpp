@@ -349,6 +349,10 @@ void Video::preFrame()
 	}	
 	m_updateMutex.unlock();
 
+
+	
+	
+
 }
 
 void Video::menuCallback(cvr::MenuItem* item)
@@ -763,6 +767,9 @@ void Video::newStream(unsigned int gid)
 	vmd.why = VIDEO_STREAM;
         vmd.obj = new VideoSceneObjectImpl(this);
 	vmd.gid = gid;
+	vmd.obj->setMovable(false);
+	vmd.obj->setNavigationOn(false);
+	
 	m_updateMutex.lock();
 	m_actionQueue.push_back(vmd);
 	m_updateMutex.unlock();
