@@ -20,7 +20,7 @@ find_library(AVCODEC_LIBRARY avcodec)
 find_library(AVDEVICE_LIBRARY avdevice)
 find_library(SWSCALE_LIBRARY swscale)
 
-FIND_PACKAGE(RSVP)
+find_library(RSVP_LIBRARY RSVP)
 FIND_PACKAGE(GLEW)
 include_directories(${RSVP_INCLUDE_DIR})
 add_definitions( -D__STDC_CONSTANT_FORMATS -D__STDC_CONSTANT_MACROS)
