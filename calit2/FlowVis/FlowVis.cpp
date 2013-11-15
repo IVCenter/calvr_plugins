@@ -1,8 +1,10 @@
 #include "FlowVis.h"
 #include "FlowObject.h"
+#include "PagedFlowObject.h"
 
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/PluginHelper.h>
+#include <cvrUtil/OsgMath.h>
 
 #include <osg/PrimitiveSet>
 #include <osg/Geode>
@@ -12,6 +14,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <sstream>
 #include <cstring>
 #include <fstream>
 #include <cstdio>
@@ -23,6 +26,10 @@
 #include <FX.h>
 #endif
 
+#define PLUGIN_BINARY_READER_VERSION 1
+
+//#define NOT_PAGED
+
 using namespace cvr;
 
 CVRPLUGIN(FlowVis)
@@ -31,6 +38,9 @@ FlowVis::FlowVis()
 {
     _loadedSet = NULL;
     _loadedObject = NULL;
+
+    _loadedPagedSet = NULL;
+    _loadedPagedObject = NULL;
 }
 
 FlowVis::~FlowVis()
@@ -75,6 +85,22 @@ void FlowVis::preFrame()
     {
 	_loadedObject->perFrame();
     }
+    if(_loadedPagedObject)
+    {
+	_loadedPagedObject->preFrame();
+    }
+}
+
+void FlowVis::postFrame()
+{
+    if(_loadedObject)
+    {
+	_loadedObject->postFrame();
+    }
+    if(_loadedPagedObject)
+    {
+	_loadedPagedObject->postFrame();
+    }
 }
 
 void FlowVis::menuCallback(MenuItem * item)
@@ -95,6 +121,20 @@ void FlowVis::menuCallback(MenuItem * item)
 		_loadedSet = NULL;
 	    }
 	}
+
+	if(_loadedPagedSet)
+	{
+	    delete _loadedPagedObject;
+	    _loadedPagedObject = NULL;
+
+	    for(int i = 0; i < _loadedPagedSet->frameList.size(); ++i)
+	    {
+		delete _loadedPagedSet->frameList[i];
+	    }
+	    delete _loadedPagedSet;
+	    _loadedPagedSet = NULL;
+	}
+
 	return;
     }
 
@@ -117,6 +157,19 @@ void FlowVis::menuCallback(MenuItem * item)
 		}
 	    }
 
+	    if(_loadedPagedSet)
+	    {
+		delete _loadedPagedObject;
+		_loadedPagedObject = NULL;
+
+		for(int i = 0; i < _loadedPagedSet->frameList.size(); ++i)
+		{
+		    delete _loadedPagedSet->frameList[i];
+		}
+		delete _loadedPagedSet;
+		_loadedPagedSet = NULL;
+	    }
+
 	    size_t pos;
 	    pos = _loadFiles[i]->path.find_last_of('.');
 
@@ -124,6 +177,8 @@ void FlowVis::menuCallback(MenuItem * item)
 	    {
 		std::string ext = _loadFiles[i]->path.substr(pos,_loadFiles[i]->path.length()-pos);
 		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+		std::string baseName = _loadFiles[i]->path.substr(0,pos);
 
 		if(ext == ".vtk")
 		{
@@ -149,6 +204,53 @@ void FlowVis::menuCallback(MenuItem * item)
 			    _loadedObject->attachToScene();
 			}
 		    }
+		}
+		else if(ext == ".meta")
+		{
+		    PagedDataSet * set;
+		    if(!(set = parsePagedSet(baseName)))
+		    {
+			std::cerr << "Error parsing paged set files, base path: " << baseName << std::endl;
+			return;
+		    }
+		    else
+		    {
+			std::cerr << "Got set with " << set->frameList.size() << " frames" << std::endl;
+
+#ifdef NOT_PAGED
+			FlowDataSet * flowset;
+			if((flowset = createFlowSet(set)))
+			{
+			    _loadedSet = flowset;
+			    _loadedObject = new FlowObject(flowset,baseName,true,false,false,true,true);
+			    _loadedObject->setBoundsCalcMode(SceneObject::MANUAL);
+			    _loadedObject->setBoundingBox(flowset->frameList[0]->bb);
+
+			    PluginHelper::registerSceneObject(_loadedObject,"FlowVis");
+			    _loadedObject->attachToScene();
+			}
+			else
+			{
+			    std::cerr << "Unable to load into flow data set." << std::endl;
+			}
+
+			for(int i = 0; i < set->frameList.size(); ++i)
+			{
+			    delete set->frameList[i];
+			}
+			delete set;
+
+#else
+
+			_loadedPagedSet = set;
+			_loadedPagedObject = new PagedFlowObject(set,set->bb,_loadFiles[i]->path,true,false,false,true,false);
+			
+			PluginHelper::registerSceneObject(_loadedPagedObject,"FlowVis");
+			_loadedPagedObject->attachToScene();
+
+#endif
+		    }
+		    return;
 		}
 		else
 		{
@@ -413,6 +515,11 @@ FlowDataSet * FlowVis::parseVTK(std::string filePath, int start, int frames)
 	    }
 	}
 
+	//for(std::map<std::string,std::pair<float,float> >::iterator it = dataSet->attribRanges.begin(); it != dataSet->attribRanges.end(); ++it)
+	//{
+	//    std::cerr << "Name: " << it->first << " min: " << it->second.first << " max: " << it->second.second << std::endl;
+	//}
+
 	return dataSet;
     }
     else
@@ -466,7 +573,7 @@ VTKDataAttrib * FlowVis::parseVTKAttrib(FILE * file, std::string type, int count
 		    attrib->intData->at(i) = 8;
 		}*/
 	    }
-	    //std::cerr << "Int name: " << attrib->name <<  " min: " << attrib->intMin << " max: " << attrib->intMax << std::endl;
+	    std::cerr << "Int name: " << attrib->name <<  " min: " << attrib->intMin << " max: " << attrib->intMax << std::endl;
 	}
 	else if(svalType == "double")
 	{
@@ -486,6 +593,7 @@ VTKDataAttrib * FlowVis::parseVTKAttrib(FILE * file, std::string type, int count
 		    attrib->floatMax = attrib->floatData->at(i);
 		}
 	    }
+	    std::cerr << "Float name: " << attrib->name <<  " min: " << attrib->floatMin << " max: " << attrib->floatMax << std::endl;
 	}
 	else
 	{
@@ -562,8 +670,14 @@ void FlowVis::extractSurfaceVTK(VTKDataFrame * frame)
     frame->surfaceInd = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES,0);
 
     std::map<unsigned int, std::map<unsigned int, std::map<unsigned int, std::pair<face,int> > > > faces;
+    std::map<unsigned int,std::vector<unsigned int> > tetraMap;
     for(int i = 0; i < frame->indices->size(); i += 4)
     {
+	tetraMap[frame->indices->at(i+0)].push_back(i/4);
+	tetraMap[frame->indices->at(i+1)].push_back(i/4);
+	tetraMap[frame->indices->at(i+2)].push_back(i/4);
+	tetraMap[frame->indices->at(i+3)].push_back(i/4);
+
 	std::vector<face> faceList;
 	faceList.push_back(face(frame->indices->at(i+0),frame->indices->at(i+1),frame->indices->at(i+3)));
 	faceList.push_back(face(frame->indices->at(i+0),frame->indices->at(i+2),frame->indices->at(i+1)));
@@ -626,6 +740,8 @@ void FlowVis::extractSurfaceVTK(VTKDataFrame * frame)
     frame->surfaceFacets = new osg::Vec4iArray();
     frame->surfaceCells = new osg::IntArray();
 
+    std::map<unsigned int,std::vector<osg::Vec3> > surfaceNormals;
+
     for(std::map<unsigned int, std::map<unsigned int, std::map<unsigned int, std::pair<face,int> > > >::iterator it = faces.begin(); it != faces.end(); ++it)
     {
 	for(std::map<unsigned int, std::map<unsigned int, std::pair<face,int> > >::iterator itt = it->second.begin(); itt != it->second.end(); ++itt)
@@ -639,12 +755,91 @@ void FlowVis::extractSurfaceVTK(VTKDataFrame * frame)
 		    frame->surfaceInd->push_back(ittt->second.first.indices[2]);
 		    frame->surfaceFacets->push_back(osg::Vec4i(ittt->second.first.indices[0],ittt->second.first.indices[1],ittt->second.first.indices[2],0));
 		    frame->surfaceCells->push_back(ittt->second.first.cell);
+
+		    osg::Vec3 d1 = frame->verts->at(ittt->second.first.indices[1]) - frame->verts->at(ittt->second.first.indices[0]);
+		    osg::Vec3 d2 = frame->verts->at(ittt->second.first.indices[2]) - frame->verts->at(ittt->second.first.indices[0]);
+		    osg::Vec3 norm = d1 ^ d2;
+		    surfaceNormals[ittt->second.first.indices[0]].push_back(norm);
+		    surfaceNormals[ittt->second.first.indices[1]].push_back(norm);
+		    surfaceNormals[ittt->second.first.indices[2]].push_back(norm);
 		}
 	    }
 	}
     }
 
+    /*std::map<unsigned int, unsigned int> surfaceDataMap;
+
+    for(std::map<unsigned int,std::vector<osg::Vec3> >::iterator it = surfaceNormals.begin(); it != surfaceNormals.end(); ++it)
+    {
+	std::map<unsigned int,bool> connectedInd;
+	std::map<unsigned int,std::vector<unsigned int> >::iterator tetraIt = tetraMap.find(it->first);
+	if(tetraIt == tetraMap.end())
+	{
+	    continue;
+	}
+
+	for(int i = 0; i < tetraIt->second.size(); ++i)
+	{
+	    //if(surfaceNormals.find(frame->indices->at((4*tetraIt->second[i])+0)) == surfaceNormals.end())
+	    {
+		connectedInd[frame->indices->at((4*tetraIt->second[i])+0)] = true;
+	    }
+	    //if(surfaceNormals.find(frame->indices->at((4*tetraIt->second[i])+1)) == surfaceNormals.end())
+	    {
+		connectedInd[frame->indices->at((4*tetraIt->second[i])+1)] = true;
+	    }
+	    //if(surfaceNormals.find(frame->indices->at((4*tetraIt->second[i])+2)) == surfaceNormals.end())
+	    {
+		connectedInd[frame->indices->at((4*tetraIt->second[i])+2)] = true;
+	    }
+	    //if(surfaceNormals.find(frame->indices->at((4*tetraIt->second[i])+3)) == surfaceNormals.end())
+	    {
+		connectedInd[frame->indices->at((4*tetraIt->second[i])+3)] = true;
+	    }
+	}
+
+	// remove self
+	connectedInd.erase(it->first);
+
+	unsigned int ind = 0;
+	float dist = FLT_MAX;
+	for(std::map<unsigned int,bool>::iterator indIt = connectedInd.begin(); indIt != connectedInd.end(); ++indIt)
+	{
+	    for(int i = 0; i < it->second.size(); ++i)
+	    {
+		float myDist = linePointDistance(frame->verts->at(it->first),frame->verts->at(it->first)+it->second[i],frame->verts->at(indIt->first));
+		if(myDist < dist)
+		{
+		    dist = myDist;
+		    ind = indIt->first;
+		}
+	    }
+	}
+	surfaceDataMap[it->first] = ind;
+	//std::cerr << "Map: " << it->first << " to " << ind << std::endl;
+    }
+
+    for(int i = 0; i < frame->pointData.size(); ++i)
+    {
+	for(std::map<unsigned int, unsigned int>::iterator it = surfaceDataMap.begin(); it != surfaceDataMap.end(); ++it)
+	{
+	    if(frame->pointData[i]->attribType == VAT_VECTORS)
+	    {
+		frame->pointData[i]->vecData->at(it->first) = frame->pointData[i]->vecData->at(it->second);
+	    }
+	    else if(frame->pointData[i]->dataType == VDT_INT)
+	    {
+		frame->pointData[i]->intData->at(it->first) = frame->pointData[i]->intData->at(it->second);
+	    }
+	    else
+	    {
+		frame->pointData[i]->floatData->at(it->first) = frame->pointData[i]->floatData->at(it->second);
+	    }
+	}
+    }*/
+
     std::cerr << "done: got " << frame->surfaceInd->size() << " indices." << std::endl;
+    //std::cerr << "Map size: " << surfaceDataMap.size() << std::endl;
 }
 
 void FlowVis::deleteVTKFrame(VTKDataFrame * frame)
@@ -972,3 +1167,311 @@ void FXVELPTR(float **vel, float *hvel)
 }
 
 #endif
+
+PagedDataSet * FlowVis::parsePagedSet(std::string baseName)
+{
+    std::cerr << "Parsing data set with basename: " << baseName << std::endl;
+
+    PagedDataSet * set = new PagedDataSet;
+
+    std::string metaName = baseName + ".meta";
+    FILE * metaFile = fopen(metaName.c_str(),"rb");
+
+    if(!metaFile)
+    {
+	std::cerr << "Unable to open file: " << metaName << " for reading." << std::endl;
+	delete set;
+	return NULL;
+    }
+
+    int version;
+    fread(&version,sizeof(int),1,metaFile);
+
+    if(version != PLUGIN_BINARY_READER_VERSION)
+    {
+	std::cerr << "Binary version mismatch.  File: " << version << " Reader: " << PLUGIN_BINARY_READER_VERSION << std::endl;
+	delete set;
+	return NULL;
+    }
+
+    int numFrames;
+    fread(&numFrames,sizeof(int),1,metaFile);
+
+    for(int i = 0; i < numFrames; ++i)
+    {
+	std::stringstream fileNamess;
+	fileNamess << baseName << i << ".bin";
+	set->frameFiles.push_back(fileNamess.str());
+    }
+
+    fread(&set->bb._min.x(),sizeof(float),1,metaFile);
+    fread(&set->bb._max.x(),sizeof(float),1,metaFile);
+    fread(&set->bb._min.y(),sizeof(float),1,metaFile);
+    fread(&set->bb._max.y(),sizeof(float),1,metaFile);
+    fread(&set->bb._min.z(),sizeof(float),1,metaFile);
+    fread(&set->bb._max.z(),sizeof(float),1,metaFile);
+
+    char buffer[1024];
+    int numAttrib;
+    fread(&numAttrib,sizeof(int),1,metaFile);
+
+    for(int i = 0; i < numAttrib; ++i)
+    {
+	float min, max;
+	fread(buffer,sizeof(char),1024,metaFile);
+	fread(&min,sizeof(float),1,metaFile);
+	fread(&max,sizeof(float),1,metaFile);
+	set->attribRanges[buffer] = std::pair<float,float>(min,max);
+    }
+
+    fread(&set->maxInds,sizeof(int),1,metaFile);
+    fread(&set->maxVerts,sizeof(int),1,metaFile);
+    fread(&set->maxSurface,sizeof(int),1,metaFile);
+
+    for(int i = 0; i < numFrames; ++i)
+    {
+	PagedDataFrame * frame = new PagedDataFrame;
+
+	fread(&frame->indices.first,sizeof(int),1,metaFile);
+	fread(&frame->indices.second,sizeof(int),1,metaFile);
+	fread(&frame->verts.first,sizeof(int),1,metaFile);
+	fread(&frame->verts.second,sizeof(int),1,metaFile);
+	fread(&frame->surfaceInd.first,sizeof(int),1,metaFile);
+	fread(&frame->surfaceInd.second,sizeof(int),1,metaFile);
+	
+	int numPointAttrib;
+	fread(&numPointAttrib,sizeof(int),1,metaFile);
+
+	for(int j = 0; j < numPointAttrib; ++j)
+	{
+	    PagedDataAttrib * attrib = new PagedDataAttrib;
+
+	    fread(buffer,sizeof(char),1024,metaFile);
+	    attrib->name = buffer;
+
+	    int type;
+	    fread(&type,sizeof(int),1,metaFile);
+	    attrib->attribType = (VTKAttribType)type;
+	    fread(&type,sizeof(int),1,metaFile);
+	    attrib->dataType = (VTKDataType)type;
+
+	    if(attrib->dataType == VDT_INT)
+	    {
+		fread(&attrib->intMin,sizeof(int),1,metaFile);
+		fread(&attrib->intMax,sizeof(int),1,metaFile);
+		//std::cerr << "Name: " << buffer << " min: " << attrib->intMin << " max: " << attrib->intMax << std::endl;
+	    }
+	    else
+	    {
+		fread(&attrib->floatMin,sizeof(float),1,metaFile);
+		fread(&attrib->floatMax,sizeof(float),1,metaFile);
+		//std::cerr << "Name: " << buffer << " min: " << attrib->floatMin << " max: " << attrib->floatMax << std::endl;
+	    }
+	    
+	    fread(&attrib->offset,sizeof(int),1,metaFile);
+
+	    frame->pointData.push_back(attrib);
+	}
+
+	fread(&frame->vcoreVerts.first,sizeof(int),1,metaFile);
+	fread(&frame->vcoreVerts.second,sizeof(int),1,metaFile);
+	frame->vcoreStr.first = frame->vcoreVerts.first;
+	frame->vcoreStr.second = frame->vcoreVerts.second + 3*sizeof(float)*frame->vcoreVerts.first;
+
+	int numSegments;
+	fread(&numSegments,sizeof(int),1,metaFile);
+
+	for(int j = 0; j < numSegments; ++j)
+	{
+	    int first, count;
+	    fread(&first,sizeof(int),1,metaFile);
+	    fread(&count,sizeof(int),1,metaFile);
+	    frame->vcoreSegments.push_back(std::pair<int,int>(first,count));
+	}
+
+	fread(&frame->sepVerts.first,sizeof(int),1,metaFile);
+	fread(&frame->sepVerts.second,sizeof(int),1,metaFile);
+
+	fread(&numSegments,sizeof(int),1,metaFile);
+
+	for(int j = 0; j < numSegments; ++j)
+	{
+	    int first, count;
+	    fread(&first,sizeof(int),1,metaFile);
+	    fread(&count,sizeof(int),1,metaFile);
+	    frame->sepSegments.push_back(std::pair<int,int>(first,count));
+	}
+	
+	fread(&frame->attVerts.first,sizeof(int),1,metaFile);
+	fread(&frame->attVerts.second,sizeof(int),1,metaFile);
+
+	fread(&numSegments,sizeof(int),1,metaFile);
+
+	for(int j = 0; j < numSegments; ++j)
+	{
+	    int first, count;
+	    fread(&first,sizeof(int),1,metaFile);
+	    fread(&count,sizeof(int),1,metaFile);
+	    frame->attSegments.push_back(std::pair<int,int>(first,count));
+	}
+
+	set->frameList.push_back(frame);
+    }
+
+    fclose(metaFile);
+
+    return set;
+}
+
+FlowDataSet * FlowVis::createFlowSet(PagedDataSet * pset)
+{
+    FlowDataSet * set = new FlowDataSet;
+
+    set->info.path = pset->metaFile;
+    set->info.start = 0;
+    set->info.frames = pset->frameList.size();
+    set->type = FDT_VTK;
+    
+    std::cerr << "Attributes: " << pset->attribRanges.size() << std::endl;
+    for(std::map<std::string,std::pair<float,float> >::iterator it = pset->attribRanges.begin(); it != pset->attribRanges.end(); ++it)
+    {
+	std::cerr << "Name: " << it->first << " min: " << it->second.first << " max: " << it->second.second << std::endl;
+	if(it->first == "Vortex Cores")
+	{
+	    set->vcoreMin = it->second.first;
+	    set->vcoreMax = it->second.second;
+	}
+	else
+	{
+	    set->attribRanges[it->first] = it->second;
+	}
+    }
+
+    for(int i = 0; i < pset->frameList.size(); ++i)
+    {
+	std::cerr << "Reading data for frame " << i << std::endl;
+	VTKDataFrame * frame = new VTKDataFrame;
+	
+	FILE * frameFile = fopen(pset->frameFiles[i].c_str(),"rb");
+	if(!frameFile)
+	{
+	    std::cerr << "Unable to open file: " << pset->frameFiles[i] << std::endl;
+	    deleteVTKFrame(frame);
+	    continue;
+	}
+
+	std::cerr << "Verts size: " << pset->frameList[i]->verts.first << " offset: " << pset->frameList[i]->verts.second << std::endl;
+	frame->verts = new osg::Vec3Array(pset->frameList[i]->verts.first);
+	fseek(frameFile,pset->frameList[i]->verts.second,SEEK_SET);
+	fread(&frame->verts->at(0),3*sizeof(float),frame->verts->size(),frameFile);
+
+	std::cerr << "Ind size: " << pset->frameList[i]->indices.first << " offset: " << pset->frameList[i]->indices.second << std::endl;
+	frame->indices = new osg::DrawElementsUInt(osg::PrimitiveSet::QUADS,pset->frameList[i]->indices.first);
+	fseek(frameFile,pset->frameList[i]->indices.second,SEEK_SET);
+	fread(&frame->indices->at(0),sizeof(unsigned int),frame->indices->size(),frameFile);
+
+	std::cerr << "SurfaceInd size: " << pset->frameList[i]->surfaceInd.first << " offset: " << pset->frameList[i]->surfaceInd.second << std::endl;
+	frame->surfaceInd = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES,pset->frameList[i]->surfaceInd.first);
+	fseek(frameFile,pset->frameList[i]->surfaceInd.second,SEEK_SET);
+	fread(&frame->surfaceInd->at(0),sizeof(unsigned int),frame->surfaceInd->size(),frameFile);
+
+	for(int j = 0; j < pset->frameList[i]->pointData.size(); ++j)
+	{
+	    VTKDataAttrib * attrib = new VTKDataAttrib;
+
+	    attrib->name = pset->frameList[i]->pointData[j]->name;
+	    attrib->attribType = pset->frameList[i]->pointData[j]->attribType;
+	    attrib->dataType = pset->frameList[i]->pointData[j]->dataType;
+	    attrib->intMin = pset->frameList[i]->pointData[j]->intMin;
+	    attrib->intMax = pset->frameList[i]->pointData[j]->intMax;
+	    attrib->floatMin = pset->frameList[i]->pointData[j]->floatMin;
+	    attrib->floatMax = pset->frameList[i]->pointData[j]->floatMax;
+
+	    if(attrib->attribType == VAT_VECTORS)
+	    {
+		attrib->vecData = new osg::Vec3Array(frame->verts->size());
+		fseek(frameFile,pset->frameList[i]->pointData[j]->offset,SEEK_SET);
+		fread(&attrib->vecData->at(0),3*sizeof(float),frame->verts->size(),frameFile);
+	    }
+	    else
+	    {
+		if(attrib->dataType == VDT_INT)
+		{
+		    attrib->intData = new osg::IntArray(frame->verts->size());
+		    fseek(frameFile,pset->frameList[i]->pointData[j]->offset,SEEK_SET);
+		    fread(&attrib->intData->at(0),sizeof(int),frame->verts->size(),frameFile);
+		}
+		else
+		{
+		    attrib->floatData = new osg::FloatArray(frame->verts->size());
+		    fseek(frameFile,pset->frameList[i]->pointData[j]->offset,SEEK_SET);
+		    fread(&attrib->floatData->at(0),sizeof(float),frame->verts->size(),frameFile);
+		}
+	    }
+
+	    frame->pointData.push_back(attrib);
+	}
+
+	std::cerr << "Read in FX info." << std::endl;
+
+	if(pset->frameList[i]->vcoreVerts.first > 0)
+	{
+	    frame->vcoreData = new VortexCoreData;
+	    
+	    frame->vcoreData->verts = new osg::Vec3Array(pset->frameList[i]->vcoreVerts.first);
+	    fseek(frameFile,pset->frameList[i]->vcoreVerts.second,SEEK_SET);
+	    fread(&frame->vcoreData->verts->at(0),3*sizeof(float),pset->frameList[i]->vcoreVerts.first,frameFile);
+
+	    frame->vcoreData->coreStr = new osg::FloatArray(pset->frameList[i]->vcoreStr.first);
+	    fseek(frameFile,pset->frameList[i]->vcoreStr.second,SEEK_SET);
+	    fread(&frame->vcoreData->coreStr->at(0),sizeof(float),pset->frameList[i]->vcoreStr.first,frameFile);
+
+	    for(int j = 0; j < pset->frameList[i]->vcoreSegments.size(); ++j)
+	    {
+		frame->vcoreData->coreSegments.push_back(new osg::DrawArrays(GL_LINE_STRIP,pset->frameList[i]->vcoreSegments[j].first,pset->frameList[i]->vcoreSegments[j].second));
+	    }
+	}
+	else
+	{
+	    frame->vcoreData = NULL;
+	}
+
+	if(pset->frameList[i]->sepVerts.first > 0 || pset->frameList[i]->attVerts.first > 0)
+	{
+	    frame->sepAttData = new SepAttLineData;
+	}
+	else
+	{
+	    frame->sepAttData = NULL;
+	}
+
+	if(pset->frameList[i]->sepVerts.first > 0)
+	{
+	    frame->sepAttData->sverts = new osg::Vec3Array(pset->frameList[i]->sepVerts.first);
+	    fseek(frameFile,pset->frameList[i]->sepVerts.second,SEEK_SET);
+	    fread(&frame->sepAttData->sverts->at(0),3*sizeof(float),pset->frameList[i]->sepVerts.first,frameFile);
+
+	    for(int j = 0; j < pset->frameList[i]->sepSegments.size(); ++j)
+	    {
+		frame->sepAttData->sSegments.push_back(new osg::DrawArrays(GL_LINES,pset->frameList[i]->sepSegments[j].first,pset->frameList[i]->sepSegments[j].second));
+	    }
+	}
+
+	if(pset->frameList[i]->attVerts.first > 0)
+	{
+	    frame->sepAttData->averts = new osg::Vec3Array(pset->frameList[i]->attVerts.first);
+	    fseek(frameFile,pset->frameList[i]->attVerts.second,SEEK_SET);
+	    fread(&frame->sepAttData->averts->at(0),3*sizeof(float),pset->frameList[i]->attVerts.first,frameFile);
+
+	    for(int j = 0; j < pset->frameList[i]->attSegments.size(); ++j)
+	    {
+		frame->sepAttData->aSegments.push_back(new osg::DrawArrays(GL_LINES,pset->frameList[i]->attSegments[j].first,pset->frameList[i]->attSegments[j].second));
+	    }
+	}
+
+	frame->bb = pset->bb;
+	set->frameList.push_back(frame);
+    }
+
+    return set;
+}

@@ -100,7 +100,43 @@ struct FlowDataSet
     std::map<std::string,std::pair<float,float> > attribRanges;
 };
 
+struct PagedDataAttrib
+{
+    std::string name;
+    VTKAttribType attribType;
+    VTKDataType dataType;
+    int intMin, intMax;
+    float floatMin, floatMax;
+    int offset;
+};
+
+struct PagedDataFrame
+{
+    std::pair<int,int> verts;
+    std::pair<int,int> indices;
+    std::pair<int,int> surfaceInd;
+    std::vector<PagedDataAttrib*> pointData;
+    std::pair<int,int> vcoreVerts;
+    std::pair<int,int> vcoreStr;
+    std::vector<std::pair<int,int> > vcoreSegments;
+    std::pair<int,int> sepVerts;
+    std::vector<std::pair<int,int> > sepSegments;
+    std::pair<int,int> attVerts;
+    std::vector<std::pair<int,int> > attSegments;
+};
+
+struct PagedDataSet
+{
+    std::string metaFile;
+    std::vector<std::string> frameFiles;
+    osg::BoundingBox bb;
+    std::map<std::string,std::pair<float,float> > attribRanges;
+    int maxInds, maxVerts, maxSurface;
+    std::vector<PagedDataFrame*> frameList;
+};
+
 class FlowObject;
+class PagedFlowObject;
 
 class FlowVis : public cvr::CVRPlugin, public cvr::MenuCallback
 {
@@ -110,6 +146,7 @@ class FlowVis : public cvr::CVRPlugin, public cvr::MenuCallback
 
         bool init();
         void preFrame();
+        void postFrame();
         void menuCallback(cvr::MenuItem * item);
 
     protected:
@@ -117,8 +154,10 @@ class FlowVis : public cvr::CVRPlugin, public cvr::MenuCallback
         VTKDataAttrib * parseVTKAttrib(FILE * file, std::string type, int count);
         void extractSurfaceVTK(VTKDataFrame * frame);
         void deleteVTKFrame(VTKDataFrame * frame);
-
         void processWithFX(FlowDataSet * set);
+
+        PagedDataSet * parsePagedSet(std::string baseName);
+        FlowDataSet * createFlowSet(PagedDataSet * pset);
 
         cvr::SubMenu * _flowMenu;
         cvr::SubMenu * _loadMenu;
@@ -128,6 +167,8 @@ class FlowVis : public cvr::CVRPlugin, public cvr::MenuCallback
 
         FlowDataSet * _loadedSet;
         FlowObject * _loadedObject;
+        PagedDataSet * _loadedPagedSet;
+        PagedFlowObject * _loadedPagedObject;
 };
 
 struct SetBoundsCallback : public osg::Drawable::ComputeBoundingBoxCallback

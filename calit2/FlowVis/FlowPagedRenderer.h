@@ -1,0 +1,118 @@
+#ifndef FLOW_PAGED_RENDERER_H
+#define FLOW_PAGED_RENDERER_H
+
+#include "FlowObject.h"
+#include "FlowVis.h"
+#include "VBOCache.h"
+
+#include <string>
+#include <map>
+#include <pthread.h>
+
+#include <GL/gl.h>
+
+enum UniType
+{
+    UNI_FLOAT,
+    UNI_INT,
+    UNI_UINT
+};
+
+struct UniData
+{
+    UniType type;
+    void * data;
+};
+
+class FlowPagedRenderer
+{
+    public: 
+        FlowPagedRenderer(PagedDataSet * set, int frame, FlowVisType type, std::string attribute);
+        ~FlowPagedRenderer();
+
+        void frameStart(int context);
+        void preFrame();
+        void preDraw(int context);
+        void draw(int context);
+        void postFrame();
+
+        void setType(FlowVisType type, std::string attribute);
+        FlowVisType getType();
+        std::string getAttribute();
+
+        void setNextFrame(int frame);
+        bool advance();
+
+        void setUniData(std::string key, struct UniData & data);
+        bool getUniData(std::string key, struct UniData & data);
+
+    protected:
+        void initUniData();
+
+        void checkGlewInit(int context);
+        void checkShaderInit(int context);
+        void checkColorTableInit(int context);
+
+        void deleteUniData(UniData & data);
+
+        struct AttribBinding
+        {
+            int index;
+            int size;
+            GLenum type;
+            GLuint buffer;
+        };
+
+        struct TextureBinding
+        {
+            GLuint id;
+            int unit;
+            GLenum type;
+        };
+
+        struct UniformBinding
+        {
+            GLint location;
+            UniType type;
+            void * data;
+        };
+
+        void loadUniform(UniformBinding & uni);
+
+        void drawElements(GLenum mode, GLsizei count, GLenum type, GLuint indVBO, GLuint vertsVBO, std::vector<AttribBinding> & attribBinding, GLuint program, std::vector<TextureBinding> & textureBinding, std::vector<UniformBinding> & uniBinding);
+
+        PagedDataSet * _set;
+        int _currentFrame, _nextFrame;
+        std::map<int,bool> _nextFrameReady;
+        pthread_mutex_t _frameReadyLock;
+        FlowVisType _type;
+        std::string _attribute;
+        std::map<std::string,struct UniData> _uniDataMap;
+        
+        VBOCache * _cache;
+
+        static std::map<int,bool> _glewInitMap;
+        static pthread_mutex_t _glewInitLock;
+
+        std::map<int,bool> _shaderInitMap;
+        pthread_mutex_t _shaderInitLock;
+
+        std::map<int,GLuint> _normalProgram;
+
+        std::map<int,GLuint> _normalFloatProgram;
+        std::map<int,GLint> _normalFloatMinUni;
+        std::map<int,GLint> _normalFloatMaxUni;
+
+        std::map<int,GLuint> _normalIntProgram;
+        std::map<int,GLint> _normalIntMinUni;
+        std::map<int,GLint> _normalIntMaxUni;
+
+        std::map<int,GLuint> _normalVecProgram;
+        std::map<int,GLint> _normalVecMinUni;
+        std::map<int,GLint> _normalVecMaxUni;
+
+        static std::map<int,GLuint> _colorTableMap;
+        static pthread_mutex_t _colorTableInitLock;
+};
+
+#endif

@@ -2,10 +2,16 @@
 #define FLOW_OBJECT_H
 
 #include <cvrKernel/SceneObject.h>
+#include <cvrKernel/CVRViewer.h>
 #include <cvrMenu/MenuRangeValueCompact.h>
 #include <cvrMenu/MenuRangeValue.h>
 #include <cvrMenu/MenuCheckbox.h>
 #include <cvrMenu/MenuList.h>
+
+#include <OpenThreads/Mutex>
+
+#include <vector>
+#include <map>
 
 #include "FlowVis.h"
 
@@ -16,20 +22,24 @@ enum FlowVisType
     FVT_PLANE,
     FVT_PLANE_VEC,
     FVT_VORTEX_CORES,
-    FVT_SEP_ATT_LINES
+    FVT_SEP_ATT_LINES,
+    FVT_VOLUME_CUDA
 };
 
 static osg::ref_ptr<osg::Texture1D> lookupColorTable = NULL;
 static void initColorTable();
 
-class FlowObject : public cvr::SceneObject
+class FlowObject : public cvr::SceneObject, public cvr::PerContextCallback
 {
     public:
         FlowObject(FlowDataSet * set, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~FlowObject();
 
         void perFrame();
+        void postFrame();
         void menuCallback(cvr::MenuItem * item);
+
+        virtual void perContextCallback(int contextid, PerContextCallback::PCCType type) const;
 
     protected:
         void setFrame(int frame);
@@ -83,6 +93,20 @@ class FlowObject : public cvr::SceneObject
         osg::ref_ptr<osg::Geometry> _vcoreGeometry;
         osg::ref_ptr<osg::Geometry> _slineGeometry;
         osg::ref_ptr<osg::Geometry> _alineGeometry;
+        osg::ref_ptr<osg::Geometry> _volGeometry;
+
+        osg::ref_ptr<osg::FloatArray> _volDist;
+        osg::ref_ptr<osg::FloatArray> _volSlope1;
+        osg::ref_ptr<osg::FloatArray> _volSlope2;
+        osg::ref_ptr<osg::Vec3iArray> _volPreSortInd;
+        osg::ref_ptr<osg::DrawElementsUInt> _volInd;
+        mutable osg::Vec3 _volViewerPos;
+        mutable osg::Vec3 _volViewerDir;
+        int _volFrame;
+        mutable std::map<int,bool> _volInitMap;
+        mutable std::map<int,bool> _volActiveKernelMap;
+        mutable OpenThreads::Mutex _volCallbackLock;
+        static std::map<int,bool> _cudaContextSet;
 };
 
 #endif
