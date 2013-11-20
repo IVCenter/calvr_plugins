@@ -15,7 +15,7 @@ class SingleMicrobeObject : public LayoutTypeObject, public PatientSelectObject
         SingleMicrobeObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~SingleMicrobeObject();
 
-        bool setGraph(std::string microbe, int taxid, std::string tableSuffix, bool rankOrder=false, bool labels=true);
+        bool setGraph(std::string microbe, int taxid, std::string tableSuffix, bool rankOrder=true, bool labels=true, bool firstOnly=false, bool groupPatients=false);
 
         virtual void objectAdded();
         virtual void objectRemoved();
@@ -34,6 +34,7 @@ class SingleMicrobeObject : public LayoutTypeObject, public PatientSelectObject
         bool _desktopMode;
 
         std::map<std::string,bool> _cdCountMap;
+        std::map<std::string,bool> _ucCountMap;
 };
 
 class BandingFunction : public MicrobeMathFunction
