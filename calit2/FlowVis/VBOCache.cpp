@@ -13,7 +13,7 @@ void * loadVBOThread(void * arg)
     LoadVBOParams * params = (LoadVBOParams*)arg;
 
     std::list<std::pair<BufferJob*,struct timeval> > waitList;
-    float waitInterval = 0.0;
+    float waitInterval = 0.02;
 
     while(1)
     {
@@ -315,8 +315,11 @@ void VBOCache::getOrCreateBuffer(BufferJob * job)
 
     glBindBuffer(job->bufferType,job->vbo);
 
-    glBufferStorage(job->bufferType,job->size,NULL,GL_CLIENT_STORAGE_BIT | GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
-    job->mappedPtr = glMapBufferRange(job->bufferType,0,job->size,GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+    glBufferData(job->bufferType,job->size,NULL,GL_STATIC_DRAW);
+    job->mappedPtr = glMapBufferRange(job->bufferType,0,job->size,GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
+
+    //glBufferStorage(job->bufferType,job->size,NULL,GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+    //job->mappedPtr = glMapBufferRange(job->bufferType,0,job->size,GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 
     glBindBuffer(job->bufferType,0);
 }
