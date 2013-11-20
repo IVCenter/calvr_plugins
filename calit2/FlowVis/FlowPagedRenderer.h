@@ -79,7 +79,7 @@ class FlowPagedRenderer
 
         void loadUniform(UniformBinding & uni);
 
-        void drawElements(GLenum mode, GLsizei count, GLenum type, GLuint indVBO, GLuint vertsVBO, std::vector<AttribBinding> & attribBinding, GLuint program, std::vector<TextureBinding> & textureBinding, std::vector<UniformBinding> & uniBinding);
+        void drawElements(GLenum mode, GLsizei count, GLenum type, GLuint indVBO, GLuint vertsVBO, std::vector<float> & color, std::vector<AttribBinding> & attribBinding, GLuint program, std::vector<TextureBinding> & textureBinding, std::vector<UniformBinding> & uniBinding);
 
         PagedDataSet * _set;
         int _currentFrame, _nextFrame;
@@ -110,6 +110,12 @@ class FlowPagedRenderer
         std::map<int,GLuint> _normalVecProgram;
         std::map<int,GLint> _normalVecMinUni;
         std::map<int,GLint> _normalVecMaxUni;
+
+        std::map<int,GLuint> _isoProgram;
+        std::map<int,GLint> _isoMaxUni;
+
+        std::map<int,GLuint> _isoVecProgram;
+        std::map<int,GLint> _isoVecMaxUni;
 
         static std::map<int,GLuint> _colorTableMap;
         static pthread_mutex_t _colorTableInitLock;

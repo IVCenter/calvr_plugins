@@ -168,8 +168,15 @@ void FlowPagedRenderer::draw(int context)
 	    //std::cerr << "CurrentFrame: " << _currentFrame << " nextFrame: " << _nextFrame << std::endl;
 	    if(surfVBO && vertsVBO && (!attrib || attribVBO))
 	    {
+		std::vector<float> color(4);
+		color[0] = 1.0;
+		color[1] = 1.0;
+		color[2] = 1.0;
+		color[3] = 1.0;
 		//std::cerr << "drawn" << std::endl;
-		drawElements(GL_TRIANGLES,_set->frameList[_currentFrame]->surfaceInd.first,GL_UNSIGNED_INT,surfVBO,vertsVBO,binding,prog,texBinding,uniBinding);
+		glEnable(GL_CULL_FACE);
+		drawElements(GL_TRIANGLES,_set->frameList[_currentFrame]->surfaceInd.first,GL_UNSIGNED_INT,surfVBO,vertsVBO,color,binding,prog,texBinding,uniBinding);
+		glDisable(GL_CULL_FACE);
 	    }
 	    else
 	    {
@@ -190,6 +197,188 @@ void FlowPagedRenderer::draw(int context)
 
 		pthread_mutex_lock(&_frameReadyLock);
 		if(ibuf && vbuf && (!attrib || abuf))
+		{
+		    _nextFrameReady[context] = true;
+		}
+		else
+		{
+		    _nextFrameReady[context] = false;
+		}
+		pthread_mutex_unlock(&_frameReadyLock);
+	    }
+
+	    break;
+	}
+	case FVT_ISO_SURFACE:
+	{
+	    GLuint indVBO, surfVBO, vertsVBO, attribVBO;
+	    
+	    indVBO = _cache->getOrRequestBuffer(context,fileID,_set->frameList[_currentFrame]->indices.second,_set->frameList[_currentFrame]->indices.first*sizeof(unsigned int),GL_ELEMENT_ARRAY_BUFFER);
+	    surfVBO = _cache->getOrRequestBuffer(context,fileID,_set->frameList[_currentFrame]->surfaceInd.second,_set->frameList[_currentFrame]->surfaceInd.first*sizeof(unsigned int),GL_ELEMENT_ARRAY_BUFFER);
+	    vertsVBO = _cache->getOrRequestBuffer(context,fileID,_set->frameList[_currentFrame]->verts.second,_set->frameList[_currentFrame]->verts.first*3*sizeof(float),GL_ARRAY_BUFFER);
+
+	    PagedDataAttrib * attrib = NULL;
+	    for(int i = 0; i < _set->frameList[_currentFrame]->pointData.size(); ++i)
+	    {
+		if(_set->frameList[_currentFrame]->pointData[i]->name == _attribute)
+		{
+		    attrib = _set->frameList[_currentFrame]->pointData[i];
+		    break;
+		}
+	    }
+
+	    std::vector<AttribBinding> surfAttribBinding;
+	    std::vector<TextureBinding> surfTexBinding;
+	    std::vector<UniformBinding> surfUniBinding;
+
+	    std::vector<AttribBinding> meshAttribBinding;
+	    std::vector<TextureBinding> meshTexBinding;
+	    std::vector<UniformBinding> meshUniBinding;
+
+	    GLuint surfProg = 0;
+	    GLuint meshProg = 0;
+
+	    bool drawMesh = false;
+
+	    unsigned int unitsize;
+	    if(attrib)
+	    {
+		AttribBinding ab;
+		UniformBinding ub;
+		if(attrib->attribType == VAT_VECTORS)
+		{
+		    ab.size = 3;
+		    ab.type = GL_FLOAT;
+		    unitsize = 3*sizeof(float);
+		    surfProg = _normalVecProgram[context];
+		    meshProg = _isoVecProgram[context];
+
+		    ub.location = _isoVecMaxUni[context];
+		    ub.type = _uniDataMap["isoMax"].type;
+		    ub.data = _uniDataMap["isoMax"].data;
+		    meshUniBinding.push_back(ub);
+
+		    ub.location = _normalVecMinUni[context];
+		    ub.type = _uniDataMap["minf"].type;
+		    ub.data = _uniDataMap["minf"].data;
+		    surfUniBinding.push_back(ub);
+		    ub.location = _normalVecMaxUni[context];
+		    ub.type = _uniDataMap["maxf"].type;
+		    ub.data = _uniDataMap["maxf"].data;
+		    surfUniBinding.push_back(ub);
+
+		    drawMesh = true;
+		}
+		else if(attrib->dataType == VDT_INT)
+		{
+		    ab.size = 1;
+		    ab.type = GL_UNSIGNED_INT;
+		    unitsize = sizeof(int);
+		    surfProg = _normalIntProgram[context];
+
+		    ub.location = _normalIntMinUni[context];
+		    ub.type = _uniDataMap["mini"].type;
+		    ub.data = _uniDataMap["mini"].data;
+		    surfUniBinding.push_back(ub);
+		    ub.location = _normalIntMaxUni[context];
+		    ub.type = _uniDataMap["maxi"].type;
+		    ub.data = _uniDataMap["maxi"].data;
+		    surfUniBinding.push_back(ub);
+
+		    // no mesh for int attributes
+		    drawMesh = false;
+		}
+		else
+		{
+		    ab.size = 1;
+		    ab.type = GL_FLOAT;
+		    unitsize = sizeof(float);
+		    surfProg = _normalFloatProgram[context];
+		    meshProg = _isoProgram[context];
+
+		    ub.location = _isoMaxUni[context];
+		    ub.type = _uniDataMap["isoMax"].type;
+		    ub.data = _uniDataMap["isoMax"].data;
+		    meshUniBinding.push_back(ub);
+
+		    ub.location = _normalFloatMinUni[context];
+		    ub.type = _uniDataMap["minf"].type;
+		    ub.data = _uniDataMap["minf"].data;
+		    surfUniBinding.push_back(ub);
+		    ub.location = _normalFloatMaxUni[context];
+		    ub.type = _uniDataMap["maxf"].type;
+		    ub.data = _uniDataMap["maxf"].data;
+		    surfUniBinding.push_back(ub);
+
+		    drawMesh = true;
+		}
+
+		ab.index = 4;
+		attribVBO = _cache->getOrRequestBuffer(context,fileID,attrib->offset,_set->frameList[_currentFrame]->verts.first*unitsize,GL_ARRAY_BUFFER);
+		ab.buffer = attribVBO;
+		meshAttribBinding.push_back(ab);
+		surfAttribBinding.push_back(ab);
+
+		TextureBinding tb;
+
+		pthread_mutex_lock(&_colorTableInitLock);
+		tb.id = _colorTableMap[context];
+		pthread_mutex_unlock(&_colorTableInitLock);
+
+		tb.unit = 0;
+		tb.type = GL_TEXTURE_1D;
+		surfTexBinding.push_back(tb);
+
+	    }
+	    else
+	    {
+		attribVBO = 0;
+		surfProg = _normalProgram[context];
+	    }
+	    
+	    //std::cerr << "CurrentFrame: " << _currentFrame << " nextFrame: " << _nextFrame << std::endl;
+	    if(surfVBO && vertsVBO && (!attrib || attribVBO))
+	    {
+		std::vector<float> color(4);
+		color[0] = 1.0;
+		color[1] = 1.0;
+		color[2] = 1.0;
+		color[3] = 1.0;
+		//std::cerr << "drawn" << std::endl;
+		glEnable(GL_CULL_FACE);
+		drawElements(GL_TRIANGLES,_set->frameList[_currentFrame]->surfaceInd.first,GL_UNSIGNED_INT,surfVBO,vertsVBO,color,surfAttribBinding,surfProg,surfTexBinding,surfUniBinding);
+		glDisable(GL_CULL_FACE);
+	    }
+	    else
+	    {
+		//std::cerr << "not drawn" << std::endl;
+	    }
+
+	    if(drawMesh && attribVBO && indVBO)
+	    {
+		std::vector<float> color(4);
+		color[0] = 0.0;
+		color[1] = 0.0;
+		color[2] = 1.0;
+		color[3] = 1.0;
+		drawElements(GL_LINES_ADJACENCY,_set->frameList[_currentFrame]->indices.first,GL_UNSIGNED_INT,indVBO,vertsVBO,color,meshAttribBinding,meshProg,meshTexBinding,meshUniBinding);
+	    }
+
+	    if(_currentFrame != _nextFrame)
+	    {
+		int nextfileID = _cache->getFileID(_set->frameFiles[_nextFrame]);
+		GLuint fullibuf, ibuf, vbuf, abuf = 0;
+		fullibuf = _cache->getOrRequestBuffer(context,nextfileID,_set->frameList[_nextFrame]->indices.second,_set->frameList[_nextFrame]->indices.first*sizeof(unsigned int),GL_ELEMENT_ARRAY_BUFFER);
+		ibuf = _cache->getOrRequestBuffer(context,nextfileID,_set->frameList[_nextFrame]->surfaceInd.second,_set->frameList[_nextFrame]->surfaceInd.first*sizeof(unsigned int),GL_ELEMENT_ARRAY_BUFFER);
+		vbuf = _cache->getOrRequestBuffer(context,nextfileID,_set->frameList[_nextFrame]->verts.second,_set->frameList[_nextFrame]->verts.first*3*sizeof(float),GL_ARRAY_BUFFER);
+		if(attrib)
+		{
+		    abuf = _cache->getOrRequestBuffer(context,nextfileID,attrib->offset,_set->frameList[_nextFrame]->verts.first*unitsize,GL_ARRAY_BUFFER);
+		}
+
+
+		pthread_mutex_lock(&_frameReadyLock);
+		if(fullibuf && ibuf && vbuf && (!attrib || abuf))
 		{
 		    _nextFrameReady[context] = true;
 		}
@@ -310,6 +499,9 @@ void FlowPagedRenderer::initUniData()
     _uniDataMap["mini"].data = new int[1];
     _uniDataMap["maxi"].type = UNI_INT;
     _uniDataMap["maxi"].data = new int[1];
+
+    _uniDataMap["isoMax"].type = UNI_FLOAT;
+    _uniDataMap["isoMax"].data = new float[1];
 }
 
 void FlowPagedRenderer::checkGlewInit(int context)
@@ -366,6 +558,20 @@ void FlowPagedRenderer::checkShaderInit(int context)
 
 	_normalVecMinUni[context] = glGetUniformLocation(_normalVecProgram[context],"min");
 	_normalVecMaxUni[context] = glGetUniformLocation(_normalVecProgram[context],"max");
+
+	createShaderFromSrc(isoFloatVertSrc,GL_VERTEX_SHADER,verts,"isoFloatVert");
+	createShaderFromSrc(isoGeomSrc,GL_GEOMETRY_SHADER,geoms,"isoGeom");
+	createShaderFromSrc(isoFragSrc,GL_FRAGMENT_SHADER,frags,"isoFrag");
+	createProgram(_isoProgram[context],verts,frags,geoms,GL_LINES_ADJACENCY,GL_TRIANGLE_STRIP,4);
+
+	_isoMaxUni[context] = glGetUniformLocation(_isoProgram[context],"isoMax");
+
+	createShaderFromSrc(isoVecVertSrc,GL_VERTEX_SHADER,verts,"isoVecVert");
+	createShaderFromSrc(isoGeomSrc,GL_GEOMETRY_SHADER,geoms,"isoGeom");
+	createShaderFromSrc(isoFragSrc,GL_FRAGMENT_SHADER,frags,"isoFrag");
+	createProgram(_isoVecProgram[context],verts,frags,geoms,GL_LINES_ADJACENCY,GL_TRIANGLE_STRIP,4);
+
+	_isoVecMaxUni[context] = glGetUniformLocation(_isoVecProgram[context],"isoMax");
 
 	_shaderInitMap[context] = true;
     }
@@ -474,12 +680,18 @@ void FlowPagedRenderer::loadUniform(UniformBinding & uni)
     }
 }
 
-void FlowPagedRenderer::drawElements(GLenum mode, GLsizei count, GLenum type, GLuint indVBO, GLuint vertsVBO, std::vector<FlowPagedRenderer::AttribBinding> & attribBinding, GLuint program, std::vector<TextureBinding> & textureBinding, std::vector<UniformBinding> & uniBinding)
+void FlowPagedRenderer::drawElements(GLenum mode, GLsizei count, GLenum type, GLuint indVBO, GLuint vertsVBO, std::vector<float> & color, std::vector<FlowPagedRenderer::AttribBinding> & attribBinding, GLuint program, std::vector<TextureBinding> & textureBinding, std::vector<UniformBinding> & uniBinding)
 {
-    glEnable(GL_CULL_FACE);
     glEnableClientState(GL_VERTEX_ARRAY);
 
-    glColor4f(1.0,1.0,1.0,1.0);
+    if(color.size() < 4)
+    {
+	glColor4f(1.0,1.0,1.0,1.0);
+    }
+    else
+    {
+	glColor4f(color[0],color[1],color[2],color[3]);
+    }
 
     glBindBuffer(GL_ARRAY_BUFFER,vertsVBO);
     glVertexPointer(3,GL_FLOAT,0,0);

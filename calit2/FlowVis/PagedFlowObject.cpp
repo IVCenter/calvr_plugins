@@ -119,6 +119,16 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 	// cleanup last type
 	switch(_lastType)
 	{
+	    case FVT_ISO_SURFACE:
+	    {
+		if(_isoMaxRV)
+		{
+		    removeMenuItem(_isoMaxRV);
+		    delete _isoMaxRV;
+		    _isoMaxRV = NULL;
+		}
+		break;
+	    }
 	    default:
 		break;
 	}
@@ -128,6 +138,13 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 	// setup new type
 	switch(_lastType)
 	{
+	    case FVT_ISO_SURFACE:
+	    {
+		// setup iso max menu item
+		_lastAttribute = "None";
+		menuCallback(_loadedAttribList);
+		break;
+	    }
 	    default:
 		break;
 	}
@@ -153,6 +170,13 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 		attrib = _set->frameList[_currentFrame]->pointData[i];
 		break;
 	    }
+	}
+
+	if(_isoMaxRV)
+	{
+	    removeMenuItem(_isoMaxRV);
+	    delete _isoMaxRV;
+	    _isoMaxRV = NULL;
 	}
 
 	if(attrib && _set->attribRanges.find(_lastAttribute) != _set->attribRanges.end())
@@ -182,12 +206,31 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 		    }
 		    break;
 		}
+		case FVT_ISO_SURFACE:
+		{
+		    _isoMaxRV = new MenuRangeValue("ISO Value",_set->attribRanges[_lastAttribute].first,_set->attribRanges[_lastAttribute].second,_set->attribRanges[_lastAttribute].second);
+		    _isoMaxRV->setCallback(this);
+		    addMenuItem(_isoMaxRV);
+
+		    UniData max;
+		    _renderer->getUniData("isoMax",max);
+		    *((float*)max.data) = _set->attribRanges[_lastAttribute].second;
+
+		    break;
+		}
 		default:
 		    break;
 	    }
 	}
 
 	_renderer->setType((FlowVisType)_typeList->getIndex(),_loadedAttribList->getValue());
+    }
+
+    if(item == _isoMaxRV)
+    {
+	UniData max;
+	_renderer->getUniData("isoMax",max);
+	*((float*)max.data) = _isoMaxRV->getValue();
     }
 
     if(item == _animateCB)
