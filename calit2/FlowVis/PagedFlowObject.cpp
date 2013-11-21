@@ -83,6 +83,8 @@ PagedFlowObject::~PagedFlowObject()
 {
     CVRViewer::instance()->removePerContextFrameStartCallback(this);
     CVRViewer::instance()->removePerContextPreDrawCallback(this);
+
+    FlowVis::deleteRenderer(_renderer);
 }
 
 void PagedFlowObject::preFrame()
@@ -215,6 +217,25 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 		    UniData max;
 		    _renderer->getUniData("isoMax",max);
 		    *((float*)max.data) = _set->attribRanges[_lastAttribute].second;
+
+		    if(_lastAttribute != "None")
+		    {
+			UniData min, max;
+			if(attrib->dataType == VDT_INT)
+			{
+			    _renderer->getUniData("mini",min);
+			    _renderer->getUniData("maxi",max);
+			    *((int*)min.data) = (int)_set->attribRanges[_lastAttribute].first;
+			    *((int*)max.data) = (int)_set->attribRanges[_lastAttribute].second;
+			}
+			else
+			{
+			    _renderer->getUniData("minf",min);
+			    _renderer->getUniData("maxf",max);
+			    *((float*)min.data) = _set->attribRanges[_lastAttribute].first;
+			    *((float*)max.data) = _set->attribRanges[_lastAttribute].second;
+			}
+		    }
 
 		    break;
 		}

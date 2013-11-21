@@ -15,7 +15,7 @@
 #include <string>
 
 /// checks for errors creating an opengl shader
-bool checkShader(GLuint shader);
+bool checkShader(GLuint shader, std::string name = "");
 
 /// checks for errors linking an opengl shader program
 bool checkProgram(GLuint program);

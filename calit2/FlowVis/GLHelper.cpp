@@ -5,7 +5,7 @@
 #include <iostream>
 #include <cstdlib>
 
-bool checkShader(GLuint shader)
+bool checkShader(GLuint shader, std::string name)
 {
     GLchar *log = NULL;
     GLint   val = 0;
@@ -22,6 +22,7 @@ bool checkShader(GLuint shader)
         {
             glGetShaderInfoLog(shader, len, NULL, log);
 
+	    std::cerr << "Shader: " << name << std::endl;
             std::cerr << "OpenGL Shader Error:" << std::endl << log;
             free(log);
         }
@@ -33,7 +34,7 @@ bool checkShader(GLuint shader)
 	{
 	    glGetShaderInfoLog(shader, len, NULL, log);
 
-	    std::cerr << "OpenGL Shader Log:" << std::endl << log;
+	    //std::cerr << "OpenGL Shader Log:" << std::endl << log;
 	    free(log);
 	}
     }
@@ -172,9 +173,9 @@ bool createShader(std::string file, GLenum shaderType, GLuint & shader)
 
     delete[] fileBuffer;
 
-    std::cerr << "Shader: " << file << std::endl;
+    //std::cerr << "Shader: " << file << std::endl;
 
-    return checkShader(shader);
+    return checkShader(shader,file);
 }
 
 bool createShaderFromSrc(std::string & source, GLenum shaderType, GLuint & shader, std::string name)
@@ -184,9 +185,9 @@ bool createShaderFromSrc(std::string & source, GLenum shaderType, GLuint & shade
     glShaderSource(shader, 1, (const GLchar **) &srcPtr, NULL);
     glCompileShader(shader);
     
-    std::cerr << "Shader: " << name << std::endl;
+    //std::cerr << "Shader: " << name << std::endl;
 
-    return checkShader(shader);
+    return checkShader(shader,name);
 }
 
 bool createProgram(GLuint & program, GLuint vertexShader, GLuint fragShader, GLuint geometryShader, GLenum inputType, GLenum outputType, int vertOut)

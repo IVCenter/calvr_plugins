@@ -39,6 +39,7 @@ FlowPagedRenderer::FlowPagedRenderer(PagedDataSet * set, int frame, FlowVisType 
 
 FlowPagedRenderer::~FlowPagedRenderer()
 {
+    delete _cache;
 }
 
 void FlowPagedRenderer::frameStart(int context)
@@ -486,6 +487,17 @@ bool FlowPagedRenderer::getUniData(std::string key, struct UniData & data)
 	return true;
     }
     return false;
+}
+
+void FlowPagedRenderer::freeResources(int context)
+{
+    _cache->update(context);
+    _cache->freeResources(context);
+}
+
+bool FlowPagedRenderer::freeDone()
+{
+    return _cache->freeDone();
 }
 
 // create all uniform data here, so it doesn't need to be checked for every time

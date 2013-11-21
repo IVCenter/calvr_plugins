@@ -32,6 +32,8 @@
 
 using namespace cvr;
 
+std::list<FlowPagedRenderer*> FlowVis::_deleteList;
+
 CVRPLUGIN(FlowVis)
 
 FlowVis::FlowVis()
@@ -45,6 +47,17 @@ FlowVis::FlowVis()
 
 FlowVis::~FlowVis()
 {
+    CVRViewer::instance()->removePerContextFrameStartCallback(this);
+
+    if(_loadedPagedObject)
+    {
+	delete _loadedPagedObject;
+    }
+
+    for(std::list<FlowPagedRenderer*>::iterator it = _deleteList.begin(); it != _deleteList.end(); ++it)
+    {
+	delete (*it);
+    }
 }
 
 bool FlowVis::init()
@@ -76,6 +89,8 @@ bool FlowVis::init()
     _removeButton->setCallback(this);
     _flowMenu->addItem(_removeButton);
 
+    CVRViewer::instance()->addPerContextFrameStartCallback(this);
+
     return true;
 }
 
@@ -100,6 +115,19 @@ void FlowVis::postFrame()
     if(_loadedPagedObject)
     {
 	_loadedPagedObject->postFrame();
+    }
+
+    for(std::list<FlowPagedRenderer*>::iterator it = _deleteList.begin(); it != _deleteList.end();)
+    {
+	if((*it)->freeDone())
+	{
+	    delete (*it);
+	    it = _deleteList.erase(it);
+	}
+	else
+	{
+	    it++;
+	}
     }
 }
 
@@ -267,6 +295,19 @@ void FlowVis::menuCallback(MenuItem * item)
 	    return;
 	}
     }
+}
+
+void FlowVis::perContextCallback(int contextid, PerContextCallback::PCCType type) const
+{
+    for(std::list<FlowPagedRenderer*>::iterator it = _deleteList.begin(); it != _deleteList.end(); ++it)
+    {
+	(*it)->freeResources(contextid);
+    }
+}
+
+void FlowVis::deleteRenderer(FlowPagedRenderer* renderer)
+{
+    _deleteList.push_back(renderer);
 }
 
 FlowDataSet * FlowVis::parseVTK(std::string filePath, int start, int frames)

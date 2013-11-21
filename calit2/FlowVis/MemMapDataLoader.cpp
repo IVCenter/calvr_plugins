@@ -59,6 +59,12 @@ MemMapDataLoader::~MemMapDataLoader()
     {
 	pthread_join(_threadList[i],NULL);
     }
+
+    for(std::map<int,MappedFileInfo>::iterator it = _mMap.begin(); it != _mMap.end(); ++it)
+    {
+	munmap(it->second.ptr,it->second.fileSize);
+	close(it->second.fd);
+    }
 }
 
 void MemMapDataLoader::init(std::map<int,std::list<BufferJob*> > * fetchQueue, std::map<int,std::list<BufferJob*> > * vboQueue, pthread_mutex_t * queueLock)

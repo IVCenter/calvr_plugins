@@ -46,6 +46,9 @@ class FlowPagedRenderer
         void setUniData(std::string key, struct UniData & data);
         bool getUniData(std::string key, struct UniData & data);
 
+        void freeResources(int context);
+        bool freeDone();
+
     protected:
         void initUniData();
 

@@ -10,6 +10,9 @@ struct BufferJob;
 class DataLoader
 {
     public:
+        virtual ~DataLoader()
+        {
+        }
         virtual void init(std::map<int,std::list<BufferJob*> > * fetchQueue, std::map<int,std::list<BufferJob*> > * vboQueue, pthread_mutex_t * queueLock) = 0;
 };
 

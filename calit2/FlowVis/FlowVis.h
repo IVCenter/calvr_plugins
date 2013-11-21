@@ -2,6 +2,7 @@
 #define FLOW_VIS_PLUGIN_H
 
 #include <cvrKernel/CVRPlugin.h>
+#include <cvrKernel/CVRViewer.h>
 #include <cvrKernel/SceneObject.h>
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuButton.h>
@@ -137,8 +138,9 @@ struct PagedDataSet
 
 class FlowObject;
 class PagedFlowObject;
+class FlowPagedRenderer;
 
-class FlowVis : public cvr::CVRPlugin, public cvr::MenuCallback
+class FlowVis : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::PerContextCallback
 {
     public:
         FlowVis();
@@ -148,6 +150,10 @@ class FlowVis : public cvr::CVRPlugin, public cvr::MenuCallback
         void preFrame();
         void postFrame();
         void menuCallback(cvr::MenuItem * item);
+
+        virtual void perContextCallback(int contextid, PerContextCallback::PCCType type) const;
+
+        static void deleteRenderer(FlowPagedRenderer* renderer);
 
     protected:
         FlowDataSet * parseVTK(std::string filePath, int start, int frames);
@@ -169,6 +175,8 @@ class FlowVis : public cvr::CVRPlugin, public cvr::MenuCallback
         FlowObject * _loadedObject;
         PagedDataSet * _loadedPagedSet;
         PagedFlowObject * _loadedPagedObject;
+
+        static std::list<FlowPagedRenderer*> _deleteList;
 };
 
 struct SetBoundsCallback : public osg::Drawable::ComputeBoundingBoxCallback

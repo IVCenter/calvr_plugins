@@ -150,6 +150,8 @@ VBOCache::~VBOCache()
     {
 	pthread_join(_threadList[i],NULL);
     }
+
+    delete _dataLoader;
 }
 
 unsigned int VBOCache::getOrRequestBuffer(int context, int file, int offset, int size, unsigned int bufferType)
@@ -265,6 +267,72 @@ void VBOCache::update(int context)
 void VBOCache::advanceTime()
 {
     _currentTimestamp++;
+}
+
+void VBOCache::freeResources(int context)
+{
+    pthread_mutex_lock(&_queueLock);
+
+    for(std::map<int,std::list<BufferInfo*> >::iterator fileIt = _loadedBuffers[context].begin(); fileIt != _loadedBuffers[context].end(); ++fileIt)
+    {
+	for(std::list<BufferInfo*>::iterator it = fileIt->second.begin(); it != fileIt->second.end();)
+	{
+	    glDeleteBuffers(1,&(*it)->vbo);
+	    it = fileIt->second.erase(it);
+	}
+    }
+
+    pthread_mutex_unlock(&_queueLock);
+}
+
+bool VBOCache::freeDone()
+{
+    bool done = true;
+
+    pthread_mutex_lock(&_queueLock);
+
+    for(std::map<int,std::list<BufferJob*> >::iterator it = _fetchDataQueue.begin(); it != _fetchDataQueue.end(); ++it)
+    {
+	if(it->second.size())
+	{
+	    done = false;
+	    break;
+	}
+    }
+
+    for(std::map<int,std::list<BufferJob*> >::iterator it = _loadVBOQueue.begin(); it != _loadVBOQueue.end(); ++it)
+    {
+	if(it->second.size())
+	{
+	    done = false;
+	    break;
+	}
+    }
+
+    for(std::map<int,std::list<BufferJob*> >::iterator it = _doneQueue.begin(); it != _doneQueue.end(); ++it)
+    {
+	if(it->second.size())
+	{
+	    done = false;
+	    break;
+	}
+    }
+
+    for(std::map<int,std::map<int,std::list<BufferInfo*> > >::iterator it = _loadedBuffers.begin(); it != _loadedBuffers.end(); ++it)
+    {
+	for(std::map<int,std::list<BufferInfo*> >::iterator it2 = it->second.begin(); it2 != it->second.end(); ++it2)
+	{
+	    if(it2->second.size())
+	    {
+		done = false;
+		break;
+	    }
+	}
+    }
+
+    pthread_mutex_unlock(&_queueLock);
+
+    return done;
 }
 
 void VBOCache::getOrCreateBuffer(BufferJob * job)

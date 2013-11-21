@@ -53,6 +53,9 @@ class VBOCache
         void update(int context);
         void advanceTime();
 
+        void freeResources(int context);
+        bool freeDone();
+
     protected:
         void getOrCreateBuffer(BufferJob * job);
 
