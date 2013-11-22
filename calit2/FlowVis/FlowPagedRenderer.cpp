@@ -345,14 +345,13 @@ void FlowPagedRenderer::draw(int context)
 		color[1] = 1.0;
 		color[2] = 1.0;
 		color[3] = 1.0;
-		//std::cerr << "drawn" << std::endl;
 		glEnable(GL_CULL_FACE);
 		drawElements(GL_TRIANGLES,_set->frameList[_currentFrame]->surfaceInd.first,GL_UNSIGNED_INT,surfVBO,vertsVBO,color,surfAttribBinding,surfProg,surfTexBinding,surfUniBinding);
 		glDisable(GL_CULL_FACE);
 	    }
 	    else
 	    {
-		//std::cerr << "not drawn" << std::endl;
+		//std::cerr << "not drawn surfind: " << surfVBO << " vert: " << vertsVBO << " attrib: " << attribVBO << std::endl;
 	    }
 
 	    if(drawMesh && attribVBO && indVBO)
@@ -372,15 +371,27 @@ void FlowPagedRenderer::draw(int context)
 		fullibuf = _cache->getOrRequestBuffer(context,nextfileID,_set->frameList[_nextFrame]->indices.second,_set->frameList[_nextFrame]->indices.first*sizeof(unsigned int),GL_ELEMENT_ARRAY_BUFFER);
 		ibuf = _cache->getOrRequestBuffer(context,nextfileID,_set->frameList[_nextFrame]->surfaceInd.second,_set->frameList[_nextFrame]->surfaceInd.first*sizeof(unsigned int),GL_ELEMENT_ARRAY_BUFFER);
 		vbuf = _cache->getOrRequestBuffer(context,nextfileID,_set->frameList[_nextFrame]->verts.second,_set->frameList[_nextFrame]->verts.first*3*sizeof(float),GL_ARRAY_BUFFER);
-		if(attrib)
+
+		PagedDataAttrib * nextattrib = NULL;
+		for(int i = 0; i < _set->frameList[_nextFrame]->pointData.size(); ++i)
 		{
-		    abuf = _cache->getOrRequestBuffer(context,nextfileID,attrib->offset,_set->frameList[_nextFrame]->verts.first*unitsize,GL_ARRAY_BUFFER);
+		    if(_set->frameList[_nextFrame]->pointData[i]->name == _attribute)
+		    {
+			nextattrib = _set->frameList[_nextFrame]->pointData[i];
+			break;
+		    }
+		}
+
+		if(nextattrib)
+		{
+		    abuf = _cache->getOrRequestBuffer(context,nextfileID,nextattrib->offset,_set->frameList[_nextFrame]->verts.first*unitsize,GL_ARRAY_BUFFER);
 		}
 
 
 		pthread_mutex_lock(&_frameReadyLock);
 		if(fullibuf && ibuf && vbuf && (!attrib || abuf))
 		{
+		    //std::cerr << "next frame ready. surf: " << ibuf << " vert: " << vbuf << " attrib: " << abuf << std::endl;
 		    _nextFrameReady[context] = true;
 		}
 		else
