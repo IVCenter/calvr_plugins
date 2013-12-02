@@ -14,6 +14,8 @@
 enum UniType
 {
     UNI_FLOAT,
+    UNI_FLOAT3,
+    UNI_MAT3,
     UNI_INT,
     UNI_UINT
 };
@@ -84,6 +86,8 @@ class FlowPagedRenderer
 
         void drawElements(GLenum mode, GLsizei count, GLenum type, GLuint indVBO, GLuint vertsVBO, std::vector<float> & color, std::vector<AttribBinding> & attribBinding, GLuint program, std::vector<TextureBinding> & textureBinding, std::vector<UniformBinding> & uniBinding);
 
+        void drawArrays(GLenum mode, GLint first, GLsizei count, GLuint vertsVBO, std::vector<float> & color, std::vector<AttribBinding> & attribBinding, GLuint program, std::vector<TextureBinding> & textureBinding, std::vector<UniformBinding> & uniBinding);
+
         PagedDataSet * _set;
         int _currentFrame, _nextFrame;
         std::map<int,bool> _nextFrameReady;
@@ -119,6 +123,33 @@ class FlowPagedRenderer
 
         std::map<int,GLuint> _isoVecProgram;
         std::map<int,GLint> _isoVecMaxUni;
+
+        std::map<int,GLuint> _planeFloatProgram;
+        std::map<int,GLint> _planeFloatMinUni;
+        std::map<int,GLint> _planeFloatMaxUni;
+        std::map<int,GLint> _planeFloatPointUni;
+        std::map<int,GLint> _planeFloatNormalUni;
+        std::map<int,GLint> _planeFloatAlphaUni;
+
+        std::map<int,GLuint> _planeVecProgram;
+        std::map<int,GLint> _planeVecMinUni;
+        std::map<int,GLint> _planeVecMaxUni;
+        std::map<int,GLint> _planeVecPointUni;
+        std::map<int,GLint> _planeVecNormalUni;
+        std::map<int,GLint> _planeVecAlphaUni;
+
+        std::map<int,GLuint> _vecPlaneProgram;
+        std::map<int,GLint> _vecPlaneMinUni;
+        std::map<int,GLint> _vecPlaneMaxUni;
+        std::map<int,GLint> _vecPlanePointUni;
+        std::map<int,GLint> _vecPlaneNormalUni;
+        std::map<int,GLint> _vecPlaneUpUni;
+        std::map<int,GLint> _vecPlaneRightUni;
+        std::map<int,GLint> _vecPlaneBasisInvUni;
+
+        std::map<int,GLuint> _vortexAlphaProgram;
+        std::map<int,GLint> _vortexAlphaMinUni;
+        std::map<int,GLint> _vortexAlphaMaxUni;
 
         static std::map<int,GLuint> _colorTableMap;
         static pthread_mutex_t _colorTableInitLock;

@@ -101,6 +101,111 @@ void PagedFlowObject::preFrame()
 	}
     }
 
+    switch(_lastType)
+    {
+	case FVT_PLANE:
+	{
+	    osg::Vec3 point(0,1500,0), normal, origin;
+	    point = point * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
+	    origin = origin * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
+	    normal = origin - point;
+	    normal.normalize();
+
+	    UniData pUni, nUni;
+	    _renderer->getUniData("planePoint",pUni);
+	    _renderer->getUniData("planeNormal",nUni);
+
+	    ((float*)pUni.data)[0] = point.x();
+	    ((float*)pUni.data)[1] = point.y();
+	    ((float*)pUni.data)[2] = point.z();
+
+	    ((float*)nUni.data)[0] = normal.x();
+	    ((float*)nUni.data)[1] = normal.y();
+	    ((float*)nUni.data)[2] = normal.z();
+	    break;
+	}
+	case FVT_PLANE_VEC:
+	{
+	    osg::Vec3 point(0,1500,0), normal, origin, right(1,1500,0), up(0,1500,1);
+	    point = point * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
+	    origin = origin * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
+	    right = right * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
+	    up = up * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
+	    normal = origin - point;
+	    normal.normalize();
+
+	    right = right - point;
+	    right.normalize();
+	    right = right * _planeVecSpacingRV->getValue();
+
+	    up = up - point;
+	    up.normalize();
+	    up = up * _planeVecSpacingRV->getValue();
+
+	    osg::Matrixf matf;
+	    matf(0,0) = up.x();
+	    matf(0,1) = up.y();
+	    matf(0,2) = up.z();
+	    matf(0,3) = 0;
+	    matf(1,0) = right.x();
+	    matf(1,1) = right.y();
+	    matf(1,2) = right.z();
+	    matf(1,3) = 0;
+	    matf(2,0) = 0;
+	    matf(2,1) = 0;
+	    matf(2,2) = 1;
+	    matf(2,3) = 0;
+	    matf(3,0) = 0;
+	    matf(3,1) = 0;
+	    matf(3,2) = 0;
+	    matf(3,3) = 1;
+
+	    matf = osg::Matrixf::inverse(matf);
+
+	    osg::Matrix3 m;
+	    for(int i = 0; i < 3; ++i)
+	    {
+		for(int j = 0; j < 3; ++j)
+		{
+		    m(i,j) = matf(i,j);
+		}
+	    }
+
+	    UniData ud;
+	    _renderer->getUniData("planePoint",ud);
+	    ((float*)ud.data)[0] = point.x();
+	    ((float*)ud.data)[1] = point.y();
+	    ((float*)ud.data)[2] = point.z();
+
+	    _renderer->getUniData("planeNormal",ud);
+	    ((float*)ud.data)[0] = normal.x();
+	    ((float*)ud.data)[1] = normal.y();
+	    ((float*)ud.data)[2] = normal.z();
+	    
+	    _renderer->getUniData("planeUp",ud);
+	    ((float*)ud.data)[0] = up.x();
+	    ((float*)ud.data)[1] = up.y();
+	    ((float*)ud.data)[2] = up.z();
+
+	    _renderer->getUniData("planeRight",ud);
+	    ((float*)ud.data)[0] = right.x();
+	    ((float*)ud.data)[1] = right.y();
+	    ((float*)ud.data)[2] = right.z();
+
+	    _renderer->getUniData("planeBasisInv",ud);
+	    memcpy(ud.data,m.ptr(),9*sizeof(float));
+
+	    //_planePointUni->set(point);
+	    //_planeNormalUni->set(normal);
+	    //_planeUpUni->set(up);
+	    //_planeRightUni->set(right);
+	    //_planeBasisInvUni->set(m);
+	    break;
+	}
+	default:
+	    break;
+    }
+
     _renderer->preFrame();
 }
 
@@ -131,6 +236,16 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 		}
 		break;
 	    }
+	    case FVT_PLANE:
+	    {
+		removeMenuItem(_alphaRV);
+		break;
+	    }
+	    case FVT_PLANE_VEC:
+	    {
+		removeMenuItem(_planeVecSpacingRV);
+		break;
+	    }
 	    default:
 		break;
 	}
@@ -143,6 +258,44 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 	    case FVT_ISO_SURFACE:
 	    {
 		// setup iso max menu item
+		_lastAttribute = "None";
+		menuCallback(_loadedAttribList);
+		break;
+	    }
+	    case FVT_PLANE:
+	    {
+		addMenuItem(_alphaRV);
+
+		UniData aUni;
+
+		_renderer->getUniData("alpha",aUni);
+		*((float*)aUni.data) = _alphaRV->getValue();
+
+		_lastAttribute = "None";
+		menuCallback(_loadedAttribList);
+		break;
+	    }
+	    case FVT_PLANE_VEC:
+	    {
+		addMenuItem(_planeVecSpacingRV);
+
+		_lastAttribute = "None";
+		menuCallback(_loadedAttribList);
+		break;
+	    }
+	    case FVT_VORTEX_CORES:
+	    {
+		std::map<std::string,std::pair<float,float> >::iterator it = _set->attribRanges.find("Vortex Cores");
+		if(it != _set->attribRanges.end())
+		{
+		    UniData vmin,vmax;
+		    _renderer->getUniData("vmin",vmin);
+		    _renderer->getUniData("vmax",vmax);
+
+		    *((float*)vmin.data) = it->second.first;
+		    *((float*)vmax.data) = it->second.second;
+		}
+
 		_lastAttribute = "None";
 		menuCallback(_loadedAttribList);
 		break;
@@ -187,6 +340,10 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 	    switch(_lastType)
 	    {
 		case FVT_NONE:
+		case FVT_PLANE:
+		case FVT_PLANE_VEC:
+		case FVT_VORTEX_CORES:
+		case FVT_SEP_ATT_LINES:
 		{
 		    if(_lastAttribute != "None")
 		    {
@@ -252,6 +409,13 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 	UniData max;
 	_renderer->getUniData("isoMax",max);
 	*((float*)max.data) = _isoMaxRV->getValue();
+    }
+
+    if(item == _alphaRV)
+    {
+	UniData aUni;
+	_renderer->getUniData("alpha",aUni);
+	*((float*)aUni.data) = _alphaRV->getValue();
     }
 
     if(item == _animateCB)
