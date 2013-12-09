@@ -91,7 +91,7 @@ bool Points::loadFile(std::string filename)
 	    if(_locInit.find(name) != _locInit.end())
 	    {
     	    currentobject->pointScale = new osg::Uniform("pointScale", _locInit[name].first);
-            MenuRangeValue * mrv = new MenuRangeValue("Point Scale", 0.0, 0.5, _locInit[name].first);
+            MenuRangeValue * mrv = new MenuRangeValue("Point Scale", 0.0, 20.0, _locInit[name].first);
     	    mrv->setCallback(this);
             so->addMenuItem(mrv);
             _sliderMap[currentobject] = mrv;
@@ -107,7 +107,7 @@ bool Points::loadFile(std::string filename)
         else
         { 
             currentobject->pointScale = new osg::Uniform("pointScale", initialPointScale);
-            MenuRangeValue * mrv = new MenuRangeValue("Point Scale", 0.0, 0.5, initialPointScale);
+            MenuRangeValue * mrv = new MenuRangeValue("Point Scale", 0.0, 20.0, initialPointScale);
             mrv->setCallback(this);
             so->addMenuItem(mrv);
             _sliderMap[currentobject] = mrv;

@@ -19,7 +19,8 @@ main(void)
     	gl_FrontColor = gl_FrontColorIn[0];
     	gl_FrontColor.a = globalAlpha;
 
-    	vertex_light_position = normalize(gl_LightSource[0].position.xyz);
+    	//vertex_light_position = normalize(gl_LightSource[0].position.xyz);
+    	vertex_light_position = vec3(0, 0, 1)
     	eye_position = gl_PositionIn[0];
 
     	gl_TexCoord[0].st = vec2(-1.0,-1.0);
