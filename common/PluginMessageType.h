@@ -176,6 +176,7 @@ enum LayoutManagerMessageType
 enum VideoMessageType
 {
     VIDEO_LOAD,
+    VIDEO_STREAM,
     VIDEO_STOP
 };
 
@@ -206,6 +207,8 @@ struct VideoMessageData
     VideoMessageType why;
     std::string path;   
     VideoSceneObject* obj;
+    int width, height;
+    unsigned int gid;
 };
 
 #endif

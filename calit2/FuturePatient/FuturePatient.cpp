@@ -185,13 +185,21 @@ bool FuturePatient::init()
     _sMicrobes->setSensitivity(1.0);
     _sMicrobes->setScrollingHint(MenuList::CONTINUOUS);
 
-    _sMicrobeRankOrder = new MenuCheckbox("Rank Order",false);
+    _sMicrobeRankOrder = new MenuCheckbox("Rank Order",true);
     _sMicrobeRankOrder->setCallback(this);
     _sMicrobeMenu->addItem(_sMicrobeRankOrder);
 
     _sMicrobeLabels = new MenuCheckbox("Labels",true);
     _sMicrobeLabels->setCallback(this);
     _sMicrobeMenu->addItem(_sMicrobeLabels);
+
+    _sMicrobeFirstTimeOnly = new MenuCheckbox("First Time Only",false);
+    _sMicrobeFirstTimeOnly->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobeFirstTimeOnly);
+
+    _sMicrobeGroupPatients = new MenuCheckbox("Group Patients",false);
+    _sMicrobeGroupPatients->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobeGroupPatients);
 
     _sMicrobeLoad = new MenuButton("Load");
     _sMicrobeLoad->setCallback(this);
@@ -1524,7 +1532,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	}
 
 	SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	if(smo->setGraph(_sMicrobes->getValue(),taxid,tablesuffix,_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue()))
+	if(smo->setGraph(_sMicrobes->getValue(),taxid,tablesuffix,_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
 	{
 	    checkLayout();
 	    _layoutObject->addGraphObject(smo);
@@ -2454,7 +2462,7 @@ void FuturePatient::loadPhenotype()
     for(int i = 0; i < displayList.size() && i < 20; ++i)
     {
 	SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	if(smo->setGraph(displayList[i].first->name,displayList[i].first->taxid,suffix,_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue()))
+	if(smo->setGraph(displayList[i].first->name,displayList[i].first->taxid,suffix,_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
 	{
 	    checkLayout();
 	    _layoutObject->addGraphObject(smo);

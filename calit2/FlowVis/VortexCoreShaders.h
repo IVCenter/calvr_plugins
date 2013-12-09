@@ -15,7 +15,7 @@ std::string vcoreAlphaVertSrc =
 "{ \n"
 "    gl_Position = ftransform(); \n"
 "    gl_FrontColor = gl_Color; \n"
-"    gl_FrontColor.a = clamp((0.8 * (value-min) / (max-min) + 0.2),0.0,1.0); \n"
+"    gl_FrontColor.a = clamp((0.6 * (value-min) / (max-min) + 0.4),0.0,1.0); \n"
 "} \n";
 
 #endif

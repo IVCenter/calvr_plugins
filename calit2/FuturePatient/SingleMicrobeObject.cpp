@@ -36,7 +36,7 @@ bool rankOrderSort(const std::pair<std::string, float> & first, const std::pair<
     return first.second > second.second;
 }
 
-bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string tableSuffix, bool rankOrder, bool labels)
+bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string tableSuffix, bool rankOrder, bool labels, bool firstOnly, bool groupPatients)
 {
     std::string measurementTable = "Microbe_Measurement";
     measurementTable += tableSuffix;
@@ -55,6 +55,8 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string t
     std::stringstream queryss;
 
     queryss << "select Patient.last_name, Patient.p_condition, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where " << measurementTable << ".taxonomy_id = " << taxid << " order by p_condition, last_name, timestamp;";
+
+    std::cerr << "Query: " << queryss.str() << std::endl;
 
     struct microbeData * data = NULL;
     int dataSize = 0;
@@ -107,7 +109,7 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string t
     for(int i = 0; i < dataSize; ++i)
     {
 	std::string condition = data[i].condition;
-	if(condition == "CD" || condition == "healthy" || condition == "Larry" || condition == "ulcerous colitis")
+	if(condition == "CD" || condition == "healthy" || condition == "Larry" || condition == "UC")
 	{
 	    //if(data[i].value > 0.0)
 	    {
@@ -120,22 +122,45 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string t
 		std::string name = data[i].name;
 		name = name + " - " + timestamp;
 
-		/*if(condition == "CD")
+		if(groupPatients || firstOnly)
 		{
-		    if(_cdCountMap.find(data[i].name) == _cdCountMap.end())
+		    if(condition == "CD")
 		    {
-			_cdCountMap[data[i].name] = true;
-		    }
+			if(_cdCountMap.find(data[i].name) == _cdCountMap.end())
+			{
+			    _cdCountMap[data[i].name] = true;
+			}
 
-		    std::stringstream groupss;
-		    groupss << "Crohns - " << _cdCountMap.size();
-		    group = groupss.str();
-		}*/
-		if(condition == "CD")
-		{
-		    group = "Crohns";
+			std::stringstream groupss;
+			groupss << "Crohns - " << _cdCountMap.size();
+			group = groupss.str();
+		    }
+		    else if(condition == "UC")
+		    {
+			if(_ucCountMap.find(data[i].name) == _ucCountMap.end())
+			{
+			    _ucCountMap[data[i].name] = true;
+			}
+
+			std::stringstream groupss;
+			groupss << "UC - " << _ucCountMap.size();
+			group = groupss.str();
+		    }
 		}
-		else if(condition == "healthy")
+		else
+		{
+		    if(condition == "CD")
+		    {
+			group = "Crohns";
+		    }
+		    else if(condition == "UC")
+		    {
+			std::cerr << "Got UC" << std::endl;
+			group = "UC";
+		    }
+		}
+
+		if(condition == "healthy")
 		{
 		    group = "Healthy";
 		}
@@ -143,28 +168,48 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string t
 		{
 		    group = "Smarr";
 		}
-		else if(condition == "ulcerous colitis")
+		
+		if(!groupPatients || group != "Healthy")
 		{
-		    group = "UC";
+		    if(!firstOnly || group == "Healthy" || !dataMap[group].size())
+		    {
+			dataMap[group].push_back(std::pair<std::string,float>(name,data[i].value));
+		    }
 		}
-
-		dataMap[group].push_back(std::pair<std::string,float>(name,data[i].value));
 	    }
 	}
     }
 
     orderList.push_back("Smarr");
-    orderList.push_back("Crohns");
-    /*for(int i = 0; i < _cdCountMap.size(); ++i)
-    {
-	std::stringstream cdss;
-	cdss << "Crohns - " << (i+1);
-	colorMap[cdss.str()] = colorMap["Crohns"];
-	orderList.push_back(cdss.str());
-    }*/
 
-    orderList.push_back("UC");
-    orderList.push_back("Healthy");
+    if(firstOnly || groupPatients)
+    {
+	for(int i = 0; i < _cdCountMap.size(); ++i)
+	{
+	    std::stringstream cdss;
+	    cdss << "Crohns - " << (i+1);
+	    colorMap[cdss.str()] = colorMap["Crohns"];
+	    orderList.push_back(cdss.str());
+	}
+	for(int i = 0; i < _ucCountMap.size(); ++i)
+	{
+	    std::stringstream ucss;
+	    ucss << "UC - " << (i+1);
+	    colorMap[ucss.str()] = colorMap["UC"];
+	    orderList.push_back(ucss.str());
+	}
+    }
+    else
+    {
+	orderList.push_back("Crohns");
+	orderList.push_back("UC");
+    }
+
+
+    if(!groupPatients)
+    {
+	orderList.push_back("Healthy");
+    }
 
     _graph->setColorMapping(GraphGlobals::getDefaultPhylumColor(),colorMap);
     _graph->setColorMode(BGCM_GROUP);
