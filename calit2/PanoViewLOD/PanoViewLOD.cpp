@@ -269,6 +269,24 @@ void PanoViewLOD::message(int type, char *&data, bool collaborative)
 	    _panObject->setAlpha(alpha);
 	}
     }
+    
+    if(type == PAN_SET_ROTATE)
+    {
+	float rotate = *((float*)data);
+
+	if(_panObject)
+	{
+	    _panObject->setRotate(rotate);
+	}
+    }
+
+    if(type == PAN_NEXT)
+    {
+        if(_panObject)
+        {
+            _panObject->next();
+        }
+    }
 
     if(type == PAN_UNLOAD)
     {

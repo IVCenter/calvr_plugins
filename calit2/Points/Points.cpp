@@ -91,7 +91,7 @@ bool Points::loadFile(std::string filename)
 	    if(_locInit.find(name) != _locInit.end())
 	    {
     	    currentobject->pointScale = new osg::Uniform("pointScale", _locInit[name].first);
-            MenuRangeValue * mrv = new MenuRangeValue("Point Scale", 0.0, 0.5, _locInit[name].first);
+            MenuRangeValue * mrv = new MenuRangeValue("Point Scale", 0.0, 20.0, _locInit[name].first);
     	    mrv->setCallback(this);
             so->addMenuItem(mrv);
             _sliderMap[currentobject] = mrv;
@@ -107,7 +107,7 @@ bool Points::loadFile(std::string filename)
         else
         { 
             currentobject->pointScale = new osg::Uniform("pointScale", initialPointScale);
-            MenuRangeValue * mrv = new MenuRangeValue("Point Scale", 0.0, 0.5, initialPointScale);
+            MenuRangeValue * mrv = new MenuRangeValue("Point Scale", 0.0, 20.0, initialPointScale);
             mrv->setCallback(this);
             so->addMenuItem(mrv);
             _sliderMap[currentobject] = mrv;
@@ -254,7 +254,10 @@ bool Points::isFile(const char* filename)
 
 void Points::removeAll()
 {
-    for(std::vector<struct PointObject*>::iterator delit = _loadedPoints.begin(); delit != _loadedPoints.end(); delit++)
+    std::cerr << "Remove all called\n";
+
+    std::vector<struct PointObject*>::iterator delit = _loadedPoints.begin();
+    while( delit != _loadedPoints.end() )
     {
         //(*delit)->scene->detachFromScene();
 
@@ -286,7 +289,9 @@ void Points::removeAll()
             delete (*delit)->scene;
 
         _loadedPoints.erase(delit);
-        break;
+
+        delit = _loadedPoints.begin();
+        //break;
     }
 }
 
@@ -393,6 +398,12 @@ void Points::menuCallback(MenuItem* menuItem)
 
             std::cout << "Save." << std::endl;
         }
+    }
+
+    // check for removeAll
+    if( menuItem == _removeButton )
+    {
+        removeAll();
     }
 
 }

@@ -72,6 +72,8 @@ enum PanoViewLODMessageType
     PAN_LOAD_REQUEST=0,
     PAN_HEIGHT_REQUEST,
     PAN_SET_ALPHA,
+    PAN_SET_ROTATE,
+    PAN_NEXT,
     PAN_UNLOAD
 };
 
@@ -211,6 +213,22 @@ struct VideoMessageData
     int width, height;
     unsigned int gid;
 };
+
+enum BerkeleyMessageType
+{
+    BERK_USER=0,
+    BERK_NO_USER,
+    BERK_NAV
+};
+
+struct BerkeleyRequest
+{
+   int user;
+   float rx;
+   float ry;
+   float my;
+};
+
 
 #endif
 
