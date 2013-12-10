@@ -41,7 +41,7 @@ ADD_LIBRARY(${LIB_NAME}
     KinectInteractions.cpp
     helmparms3d/helmparms3d.cpp
     helmparms3d/svdm.cpp
-   # SkeletonManager.cpp
+    SkeletonManager.cpp
 )
 
 SET(CMAKE_BUILD_TYPE Release)

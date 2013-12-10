@@ -68,6 +68,7 @@ class PointCloudObject : public cvr::SceneObject
 	osg::Vec3 _posOrig;
 	osg::Quat _rotOrig;
 	float _scaleFloatOrig;
+        PointsLoadInfo pli;
 
     protected:
         void updateZoom(osg::Matrix & mat);

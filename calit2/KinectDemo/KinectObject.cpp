@@ -14,12 +14,9 @@ KinectObject::KinectObject(std::string name, std::string cloud_server, std::stri
     _kinectFOV_on = false;
     switchNode = new osg::Switch();
     addChild(switchNode);
-    _navigatable = true;//false;
+    _navigatable = true;
     setNavigationOn(_navigatable);
     setMovable(false);
-    //   kinectX = ConfigManager::getFloat("x", "Plugin.KinectDemo.KinectSkeleton", 0.0f);
-    //   kinectY = ConfigManager::getFloat("y", "Plugin.KinectDemo.KinectSkeleton", 0.0f);
-    //   kinectZ = ConfigManager::getFloat("z", "Plugin.KinectDemo.KinectSkeleton", 0.0f);
     kinectX = position.x();
     kinectY = position.y();
     kinectZ = position.z();
@@ -31,11 +28,13 @@ KinectObject::KinectObject(std::string name, std::string cloud_server, std::stri
     //Setup Cloud
     cloudInit();
     skeletonOn();
-    if(ConfigManager::getBool("Plugin.KinectDemo.ShowKinectFOV"))
+
+    if (ConfigManager::getBool("Plugin.KinectDemo.ShowKinectFOV"))
     {
-    _kinectFOV_on = true;
-    showKinectFOV();
+        _kinectFOV_on = true;
+        showKinectFOV();
     }
+
     setupMenus();
 
     //Setup Skeleton
@@ -65,17 +64,13 @@ KinectObject::KinectObject(std::string name, std::string cloud_server, std::stri
         rotMat.makeRotate(rot);
         rotate->setMatrix(rotMat);
         rotate->addChild(modelScaleTrans);
-        // MatrixTransform* translate = new osg::MatrixTransform();
-        // osg::Matrixd tmat;
-        // Vec3 pos = Vec3(kinectX, kinectY, kinectZ);
-        // tmat.makeTranslate(pos);
-        // translate->setMatrix(tmat);
-        // translate->addChild(rotate);
-        // switchNode->addChild(translate);
         switchNode->addChild(rotate);
     }
 
     cm = new CloudManager(cloudServer);
+    //sm = new SkeletonManager(skeletonServer);
+    //sm->start();
+    //switchNode->addChild(sm->switchNode);
     _cameraOn = _depthOn = false;
 }
 
@@ -85,43 +80,44 @@ void KinectObject::setupMenus()
     addNavigationMenuItem();
     loadTransformMenu();
 
-    if(cvr::ConfigManager::getBool("Plugin.KinectDemo.TransformsAtStartup"))
+    if (cvr::ConfigManager::getBool("Plugin.KinectDemo.TransformsAtStartup"))
     {
-       for(int i=0; i < transform_path->size(); i++)
-       {
-         std::string name2 = transform_path->at(i);
-         name2.erase(0,name2.length()-5);
-         name2.erase(1,name2.length());
-         if(name2 == _kinectName)
-         {
-           transformFromFile(transform_path->at(i));
-           cerr << "Transformed: " << name2 << "\n";
-	   break;
-	 }
-       }
+        for (int i = 0; i < transform_path->size(); i++)
+        {
+            std::string name2 = transform_path->at(i);
+            name2.erase(0, name2.length() - 5);
+            name2.erase(1, name2.length());
+
+            if (name2 == _kinectName)
+            {
+                transformFromFile(transform_path->at(i));
+                cerr << "Transformed: " << name2 << "\n";
+                break;
+            }
+        }
     }
 
     SubMenu* usersMenu = new SubMenu("Users Menu");
     addMenuItem(usersMenu);
-    for(int n=0; n < max_users; n++)
+
+    for (int n = 0; n < max_users; n++)
     {
-     stringstream ss;
-     ss << "User " <<  n;
-     std::string userNum = ss.str();
-     cvr::MenuCheckbox* toggleUsers = new MenuCheckbox(userNum, true);
-    toggleUsers->setCallback(this);
-    usersMenu->addItem(toggleUsers);
-    _toggleUsersArray.push_back(toggleUsers);
+        stringstream ss;
+        ss << "User " <<  n;
+        std::string userNum = ss.str();
+        cvr::MenuCheckbox* toggleUsers = new MenuCheckbox(userNum, true);
+        toggleUsers->setCallback(this);
+        usersMenu->addItem(toggleUsers);
+        _toggleUsersArray.push_back(toggleUsers);
     }
 
-    _toggleKinectFOV = new MenuCheckbox("Kinect FOV",_kinectFOV_on);
+    _toggleKinectFOV = new MenuCheckbox("Kinect FOV", _kinectFOV_on);
     _toggleKinectFOV->setCallback(this);
     addMenuItem(_toggleKinectFOV);
 }
 
 void KinectObject::menuCallback(MenuItem* item)
 {
-
     for (int i = 0; i < transform_list->size(); i++)
     {
         if (item == transform_list->at(i))
@@ -131,45 +127,50 @@ void KinectObject::menuCallback(MenuItem* item)
             break;
         }
     }
-    for(int n; n < _toggleUsersArray.size(); n++)
+
+    for (int n; n < _toggleUsersArray.size(); n++)
     {
-    if (item == _toggleUsersArray[n])
-    {
-        if (_toggleUsersArray[n]->getValue())
+        if (item == _toggleUsersArray[n])
         {
-		 cm->userOn[n] = true;
-	         _cloudGroups[n]->setNodeMask(0xffffffff);
-        }
-        else
-        {
-		 cm->userOn[n] = false;
-	         _cloudGroups[n]->setNodeMask(0);
+            if (_toggleUsersArray[n]->getValue())
+            {
+                cm->userOn[n] = true;
+                _cloudGroups[n]->setNodeMask(0xffffffff);
+            }
+            else
+            {
+                cm->userOn[n] = false;
+                _cloudGroups[n]->setNodeMask(0);
+            }
         }
     }
-    }
+
     if (item == _toggleKinectFOV)
     {
         if (_toggleKinectFOV->getValue())
         {
-		 _kinectFOV_on = true;
-                 if(kinectFOV == NULL)
-		 {
-		   showKinectFOV();
-		 }
-		 else
-		 {
-                   switchNode->addChild(kinectFOV.get());
-		 }
+            _kinectFOV_on = true;
+
+            if (kinectFOV == NULL)
+            {
+                showKinectFOV();
+            }
+            else
+            {
+                switchNode->addChild(kinectFOV.get());
+            }
         }
         else
         {
-		 _kinectFOV_on = false;
-                 if(kinectFOV != NULL)
-		 {
-                   switchNode->removeChild(kinectFOV.get());
-		 }
+            _kinectFOV_on = false;
+
+            if (kinectFOV != NULL)
+            {
+                switchNode->removeChild(kinectFOV.get());
+            }
         }
     }
+
     SceneObject::menuCallback(item);
 }
 
@@ -191,7 +192,7 @@ void KinectObject::transformFromFile(string filename)
         Vec3 kScale = helmertVec3Array->at(4);
         float scale = kScale.x();
         //Vec3 koPos = getPosition();
-        Vec3 koPos = Vec3(0,0,0);
+        Vec3 koPos = Vec3(0, 0, 0);
         calcTranslate = (calcTranslate + (calcMatrix * koPos * scale));
         Matrix inverseRot;
         calcMatrix = inverseRot.inverse(calcMatrix);
@@ -226,22 +227,23 @@ void KinectObject::cloudOn()
     if (_firstRun)
     {
         cout << "Starting Thread\n";
-        //cm = new CloudManager(cloudServer);
         cout << "Started\n";
         cm->start();
-        for(int i = 0; i < max_users; i++)
+
+        for (int i = 0; i < max_users; i++)
         {
-        osg::Group* group = new osg::Group();
-        osg::StateSet* state = group->getOrCreateStateSet();
-        state->setAttribute(pgm1);
-        state->addUniform(new osg::Uniform("pointScale", initialPointScale));
-        state->addUniform(new osg::Uniform("globalAlpha", 1.0f));
-        float pscale = initialPointScale;
-        osg::Uniform*  _scaleUni = new osg::Uniform("pointScale", 1.0f * pscale);
-        group->getOrCreateStateSet()->addUniform(_scaleUni);
-        _cloudGroups.push_back(group);
-        switchNode->addChild(group);
+            osg::Group* group = new osg::Group();
+            osg::StateSet* state = group->getOrCreateStateSet();
+            state->setAttribute(pgm1);
+            state->addUniform(new osg::Uniform("pointScale", initialPointScale));
+            state->addUniform(new osg::Uniform("globalAlpha", 1.0f));
+            float pscale = initialPointScale;
+            osg::Uniform*  _scaleUni = new osg::Uniform("pointScale", 1.0f * pscale);
+            group->getOrCreateStateSet()->addUniform(_scaleUni);
+            _cloudGroups.push_back(group);
+            switchNode->addChild(group);
         }
+
         _cloudIsOn = true;
     }
     else
@@ -256,15 +258,15 @@ void KinectObject::cloudOn()
 
 void KinectObject::cloudOff()
 {
-    //    if (cm != NULL)
     if (_cloudIsOn == true)
     {
         _cloudIsOn = false;
         cm->quit();
-        for(int n; n < max_users; n++)
-	{
-        _cloudGroups[n]->removeChild(0,1);
-	}
+
+        for (int n; n < max_users; n++)
+        {
+            _cloudGroups[n]->removeChild(0, 1);
+        }
     }
 }
 
@@ -283,56 +285,43 @@ void KinectObject::cloudUpdate()
                     if (_firstRun)
                     {
                         _firstRun = false;
-                        for(int n=0; n < cm->max_users; n++)
-			{
-                        osg::Geode* kgeode = new osg::Geode();
-                        kgeode->setCullingActive(false);
-                        osg::Geometry* geom = new osg::Geometry();
-                        StateSet* state = geom->getOrCreateStateSet();
-                        state->setMode(GL_LIGHTING, StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
-                        osg::VertexBufferObject* vboP = geom->getOrCreateVertexBufferObject();
-                        vboP->setUsage(GL_STREAM_DRAW);
-                        //vboP->setUsage(GL_DYNAMIC_DRAW);
-                        //vboP->setUsage(GL_STATIC_DRAW);
-                        geom->setUseDisplayList(false);
-                        geom->setUseVertexBufferObjects(true);
 
-                        osg::DrawArrays* drawArray;
- 			if(n > 0 && useHands)
+                        for (int n = 0; n < cm->max_users; n++)
                         {
-                        drawArray = cm->drawArraysHand[n].get();
-                        geom->addPrimitiveSet(drawArray);
-                        //geom->setVertexArray(cm->kinectVertices.get());
-                        geom->setVertexAttribArray(VERTEXBIND, cm->lHandVerticesArray[n].get());
-                        geom->setVertexAttribBinding(VERTEXBIND, osg::Geometry::BIND_PER_VERTEX);
-                        geom->setColorArray(cm->lHandColoursArray[n].get());
+                            osg::Geode* kgeode = new osg::Geode();
+                            kgeode->setCullingActive(false);
+                            osg::Geometry* geom = new osg::Geometry();
+                            StateSet* state = geom->getOrCreateStateSet();
+                            state->setMode(GL_LIGHTING, StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+                            osg::VertexBufferObject* vboP = geom->getOrCreateVertexBufferObject();
+                            vboP->setUsage(GL_STREAM_DRAW);
+                            //vboP->setUsage(GL_DYNAMIC_DRAW);
+                            //vboP->setUsage(GL_STATIC_DRAW);
+                            geom->setUseDisplayList(false);
+                            geom->setUseVertexBufferObjects(true);
+                            osg::DrawArrays* drawArray;
+
+                            if (n > 0 && useHands)
+                            {
+                                drawArray = cm->drawArraysHand[n].get();
+                                geom->addPrimitiveSet(drawArray);
+                                geom->setVertexAttribArray(VERTEXBIND, cm->lHandVerticesArray[n].get());
+                                geom->setVertexAttribBinding(VERTEXBIND, osg::Geometry::BIND_PER_VERTEX);
+                                geom->setColorArray(cm->lHandColoursArray[n].get());
+                            }
+                            else
+                            {
+                                drawArray = cm->drawArrays[n].get();
+                                geom->addPrimitiveSet(drawArray);
+                                geom->setVertexAttribArray(VERTEXBIND, cm->userVerticesArray[n].get());
+                                geom->setVertexAttribBinding(VERTEXBIND, osg::Geometry::BIND_PER_VERTEX);
+                                geom->setColorArray(cm->userColoursArray[n].get());
+                            }
+
+                            geom->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+                            kgeode->addDrawable(geom);
+                            _cloudGroups[n]->addChild(kgeode);
                         }
-                        else
-                        {
-                        drawArray = cm->drawArrays[n].get();
-                        geom->addPrimitiveSet(drawArray);
-                        //geom->setVertexArray(cm->kinectVertices.get());
-                        geom->setVertexAttribArray(VERTEXBIND, cm->userVerticesArray[n].get());
-                        geom->setVertexAttribBinding(VERTEXBIND, osg::Geometry::BIND_PER_VERTEX);
-                        geom->setColorArray(cm->userColoursArray[n].get());
-                        }
-                        geom->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
-                        kgeode->addDrawable(geom);
-                        _cloudGroups[n]->addChild(kgeode);
-			}
-                    }
-                    else
-                    {
-            //geom->computeBound();
-            //const osg::BoundingBox& bbox = geom->getBound();
-            //userRadius[1] = bbox.radius();
-            //osg::Vec3f center = bbox.center();
-            //userRadius[1] = center.x();
-           // cerr << "Center" << bbox.radius() << "\n";
-                        //cm->kinectVertices.get()->dirty();
-                        //cm->kinectColours.get()->dirty();
-                        //osg::Array* temp = geom->getVertexArray();
-                        //cerr << temp->getNumElements() << "\n";
                     }
                 }
             }
@@ -415,6 +404,7 @@ void KinectObject::skeletonOff()
 std::map<int, Skeleton>* KinectObject::skeletonGetMap()
 {
     return &mapIdSkel;
+    //return sm->skeletonGetMap();
 }
 
 void KinectObject::cameraOn()
@@ -623,125 +613,122 @@ void KinectObject::toggleNavigation(bool navigatable)
 }
 void KinectObject::showKinectFOV()
 {
+    if (_kinectFOV_on)
+    {
+        if (kinectFOV == NULL)
+        {
+            //Draw Kinect FOV
+            float width;
+            float height;
+            Vec3 offsetScreen = Vec3(0, 500, 0);
+            Vec3 pos;
+            Vec4f color = Vec4f(0, 0.42, 0.92, 1);
+            //Create Quad Face
+            width = 543;
+            height = 394;
+            pos = Vec3(-(width / 2), 0, -(height / 2));
+            pos += Vec3(kinectX, kinectY, kinectZ);
+            pos += offsetScreen;
+            osg::Geometry* geo = new osg::Geometry();
+            osg::Vec3Array* verts = new osg::Vec3Array();
+            verts->push_back(pos);
+            verts->push_back(pos + osg::Vec3(width, 0, 0));
+            verts->push_back(pos + osg::Vec3(width, 0, height));
+            verts->push_back(pos + osg::Vec3(0, 0, height));
+            //do it Again
+            width = 3800.6;
+            height = 2756;
+            offsetScreen = Vec3(0, 3500, 0);
+            pos = Vec3(-(width / 2), 0, -(height / 2));
+            pos += Vec3(kinectX, kinectY, kinectZ);
+            pos += offsetScreen;
+            verts->push_back(pos);
+            verts->push_back(pos + osg::Vec3(width, 0, 0));
+            verts->push_back(pos + osg::Vec3(width, 0, height));
+            verts->push_back(pos + osg::Vec3(0, 0, height));
+            //....................................
+            int size = verts->size() / 2;
+            Geometry* geom = new Geometry();
+            Geometry* tgeom = new Geometry();
+            Geode* fgeode = new Geode();
+            Geode* lgeode = new Geode();
+            geom->setVertexArray(verts);
+            tgeom->setVertexArray(verts);
 
-            if (_kinectFOV_on)
+            for (int n = 0; n < size; n++)
             {
-              if(kinectFOV == NULL)
-	      {
-                //Draw Kinect FOV
-                float width;
-                float height;
-                Vec3 offsetScreen = Vec3(0, 500, 0);
-                Vec3 pos;
-                Vec4f color = Vec4f(0, 0.42, 0.92, 1);
-                //Create Quad Face
-                width = 543;
-                height = 394;
-                pos = Vec3(-(width / 2), 0, -(height / 2));
-                pos += Vec3(kinectX, kinectY, kinectZ);
-                pos += offsetScreen;
-                osg::Geometry* geo = new osg::Geometry();
-                osg::Vec3Array* verts = new osg::Vec3Array();
-                verts->push_back(pos);
-                verts->push_back(pos + osg::Vec3(width, 0, 0));
-                verts->push_back(pos + osg::Vec3(width, 0, height));
-                verts->push_back(pos + osg::Vec3(0, 0, height));
-                //do it Again
-                width = 3800.6;
-                height = 2756;
-                offsetScreen = Vec3(0, 3500, 0);
-                pos = Vec3(-(width / 2), 0, -(height / 2));
-                pos += Vec3(kinectX, kinectY, kinectZ);
-                pos += offsetScreen;
-                verts->push_back(pos);
-                verts->push_back(pos + osg::Vec3(width, 0, 0));
-                verts->push_back(pos + osg::Vec3(width, 0, height));
-                verts->push_back(pos + osg::Vec3(0, 0, height));
-                //....................................
-                int size = verts->size() / 2;
-                Geometry* geom = new Geometry();
-                Geometry* tgeom = new Geometry();
+                DrawElementsUInt* face = new DrawElementsUInt(PrimitiveSet::QUADS, 0);
+                face->push_back(n);
+                face->push_back(n + size);
+                face->push_back(((n + 1) % size) + size);
+                face->push_back((n + 1) % size);
+                geom->addPrimitiveSet(face);
+            }
+
+            StateSet* state(fgeode->getOrCreateStateSet());
+            Material* mat(new Material);
+            mat->setColorMode(Material::DIFFUSE);
+            mat->setDiffuse(Material::FRONT_AND_BACK, color);
+            state->setAttribute(mat);
+            state->setRenderingHint(StateSet::OPAQUE_BIN);
+            state->setMode(GL_BLEND, StateAttribute::ON);
+            state->setMode(GL_LIGHTING, StateAttribute::OFF);
+            osg::PolygonMode* polymode = new osg::PolygonMode;
+            polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+            state->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            fgeode->setStateSet(state);
+            fgeode->addDrawable(geom);
+
+            if (false)
+            {
+                geo->setVertexArray(verts);
+                osg::DrawElementsUInt* ele = new osg::DrawElementsUInt(
+                    osg::PrimitiveSet::QUADS, 0);
+                ele->push_back(0);
+                ele->push_back(1);
+                ele->push_back(2);
+                ele->push_back(3);
+                ele->push_back(4);
+                ele->push_back(5);
+                ele->push_back(6);
+                ele->push_back(7);
+                geo->addPrimitiveSet(ele);
                 Geode* fgeode = new Geode();
-                Geode* lgeode = new Geode();
-                geom->setVertexArray(verts);
-                tgeom->setVertexArray(verts);
-
-                for (int n = 0; n < size; n++)
-                {
-                    DrawElementsUInt* face = new DrawElementsUInt(PrimitiveSet::QUADS, 0);
-                    face->push_back(n);
-                    face->push_back(n + size);
-                    face->push_back(((n + 1) % size) + size);
-                    face->push_back((n + 1) % size);
-                    geom->addPrimitiveSet(face);
-                }
-
                 StateSet* state(fgeode->getOrCreateStateSet());
                 Material* mat(new Material);
                 mat->setColorMode(Material::DIFFUSE);
                 mat->setDiffuse(Material::FRONT_AND_BACK, color);
                 state->setAttribute(mat);
-                state->setRenderingHint(StateSet::OPAQUE_BIN);
+                state->setRenderingHint(StateSet::TRANSPARENT_BIN);
                 state->setMode(GL_BLEND, StateAttribute::ON);
                 state->setMode(GL_LIGHTING, StateAttribute::OFF);
                 osg::PolygonMode* polymode = new osg::PolygonMode;
                 polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
                 state->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
                 fgeode->setStateSet(state);
-                fgeode->addDrawable(geom);
-
-                if (false)
-                {
-                    geo->setVertexArray(verts);
-                    osg::DrawElementsUInt* ele = new osg::DrawElementsUInt(
-                        osg::PrimitiveSet::QUADS, 0);
-                    ele->push_back(0);
-                    ele->push_back(1);
-                    ele->push_back(2);
-                    ele->push_back(3);
-                    ele->push_back(4);
-                    ele->push_back(5);
-                    ele->push_back(6);
-                    ele->push_back(7);
-                    geo->addPrimitiveSet(ele);
-                    Geode* fgeode = new Geode();
-                    StateSet* state(fgeode->getOrCreateStateSet());
-                    Material* mat(new Material);
-                    mat->setColorMode(Material::DIFFUSE);
-                    mat->setDiffuse(Material::FRONT_AND_BACK, color);
-                    state->setAttribute(mat);
-                    state->setRenderingHint(StateSet::TRANSPARENT_BIN);
-                    state->setMode(GL_BLEND, StateAttribute::ON);
-                    state->setMode(GL_LIGHTING, StateAttribute::OFF);
-                    osg::PolygonMode* polymode = new osg::PolygonMode;
-                    polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
-                    state->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
-                    fgeode->setStateSet(state);
-                    // _annotations[inc]->geo = geo;
-                    fgeode->addDrawable(geo);
-                }
-
-                float rotDegrees[3];
-                rotDegrees[0] = 0;
-                rotDegrees[1] = 0;
-                rotDegrees[2] = 0;
-                rotDegrees[0] = DegreesToRadians(rotDegrees[0]);
-                rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
-                rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
-                Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1, 0, 0), rotDegrees[1], osg::Vec3d(0, 1, 0), rotDegrees[2], osg::Vec3d(0, 0, 1));
-                kinectFOV = new osg::MatrixTransform();
-                Matrix rotMat;
-                rotMat.makeRotate(rot);
-                kinectFOV->setMatrix(rotMat);
-                kinectFOV->addChild(fgeode);
-                switchNode->addChild(kinectFOV.get());
-	     }
+                // _annotations[inc]->geo = geo;
+                fgeode->addDrawable(geo);
             }
 
+            float rotDegrees[3];
+            rotDegrees[0] = 0;
+            rotDegrees[1] = 0;
+            rotDegrees[2] = 0;
+            rotDegrees[0] = DegreesToRadians(rotDegrees[0]);
+            rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
+            rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
+            Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1, 0, 0), rotDegrees[1], osg::Vec3d(0, 1, 0), rotDegrees[2], osg::Vec3d(0, 0, 1));
+            kinectFOV = new osg::MatrixTransform();
+            Matrix rotMat;
+            rotMat.makeRotate(rot);
+            kinectFOV->setMatrix(rotMat);
+            kinectFOV->addChild(fgeode);
+            switchNode->addChild(kinectFOV.get());
+        }
+    }
 }
 void KinectObject::loadTransformMenu()
 {
-
     SubMenu* transforms_sm = new SubMenu("Load transform");
     addMenuItem(transforms_sm);
     transform_list = new std::vector<cvr::MenuButton*>();

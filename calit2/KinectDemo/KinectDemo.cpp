@@ -25,6 +25,7 @@ bool KinectDemo::init()
     buttonDown = false;
     rightButtonDown = false;
     masterKinect = 1;
+    masterKinectServer = 2;
     max_users = 12;
     wandLockedToSkeleton = false;
     useKinect = true;
@@ -84,11 +85,9 @@ bool KinectDemo::init()
     _avMenu->addItem(_kFreezeCloud);
     _avMenu->addItem(_kShowInfoPanel);
     MenuSystem::instance()->addMenuItem(_avMenu);
-
     _switchMasterSkeleton = new MenuButton("Switch Master Skeleton");
     _switchMasterSkeleton->setCallback(this);
     _avMenu->addItem(_switchMasterSkeleton);
-
     _devMenu = new SubMenu("Dev options", "Dev options");
     _devMenu->setCallback(this);
     _devFixXY = new MenuCheckbox("Fix XY", fixXY);
@@ -154,7 +153,6 @@ bool KinectDemo::init()
     _toggleButton0->setCallback(this);
     _toggleNavigation = new MenuCheckbox("Toggle Navigation", false);
     _toggleNavigation->setCallback(this);
-
     _calibrateMenu->addItem(_calibrateIrMenu);
     _calibrateIrMenu->addItem(_toggleCalibrate);
     _calibrateIrMenu->addItem(_skeletonCalibrate);
@@ -177,9 +175,7 @@ bool KinectDemo::init()
     _calibrateMenu->addItem(_showIRPoints);
     _calibrateMenu->addItem(_toggleNavigation);
     _avMenu->addItem(_calibrateMenu);
-
     loadScreensMenu();
-
     SceneManager::instance()->getObjectsRoot()->addChild(_root);
 
     if (useKinect) kinectInit();
@@ -273,8 +269,9 @@ void KinectDemo::menuCallback(MenuItem* menuItem)
 
     if (menuItem == _switchMasterSkeleton)
     {
-       masterKinect++;
+        masterKinect++;
     }
+
     if (menuItem == _kColorOn)
     {
         if (_kColorOn->getValue())
@@ -639,37 +636,39 @@ void KinectDemo::menuCallback(MenuItem* menuItem)
         calibrateTool->triangulateKinect(0, kinectRefPoints, "ir");
     }
 
-    for(int i = 0; i < screen_list.size(); i++)
+    for (int i = 0; i < screen_list.size(); i++)
     {
-    if (menuItem == screen_list[i])
-    {
-        if (screen_list[i]->getValue())
+        if (menuItem == screen_list[i])
         {
-            if (screenGroup[i]->getNumChildren() == 0)
+            if (screen_list[i]->getValue())
             {
-            osg::Group* sGroup;
-            CalibrateKinect* calibrateTool = new CalibrateKinect();
-            sGroup = calibrateTool->generateScreen(screen_path[i]);
-		if(sGroup != NULL)
+                if (screenGroup[i]->getNumChildren() == 0)
                 {
-		screenGroup[i] = sGroup;
-                _root->addChild(screenGroup[i].get());
-                } 
+                    osg::Group* sGroup;
+                    CalibrateKinect* calibrateTool = new CalibrateKinect();
+                    sGroup = calibrateTool->generateScreen(screen_path[i]);
+
+                    if (sGroup != NULL)
+                    {
+                        screenGroup[i] = sGroup;
+                        _root->addChild(screenGroup[i].get());
+                    }
+                }
+                else
+                {
+                    _root->addChild(screenGroup[i].get());
+                }
             }
             else
             {
-                _root->addChild(screenGroup[i].get());
-            }
-        }
-        else
-        {
-            if (screenGroup[i]->getNumChildren() > 0)
-            {
-                _root->removeChild(screenGroup[i].get());
+                if (screenGroup[i]->getNumChildren() > 0)
+                {
+                    _root->removeChild(screenGroup[i].get());
+                }
             }
         }
     }
-    }
+
     if (menuItem == _showRefPoints)
     {
         if (_showRefPoints->getValue())
@@ -691,6 +690,7 @@ void KinectDemo::menuCallback(MenuItem* menuItem)
             }
         }
     }
+
     if (menuItem == _showIRPoints)
     {
         if (_showIRPoints->getValue())
@@ -723,23 +723,25 @@ void KinectDemo::menuCallback(MenuItem* menuItem)
             inputManager->buttonUp(0);
         }
     }
+
     if (menuItem == _toggleNavigation)
     {
         if (_toggleNavigation->getValue())
         {
-		for (int i = 0; i < kinects->size(); i++)
-		{
-		 kinects->at(i)->toggleNavigation(true);
-		}
+            for (int i = 0; i < kinects->size(); i++)
+            {
+                kinects->at(i)->toggleNavigation(true);
+            }
         }
         else
         {
-		for (int i = 0; i < kinects->size(); i++)
-		{
-		 kinects->at(i)->toggleNavigation(true);
-		}
+            for (int i = 0; i < kinects->size(); i++)
+            {
+                kinects->at(i)->toggleNavigation(true);
+            }
         }
     }
+
     if (menuItem == _testInteract)
     {
         sendEvents();
@@ -798,9 +800,15 @@ void KinectDemo::preFrame()
                 kinects->at(i)->depthUpdate();
             }
         }
-	updateInfoPanel();
+
+        updateInfoPanel();
     }
 
+    handleSkeleton();
+    
+}
+void KinectDemo::handleSkeleton()
+{
     if (!skeletonThreaded)
     {
         // for every skeleton in mapIdSkel - draw, navigation spheres, check intersection with objects
@@ -811,20 +819,22 @@ void KinectDemo::preFrame()
         {
             std::map<int, Skeleton>* skel_map = kinects->at(kinect_id)->skeletonGetMap();
 
-            if (kinect_id == 0)
+            if (kinect_id == masterKinectServer)
             {
+                int id = masterKinectServer;
+
                 if (skel_map != NULL)
                 {
                     if (inputManager != NULL)
                     {
-                        Matrix kinectMat = kinects->at(0)->getTransform();
+                        Matrix kinectMat = kinects->at(id)->getTransform();
                         int count = 0;
                         checkSkelGesture(skel_map);
                         checkSkelMaster(skel_map);
 
-                        if (kinects->at(0)->helmertSArray.size() > 0)
+                        if (kinects->at(id)->helmertSArray.size() > 0)
                         {
-                            inputManager->updateSkeletonInteract(kinect_id, masterKinect, wandLockedToSkeleton, skel_map, kinectMat, kinects->at(0)->helmertTArray[count], kinects->at(0)->helmertMArray[count], kinects->at(0)->helmertSArray[count]);
+                            inputManager->updateSkeletonInteract(kinect_id, masterKinect, wandLockedToSkeleton, skel_map, kinectMat, kinects->at(id)->helmertTArray[count], kinects->at(id)->helmertMArray[count], kinects->at(id)->helmertSArray[count]);
                         }
                         else
                         {
@@ -967,7 +977,6 @@ void KinectDemo::preFrame()
         }
     }
 }
-
 void KinectDemo::kinectInit()
 {
     // moving from points to spheres in kinect point cloud
@@ -1069,27 +1078,24 @@ void KinectDemo::kinectInit()
     }
 
     kinectInitialized = true;
-
     int num_kinects = ConfigManager::getInt("Plugin.KinectDemo.KinectServer.NumKinects");
 
-    for (int i=0; i<num_kinects; i++)
+    for (int i = 0; i < num_kinects; i++)
     {
-
-    string cloud_server = ConfigManager::getEntry("Plugin.KinectDemo.KinectServer.PointCloud"+std::to_string((long long int)i+1));
-    string skeleton_server = ConfigManager::getEntry("Plugin.KinectDemo.KinectServer.Skeleton"+std::to_string((long long int)i+1));
-    string color_server = ConfigManager::getEntry("Plugin.KinectDemo.KinectServer.ColorMap"+std::to_string((long long int)i+1));
-    string depth_server = ConfigManager::getEntry("Plugin.KinectDemo.KinectServer.DepthMap"+std::to_string((long long int)i+1));
-    string name = std::to_string((long long int)(i));
-    KinectObject* kinect = new KinectObject(name, cloud_server, skeleton_server, color_server, depth_server, osg::Vec3(0, 0, 0));
-    PluginHelper::registerSceneObject(kinect, name);
-    kinect->attachToScene();
-    kinects->push_back(kinect);
+        string cloud_server = ConfigManager::getEntry("Plugin.KinectDemo.KinectServer.PointCloud" + std::to_string((long long int)i + 1));
+        string skeleton_server = ConfigManager::getEntry("Plugin.KinectDemo.KinectServer.Skeleton" + std::to_string((long long int)i + 1));
+        string color_server = ConfigManager::getEntry("Plugin.KinectDemo.KinectServer.ColorMap" + std::to_string((long long int)i + 1));
+        string depth_server = ConfigManager::getEntry("Plugin.KinectDemo.KinectServer.DepthMap" + std::to_string((long long int)i + 1));
+        string name = std::to_string((long long int)(i));
+        KinectObject* kinect = new KinectObject(name, cloud_server, skeleton_server, color_server, depth_server, osg::Vec3(0, 0, 0));
+        PluginHelper::registerSceneObject(kinect, name);
+        kinect->attachToScene();
+        kinects->push_back(kinect);
     }
 
     inputManager = new InputManager();
     //inputManager->start();
     //   kinectTransform();
-
 }
 
 //Add as global class CalibrateKinect
@@ -1285,453 +1291,34 @@ void KinectDemo::checkHandsIntersections(int skel_id, std::map<int, Skeleton>* s
 void KinectDemo::updateInfoPanel()
 {
     std::stringstream ss;
-    if(false)
+
+    if (false)
     {
-    for (int i = 0; i < kinects->size(); i++)
-    {
-       for(int n = 0; n < 3; n++)
-       {
-        float radius = kinects->at(i)->cm->userRadius[n];
-        if (!kinects->at(i)->_firstRun)
-	{
-        int count = kinects->at(i)->cm->userVerticesArray[n]->size();
-        int count2 = kinects->at(i)->cm->lHandVerticesArray[n]->size();
-        float radius = kinects->at(i)->cm->userRadius[n];
-            ss << "User" << n <<"\n" << "Radius:" << count << " " << count2  << "\n";
-	}
-       }
+        for (int i = 0; i < kinects->size(); i++)
+        {
+            for (int n = 0; n < 3; n++)
+            {
+                float radius = kinects->at(i)->cm->userRadius[n];
+
+                if (!kinects->at(i)->_firstRun)
+                {
+                    int count = kinects->at(i)->cm->userVerticesArray[n]->size();
+                    int count2 = kinects->at(i)->cm->lHandVerticesArray[n]->size();
+                    float radius = kinects->at(i)->cm->userRadius[n];
+                    ss << "User" << n << "\n" << "Radius:" << count << " " << count2  << "\n";
+                }
+            }
+        }
     }
-    }
-    if(oldMasterKinect != masterKinect)
+
+    if (oldMasterKinect != masterKinect)
     {
-	oldMasterKinect = masterKinect;
-       ss << "User " << oldMasterKinect << " is Master\n";
-       _infoPanel->updateTabWithText("Info", ss.str());
+        oldMasterKinect = masterKinect;
+        ss << "User " << oldMasterKinect << " is Master\n";
+        _infoPanel->updateTabWithText("Info", ss.str());
     }
 }
 
-//void KinectDemo::createSceneObject()
-//{
-//    cerr << "Creating SceneObject\n";
-//    PointCloud* newModel = new PointCloud();
-//    _pointClouds.push_back(newModel);
-//    string name = "test";
-//    int i = _pointClouds.size() - 1;
-//
-//    if (i == -1) return;
-//
-//    // float currentScale = _pointClouds[i]->scale;
-//    float currentScale = 1;
-//    SceneObject* so;
-//    so = new SceneObject(name, false, false, false, true, false);
-//    osg::Switch* switchNode = new osg::Switch();
-//    so->addChild(switchNode);
-//    PluginHelper::registerSceneObject(so, "Test");
-//    so->attachToScene();
-//    //Add currentNode to switchNode
-//    // _models3d[i]->currentModelNode = modelNode;
-//    cerr << "here\n";
-//
-//    //  switchNode->addChild(kinectgrp);
-//    if (i == 0)
-//    {
-//        //  switchNode->addChild(_modelFileNode4);
-//        if (false)
-//        {
-//            Vec3d poz0(kinectX, kinectY, kinectZ);
-//            Box* sphereShape = new Box(poz0, 50.0);
-//            ShapeDrawable* ggg2 = new ShapeDrawable(sphereShape);
-//            ggg2->setColor(Vec4(1, 1, 1, 1));
-//            osg::Geode* boxGeode = new osg::Geode;
-//            boxGeode->addDrawable(ggg2);
-//            switchNode->addChild(boxGeode);
-//        }
-//
-//        if (ConfigManager::getBool("Plugin.KinectDemo.ShowKinectModel"))
-//        {
-//            //Loads Kinect Obj file
-//            Matrixd scale;
-//            double snum = 1;
-//            scale.makeScale(snum, snum, snum);
-//            MatrixTransform* modelScaleTrans = new MatrixTransform();
-//            modelScaleTrans->setMatrix(scale);
-//            modelScaleTrans->addChild(_modelFileNode1);
-//            MatrixTransform* rotate = new osg::MatrixTransform();
-//            float rotDegrees[3];
-//            rotDegrees[0] = -90;
-//            rotDegrees[1] = 0;
-//            rotDegrees[2] = 180;
-//            rotDegrees[0] = DegreesToRadians(rotDegrees[0]);
-//            rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
-//            rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
-//            Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1, 0, 0), rotDegrees[1], osg::Vec3d(0, 1, 0), rotDegrees[2], osg::Vec3d(0, 0, 1));
-//            Matrix rotMat;
-//            rotMat.makeRotate(rot);
-//            rotate->setMatrix(rotMat);
-//            rotate->addChild(modelScaleTrans);
-//            MatrixTransform* translate = new osg::MatrixTransform();
-//            osg::Matrixd tmat;
-//            Vec3 pos = Vec3(kinectX, kinectY, kinectZ);
-//            tmat.makeTranslate(pos);
-//            translate->setMatrix(tmat);
-//            translate->addChild(rotate);
-//            switchNode->addChild(translate);
-//        }
-//
-//        if (ConfigManager::getBool("Plugin.KinectDemo.ShowScreenFrames"))
-//        {
-//            //Draw Configured Screens
-//            int numWindows = ScreenConfig::instance()->getNumWindows();
-//            float width;
-//            float height;
-//            float h;
-//            float p;
-//            float r;
-//            Vec3 offsetScreen;
-//            cerr << "NumWindows: " << numWindows << endl;
-//
-//            //TODO:Get Screen Info from Config file
-//            for (int j = 0; j < numWindows; j++)
-//            {
-//                ScreenInfo* si = ScreenConfig::instance()->getScreenInfo(j);
-//                width = si->width;
-//                height = si->height;
-//                h = si->h;
-//                p = si->p;
-//                r = si->r;
-//                offsetScreen = si->xyz;
-//                //Create Quad Face
-//                //  float width = 300;
-//                //  float height = 500;
-//                Vec3 pos = Vec3(-(width / 2), 0, -(height / 2));
-//                Vec4f color = Vec4f(0, 0.42, 0.92, 1);
-//                //Ofset Pos
-//                pos += offsetScreen;
-//                osg::Geometry* geo = new osg::Geometry();
-//                osg::Vec3Array* verts = new osg::Vec3Array();
-//                verts->push_back(pos);
-//                verts->push_back(pos + osg::Vec3(width, 0, 0));
-//                verts->push_back(pos + osg::Vec3(width, 0, height));
-//                verts->push_back(pos + osg::Vec3(0, 0, height));
-//                geo->setVertexArray(verts);
-//                osg::DrawElementsUInt* ele = new osg::DrawElementsUInt(
-//                    osg::PrimitiveSet::QUADS, 0);
-//                ele->push_back(0);
-//                ele->push_back(1);
-//                ele->push_back(2);
-//                ele->push_back(3);
-//                geo->addPrimitiveSet(ele);
-//                Geode* fgeode = new Geode();
-//                StateSet* state(fgeode->getOrCreateStateSet());
-//                Material* mat(new Material);
-//                mat->setColorMode(Material::DIFFUSE);
-//                mat->setDiffuse(Material::FRONT_AND_BACK, color);
-//                state->setAttribute(mat);
-//                state->setRenderingHint(StateSet::TRANSPARENT_BIN);
-//                state->setMode(GL_BLEND, StateAttribute::ON);
-//                state->setMode(GL_LIGHTING, StateAttribute::OFF);
-//                osg::PolygonMode* polymode = new osg::PolygonMode;
-//                polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
-//                state->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
-//                fgeode->setStateSet(state);
-//                // _annotations[inc]->geo = geo;
-//                fgeode->addDrawable(geo);
-//                float rotDegrees[3];
-//                rotDegrees[0] = h;
-//                rotDegrees[1] = p;
-//                rotDegrees[2] = r;
-//                rotDegrees[0] = DegreesToRadians(rotDegrees[0]);
-//                rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
-//                rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
-//                Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1, 0, 0), rotDegrees[1], osg::Vec3d(0, 1, 0), rotDegrees[2], osg::Vec3d(0, 0, 1));
-//                MatrixTransform* rotate = new osg::MatrixTransform();
-//                Matrix rotMat;
-//                rotMat.makeRotate(rot);
-//                rotate->setMatrix(rotMat);
-//                rotate->addChild(fgeode);
-//                switchNode->addChild(rotate);
-//            }
-//
-//            if (ConfigManager::getBool("Plugin.KinectDemo.ShowKinectFOV"))
-//            {
-//                //Draw Kinect FOV
-//                float width;
-//                float height;
-//                Vec3 offsetScreen = Vec3(0, 500, 0);
-//                Vec3 pos;
-//                Vec4f color = Vec4f(0, 0.42, 0.92, 1);
-//                //Create Quad Face
-//                width = 543;
-//                height = 394;
-//                pos = Vec3(-(width / 2), 0, -(height / 2));
-//                pos += Vec3(kinectX, kinectY, kinectZ);
-//                pos += offsetScreen;
-//                osg::Geometry* geo = new osg::Geometry();
-//                osg::Vec3Array* verts = new osg::Vec3Array();
-//                verts->push_back(pos);
-//                verts->push_back(pos + osg::Vec3(width, 0, 0));
-//                verts->push_back(pos + osg::Vec3(width, 0, height));
-//                verts->push_back(pos + osg::Vec3(0, 0, height));
-//                //do it Again
-//                width = 3800.6;
-//                height = 2756;
-//                offsetScreen = Vec3(0, 3500, 0);
-//                pos = Vec3(-(width / 2), 0, -(height / 2));
-//                pos += Vec3(kinectX, kinectY, kinectZ);
-//                pos += offsetScreen;
-//                verts->push_back(pos);
-//                verts->push_back(pos + osg::Vec3(width, 0, 0));
-//                verts->push_back(pos + osg::Vec3(width, 0, height));
-//                verts->push_back(pos + osg::Vec3(0, 0, height));
-//                //....................................
-//                int size = verts->size() / 2;
-//                Geometry* geom = new Geometry();
-//                Geometry* tgeom = new Geometry();
-//                Geode* fgeode = new Geode();
-//                Geode* lgeode = new Geode();
-//                geom->setVertexArray(verts);
-//                tgeom->setVertexArray(verts);
-//
-//                for (int n = 0; n < size; n++)
-//                {
-//                    DrawElementsUInt* face = new DrawElementsUInt(PrimitiveSet::QUADS, 0);
-//                    face->push_back(n);
-//                    face->push_back(n + size);
-//                    face->push_back(((n + 1) % size) + size);
-//                    face->push_back((n + 1) % size);
-//                    geom->addPrimitiveSet(face);
-//                }
-//
-//                StateSet* state(fgeode->getOrCreateStateSet());
-//                Material* mat(new Material);
-//                mat->setColorMode(Material::DIFFUSE);
-//                mat->setDiffuse(Material::FRONT_AND_BACK, color);
-//                state->setAttribute(mat);
-//                state->setRenderingHint(StateSet::OPAQUE_BIN);
-//                state->setMode(GL_BLEND, StateAttribute::ON);
-//                state->setMode(GL_LIGHTING, StateAttribute::OFF);
-//                osg::PolygonMode* polymode = new osg::PolygonMode;
-//                polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
-//                state->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
-//                fgeode->setStateSet(state);
-//                fgeode->addDrawable(geom);
-//
-//                if (false)
-//                {
-//                    geo->setVertexArray(verts);
-//                    osg::DrawElementsUInt* ele = new osg::DrawElementsUInt(
-//                        osg::PrimitiveSet::QUADS, 0);
-//                    ele->push_back(0);
-//                    ele->push_back(1);
-//                    ele->push_back(2);
-//                    ele->push_back(3);
-//                    ele->push_back(4);
-//                    ele->push_back(5);
-//                    ele->push_back(6);
-//                    ele->push_back(7);
-//                    geo->addPrimitiveSet(ele);
-//                    Geode* fgeode = new Geode();
-//                    StateSet* state(fgeode->getOrCreateStateSet());
-//                    Material* mat(new Material);
-//                    mat->setColorMode(Material::DIFFUSE);
-//                    mat->setDiffuse(Material::FRONT_AND_BACK, color);
-//                    state->setAttribute(mat);
-//                    state->setRenderingHint(StateSet::TRANSPARENT_BIN);
-//                    state->setMode(GL_BLEND, StateAttribute::ON);
-//                    state->setMode(GL_LIGHTING, StateAttribute::OFF);
-//                    osg::PolygonMode* polymode = new osg::PolygonMode;
-//                    polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
-//                    state->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
-//                    fgeode->setStateSet(state);
-//                    // _annotations[inc]->geo = geo;
-//                    fgeode->addDrawable(geo);
-//                }
-//
-//                float rotDegrees[3];
-//                rotDegrees[0] = 0;
-//                rotDegrees[1] = 0;
-//                rotDegrees[2] = 0;
-//                rotDegrees[0] = DegreesToRadians(rotDegrees[0]);
-//                rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
-//                rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
-//                Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1, 0, 0), rotDegrees[1], osg::Vec3d(0, 1, 0), rotDegrees[2], osg::Vec3d(0, 0, 1));
-//                MatrixTransform* rotate = new osg::MatrixTransform();
-//                Matrix rotMat;
-//                rotMat.makeRotate(rot);
-//                rotate->setMatrix(rotMat);
-//                rotate->addChild(fgeode);
-//                switchNode->addChild(rotate);
-//            }
-//        }
-//    }
-//
-//    _pointClouds[i]->switchNode = switchNode;
-//    //Add menu system
-//    so->setNavigationOn(true);
-//    so->setMovable(false);
-//    so->addMoveMenuItem();
-//    so->addNavigationMenuItem();
-//    float min = 0.0001;
-//    float max = 1;
-//    so->addScaleMenuItem("Scale", min, max, currentScale);
-//    SubMenu* sm = new SubMenu("Position");
-//    so->addMenuItem(sm);
-//    MenuButton* mb;
-//    mb = new MenuButton("Load");
-//    mb->setCallback(this);
-//    sm->addItem(mb);
-//    SubMenu* savemenu = new SubMenu("Save");
-//    sm->addItem(savemenu);
-//    mb = new MenuButton("Save");
-//    mb->setCallback(this);
-//    savemenu->addItem(mb);
-//    _pointClouds[i]->saveMap = mb;
-//    mb = new MenuButton("Save New Kml");
-//    mb->setCallback(this);
-//    savemenu->addItem(mb);
-//    _pointClouds[i]->saveNewMap = mb;
-//    mb = new MenuButton("Reset to Origin");
-//    mb->setCallback(this);
-//    so->addMenuItem(mb);
-//    _pointClouds[i]->resetMap = mb;
-//    MenuCheckbox* mc;
-//    mc = new MenuCheckbox("Active", false);
-//    mc->setCallback(this);
-//    so->addMenuItem(mc);
-//    _pointClouds[i]->activeMap = mc;
-//    mc = new MenuCheckbox("Visible", true);
-//    mc->setCallback(this);
-//    so->addMenuItem(mc);
-//    _pointClouds[i]->visibleMap = mc;
-//    _pointClouds[i]->visible = true;
-//    float rValue = 0;
-//    min = -1;
-//    max = 1;
-//    MenuRangeValue* rt = new MenuRangeValue("rx", min, max, rValue);
-//    rt->setCallback(this);
-//    so->addMenuItem(rt);
-//    _pointClouds[i]->rxMap = rt;
-//    rt = new MenuRangeValue("ry", min, max, rValue);
-//    rt->setCallback(this);
-//    so->addMenuItem(rt);
-//    _pointClouds[i]->ryMap = rt;
-//    rt = new MenuRangeValue("rz", min, max, rValue);
-//    rt->setCallback(this);
-//    so->addMenuItem(rt);
-//    _pointClouds[i]->rzMap = rt;
-//    /*
-//            mc = new MenuCheckbox("Panel Visible",true);
-//            mc->setCallback(this);
-//            so->addMenuItem(mc);
-//     //           _query[q]->artifacts[inc]->model->pVisibleMap = mc;
-//               // _query[q]->artifacts[inc]->model->pVisible = true;
-//    */
-//    //Quat currentRot = _pointClouds[i]->rot;
-//    //Vec3 currentPos = _pointClouds[i]->pos;
-//    //Vec3 orig = currentPos;
-//    //cerr << "Pos: " << orig.x() << " " << orig.y() << " " << orig.z() << "\n";
-//    // so->setPosition(currentPos);
-//    so->setScale(1);
-//
-//    if (i == 0)
-//    {
-//        Vec3 currentPos = Vec3(0, 0, 0);
-//        float rotDegrees[3];
-//        rotDegrees[0] = 0;
-//        rotDegrees[1] = 0;
-//        rotDegrees[2] = 180;
-//        rotDegrees[0] = DegreesToRadians(rotDegrees[0]);
-//        rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
-//        rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
-//        Quat rot = osg::Quat(rotDegrees[0], osg::Vec3d(1, 0, 0), rotDegrees[1], osg::Vec3d(0, 1, 0), rotDegrees[2], osg::Vec3d(0, 0, 1));
-//        //so->setRotation(rot);
-//        //so->setPosition(currentPos);
-//    }
-//
-//    _pointClouds[i]->so = so;
-//    _pointClouds[i]->pos = so->getPosition();
-//    _pointClouds[i]->rot = so->getRotation();
-//    _pointClouds[i]->active = false;
-//    _pointClouds[i]->loaded = true;
-//}
-void KinectDemo::sendEvents()
-{
-    cerr << "Sending Event\n";
-    /*  TrackingManager * tConfig = TrackingManager::instance();
-      TrackerPlugin::TrackerPlugin* _trackerSystem;
-     //helo
-      cerr << "Total Tracking Systems=" << tConfig->getNumTrackingSystems() << "\n";
-      for (int i=1; i < tConfig->getNumTrackingSystems(); i++)
-      {
-        //TrackerBase
-        //Currently testing with first found tracking system
-         _trackerSystem = dynamic_cast<TrackerPlugin::TrackerPlugin *> (tConfig->getTrackingSystem(i));
-          if (_trackerSystem != NULL)
-              break;
-      }
-      if (_trackerSystem == NULL)
-      {
-          std::cerr<<"Cannot initialize tracker.\n";
-
-      }
-      else
-      {
-         int numButtons = _trackerSystem->getNumButtons();
-         int numBodies = _trackerSystem->getNumBodies();
-         cerr << "Buttons=" << numButtons << " Bodies=" << numBodies << endl;
-
-          //Test updating Body
-          if(true)
-          {
-    TrackerBase::TrackedBody* body = _trackerSystem->getBody(0);
-
-                  float x; ///< position x
-                  float y; ///< position y
-                  float z; ///< position z
-                  float qx; ///< rotation x (quat)
-                  float qy; ///< rotation y (quat)
-                  float qz; ///< rotation z (quat)
-                  float qw; ///< rotation w (quat)
-        x = body->x;
-        y = body->y;
-        z = body->z;
-        cerr << "Body:" << x << "," << y << "," << z << endl;
-       float rotDegrees[3];
-       rotDegrees[0] = 0;
-       rotDegrees[1] = 0;
-       rotDegrees[2] = 5;
-                  //Convert Degrees to Radians
-      rotDegrees[0] = DegreesToRadians(rotDegrees[0]);
-      rotDegrees[1] = DegreesToRadians(rotDegrees[1]);
-      rotDegrees[2] = DegreesToRadians(rotDegrees[2]);
-      osg::Quat q = osg::Quat(rotDegrees[0], osg::Vec3d(1,0,0),rotDegrees[1], osg::Vec3d(0,1,0),rotDegrees[2], osg::Vec3d(0,0,1));
-                 //Get old Bodies transform into quat
-                 osg::Quat qOld = osg::Quat(body->qx,body->qy,body->qz,body->qw);
-                 //Add new update to old Quat
-                  qOld *= q;
-                 //Set new quat for creating new TrackedBody
-                  q = qOld;
-              //Setup tracked body TODO:Use a KinectSensor for trackedBody;
-        TrackerBase::TrackedBody * tb = new TrackerBase::TrackedBody;
-        tb->x = tb->y = tb->z = 0.0;
-        tb->qx = q.x();
-        tb->qy = q.y();
-        tb->qz = q.z();
-        tb->qw = q.w();
-              //Set Current Tracker System Body to new tb
-              _trackerSystem->setBody(0,tb);
-              delete tb;
-           }
-           //Test Button Interaction
-           if(true)
-           {
-              _trackerSystem->setButton(0,true);
-          //    _trackerSystem->setButton(0,false);
-           }
-      }
-    */
-    cerr << "Finised\n";
-}
 
 bool KinectDemo::processEvent(InteractionEvent* event)
 {
@@ -1779,8 +1366,11 @@ bool KinectDemo::processEvent(InteractionEvent* event)
             {
                 for (int i = 0; i < count; i++)
                 {
-                    if (!kinects->at(i)->_firstRun)
+                    cout << "KINECT FIRSTRUN " << kinects->at(i)->_firstRun << endl;
+
+                    if (true || !kinects->at(i)->_firstRun)
                     {
+                        cout << "SIZE " << kinects->at(i)->cm->userVerticesArray[1]->size() << endl;
                         kinectArrayVert.push_back(kinects->at(i)->cm->userVerticesArray[1]);
                         kinectArrayColor.push_back(kinects->at(i)->cm->userColoursArray[1]);
                     }
@@ -1913,47 +1503,8 @@ bool KinectDemo::processEvent(InteractionEvent* event)
 
     return false;
 }
-//void KinectDemo::kinectTransform()
-//{
-//    return;
-//    CalibrateKinect* calibrateTool = new CalibrateKinect();
-//
-//    for (int i = 0; i < kinects->size(); i++)
-//    {
-//        stringstream ss;
-//        ss << i;
-//        string count =  ss.str();
-//        string filename = cvr::ConfigManager::getEntry("Plugin.KinectDemo.3DModelFolder").append("kinectIrTransform_").append(count).append(".txt");
-//        osg::Vec3Array* helmertVec3Array = calibrateTool->getTransformOutput(filename);
-//
-//        if (helmertVec3Array->size() != 0)
-//        {
-//            Matrix calcMatrix;
-//            Vec3 r1 = helmertVec3Array->at(0);
-//            Vec3 r2 = helmertVec3Array->at(1);
-//            Vec3 r3 = helmertVec3Array->at(2);
-//            Vec3 r4 = Vec3(0, 0, 0);
-//            calcMatrix.set(r1.x(), r1.y(), r1.z(), 0, r2.x(), r2.y(), r2.z(), 0, r3.x(), r3.y(), r3.z(), 0, r4.x(), r4.y(), r4.z(), 1);
-//            Vec3 calcTranslate = helmertVec3Array->at(3);
-//            Vec3 kScale = helmertVec3Array->at(4);
-//            float scale = kScale.x();
-//            Vec3 koPos = kinects->at(i)->getPosition();
-//            calcTranslate = (calcTranslate + (calcMatrix * koPos * scale));
-//            Matrix inverseRot;
-//            calcMatrix = inverseRot.inverse(calcMatrix);
-//            kinects->at(i)->setTransform(calcMatrix);
-//            kinects->at(i)->setScale(kScale.x());
-//            kinects->at(i)->setPosition(calcTranslate);
-//            helmertTArray.push_back(calcTranslate);
-//            helmertMArray.push_back(calcMatrix);
-//            helmertSArray.push_back(kScale.x());
-//            cerr << "File Present\n";
-//        }
-//    }
-//}
 void KinectDemo::loadScreensMenu()
 {
-
     SubMenu* screensMenu = new SubMenu("Screens Menu");
     _avMenu->addItem(screensMenu);
     string directory = cvr::ConfigManager::getEntry("Plugin.KinectDemo.ScreenConfigLocation");
@@ -1979,15 +1530,16 @@ void KinectDemo::loadScreensMenu()
 
         string check = file_name;
         int found = check.find("creen");
+
         if (found >= 0)
         {
         }
         else
         {
-          continue;
+            continue;
         }
 
-        MenuCheckbox* b = new MenuCheckbox(file_name,false);//"test " + i);
+        MenuCheckbox* b = new MenuCheckbox(file_name, false); //"test " + i);
         screensMenu->addItem(b);
         b->setCallback(this);
         screen_list.push_back(b);
@@ -1999,130 +1551,138 @@ void KinectDemo::loadScreensMenu()
 }
 void KinectDemo::checkSkelMaster(std::map<int, Skeleton>* skel_map)
 {
-            //Using tempKinect because don't want to update skeleton until sure it is attached
-            bool skelFound = false;
-            for (std::map<int, Skeleton>::iterator it = skel_map->begin(); it != skel_map->end(); ++it)
-            {
-                int sk_id = it->first;
-                if(masterKinect == sk_id)
-                {
-			//cerr << "Found SkeletonInt\n";
-			Skeleton* sk = &(it->second);
-			bool attached = sk->attached;
-			if(attached)
-			{
-                          skelFound = true;
-			  break;
+    //Using tempKinect because don't want to update skeleton until sure it is attached
+    bool skelFound = false;
 
-			}
-                }
-	    }
-            if(!skelFound)
+    for (std::map<int, Skeleton>::iterator it = skel_map->begin(); it != skel_map->end(); ++it)
+    {
+        int sk_id = it->first;
+
+        if (masterKinect == sk_id)
+        {
+            //cerr << "Found SkeletonInt\n";
+            Skeleton* sk = &(it->second);
+            bool attached = sk->attached;
+
+            if (attached)
             {
-		int firstId = -1;
-                bool mKhigher = false;
-            for (std::map<int, Skeleton>::iterator it = skel_map->begin(); it != skel_map->end(); ++it)
-            {
-               int sk_id = it->first;
-               if(firstId == -1)
-		{
-               firstId = sk_id;
-    		}
-               if(masterKinect > sk_id)
-               {
-                  mKhigher = true;
-               }
-               else
-               {
-		 masterKinect = sk_id;
-                 mKhigher = false; 
-                 break;
-               }
-	    }
-            if (mKhigher)
-               {
-		masterKinect = firstId;
-               }
+                skelFound = true;
+                break;
             }
+        }
+    }
+
+    if (!skelFound)
+    {
+        int firstId = -1;
+        bool mKhigher = false;
+
+        for (std::map<int, Skeleton>::iterator it = skel_map->begin(); it != skel_map->end(); ++it)
+        {
+            int sk_id = it->first;
+
+            if (firstId == -1)
+            {
+                firstId = sk_id;
+            }
+
+            if (masterKinect > sk_id)
+            {
+                mKhigher = true;
+            }
+            else
+            {
+                masterKinect = sk_id;
+                mKhigher = false;
+                break;
+            }
+        }
+
+        if (mKhigher)
+        {
+            masterKinect = firstId;
+        }
+    }
 }
 void KinectDemo::checkSkelGesture(std::map<int, Skeleton>* skel_map)
 {
-            for (std::map<int, Skeleton>::iterator it = skel_map->begin(); it != skel_map->end(); ++it)
-            {
-                int sk_id = it->first;
-                if(sk_id == masterKinect)
-                {
-                  
-	           Skeleton* sk = &(it->second);
-		   
-                Vec3 lHand = sk->joints[M_LHAND].position;
-                Vec3 rHand = sk->joints[M_RHAND].position;
-                Vec3 head = sk->joints[M_HEAD].position;
-                gestureSurrender(lHand,rHand,head);
-                gestureLeftClick(lHand,rHand,head);
-                gestureRightClick(lHand,rHand,head);
-                
-                   break;
-		}
-	    }
+    for (std::map<int, Skeleton>::iterator it = skel_map->begin(); it != skel_map->end(); ++it)
+    {
+        int sk_id = it->first;
+
+        if (sk_id == masterKinect)
+        {
+            Skeleton* sk = &(it->second);
+            Vec3 lHand = sk->joints[M_LHAND].position;
+            Vec3 rHand = sk->joints[M_RHAND].position;
+            Vec3 head = sk->joints[M_HEAD].position;
+            gestureSurrender(lHand, rHand, head);
+            gestureLeftClick(lHand, rHand, head);
+            gestureRightClick(lHand, rHand, head);
+            break;
+        }
+    }
 }
-void KinectDemo::gestureSurrender(osg::Vec3 lHand,osg::Vec3 rHand,osg::Vec3 head)
+void KinectDemo::gestureSurrender(osg::Vec3 lHand, osg::Vec3 rHand, osg::Vec3 head)
 {
-      float offset = 250.0;
-      head += Vec3(0,0,offset);
-      if(rHand.z() > head.z() && lHand.z() > head.z())
-      {
-          masterKinect++;
-          //cerr << "inc " << masterKinect << "\n";
-      }
+    float offset = 200.0;
+    head += Vec3(0, 0, offset);
+
+    if (rHand.z() > head.z() && lHand.z() > head.z())
+    {
+        masterKinect++;
+        //cerr << "inc " << masterKinect << "\n";
+    }
 }
-void KinectDemo::gestureLeftClick(osg::Vec3 lHand,osg::Vec3 rHand,osg::Vec3 head)
+void KinectDemo::gestureLeftClick(osg::Vec3 lHand, osg::Vec3 rHand, osg::Vec3 head)
 {
-      float offset = 400.0;
-      head -= Vec3(0,offset,0);
-      if(lHand.y() < head.y())
-      {
-          if(!buttonDown)
-	  {
-          buttonDown = true;
-          cerr << "ButtonDown\n";
-          inputManager->buttonDown(0);
-          }
-      }
-      if(lHand.y() > head.y())
-      {
-         if(buttonDown)
-         {
-         buttonDown = false;
-         cerr << "ButtonUp\n";
-         inputManager->buttonUp(0);
-         }
+    float offset = 100.0;
+    head -= Vec3(0, offset, 0);
 
+    if (lHand.y() < head.y() && lHand.z() < head.z())
+    {
+        if (!buttonDown)
+        {
+            buttonDown = true;
+            //cerr << "ButtonDown\n";
+            inputManager->buttonDown(0);
+        }
+    }
 
-      }
+    if (lHand.y() > head.y() || lHand.z() > head.z())
+    {
+        if (buttonDown)
+        {
+            buttonDown = false;
+            //cerr << "ButtonUp\n";
+            inputManager->buttonUp(0);
+        }
+    }
 }
-void KinectDemo::gestureRightClick(osg::Vec3 lHand,osg::Vec3 rHand,osg::Vec3 head)
+void KinectDemo::gestureRightClick(osg::Vec3 lHand, osg::Vec3 rHand, osg::Vec3 head)
 {
-      float offset = 400.0;
-      head += Vec3(offset,0,0);
-      if(lHand.x() > head.x())
-      {
-          if(!rightButtonDown)
-	  {
-          rightButtonDown = true;
-          cerr << "RightButtonDown\n";
-          inputManager->buttonDown(1);
-          }
-      }
-      if(lHand.x() < head.x())
-      {
-         if(rightButtonDown)
-         {
-         rightButtonDown = false;
-         cerr << "RightButtonUp\n";
-         inputManager->buttonUp(1);
-         }
+    float offset = 400.0;
+    float offset2 = 200.0;
+    head += Vec3(offset, 0, 0);
+    head -= Vec3(0, 0, offset2);
 
+    if (lHand.x() > head.x() && lHand.y() > head.y())
+    {
+        if (!rightButtonDown)
+        {
+            rightButtonDown = true;
+            //cerr << "RightButtonDown\n";
+            inputManager->buttonDown(1);
+        }
+    }
 
-      }
+    if (lHand.x() < head.x())
+    {
+        if (rightButtonDown)
+        {
+            rightButtonDown = false;
+            //cerr << "RightButtonUp\n";
+            inputManager->buttonUp(1);
+        }
+    }
 }

@@ -32,17 +32,18 @@ CloudManager::CloudManager(std::string server)
 
     // precomputing colors for heat coloring
     for (int i = 0; i < 20000; i++) getColorRGB(i);
-    
-    for(int i=0; i < max_users; i++)
+
+    for (int i = 0; i < max_users; i++)
     {
-    userSize.push_back(0);
-    userOn.push_back(true);
-    lastUserSize.push_back(0);
-    lHandSize.push_back(0);
-    lastlHandSize.push_back(0);
-    userRadius.push_back(0);
+        userSize.push_back(0);
+        userOn.push_back(true);
+        lastUserSize.push_back(0);
+        lHandSize.push_back(0);
+        lastlHandSize.push_back(0);
+        userRadius.push_back(0);
     }
-//    userOn[0] = false;
+
+    // userOn[0] = false;
 }
 
 CloudManager::~CloudManager()
@@ -131,16 +132,16 @@ void CloudManager::run()
         newVertices = new osg::Vec3Array(0);
         newNormals = new osg::Vec3Array;
         newColours = new osg::Vec4Array(0);
-    for(int i=0; i < max_users; i++)
-    {
-    userVerticesArray.push_back(new osg::Vec3Array(1)); 
-    userColoursArray.push_back(new osg::Vec4Array(1)); 
-    drawArrays.push_back(new osg::DrawArrays(osg::PrimitiveSet::POINTS, 0, userVerticesArray[i].get()->size()));
 
-    lHandVerticesArray.push_back(new osg::Vec3Array(1)); 
-    lHandColoursArray.push_back(new osg::Vec4Array(1)); 
-    drawArraysHand.push_back(new osg::DrawArrays(osg::PrimitiveSet::POINTS, 0, lHandVerticesArray[i].get()->size()));
-    }
+        for (int i = 0; i < max_users; i++)
+        {
+            userVerticesArray.push_back(new osg::Vec3Array(1));
+            userColoursArray.push_back(new osg::Vec4Array(1));
+            drawArrays.push_back(new osg::DrawArrays(osg::PrimitiveSet::POINTS, 0, userVerticesArray[i].get()->size()));
+            lHandVerticesArray.push_back(new osg::Vec3Array(1));
+            lHandColoursArray.push_back(new osg::Vec4Array(1));
+            drawArraysHand.push_back(new osg::DrawArrays(osg::PrimitiveSet::POINTS, 0, lHandVerticesArray[i].get()->size()));
+        }
 
         while (!should_quit)
         {
@@ -156,80 +157,85 @@ void CloudManager::run()
                     //printf("NotNull");
                     if (cloudT_socket->recv(*packet))
                     {
-                        for(int n=0; n < userSize.size(); n++)
-			{
-                        userSize[n] = 0;
-			}
+                        for (int n = 0; n < userSize.size(); n++)
+                        {
+                            userSize[n] = 0;
+                        }
+
                         //Reset count for user Array Sizes
                         float r, g, b, a;
                         // overwrite ones that existed
-                        osg::Vec4 tempColour = osg::Vec4(0,0,0,1);
+                        osg::Vec4 tempColour = osg::Vec4(0, 0, 0, 1);
+
                         for (int i = 0; i < packet->points_size(); i++)
                         {
                             int id = packet->points(i).id();
-			   if(userOn[id])
-                           { 
-                            osg::Vec3 ppos((packet->points(i).x()),
-                                           (packet->points(i).z()),
-                                           (packet->points(i).y()));
-                            if (userColor)
-                            {
-                                // color each user different color
-                                tempColour = getColorUser(packet->points(i).id(), packet->points(i).z());
-                            }
-                            else if (useKColor)
-                            {
-                                r = (packet->points(i).r() / 255.);
-                                g = (packet->points(i).g() / 255.);
-                                b = (packet->points(i).b() / 255.);
-                                a = 1;
-				tempColour = osg::Vec4(r, g, b, a);
-                            }
-                            else
-                            {
-                                tempColour = getColorRGB(packet->points(i).z());
-                            }
 
-                           if(userSize[id] < userVerticesArray[id]->size())
-                           {
-                            userVerticesArray[id]->at(userSize[id]) = ppos;
-                            userColoursArray[id]->at(userSize[id]) = tempColour;
-			   }
-			   else
-			   {
-                            userVerticesArray[id]->push_back(ppos);
-                            userColoursArray[id]->push_back(tempColour);
-                           }
-			   userSize[id]++;
-                          }
-			}
+                            if (userOn[id])
+                            {
+                                // userOn[0] == false if userColor
+                                if (userColor == true && id == 0) continue;
+
+                                osg::Vec3 ppos((packet->points(i).x()),
+                                               (packet->points(i).z()),
+                                               (packet->points(i).y()));
+
+                                if (userColor)
+                                {
+                                    // color each user different color
+                                    tempColour = getColorUser(packet->points(i).id(), packet->points(i).z());
+                                }
+                                else if (useKColor)
+                                {
+                                    r = (packet->points(i).r() / 255.);
+                                    g = (packet->points(i).g() / 255.);
+                                    b = (packet->points(i).b() / 255.);
+                                    a = 1;
+                                    tempColour = osg::Vec4(r, g, b, a);
+                                }
+                                else
+                                {
+                                    tempColour = getColorRGB(packet->points(i).z());
+                                }
+
+                                if (userSize[id] < userVerticesArray[id]->size())
+                                {
+                                    userVerticesArray[id]->at(userSize[id]) = ppos;
+                                    userColoursArray[id]->at(userSize[id]) = tempColour;
+                                }
+                                else
+                                {
+                                    userVerticesArray[id]->push_back(ppos);
+                                    userColoursArray[id]->push_back(tempColour);
+                                }
+
+                                userSize[id]++;
+                            }
+                        }
 
                         reduceUsersArray();
                         generateHandArray();
-                        for(int n=0; n < userVerticesArray.size(); n++)
-			{
-		         if(userOn[n])
-                         {
-				 if(userVerticesArray[n]->size() > 1)
-				 {
-                                   drawArrays[n]->setCount(userVerticesArray[n]->size());
-				   userVerticesArray[n]->dirty();
-				   userColoursArray[n]->dirty();
-				  // userVerticesArray[n] = lHandVerticesArray[n];
-				  // userColoursArray[n] = lHandColoursArray[n];
-				 }
-			 }
-		         else if(userVerticesArray[n]->size() > 1)
-	                 {
-			   userVerticesArray[n]->resize(1);
-			   userColoursArray[n]->resize(1);
-                           drawArrays[n]->setCount(userVerticesArray[n]->size());
-		           userVerticesArray[n]->dirty();
-	                   userColoursArray[n]->dirty();
-                           
-			 }
-                        
-			}
+
+                        for (int n = 0; n < userVerticesArray.size(); n++)
+                        {
+                            if (userOn[n])
+                            {
+                                    drawArrays[n]->setCount(userSize[n]);
+                                    userVerticesArray[n]->dirty();
+                                    userColoursArray[n]->dirty();
+                                    // userVerticesArray[n] = lHandVerticesArray[n];
+                                    // userColoursArray[n] = lHandColoursArray[n];
+                            }
+                            else// if (userVerticesArray[n]->size() > 1)
+                            {
+                                //userVerticesArray[n]->resize(1);
+                                //userColoursArray[n]->resize(1);
+                                drawArrays[n]->setCount(0);//userVerticesArray[n]->size());
+                                userVerticesArray[n]->dirty();
+                                userColoursArray[n]->dirty();
+                            }
+                        }
+
                         kinectVertices = userVerticesArray[0];
                         kinectColours = userColoursArray[0];
                     }
@@ -286,10 +292,6 @@ osg::Vec4f CloudManager::getColorRGB(int dist)
 
 osg::Vec4f CloudManager::getColorUser(int uid, int dist)
 {
-
-    // XXX this should not be necessary if we are removing points from the array
-    if (uid == 0) return osg::Vec4f(0, 0, 0, 1);
-
     if (userColorMap.count(uid * 1000000 + dist) == 0)
     {
         float r, g, b, h, s, v;
@@ -332,206 +334,221 @@ void CloudManager::processNewCloud()
 }
 void CloudManager::reduceUsersArray()
 {
-	for(int n=0; n < userSize.size(); n++)
-	{
-	  if(userSize[n] < lastUserSize[n] && lastUserSize[n] != 0 && userSize[n] != 0)
-	  {
-	      int removals = lastUserSize[n] - userSize[n];
-	      while(removals > 0)
-	      {
-		userVerticesArray[n]->pop_back();
-		userColoursArray[n]->pop_back();
-		removals--;
-	      }
-	  }
-	  lastUserSize[n] = userSize[n];
-	  
-	}
+    for (int n = 0; n < userSize.size(); n++)
+    {
+        int diff = -userSize[n] + userVerticesArray[n]->size();
+
+        if (diff > 0)
+        {
+            while (diff-- > 0)
+            {
+                userVerticesArray[n]->pop_back();
+                userColoursArray[n]->pop_back();
+            }
+        }
+    }
+
+    for (int n = 0; n < userSize.size(); n++)
+    {
+        if (userOn[n] == 0)
+        {
+            int diff = userVerticesArray[n]->size();
+
+            if (diff > 0)
+            {
+                while (diff-- > 0)
+                {
+                    userVerticesArray[n]->pop_back();
+                    userColoursArray[n]->pop_back();
+                }
+            }
+        }
+    }
 }
 void CloudManager::reduceHandArray()
 {
-	for(int n=0; n < lHandSize.size(); n++)
-	{
-	  if(lHandSize[n] < lastlHandSize[n] && lastlHandSize[n] != 0 && lHandSize[n] != 0)
-	  {
-	      int removals = lastlHandSize[n] - lHandSize[n];
-	      while(removals > 0)
-	      {
-		lHandVerticesArray[n]->pop_back();
-		lHandColoursArray[n]->pop_back();
-		removals--;
-	      }
-	  }
-	  lastlHandSize[n] = lHandSize[n];
-	  
-	}
+    for (int n = 0; n < lHandSize.size(); n++)
+    {
+        if (lHandSize[n] < lastlHandSize[n] && lastlHandSize[n] != 0 && lHandSize[n] != 0)
+        {
+            int removals = lastlHandSize[n] - lHandSize[n];
+
+            while (removals > 0)
+            {
+                lHandVerticesArray[n]->pop_back();
+                lHandColoursArray[n]->pop_back();
+                removals--;
+            }
+        }
+
+        lastlHandSize[n] = lHandSize[n];
+    }
 }
 void CloudManager::generateHandArray()
 {
-
-	for(int i=1;i < userVerticesArray.size(); i++)
+    for (int i = 1; i < userVerticesArray.size(); i++)
+    {
+        if (userVerticesArray[i]->size() > 500)
         {
-	 if(userVerticesArray[i]->size() > 500)
-	 {
-	    
-		osg::Geometry* tempGeom = new osg::Geometry();
-		osg::DrawArrays* drawArray = new osg::DrawArrays(osg::PrimitiveSet::POINTS, 0, userVerticesArray[i]->size());
-		tempGeom->addPrimitiveSet(drawArray);
-		tempGeom->setVertexArray(userVerticesArray[i]);
-
+            osg::Geometry* tempGeom = new osg::Geometry();
+            osg::DrawArrays* drawArray = new osg::DrawArrays(osg::PrimitiveSet::POINTS, 0, userVerticesArray[i]->size());
+            tempGeom->addPrimitiveSet(drawArray);
+            tempGeom->setVertexArray(userVerticesArray[i]);
             //Get New Bounding Box and Compare to Average
             tempGeom->computeBound();
-            osg::BoundingBox bbox = tempGeom->getBound(); 
+            osg::BoundingBox bbox = tempGeom->getBound();
+            osg::Vec3f center = bbox.center();
+            float yOverRadius = center.y() - 225;
+            float yOverLimit = center.y() - 800 ;
+            int id = i;
+            lHandSize[id] = 0;
 
-		osg::Vec3f center = bbox.center();
-                float yOverRadius = center.y() - 225;
-                float yOverLimit = center.y() - 800 ;
-		int id = i;
-                lHandSize[id] = 0;
-                for(int n=0;n < userVerticesArray[id]->size(); n++)
-		{
-		if(userVerticesArray[id]->at(n).y() < yOverRadius && userVerticesArray[id]->at(n).y() > yOverLimit )
-		{
-                           if(lHandSize[id] < lHandVerticesArray[id]->size())
-                           {
-                            lHandVerticesArray[id]->at(lHandSize[id]) = userVerticesArray[id]->at(n);
-                            lHandColoursArray[id]->at(lHandSize[id]) = userColoursArray[id]->at(n);
-			   }
-			   else
-			   {
-                            lHandVerticesArray[id]->push_back(userVerticesArray[id]->at(n));
-                            lHandColoursArray[id]->push_back(userColoursArray[id]->at(n));
-                           }
-			   lHandSize[id]++;
-			//TODO: Need to do Cluster to find which hand it belongs too
-		}
-		}
-		reduceHandArray();
-
-		drawArraysHand[i]->setCount(lHandVerticesArray[i]->size());
-		lHandVerticesArray[i]->dirty();
-		lHandColoursArray[i]->dirty();
-	 }
-         else
-         {
-                if(lHandVerticesArray[i]->size() > 1)
+            for (int n = 0; n < userVerticesArray[id]->size(); n++)
+            {
+                if (userVerticesArray[id]->at(n).y() < yOverRadius && userVerticesArray[id]->at(n).y() > yOverLimit)
                 {
-			   lHandVerticesArray[i]->resize(1);
-			   lHandColoursArray[i]->resize(1);
-                           drawArraysHand[i]->setCount(lHandVerticesArray[i]->size());
-		           lHandVerticesArray[i]->dirty();
-	                   lHandColoursArray[i]->dirty();
-		}
-         }
-	}
+                    if (lHandSize[id] < lHandVerticesArray[id]->size())
+                    {
+                        lHandVerticesArray[id]->at(lHandSize[id]) = userVerticesArray[id]->at(n);
+                        lHandColoursArray[id]->at(lHandSize[id]) = userColoursArray[id]->at(n);
+                    }
+                    else
+                    {
+                        lHandVerticesArray[id]->push_back(userVerticesArray[id]->at(n));
+                        lHandColoursArray[id]->push_back(userColoursArray[id]->at(n));
+                    }
+
+                    lHandSize[id]++;
+                    //TODO: Need to do Cluster to find which hand it belongs too
+                }
+            }
+
+            reduceHandArray();
+            drawArraysHand[i]->setCount(lHandVerticesArray[i]->size());
+            lHandVerticesArray[i]->dirty();
+            lHandColoursArray[i]->dirty();
+        }
+        else
+        {
+            if (lHandVerticesArray[i]->size() > 1)
+            {
+                lHandVerticesArray[i]->resize(1);
+                lHandColoursArray[i]->resize(1);
+                drawArraysHand[i]->setCount(lHandVerticesArray[i]->size());
+                lHandVerticesArray[i]->dirty();
+                lHandColoursArray[i]->dirty();
+            }
+        }
+    }
 }
 void CloudManager::triangulatePointCloud()
 {
-// create a square area
-// osg::Vec3Array* points = new osg::Vec3Array;
-// points->push_back(osg::Vec3(-1, -1, 0));
-// points->push_back(osg::Vec3(-1,  1, 0));
-// points->push_back(osg::Vec3( 1, -1, 0));
-// points->push_back(osg::Vec3( 1,  1, 0));
-//
-// // create triangulator and set the points as the area
-// osg::ref_ptr<osgUtil::DelaunayTriangulator> trig = new osgUtil::DelaunayTriangulator();
-// trig->setInputPointArray(points);
-//
-// // create a triangular constraint
-// osg::Vec3Array* bounds = new osg::Vec3Array;
-// bounds->push_back(osg::Vec3(-0.5f, -0.5f, 0));
-// bounds->push_back(osg::Vec3(-0.5f, 0.5f, 0));
-// bounds->push_back(osg::Vec3(0.5f, 0.5f, 0));
-// osg::ref_ptr<osgUtil::DelaunayConstraint> constraint = new osgUtil::DelaunayConstraint;
-// constraint->setVertexArray(bounds);
-// constraint->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_LOOP,0,3) );
-//
-// // add constraint to triangulator
-// trig->addInputConstraint(constraint.get());
-//
-// trig->triangulate();
-//
-// // remove triangle from mesh
-// trig->removeInternalTriangles(constraint.get());
-//
-// // put triangulated mesh into OSG geometry
-// osg::Geometry* gm = new osg::Geometry;
-// gm->setVertexArray(points);
-// gm->addPrimitiveSet(trig->getTriangles());
-// osg::Vec4Array* colors = new osg::Vec4Array(1);
-// colors->push_back(osg::Vec4(1,0,1,1));
-// gm->setColorArray(colors);
-// gm->setColorBinding(osg::Geometry::BIND_OVERALL);
-//
-
+    // create a square area
+    // osg::Vec3Array* points = new osg::Vec3Array;
+    // points->push_back(osg::Vec3(-1, -1, 0));
+    // points->push_back(osg::Vec3(-1,  1, 0));
+    // points->push_back(osg::Vec3( 1, -1, 0));
+    // points->push_back(osg::Vec3( 1,  1, 0));
+    //
+    // // create triangulator and set the points as the area
+    // osg::ref_ptr<osgUtil::DelaunayTriangulator> trig = new osgUtil::DelaunayTriangulator();
+    // trig->setInputPointArray(points);
+    //
+    // // create a triangular constraint
+    // osg::Vec3Array* bounds = new osg::Vec3Array;
+    // bounds->push_back(osg::Vec3(-0.5f, -0.5f, 0));
+    // bounds->push_back(osg::Vec3(-0.5f, 0.5f, 0));
+    // bounds->push_back(osg::Vec3(0.5f, 0.5f, 0));
+    // osg::ref_ptr<osgUtil::DelaunayConstraint> constraint = new osgUtil::DelaunayConstraint;
+    // constraint->setVertexArray(bounds);
+    // constraint->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_LOOP,0,3) );
+    //
+    // // add constraint to triangulator
+    // trig->addInputConstraint(constraint.get());
+    //
+    // trig->triangulate();
+    //
+    // // remove triangle from mesh
+    // trig->removeInternalTriangles(constraint.get());
+    //
+    // // put triangulated mesh into OSG geometry
+    // osg::Geometry* gm = new osg::Geometry;
+    // gm->setVertexArray(points);
+    // gm->addPrimitiveSet(trig->getTriangles());
+    // osg::Vec4Array* colors = new osg::Vec4Array(1);
+    // colors->push_back(osg::Vec4(1,0,1,1));
+    // gm->setColorArray(colors);
+    // gm->setColorBinding(osg::Geometry::BIND_OVERALL);
+    //
 }
 void CloudManager::updateUserVertices(int id, int j, osg::Vec3 ppos)
 {
-if(id ==1)
-{
-    if(userVerticesArray[id]->size() > j)
+    if (id == 1)
     {
-    userVerticesArray[id]->at(j) = ppos;
-      if(id == 1)
-      {
-	user1Vertices->at(j) = ppos;
-      }
+        if (userVerticesArray[id]->size() > j)
+        {
+            userVerticesArray[id]->at(j) = ppos;
+
+            if (id == 1)
+            {
+                user1Vertices->at(j) = ppos;
+            }
+        }
+        else
+        {
+            userVerticesArray[id]->push_back(ppos);
+
+            if (id == 1)
+            {
+                user1Vertices->push_back(ppos);
+            }
+        }
     }
-    else
-    {
-    userVerticesArray[id]->push_back(ppos);
-      if(id == 1)
-      {
-	user1Vertices->push_back(ppos);
-      }
-    }
-}
 }
 
 void CloudManager::updateHandVertices(int id, int j, int hand, osg::Vec3 ppos)
 {
-    if(lHandVerticesArray[id]->size() > j)
+    if (lHandVerticesArray[id]->size() > j)
     {
-    lHandVerticesArray[id]->at(j) = ppos;
+        lHandVerticesArray[id]->at(j) = ppos;
     }
     else
     {
-    lHandVerticesArray[id]->push_back(ppos);
+        lHandVerticesArray[id]->push_back(ppos);
     }
-
 }
 void CloudManager::updateUserColours(int id, int j, osg::Vec4 tempColour)
 {
-if(id==1)
-{
-    if(userColoursArray[id]->size() > j)
+    if (id == 1)
     {
-    userColoursArray[id]->at(j) = tempColour;
-      if(id == 1)
-      {
-	user1Colours->at(j) = tempColour;
-      }
+        if (userColoursArray[id]->size() > j)
+        {
+            userColoursArray[id]->at(j) = tempColour;
+
+            if (id == 1)
+            {
+                user1Colours->at(j) = tempColour;
+            }
+        }
+        else
+        {
+            userColoursArray[id]->push_back(tempColour);
+
+            if (id == 1)
+            {
+                user1Colours->push_back(tempColour);
+            }
+        }
     }
-    else
-    {
-    userColoursArray[id]->push_back(tempColour);
-      if(id == 1)
-      {
-	user1Colours->push_back(tempColour);
-      }
-    }
-}
 }
 void CloudManager::updateHandColours(int id, int j, int hand, osg::Vec4 tempColour)
 {
-    if(lHandColoursArray[id]->size() > j)
+    if (lHandColoursArray[id]->size() > j)
     {
-    lHandColoursArray[id]->at(j) = tempColour;
+        lHandColoursArray[id]->at(j) = tempColour;
     }
     else
     {
-    lHandColoursArray[id]->push_back(tempColour);
+        lHandColoursArray[id]->push_back(tempColour);
     }
-
 }

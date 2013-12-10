@@ -50,6 +50,7 @@ public:
     void menuCallback(cvr::MenuItem* item);
     bool processEvent(InteractionEvent* event);
     void preFrame();
+    void handleSkeleton();
 
     static KinectDemo* instance();
     InputManager* inputManager;
@@ -57,6 +58,7 @@ public:
     int bcounter;
     int masterKinect;
     int oldMasterKinect;
+    int masterKinectServer;
     int max_users;
     float colorfps;
 
@@ -104,9 +106,9 @@ public:
     void loadScreensMenu();
     void checkSkelMaster(std::map<int, Skeleton>* skel_map);
     void checkSkelGesture(std::map<int, Skeleton>* skel_map);
-    void gestureSurrender(osg::Vec3 lHand,osg::Vec3 rHand,osg::Vec3 head);
-    void gestureLeftClick(osg::Vec3 lHand,osg::Vec3 rHand,osg::Vec3 head);
-    void gestureRightClick(osg::Vec3 lHand,osg::Vec3 rHand,osg::Vec3 head);
+    void gestureSurrender(osg::Vec3 lHand, osg::Vec3 rHand, osg::Vec3 head);
+    void gestureLeftClick(osg::Vec3 lHand, osg::Vec3 rHand, osg::Vec3 head);
+    void gestureRightClick(osg::Vec3 lHand, osg::Vec3 rHand, osg::Vec3 head);
     //    void kinectTransform();
 
     //    osg::ref_ptr<osg::Geode> kgeode;
@@ -197,7 +199,7 @@ protected:
     osg::Group* irPointsGroup;
     bool buttonDown;
     bool rightButtonDown;
-    
+
     int  calibCount;
 
     float distanceMIN, distanceMAX;

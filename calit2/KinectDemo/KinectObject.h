@@ -1,4 +1,5 @@
 #include "CloudManager.h"
+#include "SkeletonManager.h"
 #include <osg/PolygonMode>
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/SceneObject.h>
@@ -18,6 +19,7 @@ class KinectObject : public cvr::SceneObject
 public:
     KinectObject(std::string name, std::string cloud_server, std::string skeleton_server, std::string color_server, std::string depth_server, osg::Vec3 position);
     CloudManager* cm;
+    SkeletonManager* sm;
     //osg::Group* group;
     //osg::Geometry* geom;
     //osg::Geode* kgeode;

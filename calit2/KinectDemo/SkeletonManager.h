@@ -1,58 +1,49 @@
 //#ifndef _ANIMATION_MANAGER_MULT
 //#define _ANIMATION_MANAGER_MULT
 
-#include <osgDB/ReadFile>
-#include <osgDB/FileUtils>
 #include <cvrKernel/SceneManager.h>
 #include <cvrConfig/ConfigManager.h>
+#include <cvrKernel/SceneObject.h>
 #include <cvrKernel/PluginHelper.h>
-#include <cvrKernel/CVRPlugin.h>
 #include <cvrMenu/MenuCheckbox.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuRangeValue.h>
 
 #include <shared/PubSub.h>
 #include <protocol/skeletonframe.pb.h>
-#include <protocol/colormap.pb.h>
-#include <protocol/depthmap.pb.h>
-#include <protocol/pointcloud.pb.h>
 #include <zmq.hpp>
-#include "kUtils.h"
 #include "Skeleton.h"
-#include <unordered_map>
 
 
-#include <iostream>
-#include <string>
-#include <map>
 
 #include <OpenThreads/Thread>
-
-
-//  zmq::context_t contextCloud(1);
 
 class SkeletonManager : public OpenThreads::Thread {
 
 public:
 
-    SkeletonManager();
+    SkeletonManager(std::string server);
     ~SkeletonManager();
-    //contextCloud(1);
-    SubSocket<RemoteKinect::SkeletonFrame>* skelT_socket;
+    RemoteKinect::SkeletonFrame* skel_frame;
+    SubSocket<RemoteKinect::SkeletonFrame>* skel_socket;
+    std::map<int, Skeleton> mapIdSkel;
+    osg::Switch* switchNode;
+
     void update();
     bool isCacheDone();
 
-    RemoteKinect::SkeletonFrame* sf2;
     virtual void run();
     void quit();
+    std::map<int, Skeleton>* skeletonGetMap();
+
+    zmq::context_t* context;
 protected:
 
-    std::map<int, Skeleton> mapIdSkel;
     bool kNavSpheres;
     bool kMoveWithCam;
     bool _cacheDone;
     bool should_quit;
-    osg::MatrixTransform* _root;
+    std::string skeletonServer;
 };
 
 //#endif

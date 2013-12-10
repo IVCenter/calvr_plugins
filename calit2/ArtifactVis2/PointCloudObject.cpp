@@ -66,7 +66,7 @@ void PointCloudObject::init(std::string name, std::string filename, osg::Quat pc
 
 
             cout << "File: " << filename << endl;
-            PointsLoadInfo pli;
+//            PointsLoadInfo pli;
             pli.file = filename;
             pli.group = new osg::Group();
 

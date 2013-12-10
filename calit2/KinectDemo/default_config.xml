@@ -38,17 +38,38 @@
 	 </KinectDefaultOn>
 
           <KinectServer>
+              <NumKinects value="5" />
+              <!--Kinect0 is on top of NexCave-->
+              <DepthMap1 value="tcp://109.171.138.169:9000" />
+              <ColorMap1 value="tcp://109.171.138.169:9001" />
+              <Skeleton1 value="tcp://109.171.138.169:9002" />
+              <PointCloud1 value="tcp://109.171.138.169:9003" />
+
+              <!--Kinect1 is back of NexCave-->
+              <DepthMap2 value="tcp://109.171.138.131:9000" />
+              <ColorMap2 value="tcp://109.171.138.131:9001" />
+              <Skeleton2 value="tcp://109.171.138.131:9002" />
+              <PointCloud2 value="tcp://109.171.138.131:9003" />
+
+              <!--Kinect2 is center of Zone2-->
+              <DepthMap3 value="tcp://109.171.138.153:9000" />
+              <ColorMap3 value="tcp://109.171.138.153:9001" />
+              <Skeleton3 value="tcp://109.171.138.153:9002" />
+              <PointCloud3 value="tcp://109.171.138.153:9003" />
+              
+              <!--Kinect3 is left on Zone2-->
+              <DepthMap4 value="tcp://109.171.138.150:9000" />
+              <ColorMap4 value="tcp://109.171.138.150:9001" />
+              <Skeleton4 value="tcp://109.171.138.150:9002" />
+              <PointCloud4 value="tcp://109.171.138.150:9003" />
               <NumKinects value="2" />
 
-              <DepthMap1 value="tcp://127.0.0.1:9000" /> 
-              <ColorMap1 value="tcp://127.0.0.1:9001" />
-              <Skeleton1 value="tcp://127.0.0.1:9002" />
-              <PointCloud1 value="tcp://127.0.0.1:9003" />
+              <!--Kinect4 is localhost setup-->
+              <DepthMap5 value="tcp://127.0.0.1:9000" /> 
+              <ColorMap5 value="tcp://127.0.0.1:9001" />
+              <Skeleton5 value="tcp://127.0.0.1:9002" />
+              <PointCloud5 value="tcp://127.0.0.1:9003" />
 
-              <DepthMap2 value="tcp://109.171.138.130:9000" /> 
-              <ColorMap2 value="tcp://109.171.138.130:9001" />
-              <Skeleton2 value="tcp://109.171.138.130:9002" />
-              <PointCloud2 value="tcp://109.171.138.130:9003" />
           </KinectServer>
 
           <KinectNavSphere>
@@ -82,6 +103,12 @@
 </KinectDemo>
 <!--Too Be Added to your Input Config Like This-->
 <!--You will need to have TrackerPlugin(~/KinectDemo/) put in CalVR core and compiled-->
+
+
+<!--DoubleClick is to set eval for double right clicking-->
+<DoubleClickTimeout vale="60" />
+
+
 <TrackingSystem3 value="PLUGIN">
         <Offset x="0" y="0" z="0" />
         <Orientation h="0" p="0" r="0" />
@@ -122,7 +149,7 @@
      <Hand0>
        <Address system="3" body="1" />
        <!-- <Address system="0" body="1" /> -->
-       <ButtonMask system0="0xFF" system1="0x00" system2="0x00" />
+       <ButtonMask system0="0x00" system1="0x00" system2="0x00" system3="0xFF" />
        <Valuator0 system="0" index="0" />
      </Hand0>
      <Hand1>
