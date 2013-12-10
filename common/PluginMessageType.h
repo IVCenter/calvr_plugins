@@ -64,6 +64,7 @@ struct PointsLoadInfo
 {
     std::string file;
     osg::ref_ptr<osg::Group> group;
+    bool useShader;
 };
 
 enum PanoViewLODMessageType
