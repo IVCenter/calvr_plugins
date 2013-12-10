@@ -254,7 +254,10 @@ bool Points::isFile(const char* filename)
 
 void Points::removeAll()
 {
-    for(std::vector<struct PointObject*>::iterator delit = _loadedPoints.begin(); delit != _loadedPoints.end(); delit++)
+    std::cerr << "Remove all called\n";
+
+    std::vector<struct PointObject*>::iterator delit = _loadedPoints.begin();
+    while( delit != _loadedPoints.end() )
     {
         //(*delit)->scene->detachFromScene();
 
@@ -286,7 +289,9 @@ void Points::removeAll()
             delete (*delit)->scene;
 
         _loadedPoints.erase(delit);
-        break;
+
+        delit = _loadedPoints.begin();
+        //break;
     }
 }
 
@@ -393,6 +398,12 @@ void Points::menuCallback(MenuItem* menuItem)
 
             std::cout << "Save." << std::endl;
         }
+    }
+
+    // check for removeAll
+    if( menuItem == _removeButton )
+    {
+        removeAll();
     }
 
 }
