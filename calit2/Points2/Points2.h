@@ -47,6 +47,7 @@
 #include <osgDB/Registry>
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
+/*
 #include <osgCuda/Computation>
 #include <osgCuda/Memory>
 #include <osgCuda/Geometry>
@@ -57,7 +58,7 @@
 //CUDA
 #include "CudaParticle.h"
 #include "CudaHelper.h"
-
+*/
 class Points2 : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::FileLoadCallback, public cvr::PerContextCallback
 {
   protected:
@@ -94,9 +95,9 @@ class Points2 : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::Fil
     void preFrame();
     void message(int type, char *&data, bool collaborative=false);
     void initParticles();
-
+    osg::Geode* getBoundingBox();
+/*
 //osgCompute
-osg::Geode* getBoundingBox();
 osg::Geode* getGeode();
 osg::ref_ptr<osgCompute::Computation> getComputation();
 osg::ref_ptr<osgCompute::ResourceVisitor> getVisitor( osg::FrameStamp* fs );
@@ -134,5 +135,6 @@ int contextid;
         bool _callbackActive;
         mutable std::map<int,CUdeviceptr> d_debugDataMap;
         mutable std::map<int,CUdeviceptr> d_particleDataMap;
+*/
 };
 #endif

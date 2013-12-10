@@ -118,6 +118,7 @@ bool Points2::loadFile(std::string filename)
 	    currentobject->scene = NULL;
 	    currentobject->pointScale = NULL;
 	    _loadedPoints.push_back(currentobject);
+/*
   //osgCompute Test
     osg::ref_ptr<osg::Group> scene = new osg::Group;
     osg::ref_ptr<osg::Group> computation = getComputation();
@@ -130,6 +131,7 @@ bool Points2::loadFile(std::string filename)
     visitor->apply( *scene );
    // SceneManager::instance()->getScene()->addChild(scene);
     SceneManager::instance()->getObjectsRoot()->addChild(scene);
+*/
     }
     return result;
 }
@@ -434,7 +436,7 @@ void Points2::message(int type, char *&data, bool collaborative)
     }
 }
 
-
+//
 //------------------------------------------------------------------------------
 osg::Geode* Points2::getBoundingBox()
 {
@@ -508,9 +510,11 @@ osg::Geode* Points2::getBoundingBox()
 }
 
 //------------------------------------------------------------------------------
+/*
 osg::Geode* Points2::getGeode()
 {
     osg::Geode* geode = new osg::Geode;
+
     unsigned int numParticles = 1000000;
       osg::Vec3Array* vecCoords;
       osg::Vec4Array* vecColors;
@@ -635,6 +639,7 @@ osg::Geode* Points2::getGeode()
 }
 
 //------------------------------------------------------------------------------
+
 osg::ref_ptr<osgCompute::Computation> Points2::getComputation()
 {
     osg::ref_ptr<osgCompute::Computation> computationEmitter = new osgCuda::Computation;
@@ -680,10 +685,10 @@ osg::ref_ptr<osgCompute::ResourceVisitor> Points2::getVisitor( osg::FrameStamp* 
 	seedValues->allocateImage(numParticles,1,1,GL_LUMINANCE,GL_FLOAT);
     
 	float* seeds = (float*)seedValues->data();
-/*
-	for( unsigned int s=0; s<numParticles; ++s )
-        seeds[s] = ( float(rand()) / RAND_MAX );
-*/
+
+//	for( unsigned int s=0; s<numParticles; ++s )
+//        seeds[s] = ( float(rand()) / RAND_MAX );
+
     osg::ref_ptr<osgCuda::Memory> seedBuffer = new osgCuda::Memory;
     seedBuffer->setElementSize( sizeof(float) );
     seedBuffer->setName( "ptclSeedBuffer" );
@@ -869,7 +874,7 @@ void Points2::initParticles()
     //_particleGeo->setCullingActive( false );
 
 
-/*
+
 	int cudaDevice = ScreenConfig::instance()->getCudaDevice(contextid);
 	//    if(!_cudaContextSet[contextid])
 	//    {
@@ -893,7 +898,7 @@ void Points2::initParticles()
 	    _cudaContextSet[contextid] = true;
 	}
 	printCudaErr();
-*/
+
 
 
 }
@@ -1005,7 +1010,7 @@ cerr << "Launching Cuda!!!\n";
 //Allocate ParticleMemory
 //	size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
 //	cuMemcpyHtoD(d_particleDataMap[contextid], h_particleData, size);
-/*
+
 //Setup Injector and Launch Point
 
     setReflData((void*)h_reflectorData,sizeof(h_reflectorData));
@@ -1027,8 +1032,9 @@ cerr << "Launching Cuda!!!\n";
     cudaThreadSynchronize();
 
     checkUnmapBufferObj(vbo);
-*/
+
 
 
   
 }
+*/
