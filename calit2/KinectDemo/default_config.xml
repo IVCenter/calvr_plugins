@@ -1,0 +1,158 @@
+<?xml version="1.0"?>
+<KinectDemo value="on" />
+ <KinectDemo>
+          <3DModelFolder value="/home/calvr/osgdata/" />
+          <Transforms value="/home/calvr/CVRPlugins/calit2/KinectDemo/transforms/" />
+          <TransformsAtStartup value="true" />
+          <ShaderPath value="/home/calvr/CVRPlugins/calit2/KinectDemo/shaders" />
+          <ScreenConfigLocation value="/home/calvr/CalVR/config/" />
+          <MaxVisibleRange value="100000000000.0" />
+          <Offset>
+            <X value="-700000" />
+            <Y value="-3300000" />
+            <Z value="0" />
+          </Offset>
+          <SphereRadius value="10" />
+          <Tessellation value=".2" />
+          <ShowKinectModel value="true" />
+          <ShowScreenFrames value="true" />
+          <ShowKinectFOV value="true" />
+          <ArtifactPanel x="-200" y="2000" z="100" scale="1.0" />
+          <InfoPanel x="0" y="1000" z="0" scale="0.5" />
+          <KinectSkeleton x="0" y="1000" z="400" rx="0" ry="0" rz="0" rw="1" />
+          <CamStart s="1000" x="0.0249151" y="3.41685" z="-0.191232" rx="0.0143035" ry="-0.0208855" rz="0.999386" rw="-0.0242437" />
+	 <KinectDefaultOn value="true" >
+	      <MoveWithCam value="false" />
+	      <KinectPointSize value="1" />
+	      <FlyToDefault value="4" />
+	      <ShowPCloud value="true" />
+	      <KinectThreaded value="true" />
+	      <ShowColor value="true" />
+	      <NavSpheres value="true" />
+	      <UseGestures value="false" />
+	      <LockPos value="false" />
+	      <LockRot value="false" />
+	      <LockScale value="true" />
+	      <ShowArtifactPanel value="false" />
+	      <ShowInfoPanel value="true" />
+	 </KinectDefaultOn>
+
+          <KinectServer>
+              <NumKinects value="5" />
+              <!--Kinect0 is on top of NexCave-->
+              <DepthMap1 value="tcp://109.171.138.169:9000" />
+              <ColorMap1 value="tcp://109.171.138.169:9001" />
+              <Skeleton1 value="tcp://109.171.138.169:9002" />
+              <PointCloud1 value="tcp://109.171.138.169:9003" />
+
+              <!--Kinect1 is back of NexCave-->
+              <DepthMap2 value="tcp://109.171.138.131:9000" />
+              <ColorMap2 value="tcp://109.171.138.131:9001" />
+              <Skeleton2 value="tcp://109.171.138.131:9002" />
+              <PointCloud2 value="tcp://109.171.138.131:9003" />
+
+              <!--Kinect2 is center of Zone2-->
+              <DepthMap3 value="tcp://109.171.138.153:9000" />
+              <ColorMap3 value="tcp://109.171.138.153:9001" />
+              <Skeleton3 value="tcp://109.171.138.153:9002" />
+              <PointCloud3 value="tcp://109.171.138.153:9003" />
+              
+              <!--Kinect3 is left on Zone2-->
+              <DepthMap4 value="tcp://109.171.138.150:9000" />
+              <ColorMap4 value="tcp://109.171.138.150:9001" />
+              <Skeleton4 value="tcp://109.171.138.150:9002" />
+              <PointCloud4 value="tcp://109.171.138.150:9003" />
+              <NumKinects value="2" />
+
+              <!--Kinect4 is localhost setup-->
+              <DepthMap5 value="tcp://127.0.0.1:9000" /> 
+              <ColorMap5 value="tcp://127.0.0.1:9001" />
+              <Skeleton5 value="tcp://127.0.0.1:9002" />
+              <PointCloud5 value="tcp://127.0.0.1:9003" />
+
+          </KinectServer>
+
+          <KinectNavSphere>
+	        <navSphereOffsetY value="0.3" />
+	        <navSphereOffsetZ value="0.1" />
+	        <diffScaleY value="0.15" />
+	    	<diffScaleNegY value="-0.05" />
+                <tranScaleY value="-200" />
+            	<diffScaleX value="0.1" />
+	    	<diffScaleNegX value="-0.1" />
+		<tranScaleX value="0.006" />
+            	<diffScaleZ value="0.05" />
+	    	<diffScaleNegZ value="-0.05" />
+		<tranScaleZ value="-50" />
+            	<diffScaleRY value="-0.5" />
+	    	<diffScaleNegRY value="-0.8" />
+		<tranScaleRY value="0.005" />
+          </KinectNavSphere>
+
+	  <Cylinder>
+            <Min value="200" />
+            <Max value="1000" />
+          </Cylinder>
+
+	  <QueryTest value ="false">
+	      <Query value="zb" />
+	  </QueryTest>
+
+	  <Nvidia value="true" />
+	  <scaleP value="1.0" />
+</KinectDemo>
+<!--Too Be Added to your Input Config Like This-->
+<!--You will need to have TrackerPlugin(~/KinectDemo/) put in CalVR core and compiled-->
+
+
+<!--DoubleClick is to set eval for double right clicking-->
+<DoubleClickTimeout vale="60" />
+
+
+<TrackingSystem3 value="PLUGIN">
+        <Offset x="0" y="0" z="0" />
+        <Orientation h="0" p="0" r="0" />
+        <NumBodies value="2"/>
+       <Body0>
+        <Offset x="0" y="0" z="0" />
+        <Orientation h="0" p="0" r="0" />
+       </Body0>
+       <Body1>
+        <Offset x="0" y="0" z="0" />
+        <Orientation h="0" p="0" r="0" />
+       </Body1>
+       <Body2>
+        <Offset x="0" y="0" z="0" />
+        <Orientation h="0" p="0" r="0" />
+       </Body2>
+       <Body3>
+        <Offset x="0" y="0" z="0" />
+        <Orientation h="0" p="0" r="0" />
+       </Body3>
+       <Body4>
+        <Offset x="0" y="0" z="0" />
+        <Orientation h="0" p="0" r="0" />
+       </Body4>
+       <Body5>
+        <Offset x="0" y="0" z="0" />
+        <Orientation h="0" p="0" r="0" />
+       </Body5>
+       <NumButtons value="3" />
+       <NumValuators value="1" />
+</TrackingSystem3>
+
+     <NumHeads value="1" />
+     <Head0Address system="3" body="0" />
+     <!-- <Head0Address system="0" body="0" /> -->
+
+     <NumHands value="2" />
+     <Hand0>
+       <Address system="3" body="1" />
+       <!-- <Address system="0" body="1" /> -->
+       <ButtonMask system0="0x00" system1="0x00" system2="0x00" system3="0xFF" />
+       <Valuator0 system="0" index="0" />
+     </Hand0>
+     <Hand1>
+       <Address system="1" body="0" />
+       <ButtonMask system0="0x00" system1="0xFF" system2="0x00" />
+     </Hand1>

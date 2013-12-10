@@ -1,0 +1,80 @@
+SET(LIB_NAME KinectDemo)
+
+SET(PLUGIN_HEADERS
+    KinectDemo.h
+    Skeleton.h
+    MCylinder.h
+    ${REMOTEKINECT_INCLUDE_DIR}/protocol/skeletonframe.pb.h
+    ${REMOTEKINECT_INCLUDE_DIR}/protocol/skeleton.pb.h
+    ${REMOTEKINECT_INCLUDE_DIR}/protocol/colormap.pb.h
+    ${REMOTEKINECT_INCLUDE_DIR}/protocol/depthmap.pb.h
+    ${REMOTEKINECT_INCLUDE_DIR}/protocol/pointcloud.pb.h
+    ${REMOTEKINECT_INCLUDE_DIR}/protocol/packing.pb.h
+    kUtils.h
+    SelectableItem.h
+    CloudManager.h
+    SkeletonManager.h
+    KinectObject.h
+    CalibrateKinect.h
+    InputManager.h
+    KinectInteractions.h
+    helmparms3d/svdm.h)
+
+ADD_LIBRARY(${LIB_NAME}
+    "SHARED"
+    ${PLUGIN_HEADERS}
+    KinectDemo.cpp
+    Skeleton.cpp
+    MCylinder.cpp
+    ${REMOTEKINECT_INCLUDE_DIR}/protocol/skeletonframe.pb.cc
+    ${REMOTEKINECT_INCLUDE_DIR}/protocol/skeleton.pb.cc
+    ${REMOTEKINECT_INCLUDE_DIR}/protocol/colormap.pb.cc
+    ${REMOTEKINECT_INCLUDE_DIR}/protocol/depthmap.pb.cc
+    ${REMOTEKINECT_INCLUDE_DIR}/protocol/pointcloud.pb.cc
+    ${REMOTEKINECT_INCLUDE_DIR}/protocol/packing.pb.cc
+    kUtils.cpp
+    SelectableItem.cpp
+    CloudManager.cpp
+    KinectObject.cpp
+    CalibrateKinect.cpp
+    InputManager.cpp
+    KinectInteractions.cpp
+    helmparms3d/helmparms3d.cpp
+    helmparms3d/svdm.cpp
+    SkeletonManager.cpp
+)
+
+SET(CMAKE_BUILD_TYPE Release)
+
+ADD_DEFINITIONS(-std=c++0x -O3)
+
+
+FIND_PACKAGE(Snappy)
+FIND_PACKAGE(Protobuf)
+FIND_PACKAGE(ZMQ)
+FIND_PACKAGE(UUID)
+FIND_PACKAGE(RemoteKinect)
+
+
+INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${MXML_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${SPACENAV_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${SNAPPY_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${PROTOBUF_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${ZMQ_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${REMOTEKINECT_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${CalVR_Plugins_SOURCE_DIR}/calit2/KinectDemo/)
+
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${OSG_LIBRARIES})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${MXML_LIBRARY})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${SNAPPY_LIBRARY})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${PROTOBUF_LIBRARY})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${ZMQ_LIBRARY})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${UUID_LIBRARY})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${SPACENAV_LIBRARY})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${VRPN_LIBRARY})
+
+
+ADD_CALVR_LIBRARIES(${LIB_NAME})
+
+INSTALL(TARGETS ${LIB_NAME} DESTINATION lib/plugins)
