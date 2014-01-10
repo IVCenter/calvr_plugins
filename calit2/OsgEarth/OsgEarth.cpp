@@ -48,37 +48,43 @@ OsgEarth::OsgEarth()
 
 }
 
-void OsgEarth::message(int type, char *&data, bool collaborative=false);
+void OsgEarth::message(int type, char *&data, bool collaborative)
 {
     // data needs to include the plugin name and also the lat,lon and height
     if(type == OE_ADD_MODEL)
     {
-	// data contains 3 floats
-	OsgEarthRequest request = * (OsgEarthRequest*) data;
+	    // data contains 3 floats
+	    OsgEarthRequest request = * (OsgEarthRequest*) data;
 
-	// if get a request create new node add matrix and return the address of the matrixtransform
+	    // if get a request create new node add matrix and return the address of the matrixtransform
         osg::Matrixd output;
-	_map->getProfile()->getSRS()->getEllipsoid()->computeLocalToWorldTransformFromLatLongHeight(
+	    _map->getProfile()->getSRS()->getEllipsoid()->computeLocalToWorldTransformFromLatLongHeight(
 	        osg::DegreesToRadians(request.lat),
 	        osg::DegreesToRadians(request.lon),
 		request.height,
 	        output );
 
-	if( request.trans != NULL )
-	{
+	    if( request.trans != NULL )
+	    {
             request.trans->setMatrix(output);
-	}
-	else
-	{
+	    }
+	    else
+	    {
 	    osg::MatrixTransform* trans = new osg::MatrixTransform();
             trans->setMatrix(output);
             SceneManager::instance()->getObjectsRoot()->addChild(trans);
             request.trans = trans;
-	}
+	    }
 
         // send message back	
-	PluginManager::instance()->sendMessageByName(request.pluginName,OE_TRANSFORM_POINTER,(char *) &request);
+	    PluginManager::instance()->sendMessageByName(request.plugin,OE_TRANSFORM_POINTER,(char *) &request);
     }
+    else if(type == OE_MENU)
+    {
+        OsgEarthMenuRequest request = * (OsgEarthMenuRequest*) data;
+        request.oe_menu = _osgEarthMenu;
+        PluginManager::instance()->sendMessageByName(request.plugin,OE_MENU,(char *) &request);
+    } 
 }
 
 bool OsgEarth::init()
