@@ -28,6 +28,11 @@ class PagedFlowObject : public cvr::SceneObject, public cvr::PerContextCallback
         virtual void perContextCallback(int contextid, PerContextCallback::PCCType type) const;
 
     protected:
+        void getBoundsPlaneIntersectPoints(osg::Vec3 point, osg::Vec3 normal, osg::BoundingBox & bounds, std::vector<osg::Vec3> & intersectList);
+        void checkAndAddIntersect(osg::Vec3 & p1,osg::Vec3 & p2,osg::Vec3 & planep, osg::Vec3 & planen,std::vector<osg::Vec3> & intersectList);
+
+        void initCudaInfo();
+
         PagedDataSet * _set;
         FlowPagedRenderer * _renderer;
 

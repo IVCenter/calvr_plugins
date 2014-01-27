@@ -6,17 +6,32 @@
 
 #include <sys/time.h>
 
+#ifdef WITH_CUDA_LIB
+#include <cuda.h>
+#include <cudaGL.h>
+#include "CudaHelper.h"
+#include "CudaLIC.h"
+#endif
+
 namespace fpr
 {
 #include "NormalShader.h"
 #include "PlaneVecShaders.h"
 #include "VortexCoreShaders.h"
+#include "LicShaders.h"
 }
+
+// for cuda debug, remove later
+#include <osg/Matrix>
 
 using namespace fpr;
 
 pthread_mutex_t FlowPagedRenderer::_glewInitLock = PTHREAD_MUTEX_INITIALIZER;
 std::map<int,bool> FlowPagedRenderer::_glewInitMap;
+
+pthread_mutex_t FlowPagedRenderer::_cudaInitLock = PTHREAD_MUTEX_INITIALIZER;
+std::map<int,bool> FlowPagedRenderer::_cudaInitMap;
+std::map<int,std::pair<int,int> > FlowPagedRenderer::_cudaInitInfo;
 
 pthread_mutex_t FlowPagedRenderer::_colorTableInitLock = PTHREAD_MUTEX_INITIALIZER;
 std::map<int,GLuint> FlowPagedRenderer::_colorTableMap;
@@ -28,9 +43,12 @@ FlowPagedRenderer::FlowPagedRenderer(PagedDataSet * set, int frame, FlowVisType 
     _nextFrame = frame;
     _type = type;
     _attribute = attribute;
+    _licStarted = false;
 
     pthread_mutex_init(&_shaderInitLock,NULL);
     pthread_mutex_init(&_frameReadyLock,NULL);
+    pthread_mutex_init(&_licLock,NULL);
+    pthread_mutex_init(&_licCudaLock,NULL);
 
     initUniData();
 
@@ -46,10 +64,324 @@ FlowPagedRenderer::~FlowPagedRenderer()
 
 void FlowPagedRenderer::frameStart(int context)
 {
+    switch(_type)
+    {
+	case FVT_LIC_CUDA:
+	{
+#ifdef WITH_CUDA_LIB
+	    pthread_mutex_lock(&_licCudaLock);
+
+	    int fileID = _cache->getFileID(_set->frameFiles[_currentFrame]);
+	    // get needed buffers
+	    GLuint indVBO, vertsVBO, velVBO = 0;
+
+	    indVBO = _cache->getOrRequestBuffer(context,fileID,_set->frameList[_currentFrame]->indices.second,_set->frameList[_currentFrame]->indices.first*sizeof(unsigned int),GL_ELEMENT_ARRAY_BUFFER,true);
+	    for(int i = 0; i < _set->frameList[_currentFrame]->pointData.size(); ++i)
+	    {
+		if(_set->frameList[_currentFrame]->pointData[i]->name == "Velocity")
+		{
+		    velVBO = _cache->getOrRequestBuffer(context,fileID,_set->frameList[_currentFrame]->pointData[i]->offset,_set->frameList[_currentFrame]->verts.first*3*sizeof(float),GL_ARRAY_BUFFER,true);
+		    break;
+		}
+	    }
+
+	    vertsVBO = _cache->getOrRequestBuffer(context,fileID,_set->frameList[_currentFrame]->verts.second,_set->frameList[_currentFrame]->verts.first*3*sizeof(float),GL_ARRAY_BUFFER,true);
+
+	    // if all needed buffers are loaded, do LIC
+	    if(indVBO && vertsVBO && velVBO)
+	    {
+		// map buffers
+		CUdeviceptr d_indVBO, d_vertsVBO, d_velVBO;
+		checkMapBufferObj((void**)&d_indVBO,indVBO);
+		checkMapBufferObj((void**)&d_vertsVBO,vertsVBO);
+		checkMapBufferObj((void**)&d_velVBO,velVBO);
+		
+		// test to see how long it takes to form a list of tets on the plane
+		void * d_tetList;
+		cudaMalloc(&d_tetList,(_set->frameList[_currentFrame]->indices.first/4)*sizeof(unsigned int));
+
+		void * d_numTets;
+		cudaMalloc(&d_numTets,sizeof(unsigned int));
+		cudaMemset(d_numTets,0,sizeof(unsigned int));
+
+		launchMakeTetList((unsigned int*)d_tetList,(unsigned int*)d_numTets,_set->frameList[_currentFrame]->indices.first/4,(uint4*)d_indVBO,(float3*)d_vertsVBO);
+		cudaThreadSynchronize();
+
+		unsigned int h_numTets;
+		cudaMemcpy(&h_numTets,d_numTets,sizeof(unsigned int),cudaMemcpyDeviceToHost);
+
+		//std::cerr << "TotalTets: " << _set->frameList[_currentFrame]->indices.first/4 << " tets on plane: " << h_numTets << std::endl;
+
+		
+
+		// vel check
+		if(0)
+		{
+		    int velSize = _set->frameList[_currentFrame]->verts.first;
+		    float * hostVel = new float[velSize*3];
+
+		    cudaMemcpy(hostVel,(const void*)d_velVBO,velSize*3*sizeof(float),cudaMemcpyDeviceToHost);
+
+		    int zeroCount = 0;
+
+		    for(int i = 0; i < velSize; ++i)
+		    {
+			if(hostVel[(i*3)+0] == 0.0f && hostVel[(i*3)+1] == 0.0f && hostVel[(i*3)+2] == 0.0f)
+			{
+			    zeroCount++;
+			}
+		    }
+
+		    std::cerr << "ZeroCount: " << zeroCount << std::endl;
+
+		    delete[] hostVel;
+		}
+
+		// cpu validation 
+		if(0)
+		{
+
+		    int indSize = _set->frameList[_currentFrame]->indices.first;
+		    int vertSize = _set->frameList[_currentFrame]->verts.first*3;
+
+		    unsigned int * hostInd = new unsigned int[indSize];
+		    float * hostVerts = new float[vertSize];
+
+		    cudaMemcpy(hostInd,(const void*)d_indVBO,indSize*sizeof(unsigned int),cudaMemcpyDeviceToHost);
+		    cudaMemcpy(hostVerts,(const void*)d_vertsVBO,vertSize*sizeof(float),cudaMemcpyDeviceToHost);
+
+		    float * planePoint = (float*)_uniDataMap["planePoint"].data;
+		    float * planeNormal = (float*)_uniDataMap["planeNormal"].data;
+		    float * planeRight = (float*)_uniDataMap["planeRight"].data;
+		    float * planeUp = (float*)_uniDataMap["planeUp"].data;
+		    float * planeBasisMat = (float*)_uniDataMap["planeBasisInv"].data;
+
+		    int numTets = _set->frameList[_currentFrame]->indices.first/4;
+
+		    std::cerr << "PlanePoint x: " << planePoint[0] << " y: " << planePoint[1] << " z: " << planePoint[2] << std::endl;
+		    std::cerr << "PlaneNormal x: " << planeNormal[0] << " y: " << planeNormal[1] << " z: " << planeNormal[2] << std::endl;
+
+		    osg::Matrix invBasis;
+		    std::cerr << "Matrix : ";
+		    for(int i = 0; i < 3; ++i)
+		    {
+			for(int j = 0; j < 3; ++j)
+			{
+			    invBasis(i,j) = planeBasisMat[(i*3)+j];
+			    std::cerr << invBasis(i,j) << " ";
+			}
+		    }
+		    std::cerr << std::endl;
+
+		    osg::Vec3 vplanePoint(planePoint[0],planePoint[1],planePoint[2]);
+		    osg::Vec3 vplaneNormal(planeNormal[0],planeNormal[1],planeNormal[2]);
+		    osg::Vec3 vplaneRight(planeRight[0],planeRight[1],planeRight[2]);
+		    osg::Vec3 vplaneUp(planeUp[0],planeUp[1],planeUp[2]);
+
+		    // verify
+		    osg::Vec3 tempp = vplaneRight * invBasis;
+		    std::cerr << "Right verify x: " << tempp.x() << " y: " << tempp.y() << " z: " << tempp.z() << std::endl;
+		    tempp = vplaneUp * invBasis;
+		    std::cerr << "Up verify x: " << tempp.x() << " y: " << tempp.y() << " z: " << tempp.z() << std::endl;
+
+		    for(int i = 0; i < 1; ++i)
+		    {
+			osg::Vec3 tets[4];
+			for(int j = 0; j < 4; ++j)
+			{
+			    tets[j].x() = hostVerts[(hostInd[(i*4)+j]*3)+0];
+			    tets[j].y() = hostVerts[(hostInd[(i*4)+j]*3)+1];
+			    tets[j].z() = hostVerts[(hostInd[(i*4)+j]*3)+2];
+
+			    std::cerr << "Host Point " << j << " " << tets[j].x() << " " << tets[j].y() << " " << tets[j].z() << std::endl;
+			}
+			
+			float dist[4];
+			for(int j = 0; j < 4; ++j)
+			{
+			    dist[j] = (tets[j] - vplanePoint) * vplaneNormal;
+			    std::cerr << "Distance " << j << " " << dist[j] << std::endl;
+			}
+
+			float minX = FLT_MAX;
+			float minY = FLT_MAX;
+			float maxX = -FLT_MAX;
+			float maxY = -FLT_MAX;
+
+			for(int j = 0; j < 4; ++j)
+			{
+			    osg::Vec3 ppoint = tets[j] - (vplaneNormal * dist[j]) - vplanePoint;
+			    //std::cerr << "Proj x: " << ppoint.x() << " y: " << ppoint.y() << " z: " << ppoint.z() << std::endl;
+			    ppoint = ppoint * invBasis;
+			    std::cerr << "Basis x: " << ppoint.x() << " y: " << ppoint.y() << " z: " << ppoint.z() << std::endl;
+			    minX = std::min(minX,ppoint.x());
+			    maxX = std::max(maxX,ppoint.x());
+			    minY = std::min(minY,ppoint.y());
+			    maxY = std::max(maxY,ppoint.y());
+			}
+
+			std::cerr << "X: " << minX << " " << maxX << std::endl;
+			std::cerr << "Y: " << minY << " " << maxY << std::endl;
+
+			minX = ceil(minX - 0.5) + 0.5;
+			minY = ceil(minY - 0.5) + 0.5;
+			maxX = floor(maxX - 0.5) + 0.500001f;
+			maxY = floor(maxY - 0.5) + 0.500001f;
+
+			std::cerr << "X: " << minX << " " << maxX << std::endl;
+			std::cerr << "Y: " << minY << " " << maxY << std::endl;
+
+			osg::Matrixf barMat;
+
+			barMat(0,0) = tets[0].x() - tets[3].x();
+			barMat(0,1) = tets[0].y() - tets[3].y();
+			barMat(0,2) = tets[0].z() - tets[3].z();
+			barMat(0,3) = 0;
+			barMat(1,0) = tets[1].x() - tets[3].x();
+			barMat(1,1) = tets[1].y() - tets[3].y();
+			barMat(1,2) = tets[1].z() - tets[3].z();
+			barMat(1,3) = 0;
+			barMat(2,0) = tets[2].x() - tets[3].x();
+			barMat(2,1) = tets[2].y() - tets[3].y();
+			barMat(2,2) = tets[2].z() - tets[3].z();
+			barMat(2,3) = 0;
+			barMat(3,0) = 0;
+			barMat(3,1) = 0;
+			barMat(3,2) = 0;
+			barMat(3,3) = 1;
+
+			barMat = osg::Matrixf::inverse(barMat);
+			std::cerr << "InvMat: ";
+			for(int j = 0; j < 3; ++j)
+			{
+			    for(int k = 0; k < 3; ++k)
+			    {
+				std::cerr << barMat(k,j) << " ";
+			    }
+			    std::cerr << std::endl;
+			}
+
+			for(float fi = minX; fi <= maxX; fi = fi + 1.0)
+			{
+			    for(float fj = minY; fj <= maxY; fj = fj + 1.0)
+			    {
+				osg::Vec3 testpoint = vplaneUp * fi + vplaneRight * fj + vplanePoint - tets[3];
+				std::cerr << "TestPoint x: " << testpoint.x() << " y: " << testpoint.y() << " z: " << testpoint.z() << std::endl;
+
+				osg::Vec3 coords = testpoint * barMat;
+				std::cerr << "Coords " << coords.x() << " " << coords.y() << " " << coords.z() << " " << (1.0 - coords.x() - coords.y() - coords.z()) << std::endl;
+				
+			    }
+			}
+		    }
+
+		    delete[] hostInd;
+		    delete[] hostVerts;
+		}
+
+		//std::cerr << std::endl;
+
+		// map velocity texture
+		_licCudaVelImage[context]->setMapFlags(cudaGraphicsMapFlagsWriteDiscard);
+		_licCudaVelImage[context]->map();
+
+		// bind array to surface
+		setVelSurfaceRef(_licCudaVelImage[context]->getPointer());
+
+		// populate texture
+		//launchVel((uint4*)d_indVBO,(float3*)d_vertsVBO,(float3*)d_velVBO,_set->frameList[_currentFrame]->indices.first/4,LIC_TEXTURE_SIZE,LIC_TEXTURE_SIZE);
+		launchVel((uint4*)d_indVBO,(float3*)d_vertsVBO,(float3*)d_velVBO,(unsigned int*)d_tetList,h_numTets,LIC_TEXTURE_SIZE,LIC_TEXTURE_SIZE);
+		//launchVel((uint4*)d_indVBO,(float3*)d_vertsVBO,(float3*)d_velVBO,1);
+		cudaThreadSynchronize();
+
+		cudaFree(d_tetList);
+		cudaFree(d_numTets);
+
+		// unmap buffers
+		checkUnmapBufferObj(indVBO);
+		checkUnmapBufferObj(vertsVBO);
+		checkUnmapBufferObj(velVBO);
+
+		// map output texture
+		_licCudaOutputImage[context]->setMapFlags(cudaGraphicsMapFlagsWriteDiscard);
+		_licCudaOutputImage[context]->map();
+
+		// map noise texture
+		_licCudaNoiseImage[context]->setMapFlags(cudaGraphicsMapFlagsReadOnly);
+		_licCudaNoiseImage[context]->map();
+
+		// bind array to surface
+		setOutSurfaceRef(_licCudaOutputImage[context]->getPointer());
+
+		// run LIC kernel
+		launchLIC(LIC_TEXTURE_SIZE,LIC_TEXTURE_SIZE,10.0,_licCudaNoiseImage[context]->getPointer());
+
+		// unmap textures
+		_licCudaVelImage[context]->unmap();
+		_licCudaOutputImage[context]->unmap();
+		_licCudaNoiseImage[context]->unmap();
+
+	    }
+
+	    pthread_mutex_unlock(&_licCudaLock);
+#endif
+	    break;
+	}
+	default:
+	    break;
+    }
 }
 
 void FlowPagedRenderer::preFrame()
 {
+    switch(_type)
+    {
+	case FVT_LIC_CUDA:
+	{
+	    if(!_licStarted)
+	    {
+		_licOutputPoints = std::vector<float>(12);
+		float * planePoint = (float*)_uniDataMap["planePoint"].data;
+		float * planeNormal = (float*)_uniDataMap["planeNormal"].data;
+		float * planeRight = (float*)_uniDataMap["planeRight"].data;
+		float * planeUp = (float*)_uniDataMap["planeUp"].data;
+
+#ifdef WITH_CUDA_LIB
+		pthread_mutex_lock(&_licCudaLock);
+		// set constant values
+		setPlaneConsts(planePoint,planeNormal,planeRight,planeUp,_uniDataMap["planeRightNorm"].data,_uniDataMap["planeUpNorm"].data,_uniDataMap["planeBasisInv"].data,_uniDataMap["planeBasisLength"].data);
+		pthread_mutex_unlock(&_licCudaLock);
+#endif
+
+		float right[3];
+		float up[3];
+
+		right[0] = (LIC_TEXTURE_SIZE/2.0) * planeRight[0];
+		right[1] = (LIC_TEXTURE_SIZE/2.0) * planeRight[1];
+		right[2] = (LIC_TEXTURE_SIZE/2.0) * planeRight[2];
+
+		up[0] = (LIC_TEXTURE_SIZE/2.0) * planeUp[0];
+		up[1] = (LIC_TEXTURE_SIZE/2.0) * planeUp[1];
+		up[2] = (LIC_TEXTURE_SIZE/2.0) * planeUp[2];
+
+		_licOutputPoints[0] = planePoint[0] - right[0] - up[0];
+		_licOutputPoints[1] = planePoint[1] - right[1] - up[1];
+		_licOutputPoints[2] = planePoint[2] - right[2] - up[2];
+		_licOutputPoints[3] = planePoint[0] + right[0] - up[0];
+		_licOutputPoints[4] = planePoint[1] + right[1] - up[1];
+		_licOutputPoints[5] = planePoint[2] + right[2] - up[2];
+		_licOutputPoints[6] = planePoint[0] + right[0] + up[0];
+		_licOutputPoints[7] = planePoint[1] + right[1] + up[1];
+		_licOutputPoints[8] = planePoint[2] + right[2] + up[2];
+		_licOutputPoints[9] = planePoint[0] - right[0] + up[0];
+		_licOutputPoints[10] = planePoint[1] - right[1] + up[1];
+		_licOutputPoints[11] = planePoint[2] - right[2] + up[2];
+	    }
+	    break;
+	}
+	default:
+	    break;
+    }
 }
 
 void FlowPagedRenderer::preDraw(int context)
@@ -1290,6 +1622,193 @@ void FlowPagedRenderer::draw(int context)
 
 	    break;
 	}
+	case FVT_LIC_CUDA:
+	{
+	    checkLICInit(context);
+
+	    GLuint surfVBO, vertsVBO, attribVBO;
+	    
+	    // will need these buffers for cuda calc
+	    _cache->getOrRequestBuffer(context,fileID,_set->frameList[_currentFrame]->indices.second,_set->frameList[_currentFrame]->indices.first*sizeof(unsigned int),GL_ELEMENT_ARRAY_BUFFER,true);
+	    for(int i = 0; i < _set->frameList[_currentFrame]->pointData.size(); ++i)
+	    {
+		if(_set->frameList[_currentFrame]->pointData[i]->name == "Velocity")
+		{
+		    _cache->getOrRequestBuffer(context,fileID,_set->frameList[_currentFrame]->pointData[i]->offset,_set->frameList[_currentFrame]->verts.first*3*sizeof(float),GL_ARRAY_BUFFER,true);
+		    break;
+		}
+	    }
+
+	    surfVBO = _cache->getOrRequestBuffer(context,fileID,_set->frameList[_currentFrame]->surfaceInd.second,_set->frameList[_currentFrame]->surfaceInd.first*sizeof(unsigned int),GL_ELEMENT_ARRAY_BUFFER);
+	    vertsVBO = _cache->getOrRequestBuffer(context,fileID,_set->frameList[_currentFrame]->verts.second,_set->frameList[_currentFrame]->verts.first*3*sizeof(float),GL_ARRAY_BUFFER,true);
+
+	    PagedDataAttrib * attrib = NULL;
+	    for(int i = 0; i < _set->frameList[_currentFrame]->pointData.size(); ++i)
+	    {
+		if(_set->frameList[_currentFrame]->pointData[i]->name == _attribute)
+		{
+		    attrib = _set->frameList[_currentFrame]->pointData[i];
+		    break;
+		}
+	    }
+
+	    std::vector<AttribBinding> binding;
+	    std::vector<TextureBinding> texBinding;
+	    std::vector<UniformBinding> uniBinding;
+
+	    GLuint prog = 0;
+	    GLuint texture = 0;
+
+	    unsigned int unitsize;
+	    if(attrib)
+	    {
+		AttribBinding ab;
+		UniformBinding ub;
+		if(attrib->attribType == VAT_VECTORS)
+		{
+		    ab.size = 3;
+		    ab.type = GL_FLOAT;
+		    unitsize = 3*sizeof(float);
+		    prog = _normalVecProgram[context];
+
+		    ub.location = _normalVecMinUni[context];
+		    ub.type = _uniDataMap["minf"].type;
+		    ub.data = _uniDataMap["minf"].data;
+		    uniBinding.push_back(ub);
+		    ub.location = _normalVecMaxUni[context];
+		    ub.type = _uniDataMap["maxf"].type;
+		    ub.data = _uniDataMap["maxf"].data;
+		    uniBinding.push_back(ub);
+		}
+		else if(attrib->dataType == VDT_INT)
+		{
+		    ab.size = 1;
+		    ab.type = GL_UNSIGNED_INT;
+		    unitsize = sizeof(int);
+		    prog = _normalIntProgram[context];
+
+		    ub.location = _normalIntMinUni[context];
+		    ub.type = _uniDataMap["mini"].type;
+		    ub.data = _uniDataMap["mini"].data;
+		    uniBinding.push_back(ub);
+		    ub.location = _normalIntMaxUni[context];
+		    ub.type = _uniDataMap["maxi"].type;
+		    ub.data = _uniDataMap["maxi"].data;
+		    uniBinding.push_back(ub);
+		}
+		else
+		{
+		    ab.size = 1;
+		    ab.type = GL_FLOAT;
+		    unitsize = sizeof(float);
+		    prog = _normalFloatProgram[context];
+
+		    ub.location = _normalFloatMinUni[context];
+		    ub.type = _uniDataMap["minf"].type;
+		    ub.data = _uniDataMap["minf"].data;
+		    uniBinding.push_back(ub);
+		    ub.location = _normalFloatMaxUni[context];
+		    ub.type = _uniDataMap["maxf"].type;
+		    ub.data = _uniDataMap["maxf"].data;
+		    uniBinding.push_back(ub);
+		}
+
+		ab.index = 4;
+		attribVBO = _cache->getOrRequestBuffer(context,fileID,attrib->offset,_set->frameList[_currentFrame]->verts.first*unitsize,GL_ARRAY_BUFFER);
+		ab.buffer = attribVBO;
+		binding.push_back(ab);
+
+		TextureBinding tb;
+
+		pthread_mutex_lock(&_colorTableInitLock);
+		tb.id = _colorTableMap[context];
+		pthread_mutex_unlock(&_colorTableInitLock);
+
+		tb.unit = 0;
+		tb.type = GL_TEXTURE_1D;
+		texBinding.push_back(tb);
+	    }
+	    else
+	    {
+		attribVBO = 0;
+		prog = _normalProgram[context];
+	    }
+	    
+	    //std::cerr << "CurrentFrame: " << _currentFrame << " nextFrame: " << _nextFrame << std::endl;
+	    if(surfVBO && vertsVBO && (!attrib || attribVBO))
+	    {
+		std::vector<float> color(4);
+		color[0] = 1.0;
+		color[1] = 1.0;
+		color[2] = 1.0;
+		color[3] = 1.0;
+		//std::cerr << "drawn" << std::endl;
+		glEnable(GL_CULL_FACE);
+		drawElements(GL_TRIANGLES,_set->frameList[_currentFrame]->surfaceInd.first,GL_UNSIGNED_INT,surfVBO,vertsVBO,color,binding,prog,texBinding,uniBinding);
+		glDisable(GL_CULL_FACE);
+	    }
+	    else
+	    {
+		//std::cerr << "not drawn" << std::endl;
+	    }
+
+	    // debug texture draw
+	    {
+		//glBindTexture(GL_TEXTURE_2D,_licNoiseTex[context]);
+		glBindTexture(GL_TEXTURE_2D,_licOutputTex[context]);
+		glEnable(GL_TEXTURE_2D);
+
+		glBegin(GL_QUADS);
+		glTexCoord2f(0.0,0.0);
+		glVertex3fv(&_licOutputPoints[0]);
+		glTexCoord2f(1.0,0.0);
+		glVertex3fv(&_licOutputPoints[3]);
+		glTexCoord2f(1.0,1.0);
+		glVertex3fv(&_licOutputPoints[6]);
+		glTexCoord2f(0.0,1.0);
+		glVertex3fv(&_licOutputPoints[9]);
+		glEnd();
+
+		glDisable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D,0);
+	    }
+
+	    if(_currentFrame != _nextFrame)
+	    {
+		int nextfileID = _cache->getFileID(_set->frameFiles[_nextFrame]);
+		GLuint ibuf, vbuf, abuf = 0;
+		ibuf = _cache->getOrRequestBuffer(context,nextfileID,_set->frameList[_nextFrame]->surfaceInd.second,_set->frameList[_nextFrame]->surfaceInd.first*sizeof(unsigned int),GL_ELEMENT_ARRAY_BUFFER);
+		vbuf = _cache->getOrRequestBuffer(context,nextfileID,_set->frameList[_nextFrame]->verts.second,_set->frameList[_nextFrame]->verts.first*3*sizeof(float),GL_ARRAY_BUFFER);
+
+		PagedDataAttrib * nextattrib = NULL;
+		for(int i = 0; i < _set->frameList[_nextFrame]->pointData.size(); ++i)
+		{
+		    if(_set->frameList[_nextFrame]->pointData[i]->name == _attribute)
+		    {
+			nextattrib = _set->frameList[_nextFrame]->pointData[i];
+			break;
+		    }
+		}
+
+		if(nextattrib)
+		{
+		    abuf = _cache->getOrRequestBuffer(context,nextfileID,nextattrib->offset,_set->frameList[_nextFrame]->verts.first*unitsize,GL_ARRAY_BUFFER);
+		}
+
+		pthread_mutex_lock(&_frameReadyLock);
+		if(ibuf && vbuf && (!attrib || abuf))
+		{
+		    _nextFrameReady[context] = true;
+		}
+		else
+		{
+		    _nextFrameReady[context] = false;
+		}
+		pthread_mutex_unlock(&_frameReadyLock);
+	    }
+
+	    break;
+	}
 	default:
 	    break;
     }
@@ -1297,6 +1816,20 @@ void FlowPagedRenderer::draw(int context)
 
 void FlowPagedRenderer::postFrame()
 {
+    switch(_type)
+    {
+	case FVT_LIC_CUDA:
+	{
+	    if(!_licStarted)
+	    {
+		_licStarted = true;
+	    }
+	    break;
+	}
+	default:
+	    break;
+    }
+
     _cache->advanceTime();
 }
 
@@ -1398,6 +1931,11 @@ bool FlowPagedRenderer::freeDone()
     return _cache->freeDone();
 }
 
+void FlowPagedRenderer::setCudaInitInfo(std::map<int,std::pair<int,int> > & initInfo)
+{
+    _cudaInitInfo = initInfo;
+}
+
 // create all uniform data here, so it doesn't need to be checked for every time
 void FlowPagedRenderer::initUniData()
 {
@@ -1424,6 +1962,14 @@ void FlowPagedRenderer::initUniData()
     _uniDataMap["planeUp"].data = new float[3];
     _uniDataMap["planeRight"].type = UNI_FLOAT3;
     _uniDataMap["planeRight"].data = new float[3];
+
+    _uniDataMap["planeUpNorm"].type = UNI_FLOAT3;
+    _uniDataMap["planeUpNorm"].data = new float[3];
+    _uniDataMap["planeRightNorm"].type = UNI_FLOAT3;
+    _uniDataMap["planeRightNorm"].data = new float[3];
+    _uniDataMap["planeBasisLength"].type = UNI_FLOAT;
+    _uniDataMap["planeBasisLength"].data = new float[1];
+
     _uniDataMap["planeBasisInv"].type = UNI_MAT3;
     _uniDataMap["planeBasisInv"].data = new float[9];
 
@@ -1450,6 +1996,42 @@ void FlowPagedRenderer::checkGlewInit(int context)
     _nextFrameReady[context] = false;
 
     pthread_mutex_unlock(&_frameReadyLock);
+}
+
+void FlowPagedRenderer::checkCudaInit(int context)
+{
+    pthread_mutex_lock(&_cudaInitLock);
+
+    if(!_cudaInitMap[context])
+    {
+#ifdef CUDA_LIB
+	if(_cudaInitInfo.find(context) != _cudaInitInfo.end())
+	{
+	    if(_cudaInitInfo[context].second > 1)
+	    {
+		CUdevice device;
+		cuDeviceGet(&device,_cudaInitInfo[context].first);
+		CUcontext cudaContext;
+
+		cuGLCtxCreate(&cudaContext, 0, device);
+		cuGLInit();
+		cuCtxSetCurrent(cudaContext);
+	    }
+	    else
+	    {
+		cudaGLSetGLDevice(_cudaInitInfo[context].first);
+		cudaSetDevice(_cudaInitInfo[context].first);
+	    }
+	}
+	else
+	{
+	    std::cerr << "Warning: no cuda init info for context: " << context << std::endl;
+	}
+#endif
+	_cudaInitMap[context] = true;
+    }
+
+    pthread_mutex_unlock(&_cudaInitLock);
 }
 
 void FlowPagedRenderer::checkShaderInit(int context)
@@ -1543,6 +2125,10 @@ void FlowPagedRenderer::checkShaderInit(int context)
 	_vortexAlphaMinUni[context] = glGetUniformLocation(_vortexAlphaProgram[context],"min");
 	_vortexAlphaMaxUni[context] = glGetUniformLocation(_vortexAlphaProgram[context],"max");
 
+	createShaderFromSrc(licVertSrc,GL_VERTEX_SHADER,verts,"licVert");
+	createShaderFromSrc(licFragSrc,GL_FRAGMENT_SHADER,frags,"licFrag");
+	createProgram(_licRenderProgram[context],verts,frags);
+
 	_shaderInitMap[context] = true;
     }
 
@@ -1610,6 +2196,90 @@ void FlowPagedRenderer::checkColorTableInit(int context)
     }
 
     pthread_mutex_unlock(&_colorTableInitLock);
+}
+
+void FlowPagedRenderer::checkLICInit(int context)
+{
+    pthread_mutex_lock(&_licLock);
+
+    if(!_licInit[context])
+    {
+	// temp seed for the moment
+	srand(451651);
+	glGenTextures(1,&_licNoiseTex[context]);
+
+	float * data = new float[LIC_TEXTURE_SIZE*LIC_TEXTURE_SIZE];
+
+	for(int i = 0; i < LIC_TEXTURE_SIZE*LIC_TEXTURE_SIZE; ++i)
+	{
+	    data[i] = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+	}
+
+	glBindTexture(GL_TEXTURE_2D,_licNoiseTex[context]);
+
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glTexImage2D(GL_TEXTURE_2D,0,GL_R32F,LIC_TEXTURE_SIZE,LIC_TEXTURE_SIZE,0,GL_RED,GL_FLOAT,data);
+
+#ifdef WITH_CUDA_LIB
+	_licCudaNoiseImage[context] = new CudaGLImage(_licNoiseTex[context],GL_TEXTURE_2D);
+	_licCudaNoiseImage[context]->registerImage(cudaGraphicsRegisterFlagsReadOnly);
+#endif
+	
+	glGenTextures(1,&_licVelTex[context]);
+	glBindTexture(GL_TEXTURE_2D,_licVelTex[context]);
+
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glTexImage2D(GL_TEXTURE_2D,0,GL_RG16F,LIC_TEXTURE_SIZE,LIC_TEXTURE_SIZE,0,GL_RG,GL_UNSIGNED_SHORT,NULL);
+
+#ifdef WITH_CUDA_LIB
+	_licCudaVelImage[context] = new CudaGLImage(_licVelTex[context],GL_TEXTURE_2D);
+	_licCudaVelImage[context]->registerImage(cudaGraphicsRegisterFlagsSurfaceLoadStore);
+#endif
+	
+	glGenTextures(1,&_licOutputTex[context]);
+	glBindTexture(GL_TEXTURE_2D,_licOutputTex[context]);
+
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glTexImage2D(GL_TEXTURE_2D,0,GL_RG16F,LIC_TEXTURE_SIZE,LIC_TEXTURE_SIZE,0,GL_RG,GL_UNSIGNED_SHORT,NULL);
+
+#ifdef WITH_CUDA_LIB
+	_licCudaOutputImage[context] = new CudaGLImage(_licOutputTex[context],GL_TEXTURE_2D);
+	_licCudaOutputImage[context]->registerImage(cudaGraphicsRegisterFlagsSurfaceLoadStore);
+#endif
+
+	glGenTextures(1,&_licNextOutputTex[context]);
+	glBindTexture(GL_TEXTURE_2D,_licNextOutputTex[context]);
+
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glTexImage2D(GL_TEXTURE_2D,0,GL_RG16F,LIC_TEXTURE_SIZE,LIC_TEXTURE_SIZE,0,GL_RG,GL_UNSIGNED_SHORT,NULL);
+
+#ifdef WITH_CUDA_LIB
+	_licCudaNextOutputImage[context] = new CudaGLImage(_licNextOutputTex[context],GL_TEXTURE_2D);
+	_licCudaNextOutputImage[context]->registerImage(cudaGraphicsRegisterFlagsSurfaceLoadStore);
+#endif
+
+	glBindTexture(GL_TEXTURE_2D,0);
+
+	_licInit[context] = true;
+    }
+
+    pthread_mutex_unlock(&_licLock);
 }
 
 void FlowPagedRenderer::deleteUniData(UniData & data)

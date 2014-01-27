@@ -31,6 +31,7 @@ struct BufferInfo
     unsigned int vbo;
     unsigned int timestamp;
     unsigned int bufferType;
+    bool cudaReg;
 };
 
 struct LoadVBOParams
@@ -48,7 +49,7 @@ class VBOCache
         VBOCache(int size);
         ~VBOCache();
 
-        unsigned int getOrRequestBuffer(int context, int file, int offset, int size, unsigned int bufferType);
+        unsigned int getOrRequestBuffer(int context, int file, int offset, int size, unsigned int bufferType, bool cudaReg = false);
         int getFileID(std::string file);
         void update(int context);
         void advanceTime();

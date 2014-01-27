@@ -23,7 +23,8 @@ enum FlowVisType
     FVT_PLANE_VEC,
     FVT_VORTEX_CORES,
     FVT_SEP_ATT_LINES,
-    FVT_VOLUME_CUDA
+    FVT_VOLUME_CUDA,
+    FVT_LIC_CUDA
 };
 
 static osg::ref_ptr<osg::Texture1D> lookupColorTable = NULL;

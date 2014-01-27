@@ -27,6 +27,7 @@ FIND_PACKAGE(CUDA)
 SET(CUDA_SRC
     CudaHelper.cpp
     CudaVolume.cu
+    CudaLIC.cu
 )
 
 IF(NOT CUDA_FOUND)
@@ -39,7 +40,7 @@ ELSE(NOT CUDA_FOUND)
     CUDA_ADD_LIBRARY(${LIB_NAME}
 	${PLUGIN_SRC}
 	${CUDA_SRC}
-	"SHARED" OPTIONS "--ptxas-options=-v"
+	"SHARED" OPTIONS "--ptxas-options=-v -arch sm_20"
     )
     INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIRS})
     TARGET_LINK_LIBRARIES(${LIB_NAME} ${CUDA_LIBRARIES})

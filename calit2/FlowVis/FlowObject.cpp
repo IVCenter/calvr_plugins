@@ -99,6 +99,7 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
     visTypes.push_back("Vortex Cores");
     visTypes.push_back("Sep Att Lines");
     visTypes.push_back("Volume Cuda");
+    visTypes.push_back("LIC Cuda");
 
     _typeList = new MenuList();
     _typeList->setCallback(this);

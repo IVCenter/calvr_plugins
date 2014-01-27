@@ -11,6 +11,8 @@
 
 #include <GL/gl.h>
 
+#define LIC_TEXTURE_SIZE 1024
+
 enum UniType
 {
     UNI_FLOAT,
@@ -25,6 +27,8 @@ struct UniData
     UniType type;
     void * data;
 };
+
+class CudaGLImage;
 
 class FlowPagedRenderer
 {
@@ -51,12 +55,16 @@ class FlowPagedRenderer
         void freeResources(int context);
         bool freeDone();
 
+        static void setCudaInitInfo(std::map<int,std::pair<int,int> > & initInfo);
+
     protected:
         void initUniData();
 
         void checkGlewInit(int context);
+        void checkCudaInit(int context);
         void checkShaderInit(int context);
         void checkColorTableInit(int context);
+        void checkLICInit(int context);
 
         void deleteUniData(UniData & data);
 
@@ -100,6 +108,10 @@ class FlowPagedRenderer
 
         static std::map<int,bool> _glewInitMap;
         static pthread_mutex_t _glewInitLock;
+
+        static std::map<int,bool> _cudaInitMap;
+        static pthread_mutex_t _cudaInitLock;
+        static std::map<int,std::pair<int,int> > _cudaInitInfo;
 
         std::map<int,bool> _shaderInitMap;
         pthread_mutex_t _shaderInitLock;
@@ -150,6 +162,23 @@ class FlowPagedRenderer
         std::map<int,GLuint> _vortexAlphaProgram;
         std::map<int,GLint> _vortexAlphaMinUni;
         std::map<int,GLint> _vortexAlphaMaxUni;
+
+        pthread_mutex_t _licLock;
+        std::map<int,bool> _licInit;
+        std::map<int,GLuint> _licNoiseTex;
+        std::map<int,GLuint> _licVelTex;
+        std::map<int,GLuint> _licOutputTex;
+        std::map<int,GLuint> _licNextOutputTex;
+        std::map<int,bool> _licNextDone;
+        bool _licStarted;
+        std::vector<float> _licOutputPoints;
+        std::vector<float> _licOutputTexCoords;
+        std::map<int,GLuint> _licRenderProgram;
+        std::map<int,CudaGLImage*> _licCudaNoiseImage;
+        std::map<int,CudaGLImage*> _licCudaVelImage;
+        std::map<int,CudaGLImage*> _licCudaOutputImage;
+        std::map<int,CudaGLImage*> _licCudaNextOutputImage;
+        pthread_mutex_t _licCudaLock;
 
         static std::map<int,GLuint> _colorTableMap;
         static pthread_mutex_t _colorTableInitLock;

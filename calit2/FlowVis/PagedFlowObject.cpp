@@ -1,6 +1,8 @@
 #include "PagedFlowObject.h"
 
 #include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/ScreenConfig.h>
+#include <cvrUtil/OsgMath.h>
 
 #include <iostream>
 
@@ -11,6 +13,8 @@ PagedFlowObject::PagedFlowObject(PagedDataSet * set, osg::BoundingBox bb, std::s
     _set = set;
     _currentFrame = 0;
     _animationTime = 0.0;
+
+    initCudaInfo();
 
     _renderer = new FlowPagedRenderer(set,0,FVT_NONE,"None");
 
@@ -38,6 +42,7 @@ PagedFlowObject::PagedFlowObject(PagedDataSet * set, osg::BoundingBox bb, std::s
     visTypes.push_back("Vortex Cores");
     visTypes.push_back("Sep Att Lines");
     visTypes.push_back("Volume Cuda");
+    visTypes.push_back("LIC Cuda");
 
     _typeList = new MenuList();
     _typeList->setCallback(this);
@@ -200,6 +205,214 @@ void PagedFlowObject::preFrame()
 	    //_planeUpUni->set(up);
 	    //_planeRightUni->set(right);
 	    //_planeBasisInvUni->set(m);
+	    break;
+	}
+	case FVT_LIC_CUDA:
+	{
+	    osg::Vec3 point(0,1500,0), normal, origin, right(1,1500,0), up(0,1500,1);
+	    point = point * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
+	    origin = origin * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
+	    right = right * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
+	    up = up * PluginHelper::getHandMat(0) * getWorldToObjectMatrix();
+	    normal = origin - point;
+	    normal.normalize();
+
+	    static const float eps = 0.000001f;
+
+	    right = right - point;
+	    right.normalize();
+
+	    /*if(fabs(right.x()) < eps)
+	    {
+		right.x() = eps;
+	    }
+	    if(fabs(right.y()) < eps)
+	    {
+		right.y() = eps;
+	    }
+	    if(fabs(right.z()) < eps)
+	    {
+		right.z() = eps;
+	    }
+
+	    right.normalize();*/
+
+	    up = up - point;
+	    up.normalize();
+
+	    /*if(fabs(up.x()) < eps)
+	    {
+		up.x() = eps;
+	    }
+	    if(fabs(up.y()) < eps)
+	    {
+		up.y() = eps;
+	    }
+	    if(fabs(up.z()) < eps)
+	    {
+		up.z() = eps;
+	    }
+
+	    up.normalize();*/
+
+	    osg::Matrixf matf;
+	    matf(0,0) = up.x();
+	    matf(0,1) = up.y();
+	    matf(0,2) = up.z();
+	    matf(0,3) = 0;
+	    matf(1,0) = right.x();
+	    matf(1,1) = right.y();
+	    matf(1,2) = right.z();
+	    matf(1,3) = 0;
+	    matf(2,0) = 0;
+	    matf(2,1) = 0;
+	    matf(2,2) = 1;
+	    matf(2,3) = 0;
+	    matf(3,0) = 0;
+	    matf(3,1) = 0;
+	    matf(3,2) = 0;
+	    matf(3,3) = 1;
+
+	    matf = osg::Matrixf::inverse(matf);
+
+	    std::vector<osg::Vec3> edgeIntersectionList;
+
+	    //std::cerr << "PlanePoint: " << point.x() << " " << point.y() << " " << point.z() << std::endl;
+	    //std::cerr << "PlaneNormal: " << normal.x() << " " << normal.y() << " " << normal.z() << std::endl;
+
+	    getBoundsPlaneIntersectPoints(point,normal,_set->bb,edgeIntersectionList);
+
+	    if(0)
+	    {
+		std::cerr << "Got " << edgeIntersectionList.size() << " points." << std::endl;
+		for(int i = 0; i < edgeIntersectionList.size(); ++i)
+		{
+		    std::cerr << edgeIntersectionList[i].x() << " " << edgeIntersectionList[i].y() << " " << edgeIntersectionList[i].z() << std::endl;
+		}
+	    }
+
+	    float basisXMin = FLT_MAX;
+	    float basisXMax = -FLT_MAX;
+	    float basisYMin = FLT_MAX;
+	    float basisYMax = -FLT_MAX;
+
+	    for(int i = 0; i < edgeIntersectionList.size(); ++i)
+	    {
+		osg::Vec3 tempP = edgeIntersectionList[i]-point;
+		//std::cerr << "Plane Point x: " << tempP.x() << " y: " << tempP.y() << " z: " << tempP.z() << std::endl;
+		osg::Vec3 basisPoint = (edgeIntersectionList[i]-point) * matf;
+		//std::cerr << "Basis Point x: " << basisPoint.x() << " y: " << basisPoint.y() << " z: " << basisPoint.z() << std::endl;
+		basisXMin = std::min(basisXMin,basisPoint.x());
+		basisXMax = std::max(basisXMax,basisPoint.x());
+		basisYMin = std::min(basisYMin,basisPoint.y());
+		basisYMax = std::max(basisYMax,basisPoint.y());
+	    }
+
+	    // TODO: handle case of first call
+	    if(!edgeIntersectionList.size())
+	    {
+		break;
+	    }
+
+	    //std::cerr << "BasisXMin: " << basisXMin << " BasisXMax: " << basisXMax << std::endl;
+	    //std::cerr << "BasisYMin: " << basisYMin << " BasisYMax: " << basisYMax << std::endl;
+	    
+	    float textureSize = LIC_TEXTURE_SIZE;
+
+	    float basisXRange = basisXMax - basisXMin;
+	    float basisYRange = basisYMax - basisYMin;
+	    float basisMaxRange = std::max(basisXRange,basisYRange);
+
+	    //std::cerr << "Point x: " << point.x() << " y: " << point.y() << " z: " << point.z() << std::endl;
+
+	    osg::Vec3 basisCenter = up * (basisXMin + (basisXRange/2.0)) + right * (basisYMin + (basisYRange/2.0));
+	    basisCenter += point;
+	    //std::cerr << "Center x: " << basisCenter.x() << " y: " << basisCenter.y() << " z: " << basisCenter.z() << std::endl;
+	    //std::cerr << "Right x: " << right.x() << " y: " << right.y() << " z: " << right.z() << std::endl;
+	    //std::cerr << "Up x: " << up.x() << " y: " << up.y() << " z: " << up.z() << std::endl;
+	    float basisScale = basisMaxRange / textureSize;
+	    //std::cerr << "BasisScale: " << basisScale << std::endl;
+	   
+	    UniData ud;
+	    
+	    _renderer->getUniData("planeUpNorm",ud);
+	    ((float*)ud.data)[0] = up.x();
+	    ((float*)ud.data)[1] = up.y();
+	    ((float*)ud.data)[2] = up.z();
+
+	    _renderer->getUniData("planeRightNorm",ud);
+	    ((float*)ud.data)[0] = right.x();
+	    ((float*)ud.data)[1] = right.y();
+	    ((float*)ud.data)[2] = right.z();
+	    
+	    right = right * basisScale;
+	    up = up * basisScale;
+
+	    _renderer->getUniData("planeBasisLength",ud);
+	    ((float*)ud.data)[0] = basisScale;
+
+	    matf(0,0) = up.x();
+	    matf(0,1) = up.y();
+	    matf(0,2) = up.z();
+	    matf(0,3) = 0;
+	    matf(1,0) = right.x();
+	    matf(1,1) = right.y();
+	    matf(1,2) = right.z();
+	    matf(1,3) = 0;
+	    matf(2,0) = 0;
+	    matf(2,1) = 0;
+	    matf(2,2) = 1;
+	    matf(2,3) = 0;
+	    matf(3,0) = 0;
+	    matf(3,1) = 0;
+	    matf(3,2) = 0;
+	    matf(3,3) = 1;
+
+	    matf = osg::Matrixf::inverse(matf);
+
+	    // sanity check
+	    osg::Vec3 tempPoint = basisCenter * matf;
+	    //std::cerr << "Center: x: " << tempPoint.x() << " y: " << tempPoint.y() << " z: " << tempPoint.z() << std::endl;
+	    tempPoint = right * matf;
+	    //std::cerr << "Right: x: " << tempPoint.x() << " y: " << tempPoint.y() << " z: " << tempPoint.z() << std::endl;
+	    tempPoint = up * matf;
+	    //std::cerr << "Up: x: " << tempPoint.x() << " y: " << tempPoint.y() << " z: " << tempPoint.z() << std::endl;
+
+	    osg::Matrix3 m;
+	    for(int i = 0; i < 3; ++i)
+	    {
+		for(int j = 0; j < 3; ++j)
+		{
+		    m(i,j) = matf(i,j);
+		}
+	    }
+
+	    _renderer->getUniData("planePoint",ud);
+	    ((float*)ud.data)[0] = basisCenter.x();
+	    ((float*)ud.data)[1] = basisCenter.y();
+	    ((float*)ud.data)[2] = basisCenter.z();
+	    //((float*)ud.data)[0] = point.x();
+	    //((float*)ud.data)[1] = point.y();
+	    //((float*)ud.data)[2] = point.z();
+
+	    _renderer->getUniData("planeNormal",ud);
+	    ((float*)ud.data)[0] = normal.x();
+	    ((float*)ud.data)[1] = normal.y();
+	    ((float*)ud.data)[2] = normal.z();
+	    
+	    _renderer->getUniData("planeUp",ud);
+	    ((float*)ud.data)[0] = up.x();
+	    ((float*)ud.data)[1] = up.y();
+	    ((float*)ud.data)[2] = up.z();
+
+	    _renderer->getUniData("planeRight",ud);
+	    ((float*)ud.data)[0] = right.x();
+	    ((float*)ud.data)[1] = right.y();
+	    ((float*)ud.data)[2] = right.z();
+
+	    _renderer->getUniData("planeBasisInv",ud);
+	    memcpy(ud.data,m.ptr(),9*sizeof(float));
+
 	    break;
 	}
 	default:
@@ -442,4 +655,94 @@ void PagedFlowObject::perContextCallback(int contextid, PerContextCallback::PCCT
     {
 	_renderer->preDraw(contextid);
     }
+}
+
+void PagedFlowObject::getBoundsPlaneIntersectPoints(osg::Vec3 point, osg::Vec3 normal, osg::BoundingBox & bounds, std::vector<osg::Vec3> & intersectList)
+{
+    // check intersection of plane with all edges of aabb
+
+    osg::Vec3 bpoint1, bpoint2;
+    osg::Vec3 intersect;
+    float w;
+
+    bpoint1 = osg::Vec3(bounds.xMin(),bounds.yMin(),bounds.zMax());
+    bpoint2 = osg::Vec3(bounds.xMin(),bounds.yMax(),bounds.zMax());
+    checkAndAddIntersect(bpoint1,bpoint2,point,normal,intersectList);
+
+    bpoint1 = osg::Vec3(bounds.xMin(),bounds.yMax(),bounds.zMax());
+    bpoint2 = osg::Vec3(bounds.xMax(),bounds.yMax(),bounds.zMax());
+    checkAndAddIntersect(bpoint1,bpoint2,point,normal,intersectList);
+
+    bpoint1 = osg::Vec3(bounds.xMax(),bounds.yMin(),bounds.zMax());
+    bpoint2 = osg::Vec3(bounds.xMax(),bounds.yMax(),bounds.zMax());
+    checkAndAddIntersect(bpoint1,bpoint2,point,normal,intersectList);
+
+    bpoint1 = osg::Vec3(bounds.xMin(),bounds.yMin(),bounds.zMax());
+    bpoint2 = osg::Vec3(bounds.xMax(),bounds.yMin(),bounds.zMax());
+    checkAndAddIntersect(bpoint1,bpoint2,point,normal,intersectList);
+
+    bpoint1 = osg::Vec3(bounds.xMin(),bounds.yMax(),bounds.zMin());
+    bpoint2 = osg::Vec3(bounds.xMin(),bounds.yMax(),bounds.zMax());
+    checkAndAddIntersect(bpoint1,bpoint2,point,normal,intersectList);
+
+    bpoint1 = osg::Vec3(bounds.xMin(),bounds.yMin(),bounds.zMin());
+    bpoint2 = osg::Vec3(bounds.xMin(),bounds.yMin(),bounds.zMax());
+    checkAndAddIntersect(bpoint1,bpoint2,point,normal,intersectList);
+
+    bpoint1 = osg::Vec3(bounds.xMax(),bounds.yMin(),bounds.zMin());
+    bpoint2 = osg::Vec3(bounds.xMax(),bounds.yMin(),bounds.zMax());
+    checkAndAddIntersect(bpoint1,bpoint2,point,normal,intersectList);
+
+    bpoint1 = osg::Vec3(bounds.xMax(),bounds.yMax(),bounds.zMin());
+    bpoint2 = osg::Vec3(bounds.xMax(),bounds.yMax(),bounds.zMax());
+    checkAndAddIntersect(bpoint1,bpoint2,point,normal,intersectList);
+
+    bpoint1 = osg::Vec3(bounds.xMin(),bounds.yMin(),bounds.zMin());
+    bpoint2 = osg::Vec3(bounds.xMin(),bounds.yMax(),bounds.zMin());
+    checkAndAddIntersect(bpoint1,bpoint2,point,normal,intersectList);
+
+    bpoint1 = osg::Vec3(bounds.xMin(),bounds.yMax(),bounds.zMin());
+    bpoint2 = osg::Vec3(bounds.xMax(),bounds.yMax(),bounds.zMin());
+    checkAndAddIntersect(bpoint1,bpoint2,point,normal,intersectList);
+
+    bpoint1 = osg::Vec3(bounds.xMax(),bounds.yMin(),bounds.zMin());
+    bpoint2 = osg::Vec3(bounds.xMax(),bounds.yMax(),bounds.zMin());
+    checkAndAddIntersect(bpoint1,bpoint2,point,normal,intersectList);
+
+    bpoint1 = osg::Vec3(bounds.xMin(),bounds.yMin(),bounds.zMin());
+    bpoint2 = osg::Vec3(bounds.xMax(),bounds.yMin(),bounds.zMin());
+    checkAndAddIntersect(bpoint1,bpoint2,point,normal,intersectList);
+}
+
+void PagedFlowObject::checkAndAddIntersect(osg::Vec3 & p1,osg::Vec3 & p2,osg::Vec3 & planep, osg::Vec3 & planen,std::vector<osg::Vec3> & intersectList)
+{
+    osg::Vec3 intersect;
+    float w;
+
+    //std::cerr << "Point1: " << p1.x() << " " << p1.y() << " " << p1.z() << std::endl;
+    //std::cerr << "Point2: " << p2.x() << " " << p2.y() << " " << p2.z() << std::endl;
+
+    if(linePlaneIntersectionRef(p1,p2,planep,planen,intersect,w))
+    {
+	w = w / (p2-p1).length();
+	//std::cerr << "w: " << w << std::endl;
+	// see if hit is on the bounds edge
+	if(w >= 0.0 && w <= 1.0)
+	{
+	    intersectList.push_back(intersect);
+	}
+    }
+}
+
+void PagedFlowObject::initCudaInfo()
+{
+    std::map<int,std::pair<int,int> > initInfo;
+
+    for(int i = 0; i < ScreenConfig::instance()->getNumWindows(); ++i)
+    {
+	initInfo[i].first = ScreenConfig::instance()->getCudaDevice(i);
+	initInfo[i].second = ScreenConfig::instance()->getNumContexts(i);
+    }
+
+    FlowPagedRenderer::setCudaInitInfo(initInfo);
 }

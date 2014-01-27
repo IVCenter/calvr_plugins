@@ -1,4 +1,5 @@
 #ifndef CUDA_VOLUME_H
+#define CUDA_VOLUME_H
 
 #include <cuda.h>
 #include <cuda_runtime.h>
