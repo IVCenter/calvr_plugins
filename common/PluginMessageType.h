@@ -41,7 +41,8 @@ enum MenuMessageType
 enum OsgEarthMessageType
 {
     OE_ADD_MODEL = 0,
-    OE_TRANSFORM_POINTER
+    OE_TRANSFORM_POINTER,
+    OE_MENU
 };
 
 // OsgEarth message struct (lat (degrees), lon (degrees), height (meters above surface)
@@ -51,9 +52,16 @@ struct OsgEarthRequest
     float lat;
     float lon;
     float height;
-    char pluginName[4096];
+    std::string plugin;
     osg::MatrixTransform* trans;
 };
+
+struct OsgEarthMenuRequest
+{
+    std::string plugin;
+    cvr::SubMenu* oe_menu;
+};
+
 
 enum PointsMessageType
 {

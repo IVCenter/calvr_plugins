@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<Hpwren>
+	<Sensor0 value="rtd.hpwren.ucsd.edu:12020" name="" lat="32.700001" lon="-116.760002" />
+	<Sensor1 value="rtd.hpwren.ucsd.edu:12021" name="" lat="33.029999" lon="-116.959999" />
+	<Sensor2 value="rtd.hpwren.ucsd.edu:12024" name="" lat="33.009998" lon="-116.970001" />
+	<Sensor3 value="rtd.hpwren.ucsd.edu:12025" name="" lat="33.189999" lon="-116.760002" />
+	<!-- <Sensor4 value="rtd.hpwren.ucsd.edu:12026" name="" lat="32.669998" lon="-117.239998" /> -->
+	<Sensor4 value="rtd.hpwren.ucsd.edu:12027" name="" lat="33.52" lon="-116.43" />
+	<!-- <Sensor5 value="rtd.hpwren.ucsd.edu:12028" name="" lat="33.349998" lon="-116.980003" />
+	<Sensor6 value="rtd.hpwren.ucsd.edu:12029" name="" lat="33.130001" lon="-116.610001" />
+    -->
+    <Sensor5 value="rtd.hpwren.ucsd.edu:12030" name="" lat="33.4" lon="-117.19" />
+    <Sensor6 value="rtd.hpwren.ucsd.edu:12032" name="" lat="32.889999" lon="-116.42" />
+</Hpwren>
+<Sdge>
+	<Sensor0 value="ANE" name="Alpine" lat="32.82704" lon="-116.77332" />
+	<Sensor1 value="AMO" name="Ammo Dump" lat="33.35713" lon="-117.2757" />
+	<Sensor2 value="CAP" name="Bell Canyon" lat="33.5576" lon="-117.54654" />
+	<Sensor3 value="CMN" name="Cameron" lat="32.71464" lon="-116.47076" />
+	<Sensor4 value="MPE" name="Camp Elliot" lat="32.85239" lon="-117.11801" />
+	<Sensor5 value="DEN" name="Descanso" lat="32.85883" lon="-116.61182" />
+	<Sensor6 value="GOS" name="Goose Valley" lat="33.07279" lon="-116.84494" />
+	<Sensor7 value="JUL" name="Julian" lat="33.07638" lon="-116.59076" />
+	<Sensor8 value="MLG" name="Mt. Laguna" lat="32.87828" lon="-116.42359" />
+	<Sensor9 value="PAM" name="Mt. Palomar" lat="33.35214" lon="-116.86286" />
+	<Sensor10 value="OGV" name="Oak Grove" lat="33.39177" lon="-116.78812" />
+	<Sensor11 value="PIH" name="Pine Hills" lat="33.0494" lon="-116.63691" />
+	<Sensor12 value="POT" name="Potrero" lat="32.60439" lon="-116.60744" />
+	<Sensor13 value="RCH" name="Ranchita" lat="33.2103" lon="-116.50836" />
+	<Sensor14 value="MIG" name="San Miguel" lat="32.68471" lon="-116.98005" />
+	<Sensor15 value="TLG" name="Talega 1" lat="33.47839" lon="-117.43428" />
+	<Sensor16 value="VLC" name="Valley Center" lat="33.23563" lon="-117.00068" />
+	<Sensor17 value="COC" name="Los Coches" lat="32.85145" lon="-116.89528" />
+	<Sensor18 value="RSF" name="Rancho Santa Fe" lat="33.03329" lon="-117.18869" />
+	<Sensor19 value="IMP" name="Imperial Valley" lat="32.740564" lon="-116.040322" />
+	<Sensor20 value="IKP" name="In Ko Pah" lat="32.63604" lon="-116.11823" />
+	<Sensor21 value="JAM" name="Jamul" lat="32.71384" lon="-116.86904" />
+	<Sensor22 value="SYC" name="Sycamore Canyon" lat="32.91431" lon="-117.02959" />
+	<Sensor23 value="ELM" name="El Monte" lat="32.86702" lon="-116.89619" />
+	<Sensor24 value="RIO" name="Rios Canyon" lat="32.84329" lon="-116.88113" />
+	<Sensor25 value="TDS" name="Tierra Del Sol" lat="32.64449" lon="-116.34617" />
+	<Sensor26 value="CST" name="Crest" lat="32.81154" lon="-116.85324" />
+	<Sensor27 value="MOR" name="Lake Morena" lat="32.68839" lon="-116.51179" />
+	<Sensor28 value="HAR" name="Harbision Canyon" lat="32.85794333" lon="-116.82188" />
+	<Sensor29 value="BVY" name="Blossom Valley" lat="32.8683" lon="-116.84252" />
+	<Sensor30 value="SPP" name="Spangler Peak" lat="32.99703" lon="-116.78934" />
+	<Sensor31 value="BNA" name="Barona" lat="32.93508" lon="-116.87671" />
+	<Sensor32 value="SVC" name="San Vicente" lat="32.91247" lon="-116.95207" />
+	<Sensor33 value="ARH" name="Archie Moore" lat="33.03983" lon="-116.958" />
+	<Sensor34 value="HVY" name="Highland Valley" lat="33.02928" lon="-116.93606" />
+	<Sensor35 value="MGR" name="Mussey Grade" lat="32.98626" lon="-116.9081" />
+	<Sensor36 value="CGD" name="Cole Grade" lat="33.284635" lon="-117.01553" />
+	<Sensor37 value="LLC" name="Lilac" lat="33.25990833" lon="-117.0699917" />
+	<Sensor38 value="VJS" name="Viejas" lat="32.84559" lon="-116.70437" />
+	<Sensor39 value="PVD" name="Palo Verde" lat="32.813235" lon="-116.734115" />
+	<Sensor40 value="CRV" name="Caravacre" lat="32.78356" lon="-116.7229967" />
+
+
+
+
+
+
+</Sdge>

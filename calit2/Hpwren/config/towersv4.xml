@@ -1,0 +1,135 @@
+<?xml version="1.0"?>
+<Hpwren>
+	<Sensor0 value="rtd.hpwren.ucsd.edu:12020" name="" lat="32.700001" lon="-116.760002" />
+	<Sensor1 value="rtd.hpwren.ucsd.edu:12021" name="" lat="33.029999" lon="-116.959999" />
+	<Sensor2 value="rtd.hpwren.ucsd.edu:12024" name="" lat="33.009998" lon="-116.970001" />
+	<Sensor3 value="rtd.hpwren.ucsd.edu:12025" name="" lat="33.189999" lon="-116.760002" />
+	<Sensor4 value="rtd.hpwren.ucsd.edu:12026" name="" lat="32.669998" lon="-117.239998" />
+	<Sensor5 value="rtd.hpwren.ucsd.edu:12028" name="" lat="33.349998" lon="-116.980003" />
+	<Sensor6 value="rtd.hpwren.ucsd.edu:12029" name="" lat="33.130001" lon="-116.610001" />
+</Hpwren>
+<Sdge>
+	<Sensor0 value="ANE" name="Alpine" lat="32.82704" lon="-116.77332" />
+	<Sensor1 value="AMO" name="Ammo Dump" lat="33.35713" lon="-117.2757" />
+	<Sensor2 value="CAP" name="Bell Canyon" lat="33.5576" lon="-117.54654" />
+	<Sensor3 value="CMN" name="Cameron" lat="32.71464" lon="-116.47076" />
+	<Sensor4 value="MPE" name="Camp Elliot" lat="32.85239" lon="-117.11801" />
+	<Sensor5 value="DEN" name="Descanso" lat="32.85883" lon="-116.61182" />
+	<Sensor6 value="GOS" name="Goose Valley" lat="33.07279" lon="-116.84494" />
+	<Sensor7 value="JUL" name="Julian" lat="33.07638" lon="-116.59076" />
+	<Sensor8 value="MLG" name="Mt. Laguna" lat="32.87828" lon="-116.42359" />
+	<Sensor9 value="PAM" name="Mt. Palomar" lat="33.35214" lon="-116.86286" />
+	<Sensor10 value="OGV" name="Oak Grove" lat="33.39177" lon="-116.78812" />
+	<Sensor11 value="PIH" name="Pine Hills" lat="33.0494" lon="-116.63691" />
+	<Sensor12 value="POT" name="Potrero" lat="32.60439" lon="-116.60744" />
+	<Sensor13 value="RCH" name="Ranchita" lat="33.2103" lon="-116.50836" />
+	<Sensor14 value="MIG" name="San Miguel" lat="32.68471" lon="-116.98005" />
+	<Sensor15 value="TLG" name="Talega 1" lat="33.47839" lon="-117.43428" />
+	<Sensor16 value="VLC" name="Valley Center" lat="33.23563" lon="-117.00068" />
+	<Sensor17 value="COC" name="Los Coches" lat="32.85145" lon="-116.89528" />
+	<Sensor18 value="RSF" name="Rancho Santa Fe" lat="33.03329" lon="-117.18869" />
+	<Sensor19 value="IMP" name="Imperial Valley" lat="32.740564" lon="-116.040322" />
+	<Sensor20 value="IKP" name="In Ko Pah" lat="32.63604" lon="-116.11823" />
+	<Sensor21 value="JAM" name="Jamul" lat="32.71384" lon="-116.86904" />
+	<Sensor22 value="SYC" name="Sycamore Canyon" lat="32.91431" lon="-117.02959" />
+	<Sensor23 value="ELM" name="El Monte" lat="32.86702" lon="-116.89619" />
+	<Sensor24 value="RIO" name="Rios Canyon" lat="32.84329" lon="-116.88113" />
+	<Sensor25 value="TDS" name="Tierra Del Sol" lat="32.64449" lon="-116.34617" />
+	<Sensor26 value="CST" name="Crest" lat="32.81154" lon="-116.85324" />
+	<Sensor27 value="MOR" name="Lake Morena" lat="32.68839" lon="-116.51179" />
+	<Sensor28 value="HAR" name="Harbision Canyon" lat="32.85794333" lon="-116.82188" />
+	<Sensor29 value="BVY" name="Blossom Valley" lat="32.8683" lon="-116.84252" />
+	<Sensor30 value="SPP" name="Spangler Peak" lat="32.99703" lon="-116.78934" />
+	<Sensor31 value="BNA" name="Barona" lat="32.93508" lon="-116.87671" />
+	<Sensor32 value="SVC" name="San Vicente" lat="32.91247" lon="-116.95207" />
+	<Sensor33 value="ARH" name="Archie Moore" lat="33.03983" lon="-116.958" />
+	<Sensor34 value="HVY" name="Highland Valley" lat="33.02928" lon="-116.93606" />
+	<Sensor35 value="MGR" name="Mussey Grade" lat="32.98626" lon="-116.9081" />
+	<Sensor36 value="CGD" name="Cole Grade" lat="33.284635" lon="-117.01553" />
+	<Sensor37 value="LLC" name="Lilac" lat="33.25990833" lon="-117.0699917" />
+	<Sensor38 value="VJS" name="Viejas" lat="32.84559" lon="-116.70437" />
+	<Sensor39 value="PVD" name="Palo Verde" lat="32.813235" lon="-116.734115" />
+	<Sensor40 value="CRV" name="Caravacre" lat="32.78356" lon="-116.7229967" />
+	<Sensor41 value="ESC" name="Escondido" lat="33.15917" lon="-117.03138" />
+	<Sensor42 value="LKW" name="Lake Woldford" lat="33.17799" lon="-116.9947" />
+	<Sensor43 value="WCK" name="Witch Creek" lat="33.07272167" lon="-116.7379367" />
+	<Sensor44 value="BOC" name="Boulder Creek" lat="32.94015" lon="-116.63601" />
+	<Sensor45 value="MGC" name="Mesa Grande" lat="33.16756" lon="-116.75917" />
+	<Sensor46 value="CWD" name="Crestwood" lat="32.69532" lon="-116.35049" />
+	<Sensor47 value="LAG" name="Laguna" lat="32.84538333" lon="-116.4719217" />
+	<Sensor48 value="SRH" name="Sunrise Hwy" lat="32.80849" lon="-116.50830" />
+	<Sensor49 value="CPO" name="Campo" lat="32.59897833" lon="-116.4929217" />
+	<Sensor50 value="RPO" name="Round Potrero" lat="32.64791167" lon="-116.631445" />
+	<Sensor51 value="WPT" name="West Potrero" lat="32.61225167" lon="-116.61333" />
+	<Sensor52 value="DHV" name="Deerhorn Valley" lat="32.68695" lon="-116.7622083" />
+	<Sensor53 value="LLD" name="Loveland" lat="32.80824" lon="-116.78794" />
+	<Sensor54 value="LSV" name="Lawson Valley" lat="32.73616" lon="-116.8223" />
+	<Sensor55 value="DEH" name="Dehesa" lat="32.78691" lon="-116.83534" />
+	<Sensor56 value="ORT" name="Ortega" lat="33.56964" lon="-117.51306" />
+	<Sensor57 value="PTM" name="Pala Temecula" lat="33.41921" lon="-117.08186" />
+	<Sensor58 value="DLZ" name="DeLuz" lat="33.41921" lon="-117.29735" />
+	<Sensor59 value="RNB" name="Rainbow" lat="33.41892167" lon="-117.14413" />
+	<Sensor60 value="RBH" name="Rainbow Hts" lat="33.41396" lon="-117.12595" />
+	<Sensor61 value="RBV" name="Rainbow Valley" lat="33.40319" lon="-117.16474" />
+	<Sensor62 value="KCK" name="Keyes Creek" lat="33.313111" lon="-117.08583" />
+	<Sensor63 value="HID" name="Hideaway Lake" lat="33.23996" lon="-117.04519" />
+	<Sensor64 value="RIN" name="Rincon" lat="33.28779" lon="-116.95642" />
+	<Sensor65 value="WAR" name="Warners" lat="33.247915" lon="-116.697285" />
+	<Sensor66 value="COY" name="Los Coyotes" lat="33.25843833" lon="-116.5851767" />
+	<Sensor67 value="MGY" name="Mataguay" lat="33.22329" lon="-116.69879" />
+	<Sensor68 value="CIR" name="Cristianitos" lat="33.474123" lon="-117.55057" />
+	<Sensor69 value="TWO" name="Twin Oaks" lat="33.1937683" lon="-117.1530117" />
+	<Sensor70 value="TLK" name="Turner Lake" lat="33.226173" lon="-117.075588" />
+	<Sensor71 value="CIR" name="Circle R" lat="33.28555667" lon="-117.1457417" />
+	<Sensor72 value="HMD" name="Hidden Meadows" lat="33.226505" lon="-117.0941483" />
+	<Sensor73 value="PAU" name="Pauma Valley" lat="33.37111" lon="-117.0789367" />
+	<Sensor74 value="CES" name="Country Estates" lat="33.02876" lon="-116.79285" />
+	<Sensor75 value="CLM" name="Creelman" lat="33.01566" lon="-116.87089" />
+	<Sensor76 value="RIN" name="Wynola" lat="33.10468" lon="-116.60250" />
+	<Sensor77 value="PMA" name="Pauma" lat="33.31236" lon="-117.00349" />
+	<Sensor78 value="FBK" name="Fallbrook" lat="33.35471" lon="-117.1672" />
+	<Sensor79 value="RCR" name="Rincon Res" lat="33.25143" lon="-116.95707" />
+	<Sensor80 value="FTV" name="Fruitvale" lat="33.25614" lon="-116.98201" />
+	<Sensor81 value="RAM" name="Ramona" lat="33.073" lon="-116.85802" />
+	<Sensor82 value="SSO" name="Sunset Oaks" lat="33.07452" lon="-116.8137" />
+	<Sensor83 value="BAJC1" name="Barrett" lat="32.6675" lon="-116.6994" />
+	<Sensor84 value="BVDC1" name="Boulevard" lat="32.6622" lon="-116.2717" />
+	<Sensor85 value="BVD" name="Boulevard West" lat="32.66213" lon="-116.2888" />
+	<Sensor86 value="YSA" name="Santa Ysabel North" lat="33.11312" lon="-116.67182" />
+	<Sensor87 value="PZAC1" name="Pala" lat="33.3611" lon="-117.1058" />
+	<Sensor88 value="PSQC1" name="San Pasqual" lat="33.0914" lon="-117.0122" />
+	<Sensor89 value="YSAC1" name="Santa Ysabel" lat="33.1108" lon="-116.6711" />
+	<Sensor90 value="OTY" name="Otay" lat="32.72022" lon="-116.92783" />
+	<Sensor91 value="BLC" name="Black Canyon" lat="33.09856" lon="-116.82758" />
+	<Sensor92 value="WAL" name="West Alpine" lat="32.83006" lon="-116.79944" />
+	<Sensor93 value="SVL" name="Sky Valley" lat="32.72076" lon="-116.70242" />
+	<Sensor94 value="WCV" name="Wisecarver" lat="32.73203" lon="-116.76183" />
+	<Sensor95 value="CTM" name="Corte Madera" lat="32.78285" lon="-116.54967" />
+	<Sensor96 value="WDC" name="West Descanso" lat="32.84953" lon="-116.62982" />
+	<Sensor97 value="NDC" name="North Descanso" lat="32.88324" lon="-116.64651" />
+	<Sensor98 value="HRP" name="Harrison Park" lat="33.03958" lon="-116.56066" />
+	<Sensor99 value="LCM" name="Lake Cuyamaca" lat="32.99739" lon="-116.59515" />
+	<Sensor100 value="LFR" name="Lucky Five Ranch" lat="32.93306" lon="-116.52806" />
+	<Sensor101 value="SYR" name="Santa Ysabel Ranch" lat="33.13219" lon="-116.68593" />
+	<Sensor102 value="OLV" name="Olivenhain" lat="33.0801" lon="-117.1296" />
+	<Sensor103 value="DZR" name="Dulzura" lat="32.61495" lon="-116.757605" />
+	<Sensor104 value="BRJ" name="Barrett Junction" lat="32.60107" lon="-116.685878" />
+	<Sensor105 value="NPT" name="North Potrero" lat="32.629814" lon="-116.585044" />
+	<Sensor106 value="CMC" name="Cameron Corners" lat="32.646038" lon="-116.497288" />
+	<Sensor107 value="STT" name="Shockey Truck Trail" lat="32.63386" lon="-116.42347" />
+	<Sensor108 value="LPT" name="La Posta" lat="32.713771" lon="-116.403757" />
+	<Sensor109 value="BMS" name="Buckman Springs" lat="32.761981" lon="-116.488716" />
+	<Sensor110 value="HDM" name="Hodges Dam" lat="33.043938" lon="-117.134644" />
+	<Sensor111 value="WWY" name="West Wynola" lat="33.10569" lon="-116.65363" />
+	<Sensor112 value="EWN" name="East Warners" lat="33.2265" lon="-116.6207" />
+	<Sensor113 value="WRB" name="West Rancho Bernardo" lat="33.031135" lon="-117.122459" />
+	<Sensor114 value="WSY" name="West Santa Ysabel" lat="33.08678" lon="-116.68974" />
+	<Sensor115 value="GTY" name="Guatay" lat="32.85523" lon="-116.5743" />
+	<Sensor116 value="NBC" name="North Boulder Creek" lat="32.98824" lon="-116.66817" />
+	<Sensor117 value="OTM" name="Otay Mountain" lat="32.59927" lon="-116.8434" />
+	<Sensor118 value="SSS" name="Sunshine Summit" lat="33.34397" lon="-116.73174" />
+	<Sensor119 value="CCR" name="Cuca Ranch" lat="33.34397" lon="-116.73174" />
+	<Sensor120 value="NHG" name="Nate Harrison Grade" lat="33.32219" lon="-116.96191" />
+	<Sensor121 value="CHH" name="Chihuahua Valley" lat="33.3867" lon="-116.64445" />
+	<Sensor122 value="AVO" name="Avocado" lat="33.39251" lon="-117.2547" />
+</Sdge>
