@@ -19,7 +19,7 @@ static size_t http_write(void* buf, size_t size, size_t nmemb, void* userp)
 	return 0;
 }
 
-SdgeReader::SdgeReader(std::string url, std::map<std::string, Sensor > & sensors, osg::ref_ptr<osgText::Font> font, osg::ref_ptr<osgText::Style> style, std::string fileName)
+SdgeReader::SdgeReader(std::string url, std::map<std::string, Sensor > & sensors, osg::ref_ptr<osgText::Font> font, osg::ref_ptr<osgText::Style> style, std::string fileName, bool rotate)
 {
     CURL* curl = curl_easy_init();
 
@@ -72,7 +72,7 @@ SdgeReader::SdgeReader(std::string url, std::map<std::string, Sensor > & sensors
                 float lat, lon;
 
                 // data to be added to list
-                Sensor data(true, font, style);
+                Sensor data(true, font, style, rotate);
 
 				// get wind speed
 				test = test.substr(5 + name.size());

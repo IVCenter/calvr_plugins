@@ -106,7 +106,7 @@ bool Points::loadFile(std::string filename)
 	    }
         else
         { 
-            currentobject->pointScale = new osg::Uniform("pointScale", initialPointScale);
+            currentobject->pointScale = new osg::Uniform("pointScale", initialPointScale * objectScale);
             MenuRangeValue * mrv = new MenuRangeValue("Point Scale", 0.0, 20.0, initialPointScale);
             mrv->setCallback(this);
             so->addMenuItem(mrv);
@@ -323,7 +323,7 @@ void Points::menuCallback(MenuItem* menuItem)
         {
             if( it->first->points )
             {
-                 it->first->pointScale->set(it->second->getValue());
+                 it->first->pointScale->set(it->second->getValue() * objectScale);
                  break;
             }
         }
@@ -501,6 +501,9 @@ bool Points::init()
   // set default point scale
   initialPointScale = ConfigManager::getFloat("Plugin.Points.PointScale", 0.001f);
 
+  // get object scale and set it
+  objectScale = PluginHelper::getObjectScale();
+
   _mainMenu = new SubMenu("Points", "Points");
   _mainMenu->setCallback(this);
 
@@ -579,6 +582,21 @@ Points::~Points()
 
 void Points::preFrame()
 {
+
+    // update point size if object scale changes
+    if( objectScale != PluginHelper::getObjectScale() )
+    {
+	objectScale = PluginHelper::getObjectScale();
+
+	for(std::map<struct PointObject*,MenuRangeValue*>::iterator it = _sliderMap.begin(); it != _sliderMap.end(); it++)
+	{
+	    if( it->first->points )
+	    {
+		it->first->pointScale->set(it->second->getValue() * objectScale);
+	    }
+	}
+    }
+
 }
 
 void Points::message(int type, char *&data, bool collaborative)
@@ -601,7 +619,7 @@ void Points::message(int type, char *&data, bool collaborative)
         //attach shader and uniform
         osg::StateSet *state = pli->group->getOrCreateStateSet();
         state->setAttribute(pgm1);
-        state->addUniform(new osg::Uniform("pointScale", initialPointScale));
+        state->addUniform(new osg::Uniform("pointScale", initialPointScale * objectScale));
         state->addUniform(new osg::Uniform("globalAlpha",1.0f));
     }
 }

@@ -24,8 +24,8 @@
 #include <string>
 #include <vector>
 
-#include "netcdf.h"
-#include "netcdfcpp.h"
+//#include "netcdf.h"
+//#include "netcdfcpp.h"
 
 #include "SensorThread.h"
 #include "XmlReader.h"
@@ -73,14 +73,14 @@ class Hpwren : public cvr::CVRPlugin, public cvr::MenuCallback
 		osg::Matrix computePosition(double lat, double lon, double height);
 
 		// parse NetCDFFile
-		int parseNetCDF(std::string fileName);
-		int initNetCDFStep(int index);
+		//int parseNetCDF(std::string fileName);
+		//int initNetCDFStep(int index);
 		float* _direction;
 		float* _speed;
 		int _nlat;
 		int _nlon;
 		int _time;
-		NcFile* _file;
+		//NcFile* _file;
 
 		// font and style for all text
         osg::ref_ptr<osgText::Font> _font;

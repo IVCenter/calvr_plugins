@@ -67,7 +67,7 @@ bool Hpwren::init()
 	_nlat = 0;
 	_nlon = 0;
 	_time = 0;
-	_file = NULL;
+	//_file = NULL;
 
 	// try finding an exiusting planet attached to the scenegraph
     osgEarth::MapNode* _mapNode = MapNode::findMapNode( SceneManager::instance()->getObjectsRoot() );
@@ -80,8 +80,8 @@ bool Hpwren::init()
 	}
 
 	// try readin the netcdf file
-	if( NC_ERR == parseNetCDF(std::string("/home/pweber/Downloads/out.nc")) )
-		std::cerr << "Error reading NetCDF File\n";
+	//if( NC_ERR == parseNetCDF(std::string("/home/pweber/Downloads/out.nc")) )
+	//	std::cerr << "Error reading NetCDF File\n";
 
 	_map = _mapNode->getMap();
 
@@ -187,6 +187,7 @@ void Hpwren::message(int type, char *&data, bool collaborative)
     }
 }
 
+/*
 int Hpwren::parseNetCDF(std::string fileName)
 {
 	//_file = new NcFile(fileName.c_str(), NcFile::ReadOnly);
@@ -265,7 +266,7 @@ int Hpwren::initNetCDFStep(int index)
 	
 	return 1;
 }
-
+*/
 
 void Hpwren::menuCallback(MenuItem * item)
 {
@@ -321,7 +322,7 @@ void Hpwren::initSensors(osg::Group* parent, XmlReader* configs)
     for(int i = 0; i < tagList.size(); i++)
     {
         std::string sensorName(baseName + "." + tagList[i]);
-        Sensor sensor(true, _font, _style);
+        Sensor sensor(true, _font, _style, ConfigManager::getBool("Plugin.Hpwren.Portrait", false));
         sensor.setCoord(configs->getFloat("lon", sensorName, 0.0), configs->getFloat("lat", sensorName, 0.0));
         _hpwrensensors.insert(std::pair<std::string, Sensor> (configs->getEntry("value", sensorName, ""), sensor));
     }
@@ -329,7 +330,47 @@ void Hpwren::initSensors(osg::Group* parent, XmlReader* configs)
 	// set up initial sdge sites
     //std::string name("http://anr.ucsd.edu/Sensors/SDGE"); OLD
     std::string name("http://anr.ucsd.edu/cgi-bin/sm_sdge2.pl");
-    SdgeReader test(name, _sdgesensors, _font, _style, ConfigManager::getEntry("Plugin.Hpwren.SdgeBak"));
+    SdgeReader test(name, _sdgesensors, _font, _style, ConfigManager::getEntry("Plugin.Hpwren.SdgeBak"), ConfigManager::getBool("Plugin.Hpwren.Portrait", false));
+
+    // sync sensor data from head node
+    std:vector< SensorData > updates((int)_sdgesensors.size());
+    
+    if(ComController::instance()->isMaster())
+    {
+	// add data to updates
+	int index = 0;
+	std::map< std::string, Sensor >::iterator it = _sdgesensors.begin();
+	for(; it != _sdgesensors.end(); ++it )
+	{
+	    updates[index].velocity = it->second.getVelocity();
+	    updates[index].direction = it->second.getDirection();
+	    updates[index].temperature = it->second.getTemperature();
+	    updates[index].pressure = it->second.getPressure();
+	    updates[index].humidity = it->second.getHumidity();
+	    strcpy(updates[index].name, it->first.c_str());
+	    index++;
+	}
+
+        ComController::instance()->sendSlaves(&updates[0],sizeof(SensorData) * (int) _sdgesensors.size());
+    }
+    else
+    {
+	ComController::instance()->readMaster(&updates[0],sizeof(SensorData) * (int) _sdgesensors.size());
+
+	// read data back into _sdgesensors (different between systems for some reason)
+	for(int i = 0; i < (int) updates.size(); i++ )
+	{
+	    std::map<std::string, Sensor>::iterator it = _sdgesensors.find(std::string(updates.at(i).name));
+	    if( it != _sdgesensors.end() )
+	    {
+		it->second.setVelocity(updates.at(i).velocity);
+		it->second.setDirection(updates.at(i).direction);
+		it->second.setTemperature(updates.at(i).temperature);
+		it->second.setPressure(updates.at(i).pressure);
+		it->second.setHumidity(updates.at(i).humidity);
+	    }
+	}
+    }
 
     // compute min and max temperatures
     std::map<std::string, Sensor>::iterator it = _sdgesensors.begin();
@@ -593,7 +634,7 @@ void Hpwren::createTowers(std::map<std::string, Sensor> & sensors, osg::Vec4 bas
 
 					// add a LOD Node to disable text from far away
 					osg::LOD* lod = new osg::LOD;
-					lod->addChild(at, 0.0, 50000.0);
+					lod->addChild(at, 0.0, 10000.0);
 					mat->addChild(lod);
             }
 

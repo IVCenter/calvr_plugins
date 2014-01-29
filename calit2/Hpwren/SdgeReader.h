@@ -13,7 +13,7 @@
 class SdgeReader
 {
     public:
-        SdgeReader(std::string url, std::map<std::string, Sensor> & sensors, osg::ref_ptr<osgText::Font> font, osg::ref_ptr<osgText::Style> style, std::string fileName);
+        SdgeReader(std::string url, std::map<std::string, Sensor> & sensors, osg::ref_ptr<osgText::Font> font, osg::ref_ptr<osgText::Style> style, std::string fileName, bool rotate = false);
 
     protected:
         SdgeReader();
