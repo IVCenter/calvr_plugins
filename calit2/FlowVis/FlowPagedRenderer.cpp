@@ -350,6 +350,7 @@ void FlowPagedRenderer::preFrame()
 		pthread_mutex_lock(&_licCudaLock);
 		// set constant values
 		setPlaneConsts(planePoint,planeNormal,planeRight,planeUp,_uniDataMap["planeRightNorm"].data,_uniDataMap["planeUpNorm"].data,_uniDataMap["planeBasisInv"].data,_uniDataMap["planeBasisLength"].data);
+		setTexConsts(_uniDataMap["planeBasisXMin"].data,_uniDataMap["planeBasisXMax"].data,_uniDataMap["planeBasisYMin"].data,_uniDataMap["planeBasisYMax"].data);
 		pthread_mutex_unlock(&_licCudaLock);
 #endif
 
@@ -1969,6 +1970,15 @@ void FlowPagedRenderer::initUniData()
     _uniDataMap["planeRightNorm"].data = new float[3];
     _uniDataMap["planeBasisLength"].type = UNI_FLOAT;
     _uniDataMap["planeBasisLength"].data = new float[1];
+
+    _uniDataMap["planeBasisXMin"].type = UNI_FLOAT;
+    _uniDataMap["planeBasisXMin"].data = new float[1];
+    _uniDataMap["planeBasisXMax"].type = UNI_FLOAT;
+    _uniDataMap["planeBasisXMax"].data = new float[1];
+    _uniDataMap["planeBasisYMin"].type = UNI_FLOAT;
+    _uniDataMap["planeBasisYMin"].data = new float[1];
+    _uniDataMap["planeBasisYMax"].type = UNI_FLOAT;
+    _uniDataMap["planeBasisYMax"].data = new float[1];
 
     _uniDataMap["planeBasisInv"].type = UNI_MAT3;
     _uniDataMap["planeBasisInv"].data = new float[9];

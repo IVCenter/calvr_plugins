@@ -30,6 +30,7 @@ class PagedFlowObject : public cvr::SceneObject, public cvr::PerContextCallback
     protected:
         void getBoundsPlaneIntersectPoints(osg::Vec3 point, osg::Vec3 normal, osg::BoundingBox & bounds, std::vector<osg::Vec3> & intersectList);
         void checkAndAddIntersect(osg::Vec3 & p1,osg::Vec3 & p2,osg::Vec3 & planep, osg::Vec3 & planen,std::vector<osg::Vec3> & intersectList);
+        void getPlaneViewportIntersection(const osg::Vec3 & planePoint, const osg::Vec3 & planeNormal, std::vector<osg::Vec3> & intersectList);
 
         void initCudaInfo();
 

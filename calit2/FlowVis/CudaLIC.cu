@@ -18,6 +18,10 @@ surface<void, cudaSurfaceType2D> outSurface;
 
 texture<float,2> noiseTex;
 
+__constant__ float texXMin;
+__constant__ float texXMax;
+__constant__ float texYMin;
+__constant__ float texYMax;
 
 void setVelSurfaceRef(cudaArray* array)
 {
@@ -48,6 +52,16 @@ void setPlaneConsts(void * point, void * normal, void * right, void * up, void *
     std::cerr << "Host rightpointN x: " << hostptr[0] << " y: " << hostptr[1] << " z: " << hostptr[2] << std::endl;
     std::cerr << "Dev rightpointN x: " << devptr[0] << " y: " << devptr[1] << " z: " << devptr[2] << std::endl;*/
 
+}
+
+void setTexConsts(void * xMin, void * xMax, void * yMin, void * yMax)
+{
+    cudaMemcpyToSymbol(texXMin,xMin,sizeof(float));
+    cudaMemcpyToSymbol(texXMax,xMax,sizeof(float));
+    cudaMemcpyToSymbol(texYMin,yMin,sizeof(float));
+    cudaMemcpyToSymbol(texYMax,yMax,sizeof(float));
+
+    std::cerr << "Setting basis range X: " << ((float*)xMin)[0] << " " << ((float*)xMax)[0] << " Y: " << ((float*)yMin)[0] << " " << ((float*)yMax)[0] << std::endl;
 }
 
 void launchVel(uint4 * indices, float3 * verts, float3 * velocity, unsigned int * tetList, int numTets, int width, int height)
@@ -269,6 +283,14 @@ __global__ void velKernel(uint4 * ind, float3 * verts, float3 * velocity, unsign
     {
 	//printf("Basis range exit x: %f %f y: %f %f\n",basisMin.x,basisMax.x,basisMin.y,basisMax.y);
 	// no critical points in tet
+	return;
+    }
+
+    //find if tet is outside the basis bounds
+    if(basisMin.x > texXMax || basisMax.x < texXMin || basisMin.y > texYMax || basisMax.y < texYMin)
+    {
+	//printf("X: %f %f\n",basisMin.x,basisMax.x);
+	//printf("Y: %f %f\n",basisMin.y,basisMax.y);
 	return;
     }
 
