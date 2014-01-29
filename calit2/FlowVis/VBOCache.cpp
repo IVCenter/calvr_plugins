@@ -8,6 +8,10 @@
 #include <iostream>
 #include <sys/time.h>
 
+#ifdef WITH_CUDA_LIB
+#include "CudaHelper.h"
+#endif
+
 void * loadVBOThread(void * arg)
 {
     LoadVBOParams * params = (LoadVBOParams*)arg;
@@ -154,7 +158,7 @@ VBOCache::~VBOCache()
     delete _dataLoader;
 }
 
-unsigned int VBOCache::getOrRequestBuffer(int context, int file, int offset, int size, unsigned int bufferType)
+unsigned int VBOCache::getOrRequestBuffer(int context, int file, int offset, int size, unsigned int bufferType, bool cudaReg)
 {
     pthread_mutex_lock(&_queueLock);
 
@@ -164,6 +168,13 @@ unsigned int VBOCache::getOrRequestBuffer(int context, int file, int offset, int
 	{
 	    (*it)->timestamp = _currentTimestamp;
 	    unsigned int vbo = (*it)->vbo;
+#ifdef WITH_CUDA_LIB
+	    if(cudaReg && !(*it)->cudaReg)
+	    {
+		checkRegBufferObj(vbo);
+		(*it)->cudaReg = true;
+	    }
+#endif
 	    pthread_mutex_unlock(&_queueLock);
 	    return vbo;
 	}
@@ -251,6 +262,7 @@ void VBOCache::update(int context)
 	bi->vbo = (*it)->vbo;
 	bi->timestamp = _currentTimestamp;
 	bi->bufferType = (*it)->bufferType;
+	bi->cudaReg = false;
 	_loadedBuffers[(*it)->context][(*it)->file].push_back(bi);
     
 	glBindBuffer(bi->bufferType,bi->vbo);
@@ -277,6 +289,12 @@ void VBOCache::freeResources(int context)
     {
 	for(std::list<BufferInfo*>::iterator it = fileIt->second.begin(); it != fileIt->second.end();)
 	{
+#ifdef WITH_CUDA_LIB
+	    if((*it)->cudaReg)
+	    {
+		checkUnregBufferObj((*it)->vbo);
+	    }
+#endif
 	    glDeleteBuffers(1,&(*it)->vbo);
 	    it = fileIt->second.erase(it);
 	}
@@ -362,6 +380,12 @@ void VBOCache::getOrCreateBuffer(BufferJob * job)
 	}
 	if(oldestTime != UINT_MAX)
 	{
+#ifdef WITH_CUDA_LIB
+	    if((*oldestIt)->cudaReg)
+	    {
+		checkUnregBufferObj((*oldestIt)->vbo);
+	    }
+#endif
 	    //glBindBuffer((*oldestIt)->bufferType,(*oldestIt)->vbo);
 	    //glUnmapBuffer((*oldestIt)->bufferType);
 	    //glBindBuffer((*oldestIt)->bufferType,0);
