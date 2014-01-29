@@ -1,7 +1,7 @@
 #include "Sensor.h"
 #include <iostream>
 
-Sensor::Sensor(bool type, osg::ref_ptr<osgText::Font> font, osg::ref_ptr<osgText::Style> style) :  _type(type)
+Sensor::Sensor(bool type, osg::ref_ptr<osgText::Font> font, osg::ref_ptr<osgText::Style> style, bool rotate) :  _type(type)
 {
 	_location.first = 0.0;
 	_location.second = 0.0;
@@ -11,7 +11,7 @@ Sensor::Sensor(bool type, osg::ref_ptr<osgText::Font> font, osg::ref_ptr<osgText
     _pressure = 0.0f;
     _humidity = 0.0f;
     _rotation = new FlagTransform();
-    _flagText = new FlagText( 120.0 ); // set a default size
+    _flagText = new FlagText( 50.0 , rotate); // set a default size
 	_flagText->setFont(font.get());
 	_flagText->setStyle(style.get());
     _flagcolor = new osg::Uniform("flagcolor", 0.0f);
@@ -47,7 +47,7 @@ osg::Matrix FlagTransform::getMatrix()
 	return _mat;
 }
 
-FlagText::FlagText(float size) : _changed(false)
+FlagText::FlagText(float size, bool rotate) : _changed(false)
 {
 	// set text object params
 	//osg::ref_ptr<osgText::Font> font = osgText::readFontFile("/home/pweber/development/calvr/resources/arial.ttf");
@@ -59,10 +59,15 @@ FlagText::FlagText(float size) : _changed(false)
 	// init the text object
 	//setFont(font.get());
 	//setStyle(style.get());
+	
+	// to deal with rotated screens (e.g portrait)
+        if ( rotate )
+	    setRotation(osg::Quat(osg::inDegrees(-90.0f),osg::Vec3(0.0f,0.0f,1.0f)));
+	
 	setCharacterSize(size);
 	setFontResolution(256,256);
 	setAlignment(osgText::Text::CENTER_BOTTOM);
-	setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	setColor(osg::Vec4(0.7, 0.7, 0.7, 1.0));
 	setPosition(osg::Vec3(0.0, 0.0, 0.0));
 
 	setUpdateCallback(this);	

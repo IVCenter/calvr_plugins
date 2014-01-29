@@ -134,7 +134,7 @@ bool OsgEarth::init()
 
     // set planet to correct scale
     osg::Matrix objects = PluginHelper::getObjectMatrix();
-    objects.setTrans(0.0, earthRadiusMM * 3.0, 0.0);
+    objects.setTrans(0.0, earthRadiusMM * 2.0, 0.0);
     PluginHelper::setObjectScale(1000.0);
     PluginHelper::setObjectMatrix(objects);    // moves the planet; matrix should be a pure translation and rotation
 

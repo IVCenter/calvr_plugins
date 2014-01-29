@@ -30,7 +30,7 @@ class FlagTransform : public osg::NodeCallback, public osg::MatrixTransform
 class FlagText : public osg::Drawable::UpdateCallback, public osgText::Text3D
 {
 	public:
-    	FlagText(float size);
+    	FlagText(float size, bool rotate);
        	virtual void update(osg::NodeVisitor*, osg::Drawable*);
 		void setText(std::string);
 	
@@ -46,7 +46,7 @@ class FlagText : public osg::Drawable::UpdateCallback, public osgText::Text3D
 class Sensor 
 {
   	public:
-		Sensor(bool type, osg::ref_ptr<osgText::Font> font, osg::ref_ptr<osgText::Style> style);
+		Sensor(bool type, osg::ref_ptr<osgText::Font> font, osg::ref_ptr<osgText::Style> style, bool rotate = false);
 		void setCoord(float lon, float lat) { _location.first = lon; _location.second = lat; }
 		void getCoord(double & lon, double & lat) { lon = _location.first; lat = _location.second; }	
 		bool getType() { return _type; }	
