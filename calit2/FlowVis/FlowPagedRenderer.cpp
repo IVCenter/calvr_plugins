@@ -44,6 +44,7 @@ FlowPagedRenderer::FlowPagedRenderer(PagedDataSet * set, int frame, FlowVisType 
     _type = type;
     _attribute = attribute;
     _licStarted = false;
+    _licOutputValid = false;
 
     pthread_mutex_init(&_shaderInitLock,NULL);
     pthread_mutex_init(&_frameReadyLock,NULL);
@@ -69,7 +70,7 @@ void FlowPagedRenderer::frameStart(int context)
 	case FVT_LIC_CUDA:
 	{
 #ifdef WITH_CUDA_LIB
-	    pthread_mutex_lock(&_licCudaLock);
+	    //pthread_mutex_lock(&_licCudaLock);
 
 	    int fileID = _cache->getFileID(_set->frameFiles[_currentFrame]);
 	    // get needed buffers
@@ -87,6 +88,13 @@ void FlowPagedRenderer::frameStart(int context)
 
 	    vertsVBO = _cache->getOrRequestBuffer(context,fileID,_set->frameList[_currentFrame]->verts.second,_set->frameList[_currentFrame]->verts.first*3*sizeof(float),GL_ARRAY_BUFFER,true);
 
+	    //std::cerr << "Frame start frame: " << _currentFrame << " indVBO: " << indVBO << " vertVBO: " << vertsVBO << " velVBO: " << velVBO << std::endl;
+
+	    if(!_licStarted)
+	    {
+		break;
+	    }
+
 	    // if all needed buffers are loaded, do LIC
 	    if(indVBO && vertsVBO && velVBO)
 	    {
@@ -95,7 +103,13 @@ void FlowPagedRenderer::frameStart(int context)
 		checkMapBufferObj((void**)&d_indVBO,indVBO);
 		checkMapBufferObj((void**)&d_vertsVBO,vertsVBO);
 		checkMapBufferObj((void**)&d_velVBO,velVBO);
-		
+	
+#ifdef PRINT_TIMING	
+		cudaThreadSynchronize();
+		struct timeval tliststart,tlistend;
+		gettimeofday(&tliststart,NULL);
+#endif
+
 		// test to see how long it takes to form a list of tets on the plane
 		void * d_tetList;
 		cudaMalloc(&d_tetList,(_set->frameList[_currentFrame]->indices.first/4)*sizeof(unsigned int));
@@ -109,6 +123,11 @@ void FlowPagedRenderer::frameStart(int context)
 
 		unsigned int h_numTets;
 		cudaMemcpy(&h_numTets,d_numTets,sizeof(unsigned int),cudaMemcpyDeviceToHost);
+
+#ifdef PRINT_TIMING
+		gettimeofday(&tlistend,NULL);
+		std::cerr << "TetList time: " << (tlistend.tv_sec - tliststart.tv_sec) + ((tlistend.tv_usec - tliststart.tv_usec)/1000000.0) << std::endl;
+#endif
 
 		//std::cerr << "TotalTets: " << _set->frameList[_currentFrame]->indices.first/4 << " tets on plane: " << h_numTets << std::endl;
 
@@ -288,11 +307,23 @@ void FlowPagedRenderer::frameStart(int context)
 		// bind array to surface
 		setVelSurfaceRef(_licCudaVelImage[context]->getPointer());
 
+		//std::cerr << "Active tets: " << h_numTets << std::endl;
+
+#ifdef PRINT_TIMING
+		struct timeval velstart,velend;
+		gettimeofday(&velstart,NULL);
+#endif
+
 		// populate texture
 		//launchVel((uint4*)d_indVBO,(float3*)d_vertsVBO,(float3*)d_velVBO,_set->frameList[_currentFrame]->indices.first/4,LIC_TEXTURE_SIZE,LIC_TEXTURE_SIZE);
 		launchVel((uint4*)d_indVBO,(float3*)d_vertsVBO,(float3*)d_velVBO,(unsigned int*)d_tetList,h_numTets,LIC_TEXTURE_SIZE,LIC_TEXTURE_SIZE);
 		//launchVel((uint4*)d_indVBO,(float3*)d_vertsVBO,(float3*)d_velVBO,1);
 		cudaThreadSynchronize();
+
+#ifdef PRINT_TIMING
+		gettimeofday(&velend,NULL);
+		std::cerr << "VelKernel time: " << (velend.tv_sec - velstart.tv_sec) + ((velend.tv_usec - velstart.tv_usec)/1000000.0) << std::endl;
+#endif
 
 		cudaFree(d_tetList);
 		cudaFree(d_numTets);
@@ -303,27 +334,40 @@ void FlowPagedRenderer::frameStart(int context)
 		checkUnmapBufferObj(velVBO);
 
 		// map output texture
-		_licCudaOutputImage[context]->setMapFlags(cudaGraphicsMapFlagsWriteDiscard);
-		_licCudaOutputImage[context]->map();
+		_licCudaNextOutputImage[context]->setMapFlags(cudaGraphicsMapFlagsWriteDiscard);
+		_licCudaNextOutputImage[context]->map();
 
 		// map noise texture
 		_licCudaNoiseImage[context]->setMapFlags(cudaGraphicsMapFlagsReadOnly);
 		_licCudaNoiseImage[context]->map();
 
 		// bind array to surface
-		setOutSurfaceRef(_licCudaOutputImage[context]->getPointer());
+		setOutSurfaceRef(_licCudaNextOutputImage[context]->getPointer());
+
+#ifdef PRINT_TIMING
+		struct timeval licstart,licend;
+		gettimeofday(&licstart,NULL);
+#endif
 
 		// run LIC kernel
 		launchLIC(LIC_TEXTURE_SIZE,LIC_TEXTURE_SIZE,10.0,_licCudaNoiseImage[context]->getPointer());
 
+#ifdef PRINT_TIMING
+		gettimeofday(&licend,NULL);
+		std::cerr << "LIC time: " << (licend.tv_sec - licstart.tv_sec) + ((licend.tv_usec - licstart.tv_usec)/1000000.0) << std::endl;
+#endif
+
 		// unmap textures
 		_licCudaVelImage[context]->unmap();
-		_licCudaOutputImage[context]->unmap();
+		_licCudaNextOutputImage[context]->unmap();
 		_licCudaNoiseImage[context]->unmap();
 
+		pthread_mutex_lock(&_licLock);
+		_licFinished[context] = true;
+		pthread_mutex_unlock(&_licLock);
 	    }
 
-	    pthread_mutex_unlock(&_licCudaLock);
+	    //pthread_mutex_unlock(&_licCudaLock);
 #endif
 	    break;
 	}
@@ -334,24 +378,42 @@ void FlowPagedRenderer::frameStart(int context)
 
 void FlowPagedRenderer::preFrame()
 {
+#ifdef PRINT_TIMING
+    struct timeval start, end;
+    gettimeofday(&start,NULL);
+#endif
+
     switch(_type)
     {
 	case FVT_LIC_CUDA:
 	{
+	    break;
 	    if(!_licStarted)
 	    {
-		_licOutputPoints = std::vector<float>(12);
+		_licNextOutputPoints = std::vector<float>(12);
 		float * planePoint = (float*)_uniDataMap["planePoint"].data;
 		float * planeNormal = (float*)_uniDataMap["planeNormal"].data;
 		float * planeRight = (float*)_uniDataMap["planeRight"].data;
 		float * planeUp = (float*)_uniDataMap["planeUp"].data;
 
 #ifdef WITH_CUDA_LIB
-		pthread_mutex_lock(&_licCudaLock);
+
+#ifdef PRINT_TIMING
+		struct timeval cstart,cend;
+		gettimeofday(&cstart,NULL);
+#endif
+
+		//pthread_mutex_lock(&_licCudaLock);
 		// set constant values
 		setPlaneConsts(planePoint,planeNormal,planeRight,planeUp,_uniDataMap["planeRightNorm"].data,_uniDataMap["planeUpNorm"].data,_uniDataMap["planeBasisInv"].data,_uniDataMap["planeBasisLength"].data);
 		setTexConsts(_uniDataMap["planeBasisXMin"].data,_uniDataMap["planeBasisXMax"].data,_uniDataMap["planeBasisYMin"].data,_uniDataMap["planeBasisYMax"].data);
-		pthread_mutex_unlock(&_licCudaLock);
+		//pthread_mutex_unlock(&_licCudaLock);
+
+#ifdef PRINT_TIMING
+		gettimeofday(&cend,NULL);
+		std::cerr << "FlowPagedRenderer preframe LIC cuda: " << (cend.tv_sec - cstart.tv_sec) + ((cend.tv_usec - cstart.tv_usec)/1000000.0) << std::endl;
+#endif
+
 #endif
 
 		float right[3];
@@ -365,24 +427,29 @@ void FlowPagedRenderer::preFrame()
 		up[1] = (LIC_TEXTURE_SIZE/2.0) * planeUp[1];
 		up[2] = (LIC_TEXTURE_SIZE/2.0) * planeUp[2];
 
-		_licOutputPoints[0] = planePoint[0] - right[0] - up[0];
-		_licOutputPoints[1] = planePoint[1] - right[1] - up[1];
-		_licOutputPoints[2] = planePoint[2] - right[2] - up[2];
-		_licOutputPoints[3] = planePoint[0] + right[0] - up[0];
-		_licOutputPoints[4] = planePoint[1] + right[1] - up[1];
-		_licOutputPoints[5] = planePoint[2] + right[2] - up[2];
-		_licOutputPoints[6] = planePoint[0] + right[0] + up[0];
-		_licOutputPoints[7] = planePoint[1] + right[1] + up[1];
-		_licOutputPoints[8] = planePoint[2] + right[2] + up[2];
-		_licOutputPoints[9] = planePoint[0] - right[0] + up[0];
-		_licOutputPoints[10] = planePoint[1] - right[1] + up[1];
-		_licOutputPoints[11] = planePoint[2] - right[2] + up[2];
+		_licNextOutputPoints[0] = planePoint[0] - right[0] - up[0];
+		_licNextOutputPoints[1] = planePoint[1] - right[1] - up[1];
+		_licNextOutputPoints[2] = planePoint[2] - right[2] - up[2];
+		_licNextOutputPoints[3] = planePoint[0] + right[0] - up[0];
+		_licNextOutputPoints[4] = planePoint[1] + right[1] - up[1];
+		_licNextOutputPoints[5] = planePoint[2] + right[2] - up[2];
+		_licNextOutputPoints[6] = planePoint[0] + right[0] + up[0];
+		_licNextOutputPoints[7] = planePoint[1] + right[1] + up[1];
+		_licNextOutputPoints[8] = planePoint[2] + right[2] + up[2];
+		_licNextOutputPoints[9] = planePoint[0] - right[0] + up[0];
+		_licNextOutputPoints[10] = planePoint[1] - right[1] + up[1];
+		_licNextOutputPoints[11] = planePoint[2] - right[2] + up[2];
 	    }
 	    break;
 	}
 	default:
 	    break;
     }
+
+#ifdef PRINT_TIMING
+    gettimeofday(&end,NULL);
+    std::cerr << "FlowPagedRenderer preframe: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec)/1000000.0) << std::endl;
+#endif
 }
 
 void FlowPagedRenderer::preDraw(int context)
@@ -1753,7 +1820,42 @@ void FlowPagedRenderer::draw(int context)
 		//std::cerr << "not drawn" << std::endl;
 	    }
 
-	    // debug texture draw
+	    pthread_mutex_lock(&_licLock);
+
+	    bool finished = true;
+
+	    for(std::map<int,bool>::iterator it = _licFinished.begin(); it != _licFinished.end(); ++it)
+	    {
+		if(!it->second)
+		{
+		    finished = false;
+		    break;
+		}
+	    }
+
+	    if(finished)
+	    {
+
+		_licOutputPoints = _licNextOutputPoints;
+		//swap next output into current output
+		GLuint tempid = _licOutputTex[context];
+		_licOutputTex[context] = _licNextOutputTex[context];
+		_licNextOutputTex[context] = tempid;
+
+		CudaGLImage * tempptr = _licCudaOutputImage[context];
+		_licCudaOutputImage[context] = _licCudaNextOutputImage[context];
+		_licCudaNextOutputImage[context] = tempptr;
+
+		_licStarted = false;
+		if(!_licOutputValid)
+		{
+		    _licOutputValid = true;
+		}
+	    }
+
+	    pthread_mutex_unlock(&_licLock);
+
+	    if(_licOutputValid)
 	    {
 		//glBindTexture(GL_TEXTURE_2D,_licNoiseTex[context]);
 		glBindTexture(GL_TEXTURE_2D,_licOutputTex[context]);
@@ -1774,10 +1876,12 @@ void FlowPagedRenderer::draw(int context)
 		glBindTexture(GL_TEXTURE_2D,0);
 	    }
 
-	    if(_currentFrame != _nextFrame)
+	    pthread_mutex_lock(&_licLock);
+	    if(_currentFrame != _nextFrame && !_licStarted)
 	    {
+		pthread_mutex_unlock(&_licLock);
 		int nextfileID = _cache->getFileID(_set->frameFiles[_nextFrame]);
-		GLuint ibuf, vbuf, abuf = 0;
+		GLuint ibuf, vbuf, abuf = 0, fullibuf, velbuf = 0;
 		ibuf = _cache->getOrRequestBuffer(context,nextfileID,_set->frameList[_nextFrame]->surfaceInd.second,_set->frameList[_nextFrame]->surfaceInd.first*sizeof(unsigned int),GL_ELEMENT_ARRAY_BUFFER);
 		vbuf = _cache->getOrRequestBuffer(context,nextfileID,_set->frameList[_nextFrame]->verts.second,_set->frameList[_nextFrame]->verts.first*3*sizeof(float),GL_ARRAY_BUFFER);
 
@@ -1796,8 +1900,19 @@ void FlowPagedRenderer::draw(int context)
 		    abuf = _cache->getOrRequestBuffer(context,nextfileID,nextattrib->offset,_set->frameList[_nextFrame]->verts.first*unitsize,GL_ARRAY_BUFFER);
 		}
 
+		fullibuf = _cache->getOrRequestBuffer(context,nextfileID,_set->frameList[_nextFrame]->indices.second,_set->frameList[_nextFrame]->indices.first*sizeof(unsigned int),GL_ELEMENT_ARRAY_BUFFER,true);
+		for(int i = 0; i < _set->frameList[_nextFrame]->pointData.size(); ++i)
+		{
+		    if(_set->frameList[_nextFrame]->pointData[i]->name == "Velocity")
+		    {
+			velbuf = _cache->getOrRequestBuffer(context,nextfileID,_set->frameList[_nextFrame]->pointData[i]->offset,_set->frameList[_nextFrame]->verts.first*3*sizeof(float),GL_ARRAY_BUFFER,true);
+			break;
+		    }
+		}
+
+
 		pthread_mutex_lock(&_frameReadyLock);
-		if(ibuf && vbuf && (!attrib || abuf))
+		if(ibuf && vbuf && (!attrib || abuf) && fullibuf && velbuf)
 		{
 		    _nextFrameReady[context] = true;
 		}
@@ -1806,6 +1921,10 @@ void FlowPagedRenderer::draw(int context)
 		    _nextFrameReady[context] = false;
 		}
 		pthread_mutex_unlock(&_frameReadyLock);
+	    }
+	    else
+	    {
+		pthread_mutex_unlock(&_licLock);
 	    }
 
 	    break;
@@ -1823,7 +1942,64 @@ void FlowPagedRenderer::postFrame()
 	{
 	    if(!_licStarted)
 	    {
+		_licNextOutputPoints = std::vector<float>(12);
+		float * planePoint = (float*)_uniDataMap["planePoint"].data;
+		float * planeNormal = (float*)_uniDataMap["planeNormal"].data;
+		float * planeRight = (float*)_uniDataMap["planeRight"].data;
+		float * planeUp = (float*)_uniDataMap["planeUp"].data;
+
+#ifdef WITH_CUDA_LIB
+
+#ifdef PRINT_TIMING
+		struct timeval cstart,cend;
+		gettimeofday(&cstart,NULL);
+#endif
+
+		//pthread_mutex_lock(&_licCudaLock);
+		// set constant values
+		setPlaneConsts(planePoint,planeNormal,planeRight,planeUp,_uniDataMap["planeRightNorm"].data,_uniDataMap["planeUpNorm"].data,_uniDataMap["planeBasisInv"].data,_uniDataMap["planeBasisLength"].data);
+		setTexConsts(_uniDataMap["planeBasisXMin"].data,_uniDataMap["planeBasisXMax"].data,_uniDataMap["planeBasisYMin"].data,_uniDataMap["planeBasisYMax"].data);
+		//pthread_mutex_unlock(&_licCudaLock);
+
+#ifdef PRINT_TIMING
+		gettimeofday(&cend,NULL);
+		std::cerr << "FlowPagedRenderer preframe LIC cuda: " << (cend.tv_sec - cstart.tv_sec) + ((cend.tv_usec - cstart.tv_usec)/1000000.0) << std::endl;
+#endif
+
+#endif
+
+		float right[3];
+		float up[3];
+
+		right[0] = (LIC_TEXTURE_SIZE/2.0) * planeRight[0];
+		right[1] = (LIC_TEXTURE_SIZE/2.0) * planeRight[1];
+		right[2] = (LIC_TEXTURE_SIZE/2.0) * planeRight[2];
+
+		up[0] = (LIC_TEXTURE_SIZE/2.0) * planeUp[0];
+		up[1] = (LIC_TEXTURE_SIZE/2.0) * planeUp[1];
+		up[2] = (LIC_TEXTURE_SIZE/2.0) * planeUp[2];
+
+		_licNextOutputPoints[0] = planePoint[0] - right[0] - up[0];
+		_licNextOutputPoints[1] = planePoint[1] - right[1] - up[1];
+		_licNextOutputPoints[2] = planePoint[2] - right[2] - up[2];
+		_licNextOutputPoints[3] = planePoint[0] + right[0] - up[0];
+		_licNextOutputPoints[4] = planePoint[1] + right[1] - up[1];
+		_licNextOutputPoints[5] = planePoint[2] + right[2] - up[2];
+		_licNextOutputPoints[6] = planePoint[0] + right[0] + up[0];
+		_licNextOutputPoints[7] = planePoint[1] + right[1] + up[1];
+		_licNextOutputPoints[8] = planePoint[2] + right[2] + up[2];
+		_licNextOutputPoints[9] = planePoint[0] - right[0] + up[0];
+		_licNextOutputPoints[10] = planePoint[1] - right[1] + up[1];
+		_licNextOutputPoints[11] = planePoint[2] - right[2] + up[2];
+
+
+		//std::cerr << "Setting _licStarted to true" << std::endl;
 		_licStarted = true;
+
+		for(std::map<int,bool>::iterator it = _licFinished.begin(); it != _licFinished.end(); ++it)
+		{
+		    it->second = false;
+		}
 	    }
 	    break;
 	}
@@ -2257,8 +2433,8 @@ void FlowPagedRenderer::checkLICInit(int context)
 	glGenTextures(1,&_licOutputTex[context]);
 	glBindTexture(GL_TEXTURE_2D,_licOutputTex[context]);
 
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
@@ -2287,6 +2463,7 @@ void FlowPagedRenderer::checkLICInit(int context)
 	glBindTexture(GL_TEXTURE_2D,0);
 
 	_licInit[context] = true;
+	_licFinished[context] = false;
     }
 
     pthread_mutex_unlock(&_licLock);

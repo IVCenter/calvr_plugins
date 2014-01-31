@@ -171,8 +171,10 @@ class FlowPagedRenderer
         std::map<int,GLuint> _licNextOutputTex;
         std::map<int,bool> _licNextDone;
         bool _licStarted;
+        std::map<int,bool> _licFinished;
+        bool _licOutputValid;
         std::vector<float> _licOutputPoints;
-        std::vector<float> _licOutputTexCoords;
+        std::vector<float> _licNextOutputPoints;
         std::map<int,GLuint> _licRenderProgram;
         std::map<int,CudaGLImage*> _licCudaNoiseImage;
         std::map<int,CudaGLImage*> _licCudaVelImage;

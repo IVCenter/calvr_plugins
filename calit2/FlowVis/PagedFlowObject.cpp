@@ -6,6 +6,8 @@
 
 #include <iostream>
 
+#include <sys/time.h>
+
 using namespace cvr;
 
 PagedFlowObject::PagedFlowObject(PagedDataSet * set, osg::BoundingBox bb, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : SceneObject(name,navigation,movable,clip,true,showBounds)
@@ -94,6 +96,11 @@ PagedFlowObject::~PagedFlowObject()
 
 void PagedFlowObject::preFrame()
 {
+#ifdef PRINT_TIMING
+    struct timeval start,end;
+    gettimeofday(&start,NULL);
+#endif
+
     if(_animateCB->getValue() && _set && _set->frameList.size())
     {
 	_animationTime += PluginHelper::getLastFrameDuration();
@@ -501,11 +508,36 @@ void PagedFlowObject::preFrame()
 	    break;
     }
 
+#ifdef PRINT_TIMING
+    gettimeofday(&end,NULL);
+    std::cerr << "PagedFlowObject time (without renderer): " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec)/1000000.0) << std::endl;
+#endif
+
     _renderer->preFrame();
 }
 
 void PagedFlowObject::postFrame()
 {
+    switch(_lastType)
+    {
+	case FVT_LIC_CUDA:
+	{
+	    // check again for frame advance before the next LIC calculation starts
+	    if(_animateCB->getValue() && _set && _set->frameList.size())
+	    {
+		if(_animationTime > 1.0 / _targetFPSRV->getValue() && _renderer->advance())
+		{
+		    _currentFrame = (_currentFrame + 1) % _set->frameList.size();
+		    int next = (_currentFrame + 1) % _set->frameList.size();
+		    _renderer->setNextFrame(next);
+		    _animationTime = 0.0;
+		}
+	    }
+	}
+	default:
+	    break;
+    }
+
     _renderer->postFrame();
 }
 

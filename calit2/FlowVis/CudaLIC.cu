@@ -61,7 +61,7 @@ void setTexConsts(void * xMin, void * xMax, void * yMin, void * yMax)
     cudaMemcpyToSymbol(texYMin,yMin,sizeof(float));
     cudaMemcpyToSymbol(texYMax,yMax,sizeof(float));
 
-    std::cerr << "Setting basis range X: " << ((float*)xMin)[0] << " " << ((float*)xMax)[0] << " Y: " << ((float*)yMin)[0] << " " << ((float*)yMax)[0] << std::endl;
+    //std::cerr << "Setting basis range X: " << ((float*)xMin)[0] << " " << ((float*)xMax)[0] << " Y: " << ((float*)yMin)[0] << " " << ((float*)yMax)[0] << std::endl;
 }
 
 void launchVel(uint4 * indices, float3 * verts, float3 * velocity, unsigned int * tetList, int numTets, int width, int height)
@@ -74,15 +74,85 @@ void launchVel(uint4 * indices, float3 * verts, float3 * velocity, unsigned int 
     dim3 blockc(8,8,1);
     dim3 gridc(width/8,height/8,1);
 
-    velTest<<< gridc, blockc >>>(width,height);
+    velClear<<< gridc, blockc >>>(width,height);
     cudaThreadSynchronize();
 
-    dim3 block(256,1,1);
-    int griddim = (numTets / 256) + 1;
+    int threadsPerBlock = 256;
+    dim3 block(threadsPerBlock,1,1);
+
+    int critcalPoints = width * height * 1.1;
+    int pointsPerTet = critcalPoints * 1.2 / numTets;
+    float blocksPerTet = pointsPerTet / (threadsPerBlock * 20.0f);
+    
+    int griddim;
+    //griddim = (numTets / 256) + 1;
+
+    bool threadPerTet = false;
+
+    int sharedMemPerBlock = 0;
+    int tetsPerBlock = 1;
+
+    if(blocksPerTet >= 1.0f)
+    {
+	griddim = ((int)blocksPerTet) * numTets;
+	sharedMemPerBlock = 24 * sizeof(float);
+    }
+    else
+    {
+	float tetsPerBlockf = 1.0f / blocksPerTet;
+
+	// may need to lower limit if reg count goes down
+	if(tetsPerBlockf > 64.0f)
+	{
+	    griddim = (numTets / 256) + 1;
+	    threadPerTet = true;
+	}
+	else if(tetsPerBlockf > 32.0f)
+	{
+	    griddim = (numTets / 64) + 1;
+	    tetsPerBlock = 64;
+	}
+	else if(tetsPerBlockf > 16.0f)
+	{
+	    griddim = (numTets / 32) + 1;
+	    tetsPerBlock = 32;
+	}
+	else if(tetsPerBlockf > 8.0f)
+	{
+	    griddim = (numTets / 16) + 1;
+	    tetsPerBlock = 16;
+	}
+	else if(tetsPerBlockf > 4.0f)
+	{
+	    griddim = (numTets / 8) + 1;
+	    tetsPerBlock = 8;
+	}
+	else if(tetsPerBlockf > 2.0f)
+	{
+	    griddim = (numTets / 4) + 1;
+	    tetsPerBlock = 4;
+	}
+	else
+	{
+	    griddim = (numTets / 2  ) + 1;
+	    tetsPerBlock = 2;
+	}
+	sharedMemPerBlock = 24 * sizeof(float) * tetsPerBlock;
+    }
+
     //std::cerr << "NumTets: " << numTets << " Grid dim: " << griddim << std::endl;
     dim3 grid(griddim,1,1);
 
-    velKernel<<< grid, block >>>(indices,verts,velocity,tetList,numTets,width,height,width/2.0,height/2.0);
+    if(threadPerTet)
+    {
+	//std::cerr << "Using single thread kernel" << std::endl;
+	velKernel<<< grid, block >>>(indices,verts,velocity,tetList,numTets,width,height,width/2.0,height/2.0);
+    }
+    else
+    {
+	//std::cerr << "Using multi thread kernel, blocksPerTet: " << (int)blocksPerTet << " tetsPerBlock: " << tetsPerBlock << " smem: " << sharedMemPerBlock << std::endl;
+	velSplitKernel<<< grid, block, sharedMemPerBlock >>>(indices,verts,velocity,tetList,numTets,(int)blocksPerTet,tetsPerBlock,width,height,width/2.0,height/2.0);
+    }
 }
 
 void launchLIC(int width, int height, float length, cudaArray * noiseArray)
@@ -111,7 +181,7 @@ void launchMakeTetList(unsigned int * tetList, unsigned int * numTets, int total
     makeTetListKernel<<< grid, block >>>(tetList,numTets,totalTets,indices,verts);
 }
 
-__global__ void velTest(int width, int height) 
+__global__ void velClear(int width, int height) 
 {
     // Calculate surface coordinates
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -362,6 +432,9 @@ __global__ void velKernel(uint4 * ind, float3 * verts, float3 * velocity, unsign
     tetVel[2] = velocity[ind[tetid].z];
     tetVel[3] = velocity[ind[tetid].w];
 
+    //float tests = (basisMax.x - basisMin.x) * (basisMax.y - basisMin.y);
+    //printf("Critical Points: %f\n",tests);
+
     // process all critical points
     for(float i = basisMin.x; i <= basisMax.x; i = i + 1.0f)
     {
@@ -417,14 +490,19 @@ __global__ void velKernel(uint4 * ind, float3 * verts, float3 * velocity, unsign
 		myVelocity.y = coords.x * tetVel[0].y + coords.y * tetVel[1].y + coords.z * tetVel[2].y + coords.w * tetVel[3].y;
 		myVelocity.z = coords.x * tetVel[0].z + coords.y * tetVel[1].z + coords.z * tetVel[2].z + coords.w * tetVel[3].z;
 
+		// also temp x
+		float mag;
+		mag = planeRightNorm.x * myVelocity.x + planeRightNorm.y * myVelocity.y + planeRightNorm.z * myVelocity.z;
+		myVelocity.y = planeUpNorm.x * myVelocity.x + planeUpNorm.y * myVelocity.y + planeUpNorm.z * myVelocity.z;
+		myVelocity.x = mag;
+
 		// normalize
-		float mag = myVelocity.x * myVelocity.x + myVelocity.y * myVelocity.y + myVelocity.z * myVelocity.z;
+		mag = myVelocity.x * myVelocity.x + myVelocity.y * myVelocity.y;
 		mag = sqrt(mag);
 		if(mag > 0.0f)
 		{
 		    myVelocity.x = myVelocity.x / mag;
 		    myVelocity.y = myVelocity.y / mag;
-		    myVelocity.z = myVelocity.z / mag;
 		}
 
 		unsigned short data[2];
@@ -435,8 +513,8 @@ __global__ void velKernel(uint4 * ind, float3 * verts, float3 * velocity, unsign
 		printf("Output x: %d y: %d %f %f\n",texelIndex.x,texelIndex.y,output.x,output.y);
 		data[0] = __float2half_rn(output.x);
 		data[1] = __float2half_rn(output.y);*/
-		data[0] = __float2half_rn(planeRightNorm.x * myVelocity.x + planeRightNorm.y * myVelocity.y + planeRightNorm.z * myVelocity.z);
-		data[1] = __float2half_rn(planeUpNorm.x * myVelocity.x + planeUpNorm.y * myVelocity.y + planeUpNorm.z * myVelocity.z);
+		data[0] = __float2half_rn(myVelocity.x);
+		data[1] = __float2half_rn(myVelocity.y);
 		/*if(output.x != 0.0f || output.y != 0.0f)
 		{
 		    data[0] = __float2half_rn(1.0f);
@@ -454,6 +532,243 @@ __global__ void velKernel(uint4 * ind, float3 * verts, float3 * velocity, unsign
 		}*/
 		surf2Dwrite(*((uchar4*)data), velSurface, texelIndex.x * 4, texelIndex.y);
 	    }
+	}
+    }
+}
+
+__global__ void velSplitKernel(uint4 * ind, float3 * verts, float3 * velocity, unsigned int * tetList, int numTets, int blocksPerTet, int tetsPerBlock, int width, int height, float hwidth, float hheight)
+{
+    extern __shared__ float3 tetData[];
+
+    int myOffset;
+    int blockOffset;
+    int threadOffset;
+    int threadsPerTet;
+
+    if(blocksPerTet == 0)
+    {
+	blockOffset = blockIdx.x * tetsPerBlock;
+	myOffset = threadIdx.x / (blockDim.x / tetsPerBlock);
+	threadOffset = threadIdx.x % (blockDim.x / tetsPerBlock);
+	threadsPerTet = (blockDim.x / tetsPerBlock);
+    }
+    else
+    {
+	blockOffset = blockIdx.x / blocksPerTet;
+	myOffset = 0;
+	threadOffset = (blockIdx.x % blocksPerTet) * blockDim.x + threadIdx.x;
+	threadsPerTet = blockDim.x * blocksPerTet;
+    }
+
+    //printf("myOffset %d, blockOffset %d, threadOffset %d, threadsPerTet %d, blocksPerTet %d, tetsPerBlock %d, thread %d, block %d\n",myOffset,blockOffset,threadOffset,threadsPerTet,blocksPerTet,tetsPerBlock,threadIdx.x,blockIdx.x);
+
+    if(blockOffset + myOffset >= numTets)
+    {
+	return;
+    }
+
+    int tetid = tetList[blockOffset + myOffset];
+
+    myOffset = myOffset * 4;
+
+    // read tet data
+    if(threadOffset == 0 || threadIdx.x == 0)
+    {
+	int toffset = myOffset;
+	tetData[toffset] = verts[ind[tetid].x];
+	tetData[toffset+1] = verts[ind[tetid].y];
+	tetData[toffset+2] = verts[ind[tetid].z];
+	tetData[toffset+3] = verts[ind[tetid].w];
+
+	toffset = toffset + 4 * tetsPerBlock;
+	tetData[toffset] = velocity[ind[tetid].x];
+	tetData[toffset+1] = velocity[ind[tetid].y];
+	tetData[toffset+2] = velocity[ind[tetid].z];
+	tetData[toffset+3] = velocity[ind[tetid].w];
+    }
+
+    __syncthreads();
+
+    //int velind = myOffset + 4 * tetsPerBlock;
+    //printf("Vert %f %f %f, vel %f %f %f\n",tetData[myOffset].x,tetData[myOffset].y,tetData[myOffset].z,tetData[velind].x,tetData[velind].y,tetData[velind].z);
+
+    float dist[4];
+
+    // find viewing plane distance
+    dist[0] = (tetData[myOffset+0].x - planePoint.x) * planeNormal.x + (tetData[myOffset+0].y - planePoint.y) * planeNormal.y + (tetData[myOffset+0].z - planePoint.z) * planeNormal.z;
+    dist[1] = (tetData[myOffset+1].x - planePoint.x) * planeNormal.x + (tetData[myOffset+1].y - planePoint.y) * planeNormal.y + (tetData[myOffset+1].z - planePoint.z) * planeNormal.z;
+    dist[2] = (tetData[myOffset+2].x - planePoint.x) * planeNormal.x + (tetData[myOffset+2].y - planePoint.y) * planeNormal.y + (tetData[myOffset+2].z - planePoint.z) * planeNormal.z;
+    dist[3] = (tetData[myOffset+3].x - planePoint.x) * planeNormal.x + (tetData[myOffset+3].y - planePoint.y) * planeNormal.y + (tetData[myOffset+3].z - planePoint.z) * planeNormal.z;
+
+    //printf("dist %f %f %f %f\n",dist[0],dist[1],dist[2],dist[3]);
+
+    // project points onto plane and find basis values
+    float3 projpoint;
+    float2 basisMin;
+    float2 basisMax;
+    float tempx;
+    projpoint.x = tetData[myOffset+0].x - (planeNormal.x * dist[0]) - planePoint.x;
+    projpoint.y = tetData[myOffset+0].y - (planeNormal.y * dist[0]) - planePoint.y;
+    projpoint.z = tetData[myOffset+0].z - (planeNormal.z * dist[0]) - planePoint.z;
+
+    tempx = (projpoint.x * planeUpNorm.x + projpoint.y * planeUpNorm.y + projpoint.z * planeUpNorm.z) / basisLength;
+    projpoint.y = (projpoint.x * planeRightNorm.x + projpoint.y * planeRightNorm.y + projpoint.z * planeRightNorm.z) / basisLength;
+
+    basisMin.x = basisMax.x = tempx;
+    basisMin.y = basisMax.y = projpoint.y;
+    
+    projpoint.x = tetData[myOffset+1].x - (planeNormal.x * dist[1]) - planePoint.x;
+    projpoint.y = tetData[myOffset+1].y - (planeNormal.y * dist[1]) - planePoint.y;
+    projpoint.z = tetData[myOffset+1].z - (planeNormal.z * dist[1]) - planePoint.z;
+
+    tempx = (projpoint.x * planeUpNorm.x + projpoint.y * planeUpNorm.y + projpoint.z * planeUpNorm.z) / basisLength;
+    projpoint.y = (projpoint.x * planeRightNorm.x + projpoint.y * planeRightNorm.y + projpoint.z * planeRightNorm.z) / basisLength;
+
+    basisMin.x = fminf(basisMin.x,tempx);
+    basisMax.x = fmaxf(basisMax.x,tempx);
+    basisMin.y = fminf(basisMin.y,projpoint.y);
+    basisMax.y = fmaxf(basisMax.y,projpoint.y);
+
+    projpoint.x = tetData[myOffset+2].x - (planeNormal.x * dist[2]) - planePoint.x;
+    projpoint.y = tetData[myOffset+2].y - (planeNormal.y * dist[2]) - planePoint.y;
+    projpoint.z = tetData[myOffset+2].z - (planeNormal.z * dist[2]) - planePoint.z;
+
+    tempx = (projpoint.x * planeUpNorm.x + projpoint.y * planeUpNorm.y + projpoint.z * planeUpNorm.z) / basisLength;
+    projpoint.y = (projpoint.x * planeRightNorm.x + projpoint.y * planeRightNorm.y + projpoint.z * planeRightNorm.z) / basisLength;
+
+    basisMin.x = fminf(basisMin.x,tempx);
+    basisMax.x = fmaxf(basisMax.x,tempx);
+    basisMin.y = fminf(basisMin.y,projpoint.y);
+    basisMax.y = fmaxf(basisMax.y,projpoint.y);
+
+    projpoint.x = tetData[myOffset+3].x - (planeNormal.x * dist[3]) - planePoint.x;
+    projpoint.y = tetData[myOffset+3].y - (planeNormal.y * dist[3]) - planePoint.y;
+    projpoint.z = tetData[myOffset+3].z - (planeNormal.z * dist[3]) - planePoint.z;
+
+    tempx = (projpoint.x * planeUpNorm.x + projpoint.y * planeUpNorm.y + projpoint.z * planeUpNorm.z) / basisLength;
+    projpoint.y = (projpoint.x * planeRightNorm.x + projpoint.y * planeRightNorm.y + projpoint.z * planeRightNorm.z) / basisLength;
+
+    basisMin.x = fminf(basisMin.x,tempx);
+    basisMax.x = fmaxf(basisMax.x,tempx);
+    basisMin.y = fminf(basisMin.y,projpoint.y);
+    basisMax.y = fmaxf(basisMax.y,projpoint.y);
+
+    //printf("basisX %f %f, basisY %f %f, bxtex %f %f, bytex %f %f\n",basisMin.x,basisMax.x,basisMin.y,basisMax.y,texXMin,texXMax,texYMin,texYMax);
+
+    // area larger than needed for rounding errors
+    basisMin.x = floorf(basisMin.x - 0.5f) - 0.5f;
+    basisMin.y = floorf(basisMin.y - 0.5f) - 0.5f;
+    basisMax.x = ceilf(basisMax.x + 0.5f) + 0.500001f;
+    basisMax.y = ceilf(basisMax.y + 0.5f) + 0.500001f;
+
+    if(basisMin.x > basisMax.x || basisMin.y > basisMax.y)
+    {
+	// no critical points in tet
+	return;
+    }
+
+    //find if tet is outside the basis bounds
+    if(basisMin.x > texXMax || basisMax.x < texXMin || basisMin.y > texYMax || basisMax.y < texYMin)
+    {
+	return;
+    }
+
+    // create matrix to solve for barycentric coords
+
+    // create matrix rows to inverse
+    tetData[myOffset+0].x = tetData[myOffset+0].x - tetData[myOffset+3].x;
+    tetData[myOffset+0].y = tetData[myOffset+0].y - tetData[myOffset+3].y;
+    tetData[myOffset+0].z = tetData[myOffset+0].z - tetData[myOffset+3].z;
+    tetData[myOffset+1].x = tetData[myOffset+1].x - tetData[myOffset+3].x;
+    tetData[myOffset+1].y = tetData[myOffset+1].y - tetData[myOffset+3].y;
+    tetData[myOffset+1].z = tetData[myOffset+1].z - tetData[myOffset+3].z;
+    tetData[myOffset+2].x = tetData[myOffset+2].x - tetData[myOffset+3].x;
+    tetData[myOffset+2].y = tetData[myOffset+2].y - tetData[myOffset+3].y;
+    tetData[myOffset+2].z = tetData[myOffset+2].z - tetData[myOffset+3].z;
+    
+    // matrix determinant
+    float det = tetData[myOffset+0].x*tetData[myOffset+1].y*tetData[myOffset+2].z + tetData[myOffset+1].x*tetData[myOffset+2].y*tetData[myOffset+0].z + tetData[myOffset+2].x*tetData[myOffset+0].y*tetData[myOffset+1].z - tetData[myOffset+2].x*tetData[myOffset+1].y*tetData[myOffset+0].z - tetData[myOffset+1].x*tetData[myOffset+0].y*tetData[myOffset+2].z - tetData[myOffset+0].x*tetData[myOffset+2].y*tetData[myOffset+1].z;
+
+    // invert
+    float tetMat[9];
+    tetMat[0] = (tetData[myOffset+2].z*tetData[myOffset+1].y - tetData[myOffset+1].z*tetData[myOffset+2].y) / det;
+    tetMat[1] = (tetData[myOffset+2].z*tetData[myOffset+1].x - tetData[myOffset+1].z*tetData[myOffset+2].x) / -det;
+    tetMat[2] = (tetData[myOffset+2].y*tetData[myOffset+1].x - tetData[myOffset+1].y*tetData[myOffset+2].x) / det;
+    tetMat[3] = (tetData[myOffset+2].z*tetData[myOffset+0].y - tetData[myOffset+0].z*tetData[myOffset+2].y) / -det;
+    tetMat[4] = (tetData[myOffset+2].z*tetData[myOffset+0].x - tetData[myOffset+0].z*tetData[myOffset+2].x) / det;
+    tetMat[5] = (tetData[myOffset+2].y*tetData[myOffset+0].x - tetData[myOffset+0].y*tetData[myOffset+2].x) / -det;
+    tetMat[6] = (tetData[myOffset+1].z*tetData[myOffset+0].y - tetData[myOffset+0].z*tetData[myOffset+1].y) / det;
+    tetMat[7] = (tetData[myOffset+1].z*tetData[myOffset+0].x - tetData[myOffset+0].z*tetData[myOffset+1].x) / -det;
+    tetMat[8] = (tetData[myOffset+1].y*tetData[myOffset+0].x - tetData[myOffset+0].y*tetData[myOffset+1].x) / det;
+
+
+    int2 basisRange;
+    basisRange.x = (int)(basisMax.x - basisMin.x);
+    basisRange.y = (int)(basisMax.y - basisMin.y);
+    
+    int velOffset = myOffset + 4 * tetsPerBlock;
+    //printf("Brange %d %d, voffset %d\n",basisRange.x,basisRange.y,velOffset);
+    while(1)
+    {
+	float2 basis;
+	basis.x = basisMin.x + (float)(threadOffset % basisRange.x);
+	basis.y = basisMin.y + (float)(threadOffset / basisRange.x);
+
+	threadOffset = threadOffset + threadsPerTet;
+
+	if(basis.y > basisMax.y)
+	{
+	    break;
+	}
+
+	// find barycentric coords
+	float3 tempPoint;
+
+	tempPoint.x = basis.x * planeUp.x + basis.y * planeRight.x + planePoint.x - tetData[myOffset+3].x;
+	tempPoint.y = basis.x * planeUp.y + basis.y * planeRight.y + planePoint.y - tetData[myOffset+3].y;
+	tempPoint.z = basis.x * planeUp.z + basis.y * planeRight.z + planePoint.z - tetData[myOffset+3].z;
+
+	float4 coords;
+	coords.x = tempPoint.x * tetMat[0] + tempPoint.y * tetMat[1] + tempPoint.z * tetMat[2];
+	coords.y = tempPoint.x * tetMat[3] + tempPoint.y * tetMat[4] + tempPoint.z * tetMat[5];
+	coords.z = tempPoint.x * tetMat[6] + tempPoint.y * tetMat[7] + tempPoint.z * tetMat[8];
+	coords.w = 1.0f - coords.x - coords.y - coords.z;
+
+	if(coords.x > 1.0f + VEL_EPS || coords.x < 0.0f - VEL_EPS || coords.y > 1.0f + VEL_EPS || coords.y < 0.0f - VEL_EPS || coords.z > 1.0f + VEL_EPS || coords.z < 0.0f - VEL_EPS || coords.w > 1.0f + VEL_EPS || coords.w < 0.0f - VEL_EPS)
+	{	
+	    continue;
+	}
+
+	int2 texelIndex;
+	texelIndex.x = lrintf((floorf(basis.y) + hwidth));
+	texelIndex.y = lrintf(floor(basis.x) + hheight);
+	if(texelIndex.x >= 0 && texelIndex.x < width && texelIndex.y >= 0 && texelIndex.y < height)
+	{
+	    // find point velocity
+	    float3 myVelocity;
+	    myVelocity.x = coords.x * tetData[velOffset+0].x + coords.y * tetData[velOffset+1].x + coords.z * tetData[velOffset+2].x + coords.w * tetData[velOffset+3].x;
+	    myVelocity.y = coords.x * tetData[velOffset+0].y + coords.y * tetData[velOffset+1].y + coords.z * tetData[velOffset+2].y + coords.w * tetData[velOffset+3].y;
+	    myVelocity.z = coords.x * tetData[velOffset+0].z + coords.y * tetData[velOffset+1].z + coords.z * tetData[velOffset+2].z + coords.w * tetData[velOffset+3].z;
+
+	    // also temp x
+	    float mag;
+	    mag = planeRightNorm.x * myVelocity.x + planeRightNorm.y * myVelocity.y + planeRightNorm.z * myVelocity.z;
+	    myVelocity.y = planeUpNorm.x * myVelocity.x + planeUpNorm.y * myVelocity.y + planeUpNorm.z * myVelocity.z;
+	    myVelocity.x = mag;
+
+	    // normalize
+	    mag = myVelocity.x * myVelocity.x + myVelocity.y * myVelocity.y;
+	    mag = sqrt(mag);
+	    if(mag > 0.0f)
+	    {
+		myVelocity.x = myVelocity.x / mag;
+		myVelocity.y = myVelocity.y / mag;
+	    }
+
+	    unsigned short data[2];
+	    data[0] = __float2half_rn(myVelocity.x);
+	    data[1] = __float2half_rn(myVelocity.y);
+	    surf2Dwrite(*((uchar4*)data), velSurface, texelIndex.x * 4, texelIndex.y);
 	}
     }
 }
@@ -487,7 +802,7 @@ __global__ void licKernel(int width, int height, float length)
     //}
 
     float pixelVal = 0.0f;
-    //float pixelDeb = 0.0f;
+    float pixelDeb = 0.0f;
     // one thread per pixel
     if (x < width && y < height)
     {
@@ -500,7 +815,7 @@ __global__ void licKernel(int width, int height, float length)
 
 	weightTotal.x = weightTotal.y = 0.0f;
 
-	int maxIterations = length * 10.0f;
+	int maxIterations = length * 100.0f;
 	// forward path
 	for(int i = 0; i < maxIterations; ++i)
 	{
@@ -519,6 +834,7 @@ __global__ void licKernel(int width, int height, float length)
 	    float top,bottom,left,right;
 	    if(velocity.y == 0.0f)
 	    {
+		//pixelDeb = 1.0f;
 		top = bottom = FLT_MAX;
 	    }
 	    else
@@ -529,6 +845,7 @@ __global__ void licKernel(int width, int height, float length)
 
 	    if(velocity.x == 0.0f)
 	    {
+		//pixelDeb = 1.0f;
 		left = right = FLT_MAX;
 	    }
 	    else
@@ -563,6 +880,7 @@ __global__ void licKernel(int width, int height, float length)
 	    // zero velocity, going nowhere
 	    if(deltas == FLT_MAX)
 	    {
+		//pixelDeb = 1.0f;
 		//printf("FLT_MAX break\n");
 		break;
 	    }
@@ -575,6 +893,13 @@ __global__ void licKernel(int width, int height, float length)
 	    // end of line
 	    if(weightTotal.x + deltas > length)
 	    {
+		//pixelDeb = 1.0f;
+		/*if(weightTotal.x == 0.0f)
+		{
+		    printf("Pos ds: %f\n",deltas);
+		    printf("T: %f B: %f R: %f L: %f\n",top,bottom,right,left);
+		    printf("Velocity: %f %f\n",velocity.x,velocity.y);
+		}*/
 		//printf("weightTotal break\n");
 		break;
 	    }
@@ -620,6 +945,7 @@ __global__ void licKernel(int width, int height, float length)
 	    float top,bottom,left,right;
 	    if(velocity.y == 0.0f)
 	    {
+		//pixelDeb = 1.0f;
 		top = bottom = FLT_MAX;
 	    }
 	    else
@@ -630,6 +956,7 @@ __global__ void licKernel(int width, int height, float length)
 
 	    if(velocity.x == 0.0f)
 	    {
+		//pixelDeb = 1.0f;
 		left = right = FLT_MAX;
 	    }
 	    else
@@ -664,6 +991,7 @@ __global__ void licKernel(int width, int height, float length)
 	    // zero velocity, going nowhere
 	    if(deltas == FLT_MAX)
 	    {
+		//pixelDeb = 1.0f;
 		//printf("FLT_MAX break\n");
 		break;
 	    }
@@ -676,6 +1004,13 @@ __global__ void licKernel(int width, int height, float length)
 	    // end of line
 	    if(weightTotal.y + deltas > length)
 	    {
+		//pixelDeb = 1.0f;
+		/*if(weightTotal.y == 0.0f)
+		{
+		    printf("Neg ds: %f\n",deltas);
+		    printf("T: %f B: %f R: %f L: %f\n",top,bottom,right,left);
+		    printf("Velocity: %f %f\n",velocity.x,velocity.y);
+		}*/
 		//printf("weightTotal break\n");
 		break;
 	    }
@@ -703,10 +1038,13 @@ __global__ void licKernel(int width, int height, float length)
 	if((weightTotal.x + weightTotal.y) > 0.0f)
 	{
 	    pixelVal = pixelVal / (weightTotal.x + weightTotal.y);
+	    //pixelVal = 0.0f;
 	}
 	else
 	{
+	    //pixelVal = 1.0f;
 	    //pixelDeb = 1.0f;
+	    //printf("Wx: %f Wy: %f\n",weightTotal.x,weightTotal.y);
 	}
 
 	//printf("Writing pixelVal: %f\n",pixelVal);
@@ -714,7 +1052,7 @@ __global__ void licKernel(int width, int height, float length)
 	// set pixel value
 	unsigned short data[2];
 	data[0] = __float2half_rn(pixelVal);
-	data[1] = __float2half_rn(0.0);
+	data[1] = __float2half_rn(pixelDeb);
         surf2Dwrite(*((uchar4*)data), outSurface, x * 4, y);
     }
 }
@@ -778,6 +1116,107 @@ __global__ void makeTetListKernel(unsigned int * tetList, unsigned int * numTets
 
     if(count == 0 || count == 4)
     {
+	return;
+    }
+
+    // project points onto plane and find basis values
+    float3 projpoint;
+    float2 basisMin;
+    float2 basisMax;
+    float tempx;
+    projpoint.x = tetpoints[0].x - (planeNormal.x * tetpoints[0].w) - planePoint.x;
+    projpoint.y = tetpoints[0].y - (planeNormal.y * tetpoints[0].w) - planePoint.y;
+    projpoint.z = tetpoints[0].z - (planeNormal.z * tetpoints[0].w) - planePoint.z;
+
+    //printf("projpoint: %f %f %f\n",projpoint.x,projpoint.y,projpoint.z);
+
+    //tempx = projpoint.x * invBasisMat[0] + projpoint.y * invBasisMat[3] + projpoint.z * invBasisMat[6];
+    //projpoint.y = projpoint.x * invBasisMat[1] + projpoint.y * invBasisMat[4] + projpoint.z * invBasisMat[7];
+    tempx = (projpoint.x * planeUpNorm.x + projpoint.y * planeUpNorm.y + projpoint.z * planeUpNorm.z) / basisLength;
+    projpoint.y = (projpoint.x * planeRightNorm.x + projpoint.y * planeRightNorm.y + projpoint.z * planeRightNorm.z) / basisLength;
+
+    //printf("basis %f %f\n",tempx,projpoint.y);
+
+    basisMin.x = basisMax.x = tempx;
+    basisMin.y = basisMax.y = projpoint.y;
+    
+    projpoint.x = tetpoints[1].x - (planeNormal.x * tetpoints[1].w) - planePoint.x;
+    projpoint.y = tetpoints[1].y - (planeNormal.y * tetpoints[1].w) - planePoint.y;
+    projpoint.z = tetpoints[1].z - (planeNormal.z * tetpoints[1].w) - planePoint.z;
+
+    //tempx = projpoint.x * invBasisMat[0] + projpoint.y * invBasisMat[3] + projpoint.z * invBasisMat[6];
+    //projpoint.y = projpoint.x * invBasisMat[1] + projpoint.y * invBasisMat[4] + projpoint.z * invBasisMat[7];
+    tempx = (projpoint.x * planeUpNorm.x + projpoint.y * planeUpNorm.y + projpoint.z * planeUpNorm.z) / basisLength;
+    projpoint.y = (projpoint.x * planeRightNorm.x + projpoint.y * planeRightNorm.y + projpoint.z * planeRightNorm.z) / basisLength;
+
+
+    //printf("basis %f %f\n",tempx,projpoint.y);
+
+    basisMin.x = fminf(basisMin.x,tempx);
+    basisMax.x = fmaxf(basisMax.x,tempx);
+    basisMin.y = fminf(basisMin.y,projpoint.y);
+    basisMax.y = fmaxf(basisMax.y,projpoint.y);
+
+    projpoint.x = tetpoints[2].x - (planeNormal.x * tetpoints[2].w) - planePoint.x;
+    projpoint.y = tetpoints[2].y - (planeNormal.y * tetpoints[2].w) - planePoint.y;
+    projpoint.z = tetpoints[2].z - (planeNormal.z * tetpoints[2].w) - planePoint.z;
+
+    //tempx = projpoint.x * invBasisMat[0] + projpoint.y * invBasisMat[3] + projpoint.z * invBasisMat[6];
+    //projpoint.y = projpoint.x * invBasisMat[1] + projpoint.y * invBasisMat[4] + projpoint.z * invBasisMat[7];
+    tempx = (projpoint.x * planeUpNorm.x + projpoint.y * planeUpNorm.y + projpoint.z * planeUpNorm.z) / basisLength;
+    projpoint.y = (projpoint.x * planeRightNorm.x + projpoint.y * planeRightNorm.y + projpoint.z * planeRightNorm.z) / basisLength;
+
+    //printf("basis %f %f\n",tempx,projpoint.y);
+
+    basisMin.x = fminf(basisMin.x,tempx);
+    basisMax.x = fmaxf(basisMax.x,tempx);
+    basisMin.y = fminf(basisMin.y,projpoint.y);
+    basisMax.y = fmaxf(basisMax.y,projpoint.y);
+
+    projpoint.x = tetpoints[3].x - (planeNormal.x * tetpoints[3].w) - planePoint.x;
+    projpoint.y = tetpoints[3].y - (planeNormal.y * tetpoints[3].w) - planePoint.y;
+    projpoint.z = tetpoints[3].z - (planeNormal.z * tetpoints[3].w) - planePoint.z;
+
+    //tempx = projpoint.x * invBasisMat[0] + projpoint.y * invBasisMat[3] + projpoint.z * invBasisMat[6];
+    //projpoint.y = projpoint.x * invBasisMat[1] + projpoint.y * invBasisMat[4] + projpoint.z * invBasisMat[7];
+    tempx = (projpoint.x * planeUpNorm.x + projpoint.y * planeUpNorm.y + projpoint.z * planeUpNorm.z) / basisLength;
+    projpoint.y = (projpoint.x * planeRightNorm.x + projpoint.y * planeRightNorm.y + projpoint.z * planeRightNorm.z) / basisLength;
+
+    //printf("basis %f %f\n",tempx,projpoint.y);
+
+    basisMin.x = fminf(basisMin.x,tempx);
+    basisMax.x = fmaxf(basisMax.x,tempx);
+    basisMin.y = fminf(basisMin.y,projpoint.y);
+    basisMax.y = fmaxf(basisMax.y,projpoint.y);
+
+    //printf("X: %f %f\n",basisMin.x,basisMax.x);
+    //printf("Y: %f %f\n",basisMin.y,basisMax.y);
+
+    /*basisMin.x = ceilf(basisMin.x - 0.5f) + 0.5f;
+    basisMin.y = ceilf(basisMin.y - 0.5f) + 0.5f;
+    basisMax.x = floorf(basisMax.x - 0.5f) + 0.500001f;
+    basisMax.y = floorf(basisMax.y - 0.5f) + 0.500001f;*/
+
+    basisMin.x = floorf(basisMin.x - 0.5f) - 0.5f;
+    basisMin.y = floorf(basisMin.y - 0.5f) - 0.5f;
+    basisMax.x = ceilf(basisMax.x + 0.5f) + 0.500001f;
+    basisMax.y = ceilf(basisMax.y + 0.5f) + 0.500001f;
+
+    //printf("X: %f %f\n",basisMin.x,basisMax.x);
+    //printf("Y: %f %f\n",basisMin.y,basisMax.y);
+
+    if(basisMin.x > basisMax.x || basisMin.y > basisMax.y)
+    {
+	//printf("Basis range exit x: %f %f y: %f %f\n",basisMin.x,basisMax.x,basisMin.y,basisMax.y);
+	// no critical points in tet
+	return;
+    }
+
+    //find if tet is outside the basis bounds
+    if(basisMin.x > texXMax || basisMax.x < texXMin || basisMin.y > texYMax || basisMax.y < texYMin)
+    {
+	//printf("X: %f %f\n",basisMin.x,basisMax.x);
+	//printf("Y: %f %f\n",basisMin.y,basisMax.y);
 	return;
     }
 
