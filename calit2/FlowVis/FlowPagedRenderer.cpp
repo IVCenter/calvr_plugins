@@ -1860,6 +1860,10 @@ void FlowPagedRenderer::draw(int context)
 		//glBindTexture(GL_TEXTURE_2D,_licNoiseTex[context]);
 		glBindTexture(GL_TEXTURE_2D,_licOutputTex[context]);
 		glEnable(GL_TEXTURE_2D);
+		glEnable(GL_BLEND);
+
+		glUseProgram(_licRenderProgram[context]);
+		glUniform1f(_licRenderAlphaUni[context],*((float*)_uniDataMap["alpha"].data));
 
 		glBegin(GL_QUADS);
 		glTexCoord2f(0.0,0.0);
@@ -1872,6 +1876,9 @@ void FlowPagedRenderer::draw(int context)
 		glVertex3fv(&_licOutputPoints[9]);
 		glEnd();
 
+		glUseProgram(0);
+
+		glDisable(GL_BLEND);
 		glDisable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D,0);
 	    }
@@ -2314,6 +2321,7 @@ void FlowPagedRenderer::checkShaderInit(int context)
 	createShaderFromSrc(licVertSrc,GL_VERTEX_SHADER,verts,"licVert");
 	createShaderFromSrc(licFragSrc,GL_FRAGMENT_SHADER,frags,"licFrag");
 	createProgram(_licRenderProgram[context],verts,frags);
+	_licRenderAlphaUni[context] = glGetUniformLocation(_licRenderProgram[context],"alpha");
 
 	_shaderInitMap[context] = true;
     }

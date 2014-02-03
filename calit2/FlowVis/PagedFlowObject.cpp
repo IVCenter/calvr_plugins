@@ -568,6 +568,11 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 		removeMenuItem(_alphaRV);
 		break;
 	    }
+	    case FVT_LIC_CUDA:
+	    {
+		removeMenuItem(_alphaRV);
+		break;
+	    }
 	    case FVT_PLANE_VEC:
 	    {
 		removeMenuItem(_planeVecSpacingRV);
@@ -600,6 +605,17 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 
 		_lastAttribute = "None";
 		menuCallback(_loadedAttribList);
+		break;
+	    }
+	    case FVT_LIC_CUDA:
+	    {
+		addMenuItem(_alphaRV);
+
+		UniData aUni;
+
+		_renderer->getUniData("alpha",aUni);
+		*((float*)aUni.data) = _alphaRV->getValue();
+
 		break;
 	    }
 	    case FVT_PLANE_VEC:

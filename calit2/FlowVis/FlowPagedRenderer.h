@@ -176,6 +176,7 @@ class FlowPagedRenderer
         std::vector<float> _licOutputPoints;
         std::vector<float> _licNextOutputPoints;
         std::map<int,GLuint> _licRenderProgram;
+        std::map<int,GLint> _licRenderAlphaUni;
         std::map<int,CudaGLImage*> _licCudaNoiseImage;
         std::map<int,CudaGLImage*> _licCudaVelImage;
         std::map<int,CudaGLImage*> _licCudaOutputImage;
