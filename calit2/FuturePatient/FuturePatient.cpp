@@ -197,7 +197,7 @@ bool FuturePatient::init()
     _sMicrobeFirstTimeOnly->setCallback(this);
     _sMicrobeMenu->addItem(_sMicrobeFirstTimeOnly);
 
-    _sMicrobeGroupPatients = new MenuCheckbox("Group Patients",false);
+    _sMicrobeGroupPatients = new MenuCheckbox("Split Patients",false);
     _sMicrobeGroupPatients->setCallback(this);
     _sMicrobeMenu->addItem(_sMicrobeGroupPatients);
 

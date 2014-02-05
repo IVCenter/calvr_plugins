@@ -317,7 +317,7 @@ void GroupedScatterPlot::setHover(osg::Vec3 intersect)
 	_hoverText->setText(ss.str());
 	_hoverText->setAlignment(osgText::Text::LEFT_TOP);
 	osg::BoundingBox bb = _hoverText->getBound();
-	float csize = 150.0 / (bb.zMax() - bb.zMin());
+	float csize = GraphGlobals::getHoverHeight() / (bb.zMax() - bb.zMin());
 	_hoverText->setCharacterSize(csize);
 	_hoverText->setPosition(osg::Vec3(verts->at(pointIndex).x(),-2.5,verts->at(pointIndex).z()));
 

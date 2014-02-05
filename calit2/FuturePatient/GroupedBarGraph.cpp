@@ -270,7 +270,7 @@ void GroupedBarGraph::setHover(osg::Vec3 intersect)
     float groupTop = _graphTop + _height * _topPaddingMult * _groupLabelMult;
     float groupBottom = _graphTop;
 
-    float targetHeight = 150.0;
+    float targetHeight = GraphGlobals::getHoverHeight();
 
     if(intersect.z() > groupBottom && intersect.z() <= groupTop && _displayMode == BGDM_GROUPED)
     {

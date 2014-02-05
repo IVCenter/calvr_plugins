@@ -42,6 +42,8 @@ class GraphGlobals
         static float getMasterPointScale();
         static float getMasterLineScale();
 
+        static float getHoverHeight();
+
     protected:
         static void checkInit();
         static void init();
@@ -67,6 +69,8 @@ class GraphGlobals
         static float _pointLineScale;
         static float _masterPointScale;
         static float _masterLineScale;
+
+        static float _hoverHeight;
 };
 
 struct SetBoundsCallback : public osg::Drawable::ComputeBoundingBoxCallback

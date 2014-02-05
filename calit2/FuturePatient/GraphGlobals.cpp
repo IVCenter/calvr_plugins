@@ -22,6 +22,7 @@ osg::Vec4 GraphGlobals::_high100Color;
 float GraphGlobals::_pointLineScale;
 float GraphGlobals::_masterPointScale;
 float GraphGlobals::_masterLineScale;
+float GraphGlobals::_hoverHeight;
 
 osgText::Text * GraphGlobals::makeText(std::string text, osg::Vec4 color)
 {
@@ -181,6 +182,12 @@ float GraphGlobals::getMasterLineScale()
     return _masterLineScale;
 }
 
+float GraphGlobals::getHoverHeight()
+{
+    checkInit();
+    return _hoverHeight;
+}
+
 void GraphGlobals::checkInit()
 {
     if(!_init)
@@ -232,4 +239,6 @@ void GraphGlobals::init()
     _pointLineScale = ConfigManager::getFloat("value","Plugin.FuturePatient.PointLineScale",1.0);
     _masterPointScale = ConfigManager::getFloat("value","Plugin.FuturePatient.MasterPointScale",1.0);
     _masterLineScale = ConfigManager::getFloat("value","Plugin.FuturePatient.MasterLineScale",1.0);
+
+    _hoverHeight = ConfigManager::getFloat("value","Plugin.FuturePatient.HoverHeight",150.0);
 }
