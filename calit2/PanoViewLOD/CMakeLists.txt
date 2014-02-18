@@ -12,6 +12,7 @@ SET(PLUGIN_HEADERS
     PanoViewLOD.h
     PanoViewObject.h
     DiskCache.h
+    ColorShader.h
 )
 
 ADD_LIBRARY(${LIB_NAME}

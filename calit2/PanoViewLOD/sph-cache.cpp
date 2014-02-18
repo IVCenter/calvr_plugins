@@ -553,7 +553,7 @@ sph_cache::sph_cache(int n) : pages(n), waits(n), needs(32), loads()
     float targetFPS = cvr::ConfigManager::getFloat("value","Plugin.PanoViewLOD.TargetFPS",60.0);
     _maxTime = 1.0f / targetFPS;
     // give some time for other things
-    _maxTime *= 0.9f;
+    //_maxTime *= 0.9f;
     
     // Launch the image loader threads.
     
@@ -728,6 +728,9 @@ void sph_cache::update(int t)
     glPushAttrib(GL_PIXEL_MODE_BIT);
     {
 	int c;
+	float time;
+	float lastTime;
+	time = lastTime = 0.0;
         for (c = 0; !loads.empty(); ++c)
         {
             sph_task task = loads.remove();
@@ -767,8 +770,10 @@ void sph_cache::update(int t)
             pbos.enq(task.u);
 
 	    gettimeofday(&end,NULL);
-	    float time = (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec)/1000000.0);
-	    if(time > _maxTime)
+            lastTime = time;
+	    time = (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec)/1000000.0);
+	    lastTime = time - lastTime;
+	    if(time + (lastTime*2.0) > _maxTime)
 	    {
 #ifdef CACHE_PRINT_DEBUG
 		std::cerr << "Timeout break: Textures loaded: " << c+1 << std::endl;

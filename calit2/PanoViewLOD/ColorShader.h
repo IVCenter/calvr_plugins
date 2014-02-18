@@ -1,0 +1,68 @@
+#ifndef COLOR_SHADER_H
+#define COLOR_SHADER_H
+
+#include <string>
+
+std::string colorVertSrc =
+"#version 150 compatibility                          \n"
+"#extension GL_ARB_gpu_shader5 : enable              \n"
+"                                                    \n"
+"uniform int level;                                  \n"
+"                                                    \n"
+"uniform vec3 pos_a;                                 \n"
+"uniform vec3 pos_b;                                 \n"
+"uniform vec3 pos_c;                                 \n"
+"uniform vec3 pos_d;                                 \n"
+"                                                    \n"
+"uniform vec2 tex_a[8];                              \n"
+"uniform vec2 tex_d[8];                              \n"
+"                                                    \n"
+"vec3 slerp(vec3 a, vec3 b, float k)                 \n"
+"{                                                   \n"
+"    float l = 1.0 - k;                              \n"
+"    float O = acos(dot(a, b));                      \n"
+"                                                    \n"
+"    return a * sin(l * O) / sin(O)                  \n"
+"         + b * sin(k * O) / sin(O);                 \n"
+"}                                                   \n"
+"                                                    \n"
+"vec3 bislerp(vec3 a, vec3 b, vec3 c, vec3 d, vec2 k)\n"
+"{                                                   \n"
+"    vec3 t = slerp(a, b, k.x);                      \n"
+"    vec3 u = slerp(c, d, k.x);                      \n"
+"                                                    \n"
+"    return slerp(t, u, k.y);                        \n"
+"}                                                   \n"
+"                                                    \n"
+"void main()                                         \n"
+"{                                                   \n"
+"    vec2 t =  tex_a[level]                          \n"
+"           + (tex_d[level] - tex_a[level]) * gl_Vertex.xy; \n"
+"                                                    \n"
+"    vec3 v = bislerp(pos_a, pos_b, pos_c, pos_d, t);\n"
+"                                                    \n"
+"    gl_TexCoord[0].xy = t;                          \n"
+"                                                    \n"
+"    gl_Position = gl_ModelViewProjectionMatrix * vec4(v, 1.0); \n"
+"}                                                   \n";
+
+std::string colorFragSrc =
+"#version 150 compatibility                          \n"
+"                                                    \n"
+"uniform vec2 tex_a[8];                              \n"
+"uniform vec2 tex_d[8];                              \n"
+"uniform int level;                                  \n"
+"                                                    \n"
+"uniform sampler2D image[8];                         \n"
+"uniform float     alpha[8];                         \n"
+"                                                    \n"
+"uniform float globalAlpha;                          \n"
+"                                                    \n"
+"void main()                                         \n"
+"{                                                   \n"
+"    vec3 p = texture2D(image[level], (gl_TexCoord[0].xy - tex_a[level]) / (tex_d[level] - tex_a[level])).rgb; \n"
+"    gl_FragColor = vec4(p, globalAlpha);            \n"
+"    //gl_FragColor = vec4(1.0,0.0,0.0,globalAlpha);   \n"
+"}                                                   \n";
+
+#endif
