@@ -481,6 +481,8 @@ void sph_model::draw_face(const int *fv, int fc,
 	    {
 		if(o != cache.get_fill())
 		{
+		    glBindTexture(GL_TEXTURE_2D, o);
+		    glActiveTexture(GL_TEXTURE0 + e + 16);
 		    glBindTexture(GL_TEXTURE_2D, levelColorTex[d]);
 		    currentLastValid = d;
 		}
@@ -650,6 +652,7 @@ void sph_model::init_program(const char *vert_src,
     {
 	color_alpha[d]  = glGetUniformLocationv(color_program, "alpha[%d]", d);
 	glUniform1i(glGetUniformLocationv(color_program, "image[%d]", d), d);
+	glUniform1i(glGetUniformLocationv(color_program, "colors[%d]", d), d+16);
     }
 
 }

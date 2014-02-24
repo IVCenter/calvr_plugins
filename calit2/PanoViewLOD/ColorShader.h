@@ -54,6 +54,7 @@ std::string colorFragSrc =
 "uniform int level;                                  \n"
 "                                                    \n"
 "uniform sampler2D image[8];                         \n"
+"uniform sampler2D colors[8];                        \n"
 "uniform float     alpha[8];                         \n"
 "                                                    \n"
 "uniform float globalAlpha;                          \n"
@@ -61,7 +62,8 @@ std::string colorFragSrc =
 "void main()                                         \n"
 "{                                                   \n"
 "    vec3 p = texture2D(image[level], (gl_TexCoord[0].xy - tex_a[level]) / (tex_d[level] - tex_a[level])).rgb; \n"
-"    gl_FragColor = vec4(p, globalAlpha);            \n"
+"    vec3 c = texture2D(colors[level], (gl_TexCoord[0].xy - tex_a[level]) / (tex_d[level] - tex_a[level])).rgb; \n"
+"    gl_FragColor = vec4(p.x * c.x, p.y * c.y, p.z * c.z, globalAlpha);            \n"
 "    //gl_FragColor = vec4(1.0,0.0,0.0,globalAlpha);   \n"
 "}                                                   \n";
 
