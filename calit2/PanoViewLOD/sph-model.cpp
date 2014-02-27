@@ -309,7 +309,9 @@ void sph_model::prep_face(const double *M, int w, int h,
             }
         }
         else
+	{
             status[i] = s_halt;
+	}
     }
     else
     {
@@ -551,8 +553,15 @@ void sph_model::draw_face(const int *fv, int fc,
 	else
 	{
 	    //glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
-	    glDrawElements(GL_QUADS, count, GL_UNSIGNED_SHORT, 0);
+	    //glDrawElements(GL_QUADS, count, GL_UNSIGNED_SHORT, 0);
 	    //glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+	    //std::cerr << "t: " << t << " b: " << b << " l: " << l << " r: " << r << std::endl;
+	    glBegin(GL_QUADS);
+	    glVertex2f(l,t);
+	    glVertex2f(l,b);
+	    glVertex2f(r,b);
+	    glVertex2f(r,t);
+	    glEnd();
 	}
     }
     
@@ -628,8 +637,8 @@ void sph_model::init_program(const char *vert_src,
     }
 
     //init color shader
-    //color_vert_shader = glsl_init_shader(GL_VERTEX_SHADER,   colorVertSrc.c_str());
-    color_vert_shader = glsl_init_shader(GL_VERTEX_SHADER,   vert_src);
+    color_vert_shader = glsl_init_shader(GL_VERTEX_SHADER,   colorVertSrc.c_str());
+    //color_vert_shader = glsl_init_shader(GL_VERTEX_SHADER,   vert_src);
     color_frag_shader = glsl_init_shader(GL_FRAGMENT_SHADER, colorFragSrc.c_str());
     color_program     = glsl_init_program(color_vert_shader, color_frag_shader);
 
