@@ -44,6 +44,8 @@ public:
         zoomv[2] = z;
         zoomk    = k;
     }
+   
+    void set_debug(int d);
     
 private:
 
@@ -66,7 +68,7 @@ private:
 
     void   draw_face(const int *, int,
                      const int *, int,
-                     double, double, double, double, int, int);
+                     double, double, double, double, int, int,int);
     void   prep_face(const double *, int, int,
                      double, double, double, double, int, int, int);
     double view_face(const double *, int, int,
@@ -112,6 +114,26 @@ private:
     GLsizei count;
     GLuint  vertices;
     GLuint  elements[16];
+
+    int wireframe;
+    std::vector<GLuint> levelColorTex;
+    GLuint color_vert_shader;
+    GLuint color_frag_shader;
+    GLuint color_program;
+
+    GLuint color_pos_a;
+    GLuint color_pos_b;
+    GLuint color_pos_c;
+    GLuint color_pos_d;
+    GLuint color_tex_a[8];
+    GLuint color_tex_d[8];
+    GLuint color_alpha[16];
+    GLuint color_level;
+    GLuint color_fader;
+
+    void init_color_tex(int depth);
+    void free_color_tex();
+
 };
 
 //------------------------------------------------------------------------------

@@ -4,12 +4,25 @@
 #include "VortexCoreShaders.h"
 
 #include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/CVRStatsHandler.h>
 
 #include <osgDB/FileUtils>
 #include <osg/PolygonMode>
 #include <osg/CullFace>
 
+#ifdef WITH_CUDA_LIB
+#include <cuda.h>
+#include <cudaGL.h>
+#include "CudaHelper.h"
+#include "CudaVolume.h"
+
+CUdeviceptr d_firstIndex;
+
+#endif
+
 using namespace cvr;
+
+std::map<int,bool> FlowObject::_cudaContextSet;
 
 void initColorTable()
 {
@@ -66,6 +79,7 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
     _set = set;
     _visType = FVT_NONE;
     _currentFrame = 0;
+    _volFrame = -1;
     _animationTime = 0.0;
     _isoMaxRV = NULL;
 
@@ -84,6 +98,8 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
     visTypes.push_back("Vector Plane");
     visTypes.push_back("Vortex Cores");
     visTypes.push_back("Sep Att Lines");
+    visTypes.push_back("Volume Cuda");
+    visTypes.push_back("LIC Cuda");
 
     _typeList = new MenuList();
     _typeList->setCallback(this);
@@ -325,15 +341,36 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
 	}
     }
 
+    _volGeometry = new osg::Geometry();
+    _volGeometry->setUseDisplayList(false);
+    _volGeometry->setUseVertexBufferObjects(true);
+    colors = new osg::Vec4Array(1);
+    colors->at(0) = osg::Vec4(1.0,1.0,1.0,1.0);
+    _volGeometry->setColorArray(colors);
+    _volGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+    _volGeometry->setComputeBoundingBoxCallback(sbc);
+
+    stateset = _volGeometry->getOrCreateStateSet();
+    stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+
+#ifdef WITH_CUDA_LIB
+    int numtets = _set->frameList[0]->indices->size() / 4;
+    _volDist = new osg::FloatArray(numtets*3);
+    _volSlope1 = new osg::FloatArray(numtets*3);
+    _volSlope2 = new osg::FloatArray(numtets*3);
+    _volPreSortInd = new osg::Vec3iArray(numtets*3);
+    _volInd = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES,numtets*3);
+
+    CVRViewer::instance()->addPerContextFrameStartCallback(this);
+    CVRViewer::instance()->addPerContextPreDrawCallback(this);
+#endif
+
     _lastAttribute = "";
     std::vector<std::string> attribList;
     attribList.push_back("None");
     for(int i = 0; i < _set->frameList[0]->pointData.size(); ++i)
     {
-	//if(_set->frameList[0]->pointData[i]->attribType == VAT_SCALARS)
-	{
-	    attribList.push_back(_set->frameList[0]->pointData[i]->name);
-	}
+	attribList.push_back(_set->frameList[0]->pointData[i]->name);
     }
 
     _loadedAttribList = new MenuList();
@@ -349,6 +386,11 @@ FlowObject::FlowObject(FlowDataSet * set, std::string name, bool navigation, boo
 
 FlowObject::~FlowObject()
 {
+#ifdef WITH_CUDA_LIB
+    CVRViewer::instance()->removePerContextFrameStartCallback(this);
+    CVRViewer::instance()->removePerContextPreDrawCallback(this);
+#endif
+
 }
 
 void FlowObject::perFrame()
@@ -434,9 +476,43 @@ void FlowObject::perFrame()
 	    _planeNormalUni->set(normal);
 	    break;
 	}
+	case FVT_VOLUME_CUDA:
+	{
+	    break;
+	}
 	default:
 	    break;
     }
+}
+
+void FlowObject::postFrame()
+{
+#ifdef WITH_CUDA_LIB
+    if(_visType == FVT_VOLUME_CUDA)
+    {
+	osg::Vec3 pos, norm(0,150,0);
+	pos = pos * PluginHelper::getHeadMat(0) * getWorldToObjectMatrix();
+	norm = norm * PluginHelper::getHeadMat(0) * getWorldToObjectMatrix();
+	norm = norm - pos;
+	norm.normalize();
+	_volViewerPos = pos;
+	_volViewerDir = norm;
+
+	if(_volFrame != _currentFrame)
+	{
+	    //std::cerr << "setting volume frame: " << _currentFrame << std::endl;
+	    if(!_volGeometry->getNumPrimitiveSets())
+	    {
+		//std::cerr << "Adding volInd" << std::endl;
+		_volGeometry->addPrimitiveSet(_volInd);
+	    }
+
+	    _volGeometry->setVertexArray(_set->frameList[_currentFrame]->verts);
+
+	    _volFrame = _currentFrame;
+	}
+    }
+#endif
 }
 
 void FlowObject::menuCallback(MenuItem * item)
@@ -462,6 +538,299 @@ void FlowObject::menuCallback(MenuItem * item)
     }
 
     SceneObject::menuCallback(item);
+}
+
+void FlowObject::perContextCallback(int contextid, PerContextCallback::PCCType type) const
+{
+#ifdef WITH_CUDA_LIB
+
+    if(_visType == FVT_VOLUME_CUDA)
+    {
+	if(type == PCC_FRAME_START)
+	{
+	    _volCallbackLock.lock();
+	    if(!_volInitMap[contextid])
+	    {
+		int cudaDevice = ScreenConfig::instance()->getCudaDevice(contextid);
+		int numContexts = ScreenConfig::instance()->getNumContexts(cudaDevice);
+
+		std::cerr << "Setting cuda device: " << cudaDevice << std::endl;
+
+		if(!_cudaContextSet[contextid])
+		{
+		    if(numContexts > 1)
+		    {
+			CUdevice device;
+			cuDeviceGet(&device,cudaDevice);
+			CUcontext cudaContext;
+
+			cuGLCtxCreate(&cudaContext, 0, device);
+			cuGLInit();
+			cuCtxSetCurrent(cudaContext);
+		    }
+		    else
+		    {
+			cudaGLSetGLDevice(cudaDevice);
+			cudaSetDevice(cudaDevice);
+		    }
+		    _cudaContextSet[contextid] = true;
+		}
+
+		_volInitMap[contextid] = true;
+
+
+		printCudaErr();
+
+		// register buffers
+		osg::GLBufferObject * glbo = _set->frameList[_volFrame]->verts->getOrCreateGLBufferObject(contextid);
+		if(glbo)
+		{
+		    glbo->compileBuffer();
+		    checkRegBufferObj(glbo->getGLObjectID());
+		}
+		else
+		{
+		    std::cerr << "Invalid gl buffer object for points in context: " << contextid << std::endl;
+		}
+
+		_volDist->setVertexBufferObject(new osg::VertexBufferObject());
+		_volDist->getVertexBufferObject()->setGLBufferObject(contextid,new osg::GLBufferObject(contextid,_volDist->getVertexBufferObject()));
+		glbo = _volDist->getOrCreateGLBufferObject(contextid);
+		glbo->compileBuffer();
+		checkRegBufferObj(glbo->getGLObjectID());
+		//std::cerr << "Context: " << contextid << " VBO id: " << glbo->getGLObjectID() << std::endl;
+
+		_volSlope1->setVertexBufferObject(new osg::VertexBufferObject());
+		_volSlope1->getVertexBufferObject()->setGLBufferObject(contextid,new osg::GLBufferObject(contextid,_volSlope1->getVertexBufferObject()));
+		glbo = _volSlope1->getOrCreateGLBufferObject(contextid);
+		glbo->compileBuffer();
+		checkRegBufferObj(glbo->getGLObjectID());
+
+		_volSlope2->setVertexBufferObject(new osg::VertexBufferObject());
+		_volSlope2->getVertexBufferObject()->setGLBufferObject(contextid,new osg::GLBufferObject(contextid,_volSlope2->getVertexBufferObject()));
+		glbo = _volSlope2->getOrCreateGLBufferObject(contextid);
+		glbo->compileBuffer();
+		checkRegBufferObj(glbo->getGLObjectID());
+
+		_volPreSortInd->setVertexBufferObject(new osg::VertexBufferObject());
+		_volPreSortInd->getVertexBufferObject()->setGLBufferObject(contextid,new osg::GLBufferObject(contextid,_volPreSortInd->getVertexBufferObject()));
+		glbo = _volPreSortInd->getOrCreateGLBufferObject(contextid);
+		glbo->compileBuffer();
+		checkRegBufferObj(glbo->getGLObjectID());
+
+		// clear buffer binding for arrays
+		glbo->unbindBuffer();
+
+		_volInd->setElementBufferObject(new osg::ElementBufferObject());
+		_volInd->getElementBufferObject()->setGLBufferObject(contextid,new osg::GLBufferObject(contextid,_volInd->getElementBufferObject()));
+		glbo = _volInd->getOrCreateGLBufferObject(contextid);
+		glbo->compileBuffer();
+		checkRegBufferObj(glbo->getGLObjectID());
+
+		glbo = _set->frameList[_volFrame]->indices->getOrCreateGLBufferObject(contextid);
+		if(glbo)
+		{
+		    glbo->compileBuffer();
+		    checkRegBufferObj(glbo->getGLObjectID());
+		}
+		else
+		{
+		    std::cerr << "Invalid gl buffer object for indices in context: " << contextid << std::endl;
+		}
+
+		// clear buffer binding for elements
+		glbo->unbindBuffer();
+
+		// allocate memory to hold first triangle index
+		if(contextid == 0)
+		{
+		    if(cuMemAlloc(&d_firstIndex,sizeof(int)) != CUDA_SUCCESS)
+		    {
+			std::cerr << "Failed to allocate first index memory." << std::endl;
+			printCudaErr();
+		    }
+		}
+	    }
+
+	    _volCallbackLock.unlock();
+
+	    osg::Stats * stats = NULL;
+
+	    osgViewer::ViewerBase::Contexts contexts;
+	    CVRViewer::instance()->getContexts(contexts);
+
+	    for(osgViewer::ViewerBase::Contexts::iterator citr = contexts.begin(); citr != contexts.end();
+		    ++citr)
+	    {
+		if((*citr)->getState()->getContextID() != contextid)
+		{
+		    continue;
+		}
+
+		osg::GraphicsContext::Cameras& cameras = (*citr)->getCameras();
+		for(osg::GraphicsContext::Cameras::iterator camitr = cameras.begin(); camitr != cameras.end();++camitr)
+		{
+		    if((*camitr)->getStats())
+		    {
+			stats = (*camitr)->getStats();
+			break;
+		    }
+		}
+
+		if(stats)
+		{
+		    break;
+		}
+	    }
+
+	    double cudastart, cudaend;
+
+	    if(stats && ! stats->collectStats("FV stats"))
+	    {
+		stats = NULL;
+	    }
+
+	    if(stats)
+	    {
+		cudastart = osg::Timer::instance()->delta_s(CVRViewer::instance()->getStartTick(), osg::Timer::instance()->tick());
+	    }
+
+	    GLuint tetPointVBO, tetIndVBO, distVBO, slope1VBO, slope2VBO, preSortVBO, indVBO;
+	    tetPointVBO = _set->frameList[_volFrame]->verts->getOrCreateGLBufferObject(contextid)->getGLObjectID();
+	    tetIndVBO = _set->frameList[_volFrame]->indices->getOrCreateGLBufferObject(contextid)->getGLObjectID();
+	    distVBO = _volDist->getOrCreateGLBufferObject(contextid)->getGLObjectID();
+	    slope1VBO = _volSlope1->getOrCreateGLBufferObject(contextid)->getGLObjectID();
+	    slope2VBO = _volSlope2->getOrCreateGLBufferObject(contextid)->getGLObjectID();
+	    preSortVBO = _volPreSortInd->getOrCreateGLBufferObject(contextid)->getGLObjectID();
+	    indVBO = _volInd->getOrCreateGLBufferObject(contextid)->getGLObjectID();
+
+	    CUdeviceptr d_tetPointVBO, d_tetIndVBO, d_distVBO, d_slope1VBO, d_slope2VBO, d_preSortVBO, d_indVBO;
+	    checkMapBufferObj((void**)&d_tetPointVBO,tetPointVBO);
+	    checkMapBufferObj((void**)&d_tetIndVBO,tetIndVBO);
+	    checkMapBufferObj((void**)&d_distVBO,distVBO);
+	    checkMapBufferObj((void**)&d_slope1VBO,slope1VBO);
+	    checkMapBufferObj((void**)&d_slope2VBO,slope2VBO);
+	    checkMapBufferObj((void**)&d_preSortVBO,preSortVBO);
+	    checkMapBufferObj((void**)&d_indVBO,indVBO);
+
+	    setViewerInfo(_volViewerPos.ptr(),_volViewerDir.ptr());
+	    printCudaErr();
+
+	    //std::cerr << "Buffer index: " << _volInd->getBufferIndex() << " vbo: " << indVBO << std::endl;
+
+	    launchDistClear((float*)d_distVBO,(_set->frameList[_volFrame]->indices->size()/4)*3);
+	    cudaThreadSynchronize();
+	    printCudaErr();
+
+	    if(0)
+	    {
+		float testArray[100];
+		cuMemcpyDtoH(testArray,d_distVBO,sizeof(float)*100);
+		printCudaErr();
+		for(int i = 0; i < 100; ++i)
+		{
+		    std::cerr << "value: " << testArray[i] << std::endl;
+		}
+	    }
+
+	    if(0)
+	    {
+		unsigned int testArray[10*3];
+		cuMemcpyDtoH(testArray,d_indVBO,sizeof(unsigned int)*10*3);
+		printCudaErr();
+		for(int i = 0; i < 10; ++i)
+		{
+		    std::cerr << "triStart " << i << ": " << testArray[(i*3)+0] << " " << testArray[(i*3)+1] << " " << testArray[(i*3)+2] << std::endl;
+		}
+	    }
+
+	    launchPreSort((float3*)d_tetPointVBO,(uint4*)d_tetIndVBO,_set->frameList[_volFrame]->indices->size()/4,(float*)d_distVBO,(float*)d_slope1VBO,(float*)d_slope2VBO,(uint3*)d_preSortVBO);
+	    cudaThreadSynchronize();
+	    printCudaErr();
+
+	    if(0)
+	    {
+		float testArray[10];
+		cuMemcpyDtoH(testArray,d_distVBO,sizeof(float)*10);
+		printCudaErr();
+		for(int i = 0; i < 10; ++i)
+		{
+		    std::cerr << "dist " << i << ": " << testArray[i] << std::endl;
+		}
+	    }
+
+	    CUdeviceptr tempptr;
+	    if(contextid == 0)
+	    {
+		tempptr = d_firstIndex;
+	    }
+	    else
+	    {
+		tempptr = (CUdeviceptr)NULL;
+	    }
+
+	    if(0)
+	    {
+		unsigned int testArray[10*3];
+		cuMemcpyDtoH(testArray,d_preSortVBO,sizeof(unsigned int)*10*3);
+		printCudaErr();
+		for(int i = 0; i < 10; ++i)
+		{
+		    std::cerr << "preSort " << i << ": " << testArray[(i*3)+0] << " " << testArray[(i*3)+1] << " " << testArray[(i*3)+2] << std::endl;
+		}
+	    }
+
+	    //launchSort((_set->frameList[_volFrame]->indices->size()/4)*3,(float*)d_distVBO,(float*)d_slope1VBO,(float*)d_slope2VBO,(uint3*)d_preSortVBO,(uint3*)d_indVBO,(int*)tempptr);
+	    launchSort(1000000,(float*)d_distVBO,(float*)d_slope1VBO,(float*)d_slope2VBO,(uint3*)d_preSortVBO,(uint3*)d_indVBO,(int*)tempptr);
+	    cudaThreadSynchronize();
+
+	    if(0)
+	    {
+		unsigned int testArray[10*3];
+		cuMemcpyDtoH(testArray,d_indVBO,sizeof(unsigned int)*10*3);
+		printCudaErr();
+		for(int i = 0; i < 10; ++i)
+		{
+		    std::cerr << "tri " << i << ": " << testArray[(i*3)+0] << " " << testArray[(i*3)+1] << " " << testArray[(i*3)+2] << std::endl;
+		}
+	    }
+
+	    printCudaErr();
+
+	    if(contextid == 0)
+	    {
+		int index = -1;
+		cuMemcpyDtoH(&index,tempptr,sizeof(int));
+		printCudaErr();
+
+		std::cerr << "Max size: " << (_set->frameList[_volFrame]->indices->size()/4)*3 << " firstIndex: " << index << std::endl;
+	    }
+
+	    cudaThreadSynchronize();
+
+	    checkUnmapBufferObj(tetPointVBO);
+	    checkUnmapBufferObj(tetIndVBO);
+	    checkUnmapBufferObj(distVBO);
+	    checkUnmapBufferObj(slope1VBO);
+	    checkUnmapBufferObj(slope2VBO);
+	    checkUnmapBufferObj(preSortVBO);
+	    checkUnmapBufferObj(indVBO);
+
+	    if(stats)
+	    {
+		cudaend = osg::Timer::instance()->delta_s(CVRViewer::instance()->getStartTick(), osg::Timer::instance()->tick());
+		stats->setAttribute(CVRViewer::instance()->getViewerFrameStamp()->getFrameNumber(), "FV Cuda start", cudastart);
+		stats->setAttribute(CVRViewer::instance()->getViewerFrameStamp()->getFrameNumber(), "FV Cuda end", cudaend);
+		stats->setAttribute(CVRViewer::instance()->getViewerFrameStamp()->getFrameNumber(), "FV Cuda duration", cudaend-cudastart);
+	    }
+	}
+	else if(type == PCC_PRE_DRAW)
+	{
+	    
+	}
+    }
+
+#endif
 }
 
 void FlowObject::setFrame(int frame)
@@ -555,6 +924,13 @@ void FlowObject::setVisType(FlowVisType fvt)
 	    _geode->removeDrawable(_alineGeometry);
 	    break;
 	}
+	case FVT_VOLUME_CUDA:
+	{
+	    _geode->removeDrawable(_volGeometry);
+	    _geode->addDrawable(_surfaceGeometry);
+	    _volGeometry->removePrimitiveSet(0,_volGeometry->getNumPrimitiveSets());
+	    break;
+	}
 	default:
 	    break;
     }
@@ -591,6 +967,13 @@ void FlowObject::setVisType(FlowVisType fvt)
 	{
 	    _geode->addDrawable(_slineGeometry);
 	    _geode->addDrawable(_alineGeometry);
+	    break;
+	}
+	case FVT_VOLUME_CUDA:
+	{
+	    _geode->addDrawable(_volGeometry);
+	    _geode->removeDrawable(_surfaceGeometry);
+	    CVRViewer::instance()->getStatsHandler()->addStatTimeBar(CVRStatsHandler::CAMERA_STAT,"FVCuda Time:","FV Cuda duration","FV Cuda start","FV Cuda end",osg::Vec3(0,1,0),"FV stats");
 	    break;
 	}
 	default:

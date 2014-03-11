@@ -158,7 +158,7 @@ void HeatMapGraph::setHover(osg::Vec3 intersect)
 	right -= _lastBoxSize + _lastSpacing;
     }
 
-    float targetHeight = 150.0;
+    float targetHeight = GraphGlobals::getHoverHeight();
 
     if(newIndex != _hoverIndex)
     {

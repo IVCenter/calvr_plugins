@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<Hpwren>
+	<Sensor0 value="rtd.hpwren.ucsd.edu:12020" name="" lat="32.700001" lon="-116.760002" />
+	<Sensor1 value="rtd.hpwren.ucsd.edu:12021" name="" lat="33.029999" lon="-116.959999" />
+	<Sensor2 value="rtd.hpwren.ucsd.edu:12024" name="" lat="33.009998" lon="-116.970001" />
+	<Sensor3 value="rtd.hpwren.ucsd.edu:12025" name="" lat="33.189999" lon="-116.760002" />
+	<Sensor4 value="rtd.hpwren.ucsd.edu:12026" name="" lat="32.669998" lon="-116.239998" />
+	<Sensor5 value="rtd.hpwren.ucsd.edu:12028" name="" lat="32.349998" lon="-116.980003" />
+	<Sensor6 value="rtd.hpwren.ucsd.edu:12029" name="" lat="33.130001" lon="-116.610001" />
+</Hpwren>
+<Sdge>
+	<Sensor0 value="ANE" name="Alpine" lat="32.82704" lon="-116.77332" />
+	<Sensor1 value="AMO" name="Ammo Dump" lat="33.35713" lon="-117.2757" />
+	<Sensor2 value="CAP" name="Bell Canyon" lat="33.5576" lon="-117.54654" />
+	<Sensor3 value="CMN" name="Cameron" lat="32.71464" lon="-116.47076" />
+	<Sensor4 value="MPE" name="Camp Elliot" lat="32.85239" lon="-117.11801" />
+	<Sensor5 value="DEN" name="Descanso" lat="32.85883" lon="-116.61182" />
+	<Sensor6 value="GOS" name="Goose Valley" lat="33.07279" lon="-116.84494" />
+	<Sensor7 value="JUL" name="Julian" lat="33.07638" lon="-116.59076" />
+	<Sensor8 value="MLG" name="Mt. Laguna" lat="32.87828" lon="-116.42359" />
+	<Sensor9 value="PAM" name="Mt. Palomar" lat="33.35214" lon="-116.86286" />
+	<Sensor10 value="OGV" name="Oak Grove" lat="33.39177" lon="-116.78812" />
+	<Sensor11 value="PIH" name="Pine Hills" lat="33.0494" lon="-116.63691" />
+	<Sensor12 value="POT" name="Potrero" lat="32.60439" lon="-116.60744" />
+</Sdge>

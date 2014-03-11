@@ -33,13 +33,13 @@ void TextureManager::AddGID(unsigned int gid)
 
 osg::Geode* TextureManager::AddTexture(unsigned int gid, std::map<unsigned int, GLuint> texmap, unsigned int width, unsigned int height)
 {
-	double xstart, ystart;
+	double xstart, ystart, zstart;
 	double nrows, ncols, myrow, mycol;
 
 	if (gid & 0x80000000)
 	{
-		nrows = ((gid& 0x3E000000) >> 25) + 1.;
-        	ncols = ((gid& 0x00F80000) >> 19) + 1.;
+		nrows = ((gid & 0x3E000000) >> 25) + 1.;
+        	ncols = ((gid & 0x00F80000) >> 19) + 1.;
 		myrow = (gid & 0x0007E000) >> 13;
 		mycol = (gid & 0x00001F80) >> 7;
 	}
@@ -51,10 +51,11 @@ osg::Geode* TextureManager::AddTexture(unsigned int gid, std::map<unsigned int, 
 		mycol = 0.;
 	}
 
-	xstart = mycol * width;
-	ystart = myrow * height;
+	xstart = mycol * width - width/2.;
+	ystart = myrow * height - height/2.;
+	zstart = 2244.; // distance in mm for a 2048 pixel video stream with a 12.5mm lens
 	TextureObject* to = new TextureObject(texmap);
-	osg::Geometry* picture_quad = osg::createTexturedQuadGeometry(osg::Vec3(xstart, 0., ystart), osg::Vec3(width, 0., 0.), osg::Vec3(0., 0., height));
+	osg::Geometry* picture_quad = osg::createTexturedQuadGeometry(osg::Vec3(xstart, zstart, ystart), osg::Vec3(width, 0., 0.), osg::Vec3(0., 0., height));
 	osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D;
 	osg::Geode* geode = new osg::Geode;
 	texture->setResizeNonPowerOfTwoHint(false);

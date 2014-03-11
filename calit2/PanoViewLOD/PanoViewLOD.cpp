@@ -3,6 +3,8 @@
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/NodeMask.h>
 #include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/CVRViewer.h>
+#include <cvrKernel/CVRStatsHandler.h>
 #include <PluginMessageType.h>
 
 #include <iostream>
@@ -108,6 +110,8 @@ bool PanoViewLOD::init()
 
     _useDiskCache = ConfigManager::getBool("value","Plugin.PanoViewLOD.DiskCache",true);
 
+    CVRViewer::instance()->getStatsHandler()->addStatValue(CVRStatsHandler::VIEWER_STAT,"Seconds Per Tile: ","PVLOD_SPT",osg::Vec3(1.0,1.0,1.0),"PVLOD_Stats");
+
     TIFFSetWarningHandler(0);
 
     return true;
@@ -119,6 +123,27 @@ void PanoViewLOD::preFrame()
     if(_panObject)
     {
 	_panObject->preFrameUpdate();
+    }
+
+    if(sph_cache::_diskCache && CVRViewer::instance()->getViewerStats()->collectStats("PVLOD_Stats"))
+    {
+	//std::cerr << "Collect stats" << std::endl;
+	unsigned int tiles;
+	double time;
+	sph_cache::_diskCache->getReadStats(tiles,time);
+	//std::cerr << "Tiles: " << tiles << " time: " << time << " spt: " << (time / ((double)tiles))  << std::endl;
+	if(tiles > 0)
+	{
+	    CVRViewer::instance()->getViewerStats()->setAttribute(CVRViewer::instance()->getViewerFrameStamp()->getFrameNumber(),"PVLOD_SPT",time / ((double)tiles));
+	}
+	else
+	{
+	    CVRViewer::instance()->getViewerStats()->setAttribute(CVRViewer::instance()->getViewerFrameStamp()->getFrameNumber(),"PVLOD_SPT",0);
+	}
+    }
+    else if(sph_cache::_diskCache)
+    {
+	//std::cerr << "Collect stats not set" << std::endl;
     }
 
 #ifdef PRINT_TIMING
@@ -268,6 +293,24 @@ void PanoViewLOD::message(int type, char *&data, bool collaborative)
 	{
 	    _panObject->setAlpha(alpha);
 	}
+    }
+    
+    if(type == PAN_SET_ROTATE)
+    {
+	float rotate = *((float*)data);
+
+	if(_panObject)
+	{
+	    _panObject->setRotate(rotate);
+	}
+    }
+
+    if(type == PAN_NEXT)
+    {
+        if(_panObject)
+        {
+            _panObject->next();
+        }
     }
 
     if(type == PAN_UNLOAD)

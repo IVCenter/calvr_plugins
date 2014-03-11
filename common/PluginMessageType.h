@@ -41,7 +41,8 @@ enum MenuMessageType
 enum OsgEarthMessageType
 {
     OE_ADD_MODEL = 0,
-    OE_TRANSFORM_POINTER
+    OE_TRANSFORM_POINTER,
+    OE_MENU
 };
 
 // OsgEarth message struct (lat (degrees), lon (degrees), height (meters above surface)
@@ -51,9 +52,16 @@ struct OsgEarthRequest
     float lat;
     float lon;
     float height;
-    char pluginName[4096];
+    std::string plugin;
     osg::MatrixTransform* trans;
 };
+
+struct OsgEarthMenuRequest
+{
+    std::string plugin;
+    cvr::SubMenu* oe_menu;
+};
+
 
 enum PointsMessageType
 {
@@ -64,6 +72,7 @@ struct PointsLoadInfo
 {
     std::string file;
     osg::ref_ptr<osg::Group> group;
+    bool useShader;
 };
 
 enum PanoViewLODMessageType
@@ -71,6 +80,8 @@ enum PanoViewLODMessageType
     PAN_LOAD_REQUEST=0,
     PAN_HEIGHT_REQUEST,
     PAN_SET_ALPHA,
+    PAN_SET_ROTATE,
+    PAN_NEXT,
     PAN_UNLOAD
 };
 
@@ -176,6 +187,7 @@ enum LayoutManagerMessageType
 enum VideoMessageType
 {
     VIDEO_LOAD,
+    VIDEO_STREAM,
     VIDEO_STOP
 };
 
@@ -206,7 +218,25 @@ struct VideoMessageData
     VideoMessageType why;
     std::string path;   
     VideoSceneObject* obj;
+    int width, height;
+    unsigned int gid;
 };
+
+enum BerkeleyMessageType
+{
+    BERK_USER=0,
+    BERK_NO_USER,
+    BERK_NAV
+};
+
+struct BerkeleyRequest
+{
+   int user;
+   float rx;
+   float ry;
+   float my;
+};
+
 
 #endif
 

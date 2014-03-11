@@ -117,6 +117,10 @@ void PanoViewObject::init(std::vector<std::string> & leftEyeFiles, std::vector<s
     _demoMode->setCallback(this);
     addMenuItem(_demoMode);
 
+    _debugCB = new MenuCheckbox("Debug",false);
+    _debugCB->setCallback(this);
+    addMenuItem(_debugCB);
+
     _trackball = new MenuCheckbox("Trackball Mode", false);
     _trackball->setCallback(this);
     addMenuItem(_trackball);
@@ -429,6 +433,12 @@ void PanoViewObject::menuCallback(cvr::MenuItem * item)
     if(item == _previousButton)
     {
 	previous();
+    }
+
+    if(item == _debugCB)
+    {
+	_leftDrawable->setDebug(_debugCB->getValue());
+	_rightDrawable->setDebug(_debugCB->getValue());
     }
 
     if(item == _radiusRV)

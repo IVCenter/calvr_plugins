@@ -42,7 +42,7 @@ class Points : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
        cvr::SceneObject* scene;
        osg::Geode* points;
        osg::Uniform* pointScale;
-       osg::Uniform* objectScale;
+       //osg::Uniform* objectScale;
     }; 
 
     void readXYZ(std::string& filename, osg::Vec3Array* points, osg::Vec4Array* colors);
@@ -66,7 +66,7 @@ class Points : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::File
     std::vector<cvr::MenuButton*> _menuFileList;
     std::vector<std::string> _filePaths;
 
-    osg::Uniform* objectScale;
+    float objectScale;
 
   public:
     Points();

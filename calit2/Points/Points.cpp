@@ -91,7 +91,7 @@ bool Points::loadFile(std::string filename)
 	    if(_locInit.find(name) != _locInit.end())
 	    {
     	    currentobject->pointScale = new osg::Uniform("pointScale", _locInit[name].first);
-            MenuRangeValue * mrv = new MenuRangeValue("Point Scale", 0.0, 0.5, _locInit[name].first);
+            MenuRangeValue * mrv = new MenuRangeValue("Point Scale", 0.0, 20.0, _locInit[name].first);
     	    mrv->setCallback(this);
             so->addMenuItem(mrv);
             _sliderMap[currentobject] = mrv;
@@ -106,8 +106,8 @@ bool Points::loadFile(std::string filename)
 	    }
         else
         { 
-            currentobject->pointScale = new osg::Uniform("pointScale", initialPointScale);
-            MenuRangeValue * mrv = new MenuRangeValue("Point Scale", 0.0, 0.5, initialPointScale);
+            currentobject->pointScale = new osg::Uniform("pointScale", initialPointScale * objectScale);
+            MenuRangeValue * mrv = new MenuRangeValue("Point Scale", 0.0, 20.0, initialPointScale);
             mrv->setCallback(this);
             so->addMenuItem(mrv);
             _sliderMap[currentobject] = mrv;
@@ -254,7 +254,10 @@ bool Points::isFile(const char* filename)
 
 void Points::removeAll()
 {
-    for(std::vector<struct PointObject*>::iterator delit = _loadedPoints.begin(); delit != _loadedPoints.end(); delit++)
+    std::cerr << "Remove all called\n";
+
+    std::vector<struct PointObject*>::iterator delit = _loadedPoints.begin();
+    while( delit != _loadedPoints.end() )
     {
         //(*delit)->scene->detachFromScene();
 
@@ -286,7 +289,9 @@ void Points::removeAll()
             delete (*delit)->scene;
 
         _loadedPoints.erase(delit);
-        break;
+
+        delit = _loadedPoints.begin();
+        //break;
     }
 }
 
@@ -318,7 +323,7 @@ void Points::menuCallback(MenuItem* menuItem)
         {
             if( it->first->points )
             {
-                 it->first->pointScale->set(it->second->getValue());
+                 it->first->pointScale->set(it->second->getValue() * objectScale);
                  break;
             }
         }
@@ -393,6 +398,12 @@ void Points::menuCallback(MenuItem* menuItem)
 
             std::cout << "Save." << std::endl;
         }
+    }
+
+    // check for removeAll
+    if( menuItem == _removeButton )
+    {
+        removeAll();
     }
 
 }
@@ -490,6 +501,9 @@ bool Points::init()
   // set default point scale
   initialPointScale = ConfigManager::getFloat("Plugin.Points.PointScale", 0.001f);
 
+  // get object scale and set it
+  objectScale = PluginHelper::getObjectScale();
+
   _mainMenu = new SubMenu("Points", "Points");
   _mainMenu->setCallback(this);
 
@@ -568,6 +582,21 @@ Points::~Points()
 
 void Points::preFrame()
 {
+
+    // update point size if object scale changes
+    if( objectScale != PluginHelper::getObjectScale() )
+    {
+	objectScale = PluginHelper::getObjectScale();
+
+	for(std::map<struct PointObject*,MenuRangeValue*>::iterator it = _sliderMap.begin(); it != _sliderMap.end(); it++)
+	{
+	    if( it->first->points )
+	    {
+		it->first->pointScale->set(it->second->getValue() * objectScale);
+	    }
+	}
+    }
+
 }
 
 void Points::message(int type, char *&data, bool collaborative)
@@ -590,7 +619,7 @@ void Points::message(int type, char *&data, bool collaborative)
         //attach shader and uniform
         osg::StateSet *state = pli->group->getOrCreateStateSet();
         state->setAttribute(pgm1);
-        state->addUniform(new osg::Uniform("pointScale", initialPointScale));
+        state->addUniform(new osg::Uniform("pointScale", initialPointScale * objectScale));
         state->addUniform(new osg::Uniform("globalAlpha",1.0f));
     }
 }

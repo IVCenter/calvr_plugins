@@ -28,8 +28,8 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
         MicrobeGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~MicrobeGraphObject();
 
-        bool setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, bool group = true, bool lsOrdering = true, bool familyLevel = false);
-        bool setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, bool group = true, bool lsOrdering = true, bool familyLevel = false);
+        bool setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, std::string tableSuffix, bool group = true, bool lsOrdering = true, bool familyLevel = false);
+        bool setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, std::string tableSuffix, bool group = true, bool lsOrdering = true, bool familyLevel = false);
 
         virtual void objectAdded();
         virtual void objectRemoved();

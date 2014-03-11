@@ -11,6 +11,8 @@
 
 #include <tiffio.h>
 
+#include <sys/time.h>
+
 struct sph_task;
 class sph_cache;
 
@@ -27,6 +29,7 @@ struct CopyJobInfo
     unsigned int valid;
     int refs;
     OpenThreads::Mutex lock;
+    struct timeval diskReadStart;
 };
 
 struct DiskCacheEntry
@@ -90,6 +93,9 @@ class DiskCache
         void setRightFiles(int prev, int curr, int next);
         void kill_tasks(int file);
 
+        void getReadStats(unsigned int & pages, double & totalTime);
+        void addPageTime(double time);
+
     protected:
         void cleanup();
 
@@ -130,6 +136,11 @@ class DiskCache
         std::map<int, std::map<int,DiskCacheEntry*> > _prefetchMap;
 
         std::map<sph_cache*,int> _cacheIndexMap;
+        
+        // disk copy stats
+        OpenThreads::Mutex _readStatsLock;
+        unsigned int _pagesRead;
+        double _totalReadTime;
 };
 
 #endif

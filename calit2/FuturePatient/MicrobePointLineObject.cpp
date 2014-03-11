@@ -47,7 +47,7 @@ struct patientData
     float data[7];
 };
 
-bool MicrobePointLineObject::setGraph(bool expandAxis)
+bool MicrobePointLineObject::setGraph(std::string tableSuffix, bool expandAxis)
 {
     std::vector<std::string> phylumOrder;
     // larry order
@@ -70,7 +70,16 @@ bool MicrobePointLineObject::setGraph(bool expandAxis)
     int numPatients = 0;
     std::vector<patientData> data;
 
-    std::string querystr = "SELECT Patient.p_condition, Patient.last_name, unix_timestamp(Microbe_Measurement.timestamp) as timestamp, Microbes.phylum, sum(Microbe_Measurement.value) as value from Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id inner join Patient on Patient.patient_id = Microbe_Measurement.patient_id group by Patient.last_name, Microbe_Measurement.timestamp, Microbes.phylum;";
+    std::string measurementTable = "Microbe_Measurement";
+    measurementTable += tableSuffix;
+
+    std::string microbesTable = "Microbes";
+    microbesTable += tableSuffix;
+
+    std::stringstream queryss;
+    queryss << "SELECT Patient.p_condition, Patient.last_name, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << microbesTable << ".phylum, sum(" << measurementTable << ".value) as value from " << measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id group by Patient.last_name, " << measurementTable << ".timestamp, " << microbesTable << ".phylum;";
+
+    std::string querystr = queryss.str();
 
     if(ComController::instance()->isMaster())
     {

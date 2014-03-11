@@ -104,6 +104,9 @@ void JobThread::read()
     {
 	if (!task->cache->files[task->f].name.empty())
         {
+	    cji->lock.lock();
+	    gettimeofday(&cji->diskReadStart,NULL);
+	    cji->lock.unlock();
             if (TIFF *T = TIFFOpen(task->cache->files[task->f].name.c_str(), "r"))
             {
                 if (up(T, task->i))
@@ -405,7 +408,16 @@ void JobThread::readData(sph_task * task, CopyJobInfo * cji, TIFF * T, uint32 w,
 		cji->valid = currentValid;
 		cji->lock.unlock();
 	    }
-	}	
+	}
+	struct timeval readEnd;
+	gettimeofday(&readEnd,NULL);
+
+	cji->lock.lock();
+	// disk copy stats
+	double readTime = (readEnd.tv_sec - cji->diskReadStart.tv_sec) + ((readEnd.tv_usec - cji->diskReadStart.tv_usec) / 1000000.0);
+	cji->lock.unlock();
+
+	sph_cache::_diskCache->addPageTime(readTime);
     }
     else
     {
@@ -426,6 +438,9 @@ DiskCache::DiskCache(int pages) : _pages(pages)
     _prevFileL = _prevFileR = -1;
     _currentFileL = _currentFileR = -1;
     _nextFileL = _nextFileR = -1;
+
+    _pagesRead = 0;
+    _totalReadTime = 0.0;
 }
 
 DiskCache::~DiskCache()
@@ -870,6 +885,26 @@ void DiskCache::kill_tasks(int file)
     _readList[file].clear();
 
     listLock.unlock();
+}
+
+void DiskCache::getReadStats(unsigned int & pages, double & totalTime)
+{
+    _readStatsLock.lock();
+
+    pages = _pagesRead;
+    totalTime = _totalReadTime;
+
+    _readStatsLock.unlock();
+}
+
+void DiskCache::addPageTime(double time)
+{
+    _readStatsLock.lock();
+
+    _pagesRead++;
+    _totalReadTime += time;
+
+    _readStatsLock.unlock();
 }
 
 bool DiskCache::eject()

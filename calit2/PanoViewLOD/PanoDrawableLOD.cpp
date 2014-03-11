@@ -382,6 +382,19 @@ void PanoDrawableLOD::setZoom(osg::Vec3 dir, float k)
     }
 }
 
+void PanoDrawableLOD::setDebug(bool d)
+{
+    for(std::map<int,sph_model*>::iterator it = _pdi->modelMap.begin(); it!= _pdi->modelMap.end(); it++)
+    {
+	it->second->set_debug((int)d);
+    }
+
+    for(std::map<int,sph_model*>::iterator it = _pdi->transitionModelMap.begin(); it!= _pdi->transitionModelMap.end(); it++)
+    {
+	it->second->set_debug((int)d);
+    }
+}
+
 osg::BoundingBox PanoDrawableLOD::computeBound() const
 {
     osg::Vec3 size2(_radius, _radius, _radius);

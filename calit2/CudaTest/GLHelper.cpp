@@ -1,8 +1,10 @@
 #include "GLHelper.h"
 
 #include <fcntl.h>
+#include <cstdlib>
 #include <sys/stat.h>
 #include <iostream>
+using namespace std;
 
 bool checkShader(GLuint shader)
 {

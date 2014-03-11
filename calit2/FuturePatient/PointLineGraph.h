@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include "GraphGlobals.h"
+
 enum PLGAxisType
 {
     PLG_LINEAR=0,
@@ -96,6 +98,8 @@ class PointLineGraph
         int _currentHoverGroup, _currentHoverItem, _currentHoverPoint;
         std::string _selectedGroup;
         std::vector<std::string> _selectedLabels;
+
+        osg::ref_ptr<SetBoundsCallback> _graphBoundsCallback;
 };
 
 #endif

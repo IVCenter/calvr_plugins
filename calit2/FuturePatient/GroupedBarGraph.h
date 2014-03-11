@@ -29,6 +29,8 @@ enum BarGraphDisplayMode
     BGDM_CUSTOM
 };
 
+class MicrobeMathFunction;
+
 class GroupedBarGraph
 {
     public:
@@ -122,6 +124,9 @@ class GroupedBarGraph
 
         bool processClick(osg::Vec3 & hitPoint, std::string & selectedGroup, std::vector<std::string> & selectedKeys);
 
+        void addMathFunction(MicrobeMathFunction * mf);
+        void removeMathFunction(MicrobeMathFunction * mf);
+
     protected:
         void makeGraph();
         void makeHover();
@@ -132,6 +137,7 @@ class GroupedBarGraph
         void updateShading();
         void updateColors();
         void updateSizes();
+        void updateMathFuncs();
 
         float _width, _height;
         float _maxGraphValue, _minGraphValue;
@@ -169,6 +175,8 @@ class GroupedBarGraph
         osg::ref_ptr<osg::Geometry> _hoverBGGeom;
         osg::ref_ptr<osgText::Text> _hoverText;
 
+        osg::ref_ptr<osg::Geode> _mathGeode;
+
         std::string _hoverGroup;
         std::string _hoverItem;
 
@@ -176,6 +184,16 @@ class GroupedBarGraph
         BarGraphDisplayMode _displayMode;
 
         osg::ref_ptr<SetBoundsCallback> _graphBoundsCallback;
+
+        std::vector<MicrobeMathFunction *> _mathFunctionList;
+};
+
+class MicrobeMathFunction
+{
+    public:
+        virtual void added(osg::Geode * geode) = 0;
+        virtual void removed(osg::Geode * geode) = 0;
+        virtual void update(float left, float right, float top, float bottom, float barWidth, std::map<std::string, std::vector<std::pair<std::string, float> > > & data, BarGraphDisplayMode displayMode, const std::vector<std::string> & groupOrder, const std::vector<std::pair<std::string,int> > & customOrder, float displayMin, float displayMax, BarGraphAxisType axisType, const std::vector<std::pair<float,float> > & groupRanges) = 0;
 };
 
 #endif

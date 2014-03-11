@@ -74,6 +74,8 @@ class PanoDrawableLOD : public osg::Drawable
        
         void setAlpha(float alpha) { _alpha = alpha; }
         float getAlpha() { return _alpha; }
+
+        void setDebug(bool d);
         
         float getCurrentFadeTime() { return _currentFadeTime; }
 

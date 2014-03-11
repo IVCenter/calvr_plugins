@@ -17,12 +17,15 @@
 #include <cassert>
 #include <limits>
 
+#include <iostream>
+
 #include "math3d.h"
 #include "glyph.h"
 #include "glsl.h"
 #include "cube.hpp"
 
 #include "sph-model.hpp"
+#include "ColorShader.h"
 
 #ifdef WIN32
 #define M_PI 3.141592653589793238462643
@@ -38,17 +41,21 @@ sph_model::sph_model(sph_cache& cache,
 {
     init_program(vert, frag);
     init_arrays(n);
+    init_color_tex(d);
     
     zoomv[0] =  0;
     zoomv[1] =  0;
     zoomv[2] = -1;
     zoomk    =  1;
+
+    wireframe = 0;
 }
 
 sph_model::~sph_model()
 {
     free_arrays();
     free_program();
+    free_color_tex();
 }
 
 //------------------------------------------------------------------------------
@@ -273,7 +280,7 @@ void sph_model::prep_face(const double *M, int w, int h,
             const int i2 = face_child(i, 2);
             const int i3 = face_child(i, 3);
 
-            if (s < size)
+            if (s < size && !wireframe)
             {
                 status[i]  = s_draw;
                 status[i0] = s_halt;
@@ -302,7 +309,9 @@ void sph_model::prep_face(const double *M, int w, int h,
             }
         }
         else
+	{
             status[i] = s_halt;
+	}
     }
     else
     {
@@ -378,12 +387,29 @@ void sph_model::draw(const double *P, const double *V, const int *fv, int fc,
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 #endif
 
-    glUseProgram(program);
+    if(!wireframe)
     {
-        glUniform1f(glGetUniformLocation(program, "zoomk"), zoomk);
-	glUniform1f(glGetUniformLocation(program, "globalAlpha"), alpha);
-        glUniform3f(glGetUniformLocation(program, "zoomv"),
+	glUseProgram(program);
+    }
+    else
+    {
+	glUseProgram(color_program);
+    }
+    {
+	if(!wireframe)
+	{
+	    glUniform1f(glGetUniformLocation(program, "zoomk"), zoomk);
+	    glUniform1f(glGetUniformLocation(program, "globalAlpha"), alpha);
+	    glUniform3f(glGetUniformLocation(program, "zoomv"),
                     zoomv[0], zoomv[1], zoomv[2]);
+	}
+	else
+	{
+	    glUniform1f(glGetUniformLocation(color_program, "zoomk"), zoomk);
+	    glUniform1f(glGetUniformLocation(color_program, "globalAlpha"), alpha);
+	    glUniform3f(glGetUniformLocation(color_program, "zoomv"),
+                    zoomv[0], zoomv[1], zoomv[2]);
+	}
 
         for (int i = 0; i < 6; ++i)
         {
@@ -394,12 +420,22 @@ void sph_model::draw(const double *P, const double *V, const int *fv, int fc,
             vnormalize(c, cube_v[cube_i[i][2]]);
             vnormalize(d, cube_v[cube_i[i][3]]);
             
-            glUniform3f(pos_a, GLfloat(a[0]), GLfloat(a[1]), GLfloat(a[2]));
-            glUniform3f(pos_b, GLfloat(b[0]), GLfloat(b[1]), GLfloat(b[2]));
-            glUniform3f(pos_c, GLfloat(c[0]), GLfloat(c[1]), GLfloat(c[2]));
-            glUniform3f(pos_d, GLfloat(d[0]), GLfloat(d[1]), GLfloat(d[2]));
+	    if(!wireframe)
+	    {
+		glUniform3f(pos_a, GLfloat(a[0]), GLfloat(a[1]), GLfloat(a[2]));
+		glUniform3f(pos_b, GLfloat(b[0]), GLfloat(b[1]), GLfloat(b[2]));
+		glUniform3f(pos_c, GLfloat(c[0]), GLfloat(c[1]), GLfloat(c[2]));
+		glUniform3f(pos_d, GLfloat(d[0]), GLfloat(d[1]), GLfloat(d[2]));
+	    }
+	    else
+	    {
+		glUniform3f(color_pos_a, GLfloat(a[0]), GLfloat(a[1]), GLfloat(a[2]));
+		glUniform3f(color_pos_b, GLfloat(b[0]), GLfloat(b[1]), GLfloat(b[2]));
+		glUniform3f(color_pos_c, GLfloat(c[0]), GLfloat(c[1]), GLfloat(c[2]));
+		glUniform3f(color_pos_d, GLfloat(d[0]), GLfloat(d[1]), GLfloat(d[2]));
+	    }
 
-            draw_face(fv, fc, pv, pc, 0, 1, 0, 1, 0, i);
+            draw_face(fv, fc, pv, pc, 0, 1, 0, 1, 0, i, 0);
         }
     }
     glUseProgram(0);
@@ -413,10 +449,12 @@ void sph_model::draw(const double *P, const double *V, const int *fv, int fc,
 
 void sph_model::draw_face(const int *fv, int fc,
                           const int *pv, int pc,
-                          double r, double l, double t, double b, int d, int i)
+                          double r, double l, double t, double b, int d, int i,int lastValidLevel)
 {
     GLuint o = 0;
     int then = time;
+
+    int currentLastValid = lastValidLevel;
 
     if (status[i] != s_halt)
     {
@@ -428,11 +466,45 @@ void sph_model::draw_face(const int *fv, int fc,
 
             o = cache.get_page(fv[fi], i, time, then);
 
-            glUniform1f(alpha[e], age(then));
-            glBindTexture(GL_TEXTURE_2D, o);
+	    if(!wireframe)
+	    {
+		glUniform1f(alpha[e], age(then));
+	    }
+	    else
+	    {
+		glUniform1f(color_alpha[e], age(then));
+	    }
+
+	    if(!wireframe)
+	    {
+		glBindTexture(GL_TEXTURE_2D, o);
+	    }
+	    else
+	    {
+		if(o != cache.get_fill())
+		{
+		    glBindTexture(GL_TEXTURE_2D, o);
+		    glActiveTexture(GL_TEXTURE0 + e + 16);
+		    glBindTexture(GL_TEXTURE_2D, levelColorTex[d]);
+		    currentLastValid = d;
+		}
+		else
+		{
+		    glBindTexture(GL_TEXTURE_2D, o);
+		}
+	    }
         }
-        glUniform2f(tex_a[d], GLfloat(r), GLfloat(t));
-        glUniform2f(tex_d[d], GLfloat(l), GLfloat(b));
+
+	if(!wireframe)
+	{
+	    glUniform2f(tex_a[d], GLfloat(r), GLfloat(t));
+	    glUniform2f(tex_d[d], GLfloat(l), GLfloat(b));
+	}
+	else
+	{
+	    glUniform2f(color_tex_a[d], GLfloat(r), GLfloat(t));
+	    glUniform2f(color_tex_d[d], GLfloat(l), GLfloat(b));
+	}
     }
 
     if (status[i] == s_pass)
@@ -446,10 +518,10 @@ void sph_model::draw_face(const int *fv, int fc,
         const double x = (r + l) * 0.5;
         const double y = (t + b) * 0.5;
 
-        draw_face(fv, fc, pv, pc, r, x, t, y, d + 1, face_child(i, 0));
-        draw_face(fv, fc, pv, pc, x, l, t, y, d + 1, face_child(i, 1));
-        draw_face(fv, fc, pv, pc, r, x, y, b, d + 1, face_child(i, 2));
-        draw_face(fv, fc, pv, pc, x, l, y, b, d + 1, face_child(i, 3));
+        draw_face(fv, fc, pv, pc, r, x, t, y, d + 1, face_child(i, 0),currentLastValid);
+        draw_face(fv, fc, pv, pc, x, l, t, y, d + 1, face_child(i, 1),currentLastValid);
+        draw_face(fv, fc, pv, pc, r, x, y, b, d + 1, face_child(i, 2),currentLastValid);
+        draw_face(fv, fc, pv, pc, x, l, y, b, d + 1, face_child(i, 3),currentLastValid);
     }
 
     if (status[i] == s_draw)
@@ -463,10 +535,34 @@ void sph_model::draw_face(const int *fv, int fc,
                      | (status[face_parent(e)] == s_draw ? 4 : 0)
                      | (status[face_parent(w)] == s_draw ? 8 : 0);
 
-        glUniform1i(level, d);
+	if(!wireframe)
+	{
+	    glUniform1i(level, d);
+	}
+	else
+	{
+	    glUniform1i(color_level, currentLastValid);
+	}
         
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elements[j]);
-        glDrawElements(GL_QUADS, count, GL_UNSIGNED_SHORT, 0);
+
+	if(!wireframe)
+	{
+	    glDrawElements(GL_QUADS, count, GL_UNSIGNED_SHORT, 0);
+	}
+	else
+	{
+	    //glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+	    //glDrawElements(GL_QUADS, count, GL_UNSIGNED_SHORT, 0);
+	    //glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+	    //std::cerr << "t: " << t << " b: " << b << " l: " << l << " r: " << r << std::endl;
+	    glBegin(GL_QUADS);
+	    glVertex2f(l,t);
+	    glVertex2f(l,b);
+	    glVertex2f(r,b);
+	    glVertex2f(r,t);
+	    glEnd();
+	}
     }
     
     if (status[i] != s_halt)
@@ -483,8 +579,21 @@ void sph_model::draw_face(const int *fv, int fc,
 
 void sph_model::set_fade(double k)
 {
-    glUseProgram(program);
-    glUniform1f(fader, k);
+    if(!wireframe)
+    {
+	glUseProgram(program);
+	glUniform1f(fader, k);
+    }
+    else
+    {
+	glUseProgram(color_program);
+	glUniform1f(color_fader, k);
+    }
+}
+
+void sph_model::set_debug(int d)
+{
+    wireframe = d;
 }
 
 static GLuint glGetUniformLocationv(GLuint program, const char *fmt, int d)
@@ -526,6 +635,35 @@ void sph_model::init_program(const char *vert_src,
             glUniform1i(glGetUniformLocationv(program, "image[%d]", d), d);
         }
     }
+
+    //init color shader
+    color_vert_shader = glsl_init_shader(GL_VERTEX_SHADER,   colorVertSrc.c_str());
+    //color_vert_shader = glsl_init_shader(GL_VERTEX_SHADER,   vert_src);
+    color_frag_shader = glsl_init_shader(GL_FRAGMENT_SHADER, colorFragSrc.c_str());
+    color_program     = glsl_init_program(color_vert_shader, color_frag_shader);
+
+    glUseProgram(color_program);
+
+    color_pos_a = glGetUniformLocation(color_program, "pos_a");
+    color_pos_b = glGetUniformLocation(color_program, "pos_b");
+    color_pos_c = glGetUniformLocation(color_program, "pos_c");
+    color_pos_d = glGetUniformLocation(color_program, "pos_d");
+    color_level = glGetUniformLocation(color_program, "level");
+    color_fader = glGetUniformLocation(color_program, "fader");
+
+    for (int d = 0; d < 8; ++d)
+    {
+	color_tex_a[d]  = glGetUniformLocationv(color_program, "tex_a[%d]", d);
+	color_tex_d[d]  = glGetUniformLocationv(color_program, "tex_d[%d]", d);
+    }
+
+    for (int d = 0; d < 16; ++d)
+    {
+	color_alpha[d]  = glGetUniformLocationv(color_program, "alpha[%d]", d);
+	glUniform1i(glGetUniformLocationv(color_program, "image[%d]", d), d);
+	glUniform1i(glGetUniformLocationv(color_program, "colors[%d]", d), d+16);
+    }
+
 }
 
 void sph_model::free_program()
@@ -533,6 +671,10 @@ void sph_model::free_program()
     glDeleteProgram(program);
     glDeleteShader(frag_shader);
     glDeleteShader(vert_shader);
+
+    glDeleteProgram(color_program);
+    glDeleteShader(color_frag_shader);
+    glDeleteShader(color_vert_shader);
 }
 
 //------------------------------------------------------------------------------
@@ -648,6 +790,43 @@ void sph_model::free_arrays()
 {
     glDeleteBuffers(16, elements);
     glDeleteBuffers(1, &vertices);
+}
+
+void sph_model::init_color_tex(int depth)
+{
+    static const GLfloat colors[][4] = {
+	{0.89412,0.10196,0.109804,1.0},
+	{0.21569,0.49412,0.72157,1.0},
+	{0.302,0.6863,0.2902,1.0},
+	{0.59608,0.305882,0.63922,1.0},
+	{1.0,0.5,0,1.0},
+	{0.9,0.0,1.0,1.0},
+	{0.6510,0.3373,0.15686,1.0}
+    };
+
+    for(int i = 0; i <= depth; ++i)
+    {
+	GLuint texid;
+	glGenTextures(1,&texid);
+	glBindTexture  (GL_TEXTURE_2D, texid);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP);
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, colors[i]);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_FLOAT, colors[i]);
+	glBindTexture(GL_TEXTURE_2D,0);
+
+	levelColorTex.push_back(texid);
+    }
+}
+
+void sph_model::free_color_tex()
+{
+    for(int i = 0; i < levelColorTex.size(); ++i)
+    {
+	glDeleteTextures(1,&levelColorTex[i]);
+    }
 }
 
 //------------------------------------------------------------------------------

@@ -6,6 +6,7 @@ std::string normalVertSrc =
 "#extension GL_ARB_gpu_shader5 : enable              \n"
 "                                                    \n"
 "out vec3 ls;                                        \n"
+"out vec4 rawVert;                                   \n"
 "                                                    \n"
 "void main(void)                                     \n"
 "{                                                   \n"
@@ -21,7 +22,7 @@ std::string normalVertSrc =
 "    gl_Position = ftransform();                     \n"
 "                                                    \n"
 "    // pass vertex to geometry shader in output variable \n"
-"    gl_TexCoord[0]  = gl_Vertex;                    \n"
+"    rawVert  = gl_Vertex;                    \n"
 "}                                                   \n";
 
 std::string normalFloatVertSrc =
@@ -87,7 +88,7 @@ std::string normalIntVertSrc =
 "#extension GL_ARB_gpu_shader5 : enable              \n"
 "#extension GL_ARB_explicit_attrib_location : enable \n"
 "                                                    \n"
-"layout(location = 4) in float value;                \n"
+"layout(location = 4) in int value;                \n"
 "uniform int min;                                  \n"
 "uniform int max;                                  \n"
 "                                                    \n"
@@ -112,7 +113,7 @@ std::string normalIntVertSrc =
 "      //  gl_TexCoord[1].x = 0.0;                     \n"
 "    //else                                            \n"
 "      //  gl_TexCoord[1].x = 1.0;                     \n"
-"    gl_TexCoord[1].x = clamp(float(int(value) - min) / float(max - min), 0.0, 1.0); \n"
+"    gl_TexCoord[1].x = clamp(float(value - min) / float(max - min), 0.0, 1.0); \n"
 "}                                                   \n";
 
 std::string normalGeomSrc =
@@ -120,10 +121,11 @@ std::string normalGeomSrc =
 "#extension GL_EXT_geometry_shader4 : enable         \n"
 "                                                    \n"
 "varying in vec3 ls[3];                              \n"
+"varying in vec4 rawVert[3];                         \n"
 "                                                    \n"
 "void main()                                         \n"
 "{                                                   \n" 
-"    vec3 normal = normalize(cross(gl_TexCoordIn[1][0].xyz - gl_TexCoordIn[0][0].xyz, gl_TexCoordIn[2][0].xyz - gl_TexCoordIn[0][0].xyz)); \n"
+"    vec3 normal = normalize(cross(rawVert[1].xyz - rawVert[0].xyz, rawVert[2].xyz - rawVert[0].xyz)); \n"
 "    vec3 n1 = normalize(gl_NormalMatrix * normal);  \n"
 "    vec3 n2 = normalize(gl_NormalMatrix * -normal); \n"
 "    for(int i = 0; i < gl_VerticesIn; ++i)          \n"
@@ -177,6 +179,7 @@ std::string normalFloatFragSrc =
 "    gl_FragColor = texture1D(tex,gl_TexCoord[0].x) * gl_TexCoord[0].y; \n"
 "    //gl_FragColor = gl_Color * gl_TexCoord[0].x * gl_TexCoord[0].y; \n"
 "    //gl_FragColor = gl_Color * gl_TexCoord[0].x;            \n"
+"    //gl_FragColor = texture1D(tex,0.1) * gl_TexCoord[0].y; \n"
 "}                                                   \n";
 
 

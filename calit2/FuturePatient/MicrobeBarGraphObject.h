@@ -16,8 +16,8 @@ class MicrobeBarGraphObject : public LayoutTypeObject, public MicrobeSelectObjec
         MicrobeBarGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~MicrobeBarGraphObject();
 
-        bool addGraph(std::string label, int patientid, std::string testLabel);
-        bool addSpecialGraph(SpecialMicrobeGraphType smgt);
+        bool addGraph(std::string label, int patientid, std::string testLabel, std::string tableSuffix);
+        bool addSpecialGraph(SpecialMicrobeGraphType smgt, std::string tableSuffix);
 
         void setGraphSize(float width, float height);
 

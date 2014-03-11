@@ -1,4 +1,5 @@
 #include "SymptomGraphObject.h"
+#include "TRGraphAction.h"
 
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/ComController.h>
@@ -47,6 +48,11 @@ SymptomGraphObject::~SymptomGraphObject()
 
 bool SymptomGraphObject::addGraph(std::string name)
 {
+
+    /*if(name == "Microbe Test")
+    {
+	return addGraphMicrobe(name);
+    }*/
 
     struct timeRange
     {
@@ -102,13 +108,31 @@ bool SymptomGraphObject::addGraph(std::string name)
 	std::vector<std::pair<time_t,time_t> > rangeList;
 	std::vector<int> intensityList;
 
+	time_t timePadding = 0;
+
 	for(int i = 0; i < numRanges; ++i)
 	{
-	    rangeList.push_back(std::pair<time_t,time_t>(ranges[i].start,ranges[i].end));
+	    if(name == "Stool")
+	    {
+		rangeList.push_back(std::pair<time_t,time_t>(ranges[i].start,ranges[i].start));
+		timePadding = 200000;
+	    }
+	    else
+	    {
+		rangeList.push_back(std::pair<time_t,time_t>(ranges[i].start,ranges[i].end));
+	    }
 	    intensityList.push_back(ranges[i].intensity);
 	}
 
-	_graph->addGraph(name,rangeList,intensityList,5);
+	_graph->addGraph(name,rangeList,intensityList,5,timePadding);
+
+	if(name == "Stool")
+	{
+	    MicrobeGraphAction * mga = new MicrobeGraphAction();
+	    mga->symptomObject = this;
+	    mga->conn = _conn;
+	    _graph->setGraphAction(name,mga);
+	}
 
 	delete[] ranges;
 
@@ -254,4 +278,78 @@ void SymptomGraphObject::leaveCallback(int handID)
     {
 	_graph->clearHoverText();
     }
+}
+
+bool SymptomGraphObject::eventCallback(cvr::InteractionEvent * ie)
+{
+    if(ie->asTrackedButtonEvent() && ie->asTrackedButtonEvent()->getButton() == 0 && (ie->getInteraction() == BUTTON_DOUBLE_CLICK))
+    {
+	return _graph->click();
+    }
+    return false;
+}
+
+bool SymptomGraphObject::addGraphMicrobe(std::string name)
+{
+    time_t * testTimes = NULL;
+    int numTests = 0;
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_conn)
+	{
+	    std::stringstream qss;
+	    qss << "select distinct unix_timestamp(timestamp) as timestamp from Microbe_Measurement where patient_id = 1 order by timestamp asc;";
+
+	    mysqlpp::Query query = _conn->query(qss.str().c_str());
+	    mysqlpp::StoreQueryResult result = query.store();
+
+	    numTests = result.num_rows();
+	    if(numTests)
+	    {
+		testTimes = new time_t[numTests];
+		for(int i = 0; i < numTests; ++i)
+		{
+		    testTimes[i] = atol(result[i]["timestamp"].c_str());
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&numTests,sizeof(int));
+	if(numTests)
+	{
+	    ComController::instance()->sendSlaves(testTimes,numTests*sizeof(time_t));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&numTests,sizeof(int));
+	if(numTests)
+	{
+	    testTimes = new time_t[numTests];
+	    ComController::instance()->readMaster(testTimes,numTests*sizeof(time_t));
+	}
+    }
+
+    if(numTests)
+    {
+	std::vector<std::pair<time_t,time_t> > ranges;
+	std::vector<int> values;
+
+	for(int i = 0; i < numTests; ++i)
+	{
+	    ranges.push_back(std::pair<time_t,time_t>(testTimes[i],testTimes[i]));
+	    values.push_back(1);
+	}
+
+	_graph->addGraph(name,ranges,values,1,302400);
+	_graph->setGraphAction(name,new MicrobeGraphAction());
+    }
+
+    if(testTimes)
+    {
+	delete[] testTimes;
+    }
+
+    return (bool)numTests;
 }

@@ -1,79 +1,34 @@
         <ArtifactVis2>
-           <Database value="/home/calvr/ArchInterface/queries/" />
-              <ArchInterfaceFolder value="/home/calvr/ArchInterface/" />
-              <TopoFile value="/data/ArtifactVis/3d-model/Ken3dv3.wrl" />
-              <PicFolder value="/home/calvr/ArchInterface/data/" />
-              <3DModelFolder value="/home/calvr/ArchInterface/data/" />
-              <ScanFolder value="/home/calvr/ArchInterface/data/scan_models/" />
-              <LociFile value="/home/cdefanti/calvr/plugins/calit2/ArtifactVis/AreaMLociDepth.kml" />
-              <ArtifactFileList value="/home/covise/data/3DArtifacts.txt" />
-                                                                                                 <MaxVisibleRange value="100000000000.0" />
-                 <Offset>
-                  <!-- <X value="-304670000.000" />
-                       <Y value="1450800.00" />
-                      <Z value="-354990000.00" />/-->
-                 <X value="-700000" />
-                 <Y value="-3300000" />
-                 <Z value="0" />
-                 </Offset>
-                 <Site>
-                 <Longitude value="35.491239" />
-                 <Latitude value="30.628039" />
-             <!--Height value="0" /-->
-            <!--Scale value="1" /-->
-          </Site>
-             <Tessellation value=".2" />
-          <ArtifactPanel x="-200" y="2000" z="100" scale="1.0" />
-          <InfoPanel x="-900" y="3000" z="350" scale="1.0" />
-          <KinectSkeleton x="-0.2" y="1.7" z="0.6" />
+          <StartArtifactVis2 value="false" />
+          <ShowScreens value="true" />
+          <MoveCamera value="true" />
+          <FlyToDefault value="0" />
+
+          <Database value="/home/ngsmith/ArchInterface/queries/" />
+          <ArchInterfaceFolder value="/home/ngsmith/ArchInterface/" />
+          <3DModelFolder value="/home/ngsmith/ArchInterface/data/" />
+          <ScreenConfigLocation value="/home/calvr/CalVR/config/tourcaveLG-screens-2level.xml" />
+          <MaxVisibleRange value="100000000000.0" />
+          <Offset>
+            <X value="-700000" />
+            <Y value="-3300000" />
+            <Z value="0" />
+          </Offset>
+          <Tessellation value=".2" />
+          <InfoPanel x="-500" y="1000" z="300" scale="0.5" />
+          <FileManagerPanel x="-300" y="1000" z="300" scale="0.5" />
+          <BookmarkPanel x="300" y="1000" z="0" scale="0.5" />
+          <UtilsPanel x="400" y="1000" z="0" scale="0.5" />
+          <QsPanel x="400" y="1000" z="300" scale="0.5" />
+          <FileManagerTypes value="ply,obj,wrl,pts,xyb,xyz,3ds,jpg,tif,png,kml,xml" />
          
-	 <KinectDefaultOn value="true" >
-	      <MoveWithCam value="true" />
-	      <FlyToDefault value="4" />
-	      <ShowPCloud value="false" />
-	      <ShowColor value="false" />
-	      <NavSpheres value="true" />
-	      <UseGestures value="false" />
-	      <LockPos value="false" />
-	      <LockRot value="false" />
-	      <LockScale value="true" />
-	      <ShowArtifactPanel value="false" />
-	      <ShowInfoPanel value="true" />
-	 </KinectDefaultOn>
-
-          <KinectServer>
-              <DepthMap value="tcp://67.58.33.222:9000" /> 
-              <ColorMap value="tcp://67.58.33.222:9001" />
-              <Skeleton value="tcp://67.58.33.222:9002" />
-              <PointCloud value="tcp://67.58.33.222:9003" />
-          </KinectServer>
-       
-          <KinectNavSphere>
-	        <navSphereOffsetY value="0.3" />
-	        <navSphereOffsetZ value="0.1" />
-	        <diffScaleY value="0.15" />
-	    	<diffScaleNegY value="-0.05" />
-                <tranScaleY value="-200" />
-            	<diffScaleX value="0.1" />
-	    	<diffScaleNegX value="-0.1" />
-		<tranScaleX value="0.006" />
-            	<diffScaleZ value="0.05" />
-	    	<diffScaleNegZ value="-0.05" />
-		<tranScaleZ value="-50" />
-            	<diffScaleRY value="-0.5" />
-	    	<diffScaleNegRY value="-0.8" />
-		<tranScaleRY value="0.005" />
-          </KinectNavSphere> 
-
-	  <Cylinder>
-            <Min value="0.2" />
-            <Max value="1.0" />
-          </Cylinder>
-
-	  <QueryTest value ="true">
-	      <Query value="zb" />
+	  <QueryTest value ="false">
+	      <Query value="allkis" />
 	  </QueryTest>
 	  
+          <ShaderVert value="/home/calvr/osgdata/shaders/gooch.vert" />
+          <ShaderFrag value="/home/calvr/osgdata/shaders/gooch.frag" />
+
 	  <Nvidia value="true" />
 	  <scaleP value="5.0" />
            </ArtifactVis2>

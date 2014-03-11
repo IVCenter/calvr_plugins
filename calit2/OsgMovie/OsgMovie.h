@@ -14,6 +14,7 @@
 #include <osg/MatrixTransform>
 #include <osg/ImageStream>
 #include <osg/Uniform>
+#include <osg/ShapeDrawable>
 
 #include <string>
 #include <vector>
@@ -34,8 +35,9 @@ class OsgMovie : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::Fi
 	struct VideoObject
         {
             std::string name;
-            cvr::SceneObject * scene;
-            osg::ImageStream * stream;
+	    cvr::SceneObject * scene;
+	    osg::ImageStream * stream;
+	    osg::ImageStream * streamR;
             osg::Uniform * modeUniform;
             osg::Uniform * typeUniform;
             osg::Uniform * splitUniform;
@@ -65,6 +67,8 @@ class OsgMovie : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr::Fi
         std::string configPath;
 
         osg::Geometry* myCreateTexturedQuadGeometry(osg::Vec3 pos, float width,float height, osg::Image* image);
+        osg::ShapeDrawable* myCreateTexturedModel(osg::Vec3 pos, float width,float height, osg::Image* image);
+        osg::Node* myCreateTexturedLoadedModel(osg::Vec3 pos, float width,float height, osg::Image* image);
         void writeConfigFile();
 };
 
