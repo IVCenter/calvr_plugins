@@ -12,6 +12,7 @@
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuCheckbox.h>
 #include <cvrMenu/MenuRangeValue.h>
+#include <cvrKernel/ComController.h>
 #include "CudaParticle.h"
 #include "PDObject.h"
 
@@ -342,53 +343,8 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
 
 	std::string _TargetSystem;
 	std::string _DisplaySystem;
-	void initGeoEdSection();
-        void cleanupGeoEdSection();
-		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid1;
-		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid2;
-		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid3;
-		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid4;
-		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid5;
-		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid6;
-		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid7;
-		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid8;
 
-        cvr::SceneObject * _EdSceneObject;
 
-	void turnAllEduSlidsOff();
-/*	
-	    osg::MatrixTransform * _EdAxisBallsXform	;
-		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid1;
-		osg::ref_ptr<osg::Switch> _EdSecSwitchAxis;
-		osg::ref_ptr<osg::Switch> _EdSecXballObjSwitch;
-		osg::ref_ptr<osg::Switch> _EdSecYballObjSwitch;
-		osg::ref_ptr<osg::Switch> _EdSecZballObjSwitch;
-		osg::ref_ptr<osg::Switch> _EdSecXYZballObjSwitch;
-		osg::MatrixTransform * _xBallXform;
-		osg::MatrixTransform * _yBallXform;
-		osg::MatrixTransform * _zBallXform;
-		osg::MatrixTransform * _xyzBallXform;
-		
-		osg::ref_ptr<osg::Switch> _EdSecXboxObjSwitch;
-		osg::ref_ptr<osg::Switch> _EdSecYboxObjSwitch;
-		osg::ref_ptr<osg::Switch> _EdSecZboxObjSwitch;
-		osg::MatrixTransform * _xboxXform;
-		osg::MatrixTransform * _yboxXform;
-		osg::MatrixTransform * _zboxXform;
-
-		osg::ref_ptr<osg::Switch> _EdSecXarrowObjSwitch;
-		osg::ref_ptr<osg::Switch> _EdSecYarrowObjSwitch;
-		osg::ref_ptr<osg::Switch> _EdSecZarrowObjSwitch;
-		osg::ref_ptr<osg::Switch> _EdSecXYZarrowObjSwitch;
-
-		osg::MatrixTransform * _xArrowXform;
-		osg::MatrixTransform * _yArrowXform;
-		osg::MatrixTransform * _zArrowXform;
-		osg::MatrixTransform * _xyzArrowXform;
-	void   AddCylinderBetweenPoints(osg::Vec3   StartPoint, osg::Vec3   EndPoint, float radius, osg::Vec4   CylinderColor, osg::Group   *pAddToThisGroup) ;
-
-	void   setsMatrixScalingUnitLengthZupObjectBetweenPoints(osg::Vec3   StartPoint, osg::Vec3   EndPoint, float xscale,float yscale, osg::Matrix * result) ;
-*/
 //	omicron::SoundManager* _SoundMng;
 //	omicron::SoundEnvironment* _SoundEnv;
 //	omicron::Sound* _harmonicAlgorithm;

@@ -110,14 +110,14 @@ bool ParticleDreams::init()
 
 	_TargetSystem = ConfigManager::getEntry("value","Plugin.ParticleDreams.TargetSystem","TourCaveCalit2");
 	std::cout << "targetSystem " << _TargetSystem << "\n";
-	// TourCaveCalit2 TourCaveSaudi NexCaveCalit2 StarCave CAVE2
+	// TourCaveCalit2 TourCaveSaudi NexCaveCalit2 StarCave Cave2
 
 //	ContextChange block comented out id fr 1 screen version
 	
 	_DisplaySystem = ConfigManager::getEntry("value","Plugin.ParticleDreams.DisplaySystem","Simulator");
 	std::cout << "DisplaySystem " << _DisplaySystem << "\n";
 //	_DisplaySystem = ConfigManager::getEntry("value","Plugin.ParticleDreams.DisplaySystem","TourCaveCalit2");
-	// TourCaveCalit2 TourCaveSaudi NexCaveCalit2 StarCave CAVE2 Simulator
+	// TourCaveCalit2 TourCaveSaudi NexCaveCalit2 StarCave Cave2 Simulator
 	
 
    return true;
@@ -206,11 +206,11 @@ void ParticleDreams::preFrame()
 	//if ((but2old ==0)&&(but2 == 1)&&(but1))
 	if (skipTonextScene ==1)
 	{	std::cout << "skipTonextScene ==1 " << std::endl;
-	    sceneOrder =( sceneOrder+1)%4;sceneChange=1;
+	    sceneOrder =( sceneOrder+1)%3;sceneChange=1;
 		skipTonextScene =0;
 		
 	}
-	if (nextSean ==1) { sceneOrder =( sceneOrder+1)%4;sceneChange=1;nextSean =0;}
+	if (nextSean ==1) { sceneOrder =( sceneOrder+1)%3;sceneChange=1;nextSean =0;}
 	//reordering seenes
 /*
 	if (sceneOrder ==0)sceneNum =4;
@@ -935,10 +935,10 @@ void ParticleDreams::initGeometry()
 
 		}
 	
-	else if (_TargetSystem.compare("CAVE2") == 0)
+	else if (_TargetSystem.compare("Cave2") == 0)
 
 		{
-			std::cout << "CAVE2  loaded" << std::endl;
+			std::cout << "Cave2  loaded" << std::endl;
 			int i =loadOneHalfPhysicalScreensArrayCave2();
 			std::cout << "loadPhysicalScreens " << i <<" " << _PhScAr[i-1].index << " " << std::endl;
 
@@ -957,71 +957,8 @@ void ParticleDreams::initGeometry()
 
 
 
-	initGeoEdSection();
 
-/*
-		_quad1 = createQuad();
- 
-		SceneObject * so = new SceneObject("anything",false,false,false,false,false);
-        osg::Geode * qgeode = new osg::Geode();
-        qgeode->setCullingActive(false);
-        qgeode->addDrawable(_quad1);
-        so->addChild(qgeode);
-        PluginHelper::registerSceneObject(so,"ParticleDreams");
-        so->setPosition(osg::Vec3(0,1000,0));
-        so->setScale(1000);
-        so->attachToScene();
-		so->setNavigationOn(true);
 
-*/
-/*
-    _injecttorObjSwitch = new osg::Switch;
-
-    _injFaceProgram = new osg::Program();
-
-    if(!particle_inj_face)
-    {
-        std::cerr << "Error reading inj face obj" << std::endl;
-    }
-    else
-    {
-        osg::MatrixTransform * mt = new osg::MatrixTransform();
-        osg::Matrix m;
-        m.makeScale(osg::Vec3(1000.0,1000.0,1000.0));
-        mt->setMatrix(m);
-        mt->addChild(particle_inj_face);
-        _injecttorObjSwitch->addChild(mt);
-
-        _injFaceProgram->setName("InjFace");
-        _injFaceProgram->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile(_dataDir + "glsl/sprite.vert")));
-        _injFaceProgram->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile(_dataDir + "glsl/sprite.frag")));
-        //mt->getOrCreateStateSet()->setAttribute(_injFaceProgram);
-    }
-
-    _injLineProgram = new osg::Program();
-
-    if(!particle_inj_line)
-    {
-        std::cerr << "Error reading inj line obj" << std::endl;
-    }
-    else
-    {
-        osg::MatrixTransform * mt = new osg::MatrixTransform();
-        osg::Matrix m;
-        m.makeScale(osg::Vec3(1000.0,1000.0,1000.0));
-        mt->setMatrix(m);
-        mt->addChild(particle_inj_line);
-        _injecttorObjSwitch->addChild(mt);
-
-        _injLineProgram->setName("InjLine");
-        _injLineProgram->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile(_dataDir + "glsl/sprite.vert")));
-        _injLineProgram->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile(_dataDir + "glsl/sprite.frag")));
-        //mt->getOrCreateStateSet()->setAttribute(_injLineProgram);
-    }
-
-	_injecttorObjSwitch->setAllChildrenOn();
-  	_handModelMT->addChild(_injecttorObjSwitch);
-*/
 }
 
 void ParticleDreams::initSound()
@@ -1032,10 +969,20 @@ void ParticleDreams::initSound()
 	float SoundWidth =2;
 	//ToDoSound
 	_SoundMng = new omicron::SoundManager();
-	_SoundMng->connectToServer("xenakis.evl.uic.edu", 57120);
+
+	if (_TargetSystem.compare("Cave2") == 0){	_SoundMng->connectToServer("xenakis.evl.uic.edu", 57120);}
+	else {	_SoundMng->connectToServer("131.193.77.209", 57120);}
 	_SoundMng->startSoundServer();
 	_SoundEnv = _SoundMng->getSoundEnvironment();
-	_SoundEnv->setAssetDirectory("/Users/evldemo/sounds/dan/particle_dreams/");
+	
+	if (_TargetSystem.compare("Cave2") == 0){_SoundEnv->setAssetDirectory("/dan/particle_dreams/");}
+	else {_SoundEnv->setAssetDirectory("/Users/dan/data/OASCache/");}
+	
+	
+	if(cvr::ComController::instance()->isMaster())
+	{
+		while( !_SoundMng->isSoundServerRunning() ){}
+	}
 	
 	_harmonicAlgorithm = _SoundEnv->loadSoundFromFile("harmonicAlgorithm", "harmonicAlgorithm.wav");
 	_dan_10122606_sound_spray = _SoundEnv->loadSoundFromFile("soundSpray", "dan_10122606_sound_spray.wav");
@@ -1071,7 +1018,7 @@ void ParticleDreams::initSound()
 
 	_harmonicAlgorithmInstance = new omicron::SoundInstance(_harmonicAlgorithm);
 	_harmonicAlgorithmInstance->setLoop(true);
-	_harmonicAlgorithmInstance->playStereo();
+	//_harmonicAlgorithmInstance->playStereo();
 
 	
 	_dan_10122606_sound_sprayInstance = new omicron::SoundInstance(_dan_10122606_sound_spray);
@@ -1218,7 +1165,7 @@ void ParticleDreams::cleanupPart()
 
 void ParticleDreams::cleanupGeometry()
 {
-    cleanupGeoEdSection();
+ 
 
     delete[] _PhScAr;
 
@@ -1450,72 +1397,42 @@ int ParticleDreams::load6wallcaveWalls(int firstRefNum)
 		 reflectorSetSize ( reflNum , caverad, axisUpZ);
 		 reflectorSetDamping ( reflNum , damping);
 		 reflectorSetNoTraping ( reflNum , no_traping);
-		 
-/*
-    h_reflectorData[reflNum ][0][0]=1;h_reflectorData[reflNum ][0][1]=0;// type, age ie colormod, ~  0 is off 1 is plane reflector
-    h_reflectorData[reflNum ][1][0]=ftToM(5);    h_reflectorData[reflNum ][1][1]= 0.0;h_reflectorData[reflNum ][1][2]=0;//x,y,z position
-    h_reflectorData[reflNum ][2][0]= -1.0;  h_reflectorData[reflNum ][2][1]=0;    h_reflectorData[reflNum ][2][2]=0;//x,y,z normal
-    h_reflectorData[reflNum ][3][0]=caverad; h_reflectorData[reflNum ][3][1]=0.00; h_reflectorData[reflNum ][3][2]=0;//reflector radis ,~,~ 
-    h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implimented = speed 
-    h_reflectorData[reflNum ][5][0]= damping; h_reflectorData[reflNum ][5][1]=no_traping;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
-    h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
 
-*/
     reflNum = firstRefNum;
     //front
     		 reflectorSetPosition ( reflNum , 0, caverad,  -caverad, axisUpZ);
 		 reflectorSetNormal( reflNum , 0, 0,  1, axisUpZ);
-/*
-    h_reflectorData[reflNum ][1][0]=0;    h_reflectorData[reflNum ][1][1]= caverad;h_reflectorData[reflNum ][1][2]= -caverad;//x,y,z position
-    h_reflectorData[reflNum ][2][0]=0;  h_reflectorData[reflNum ][2][1]=0;    h_reflectorData[reflNum ][2][2]=1;//x,y,z normal
-*/
-//	h_reflectorData[reflNum ][2][0]=1;  h_reflectorData[reflNum ][2][1]=1;    h_reflectorData[reflNum ][2][2]=1;//x,y,z normal
 
     copy_reflector( reflNum, reflNum +1);
     reflNum++;//back
     
      	reflectorSetPosition ( reflNum , 0, caverad,  caverad, axisUpZ);
 		reflectorSetNormal( reflNum , 0, 0,  -1, axisUpZ);
-/*   
-    h_reflectorData[reflNum ][1][0]=0;    h_reflectorData[reflNum ][1][1]= caverad;h_reflectorData[reflNum ][1][2]=caverad;//x,y,z position
-    h_reflectorData[reflNum ][2][0]=0;  h_reflectorData[reflNum ][2][1]=0;    h_reflectorData[reflNum ][2][2]=-1;//x,y,z normal
-*/
+
     copy_reflector( reflNum, reflNum +1);
     reflNum++;//right
     
       	reflectorSetPosition ( reflNum , caverad, caverad,  0, axisUpZ);
 		reflectorSetNormal( reflNum , -1, 0,  0, axisUpZ);
- /*  
-    h_reflectorData[reflNum ][1][0]=caverad;    h_reflectorData[reflNum ][1][1]= caverad;h_reflectorData[reflNum ][1][2]=0;//x,y,z position
-    h_reflectorData[reflNum ][2][0]=-1;  h_reflectorData[reflNum ][2][1]=0;    h_reflectorData[reflNum ][2][2]=0;//x,y,z normal
-*/
+ 
     copy_reflector( reflNum, reflNum +1);
 
     reflNum++;//left
         reflectorSetPosition ( reflNum , -caverad, caverad,  0, axisUpZ);
 		reflectorSetNormal( reflNum , 1, 0,  0, axisUpZ);
-/*
-    h_reflectorData[reflNum ][1][0]=-caverad;    h_reflectorData[reflNum ][1][1]= caverad;h_reflectorData[reflNum ][1][2]=0;//x,y,z position
-    h_reflectorData[reflNum ][2][0]=1;  h_reflectorData[reflNum ][2][1]=0;    h_reflectorData[reflNum ][2][2]=0;//x,y,z normal
-*/
+
     copy_reflector( reflNum, reflNum +1);
     reflNum++;//top
         reflectorSetPosition ( reflNum , 0, 2 * caverad,  0, axisUpZ);
 		reflectorSetNormal( reflNum , 0, -1,  0, axisUpZ);
   
- /*   
-    h_reflectorData[reflNum ][1][0]=0;    h_reflectorData[reflNum ][1][1]= 2*caverad;h_reflectorData[reflNum ][1][2]=0;//x,y,z position
-    h_reflectorData[reflNum ][2][0]=0;  h_reflectorData[reflNum ][2][1]=-1;    h_reflectorData[reflNum ][2][2]=0;//x,y,z normal
-*/
+ 
     copy_reflector( reflNum, reflNum +1);
     reflNum++;//bottom
     
         reflectorSetPosition ( reflNum , 0, 0,  0, axisUpZ);
 		reflectorSetNormal( reflNum , 0, 1,  0, axisUpZ);
-/*   
-    h_reflectorData[reflNum ][1][0]=0;    h_reflectorData[reflNum ][1][1]= -0;h_reflectorData[reflNum ][1][2]=0;//x,y,z position
-    h_reflectorData[reflNum ][2][0]=0;  h_reflectorData[reflNum ][2][1]=1;    h_reflectorData[reflNum ][2][2]=0;//x,y,z normal
-*/
+
     
     return reflNum;
 
@@ -2585,17 +2502,6 @@ int ParticleDreams::loadInjFountsFrScr(float dx,float dy,float dz,float speed)
 				injectorSetSpeedCentrality (injNum, 5, 5,  5,  axisUpZ);
 
 				
-				/*
-				//std::cout << " injNum _PhScAr[i].originX /1000.0 .originY /1000.0 .originY /1000.0 " <<  injNum << " " << _PhScAr[i].originX /1000.0 << " " << _PhScAr[i].originY /1000.0 << " " << _PhScAr[i].originZ /1000.0 << std::endl;
-				h_injectorData[injNum][1][0]=2;h_injectorData[injNum][1][1]=1.0;// type, injection ratio ie streem volume, ~
-				h_injectorData[injNum][2][0]=_PhScAr[i].originX /1000.0 +dx;h_injectorData[injNum][2][1]=_PhScAr[i].originY / 1000.0+dy;h_injectorData[injNum][2][2]=_PhScAr[i].originZ /1000.0 + dz;//x,y,z position
-				h_injectorData[injNum][3][0]=_PhScAr[i].vx * speed;h_injectorData[injNum][3][1]=_PhScAr[i].vy * speed;h_injectorData[injNum][3][2]=_PhScAr[i].vz * speed;//x,y,z velocity drection
-				h_injectorData[injNum][4][0]=ftToM(0.25);h_injectorData[injNum][4][1]=ftToM(0.25);h_injectorData[injNum][4][2]=ftToM(0.25);//x,y,z size
-
-				h_injectorData[injNum][5][0]=0.000;h_injectorData[injNum][5][1]=0.000;h_injectorData[injNum][5][2]=0.000;//t,u,v jiter v not implimented = speed 
-				h_injectorData[injNum][6][0]=0.2000;h_injectorData[injNum][6][1]=0.0;h_injectorData[injNum][6][2]=0.0;//speed jiter ~ ~
-				h_injectorData[injNum][7][0]=5;h_injectorData[injNum][7][1]=5;h_injectorData[injNum][7][2]=5;//centrality of rnd distribution speed dt tu ~
-				*/		
 				i++;
 			}  
 			
@@ -2681,11 +2587,6 @@ void ParticleDreams::scene_data_0_host()
     //h_injectorData[0][0][0] =0;// turn off all injectors ~ ~   ~ means dont care
 	injectorSetMaxnumNum(0);// turn off all injectors
 	if (DEBUG_PRINT >0)printf("scene0Start \n");
-	/*if ((SOUND_SERV ==1)&& (::host->root() == 1))
-	{
-	    audioPlay(dan_ambiance_2,1.0);audioGain(dan_ambiance_2,1);
-
-	}*/
 	if (soundEnabled)
 	{ambient_sound_start_data_0();
 	//	dan_ambiance_2.setGain(1);
@@ -2728,15 +2629,8 @@ void ParticleDreams::scene_data_0_host()
 	injectorSetSpeedDist (injNum, 0.01, 0.01,  0,  axisUpZ);
 	injectorSetSpeedJitter (injNum, 0.1, 0.1,  0,  axisUpZ);
 	injectorSetSpeedCentrality (injNum, 5, 5,  5,  axisUpZ);
-/*
-    h_injectorData[injNum][1][0]=1;h_injectorData[injNum][1][1]=but2;// type, injection ratio ie streem volume, ~
-    h_injectorData[injNum][2][0]=wandPos[0];h_injectorData[injNum][2][1]=wandPos[1];h_injectorData[injNum][2][2]=wandPos[2];//x,y,z position
-    h_injectorData[injNum][3][0]=wandVec[0];h_injectorData[injNum][3][1]=wandVec[1];h_injectorData[injNum][3][2]=wandVec[2];//x,y,z velocity direction
-    h_injectorData[injNum][4][0]=0.00;h_injectorData[injNum][4][1]=0.00;h_injectorData[injNum][4][2]=.0;//x,y,z size
-    h_injectorData[injNum][5][0]=0.010;h_injectorData[injNum][5][1]=0.010;h_injectorData[injNum][5][2]=0.000;//t,u,v jiter v not implimented = speed 
-    h_injectorData[injNum][6][0]=.1;h_injectorData[injNum][6][1]=0.1;h_injectorData[injNum][6][2]=0.0;//speed jiter ~ ~
-    h_injectorData[injNum][7][0]=5;h_injectorData[injNum][7][1]=5;h_injectorData[injNum][7][2]=5;//centrality of rnd distribution speed dt tu ~
-*/
+
+
     //if (but1){printf (" wandPos[0 ,1,2] wandVec[0,1,2] %f %f %f    %f %f %f \n", wandPos[0],wandPos[1],wandPos[2],wandVec[0],wandVec[1],wandVec[2]);}
     // load starcave wall reflectors
    // h_reflectorData[0][0][0] = loadStarcaveWalls(1);
@@ -2783,11 +2677,6 @@ void ParticleDreams::scene_data_1_host()
         //::user->home();
         //printf( "in start sean3 \n");
         if (DEBUG_PRINT >0)printf("scene0Start \n");
-        /*if ((SOUND_SERV ==1)&& (::host->root() == 1))
-        {
-            audioPlay(dan_5min_ostinato,1.0);audioGain(dan_5min_ostinato,0.5);
-                    
-        }*/
         if (soundEnabled)
         {ambient_sound_start_data_1();
         //	dan_5min_ostinato.setGain(0.5);
@@ -2837,18 +2726,7 @@ void ParticleDreams::scene_data_1_host()
 				injectorSetSpeedJitter (injNum, 0.03, 0,  0,  axisUpZ);
 				injectorSetSpeedCentrality (injNum, 5, 5,  5,  axisUpZ);
 
-/*	
-    h_injectorData[injNum][1][0]=2;h_injectorData[injNum][1][1]=1.0;// type, injection ratio ie streem volume, ~
-    h_injectorData[injNum][2][0]=0;h_injectorData[injNum][2][1]=ftToM(0.1);h_injectorData[injNum][2][2]=0;//x,y,z position
-    h_injectorData[injNum][3][0]=0.02 * (sin(time_in_sean*2*M_PI));h_injectorData[injNum][3][1]=0.5;h_injectorData[injNum][3][2]=0.02 * (cos(time_in_sean*2*M_PI));//x,y,z velocity
-    //h_injectorData[injNum][3][0]=0.02 *0.0;h_injectorData[injNum][3][1]=10;h_injectorData[injNum][3][2]=0.02 * -1;//x,y,z velocity
-	
-    h_injectorData[injNum][4][0]=0.03;h_injectorData[injNum][4][1]=0.03;h_injectorData[injNum][4][2]=0.03;//x,y,z size
-    h_injectorData[injNum][5][0]=0.0000;h_injectorData[injNum][5][1]=0.00000;h_injectorData[injNum][5][2]=0.000;//t,u,v jiter v not implimented = speed 
-    //h_injectorData[injNum][5][0]=0.000;h_injectorData[injNum][5][1]=0.000;h_injectorData[injNum][5][2]=0.000;//t,u,v jiter v not implimented = speed 
-    h_injectorData[injNum][6][0]= .03;h_injectorData[injNum][6][1]=0.0;h_injectorData[injNum][6][2]=0.0;//speed jiter ~ ~
-    h_injectorData[injNum][7][0]=5;h_injectorData[injNum][7][1]=5;h_injectorData[injNum][7][2]=5;//centrality of rnd distribution speed dt tu ~
-*/
+
     int reflect_on;
     reflect_on =0;
     float speed= 1.0/30; //one rotation every 
@@ -2907,15 +2785,7 @@ void ParticleDreams::scene_data_1_host()
 		 reflectorSetDamping ( reflNum ,  0.4);
 		 reflectorSetNoTraping ( reflNum , 0);
 	
-   /*
-    h_reflectorData[reflNum ][0][0]=reflect_on;h_reflectorData[reflNum ][0][1]=0;// type, age ie colormod,, ~  0 is off 1 is plane reflector
-    h_reflectorData[reflNum ][1][0]=0;    h_reflectorData[reflNum ][1][1]= 0.0;h_reflectorData[reflNum ][1][2]=0;//x,y,z position
-    h_reflectorData[reflNum ][2][0]=0.0;  h_reflectorData[reflNum ][2][1]=1;    h_reflectorData[reflNum ][2][2]=0;//x,y,z normal
-    h_reflectorData[reflNum ][3][0]=ftToM(10.00); h_reflectorData[reflNum ][3][1]=0.00; h_reflectorData[reflNum ][3][2]=0;//reflector radis ,~,~ 
-    h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implimented = speed 
-    h_reflectorData[reflNum ][5][0]= 0.4; h_reflectorData[reflNum ][5][1]=0.0;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
-    h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
-*/	
+ 
     reflNum = 2;
 //BOB XFORM THIS
     float x = wandPos[0];
@@ -2942,16 +2812,7 @@ void ParticleDreams::scene_data_1_host()
 		 reflectorSetDamping ( reflNum , 1);
 		 reflectorSetNoTraping ( reflNum , 1);
 	
- /*
-    h_reflectorData[reflNum ][0][0]=but2;h_reflectorData[reflNum ][0][1]=1;// type, age ie colormod, ~  0 is off 1 is plane reflector  0 is off 1 is plane reflector
-    h_reflectorData[reflNum ][1][0]=x;    h_reflectorData[reflNum ][1][1]= y;h_reflectorData[reflNum ][1][2]=z;//x,y,z position
-    h_reflectorData[reflNum ][2][0]=dx;  h_reflectorData[reflNum ][2][1]=dy;    h_reflectorData[reflNum ][2][2]=dz;//x,y,z normal
-    h_reflectorData[reflNum ][3][0]=ftToM(0.5); h_reflectorData[reflNum ][3][1]=0.00; h_reflectorData[reflNum ][3][2]=0;//reflector radis ,~,~ 
-    h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implimented = speed 
-    h_reflectorData[reflNum ][5][0]= 1; h_reflectorData[reflNum ][5][1]= 1.00;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
-    h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
-     
-*/
+ 
 
 
     if (soundEnabled)reflSoundUpdate( reflNum);
@@ -3044,7 +2905,7 @@ void ParticleDreams::scene_data_2_host()
 //
 	float speed = 0.2;
 	float YdispFonts = .5;
-	if (_TargetSystem.compare("CAVE2") == 0)YdispFonts = 0;
+	if (_TargetSystem.compare("Cave2") == 0)YdispFonts = 0;
 	loadInjFountsFrScr(0 ,YdispFonts,0,speed);// axisyup
  
 	
@@ -3079,15 +2940,7 @@ void ParticleDreams::scene_data_2_host()
 		 reflectorSetDamping ( reflNum , 1);
 		 reflectorSetNoTraping ( reflNum , 1);
 	
-/*
-    h_reflectorData[reflNum ][0][0]=but2;h_reflectorData[reflNum ][0][1]=1;// type, age ie colormod, ~  0 is off 1 is plane reflector  0 is off 1 is plane reflector
-    h_reflectorData[reflNum ][1][0]=x;    h_reflectorData[reflNum ][1][1]= y;h_reflectorData[reflNum ][1][2]=z;//x,y,z position
-    h_reflectorData[reflNum ][2][0]=dx;  h_reflectorData[reflNum ][2][1]=dy;    h_reflectorData[reflNum ][2][2]=dz;//x,y,z normal
-    h_reflectorData[reflNum ][3][0]=ftToM(0.5); h_reflectorData[reflNum ][3][1]=0.00; h_reflectorData[reflNum ][3][2]=0;//reflector radis ,~,~ 
-    h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implimented = speed 
-    h_reflectorData[reflNum ][5][0]= 1; h_reflectorData[reflNum ][5][1]= 1.00;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
-    h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
-*/
+
 	int reflectOn;
 	if (time_in_sean > 15)
 		{
@@ -3121,15 +2974,7 @@ void ParticleDreams::scene_data_2_host()
 		 reflectorSetDamping ( reflNum , 1);
 		 reflectorSetNoTraping ( reflNum , 1);
 	
-/*		
-		h_reflectorData[reflNum ][0][0]=reflectOn;h_reflectorData[reflNum ][0][1]=1;// type, age ie colormod, ~  0 is off 1 is plane reflector  0 is off 1 is plane reflector
-		h_reflectorData[reflNum ][1][0]=0;    h_reflectorData[reflNum ][1][1]= 0;h_reflectorData[reflNum ][1][2]=0;//x,y,z position
-		h_reflectorData[reflNum ][2][0]=0 + dvx;  h_reflectorData[reflNum ][2][1]=1 + dvy;    h_reflectorData[reflNum ][2][2]= -1 +dvz;//x,y,z normal
-		h_reflectorData[reflNum ][3][0]=1; h_reflectorData[reflNum ][3][1]=0.00; h_reflectorData[reflNum ][3][2]=0;//reflector radis ,~,~ 
-		h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implimented = speed 
-		h_reflectorData[reflNum ][5][0]= 1; h_reflectorData[reflNum ][5][1]= 1.00;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
-		h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
-*/
+
 //large floor reflector
 		  	reflectorSetMaxnumNum( 3);// number of reflectors ~ ~   ~ means dont care
 		reflNum = 3;
@@ -3138,21 +2983,12 @@ void ParticleDreams::scene_data_2_host()
 		 //reflectorSetMaxnumNum( maxNumber);
 		 reflectorSetType ( reflNum , reflectOn);// 0 os off, 1 is plain
 		 //reflectorSetDifaults( reflNum );
-		 reflectorSetPosition ( reflNum ,0, 1.5,  0, axisUpZ);
+		 reflectorSetPosition ( reflNum ,0, 0,  0, axisUpZ);
 		 reflectorSetNormal( reflNum , 0, 1.0,  0, axisUpZ);
 		 reflectorSetSize ( reflNum , 30, axisUpZ);
-		 reflectorSetDamping ( reflNum , .5);
+		 reflectorSetDamping ( reflNum , 1.0);
 		 reflectorSetNoTraping ( reflNum , 1);
 		
-/*		
-		h_reflectorData[reflNum ][0][0]=reflectOn;h_reflectorData[reflNum ][0][1]=1;// type, age ie colormod, ~  0 is off 1 is plane reflector  0 is off 1 is plane reflector
-		h_reflectorData[reflNum ][1][0]=0;    h_reflectorData[reflNum ][1][1]= 0;h_reflectorData[reflNum ][1][2]=0;//x,y,z position
-		h_reflectorData[reflNum ][2][0]=0;  h_reflectorData[reflNum ][2][1]=1;    h_reflectorData[reflNum ][2][2]=0;//x,y,z normal
-		h_reflectorData[reflNum ][3][0]=30; h_reflectorData[reflNum ][3][1]=0.00; h_reflectorData[reflNum ][3][2]=0;//reflector radis ,~,~ 
-		h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implimented = speed 
-		h_reflectorData[reflNum ][5][0]= 1; h_reflectorData[reflNum ][5][1]= 1.00;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
-		h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
-*/
 
 
 
@@ -3205,16 +3041,18 @@ void ParticleDreams::scene_data_3_host()
 		//::user->pass(43200/2.0);
 		//printf( " time %f \n", ::user->get_t());
 
-		/*if ((SOUND_SERV ==1)&& (::host->root() == 1))
-		{
-			audioLoop(rain_at_sea,1);audioPlay(rain_at_sea,1.0);audioGain(rain_at_sea,1);
-			audioLoop(texture_17_swirls3,1);audioPlay(texture_17_swirls3,1.0);audioGain(texture_17_swirls3,1);
 
-		}*/
 
 		if (soundEnabled)
 		{ambient_sound_start_data_3();
 		//	rain_at_sea.setLoop(true);
+		#ifdef OAS_SOUND
+		//TODOSound		
+			texture_12.fade(0,1);// kludge to stop sound from injector on skip to end
+		#endif
+		#ifdef OMICRON_SOUND
+			_texture_12Instance->fade(0,1);// kludge to stop sound from injector on skip to end
+		#endif
 		//	rain_at_sea.setGain(1);
 		//	rain_at_sea.play(1);
 
@@ -3301,22 +3139,7 @@ void ParticleDreams::scene_data_3_host()
 
 // floor reflector
 
-/*
-	int reflNum =1;
-	h_reflectorData[0][0][0]=1;
 
-    h_reflectorData[reflNum ][0][0]=1;h_reflectorData[reflNum ][0][1] =1;// type, age ie colormod, ~  0 is off 1 is plane reflector  0 is off 1 is plane reflector
-    h_reflectorData[reflNum ][1][0]=0;    h_reflectorData[reflNum ][1][1]= 0;h_reflectorData[reflNum ][1][2]=0;//x,y,z position
-    h_reflectorData[reflNum ][2][0]=0;  h_reflectorData[reflNum ][2][1]=1;    h_reflectorData[reflNum ][2][2]=0;//x,y,z normal
-    h_reflectorData[reflNum ][3][0]=10; h_reflectorData[reflNum ][3][1]=0.00; h_reflectorData[reflNum ][3][2]=0;//reflector radis ,~,~ 
-    h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implimented = speed 
-    h_reflectorData[reflNum ][5][0]= 1; h_reflectorData[reflNum ][5][1]= 1.00;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
-    h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
-
-
- 
-
-*/
 				injectorSetType (injNum, 1);		
 				injectorSetInjtRatio (injNum, but2*4.0);
 				injectorSetPosition (injNum, wandPos[0], wandPos[1],  wandPos[2],  axisUpZ);
@@ -3325,17 +3148,7 @@ void ParticleDreams::scene_data_3_host()
 				injectorSetSpeedDist (injNum, 0.01, 0.01,  0,  axisUpZ);
 				injectorSetSpeedJitter (injNum, 0.1, 0,  0,  axisUpZ);
 				injectorSetSpeedCentrality (injNum, 5, 5,  5,  axisUpZ);
-/*
-    h_injectorData[injNum][1][0]=1;h_injectorData[injNum][1][1]=but2*4.0;// type, injection ratio ie streem volume, ~
-    h_injectorData[injNum][2][0]=wandPos[0];h_injectorData[injNum][2][1]=wandPos[1];h_injectorData[injNum][2][2]=wandPos[2];//x,y,z position
-    h_injectorData[injNum][3][0]=wandVec[0];h_injectorData[injNum][3][1]=wandVec[1];h_injectorData[injNum][3][2]=wandVec[2];//x,y,z velocity direction
-    //h_injectorData[injNum][3][0]=0.02 * (sin(anim));h_injectorData[injNum][3][1]=0;h_injectorData[injNum][3][2]=0.02 * (cos(anim));//x,y,z velocity
-    //h_injectorData[injNum][3][0]=0.02 *0.0;h_injectorData[injNum][3][1]=0;h_injectorData[injNum][3][2]=0.02 * -1;//x,y,z velocity
-    h_injectorData[injNum][4][0]=0.00;h_injectorData[injNum][4][1]=0.00;h_injectorData[injNum][4][2]=.0;//x,y,z size
-    h_injectorData[injNum][5][0]=0.010;h_injectorData[injNum][5][1]=0.010;h_injectorData[injNum][5][2]=0.000;//t,u,v jiter v not implimented = speed 
-    h_injectorData[injNum][6][0]=0.1;h_injectorData[injNum][6][1]=0.0;h_injectorData[injNum][6][2]=0.0;//speed jiter ~ ~
-    h_injectorData[injNum][7][0]=5;h_injectorData[injNum][7][1]=5;h_injectorData[injNum][7][2]=5;//centrality of rnd distribution speed dt tu ~
- */
+
     //
     if (but2){if (DEBUG_PRINT >0) {printf(" wandPos[0 ,1,2] wandVec[0,1,2] %f %f %f    %f %f %f \n", wandPos[0],wandPos[1],wandPos[2],wandVec[0],wandVec[1],wandVec[2]);}}
     if (soundEnabled)injSoundUpdate(injNum);
@@ -3346,7 +3159,7 @@ void ParticleDreams::scene_data_3_host()
 
 void ParticleDreams::scene_data_4_host()
 {
-    //educational
+    //educational stub fro firtherDev
 
     draw_water_sky =0;
     // particalsysparamiteres--------------
@@ -3360,25 +3173,12 @@ void ParticleDreams::scene_data_4_host()
     static float time_in_sean;
     time_in_sean = time_in_sean + 1.0/TARGET_FR_RATE;
 	static float in_rot_time = 0;
-		    static int subsceanStep;
-    			static int suboldseanStep;
-    			static int subseanCnangeTo;
 
     // reload  rnd < max_age in to pdata
 
     if (scene4Start == 1)
 		{
-		    subsceanStep =-1;
-    			suboldseanStep  = -1;
-    			subseanCnangeTo = -1;
 
-		//size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
-		//pdata_init_age( max_age);
-		//pdata_init_velocity(-10000, -10000, -10000);
-		//pdata_init_rand();
-		//cuMemcpyHtoD(d_particleData, h_particleData, size);
-
-		//::user->home();
 		_injObjSwitchFace->setAllChildrenOff();
 		_injObjSwitchLine->setAllChildrenOff();
 		_refObjSwitchLine->setAllChildrenOn();
@@ -3387,27 +3187,19 @@ void ParticleDreams::scene_data_4_host()
 		injectorSetMaxnumNum(0);// turn off all injectors
 #ifdef OAS_SOUND
 		//TODOSound		
-		texture_12.fade(0, 1);// cludge to stop shound from injector on skip to end
+		texture_12.fade(0, 1);// cludge to stop sound from injector on skip to end
 #endif
 #ifdef OMICRON_SOUND
-		_texture_12Instance->fade(0, 1);// cludge to stop shound from injector on skip to end
+		_texture_12Instance->fade(0, 1);// cludge to stop sound from injector on skip to end
 
 
 #endif
-		_EdSecSwitchSlid1->setAllChildrenOn();
 		in_rot_time = 10;
 
 /*		_EdSecSwitchAxis->setAllChildrenOn();
 */	
 		if (DEBUG_PRINT >0)printf( "in start sean4 \n");
 		time_in_sean =0 * TARGET_FR_RATE;
-		/*if ((SOUND_SERV ==1)&& (::host->root() == 1))
-		{
-
-			audioLoop(dan_rain_at_sea_loop,1);
-			audioPlay(dan_rain_at_sea_loop,1.0);audioGain(dan_rain_at_sea_loop,1.0);
-			//printf(" playcode exicuted\n");
-		}*/
 
 		if (soundEnabled)
 		{ambient_sound_start_data_4();
@@ -3431,50 +3223,13 @@ void ParticleDreams::scene_data_4_host()
     // creates seanCnangeTo varable 
     
     
-    subsceanStep = fract_of_max_time_in_sean * 20;//10 steps	float rotTime =30;
-
-    if (subsceanStep > suboldseanStep) { subseanCnangeTo = subsceanStep;suboldseanStep = subsceanStep;} else {subseanCnangeTo =-1;}
-    if (subseanCnangeTo !=-1) std::cout << "subseanCnangeTo " << subseanCnangeTo << std::endl; 
+   
     
-    
-    //std::cout << "time_in_sean , maxTime_in_sean , fract_of_max_time_in_sean , fract_of_max_time_in_sean " << time_in_sean << maxTime_in_sean << fract_of_max_time_in_sean << fract_of_max_time_in_sean << std::endl;
-    //printf ("time_in_sean 4 %f\n",time_in_sean);
-    if (DEBUG_PRINT >0)printf( "in sean4 \n");
-    //printf( "in sean4 \n");
-/*	static int oldGravity =0;
-	int gravityChanged;
-    gravity = _gravityRV->getValue();
-	if (gravity != oldGravity) {gravityChanged =1;} else {gravityChanged =0;}
+   if (DEBUG_PRINT >0)printf( "in sean4 \n");
 
-	if (gravityChanged){turnAllEduSlidsOff(); _EdSecSwitchSlid2->setAllChildrenOn();}
-	oldGravity = gravity;
-
-	int reflectorOnChanged;
-	static int oldReflectorOn =0;
-	int reflectorOn = (int) _reflectorCB->getValue();
-	if (reflectorOn != oldReflectorOn ) {reflectorOnChanged =1;} else {reflectorOnChanged =0;}
-	if (reflectorOnChanged &&  (reflectorOn ==1)){turnAllEduSlidsOff(); _EdSecSwitchSlid3->setAllChildrenOn();std::cout << "turning slide3 on \n";}
-	oldReflectorOn = reflectorOn;
-*/
     gravity = _gravityRV->getValue();
 	//std::cout << " sin refl grav " << _rotateInjCB->getValue() << " " <<  _reflectorCB->getValue() << " " << _gravityRV->getValue() << "\n";
-	turnAllEduSlidsOff();
-	if (_rotateInjCB->getValue())
-		{
-		if ((_gravityRV->getValue() >= .0001) && ( _reflectorCB->getValue() == 1)){ _EdSecSwitchSlid6->setAllChildrenOn() ;}
-		if ((_gravityRV->getValue() >= .0001) && (! _reflectorCB->getValue())){_EdSecSwitchSlid5->setAllChildrenOn()    ;}
-		if ((_gravityRV->getValue() < .0001) && (! _reflectorCB->getValue())){_EdSecSwitchSlid4->setAllChildrenOn()    ;}
-		if ((_gravityRV->getValue() < .0001) && ( _reflectorCB->getValue())){_EdSecSwitchSlid8->setAllChildrenOn()    ;}// need to change new slide
-
-		}
-	else
-		{
-		if ((_gravityRV->getValue() >= .0001) && ( _reflectorCB->getValue() == 1)){_EdSecSwitchSlid3->setAllChildrenOn()    ;}
-		if ((_gravityRV->getValue() >= .0001) && (! _reflectorCB->getValue())){ _EdSecSwitchSlid2->setAllChildrenOn()   ;}
-		if (( _gravityRV->getValue() < .0001) && (! _reflectorCB->getValue())){_EdSecSwitchSlid1->setAllChildrenOn()    ;}
-		if (( _gravityRV->getValue() < .0001) && (_reflectorCB->getValue())){_EdSecSwitchSlid7->setAllChildrenOn()    ;}// need to make a new slide
-
-		}
+	
 
 
 
@@ -3535,15 +3290,7 @@ void ParticleDreams::scene_data_4_host()
 				injectorSetSpeedJitter (injNum, 0.2, 0,  0,  axisUpZ);
 				injectorSetSpeedCentrality (injNum, 2, 2,  2,  axisUpZ);
 
-/*    
-    h_injectorData[injNum][1][0]=2;h_injectorData[injNum][1][1]=1.0;// type, injection ratio ie streem volume, ~
-    h_injectorData[injNum][2][0]=0;h_injectorData[injNum][2][1]=2;h_injectorData[injNum][2][2]= -1.5;//x,y,z position
-    h_injectorData[injNum][3][0]=xvos;h_injectorData[injNum][3][1]=0.00;h_injectorData[injNum][3][2]=zvos;//x,y,z velocity drection
-	h_injectorData[injNum][4][0]=ftToM(0.25);h_injectorData[injNum][4][1]=ftToM(0.25);h_injectorData[injNum][4][2]=ftToM(0.25);//x,y,z size
-	h_injectorData[injNum][5][0]=0.000;h_injectorData[injNum][5][1]=0.000;h_injectorData[injNum][5][2]=0.000;//t,u,v jiter v not implimented = speed 
-	h_injectorData[injNum][6][0]=0.2000;h_injectorData[injNum][6][1]=0.0;h_injectorData[injNum][6][2]=0.0;//speed jiter ~ ~
-	h_injectorData[injNum][7][0]=2;h_injectorData[injNum][7][1]=2;h_injectorData[injNum][7][2]=2;//centrality of rnd distribution speed dt tu ~
-*/
+
  
 
     //h_reflectorData[0][0][0] =1;// number of reflectors ~ ~   ~ means dont care
@@ -3575,16 +3322,7 @@ void ParticleDreams::scene_data_4_host()
 		 reflectorSetDamping ( reflNum , 1);
 		 reflectorSetNoTraping ( reflNum , 1);
 	
-/*
-    h_reflectorData[reflNum ][0][0]=but2;h_reflectorData[reflNum ][0][1] =1;// type, age ie colormod, ~  0 is off 1 is plane reflector  0 is off 1 is plane reflector
-    h_reflectorData[reflNum ][1][0]=x;    h_reflectorData[reflNum ][1][1]= y;h_reflectorData[reflNum ][1][2]=z;//x,y,z position
-    h_reflectorData[reflNum ][2][0]=dx;  h_reflectorData[reflNum ][2][1]=dy;    h_reflectorData[reflNum ][2][2]=dz;//x,y,z normal
-    h_reflectorData[reflNum ][3][0]=ftToM(0.5); h_reflectorData[reflNum ][3][1]=0.00; h_reflectorData[reflNum ][3][2]=0;//reflector radis ,~,~ 
-    h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implimented = speed 
-    h_reflectorData[reflNum ][5][0]= 1; h_reflectorData[reflNum ][5][1]= 1.00;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
-    h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
 
- */  
 
     if (soundEnabled) reflSoundUpdate(reflNum);
 
@@ -3608,15 +3346,7 @@ void ParticleDreams::scene_data_4_host()
 		 reflectorSetNoTraping ( reflNum , 1);
 	
     
-/*
-    h_reflectorData[reflNum ][0][0]=floorReflectOn;h_reflectorData[reflNum ][0][1] =1;// type, age ie colormod, ~  0 is off 1 is plane reflector  0 is off 1 is plane reflector
-    h_reflectorData[reflNum ][1][0]=0;    h_reflectorData[reflNum ][1][1]= 0;h_reflectorData[reflNum ][1][2]=0;//x,y,z position
-    h_reflectorData[reflNum ][2][0]=0;  h_reflectorData[reflNum ][2][1]=1;    h_reflectorData[reflNum ][2][2]=0;//x,y,z normal
-    h_reflectorData[reflNum ][3][0]=10; h_reflectorData[reflNum ][3][1]=0.00; h_reflectorData[reflNum ][3][2]=0;//reflector radis ,~,~ 
-    h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implimented = speed 
-    h_reflectorData[reflNum ][5][0]= 1; h_reflectorData[reflNum ][5][1]= 1.00;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
-    h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
-*/
+
 
 
     scene4Start =0;
@@ -3730,7 +3460,7 @@ void ParticleDreams::scene_data_4_clean_up()
 	reflectorSetMaxnumNum( 0);
 	injectorSetMaxnumNum(0);
 
-	turnAllEduSlidsOff();
+	
 	std::cout << "scene_data_4_clean_up() " << std::endl;
 
 	if (soundEnabled)
@@ -3962,11 +3692,21 @@ void ParticleDreams::ambient_sound_start_data_1()
 	}
 void ParticleDreams::ambient_sound_start_data_2()
 	{
+	
+	#ifdef OAS_SOUND
+		//TODOSound		
+			texture_12.fade(0,1);// kludge to stop sound from injector on skip to end
+	#endif
+	#ifdef OMICRON_SOUND
+			_texture_12Instance->fade(0,1);// kludge to stop sound from injector on skip to end
+	#endif
+
 	#ifdef OAS_SOUND
 	
 		harmonicAlgorithm.setGain(1);
 		harmonicAlgorithm.setLoop(1);
 		harmonicAlgorithm.play(1);
+		
 	 #endif
 	#ifdef OMICRON_SOUND
 	//ToDoSound
@@ -4121,7 +3861,7 @@ void ParticleDreams::texture_swirls_setPosition(int injNum)
 	 
 	#ifdef OMICRON_SOUND
 	omicron::Vector3f injPos2(x,y,z);
-	std::cout <<" injPos2 " << injPos2 << "\n";
+	//std::cout <<" injPos2 " << injPos2 << "\n";
 	
 
 	_texture_17_swirls3Instance->setPosition(injPos2);
@@ -4151,165 +3891,9 @@ osg::Geometry* ParticleDreams::createQuad()
 	return quad.get();
 	}
 
-void ParticleDreams::turnAllEduSlidsOff()
-	{
-       _EdSecSwitchSlid1->setAllChildrenOff();
-       _EdSecSwitchSlid2->setAllChildrenOff();
-       _EdSecSwitchSlid3->setAllChildrenOff();
-       _EdSecSwitchSlid4->setAllChildrenOff();
-       _EdSecSwitchSlid5->setAllChildrenOff();
-       _EdSecSwitchSlid6->setAllChildrenOff();
-       _EdSecSwitchSlid7->setAllChildrenOff();
-       _EdSecSwitchSlid8->setAllChildrenOff();
-	}
-
-void	ParticleDreams::initGeoEdSection()
-{
-
-    osg::Node* tidleSlide1 = NULL;
-    tidleSlide1 = osgDB::readNodeFile(_dataDir + "/models/frameS1.obj");//xyz
-    if(!tidleSlide1){std::cerr << "Error reading /models/frameS1.obj" << std::endl;}
-    osg::Node* tidleSlide2 = NULL;
-    tidleSlide2 = osgDB::readNodeFile(_dataDir + "/models/frameS2.obj");//;xyza
-    if(!tidleSlide2){std::cerr << "Error reading /models/frameS2.obj" << std::endl;}
-    osg::Node* tidleSlide3 = NULL;
-    tidleSlide3 = osgDB::readNodeFile(_dataDir + "/models/frameS3.obj");//xyzar
-    if(!tidleSlide3){std::cerr << "Error reading /models/frameS3.obj" << std::endl;}
-    osg::Node* tidleSlide4 = NULL;
-    tidleSlide4 = osgDB::readNodeFile(_dataDir + "/models/frameS4.obj");//sinxyz
-    if(!tidleSlide4){std::cerr << "Error reading /models/frameS4.obj" << std::endl;}
-    osg::Node* tidleSlide5 = NULL;
-    tidleSlide5 = osgDB::readNodeFile(_dataDir + "/models/frameS5.obj");//sinxyza
-    if(!tidleSlide5){std::cerr << "Error reading /models/frameS5.obj" << std::endl;}
-    osg::Node* tidleSlide6 = NULL;
-    tidleSlide6 = osgDB::readNodeFile(_dataDir + "/models/frameS6.obj");//sin xyzar
-    if(!tidleSlide6){std::cerr << "Error reading /models/frameS6.obj" << std::endl;}
-
-    osg::Node* tidleSlide7 = NULL;
-    tidleSlide7 = osgDB::readNodeFile(_dataDir + "/models/frameS7.obj");//sin xyzr
-    if(!tidleSlide7){std::cerr << "Error reading /models/frameS7.obj" << std::endl;}
-    osg::Node* tidleSlide8 = NULL;
-    tidleSlide8 = osgDB::readNodeFile(_dataDir + "/models/frameS8.obj");// xyz
-    if(!tidleSlide8){std::cerr << "Error reading /models/frameS8.obj" << std::endl;}
-
-    std::cout << " loading slides " << "\n" ;
-    //creat switchnode
-    _EdSecSwitchSlid1 = new osg::Switch;
-    _EdSecSwitchSlid2 = new osg::Switch;
-    _EdSecSwitchSlid3 = new osg::Switch;
-    _EdSecSwitchSlid4 = new osg::Switch;
-    _EdSecSwitchSlid5 = new osg::Switch;
-    _EdSecSwitchSlid6 = new osg::Switch;
-    _EdSecSwitchSlid7 = new osg::Switch;
-    _EdSecSwitchSlid8 = new osg::Switch;
-    ParticleDreams::turnAllEduSlidsOff();
-
-    // creat fixes xform on slides
-    osg::Matrix ms;
-    osg::MatrixTransform * mtSlide1 = new osg::MatrixTransform();
-    osg::MatrixTransform * mtSlide2 = new osg::MatrixTransform();
-    osg::MatrixTransform * mtSlide3 = new osg::MatrixTransform();
-    osg::MatrixTransform * mtSlide4 = new osg::MatrixTransform();
-    osg::MatrixTransform * mtSlide5 = new osg::MatrixTransform();
-    osg::MatrixTransform * mtSlide6 = new osg::MatrixTransform();
-    osg::MatrixTransform * mtSlide7 = new osg::MatrixTransform();
-    osg::MatrixTransform * mtSlide8 = new osg::MatrixTransform();
-    //matrices for interdediat computations
-    osg::Matrix mss;
-    osg::Matrix msr;
-
-    osg::Matrix msrh;
-    osg::Matrix mst;
-
-    osg::Matrix mresult;
 
 
 
-    //    height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -802  ; originY= 1657  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
-    int i =1;
-   // std::cout << " i, _PhScAr[i].originX  ,_PhScAr[i].originY _PhScAr[i].h "<< i<< " " << _PhScAr[i].originX  << " " << _PhScAr[i].originY << " " << _PhScAr[i].h << "\n";
-
-    mst.makeTranslate(osg::Vec3(_PhScAr[i].originX,_PhScAr[i].originY +150,450));
-    // mst.makeTranslate(osg::Vec3(-802,1657,450));
-    ms.makeScale(osg::Vec3(40.0,25,1.0));
-    msr.makeRotate(osg::DegreesToRadians(90.0), osg::Vec3(1,0,0));
-    msrh.makeRotate(osg::DegreesToRadians(25.0), osg::Vec3(0,0,1));
-    msrh.makeRotate(osg::DegreesToRadians(_PhScAr[i].h), osg::Vec3(0,0,1));
-
-
-
-    mresult.set ( ms*msr*msrh * mst);
-    mtSlide1->setMatrix(mresult);
-    mtSlide2->setMatrix(mresult);
-    mtSlide3->setMatrix(mresult);
-    mtSlide4->setMatrix(mresult);
-    mtSlide5->setMatrix(mresult);
-    mtSlide6->setMatrix(mresult);
-    mtSlide7->setMatrix(mresult);
-    mtSlide8->setMatrix(mresult);
-
-
-    //atatch tidleSlide to matrix transform
-    mtSlide1->addChild(tidleSlide1);
-    mtSlide2->addChild(tidleSlide2);
-    mtSlide3->addChild(tidleSlide3);
-    mtSlide4->addChild(tidleSlide4);
-    mtSlide5->addChild(tidleSlide5);
-    mtSlide6->addChild(tidleSlide6);
-    mtSlide7->addChild(tidleSlide7);
-    mtSlide8->addChild(tidleSlide8);
-
-
-    // atatch scaled model to switch 
-    _EdSecSwitchSlid1->addChild(mtSlide1);
-    _EdSecSwitchSlid2->addChild(mtSlide2);
-    _EdSecSwitchSlid3->addChild(mtSlide3);
-    _EdSecSwitchSlid4->addChild(mtSlide4);
-    _EdSecSwitchSlid5->addChild(mtSlide5);
-    _EdSecSwitchSlid6->addChild(mtSlide6);
-    _EdSecSwitchSlid7->addChild(mtSlide7);
-    _EdSecSwitchSlid8->addChild(mtSlide8);
-
-    turnAllEduSlidsOff(); 
-
-    // atatch switch to scene
-
-
-    // addTidle screene.
-    SceneObject * so = new SceneObject("EdSlide1",false,false,false,false,false);
-    so->addChild(_EdSecSwitchSlid1);
-    so->addChild(_EdSecSwitchSlid2);
-    so->addChild(_EdSecSwitchSlid3);
-    so->addChild(_EdSecSwitchSlid4);
-    so->addChild(_EdSecSwitchSlid5);
-    so->addChild(_EdSecSwitchSlid6);
-    so->addChild(_EdSecSwitchSlid7);
-    so->addChild(_EdSecSwitchSlid8);
-    _EdSceneObject = so;
-
-    PluginHelper::registerSceneObject(so,"ParticleDreams");
-
-    so->setPosition(osg::Vec3(0,0,0));
-
-    so->setScale(1);
-    so->attachToScene();
-    so->setNavigationOn(true);
-
-}
-
-void ParticleDreams::cleanupGeoEdSection()
-{
-    _EdSecSwitchSlid1 = NULL;
-    _EdSecSwitchSlid2 = NULL;
-    _EdSecSwitchSlid3 = NULL;
-    _EdSecSwitchSlid4 = NULL;
-    _EdSecSwitchSlid5 = NULL;
-    _EdSecSwitchSlid6 = NULL;
-    _EdSecSwitchSlid7 = NULL;
-    _EdSecSwitchSlid8 = NULL;
-
-    delete _EdSceneObject;
-}
 
 void ParticleDreams::injectorSetMaxnumNum(int maxNumber)
 	{
