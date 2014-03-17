@@ -81,6 +81,8 @@ bool MicrobePointLineObject::setGraph(std::string tableSuffix, bool expandAxis)
 
     std::string querystr = queryss.str();
 
+    std::cerr << querystr << std::endl;
+
     if(ComController::instance()->isMaster())
     {
 	if(_conn)
@@ -105,7 +107,8 @@ bool MicrobePointLineObject::setGraph(std::string tableSuffix, bool expandAxis)
 		{
 		    type = SMARR;
 		}
-		else if(condition == "ulcerous colitis")
+		//else if(condition == "ulcerous colitis")
+		else if(condition == "UC")
 		{
 		    type = UC;
 		}

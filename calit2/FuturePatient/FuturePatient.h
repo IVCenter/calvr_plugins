@@ -93,7 +93,20 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         std::map<std::string,int> _strainIdMap;
         std::vector<time_t> _microbeTestTime;
 
-        std::map<int,std::vector<std::string> > _patientMicrobeTestMap;
+        struct MicrobeTableInfo
+        {
+            std::string microbeSuffix;
+            std::string measureSuffix;
+            std::map<int,std::vector<std::string> > testMap;
+            std::map<int,std::vector<time_t> > testTimeMap;
+            std::vector<std::string> microbeList;
+            std::vector<int> microbeIDList;
+            std::map<std::string,std::map<std::string,struct PhenoStats > > statsMap;
+        };
+
+        std::vector<MicrobeTableInfo*> _microbeTableList;
+
+        /*std::map<int,std::vector<std::string> > _patientMicrobeTestMap;
         std::map<int,std::vector<time_t> > _patientMicrobeTestTimeMap;
 
         std::map<int,std::vector<std::string> > _patientMicrobeV2TestMap;
@@ -102,7 +115,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         std::vector<std::string> _microbeList;
         std::vector<int> _microbeIDList;
         std::vector<std::string> _microbeV2List;
-        std::vector<int> _microbeV2IDList;
+        std::vector<int> _microbeV2IDList;*/
 
         cvr::SubMenu * _chartMenu;
         cvr::SubMenu * _presetMenu;
@@ -134,8 +147,11 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuCheckbox * _sMicrobeGroupPatients;
         cvr::MenuList * _sMicrobePhenotypes;
         cvr::MenuButton * _sMicrobePhenotypeLoad;
+        cvr::SubMenu * _sMicrobePresetMenu;
+        cvr::MenuButton * _sMicrobeBFragilis;
 
         cvr::SubMenu * _microbeSpecialMenu;
+        cvr::MenuList * _microbeRegionList;
         cvr::MenuButton * _microbeLoadAverage;
         cvr::MenuButton * _microbeLoadHealthyAverage;
         cvr::MenuButton * _microbeLoadCrohnsAverage;
@@ -182,8 +198,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         std::vector<MicrobeGraphObject *> _microbeGraphList;
 
-        std::map<std::string,std::map<std::string,struct PhenoStats > > _microbeStatsMap;
-        std::map<std::string,std::map<std::string,struct PhenoStats > > _microbeV2StatsMap;
+        //std::map<std::string,std::map<std::string,struct PhenoStats > > _microbeStatsMap;
+        //std::map<std::string,std::map<std::string,struct PhenoStats > > _microbeV2StatsMap;
 
         std::string _layoutDirectory;   
         cvr::MultiListenSocket * _mls;

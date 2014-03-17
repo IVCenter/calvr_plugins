@@ -433,15 +433,15 @@ bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string 
     return loadGraphData(valuess.str(), orderss.str(), group, lsOrdering, familyLevel);
 }
 
-bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, std::string tableSuffix, bool group, bool lsOrdering, bool familyLevel)
+bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, std::string region, bool group, bool lsOrdering, bool familyLevel)
 {
     std::stringstream valuess, orderss;
 
-    std::string measurementTable = "Microbe_Measurement";
+    /*std::string measurementTable = "Microbe_Measurement";
     measurementTable += tableSuffix;
 
     std::string microbesTable = "Microbes";
-    microbesTable += tableSuffix;
+    microbesTable += tableSuffix;*/
 
     switch(smgt)
     {
@@ -451,37 +451,60 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int micro
 	    {
 
 		std::string field;
+		std::string condition;
 
 		switch(smgt)
 		{
 		    case SMGT_AVERAGE:
 			field = "average";
+			condition = "ulcerous colitis";
 			_graphTitle = "UC Average";
 			break;
 		    case SMGT_HEALTHY_AVERAGE:
 			field = "average_healthy";
+			condition = "healthy";
 			_graphTitle = "Healthy Average";
 			break;
 		    case SMGT_CROHNS_AVERAGE:
 			field = "average_crohns";
+			condition = "crohn's disease";
 			_graphTitle = "Crohns Average";
 			break;
 		    default:
 			break;
 		}
 
-		if(!familyLevel)
+		std::string regionField;
+
+		if(region == "US")
 		{
-		    valuess << "select * from (select description, phylum, species, " << field << " as value from " << microbesTable << " order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
-		    orderss << "select t.phylum, sum(t.value) as total_value from (select phylum, " << field << " as value from " << microbesTable << " order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
+		    regionField = " and Microbe_Stats.patient_region = \"US\"";
+		}
+		else if(region == "EU")
+		{
+		    regionField = " and Microbe_Stats.patient_region = \"EU\"";
 		}
 		else
 		{
-		    valuess << "select description, phylum, family, sum(value) as value from (select description, phylum, family, " << field << " as value from " << microbesTable << " order by value desc limit " << microbes << ")t group by t.family order by t.phylum, value desc;";
+		    regionField = "";
+		}
+
+		if(!familyLevel)
+		{
+		    //valuess << "select * from (select description, phylum, species, " << field << " as value from " << microbesTable << " order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
+		    valuess << "select Microbes.description, Microbes.phylum, Microbes.species, avg(Microbe_Stats.value) as value from Microbes inner join Microbe_Stats on Microbes.taxonomy_id = Microbe_Stats.taxonomy_id and Microbe_Stats.stat_type = \"average\" and Microbe_Stats.patient_condition = \"" << condition << "\"" << regionField << " group by Microbes.species order by value desc limit " << microbes << ";";
+		    //orderss << "select t.phylum, sum(t.value) as total_value from (select phylum, " << field << " as value from " << microbesTable << " order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
+		    
+		}
+		else
+		{
+		    //valuess << "select description, phylum, family, sum(value) as value from (select description, phylum, family, " << field << " as value from " << microbesTable << " order by value desc limit " << microbes << ")t group by t.family order by t.phylum, value desc;";
+		    //select Microbes.description, Microbes.phylum, Microbes.family, sum(Microbe_Stats.value) as value from Microbes inner join Microbe_Stats on Microbes.taxonomy_id = Microbe_Stats.taxonomy_id and Microbe_Stats.stat_type = "average" and Microbe_Stats.patient_region = "US" and Microbe_Stats.patient_condition = "healthy" group by Microbes.family order by value desc;
+		    valuess << "select Microbes.description, Microbes.phylum, Microbes.family, sum(t.value) as value from (select taxonomy_id, avg(value) as value from Microbe_Stats where patient_condition = \"" << condition << "\"" << regionField << " group by taxonomy_id order by value desc limit " << microbes << ")t inner join Microbes on t.taxonomy_id = Microbes.taxonomy_id group by Microbes.family order by value desc;";
 		}
 		break;
 	    }
-	case SMGT_SRS_AVERAGE:
+	/*case SMGT_SRS_AVERAGE:
 	case SMGT_SRX_AVERAGE:
 	{
 
@@ -511,7 +534,7 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int micro
 	    }
 
 	    break;
-	}
+	}*/
 	default:
 	    return false;
     }

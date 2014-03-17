@@ -56,7 +56,7 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string t
 
     queryss << "select Patient.last_name, Patient.p_condition, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where " << measurementTable << ".taxonomy_id = " << taxid << " order by p_condition, last_name, timestamp;";
 
-    std::cerr << "Query: " << queryss.str() << std::endl;
+    //std::cerr << "Query: " << queryss.str() << std::endl;
 
     struct microbeData * data = NULL;
     int dataSize = 0;
@@ -155,7 +155,6 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string t
 		    }
 		    else if(condition == "UC")
 		    {
-			std::cerr << "Got UC" << std::endl;
 			group = "UC";
 		    }
 		}

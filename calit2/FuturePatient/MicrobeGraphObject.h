@@ -29,7 +29,7 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
         virtual ~MicrobeGraphObject();
 
         bool setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, std::string tableSuffix, bool group = true, bool lsOrdering = true, bool familyLevel = false);
-        bool setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, std::string tableSuffix, bool group = true, bool lsOrdering = true, bool familyLevel = false);
+        bool setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, std::string region, bool group = true, bool lsOrdering = true, bool familyLevel = false);
 
         virtual void objectAdded();
         virtual void objectRemoved();
