@@ -95,7 +95,7 @@ bool MicrobePointLineObject::setGraph(std::string tableSuffix, bool expandAxis)
 	    {
 		std::string condition = res[i]["p_condition"].c_str();
 		patType type;
-		if(condition == "crohn's disease")
+		if(condition == "CD")
 		{
 		    type = CROHNS;
 		}
