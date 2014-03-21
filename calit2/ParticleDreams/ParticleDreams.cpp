@@ -43,6 +43,15 @@ double getTimeInSecs()
     return tv.tv_sec + (tv.tv_usec / 1000000.0);
 }
 
+float lerp(float in,float beginIN,float endIn,float beginOut,float endOut)
+{
+    float pers;
+    float out;
+    pers =   (in - beginIN)/( endIn - beginIN);
+    out = beginOut + pers * (endOut-beginOut);
+    return out;
+}
+
 struct MyComputeBounds : public osg::Drawable::ComputeBoundingBoxCallback
 {
     MyComputeBounds() {}
@@ -66,6 +75,7 @@ ParticleDreams::ParticleDreams()
     _pointerRoll = 0.0;
     _callbackAdded = false;
     _callbackActive = false;
+    _skyTime = 39600.0;
 }
 
 ParticleDreams::~ParticleDreams()
@@ -138,6 +148,8 @@ void ParticleDreams::menuCallback(MenuItem * item)
 	    initPart();
 	    initGeometry();
 	    initSound();
+	    initWater();
+	    setWater(true);
 	}
 	else
 	{
@@ -170,28 +182,49 @@ void ParticleDreams::preFrame()
 
     if(_enable->getValue())
     {
+	// set water shader time
+	double times = PluginHelper::getProgramDuration();
+	if(_waterTimeUni)
+	{
+	    _waterTimeUni->set((float)times);
+	}
+
+	// set water shader light position
+	if(_waterLightUni)
+	{
+	    // TODO: get this from somewhere and advance time
+	    // 11am
+	    osg::Matrix spin, tilt;
+	    tilt.makeRotate(120.0*M_PI/180.0,osg::Vec3(1.0,0,0));
+	    spin.makeRotate((360.0*_skyTime/(24.0*60.0*60.0))*(M_PI/180.0),osg::Vec3(0,1.0,0));
+	    
+	    osg::Vec3 lightPoint(0,0,8192.0);
+	    lightPoint = lightPoint * spin * tilt;// * _particleObject->getWorldToObjectMatrix();
+	    _waterLightUni->set(lightPoint);
+	}
+
 	//do driver thread part of step
-	
-    if(SceneManager::instance()->getMenuOpenObject() == _particleObject)
-    {
-        SceneManager::instance()->setHidePointer(false);
-    }
-    else
-    {
-        SceneManager::instance()->setHidePointer(true);
-    }
+
+	if(SceneManager::instance()->getMenuOpenObject() == _particleObject)
+	{
+	    SceneManager::instance()->setHidePointer(false);
+	}
+	else
+	{
+	    SceneManager::instance()->setHidePointer(true);
+	}
 
 	double intigrate_time =1;
 	//timeing
 	showTime=getTimeInSecs() - showStartTime;
 	showFrameNo++;
-	
+
 	nowTime = getTimeInSecs();
-	
+
 	//first print out meaningless
 	if ( (nowTime - startTime) > intigrate_time)
 	{
-		
+
 	    if (FR_RATE_PRINT >0) printf("%f ms %f FR/sec  ",intigrate_time/frNum*1000,frNum/intigrate_time);
 	    startTime = nowTime;  frNum =0;
 	}
@@ -207,23 +240,23 @@ void ParticleDreams::preFrame()
 	if (skipTonextScene ==1)
 	{	std::cout << "skipTonextScene ==1 " << std::endl;
 	    sceneOrder =( sceneOrder+1)%3;sceneChange=1;
-		skipTonextScene =0;
-		
+	    skipTonextScene =0;
+
 	}
 	if (nextSean ==1) { sceneOrder =( sceneOrder+1)%3;sceneChange=1;nextSean =0;}
 	//reordering seenes
-/*
-	if (sceneOrder ==0)sceneNum =4;
-	if (sceneOrder ==1)sceneNum =1;
-	if (sceneOrder ==2)sceneNum =2;
-	if (sceneOrder ==3)sceneNum =0;
-	if (sceneOrder ==4)sceneNum =3;
+	/*
+	   if (sceneOrder ==0)sceneNum =4;
+	   if (sceneOrder ==1)sceneNum =1;
+	   if (sceneOrder ==2)sceneNum =2;
+	   if (sceneOrder ==3)sceneNum =0;
+	   if (sceneOrder ==4)sceneNum =3;
 
-	if (sceneOrder ==0)sceneNum =4;
-	if (sceneOrder ==1)sceneNum =2;
-	if (sceneOrder ==2)sceneNum =0;
-	if (sceneOrder ==3)sceneNum =3;
-*/
+	   if (sceneOrder ==0)sceneNum =4;
+	   if (sceneOrder ==1)sceneNum =2;
+	   if (sceneOrder ==2)sceneNum =0;
+	   if (sceneOrder ==3)sceneNum =3;
+	   */
 	if (sceneOrder ==0)sceneNum =2;
 	if (sceneOrder ==1)sceneNum =0;
 	if (sceneOrder ==2)sceneNum =3;
@@ -237,11 +270,11 @@ void ParticleDreams::preFrame()
 
 	if (sceneChange)
 	{
-		if (witch_scene == 0) 		scene_data_0_clean_up();
-		else if (witch_scene == 1)	scene_data_1_clean_up();//not used
-		else if (witch_scene == 2)	scene_data_2_clean_up();
-		else if (witch_scene == 3)	scene_data_3_clean_up();
-		else if (witch_scene == 4)	scene_data_4_clean_up();
+	    if (witch_scene == 0) 		scene_data_0_clean_up();
+	    else if (witch_scene == 1)	scene_data_1_clean_up();//not used
+	    else if (witch_scene == 2)	scene_data_2_clean_up();
+	    else if (witch_scene == 3)	scene_data_3_clean_up();
+	    else if (witch_scene == 4)	scene_data_4_clean_up();
 	}
 
 	if (sceneNum ==0)
@@ -620,7 +653,7 @@ void ParticleDreams::initPart()
     nowTime = 0;
     frNum = 1;
     colorFreq = 16;
-    draw_water_sky = 1;
+    //draw_water_sky = 1;
     //TODO: get from config file
     state =0;
     trigger =0;
@@ -1153,6 +1186,196 @@ void ParticleDreams::initSound()
 
 }
 
+void ParticleDreams::initWater()
+{
+    // find max window size, i will assume all windows are the same for the moment
+    cvr::WindowInfo * wi = ScreenConfig::instance()->getWindowInfo(0);
+    if(!wi)
+    {
+	std::cerr << "No Valid WindowInfo." << std::endl;
+	return;
+    }
+
+    // init fbo textures
+    _waterColorTexture = new osg::TextureRectangle();
+    _waterColorTexture->setTextureSize(wi->width,wi->height);
+    _waterColorTexture->setInternalFormat(GL_RGBA);
+    _waterColorTexture->setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::NEAREST);
+    _waterColorTexture->setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::NEAREST);
+    _waterColorTexture->setResizeNonPowerOfTwoHint(false);
+    _waterColorTexture->setUseHardwareMipMapGeneration(false);
+
+    _waterDepthTexture = new osg::Texture2D();
+    _waterDepthTexture->setTextureSize(wi->width,wi->height);
+    _waterDepthTexture->setInternalFormat(GL_DEPTH_COMPONENT);
+    _waterDepthTexture->setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::NEAREST);
+    _waterDepthTexture->setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::NEAREST);
+    _waterDepthTexture->setResizeNonPowerOfTwoHint(false);
+    _waterDepthTexture->setUseHardwareMipMapGeneration(false);
+
+    // init cameras
+    _waterPreCamera = new osg::Camera();
+    _waterPreCamera->setAllowEventFocus(false);
+    _waterPreCamera->setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //_waterPreCamera->setClearColor(osg::Vec4(1.0,0,0,1.0));
+    _waterPreCamera->setRenderOrder(osg::Camera::PRE_RENDER);
+    _waterPreCamera->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+    _waterPreCamera->attach(osg::Camera::COLOR_BUFFER0,_waterColorTexture);
+    _waterPreCamera->attach(osg::Camera::DEPTH_BUFFER,_waterDepthTexture);
+    _waterPreCamera->setReferenceFrame(osg::Transform::RELATIVE_RF);
+
+    _waterMirrorXform = new osg::MatrixTransform();
+    osg::Matrix m;
+    m.makeScale(osg::Vec3(1.0,-1.0,1.0));
+    _waterMirrorXform->setMatrix(m);
+    _waterPreCamera->addChild(_waterMirrorXform);
+    _waterMirrorXform->addChild(_particleGeode);
+
+    _waterPostCamera = new osg::Camera();
+    _waterPostCamera->setAllowEventFocus(false);
+    _waterPostCamera->setClearMask(0);
+    _waterPostCamera->setRenderOrder(osg::Camera::POST_RENDER);
+    _waterPostCamera->setReferenceFrame(osg::Transform::RELATIVE_RF);
+    _waterPostCamera->addChild(_particleGeode);
+
+    _waterNestedCamera = new osg::Camera();
+    _waterNestedCamera->setAllowEventFocus(false);
+    _waterNestedCamera->setClearMask(0);
+    _waterNestedCamera->setRenderOrder(osg::Camera::NESTED_RENDER);
+    //_waterNestedCamera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+
+    _waterSkyGeode = new osg::Geode();
+    _waterSkyGeometry = new osg::Geometry();
+    _waterSkyGeometry->setUseDisplayList(false);
+    _waterSkyGeometry->setUseVertexBufferObjects(true);
+   
+    MyComputeBounds * mcb = new MyComputeBounds();
+    _waterSkyGeometry->setComputeBoundingBoxCallback(mcb);
+    mcb->_bound = osg::BoundingBox(osg::Vec3(-100000,-100000,-100000),osg::Vec3(100000,100000,100000));
+    
+    osg::Vec2Array * verts = new osg::Vec2Array(4);
+    osg::Vec4Array * colors = new osg::Vec4Array(1);
+    osg::Vec2Array * tcoords = new osg::Vec2Array(4);
+    
+    verts->at(0) = osg::Vec2(-1.0,1.0);
+    verts->at(1) = osg::Vec2(-1.0,-1.0);
+    verts->at(2) = osg::Vec2(1.0,-1.0);
+    verts->at(3) = osg::Vec2(1.0,1.0);
+
+    colors->at(0) = osg::Vec4(1.0,1.0,1.0,1.0);
+
+    tcoords->at(0) = osg::Vec2(0.0,750.0);
+    tcoords->at(1) = osg::Vec2(0.0,0.0);
+    tcoords->at(2) = osg::Vec2(1500.0,0.0);
+    tcoords->at(3) = osg::Vec2(1500.0,750.0);
+
+    _waterSkyGeometry->setVertexArray(verts);
+    _waterSkyGeometry->setColorArray(colors);
+    _waterSkyGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+    _waterSkyGeometry->setTexCoordArray(0,tcoords,osg::Array::BIND_PER_VERTEX);
+    _waterSkyGeometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
+    _waterSkyGeode->addDrawable(_waterSkyGeometry);
+    _waterNestedCamera->addChild(_waterSkyGeode);
+    _waterNestedCamera->getOrCreateStateSet()->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+    _waterNestedCamera->getOrCreateStateSet()->setMode(GL_BLEND,osg::StateAttribute::ON);
+    _waterNestedCamera->getOrCreateStateSet()->setTextureAttributeAndModes(3,_waterColorTexture,osg::StateAttribute::ON);
+
+    osg::BlendFunc * bf = new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA,osg::BlendFunc::ONE_MINUS_SRC_ALPHA);
+    _waterNestedCamera->getOrCreateStateSet()->setAttributeAndModes(bf,osg::StateAttribute::ON);
+        
+
+    _waterVert = osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile(_dataDir + "/mirror-water/mirror-water.vert"));
+    _waterFrag = osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile(_dataDir + "/mirror-water/mirror-water.frag"));
+    _waterProgram = new osg::Program();
+    _waterProgram->setName("mirror-water");
+    _waterProgram->addShader(_waterVert);
+    _waterProgram->addShader(_waterFrag);
+
+    _waterMirrorVert = osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile(_dataDir + "/mirror-water/sprite-mirror.vert"));
+    _waterMirrorFrag = osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile(_dataDir + "/mirror-water/sprite-mirror.frag"));
+    _waterMirrorProgram = new osg::Program();
+    _waterMirrorProgram->setName("mirror-render");
+    _waterMirrorProgram->addShader(_waterMirrorVert);
+    _waterMirrorProgram->addShader(_waterMirrorFrag);
+
+    _waterNestedCamera->getOrCreateStateSet()->setAttribute(_waterProgram);
+    _waterPreCamera->getOrCreateStateSet()->setAttribute(_waterMirrorProgram);
+    _waterPostCamera->getOrCreateStateSet()->setAttribute(_waterMirrorProgram);
+
+    _waterTimeUni = new osg::Uniform(osg::Uniform::FLOAT,"time");
+    _waterLightUni = new osg::Uniform(osg::Uniform::FLOAT_VEC3,"light_position");
+    _waterGlowUni = new osg::Uniform(osg::Uniform::SAMPLER_2D,"glow");
+    _waterGlowUni->set(1);
+    _waterFillUni = new osg::Uniform(osg::Uniform::SAMPLER_2D,"fill");
+    _waterFillUni->set(0);
+    _waterNormUni = new osg::Uniform(osg::Uniform::SAMPLER_2D,"norm");
+    _waterNormUni->set(2);
+    _waterReflUni = new osg::Uniform(osg::Uniform::SAMPLER_2D_RECT,"refl");
+    _waterReflUni->set(3);
+
+    _waterNestedCamera->getOrCreateStateSet()->addUniform(_waterTimeUni);
+    _waterNestedCamera->getOrCreateStateSet()->addUniform(_waterLightUni);
+    _waterNestedCamera->getOrCreateStateSet()->addUniform(_waterGlowUni);
+    _waterNestedCamera->getOrCreateStateSet()->addUniform(_waterFillUni);
+    _waterNestedCamera->getOrCreateStateSet()->addUniform(_waterNormUni);
+    _waterNestedCamera->getOrCreateStateSet()->addUniform(_waterReflUni);
+
+    _waterNormalTexture = new osg::Texture2D();
+    _waterSkyFillTexture = new osg::Texture2D();
+    _waterSkyGlowTexture = new osg::Texture2D();
+
+    osg::ref_ptr<osg::Image> image = osgDB::readImageFile(_dataDir + "/mirror-water/water-normal.png");
+
+    if(image)
+    {
+	_waterNormalTexture->setImage(image);
+	_waterNormalTexture->setWrap(osg::Texture::WRAP_S,osg::Texture::REPEAT);
+	_waterNormalTexture->setWrap(osg::Texture::WRAP_T,osg::Texture::REPEAT);
+	_waterNormalTexture->setFilter(osg::Texture::MIN_FILTER,osg::Texture::LINEAR_MIPMAP_LINEAR);
+	_waterNormalTexture->setFilter(osg::Texture::MAG_FILTER,osg::Texture::LINEAR);
+	_waterNormalTexture->setResizeNonPowerOfTwoHint(false);
+	_waterNestedCamera->getOrCreateStateSet()->setTextureAttributeAndModes(2,_waterNormalTexture,osg::StateAttribute::ON);
+    }
+    else
+    {
+	std::cerr << "Unable to read texture: " << _dataDir + "/mirror-water/water-normal.png" << std::endl;
+    }
+    
+    image = osgDB::readImageFile(_dataDir + "/mirror-water/sky-fill.png");
+
+    if(image)
+    {
+	_waterSkyFillTexture->setImage(image);
+	_waterSkyFillTexture->setWrap(osg::Texture::WRAP_S,osg::Texture::CLAMP_TO_EDGE);
+	_waterSkyFillTexture->setWrap(osg::Texture::WRAP_T,osg::Texture::CLAMP_TO_EDGE);
+	_waterSkyFillTexture->setFilter(osg::Texture::MIN_FILTER,osg::Texture::NEAREST_MIPMAP_LINEAR);
+	_waterSkyFillTexture->setFilter(osg::Texture::MAG_FILTER,osg::Texture::LINEAR);
+	_waterSkyFillTexture->setResizeNonPowerOfTwoHint(false);
+	_waterNestedCamera->getOrCreateStateSet()->setTextureAttributeAndModes(0,_waterSkyFillTexture,osg::StateAttribute::ON);
+    }
+    else
+    {
+	std::cerr << "Unable to read texture: " << _dataDir + "/mirror-water/sky-fill.png" << std::endl;
+    }
+
+    image = osgDB::readImageFile(_dataDir + "/mirror-water/sky-glow.png");
+
+    if(image)
+    {
+	_waterSkyGlowTexture->setImage(image);
+	_waterSkyGlowTexture->setWrap(osg::Texture::WRAP_S,osg::Texture::CLAMP_TO_EDGE);
+	_waterSkyGlowTexture->setWrap(osg::Texture::WRAP_T,osg::Texture::CLAMP_TO_EDGE);
+	_waterSkyGlowTexture->setFilter(osg::Texture::MIN_FILTER,osg::Texture::NEAREST_MIPMAP_LINEAR);
+	_waterSkyGlowTexture->setFilter(osg::Texture::MAG_FILTER,osg::Texture::LINEAR);
+	_waterSkyGlowTexture->setResizeNonPowerOfTwoHint(false);
+	_waterNestedCamera->getOrCreateStateSet()->setTextureAttributeAndModes(1,_waterSkyGlowTexture,osg::StateAttribute::ON);
+    }
+    else
+    {
+	std::cerr << "Unable to read texture: " << _dataDir + "/mirror-water/sky-glow.png" << std::endl;
+    }
+}
+
 void ParticleDreams::cleanupPart()
 {
     delete[] h_particleData;
@@ -1261,6 +1484,32 @@ if (but2)
 		
 	}
 */
+}
+
+void ParticleDreams::setWater(bool b)
+{
+    if(_particleObject)
+    {
+	while(_particleObject->getNumChildNodes())
+	{
+	    _particleObject->removeChild(_particleObject->getChildNode(0));
+	}
+
+	if(b)
+	{
+	    //_particleObject->addChild(_particleGeode);
+	    _particleObject->addChild(_waterNestedCamera);
+	    _particleObject->addChild(_waterPreCamera);
+	    _particleObject->addChild(_waterPostCamera);
+
+	    _particleGeode->getDrawable(0)->getOrCreateStateSet()->removeAttribute(_spriteProgram);
+	}
+	else
+	{
+	    _particleObject->addChild(_particleGeode);
+	    _particleGeode->getDrawable(0)->getOrCreateStateSet()->setAttribute(_spriteProgram);
+	}
+    }
 }
 
 void ParticleDreams::updateHand()
@@ -2605,7 +2854,8 @@ void ParticleDreams::scene_data_0_host()
 
     anim = showFrameNo * .001;
 
-    draw_water_sky =0;
+    //draw_water_sky =0;
+    setWater(false);
     if(but2==1)	_injObjSwitchFace->setAllChildrenOn();
 	
 	if(but2==0)	_injObjSwitchFace->setAllChildrenOff();
@@ -2648,7 +2898,8 @@ void ParticleDreams::scene_data_0_host()
 
 void ParticleDreams::scene_data_1_host()
 {
-    draw_water_sky =0;
+    //draw_water_sky =0;
+    setWater(false);
 // particalsysparamiteres--------------
     gravity = .00005;	
     max_age = 2000;
@@ -2825,7 +3076,8 @@ void ParticleDreams::scene_data_2_host()
     //4 waterFalls
     // waterFallsFrom screenes
 
-    draw_water_sky =0;
+    //draw_water_sky =0;
+    setWater(false);
     // particalsysparamiteres--------------
     gravity = .005;	
     gravity = .001;	
@@ -3001,6 +3253,7 @@ void ParticleDreams::scene_data_3_host()
     //painting skys
 
     //draw_water_sky =1;
+    setWater(true);
     // particalsysparamiteres--------------
     gravity = .000005;	
     max_age = 2000;
@@ -3034,6 +3287,7 @@ void ParticleDreams::scene_data_3_host()
 		///::user->set_t(86400);// set to 00:00 monday  old
 		///::user->set_t(1);// set to 0 days 1 sec
 		///::user->set_t(63711);// set to 0 days 1 sec
+		_skyTime = 63711.0;
 
 		//::user->time(43200/2.0);// set to dawn  old
 		//::user->set_t(43200/2.0);
@@ -3076,8 +3330,8 @@ void ParticleDreams::scene_data_3_host()
     // printf ( "seantime time %f %f\n",time_in_sean,::user->get_t());
     //lerp(in, beginIN, endIn, beginOut, endOut)
 
-    ///if((time_in_sean > 0)&& (time_in_sean <= 30)) user->set_t(lerp(time_in_sean, 0, 30, 63400, 74000));
-    ///if((time_in_sean > 30)&& (time_in_sean <= 90)) user->set_t(lerp(time_in_sean, 30, 90, 74000, 107000));
+    if((time_in_sean > 0)&& (time_in_sean <= 30)) _skyTime = lerp(time_in_sean, 0, 30, 63400, 74000);
+    if((time_in_sean > 30)&& (time_in_sean <= 90)) _skyTime = lerp(time_in_sean, 30, 90, 74000, 107000);
     //if((time_in_sean > 30)&& (time_in_sean <= 40)) user->set_t(lerp(time_in_sean, 30, 40, 74000, 110000));
     //     ::user->set_t(107000);// set to 0 days 1 sec
 
@@ -3161,7 +3415,8 @@ void ParticleDreams::scene_data_4_host()
 {
     //educational stub fro firtherDev
 
-    draw_water_sky =0;
+    //draw_water_sky =0;
+    setWater(false);
     // particalsysparamiteres--------------
     //std::cerr << "Gravity: " << _gravityRV->getValue() << std::endl;
     gravity = .01;	

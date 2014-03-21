@@ -21,6 +21,7 @@
 #include <osg/Shader>
 #include <osg/Program>
 #include <osg/Texture2D>
+#include <osg/TextureRectangle>
 #include <OpenThreads/Mutex>
 
 #include <string>
@@ -46,6 +47,7 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
         void initPart();
         void initGeometry();
         void initSound();
+        void initWater();
 
         void cleanupPart();
         void cleanupGeometry();
@@ -53,6 +55,8 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
 
         void updateHand();
        void updateHead();
+
+        void setWater(bool b);
 
         void pdata_init_age(int mAge);
         void pdata_init_velocity(float vx,float vy,float vz);
@@ -263,6 +267,35 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
 
         
         std::string _dataDir;
+
+        // water
+        osg::ref_ptr<osg::Shader> _waterVert;
+        osg::ref_ptr<osg::Shader> _waterFrag;
+        osg::ref_ptr<osg::Program> _waterProgram;
+        
+        osg::ref_ptr<osg::Shader> _waterMirrorVert;
+        osg::ref_ptr<osg::Shader> _waterMirrorFrag;
+        osg::ref_ptr<osg::Program> _waterMirrorProgram;
+
+        osg::ref_ptr<osg::Uniform> _waterTimeUni;
+        osg::ref_ptr<osg::Uniform> _waterLightUni;
+        osg::ref_ptr<osg::Uniform> _waterGlowUni;
+        osg::ref_ptr<osg::Uniform> _waterFillUni;
+        osg::ref_ptr<osg::Uniform> _waterNormUni;
+        osg::ref_ptr<osg::Uniform> _waterReflUni;
+        osg::ref_ptr<osg::Texture2D> _waterNormalTexture;
+        osg::ref_ptr<osg::Texture2D> _waterSkyFillTexture;
+        osg::ref_ptr<osg::Texture2D> _waterSkyGlowTexture;
+        osg::ref_ptr<osg::Camera> _waterPreCamera;
+        osg::ref_ptr<osg::Camera> _waterNestedCamera;
+        osg::ref_ptr<osg::Camera> _waterPostCamera;
+        osg::ref_ptr<osg::MatrixTransform> _waterMirrorXform;
+        osg::ref_ptr<osg::Geode> _waterSkyGeode;
+        osg::ref_ptr<osg::Geometry> _waterSkyGeometry;
+        osg::ref_ptr<osg::TextureRectangle> _waterColorTexture;
+        osg::ref_ptr<osg::Texture2D> _waterDepthTexture;
+        double _skyTime;
+
 
         osg::ref_ptr<osg::Shader> _spriteVert;
         osg::ref_ptr<osg::Shader> _spriteFrag;
