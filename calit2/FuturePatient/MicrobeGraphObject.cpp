@@ -180,7 +180,7 @@ bool MicrobeGraphObject::loadState(std::istream & in)
 	int patientid;
 	in >> patientid;
 
-	setGraph(title,patientid,tlabel,0,microbes,"",lsOrder);
+	setGraph(title,patientid,tlabel,0,microbes,"","",lsOrder);
     }
 
     float drmin, drmax;
@@ -397,7 +397,7 @@ void MicrobeGraphObject::menuCallback(MenuItem * item)
     FPTiledWallSceneObject::menuCallback(item);
 }
 
-bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, std::string tableSuffix, bool group, bool lsOrdering, bool familyLevel)
+bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, std::string microbeTableSuffix, std::string measureTableSuffix, bool group, bool lsOrdering, bool familyLevel)
 {
     struct tm timetm = *localtime(&testTime);
     char timestr[256];
@@ -408,10 +408,10 @@ bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string 
     std::stringstream valuess, orderss;
 
     std::string measurementTable = "Microbe_Measurement";
-    measurementTable += tableSuffix;
+    measurementTable += measureTableSuffix;
 
     std::string microbesTable = "Microbes";
-    microbesTable += tableSuffix;
+    microbesTable += microbeTableSuffix;
 
     if(!familyLevel)
     {

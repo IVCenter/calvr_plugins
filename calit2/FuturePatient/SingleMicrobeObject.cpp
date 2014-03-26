@@ -36,13 +36,13 @@ bool rankOrderSort(const std::pair<std::string, float> & first, const std::pair<
     return first.second > second.second;
 }
 
-bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string tableSuffix, bool rankOrder, bool labels, bool firstOnly, bool groupPatients)
+bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string microbeTableSuffix, std::string measureTableSuffix, bool rankOrder, bool labels, bool firstOnly, bool groupPatients)
 {
     std::string measurementTable = "Microbe_Measurement";
-    measurementTable += tableSuffix;
+    measurementTable += measureTableSuffix;
 
     std::string microbesTable = "Microbes";
-    microbesTable += tableSuffix;
+    microbesTable += microbeTableSuffix;
 
     struct microbeData
     {

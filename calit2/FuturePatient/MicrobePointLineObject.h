@@ -17,7 +17,7 @@ class MicrobePointLineObject : public LayoutTypeObject, public PatientSelectObje
         MicrobePointLineObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~MicrobePointLineObject();
 
-        bool setGraph(std::string tableSuffix, bool expandAxis = false);
+        bool setGraph(std::string microbeTableSuffix, std::string measureTableSuffix, bool expandAxis = false);
 
         virtual void objectAdded();
         virtual void objectRemoved();

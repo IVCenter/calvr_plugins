@@ -47,7 +47,7 @@ struct patientData
     float data[7];
 };
 
-bool MicrobePointLineObject::setGraph(std::string tableSuffix, bool expandAxis)
+bool MicrobePointLineObject::setGraph(std::string microbeTableSuffix, std::string measureTableSuffix, bool expandAxis)
 {
     std::vector<std::string> phylumOrder;
     // larry order
@@ -71,10 +71,10 @@ bool MicrobePointLineObject::setGraph(std::string tableSuffix, bool expandAxis)
     std::vector<patientData> data;
 
     std::string measurementTable = "Microbe_Measurement";
-    measurementTable += tableSuffix;
+    measurementTable += measureTableSuffix;
 
     std::string microbesTable = "Microbes";
-    microbesTable += tableSuffix;
+    microbesTable += microbeTableSuffix;
 
     std::stringstream queryss;
     queryss << "SELECT Patient.p_condition, Patient.last_name, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << microbesTable << ".phylum, sum(" << measurementTable << ".value) as value from " << measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id group by Patient.last_name, " << measurementTable << ".timestamp, " << microbesTable << ".phylum;";
@@ -107,7 +107,6 @@ bool MicrobePointLineObject::setGraph(std::string tableSuffix, bool expandAxis)
 		{
 		    type = SMARR;
 		}
-		//else if(condition == "ulcerous colitis")
 		else if(condition == "UC")
 		{
 		    type = UC;

@@ -35,7 +35,7 @@ MicrobeBarGraphObject::~MicrobeBarGraphObject()
 {
 }
 
-bool MicrobeBarGraphObject::addGraph(std::string label, int patientid, std::string testLabel, std::string tableSuffix)
+bool MicrobeBarGraphObject::addGraph(std::string label, int patientid, std::string testLabel, std::string microbeTableSuffix, std::string measureTableSuffix)
 {
     std::stringstream qss;
     qss << "select Microbes.species, Microbe_Measurement.value from Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \""<< testLabel << "\";";
@@ -53,7 +53,7 @@ bool MicrobeBarGraphObject::addGraph(std::string label, int patientid, std::stri
     return addGraph(title,qss.str());
 }
 
-bool MicrobeBarGraphObject::addSpecialGraph(SpecialMicrobeGraphType smgt, std::string tableSuffix)
+bool MicrobeBarGraphObject::addSpecialGraph(SpecialMicrobeGraphType smgt, std::string microbeTableSuffix, std::string measureTableSuffix)
 {
     std::stringstream queryss;
     std::string label;
@@ -464,7 +464,7 @@ bool MicrobeBarGraphObject::loadState(std::istream & in)
 	{
 	    int type;
 	    in >> type;
-	    addSpecialGraph((SpecialMicrobeGraphType)type,"");
+	    addSpecialGraph((SpecialMicrobeGraphType)type,"","");
 	}
 	else
 	{
@@ -481,7 +481,7 @@ bool MicrobeBarGraphObject::loadState(std::istream & in)
 	    in.getline(tempstr,1024);
 	    testLabel = tempstr;
 
-	    addGraph(label,id,testLabel,"");
+	    addGraph(label,id,testLabel,"","");
 	}
     }
 
