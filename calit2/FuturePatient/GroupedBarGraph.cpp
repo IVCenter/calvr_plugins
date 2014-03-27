@@ -832,6 +832,42 @@ void GroupedBarGraph::removeMathFunction(MicrobeMathFunction * mf)
     }
 }
 
+float GroupedBarGraph::getGroupValue(std::string group)
+{
+    std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = _data.find(group);
+    if(it == _data.end())
+    {
+	return -1.0;
+    }
+    float total = 0.0;
+
+    for(int i = 0; i < it->second.size(); ++i)
+    {
+	total += it->second[i].second;
+    }
+
+    return total;
+}
+
+float GroupedBarGraph::getKeyValue(std::string group, std::string key)
+{
+    std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = _data.find(group);
+    if(it == _data.end())
+    {
+	return -1.0;
+    }
+
+    for(int i = 0; i < it->second.size(); ++i)
+    {
+	if(it->second[i].first == key)
+	{
+	    return it->second[i].second;
+	}
+    }
+
+    return -1.0;
+}
+
 void GroupedBarGraph::makeGraph()
 {
     _barGeom = new osg::Geometry();

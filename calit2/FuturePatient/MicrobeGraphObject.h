@@ -48,9 +48,13 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
         void resetGraphDisplayRange();
 
         void selectMicrobes(std::string & group, std::vector<std::string> & keys);
+        float getGroupValue(std::string group);
+        float getMicrobeValue(std::string group, std::string key);
 
         virtual void dumpState(std::ostream & out);
         virtual bool loadState(std::istream & in);
+
+        virtual std::string getTitle();
 
         virtual bool processEvent(cvr::InteractionEvent * ie);
         virtual void updateCallback(int handID, const osg::Matrix & mat);

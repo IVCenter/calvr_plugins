@@ -22,6 +22,8 @@ class MicrobeBarGraphObject : public LayoutTypeObject, public MicrobeSelectObjec
         void setGraphSize(float width, float height);
 
         void selectMicrobes(std::string & group, std::vector<std::string> & keys);
+        float getGroupValue(std::string group);
+        float getMicrobeValue(std::string group, std::string key);
 
         virtual void dumpState(std::ostream & out);
         virtual bool loadState(std::istream & in);

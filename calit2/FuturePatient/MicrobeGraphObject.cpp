@@ -130,6 +130,16 @@ void MicrobeGraphObject::selectMicrobes(std::string & group, std::vector<std::st
     _graph->selectItems(group,keys);
 }
 
+float MicrobeGraphObject::getGroupValue(std::string group)
+{
+    return _graph->getGroupValue(group);
+}
+
+float MicrobeGraphObject::getMicrobeValue(std::string group, std::string key)
+{
+    return _graph->getKeyValue(group,key);
+}
+
 void MicrobeGraphObject::dumpState(std::ostream & out)
 {
     out << "MICROBE_GRAPH" << std::endl;
@@ -189,6 +199,11 @@ bool MicrobeGraphObject::loadState(std::istream & in)
     _graph->setDisplayRange(drmin,drmax);
 
     return true;
+}
+
+std::string MicrobeGraphObject::getTitle()
+{
+    return _graphTitle;
 }
 
 bool MicrobeGraphObject::processEvent(InteractionEvent * ie)
@@ -473,6 +488,8 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int micro
 		    default:
 			break;
 		}
+
+		_graphTitle = _graphTitle + " (" + region + ")";
 
 		std::string regionField;
 

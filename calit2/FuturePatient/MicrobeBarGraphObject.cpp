@@ -428,6 +428,16 @@ void MicrobeBarGraphObject::selectMicrobes(std::string & group, std::vector<std:
     _graph->selectItems(group,keys);
 }
 
+float MicrobeBarGraphObject::getGroupValue(std::string group)
+{
+    return -1.0;
+}
+
+float MicrobeBarGraphObject::getMicrobeValue(std::string group, std::string key)
+{
+    return -1.0;
+}
+
 void MicrobeBarGraphObject::dumpState(std::ostream & out)
 {
     out << "MICROBE_BAR_GRAPH" << std::endl;

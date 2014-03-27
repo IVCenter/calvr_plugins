@@ -127,6 +127,14 @@ class GroupedBarGraph
         void addMathFunction(MicrobeMathFunction * mf);
         void removeMathFunction(MicrobeMathFunction * mf);
 
+        float getGroupValue(std::string group);
+        float getKeyValue(std::string group, std::string key);
+
+        std::string getTitle()
+        {
+            return _title;
+        }
+
     protected:
         void makeGraph();
         void makeHover();

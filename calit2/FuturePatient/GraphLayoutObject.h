@@ -4,6 +4,8 @@
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuCheckbox.h>
 #include <cvrMenu/MenuRangeValueCompact.h>
+#include <cvrMenu/MenuText.h>
+#include <cvrMenu/PopupMenu.h>
 #include <cvrInput/TrackerBase.h>
 
 #include "GraphObject.h"
@@ -76,6 +78,7 @@ class GraphLayoutObject : public FPTiledWallSceneObject
         void updateLayout();
         void checkLineRefs();
         void setTitle(std::string title);
+        void setSelectionText();
 
         bool loadObject(std::istream & in);
 
@@ -114,6 +117,9 @@ class GraphLayoutObject : public FPTiledWallSceneObject
         cvr::MenuRangeValueCompact * _widthRV;
         cvr::MenuRangeValueCompact * _heightRV;
         cvr::MenuButton * _removeUnselected;
+
+        cvr::PopupMenu * _selectionMenu;
+        cvr::MenuText * _selectionText;
 
         int _activeHand;
         cvr::TrackerBase::TrackerType _activeHandType;

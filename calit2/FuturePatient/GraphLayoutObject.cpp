@@ -55,6 +55,12 @@ GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std
     _activeHandType = TrackerBase::INVALID;
 
     _minimized = false;
+
+    _selectionMenu = new PopupMenu("Selection Info","Plugin.FuturePatient.SelectionMenu");
+    _selectionMenu->setVisible(false);
+
+    _selectionText = new MenuText("",1.0,false);
+    _selectionMenu->addMenuItem(_selectionText);
 }
 
 GraphLayoutObject::~GraphLayoutObject()
@@ -230,6 +236,7 @@ void GraphLayoutObject::selectMicrobes(std::string & group, std::vector<std::str
 	    mso->selectMicrobes(group,keys);
 	}
     }
+    setSelectionText();
 }
 
 void GraphLayoutObject::selectPatients(std::string & group, std::vector<std::string> & patients)
@@ -1234,6 +1241,7 @@ void GraphLayoutObject::updateLayout()
 	{
 	    mso->selectMicrobes(_currentSelectedMicrobeGroup,_currentSelectedMicrobes);
 	}
+	setSelectionText();
     }
 
     for(int i = 0; i < _objectList.size(); ++i)
@@ -1291,6 +1299,68 @@ void GraphLayoutObject::setTitle(std::string title)
     _text->setPosition(osg::Vec3(0,1.5,halfh+(_height*0.05)));
 
     _layoutGeode->addDrawable(_text);
+}
+
+void GraphLayoutObject::setSelectionText()
+{
+    if(_currentSelectedMicrobeGroup != "" && _currentSelectedMicrobes.size())
+    {
+	std::stringstream ss;
+	std::string spacer = "   ";
+	if(_currentSelectedMicrobes.size() != 1)
+	{
+	    ss << _currentSelectedMicrobeGroup << " Totals" << std::endl;
+	    // group stats
+	    for(int i = 0; i < _objectList.size(); ++i)
+	    {
+		MicrobeSelectObject * mso = dynamic_cast<MicrobeSelectObject *>(_objectList[i]);
+		if(mso)
+		{
+		    ss << spacer << _objectList[i]->getTitle() << ": ";
+		    float val = mso->getGroupValue(_currentSelectedMicrobeGroup);
+		    if(val >= 0.0)
+		    {
+			ss << val << std::endl;
+		    }
+		    else
+		    {
+			ss << "~" << std::endl;
+		    }
+		}
+	    }
+	}
+	else
+	{
+	    // single microbe stats
+	    ss << _currentSelectedMicrobes[0] << " Values" << std::endl;
+	    // group stats
+	    for(int i = 0; i < _objectList.size(); ++i)
+	    {
+		MicrobeSelectObject * mso = dynamic_cast<MicrobeSelectObject *>(_objectList[i]);
+		if(mso)
+		{
+		    ss << spacer << _objectList[i]->getTitle() << ": ";
+		    float val = mso->getMicrobeValue(_currentSelectedMicrobeGroup,_currentSelectedMicrobes[0]);
+		    if(val >= 0.0)
+		    {
+			ss << val << std::endl;
+		    }
+		    else
+		    {
+			ss << "~" << std::endl;
+		    }
+		}
+	    }
+	}
+
+	_selectionText->setText(ss.str());
+
+	_selectionMenu->setVisible(true);
+    }
+    else
+    {
+	_selectionMenu->setVisible(false);
+    }
 }
 
 bool GraphLayoutObject::loadObject(std::istream & in)

@@ -58,6 +58,10 @@ class LayoutTypeObject : public FPTiledWallSceneObject
         {
             return true;
         }
+        virtual std::string getTitle()
+        {
+            return "";
+        }
 };
 
 class LayoutLineObject : public FPTiledWallSceneObject
@@ -126,6 +130,8 @@ class MicrobeSelectObject
 {
     public:
         virtual void selectMicrobes(std::string & group, std::vector<std::string> & keys) = 0;
+        virtual float getGroupValue(std::string group) = 0;
+        virtual float getMicrobeValue(std::string group, std::string key) = 0;
 };
 
 class PatientSelectObject
