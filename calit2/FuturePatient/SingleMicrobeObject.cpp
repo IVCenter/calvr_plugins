@@ -48,13 +48,14 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string m
     {
 	char name[512];
 	char condition[512];
+	int id;
 	time_t timestamp;
 	float value;
     };
 
     std::stringstream queryss;
 
-    queryss << "select Patient.last_name, Patient.p_condition, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where " << measurementTable << ".taxonomy_id = " << taxid << " order by p_condition, last_name, timestamp;";
+    queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where " << measurementTable << ".taxonomy_id = " << taxid << " and Patient.region = \"US\" order by p_condition, last_name, timestamp;";
 
     //std::cerr << "Query: " << queryss.str() << std::endl;
 
@@ -79,6 +80,7 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string m
 		    strncpy(data[i].name,res[i]["last_name"].c_str(),511);
 		    data[i].condition[511] = '\0';
 		    strncpy(data[i].condition,res[i]["p_condition"].c_str(),511);
+		    data[i].id = atoi(res[i]["patient_id"].c_str());
 		    data[i].timestamp = atol(res[i]["timestamp"].c_str());
 		    data[i].value = atof(res[i]["value"].c_str());
 		}
@@ -109,7 +111,7 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string m
     for(int i = 0; i < dataSize; ++i)
     {
 	std::string condition = data[i].condition;
-	if(condition == "CD" || condition == "healthy" || condition == "Larry" || condition == "UC")
+	if(condition == "CD" || condition == "crohn's disease" || condition == "healthy" || condition == "Larry" || condition == "UC" || condition == "ulcerous colitis")
 	{
 	    //if(data[i].value > 0.0)
 	    {
@@ -124,36 +126,50 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string m
 
 		if(groupPatients || firstOnly)
 		{
-		    if(condition == "CD")
+		    if(condition == "CD" || condition == "crohn's disease")
 		    {
-			if(_cdCountMap.find(data[i].name) == _cdCountMap.end())
+			if((data[i].id >= 238 && data[i].id <= 242) || (data[i].id >= 339 && data[i].id <= 343))
 			{
-			    _cdCountMap[data[i].name] = true;
-			}
+			    if(_cdCountMap.find(data[i].name) == _cdCountMap.end())
+			    {
+				_cdCountMap[data[i].name] = true;
+			    }
 
-			std::stringstream groupss;
-			groupss << "Crohns - " << _cdCountMap.size();
-			group = groupss.str();
+			    std::stringstream groupss;
+			    groupss << "Crohns - " << _cdCountMap.size();
+			    group = groupss.str();
+			}
+			else
+			{
+			    continue;
+			}
 		    }
-		    else if(condition == "UC")
+		    else if(condition == "UC" || condition == "ulcerous colitis")
 		    {
-			if(_ucCountMap.find(data[i].name) == _ucCountMap.end())
+			if((data[i].id >= 243 && data[i].id <= 244) || (data[i].id >= 344 && data[i].id <= 349))
 			{
-			    _ucCountMap[data[i].name] = true;
-			}
+			    if(_ucCountMap.find(data[i].name) == _ucCountMap.end())
+			    {
+				_ucCountMap[data[i].name] = true;
+			    }
 
-			std::stringstream groupss;
-			groupss << "UC - " << _ucCountMap.size();
-			group = groupss.str();
+			    std::stringstream groupss;
+			    groupss << "UC - " << _ucCountMap.size();
+			    group = groupss.str();
+			}
+			else
+			{
+			    continue;
+			}
 		    }
 		}
 		else
 		{
-		    if(condition == "CD")
+		    if(condition == "CD" || condition == "crohn's disease")
 		    {
 			group = "Crohns";
 		    }
-		    else if(condition == "UC")
+		    else if(condition == "UC" || condition == "ulcerous colitis")
 		    {
 			group = "UC";
 		    }
@@ -233,6 +249,7 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string m
 	addChild(_graph->getRootNode());
 	_graph->addMathFunction(new BandingFunction());
 	_graph->setShowLabels(labels);
+	_graph->setDisplayRange(0.000007,1.0);
     }
 
     return status;

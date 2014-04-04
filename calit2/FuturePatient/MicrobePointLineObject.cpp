@@ -77,11 +77,11 @@ bool MicrobePointLineObject::setGraph(std::string microbeTableSuffix, std::strin
     microbesTable += microbeTableSuffix;
 
     std::stringstream queryss;
-    queryss << "SELECT Patient.p_condition, Patient.last_name, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << microbesTable << ".phylum, sum(" << measurementTable << ".value) as value from " << measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id group by Patient.last_name, " << measurementTable << ".timestamp, " << microbesTable << ".phylum;";
+    queryss << "SELECT Patient.p_condition, Patient.last_name, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << microbesTable << ".phylum, sum(" << measurementTable << ".value) as value from " << measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.region = \"US\" group by Patient.last_name, " << measurementTable << ".timestamp, " << microbesTable << ".phylum;";
 
     std::string querystr = queryss.str();
 
-    std::cerr << querystr << std::endl;
+    //std::cerr << querystr << std::endl;
 
     if(ComController::instance()->isMaster())
     {
@@ -95,7 +95,7 @@ bool MicrobePointLineObject::setGraph(std::string microbeTableSuffix, std::strin
 	    {
 		std::string condition = res[i]["p_condition"].c_str();
 		patType type;
-		if(condition == "CD")
+		if(condition == "CD" || condition == "crohn's disease")
 		{
 		    type = CROHNS;
 		}
@@ -107,7 +107,7 @@ bool MicrobePointLineObject::setGraph(std::string microbeTableSuffix, std::strin
 		{
 		    type = SMARR;
 		}
-		else if(condition == "UC")
+		else if(condition == "UC" || condition == "ulcerous colitis")
 		{
 		    type = UC;
 		}

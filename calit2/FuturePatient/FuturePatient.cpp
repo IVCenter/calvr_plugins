@@ -166,13 +166,17 @@ bool FuturePatient::init()
     _microbeLoadCrohnsAll->setCallback(this);
     _microbeSpecialMenu->addItem(_microbeLoadCrohnsAll);
 
-    _microbeLoadHealthyAll = new MenuButton("Healthy All");
+    _microbeLoadHealthyAll = new MenuButton("Healthy 35");
     _microbeLoadHealthyAll->setCallback(this);
     _microbeSpecialMenu->addItem(_microbeLoadHealthyAll);
 
-    _microbeLoadHealthy105All = new MenuButton("Healthy 119");
+    _microbeLoadHealthy105All = new MenuButton("Healthy 155");
     _microbeLoadHealthy105All->setCallback(this);
     _microbeSpecialMenu->addItem(_microbeLoadHealthy105All);
+
+    _microbeLoadHealthy252All = new MenuButton("Healthy 252");
+    _microbeLoadHealthy252All->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadHealthy252All);
 
     _microbeLoadUCAll = new MenuButton("UC All");
     _microbeLoadUCAll->setCallback(this);
@@ -264,6 +268,7 @@ bool FuturePatient::init()
     tableList.push_back("2014_02_19");
 
     _microbeTable->setValues(tableList);
+    _microbeTable->setIndex(2);
 
     _microbeGraphType = new MenuList();
     _microbeGraphType->setCallback(this);
@@ -1382,7 +1387,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	}
     }
 
-    if(item == _microbeLoadHealthyAll || item == _microbeLoadUCAll || item == _microbeLoadHealthy105All)
+    if(item == _microbeLoadHealthyAll || item == _microbeLoadUCAll || item == _microbeLoadHealthy105All || item == _microbeLoadHealthy252All)
     {
 	/*std::string tablesuffix;
 	if(_microbeTable->getIndex() == 1)
@@ -1402,7 +1407,14 @@ void FuturePatient::menuCallback(MenuItem * item)
 	}
 	else if(item == _microbeLoadHealthy105All)
 	{
+	    rangeList.push_back(std::pair<int,int>(65,99));
 	    rangeList.push_back(std::pair<int,int>(118,236));
+	}
+	else if(item == _microbeLoadHealthy252All)
+	{
+	    rangeList.push_back(std::pair<int,int>(65,99));
+	    rangeList.push_back(std::pair<int,int>(118,236));
+	    rangeList.push_back(std::pair<int,int>(349,447));
 	}
 	else
 	{

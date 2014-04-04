@@ -160,6 +160,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeLoadCrohnsAll;
         cvr::MenuButton * _microbeLoadHealthyAll;
         cvr::MenuButton * _microbeLoadHealthy105All;
+        cvr::MenuButton * _microbeLoadHealthy252All;
         cvr::MenuButton * _microbeLoadUCAll;
         cvr::SubMenu * _microbePointLineMenu;
         cvr::MenuCheckbox * _microbePointLineExpand;

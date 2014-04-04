@@ -287,6 +287,9 @@ void GraphLayoutObject::removeAll()
     checkLineRefs();
 
     setTitle(getName());
+    
+    _selectionText->setText("");
+    _selectionMenu->setVisible(false);
 }
 
 void GraphLayoutObject::perFrame()
@@ -1303,11 +1306,11 @@ void GraphLayoutObject::setTitle(std::string title)
 
 void GraphLayoutObject::setSelectionText()
 {
-    if(_currentSelectedMicrobeGroup != "" && _currentSelectedMicrobes.size())
+    if(_currentSelectedMicrobeGroup != "")
     {
 	std::stringstream ss;
 	std::string spacer = "   ";
-	if(_currentSelectedMicrobes.size() != 1)
+	if(!_currentSelectedMicrobes.size())
 	{
 	    ss << _currentSelectedMicrobeGroup << " Totals" << std::endl;
 	    // group stats
@@ -1326,6 +1329,30 @@ void GraphLayoutObject::setSelectionText()
 		    {
 			ss << "~" << std::endl;
 		    }
+		}
+	    }
+	}
+	else if(_currentSelectedMicrobes.size() != 1)
+	{
+	    ss << _currentSelectedMicrobeGroup << " Selected Totals" << std::endl;
+	    // group stats
+	    for(int i = 0; i < _objectList.size(); ++i)
+	    {
+		MicrobeSelectObject * mso = dynamic_cast<MicrobeSelectObject *>(_objectList[i]);
+		if(mso)
+		{
+		    ss << spacer << _objectList[i]->getTitle() << ": ";
+		    float val = 0.0;
+		    
+		    for(int j = 0; j < _currentSelectedMicrobes.size(); ++j)
+		    {
+			float tval = mso->getMicrobeValue(_currentSelectedMicrobeGroup,_currentSelectedMicrobes[j]);
+			if(tval >= 0.0)
+			{
+			    val += tval;
+			}
+		    }
+		    ss << val << std::endl;
 		}
 	    }
 	}
