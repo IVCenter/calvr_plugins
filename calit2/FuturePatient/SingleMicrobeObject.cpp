@@ -181,7 +181,8 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string m
 		}
 		else if(condition == "Larry")
 		{
-		    group = "Smarr";
+		    //group = "Smarr";
+		    group = "LS";
 		}
 		
 		if(!groupPatients || group != "Healthy")
@@ -195,7 +196,8 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string m
 	}
     }
 
-    orderList.push_back("Smarr");
+    //orderList.push_back("Smarr");
+    orderList.push_back("LS");
 
     if(firstOnly || groupPatients)
     {
@@ -242,14 +244,14 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string m
 	}
     }
 
-    bool status = _graph->setGraph(microbe,dataMap,orderList,BGAT_LOG,"Value","","condition / patient", osg::Vec4());
+    bool status = _graph->setGraph(microbe,dataMap,orderList,BGAT_LOG,"Relative Abundance","","condition / patient", osg::Vec4());
 
     if(status)
     {
 	addChild(_graph->getRootNode());
 	_graph->addMathFunction(new BandingFunction());
 	_graph->setShowLabels(labels);
-	_graph->setDisplayRange(0.000007,1.0);
+	_graph->setDisplayRange(0.0000007,1.0);
     }
 
     return status;

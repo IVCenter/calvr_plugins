@@ -1087,7 +1087,8 @@ void GraphLayoutObject::makeKeys()
     std::vector<osg::Vec4> colors;
     std::vector<std::string> labels;
 
-    labels.push_back("Smarr");
+    //labels.push_back("Smarr");
+    labels.push_back("LS");
     labels.push_back("Crohns");
     labels.push_back("UC");
     labels.push_back("Healthy");
