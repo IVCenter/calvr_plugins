@@ -15,7 +15,7 @@ class SingleMicrobeObject : public LayoutTypeObject, public PatientSelectObject
         SingleMicrobeObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~SingleMicrobeObject();
 
-        bool setGraph(std::string microbe, int taxid, std::string microbeTableSuffix, std::string measureTableSuffix, bool rankOrder=true, bool labels=true, bool firstOnly=false, bool groupPatients=false);
+        bool setGraph(std::string microbe, int taxid, std::string microbeTableSuffix, std::string measureTableSuffix, bool family, bool rankOrder=true, bool labels=true, bool firstOnly=false, bool groupPatients=false);
 
         virtual void objectAdded();
         virtual void objectRemoved();

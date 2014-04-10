@@ -203,6 +203,15 @@ bool FuturePatient::init()
     _sMicrobeBFragilis->setCallback(this);
     _sMicrobePresetMenu->addItem(_sMicrobeBFragilis);
 
+    _sMicrobeType = new MenuList();
+    _sMicrobeType->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobeType);
+
+    std::vector<std::string> mtypeList;
+    mtypeList.push_back("Microbe");
+    mtypeList.push_back("Family");
+    _sMicrobeType->setValues(mtypeList);
+
     _sMicrobes = new MenuList();
     _sMicrobes->setCallback(this);
     _sMicrobeMenu->addItem(_sMicrobes);
@@ -1190,7 +1199,26 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    _sMicrobes->setValues(_microbeV2List);
 	}*/
-	_sMicrobes->setValues(_microbeTableList[_microbeTable->getIndex()]->microbeList);
+	if(_sMicrobeType->getValue() == "Microbe")
+	{
+	    _sMicrobes->setValues(_microbeTableList[_microbeTable->getIndex()]->microbeList);
+	}
+	else if(_sMicrobeType->getValue() == "Family")
+	{
+	    _sMicrobes->setValues(_microbeTableList[_microbeTable->getIndex()]->familyList);
+	}
+    }
+
+    if(item == _sMicrobeType)
+    {
+	if(_sMicrobeType->getValue() == "Microbe")
+	{
+	    _sMicrobes->setValues(_microbeTableList[_microbeTable->getIndex()]->microbeList);
+	}
+	else if(_sMicrobeType->getValue() == "Family")
+	{
+	    _sMicrobes->setValues(_microbeTableList[_microbeTable->getIndex()]->familyList);
+	}
     }
 
     if(item == _microbePatients)
@@ -1581,7 +1609,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	}*/
 
 	SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	if(smo->setGraph(_sMicrobes->getValue(),taxid,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
+	if(smo->setGraph(_sMicrobes->getValue(),taxid,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(_sMicrobeType->getValue() == "Family"),_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
 	{
 	    checkLayout();
 	    _layoutObject->addGraphObject(smo);
@@ -1608,7 +1636,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	if(index >= 0)
 	{
 	    SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	    if(smo->setGraph(_sMicrobeBFragilis->getText(),_microbeTableList[_microbeTable->getIndex()]->microbeIDList[index],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,false,false,_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
+	    if(smo->setGraph(_sMicrobeBFragilis->getText(),_microbeTableList[_microbeTable->getIndex()]->microbeIDList[index],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,false,false,false,_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
 	    {
 		checkLayout();
 		_layoutObject->addGraphObject(smo);
@@ -1905,8 +1933,16 @@ void FuturePatient::setupMicrobes()
 	int taxid;
     };
 
+    struct Families
+    {
+	char name[512];
+    };
+
     Microbes * microbes;
     int numMicrobes;
+
+    Families * families;
+    int numFamilies;
 
     for(int j = 0; j < _microbeTableList.size(); ++j)
     {
@@ -1961,6 +1997,57 @@ void FuturePatient::setupMicrobes()
 	if(microbes)
 	{
 	    delete[] microbes;
+	}
+
+	families = NULL;
+	numFamilies = 0;
+
+	if(ComController::instance()->isMaster())
+	{
+	    if(_conn)
+	    {
+		std::stringstream qss;
+		qss << "select distinct family from Microbes" << _microbeTableList[j]->microbeSuffix << " order by family;";
+		mysqlpp::Query q = _conn->query(qss.str());
+		mysqlpp::StoreQueryResult res = q.store();
+
+		numFamilies = res.num_rows();
+
+		if(numFamilies)
+		{
+		    families = new struct Families[numFamilies];
+
+		    for(int i = 0; i < numFamilies; ++i)
+		    {
+			strncpy(families[i].name,res[i]["family"].c_str(),511);
+		    }
+		}
+
+		ComController::instance()->sendSlaves(&numFamilies,sizeof(int));
+		if(numFamilies)
+		{
+		    ComController::instance()->sendSlaves(families,numFamilies*sizeof(struct Families));
+		}
+	    }
+	}
+	else
+	{
+	    ComController::instance()->readMaster(&numFamilies,sizeof(int));
+	    if(numFamilies)
+	    {
+		families = new struct Families[numFamilies];
+		ComController::instance()->readMaster(families,numFamilies*sizeof(struct Families));
+	    }
+	}
+
+	for(int i = 0; i < numFamilies; ++i)
+	{
+	    _microbeTableList[j]->familyList.push_back(families[i].name);
+	}
+
+	if(families)
+	{
+	    delete[] families;
 	}
 
     }

@@ -36,7 +36,7 @@ bool rankOrderSort(const std::pair<std::string, float> & first, const std::pair<
     return first.second > second.second;
 }
 
-bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string microbeTableSuffix, std::string measureTableSuffix, bool rankOrder, bool labels, bool firstOnly, bool groupPatients)
+bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string microbeTableSuffix, std::string measureTableSuffix, bool family, bool rankOrder, bool labels, bool firstOnly, bool groupPatients)
 {
     std::string measurementTable = "Microbe_Measurement";
     measurementTable += measureTableSuffix;
@@ -55,7 +55,14 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string m
 
     std::stringstream queryss;
 
-    queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where " << measurementTable << ".taxonomy_id = " << taxid << " and Patient.region = \"US\" order by p_condition, last_name, timestamp;";
+    if(!family)
+    {
+	queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where " << measurementTable << ".taxonomy_id = " << taxid << " and Patient.region = \"US\" order by p_condition, last_name, timestamp;";
+    }
+    else
+    {
+	queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << microbesTable << ".family, sum(" << measurementTable << ".value) as value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id inner join " << microbesTable << " on " << microbesTable << ".taxonomy_id = " << measurementTable << ".taxonomy_id where " << microbesTable << ".family = \"" << microbe << "\" and Patient.region = \"US\" group by patient_id, timestamp order by p_condition, last_name, timestamp;";
+    }
 
     //std::cerr << "Query: " << queryss.str() << std::endl;
 
