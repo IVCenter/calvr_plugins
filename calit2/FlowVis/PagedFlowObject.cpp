@@ -146,13 +146,30 @@ void PagedFlowObject::preFrame()
 	    normal = origin - point;
 	    normal.normalize();
 
+	    UniData ud;
+
 	    right = right - point;
 	    right.normalize();
+
+	    _renderer->getUniData("planeRightNorm",ud);
+	    ((float*)ud.data)[0] = right.x();
+	    ((float*)ud.data)[1] = right.y();
+	    ((float*)ud.data)[2] = right.z();
+
 	    right = right * _planeVecSpacingRV->getValue();
 
 	    up = up - point;
 	    up.normalize();
+
+	    _renderer->getUniData("planeUpNorm",ud);
+	    ((float*)ud.data)[0] = up.x();
+	    ((float*)ud.data)[1] = up.y();
+	    ((float*)ud.data)[2] = up.z();
+
 	    up = up * _planeVecSpacingRV->getValue();
+
+	    _renderer->getUniData("planeBasisLength",ud);
+	    ((float*)ud.data)[0] = _planeVecSpacingRV->getValue();
 
 	    osg::Matrixf matf;
 	    matf(0,0) = up.x();
@@ -183,7 +200,6 @@ void PagedFlowObject::preFrame()
 		}
 	    }
 
-	    UniData ud;
 	    _renderer->getUniData("planePoint",ud);
 	    ((float*)ud.data)[0] = point.x();
 	    ((float*)ud.data)[1] = point.y();
@@ -333,51 +349,57 @@ void PagedFlowObject::preFrame()
 
 	    // TODO: make this an option that can be disabled for cave display
 
-	    // factor in viewport
-	    float vpBasisXMin = FLT_MAX;
-	    float vpBasisXMax = -FLT_MAX;
-	    float vpBasisYMin = FLT_MAX;
-	    float vpBasisYMax = -FLT_MAX;
-
-	    for(int i = 0; i < viewportIntersectionList.size(); ++i)
+	    // only use viewport bounds if all corner rays hit the lic plane
+	    if(viewportIntersectionList.size() == 4)
 	    {
-		osg::Vec3 tempP = viewportIntersectionList[i]-point;
+		//std::cerr << "Using viewport bounds" << std::endl;
 
-		osg::Vec3 basisPoint;
-		basisPoint.x() = tempP * up;
-		basisPoint.y() = tempP * right;
+		// factor in viewport
+		float vpBasisXMin = FLT_MAX;
+		float vpBasisXMax = -FLT_MAX;
+		float vpBasisYMin = FLT_MAX;
+		float vpBasisYMax = -FLT_MAX;
 
-		vpBasisXMin = std::min(vpBasisXMin,basisPoint.x());
-		vpBasisXMax = std::max(vpBasisXMax,basisPoint.x());
-		vpBasisYMin = std::min(vpBasisYMin,basisPoint.y());
-		vpBasisYMax = std::max(vpBasisYMax,basisPoint.y());
-	    }
+		for(int i = 0; i < viewportIntersectionList.size(); ++i)
+		{
+		    osg::Vec3 tempP = viewportIntersectionList[i]-point;
 
-	    float vpBasisXPadding = (vpBasisXMax - vpBasisXMin)*0.20;
-	    float vpBasisYPadding = (vpBasisYMax - vpBasisYMin)*0.20;
-	    vpBasisXMin -= vpBasisXPadding;
-	    vpBasisXMax += vpBasisXPadding;
-	    vpBasisYMin -= vpBasisYPadding;
-	    vpBasisYMax += vpBasisYPadding;
+		    osg::Vec3 basisPoint;
+		    basisPoint.x() = tempP * up;
+		    basisPoint.y() = tempP * right;
 
-	    //std::cerr << "Old - BasisXMin: " << basisXMin << " BasisXMax: " << basisXMax << std::endl;
-	    //std::cerr << "Old - BasisYMin: " << basisYMin << " BasisYMax: " << basisYMax << std::endl;
+		    vpBasisXMin = std::min(vpBasisXMin,basisPoint.x());
+		    vpBasisXMax = std::max(vpBasisXMax,basisPoint.x());
+		    vpBasisYMin = std::min(vpBasisYMin,basisPoint.y());
+		    vpBasisYMax = std::max(vpBasisYMax,basisPoint.y());
+		}
 
-	    if(vpBasisXMin > basisXMin)
-	    {
-		basisXMin = vpBasisXMin;
-	    }
-	    if(vpBasisYMin > basisYMin)
-	    {
-		basisYMin = vpBasisYMin;
-	    }
-	    if(vpBasisXMax < basisXMax)
-	    {
-		basisXMax = vpBasisXMax;
-	    }
-	    if(vpBasisYMax < basisYMax)
-	    {
-		basisYMax = vpBasisYMax;
+		float vpBasisXPadding = (vpBasisXMax - vpBasisXMin)*0.20;
+		float vpBasisYPadding = (vpBasisYMax - vpBasisYMin)*0.20;
+		vpBasisXMin -= vpBasisXPadding;
+		vpBasisXMax += vpBasisXPadding;
+		vpBasisYMin -= vpBasisYPadding;
+		vpBasisYMax += vpBasisYPadding;
+
+		//std::cerr << "Old - BasisXMin: " << basisXMin << " BasisXMax: " << basisXMax << std::endl;
+		//std::cerr << "Old - BasisYMin: " << basisYMin << " BasisYMax: " << basisYMax << std::endl;
+
+		if(vpBasisXMin > basisXMin)
+		{
+		    basisXMin = vpBasisXMin;
+		}
+		if(vpBasisYMin > basisYMin)
+		{
+		    basisYMin = vpBasisYMin;
+		}
+		if(vpBasisXMax < basisXMax)
+		{
+		    basisXMax = vpBasisXMax;
+		}
+		if(vpBasisYMax < basisYMax)
+		{
+		    basisYMax = vpBasisYMax;
+		}
 	    }
 
 	    //std::cerr << "BasisXMin: " << basisXMin << " BasisXMax: " << basisXMax << std::endl;
@@ -908,7 +930,7 @@ void PagedFlowObject::getPlaneViewportIntersection(const osg::Vec3 & planePoint,
 	float w;
 	osg::Vec3 intersect;
 
-	if(linePlaneIntersectionRef(viewerPos,vpCorners[i],planePoint,planeNormal,intersect,w))
+	if(linePlaneIntersectionRef(viewerPos,vpCorners[i],planePoint,planeNormal,intersect,w) && w > 0.0)
 	{
 	    intersectList.push_back(intersect);
 	}

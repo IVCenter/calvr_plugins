@@ -1123,10 +1123,22 @@ void FlowPagedRenderer::draw(int context)
 		    ub.data = _uniDataMap["planeRight"].data;
 		    meshUniBinding.push_back(ub);
 
-		    ub.location = _vecPlaneBasisInvUni[context];
+		    ub.location = _vecPlaneUpNormUni[context];
+		    ub.type = _uniDataMap["planeUpNorm"].type;
+		    ub.data = _uniDataMap["planeUpNorm"].data;
+		    meshUniBinding.push_back(ub);
+		    ub.location = _vecPlaneRightNormUni[context];
+		    ub.type = _uniDataMap["planeRightNorm"].type;
+		    ub.data = _uniDataMap["planeRightNorm"].data;
+		    meshUniBinding.push_back(ub);
+		    ub.location = _vecPlaneBasisLengthUni[context];
+		    ub.type = _uniDataMap["planeBasisLength"].type;
+		    ub.data = _uniDataMap["planeBasisLength"].data;
+		    meshUniBinding.push_back(ub);
+		    /*ub.location = _vecPlaneBasisInvUni[context];
 		    ub.type = _uniDataMap["planeBasisInv"].type;
 		    ub.data = _uniDataMap["planeBasisInv"].data;
-		    meshUniBinding.push_back(ub);
+		    meshUniBinding.push_back(ub);*/
 
 		    drawMesh = true;
 		}
@@ -2310,7 +2322,10 @@ void FlowPagedRenderer::checkShaderInit(int context)
 	_vecPlaneNormalUni[context] = glGetUniformLocation(_vecPlaneProgram[context],"planeNormal");
 	_vecPlaneUpUni[context] = glGetUniformLocation(_vecPlaneProgram[context],"planeUp");
 	_vecPlaneRightUni[context] = glGetUniformLocation(_vecPlaneProgram[context],"planeRight");
-	_vecPlaneBasisInvUni[context] = glGetUniformLocation(_vecPlaneProgram[context],"planeBasisInv");
+	_vecPlaneUpNormUni[context] = glGetUniformLocation(_vecPlaneProgram[context],"planeUpNorm");
+	_vecPlaneRightNormUni[context] = glGetUniformLocation(_vecPlaneProgram[context],"planeRightNorm");
+	_vecPlaneBasisLengthUni[context] = glGetUniformLocation(_vecPlaneProgram[context],"planeBasisLength");
+	//_vecPlaneBasisInvUni[context] = glGetUniformLocation(_vecPlaneProgram[context],"planeBasisInv");
 
 	createShaderFromSrc(vcoreAlphaVertSrc,GL_VERTEX_SHADER,verts,"vcoreAlphaVert");
 	createProgram(_vortexAlphaProgram[context],verts,0);

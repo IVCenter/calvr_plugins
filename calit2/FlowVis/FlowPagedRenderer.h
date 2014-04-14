@@ -157,7 +157,10 @@ class FlowPagedRenderer
         std::map<int,GLint> _vecPlaneNormalUni;
         std::map<int,GLint> _vecPlaneUpUni;
         std::map<int,GLint> _vecPlaneRightUni;
-        std::map<int,GLint> _vecPlaneBasisInvUni;
+        std::map<int,GLint> _vecPlaneUpNormUni;
+        std::map<int,GLint> _vecPlaneRightNormUni;
+        std::map<int,GLint> _vecPlaneBasisLengthUni;
+        //std::map<int,GLint> _vecPlaneBasisInvUni;
 
         std::map<int,GLuint> _vortexAlphaProgram;
         std::map<int,GLint> _vortexAlphaMinUni;
