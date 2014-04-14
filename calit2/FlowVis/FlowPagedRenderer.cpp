@@ -1001,7 +1001,9 @@ void FlowPagedRenderer::draw(int context)
 		color[1] = 0.0;
 		color[2] = 1.0;
 		color[3] = 1.0;
+		glEnable(GL_BLEND);
 		drawElements(GL_LINES_ADJACENCY,_set->frameList[_currentFrame]->indices.first,GL_UNSIGNED_INT,indVBO,vertsVBO,color,meshAttribBinding,meshProg,meshTexBinding,meshUniBinding);
+		glDisable(GL_BLEND);
 	    }
 
 	    if(_currentFrame != _nextFrame)
