@@ -2,6 +2,7 @@
 
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/ScreenConfig.h>
+#include <cvrKernel/ComController.h>
 #include <cvrUtil/OsgMath.h>
 
 #include <iostream>
@@ -350,7 +351,8 @@ void PagedFlowObject::preFrame()
 	    // TODO: make this an option that can be disabled for cave display
 
 	    // only use viewport bounds if all corner rays hit the lic plane
-	    if(viewportIntersectionList.size() == 4)
+	    // also don't do this for clusters, since they have different viewports per node
+	    if(viewportIntersectionList.size() == 4 && !ComController::instance()->getNumSlaves())
 	    {
 		//std::cerr << "Using viewport bounds" << std::endl;
 
