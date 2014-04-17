@@ -3,6 +3,7 @@
 #include "GLHelper.h"
 
 #include <iostream>
+#include <cstring>
 
 #include <sys/time.h>
 
@@ -13,6 +14,7 @@
 #include "CudaLIC.h"
 #endif
 
+// namespace scope to fix compile issues in chain included headers
 namespace fpr
 {
 #include "NormalShader.h"
@@ -20,9 +22,6 @@ namespace fpr
 #include "VortexCoreShaders.h"
 #include "LicShaders.h"
 }
-
-// for cuda debug, remove later
-#include <osg/Matrix>
 
 using namespace fpr;
 
@@ -36,7 +35,7 @@ std::map<int,std::pair<int,int> > FlowPagedRenderer::_cudaInitInfo;
 pthread_mutex_t FlowPagedRenderer::_colorTableInitLock = PTHREAD_MUTEX_INITIALIZER;
 std::map<int,GLuint> FlowPagedRenderer::_colorTableMap;
 
-FlowPagedRenderer::FlowPagedRenderer(PagedDataSet * set, int frame, FlowVisType type, std::string attribute)
+FlowPagedRenderer::FlowPagedRenderer(PagedDataSet * set, int frame, FlowVisType type, std::string attribute, int cacheSize)
 {
     _set = set;
     _currentFrame = frame;
@@ -53,9 +52,7 @@ FlowPagedRenderer::FlowPagedRenderer(PagedDataSet * set, int frame, FlowVisType 
 
     initUniData();
 
-    //TODO: read from config
-    // 1GB gpu cache
-    _cache = new VBOCache(1048576);
+    _cache = new VBOCache(cacheSize);
 }
 
 FlowPagedRenderer::~FlowPagedRenderer()
@@ -70,7 +67,6 @@ void FlowPagedRenderer::frameStart(int context)
 	case FVT_LIC_CUDA:
 	{
 #ifdef WITH_CUDA_LIB
-	    //pthread_mutex_lock(&_licCudaLock);
 
 	    int fileID = _cache->getFileID(_set->frameFiles[_currentFrame]);
 	    // get needed buffers
@@ -98,19 +94,22 @@ void FlowPagedRenderer::frameStart(int context)
 	    // if all needed buffers are loaded, do LIC
 	    if(indVBO && vertsVBO && velVBO)
 	    {
+		setPlaneConsts(ccPlanePoint,ccPlaneNormal,ccPlaneRight,ccPlaneUp,ccPlaneRightNorm,ccPlaneUpNorm,&ccPlaneBasisLength);
+		setTexConsts(&ccTexXMin,&ccTexXMax,&ccTexYMin,&ccTexYMax);
+
 		// map buffers
 		CUdeviceptr d_indVBO, d_vertsVBO, d_velVBO;
 		checkMapBufferObj((void**)&d_indVBO,indVBO);
 		checkMapBufferObj((void**)&d_vertsVBO,vertsVBO);
 		checkMapBufferObj((void**)&d_velVBO,velVBO);
-	
+
 #ifdef PRINT_TIMING	
 		cudaThreadSynchronize();
 		struct timeval tliststart,tlistend;
 		gettimeofday(&tliststart,NULL);
 #endif
 
-		// test to see how long it takes to form a list of tets on the plane
+		// form a list of tets on the plane
 		void * d_tetList;
 		cudaMalloc(&d_tetList,(_set->frameList[_currentFrame]->indices.first/4)*sizeof(unsigned int));
 
@@ -131,175 +130,6 @@ void FlowPagedRenderer::frameStart(int context)
 
 		//std::cerr << "TotalTets: " << _set->frameList[_currentFrame]->indices.first/4 << " tets on plane: " << h_numTets << std::endl;
 
-		
-
-		// vel check
-		if(0)
-		{
-		    int velSize = _set->frameList[_currentFrame]->verts.first;
-		    float * hostVel = new float[velSize*3];
-
-		    cudaMemcpy(hostVel,(const void*)d_velVBO,velSize*3*sizeof(float),cudaMemcpyDeviceToHost);
-
-		    int zeroCount = 0;
-
-		    for(int i = 0; i < velSize; ++i)
-		    {
-			if(hostVel[(i*3)+0] == 0.0f && hostVel[(i*3)+1] == 0.0f && hostVel[(i*3)+2] == 0.0f)
-			{
-			    zeroCount++;
-			}
-		    }
-
-		    std::cerr << "ZeroCount: " << zeroCount << std::endl;
-
-		    delete[] hostVel;
-		}
-
-		// cpu validation 
-		if(0)
-		{
-
-		    int indSize = _set->frameList[_currentFrame]->indices.first;
-		    int vertSize = _set->frameList[_currentFrame]->verts.first*3;
-
-		    unsigned int * hostInd = new unsigned int[indSize];
-		    float * hostVerts = new float[vertSize];
-
-		    cudaMemcpy(hostInd,(const void*)d_indVBO,indSize*sizeof(unsigned int),cudaMemcpyDeviceToHost);
-		    cudaMemcpy(hostVerts,(const void*)d_vertsVBO,vertSize*sizeof(float),cudaMemcpyDeviceToHost);
-
-		    float * planePoint = (float*)_uniDataMap["planePoint"].data;
-		    float * planeNormal = (float*)_uniDataMap["planeNormal"].data;
-		    float * planeRight = (float*)_uniDataMap["planeRight"].data;
-		    float * planeUp = (float*)_uniDataMap["planeUp"].data;
-		    float * planeBasisMat = (float*)_uniDataMap["planeBasisInv"].data;
-
-		    int numTets = _set->frameList[_currentFrame]->indices.first/4;
-
-		    std::cerr << "PlanePoint x: " << planePoint[0] << " y: " << planePoint[1] << " z: " << planePoint[2] << std::endl;
-		    std::cerr << "PlaneNormal x: " << planeNormal[0] << " y: " << planeNormal[1] << " z: " << planeNormal[2] << std::endl;
-
-		    osg::Matrix invBasis;
-		    std::cerr << "Matrix : ";
-		    for(int i = 0; i < 3; ++i)
-		    {
-			for(int j = 0; j < 3; ++j)
-			{
-			    invBasis(i,j) = planeBasisMat[(i*3)+j];
-			    std::cerr << invBasis(i,j) << " ";
-			}
-		    }
-		    std::cerr << std::endl;
-
-		    osg::Vec3 vplanePoint(planePoint[0],planePoint[1],planePoint[2]);
-		    osg::Vec3 vplaneNormal(planeNormal[0],planeNormal[1],planeNormal[2]);
-		    osg::Vec3 vplaneRight(planeRight[0],planeRight[1],planeRight[2]);
-		    osg::Vec3 vplaneUp(planeUp[0],planeUp[1],planeUp[2]);
-
-		    // verify
-		    osg::Vec3 tempp = vplaneRight * invBasis;
-		    std::cerr << "Right verify x: " << tempp.x() << " y: " << tempp.y() << " z: " << tempp.z() << std::endl;
-		    tempp = vplaneUp * invBasis;
-		    std::cerr << "Up verify x: " << tempp.x() << " y: " << tempp.y() << " z: " << tempp.z() << std::endl;
-
-		    for(int i = 0; i < 1; ++i)
-		    {
-			osg::Vec3 tets[4];
-			for(int j = 0; j < 4; ++j)
-			{
-			    tets[j].x() = hostVerts[(hostInd[(i*4)+j]*3)+0];
-			    tets[j].y() = hostVerts[(hostInd[(i*4)+j]*3)+1];
-			    tets[j].z() = hostVerts[(hostInd[(i*4)+j]*3)+2];
-
-			    std::cerr << "Host Point " << j << " " << tets[j].x() << " " << tets[j].y() << " " << tets[j].z() << std::endl;
-			}
-			
-			float dist[4];
-			for(int j = 0; j < 4; ++j)
-			{
-			    dist[j] = (tets[j] - vplanePoint) * vplaneNormal;
-			    std::cerr << "Distance " << j << " " << dist[j] << std::endl;
-			}
-
-			float minX = FLT_MAX;
-			float minY = FLT_MAX;
-			float maxX = -FLT_MAX;
-			float maxY = -FLT_MAX;
-
-			for(int j = 0; j < 4; ++j)
-			{
-			    osg::Vec3 ppoint = tets[j] - (vplaneNormal * dist[j]) - vplanePoint;
-			    //std::cerr << "Proj x: " << ppoint.x() << " y: " << ppoint.y() << " z: " << ppoint.z() << std::endl;
-			    ppoint = ppoint * invBasis;
-			    std::cerr << "Basis x: " << ppoint.x() << " y: " << ppoint.y() << " z: " << ppoint.z() << std::endl;
-			    minX = std::min(minX,ppoint.x());
-			    maxX = std::max(maxX,ppoint.x());
-			    minY = std::min(minY,ppoint.y());
-			    maxY = std::max(maxY,ppoint.y());
-			}
-
-			std::cerr << "X: " << minX << " " << maxX << std::endl;
-			std::cerr << "Y: " << minY << " " << maxY << std::endl;
-
-			minX = ceil(minX - 0.5) + 0.5;
-			minY = ceil(minY - 0.5) + 0.5;
-			maxX = floor(maxX - 0.5) + 0.500001f;
-			maxY = floor(maxY - 0.5) + 0.500001f;
-
-			std::cerr << "X: " << minX << " " << maxX << std::endl;
-			std::cerr << "Y: " << minY << " " << maxY << std::endl;
-
-			osg::Matrixf barMat;
-
-			barMat(0,0) = tets[0].x() - tets[3].x();
-			barMat(0,1) = tets[0].y() - tets[3].y();
-			barMat(0,2) = tets[0].z() - tets[3].z();
-			barMat(0,3) = 0;
-			barMat(1,0) = tets[1].x() - tets[3].x();
-			barMat(1,1) = tets[1].y() - tets[3].y();
-			barMat(1,2) = tets[1].z() - tets[3].z();
-			barMat(1,3) = 0;
-			barMat(2,0) = tets[2].x() - tets[3].x();
-			barMat(2,1) = tets[2].y() - tets[3].y();
-			barMat(2,2) = tets[2].z() - tets[3].z();
-			barMat(2,3) = 0;
-			barMat(3,0) = 0;
-			barMat(3,1) = 0;
-			barMat(3,2) = 0;
-			barMat(3,3) = 1;
-
-			barMat = osg::Matrixf::inverse(barMat);
-			std::cerr << "InvMat: ";
-			for(int j = 0; j < 3; ++j)
-			{
-			    for(int k = 0; k < 3; ++k)
-			    {
-				std::cerr << barMat(k,j) << " ";
-			    }
-			    std::cerr << std::endl;
-			}
-
-			for(float fi = minX; fi <= maxX; fi = fi + 1.0)
-			{
-			    for(float fj = minY; fj <= maxY; fj = fj + 1.0)
-			    {
-				osg::Vec3 testpoint = vplaneUp * fi + vplaneRight * fj + vplanePoint - tets[3];
-				std::cerr << "TestPoint x: " << testpoint.x() << " y: " << testpoint.y() << " z: " << testpoint.z() << std::endl;
-
-				osg::Vec3 coords = testpoint * barMat;
-				std::cerr << "Coords " << coords.x() << " " << coords.y() << " " << coords.z() << " " << (1.0 - coords.x() - coords.y() - coords.z()) << std::endl;
-				
-			    }
-			}
-		    }
-
-		    delete[] hostInd;
-		    delete[] hostVerts;
-		}
-
-		//std::cerr << std::endl;
-
 		// map velocity texture
 		_licCudaVelImage[context]->setMapFlags(cudaGraphicsMapFlagsWriteDiscard);
 		_licCudaVelImage[context]->map();
@@ -315,9 +145,7 @@ void FlowPagedRenderer::frameStart(int context)
 #endif
 
 		// populate texture
-		//launchVel((uint4*)d_indVBO,(float3*)d_vertsVBO,(float3*)d_velVBO,_set->frameList[_currentFrame]->indices.first/4,LIC_TEXTURE_SIZE,LIC_TEXTURE_SIZE);
 		launchVel((uint4*)d_indVBO,(float3*)d_vertsVBO,(float3*)d_velVBO,(unsigned int*)d_tetList,h_numTets,LIC_TEXTURE_SIZE,LIC_TEXTURE_SIZE);
-		//launchVel((uint4*)d_indVBO,(float3*)d_vertsVBO,(float3*)d_velVBO,1);
 		cudaThreadSynchronize();
 
 #ifdef PRINT_TIMING
@@ -367,7 +195,6 @@ void FlowPagedRenderer::frameStart(int context)
 		pthread_mutex_unlock(&_licLock);
 	    }
 
-	    //pthread_mutex_unlock(&_licCudaLock);
 #endif
 	    break;
 	}
@@ -385,63 +212,6 @@ void FlowPagedRenderer::preFrame()
 
     switch(_type)
     {
-	case FVT_LIC_CUDA:
-	{
-	    break;
-	    if(!_licStarted)
-	    {
-		_licNextOutputPoints = std::vector<float>(12);
-		float * planePoint = (float*)_uniDataMap["planePoint"].data;
-		float * planeNormal = (float*)_uniDataMap["planeNormal"].data;
-		float * planeRight = (float*)_uniDataMap["planeRight"].data;
-		float * planeUp = (float*)_uniDataMap["planeUp"].data;
-
-#ifdef WITH_CUDA_LIB
-
-#ifdef PRINT_TIMING
-		struct timeval cstart,cend;
-		gettimeofday(&cstart,NULL);
-#endif
-
-		//pthread_mutex_lock(&_licCudaLock);
-		// set constant values
-		setPlaneConsts(planePoint,planeNormal,planeRight,planeUp,_uniDataMap["planeRightNorm"].data,_uniDataMap["planeUpNorm"].data,_uniDataMap["planeBasisInv"].data,_uniDataMap["planeBasisLength"].data);
-		setTexConsts(_uniDataMap["planeBasisXMin"].data,_uniDataMap["planeBasisXMax"].data,_uniDataMap["planeBasisYMin"].data,_uniDataMap["planeBasisYMax"].data);
-		//pthread_mutex_unlock(&_licCudaLock);
-
-#ifdef PRINT_TIMING
-		gettimeofday(&cend,NULL);
-		std::cerr << "FlowPagedRenderer preframe LIC cuda: " << (cend.tv_sec - cstart.tv_sec) + ((cend.tv_usec - cstart.tv_usec)/1000000.0) << std::endl;
-#endif
-
-#endif
-
-		float right[3];
-		float up[3];
-
-		right[0] = (LIC_TEXTURE_SIZE/2.0) * planeRight[0];
-		right[1] = (LIC_TEXTURE_SIZE/2.0) * planeRight[1];
-		right[2] = (LIC_TEXTURE_SIZE/2.0) * planeRight[2];
-
-		up[0] = (LIC_TEXTURE_SIZE/2.0) * planeUp[0];
-		up[1] = (LIC_TEXTURE_SIZE/2.0) * planeUp[1];
-		up[2] = (LIC_TEXTURE_SIZE/2.0) * planeUp[2];
-
-		_licNextOutputPoints[0] = planePoint[0] - right[0] - up[0];
-		_licNextOutputPoints[1] = planePoint[1] - right[1] - up[1];
-		_licNextOutputPoints[2] = planePoint[2] - right[2] - up[2];
-		_licNextOutputPoints[3] = planePoint[0] + right[0] - up[0];
-		_licNextOutputPoints[4] = planePoint[1] + right[1] - up[1];
-		_licNextOutputPoints[5] = planePoint[2] + right[2] - up[2];
-		_licNextOutputPoints[6] = planePoint[0] + right[0] + up[0];
-		_licNextOutputPoints[7] = planePoint[1] + right[1] + up[1];
-		_licNextOutputPoints[8] = planePoint[2] + right[2] + up[2];
-		_licNextOutputPoints[9] = planePoint[0] - right[0] + up[0];
-		_licNextOutputPoints[10] = planePoint[1] - right[1] + up[1];
-		_licNextOutputPoints[11] = planePoint[2] - right[2] + up[2];
-	    }
-	    break;
-	}
 	default:
 	    break;
     }
@@ -460,6 +230,7 @@ void FlowPagedRenderer::draw(int context)
 {
     checkGlewInit(context);
     checkShaderInit(context);
+    checkCudaInit(context);
     checkColorTableInit(context);
 
 
@@ -1137,10 +908,6 @@ void FlowPagedRenderer::draw(int context)
 		    ub.type = _uniDataMap["planeBasisLength"].type;
 		    ub.data = _uniDataMap["planeBasisLength"].data;
 		    meshUniBinding.push_back(ub);
-		    /*ub.location = _vecPlaneBasisInvUni[context];
-		    ub.type = _uniDataMap["planeBasisInv"].type;
-		    ub.data = _uniDataMap["planeBasisInv"].data;
-		    meshUniBinding.push_back(ub);*/
 
 		    drawMesh = true;
 		}
@@ -1976,11 +1743,18 @@ void FlowPagedRenderer::postFrame()
 		gettimeofday(&cstart,NULL);
 #endif
 
-		//pthread_mutex_lock(&_licCudaLock);
-		// set constant values
-		setPlaneConsts(planePoint,planeNormal,planeRight,planeUp,_uniDataMap["planeRightNorm"].data,_uniDataMap["planeUpNorm"].data,_uniDataMap["planeBasisInv"].data,_uniDataMap["planeBasisLength"].data);
-		setTexConsts(_uniDataMap["planeBasisXMin"].data,_uniDataMap["planeBasisXMax"].data,_uniDataMap["planeBasisYMin"].data,_uniDataMap["planeBasisYMax"].data);
-		//pthread_mutex_unlock(&_licCudaLock);
+		// copy consts into isolated variables
+		memcpy(ccPlanePoint,planePoint,3*sizeof(float));
+		memcpy(ccPlaneNormal,planeNormal,3*sizeof(float));
+		memcpy(ccPlaneRight,planeRight,3*sizeof(float));
+		memcpy(ccPlaneUp,planeUp,3*sizeof(float));
+		memcpy(ccPlaneRightNorm,_uniDataMap["planeRightNorm"].data,3*sizeof(float));
+		memcpy(ccPlaneUpNorm,_uniDataMap["planeUpNorm"].data,3*sizeof(float));
+		memcpy(&ccPlaneBasisLength,_uniDataMap["planeBasisLength"].data,sizeof(float));
+		memcpy(&ccTexXMin,_uniDataMap["planeBasisXMin"].data,sizeof(float));
+		memcpy(&ccTexXMax,_uniDataMap["planeBasisXMax"].data,sizeof(float));
+		memcpy(&ccTexYMin,_uniDataMap["planeBasisYMin"].data,sizeof(float));
+		memcpy(&ccTexYMax,_uniDataMap["planeBasisYMax"].data,sizeof(float));
 
 #ifdef PRINT_TIMING
 		gettimeofday(&cend,NULL);
@@ -2177,9 +1951,6 @@ void FlowPagedRenderer::initUniData()
     _uniDataMap["planeBasisYMax"].type = UNI_FLOAT;
     _uniDataMap["planeBasisYMax"].data = new float[1];
 
-    _uniDataMap["planeBasisInv"].type = UNI_MAT3;
-    _uniDataMap["planeBasisInv"].data = new float[9];
-
     _uniDataMap["vmin"].type = UNI_FLOAT;
     _uniDataMap["vmin"].data = new float[1];
     _uniDataMap["vmax"].type = UNI_FLOAT;
@@ -2211,11 +1982,12 @@ void FlowPagedRenderer::checkCudaInit(int context)
 
     if(!_cudaInitMap[context])
     {
-#ifdef CUDA_LIB
+#ifdef WITH_CUDA_LIB
 	if(_cudaInitInfo.find(context) != _cudaInitInfo.end())
 	{
 	    if(_cudaInitInfo[context].second > 1)
 	    {
+		//std::cerr << "Multi context per device init" << std::endl;
 		CUdevice device;
 		cuDeviceGet(&device,_cudaInitInfo[context].first);
 		CUcontext cudaContext;
@@ -2226,6 +1998,7 @@ void FlowPagedRenderer::checkCudaInit(int context)
 	    }
 	    else
 	    {
+		//std::cerr << "Single context per device init" << std::endl;
 		cudaGLSetGLDevice(_cudaInitInfo[context].first);
 		cudaSetDevice(_cudaInitInfo[context].first);
 	    }
@@ -2327,7 +2100,6 @@ void FlowPagedRenderer::checkShaderInit(int context)
 	_vecPlaneUpNormUni[context] = glGetUniformLocation(_vecPlaneProgram[context],"planeUpNorm");
 	_vecPlaneRightNormUni[context] = glGetUniformLocation(_vecPlaneProgram[context],"planeRightNorm");
 	_vecPlaneBasisLengthUni[context] = glGetUniformLocation(_vecPlaneProgram[context],"planeBasisLength");
-	//_vecPlaneBasisInvUni[context] = glGetUniformLocation(_vecPlaneProgram[context],"planeBasisInv");
 
 	createShaderFromSrc(vcoreAlphaVertSrc,GL_VERTEX_SHADER,verts,"vcoreAlphaVert");
 	createProgram(_vortexAlphaProgram[context],verts,0);
@@ -2489,6 +2261,8 @@ void FlowPagedRenderer::checkLICInit(int context)
 
 	_licInit[context] = true;
 	_licFinished[context] = false;
+
+	printCudaErr();
     }
 
     pthread_mutex_unlock(&_licLock);

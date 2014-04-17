@@ -1,5 +1,6 @@
 #include "PagedFlowObject.h"
 
+#include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/ScreenConfig.h>
 #include <cvrKernel/ComController.h>
@@ -19,7 +20,9 @@ PagedFlowObject::PagedFlowObject(PagedDataSet * set, osg::BoundingBox bb, std::s
 
     initCudaInfo();
 
-    _renderer = new FlowPagedRenderer(set,0,FVT_NONE,"None");
+    // get size of vbo cache in KB, 1GB default
+    int cacheSize = ConfigManager::getInt("value","Plugin.FlowVis.VBOCacheSize",1048576);
+    _renderer = new FlowPagedRenderer(set,0,FVT_NONE,"None",cacheSize);
 
     setBoundsCalcMode(SceneObject::MANUAL);
     setBoundingBox(bb);
@@ -172,35 +175,6 @@ void PagedFlowObject::preFrame()
 	    _renderer->getUniData("planeBasisLength",ud);
 	    ((float*)ud.data)[0] = _planeVecSpacingRV->getValue();
 
-	    osg::Matrixf matf;
-	    matf(0,0) = up.x();
-	    matf(0,1) = up.y();
-	    matf(0,2) = up.z();
-	    matf(0,3) = 0;
-	    matf(1,0) = right.x();
-	    matf(1,1) = right.y();
-	    matf(1,2) = right.z();
-	    matf(1,3) = 0;
-	    matf(2,0) = 0;
-	    matf(2,1) = 0;
-	    matf(2,2) = 1;
-	    matf(2,3) = 0;
-	    matf(3,0) = 0;
-	    matf(3,1) = 0;
-	    matf(3,2) = 0;
-	    matf(3,3) = 1;
-
-	    matf = osg::Matrixf::inverse(matf);
-
-	    osg::Matrix3 m;
-	    for(int i = 0; i < 3; ++i)
-	    {
-		for(int j = 0; j < 3; ++j)
-		{
-		    m(i,j) = matf(i,j);
-		}
-	    }
-
 	    _renderer->getUniData("planePoint",ud);
 	    ((float*)ud.data)[0] = point.x();
 	    ((float*)ud.data)[1] = point.y();
@@ -221,14 +195,6 @@ void PagedFlowObject::preFrame()
 	    ((float*)ud.data)[1] = right.y();
 	    ((float*)ud.data)[2] = right.z();
 
-	    _renderer->getUniData("planeBasisInv",ud);
-	    memcpy(ud.data,m.ptr(),9*sizeof(float));
-
-	    //_planePointUni->set(point);
-	    //_planeNormalUni->set(normal);
-	    //_planeUpUni->set(up);
-	    //_planeRightUni->set(right);
-	    //_planeBasisInvUni->set(m);
 	    break;
 	}
 	case FVT_LIC_CUDA:
@@ -241,79 +207,15 @@ void PagedFlowObject::preFrame()
 	    normal = origin - point;
 	    normal.normalize();
 
-	    static const float eps = 0.000001f;
-
 	    right = right - point;
 	    right.normalize();
-
-	    /*if(fabs(right.x()) < eps)
-	    {
-		right.x() = eps;
-	    }
-	    if(fabs(right.y()) < eps)
-	    {
-		right.y() = eps;
-	    }
-	    if(fabs(right.z()) < eps)
-	    {
-		right.z() = eps;
-	    }
-
-	    right.normalize();*/
 
 	    up = up - point;
 	    up.normalize();
 
-	    /*if(fabs(up.x()) < eps)
-	    {
-		up.x() = eps;
-	    }
-	    if(fabs(up.y()) < eps)
-	    {
-		up.y() = eps;
-	    }
-	    if(fabs(up.z()) < eps)
-	    {
-		up.z() = eps;
-	    }
-
-	    up.normalize();*/
-
-	    osg::Matrixf matf;
-	    matf(0,0) = up.x();
-	    matf(0,1) = up.y();
-	    matf(0,2) = up.z();
-	    matf(0,3) = 0;
-	    matf(1,0) = right.x();
-	    matf(1,1) = right.y();
-	    matf(1,2) = right.z();
-	    matf(1,3) = 0;
-	    matf(2,0) = 0;
-	    matf(2,1) = 0;
-	    matf(2,2) = 1;
-	    matf(2,3) = 0;
-	    matf(3,0) = 0;
-	    matf(3,1) = 0;
-	    matf(3,2) = 0;
-	    matf(3,3) = 1;
-
-	    matf = osg::Matrixf::inverse(matf);
-
 	    std::vector<osg::Vec3> edgeIntersectionList;
 
-	    //std::cerr << "PlanePoint: " << point.x() << " " << point.y() << " " << point.z() << std::endl;
-	    //std::cerr << "PlaneNormal: " << normal.x() << " " << normal.y() << " " << normal.z() << std::endl;
-
 	    getBoundsPlaneIntersectPoints(point,normal,_set->bb,edgeIntersectionList);
-
-	    if(0)
-	    {
-		std::cerr << "Got " << edgeIntersectionList.size() << " points." << std::endl;
-		for(int i = 0; i < edgeIntersectionList.size(); ++i)
-		{
-		    std::cerr << edgeIntersectionList[i].x() << " " << edgeIntersectionList[i].y() << " " << edgeIntersectionList[i].z() << std::endl;
-		}
-	    }
 
 	    std::vector<osg::Vec3> viewportIntersectionList;
 	    getPlaneViewportIntersection(point,normal,viewportIntersectionList);
@@ -326,10 +228,7 @@ void PagedFlowObject::preFrame()
 	    for(int i = 0; i < edgeIntersectionList.size(); ++i)
 	    {
 		osg::Vec3 tempP = edgeIntersectionList[i]-point;
-		//std::cerr << "Plane Point x: " << tempP.x() << " y: " << tempP.y() << " z: " << tempP.z() << std::endl;
 		
-		// matrix method can be unstable
-		//osg::Vec3 basisPoint = (edgeIntersectionList[i]-point) * matf;
 		// projection method
 		osg::Vec3 basisPoint;
 		basisPoint.x() = tempP * up;
@@ -347,8 +246,6 @@ void PagedFlowObject::preFrame()
 	    {
 		break;
 	    }
-
-	    // TODO: make this an option that can be disabled for cave display
 
 	    // only use viewport bounds if all corner rays hit the lic plane
 	    // also don't do this for clusters, since they have different viewports per node
@@ -404,9 +301,6 @@ void PagedFlowObject::preFrame()
 		}
 	    }
 
-	    //std::cerr << "BasisXMin: " << basisXMin << " BasisXMax: " << basisXMax << std::endl;
-	    //std::cerr << "BasisYMin: " << basisYMin << " BasisYMax: " << basisYMax << std::endl;
-	    
 	    if(basisXMin >= basisXMax || basisYMin >= basisYMax)
 	    {
 		break;
@@ -423,16 +317,10 @@ void PagedFlowObject::preFrame()
 	    basisYMin = (basisYMin + (basisYRange / 2.0)) - (basisMaxRange / 2.0);
 	    basisYMax = (basisYMin + (basisYRange / 2.0)) + (basisMaxRange / 2.0);
 
-	    //std::cerr << "Point x: " << point.x() << " y: " << point.y() << " z: " << point.z() << std::endl;
-
 	    osg::Vec3 basisCenter = up * (basisXMin + (basisXRange/2.0)) + right * (basisYMin + (basisYRange/2.0));
 	    basisCenter += point;
 
-	    //std::cerr << "Center x: " << basisCenter.x() << " y: " << basisCenter.y() << " z: " << basisCenter.z() << std::endl;
-	    //std::cerr << "Right x: " << right.x() << " y: " << right.y() << " z: " << right.z() << std::endl;
-	    //std::cerr << "Up x: " << up.x() << " y: " << up.y() << " z: " << up.z() << std::endl;
 	    float basisScale = basisMaxRange / textureSize;
-	    //std::cerr << "BasisScale: " << basisScale << std::endl;
 	   
 	    float centerOffsetX = ((point - basisCenter) * up) / basisScale;
 	    float centerOffsetY = ((point - basisCenter) * right) / basisScale;
@@ -464,49 +352,10 @@ void PagedFlowObject::preFrame()
 	    _renderer->getUniData("planeBasisYMax",ud);
 	    ((float*)ud.data)[0] = (basisYMax / basisScale) + centerOffsetY;
 
-	    matf(0,0) = up.x();
-	    matf(0,1) = up.y();
-	    matf(0,2) = up.z();
-	    matf(0,3) = 0;
-	    matf(1,0) = right.x();
-	    matf(1,1) = right.y();
-	    matf(1,2) = right.z();
-	    matf(1,3) = 0;
-	    matf(2,0) = 0;
-	    matf(2,1) = 0;
-	    matf(2,2) = 1;
-	    matf(2,3) = 0;
-	    matf(3,0) = 0;
-	    matf(3,1) = 0;
-	    matf(3,2) = 0;
-	    matf(3,3) = 1;
-
-	    matf = osg::Matrixf::inverse(matf);
-
-	    // sanity check
-	    osg::Vec3 tempPoint = basisCenter * matf;
-	    //std::cerr << "Center: x: " << tempPoint.x() << " y: " << tempPoint.y() << " z: " << tempPoint.z() << std::endl;
-	    tempPoint = right * matf;
-	    //std::cerr << "Right: x: " << tempPoint.x() << " y: " << tempPoint.y() << " z: " << tempPoint.z() << std::endl;
-	    tempPoint = up * matf;
-	    //std::cerr << "Up: x: " << tempPoint.x() << " y: " << tempPoint.y() << " z: " << tempPoint.z() << std::endl;
-
-	    osg::Matrix3 m;
-	    for(int i = 0; i < 3; ++i)
-	    {
-		for(int j = 0; j < 3; ++j)
-		{
-		    m(i,j) = matf(i,j);
-		}
-	    }
-
 	    _renderer->getUniData("planePoint",ud);
 	    ((float*)ud.data)[0] = basisCenter.x();
 	    ((float*)ud.data)[1] = basisCenter.y();
 	    ((float*)ud.data)[2] = basisCenter.z();
-	    //((float*)ud.data)[0] = point.x();
-	    //((float*)ud.data)[1] = point.y();
-	    //((float*)ud.data)[2] = point.z();
 
 	    _renderer->getUniData("planeNormal",ud);
 	    ((float*)ud.data)[0] = normal.x();
@@ -522,9 +371,6 @@ void PagedFlowObject::preFrame()
 	    ((float*)ud.data)[0] = right.x();
 	    ((float*)ud.data)[1] = right.y();
 	    ((float*)ud.data)[2] = right.z();
-
-	    _renderer->getUniData("planeBasisInv",ud);
-	    memcpy(ud.data,m.ptr(),9*sizeof(float));
 
 	    break;
 	}

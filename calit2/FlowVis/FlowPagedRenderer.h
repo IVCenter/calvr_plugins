@@ -33,7 +33,7 @@ class CudaGLImage;
 class FlowPagedRenderer
 {
     public: 
-        FlowPagedRenderer(PagedDataSet * set, int frame, FlowVisType type, std::string attribute);
+        FlowPagedRenderer(PagedDataSet * set, int frame, FlowVisType type, std::string attribute, int cacheSize);
         ~FlowPagedRenderer();
 
         void frameStart(int context);
@@ -185,6 +185,20 @@ class FlowPagedRenderer
         std::map<int,CudaGLImage*> _licCudaOutputImage;
         std::map<int,CudaGLImage*> _licCudaNextOutputImage;
         pthread_mutex_t _licCudaLock;
+
+        // temp consts for lic kernels
+        // isolated so they can be loaded in draw threads
+        float ccPlanePoint[3];
+        float ccPlaneNormal[3];
+        float ccPlaneRight[3];
+        float ccPlaneUp[3];
+        float ccPlaneRightNorm[3];
+        float ccPlaneUpNorm[3];
+        float ccPlaneBasisLength;
+        float ccTexXMin;
+        float ccTexXMax;
+        float ccTexYMin;
+        float ccTexYMax;
 
         static std::map<int,GLuint> _colorTableMap;
         static pthread_mutex_t _colorTableInitLock;
