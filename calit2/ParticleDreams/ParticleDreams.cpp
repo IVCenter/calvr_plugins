@@ -75,7 +75,7 @@ ParticleDreams::ParticleDreams()
     _pointerRoll = 0.0;
     _callbackAdded = false;
     _callbackActive = false;
-    _skyTime = 39600.0;
+    _skyTime = 80000.0;
 }
 
 ParticleDreams::~ParticleDreams()
@@ -120,16 +120,16 @@ bool ParticleDreams::init()
 
 	_TargetSystem = ConfigManager::getEntry("value","Plugin.ParticleDreams.TargetSystem","TourCaveCalit2");
 	std::cout << "targetSystem " << _TargetSystem << "\n";
-	// TourCaveCalit2 TourCaveSaudi NexCaveCalit2 StarCave Cave2
+	// TourCaveCalit2 TourCaveSaudi NexCaveCalit2 StarCave Cave2 Wave
 
 //	ContextChange block comented out id fr 1 screen version
 	
 	_DisplaySystem = ConfigManager::getEntry("value","Plugin.ParticleDreams.DisplaySystem","Simulator");
 	std::cout << "DisplaySystem " << _DisplaySystem << "\n";
 //	_DisplaySystem = ConfigManager::getEntry("value","Plugin.ParticleDreams.DisplaySystem","TourCaveCalit2");
-	// TourCaveCalit2 TourCaveSaudi NexCaveCalit2 StarCave Cave2 Simulator
-	
-
+	// TourCaveCalit2 TourCaveSaudi NexCaveCalit2 StarCave Cave2 Wave Simulator
+	targetFrameRate = 	ConfigManager::getInt("value","Plugin.ParticleDreams.TargetFrameRate",30);
+	std::cout <<"targetFrameRate " << targetFrameRate << "\n";
    return true;
 }
 
@@ -142,7 +142,7 @@ void ParticleDreams::menuCallback(MenuItem * item)
 
 	    CVRViewer::instance()->getStatsHandler()->addStatTimeBar(CVRStatsHandler::CAMERA_STAT,"AIMCuda Time:","PD Cuda duration","PD Cuda start","PD Cuda end",osg::Vec3(0,1,0),"PD stats");
 	    //CVRViewer::instance()->getStatsHandler()->addStatTimeBar(CVRStatsHandler::CAMERA_STAT,"PDCuda Copy:","PD Cuda Copy duration","PD Cuda Copy start","PD Cuda Copy end",osg::Vec3(0,0,1),"PD stats");
-
+// change back
 	    SceneManager::instance()->setHidePointer(true);
 
 	    initPart();
@@ -207,10 +207,10 @@ void ParticleDreams::preFrame()
 
 	if(SceneManager::instance()->getMenuOpenObject() == _particleObject)
 	{
-	    SceneManager::instance()->setHidePointer(false);
+	    SceneManager::instance()->setHidePointer(true);
 	}
 	else
-	{
+	{//change back
 	    SceneManager::instance()->setHidePointer(true);
 	}
 
@@ -235,73 +235,84 @@ void ParticleDreams::preFrame()
 
 
 	sceneChange =0;
-
+	
 	//if ((but2old ==0)&&(but2 == 1)&&(but1))
+	
+	//STATE GENERATOR
+	// ADD NEW SCENES HERE
+	// check for above comment elsewhere
+	name_paint_on_walls = 0;
+	name_sprial_fountens =1;
+	name_N_waterfalls =2;
+	name_painting_skys =3;
+	name_rain =4;
+	int numberOfScenes = 5;
 	if (skipTonextScene ==1)
 	{	std::cout << "skipTonextScene ==1 " << std::endl;
-	    sceneOrder =( sceneOrder+1)%3;sceneChange=1;
+	    sceneOrder =( sceneOrder+1)%(numberOfScenes -1);sceneChange=1;
 	    skipTonextScene =0;
 
 	}
-	if (nextSean ==1) { sceneOrder =( sceneOrder+1)%3;sceneChange=1;nextSean =0;}
-	//reordering seenes
-	/*
-	   if (sceneOrder ==0)sceneNum =4;
-	   if (sceneOrder ==1)sceneNum =1;
-	   if (sceneOrder ==2)sceneNum =2;
-	   if (sceneOrder ==3)sceneNum =0;
-	   if (sceneOrder ==4)sceneNum =3;
-
-	   if (sceneOrder ==0)sceneNum =4;
-	   if (sceneOrder ==1)sceneNum =2;
-	   if (sceneOrder ==2)sceneNum =0;
-	   if (sceneOrder ==3)sceneNum =3;
-	   */
-	if (sceneOrder ==0)sceneNum =2;
-	if (sceneOrder ==1)sceneNum =0;
-	if (sceneOrder ==2)sceneNum =3;
-	if (sceneOrder ==3)sceneNum =4;
-
-	//if((sceneChange==1) && (witch_scene ==3)){scene_data_3_clean_up();}
-	//if((sceneChange==1) && (witch_scene ==0)){scene_data_0_clean_up();}
-	//if((sceneChange==1) && (witch_scene ==1)){scene_data_1_clean_up();}
-	//if((sceneChange==1) && (witch_scene ==2)){scene_data_2_clean_up();}
-	//if((sceneChange==1) && (witch_scene ==4)){scene_data_4_clean_up();}
-
-	if (sceneChange)
+	if (sceneOrder ==-1) // program start
+		{
+			nextSean =1;
+		    paint_on_walls_start =0;
+			sprial_fountens_start =0;
+			N_waterfalls_start=0;
+			painting_skys_start =0;
+			rain_start =0;
+			paint_on_wallsContextStart =0;
+			sprial_fountensContextStart =0;
+			N_waterfallsContextStart =0;
+			painting_skysContextStart =0;
+			rainContextStart =0;	
+		}
+	if (nextSean ==1) { sceneOrder =( sceneOrder+1)%(numberOfScenes -1);sceneChange=1;nextSean =0;}
+   
+		if (sceneChange)
 	{
-	    if (witch_scene == 0) 		scene_data_0_clean_up();
-	    else if (witch_scene == 1)	scene_data_1_clean_up();//not used
-	    else if (witch_scene == 2)	scene_data_2_clean_up();
-	    else if (witch_scene == 3)	scene_data_3_clean_up();
-	    else if (witch_scene == 4)	scene_data_4_clean_up();
+		//previous state
+	    if 		(sceneName == name_N_waterfalls) 	N_waterfalls__clean_up();
+	    else if (sceneName == name_paint_on_walls)	paint_on_walls__clean_up();//not used??
+	    else if (sceneName == name_painting_skys)	painting_skys__clean_up();
+	    else if (sceneName == name_rain)			rain__clean_up();
+	    else if (sceneName == name_sprial_fountens)	sprial_fountens__clean_up();
+	}   
+	 // neststate  
+	if (sceneOrder ==0)sceneName =name_N_waterfalls;
+	if (sceneOrder ==1)sceneName =name_sprial_fountens;
+	if (sceneOrder ==2)sceneName =name_paint_on_walls;
+	if (sceneOrder ==3)sceneName =name_painting_skys;
+	if (sceneOrder ==4)sceneName =name_rain;
+
+
+
+
+	if (sceneName ==name_paint_on_walls)
+	{//paint_on_walls
+	    if (sceneChange ==1){paint_on_walls_start =1;sceneChange =0;}
+	    paint_on_walls_host();
+	}
+	if (sceneName ==name_sprial_fountens)
+	{//sprial_fountens
+	    if (sceneChange ==1){sprial_fountens_start =1;sceneChange =0;}
+	    sprial_fountens_host();
+	}
+	if (sceneName ==name_N_waterfalls)
+	{//N_waterfalls
+	    if (sceneChange ==1){N_waterfalls_start=1;sceneChange =0;}
+	    N_waterfalls_host();
+	}
+	if (sceneName ==name_painting_skys)
+	{//painting_skys
+	    if (sceneChange ==1){painting_skys_start =1;sceneChange =0;}
+	    painting_skys_host();
 	}
 
-	if (sceneNum ==0)
-	{//paint on walls
-	    if (sceneChange ==1){scene0Start =1;sceneChange =0;witch_scene =0;}
-	    scene_data_0_host();
-	}
-	if (sceneNum ==1)
-	{//sprial fountens
-	    if (sceneChange ==1){scene1Start =1;sceneChange =0;witch_scene =1;}
-	    scene_data_1_host();
-	}
-	if (sceneNum ==2)
-	{//4 waterfalls
-	    if (sceneChange ==1){scene2Start =1;sceneChange =0;witch_scene =2;}
-	    scene_data_2_host();
-	}
-	if (sceneNum ==3)
-	{//painting skys
-	    if (sceneChange ==1){scene3Start =1;sceneChange =0;witch_scene =3;}
-	    scene_data_3_host();
-	}
-
-	if (sceneNum ==4)
+	if (sceneName ==name_rain)
 	{//rain
-	    if (sceneChange ==1){scene4Start =1;sceneChange =0;witch_scene =4;}
-	    scene_data_4_host();
+	    if (sceneChange ==1){rain_start =1;sceneChange =0;}
+	    rain_host();
 	}
 
 	for ( int n =1;n < h_injectorData[0][0][0] +1;n++)
@@ -396,10 +407,10 @@ bool ParticleDreams::processEvent(InteractionEvent * event)
     if(vie && vie->getHand() == hand_id)
     {
         if(vie->getValuator() == 0)
-        {
-            _pointerHeading += vie->getValue() * 0.5;
-            _pointerHeading = std::max(_pointerHeading,-90.0f);
-            _pointerHeading = std::min(_pointerHeading,90.0f);
+        {    // Ask Andrew or Bob kludge
+           // _pointerHeading += vie->getValue() * 0.5;
+           // _pointerHeading = std::max(_pointerHeading,-90.0f);
+           // _pointerHeading = std::min(_pointerHeading,90.0f);
         }
     }
 
@@ -547,26 +558,30 @@ void ParticleDreams::perContextCallback(int contextid,PerContextCallback::PCCTyp
 	cudastart = osg::Timer::instance()->delta_s(CVRViewer::instance()->getStartTick(), osg::Timer::instance()->tick());
     }
 
-    if (sceneNum ==0)
+
+
+// ADD NEW SCENES HERE
+
+    if (sceneName ==name_paint_on_walls)
     {//paint on walls
-	scene_data_0_context(contextid);
+	paint_on_walls_context(contextid);
     }
-    if (sceneNum ==1)
+    if (sceneName ==name_sprial_fountens)
     {//sprial fountens
-	scene_data_1_context(contextid);
+	sprial_fountens_context(contextid);
     }
-    if (sceneNum ==2)
+    if (sceneName ==name_N_waterfalls)
     {//4 waterfalls
-	scene_data_2_context(contextid);
+	N_waterfalls_context(contextid);
     }
-    if (sceneNum ==3)
+    if (sceneName ==name_painting_skys)
     {//painting skys
-	scene_data_3_context(contextid);
+	painting_skys_context(contextid);
     }
 
-    if (sceneNum ==4)
-    {//educational
-	scene_data_4_context(contextid);
+    if (sceneName ==name_rain)
+    {
+	rain_context(contextid);
     }
 
     //if(stats)
@@ -663,22 +678,11 @@ void ParticleDreams::initPart()
     but1 =0;
    skipTonextScene=0;skipTOnextSceneOld=0;
 
-    // init seenes
-    scene0Start =0;
-    scene1Start =0;
-    scene2Start =1;//// must be set to starting
-    scene3Start =0;
-    scene4Start =0;
-    scene0ContextStart =0;
-    scene1ContextStart =0;
-    scene2ContextStart =0;
-    scene3ContextStart =0;
-    scene4ContextStart =0;
-    sceneNum =0;
-    sceneOrder = 0;
+    // init_scenes
+    sceneOrder = -1;// tels state mechene program start
     nextSean =0;
-    witch_scene =2;// must be set to starting
-    old_witch_scene = -1;
+    //witch_scene =2;// must be set to starting TODO
+    //old_witch_scene = -1;
     sceneChange =0;
     modulator[0] = 1.0;
     modulator[1] = 1.0;
@@ -856,7 +860,7 @@ void ParticleDreams::initGeometry()
     }
     else
     {
-	std::cerr << "Unable to read sprite texture: " << _dataDir + "glsl/sprite.png" << std::endl;
+	std::cerr << "Unable to read sprite texture: " << _dataDir + "images/sprite50_50.png" << std::endl;
     }
 //  PluginHelper::getScene()->addChild(...)
     _particleGeode->addDrawable(_particleGeo);
@@ -978,6 +982,16 @@ void ParticleDreams::initGeometry()
 
 		}
 
+	else if (_TargetSystem.compare("StarCave") == 0)
+
+		{
+			std::cout << "StarCave  loaded" << std::endl;
+			int i =loadPhysicalScreensArrayStarCave();
+			std::cout << "loadPhysicalScreens " << i <<" " << _PhScAr[i-1].index << " " << std::endl;
+
+
+		}
+
 	else  
 
 		{
@@ -988,7 +1002,7 @@ void ParticleDreams::initGeometry()
 
 		}
 
-
+	initGeoEdSection();//SlideStuff
 
 
 
@@ -1013,8 +1027,9 @@ void ParticleDreams::initSound()
 	
 	
 	if(cvr::ComController::instance()->isMaster())
-	{
-		while( !_SoundMng->isSoundServerRunning() ){}
+	{ std::cout << "_SoundMng->isSoundServerRunning \n";
+		if (_DisplaySystem.compare("Cave2") == 0)while( !_SoundMng->isSoundServerRunning() ){}
+		std::cout << "_SoundMng->isSoundServerRunning end \n";
 	}
 	
 	_harmonicAlgorithm = _SoundEnv->loadSoundFromFile("harmonicAlgorithm", "harmonicAlgorithm.wav");
@@ -1123,7 +1138,7 @@ void ParticleDreams::initSound()
     ipAddrStr =  ConfigManager::getEntry("ipAddr","Plugin.ParticleDreams.SoundServer","127.0.0.1");
 
     port = ConfigManager::getInt("port", "Plugin.ParticleDreams.SoundServer", 31231);
-
+	std::cout <<  "OAS_SOUND enabled \n";
     if (!oasclient::ClientInterface::initialize(ipAddrStr, port))
     {
         std::cerr << "Unable to connect to sound server at " << ipAddrStr << ", port " << port << std::endl;
@@ -1272,7 +1287,7 @@ void ParticleDreams::initWater()
     _waterSkyGeometry->setVertexArray(verts);
     _waterSkyGeometry->setColorArray(colors);
     _waterSkyGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
-    _waterSkyGeometry->setTexCoordArray(0,tcoords,osg::Array::BIND_PER_VERTEX);
+    _waterSkyGeometry->setTexCoordArray(0,tcoords);
     _waterSkyGeometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
     _waterSkyGeode->addDrawable(_waterSkyGeometry);
     _waterNestedCamera->addChild(_waterSkyGeode);
@@ -1310,7 +1325,7 @@ void ParticleDreams::initWater()
     _waterFillUni->set(0);
     _waterNormUni = new osg::Uniform(osg::Uniform::SAMPLER_2D,"norm");
     _waterNormUni->set(2);
-    _waterReflUni = new osg::Uniform(osg::Uniform::SAMPLER_2D_RECT,"refl");
+    _waterReflUni = new osg::Uniform(osg::Uniform::SAMPLER_2D,"refl");
     _waterReflUni->set(3);
 
     _waterNestedCamera->getOrCreateStateSet()->addUniform(_waterTimeUni);
@@ -1471,19 +1486,47 @@ std::cout << " _SoundMng distructorCaled \n";
 void ParticleDreams::updateHead()
 {
  //   osg::Matrix m = PluginHelper::getHeadMat(head_id) * _particleObject->getWorldToObjectMatrix();
-   osg::Matrix m = PluginHelper::getHeadMat(head_id) ;
-   headPos = osg::Vec3(0,0.0,0) * m;
-   navHeadPos=osg::Vec3(0,0.0,0) * m*_particleObject->getWorldToObjectMatrix();
-/*
-if (but2)
-	{
-		std::cout << " headMatrix " << m << "\n";
-		std::cout << "headpos  x,y,z " <<  headPos.x() <<" " <<headPos.y()<<" " <<headPos.z()<<"\n " ;
-		
-		std::cout <<"navHeadpos  x,y,z " <<  navHeadPos.x() <<" " << navHeadPos.y()<<" " << navHeadPos.z()<<"\n " ;
-		
+   osg::Matrix hm = PluginHelper::getHeadMat(head_id) ;
+   headPos = osg::Vec3(0,0.0,0) * hm;
+   navHeadPos=osg::Vec3(0,0.0,0) * hm*_particleObject->getWorldToObjectMatrix();
+ 
+    osg::Matrix hhMat;
+    hhMat.makeRotate(_headHeading * M_PI / 180.0, osg::Vec3(0,0,1));
+    osg::Matrix hpMat;
+    hpMat.makeRotate(_headPitch * M_PI / 180.0, osg::Vec3(1,0,0));
+    osg::Matrix hrMat;
+    hrMat.makeRotate(_headRoll * M_PI / 180.0, osg::Vec3(0,1,0));
+    osg::Matrix hoMat = hrMat * hpMat * hhMat;
+
+    osg::Matrix m = PluginHelper::getHeadMat(head_id) * _particleObject->getWorldToObjectMatrix();
+    osg::Vec3 headdir = osg::Vec3(0,1.0,0) * hoMat *hm;
+    headdir = headdir - hm.getTrans();
+    headdir.normalize();
+
+    osg::Vec3 headup = osg::Vec3(0,0,1.0) * hoMat * hm;
+    headup = headup - hm.getTrans();
+    headup.normalize();
+	osg::Vec3 headoffset(0.0,0,0.0);
+	std::string str2 = ("Simulator"); 
+	if (_DisplaySystem.compare(str2) == 0)
+	{ 
+		//std::cout << "Simulator Head Offset" << std::endl;
+		//headoffset[0]= 0;headoffset[1]= 1.5;headoffset[0]= 0.17;
 	}
-*/
+
+    osg::Vec3 headpos = headoffset * hm;
+    hm.setTrans(headpos);
+
+ 	headPos[0] = headpos.x();
+    headPos[1] = headpos.y();
+    headPos[2] = headpos.z();
+    headVec[0] = headdir.x();
+    headVec[1] = headdir.y();
+    headVec[2] = headdir.z();
+    headMat[4] = headup.x();
+    headMat[5] = headup.y();
+    headMat[6] = headup.z();
+
 }
 
 void ParticleDreams::setWater(bool b)
@@ -2516,6 +2559,567 @@ std::cout << "in loadPhysicalScreensArrayCave2 \n";
 
 }
 
+
+
+
+
+
+
+int ParticleDreams::loadPhysicalScreensArrayStarCave()
+
+{
+_PhScAr = new _PhSc [128];
+float height, h, width, p, originX, originY,r,name,originZ, screen;
+int i=0;
+std::cout << "in loadPhysicalScreensArrayStarCave \n";
+
+
+originX= 1249   ;originY= -406   ;originZ= -1180   ;width= 2134   ;height= 1200  ; h= -108.0  ; p= -14.9  ; r= 0.0  ;name= 0;  
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+originX= 1397   ;originY= -454   ;originZ= 0   ;width= 2134   ;height= 1200  ; h= -108.0  ; p= 0.0  ; r= 0.0  ;name= 0 ; 
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+originX= 1249   ;originY= -406   ;originZ= 1180   ;width= 2134   ;height= 1200  ; h= -108.0  ; p= 14.9  ; r= 0.0  ;name= 0; 
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+originX= 772   ;originY= 1062   ;originZ= -1180   ;width= 2134   ;height= 1200  ; h= -36.0  ; p= -14.9  ; r= 0.0  ;name= 0; 
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+originX= 863   ;originY= 1188   ;originZ= 0   ;width= 2134   ;height= 1200  ; h= -36.0  ; p= 0.0  ; r= 0.0  ;name= 0 ; 
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+originX= 772   ;originY= 1062   ;originZ= 1180   ;width= 2134   ;height= 1200  ; h= -36.0  ; p= 14.9  ; r= 0.0  ;name= 0; 
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+originX= -772   ;originY= 1062   ;originZ= -1180   ;width= 2134   ;height= 1200  ; h= 36.0  ; p= -14.9  ; r= 0.0  ;name= 0 ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+originX= -863   ;originY= 1188   ;originZ= 0   ;width= 2134   ;height= 1200  ; h= 36.0  ; p= 0.0  ; r= 0.0  ;name= 0 ; 
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+originX= -772   ;originY= 1062   ;originZ= 1180   ;width= 2134   ;height= 1200  ; h= 36.0  ; p= 14.9  ; r= 0.0  ;name= 0 ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+originX= -1249   ;originY= -406   ;originZ= -1180   ;width= 2134   ;height= 1200  ; h= 108.0  ; p= -14.9  ; r= 0.0  ;name= 0 ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+	
+originX= -1397   ;originY= -454   ;originZ= 0   ;width= 2134   ;height= 1175  ; h= 108.0  ; p= 0.0  ; r= 0.0  ;name= 0 ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+	
+originX= -1249   ;originY= -406   ;originZ= 1180   ;width= 2134   ;height= 1200  ; h= 108.0  ; p= 14.9  ; r= 0.0  ;name= 0 ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+	
+originX= 0   ;originY= -1313   ;originZ= -1180   ;width= 2134   ;height= 1200  ; h= 180.0  ; p= -14.9  ; r= 0.0  ;name= 0 ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+	
+originX= 0   ;originY= -1468   ;originZ= 0   ;width= 2134   ;height= 1200  ; h= 180.0  ; p= 0.0  ; r= 0.0  ;name= 0  ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+	
+originX= 0   ;originY= -1313   ;originZ= 1180   ;width= 2134   ;height= 1200  ; h= 180.0  ; p= 14.9  ; r= 0.0  ;name= 0 ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+	
+originX= 0   ;originY= -766   ;originZ= -1759   ;width= 2723   ;height= 1532  ; h= 0.0  ; p= -90.0  ; r= 0.0  ;name= 0 ; 
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+	
+originX= 0   ;originY= 766   ;originZ= -1759   ;width= 2723   ;height= 1532  ; h= 0.0  ; p= -90.0  ; r= 0.0  ;name= 0 ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+	
+
+//oldstuff below
+/*
+//			<Screen comment=RelColumn -9 row 0 column 18 width= 1018.3 height= 572.5 originX= -1008.81 originY= -3104.81 originZ= 869.7 h= 162 p= -0 r= 0 name= 0 />
+			 width= 1018.3; height= 572.5; originX= -1008.81; originY= -3104.81; originZ= 869.7 ;h= 162; p= -0; r= 0; name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+			
+			
+//			<Screen comment=RelColumn -8 row 0 column 17 width= 1018.3 height= 572.5 originX= -1918.88 originY= -2641.11 originZ= 869.7 h= 144 p= -0 r= 0 name= 0 />
+			 width= 1018.3; height= 572.5 ;originX= -1918.88 ;originY= -2641.11 ;originZ= 869.7 ;h= 144; p= -0 ;r= 0; name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+			
+			
+//			<Screen comment=RelColumn -7 row 0 column 16 width= 1018.3 height= 572.5 originX= -2641.11 originY= -1918.88 originZ= 869.7 h= 126 p= -0 r= 0 name= 0 />
+			 width= 1018.3 ;height= 572.5; originX= -2641.11; originY= -1918.88; originZ= 869.7; h= 126; p= -0 ;r= 0 ;name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+
+//			<Screen comment=RelColumn -6 row 0 column 15 width= 1018.3 height= 572.5 originX= -3104.81 originY= -1008.81 originZ= 869.7 h= 108 p= -0 r= 0 name= 0 />
+			 width= 1018.3; height= 572.5; originX= -3104.81 ;originY= -1008.81 ;originZ= 869.7; h= 108; p= -0 ;r= 0 ;name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+
+//			<Screen comment=RelColumn -5 row 0 column 14 width= 1018.3 height= 572.5 originX= -3264.59 originY= -0.0001427 originZ= 869.7 h= 90 p= -0 r= 0 name= 0 />
+			width= 1018.3; height= 572.5; originX= -3264.59; originY= -0.0001427; originZ= 869.7; h= 90 ;p= -0; r= 0 ;name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+
+//			<Screen comment=RelColumn -4 row 0 column 13 width= 1018.3 height= 572.5 originX= -3104.81 originY= 1008.81 originZ= 869.7 h= 72 p= -0 r= 0 name= 0 />
+			 width= 1018.3; height= 572.5; originX= -3264.59 ;originY= -0.0001427 ;originZ= 869.7 ;h= 90 ;p= -0; r= 0; name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+
+//			<Screen comment=RelColumn -3 row 0 column 12 width= 1018.3 height= 572.5 originX= -2641.11 originY= 1918.88 originZ= 869.7 h= 54 p= -0 r= 0 name= 0 />
+			 width= 1018.3; height= 572.5; originX= -2641.11; originY= 1918.88; originZ= 869.7; h= 54; p= -0; r= 0; name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+
+//			<Screen comment=RelColumn -2 row 0 column 11 width= 1018.3 height= 572.5 originX= -1918.88 originY= 2641.11 originZ= 869.7 h= 36 p= -0 r= 0 name= 0 />
+			width= 1018.3; height= 572.5; originX= -1918.88; originY= 2641.11; originZ= 869.7; h= 36; p= -0 ;r= 0; name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+
+//			<Screen comment=RelColumn -1 row 0 column 10 width= 1018.3 height= 572.5 originX= -1008.81 originY= 3104.81 originZ= 869.7 h= 18 p= -0 r= 0 name= 0 />
+			 width= 1018.3; height= 572.5; originX= -1008.81; originY= 3104.81; originZ= 869.7; h= 18; p= -0; r= 0; name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+
+//			<Screen comment=RelColumn 0 row 0 column 9 width= 1018.3 height= 572.5 originX= 0 originY= 3264.59 originZ= 869.7 h= 0 p= -0 r= 0 name= 0 />
+			 width= 1018.3 ;height= 572.5; originX= 0; originY= 3264.59; originZ= 869.7; h= 0; p= -0; r= 0; name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+
+//			<Screen comment=RelColumn 1 row 0 column 8 width= 1018.3 height= 572.5 originX= 1008.81 originY= 3104.81 originZ= 869.7 h= -18 p= -0 r= 0 name= 0 />
+			 width= 1018.3; height= 572.5 ;originX= 1008.81 ;originY= 3104.81; originZ= 869.7; h= -18; p= -0; r= 0; name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+
+//			<Screen comment=RelColumn 2 row 0 column 7 width= 1018.3 height= 572.5 originX= 1918.88 originY= 2641.11 originZ= 869.7 h= -36 p= -0 r= 0 name= 0 />
+			 width= 1018.3; height= 572.5; originX= 1918.88; originY= 2641.11; originZ= 869.7; h= -36; p= -0; r= 0 ;name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+
+//			<Screen comment=RelColumn 3 row 0 column 6 width= 1018.3 height= 572.5 originX= 2641.11 originY= 1918.88 originZ= 869.7 h= -54 p= -0 r= 0 name= 0 />
+			width= 1018.3 ;height= 572.5 ;originX= 2641.11 ;originY= 1918.88 ;originZ= 869.7; h= -54; p= -0; r= 0; name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+
+//			<Screen comment=RelColumn 4 row 0 column 5 width= 1018.3 height= 572.5 originX= 3104.81 originY= 1008.81 originZ= 869.7 h= -72 p= -0 r= 0 name= 0 />
+			width= 1018.3 ;height= 572.5 ;originX= 3104.81; originY= 1008.81; originZ= 869.7; h= -72; p= -0; r= 0; name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+
+//			<Screen comment=RelColumn 5 row 0 column 4 width= 1018.3 height= 572.5 originX= 3264.59 originY= -0.0001427 originZ= 869.7 h= -90 p= -0 r= 0 name= 0 />
+			 width= 1018.3 ;height= 572.5; originX= 3264.59 ;originY= -0.0001427; originZ= 869.7; h= -90; p= -0; r= 0; name= 0;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+
+//			<Screen comment=RelColumn 6 row 0 column 3 width= 1018.3 height= 572.5 originX= 3104.81 originY= -1008.81 originZ= 869.7 h= -108 p= -0 r= 0 name= 0 />
+			width= 1018.3 ;height= 572.5; originX= 3104.81 ;originY= -1008.81; originZ= 869.7; h= -108; p= -0; r= 0 ;name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+
+//			<Screen comment=RelColumn 7 row 0 column 2 width= 1018.3 height= 572.5 originX= 2641.11 originY= -1918.88 originZ= 869.7 h= -126 p= -0 r= 0 name= 0 />
+			width= 1018.3 ;height= 572.5 ;originX= 2641.11 ;originY= -1918.88; originZ= 869.7; h= -126 ;p= -0 ;r= 0 ;name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+
+
+//			<Screen comment=RelColumn 8 row 0 column 1 width= 1018.3 height= 572.5 originX= 1918.88 originY= -2641.11 originZ= 869.7 h= -144 p= -0 r= 0 name= 0 />
+			 width= 1018.3 ;height= 572.5 ;originX= 1918.88 ;originY= -2641.11 ;originZ= 869.7 ;h= -144; p= -0; r= 0 ;name= 0 ;
+ 	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+*/
+//end OldStuff
+ 	 _PhScAr[i].index =-1;
+ 	// clearly dont have this correct
+ 	// probibly need to xform positions and vectors from z up to z forward
+ 	for (int j=0;j<i;j++)
+ 		{
+ 			
+ 			//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl;
+
+	 		osg::Matrix hMat;
+	   		hMat.makeRotate(_PhScAr[j].h * M_PI / 180.0, osg::Vec3(0,0,1));
+	   	   	osg::Matrix pMat;
+				pMat.makeRotate(_PhScAr[i].p* M_PI / 180.0, osg::Vec3(1,0,0));
+				osg::Matrix rMat;
+				rMat.makeRotate(_PhScAr[i].r * M_PI / 180.0, osg::Vec3(0,1,0));
+	//    	osg::Matrix oMat = rMat* pMat * hMat;
+				osg::Matrix oMat = hMat;
+
+	   		osg::Vec3 test = oMat * osg::Vec3(0,-1,0);
+	   		//std::cout << "test.x,y,z " << _PhScAr[j].h << " " << test[0] << " " << test[1] << " " << test[2] << std::endl;
+	 		_PhScAr[j].vx = test[0] * -1;
+	 		_PhScAr[j].vy = test[1];
+			_PhScAr[j].vz = test[2];
+			// rotatefrom z up ti z back
+			// x stays same
+	   		// y =z
+	   		//z = -y
+			_PhScAr[j].originZ = _PhScAr[j].originZ  + Navigation::instance()->getFloorOffset();
+			float ytemp;
+	   		if ( 1 == 1)
+		   		{
+	   				// process position
+			   		ytemp = _PhScAr[j].originY;
+			   		_PhScAr[j].originY = _PhScAr[j].originZ;
+			   		_PhScAr[j].originZ = -ytemp;
+			   		
+			   		// vector
+			   		ytemp = _PhScAr[j].vy;
+			   		_PhScAr[j].vy = _PhScAr[j].vz;
+			   		_PhScAr[j].vz = -ytemp;
+					
+		   		}
+ 			//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl<< std::endl;
+			
+		 	}
+
+ return i;
+
+
+}
+
+
+
 int ParticleDreams::loadOneHalfPhysicalScreensArrayCave2()
 
 {
@@ -2808,7 +3412,7 @@ int ParticleDreams::loadReflFrScr()
 	return reflNum ;
 }
 
-void ParticleDreams::scene_data_0_host()
+void ParticleDreams::paint_on_walls_host()
 {
     gravity = .1;
     gravity = 0.000001;
@@ -2818,16 +3422,16 @@ void ParticleDreams::scene_data_0_host()
     disappear_age =2000;
     alphaControl =0;
     static float time_in_sean;
-    time_in_sean = time_in_sean + 1.0/TARGET_FR_RATE;
+    time_in_sean = time_in_sean + 1.0/targetFrameRate;
 
-    if (scene0Start == 1)
+    if (paint_on_walls_start == 1)
     {
 	size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
 	//pdata_init_age( max_age);
 	pdata_init_velocity(0, -0.005, 0);
 	pdata_init_rand();
 	//cuMemcpyHtoD(d_particleData, h_particleData, size);
-	time_in_sean =0 * TARGET_FR_RATE;
+	time_in_sean =0 * targetFrameRate;
 	//::user->home();
 	_refObjSwitchFace->setAllChildrenOff();
 	_refObjSwitchLine->setAllChildrenOff();
@@ -2835,22 +3439,24 @@ void ParticleDreams::scene_data_0_host()
     reflectorSetMaxnumNum(0);//turn off all reflectors
     //h_injectorData[0][0][0] =0;// turn off all injectors ~ ~   ~ means dont care
 	injectorSetMaxnumNum(0);// turn off all injectors
-	if (DEBUG_PRINT >0)printf("scene0Start \n");
+	if (DEBUG_PRINT >0);;
+	printf("paint_on_walls_start \n");
 	if (soundEnabled)
-	{ambient_sound_start_data_0();
+	{ambient_sound_start_paint_on_walls();
 	//	dan_ambiance_2.setGain(1);
 	//	dan_ambiance_2.play(1);
 	}
 
-	scene0ContextStart = 1;
+	paint_on_wallsContextStart = 1;
     }
     else
     {
-	scene0ContextStart = 0;
+	paint_on_wallsContextStart = 0;
     }
 
 
     if (time_in_sean >90)nextSean=1;          
+   // if (time_in_sean >5)nextSean=1;  // temp shorttime        
 
     anim = showFrameNo * .001;
 
@@ -2893,10 +3499,10 @@ void ParticleDreams::scene_data_0_host()
 			
 		}
 
-    scene0Start =0;
+    paint_on_walls_start =0;
 }
 
-void ParticleDreams::scene_data_1_host()
+void ParticleDreams::sprial_fountens_host()
 {
     //draw_water_sky =0;
     setWater(false);
@@ -2908,10 +3514,10 @@ void ParticleDreams::scene_data_1_host()
     alphaControl =0;//turns alph to transparent beloy y=0
 // reload  rnd < max_age in to pdata
     static float time_in_sean;
-    time_in_sean = time_in_sean + 1.0/TARGET_FR_RATE;
+    time_in_sean = time_in_sean + 1.0/targetFrameRate;
 
 
-    if (scene1Start == 1)
+    if (sprial_fountens_start == 1)
     {
         //size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
         //pdata_init_age( max_age);
@@ -2924,27 +3530,28 @@ void ParticleDreams::scene_data_1_host()
     reflectorSetMaxnumNum(0);//turn off all reflectors
    // h_injectorData[0][0][0] =0;// turn off all injectors ~ ~   ~ means dont care
 		injectorSetMaxnumNum(0);// turn off all injectors
-        time_in_sean =0 * TARGET_FR_RATE;
+        time_in_sean =0 * targetFrameRate;
         //::user->home();
         //printf( "in start sean3 \n");
-        if (DEBUG_PRINT >0)printf("scene0Start \n");
+        if (DEBUG_PRINT >0);;
+        printf("sprial_fountens__start \n");
         if (soundEnabled)
-        {ambient_sound_start_data_1();
+        {ambient_sound_start_sprial_fountens();
         //	dan_5min_ostinato.setGain(0.5);
         //	dan_5min_ostinato.play(1);
         }
             
         //printf( " time %f \n", ::user->get_t());
-	scene1ContextStart = 1;
+	sprial_fountensContextStart = 1;
     }
     else
     {
-	scene1ContextStart = 0;
+	sprial_fountensContextStart = 0;
     }
 
 //printf ("time_in_sean 1 %f\n",time_in_sean);
-//    if (time_in_sean >110)nextSean=1;
-    if (time_in_sean >10)nextSean=1;// short time
+    if (time_in_sean >110)nextSean=1;
+    //if (time_in_sean >10)nextSean=1;// temp shorttime
     if (DEBUG_PRINT >0)printf( "in sean1 \n");
 //printf( "in sean1 \n"); 
 
@@ -3050,7 +3657,7 @@ void ParticleDreams::scene_data_1_host()
     dy = wandMat[5];
     dz = wandMat[6];
 // reflector obj switch
-  if(but2==1) 
+  if(but2==1) _refObjSwitchFace->setAllChildrenOn();
    if(but2==0)_refObjSwitchFace->setAllChildrenOff();
    
       		 //reflectorGetMaxnumNum();
@@ -3067,11 +3674,12 @@ void ParticleDreams::scene_data_1_host()
 
 
     if (soundEnabled)reflSoundUpdate( reflNum);
+    HeadReflectorsMake();
 
-    scene1Start =0;
+    sprial_fountens_start =0;
 }
 
-void ParticleDreams::scene_data_2_host()
+void ParticleDreams::N_waterfalls_host()
 {
     //4 waterFalls
     // waterFallsFrom screenes
@@ -3086,18 +3694,18 @@ void ParticleDreams::scene_data_2_host()
     colorFreq =128 *max_age/2000.0 ;
     alphaControl =0;//turns alph to transparent beloy y=0
     static float time_in_sean;
-    time_in_sean = time_in_sean + 1.0/TARGET_FR_RATE;
+    time_in_sean = time_in_sean + 1.0/targetFrameRate;
 
     // reload  rnd < max_age in to pdata
 
-    if (scene2Start == 1)
+    if (N_waterfalls_start== 1)
     {
     _particleObject->resetPosition();
 	//size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
 	//pdata_init_age( max_age);
 	//pdata_init_velocity(-10000, -10000, -10000);
 	//pdata_init_rand();
-   std::cout << " init particals in seen2 " << std::endl;
+   std::cout << " N_waterfalls_start " << std::endl;
 	//cuMemcpyHtoD(d_particleData, h_particleData, size);
 	_injObjSwitchFace->setAllChildrenOff();
 	_injObjSwitchLine->setAllChildrenOff();
@@ -3109,27 +3717,36 @@ void ParticleDreams::scene_data_2_host()
 
 
 	if (DEBUG_PRINT >0)printf( "in start sean2 \n");
-	time_in_sean =0 * TARGET_FR_RATE;
+	time_in_sean =0 * targetFrameRate;
 	//::user->home();
-	if (DEBUG_PRINT >0)printf("scene0Start \n");
+	if (DEBUG_PRINT >0)printf("paint_on_walls_start \n");
 
 	if (soundEnabled)
-	{ambient_sound_start_data_2();
+	{ambient_sound_start_N_waterfalls();
 	//	harmonicAlgorithm.setGain(1);
 	//	harmonicAlgorithm.play(1);
 	}
 
 	//printf( " time %f \n", ::user->get_t());
-	scene2ContextStart = 1;
+
+	N_waterfallsContextStart = 1;
     }
     else
     {
-	scene2ContextStart = 0;
+	N_waterfallsContextStart = 0;
     }
+_refObjSwitchFace->setAllChildrenOff();
+	if ((time_in_sean >0) && (time_in_sean <5)){ _EdSecSwitchSlid1->setAllChildrenOn();}//slideStuff
+	else { _EdSecSwitchSlid1->setAllChildrenOff();}
+	
+	if ((time_in_sean >5) && (time_in_sean <10)) _EdSecSwitchSlid2->setAllChildrenOn();//slideStuff
+	else _EdSecSwitchSlid2->setAllChildrenOff();
 
+	//if ((time_in_sean >10) && (time_in_sean <15)) _EdSecSwitchSlid3->setAllChildrenOn();//slideStuff
+	//else _EdSecSwitchSlid3->setAllChildrenOff();
 
     if (time_in_sean >90)nextSean=1;
-//     if (time_in_sean >8)nextSean=1;//short time
+    //if (time_in_sean >8)nextSean=1;//short time
    //printf ("time_in_sean 2 %f\n",time_in_sean);
     if (DEBUG_PRINT >0)printf( "in sean2 \n");
     //printf( "in sean2 \n");
@@ -3161,7 +3778,7 @@ void ParticleDreams::scene_data_2_host()
 	loadInjFountsFrScr(0 ,YdispFonts,0,speed);// axisyup
  
 	
-
+	
     reflectorSetMaxnumNum(1);// number of reflectors ~ ~   ~ means dont care
     int reflNum;
     reflNum = 1;
@@ -3179,6 +3796,7 @@ void ParticleDreams::scene_data_2_host()
 //   if(but2==1)_reflectorObjSwitch->setAllChildrenOn();
 //   if(but2==0)_reflectorObjSwitch->setAllChildrenOff();
 // paddel reflector
+	
    if(but2==1)_refObjSwitchFace->setAllChildrenOn();
    if(but2==0)_refObjSwitchFace->setAllChildrenOff();
 
@@ -3187,6 +3805,7 @@ void ParticleDreams::scene_data_2_host()
 		 reflectorSetType ( reflNum , but2);// 0 os off, 1 is plain
 		 //reflectorSetDifaults( reflNum );
 		 reflectorSetPosition ( reflNum ,x,y,z, axisUpZ);
+		 //std::cout << " Wand x,y,z,dx,dy,dz " << " " <<x<< " " <<y<< " " <<z<< " " <<dx<< " " <<dy<< " " <<dz << std::endl;
 		 reflectorSetNormal( reflNum , dx,dy,dz, axisUpZ);
 		 reflectorSetSize ( reflNum , ftToM(0.5), axisUpZ);
 		 reflectorSetDamping ( reflNum , 1);
@@ -3212,9 +3831,9 @@ void ParticleDreams::scene_data_2_host()
 		dvx =  .1 * cos(rotSp);
 
 		//(sin(time_in_sean*2*M_PI))
-// persone reflector
-	  	reflectorSetMaxnumNum( 2);;// number of reflectors ~ ~   ~ means dont care
-		reflNum = 2;
+// rotating floor reflector
+	  	reflectorSetMaxnumNum(reflectorGetMaxnumNum()+ 1);;// number of reflectors ~ ~   ~ means dont care
+		reflNum = reflectorGetMaxnumNum();
 		
 		  		 //reflectorGetMaxnumNum();
 		 //reflectorSetMaxnumNum( maxNumber);
@@ -3228,8 +3847,8 @@ void ParticleDreams::scene_data_2_host()
 	
 
 //large floor reflector
-		  	reflectorSetMaxnumNum( 3);// number of reflectors ~ ~   ~ means dont care
-		reflNum = 3;
+		  	reflectorSetMaxnumNum( reflectorGetMaxnumNum()+ 1);// number of reflectors ~ ~   ~ means dont care
+		reflNum = reflectorGetMaxnumNum();
 		
 	  		 //reflectorGetMaxnumNum();
 		 //reflectorSetMaxnumNum( maxNumber);
@@ -3241,19 +3860,19 @@ void ParticleDreams::scene_data_2_host()
 		 reflectorSetDamping ( reflNum , 1.0);
 		 reflectorSetNoTraping ( reflNum , 1);
 		
-
+//persone reflectorA
+		HeadReflectorsMake();
 
 
  
-    scene2Start =0;
+    N_waterfalls_start=0;
 }
 
-void ParticleDreams::scene_data_3_host()
+void ParticleDreams::painting_skys_host()
 {
     //painting skys
 
     //draw_water_sky =1;
-    setWater(true);
     // particalsysparamiteres--------------
     gravity = .000005;	
     max_age = 2000;
@@ -3261,13 +3880,21 @@ void ParticleDreams::scene_data_3_host()
     colorFreq =64 *max_age/2000.0 ;
     alphaControl =0;//turns alph to transparent beloy y=0 1 transparenrt
     static float time_in_sean;
+    static float time_in_Watersean;
+ 
     static float rotRate;
+	float last_time_in_scene ;
+    //time_in_sean = time_in_sean + 1.0/targetFrameRate;
+    float maxTime_in_sean = 180;
+    float begin_Time_in_Watersean = 10;
+     
 
-    time_in_sean = time_in_sean + 1.0/TARGET_FR_RATE;
+      
+  
 
     // reload  rnd < max_age in to pdata
 
-    if (scene3Start == 1)
+    if (painting_skys_start == 1)
     {
 		size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
 		//pdata_init_age( max_age);
@@ -3280,14 +3907,17 @@ void ParticleDreams::scene_data_3_host()
     //h_injectorData[0][0][0] =0;// turn off all injectors ~ ~   ~ means dont care
 	injectorSetMaxnumNum(0);// turn off all injectors
 		///cuMemcpyHtoD(d_particleData, h_particleData, size);
-		if (DEBUG_PRINT >0)printf( "in start sean3 \n");
-		time_in_sean =0 * TARGET_FR_RATE;
+		if (DEBUG_PRINT >0);;
+		printf( "painting_skys_start \n");
+		time_in_sean =0 * targetFrameRate;
+		time_in_Watersean = 0 * targetFrameRate;
 		//::user->home();
 		rotRate = .05;
 		///::user->set_t(86400);// set to 00:00 monday  old
 		///::user->set_t(1);// set to 0 days 1 sec
 		///::user->set_t(63711);// set to 0 days 1 sec
 		_skyTime = 63711.0;
+		_skyTime = 80000;
 
 		//::user->time(43200/2.0);// set to dawn  old
 		//::user->set_t(43200/2.0);
@@ -3298,7 +3928,7 @@ void ParticleDreams::scene_data_3_host()
 
 
 		if (soundEnabled)
-		{ambient_sound_start_data_3();
+		{ambient_sound_start_painting_skys();
 		//	rain_at_sea.setLoop(true);
 		#ifdef OAS_SOUND
 		//TODOSound		
@@ -3314,28 +3944,30 @@ void ParticleDreams::scene_data_3_host()
 		//	texture_17_swirls3.setGain(1);
 		//	texture_17_swirls3.play(1);
 		}
-		scene3ContextStart = 1;
+		painting_skysContextStart = 1;
     }
     else
     {
-	scene3ContextStart = 0;
+	painting_skysContextStart = 0;
     }
     //printf ("time_in_sean 3 %f\n",time_in_sean);
-    float maxTime_in_sean = 90;
- 
+
     if (time_in_sean >maxTime_in_sean) nextSean=1;
 
 
     if (DEBUG_PRINT >0)printf( "in sean3 \n");
     // printf ( "seantime time %f %f\n",time_in_sean,::user->get_t());
     //lerp(in, beginIN, endIn, beginOut, endOut)
-
-    if((time_in_sean > 0)&& (time_in_sean <= 30)) _skyTime = lerp(time_in_sean, 0, 30, 63400, 74000);
-    if((time_in_sean > 30)&& (time_in_sean <= 90)) _skyTime = lerp(time_in_sean, 30, 90, 74000, 107000);
+	last_time_in_scene = time_in_sean;
+    time_in_sean = time_in_sean + 1.0/targetFrameRate;
+    time_in_Watersean = time_in_sean -begin_Time_in_Watersean;
+	if ((last_time_in_scene <= begin_Time_in_Watersean) && (time_in_sean >= begin_Time_in_Watersean)){setWater(true);}
+    if((time_in_Watersean >= 0)&& (time_in_Watersean <= 30)) _skyTime = lerp(time_in_Watersean, 0, 30, 80000, 70000);
+    if((time_in_Watersean > 30)&& (time_in_Watersean <= 90)) _skyTime = lerp(time_in_Watersean, 30, 90, 70000, 107000);
     //if((time_in_sean > 30)&& (time_in_sean <= 40)) user->set_t(lerp(time_in_sean, 30, 40, 74000, 110000));
     //     ::user->set_t(107000);// set to 0 days 1 sec
 
-
+//if(time_in_Watersean > 0) { std::cout << "_skyTime = " << _skyTime << " " <<time_in_Watersean <<"\n";}
     // anim += 0.001;// .0001
 
     anim = showFrameNo * rotRate;
@@ -3408,10 +4040,10 @@ void ParticleDreams::scene_data_3_host()
     if (soundEnabled)injSoundUpdate(injNum);
 
 
-    scene3Start =0;
+    painting_skys_start =0;
 }
 
-void ParticleDreams::scene_data_4_host()
+void ParticleDreams::rain_host()
 {
     //educational stub fro firtherDev
 
@@ -3426,12 +4058,12 @@ void ParticleDreams::scene_data_4_host()
     colorFreq =64 *max_age/2000.0 ;
     alphaControl =0;//turns alph to transparent beloy y=0
     static float time_in_sean;
-    time_in_sean = time_in_sean + 1.0/TARGET_FR_RATE;
+    time_in_sean = time_in_sean + 1.0/targetFrameRate;
 	static float in_rot_time = 0;
 
     // reload  rnd < max_age in to pdata
 
-    if (scene4Start == 1)
+    if (rain_start == 1)
 		{
 
 		_injObjSwitchFace->setAllChildrenOff();
@@ -3453,22 +4085,23 @@ void ParticleDreams::scene_data_4_host()
 
 /*		_EdSecSwitchAxis->setAllChildrenOn();
 */	
-		if (DEBUG_PRINT >0)printf( "in start sean4 \n");
-		time_in_sean =0 * TARGET_FR_RATE;
+		if (DEBUG_PRINT >0);;
+		printf( "rain_start \n");
+		time_in_sean =0 * targetFrameRate;
 
 		if (soundEnabled)
-		{ambient_sound_start_data_4();
+		{ambient_sound_start_rain();
 		//	dan_rain_at_sea_loop.setLoop(1);
 		//	dan_rain_at_sea_loop.setGain(1);
 
 		//	dan_rain_at_sea_loop.play();
 		}
 		//printf( " time %f \n", ::user->get_t());
-		scene4ContextStart = 1;
+		rainContextStart = 1;
 		}
 		else
 		{
-		scene4ContextStart = 0;
+		rainContextStart = 0;
 		}
 		
     float maxTime_in_sean = 90;
@@ -3529,7 +4162,7 @@ void ParticleDreams::scene_data_4_host()
 	speed = _speedRV->getValue();
 	float xvos,zvos;
 	float rotTime = 15;
-	if (_rotateInjCB->getValue()){in_rot_time = in_rot_time + 1.0/TARGET_FR_RATE;}
+	if (_rotateInjCB->getValue()){in_rot_time = in_rot_time + 1.0/targetFrameRate;}
 			xvos = (sin(in_rot_time*2*M_PI/rotTime))*speed;
 			zvos = (cos(in_rot_time*2*M_PI/rotTime))*speed;
 
@@ -3588,7 +4221,7 @@ void ParticleDreams::scene_data_4_host()
 	
 	if ((time_in_sean > 5) && _reflectorCB->getValue())	{floorReflectOn =1;}
 	else					{floorReflectOn =0;}
-    //h_reflectorData[0][0][0] =reflNum;// number of reflectors ~ 1.0/TARGET_FR_RATE;~   ~ means dont care
+    //h_reflectorData[0][0][0] =reflNum;// number of reflectors ~ 1.0/targetFrameRate;~   ~ means dont care
     reflectorSetMaxnumNum( reflNum);
        		 //reflectorGetMaxnumNum();
 		 //reflectorSetMaxnumNum( maxNumber);
@@ -3604,12 +4237,12 @@ void ParticleDreams::scene_data_4_host()
 
 
 
-    scene4Start =0;
+    rain_start =0;
 }
 
-void ParticleDreams::scene_data_0_context(int contextid) const
+void ParticleDreams::paint_on_walls_context(int contextid) const
 {
-    if(scene0ContextStart)
+    if(paint_on_wallsContextStart)
     {
 	size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
 	cuMemcpyHtoD(d_particleDataMap[contextid], h_particleData, size);
@@ -3617,23 +4250,23 @@ void ParticleDreams::scene_data_0_context(int contextid) const
 
 }
 
-void ParticleDreams::scene_data_1_context(int contextid) const
+void ParticleDreams::sprial_fountens_context(int contextid) const
 {
-    if(scene1ContextStart)
+    if(sprial_fountensContextStart)
     {
     }
 }
 
-void ParticleDreams::scene_data_2_context(int contextid) const
+void ParticleDreams::N_waterfalls_context(int contextid) const
 {
-    if(scene2ContextStart)
+    if(N_waterfallsContextStart)
     {
     }
 }
 
-void ParticleDreams::scene_data_3_context(int contextid) const
+void ParticleDreams::painting_skys_context(int contextid) const
 {
-    if(scene3ContextStart)
+    if(painting_skysContextStart)
     {
 	size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
 	cuMemcpyHtoD(d_particleDataMap[contextid], h_particleData, size);
@@ -3641,66 +4274,69 @@ void ParticleDreams::scene_data_3_context(int contextid) const
     }
 }
 
-void ParticleDreams::scene_data_4_context(int contextid) const
+void ParticleDreams::rain_context(int contextid) const
 {
-    if(scene4ContextStart)
+    if(rainContextStart)
     {
     }
 }
 
-void ParticleDreams::scene_data_0_clean_up()
+void ParticleDreams::paint_on_walls__clean_up()
 {
 	//h_reflectorData[0][0][0] = 0;
 	reflectorSetMaxnumNum( 0);
 	//h_injectorData[0][0][0] = 0;
 	injectorSetMaxnumNum(0);
 	if (soundEnabled)
-	{sound_stop_data_0();
+	{sound_stop_paint_on_walls();
 	//	dan_ambiance_2.fade(0, 1.5);
 	//	dan_10122606_sound_spray.setGain(0);
 	}
 }
 
-void ParticleDreams::scene_data_1_clean_up()
+void ParticleDreams::sprial_fountens__clean_up()
 {
 	//h_reflectorData[0][0][0] = 0;
 	reflectorSetMaxnumNum( 0);
 	
 	injectorSetMaxnumNum(0);
-	std::cout << "scene_data_1_clean_up() " << std::endl;
+	std::cout << "sprial_fountens__clean_up() " << std::endl;
 	if (soundEnabled)
-	{sound_stop_data_1();
+	{sound_stop_sprial_fountens();
 	//	dan_5min_ostinato.fade(0, 1.50);
 	//	dan_10122606_sound_spray.setGain(0);
 	}
 }
 
 
-void ParticleDreams::scene_data_2_clean_up()
+void ParticleDreams::N_waterfalls__clean_up()
 {
 	//h_reflectorData[0][0][0] = 0;
 		reflectorSetMaxnumNum( 0);
 
 	injectorSetMaxnumNum(0);
-	std::cout << "scene_data_2_clean_up() " << std::endl;
+	std::cout << "N_waterfalls__clean_up() " << std::endl;
+	_EdSecSwitchSlid1->setAllChildrenOff();
+	_EdSecSwitchSlid2->setAllChildrenOff();
+	_EdSecSwitchSlid3->setAllChildrenOff();
 
 	if (soundEnabled)
-	{sound_stop_data_2();
+	{sound_stop_N_waterfalls();
 	//	harmonicAlgorithm.fade(0, 1.50);
 	//	dan_10122606_sound_spray.setGain(0);
 	}
 }
 
-void ParticleDreams::scene_data_3_clean_up()
+void ParticleDreams::painting_skys__clean_up()
 {
 	//h_reflectorData[0][0][0] = 0;
 	//h_injectorData[0][0][0] = 0;
 	reflectorSetMaxnumNum( 0);
 	injectorSetMaxnumNum(0);
 
-	std::cout << "scene_data_3_clean_up() " << std::endl;
+	std::cout << "painting_skys__clean_up() " << std::endl;
 	if (soundEnabled)
-	{sound_stop_data_3();
+	{sound_stop_painting_skys();
 	//	rain_at_sea.fade(0, 1.50);
 	//	texture_17_swirls3.fade(0, 1.50);
 	//	dan_10122606_sound_spray.setGain(0);
@@ -3709,23 +4345,59 @@ void ParticleDreams::scene_data_3_clean_up()
 	}
 }
 
-void ParticleDreams::scene_data_4_clean_up()
+void ParticleDreams::rain__clean_up()
 {
 	//h_reflectorData[0][0][0] = 0;
 	reflectorSetMaxnumNum( 0);
 	injectorSetMaxnumNum(0);
 
 	
-	std::cout << "scene_data_4_clean_up() " << std::endl;
+	std::cout << "rain__clean_up() " << std::endl;
 
 	if (soundEnabled)
-	{sound_stop_data_4();
+	{sound_stop_rain();
 	//	dan_rain_at_sea_loop.fade(0, 1.50);
 	//	dan_10122606_sound_spray.setGain(0);
 	}
 }
 
+void ParticleDreams::HeadReflectorsMake()
 
+	{
+//persone reflector
+	int reflNum;
+			//std::cout << "reflectorA reflectorGetMaxnumNum " << reflectorGetMaxnumNum() << std::endl;
+		  	reflectorSetMaxnumNum( reflectorGetMaxnumNum() + 1);// number of reflectors ~ ~   ~ means dont care
+		reflNum = reflectorGetMaxnumNum();
+    float head_x = headPos[0];
+    float head_y = headPos[1];
+    float head_z = headPos[2];
+    float head_dx = headVec[0]/2;
+    float head_dy = headVec[1]/2;
+    float head_dz = headVec[2]/2;
+    
+    float dx = headMat[4];
+    float dy = headMat[5];
+    float dz = headMat[6];
+		
+	  		 //reflectorGetMaxnumNum();
+		 //reflectorSetMaxnumNum( maxNumber);
+		 reflectorSetType ( reflNum , 1);// 0 os off, 1 is plain
+		 //reflectorSetDifaults( reflNum );
+		 reflectorSetPosition ( reflNum ,head_x, head_y,head_z, axisUpZ);
+		 reflectorSetNormal( reflNum , 0, 1.0,  0, axisUpZ);
+		//std::cout << "head_x, head_y,head_z " << head_x << " " << head_y<< " " << head_z << std::endl;
+		 reflectorSetSize ( reflNum , 0.5, axisUpZ);
+		 reflectorSetDamping ( reflNum , 1.0);
+		 reflectorSetNoTraping ( reflNum , 1);
+	   if (soundEnabled)reflSoundUpdate(reflNum);
+
+
+	
+	
+	
+	
+	}
 float ParticleDreams::reflSoundUpdate(int reflNum)
 	{
 		static float OldReflectOn =0;
@@ -3917,7 +4589,7 @@ void	ParticleDreams::injSoundUpdate(int injNum)
 	}
 	
 
-void ParticleDreams::ambient_sound_start_data_0()
+void ParticleDreams::ambient_sound_start_paint_on_walls()
 	{
 	#ifdef OAS_SOUND
 		dan_ambiance_2.setGain(1);
@@ -3930,7 +4602,7 @@ void ParticleDreams::ambient_sound_start_data_0()
 	 #endif
 
 	}
-void ParticleDreams::ambient_sound_start_data_1()
+void ParticleDreams::ambient_sound_start_sprial_fountens()
 	{
 	#ifdef OAS_SOUND
 
@@ -3945,7 +4617,7 @@ void ParticleDreams::ambient_sound_start_data_1()
 
  	
 	}
-void ParticleDreams::ambient_sound_start_data_2()
+void ParticleDreams::ambient_sound_start_N_waterfalls()
 	{
 	
 	#ifdef OAS_SOUND
@@ -3972,7 +4644,7 @@ void ParticleDreams::ambient_sound_start_data_2()
 
 	
 	}
-void ParticleDreams::ambient_sound_start_data_3()
+void ParticleDreams::ambient_sound_start_painting_skys()
 	{
 	#ifdef OAS_SOUND
 		rain_at_sea.setLoop(true);
@@ -3997,7 +4669,7 @@ void ParticleDreams::ambient_sound_start_data_3()
 
 	
 	}
-void ParticleDreams::ambient_sound_start_data_4()
+void ParticleDreams::ambient_sound_start_rain()
 	{
 	#ifdef OAS_SOUND
 		dan_rain_at_sea_loop.setLoop(1);
@@ -4015,7 +4687,7 @@ void ParticleDreams::ambient_sound_start_data_4()
 	
 	}
 
-void ParticleDreams::sound_stop_data_0()
+void ParticleDreams::sound_stop_paint_on_walls()
 	{
 	#ifdef OAS_SOUND
 		dan_ambiance_2.fade(0, 1.5);
@@ -4028,7 +4700,7 @@ void ParticleDreams::sound_stop_data_0()
 	 #endif
 	
 	}
-void ParticleDreams::sound_stop_data_1()
+void ParticleDreams::sound_stop_sprial_fountens()
 	{
 	#ifdef OAS_SOUND
 		dan_5min_ostinato.fade(0, 1.50);
@@ -4042,7 +4714,7 @@ void ParticleDreams::sound_stop_data_1()
 
 	
 	}
-void ParticleDreams::sound_stop_data_2() 
+void ParticleDreams::sound_stop_N_waterfalls() 
 	{
 	#ifdef OAS_SOUND
 		harmonicAlgorithm.fade(0, 1.50);
@@ -4060,7 +4732,7 @@ void ParticleDreams::sound_stop_data_2()
 	
 	}
 	
-void ParticleDreams::sound_stop_data_3()
+void ParticleDreams::sound_stop_painting_skys()
 	{
 	#ifdef OAS_SOUND
 		rain_at_sea.fade(0, 1.50);
@@ -4079,7 +4751,7 @@ void ParticleDreams::sound_stop_data_3()
 
 	
 	}
-void ParticleDreams::sound_stop_data_4()
+void ParticleDreams::sound_stop_rain()
 	{
 	#ifdef OAS_SOUND
 		dan_rain_at_sea_loop.fade(0, 1.50);
@@ -4147,6 +4819,208 @@ osg::Geometry* ParticleDreams::createQuad()
 	}
 
 
+void	ParticleDreams::initGeoEdSection()
+{
+
+    osg::Node* tidleSlide1 = NULL;
+    tidleSlide1 = osgDB::readNodeFile(_dataDir + "/models/Dan-Spherical_Credits-001.obj");//Tidle
+    if(!tidleSlide1){std::cerr << "Error reading /models/Dan-Spherical_Credits-001.obj" << std::endl;}
+    osg::Node* tidleSlide2 = NULL;
+    tidleSlide2 = osgDB::readNodeFile(_dataDir + "/models/Dan-Spherical_Credits-002.obj");//Credit1
+    if(!tidleSlide2){std::cerr << "Error reading /models/Dan-Spherical_Credits-002.obj" << std::endl;}
+    osg::Node* tidleSlide3 = NULL;
+    tidleSlide3 = osgDB::readNodeFile(_dataDir + "/models/frameS3.obj");//Credit2
+    if(!tidleSlide3){std::cerr << "Error reading /models/frameS3.obj" << std::endl;}
+    std::cout << "slidesLoaded \n";
+ /*
+    osg::Node* tidleSlide4 = NULL;
+    tidleSlide4 = osgDB::readNodeFile(_dataDir + "/models/frameS4.obj");//sinxyz
+    if(!tidleSlide4){std::cerr << "Error reading /models/frameS4.obj" << std::endl;}
+    osg::Node* tidleSlide5 = NULL;
+    tidleSlide5 = osgDB::readNodeFile(_dataDir + "/models/frameS5.obj");//sinxyza
+    if(!tidleSlide5){std::cerr << "Error reading /models/frameS5.obj" << std::endl;}
+    osg::Node* tidleSlide6 = NULL;
+    tidleSlide6 = osgDB::readNodeFile(_dataDir + "/models/frameS6.obj");//sin xyzar
+    if(!tidleSlide6){std::cerr << "Error reading /models/frameS6.obj" << std::endl;}
+
+    osg::Node* tidleSlide7 = NULL;
+    tidleSlide7 = osgDB::readNodeFile(_dataDir + "/models/frameS7.obj");//sin xyzr
+    if(!tidleSlide7){std::cerr << "Error reading /models/frameS7.obj" << std::endl;}
+    osg::Node* tidleSlide8 = NULL;
+    tidleSlide8 = osgDB::readNodeFile(_dataDir + "/models/frameS8.obj");// xyz
+    if(!tidleSlide8){std::cerr << "Error reading /models/frameS8.obj" << std::endl;}
+*/
+    std::cout << " loading slides " << "\n" ;
+    //creat switchnode
+    _EdSecSwitchSlid1 = new osg::Switch;
+    _EdSecSwitchSlid2 = new osg::Switch;
+    _EdSecSwitchSlid3 = new osg::Switch;
+/*    _EdSecSwitchSlid4 = new osg::Switch;
+    _EdSecSwitchSlid5 = new osg::Switch;
+    _EdSecSwitchSlid6 = new osg::Switch;
+    _EdSecSwitchSlid7 = new osg::Switch;
+    _EdSecSwitchSlid8 = new osg::Switch;
+*/
+    ParticleDreams::turnAllEduSlidsOff();
+
+    // creat fixes xform on slides
+    osg::Matrix ms;
+    osg::MatrixTransform * mtSlide1 = new osg::MatrixTransform();
+    osg::MatrixTransform * mtSlide2 = new osg::MatrixTransform();
+    osg::MatrixTransform * mtSlide3 = new osg::MatrixTransform();
+/*   osg::MatrixTransform * mtSlide4 = new osg::MatrixTransform();
+    osg::MatrixTransform * mtSlide5 = new osg::MatrixTransform();
+    osg::MatrixTransform * mtSlide6 = new osg::MatrixTransform();
+    osg::MatrixTransform * mtSlide7 = new osg::MatrixTransform();
+    osg::MatrixTransform * mtSlide8 = new osg::MatrixTransform();
+*/
+    //matrices for interdediat computations
+    osg::Matrix mss;
+    osg::Matrix msr;
+
+    osg::Matrix msrh;
+    osg::Matrix mst;
+
+    osg::Matrix mresult;
+
+
+if (_TargetSystem.compare("TourCaveCalit2") == 0)
+    {
+         //    height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -802  ; originY= 1657  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
+    int i =1;
+   // std::cout << " i, _PhScAr[i].originX  ,_PhScAr[i].originY _PhScAr[i].h "<< i<< " " << _PhScAr[i].originX  << " " << _PhScAr[i].originY << " " << _PhScAr[i].h << "\n";
+
+    mst.makeTranslate(osg::Vec3(_PhScAr[i].originX,_PhScAr[i].originY +150,450));
+    // mst.makeTranslate(osg::Vec3(-802,1657,450));
+    ms.makeScale(osg::Vec3(40.0,25,1.0));
+    msr.makeRotate(osg::DegreesToRadians(90.0), osg::Vec3(1,0,0));
+    msrh.makeRotate(osg::DegreesToRadians(25.0), osg::Vec3(0,0,1));
+    msrh.makeRotate(osg::DegreesToRadians(_PhScAr[i].h), osg::Vec3(0,0,1));
+
+    }
+
+
+if (_TargetSystem.compare("Cave2") == 0)
+    {
+         //    height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -802  ; originY= 1657  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
+    int i =1;
+   std::cout << " i, _PhScAr[i].originX  ,_PhScAr[i].originY _PhScAr[i].h "<< i<< " " << _PhScAr[i].originX  << " " << _PhScAr[i].originY << " " << _PhScAr[i].h << "\n";
+
+   // mst.makeTranslate(osg::Vec3(_PhScAr[i].originX,_PhScAr[i].originY ,_PhScAr[i].originZ));
+    mst.makeTranslate(osg::Vec3(-802,1657,450));
+    ms.makeScale(osg::Vec3(40.0,25,1.0));
+    msr.makeRotate(osg::DegreesToRadians(90.0), osg::Vec3(1,0,0));
+    msrh.makeRotate(osg::DegreesToRadians(30.0), osg::Vec3(0,0,1));
+    //msrh.makeRotate(osg::DegreesToRadians(_PhScAr[i].h), osg::Vec3(0,0,1));
+
+    }
+if (_TargetSystem.compare("StarCave") == 0)
+    {
+         //    height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -802  ; originY= 1657  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
+    int i =1;
+   // std::cout << " i, _PhScAr[i].originX  ,_PhScAr[i].originY _PhScAr[i].h "<< i<< " " << _PhScAr[i].originX  << " " << _PhScAr[i].originY << " " << _PhScAr[i].h << "\n";
+
+    mst.makeTranslate(osg::Vec3(_PhScAr[i].originX,_PhScAr[i].originY +150,450));
+    // mst.makeTranslate(osg::Vec3(-802,1657,450));
+    ms.makeScale(osg::Vec3(40.0,25,1.0));
+    msr.makeRotate(osg::DegreesToRadians(90.0), osg::Vec3(1,0,0));
+    msrh.makeRotate(osg::DegreesToRadians(25.0), osg::Vec3(0,0,1));
+    msrh.makeRotate(osg::DegreesToRadians(_PhScAr[i].h), osg::Vec3(0,0,1));
+
+    }
+
+    mresult.set ( ms*msr*msrh * mst);
+    mtSlide1->setMatrix(mresult);
+    mtSlide2->setMatrix(mresult);
+    mtSlide3->setMatrix(mresult);
+ /*
+    mtSlide4->setMatrix(mresult);
+    mtSlide5->setMatrix(mresult);
+    mtSlide6->setMatrix(mresult);
+    mtSlide7->setMatrix(mresult);
+    mtSlide8->setMatrix(mresult);
+
+*/
+    //atatch tidleSlide to matrix transform
+    mtSlide1->addChild(tidleSlide1);
+    mtSlide2->addChild(tidleSlide2);
+    mtSlide3->addChild(tidleSlide3);
+/*
+    mtSlide4->addChild(tidleSlide4);
+    mtSlide5->addChild(tidleSlide5);
+    mtSlide6->addChild(tidleSlide6);
+    mtSlide7->addChild(tidleSlide7);
+    mtSlide8->addChild(tidleSlide8);
+*/
+
+    // atatch scaled model to switch 
+    _EdSecSwitchSlid1->addChild(mtSlide1);
+    _EdSecSwitchSlid2->addChild(mtSlide2);
+    _EdSecSwitchSlid3->addChild(mtSlide3);
+/*
+    _EdSecSwitchSlid4->addChild(mtSlide4);
+    _EdSecSwitchSlid5->addChild(mtSlide5);
+    _EdSecSwitchSlid6->addChild(mtSlide6);
+    _EdSecSwitchSlid7->addChild(mtSlide7);
+    _EdSecSwitchSlid8->addChild(mtSlide8);
+*/
+    turnAllEduSlidsOff(); 
+
+    // atatch switch to scene
+
+
+    // addTidle screene.
+    SceneObject * so = new SceneObject("EdSlide1",false,false,false,false,false);
+    so->addChild(_EdSecSwitchSlid1);
+    so->addChild(_EdSecSwitchSlid2);
+    so->addChild(_EdSecSwitchSlid3);
+/*
+    so->addChild(_EdSecSwitchSlid4);
+    so->addChild(_EdSecSwitchSlid5);
+    so->addChild(_EdSecSwitchSlid6);
+    so->addChild(_EdSecSwitchSlid7);
+    so->addChild(_EdSecSwitchSlid8);
+*/
+    _EdSceneObject = so;
+
+    PluginHelper::registerSceneObject(so,"ParticleDreams");
+
+    so->setPosition(osg::Vec3(0,0,0));
+
+    so->setScale(1);
+    so->attachToScene();
+    so->setNavigationOn(true);
+
+}
+
+void ParticleDreams::cleanupGeoEdSection()
+{
+    _EdSecSwitchSlid1 = NULL;
+    _EdSecSwitchSlid2 = NULL;
+    _EdSecSwitchSlid3 = NULL;
+/*
+    _EdSecSwitchSlid4 = NULL;
+    _EdSecSwitchSlid5 = NULL;
+    _EdSecSwitchSlid6 = NULL;
+    _EdSecSwitchSlid7 = NULL;
+    _EdSecSwitchSlid8 = NULL;
+*/
+    delete _EdSceneObject;
+}
+
+void ParticleDreams::turnAllEduSlidsOff()
+	{
+       _EdSecSwitchSlid1->setAllChildrenOff();
+       _EdSecSwitchSlid2->setAllChildrenOff();
+       _EdSecSwitchSlid3->setAllChildrenOff();
+/*
+       _EdSecSwitchSlid4->setAllChildrenOff();
+       _EdSecSwitchSlid5->setAllChildrenOff();
+       _EdSecSwitchSlid6->setAllChildrenOff();
+       _EdSecSwitchSlid7->setAllChildrenOff();
+       _EdSecSwitchSlid8->setAllChildrenOff();
+*/
+	}
 
 
 

@@ -69,6 +69,7 @@ __device__ float  distRnd1( float seed, int iter){
 
 __device__ void  injector1(unsigned int arrayLoc,unsigned int posLoc,float time,float4* pos, float* pdata){
     float rnd1,rnd2,rnd3;
+// not used now
     rnd1 = distRnd1(pdata[arrayLoc+4] , 5);
     rnd2 = distRnd1(pdata[arrayLoc+5] , 5);
     rnd3 = distRnd1(pdata[arrayLoc+6] , 5);
@@ -87,6 +88,7 @@ __device__ void  injector1(unsigned int arrayLoc,unsigned int posLoc,float time,
 __device__ void  injector2(unsigned int arrayLoc,unsigned int posLoc,int injNum,float time,float3* pos, float* pdata,float* debugData){
     float rnd1,rnd2,rnd3,rnd4,rnd5;
     float dt,du,dx,dy,dz,dx2,dy2,dz2,len,vx,vy,vz,dxt,dyt,dzt,dxu,dyu,dzu;
+// used now
     // float dv
     /*
        injdata[injNum][1][0]// type, injection ratio ie streem volume, ~
@@ -201,7 +203,7 @@ __device__ void  planeReflector1(float posX,float posY,float posZ,unsigned int a
 {
     float xn =1,yn =1,zn =0, rad =1,damping =.7,noTraping;
     float xp,yp,zp;
-
+// used now
     //indexices num injectors =0,position =[reflNum][1][0],normal =[reflNum][2][0], size =[reflNum][3][0] tuv jiter = [reflNum ][4][0],damping = [reflNum ][4][0],centrality of randum = 21
 
     //dataorginization  refldata[reflNum][rownum][quardinare numbr x=0,1=y,2=z]
@@ -260,9 +262,7 @@ __device__ void  planeReflector1(float posX,float posY,float posZ,unsigned int a
 	    //pdata[arrayLoc] = 0;// temp set age to 0
 	    if ((noTraping ==1)&& (refldata[reflNum][0][1]) == 1 )
 	    {
-		//pdata[arrayLoc] = pdata[arrayLoc]/2.0;// chnage color
-
-		pdata[arrayLoc] = pdata[arrayLoc] * 1.5;// chnage color
+		pdata[arrayLoc] = pdata[arrayLoc]/2.0;
 	    }
 	}
     }
@@ -273,7 +273,7 @@ __device__ void  planeReflector1(float posX,float posY,float posZ,unsigned int a
 __global__ void Point1(float3* pos, float4* color, float * pdata,float * debugData ,unsigned int width,
 	unsigned int height, int max_age,int disappear_age,float alphaControl, float time, float gravity, float colorFreq, float r3)
 {
-
+// used now
     // r1,r2,r3 curently not used
     unsigned int x = blockIdx.x*blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y*blockDim.y + threadIdx.y;
@@ -347,7 +347,7 @@ __global__ void Point1(float3* pos, float4* color, float * pdata,float * debugDa
 __global__ void PointSquars(float4* pos, float * pdata, unsigned int width,
 	unsigned int height, int max_age, float time, float r1, float r2, float r3)
 {
-
+//not used now
     // r1,r2,r3 curently not used
     unsigned int x = blockIdx.x*blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y*blockDim.y + threadIdx.y;

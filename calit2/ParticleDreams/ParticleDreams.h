@@ -55,6 +55,20 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
 
         void updateHand();
        void updateHead();
+	void initGeoEdSection();
+	       void cleanupGeoEdSection();
+		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid1;
+		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid2;
+		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid3;
+		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid4;
+		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid5;
+		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid6;
+		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid7;
+		osg::ref_ptr<osg::Switch> _EdSecSwitchSlid8;
+
+        cvr::SceneObject * _EdSceneObject;
+
+	void turnAllEduSlidsOff();
 
         void setWater(bool b);
 
@@ -65,23 +79,24 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
         void copy_injector( int sorce, int destination);
         int load6wallcaveWalls(int firstRefNum);
  
-        void scene_data_0_host();
-        void scene_data_1_host();
-        void scene_data_2_host();
-        void scene_data_3_host();
-        void scene_data_4_host();
+        void paint_on_walls_host();
+        void sprial_fountens_host();
+        void N_waterfalls_host();
+        void painting_skys_host();
+        void rain_host();
 
-        void scene_data_0_context(int contextid) const;
-        void scene_data_1_context(int contextid) const;
-        void scene_data_2_context(int contextid) const;
-        void scene_data_3_context(int contextid) const;
-        void scene_data_4_context(int contextid) const;
+        void paint_on_walls_context(int contextid) const;
+        void sprial_fountens_context(int contextid) const;
+        void N_waterfalls_context(int contextid) const;
+        void painting_skys_context(int contextid) const;
+        void rain_context(int contextid) const;
 
-        void scene_data_0_clean_up();
-        void scene_data_1_clean_up();
-        void scene_data_2_clean_up();
-        void scene_data_3_clean_up();
-        void scene_data_4_clean_up();
+        void paint_on_walls__clean_up();
+        void sprial_fountens__clean_up();
+        void N_waterfalls__clean_up();
+        void painting_skys__clean_up();
+        void rain__clean_up();
+        void HeadReflectorsMake();
 
         cvr::SubMenu * _myMenu;
         cvr::MenuCheckbox * _enable;
@@ -115,7 +130,9 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
         double headMat[16];
 		osg::Vec3 headPos;
 		osg::Vec3 navHeadPos;
-
+		
+       
+ 
 
         size_t sizeDebug;
         int max_age;
@@ -134,22 +151,28 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
         int but2,but2old;
         int but1,but1old;
 		int skipTonextScene,skipTOnextSceneOld;
-        int sceneNum;
+        int sceneName;
         int sceneOrder;
         int nextSean;
-        int scene0Start;
-        int scene1Start;
-        int scene2Start;
-        int scene3Start;
-        int scene4Start;
-        int scene0ContextStart;
-        int scene1ContextStart;
-        int scene2ContextStart;
-        int scene3ContextStart;
-        int scene4ContextStart;
-        int witch_scene;
-        int old_witch_scene;
+        int paint_on_walls_start;
+        int sprial_fountens_start;
+        int N_waterfalls_start;
+        int painting_skys_start;
+        int rain_start;
+        int paint_on_wallsContextStart;
+        int sprial_fountensContextStart;
+        int N_waterfallsContextStart;
+        int painting_skysContextStart;
+        int rainContextStart;
+        int name_paint_on_walls ;
+		int name_sprial_fountens;
+		int name_N_waterfalls;
+		int name_painting_skys ;
+		int name_rain ;
+        //int witch_scene;
+        //int old_witch_scene;
         int sceneChange;
+        //int firstScene ;
 
         float showFrameNo;
         float lastShowFrameNo;
@@ -252,17 +275,17 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
 
         float reflSoundUpdate(int refNum);
 		void injSoundUpdate(int injNum);
-		void ambient_sound_start_data_0();
-		void ambient_sound_start_data_1();
-		void ambient_sound_start_data_2();
-		void ambient_sound_start_data_3();
-		void ambient_sound_start_data_4();
+		void ambient_sound_start_paint_on_walls();
+		void ambient_sound_start_sprial_fountens();
+		void ambient_sound_start_N_waterfalls();
+		void ambient_sound_start_painting_skys();
+		void ambient_sound_start_rain();
 
-		void sound_stop_data_0();
-		void sound_stop_data_1();
-		void sound_stop_data_2();
-		void sound_stop_data_3();
-		void sound_stop_data_4();
+		void sound_stop_paint_on_walls();
+		void sound_stop_sprial_fountens();
+		void sound_stop_N_waterfalls();
+		void sound_stop_painting_skys();
+		void sound_stop_rain();
 		void texture_swirls_setPosition(int injNum);
 
         
@@ -320,11 +343,13 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
         mutable std::map<int,bool> _cudaContextSet;
 
         float _pointerHeading, _pointerPitch, _pointerRoll;
+        float _headHeading, _headPitch, _headRoll;
 		int loadPhysicalScreensArrayTourCaveCalit2();
 		int loadPhysicalScreensArrayTourCaveCalit2_5lowerScr();
 		int loadPhysicalScreensArrayTourCaveSaudi();
 		int loadPhysicalScreensArrayCave2();
 		int loadOneHalfPhysicalScreensArrayCave2();
+		int loadPhysicalScreensArrayStarCave();
        int loadInjFountsFrScr(float dx,float dy,float dz,float speed);
        int loadReflFrScr();
        //
@@ -376,7 +401,7 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
 
 	std::string _TargetSystem;
 	std::string _DisplaySystem;
-
+	int targetFrameRate;
 
 //	omicron::SoundManager* _SoundMng;
 //	omicron::SoundEnvironment* _SoundEnv;
