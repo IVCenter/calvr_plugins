@@ -48,6 +48,7 @@ class FlowPagedRenderer
 
         void setNextFrame(int frame);
         bool advance();
+        bool canAdvance();
 
         void setUniData(std::string key, struct UniData & data);
         bool getUniData(std::string key, struct UniData & data);

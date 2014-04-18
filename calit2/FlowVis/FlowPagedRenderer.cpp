@@ -1906,6 +1906,27 @@ bool FlowPagedRenderer::advance()
     return true;
 }
 
+bool FlowPagedRenderer::canAdvance()
+{
+    if(_currentFrame != _nextFrame)
+    {
+	pthread_mutex_lock(&_frameReadyLock);
+	bool advance = true;
+	for(std::map<int,bool>::iterator it = _nextFrameReady.begin(); it != _nextFrameReady.end(); ++it)
+	{
+	    if(!it->second)
+	    {
+		advance = false;
+	    }
+	}
+
+	pthread_mutex_unlock(&_frameReadyLock);
+
+	return advance;
+    }
+    return true;
+}
+
 void FlowPagedRenderer::setUniData(std::string key, struct UniData & data)
 {
     if(_uniDataMap.find(key) != _uniDataMap.end())
