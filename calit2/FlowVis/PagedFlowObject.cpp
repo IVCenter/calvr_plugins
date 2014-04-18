@@ -19,6 +19,7 @@ PagedFlowObject::PagedFlowObject(PagedDataSet * set, osg::BoundingBox bb, std::s
     _animationTime = 0.0;
 
     initCudaInfo();
+    initContextRenderCount();
 
     // get size of vbo cache in KB, 1GB default
     int cacheSize = ConfigManager::getInt("value","Plugin.FlowVis.VBOCacheSize",1048576);
@@ -745,6 +746,20 @@ void PagedFlowObject::initCudaInfo()
     }
 
     FlowPagedRenderer::setCudaInitInfo(initInfo);
+}
+
+void PagedFlowObject::initContextRenderCount()
+{
+    std::map<int,int> drawCounts;
+
+    // TODO: determine this based on number of channels and stereo modes
+    // for now assume one draw per context
+    for(int i = 0; i < ScreenConfig::instance()->getNumWindows(); ++i)
+    {
+	drawCounts[i] = 1;
+    }
+
+    FlowPagedRenderer::setContextRenderCount(drawCounts);
 }
 
 void PagedFlowObject::getPlaneViewportIntersection(const osg::Vec3 & planePoint, const osg::Vec3 & planeNormal, std::vector<osg::Vec3> & intersectList)

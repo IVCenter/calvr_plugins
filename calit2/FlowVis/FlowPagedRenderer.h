@@ -56,6 +56,7 @@ class FlowPagedRenderer
         bool freeDone();
 
         static void setCudaInitInfo(std::map<int,std::pair<int,int> > & initInfo);
+        static void setContextRenderCount(std::map<int,int> & contextRenderCountMap);
 
     protected:
         void initUniData();
@@ -112,6 +113,7 @@ class FlowPagedRenderer
         static std::map<int,bool> _cudaInitMap;
         static pthread_mutex_t _cudaInitLock;
         static std::map<int,std::pair<int,int> > _cudaInitInfo;
+        static std::map<int,int> _contextRenderCountMap;
 
         std::map<int,bool> _shaderInitMap;
         pthread_mutex_t _shaderInitLock;
@@ -185,6 +187,8 @@ class FlowPagedRenderer
         std::map<int,CudaGLImage*> _licCudaOutputImage;
         std::map<int,CudaGLImage*> _licCudaNextOutputImage;
         pthread_mutex_t _licCudaLock;
+
+        std::map<int,int> _licContextRenderCount;
 
         // temp consts for lic kernels
         // isolated so they can be loaded in draw threads

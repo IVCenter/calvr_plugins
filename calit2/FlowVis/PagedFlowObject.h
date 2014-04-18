@@ -33,6 +33,7 @@ class PagedFlowObject : public cvr::SceneObject, public cvr::PerContextCallback
         void getPlaneViewportIntersection(const osg::Vec3 & planePoint, const osg::Vec3 & planeNormal, std::vector<osg::Vec3> & intersectList);
 
         void initCudaInfo();
+        void initContextRenderCount();
 
         PagedDataSet * _set;
         FlowPagedRenderer * _renderer;
