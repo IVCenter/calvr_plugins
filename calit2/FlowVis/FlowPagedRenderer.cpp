@@ -31,6 +31,7 @@ std::map<int,bool> FlowPagedRenderer::_glewInitMap;
 pthread_mutex_t FlowPagedRenderer::_cudaInitLock = PTHREAD_MUTEX_INITIALIZER;
 std::map<int,bool> FlowPagedRenderer::_cudaInitMap;
 std::map<int,std::pair<int,int> > FlowPagedRenderer::_cudaInitInfo;
+std::map<int,int> FlowPagedRenderer::_contextRenderCountMap;
 
 pthread_mutex_t FlowPagedRenderer::_colorTableInitLock = PTHREAD_MUTEX_INITIALIZER;
 std::map<int,GLuint> FlowPagedRenderer::_colorTableMap;
@@ -205,6 +206,8 @@ void FlowPagedRenderer::frameStart(int context)
 
 void FlowPagedRenderer::preFrame()
 {
+    //std::cerr << "PreFrame" << std::endl;
+
 #ifdef PRINT_TIMING
     struct timeval start, end;
     gettimeofday(&start,NULL);
@@ -1603,41 +1606,50 @@ void FlowPagedRenderer::draw(int context)
 
 	    pthread_mutex_lock(&_licLock);
 
-	    bool finished = true;
+	    //std::cerr << "Context: " << context << " Count: " << _licContextRenderCount[context] << " total: " << _contextRenderCountMap[context] << std::endl;
 
-	    for(std::map<int,bool>::iterator it = _licFinished.begin(); it != _licFinished.end(); ++it)
+	    // only check this on the first draw in the context
+	    if(_licContextRenderCount[context] == _contextRenderCountMap[context])
 	    {
-		if(!it->second)
+		//std::cerr << "Checking for finish" << std::endl;
+		bool finished = true;
+
+		for(std::map<int,bool>::iterator it = _licFinished.begin(); it != _licFinished.end(); ++it)
 		{
-		    finished = false;
-		    break;
+		    if(!it->second)
+		    {
+			finished = false;
+			break;
+		    }
 		}
-	    }
 
-	    if(finished)
-	    {
-
-		_licOutputPoints = _licNextOutputPoints;
-		//swap next output into current output
-		GLuint tempid = _licOutputTex[context];
-		_licOutputTex[context] = _licNextOutputTex[context];
-		_licNextOutputTex[context] = tempid;
-
-		CudaGLImage * tempptr = _licCudaOutputImage[context];
-		_licCudaOutputImage[context] = _licCudaNextOutputImage[context];
-		_licCudaNextOutputImage[context] = tempptr;
-
-		_licStarted = false;
-		if(!_licOutputValid)
+		if(finished)
 		{
-		    _licOutputValid = true;
+
+		    _licOutputPoints = _licNextOutputPoints;
+		    //swap next output into current output
+		    GLuint tempid = _licOutputTex[context];
+		    _licOutputTex[context] = _licNextOutputTex[context];
+		    _licNextOutputTex[context] = tempid;
+
+		    CudaGLImage * tempptr = _licCudaOutputImage[context];
+		    _licCudaOutputImage[context] = _licCudaNextOutputImage[context];
+		    _licCudaNextOutputImage[context] = tempptr;
+
+		    _licStarted = false;
+		    if(!_licOutputValid)
+		    {
+			_licOutputValid = true;
+		    }
 		}
+
 	    }
 
 	    pthread_mutex_unlock(&_licLock);
 
 	    if(_licOutputValid)
 	    {
+		//std::cerr << "Draw outputValid context: " << context << " texture: " << _licOutputTex[context] << std::endl;
 		//glBindTexture(GL_TEXTURE_2D,_licNoiseTex[context]);
 		glBindTexture(GL_TEXTURE_2D,_licOutputTex[context]);
 		glEnable(GL_TEXTURE_2D);
@@ -1665,8 +1677,13 @@ void FlowPagedRenderer::draw(int context)
 	    }
 
 	    pthread_mutex_lock(&_licLock);
-	    if(_currentFrame != _nextFrame && !_licStarted)
+
+	    // only check for frame advance on last context draw
+	    _licContextRenderCount[context]--;
+
+	    if(_currentFrame != _nextFrame && !_licStarted && _licContextRenderCount[context] == 0)
 	    {
+		//std::cerr << "Checking frame advance" << std::endl;
 		pthread_mutex_unlock(&_licLock);
 		int nextfileID = _cache->getFileID(_set->frameFiles[_nextFrame]);
 		GLuint ibuf, vbuf, abuf = 0, fullibuf, velbuf = 0;
@@ -1796,6 +1813,22 @@ void FlowPagedRenderer::postFrame()
 		    it->second = false;
 		}
 	    }
+
+	    // no lock should be needed, threads are blocked waiting for frame start
+	    for(std::map<int,int>::iterator it = _licContextRenderCount.begin(); it != _licContextRenderCount.end(); ++it)
+	    {
+		int draws = _contextRenderCountMap[it->first];
+		if(draws <= 0)
+		{
+		    _contextRenderCountMap[it->first] = 1;
+		    it->second = 1;
+		}
+		else
+		{
+		    it->second = draws;
+		}
+	    }
+
 	    break;
 	}
 	default:
@@ -1873,6 +1906,27 @@ bool FlowPagedRenderer::advance()
     return true;
 }
 
+bool FlowPagedRenderer::canAdvance()
+{
+    if(_currentFrame != _nextFrame)
+    {
+	pthread_mutex_lock(&_frameReadyLock);
+	bool advance = true;
+	for(std::map<int,bool>::iterator it = _nextFrameReady.begin(); it != _nextFrameReady.end(); ++it)
+	{
+	    if(!it->second)
+	    {
+		advance = false;
+	    }
+	}
+
+	pthread_mutex_unlock(&_frameReadyLock);
+
+	return advance;
+    }
+    return true;
+}
+
 void FlowPagedRenderer::setUniData(std::string key, struct UniData & data)
 {
     if(_uniDataMap.find(key) != _uniDataMap.end())
@@ -1906,6 +1960,11 @@ bool FlowPagedRenderer::freeDone()
 void FlowPagedRenderer::setCudaInitInfo(std::map<int,std::pair<int,int> > & initInfo)
 {
     _cudaInitInfo = initInfo;
+}
+
+void FlowPagedRenderer::setContextRenderCount(std::map<int,int> & contextRenderCountMap)
+{
+    _contextRenderCountMap = contextRenderCountMap;
 }
 
 // create all uniform data here, so it doesn't need to be checked for every time
@@ -2258,6 +2317,18 @@ void FlowPagedRenderer::checkLICInit(int context)
 #endif
 
 	glBindTexture(GL_TEXTURE_2D,0);
+
+	int draws = _contextRenderCountMap[context];
+
+	if(draws <= 0)
+	{
+	    _contextRenderCountMap[context] = 1;
+	    _licContextRenderCount[context] = 1;
+	}
+	else
+	{
+	    _licContextRenderCount[context] = draws;
+	}
 
 	_licInit[context] = true;
 	_licFinished[context] = false;
