@@ -223,7 +223,7 @@ unsigned int VBOCache::getOrRequestBuffer(int context, int file, int offset, int
     job->context = context;
     job->processing = false;
 
-    getOrCreateBuffer(job);
+    getOrCreateBuffer(job,context);
 
     if(job->vbo)
     {
@@ -353,7 +353,7 @@ bool VBOCache::freeDone()
     return done;
 }
 
-void VBOCache::getOrCreateBuffer(BufferJob * job)
+void VBOCache::getOrCreateBuffer(BufferJob * job, int context)
 {
     int sizek = job->size / 1024;
     while(sizek + _currentSize > _maxSize)
@@ -362,22 +362,20 @@ void VBOCache::getOrCreateBuffer(BufferJob * job)
 	unsigned int oldestTime = UINT_MAX;
 	std::list<BufferInfo*>::iterator oldestIt;
 	int oldestContext, oldestFile;
-	for(std::map<int,std::map<int,std::list<BufferInfo*> > >::iterator it = _loadedBuffers.begin(); it != _loadedBuffers.end(); ++it)
+	for(std::map<int,std::list<BufferInfo*> >::iterator fit = _loadedBuffers[context].begin(); fit != _loadedBuffers[context].end(); ++fit)
 	{
-	    for(std::map<int,std::list<BufferInfo*> >::iterator fit = it->second.begin(); fit != it->second.end(); ++fit)
+	    for(std::list<BufferInfo*>::iterator lit = fit->second.begin(); lit != fit->second.end(); ++lit)
 	    {
-		for(std::list<BufferInfo*>::iterator lit = fit->second.begin(); lit != fit->second.end(); ++lit)
+		if((*lit)->timestamp < oldestTime)
 		{
-		    if((*lit)->timestamp < oldestTime)
-		    {
-			oldestIt = lit;
-			oldestContext = it->first;
-			oldestFile = fit->first;
-			oldestTime = (*lit)->timestamp;
-		    }
+		    oldestIt = lit;
+		    oldestContext = context;
+		    oldestFile = fit->first;
+		    oldestTime = (*lit)->timestamp;
 		}
 	    }
 	}
+
 	if(oldestTime != UINT_MAX)
 	{
 #ifdef WITH_CUDA_LIB

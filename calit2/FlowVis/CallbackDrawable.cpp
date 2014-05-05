@@ -1,4 +1,9 @@
 #include <GL/glew.h>
+
+#ifndef GL_DOUBLE_MAT3x2
+#undef GL_ARB_gpu_shader_fp64
+#endif
+
 #include "CallbackDrawable.h"
 
 struct MyGLClientState

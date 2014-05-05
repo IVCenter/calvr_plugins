@@ -1,4 +1,9 @@
 #include <GL/glew.h>
+
+#ifndef GL_DOUBLE_MAT3x2
+#undef GL_ARB_gpu_shader_fp64
+#endif
+
 #include "FlowPagedRenderer.h"
 #include "GLHelper.h"
 
@@ -85,7 +90,7 @@ void FlowPagedRenderer::frameStart(int context)
 
 	    vertsVBO = _cache->getOrRequestBuffer(context,fileID,_set->frameList[_currentFrame]->verts.second,_set->frameList[_currentFrame]->verts.first*3*sizeof(float),GL_ARRAY_BUFFER,true);
 
-	    //std::cerr << "Frame start frame: " << _currentFrame << " indVBO: " << indVBO << " vertVBO: " << vertsVBO << " velVBO: " << velVBO << std::endl;
+	    //std::cerr << "Frame start context: " << context << " frame: " << _currentFrame << " indVBO: " << indVBO << " vertVBO: " << vertsVBO << " velVBO: " << velVBO << std::endl;
 
 	    if(!_licStarted)
 	    {
@@ -523,7 +528,8 @@ void FlowPagedRenderer::draw(int context)
 		surfProg = _normalProgram[context];
 	    }
 	    
-	    //std::cerr << "CurrentFrame: " << _currentFrame << " nextFrame: " << _nextFrame << std::endl;
+	    //std::cerr << "context: " << context << " CurrentFrame: " << _currentFrame << " nextFrame: " << _nextFrame << std::endl;
+	    //std::cerr << "context: " << context << " fullind: " << indVBO << " surfind: " << surfVBO << " vert: " << vertsVBO << " attrib: " << attribVBO << std::endl;
 	    if(surfVBO && vertsVBO && (!attrib || attribVBO))
 	    {
 		std::vector<float> color(4);
@@ -575,7 +581,7 @@ void FlowPagedRenderer::draw(int context)
 
 
 		pthread_mutex_lock(&_frameReadyLock);
-		if(fullibuf && ibuf && vbuf && (!attrib || abuf))
+		if(fullibuf && ibuf && vbuf && (!nextattrib || abuf))
 		{
 		    //std::cerr << "next frame ready. surf: " << ibuf << " vert: " << vbuf << " attrib: " << abuf << std::endl;
 		    _nextFrameReady[context] = true;
@@ -1625,7 +1631,6 @@ void FlowPagedRenderer::draw(int context)
 
 		if(finished)
 		{
-
 		    _licOutputPoints = _licNextOutputPoints;
 		    //swap next output into current output
 		    GLuint tempid = _licOutputTex[context];

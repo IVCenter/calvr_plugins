@@ -58,7 +58,7 @@ class VBOCache
         bool freeDone();
 
     protected:
-        void getOrCreateBuffer(BufferJob * job);
+        void getOrCreateBuffer(BufferJob * job, int context);
 
         int _maxSize;
         int _currentSize;
