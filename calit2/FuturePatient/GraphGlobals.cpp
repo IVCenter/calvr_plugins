@@ -220,7 +220,8 @@ void GraphGlobals::init()
     _defaultPhylumColor = osg::Vec4(0.4,0.4,0.4,1.0);
 
     std::vector<std::string> patientTypes;
-    patientTypes.push_back("Smarr");
+    //patientTypes.push_back("Smarr");
+    patientTypes.push_back("LS");
     patientTypes.push_back("Crohns");
     patientTypes.push_back("UC");
     patientTypes.push_back("Healthy");

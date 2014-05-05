@@ -412,7 +412,7 @@ void MicrobeGraphObject::menuCallback(MenuItem * item)
     FPTiledWallSceneObject::menuCallback(item);
 }
 
-bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, std::string microbeTableSuffix, std::string measureTableSuffix, bool group, bool lsOrdering, bool familyLevel)
+bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, std::string microbeTableSuffix, std::string measureTableSuffix, bool group, bool lsOrdering, MicrobeGraphType type)
 {
     struct tm timetm = *localtime(&testTime);
     char timestr[256];
@@ -428,15 +428,37 @@ bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string 
     std::string microbesTable = "Microbes";
     microbesTable += microbeTableSuffix;
 
-    if(!familyLevel)
+    
+    switch( type )
     {
-	valuess << "select description, phylum, species, value from (select taxonomy_id, value from " << measurementTable << " where " << measurementTable << ".patient_id = " << patientid << " and " << measurementTable << ".timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")v inner join " << microbesTable << " on v.taxonomy_id = " << microbesTable << ".taxonomy_id order by phylum, value desc;";
+        case MGT_SPECIES:
+        {
+	        valuess << "select description, phylum, species, value from (select taxonomy_id, value from " << measurementTable << " where " << measurementTable << ".patient_id = " << patientid << " and " << measurementTable << ".timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")v inner join " << microbesTable << " on v.taxonomy_id = " << microbesTable << ".taxonomy_id order by phylum, value desc;";
 
-	orderss << "select t.phylum, sum(t.value) as total_value from (select " << microbesTable << ".phylum, " << measurementTable << ".value from " << measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id where " << measurementTable << ".patient_id = \"" << patientid << "\" and " << measurementTable << ".timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
-    }
-    else
-    {
-	valuess << "select description, phylum, family, sum(value) as value from (select taxonomy_id, value from " << measurementTable << " where " << measurementTable << ".patient_id = " << patientid << " and " << measurementTable << ".timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")v inner join " << microbesTable << " on v.taxonomy_id = " << microbesTable << ".taxonomy_id group by family order by phylum, value desc;";
+	        orderss << "select t.phylum, sum(t.value) as total_value from (select " << microbesTable << ".phylum, " << measurementTable << ".value from " << measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id where " << measurementTable << ".patient_id = \"" << patientid << "\" and " << measurementTable << ".timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
+            break;
+        }
+
+        case MGT_FAMILY:
+        {
+	        valuess << "select description, phylum, family, sum(value) as value from (select taxonomy_id, value from " << measurementTable << " where " << measurementTable << ".patient_id = " << patientid << " and " << measurementTable << ".timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")v inner join " << microbesTable << " on v.taxonomy_id = " << microbesTable << ".taxonomy_id group by family order by phylum, value desc;";
+            break;
+        }
+
+        case MGT_GENUS:
+        {
+            valuess << "select description, phylum, genus, sum(value) as value from (select taxonomy_id, value from " << measurementTable << " where " << measurementTable << ".patient_id = " << patientid << " and " << measurementTable << ".timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")v inner join " << microbesTable << " on v.taxonomy_id = " << microbesTable << ".taxonomy_id group by genus order by phylum, value desc;";
+            break;
+        }
+
+        default:
+        {
+            // default to SPECIES
+	        valuess << "select description, phylum, species, value from (select taxonomy_id, value from " << measurementTable << " where " << measurementTable << ".patient_id = " << patientid << " and " << measurementTable << ".timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")v inner join " << microbesTable << " on v.taxonomy_id = " << microbesTable << ".taxonomy_id order by phylum, value desc;";
+
+	        orderss << "select t.phylum, sum(t.value) as total_value from (select " << microbesTable << ".phylum, " << measurementTable << ".value from " << measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id where " << measurementTable << ".patient_id = \"" << patientid << "\" and " << measurementTable << ".timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
+            break;
+        }
     }
 
     _specialGraph = false;
@@ -445,10 +467,10 @@ bool MicrobeGraphObject::setGraph(std::string title, int patientid, std::string 
     _microbes = microbes;
     _lsOrdered = lsOrdering;
 
-    return loadGraphData(valuess.str(), orderss.str(), group, lsOrdering, familyLevel);
+    return loadGraphData(valuess.str(), orderss.str(), group, lsOrdering, type);
 }
 
-bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, std::string region, bool group, bool lsOrdering, bool familyLevel)
+bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, std::string region, bool group, bool lsOrdering, MicrobeGraphType type)
 {
     std::stringstream valuess, orderss;
 
@@ -506,19 +528,38 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int micro
 		    regionField = "";
 		}
 
-		if(!familyLevel)
+        switch ( type )
 		{
+            case MGT_SPECIES:
+            {
 		    //valuess << "select * from (select description, phylum, species, " << field << " as value from " << microbesTable << " order by value desc limit " << microbes << ")t order by t.phylum, t.value desc;";
-		    valuess << "select Microbes.description, Microbes.phylum, Microbes.species, avg(Microbe_Stats.value) as value from Microbes inner join Microbe_Stats on Microbes.taxonomy_id = Microbe_Stats.taxonomy_id and Microbe_Stats.stat_type = \"average\" and Microbe_Stats.patient_condition = \"" << condition << "\"" << regionField << " group by Microbes.species order by value desc limit " << microbes << ";";
+		        valuess << "select Microbes.description, Microbes.phylum, Microbes.species, avg(Microbe_Stats.value) as value from Microbes inner join Microbe_Stats on Microbes.taxonomy_id = Microbe_Stats.taxonomy_id and Microbe_Stats.stat_type = \"average\" and Microbe_Stats.patient_condition = \"" << condition << "\"" << regionField << " group by Microbes.species order by value desc limit " << microbes << ";";
 		    //orderss << "select t.phylum, sum(t.value) as total_value from (select phylum, " << field << " as value from " << microbesTable << " order by value desc limit " << microbes << ")t group by phylum order by total_value desc;";
-		    
-		}
-		else
-		{
+		        break;
+            }
+            
+            case MGT_FAMILY:
+		    {
 		    //valuess << "select description, phylum, family, sum(value) as value from (select description, phylum, family, " << field << " as value from " << microbesTable << " order by value desc limit " << microbes << ")t group by t.family order by t.phylum, value desc;";
 		    //select Microbes.description, Microbes.phylum, Microbes.family, sum(Microbe_Stats.value) as value from Microbes inner join Microbe_Stats on Microbes.taxonomy_id = Microbe_Stats.taxonomy_id and Microbe_Stats.stat_type = "average" and Microbe_Stats.patient_region = "US" and Microbe_Stats.patient_condition = "healthy" group by Microbes.family order by value desc;
-		    valuess << "select Microbes.description, Microbes.phylum, Microbes.family, sum(t.value) as value from (select taxonomy_id, avg(value) as value from Microbe_Stats where patient_condition = \"" << condition << "\"" << regionField << " group by taxonomy_id order by value desc limit " << microbes << ")t inner join Microbes on t.taxonomy_id = Microbes.taxonomy_id group by Microbes.family order by value desc;";
-		}
+		        valuess << "select Microbes.description, Microbes.phylum, Microbes.family, sum(t.value) as value from (select taxonomy_id, avg(value) as value from Microbe_Stats where patient_condition = \"" << condition << "\"" << regionField << " group by taxonomy_id order by value desc limit " << microbes << ")t inner join Microbes on t.taxonomy_id = Microbes.taxonomy_id group by Microbes.family order by value desc;";
+		        break;
+            }
+
+            case MGT_GENUS:
+            {
+		        valuess << "select Microbes.description, Microbes.phylum, Microbes.genus, sum(t.value) as value from (select taxonomy_id, avg(value) as value from Microbe_Stats where patient_condition = \"" << condition << "\"" << regionField << " group by taxonomy_id order by value desc limit " << microbes << ")t inner join Microbes on t.taxonomy_id = Microbes.taxonomy_id group by Microbes.genus order by value desc;";
+
+                break;
+            }
+
+            default:
+            {
+		        valuess << "select Microbes.description, Microbes.phylum, Microbes.species, avg(Microbe_Stats.value) as value from Microbes inner join Microbe_Stats on Microbes.taxonomy_id = Microbe_Stats.taxonomy_id and Microbe_Stats.stat_type = \"average\" and Microbe_Stats.patient_condition = \"" << condition << "\"" << regionField << " group by Microbes.species order by value desc limit " << microbes << ";";
+                break;
+            }
+        }
+
 		break;
 	    }
 	/*case SMGT_SRS_AVERAGE:
@@ -561,7 +602,7 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int micro
     _microbes = microbes;
     _lsOrdered = lsOrdering;
 
-    return loadGraphData(valuess.str(), orderss.str(), group, lsOrdering, familyLevel);
+    return loadGraphData(valuess.str(), orderss.str(), group, lsOrdering, type);
 }
 
 void MicrobeGraphObject::objectAdded()
@@ -588,7 +629,7 @@ void MicrobeGraphObject::objectRemoved()
     }
 }
 
-bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string orderQuery, bool group, bool lsOrdering, bool familyLevel)
+bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string orderQuery, bool group, bool lsOrdering, MicrobeGraphType type)
 {
     //std::cerr << "Query1: " << valueQuery << std::endl << "Query2: " << orderQuery << std::endl;
     struct timeval start,end;
@@ -649,14 +690,33 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
 		for(int i = 0; i < valuer.num_rows(); ++i)
 		{
 		    strncpy(data[i].phylum,valuer[i]["phylum"].c_str(),1023);
-		    if(!familyLevel)
+            switch( type )
 		    {
-			strncpy(data[i].species,valuer[i]["species"].c_str(),1023);
+                case MGT_SPECIES:
+                {
+			        strncpy(data[i].species,valuer[i]["species"].c_str(),1023);
+		            break;
+                }
+		    
+                case MGT_FAMILY:
+                {
+			        strncpy(data[i].species,valuer[i]["family"].c_str(),1023);
+                    break;
+                }
+
+                case MGT_GENUS:
+                {
+                    strncpy(data[i].species,valuer[i]["genus"].c_str(),1023);
+                    break;
+                }
+
+                default:
+                {
+			        strncpy(data[i].species,valuer[i]["species"].c_str(),1023);
+                    break;
+                }
 		    }
-		    else
-		    {
-			strncpy(data[i].species,valuer[i]["family"].c_str(),1023);
-		    }
+
 		    strncpy(data[i].description,valuer[i]["description"].c_str(),1023);
 		    data[i].value = atof(valuer[i]["value"]);
 		    totalMap[data[i].phylum] += data[i].value;
@@ -799,13 +859,32 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
     titless << _graphTitle << " - Count=" << header.numDataValues << " - " << round(header.totalValue * 100.0) << "%";
 
     std::string sublabel;
-    if(!familyLevel)
+    
+    switch( type )
     {
-	sublabel = "phylum / species";
-    }
-    else
-    {
-	sublabel = "phylum / family";
+        case MGT_SPECIES:
+        {
+	        sublabel = "phylum / microbe";
+            break;
+        }
+
+        case MGT_FAMILY:
+        {
+	        sublabel = "phylum / family";
+            break;
+        }
+
+        case MGT_GENUS:
+        {
+            sublabel = "phylum / genus";
+            break;
+        }
+
+        default:
+        {
+            sublabel = "phylum / species";
+            break;
+        }
     }
 
     bool graphValid = _graph->setGraph(titless.str(), _graphData, _graphOrder, BGAT_LOG, "Value", "", sublabel,osg::Vec4(1.0,0,0,1));

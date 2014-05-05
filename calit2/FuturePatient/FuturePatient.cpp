@@ -210,6 +210,7 @@ bool FuturePatient::init()
     std::vector<std::string> mtypeList;
     mtypeList.push_back("Microbe");
     mtypeList.push_back("Family");
+    mtypeList.push_back("Genus");
     _sMicrobeType->setValues(mtypeList);
 
     _sMicrobes = new MenuList();
@@ -312,9 +313,22 @@ bool FuturePatient::init()
     _microbeGrouping->setCallback(this);
     _microbeMenu->addItem(_microbeGrouping);
 
+/*
     _microbeFamilyLevel = new MenuCheckbox("Family Level",false);
     _microbeFamilyLevel->setCallback(this);
     _microbeMenu->addItem(_microbeFamilyLevel);
+*/
+    
+    _microbeLevel = new MenuList();
+    _microbeLevel->setCallback(this);
+    _microbeLevel->setScrollingHint(MenuList::ONE_TO_ONE);
+    _microbeMenu->addItem(_microbeLevel);
+
+    std::vector<std::string> mGraphLevel;
+    mGraphLevel.push_back("Microbe");
+    mGraphLevel.push_back("Family");
+    mGraphLevel.push_back("Genus");
+    _microbeLevel->setValues(mGraphLevel);
 
     _microbeLoad = new MenuButton("Load");
     _microbeLoad->setCallback(this);
@@ -1207,6 +1221,10 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    _sMicrobes->setValues(_microbeTableList[_microbeTable->getIndex()]->familyList);
 	}
+	else if(_sMicrobeType->getValue() == "Genus")
+	{
+	    _sMicrobes->setValues(_microbeTableList[_microbeTable->getIndex()]->genusList);
+	}
     }
 
     if(item == _sMicrobeType)
@@ -1218,6 +1236,10 @@ void FuturePatient::menuCallback(MenuItem * item)
 	else if(_sMicrobeType->getValue() == "Family")
 	{
 	    _sMicrobes->setValues(_microbeTableList[_microbeTable->getIndex()]->familyList);
+	}
+	else if(_sMicrobeType->getValue() == "Genus")
+	{
+	    _sMicrobes->setValues(_microbeTableList[_microbeTable->getIndex()]->genusList);
 	}
     }
 
@@ -1240,7 +1262,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	if(_microbeGraphType->getIndex() == 0)
 	{
 	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(), _microbeTestTime[_microbeTest->getIndex()],(int)_microbeNumBars->getValue(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue()))
+	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(), _microbeTestTime[_microbeTest->getIndex()],(int)_microbeNumBars->getValue(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),(MicrobeGraphType)(_microbeLevel->getIndex())))
 	    {
 		checkLayout();
 		_layoutObject->addGraphObject(mgo);
@@ -1366,7 +1388,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		    if(_microbeGraphType->getIndex() == 0)
 		    {
 			MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-			bool tb = mgo->setGraph(_microbePatients->getValue(j), j+1, it->second[k], _microbeTableList[_microbeTable->getIndex()]->testTimeMap[it->first][k],(int)_microbeNumBars->getValue(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue());
+			bool tb = mgo->setGraph(_microbePatients->getValue(j), j+1, it->second[k], _microbeTableList[_microbeTable->getIndex()]->testTimeMap[it->first][k],(int)_microbeNumBars->getValue(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),(MicrobeGraphType)(_microbeLevel->getIndex()));
 			if(tb)
 			{
 			    checkLayout();
@@ -1415,7 +1437,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	}
     }
 
-    if(item == _microbeLoadHealthyAll || item == _microbeLoadUCAll || item == _microbeLoadHealthy105All || item == _microbeLoadHealthy252All)
+    if(item == _microbeLoadCrohnsAll || item == _microbeLoadHealthyAll || item == _microbeLoadUCAll || item == _microbeLoadHealthy105All || item == _microbeLoadHealthy252All)
     {
 	/*std::string tablesuffix;
 	if(_microbeTable->getIndex() == 1)
@@ -1427,7 +1449,9 @@ void FuturePatient::menuCallback(MenuItem * item)
 
 	if(item == _microbeLoadCrohnsAll)
 	{
-	    rangeList.push_back(std::pair<int,int>(44,58));
+        std::cerr << "crohns item\n";
+	    //rangeList.push_back(std::pair<int,int>(44,58));
+	    rangeList.push_back(std::pair<int,int>(338,342));
 	}
 	else if(item == _microbeLoadHealthyAll)
 	{
@@ -1446,12 +1470,14 @@ void FuturePatient::menuCallback(MenuItem * item)
 	}
 	else
 	{
-	    rangeList.push_back(std::pair<int,int>(59,64));
+	    //rangeList.push_back(std::pair<int,int>(59,64));
+	    rangeList.push_back(std::pair<int,int>(343,348));
 	}
 
 	struct timeval tstart,tend;
 	gettimeofday(&tstart,NULL);
 
+    // TODO this needs to be adjusted!!!!
 	GraphGlobals::setDeferUpdate(true);
 	for(int i = 0; i < rangeList.size(); ++i)
 	{
@@ -1463,15 +1489,16 @@ void FuturePatient::menuCallback(MenuItem * item)
 		if(_microbeGraphType->getIndex() == 0)
 		{
 		    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-		    bool tb = mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), _microbeTestTime[0],(int)_microbeNumBars->getValue(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue());
+
+		    bool tb = mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), _microbeTestTime[0],(int)_microbeNumBars->getValue(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),(MicrobeGraphType)(_microbeLevel->getIndex()));
 		    if(tb)
 		    {
-			checkLayout();
-			_layoutObject->addGraphObject(mgo);
+			    checkLayout();
+			    _layoutObject->addGraphObject(mgo);
 		    }
 		    else
 		    {
-			delete mgo;
+			    delete mgo;
 		    }
 		}
 		else if(_microbeGraphType->getIndex() == 1)
@@ -1544,7 +1571,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 
-	    if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue(),_microbeRegionList->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue(),_microbeFamilyLevel->getValue()))
+	    if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue(),_microbeRegionList->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue(),(MicrobeGraphType) (_microbeLevel->getIndex())))
 	    {
 		//PluginHelper::registerSceneObject(mgo,"FuturePatient");
 		//mgo->attachToScene();
@@ -1608,8 +1635,9 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    tablesuffix = "_V2";
 	}*/
 
+
 	SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	if(smo->setGraph(_sMicrobes->getValue(),taxid,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(_sMicrobeType->getValue() == "Family"),_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
+	if(smo->setGraph(_sMicrobes->getValue(),taxid,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType) (_sMicrobeType->getIndex()),_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
 	{
 	    checkLayout();
 	    _layoutObject->addGraphObject(smo);
@@ -1636,14 +1664,15 @@ void FuturePatient::menuCallback(MenuItem * item)
 	if(index >= 0)
 	{
 	    SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	    if(smo->setGraph(_sMicrobeBFragilis->getText(),_microbeTableList[_microbeTable->getIndex()]->microbeIDList[index],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,false,false,false,_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
+	    if(smo->setGraph(_sMicrobeBFragilis->getText(),_microbeTableList[_microbeTable->getIndex()]->microbeIDList[index],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix, MGT_SPECIES,false,false,_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
 	    {
-		checkLayout();
-		_layoutObject->addGraphObject(smo);
+		    checkLayout();
+		    _layoutObject->addGraphObject(smo);
 	    }
 	    else
 	    {
 		delete smo;
+
 	    }
 	}
 	return;
@@ -1937,12 +1966,20 @@ void FuturePatient::setupMicrobes()
     {
 	char name[512];
     };
+    
+    struct Genuses
+    {
+	char name[512];
+    };
 
     Microbes * microbes;
     int numMicrobes;
 
     Families * families;
     int numFamilies;
+    
+    Genuses * genuses;
+    int numGenuses;
 
     for(int j = 0; j < _microbeTableList.size(); ++j)
     {
@@ -2048,6 +2085,58 @@ void FuturePatient::setupMicrobes()
 	if(families)
 	{
 	    delete[] families;
+	}
+
+
+	genuses = NULL;
+	numGenuses = 0;
+
+	if(ComController::instance()->isMaster())
+	{
+	    if(_conn)
+	    {
+		std::stringstream qss;
+		qss << "select distinct genus from Microbes" << _microbeTableList[j]->microbeSuffix << " order by genus;";
+		mysqlpp::Query q = _conn->query(qss.str());
+		mysqlpp::StoreQueryResult res = q.store();
+
+		numGenuses = res.num_rows();
+
+		if(numGenuses)
+		{
+		    genuses = new struct Genuses[numGenuses];
+
+		    for(int i = 0; i < numGenuses; ++i)
+		    {
+			strncpy(genuses[i].name,res[i]["genus"].c_str(),511);
+		    }
+		}
+
+		ComController::instance()->sendSlaves(&numGenuses,sizeof(int));
+		if(numGenuses)
+		{
+		    ComController::instance()->sendSlaves(genuses,numGenuses*sizeof(struct Genuses));
+		}
+	    }
+	}
+	else
+	{
+	    ComController::instance()->readMaster(&numGenuses,sizeof(int));
+	    if(numGenuses)
+	    {
+		genuses = new struct Genuses[numGenuses];
+		ComController::instance()->readMaster(genuses,numGenuses*sizeof(struct Genuses));
+	    }
+	}
+
+	for(int i = 0; i < numGenuses; ++i)
+	{
+	    _microbeTableList[j]->genusList.push_back(genuses[i].name);
+	}
+
+	if(genuses)
+	{
+	    delete[] genuses;
 	}
 
     }
@@ -2422,8 +2511,8 @@ void FuturePatient::updateMicrobeTests(int patientid)
 
     if(_microbeTableList[_microbeTable->getIndex()]->testMap.find(patientid) != _microbeTableList[_microbeTable->getIndex()]->testMap.end())
     {
-	_microbeTest->setValues(_microbeTableList[_microbeTable->getIndex()]->testMap[patientid]);
-	_microbeTestTime = _microbeTableList[_microbeTable->getIndex()]->testTimeMap[patientid];
+	    _microbeTest->setValues(_microbeTableList[_microbeTable->getIndex()]->testMap[patientid]);
+	    _microbeTestTime = _microbeTableList[_microbeTable->getIndex()]->testTimeMap[patientid];
     }
 
     /*if(_microbeTable->getIndex() == 0)
@@ -2656,7 +2745,7 @@ void FuturePatient::loadPhenotype()
     for(int i = 0; i < displayList.size() && i < 20; ++i)
     {
 	SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	if(smo->setGraph(displayList[i].first->name,displayList[i].first->taxid,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
+	if(smo->setGraph(displayList[i].first->name,displayList[i].first->taxid,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix, (MicrobeGraphType) (_sMicrobeType->getIndex()),  _sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
 	{
 	    checkLayout();
 	    _layoutObject->addGraphObject(smo);

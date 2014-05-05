@@ -102,6 +102,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
             std::vector<std::string> microbeList;
             std::vector<int> microbeIDList;
             std::vector<std::string> familyList;
+            std::vector<std::string> genusList;
             std::map<std::string,std::map<std::string,struct PhenoStats > > statsMap;
         };
 
@@ -135,7 +136,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeLoad;
         cvr::MenuCheckbox * _microbeOrdering;
         cvr::MenuCheckbox * _microbeGrouping;
-        cvr::MenuCheckbox * _microbeFamilyLevel;
+        //cvr::MenuCheckbox * _microbeFamilyLevel;
+        cvr::MenuList * _microbeLevel;
         cvr::MenuRangeValueCompact * _microbeNumBars;
         cvr::MenuButton * _microbeDone;
 
