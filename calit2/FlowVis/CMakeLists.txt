@@ -9,6 +9,14 @@ SET(PLUGIN_HEADERS
     DataLoader.h
     MemMapDataLoader.h
     GLHelper.h
+    VisModes/VisMode.h
+    VisModes/NormalVisMode.h
+    VisModes/IsoSurfaceVisMode.h
+    VisModes/PlaneVisMode.h
+    VisModes/VecPlaneVisMode.h
+    VisModes/VortexCoresVisMode.h
+    VisModes/SepAttLineVisMode.h
+    VisModes/LicCudaVisMode.h
 )
 
 SET(PLUGIN_SRC
@@ -20,14 +28,21 @@ SET(PLUGIN_SRC
     VBOCache.cpp
     MemMapDataLoader.cpp
     GLHelper.cpp
+    VisModes/NormalVisMode.cpp
+    VisModes/IsoSurfaceVisMode.cpp
+    VisModes/PlaneVisMode.cpp
+    VisModes/VecPlaneVisMode.cpp
+    VisModes/VortexCoresVisMode.cpp
+    VisModes/SepAttLineVisMode.cpp
+    VisModes/LicCudaVisMode.cpp
 )
 
 FIND_PACKAGE(CUDA)
 
 SET(CUDA_SRC
     CudaHelper.cpp
-    CudaVolume.cu
-    CudaLIC.cu
+    VisModes/CudaVolume.cu
+    VisModes/CudaLIC.cu
 )
 
 IF(NOT CUDA_FOUND)

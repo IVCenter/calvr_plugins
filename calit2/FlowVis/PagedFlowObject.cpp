@@ -10,6 +10,8 @@
 
 #include <sys/time.h>
 
+#include "VisModes/LicCudaVisMode.h"
+
 using namespace cvr;
 
 PagedFlowObject::PagedFlowObject(PagedDataSet * set, osg::BoundingBox bb, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : SceneObject(name,navigation,movable,clip,true,showBounds)

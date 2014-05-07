@@ -1,7 +1,7 @@
 #include "FlowObject.h"
-#include "NormalShader.h"
-#include "PlaneVecShaders.h"
-#include "VortexCoreShaders.h"
+#include "glsl/NormalShader.h"
+#include "glsl/PlaneVecShaders.h"
+#include "glsl/VortexCoreShaders.h"
 
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/CVRStatsHandler.h>
@@ -14,7 +14,7 @@
 #include <cuda.h>
 #include <cudaGL.h>
 #include "CudaHelper.h"
-#include "CudaVolume.h"
+#include "VisModes/CudaVolume.h"
 
 CUdeviceptr d_firstIndex;
 
