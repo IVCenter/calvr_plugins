@@ -22,14 +22,21 @@ enum SpecialMicrobeGraphType
     SMGT_SRX_AVERAGE
 };
 
+enum MicrobeGraphType
+{
+    MGT_SPECIES=0,
+    MGT_FAMILY,
+    MGT_GENUS
+};
+
 class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, public ValueRangeObject
 {
     public:
         MicrobeGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~MicrobeGraphObject();
 
-        bool setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, std::string microbeTableSuffix, std::string measureTableSuffix, bool group = true, bool lsOrdering = true, bool familyLevel = false);
-        bool setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, std::string region, bool group = true, bool lsOrdering = true, bool familyLevel = false);
+        bool setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, std::string microbeTableSuffix, std::string measureTableSuffix, bool group = true, bool lsOrdering = true, MicrobeGraphType type = MGT_SPECIES);
+        bool setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, std::string region, bool group = true, bool lsOrdering = true, MicrobeGraphType type = MGT_SPECIES);
 
         virtual void objectAdded();
         virtual void objectRemoved();
@@ -63,7 +70,7 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
         virtual void menuCallback(cvr::MenuItem * item);
 
     protected:
-        bool loadGraphData(std::string valueQuery, std::string orderQuery, bool group, bool lsOrdering, bool familyLevel);
+        bool loadGraphData(std::string valueQuery, std::string orderQuery, bool group, bool lsOrdering, MicrobeGraphType familyLevel);
 
         mysqlpp::Connection * _conn;
         

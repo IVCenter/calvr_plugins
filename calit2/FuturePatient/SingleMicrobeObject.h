@@ -8,6 +8,9 @@
 
 #include "LayoutInterfaces.h"
 #include "GroupedBarGraph.h"
+#include "MicrobeGraphObject.h"
+
+#include <osg/LineWidth>
 
 class SingleMicrobeObject : public LayoutTypeObject, public PatientSelectObject
 {
@@ -15,7 +18,7 @@ class SingleMicrobeObject : public LayoutTypeObject, public PatientSelectObject
         SingleMicrobeObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~SingleMicrobeObject();
 
-        bool setGraph(std::string microbe, int taxid, std::string microbeTableSuffix, std::string measureTableSuffix, bool family, bool rankOrder=true, bool labels=true, bool firstOnly=false, bool groupPatients=false);
+        bool setGraph(std::string microbe, int taxid, std::string microbeTableSuffix, std::string measureTableSuffix, MicrobeGraphType type = MGT_SPECIES, bool rankOrder=true, bool labels=true, bool firstOnly=false, bool groupPatients=false);
 
         virtual void objectAdded();
         virtual void objectRemoved();
@@ -48,6 +51,7 @@ class BandingFunction : public MicrobeMathFunction
         osg::ref_ptr<osg::Geometry> _bandGeometry;
         osg::ref_ptr<osg::Geometry> _lineGeometry;
         osg::ref_ptr<SetBoundsCallback> _boundsCallback;
+        osg::ref_ptr<osg::LineWidth> _lineWidth;
 };
 
 #endif
