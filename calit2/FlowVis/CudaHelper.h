@@ -10,6 +10,10 @@
 #ifndef MGPU_CUDA_HELPER
 #define MGPU_CUDA_HELPER
 
+#ifdef WIN32
+#include <Windows.h>
+#endif
+
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>

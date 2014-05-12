@@ -4,7 +4,12 @@
 #include "VisMode.h"
 
 #include <map>
+
+#ifndef WIN32
 #include <pthread.h>
+#else
+#include "../pthread_win.h"
+#endif
 
 #include <GL/gl.h>
 

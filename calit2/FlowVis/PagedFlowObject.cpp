@@ -8,7 +8,9 @@
 
 #include <iostream>
 
+#ifndef WIN32
 #include <sys/time.h>
+#endif
 
 #include "VisModes/LicCudaVisMode.h"
 
@@ -273,10 +275,17 @@ void PagedFlowObject::preFrame()
 		basisPoint.y() = tempP * right;
 
 		//std::cerr << "Basis Point x: " << basisPoint.x() << " y: " << basisPoint.y() << " z: " << basisPoint.z() << std::endl;
+#ifndef WIN32
 		basisXMin = std::min(basisXMin,basisPoint.x());
 		basisXMax = std::max(basisXMax,basisPoint.x());
 		basisYMin = std::min(basisYMin,basisPoint.y());
 		basisYMax = std::max(basisYMax,basisPoint.y());
+#else
+		basisXMin = min(basisXMin,basisPoint.x());
+		basisXMax = max(basisXMax,basisPoint.x());
+		basisYMin = min(basisYMin,basisPoint.y());
+		basisYMax = max(basisYMax,basisPoint.y());
+#endif
 	    }
 
 	    // TODO: handle case of first call
@@ -305,10 +314,17 @@ void PagedFlowObject::preFrame()
 		    basisPoint.x() = tempP * up;
 		    basisPoint.y() = tempP * right;
 
+#ifndef WIN32
 		    vpBasisXMin = std::min(vpBasisXMin,basisPoint.x());
 		    vpBasisXMax = std::max(vpBasisXMax,basisPoint.x());
 		    vpBasisYMin = std::min(vpBasisYMin,basisPoint.y());
 		    vpBasisYMax = std::max(vpBasisYMax,basisPoint.y());
+#else
+			vpBasisXMin = min(vpBasisXMin,basisPoint.x());
+		    vpBasisXMax = max(vpBasisXMax,basisPoint.x());
+		    vpBasisYMin = min(vpBasisYMin,basisPoint.y());
+		    vpBasisYMax = max(vpBasisYMax,basisPoint.y());
+#endif
 		}
 
 		float vpBasisXPadding = (vpBasisXMax - vpBasisXMin)*0.20;
@@ -348,7 +364,11 @@ void PagedFlowObject::preFrame()
 
 	    float basisXRange = basisXMax - basisXMin;
 	    float basisYRange = basisYMax - basisYMin;
+#ifndef WIN32
 	    float basisMaxRange = std::max(basisXRange,basisYRange);
+#else
+		float basisMaxRange = max(basisXRange,basisYRange);
+#endif
 
 	    basisXMin = (basisXMin + (basisXRange / 2.0)) - (basisMaxRange / 2.0);
 	    basisXMax = (basisXMin + (basisXRange / 2.0)) + (basisMaxRange / 2.0);
@@ -556,6 +576,8 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 		_renderer->getUniData("alpha",aUni);
 		*((float*)aUni.data) = _alphaRV->getValue();
 
+		_lastAttribute = "None";
+		menuCallback(_loadedAttribList);
 		break;
 	    }
 	    case FVT_PLANE_VEC:
@@ -627,6 +649,7 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 		case FVT_PLANE_VEC:
 		case FVT_VORTEX_CORES:
 		case FVT_SEP_ATT_LINES:
+		case FVT_LIC_CUDA:
 		{
 		    if(_lastAttribute != "None")
 		    {
@@ -733,7 +756,6 @@ void PagedFlowObject::getBoundsPlaneIntersectPoints(osg::Vec3 point, osg::Vec3 n
 
     osg::Vec3 bpoint1, bpoint2;
     osg::Vec3 intersect;
-    float w;
 
     bpoint1 = osg::Vec3(bounds.xMin(),bounds.yMin(),bounds.zMax());
     bpoint2 = osg::Vec3(bounds.xMin(),bounds.yMax(),bounds.zMax());

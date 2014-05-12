@@ -5,6 +5,13 @@
 #include <iostream>
 #include <cstdlib>
 
+#ifdef WIN32
+#include <io.h>
+#define open _open
+#define read _read
+#define close _close
+#endif
+
 bool checkShader(GLuint shader, std::string name)
 {
     GLchar *log = NULL;

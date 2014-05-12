@@ -5,12 +5,23 @@
 #include <climits>
 #include <cstdio>
 #include <sys/types.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#ifndef WIN32
+#include <sys/mman.h>
+#else
+#include <cvrUtil/TimeOfDay.h>
+#include "mman.h"
+#include "VBOCache.h"
+#include <io.h>
+#define close _close
+#define open _open
+#endif
+
 void setUseAllCores(pthread_t & thread)
 {
+#ifndef WIN32
     int numCores = sysconf(_SC_NPROCESSORS_ONLN);
 
     if(numCores <= 0)
@@ -32,7 +43,23 @@ void setUseAllCores(pthread_t & thread)
     {
 	std::cerr << "Error setting cpu affinity." << std::endl;
     }
+#else
+	HANDLE process = GetCurrentProcess();
 
+	DWORD_PTR processAM;
+	DWORD_PTR systemAM;
+
+	if(!GetProcessAffinityMask(process,&processAM,&systemAM))
+	{
+		std::cerr << "Error getting Affinity Mask." << std::endl;
+		return;
+	}
+
+	if(!SetThreadAffinityMask(thread,processAM))
+	{
+		std::cerr << "Error setting cpu affinity." << std::endl;
+	}
+#endif
 }
 
 void * runLoader(void * arg)
@@ -129,6 +156,9 @@ void MemMapDataLoader::run()
 
 	if(job)
 	{
+		struct timeval start, end;
+		gettimeofday(&start,NULL);
+
 	    pthread_mutex_lock(&_mapLock);
 	    if(_mMap.find(job->file) == _mMap.end())
 	    {
@@ -150,13 +180,24 @@ void MemMapDataLoader::run()
 	    }
 	    (*_vboQueue)[context].push_back(job);
 	    pthread_mutex_unlock(_queueLock);
+
+		gettimeofday(&end,NULL);
+		std::cerr << "MMDL Job time: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) / 1000000.0f) << std::endl;
 	}
 	else
 	{
+#ifndef WIN32
 	    struct timespec ts;
 	    ts.tv_sec = 0;
 	    ts.tv_nsec = 50000;
 	    nanosleep(&ts,NULL);
+#else
+		struct timeval start, end;
+		gettimeofday(&start,NULL);
+		usleep(50);
+		gettimeofday(&end,NULL);
+		std::cerr << "MMDL Sleep time: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) / 1000000.0f) << std::endl;
+#endif
 	}
 
 	_counter++;

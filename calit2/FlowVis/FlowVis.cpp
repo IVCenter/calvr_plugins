@@ -26,6 +26,10 @@
 #include <FX.h>
 #endif
 
+#ifdef WIN32
+#define snprintf _snprintf
+#endif
+
 #define PLUGIN_BINARY_READER_VERSION 1
 
 //#define NOT_PAGED

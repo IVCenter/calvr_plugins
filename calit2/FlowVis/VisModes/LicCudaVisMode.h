@@ -5,7 +5,12 @@
 
 #include <map>
 #include <vector>
+
+#ifndef WIN32
 #include <pthread.h>
+#else
+#include "../pthread_win.h"
+#endif
 
 #include <GL/gl.h>
 

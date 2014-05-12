@@ -12,6 +12,10 @@
 #include <FX.h>
 #endif
 
+#ifdef WIN32
+#define snprintf _snprintf_s
+#endif
+
 #define BINARY_FILE_VERSION 1
 
 void printUsage(std::string name)

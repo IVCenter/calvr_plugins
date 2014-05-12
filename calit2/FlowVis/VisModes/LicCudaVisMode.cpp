@@ -14,6 +14,9 @@
 #include <cudaGL.h>
 #include "../CudaHelper.h"
 #include "CudaLIC.h"
+#ifdef WIN32
+//#pragma comment(lib, "cuda.lib")
+#endif
 #endif
 
 // namespace scope to fix compile issues

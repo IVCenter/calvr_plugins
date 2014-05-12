@@ -20,6 +20,15 @@ CUdeviceptr d_firstIndex;
 
 #endif
 
+#ifdef WIN32
+#include <algorithm>
+#define M_PI 3.14159265358979323846
+#endif
+
+#ifndef GL_LINES_ADJACENCY
+#define GL_LINES_ADJACENCY 0x000A
+#endif
+
 using namespace cvr;
 
 std::map<int,bool> FlowObject::_cudaContextSet;
@@ -41,8 +50,13 @@ void initColorTable()
     for(int i = 0; i < size; ++i)
     {
 	float pos = ((float)i) / ((float)(size-1));
+#ifndef WIN32
 	pos = fmax(pos,0.0);
 	pos = fmin(pos,1.0);
+#else
+	pos = max(pos,0.0f);
+	pos = min(pos,1.0f);
+#endif
 	pos = pos * ((float)(colorList.size()-1));
 	int topIndex = ceil(pos);
 	if(topIndex >= colorList.size())

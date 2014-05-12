@@ -16,7 +16,11 @@
 #include <iostream>
 #include <cstring>
 
+#ifndef WIN32
 #include <sys/time.h>
+#else
+#pragma comment(lib, "Opengl32.lib")
+#endif
 
 #include "VisModes/NormalVisMode.h"
 #include "VisModes/IsoSurfaceVisMode.h"
@@ -460,8 +464,13 @@ void FlowPagedRenderer::checkColorTableInit(int context)
 	for(int i = 0; i < size; ++i)
 	{
 	    float pos = ((float)i) / ((float)(size-1));
+#ifndef WIN32
 	    pos = fmax(pos,0.0);
 	    pos = fmin(pos,1.0);
+#else
+		pos = max(pos,0.0);
+	    pos = min(pos,1.0);
+#endif
 	    pos = pos * ((float)(colorR.size()-1));
 	    int topIndex = ceil(pos);
 	    if(topIndex >= colorR.size())

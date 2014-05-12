@@ -8,7 +8,12 @@
 #include <vector>
 #include <list>
 #include <map>
+
+#ifndef WIN32
 #include <pthread.h>
+#else
+#include "pthread_win.h"
+#endif
 
 struct BufferJob
 {
@@ -42,6 +47,12 @@ struct LoadVBOParams
     std::map<int,std::list<BufferJob*> > * doneQueue;
     pthread_mutex_t * queueLock;
 };
+
+#ifdef WIN32
+
+int usleep(long usec);
+
+#endif
 
 class VBOCache
 {

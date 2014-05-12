@@ -6,10 +6,32 @@
 #include <cstring>
 #include <climits>
 #include <iostream>
+
+#ifndef WIN32
 #include <sys/time.h>
+#else
+#include <cvrUtil/TimeOfDay.h>
+#endif
 
 #ifdef WITH_CUDA_LIB
 #include "CudaHelper.h"
+#endif
+
+#ifdef WIN32
+bool wsaInit = false;
+
+int usleep(long usec)
+{
+    struct timeval tv;
+    fd_set dummy;
+    SOCKET s = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    FD_ZERO(&dummy);
+    FD_SET(s, &dummy);
+    tv.tv_sec = usec/1000000L;
+    tv.tv_usec = usec%1000000L;
+    return select(0, 0, 0, &dummy, &tv);
+}
+
 #endif
 
 void * loadVBOThread(void * arg)
@@ -17,7 +39,7 @@ void * loadVBOThread(void * arg)
     LoadVBOParams * params = (LoadVBOParams*)arg;
 
     std::list<std::pair<BufferJob*,struct timeval> > waitList;
-    float waitInterval = 0.02;
+    float waitInterval = 0.02f;
 
     while(1)
     {
@@ -34,7 +56,7 @@ void * loadVBOThread(void * arg)
 
 	for(std::list<std::pair<BufferJob*,struct timeval> >::iterator it = waitList.begin(); it != waitList.end(); )
 	{
-	    float interval = (now.tv_sec - it->second.tv_sec) + ((now.tv_usec - it->second.tv_usec)/1000000.0);
+	    float interval = (now.tv_sec - it->second.tv_sec) + ((now.tv_usec - it->second.tv_usec)/1000000.0f);
 	    if(interval > waitInterval)
 	    {
 		pthread_mutex_lock(params->queueLock);
@@ -88,10 +110,14 @@ void * loadVBOThread(void * arg)
 	}
 	else
 	{
+#ifndef WIN32
 	    struct timespec ts;
 	    ts.tv_sec = 0;
 	    ts.tv_nsec = 50000;
 	    nanosleep(&ts,NULL);
+#else
+		usleep(50);
+#endif
 	}
     }
 
@@ -103,6 +129,16 @@ VBOCache::VBOCache(int size)
     _maxSize = size;
     _currentSize = 0;
     _currentTimestamp = 0;
+
+#ifdef WIN32
+	if(!wsaInit)
+	{
+		WORD wVersionRequested = MAKEWORD(1,0);
+		WSADATA wsaData;
+		WSAStartup(wVersionRequested, &wsaData);
+		wsaInit = true;
+	}
+#endif
 
     //TODO: read from config
     int numThreads = 2;
@@ -235,6 +271,8 @@ unsigned int VBOCache::getOrRequestBuffer(int context, int file, int offset, int
     }
 
     pthread_mutex_unlock(&_queueLock);
+
+	return 0;
 }
 
 int VBOCache::getFileID(std::string file)
@@ -242,7 +280,7 @@ int VBOCache::getFileID(std::string file)
     pthread_mutex_lock(&_fileNameLock);
     if(_fileIDMap.find(file) == _fileIDMap.end())
     {
-	_fileIDMap[file] = _fileIDMap.size();
+	_fileIDMap[file] = (int)_fileIDMap.size();
 	_fileNameMap[_fileIDMap[file]] = file;
     }
     int fileid = _fileIDMap[file];

@@ -9,7 +9,10 @@
 #include <string>
 #include <map>
 #include <queue>
+
+#ifndef WIN32
 #include <pthread.h>
+#endif
 
 #include <GL/gl.h>
 
