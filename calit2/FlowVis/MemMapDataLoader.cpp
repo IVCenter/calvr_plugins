@@ -156,9 +156,6 @@ void MemMapDataLoader::run()
 
 	if(job)
 	{
-		struct timeval start, end;
-		gettimeofday(&start,NULL);
-
 	    pthread_mutex_lock(&_mapLock);
 	    if(_mMap.find(job->file) == _mMap.end())
 	    {
@@ -180,9 +177,6 @@ void MemMapDataLoader::run()
 	    }
 	    (*_vboQueue)[context].push_back(job);
 	    pthread_mutex_unlock(_queueLock);
-
-		gettimeofday(&end,NULL);
-		std::cerr << "MMDL Job time: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) / 1000000.0f) << std::endl;
 	}
 	else
 	{
@@ -192,11 +186,7 @@ void MemMapDataLoader::run()
 	    ts.tv_nsec = 50000;
 	    nanosleep(&ts,NULL);
 #else
-		struct timeval start, end;
-		gettimeofday(&start,NULL);
-		usleep(50);
-		gettimeofday(&end,NULL);
-		std::cerr << "MMDL Sleep time: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) / 1000000.0f) << std::endl;
+	    usleep(50);
 #endif
 	}
 
