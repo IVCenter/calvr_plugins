@@ -319,7 +319,7 @@ void LicCudaVisMode::frameStart(int context)
 	std::cerr << "TetList time: " << (tlistend.tv_sec - tliststart.tv_sec) + ((tlistend.tv_usec - tliststart.tv_usec)/1000000.0) << std::endl;
 #endif
 
-	//std::cerr << "TotalTets: " << _set->frameList[_currentFrame]->indices.first/4 << " tets on plane: " << h_numTets << std::endl;
+	//std::cerr << "TotalTets: " << set->frameList[currentFrame]->indices.first/4 << " tets on plane: " << h_numTets << std::endl;
 
 	// map velocity texture
 	_licCudaVelImage[context]->setMapFlags(cudaGraphicsMapFlagsWriteDiscard);

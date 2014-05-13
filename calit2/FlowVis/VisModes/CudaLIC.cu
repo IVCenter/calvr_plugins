@@ -156,8 +156,11 @@ void launchMakeTetList(unsigned int * tetList, unsigned int * numTets, int total
 {
     dim3 block(256,1,1);
     int griddim = (totalTets / 256) + 1;
-    //std::cerr << "NumTets: " << numTets << " Grid dim: " << griddim << std::endl;
-    dim3 grid(griddim,1,1);
+    // 65535 is dimension limit for compute version 2.x and below
+    int gridy = (griddim / 65535) + 1;
+    int gridx = griddim / gridy;
+    //std::cerr << "Grid dim: " << gridx << " " << gridy << std::endl;
+    dim3 grid(gridx,gridy,1);
 
     makeTetListKernel<<< grid, block >>>(tetList,numTets,totalTets,indices,verts);
 }
@@ -801,7 +804,7 @@ __global__ void licKernel(int width, int height, float length)
 
 __global__ void makeTetListKernel(unsigned int * tetList, unsigned int * numTets, int totalTets, uint4 * ind, float3 * verts)
 {
-    int tetid = blockIdx.x*blockDim.x + threadIdx.x;
+    int tetid = blockIdx.x*blockDim.x + threadIdx.x + (gridDim.x*blockDim.x*blockIdx.y);
     if(tetid >= totalTets)
     {
 	return;
