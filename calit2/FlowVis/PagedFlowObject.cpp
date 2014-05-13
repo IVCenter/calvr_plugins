@@ -4,12 +4,16 @@
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/ScreenConfig.h>
 #include <cvrKernel/ComController.h>
+#include <cvrKernel/CVRViewer.h>
+#include <cvrKernel/CVRStatsHandler.h>
 #include <cvrUtil/OsgMath.h>
 
 #include <iostream>
 
 #ifndef WIN32
 #include <sys/time.h>
+#else
+#include <cvrUtil/TimeOfDay.h>
 #endif
 
 #include "VisModes/LicCudaVisMode.h"
@@ -93,6 +97,8 @@ PagedFlowObject::PagedFlowObject(PagedDataSet * set, osg::BoundingBox bb, std::s
     osg::Matrix scale;
     scale.makeScale(osg::Vec3(1000.0,1000.0,1000.0));
     setTransform(scale);
+
+    CVRViewer::instance()->getStatsHandler()->addStatValue(CVRStatsHandler::VIEWER_STAT,"Animation FPS: ","FV_SPT",osg::Vec3(1.0,1.0,1.0),"FV_Stats");
 }
 
 PagedFlowObject::~PagedFlowObject()
@@ -101,6 +107,8 @@ PagedFlowObject::~PagedFlowObject()
     CVRViewer::instance()->removePerContextPreDrawCallback(this);
 
     FlowVis::deleteRenderer(_renderer);
+
+    CVRViewer::instance()->getStatsHandler()->removeStatValue("FV_SPT");
 }
 
 void PagedFlowObject::preFrame()
@@ -152,6 +160,16 @@ void PagedFlowObject::preFrame()
 		    int next = (_currentFrame + 1) % _set->frameList.size();
 		    _renderer->setNextFrame(next);
 		    _animationTime = 0.0;
+
+		    struct timeval frameEnd;
+		    gettimeofday(&frameEnd,NULL);
+		    if(CVRViewer::instance()->getViewerStats()->collectStats("FV_Stats"))
+		    {
+			float fps = (frameEnd.tv_sec - _lastFrameStart.tv_sec) + ((frameEnd.tv_usec - _lastFrameStart.tv_usec) / 1000000.0);
+			fps = 1.0 / fps;
+			CVRViewer::instance()->getViewerStats()->setAttribute(CVRViewer::instance()->getViewerFrameStamp()->getFrameNumber(),"FV_SPT",fps);
+		    }
+		    _lastFrameStart = frameEnd;
 		}
 	    }
 	}
@@ -490,6 +508,16 @@ void PagedFlowObject::postFrame()
 			int next = (_currentFrame + 1) % _set->frameList.size();
 			_renderer->setNextFrame(next);
 			_animationTime = 0.0;
+
+			struct timeval frameEnd;
+			gettimeofday(&frameEnd,NULL);
+			if(CVRViewer::instance()->getViewerStats()->collectStats("FV_Stats"))
+			{
+			    float fps = (frameEnd.tv_sec - _lastFrameStart.tv_sec) + ((frameEnd.tv_usec - _lastFrameStart.tv_usec) / 1000000.0);
+			    fps = 1.0 / fps;
+			    CVRViewer::instance()->getViewerStats()->setAttribute(CVRViewer::instance()->getViewerFrameStamp()->getFrameNumber(),"FV_SPT",fps);
+			}
+			_lastFrameStart = frameEnd;
 		    }
 		}
 	    }
@@ -730,6 +758,7 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 	{
 	    int next = (_currentFrame + 1) % _set->frameList.size();
 	    _renderer->setNextFrame(next);
+	    gettimeofday(&_lastFrameStart,NULL);
 	}
 	else
 	{

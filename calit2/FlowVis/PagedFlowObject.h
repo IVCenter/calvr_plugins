@@ -53,6 +53,8 @@ class PagedFlowObject : public cvr::SceneObject, public cvr::PerContextCallback
 
         int _currentFrame;
         float _animationTime;
+
+        struct timeval _lastFrameStart;
 };
 
 #endif
