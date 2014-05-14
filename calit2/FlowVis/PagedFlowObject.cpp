@@ -166,8 +166,7 @@ void PagedFlowObject::preFrame()
 		    if(CVRViewer::instance()->getViewerStats()->collectStats("FV_Stats"))
 		    {
 			float fps = (frameEnd.tv_sec - _lastFrameStart.tv_sec) + ((frameEnd.tv_usec - _lastFrameStart.tv_usec) / 1000000.0);
-			fps = 1.0 / fps;
-			CVRViewer::instance()->getViewerStats()->setAttribute(CVRViewer::instance()->getViewerFrameStamp()->getFrameNumber(),"FV_SPT",fps);
+			_lastFrameFPS = 1.0 / fps;
 		    }
 		    _lastFrameStart = frameEnd;
 		}
@@ -514,8 +513,7 @@ void PagedFlowObject::postFrame()
 			if(CVRViewer::instance()->getViewerStats()->collectStats("FV_Stats"))
 			{
 			    float fps = (frameEnd.tv_sec - _lastFrameStart.tv_sec) + ((frameEnd.tv_usec - _lastFrameStart.tv_usec) / 1000000.0);
-			    fps = 1.0 / fps;
-			    CVRViewer::instance()->getViewerStats()->setAttribute(CVRViewer::instance()->getViewerFrameStamp()->getFrameNumber(),"FV_SPT",fps);
+			    _lastFrameFPS = 1.0 / fps;
 			}
 			_lastFrameStart = frameEnd;
 		    }
@@ -524,6 +522,11 @@ void PagedFlowObject::postFrame()
 	}
 	default:
 	    break;
+    }
+
+    if(_lastFrameFPS > 0.0 && CVRViewer::instance()->getViewerStats()->collectStats("FV_Stats"))
+    {
+	CVRViewer::instance()->getViewerStats()->setAttribute(CVRViewer::instance()->getViewerFrameStamp()->getFrameNumber(),"FV_SPT",_lastFrameFPS);
     }
 
     _renderer->postFrame();
@@ -764,6 +767,7 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 	{
 	    _renderer->setNextFrame(_currentFrame);
 	}
+	_lastFrameFPS = 0.0;
     }
 }
 
