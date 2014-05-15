@@ -24,6 +24,8 @@ struct VortexCoreData
     osg::ref_ptr<osg::Vec3Array> verts;
     std::vector<osg::ref_ptr<osg::DrawArrays> > coreSegments;
     osg::ref_ptr<osg::FloatArray> coreStr;
+    int coreDataOffset;
+    int coreDataSize;
     float min;
     float max;
 };
@@ -32,8 +34,12 @@ struct SepAttLineData
 {
     osg::ref_ptr<osg::Vec3Array> sverts;
     std::vector<osg::ref_ptr<osg::DrawArrays> > sSegments;
+    int sDataOffset;
+    int sDataSize;
     osg::ref_ptr<osg::Vec3Array> averts;
     std::vector<osg::ref_ptr<osg::DrawArrays> > aSegments;
+    int aDataOffset;
+    int aDataSize;
 };
 
 struct VTKDataAttrib
@@ -46,6 +52,7 @@ struct VTKDataAttrib
     osg::ref_ptr<osg::Vec3Array> vecData;
     int intMin, intMax;
     float floatMin, floatMax;
+    int dataOffset;
 };
 
 struct VTKDataFrame
@@ -61,6 +68,12 @@ struct VTKDataFrame
     osg::BoundingBox bb;
     std::vector<VTKDataAttrib*> cellData;
     std::vector<VTKDataAttrib*> pointData;
+    int vertsDataOffset;
+    int vertsDataSize;
+    int indicesDataOffset;
+    int indicesDataSize;
+    int surfaceDataOffset;
+    int surfaceDataSize;
 };
 
 struct FlowDataSet
@@ -76,6 +89,9 @@ void extractSurfaceVTK(VTKDataFrame * frame);
 void deleteVTKFrame(VTKDataFrame * frame);
 
 void processWithFX(FlowDataSet * set);
+void processFrameWithFX(FlowDataSet * set, int frame);
 
 void writeBinaryFiles(FlowDataSet * set, std::string name);
+void writeBinaryFrameFile(FlowDataSet * set, std::string name, int frame);
+void writeBinaryMetaFile(FlowDataSet * set, std::string name);
 

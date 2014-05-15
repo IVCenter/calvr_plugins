@@ -112,6 +112,14 @@ int main(int argc, char ** argv)
 	{
 	    std::cerr << "Error parsing file." << std::endl;
 	}
+	else
+	{
+	    if(set->frameList.size())
+	    {
+		processFrameWithFX(set,set->frameList.size()-1);
+		writeBinaryFrameFile(set,outputFile,set->frameList.size()-1);
+	    }
+	}
 
 	currentFrame++;
 	snprintf(currentFile,1023,inputFile.c_str(),currentFrame);
@@ -119,7 +127,7 @@ int main(int argc, char ** argv)
 
     if(set->frameList.size())
     {
-	processWithFX(set);
+	//processWithFX(set);
 
 	for(int i = 0; i < set->frameList.size(); ++i)
 	{
@@ -148,7 +156,8 @@ int main(int argc, char ** argv)
 	    set->bb.expandBy(set->frameList[i]->bb);
 	}
 
-	writeBinaryFiles(set,outputFile);
+	//writeBinaryFiles(set,outputFile);
+	writeBinaryMetaFile(set,outputFile);
     }
 
     return 1;
@@ -834,6 +843,233 @@ void processWithFX(FlowDataSet * set)
 #endif
 }
 
+void processFrameWithFX(FlowDataSet * set, int frame)
+{
+#ifdef WITH_FX_LIB
+    std::cerr << "Processing set with FX library." << std::endl;
+
+    if(set)
+    {
+	// init fx library
+
+	// assuming dry air at 20c for the moment
+	float gamma = 1.4;
+	int iopt = 0;
+	int knode = set->frameList[frame]->verts->size()-1;
+	int nhalo = 0, npyra = 0, nprism = 0, nhexa = 0, nblock = 0;
+	int ntets = set->frameList[frame]->indices->size() / 4;
+	int * blocks = NULL;
+	int nhcell = 0;
+	int nfacet = set->frameList[frame]->surfaceCells->size();
+	int nbc = 1;
+	int flag = 1 + 2 + 4 + 8;
+
+	fxSet = set;
+	fxFrame = frame;
+
+	FX_INIT(&gamma,&iopt,&knode,&nhalo,&ntets,&npyra,&nprism,&nhexa,&nblock,blocks,&nhcell,&nfacet,&nbc,&flag);
+	std::cerr << "FX_Init return: " << flag << std::endl;
+
+	int type = 0;
+	int numSeg;
+	int * segEnds;
+	float * segPoints;
+	float * coreStrength;
+
+	std::cerr << "Finding vortex cores..." << std::endl;
+	FX_VORTEXCORE(&type,&numSeg,&segEnds,&segPoints,&coreStrength);
+	std::cerr << "Got " << numSeg << " segments" << std::endl;
+	if(numSeg)
+	{
+	    VortexCoreData * vcore = new VortexCoreData;
+	    set->frameList[frame]->vcoreData = vcore;
+
+	    vcore->min = FLT_MAX;
+	    vcore->max = FLT_MIN;
+
+	    vcore->verts = new osg::Vec3Array(segEnds[numSeg-1]);
+	    vcore->coreStr = new osg::FloatArray(segEnds[numSeg-1]);
+	    for(int j = 0; j < segEnds[numSeg-1]; ++j)
+	    {
+		vcore->verts->at(j) = osg::Vec3(segPoints[(j*3)+0],segPoints[(j*3)+1],segPoints[(j*3)+2]);
+		vcore->coreStr->at(j) = coreStrength[j];
+		if(coreStrength[j] < vcore->min)
+		{
+		    vcore->min = coreStrength[j];
+		}
+		if(coreStrength[j] > vcore->max)
+		{
+		    vcore->max = coreStrength[j];
+		}
+	    }
+
+	    int start = 0;
+	    for(int j = 0; j < numSeg; ++j)
+	    {
+		vcore->coreSegments.push_back(new osg::DrawArrays(GL_LINE_STRIP,start,segEnds[j]-start));
+		start = segEnds[j];
+	    }
+
+	    free(segEnds);
+	    free(segPoints);
+	    free(coreStrength);
+	}
+	else
+	{
+	    set->frameList[frame]->vcoreData = NULL;
+	}
+
+	if(nbc)
+	{
+	    int sEnds[nbc];
+	    float * sPoints;
+	    int aEnds[nbc];
+	    float * aPoints;
+
+	    std::cerr << "Finding Sep/Att lines..." << std::endl;
+	    FX_SEPNLINE(sEnds,&sPoints,aEnds,&aPoints);
+
+	    if(sEnds[nbc-1] && aEnds[nbc-1])
+	    {
+		SepAttLineData * saData = new SepAttLineData;
+		set->frameList[frame]->sepAttData = saData;
+		//std::cerr << "sEnds: " << sEnds[nbc-1] << " aEnds: " << aEnds[nbc-1] << std::endl;
+		saData->sverts = new osg::Vec3Array(sEnds[nbc-1]);
+		saData->averts = new osg::Vec3Array(aEnds[nbc-1]);
+
+		memcpy(&saData->sverts->at(0),sPoints,sEnds[nbc-1]*3*sizeof(float));
+		memcpy(&saData->averts->at(0),aPoints,aEnds[nbc-1]*3*sizeof(float));
+
+		int sStart = 0;
+		int aStart = 0;
+		for(int j = 0; j < nbc; ++j)
+		{
+		    saData->sSegments.push_back(new osg::DrawArrays(GL_LINES,sStart,sEnds[j]-sStart));
+		    saData->aSegments.push_back(new osg::DrawArrays(GL_LINES,aStart,aEnds[j]-aStart));
+		    sStart = sEnds[j];
+		    aStart = aEnds[j];
+		}
+
+		free(sPoints);
+		free(aPoints);
+	    }
+	    else
+	    {
+		set->frameList[frame]->sepAttData = NULL;
+	    }
+	}
+	else
+	{
+	    set->frameList[frame]->sepAttData = NULL;
+	}
+
+	std::cerr << "Getting shock info..." << std::endl;
+	float * shock;
+	FX_SHOCKFIND(&shock);
+
+	if(shock)
+	{
+	    VTKDataAttrib * attr = new VTKDataAttrib;
+	    attr->name = "Shock";
+	    attr->attribType = VAT_SCALARS;
+	    attr->dataType = VDT_DOUBLE;
+	    attr->floatMin = FLT_MAX;
+	    attr->floatMax = FLT_MIN;
+
+	    attr->floatData = new osg::FloatArray(set->frameList[frame]->verts->size());
+	    for(int j = 1; j < attr->floatData->size(); ++j)
+	    {
+		attr->floatData->at(j) = shock[j-1];
+		if(shock[j-1] < attr->floatMin)
+		{
+		    attr->floatMin = shock[j-1];
+		}
+		if(shock[j-1] > attr->floatMax)
+		{
+		    attr->floatMax = shock[j-1];
+		}
+	    }
+
+	    set->frameList[frame]->pointData.push_back(attr);
+
+	    free(shock);
+	}
+
+	FX_CLOSE();
+
+	if(set->frameList[frame]->vcoreData)
+	{
+	    if(set->attribRanges.find("Vortex Cores") == set->attribRanges.end())
+	    {
+		set->attribRanges["Vortex Cores"] = std::pair<float,float>(FLT_MAX,FLT_MIN);
+	    }
+
+	    if(set->frameList[frame]->vcoreData->min < set->attribRanges["Vortex Cores"].first)
+	    {
+		set->attribRanges["Vortex Cores"].first = set->frameList[frame]->vcoreData->min;
+	    }
+	    if(set->frameList[frame]->vcoreData->max > set->attribRanges["Vortex Cores"].second)
+	    {
+		set->attribRanges["Vortex Cores"].second = set->frameList[frame]->vcoreData->max;
+	    }
+	}
+
+	/*float vcoreMin = FLT_MAX;
+	float vcoreMax = FLT_MIN;
+	for(int i = 0; i < set->frameList.size(); ++i)
+	{
+	    if(!set->frameList[i]->vcoreData)
+	    {
+		continue;
+	    }
+	    if(set->frameList[i]->vcoreData->min < vcoreMin)
+	    {
+		vcoreMin = set->frameList[i]->vcoreData->min;
+	    }
+	    if(set->frameList[i]->vcoreData->max > vcoreMax)
+	    {
+		vcoreMax = set->frameList[i]->vcoreData->max;
+	    }
+	}
+	set->attribRanges["Vortex Cores"] = std::pair<float,float>(vcoreMin,vcoreMax);*/
+
+	/*float min = FLT_MAX;
+	float max = FLT_MIN;
+	for(int i = 0; i < set->frameList.size(); ++i)
+	{
+	    for(int j = 0; j < set->frameList[i]->pointData.size(); ++j)
+	    {
+		if(set->frameList[i]->pointData[j]->name != "Shock")
+		{
+		    continue;
+		}
+		if(set->frameList[i]->pointData[j]->floatMin < min)
+		{
+		    min = set->frameList[i]->pointData[j]->floatMin;
+		}
+		if(set->frameList[i]->pointData[j]->floatMax < max)
+		{
+		    max = set->frameList[i]->pointData[j]->floatMax;
+		}
+	    }
+	}
+	set->attribRanges["Shock"] = std::pair<float,float>(min,max);*/
+    }
+    else
+    {
+	fxSet = NULL;
+    }
+    
+#else
+    if(set)
+    {
+	set->frameList[frame]->vcoreData = NULL;
+	set->frameList[frame]->sepAttData = NULL;
+    }
+    std::cerr << "Not built with FX library." << std::endl;
+#endif
+}
+
 #ifdef WITH_FX_LIB
 
 void FXCELLPTR(int **tets, int **pyras, int **prisms, int **hexas, int *halo)
@@ -1154,6 +1390,461 @@ void writeBinaryFiles(FlowDataSet * set, std::string name)
 	}
 
 	fclose(frameFile);
+    }
+    fclose(metaFile);
+}
+
+void writeBinaryFrameFile(FlowDataSet * set, std::string name, int frame)
+{
+    std::stringstream framess;
+    framess << name << frame << ".bin";
+
+    FILE * frameFile = fopen(framess.str().c_str(),"wb");
+    if(!frameFile)
+    {
+	std::cerr << "Unable to open file: " << framess.str() << " for writing." << std::endl;
+	return;;
+    }
+
+    int offset = 0;
+    int temp;
+
+    temp = set->frameList[frame]->indices->size();
+    //fwrite(&temp,sizeof(int),1,metaFile);
+    //fwrite(&offset,sizeof(int),1,metaFile);
+    fwrite(&set->frameList[frame]->indices->at(0),sizeof(unsigned int),temp,frameFile);
+    set->frameList[frame]->indicesDataOffset = offset;
+    set->frameList[frame]->indicesDataSize = temp;
+    offset += temp * sizeof(unsigned int);
+
+    temp = set->frameList[frame]->verts->size();
+    //fwrite(&temp,sizeof(int),1,metaFile);
+    //fwrite(&offset,sizeof(int),1,metaFile);
+    fwrite(&set->frameList[frame]->verts->at(0),sizeof(float)*3,temp,frameFile);
+    set->frameList[frame]->vertsDataOffset = offset;
+    set->frameList[frame]->vertsDataSize = temp;
+    offset += temp * 3 * sizeof(float);
+
+    temp = set->frameList[frame]->surfaceInd->size();
+    //fwrite(&temp,sizeof(int),1,metaFile);
+    //fwrite(&offset,sizeof(int),1,metaFile);
+    fwrite(&set->frameList[frame]->surfaceInd->at(0),sizeof(unsigned int),temp,frameFile);
+    set->frameList[frame]->surfaceDataOffset = offset;
+    set->frameList[frame]->surfaceDataSize = temp;
+    offset += temp * sizeof(unsigned int);
+
+    //temp = set->frameList[i]->pointData.size();
+    //fwrite(&temp,sizeof(int),1,metaFile);
+
+    for(int j = 0; j < set->frameList[frame]->pointData.size(); ++j)
+    {
+	//strncpy(buffer,set->frameList[i]->pointData[j]->name.c_str(),1023);
+	//fwrite(buffer,sizeof(char),1024,metaFile);
+
+	//temp = (int)set->frameList[i]->pointData[j]->attribType;
+	//fwrite(&temp,sizeof(int),1,metaFile);
+	//temp = (int)set->frameList[i]->pointData[j]->dataType;
+	//fwrite(&temp,sizeof(int),1,metaFile);
+
+	//if(set->frameList[i]->pointData[j]->dataType == VDT_INT)
+	//{
+	//    fwrite(&set->frameList[i]->pointData[j]->intMin,sizeof(int),1,metaFile);
+	//    fwrite(&set->frameList[i]->pointData[j]->intMax,sizeof(int),1,metaFile);
+	//}
+	//else
+	//{
+	//    fwrite(&set->frameList[i]->pointData[j]->floatMin,sizeof(float),1,metaFile);
+	//    fwrite(&set->frameList[i]->pointData[j]->floatMax,sizeof(float),1,metaFile);
+	//}
+
+	if(set->frameList[frame]->pointData[j]->attribType == VAT_VECTORS)
+	{
+	    fwrite(&set->frameList[frame]->pointData[j]->vecData->at(0),3*sizeof(float),set->frameList[frame]->verts->size(),frameFile);
+	    //fwrite(&offset,sizeof(int),1,metaFile);
+	    set->frameList[frame]->pointData[j]->dataOffset = offset;
+	    offset += set->frameList[frame]->verts->size()*3*sizeof(float); 
+	}
+	else
+	{
+	    int elementSize;
+	    void * addr;
+	    if(set->frameList[frame]->pointData[j]->dataType == VDT_INT)
+	    {
+		elementSize = sizeof(int);
+		addr = &set->frameList[frame]->pointData[j]->intData->at(0);
+	    }
+	    else
+	    {
+		elementSize= sizeof(float);
+		addr = &set->frameList[frame]->pointData[j]->floatData->at(0);
+	    }
+
+	    fwrite(addr,elementSize,set->frameList[frame]->verts->size(),frameFile);
+	    set->frameList[frame]->pointData[j]->dataOffset = offset;
+	    //fwrite(&offset,sizeof(int),1,metaFile);
+	    offset += set->frameList[frame]->verts->size()*elementSize;
+	}
+    }
+
+    if(set->frameList[frame]->vcoreData)
+    {
+	temp = set->frameList[frame]->vcoreData->verts->size();
+	//fwrite(&temp,sizeof(int),1,metaFile);
+	//fwrite(&offset,sizeof(int),1,metaFile);
+	fwrite(&set->frameList[frame]->vcoreData->verts->at(0),3*sizeof(float),temp,frameFile);
+	fwrite(&set->frameList[frame]->vcoreData->coreStr->at(0),sizeof(float),temp,frameFile);
+	set->frameList[frame]->vcoreData->coreDataOffset = offset;
+	set->frameList[frame]->vcoreData->coreDataSize = temp;
+	offset += temp * (3*sizeof(float) + sizeof(float));
+
+	//temp = set->frameList[i]->vcoreData->coreSegments.size();
+	//fwrite(&temp,sizeof(int),1,metaFile);
+	//for(int j = 0; j < set->frameList[i]->vcoreData->coreSegments.size(); ++j)
+	//{
+	//    int first, count;
+	//    first = set->frameList[i]->vcoreData->coreSegments[j]->getFirst();
+	//    count = set->frameList[i]->vcoreData->coreSegments[j]->getCount();
+	//    fwrite(&first,sizeof(int),1,metaFile);
+	//    fwrite(&count,sizeof(int),1,metaFile);
+	//}
+    }
+    else
+    {
+	//temp = 0;
+	//fwrite(&temp,sizeof(int),1,metaFile);
+	//fwrite(&offset,sizeof(int),1,metaFile);
+	//fwrite(&temp,sizeof(int),1,metaFile);
+    }
+
+    if(set->frameList[frame]->sepAttData)
+    {
+	temp = set->frameList[frame]->sepAttData->sverts->size();
+	//fwrite(&temp,sizeof(int),1,metaFile);
+	//fwrite(&offset,sizeof(int),1,metaFile);
+	fwrite(&set->frameList[frame]->sepAttData->sverts->at(0),3*sizeof(float),temp,frameFile);
+	set->frameList[frame]->sepAttData->sDataOffset = offset;
+	set->frameList[frame]->sepAttData->sDataSize = temp;
+	offset += temp*3*sizeof(float);
+
+	//temp = set->frameList[i]->sepAttData->sSegments.size();
+	//fwrite(&temp,sizeof(int),1,metaFile);
+	//for(int j = 0; j < set->frameList[i]->sepAttData->sSegments.size(); ++j)
+	//{
+	//    int first, count;
+	//    first = set->frameList[i]->sepAttData->sSegments[j]->getFirst();
+	//    count = set->frameList[i]->sepAttData->sSegments[j]->getCount();
+	//    fwrite(&first,sizeof(int),1,metaFile);
+	//    fwrite(&count,sizeof(int),1,metaFile);
+	//}
+
+	temp = set->frameList[frame]->sepAttData->averts->size();
+	//fwrite(&temp,sizeof(int),1,metaFile);
+	//fwrite(&offset,sizeof(int),1,metaFile);
+	fwrite(&set->frameList[frame]->sepAttData->averts->at(0),3*sizeof(float),temp,frameFile);
+	set->frameList[frame]->sepAttData->aDataOffset = offset;
+	set->frameList[frame]->sepAttData->aDataSize = temp;
+	offset += temp*3*sizeof(float);
+
+	//temp = set->frameList[i]->sepAttData->aSegments.size();
+	//fwrite(&temp,sizeof(int),1,metaFile);
+	//for(int j = 0; j < set->frameList[i]->sepAttData->aSegments.size(); ++j)
+	//{
+	//    int first, count;
+	//    first = set->frameList[i]->sepAttData->aSegments[j]->getFirst();
+	//    count = set->frameList[i]->sepAttData->aSegments[j]->getCount();
+	//    fwrite(&first,sizeof(int),1,metaFile);
+	//    fwrite(&count,sizeof(int),1,metaFile);
+	//}
+    }
+    else
+    {
+	//temp = 0;
+	//fwrite(&temp,sizeof(int),1,metaFile);
+	//fwrite(&offset,sizeof(int),1,metaFile);
+	//fwrite(&temp,sizeof(int),1,metaFile);
+
+	//fwrite(&temp,sizeof(int),1,metaFile);
+	//fwrite(&offset,sizeof(int),1,metaFile);
+	//fwrite(&temp,sizeof(int),1,metaFile);
+    }
+
+    fclose(frameFile);
+
+    // clear the raw data in the frame
+    set->frameList[frame]->verts = new osg::Vec3Array();
+    set->frameList[frame]->indices = new osg::DrawElementsUInt();
+    set->frameList[frame]->surfaceInd = new osg::DrawElementsUInt();
+    if(set->frameList[frame]->surfaceFacets)
+    {
+	set->frameList[frame]->surfaceFacets = new osg::Vec4iArray();
+	set->frameList[frame]->surfaceCells = new osg::IntArray();
+	set->frameList[frame]->cellTypes = new osg::IntArray();
+    }
+
+    for(int i = 0; i < set->frameList[frame]->cellData.size(); ++i)
+    {
+	if(set->frameList[frame]->cellData[i]->attribType == VAT_VECTORS)
+	{
+	    set->frameList[frame]->cellData[i]->vecData = new osg::Vec3Array();
+	}
+	else if(set->frameList[frame]->cellData[i]->dataType == VDT_INT)
+	{
+	    set->frameList[frame]->cellData[i]->intData = new osg::IntArray();
+	}
+	else if(set->frameList[frame]->cellData[i]->dataType == VDT_DOUBLE)
+	{
+	    set->frameList[frame]->cellData[i]->floatData = new osg::FloatArray();
+	}
+    }
+
+    for(int i = 0; i < set->frameList[frame]->pointData.size(); ++i)
+    {
+	if(set->frameList[frame]->pointData[i]->attribType == VAT_VECTORS)
+	{
+	    set->frameList[frame]->pointData[i]->vecData = new osg::Vec3Array();
+	}
+	else if(set->frameList[frame]->pointData[i]->dataType == VDT_INT)
+	{
+	    set->frameList[frame]->pointData[i]->intData = new osg::IntArray();
+	}
+	else if(set->frameList[frame]->pointData[i]->dataType == VDT_DOUBLE)
+	{
+	    set->frameList[frame]->pointData[i]->floatData = new osg::FloatArray();
+	}
+    }
+
+    if(set->frameList[frame]->vcoreData)
+    {
+	set->frameList[frame]->vcoreData->verts = new osg::Vec3Array();
+	set->frameList[frame]->vcoreData->coreStr = new osg::FloatArray();
+    }
+
+    if(set->frameList[frame]->sepAttData)
+    {
+	set->frameList[frame]->sepAttData->sverts = new osg::Vec3Array();
+	set->frameList[frame]->sepAttData->averts = new osg::Vec3Array();
+    }
+}
+
+void writeBinaryMetaFile(FlowDataSet * set, std::string name)
+{
+    std::string metaName = name + ".meta";
+    FILE * metaFile;
+    metaFile = fopen(metaName.c_str(),"wb");
+
+    if(!metaFile)
+    {
+	std::cerr << "Unable to open file: " << metaName << " for writing." << std::endl;
+	return;
+    }
+
+    int version = BINARY_FILE_VERSION;
+    fwrite(&version,sizeof(int),1,metaFile);
+
+    int temp = set->frameList.size();
+    fwrite(&temp,sizeof(int),1,metaFile);
+    fwrite(&set->bb.xMin(),sizeof(float),1,metaFile);
+    fwrite(&set->bb.xMax(),sizeof(float),1,metaFile);
+    fwrite(&set->bb.yMin(),sizeof(float),1,metaFile);
+    fwrite(&set->bb.yMax(),sizeof(float),1,metaFile);
+    fwrite(&set->bb.zMin(),sizeof(float),1,metaFile);
+    fwrite(&set->bb.zMax(),sizeof(float),1,metaFile);
+
+    temp = set->attribRanges.size();
+    fwrite(&temp,sizeof(int),1,metaFile);
+
+    char buffer[1024];
+    buffer[1023] = '\0';
+
+    for(std::map<std::string,std::pair<float,float> >::iterator it = set->attribRanges.begin(); it != set->attribRanges.end(); ++it)
+    {
+	strncpy(buffer,it->first.c_str(),1023);
+	fwrite(buffer,sizeof(char),1024,metaFile);
+	fwrite(&it->second.first,sizeof(float),1,metaFile);
+	fwrite(&it->second.second,sizeof(float),1,metaFile);
+    }
+
+    int maxInd = 0;
+    int maxVert = 0;
+    int maxSurf = 0;
+
+    for(int i = 0; i < set->frameList.size(); ++i)
+    {
+	if(set->frameList[i]->vertsDataSize > maxVert)
+	{
+	    maxVert = set->frameList[i]->vertsDataSize;
+	}
+	if(set->frameList[i]->indicesDataSize > maxInd)
+	{
+	    maxInd = set->frameList[i]->indicesDataSize;
+	}
+	if(set->frameList[i]->surfaceDataSize > maxSurf)
+	{
+	    maxSurf = set->frameList[i]->surfaceDataSize;
+	}
+    }
+
+    fwrite(&maxInd,sizeof(int),1,metaFile);
+    fwrite(&maxVert,sizeof(int),1,metaFile);
+    fwrite(&maxSurf,sizeof(int),1,metaFile);
+
+    
+    for(int i = 0; i < set->frameList.size(); ++i)
+    {
+	int offset = 0;
+
+	temp = set->frameList[i]->indicesDataSize;
+	offset = set->frameList[i]->indicesDataOffset;
+	fwrite(&temp,sizeof(int),1,metaFile);
+	fwrite(&offset,sizeof(int),1,metaFile);
+	//fwrite(&set->frameList[i]->indices->at(0),sizeof(unsigned int),temp,frameFile);
+	//offset += temp * sizeof(unsigned int);
+
+	temp = set->frameList[i]->vertsDataSize;
+	offset = set->frameList[i]->vertsDataOffset;
+	fwrite(&temp,sizeof(int),1,metaFile);
+	fwrite(&offset,sizeof(int),1,metaFile);
+	//fwrite(&set->frameList[i]->verts->at(0),sizeof(float)*3,temp,frameFile);
+	//offset += temp * 3 * sizeof(float);
+
+	temp = set->frameList[i]->surfaceDataSize;
+	offset = set->frameList[i]->surfaceDataOffset;
+	fwrite(&temp,sizeof(int),1,metaFile);
+	fwrite(&offset,sizeof(int),1,metaFile);
+	//fwrite(&set->frameList[i]->surfaceInd->at(0),sizeof(unsigned int),temp,frameFile);
+	//offset += temp * sizeof(unsigned int);
+
+	temp = set->frameList[i]->pointData.size();
+	fwrite(&temp,sizeof(int),1,metaFile);
+
+	for(int j = 0; j < set->frameList[i]->pointData.size(); ++j)
+	{
+	    strncpy(buffer,set->frameList[i]->pointData[j]->name.c_str(),1023);
+	    fwrite(buffer,sizeof(char),1024,metaFile);
+
+	    temp = (int)set->frameList[i]->pointData[j]->attribType;
+	    fwrite(&temp,sizeof(int),1,metaFile);
+	    temp = (int)set->frameList[i]->pointData[j]->dataType;
+	    fwrite(&temp,sizeof(int),1,metaFile);
+
+	    if(set->frameList[i]->pointData[j]->dataType == VDT_INT)
+	    {
+		fwrite(&set->frameList[i]->pointData[j]->intMin,sizeof(int),1,metaFile);
+		fwrite(&set->frameList[i]->pointData[j]->intMax,sizeof(int),1,metaFile);
+	    }
+	    else
+	    {
+		fwrite(&set->frameList[i]->pointData[j]->floatMin,sizeof(float),1,metaFile);
+		fwrite(&set->frameList[i]->pointData[j]->floatMax,sizeof(float),1,metaFile);
+	    }
+
+	    if(set->frameList[i]->pointData[j]->attribType == VAT_VECTORS)
+	    {
+		//fwrite(&set->frameList[i]->pointData[j]->vecData->at(0),3*sizeof(float),set->frameList[i]->verts->size(),frameFile);
+		offset = set->frameList[i]->pointData[j]->dataOffset;
+		fwrite(&offset,sizeof(int),1,metaFile);
+		//offset += set->frameList[i]->verts->size()*3*sizeof(float); 
+	    }
+	    else
+	    {
+		//int elementSize;
+		//void * addr;
+		//if(set->frameList[i]->pointData[j]->dataType == VDT_INT)
+		//{
+		    //elementSize = sizeof(int);
+		    //addr = &set->frameList[i]->pointData[j]->intData->at(0);
+		//}
+		//else
+		//{
+		    //elementSize= sizeof(float);
+		    //addr = &set->frameList[i]->pointData[j]->floatData->at(0);
+		//}
+
+		//fwrite(addr,elementSize,set->frameList[i]->verts->size(),frameFile);
+		offset = set->frameList[i]->pointData[j]->dataOffset;
+		fwrite(&offset,sizeof(int),1,metaFile);
+		//offset += set->frameList[i]->verts->size()*elementSize;
+	    }
+	}
+
+	if(set->frameList[i]->vcoreData)
+	{
+	    temp = set->frameList[i]->vcoreData->coreDataSize;
+	    offset = set->frameList[i]->vcoreData->coreDataOffset;
+	    fwrite(&temp,sizeof(int),1,metaFile);
+	    fwrite(&offset,sizeof(int),1,metaFile);
+	    //fwrite(&set->frameList[i]->vcoreData->verts->at(0),3*sizeof(float),temp,frameFile);
+	    //fwrite(&set->frameList[i]->vcoreData->coreStr->at(0),sizeof(float),temp,frameFile);
+	    //offset += temp * (3*sizeof(float) + sizeof(float));
+
+	    temp = set->frameList[i]->vcoreData->coreSegments.size();
+	    fwrite(&temp,sizeof(int),1,metaFile);
+	    for(int j = 0; j < set->frameList[i]->vcoreData->coreSegments.size(); ++j)
+	    {
+		int first, count;
+		first = set->frameList[i]->vcoreData->coreSegments[j]->getFirst();
+		count = set->frameList[i]->vcoreData->coreSegments[j]->getCount();
+		fwrite(&first,sizeof(int),1,metaFile);
+		fwrite(&count,sizeof(int),1,metaFile);
+	    }
+	}
+	else
+	{
+	    temp = 0;
+	    fwrite(&temp,sizeof(int),1,metaFile);
+	    fwrite(&offset,sizeof(int),1,metaFile);
+	    fwrite(&temp,sizeof(int),1,metaFile);
+	}
+
+	if(set->frameList[i]->sepAttData)
+	{
+	    temp = set->frameList[i]->sepAttData->sDataSize;
+	    offset = set->frameList[i]->sepAttData->sDataOffset;
+	    fwrite(&temp,sizeof(int),1,metaFile);
+	    fwrite(&offset,sizeof(int),1,metaFile);
+	    //fwrite(&set->frameList[i]->sepAttData->sverts->at(0),3*sizeof(float),temp,frameFile);
+	    //offset += temp*3*sizeof(float);
+
+	    temp = set->frameList[i]->sepAttData->sSegments.size();
+	    fwrite(&temp,sizeof(int),1,metaFile);
+	    for(int j = 0; j < set->frameList[i]->sepAttData->sSegments.size(); ++j)
+	    {
+		int first, count;
+		first = set->frameList[i]->sepAttData->sSegments[j]->getFirst();
+		count = set->frameList[i]->sepAttData->sSegments[j]->getCount();
+		fwrite(&first,sizeof(int),1,metaFile);
+		fwrite(&count,sizeof(int),1,metaFile);
+	    }
+
+	    temp = set->frameList[i]->sepAttData->aDataSize;
+	    offset = set->frameList[i]->sepAttData->aDataOffset;
+	    fwrite(&temp,sizeof(int),1,metaFile);
+	    fwrite(&offset,sizeof(int),1,metaFile);
+	    //fwrite(&set->frameList[i]->sepAttData->averts->at(0),3*sizeof(float),temp,frameFile);
+	    //offset += temp*3*sizeof(float);
+
+	    temp = set->frameList[i]->sepAttData->aSegments.size();
+	    fwrite(&temp,sizeof(int),1,metaFile);
+	    for(int j = 0; j < set->frameList[i]->sepAttData->aSegments.size(); ++j)
+	    {
+		int first, count;
+		first = set->frameList[i]->sepAttData->aSegments[j]->getFirst();
+		count = set->frameList[i]->sepAttData->aSegments[j]->getCount();
+		fwrite(&first,sizeof(int),1,metaFile);
+		fwrite(&count,sizeof(int),1,metaFile);
+	    }
+	}
+	else
+	{
+	    temp = 0;
+	    fwrite(&temp,sizeof(int),1,metaFile);
+	    fwrite(&offset,sizeof(int),1,metaFile);
+	    fwrite(&temp,sizeof(int),1,metaFile);
+
+	    fwrite(&temp,sizeof(int),1,metaFile);
+	    fwrite(&offset,sizeof(int),1,metaFile);
+	    fwrite(&temp,sizeof(int),1,metaFile);
+	}
     }
     fclose(metaFile);
 }
