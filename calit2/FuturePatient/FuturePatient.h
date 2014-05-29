@@ -29,6 +29,7 @@ struct PhenoStats
     float avg;
     float stdev;
     int taxid;
+    std::vector<float> values;
 };
 
 
@@ -68,7 +69,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         void loadPhenotype();
 
-        void initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::string tableSuffix);
+        void initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::string microbeSuffix, std::string measureSuffix);
 
         cvr::SubMenu * _fpMenu;
         cvr::SubMenu * _layoutMenu;
@@ -150,6 +151,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuCheckbox * _sMicrobeFirstTimeOnly;
         cvr::MenuCheckbox * _sMicrobeGroupPatients;
         cvr::MenuList * _sMicrobePhenotypes;
+        cvr::MenuCheckbox * _sMicrobePvalSort;
         cvr::MenuButton * _sMicrobePhenotypeLoad;
         cvr::SubMenu * _sMicrobePresetMenu;
         cvr::MenuButton * _sMicrobeBFragilis;

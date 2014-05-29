@@ -22,6 +22,11 @@
 
 #include <sys/time.h>
 
+#include <octave/oct.h>
+#include <octave/octave.h>
+#include <octave/parse.h>
+#include <octave/toplev.h>
+
 #define SAVED_LAYOUT_VERSION 3
 
 using namespace cvr;
@@ -37,6 +42,12 @@ FuturePatient::FuturePatient()
     _currentSBGraph = NULL;
     _currentSymptomGraph = NULL;
     _mls = NULL;
+
+    string_vector argv (2);
+    argv(0) = "embedded";
+    argv(1) = "-q";
+
+    octave_main(2, argv.c_str_vec(), 1);
 }
 
 FuturePatient::~FuturePatient()
@@ -45,6 +56,8 @@ FuturePatient::~FuturePatient()
     {
         delete _mls;
     }
+
+    clean_up_and_exit(0);
 }
 
 bool FuturePatient::init()
@@ -251,6 +264,10 @@ bool FuturePatient::init()
     pheno.push_back("Healthy");
     _sMicrobePhenotypes->setValues(pheno);
 
+    _sMicrobePvalSort = new MenuCheckbox("P Val Sort",false);
+    _sMicrobePvalSort->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobePvalSort);
+
     _sMicrobePhenotypeLoad = new MenuButton("Load(Phenotype)");
     _sMicrobePhenotypeLoad->setCallback(this);
     _sMicrobeMenu->addItem(_sMicrobePhenotypeLoad);
@@ -436,7 +453,8 @@ bool FuturePatient::init()
 	if(!_conn)
 	{
 	    _conn = new mysqlpp::Connection(false);
-	    if(!_conn->connect("futurepatient","palmsdev2.ucsd.edu","fpuser","FPp@ssw0rd"))
+	    //if(!_conn->connect("futurepatient","palmsdev2.ucsd.edu","fpuser","FPp@ssw0rd"))
+	    if(!_conn->connect("futurepatient","fiona-01.ucsd.edu","fpuser","p@ti3nt"))
 	    {
 		std::cerr << "Unable to connect to database." << std::endl;
 		delete _conn;
@@ -716,7 +734,7 @@ bool FuturePatient::init()
     {
 	if(_conn)
 	{
-	    mysqlpp::Query q = _conn->query("select distinct name from Event where patient_id = \"1\" order by name;");
+	    mysqlpp::Query q = _conn->query("select distinct name, type from Event where patient_id = \"1\" order by type desc, name;");
 	    mysqlpp::StoreQueryResult res = q.store();
 
 	    listEntries = res.num_rows();
@@ -1486,34 +1504,38 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    {
 		std::cerr << "Loading graph " << start << std::endl;
 		updateMicrobeTests(start + 1);
-		if(_microbeGraphType->getIndex() == 0)
-		{
-		    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 
-		    bool tb = mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), _microbeTestTime[0],(int)_microbeNumBars->getValue(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),(MicrobeGraphType)(_microbeLevel->getIndex()));
-		    if(tb)
+		for(int j =0; j < _microbeTestTime.size(); ++j)
+		{
+		    if(_microbeGraphType->getIndex() == 0)
 		    {
+			MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+
+			bool tb = mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(j), _microbeTestTime[j],(int)_microbeNumBars->getValue(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),(MicrobeGraphType)(_microbeLevel->getIndex()));
+			if(tb)
+			{
 			    checkLayout();
 			    _layoutObject->addGraphObject(mgo);
-		    }
-		    else
-		    {
+			}
+			else
+			{
 			    delete mgo;
+			}
 		    }
-		}
-		else if(_microbeGraphType->getIndex() == 1)
-		{
-		    if(!_currentSBGraph)
+		    else if(_microbeGraphType->getIndex() == 1)
 		    {
-			_currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-			_currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
-			checkLayout();
-			_layoutObject->addGraphObject(_currentSBGraph);
-			_microbeMenu->addItem(_microbeDone);
-		    }
-		    else
-		    {
-			_currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), _microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
+			if(!_currentSBGraph)
+			{
+			    _currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+			    _currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
+			    checkLayout();
+			    _layoutObject->addGraphObject(_currentSBGraph);
+			    _microbeMenu->addItem(_microbeDone);
+			}
+			else
+			{
+			    _currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), _microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
+			}
 		    }
 		}
 
@@ -2635,11 +2657,16 @@ bool phenoDispSort(const std::pair<PhenoStats*,float> & first, const std::pair<P
     return first.second > second.second;
 }
 
+bool phenoDispSortRev(const std::pair<PhenoStats*,float> & first, const std::pair<PhenoStats*,float> & second)
+{
+    return first.second < second.second;
+}
+
 void FuturePatient::loadPhenotype()
 {
     if(!_microbeTableList[_microbeTable->getIndex()]->statsMap.size())
     {
-	initPhenoStats(_microbeTableList[_microbeTable->getIndex()]->statsMap,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix);
+	initPhenoStats(_microbeTableList[_microbeTable->getIndex()]->statsMap,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
     }
 
     /*if(_microbeTable->getIndex() == 0 && !_microbeStatsMap.size())
@@ -2656,6 +2683,9 @@ void FuturePatient::loadPhenotype()
 
     //if(_microbeTable->getIndex() == 0)
     //{
+    
+    if(!_sMicrobePvalSort->getValue())
+    {
 	for(std::map<std::string,struct PhenoStats>::iterator it = _microbeTableList[_microbeTable->getIndex()]->statsMap[_sMicrobePhenotypes->getValue()].begin(); it != _microbeTableList[_microbeTable->getIndex()]->statsMap[_sMicrobePhenotypes->getValue()].end(); ++it)
 	{
 	    float refMax = it->second.avg + it->second.stdev;
@@ -2691,6 +2721,110 @@ void FuturePatient::loadPhenotype()
 		displayList.push_back(std::pair<PhenoStats*,float>(&it->second,minGap));
 	    }
 	}
+
+	std::sort(displayList.begin(),displayList.end(),phenoDispSort);
+    }
+    else
+    {
+	// put octave call here
+        
+	//std::map<std::string,float> pvalMap;
+	for(std::map<std::string,struct PhenoStats>::iterator it = _microbeTableList[_microbeTable->getIndex()]->statsMap[_sMicrobePhenotypes->getValue()].begin(); it != _microbeTableList[_microbeTable->getIndex()]->statsMap[_sMicrobePhenotypes->getValue()].end(); ++it)
+	{
+	    int groupIndex = 0;
+	    std::vector<float> inVal;
+	    std::vector<int> inGrp;
+
+	    for(int i = 0; i < it->second.values.size(); ++i)
+	    {
+		inGrp.push_back(groupIndex);
+		inVal.push_back(it->second.values[i]);
+	    }
+	    groupIndex++;
+
+	    for(std::map<std::string,std::map<std::string,struct PhenoStats> >::iterator git = _microbeTableList[_microbeTable->getIndex()]->statsMap.begin(); git != _microbeTableList[_microbeTable->getIndex()]->statsMap.end(); ++git)
+	    {
+		if(git->first == _sMicrobePhenotypes->getValue())
+		{
+		    continue;
+		}
+
+		if(git->second.find(it->first) == git->second.end())
+		{
+		    continue;
+		}
+
+		struct PhenoStats * stats = &git->second[it->first];
+
+		for(int i = 0; i < stats->values.size(); ++i)
+		{
+		    inGrp.push_back(groupIndex);
+		    inVal.push_back(stats->values[i]);
+		}
+
+		groupIndex++;
+	    }
+
+	    if(inVal.size())
+	    {
+		Matrix valMat(inVal.size(),1);
+		Matrix grpMat(inVal.size(),1);
+
+		//std::map<int,std::vector<float> > groupedMap;
+
+		for(int i = 0; i < inVal.size(); ++i)
+		{
+		    valMat(i) = inVal[i];
+		    grpMat(i) = inGrp[i];
+
+		    //groupedMap[inGrp[i]].push_back(inVal[i]);
+		    //std::cerr << "Grp: " << inGrp[i] << " Val: " << inVal[i] << std::endl;
+		}
+
+		/*for(std::map<int,std::vector<float> >::iterator pit = groupedMap.begin(); pit != groupedMap.end(); ++pit)
+		{
+		    std::cerr << "Group: " << pit->first << std::endl;
+		    for(int i = 0; i < pit->second.size(); ++i)
+		    {
+			std::cerr << pit->second[i] << std::endl;
+		    }
+		}*/
+
+		octave_value_list mList;
+		mList(0) = valMat;
+		mList(1) = grpMat;
+
+		//std::cerr << "Running anova: " << it->first << std::endl;
+
+		octave_value_list out = feval("anova",mList);
+
+		float pval = out(0).float_value();
+		if(std::isnan(pval))
+		{
+		    //std::cerr << "NaN" << std::endl;
+		}
+		else if(pval == 0.0)
+		{
+		}
+		else
+		{
+		    displayList.push_back(std::pair<PhenoStats*,float>(&it->second,pval));
+		}
+		//pvalMap[it->first] = out(0).float_value();
+		//std::cerr << "pval: " << out(0).float_value() << " fval: " << out(1).float_value() << std::endl;
+
+		//sleep(5);
+	    }
+	}
+
+	std::sort(displayList.begin(),displayList.end(),phenoDispSortRev);
+
+	/*std::cerr << "Map size: " << pvalMap.size() << std::endl;
+	for(std::map<std::string,float>::iterator it = pvalMap.begin(); it != pvalMap.end(); ++it)
+	{
+	    std::cerr << it->first << "    " << it->second << std::endl;
+	}*/
+    }
     //}
     /*else if(_microbeTable->getIndex() == 1)
     {
@@ -2732,8 +2866,6 @@ void FuturePatient::loadPhenotype()
 	suffix = "_V2";
     }*/
 
-    std::sort(displayList.begin(),displayList.end(),phenoDispSort);
-
     std::cerr << "Got " << displayList.size() << " graphs in display list." << std::endl;
 
     if(!displayList.size())
@@ -2762,7 +2894,7 @@ void FuturePatient::loadPhenotype()
     }
 }
 
-void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::string tableSuffix)
+void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::string microbeSuffix, std::string measureSuffix)
 {
     struct entry
     {
@@ -2777,17 +2909,17 @@ void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,str
     int totalEntries = 0;
 
     std::string measurementTable = "Microbe_Measurement";
-    measurementTable += tableSuffix;
+    measurementTable += measureSuffix;
 
     std::string microbesTable = "Microbes";
-    microbesTable += tableSuffix;
+    microbesTable += microbeSuffix;
 
     std::stringstream queryhss, querycss, queryuss, querylss;
-    queryhss << "select " << microbesTable << ".species, t.taxonomy_id, t.value from (select " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"healthy\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
+    queryhss << "select " << microbesTable << ".species, t.taxonomy_id, t.value from (select " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"healthy\" and Patient.region = \"US\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
 
-    querycss << "select " << microbesTable << ".species, t.taxonomy_id, t.value from (select " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"CD\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
+    querycss << "select " << microbesTable << ".species, t.taxonomy_id, t.value from (select " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"crohn's disease\" and Patient.region = \"US\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
 
-    queryuss << "select " << microbesTable << ".species, t.taxonomy_id, t.value from (select " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"ulcerous colitis\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
+    queryuss << "select " << microbesTable << ".species, t.taxonomy_id, t.value from (select " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"ulcerous colitis\" and Patient.region = \"US\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
 
     querylss << "select " << microbesTable << ".species, t.taxonomy_id, t.value from (select " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"Larry\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
 
@@ -2862,6 +2994,7 @@ void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,str
     int entryIndex = 0;
     for(int i = 0; i < 4; ++i)
     {
+	std::cerr << "NumEntries " << i << ": " << numEntries[i] << std::endl;
 	std::map<std::string,int> countMap;
 	for(int j = 0; j < numEntries[i]; ++j)
 	{
@@ -2870,6 +3003,7 @@ void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,str
 	    countMap[entries[index].name]++;
 	    statMap[groupLabels[i]][entries[index].name].taxid = entries[index].taxid;
 	    statMap[groupLabels[i]][entries[index].name].name = entries[index].name;
+	    statMap[groupLabels[i]][entries[index].name].values.push_back(entries[index].value);
 	}
 
 	for(std::map<std::string,int>::iterator it = countMap.begin(); it != countMap.end(); ++it)

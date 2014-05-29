@@ -55,9 +55,11 @@ bool GroupedBarGraph::setGraph(std::string title, std::map<std::string, std::vec
     _groupOrder = groupOrder;
 
     float minValue = FLT_MAX;
-    float maxValue = FLT_MIN;
+    float maxValue = -FLT_MAX;
 
     _numBars = 0;
+
+    bool rangeValid = false;
 
     std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it;
     for(it = _data.begin(); it != _data.end(); it++)
@@ -70,6 +72,8 @@ bool GroupedBarGraph::setGraph(std::string title, std::map<std::string, std::vec
 		continue;
 	    }
 
+	    rangeValid = true;
+
 	    if(it->second[i].second < minValue)
 	    {
 		minValue = it->second[i].second;
@@ -81,8 +85,15 @@ bool GroupedBarGraph::setGraph(std::string title, std::map<std::string, std::vec
 	}
     }
 
+    if(!rangeValid)
+    {
+	return false;
+    }
+
     _minGraphValue = minValue;
     _maxGraphValue = maxValue;
+
+    //std::cerr << "minGraph: " << _minGraphValue << " maxGraph: " << _maxGraphValue << std::endl;
 
     float lowerPadding = 0.05;
 
@@ -1337,8 +1348,12 @@ void GroupedBarGraph::updateAxis()
 
 	    tickCharacterSize = (_leftPaddingMult * _width * 0.6 - 2.0 * tickSize) / testWidth;
 
+	    //std::cerr << "Top: " << _graphTop << " Bottom: " << _graphBottom << " tickHeight: " << tickHeight << " interval: " << interval << std::endl;
+	    //std::cerr << "minDisplay: " << _minDisplayRange << " maxDisplay: " << _maxDisplayRange << std::endl;
+
 	    while(tickHeight >= _graphBottom)
 	    {
+		//std::cerr << tickHeight << std::endl;
 		lineVerts->push_back(osg::Vec3(_graphLeft-tickSize,-1,tickHeight));
 		lineVerts->push_back(osg::Vec3(_graphLeft,-1,tickHeight));
 
