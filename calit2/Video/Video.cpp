@@ -767,8 +767,8 @@ void Video::newStream(unsigned int gid)
 	vmd.why = VIDEO_STREAM;
         vmd.obj = new VideoSceneObjectImpl(this);
 	vmd.gid = gid;
-	vmd.obj->setMovable(false);
-	vmd.obj->setNavigationOn(false);
+	vmd.obj->setMovable(true);
+	vmd.obj->setNavigationOn(true);
 	
 	m_updateMutex.lock();
 	m_actionQueue.push_back(vmd);
