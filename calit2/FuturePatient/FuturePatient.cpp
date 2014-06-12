@@ -212,9 +212,21 @@ bool FuturePatient::init()
     _sMicrobePresetMenu = new SubMenu("Presets");
     _sMicrobeMenu->addItem(_sMicrobePresetMenu);
 
-    _sMicrobeBFragilis = new MenuButton("Bacteroides fragilis");
+    /*_sMicrobeBFragilis = new MenuButton("Bacteroides fragilis");
     _sMicrobeBFragilis->setCallback(this);
-    _sMicrobePresetMenu->addItem(_sMicrobeBFragilis);
+    _sMicrobePresetMenu->addItem(_sMicrobeBFragilis);*/
+
+    std::vector<std::string> microbeTagList;
+    ConfigManager::getChildren("Plugin.FuturePatient.MicrobePresets",microbeTagList);
+    for(int i = 0; i < microbeTagList.size(); ++i)
+    {
+	std::string path = "Plugin.FuturePatient.MicrobePresets";
+	path = path + "." + microbeTagList[i];
+	MenuButton * mb = new MenuButton(ConfigManager::getEntry("value",path,"Name"));
+	mb->setCallback(this);
+	_sMicrobePresetList.push_back(mb);
+	_sMicrobePresetMenu->addItem(mb);
+    }
 
     _sMicrobeType = new MenuList();
     _sMicrobeType->setCallback(this);
@@ -1671,33 +1683,34 @@ void FuturePatient::menuCallback(MenuItem * item)
 	return;
     }
 
-    if(item == _sMicrobeBFragilis && _sMicrobes->getListSize())
+    for(int j = 0; j < _sMicrobePresetList.size(); ++j)
     {
-	int index = -1;
-	for(int i = 0; i < _microbeTableList[_microbeTable->getIndex()]->microbeList.size(); ++i)
+	if(item == _sMicrobePresetList[j] && _sMicrobes->getListSize())
 	{
-	    if(_sMicrobeBFragilis->getText() == _microbeTableList[_microbeTable->getIndex()]->microbeList[i])
+	    int index = -1;
+	    for(int i = 0; i < _microbeTableList[_microbeTable->getIndex()]->microbeList.size(); ++i)
 	    {
-		index = i;
-		break;
+		if(_sMicrobePresetList[j]->getText() == _microbeTableList[_microbeTable->getIndex()]->microbeList[i])
+		{
+		    index = i;
+		    break;
+		}
 	    }
-	}
 
-	if(index >= 0)
-	{
-	    SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	    if(smo->setGraph(_sMicrobeBFragilis->getText(),_microbeTableList[_microbeTable->getIndex()]->microbeIDList[index],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix, MGT_SPECIES,false,false,_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
+	    if(index >= 0)
 	    {
+		SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+		if(smo->setGraph(_sMicrobePresetList[j]->getText(),_microbeTableList[_microbeTable->getIndex()]->microbeIDList[index],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix, MGT_SPECIES,_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
+		{
 		    checkLayout();
 		    _layoutObject->addGraphObject(smo);
-	    }
-	    else
-	    {
-		delete smo;
-
+		}
+		else
+		{
+		    delete smo;
+		}
 	    }
 	}
-	return;
     }
 
     if(item == _sMicrobePhenotypeLoad)
@@ -2803,9 +2816,9 @@ void FuturePatient::loadPhenotype()
 		{
 		    //std::cerr << "NaN" << std::endl;
 		}
-		else if(pval == 0.0)
-		{
-		}
+		//else if(pval == 0.0)
+		//{
+		//}
 		else
 		{
 		    displayList.push_back(std::pair<PhenoStats*,float>(&it->second,pval));

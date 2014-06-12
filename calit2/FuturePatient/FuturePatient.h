@@ -155,6 +155,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _sMicrobePhenotypeLoad;
         cvr::SubMenu * _sMicrobePresetMenu;
         cvr::MenuButton * _sMicrobeBFragilis;
+        std::vector<cvr::MenuButton*> _sMicrobePresetList;
 
         cvr::SubMenu * _microbeSpecialMenu;
         cvr::MenuList * _microbeRegionList;
