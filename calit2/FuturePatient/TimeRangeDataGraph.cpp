@@ -562,7 +562,55 @@ void TimeRangeDataGraph::updateGraphs()
     for(int i = 0; i < _graphList.size(); ++i)
     {
 	osg::Vec4Array * colors = dynamic_cast<osg::Vec4Array*>(_graphList[i]->barOutlineGeometry->getColorArray());
-	osg::Vec4 myColor = ColorGenerator::makeColor(i,_graphList.size(), _colorOffset);
+	//osg::Vec4 myColor = ColorGenerator::makeColor(i,_graphList.size(), _colorOffset);
+	osg::Vec4 myColor;
+	/*if(_graphList.size() % 2)
+	{
+	    // odd
+	    int colorId = (i * 2) % _graphList.size();
+	    myColor = ColorGenerator::makeColor(colorId,_graphList.size(), _colorOffset);
+	}
+	else
+	{
+	    // even
+	    int colorId;
+	    if((2*i) >= _graphList.size())
+	    {
+		colorId = ((2*i) % _graphList.size()) + 1;
+	    }
+	    else
+	    {
+		colorId = (2*i) % _graphList.size();
+	    }
+	    //std::cerr << "ColorID: " << colorId << std::endl;
+	    myColor = ColorGenerator::makeColor(colorId,_graphList.size(), _colorOffset);
+	}*/
+
+	int half;
+	if(_graphList.size() % 2)
+	{
+	    // odd
+	    half = (_graphList.size() / 2) + 1;
+	}
+	else
+	{
+	    // even
+	    half = _graphList.size() / 2;
+	}
+
+	int colorId;
+	if(i % 2)
+	{
+	    // odd
+	    colorId = (i / 2) + half;
+	}
+	else
+	{
+	    colorId = i / 2;
+	}
+
+	myColor = ColorGenerator::makeColor(colorId,_graphList.size(), _colorOffset);
+
 	if(colors)
 	{
 	    colors->at(0) = myColor;
