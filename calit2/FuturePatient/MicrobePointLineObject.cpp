@@ -163,7 +163,7 @@ bool MicrobePointLineObject::setGraph(std::string microbeTableSuffix, std::strin
     }
 
     std::vector<std::string> groupNames;
-    groupNames.push_back("Smarr");
+    groupNames.push_back("LS");
     groupNames.push_back("Crohns");
     groupNames.push_back("UC");
     groupNames.push_back("Healthy");
@@ -186,6 +186,10 @@ bool MicrobePointLineObject::setGraph(std::string microbeTableSuffix, std::strin
 
 	char timestamp[512];
 	std::string name = data[i].name;
+	if(name == "Smarr")
+	{
+	    name = "LS";
+	}
 	name += " - ";
 	strftime(timestamp,511,"%F",localtime(&data[i].timestamp));
 	name += timestamp;

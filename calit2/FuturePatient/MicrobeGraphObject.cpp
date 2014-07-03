@@ -887,7 +887,7 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
         }
     }
 
-    bool graphValid = _graph->setGraph(titless.str(), _graphData, _graphOrder, BGAT_LOG, "Value", "", sublabel,osg::Vec4(1.0,0,0,1));
+    bool graphValid = _graph->setGraph(titless.str(), _graphData, _graphOrder, BGAT_LOG, "Relative Abundance", "", sublabel,osg::Vec4(1.0,0,0,1));
 
     if(graphValid)
     {
