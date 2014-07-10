@@ -666,6 +666,34 @@ void VirvoVolume::preFrame()
     // exit preframe if no volumes
     if( ! _volumeMap.size() )
         return;
+	
+	osg::Matrix viewerWorld = PluginHelper::getHeadMat();
+    osg::Vec3 viewDirWorld(viewerWorld(1, 0), viewerWorld(1, 1), viewerWorld(1, 2));
+
+    // iterate through the volume map and set the viewer and object direction for renderering
+    for(std::map<cvr::SceneObject*, volumeinfo*>::iterator it = _volumeMap.begin(); it != _volumeMap.end(); ++it)
+    {
+        osg::Vec3 bbCenterObj = it->first->getOrComputeBoundingBox().center();
+        
+        osg::Matrix bbCenterMatrix;
+        bbCenterMatrix.setTrans(bbCenterObj);
+        osg::Matrix obj2world = it->first->getObjectToWorldMatrix();
+
+        osg::Vec3 bbCenterWorld = bbCenterObj * obj2world;
+        osg::Matrix bbCenterWorld2obj = osg::Matrix::inverse(bbCenterMatrix * obj2world);
+        
+        osg::Vec3 objDirWorld = bbCenterWorld - viewerWorld.getTrans();
+
+        osg::Vec3 viewDirObj = viewDirWorld * bbCenterWorld2obj;
+        osg::Vec3 objDirObj = objDirWorld * bbCenterWorld2obj;
+        objDirObj.normalize();
+
+        volumeinfo* info = _volumeMap[it->first];
+        info->drawable->setViewDirection(viewDirObj);
+        info->drawable->setObjectDirection(objDirObj);
+        info->drawable->setQuality(_quality->getValue());
+    }
+
 
     // check if clipping plane is enabled if so set location and direction for applicable volume
     for(std::map<SceneObject*,MenuCheckbox*>::iterator it = _clipplaneMap.begin(); it != _clipplaneMap.end(); it++)
@@ -796,6 +824,10 @@ bool VirvoVolume::init()
     _filesMenu = new SubMenu("Files","Files");
     _filesMenu->setCallback(this);
     _volumeMenu->addItem(_filesMenu);
+    
+    _quality = new MenuRangeValue("Quality", 0.0, 10.0, 1.0);
+    _quality->setCallback(this);
+    _volumeMenu->addItem(_quality);
     
     _removeButton = new MenuButton("Remove All");
     _removeButton->setCallback(this);

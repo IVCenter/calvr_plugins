@@ -74,6 +74,7 @@ class VirvoVolume : public cvr::CVRPlugin, public cvr::MenuCallback ,public cvr:
         // menu objects
         cvr::SubMenu* _volumeMenu;
         cvr::SubMenu * _filesMenu;
+        cvr::MenuRangeValue* _quality;
         cvr::MenuButton* _removeButton;
    
         static int id;
