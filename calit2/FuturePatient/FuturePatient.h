@@ -6,6 +6,7 @@
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuRangeValueCompact.h>
 #include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuTextEntryItem.h>
 #include <cvrUtil/MultiListenSocket.h>
 #include <cvrUtil/CVRSocket.h>
 
@@ -143,6 +144,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeDone;
 
         cvr::SubMenu * _sMicrobeMenu;
+        cvr::MenuTextEntryItem * _sMicrobeEntry;
         cvr::MenuList * _sMicrobes;
         cvr::MenuList * _sMicrobeType;
         cvr::MenuButton * _sMicrobeLoad;
@@ -154,7 +156,15 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuCheckbox * _sMicrobePvalSort;
         cvr::MenuButton * _sMicrobePhenotypeLoad;
         cvr::SubMenu * _sMicrobePresetMenu;
-        cvr::MenuButton * _sMicrobeBFragilis;
+        //cvr::MenuButton * _sMicrobeBFragilis;
+        std::vector<cvr::MenuButton*> _sMicrobePresetList;
+        cvr::SubMenu * _sMicrobeFilterMenu;
+        cvr::MenuCheckbox * _sMicrobeAvgEnable;
+        cvr::MenuRangeValueCompact * _sMicrobeAvgValue;
+        cvr::MenuCheckbox * _sMicrobeReqMaxEnable;
+        cvr::MenuRangeValueCompact * _sMicrobeReqMaxValue;
+        cvr::MenuCheckbox * _sMicrobeZerosEnable;
+        cvr::MenuRangeValueCompact * _sMicrobeZerosValue;
 
         cvr::SubMenu * _microbeSpecialMenu;
         cvr::MenuList * _microbeRegionList;

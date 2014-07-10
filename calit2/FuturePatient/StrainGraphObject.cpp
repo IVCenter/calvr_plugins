@@ -99,7 +99,7 @@ bool StrainGraphObject::setGraph(std::string title, int taxId, bool larryOnly)
     std::map<std::string,std::string> condition2Group;
     condition2Group["crohn's disease"] = "Crohns";
     condition2Group["healthy"] = "Healthy";
-    condition2Group["Larry"] = "Smarr";
+    condition2Group["Larry"] = "LS";
     condition2Group["ulcerous colitis"] = "UC";
 
     std::map<std::string, std::vector<std::pair<std::string, float> > > dataMap;
@@ -123,7 +123,7 @@ bool StrainGraphObject::setGraph(std::string title, int taxId, bool larryOnly)
 	else
 	{
 	    std::stringstream ss;
-	    ss << "Smarr" << (i+1);
+	    ss << "LS" << (i+1);
 	    if(sdata[i].value > 0.0)
 	    {
 		dataMap[ss.str()].push_back(std::pair<std::string,float>(name,sdata[i].value));
@@ -140,7 +140,7 @@ bool StrainGraphObject::setGraph(std::string title, int taxId, bool larryOnly)
 
     if(orderVec.size())
     {
-	graphValid = _graph->setGraph(title, dataMap, orderVec, BGAT_LOG, "Value", "", "condition / patient", osg::Vec4());
+	graphValid = _graph->setGraph(title, dataMap, orderVec, BGAT_LOG, "Relative Abundance", "", "condition / patient", osg::Vec4());
     }
 
     if(graphValid)
@@ -197,7 +197,7 @@ bool StrainGraphObject::setGraph(std::string title, int taxId, bool larryOnly)
 	    for(int i = 0; i < customOrder.size(); ++i)
 	    {
 		std::stringstream ss;
-		ss << "Smarr" << (i+1);
+		ss << "LS" << (i+1);
 		larryColors[ss.str()] = osg::Vec4(1.0-((float)i)*step,0.0,0.0,1.0);
 	    }
 	    _graph->setColorMapping(osg::Vec4(0.0,0.0,0.0,1.0),larryColors);
