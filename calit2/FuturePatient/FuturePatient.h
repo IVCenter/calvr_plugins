@@ -70,7 +70,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         void loadPhenotype();
 
-        void initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::string microbeSuffix, std::string measureSuffix);
+        void initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & familyStatMap, std::string microbeSuffix, std::string measureSuffix);
 
         cvr::SubMenu * _fpMenu;
         cvr::SubMenu * _layoutMenu;
@@ -106,6 +106,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
             std::vector<std::string> familyList;
             std::vector<std::string> genusList;
             std::map<std::string,std::map<std::string,struct PhenoStats > > statsMap;
+            std::map<std::string,std::map<std::string,struct PhenoStats > > familyStatsMap;
         };
 
         std::vector<MicrobeTableInfo*> _microbeTableList;
