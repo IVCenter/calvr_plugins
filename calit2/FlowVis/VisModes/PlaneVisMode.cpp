@@ -309,6 +309,16 @@ void PlaneVisMode::draw(int context)
 	color[1] = 1.0;
 	color[2] = 1.0;
 	color[3] = 1.0;
+
+	if(set->revCullFace)
+	{
+	    glCullFace(GL_FRONT);
+	}
+	else
+	{
+	    glCullFace(GL_BACK);
+	}
+
 	glEnable(GL_CULL_FACE);
 	_renderer->drawElements(GL_TRIANGLES,set->frameList[currentFrame]->surfaceInd.first,GL_UNSIGNED_INT,surfVBO,vertsVBO,color,surfAttribBinding,surfProg,surfTexBinding,surfUniBinding);
 	glDisable(GL_CULL_FACE);

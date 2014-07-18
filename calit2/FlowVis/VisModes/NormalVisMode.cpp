@@ -214,6 +214,16 @@ void NormalVisMode::draw(int context)
 	color[2] = 1.0;
 	color[3] = 1.0;
 	//std::cerr << "drawn" << std::endl;
+	
+	if(set->revCullFace)
+	{
+	    glCullFace(GL_FRONT);
+	}
+	else
+	{
+	    glCullFace(GL_BACK);
+	}
+
 	glEnable(GL_CULL_FACE);
 	_renderer->drawElements(GL_TRIANGLES,set->frameList[currentFrame]->surfaceInd.first,GL_UNSIGNED_INT,surfVBO,vertsVBO,color,binding,prog,texBinding,uniBinding);
 	glDisable(GL_CULL_FACE);

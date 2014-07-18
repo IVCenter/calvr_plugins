@@ -91,6 +91,9 @@ PagedFlowObject::PagedFlowObject(PagedDataSet * set, osg::BoundingBox bb, std::s
     _planeVecSpacingRV = new MenuRangeValue("Spacing",0.05,1.0,0.1);
     _planeVecSpacingRV->setCallback(this);
 
+    _licLengthRV = new MenuRangeValueCompact("LIC Length",5.0,100.0,10.0);
+    _licLengthRV->setCallback(this);
+
     CVRViewer::instance()->addPerContextFrameStartCallback(this);
     CVRViewer::instance()->addPerContextPreDrawCallback(this);
 
@@ -562,6 +565,7 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 	    case FVT_LIC_CUDA:
 	    {
 		removeMenuItem(_alphaRV);
+		removeMenuItem(_licLengthRV);
 		break;
 	    }
 	    case FVT_PLANE_VEC:
@@ -606,6 +610,11 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 
 		_renderer->getUniData("alpha",aUni);
 		*((float*)aUni.data) = _alphaRV->getValue();
+
+		addMenuItem(_licLengthRV);
+
+		_renderer->getUniData("licLength",aUni);
+		*((float*)aUni.data) = _licLengthRV->getValue();
 
 		_lastAttribute = "None";
 		menuCallback(_loadedAttribList);
@@ -753,6 +762,13 @@ void PagedFlowObject::menuCallback(cvr::MenuItem * item)
 	UniData aUni;
 	_renderer->getUniData("alpha",aUni);
 	*((float*)aUni.data) = _alphaRV->getValue();
+    }
+
+    if(item == _licLengthRV)
+    {
+	UniData aUni;
+	_renderer->getUniData("licLength",aUni);
+	*((float*)aUni.data) = _licLengthRV->getValue();
     }
 
     if(item == _animateCB)

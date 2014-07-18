@@ -86,6 +86,7 @@ bool FlowVis::init()
 	fi->path = ConfigManager::getEntry("path",std::string("Plugin.FlowVis.Files.") + tags[i],"");
 	fi->start = ConfigManager::getInt("start",std::string("Plugin.FlowVis.Files.") + tags[i],0);
 	fi->frames = ConfigManager::getInt("frames",std::string("Plugin.FlowVis.Files.") + tags[i],0);
+	fi->revCullFace = ConfigManager::getBool("revCullFace",std::string("Plugin.FlowVis.Files.") + tags[i],false);
 	_loadFiles.push_back(fi);
     }
 
@@ -248,6 +249,7 @@ void FlowVis::menuCallback(MenuItem * item)
 		    else
 		    {
 			std::cerr << "Got set with " << set->frameList.size() << " frames" << std::endl;
+			set->revCullFace = _loadFiles[i]->revCullFace;
 
 #ifdef NOT_PAGED
 			FlowDataSet * flowset;

@@ -25,6 +25,7 @@ struct FileInfo
     std::string path;
     int start;
     int frames;
+    bool revCullFace;
 };
 
 enum VTKAttribType
@@ -134,6 +135,7 @@ struct PagedDataSet
     std::map<std::string,std::pair<float,float> > attribRanges;
     int maxInds, maxVerts, maxSurface;
     std::vector<PagedDataFrame*> frameList;
+    bool revCullFace;
 };
 
 class FlowObject;

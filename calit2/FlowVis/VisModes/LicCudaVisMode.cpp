@@ -257,6 +257,7 @@ void LicCudaVisMode::frameStart(int context)
     PagedDataSet * set = _renderer->getSet();
     int currentFrame = _renderer->getCurrentFrame();
     int nextFrame = _renderer->getNextFrame();
+    std::map<std::string,struct UniData> & uniDataMap = _renderer->getUniDataMap();
 
 #ifdef WITH_CUDA_LIB
     int fileID = cache->getFileID(set->frameFiles[currentFrame]);
@@ -369,7 +370,7 @@ void LicCudaVisMode::frameStart(int context)
 #endif
 
 	// run LIC kernel
-	launchLIC(LIC_TEXTURE_SIZE,LIC_TEXTURE_SIZE,10.0,_licCudaNoiseImage[context]->getPointer());
+	launchLIC(LIC_TEXTURE_SIZE,LIC_TEXTURE_SIZE,*((float*)uniDataMap["licLength"].data),_licCudaNoiseImage[context]->getPointer());
 
 #ifdef PRINT_TIMING
 	gettimeofday(&licend,NULL);
@@ -513,6 +514,16 @@ void LicCudaVisMode::draw(int context)
 	color[2] = 1.0;
 	color[3] = 1.0;
 	//std::cerr << "drawn" << std::endl;
+	
+	if(set->revCullFace)
+	{
+	    glCullFace(GL_FRONT);
+	}
+	else
+	{
+	    glCullFace(GL_BACK);
+	}
+	
 	glEnable(GL_CULL_FACE);
 	_renderer->drawElements(GL_TRIANGLES,set->frameList[currentFrame]->surfaceInd.first,GL_UNSIGNED_INT,surfVBO,vertsVBO,color,binding,prog,texBinding,uniBinding);
 	glDisable(GL_CULL_FACE);

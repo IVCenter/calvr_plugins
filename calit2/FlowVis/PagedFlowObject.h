@@ -45,6 +45,7 @@ class PagedFlowObject : public cvr::SceneObject, public cvr::PerContextCallback
         cvr::MenuCheckbox * _animateCB;
         cvr::MenuRangeValue * _planeVecSpacingRV;
         cvr::MenuRangeValueCompact * _alphaRV;
+        cvr::MenuRangeValueCompact * _licLengthRV;
 
         osg::ref_ptr<CallbackDrawable> _callbackDrawable;
 

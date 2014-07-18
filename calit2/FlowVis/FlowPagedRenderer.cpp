@@ -379,6 +379,9 @@ void FlowPagedRenderer::initUniData()
     _uniDataMap["vmin"].data = new float[1];
     _uniDataMap["vmax"].type = UNI_FLOAT;
     _uniDataMap["vmax"].data = new float[1];
+
+    _uniDataMap["licLength"].type = UNI_FLOAT;
+    _uniDataMap["licLength"].data = new float[1];
 }
 
 void FlowPagedRenderer::checkGlewInit(int context)
