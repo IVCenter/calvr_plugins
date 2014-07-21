@@ -630,7 +630,7 @@ void Hpwren::createTowers(std::map<std::string, Sensor> & sensors, osg::Vec4 bas
 
 					// add a LOD Node to disable text from far away
 					osg::LOD* lod = new osg::LOD;
-					lod->addChild(at, 0.0, 10000.0);
+					lod->addChild(textGeode, 0.0, 10000.0);
 					at->addChild(lod);
 					mat->addChild(at);
             }
