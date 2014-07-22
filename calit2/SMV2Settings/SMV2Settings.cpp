@@ -6,7 +6,7 @@
 #include <cvrKernel/InteractionManager.h>
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/ScreenConfig.h>
-#include <cvrKernel/ScreenMVZones.h>
+#include <cvrKernel/Screens/ScreenMVZones.h>
 #include <cvrMenu/MenuSystem.h>
 
 #include <osg/ShapeDrawable>

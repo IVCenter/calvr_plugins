@@ -12,7 +12,7 @@
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrKernel/PluginHelper.h>
-#include <cvrKernel/ScreenBase.h>
+#include <cvrKernel/Screens/ScreenBase.h>
 #include <cvrKernel/SceneManager.h>
 #include <cvrKernel/Navigation.h>
 #include <cvrKernel/ComController.h>

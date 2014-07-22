@@ -5,7 +5,7 @@
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/InteractionManager.h>
 #include <cvrKernel/PluginHelper.h>
-#include <cvrKernel/ScreenMultiViewer2.h>
+#include <cvrKernel/Screens/Screens/ScreenMultiViewer2.h>
 #include <cvrMenu/MenuSystem.h>
 
 #include <osg/ShapeDrawable>

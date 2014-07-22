@@ -2,7 +2,7 @@
 #define SMV2SETTINGS
 
 #include <cvrKernel/CVRPlugin.h>
-#include <cvrKernel/ScreenMVSimulator.h>
+#include <cvrKernel/Screens/ScreenMVSimulator.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuCheckbox.h>

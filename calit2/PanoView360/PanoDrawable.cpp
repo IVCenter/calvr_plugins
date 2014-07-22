@@ -2,7 +2,7 @@
 
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/ScreenConfig.h>
-#include <cvrKernel/ScreenBase.h>
+#include <cvrKernel/Screens/ScreenBase.h>
 #include <cvrKernel/ComController.h>
 #include <cvrKernel/NodeMask.h>
 

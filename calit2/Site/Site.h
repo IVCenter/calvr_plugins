@@ -16,7 +16,7 @@
 
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrKernel/FileHandler.h>
-#include <cvrKernel/ScreenBase.h>
+#include <cvrKernel/Screens/ScreenBase.h>
 #include <cvrKernel/SceneManager.h>
 #include <cvrKernel/Navigation.h>
 #include <cvrKernel/ComController.h>

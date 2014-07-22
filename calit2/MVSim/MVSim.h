@@ -2,8 +2,8 @@
 #define _MVSIM_H_
 
 #include <cvrKernel/CVRPlugin.h>
-#include <cvrKernel/ScreenMVMaster.h>
-#include <cvrKernel/ScreenMVSimulator.h>
+#include <cvrKernel/Screens/ScreenMVMaster.h>
+#include <cvrKernel/Screens/ScreenMVSimulator.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuCheckbox.h>

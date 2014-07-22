@@ -4,7 +4,7 @@
 #include <cvrKernel/NodeMask.h>
 #include <cvrKernel/ScreenConfig.h>
 #include <cvrKernel/PluginHelper.h>
-#include <cvrKernel/ScreenBase.h>
+#include <cvrKernel/Screens/ScreenBase.h>
 
 #include <osg/GraphicsContext>
 
