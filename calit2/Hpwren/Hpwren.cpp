@@ -619,23 +619,20 @@ void Hpwren::createTowers(std::map<std::string, Sensor> & sensors, osg::Vec4 bas
                     mat->addChild(it->second.getFlagTransform());
                     it->second.getFlagTransform()->addChild(flag);
 
-					//osg::BoundingBox box = text3D->computeBound();
-
 					// add text and background to geode
 					osg::Geode* textGeode = new osg::Geode();
-					//textGeode->addDrawable(text3D);
 					textGeode->addDrawable(it->second.getFlagText());
 
 					// create auto transform to aligntext with screen
 					osg::AutoTransform* at = new osg::AutoTransform;
 					at->setPosition(osg::Vec3(0.0, 0.0, towerHeight));
 					at->setAutoRotateMode(osg::AutoTransform::ROTATE_TO_CAMERA);
-					at->addChild(textGeode);
 
 					// add a LOD Node to disable text from far away
 					osg::LOD* lod = new osg::LOD;
-					lod->addChild(at, 0.0, 10000.0);
-					mat->addChild(lod);
+					lod->addChild(textGeode, 0.0, 10000.0);
+					at->addChild(lod);
+					mat->addChild(at);
             }
 
             // create flag to attach   // adjust scale in x to stretch flag for speed
