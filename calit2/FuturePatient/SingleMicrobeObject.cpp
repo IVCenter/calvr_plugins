@@ -36,7 +36,7 @@ bool rankOrderSort(const std::pair<std::string, float> & first, const std::pair<
     return first.second > second.second;
 }
 
-bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string microbeTableSuffix, std::string measureTableSuffix, MicrobeGraphType type, bool rankOrder, bool labels, bool firstOnly, bool groupPatients)
+bool SingleMicrobeObject::setGraph(std::string microbe, std::string titleSuffix, int taxid, std::string microbeTableSuffix, std::string measureTableSuffix, MicrobeGraphType type, bool rankOrder, bool labels, bool firstOnly, bool groupPatients)
 {
     std::string measurementTable = "Microbe_Measurement";
     measurementTable += measureTableSuffix;
@@ -273,7 +273,7 @@ bool SingleMicrobeObject::setGraph(std::string microbe, int taxid, std::string m
 	}
     }
 
-    bool status = _graph->setGraph(microbe,dataMap,orderList,BGAT_LOG,"Relative Abundance","","condition / patient", osg::Vec4());
+    bool status = _graph->setGraph(microbe + titleSuffix,dataMap,orderList,BGAT_LOG,"Relative Abundance","","condition / patient", osg::Vec4());
 
     if(status)
     {
@@ -426,13 +426,13 @@ void BandingFunction::added(osg::Geode * geode)
 	_lineGeometry->setComputeBoundingBoxCallback(_boundsCallback.get());
     }
 
-    //geode->addDrawable(_bandGeometry);
+    geode->addDrawable(_bandGeometry);
     geode->addDrawable(_lineGeometry);
 }
 
 void BandingFunction::removed(osg::Geode * geode)
 {
-    //geode->removeDrawable(_bandGeometry);
+    geode->removeDrawable(_bandGeometry);
     geode->removeDrawable(_lineGeometry);
 }
 
