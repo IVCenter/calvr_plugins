@@ -86,7 +86,7 @@ bool SingleMicrobeObject::setGraph(std::string microbe, std::string titleSuffix,
         }
     }
 
-    std::cerr << "Query: " << queryss.str() << std::endl;
+    //std::cerr << "Query: " << queryss.str() << std::endl;
 
     struct microbeData * data = NULL;
     int dataSize = 0;

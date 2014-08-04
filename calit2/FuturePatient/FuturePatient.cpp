@@ -288,6 +288,10 @@ bool FuturePatient::init()
     _sMicrobePvalSort->setCallback(this);
     _sMicrobeFilterMenu->addItem(_sMicrobePvalSort);
 
+    _sMicrobeTvalSort = new MenuCheckbox("With T Val",false);
+    _sMicrobeTvalSort->setCallback(this);
+    _sMicrobeFilterMenu->addItem(_sMicrobeTvalSort);
+
     MenuBar * sMicrobeBar = new MenuBar(osg::Vec4(1.0,1.0,1.0,1.0));
     _sMicrobeFilterMenu->addItem(sMicrobeBar);
 
@@ -320,6 +324,10 @@ bool FuturePatient::init()
     _sMicrobeZerosValue = new MenuRangeValueCompact("Zeros Threshold",0.0,1.0,0.25);
     _sMicrobeZerosValue->setCallback(this);
     _sMicrobeFilterMenu->addItem(_sMicrobeZerosValue);
+
+    _sMicrobeSortResults = new MenuRangeValueCompact("Num Results",5.0,50.0,20.0);
+    _sMicrobeSortResults->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobeSortResults);
 
     _sMicrobePhenotypeLoad = new MenuButton("Load(Phenotype)");
     _sMicrobePhenotypeLoad->setCallback(this);
@@ -2730,14 +2738,36 @@ void FuturePatient::loadLayout(const std::string & file)
     instream.close();
 }
 
-bool phenoDispSort(const std::pair<PhenoStats*,float> & first, const std::pair<PhenoStats*,float> & second)
+struct sortCriteria
 {
-    return first.second > second.second;
+    float primaryValue;
+    float secondaryValue;
+};
+
+bool phenoDispSort(const std::pair<PhenoStats*,struct sortCriteria> & first, const std::pair<PhenoStats*,struct sortCriteria> & second)
+{
+    return first.second.primaryValue > second.second.primaryValue;
 }
 
-bool phenoDispSortRev(const std::pair<PhenoStats*,float> & first, const std::pair<PhenoStats*,float> & second)
+bool phenoDispSortRev(const std::pair<PhenoStats*,struct sortCriteria> & first, const std::pair<PhenoStats*,struct sortCriteria> & second)
 {
-    return first.second < second.second;
+    return first.second.primaryValue < second.second.primaryValue;
+}
+
+bool phenoDispSortWithT(const std::pair<PhenoStats*,struct sortCriteria> & first, const std::pair<PhenoStats*,struct sortCriteria> & second)
+{
+    if(first.second.primaryValue != second.second.primaryValue)
+    {
+	return first.second.primaryValue < second.second.primaryValue;
+    }
+    else
+    {
+	//if(first.second.primaryValue == 0.0)
+	//{
+	//    std::cerr << "Tie breaker first t: " << first.second.secondaryValue << " second t: " << second.second.secondaryValue << std::endl;
+	//}
+	return first.second.secondaryValue > second.second.secondaryValue;
+    }
 }
 
 void FuturePatient::loadPhenotype()
@@ -2747,7 +2777,7 @@ void FuturePatient::loadPhenotype()
 	initPhenoStats(_microbeTableList[_microbeTable->getIndex()]->statsMap,_microbeTableList[_microbeTable->getIndex()]->familyStatsMap,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
     }
 
-    std::vector<std::pair<PhenoStats*,float> > displayList;
+    std::vector<std::pair<PhenoStats*,sortCriteria> > displayList;
 
     std::map<std::string,std::map<std::string,struct PhenoStats > > * statsMapp;
 
@@ -2863,7 +2893,9 @@ void FuturePatient::loadPhenotype()
 	    }
 	    if(addGraph)
 	    {
-		displayList.push_back(std::pair<PhenoStats*,float>(ps,minGap));
+		struct sortCriteria sc;
+		sc.primaryValue = minGap;
+		displayList.push_back(std::pair<PhenoStats*,struct sortCriteria>(ps,sc));
 	    }
 	}
 	else
@@ -2880,6 +2912,39 @@ void FuturePatient::loadPhenotype()
 		    inVal.push_back(itt->second.values[i]);
 		}
 		groupIndex++;
+	    }
+
+	    std::map<std::string,struct PhenoStats >::iterator baseStats;
+
+	    baseStats = it->second.find(_sMicrobePhenotypes->getValue());
+
+	    float tval = 0.0;
+
+	    if(baseStats != it->second.end())
+	    {
+		for(std::map<std::string,struct PhenoStats >::iterator itt = it->second.begin(); itt != it->second.end(); ++itt)
+		{
+		    if(itt->first == _sMicrobePhenotypes->getValue())
+		    {
+			continue;
+		    }
+
+		    float tempTval = fabs(baseStats->second.avg - itt->second.avg);
+		    float denom = ((baseStats->second.stdev*baseStats->second.stdev) / baseStats->second.values.size() + (itt->second.stdev*itt->second.stdev) / itt->second.values.size());
+
+		    if(denom <= 0.0)
+		    {
+			continue;
+		    }
+
+		    tempTval /= denom;
+
+		    if(tval == 0.0 || tempTval < tval)
+		    {
+			tval = tempTval;
+		    }
+
+		}
 	    }
 
 	    if(inVal.size())
@@ -2905,7 +2970,10 @@ void FuturePatient::loadPhenotype()
 		}
 		else
 		{
-		    displayList.push_back(std::pair<PhenoStats*,float>(&it->second.begin()->second,pval));
+		    struct sortCriteria sc;
+		    sc.primaryValue = pval;
+		    sc.secondaryValue = tval;
+		    displayList.push_back(std::pair<PhenoStats*,struct sortCriteria>(&it->second.begin()->second,sc));
 		}
 	    }
 	}
@@ -2915,9 +2983,13 @@ void FuturePatient::loadPhenotype()
     {
 	std::sort(displayList.begin(),displayList.end(),phenoDispSort);
     }
-    else
+    else if(!_sMicrobeTvalSort->getValue())
     {
 	std::sort(displayList.begin(),displayList.end(),phenoDispSortRev);
+    }
+    else
+    {
+	std::sort(displayList.begin(),displayList.end(),phenoDispSortWithT);
     }
 
     std::cerr << "Got " << displayList.size() << " graphs in display list." << std::endl;
@@ -2928,7 +3000,7 @@ void FuturePatient::loadPhenotype()
     }
 
     GraphGlobals::setDeferUpdate(true);
-    for(int i = 0; i < displayList.size() && i < 20; ++i)
+    for(int i = 0; i < displayList.size() && i < ((int)_sMicrobeSortResults->getValue()); ++i)
     {
 	SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 
@@ -2937,7 +3009,13 @@ void FuturePatient::loadPhenotype()
 	if(_sMicrobePvalSort->getValue())
 	{
 	    std::stringstream ss;
-	    ss << " PVal: " << displayList[i].second;
+	    ss << " PVal: " << displayList[i].second.primaryValue;
+
+	    if(_sMicrobeTvalSort->getValue())
+	    {
+		ss << " Min TVal: " << displayList[i].second.secondaryValue;
+	    }
+
 	    titleSuffix = ss.str();
 	}
 

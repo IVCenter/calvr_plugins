@@ -155,6 +155,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuCheckbox * _sMicrobeGroupPatients;
         cvr::MenuList * _sMicrobePhenotypes;
         cvr::MenuCheckbox * _sMicrobePvalSort;
+        cvr::MenuCheckbox * _sMicrobeTvalSort;
+        cvr::MenuRangeValueCompact * _sMicrobeSortResults;
         cvr::MenuButton * _sMicrobePhenotypeLoad;
         cvr::SubMenu * _sMicrobePresetMenu;
         //cvr::MenuButton * _sMicrobeBFragilis;
