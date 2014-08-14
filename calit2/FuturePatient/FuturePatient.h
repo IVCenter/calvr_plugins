@@ -7,6 +7,7 @@
 #include <cvrMenu/MenuRangeValueCompact.h>
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuTextEntryItem.h>
+#include <cvrMenu/MenuIntEntryItem.h>
 #include <cvrUtil/MultiListenSocket.h>
 #include <cvrUtil/CVRSocket.h>
 
@@ -14,7 +15,8 @@
 #include <map>
 #include <vector>
 
-#include <mysql++/mysql++.h>
+//#include <mysql++/mysql++.h>
+#include "DBManager.h"
 
 #include "GraphObject.h"
 #include "GraphLayoutObject.h"
@@ -45,9 +47,14 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         virtual void menuCallback(cvr::MenuItem * item);
 
-        static mysqlpp::Connection * getConnection()
+        /*static mysqlpp::Connection * getConnection()
         {
             return _conn;
+        }*/
+
+        static DBManager * getDBManager()
+        {
+            return _dbm;
         }
 
     protected:
@@ -63,7 +70,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         void saveLayout();
         void loadLayout(const std::string & file);
 
-        static mysqlpp::Connection * _conn;
+        //static mysqlpp::Connection * _conn;
+        static DBManager * _dbm;
 
         void checkSockets(std::vector<int> & messageList);
         bool processSocketInput(cvr::CVRSocket * socket, std::vector<int> & messageList);
@@ -141,7 +149,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuCheckbox * _microbeGrouping;
         //cvr::MenuCheckbox * _microbeFamilyLevel;
         cvr::MenuList * _microbeLevel;
-        cvr::MenuRangeValueCompact * _microbeNumBars;
+        cvr::MenuIntEntryItem * _microbeNumBars;
         cvr::MenuButton * _microbeDone;
 
         cvr::SubMenu * _sMicrobeMenu;

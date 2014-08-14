@@ -34,7 +34,8 @@ using namespace cvr;
 
 CVRPLUGIN(FuturePatient)
 
-mysqlpp::Connection * FuturePatient::_conn = NULL;
+//mysqlpp::Connection * FuturePatient::_conn = NULL;
+DBManager * FuturePatient::_dbm = NULL;
 
 FuturePatient::FuturePatient()
 {
@@ -379,7 +380,8 @@ bool FuturePatient::init()
     _microbeTest->setSensitivity(2.0);
 
     //_microbeNumBars = new MenuRangeValueCompact("Microbes",1,100,25);
-    _microbeNumBars = new MenuRangeValueCompact("Microbes",1,2000,25,true);
+    //_microbeNumBars = new MenuRangeValueCompact("Microbes",1,2000,25,true);
+    _microbeNumBars = new MenuIntEntryItem("Microbes: ",60);
     _microbeNumBars->setCallback(this);
     _microbeMenu->addItem(_microbeNumBars);
 
@@ -511,7 +513,7 @@ bool FuturePatient::init()
 
     if(ComController::instance()->isMaster())
     {
-	if(!_conn)
+	/*if(!_conn)
 	{
 	    _conn = new mysqlpp::Connection(false);
 	    //if(!_conn->connect("futurepatient","palmsdev2.ucsd.edu","fpuser","FPp@ssw0rd"))
@@ -521,9 +523,59 @@ bool FuturePatient::init()
 		delete _conn;
 		_conn = NULL;
 	    }
+	}*/
+
+	if(!_dbm)
+	{
+	    std::string cacheDir = ConfigManager::getEntry("value","Plugin.FuturePatient.CacheDir","");
+	    _dbm = new DBManager("futurepatient","fiona-01.ucsd.edu","fpuser","p@ti3nt",cacheDir);
 	}
 
-	if(_conn)
+	if(_dbm)
+	{
+	    DBMQueryResult result;
+	    _dbm->runQuery("select distinct Measurement.patient_id, Patient.last_name as name from Measurement inner join Patient on Measurement.patient_id = Patient.patient_id order by patient_id;",result);
+
+	    listEntries = result.numRows();
+
+	    if(listEntries)
+	    {
+		lfList = new struct listField[listEntries];
+		sizes = new int[listEntries];
+		groupLists = new listField*[listEntries];
+
+		for(int i = 0; i < listEntries; i++)
+		{
+		    strncpy(lfList[i].entry,result(i,"name").c_str(),255);
+		}
+
+		for(int i = 0; i < listEntries; ++i)
+		{
+		    std::stringstream groupss;
+		    groupss << "select distinct Measure.name from Measure inner join Measurement on Measure.measure_id = Measurement.measure_id and Measurement.patient_id = \"" << result(i,"patient_id") << "\" order by Measure.name;";
+
+		    DBMQueryResult resultg;
+		    _dbm->runQuery(groupss.str(),resultg);
+
+		    sizes[i] = resultg.numRows();
+		    if(resultg.numRows())
+		    {
+			groupLists[i] = new listField[resultg.numRows()];
+		    }
+		    else
+		    {
+			groupLists[i] = NULL;
+		    }
+
+		    for(int j = 0; j < resultg.numRows(); j++)
+		    {
+			strncpy(groupLists[i][j].entry,resultg(j,"name").c_str(),255);
+		    }
+		}
+	    }
+	}
+
+	/*if(_conn)
 	{
 	    mysqlpp::Query q = _conn->query("select distinct Measurement.patient_id, Patient.last_name as name from Measurement inner join Patient on Measurement.patient_id = Patient.patient_id order by patient_id;");
 	    mysqlpp::StoreQueryResult res = q.store();
@@ -565,7 +617,7 @@ bool FuturePatient::init()
 		    }
 		}
 	    }
-	}
+	}*/
 
 	ComController::instance()->sendSlaves(&listEntries,sizeof(int));
 	if(listEntries)
@@ -659,7 +711,57 @@ bool FuturePatient::init()
 
     if(ComController::instance()->isMaster())
     {
-	if(_conn)
+	if(_dbm)
+	{
+	    DBMQueryResult result;
+
+	    _dbm->runQuery("select display_name from Measure_Type order by display_name;",result);
+
+	    listEntries = result.numRows();
+
+	    if(listEntries)
+	    {
+		lfList = new struct listField[listEntries];
+
+		for(int i = 0; i < listEntries; i++)
+		{
+		    strncpy(lfList[i].entry,result(i,"display_name").c_str(),255);
+		}
+	    }
+
+	    if(listEntries)
+	    {
+		sizes = new int[listEntries];
+		groupLists = new listField*[listEntries];
+
+		for(int i = 0; i < listEntries; i++)
+		{
+		    std::stringstream groupss;
+		    groupss << "select Measure.name from Measure inner join Measure_Type on Measure_Type.measure_type_id = Measure.measure_type_id where Measure_Type.display_name = \"" << result(i,"display_name") << "\";";
+
+		    DBMQueryResult resultg;
+
+		    _dbm->runQuery(groupss.str(),resultg);
+
+		    sizes[i] = resultg.numRows();
+		    if(resultg.numRows())
+		    {
+			groupLists[i] = new listField[resultg.numRows()];
+		    }
+		    else
+		    {
+			groupLists[i] = NULL;
+		    }
+
+		    for(int j = 0; j < resultg.numRows(); j++)
+		    {
+			strncpy(groupLists[i][j].entry,resultg(j,"name").c_str(),255);
+		    }
+		}
+	    }
+	}
+
+	/*if(_conn)
 	{
 	    mysqlpp::Query q = _conn->query("select display_name from Measure_Type order by display_name;");
 	    mysqlpp::StoreQueryResult res = q.store();
@@ -705,7 +807,7 @@ bool FuturePatient::init()
 		    }
 		}
 	    }
-	}
+	}*/
 
 	ComController::instance()->sendSlaves(&listEntries,sizeof(int));
 	if(listEntries)
@@ -793,7 +895,32 @@ bool FuturePatient::init()
 
     if(ComController::instance()->isMaster())
     {
-	if(_conn)
+	if(_dbm)
+	{
+	    DBMQueryResult result;
+
+	    _dbm->runQuery("select distinct name, type from Event where patient_id = \"1\" order by type desc, name;",result);
+
+	    listEntries = result.numRows();
+
+	    if(listEntries)
+	    {
+		lfList = new struct listField[listEntries];
+
+		for(int i = 0; i < listEntries; i++)
+		{
+		    strncpy(lfList[i].entry,result(i,"name").c_str(),255);
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&listEntries,sizeof(int));
+	if(listEntries)
+	{
+	    ComController::instance()->sendSlaves(lfList,sizeof(struct listField)*listEntries);
+	}
+
+	/*if(_conn)
 	{
 	    mysqlpp::Query q = _conn->query("select distinct name, type from Event where patient_id = \"1\" order by type desc, name;");
 	    mysqlpp::StoreQueryResult res = q.store();
@@ -815,7 +942,7 @@ bool FuturePatient::init()
 	if(listEntries)
 	{
 	    ComController::instance()->sendSlaves(lfList,sizeof(struct listField)*listEntries);
-	}
+	}*/
     }
     else
     {
@@ -918,7 +1045,26 @@ bool FuturePatient::init()
 
     if(ComController::instance()->isMaster())
     {
-	if(_conn)
+	if(_dbm)
+	{
+	    DBMQueryResult result;
+
+	    _dbm->runQuery("select distinct phylum from Microbes order by phylum;",result);
+
+	    listEntries = result.numRows();
+
+	    if(listEntries)
+	    {
+		lfList = new struct listField[listEntries];
+
+		for(int i = 0; i < listEntries; i++)
+		{
+		    strncpy(lfList[i].entry,result(i,"phylum").c_str(),255);
+		}
+	    }
+	}
+
+	/*if(_conn)
 	{
 	    mysqlpp::Query q = _conn->query("select distinct phylum from Microbes order by phylum;");
 	    mysqlpp::StoreQueryResult res = q.store();
@@ -934,7 +1080,7 @@ bool FuturePatient::init()
 		    strncpy(lfList[i].entry,res[i]["phylum"].c_str(),255);
 		}
 	    }
-	}
+	}*/
 
 	ComController::instance()->sendSlaves(&listEntries,sizeof(int));
 	if(listEntries)
@@ -1348,7 +1494,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	// Bar Graph
 	if(_microbeGraphType->getIndex() == 0)
 	{
-	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(), _microbeTestTime[_microbeTest->getIndex()],(int)_microbeNumBars->getValue(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),(MicrobeGraphType)(_microbeLevel->getIndex())))
 	    {
 		checkLayout();
@@ -1364,7 +1510,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    if(!_currentSBGraph)
 	    {
-		_currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+		_currentSBGraph = new MicrobeBarGraphObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 		_currentSBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
 		checkLayout();
 		_layoutObject->addGraphObject(_currentSBGraph);
@@ -1474,7 +1620,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		{
 		    if(_microbeGraphType->getIndex() == 0)
 		    {
-			MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+			MicrobeGraphObject * mgo = new MicrobeGraphObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 			bool tb = mgo->setGraph(_microbePatients->getValue(j), j+1, it->second[k], _microbeTableList[_microbeTable->getIndex()]->testTimeMap[it->first][k],(int)_microbeNumBars->getValue(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),(MicrobeGraphType)(_microbeLevel->getIndex()));
 			if(tb)
 			{
@@ -1491,7 +1637,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		    {
 			if(!_currentSBGraph)
 			{
-			    _currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+			    _currentSBGraph = new MicrobeBarGraphObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 			    _currentSBGraph->addGraph(_microbePatients->getValue(j), j+1, it->second[k],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
 			    checkLayout();
 			    _layoutObject->addGraphObject(_currentSBGraph);
@@ -1580,9 +1726,9 @@ void FuturePatient::menuCallback(MenuItem * item)
 		    {
 			//struct timeval loadstart,loadend;
 			//gettimeofday(&loadstart,NULL);
-			MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+			MicrobeGraphObject * mgo = new MicrobeGraphObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 
-			bool tb = mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(j), _microbeTestTime[j],(int)_microbeNumBars->getValue(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),(MicrobeGraphType)(_microbeLevel->getIndex()));
+			bool tb = mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(j), _microbeTestTime[j],75,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),(MicrobeGraphType)(_microbeLevel->getIndex()));
 			if(tb)
 			{
 			    checkLayout();
@@ -1599,7 +1745,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		    {
 			if(!_currentSBGraph)
 			{
-			    _currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+			    _currentSBGraph = new MicrobeBarGraphObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 			    _currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
 			    checkLayout();
 			    _layoutObject->addGraphObject(_currentSBGraph);
@@ -1664,7 +1810,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	// Bar Graph
 	if(_microbeGraphType->getIndex() == 0)
 	{
-	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	    MicrobeGraphObject * mgo = new MicrobeGraphObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 
 	    if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue(),_microbeRegionList->getValue(),_microbeGrouping->getValue(),_microbeOrdering->getValue(),(MicrobeGraphType) (_microbeLevel->getIndex())))
 	    {
@@ -1683,7 +1829,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    if(!_currentSBGraph)
 	    {
-		_currentSBGraph = new MicrobeBarGraphObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+		_currentSBGraph = new MicrobeBarGraphObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 		_currentSBGraph->addSpecialGraph(mgt,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
 		checkLayout();
 		_layoutObject->addGraphObject(_currentSBGraph);
@@ -1704,7 +1850,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    tablesuffix = "_V2";
 	}*/
 
-	MicrobePointLineObject * mplo = new MicrobePointLineObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	MicrobePointLineObject * mplo = new MicrobePointLineObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 	if(mplo->setGraph(_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbePointLineExpand->getValue()))
 	{
 	    checkLayout();
@@ -1759,7 +1905,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	}*/
 
 
-	SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	SingleMicrobeObject * smo = new SingleMicrobeObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 	if(smo->setGraph(name,"",taxid,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType) (_sMicrobeType->getIndex()),_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
 	{
 	    checkLayout();
@@ -1788,7 +1934,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 
 	    if(index >= 0)
 	    {
-		SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+		SingleMicrobeObject * smo = new SingleMicrobeObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 		if(smo->setGraph(_sMicrobePresetList[j]->getText(),"",_microbeTableList[_microbeTable->getIndex()]->microbeIDList[index],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix, MGT_SPECIES,_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
 		{
 		    checkLayout();
@@ -1821,7 +1967,7 @@ void FuturePatient::menuCallback(MenuItem * item)
     {
 	if(_strainGroupList->getListSize() && _strainList->getListSize())
 	{
-	    StrainGraphObject * sgo = new StrainGraphObject(_conn, 1000.0, 1000.0, "Strain Graph", false, true, false, true);
+	    StrainGraphObject * sgo = new StrainGraphObject(_dbm, 1000.0, 1000.0, "Strain Graph", false, true, false, true);
 
 	    if(sgo->setGraph(_strainList->getValue(),_strainIdMap[_strainList->getValue()],_strainLarryOnlyCB->getValue()))
 	    {
@@ -1850,7 +1996,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		for(int i = 0; i < it->second.size(); ++i)
 		{
 		    std::cerr << "Loading strain " << i << " id: " << _strainIdMap[it->second[i]] << std::endl;
-		    StrainGraphObject * sgo = new StrainGraphObject(_conn, 1000.0, 1000.0, "Strain Graph", false, true, false, true);
+		    StrainGraphObject * sgo = new StrainGraphObject(_dbm, 1000.0, 1000.0, "Strain Graph", false, true, false, true);
 
 		    if(sgo->setGraph(it->second[i],_strainIdMap[it->second[i]],_strainLarryOnlyCB->getValue()))
 		    {
@@ -1879,7 +2025,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		for(int i = 0; i < it->second.size(); ++i)
 		{
 		    std::cerr << "Loading strain " << i << " id: " << _strainIdMap[it->second[i]] << std::endl;
-		    StrainHMObject * shmo = new StrainHMObject(_conn, 1000.0, 1000.0, "Strain Heat Map", false, true, false, true);
+		    StrainHMObject * shmo = new StrainHMObject(_dbm, 1000.0, 1000.0, "Strain Heat Map", false, true, false, true);
 
 		    if(shmo->setGraph(it->second[i],"Smarr",1,_strainIdMap[it->second[i]],osg::Vec4(1,0,0,1)))
 		    {
@@ -1899,7 +2045,7 @@ void FuturePatient::menuCallback(MenuItem * item)
     {
 	if(!_currentSymptomGraph)
 	{
-	    _currentSymptomGraph = new SymptomGraphObject(_conn, 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
+	    _currentSymptomGraph = new SymptomGraphObject(_dbm, 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
 	    _currentSymptomGraph->addGraph(_eventName->getValue());
 	    checkLayout();
 	    _layoutObject->addGraphObject(_currentSymptomGraph);
@@ -1916,7 +2062,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	bool addObject = false;
 	if(!_currentSymptomGraph)
 	{
-	    _currentSymptomGraph = new SymptomGraphObject(_conn, 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
+	    _currentSymptomGraph = new SymptomGraphObject(_dbm, 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
 	    checkLayout();
 	    addObject = true;
 	}
@@ -1936,7 +2082,7 @@ void FuturePatient::menuCallback(MenuItem * item)
     {
 	if(!_currentSymptomGraph)
 	{
-	    _currentSymptomGraph = new SymptomGraphObject(_conn, 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
+	    _currentSymptomGraph = new SymptomGraphObject(_dbm, 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
 	    _currentSymptomGraph->addGraph("Microbe Test");
 	    checkLayout();
 	    _layoutObject->addGraphObject(_currentSymptomGraph);
@@ -1958,7 +2104,7 @@ void FuturePatient::menuCallback(MenuItem * item)
     {
 	if(_scatterFirstList->getListSize() && _scatterFirstList->getIndex() != _scatterSecondList->getIndex())
 	{
-	    MicrobeScatterGraphObject * msgo = new MicrobeScatterGraphObject(_conn, 1000.0, 1000.0, "Scatter Plot", false, true, false, true);
+	    MicrobeScatterGraphObject * msgo = new MicrobeScatterGraphObject(_dbm, 1000.0, 1000.0, "Scatter Plot", false, true, false, true);
 	    if(msgo->setGraph(_scatterSecondList->getValue() + " vs " + _scatterFirstList->getValue(),_scatterFirstList->getValue(),_scatterSecondList->getValue()))
 	    {
 		checkLayout();
@@ -1982,7 +2128,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		{
 		    continue;
 		}
-		MicrobeScatterGraphObject * msgo = new MicrobeScatterGraphObject(_conn, 1000.0, 1000.0, "Scatter Plot", false, true, false, true);
+		MicrobeScatterGraphObject * msgo = new MicrobeScatterGraphObject(_dbm, 1000.0, 1000.0, "Scatter Plot", false, true, false, true);
 		if(msgo->setGraph(_scatterSecondList->getValue(i) + " vs " + _scatterFirstList->getValue(),_scatterFirstList->getValue(),_scatterSecondList->getValue(i)))
 		{
 		    checkLayout();
@@ -2041,7 +2187,7 @@ void FuturePatient::loadGraph(std::string patient, std::string test, bool averag
 	{
 	    //if(_graphObjectMap.find(value) == _graphObjectMap.end())
 	    {
-		GraphObject * gobject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
+		GraphObject * gobject = new GraphObject(_dbm, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
 		if(gobject->addGraph(patient,test,averageColor))
 		{
 		    //_graphObjectMap[value] = gobject;
@@ -2063,7 +2209,7 @@ void FuturePatient::loadGraph(std::string patient, std::string test, bool averag
 	{
 	    if(!_multiObject)
 	    {
-		_multiObject = new GraphObject(_conn, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
+		_multiObject = new GraphObject(_dbm, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
 	    }
 
 	    if(_multiObject->addGraph(patient,test))
@@ -2112,7 +2258,36 @@ void FuturePatient::setupMicrobes()
 
 	if(ComController::instance()->isMaster())
 	{
-	    if(_conn)
+	    if(_dbm)
+	    {
+		std::stringstream qss;
+		qss << "select distinct taxonomy_id, species from Microbes" << _microbeTableList[j]->microbeSuffix << " order by species;";
+
+		DBMQueryResult result;
+
+		_dbm->runQuery(qss.str(),result);
+
+		numMicrobes = result.numRows();
+
+		if(numMicrobes)
+		{
+		    microbes = new struct Microbes[numMicrobes];
+
+		    for(int i = 0; i < numMicrobes; ++i)
+		    {
+			strncpy(microbes[i].name,result(i,"species").c_str(),511);
+			microbes[i].taxid = atoi(result(i,"taxonomy_id").c_str());
+		    }
+		}
+
+		ComController::instance()->sendSlaves(&numMicrobes,sizeof(int));
+		if(numMicrobes)
+		{
+		    ComController::instance()->sendSlaves(microbes,numMicrobes*sizeof(struct Microbes));
+		}
+	    }
+
+	    /*if(_conn)
 	    {
 		std::stringstream qss;
 		qss << "select distinct taxonomy_id, species from Microbes" << _microbeTableList[j]->microbeSuffix << " order by species;";
@@ -2137,7 +2312,7 @@ void FuturePatient::setupMicrobes()
 		{
 		    ComController::instance()->sendSlaves(microbes,numMicrobes*sizeof(struct Microbes));
 		}
-	    }
+	    }*/
 	}
 	else
 	{
@@ -2165,7 +2340,35 @@ void FuturePatient::setupMicrobes()
 
 	if(ComController::instance()->isMaster())
 	{
-	    if(_conn)
+	    if(_dbm)
+	    {
+		std::stringstream qss;
+		qss << "select distinct family from Microbes" << _microbeTableList[j]->microbeSuffix << " order by family;";
+
+		DBMQueryResult result;
+
+		_dbm->runQuery(qss.str(),result);
+
+		numFamilies = result.numRows();
+
+		if(numFamilies)
+		{
+		    families = new struct Families[numFamilies];
+
+		    for(int i = 0; i < numFamilies; ++i)
+		    {
+			strncpy(families[i].name,result(i,"family").c_str(),511);
+		    }
+		}
+
+		ComController::instance()->sendSlaves(&numFamilies,sizeof(int));
+		if(numFamilies)
+		{
+		    ComController::instance()->sendSlaves(families,numFamilies*sizeof(struct Families));
+		}
+	    }
+
+	    /*if(_conn)
 	    {
 		std::stringstream qss;
 		qss << "select distinct family from Microbes" << _microbeTableList[j]->microbeSuffix << " order by family;";
@@ -2189,7 +2392,7 @@ void FuturePatient::setupMicrobes()
 		{
 		    ComController::instance()->sendSlaves(families,numFamilies*sizeof(struct Families));
 		}
-	    }
+	    }*/
 	}
 	else
 	{
@@ -2217,7 +2420,35 @@ void FuturePatient::setupMicrobes()
 
 	if(ComController::instance()->isMaster())
 	{
-	    if(_conn)
+	    if(_dbm)
+	    {
+		std::stringstream qss;
+		qss << "select distinct genus from Microbes" << _microbeTableList[j]->microbeSuffix << " order by genus;";
+
+		DBMQueryResult result;
+
+		_dbm->runQuery(qss.str(),result);
+
+		numGenuses = result.numRows();
+
+		if(numGenuses)
+		{
+		    genuses = new struct Genuses[numGenuses];
+
+		    for(int i = 0; i < numGenuses; ++i)
+		    {
+			strncpy(genuses[i].name,result(i,"genus").c_str(),511);
+		    }
+		}
+
+		ComController::instance()->sendSlaves(&numGenuses,sizeof(int));
+		if(numGenuses)
+		{
+		    ComController::instance()->sendSlaves(genuses,numGenuses*sizeof(struct Genuses));
+		}
+	    }
+
+	    /*if(_conn)
 	    {
 		std::stringstream qss;
 		qss << "select distinct genus from Microbes" << _microbeTableList[j]->microbeSuffix << " order by genus;";
@@ -2241,7 +2472,7 @@ void FuturePatient::setupMicrobes()
 		{
 		    ComController::instance()->sendSlaves(genuses,numGenuses*sizeof(struct Genuses));
 		}
-	    }
+	    }*/
 	}
 	else
 	{
@@ -2332,7 +2563,26 @@ void FuturePatient::setupMicrobePatients()
 
     if(ComController::instance()->isMaster())
     {
-	if(_conn)
+	if(_dbm)
+	{
+	    DBMQueryResult result;
+
+	    _dbm->runQuery("select last_name, patient_id from Patient order by patient_id;",result);
+
+	    numNames = result.numRows();
+
+	    if(numNames)
+	    {
+		names = new struct PatientName[numNames];
+
+		for(int i = 0; i < numNames; ++i)
+		{
+		    strncpy(names[i].name,result(i,"last_name").c_str(),63);
+		}
+	    }
+	}
+	
+	/*if(_conn)
 	{
 	    mysqlpp::Query q = _conn->query("select last_name, patient_id from Patient order by patient_id;");
 	    mysqlpp::StoreQueryResult res = q.store();
@@ -2348,7 +2598,7 @@ void FuturePatient::setupMicrobePatients()
 		    strncpy(names[i].name,res[i]["last_name"].c_str(),63);
 		}
 	    }
-	}
+	}*/
 
 	ComController::instance()->sendSlaves(&numNames,sizeof(int));
 	if(numNames)
@@ -2396,7 +2646,31 @@ void FuturePatient::setupMicrobePatients()
 
 	if(ComController::instance()->isMaster())
 	{
-	    if(_conn)
+	    if(_dbm)
+	    {
+		std::stringstream qss;
+		qss << "select patient_id, timestamp, unix_timestamp(timestamp) as utimestamp from Microbe_Measurement" << _microbeTableList[i]->measureSuffix << " group by patient_id, timestamp order by patient_id, timestamp;";
+
+		DBMQueryResult result;
+
+		_dbm->runQuery(qss.str(),result);
+
+		numTests = result.numRows();
+
+		if(numTests)
+		{
+		    labels = new struct TestLabel[numTests];
+
+		    for(int j = 0; j < numTests; ++j)
+		    {
+			labels[j].id = atoi(result(j,"patient_id").c_str());
+			strncpy(labels[j].label,result(j,"timestamp").c_str(),255);
+			labels[j].timestamp = atol(result(j,"utimestamp").c_str());
+		    }
+		}
+	    }
+	    
+	    /*if(_conn)
 	    {
 		std::stringstream qss;
 		qss << "select patient_id, timestamp, unix_timestamp(timestamp) as utimestamp from Microbe_Measurement" << _microbeTableList[i]->measureSuffix << " group by patient_id, timestamp order by patient_id, timestamp;";
@@ -2417,7 +2691,7 @@ void FuturePatient::setupMicrobePatients()
 			labels[j].timestamp = atol(res[j]["utimestamp"].c_str());
 		    }
 		}
-	    }
+	    }*/
 
 	    ComController::instance()->sendSlaves(&numTests,sizeof(int));
 	    if(numTests)
@@ -2518,7 +2792,26 @@ void FuturePatient::setupStrainMenu()
 
     if(ComController::instance()->isMaster())
     {
-	if(_conn)
+	if(_dbm)
+	{
+	    DBMQueryResult result;
+
+	    _dbm->runQuery("select distinct genus from TaxonomyId order by genus;",result);
+
+	    numNames = result.numRows();
+
+	    if(numNames)
+	    {
+		names = new struct Data[numNames];
+
+		for(int i = 0; i < numNames; ++i)
+		{
+		    strncpy(names[i].name,result(i,"genus").c_str(),1000);
+		}
+	    }
+	}
+
+	/*if(_conn)
 	{
 	    mysqlpp::Query q = _conn->query("select distinct genus from TaxonomyId order by genus;");
 	    mysqlpp::StoreQueryResult res = q.store();
@@ -2534,7 +2827,7 @@ void FuturePatient::setupStrainMenu()
 		    strncpy(names[i].name,res[i]["genus"].c_str(),1000);
 		}
 	    }
-	}
+	}*/
 
 	ComController::instance()->sendSlaves(&numNames,sizeof(int));
 	if(numNames)
@@ -2572,7 +2865,30 @@ void FuturePatient::setupStrainMenu()
 
 	if(ComController::instance()->isMaster())
 	{
-	    if(_conn)
+	    if(_dbm)
+	    {
+		std::stringstream queryss;
+		queryss << "select description, taxonomy_id from TaxonomyId where genus = '" << nameVec[i] << "' order by description;";
+
+		DBMQueryResult result;
+
+		_dbm->runQuery(queryss.str(),result);
+
+		numNames = result.numRows();
+
+		if(numNames)
+		{
+		    names = new struct Data[numNames];
+
+		    for(int j = 0; j < numNames; ++j)
+		    {
+			strncpy(names[j].name,result(j,"description").c_str(),1000);
+			names[j].value = atoi(result(j,"taxonomy_id").c_str());
+		    }
+		}
+	    }
+
+	    /*if(_conn)
 	    {
 		std::stringstream queryss;
 		queryss << "select description, taxonomy_id from TaxonomyId where genus = '" << nameVec[i] << "' order by description;";
@@ -2591,7 +2907,7 @@ void FuturePatient::setupStrainMenu()
 			names[j].value = atoi(res[j]["taxonomy_id"].c_str());
 		    }
 		}
-	    }
+	    }*/
 
 	    ComController::instance()->sendSlaves(&numNames,sizeof(int));
 	    if(numNames)
@@ -2937,7 +3253,7 @@ void FuturePatient::loadPhenotype()
 			continue;
 		    }
 
-		    tempTval /= denom;
+		    tempTval /= sqrt(denom);
 
 		    if(tval == 0.0 || tempTval < tval)
 		    {
@@ -3002,7 +3318,7 @@ void FuturePatient::loadPhenotype()
     GraphGlobals::setDeferUpdate(true);
     for(int i = 0; i < displayList.size() && i < ((int)_sMicrobeSortResults->getValue()); ++i)
     {
-	SingleMicrobeObject * smo = new SingleMicrobeObject(_conn, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	SingleMicrobeObject * smo = new SingleMicrobeObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 
 	std::string titleSuffix;
 
@@ -3067,11 +3383,50 @@ void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,str
 
     querylss << "select " << microbesTable << ".species, " << microbesTable << ".family, t.last_name, t.taxonomy_id, t.value from (select Patient.last_name, " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"Larry\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
 
-    std::cerr << "Larry query: " << querylss.str() << std::endl;
+    //std::cerr << "Larry query: " << querylss.str() << std::endl;
 
     if(ComController::instance()->isMaster())
     {
-	if(_conn)
+	if(_dbm)
+	{
+	    DBMQueryResult res[4];
+
+	    _dbm->runQuery(queryhss.str(),res[0]);
+	    _dbm->runQuery(querycss.str(),res[1]);
+	    _dbm->runQuery(queryuss.str(),res[2]);
+	    _dbm->runQuery(querylss.str(),res[3]);
+
+	    for(int i = 0; i < 4; ++i)
+	    {
+		numEntries[i] = res[i].numRows();
+	    }
+
+	    totalEntries += numEntries[0] + numEntries[1] + numEntries[2] + numEntries[3];
+
+	    if(totalEntries)
+	    {
+		entries = new struct entry[totalEntries];
+		int entryIndex = 0;
+
+		for(int i = 0; i < 4; ++i)
+		{
+		    for(int j = 0; j < numEntries[i]; ++j)
+		    {
+			entries[entryIndex+j].name[511] = '\0';
+			strncpy(entries[entryIndex+j].name,res[i](j,"species").c_str(),511);
+			entries[entryIndex+j].family[511] = '\0';
+			strncpy(entries[entryIndex+j].family,res[i](j,"family").c_str(),511);
+			entries[entryIndex+j].patientName[511] = '\0';
+			strncpy(entries[entryIndex+j].patientName,res[i](j,"last_name").c_str(),511);
+			entries[entryIndex+j].taxid = atoi(res[i](j,"taxonomy_id").c_str());
+			entries[entryIndex+j].value = atof(res[i](j,"value").c_str());
+		    }
+		    entryIndex += numEntries[i];
+		}
+	    }
+	}
+
+	/*if(_conn)
 	{
 	    mysqlpp::StoreQueryResult res[4];
 
@@ -3115,7 +3470,7 @@ void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,str
 		    entryIndex += numEntries[i];
 		}
 	    }
-	}
+	}*/
 
 	ComController::instance()->sendSlaves(&totalEntries,sizeof(int));
 	ComController::instance()->sendSlaves(numEntries,4*sizeof(int));

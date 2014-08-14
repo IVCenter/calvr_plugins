@@ -11,9 +11,9 @@
 
 using namespace cvr;
 
-SymptomGraphObject::SymptomGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
+SymptomGraphObject::SymptomGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
 {
-    _conn = conn;
+    _dbm = dbm;
     _graph = new TimeRangeDataGraph();
     _graph->setDisplaySize(width,height);
     _graph->setColorOffset(0.5);
@@ -66,7 +66,29 @@ bool SymptomGraphObject::addGraph(std::string name)
 
     if(ComController::instance()->isMaster())
     {
-	if(_conn)
+	if(_dbm)
+	{
+	    std::stringstream qss;
+	    qss << "select unix_timestamp(start_timestamp) as start, unix_timestamp(end_timestamp) as end, intensity from Event where patient_id = \"1\" and name = \"" << name << "\";";
+
+	    DBMQueryResult result;
+
+	    _dbm->runQuery(qss.str(),result);
+
+	    numRanges = result.numRows();
+	    if(numRanges)
+	    {
+		ranges = new struct timeRange[numRanges];
+		for(int i = 0; i < numRanges; ++i)
+		{
+		    ranges[i].start = atol(result(i,"start").c_str());
+		    ranges[i].end = atol(result(i,"end").c_str());
+		    ranges[i].intensity = atoi(result(i,"intensity").c_str());
+		}
+	    }
+	}
+
+	/*if(_conn)
 	{
 	    std::stringstream qss;
 	    qss << "select unix_timestamp(start_timestamp) as start, unix_timestamp(end_timestamp) as end, intensity from Event where patient_id = \"1\" and name = \"" << name << "\";";
@@ -85,7 +107,7 @@ bool SymptomGraphObject::addGraph(std::string name)
 		    ranges[i].intensity = atoi(result[i]["intensity"].c_str());
 		}
 	    }
-	}
+	}*/
 
 	ComController::instance()->sendSlaves(&numRanges,sizeof(int));
 	if(numRanges)
@@ -130,7 +152,7 @@ bool SymptomGraphObject::addGraph(std::string name)
 	{
 	    MicrobeGraphAction * mga = new MicrobeGraphAction();
 	    mga->symptomObject = this;
-	    mga->conn = _conn;
+	    mga->dbm = _dbm;
 	    _graph->setGraphAction(name,mga);
 	}
 
@@ -296,7 +318,26 @@ bool SymptomGraphObject::addGraphMicrobe(std::string name)
 
     if(ComController::instance()->isMaster())
     {
-	if(_conn)
+	if(_dbm)
+	{
+	    std::stringstream qss;
+	    qss << "select distinct unix_timestamp(timestamp) as timestamp from Microbe_Measurement where patient_id = 1 order by timestamp asc;";
+
+	    DBMQueryResult result;
+	    _dbm->runQuery(qss.str(),result);
+
+	    numTests = result.numRows();
+	    if(numTests)
+	    {
+		testTimes = new time_t[numTests];
+		for(int i = 0; i < numTests; ++i)
+		{
+		    testTimes[i] = atol(result(i,"timestamp").c_str());
+		}
+	    }
+	}
+
+	/*if(_conn)
 	{
 	    std::stringstream qss;
 	    qss << "select distinct unix_timestamp(timestamp) as timestamp from Microbe_Measurement where patient_id = 1 order by timestamp asc;";
@@ -313,7 +354,7 @@ bool SymptomGraphObject::addGraphMicrobe(std::string name)
 		    testTimes[i] = atol(result[i]["timestamp"].c_str());
 		}
 	    }
-	}
+	}*/
 
 	ComController::instance()->sendSlaves(&numTests,sizeof(int));
 	if(numTests)

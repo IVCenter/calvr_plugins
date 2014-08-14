@@ -5,7 +5,7 @@
 
 #include <cvrKernel/SceneObject.h>
 
-#include <mysql++/mysql++.h>
+#include "DBManager.h"
 
 class TRGraphAction
 {
@@ -19,7 +19,7 @@ class MicrobeGraphAction : public TRGraphAction
         virtual void action(std::string name, time_t start, time_t end, int value);
 
         cvr::SceneObject * symptomObject;
-        mysqlpp::Connection * conn;
+        DBManager * dbm;
 };
 
 #endif

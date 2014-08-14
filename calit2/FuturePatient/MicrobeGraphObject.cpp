@@ -21,9 +21,9 @@
 
 using namespace cvr;
 
-MicrobeGraphObject::MicrobeGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
+MicrobeGraphObject::MicrobeGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
 {
-    _conn = conn;
+    _dbm = dbm;
 
     setBoundsCalcMode(SceneObject::MANUAL);
     osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
@@ -670,7 +670,111 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
 
     if(ComController::instance()->isMaster())
     {
-	if(_conn)
+	if(_dbm)
+	{
+	    struct timeval start,end;
+	    gettimeofday(&start,NULL);
+
+	    DBMQueryResult result;
+
+	    _dbm->runQuery(valueQuery,result);
+
+	    gettimeofday(&end,NULL);
+	    //std::cerr << "Query1: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) / 1000000.0) << std::endl;
+
+	    header.numDataValues = result.numRows();
+
+	    std::map<std::string,float> totalMap;
+
+	    if(result.numRows())
+	    {
+		data = new MicrobeDataValue[result.numRows()];
+
+		for(int i = 0; i < result.numRows(); ++i)
+		{
+		    strncpy(data[i].phylum,result(i,"phylum").c_str(),1023);
+            switch( type )
+		    {
+                case MGT_SPECIES:
+                {
+			        strncpy(data[i].species,result(i,"species").c_str(),1023);
+		            break;
+                }
+		    
+                case MGT_FAMILY:
+                {
+			        strncpy(data[i].species,result(i,"family").c_str(),1023);
+                    break;
+                }
+
+                case MGT_GENUS:
+                {
+                    strncpy(data[i].species,result(i,"genus").c_str(),1023);
+                    break;
+                }
+
+                default:
+                {
+			        strncpy(data[i].species,result(i,"species").c_str(),1023);
+                    break;
+                }
+		    }
+
+		    strncpy(data[i].description,result(i,"description").c_str(),1023);
+		    data[i].value = atof(result(i,"value").c_str());
+		    totalMap[data[i].phylum] += data[i].value;
+		    header.totalValue += data[i].value;
+		}
+	    }
+
+	    std::vector<std::pair<float,std::string> > orderList;
+	    for(std::map<std::string,float>::iterator it = totalMap.begin(); it != totalMap.end(); ++it)
+	    {
+		orderList.push_back(std::pair<float,std::string>(it->second,it->first));
+	    }
+
+	    header.numOrderValues = orderList.size();
+
+	    std::sort(orderList.begin(),orderList.end());
+	    if(orderList.size())
+	    {
+		order = new MicrobeOrderValue[orderList.size()];
+
+		//default sort is backwards, reverse add order
+		for(int i = 0; i < orderList.size(); ++i)
+		{
+		    strncpy(order[i].group,orderList[orderList.size()-i-1].second.c_str(),1023);
+		}
+	    }
+
+	    /*struct timeval start1, end1;
+	    gettimeofday(&start1,NULL);
+
+	    mysqlpp::Query orderq = _conn->query(orderQuery.c_str());
+	    mysqlpp::StoreQueryResult orderr = orderq.store();
+	    gettimeofday(&end1,NULL);
+	    //std::cerr << "Query2: " << (end1.tv_sec - start1.tv_sec) + ((end1.tv_usec - start1.tv_usec) / 1000000.0) << std::endl;
+
+	    header.numOrderValues = orderr.num_rows();
+
+	    if(orderr.num_rows())
+	    {
+		order = new MicrobeOrderValue[orderr.num_rows()];
+
+		for(int i = 0; i < orderr.num_rows(); ++i)
+		{
+		    strncpy(order[i].group,orderr[i]["phylum"].c_str(),1023);
+		}
+	    }*/
+
+	    header.valid = true;
+	}
+	else
+	{
+	    std::cerr << "No Database connection." << std::endl;
+	}
+
+	/*if(_conn)
 	{
 	    struct timeval start,end;
 	    gettimeofday(&start,NULL);
@@ -744,32 +848,12 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
 		}
 	    }
 
-	    /*struct timeval start1, end1;
-	    gettimeofday(&start1,NULL);
-
-	    mysqlpp::Query orderq = _conn->query(orderQuery.c_str());
-	    mysqlpp::StoreQueryResult orderr = orderq.store();
-	    gettimeofday(&end1,NULL);
-	    //std::cerr << "Query2: " << (end1.tv_sec - start1.tv_sec) + ((end1.tv_usec - start1.tv_usec) / 1000000.0) << std::endl;
-
-	    header.numOrderValues = orderr.num_rows();
-
-	    if(orderr.num_rows())
-	    {
-		order = new MicrobeOrderValue[orderr.num_rows()];
-
-		for(int i = 0; i < orderr.num_rows(); ++i)
-		{
-		    strncpy(order[i].group,orderr[i]["phylum"].c_str(),1023);
-		}
-	    }*/
-
 	    header.valid = true;
 	}
 	else
 	{
 	    std::cerr << "No Database connection." << std::endl;
-	}
+	}*/
 
 	ComController::instance()->sendSlaves(&header, sizeof(struct MicrobeDataHeader));
 	if(header.valid)

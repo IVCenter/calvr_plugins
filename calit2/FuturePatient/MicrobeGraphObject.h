@@ -8,7 +8,7 @@
 #include <string>
 #include <map>
 
-#include <mysql++/mysql++.h>
+#include "DBManager.h"
 
 #include "GroupedBarGraph.h"
 #include "LayoutInterfaces.h"
@@ -32,7 +32,7 @@ enum MicrobeGraphType
 class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, public ValueRangeObject
 {
     public:
-        MicrobeGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
+        MicrobeGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~MicrobeGraphObject();
 
         bool setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, std::string microbeTableSuffix, std::string measureTableSuffix, bool group = true, bool lsOrdering = true, MicrobeGraphType type = MGT_SPECIES);
@@ -72,7 +72,7 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
     protected:
         bool loadGraphData(std::string valueQuery, std::string orderQuery, bool group, bool lsOrdering, MicrobeGraphType familyLevel);
 
-        mysqlpp::Connection * _conn;
+        DBManager * _dbm;
         
         std::string _graphTitle;
         std::map<std::string, std::vector<std::pair<std::string, float> > > _graphData;

@@ -6,7 +6,7 @@
 #include <osg/Geode>
 #include <osg/Geometry>
 
-#include <mysql++/mysql++.h>
+#include "DBManager.h"
 
 #include "LayoutInterfaces.h"
 #include "PointLineGraph.h"
@@ -14,7 +14,7 @@
 class MicrobePointLineObject : public LayoutTypeObject, public PatientSelectObject
 {
     public:
-        MicrobePointLineObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
+        MicrobePointLineObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~MicrobePointLineObject();
 
         bool setGraph(std::string microbeTableSuffix, std::string measureTableSuffix, bool expandAxis = false);
@@ -32,7 +32,7 @@ class MicrobePointLineObject : public LayoutTypeObject, public PatientSelectObje
 
     protected:
         PointLineGraph * _graph;
-        mysqlpp::Connection * _conn;
+        DBManager * _dbm;
         bool _desktopMode;
 };
 

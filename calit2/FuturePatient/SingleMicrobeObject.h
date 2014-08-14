@@ -4,7 +4,7 @@
 #include <string>
 #include <map>
 
-#include <mysql++/mysql++.h>
+#include "DBManager.h"
 
 #include "LayoutInterfaces.h"
 #include "GroupedBarGraph.h"
@@ -15,7 +15,7 @@
 class SingleMicrobeObject : public LayoutTypeObject, public PatientSelectObject
 {
     public:
-        SingleMicrobeObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
+        SingleMicrobeObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~SingleMicrobeObject();
 
         bool setGraph(std::string microbe, std::string titleSuffix, int taxid, std::string microbeTableSuffix, std::string measureTableSuffix, MicrobeGraphType type = MGT_SPECIES, bool rankOrder=true, bool labels=true, bool firstOnly=false, bool groupPatients=false);
@@ -33,7 +33,7 @@ class SingleMicrobeObject : public LayoutTypeObject, public PatientSelectObject
 
     protected:
         GroupedBarGraph * _graph;
-        mysqlpp::Connection * _conn;
+        DBManager * _dbm;
         bool _desktopMode;
 
         std::map<std::string,bool> _cdCountMap;

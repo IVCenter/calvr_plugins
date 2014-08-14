@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include <mysql++/mysql++.h>
+#include "DBManager.h"
 
 #include "LayoutInterfaces.h"
 #include "TimeRangeDataGraph.h"
@@ -11,7 +11,7 @@
 class SymptomGraphObject : public LayoutTypeObject, public TimeRangeObject
 {
     public:
-        SymptomGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
+        SymptomGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~SymptomGraphObject();
 
         bool addGraph(std::string name);
@@ -38,7 +38,7 @@ class SymptomGraphObject : public LayoutTypeObject, public TimeRangeObject
     protected:
         bool addGraphMicrobe(std::string name);
 
-        mysqlpp::Connection * _conn;
+        DBManager * _dbm;
 
         TimeRangeDataGraph * _graph;
 

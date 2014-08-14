@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include <mysql++/mysql++.h>
+#include "DBManager.h"
 
 #include "GroupedBarGraph.h"
 #include "LayoutInterfaces.h"
@@ -12,7 +12,7 @@
 class StrainGraphObject: public LayoutTypeObject, public PatientSelectObject, public ValueRangeObject
 {
     public:
-        StrainGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
+        StrainGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~StrainGraphObject();
 
         bool setGraph(std::string title, int taxId, bool larryOnly = false);
@@ -39,7 +39,7 @@ class StrainGraphObject: public LayoutTypeObject, public PatientSelectObject, pu
         virtual void leaveCallback(int handID);
 
     protected:
-        mysqlpp::Connection * _conn;
+        DBManager * _dbm;
 
         GroupedBarGraph * _graph;
 

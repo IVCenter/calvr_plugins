@@ -15,9 +15,9 @@ using namespace cvr;
 MicrobeBarGraphObject::Microbe * MicrobeBarGraphObject::_microbeList = NULL;
 int MicrobeBarGraphObject::_microbeCount = 0;
 
-MicrobeBarGraphObject::MicrobeBarGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
+MicrobeBarGraphObject::MicrobeBarGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
 {
-    _conn = conn;
+    _dbm = dbm;
     _graph = new StackedBarGraph("Microbe Graph",width,height);
     _width = width;
     _height = height;
@@ -129,12 +129,13 @@ bool MicrobeBarGraphObject::addGraph(std::string & label, std::string query)
     {
 	if(ComController::instance()->isMaster())
 	{
-	    if(_conn)
+	    if(_dbm)
 	    {
-		mysqlpp::Query microbeQuery = _conn->query("select * from Microbes;");
-		mysqlpp::StoreQueryResult microbeRes = microbeQuery.store();
+		DBMQueryResult result;
 
-		_microbeCount = microbeRes.num_rows();
+		_dbm->runQuery("select * from Microbes;",result);
+
+		_microbeCount = result.numRows();
 
 		if(_microbeCount)
 		{
@@ -142,19 +143,19 @@ bool MicrobeBarGraphObject::addGraph(std::string & label, std::string query)
 
 		    for(int i = 0; i < _microbeCount; ++i)
 		    {
-			strncpy(_microbeList[i].superkingdom,microbeRes[i]["superkingdom"].c_str(),127);
+			strncpy(_microbeList[i].superkingdom,result(i,"superkingdom").c_str(),127);
 			_microbeList[i].superkingdom[127] = '\0';
-			strncpy(_microbeList[i].phylum,microbeRes[i]["phylum"].c_str(),127);
+			strncpy(_microbeList[i].phylum,result(i,"phylum").c_str(),127);
 			_microbeList[i].phylum[127] = '\0';
-			strncpy(_microbeList[i].mclass,microbeRes[i]["class"].c_str(),127);
+			strncpy(_microbeList[i].mclass,result(i,"class").c_str(),127);
 			_microbeList[i].mclass[127] = '\0';
-			strncpy(_microbeList[i].order,microbeRes[i]["order"].c_str(),127);
+			strncpy(_microbeList[i].order,result(i,"order").c_str(),127);
 			_microbeList[i].order[127] = '\0';
-			strncpy(_microbeList[i].family,microbeRes[i]["family"].c_str(),127);
+			strncpy(_microbeList[i].family,result(i,"family").c_str(),127);
 			_microbeList[i].family[127] = '\0';
-			strncpy(_microbeList[i].genus,microbeRes[i]["genus"].c_str(),127);
+			strncpy(_microbeList[i].genus,result(i,"genus").c_str(),127);
 			_microbeList[i].genus[127] = '\0';
-			strncpy(_microbeList[i].species,microbeRes[i]["species"].c_str(),127);
+			strncpy(_microbeList[i].species,result(i,"species").c_str(),127);
 			_microbeList[i].species[127] = '\0';
 		    }
 		}
@@ -222,21 +223,25 @@ bool MicrobeBarGraphObject::addGraph(std::string & label, std::string query)
 
     if(ComController::instance()->isMaster())
     {
-	mysqlpp::Query q = _conn->query(query);
-	mysqlpp::StoreQueryResult res = q.store();
-
-	dataSize = res.num_rows();
-
-	if(dataSize)
+	if(_dbm)
 	{
-	    data = new struct tempData[dataSize];
-	}
+	    DBMQueryResult result;
 
-	for(int i = 0; i < dataSize; ++i)
-	{
-	    strncpy(data[i].species,res[i]["species"].c_str(),127);
-	    data[i].species[127] = '\0';
-	    data[i].value = atof(res[i]["value"].c_str());
+	    _dbm->runQuery(query,result);
+
+	    dataSize = result.numRows();
+
+	    if(dataSize)
+	    {
+		data = new struct tempData[dataSize];
+	    }
+
+	    for(int i = 0; i < dataSize; ++i)
+	    {
+		strncpy(data[i].species,result(i,"species").c_str(),127);
+		data[i].species[127] = '\0';
+		data[i].value = atof(result(i,"value").c_str());
+	    }
 	}
 
 	ComController::instance()->sendSlaves(&dataSize,sizeof(int));

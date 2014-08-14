@@ -12,9 +12,9 @@
 
 using namespace cvr;
 
-MicrobePointLineObject::MicrobePointLineObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
+MicrobePointLineObject::MicrobePointLineObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
 {
-    _conn = conn;
+    _dbm = dbm;
 
     setBoundsCalcMode(SceneObject::MANUAL);
     osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
@@ -85,15 +85,16 @@ bool MicrobePointLineObject::setGraph(std::string microbeTableSuffix, std::strin
 
     if(ComController::instance()->isMaster())
     {
-	if(_conn)
+	if(_dbm)
 	{
-	    mysqlpp::Query query = _conn->query(querystr.c_str());
-	    mysqlpp::StoreQueryResult res = query.store();
+	    DBMQueryResult result;
+
+	    _dbm->runQuery(querystr,result);
 
 	    std::map<patType,std::map<std::string,std::map<time_t,std::map<std::string,float> > > > sortMap;
-	    for(int i = 0; i < res.num_rows(); ++i)
+	    for(int i = 0; i < result.numRows(); ++i)
 	    {
-		std::string condition = res[i]["p_condition"].c_str();
+		std::string condition = result(i,"p_condition").c_str();
 		patType type;
 		if(condition == "CD" || condition == "crohn's disease")
 		{
@@ -115,7 +116,7 @@ bool MicrobePointLineObject::setGraph(std::string microbeTableSuffix, std::strin
 		{
 		    continue;
 		}
-		sortMap[type][res[i]["last_name"].c_str()][atol(res[i]["timestamp"].c_str())][res[i]["phylum"].c_str()] = atof(res[i]["value"].c_str());
+		sortMap[type][result(i,"last_name").c_str()][atol(result(i,"timestamp").c_str())][result(i,"phylum").c_str()] = atof(result(i,"value").c_str());
 	    }
 
 	    for(std::map<patType,std::map<std::string,std::map<time_t,std::map<std::string,float> > > >::iterator git = sortMap.begin(); git != sortMap.end(); ++git)

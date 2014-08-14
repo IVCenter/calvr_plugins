@@ -1408,34 +1408,34 @@ bool GraphLayoutObject::loadObject(std::istream & in)
     if(objectType == "GRAPH_OBJECT")
     {
 	//std::cerr << "Loading new GraphObject" << std::endl;
-	LayoutTypeObject * obj = new GraphObject(FuturePatient::getConnection(), 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
+	LayoutTypeObject * obj = new GraphObject(FuturePatient::getDBManager(), 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
 	ret = obj->loadState(in);
 	addGraphObject(obj);
     }
     else if(objectType == "SYMPTOM_GRAPH")
     {
 	//std::cerr << "Loading new SymptomGraphObject" << std::endl;
-	LayoutTypeObject * obj = new SymptomGraphObject(FuturePatient::getConnection(), 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
+	LayoutTypeObject * obj = new SymptomGraphObject(FuturePatient::getDBManager(), 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
 	ret = obj->loadState(in);
 	addGraphObject(obj);
     }
     else if(objectType == "MICROBE_GRAPH")
     {
 	//std::cerr << "Loading new MicrobeGraphObject" << std::endl;
-	LayoutTypeObject * obj = new MicrobeGraphObject(FuturePatient::getConnection(), 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	LayoutTypeObject * obj = new MicrobeGraphObject(FuturePatient::getDBManager(), 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 	ret = obj->loadState(in);
 	addGraphObject(obj);
     }
     else if(objectType == "MICROBE_BAR_GRAPH")
     {
 	//std::cerr << "Loading new MicrobeBarGraphObject" << std::endl;
-	LayoutTypeObject * obj = new MicrobeBarGraphObject(FuturePatient::getConnection(), 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	LayoutTypeObject * obj = new MicrobeBarGraphObject(FuturePatient::getDBManager(), 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 	ret = obj->loadState(in);
 	addGraphObject(obj);
     }
     else if(objectType == "UNKNOWN")
     {
-	std::cerr << "Waring: unknown object type" << std::endl;
+	std::cerr << "Warning: unknown object type" << std::endl;
 	return true;
     }
     else

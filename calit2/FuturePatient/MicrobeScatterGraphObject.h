@@ -6,7 +6,7 @@
 #include <osg/Geode>
 #include <osg/Geometry>
 
-#include <mysql++/mysql++.h>
+#include "DBManager.h"
 
 #include "LayoutInterfaces.h"
 #include "GroupedScatterPlot.h"
@@ -15,7 +15,7 @@
 class MicrobeScatterGraphObject : public LayoutTypeObject, public LogValueRangeObject, public PatientSelectObject, public SelectableObject
 {
     public:
-        MicrobeScatterGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
+        MicrobeScatterGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~MicrobeScatterGraphObject();
 
         bool setGraph(std::string title, std::string primaryPhylum, std::string secondaryPhylum);
@@ -52,7 +52,7 @@ class MicrobeScatterGraphObject : public LayoutTypeObject, public LogValueRangeO
         void makeSelect();
         void updateSelect();
 
-        mysqlpp::Connection * _conn;
+        DBManager * _dbm;
         GroupedScatterPlot * _graph;
 
         bool _desktopMode;

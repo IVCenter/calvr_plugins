@@ -13,9 +13,9 @@
 
 using namespace cvr;
 
-StrainHMObject::StrainHMObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
+StrainHMObject::StrainHMObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
 {
-    _conn = conn;
+    _dbm = dbm;
 
     setBoundsCalcMode(SceneObject::MANUAL);
     osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
@@ -56,20 +56,21 @@ bool StrainHMObject::setGraph(std::string title, std::string patientName, int pa
 
     if(ComController::instance()->isMaster())
     {
-	if(_conn)
+	if(_dbm)
 	{
-	    mysqlpp::Query strainQuery = _conn->query(queryss.str().c_str());
-	    mysqlpp::StoreQueryResult strainResult = strainQuery.store();
+	    DBMQueryResult result;
 
-	    dataSize = strainResult.num_rows();
+	    _dbm->runQuery(queryss.str(),result);
+
+	    dataSize = result.numRows();
 	    if(dataSize)
 	    {
 		sdata = new struct StrainData[dataSize];
 
 		for(int i = 0; i < dataSize; ++i)
 		{
-		    sdata[i].value = atof(strainResult[i]["value"].c_str());
-		    sdata[i].timestamp = atol(strainResult[i]["timestamp"].c_str());
+		    sdata[i].value = atof(result(i,"value").c_str());
+		    sdata[i].timestamp = atol(result(i,"timestamp").c_str());
 		}
 	    }
 	}

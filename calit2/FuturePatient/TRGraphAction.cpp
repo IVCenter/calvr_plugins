@@ -11,7 +11,7 @@ void MicrobeGraphAction::action(std::string name, time_t start, time_t end, int 
     GraphLayoutObject * layout = dynamic_cast<GraphLayoutObject*>(symptomObject->getParentObject());
     if(layout)
     {
-	MicrobeGraphObject * mgo = new MicrobeGraphObject(conn,1000,1000,"Microbe Graph", false, true, false, true);
+	MicrobeGraphObject * mgo = new MicrobeGraphObject(dbm,1000,1000,"Microbe Graph", false, true, false, true);
 	char timestamp[512];
 	timestamp[511] = '\0';
 	strftime(timestamp,511,"%F %T",localtime(&start));

@@ -4,7 +4,7 @@
 #include <string>
 #include <map>
 
-#include <mysql++/mysql++.h>
+#include "DBManager.h"
 
 #include "HeatMapGraph.h"
 #include "LayoutInterfaces.h"
@@ -12,7 +12,7 @@
 class StrainHMObject : public LayoutTypeObject, public ValueRangeObject
 {
     public:
-        StrainHMObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
+        StrainHMObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~StrainHMObject();
 
         void setGraphSize(float width, float height);
@@ -34,7 +34,7 @@ class StrainHMObject : public LayoutTypeObject, public ValueRangeObject
     protected:
         bool _desktopMode;
         HeatMapGraph * _graph;
-        mysqlpp::Connection * _conn;
+        DBManager * _dbm;
 };
 
 #endif

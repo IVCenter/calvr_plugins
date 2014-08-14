@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include <mysql++/mysql++.h>
+#include "DBManager.h"
 
 #include "DataGraph.h"
 #include "LayoutInterfaces.h"
@@ -14,7 +14,7 @@
 class GraphObject : public LayoutTypeObject, public TimeRangeObject
 {
     public:
-        GraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
+        GraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~GraphObject();
 
         bool addGraph(std::string patient, std::string name, bool averageColor = false);
@@ -60,7 +60,7 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
         virtual void updateCallback(int handID, const osg::Matrix &mat);
         virtual void leaveCallback(int handID);
     protected:
-        mysqlpp::Connection * _conn;
+        DBManager * _dbm;
         std::vector<std::string> _nameList;
         DataGraph * _graph;
 

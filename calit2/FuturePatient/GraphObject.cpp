@@ -10,9 +10,9 @@
 
 using namespace cvr;
 
-GraphObject::GraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
+GraphObject::GraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
 {
-    _conn = conn;
+    _dbm = dbm;
     _graph = new DataGraph();
     _graph->setDisplaySize(width,height);
 
@@ -105,7 +105,7 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool averageCo
 
     if(ComController::instance()->isMaster())
     {
-	if(_conn)
+	if(_dbm)
 	{
 	    std::stringstream mss;
 	    mss << "select * from Measure where name = \"" << name << "\";";
@@ -113,10 +113,11 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool averageCo
 
 	    //std::cerr << "Query: " << mss.str() << std::endl;
 
-	    mysqlpp::Query metaQuery = _conn->query(mss.str().c_str());
-	    mysqlpp::StoreQueryResult metaRes = metaQuery.store();
+	    DBMQueryResult mresult;
 
-	    if(!metaRes.num_rows())
+	    _dbm->runQuery(mss.str(),mresult);
+
+	    if(!mresult.numRows())
 	    {
 		std::cerr << "Meta Data query result empty for value: " << name << std::endl;
 		gd.valid = false;
@@ -124,25 +125,26 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool averageCo
 	    else
 	    {
 
-		int measureId = atoi(metaRes[0]["measure_id"].c_str());
+		int measureId = atoi(mresult(0,"measure_id").c_str());
 
 		std::stringstream qss;
 		qss << "select Measurement.timestamp, unix_timestamp(Measurement.timestamp) as utime, Measurement.value, Measurement.has_annotation from Measurement inner join Measure on Measurement.measure_id = Measure.measure_id and Measure.measure_id = \"" << measureId << "\" inner join Patient on Measurement.patient_id = Patient.patient_id and Patient.last_name = \"" << patient << "\" order by utime;";
 
 		//std::cerr << "Query: " << qss.str() << std::endl;
 
-		mysqlpp::Query query = _conn->query(qss.str().c_str());
-		mysqlpp::StoreQueryResult res;
-		res = query.store();
+		DBMQueryResult result;
+
+		_dbm->runQuery(qss.str(),result);
 
 		std::stringstream annotationss;
 		annotationss << "select Annotation.text, Annotation.URL, unix_timestamp(Measurement.timestamp) as utime from Measurement inner join Annotation on Measurement.measurement_id = Annotation.measurement_id and Measurement.measure_id = \"" << measureId << "\" inner join Patient on Measurement.patient_id = Patient.patient_id and Patient.last_name = \"" << patient << "\" order by utime;";
 
-		mysqlpp::Query annotationQuery = _conn->query(annotationss.str().c_str());
-		mysqlpp::StoreQueryResult annotationRes = annotationQuery.store();
+		DBMQueryResult aresult;
+
+		_dbm->runQuery(annotationss.str(),aresult);
 
 		//std::cerr << "Num Rows: " << res.num_rows() << std::endl;
-		if(!res.num_rows())
+		if(!result.numRows())
 		{
 		    std::cerr << "Empty query result for name: " << name << " id: " << measureId << std::endl;
 		    gd.valid = false;
@@ -150,28 +152,28 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool averageCo
 		else
 		{
 
-		    points = new osg::Vec3Array(res.num_rows());
-		    colors = new osg::Vec4Array(res.num_rows());
-		    secondary = new osg::Vec4Array(res.num_rows());
+		    points = new osg::Vec3Array(result.numRows());
+		    colors = new osg::Vec4Array(result.numRows());
+		    secondary = new osg::Vec4Array(result.numRows());
 
 		    bool hasGoodRange = false;
 		    float goodLow, goodHigh;
 
-		    if(strcmp(metaRes[0]["good_low"].c_str(),"NULL") || strcmp(metaRes[0]["good_high"].c_str(),"NULL"))
+		    if(strcmp(mresult(0,"good_low").c_str(),"NULL") || strcmp(mresult(0,"good_high").c_str(),"NULL"))
 		    {
 			hasGoodRange = true;
-			if(strcmp(metaRes[0]["good_low"].c_str(),"NULL"))
+			if(strcmp(mresult(0,"good_low").c_str(),"NULL"))
 			{
-			    gd.normalLow = goodLow = atof(metaRes[0]["good_low"].c_str());
+			    gd.normalLow = goodLow = atof(mresult(0,"good_low").c_str());
 			}
 			else
 			{
 			    gd.normalLow = goodLow = FLT_MIN;
 			}
 
-			if(strcmp(metaRes[0]["good_high"].c_str(),"NULL"))
+			if(strcmp(mresult(0,"good_high").c_str(),"NULL"))
 			{
-			    gd.normalHigh = goodHigh = atof(metaRes[0]["good_high"].c_str());
+			    gd.normalHigh = goodHigh = atof(mresult(0,"good_high").c_str());
 			}
 			else
 			{
@@ -185,14 +187,14 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool averageCo
 
 		    //find min/max values
 		    time_t mint, maxt;
-		    mint = maxt = atol(res[0]["utime"].c_str());
+		    mint = maxt = atol(result(0,"utime").c_str());
 		    float minval,maxval;
 		    float total = 0.0;;
-		    minval = maxval = atof(res[0]["value"].c_str());
-		    for(int i = 1; i < res.num_rows(); i++)
+		    minval = maxval = atof(result(0,"value").c_str());
+		    for(int i = 1; i < result.numRows(); i++)
 		    {
-			time_t time = atol(res[i]["utime"].c_str());
-			float value = atof(res[i]["value"].c_str());
+			time_t time = atol(result(i,"utime").c_str());
+			float value = atof(result(i,"value").c_str());
 			total += value;
 
 			if(time < mint)
@@ -213,7 +215,7 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool averageCo
 			}
 		    }
 
-		    gd.average = total / ((float)res.num_rows());
+		    gd.average = total / ((float)result.numRows());
 
 		    //std::cerr << "Mintime: " << mint << " Maxtime: " << maxt << " MinVal: " << minval << " Maxval: " << maxval << std::endl;
 
@@ -231,11 +233,11 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool averageCo
 		    }
 
 		    int annCount = 0;
-		    for(int i = 0; i < res.num_rows(); i++)
+		    for(int i = 0; i < result.numRows(); i++)
 		    {
-			time_t time = atol(res[i]["utime"].c_str());
-			float value = atof(res[i]["value"].c_str());
-			int hasAnn = atoi(res[i]["has_annotation"].c_str());
+			time_t time = atol(result(i,"utime").c_str());
+			float value = atof(result(i,"value").c_str());
+			int hasAnn = atoi(result(i,"has_annotation").c_str());
 			if(hasAnn)
 			{
 			    annCount++;
@@ -294,15 +296,15 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool averageCo
 		    }
 		    gd.valid = true;
 
-		    strncpy(gd.displayName, metaRes[0]["display_name"].c_str(), 255);
-		    strncpy(gd.units, metaRes[0]["units"].c_str(), 255);
+		    strncpy(gd.displayName, mresult(0,"display_name").c_str(), 255);
+		    strncpy(gd.units, mresult(0,"units").c_str(), 255);
 		    gd.minValue = minval;
 		    gd.maxValue = maxval;
 		    gd.minTime = mint;
 		    gd.maxTime = maxt;
-		    gd.numPoints = res.num_rows();
+		    gd.numPoints = result.numRows();
 
-		    annCount = std::min(annCount,(int)annotationRes.num_rows());
+		    annCount = std::min(annCount,(int)aresult.numRows());
 
 		    if(annCount)
 		    {
@@ -310,19 +312,19 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool averageCo
 		    }
 
 		    int annIndex = 0;
-		    for(int i = 0; i < res.num_rows(); i++)
+		    for(int i = 0; i < result.numRows(); i++)
 		    {
-			if(annIndex >= annotationRes.num_rows())
+			if(annIndex >= aresult.numRows())
 			{
 			    break;
 			}
 
-			int hasAnn = atoi(res[i]["has_annotation"].c_str());
+			int hasAnn = atoi(result(i,"has_annotation").c_str());
 			if(hasAnn)
 			{
 			    annotations[annIndex].point = i;
-			    strncpy(annotations[annIndex].text, annotationRes[annIndex]["text"].c_str(), 1023);
-			    strncpy(annotations[annIndex].url, annotationRes[annIndex]["URL"].c_str(), 2047);
+			    strncpy(annotations[annIndex].text, aresult(annIndex,"text").c_str(), 1023);
+			    strncpy(annotations[annIndex].url, aresult(annIndex,"URL").c_str(), 2047);
 			    annIndex++;
 			}
 		    }

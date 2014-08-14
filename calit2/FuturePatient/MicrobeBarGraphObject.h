@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include <mysql++/mysql++.h>
+#include "DBManager.h"
 
 #include "StackedBarGraph.h"
 #include "MicrobeGraphObject.h"
@@ -13,7 +13,7 @@
 class MicrobeBarGraphObject : public LayoutTypeObject, public MicrobeSelectObject
 {
     public:
-        MicrobeBarGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
+        MicrobeBarGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~MicrobeBarGraphObject();
 
         bool addGraph(std::string label, int patientid, std::string testLabel, std::string microbeTableSuffix, std::string measureTableSuffix);
@@ -35,7 +35,7 @@ class MicrobeBarGraphObject : public LayoutTypeObject, public MicrobeSelectObjec
     protected:
         bool addGraph(std::string & label, std::string query);
 
-        mysqlpp::Connection * _conn;
+        DBManager * _dbm;
 
         float _width, _height;
 

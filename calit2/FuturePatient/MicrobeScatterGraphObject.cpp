@@ -20,10 +20,10 @@ std::map<std::string,int> MicrobeScatterGraphObject::_phylumIndexMap;
 
 using namespace cvr;
 
-MicrobeScatterGraphObject::MicrobeScatterGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds), SelectableObject()
+MicrobeScatterGraphObject::MicrobeScatterGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds), SelectableObject()
 {
     _graph = new GroupedScatterPlot(width,height);
-    _conn = conn;
+    _dbm = dbm;
 
     _desktopMode = ConfigManager::getBool("Plugin.FuturePatient.DesktopMode",false);
 
@@ -321,7 +321,7 @@ void MicrobeScatterGraphObject::initData()
 
     if(ComController::instance()->isMaster())
     {
-	if(_conn)
+	if(_dbm)
 	{
 	    std::string sizesQuery = "SELECT q.phylum, count(q.value) as count from (SELECT Microbes.phylum, Patient.last_name, unix_timestamp(Microbe_Measurement.timestamp) as timestamp, sum(Microbe_Measurement.value) as value FROM Microbe_Measurement INNER JOIN Patient ON Microbe_Measurement.patient_id = Patient.patient_id INNER JOIN Microbes ON Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id GROUP BY Patient.last_name, Microbe_Measurement.timestamp, Microbes.phylum ORDER BY Microbes.phylum, Patient.last_name, Microbe_Measurement.timestamp)q group by q.phylum order by q.phylum;";
 	    std::string orderQuery = "SELECT q.phylum, q.last_name, q.timestamp from (SELECT Microbes.phylum, Patient.last_name, unix_timestamp(Microbe_Measurement.timestamp) as timestamp, sum(Microbe_Measurement.value) as value FROM Microbe_Measurement INNER JOIN Patient ON Microbe_Measurement.patient_id = Patient.patient_id INNER JOIN Microbes ON Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id GROUP BY Patient.last_name, Microbe_Measurement.timestamp, Microbes.phylum ORDER BY Microbes.phylum, Patient.last_name, Microbe_Measurement.timestamp)q order by q.phylum, q.last_name, q.timestamp;";
@@ -329,10 +329,11 @@ void MicrobeScatterGraphObject::initData()
 
 	    std::cerr << "Starting first query." << std::endl;
 
-	    mysqlpp::Query sQuery = _conn->query(sizesQuery.c_str());
-	    mysqlpp::StoreQueryResult sRes = sQuery.store();
+	    DBMQueryResult sresult;
 
-	    numPhylum = sRes.num_rows();
+	    _dbm->runQuery(sizesQuery,sresult);
+
+	    numPhylum = sresult.numRows();
 
 	    std::cerr << "Num Phylum: " << numPhylum << std::endl;
 
@@ -342,51 +343,53 @@ void MicrobeScatterGraphObject::initData()
 		orderSizes = new int[numPhylum];
 		for(int i = 0; i < numPhylum; ++i)
 		{
-		    strncpy(phylums[i].name,sRes[i]["phylum"].c_str(),1023);
-		    orderSizes[i] = atoi(sRes[i]["count"].c_str());
+		    strncpy(phylums[i].name,sresult(i,"phylum").c_str(),1023);
+		    orderSizes[i] = atoi(sresult(i,"count").c_str());
 		    orderTotal += orderSizes[i];
 		}
 
 		std::cerr << "OrderTotal: " << orderTotal << std::endl;
 
-		mysqlpp::Query oQuery = _conn->query(orderQuery.c_str());
-		mysqlpp::StoreQueryResult oRes = oQuery.store();
+                DBMQueryResult oresult;
+
+		_dbm->runQuery(orderQuery,oresult);
 
 		std::cerr << "Second done." << std::endl;
 
-		if(oRes.num_rows() == orderTotal)
+		if(oresult.numRows() == orderTotal)
 		{
 		    order = new struct orderEntry[orderTotal];
 		    for(int i = 0; i < orderTotal; ++i)
 		    {
-			strncpy(order[i].name,oRes[i]["last_name"].c_str(),1023);
-			order[i].timestamp = atol(oRes[i]["timestamp"].c_str());
+			strncpy(order[i].name,oresult(i,"last_name").c_str(),1023);
+			order[i].timestamp = atol(oresult(i,"timestamp").c_str());
 		    }
 		}
 		else
 		{
-		    std::cerr << "Number of order rows different than expected. Wanted: " << orderTotal << " Got: " << oRes.num_rows() << std::endl;
+		    std::cerr << "Number of order rows different than expected. Wanted: " << orderTotal << " Got: " << oresult.numRows() << std::endl;
 		    orderTotal = 0;
 		}
 
 		std::cerr << "Last started." << std::endl;
 
-		mysqlpp::Query vQuery = _conn->query(query.c_str());
-		mysqlpp::StoreQueryResult vRes = vQuery.store();
+		DBMQueryResult vresult;
+
+		_dbm->runQuery(query,vresult);
 
 		std::cerr << "Last done." << std::endl;
 
-		if(vRes.num_rows() == orderTotal)
+		if(vresult.numRows() == orderTotal)
 		{
 		    data = new float[orderTotal];
 		    for(int i = 0; i < orderTotal; ++i)
 		    {
-			data[i] = atof(vRes[i]["value"].c_str());
+			data[i] = atof(vresult(i,"value").c_str());
 		    }
 		}
 		else
 		{
-		    std::cerr << "Number of values different than expected. Wanted: " << orderTotal << " Got: " << vRes.num_rows() << std::endl;
+		    std::cerr << "Number of values different than expected. Wanted: " << orderTotal << " Got: " << vresult.numRows() << std::endl;
 		    orderTotal = 0;
 		}
 	    }

@@ -14,9 +14,9 @@
 
 using namespace cvr;
 
-SingleMicrobeObject::SingleMicrobeObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
+SingleMicrobeObject::SingleMicrobeObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
 {
-    _conn = conn;
+    _dbm = dbm;
 
     setBoundsCalcMode(SceneObject::MANUAL);
     osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
@@ -93,7 +93,31 @@ bool SingleMicrobeObject::setGraph(std::string microbe, std::string titleSuffix,
 
     if(ComController::instance()->isMaster())
     {
-	if(_conn)
+	if(_dbm)
+	{
+	    DBMQueryResult result;
+
+	    _dbm->runQuery(queryss.str(),result);
+
+	    dataSize = result.numRows();
+
+	    if(dataSize)
+	    {
+		data = new struct microbeData[dataSize];
+		for(int i = 0; i < dataSize; ++i)
+		{
+		    data[i].name[511] = '\0';
+		    strncpy(data[i].name,result(i,"last_name").c_str(),511);
+		    data[i].condition[511] = '\0';
+		    strncpy(data[i].condition,result(i,"p_condition").c_str(),511);
+		    data[i].id = atoi(result(i,"patient_id").c_str());
+		    data[i].timestamp = atol(result(i,"timestamp").c_str());
+		    data[i].value = atof(result(i,"value").c_str());
+		}
+	    }
+	}
+
+	/*if(_conn)
 	{
 	    mysqlpp::Query query = _conn->query(queryss.str().c_str());
 	    mysqlpp::StoreQueryResult res = query.store();
@@ -114,7 +138,7 @@ bool SingleMicrobeObject::setGraph(std::string microbe, std::string titleSuffix,
 		    data[i].value = atof(res[i]["value"].c_str());
 		}
 	    }
-	}
+	}*/
 
 	ComController::instance()->sendSlaves(&dataSize,sizeof(int));
 	if(dataSize)

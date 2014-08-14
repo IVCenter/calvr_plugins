@@ -27,6 +27,8 @@ SET(PLUGIN_HEADERS
     PointLineGraph.h
     TRGraphAction.h
     SingleMicrobeObject.h
+    DBManager.h
+    md5.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -59,6 +61,8 @@ ADD_LIBRARY(${LIB_NAME}
     PointLineGraph.cpp
     TRGraphAction.cpp
     SingleMicrobeObject.cpp
+    DBManager.cpp
+    md5.cpp
 )
 
 FIND_PACKAGE(Mysql)

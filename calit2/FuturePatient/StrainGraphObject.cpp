@@ -12,9 +12,9 @@
 
 using namespace cvr;
 
-StrainGraphObject::StrainGraphObject(mysqlpp::Connection * conn, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
+StrainGraphObject::StrainGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
 {
-    _conn = conn;
+    _dbm = dbm;
 
     setBoundsCalcMode(SceneObject::MANUAL);
     osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
@@ -56,7 +56,28 @@ bool StrainGraphObject::setGraph(std::string title, int taxId, bool larryOnly)
 
     if(ComController::instance()->isMaster())
     {
-	if(_conn)
+	if(_dbm)
+	{
+	    DBMQueryResult result;
+
+	    _dbm->runQuery(ss.str(),result);
+
+	    dataSize = result.numRows();
+	    if(dataSize)
+	    {
+		sdata = new struct StrainData[dataSize];
+
+		for(int i = 0; i < dataSize; ++i)
+		{
+		    strncpy(sdata[i].name,result(i,"last_name").c_str(),1023);
+		    strncpy(sdata[i].group,result(i,"p_condition").c_str(),1023);
+		    sdata[i].value = atof(result(i,"value").c_str());
+		    sdata[i].timestamp = atol(result(i,"timestamp").c_str());
+		}
+	    }
+	}
+
+	/*if(_conn)
 	{
 	    mysqlpp::Query strainQuery = _conn->query(ss.str().c_str());
 	    mysqlpp::StoreQueryResult strainResult = strainQuery.store();
@@ -78,7 +99,7 @@ bool StrainGraphObject::setGraph(std::string title, int taxId, bool larryOnly)
 	else
 	{
 	    std::cerr << "No Database connection." << std::endl;
-	}
+	}*/
 
 	ComController::instance()->sendSlaves(&dataSize,sizeof(int));
 	if(dataSize)
