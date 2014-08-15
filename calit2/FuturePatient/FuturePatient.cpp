@@ -492,6 +492,10 @@ bool FuturePatient::init()
     _scatterLoadAll->setCallback(this);
     _scatterMenu->addItem(_scatterLoadAll);
 
+    _dbCache = new MenuCheckbox("DB Cache",true);
+    _dbCache->setCallback(this);
+    _fpMenu->addItem(_dbCache);
+
     _removeAllButton = new MenuButton("Remove All");
     _removeAllButton->setCallback(this);
     _fpMenu->addItem(_removeAllButton);
@@ -1387,6 +1391,15 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    _layoutObject->setRows(7.0);
 	    _layoutObject->setSyncTime(true);
 	}
+    }
+
+    if(item == _dbCache)
+    {
+	if(_dbm)
+	{
+	    _dbm->setUseCache(_dbCache->getValue());
+	}
+	return;
     }
 
     if(item == _removeAllButton)

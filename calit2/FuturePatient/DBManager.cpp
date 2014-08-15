@@ -15,6 +15,8 @@ DBManager::DBManager(std::string database, std::string server, std::string user,
 	_conn = NULL;
     }
 
+    _useCache = true;
+
     if(!cacheDir.empty())
     {
 	_withCache = true;
@@ -39,7 +41,7 @@ bool DBManager::runQuery(std::string query, DBMQueryResult & result)
 	return false;
     }
 
-    if(_withCache)
+    if(_withCache && _useCache)
     {
 	bool status;
 	status = loadFromCache(query,result);
@@ -55,7 +57,12 @@ bool DBManager::runQuery(std::string query, DBMQueryResult & result)
     }
     else
     {
-	return loadFromDB(query,result);
+	bool status = loadFromDB(query,result);
+	if(status && _withCache)
+	{
+	    writeToCache(query,result);
+	}
+	return status;
     }
 }
 

@@ -38,6 +38,15 @@ class DBManager
 
         bool isConnected();
 
+        void setUseCache(bool b)
+        {
+            _useCache = b;
+        }
+        bool getUseCache()
+        {
+            return _useCache;
+        }
+
         bool runQuery(std::string query, DBMQueryResult & result);
 
     protected:
@@ -48,6 +57,7 @@ class DBManager
 
         mysqlpp::Connection * _conn;
 
+        bool _useCache;
         bool _withCache;
         std::string _cacheDir;
 };

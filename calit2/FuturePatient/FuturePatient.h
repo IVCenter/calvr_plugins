@@ -130,6 +130,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         std::vector<std::string> _microbeV2List;
         std::vector<int> _microbeV2IDList;*/
 
+        cvr::MenuCheckbox * _dbCache;
+
         cvr::SubMenu * _chartMenu;
         cvr::SubMenu * _presetMenu;
         cvr::MenuButton * _inflammationButton;
