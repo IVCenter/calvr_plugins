@@ -1889,13 +1889,23 @@ void FuturePatient::menuCallback(MenuItem * item)
 	else
 	{
 	    std::string text = _sMicrobeEntry->getText();
-	    for(int i = 0; i < _microbeTableList[_microbeTable->getIndex()]->microbeList.size(); ++i)
+
+	    //std::cerr << "Entry text: " << text << std::endl;
+	    for(int i = 0; i < _sMicrobes->getListSize() ; ++i)
 	    {
-		if(text == _microbeTableList[_microbeTable->getIndex()]->microbeList[i])
+		if(text == _sMicrobes->getValue(i))
 		{
-		    //std::cerr << "loading microbe: " << _microbeTableList[_microbeTable->getIndex()]->microbeList[i] << " id: " << _microbeTableList[_microbeTable->getIndex()]->microbeIDList[i] << std::endl;
-		    name = _microbeTableList[_microbeTable->getIndex()]->microbeList[i];
-		    taxid = _microbeTableList[_microbeTable->getIndex()]->microbeIDList[i];
+		    name = _sMicrobes->getValue(i);
+		    if(i < _microbeTableList[_microbeTable->getIndex()]->microbeIDList.size())
+		    {
+			taxid = _microbeTableList[_microbeTable->getIndex()]->microbeIDList[i];
+		    }
+		    else
+		    {
+			taxid = 0;
+		    }
+
+		    //std::cerr << "loading microbe: " << name << " id: " << taxid << std::endl;
 		    break;
 		}
 	    }
