@@ -6,6 +6,7 @@
 #include <cvrKernel/ComController.h>
 #include <cvrKernel/CVRViewer.h>
 #include <cvrKernel/CVRStatsHandler.h>
+#include <cvrKernel/NodeMask.h>
 #include <cvrUtil/OsgMath.h>
 
 #include <iostream>
@@ -40,6 +41,8 @@ PagedFlowObject::PagedFlowObject(PagedDataSet * set, osg::BoundingBox bb, std::s
     osg::Geode * geode = new osg::Geode();
     geode->addDrawable(_callbackDrawable);
     addChild(geode);
+
+    _root->setNodeMask(_root->getNodeMask() & ~(CULL_ENABLE));
 
     _animateCB = new MenuCheckbox("Animate",false);
     _animateCB->setCallback(this);
