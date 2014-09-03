@@ -361,6 +361,14 @@ void GroupedScatterPlot::clearHoverText()
     }
 }
 
+void GroupedScatterPlot::setColorMapping(osg::Vec4 def, const std::map<std::string,osg::Vec4> & colorMap)
+{
+    _defaultGroupColor = def;
+    _groupColorMap = colorMap;
+
+    update();
+}
+
 void GroupedScatterPlot::makeBG()
 {
     osg::Geometry * geom = new osg::Geometry();
@@ -722,7 +730,17 @@ void GroupedScatterPlot::updateGraph()
     float secondLogMax = log10(_secondDisplayMax);
     for(std::map<int,std::vector<std::pair<float,float> > >::iterator it = _plotData.begin(); it != _plotData.end(); ++it)
     {
-	osg::Vec4 color = ColorGenerator::makeColor(it->first,_maxIndex+1);
+	//osg::Vec4 color = ColorGenerator::makeColor(it->first,_maxIndex+1);
+	osg::Vec4 color;
+
+	if(_groupColorMap.find(_indexLabels[it->first]) != _groupColorMap.end())
+	{
+	    color = _groupColorMap[_indexLabels[it->first]];
+	}
+	else
+	{
+	    color = _defaultGroupColor;
+	}
 
 	for(int i = 0; i < it->second.size(); ++i)
 	{

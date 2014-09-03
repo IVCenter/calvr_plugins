@@ -472,17 +472,37 @@ bool FuturePatient::init()
     _scatterMenu = new SubMenu("Scatter Plots");
     _fpMenu->addItem(_scatterMenu);
 
-    _scatterFirstLabel = new MenuText("Primary Phylum:",1.0,false);
+    _scatterMicrobeType = new MenuList();
+    _scatterMicrobeType->setCallback(this);
+    _scatterMenu->addItem(_scatterMicrobeType);
+
+    std::vector<std::string> typeList;
+    typeList.push_back("Species");
+    typeList.push_back("Family");
+    typeList.push_back("Genus");
+    typeList.push_back("Phylum");
+    _scatterMicrobeType->setValues(typeList);
+    _scatterMicrobeType->setIndex(3);
+
+    _scatterFirstLabel = new MenuText("Primary:",1.0,false);
     _scatterMenu->addItem(_scatterFirstLabel);
 
     _scatterFirstList = new MenuList();
     _scatterMenu->addItem(_scatterFirstList);
 
-    _scatterSecondLabel = new MenuText("Secondary Phylum:",1.0,false);
+    _scatterFirstEntry = new MenuTextEntryItem("Manual Entry","",MenuItemGroup::ALIGN_CENTER);
+    _scatterFirstEntry->setCallback(this);
+    _scatterMenu->addItem(_scatterFirstEntry);
+
+    _scatterSecondLabel = new MenuText("Secondary:",1.0,false);
     _scatterMenu->addItem(_scatterSecondLabel);
 
     _scatterSecondList = new MenuList();
     _scatterMenu->addItem(_scatterSecondList);
+
+    _scatterSecondEntry = new MenuTextEntryItem("Manual Entry","",MenuItemGroup::ALIGN_CENTER);
+    _scatterSecondEntry->setCallback(this);
+    _scatterMenu->addItem(_scatterSecondEntry);
 
     _scatterLoad = new MenuButton("Load");
     _scatterLoad->setCallback(this);
@@ -1108,8 +1128,11 @@ bool FuturePatient::init()
 	stringlist.push_back(lfList[i].entry);
     }
 
+    _scatterPhylumList = stringlist;
     _scatterFirstList->setValues(stringlist);
     _scatterSecondList->setValues(stringlist);
+    _scatterFirstEntry->setSearchList(_scatterPhylumList,5);
+    _scatterSecondEntry->setSearchList(_scatterPhylumList,5);
 
     if(lfList)
     {
@@ -1445,6 +1468,8 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    updateMicrobeTests(_microbePatients->getIndex() + 1);
 	}
 
+	menuCallback(_scatterMicrobeType);
+
 	/*if(_microbeTable->getIndex() == 0)
 	{
 	    _sMicrobes->setValues(_microbeList);
@@ -1467,6 +1492,38 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    _sMicrobes->setValues(_microbeTableList[_microbeTable->getIndex()]->genusList);
 	    _sMicrobeEntry->setSearchList(_microbeTableList[_microbeTable->getIndex()]->genusList,5);
+	}
+    }
+
+    if(item == _scatterMicrobeType)
+    {
+	if(_scatterMicrobeType->getValue() == "Species")
+	{
+	    _scatterFirstList->setValues(_microbeTableList[_microbeTable->getIndex()]->microbeList);
+	    _scatterSecondList->setValues(_microbeTableList[_microbeTable->getIndex()]->microbeList);
+	    _scatterFirstEntry->setSearchList(_microbeTableList[_microbeTable->getIndex()]->microbeList,5);
+	    _scatterSecondEntry->setSearchList(_microbeTableList[_microbeTable->getIndex()]->microbeList,5);
+	}
+	else if(_scatterMicrobeType->getValue() == "Family")
+	{
+	    _scatterFirstList->setValues(_microbeTableList[_microbeTable->getIndex()]->familyList);
+	    _scatterSecondList->setValues(_microbeTableList[_microbeTable->getIndex()]->familyList);
+	    _scatterFirstEntry->setSearchList(_microbeTableList[_microbeTable->getIndex()]->familyList,5);
+	    _scatterSecondEntry->setSearchList(_microbeTableList[_microbeTable->getIndex()]->familyList,5);
+	}
+	else if(_scatterMicrobeType->getValue() == "Genus")
+	{
+	    _scatterFirstList->setValues(_microbeTableList[_microbeTable->getIndex()]->genusList);
+	    _scatterSecondList->setValues(_microbeTableList[_microbeTable->getIndex()]->genusList);
+	    _scatterFirstEntry->setSearchList(_microbeTableList[_microbeTable->getIndex()]->genusList,5);
+	    _scatterSecondEntry->setSearchList(_microbeTableList[_microbeTable->getIndex()]->genusList,5);
+	}
+	else
+	{
+	    _scatterFirstList->setValues(_scatterPhylumList);
+	    _scatterSecondList->setValues(_scatterPhylumList);
+	    _scatterFirstEntry->setSearchList(_scatterPhylumList,5);
+	    _scatterSecondEntry->setSearchList(_scatterPhylumList,5);
 	}
     }
 
@@ -2123,12 +2180,44 @@ void FuturePatient::menuCallback(MenuItem * item)
 	_eventMenu->removeItem(_eventDone);
     }
 
+    if(item == _scatterFirstEntry)
+    {
+	std::string entryText = _scatterFirstEntry->getText();
+
+	for(int i = 0; i < _scatterFirstList->getListSize(); ++i)
+	{
+	    if(_scatterFirstList->getValue(i) == entryText)
+	    {
+		_scatterFirstList->setIndex(i);
+		break;
+	    }
+	}
+
+	_scatterFirstEntry->setText("");
+    }
+
+    if(item == _scatterSecondEntry)
+    {
+	std::string entryText = _scatterSecondEntry->getText();
+
+	for(int i = 0; i < _scatterSecondList->getListSize(); ++i)
+	{
+	    if(_scatterSecondList->getValue(i) == entryText)
+	    {
+		_scatterSecondList->setIndex(i);
+		break;
+	    }
+	}
+
+	_scatterSecondEntry->setText("");
+    }
+
     if(item == _scatterLoad)
     {
 	if(_scatterFirstList->getListSize() && _scatterFirstList->getIndex() != _scatterSecondList->getIndex())
 	{
 	    MicrobeScatterGraphObject * msgo = new MicrobeScatterGraphObject(_dbm, 1000.0, 1000.0, "Scatter Plot", false, true, false, true);
-	    if(msgo->setGraph(_scatterSecondList->getValue() + " vs " + _scatterFirstList->getValue(),_scatterFirstList->getValue(),_scatterSecondList->getValue()))
+	    if(msgo->setGraph(_scatterSecondList->getValue() + " vs " + _scatterFirstList->getValue(),_scatterFirstList->getValue(),_scatterSecondList->getValue(),(MicrobeGraphType)_scatterMicrobeType->getIndex(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix))
 	    {
 		checkLayout();
 		_layoutObject->addGraphObject(msgo);
@@ -2152,7 +2241,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		    continue;
 		}
 		MicrobeScatterGraphObject * msgo = new MicrobeScatterGraphObject(_dbm, 1000.0, 1000.0, "Scatter Plot", false, true, false, true);
-		if(msgo->setGraph(_scatterSecondList->getValue(i) + " vs " + _scatterFirstList->getValue(),_scatterFirstList->getValue(),_scatterSecondList->getValue(i)))
+		if(msgo->setGraph(_scatterSecondList->getValue(i) + " vs " + _scatterFirstList->getValue(),_scatterFirstList->getValue(),_scatterSecondList->getValue(i),(MicrobeGraphType)_scatterMicrobeType->getIndex(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix))
 		{
 		    checkLayout();
 		    _layoutObject->addGraphObject(msgo);

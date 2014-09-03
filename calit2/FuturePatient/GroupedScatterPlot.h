@@ -74,6 +74,8 @@ class GroupedScatterPlot
         void setHover(osg::Vec3 intersect);
         void clearHoverText();
 
+        void setColorMapping(osg::Vec4 def, const std::map<std::string,osg::Vec4> & colorMap);
+
         osg::Group * getRootNode()
         {
             return _root.get();
@@ -138,6 +140,9 @@ class GroupedScatterPlot
 
         std::string _selectedGroup;
         std::vector<std::string> _selectedLabels;
+
+        osg::Vec4 _defaultGroupColor;
+        std::map<std::string,osg::Vec4> _groupColorMap;
 };
 
 #endif

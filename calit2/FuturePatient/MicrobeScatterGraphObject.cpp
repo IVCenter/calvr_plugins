@@ -46,9 +46,393 @@ MicrobeScatterGraphObject::~MicrobeScatterGraphObject()
 {
 }
 
-bool MicrobeScatterGraphObject::setGraph(std::string title, std::string primaryPhylum, std::string secondaryPhylum)
+bool MicrobeScatterGraphObject::setGraph(std::string title, std::string primaryPhylum, std::string secondaryPhylum, MicrobeGraphType type, std::string microbeTableSuffix, std::string measureTableSuffix)
 {
-    if(!_dataInit)
+    std::string measurementTable = "Microbe_Measurement";
+    measurementTable += measureTableSuffix;
+
+    std::string microbesTable = "Microbes";
+    microbesTable += microbeTableSuffix;
+
+    struct microbeData
+    {
+	char name[512];
+	char condition[512];
+	int id;
+	time_t timestamp;
+	float value;
+    };
+
+    std::stringstream queryss;
+
+    switch( type )
+    {
+        case MGT_SPECIES:
+	default:
+        {
+	    //queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where " << measurementTable << ".taxonomy_id = " << taxid << " and Patient.region = \"US\" order by p_condition, last_name, timestamp;";
+	    queryss << "select Patient.p_condition, Patient.last_name, t.patient_id, unix_timestamp(t.timestamp) as timestamp, t.value from (select " << measurementTable << ".patient_id, " << measurementTable << ".timestamp, " << measurementTable << ".value as value from "<< measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id where " << microbesTable << ".species = \"" << primaryPhylum << "\")t inner join Patient on t.patient_id = Patient.patient_id where Patient.region = \"US\" order by Patient.p_condition, Patient.last_name, t.timestamp;";
+            break;
+        }
+    
+        case MGT_FAMILY:
+        {
+	    queryss << "select Patient.p_condition, Patient.last_name, t.patient_id, unix_timestamp(t.timestamp) as timestamp, t.value from (select " << microbesTable << ".family, " << measurementTable << ".patient_id, " << measurementTable << ".timestamp, sum(" << measurementTable << ".value) as value from "<< measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id where " << microbesTable << ".family = \"" << primaryPhylum << "\" group by " << measurementTable << ".patient_id, " << measurementTable << ".timestamp)t inner join Patient on t.patient_id = Patient.patient_id where Patient.region = \"US\" order by Patient.p_condition, Patient.last_name, t.timestamp;";
+	        //queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << microbesTable << ".family, sum(" << measurementTable << ".value) as value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id inner join " << microbesTable << " on " << microbesTable << ".taxonomy_id = " << measurementTable << ".taxonomy_id where " << microbesTable << ".family = \"" << microbe << "\" and Patient.region = \"US\" group by patient_id, timestamp order by p_condition, last_name, timestamp;";
+            break;
+        }
+
+        case MGT_GENUS:
+        {
+	    queryss << "select Patient.p_condition, Patient.last_name, t.patient_id, unix_timestamp(t.timestamp) as timestamp, t.value from (select " << microbesTable << ".genus, " << measurementTable << ".patient_id, " << measurementTable << ".timestamp, sum(" << measurementTable << ".value) as value from "<< measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id where " << microbesTable << ".genus = \"" << primaryPhylum << "\" group by " << measurementTable << ".patient_id, " << measurementTable << ".timestamp)t inner join Patient on t.patient_id = Patient.patient_id where Patient.region = \"US\" order by Patient.p_condition, Patient.last_name, t.timestamp;";
+	        //queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << microbesTable << ".genus, sum(" << measurementTable << ".value) as value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id inner join " << microbesTable << " on " << microbesTable << ".taxonomy_id = " << measurementTable << ".taxonomy_id where " << microbesTable << ".genus = \"" << microbe << "\" and Patient.region = \"US\" group by patient_id, timestamp order by p_condition, last_name, timestamp;";
+
+            break;
+        }
+
+	case MGT_PHYLUM:
+	{
+	    queryss << "select Patient.p_condition, Patient.last_name, t.patient_id, unix_timestamp(t.timestamp) as timestamp, t.value from (select " << microbesTable << ".genus, " << measurementTable << ".patient_id, " << measurementTable << ".timestamp, sum(" << measurementTable << ".value) as value from "<< measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id where " << microbesTable << ".phylum = \"" << primaryPhylum << "\" group by " << measurementTable << ".patient_id, " << measurementTable << ".timestamp)t inner join Patient on t.patient_id = Patient.patient_id where Patient.region = \"US\" order by Patient.p_condition, Patient.last_name, t.timestamp;";
+	}
+
+        /*default:
+        {
+	        queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where " << measurementTable << ".taxonomy_id = " << taxid << " and Patient.region = \"US\" order by p_condition, last_name, timestamp;";
+
+            break;
+        }*/
+    }
+
+    //std::cerr << "Query: " << queryss.str() << std::endl;
+
+    struct microbeData * data = NULL;
+    int dataSize = 0;
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_dbm)
+	{
+	    DBMQueryResult result;
+
+	    _dbm->runQuery(queryss.str(),result);
+
+	    dataSize = result.numRows();
+
+	    if(dataSize)
+	    {
+		data = new struct microbeData[dataSize];
+		for(int i = 0; i < dataSize; ++i)
+		{
+		    data[i].name[511] = '\0';
+		    strncpy(data[i].name,result(i,"last_name").c_str(),511);
+		    data[i].condition[511] = '\0';
+		    strncpy(data[i].condition,result(i,"p_condition").c_str(),511);
+		    data[i].id = atoi(result(i,"patient_id").c_str());
+		    data[i].timestamp = atol(result(i,"timestamp").c_str());
+		    data[i].value = atof(result(i,"value").c_str());
+		}
+	    }
+	}
+
+	/*if(_conn)
+	{
+	    mysqlpp::Query query = _conn->query(queryss.str().c_str());
+	    mysqlpp::StoreQueryResult res = query.store();
+
+	    dataSize = res.num_rows();
+
+	    if(dataSize)
+	    {
+		data = new struct microbeData[dataSize];
+		for(int i = 0; i < dataSize; ++i)
+		{
+		    data[i].name[511] = '\0';
+		    strncpy(data[i].name,res[i]["last_name"].c_str(),511);
+		    data[i].condition[511] = '\0';
+		    strncpy(data[i].condition,res[i]["p_condition"].c_str(),511);
+		    data[i].id = atoi(res[i]["patient_id"].c_str());
+		    data[i].timestamp = atol(res[i]["timestamp"].c_str());
+		    data[i].value = atof(res[i]["value"].c_str());
+		}
+	    }
+	}*/
+
+	ComController::instance()->sendSlaves(&dataSize,sizeof(int));
+	if(dataSize)
+	{
+	    ComController::instance()->sendSlaves(data,dataSize*sizeof(struct microbeData));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&dataSize,sizeof(int));
+	if(dataSize)
+	{
+	    data = new struct microbeData[dataSize];
+	    ComController::instance()->readMaster(data,dataSize*sizeof(struct microbeData));
+	}
+    }
+
+    //std::cerr << "Data size: " << dataSize << std::endl;
+
+    std::map<std::string, std::vector<std::pair<std::string, std::pair<float,float> > > > dataMap;
+
+    for(int i = 0; i < dataSize; ++i)
+    {
+	std::string condition = data[i].condition;
+	//std::cerr << "Condition: " << condition << " value: " << data[i].value << std::endl;
+	if(condition == "CD" || condition == "crohn's disease" || condition == "healthy" || condition == "Larry" || condition == "UC" || condition == "ulcerous colitis")
+	{
+	    //if(data[i].value > 0.0)
+	    {
+		char timestamp[512];
+		timestamp[511] = '\0';
+		strftime(timestamp,511,"%F",localtime(&data[i].timestamp));
+
+		std::string group;
+
+		std::string name = data[i].name;
+		name = name + " - " + timestamp;
+
+		if(condition == "CD" || condition == "crohn's disease")
+		{
+		    group = "Crohns";
+		}
+		else if(condition == "UC" || condition == "ulcerous colitis")
+		{
+		    group = "UC";
+		}
+
+		if(condition == "healthy")
+		{
+		    group = "Healthy";
+		}
+		else if(condition == "Larry")
+		{
+		    //group = "Smarr";
+		    group = "LS";
+		}
+
+		dataMap[group].push_back(std::pair<std::string,std::pair<float,float> >(name,std::pair<float,float>(data[i].value,0.5)));
+	    }
+	}
+    }
+
+    if(data)
+    {
+	delete[] data;
+    }
+
+
+    std::stringstream queryss2;
+
+    switch( type )
+    {
+        case MGT_SPECIES:
+	default:
+        {
+	    //queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where " << measurementTable << ".taxonomy_id = " << taxid << " and Patient.region = \"US\" order by p_condition, last_name, timestamp;";
+	    queryss2 << "select Patient.p_condition, Patient.last_name, t.patient_id, unix_timestamp(t.timestamp) as timestamp, t.value from (select " << measurementTable << ".patient_id, " << measurementTable << ".timestamp, " << measurementTable << ".value as value from "<< measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id where " << microbesTable << ".species = \"" << secondaryPhylum << "\")t inner join Patient on t.patient_id = Patient.patient_id where Patient.region = \"US\" order by Patient.p_condition, Patient.last_name, t.timestamp;";
+            break;
+        }
+    
+        case MGT_FAMILY:
+        {
+	    queryss2 << "select Patient.p_condition, Patient.last_name, t.patient_id, unix_timestamp(t.timestamp) as timestamp, t.value from (select " << microbesTable << ".family, " << measurementTable << ".patient_id, " << measurementTable << ".timestamp, sum(" << measurementTable << ".value) as value from "<< measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id where " << microbesTable << ".family = \"" << secondaryPhylum << "\" group by " << measurementTable << ".patient_id, " << measurementTable << ".timestamp)t inner join Patient on t.patient_id = Patient.patient_id where Patient.region = \"US\" order by Patient.p_condition, Patient.last_name, t.timestamp;";
+	        //queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << microbesTable << ".family, sum(" << measurementTable << ".value) as value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id inner join " << microbesTable << " on " << microbesTable << ".taxonomy_id = " << measurementTable << ".taxonomy_id where " << microbesTable << ".family = \"" << microbe << "\" and Patient.region = \"US\" group by patient_id, timestamp order by p_condition, last_name, timestamp;";
+            break;
+        }
+
+        case MGT_GENUS:
+        {
+	    queryss2 << "select Patient.p_condition, Patient.last_name, t.patient_id, unix_timestamp(t.timestamp) as timestamp, t.value from (select " << microbesTable << ".genus, " << measurementTable << ".patient_id, " << measurementTable << ".timestamp, sum(" << measurementTable << ".value) as value from "<< measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id where " << microbesTable << ".genus = \"" << secondaryPhylum << "\" group by " << measurementTable << ".patient_id, " << measurementTable << ".timestamp)t inner join Patient on t.patient_id = Patient.patient_id where Patient.region = \"US\" order by Patient.p_condition, Patient.last_name, t.timestamp;";
+	        //queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << microbesTable << ".genus, sum(" << measurementTable << ".value) as value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id inner join " << microbesTable << " on " << microbesTable << ".taxonomy_id = " << measurementTable << ".taxonomy_id where " << microbesTable << ".genus = \"" << microbe << "\" and Patient.region = \"US\" group by patient_id, timestamp order by p_condition, last_name, timestamp;";
+
+            break;
+        }
+
+	case MGT_PHYLUM:
+	{
+	    queryss2 << "select Patient.p_condition, Patient.last_name, t.patient_id, unix_timestamp(t.timestamp) as timestamp, t.value from (select " << microbesTable << ".genus, " << measurementTable << ".patient_id, " << measurementTable << ".timestamp, sum(" << measurementTable << ".value) as value from "<< measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id where " << microbesTable << ".phylum = \"" << secondaryPhylum << "\" group by " << measurementTable << ".patient_id, " << measurementTable << ".timestamp)t inner join Patient on t.patient_id = Patient.patient_id where Patient.region = \"US\" order by Patient.p_condition, Patient.last_name, t.timestamp;";
+	}
+
+        /*default:
+        {
+	        queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where " << measurementTable << ".taxonomy_id = " << taxid << " and Patient.region = \"US\" order by p_condition, last_name, timestamp;";
+
+            break;
+        }*/
+    }
+
+    //std::cerr << "Query: " << queryss2.str() << std::endl;
+
+    data = NULL;
+    dataSize = 0;
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_dbm)
+	{
+	    DBMQueryResult result;
+
+	    _dbm->runQuery(queryss2.str(),result);
+
+	    dataSize = result.numRows();
+
+	    if(dataSize)
+	    {
+		data = new struct microbeData[dataSize];
+		for(int i = 0; i < dataSize; ++i)
+		{
+		    data[i].name[511] = '\0';
+		    strncpy(data[i].name,result(i,"last_name").c_str(),511);
+		    data[i].condition[511] = '\0';
+		    strncpy(data[i].condition,result(i,"p_condition").c_str(),511);
+		    data[i].id = atoi(result(i,"patient_id").c_str());
+		    data[i].timestamp = atol(result(i,"timestamp").c_str());
+		    data[i].value = atof(result(i,"value").c_str());
+		}
+	    }
+	}
+
+	/*if(_conn)
+	{
+	    mysqlpp::Query query = _conn->query(queryss.str().c_str());
+	    mysqlpp::StoreQueryResult res = query.store();
+
+	    dataSize = res.num_rows();
+
+	    if(dataSize)
+	    {
+		data = new struct microbeData[dataSize];
+		for(int i = 0; i < dataSize; ++i)
+		{
+		    data[i].name[511] = '\0';
+		    strncpy(data[i].name,res[i]["last_name"].c_str(),511);
+		    data[i].condition[511] = '\0';
+		    strncpy(data[i].condition,res[i]["p_condition"].c_str(),511);
+		    data[i].id = atoi(res[i]["patient_id"].c_str());
+		    data[i].timestamp = atol(res[i]["timestamp"].c_str());
+		    data[i].value = atof(res[i]["value"].c_str());
+		}
+	    }
+	}*/
+
+	ComController::instance()->sendSlaves(&dataSize,sizeof(int));
+	if(dataSize)
+	{
+	    ComController::instance()->sendSlaves(data,dataSize*sizeof(struct microbeData));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&dataSize,sizeof(int));
+	if(dataSize)
+	{
+	    data = new struct microbeData[dataSize];
+	    ComController::instance()->readMaster(data,dataSize*sizeof(struct microbeData));
+	}
+    }
+
+    //std::cerr << "Data size: " << dataSize << std::endl;
+
+    for(int i = 0; i < dataSize; ++i)
+    {
+	std::string condition = data[i].condition;
+	//std::cerr << "Condition: " << condition << " value: " << data[i].value << std::endl;
+	if(condition == "CD" || condition == "crohn's disease" || condition == "healthy" || condition == "Larry" || condition == "UC" || condition == "ulcerous colitis")
+	{
+	    //if(data[i].value > 0.0)
+	    {
+		char timestamp[512];
+		timestamp[511] = '\0';
+		strftime(timestamp,511,"%F",localtime(&data[i].timestamp));
+
+		std::string group;
+
+		std::string name = data[i].name;
+		name = name + " - " + timestamp;
+
+		if(condition == "CD" || condition == "crohn's disease")
+		{
+		    group = "Crohns";
+		}
+		else if(condition == "UC" || condition == "ulcerous colitis")
+		{
+		    group = "UC";
+		}
+
+		if(condition == "healthy")
+		{
+		    group = "Healthy";
+		}
+		else if(condition == "Larry")
+		{
+		    //group = "Smarr";
+		    group = "LS";
+		}
+
+		if(dataMap.find(group) != dataMap.end())
+		{
+		    for(int j = 0; j < dataMap[group].size(); ++j)
+		    {
+			if(dataMap[group][j].first == name)
+			{
+			    dataMap[group][j].second.second = data[i].value;
+			}
+		    }
+		}
+	    }
+	}
+    }
+
+    if(data)
+    {
+	delete[] data;
+    }
+
+
+    _graph->setLabels(title,primaryPhylum,secondaryPhylum);
+    _graph->setAxisTypes(GSP_LOG,GSP_LOG);
+
+    _graph->setColorMapping(GraphGlobals::getDefaultPhylumColor(),GraphGlobals::getPatientColorMap());
+
+    bool graphValid = false;
+
+    int groupIndex = 0;
+    for(std::map<std::string, std::vector<std::pair<std::string, std::pair<float,float> > > >::iterator it = dataMap.begin(); it != dataMap.end(); ++it)
+    {
+	//std::cerr << "Group: " << groupIndex << " name: " << it->first << std::endl;
+
+	std::vector<std::pair<float,float> > dataList;
+	std::vector<std::string> labels;
+	for(int i = 0; i < it->second.size(); ++i)
+	{
+	    if(it->second[i].second.first > 0.0 && it->second[i].second.second > 0.0)
+	    {
+		//std::cerr << "adding data name: " << it->second[i].first << " first: " << it->second[i].second.first << " second: " << it->second[i].second.second << std::endl;
+		labels.push_back(it->second[i].first);
+		dataList.push_back(std::pair<float,float>(it->second[i].second.first,it->second[i].second.second));
+	    }
+	}
+
+	if(dataList.size())
+	{
+	    graphValid = true;
+	    _graph->addGroup(groupIndex,it->first,dataList,labels);
+	}
+
+	groupIndex++;
+    }
+    
+    if(graphValid)
+    {
+	addChild(_graph->getRootNode());
+    }
+
+    return graphValid;
+
+    /*if(!_dataInit)
     {
 	initData();
     }
@@ -125,7 +509,7 @@ bool MicrobeScatterGraphObject::setGraph(std::string title, std::string primaryP
 
     addChild(_graph->getRootNode());
 
-    return true;
+    return true;*/
 }
 
 void MicrobeScatterGraphObject::objectAdded()

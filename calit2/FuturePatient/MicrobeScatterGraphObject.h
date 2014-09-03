@@ -11,6 +11,7 @@
 #include "LayoutInterfaces.h"
 #include "GroupedScatterPlot.h"
 #include "GraphKeyObject.h"
+#include "MicrobeGraphObject.h"
 
 class MicrobeScatterGraphObject : public LayoutTypeObject, public LogValueRangeObject, public PatientSelectObject, public SelectableObject
 {
@@ -18,7 +19,7 @@ class MicrobeScatterGraphObject : public LayoutTypeObject, public LogValueRangeO
         MicrobeScatterGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~MicrobeScatterGraphObject();
 
-        bool setGraph(std::string title, std::string primaryPhylum, std::string secondaryPhylum);
+        bool setGraph(std::string title, std::string primaryPhylum, std::string secondaryPhylum, MicrobeGraphType type, std::string microbeTableSuffix, std::string measureTableSuffix);
 
         virtual void objectAdded();
         virtual void objectRemoved();
