@@ -18,6 +18,14 @@
 
 #define BINARY_FILE_VERSION 1
 
+float linePointDistance(osg::Vec3 linePoint1, osg::Vec3 linePoint2, osg::Vec3 point)
+{
+    return ((point - linePoint1) ^ (point - linePoint2)).length()
+            / (linePoint2 - linePoint1).length();
+}
+
+bool withProjectedAttrib = false;
+
 void printUsage(std::string name)
 {
     std::cerr << "Usage: " << name << " [options] input" << std::endl;
@@ -29,6 +37,8 @@ void printUsage(std::string name)
     std::cerr << "               Set the number of frames to process, default: 0 (all, step until file not found)" << std::endl;
     std::cerr << "  -o <string>" << std::endl;
     std::cerr << "               Base name for output files" << std::endl;
+    std::cerr << "  -p" << std::endl;
+    std::cerr << "               Add serface projected attributes" << std::endl;
 }
 
 bool fileExists(std::string file)
@@ -65,6 +75,10 @@ int main(int argc, char ** argv)
 	{
 	    i++;
 	    outputFile = argv[i];
+	}
+	else if(std::string(argv[i]) == "-p")
+	{
+	    withProjectedAttrib = true;
 	}
 	else if(std::string(argv[i]) == "-h" || std::string(argv[i]) == "--help")
 	{
@@ -519,8 +533,17 @@ void extractSurfaceVTK(VTKDataFrame * frame)
     frame->surfaceInd = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES,0);
 
     std::map<unsigned int, std::map<unsigned int, std::map<unsigned int, std::pair<face,int> > > > faces;
+    std::map<unsigned int,std::vector<unsigned int> > tetraMap;
     for(int i = 0; i < frame->indices->size(); i += 4)
     {
+	if(withProjectedAttrib)
+	{
+	    tetraMap[frame->indices->at(i+0)].push_back(i/4);
+	    tetraMap[frame->indices->at(i+1)].push_back(i/4);
+	    tetraMap[frame->indices->at(i+2)].push_back(i/4);
+	    tetraMap[frame->indices->at(i+3)].push_back(i/4);
+	}
+
 	std::vector<face> faceList;
 	faceList.push_back(face(frame->indices->at(i+0),frame->indices->at(i+1),frame->indices->at(i+3)));
 	faceList.push_back(face(frame->indices->at(i+0),frame->indices->at(i+2),frame->indices->at(i+1)));
@@ -583,6 +606,8 @@ void extractSurfaceVTK(VTKDataFrame * frame)
     frame->surfaceFacets = new osg::Vec4iArray();
     frame->surfaceCells = new osg::IntArray();
 
+    std::map<unsigned int,std::vector<osg::Vec3> > surfaceNormals;
+
     for(std::map<unsigned int, std::map<unsigned int, std::map<unsigned int, std::pair<face,int> > > >::iterator it = faces.begin(); it != faces.end(); ++it)
     {
 	for(std::map<unsigned int, std::map<unsigned int, std::pair<face,int> > >::iterator itt = it->second.begin(); itt != it->second.end(); ++itt)
@@ -596,8 +621,125 @@ void extractSurfaceVTK(VTKDataFrame * frame)
 		    frame->surfaceInd->push_back(ittt->second.first.indices[2]);
 		    frame->surfaceFacets->push_back(osg::Vec4i(ittt->second.first.indices[0],ittt->second.first.indices[1],ittt->second.first.indices[2],0));
 		    frame->surfaceCells->push_back(ittt->second.first.cell);
+
+		    if(withProjectedAttrib)
+		    {
+			osg::Vec3 d1 = frame->verts->at(ittt->second.first.indices[1]) - frame->verts->at(ittt->second.first.indices[0]);
+			osg::Vec3 d2 = frame->verts->at(ittt->second.first.indices[2]) - frame->verts->at(ittt->second.first.indices[0]);
+			osg::Vec3 norm = d1 ^ d2;
+			surfaceNormals[ittt->second.first.indices[0]].push_back(norm);
+			surfaceNormals[ittt->second.first.indices[1]].push_back(norm);
+			surfaceNormals[ittt->second.first.indices[2]].push_back(norm);
+		    }
 		}
 	    }
+	}
+    }
+
+    if(withProjectedAttrib)
+    {
+	std::map<unsigned int, unsigned int> surfaceDataMap;
+
+	for(std::map<unsigned int,std::vector<osg::Vec3> >::iterator it = surfaceNormals.begin(); it != surfaceNormals.end(); ++it)
+	{
+	    std::map<unsigned int,bool> connectedInd;
+	    std::map<unsigned int,std::vector<unsigned int> >::iterator tetraIt = tetraMap.find(it->first);
+	    if(tetraIt == tetraMap.end())
+	    {
+		continue;
+	    }
+
+	    for(int i = 0; i < tetraIt->second.size(); ++i)
+	    {
+		//if(surfaceNormals.find(frame->indices->at((4*tetraIt->second[i])+0)) == surfaceNormals.end())
+		{
+		    connectedInd[frame->indices->at((4*tetraIt->second[i])+0)] = true;
+		}
+		//if(surfaceNormals.find(frame->indices->at((4*tetraIt->second[i])+1)) == surfaceNormals.end())
+		{
+		    connectedInd[frame->indices->at((4*tetraIt->second[i])+1)] = true;
+		}
+		//if(surfaceNormals.find(frame->indices->at((4*tetraIt->second[i])+2)) == surfaceNormals.end())
+		{
+		    connectedInd[frame->indices->at((4*tetraIt->second[i])+2)] = true;
+		}
+		//if(surfaceNormals.find(frame->indices->at((4*tetraIt->second[i])+3)) == surfaceNormals.end())
+		{
+		    connectedInd[frame->indices->at((4*tetraIt->second[i])+3)] = true;
+		}
+	    }
+
+	    // remove self
+	    connectedInd.erase(it->first);
+
+	    unsigned int ind = 0;
+	    float dist = FLT_MAX;
+	    for(std::map<unsigned int,bool>::iterator indIt = connectedInd.begin(); indIt != connectedInd.end(); ++indIt)
+	    {
+		for(int i = 0; i < it->second.size(); ++i)
+		{
+		    float myDist = linePointDistance(frame->verts->at(it->first),frame->verts->at(it->first)+it->second[i],frame->verts->at(indIt->first));
+		    if(myDist < dist)
+		    {
+			dist = myDist;
+			ind = indIt->first;
+		    }
+		}
+	    }
+	    surfaceDataMap[it->first] = ind;
+	    //std::cerr << "Map: " << it->first << " to " << ind << std::endl;
+	}
+
+	//use mapping to create modified attributes
+	std::vector<VTKDataAttrib*> projPointData;
+	for(int i = 0; i < frame->pointData.size(); ++i)
+	{
+	    VTKDataAttrib * attrib = new VTKDataAttrib;
+	    attrib->name = frame->pointData[i]->name + " Proj";
+	    attrib->attribType = frame->pointData[i]->attribType;
+	    attrib->dataType = frame->pointData[i]->dataType;
+	    attrib->intMin = frame->pointData[i]->intMin;
+	    attrib->intMax = frame->pointData[i]->intMax;
+	    attrib->floatMin = frame->pointData[i]->floatMin;
+	    attrib->floatMax = frame->pointData[i]->floatMax;
+
+	    if(frame->pointData[i]->attribType == VAT_VECTORS)
+	    {
+		attrib->vecData = new osg::Vec3Array(frame->pointData[i]->vecData->size());
+		memcpy(&attrib->vecData->at(0),&frame->pointData[i]->vecData->at(0),frame->pointData[i]->vecData->size()*sizeof(osg::Vec3));
+	    }
+	    else if(frame->pointData[i]->dataType == VDT_INT)
+	    {
+		attrib->intData = new osg::IntArray(frame->pointData[i]->intData->size());
+		memcpy(&attrib->intData->at(0),&frame->pointData[i]->intData->at(0),frame->pointData[i]->intData->size()*sizeof(int));
+	    }
+	    else
+	    {
+		attrib->floatData = new osg::FloatArray(frame->pointData[i]->floatData->size());
+		memcpy(&attrib->floatData->at(0),&frame->pointData[i]->floatData->at(0),frame->pointData[i]->floatData->size()*sizeof(float));
+	    }
+
+	    for(std::map<unsigned int, unsigned int>::iterator it = surfaceDataMap.begin(); it != surfaceDataMap.end(); ++it)
+	    {
+		if(attrib->attribType == VAT_VECTORS)
+		{
+		    attrib->vecData->at(it->first) = attrib->vecData->at(it->second);
+		}
+		else if(attrib->dataType == VDT_INT)
+		{
+		    attrib->intData->at(it->first) = attrib->intData->at(it->second);
+		}
+		else
+		{
+		    attrib->floatData->at(it->first) = attrib->floatData->at(it->second);
+		}
+	    }
+	    projPointData.push_back(attrib);
+	}
+
+	for(int i = 0; i < projPointData.size(); ++i)
+	{
+	    frame->pointData.push_back(projPointData[i]);
 	}
     }
 
