@@ -22,6 +22,10 @@ DBManager::DBManager(std::string database, std::string server, std::string user,
 	_withCache = true;
 	_cacheDir = cacheDir;
     }
+    else
+    {
+	_withCache = false;
+    }
 }
 
 DBManager::~DBManager()

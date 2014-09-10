@@ -210,6 +210,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _eventLoadMicrobe;
         cvr::MenuButton * _eventDone;
 
+        std::vector<std::string> _scatterPhylumList;
         cvr::SubMenu * _scatterMenu;
         cvr::MenuText * _scatterFirstLabel;
         cvr::MenuText * _scatterSecondLabel;
@@ -217,6 +218,9 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _scatterSecondList;
         cvr::MenuButton * _scatterLoad;
         cvr::MenuButton * _scatterLoadAll;
+        cvr::MenuList * _scatterMicrobeType;
+        cvr::MenuTextEntryItem * _scatterFirstEntry;
+        cvr::MenuTextEntryItem * _scatterSecondEntry;
 
         MicrobeBarGraphObject * _currentSBGraph;
         SymptomGraphObject * _currentSymptomGraph;

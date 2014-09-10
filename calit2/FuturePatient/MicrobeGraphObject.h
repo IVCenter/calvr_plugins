@@ -26,7 +26,8 @@ enum MicrobeGraphType
 {
     MGT_SPECIES=0,
     MGT_FAMILY,
-    MGT_GENUS
+    MGT_GENUS,
+    MGT_PHYLUM
 };
 
 class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, public ValueRangeObject
