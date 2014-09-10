@@ -7,6 +7,7 @@
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuRangeValue.h>
 
 #include <osg/MatrixTransform>
 
@@ -54,6 +55,7 @@ class ModelLoader : public cvr::MenuCallback, public cvr::CVRPlugin, public cvr:
         std::map<cvr::SceneObject*,cvr::MenuButton*> _loadMap;
         std::map<cvr::SceneObject*,cvr::MenuButton*> _resetMap;
         std::map<cvr::SceneObject*,cvr::MenuButton*> _deleteMap;
+        std::map<cvr::SceneObject*,cvr::MenuRangeValue*> _pointMap;
         std::map<cvr::SceneObject*,cvr::SubMenu*> _posMap;
         std::map<cvr::SceneObject*,cvr::SubMenu*> _saveMenuMap;
 
