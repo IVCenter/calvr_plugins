@@ -37,7 +37,7 @@ using namespace cvr;
 
 CVRPLUGIN(ModelLoader)
 
-ModelLoader::ModelLoader() : FileLoadCallback("iv,wrl,vrml,obj,osg,earth")
+ModelLoader::ModelLoader() : FileLoadCallback("iv,wrl,vrml,obj,osg,earth,osga")
 {
 }
 
@@ -314,6 +314,23 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
 	    sm->addItem(mb);
 	    _resetMap[so] = mb;
 
+        // check if point size is an option
+        osg::Uniform* pointUniform = switchNode->getChild(0)->getStateSet()->getUniform("point_size");
+        if( pointUniform )
+        {
+            // get default value out
+            float pointValue;
+            pointUniform->get(pointValue);
+
+            // create a range for the slider
+            float range = pointValue * 0.75;
+
+            // create a slider to adjust point size
+            _pointMap[so] = new MenuRangeValue("Point Size", pointValue - range, pointValue + range, pointValue);
+	        _pointMap[so]->setCallback(this);
+	        so->addMenuItem(_pointMap[so]);
+        }
+
 	    mb = new MenuButton("Delete");
 	    mb->setCallback(this);
 	    so->addMenuItem(mb);
@@ -386,11 +403,39 @@ void ModelLoader::menuCallback(MenuItem* menuItem)
 	    it->first->setNavigationOn(nav);
 	}
     }
+    
+    for(std::map<SceneObject*,MenuRangeValue*>::iterator it = _pointMap.begin(); it != _pointMap.end(); it++)
+    {
+	if(menuItem == it->second)
+	{
+        // access the uniform to adjust the point size
+        // get the node and then try and get the point_size uniform
+
+        osg::Node* modelNode = it->first->getChildNode(0)->asGroup()->getChild(0);
+        if( modelNode )
+        {
+            osg::Uniform* pointUniform = modelNode->getStateSet()->getUniform("point_size");
+            if( pointUniform )
+            {
+                // get default value out
+                float pointValue = it->second->getValue();
+               
+                // create a slider to adjust point size
+                pointUniform->set(pointValue);
+            }
+        }
+    }
+    }
 
     for(std::map<SceneObject*,MenuButton*>::iterator it = _deleteMap.begin(); it != _deleteMap.end(); it++)
     {
 	if(menuItem == it->second)
 	{
+	    if(_pointMap.find(it->first) != _pointMap.end())
+	    {
+		delete _pointMap[it->first];
+		_pointMap.erase(it->first);
+	    }
 	    if(_saveMap.find(it->first) != _saveMap.end())
 	    {
 		delete _saveMap[it->first];
