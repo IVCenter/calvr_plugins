@@ -2373,7 +2373,8 @@ void FuturePatient::setupMicrobes()
 	    if(_dbm)
 	    {
 		std::stringstream qss;
-		qss << "select distinct taxonomy_id, species from Microbes" << _microbeTableList[j]->microbeSuffix << " order by species;";
+		//qss << "select distinct taxonomy_id, species from Microbes" << _microbeTableList[j]->microbeSuffix << " order by species;";
+		qss << "select distinct Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id, Microbes" << _microbeTableList[j]->microbeSuffix << ".species from Microbe_Measurement" << _microbeTableList[j]->measureSuffix << " inner join Microbes" << _microbeTableList[j]->microbeSuffix << " on Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id = Microbes" << _microbeTableList[j]->microbeSuffix << ".taxonomy_id order by Microbes" << _microbeTableList[j]->microbeSuffix << ".species;";
 
 		DBMQueryResult result;
 
@@ -2455,7 +2456,8 @@ void FuturePatient::setupMicrobes()
 	    if(_dbm)
 	    {
 		std::stringstream qss;
-		qss << "select distinct family from Microbes" << _microbeTableList[j]->microbeSuffix << " order by family;";
+		//qss << "select distinct family from Microbes" << _microbeTableList[j]->microbeSuffix << " order by family;";
+		qss << "select distinct Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id, Microbes" << _microbeTableList[j]->microbeSuffix << ".family from Microbe_Measurement" << _microbeTableList[j]->measureSuffix << " inner join Microbes" << _microbeTableList[j]->microbeSuffix << " on Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id = Microbes" << _microbeTableList[j]->microbeSuffix << ".taxonomy_id group by Microbes" << _microbeTableList[j]->microbeSuffix << ".family order by Microbes" << _microbeTableList[j]->microbeSuffix << ".family;";
 
 		DBMQueryResult result;
 
@@ -2535,7 +2537,8 @@ void FuturePatient::setupMicrobes()
 	    if(_dbm)
 	    {
 		std::stringstream qss;
-		qss << "select distinct genus from Microbes" << _microbeTableList[j]->microbeSuffix << " order by genus;";
+		//qss << "select distinct genus from Microbes" << _microbeTableList[j]->microbeSuffix << " order by genus;";
+		qss << "select distinct Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id, Microbes" << _microbeTableList[j]->microbeSuffix << ".genus from Microbe_Measurement" << _microbeTableList[j]->measureSuffix << " inner join Microbes" << _microbeTableList[j]->microbeSuffix << " on Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id = Microbes" << _microbeTableList[j]->microbeSuffix << ".taxonomy_id group by Microbes" << _microbeTableList[j]->microbeSuffix << ".genus order by Microbes" << _microbeTableList[j]->microbeSuffix << ".genus;";
 
 		DBMQueryResult result;
 

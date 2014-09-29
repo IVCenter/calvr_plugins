@@ -25,9 +25,9 @@ GroupedScatterPlot::GroupedScatterPlot(float width, float height)
     _firstAxisType = GSP_LINEAR;
     _secondAxisType = GSP_LINEAR;
 
-    _firstDataMax = FLT_MIN;
+    _firstDataMax = -FLT_MAX;
     _firstDataMin = FLT_MAX;
-    _secondDataMax = FLT_MIN;
+    _secondDataMax = -FLT_MAX;
     _secondDataMin = FLT_MAX;
 
     _maxIndex = -1;
@@ -89,7 +89,7 @@ void GroupedScatterPlot::setAxisTypes(GSPAxisType first, GSPAxisType second)
     update();
 }
 
-bool GroupedScatterPlot::addGroup(int index, std::string indexLabel, std::vector<std::pair<float,float> > & data, std::vector<std::string> & dataLabels)
+bool GroupedScatterPlot::addGroup(int index, std::string indexLabel, std::vector<std::pair<float,float> > & data, std::vector<std::string> & dataLabels, float firstLogMinValue, float secondLogMinValue)
 {
     if(_plotData.find(index) != _plotData.end())
     {
@@ -127,6 +127,9 @@ bool GroupedScatterPlot::addGroup(int index, std::string indexLabel, std::vector
 	}
     }
 
+    //std::cerr << "Firstmin: " << _firstDataMin << " max: " << _firstDataMax << std::endl;
+    //std::cerr << "Secondmin: " << _secondDataMin << " max: " << _secondDataMax << std::endl;
+
     float lowerPadding = 0.05;
 
     switch(_firstAxisType)
@@ -139,6 +142,16 @@ bool GroupedScatterPlot::addGroup(int index, std::string indexLabel, std::vector
 	}
 	case GSP_LOG:
 	{
+	    if(_firstDataMax <= 0.0)
+	    {
+		return false;
+	    }
+
+	    if(_firstDataMin <= 0.0)
+	    {
+		_firstDataMin = firstLogMinValue;
+	    }
+
 	    float logMax = log10(_firstDataMax);
 	    logMax = ceil(logMax);
 	    _firstDisplayMax = pow(10.0,logMax);
@@ -166,6 +179,16 @@ bool GroupedScatterPlot::addGroup(int index, std::string indexLabel, std::vector
 	}
 	case GSP_LOG:
 	{
+	    if(_secondDataMax <= 0.0)
+	    {
+		return false;
+	    }
+
+	    if(_secondDataMin <= 0.0)
+	    {
+		_secondDataMin = secondLogMinValue;
+	    }
+
 	    float logMax = log10(_secondDataMax);
 	    logMax = ceil(logMax);
 	    _secondDisplayMax = pow(10.0,logMax);
@@ -756,14 +779,21 @@ void GroupedScatterPlot::updateGraph()
 		    }
 		case GSP_LOG:
 		    {
-			float logVal = log10(it->second[i].first);
-			if(logVal < firstLogMin || logVal > firstLogMax)
+			if(it->second[i].first <= 0.0)
 			{
-			    addPoint = false;
+			    pointX = _graphLeft;
 			}
 			else
 			{
-			    pointX = _graphLeft + ((logVal - firstLogMin) / (firstLogMax - firstLogMin)) * (_graphRight - _graphLeft);
+			    float logVal = log10(it->second[i].first);
+			    if(logVal < firstLogMin || logVal > firstLogMax)
+			    {
+				addPoint = false;
+			    }
+			    else
+			    {
+				pointX = _graphLeft + ((logVal - firstLogMin) / (firstLogMax - firstLogMin)) * (_graphRight - _graphLeft);
+			    }
 			}
 			break;
 		    }
@@ -783,14 +813,21 @@ void GroupedScatterPlot::updateGraph()
 		    }
 		case GSP_LOG:
 		    {
-			float logVal = log10(it->second[i].second);
-			if(logVal < secondLogMin || logVal > secondLogMax)
+			if(it->second[i].second <= 0.0)
 			{
-			    addPoint = false;
+			    pointZ = _graphBottom;
 			}
 			else
 			{
-			    pointZ = _graphBottom + ((logVal - secondLogMin) / (secondLogMax - secondLogMin)) * (_graphTop - _graphBottom);
+			    float logVal = log10(it->second[i].second);
+			    if(logVal < secondLogMin || logVal > secondLogMax)
+			    {
+				addPoint = false;
+			    }
+			    else
+			    {
+				pointZ = _graphBottom + ((logVal - secondLogMin) / (secondLogMax - secondLogMin)) * (_graphTop - _graphBottom);
+			    }
 			}
 			break;
 		    }

@@ -213,7 +213,7 @@ bool MicrobeScatterGraphObject::setGraph(std::string title, std::string primaryP
 		    group = "LS";
 		}
 
-		dataMap[group].push_back(std::pair<std::string,std::pair<float,float> >(name,std::pair<float,float>(data[i].value,0.5)));
+		dataMap[group].push_back(std::pair<std::string,std::pair<float,float> >(name,std::pair<float,float>(data[i].value,-1.0)));
 	    }
 	}
     }
@@ -223,6 +223,11 @@ bool MicrobeScatterGraphObject::setGraph(std::string title, std::string primaryP
 	delete[] data;
     }
 
+    if(!dataSize)
+    {
+	std::cerr << "No entries for " << primaryPhylum << std::endl;
+	return false;
+    }
 
     std::stringstream queryss2;
 
@@ -391,6 +396,11 @@ bool MicrobeScatterGraphObject::setGraph(std::string title, std::string primaryP
 	delete[] data;
     }
 
+    if(!dataSize)
+    {
+	std::cerr << "No entries for " << secondaryPhylum << std::endl;
+	return false;
+    }
 
     _graph->setLabels(title,primaryPhylum,secondaryPhylum);
     _graph->setAxisTypes(GSP_LOG,GSP_LOG);
@@ -408,7 +418,7 @@ bool MicrobeScatterGraphObject::setGraph(std::string title, std::string primaryP
 	std::vector<std::string> labels;
 	for(int i = 0; i < it->second.size(); ++i)
 	{
-	    if(it->second[i].second.first > 0.0 && it->second[i].second.second > 0.0)
+	    //if(it->second[i].second.first > 0.0 && it->second[i].second.second > 0.0)
 	    {
 		//std::cerr << "adding data name: " << it->second[i].first << " first: " << it->second[i].second.first << " second: " << it->second[i].second.second << std::endl;
 		labels.push_back(it->second[i].first);
@@ -418,8 +428,10 @@ bool MicrobeScatterGraphObject::setGraph(std::string title, std::string primaryP
 
 	if(dataList.size())
 	{
-	    graphValid = true;
-	    _graph->addGroup(groupIndex,it->first,dataList,labels);
+	    if(_graph->addGroup(groupIndex,it->first,dataList,labels))
+	    {
+		graphValid = true;
+	    }
 	}
 
 	groupIndex++;
