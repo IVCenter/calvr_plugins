@@ -26,7 +26,7 @@ class MicrobeScatterGraphObject : public LayoutTypeObject, public LogValueRangeO
 
         virtual void setGraphSize(float width, float height);
 
-        virtual void selectPatients(std::string & group, std::vector<std::string> & patients);
+        virtual void selectPatients(std::map<std::string,std::vector<std::string> > & selectMap);
 
         virtual float getGraphXMaxValue();
         virtual float getGraphXMinValue();

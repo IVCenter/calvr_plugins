@@ -304,9 +304,9 @@ void StrainGraphObject::resetGraphDisplayRange()
     _graph->setDisplayRange(_graph->getDisplayRangeMin(),_graph->getDisplayRangeMax());
 }
 
-void StrainGraphObject::selectPatients(std::string & group, std::vector<std::string> & patients)
+void StrainGraphObject::selectPatients(std::map<std::string,std::vector<std::string> > & selectMap)
 {
-    _graph->selectItems(group,patients);
+    _graph->selectItems(selectMap);
 }
 
 bool StrainGraphObject::processEvent(cvr::InteractionEvent * ie)

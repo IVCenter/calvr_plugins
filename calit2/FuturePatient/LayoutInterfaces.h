@@ -137,7 +137,8 @@ class MicrobeSelectObject
 class PatientSelectObject
 {
     public:
-        virtual void selectPatients(std::string & group, std::vector<std::string> & patients) = 0;
+        //virtual void selectPatients(std::string & group, std::vector<std::string> & patients) = 0;
+        virtual void selectPatients(std::map<std::string,std::vector<std::string> > & selectMap) = 0;
 };
 
 class SelectableObject

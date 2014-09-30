@@ -25,7 +25,7 @@ class SingleMicrobeObject : public LayoutTypeObject, public PatientSelectObject
 
         virtual void setGraphSize(float width, float height);
 
-        virtual void selectPatients(std::string & group, std::vector<std::string> & patients);
+        virtual void selectPatients(std::map<std::string,std::vector<std::string> > & selectMap);
 
         virtual bool processEvent(cvr::InteractionEvent * ie);
         virtual void updateCallback(int handID, const osg::Matrix & mat);

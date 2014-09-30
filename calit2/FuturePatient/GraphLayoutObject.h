@@ -92,6 +92,7 @@ class GraphLayoutObject : public FPTiledWallSceneObject
         std::vector<std::string> _currentSelectedMicrobes;
         std::string _currentSelectedPatientGroup;
         std::vector<std::string> _currentSelectedPatients;
+        std::map<std::string,std::vector<std::string> > _currentSelectedPatientMap;
 
         GraphKeyObject * _phylumKey;
         GraphKeyObject * _patientKey;
@@ -117,6 +118,7 @@ class GraphLayoutObject : public FPTiledWallSceneObject
         cvr::MenuRangeValueCompact * _widthRV;
         cvr::MenuRangeValueCompact * _heightRV;
         cvr::MenuButton * _removeUnselected;
+        cvr::MenuCheckbox * _multiSelect;
 
         cvr::PopupMenu * _selectionMenu;
         cvr::MenuText * _selectionText;

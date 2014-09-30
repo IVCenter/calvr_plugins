@@ -32,7 +32,7 @@ class StrainGraphObject: public LayoutTypeObject, public PatientSelectObject, pu
         void setGraphDisplayRange(float min, float max);
         void resetGraphDisplayRange();
 
-        void selectPatients(std::string & group, std::vector<std::string> & patients);
+        void selectPatients(std::map<std::string,std::vector<std::string> > & selectMap);
 
         virtual bool processEvent(cvr::InteractionEvent * ie);
         virtual void updateCallback(int handID, const osg::Matrix & mat);

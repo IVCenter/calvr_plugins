@@ -558,9 +558,9 @@ void MicrobeScatterGraphObject::setGraphSize(float width, float height)
     _graph->setDisplaySize(width,height);
 }
 
-void MicrobeScatterGraphObject::selectPatients(std::string & group, std::vector<std::string> & patients)
+void MicrobeScatterGraphObject::selectPatients(std::map<std::string,std::vector<std::string> > & selectMap)
 {
-    _graph->selectPoints(group,patients);
+    _graph->selectPoints(selectMap);
 }
 
 float MicrobeScatterGraphObject::getGraphXMaxValue()

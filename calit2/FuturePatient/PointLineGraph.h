@@ -38,7 +38,7 @@ class PointLineGraph
         void setColorMapping(const std::map<std::string,osg::Vec4> & colorMap);
 
         bool processClick(osg::Vec3 point, std::string & group, std::vector<std::string> & labels);
-        void selectItems(std::string & group, std::vector<std::string> & labels);
+        void selectItems(std::map<std::string,std::vector<std::string> > & selectMap);
 
         void setHover(osg::Vec3 intersect);
         void clearHoverText();
@@ -96,8 +96,9 @@ class PointLineGraph
         osg::ref_ptr<osg::LineWidth> _line;
 
         int _currentHoverGroup, _currentHoverItem, _currentHoverPoint;
-        std::string _selectedGroup;
-        std::vector<std::string> _selectedLabels;
+        std::map<std::string,std::vector<std::string> > _selectedMap;
+        //std::string _selectedGroup;
+        //std::vector<std::string> _selectedLabels;
 
         osg::ref_ptr<SetBoundsCallback> _graphBoundsCallback;
 };

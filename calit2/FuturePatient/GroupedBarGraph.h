@@ -121,6 +121,7 @@ class GroupedBarGraph
         }
 
         void selectItems(std::string & group, std::vector<std::string> & keys);
+        void selectItems(std::map<std::string,std::vector<std::string> > & selectMap);
 
         bool processClick(osg::Vec3 & hitPoint, std::string & selectedGroup, std::vector<std::string> & selectedKeys);
 

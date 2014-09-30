@@ -240,10 +240,12 @@ bool PointLineGraph::processClick(osg::Vec3 point, std::string & group, std::vec
     return true;
 }
 
-void PointLineGraph::selectItems(std::string & group, std::vector<std::string> & labels)
+void PointLineGraph::selectItems(std::map<std::string,std::vector<std::string> > & selectMap)
 {
-    _selectedGroup = group;
-    _selectedLabels = labels;
+    //_selectedGroup = group;
+    //_selectedLabels = labels;
+
+    _selectedMap = selectMap;
 
     updateGraph();
     updateColors();
@@ -649,30 +651,23 @@ void PointLineGraph::updateGraph()
 			{
 			    float yval;
 
-			    if(!_selectedGroup.empty())
+			    if(_selectedMap.find(_groupLabels[i]) != _selectedMap.end())
 			    {
-				if(_groupLabels[i] == _selectedGroup)
+				if(!_selectedMap[_groupLabels[i]].size())
 				{
-				    if(!_selectedLabels.size())
-				    {
-					yval = -0.5;
-				    }
-				    else
-				    {
-					yval = 0.0;
-					for(int m = 0; m < _selectedLabels.size(); ++m)
-					{
-					    if(_selectedLabels[m] == _dataLabels[i][j])
-					    {
-						yval = -0.5;
-						break;
-					    }
-					}
-				    }
+				    yval = -0.5;
 				}
 				else
 				{
 				    yval = 0.0;
+				    for(int m = 0; m < _selectedMap[_groupLabels[i]].size(); ++m)
+				    {
+					if(_selectedMap[_groupLabels[i]][m] == _dataLabels[i][j])
+					{
+					    yval = -0.5;
+					    break;
+					}
+				    }
 				}
 			    }
 			    else
@@ -779,31 +774,28 @@ void PointLineGraph::updateColors()
 		colors->at(index) = color;
 		colors->at(index).w() = selectedAlpha;
 
-		if(!_selectedGroup.empty())
+		if(_selectedMap.find(_groupLabels[i]) != _selectedMap.end())
 		{
-		    if(_groupLabels[i] == _selectedGroup)
+		    if(_selectedMap[_groupLabels[i]].size())
 		    {
-			if(_selectedLabels.size())
+			bool found = false;
+			for(int m = 0; m < _selectedMap[_groupLabels[i]].size(); ++m)
 			{
-			    bool found = false;
-			    for(int m = 0; m < _selectedLabels.size(); ++m)
+			    if(_selectedMap[_groupLabels[i]][m] == _dataLabels[i][j])
 			    {
-				if(_selectedLabels[m] == _dataLabels[i][j])
-				{
-				    found = true;
-				    break;
-				}
-			    }
-			    if(!found)
-			    {
-				colors->at(index).w() = unselectedAlpha;
+				found = true;
+				break;
 			    }
 			}
+			if(!found)
+			{
+			    colors->at(index).w() = unselectedAlpha;
+			}
 		    }
-		    else
-		    {
-			colors->at(index).w() = unselectedAlpha;
-		    }
+		}
+		else
+		{
+		    colors->at(index).w() = unselectedAlpha;
 		}
 		index++;
 	    }

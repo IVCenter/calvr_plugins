@@ -271,10 +271,9 @@ bool GroupedScatterPlot::processClick(std::string & group, std::vector<std::stri
     return true;
 }
 
-void GroupedScatterPlot::selectPoints(std::string & group, std::vector<std::string> & labels)
+void GroupedScatterPlot::selectPoints(std::map<std::string,std::vector<std::string> > & selectMap)
 {
-    _selectedGroup = group;
-    _selectedLabels = labels;
+    _selectedMap = selectMap;
 
     updateGraph();
 }
@@ -840,19 +839,19 @@ void GroupedScatterPlot::updateGraph()
 
 	    if(addPoint)
 	    {
-		if(_selectedGroup.empty() && !_selectedLabels.size())
+		if(!_selectedMap.size())
 		{
 		    color.w() = 1.0;
 		    verts->push_back(osg::Vec3(pointX,0,pointZ));
 		}
-		else
+		else if(_selectedMap.find(_indexLabels[it->first]) != _selectedMap.end())
 		{
 		    bool selected = false;
-		    if(_selectedLabels.size())
+		    if(_selectedMap[_indexLabels[it->first]].size())
 		    {
-			for(int j = 0; j < _selectedLabels.size(); ++j)
+			for(int j = 0; j < _selectedMap[_indexLabels[it->first]].size(); ++j)
 			{
-			    if(_pointLabels[it->first][i] == _selectedLabels[j])
+			    if(_pointLabels[it->first][i] == _selectedMap[_indexLabels[it->first]][j])
 			    {
 				selected = true;
 			    }
@@ -860,10 +859,7 @@ void GroupedScatterPlot::updateGraph()
 		    }
 		    else
 		    {
-			if(_selectedGroup == _indexLabels[it->first])
-			{
-			    selected = true;
-			}
+			selected = true;
 		    }
 
 		    if(selected)
@@ -876,6 +872,11 @@ void GroupedScatterPlot::updateGraph()
 			color.w() = unselectedAlpha;
 			verts->push_back(osg::Vec3(pointX,0,pointZ));
 		    }
+		}
+		else
+		{
+		    color.w() = unselectedAlpha;
+		    verts->push_back(osg::Vec3(pointX,0,pointZ));
 		}
 
 		colors->push_back(color);

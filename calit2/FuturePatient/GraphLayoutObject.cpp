@@ -28,6 +28,10 @@ GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std
     _zoomCB->setCallback(this);
     addMenuItem(_zoomCB);
 
+    _multiSelect = new MenuCheckbox("Multi Select",false);
+    _multiSelect->setCallback(this);
+    addMenuItem(_multiSelect);
+
     _rowsRV = new MenuRangeValueCompact("Rows",1.0,40.0,maxRows);
     _rowsRV->setCallbackType(MenuRangeValueCompact::ON_RELEASE);
     _rowsRV->setCallback(this);
@@ -178,8 +182,9 @@ void GraphLayoutObject::removeGraphObject(LayoutTypeObject * object)
 
     if(!selectedPatients)
     {
-	_currentSelectedPatientGroup = "";
-	_currentSelectedPatients.clear();
+	//_currentSelectedPatientGroup = "";
+	//_currentSelectedPatients.clear();
+	_currentSelectedPatientMap.clear();
     }
 
     updateLayout();
@@ -241,15 +246,63 @@ void GraphLayoutObject::selectMicrobes(std::string & group, std::vector<std::str
 
 void GraphLayoutObject::selectPatients(std::string & group, std::vector<std::string> & patients)
 {
-    _currentSelectedPatientGroup = group;
-    _currentSelectedPatients = patients;
+    if(group.empty())
+    {
+	_currentSelectedPatientMap.clear();
+    }
+    else
+    {
+	if(!_multiSelect->getValue())
+	{
+	    _currentSelectedPatientMap.clear();
+	    //_currentSelectedPatientGroup = group;
+	    //_currentSelectedPatients = patients;
+	    _currentSelectedPatientMap[group] = patients;
+	}
+	else
+	{
+	    if(!patients.size())
+	    {
+		_currentSelectedPatientMap[group] = patients;
+	    }
+	    else
+	    {
+		std::map<std::string,std::vector<std::string> >::iterator it;
+		it = _currentSelectedPatientMap.find(group);
+		if(it == _currentSelectedPatientMap.end())
+		{
+		    _currentSelectedPatientMap[group] = patients;
+		}
+		else if(it->second.size())
+		{
+		    for(int i = 0; i < patients.size(); ++i)
+		    {
+			bool add = true;
+			for(int j = 0; j < it->second.size(); ++j)
+			{
+			    if(patients[i] == it->second[j])
+			    {
+				add = false;
+				break;
+			    }
+			}
+			if(add)
+			{
+			    it->second.push_back(patients[i]);
+			}
+		    }
+		}
+	    }
+	}
+    }
 
     for(int i = 0; i < _objectList.size(); ++i)
     {
 	PatientSelectObject * pso = dynamic_cast<PatientSelectObject*>(_objectList[i]);
 	if(pso)
 	{
-	    pso->selectPatients(group,patients);
+	    //pso->selectPatients(group,patients);
+	    pso->selectPatients(_currentSelectedPatientMap);
 	}
     }
 }
@@ -279,8 +332,9 @@ void GraphLayoutObject::removeAll()
     _currentSelectedMicrobeGroup = "";
     _currentSelectedMicrobes.clear();
 
-    _currentSelectedPatientGroup = "";
-    _currentSelectedPatients.clear();
+    //_currentSelectedPatientGroup = "";
+    //_currentSelectedPatients.clear();
+    _currentSelectedPatientMap.clear();
 
     _objectList.clear();
 
@@ -485,6 +539,13 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
     {
 	updateLayout();
 	return;
+    }
+
+    if(item == _multiSelect)
+    {
+	std::string group;
+	std::vector<std::string> patients;
+	selectPatients(group,patients);
     }
 
     if(item == _rowsRV)
@@ -1253,7 +1314,8 @@ void GraphLayoutObject::updateLayout()
 	PatientSelectObject * pso = dynamic_cast<PatientSelectObject*>(_objectList[i]);
 	if(pso)
 	{
-	    pso->selectPatients(_currentSelectedPatientGroup,_currentSelectedPatients);
+	    //pso->selectPatients(_currentSelectedPatientGroup,_currentSelectedPatients);
+	    pso->selectPatients(_currentSelectedPatientMap);
 	}
     }
 }

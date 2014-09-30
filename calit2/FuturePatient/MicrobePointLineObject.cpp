@@ -245,9 +245,9 @@ void MicrobePointLineObject::setGraphSize(float width, float height)
     _graph->setDisplaySize(width,height);
 }
 
-void MicrobePointLineObject::selectPatients(std::string & group, std::vector<std::string> & patients)
+void MicrobePointLineObject::selectPatients(std::map<std::string,std::vector<std::string> > & selectMap)
 {
-    _graph->selectItems(group,patients);
+    _graph->selectItems(selectMap);
 }
 
 bool MicrobePointLineObject::processEvent(cvr::InteractionEvent * ie)

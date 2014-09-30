@@ -499,11 +499,21 @@ void GroupedBarGraph::clearHoverText()
 
 void GroupedBarGraph::selectItems(std::string & group, std::vector<std::string> & keys)
 {
+    std::map<std::string,std::vector<std::string> > selectMap;
+    if(!group.empty())
+    {
+	selectMap[group] = keys;
+    }
+    selectItems(selectMap);
+}
+
+void GroupedBarGraph::selectItems(std::map<std::string,std::vector<std::string> > & selectMap)
+{
     float groupLabelTop = _graphTop + _groupLabelMult * _topPaddingMult * _height;
     float selectedAlpha = 1.0;
     float notSelectedAlpha;
 
-    if(group.length())
+    if(selectMap.size())
     { 
 	notSelectedAlpha = 0.3;
     }
@@ -554,7 +564,7 @@ void GroupedBarGraph::selectItems(std::string & group, std::vector<std::string> 
 		    continue;
 		}
 
-		bool selectGroup = (it->first == group);
+		bool selectGroup = (selectMap.find(it->first) != selectMap.end());
 
 		if(selectGroup)
 		{
@@ -571,15 +581,15 @@ void GroupedBarGraph::selectItems(std::string & group, std::vector<std::string> 
 		    if(selectGroup)
 		    {
 			bool found = false;
-			if(!keys.size())
+			if(!selectMap[it->first].size())
 			{
 			    found = true;
 			}
 			else
 			{
-			    for(int k = 0; k < keys.size(); ++k)
+			    for(int k = 0; k < selectMap[it->first].size(); ++k)
 			    {
-				if(keys[k] == it->second[j].first)
+				if(selectMap[it->first][k] == it->second[j].first)
 				{
 				    found = true;
 				    break;
@@ -620,18 +630,18 @@ void GroupedBarGraph::selectItems(std::string & group, std::vector<std::string> 
 		}
 
 		float alpha = notSelectedAlpha;
-		if(group == _customDataOrder[i].first)
+		if(selectMap.find(_customDataOrder[i].first) != selectMap.end())
 		{
 		    bool found = false;
-		    if(!keys.size())
+		    if(!selectMap[_customDataOrder[i].first].size())
 		    {
 			found = true;
 		    }
 		    else
 		    {
-			for(int k = 0; k < keys.size(); ++k)
+			for(int k = 0; k < selectMap[_customDataOrder[i].first].size(); ++k)
 			{
-			    if(keys[k] == _data[_customDataOrder[i].first][_customDataOrder[i].second].first)
+			    if(selectMap[_customDataOrder[i].first][k] == _data[_customDataOrder[i].first][_customDataOrder[i].second].first)
 			    {
 				found = true;
 				break;

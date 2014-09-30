@@ -342,9 +342,9 @@ void SingleMicrobeObject::setGraphSize(float width, float height)
     _graph->setDisplaySize(width,height);
 }
 
-void SingleMicrobeObject::selectPatients(std::string & group, std::vector<std::string> & patients)
+void SingleMicrobeObject::selectPatients(std::map<std::string,std::vector<std::string> > & selectMap)
 {
-    _graph->selectItems(group,patients);
+    _graph->selectItems(selectMap);
 }
 
 bool SingleMicrobeObject::processEvent(cvr::InteractionEvent * ie)
