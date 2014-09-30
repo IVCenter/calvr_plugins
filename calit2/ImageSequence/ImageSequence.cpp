@@ -53,6 +53,10 @@ bool ImageSequence::init()
 	_autoStart = true;
 	_autoStartIndex = index;
     }
+    else
+    {
+	_autoStart = false;
+    }
 
     _removeButton = new MenuButton("Remove");
     _removeButton->setCallback(this);
