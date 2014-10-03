@@ -9,6 +9,7 @@
 #include <cvrConfig/ConfigManager.h>
 #include <cvrMenu/MenuBar.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
@@ -238,6 +239,7 @@ bool FuturePatient::init()
     mtypeList.push_back("Microbe");
     mtypeList.push_back("Family");
     mtypeList.push_back("Genus");
+    mtypeList.push_back("Phylum");
     _sMicrobeType->setValues(mtypeList);
 
     _sMicrobes = new MenuList();
@@ -476,6 +478,49 @@ bool FuturePatient::init()
     _scatterMicrobeType->setCallback(this);
     _scatterMenu->addItem(_scatterMicrobeType);
 
+    _scatterFilterMenu = new SubMenu("Filters");
+
+    _scatterPvalSort = new MenuCheckbox("P Val Enable",false);
+    _scatterPvalSort->setCallback(this);
+    _scatterFilterMenu->addItem(_scatterPvalSort);
+
+    _scatterTvalSort = new MenuCheckbox("With T Val",false);
+    _scatterTvalSort->setCallback(this);
+    _scatterFilterMenu->addItem(_scatterTvalSort);
+
+    sMicrobeBar = new MenuBar(osg::Vec4(1.0,1.0,1.0,1.0));
+    _scatterFilterMenu->addItem(sMicrobeBar);
+
+    _scatterAvgEnable = new MenuCheckbox("Average Enable",false);
+    _scatterAvgEnable->setCallback(this);
+    _scatterFilterMenu->addItem(_scatterAvgEnable);
+
+    _scatterAvgValue = new MenuRangeValueCompact("Avg Threshold",0.0,1.0,0.0001);
+    _scatterAvgValue->setCallback(this);
+    _scatterFilterMenu->addItem(_scatterAvgValue);
+
+    sMicrobeBar = new MenuBar(osg::Vec4(1.0,1.0,1.0,1.0));
+    _scatterFilterMenu->addItem(sMicrobeBar);
+
+    _scatterReqMaxEnable = new MenuCheckbox("Req Max Enable",false);
+    _scatterReqMaxEnable->setCallback(this);
+    _scatterFilterMenu->addItem(_scatterReqMaxEnable);
+
+    _scatterReqMaxValue = new MenuRangeValueCompact("Value Threshold",0.0,1.0,0.0001);
+    _scatterReqMaxValue->setCallback(this);
+    _scatterFilterMenu->addItem(_scatterReqMaxValue);
+
+    sMicrobeBar = new MenuBar(osg::Vec4(1.0,1.0,1.0,1.0));
+    _scatterFilterMenu->addItem(sMicrobeBar);
+
+    _scatterZerosEnable = new MenuCheckbox("Zeros Enable",false);
+    _scatterZerosEnable->setCallback(this);
+    _scatterFilterMenu->addItem(_scatterZerosEnable);
+
+    _scatterZerosValue = new MenuRangeValueCompact("Zeros Threshold",0.0,1.0,0.25);
+    _scatterZerosValue->setCallback(this);
+    _scatterFilterMenu->addItem(_scatterZerosValue);
+
     std::vector<std::string> typeList;
     typeList.push_back("Species");
     typeList.push_back("Family");
@@ -511,6 +556,21 @@ bool FuturePatient::init()
     _scatterLoadAll = new MenuButton("Load All");
     _scatterLoadAll->setCallback(this);
     _scatterMenu->addItem(_scatterLoadAll);
+
+    _scatterMenu->addItem(_scatterFilterMenu);
+    
+    _scatterPhenotypes = new MenuList();
+    _scatterPhenotypes->setCallback(this);
+    _scatterPhenotypes->setScrollingHint(MenuList::ONE_TO_ONE);
+    _scatterMenu->addItem(_scatterPhenotypes);
+    _scatterPhenotypes->setValues(pheno);
+
+    _scatterSortResults = new MenuRangeValueCompact("Num Results",2,7,5);
+    _scatterMenu->addItem(_scatterSortResults);
+
+    _scatterLoadFilter = new MenuButton("Load w/ Filter");
+    _scatterLoadFilter->setCallback(this);
+    _scatterMenu->addItem(_scatterLoadFilter);
 
     _dbCache = new MenuCheckbox("DB Cache",true);
     _dbCache->setCallback(this);
@@ -1493,6 +1553,11 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    _sMicrobes->setValues(_microbeTableList[_microbeTable->getIndex()]->genusList);
 	    _sMicrobeEntry->setSearchList(_microbeTableList[_microbeTable->getIndex()]->genusList,5);
 	}
+	else
+	{
+	    _sMicrobes->setValues(_scatterPhylumList);
+	    _sMicrobeEntry->setSearchList(_scatterPhylumList,5);
+	}
     }
 
     if(item == _scatterMicrobeType)
@@ -1543,6 +1608,11 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    _sMicrobes->setValues(_microbeTableList[_microbeTable->getIndex()]->genusList);
 	    _sMicrobeEntry->setSearchList(_microbeTableList[_microbeTable->getIndex()]->genusList,5);
+	}
+	else
+	{
+	    _sMicrobes->setValues(_scatterPhylumList);
+	    _sMicrobeEntry->setSearchList(_scatterPhylumList,5);
 	}
     }
 
@@ -2252,6 +2322,12 @@ void FuturePatient::menuCallback(MenuItem * item)
 		}
 	    }
 	}
+	return;
+    }
+
+    if(item == _scatterLoadFilter)
+    {
+	loadScatter();
 	return;
     }
 
@@ -3169,23 +3245,17 @@ void FuturePatient::loadLayout(const std::string & file)
     instream.close();
 }
 
-struct sortCriteria
-{
-    float primaryValue;
-    float secondaryValue;
-};
-
-bool phenoDispSort(const std::pair<PhenoStats*,struct sortCriteria> & first, const std::pair<PhenoStats*,struct sortCriteria> & second)
+bool phenoDispSort(const std::pair<PhenoStats*,struct SortCriteria> & first, const std::pair<PhenoStats*,struct SortCriteria> & second)
 {
     return first.second.primaryValue > second.second.primaryValue;
 }
 
-bool phenoDispSortRev(const std::pair<PhenoStats*,struct sortCriteria> & first, const std::pair<PhenoStats*,struct sortCriteria> & second)
+bool phenoDispSortRev(const std::pair<PhenoStats*,struct SortCriteria> & first, const std::pair<PhenoStats*,struct SortCriteria> & second)
 {
     return first.second.primaryValue < second.second.primaryValue;
 }
 
-bool phenoDispSortWithT(const std::pair<PhenoStats*,struct sortCriteria> & first, const std::pair<PhenoStats*,struct sortCriteria> & second)
+bool phenoDispSortWithT(const std::pair<PhenoStats*,struct SortCriteria> & first, const std::pair<PhenoStats*,struct SortCriteria> & second)
 {
     if(first.second.primaryValue != second.second.primaryValue)
     {
@@ -3201,23 +3271,144 @@ bool phenoDispSortWithT(const std::pair<PhenoStats*,struct sortCriteria> & first
     }
 }
 
-void FuturePatient::loadPhenotype()
+void FuturePatient::loadScatter()
 {
-    if(!_microbeTableList[_microbeTable->getIndex()]->statsMap.size())
+    std::vector<std::pair<PhenoStats*,SortCriteria> > displayList = createListWithFilters((MicrobeGraphType)_scatterMicrobeType->getIndex(),_scatterPhenotypes->getValue(),_scatterPvalSort->getValue(),_scatterTvalSort->getValue(),_scatterAvgEnable->getValue(),_scatterAvgValue->getValue(),_scatterReqMaxEnable->getValue(),_scatterReqMaxValue->getValue(),_scatterZerosEnable->getValue(),_scatterZerosValue->getValue());
+
+    std::cerr << "Got " << displayList.size() << " graphs in display list." << std::endl;
+
+    if(displayList.size() < 2)
     {
-	initPhenoStats(_microbeTableList[_microbeTable->getIndex()]->statsMap,_microbeTableList[_microbeTable->getIndex()]->familyStatsMap,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
+	return;
     }
-
-    std::vector<std::pair<PhenoStats*,sortCriteria> > displayList;
-
-    std::map<std::string,std::map<std::string,struct PhenoStats > > * statsMapp;
 
     MicrobeGraphType mgt;
     switch(_sMicrobeType->getIndex())
     {
 	case MGT_FAMILY:
 	{
-	    std::cerr << "Family pheno load." << std::endl;
+	    //std::cerr << "Family pheno load." << std::endl;
+	    mgt = MGT_FAMILY;
+	    break;
+	}
+	case MGT_SPECIES:
+	default:
+	{
+	    //std::cerr << "Species pheno load." << std::endl;
+	    mgt = MGT_SPECIES;
+	    break;
+	}
+    }
+
+    int graphs = std::min((int)displayList.size(),((int)_scatterSortResults->getValue()));
+
+    GraphGlobals::setDeferUpdate(true);
+    for(int i = 0; i < graphs; ++i)
+    {
+	for(int j = (graphs-1); j > i; --j)
+	{
+	    MicrobeScatterGraphObject * msgo = new MicrobeScatterGraphObject(_dbm, 1000.0, 1000.0, "Scatter Plot", false, true, false, true);
+	    if(msgo->setGraph(displayList[i].first->name + " vs " + displayList[j].first->name,displayList[i].first->name,displayList[j].first->name,mgt,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix))
+	    {
+		checkLayout();
+		_layoutObject->addGraphObject(msgo);
+	    }
+	    else
+	    {
+		delete msgo;
+	    }
+	}
+    }
+    GraphGlobals::setDeferUpdate(false);
+    if(_layoutObject)
+    {
+	_layoutObject->forceUpdate();
+    }
+}
+
+void FuturePatient::loadPhenotype()
+{
+    std::vector<std::pair<PhenoStats*,SortCriteria> > displayList = createListWithFilters((MicrobeGraphType)_sMicrobeType->getIndex(),_sMicrobePhenotypes->getValue(),_sMicrobePvalSort->getValue(),_sMicrobeTvalSort->getValue(),_sMicrobeAvgEnable->getValue(),_sMicrobeAvgValue->getValue(),_sMicrobeReqMaxEnable->getValue(),_sMicrobeReqMaxValue->getValue(),_sMicrobeZerosEnable->getValue(),_sMicrobeZerosValue->getValue());
+
+    std::cerr << "Got " << displayList.size() << " graphs in display list." << std::endl;
+
+    if(!displayList.size())
+    {
+	return;
+    }
+
+    MicrobeGraphType mgt;
+    switch(_sMicrobeType->getIndex())
+    {
+	case MGT_FAMILY:
+	{
+	    //std::cerr << "Family pheno load." << std::endl;
+	    mgt = MGT_FAMILY;
+	    break;
+	}
+	case MGT_SPECIES:
+	default:
+	{
+	    //std::cerr << "Species pheno load." << std::endl;
+	    mgt = MGT_SPECIES;
+	    break;
+	}
+    }
+
+    GraphGlobals::setDeferUpdate(true);
+    for(int i = 0; i < displayList.size() && i < ((int)_sMicrobeSortResults->getValue()); ++i)
+    {
+	SingleMicrobeObject * smo = new SingleMicrobeObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+
+	std::string titleSuffix;
+
+	if(_sMicrobePvalSort->getValue())
+	{
+	    std::stringstream ss;
+	    ss << " PVal: " << displayList[i].second.primaryValue;
+
+	    if(_sMicrobeTvalSort->getValue())
+	    {
+		ss << " Min TVal: " << displayList[i].second.secondaryValue;
+	    }
+
+	    titleSuffix = ss.str();
+	}
+
+	if(smo->setGraph(displayList[i].first->name,titleSuffix,displayList[i].first->taxid,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix, mgt,  _sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
+	{
+	    checkLayout();
+	    _layoutObject->addGraphObject(smo);
+	}
+	else
+	{
+	    delete smo;
+	}	
+    }
+    GraphGlobals::setDeferUpdate(false);
+    if(_layoutObject)
+    {
+	_layoutObject->forceUpdate();
+    }
+}
+
+std::vector<std::pair<PhenoStats*,SortCriteria> > FuturePatient::createListWithFilters(MicrobeGraphType type, std::string phenotype, bool pvalSort, bool tvalSort, bool averageThresh, float avgVal, bool reqMax, float reqMaxVal, bool zeroLimit, float zeroVal)
+{
+    if(!_microbeTableList[_microbeTable->getIndex()]->statsMap.size())
+    {
+	initPhenoStats(_microbeTableList[_microbeTable->getIndex()]->statsMap,_microbeTableList[_microbeTable->getIndex()]->familyStatsMap,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
+    }
+
+    std::vector<std::pair<PhenoStats*,SortCriteria> > displayList;
+
+    std::map<std::string,std::map<std::string,struct PhenoStats > > * statsMapp;
+
+    MicrobeGraphType mgt;
+    switch(type)
+    {
+	case MGT_FAMILY:
+	{
+	    //std::cerr << "Family pheno load." << std::endl;
 	    mgt = MGT_FAMILY;
 	    statsMapp = &_microbeTableList[_microbeTable->getIndex()]->familyStatsMap;
 	    break;
@@ -3225,7 +3416,7 @@ void FuturePatient::loadPhenotype()
 	case MGT_SPECIES:
 	default:
 	{
-	    std::cerr << "Species pheno load." << std::endl;
+	    //std::cerr << "Species pheno load." << std::endl;
 	    mgt = MGT_SPECIES;
 	    statsMapp = &_microbeTableList[_microbeTable->getIndex()]->statsMap;
 	    break;
@@ -3235,7 +3426,7 @@ void FuturePatient::loadPhenotype()
 
     for(std::map<std::string,std::map<std::string,struct PhenoStats > >::iterator it = statsMapp->begin(); it != statsMapp->end(); ++it)
     {
-	if(_sMicrobeAvgEnable->getValue() || _sMicrobeReqMaxEnable->getValue() || _sMicrobeZerosEnable->getValue())
+	if(averageThresh || reqMax || zeroLimit)
 	{
 	    float avg = 0.0;
 	    int count = 0;
@@ -3260,29 +3451,29 @@ void FuturePatient::loadPhenotype()
 	    avg /= ((float)count);
 	    float zeroRatio = ((float)zeros) / ((float)count);
 
-	    if(_sMicrobeAvgEnable->getValue() && avg < _sMicrobeAvgValue->getValue())
+	    if(averageThresh && avg < avgVal)
 	    {
 		continue;
 	    }
 
-	    if(_sMicrobeReqMaxEnable->getValue() && maxVal < _sMicrobeReqMaxValue->getValue())
+	    if(reqMax && maxVal < reqMaxVal)
 	    {
 		continue;
 	    }
 
-	    if(_sMicrobeZerosEnable->getValue() && zeroRatio > _sMicrobeZerosValue->getValue())
+	    if(zeroLimit && zeroRatio > zeroVal)
 	    {
 		continue;
 	    }
 	}
 
-	if(!_sMicrobePvalSort->getValue())
+	if(!pvalSort)
 	{
 	    struct PhenoStats * ps = NULL;
 
 	    for(std::map<std::string,struct PhenoStats >::iterator itt = it->second.begin(); itt != it->second.end(); ++itt)
 	    {
-		if(itt->first == _sMicrobePhenotypes->getValue())
+		if(itt->first == phenotype)
 		{
 		    ps = &itt->second;
 		    break;
@@ -3301,7 +3492,7 @@ void FuturePatient::loadPhenotype()
 	    float minGap = FLT_MAX;
 	    for(std::map<std::string,struct PhenoStats >::iterator itt = it->second.begin(); itt != it->second.end(); ++itt)
 	    {
-		if(itt->first == _sMicrobePhenotypes->getValue())
+		if(itt->first == phenotype)
 		{
 		    continue;
 		}
@@ -3324,9 +3515,9 @@ void FuturePatient::loadPhenotype()
 	    }
 	    if(addGraph)
 	    {
-		struct sortCriteria sc;
+		struct SortCriteria sc;
 		sc.primaryValue = minGap;
-		displayList.push_back(std::pair<PhenoStats*,struct sortCriteria>(ps,sc));
+		displayList.push_back(std::pair<PhenoStats*,struct SortCriteria>(ps,sc));
 	    }
 	}
 	else
@@ -3347,7 +3538,7 @@ void FuturePatient::loadPhenotype()
 
 	    std::map<std::string,struct PhenoStats >::iterator baseStats;
 
-	    baseStats = it->second.find(_sMicrobePhenotypes->getValue());
+	    baseStats = it->second.find(phenotype);
 
 	    float tval = 0.0;
 
@@ -3355,7 +3546,7 @@ void FuturePatient::loadPhenotype()
 	    {
 		for(std::map<std::string,struct PhenoStats >::iterator itt = it->second.begin(); itt != it->second.end(); ++itt)
 		{
-		    if(itt->first == _sMicrobePhenotypes->getValue())
+		    if(itt->first == phenotype)
 		    {
 			continue;
 		    }
@@ -3401,20 +3592,20 @@ void FuturePatient::loadPhenotype()
 		}
 		else
 		{
-		    struct sortCriteria sc;
+		    struct SortCriteria sc;
 		    sc.primaryValue = pval;
 		    sc.secondaryValue = tval;
-		    displayList.push_back(std::pair<PhenoStats*,struct sortCriteria>(&it->second.begin()->second,sc));
+		    displayList.push_back(std::pair<PhenoStats*,struct SortCriteria>(&it->second.begin()->second,sc));
 		}
 	    }
 	}
     }
     
-    if(!_sMicrobePvalSort->getValue())
+    if(!pvalSort)
     {
 	std::sort(displayList.begin(),displayList.end(),phenoDispSort);
     }
-    else if(!_sMicrobeTvalSort->getValue())
+    else if(!tvalSort)
     {
 	std::sort(displayList.begin(),displayList.end(),phenoDispSortRev);
     }
@@ -3423,48 +3614,7 @@ void FuturePatient::loadPhenotype()
 	std::sort(displayList.begin(),displayList.end(),phenoDispSortWithT);
     }
 
-    std::cerr << "Got " << displayList.size() << " graphs in display list." << std::endl;
-
-    if(!displayList.size())
-    {
-	return;
-    }
-
-    GraphGlobals::setDeferUpdate(true);
-    for(int i = 0; i < displayList.size() && i < ((int)_sMicrobeSortResults->getValue()); ++i)
-    {
-	SingleMicrobeObject * smo = new SingleMicrobeObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-
-	std::string titleSuffix;
-
-	if(_sMicrobePvalSort->getValue())
-	{
-	    std::stringstream ss;
-	    ss << " PVal: " << displayList[i].second.primaryValue;
-
-	    if(_sMicrobeTvalSort->getValue())
-	    {
-		ss << " Min TVal: " << displayList[i].second.secondaryValue;
-	    }
-
-	    titleSuffix = ss.str();
-	}
-
-	if(smo->setGraph(displayList[i].first->name,titleSuffix,displayList[i].first->taxid,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix, mgt,  _sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
-	{
-	    checkLayout();
-	    _layoutObject->addGraphObject(smo);
-	}
-	else
-	{
-	    delete smo;
-	}	
-    }
-    GraphGlobals::setDeferUpdate(false);
-    if(_layoutObject)
-    {
-	_layoutObject->forceUpdate();
-    }
+    return displayList;
 }
 
 void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & familyStatMap, std::string microbeSuffix, std::string measureSuffix)

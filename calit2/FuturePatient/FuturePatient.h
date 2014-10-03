@@ -35,6 +35,12 @@ struct PhenoStats
     std::vector<float> values;
 };
 
+struct SortCriteria
+{
+    float primaryValue;
+    float secondaryValue;
+};
+
 
 class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 {
@@ -76,7 +82,9 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         void checkSockets(std::vector<int> & messageList);
         bool processSocketInput(cvr::CVRSocket * socket, std::vector<int> & messageList);
 
+        void loadScatter();
         void loadPhenotype();
+        std::vector<std::pair<PhenoStats*,SortCriteria> > createListWithFilters(MicrobeGraphType type, std::string phenotype = "", bool pvalSort = false, bool tvalSort = false, bool averageThresh = false, float avgVal = 0.0, bool reqMax = false, float reqMaxVal = 0.0, bool zeroLimit = false, float zeroVal = 0.0);
 
         void initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & familyStatMap, std::string microbeSuffix, std::string measureSuffix);
 
@@ -221,6 +229,18 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _scatterMicrobeType;
         cvr::MenuTextEntryItem * _scatterFirstEntry;
         cvr::MenuTextEntryItem * _scatterSecondEntry;
+        cvr::SubMenu * _scatterFilterMenu;
+        cvr::MenuCheckbox * _scatterPvalSort;
+        cvr::MenuCheckbox * _scatterTvalSort;
+        cvr::MenuCheckbox * _scatterAvgEnable;
+        cvr::MenuRangeValueCompact * _scatterAvgValue;
+        cvr::MenuCheckbox * _scatterReqMaxEnable;
+        cvr::MenuRangeValueCompact * _scatterReqMaxValue;
+        cvr::MenuCheckbox * _scatterZerosEnable;
+        cvr::MenuRangeValueCompact * _scatterZerosValue;
+        cvr::MenuRangeValueCompact * _scatterSortResults;
+        cvr::MenuButton * _scatterLoadFilter;
+        cvr::MenuList * _scatterPhenotypes;
 
         MicrobeBarGraphObject * _currentSBGraph;
         SymptomGraphObject * _currentSymptomGraph;

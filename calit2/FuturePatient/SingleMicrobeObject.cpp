@@ -78,6 +78,12 @@ bool SingleMicrobeObject::setGraph(std::string microbe, std::string titleSuffix,
             break;
         }
 
+	case MGT_PHYLUM:
+	{
+	    queryss << "select Patient.p_condition, Patient.last_name, t.patient_id, unix_timestamp(t.timestamp) as timestamp, t.value from (select " << microbesTable << ".phylum, " << measurementTable << ".patient_id, " << measurementTable << ".timestamp, sum(" << measurementTable << ".value) as value from "<< measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id where " << microbesTable << ".phylum = \"" << microbe << "\" group by " << measurementTable << ".patient_id, " << measurementTable << ".timestamp)t inner join Patient on t.patient_id = Patient.patient_id where Patient.region = \"US\" order by Patient.p_condition, Patient.last_name, t.timestamp;";
+	    break;
+	}
+
         default:
         {
 	        queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where " << measurementTable << ".taxonomy_id = " << taxid << " and Patient.region = \"US\" order by p_condition, last_name, timestamp;";
