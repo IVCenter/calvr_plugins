@@ -474,6 +474,15 @@ bool FuturePatient::init()
     _scatterMenu = new SubMenu("Scatter Plots");
     _fpMenu->addItem(_scatterMenu);
 
+    _scatterPresetMenu = new SubMenu("Presets");
+    _scatterMenu->addItem(_scatterPresetMenu);
+
+    _scatterPresetDir = ConfigManager::getEntry("value","Plugin.FuturePatient.ScatterDir","");
+    if(!_scatterPresetDir.empty())
+    {
+	loadScatterPresets();
+    }
+
     _scatterMicrobeType = new MenuList();
     _scatterMicrobeType->setCallback(this);
     _scatterMenu->addItem(_scatterMicrobeType);
@@ -2331,6 +2340,55 @@ void FuturePatient::menuCallback(MenuItem * item)
 	return;
     }
 
+    for(int k = 0; k < _scatterPresetButtons.size(); ++k)
+    {
+	if(item == _scatterPresetButtons[k])
+	{
+	    MicrobeGraphType mgt;
+	    switch(_scatterMicrobeType->getIndex())
+	    {
+		case MGT_FAMILY:
+		    {
+			//std::cerr << "Family pheno load." << std::endl;
+			mgt = MGT_FAMILY;
+			break;
+		    }
+		case MGT_SPECIES:
+		default:
+		    {
+			//std::cerr << "Species pheno load." << std::endl;
+			mgt = MGT_SPECIES;
+			break;
+		    }
+	    }
+
+	    GraphGlobals::setDeferUpdate(true);
+	    for(int i = 0; i < _scatterPresets[k].size(); ++i)
+	    {
+		for(int j = (_scatterPresets[k].size()-1); j > i; --j)
+		{
+		    MicrobeScatterGraphObject * msgo = new MicrobeScatterGraphObject(_dbm, 1000.0, 1000.0, "Scatter Plot", false, true, false, true);
+		    if(msgo->setGraph(_scatterPresets[k][i] + " vs " + _scatterPresets[k][j],_scatterPresets[k][i],_scatterPresets[k][j],mgt,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix))
+		    {
+			checkLayout();
+			_layoutObject->addGraphObject(msgo);
+		    }
+		    else
+		    {
+			delete msgo;
+		    }
+		}
+	    }
+	    GraphGlobals::setDeferUpdate(false);
+	    if(_layoutObject)
+	    {
+		_layoutObject->forceUpdate();
+	    }
+
+	    return;
+	}
+    }
+
     if(item == _saveLayoutButton)
     {
 	saveLayout();
@@ -2515,6 +2573,7 @@ void FuturePatient::setupMicrobes()
 
 	for(int i = 0; i < numMicrobes; ++i)
 	{
+	    //std::cerr << microbes[i].name << std::endl;
 	    _microbeTableList[j]->microbeList.push_back(microbes[i].name);
 	    _microbeTableList[j]->microbeIDList.push_back(microbes[i].taxid);
 	}
@@ -3283,7 +3342,7 @@ void FuturePatient::loadScatter()
     }
 
     MicrobeGraphType mgt;
-    switch(_sMicrobeType->getIndex())
+    switch(_scatterMicrobeType->getIndex())
     {
 	case MGT_FAMILY:
 	{
@@ -3823,4 +3882,52 @@ void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,str
     {
 	delete[] entries;
     }
+}
+
+void FuturePatient::loadScatterPresets()
+{
+    DIR * dir = opendir(_scatterPresetDir.c_str());
+    if(!dir)
+    {
+	std::cerr << "Unable to open scatter preset director: " << _scatterPresetDir << std::endl;
+	return;
+    }
+
+    struct dirent * ent;
+    struct stat fstat;
+    while((ent = readdir(dir)))
+    {
+	std::string path = _scatterPresetDir + "/" + ent->d_name;
+
+	if(stat(path.c_str(),&fstat) || S_ISDIR(fstat.st_mode))
+	{
+	    continue;
+	}
+
+	std::vector<std::string> entryList;
+
+	std::ifstream infile;
+	infile.open(path.c_str());
+	while(infile.good())
+	{
+	    std::string entry;
+	    std::getline(infile,entry);
+	    if(!entry.empty())
+	    {
+		//std::cerr << "Entry: " << entry << std::endl;
+		entryList.push_back(entry);
+	    }
+	}
+	infile.close();
+
+	if(entryList.size())
+	{
+	    MenuButton * button = new MenuButton(ent->d_name,false);
+	    button->setCallback(this);
+	    _scatterPresetMenu->addItem(button);
+	    _scatterPresetButtons.push_back(button);
+	    _scatterPresets.push_back(entryList);
+	}
+    }
+    closedir(dir);
 }

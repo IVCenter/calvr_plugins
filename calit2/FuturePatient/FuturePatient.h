@@ -88,6 +88,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         void initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & familyStatMap, std::string microbeSuffix, std::string measureSuffix);
 
+        void loadScatterPresets();
+
         cvr::SubMenu * _fpMenu;
         cvr::SubMenu * _layoutMenu;
         cvr::MenuButton * _saveLayoutButton;
@@ -241,6 +243,10 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuRangeValueCompact * _scatterSortResults;
         cvr::MenuButton * _scatterLoadFilter;
         cvr::MenuList * _scatterPhenotypes;
+        cvr::SubMenu * _scatterPresetMenu;
+        std::vector<cvr::MenuButton*> _scatterPresetButtons;
+        std::vector<std::vector<std::string> > _scatterPresets;
+        std::string _scatterPresetDir;
 
         MicrobeBarGraphObject * _currentSBGraph;
         SymptomGraphObject * _currentSymptomGraph;
