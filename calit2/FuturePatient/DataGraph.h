@@ -172,6 +172,8 @@ class DataGraph
 
         void addMathFunction(MathFunction * mf);
         void removeMathFunction(MathFunction * mf);
+        int getNumMathFunctions();
+        MathFunction * getMathFunction(int i);
 
     protected:
         void setupMultiGraphDisplayModes();

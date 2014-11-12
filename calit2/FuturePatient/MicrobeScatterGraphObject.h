@@ -48,6 +48,8 @@ class MicrobeScatterGraphObject : public LayoutTypeObject, public LogValueRangeO
 
         virtual void menuCallback(cvr::MenuItem * item);
 
+        void setLogScale(bool logScale);
+
     protected:
         void initData();
         void makeSelect();

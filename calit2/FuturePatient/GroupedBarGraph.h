@@ -86,6 +86,12 @@ class GroupedBarGraph
             return _displayMode;
         }
 
+        void setAxisType(BarGraphAxisType axisType);
+        BarGraphAxisType getAxisType()
+        {
+            return _axisType;
+        }
+
         void setColorMode(BarGraphColorMode bgcm);
         BarGraphColorMode getColorMode()
         {
@@ -127,6 +133,8 @@ class GroupedBarGraph
 
         void addMathFunction(MicrobeMathFunction * mf);
         void removeMathFunction(MicrobeMathFunction * mf);
+        int getNumMathFunctions();
+        MicrobeMathFunction * getMathFunction(int index);
 
         float getGroupValue(std::string group);
         float getKeyValue(std::string group, std::string key);

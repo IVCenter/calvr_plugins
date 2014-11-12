@@ -131,6 +131,10 @@ bool FuturePatient::init()
     _testList->setScrollingHint(MenuList::ONE_TO_ONE);
     _chartMenu->addItem(_testList);
 
+    _linearRegCB = new MenuCheckbox("Linear Regression",false);
+    _linearRegCB->setCallback(this);
+    _chartMenu->addItem(_linearRegCB);
+
     _loadButton = new MenuButton("Load");
     _loadButton->setCallback(this);
     _chartMenu->addItem(_loadButton);
@@ -259,6 +263,14 @@ bool FuturePatient::init()
     _sMicrobeLabels = new MenuCheckbox("Labels",true);
     _sMicrobeLabels->setCallback(this);
     _sMicrobeMenu->addItem(_sMicrobeLabels);
+
+    _sMicrobeLogCB = new MenuCheckbox("Log Scale",true);
+    _sMicrobeLogCB->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobeLogCB);
+
+    _sMicrobeStdDevCB = new MenuCheckbox("Std Dev",false);
+    _sMicrobeStdDevCB->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobeStdDevCB);
 
     _sMicrobeFirstTimeOnly = new MenuCheckbox("First Time Only",false);
     _sMicrobeFirstTimeOnly->setCallback(this);
@@ -557,6 +569,10 @@ bool FuturePatient::init()
     _scatterSecondEntry = new MenuTextEntryItem("Manual Entry","",MenuItemGroup::ALIGN_CENTER);
     _scatterSecondEntry->setCallback(this);
     _scatterMenu->addItem(_scatterSecondEntry);
+
+    _scatterLogCB = new MenuCheckbox("Log Scale",true);
+    _scatterLogCB->setCallback(this);
+    _scatterMenu->addItem(_scatterLogCB);
 
     _scatterLoad = new MenuButton("Load");
     _scatterLoad->setCallback(this);
@@ -1369,6 +1385,14 @@ void FuturePatient::menuCallback(MenuItem * item)
 	loadGraph(_chartPatientList->getValue(),_testList->getValue());
     }
 
+    if(item == _linearRegCB)
+    {
+	if(_layoutObject)
+	{
+	    _layoutObject->setChartLinearRegression(_linearRegCB->getValue());
+	}
+    }
+
     if(item == _groupLoadButton)
     {
 	for(int i = 0; i < _groupTestMap[_groupList->getValue()].size(); i++)
@@ -2011,6 +2035,22 @@ void FuturePatient::menuCallback(MenuItem * item)
 	}
     }
 
+    if(item == _sMicrobeLogCB)
+    {
+	if(_layoutObject)
+	{
+	    _layoutObject->setSingleMicrobeLogScale(_sMicrobeLogCB->getValue());
+	}
+    }
+
+    if(item == _sMicrobeStdDevCB)
+    {
+	if(_layoutObject)
+	{
+	    _layoutObject->setSingleMicrobeShowStdDev(_sMicrobeStdDevCB->getValue());
+	}
+    }
+
     if((item == _sMicrobeLoad || item == _sMicrobeEntry) && _sMicrobes->getListSize())
     {
 	//std::string tablesuffix;
@@ -2069,6 +2109,8 @@ void FuturePatient::menuCallback(MenuItem * item)
 	{
 	    checkLayout();
 	    _layoutObject->addGraphObject(smo);
+	    smo->setLogScale(_sMicrobeLogCB->getValue());
+	    smo->setShowStdDev(_sMicrobeStdDevCB->getValue());
 	}
 	else
 	{
@@ -2098,6 +2140,8 @@ void FuturePatient::menuCallback(MenuItem * item)
 		{
 		    checkLayout();
 		    _layoutObject->addGraphObject(smo);
+		    smo->setLogScale(_sMicrobeLogCB->getValue());
+		    smo->setShowStdDev(_sMicrobeStdDevCB->getValue());
 		}
 		else
 		{
@@ -2291,6 +2335,14 @@ void FuturePatient::menuCallback(MenuItem * item)
 	_scatterSecondEntry->setText("");
     }
 
+    if(item == _scatterLogCB)
+    {
+	if(_layoutObject)
+	{
+	    _layoutObject->setScatterLogScale(_scatterLogCB->getValue());
+	}
+    }
+
     if(item == _scatterLoad)
     {
 	if(_scatterFirstList->getListSize() && _scatterFirstList->getIndex() != _scatterSecondList->getIndex())
@@ -2300,6 +2352,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    {
 		checkLayout();
 		_layoutObject->addGraphObject(msgo);
+		msgo->setLogScale(_scatterLogCB->getValue());
 	    }
 	    else
 	    {
@@ -2324,6 +2377,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		{
 		    checkLayout();
 		    _layoutObject->addGraphObject(msgo);
+		    msgo->setLogScale(_scatterLogCB->getValue());
 		}
 		else
 		{
@@ -2372,6 +2426,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		    {
 			checkLayout();
 			_layoutObject->addGraphObject(msgo);
+			msgo->setLogScale(_scatterLogCB->getValue());
 		    }
 		    else
 		    {
@@ -3344,10 +3399,20 @@ void FuturePatient::loadScatter()
     MicrobeGraphType mgt;
     switch(_scatterMicrobeType->getIndex())
     {
+	case MGT_PHYLUM:
+	{
+	    mgt = MGT_PHYLUM;
+	    break;
+	}
 	case MGT_FAMILY:
 	{
 	    //std::cerr << "Family pheno load." << std::endl;
 	    mgt = MGT_FAMILY;
+	    break;
+	}
+	case MGT_GENUS:
+	{
+	    mgt = MGT_GENUS;
 	    break;
 	}
 	case MGT_SPECIES:
@@ -3371,6 +3436,7 @@ void FuturePatient::loadScatter()
 	    {
 		checkLayout();
 		_layoutObject->addGraphObject(msgo);
+		msgo->setLogScale(_scatterLogCB->getValue());
 	    }
 	    else
 	    {
@@ -3399,10 +3465,20 @@ void FuturePatient::loadPhenotype()
     MicrobeGraphType mgt;
     switch(_sMicrobeType->getIndex())
     {
+	case MGT_PHYLUM:
+	{
+	    mgt = MGT_PHYLUM;
+	    break;
+	}
 	case MGT_FAMILY:
 	{
 	    //std::cerr << "Family pheno load." << std::endl;
 	    mgt = MGT_FAMILY;
+	    break;
+	}
+	case MGT_GENUS:
+	{
+	    mgt = MGT_GENUS;
 	    break;
 	}
 	case MGT_SPECIES:
@@ -3438,6 +3514,8 @@ void FuturePatient::loadPhenotype()
 	{
 	    checkLayout();
 	    _layoutObject->addGraphObject(smo);
+	    smo->setLogScale(_sMicrobeLogCB->getValue());
+	    smo->setShowStdDev(_sMicrobeStdDevCB->getValue());
 	}
 	else
 	{
@@ -3455,7 +3533,7 @@ std::vector<std::pair<PhenoStats*,SortCriteria> > FuturePatient::createListWithF
 {
     if(!_microbeTableList[_microbeTable->getIndex()]->statsMap.size())
     {
-	initPhenoStats(_microbeTableList[_microbeTable->getIndex()]->statsMap,_microbeTableList[_microbeTable->getIndex()]->familyStatsMap,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
+	initPhenoStats(_microbeTableList[_microbeTable->getIndex()]->statsMap,_microbeTableList[_microbeTable->getIndex()]->genusStatsMap,_microbeTableList[_microbeTable->getIndex()]->familyStatsMap,_microbeTableList[_microbeTable->getIndex()]->phylumStatsMap,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
     }
 
     std::vector<std::pair<PhenoStats*,SortCriteria> > displayList;
@@ -3465,11 +3543,23 @@ std::vector<std::pair<PhenoStats*,SortCriteria> > FuturePatient::createListWithF
     MicrobeGraphType mgt;
     switch(type)
     {
+	case MGT_PHYLUM:
+	{
+	    mgt = MGT_PHYLUM;
+	    statsMapp = &_microbeTableList[_microbeTable->getIndex()]->phylumStatsMap;
+	    break;
+	}
 	case MGT_FAMILY:
 	{
 	    //std::cerr << "Family pheno load." << std::endl;
 	    mgt = MGT_FAMILY;
 	    statsMapp = &_microbeTableList[_microbeTable->getIndex()]->familyStatsMap;
+	    break;
+	}
+	case MGT_GENUS:
+	{
+	    mgt = MGT_GENUS;
+	    statsMapp = &_microbeTableList[_microbeTable->getIndex()]->genusStatsMap;
 	    break;
 	}
 	case MGT_SPECIES:
@@ -3676,15 +3766,18 @@ std::vector<std::pair<PhenoStats*,SortCriteria> > FuturePatient::createListWithF
     return displayList;
 }
 
-void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & familyStatMap, std::string microbeSuffix, std::string measureSuffix)
+void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & genusStatMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & familyStatMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & phylumStatMap, std::string microbeSuffix, std::string measureSuffix)
 {
     struct entry
     {
 	char name[512];
+	char genus[512];
 	char family[512];
+	char phylum[512];
 	char patientName[512];
 	int taxid;
 	float value;
+	time_t timestamp;
     };
 
     struct entry * entries = NULL;
@@ -3699,13 +3792,13 @@ void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,str
     microbesTable += microbeSuffix;
 
     std::stringstream queryhss, querycss, queryuss, querylss;
-    queryhss << "select " << microbesTable << ".species, " << microbesTable << ".family, t.last_name, t.taxonomy_id, t.value from (select Patient.last_name, " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"healthy\" and Patient.region = \"US\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
+    queryhss << "select " << microbesTable << ".species, " << microbesTable << ".genus, " << microbesTable << ".family, " << microbesTable << ".phylum, t.last_name, t.taxonomy_id, t.timestamp, t.value from (select Patient.last_name, " << measurementTable << ".taxonomy_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"healthy\" and Patient.region = \"US\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
 
-    querycss << "select " << microbesTable << ".species, " << microbesTable << ".family, t.last_name, t.taxonomy_id, t.value from (select Patient.last_name, " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"crohn's disease\" and Patient.region = \"US\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
+    querycss << "select " << microbesTable << ".species, " << microbesTable << ".genus, " << microbesTable << ".family, " << microbesTable << ".phylum, t.last_name, t.taxonomy_id, t.timestamp, t.value from (select Patient.last_name, " << measurementTable << ".taxonomy_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"crohn's disease\" and Patient.region = \"US\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
 
-    queryuss << "select " << microbesTable << ".species, " << microbesTable << ".family, t.last_name, t.taxonomy_id, t.value from (select Patient.last_name, " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"ulcerous colitis\" and Patient.region = \"US\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
+    queryuss << "select " << microbesTable << ".species, " << microbesTable << ".genus, " << microbesTable << ".family, " << microbesTable << ".phylum, t.last_name, t.taxonomy_id, t.timestamp, t.value from (select Patient.last_name, " << measurementTable << ".taxonomy_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"ulcerous colitis\" and Patient.region = \"US\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
 
-    querylss << "select " << microbesTable << ".species, " << microbesTable << ".family, t.last_name, t.taxonomy_id, t.value from (select Patient.last_name, " << measurementTable << ".taxonomy_id, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"Larry\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
+    querylss << "select " << microbesTable << ".species, " << microbesTable << ".genus, " << microbesTable << ".family, " << microbesTable << ".phylum, t.last_name, t.taxonomy_id, t.timestamp, t.value from (select Patient.last_name, " << measurementTable << ".taxonomy_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where Patient.p_condition = \"Larry\")t inner join " << microbesTable << " on t.taxonomy_id = " << microbesTable << ".taxonomy_id;";
 
     //std::cerr << "Larry query: " << querylss.str() << std::endl;
 
@@ -3738,12 +3831,17 @@ void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,str
 		    {
 			entries[entryIndex+j].name[511] = '\0';
 			strncpy(entries[entryIndex+j].name,res[i](j,"species").c_str(),511);
+			entries[entryIndex+j].genus[511] = '\0';
+			strncpy(entries[entryIndex+j].genus,res[i](j,"genus").c_str(),511);
 			entries[entryIndex+j].family[511] = '\0';
 			strncpy(entries[entryIndex+j].family,res[i](j,"family").c_str(),511);
+			entries[entryIndex+j].phylum[511] = '\0';
+			strncpy(entries[entryIndex+j].phylum,res[i](j,"phylum").c_str(),511);
 			entries[entryIndex+j].patientName[511] = '\0';
 			strncpy(entries[entryIndex+j].patientName,res[i](j,"last_name").c_str(),511);
 			entries[entryIndex+j].taxid = atoi(res[i](j,"taxonomy_id").c_str());
 			entries[entryIndex+j].value = atof(res[i](j,"value").c_str());
+			entries[entryIndex+j].timestamp = atol(res[i](j,"timestamp").c_str());
 		    }
 		    entryIndex += numEntries[i];
 		}
@@ -3825,7 +3923,9 @@ void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,str
     {
 	std::cerr << "NumEntries " << i << ": " << numEntries[i] << std::endl;
 	std::map<std::string,int> countMap;
+	std::map<std::string, std::map<std::string,float> > genusMap;
 	std::map<std::string, std::map<std::string,float> > familyMap;
+	std::map<std::string, std::map<std::string,float> > phylumMap;
 	for(int j = 0; j < numEntries[i]; ++j)
 	{
 	    int index = entryIndex + j;
@@ -3835,12 +3935,41 @@ void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,str
 	    statMap[entries[index].name][groupLabels[i]].name = entries[index].name;
 	    statMap[entries[index].name][groupLabels[i]].values.push_back(entries[index].value);
 
-	    familyMap[entries[index].family][entries[index].patientName] += entries[index].value;
+	    struct tm timetm = *localtime(&entries[index].timestamp);
+	    char timestr[256];
+	    timestr[255] = '\0';
+	    strftime(timestr, 255, "%F", &timetm);
+
+	    std::string pname = std::string(entries[index].patientName) + " - " + timestr;
+
+	    genusMap[entries[index].genus][pname] += entries[index].value;
+	    familyMap[entries[index].family][pname] += entries[index].value;
+	    phylumMap[entries[index].phylum][pname] += entries[index].value;
 	}
 
 	for(std::map<std::string,int>::iterator it = countMap.begin(); it != countMap.end(); ++it)
 	{
 	    statMap[it->first][groupLabels[i]].avg /= ((float)it->second);
+	}
+
+	for(std::map<std::string, std::map<std::string,float> >::iterator it = genusMap.begin(); it != genusMap.end(); ++it)
+	{
+	    genusStatMap[it->first][groupLabels[i]].name = it->first;
+	    for(std::map<std::string,float>::iterator itt = it->second.begin(); itt != it->second.end(); ++itt)
+	    {
+		genusStatMap[it->first][groupLabels[i]].avg += itt->second;
+		genusStatMap[it->first][groupLabels[i]].values.push_back(itt->second);
+	    }
+	    genusStatMap[it->first][groupLabels[i]].avg /= ((float)it->second.size());
+	    std::cerr << "Gen: " << it->first << " group label: " << groupLabels[i] << " avg: " << genusStatMap[it->first][groupLabels[i]].avg << " size: " << it->second.size() << std::endl;
+
+	    for(int j = 0; j < genusStatMap[it->first][groupLabels[i]].values.size(); ++j)
+	    {
+		float val = genusStatMap[it->first][groupLabels[i]].values[j] - genusStatMap[it->first][groupLabels[i]].avg;
+		val *= val;
+		genusStatMap[it->first][groupLabels[i]].stdev += val;
+	    }
+	    genusStatMap[it->first][groupLabels[i]].stdev = sqrt(genusStatMap[it->first][groupLabels[i]].stdev / ((float)it->second.size()));
 	}
 
 	for(std::map<std::string, std::map<std::string,float> >::iterator it = familyMap.begin(); it != familyMap.end(); ++it)
@@ -3852,6 +3981,7 @@ void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,str
 		familyStatMap[it->first][groupLabels[i]].values.push_back(itt->second);
 	    }
 	    familyStatMap[it->first][groupLabels[i]].avg /= ((float)it->second.size());
+	    std::cerr << "Fam: " << it->first << " group label: " << groupLabels[i] << " avg: " << familyStatMap[it->first][groupLabels[i]].avg << " size: " << it->second.size() << std::endl;
 
 	    for(int j = 0; j < familyStatMap[it->first][groupLabels[i]].values.size(); ++j)
 	    {
@@ -3859,7 +3989,27 @@ void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,str
 		val *= val;
 		familyStatMap[it->first][groupLabels[i]].stdev += val;
 	    }
-	    familyStatMap[it->first][groupLabels[i]].stdev /= ((float)it->second.size());
+	    familyStatMap[it->first][groupLabels[i]].stdev = sqrt(familyStatMap[it->first][groupLabels[i]].stdev / ((float)it->second.size()));
+	}
+
+	for(std::map<std::string, std::map<std::string,float> >::iterator it = phylumMap.begin(); it != phylumMap.end(); ++it)
+	{
+	    phylumStatMap[it->first][groupLabels[i]].name = it->first;
+	    for(std::map<std::string,float>::iterator itt = it->second.begin(); itt != it->second.end(); ++itt)
+	    {
+		phylumStatMap[it->first][groupLabels[i]].avg += itt->second;
+		phylumStatMap[it->first][groupLabels[i]].values.push_back(itt->second);
+	    }
+	    phylumStatMap[it->first][groupLabels[i]].avg /= ((float)it->second.size());
+	    std::cerr << "Phy: " << it->first << " group label: " << groupLabels[i] << " avg: " << phylumStatMap[it->first][groupLabels[i]].avg << " size: " << it->second.size() << std::endl;
+
+	    for(int j = 0; j < phylumStatMap[it->first][groupLabels[i]].values.size(); ++j)
+	    {
+		float val = phylumStatMap[it->first][groupLabels[i]].values[j] - phylumStatMap[it->first][groupLabels[i]].avg;
+		val *= val;
+		phylumStatMap[it->first][groupLabels[i]].stdev += val;
+	    }
+	    phylumStatMap[it->first][groupLabels[i]].stdev = sqrt(phylumStatMap[it->first][groupLabels[i]].stdev / ((float)it->second.size()));
 	}
 
 	for(int j = 0; j < numEntries[i]; ++j)

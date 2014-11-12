@@ -11,6 +11,8 @@
 #include "DataGraph.h"
 #include "LayoutInterfaces.h"
 
+class LinearRegFunc;
+
 class GraphObject : public LayoutTypeObject, public TimeRangeObject
 {
     public:
@@ -51,6 +53,8 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
 
         void setGLScale(float scale);
 
+        void setLinearRegression(bool lr);
+
         void perFrame();
 
         virtual void menuCallback(cvr::MenuItem * item);
@@ -59,6 +63,9 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
         virtual void enterCallback(int handID, const osg::Matrix &mat);
         virtual void updateCallback(int handID, const osg::Matrix &mat);
         virtual void leaveCallback(int handID);
+
+        int getNumMathFunctions();
+        MathFunction * getMathFunction(int i);
     protected:
         DBManager * _dbm;
         std::vector<std::string> _nameList;
@@ -81,8 +88,41 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
 
         AverageFunction * _averageFunc;
         cvr::MenuCheckbox * _averageCB;
+        LinearRegFunc * _linRegFunc;
+        cvr::MenuCheckbox * _linRegCB;
 
         std::vector<LoadData> _loadedGraphs;
+};
+
+class LinearRegFunc : public MathFunction
+{
+    public:
+        LinearRegFunc();
+        virtual ~LinearRegFunc();
+
+        void added(osg::Geode * geode);
+        void removed(osg::Geode * geode);
+        void update(float width, float height, std::map<std::string, GraphDataInfo> & data, std::map<std::string, std::pair<float,float> > & displayRanges, std::map<std::string,std::pair<int,int> > & dataPointRanges);
+
+        void setDataRange(std::string name, float min, float max);
+        void setTimeRange(std::string name, time_t min, time_t max);
+        void setHealthyRange(std::string name, float min, float max);
+
+        time_t getHealthyIntersectTime()
+        {
+            return _healthyIntersectTime;
+        }
+
+    protected:
+        osg::ref_ptr<osg::Geometry> _lrGeometry;
+        osg::ref_ptr<osg::LineWidth> _lrLineWidth;
+        osg::ref_ptr<SetBoundsCallback> _lrBoundsCallback;
+
+        std::map<std::string,std::pair<float,float> > _dataRangeMap;
+        std::map<std::string,std::pair<time_t,time_t> > _timeRangeMap;
+        std::map<std::string,std::pair<float,float> > _healthyRangeMap;
+
+        time_t _healthyIntersectTime;
 };
 
 #endif

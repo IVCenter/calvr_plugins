@@ -695,6 +695,18 @@ void MicrobeScatterGraphObject::menuCallback(MenuItem * item)
     FPTiledWallSceneObject::menuCallback(item);
 }
 
+void MicrobeScatterGraphObject::setLogScale(bool logScale)
+{
+    if(logScale)
+    {
+	_graph->setAxisTypes(GSP_LOG,GSP_LOG);
+    }
+    else
+    {
+	_graph->setAxisTypes(GSP_LINEAR,GSP_LINEAR);
+    }
+}
+
 void MicrobeScatterGraphObject::initData()
 {
     int numPhylum = 0;

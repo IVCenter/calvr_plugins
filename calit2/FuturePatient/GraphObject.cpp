@@ -8,6 +8,11 @@
 #include <sstream>
 #include <cstdlib>
 
+#include <octave/oct.h>
+#include <octave/octave.h>
+#include <octave/parse.h>
+#include <octave/toplev.h>
+
 using namespace cvr;
 
 GraphObject::GraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
@@ -49,6 +54,11 @@ GraphObject::GraphObject(DBManager * dbm, float width, float height, std::string
     _averageCB = new MenuCheckbox("Average",false);
     _averageCB->setCallback(this);
     addMenuItem(_averageCB);
+
+    _linRegFunc = new LinearRegFunc();
+    _linRegCB = new MenuCheckbox("Linear Regression",false);
+    _linRegCB->setCallback(this);
+    addMenuItem(_linRegCB);
 
     _pdfDir = ConfigManager::getEntry("value","Plugin.FuturePatient.PDFDir","");
 
@@ -189,8 +199,8 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool averageCo
 		    time_t mint, maxt;
 		    mint = maxt = atol(result(0,"utime").c_str());
 		    float minval,maxval;
-		    float total = 0.0;;
-		    minval = maxval = atof(result(0,"value").c_str());
+		    float total = 0.0;
+		    minval = maxval = total = atof(result(0,"value").c_str());
 		    for(int i = 1; i < result.numRows(); i++)
 		    {
 			time_t time = atol(result(i,"utime").c_str());
@@ -303,6 +313,8 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool averageCo
 		    gd.minTime = mint;
 		    gd.maxTime = maxt;
 		    gd.numPoints = result.numRows();
+
+		    //std::cerr << "name: " << gd.displayName << " avg: " << gd.average << std::endl;
 
 		    annCount = std::min(annCount,(int)aresult.numRows());
 
@@ -475,6 +487,10 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool averageCo
 		}
 	    }
 	}
+
+	_linRegFunc->setDataRange(gd.displayName,gd.minValue,gd.maxValue);
+	_linRegFunc->setTimeRange(gd.displayName,gd.minTime,gd.maxTime);
+	_linRegFunc->setHealthyRange(gd.displayName,gd.normalLow,gd.normalHigh);
 
 	_graph->setBGRanges(ranges,colors);
 	
@@ -722,6 +738,15 @@ void GraphObject::setGLScale(float scale)
     _graph->setGLScale(scale);
 }
 
+void GraphObject::setLinearRegression(bool lr)
+{
+    if(lr != _linRegCB->getValue())
+    {
+	_linRegCB->setValue(lr);
+	menuCallback(_linRegCB);
+    }
+}
+
 void GraphObject::perFrame()
 {
     _graph->updatePointAction();
@@ -751,6 +776,18 @@ void GraphObject::menuCallback(MenuItem * item)
 	else
 	{
 	    _graph->removeMathFunction(_averageFunc);
+	}
+    }
+
+    if(item == _linRegCB)
+    {
+	if(_linRegCB->getValue())
+	{
+	    _graph->addMathFunction(_linRegFunc);
+	}
+	else
+	{
+	    _graph->removeMathFunction(_linRegFunc);
 	}
     }
 
@@ -801,4 +838,280 @@ void GraphObject::leaveCallback(int handID)
 	_activeHand = -1;
 	_graph->clearHoverText();
     }
+}
+
+int GraphObject::getNumMathFunctions()
+{
+    if(_graph)
+    {
+	return _graph->getNumMathFunctions();
+    }
+    return 0;
+}
+
+MathFunction * GraphObject::getMathFunction(int i)
+{
+    if(_graph)
+    {
+	return _graph->getMathFunction(i);
+    }
+    return NULL;
+}
+
+LinearRegFunc::LinearRegFunc()
+{
+    _lrGeometry = new osg::Geometry();
+    _lrGeometry->setUseDisplayList(false);
+    _lrGeometry->setUseVertexBufferObjects(true);
+    osg::Vec3Array * verts = new osg::Vec3Array(2);
+    osg::Vec4Array * colors = new osg::Vec4Array(1);
+    colors->at(0) = osg::Vec4(1,1,0,1);
+    _lrGeometry->setVertexArray(verts);
+    _lrGeometry->setColorArray(colors);
+    _lrGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+    _lrGeometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES,0,2));
+    
+    _lrLineWidth = new osg::LineWidth();
+
+    _lrGeometry->getOrCreateStateSet()->setAttributeAndModes(_lrLineWidth,osg::StateAttribute::ON);
+    _lrGeometry->getOrCreateStateSet()->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+
+    _lrBoundsCallback = new SetBoundsCallback;
+
+    _lrGeometry->setComputeBoundingBoxCallback(_lrBoundsCallback.get());
+
+    _healthyIntersectTime = 0;
+}
+
+LinearRegFunc::~LinearRegFunc()
+{
+}
+
+void LinearRegFunc::added(osg::Geode * geode)
+{
+    geode->addDrawable(_lrGeometry);
+}
+
+void LinearRegFunc::removed(osg::Geode * geode)
+{
+    geode->removeDrawable(_lrGeometry);
+}
+
+void LinearRegFunc::update(float width, float height, std::map<std::string, GraphDataInfo> & data, std::map<std::string, std::pair<float,float> > & displayRanges, std::map<std::string,std::pair<int,int> > & dataPointRanges)
+{
+    osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(_lrGeometry->getVertexArray());
+    if(!verts)
+    {
+	return;
+    }
+
+    if(!dataPointRanges.size() || dataPointRanges.begin()->second.first < 0 || dataPointRanges.begin()->second.second < 0 || dataPointRanges.begin()->second.first > dataPointRanges.begin()->second.second)
+    {
+	verts->at(0) = osg::Vec3(0,0,0);
+	verts->at(1) = osg::Vec3(0,0,0);
+	verts->dirty();
+	return;
+    }
+
+    std::map<std::string,std::pair<int,int> >::iterator pit = dataPointRanges.begin();
+    std::map<std::string, GraphDataInfo>::iterator dit = data.find(pit->first);
+    if(dit == data.end())
+    {
+	verts->at(0) = osg::Vec3(0,0,0);
+	verts->at(1) = osg::Vec3(0,0,0);
+	verts->dirty();
+	return;
+    }
+
+    //std::cerr << "first: " << pit->second.first << " second: " << pit->second.second << std::endl;
+
+    if((pit->second.second - pit->second.first) < 1)
+    {
+	verts->at(0) = osg::Vec3(0,0,0);
+	verts->at(1) = osg::Vec3(0,0,0);
+	verts->dirty();
+	return;
+    }
+
+    Matrix XMat((pit->second.second - pit->second.first)+1,2);
+    Matrix ZMat((pit->second.second - pit->second.first)+1,1);
+
+    for(int i = pit->second.first; i <= pit->second.second; ++i)
+    {
+	int matindex = i - pit->second.first;
+	XMat(matindex,0) = 1.0;
+	XMat(matindex,1) = dit->second.data->at(i).x();
+	ZMat(matindex) = dit->second.data->at(i).z();
+    }
+
+    Matrix XTMat = XMat.transpose();
+    Matrix resMat = (XTMat*XMat).pseudo_inverse()*XTMat*ZMat;
+    
+    //std::cerr << "resMat x: " << resMat(0) << " y: " << resMat(1) << std::endl;
+
+    // set intersect with healthy zone
+    std::map<std::string,std::pair<float,float> >::iterator hit = _healthyRangeMap.begin();
+    std::map<std::string,std::pair<float,float> >::iterator dataIt = _dataRangeMap.begin();
+    std::map<std::string,std::pair<time_t,time_t> >::iterator timeIt = _timeRangeMap.begin();
+    if(hit != _healthyRangeMap.end() && dataIt != _dataRangeMap.end() && timeIt != _timeRangeMap.end())
+    {
+	//std::cerr << "Name: " << hit->first << std::endl;
+	//std::cerr << "healthy min: " << hit->second.first << " max: " << hit->second.second << std::endl;
+	//std::cerr << "data min: " << dataIt->second.first << " max: " << dataIt->second.second << std::endl;
+	time_t intersect = 0;
+	if(hit->second.first != FLT_MIN && hit->second.first != 0.0)
+	{
+	    // find min intersect
+	    float minNorm = (hit->second.first - dataIt->second.first) / (dataIt->second.second - dataIt->second.first);
+	    float x = (minNorm - resMat(0)) / resMat(1);
+	    //std::cerr << "Min x: " << x << std::endl;
+	    if(x > 1.0)
+	    {
+		intersect = timeIt->second.first + (time_t)(x * ((float)(timeIt->second.second - timeIt->second.first)));
+	    }
+	}
+
+	if(hit->second.second != FLT_MAX && hit->second.second != 0.0)
+	{
+	    float minNorm = (hit->second.second - dataIt->second.first) / (dataIt->second.second - dataIt->second.first);
+	    float x = (minNorm - resMat(0)) / resMat(1);
+	    //std::cerr << "Max x: " << x << std::endl;
+	    if(x > 1.0)
+	    {
+		time_t mintersect = timeIt->second.first + (time_t)(x * ((float)(timeIt->second.second - timeIt->second.first)));
+		if(intersect == 0 || mintersect < intersect)
+		{
+		    intersect = mintersect;
+		}
+	    }
+	}
+	_healthyIntersectTime = intersect;
+    }
+
+    float xPosMin, xPosMax;
+    float zPosMin, zPosMax;
+    //float zpos = (average * height) - (height / 2.0);
+    
+     std::map<std::string, std::pair<float,float> >::iterator displayIt = displayRanges.begin();
+
+    if(resMat(1) == 0.0)
+    {
+	xPosMin = 0.0;
+	xPosMax = 1.0;
+	zPosMin = zPosMax = resMat(0);
+    }
+    else
+    {
+	float y = displayIt->second.first * resMat(1) + resMat(0);
+	if(y >= 0.0 && y <= 1.0)
+	{
+	    xPosMin = 0.0;
+	    zPosMin = y;
+	}
+	else if(resMat(1) > 0.0)
+	{
+	    float x = -resMat(0) / resMat(1);
+	    xPosMin = (x - displayIt->second.first) / (displayIt->second.second - displayIt->second.first);
+	    zPosMin = 0.0;
+	}
+	else
+	{
+	    float x = (1.0 - resMat(0)) / resMat(1);
+	    xPosMin = (x - displayIt->second.first) / (displayIt->second.second - displayIt->second.first);
+	    zPosMin = 1.0;
+	}
+
+	y = displayIt->second.second * resMat(1) + resMat(0);
+	if(y >= 0.0 && y <= 1.0)
+	{
+	    xPosMax = 1.0;
+	    zPosMax = y;
+	}
+	else if(resMat(1) > 0.0)
+	{
+	    float x = (1.0-resMat(0)) / resMat(1);
+	    xPosMax = (x - displayIt->second.first) / (displayIt->second.second - displayIt->second.first);
+	    zPosMax = 1.0;
+	}
+	else
+	{
+	    float x = -resMat(0) / resMat(1);
+	    xPosMax = (x - displayIt->second.first) / (displayIt->second.second - displayIt->second.first);
+	    zPosMax = 0.0;
+	}
+    }
+
+    //std::cerr << "Display Range first: " << displayIt->second.first << " second: " << displayIt->second.second << std::endl;
+
+    xPosMin = (xPosMin * width) - (width / 2.0);
+    xPosMax = (xPosMax * width) - (width / 2.0);
+    zPosMin = (zPosMin * height) - (height / 2.0);
+    zPosMax = (zPosMax * height) - (height / 2.0);
+
+    verts->at(0) = osg::Vec3(xPosMin,-0.5,zPosMin);
+    verts->at(1) = osg::Vec3(xPosMax,-0.5,zPosMax);
+    verts->dirty();
+
+    float avglen = (width + height) / 2.0;
+    _lrLineWidth->setWidth(avglen * 0.05 * GraphGlobals::getPointLineScale() * GraphGlobals::getPointLineScale());
+    if(ComController::instance()->isMaster())
+    {
+	_lrLineWidth->setWidth(_lrLineWidth->getWidth() * GraphGlobals::getMasterLineScale());
+    }
+
+    _lrBoundsCallback->bbox.set(-width/2.0,-3,-height/2.0,width/2.0,1,height/2.0);
+    _lrGeometry->dirtyBound();
+    _lrGeometry->getBound();
+
+    /*float average = 0.0;
+    for(int i = pit->second.first; i <= pit->second.second; ++i)
+    {
+	average += dit->second.data->at(i).z();
+    }
+    average /= ((float)(pit->second.second - pit->second.first + 1));
+
+    //std::cerr << "range start: " << pit->second.first << " end: " << pit->second.second << " avg: " << average << std::endl;
+
+    float zpos = (average * height) - (height / 2.0);
+    
+    verts->at(0) = osg::Vec3(-width/2.0,-0.5,zpos);
+    verts->at(1) = osg::Vec3(width/2.0,-0.5,zpos);
+    verts->dirty();
+
+    std::stringstream ss;
+    ss << (average * (dit->second.zMax - dit->second.zMin) + dit->second.zMin);
+    _averageText->setText(ss.str());
+    _averageText->setCharacterSize(1.0);
+
+    float textHeight = ((width + height) / 2.0) * 0.015;
+    osg::BoundingBox bb = _averageText->getBound();
+    float csize = textHeight / (bb.zMax() - bb.zMin());
+    _averageText->setCharacterSize(csize);
+    _averageText->setPosition(osg::Vec3(0,-0.5,zpos+(textHeight*0.01)));
+
+    float avglen = (width + height) / 2.0;
+    _averageLineWidth->setWidth(avglen * 0.05 * GraphGlobals::getPointLineScale() * GraphGlobals::getPointLineScale());
+    if(ComController::instance()->isMaster())
+    {
+	_averageLineWidth->setWidth(_averageLineWidth->getWidth() * GraphGlobals::getMasterLineScale());
+    }
+
+    _boundsCallback->bbox.set(-width/2.0,-3,-height/2.0,width/2.0,1,height/2.0);
+    _averageGeometry->dirtyBound();
+    _averageGeometry->getBound();*/
+}
+
+void LinearRegFunc::setDataRange(std::string name, float min, float max)
+{
+    _dataRangeMap[name] = std::pair<float,float>(min,max);
+}
+
+void LinearRegFunc::setTimeRange(std::string name, time_t min, time_t max)
+{
+    _timeRangeMap[name] = std::pair<time_t,time_t>(min,max);
+}
+
+void LinearRegFunc::setHealthyRange(std::string name, float min, float max)
+{
+    _healthyRangeMap[name] = std::pair<float,float>(min,max);
 }

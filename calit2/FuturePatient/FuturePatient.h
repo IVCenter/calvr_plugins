@@ -86,7 +86,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         void loadPhenotype();
         std::vector<std::pair<PhenoStats*,SortCriteria> > createListWithFilters(MicrobeGraphType type, std::string phenotype = "", bool pvalSort = false, bool tvalSort = false, bool averageThresh = false, float avgVal = 0.0, bool reqMax = false, float reqMaxVal = 0.0, bool zeroLimit = false, float zeroVal = 0.0);
 
-        void initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & familyStatMap, std::string microbeSuffix, std::string measureSuffix);
+        void initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & genusStatMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & familyStatMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & phylumStatMap, std::string microbeSuffix, std::string measureSuffix);
 
         void loadScatterPresets();
 
@@ -97,6 +97,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         std::vector<cvr::MenuButton*> _loadLayoutButtons;
         cvr::MenuList * _chartPatientList;
         cvr::MenuList * _testList;
+        cvr::MenuCheckbox * _linearRegCB;
         cvr::MenuButton * _loadButton;
         cvr::MenuButton * _removeAllButton;
         cvr::MenuButton * _closeLayoutButton;
@@ -124,7 +125,9 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
             std::vector<std::string> familyList;
             std::vector<std::string> genusList;
             std::map<std::string,std::map<std::string,struct PhenoStats > > statsMap;
+            std::map<std::string,std::map<std::string,struct PhenoStats > > genusStatsMap;
             std::map<std::string,std::map<std::string,struct PhenoStats > > familyStatsMap;
+            std::map<std::string,std::map<std::string,struct PhenoStats > > phylumStatsMap;
         };
 
         std::vector<MicrobeTableInfo*> _microbeTableList;
@@ -178,6 +181,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuCheckbox * _sMicrobeTvalSort;
         cvr::MenuRangeValueCompact * _sMicrobeSortResults;
         cvr::MenuButton * _sMicrobePhenotypeLoad;
+        cvr::MenuCheckbox * _sMicrobeLogCB;
+        cvr::MenuCheckbox * _sMicrobeStdDevCB;
         cvr::SubMenu * _sMicrobePresetMenu;
         //cvr::MenuButton * _sMicrobeBFragilis;
         std::vector<cvr::MenuButton*> _sMicrobePresetList;
@@ -231,6 +236,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _scatterMicrobeType;
         cvr::MenuTextEntryItem * _scatterFirstEntry;
         cvr::MenuTextEntryItem * _scatterSecondEntry;
+        cvr::MenuCheckbox * _scatterLogCB;
         cvr::SubMenu * _scatterFilterMenu;
         cvr::MenuCheckbox * _scatterPvalSort;
         cvr::MenuCheckbox * _scatterTvalSort;

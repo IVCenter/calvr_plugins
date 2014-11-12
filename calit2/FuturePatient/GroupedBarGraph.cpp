@@ -101,8 +101,9 @@ bool GroupedBarGraph::setGraph(std::string title, std::map<std::string, std::vec
     {
 	case BGAT_LINEAR:
 	{
-	    _maxDisplayRange = _maxGraphValue;
-	    _minDisplayRange = _minGraphValue - lowerPadding * (_maxGraphValue - _minGraphValue);
+	    _maxDisplayRange = _maxGraphValue + lowerPadding * (_maxGraphValue - _minGraphValue);
+	    //_minDisplayRange = _minGraphValue - lowerPadding * (_maxGraphValue - _minGraphValue);
+	    _minDisplayRange = 0.0;
 	    break;
 	}
 	case BGAT_LOG:
@@ -211,6 +212,49 @@ void GroupedBarGraph::setDisplayMode(BarGraphDisplayMode bgdm)
     {
 	_displayMode = bgdm;
 	updateColors();
+	update();
+    }
+}
+
+void GroupedBarGraph::setAxisType(BarGraphAxisType axisType)
+{
+    if(axisType != _axisType)
+    {
+	float lowerPadding = 0.05;
+
+	switch(axisType)
+	{
+	    case BGAT_LINEAR:
+	    {
+		_maxDisplayRange = _maxGraphValue + lowerPadding * (_maxGraphValue - _minGraphValue);
+		//_minDisplayRange = _minGraphValue - lowerPadding * (_maxGraphValue - _minGraphValue);
+		_minDisplayRange = 0.0;
+		break;
+	    }
+	    case BGAT_LOG:
+	    {
+		float logMax = log10(_maxGraphValue);
+		logMax = ceil(logMax);
+		_maxDisplayRange = pow(10.0,logMax);
+
+		float logMin = log10(_minGraphValue);
+		logMin = logMin - lowerPadding * (logMax - logMin);
+		_minDisplayRange = pow(10.0,logMin);
+		break;
+	    }
+	    default:
+	    {
+		_minDisplayRange = _minGraphValue;
+		_maxDisplayRange = _maxGraphValue;
+		break;
+	    }
+	}
+
+	_defaultMinDisplayRange = _minDisplayRange;
+	_defaultMaxDisplayRange = _maxDisplayRange;
+
+	_axisType = axisType;
+
 	update();
     }
 }
@@ -359,9 +403,23 @@ void GroupedBarGraph::setHover(osg::Vec3 intersect)
 			    if(intersect.z() <= _graphTop && intersect.z() >= _graphBottom)
 			    {
 				float hitValue = (intersect.z() - _graphBottom) / (_graphTop - _graphBottom);
-				hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
-				hitValue += log10(_minDisplayRange);
-				hitValue = pow(10.0,hitValue);
+
+				switch(_axisType)
+				{
+				    default:
+				    case BGAT_LINEAR:
+				    {
+					hitValue = _minDisplayRange + hitValue * (_maxDisplayRange - _minDisplayRange);
+					break;
+				    }
+				    case BGAT_LOG:
+				    {
+					hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
+					hitValue += log10(_minDisplayRange);
+					hitValue = pow(10.0,hitValue);
+					break;
+				    }
+				}
 
 				if(hitValue <= it->second[j].second)
 				{
@@ -410,9 +468,23 @@ void GroupedBarGraph::setHover(osg::Vec3 intersect)
 			if(intersect.z() <= _graphTop && intersect.z() >= _graphBottom)
 			{
 			    float hitValue = (intersect.z() - _graphBottom) / (_graphTop - _graphBottom);
-			    hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
-			    hitValue += log10(_minDisplayRange);
-			    hitValue = pow(10.0,hitValue);
+
+			    switch(_axisType)
+			    {
+				default:
+				case BGAT_LINEAR:
+				{
+				    hitValue = _minDisplayRange + hitValue * (_maxDisplayRange - _minDisplayRange);
+				    break;
+				}
+				case BGAT_LOG:
+				{
+				    hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
+				    hitValue += log10(_minDisplayRange);
+				    hitValue = pow(10.0,hitValue);
+				    break;
+				}
+			    }
 
 			    if(hitValue <= _data[_customDataOrder[i].first][_customDataOrder[i].second].second)
 			    {
@@ -755,9 +827,23 @@ bool GroupedBarGraph::processClick(osg::Vec3 & hitPoint, std::string & selectedG
 			    breakOut = true;
 
 			    float hitValue = (hitPoint.z() - _graphBottom) / (_graphTop - _graphBottom);
-			    hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
-			    hitValue += log10(_minDisplayRange);
-			    hitValue = pow(10.0,hitValue);
+
+			    switch(_axisType)
+			    {
+				default:
+				case BGAT_LINEAR:
+				{
+				    hitValue = _minDisplayRange + hitValue * (_maxDisplayRange - _minDisplayRange);
+				    break;
+				}
+				case BGAT_LOG:
+				{
+				    hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
+				    hitValue += log10(_minDisplayRange);
+				    hitValue = pow(10.0,hitValue);
+				    break;
+				}
+			    }
 
 			    if(hitValue <= it->second[j].second)
 			    {
@@ -800,9 +886,23 @@ bool GroupedBarGraph::processClick(osg::Vec3 & hitPoint, std::string & selectedG
 		    if(hitPoint.x() < barRight)
 		    {
 			float hitValue = (hitPoint.z() - _graphBottom) / (_graphTop - _graphBottom);
-			hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
-			hitValue += log10(_minDisplayRange);
-			hitValue = pow(10.0,hitValue);
+
+			switch(_axisType)
+			{
+			    default:
+			    case BGAT_LINEAR:
+			    {
+				hitValue = _minDisplayRange + hitValue * (_maxDisplayRange - _minDisplayRange);
+				break;
+			    }
+			    case BGAT_LOG:
+			    {
+				hitValue *= (log10(_maxDisplayRange) - log10(_minDisplayRange));
+				hitValue += log10(_minDisplayRange);
+				hitValue = pow(10.0,hitValue);
+				break;
+			    }
+			}
 
 			if(hitValue <= _data[_customDataOrder[i].first][_customDataOrder[i].second].second)
 			{
@@ -851,6 +951,20 @@ void GroupedBarGraph::removeMathFunction(MicrobeMathFunction * mf)
 	    }
 	}
     }
+}
+
+int GroupedBarGraph::getNumMathFunctions()
+{
+    return _mathFunctionList.size();
+}
+
+MicrobeMathFunction * GroupedBarGraph::getMathFunction(int index)
+{
+    if(index >= 0 && index < _mathFunctionList.size())
+    {
+	return _mathFunctionList[index];
+    }
+    return NULL;
 }
 
 float GroupedBarGraph::getGroupValue(std::string group)
@@ -1049,6 +1163,14 @@ void GroupedBarGraph::updateGraph()
 			{
 			    case BGAT_LINEAR:
 				{
+				    float barHeight = ((value - _minDisplayRange) / (_maxDisplayRange - _minDisplayRange)) * (_graphTop - _graphBottom);
+				    barHeight += _graphBottom;
+
+				    verts->at(vertIndex) = osg::Vec3(currentPos+halfWidth,-1,barHeight);
+				    verts->at(vertIndex+1) = osg::Vec3(currentPos+halfWidth,-1,_graphBottom);
+				    verts->at(vertIndex+2) = osg::Vec3(currentPos-halfWidth,-1,_graphBottom);
+				    verts->at(vertIndex+3) = osg::Vec3(currentPos-halfWidth,-1,barHeight);
+
 				    break;
 				}
 			    case BGAT_LOG:
@@ -1104,6 +1226,13 @@ void GroupedBarGraph::updateGraph()
 		    {
 			case BGAT_LINEAR:
 			    {
+				float barHeight = ((value - _minDisplayRange) / (_maxDisplayRange - _minDisplayRange)) * (_graphTop - _graphBottom);
+				barHeight += _graphBottom;
+
+				verts->at(vertIndex) = osg::Vec3(currentPos+halfWidth,-1,barHeight);
+				verts->at(vertIndex+1) = osg::Vec3(currentPos+halfWidth,-1,_graphBottom);
+				verts->at(vertIndex+2) = osg::Vec3(currentPos-halfWidth,-1,_graphBottom);
+				verts->at(vertIndex+3) = osg::Vec3(currentPos-halfWidth,-1,barHeight);
 				break;
 			    }
 			case BGAT_LOG:
@@ -1332,7 +1461,71 @@ void GroupedBarGraph::updateAxis()
     {
 	case BGAT_LINEAR:
 	{
-	    std::cerr << "Linear graph label not yet implemented." << std::endl;
+	    float rangeDif = _maxDisplayRange - _minDisplayRange;
+	    int power = (int)log10(rangeDif);
+	    float interval = pow(10.0, power);
+
+	    while(rangeDif / interval < 2)
+	    {
+		interval /= 10.0;
+	    }
+
+	    while(rangeDif / interval > 12)
+	    {
+		interval *= 10.0;
+	    }
+
+	    if(rangeDif / interval < 4)
+	    {
+		interval /= 2;
+	    }
+
+	    float tickValue = ((float)((int)(_minDisplayRange/interval)))*interval;
+	    if(tickValue < _minDisplayRange)
+	    {
+		tickValue += interval;
+	    }
+
+	    //std::cerr << "maxdr: " << _maxDisplayRange << " mindr: " << _minDisplayRange << std::endl;
+	    float tickCharacterSize;
+	    int maxExp = (int)fabs(log10(interval));
+	    //std::cerr << "maxexp: " << maxExp << std::endl;
+	    maxExp += 3;
+
+	    std::stringstream testss;
+	    while(maxExp > 0)
+	    {
+		testss << "0";
+		maxExp--;
+	    }
+
+	    osg::ref_ptr<osgText::Text> testText = GraphGlobals::makeText(testss.str(),osg::Vec4(0,0,0,1));
+	    osg::BoundingBox testbb = testText->getBound();
+	    float testWidth = testbb.xMax() - testbb.xMin();
+
+	    float totalLength = _graphTop - _graphBottom;
+
+	    tickCharacterSize = (_leftPaddingMult * _width * 0.6 - 2.0 * tickSize) / testWidth;
+	    tickCharacterSize = std::min(tickCharacterSize, (interval * 0.9f / (_maxDisplayRange - _minDisplayRange)) * totalLength  / (testbb.zMax()-testbb.zMin()));
+
+	    float value = (((tickValue - _minDisplayRange) / (_maxDisplayRange - _minDisplayRange)) * totalLength);
+	    while(value <= totalLength)
+	    {
+		//std::cerr << "Tick Val: " << tickValue << " size: " << tickCharacterSize << std::endl;
+		lineVerts->push_back(osg::Vec3(_graphLeft,-1,_graphBottom + value));
+		lineVerts->push_back(osg::Vec3(_graphLeft - tickSize,-1,_graphBottom + value));
+
+		std::stringstream ss;
+		ss << tickValue;
+		osgText::Text * tickText = GraphGlobals::makeText(ss.str(),osg::Vec4(0,0,0,1));
+		tickText->setAlignment(osgText::Text::RIGHT_CENTER);
+		tickText->setCharacterSize(tickCharacterSize);
+		tickText->setPosition(osg::Vec3(_graphLeft - 2.0*tickSize,-1,_graphBottom + value));
+		_axisGeode->addDrawable(tickText);
+
+		tickValue += interval;
+		value = (((tickValue - _minDisplayRange) / (_maxDisplayRange - _minDisplayRange)) * totalLength);
+	    }
 	    break;
 	}
 	case BGAT_LOG:

@@ -2,6 +2,8 @@
 #include "ColorGenerator.h"
 #include "FuturePatient.h"
 #include "GraphGlobals.h"
+#include "SingleMicrobeObject.h"
+#include "MicrobeScatterGraphObject.h"
 
 #include <cvrInput/TrackingManager.h>
 #include <cvrConfig/ConfigManager.h>
@@ -50,6 +52,10 @@ GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std
     _minmaxButton = new MenuButton("Minimize");
     _minmaxButton->setCallback(this);
     addMenuItem(_minmaxButton);
+
+    _linRegSort = new MenuButton("Linear Reg Sort");
+    _linRegSort->setCallback(this);
+    addMenuItem(_linRegSort);
 
     _removeUnselected = new MenuButton("Remove Unselected");
     _removeUnselected->setCallback(this);
@@ -533,6 +539,11 @@ bool GraphLayoutObject::loadState(std::istream & in)
     return true;
 }
 
+bool lrSort(const std::pair<GraphObject*,time_t> & first, const std::pair<GraphObject*,time_t> & second)
+{
+    return first.second < second.second;
+}
+
 void GraphLayoutObject::menuCallback(MenuItem * item)
 {
     if(item == _resetLayoutButton)
@@ -614,6 +625,73 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	    }
 	    menuCallback(_syncTimeCB);
 	}
+    }
+
+    if(item = _linRegSort)
+    {
+	std::vector<GraphObject*> objects;
+	std::vector<LinearRegFunc*> funcs;
+
+	for(int i = 0; i < _objectList.size(); ++i)
+	{
+	    GraphObject * go = dynamic_cast<GraphObject*>(_objectList[i]);
+	    if(go)
+	    {
+		for(int j = 0; j < go->getNumMathFunctions(); ++j)
+		{
+		    LinearRegFunc* func = dynamic_cast<LinearRegFunc*>(go->getMathFunction(j));
+		    if(func)
+		    {
+			objects.push_back(go);
+			funcs.push_back(func);
+		    }
+		}
+	    }
+	}
+
+	std::vector<std::pair<GraphObject*,time_t> > graphSortList;
+	for(int i = 0; i < objects.size(); ++i)
+	{
+	    if(funcs[i]->getHealthyIntersectTime() > 0)
+	    {
+		graphSortList.push_back(std::pair<GraphObject*,time_t>(objects[i],funcs[i]->getHealthyIntersectTime()));
+	    }
+	}
+	std::sort(graphSortList.begin(),graphSortList.end(),lrSort);
+
+	/*for(int i = 0; i < graphSortList.size(); ++i)
+	{
+	    std::cerr << graphSortList[i].second << std::endl;
+	}*/
+
+	for(std::vector<LayoutTypeObject*>::iterator it = _objectList.begin(); it != _objectList.end();)
+	{
+	    bool erase = false;
+	    for(int i = 0; i < graphSortList.size(); ++i)
+	    {
+		if((*it) == graphSortList[i].first)
+		{
+		    erase = true;
+		    break;
+		}
+	    }
+
+	    if(erase)
+	    {
+		it = _objectList.erase(it);
+	    }
+	    else
+	    {
+		it++;
+	    }
+	}
+
+	for(int i = graphSortList.size() - 1; i >= 0; --i)
+	{
+	    _objectList.insert(_objectList.begin(),graphSortList[i].first);
+	}
+
+	forceUpdate();
     }
 
     if(item == _syncTimeCB)
@@ -1076,6 +1154,56 @@ void GraphLayoutObject::leaveCallback(int handID)
 	    }
 	}
     }
+}
+
+void GraphLayoutObject::setChartLinearRegression(bool lr)
+{
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	GraphObject * go = dynamic_cast<GraphObject *>(_objectList[i]);
+	if(go)
+	{
+	    go->setLinearRegression(lr);
+	}
+    }
+}
+
+void GraphLayoutObject::setSingleMicrobeLogScale(bool logScale)
+{
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	SingleMicrobeObject * smo = dynamic_cast<SingleMicrobeObject*>(_objectList[i]);
+	if(smo)
+	{
+	    smo->setLogScale(logScale);
+	}
+    }
+    menuCallback(_syncTimeCB);
+}
+
+void GraphLayoutObject::setSingleMicrobeShowStdDev(bool value)
+{
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	SingleMicrobeObject * smo = dynamic_cast<SingleMicrobeObject*>(_objectList[i]);
+	if(smo)
+	{
+	    smo->setShowStdDev(value);
+	}
+    }
+}
+
+void GraphLayoutObject::setScatterLogScale(bool logScale)
+{
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	MicrobeScatterGraphObject * sgo = dynamic_cast<MicrobeScatterGraphObject*>(_objectList[i]);
+	if(sgo)
+	{
+	    sgo->setLogScale(logScale);
+	}
+    }
+    menuCallback(_syncTimeCB);
 }
 
 void GraphLayoutObject::forceUpdate()

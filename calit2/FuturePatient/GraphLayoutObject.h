@@ -70,6 +70,11 @@ class GraphLayoutObject : public FPTiledWallSceneObject
         virtual void updateCallback(int handID, const osg::Matrix &mat);
         virtual void leaveCallback(int handID);
 
+        void setChartLinearRegression(bool lr);
+        void setSingleMicrobeLogScale(bool logScale);
+        void setSingleMicrobeShowStdDev(bool value);
+        void setScatterLogScale(bool logScale);
+
         void forceUpdate();
     protected:
         void makeGeometry();
@@ -119,6 +124,7 @@ class GraphLayoutObject : public FPTiledWallSceneObject
         cvr::MenuRangeValueCompact * _heightRV;
         cvr::MenuButton * _removeUnselected;
         cvr::MenuCheckbox * _multiSelect;
+        cvr::MenuButton * _linRegSort;
 
         cvr::PopupMenu * _selectionMenu;
         cvr::MenuText * _selectionText;

@@ -31,6 +31,9 @@ class SingleMicrobeObject : public LayoutTypeObject, public PatientSelectObject
         virtual void updateCallback(int handID, const osg::Matrix & mat);
         virtual void leaveCallback(int handID);
 
+        void setLogScale(bool logScale);
+        void setShowStdDev(bool show);
+
     protected:
         GroupedBarGraph * _graph;
         DBManager * _dbm;
@@ -47,11 +50,14 @@ class BandingFunction : public MicrobeMathFunction
         virtual void removed(osg::Geode * geode);
         virtual void update(float left, float right, float top, float bottom, float barWidth, std::map<std::string, std::vector<std::pair<std::string, float> > > & data, BarGraphDisplayMode displayMode, const std::vector<std::string> & groupOrder, const std::vector<std::pair<std::string,int> > & customOrder, float displayMin, float displayMax, BarGraphAxisType axisType, const std::vector<std::pair<float,float> > & groupRanges);
 
+        void setShowStdDev(bool show);
+
     protected:
         osg::ref_ptr<osg::Geometry> _bandGeometry;
         osg::ref_ptr<osg::Geometry> _lineGeometry;
         osg::ref_ptr<SetBoundsCallback> _boundsCallback;
         osg::ref_ptr<osg::LineWidth> _lineWidth;
+        osg::ref_ptr<osg::Geode> _myGeode;
 };
 
 #endif
