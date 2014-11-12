@@ -627,7 +627,7 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	}
     }
 
-    if(item = _linRegSort)
+    if(item == _linRegSort)
     {
 	std::vector<GraphObject*> objects;
 	std::vector<LinearRegFunc*> funcs;
