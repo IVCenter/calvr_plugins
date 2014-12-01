@@ -12,7 +12,7 @@
 
 #include <osg/LineWidth>
 
-class SingleMicrobeObject : public LayoutTypeObject, public PatientSelectObject
+class SingleMicrobeObject : public LayoutTypeObject, public PatientSelectObject, public ValueRangeObject
 {
     public:
         SingleMicrobeObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
@@ -26,6 +26,15 @@ class SingleMicrobeObject : public LayoutTypeObject, public PatientSelectObject
         virtual void setGraphSize(float width, float height);
 
         virtual void selectPatients(std::map<std::string,std::vector<std::string> > & selectMap);
+
+        virtual float getGraphMaxValue();
+        virtual float getGraphMinValue();
+
+        virtual float getGraphDisplayRangeMax();
+        virtual float getGraphDisplayRangeMin();
+
+        virtual void setGraphDisplayRange(float min, float max);
+        virtual void resetGraphDisplayRange();
 
         virtual bool processEvent(cvr::InteractionEvent * ie);
         virtual void updateCallback(int handID, const osg::Matrix & mat);

@@ -353,6 +353,36 @@ void SingleMicrobeObject::selectPatients(std::map<std::string,std::vector<std::s
     _graph->selectItems(selectMap);
 }
 
+float SingleMicrobeObject::getGraphMaxValue()
+{
+    return _graph->getDataMax();
+}
+
+float SingleMicrobeObject::getGraphMinValue()
+{
+    return _graph->getDataMin();
+}
+
+float SingleMicrobeObject::getGraphDisplayRangeMax()
+{
+    return _graph->getDisplayRangeMax();
+}
+
+float SingleMicrobeObject::getGraphDisplayRangeMin()
+{
+    return _graph->getDisplayRangeMin();
+}
+
+void SingleMicrobeObject::setGraphDisplayRange(float min, float max)
+{
+    _graph->setDisplayRange(min,max);
+}
+
+void SingleMicrobeObject::resetGraphDisplayRange()
+{
+    _graph->setDisplayRange(_graph->getDisplayRangeMin(),_graph->getDisplayRangeMax());
+}
+
 bool SingleMicrobeObject::processEvent(cvr::InteractionEvent * ie)
 {
     if(ie->asTrackedButtonEvent() && ie->asTrackedButtonEvent()->getButton() == 0 && (ie->getInteraction() == BUTTON_DOWN || ie->getInteraction() == BUTTON_DOUBLE_CLICK))

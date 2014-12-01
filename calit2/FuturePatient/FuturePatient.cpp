@@ -296,6 +296,18 @@ bool FuturePatient::init()
     pheno.push_back("Healthy");
     _sMicrobePhenotypes->setValues(pheno);
 
+    _sMicrobeSecondPhenotype = new MenuList();
+    _sMicrobeSecondPhenotype->setCallback(this);
+    _sMicrobeSecondPhenotype->setScrollingHint(MenuList::ONE_TO_ONE);
+    _sMicrobeMenu->addItem(_sMicrobeSecondPhenotype);
+
+    pheno.clear();
+    pheno.push_back("Smarr");
+    pheno.push_back("Crohns");
+    pheno.push_back("UC");
+    pheno.push_back("Healthy");
+    _sMicrobeSecondPhenotype->setValues(pheno);
+
     _sMicrobeFilterMenu = new SubMenu("Filters");
     _sMicrobeMenu->addItem(_sMicrobeFilterMenu);
 
@@ -306,6 +318,18 @@ bool FuturePatient::init()
     _sMicrobeTvalSort = new MenuCheckbox("With T Val",false);
     _sMicrobeTvalSort->setCallback(this);
     _sMicrobeFilterMenu->addItem(_sMicrobeTvalSort);
+
+    _sMicrobeTvalSortType = new MenuList();
+    _sMicrobeTvalSortType->setCallback(this);
+    _sMicrobeFilterMenu->addItem(_sMicrobeTvalSortType);
+
+    std::vector<std::string> tvaltype;
+    tvaltype.push_back("Min Group T");
+    tvaltype.push_back("Avg Group T");
+    tvaltype.push_back("Group Pair T");
+    tvaltype.push_back("Group Avg Dev");
+
+    _sMicrobeTvalSortType->setValues(tvaltype);
 
     MenuBar * sMicrobeBar = new MenuBar(osg::Vec4(1.0,1.0,1.0,1.0));
     _sMicrobeFilterMenu->addItem(sMicrobeBar);
@@ -509,6 +533,12 @@ bool FuturePatient::init()
     _scatterTvalSort->setCallback(this);
     _scatterFilterMenu->addItem(_scatterTvalSort);
 
+    _scatterTvalSortType = new MenuList();
+    _scatterTvalSortType->setCallback(this);
+    _scatterFilterMenu->addItem(_scatterTvalSortType);
+
+    _scatterTvalSortType->setValues(tvaltype);
+
     sMicrobeBar = new MenuBar(osg::Vec4(1.0,1.0,1.0,1.0));
     _scatterFilterMenu->addItem(sMicrobeBar);
 
@@ -588,7 +618,27 @@ bool FuturePatient::init()
     _scatterPhenotypes->setCallback(this);
     _scatterPhenotypes->setScrollingHint(MenuList::ONE_TO_ONE);
     _scatterMenu->addItem(_scatterPhenotypes);
+
+    pheno.clear();
+    pheno.push_back("Smarr");
+    pheno.push_back("Crohns");
+    pheno.push_back("UC");
+    pheno.push_back("Healthy");
+
     _scatterPhenotypes->setValues(pheno);
+
+    _scatterSecondPhenotype = new MenuList();
+    _scatterSecondPhenotype->setCallback(this);
+    _scatterSecondPhenotype->setScrollingHint(MenuList::ONE_TO_ONE);
+    _scatterMenu->addItem(_scatterSecondPhenotype);
+
+    pheno.clear();
+    pheno.push_back("Smarr");
+    pheno.push_back("Crohns");
+    pheno.push_back("UC");
+    pheno.push_back("Healthy");
+
+    _scatterSecondPhenotype->setValues(pheno);
 
     _scatterSortResults = new MenuRangeValueCompact("Num Results",2,7,5);
     _scatterMenu->addItem(_scatterSortResults);
@@ -3387,7 +3437,7 @@ bool phenoDispSortWithT(const std::pair<PhenoStats*,struct SortCriteria> & first
 
 void FuturePatient::loadScatter()
 {
-    std::vector<std::pair<PhenoStats*,SortCriteria> > displayList = createListWithFilters((MicrobeGraphType)_scatterMicrobeType->getIndex(),_scatterPhenotypes->getValue(),_scatterPvalSort->getValue(),_scatterTvalSort->getValue(),_scatterAvgEnable->getValue(),_scatterAvgValue->getValue(),_scatterReqMaxEnable->getValue(),_scatterReqMaxValue->getValue(),_scatterZerosEnable->getValue(),_scatterZerosValue->getValue());
+    std::vector<std::pair<PhenoStats*,SortCriteria> > displayList = createListWithFilters((MicrobeGraphType)_scatterMicrobeType->getIndex(),_scatterPhenotypes->getValue(),_scatterSecondPhenotype->getValue(),_scatterPvalSort->getValue(),_scatterTvalSort->getValue(),_scatterTvalSortType->getValue(),_scatterAvgEnable->getValue(),_scatterAvgValue->getValue(),_scatterReqMaxEnable->getValue(),_scatterReqMaxValue->getValue(),_scatterZerosEnable->getValue(),_scatterZerosValue->getValue());
 
     std::cerr << "Got " << displayList.size() << " graphs in display list." << std::endl;
 
@@ -3453,7 +3503,7 @@ void FuturePatient::loadScatter()
 
 void FuturePatient::loadPhenotype()
 {
-    std::vector<std::pair<PhenoStats*,SortCriteria> > displayList = createListWithFilters((MicrobeGraphType)_sMicrobeType->getIndex(),_sMicrobePhenotypes->getValue(),_sMicrobePvalSort->getValue(),_sMicrobeTvalSort->getValue(),_sMicrobeAvgEnable->getValue(),_sMicrobeAvgValue->getValue(),_sMicrobeReqMaxEnable->getValue(),_sMicrobeReqMaxValue->getValue(),_sMicrobeZerosEnable->getValue(),_sMicrobeZerosValue->getValue());
+    std::vector<std::pair<PhenoStats*,SortCriteria> > displayList = createListWithFilters((MicrobeGraphType)_sMicrobeType->getIndex(),_sMicrobePhenotypes->getValue(),_sMicrobeSecondPhenotype->getValue(),_sMicrobePvalSort->getValue(),_sMicrobeTvalSort->getValue(),_sMicrobeTvalSortType->getValue(),_sMicrobeAvgEnable->getValue(),_sMicrobeAvgValue->getValue(),_sMicrobeReqMaxEnable->getValue(),_sMicrobeReqMaxValue->getValue(),_sMicrobeZerosEnable->getValue(),_sMicrobeZerosValue->getValue());
 
     std::cerr << "Got " << displayList.size() << " graphs in display list." << std::endl;
 
@@ -3529,7 +3579,7 @@ void FuturePatient::loadPhenotype()
     }
 }
 
-std::vector<std::pair<PhenoStats*,SortCriteria> > FuturePatient::createListWithFilters(MicrobeGraphType type, std::string phenotype, bool pvalSort, bool tvalSort, bool averageThresh, float avgVal, bool reqMax, float reqMaxVal, bool zeroLimit, float zeroVal)
+std::vector<std::pair<PhenoStats*,SortCriteria> > FuturePatient::createListWithFilters(MicrobeGraphType type, std::string phenotype, std::string tphenotype, bool pvalSort, bool tvalSort, std::string tvalSortType, bool averageThresh, float avgVal, bool reqMax, float reqMaxVal, bool zeroLimit, float zeroVal)
 {
     if(!_microbeTableList[_microbeTable->getIndex()]->statsMap.size())
     {
@@ -3537,6 +3587,11 @@ std::vector<std::pair<PhenoStats*,SortCriteria> > FuturePatient::createListWithF
     }
 
     std::vector<std::pair<PhenoStats*,SortCriteria> > displayList;
+
+    if(tvalSort && tvalSortType == "Group Pair T" && phenotype == tphenotype)
+    {
+	return displayList;
+    }
 
     std::map<std::string,std::map<std::string,struct PhenoStats > > * statsMapp;
 
@@ -3690,32 +3745,80 @@ std::vector<std::pair<PhenoStats*,SortCriteria> > FuturePatient::createListWithF
 	    baseStats = it->second.find(phenotype);
 
 	    float tval = 0.0;
+	    int count = 0;
 
 	    if(baseStats != it->second.end())
 	    {
-		for(std::map<std::string,struct PhenoStats >::iterator itt = it->second.begin(); itt != it->second.end(); ++itt)
+		if(tvalSortType == "Group Avg Dev")
 		{
-		    if(itt->first == phenotype)
+		    float avgavg = 0;
+		    float acount = 0;
+
+		    for(std::map<std::string,struct PhenoStats >::iterator itt = it->second.begin(); itt != it->second.end(); ++itt)
 		    {
-			continue;
+			avgavg += itt->second.avg;
+			acount += 1.0;
 		    }
 
-		    float tempTval = fabs(baseStats->second.avg - itt->second.avg);
-		    float denom = ((baseStats->second.stdev*baseStats->second.stdev) / baseStats->second.values.size() + (itt->second.stdev*itt->second.stdev) / itt->second.values.size());
-
-		    if(denom <= 0.0)
+		    if(acount > 0.0)
 		    {
-			continue;
+			avgavg /= acount;
+
+			float dev = 0.0;
+			for(std::map<std::string,struct PhenoStats >::iterator itt = it->second.begin(); itt != it->second.end(); ++itt)
+			{
+			    dev += pow(avgavg - itt->second.avg,2.0);
+			}
+			dev /+ acount;
+			tval = sqrt(dev);
 		    }
-
-		    tempTval /= sqrt(denom);
-
-		    if(tval == 0.0 || tempTval < tval)
-		    {
-			tval = tempTval;
-		    }
-
 		}
+		else
+		{
+		    for(std::map<std::string,struct PhenoStats >::iterator itt = it->second.begin(); itt != it->second.end(); ++itt)
+		    {
+			if(itt->first == phenotype)
+			{
+			    continue;
+			}
+			if(tvalSortType == "Group Pair T" && itt->first != tphenotype)
+			{
+			    continue;
+			}
+
+			float tempTval = fabs(baseStats->second.avg - itt->second.avg);
+			float denom = ((baseStats->second.stdev*baseStats->second.stdev) / baseStats->second.values.size() + (itt->second.stdev*itt->second.stdev) / itt->second.values.size());
+
+			if(denom <= 0.0)
+			{
+			    continue;
+			}
+
+			tempTval /= sqrt(denom);
+
+			if(tvalSortType == "Avg Group T")
+			{
+			    tval += tempTval;
+			    count++;
+			}
+			else
+			{
+			    if(tval == 0.0 || tempTval < tval)
+			    {
+				tval = tempTval;
+			    }
+			}
+		    }
+		}
+		if(tval == 0.0)
+		{
+		    tval = FLT_MAX;
+		}
+	    }
+
+	    if(tvalSortType == "Avg Group T")
+	    {
+		tval /= ((float)count);
 	    }
 
 	    if(inVal.size())
@@ -3961,7 +4064,7 @@ void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,str
 		genusStatMap[it->first][groupLabels[i]].values.push_back(itt->second);
 	    }
 	    genusStatMap[it->first][groupLabels[i]].avg /= ((float)it->second.size());
-	    std::cerr << "Gen: " << it->first << " group label: " << groupLabels[i] << " avg: " << genusStatMap[it->first][groupLabels[i]].avg << " size: " << it->second.size() << std::endl;
+	    //std::cerr << "Gen: " << it->first << " group label: " << groupLabels[i] << " avg: " << genusStatMap[it->first][groupLabels[i]].avg << " size: " << it->second.size() << std::endl;
 
 	    for(int j = 0; j < genusStatMap[it->first][groupLabels[i]].values.size(); ++j)
 	    {
@@ -3981,7 +4084,7 @@ void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,str
 		familyStatMap[it->first][groupLabels[i]].values.push_back(itt->second);
 	    }
 	    familyStatMap[it->first][groupLabels[i]].avg /= ((float)it->second.size());
-	    std::cerr << "Fam: " << it->first << " group label: " << groupLabels[i] << " avg: " << familyStatMap[it->first][groupLabels[i]].avg << " size: " << it->second.size() << std::endl;
+	    //std::cerr << "Fam: " << it->first << " group label: " << groupLabels[i] << " avg: " << familyStatMap[it->first][groupLabels[i]].avg << " size: " << it->second.size() << std::endl;
 
 	    for(int j = 0; j < familyStatMap[it->first][groupLabels[i]].values.size(); ++j)
 	    {
@@ -4001,7 +4104,7 @@ void FuturePatient::initPhenoStats(std::map<std::string,std::map<std::string,str
 		phylumStatMap[it->first][groupLabels[i]].values.push_back(itt->second);
 	    }
 	    phylumStatMap[it->first][groupLabels[i]].avg /= ((float)it->second.size());
-	    std::cerr << "Phy: " << it->first << " group label: " << groupLabels[i] << " avg: " << phylumStatMap[it->first][groupLabels[i]].avg << " size: " << it->second.size() << std::endl;
+	    //std::cerr << "Phy: " << it->first << " group label: " << groupLabels[i] << " avg: " << phylumStatMap[it->first][groupLabels[i]].avg << " size: " << it->second.size() << std::endl;
 
 	    for(int j = 0; j < phylumStatMap[it->first][groupLabels[i]].values.size(); ++j)
 	    {

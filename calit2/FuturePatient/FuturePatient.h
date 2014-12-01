@@ -84,7 +84,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         void loadScatter();
         void loadPhenotype();
-        std::vector<std::pair<PhenoStats*,SortCriteria> > createListWithFilters(MicrobeGraphType type, std::string phenotype = "", bool pvalSort = false, bool tvalSort = false, bool averageThresh = false, float avgVal = 0.0, bool reqMax = false, float reqMaxVal = 0.0, bool zeroLimit = false, float zeroVal = 0.0);
+        std::vector<std::pair<PhenoStats*,SortCriteria> > createListWithFilters(MicrobeGraphType type, std::string phenotype = "", std::string tphenotype = "", bool pvalSort = false, bool tvalSort = false, std::string tvalSortType = "", bool averageThresh = false, float avgVal = 0.0, bool reqMax = false, float reqMaxVal = 0.0, bool zeroLimit = false, float zeroVal = 0.0);
 
         void initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & genusStatMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & familyStatMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & phylumStatMap, std::string microbeSuffix, std::string measureSuffix);
 
@@ -177,8 +177,10 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuCheckbox * _sMicrobeFirstTimeOnly;
         cvr::MenuCheckbox * _sMicrobeGroupPatients;
         cvr::MenuList * _sMicrobePhenotypes;
+        cvr::MenuList * _sMicrobeSecondPhenotype;
         cvr::MenuCheckbox * _sMicrobePvalSort;
         cvr::MenuCheckbox * _sMicrobeTvalSort;
+        cvr::MenuList * _sMicrobeTvalSortType;
         cvr::MenuRangeValueCompact * _sMicrobeSortResults;
         cvr::MenuButton * _sMicrobePhenotypeLoad;
         cvr::MenuCheckbox * _sMicrobeLogCB;
@@ -240,6 +242,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::SubMenu * _scatterFilterMenu;
         cvr::MenuCheckbox * _scatterPvalSort;
         cvr::MenuCheckbox * _scatterTvalSort;
+        cvr::MenuList * _scatterTvalSortType;
         cvr::MenuCheckbox * _scatterAvgEnable;
         cvr::MenuRangeValueCompact * _scatterAvgValue;
         cvr::MenuCheckbox * _scatterReqMaxEnable;
@@ -249,6 +252,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuRangeValueCompact * _scatterSortResults;
         cvr::MenuButton * _scatterLoadFilter;
         cvr::MenuList * _scatterPhenotypes;
+        cvr::MenuList * _scatterSecondPhenotype;
         cvr::SubMenu * _scatterPresetMenu;
         std::vector<cvr::MenuButton*> _scatterPresetButtons;
         std::vector<std::vector<std::string> > _scatterPresets;
