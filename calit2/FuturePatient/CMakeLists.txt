@@ -11,8 +11,10 @@ SET(PLUGIN_HEADERS
     GroupedBarGraph.h
     GroupedScatterPlot.h
     MicrobeBarGraphObject.h
+    MicrobeVerticalBarGraphObject.h
     MicrobeScatterGraphObject.h
     StackedBarGraph.h
+    VerticalStackedBarGraph.h
     ColorGenerator.h
     SymptomGraphObject.h
     TimeRangeDataGraph.h
@@ -45,8 +47,10 @@ ADD_LIBRARY(${LIB_NAME}
     GroupedBarGraph.cpp
     GroupedScatterPlot.cpp
     MicrobeBarGraphObject.cpp
+    MicrobeVerticalBarGraphObject.cpp
     MicrobeScatterGraphObject.cpp
     StackedBarGraph.cpp
+    VerticalStackedBarGraph.cpp
     ColorGenerator.cpp
     SymptomGraphObject.cpp
     TimeRangeDataGraph.cpp

@@ -6,6 +6,9 @@
 
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/ComController.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/ScreenBase.h>
+#include <cvrKernel/CVRViewer.h>
 #include <cvrConfig/ConfigManager.h>
 #include <cvrMenu/MenuBar.h>
 
@@ -19,6 +22,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
+#include <osgDB/WriteFile>
 
 #include <mysql++/mysql++.h>
 
@@ -44,7 +49,10 @@ FuturePatient::FuturePatient()
     _multiObject = NULL;
     _currentSBGraph = NULL;
     _currentSymptomGraph = NULL;
+    _currentVBGraph = NULL;
     _mls = NULL;
+    _takeSubImage = false;
+    _subImageDone = false;
 
     string_vector argv (2);
     argv(0) = "embedded";
@@ -405,6 +413,7 @@ bool FuturePatient::init()
     std::vector<std::string> mGraphTypes;
     mGraphTypes.push_back("Bar Graph");
     mGraphTypes.push_back("Stacked Bar Graph");
+    mGraphTypes.push_back("Vertical Bar Graph");
     _microbeGraphType->setValues(mGraphTypes);
 
     _microbePatients = new MenuList();
@@ -657,6 +666,10 @@ bool FuturePatient::init()
 
     _closeLayoutButton = new MenuButton("Close Layout");
     _closeLayoutButton->setCallback(this);
+
+    _ssButton = new MenuButton("Sub shot");
+    _ssButton->setCallback(this);
+    //_fpMenu->addItem(_ssButton);
 
     PluginHelper::addRootMenuItem(_fpMenu);
 
@@ -1274,6 +1287,34 @@ bool FuturePatient::init()
 	delete[] lfList;
     } 
 
+    if(ComController::instance()->isMaster())
+    {
+	_subImage = new osg::Image();
+	_subImage->allocateImage(1920,1080,GL_RGBA,GL_RGBA,GL_FLOAT);
+	_subImage->setInternalTextureFormat(4);
+
+	_subDepthTex = new osg::Texture2D();
+	_subDepthTex->setTextureSize(1920,1080);
+	_subDepthTex->setInternalFormat(GL_DEPTH_COMPONENT);
+	_subDepthTex->setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::NEAREST);
+	_subDepthTex->setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::NEAREST);
+	_subDepthTex->setResizeNonPowerOfTwoHint(false);
+	_subDepthTex->setUseHardwareMipMapGeneration(false);
+
+
+	_subCamera = new osg::Camera();
+	_subCamera->setAllowEventFocus(false);
+	_subCamera->setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	_subCamera->setClearColor(osg::Vec4(1.0,0,0,1.0));
+	_subCamera->setRenderOrder(osg::Camera::PRE_RENDER);
+	_subCamera->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+	_subCamera->attach(osg::Camera::COLOR_BUFFER0, _subImage, 0, 0);
+	_subCamera->attach(osg::Camera::DEPTH_BUFFER,_subDepthTex);
+	_subCamera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+
+	_subCamera->addChild((osg::Node*)SceneManager::instance()->getScene());
+    }
+
     return true;
 }
 
@@ -1349,6 +1390,20 @@ void FuturePatient::preFrame()
     if(_layoutObject)
     {
 	_layoutObject->perFrame();
+    }
+
+    if(_takeSubImage && !_subImageDone)
+    {
+	_subImageDone = true;;
+    }
+    else if(_takeSubImage && _subImageDone)
+    {
+	_takeSubImage = false;
+	_subImageDone = false;
+	dynamic_cast<osg::Group*>(CVRViewer::instance()->getSceneData())->removeChild(_subCamera);
+	//SceneManager::instance()->getScene()->removeChild(_subCamera);
+
+	osgDB::writeImageFile(*_subImage.get(),"/home/aprudhom/testImage.tif");
     }
 }
 
@@ -1430,6 +1485,11 @@ bool FuturePatient::processSocketInput(CVRSocket * socket, std::vector<int> & me
 
 void FuturePatient::menuCallback(MenuItem * item)
 {
+    if(item == _ssButton)
+    {
+	takeSubImage();
+    }
+
     if(item == _loadButton)
     {
 	loadGraph(_chartPatientList->getValue(),_testList->getValue());
@@ -1577,6 +1637,11 @@ void FuturePatient::menuCallback(MenuItem * item)
 	if(_currentSBGraph && _microbeGraphType->getIndex() == 1)
 	{
 	    _currentSBGraph = NULL;
+	    _microbeMenu->removeItem(_microbeDone);
+	}
+	if(_currentVBGraph && _microbeGraphType->getIndex() == 2)
+	{
+	    _currentVBGraph = NULL;
 	    _microbeMenu->removeItem(_microbeDone);
 	}
 
@@ -1744,6 +1809,54 @@ void FuturePatient::menuCallback(MenuItem * item)
 		_currentSBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
 	    }
 	}
+	else if(_microbeGraphType->getIndex() == 2)
+	{
+	    if(!_currentVBGraph)
+	    {
+		_currentVBGraph = new MicrobeVerticalBarGraphObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+
+		switch((MicrobeGraphType)(_microbeLevel->getIndex()))
+		{
+		    case MGT_PHYLUM:
+		    {
+			_currentVBGraph->setNameList(_scatterPhylumList);
+			break;
+		    }
+		    case MGT_FAMILY:
+		    {
+			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->familyList);
+			break;
+		    }
+		    case MGT_GENUS:
+		    {
+			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->genusList);
+			break;
+		    }
+		    default:
+		    {
+			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->microbeList);
+			break;
+		    }
+		}
+		_currentVBGraph->setGroupList(_scatterPhylumList);
+
+		if(_currentVBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(),_microbeTestTime[_microbeTest->getIndex()],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType)(_microbeLevel->getIndex())))
+		{
+		    checkLayout();
+		    _layoutObject->addGraphObject(_currentVBGraph);
+		    _microbeMenu->addItem(_microbeDone);
+		}
+		else
+		{
+		    delete _currentVBGraph;
+		    _currentVBGraph = NULL;
+		}
+	    }
+	    else
+	    {
+		_currentVBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(),_microbeTestTime[_microbeTest->getIndex()],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType)(_microbeLevel->getIndex()));
+	    }
+	}
     }
 
     if(item == _microbeGraphType)
@@ -1751,6 +1864,11 @@ void FuturePatient::menuCallback(MenuItem * item)
 	if(_currentSBGraph && _microbeGraphType->getIndex() != 1)
 	{
 	    _currentSBGraph = NULL;
+	    _microbeMenu->removeItem(_microbeDone);
+	}
+	if(_currentVBGraph && _microbeGraphType->getIndex() != 2)
+	{
+	    _currentVBGraph = NULL;
 	    _microbeMenu->removeItem(_microbeDone);
 	}
 	return;
@@ -1762,6 +1880,11 @@ void FuturePatient::menuCallback(MenuItem * item)
 	if(_microbeGraphType->getIndex() == 1)
 	{
 	    _currentSBGraph = NULL;
+	    _microbeMenu->removeItem(_microbeDone);
+	}
+	if(_microbeGraphType->getIndex() == 2)
+	{
+	    _currentVBGraph = NULL;
 	    _microbeMenu->removeItem(_microbeDone);
 	}
 	return;
@@ -1869,6 +1992,54 @@ void FuturePatient::menuCallback(MenuItem * item)
 			else
 			{
 			    _currentSBGraph->addGraph(_microbePatients->getValue(j), j+1, it->second[k], _microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
+			}
+		    }
+		    else if(_microbeGraphType->getIndex() == 2)
+		    {
+			if(!_currentVBGraph)
+			{
+			    _currentVBGraph = new MicrobeVerticalBarGraphObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+
+			    switch((MicrobeGraphType)(_microbeLevel->getIndex()))
+			    {
+				case MGT_PHYLUM:
+				    {
+					_currentVBGraph->setNameList(_scatterPhylumList);
+					break;
+				    }
+				case MGT_FAMILY:
+				    {
+					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->familyList);
+					break;
+				    }
+				case MGT_GENUS:
+				    {
+					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->genusList);
+					break;
+				    }
+				default:
+				    {
+					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->microbeList);
+					break;
+				    }
+			    }
+			    _currentVBGraph->setGroupList(_scatterPhylumList);
+
+			    if(_currentVBGraph->addGraph(_microbePatients->getValue(j), j+1,it->second[k],_microbeTableList[_microbeTable->getIndex()]->testTimeMap[it->first][k],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType)(_microbeLevel->getIndex())))
+			    {
+				checkLayout();
+				_layoutObject->addGraphObject(_currentVBGraph);
+				_microbeMenu->addItem(_microbeDone);
+			    }
+			    else
+			    {
+				delete _currentVBGraph;
+				_currentVBGraph = NULL;
+			    }
+			}
+			else
+			{
+			    _currentVBGraph->addGraph(_microbePatients->getValue(j), j+1,it->second[k],_microbeTableList[_microbeTable->getIndex()]->testTimeMap[it->first][k],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType)(_microbeLevel->getIndex()));
 			}
 		    }
 		}
@@ -1979,6 +2150,54 @@ void FuturePatient::menuCallback(MenuItem * item)
 			    _currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), _microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
 			}
 		    }
+		    else if(_microbeGraphType->getIndex() == 2)
+		    {
+			if(!_currentVBGraph)
+			{
+			    _currentVBGraph = new MicrobeVerticalBarGraphObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+
+			    switch((MicrobeGraphType)(_microbeLevel->getIndex()))
+			    {
+				case MGT_PHYLUM:
+				    {
+					_currentVBGraph->setNameList(_scatterPhylumList);
+					break;
+				    }
+				case MGT_FAMILY:
+				    {
+					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->familyList);
+					break;
+				    }
+				case MGT_GENUS:
+				    {
+					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->genusList);
+					break;
+				    }
+				default:
+				    {
+					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->microbeList);
+					break;
+				    }
+			    }
+			    _currentVBGraph->setGroupList(_scatterPhylumList);
+
+			    if(_currentVBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0),_microbeTestTime[j],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType)(_microbeLevel->getIndex())))
+			    {
+				checkLayout();
+				_layoutObject->addGraphObject(_currentVBGraph);
+				_microbeMenu->addItem(_microbeDone);
+			    }
+			    else
+			    {
+				delete _currentVBGraph;
+				_currentVBGraph = NULL;
+			    }
+			}
+			else
+			{
+			    _currentVBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0),_microbeTestTime[j],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType)(_microbeLevel->getIndex()));
+			}
+		    }
 		}
 
 		start++;
@@ -2061,6 +2280,54 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    else
 	    {
 		_currentSBGraph->addSpecialGraph(mgt,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
+	    }
+	}
+	else if(_microbeGraphType->getIndex() == 2)
+	{
+	    if(!_currentVBGraph)
+	    {
+		_currentVBGraph = new MicrobeVerticalBarGraphObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+
+		switch((MicrobeGraphType)(_microbeLevel->getIndex()))
+		{
+		    case MGT_PHYLUM:
+		    {
+			_currentVBGraph->setNameList(_scatterPhylumList);
+			break;
+		    }
+		    case MGT_FAMILY:
+		    {
+			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->familyList);
+			break;
+		    }
+		    case MGT_GENUS:
+		    {
+			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->genusList);
+			break;
+		    }
+		    default:
+		    {
+			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->microbeList);
+			break;
+		    }
+		}
+		_currentVBGraph->setGroupList(_scatterPhylumList);
+
+		if(_currentVBGraph->addSpecialGraph(mgt,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeRegionList->getValue(),(MicrobeGraphType) (_microbeLevel->getIndex())))
+		{
+		    checkLayout();
+		    _layoutObject->addGraphObject(_currentVBGraph);
+		    _microbeMenu->addItem(_microbeDone);
+		}
+		else
+		{
+		    delete _currentVBGraph;
+		    _currentVBGraph = NULL;
+		}
+	    }
+	    else
+	    {
+		_currentVBGraph->addSpecialGraph(mgt,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeRegionList->getValue(),(MicrobeGraphType) (_microbeLevel->getIndex()));
 	    }
 	}
     }
@@ -4183,4 +4450,75 @@ void FuturePatient::loadScatterPresets()
 	}
     }
     closedir(dir);
+}
+
+void FuturePatient::takeSubImage()
+{
+    if(_takeSubImage)
+    {
+	return;
+    }
+
+    if(ComController::instance()->isMaster())
+    {
+	_takeSubImage = true;
+	_subImageDone = false;
+
+	dynamic_cast<osg::Group*>(CVRViewer::instance()->getSceneData())->addChild(_subCamera);
+
+	//SceneManager::instance()->getScene()->addChild(_subCamera);
+
+	osg::Vec3 center(2000,0,0);
+	center = center * SceneManager::instance()->getTiledWallTransform();
+	setSubImageParams(center,1500,1500);
+
+    }
+}
+
+void FuturePatient::setSubImageParams(osg::Vec3 pos, float width, float height)
+{
+    osg::Matrix centerTrans;
+    centerTrans.makeTranslate(-pos);
+    osg::Vec3 camPos = PluginHelper::getHeadMat(0).getTrans();
+    camPos = camPos * centerTrans;
+    osg::Matrix camTrans;
+    camTrans.makeTranslate(-camPos);
+    
+    osg::Matrix view = centerTrans * camTrans * osg::Matrix::lookAt(osg::Vec3(0,0,0),osg::Vec3(0,1,0),osg::Vec3(0,0,1));
+
+    float top, bottom, left, right;
+    float screenDist = -camPos.y();
+
+    top = ScreenBase::getNear() * (height / 2.0 - camPos.z()) / screenDist;
+    bottom = ScreenBase::getNear() * (-height / 2.0 - camPos.z()) / screenDist;
+    right = ScreenBase::getNear() * (width / 2.0 - camPos.x()) / screenDist;
+    left = ScreenBase::getNear() * (-width / 2.0 - camPos.x()) / screenDist;
+
+    osg::Matrix proj;
+    proj.makeFrustum(left,right,bottom,top,ScreenBase::getNear(),ScreenBase::getFar());
+
+    _subCamera->setViewMatrix(view);
+    _subCamera->setProjectionMatrix(proj);
+
+    CVRViewer::Contexts contexts;
+    CVRViewer::instance()->getContexts(contexts);
+
+    for(CVRViewer::Contexts::iterator citr = contexts.begin(); citr != contexts.end(); ++citr)
+    {
+	osgViewer::GraphicsWindow* gw = dynamic_cast<osgViewer::GraphicsWindow*>(*citr);
+	if(gw)
+	{
+	    osg::GraphicsContext::Cameras& cameras =
+                                        gw->getCameras();
+
+	    for(osg::GraphicsContext::Cameras::iterator citr =
+		    cameras.begin(); citr != cameras.end();
+		    ++citr)
+	    {
+		std::cerr << "Found camera" << std::endl;
+		//_subCamera->setViewMatrix((*citr)->getViewMatrix());
+		//_subCamera->setProjectionMatrix((*citr)->getProjectionMatrix());
+	    }
+	}
+    }
 }

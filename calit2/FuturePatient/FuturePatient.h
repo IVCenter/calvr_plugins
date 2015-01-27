@@ -15,6 +15,10 @@
 #include <map>
 #include <vector>
 
+#include <osg/Image>
+#include <osg/Texture2D>
+#include <osg/Camera>
+
 //#include <mysql++/mysql++.h>
 #include "DBManager.h"
 
@@ -25,6 +29,7 @@
 #include "MicrobeScatterGraphObject.h"
 #include "SymptomGraphObject.h"
 #include "MicrobePointLineObject.h"
+#include "MicrobeVerticalBarGraphObject.h"
 
 struct PhenoStats
 {
@@ -89,6 +94,9 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         void initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & genusStatMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & familyStatMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & phylumStatMap, std::string microbeSuffix, std::string measureSuffix);
 
         void loadScatterPresets();
+
+        void takeSubImage();
+        void setSubImageParams(osg::Vec3 pos, float width, float height);
 
         cvr::SubMenu * _fpMenu;
         cvr::SubMenu * _layoutMenu;
@@ -260,6 +268,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         MicrobeBarGraphObject * _currentSBGraph;
         SymptomGraphObject * _currentSymptomGraph;
+        MicrobeVerticalBarGraphObject * _currentVBGraph;
 
         std::map<std::string,GraphObject*> _graphObjectMap;
         GraphObject * _multiObject;
@@ -274,6 +283,13 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         std::string _layoutDirectory;   
         cvr::MultiListenSocket * _mls;
         std::vector<cvr::CVRSocket*> _socketList;
+
+        bool _takeSubImage, _subImageDone;
+        osg::ref_ptr<osg::Camera> _subCamera;
+        osg::ref_ptr<osg::Image> _subImage;
+        osg::ref_ptr<osg::Texture2D> _subDepthTex;
+
+        cvr::MenuButton * _ssButton;
 };
 
 #endif
