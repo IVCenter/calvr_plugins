@@ -350,6 +350,8 @@ void VerticalStackedBarGraph::selectItems(std::string & group, std::vector<std::
 	return;
     }
 
+    //std::cerr << "select group: " << group << " keysize: " << keys.size() << std::endl;
+
     std::vector<int> indexList;
 
     // select phylum
@@ -394,7 +396,7 @@ void VerticalStackedBarGraph::selectItems(std::string & group, std::vector<std::
     float connSelectedAlpha = 0.45;
     float notSelectedAlpha;
 
-    if(keys.size())
+    if(keys.size() || !group.empty())
     { 
 	notSelectedAlpha = 0.3;
     }

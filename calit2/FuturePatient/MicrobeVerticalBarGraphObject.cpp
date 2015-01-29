@@ -409,6 +409,9 @@ bool MicrobeVerticalBarGraphObject::processEvent(InteractionEvent * ie)
 	    if(_graph->processClick(intersect,selectedGroup,selectedKeys,selectValid))
 	    {
 		clickUsed = true;
+	    }
+	    if(selectValid)
+	    {
 		layout->selectMicrobes(selectedGroup,selectedKeys);
 	    }
 	}
