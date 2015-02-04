@@ -21,6 +21,11 @@ class VerticalStackedBarGraph
 
         bool addBar(std::string label, std::vector<float> & values, std::vector<int> & groupIndexList);
 
+        int getNumBars();
+        std::string getBarLabel(int bar);
+        float getValue(std::string group, std::string key, int bar);
+        float getGroupValue(std::string group, int bar);
+
         void setDisplaySize(float width, float height);
         void setHover(osg::Vec3 intersect);
         void clearHoverText();

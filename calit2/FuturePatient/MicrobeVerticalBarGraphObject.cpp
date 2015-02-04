@@ -307,14 +307,24 @@ void MicrobeVerticalBarGraphObject::selectMicrobes(std::string & group, std::vec
     _graph->selectItems(group,keys);
 }
 
-float MicrobeVerticalBarGraphObject::getGroupValue(std::string group)
+float MicrobeVerticalBarGraphObject::getGroupValue(std::string group, int i)
 {
-    return -1.0;
+    return _graph->getGroupValue(group,i);
 }
 
-float MicrobeVerticalBarGraphObject::getMicrobeValue(std::string group, std::string key)
+float MicrobeVerticalBarGraphObject::getMicrobeValue(std::string group, std::string key, int i)
 {
-    return -1.0;
+    return _graph->getValue(group,key,i);
+}
+
+int MicrobeVerticalBarGraphObject::getNumDisplayValues()
+{
+    return _graph->getNumBars();
+}
+
+std::string MicrobeVerticalBarGraphObject::getDisplayLabel(int i)
+{
+    return _graph->getBarLabel(i);
 }
 
 void MicrobeVerticalBarGraphObject::dumpState(std::ostream & out)

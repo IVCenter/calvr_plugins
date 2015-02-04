@@ -25,8 +25,10 @@ class MicrobeVerticalBarGraphObject : public LayoutTypeObject, public MicrobeSel
         void setGroupList(std::vector<std::string> & groupList);
 
         void selectMicrobes(std::string & group, std::vector<std::string> & keys);
-        float getGroupValue(std::string group);
-        float getMicrobeValue(std::string group, std::string key);
+        float getGroupValue(std::string group, int i);
+        float getMicrobeValue(std::string group, std::string key, int i);
+        int getNumDisplayValues();
+        std::string getDisplayLabel(int i);
 
         virtual void dumpState(std::ostream & out);
         virtual bool loadState(std::istream & in);

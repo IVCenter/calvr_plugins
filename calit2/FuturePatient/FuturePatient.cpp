@@ -210,6 +210,10 @@ bool FuturePatient::init()
     _microbeLoadUCAll->setCallback(this);
     _microbeSpecialMenu->addItem(_microbeLoadUCAll);
 
+    _microbeLoadLarryAll = new MenuButton("Larry All");
+    _microbeLoadLarryAll->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadLarryAll);
+
     _microbePointLineMenu = new SubMenu("Point Line Graph");
     _microbeMenu->addItem(_microbePointLineMenu);
 
@@ -1824,17 +1828,17 @@ void FuturePatient::menuCallback(MenuItem * item)
 		    }
 		    case MGT_FAMILY:
 		    {
-			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->familyList);
+			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->familyListPO);
 			break;
 		    }
 		    case MGT_GENUS:
 		    {
-			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->genusList);
+			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->genusListPO);
 			break;
 		    }
 		    default:
 		    {
-			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->microbeList);
+			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->microbeListPO);
 			break;
 		    }
 		}
@@ -2009,17 +2013,17 @@ void FuturePatient::menuCallback(MenuItem * item)
 				    }
 				case MGT_FAMILY:
 				    {
-					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->familyList);
+					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->familyListPO);
 					break;
 				    }
 				case MGT_GENUS:
 				    {
-					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->genusList);
+					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->genusListPO);
 					break;
 				    }
 				default:
 				    {
-					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->microbeList);
+					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->microbeListPO);
 					break;
 				    }
 			    }
@@ -2064,7 +2068,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	}
     }
 
-    if(item == _microbeLoadCrohnsAll || item == _microbeLoadHealthyAll || item == _microbeLoadUCAll || item == _microbeLoadHealthy105All || item == _microbeLoadHealthy252All)
+    if(item == _microbeLoadCrohnsAll || item == _microbeLoadHealthyAll || item == _microbeLoadUCAll || item == _microbeLoadHealthy105All || item == _microbeLoadHealthy252All || item == _microbeLoadLarryAll)
     {
 	/*std::string tablesuffix;
 	if(_microbeTable->getIndex() == 1)
@@ -2074,7 +2078,11 @@ void FuturePatient::menuCallback(MenuItem * item)
 
 	std::vector<std::pair<int,int> > rangeList;
 
-	if(item == _microbeLoadCrohnsAll)
+	if(item == _microbeLoadLarryAll)
+	{
+	    rangeList.push_back(std::pair<int,int>(0,0));
+	}
+	else if(item == _microbeLoadCrohnsAll)
 	{
         //std::cerr << "crohns item\n";
 	    //rangeList.push_back(std::pair<int,int>(44,58));
@@ -2140,14 +2148,14 @@ void FuturePatient::menuCallback(MenuItem * item)
 			if(!_currentSBGraph)
 			{
 			    _currentSBGraph = new MicrobeBarGraphObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-			    _currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
+			    _currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(j),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
 			    checkLayout();
 			    _layoutObject->addGraphObject(_currentSBGraph);
 			    _microbeMenu->addItem(_microbeDone);
 			}
 			else
 			{
-			    _currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0), _microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
+			    _currentSBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(j), _microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix);
 			}
 		    }
 		    else if(_microbeGraphType->getIndex() == 2)
@@ -2165,23 +2173,23 @@ void FuturePatient::menuCallback(MenuItem * item)
 				    }
 				case MGT_FAMILY:
 				    {
-					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->familyList);
+					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->familyListPO);
 					break;
 				    }
 				case MGT_GENUS:
 				    {
-					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->genusList);
+					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->genusListPO);
 					break;
 				    }
 				default:
 				    {
-					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->microbeList);
+					_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->microbeListPO);
 					break;
 				    }
 			    }
 			    _currentVBGraph->setGroupList(_scatterPhylumList);
 
-			    if(_currentVBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0),_microbeTestTime[j],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType)(_microbeLevel->getIndex())))
+			    if(_currentVBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(j),_microbeTestTime[j],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType)(_microbeLevel->getIndex())))
 			    {
 				checkLayout();
 				_layoutObject->addGraphObject(_currentVBGraph);
@@ -2195,7 +2203,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 			}
 			else
 			{
-			    _currentVBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(0),_microbeTestTime[j],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType)(_microbeLevel->getIndex()));
+			    _currentVBGraph->addGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(j),_microbeTestTime[j],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType)(_microbeLevel->getIndex()));
 			}
 		    }
 		}
@@ -2297,17 +2305,17 @@ void FuturePatient::menuCallback(MenuItem * item)
 		    }
 		    case MGT_FAMILY:
 		    {
-			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->familyList);
+			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->familyListPO);
 			break;
 		    }
 		    case MGT_GENUS:
 		    {
-			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->genusList);
+			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->genusListPO);
 			break;
 		    }
 		    default:
 		    {
-			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->microbeList);
+			_currentVBGraph->setNameList(_microbeTableList[_microbeTable->getIndex()]->microbeListPO);
 			break;
 		    }
 		}
@@ -2847,17 +2855,20 @@ void FuturePatient::setupMicrobes()
     struct Microbes
     {
 	char name[512];
+	char phylum[512];
 	int taxid;
     };
 
     struct Families
     {
 	char name[512];
+	char phylum[512];
     };
     
     struct Genuses
     {
 	char name[512];
+	char phylum[512];
     };
 
     Microbes * microbes;
@@ -2880,7 +2891,7 @@ void FuturePatient::setupMicrobes()
 	    {
 		std::stringstream qss;
 		//qss << "select distinct taxonomy_id, species from Microbes" << _microbeTableList[j]->microbeSuffix << " order by species;";
-		qss << "select distinct Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id, Microbes" << _microbeTableList[j]->microbeSuffix << ".species from Microbe_Measurement" << _microbeTableList[j]->measureSuffix << " inner join Microbes" << _microbeTableList[j]->microbeSuffix << " on Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id = Microbes" << _microbeTableList[j]->microbeSuffix << ".taxonomy_id order by Microbes" << _microbeTableList[j]->microbeSuffix << ".species;";
+		qss << "select distinct Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id, Microbes" << _microbeTableList[j]->microbeSuffix << ".species, Microbes" <<_microbeTableList[j]->microbeSuffix << ".phylum from Microbe_Measurement" << _microbeTableList[j]->measureSuffix << " inner join Microbes" << _microbeTableList[j]->microbeSuffix << " on Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id = Microbes" << _microbeTableList[j]->microbeSuffix << ".taxonomy_id order by Microbes" << _microbeTableList[j]->microbeSuffix << ".species;";
 
 		DBMQueryResult result;
 
@@ -2895,6 +2906,7 @@ void FuturePatient::setupMicrobes()
 		    for(int i = 0; i < numMicrobes; ++i)
 		    {
 			strncpy(microbes[i].name,result(i,"species").c_str(),511);
+			strncpy(microbes[i].phylum,result(i,"phylum").c_str(),511);
 			microbes[i].taxid = atoi(result(i,"taxonomy_id").c_str());
 		    }
 		}
@@ -2950,6 +2962,20 @@ void FuturePatient::setupMicrobes()
 	    _microbeTableList[j]->microbeIDList.push_back(microbes[i].taxid);
 	}
 
+	std::map<std::string,std::vector<std::string> > mphylum;
+	for(int i = 0; i < numMicrobes; ++i)
+	{
+	    mphylum[microbes[i].phylum].push_back(microbes[i].name);
+	}
+
+	for(std::map<std::string,std::vector<std::string> >::iterator it = mphylum.begin(); it != mphylum.end(); ++it)
+	{
+	    for(int i = 0; i < it->second.size(); ++i)
+	    {
+		_microbeTableList[j]->microbeListPO.push_back(it->second[i]);
+	    }
+	}
+
 	if(microbes)
 	{
 	    delete[] microbes;
@@ -2964,7 +2990,7 @@ void FuturePatient::setupMicrobes()
 	    {
 		std::stringstream qss;
 		//qss << "select distinct family from Microbes" << _microbeTableList[j]->microbeSuffix << " order by family;";
-		qss << "select distinct Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id, Microbes" << _microbeTableList[j]->microbeSuffix << ".family from Microbe_Measurement" << _microbeTableList[j]->measureSuffix << " inner join Microbes" << _microbeTableList[j]->microbeSuffix << " on Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id = Microbes" << _microbeTableList[j]->microbeSuffix << ".taxonomy_id group by Microbes" << _microbeTableList[j]->microbeSuffix << ".family order by Microbes" << _microbeTableList[j]->microbeSuffix << ".family;";
+		qss << "select distinct Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id, Microbes" << _microbeTableList[j]->microbeSuffix << ".family, Microbes" << _microbeTableList[j]->microbeSuffix << ".phylum from Microbe_Measurement" << _microbeTableList[j]->measureSuffix << " inner join Microbes" << _microbeTableList[j]->microbeSuffix << " on Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id = Microbes" << _microbeTableList[j]->microbeSuffix << ".taxonomy_id group by Microbes" << _microbeTableList[j]->microbeSuffix << ".family order by Microbes" << _microbeTableList[j]->microbeSuffix << ".family;";
 
 		DBMQueryResult result;
 
@@ -2979,6 +3005,7 @@ void FuturePatient::setupMicrobes()
 		    for(int i = 0; i < numFamilies; ++i)
 		    {
 			strncpy(families[i].name,result(i,"family").c_str(),511);
+			strncpy(families[i].phylum,result(i,"phylum").c_str(),511);
 		    }
 		}
 
@@ -3030,6 +3057,20 @@ void FuturePatient::setupMicrobes()
 	    _microbeTableList[j]->familyList.push_back(families[i].name);
 	}
 
+	mphylum.clear();
+	for(int i = 0; i < numFamilies; ++i)
+	{
+	    mphylum[families[i].phylum].push_back(families[i].name);
+	}
+
+	for(std::map<std::string,std::vector<std::string> >::iterator it = mphylum.begin(); it != mphylum.end(); ++it)
+	{
+	    for(int i = 0; i < it->second.size(); ++i)
+	    {
+		_microbeTableList[j]->familyListPO.push_back(it->second[i]);
+	    }
+	}
+
 	if(families)
 	{
 	    delete[] families;
@@ -3045,7 +3086,7 @@ void FuturePatient::setupMicrobes()
 	    {
 		std::stringstream qss;
 		//qss << "select distinct genus from Microbes" << _microbeTableList[j]->microbeSuffix << " order by genus;";
-		qss << "select distinct Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id, Microbes" << _microbeTableList[j]->microbeSuffix << ".genus from Microbe_Measurement" << _microbeTableList[j]->measureSuffix << " inner join Microbes" << _microbeTableList[j]->microbeSuffix << " on Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id = Microbes" << _microbeTableList[j]->microbeSuffix << ".taxonomy_id group by Microbes" << _microbeTableList[j]->microbeSuffix << ".genus order by Microbes" << _microbeTableList[j]->microbeSuffix << ".genus;";
+		qss << "select distinct Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id, Microbes" << _microbeTableList[j]->microbeSuffix << ".genus, Microbes" << _microbeTableList[j]->microbeSuffix << ".phylum from Microbe_Measurement" << _microbeTableList[j]->measureSuffix << " inner join Microbes" << _microbeTableList[j]->microbeSuffix << " on Microbe_Measurement" << _microbeTableList[j]->measureSuffix << ".taxonomy_id = Microbes" << _microbeTableList[j]->microbeSuffix << ".taxonomy_id group by Microbes" << _microbeTableList[j]->microbeSuffix << ".genus order by Microbes" << _microbeTableList[j]->microbeSuffix << ".genus;";
 
 		DBMQueryResult result;
 
@@ -3060,6 +3101,7 @@ void FuturePatient::setupMicrobes()
 		    for(int i = 0; i < numGenuses; ++i)
 		    {
 			strncpy(genuses[i].name,result(i,"genus").c_str(),511);
+			strncpy(genuses[i].phylum,result(i,"phylum").c_str(),511);
 		    }
 		}
 
@@ -3110,6 +3152,21 @@ void FuturePatient::setupMicrobes()
 	{
 	    _microbeTableList[j]->genusList.push_back(genuses[i].name);
 	}
+
+	mphylum.clear();
+	for(int i = 0; i < numGenuses; ++i)
+	{
+	    mphylum[genuses[i].phylum].push_back(genuses[i].name);
+	}
+
+	for(std::map<std::string,std::vector<std::string> >::iterator it = mphylum.begin(); it != mphylum.end(); ++it)
+	{
+	    for(int i = 0; i < it->second.size(); ++i)
+	    {
+		_microbeTableList[j]->genusListPO.push_back(it->second[i]);
+	    }
+	}
+
 
 	if(genuses)
 	{

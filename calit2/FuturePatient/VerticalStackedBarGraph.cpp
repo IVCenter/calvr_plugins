@@ -113,6 +113,65 @@ bool VerticalStackedBarGraph::addBar(std::string label, std::vector<float> & val
     return true;
 }
 
+int VerticalStackedBarGraph::getNumBars()
+{
+    return _dataList.size();
+}
+
+std::string VerticalStackedBarGraph::getBarLabel(int bar)
+{
+    if(bar >= 0 && bar < _barLabels.size())
+    {
+	return _barLabels[bar];
+    }
+
+    return "";
+}
+
+float VerticalStackedBarGraph::getValue(std::string group, std::string key, int bar)
+{
+    if(bar >= 0 && bar < _dataList.size())
+    {
+	for(int i = 0; i < _dataLabels.size(); ++i)
+	{
+	    if(_dataLabels[i] == key && _dataGroups[_dataGroupIndexLists[bar][i]] == group)
+	    {
+		return _dataList[bar][i];
+	    }
+	}
+    }
+    return -1;
+}
+
+float VerticalStackedBarGraph::getGroupValue(std::string group, int bar)
+{
+    if(bar >= 0 && bar < _dataList.size())
+    {
+	int groupIndex = -1;
+	for(int i = 0; i < _dataGroups.size(); ++i)
+	{
+	    if(group == _dataGroups[i])
+	    {
+		groupIndex = i;
+		break;
+	    }
+	}
+	if(groupIndex >= 0)
+	{
+	    float total = 0.0;
+	    for(int i = 0; i < _dataGroupIndexLists[bar].size(); ++i)
+	    {
+		if(_dataGroupIndexLists[bar][i] == groupIndex)
+		{
+		    total += _dataList[bar][i];
+		}
+	    }
+	    return total;
+	}
+    }
+    return -1;
+}
+
 void VerticalStackedBarGraph::setDisplaySize(float width, float height)
 {
     _width = width;
@@ -439,7 +498,7 @@ void VerticalStackedBarGraph::selectItems(std::string & group, std::vector<std::
 
 	for(int j = 0; j < colors->size(); ++j)
 	{
-	    colors->at(j).w() = notSelectedAlpha;
+	    colors->at(j).w() = 0.3;
 	}
 
 	for(int j = 0; j < indexList.size(); ++j)

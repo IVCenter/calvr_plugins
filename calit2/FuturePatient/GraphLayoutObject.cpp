@@ -1510,15 +1510,18 @@ void GraphLayoutObject::setSelectionText()
 		MicrobeSelectObject * mso = dynamic_cast<MicrobeSelectObject *>(_objectList[i]);
 		if(mso)
 		{
-		    ss << spacer << _objectList[i]->getTitle() << ": ";
-		    float val = mso->getGroupValue(_currentSelectedMicrobeGroup);
-		    if(val >= 0.0)
+		    for(int j = 0; j < mso->getNumDisplayValues(); ++j)
 		    {
-			ss << val << std::endl;
-		    }
-		    else
-		    {
-			ss << "~" << std::endl;
+			ss << spacer << mso->getDisplayLabel(j) << ": ";
+			float val = mso->getGroupValue(_currentSelectedMicrobeGroup,j);
+			if(val >= 0.0)
+			{
+			    ss << val << std::endl;
+			}
+			else
+			{
+			    ss << "~" << std::endl;
+			}
 		    }
 		}
 	    }
@@ -1532,18 +1535,21 @@ void GraphLayoutObject::setSelectionText()
 		MicrobeSelectObject * mso = dynamic_cast<MicrobeSelectObject *>(_objectList[i]);
 		if(mso)
 		{
-		    ss << spacer << _objectList[i]->getTitle() << ": ";
-		    float val = 0.0;
-		    
-		    for(int j = 0; j < _currentSelectedMicrobes.size(); ++j)
+		    for(int k = 0; k < mso->getNumDisplayValues(); ++k)
 		    {
-			float tval = mso->getMicrobeValue(_currentSelectedMicrobeGroup,_currentSelectedMicrobes[j]);
-			if(tval >= 0.0)
+			ss << spacer << mso->getDisplayLabel(k) << ": ";
+			float val = 0.0;
+
+			for(int j = 0; j < _currentSelectedMicrobes.size(); ++j)
 			{
-			    val += tval;
+			    float tval = mso->getMicrobeValue(_currentSelectedMicrobeGroup,_currentSelectedMicrobes[j],k);
+			    if(tval >= 0.0)
+			    {
+				val += tval;
+			    }
 			}
+			ss << val << std::endl;
 		    }
-		    ss << val << std::endl;
 		}
 	    }
 	}
@@ -1557,15 +1563,18 @@ void GraphLayoutObject::setSelectionText()
 		MicrobeSelectObject * mso = dynamic_cast<MicrobeSelectObject *>(_objectList[i]);
 		if(mso)
 		{
-		    ss << spacer << _objectList[i]->getTitle() << ": ";
-		    float val = mso->getMicrobeValue(_currentSelectedMicrobeGroup,_currentSelectedMicrobes[0]);
-		    if(val >= 0.0)
+		    for(int j = 0; j < mso->getNumDisplayValues(); ++j)
 		    {
-			ss << val << std::endl;
-		    }
-		    else
-		    {
-			ss << "~" << std::endl;
+			ss << spacer << mso->getDisplayLabel(j) << ": ";
+			float val = mso->getMicrobeValue(_currentSelectedMicrobeGroup,_currentSelectedMicrobes[0],j);
+			if(val >= 0.0)
+			{
+			    ss << val << std::endl;
+			}
+			else
+			{
+			    ss << "~" << std::endl;
+			}
 		    }
 		}
 	    }
