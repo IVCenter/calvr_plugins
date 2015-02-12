@@ -746,7 +746,7 @@ void TimeRangeDataGraph::updateAxis()
 	text->setAlignment(osgText::Text::CENTER_CENTER);
 	osg::BoundingBox bb = text->getBound();
 	float csize1 = (padding * 0.8) / (bb.xMax() - bb.xMin());
-	float csize2 = _barHeight / (bb.zMax() - bb.zMin());
+	float csize2 = (_barHeight * 0.8) / (bb.zMax() - bb.zMin());
 	text->setCharacterSize(std::min(csize1,csize2));
 	text->setPosition(osg::Vec3(_graphLeft - (padding / 2.0),0,myCenter));
 	_axisGeode->addDrawable(text);

@@ -158,6 +158,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         cvr::SubMenu * _chartMenu;
         cvr::SubMenu * _presetMenu;
+        cvr::MenuCheckbox * _requireRangeCB;
         cvr::MenuButton * _inflammationButton;
         cvr::MenuButton * _big4MultiButton;
         cvr::MenuButton * _cholesterolButton;
@@ -235,9 +236,12 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::SubMenu * _eventMenu;
         cvr::MenuList * _eventName;
         cvr::MenuButton * _eventLoad;
+        cvr::MenuButton * _eventLoadDisplay;
         cvr::MenuButton * _eventLoadAll;
         cvr::MenuButton * _eventLoadMicrobe;
         cvr::MenuButton * _eventDone;
+        std::vector<int> _eventGroups;
+
 
         std::vector<std::string> _scatterPhylumList;
         cvr::SubMenu * _scatterMenu;

@@ -71,7 +71,7 @@ GraphObject::~GraphObject()
 
 }
 
-bool GraphObject::addGraph(std::string patient, std::string name, bool averageColor)
+bool GraphObject::addGraph(std::string patient, std::string name, bool requireRange, bool averageColor)
 {
     for(int i = 0; i < _nameList.size(); i++)
     {
@@ -487,6 +487,11 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool averageCo
 		}
 	    }
 	}
+	else if(requireRange)
+	{
+	    // TODO memory cleanup
+	    return false;
+	}
 
 	_linRegFunc->setDataRange(gd.displayName,gd.minValue,gd.maxValue);
 	_linRegFunc->setTimeRange(gd.displayName,gd.minTime,gd.maxTime);
@@ -697,7 +702,7 @@ bool GraphObject::loadState(std::istream & in)
 	in.getline(tempstr,1024);
 	displayNames.push_back(tempstr);
 
-	addGraph(patient,name);
+	addGraph(patient,name,false);
     }
 
     for(int i = 0; i < displayNames.size(); ++i)

@@ -143,6 +143,10 @@ bool FuturePatient::init()
     _linearRegCB->setCallback(this);
     _chartMenu->addItem(_linearRegCB);
 
+    _requireRangeCB = new MenuCheckbox("Require Range",true);
+    _requireRangeCB->setCallback(this);
+    _chartMenu->addItem(_requireRangeCB);
+
     _loadButton = new MenuButton("Load");
     _loadButton->setCallback(this);
     _chartMenu->addItem(_loadButton);
@@ -509,6 +513,10 @@ bool FuturePatient::init()
     _eventLoad->setCallback(this);
     _eventMenu->addItem(_eventLoad);
 
+    _eventLoadDisplay = new MenuButton("Load Display Set");
+    _eventLoadDisplay->setCallback(this);
+    _eventMenu->addItem(_eventLoadDisplay);
+
     _eventLoadAll = new MenuButton("Load All");
     _eventLoadAll->setCallback(this);
     _eventMenu->addItem(_eventLoadAll);
@@ -680,6 +688,7 @@ bool FuturePatient::init()
     struct listField
     {
 	char entry[256];
+	int id;
     };
 
     struct listField * lfList = NULL;
@@ -1075,7 +1084,7 @@ bool FuturePatient::init()
 	{
 	    DBMQueryResult result;
 
-	    _dbm->runQuery("select distinct name, type from Event where patient_id = \"1\" order by type desc, name;",result);
+	    _dbm->runQuery("select distinct name, group_id, type from Event where patient_id = \"1\" order by type desc, name;",result);
 
 	    listEntries = result.numRows();
 
@@ -1086,6 +1095,7 @@ bool FuturePatient::init()
 		for(int i = 0; i < listEntries; i++)
 		{
 		    strncpy(lfList[i].entry,result(i,"name").c_str(),255);
+		    lfList[i].id = atoi(result(i,"group_id").c_str());
 		}
 	    }
 	}
@@ -1134,6 +1144,7 @@ bool FuturePatient::init()
     for(int i = 0; i < listEntries; i++)
     {
 	stringlist.push_back(lfList[i].entry);
+	_eventGroups.push_back(lfList[i].id);
     }
 
     _eventName->setValues(stringlist);
@@ -2585,6 +2596,30 @@ void FuturePatient::menuCallback(MenuItem * item)
 	}
     }
 
+    if(item == _eventLoadDisplay && _eventName->getListSize())
+    {
+	bool addObject = false;
+	if(!_currentSymptomGraph)
+	{
+	    _currentSymptomGraph = new SymptomGraphObject(_dbm, 1000.0, 1000.0, "Symptom Graph", false, true, false, true);
+	    checkLayout();
+	    addObject = true;
+	}
+	for(int i = 0; i < _eventName->getListSize(); ++i)
+	{
+	    if(_eventGroups[i] == 1 || _eventGroups[i] == 2 || _eventGroups[i] == 3 || _eventGroups[i] == 5)
+	    {
+		_currentSymptomGraph->addGraph(_eventName->getValue(i));
+	    }
+	}
+
+	if(addObject)
+	{
+	    _layoutObject->addGraphObject(_currentSymptomGraph);
+	    _eventMenu->addItem(_eventDone);
+	}
+    }
+
     if(item == _eventLoadAll && _eventName->getListSize())
     {
 	bool addObject = false;
@@ -2814,7 +2849,7 @@ void FuturePatient::loadGraph(std::string patient, std::string test, bool averag
 	    //if(_graphObjectMap.find(value) == _graphObjectMap.end())
 	    {
 		GraphObject * gobject = new GraphObject(_dbm, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
-		if(gobject->addGraph(patient,test,averageColor))
+		if(gobject->addGraph(patient,test,_requireRangeCB->getValue(),averageColor))
 		{
 		    //_graphObjectMap[value] = gobject;
 		    gobject->setLayoutDoesDelete(true);
@@ -2838,7 +2873,7 @@ void FuturePatient::loadGraph(std::string patient, std::string test, bool averag
 		_multiObject = new GraphObject(_dbm, 1000.0, 1000.0, "DataGraph", false, true, false, true, false);
 	    }
 
-	    if(_multiObject->addGraph(patient,test))
+	    if(_multiObject->addGraph(patient,test,_requireRangeCB->getValue()))
 	    {
 		if(_multiObject->getNumGraphs() == 1)
 		{

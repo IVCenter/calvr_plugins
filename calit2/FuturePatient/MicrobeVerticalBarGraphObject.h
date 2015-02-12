@@ -19,6 +19,9 @@ class MicrobeVerticalBarGraphObject : public LayoutTypeObject, public MicrobeSel
         bool addGraph(std::string label, int patientid, std::string testLabel, time_t testTime, std::string microbeTableSuffix, std::string measureTableSuffix, MicrobeGraphType type = MGT_SPECIES);
         bool addSpecialGraph(SpecialMicrobeGraphType smgt, std::string microbeTableSuffix, std::string measureTableSuffix, std::string region, MicrobeGraphType type = MGT_SPECIES);
 
+        virtual void objectAdded();
+        virtual void objectRemoved();
+
         void setGraphSize(float width, float height);
 
         void setNameList(std::vector<std::string> & nameList);

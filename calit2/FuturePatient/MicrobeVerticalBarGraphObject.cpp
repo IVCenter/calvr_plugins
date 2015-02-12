@@ -276,6 +276,30 @@ bool MicrobeVerticalBarGraphObject::addGraph(std::string & label, std::string qu
     return _graph->addBar(label,dataValues,groupIndexList);
 }
 
+void MicrobeVerticalBarGraphObject::objectAdded()
+{
+    GraphLayoutObject * layout = dynamic_cast<GraphLayoutObject*>(_parent);
+    if(layout && layout->getPhylumKeyObject())
+    {
+	bool addKey = !layout->getPhylumKeyObject()->hasRef();
+	layout->getPhylumKeyObject()->ref(this);
+
+	if(addKey)
+	{
+	    layout->addLineObject(layout->getPhylumKeyObject());
+	}
+    }
+}
+
+void MicrobeVerticalBarGraphObject::objectRemoved()
+{
+    GraphLayoutObject * layout = dynamic_cast<GraphLayoutObject*>(_parent);
+    if(layout && layout->getPhylumKeyObject())
+    {
+	layout->getPhylumKeyObject()->unref(this);
+    }
+}
+
 void MicrobeVerticalBarGraphObject::setGraphSize(float width, float height)
 {
     osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);

@@ -19,7 +19,7 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
         GraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~GraphObject();
 
-        bool addGraph(std::string patient, std::string name, bool averageColor = false);
+        bool addGraph(std::string patient, std::string name, bool requireRange, bool averageColor = false);
         int getNumGraphs()
         {
             return _graph->getNumGraphs();
