@@ -25,14 +25,17 @@ VerticalStackedBarGraph::VerticalStackedBarGraph(std::string title)
     _bgGeode = new osg::Geode();
     _axisGeode = new osg::Geode();
     _graphGeode = new osg::Geode();
+    _groupLineGeode = new osg::Geode();
 
     _graphGeode->setCullingActive(false);
+    _groupLineGeode->setCullingActive(false);
     _axisGeode->setCullingActive(false);
 
     _root->addChild(_bgScaleMT);
     _bgScaleMT->addChild(_bgGeode);
     _root->addChild(_axisGeode);
     _root->addChild(_graphGeode);
+    _root->addChild(_groupLineGeode);
 
     _lineWidth = new osg::LineWidth();
     _lineWidth->setWidth(ConfigManager::getFloat("value","Plugin.FuturePatient.StackedBarLineWidth",1.0));
@@ -543,6 +546,13 @@ bool VerticalStackedBarGraph::processClick(osg::Vec3 & intersect, std::string & 
     return false;
 }
 
+void VerticalStackedBarGraph::setColorMapping(const std::map<std::string,osg::Vec4> & colorMap, osg::Vec4 defaultColor)
+{
+    _colorMap = colorMap;
+    _defaultColor = defaultColor;
+    update();
+}
+
 void VerticalStackedBarGraph::makeBG()
 {
     osg::Geometry * geom = new osg::Geometry();
@@ -667,11 +677,20 @@ void VerticalStackedBarGraph::updateAxis()
     titleText->setPosition(osg::Vec3(0,-1,(_height/2.0)-(_topPaddingMult*_height)/2.0));
     _axisGeode->addDrawable(titleText);
 
+    osg::Quat q;
+    q.makeRotate(M_PI/2.0,osg::Vec3(1.0,0,0));
+
+    if((0.8 * _bottomPaddingMult * _height) > (_barWidth * 0.9))
+    {
+	q = q * osg::Quat(-M_PI/2.0,osg::Vec3(0,1.0,0));
+    }
+
     //make bar labels
     myLeft = _graphLeft + (_barWidth / 2.0);
     for(int i = 0; i < _dataList.size(); ++i)
     {
 	osgText::Text * text = GraphGlobals::makeText(_barLabels[i],osg::Vec4(0,0,0,1));
+	text->setRotation(q);
 	bb = text->getBound();
 	float csize1 = (0.8 * _bottomPaddingMult * _height) / (bb.zMax() - bb.zMin());
 	float csize2 = (_barWidth * 0.9) / (bb.xMax() - bb.xMin());
@@ -689,13 +708,25 @@ void VerticalStackedBarGraph::updateAxis()
 
 void VerticalStackedBarGraph::updateGraph()
 {
+    _groupLineGeode->removeDrawables(0,_groupLineGeode->getNumDrawables());
+
     if(!_dataList.size())
     {
 	return;
     }
 
+    osg::Geometry * lineGeom = new osg::Geometry();
+    osg::Vec3Array * lineVertArray = new osg::Vec3Array();
+    osg::Vec4Array * lineColorArray = new osg::Vec4Array(1);
+    lineColorArray->at(0) = osg::Vec4(0,0,0,1);
+    lineGeom->setVertexArray(lineVertArray);
+    lineGeom->setColorArray(lineColorArray);
+    lineGeom->setColorBinding(osg::Geometry::BIND_OVERALL);
+    _groupLineGeode->addDrawable(lineGeom);
+
     for(int i = 0; i < _dataList.size(); ++i)
     {
+	int lastGroup = -1;
 	osg::Vec3Array * myVerts;
 	osg::Vec4Array * myColors;
 	osg::Vec3Array * leftVerts = NULL;
@@ -741,6 +772,8 @@ void VerticalStackedBarGraph::updateGraph()
 
 	float connAlpha = 0.3;
 
+	bool lastColorSolid = true;
+
 	for(int j = 0; j < _dataLabels.size(); ++j)
 	{
 	    float offset = _dataList[i][j] * (_graphTop - _graphBottom);
@@ -756,17 +789,42 @@ void VerticalStackedBarGraph::updateGraph()
 	    myVerts->at(4*j+2) = ll;
 	    myVerts->at(4*j+3) = lr;
 
-	    int colorNum = j;
-	    if(colorNum % 2)
+	    osg::Vec4 color;
+
+	    if(!_colorMap.size())
 	    {
-		colorNum = colorNum / 2 + _dataLabels.size() / 2;
+		int colorNum = j;
+		if(colorNum % 2)
+		{
+		    colorNum = colorNum / 2 + _dataLabels.size() / 2;
+		}
+		else
+		{
+		    colorNum = colorNum / 2;
+		}
+
+		color = ColorGenerator::makeColor(colorNum,_dataLabels.size());
 	    }
 	    else
 	    {
-		colorNum = colorNum / 2;
-	    }
+		std::map<std::string,osg::Vec4>::iterator it;
+		it = _colorMap.find(_dataGroups[_dataGroupIndexLists[i][j]]);
+		if(it != _colorMap.end())
+		{
+		    color = it->second;
+		}
+		else
+		{
+		    color = _defaultColor;
+		}
 
-	    osg::Vec4 color = ColorGenerator::makeColor(colorNum,_dataLabels.size());
+		if(!lastColorSolid)
+		{
+		    color = color * 0.6;
+		}
+
+		lastColorSolid = !lastColorSolid;
+	    }
 	    myColors->at(4*j) = color;
 	    myColors->at(4*j+1) = color;
 	    myColors->at(4*j+2) = color;
@@ -833,6 +891,8 @@ void VerticalStackedBarGraph::updateGraph()
     {
 	selectItems(_lastSelectGroup,_lastSelectKeys);
     }
+
+    lineGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES,0,lineVertArray->size()));
 }
 
 void VerticalStackedBarGraph::updateValues()

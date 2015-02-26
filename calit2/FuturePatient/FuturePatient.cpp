@@ -3,6 +3,7 @@
 #include "StrainGraphObject.h"
 #include "StrainHMObject.h"
 #include "SingleMicrobeObject.h"
+#include "MicrobeLineGraphObject.h"
 
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/ComController.h>
@@ -296,9 +297,24 @@ bool FuturePatient::init()
     _sMicrobeGroupPatients->setCallback(this);
     _sMicrobeMenu->addItem(_sMicrobeGroupPatients);
 
+    _sMicrobeChartType = new MenuList();
+    _sMicrobeChartType->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobeChartType);
+
+    std::vector<std::string> chartTypes;
+    chartTypes.push_back("Bar");
+    chartTypes.push_back("Line");
+
+    _sMicrobeChartType->setValues(chartTypes);
+    _sMicrobeChartType->setScrollingHint(MenuList::ONE_TO_ONE);
+
     _sMicrobeLoad = new MenuButton("Load");
     _sMicrobeLoad->setCallback(this);
     _sMicrobeMenu->addItem(_sMicrobeLoad);
+
+    _sMicrobeLoadLines = new MenuButton("Load Line Chart");
+    _sMicrobeLoadLines->setCallback(this);
+    //_sMicrobeMenu->addItem(_sMicrobeLoadLines);
 
     _sMicrobePhenotypes = new MenuList();
     _sMicrobePhenotypes->setCallback(this);
@@ -2087,11 +2103,14 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    tablesuffix = "_V2";
 	}*/
 
+	int microbesToLoad = 75;
+
 	std::vector<std::pair<int,int> > rangeList;
 
 	if(item == _microbeLoadLarryAll)
 	{
 	    rangeList.push_back(std::pair<int,int>(0,0));
+	    microbesToLoad = (int)_microbeNumBars->getValue();
 	}
 	else if(item == _microbeLoadCrohnsAll)
 	{
@@ -2141,7 +2160,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 			//gettimeofday(&loadstart,NULL);
 			MicrobeGraphObject * mgo = new MicrobeGraphObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
 
-			bool tb = mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(j), _microbeTestTime[j],75,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),(MicrobeGraphType)(_microbeLevel->getIndex()));
+			bool tb = mgo->setGraph(_microbePatients->getValue(start), start+1, _microbeTest->getValue(j), _microbeTestTime[j],microbesToLoad,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),(MicrobeGraphType)(_microbeLevel->getIndex()));
 			if(tb)
 			{
 			    checkLayout();
@@ -2440,19 +2459,52 @@ void FuturePatient::menuCallback(MenuItem * item)
 	}*/
 
 
-	SingleMicrobeObject * smo = new SingleMicrobeObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	if(smo->setGraph(name,"",taxid,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType) (_sMicrobeType->getIndex()),_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
+	if(_sMicrobeChartType->getValue() == "Bar")
+	{
+	    SingleMicrobeObject * smo = new SingleMicrobeObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	    if(smo->setGraph(name,"",taxid,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType) (_sMicrobeType->getIndex()),_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
+	    {
+		checkLayout();
+		_layoutObject->addGraphObject(smo);
+		smo->setLogScale(_sMicrobeLogCB->getValue());
+		smo->setShowStdDev(_sMicrobeStdDevCB->getValue());
+	    }
+	    else
+	    {
+		delete smo;
+	    }
+	}
+	else if(_sMicrobeChartType->getValue() == "Line")
+	{
+	    MicrobeLineGraphObject * mlgobject = new MicrobeLineGraphObject(_dbm, 1000.0, 1000.0, "MicrobeLineGraph", false, true, false, true, false);
+	    if(mlgobject->addGraph("Smarr",name,(MicrobeGraphType) (_sMicrobeType->getIndex()),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix))
+	    {
+		checkLayout();
+		mlgobject->setLayoutDoesDelete(true);
+		_layoutObject->addGraphObject(mlgobject);
+	    }
+	    else
+	    {
+		delete mlgobject;
+	    }
+	}
+	return;
+    }
+
+    if(item == _sMicrobeLoadLines)
+    {
+	MicrobeLineGraphObject * mlgobject = new MicrobeLineGraphObject(_dbm, 1000.0, 1000.0, "MicrobeLineGraph", false, true, false, true, false);
+	if(mlgobject->addGraph("Smarr",_sMicrobes->getValue(),(MicrobeGraphType) (_sMicrobeType->getIndex()),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix))
 	{
 	    checkLayout();
-	    _layoutObject->addGraphObject(smo);
-	    smo->setLogScale(_sMicrobeLogCB->getValue());
-	    smo->setShowStdDev(_sMicrobeStdDevCB->getValue());
+	    mlgobject->setLayoutDoesDelete(true);
+	    _layoutObject->addGraphObject(mlgobject);
 	}
 	else
 	{
-	    delete smo;
+	    delete mlgobject;
 	}
-	return;
+
     }
 
     for(int j = 0; j < _sMicrobePresetList.size(); ++j)
@@ -2471,17 +2523,34 @@ void FuturePatient::menuCallback(MenuItem * item)
 
 	    if(index >= 0)
 	    {
-		SingleMicrobeObject * smo = new SingleMicrobeObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-		if(smo->setGraph(_sMicrobePresetList[j]->getText(),"",_microbeTableList[_microbeTable->getIndex()]->microbeIDList[index],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix, MGT_SPECIES,_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
+		if(_sMicrobeChartType->getValue() == "Bar")
 		{
-		    checkLayout();
-		    _layoutObject->addGraphObject(smo);
-		    smo->setLogScale(_sMicrobeLogCB->getValue());
-		    smo->setShowStdDev(_sMicrobeStdDevCB->getValue());
+		    SingleMicrobeObject * smo = new SingleMicrobeObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+		    if(smo->setGraph(_sMicrobePresetList[j]->getText(),"",_microbeTableList[_microbeTable->getIndex()]->microbeIDList[index],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix, MGT_SPECIES,_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
+		    {
+			checkLayout();
+			_layoutObject->addGraphObject(smo);
+			smo->setLogScale(_sMicrobeLogCB->getValue());
+			smo->setShowStdDev(_sMicrobeStdDevCB->getValue());
+		    }
+		    else
+		    {
+			delete smo;
+		    }
 		}
-		else
+		else if(_sMicrobeChartType->getValue() == "Line")
 		{
-		    delete smo;
+		    MicrobeLineGraphObject * mlgobject = new MicrobeLineGraphObject(_dbm, 1000.0, 1000.0, "MicrobeLineGraph", false, true, false, true, false);
+		    if(mlgobject->addGraph("Smarr",_sMicrobePresetList[j]->getText(),MGT_SPECIES,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix))
+		    {
+			checkLayout();
+			mlgobject->setLayoutDoesDelete(true);
+			_layoutObject->addGraphObject(mlgobject);
+		    }
+		    else
+		    {
+			delete mlgobject;
+		    }
 		}
 	    }
 	}

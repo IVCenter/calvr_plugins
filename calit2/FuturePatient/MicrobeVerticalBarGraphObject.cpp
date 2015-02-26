@@ -1,5 +1,6 @@
 #include "MicrobeVerticalBarGraphObject.h"
 #include "GraphLayoutObject.h"
+#include "GraphGlobals.h"
 
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/ComController.h>
@@ -19,6 +20,8 @@ MicrobeVerticalBarGraphObject::MicrobeVerticalBarGraphObject(DBManager * dbm, fl
 {
     _dbm = dbm;
     _graph = new VerticalStackedBarGraph("Microbe Graph");
+    _graph->setColorMapping(GraphGlobals::getPhylumColorMap(),GraphGlobals::getDefaultPhylumColor());
+
     _graph->setDisplaySize(width,height);
     _width = width;
     _height = height;

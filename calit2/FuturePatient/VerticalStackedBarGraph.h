@@ -33,6 +33,8 @@ class VerticalStackedBarGraph
         void selectItems(std::string & group, std::vector<std::string> & keys);
         bool processClick(osg::Vec3 & intersect, std::string & selectedGroup, std::vector<std::string> & selectedKeys, bool & selectValid);
 
+        void setColorMapping(const std::map<std::string,osg::Vec4> & colorMap, osg::Vec4 defaultColor);
+
         osg::Group * getRoot()
         {
             return _root;
@@ -62,6 +64,7 @@ class VerticalStackedBarGraph
         osg::ref_ptr<osg::Geode> _bgGeode;
         osg::ref_ptr<osg::Geode> _axisGeode;
         osg::ref_ptr<osg::Geode> _graphGeode;
+        osg::ref_ptr<osg::Geode> _groupLineGeode;
         
         std::vector<osg::ref_ptr<osg::Geometry> > _geometryList;
         std::vector<osg::ref_ptr<osg::Geometry> > _connectionGeometryList;
@@ -84,7 +87,8 @@ class VerticalStackedBarGraph
         std::string _lastSelectGroup;
         std::vector<std::string> _lastSelectKeys;
 
-        
+        std::map<std::string,osg::Vec4> _colorMap;
+        osg::Vec4 _defaultColor;        
 };
 
 #endif

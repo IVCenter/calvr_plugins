@@ -183,7 +183,9 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuTextEntryItem * _sMicrobeEntry;
         cvr::MenuList * _sMicrobes;
         cvr::MenuList * _sMicrobeType;
+        cvr::MenuList * _sMicrobeChartType;
         cvr::MenuButton * _sMicrobeLoad;
+        cvr::MenuButton * _sMicrobeLoadLines;
         cvr::MenuCheckbox * _sMicrobeRankOrder;
         cvr::MenuCheckbox * _sMicrobeLabels;
         cvr::MenuCheckbox * _sMicrobeFirstTimeOnly;

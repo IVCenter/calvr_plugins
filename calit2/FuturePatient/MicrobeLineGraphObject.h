@@ -1,5 +1,5 @@
-#ifndef FP_GRAPH_OBJECT_H
-#define FP_GRAPH_OBJECT_H
+#ifndef FP_MICROBE_LINE_GRAPH_OBJECT_H
+#define FP_MICROBE_LINE_GRAPH_OBJECT_H
 
 #include <cvrMenu/MenuList.h>
 #include <cvrMenu/MenuCheckbox.h>
@@ -8,17 +8,18 @@
 
 #include "DBManager.h"
 
+#include "MicrobeGraphObject.h"
 #include "DataGraph.h"
 #include "LayoutInterfaces.h"
 #include "LinearRegFunc.h"
 
-class GraphObject : public LayoutTypeObject, public TimeRangeObject
+class MicrobeLineGraphObject : public LayoutTypeObject, public TimeRangeObject
 {
     public:
-        GraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
-        virtual ~GraphObject();
+        MicrobeLineGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
+        virtual ~MicrobeLineGraphObject();
 
-        bool addGraph(std::string patient, std::string name, bool requireRange, bool averageColor = false);
+        bool addGraph(std::string patient, std::string microbe, MicrobeGraphType type, std::string microbeTableSuffix, std::string measureTableSuffix);
         int getNumGraphs()
         {
             return _graph->getNumGraphs();
@@ -73,24 +74,13 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
         cvr::MenuList * _mgdList;
         cvr::MenuList * _ldmList;
 
-        std::string _pdfDir;
-
         int _activeHand;
         bool _layoutDoesDelete;
-
-        struct LoadData
-        {
-            std::string patient;
-            std::string name;
-            std::string displayName;
-        };
 
         AverageFunction * _averageFunc;
         cvr::MenuCheckbox * _averageCB;
         LinearRegFunc * _linRegFunc;
         cvr::MenuCheckbox * _linRegCB;
-
-        std::vector<LoadData> _loadedGraphs;
 };
 
 #endif
