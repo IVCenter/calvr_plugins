@@ -130,8 +130,10 @@ class MicrobeSelectObject
 {
     public:
         virtual void selectMicrobes(std::string & group, std::vector<std::string> & keys) = 0;
-        virtual float getGroupValue(std::string group) = 0;
-        virtual float getMicrobeValue(std::string group, std::string key) = 0;
+        virtual float getGroupValue(std::string group, int i) = 0;
+        virtual float getMicrobeValue(std::string group, std::string key, int i) = 0;
+        virtual int getNumDisplayValues() = 0;
+        virtual std::string getDisplayLabel(int i) = 0;
 };
 
 class PatientSelectObject

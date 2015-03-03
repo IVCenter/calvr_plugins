@@ -130,14 +130,24 @@ void MicrobeGraphObject::selectMicrobes(std::string & group, std::vector<std::st
     _graph->selectItems(group,keys);
 }
 
-float MicrobeGraphObject::getGroupValue(std::string group)
+float MicrobeGraphObject::getGroupValue(std::string group, int i)
 {
     return _graph->getGroupValue(group);
 }
 
-float MicrobeGraphObject::getMicrobeValue(std::string group, std::string key)
+float MicrobeGraphObject::getMicrobeValue(std::string group, std::string key, int i)
 {
     return _graph->getKeyValue(group,key);
+}
+
+int MicrobeGraphObject::getNumDisplayValues()
+{
+    return 1;
+}
+
+std::string MicrobeGraphObject::getDisplayLabel(int i)
+{
+    return getTitle();
 }
 
 void MicrobeGraphObject::dumpState(std::ostream & out)

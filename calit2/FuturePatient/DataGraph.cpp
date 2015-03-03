@@ -952,6 +952,20 @@ void DataGraph::removeMathFunction(MathFunction * mf)
     }
 }
 
+int DataGraph::getNumMathFunctions()
+{
+    return _mathFunctions.size();
+}
+
+MathFunction * DataGraph::getMathFunction(int i)
+{
+    if(i < 0 || i >= _mathFunctions.size())
+    {
+	return NULL;
+    }
+    return _mathFunctions[i];
+}
+
 void DataGraph::setupMultiGraphDisplayModes()
 {
     //shape setup
@@ -2263,9 +2277,6 @@ void AverageFunction::update(float width, float height, std::map<std::string, Gr
     if(!verts)
     {
 	_averageText->setText("");
-	verts->at(0) = osg::Vec3(0,0,0);
-	verts->at(1) = osg::Vec3(0,0,0);
-	verts->dirty();
 	return;
     }
 

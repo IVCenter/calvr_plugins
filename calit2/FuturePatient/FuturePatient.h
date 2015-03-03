@@ -15,6 +15,10 @@
 #include <map>
 #include <vector>
 
+#include <osg/Image>
+#include <osg/Texture2D>
+#include <osg/Camera>
+
 //#include <mysql++/mysql++.h>
 #include "DBManager.h"
 
@@ -25,6 +29,7 @@
 #include "MicrobeScatterGraphObject.h"
 #include "SymptomGraphObject.h"
 #include "MicrobePointLineObject.h"
+#include "MicrobeVerticalBarGraphObject.h"
 
 struct PhenoStats
 {
@@ -84,9 +89,14 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         void loadScatter();
         void loadPhenotype();
-        std::vector<std::pair<PhenoStats*,SortCriteria> > createListWithFilters(MicrobeGraphType type, std::string phenotype = "", bool pvalSort = false, bool tvalSort = false, bool averageThresh = false, float avgVal = 0.0, bool reqMax = false, float reqMaxVal = 0.0, bool zeroLimit = false, float zeroVal = 0.0);
+        std::vector<std::pair<PhenoStats*,SortCriteria> > createListWithFilters(MicrobeGraphType type, std::string phenotype = "", std::string tphenotype = "", bool pvalSort = false, bool tvalSort = false, std::string tvalSortType = "", bool averageThresh = false, float avgVal = 0.0, bool reqMax = false, float reqMaxVal = 0.0, bool zeroLimit = false, float zeroVal = 0.0);
 
-        void initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & familyStatMap, std::string microbeSuffix, std::string measureSuffix);
+        void initPhenoStats(std::map<std::string,std::map<std::string,struct PhenoStats > > & statMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & genusStatMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & familyStatMap, std::map<std::string,std::map<std::string,struct PhenoStats > > & phylumStatMap, std::string microbeSuffix, std::string measureSuffix);
+
+        void loadScatterPresets();
+
+        void takeSubImage();
+        void setSubImageParams(osg::Vec3 pos, float width, float height);
 
         cvr::SubMenu * _fpMenu;
         cvr::SubMenu * _layoutMenu;
@@ -95,6 +105,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         std::vector<cvr::MenuButton*> _loadLayoutButtons;
         cvr::MenuList * _chartPatientList;
         cvr::MenuList * _testList;
+        cvr::MenuCheckbox * _linearRegCB;
         cvr::MenuButton * _loadButton;
         cvr::MenuButton * _removeAllButton;
         cvr::MenuButton * _closeLayoutButton;
@@ -118,11 +129,16 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
             std::map<int,std::vector<std::string> > testMap;
             std::map<int,std::vector<time_t> > testTimeMap;
             std::vector<std::string> microbeList;
+            std::vector<std::string> microbeListPO;
             std::vector<int> microbeIDList;
             std::vector<std::string> familyList;
+            std::vector<std::string> familyListPO;
             std::vector<std::string> genusList;
+            std::vector<std::string> genusListPO;
             std::map<std::string,std::map<std::string,struct PhenoStats > > statsMap;
+            std::map<std::string,std::map<std::string,struct PhenoStats > > genusStatsMap;
             std::map<std::string,std::map<std::string,struct PhenoStats > > familyStatsMap;
+            std::map<std::string,std::map<std::string,struct PhenoStats > > phylumStatsMap;
         };
 
         std::vector<MicrobeTableInfo*> _microbeTableList;
@@ -142,6 +158,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         cvr::SubMenu * _chartMenu;
         cvr::SubMenu * _presetMenu;
+        cvr::MenuCheckbox * _requireRangeCB;
         cvr::MenuButton * _inflammationButton;
         cvr::MenuButton * _big4MultiButton;
         cvr::MenuButton * _cholesterolButton;
@@ -166,16 +183,22 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuTextEntryItem * _sMicrobeEntry;
         cvr::MenuList * _sMicrobes;
         cvr::MenuList * _sMicrobeType;
+        cvr::MenuList * _sMicrobeChartType;
         cvr::MenuButton * _sMicrobeLoad;
+        cvr::MenuButton * _sMicrobeLoadLines;
         cvr::MenuCheckbox * _sMicrobeRankOrder;
         cvr::MenuCheckbox * _sMicrobeLabels;
         cvr::MenuCheckbox * _sMicrobeFirstTimeOnly;
         cvr::MenuCheckbox * _sMicrobeGroupPatients;
         cvr::MenuList * _sMicrobePhenotypes;
+        cvr::MenuList * _sMicrobeSecondPhenotype;
         cvr::MenuCheckbox * _sMicrobePvalSort;
         cvr::MenuCheckbox * _sMicrobeTvalSort;
+        cvr::MenuList * _sMicrobeTvalSortType;
         cvr::MenuRangeValueCompact * _sMicrobeSortResults;
         cvr::MenuButton * _sMicrobePhenotypeLoad;
+        cvr::MenuCheckbox * _sMicrobeLogCB;
+        cvr::MenuCheckbox * _sMicrobeStdDevCB;
         cvr::SubMenu * _sMicrobePresetMenu;
         //cvr::MenuButton * _sMicrobeBFragilis;
         std::vector<cvr::MenuButton*> _sMicrobePresetList;
@@ -199,6 +222,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeLoadHealthy105All;
         cvr::MenuButton * _microbeLoadHealthy252All;
         cvr::MenuButton * _microbeLoadUCAll;
+        cvr::MenuButton * _microbeLoadLarryAll;
         cvr::SubMenu * _microbePointLineMenu;
         cvr::MenuCheckbox * _microbePointLineExpand;
         cvr::MenuButton * _microbeLoadPointLine;
@@ -214,9 +238,12 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::SubMenu * _eventMenu;
         cvr::MenuList * _eventName;
         cvr::MenuButton * _eventLoad;
+        cvr::MenuButton * _eventLoadDisplay;
         cvr::MenuButton * _eventLoadAll;
         cvr::MenuButton * _eventLoadMicrobe;
         cvr::MenuButton * _eventDone;
+        std::vector<int> _eventGroups;
+
 
         std::vector<std::string> _scatterPhylumList;
         cvr::SubMenu * _scatterMenu;
@@ -229,9 +256,11 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _scatterMicrobeType;
         cvr::MenuTextEntryItem * _scatterFirstEntry;
         cvr::MenuTextEntryItem * _scatterSecondEntry;
+        cvr::MenuCheckbox * _scatterLogCB;
         cvr::SubMenu * _scatterFilterMenu;
         cvr::MenuCheckbox * _scatterPvalSort;
         cvr::MenuCheckbox * _scatterTvalSort;
+        cvr::MenuList * _scatterTvalSortType;
         cvr::MenuCheckbox * _scatterAvgEnable;
         cvr::MenuRangeValueCompact * _scatterAvgValue;
         cvr::MenuCheckbox * _scatterReqMaxEnable;
@@ -241,9 +270,15 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuRangeValueCompact * _scatterSortResults;
         cvr::MenuButton * _scatterLoadFilter;
         cvr::MenuList * _scatterPhenotypes;
+        cvr::MenuList * _scatterSecondPhenotype;
+        cvr::SubMenu * _scatterPresetMenu;
+        std::vector<cvr::MenuButton*> _scatterPresetButtons;
+        std::vector<std::vector<std::string> > _scatterPresets;
+        std::string _scatterPresetDir;
 
         MicrobeBarGraphObject * _currentSBGraph;
         SymptomGraphObject * _currentSymptomGraph;
+        MicrobeVerticalBarGraphObject * _currentVBGraph;
 
         std::map<std::string,GraphObject*> _graphObjectMap;
         GraphObject * _multiObject;
@@ -258,6 +293,13 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         std::string _layoutDirectory;   
         cvr::MultiListenSocket * _mls;
         std::vector<cvr::CVRSocket*> _socketList;
+
+        bool _takeSubImage, _subImageDone;
+        osg::ref_ptr<osg::Camera> _subCamera;
+        osg::ref_ptr<osg::Image> _subImage;
+        osg::ref_ptr<osg::Texture2D> _subDepthTex;
+
+        cvr::MenuButton * _ssButton;
 };
 
 #endif

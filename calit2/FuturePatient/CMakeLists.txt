@@ -11,8 +11,11 @@ SET(PLUGIN_HEADERS
     GroupedBarGraph.h
     GroupedScatterPlot.h
     MicrobeBarGraphObject.h
+    MicrobeVerticalBarGraphObject.h
     MicrobeScatterGraphObject.h
+    MicrobeLineGraphObject.h
     StackedBarGraph.h
+    VerticalStackedBarGraph.h
     ColorGenerator.h
     SymptomGraphObject.h
     TimeRangeDataGraph.h
@@ -29,6 +32,7 @@ SET(PLUGIN_HEADERS
     SingleMicrobeObject.h
     DBManager.h
     md5.h
+    LinearRegFunc.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -45,8 +49,11 @@ ADD_LIBRARY(${LIB_NAME}
     GroupedBarGraph.cpp
     GroupedScatterPlot.cpp
     MicrobeBarGraphObject.cpp
+    MicrobeVerticalBarGraphObject.cpp
     MicrobeScatterGraphObject.cpp
+    MicrobeLineGraphObject.cpp
     StackedBarGraph.cpp
+    VerticalStackedBarGraph.cpp
     ColorGenerator.cpp
     SymptomGraphObject.cpp
     TimeRangeDataGraph.cpp
@@ -63,6 +70,7 @@ ADD_LIBRARY(${LIB_NAME}
     SingleMicrobeObject.cpp
     DBManager.cpp
     md5.cpp
+    LinearRegFunc.cpp
 )
 
 FIND_PACKAGE(Mysql)

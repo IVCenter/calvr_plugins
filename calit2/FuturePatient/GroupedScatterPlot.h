@@ -118,6 +118,9 @@ class GroupedScatterPlot
         float _mySecondDisplayMax;
         int _maxIndex;
 
+        float _firstLogMinValue;
+        float _secondLogMinValue;
+
         osg::ref_ptr<osg::Group> _root;
         osg::ref_ptr<osg::MatrixTransform> _bgScaleMT;
         osg::ref_ptr<osg::Geode> _bgGeode;

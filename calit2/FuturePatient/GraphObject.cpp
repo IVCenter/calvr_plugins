@@ -8,6 +8,11 @@
 #include <sstream>
 #include <cstdlib>
 
+#include <octave/oct.h>
+#include <octave/octave.h>
+#include <octave/parse.h>
+#include <octave/toplev.h>
+
 using namespace cvr;
 
 GraphObject::GraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
@@ -50,6 +55,11 @@ GraphObject::GraphObject(DBManager * dbm, float width, float height, std::string
     _averageCB->setCallback(this);
     addMenuItem(_averageCB);
 
+    _linRegFunc = new LinearRegFunc();
+    _linRegCB = new MenuCheckbox("Linear Regression",false);
+    _linRegCB->setCallback(this);
+    addMenuItem(_linRegCB);
+
     _pdfDir = ConfigManager::getEntry("value","Plugin.FuturePatient.PDFDir","");
 
     _activeHand = -1;
@@ -61,7 +71,7 @@ GraphObject::~GraphObject()
 
 }
 
-bool GraphObject::addGraph(std::string patient, std::string name, bool averageColor)
+bool GraphObject::addGraph(std::string patient, std::string name, bool requireRange, bool averageColor)
 {
     for(int i = 0; i < _nameList.size(); i++)
     {
@@ -189,8 +199,8 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool averageCo
 		    time_t mint, maxt;
 		    mint = maxt = atol(result(0,"utime").c_str());
 		    float minval,maxval;
-		    float total = 0.0;;
-		    minval = maxval = atof(result(0,"value").c_str());
+		    float total = 0.0;
+		    minval = maxval = total = atof(result(0,"value").c_str());
 		    for(int i = 1; i < result.numRows(); i++)
 		    {
 			time_t time = atol(result(i,"utime").c_str());
@@ -303,6 +313,8 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool averageCo
 		    gd.minTime = mint;
 		    gd.maxTime = maxt;
 		    gd.numPoints = result.numRows();
+
+		    //std::cerr << "name: " << gd.displayName << " avg: " << gd.average << std::endl;
 
 		    annCount = std::min(annCount,(int)aresult.numRows());
 
@@ -475,6 +487,15 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool averageCo
 		}
 	    }
 	}
+	else if(requireRange)
+	{
+	    // TODO memory cleanup
+	    return false;
+	}
+
+	_linRegFunc->setDataRange(gd.displayName,gd.minValue,gd.maxValue);
+	_linRegFunc->setTimeRange(gd.displayName,gd.minTime,gd.maxTime);
+	_linRegFunc->setHealthyRange(gd.displayName,gd.normalLow,gd.normalHigh);
 
 	_graph->setBGRanges(ranges,colors);
 	
@@ -681,7 +702,7 @@ bool GraphObject::loadState(std::istream & in)
 	in.getline(tempstr,1024);
 	displayNames.push_back(tempstr);
 
-	addGraph(patient,name);
+	addGraph(patient,name,false);
     }
 
     for(int i = 0; i < displayNames.size(); ++i)
@@ -722,6 +743,15 @@ void GraphObject::setGLScale(float scale)
     _graph->setGLScale(scale);
 }
 
+void GraphObject::setLinearRegression(bool lr)
+{
+    if(lr != _linRegCB->getValue())
+    {
+	_linRegCB->setValue(lr);
+	menuCallback(_linRegCB);
+    }
+}
+
 void GraphObject::perFrame()
 {
     _graph->updatePointAction();
@@ -751,6 +781,18 @@ void GraphObject::menuCallback(MenuItem * item)
 	else
 	{
 	    _graph->removeMathFunction(_averageFunc);
+	}
+    }
+
+    if(item == _linRegCB)
+    {
+	if(_linRegCB->getValue())
+	{
+	    _graph->addMathFunction(_linRegFunc);
+	}
+	else
+	{
+	    _graph->removeMathFunction(_linRegFunc);
 	}
     }
 
@@ -801,4 +843,22 @@ void GraphObject::leaveCallback(int handID)
 	_activeHand = -1;
 	_graph->clearHoverText();
     }
+}
+
+int GraphObject::getNumMathFunctions()
+{
+    if(_graph)
+    {
+	return _graph->getNumMathFunctions();
+    }
+    return 0;
+}
+
+MathFunction * GraphObject::getMathFunction(int i)
+{
+    if(_graph)
+    {
+	return _graph->getMathFunction(i);
+    }
+    return NULL;
 }

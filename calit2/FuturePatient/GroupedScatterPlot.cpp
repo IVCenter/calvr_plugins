@@ -86,6 +86,79 @@ void GroupedScatterPlot::setAxisTypes(GSPAxisType first, GSPAxisType second)
     _firstAxisType = first;
     _secondAxisType = second;
 
+    float lowerPadding = 0.05;
+
+    switch(_firstAxisType)
+    {
+	case GSP_LINEAR:
+	{
+	    _firstDisplayMax = _firstDataMax;
+	    //_firstDisplayMin = _firstDataMin - lowerPadding * (_firstDataMax - _firstDataMin);
+	    _firstDisplayMin = 0;
+	    break;
+	}
+	case GSP_LOG:
+	{
+	    if(_firstDataMin <= 0.0)
+	    {
+		_firstDataMin = _firstLogMinValue;
+	    }
+
+	    float logMax = log10(_firstDataMax);
+	    logMax = ceil(logMax);
+	    _firstDisplayMax = pow(10.0,logMax);
+
+	    float logMin = log10(_firstDataMin);
+	    logMin = logMin - lowerPadding * (logMax - logMin);
+	    _firstDisplayMin = pow(10.0,logMin);
+	    break;
+	}
+	default:
+	{
+	    _firstDisplayMin = _firstDataMin;
+	    _firstDisplayMax = _firstDataMax;
+	    break;
+	}
+    }
+
+    switch(_secondAxisType)
+    {
+	case GSP_LINEAR:
+	{
+	    _secondDisplayMax = _secondDataMax;
+	    //_secondDisplayMin = _secondDataMin - lowerPadding * (_secondDataMax - _secondDataMin);
+	    _secondDisplayMin = 0;
+	    break;
+	}
+	case GSP_LOG:
+	{
+	    if(_secondDataMin <= 0.0)
+	    {
+		_secondDataMin = _secondLogMinValue;
+	    }
+
+	    float logMax = log10(_secondDataMax);
+	    logMax = ceil(logMax);
+	    _secondDisplayMax = pow(10.0,logMax);
+
+	    float logMin = log10(_secondDataMin);
+	    logMin = logMin - lowerPadding * (logMax - logMin);
+	    _secondDisplayMin = pow(10.0,logMin);
+	    break;
+	}
+	default:
+	{
+	    _secondDisplayMin = _secondDataMin;
+	    _secondDisplayMax = _secondDataMax;
+	    break;
+	}
+    }
+
+    _myFirstDisplayMin = _firstDisplayMin;
+    _myFirstDisplayMax = _firstDisplayMax;
+    _mySecondDisplayMin = _secondDisplayMin;
+    _mySecondDisplayMax = _secondDisplayMax;
+
     update();
 }
 
@@ -101,6 +174,9 @@ bool GroupedScatterPlot::addGroup(int index, std::string indexLabel, std::vector
     {
 	return false;
     }
+
+    _firstLogMinValue = firstLogMinValue;
+    _secondLogMinValue = secondLogMinValue;
 
     _plotData[index] = data;
     _indexLabels[index] = indexLabel;
@@ -137,7 +213,8 @@ bool GroupedScatterPlot::addGroup(int index, std::string indexLabel, std::vector
 	case GSP_LINEAR:
 	{
 	    _firstDisplayMax = _firstDataMax;
-	    _firstDisplayMin = _firstDataMin - lowerPadding * (_firstDataMax - _firstDataMin);
+	    //_firstDisplayMin = _firstDataMin - lowerPadding * (_firstDataMax - _firstDataMin);
+	    _firstDisplayMin = 0;
 	    break;
 	}
 	case GSP_LOG:
@@ -174,7 +251,8 @@ bool GroupedScatterPlot::addGroup(int index, std::string indexLabel, std::vector
 	case GSP_LINEAR:
 	{
 	    _secondDisplayMax = _secondDataMax;
-	    _secondDisplayMin = _secondDataMin - lowerPadding * (_secondDataMax - _secondDataMin);
+	    //_secondDisplayMin = _secondDataMin - lowerPadding * (_secondDataMax - _secondDataMin);
+	    _secondDisplayMin = 0;
 	    break;
 	}
 	case GSP_LOG:
@@ -559,7 +637,72 @@ void GroupedScatterPlot::updateAxis()
     {
 	case GSP_LINEAR:
 	{
-	    std::cerr << "Linear graph label not yet implemented." << std::endl;
+	    float rangeDif = _firstDisplayMax - _firstDisplayMin;
+	    int power = (int)log10(rangeDif);
+	    float interval = pow(10.0, power);
+
+	    while(rangeDif / interval < 2)
+	    {
+		interval /= 10.0;
+	    }
+
+	    while(rangeDif / interval > 12)
+	    {
+		interval *= 10.0;
+	    }
+
+	    if(rangeDif / interval < 4)
+	    {
+		interval /= 2;
+	    }
+
+	    float tickValue = ((float)((int)(_firstDisplayMin/interval)))*interval;
+	    if(tickValue < _firstDisplayMin)
+	    {
+		tickValue += interval;
+	    }
+
+	    float tickCharacterSize;
+	    int maxExp = (int)fabs(log10(interval));
+	    //std::cerr << "maxexp: " << maxExp << std::endl;
+	    maxExp += 3;
+
+	    std::stringstream testss;
+	    while(maxExp > 0)
+	    {
+		testss << "0";
+		maxExp--;
+	    }
+    
+	    osg::ref_ptr<osgText::Text> testText = GraphGlobals::makeText(testss.str(),osg::Vec4(0,0,0,1));
+	    osg::BoundingBox testbb = testText->getBound();
+	    float testWidth = testbb.xMax() - testbb.xMin();
+
+	    float totalLength = _graphRight - _graphLeft;
+
+	    float csize1, csize2;
+	    csize1 = (labelBottomSize * 0.95 - 2.0 * tickSize) / (testbb.zMax() - testbb.zMin());
+	    csize2 = (((interval / (_firstDisplayMax - _firstDisplayMin)) * (_graphRight - _graphLeft)) * 0.9) / (testbb.xMax()-testbb.xMin());
+	    tickCharacterSize = std::min(csize1,csize2);
+
+	    float value = (((tickValue - _firstDisplayMin) / (_firstDisplayMax - _firstDisplayMin)) * totalLength);
+	    while(value <= totalLength)
+	    {
+		verts->push_back(osg::Vec3(_graphLeft + value,-1,_graphBottom));
+		verts->push_back(osg::Vec3(_graphLeft + value,-1,_graphBottom - tickSize));
+
+		std::stringstream ss;
+		ss << tickValue;
+		osgText::Text * tickText = GraphGlobals::makeText(ss.str(),osg::Vec4(0,0,0,1));
+		tickText->setAlignment(osgText::Text::CENTER_TOP);
+		tickText->setCharacterSize(tickCharacterSize);
+		tickText->setPosition(osg::Vec3(_graphLeft + value,-1,_graphBottom - 2.0 * tickSize));
+		_axisGeode->addDrawable(tickText);
+
+		tickValue += interval;
+		value = (((tickValue - _firstDisplayMin) / (_firstDisplayMax - _firstDisplayMin)) * totalLength);
+	    }
+
 	    break;
 	}
 	case GSP_LOG:
@@ -641,7 +784,71 @@ void GroupedScatterPlot::updateAxis()
     {
 	case GSP_LINEAR:
 	{
-	    std::cerr << "Linear graph label not yet implemented." << std::endl;
+	    float rangeDif = _secondDisplayMax - _secondDisplayMin;
+	    int power = (int)log10(rangeDif);
+	    float interval = pow(10.0, power);
+
+	    while(rangeDif / interval < 2)
+	    {
+		interval /= 10.0;
+	    }
+
+	    while(rangeDif / interval > 12)
+	    {
+		interval *= 10.0;
+	    }
+
+	    if(rangeDif / interval < 4)
+	    {
+		interval /= 2;
+	    }
+
+	    float tickValue = ((float)((int)(_secondDisplayMin/interval)))*interval;
+	    if(tickValue < _secondDisplayMin)
+	    {
+		tickValue += interval;
+	    }
+
+	    float tickCharacterSize;
+	    int maxExp = (int)fabs(log10(interval));
+	    //std::cerr << "maxexp: " << maxExp << std::endl;
+	    maxExp += 3;
+
+	    std::stringstream testss;
+	    while(maxExp > 0)
+	    {
+		testss << "0";
+		maxExp--;
+	    }
+    
+	    osg::ref_ptr<osgText::Text> testText = GraphGlobals::makeText(testss.str(),osg::Vec4(0,0,0,1));
+	    osg::BoundingBox testbb = testText->getBound();
+	    float testWidth = testbb.xMax() - testbb.xMin();
+
+	    float totalLength = _graphTop - _graphBottom;
+
+	    float csize1, csize2;
+	    csize1 = (labelLeftSize * 0.95 - 2.0 * tickSize) / (testbb.xMax() - testbb.xMin());
+	    csize2 = (((interval / (_secondDisplayMax - _secondDisplayMin)) * (_graphTop - _graphBottom)) * 0.9) / (testbb.zMax()-testbb.zMin());
+	    tickCharacterSize = std::min(csize1,csize2);
+
+	    float value = (((tickValue - _secondDisplayMin) / (_secondDisplayMax - _secondDisplayMin)) * totalLength);
+	    while(value <= totalLength)
+	    {
+		verts->push_back(osg::Vec3(_graphLeft,-1,_graphBottom + value));
+		verts->push_back(osg::Vec3(_graphLeft - tickSize,-1,_graphBottom + value));
+
+		std::stringstream ss;
+		ss << tickValue;
+		osgText::Text * tickText = GraphGlobals::makeText(ss.str(),osg::Vec4(0,0,0,1));
+		tickText->setAlignment(osgText::Text::RIGHT_CENTER);
+		tickText->setCharacterSize(tickCharacterSize);
+		tickText->setPosition(osg::Vec3(_graphLeft - 2.0*tickSize,-1,_graphBottom + value));
+		_axisGeode->addDrawable(tickText);
+
+		tickValue += interval;
+		value = (((tickValue - _secondDisplayMin) / (_secondDisplayMax - _secondDisplayMin)) * totalLength);
+	    }
 	    break;
 	}
 	case GSP_LOG:
@@ -773,7 +980,15 @@ void GroupedScatterPlot::updateGraph()
 	    {
 		case GSP_LINEAR:
 		    {
-			addPoint = false;
+			if(it->second[i].first < _firstDisplayMin)
+			{
+			    addPoint = false;
+			}
+			else
+			{
+			    pointX = _graphLeft + ((it->second[i].first - _firstDisplayMin) / (_firstDisplayMax - _firstDisplayMin)) * (_graphRight - _graphLeft);
+			}
+
 			break;
 		    }
 		case GSP_LOG:
@@ -807,7 +1022,14 @@ void GroupedScatterPlot::updateGraph()
 	    {
 		case GSP_LINEAR:
 		    {
-			addPoint = false;
+			if(it->second[i].second < _secondDisplayMin)
+			{
+			    addPoint = false;
+			}
+			else
+			{
+			    pointZ = _graphBottom + ((it->second[i].second - _secondDisplayMin) / (_secondDisplayMax - _secondDisplayMin)) * (_graphTop - _graphBottom);
+			}
 			break;
 		    }
 		case GSP_LOG:

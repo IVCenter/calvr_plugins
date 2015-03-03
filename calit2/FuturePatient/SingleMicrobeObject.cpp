@@ -310,7 +310,7 @@ bool SingleMicrobeObject::setGraph(std::string microbe, std::string titleSuffix,
 	addChild(_graph->getRootNode());
 	_graph->addMathFunction(new BandingFunction());
 	_graph->setShowLabels(labels);
-	_graph->setDisplayRange(0.000007,1.0);
+	//_graph->setDisplayRange(0.000007,1.0);
     }
 
     return status;
@@ -351,6 +351,36 @@ void SingleMicrobeObject::setGraphSize(float width, float height)
 void SingleMicrobeObject::selectPatients(std::map<std::string,std::vector<std::string> > & selectMap)
 {
     _graph->selectItems(selectMap);
+}
+
+float SingleMicrobeObject::getGraphMaxValue()
+{
+    return _graph->getDataMax();
+}
+
+float SingleMicrobeObject::getGraphMinValue()
+{
+    return _graph->getDataMin();
+}
+
+float SingleMicrobeObject::getGraphDisplayRangeMax()
+{
+    return _graph->getDisplayRangeMax();
+}
+
+float SingleMicrobeObject::getGraphDisplayRangeMin()
+{
+    return _graph->getDisplayRangeMin();
+}
+
+void SingleMicrobeObject::setGraphDisplayRange(float min, float max)
+{
+    _graph->setDisplayRange(min,max);
+}
+
+void SingleMicrobeObject::resetGraphDisplayRange()
+{
+    _graph->setDisplayRange(_graph->getDisplayRangeMin(),_graph->getDisplayRangeMax());
 }
 
 bool SingleMicrobeObject::processEvent(cvr::InteractionEvent * ie)
@@ -427,6 +457,30 @@ void SingleMicrobeObject::leaveCallback(int handID)
     }
 }
 
+void SingleMicrobeObject::setLogScale(bool logScale)
+{
+    if(logScale)
+    {
+	_graph->setAxisType(BGAT_LOG);
+    }
+    else
+    {
+	_graph->setAxisType(BGAT_LINEAR);
+    }
+}
+
+void SingleMicrobeObject::setShowStdDev(bool show)
+{
+    for(int i = 0; i < _graph->getNumMathFunctions(); ++i)
+    {
+	BandingFunction * bf = dynamic_cast<BandingFunction*>(_graph->getMathFunction(i));
+	if(bf)
+	{
+	    bf->setShowStdDev(show);
+	}
+    }
+}
+
 void BandingFunction::added(osg::Geode * geode)
 {
     if(!_bandGeometry)
@@ -458,12 +512,14 @@ void BandingFunction::added(osg::Geode * geode)
 
     geode->addDrawable(_bandGeometry);
     geode->addDrawable(_lineGeometry);
+    _myGeode = geode;
 }
 
 void BandingFunction::removed(osg::Geode * geode)
 {
     geode->removeDrawable(_bandGeometry);
     geode->removeDrawable(_lineGeometry);
+    _myGeode = NULL;
 }
 
 void BandingFunction::update(float left, float right, float top, float bottom, float barWidth, std::map<std::string, std::vector<std::pair<std::string, float> > > & data, BarGraphDisplayMode displayMode, const std::vector<std::string> & groupOrder, const std::vector<std::pair<std::string,int> > & customOrder, float displayMin, float displayMax, BarGraphAxisType axisType, const std::vector<std::pair<float,float> > & groupRanges)
@@ -504,6 +560,16 @@ void BandingFunction::update(float left, float right, float top, float bottom, f
 	    {
 		case BGAT_LINEAR:
 		{
+		    if(sum >= displayMin && sum <= displayMax)
+		    {
+			avg = bottom + ((sum - displayMin) / (displayMax - displayMin) * (top-bottom));
+			bTop = sum + 1.0*dev;
+			bTop = std::min(bTop,displayMax);
+			bBottom = sum - 1.0*dev;
+			bBottom = std::max(bBottom,displayMin);
+			bTop = bottom + ((bTop - displayMin) / (displayMax - displayMin) * (top-bottom));
+			bBottom = bottom + ((bBottom - displayMin) / (displayMax - displayMin) * (top-bottom));
+		    }
 		    break;
 		}
 		case BGAT_LOG:
@@ -582,4 +648,16 @@ void BandingFunction::update(float left, float right, float top, float bottom, f
     _lineGeometry->dirtyBound();
     _bandGeometry->getBound();
     _lineGeometry->getBound();
+}
+
+void BandingFunction::setShowStdDev(bool show)
+{
+    if(_myGeode.valid())
+    {
+	_myGeode->removeDrawable(_bandGeometry);
+    }
+    if(show && _myGeode.valid())
+    {
+	_myGeode->addDrawable(_bandGeometry);
+    }
 }

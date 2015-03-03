@@ -1,25 +1,31 @@
-#ifndef MICROBE_BAR_GRAPH_OBJECT_H
-#define MICROBE_BAR_GRAPH_OBJECT_H
+#ifndef MICROBE_VERTICAL_BAR_GRAPH_OBJECT_H
+#define MICROBE_VERTICAL_BAR_GRAPH_OBJECT_H
 
 #include <string>
 #include <vector>
 
 #include "DBManager.h"
 
-#include "StackedBarGraph.h"
+#include "VerticalStackedBarGraph.h"
 #include "MicrobeGraphObject.h"
 #include "LayoutInterfaces.h"
 
-class MicrobeBarGraphObject : public LayoutTypeObject, public MicrobeSelectObject
+class MicrobeVerticalBarGraphObject : public LayoutTypeObject, public MicrobeSelectObject
 {
     public:
-        MicrobeBarGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
-        virtual ~MicrobeBarGraphObject();
+        MicrobeVerticalBarGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
+        virtual ~MicrobeVerticalBarGraphObject();
 
-        bool addGraph(std::string label, int patientid, std::string testLabel, std::string microbeTableSuffix, std::string measureTableSuffix);
-        bool addSpecialGraph(SpecialMicrobeGraphType smgt, std::string microbeTableSuffix, std::string measureTableSuffix);
+        bool addGraph(std::string label, int patientid, std::string testLabel, time_t testTime, std::string microbeTableSuffix, std::string measureTableSuffix, MicrobeGraphType type = MGT_SPECIES);
+        bool addSpecialGraph(SpecialMicrobeGraphType smgt, std::string microbeTableSuffix, std::string measureTableSuffix, std::string region, MicrobeGraphType type = MGT_SPECIES);
+
+        virtual void objectAdded();
+        virtual void objectRemoved();
 
         void setGraphSize(float width, float height);
+
+        void setNameList(std::vector<std::string> & nameList);
+        void setGroupList(std::vector<std::string> & groupList);
 
         void selectMicrobes(std::string & group, std::vector<std::string> & keys);
         float getGroupValue(std::string group, int i);
@@ -39,9 +45,13 @@ class MicrobeBarGraphObject : public LayoutTypeObject, public MicrobeSelectObjec
 
         DBManager * _dbm;
 
+        std::vector<std::string> _nameList;
+        std::vector<std::string> _groupList;
+        std::map<std::string,int> _groupIndexMap;
+
         float _width, _height;
 
-        StackedBarGraph * _graph;
+        VerticalStackedBarGraph * _graph;
 
         struct Microbe
         {
