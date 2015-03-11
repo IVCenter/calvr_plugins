@@ -23,6 +23,9 @@ circle c1 radius=5 color=1.0,0.0,0.0,1.0 pos=10.0,2.0.0,30.0
 update c1 pos=20.0,30.0,20.0
 text t1 label="Frogs are Green" pos=0.0,30.0,20.0 size=20 color=0,1,0,1 bcolor=1,1,1,1 enableOutline=1
 line l1 width=6 pos1=0,0,20 pos2=0,0,-20 color=1,0,0,1
+scalableline l2 width=6 pos1=0,0,20 pos2=0,0,-20 color=1,0,0,1
+update l2 pos1=0,20,0 pos2=0,-20,0 
+update l2 width=2 color=0,1,0,1 
 update l1 pos1=0,20,0 pos2=0,0,-20
 delete c1;
 delete all;

@@ -7,6 +7,7 @@
 #include "shapes/LineShape.h"
 #include "shapes/RectangleShape.h"
 #include "shapes/TextShape.h"
+#include "shapes/ScalableLineShape.h"
 
 #include <iostream>
 #include <sstream>
@@ -24,6 +25,7 @@ CommandParser::CommandParser(ThreadQueue<std::string>* queue, MainNode* root) : 
     _shapeDefinitions["quad"] = new Factory<QuadShape>();
     _shapeDefinitions["circle"] = new Factory<CircleShape>();
     _shapeDefinitions["line"] = new Factory<LineShape>();
+    _shapeDefinitions["scalableline"] = new Factory<ScalableLineShape>();
     _shapeDefinitions["rectangle"] = new Factory<RectangleShape>();
     _shapeDefinitions["text"] = new Factory<TextShape>();
 

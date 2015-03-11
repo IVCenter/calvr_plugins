@@ -9,7 +9,6 @@
 
 #include "ThreadQueue.h"
 #include "MainNode.h"
-//#include "Variables.h"
 #include "shapes/BasicShape.h"
 #include "shapes/ShapeFactory.h"
 #include "shapes/Factory.h"

@@ -29,7 +29,7 @@ CircleShape::CircleShape(std::string command, std::string name)
 
     setVertexArray(_vertices); 
     setColorArray(_colors); 
-    setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+    setColorBinding(osg::Geometry::BIND_OVERALL);
     addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLE_FAN,0,_numFaces + 2));
 
     osg::StateSet* state = getOrCreateStateSet();

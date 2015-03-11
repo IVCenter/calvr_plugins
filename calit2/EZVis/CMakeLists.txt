@@ -25,6 +25,7 @@ SET(PLUGIN_HEADERS
     shapes/TriangleShape.h
     shapes/CircleShape.h
     shapes/LineShape.h
+    shapes/ScalableLineShape.h
     shapes/RectangleShape.h
     shapes/TextShape.h
 )
@@ -51,6 +52,7 @@ ADD_LIBRARY(${LIB_NAME}
     shapes/TriangleShape.cpp
     shapes/CircleShape.cpp
     shapes/LineShape.cpp
+    shapes/ScalableLineShape.cpp
     shapes/RectangleShape.cpp
     shapes/TextShape.cpp
 )

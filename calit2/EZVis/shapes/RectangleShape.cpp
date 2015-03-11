@@ -30,11 +30,11 @@ RectangleShape::RectangleShape(std::string command, std::string name)
     setColorBinding(osg::Geometry::BIND_OVERALL);
     addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
 
-    osg::StateSet* state = getOrCreateStateSet();
-    state->setMode(GL_BLEND, osg::StateAttribute::ON);
-    osg::Material* mat = new osg::Material();
-    mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
-    state->setAttributeAndModes(mat, osg::StateAttribute::ON);
+    //osg::StateSet* state = getOrCreateStateSet();
+    //state->setMode(GL_BLEND, osg::StateAttribute::ON);
+    //osg::Material* mat = new osg::Material();
+    //mat->setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
+    //state->setAttributeAndModes(mat, osg::StateAttribute::ON);
 }
 
 RectangleShape::~RectangleShape()

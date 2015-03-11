@@ -141,10 +141,10 @@ void TextShape::update()
     
     dirtyBound();
 
-    if(c[3] != 1.0)
+    //if(c[3] != 1.0)
         getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-    else
-        getOrCreateStateSet()->setRenderingHint(osg::StateSet::DEFAULT_BIN);
+    //else
+    //    getOrCreateStateSet()->setRenderingHint(osg::StateSet::DEFAULT_BIN);
 
 	// reset flag
     _dirty = false;

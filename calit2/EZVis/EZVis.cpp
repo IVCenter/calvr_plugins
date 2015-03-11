@@ -71,10 +71,6 @@ EZVis::~EZVis()
 {
     std::cerr << "EZViz Destructor called\n";
     
-	if( _router )
-        delete _router;
-    _router = NULL;
-        
     if( _st )
         delete _st;
     _st = NULL;
@@ -86,4 +82,8 @@ EZVis::~EZVis()
     if( _parser )
         delete _parser;
     _parser = NULL;
+	
+    if( _router )
+        delete _router;
+    _router = NULL;
 }
