@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+
 void UpdateCallback::operator()(osg::Node* node, osg::NodeVisitor* nv)
 {
     MainNode* mainNode = dynamic_cast<MainNode*> (node);
@@ -25,7 +26,6 @@ MainNode::MainNode(float scale, bool rotaxis)
     // make scale multiplier matrix
     osg::Matrix m;
     m.makeScale(scale, scale, scale);
-
 
     if( rotaxis )
     {

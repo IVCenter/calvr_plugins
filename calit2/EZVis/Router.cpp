@@ -32,7 +32,7 @@ size_t Router::readLine(int sockd, char *bptr, size_t maxlen)
 }
 
 // socket thread constructor
-Router::Router(int port) : _port(port), _buffSize(1500), _mkill(false)
+Router::Router(int port) : _port(port), _buffSize(65536), _mkill(false)
 {
 	// incoming socket setup
     struct sockaddr_in serv_addr; 
@@ -40,6 +40,7 @@ Router::Router(int port) : _port(port), _buffSize(1500), _mkill(false)
     _buffer = new char[_buffSize];
     int connfd = 0, n = 0;
     _listenfd = 0;
+    int buffsize = 65536;
 
     _listenfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
@@ -47,6 +48,7 @@ Router::Router(int port) : _port(port), _buffSize(1500), _mkill(false)
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     serv_addr.sin_port = htons(_port); 
+    setsockopt(_listenfd, SOL_SOCKET, SO_RCVBUF, (void*)&buffsize, sizeof(buffsize));
     bind(_listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)); 
     listen(_listenfd, 5); 
 
