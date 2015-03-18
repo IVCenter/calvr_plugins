@@ -1,0 +1,39 @@
+Setup
+-----
+
+If only running on a single machine (not a cluster) no RouterIP needs to be specified in the config,
+else add the IP address of the headNode that is routable by the slaves.
+
+e.g.
+<EZVis value="on" >
+    <RouterIP value="127.0.0.1" />
+    <RouterPort value="16667" /> <!- override default port of 16667 -->
+    <RotAxis value="yes" /> <!-- will change to use xy (plane of the screen) instead of calvr xz (default coordinates)  -->
+    <Scale value="1.0" /> <!-- will global scale the graphics  -->
+</EZVis>
+
+Testing
+-------
+
+To create a simple shape you can run netcat (e.g. nc - under linux)
+e.g. nc -u 127.0.0.1 16667  (Note: change the port if you have specified a different RouterPort in the configuration file)
+
+Command examples:
+circle c1 radius=5 color=1.0,0.0,0.0,1.0 pos=10.0,2.0.0,30.0
+update c1 pos=20.0,30.0,20.0
+text t1 label="Frogs are Green" pos=0.0,30.0,20.0 size=20 color=0,1,0,1 bcolor=1,1,1,1 enableOutline=1
+line l1 width=6 pos1=0,0,20 pos2=0,0,-20 color=1,0,0,1
+scalableline l2 width=6 pos1=0,0,20 pos2=0,0,-20 color=1,0,0,1
+update l2 pos1=0,20,0 pos2=0,-20,0 
+update l2 width=2 color=0,1,0,1 
+update l1 pos1=0,20,0 pos2=0,0,-20
+delete c1;
+delete all;
+
+
+Known Bugs
+----------
+
+With Text if you set a bcolor you need to enableOutline mode else the bcolor will over write the font color.
+text t1 label="Outline example" color=0,1,0,1 bcolor=1,1,1,1 enableOutline=1
+text t2 label="Non Outline example" color=1,0,0,1 
