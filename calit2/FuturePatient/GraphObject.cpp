@@ -132,6 +132,11 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool requireRa
 		std::cerr << "Meta Data query result empty for value: " << name << std::endl;
 		gd.valid = false;
 	    }
+	    else if(requireRange && (atoi(mresult(0,"display_flag").c_str()) != 1))
+	    {
+		//std::cerr << "not display" << std::endl;
+		gd.valid = false;
+	    }
 	    else
 	    {
 
@@ -487,11 +492,11 @@ bool GraphObject::addGraph(std::string patient, std::string name, bool requireRa
 		}
 	    }
 	}
-	else if(requireRange)
-	{
+	//else if(requireRange)
+	//{
 	    // TODO memory cleanup
-	    return false;
-	}
+	    //return false;
+	//}
 
 	_linRegFunc->setDataRange(gd.displayName,gd.minValue,gd.maxValue);
 	_linRegFunc->setTimeRange(gd.displayName,gd.minTime,gd.maxTime);
