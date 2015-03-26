@@ -31,7 +31,7 @@
 #include <osgDB/ReadFile>
 #include <osgDB/WriteFile>
 #include <osgDB/FileUtils>
-
+#include <osgDB/FileNameUtils>
 
 using namespace std;
 
@@ -96,7 +96,7 @@ static const char* sg = {
 "    gl_Position = gl_ProjectionMatrix * gl_Position;\n"
 "    EmitVertex();\n"
 
-"	gl_TexCoord[0].st = vec2(1.0,-1.0);\n"
+"	 gl_TexCoord[0].st = vec2(1.0,-1.0);\n"
 "    gl_Position = gl_PositionIn[0];\n"
 "    gl_Position.xy += vec2(halfsize, -halfsize);\n"
 "    gl_Position = gl_ProjectionMatrix * gl_Position;\n"
@@ -538,6 +538,7 @@ int main (int argc, char** argv)
   if (arguments.read("-h") || arguments.read("--help"))
   {
     arguments.getApplicationUsage()->write(std::cout);
+    std::cout << "if the inputTextFile has a 'bin' extension e.g. frog.bin it will assume the file is the intermediate produced file via the mapping\n";
     return 1;
   }
 
@@ -545,7 +546,7 @@ int main (int argc, char** argv)
   std::string outputFileName("default");
   std::string inputFormat("xyz");
   std::string outputFormat("xyz");
-  bool binaryInput = false;
+  std::string outputDirectory;
   int skipHeader = 0;
 
   float colorScale = 1.0;
@@ -554,11 +555,6 @@ int main (int argc, char** argv)
   float xShift = 0.0f;
   float yShift = 0.0f;
 
-  while( arguments.read("-binary") )
-  {
-    binaryInput = true;
-  }
-  
   while (arguments.read("-xshift", xShift))
   {
   }    
@@ -576,6 +572,10 @@ int main (int argc, char** argv)
   }    
   
   while (arguments.read("-output_format", outputFormat))
+  {
+  }    
+  
+  while (arguments.read("-output_directory", outputDirectory))
   {
   }    
   
@@ -668,11 +668,14 @@ int main (int argc, char** argv)
   int index;
   Point p;
 
+  // will place temp file in same directory as final output
+  std::string tempFileName = osgDB::concatPaths( outputDirectory, osgDB::getNameLessAllExtensions(inputFileName).append(".bin"));
+
   // if not binary create a binary representation
-  if( !binaryInput )
+  if( osgDB::getFileExtension(inputFileName) != "bin" )
   {
 	  // open a binary file for writing all the points in
-	  ofstream ofs (std::string(outputFileName).append(".bin").c_str(), ios::binary);
+	  ofstream ofs (tempFileName.c_str(), ios::binary);
 	  
 	  // hold input data
 	  double data[inputMapping.size()];
@@ -746,11 +749,17 @@ int main (int argc, char** argv)
 	  }
 	  ofs.close();
   }
+  else // adjust temp file name paths as it wont always bin in the optional specified output directory
+  {
+        tempFileName = inputFileName;
+  }
 
   ifs.close();
 
+
+
   // try sorting
-  std::fstream in(std::string(outputFileName).append(".bin").c_str(), std::ios::in | std::ios::binary);
+  std::fstream in(tempFileName.c_str(), std::ios::in | std::ios::binary);
   pvector v;
       
   std::copy(std::istream_iterator<Point>(in),
@@ -801,7 +810,7 @@ int main (int argc, char** argv)
   std::cerr << "Total number of points in geodes is: " << totalNumberOfPoints << std::endl;
 
   // create archive
-  ArchivePagedLODSubgraphsVistor archVisitor(outputFileName, group);
+  ArchivePagedLODSubgraphsVistor archVisitor(osgDB::concatPaths(outputDirectory, outputFileName), group);
   group->accept(archVisitor);
 
   std::cerr << "Archive completed\n";
