@@ -171,6 +171,84 @@ bool SymptomGraphObject::addGraph(std::string name)
     }
 }
 
+bool SymptomGraphObject::addPeripheral()
+{
+    struct timeRange
+    {
+	time_t start;
+	time_t end;
+	int intensity;
+    };
+
+    int numRanges = 0;
+    struct timeRange * ranges = NULL;
+
+    if(ComController::instance()->isMaster())
+    {
+	if(_dbm)
+	{
+	    std::stringstream qss;
+	    qss << "select unix_timestamp(start_timestamp) as start, unix_timestamp(end_timestamp) as end, MAX(intensity) as intensity from Event where patient_id = \"1\" and (name = \"Arm Red Blotch\" or name = \"Cold Sore\" or name = \"Eye\" or name = \"Hand\") group by start order by start;";
+
+	    DBMQueryResult result;
+
+	    _dbm->runQuery(qss.str(),result);
+
+	    numRanges = result.numRows();
+	    if(numRanges)
+	    {
+		ranges = new struct timeRange[numRanges];
+		for(int i = 0; i < numRanges; ++i)
+		{
+		    ranges[i].start = atol(result(i,"start").c_str());
+		    ranges[i].end = atol(result(i,"end").c_str());
+		    ranges[i].intensity = atoi(result(i,"intensity").c_str());
+		}
+	    }
+	}
+
+	ComController::instance()->sendSlaves(&numRanges,sizeof(int));
+	if(numRanges)
+	{
+	    ComController::instance()->sendSlaves(ranges,numRanges*sizeof(struct timeRange));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&numRanges,sizeof(int));
+	if(numRanges)
+	{
+	    ranges = new struct timeRange[numRanges];
+	    ComController::instance()->readMaster(ranges,numRanges*sizeof(struct timeRange));
+	}
+    }
+
+    if(numRanges)
+    {
+	std::vector<std::pair<time_t,time_t> > rangeList;
+	std::vector<int> intensityList;
+
+	time_t timePadding = 0;
+
+	for(int i = 0; i < numRanges; ++i)
+	{
+	    rangeList.push_back(std::pair<time_t,time_t>(ranges[i].start,ranges[i].end));
+	    intensityList.push_back(ranges[i].intensity);
+	}
+
+	_graph->addGraph("Peripheral",rangeList,intensityList,5,timePadding);
+
+	delete[] ranges;
+
+	return true;
+    }
+    else
+    {
+	std::cerr << "Warning: no entries for peripheral" << std::endl;
+	return false;
+    }
+}
+
 void SymptomGraphObject::setGraphSize(float width, float height)
 {
     _graph->setDisplaySize(width,height);

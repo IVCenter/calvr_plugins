@@ -181,7 +181,7 @@ bool StrainGraphObject::setGraph(std::string title, int taxId, bool larryOnly)
 
 	    while(customOrder.size() < totalEntries)
 	    {
-		float maxVal = FLT_MIN;
+		float maxVal = -FLT_MAX;
 		std::string group;
 		for(std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = dataMap.begin(); it != dataMap.end(); ++it)
 		{

@@ -57,6 +57,14 @@ GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std
     _linRegSort->setCallback(this);
     addMenuItem(_linRegSort);
 
+    _selectAll = new MenuButton("Select All");
+    _selectAll->setCallback(this);
+    addMenuItem(_selectAll);
+
+    _selectNone = new MenuButton("Select None");
+    _selectNone->setCallback(this);
+    addMenuItem(_selectNone);
+
     _removeUnselected = new MenuButton("Remove Unselected");
     _removeUnselected->setCallback(this);
     addMenuItem(_removeUnselected);
@@ -911,12 +919,49 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 	    }
 	}
 
+	GraphGlobals::setDeferUpdate(true);
+
 	for(int i = 0; i < removeList.size(); ++i)
 	{
 	    removeGraphObject(removeList[i]);
 	}
 
+	GraphGlobals::setDeferUpdate(false);
+	forceUpdate();
+
 	return;
+    }
+
+    if(item == _selectAll)
+    {
+	for(int i = 0; i < _objectList.size(); ++i)
+	{
+	    SelectableObject * so = dynamic_cast<SelectableObject*>(_objectList[i]);
+	    if(so)
+	    {
+		so->setSelected(true);
+		if(so->getMenuItem())
+		{
+		    _objectList[i]->menuCallback(so->getMenuItem());
+		}
+	    }
+	}
+    }
+
+    if(item == _selectNone)
+    {
+	for(int i = 0; i < _objectList.size(); ++i)
+	{
+	    SelectableObject * so = dynamic_cast<SelectableObject*>(_objectList[i]);
+	    if(so)
+	    {
+		so->setSelected(false);
+		if(so->getMenuItem())
+		{
+		    _objectList[i]->menuCallback(so->getMenuItem());
+		}
+	    }
+	}
     }
 
     FPTiledWallSceneObject::menuCallback(item);
@@ -1164,6 +1209,18 @@ void GraphLayoutObject::setChartLinearRegression(bool lr)
 	if(go)
 	{
 	    go->setLinearRegression(lr);
+	}
+    }
+}
+
+void GraphLayoutObject::setChartDisplayType(GraphDisplayType displayType)
+{
+    for(int i = 0; i < _objectList.size(); ++i)
+    {
+	GraphObject * go = dynamic_cast<GraphObject *>(_objectList[i]);
+	if(go)
+	{
+	    go->setDisplayType(displayType);
 	}
     }
 }

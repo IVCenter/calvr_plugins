@@ -15,6 +15,7 @@ class SymptomGraphObject : public LayoutTypeObject, public TimeRangeObject
         virtual ~SymptomGraphObject();
 
         bool addGraph(std::string name);
+        bool addPeripheral();
 
         void setGraphSize(float width, float height);
         void setBarVisible(bool vis);

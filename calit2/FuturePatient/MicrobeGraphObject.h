@@ -30,7 +30,7 @@ enum MicrobeGraphType
     MGT_PHYLUM
 };
 
-class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, public ValueRangeObject
+class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, public ValueRangeObject, public SelectableObject
 {
     public:
         MicrobeGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
@@ -74,6 +74,8 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
 
     protected:
         bool loadGraphData(std::string valueQuery, std::string orderQuery, bool group, bool lsOrdering, MicrobeGraphType familyLevel);
+        void makeSelect();
+        void updateSelect();
 
         DBManager * _dbm;
         
@@ -99,6 +101,9 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
         std::string _testLabel;
         int _microbes;
         bool _lsOrdered;
+
+        osg::ref_ptr<osg::Geode> _selectGeode;
+        osg::ref_ptr<osg::Geometry> _selectGeom;
 };
 
 #endif

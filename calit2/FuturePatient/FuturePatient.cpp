@@ -144,6 +144,21 @@ bool FuturePatient::init()
     _linearRegCB->setCallback(this);
     _chartMenu->addItem(_linearRegCB);
 
+    _loadAllAvg = new MenuCheckbox("Load All Avg",true);
+    _loadAllAvg->setCallback(this);
+    _chartMenu->addItem(_loadAllAvg);
+
+    std::vector<std::string> gdtText;
+    gdtText.push_back("None");
+    gdtText.push_back("Points");
+    gdtText.push_back("Points w/ Lines");
+
+    _graphTypeList = new MenuList();
+    _graphTypeList->setCallback(this);
+    _graphTypeList->setCallbackType(MenuList::ON_RELEASE);
+    _graphTypeList->setValues(gdtText);
+    _chartMenu->addItem(_graphTypeList);
+
     _requireRangeCB = new MenuCheckbox("Require Range",true);
     _requireRangeCB->setCallback(this);
     _chartMenu->addItem(_requireRangeCB);
@@ -292,6 +307,10 @@ bool FuturePatient::init()
     _sMicrobeFirstTimeOnly = new MenuCheckbox("First Time Only",false);
     _sMicrobeFirstTimeOnly->setCallback(this);
     _sMicrobeMenu->addItem(_sMicrobeFirstTimeOnly);
+
+    _sMicrobeGroup = new MenuCheckbox("Group",true);
+    _sMicrobeGroup->setCallback(this);
+    _sMicrobeMenu->addItem(_sMicrobeGroup);
 
     _sMicrobeGroupPatients = new MenuCheckbox("Split Patients",false);
     _sMicrobeGroupPatients->setCallback(this);
@@ -1100,7 +1119,7 @@ bool FuturePatient::init()
 	{
 	    DBMQueryResult result;
 
-	    _dbm->runQuery("select distinct name, group_id, type from Event where patient_id = \"1\" order by type desc, name;",result);
+	    _dbm->runQuery("select distinct name, group_id, type from Event where patient_id = \"1\" and group_id is not NULL order by type desc, name;",result);
 
 	    listEntries = result.numRows();
 
@@ -1159,6 +1178,7 @@ bool FuturePatient::init()
     stringlist.clear();
     for(int i = 0; i < listEntries; i++)
     {
+	//std::cerr << lfList[i].entry << " " << lfList[i].id << std::endl;
 	stringlist.push_back(lfList[i].entry);
 	_eventGroups.push_back(lfList[i].id);
     }
@@ -1639,7 +1659,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	GraphGlobals::setDeferUpdate(true);
 	for(int i = 0; i < _patientTestMap["Smarr"].size(); i++)
 	{
-	    loadGraph("Smarr",_patientTestMap["Smarr"][i],true);
+	    loadGraph("Smarr",_patientTestMap["Smarr"][i],_loadAllAvg->getValue());
 	}
 	GraphGlobals::setDeferUpdate(false);
 	if(_layoutObject)
@@ -1698,6 +1718,15 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    _layoutObject = NULL;
 	}
 	_fpMenu->removeItem(_closeLayoutButton);
+    }
+
+    if(item == _graphTypeList)
+    {
+	if(_layoutObject)
+	{
+	    _layoutObject->setChartDisplayType((GraphDisplayType)_graphTypeList->getIndex());
+	}
+	_graphTypeList->setIndex(0);
     }
 
     if(item == _microbeTable)
@@ -2462,7 +2491,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	if(_sMicrobeChartType->getValue() == "Bar")
 	{
 	    SingleMicrobeObject * smo = new SingleMicrobeObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-	    if(smo->setGraph(name,"",taxid,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType) (_sMicrobeType->getIndex()),_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
+	    if(smo->setGraph(name,"",taxid,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType) (_sMicrobeType->getIndex()),_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue(),_sMicrobeGroup->getValue()))
 	    {
 		checkLayout();
 		_layoutObject->addGraphObject(smo);
@@ -2526,7 +2555,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 		if(_sMicrobeChartType->getValue() == "Bar")
 		{
 		    SingleMicrobeObject * smo = new SingleMicrobeObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
-		    if(smo->setGraph(_sMicrobePresetList[j]->getText(),"",_microbeTableList[_microbeTable->getIndex()]->microbeIDList[index],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix, MGT_SPECIES,_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
+		    if(smo->setGraph(_sMicrobePresetList[j]->getText(),"",_microbeTableList[_microbeTable->getIndex()]->microbeIDList[index],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix, MGT_SPECIES,_sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue(),_sMicrobeGroup->getValue()))
 		    {
 			checkLayout();
 			_layoutObject->addGraphObject(smo);
@@ -2674,13 +2703,37 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    checkLayout();
 	    addObject = true;
 	}
-	for(int i = 0; i < _eventName->getListSize(); ++i)
+	/*for(int i = 0; i < _eventName->getListSize(); ++i)
 	{
 	    if(_eventGroups[i] == 1 || _eventGroups[i] == 2 || _eventGroups[i] == 3 || _eventGroups[i] == 5)
 	    {
 		_currentSymptomGraph->addGraph(_eventName->getValue(i));
 	    }
+	}*/
+
+	_currentSymptomGraph->addGraph("Blood");
+	_currentSymptomGraph->addGraph("Flare");
+	_currentSymptomGraph->addGraph("Mood");
+	_currentSymptomGraph->addPeripheral();
+	_currentSymptomGraph->addGraph("Nasal");
+
+	for(int i = 0; i < _eventName->getListSize(); ++i)
+	{
+	    if(_eventGroups[i] == 5)
+	    {
+		_currentSymptomGraph->addGraph(_eventName->getValue(i));
+	    }
 	}
+
+	_currentSymptomGraph->addGraph("Stool");
+
+	/*for(int i = 0; i < _eventName->getListSize(); ++i)
+	{
+	    if(_eventGroups[i] == 6)
+	    {
+		_currentSymptomGraph->addGraph(_eventName->getValue(i));
+	    }
+	}*/
 
 	if(addObject)
 	{
@@ -3988,7 +4041,7 @@ void FuturePatient::loadPhenotype()
 	    titleSuffix = ss.str();
 	}
 
-	if(smo->setGraph(displayList[i].first->name,titleSuffix,displayList[i].first->taxid,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix, mgt,  _sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue()))
+	if(smo->setGraph(displayList[i].first->name,titleSuffix,displayList[i].first->taxid,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix, mgt,  _sMicrobeRankOrder->getValue(),_sMicrobeLabels->getValue(),_sMicrobeFirstTimeOnly->getValue(),_sMicrobeGroupPatients->getValue(),_sMicrobeGroup->getValue()))
 	{
 	    checkLayout();
 	    _layoutObject->addGraphObject(smo);

@@ -21,7 +21,7 @@
 
 using namespace cvr;
 
-MicrobeGraphObject::MicrobeGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
+MicrobeGraphObject::MicrobeGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds), SelectableObject()
 {
     _dbm = dbm;
 
@@ -34,8 +34,15 @@ MicrobeGraphObject::MicrobeGraphObject(DBManager * dbm, float width, float heigh
 
     _desktopMode = ConfigManager::getBool("Plugin.FuturePatient.DesktopMode",false);
 
+    makeSelect();
+    updateSelect();
+
     if(_myMenu)
     {
+	_selectCB = new MenuCheckbox("Selected",false);
+	_selectCB->setCallback(this);
+	addMenuItem(_selectCB);
+
 	_colorModeML = new MenuList();
 	_colorModeML->setCallback(this);
 	addMenuItem(_colorModeML);
@@ -81,6 +88,8 @@ void MicrobeGraphObject::setGraphSize(float width, float height)
 {
     osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
     setBoundingBox(bb);
+
+    updateSelect();
 
     _graph->setDisplaySize(width,height);
 }
@@ -417,6 +426,19 @@ void MicrobeGraphObject::menuCallback(MenuItem * item)
     if(item == _colorModeML)
     {
 	_graph->setColorMode((BarGraphColorMode)_colorModeML->getIndex());
+    }
+
+    if(item == _selectCB)
+    {
+	if(_selectCB->getValue())
+	{
+	    addChild(_selectGeode);
+	}
+	else
+	{
+	    removeChild(_selectGeode);
+	}
+	return;
     }
 
     FPTiledWallSceneObject::menuCallback(item);
@@ -1001,7 +1023,7 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
 
 	    while(customOrder.size() < totalEntries)
 	    {
-		float maxVal = FLT_MIN;
+		float maxVal = -FLT_MAX;
 		std::string group;
 		for(std::map<std::string, std::vector<std::pair<std::string, float> > >::iterator it = _graphData.begin(); it != _graphData.end(); ++it)
 		{
@@ -1040,4 +1062,80 @@ bool MicrobeGraphObject::loadGraphData(std::string valueQuery, std::string order
     std::cerr << "GraphLoadTime: " << (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) / 1000000.0) << std::endl;
 
     return graphValid;
+}
+
+void MicrobeGraphObject::makeSelect()
+{
+    _selectGeode = new osg::Geode();
+    _selectGeom = new osg::Geometry();
+    _selectGeode->addDrawable(_selectGeom);
+    _selectGeode->setCullingActive(false);
+
+    osg::Vec3Array * verts = new osg::Vec3Array(16);
+    osg::Vec4Array * colors = new osg::Vec4Array();
+
+    colors->push_back(osg::Vec4(1.0,0.0,0.0,0.66));
+
+    _selectGeom->setVertexArray(verts);
+    _selectGeom->setColorArray(colors);
+    _selectGeom->setColorBinding(osg::Geometry::BIND_OVERALL);
+    _selectGeom->setUseDisplayList(false);
+    _selectGeom->setUseVertexBufferObjects(true);
+
+    _selectGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,16));
+
+    osg::StateSet * stateset = _selectGeode->getOrCreateStateSet();
+    stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+    stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
+    stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+}
+
+void MicrobeGraphObject::updateSelect()
+{
+    if(!_selectGeom)
+    {
+	return;
+    }
+
+    osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(_selectGeom->getVertexArray());
+    if(!verts)
+    {
+	return;
+    }
+
+    osg::BoundingBox bb = getOrComputeBoundingBox();
+
+    osg::Vec3 ul(bb.xMin(),bb.yMin(),bb.zMax());
+    osg::Vec3 ur(bb.xMax(),bb.yMin(),bb.zMax());
+    osg::Vec3 ll(bb.xMin(),bb.yMin(),bb.zMin());
+    osg::Vec3 lr(bb.xMax(),bb.yMin(),bb.zMin());
+
+    float offset = std::min(bb.xMax()-bb.xMin(),bb.zMax()-bb.zMin())*0.015;
+
+    // left
+    verts->at(0) = ul;
+    verts->at(1) = ll;
+    verts->at(2) = ll + osg::Vec3(offset,0,0);
+    verts->at(3) = ul + osg::Vec3(offset,0,0);
+
+    // bottom
+    verts->at(4) = ll + osg::Vec3(0,0,offset);
+    verts->at(5) = ll;
+    verts->at(6) = lr;
+    verts->at(7) = lr + osg::Vec3(0,0,offset);
+
+    // right
+    verts->at(8) = ur - osg::Vec3(offset,0,0);
+    verts->at(9) = lr - osg::Vec3(offset,0,0);
+    verts->at(10) = lr;
+    verts->at(11) = ur;
+
+    // top
+    verts->at(12) = ul;
+    verts->at(13) = ul - osg::Vec3(0,0,offset);
+    verts->at(14) = ur - osg::Vec3(0,0,offset);
+    verts->at(15) = ur;
+
+    verts->dirty();
+    _selectGeom->getBound();
 }

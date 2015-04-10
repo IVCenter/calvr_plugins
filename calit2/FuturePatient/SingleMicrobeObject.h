@@ -12,13 +12,13 @@
 
 #include <osg/LineWidth>
 
-class SingleMicrobeObject : public LayoutTypeObject, public PatientSelectObject, public ValueRangeObject
+class SingleMicrobeObject : public LayoutTypeObject, public PatientSelectObject, public ValueRangeObject, public SelectableObject
 {
     public:
         SingleMicrobeObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~SingleMicrobeObject();
 
-        bool setGraph(std::string microbe, std::string titleSuffix, int taxid, std::string microbeTableSuffix, std::string measureTableSuffix, MicrobeGraphType type = MGT_SPECIES, bool rankOrder=true, bool labels=true, bool firstOnly=false, bool groupPatients=false);
+        bool setGraph(std::string microbe, std::string titleSuffix, int taxid, std::string microbeTableSuffix, std::string measureTableSuffix, MicrobeGraphType type = MGT_SPECIES, bool rankOrder=true, bool labels=true, bool firstOnly=false, bool groupPatients=false, bool group = true);
 
         virtual void objectAdded();
         virtual void objectRemoved();
@@ -43,13 +43,21 @@ class SingleMicrobeObject : public LayoutTypeObject, public PatientSelectObject,
         void setLogScale(bool logScale);
         void setShowStdDev(bool show);
 
+        void menuCallback(cvr::MenuItem * item);
+
     protected:
+        void makeSelect();
+        void updateSelect();
+
         GroupedBarGraph * _graph;
         DBManager * _dbm;
         bool _desktopMode;
 
         std::map<std::string,bool> _cdCountMap;
         std::map<std::string,bool> _ucCountMap;
+
+        osg::ref_ptr<osg::Geode> _selectGeode;
+        osg::ref_ptr<osg::Geometry> _selectGeom;
 };
 
 class BandingFunction : public MicrobeMathFunction

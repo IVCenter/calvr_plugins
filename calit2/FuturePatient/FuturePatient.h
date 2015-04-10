@@ -109,6 +109,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _loadButton;
         cvr::MenuButton * _removeAllButton;
         cvr::MenuButton * _closeLayoutButton;
+
+        cvr::MenuList * _graphTypeList;
         
         cvr::SubMenu * _groupLoadMenu;
         cvr::MenuList * _groupList;
@@ -166,6 +168,8 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _inflammationImmuneButton;
         cvr::MenuButton * _loadAll;
 
+        cvr::MenuCheckbox * _loadAllAvg;
+
         cvr::SubMenu * _microbeMenu;
         cvr::MenuList * _microbeTable;
         cvr::MenuList * _microbeGraphType;
@@ -189,6 +193,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuCheckbox * _sMicrobeRankOrder;
         cvr::MenuCheckbox * _sMicrobeLabels;
         cvr::MenuCheckbox * _sMicrobeFirstTimeOnly;
+        cvr::MenuCheckbox * _sMicrobeGroup;
         cvr::MenuCheckbox * _sMicrobeGroupPatients;
         cvr::MenuList * _sMicrobePhenotypes;
         cvr::MenuList * _sMicrobeSecondPhenotype;

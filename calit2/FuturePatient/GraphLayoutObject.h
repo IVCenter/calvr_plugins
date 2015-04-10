@@ -71,6 +71,7 @@ class GraphLayoutObject : public FPTiledWallSceneObject
         virtual void leaveCallback(int handID);
 
         void setChartLinearRegression(bool lr);
+        void setChartDisplayType(GraphDisplayType displayType);
         void setSingleMicrobeLogScale(bool logScale);
         void setSingleMicrobeShowStdDev(bool value);
         void setScatterLogScale(bool logScale);
@@ -122,6 +123,8 @@ class GraphLayoutObject : public FPTiledWallSceneObject
         cvr::MenuRangeValueCompact * _rowsRV;
         cvr::MenuRangeValueCompact * _widthRV;
         cvr::MenuRangeValueCompact * _heightRV;
+        cvr::MenuButton * _selectAll;
+        cvr::MenuButton * _selectNone;
         cvr::MenuButton * _removeUnselected;
         cvr::MenuCheckbox * _multiSelect;
         cvr::MenuButton * _linRegSort;

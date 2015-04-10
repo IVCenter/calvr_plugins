@@ -145,6 +145,7 @@ class DataGraph
         }
 
         void setDisplayType(std::string graphName, GraphDisplayType displayType);
+        void setDisplayTypes(GraphDisplayType displayType);
         GraphDisplayType getDisplayType(std::string graphName);
 
         void setMultiGraphDisplayMode(MultiGraphDisplayMode mgdm)

@@ -10,7 +10,7 @@
 #include "MicrobeGraphObject.h"
 #include "LayoutInterfaces.h"
 
-class MicrobeVerticalBarGraphObject : public LayoutTypeObject, public MicrobeSelectObject
+class MicrobeVerticalBarGraphObject : public LayoutTypeObject, public MicrobeSelectObject, public SelectableObject
 {
     public:
         MicrobeVerticalBarGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
@@ -40,8 +40,12 @@ class MicrobeVerticalBarGraphObject : public LayoutTypeObject, public MicrobeSel
         virtual void updateCallback(int handID, const osg::Matrix & mat);
         virtual void leaveCallback(int handID);
 
+        virtual void menuCallback(cvr::MenuItem * item);
+
     protected:
         bool addGraph(std::string & label, std::string query);
+        void makeSelect();
+        void updateSelect();
 
         DBManager * _dbm;
 
@@ -80,6 +84,9 @@ class MicrobeVerticalBarGraphObject : public LayoutTypeObject, public MicrobeSel
         };
 
         std::vector<struct LoadData> _loadedGraphs;
+
+        osg::ref_ptr<osg::Geode> _selectGeode;
+        osg::ref_ptr<osg::Geometry> _selectGeom;
 };
 
 #endif

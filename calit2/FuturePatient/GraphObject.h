@@ -12,7 +12,7 @@
 #include "LayoutInterfaces.h"
 #include "LinearRegFunc.h"
 
-class GraphObject : public LayoutTypeObject, public TimeRangeObject
+class GraphObject : public LayoutTypeObject, public TimeRangeObject, public SelectableObject
 {
     public:
         GraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
@@ -53,6 +53,7 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
         void setGLScale(float scale);
 
         void setLinearRegression(bool lr);
+        void setDisplayType(GraphDisplayType displayType);
 
         void perFrame();
 
@@ -66,12 +67,16 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
         int getNumMathFunctions();
         MathFunction * getMathFunction(int i);
     protected:
+        void makeSelect();
+        void updateSelect();
+
         DBManager * _dbm;
         std::vector<std::string> _nameList;
         DataGraph * _graph;
 
         cvr::MenuList * _mgdList;
         cvr::MenuList * _ldmList;
+        cvr::MenuList * _gdtList;
 
         std::string _pdfDir;
 
@@ -91,6 +96,9 @@ class GraphObject : public LayoutTypeObject, public TimeRangeObject
         cvr::MenuCheckbox * _linRegCB;
 
         std::vector<LoadData> _loadedGraphs;
+
+        osg::ref_ptr<osg::Geode> _selectGeode;
+        osg::ref_ptr<osg::Geometry> _selectGeom;
 };
 
 #endif

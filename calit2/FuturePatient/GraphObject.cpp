@@ -15,7 +15,7 @@
 
 using namespace cvr;
 
-GraphObject::GraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds)
+GraphObject::GraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds), SelectableObject()
 {
     _dbm = dbm;
     _graph = new DataGraph();
@@ -50,6 +50,17 @@ GraphObject::GraphObject(DBManager * dbm, float width, float height, std::string
     _ldmList->setIndex(1);
     addMenuItem(_ldmList);
 
+    std::vector<std::string> gdtText;
+    gdtText.push_back("None");
+    gdtText.push_back("Points");
+    gdtText.push_back("Points w/ Lines");
+
+    _gdtList = new MenuList();
+    _gdtList->setValues(gdtText);
+    _gdtList->setCallback(this);
+    _gdtList->setIndex(2);
+    addMenuItem(_gdtList);
+
     _averageFunc = new AverageFunction();
     _averageCB = new MenuCheckbox("Average",false);
     _averageCB->setCallback(this);
@@ -59,6 +70,13 @@ GraphObject::GraphObject(DBManager * dbm, float width, float height, std::string
     _linRegCB = new MenuCheckbox("Linear Regression",false);
     _linRegCB->setCallback(this);
     addMenuItem(_linRegCB);
+
+    makeSelect();
+    updateSelect();
+
+    _selectCB = new MenuCheckbox("Selected",false);
+    _selectCB->setCallback(this);
+    addMenuItem(_selectCB);
 
     _pdfDir = ConfigManager::getEntry("value","Plugin.FuturePatient.PDFDir","");
 
@@ -546,6 +564,8 @@ void GraphObject::setGraphSize(float width, float height)
 
     osg::BoundingBox bb(-(width*0.5),-2,-(height*0.5),width*0.5,0,height*0.5);
     setBoundingBox(bb);
+
+    updateSelect();
 }
 
 void GraphObject::setGraphDisplayRange(time_t start, time_t end)
@@ -757,6 +777,11 @@ void GraphObject::setLinearRegression(bool lr)
     }
 }
 
+void GraphObject::setDisplayType(GraphDisplayType displayType)
+{
+    _graph->setDisplayTypes(displayType);
+}
+
 void GraphObject::perFrame()
 {
     _graph->updatePointAction();
@@ -774,6 +799,12 @@ void GraphObject::menuCallback(MenuItem * item)
     if(item == _ldmList)
     {
 	_graph->setLabelDisplayMode((LabelDisplayMode)_ldmList->getIndex());
+	return;
+    }
+
+    if(item == _gdtList)
+    {
+	_graph->setDisplayTypes((GraphDisplayType)_gdtList->getIndex());
 	return;
     }
 
@@ -799,6 +830,19 @@ void GraphObject::menuCallback(MenuItem * item)
 	{
 	    _graph->removeMathFunction(_linRegFunc);
 	}
+    }
+
+    if(item == _selectCB)
+    {
+	if(_selectCB->getValue())
+	{
+	    addChild(_selectGeode);
+	}
+	else
+	{
+	    removeChild(_selectGeode);
+	}
+	return;
     }
 
     FPTiledWallSceneObject::menuCallback(item);
@@ -866,4 +910,80 @@ MathFunction * GraphObject::getMathFunction(int i)
 	return _graph->getMathFunction(i);
     }
     return NULL;
+}
+
+void GraphObject::makeSelect()
+{
+    _selectGeode = new osg::Geode();
+    _selectGeom = new osg::Geometry();
+    _selectGeode->addDrawable(_selectGeom);
+    _selectGeode->setCullingActive(false);
+
+    osg::Vec3Array * verts = new osg::Vec3Array(16);
+    osg::Vec4Array * colors = new osg::Vec4Array();
+
+    colors->push_back(osg::Vec4(1.0,0.0,0.0,0.66));
+
+    _selectGeom->setVertexArray(verts);
+    _selectGeom->setColorArray(colors);
+    _selectGeom->setColorBinding(osg::Geometry::BIND_OVERALL);
+    _selectGeom->setUseDisplayList(false);
+    _selectGeom->setUseVertexBufferObjects(true);
+
+    _selectGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,16));
+
+    osg::StateSet * stateset = _selectGeode->getOrCreateStateSet();
+    stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+    stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
+    stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+}
+
+void GraphObject::updateSelect()
+{
+    if(!_selectGeom)
+    {
+	return;
+    }
+
+    osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(_selectGeom->getVertexArray());
+    if(!verts)
+    {
+	return;
+    }
+
+    osg::BoundingBox bb = getOrComputeBoundingBox();
+
+    osg::Vec3 ul(bb.xMin(),bb.yMin(),bb.zMax());
+    osg::Vec3 ur(bb.xMax(),bb.yMin(),bb.zMax());
+    osg::Vec3 ll(bb.xMin(),bb.yMin(),bb.zMin());
+    osg::Vec3 lr(bb.xMax(),bb.yMin(),bb.zMin());
+
+    float offset = std::min(bb.xMax()-bb.xMin(),bb.zMax()-bb.zMin())*0.015;
+
+    // left
+    verts->at(0) = ul;
+    verts->at(1) = ll;
+    verts->at(2) = ll + osg::Vec3(offset,0,0);
+    verts->at(3) = ul + osg::Vec3(offset,0,0);
+
+    // bottom
+    verts->at(4) = ll + osg::Vec3(0,0,offset);
+    verts->at(5) = ll;
+    verts->at(6) = lr;
+    verts->at(7) = lr + osg::Vec3(0,0,offset);
+
+    // right
+    verts->at(8) = ur - osg::Vec3(offset,0,0);
+    verts->at(9) = lr - osg::Vec3(offset,0,0);
+    verts->at(10) = lr;
+    verts->at(11) = ur;
+
+    // top
+    verts->at(12) = ul;
+    verts->at(13) = ul - osg::Vec3(0,0,offset);
+    verts->at(14) = ur - osg::Vec3(0,0,offset);
+    verts->at(15) = ur;
+
+    verts->dirty();
+    _selectGeom->getBound();
 }

@@ -690,6 +690,14 @@ void DataGraph::setDisplayType(std::string graphName, GraphDisplayType displayTy
      update();
 }
 
+void DataGraph::setDisplayTypes(GraphDisplayType displayType)
+{
+    for(std::map<std::string, GraphDataInfo>::iterator it = _dataInfoMap.begin(); it != _dataInfoMap.end(); ++it)
+    {
+	setDisplayType(it->first,displayType);
+    }
+}
+
 GraphDisplayType DataGraph::getDisplayType(std::string graphName)
 {
     if(_dataInfoMap.find(graphName) == _dataInfoMap.end())

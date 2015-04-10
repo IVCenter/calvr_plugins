@@ -160,6 +160,19 @@ class SelectableObject
             return false;
         }
 
+        void setSelected(bool s)
+        {
+            if(_selectCB)
+            {
+                _selectCB->setValue(s);
+            }
+        }
+
+        cvr::MenuItem * getMenuItem()
+        {
+            return _selectCB;
+        }
+
     protected:
         cvr::MenuCheckbox * _selectCB;
 };
