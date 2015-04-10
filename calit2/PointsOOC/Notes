@@ -1,0 +1,21 @@
+Notes
+-----
+
+points2archive is limited by system memory currently. (out of core softing will be in future update)
+
+CalVR Config
+------------
+
+<PointsOOC value="on" >
+   <ConfigDir value="/write/" />
+   <Files>
+      <Momcore value="/write/momcore.osga" />
+      <SanDiego value="/write/SanDiegoAll.osga" />
+      <Tunnel value="/write/tunnel.osga" />
+   </Files>
+</PointsOOC>
+
+Todo
+----
+
+Add call backs that match points so this viewer can be used with points and pans
