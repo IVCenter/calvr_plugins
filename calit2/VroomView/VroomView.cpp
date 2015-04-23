@@ -50,12 +50,30 @@ void VroomView::preFrame()
 		if(_mls)
 		{
 			CVRSocket * con;
-			if((con = _mls->accept()))
+			while((con = _mls->accept()))
 			{
 				std::cerr << "Adding socket." << std::endl;
 				con->setNoDelay(true);
-				//_socketList.push_back(con);
+				_clientList.push_back(new VVClient(con));
 			}
+		}
+
+		for(int i = 0; i < _clientList.size(); ++i)
+		{
+		    _clientList[i]->preFrame();
+		}
+
+		for(std::vector<VVClient*>::iterator it = _clientList.begin(); it != _clientList.end(); )
+		{
+		    if((*it)->isError())
+		    {
+			delete (*it);
+			it = _clientList.erase(it);
+		    }
+		    else
+		    {
+			it++;
+		    }
 		}
 
 	}

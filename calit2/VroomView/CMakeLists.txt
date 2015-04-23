@@ -1,12 +1,14 @@
 SET(LIB_NAME VroomView)
 SET(PLUGIN_HEADERS
     VroomView.h
+    VVClient.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
     "SHARED"
     ${PLUGIN_HEADERS}
     VroomView.cpp
+    VVClient.cpp
 )
 
 
