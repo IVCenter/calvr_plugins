@@ -1,5 +1,5 @@
-#ifndef VVCLIENT_H
-#define VVCLIENT_H
+#ifndef VVLOCAL_H
+#define VVLOCAL_H
 
 #include <cvrUtil/CVRSocket.h>
 
@@ -7,13 +7,17 @@
 #include <osg/Image>
 #include <osg/Texture2D>
 
+#include <string>
+
 #include "SubImageInfo.h"
 
-class VVClient
+class VVLocal
 {
     public:
-        VVClient(cvr::CVRSocket * socket);
-        virtual ~VVClient();
+        VVLocal();
+        virtual ~VVLocal();
+
+        void takeScreenShot(std::string label = "");
 
         void preFrame();
         bool isError()
@@ -22,14 +26,12 @@ class VVClient
         }
 
     protected:
-        bool processSocket();
         bool processSubImage();
 
         void takeSubImage(SubImageInfo* info);
         void setSubImageParams(SubImageInfo * info, osg::Vec3 pos, float width, float height);
 
         bool _error;
-        cvr::CVRSocket * _con;
         std::vector<SubImageInfo*> _imageInfoList;
 };
 

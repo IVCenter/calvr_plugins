@@ -2,6 +2,7 @@ SET(LIB_NAME VroomView)
 SET(PLUGIN_HEADERS
     VroomView.h
     VVClient.h
+    VVLocal.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -9,6 +10,7 @@ ADD_LIBRARY(${LIB_NAME}
     ${PLUGIN_HEADERS}
     VroomView.cpp
     VVClient.cpp
+    VVLocal.cpp
 )
 
 

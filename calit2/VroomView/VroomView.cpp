@@ -12,6 +12,7 @@ CVRPLUGIN(VroomView)
 VroomView::VroomView()
 {
 	_mls = NULL;
+	_localSS = NULL;
 }
 
 VroomView::~VroomView()
@@ -38,6 +39,7 @@ bool VroomView::init()
 		{
 			std::cerr << "Socket listening on port: " << port << std::endl;
 		}
+		_localSS = new VVLocal();
 	}
 
 	return true;
@@ -63,6 +65,8 @@ void VroomView::preFrame()
 		    _clientList[i]->preFrame();
 		}
 
+		_localSS->preFrame();
+
 		for(std::vector<VVClient*>::iterator it = _clientList.begin(); it != _clientList.end(); )
 		{
 		    if((*it)->isError())
@@ -77,4 +81,19 @@ void VroomView::preFrame()
 		}
 
 	}
+}
+
+bool VroomView::processEvent(cvr::InteractionEvent * event)
+{
+    KeyboardInteractionEvent * kie = event->asKeyboardEvent();
+    if(kie && kie->getKey() == (int)'N' && kie->getInteraction() == KEY_UP)
+    {
+	if(ComController::instance()->isMaster())
+	{
+	    std::cerr << "Print Screen" << std::endl;
+	    _localSS->takeScreenShot();
+	}
+	return true;
+    }
+    return false;
 }

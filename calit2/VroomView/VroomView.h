@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "VVClient.h"
+#include "VVLocal.h"
 
 class VroomView : public cvr::CVRPlugin
 {
@@ -16,9 +17,11 @@ public:
 
     bool init();
     void preFrame();
+    bool processEvent(cvr::InteractionEvent * event);
     
 protected:
     std::vector<VVClient*> _clientList;
+    VVLocal* _localSS;
     cvr::MultiListenSocket * _mls;
     
 };
