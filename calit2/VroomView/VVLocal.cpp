@@ -26,31 +26,33 @@ VVLocal::~VVLocal()
 
 void VVLocal::takeScreenShot(std::string label)
 {
-    SubImageInfo * sii = ne SubImageInfo;
+    SubImageInfo * sii = new SubImageInfo;
     sii->image = new osg::Image();
     sii->image->allocateImage(1920,1080,GL_RGBA,GL_RGBA,GL_FLOAT);
     sii->image->setInternalTextureFormat(4);
 
-    _subDepthTex = new osg::Texture2D();
-    _subDepthTex->setTextureSize(1920,1080);
-    _subDepthTex->setInternalFormat(GL_DEPTH_COMPONENT);
-    _subDepthTex->setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::NEAREST);
-    _subDepthTex->setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::NEAREST);
-    _subDepthTex->setResizeNonPowerOfTwoHint(false);
-    _subDepthTex->setUseHardwareMipMapGeneration(false);
+    sii->depthTex = new osg::Texture2D();
+    sii->depthTex->setTextureSize(1920,1080);
+    sii->depthTex->setInternalFormat(GL_DEPTH_COMPONENT);
+    sii->depthTex->setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::NEAREST);
+    sii->depthTex->setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::NEAREST);
+    sii->depthTex->setResizeNonPowerOfTwoHint(false);
+    sii->depthTex->setUseHardwareMipMapGeneration(false);
 
 
-    _subCamera = new osg::Camera();
-    _subCamera->setAllowEventFocus(false);
-    _subCamera->setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    _subCamera->setClearColor(osg::Vec4(1.0,0,0,1.0));
-    _subCamera->setRenderOrder(osg::Camera::PRE_RENDER);
-    _subCamera->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
-    _subCamera->attach(osg::Camera::COLOR_BUFFER0, _subImage, 0, 0);
-    _subCamera->attach(osg::Camera::DEPTH_BUFFER,_subDepthTex);
-    _subCamera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+    sii->camera = new osg::Camera();
+    sii->camera->setAllowEventFocus(false);
+    sii->camera->setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    sii->camera->setClearColor(osg::Vec4(1.0,0,0,1.0));
+    sii->camera->setRenderOrder(osg::Camera::PRE_RENDER);
+    sii->camera->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+    sii->camera->attach(osg::Camera::COLOR_BUFFER0, sii->image, 0, 0);
+    sii->camera->attach(osg::Camera::DEPTH_BUFFER,sii->depthTex);
+    sii->camera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
 
-    _subCamera->addChild((osg::Node*)SceneManager::instance()->getScene());
+    sii->camera->addChild((osg::Node*)SceneManager::instance()->getScene());
+    sii->takeImage = false;
+    _imageInfoList.push_back(sii);
 }
 
 void VVLocal::preFrame()
@@ -77,7 +79,7 @@ bool VVLocal::processSubImage()
 	}
 	else
 	{
-	    osgDB::writeImageFile(*(*it)->image.get(),"/home/aprudhom/testImage.tif");
+	    osgDB::writeImageFile(*(*it)->image.get(),"/Users/aprudhomme/testImage.tif");
 
 	    // send data and cleanup
 	    dynamic_cast<osg::Group*>(CVRViewer::instance()->getSceneData())->removeChild((*it)->camera);
