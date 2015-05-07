@@ -33,6 +33,12 @@ class VVLocal
 
         bool _error;
         std::vector<SubImageInfo*> _imageInfoList;
+        std::string _ssDir;
+
+        std::vector<std::string> _fileNames;
+        std::string _baseName;
+        int _rows, _cols;
+        float _maxDim, _targetDim;
 };
 
 #endif
