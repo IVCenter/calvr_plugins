@@ -202,6 +202,10 @@ bool FuturePatient::init()
     _microbeLoadCrohnsAverage->setCallback(this);
     _microbeSpecialMenu->addItem(_microbeLoadCrohnsAverage);
 
+    _microbeLoadSmarrAverage = new MenuButton("Smarr Average");
+    _microbeLoadSmarrAverage->setCallback(this);
+    _microbeSpecialMenu->addItem(_microbeLoadSmarrAverage);
+
     _microbeLoadSRSAverage = new MenuButton("SRS Average");
     _microbeLoadSRSAverage->setCallback(this);
     //_microbeSpecialMenu->addItem(_microbeLoadSRSAverage);
@@ -1445,7 +1449,7 @@ void FuturePatient::preFrame()
 
     if(_takeSubImage && !_subImageDone)
     {
-	_subImageDone = true;;
+	_subImageDone = true;
     }
     else if(_takeSubImage && _subImageDone)
     {
@@ -2284,7 +2288,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	return;
     }
 
-    if(item == _microbeLoadAverage || item == _microbeLoadHealthyAverage || item == _microbeLoadCrohnsAverage || item == _microbeLoadSRSAverage || item == _microbeLoadSRXAverage)
+    if(item == _microbeLoadAverage || item == _microbeLoadHealthyAverage || item == _microbeLoadCrohnsAverage || item == _microbeLoadSmarrAverage || item == _microbeLoadSRSAverage || item == _microbeLoadSRXAverage)
     {
 	/*std::string tablesuffix;
 	if(_microbeTable->getIndex() == 1)
@@ -2304,6 +2308,10 @@ void FuturePatient::menuCallback(MenuItem * item)
 	else if(item == _microbeLoadCrohnsAverage)
 	{
 	    mgt = SMGT_CROHNS_AVERAGE;
+	}
+	else if(item == _microbeLoadSmarrAverage)
+	{
+	    mgt = SMGT_SMARR_AVERAGE;
 	}
 	else if(item == _microbeLoadSRSAverage)
 	{
