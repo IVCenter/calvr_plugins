@@ -2721,7 +2721,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 
 	_currentSymptomGraph->addGraph("Blood");
 	_currentSymptomGraph->addGraph("Flare");
-	_currentSymptomGraph->addGraph("Mood");
+	_currentSymptomGraph->addGraph("Malaise");
 	_currentSymptomGraph->addPeripheral();
 	_currentSymptomGraph->addGraph("Nasal");
 
