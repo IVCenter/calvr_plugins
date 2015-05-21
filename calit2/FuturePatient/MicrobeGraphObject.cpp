@@ -517,6 +517,7 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int micro
 	case SMGT_AVERAGE:
 	case SMGT_HEALTHY_AVERAGE:
 	case SMGT_CROHNS_AVERAGE:
+	case SMGT_SMARR_AVERAGE:
 	    {
 
 		std::string field;
@@ -538,6 +539,11 @@ bool MicrobeGraphObject::setSpecialGraph(SpecialMicrobeGraphType smgt, int micro
 			field = "average_crohns";
 			condition = "crohn's disease";
 			_graphTitle = "Crohns Average";
+			break;
+		    case SMGT_SMARR_AVERAGE:
+			field = "";
+			condition = "Larry";
+			_graphTitle = "Smarr Average";
 			break;
 		    default:
 			break;
