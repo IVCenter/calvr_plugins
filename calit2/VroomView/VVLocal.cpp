@@ -165,14 +165,7 @@ bool VVLocal::processSubImage()
 	{
 	    combine = true;
 
-	    std::cerr << "Writing: " << (*it)->label << std::endl;
-	    osgDB::writeImageFile(*(*it)->image.get(),(*it)->label);
-
-	    // send data and cleanup
 	    dynamic_cast<osg::Group*>(CVRViewer::instance()->getSceneData())->removeChild((*it)->camera);
-	    delete (*it);
-	    it = _imageInfoList.erase(it);
-	    continue;
 	}
 
 	it++;
@@ -180,23 +173,16 @@ bool VVLocal::processSubImage()
 
     if(combine)
     {
-	std::string outfile = _ssDir + "/" + _baseName + ".tif";
-	std::stringstream combineScript;
-	combineScript << "montage ";
-	for(int i = 0; i < _fileNames.size(); ++i)
-	{
-	    combineScript << _fileNames[i] << " ";
-	}
-	combineScript << "-mode Concatenate -tile " << _cols << "x" << _rows << " " << outfile;
+	SaveThread * thread = new SaveThread(_imageInfoList,_fileNames,_baseName,_ssDir,_rows,_cols);
+	thread->startThread();
 
-	std::cerr << "script: " << combineScript.str() << std::endl;
-	system(combineScript.str().c_str());
-	for(int i = 0; i < _fileNames.size(); ++i)
+	for(int i = 0; i < _imageInfoList.size(); ++i)
 	{
-	    std::string rmss = "rm ";
-	    rmss += _fileNames[i];
-	    system(rmss.c_str());
+	    delete _imageInfoList[i];
 	}
+	_imageInfoList.clear();
+	_fileNames.clear();
+	_baseName = "";
     }
 
     return true;
@@ -235,4 +221,48 @@ void VVLocal::setSubImageParams(SubImageInfo * info, osg::Vec3 pos, float width,
 
     info->camera->setViewMatrix(view);
     info->camera->setProjectionMatrix(proj);
+}
+
+SaveThread::SaveThread(std::vector<SubImageInfo*> & infoList, std::vector<std::string> & nameList, std::string baseName, std::string ssDir, int rows, int cols)
+{
+    _baseName = baseName;
+    _nameList = nameList;
+    _ssDir = ssDir;
+    _rows = rows;
+    _cols = cols;
+
+    for(int i = 0; i < infoList.size(); ++i)
+    {
+	_imageList.push_back(infoList[i]->image);
+    }
+}
+
+void SaveThread::run()
+{
+    for(int i = 0; i < _imageList.size(); ++i)
+    {
+	std::cerr << "Writing: " << _nameList[i] << std::endl;
+	osgDB::writeImageFile(*_imageList[i].get(),_nameList[i]);
+    }
+
+    std::string outfile = _ssDir + "/" + _baseName + ".tif";
+    std::stringstream combineScript;
+    combineScript << "montage ";
+    for(int i = 0; i < _nameList.size(); ++i)
+    {
+	combineScript << _nameList[i] << " ";
+    }
+    combineScript << "-mode Concatenate -tile " << _cols << "x" << _rows << " " << outfile;
+
+    std::cerr << "script: " << combineScript.str() << std::endl;
+    system(combineScript.str().c_str());
+    for(int i = 0; i < _nameList.size(); ++i)
+    {
+	std::string rmss = "rm ";
+	rmss += _nameList[i];
+	system(rmss.c_str());
+    }
+
+    _imageList.clear();
+    _nameList.clear();
 }
