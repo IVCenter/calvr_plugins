@@ -69,6 +69,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         }
 
     protected:
+        void initOtuMenu();
         void checkLayout();
         void loadGraph(std::string patient, std::string test, bool averageColor=false);
         //void makeGraph(std::string name);
@@ -182,6 +183,11 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _microbeLevel;
         cvr::MenuIntEntryItem * _microbeNumBars;
         cvr::MenuButton * _microbeDone;
+
+        cvr::SubMenu * _otuMenu;
+        cvr::MenuList * _otuSampleList;
+        cvr::MenuIntEntryItem * _otuCount;
+        cvr::MenuButton * _otuLoad;
 
         cvr::SubMenu * _sMicrobeMenu;
         cvr::MenuTextEntryItem * _sMicrobeEntry;

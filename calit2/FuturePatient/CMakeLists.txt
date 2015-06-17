@@ -52,6 +52,7 @@ ADD_LIBRARY(${LIB_NAME}
     MicrobeVerticalBarGraphObject.cpp
     MicrobeScatterGraphObject.cpp
     MicrobeLineGraphObject.cpp
+    OtuGraphObject.cpp
     StackedBarGraph.cpp
     VerticalStackedBarGraph.cpp
     ColorGenerator.cpp

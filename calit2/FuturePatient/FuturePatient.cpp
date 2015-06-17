@@ -4,6 +4,7 @@
 #include "StrainHMObject.h"
 #include "SingleMicrobeObject.h"
 #include "MicrobeLineGraphObject.h"
+#include "OtuGraphObject.h"
 
 #include <cvrKernel/PluginHelper.h>
 #include <cvrKernel/ComController.h>
@@ -510,6 +511,24 @@ bool FuturePatient::init()
 
     _microbeDone = new MenuButton("Done");
     _microbeDone->setCallback(this);
+
+    _otuMenu = new SubMenu("OTUs");
+    _fpMenu->addItem(_otuMenu);
+
+    _otuSampleList = new MenuList();
+    _otuSampleList->setCallback(this);
+    _otuSampleList->setScrollingHint(MenuList::CONTINUOUS);
+    _otuMenu->addItem(_otuSampleList);
+
+    initOtuMenu();
+
+    _otuCount = new MenuIntEntryItem("Count: ",200);
+    _otuCount->setCallback(this);
+    _otuMenu->addItem(_otuCount);
+
+    _otuLoad = new MenuButton("Load");
+    _otuLoad->setCallback(this);
+    _otuMenu->addItem(_otuLoad);
 
     _strainMenu = new SubMenu("Strains");
     _fpMenu->addItem(_strainMenu);
@@ -2599,6 +2618,21 @@ void FuturePatient::menuCallback(MenuItem * item)
 	return;
     }
 
+    if(item == _otuLoad)
+    {
+	OtuGraphObject * ogo = new OtuGraphObject(_dbm, 1000.0, 1000.0, "OTU Graph", false, true, false, true);
+	if(ogo->setGraph(_otuSampleList->getValue(),(int)_otuCount->getValue()))
+	{
+	    checkLayout();
+	    _layoutObject->addGraphObject(ogo);
+	}
+	else
+	{
+	    delete ogo;
+	}
+	return;
+    }
+
     if(item == _strainGroupList)
     {
 	if(_strainGroupMap.find(_strainGroupList->getValue()) != _strainGroupMap.end())
@@ -2947,6 +2981,87 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    loadLayout(_loadLayoutButtons[i]->getText());
 	    return;
 	}
+    }
+}
+
+void FuturePatient::initOtuMenu()
+{
+    struct fileName
+    {
+	char name[256];
+    };
+
+    std::string otuDir = ConfigManager::getEntry("value","Plugin.FuturePatient.OtuDir","");
+
+    struct fileName * names = NULL;
+    int count = 0;
+
+    if(ComController::instance()->isMaster())
+    {
+	DIR * dir;
+
+	if ((dir = opendir(otuDir.c_str())) == NULL)
+	{
+	    std::cerr << "Unable to open directory: " << otuDir << std::endl;
+	}
+	else
+	{
+	    dirent * entry;
+	    struct stat st;
+	    while ((entry = readdir(dir)) != NULL)
+	    {
+		std::string fullPath(otuDir + "/" + entry->d_name);
+		stat(fullPath.c_str(), &st);
+		if(!S_ISDIR(st.st_mode))
+		{
+		    count++;
+		}
+	    }
+
+	    if(count)
+	    {
+		names = new fileName[count];
+		int listIndex = 0;
+		rewinddir(dir);
+		while ((entry = readdir(dir)) != NULL)
+		{
+		    std::string fullPath(otuDir + "/" + entry->d_name);
+		    stat(fullPath.c_str(), &st);
+		    if(!S_ISDIR(st.st_mode))
+		    {
+			strncpy(names[listIndex].name,entry->d_name,255);
+			listIndex++;
+		    }
+		}
+	    }
+	}
+	ComController::instance()->sendSlaves(&count,sizeof(int));
+	if(count)
+	{
+	    ComController::instance()->sendSlaves(names,count*sizeof(struct fileName));
+	}
+    }
+    else
+    {
+	ComController::instance()->readMaster(&count,sizeof(int));
+	if(count)
+	{
+	    names = new fileName[count];
+	    ComController::instance()->readMaster(names,count*sizeof(struct fileName));
+	}
+    }
+
+    std::vector<std::string> fileList;
+    for(int i = 0; i < count; ++i)
+    {
+	fileList.push_back(names[i].name);
+    }
+    std::sort(fileList.begin(),fileList.end());
+    _otuSampleList->setValues(fileList);
+
+    if(count > 0)
+    {
+	delete[] names;
     }
 }
 
