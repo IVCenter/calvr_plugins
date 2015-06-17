@@ -1,7 +1,7 @@
 #ifndef CVR_PARTICLE_DREAMS_H
 #define CVR_PARTICLE_DREAMS_H
 
-//#define SCR2_PER_CARD  
+#define SCR2_PER_CARD  
 #define OAS_SOUND
 //#define OMICRON_SOUND
 #ifdef OMICRON_SOUND
@@ -130,9 +130,12 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
         double headMat[16];
 		osg::Vec3 headPos;
 		osg::Vec3 navHeadPos;
-		
-       
- 
+		osg::Matrix SlideMatrix;
+       	void resetSlidePosition();
+ 		osg::MatrixTransform * mtSlide1;
+	    osg::MatrixTransform * mtSlide2 ;
+	    osg::MatrixTransform * mtSlide3;
+
 
         size_t sizeDebug;
         int max_age;
@@ -149,6 +152,8 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
         int but4,but4old;
         int but3,but3old;
         int but2,but2old;
+        int  hand_inject_or_reflect, hand_inject_or_reflectold;
+ 
         int but1,but1old;
 		int skipTonextScene,skipTOnextSceneOld;
         int sceneName;
@@ -169,6 +174,14 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
 		int name_N_waterfalls;
 		int name_painting_skys ;
 		int name_rain ;
+		float tidleSlideTime ;
+		float n_waterfalls_timeInScene;
+		float sprial_fountens_timeInScene;
+		float paint_on_walls_timeInScene;
+		float painting_skys_timeInScene;
+		float rain_timeInScene;
+		
+
         //int witch_scene;
         //int old_witch_scene;
         int sceneChange;
@@ -350,6 +363,8 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
 		int loadPhysicalScreensArrayCave2();
 		int loadOneHalfPhysicalScreensArrayCave2();
 		int loadPhysicalScreensArrayStarCave();
+		int loadPhysicalScreensArrayStarCaveCenterRow();
+		int loadPhysicalScreensArrayWave();
        int loadInjFountsFrScr(float dx,float dy,float dz,float speed);
        int loadReflFrScr();
        //

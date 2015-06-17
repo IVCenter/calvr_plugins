@@ -128,7 +128,22 @@ bool ParticleDreams::init()
 	std::cout << "DisplaySystem " << _DisplaySystem << "\n";
 //	_DisplaySystem = ConfigManager::getEntry("value","Plugin.ParticleDreams.DisplaySystem","TourCaveCalit2");
 	// TourCaveCalit2 TourCaveSaudi NexCaveCalit2 StarCave Cave2 Wave Simulator
-	targetFrameRate = 	ConfigManager::getInt("value","Plugin.ParticleDreams.TargetFrameRate",30);
+
+	tidleSlideTime = ConfigManager::getFloat("value","Plugin.ParticleDreams.TidleSlideTime",10.0);
+	n_waterfalls_timeInScene = ConfigManager::getFloat("value","Plugin.ParticleDreams.N_waterfalls_timeInScene",30.0);
+	sprial_fountens_timeInScene = ConfigManager::getFloat("value","Plugin.ParticleDreams.Sprial_fountens_timeInScene",30.0);
+	paint_on_walls_timeInScene = ConfigManager::getFloat("value","Plugin.ParticleDreams.Paint_on_walls_timeInScene",30.0);
+	painting_skys_timeInScene = ConfigManager::getFloat("value","Plugin.ParticleDreams.Painting_skys_timeInScene",30.0);
+	rain_timeInScene = ConfigManager::getInt("value","Plugin.ParticleDreams.Rain_timeInScene",30.0);
+	std::cout <<"tidleSlideTime " << tidleSlideTime << "\n";
+	std::cout <<"n_waterfalls_timeInScene " << n_waterfalls_timeInScene << "\n";
+	std::cout <<"sprial_fountens_timeInScene " << sprial_fountens_timeInScene << "\n";
+	std::cout <<"paint_on_walls_timeInScene  " << paint_on_walls_timeInScene  << "\n";
+	std::cout <<"painting_skys_timeInScene " << painting_skys_timeInScene  << "\n";
+	std::cout <<"rain_timeInScene " << rain_timeInScene << "\n";
+
+	
+	targetFrameRate = ConfigManager::getInt("value","Plugin.ParticleDreams.TargetFrameRate",30);
 	std::cout <<"targetFrameRate " << targetFrameRate << "\n";
    return true;
 }
@@ -236,23 +251,16 @@ void ParticleDreams::preFrame()
 
 	sceneChange =0;
 	
-	//if ((but2old ==0)&&(but2 == 1)&&(but1))
+	
 	
 	//STATE GENERATOR
-	// ADD NEW SCENES HERE
+	// ADD and Change SCENES HERE
 	// check for above comment elsewhere
 	name_paint_on_walls = 0;
 	name_sprial_fountens =1;
 	name_N_waterfalls =2;
 	name_painting_skys =3;
 	name_rain =4;
-	int numberOfScenes = 5;
-	if (skipTonextScene ==1)
-	{	std::cout << "skipTonextScene ==1 " << std::endl;
-	    sceneOrder =( sceneOrder+1)%(numberOfScenes -1);sceneChange=1;
-	    skipTonextScene =0;
-
-	}
 	if (sceneOrder ==-1) // program start
 		{
 			nextSean =1;
@@ -267,7 +275,19 @@ void ParticleDreams::preFrame()
 			painting_skysContextStart =0;
 			rainContextStart =0;	
 		}
-	if (nextSean ==1) { sceneOrder =( sceneOrder+1)%(numberOfScenes -1);sceneChange=1;nextSean =0;}
+	
+	// ADD and Change SCENES HERE
+
+	int numberOfScenes = 6;
+	//if ((_TargetSystem.compare("TourCaveCalit2") == 0) ||(_TargetSystem.compare("Cave2") == 0)||(_TargetSystem.compare("Wave") == 0) )numberOfScenes = 4;
+	//if (_TargetSystem.compare("Cave2") == 0)numberOfScenes = 4;
+	if (skipTonextScene ==1)
+	{	std::cout << "skipTonextScene ==1 " << std::endl;
+	    sceneOrder =( sceneOrder+1)%(numberOfScenes -1);sceneChange=1;
+	    skipTonextScene =0;
+
+	}
+if (nextSean ==1) { sceneOrder =( sceneOrder+1)%(numberOfScenes -1);sceneChange=1;nextSean =0;}
    
 		if (sceneChange)
 	{
@@ -278,42 +298,94 @@ void ParticleDreams::preFrame()
 	    else if (sceneName == name_rain)			rain__clean_up();
 	    else if (sceneName == name_sprial_fountens)	sprial_fountens__clean_up();
 	}   
-	 // neststate  
+	 // neststate 
+ 
 	if (sceneOrder ==0)sceneName =name_N_waterfalls;
 	if (sceneOrder ==1)sceneName =name_sprial_fountens;
 	if (sceneOrder ==2)sceneName =name_paint_on_walls;
 	if (sceneOrder ==3)sceneName =name_painting_skys;
 	if (sceneOrder ==4)sceneName =name_rain;
+/*
+	if ((_TargetSystem.compare("TourCaveCalit2") == 0) || (_TargetSystem.compare("Cave2") == 0)|| (_TargetSystem.compare("Wave") == 0))
+		{
+		//std::cout << "_TargetSystem.compare(TourCaveCalit2) == 0\n ";   mtSlide1->setMatrix(SlideMatrix);
+    mtSlide2->setMatrix(SlideMatrix);
+    mtSlide3->setMatrix(SlideMatrix);
+	resetSlidePosition();
+ 
+			if (sceneOrder ==0)sceneName =name_N_waterfalls;
+			if (sceneOrder ==1)sceneName =name_paint_on_walls;
+			if (sceneOrder ==2)sceneName =name_painting_skys;
+			if (sceneOrder ==3)sceneName =name_rain;
 
+		}
 
-
+*/
 
 	if (sceneName ==name_paint_on_walls)
 	{//paint_on_walls
+		if (paint_on_walls_timeInScene == 0)
+		{
+			nextSean =1;
+		}
+		else
+		{
 	    if (sceneChange ==1){paint_on_walls_start =1;sceneChange =0;}
 	    paint_on_walls_host();
+	    }
 	}
-	if (sceneName ==name_sprial_fountens)
+	if (sceneName ==name_sprial_fountens)  
 	{//sprial_fountens
+	if ( sprial_fountens_timeInScene == 0)
+		{
+			nextSean =1;
+		}
+		else
+		{
 	    if (sceneChange ==1){sprial_fountens_start =1;sceneChange =0;}
 	    sprial_fountens_host();
+	    }
 	}
-	if (sceneName ==name_N_waterfalls)
+	if (sceneName ==name_N_waterfalls)  
 	{//N_waterfalls
+	if ( n_waterfalls_timeInScene == 0)
+		{
+			nextSean =1;
+		}
+		else
+		{
 	    if (sceneChange ==1){N_waterfalls_start=1;sceneChange =0;}
 	    N_waterfalls_host();
+		}
 	}
-	if (sceneName ==name_painting_skys)
+	if (sceneName ==name_painting_skys) 
 	{//painting_skys
+	if (painting_skys_timeInScene == 0) 
+		{
+			nextSean =1;
+		}
+		else
+		{
 	    if (sceneChange ==1){painting_skys_start =1;sceneChange =0;}
 	    painting_skys_host();
+	    }
 	}
 
 	if (sceneName ==name_rain)
 	{//rain
+	if (rain_timeInScene == 0)
+		{
+			nextSean =1;
+		}
+		else
+		{
 	    if (sceneChange ==1){rain_start =1;sceneChange =0;}
 	    rain_host();
+	    }
 	}
+
+
+
 
 	for ( int n =1;n < h_injectorData[0][0][0] +1;n++)
 	{
@@ -323,7 +395,7 @@ void ParticleDreams::preFrame()
 
 	but4old = but4;
 	but3old = but3;
-	but2old = but2;
+	hand_inject_or_reflectold = hand_inject_or_reflect;
 	but1old = but1;
 	triggerold = trigger;
     }
@@ -344,65 +416,152 @@ bool ParticleDreams::processEvent(InteractionEvent * event)
 //1 is right mouse butt
 //2 scrole weele
 //
-    if(tie)
-    {
-	if(tie->getHand() == hand_id)
-	{
-	    if((tie->getInteraction() == BUTTON_DOWN || tie->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getButton() <= 4)
-	    { //std::cout << " buttonPtresses " << (tie->getButton()) << std::endl;
-		if(tie->getButton() == 0)
-		{
-			trigger = 1;
-			//std::cout << " trigger but2 " << trigger << " " << but2 << std::endl;
-			if (but2 ==1){ skipTonextScene =1; ; return true;}
-		}
-		else if(tie->getButton() == 1)
-		{
-		    but1 = 1;
-		}
-		else if(tie->getButton() == 2)
-		{
-		    but2 = 1;
-			return true;
-			//captures but2 to prevent defalt navagation on but2
-		}
-		else if(tie->getButton() == 3)
-		{
-		    but3 = 1;
-		}
-		else if(tie->getButton() == 4)
-		{
-		    but4 = 1;
-		}
-	    }
-	    else if(tie->getInteraction() == BUTTON_UP && tie->getButton() <= 4)
-	    {
-		if(tie->getButton() == 0)
-		{
-		    trigger = 0;
-		}
-		else if(tie->getButton() == 1)
-		{
-		    but1 = 0;
-		}
-		else if(tie->getButton() == 2)
-		{
-		    but2 = 0;
-			return true;
 
-		}
-		else if(tie->getButton() == 3)
-		{
-		    but3 = 0;
-		}
-		else if(tie->getButton() == 4)
-		{
-		    but4 = 0;
-		}
-	    }
-	}
-    }
+//StarCave
+// triger ==0
+//ll 4
+//lc 3
+//rc  2
+//rr is 1 traped above
 
+//Wave
+//triger = 0
+//ll 4
+//lc 3
+//rc  2  becomes navigation
+//rr is 1 traped above
+
+
+  if ((_DisplaySystem.compare("StarCave") == 0) ||(_DisplaySystem.compare("Wave") == 0) )// esentualy ART tracker
+  {
+      if(tie)
+      {
+	      if(tie->getHand() == hand_id)
+	      {
+	         
+	              if((tie->getInteraction() == BUTTON_DOWN || tie->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getButton() <= 4)
+	              {// std::cout << " buttonPtresses " << (tie->getButton()) << std::endl;
+		              if(tie->getButton() == 0)
+		              {
+			              trigger = 1;
+			              hand_inject_or_reflect =1;
+			              //std::cout << " trigger hand_inject_or_reflect " << trigger << " " << hand_inject_or_reflect << std::endl;
+			              //if (hand_inject_or_reflect ==1){ skipTonextScene =1; ; return true;}
+			              return true;
+		              }
+		              else if(tie->getButton() == 1)
+		              {
+		                  but1 = 1;
+		                  //return true;
+		              }
+		              else if(tie->getButton() == 2)
+		              {
+		               // return true;
+		              }
+		              else if(tie->getButton() == 3)
+		              {
+		                if (but4) skipTonextScene =1;
+			              //return true;
+	
+		                  but3 = 1;
+		              }
+		              else if(tie->getButton() == 4)
+		              {
+		                  but4 = 1;
+		                //return true;  
+		              }
+	              }
+	              else if(tie->getInteraction() == BUTTON_UP && tie->getButton() <= 4)
+	              {
+		              if(tie->getButton() == 0)
+		              {
+		                  trigger = 0;
+		                  hand_inject_or_reflect = 0;
+		              }
+		              else if(tie->getButton() == 1)
+		              {
+		                  but1 = 0;
+		              }
+		              else if(tie->getButton() == 2)
+		              {
+		                
+			              return true;
+
+		              }
+		              else if(tie->getButton() == 3)
+		              {
+		                  but3 = 0;
+		              }
+		              else if(tie->getButton() == 4)
+		              {
+		                  but4 = 0;
+		              }
+	             }
+	       }
+      }
+  }
+  else // trackers whos buttons that act like mice
+  {
+      if(tie)
+      {
+	      if(tie->getHand() == hand_id)
+	      {
+	         
+	              if((tie->getInteraction() == BUTTON_DOWN || tie->getInteraction() == BUTTON_DOUBLE_CLICK) && tie->getButton() <= 4)
+	              {// std::cout << " buttonPtresses " << (tie->getButton()) << std::endl;
+		              if(tie->getButton() == 0)
+		              {
+			              trigger = 1;
+			              //std::cout << " trigger hand_inject_or_reflect " << trigger << " " << hand_inject_or_reflect << std::endl;
+			              if (hand_inject_or_reflect ==1){ skipTonextScene =1; ; return true;}
+		              }
+		              else if(tie->getButton() == 1)
+		              {
+		                  but1 = 1;
+		              }
+		              else if(tie->getButton() == 2)
+		              {
+		                  hand_inject_or_reflect = 1;
+			              return true;
+			              //captures hand_inject_or_reflect to prevent defalt navagation on hand_inject_or_reflect
+		              }
+		              else if(tie->getButton() == 3)
+		              {
+		                  but3 = 1;
+		              }
+		              else if(tie->getButton() == 4)
+		              {
+		                  but4 = 1;
+		              }
+	              }
+	              else if(tie->getInteraction() == BUTTON_UP && tie->getButton() <= 4)
+	              {
+		              if(tie->getButton() == 0)
+		              {
+		                  trigger = 0;
+		              }
+		              else if(tie->getButton() == 1)
+		              {
+		                  but1 = 0;
+		              }
+		              else if(tie->getButton() == 2)
+		              {
+		                  hand_inject_or_reflect = 0;
+			              return true;
+
+		              }
+		              else if(tie->getButton() == 3)
+		              {
+		                  but3 = 0;
+		              }
+		              else if(tie->getButton() == 4)
+		              {
+		                  but4 = 0;
+		              }
+	             }
+	       }
+      }
+   }
     ValuatorInteractionEvent * vie = event->asValuatorEvent();
     if(vie && vie->getHand() == hand_id)
     {
@@ -674,15 +833,14 @@ void ParticleDreams::initPart()
     trigger =0;
     but4 =0;
     but3 =0;
-    but2 =0;
+    hand_inject_or_reflect =0;
     but1 =0;
    skipTonextScene=0;skipTOnextSceneOld=0;
 
     // init_scenes
     sceneOrder = -1;// tels state mechene program start
     nextSean =0;
-    //witch_scene =2;// must be set to starting TODO
-    //old_witch_scene = -1;
+    
     sceneChange =0;
     modulator[0] = 1.0;
     modulator[1] = 1.0;
@@ -845,7 +1003,8 @@ void ParticleDreams::initGeometry()
     _spriteTexture = new osg::Texture2D();
    // osg::ref_ptr<osg::Image> image = osgDB::readImageFile(_dataDir + "glsl/sprite.png");
    // osg::ref_ptr<osg::Image> image = osgDB::readImageFile(_dataDir + "images/sprite50_50.png");
-     osg::ref_ptr<osg::Image> image = osgDB::readImageFile(_dataDir + "images/sprite50_50.png");
+    // osg::ref_ptr<osg::Image> image = osgDB::readImageFile(_dataDir + "images/sprite50_50.png");
+    osg::ref_ptr<osg::Image> image = osgDB::readImageFile(_dataDir + "images/sprite100_100.png");
  
 
    if(image)
@@ -962,10 +1121,10 @@ void ParticleDreams::initGeometry()
 			std::cout << "loadPhysicalScreens " << i <<" " << _PhScAr[i-1].index << " " << std::endl;
 		}
 	
-	else if (_TargetSystem.compare("TourCavecalit2") == 0)
+	else if (_TargetSystem.compare("TourCaveCalit2") == 0)
 
 		{
-			std::cout << "TourCavecalit2" << std::endl;
+			std::cout << "TourCaveCalit2" << std::endl;
 			int i =loadPhysicalScreensArrayTourCaveCalit2_5lowerScr();
 			std::cout << "loadPhysicalScreens " << i <<" " << _PhScAr[i-1].index << " " << std::endl;
 
@@ -986,16 +1145,27 @@ void ParticleDreams::initGeometry()
 
 		{
 			std::cout << "StarCave  loaded" << std::endl;
-			int i =loadPhysicalScreensArrayStarCave();
+			//int i =loadPhysicalScreensArrayStarCave();
+			int i =loadPhysicalScreensArrayStarCaveCenterRow();
 			std::cout << "loadPhysicalScreens " << i <<" " << _PhScAr[i-1].index << " " << std::endl;
+		
 
+		}
+	else if (_TargetSystem.compare("Wave") == 0)
+        // note to update with Wave Screene info
+		{
+			std::cout << "Wave screens  loaded" << std::endl;
+			//int i =loadPhysicalScreensArrayWave();
+			int i =loadPhysicalScreensArrayStarCaveCenterRow();
+			std::cout << "loadPhysicalScreens " << i <<" " << _PhScAr[i-1].index << " " << std::endl;
+		
 
 		}
 
 	else  
 
 		{
-			std::cout << " else TourCavecalit2" << std::endl;
+			std::cout << " else TourCaveCalit2" << std::endl;
 			int i =loadPhysicalScreensArrayTourCaveCalit2_5lowerScr();
 			std::cout << "loadPhysicalScreens " << i <<" " << _PhScAr[i-1].index << " " << std::endl;
 
@@ -1017,12 +1187,12 @@ void ParticleDreams::initSound()
 	//ToDoSound
 	_SoundMng = new omicron::SoundManager();
 
-	if (_TargetSystem.compare("Cave2") == 0){	_SoundMng->connectToServer("xenakis.evl.uic.edu", 57120);}
-	else {	_SoundMng->connectToServer("131.193.77.209", 57120);}
+	if (_DisplaySystem.compare("Cave2") == 0){	_SoundMng->connectToServer("xenakis.evl.uic.edu", 57120);}
+	else {	_SoundMng->connectToServer("131.193.76.39", 57120);}
 	_SoundMng->startSoundServer();
 	_SoundEnv = _SoundMng->getSoundEnvironment();
 	
-	if (_TargetSystem.compare("Cave2") == 0){_SoundEnv->setAssetDirectory("/dan/particle_dreams/");}
+	if (_DisplaySystem.compare("Cave2") == 0){_SoundEnv->setAssetDirectory("/dan/particle_dreams/");}
 	else {_SoundEnv->setAssetDirectory("/Users/dan/data/OASCache/");}
 	
 	
@@ -1287,6 +1457,8 @@ void ParticleDreams::initWater()
     _waterSkyGeometry->setVertexArray(verts);
     _waterSkyGeometry->setColorArray(colors);
     _waterSkyGeometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+    //TODO add version ifdef
+    //_waterSkyGeometry->setTexCoordArray(0,tcoords,osg::Array::BIND_PER_VERTEX);
     _waterSkyGeometry->setTexCoordArray(0,tcoords);
     _waterSkyGeometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
     _waterSkyGeode->addDrawable(_waterSkyGeometry);
@@ -1325,6 +1497,8 @@ void ParticleDreams::initWater()
     _waterFillUni->set(0);
     _waterNormUni = new osg::Uniform(osg::Uniform::SAMPLER_2D,"norm");
     _waterNormUni->set(2);
+    //TODO add version ifdef
+    //_waterReflUni = new osg::Uniform(osg::Uniform::SAMPLER_2D_RECT,"refl");
     _waterReflUni = new osg::Uniform(osg::Uniform::SAMPLER_2D,"refl");
     _waterReflUni->set(3);
 
@@ -2091,7 +2265,133 @@ int ParticleDreams::loadPhysicalScreensArrayTourCaveCalit2_5lowerScr()
     }
 
     return i;
+}   
+ int ParticleDreams::loadPhysicalScreensArrayWave()
+{
+    _PhScAr = new _PhSc [128];
+
+    float height, h, width, p, originX, originY,r,name,originZ, screen;
+    int i=0;
+
+    // _PhScAr[i].index  -1 is sentannel for end of list
+
+         height=681; h=0.0; width=1209; p=22.5 ;  originX=-2428;   originY=1250;  r=0.0; name=0; originZ=660;
+    _PhScAr[i].index =i;
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
+
+     height=681; h=0.0; width=1209; p=22.5 ;  originX=-2428;  ; originY=1250;  r=0.0; name=0; originZ=660;
+    _PhScAr[i].index =i;
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
+
+
+       height=681; h=0.0; width=1209; p=22.5 ;  originX=0;  ; originY=1250;  r=0.0; name=0; originZ=660 ;   screen=0 ;
+    _PhScAr[i].index =i; 
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
+
+
+       height=681; h=0.0; width=1209; p=22.5;   originX=1214;  ; originY=1250;  r=0.0; name=1; originZ=660;    screen=1 ;
+    _PhScAr[i].index =i; 
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
+
+
+     height=681; h=0.0; width=1209; p=22.5;   originX=2428;  ;originY=1250;  r=0.0; name=0; originZ=660 ;   screen=0 ;
+    _PhScAr[i].index =i;
+    _PhScAr[i].height =height;
+    _PhScAr[i].h=h;
+    _PhScAr[i].width = width;
+    _PhScAr[i].p = p;
+    _PhScAr[i].originX =originX;
+    _PhScAr[i].originY =originY;
+    _PhScAr[i].r=r;
+    _PhScAr[i].originZ = originZ;
+    _PhScAr[i].screen = screen; 		
+    i++;
+
+
+
+    _PhScAr[i].index =-1;
+    // clearly dont have this correct
+    // probibly need to xform positions and vectors from z up to z forward
+    for (int j=0;j<i;j++)
+    {
+
+	//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl;
+
+	osg::Matrix hMat;
+	hMat.makeRotate(_PhScAr[j].h * M_PI / 180.0, osg::Vec3(0,0,1));
+	osg::Matrix pMat;
+	pMat.makeRotate(_PhScAr[i].p* M_PI / 180.0, osg::Vec3(1,0,0));
+	osg::Matrix rMat;
+	rMat.makeRotate(_PhScAr[i].r * M_PI / 180.0, osg::Vec3(0,1,0));
+	//    	osg::Matrix oMat = rMat* pMat * hMat;
+	osg::Matrix oMat = hMat;
+
+	osg::Vec3 test = oMat * osg::Vec3(0,-1,0);
+	//std::cout << "test.x,y,z " << _PhScAr[j].h << " " << test[0] << " " << test[1] << " " << test[2] << std::endl;
+	_PhScAr[j].vx = test[0] * -1;
+	_PhScAr[j].vy = test[1];
+	_PhScAr[j].vz = test[2];
+	// rotatefrom z up ti z back
+	// x stays same
+	// y =z
+	//z = -y
+	_PhScAr[j].originZ = _PhScAr[j].originZ  + Navigation::instance()->getFloorOffset();
+	float ytemp;
+	if ( 1 == 1)
+	{
+	    // process position
+	    ytemp = _PhScAr[j].originY;
+	    _PhScAr[j].originY = _PhScAr[j].originZ;
+	    _PhScAr[j].originZ = -ytemp;
+
+	    // vector
+	    ytemp = _PhScAr[j].vy;
+	    _PhScAr[j].vy = _PhScAr[j].vz;
+	    _PhScAr[j].vz = -ytemp;
+
+	}
+	//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl<< std::endl;
+
+    }
+
+    return i;
 }
+
 
 int ParticleDreams::loadPhysicalScreensArrayTourCaveSaudi()
 {
@@ -2562,9 +2862,6 @@ std::cout << "in loadPhysicalScreensArrayCave2 \n";
 
 
 
-
-
-
 int ParticleDreams::loadPhysicalScreensArrayStarCave()
 
 {
@@ -2796,279 +3093,7 @@ originX= 0   ;originY= 766   ;originZ= -1759   ;width= 2723   ;height= 1532  ; h
  	i++;
 	
 
-//oldstuff below
-/*
-//			<Screen comment=RelColumn -9 row 0 column 18 width= 1018.3 height= 572.5 originX= -1008.81 originY= -3104.81 originZ= 869.7 h= 162 p= -0 r= 0 name= 0 />
-			 width= 1018.3; height= 572.5; originX= -1008.81; originY= -3104.81; originZ= 869.7 ;h= 162; p= -0; r= 0; name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-			
-			
-//			<Screen comment=RelColumn -8 row 0 column 17 width= 1018.3 height= 572.5 originX= -1918.88 originY= -2641.11 originZ= 869.7 h= 144 p= -0 r= 0 name= 0 />
-			 width= 1018.3; height= 572.5 ;originX= -1918.88 ;originY= -2641.11 ;originZ= 869.7 ;h= 144; p= -0 ;r= 0; name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-			
-			
-//			<Screen comment=RelColumn -7 row 0 column 16 width= 1018.3 height= 572.5 originX= -2641.11 originY= -1918.88 originZ= 869.7 h= 126 p= -0 r= 0 name= 0 />
-			 width= 1018.3 ;height= 572.5; originX= -2641.11; originY= -1918.88; originZ= 869.7; h= 126; p= -0 ;r= 0 ;name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-
-
-//			<Screen comment=RelColumn -6 row 0 column 15 width= 1018.3 height= 572.5 originX= -3104.81 originY= -1008.81 originZ= 869.7 h= 108 p= -0 r= 0 name= 0 />
-			 width= 1018.3; height= 572.5; originX= -3104.81 ;originY= -1008.81 ;originZ= 869.7; h= 108; p= -0 ;r= 0 ;name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-
-
-//			<Screen comment=RelColumn -5 row 0 column 14 width= 1018.3 height= 572.5 originX= -3264.59 originY= -0.0001427 originZ= 869.7 h= 90 p= -0 r= 0 name= 0 />
-			width= 1018.3; height= 572.5; originX= -3264.59; originY= -0.0001427; originZ= 869.7; h= 90 ;p= -0; r= 0 ;name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-
-
-//			<Screen comment=RelColumn -4 row 0 column 13 width= 1018.3 height= 572.5 originX= -3104.81 originY= 1008.81 originZ= 869.7 h= 72 p= -0 r= 0 name= 0 />
-			 width= 1018.3; height= 572.5; originX= -3264.59 ;originY= -0.0001427 ;originZ= 869.7 ;h= 90 ;p= -0; r= 0; name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-
-
-//			<Screen comment=RelColumn -3 row 0 column 12 width= 1018.3 height= 572.5 originX= -2641.11 originY= 1918.88 originZ= 869.7 h= 54 p= -0 r= 0 name= 0 />
-			 width= 1018.3; height= 572.5; originX= -2641.11; originY= 1918.88; originZ= 869.7; h= 54; p= -0; r= 0; name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-
-
-//			<Screen comment=RelColumn -2 row 0 column 11 width= 1018.3 height= 572.5 originX= -1918.88 originY= 2641.11 originZ= 869.7 h= 36 p= -0 r= 0 name= 0 />
-			width= 1018.3; height= 572.5; originX= -1918.88; originY= 2641.11; originZ= 869.7; h= 36; p= -0 ;r= 0; name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-
-
-//			<Screen comment=RelColumn -1 row 0 column 10 width= 1018.3 height= 572.5 originX= -1008.81 originY= 3104.81 originZ= 869.7 h= 18 p= -0 r= 0 name= 0 />
-			 width= 1018.3; height= 572.5; originX= -1008.81; originY= 3104.81; originZ= 869.7; h= 18; p= -0; r= 0; name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-
-
-//			<Screen comment=RelColumn 0 row 0 column 9 width= 1018.3 height= 572.5 originX= 0 originY= 3264.59 originZ= 869.7 h= 0 p= -0 r= 0 name= 0 />
-			 width= 1018.3 ;height= 572.5; originX= 0; originY= 3264.59; originZ= 869.7; h= 0; p= -0; r= 0; name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-
-
-//			<Screen comment=RelColumn 1 row 0 column 8 width= 1018.3 height= 572.5 originX= 1008.81 originY= 3104.81 originZ= 869.7 h= -18 p= -0 r= 0 name= 0 />
-			 width= 1018.3; height= 572.5 ;originX= 1008.81 ;originY= 3104.81; originZ= 869.7; h= -18; p= -0; r= 0; name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-
-
-//			<Screen comment=RelColumn 2 row 0 column 7 width= 1018.3 height= 572.5 originX= 1918.88 originY= 2641.11 originZ= 869.7 h= -36 p= -0 r= 0 name= 0 />
-			 width= 1018.3; height= 572.5; originX= 1918.88; originY= 2641.11; originZ= 869.7; h= -36; p= -0; r= 0 ;name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-
-
-//			<Screen comment=RelColumn 3 row 0 column 6 width= 1018.3 height= 572.5 originX= 2641.11 originY= 1918.88 originZ= 869.7 h= -54 p= -0 r= 0 name= 0 />
-			width= 1018.3 ;height= 572.5 ;originX= 2641.11 ;originY= 1918.88 ;originZ= 869.7; h= -54; p= -0; r= 0; name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-
-
-//			<Screen comment=RelColumn 4 row 0 column 5 width= 1018.3 height= 572.5 originX= 3104.81 originY= 1008.81 originZ= 869.7 h= -72 p= -0 r= 0 name= 0 />
-			width= 1018.3 ;height= 572.5 ;originX= 3104.81; originY= 1008.81; originZ= 869.7; h= -72; p= -0; r= 0; name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-
-
-//			<Screen comment=RelColumn 5 row 0 column 4 width= 1018.3 height= 572.5 originX= 3264.59 originY= -0.0001427 originZ= 869.7 h= -90 p= -0 r= 0 name= 0 />
-			 width= 1018.3 ;height= 572.5; originX= 3264.59 ;originY= -0.0001427; originZ= 869.7; h= -90; p= -0; r= 0; name= 0;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-
-
-//			<Screen comment=RelColumn 6 row 0 column 3 width= 1018.3 height= 572.5 originX= 3104.81 originY= -1008.81 originZ= 869.7 h= -108 p= -0 r= 0 name= 0 />
-			width= 1018.3 ;height= 572.5; originX= 3104.81 ;originY= -1008.81; originZ= 869.7; h= -108; p= -0; r= 0 ;name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-
-
-//			<Screen comment=RelColumn 7 row 0 column 2 width= 1018.3 height= 572.5 originX= 2641.11 originY= -1918.88 originZ= 869.7 h= -126 p= -0 r= 0 name= 0 />
-			width= 1018.3 ;height= 572.5 ;originX= 2641.11 ;originY= -1918.88; originZ= 869.7; h= -126 ;p= -0 ;r= 0 ;name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-
-
-//			<Screen comment=RelColumn 8 row 0 column 1 width= 1018.3 height= 572.5 originX= 1918.88 originY= -2641.11 originZ= 869.7 h= -144 p= -0 r= 0 name= 0 />
-			 width= 1018.3 ;height= 572.5 ;originX= 1918.88 ;originY= -2641.11 ;originZ= 869.7 ;h= -144; p= -0; r= 0 ;name= 0 ;
- 	_PhScAr[i].index =i; 
-   	_PhScAr[i].height =height;
-  	_PhScAr[i].h=h;
-  	_PhScAr[i].width = width;
- 	_PhScAr[i].p = p;
-  	_PhScAr[i].originX =originX;
-  	_PhScAr[i].originY =originY;
-  	_PhScAr[i].r=r;
-  	_PhScAr[i].originZ = originZ;
-  	_PhScAr[i].screen = screen; 		
- 	i++;
-*/
-//end OldStuff
- 	 _PhScAr[i].index =-1;
+	 _PhScAr[i].index =-1;
  	// clearly dont have this correct
  	// probibly need to xform positions and vectors from z up to z forward
  	for (int j=0;j<i;j++)
@@ -3118,6 +3143,292 @@ originX= 0   ;originY= 766   ;originZ= -1759   ;width= 2723   ;height= 1532  ; h
 
 }
 
+int ParticleDreams::loadPhysicalScreensArrayStarCaveCenterRow()
+
+{
+_PhScAr = new _PhSc [128];
+float height, h, width, p, originX, originY,r,name,originZ, screen;
+int i=0;
+std::cout << "in loadPhysicalScreensArrayStarCaveCenterRow \n";
+
+/*
+originX= 1249   ;originY= -406   ;originZ= -1180   ;width= 2134   ;height= 1200  ; h= -108.0  ; p= -14.9  ; r= 0.0  ;name= 0;  
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+*/
+originX= 1397   ;originY= -454   ;originZ= 0   ;width= 2134   ;height= 1200  ; h= -108.0  ; p= 0.0  ; r= 0.0  ;name= 0 ; 
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+/*
+originX= 1249   ;originY= -406   ;originZ= 1180   ;width= 2134   ;height= 1200  ; h= -108.0  ; p= 14.9  ; r= 0.0  ;name= 0; 
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+*/
+/*
+originX= 772   ;originY= 1062   ;originZ= -1180   ;width= 2134   ;height= 1200  ; h= -36.0  ; p= -14.9  ; r= 0.0  ;name= 0; 
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+*/
+originX= 863   ;originY= 1188   ;originZ= 0   ;width= 2134   ;height= 1200  ; h= -36.0  ; p= 0.0  ; r= 0.0  ;name= 0 ; 
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+/*
+originX= 772   ;originY= 1062   ;originZ= 1180   ;width= 2134   ;height= 1200  ; h= -36.0  ; p= 14.9  ; r= 0.0  ;name= 0; 
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+*/
+/*
+originX= -772   ;originY= 1062   ;originZ= -1180   ;width= 2134   ;height= 1200  ; h= 36.0  ; p= -14.9  ; r= 0.0  ;name= 0 ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+*/
+originX= -863   ;originY= 1188   ;originZ= 0   ;width= 2134   ;height= 1200  ; h= 36.0  ; p= 0.0  ; r= 0.0  ;name= 0 ; 
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+/*
+originX= -772   ;originY= 1062   ;originZ= 1180   ;width= 2134   ;height= 1200  ; h= 36.0  ; p= 14.9  ; r= 0.0  ;name= 0 ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+*/
+/*
+originX= -1249   ;originY= -406   ;originZ= -1180   ;width= 2134   ;height= 1200  ; h= 108.0  ; p= -14.9  ; r= 0.0  ;name= 0 ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+*/	
+originX= -1397   ;originY= -454   ;originZ= 0   ;width= 2134   ;height= 1175  ; h= 108.0  ; p= 0.0  ; r= 0.0  ;name= 0 ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+/*	
+originX= -1249   ;originY= -406   ;originZ= 1180   ;width= 2134   ;height= 1200  ; h= 108.0  ; p= 14.9  ; r= 0.0  ;name= 0 ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+	*/
+	/*
+originX= 0   ;originY= -1313   ;originZ= -1180   ;width= 2134   ;height= 1200  ; h= 180.0  ; p= -14.9  ; r= 0.0  ;name= 0 ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+*/	
+originX= 0   ;originY= -1468   ;originZ= 0   ;width= 2134   ;height= 1200  ; h= 180.0  ; p= 0.0  ; r= 0.0  ;name= 0  ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+/*	
+originX= 0   ;originY= -1313   ;originZ= 1180   ;width= 2134   ;height= 1200  ; h= 180.0  ; p= 14.9  ; r= 0.0  ;name= 0 ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+*/	
+/*
+originX= 0   ;originY= -766   ;originZ= -1759   ;width= 2723   ;height= 1532  ; h= 0.0  ; p= -90.0  ; r= 0.0  ;name= 0 ; 
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+*/	
+/*
+originX= 0   ;originY= 766   ;originZ= -1759   ;width= 2723   ;height= 1532  ; h= 0.0  ; p= -90.0  ; r= 0.0  ;name= 0 ;
+	_PhScAr[i].index =i; 
+   	_PhScAr[i].height =height;
+  	_PhScAr[i].h=h;
+  	_PhScAr[i].width = width;
+ 	_PhScAr[i].p = p;
+  	_PhScAr[i].originX =originX;
+  	_PhScAr[i].originY =originY;
+  	_PhScAr[i].r=r;
+  	_PhScAr[i].originZ = originZ;
+  	_PhScAr[i].screen = screen; 		
+ 	i++;
+	
+*/
+	 _PhScAr[i].index =-1;
+ 	// clearly dont have this correct
+ 	// probibly need to xform positions and vectors from z up to z forward
+ 	for (int j=0;j<i;j++)
+ 		{
+ 			
+ 			//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl;
+
+	 		osg::Matrix hMat;
+	   		hMat.makeRotate(_PhScAr[j].h * M_PI / 180.0, osg::Vec3(0,0,1));
+	   	   	osg::Matrix pMat;
+				pMat.makeRotate(_PhScAr[i].p* M_PI / 180.0, osg::Vec3(1,0,0));
+				osg::Matrix rMat;
+				rMat.makeRotate(_PhScAr[i].r * M_PI / 180.0, osg::Vec3(0,1,0));
+	//    	osg::Matrix oMat = rMat* pMat * hMat;
+				osg::Matrix oMat = hMat;
+
+	   		osg::Vec3 test = oMat * osg::Vec3(0,-1,0);
+	   		//std::cout << "test.x,y,z " << _PhScAr[j].h << " " << test[0] << " " << test[1] << " " << test[2] << std::endl;
+	 		_PhScAr[j].vx = test[0] * -1;
+	 		_PhScAr[j].vy = test[1];
+			_PhScAr[j].vz = test[2];
+			// rotatefrom z up ti z back
+			// x stays same
+	   		// y =z
+	   		//z = -y
+			_PhScAr[j].originZ = _PhScAr[j].originZ  + Navigation::instance()->getFloorOffset();
+			float ytemp;
+	   		if ( 1 == 1)
+		   		{
+	   				// process position
+			   		ytemp = _PhScAr[j].originY;
+			   		_PhScAr[j].originY = _PhScAr[j].originZ;
+			   		_PhScAr[j].originZ = -ytemp;
+			   		
+			   		// vector
+			   		ytemp = _PhScAr[j].vy;
+			   		_PhScAr[j].vy = _PhScAr[j].vz;
+			   		_PhScAr[j].vz = -ytemp;
+					
+		   		}
+ 			//std::cout << " j,x,y,z pos " << j << " " << _PhScAr[j].originX << " " << _PhScAr[j].originY << " " << _PhScAr[j].originZ << std::endl<< std::endl;
+			
+		 	}
+
+ return i;
+
+
+}
 
 
 int ParticleDreams::loadOneHalfPhysicalScreensArrayCave2()
@@ -3427,6 +3738,7 @@ void ParticleDreams::paint_on_walls_host()
     if (paint_on_walls_start == 1)
     {
 	size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
+       _particleObject->resetPosition();
 	//pdata_init_age( max_age);
 	pdata_init_velocity(0, -0.005, 0);
 	pdata_init_rand();
@@ -3455,16 +3767,16 @@ void ParticleDreams::paint_on_walls_host()
     }
 
 
-    if (time_in_sean >90)nextSean=1;          
+    if (time_in_sean > paint_on_walls_timeInScene)nextSean=1;          
    // if (time_in_sean >5)nextSean=1;  // temp shorttime        
 
     anim = showFrameNo * .001;
 
     //draw_water_sky =0;
     setWater(false);
-    if(but2==1)	_injObjSwitchFace->setAllChildrenOn();
+    if(hand_inject_or_reflect==1)	_injObjSwitchFace->setAllChildrenOn();
 	
-	if(but2==0)	_injObjSwitchFace->setAllChildrenOff();
+	if(hand_inject_or_reflect==0)	_injObjSwitchFace->setAllChildrenOff();
 	
 
     int injNum ;	
@@ -3478,7 +3790,7 @@ void ParticleDreams::paint_on_walls_host()
 
     injNum =1;
 	injectorSetType (injNum, 1);		
-	injectorSetInjtRatio (injNum, but2);
+	injectorSetInjtRatio (injNum, hand_inject_or_reflect);
 	injectorSetPosition (injNum, wandPos[0], wandPos[1],  wandPos[2],  axisUpZ);
 	injectorSetVelocity (injNum, wandVec[0], wandVec[1], wandVec[2],  axisUpZ);
 	injectorSetSize (injNum, 0, 0, 0,  axisUpZ);
@@ -3524,6 +3836,7 @@ void ParticleDreams::sprial_fountens_host()
         //pdata_init_velocity(-10000, -10000, -10000);
         //pdata_init_rand();
         //cuMemcpyHtoD(d_particleData, h_particleData, size);
+        _particleObject->resetPosition();
 		_injObjSwitchFace->setAllChildrenOff();
 		_injObjSwitchLine->setAllChildrenOff();
 		_refObjSwitchLine->setAllChildrenOn();
@@ -3550,7 +3863,7 @@ void ParticleDreams::sprial_fountens_host()
     }
 
 //printf ("time_in_sean 1 %f\n",time_in_sean);
-    if (time_in_sean >110)nextSean=1;
+    if (time_in_sean >sprial_fountens_timeInScene)nextSean=1;
     //if (time_in_sean >10)nextSean=1;// temp shorttime
     if (DEBUG_PRINT >0)printf( "in sean1 \n");
 //printf( "in sean1 \n"); 
@@ -3657,24 +3970,25 @@ void ParticleDreams::sprial_fountens_host()
     dy = wandMat[5];
     dz = wandMat[6];
 // reflector obj switch
-  if(but2==1) _refObjSwitchFace->setAllChildrenOn();
-   if(but2==0)_refObjSwitchFace->setAllChildrenOff();
-   
+  if(hand_inject_or_reflect==1) _refObjSwitchFace->setAllChildrenOn();
+   if(hand_inject_or_reflect==0)_refObjSwitchFace->setAllChildrenOff();
+ //  std::cout << " Wand x,y,z,dx,dy,dz " << " " <<x<< " " <<y<< " " <<z<< " " <<dx<< " " <<dy<< " " <<dz << std::endl;
+
       		 //reflectorGetMaxnumNum();
 		 //reflectorSetMaxnumNum( maxNumber);
-		 reflectorSetType ( reflNum , but2);// 0 os off, 1 is plain
-		 //reflectorSetDifaults( reflNum );
+		 reflectorSetDifaults( reflNum );
+
+		 reflectorSetType ( reflNum , hand_inject_or_reflect);// 0 os off, 1 is plain
+		// std::cout << " hand_inject_or_reflect " << hand_inject_or_reflect << std::endl;
 		 reflectorSetPosition ( reflNum , x,y,x, axisUpZ);
 		 reflectorSetNormal( reflNum , dx,dy,dz, axisUpZ);
-		 reflectorSetSize ( reflNum , ftToM(0.5), axisUpZ);
+		 reflectorSetSize ( reflNum , ftToM(1.5), axisUpZ);
 		 reflectorSetDamping ( reflNum , 1);
 		 reflectorSetNoTraping ( reflNum , 1);
 	
- 
-
-
     if (soundEnabled)reflSoundUpdate( reflNum);
-    HeadReflectorsMake();
+ 
+ //   HeadReflectorsMake();
 
     sprial_fountens_start =0;
 }
@@ -3700,7 +4014,11 @@ void ParticleDreams::N_waterfalls_host()
 
     if (N_waterfalls_start== 1)
     {
+	   resetSlidePosition();
+
     _particleObject->resetPosition();
+  // resetSlidePosition();
+     
 	//size_t size = PDATA_ROW_SIZE * CUDA_MESH_WIDTH * CUDA_MESH_HEIGHT * sizeof (float);
 	//pdata_init_age( max_age);
 	//pdata_init_velocity(-10000, -10000, -10000);
@@ -3736,16 +4054,21 @@ void ParticleDreams::N_waterfalls_host()
 	N_waterfallsContextStart = 0;
     }
 _refObjSwitchFace->setAllChildrenOff();
-	if ((time_in_sean >0) && (time_in_sean <5)){ _EdSecSwitchSlid1->setAllChildrenOn();}//slideStuff
-	else { _EdSecSwitchSlid1->setAllChildrenOff();}
-	
-	if ((time_in_sean >5) && (time_in_sean <10)) _EdSecSwitchSlid2->setAllChildrenOn();//slideStuff
-	else _EdSecSwitchSlid2->setAllChildrenOff();
 
+
+    if (_TargetSystem.compare("Wave") != 0)// dont display tidle screen in Wave
+    {
+	    if ((time_in_sean > 0) && (time_in_sean < tidleSlideTime/2)){ _EdSecSwitchSlid1->setAllChildrenOn();}//slideStuff
+	    else { _EdSecSwitchSlid1->setAllChildrenOff();}
+	
+	    if ((time_in_sean > tidleSlideTime/2) && (time_in_sean <tidleSlideTime)) _EdSecSwitchSlid2->setAllChildrenOn();//slideStuff
+	    else _EdSecSwitchSlid2->setAllChildrenOff();
+    }
 	//if ((time_in_sean >10) && (time_in_sean <15)) _EdSecSwitchSlid3->setAllChildrenOn();//slideStuff
 	//else _EdSecSwitchSlid3->setAllChildrenOff();
 
-    if (time_in_sean >90)nextSean=1;
+    if (time_in_sean > n_waterfalls_timeInScene)nextSean=1;
+ //    if ((_TargetSystem.compare("Wave") == 0) || (_TargetSystem.compare("Cave2") == 0)) {   if(time_in_sean >110)nextSean=1;}
     //if (time_in_sean >8)nextSean=1;//short time
    //printf ("time_in_sean 2 %f\n",time_in_sean);
     if (DEBUG_PRINT >0)printf( "in sean2 \n");
@@ -3774,7 +4097,9 @@ _refObjSwitchFace->setAllChildrenOff();
 //
 	float speed = 0.2;
 	float YdispFonts = .5;
+	if (_TargetSystem.compare("StarCave") == 0){speed = 0.1;YdispFonts = 0;}
 	if (_TargetSystem.compare("Cave2") == 0)YdispFonts = 0;
+	//if (_TargetSystem.compare("Wave") == 0){YdispFonts = 0;speed = 0.1;}
 	loadInjFountsFrScr(0 ,YdispFonts,0,speed);// axisyup
  
 	
@@ -3793,19 +4118,19 @@ _refObjSwitchFace->setAllChildrenOff();
     dy = wandMat[5];
     dz = wandMat[6];
 
-//   if(but2==1)_reflectorObjSwitch->setAllChildrenOn();
-//   if(but2==0)_reflectorObjSwitch->setAllChildrenOff();
+//   if(hand_inject_or_reflect==1)_reflectorObjSwitch->setAllChildrenOn();
+//   if(hand_inject_or_reflect==0)_reflectorObjSwitch->setAllChildrenOff();
 // paddel reflector
 	
-   if(but2==1)_refObjSwitchFace->setAllChildrenOn();
-   if(but2==0)_refObjSwitchFace->setAllChildrenOff();
+   if(hand_inject_or_reflect==1)_refObjSwitchFace->setAllChildrenOn();
+   if(hand_inject_or_reflect==0)_refObjSwitchFace->setAllChildrenOff();
 
   		 //reflectorGetMaxnumNum();
 		 //reflectorSetMaxnumNum( maxNumber);
-		 reflectorSetType ( reflNum , but2);// 0 os off, 1 is plain
+		 reflectorSetType ( reflNum , hand_inject_or_reflect);// 0 os off, 1 is plain
 		 //reflectorSetDifaults( reflNum );
 		 reflectorSetPosition ( reflNum ,x,y,z, axisUpZ);
-		 //std::cout << " Wand x,y,z,dx,dy,dz " << " " <<x<< " " <<y<< " " <<z<< " " <<dx<< " " <<dy<< " " <<dz << std::endl;
+		// std::cout << " Wand x,y,z,dx,dy,dz " << " " <<x<< " " <<y<< " " <<z<< " " <<dx<< " " <<dy<< " " <<dz << std::endl;
 		 reflectorSetNormal( reflNum , dx,dy,dz, axisUpZ);
 		 reflectorSetSize ( reflNum , ftToM(0.5), axisUpZ);
 		 reflectorSetDamping ( reflNum , 1);
@@ -3813,7 +4138,7 @@ _refObjSwitchFace->setAllChildrenOff();
 	
 
 	int reflectOn;
-	if (time_in_sean > 15)
+	if (time_in_sean > n_waterfalls_timeInScene/10)
 		{
 			 reflectOn =1;
 		}
@@ -3861,7 +4186,7 @@ _refObjSwitchFace->setAllChildrenOff();
 		 reflectorSetNoTraping ( reflNum , 1);
 		
 //persone reflectorA
-		HeadReflectorsMake();
+//		HeadReflectorsMake();
 
 
  
@@ -3885,8 +4210,8 @@ void ParticleDreams::painting_skys_host()
     static float rotRate;
 	float last_time_in_scene ;
     //time_in_sean = time_in_sean + 1.0/targetFrameRate;
-    float maxTime_in_sean = 180;
-    float begin_Time_in_Watersean = 10;
+    float maxTime_in_sean = painting_skys_timeInScene;//was180
+    float begin_Time_in_Watersean = painting_skys_timeInScene/3.0;
      
 
       
@@ -3900,6 +4225,8 @@ void ParticleDreams::painting_skys_host()
 		//pdata_init_age( max_age);
 		//pdata_init_velocity(-10000, -10000, -10000);
 		pdata_init_rand();
+		_particleObject->resetPosition();
+
 		_refObjSwitchFace->setAllChildrenOff();
 		_refObjSwitchLine->setAllChildrenOff();
 		_injObjSwitchLine->setAllChildrenOn();
@@ -3924,6 +4251,7 @@ void ParticleDreams::painting_skys_host()
 
 		//::user->pass(43200/2.0);
 		//printf( " time %f \n", ::user->get_t());
+        
 
 
 
@@ -3962,8 +4290,8 @@ void ParticleDreams::painting_skys_host()
     time_in_sean = time_in_sean + 1.0/targetFrameRate;
     time_in_Watersean = time_in_sean -begin_Time_in_Watersean;
 	if ((last_time_in_scene <= begin_Time_in_Watersean) && (time_in_sean >= begin_Time_in_Watersean)){setWater(true);}
-    if((time_in_Watersean >= 0)&& (time_in_Watersean <= 30)) _skyTime = lerp(time_in_Watersean, 0, 30, 80000, 70000);
-    if((time_in_Watersean > 30)&& (time_in_Watersean <= 90)) _skyTime = lerp(time_in_Watersean, 30, 90, 70000, 107000);
+    if((time_in_Watersean >= 0)&& (time_in_Watersean <= 10)) _skyTime = lerp(time_in_Watersean, 0, 10, 80000, 70000);
+    if((time_in_Watersean > 30)&& (time_in_Watersean <= 120)) _skyTime = lerp(time_in_Watersean, 30, 90, 70000, 18000);//was 17000
     //if((time_in_sean > 30)&& (time_in_sean <= 40)) user->set_t(lerp(time_in_sean, 30, 40, 74000, 110000));
     //     ::user->set_t(107000);// set to 0 days 1 sec
 
@@ -3984,9 +4312,9 @@ void ParticleDreams::painting_skys_host()
 
     //	 injector data 
 
-	if(but2==1)	_injObjSwitchFace->setAllChildrenOn();
+	if(hand_inject_or_reflect==1)	_injObjSwitchFace->setAllChildrenOn();
 
-	if(but2==0)	_injObjSwitchFace->setAllChildrenOff();
+	if(hand_inject_or_reflect==0)	_injObjSwitchFace->setAllChildrenOff();
 
     int injNum ;	
    // h_injectorData[0][0][0] =2;// number of injectors ~ ~   ~ means dont care
@@ -4027,7 +4355,7 @@ void ParticleDreams::painting_skys_host()
 
 
 				injectorSetType (injNum, 1);		
-				injectorSetInjtRatio (injNum, but2*4.0);
+				injectorSetInjtRatio (injNum, hand_inject_or_reflect*4.0);
 				injectorSetPosition (injNum, wandPos[0], wandPos[1],  wandPos[2],  axisUpZ);
 				injectorSetVelocity (injNum, wandVec[0], wandVec[1],  wandVec[2],  axisUpZ);
 				injectorSetSize (injNum, 0, 0, 0,  axisUpZ);
@@ -4036,7 +4364,7 @@ void ParticleDreams::painting_skys_host()
 				injectorSetSpeedCentrality (injNum, 5, 5,  5,  axisUpZ);
 
     //
-    if (but2){if (DEBUG_PRINT >0) {printf(" wandPos[0 ,1,2] wandVec[0,1,2] %f %f %f    %f %f %f \n", wandPos[0],wandPos[1],wandPos[2],wandVec[0],wandVec[1],wandVec[2]);}}
+    if (hand_inject_or_reflect){if (DEBUG_PRINT >0) {printf(" wandPos[0 ,1,2] wandVec[0,1,2] %f %f %f    %f %f %f \n", wandPos[0],wandPos[1],wandPos[2],wandVec[0],wandVec[1],wandVec[2]);}}
     if (soundEnabled)injSoundUpdate(injNum);
 
 
@@ -4065,7 +4393,7 @@ void ParticleDreams::rain_host()
 
     if (rain_start == 1)
 		{
-
+         _particleObject->resetPosition();
 		_injObjSwitchFace->setAllChildrenOff();
 		_injObjSwitchLine->setAllChildrenOff();
 		_refObjSwitchLine->setAllChildrenOn();
@@ -4104,7 +4432,7 @@ void ParticleDreams::rain_host()
 		rainContextStart = 0;
 		}
 		
-    float maxTime_in_sean = 90;
+    float maxTime_in_sean = 100;
  
     if (time_in_sean >maxTime_in_sean) nextSean=1;
     float fract_of_max_time_in_sean =time_in_sean/maxTime_in_sean;
@@ -4195,14 +4523,14 @@ void ParticleDreams::rain_host()
     dx = wandMat[4];
     dy = wandMat[5];
     dz = wandMat[6];
-//   if(but2==1)_reflectorObjSwitch->setAllChildrenOn();
-//   if(but2==0)_reflectorObjSwitch->setAllChildrenOff();
-   if(but2==1)_refObjSwitchFace->setAllChildrenOn();
-   if(but2==0)_refObjSwitchFace->setAllChildrenOff();
+//   if(hand_inject_or_reflect==1)_reflectorObjSwitch->setAllChildrenOn();
+//   if(hand_inject_or_reflect==0)_reflectorObjSwitch->setAllChildrenOff();
+   if(hand_inject_or_reflect==1)_refObjSwitchFace->setAllChildrenOn();
+   if(hand_inject_or_reflect==0)_refObjSwitchFace->setAllChildrenOff();
 
    		 //reflectorGetMaxnumNum();
 		 //reflectorSetMaxnumNum( maxNumber);
-		 reflectorSetType ( reflNum , but2);// 0 os off, 1 is plain
+		 reflectorSetType ( reflNum , hand_inject_or_reflect);// 0 os off, 1 is plain
 		 //reflectorSetDifaults( reflNum );
 		 reflectorSetPosition ( reflNum , x,y,z, axisUpZ);
 		 reflectorSetNormal( reflNum , dx,dy,dz, axisUpZ);
@@ -4471,7 +4799,7 @@ void	ParticleDreams::injSoundUpdate(int injNum)
 		pos[1] = y;
 		pos[2] = z;
 		pos = pos - headPos;
-		//if (but2) std::cout << "pos - headPos " << pos <<"\n";
+		//if (hand_inject_or_reflect) std::cout << "pos - headPos " << pos <<"\n";
 	
 		static int roundRobenSound = 0;
 		int roundRobenMod =1;
@@ -4539,7 +4867,7 @@ void	ParticleDreams::injSoundUpdate(int injNum)
 		//pos[2] = z ;
 		
 		
-		//if(but2) {std::cout << "pos - headPos " << pos <<"\n";}
+		//if(hand_inject_or_reflect) {std::cout << "pos - headPos " << pos <<"\n";}
 		static int roundRobenSound = 0;
 		int roundRobenMod =5;
 
@@ -4818,7 +5146,12 @@ osg::Geometry* ParticleDreams::createQuad()
 	return quad.get();
 	}
 
-
+void  ParticleDreams::resetSlidePosition(){
+ 	mtSlide1->setMatrix(SlideMatrix);
+    mtSlide2->setMatrix(SlideMatrix);
+    mtSlide3->setMatrix(SlideMatrix);
+	}
+ 
 void	ParticleDreams::initGeoEdSection()
 {
 
@@ -4832,48 +5165,21 @@ void	ParticleDreams::initGeoEdSection()
     tidleSlide3 = osgDB::readNodeFile(_dataDir + "/models/frameS3.obj");//Credit2
     if(!tidleSlide3){std::cerr << "Error reading /models/frameS3.obj" << std::endl;}
     std::cout << "slidesLoaded \n";
- /*
-    osg::Node* tidleSlide4 = NULL;
-    tidleSlide4 = osgDB::readNodeFile(_dataDir + "/models/frameS4.obj");//sinxyz
-    if(!tidleSlide4){std::cerr << "Error reading /models/frameS4.obj" << std::endl;}
-    osg::Node* tidleSlide5 = NULL;
-    tidleSlide5 = osgDB::readNodeFile(_dataDir + "/models/frameS5.obj");//sinxyza
-    if(!tidleSlide5){std::cerr << "Error reading /models/frameS5.obj" << std::endl;}
-    osg::Node* tidleSlide6 = NULL;
-    tidleSlide6 = osgDB::readNodeFile(_dataDir + "/models/frameS6.obj");//sin xyzar
-    if(!tidleSlide6){std::cerr << "Error reading /models/frameS6.obj" << std::endl;}
 
-    osg::Node* tidleSlide7 = NULL;
-    tidleSlide7 = osgDB::readNodeFile(_dataDir + "/models/frameS7.obj");//sin xyzr
-    if(!tidleSlide7){std::cerr << "Error reading /models/frameS7.obj" << std::endl;}
-    osg::Node* tidleSlide8 = NULL;
-    tidleSlide8 = osgDB::readNodeFile(_dataDir + "/models/frameS8.obj");// xyz
-    if(!tidleSlide8){std::cerr << "Error reading /models/frameS8.obj" << std::endl;}
-*/
     std::cout << " loading slides " << "\n" ;
     //creat switchnode
     _EdSecSwitchSlid1 = new osg::Switch;
     _EdSecSwitchSlid2 = new osg::Switch;
     _EdSecSwitchSlid3 = new osg::Switch;
-/*    _EdSecSwitchSlid4 = new osg::Switch;
-    _EdSecSwitchSlid5 = new osg::Switch;
-    _EdSecSwitchSlid6 = new osg::Switch;
-    _EdSecSwitchSlid7 = new osg::Switch;
-    _EdSecSwitchSlid8 = new osg::Switch;
-*/
+
     ParticleDreams::turnAllEduSlidsOff();
 
     // creat fixes xform on slides
     osg::Matrix ms;
-    osg::MatrixTransform * mtSlide1 = new osg::MatrixTransform();
-    osg::MatrixTransform * mtSlide2 = new osg::MatrixTransform();
-    osg::MatrixTransform * mtSlide3 = new osg::MatrixTransform();
-/*   osg::MatrixTransform * mtSlide4 = new osg::MatrixTransform();
-    osg::MatrixTransform * mtSlide5 = new osg::MatrixTransform();
-    osg::MatrixTransform * mtSlide6 = new osg::MatrixTransform();
-    osg::MatrixTransform * mtSlide7 = new osg::MatrixTransform();
-    osg::MatrixTransform * mtSlide8 = new osg::MatrixTransform();
-*/
+    mtSlide1 = new osg::MatrixTransform();
+    mtSlide2 = new osg::MatrixTransform();
+    mtSlide3 = new osg::MatrixTransform();
+
     //matrices for interdediat computations
     osg::Matrix mss;
     osg::Matrix msr;
@@ -4881,7 +5187,7 @@ void	ParticleDreams::initGeoEdSection()
     osg::Matrix msrh;
     osg::Matrix mst;
 
-    osg::Matrix mresult;
+    
 
 
 if (_TargetSystem.compare("TourCaveCalit2") == 0)
@@ -4890,9 +5196,9 @@ if (_TargetSystem.compare("TourCaveCalit2") == 0)
     int i =1;
    // std::cout << " i, _PhScAr[i].originX  ,_PhScAr[i].originY _PhScAr[i].h "<< i<< " " << _PhScAr[i].originX  << " " << _PhScAr[i].originY << " " << _PhScAr[i].h << "\n";
 
-    mst.makeTranslate(osg::Vec3(_PhScAr[i].originX,_PhScAr[i].originY +150,450));
+    mst.makeTranslate(osg::Vec3(_PhScAr[i].originX,_PhScAr[i].originY +150,1000));//was450
     // mst.makeTranslate(osg::Vec3(-802,1657,450));
-    ms.makeScale(osg::Vec3(40.0,25,1.0));
+    ms.makeScale(osg::Vec3(40.0,30,1.0));
     msr.makeRotate(osg::DegreesToRadians(90.0), osg::Vec3(1,0,0));
     msrh.makeRotate(osg::DegreesToRadians(25.0), osg::Vec3(0,0,1));
     msrh.makeRotate(osg::DegreesToRadians(_PhScAr[i].h), osg::Vec3(0,0,1));
@@ -4922,25 +5228,33 @@ if (_TargetSystem.compare("StarCave") == 0)
 
     mst.makeTranslate(osg::Vec3(_PhScAr[i].originX,_PhScAr[i].originY +150,450));
     // mst.makeTranslate(osg::Vec3(-802,1657,450));
-    ms.makeScale(osg::Vec3(40.0,25,1.0));
+    ms.makeScale(osg::Vec3(80.0,50,1.0));
+    msr.makeRotate(osg::DegreesToRadians(90.0), osg::Vec3(1,0,0));
+    msrh.makeRotate(osg::DegreesToRadians(25.0), osg::Vec3(0,0,1));
+    msrh.makeRotate(osg::DegreesToRadians(_PhScAr[i].h), osg::Vec3(0,0,1));
+
+    }
+if (_TargetSystem.compare("Wave") == 0)
+    {
+         //    height= 805 ;h=  26.0; width= 1432 ;  p= 0.0    ;originX= -802  ; originY= 1657  ;  r= -90.0 ;   name= 0 ;  originZ= 0   ;   screen= 0;
+    int i =1;
+   // std::cout << " i, _PhScAr[i].originX  ,_PhScAr[i].originY _PhScAr[i].h "<< i<< " " << _PhScAr[i].originX  << " " << _PhScAr[i].originY << " " << _PhScAr[i].h << "\n";
+
+    mst.makeTranslate(osg::Vec3(_PhScAr[i].originX,_PhScAr[i].originY +150,450));
+    // mst.makeTranslate(osg::Vec3(-802,1657,450));
+    ms.makeScale(osg::Vec3(80.0,50,1.0));
     msr.makeRotate(osg::DegreesToRadians(90.0), osg::Vec3(1,0,0));
     msrh.makeRotate(osg::DegreesToRadians(25.0), osg::Vec3(0,0,1));
     msrh.makeRotate(osg::DegreesToRadians(_PhScAr[i].h), osg::Vec3(0,0,1));
 
     }
 
-    mresult.set ( ms*msr*msrh * mst);
-    mtSlide1->setMatrix(mresult);
-    mtSlide2->setMatrix(mresult);
-    mtSlide3->setMatrix(mresult);
- /*
-    mtSlide4->setMatrix(mresult);
-    mtSlide5->setMatrix(mresult);
-    mtSlide6->setMatrix(mresult);
-    mtSlide7->setMatrix(mresult);
-    mtSlide8->setMatrix(mresult);
-
-*/
+    SlideMatrix.set ( ms*msr*msrh * mst);
+ //   mtSlide1->setMatrix(SlideMatrix);
+ //   mtSlide2->setMatrix(SlideMatrix);
+  //  mtSlide3->setMatrix(SlideMatrix);
+	resetSlidePosition();
+ 
     //atatch tidleSlide to matrix transform
     mtSlide1->addChild(tidleSlide1);
     mtSlide2->addChild(tidleSlide2);
@@ -4989,7 +5303,7 @@ if (_TargetSystem.compare("StarCave") == 0)
 
     so->setScale(1);
     so->attachToScene();
-    so->setNavigationOn(true);
+    so->setNavigationOn(false);
 
 }
 
