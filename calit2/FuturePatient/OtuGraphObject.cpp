@@ -20,6 +20,9 @@
 // for time debug
 #include <sys/time.h>
 
+bool OtuGraphObject::_otuTableLoaded = false;
+std::map<int,OtuGraphObject::OTUClassification*> OtuGraphObject::_otuTable;
+
 using namespace cvr;
 
 OtuGraphObject::OtuGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds) : LayoutTypeObject(name,navigation,movable,clip,contextMenu,showBounds), SelectableObject()
@@ -44,15 +47,43 @@ OtuGraphObject::OtuGraphObject(DBManager * dbm, float width, float height, std::
 	_selectCB->setCallback(this);
 	addMenuItem(_selectCB);
     }
-    
+   
+    if(!_otuTableLoaded)
+    {
+	initOTUTable();
+    }
 
     _graph = new GroupedBarGraph(width,height);
     _graph->setColorMapping(GraphGlobals::getDefaultPhylumColor(),GraphGlobals::getPhylumColorMap());
-    _graph->setColorMode(BGCM_SOLID);
+    _graph->setColorMode(BGCM_GROUP);
 }
 
 OtuGraphObject::~OtuGraphObject()
 {
+}
+
+void OtuGraphObject::objectAdded()
+{
+    GraphLayoutObject * layout = dynamic_cast<GraphLayoutObject*>(_parent);
+    if(layout && layout->getPhylumKeyObject())
+    {
+	bool addKey = !layout->getPhylumKeyObject()->hasRef();
+	layout->getPhylumKeyObject()->ref(this);
+
+	if(addKey)
+	{
+	    layout->addLineObject(layout->getPhylumKeyObject());
+	}
+    }
+}
+
+void OtuGraphObject::objectRemoved()
+{
+    GraphLayoutObject * layout = dynamic_cast<GraphLayoutObject*>(_parent);
+    if(layout && layout->getPhylumKeyObject())
+    {
+	layout->getPhylumKeyObject()->unref(this);
+    }
 }
 
 void OtuGraphObject::setGraphSize(float width, float height)
@@ -333,22 +364,133 @@ bool otuSort(const std::pair<std::string,float> & first, const std::pair<std::st
     return first.second > second.second;
 }
 
-bool OtuGraphObject::setGraph(std::string sample, int displayCount)
+bool OtuGraphObject::setGraph(std::string sample, int displayCount, MicrobeGraphType type)
 {
     std::string otuDir = ConfigManager::getEntry("value","Plugin.FuturePatient.OtuDir","");
     std::string path = otuDir + "/" + sample;
 
     std::ifstream infile(path.c_str());
     float relab;
-    std::string otu;
+    std::string otus;
 
-    std::vector<std::pair<std::string,float> > otuList;
-    while(infile >> otu >> relab)
+    std::string sublabel;
+    OTUHierarchy level;
+    switch(type)
     {
-	otuList.push_back(std::pair<std::string,float>(otu,relab));
+	default:
+	case MGT_SPECIES:
+	    level = OTU_S;
+	    sublabel = "phylum / microbe";
+	    break;
+	case MGT_FAMILY:
+	    level = OTU_F;
+	    sublabel = "phylum / family";
+	    break;
+	case MGT_GENUS:
+	    level = OTU_G;
+	    sublabel = "phylum / genus";
+	    break;
     }
 
-    std::sort(otuList.begin(),otuList.end(),otuSort);
+    float total = 0.0;
+    std::map<std::string,float> phylumTotals;
+    std::map<std::string,std::map<std::string,float> > phylumData;
+    //std::vector<std::pair<std::string,float> > otuList;
+    while(infile >> otus >> relab)
+    {
+	int otu = atoi(otus.c_str());
+	if(_otuTable.find(otu) == _otuTable.end())
+	{
+	    continue;
+	}
+	if(_otuTable[otu]->lastH < OTU_P)
+	{
+	    continue;
+	}
+
+	total += relab;
+
+	phylumTotals[_otuTable[otu]->c[OTU_P]] += relab;
+	if(_otuTable[otu]->lastH < level)
+	{
+	    phylumData[_otuTable[otu]->c[OTU_P]]["OTU_OTHER"] += relab;
+	}
+	else
+	{
+	    phylumData[_otuTable[otu]->c[OTU_P]][_otuTable[otu]->c[level]] += relab;
+	}
+	//otuList.push_back(std::pair<std::string,float>(otus,relab));
+    }
+
+    std::vector<std::pair<std::string,float> > phylumList;
+    for(std::map<std::string,float>::iterator it = phylumTotals.begin(); it != phylumTotals.end(); ++it)
+    {
+	phylumList.push_back(std::pair<std::string,float>(it->first,it->second));
+    }
+    std::sort(phylumList.begin(),phylumList.end(),otuSort);
+
+    std::vector<std::string> groupOrder;
+    for(int i = 0; i < phylumList.size(); ++i)
+    {
+	groupOrder.push_back(phylumList[i].first);
+    }
+
+    if(true)
+    {
+	std::vector<std::string> reorderVec;
+	reorderVec.push_back("Spirochaetes");
+	reorderVec.push_back("Tenericutes");
+	reorderVec.push_back("Cyanobacteria");
+	reorderVec.push_back("Planctomycetes");
+	reorderVec.push_back("Synergistetes");
+	reorderVec.push_back("Ascomycota");
+	reorderVec.push_back("Euryarchaeota");
+	reorderVec.push_back("Fusobacteria");
+	reorderVec.push_back("Actinobacteria");
+	reorderVec.push_back("Proteobacteria");
+	reorderVec.push_back("Verrucomicrobia");
+	reorderVec.push_back("Firmicutes");
+	reorderVec.push_back("Bacteroidetes");
+
+	for(int i = 0; i < reorderVec.size(); ++i)
+	{
+	    for(std::vector<std::string>::iterator it = groupOrder.begin(); it != groupOrder.end(); ++it)
+	    {
+		if(*it == reorderVec[i])
+		{
+		    groupOrder.erase(it);
+		    groupOrder.insert(groupOrder.begin(),reorderVec[i]);
+		    break;
+		}
+	    }
+	}
+    }
+
+    std::map<std::string,std::vector<std::pair<std::string,float> > > dataMap;
+    for(std::map<std::string,std::map<std::string,float> >::iterator it = phylumData.begin(); it != phylumData.end(); ++it)
+    {
+	for(std::map<std::string,float>::iterator itt = it->second.begin(); itt != it->second.end(); ++itt)
+	{
+	    dataMap[it->first].push_back(std::pair<std::string,float>(itt->first,itt->second));
+	}
+	std::sort(dataMap[it->first].begin(),dataMap[it->first].end(),otuSort);
+    }
+
+    size_t dotPos = sample.find_last_of(".");
+    std::string title = sample.substr(0,dotPos);
+    std::stringstream titless;
+    titless << title << " - " << round(total * 100.0) << "%";
+
+    bool graphValid = _graph->setGraph(titless.str(), dataMap, groupOrder, BGAT_LOG, "Relative Abundance", "", sublabel,osg::Vec4(1.0,0,0,1));
+
+    if(graphValid)
+    {
+	addChild(_graph->getRootNode());
+    }
+
+    return graphValid;
+
+    /*std::sort(otuList.begin(),otuList.end(),otuSort);
 
     std::map<std::string,std::vector<std::pair<std::string,float> > > dataMap;
     dataMap["OTU"] = std::vector<std::pair<std::string,float> >();
@@ -375,7 +517,7 @@ bool OtuGraphObject::setGraph(std::string sample, int displayCount)
 	addChild(_graph->getRootNode());
     }
 
-    return true;
+    return true;*/
 }
 
 void OtuGraphObject::makeSelect()
@@ -452,4 +594,94 @@ void OtuGraphObject::updateSelect()
 
     verts->dirty();
     _selectGeom->getBound();
+}
+
+void OtuGraphObject::initOTUTable()
+{
+    std::string otuFile = ConfigManager::getEntry("value","Plugin.FuturePatient.OtuFile","");
+
+    std::ifstream infile(otuFile.c_str());
+    if(!infile.fail())
+    {
+	std::string line;
+	while(std::getline(infile,line))
+	{
+	    if(line.size() == 0)
+	    {
+		break;
+	    }
+	    if(line[0] == '#')
+	    {
+		continue;
+	    }
+
+	    OTUClassification * otuc = new OTUClassification;
+	    size_t pos = line.find_first_of("k");
+	    int id = atoi(line.substr(0,pos).c_str());
+
+	    std::stringstream ss(line.substr(pos-1));
+
+	    std::string token;
+	    std::getline(ss,token,';');
+	    otuc->c[0] = token.substr(4);
+	    if(otuc->c[0].size() > 0)
+	    {
+		otuc->lastH = OTU_K;
+	    }
+
+	    std::getline(ss,token,';');
+	    otuc->c[1] = token.substr(4);
+	    if(otuc->c[1].size() > 0)
+	    {
+		otuc->lastH = OTU_P;
+	    }
+
+	    std::getline(ss,token,';');
+	    otuc->c[2] = token.substr(4);
+	    if(otuc->c[2].size() > 0)
+	    {
+		otuc->lastH = OTU_C;
+	    }
+
+	    std::getline(ss,token,';');
+	    otuc->c[3] = token.substr(4);
+	    if(otuc->c[3].size() > 0)
+	    {
+		otuc->lastH = OTU_O;
+	    }
+
+	    std::getline(ss,token,';');
+	    otuc->c[4] = token.substr(4);
+	    if(otuc->c[4].size() > 0)
+	    {
+		otuc->lastH = OTU_F;
+	    }
+
+	    std::getline(ss,token,';');
+	    otuc->c[5] = token.substr(4);
+	    if(otuc->c[5].size() > 0)
+	    {
+		otuc->lastH = OTU_G;
+	    }
+
+	    std::getline(ss,token,'\n');
+	    otuc->c[6] = token.substr(4);
+	    if(otuc->c[6].size() > 0)
+	    {
+		otuc->lastH = OTU_S;
+	    }
+
+	    _otuTable[id] = otuc;
+
+	    //std::cerr << "id: " << id << " k: " << otuc->c[0] << " p: " << otuc->c[1] << " c: " << otuc->c[2] << " o: " << otuc->c[3] << " f: " << otuc->c[4] << " g: " << otuc->c[5] << " s: " << otuc->c[6] << " last: " << ((int)(otuc->lastH)) << std::endl;
+	}
+    }
+    else
+    {
+	std::cerr << "Unable to open OTU file: " << otuFile << std::endl;
+	return;
+    }
+    infile.close();
+
+    _otuTableLoaded = true;
 }

@@ -515,6 +515,17 @@ bool FuturePatient::init()
     _otuMenu = new SubMenu("OTUs");
     _fpMenu->addItem(_otuMenu);
 
+    _otuType = new MenuList();
+    _otuType->setCallback(this);
+    _otuMenu->addItem(_otuType);
+
+    std::vector<std::string> otypeList;
+    otypeList.push_back("Species");
+    otypeList.push_back("Family");
+    otypeList.push_back("Genus");
+    otypeList.push_back("Phylum");
+    _otuType->setValues(otypeList);
+
     _otuSampleList = new MenuList();
     _otuSampleList->setCallback(this);
     _otuSampleList->setScrollingHint(MenuList::CONTINUOUS);
@@ -2621,7 +2632,7 @@ void FuturePatient::menuCallback(MenuItem * item)
     if(item == _otuLoad)
     {
 	OtuGraphObject * ogo = new OtuGraphObject(_dbm, 1000.0, 1000.0, "OTU Graph", false, true, false, true);
-	if(ogo->setGraph(_otuSampleList->getValue(),(int)_otuCount->getValue()))
+	if(ogo->setGraph(_otuSampleList->getValue(),(int)_otuCount->getValue(),(MicrobeGraphType)_otuType->getIndex()))
 	{
 	    checkLayout();
 	    _layoutObject->addGraphObject(ogo);

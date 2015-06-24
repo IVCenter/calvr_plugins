@@ -10,6 +10,7 @@
 
 #include "DBManager.h"
 
+#include "MicrobeGraphObject.h"
 #include "GroupedBarGraph.h"
 #include "LayoutInterfaces.h"
 
@@ -19,7 +20,10 @@ class OtuGraphObject : public LayoutTypeObject, public MicrobeSelectObject, publ
         OtuGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~OtuGraphObject();
 
-        bool setGraph(std::string sample, int displayCount);
+        virtual void objectAdded();
+        virtual void objectRemoved();
+
+        bool setGraph(std::string sample, int displayCount, MicrobeGraphType type);
 
         void setGraphSize(float width, float height);
         void setColor(osg::Vec4 color);
@@ -55,6 +59,8 @@ class OtuGraphObject : public LayoutTypeObject, public MicrobeSelectObject, publ
         void makeSelect();
         void updateSelect();
 
+        void initOTUTable();
+
         DBManager * _dbm;
         
         std::string _graphTitle;
@@ -69,6 +75,27 @@ class OtuGraphObject : public LayoutTypeObject, public MicrobeSelectObject, publ
 
         osg::ref_ptr<osg::Geode> _selectGeode;
         osg::ref_ptr<osg::Geometry> _selectGeom;
+
+        enum OTUHierarchy
+        {
+            OTU_K=0,
+            OTU_P,
+            OTU_C,
+            OTU_O,
+            OTU_F,
+            OTU_G,
+            OTU_S
+        };
+
+        struct OTUClassification
+        {
+            std::string c[7];
+            OTUHierarchy lastH;
+        };
+
+        static bool _otuTableLoaded;
+        static std::map<int,OTUClassification*> _otuTable;
+
 };
 
 #endif

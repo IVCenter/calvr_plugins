@@ -185,6 +185,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeDone;
 
         cvr::SubMenu * _otuMenu;
+        cvr::MenuList * _otuType;
         cvr::MenuList * _otuSampleList;
         cvr::MenuIntEntryItem * _otuCount;
         cvr::MenuButton * _otuLoad;
