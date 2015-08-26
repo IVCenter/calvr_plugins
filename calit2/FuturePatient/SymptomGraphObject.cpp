@@ -188,7 +188,7 @@ bool SymptomGraphObject::addPeripheral()
 	if(_dbm)
 	{
 	    std::stringstream qss;
-	    qss << "select unix_timestamp(start_timestamp) as start, unix_timestamp(end_timestamp) as end, MAX(intensity) as intensity from Event where patient_id = \"1\" and (name = \"Arm Red Blotch\" or name = \"Cold Sore\" or name = \"Eye\" or name = \"Hand\") group by start order by start;";
+	    qss << "select unix_timestamp(start_timestamp) as start, unix_timestamp(end_timestamp) as end, MAX(intensity) as intensity from Event where patient_id = \"1\" and (name = \"Arm Red Blotch\" or name = \"Cold Sore\" or name = \"Eye\" or name = \"Hand\" or name = \"Hemorrhoid\") group by start order by start;";
 
 	    DBMQueryResult result;
 
