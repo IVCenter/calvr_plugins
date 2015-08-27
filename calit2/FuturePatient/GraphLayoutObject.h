@@ -77,6 +77,8 @@ class GraphLayoutObject : public FPTiledWallSceneObject
         void setScatterLogScale(bool logScale);
 
         void forceUpdate();
+
+        void setAllGraphMinTime();
     protected:
         void makeGeometry();
         void makeKeys();

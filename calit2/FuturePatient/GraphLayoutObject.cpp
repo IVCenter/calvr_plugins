@@ -18,6 +18,8 @@ GraphLayoutObject::GraphLayoutObject(float width, float height, int maxRows, std
     makeGeometry();
     makeKeys();
 
+    _maxX = _minX = _currentMaxX = _currentMinX = 0;
+
     _resetLayoutButton = new MenuButton("Reset Layout");
     _resetLayoutButton->setCallback(this);
     addMenuItem(_resetLayoutButton);
@@ -1266,6 +1268,34 @@ void GraphLayoutObject::setScatterLogScale(bool logScale)
 void GraphLayoutObject::forceUpdate()
 {
     updateLayout();
+}
+
+void GraphLayoutObject::setAllGraphMinTime()
+{
+    if(!_currentMinX)
+    {
+	return;
+    }
+
+    struct tm tempTime = *localtime(&_currentMinX);
+    //std::cerr << "Year: " << tempTime.tm_year << std::endl;
+    if(tempTime.tm_year < 96) 
+    {
+	tempTime.tm_year = 96;
+	tempTime.tm_mon = 10;
+	_currentMinX = mktime(&tempTime);
+    }
+
+    for(int i = 0; i < _objectList.size(); i++)
+    {
+	TimeRangeObject * tro = dynamic_cast<TimeRangeObject *>(_objectList[i]);
+	if(!tro)
+	{
+	    continue;
+	}
+
+	tro->setGraphDisplayRange(_currentMinX,_currentMaxX);
+    }
 }
 
 void GraphLayoutObject::makeGeometry()

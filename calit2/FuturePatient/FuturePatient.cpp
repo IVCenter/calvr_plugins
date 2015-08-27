@@ -1701,6 +1701,7 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    _layoutObject->forceUpdate();
 	    _layoutObject->setRows(7.0);
 	    _layoutObject->setSyncTime(true);
+	    _layoutObject->setAllGraphMinTime();
 	}
     }
 
