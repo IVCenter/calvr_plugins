@@ -4,6 +4,7 @@
 #include "StrainHMObject.h"
 #include "SingleMicrobeObject.h"
 #include "MicrobeLineGraphObject.h"
+#include "MicrobeGraphWAllObject.h"
 #include "OtuGraphObject.h"
 
 #include <cvrKernel/PluginHelper.h>
@@ -462,6 +463,7 @@ bool FuturePatient::init()
     mGraphTypes.push_back("Bar Graph");
     mGraphTypes.push_back("Stacked Bar Graph");
     mGraphTypes.push_back("Vertical Bar Graph");
+    mGraphTypes.push_back("Graph with All");
     _microbeGraphType->setValues(mGraphTypes);
 
     _microbePatients = new MenuList();
@@ -1950,6 +1952,20 @@ void FuturePatient::menuCallback(MenuItem * item)
 	    else
 	    {
 		_currentVBGraph->addGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(),_microbeTestTime[_microbeTest->getIndex()],_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,(MicrobeGraphType)(_microbeLevel->getIndex()));
+	    }
+	}
+	// Graph with All
+	else if(_microbeGraphType->getIndex() == 3)
+	{
+	    MicrobeGraphWAllObject * mgo = new MicrobeGraphWAllObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	    if(mgo->setGraph(_microbePatients->getValue(), _microbePatients->getIndex()+1, _microbeTest->getValue(), _microbeTestTime[_microbeTest->getIndex()],(int)_microbeNumBars->getValue(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),(MicrobeGraphType)(_microbeLevel->getIndex())))
+	    {
+		checkLayout();
+		_layoutObject->addGraphObject(mgo);
+	    }
+	    else
+	    {
+		delete mgo;
 	    }
 	}
     }

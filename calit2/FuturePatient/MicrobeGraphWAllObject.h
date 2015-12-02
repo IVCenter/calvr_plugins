@@ -1,5 +1,5 @@
-#ifndef FP_MICROBE_GRAPH_OBJECT_H
-#define FP_MICROBE_GRAPH_OBJECT_H
+#ifndef FP_MICROBE_GRAPH_WALL_OBJECT_H
+#define FP_MICROBE_GRAPH_WALL_OBJECT_H
 
 #include <cvrMenu/MenuText.h>
 #include <cvrMenu/MenuButton.h>
@@ -10,15 +10,15 @@
 
 #include "DBManager.h"
 
-#include "GroupedBarGraph.h"
+#include "GroupedBarGraphWPoints.h"
 #include "LayoutInterfaces.h"
 #include "MicrobeTypes.h"
 
-class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, public ValueRangeObject, public SelectableObject
+class MicrobeGraphWAllObject : public LayoutTypeObject, public MicrobeSelectObject, public ValueRangeObject, public SelectableObject
 {
     public:
-        MicrobeGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
-        virtual ~MicrobeGraphObject();
+        MicrobeGraphWAllObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
+        virtual ~MicrobeGraphWAllObject();
 
         bool setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, std::string microbeTableSuffix, std::string measureTableSuffix, bool group = true, bool lsOrdering = true, MicrobeGraphType type = MGT_SPECIES);
         bool setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, std::string region, bool group = true, bool lsOrdering = true, MicrobeGraphType type = MGT_SPECIES);
@@ -61,7 +61,12 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
         void makeSelect();
         void updateSelect();
 
-        DBManager * _dbm;
+        static void makePatientMap();
+
+        static bool _mapInit;
+        static std::map<int,std::pair<std::string,std::string> > _patientMap;
+
+        static DBManager * _dbm;
         
         std::string _graphTitle;
         std::map<std::string, std::vector<std::pair<std::string, float> > > _graphData;
@@ -74,7 +79,7 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
 
         float _width, _height;
 
-        GroupedBarGraph * _graph;
+        GroupedBarGraphWPoints * _graph;
 
         bool _desktopMode;
 
