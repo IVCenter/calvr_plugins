@@ -1227,6 +1227,8 @@ void GroupedBarGraphWPoints::updateGraph()
 
     std::map<std::string,std::map<std::string,float> > positionMap;
 
+    float phalfWidth = halfWidth * 0.3;
+
     switch(_displayMode)
     {
 	case BGDM_GROUPED:
@@ -1261,10 +1263,10 @@ void GroupedBarGraphWPoints::updateGraph()
 				    float barHeight = ((value - _minDisplayRange) / (_maxDisplayRange - _minDisplayRange)) * (_graphTop - _graphBottom);
 				    barHeight += _graphBottom;
 
-				    verts->at(vertIndex) = osg::Vec3(currentPos+halfWidth,-1,barHeight);
-				    verts->at(vertIndex+1) = osg::Vec3(currentPos+halfWidth,-1,_graphBottom);
-				    verts->at(vertIndex+2) = osg::Vec3(currentPos-halfWidth,-1,_graphBottom);
-				    verts->at(vertIndex+3) = osg::Vec3(currentPos-halfWidth,-1,barHeight);
+				    verts->at(vertIndex) = osg::Vec3(currentPos+halfWidth,-1,barHeight+phalfWidth);
+				    verts->at(vertIndex+1) = osg::Vec3(currentPos+halfWidth,-1,barHeight-phalfWidth);
+				    verts->at(vertIndex+2) = osg::Vec3(currentPos-halfWidth,-1,barHeight-phalfWidth);
+				    verts->at(vertIndex+3) = osg::Vec3(currentPos-halfWidth,-1,barHeight+phalfWidth);
 
 				    break;
 				}
@@ -1276,10 +1278,10 @@ void GroupedBarGraphWPoints::updateGraph()
 				    float barHeight = ((value - logMin) / (logMax - logMin)) * (_graphTop - _graphBottom);
 				    barHeight += _graphBottom;
 
-				    verts->at(vertIndex) = osg::Vec3(currentPos+halfWidth,-1,barHeight);
-				    verts->at(vertIndex+1) = osg::Vec3(currentPos+halfWidth,-1,_graphBottom);
-				    verts->at(vertIndex+2) = osg::Vec3(currentPos-halfWidth,-1,_graphBottom);
-				    verts->at(vertIndex+3) = osg::Vec3(currentPos-halfWidth,-1,barHeight);
+				    verts->at(vertIndex) = osg::Vec3(currentPos+halfWidth,-1,barHeight+phalfWidth);
+				    verts->at(vertIndex+1) = osg::Vec3(currentPos+halfWidth,-1,barHeight-phalfWidth);
+				    verts->at(vertIndex+2) = osg::Vec3(currentPos-halfWidth,-1,barHeight-phalfWidth);
+				    verts->at(vertIndex+3) = osg::Vec3(currentPos-halfWidth,-1,barHeight+phalfWidth);
 
 				    break;
 				}
@@ -1325,10 +1327,10 @@ void GroupedBarGraphWPoints::updateGraph()
 				float barHeight = ((value - _minDisplayRange) / (_maxDisplayRange - _minDisplayRange)) * (_graphTop - _graphBottom);
 				barHeight += _graphBottom;
 
-				verts->at(vertIndex) = osg::Vec3(currentPos+halfWidth,-1,barHeight);
-				verts->at(vertIndex+1) = osg::Vec3(currentPos+halfWidth,-1,_graphBottom);
-				verts->at(vertIndex+2) = osg::Vec3(currentPos-halfWidth,-1,_graphBottom);
-				verts->at(vertIndex+3) = osg::Vec3(currentPos-halfWidth,-1,barHeight);
+				verts->at(vertIndex) = osg::Vec3(currentPos+halfWidth,-1,barHeight+phalfWidth);
+				verts->at(vertIndex+1) = osg::Vec3(currentPos+halfWidth,-1,barHeight-phalfWidth);
+				verts->at(vertIndex+2) = osg::Vec3(currentPos-halfWidth,-1,barHeight-phalfWidth);
+				verts->at(vertIndex+3) = osg::Vec3(currentPos-halfWidth,-1,barHeight+phalfWidth);
 				break;
 			    }
 			case BGAT_LOG:
@@ -1339,10 +1341,10 @@ void GroupedBarGraphWPoints::updateGraph()
 				float barHeight = ((value - logMin) / (logMax - logMin)) * (_graphTop - _graphBottom);
 				barHeight += _graphBottom;
 
-				verts->at(vertIndex) = osg::Vec3(currentPos+halfWidth,-1,barHeight);
-				verts->at(vertIndex+1) = osg::Vec3(currentPos+halfWidth,-1,_graphBottom);
-				verts->at(vertIndex+2) = osg::Vec3(currentPos-halfWidth,-1,_graphBottom);
-				verts->at(vertIndex+3) = osg::Vec3(currentPos-halfWidth,-1,barHeight);
+				verts->at(vertIndex) = osg::Vec3(currentPos+halfWidth,-1,barHeight+phalfWidth);
+				verts->at(vertIndex+1) = osg::Vec3(currentPos+halfWidth,-1,barHeight-phalfWidth);
+				verts->at(vertIndex+2) = osg::Vec3(currentPos-halfWidth,-1,barHeight-phalfWidth);
+				verts->at(vertIndex+3) = osg::Vec3(currentPos-halfWidth,-1,barHeight+phalfWidth);
 
 				break;
 			    }
@@ -1371,7 +1373,6 @@ void GroupedBarGraphWPoints::updateGraph()
     }
 
     vertIndex = 0;
-    float phalfWidth = halfWidth * 0.3;
 
     std::map<std::string,std::map<std::string,std::map<std::string,std::vector<std::pair<std::string,float> > > > >::iterator pit;
     std::map<std::string,std::map<std::string,std::vector<std::pair<std::string,float> > > >::iterator pit2;
@@ -1394,7 +1395,7 @@ void GroupedBarGraphWPoints::updateGraph()
 		    {
 			value = _minDisplayRange;
 		    }
-		    else
+		    
 		    {
 			switch(_axisType)
 			{
