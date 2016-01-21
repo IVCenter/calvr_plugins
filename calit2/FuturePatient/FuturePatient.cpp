@@ -739,7 +739,9 @@ bool FuturePatient::init()
     _scatterLoadFilter->setCallback(this);
     _scatterMenu->addItem(_scatterLoadFilter);
 
-    _dbCache = new MenuCheckbox("DB Cache",true);
+    bool cacheEnabled =  ConfigManager::getBool("value","Plugin.FuturePatient.Cache",true);
+
+    _dbCache = new MenuCheckbox("DB Cache",cacheEnabled);
     _dbCache->setCallback(this);
     _fpMenu->addItem(_dbCache);
 
@@ -784,7 +786,7 @@ bool FuturePatient::init()
 	if(!_dbm)
 	{
 	    std::string cacheDir = ConfigManager::getEntry("value","Plugin.FuturePatient.CacheDir","");
-	    _dbm = new DBManager("futurepatient","fiona-01.ucsd.edu","fpuser","p@ti3nt",cacheDir);
+	    _dbm = new DBManager("futurepatient","fiona-01.ucsd.edu","fpuser","p@ti3nt",cacheDir,cacheEnabled);
 	}
 
 	if(_dbm)
@@ -2452,6 +2454,20 @@ void FuturePatient::menuCallback(MenuItem * item)
 		_currentVBGraph->addSpecialGraph(mgt,_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeRegionList->getValue(),(MicrobeGraphType) (_microbeLevel->getIndex()));
 	    }
 	}
+	else if(_microbeGraphType->getIndex() == 3) 
+	{
+	    MicrobeGraphWAllObject * mgo = new MicrobeGraphWAllObject(_dbm, 1000.0, 1000.0, "Microbe Graph", false, true, false, true);
+	    if(mgo->setSpecialGraph(mgt,(int)_microbeNumBars->getValue(),_microbeRegionList->getValue(),_microbeTableList[_microbeTable->getIndex()]->microbeSuffix,_microbeTableList[_microbeTable->getIndex()]->measureSuffix,_microbeGrouping->getValue(),_microbeOrdering->getValue(),(MicrobeGraphType)(_microbeLevel->getIndex())))
+	    {
+		checkLayout();
+		_layoutObject->addGraphObject(mgo);
+	    }
+	    else
+	    {
+		delete mgo;
+	    }
+
+	}
     }
 
     if(item == _microbeLoadPointLine)
@@ -3636,7 +3652,7 @@ void FuturePatient::setupMicrobePatients()
 	    if(_dbm)
 	    {
 		std::stringstream qss;
-		qss << "select patient_id, timestamp, unix_timestamp(timestamp) as utimestamp from Microbe_Measurement" << _microbeTableList[i]->measureSuffix << " group by patient_id, timestamp order by patient_id, timestamp;";
+		qss << "select patient_id, timestamp, unix_timestamp(timestamp) as utimestamp from Microbe_Measurement" << _microbeTableList[i]->measureSuffix << " where seq_type = 'fast' group by patient_id, timestamp order by patient_id, timestamp;";
 
 		DBMQueryResult result;
 

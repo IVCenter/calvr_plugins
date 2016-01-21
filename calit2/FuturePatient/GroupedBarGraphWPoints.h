@@ -5,6 +5,7 @@
 #include <osg/Geode>
 #include <osg/Geometry>
 #include <osgText/Text>
+#include <osg/Depth>
 
 #include <string>
 #include <map>
@@ -113,6 +114,8 @@ class GroupedBarGraphWPoints
         void selectItems(std::string & group, std::vector<std::string> & keys);
         void selectItems(std::map<std::string,std::vector<std::string> > & selectMap);
 
+        void selectOther(std::map<std::string,std::vector<std::string> > & selectMap);
+
         bool processClick(osg::Vec3 & hitPoint, std::string & selectedGroup, std::vector<std::string> & selectedKeys);
 
         void addMathFunction(MicrobeMathFunction * mf);
@@ -166,6 +169,8 @@ class GroupedBarGraphWPoints
 
         std::map<std::string,osg::Vec4> _pointColorMap;
 
+        std::map<std::string,std::vector<std::string> > _selectedOther;
+
         osg::ref_ptr<osg::Group> _root;
         osg::ref_ptr<osg::MatrixTransform> _bgScaleMT;
         osg::ref_ptr<osg::Geode> _barGeode;
@@ -185,6 +190,8 @@ class GroupedBarGraphWPoints
 
         std::string _hoverGroup;
         std::string _hoverItem;
+        std::string _hoverPointGroup;
+        std::string _hoverPointID;
 
         BarGraphColorMode _colorMode;
         BarGraphDisplayMode _displayMode;
@@ -192,6 +199,8 @@ class GroupedBarGraphWPoints
         osg::ref_ptr<SetBoundsCallback> _graphBoundsCallback;
 
         std::vector<MicrobeMathFunction *> _mathFunctionList;
+
+        osg::ref_ptr<osg::Depth> _depth;
 };
 
 #endif

@@ -33,7 +33,7 @@ class DBMQueryResult
 class DBManager
 {
     public:
-        DBManager(std::string database, std::string server, std::string user, std::string password, std::string cacheDir="");
+        DBManager(std::string database, std::string server, std::string user, std::string password, std::string cacheDir="", bool useCache=true);
         ~DBManager();
 
         bool isConnected();

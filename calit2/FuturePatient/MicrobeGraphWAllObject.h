@@ -14,14 +14,14 @@
 #include "LayoutInterfaces.h"
 #include "MicrobeTypes.h"
 
-class MicrobeGraphWAllObject : public LayoutTypeObject, public MicrobeSelectObject, public ValueRangeObject, public SelectableObject
+class MicrobeGraphWAllObject : public LayoutTypeObject, public MicrobeSelectObject, public PatientSelectObject, public ValueRangeObject, public SelectableObject
 {
     public:
         MicrobeGraphWAllObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~MicrobeGraphWAllObject();
 
         bool setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, std::string microbeTableSuffix, std::string measureTableSuffix, bool group = true, bool lsOrdering = true, MicrobeGraphType type = MGT_SPECIES);
-        bool setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, std::string region, bool group = true, bool lsOrdering = true, MicrobeGraphType type = MGT_SPECIES);
+        bool setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, std::string region, std::string microbeSuffix, std::string measureSuffix, bool group = true, bool lsOrdering = true, MicrobeGraphType type = MGT_SPECIES);
 
         virtual void objectAdded();
         virtual void objectRemoved();
@@ -38,6 +38,8 @@ class MicrobeGraphWAllObject : public LayoutTypeObject, public MicrobeSelectObje
 
         void setGraphDisplayRange(float min, float max);
         void resetGraphDisplayRange();
+
+        void selectPatients(std::map<std::string,std::vector<std::string> > & selectMap);
 
         void selectMicrobes(std::string & group, std::vector<std::string> & keys);
         float getGroupValue(std::string group, int i);
