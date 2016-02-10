@@ -371,7 +371,10 @@ void GroupedBarGraphWPoints::setHover(osg::Vec3 intersect)
 
     float targetHeight = GraphGlobals::getHoverHeight();
 
-    if(intersect.z() > groupBottom && intersect.z() <= groupTop && _displayMode == BGDM_GROUPED)
+    float hoverx;
+    float hoverValue;
+
+    /*if(intersect.z() > groupBottom && intersect.z() <= groupTop && _displayMode == BGDM_GROUPED)
     {
 	float myLeft = _graphLeft;
 	for(int i = 0; i < _groupOrder.size(); ++i)
@@ -414,7 +417,8 @@ void GroupedBarGraphWPoints::setHover(osg::Vec3 intersect)
 	    myLeft = myRight;
 	}
     }
-    else if(intersect.z() <= _graphTop && intersect.z() >= _graphBottom)
+    else */
+    if(intersect.z() <= _graphTop && intersect.z() >= _graphBottom)
     {
 	float barLeft = _graphLeft + (_barWidth / 2.0) - halfWidth;
 	float barRight = _graphLeft + (_barWidth / 2.0) + halfWidth;
@@ -465,7 +469,47 @@ void GroupedBarGraphWPoints::setHover(osg::Vec3 intersect)
 				    }
 				}
 
-				if(hitValue <= it->second[j].second)
+				float minDist = FLT_MAX;
+				std::string minGroup;
+				std::string minID;
+				float minVal;
+				for(std::map<std::string,std::vector<std::pair<std::string,float> > >::iterator git = _pointData[it->first][it->second[j].first].begin(); git != _pointData[it->first][it->second[j].first].end(); ++git)
+				{
+				    for(int k = 0; k < git->second.size(); ++k)
+				    {
+					float dist = fabs(hitValue - git->second[k].second);
+					if(dist < minDist)
+					{
+					    minDist = dist;
+					    minGroup = git->first;
+					    minID = git->second[k].first;
+					    minVal = git->second[k].second;
+					}
+				    }
+				}
+
+				if(minDist != FLT_MAX)
+				{
+				    std::stringstream hoverss;
+				    hoverss << it->first << " : ";
+				    hoverss << it->second[j].first << std::endl;
+				    hoverss << minGroup << " : " << minID << std::endl;
+				    hoverss << "Value: " << minVal << " " << _axisUnits;
+
+				    _hoverText->setText(hoverss.str());
+
+				    _hoverGroup = it->first;
+				    _hoverItem = it->second[j].first;
+				    _hoverPointGroup = minGroup;
+				    _hoverPointID = minID;
+
+				    hoverValue = minVal;
+				    hoverx = ((barRight - barLeft) / 2.0) + barLeft;
+
+				    hoverSet = true;
+				}
+
+				/*if(hitValue <= it->second[j].second)
 				{
 				    std::stringstream hoverss;
 				    hoverss << it->first << std::endl;
@@ -478,7 +522,7 @@ void GroupedBarGraphWPoints::setHover(osg::Vec3 intersect)
 				    _hoverItem = it->second[j].first;
 
 				    hoverSet = true;
-				}
+				}*/
 			    }
 			}
 
@@ -530,6 +574,8 @@ void GroupedBarGraphWPoints::setHover(osg::Vec3 intersect)
 				}
 			    }
 
+			    //TODO fix for point hover if needed
+
 			    if(hitValue <= _data[_customDataOrder[i].first][_customDataOrder[i].second].second)
 			    {
 				std::stringstream hoverss;
@@ -560,12 +606,35 @@ void GroupedBarGraphWPoints::setHover(osg::Vec3 intersect)
 
     if(hoverSet)
     {
+	float hoverz;
+	switch(_axisType)
+	{
+	    default:
+	    case BGAT_LINEAR:
+		{
+		    hoverz = ((hoverValue - _minDisplayRange) / (_maxDisplayRange - _minDisplayRange)) * (_graphTop - _graphBottom);
+		    hoverz += _graphBottom;
+
+		    break;
+		}
+	    case BGAT_LOG:
+		{
+		    hoverValue = log10(hoverValue);
+		    float logMin = log10(_minDisplayRange);
+		    float logMax = log10(_maxDisplayRange);
+		    hoverz = ((hoverValue - logMin) / (logMax - logMin)) * (_graphTop - _graphBottom);
+		    hoverz += _graphBottom;
+
+		    break;
+		}
+	}
+
 	_hoverText->setCharacterSize(1.0);
 	_hoverText->setAlignment(osgText::Text::LEFT_TOP);
 	osg::BoundingBox bb = _hoverText->getBound();
 	float csize = targetHeight / (bb.zMax() - bb.zMin());
 	_hoverText->setCharacterSize(csize);
-	_hoverText->setPosition(osg::Vec3(intersect.x(),-2.5,intersect.z()));
+	_hoverText->setPosition(osg::Vec3(hoverx,-2.5,hoverz));
 
 	float bgheight = (bb.zMax() - bb.zMin()) * csize;
 	float bgwidth = (bb.xMax() - bb.xMin()) * csize;
@@ -573,10 +642,10 @@ void GroupedBarGraphWPoints::setHover(osg::Vec3 intersect)
 	if(verts)
 	{
 	    //std::cerr << "Setting bg x: " << intersect.x() << " z: " << intersect.z() << " width: " << bgwidth << " height: " << bgheight << std::endl;
-	    verts->at(0) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z()-bgheight);
-	    verts->at(1) = osg::Vec3(intersect.x()+bgwidth,-2,intersect.z());
-	    verts->at(2) = osg::Vec3(intersect.x(),-2,intersect.z());
-	    verts->at(3) = osg::Vec3(intersect.x(),-2,intersect.z()-bgheight);
+	    verts->at(0) = osg::Vec3(hoverx+bgwidth,-2,hoverz-bgheight);
+	    verts->at(1) = osg::Vec3(hoverx+bgwidth,-2,hoverz);
+	    verts->at(2) = osg::Vec3(hoverx,-2,hoverz);
+	    verts->at(3) = osg::Vec3(hoverx,-2,hoverz-bgheight);
 	    verts->dirty();
 	    _hoverBGGeom->dirtyDisplayList();
 	}
@@ -585,6 +654,8 @@ void GroupedBarGraphWPoints::setHover(osg::Vec3 intersect)
     {
 	_hoverGroup = "";
 	_hoverItem = "";
+	_hoverPointGroup = "";
+	_hoverPointID = "";
     }
 
     if(hoverSet && !_hoverGeode->getNumParents())
@@ -611,6 +682,8 @@ void GroupedBarGraphWPoints::clearHoverText()
 
     _hoverGroup = "";
     _hoverItem = "";
+    _hoverPointGroup = "";
+    _hoverPointID = "";
 }
 
 void GroupedBarGraphWPoints::selectItems(std::string & group, std::vector<std::string> & keys)
@@ -793,8 +866,35 @@ void GroupedBarGraphWPoints::selectItems(std::map<std::string,std::vector<std::s
     geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,verts->size()));
 }
 
+void GroupedBarGraphWPoints::selectOther(std::map<std::string,std::vector<std::string> > & selectMap)
+{
+    _selectedOther = selectMap;
+
+    if(selectMap.size())
+    {
+	_depth->setWriteMask(true);
+    }
+    else
+    {
+	_depth->setWriteMask(false);
+    }
+
+    updateColors();
+    update();
+}
+
 bool GroupedBarGraphWPoints::processClick(osg::Vec3 & hitPoint, std::string & selectedGroup, std::vector<std::string> & selectedKeys)
 {
+    //std::cerr << "processClick: g: " << _hoverPointGroup << " id: " << _hoverPointID << std::endl;
+    if(!_hoverPointGroup.empty() && !_hoverPointID.empty())
+    {
+	selectedGroup = _hoverPointGroup;
+	selectedKeys.push_back(_hoverPointID);
+	return true;
+    }
+
+    return false;
+    
     float halfWidth = _barWidth * 0.75 * 0.5;
 
     float groupLabelTop = _graphTop + _groupLabelMult * _topPaddingMult * _height;
@@ -1131,9 +1231,9 @@ void GroupedBarGraphWPoints::makeGraph()
     updateColors();
 
     stateset = _pointGeom->getOrCreateStateSet();
-    osg::Depth * depth = new osg::Depth();
-    depth->setWriteMask(false);
-    stateset->setAttributeAndModes(depth,osg::StateAttribute::ON);
+    _depth = new osg::Depth();
+    _depth->setWriteMask(false);
+    stateset->setAttributeAndModes(_depth,osg::StateAttribute::ON);
     stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
     stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
 }
@@ -1384,6 +1484,8 @@ void GroupedBarGraphWPoints::updateGraph()
 	    float currentPos = positionMap[pit->first][pit2->first];
 	    for(pit3 = pit2->second.begin(); pit3 != pit2->second.end(); ++pit3)
 	    {
+		std::map<std::string,std::vector<std::string> >::iterator selectIt = _selectedOther.find(pit3->first);
+
 		for(int i = 0; i < pit3->second.size(); ++i)
 		{
 		    float value = pit3->second[i].second;
@@ -1396,6 +1498,20 @@ void GroupedBarGraphWPoints::updateGraph()
 			value = _minDisplayRange;
 		    }
 		    
+		    float pointDepth = -1.5;
+
+		    if(selectIt != _selectedOther.end())
+		    {
+			for(int j = 0; j < selectIt->second.size(); ++j)
+			{
+			    if(pit3->second[i].first == selectIt->second[j])
+			    {
+				pointDepth = -1.9;
+				break;
+			    }
+			}
+		    }
+
 		    {
 			switch(_axisType)
 			{
@@ -1404,10 +1520,10 @@ void GroupedBarGraphWPoints::updateGraph()
 				    float barHeight = ((value - _minDisplayRange) / (_maxDisplayRange - _minDisplayRange)) * (_graphTop - _graphBottom);
 				    barHeight += _graphBottom;
 
-				    verts->at(vertIndex) = osg::Vec3(currentPos+phalfWidth,-1.5,barHeight+phalfWidth);
-				    verts->at(vertIndex+1) = osg::Vec3(currentPos+phalfWidth,-1.5,barHeight-phalfWidth);
-				    verts->at(vertIndex+2) = osg::Vec3(currentPos-phalfWidth,-1.5,barHeight-phalfWidth);
-				    verts->at(vertIndex+3) = osg::Vec3(currentPos-phalfWidth,-1.5,barHeight+phalfWidth);
+				    verts->at(vertIndex) = osg::Vec3(currentPos+phalfWidth,pointDepth,barHeight+phalfWidth);
+				    verts->at(vertIndex+1) = osg::Vec3(currentPos+phalfWidth,pointDepth,barHeight-phalfWidth);
+				    verts->at(vertIndex+2) = osg::Vec3(currentPos-phalfWidth,pointDepth,barHeight-phalfWidth);
+				    verts->at(vertIndex+3) = osg::Vec3(currentPos-phalfWidth,pointDepth,barHeight+phalfWidth);
 
 				    break;
 				}
@@ -1419,10 +1535,10 @@ void GroupedBarGraphWPoints::updateGraph()
 				    float barHeight = ((value - logMin) / (logMax - logMin)) * (_graphTop - _graphBottom);
 				    barHeight += _graphBottom;
 
-				    verts->at(vertIndex) = osg::Vec3(currentPos+phalfWidth,-1.5,barHeight+phalfWidth);
-				    verts->at(vertIndex+1) = osg::Vec3(currentPos+phalfWidth,-1.5,barHeight-phalfWidth);
-				    verts->at(vertIndex+2) = osg::Vec3(currentPos-phalfWidth,-1.5,barHeight-phalfWidth);
-				    verts->at(vertIndex+3) = osg::Vec3(currentPos-phalfWidth,-1.5,barHeight+phalfWidth);
+				    verts->at(vertIndex) = osg::Vec3(currentPos+phalfWidth,pointDepth,barHeight+phalfWidth);
+				    verts->at(vertIndex+1) = osg::Vec3(currentPos+phalfWidth,pointDepth,barHeight-phalfWidth);
+				    verts->at(vertIndex+2) = osg::Vec3(currentPos-phalfWidth,pointDepth,barHeight-phalfWidth);
+				    verts->at(vertIndex+3) = osg::Vec3(currentPos-phalfWidth,pointDepth,barHeight+phalfWidth);
 
 				    break;
 				}
@@ -1993,6 +2109,9 @@ void GroupedBarGraphWPoints::updateColors()
 
     int colorIndex = 0;
 
+    float pSelectedAlpha = 1.0;
+    float pUnselectedAlpha = 0.25;
+
     std::map<std::string,std::map<std::string,std::map<std::string,std::vector<std::pair<std::string,float> > > > >::iterator pit;
     std::map<std::string,std::map<std::string,std::vector<std::pair<std::string,float> > > >::iterator pit2;
     std::map<std::string,std::vector<std::pair<std::string,float> > >::iterator pit3;
@@ -2011,13 +2130,46 @@ void GroupedBarGraphWPoints::updateColors()
 		{
 		    groupColor = _defaultGroupColor;
 		}
+		
 		groupColor.w() = pointAlpha;
+
+		std::map<std::string,std::vector<std::string> >::iterator groupIt = _selectedOther.find(pit3->first);
+
 		for(int i = 0; i < pit3->second.size(); ++i)
 		{
+		    if(_selectedOther.size() == 0)
+		    {
+			groupColor.w() = pointAlpha;
+		    }
+		    else
+		    {
+			if(groupIt == _selectedOther.end())
+			{
+			    groupColor.w() = pUnselectedAlpha;
+			}
+			else if(groupIt->second.size() == 0)
+			{
+			    groupColor.w() = pSelectedAlpha;
+			}
+			else
+			{
+			    groupColor.w() = pUnselectedAlpha;
+			    for(int j = 0; j < groupIt->second.size(); ++j)
+			    {
+				if(pit3->second[i].first == groupIt->second[j])
+				{
+				    groupColor.w() = pSelectedAlpha;
+				    break;
+				}
+			    }
+			}
+		    }
+
 		    colors->at(colorIndex+0) = groupColor;
 		    colors->at(colorIndex+1) = groupColor;
 		    colors->at(colorIndex+2) = groupColor;
 		    colors->at(colorIndex+3) = groupColor;
+		    
 		    colorIndex += 4;
 		}
 	    }

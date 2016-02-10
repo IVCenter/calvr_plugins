@@ -5,7 +5,7 @@
 #include <fstream>
 #include <vector>
 
-DBManager::DBManager(std::string database, std::string server, std::string user, std::string password, std::string cacheDir)
+DBManager::DBManager(std::string database, std::string server, std::string user, std::string password, std::string cacheDir, bool useCache)
 {
     _conn = new mysqlpp::Connection(false);
     if(!_conn->connect(database.c_str(),server.c_str(),user.c_str(),password.c_str()))
@@ -15,7 +15,7 @@ DBManager::DBManager(std::string database, std::string server, std::string user,
 	_conn = NULL;
     }
 
-    _useCache = true;
+    _useCache = useCache;
 
     if(!cacheDir.empty())
     {

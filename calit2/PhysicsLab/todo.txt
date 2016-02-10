@@ -1,0 +1,10 @@
+- keep balls from falling asleep/unresponsive
+- more balls?
+- different texture on trampoline; find trampoline model
+- more details on texture of play box
+- measure time it takes to win, show leaderboard
+- when someone hits the ring for the first time, take a configuration
+  screenshot to look at later
+- target needs to be a unique 3D model - remove 2nd (vertical) ring. maybe
+  model something more like a basket. Have player collect all balls in the
+  basket instead of just one.
