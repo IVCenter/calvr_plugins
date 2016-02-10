@@ -11,7 +11,11 @@
 
 #include <tiffio.h>
 
+#ifndef WIN32
 #include <sys/time.h>
+#else
+#include <cvrUtil/TimeOfDay.h>
+#endif
 
 struct sph_task;
 class sph_cache;

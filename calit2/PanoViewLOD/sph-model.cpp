@@ -10,6 +10,10 @@
 //  MERCHANTABILITY  or FITNESS  FOR A  PARTICULAR PURPOSE.   See  the GNU
 //  General Public License for more details.
 
+#ifdef WIN32
+#define NOMINMAX
+#endif
+
 #include <GL/glew.h>
 #include <cmath>
 #include <cstdio>
@@ -18,6 +22,7 @@
 #include <limits>
 
 #include <iostream>
+#include <algorithm>
 
 #include "math3d.h"
 #include "glyph.h"
@@ -398,17 +403,17 @@ void sph_model::draw(const double *P, const double *V, const int *fv, int fc,
     {
 	if(!wireframe)
 	{
-	    glUniform1f(glGetUniformLocation(program, "zoomk"), zoomk);
+	    glUniform1f(glGetUniformLocation(program, "zoomk"), (float)zoomk);
 	    glUniform1f(glGetUniformLocation(program, "globalAlpha"), alpha);
 	    glUniform3f(glGetUniformLocation(program, "zoomv"),
-                    zoomv[0], zoomv[1], zoomv[2]);
+			(float)zoomv[0], (float)zoomv[1], (float)zoomv[2]);
 	}
 	else
 	{
-	    glUniform1f(glGetUniformLocation(color_program, "zoomk"), zoomk);
+		glUniform1f(glGetUniformLocation(color_program, "zoomk"), (float)zoomk);
 	    glUniform1f(glGetUniformLocation(color_program, "globalAlpha"), alpha);
 	    glUniform3f(glGetUniformLocation(color_program, "zoomv"),
-                    zoomv[0], zoomv[1], zoomv[2]);
+			(float)zoomv[0], (float)zoomv[1], (float)zoomv[2]);
 	}
 
         for (int i = 0; i < 6; ++i)
@@ -557,10 +562,10 @@ void sph_model::draw_face(const int *fv, int fc,
 	    //glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 	    //std::cerr << "t: " << t << " b: " << b << " l: " << l << " r: " << r << std::endl;
 	    glBegin(GL_QUADS);
-	    glVertex2f(l,t);
-	    glVertex2f(l,b);
-	    glVertex2f(r,b);
-	    glVertex2f(r,t);
+		glVertex2f((float)l, (float)t);
+		glVertex2f((float)l, (float)b);
+		glVertex2f((float)r, (float)b);
+		glVertex2f((float)r, (float)t);
 	    glEnd();
 	}
     }
@@ -582,12 +587,12 @@ void sph_model::set_fade(double k)
     if(!wireframe)
     {
 	glUseProgram(program);
-	glUniform1f(fader, k);
+	glUniform1f(fader, (float)k);
     }
     else
     {
 	glUseProgram(color_program);
-	glUniform1f(color_fader, k);
+	glUniform1f(color_fader, (float)k);
     }
 }
 
@@ -795,13 +800,13 @@ void sph_model::free_arrays()
 void sph_model::init_color_tex(int depth)
 {
     static const GLfloat colors[][4] = {
-	{0.89412,0.10196,0.109804,1.0},
-	{0.21569,0.49412,0.72157,1.0},
-	{0.302,0.6863,0.2902,1.0},
-	{0.59608,0.305882,0.63922,1.0},
-	{1.0,0.5,0,1.0},
-	{0.9,0.0,1.0,1.0},
-	{0.6510,0.3373,0.15686,1.0}
+	{0.89412f,0.10196f,0.109804f,1.0f},
+	{0.21569f,0.49412f,0.72157f,1.0f},
+	{0.302f,0.6863f,0.2902f,1.0f},
+	{0.59608f,0.305882f,0.63922f,1.0f},
+	{1.0f,0.5f,0.0f,1.0f},
+	{0.9f,0.0f,1.0f,1.0f},
+	{0.6510f,0.3373f,0.15686f,1.0f}
     };
 
     for(int i = 0; i <= depth; ++i)
