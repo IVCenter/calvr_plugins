@@ -395,7 +395,11 @@ void PanoDrawableLOD::setDebug(bool d)
     }
 }
 
+#if ( OSG_VERSION_LESS_THAN(3, 4, 0) )
 osg::BoundingBox PanoDrawableLOD::computeBound() const
+#else
+osg::BoundingBox PanoDrawableLOD::computeBoundingBox() const
+#endif
 {
     osg::Vec3 size2(_radius, _radius, _radius);
     _boundingBox.init();
@@ -405,7 +409,11 @@ osg::BoundingBox PanoDrawableLOD::computeBound() const
 
 void PanoDrawableLOD::updateBoundingBox()
 {
+#if ( OSG_VERSION_LESS_THAN(3, 4, 0) )
     computeBound();
+#else
+	computeBoundingBox();
+#endif
     dirtyBound();
 }
 
