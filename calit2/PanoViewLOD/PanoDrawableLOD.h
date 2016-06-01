@@ -21,6 +21,7 @@
 #include "sph-cache.hpp"
 #include "sph-model.hpp"
 
+#include <osg/Version>
 #include <OpenThreads/Mutex>
 
 #include <string>
@@ -87,7 +88,11 @@ class PanoDrawableLOD : public osg::Drawable
         virtual bool isSameKindAs(const Object* obj) const { return dynamic_cast<const PanoDrawableLOD*>(obj)!=NULL; }
         virtual const char* libraryName() const { return "PanoView"; }
         virtual const char* className() const { return "PanoDrawableLOD"; }
+#if ( OSG_VERSION_LESS_THAN(3, 4, 0) )
         virtual osg::BoundingBox computeBound() const;
+#else
+		virtual osg::BoundingBox computeBoundingBox() const;
+#endif
         virtual void updateBoundingBox();
 
         virtual void drawImplementation(osg::RenderInfo&) const;
