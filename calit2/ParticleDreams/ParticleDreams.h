@@ -370,7 +370,7 @@ class ParticleDreams : public cvr::CVRPlugin, public cvr::MenuCallback, public c
        //
        void injectorSetMaxnumNum(int maxNumber);
        int injectorGetMaxnumNum(void);
-		enum axisIsUp{axisUpX,axisUpY,axisUpZ} ;// transformatios not implimented yet
+		enum axisIsUp{axisUpX,axisUpY,axisUpZ} ;// transformatios not implemented yet
 		void injectorSetType (int injtNumber,int type);
 		void injectorSetDifaults(int injtNumber);
 		void injectorSetInjtRatio (int injtNumber,float injtRatio);

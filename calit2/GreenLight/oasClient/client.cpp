@@ -313,7 +313,7 @@ void sendFile(const char *filename, int socketFD)
         
         if (bytesWritten == 0 || bytesWritten == -1)
         {
-            std::cerr << "Error occured sending file to server!\n";
+            std::cerr << "Error occurred sending file to server!\n";
             break;
         }
         dataPtr += bytesWritten;

@@ -48,7 +48,7 @@ class DSTexturePallette: public DesignStateBase
 
   protected:
 
-    // OSG objects as decendents in DSTexturePallette
+    // OSG objects as descendants in DSTexturePallette
     osg::Switch *mIdleStateSwitch, *mSelectStateSwitch, *mAlphaTurnerSwitch;
     osg::ShapeDrawable *mSD;
     ColorSelector *mColorSelector;

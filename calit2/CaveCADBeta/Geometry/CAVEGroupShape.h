@@ -1,7 +1,7 @@
 /***************************************************************
 * File Name: CAVEGroupShape.h
 *
-* Description: Derived class from CAVEGroup, direct decendent
+* Description: Derived class from CAVEGroup, direct descendant
 * of 'DesignObjectHandler::mCAVEGeodeShapeSwitch' as container
 * of CAVEGeodeShape objects.
 *

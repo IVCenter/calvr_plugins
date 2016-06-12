@@ -58,7 +58,7 @@ void DSGeometryEditor::setObjectEnabled(bool flag)
         mDOGeometryEditor->setToolkitEnabled(true);
         mDOGeometryEditor->setActiveIconToolkit(NULL);
 
-        /* using the locked flag to gurantee that no state switch is allowed when geometries are selected,
+        /* using the locked flag to guarantee that no state switch is allowed when geometries are selected,
            the flag is released when the CAVEGeodeShape vector of 'DOGeometryCollector' is empty.  */
         setLocked(true);
     } 

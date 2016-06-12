@@ -1,6 +1,6 @@
 /**
  * @file BufferManager.h
- * Contains managment class for large ram buffers and vbos to hold vertex data 
+ * Contains management class for large ram buffers and vbos to hold vertex data 
  *
  * @author Andrew Prudhomme (aprudhomme@ucsd.edu)
  *

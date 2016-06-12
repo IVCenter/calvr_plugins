@@ -71,7 +71,7 @@ bool GML::loadFile(std::string filename)
 	string s;
   	getline( ifs, s );
 
-	// seperate line into substrings	
+	// separate line into substrings	
 	stringstream ss(s);
 	string buf;	
 	vector<string> tokens; // Create vector to hold our words
@@ -101,7 +101,7 @@ bool GML::loadFile(std::string filename)
 			// get line from input
   			getline( ifs, s );
 	
-			// seperate line into substrings	
+			// separate line into substrings	
 			stringstream ss(s);
 			string buf;	
 			vector<string> tokens; // Create vector to hold our words
@@ -202,7 +202,7 @@ bool GML::loadFile(std::string filename)
 		{
   			getline( ifs, s );
 
-			// seperate line into substrings        
+			// separate line into substrings        
                         stringstream ss(s);
                         string buf;
                         vector<string> tokens; // Create vector to hold our words

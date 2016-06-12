@@ -124,7 +124,7 @@ bool CullingMultiGPURender::init()
     //filename = "/remote/temp/veryLargeFinal"; // temp placement
 
     printf("Number of gpus found is %d\n", _renderer->getNumGPUs());
-    // create and init animation managment class
+    // create and init animation management class
     _chcAnimate = new ChcAnimate(filename, _renderer->getNumGPUs());
     _renderer->setPartMap( (std::map<int, PartInfo*> *) _chcAnimate->getGeometryMap());
 

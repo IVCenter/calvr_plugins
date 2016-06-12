@@ -49,7 +49,7 @@ extern const struct VecPlane VECPLANE_NULL;
 extern void copyVector3(Vector3, const Vector3);
 ///copy the 3 values of the input vector into the output vector
 extern void copyVector3Values(Vector3, const double, const double, const double);
-///copy the 3 values of the substraction of the two input vectors into the output vector
+///copy the 3 values of the subtraction of the two input vectors into the output vector
 extern void diffVector3(Vector3, const Vector3, const Vector3);
 ///copy the 3 values of the addition of the two input vectors into the output vector
 extern void addVector3(Vector3 result, const Vector3, const Vector3);

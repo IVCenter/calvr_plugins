@@ -48,7 +48,7 @@ class CullingMultiGPURender : public cvr::CVRPlugin
 
         std::vector<osg::ref_ptr<PreDrawHook> > _drawHookList;  ///< list of objects that provide the predraw callbacks from osg
 
-        ChcAnimate * _chcAnimate;       ///< the animation managment class
+        ChcAnimate * _chcAnimate;       ///< the animation management class
         osg::Camera * _camera;          ///< osg camera to get view and projection matrices from
 };
 

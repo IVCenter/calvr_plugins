@@ -1,7 +1,7 @@
 /***************************************************************
 * File Name: CAVEGroupEditWireframe.h
 *
-* Description: Derived class from CAVEGroup, decendent of
+* Description: Derived class from CAVEGroup, descendant of
 * 'CAVEGroupIconSurface' as container 'CAVEGroupEditWireframe' 
 * objects under 'DesignObjectHandler::mCAVEGeodeIconSurfaceSwitch'
 *

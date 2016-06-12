@@ -33,7 +33,7 @@ class PointsOOC : public cvr::CVRPlugin, public cvr::MenuCallback, public cvr::F
 {
   protected:
 
-	// persistant data to save for point data
+	// persistent data to save for point data
 	struct Loc
 	{
 		osg::Matrix pos;

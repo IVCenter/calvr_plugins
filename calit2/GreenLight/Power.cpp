@@ -281,7 +281,7 @@ void GreenLight::createTimestampMenus()
     std::vector<std::string> months;
     months.push_back("January");
 
-    months.push_back("Febuary");
+    months.push_back("February");
     months.push_back("March");
     months.push_back("April");
     months.push_back("May");
