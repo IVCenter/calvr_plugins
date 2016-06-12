@@ -49,7 +49,7 @@ get andrew to do code for
 slides xyz vextor slide name.
 on off.
 reset navagation
-navagate under program controll?
+navagate under program control?
 
 need to fadeout sound 3
 texture_12

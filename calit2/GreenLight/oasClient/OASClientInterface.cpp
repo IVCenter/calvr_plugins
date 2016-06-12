@@ -159,7 +159,7 @@ bool oasclient::OASClientInterface::sendFile(const std::string &sPath, const std
         // Write a chunk of data out to the socket
         bytesWritten = write(oasclient::OASClientInterface::_socketFD, dataPtr, bytesLeft);
 
-        // If an error occured, return failure
+        // If an error occurred, return failure
         if (bytesWritten == 0 || bytesWritten == -1)
         {
             return false;

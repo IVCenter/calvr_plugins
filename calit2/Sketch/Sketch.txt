@@ -9,4 +9,4 @@ ModelDir - path to directory of model files, looks for:
 	fileIcon.obj  fileIcon.mtl
 
 GridSize - a positive integer for grid snapping, 1 for off
-OrientToViewer - on or off, controlls rotation of shapes to face viewer
+OrientToViewer - on or off, controls rotation of shapes to face viewer

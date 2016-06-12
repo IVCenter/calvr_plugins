@@ -283,7 +283,7 @@ void MVSim::menuCallback(MenuItem * item)
             headMats.erase(it);
         }
 
-        // load head matrices from file and store them as neccessary
+        // load head matrices from file and store them as necessary
         loadHeadMatrices();
     }
     else if (item == showDiagramBox)

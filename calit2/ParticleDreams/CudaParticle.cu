@@ -95,7 +95,7 @@ __device__ void  injector2(unsigned int arrayLoc,unsigned int posLoc,int injNum,
        injdata[injNum][2][0];//x,y,z position
        injdata[injNum][3][0];//x,y,z velocity
        injdata[injNum][4][0];//x,y,z size
-       injdata[injNum][5][0];//t,u,v jiter v not implimented = speed 
+       injdata[injNum][5][0];//t,u,v jiter v not implemented = speed 
        injdata[injNum][6][0];//speed jiter ~ 
        injdata[injNum][7][0];//centrality of rnd distribution speed dt tu 
 
@@ -111,7 +111,7 @@ __device__ void  injector2(unsigned int arrayLoc,unsigned int posLoc,int injNum,
     //float rnd6 = (distRnd1(pdata[arrayLoc+6],1) );
     vx = injdata[injNum][3][0];vy = injdata[injNum][3][1];vz = injdata[injNum][3][2];//direction of spray	
 
-    dt = injdata[injNum][5][0];du = injdata[injNum][5][1];// dv = injdata[injecti +17] * 0;// z component not implimented jitterelitive to direction of spreay
+    dt = injdata[injNum][5][0];du = injdata[injNum][5][1];// dv = injdata[injecti +17] * 0;// z component not implemented jitterelitive to direction of spreay
 
 
 
@@ -159,7 +159,7 @@ __device__ void  injector2(unsigned int arrayLoc,unsigned int posLoc,int injNum,
     }
     // size computation  xform  to dt du dv
 
-    dt = injdata[injNum][4][0];du = injdata[injNum][4][1];//dv = injdata[injecti +14] * 0;//re use varables z component not implimented jitterelitive to direction of spreay
+    dt = injdata[injNum][4][0];du = injdata[injNum][4][1];//dv = injdata[injecti +14] * 0;//re use varables z component not implemented jitterelitive to direction of spreay
     dxt = dx *dt;dyt = dy * dt;dzt = dz *dt;
     dxu = dx2 *du;dyu = dy2 * du;dzu = dz2 *du;
 

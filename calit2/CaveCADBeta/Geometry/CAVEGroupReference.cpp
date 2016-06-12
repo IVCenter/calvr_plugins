@@ -143,7 +143,7 @@ void CAVEGroupReferenceAxis::updateUnitGridSizeInfo(const string &infoStr)
 * 'wireFrameVect': Lengths vector of the wire frame, used to
 *  decide the size of axis system. 'solidShapeVect': Diagonal
 *  vector of the actual solid shape, used to print out numbers
-*  of dimentions that showed on each axis.
+*  of dimensions that showed on each axis.
 *
 ***************************************************************/
 void CAVEGroupReferenceAxis::updateDiagonal(const osg::Vec3 &wireFrameVect, const osg::Vec3 &solidShapeVect)

@@ -328,7 +328,7 @@ bool GreenLight::init()
     /*** OSG EARTH PLUGIN INITIALIZATION ***/
 
 #ifdef WITH_OSGEARTH
-    mapVariable = NULL; // doesn't seem neccessary.
+    mapVariable = NULL; // doesn't seem necessary.
     osgEarth::MapNode* mapNode = MapNode::findMapNode( SceneManager::instance()->getObjectsRoot() ); 
 #else
     double * mapNode = NULL;
@@ -544,7 +544,7 @@ void GreenLight::menuCallback(cvr::MenuItem * item)
 
     if (item == _showSceneCheckbox)
     {
-    // Load as neccessary
+    // Load as necessary
     if (!_box)
     {
         InitializeOASClient();            

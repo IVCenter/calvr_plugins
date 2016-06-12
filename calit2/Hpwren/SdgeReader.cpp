@@ -103,7 +103,7 @@ SdgeReader::SdgeReader(std::string url, std::map<std::string, Sensor > & sensors
 					//std::cerr << "Wind direction: " << data.direction << std::endl;
 				}
 
-				// get temperature (not imediately after 3rd element along)
+				// get temperature (not immediately after 3rd element along)
 				for(int i = 0; i < 2; i++)
 				{
 					foundsub = test.find("</td><td>");

@@ -128,7 +128,7 @@ bool Site::loadFile(string filename)
 		{
 			std::stringstream ss;
 
-                        // read in line by line and then seperate by space
+                        // read in line by line and then separate by space
                         myfile.getline(str,255); 
                         ss << str;
 
@@ -172,7 +172,7 @@ bool Site::loadFile(string filename)
 		{
 			std::stringstream ss;
 
-			// read in line by line and then seperate by space
+			// read in line by line and then separate by space
 			myfile.getline(str,255); 
                   	ss << str;
 

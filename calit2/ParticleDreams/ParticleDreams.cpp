@@ -3710,7 +3710,7 @@ int ParticleDreams::loadReflFrScr()
 			h_reflectorData[reflNum ][1][0]=xpos;    h_reflectorData[reflNum ][1][1]= ypos;h_reflectorData[reflNum ][1][2]=zpos;//x,y,z position
 			h_reflectorData[reflNum ][2][0]= vx;  h_reflectorData[reflNum ][2][1]=vy;    h_reflectorData[reflNum ][2][2]=vz;//x,y,z normal
 			h_reflectorData[reflNum ][3][0]=screenrad; h_reflectorData[reflNum ][3][1]=0.00; h_reflectorData[reflNum ][3][2]=0;//reflector radis ,~,~ 
-			h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implimented = speed 
+			h_reflectorData[reflNum ][4][0]=0.000;h_reflectorData[reflNum ][4][1]=0.000;h_reflectorData[reflNum ][4][2]=0.000;//t,u,v jiter  not implemented = speed 
 			h_reflectorData[reflNum ][5][0]= damping; h_reflectorData[reflNum ][5][1]=no_traping;  h_reflectorData[reflNum ][5][2]=0.0;//reflectiondamping , no_traping ~
 			h_reflectorData[reflNum ][6][0]=0;    h_reflectorData[reflNum ][6][1]=0;    h_reflectorData[reflNum ][6][2]=0;// not implemented yet centrality of rnd distribution speed dt tu ~
 
@@ -5387,12 +5387,12 @@ void ParticleDreams::injectorSetSize (int injtNum,float x,float y, float z, axis
 
 void ParticleDreams::injectorSetSpeedDist (int injtNum,float du,float dv, float dt, axisIsUp up)
 	{
-		h_injectorData[injtNum][5][0]=du;h_injectorData[injtNum][5][1]=dv;h_injectorData[injtNum][5][2]=dt;//t,u,v jiter v not implimented = speed 
+		h_injectorData[injtNum][5][0]=du;h_injectorData[injtNum][5][1]=dv;h_injectorData[injtNum][5][2]=dt;//t,u,v jiter v not implemented = speed 
 	}
 
 void ParticleDreams::injectorSetSpeedJitter (int injtNum,float du,float dv, float dt, axisIsUp up)
 	{
-		h_injectorData[injtNum][6][0]=du;h_injectorData[injtNum][6][1]=dv;h_injectorData[injtNum][6][2]=dt;//t,u,v jiter v not implimented = speed 
+		h_injectorData[injtNum][6][0]=du;h_injectorData[injtNum][6][1]=dv;h_injectorData[injtNum][6][2]=dt;//t,u,v jiter v not implemented = speed 
 	}
 
 void ParticleDreams::injectorSetSpeedCentrality (int injtNum,float du,float dv, float dt, axisIsUp up)

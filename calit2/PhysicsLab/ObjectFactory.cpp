@@ -188,7 +188,7 @@ MatrixTransform* ObjectFactory::addCustomObject( std::string path, double scale,
         customId = bh->addCustomObject( path, tv.getTriangles(), scale, pos, rot, phys, restitution );
     }
    
-    // the matrix transform that holds the object picking needs to be set no the object else duplicate objects can not have a seperate state 
+    // the matrix transform that holds the object picking needs to be set no the object else duplicate objects can not have a separate state 
     if (!pickable) 
         mt->setNodeMask(~2);
 

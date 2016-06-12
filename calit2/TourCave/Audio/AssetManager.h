@@ -19,7 +19,7 @@ public:
 
 	// Must call Init() to load project in Asset Manager
 	bool Init();
-	// Must call Destory() to unload project in Asset Manager
+	// Must call Destroy() to unload project in Asset Manager
 	bool Destroy();
 
 	void Mute(bool onoff);

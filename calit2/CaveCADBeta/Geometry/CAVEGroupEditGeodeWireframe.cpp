@@ -307,7 +307,7 @@ void CAVEGroupEditGeodeWireframe::applyRotation(const osg::Vec3s &axisSVect, con
 /***************************************************************
 * Function: applyScaling()
 *
-* 'gridUnitScaleVect' is guranteed to be non-negative vector
+* 'gridUnitScaleVect' is guaranteed to be non-negative vector
 *
 ***************************************************************/
 void CAVEGroupEditGeodeWireframe::applyScaling( const short &nOffsetSegs, const Vec3 &gridUnitScaleVect, 

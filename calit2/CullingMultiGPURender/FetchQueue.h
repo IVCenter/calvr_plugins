@@ -19,7 +19,7 @@ struct Request
 {
 	int frame;  /// frame number for geometry that is requested.
 	Geometry* geom; /// pointer to requested object which contains file offset info.
-        char * buffer; /// pointer where data should be transfered.
+        char * buffer; /// pointer where data should be transferred.
 };
 
 /** FetchQueue class is a threadsafe queue classes used for 

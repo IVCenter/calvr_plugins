@@ -117,5 +117,5 @@ MatrixTransform * GreenLight::InitSmoke()
     cvr::PluginHelper::getObjectsRoot()->addChild( MPP );
     /***************************************/
 
-    return test_MT; // probably unneccesary...
+    return test_MT; // probably unnecessary...
 }

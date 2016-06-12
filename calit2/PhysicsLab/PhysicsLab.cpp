@@ -368,7 +368,7 @@ void PhysicsLab::preFrame()
       // hack to keep playing sounds when balls go in
       //wonGame = true;
       
-      // resets the winding state so it will imediately be able to trigger the winning sound
+      // resets the winding state so it will immediately be able to trigger the winning sound
       of->resetGame();
       
       //////

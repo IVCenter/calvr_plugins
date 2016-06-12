@@ -1,7 +1,7 @@
 /***************************************************************
 * File Name: CAVEGroupIconSurface.h
 *
-* Description: Derived class from CAVEGroup, decendent of
+* Description: Derived class from CAVEGroup, descendant of
 * 'DesignObjectHandler::mCAVEGeodeIconSurfaceSwitch' as container
 * of CAVEGeodeIconSurface objects.
 *

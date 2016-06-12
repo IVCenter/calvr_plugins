@@ -184,7 +184,7 @@ class CAVEGeodeIconToolkitManipulate: public CAVEGeodeIconToolkit
     /* called by 'DOGeometryEditor' as reference sizes to apply scaling function */
     const osg::Vec3 &getBoundingVect() { return mBoundingVect; }
 
-    /* 'updateBoundingVect' is called before 'setMatrixTrans' to gurantee the right sizes of bounding box */
+    /* 'updateBoundingVect' is called before 'setMatrixTrans' to guarantee the right sizes of bounding box */
     void updateBoundingVect(const osg::Vec3 &boundingVect) { mBoundingVect = boundingVect; }
     virtual void setMatrixTrans(osg::MatrixTransform *matTrans); 
 

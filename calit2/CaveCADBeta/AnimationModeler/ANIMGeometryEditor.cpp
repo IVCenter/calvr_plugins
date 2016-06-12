@@ -48,7 +48,7 @@ void ANIMCreateSingleIconToolkitSwitchAnimation(int idx, ANIMIconToolkitSwitchEn
     PositionAttitudeTransform *iconToolkitPATransFwd = new PositionAttitudeTransform;
     PositionAttitudeTransform *iconToolkitPATransBwd = new PositionAttitudeTransform;
 
-    /* 'mSwitch' has two decendents for foward and backward animations */
+    /* 'mSwitch' has two descendants for foward and backward animations */
     (*iconToolkitEntry)->mSwitch->setAllChildrenOff();
     (*iconToolkitEntry)->mSwitch->addChild(iconToolkitPATransFwd);
     (*iconToolkitEntry)->mSwitch->addChild(iconToolkitPATransBwd);
