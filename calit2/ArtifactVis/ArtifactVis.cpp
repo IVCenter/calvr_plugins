@@ -41,6 +41,11 @@ bool ArtifactVis::init()
 
     _root = new osg::MatrixTransform();
 
+    // add a rotation so loads in correct orientation by default
+    osg::Matrix mat;
+    mat.makeRotate(PI * -0.5, osg::Vec3(1,0,0));
+    _root->setMatrix(mat);
+
     _avMenu = new SubMenu("ArtifactVis", "ArtifactVis");
     _avMenu->setCallback(this);
 
