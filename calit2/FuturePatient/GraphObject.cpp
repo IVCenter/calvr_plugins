@@ -8,6 +8,7 @@
 #include <sstream>
 #include <cstdlib>
 
+#include <octave/config.h>
 #include <octave/oct.h>
 #include <octave/octave.h>
 #include <octave/parse.h>

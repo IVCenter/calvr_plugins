@@ -16,8 +16,8 @@ class MicrobeVerticalBarGraphObject : public LayoutTypeObject, public MicrobeSel
         MicrobeVerticalBarGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~MicrobeVerticalBarGraphObject();
 
-        bool addGraph(std::string label, int patientid, std::string testLabel, time_t testTime, std::string microbeTableSuffix, std::string measureTableSuffix, MicrobeGraphType type = MGT_SPECIES);
-        bool addSpecialGraph(SpecialMicrobeGraphType smgt, std::string microbeTableSuffix, std::string measureTableSuffix, std::string region, MicrobeGraphType type = MGT_SPECIES);
+        bool addGraph(std::string label, int patientid, std::string testLabel, time_t testTime, std::string seqType, std::string microbeTableSuffix, std::string measureTableSuffix, MicrobeGraphType type = MGT_SPECIES);
+        bool addSpecialGraph(SpecialMicrobeGraphType smgt, std::string seqType, std::string microbeTableSuffix, std::string measureTableSuffix, std::string region, MicrobeGraphType type = MGT_SPECIES);
 
         virtual void objectAdded();
         virtual void objectRemoved();

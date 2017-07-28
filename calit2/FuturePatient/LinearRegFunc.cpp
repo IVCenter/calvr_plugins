@@ -2,6 +2,7 @@
 
 #include <cvrKernel/ComController.h>
 
+#include <octave/config.h>
 #include <octave/oct.h>
 #include <octave/octave.h>
 #include <octave/parse.h>

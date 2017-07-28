@@ -78,6 +78,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         void setupMicrobePatients();
         void setupStrainMenu();
         void updateMicrobeTests(int patientid);
+        void updateSeqType(int patientid, std::string seqType);
 
         void saveLayout();
         void loadLayout(const std::string & file);
@@ -129,11 +130,15 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         {
             std::string microbeSuffix;
             std::string measureSuffix;
-            std::map<int,std::vector<std::string> > testMap;
-            std::map<int,std::vector<time_t> > testTimeMap;
+            // adjust so user inded then seqType index then add to vector
+            std::map<int, std::map<std::string, std::vector<std::string> >  > testMap;
+            std::map<int, std::map<std::string, std::vector<time_t> > > testTimeMap;
+            //std::map<int,std::vector<std::string> > testMap;
+            //std::map<int,std::vector<time_t> > testTimeMap;
             std::vector<std::string> microbeList;
             std::vector<std::string> microbeListPO;
             std::vector<int> microbeIDList;
+            std::vector<std::string> seqType; // added to distinguish between the different types of data (index used in testMap and testTimeMap
             std::vector<std::string> familyList;
             std::vector<std::string> familyListPO;
             std::vector<std::string> genusList;
@@ -164,6 +169,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuCheckbox * _requireRangeCB;
         cvr::MenuButton * _inflammationButton;
         cvr::MenuButton * _big4MultiButton;
+        cvr::MenuButton * _big5MultiButton;
         cvr::MenuButton * _cholesterolButton;
         cvr::MenuButton * _insGluButton;
         cvr::MenuButton * _inflammationImmuneButton;
@@ -176,6 +182,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuList * _microbeGraphType;
         cvr::MenuList * _microbePatients;
         cvr::MenuList * _microbeTest;
+        cvr::MenuList * _microbeSeqType;
         cvr::MenuButton * _microbeLoad;
         cvr::MenuCheckbox * _microbeOrdering;
         cvr::MenuCheckbox * _microbeGrouping;
@@ -224,6 +231,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
 
         cvr::SubMenu * _microbeSpecialMenu;
         cvr::MenuList * _microbeRegionList;
+        cvr::MenuList * _microbeSeqTypeList; // will only effect Larry (default to Fast, ubiome is the subset
         cvr::MenuButton * _microbeLoadAverage;
         cvr::MenuButton * _microbeLoadHealthyAverage;
         cvr::MenuButton * _microbeLoadCrohnsAverage;
@@ -236,6 +244,7 @@ class FuturePatient : public cvr::CVRPlugin, public cvr::MenuCallback
         cvr::MenuButton * _microbeLoadHealthy252All;
         cvr::MenuButton * _microbeLoadUCAll;
         cvr::MenuButton * _microbeLoadLarryAll;
+        cvr::MenuButton * _microbeLoadLarryUbiomeAll;
         cvr::SubMenu * _microbePointLineMenu;
         cvr::MenuCheckbox * _microbePointLineExpand;
         cvr::MenuButton * _microbeLoadPointLine;

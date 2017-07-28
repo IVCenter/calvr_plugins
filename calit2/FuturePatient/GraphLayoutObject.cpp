@@ -788,6 +788,9 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 		}
 	    }
 
+	    //dataMin = 1.16434e-05;
+	    //dataMin = 8.71397e-05;
+
 	    for(int i = 0; i < _objectList.size(); ++i)
 	    {
 		ValueRangeObject * vro = dynamic_cast<ValueRangeObject *>(_objectList[i]);
@@ -798,6 +801,8 @@ void GraphLayoutObject::menuCallback(MenuItem * item)
 
 		vro->setGraphDisplayRange(dataMin,dataMax);
 	    }
+
+            //std::cerr << "dataMin: " << dataMin << " max: " << dataMax << std::endl;
 
 	    float xMax = FLT_MIN;
 	    float xMin = FLT_MAX;
@@ -996,7 +1001,7 @@ bool GraphLayoutObject::processEvent(InteractionEvent * event)
 
 		    if(found)
 		    {
-			time_t change = (time_t)(difftime(_currentMaxX,_currentMinX)*0.03);
+			time_t change = (time_t)(difftime(_currentMaxX,_currentMinX)*0.01);
 			if(change <= 0.0 && vie->getValue() < 0.0)
 			{
 			    time_t diff = difftime(_currentMaxX,_currentMinX);
@@ -1440,7 +1445,7 @@ void GraphLayoutObject::updateLayout()
 	return;
     }
 
-    float lineHeightMult = 0.1;
+    float lineHeightMult = 0.06;
     float maxLineMult = 0.33;
     float layoutLineHeight;
     float layoutGraphHeight;
@@ -1566,7 +1571,7 @@ void GraphLayoutObject::setTitle(std::string title)
     }
 
     float targetWidth = _width * 0.9;
-    float targetHeight = _height * 0.1 * 0.9;
+    float targetHeight = _height * 0.06 * 0.9;
     float halfh = (_height * 1.05) / 2.0;
 
     _text = GraphGlobals::makeText(title,osg::Vec4(1.0,1.0,1.0,1.0));
@@ -1577,7 +1582,7 @@ void GraphLayoutObject::setTitle(std::string title)
     _text->setCharacterSize(std::min(hsize,wsize));
     _text->setAxisAlignment(osgText::Text::XZ_PLANE);
 
-    _text->setPosition(osg::Vec3(0,1.5,halfh+(_height*0.05)));
+    _text->setPosition(osg::Vec3(0,1.5,halfh+(_height*0.03)));
 
     _layoutGeode->addDrawable(_text);
 }

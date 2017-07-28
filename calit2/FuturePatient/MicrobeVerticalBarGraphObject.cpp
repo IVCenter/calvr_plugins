@@ -46,7 +46,7 @@ MicrobeVerticalBarGraphObject::~MicrobeVerticalBarGraphObject()
 {
 }
 
-bool MicrobeVerticalBarGraphObject::addGraph(std::string label, int patientid, std::string testLabel, time_t testTime, std::string microbeTableSuffix, std::string measureTableSuffix, MicrobeGraphType type)
+bool MicrobeVerticalBarGraphObject::addGraph(std::string label, int patientid, std::string testLabel, time_t testTime, std::string seqType,std::string microbeTableSuffix, std::string measureTableSuffix, MicrobeGraphType type)
 {
     struct tm timetm = *localtime(&testTime);
     char timestr[256];
@@ -69,7 +69,7 @@ bool MicrobeVerticalBarGraphObject::addGraph(std::string label, int patientid, s
 	default:
 	case MGT_SPECIES:
 	    {
-		valuess << "select species as label, phylum, value from (select taxonomy_id, value from " << measurementTable << " where " << measurementTable << ".patient_id = " << patientid << " and " << measurementTable << ".timestamp = \"" << testLabel << "\")v inner join " << microbesTable << " on v.taxonomy_id = " << microbesTable << ".taxonomy_id order by species;";
+		valuess << "select species as label, phylum, value from (select taxonomy_id, value from " << measurementTable << " where " << measurementTable << ".patient_id = " << patientid << " and " << measurementTable << ".seq_type = \"" << seqType << "\" and " << measurementTable << ".timestamp = \"" << testLabel << "\")v inner join " << microbesTable << " on v.taxonomy_id = " << microbesTable << ".taxonomy_id order by species;";
 
 		break;
 	    }
@@ -77,14 +77,14 @@ bool MicrobeVerticalBarGraphObject::addGraph(std::string label, int patientid, s
 	case MGT_FAMILY:
 	    {
 		//valuess << "select description, phylum, family, sum(value) as value from (select taxonomy_id, value from " << measurementTable << " where " << measurementTable << ".patient_id = " << patientid << " and " << measurementTable << ".timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")v inner join " << microbesTable << " on v.taxonomy_id = " << microbesTable << ".taxonomy_id group by family order by phylum, value desc;";
-		valuess << "select family as label, phylum, sum(value) as value from (select taxonomy_id, value from " << measurementTable << " where " << measurementTable << ".patient_id = " << patientid << " and " << measurementTable << ".timestamp = \"" << testLabel << "\")v inner join " << microbesTable << " on v.taxonomy_id = " << microbesTable << ".taxonomy_id group by family order by family;";
+		valuess << "select family as label, phylum, sum(value) as value from (select taxonomy_id, value from " << measurementTable << " where " << measurementTable << ".patient_id = " << patientid << " and " << measurementTable << ".seq_type = \"" << seqType << "\" and " << measurementTable << ".timestamp = \"" << testLabel << "\")v inner join " << microbesTable << " on v.taxonomy_id = " << microbesTable << ".taxonomy_id group by family order by family;";
 		break;
 	    }
 
 	case MGT_GENUS:
 	    {
 		//valuess << "select description, phylum, genus, sum(value) as value from (select taxonomy_id, value from " << measurementTable << " where " << measurementTable << ".patient_id = " << patientid << " and " << measurementTable << ".timestamp = \"" << testLabel << "\" order by value desc limit " << microbes << ")v inner join " << microbesTable << " on v.taxonomy_id = " << microbesTable << ".taxonomy_id group by genus order by phylum, value desc;";
-		valuess << "select genus as label, phylum, sum(value) as value from (select taxonomy_id, value from " << measurementTable << " where " << measurementTable << ".patient_id = " << patientid << " and " << measurementTable << ".timestamp = \"" << testLabel << "\")v inner join " << microbesTable << " on v.taxonomy_id = " << microbesTable << ".taxonomy_id group by genus order by genus;";
+		valuess << "select genus as label, phylum, sum(value) as value from (select taxonomy_id, value from " << measurementTable << " where " << measurementTable << ".patient_id = " << patientid << " and " << measurementTable << ".seq_type = \"" << seqType << "\" and " << measurementTable << ".timestamp = \"" << testLabel << "\")v inner join " << microbesTable << " on v.taxonomy_id = " << microbesTable << ".taxonomy_id group by genus order by genus;";
 		break;
 	    }
     }
@@ -106,7 +106,7 @@ bool MicrobeVerticalBarGraphObject::addGraph(std::string label, int patientid, s
     return addGraph(title,valuess.str());
 }
 
-bool MicrobeVerticalBarGraphObject::addSpecialGraph(SpecialMicrobeGraphType smgt, std::string microbeTableSuffix, std::string measureTableSuffix, std::string region, MicrobeGraphType type)
+bool MicrobeVerticalBarGraphObject::addSpecialGraph(SpecialMicrobeGraphType smgt, std::string seqType, std::string microbeTableSuffix, std::string measureTableSuffix, std::string region, MicrobeGraphType type)
 {
     std::stringstream valuess;
 
@@ -165,19 +165,19 @@ bool MicrobeVerticalBarGraphObject::addSpecialGraph(SpecialMicrobeGraphType smgt
 		    default:
 		    case MGT_SPECIES:
 			{
-			    valuess << "select Microbes.phylum as phylum, Microbes.species as label, avg(Microbe_Stats.value) as value from Microbes inner join Microbe_Stats on Microbes.taxonomy_id = Microbe_Stats.taxonomy_id and Microbe_Stats.stat_type = \"average\" and Microbe_Stats.patient_condition = \"" << condition << "\"" << regionField << " group by Microbes.species order by species;";
+			    valuess << "select Microbes.phylum as phylum, Microbes.species as label, avg(Microbe_Stats.value) as value from Microbes inner join Microbe_Stats on Microbes.taxonomy_id = Microbe_Stats.taxonomy_id and Microbe_Stats.stat_type = \"average\"  and Microbes.seq_type = \"" << seqType << "\" and  Microbe_Stats.patient_condition = \"" << condition << "\"" << regionField << " group by Microbes.species order by species;";
 			    break;
 			}
 
 		    case MGT_FAMILY:
 			{
-			    valuess << "select Microbes.phylum as phylum, Microbes.family as label, sum(t.value) as value from (select taxonomy_id, avg(value) as value from Microbe_Stats where patient_condition = \"" << condition << "\"" << regionField << " group by taxonomy_id)t inner join Microbes on t.taxonomy_id = Microbes.taxonomy_id group by Microbes.family order by family;";
+			    valuess << "select Microbes.phylum as phylum, Microbes.family as label, sum(t.value) as value from (select taxonomy_id, avg(value) as value from Microbe_Stats where Microbes.seq_type = \"" << seqType << "\" and patient_condition = \"" << condition << "\"" << regionField << " group by taxonomy_id)t inner join Microbes on t.taxonomy_id = Microbes.taxonomy_id group by Microbes.family order by family;";
 			    break;
 			}
 
 		    case MGT_GENUS:
 			{
-			    valuess << "select Microbes.phylum as phylum, Microbes.genus as label, sum(t.value) as value from (select taxonomy_id, avg(value) as value from Microbe_Stats where patient_condition = \"" << condition << "\"" << regionField << " group by taxonomy_id)t inner join Microbes on t.taxonomy_id = Microbes.taxonomy_id group by Microbes.genus order by genus;";
+			    valuess << "select Microbes.phylum as phylum, Microbes.genus as label, sum(t.value) as value from (select taxonomy_id, avg(value) as value from Microbe_Stats where Microbes.seq_type = \"" << seqType << "\" and patient_condition = \"" << condition << "\"" << regionField << " group by taxonomy_id)t inner join Microbes on t.taxonomy_id = Microbes.taxonomy_id group by Microbes.genus order by genus;";
 
 			    break;
 			}
@@ -388,7 +388,8 @@ void MicrobeVerticalBarGraphObject::dumpState(std::ostream & out)
 bool MicrobeVerticalBarGraphObject::loadState(std::istream & in)
 {
     int graphs;
-    in >> graphs;
+    std::string seqType;
+    in >> graphs >> seqType;
 
     for(int i = 0; i < graphs; ++i)
     {
@@ -399,7 +400,7 @@ bool MicrobeVerticalBarGraphObject::loadState(std::istream & in)
 	{
 	    int type;
 	    in >> type;
-	    addSpecialGraph((SpecialMicrobeGraphType)type,"","","");
+	    addSpecialGraph((SpecialMicrobeGraphType)type,seqType,"","","");
 	}
 	else
 	{
@@ -416,7 +417,7 @@ bool MicrobeVerticalBarGraphObject::loadState(std::istream & in)
 	    in.getline(tempstr,1024);
 	    testLabel = tempstr;
 
-	    addGraph(label,id,testLabel,0,"","");
+	    addGraph(label,id,testLabel,0,seqType,"","");
 	}
     }
 

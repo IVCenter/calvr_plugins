@@ -231,6 +231,7 @@ class DataGraph
 
         float _masterPointScale;
         float _masterLineScale;
+        float _masterTimeScale;
 
         float _glScale;
 

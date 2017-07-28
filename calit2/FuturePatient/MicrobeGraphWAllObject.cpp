@@ -12,6 +12,7 @@
 #include <PluginMessageType.h>
 
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <cstdlib>
 #include <ctime>
@@ -477,7 +478,6 @@ bool MicrobeGraphWAllObject::setGraph(std::string title, int patientid, std::str
     std::string microbesTable = "Microbes";
     microbesTable += microbeTableSuffix;
 
-    
     switch( type )
     {
 	default:
@@ -918,6 +918,9 @@ bool MicrobeGraphWAllObject::loadGraphData(std::string valueQuery, std::string a
 
     std::map<std::string,std::map<std::string,std::map<std::string,std::vector<std::pair<std::string,float> > > > > otherPointData;
 
+    // PHILIP
+    //std::ofstream testTab("test1000.sim");
+
     for(int i = 0; i < header.numOtherValues; ++i)
     {
 	struct tm timetm = *localtime(&other[i].timestamp);
@@ -927,9 +930,25 @@ bool MicrobeGraphWAllObject::loadGraphData(std::string valueQuery, std::string a
 
 	std::string label = _patientMap[other[i].patient_id].first + " - " + timestr;
 	//std::cerr << "Other: " << label << " phylum: " << other[i].phylum << " name: " << other[i].name << " value: " << other[i].value << std::endl;
+		    
+/*	
+	// PHILIP tempory just to build a tab delimited file to produce graphs
+	if( other[i].value > 0.0 )
+	{
+	    testTab << label; 
+	    testTab << '\t';
+	    testTab << other[i].name;
+	    testTab << '\t';
+	    testTab << other[i].value;
+	    testTab <<'\n';
+	}
+*/	
 
 	otherPointData[other[i].phylum][other[i].name][_patientMap[other[i].patient_id].second].push_back(std::pair<std::string,float>(label,other[i].value));
     }
+
+    // PHILIP
+    //testTab.close();
 
     bool graphValid = _graph->setGraph(titless.str(), _graphData, _graphOrder, otherPointData, BGAT_LOG, "Relative Abundance", "", sublabel,osg::Vec4(1.0,0,0,1));
 

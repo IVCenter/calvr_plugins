@@ -16,7 +16,7 @@ SymptomGraphObject::SymptomGraphObject(DBManager * dbm, float width, float heigh
     _dbm = dbm;
     _graph = new TimeRangeDataGraph();
     _graph->setDisplaySize(width,height);
-    _graph->setColorOffset(0.5);
+    _graph->setColorOffset(0.1);
 
     addChild(_graph->getGraphRoot());
 

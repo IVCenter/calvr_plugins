@@ -20,8 +20,9 @@ class MicrobeGraphObject : public LayoutTypeObject, public MicrobeSelectObject, 
         MicrobeGraphObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~MicrobeGraphObject();
 
-        bool setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, int microbes, std::string microbeTableSuffix, std::string measureTableSuffix, bool group = true, bool lsOrdering = true, MicrobeGraphType type = MGT_SPECIES);
-        bool setSpecialGraph(SpecialMicrobeGraphType smgt, int microbes, std::string region, bool group = true, bool lsOrdering = true, MicrobeGraphType type = MGT_SPECIES);
+        bool setGraph(std::string title, int patientid, std::string testLabel, time_t testTime, std::string seqType, int microbes, std::string microbeTableSuffix, std::string measureTableSuffix, bool group = true, bool lsOrdering = true, MicrobeGraphType type = MGT_SPECIES);
+
+        bool setSpecialGraph(SpecialMicrobeGraphType smgt, std::string seqType, int microbes, std::string region, bool group = true, bool lsOrdering = true, MicrobeGraphType type = MGT_SPECIES);
 
         virtual void objectAdded();
         virtual void objectRemoved();

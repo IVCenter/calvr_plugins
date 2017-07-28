@@ -35,10 +35,10 @@ MicrobeBarGraphObject::~MicrobeBarGraphObject()
 {
 }
 
-bool MicrobeBarGraphObject::addGraph(std::string label, int patientid, std::string testLabel, std::string microbeTableSuffix, std::string measureTableSuffix)
+bool MicrobeBarGraphObject::addGraph(std::string label, int patientid, std::string testLabel, std::string seqType, std::string microbeTableSuffix, std::string measureTableSuffix)
 {
     std::stringstream qss;
-    qss << "select Microbes.species, Microbe_Measurement.value from Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.timestamp = \""<< testLabel << "\";";
+    qss << "select Microbes.species, Microbe_Measurement.value from Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id where Microbe_Measurement.patient_id = \"" << patientid << "\" and Microbe_Measurement.seq_type = \"" << seqType << "\" and Microbe_Measurement.timestamp = \""<< testLabel << "\";";
 
     std::string title = label + "\n" + testLabel;
 
@@ -53,7 +53,7 @@ bool MicrobeBarGraphObject::addGraph(std::string label, int patientid, std::stri
     return addGraph(title,qss.str());
 }
 
-bool MicrobeBarGraphObject::addSpecialGraph(SpecialMicrobeGraphType smgt, std::string microbeTableSuffix, std::string measureTableSuffix)
+bool MicrobeBarGraphObject::addSpecialGraph(SpecialMicrobeGraphType smgt, std::string seqType, std::string microbeTableSuffix, std::string measureTableSuffix)
 {
     std::stringstream queryss;
     std::string label;
@@ -107,7 +107,7 @@ bool MicrobeBarGraphObject::addSpecialGraph(SpecialMicrobeGraphType smgt, std::s
 		    break;
 	    }
 
-	    queryss << "select Microbes.species, avg(Microbe_Measurement.value) as value from Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id inner join Patient on Microbe_Measurement.patient_id = Patient.patient_id where Patient.last_name regexp '" << regexp << "' group by species;";
+	    queryss << "select Microbes.species, avg(Microbe_Measurement.value) as value from Microbe_Measurement inner join Microbes on Microbe_Measurement.taxonomy_id = Microbes.taxonomy_id inner join Patient on Microbe_Measurement.patient_id = Patient.patient_id and Microbe_Measurement.seq_type = \"" << seqType << "\" where Patient.last_name regexp '" << regexp << "' group by species;";
 	    break;
 	}
 	default:
@@ -478,7 +478,8 @@ void MicrobeBarGraphObject::dumpState(std::ostream & out)
 bool MicrobeBarGraphObject::loadState(std::istream & in)
 {
     int graphs;
-    in >> graphs;
+    std::string seqType;
+    in >> graphs >> seqType;
 
     for(int i = 0; i < graphs; ++i)
     {
@@ -489,7 +490,7 @@ bool MicrobeBarGraphObject::loadState(std::istream & in)
 	{
 	    int type;
 	    in >> type;
-	    addSpecialGraph((SpecialMicrobeGraphType)type,"","");
+	    addSpecialGraph((SpecialMicrobeGraphType)type,seqType,"","");
 	}
 	else
 	{
@@ -506,7 +507,7 @@ bool MicrobeBarGraphObject::loadState(std::istream & in)
 	    in.getline(tempstr,1024);
 	    testLabel = tempstr;
 
-	    addGraph(label,id,testLabel,"","");
+	    addGraph(label,id,testLabel,seqType,"","");
 	}
     }
 

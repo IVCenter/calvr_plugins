@@ -159,6 +159,7 @@ DataGraph::DataGraph()
 
     _masterPointScale = ConfigManager::getFloat("value","Plugin.FuturePatient.MasterPointScale",1.0);
     _masterLineScale = ConfigManager::getFloat("value","Plugin.FuturePatient.MasterLineScale",1.0);
+    _masterTimeScale = ConfigManager::getFloat("value","Plugin.FuturePatient.MasterTimeScale",1.0);
 
     //_clipNode->addClipPlane(new osg::ClipPlane(0));
     //_clipNode->addClipPlane(new osg::ClipPlane(1));
@@ -1374,7 +1375,7 @@ void DataGraph::update()
     _point->setSize(_glScale * avglen * 0.04 * _pointLineScale);
     _pointSizeUniform->set((float)_point->getSize());
     //_pointActionPoint->setSize(1.3*_point->getSize());
-    _pointActionPoint->setSize(0.4*_point->getSize());
+    _pointActionPoint->setSize(0.4*0.6*_point->getSize());
     //std::cerr << "Point size set to: " << _point->getSize() << std::endl;
     _lineWidth->setWidth(_glScale * avglen * 0.05 * _pointLineScale * _pointLineScale);
 
@@ -1842,6 +1843,14 @@ void DataGraph::updateAxis()
 		    osgText::Text * text = GraphGlobals::makeText(ss.str(),textColor);
 
 		    float targetSize = padding * 0.27;
+		    float positionPadding = padding * 0.5 * 0.3;
+
+		    if(ComController::instance()->isMaster())
+		    {
+			targetSize = targetSize * _masterTimeScale;
+			positionPadding = positionPadding * _masterTimeScale;
+		    }
+
 		    osg::BoundingBox bb = text->getBound();
 		    text->setCharacterSize(targetSize / (bb.zMax() - bb.zMin()));
 		    text->setAxisAlignment(axisAlign);
@@ -1850,7 +1859,8 @@ void DataGraph::updateAxis()
 			text->setRotation(q);
 		    }
 
-		    text->setPosition(startPoint + -tickDir * (padding * 0.5 * 0.3) + dir * currentValue + osg::Vec3(0,-1,0));
+		    //text->setPosition(startPoint + -tickDir * (padding * 0.5 * 0.3) + dir * currentValue + osg::Vec3(0,-1,0));
+		    text->setPosition(startPoint + -tickDir * positionPadding + dir * currentValue + osg::Vec3(0,-1,0));
 
 		    _axisGeode->addDrawable(text);
 

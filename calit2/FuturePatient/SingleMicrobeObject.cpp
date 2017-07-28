@@ -46,7 +46,7 @@ bool rankOrderSort(const std::pair<std::string, float> & first, const std::pair<
     return first.second > second.second;
 }
 
-bool SingleMicrobeObject::setGraph(std::string microbe, std::string titleSuffix, int taxid, std::string microbeTableSuffix, std::string measureTableSuffix, MicrobeGraphType type, bool rankOrder, bool labels, bool firstOnly, bool groupPatients, bool group)
+bool SingleMicrobeObject::setGraph(std::string microbe, std::string titleSuffix, int taxid, std::string seqType, std::string microbeTableSuffix, std::string measureTableSuffix, MicrobeGraphType type, bool rankOrder, bool labels, bool firstOnly, bool groupPatients, bool group)
 {
     std::string measurementTable = "Microbe_Measurement";
     measurementTable += measureTableSuffix;
@@ -69,20 +69,20 @@ bool SingleMicrobeObject::setGraph(std::string microbe, std::string titleSuffix,
     {
         case MGT_SPECIES:
         {
-	    queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where " << measurementTable << ".taxonomy_id = " << taxid << " and Patient.region = \"US\" order by p_condition, last_name, timestamp;";
+	    queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where " << measurementTable << ".taxonomy_id = " << taxid << " and " << measurementTable << ".seq_type = \"" << seqType << "\" and Patient.region = \"US\" order by p_condition, last_name, timestamp;";
             break;
         }
     
         case MGT_FAMILY:
         {
-	    queryss << "select Patient.p_condition, Patient.last_name, t.patient_id, unix_timestamp(t.timestamp) as timestamp, t.value from (select " << microbesTable << ".family, " << measurementTable << ".patient_id, " << measurementTable << ".timestamp, sum(" << measurementTable << ".value) as value from "<< measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id where " << microbesTable << ".family = \"" << microbe << "\" group by " << measurementTable << ".patient_id, " << measurementTable << ".timestamp)t inner join Patient on t.patient_id = Patient.patient_id where Patient.region = \"US\" order by Patient.p_condition, Patient.last_name, t.timestamp;";
+	    queryss << "select Patient.p_condition, Patient.last_name, t.patient_id, unix_timestamp(t.timestamp) as timestamp, t.value from (select " << microbesTable << ".family, " << measurementTable << ".patient_id, " << measurementTable << ".timestamp, sum(" << measurementTable << ".value) as value from "<< measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id and " << measurementTable << ".seq_type = \"" << seqType << "\" where " << microbesTable << ".family = \"" << microbe << "\" group by " << measurementTable << ".patient_id, " << measurementTable << ".timestamp)t inner join Patient on t.patient_id = Patient.patient_id where Patient.region = \"US\" order by Patient.p_condition, Patient.last_name, t.timestamp;";
 	        //queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << microbesTable << ".family, sum(" << measurementTable << ".value) as value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id inner join " << microbesTable << " on " << microbesTable << ".taxonomy_id = " << measurementTable << ".taxonomy_id where " << microbesTable << ".family = \"" << microbe << "\" and Patient.region = \"US\" group by patient_id, timestamp order by p_condition, last_name, timestamp;";
             break;
         }
 
         case MGT_GENUS:
         {
-	    queryss << "select Patient.p_condition, Patient.last_name, t.patient_id, unix_timestamp(t.timestamp) as timestamp, t.value from (select " << microbesTable << ".genus, " << measurementTable << ".patient_id, " << measurementTable << ".timestamp, sum(" << measurementTable << ".value) as value from "<< measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id where " << microbesTable << ".genus = \"" << microbe << "\" group by " << measurementTable << ".patient_id, " << measurementTable << ".timestamp)t inner join Patient on t.patient_id = Patient.patient_id where Patient.region = \"US\" order by Patient.p_condition, Patient.last_name, t.timestamp;";
+	    queryss << "select Patient.p_condition, Patient.last_name, t.patient_id, unix_timestamp(t.timestamp) as timestamp, t.value from (select " << microbesTable << ".genus, " << measurementTable << ".patient_id, " << measurementTable << ".timestamp, sum(" << measurementTable << ".value) as value from "<< measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id and " << measurementTable << ".seq_type = \"" << seqType << "\" where " << microbesTable << ".genus = \"" << microbe << "\" group by " << measurementTable << ".patient_id, " << measurementTable << ".timestamp)t inner join Patient on t.patient_id = Patient.patient_id where Patient.region = \"US\" order by Patient.p_condition, Patient.last_name, t.timestamp;";
 	        //queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << microbesTable << ".genus, sum(" << measurementTable << ".value) as value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id inner join " << microbesTable << " on " << microbesTable << ".taxonomy_id = " << measurementTable << ".taxonomy_id where " << microbesTable << ".genus = \"" << microbe << "\" and Patient.region = \"US\" group by patient_id, timestamp order by p_condition, last_name, timestamp;";
 
             break;
@@ -90,13 +90,13 @@ bool SingleMicrobeObject::setGraph(std::string microbe, std::string titleSuffix,
 
 	case MGT_PHYLUM:
 	{
-	    queryss << "select Patient.p_condition, Patient.last_name, t.patient_id, unix_timestamp(t.timestamp) as timestamp, t.value from (select " << microbesTable << ".phylum, " << measurementTable << ".patient_id, " << measurementTable << ".timestamp, sum(" << measurementTable << ".value) as value from "<< measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id where " << microbesTable << ".phylum = \"" << microbe << "\" group by " << measurementTable << ".patient_id, " << measurementTable << ".timestamp)t inner join Patient on t.patient_id = Patient.patient_id where Patient.region = \"US\" order by Patient.p_condition, Patient.last_name, t.timestamp;";
+	    queryss << "select Patient.p_condition, Patient.last_name, t.patient_id, unix_timestamp(t.timestamp) as timestamp, t.value from (select " << microbesTable << ".phylum, " << measurementTable << ".patient_id, " << measurementTable << ".timestamp, sum(" << measurementTable << ".value) as value from "<< measurementTable << " inner join " << microbesTable << " on " << measurementTable << ".taxonomy_id = " << microbesTable << ".taxonomy_id and " << measurementTable << ".seq_type = \"" << seqType << "\" where " << microbesTable << ".phylum = \"" << microbe << "\" group by " << measurementTable << ".patient_id, " << measurementTable << ".timestamp)t inner join Patient on t.patient_id = Patient.patient_id where Patient.region = \"US\" order by Patient.p_condition, Patient.last_name, t.timestamp;";
 	    break;
 	}
 
         default:
         {
-	        queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where " << measurementTable << ".taxonomy_id = " << taxid << " and Patient.region = \"US\" order by p_condition, last_name, timestamp;";
+	        queryss << "select Patient.last_name, Patient.p_condition, Patient.patient_id, unix_timestamp(" << measurementTable << ".timestamp) as timestamp, " << measurementTable << ".value from " << measurementTable << " inner join Patient on Patient.patient_id = " << measurementTable << ".patient_id where " << measurementTable << ".taxonomy_id = " << taxid << " and " << measurementTable << ".seq_type = \"" << seqType << "\" and Patient.region = \"US\" order by p_condition, last_name, timestamp;";
 
             break;
         }
@@ -642,8 +642,7 @@ void BandingFunction::added(osg::Geode * geode)
 	_lineGeometry->setUseDisplayList(false);
 	_lineGeometry->setUseVertexBufferObjects(true);
 
-    // changed from 5.0
-    _lineWidth = new osg::LineWidth(3.0);
+        _lineWidth = new osg::LineWidth(5.0);
 
 	stateset = _lineGeometry->getOrCreateStateSet();
 	stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);

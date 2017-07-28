@@ -18,7 +18,7 @@ class SingleMicrobeObject : public LayoutTypeObject, public PatientSelectObject,
         SingleMicrobeObject(DBManager * dbm, float width, float height, std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds=false);
         virtual ~SingleMicrobeObject();
 
-        bool setGraph(std::string microbe, std::string titleSuffix, int taxid, std::string microbeTableSuffix, std::string measureTableSuffix, MicrobeGraphType type = MGT_SPECIES, bool rankOrder=true, bool labels=true, bool firstOnly=false, bool groupPatients=false, bool group = true);
+        bool setGraph(std::string microbe, std::string titleSuffix, int taxid, std::string seqType, std::string microbeTableSuffix, std::string measureTableSuffix, MicrobeGraphType type = MGT_SPECIES, bool rankOrder=true, bool labels=true, bool firstOnly=false, bool groupPatients=false, bool group = true);
 
         virtual void objectAdded();
         virtual void objectRemoved();

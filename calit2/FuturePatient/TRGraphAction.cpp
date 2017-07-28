@@ -15,7 +15,7 @@ void MicrobeGraphAction::action(std::string name, time_t start, time_t end, int 
 	char timestamp[512];
 	timestamp[511] = '\0';
 	strftime(timestamp,511,"%F %T",localtime(&start));
-	if(mgo->setGraph("Smarr",1,timestamp,start,200,"_V2","_V2"))
+	if(mgo->setGraph("Smarr",1,timestamp,start, std::string("full"),200,"_V2","_V2"))
 	{
 	    layout->addGraphObject(mgo);
 	}
