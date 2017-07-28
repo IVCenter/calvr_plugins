@@ -7,6 +7,7 @@
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuRangeValue.h>
 
 #include <osgEarth/Map>
 #include <osgEarth/MapNode>
@@ -62,6 +63,16 @@ class OsgEarth : public cvr::CVRPlugin, public cvr::MenuCallback
         int _currentX,_currentY;
         bool _movePointValid;
         osg::Vec3d _movePoint;
+
+        //osg::ref_ptr<osgEarth::Map> _inactiveMap;
+        cvr::SubMenu * _osgEarthLayers;
+        cvr::SubMenu * _osgEarthShapes;
+
+        //std::vector< std::pair<cvr::MenuCheckbox*, osgEarth::ImageLayer*> > _layers;
+        //std::vector< std::pair<cvr::MenuCheckbox*, osgEarth::ModelLayer*> > _shapes;
+        std::vector< std::pair<cvr::MenuRangeValue*, osgEarth::ImageLayer*> > _layers;
+        std::vector< std::pair<cvr::MenuCheckbox*, osgEarth::ModelLayer*> > _shapes;
+
 
  	//bool _setting_viewpoint;
 	//osgEarthUtil::Viewpoint _pending_viewpoint;

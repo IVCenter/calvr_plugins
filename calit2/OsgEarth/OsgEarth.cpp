@@ -110,28 +110,6 @@ bool OsgEarth::init()
     _mapNode->setNodeMask(_mapNode->getNodeMask() & ~INTERSECT_MASK);
     _map = _mapNode->getMap();
 
-    // loop through the configuration and add models to the planet
-    // Load a KML file if specified
-    vector<string> list;
-    string configBase = "Plugin.OsgEarth.Models";
-    ConfigManager::getChildren(configBase,list);
-
-    for(int i = 0; i < list.size(); i++)
-    {
-            //KMLOptions kmlo;
-            //kmlo.defaultIconImage() = URI("http://www.osgearth.org/chrome/site/pushpin_yellow.png").readImage();
-            //osg::Node* kml = KML::load( URI(kmlFile), mapNode, kmlo );
-
-            string file = ConfigManager::getEntry(configBase + "." + list[i]);
-            printf("Trying to load %s\n", file.c_str());
-            osg::Node* kml = KML::load( URI(file), _mapNode);
-            
-            if ( kml )
-            {
-                SceneManager::instance()->getObjectsRoot()->addChild( kml );
-            }
-    }
-
     // set planet to correct scale
     osg::Matrix objects = PluginHelper::getObjectMatrix();
     objects.setTrans(0.0, earthRadiusMM * 2.0, 0.0);
@@ -150,6 +128,48 @@ bool OsgEarth::init()
     _navCB = new MenuCheckbox("Planet Nav Mode", false);
     _navCB->setCallback(this);
     _osgEarthMenu->addItem(_navCB);
+
+    _osgEarthLayers = NULL;
+    _osgEarthShapes = NULL;
+
+
+// TEMP disable layers until TMS URI can load service
+
+    // add layers menus
+    //_inactiveMap = new osgEarth::Map();
+    
+    // add layers
+    _osgEarthLayers = new SubMenu("Layers");
+    _osgEarthMenu->addItem(_osgEarthLayers);
+
+    std::cerr << "Number of Layers: " << _map->getNumImageLayers() << std::endl;
+
+    // add layer buttons to layers list
+    for(int i = 1; i < _map->getNumImageLayers(); i++)
+    {
+        ImageLayer* layer = _map->getImageLayerAt(i);
+	layer->setOpacity(0);	// by default disable
+        MenuRangeValue* currentcheck = new MenuRangeValue(layer->getImageLayerOptions().name(), 0.0, 1.0, 0.0);
+        currentcheck->setCallback(this);
+        _osgEarthLayers->addItem(currentcheck);
+        _layers.push_back(std::pair<MenuRangeValue*, ImageLayer*> (currentcheck, layer));
+    }
+
+    // add shapes
+    _osgEarthShapes = new SubMenu("Shapes");
+    _osgEarthMenu->addItem(_osgEarthShapes);
+
+    // add shape buttons to shape list (default hiding the shapes)
+    for(int i = 0; i < _map->getNumModelLayers(); i++)
+    {
+        ModelLayer* shape = _map->getModelLayerAt(i);
+        shape->setVisible(false); // hide models by default
+        MenuCheckbox* currentcheck = new MenuCheckbox(shape->getName(), false);
+        currentcheck->setCallback(this);
+        _osgEarthShapes->addItem(currentcheck);
+        _shapes.push_back(std::pair<MenuCheckbox*, ModelLayer*> (currentcheck, shape));
+        ModelLayerOptions options = shape->getModelLayerOptions();
+    }
 
     PluginHelper::addRootMenuItem(_osgEarthMenu);
 
@@ -461,20 +481,42 @@ void OsgEarth::menuCallback(MenuItem * item)
 {
     if(item == _visCB)
     {
-	if(_visCB->getValue())
-		_mapNode->setNodeMask(~2);
-	else
-		_mapNode->setNodeMask(0);
-
+	    if(_visCB->getValue())
+		    _mapNode->setNodeMask(~2);
+	    else
+		    _mapNode->setNodeMask(0);
     }
     else if(item == _visCB)
     {
-	if(_visCB->getValue())
-		_mapNode->setNodeMask(~2);
-	else
-		_mapNode->setNodeMask(0);
-
+	    if(_visCB->getValue())
+		    _mapNode->setNodeMask(~2);
+	    else
+		    _mapNode->setNodeMask(0);
     }
+    
+    // check for layer enabling and disabling
+    for(int i = 0; i < (int) _layers.size(); i++)
+    {
+        MenuRangeValue * current = _layers.at(i).first;
+        if( current == item)
+        {
+	    // asjust layer opacity
+	    _layers.at(i).second->setOpacity(current->getValue());
+            return;
+        }
+    }
+
+    // check for shape enabling and disabling
+    for(int i = 0; i < (int) _shapes.size(); i++)
+    {
+        MenuCheckbox * current = _shapes.at(i).first;
+        if( current == item)
+        {
+	    // enable or disable model
+	    _shapes.at(i).second->setVisible(current->getValue());
+            return;
+        }
+    }    
 }
 
 void OsgEarth::processNav(double speed)

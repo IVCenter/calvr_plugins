@@ -30,17 +30,17 @@ class FlagTransform : public osg::NodeCallback, public osg::MatrixTransform
 class FlagText : public osg::Drawable::UpdateCallback, public osgText::Text3D
 {
 	public:
-    	FlagText(float size, bool rotate);
-       	virtual void update(osg::NodeVisitor*, osg::Drawable*);
-		void setText(std::string);
+    	    FlagText(float size, bool rotate);
+       	    virtual void update(osg::NodeVisitor*, osg::Drawable*);
+	    void setText(std::string);
 	
 	protected:
-		FlagText() {};
+	    FlagText() {};
 
 	private:
-		std::string _text;
-		OpenThreads::Mutex _mutex;
-        bool _changed;
+	    std::string _text;
+	    OpenThreads::Mutex _mutex;
+            bool _changed;
 };
 
 class Sensor 

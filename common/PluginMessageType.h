@@ -78,9 +78,12 @@ struct PointsLoadInfo
 enum PanoViewLODMessageType
 {
     PAN_LOAD_REQUEST=0,
+    PAN_IMAGE_LOAD_REQUEST,
     PAN_HEIGHT_REQUEST,
     PAN_SET_ALPHA,
     PAN_SET_ROTATE,
+    PAN_SET_TILT,
+    PAN_SET_DEMOMODE,
     PAN_NEXT,
     PAN_UNLOAD
 };
@@ -89,8 +92,13 @@ struct PanLoadRequest
 {
     std::string name;
     float rotationOffset;
+    bool enableDemoMode;
     std::string plugin;
     int pluginMessageType;
+    bool enableRemoval;
+    // to load images that arent part of the menu
+    std::string leftFile;
+    std::string rightFile;
     bool loaded;
 };
 
@@ -98,6 +106,11 @@ struct PanHeightRequest
 {
     std::string name;
     float height;
+};
+
+enum CatalystMessageType
+{
+    CAT_PAN_UNLOADED=0
 };
 
 enum PointsWithPanMessageType

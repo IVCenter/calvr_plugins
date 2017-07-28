@@ -11,7 +11,7 @@ Sensor::Sensor(bool type, osg::ref_ptr<osgText::Font> font, osg::ref_ptr<osgText
     _pressure = 0.0f;
     _humidity = 0.0f;
     _rotation = new FlagTransform();
-    _flagText = new FlagText( 50.0 , rotate); // set a default size
+    _flagText = new FlagText( 75.0 , rotate); // set a default size
 	_flagText->setFont(font.get());
 	_flagText->setStyle(style.get());
     _flagcolor = new osg::Uniform("flagcolor", 0.0f);
@@ -82,6 +82,7 @@ void FlagText::update(osg::NodeVisitor*, osg::Drawable* drawable)
     {
         //std::cerr << "Update called: " << _text << std::endl;
        	((osgText::Text3D*) ft)->setText(_text);
+       	((osgText::Text3D*) ft)->computeBound(); // PHILIP see if it fixes bounding box issue
         _changed = false;
     }
 }

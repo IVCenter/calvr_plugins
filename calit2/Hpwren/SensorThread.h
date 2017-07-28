@@ -19,6 +19,8 @@ struct SensorData {
 	float temperature;
 	float pressure;
 	float humidity;
+	double lat;
+	double lon;
 };
 
 class SensorThread : public OpenThreads::Thread

@@ -1,0 +1,12 @@
+configuration parameters
+------------------------
+
+<Catalyst>
+        <Textures value="/home/calvr/philip/CVRPlugins/calit2/Catalyst/textures"/> <!-- textures for description panel -->
+        <ConfigJSON value="/mnt/cavebase-public/config/philip_test.json" /> <!-- configuration file that has meta data with pans -->
+        <RemoteMount value="/mnt/cavebase-public/philip_test/" /> <!-- disk mount location -->
+        <CacheDirectory value="/data-nfs/Pans/Catalyst/" /> <!-- location for pans to see if they exit -->
+        <FontSize value="40.0" />
+        <DescriptionPosition x="1000" y="1000" z="400" />
+</Catalyst>
+

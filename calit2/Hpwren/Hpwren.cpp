@@ -24,7 +24,8 @@
 
 #include <math.h>
 #include <string.h>
-#include "SdgeReader.h"
+//#include "SdgeReader.h"
+#include "MesoReader.h"
 
 using namespace osg;
 using namespace std;
@@ -58,8 +59,9 @@ bool Hpwren::init()
 	//osg::setNotifyLevel( osg::INFO );
 
     std::cerr << "Hpwren init\n";
+    _sensorThread = NULL;
     _map = NULL;
-	_mapNode = NULL;
+    _mapNode = NULL;
 
 	// init netcdf params
 	_direction = NULL;
@@ -104,6 +106,9 @@ bool Hpwren::init()
 	// note: replaced with getting main menu from the osgEarth
     //PluginHelper::addRootMenuItem(_hpwrenMenu);
 
+
+    // NOTE hard coding min and max 0 - 40 celcius
+
     _minTemp = FLT_MAX;
     _maxTemp = FLT_MIN;
 
@@ -113,6 +118,8 @@ bool Hpwren::init()
 	// read in hpwren sensors
     osg::Group* flagGroup = new osg::Group();
     PluginHelper::getObjectsRoot()->addChild(flagGroup);
+    
+    // init sensors
     initSensors(flagGroup, configs);
 
 	// read in shape file and create menu items
@@ -170,7 +177,7 @@ bool Hpwren::init()
         	_heightLayers.push_back(std::pair<MenuRangeValue*, StyleSheet* > (currentheight, styleSheet));
         	_colorLayers.push_back(std::pair<MenuRangeValue*, StyleSheet* > (currentcolor, styleSheet));
     }
-
+    std::cerr << "Hpwren init complete\n";
     return true;
 }
 
@@ -321,19 +328,36 @@ void Hpwren::initSensors(osg::Group* parent, XmlReader* configs)
     configs->getChildren(baseName, tagList);
     for(int i = 0; i < tagList.size(); i++)
     {
-        std::string sensorName(baseName + "." + tagList[i]);
-        Sensor sensor(true, _font, _style, ConfigManager::getBool("Plugin.Hpwren.Portrait", false));
-        sensor.setCoord(configs->getFloat("lon", sensorName, 0.0), configs->getFloat("lat", sensorName, 0.0));
-        _hpwrensensors.insert(std::pair<std::string, Sensor> (configs->getEntry("value", sensorName, ""), sensor));
+	std::string sensorName(baseName + "." + tagList[i]);
+	Sensor sensor(true, _font, _style, ConfigManager::getBool("Plugin.Hpwren.Portrait", false));
+	sensor.setCoord(configs->getFloat("lon", sensorName, 0.0), configs->getFloat("lat", sensorName, 0.0));
+	_hpwrensensors.insert(std::pair<std::string, Sensor> (configs->getEntry("value", sensorName, ""), sensor));
     }
 
-	// set up initial sdge sites
-    //std::string name("http://anr.ucsd.edu/Sensors/SDGE"); OLD
-    std::string name("http://anr.ucsd.edu/cgi-bin/sm_sdge2.pl");
-    SdgeReader test(name, _sdgesensors, _font, _style, ConfigManager::getEntry("Plugin.Hpwren.SdgeBak"), ConfigManager::getBool("Plugin.Hpwren.Portrait", false));
+    // set up initial sdge sites
+    
+    int numSDGESensors = 0;
+
+    // ONLY READ ON MASTER and then sync size
+    if(ComController::instance()->isMaster())
+    {
+	//std::string name("http://anr.ucsd.edu/Sensors/SDGE"); OLD
+	//std::string name("http://anr.ucsd.edu/cgi-bin/sm_sdge2.pl");
+	//SdgeReader test(name, _sdgesensors, _font, _style, ConfigManager::getEntry("Plugin.Hpwren.SdgeBak"), ConfigManager::getBool("Plugin.Hpwren.Portrait", false));
+	std::string name("https://firemap.sdsc.edu:5443/stations/data/latest?selection=withinRadius&lat=32.7157&lon=-117.1611&radius=50&observable=temperature&observable=wind_speed&observable=wind_direction");
+	MesoReader test(name, _sdgesensors, _font, _style, ConfigManager::getEntry("Plugin.Hpwren.MesoBak"), ConfigManager::getBool("Plugin.Hpwren.Portrait", false));
+	numSDGESensors = (int)_sdgesensors.size();
+        ComController::instance()->sendSlaves(&numSDGESensors,sizeof(int));
+    }
+    else
+    {
+	ComController::instance()->readMaster(&numSDGESensors,sizeof(int));
+    }
+
+    std::cerr << "Num sensors: " << numSDGESensors << std::endl;
 
     // sync sensor data from head node
-    std:vector< SensorData > updates((int)_sdgesensors.size());
+    std:vector< SensorData > updates(numSDGESensors);
     
     if(ComController::instance()->isMaster())
     {
@@ -347,19 +371,30 @@ void Hpwren::initSensors(osg::Group* parent, XmlReader* configs)
 	    updates[index].temperature = it->second.getTemperature();
 	    updates[index].pressure = it->second.getPressure();
 	    updates[index].humidity = it->second.getHumidity();
+	    it->second.getCoord(updates[index].lon, updates[index].lat);
 	    strcpy(updates[index].name, it->first.c_str());
 	    index++;
 	}
 
-        ComController::instance()->sendSlaves(&updates[0],sizeof(SensorData) * (int) _sdgesensors.size());
+        ComController::instance()->sendSlaves(&updates[0],sizeof(SensorData) * numSDGESensors);
     }
     else
     {
-	ComController::instance()->readMaster(&updates[0],sizeof(SensorData) * (int) _sdgesensors.size());
+	ComController::instance()->readMaster(&updates[0],sizeof(SensorData) * numSDGESensors);
 
+	// add sdge data to map
 	// read data back into _sdgesensors (different between systems for some reason)
 	for(int i = 0; i < (int) updates.size(); i++ )
 	{
+	    Sensor sens(true, _font, _style, ConfigManager::getBool("Plugin.Hpwren.Portrait", false));
+	    sens.setVelocity(updates.at(i).velocity);
+	    sens.setDirection(updates.at(i).direction);
+	    sens.setTemperature(updates.at(i).temperature);
+	    sens.setPressure(updates.at(i).pressure);
+	    sens.setHumidity(updates.at(i).humidity);
+	    sens.setCoord(updates.at(i).lon, updates.at(i).lat);
+	    _sdgesensors.insert(std::pair< std::string, Sensor> (std::string(updates.at(i).name),sens));
+/*
 	    std::map<std::string, Sensor>::iterator it = _sdgesensors.find(std::string(updates.at(i).name));
 	    if( it != _sdgesensors.end() )
 	    {
@@ -369,6 +404,7 @@ void Hpwren::initSensors(osg::Group* parent, XmlReader* configs)
 		it->second.setPressure(updates.at(i).pressure);
 		it->second.setHumidity(updates.at(i).humidity);
 	    }
+*/
 	}
     }
 
@@ -376,7 +412,7 @@ void Hpwren::initSensors(osg::Group* parent, XmlReader* configs)
     std::map<std::string, Sensor>::iterator it = _sdgesensors.begin();
     for(; it != _sdgesensors.end(); ++it)
     {
-		float temp = it->second.getTemperature();
+	float temp = it->second.getTemperature();
         if(temp < _minTemp)
                 _minTemp = temp;
         if(temp > _maxTemp)
@@ -385,6 +421,11 @@ void Hpwren::initSensors(osg::Group* parent, XmlReader* configs)
         //std::cerr << "Name: " << it->first << " direction: " << it->second.getDirection() << " velocity " << it->second.getVelocity() 
         //                <<  " temp " << it->second.getTemperature() << std::endl;
     }
+
+
+    // NOTE hard coding min and max 0 - 40 celcius
+    _minTemp = 0.0;
+    _maxTemp = 40.0;
 
 	// initialize sdge tower data
     for(it = _sdgesensors.begin() ; it != _sdgesensors.end(); ++it)
@@ -409,22 +450,23 @@ void Hpwren::initSensors(osg::Group* parent, XmlReader* configs)
         it->second.getColor()->set(clamp((it->second.getTemperature() - _minTemp) / (_maxTemp - _minTemp), 0.0, 1.0));
         
         //std::cerr << "Updated tower info " << key << std::endl;
-		std::stringstream ss;
+	std::stringstream ss;
+	ss << it->first << ", ";
         ss << setprecision(1) << std::fixed;
-		ss << "Velocity: ";
+	ss << "Velocity: ";
         ss << it->second.getVelocity();
         ss << "m/s, Temp: ";
         ss << it->second.getTemperature();
         ss << "C, Direction: ";
         ss << it->second.getDirection();
         ss << " degrees";
-		it->second.getFlagText()->setText(ss.str());			
+	it->second.getFlagText()->setText(ss.str());			
     }
 
 	std::cerr << "min: " << _minTemp << " max: " << _maxTemp << std::endl;
 
-	// if master create a sensor thread to listen for updates
-	if(ComController::instance()->isMaster())
+    // if master create a sensor thread to listen for updates
+    if(ComController::instance()->isMaster())
         _sensorThread = new SensorThread(_hpwrensensors);
 
 	// locate flag shaders
@@ -443,7 +485,9 @@ void Hpwren::initSensors(osg::Group* parent, XmlReader* configs)
    
     // create Towers
     createTowers(_hpwrensensors, osg::Vec4(0.0, 0.0, 1.0, 1.0), parent, 1000.0, program);
-    createTowers(_sdgesensors, osg::Vec4(1.0, 0.0, 0.0, 1.0) , parent, 1000.0, program);
+    createTowers(_sdgesensors, osg::Vec4(102.0 / 255.0, 0.0, 204.0 / 255.0, 1.0) , parent, 1000.0, program);
+    //createTowers(_hpwrensensors, osg::Vec4(0.0, 0.0, 1.0, 1.0), parent, 1000.0, program);
+    //createTowers(_sdgesensors, osg::Vec4(102.0 / 255.0, 0.0, 204.0 / 255.0, 1.0) , parent, 1000.0, program);
 }
 
 osg::Geode * Hpwren::createFlag(float heightAboveGround, osg::Vec4& color, int numWaves)
@@ -564,6 +608,7 @@ void Hpwren::createTowers(std::map<std::string, Sensor> & sensors, osg::Vec4 bas
     {
             // sample: compute a location on the planet
             double height = 0.0;   // on the surface (in meters)
+	    double test = 0.0;
 
             double latitude;
             double longitude;
@@ -571,7 +616,7 @@ void Hpwren::createTowers(std::map<std::string, Sensor> & sensors, osg::Vec4 bas
 
             osgEarth::ElevationQuery query( _map );
             osgEarth::GeoPoint point(_map->getProfile()->getSRS(), longitude, latitude);
-            query.getElevation(point, height);
+	    query.getElevation(point, height);
 
             osg::Matrixd output;
             _map->getProfile()->getSRS()->getEllipsoid()->computeLocalToWorldTransformFromLatLongHeight(
@@ -600,7 +645,7 @@ void Hpwren::createTowers(std::map<std::string, Sensor> & sensors, osg::Vec4 bas
             mat->setMatrix(output);
             mat->addChild(tower);
 
-			if( it->second.getType() )   //  add flag if site has data
+	    if( it->second.getType() )   //  add flag if site has data
             {
                     // create geode flag
                     osg::Vec4 color(1.0, 0.0, 0.0, 1.0);
@@ -643,26 +688,25 @@ void Hpwren::createTowers(std::map<std::string, Sensor> & sensors, osg::Vec4 bas
 Hpwren::~Hpwren()
 {
    if( _sensorThread )
-	delete _sensorThread;
+		delete _sensorThread;
    _sensorThread = NULL;
 }
 
 void Hpwren::preFrame()
 {
-   // synchronize map data
-   std:vector< SensorData > updates((int)_hpwrensensors.size());
-
-   if(ComController::instance()->isMaster())
-   {
-       // get data from listening thread
-       _sensorThread->getData(updates);
-       ComController::instance()->sendSlaves(&updates[0],sizeof(SensorData) * (int) _hpwrensensors.size());
-   }
-   else
-   {
-       ComController::instance()->readMaster(&updates[0],sizeof(SensorData) * (int) _hpwrensensors.size());
-   }
-
+	// synchronize map data
+	std:vector< SensorData > updates((int)_hpwrensensors.size());
+	
+	if(ComController::instance()->isMaster())
+	{
+	    // get data from listening thread
+	    _sensorThread->getData(updates);
+	    ComController::instance()->sendSlaves(&updates[0],sizeof(SensorData) * (int) _hpwrensensors.size());
+	}
+	else
+	{
+	    ComController::instance()->readMaster(&updates[0],sizeof(SensorData) * (int) _hpwrensensors.size());
+	}
 
    // loop through the updates.... then update the tower info
    for(int i = 0; i < (int)updates.size(); i++)

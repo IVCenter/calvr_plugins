@@ -52,6 +52,12 @@ class PanoViewObject : public cvr::SceneObject
             _removeOnClick = b;
         }
 
+        // added so can send a msg to enable demo mode
+        void setDemoMode(bool enable) 
+        { 
+            _demoMode->setValue(enable); 
+        }
+
         virtual void menuCallback(cvr::MenuItem * item);
         virtual void updateCallback(int handID, const osg::Matrix & mat);
         virtual bool eventCallback(cvr::InteractionEvent * ie);

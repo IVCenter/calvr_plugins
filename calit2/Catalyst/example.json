@@ -1,0 +1,21 @@
+{
+    "cavecams" : {
+        "entries" : [
+            {
+                "id"   : 5,
+                "name" : "LuxorTempleFirstCourtNight",
+                "panoproc_left"  : "a34ee6c0cd0c49d79ab4b55d2c346b7d",
+                "panoproc_right" : "b3cafbeedb554ee0aef78d0472c265e5",
+                "description" : "This CAVEcam was shot in the Luxor Temple showing the First Court of Ramesses II and the 14th Century Mosque of Abu al-Haggag, at night.  See: http://www.calit2.net/newsroom/rss.php?id=1862 and http://en.wikipedia.org/wiki/Luxor_Temple"
+            },
+            
+            {
+            	"id" : 7,
+            	"name" : "LuxorMedinetHabuHypostyle",
+            	"panoproc_left" : "7bcd39b3d6fa4b4ab5a782c393b4aa0f",
+            	"panoproc_right" : "037f1c8fb2b24d2d98e7268d8d149d84",
+            	"description" : "This CAVEcam was shot in the Temple of Ramesses III at Medinet Habu. This is outside of the columns CAVEcam shot and the Royal Treasure Halls.\nSee: http://www.calit2.net/newsroom/rss.php?id=1862\nand http://en.wikipedia.org/wiki/Medinet_Habu_(temple)"
+            }
+        ]
+    }
+}
