@@ -22,6 +22,8 @@
 #define PANOPROC_RASTER_HPP
 
 #include <string>
+#include <unistd.h>
+#include "sys/types.h"
 
 //------------------------------------------------------------------------------
 

@@ -23,6 +23,7 @@
 #include <ctime>
 #include <stdint.h>
 #include <zlib.h>
+#include <stddef.h>
 
 #include "tiff.hpp"
 
