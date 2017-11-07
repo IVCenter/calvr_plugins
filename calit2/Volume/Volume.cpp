@@ -38,6 +38,7 @@
 #include <osg/MatrixTransform>
 #include <osg/ShapeDrawable>
 #include <osg/Point>
+#include <osg/Version>
 #include <osgUtil/Simplifier>
 
 #include <osgDB/Registry>
@@ -51,6 +52,10 @@
 #include <osgVolume/VolumeTile>
 #include <osgVolume/RayTracedTechnique>
 #include <osgVolume/FixedFunctionTechnique>
+
+#ifdef VTK_FOUND
+#include <vtkVersionMacros.h>
+#endif
 
 #include "cvrImageSequence.h"
 
@@ -180,7 +185,11 @@ struct Volume::volumeinfo* Volume::loadXVF(std::string filename, int &x, int &y,
     volinfo->numberOfBytesPerComponent = numberBytesPerComponent;
     volinfo->datatype = dataType;
     volinfo->id = id++;
+#if OSG_VERSION_LESS_THAN(3,1,4)
     volinfo->numberOfFrames = imageSequence->getNumImages();
+#else
+    volinfo->numberOfFrames = imageSequence->getNumImageData();
+#endif
     
     // compute transferFunction make adjustemnt for scalar shift
     osg::Vec4 minValue, maxValue;
@@ -204,7 +213,7 @@ struct Volume::volumeinfo* Volume::loadXVF(std::string filename, int &x, int &y,
 
     // create colorMap (access widget and get center and min max ranges)
     // Looks only for PyramidWidgets
-    int size = vol->tf._widgets.size();
+    int size = vol->tf[0]._widgets.size();
     //vol->tf._widgets.first();
 
     // temporary transferfunction table
@@ -212,7 +221,7 @@ struct Volume::volumeinfo* Volume::loadXVF(std::string filename, int &x, int &y,
 
     for(int i = 0; i < size; i++)
     {
-        vvTFWidget* w = vol->tf._widgets[i];
+        vvTFWidget* w = vol->tf[0]._widgets[i];
 
         if( vvTFPyramid *pw = dynamic_cast<vvTFPyramid*>(w) )
         {
@@ -852,8 +861,12 @@ osg::Geode* Volume::createSurface(volumeinfo * info, osg::Vec3 position, float l
     vtkStructuredPoints *grid = vtkStructuredPoints::New();
     grid->SetDimensions(info->x, info->y, info->z);
     grid->SetSpacing(info->xMultiplier, info->yMultiplier, info->zMultiplier);
+#if VTK_MAJOR_VERSION <= 5
     grid->SetNumberOfScalarComponents(1);
     grid->SetScalarTypeToFloat();
+#else
+    //grid->AllocateScalars(VTK_FLOAT, 1);
+#endif
 
     vtkFloatArray* scalararray = vtkFloatArray::New();
     for(int i = 0; i < (info->z); i++)
@@ -875,7 +888,11 @@ osg::Geode* Volume::createSurface(volumeinfo * info, osg::Vec3 position, float l
 
     // run marching cubes against data using (lower bound value)
     vtkMarchingContourFilter* surface = vtkMarchingContourFilter::New();
+#if VTK_MAJOR_VERSION <= 5
     surface->SetInput(grid);
+#else
+    surface->SetInputData(grid);
+#endif
     surface->SetValue(0, lowerBound);
     surface->ComputeNormalsOn();
     surface->ComputeGradientsOff();
@@ -888,7 +905,11 @@ osg::Geode* Volume::createSurface(volumeinfo * info, osg::Vec3 position, float l
     
     // surface filter
     vtkWindowedSincPolyDataFilter* smoother = vtkWindowedSincPolyDataFilter::New();
+#if VTK_MAJOR_VERSION <= 5
     smoother->SetInput(confilter->GetOutput());
+#else
+    smoother->SetInputData(confilter->GetOutput());
+#endif
     smoother->SetNumberOfIterations(15);
     smoother->BoundarySmoothingOff();
     smoother->FeatureEdgeSmoothingOff();
@@ -926,7 +947,18 @@ osg::Geode* Volume::createSurface(volumeinfo * info, osg::Vec3 position, float l
     osgUtil::Simplifier simplifier;
     simplifier.setDoTriStrip(false);
     simplifier.setSmoothing(true);
+#if OSG_VERSION_LESS_THAN(3,5,6) //FIXME: is this *exactly* the right version?
     simplifier.apply(*geode);
+#else
+    if( geode->getNumDrawables() )
+    {
+        osg::Geometry* geom = dynamic_cast<osg::Geometry*>(geode->getDrawable(0));
+        if( geom != NULL )
+        {
+            simplifier.apply(*geom);
+        }
+    }
+#endif
 #endif
 
     return geode;
@@ -1692,7 +1724,13 @@ bool Volume::loadFile(std::string filename)
         info->seedPoint->addChild(spoint);
         info->seedPoint->setPosition(locationPoint);
 	info->seedPoint->setBoundsCalcMode(SceneObject::MANUAL);
-	info->seedPoint->setBoundingBox(shape->getBound());
+#if OSG_VERSION_GREATER_OR_EQUAL(3, 3, 2)
+        BoundingBox bb; 
+        bb.expandBy(shape->getBound());
+        info->seedPoint->setBoundingBox(bb);
+#else
+        info->seedPoint->setBoundingBox(shape->getBound());
+#endif
         // so->addChild(info->seedPoint); TODO
         //info->seedPoint->getChildNode(0)->setNodeMask(~0);
         //info->seedPoint->getChildNode(0)->setNodeMask(0);

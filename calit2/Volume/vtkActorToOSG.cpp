@@ -134,7 +134,12 @@ osg::Geometry *processPrimitive(vtkActor *actor, vtkCellArray *primArray, int pr
 		if (normalPerCell)
 		{
 			double *aNormal = normals->GetTuple(prim);
-			norms->push_back(osg::Vec3(aNormal[0], aNormal[1], aNormal[2]));
+            // OSG only supports vertex normals, so assign the same
+            // face normal to all face verts
+		    for (i=0; i < npts; i++)
+            {
+			    norms->push_back(osg::Vec3(aNormal[0], aNormal[1], aNormal[2]));
+            }
 		}
 		// go through points in cell (verts)
 		for (i=0; i < npts; i++)
@@ -171,12 +176,12 @@ osg::Geometry *processPrimitive(vtkActor *actor, vtkCellArray *primArray, int pr
 	if (normalPerVertex)
         geom->setNormalBinding(osg::Geometry::BIND_PER_VERTEX);
 	if (normalPerCell)
-        geom->setNormalBinding(osg::Geometry::BIND_PER_PRIMITIVE);
+        geom->setNormalBinding(osg::Geometry::BIND_PER_VERTEX);
 
 	if (colorPerVertex)
         geom->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
 	else if (colorPerCell)
-        geom->setColorBinding(osg::Geometry::BIND_PER_PRIMITIVE);
+        geom->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
 	else
 	{ 
     // use overall color (get from Actor)
