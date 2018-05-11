@@ -39,6 +39,7 @@
 #include <foundation/Px.h>
 #include <extensions/PxShapeExt.h>
 #include <foundation/PxMat33.h>
+#include <foundation/PxQuat.h>
 
 
 
@@ -47,7 +48,7 @@ class SpatialViz : public cvr::CVRPlugin, public cvr::MenuCallback
   protected:
     // menu variables
     cvr::SubMenu *_mainMenu;
-    cvr::MenuButton *_puzzle1Button, *_puzzle2Button, *_puzzle3Button, *_labyrinthPuzzle, *_removePuzzles, *_restartPhysics;
+    cvr::MenuButton *_puzzle1Button, *_puzzle2Button, *_puzzle3Button, *_labyrinthPuzzle, *_tetrisPuzzle, *_removePuzzles, *_restartPhysics;
     
     osg::PositionAttitudeTransform *_sphereTrans, *_cubeTrans;
     osg::Geode *_cubeGeode, *_sphereGeode;
@@ -56,17 +57,14 @@ class SpatialViz : public cvr::CVRPlugin, public cvr::MenuCallback
     
     // Puzzle variables
     osg::PositionAttitudeTransform * _puzzleMaze, *_mazeBox, *_puzzle5x5, * _piecePuzzle1, * _piecePuzzle2, * _piecePuzzle3, * _piecePuzzle4, * _piecePuzzle5;
-    osg::Group * _puzzleMazeGroup, *_puzzle5x5Group, *_piecePuzzleGroup;
-    osg::Group * _objGroup;
+    osg::Group * _puzzleMazeGroup, *_puzzle5x5Group, *_piecePuzzleGroup, *_labyrinthGroup;
+    osg::Group * _objGroup, *_objGroupMaze, *_objGroupTetris, *_TetrisPiece;
     
-    std::vector<osg::Vec3> startingPositions;
-    std::vector<physx::PxVec3> physxStartPos;
     
     physx::PxSceneDesc* _sceneDesc;
     
     // functions
     osg::PositionAttitudeTransform *loadOBJ(osg::Group *, std::string, osg::Vec3, osg::Vec3, float);
-    //osg::PositionAttitudeTransform *loadOBJ(osg::PositionAttitudeTransform *, std::string, osg::Vec3, osg::Vec3, float);
     
     void setNodeTransparency(osg::Node*, float);
     osg::Geode * makePyramid(osg::Vec3, osg::Vec3);
@@ -84,9 +82,16 @@ class SpatialViz : public cvr::CVRPlugin, public cvr::MenuCallback
     
     // PhysX 
     void initPhysX();
+    void restartPhysics();
+    
+    void createTetris(int);
+    void createTetrisPiece(int, int, std::vector<osg::Vec3>&);
+    void createPuzzleCube(int);
+    void create5x5(int);
     void createLabyrinth(float, float);
-    void createBoxes(int, physx::PxVec3, physx::PxVec3, bool);
-    void createSpheres(int, physx::PxVec3, float);
+    
+    void createBoxes(int, physx::PxVec3, physx::PxVec3, bool, osg::Group*, std::vector<osg::PositionAttitudeTransform*>*, std::vector<physx::PxRigidDynamic*>*, std::vector<osg::Vec3>*, std::vector<physx::PxVec3>*, physx::PxQuat quat = physx::PxQuat::createIdentity());
+    void createSpheres(int, physx::PxVec3, float, osg::Group*, std::vector<osg::PositionAttitudeTransform*>*, std::vector<physx::PxRigidDynamic*>*, std::vector<osg::Vec3>*, std::vector<physx::PxVec3>*);
     bool advance(physx::PxReal);
 
     
