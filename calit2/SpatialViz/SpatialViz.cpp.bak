@@ -1,0 +1,796 @@
+#include "SpatialViz.h"
+
+#include <PluginMessageType.h>
+
+#include <fstream>
+#include <iostream>
+#include <vector>
+#include <string>
+#include <iterator>
+#include <math.h>
+
+// OSG:
+#include <osg/Node>
+#include <osg/Geode>
+#include <osg/Geometry>
+#include <osg/Material>
+#include <osg/Vec3d>
+#include <osg/MatrixTransform>
+#include <osg/ShapeDrawable>
+#include <osg/Texture2D>
+#include <osg/PrimitiveSet>
+
+// PhysX: -> moved to header
+//#include <PxPhysicsAPI.h>
+//#include <extensions/PxDefaultErrorCallback.h>
+//#include <extensions/PxDefaultAllocator.h>
+//#include <foundation/Px.h>
+
+
+
+#include <osg/TexEnv>   // adding a texture state
+
+#include <map>
+#include <limits>
+
+using namespace std;
+using namespace cvr;
+using namespace osg;
+using namespace physx;
+
+CVRPLUGIN(SpatialViz)
+
+// paths to puzzle models 
+static string PATH_5X5 = "/home/klucknav/CVRPlugins/calit2/SpatialViz/Puzzle5x5/Puzzle5x5.dae";
+static string PATH_MAZE = "/home/klucknav/CVRPlugins/calit2/SpatialViz/MazePuzzle/PuzzleMaze.dae";
+static string PATH_MAZE_BOX = "/home/klucknav/CVRPlugins/calit2/SpatialViz/MazePuzzle/MazeBox5.dae";
+static string PATH_PUZZLE1 = "/home/klucknav/CVRPlugins/calit2/SpatialViz/5PiecePuzzle/cube1of5.dae";
+static string PATH_PUZZLE2 = "/home/klucknav/CVRPlugins/calit2/SpatialViz/5PiecePuzzle/cube2of5.dae";
+static string PATH_PUZZLE3 = "/home/klucknav/CVRPlugins/calit2/SpatialViz/5PiecePuzzle/cube3of5.dae";
+static string PATH_PUZZLE4 = "/home/klucknav/CVRPlugins/calit2/SpatialViz/5PiecePuzzle/cube4of5.dae";
+static string PATH_PUZZLE5 = "/home/klucknav/CVRPlugins/calit2/SpatialViz/5PiecePuzzle/cube5of5.dae";
+
+
+
+// PhysX 
+PxPhysics *mPhysics = NULL;
+PxScene *gScene = NULL;
+
+PxReal myTimestep = 1.0f/60.0f;
+PxReal currTime = 0.0f;
+PxReal end = 1.0f;
+
+vector<PositionAttitudeTransform*> movingObjs;
+vector<PxRigidBody*> movingPhysx;           // was PxRigidActor
+
+// Code for character controller
+static PxControllerManager* manager = NULL;
+PxController* characterController = NULL;
+bool xTrue = false, yTrue = false, zTrue = false;
+PxReal x = 0, z = 0, y = 0;
+PxReal movement = 0.2f;
+static PxF32 startElapsedTime;
+
+// ------------------------------------------ Start PhysX functions -------------------------------------
+
+void SpatialViz::initPhysX()
+{
+    // ------------------------ PhysX -------------------
+    cerr << "initializing PhysX\n";
+    static PxDefaultErrorCallback gDefaultErrorCallback;
+    static PxDefaultAllocator gDefaultAllocatorCallback;
+    static PxSimulationFilterShader gDefaultFilterShader = PxDefaultSimulationFilterShader;
+
+    //PxRigidBody *box;       // was PxRigidActor
+ 
+    cerr << "creating Foundation\n";
+    PxFoundation *mFoundation = NULL;
+    mFoundation = PxCreateFoundation( PX_PHYSICS_VERSION, gDefaultAllocatorCallback, gDefaultErrorCallback);
+ 
+    cerr <<"creating Physics\n";
+    // create Physics object with the created foundation and with a 'default' scale tolerance.
+    mPhysics = PxCreatePhysics( PX_PHYSICS_VERSION, *mFoundation, PxTolerancesScale());
+    
+    // extension check
+    if (!PxInitExtensions(*mPhysics)) cerr << "PxInitExtensions failed!" << endl;
+
+    // testing
+    if(mPhysics == NULL) 
+    {
+        cerr << "Error creating PhysX device." << endl;
+        cerr << "Exiting..." << endl;
+    }
+   
+    // -------------------- Create the scene --------------------
+    cerr << "creating the scene\n";
+    PxSceneDesc sceneDesc(mPhysics->getTolerancesScale());
+    sceneDesc.gravity=PxVec3(0.0f, -9.81f, 0.0f);            // adding gravity 
+    
+    if(!sceneDesc.cpuDispatcher) 
+    {
+        PxDefaultCpuDispatcher* mCpuDispatcher = PxDefaultCpuDispatcherCreate(1);
+        if(!mCpuDispatcher) {
+            cerr << "PxDefaultCpuDispatcherCreate failed!" << endl;
+        } 
+        sceneDesc.cpuDispatcher = mCpuDispatcher;
+    }
+    if(!sceneDesc.filterShader)
+        sceneDesc.filterShader  = gDefaultFilterShader;
+
+    gScene = mPhysics->createScene(sceneDesc);
+    if (!gScene)
+        cerr<<"createScene failed!"<<endl;
+    
+    gScene->setVisualizationParameter(PxVisualizationParameter::eSCALE, 1.0);
+    gScene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_SHAPES, 1.0f);
+      
+    cerr << "scene created " << endl;
+    
+    
+    // create a material: setting the coefficients of static friction, dynamic friction and 
+    // restitution (how elastic a collision would be)
+    PxMaterial* mMaterial = mPhysics->createMaterial(0.1,0.2,0.5);
+    
+    // -------------------- Create ground plane --------------------
+    PxReal d = 0.0f;  
+    PxTransform pose = PxTransform(PxVec3(0.0f, -0.25, 0.0f),PxQuat(PxHalfPi, PxVec3(0.0f, 0.0f, 1.0f)));
+    PxRigidStatic* plane = mPhysics->createRigidStatic(pose);           // make the plane
+    if (!plane)
+        cerr << "create plane failed!" << endl;
+    
+    PxShape* shape = plane->createShape(PxPlaneGeometry(), *mMaterial); // adding material to the plane
+    if (!shape) {
+        cerr << "creating plane shape failed!" << endl;
+    }
+    gScene->addActor(*plane);                                           // add plane to the scene
+    cerr << "Created ground plane" << endl;
+    
+    //  -------------------- Create cube(s) --------------------
+    createBoxes(3, PxVec3(0.0f, 0.3f, 0.0f), PxVec3(0.05, 0.05, 0.05), false);  // TESTING STATIC ON BOXES
+
+    //  -------------------- Create sphere(s) --------------------
+    createSpheres(2, PxVec3(0.5f, 0.3f, 0.0f), 0.01);
+    //createSpheres(1, PxVec3(0.125, -0.245, 0.19), 0.0075);              // sphere for labyrinth
+    
+    
+    // --------------------- Create the Labyrinth ------------------
+    //createLabyrinth(0.005, -0.245);                                     // boxHeight = 0.005 floorHeight = -0.245;
+    //cerr << "Created the Layrinth" << endl;
+    
+    // --------------------- Testing static objects -----------------
+    
+    
+    if (!PxInitExtensions(*mPhysics)) cerr << "PxInitExtensions failed!" << endl;
+    //WavefrontObj puzzleMazePhysX = WavefrontObj();
+    //puzzleMazePhysX.loadObj("/home/klucknav/CVRPlugins/calit2/SpatialViz/MazePuzzle/PuzzleMaze.obj", false);
+    
+
+} 
+void SpatialViz::createLabyrinth(float boxHeight, float floorHeight)
+{      
+    // create the frame 
+    createBoxes(1, PxVec3(0.0f, floorHeight+boxHeight, .20f), PxVec3(0.15, boxHeight*2, 0.005), true);
+    createBoxes(1, PxVec3(0.0f, floorHeight+boxHeight, 0.0f), PxVec3(0.15, boxHeight*2, 0.005), true);
+    createBoxes(1, PxVec3(-0.155f, floorHeight+boxHeight, 0.1f), PxVec3(0.005, boxHeight*2, 0.105), true);
+    createBoxes(1, PxVec3(0.155f, floorHeight+boxHeight, 0.1f), PxVec3(0.005, boxHeight*2, 0.105), true);
+
+    // maze portions
+    // left to right - horizontal boxes
+    createBoxes(1, PxVec3(-0.135, floorHeight, 0.16), PxVec3(0.02, boxHeight, 0.0015), true);
+    createBoxes(1, PxVec3(-0.135, floorHeight, 0.08), PxVec3(0.02, boxHeight, 0.0015), true); 
+    
+    createBoxes(1, PxVec3(-0.105, floorHeight, 0.12), PxVec3(0.0225, boxHeight, 0.0015), true);
+    createBoxes(1, PxVec3(-0.105, floorHeight, 0.04), PxVec3(0.0225, boxHeight, 0.0015), true);
+    
+    createBoxes(1, PxVec3(-0.055, floorHeight, 0.16), PxVec3(0.0325, boxHeight, 0.0015), true);
+    
+    createBoxes(1, PxVec3(-0.02, floorHeight, 0.12), PxVec3(0.03, boxHeight, 0.0015), true);
+    createBoxes(1, PxVec3(-0.02, floorHeight, 0.08), PxVec3(0.03, boxHeight, 0.0015), true);
+    
+    createBoxes(1, PxVec3(0.07, floorHeight, 0.04), PxVec3(0.02, boxHeight, 0.0015), true);
+    createBoxes(1, PxVec3(0.11, floorHeight, 0.08), PxVec3(0.02, boxHeight, 0.0015), true);
+    
+    createBoxes(1, PxVec3(0.05, floorHeight, 0.08), PxVec3(0.02, boxHeight, 0.0015), true);
+    createBoxes(1, PxVec3(0.09, floorHeight, 0.155), PxVec3(0.03, boxHeight, 0.0015), true);
+    
+    createBoxes(1, PxVec3(0.13, floorHeight, 0.12), PxVec3(0.02, boxHeight, 0.0015), true);
+    
+    
+    // top down - vertical boxes
+    createBoxes(1, PxVec3(-0.025, floorHeight, 0.175), PxVec3(0.0015, boxHeight, 0.0175), true);
+    createBoxes(1, PxVec3(0.09, floorHeight, 0.175), PxVec3(0.0015, boxHeight, 0.0175), true);
+    
+    createBoxes(1, PxVec3(-0.085, floorHeight, 0.14), PxVec3(0.0015, boxHeight, 0.0175), true);
+    createBoxes(1, PxVec3(-0.085, floorHeight, 0.06), PxVec3(0.0015, boxHeight, 0.0175), true);
+    
+    createBoxes(1, PxVec3(-0.055, floorHeight, 0.02), PxVec3(0.0015, boxHeight, 0.0175), true);
+    
+    createBoxes(1, PxVec3(-0.02, floorHeight, 0.06), PxVec3(0.0015, boxHeight, 0.0175), true);
+    
+    createBoxes(1, PxVec3(0.025, floorHeight, 0.02), PxVec3(0.0015, boxHeight, 0.0175), true);
+    
+    createBoxes(1, PxVec3(0.0325, floorHeight, 0.13), PxVec3(0.001, boxHeight, 0.0475), true);
+    
+    createBoxes(1, PxVec3(0.0875, floorHeight, 0.07), PxVec3(0.0015, boxHeight, 0.0275), true);
+}
+
+void SpatialViz::createBoxes(int num, PxVec3 startVec, PxVec3 dimensions, bool fixed) 
+{
+    // set the density and dimenstions
+    PxReal density;
+    PxBoxGeometry geometryBox(dimensions); 
+    
+    // create the material based on if it it fixed or not
+    PxMaterial* mMaterial;
+    if (!fixed) 
+    {
+        // material: static friction, dynamic friction and elasticity of collisions
+        mMaterial = mPhysics->createMaterial(0.1,0.2,0.5);
+        density = 1.0f;
+    }
+    else
+    { 
+        // material: static friction, dynamic friction and elasticity of collisions
+        mMaterial = mPhysics->createMaterial(100.0, 100.0, 0.5);
+        density = 10.0f;
+    }
+    
+    for (int i = 0; i < num; i++)
+    {
+        //cerr << "----- Creating a cube ----- " << endl;
+        
+        //PxVec3 currVec = PxVec3(startVec.x+(i*0.2), startVec.y+(i*0.1), startVec.z+(i*0.12));
+        PxVec3 currVec = PxVec3(startVec.x, startVec.y+(i*0.12), startVec.z);
+        PxTransform transform(currVec, PxQuat::createIdentity());
+
+        PxRigidDynamic *actor = PxCreateDynamic(*mPhysics, transform, geometryBox, *mMaterial, density);
+        actor->setAngularDamping(0.75);
+        actor->setLinearVelocity(PxVec3(0,0,0)); 
+        //actor->setActorFlag(PxActorFlag::eDISABLE_SIMULATION);
+        
+        if (!actor)
+            cerr << "create actor failed!" << endl;
+            
+        // add the box to the scene
+        gScene->addActor(*actor);                                       
+        movingPhysx.push_back(actor); 
+        
+        // for restarting
+        Vec3 start = Vec3(currVec.x, currVec.y, currVec.z);
+        startingPositions.push_back(start);
+        physxStartPos.push_back(currVec);
+        
+        // add a cube to the given parent (root) then add the associated PAT to the moving Objs vector
+        //                                              parent      center                          dimenstions                   transformation
+        PositionAttitudeTransform * tempTrans = addCube(_objGroup, start, dimensions.x*2000, dimensions.z*2000, dimensions.y*2000, Vec3(0,0,0));   
+        movingObjs.push_back(tempTrans);         
+    }
+}
+
+void SpatialViz::createSpheres(int num, PxVec3 startVec, float radius)
+{
+    // set the density, material and dimenstions
+    PxReal density = 1.0f;
+    PxMaterial* mMaterial = mPhysics->createMaterial(0.1,0.2,0.5);
+    PxSphereGeometry geometrySphere(radius);                             // make a sphere with the given radius
+    
+    for (int i = 0; i < num; i++)
+    {
+        //cerr << "Creating a sphere" << endl;
+        
+        PxVec3 currVec = PxVec3(startVec.x+(i*0.05), startVec.y+(i*0.2), startVec.z);
+        PxTransform transform(currVec, PxQuat::createIdentity());
+        
+        PxRigidDynamic *actor = PxCreateDynamic(*mPhysics, transform, geometrySphere, *mMaterial, density);
+        actor->setAngularDamping(0.75);
+        actor->setLinearVelocity(PxVec3(0,0,-1.0)); 
+        
+        if (!actor)
+            cerr << "create sphere actor failed!" << endl;
+        
+        // add the sphere to the scene
+        gScene->addActor(*actor);                                       
+        movingPhysx.push_back(actor); 
+        
+        // for restarting
+        Vec3 start = Vec3(currVec.x, currVec.y, currVec.z);
+        startingPositions.push_back(start);
+        physxStartPos.push_back(currVec);
+        
+        // adds a cube to the given parent (root) then add the associated PAT to the moving Objs vector
+        PositionAttitudeTransform * tempTrans = addSphere(_objGroup, Vec3(0,0,0), radius*1000, Vec3(0,0,0));   
+        movingObjs.push_back(tempTrans); 
+    }
+}
+
+// ------------------------------------------- End PhysX functions --------------------------------------
+
+// ---------------------------------------- Start SpatialViz functions -----------------------------------
+//constructor
+SpatialViz::SpatialViz()
+{
+
+}
+
+void SpatialViz::menuCallback(MenuItem* menuItem)
+{
+    //static bool firstNodeOn = true;
+    //static bool secondNodeOn = true;
+
+    if (menuItem == _puzzle1Button)
+    {
+        cerr << "Puzzle 1 Button pressed" << endl;
+        // shows the first puzzle only (maze)
+        _root->setSingleChildOn(0);
+    }
+    if (menuItem == _puzzle2Button)
+    {
+        cerr << "Puzzle 2 Button pressed" << endl;  
+        // shows the second puzzle only (5x5)
+        _root->setSingleChildOn(1);
+    }
+    if (menuItem == _puzzle3Button)
+    {
+        cerr << "Puzzle 3 Button pressed" << endl;  
+        // shows the third puzzle only (5 piece)
+        _root->setSingleChildOn(2);
+    }  
+    if (menuItem == _labyrinthPuzzle)
+    {
+        cerr << "Labyrinth Puzzle" << endl;
+        _root->setSingleChildOn(3);
+    }
+    if (menuItem == _removePuzzles)
+    {
+        cerr << "Remove Puzzles " << endl;  
+        // shows no puzzles
+        _root->setSingleChildOn(4);   
+    }
+    if (menuItem == _restartPhysics)
+    {
+        cerr << "restart Physics" << endl;
+        currTime = 0.0f;
+        // reset the positions of the objects 
+        // loop through the objects and update the positionAttitudeTransform based on the new location
+        for(int i = 0; i < movingObjs.size(); i++)
+        {
+            //movingObjs[i]->setPosition(Vec3(0.0, 0.0, 0.0));
+            movingObjs[i]->setPosition(startingPositions[i]);
+            
+            //PxVec3 currVec = PxVec3(0.0, 0.3, 0.0);
+            //PxTransform trans(currVec, PxQuat::createIdentity());
+            
+            PxTransform trans(physxStartPos[i], PxQuat::createIdentity());
+            movingPhysx[i]->setGlobalPose(trans);
+            
+            //PxVec3 currVec = PxVec3(startVec.x+(i*0.05), startVec.y+(i*0.2), startVec.z);
+            //PxTransform transform(currVec, PxQuat::createIdentity());
+        
+        }
+    }
+  
+}
+
+// intialize graphics and menus
+bool SpatialViz::init()
+{
+
+	cerr << " -------------------- SpatialViz::SpatialViz -------------------- " << endl;
+
+	// enable osg debugging
+	//osg::setNotifyLevel( osg::INFO );
+ 	
+	// --------------- create the menu ---------------
+	_mainMenu = new SubMenu("SpatialViz", "SpatialViz");
+ 	_mainMenu->setCallback(this);
+ 	MenuSystem::instance()->addMenuItem(_mainMenu);
+
+    _puzzle1Button = new MenuButton("Maze Puzzle");
+    _puzzle1Button->setCallback(this);
+    _mainMenu->addItem(_puzzle1Button);
+    
+	_puzzle2Button = new MenuButton("5x5 Puzzle");
+    _puzzle2Button->setCallback(this);
+    _mainMenu->addItem(_puzzle2Button);
+    
+    _puzzle3Button = new MenuButton("Cube Puzzle");
+    _puzzle3Button->setCallback(this);
+    _mainMenu->addItem(_puzzle3Button);
+    
+    _labyrinthPuzzle = new MenuButton("Labyrinth Puzzle");
+    _labyrinthPuzzle->setCallback(this);
+    _mainMenu->addItem(_labyrinthPuzzle);
+    
+    _removePuzzles = new MenuButton("Remove Puzzles");
+    _removePuzzles->setCallback(this);
+    _mainMenu->addItem(_removePuzzles);
+    
+	_restartPhysics = new MenuButton("Restart Physics");
+    _restartPhysics->setCallback(this);
+    _mainMenu->addItem(_restartPhysics);
+	
+	// --------------- create the root "Node" ---------------
+	_root = new Switch();		
+    //Group * test = new Group();
+    //_root->addChild(test);
+    
+    // make a Pyramid and add it to the root 
+    //Geode * pyramidGeode = makePyramid(Vec3(0,0,0), Vec3(250, 250, 250));
+
+	// --------------- load an image ---------------
+	//Texture2D * faceTexture = loadTexture("/home/klucknav/Downloads/index.tga");
+	
+	// --------------- add that image to the state ---------------
+	//StateSet * stateOne = new StateSet();
+	//stateOne->setTextureAttributeAndModes(0, faceTexture, StateAttribute::ON);
+
+ 
+    // --------------- Load the Puzzles ---------------
+    _puzzleMazeGroup = new Group;
+    _puzzle5x5Group = new Group;
+    _piecePuzzleGroup = new Group;
+    
+    Vec3 scale = Vec3(25, 25, 25);
+    
+    // PuzzleMaze and add to the puzzleMazeGroup       Scale      transform        alpha
+	_puzzleMaze = loadOBJ(_puzzleMazeGroup, PATH_MAZE, scale, Vec3(-150, 0.0, 0.0), 1.0f);   // name, scale, trans, alpha
+	_mazeBox = loadOBJ(_puzzleMaze, PATH_MAZE_BOX, Vec3(1,1,1), Vec3(0,0,0), 0.5f);         // name, scale, trans, alpha
+
+
+    // 5x5 Puzzle and add to the puzzle5x5Group
+    _puzzle5x5 = loadOBJ(_puzzle5x5Group, PATH_5X5, scale, Vec3(-150, 0.0, 0.0), 0.5f);  // name, scale, trans, alpha
+    //addSphere(_puzzle5x5, Vec3(0, 0, 0), 50.0, Vec3(0, 0, 0));                        // center radius transform
+    //addSphere(_puzzle5x5Group, Vec3(150, 0, 0), 50.0, Vec3(150, 50, -280));
+    
+    
+    // 5 Piece Puzzle
+    /*
+    PositionAttitudeTransform * _piecePuzzleT = new PositionAttitudeTransform;
+	_piecePuzzleT->setScale(Vec3(100, 100, 100));
+	_piecePuzzleT->setPosition(Vec3(-300, 0, -300));
+	
+	_piecePuzzleGroup->addChild(_piecePuzzleT);
+	
+    _piecePuzzle1 = loadOBJ(_piecePuzzleT, PATH_PUZZLE1, Vec3(1, 1, 1), Vec3(50, 0, 0), 1.0f);     // name, scale, trans, alpha
+    _piecePuzzle2 = loadOBJ(_piecePuzzleT, PATH_PUZZLE2, Vec3(1, 1, 1), Vec3(200, 250, 0), 1.0f);   // name, scale, trans, alpha
+    _piecePuzzle3 = loadOBJ(_piecePuzzleT, PATH_PUZZLE3, Vec3(1, 1, 1), Vec3(-300, 0, 0), 1.0f);     // name, scale, trans, alpha
+    _piecePuzzle4 = loadOBJ(_piecePuzzleT, PATH_PUZZLE4, Vec3(1, 1, 1), Vec3(200, -250, 0), 1.0f);  // name, scale, trans, alpha
+    _piecePuzzle5 = loadOBJ(_piecePuzzleT, PATH_PUZZLE5, Vec3(1, 1, 1), Vec3(500, 0, 0), 1.0f);      // name, scale, trans, alpha
+    */
+    
+    // old way
+    _piecePuzzle1 = loadOBJ(_piecePuzzleGroup, PATH_PUZZLE1, scale, Vec3(-150, 0.0, 0.0), 1.0f);    // name, scale, trans, alpha
+    _piecePuzzle2 = loadOBJ(_piecePuzzleGroup, PATH_PUZZLE2, scale, Vec3(-75, 250, 0.0), 1.0f);    // name, scale, trans, alpha
+    _piecePuzzle3 = loadOBJ(_piecePuzzleGroup, PATH_PUZZLE3, scale, Vec3(-300, 0.0, 0.0), 1.0f);    // name, scale, trans, alpha
+    _piecePuzzle4 = loadOBJ(_piecePuzzleGroup, PATH_PUZZLE4, scale, Vec3(-50, -250, 0.0), 1.0f);   // name, scale, trans, alpha
+    _piecePuzzle5 = loadOBJ(_piecePuzzleGroup, PATH_PUZZLE5, scale, Vec3(100, 0.0, 0.0), 1.0f);     // name, scale, trans, alpha
+    
+    
+    // add puzzles to _root
+    _root->addChild(_puzzleMazeGroup);
+    _root->addChild(_puzzle5x5Group);
+    _root->addChild(_piecePuzzleGroup);
+    
+    
+ 	// from Points 		-------------------------------------------------------
+	SceneObject *so = new SceneObject("test", false, false, false, true, true);
+	PluginHelper::registerSceneObject(so,"SpatialVizObject");
+	so->addChild(_root);				// adding the _root to the scene
+	so->attachToScene();				
+	so->setNavigationOn(true);
+	so->addMoveMenuItem();
+	so->addNavigationMenuItem();
+	so->setShowBounds(false);
+	
+    // ------------------------ PhysX -------------------
+    
+	// _objGroup that contains all the boxes/spheres
+	_objGroup = new Group;
+	_root->addChild(_objGroup); 
+	
+	initPhysX();
+	
+	// shows no puzzles
+    _root->setSingleChildOn(4);
+    
+    return true;
+}
+
+
+
+// load in an OBJ file
+PositionAttitudeTransform * SpatialViz::loadOBJ(Group * parent, string filename, Vec3 scale, Vec3 trans, float alpha)
+{
+    // LOAD IN A OBJ FILE
+	osg::Node* objNode = osgDB::readNodeFile(filename);
+	osg::PositionAttitudeTransform *modelScale = new PositionAttitudeTransform;
+	
+	if (objNode==NULL)
+	{ 
+	    std::cerr << "SpatialViz: Error reading file " << filename << endl;
+	}	
+	else if (objNode != NULL)
+	{
+	    setNodeTransparency(objNode, alpha);
+	
+	    modelScale->setScale(scale);
+	    modelScale->setPosition(trans);
+	
+	    modelScale->addChild(objNode);
+	    parent->addChild(modelScale);
+	}
+	//return objNode;
+    return modelScale;	
+}
+/*
+PositionAttitudeTransform * SpatialViz::loadOBJ(PositionAttitudeTransform * parent, string filename, Vec3 scale, Vec3 trans, float alpha)
+{
+    // LOAD IN A OBJ FILE
+    cerr << "SpatialViz: loading " << filename << " with a PAT as the parent\n";
+	osg::Node* objNode = osgDB::readNodeFile(filename);
+	osg::PositionAttitudeTransform *modelScale = new PositionAttitudeTransform;
+	if (objNode==NULL)
+	{ 
+	    std::cerr << "SpatialViz: Error reading file " << filename << endl;
+	}	
+	else if (objNode != NULL)
+	{
+	    setNodeTransparency(objNode, alpha);
+	
+	    //osg::PositionAttitudeTransform *modelScale = new PositionAttitudeTransform;
+	    modelScale->setScale(scale);
+	    modelScale->setPosition(trans);
+	
+	    modelScale->addChild(objNode);
+	    parent->addChild(modelScale);
+	}
+	//return objNode;
+	cerr << "Spatial Viz: loaded in the obj\n";
+    return modelScale;	
+}*/
+
+Texture2D * SpatialViz::loadTexture(string filename)
+{
+    // load an image:
+	Texture2D * faceTexture = new Texture2D;
+	faceTexture->setDataVariance(Object::DYNAMIC);
+	
+	Image * faceIm = osgDB::readImageFile(filename);
+	if (!faceIm) {
+		cerr << "couldn't find texture" << filename << endl;
+	}
+	
+	faceTexture->setImage(faceIm);
+
+	StateSet * stateOne = new StateSet();
+	stateOne->setTextureAttributeAndModes(0, faceTexture, StateAttribute::ON);
+	
+	return faceTexture;
+}
+
+PositionAttitudeTransform * SpatialViz::addCube(Group * parent, Vec3 center, float dimX, float dimY, float dimZ, Vec3 trans)
+{
+    // add a cube to the root
+	Box * unitCube = new Box(center, dimX, dimY, dimZ); // center, dimension
+	ShapeDrawable * unitCubeDrawable = new ShapeDrawable(unitCube);
+	
+	// move the cube 
+	PositionAttitudeTransform * cubeTrans = new PositionAttitudeTransform();
+	cubeTrans->setPosition(trans);
+	
+	// set the Transparency
+	//setNodeTransparency((Node*)unitCube, alpha);
+	
+	_cubeGeode = new Geode();
+	parent->addChild(cubeTrans);
+	//cerr << "added cube to parent" << endl;
+	
+	cubeTrans->addChild(_cubeGeode);
+	_cubeGeode->addDrawable(unitCubeDrawable);
+	
+	return cubeTrans;
+}
+
+PositionAttitudeTransform * SpatialViz::addSphere(Group * parent, Vec3 center, float radius, Vec3 trans)
+{
+    // unit sphere (radius = 25 to see)
+	Sphere * unitSphere = new Sphere(center, radius);
+	ShapeDrawable * unitSphereDrawable = new ShapeDrawable(unitSphere);
+	
+	// move the sphere 
+	PositionAttitudeTransform * sphereTrans = new PositionAttitudeTransform();
+	sphereTrans->setPosition(trans);
+	
+	_sphereGeode = new Geode();
+	parent->addChild(sphereTrans);
+	//cerr << "added sphere to parent" << endl;
+	
+	sphereTrans->addChild(_sphereGeode);
+	_sphereGeode->addDrawable(unitSphereDrawable);
+	
+	return sphereTrans;
+}
+
+// set the transparency of the given node to alpha
+void SpatialViz::setNodeTransparency(osg::Node *node, float alpha)
+{
+    osg::ref_ptr<osg::StateSet> stateset;
+        
+    stateset = node->getOrCreateStateSet();
+
+    osg::ref_ptr<osg::Material> mm = dynamic_cast<osg::Material*>(stateset->getAttribute(osg::StateAttribute::MATERIAL));
+
+    if (!mm) mm = new osg::Material;
+    mm->setAlpha(osg::Material::FRONT, alpha);
+
+    stateset->setMode(GL_BLEND, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON );
+    stateset->setRenderingHint(alpha == 1.0 ?
+                               osg::StateSet::OPAQUE_BIN :
+                               osg::StateSet::TRANSPARENT_BIN);
+    stateset->setAttributeAndModes( mm, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+    node->setStateSet(stateset);
+}
+
+// make a Pyramid with the given transform information and attach to the root node
+Geode * SpatialViz::makePyramid(Vec3 pos, Vec3 scale)
+{
+    // make a Pyramid
+	Geode * pyramidGeode = new Geode();		        // a geometry node to collect drawables 
+	Geometry * pyramidGeometry = new Geometry();	// Geometry instance to associate the 
+							                        // vertices and vertex data 
+
+	pyramidGeode->addDrawable(pyramidGeometry);	    // attaching the geometry to the drawable
+
+	// the vertex data
+	Vec3Array * pyramidVertices = new Vec3Array;
+	pyramidVertices->push_back(Vec3(0, 0, 0));
+	pyramidVertices->push_back(Vec3(2, 0, 0));
+	pyramidVertices->push_back(Vec3(2, 2, 0));
+	pyramidVertices->push_back(Vec3(0, 2, 0));
+	pyramidVertices->push_back(Vec3(1, 1, 2));
+
+	pyramidGeometry->setVertexArray(pyramidVertices);
+
+	// NOTES:
+	// addPrimitiveSet takes a primitiveSet type 
+	// pyramidBase needs to be a primitiveSet type BUT since PrimitiveSet is an abstract class 
+	// we need to use a class that inherits PrimitiveSet... 
+	// DrawElements is ... NOPE still abstract
+	//
+	// PrimitiveSet test = new PrimitiveSet(DrawElements); // PyramidSet = abstract
+	// DrawElements * pyramidBase = new DrawElements(PrimitiveSet::QUADS, 0, 0); 
+	// DrawElements = abstract
+
+	// Basically creating the EBO's for each face
+	// Base	
+	DrawElementsUInt * pyramidBase = new DrawElementsUInt(PrimitiveSet::QUADS);
+	pyramidBase->push_back(3);
+	pyramidBase->push_back(2);
+	pyramidBase->push_back(1);
+	pyramidBase->push_back(0);
+	pyramidGeometry->addPrimitiveSet(pyramidBase);
+	
+	// Faces:
+	DrawElementsUInt * pyramidFace1 = new DrawElementsUInt(PrimitiveSet::TRIANGLES);
+	pyramidFace1->push_back(0);
+	pyramidFace1->push_back(1);
+	pyramidFace1->push_back(4);
+	pyramidGeometry->addPrimitiveSet(pyramidFace1);
+
+	DrawElementsUInt * pyramidFace2 = new DrawElementsUInt(PrimitiveSet::TRIANGLES);
+	pyramidFace2->push_back(1);
+	pyramidFace2->push_back(2);
+	pyramidFace2->push_back(4);
+	pyramidGeometry->addPrimitiveSet(pyramidFace2);
+
+	DrawElementsUInt * pyramidFace3 = new DrawElementsUInt(PrimitiveSet::TRIANGLES);
+	pyramidFace3->push_back(2);
+	pyramidFace3->push_back(3);
+	pyramidFace3->push_back(4);
+	pyramidGeometry->addPrimitiveSet(pyramidFace3);
+	
+	DrawElementsUInt * pyramidFace4 = new DrawElementsUInt(PrimitiveSet::TRIANGLES);
+	pyramidFace4->push_back(3);
+	pyramidFace4->push_back(0);
+	pyramidFace4->push_back(4);
+	pyramidGeometry->addPrimitiveSet(pyramidFace4);
+
+	// Array of colors 
+	Vec4Array * colors = new Vec4Array;
+	colors->push_back(Vec4(1.0f, 1.0f, 1.0f, 1.0f));	// index 1: red
+	colors->push_back(Vec4(1.0f, 1.0f, 1.0f, 1.0f));	// index 2: green
+	colors->push_back(Vec4(1.0f, 1.0f, 1.0f, 1.0f));	// index 3: blue
+	colors->push_back(Vec4(1.0f, 1.0f, 1.0f, 1.0f));	// index 4: white
+
+	// assign colors to vertices
+	TemplateIndexArray<unsigned int, Array::UIntArrayType,4,4> *colorIndexArray;
+	colorIndexArray = new TemplateIndexArray<unsigned int, Array::UIntArrayType, 4, 4>;
+	
+	colorIndexArray->push_back(0); 		// vertex 0 assigned to color index 0 
+	colorIndexArray->push_back(1); 		// vertex 1 assigned to color index 1 
+	colorIndexArray->push_back(2); 		// vertex 2 assigned to color index 2 
+	colorIndexArray->push_back(3); 		// vertex 3 assigned to color index 3 
+	colorIndexArray->push_back(0); 		// vertex 4 assigned to color index 0
+
+	// associate the color array with the actual geometry
+	pyramidGeometry->setColorArray(colors);				// attach the actual colors
+	// NOTE: says that Geometry does not have this function.. deprecated 
+	//pyramidGeometry->setColorIndices(colorIndexArray);		// attach the array that says
+									// which color goes with which vertex
+	pyramidGeometry->setColorBinding(Geometry::BIND_PER_VERTEX);	// since we are attaching a 
+									// color to each vertex 
+	
+	// texture coordinates	
+	Vec2Array * texCoords = new Vec2Array(5);
+	(*texCoords)[0].set(0.00f, 0.0f);
+	(*texCoords)[1].set(0.25f, 0.0f);
+	(*texCoords)[2].set(0.50f, 0.0f);
+	(*texCoords)[3].set(0.75f, 0.0f);
+	(*texCoords)[4].set(0.50f, 1.0f);
+	
+	pyramidGeometry->setTexCoordArray(0, texCoords);
+	
+	// Declare and initialize a transform Nodoe
+	PositionAttitudeTransform * pyramid2xForm = new PositionAttitudeTransform;
+
+	// position/scale the model
+	pyramid2xForm->setPosition(pos);
+	pyramid2xForm->setScale(scale);
+	
+	_root->addChild(pyramid2xForm);
+	pyramid2xForm->addChild(pyramidGeode);
+	
+	return pyramidGeode;
+	
+}
+bool SpatialViz::advance(PxReal dt) 
+{
+    currTime += dt;
+    if (currTime < myTimestep)
+        return false;
+    currTime -= myTimestep;
+    gScene->simulate(myTimestep);
+    return true;
+}
+
+// this is the draw callback, gets called every frame
+void SpatialViz::preFrame()
+{
+    if( currTime < end) 
+	{
+	    //cerr << "----- in preFrame ----- \n";
+	    gScene->simulate(myTimestep);   // advance the simulation by myTimestep
+	    //advance(myTimestep);
+	    gScene->fetchResults();
+
+       
+        // loop through the objects and update the positionAttitudeTransform based on the new location
+        for(int i = 0; i < movingObjs.size(); i++)
+        {
+            // the PhysX objects live in movingPhysx and the osg objects live in movingObjs
+            PxTransform trans = movingPhysx[i]->getGlobalPose();
+            
+            // checks 
+            //cerr << "Testing: \t" << trans.p.x << " : " << trans.p.y <<  " : " << trans.p.z << endl;
+
+            // osg down is z out/in is y PhysX is in meters and CalVR is in mm
+            Vec3 nextPos = Vec3(1000*trans.p.x, 1000*trans.p.z, 1000*trans.p.y); 
+            
+            // update the osg position (and physX object for the forced fall)
+	        movingObjs[i]->setPosition(nextPos);
+	    }
+        currTime += myTimestep;
+	}
+	/*else 
+	{
+	    PxU32 time = gScene->getTimestamp();
+        cerr << "time: \t\t" << time << endl;
+	}*/
+}
+
+// this is called if the plugin is removed at runtime
+SpatialViz::~SpatialViz()
+{
+   fprintf(stderr,"SpatialViz::~SpatialViz\n");
+}
+

@@ -22,19 +22,15 @@
 #include <osg/Texture2D>
 #include <osg/PrimitiveSet>
 
-// PhysX: -> moved to header
-//#include <PxPhysicsAPI.h>
-//#include <extensions/PxDefaultErrorCallback.h>
-//#include <extensions/PxDefaultAllocator.h>
-//#include <foundation/Px.h>
+
+#include "Polyomino.hpp"        // to Generate Tetris2
 
 
-
-#include <osg/TexEnv>   // adding a texture state
+#include <osg/TexEnv>           // adding a texture state
 
 #include <map>
 #include <limits>
-#include <iomanip>      // for formatting print statements
+#include <iomanip>              // for formatting print statements
 
 using namespace std;
 using namespace cvr;
@@ -104,6 +100,15 @@ vector<PxRigidDynamic*> tetrisPhysx;
 std::vector<osg::Vec3> tetrisStartingPos;
 std::vector<physx::PxVec3> tetrisPhysxStartPos;
 
+
+// the objects for the tetris
+vector<PositionAttitudeTransform*> tetrisObjs2;
+vector<PxRigidDynamic*> tetrisPhysx2;
+
+std::vector<osg::Vec3> tetrisStartingPos2;
+std::vector<physx::PxVec3> tetrisPhysxStartPos2;
+
+
 // to store the moving Scene Graph objects and their corresponding PhysX objects
 vector<PositionAttitudeTransform*> movingObjs;
 vector<PxRigidDynamic*> movingPhysx;
@@ -129,7 +134,7 @@ static PxF32 startElapsedTime;
 void SpatialViz::initPhysX()
 {
     // ------------------------ PhysX -------------------
-    cerr << "initializing PhysX\n";
+    cerr << "--- initializing PhysX ---\n";
     static PxDefaultErrorCallback gDefaultErrorCallback;
     static PxDefaultAllocator gDefaultAllocatorCallback;
     static PxSimulationFilterShader gDefaultFilterShader = PxDefaultSimulationFilterShader;
@@ -209,21 +214,9 @@ void SpatialViz::initPhysX()
         cerr << "creating plane shape failed!" << endl;
     }
     gScene->addActor(*plane);                                           // add plane to the scene
-    //gScene2->addActor(*plane);                                          // add plane to the scene
     
     cerr << "Created ground plane" << endl;
     
-    
-    
-    
-    //  -------------------- Create cube(s) --------------------
-    //createBoxes(1, PxVec3(0.0f, 0.3f, 0.0f), PxVec3(0.05, 0.05, 0.05), false);
-
-    //  -------------------- Create sphere(s) --------------------
-    //createSpheres(1, PxVec3(0.0f, 0.3f, 0.0f), 0.05);
-    //createSpheres(1, PxVec3(0.0f, 0.15f, 0.0f), 0.0075, _puzzleMazeGroup, &mazeObjs, &mazePhysx, &mazeStartingPos, &mazePhysxStartPos);          // for the puzzle maze
-    //createSpheres(1, PxVec3(0.0f, 0.15f, 0.0f), 0.0125, _puzzle5x5Group, &fiveObjs, &fivePhysx, &fiveStartingPos, &fivePhysxStartPos);          // for the 5x5 puzzle
-    //createSpheres(1, PxVec3(0.125, -0.245, 0.19), 0.0075, _objGroup);               // for the labyrinth
     
     // --------------------- Create the Labyrinth ------------------
     createLabyrinth(0.005, -0.245);                                     // boxHeight = 0.005 floorHeight = -0.245;
@@ -241,23 +234,37 @@ void SpatialViz::initPhysX()
     createTetris(5);
     cerr << "Created the tetris pieces" << endl;
     
+    // tetris 2
+    createTetris2(5);
+    cerr << "Created the second tetris" << endl;
     
     currScene = gScene;
     currSG = &labyrinthObjs;
     currPhysx = &labyrinthPhysx;
     currStartingPositions = &labyrinthStartingPos;
     currPhysxStartPos = &labyrinthPhysxStartPos;
+   
+    
+    cerr << "--- DONE initializing PhysX ---\n";
 } 
 
 void SpatialViz::createTetris(int numPieces) {
 
-    float dim = 0.025;              // dimension of the cubes that make the tetris piece
-    int size = 3;                   // dimension of the space the entire tetirs piece will fit in
+    float dim = 0.025;                          // dimension of the cubes that make the tetris piece
+    int size = floor(sqrt(numPieces)+1);          // dimension of the space the entire tetirs piece will fit in
     cube_color = Vec4(0.15, 0.35, 0.75,1); cube_alpha = 1.0;    // color of first tetris piece
     
     // for the main piece
     vector<Vec3> mainTetris;
     int mainPiece = (rand() % 4) - 1;
+    
+    // transform the piece
+    PositionAttitudeTransform * fourTrans = new PositionAttitudeTransform();
+    // set the rotation
+    Quat tetris4Quat = Quat(DegreesToRadians(15.0), Vec3(1,0,0));
+    //tetris4Quat*= Quat(DegreesToRadians(15.0), Vec3(0,0,1));
+    fourTrans->setAttitude(tetris4Quat);
+    //fourTrans->setPosition(Vec3(0,0,-250));
     
     // create 4 tetris pieces
     for (int puzzleNumber = -1; puzzleNumber < 3; puzzleNumber++) {
@@ -273,15 +280,17 @@ void SpatialViz::createTetris(int numPieces) {
         currScene = gSceneTetris;
         for (int i = 0; i < cubeLocations.size(); i++) {  
             Vec3 pos = cubeLocations[i]; 
-            pos *= dim*2;                       // scale the positions
-            pos[0] += (puzzleNumber-0.5)*0.25;        // shift subsequent puzzles right
-            pos[1] += 0.25;                     // shift puzzles up...
+            pos *= dim*2;                               // scale the positions
+            pos[0] += (puzzleNumber-0.5)*0.25;          // shift subsequent puzzles right
+            pos[1] += 0.25;                             // shift puzzles up...
             createBoxes(1, PxVec3(pos[0],pos[1], pos[2]), PxVec3(dim, dim, dim), true, _objGroupTetris, &tetrisObjs, &tetrisPhysx, &tetrisStartingPos, &tetrisPhysxStartPos);
         }
-        //_objGroupTetris.setMovable(false);
-        
-        cube_color[0] += 0.15;                  // change the color for the next piece
+        cube_color[0] += 0.15;                          // change the color for the next piece
     }
+    
+    _tetrisSwitch->addChild(fourTrans);
+    fourTrans->addChild(_objGroupTetris);
+    
     
     // draw the main cube
     cube_color = Vec4(0.15, 0.75, 0.35, 1); 
@@ -296,7 +305,8 @@ void SpatialViz::createTetris(int numPieces) {
     cerr << "axis: " << axis[0] << " : " << axis[1] << " : " << axis[2] << endl;
     
     // make a group for the piece
-    _TetrisPiece = new Group();
+    _TetrisPiece = new Group;
+    _mainTetrisSwitch = new Switch;
         
     // transform the piece
     PositionAttitudeTransform * pieceTrans = new PositionAttitudeTransform();
@@ -312,12 +322,48 @@ void SpatialViz::createTetris(int numPieces) {
         
         createBoxes(1, PxVec3(pos[0],pos[1], pos[2]), PxVec3(dim, dim, dim), true, _TetrisPiece, &tetrisObjs, &tetrisPhysx, &tetrisStartingPos, &tetrisPhysxStartPos);
     }
-    // add the group to the root
-    _objGroupTetris->addChild(pieceTrans);
+    // add the group to the Tetris group
+    _root->addChild(_mainTetrisSwitch);
+    _mainTetrisSwitch->addChild(pieceTrans);
     pieceTrans->addChild(_TetrisPiece);
     
     // reset the color
     cube_color = Vec4(1,1,1,1); cube_alpha = 1.0;
+}
+
+void SpatialViz::createTetris2(int numPieces) {
+
+    _mainTetris2 = new Group();
+    _mainTetrisSwitch2 = new Switch();
+    
+	// draw the main cube
+	cube_color = Vec4(0.15, 0.75, 0.35, 1);
+	float dim = 0.025;
+	vector<vector<vector<float> > > quiz = Polyomino::generatePolyominoQuiz(numPieces, 4);
+	for (int i = 0; i < quiz[0].size(); i++) {
+	    vector<float> seg = quiz[0][i];
+	    createBoxes(1, PxVec3(2 * dim * seg[0], 2 * dim * seg[1], 2 * dim * seg[2]), PxVec3(dim, dim, dim), true, _mainTetris2, &tetrisObjs2, &tetrisPhysx2, &tetrisStartingPos2, &tetrisPhysxStartPos2);
+	    cerr << "check : " << 2 * dim * seg[0]<< " : "<< 2 * dim * seg[1] << " : " << 2 * dim * seg[2]<< endl;
+	}
+    cerr << "made main" << endl;
+	// draw the other pieces
+	cube_color = Vec4(0.15, 0.35, 0.75, 1); cube_alpha = 1.0;    // color of first tetris piece
+	float spacing = 2*dim * ((int)sqrt(numPieces) + 2);
+	cerr << "spacing = " << spacing << endl;
+	for (int i = 1; i < quiz.size(); i++) {
+		for (int j = 0; j < quiz[i].size(); j++) {
+	        vector<float> seg = quiz[i][j];
+	        createBoxes(1, PxVec3(2 * dim * seg[0] + (i - 0.5) * spacing, 2 * dim * seg[1] + spacing, 2 * dim * seg[2]), PxVec3(dim, dim, dim), true, _TetrisPiece2, &tetrisObjs2, &tetrisPhysx2, &tetrisStartingPos2, &tetrisPhysxStartPos);
+		}
+		cube_color[0] += 0.15;
+	}
+	cerr << "made 4" << endl;
+	// adding to root
+    _root->addChild(_mainTetrisSwitch2);
+    _mainTetrisSwitch2->addChild(_mainTetris2);
+    cerr << "added" << endl;
+	// reset the color
+	cube_color = Vec4(1, 1, 1, 1); cube_alpha = 1.0;
 }
 
 void SpatialViz::createTetrisPiece(int size, int numPieces, vector<Vec3> &cubeLocations) {
@@ -1193,6 +1239,12 @@ void SpatialViz::menuCallback(MenuItem* menuItem)
         // shows the first puzzle only (maze)
         _root->setSingleChildOn(5); // was 0
         
+        _5x5Switch->setSingleChildOn(1);
+        _mazeSwitch->setSingleChildOn(0);
+        _labyrinthSwitch->setSingleChildOn(1);  
+        _tetrisSwitch->setSingleChildOn(1);
+        _mainTetrisSwitch->setSingleChildOn(1);
+        
         currScene = gScene2;
         
         currSG = &mazeObjs;
@@ -1208,6 +1260,12 @@ void SpatialViz::menuCallback(MenuItem* menuItem)
         // shows the second puzzle only (5x5)
         _root->setSingleChildOn(4); // was 1
         
+        _5x5Switch->setSingleChildOn(0);
+        _mazeSwitch->setSingleChildOn(1);
+        _labyrinthSwitch->setSingleChildOn(1); 
+        _tetrisSwitch->setSingleChildOn(1);
+        _mainTetrisSwitch->setSingleChildOn(1);
+        
         currScene = gScene;
         
         currSG = &fiveObjs;
@@ -1221,12 +1279,35 @@ void SpatialViz::menuCallback(MenuItem* menuItem)
     {
         cerr << "Cube Puzzle Button pressed" << endl;  
         // shows the third puzzle only (5 piece)
+        // NOW THE SECOND TETRIS OPTION
+        
         _root->setSingleChildOn(2);
+        
+        _5x5Switch->setSingleChildOn(1);
+        _mazeSwitch->setSingleChildOn(1);
+        _labyrinthSwitch->setSingleChildOn(1);  
+        _tetrisSwitch->setSingleChildOn(1);
+        _mainTetrisSwitch->setSingleChildOn(1);
+        
+        _tetrisSwitch2->setSingleChildOn(0);
+        _mainTetrisSwitch2->setSingleChildOn(0);
+        
+        currSG = &tetrisObjs2;
+        currPhysx = &tetrisPhysx2;
+        currStartingPositions = &tetrisStartingPos2;
+        currPhysxStartPos = &tetrisPhysxStartPos2;
+        
     }  
     if (menuItem == _labyrinthPuzzle)
     {
         cerr << "Labyrinth Puzzle Button pressed" << endl;
         _root->setSingleChildOn(3);
+        
+        _5x5Switch->setSingleChildOn(1);
+        _mazeSwitch->setSingleChildOn(1);
+        _labyrinthSwitch->setSingleChildOn(0); 
+        _tetrisSwitch->setSingleChildOn(1);
+        _mainTetrisSwitch->setSingleChildOn(1);
         
         currScene = gScene;
         
@@ -1243,6 +1324,12 @@ void SpatialViz::menuCallback(MenuItem* menuItem)
         cerr << "Tetris Puzzle Button pressed" << endl;
         _root->setSingleChildOn(6);
         
+        _5x5Switch->setSingleChildOn(1);
+        _mazeSwitch->setSingleChildOn(1);
+        _labyrinthSwitch->setSingleChildOn(1);  
+        _tetrisSwitch->setSingleChildOn(0);
+        _mainTetrisSwitch->setSingleChildOn(0);
+        
         // currScene = gSceneTetris;
         currSG = &tetrisObjs;
         currPhysx = &tetrisPhysx;
@@ -1256,7 +1343,17 @@ void SpatialViz::menuCallback(MenuItem* menuItem)
     {
         cerr << "Remove Puzzles " << endl;  
         // shows no puzzles
-        _root->setSingleChildOn(7);   
+        _root->setSingleChildOn(8);   
+        
+        _5x5Switch->setSingleChildOn(1);
+        _mazeSwitch->setSingleChildOn(1);
+        _labyrinthSwitch->setSingleChildOn(1);  
+        _tetrisSwitch->setSingleChildOn(1);
+        _mainTetrisSwitch->setSingleChildOn(1);
+        
+        _tetrisSwitch2->setSingleChildOn(1);
+        _mainTetrisSwitch2->setSingleChildOn(1);
+        
         
         // to change later
         //currSG = &mazeObjs;
@@ -1302,7 +1399,7 @@ bool SpatialViz::init()
     _labyrinthPuzzle->setCallback(this);
     _mainMenu->addItem(_labyrinthPuzzle);
     
-    _tetrisPuzzle = new MenuButton("Tetris Physics");
+    _tetrisPuzzle = new MenuButton("Tetris Matching");
     _tetrisPuzzle->setCallback(this);
     _mainMenu->addItem(_tetrisPuzzle);
     
@@ -1334,6 +1431,7 @@ bool SpatialViz::init()
     _puzzle5x5Group = new Group;
     _piecePuzzleGroup = new Group;
     _labyrinthGroup = new Group;
+    _labyrinthSwitch = new Switch;
     
     Vec3 scale = Vec3(25, 25, 25);
     
@@ -1351,21 +1449,6 @@ bool SpatialViz::init()
     
     
     // 5 Piece Puzzle
-    /*
-    PositionAttitudeTransform * _piecePuzzleT = new PositionAttitudeTransform;
-	_piecePuzzleT->setScale(Vec3(100, 100, 100));
-	_piecePuzzleT->setPosition(Vec3(-300, 0, -300));
-	
-	_piecePuzzleGroup->addChild(_piecePuzzleT);
-	
-    _piecePuzzle1 = loadOBJ(_piecePuzzleT, PATH_PUZZLE1, Vec3(1, 1, 1), Vec3(50, 0, 0), 1.0f);     // name, scale, trans, alpha
-    _piecePuzzle2 = loadOBJ(_piecePuzzleT, PATH_PUZZLE2, Vec3(1, 1, 1), Vec3(200, 250, 0), 1.0f);   // name, scale, trans, alpha
-    _piecePuzzle3 = loadOBJ(_piecePuzzleT, PATH_PUZZLE3, Vec3(1, 1, 1), Vec3(-300, 0, 0), 1.0f);     // name, scale, trans, alpha
-    _piecePuzzle4 = loadOBJ(_piecePuzzleT, PATH_PUZZLE4, Vec3(1, 1, 1), Vec3(200, -250, 0), 1.0f);  // name, scale, trans, alpha
-    _piecePuzzle5 = loadOBJ(_piecePuzzleT, PATH_PUZZLE5, Vec3(1, 1, 1), Vec3(500, 0, 0), 1.0f);      // name, scale, trans, alpha
-    */
-    
-    // old way
     _piecePuzzle1 = loadOBJ(_piecePuzzleGroup, configPath+PATH_PUZZLE1, scale, Vec3(-150, 0.0, 0.0), 1.0f);    // name, scale, trans, alpha
     _piecePuzzle2 = loadOBJ(_piecePuzzleGroup, configPath+PATH_PUZZLE2, scale, Vec3(-75, 250, 0.0), 1.0f);    // name, scale, trans, alpha
     _piecePuzzle3 = loadOBJ(_piecePuzzleGroup, configPath+PATH_PUZZLE3, scale, Vec3(-300, 0.0, 0.0), 1.0f);    // name, scale, trans, alpha
@@ -1377,47 +1460,114 @@ bool SpatialViz::init()
     _root->addChild(_puzzleMazeGroup);
     _root->addChild(_puzzle5x5Group);
     _root->addChild(_piecePuzzleGroup);
-    _root->addChild(_labyrinthGroup);
+    _root->addChild(_labyrinthSwitch);
+    _labyrinthSwitch->addChild(_labyrinthGroup);
     
     
- 	// from Points 		-------------------------------------------------------
- 	//                              name, navigation, movable, clip, context menu, show bounds
-	SceneObject *so = new SceneObject("root", true, false, false, true, false);
-	PluginHelper::registerSceneObject(so,"SpatialVizObject");
-	so->addChild(_root);				// adding the _root to the scene
-	so->attachToScene();				
-	so->addMoveMenuItem();
-	so->addNavigationMenuItem();
-		
+    
     // ------------------------ PhysX -------------------
     
-	// _objGroup for testing with PhysX boxes/spheres
+    // _objGroup for testing with PhysX boxes/spheres
+    _5x5Switch = new Switch;
 	_objGroup = new Group;
-	_root->addChild(_objGroup); 
+	_root->addChild(_5x5Switch);
+	_5x5Switch->addChild(_objGroup); 
 	
+	_mazeSwitch = new Switch;
 	_objGroupMaze = new Group;
-	_root->addChild(_objGroupMaze);
+	_root->addChild(_mazeSwitch);
+	_mazeSwitch->addChild(_objGroupMaze);
 	
+	_tetrisSwitch = new Switch;
 	_objGroupTetris = new Group;
-	_root->addChild(_objGroupTetris);
+	_root->addChild(_tetrisSwitch);
 	
+	_tetrisSwitch2 = new Switch;
+	_TetrisPiece2 = new Group;
+	_root->addChild(_tetrisSwitch2);
+	_tetrisSwitch2->addChild(_TetrisPiece2);
 	
-	/*// from Points 		-------------------------------------------------------
+	initPhysX();
+	
+ 	// from Points 		-------------------------------------------------------
+ 	//                              name, navigation, movable, clip, context menu, show bounds
+	SceneObject *soLab = new SceneObject("root", true, false, true, true, false);
+	PluginHelper::registerSceneObject(soLab,"SpatialVizObject");
+	//so->addChild(_root);
+	soLab->addChild(_labyrinthSwitch);				// adding the _root to the scene
+	soLab->attachToScene();				
+	soLab->addMoveMenuItem();
+	soLab->addNavigationMenuItem();
+	cerr << "added the root to the scene " << endl;
+	//                              name, navigation, movable, clip, context menu, show bounds
+	SceneObject *so5x5 = new SceneObject("5x5", true, false, true, true, false);
+	PluginHelper::registerSceneObject(so5x5,"SpatialVizObject");
+	so5x5->addChild(_5x5Switch);				// adding the _root to the scene
+	so5x5->attachToScene();				
+	so5x5->addMoveMenuItem();
+	so5x5->addNavigationMenuItem();
+	//                              name, navigation, movable, clip, context menu, show bounds
+	SceneObject *soMaze = new SceneObject("Maze", true, false, true, true, false);
+	PluginHelper::registerSceneObject(soMaze,"SpatialVizObject");
+	soMaze->addChild(_mazeSwitch);				// adding the _root to the scene
+	soMaze->attachToScene();				
+	soMaze->addMoveMenuItem();
+	soMaze->addNavigationMenuItem();
+	//                                      name, navigation, movable, clip, context menu, show bounds
+	SceneObject *soTetris = new SceneObject("tetris4", false, false, true, true, false);
+	PluginHelper::registerSceneObject(soTetris,"SpatialVizObject");
+	soTetris->addChild(_tetrisSwitch);				// adding the _root to the scene
+	soTetris->attachToScene();				
+	soTetris->addMoveMenuItem();
+	soTetris->addNavigationMenuItem();
+	//                                            name, navigation, movable, clip, context menu, show bounds
+	SceneObject *soMainTetris = new SceneObject("mainTetris", true, true, true, true, false);
+	PluginHelper::registerSceneObject(soMainTetris,"SpatialVizObject");
+	soMainTetris->addChild(_mainTetrisSwitch);				// adding the _root to the scene
+	soMainTetris->attachToScene();				
+	soMainTetris->addMoveMenuItem();
+	soMainTetris->addNavigationMenuItem();
+    
+    //                                      name, navigation, movable, clip, context menu, show bounds
+	SceneObject *soTetris2 = new SceneObject("tetris4_2", false, false, true, true, false);
+	PluginHelper::registerSceneObject(soTetris2,"SpatialVizObject");
+	soTetris2->addChild(_tetrisSwitch2);				// adding the _root to the scene
+	soTetris2->attachToScene();				
+	soTetris2->addMoveMenuItem();
+	soTetris2->addNavigationMenuItem();
+	//                                            name, navigation, movable, clip, context menu, show bounds
+	SceneObject *soMainTetris2 = new SceneObject("mainTetris_2", true, true, true, true, false);
+	PluginHelper::registerSceneObject(soMainTetris2,"SpatialVizObject");
+	soMainTetris2->addChild(_mainTetrisSwitch2);				// adding the _root to the scene
+	soMainTetris2->attachToScene();				
+	soMainTetris2->addMoveMenuItem();
+	soMainTetris2->addNavigationMenuItem();
+		
+	
+	/*cerr << "adding the next so" << endl;
+	// testing 		-------------------------------------------------------
 	SceneObject *so2 = new SceneObject("tetris test", true, false, false, true, false);
 	PluginHelper::registerSceneObject(so2,"SpatialVizObject");
-	so2->addChild(_objGroupTetris);				// adding the _root to the scene
+	so2->addChild(_TetrisPiece);				// adding the _root to the scene
 	so2->attachToScene();				
 	so2->setNavigationOn(true);
 	so2->addMoveMenuItem();
 	so2->addNavigationMenuItem();
 	so2->setShowBounds(false); 
-	so2->setMovable(false);*/
+	so2->setMovable(true);*/
 	
-	initPhysX();
+	
 	
 	// show no puzzles
-    _root->setSingleChildOn(7);
+    _root->setSingleChildOn(8);
     
+    _5x5Switch->setSingleChildOn(1);
+    _mazeSwitch->setSingleChildOn(1);
+    _labyrinthSwitch->setSingleChildOn(1);  
+    _tetrisSwitch->setSingleChildOn(1);
+    _mainTetrisSwitch->setSingleChildOn(1);
+    _tetrisSwitch2->setSingleChildOn(1);
+    _mainTetrisSwitch2->setSingleChildOn(1);
     return true;
 }
 
@@ -1645,15 +1795,6 @@ Geode * SpatialViz::makePyramid(Vec3 pos, Vec3 scale)
 	return pyramidGeode;
 	
 }
-bool SpatialViz::advance(PxReal dt) 
-{
-    currTime += dt;
-    if (currTime < myTimestep)
-        return false;
-    currTime -= myTimestep;
-    gScene->simulate(myTimestep);
-    return true;
-}
 
 // this is the draw callback, gets called every frame
 void SpatialViz::preFrame()
@@ -1662,17 +1803,15 @@ void SpatialViz::preFrame()
 	{
 	    //cerr << "----- in preFrame ----- \n";
 	    currScene->simulate(myTimestep);   // advance the simulation by myTimestep
-	    //advance(myTimestep);
 	    currScene->fetchResults();
 
-        // Update gravity vector:
+        // ---------- Update gravity vector: ----------
         //osg::Matrix w2o = PluginHelper::getObjectToWorldTransform();
         //osg::Matrix w2o = PluginHelper::getWorldToObjectTransform();
         osg::Matrix w2o = PluginHelper::getObjectMatrix();
-        
         w2o.setTrans(Vec3(0,0,0));
-        
         osg::Vec3 wDown, oDown, gravity;
+        
         // Down in CalVr is (0,0,-1)
         wDown[0]=0;
         wDown[1]=0;
@@ -1680,6 +1819,7 @@ void SpatialViz::preFrame()
         oDown = w2o * wDown;
         oDown.normalize();
         oDown = oDown * 9.81;
+        
         // rotate 90 about the x axis for PhysX
         gravity[0] = oDown[0];
         gravity[1] = oDown[2];
@@ -1689,6 +1829,14 @@ void SpatialViz::preFrame()
         currScene->setGravity(PxVec3(gravity[0], gravity[1], gravity[2]));
         
         //cerr << "gravity=" << gravity[0] << ", " << gravity[1] << ", " << gravity[2] << endl;  
+        if (*currSG == tetrisObjs){
+            cerr << "TETRIS" << endl;
+            cerr << "size of currSG = " << currSG->size() << endl;
+            // need to check the orientation of the last 5 cubes with any of the first 4 puzzles
+            for (int i = currSG->size(); i >= 0; i--){
+                
+            }
+        }
         
         // loop through the objects and update the positionAttitudeTransform based on the new location
         for(int i = 0; i < currSG->size(); i++)
@@ -1696,26 +1844,14 @@ void SpatialViz::preFrame()
             // the PhysX objects live in movingPhysx and the osg objects live in movingObjs
             PxTransform trans = currPhysx->at(i)->getGlobalPose();
             
-            // checks 
-            //cerr << "Testing: \t" << trans.p.x << " : " << trans.p.y <<  " : " << trans.p.z << endl;
-
             // osg down is z out/in is y PhysX is in meters and CalVR is in mm
             Vec3 nextPos = Vec3(1000*trans.p.x, 1000*trans.p.z, 1000*trans.p.y); 
             
             // update the osg position (and physX object for the forced fall)
 	        currSG->at(i)->setPosition(nextPos);
-	        
-	        // to try and fix the sticking
-	        //movingPhysx[i]->setSleepThreshold(0.0);
-
 	    }
         currTime += myTimestep;
 	}
-	/*else 
-	{
-	    PxU32 time = gScene->getTimestamp();
-        cerr << "time: \t\t" << time << endl;
-	}*/
 }
 
 // this is called if the plugin is removed at runtime
