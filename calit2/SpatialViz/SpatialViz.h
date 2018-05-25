@@ -1,6 +1,7 @@
 #ifndef _SPATIALVIZ_H
 #define _SPATIALVIZ_H
 
+// STD
 #include <queue>
 #include <vector>
 #include <sys/types.h>
@@ -48,9 +49,9 @@ class SpatialViz : public cvr::CVRPlugin, public cvr::MenuCallback
   protected:
     // menu variables
     cvr::SubMenu *_mainMenu;
-    cvr::MenuButton *_puzzle1Button, *_puzzle2Button, *_puzzle3Button, *_labyrinthPuzzle, *_tetrisPuzzle, *_removePuzzles, *_restartPhysics;
+    cvr::MenuButton *_mazePuzzleButton, *_5x5puzzleButton, *_tetrisPuzzle2, *_labyrinthPuzzle, *_tetrisPuzzle, *_removePuzzles, *_restartPhysics;
     
-    cvr::SceneObject *soLab, *so5x5, *soMaze, *soTetris, *soMainTetris, *soTetris2, *_soMainTetris2;
+    cvr::SceneObject *soLab, *so5x5, *soMaze, *soTetris, *soMainTetris, *soTetris2, *soMainTetris2;
     
     osg::PositionAttitudeTransform *_sphereTrans, *_cubeTrans;
     osg::Geode *_cubeGeode, *_sphereGeode;
@@ -69,7 +70,6 @@ class SpatialViz : public cvr::CVRPlugin, public cvr::MenuCallback
     osg::PositionAttitudeTransform *loadOBJ(osg::Group *, std::string, osg::Vec3, osg::Vec3, float);
     
     void setNodeTransparency(osg::Node*, float);
-    osg::Geode * makePyramid(osg::Vec3, osg::Vec3);
     osg::Texture2D * loadTexture(std::string);
     osg::PositionAttitudeTransform  * addSphere(osg::Group*, osg::Vec3, float, osg::Vec3);
     osg::PositionAttitudeTransform  * addCube(osg::Group*, osg::Vec3, float, float, float, osg::Vec3);
@@ -87,9 +87,8 @@ class SpatialViz : public cvr::CVRPlugin, public cvr::MenuCallback
     void restartPhysics();
     
     // puzzles
-    void createTetris2(int);
     void createTetris(int);
-    void createTetrisPiece(int, int, std::vector<osg::Vec3>&);
+    void createTetris2(int);
     void createPuzzleCube(int);
     void create5x5(int);
     void createLabyrinth(float, float);
