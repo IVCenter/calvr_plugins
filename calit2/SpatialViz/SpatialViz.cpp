@@ -98,6 +98,7 @@ vector<PxRigidDynamic*> tetrisPhysx;
 vector<osg::Vec3> tetrisStartingPos;
 vector<physx::PxVec3> tetrisPhysxStartPos;
 Quat tetrisQuat;
+int mainPieceMatchID;
 
 // the objects for tetris2
 vector<PositionAttitudeTransform*> tetrisObjs2;
@@ -126,13 +127,10 @@ void SpatialViz::initPhysX()
     static PxDefaultAllocator gDefaultAllocatorCallback;
     static PxSimulationFilterShader gDefaultFilterShader = PxDefaultSimulationFilterShader;
 
-    //PxRigidBody *box;       // was PxRigidActor
- 
     //cerr << "creating Foundation\n";
     PxFoundation *mFoundation = NULL;
     mFoundation = PxCreateFoundation( PX_PHYSICS_VERSION, gDefaultAllocatorCallback, gDefaultErrorCallback);
  
-    //cerr <<"creating Physics\n";
     // create Physics object with the created foundation and with a 'default' scale tolerance.
     mPhysics = PxCreatePhysics( PX_PHYSICS_VERSION, *mFoundation, PxTolerancesScale());
     
@@ -146,7 +144,6 @@ void SpatialViz::initPhysX()
     }
    
     // -------------------- Create the scene --------------------
-    //cerr << "creating the scenes\n";
     _sceneDesc = new PxSceneDesc(mPhysics->getTolerancesScale());
     _sceneDesc->gravity=PxVec3(0.0f, -9.81f, 0.0f); 
     
@@ -184,8 +181,7 @@ void SpatialViz::initPhysX()
     //cerr << "scenes created " << endl;
     
     
-    // create a material: setting the coefficients of static friction, dynamic friction and 
-    // restitution (how elastic a collision would be)
+    // create a material: setting the coefficients of static friction, dynamic friction and restitution (how elastic a collision would be)
     PxMaterial* mMaterial = mPhysics->createMaterial(0.1,0.2,0.5);// also tried 0.0,0.0,0.5 -> same sticking problem with both
     
     // -------------------- Create ground plane ---------------------
@@ -248,7 +244,8 @@ void SpatialViz::createTetris(int numPieces) {
     
     // for the main piece
     vector<Vec3> mainTetris;
-    int mainPiece = (rand() % 4) - 1;
+    mainPieceMatchID = (rand() % 4) - 1;
+    cerr << "main piece MatchID = " << mainPieceMatchID << endl;
     
     // transform the piece
     PositionAttitudeTransform * fourTrans = new PositionAttitudeTransform();
@@ -265,7 +262,7 @@ void SpatialViz::createTetris(int numPieces) {
         vector<Vec3> cubeLocations;
         PuzzleGenerator::createTetrisPiece(size, numPieces, cubeLocations);
         
-        if (mainPiece == puzzleNumber) {
+        if (mainPieceMatchID == puzzleNumber) {
             mainTetris = cubeLocations;
         }
         
@@ -310,8 +307,6 @@ void SpatialViz::createTetris(int numPieces) {
     for (int i = 0; i < mainTetris.size(); i++) {  
         Vec3 pos = mainTetris[i]; 
         pos *= dim*2;                           // scale the positions
-        //pos[1] -= 1.5*0.25;                     // shift main piece down
-        cerr << "createTetris Main Piece: " << pos[0] << " : " << pos[1] << " : " << pos[2] << endl;
         createBoxes(1, PxVec3(pos[0],pos[1], pos[2]), PxVec3(dim, dim, dim), true, _TetrisPiece, &tetrisObjs, &tetrisPhysx, &tetrisStartingPos, &tetrisPhysxStartPos);
     }
     // add the group to the Tetris group
@@ -1077,20 +1072,17 @@ void SpatialViz::preFrame()
     
     _sceneDesc->gravity=PxVec3(gravity[0], gravity[1], gravity[2]);
     currScene->setGravity(PxVec3(gravity[0], gravity[1], gravity[2]));
-    
     //cerr << "gravity=" << gravity[0] << ", " << gravity[1] << ", " << gravity[2] << endl;  
+    
+    // if there are no SG objects -> return
     if (currSG == NULL){
-        //cerr << "NO currSG " << endl;
         return;
     }
-    if (*currSG == tetrisObjs){
-        cerr << "TETRIS" << endl;
-        
-        // get the position and orientation of the main tetris piece
-        Vec3 mainPos = soMainTetris->getPosition(); // tracks the position when translating (starts at 0,0,0)
-        
-        Vec3 mainTrans = currSG->at(21)->getPosition();
-        Quat mainQuat = currSG->at(21)->getAttitude();
+    // check for matches with Tetris
+    if (*currSG == tetrisObjs) {
+        bool orientationMatch = false;              bool positionMatch = false;
+        // --------------------------- Matching Orientation --------------------------------
+        Quat mainQuat = currSG->at(20)->getAttitude();
         mainQuat *= tetrisQuat;             // apply the arbitrary rotation applied to the main tetris piece
              
         // apply the world matrix rotation to the main tetris piece 
@@ -1102,55 +1094,44 @@ void SpatialViz::preFrame()
         Vec3 mainVec; double mainAngle;
         mainQuat.getRotate(mainAngle, mainVec);
         
-        //cerr << "Main vec = " << mainVec[0] << " : " << mainVec[1] << " : " << mainVec[2] << endl;
-        //cerr << "Main angle = " << mainAngle << endl;
-        
         // if the angle of the tetris piece is within 5 degrees of 0 -> match
         if (abs(mainAngle) < DegreesToRadians(5.0) || abs(mainAngle - DegreesToRadians(360.0)) < DegreesToRadians(5.0)){
-            cerr << "---------------- ORENTATION MATCH ------------------ " << endl;
+            //cerr << "---------------- ORENTATION MATCH ------------------ " << endl;
+            orientationMatch = true;
+        }
+        else {
+            //cerr << endl;
+            orientationMatch = false; 
         }
         
-        cerr << "Main piece Trans: " << mainTrans[0] << " : " << mainTrans[1] << " : " << mainTrans[2] << endl;
-        cerr << "main piece position: " << mainPos[0] << " : " << mainPos[1] << " : " << mainPos[2] << endl << endl;
-        mainPos+= mainTrans;
-        cerr << "main piece position: " << mainPos[0] << " : " << mainPos[1] << " : " << mainPos[2] << endl << endl;
+        // ---------------------------- Matching Position -----------------------------------
+        // get the position of the main tetris piece
+        Vec3 mainPos = soMainTetris->getPosition();         // tracks the position when translating (starts at 0,0,0)
+        mainPos[2] -= 250;                                  // apply the same translations when it was created
+        mainPos = worldQuat * mainPos;                      // apply the world matrix to the main tetris piece position
         
-        // apply the world matrix to the main tetris piece position
-        mainPos = w2o * mainPos;
+        // get the position of the matching tetris piece
+        Vec3 tetrisPos = soTetris->getPosition();           // 0,0,0
+        tetrisPos[0] += (mainPieceMatchID - 0.5) * 250;     // apply the same transformations to get the position of the matching piece
+        tetrisPos[2] += 250;
+        Matrix tetrisWorld = soTetris->getTransform();      
+        tetrisPos = tetrisWorld * tetrisPos;                // apply the world matrix of the 4 tetris pieces to get the world position
         
-        
-        // need to check the orientation of the last 5 cubes with any of the first 4 puzzles
-        for (int i = 0; i < currSG->size()-5; i+=5){
-            // need to get the current position and orientation of the object according to CVR
-            //cerr << "piece = " << (i/ 5) + 1 << " ";
-            
-            Vec3 currPos = currSG->at(i)->getPosition();    // gets the position 
-            //cerr << "curr piece position: " << currPos[0] << " : " << currPos[1] << " : " << currPos[2] << endl;
-            //cerr << "\tmain piece position: " << mainPos[0] << " : " << mainPos[1] << " : " << mainPos[2] << endl << endl;
-            
-            //Vec3 nextPos = currSG->at(i)->getPosition();
-            //nextPos = w2o * nextPos;
-            //cerr << "pose = " << nextPos[0] << " : " << nextPos[1] << " : " << nextPos[2] << endl;
-            
-            // check the positions
-            /*if (abs(mainPos[0] - currPos[0]) < 25.0){
-                cerr << "---------------- X - POSITION MATCH ------------------ " << endl;
-                cerr << "piece " << (i/ 5) + 1 << " position: " << currPos[0] << " : " << currPos[1] << " : " << currPos[2] << endl;
-                cerr << "main piece position: " << mainPos[0] << " : " << mainPos[1] << " : " << mainPos[2] << endl << endl;
-            }
-            if (abs(mainPos[1] - currPos[1]) < 25.0){
-                cerr << "---------------- Y - POSITION MATCH ------------------ " << endl;
-                cerr << "piece " << (i/ 5) + 1 << " position: " << currPos[0] << " : " << currPos[1] << " : " << currPos[2] << endl;
-                cerr << "main piece position: " << mainPos[0] << " : " << mainPos[1] << " : " << mainPos[2] << endl << endl;
-            }
-            if (abs(mainPos[2] - currPos[2]) < 25.0){
-                cerr << "---------------- Z - POSITION MATCH ------------------ " << endl;
-                cerr << "piece " << (i/ 5) + 1 << " position: " << currPos[0] << " : " << currPos[1] << " : " << currPos[2] << endl;
-                cerr << "main piece position: " << mainPos[0] << " : " << mainPos[1] << " : " << mainPos[2] << endl << endl;
-            }*/
+        // if the x and z positions are within 25mm of each other -> match 
+        if (abs(mainPos[0] - tetrisPos[0]) < 25.0 && abs(mainPos[2] - tetrisPos[2]) < 25.0) {
+            //cerr << "----------------- POSITION MATCH ------------------- " << endl;
+            positionMatch = true;
+        }
+        else {
+            //cerr << endl;
+            positionMatch = false;
+        }
+        if (orientationMatch && positionMatch) {
+            cerr << "CORRECT MATCH" << endl;
         }
     }
     
+    // update the physics if necessary 
     if (currSG != NULL) {
         // loop through the objects and update the positionAttitudeTransform based on the new location
         for(int i = 0; i < currSG->size(); i++)
