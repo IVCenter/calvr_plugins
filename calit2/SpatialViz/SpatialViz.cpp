@@ -105,7 +105,8 @@ vector<PositionAttitudeTransform*> tetrisObjs2;
 vector<PxRigidDynamic*> tetrisPhysx2;
 vector<osg::Vec3> tetrisStartingPos2;
 vector<physx::PxVec3> tetrisPhysxStartPos2;
-
+Quat tetrisQuat2;
+int mainPieveMatchID2;
 
 // to store the moving Scene Graph objects and their corresponding PhysX objects
 vector<PositionAttitudeTransform*> movingObjs;
@@ -329,7 +330,8 @@ void SpatialViz::createTetris2(int numPieces) {
 	float dim = 0.025;
 	
 	// generate the boxes for the tetris pieces
-	vector<vector<vector<float> > > quiz = Polyomino::generatePolyominoQuiz(numPieces, 4);
+	int options = 4;
+	vector<vector<vector<float> > > quiz = Polyomino::generatePolyominoQuiz(numPieces, options);
 	for (int i = 0; i < quiz[0].size(); i++) {
 	    vector<float> seg = quiz[0][i];
 	    createBoxes(1, PxVec3(2 * dim * seg[0], 2 * dim * seg[1], 2 * dim * seg[2]), PxVec3(dim, dim, dim), true, _mainTetris2, &tetrisObjs2, &tetrisPhysx2, &tetrisStartingPos2, &tetrisPhysxStartPos2);
@@ -338,18 +340,38 @@ void SpatialViz::createTetris2(int numPieces) {
     // draw the other 4 pieces
 	cube_color = Vec4(0.15, 0.35, 0.75, 1); cube_alpha = 1.0;    // color of first tetris piece
 	
-	float spacing = 2*dim * ((int)sqrt(numPieces) + 2);
+	// randomize locations
+	vector<int> pieceIndices = vector<int>();
 	for (int i = 1; i < quiz.size(); i++) {
-		for (int j = 0; j < quiz[i].size(); j++) {
-	        vector<float> seg = quiz[i][j];
+		pieceIndices.push_back(i);
+	}
+	random_shuffle(pieceIndices.begin(), pieceIndices.end());
+
+	float spacing = 2*dim * ((int)sqrt(numPieces) + 2);
+	for (int i = 0; i < quiz.size() - 1; i++) {
+		if (pieceIndices[i] == 1) mainPieceMatchID2 = i;
+		for (int j = 0; j < quiz[pieceIndices[i]].size(); j++) {
+	        vector<float> seg = quiz[pieceIndices[i]][j];
 	        createBoxes(1, PxVec3(2 * dim * seg[0] + (i - 0.5) * spacing, 2 * dim * seg[1] + spacing, 2 * dim * seg[2]), PxVec3(dim, dim, dim), true, _TetrisPiece2, &tetrisObjs2, &tetrisPhysx2, &tetrisStartingPos2, &tetrisPhysxStartPos);
 		}
 		cube_color[0] += 0.15;
 	}
+
+	// randomize rotation of main piece
+	PositionAttitudeTransform * pieceTrans = new PositionAttitudeTransform();
+ 	float x,y,z;                        
+	srand((unsigned)time(0));
+	x = rand(); y = rand(); z = rand();
+ 	PxVec3 axis = PxVec3(x,y,z);        axis.normalize();
+	float angle = rand() % 360;
+ 	tetrisQuat2 = Quat(DegreesToRadians(angle), Vec3(axis[0], axis[2], axis[1]));
+	pieceTrans->setAttitude(tetrisQuat2);
+	pieceTrans->setPosition(Vec3(0,0,-250));
 	
 	// adding to root
     _root->addChild(_mainTetrisSwitch2);
-    _mainTetrisSwitch2->addChild(_mainTetris2);
+    _mainTetrisSwitch2->addChild(pieceTrans);
+    pieceTrans->addChild(_mainTetris2);
     
     // reset the color
 	cube_color = Vec4(1, 1, 1, 1); cube_alpha = 1.0;
@@ -1131,6 +1153,60 @@ void SpatialViz::preFrame()
         }
     }
     
+
+    // check for matches with Tetris
+    if (*currSG == tetrisObjs2) {
+        bool orientationMatch = false;              bool positionMatch = false;
+        // --------------------------- Matching Orientation --------------------------------
+        Quat mainQuat = currSG->at(20)->getAttitude();
+        mainQuat *= tetrisQuat2;             // apply the arbitrary rotation applied to the main tetris piece
+             
+        // apply the world matrix rotation to the main tetris piece 
+        Quat worldQuat;
+        worldQuat.set(w2o);                 // world matrix as a quaternion
+        mainQuat = worldQuat * mainQuat; 
+        
+        // get the angle and vector of the orientation of the tetris piece
+        Vec3 mainVec; double mainAngle;
+        mainQuat.getRotate(mainAngle, mainVec);
+        
+        // if the angle of the tetris piece is within 5 degrees of 0 -> match
+        if (abs(mainAngle) < DegreesToRadians(5.0) || abs(mainAngle - DegreesToRadians(360.0)) < DegreesToRadians(5.0)){
+            //cerr << "---------------- ORENTATION MATCH ------------------ " << endl;
+            orientationMatch = true;
+        }
+        else {
+            //cerr << endl;
+            orientationMatch = false; 
+        }
+        
+        // ---------------------------- Matching Position -----------------------------------
+        // get the position of the main tetris piece
+        Vec3 mainPos = soMainTetris2->getPosition();         // tracks the position when translating (starts at 0,0,0)
+        mainPos[2] -= 250;                                  // apply the same translations when it was created
+        mainPos = worldQuat * mainPos;                      // apply the world matrix to the main tetris piece position
+        
+        // get the position of the matching tetris piece
+        Vec3 tetrisPos = soTetris2->getPosition();           // 0,0,0
+        tetrisPos[0] += (mainPieceMatchID2 - 0.5) * 250;     // apply the same transformations to get the position of the matching piece
+        tetrisPos[2] += 250;
+        Matrix tetrisWorld = soTetris2->getTransform();      
+        tetrisPos = tetrisWorld * tetrisPos;                // apply the world matrix of the 4 tetris pieces to get the world position
+        
+        // if the x and z positions are within 25mm of each other -> match 
+        if (abs(mainPos[0] - tetrisPos[0]) < 25.0 && abs(mainPos[2] - tetrisPos[2]) < 25.0) {
+            //cerr << "----------------- POSITION MATCH ------------------- " << endl;
+            positionMatch = true;
+        }
+        else {
+            //cerr << endl;
+            positionMatch = false;
+        }
+        if (orientationMatch && positionMatch) {
+            cerr << "CORRECT MATCH" << endl;
+        }
+    }
+
     // update the physics if necessary 
     if (currSG != NULL) {
         // loop through the objects and update the positionAttitudeTransform based on the new location
