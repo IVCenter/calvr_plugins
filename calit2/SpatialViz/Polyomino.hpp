@@ -499,7 +499,7 @@ public:
 			}
 			if (!foundMatch) {
 				//cout << "push s" << endl;
-				currSimilarities.push_back(polyonimoOrientation(base, rand() % 24));
+				currSimilarities.push_back(polyonimoOrientation(base, 0));
 				continue;
 			}
 
