@@ -296,7 +296,7 @@ void SpatialViz::createTetris(int numPieces) {
     float x,y,z;                        srand((unsigned)time(0));
     x = rand(); y = rand(); z = rand(); 
     PxVec3 axis = PxVec3(x,y,z);        axis.normalize();
-    float angle = rand() % 360;
+    float angle = rand() % (330) + 15;         // angle ranges from 15 to 345
     
     // set the position and orientation 
     tetrisQuat = Quat(DegreesToRadians(angle), Vec3(axis[0], axis[2], axis[1]));
@@ -1096,11 +1096,11 @@ void SpatialViz::preFrame()
         
         // if the angle of the tetris piece is within 5 degrees of 0 -> match
         if (abs(mainAngle) < DegreesToRadians(5.0) || abs(mainAngle - DegreesToRadians(360.0)) < DegreesToRadians(5.0)){
-            //cerr << "---------------- ORENTATION MATCH ------------------ " << endl;
+            cerr << "---------------- ORENTATION MATCH ------------------ " << endl;
             orientationMatch = true;
         }
         else {
-            //cerr << endl;
+            cerr << endl;
             orientationMatch = false; 
         }
         
@@ -1119,11 +1119,11 @@ void SpatialViz::preFrame()
         
         // if the x and z positions are within 25mm of each other -> match 
         if (abs(mainPos[0] - tetrisPos[0]) < 25.0 && abs(mainPos[2] - tetrisPos[2]) < 25.0) {
-            //cerr << "----------------- POSITION MATCH ------------------- " << endl;
+            cerr << "----------------- POSITION MATCH ------------------- " << endl;
             positionMatch = true;
         }
         else {
-            //cerr << endl;
+            cerr << endl;
             positionMatch = false;
         }
         if (orientationMatch && positionMatch) {
