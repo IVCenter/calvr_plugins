@@ -95,7 +95,6 @@ class SpatialViz : public cvr::CVRPlugin, public cvr::MenuCallback
     
     void createBoxes(int, physx::PxVec3, physx::PxVec3, bool, osg::Group*, std::vector<osg::PositionAttitudeTransform*>*, std::vector<physx::PxRigidDynamic*>*, std::vector<osg::Vec3>*, std::vector<physx::PxVec3>*, physx::PxQuat quat = physx::PxQuat::createIdentity());
     void createSpheres(int, physx::PxVec3, float, osg::Group*, std::vector<osg::PositionAttitudeTransform*>*, std::vector<physx::PxRigidDynamic*>*, std::vector<osg::Vec3>*, std::vector<physx::PxVec3>*);
-    bool advance(physx::PxReal);
 
     
 };

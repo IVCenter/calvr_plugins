@@ -1013,9 +1013,7 @@ PositionAttitudeTransform * SpatialViz::addSphere(Group * parent, Vec3 center, f
 void SpatialViz::setNodeTransparency(osg::Node *node, float alpha)
 {
     osg::ref_ptr<osg::StateSet> stateset;
-    
     stateset = node->getOrCreateStateSet();
-    
     osg::ref_ptr<osg::Material> mm = dynamic_cast<osg::Material*>(stateset->getAttribute(osg::StateAttribute::MATERIAL));
    
     if (!mm) mm = new osg::Material;
