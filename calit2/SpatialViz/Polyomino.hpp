@@ -7,11 +7,9 @@
 
 #include <osg/Vec3d>
 
-using namespace osg;
-using namespace std;
+using namespace osg;using namespace std;
 
-class Polyomino {
-public:
+class Polyomino {public:
 
 	// Generate a polyomino of size n
 	static vector<bool> generatePolyomino(int n) {

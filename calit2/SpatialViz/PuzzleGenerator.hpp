@@ -11,7 +11,9 @@
 
 using namespace std;
 using namespace osg;
-using namespace physx;
+#ifdef HAVE_PHYSX
+  using namespace physx;
+#endif
 
 class PuzzleGenerator{
 public:

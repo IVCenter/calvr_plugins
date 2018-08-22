@@ -31,7 +31,9 @@
 #include <osgDB/FileUtils>
 
 #include <osg/PositionAttitudeTransform> 	// the transform of objects 
-#include <GL/freeglut.h>                    // testing - PhysX3
+
+
+#ifdef HAVE_PHYSX
 
 // PhysX:
 #include <PxPhysicsAPI.h>
@@ -42,20 +44,19 @@
 #include <foundation/PxMat33.h>
 #include <foundation/PxQuat.h>
 
+#endif
 
 
 class SpatialViz : public cvr::CVRPlugin, public cvr::MenuCallback
 {
   protected:
-    // menu variables
+    // menu and CVR variables
     cvr::SubMenu *_mainMenu;
     cvr::MenuButton *_mazePuzzleButton, *_5x5puzzleButton, *_tetrisPuzzle2, *_labyrinthPuzzle, *_tetrisPuzzle, *_removePuzzles, *_restartPhysics;
-    
     cvr::SceneObject *soLab, *so5x5, *soMaze, *soTetris, *soMainTetris, *soTetris2, *soMainTetris2;
     
     osg::PositionAttitudeTransform *_sphereTrans, *_cubeTrans;
     osg::Geode *_cubeGeode, *_sphereGeode;
-    
     osg::Switch *_root, *_labyrinthSwitch, *_5x5Switch, *_mazeSwitch, *_tetrisSwitch, *_mainTetrisSwitch, *_tetrisSwitch2, *_mainTetrisSwitch2;
     
     // Puzzle variables
@@ -63,14 +64,12 @@ class SpatialViz : public cvr::CVRPlugin, public cvr::MenuCallback
     osg::Group * _puzzleMazeGroup, *_puzzle5x5Group, *_piecePuzzleGroup, *_labyrinthGroup;
     osg::Group * _objGroup, *_objGroupMaze, *_objGroupTetris, *_TetrisPiece, *_mainTetris, *_TetrisPiece2, *_mainTetris2;
     
-    
+#ifdef HAVE_PHYSX
     physx::PxSceneDesc* _sceneDesc;
+#endif
     
     // functions
-    osg::PositionAttitudeTransform *loadOBJ(osg::Group *, std::string, osg::Vec3, osg::Vec3, float);
-    
     void setNodeTransparency(osg::Node*, float);
-    osg::Texture2D * loadTexture(std::string);
     osg::PositionAttitudeTransform  * addSphere(osg::Group*, osg::Vec3, float, osg::Vec3);
     osg::PositionAttitudeTransform  * addCube(osg::Group*, osg::Vec3, float, float, float, osg::Vec3);
  
@@ -80,6 +79,7 @@ class SpatialViz : public cvr::CVRPlugin, public cvr::MenuCallback
     
     bool init();
     void menuCallback(cvr::MenuItem * item);
+    void resetSceneManager();
     void preFrame();
     
     // PhysX 

@@ -10,6 +10,7 @@ ADD_LIBRARY(${LIB_NAME}
 )
 
 add_definitions(-DNDEBUG)
+add_definitions(-DHAVE_PHYSX)
 
 FIND_PACKAGE(PhysX)
 
