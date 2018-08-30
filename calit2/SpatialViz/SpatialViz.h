@@ -92,8 +92,13 @@ class SpatialViz : public cvr::CVRPlugin, public cvr::MenuCallback
     void createPuzzleCube(int);
     void create5x5(int);
     void createLabyrinth(float, float);
-    
+
+#if(PHYSX_VERSION >= 33)
+    // createIdentity() and createZero() are deprecated since 3.3
+    void createBoxes(int, physx::PxVec3, physx::PxVec3, bool, osg::Group*, std::vector<osg::PositionAttitudeTransform*>*, std::vector<physx::PxRigidDynamic*>*, std::vector<osg::Vec3>*, std::vector<physx::PxVec3>*, physx::PxQuat quat = physx::PxQuat(physx::PxIDENTITY()));
+#else
     void createBoxes(int, physx::PxVec3, physx::PxVec3, bool, osg::Group*, std::vector<osg::PositionAttitudeTransform*>*, std::vector<physx::PxRigidDynamic*>*, std::vector<osg::Vec3>*, std::vector<physx::PxVec3>*, physx::PxQuat quat = physx::PxQuat::createIdentity());
+#endif
     void createSpheres(int, physx::PxVec3, float, osg::Group*, std::vector<osg::PositionAttitudeTransform*>*, std::vector<physx::PxRigidDynamic*>*, std::vector<osg::Vec3>*, std::vector<physx::PxVec3>*);
 
     

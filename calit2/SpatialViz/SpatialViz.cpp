@@ -5,6 +5,7 @@
 #include <PluginMessageType.h>
 
 // STD:
+#include <random>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -39,6 +40,7 @@ using namespace osg;
 #ifdef HAVE_PHYSX
   using namespace physx;
 #endif
+
 
 CVRPLUGIN(SpatialViz)
 
@@ -142,7 +144,12 @@ void SpatialViz::initPhysX()
     mPhysics = PxCreatePhysics( PX_PHYSICS_VERSION, *mFoundation, PxTolerancesScale());
     
     // -------------------- START checks --------------------
+#if(PHYSX_VERSION >= 34)
+    // PX_C_EXPORT bool PX_CALL_CONV 	PxInitExtensions (physx::PxPhysics &physics, physx::PxPvd *pvd) since 3.4
+    if (!PxInitExtensions(*mPhysics, nullptr)) cerr << "PxInitExtensions failed!" << endl;
+#else
     if (!PxInitExtensions(*mPhysics)) cerr << "PxInitExtensions failed!" << endl;
+#endif
     
     if(mPhysics == NULL) {
         cerr << "Error creating PhysX device." << endl << "Exiting..." << endl;
@@ -354,9 +361,14 @@ void SpatialViz::createTetris2(int numPieces) {
 	for (int i = 1; i < quiz.size(); i++) {
 		pieceIndices.push_back(i);
 	}
-	random_shuffle(pieceIndices.begin(), pieceIndices.end());
 
-	float spacing = 0.25;
+    //random_shuffle(pieceIndices.begin(), pieceIndices.end()); (deprecated in C++14)
+
+    random_device rd;
+    mt19937 g(rd());
+    shuffle(pieceIndices.begin(), pieceIndices.end(), g);
+
+    float spacing = 0.25;
 	for (int i = 0; i < quiz.size() - 1; i++) {
 		if (pieceIndices[i] == 1) mainPieceMatchID2 = i;
 		for (int j = 0; j < quiz[pieceIndices[i]].size(); j++) {
@@ -589,8 +601,12 @@ void SpatialViz::createSpheres(int num, PxVec3 startVec, float radius, Group* pa
         //cerr << "Creating a sphere" << endl;
         
         PxVec3 currVec = PxVec3(startVec.x+(i*0.05), startVec.y, startVec.z);
+#if(PHYSX_VERSION >= 33)
+        // createIdentity() and createZero() are deprecated since 3.3
+        PxTransform transform(currVec, PxQuat(PxIDENTITY()));
+#else
         PxTransform transform(currVec, PxQuat::createIdentity());
-        
+#endif
         PxRigidDynamic *actor = PxCreateDynamic(*mPhysics, transform, geometrySphere, *mMaterial, density);
         actor->setAngularDamping(0.75);
         actor->setLinearVelocity(PxVec3(0,0,0)); 
@@ -643,8 +659,14 @@ void SpatialViz::restartPhysics()
         
         //PxVec3 currVec = PxVec3(0.0, 0.3, 0.0);
         //PxTransform trans(currVec, PxQuat::createIdentity());
-        
+
+#if(PHYSX_VERSION >= 33)
+        // createIdentity() and createZero() are deprecated since 3.3
+        PxTransform trans(currPhysxStartPos->at(i), PxQuat(PxIDENTITY()));
+#else
+
         PxTransform trans(currPhysxStartPos->at(i), PxQuat::createIdentity());
+#endif
         currPhysx->at(i)->setGlobalPose(trans);
         
         currPhysx->at(i)->setLinearVelocity(PxVec3(0,0,0), true);
