@@ -38,7 +38,11 @@ typedef struct IntersetctObj{
     osg::Uniform * uTexture;
     osg::MatrixTransform * matrixTrans;
 }isectObj;
-
+enum sceneState{
+    FREE = 0,
+    ROTATE,
+    TRANSLATE
+};
 class GlesDrawables : public cvr::CVRPlugin, public cvr::MenuCallback
 {
 typedef osg::ref_ptr<osg::MatrixTransform> Transform;
@@ -53,6 +57,8 @@ protected:
     std::vector<planeDrawable*> _planeDrawables;
     osg::ref_ptr<strokeDrawable> _strokeDrawable;
     std::unordered_map<osg::Node*, isectObj> _map;
+    osg::Node* _selectedNode = nullptr;
+    sceneState _selectState = FREE;
 
     void initMenuButtons();
     void createObject(osg::Group *, const char*, const char*, osg::Matrixf);

@@ -11,7 +11,19 @@
 
 using namespace osg;
 using namespace cvr;
-
+//class selectableGroupCallBack:public NodeCallback{
+//    sceneState *_state;
+//    Node* _selecNode;
+//    std::unordered_map<osg::Node*, isectObj> *_map;
+//public:
+//    selectableGroupCallBack(sceneState* state, Node* node,
+//                            std::unordered_map<osg::Node*, isectObj > * map):
+//            _state(state),_selecNode(node), _map(map){}
+//    virtual void operator()( osg::Node* node, osg::NodeVisitor* nv ){
+//        _map
+//        traverse( node, nv );
+//    }
+//};
 bool GlesDrawables:: tackleHitted(osgUtil::LineSegmentIntersector::Intersection result ){
 //    LOGE("==== parent Num: %d", result.drawable->getNumParents());
     osg::Node* parent = dynamic_cast<Node*>(result.drawable->getParent(0));
@@ -28,6 +40,7 @@ bool GlesDrawables:: tackleHitted(osgUtil::LineSegmentIntersector::Intersection 
         bool textureChoice;
         _map[parent].uTexture->get(textureChoice);
         _map[parent].uTexture->set(!textureChoice);
+        _selectedNode = parent;
         PluginManager::setCallBackRequest("popButtons");
         return true;
     }
@@ -125,15 +138,32 @@ void GlesDrawables::postFrame() {
         }
         _objNum = anchor_num;
     }
+
+    if(_selectState!=FREE && _selectedNode){
+        if(_selectState == TRANSLATE){
+//            Matrixf mat = _map[_selectedNode].matrixTrans->getMatrix();
+//            Vec3f trans = Vec3f(mat.getTrans().x(), mat.getTrans().z(), -mat.getTrans().y());
+//            Matrixf camMat = ARCoreManager::instance()->getCameraMatrix();
+//            trans = (trans - camMat.getTrans())* camMat;//Matrixf::rotate(camMat.getRotate()) + camMat.getTrans();
+//            trans = Vec3f(trans.x(), -trans.z(), trans.y());
+//            _map[_selectedNode].matrixTrans->setMatrix(Matrixf::translate(trans));
+        }
+
+    }
 }
 
 bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
     AndroidInteractionEvent * aie = event->asAndroidEvent();
     if(aie->getTouchType() == TRANS_BUTTON){
-
+        _selectState = TRANSLATE;
         return true;
     }
     if(aie->getTouchType() == ROT_BUTTON){
+        _selectState = ROTATE;
+        return true;
+    }
+    if(aie->getTouchType() == FT_BUTTON){
+        _selectState = FREE;
         return true;
     }
 
