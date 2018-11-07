@@ -73,7 +73,7 @@ bool GlesDrawables::init() {
     rootSO->attachToScene();
 
     _strokeDrawable = new strokeDrawable;
-    _root->addChild(_strokeDrawable->createDrawableNode());
+    _root->addChild(_strokeDrawable->createDrawableNode(.0f,-0.8f));
 
     _pointcloudDrawable = new pointDrawable;
     _root->addChild(_pointcloudDrawable->createDrawableNode());
@@ -104,11 +104,9 @@ void GlesDrawables::postFrame() {
         _planeDrawables[i]->updateOnFrame(planeIt->first, planeIt->second);
 
 
-    Vec3f isPoint;Vec2f offset;
+    Vec3f isPoint;
     if(TrackingManager::instance()->getIsPoint(isPoint)){
-        TrackingManager::instance()->getTouchOffset(offset);
-        _strokeDrawable->updateOnFrame(TrackingManager::instance()->getHandMat(0).getTrans(),
-                                       isPoint, offset);
+        _strokeDrawable->updateOnFrame(isPoint);
         _strokeDrawable->getGLNode()->setNodeMask(0xFFFFFF);
     } else
         _strokeDrawable->getGLNode()->setNodeMask(0x0);
