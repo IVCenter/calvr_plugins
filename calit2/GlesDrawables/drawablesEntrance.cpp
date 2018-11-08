@@ -139,17 +139,18 @@ void GlesDrawables::postFrame() {
         _objNum = anchor_num;
     }
 
-    if(_selectState!=FREE && _selectedNode){
-        if(_selectState == TRANSLATE){
+//    if(_selectState!=FREE && _selectedNode){
+//        if(_selectState == TRANSLATE){
 //            Matrixf mat = _map[_selectedNode].matrixTrans->getMatrix();
-//            Vec3f trans = Vec3f(mat.getTrans().x(), mat.getTrans().z(), -mat.getTrans().y());
-//            Matrixf camMat = ARCoreManager::instance()->getCameraMatrix();
-//            trans = (trans - camMat.getTrans())* camMat;//Matrixf::rotate(camMat.getRotate()) + camMat.getTrans();
-//            trans = Vec3f(trans.x(), -trans.z(), trans.y());
-//            _map[_selectedNode].matrixTrans->setMatrix(Matrixf::translate(trans));
-        }
-
-    }
+////            Vec3f trans = mat.getTrans() +
+////            Vec3f trans = Vec3f(mat.getTrans().x(), mat.getTrans().z(), -mat.getTrans().y());
+////            Matrixf camMat = ARCoreManager::instance()->getCameraMatrix();
+////            trans = (trans - camMat.getTrans())* camMat;//Matrixf::rotate(camMat.getRotate()) + camMat.getTrans();
+////            trans = Vec3f(trans.x(), -trans.z(), trans.y());
+////            _map[_selectedNode].matrixTrans->setMatrix(Matrixf::translate(trans));
+//        }
+//
+//    }
 }
 
 bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
@@ -171,26 +172,45 @@ bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
         return false;
 
     Vec2f touchPos = Vec2f(aie->getX(), aie->getY());
+    if(aie->getInteraction() == BUTTON_DRAG && _selectState!=FREE){
+        LOGE("====DRAGING");
+        Matrixf objMat = _map[_selectedNode].matrixTrans->getMatrix();
+//        Vec3f camPos = TrackingManager::instance()->getHandMat(0).getTrans();
+
+        TrackingManager::instance()->getScreenToClientPos(touchPos);
+        Vec3f near_plane = ARCoreManager::instance()->getRealWorldPositionFromScreen(touchPos.x(), touchPos.y());
+        near_plane = Vec3f(near_plane.x(), -near_plane.z(), near_plane.y());
+        Vec3f far_plane = ARCoreManager::instance()->getRealWorldPositionFromScreen(touchPos.x(), touchPos.y(), 1.0f);
+        far_plane = Vec3f(far_plane.x(), -far_plane.z(), far_plane.y());
+        Vec3f lineDir = near_plane - far_plane;
+
+        Vec3f planeNormal = osg::Vec3f(.0f,1.0,.0f)*TrackingManager::instance()->getCameraRotation();
+        Vec3f planePoint = objMat.getTrans();
+
+        if(planeNormal * lineDir == 0)
+            return false;
+        float t = (planeNormal*planePoint - planeNormal*near_plane)/ (planeNormal*lineDir);
+        Vec3f p = near_plane+lineDir*t;
+
+        _map[_selectedNode].matrixTrans->setMatrix(objMat*Matrixf::translate(p-planePoint));
+
+        return true;
+    }
+
     if(aie->getInteraction()==BUTTON_DOUBLE_CLICK){
         ARCoreManager::instance()->updatePlaneHittest(touchPos.x(), touchPos.y());
         return true;
     }
 
     if(aie->getInteraction()== BUTTON_DOWN){
-        Matrixf vpMat =ARCoreManager::instance()->getMVPMatrix();
-        vpMat = Matrixf::inverse(vpMat);
-
         osg::Vec3 pointerStart, pointerEnd;
         pointerStart = TrackingManager::instance()->getHandMat(0).getTrans();
         TrackingManager::instance()->getScreenToClientPos(touchPos);
-        Vec4f vIn(touchPos.x(),touchPos.y(),-1, 1.0f);
-        Vec4f pos = vIn * vpMat;
-        float inv_w = 1.0f / pos.w();// * ConfigManager::UNIT_ALIGN_FACTOR;
+        pointerEnd = ARCoreManager::instance()->getRealWorldPositionFromScreen(touchPos.x(), touchPos.y());
 
-
-        Vec4f testScreen = Vec4f(pos.x()*inv_w, pos.y()*inv_w, pos.z()*inv_w, 1.0) *ARCoreManager::instance()->getMVPMatrix();
-        pointerEnd = Vec3f(pos.x() * inv_w, -pos.z()*inv_w, pos.y()*inv_w);
-        Vec3f dir = pointerEnd-pointerStart;
+        //3d line equation: (x- x0)/a = (y-y0)/b = (z-z0)/c
+        Vec3f potential_p0 = Vec3f(pointerEnd.x(), -pointerEnd.z(), pointerEnd.y());
+        Vec3f dir = potential_p0-pointerStart;
         float t = (10-pointerStart.y())/dir.y();
         pointerEnd = Vec3f(pointerStart.x() + t*dir.x(), 10.0f, pointerStart.z() + t*dir.z());
 
@@ -201,8 +221,11 @@ bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
         if ( handseg->containsIntersections()){
             _map.clear();
             for(auto itr=handseg->getIntersections().begin(); itr!=handseg->getIntersections().end(); itr++){
-                if(tackleHitted(*itr))
+                if(tackleHitted(*itr)){
+//                    _p0 = potential_p0;
                     break;
+                }
+
             }
         }
 
