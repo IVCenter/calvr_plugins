@@ -11,27 +11,9 @@
 
 using namespace osg;
 using namespace cvr;
-//class selectableGroupCallBack:public NodeCallback{
-//    sceneState *_state;
-//    Node* _selecNode;
-//    std::unordered_map<osg::Node*, isectObj> *_map;
-//public:
-//    selectableGroupCallBack(sceneState* state, Node* node,
-//                            std::unordered_map<osg::Node*, isectObj > * map):
-//            _state(state),_selecNode(node), _map(map){}
-//    virtual void operator()( osg::Node* node, osg::NodeVisitor* nv ){
-//        _map
-//        traverse( node, nv );
-//    }
-//};
 bool GlesDrawables:: tackleHitted(osgUtil::LineSegmentIntersector::Intersection result ){
-//    LOGE("==== parent Num: %d", result.drawable->getNumParents());
     osg::Node* parent = dynamic_cast<Node*>(result.drawable->getParent(0));
     if(_map.empty() || _map.find(parent) ==_map.end()){
-//        MatrixTransform *transform =
-//        Matrixf mat = transform->getMatrix();
-//        Vec3f pos = mat.getTrans();
-//        LOGE("====getpos: %f, %f, %f", pos.x(), pos.y(), pos.z());
         isectObj obj;
         obj.uTexture = parent->getOrCreateStateSet()->getUniform("uTextureChoice");
         obj.matrixTrans = dynamic_cast<MatrixTransform *>(parent->getParent(0));
@@ -90,11 +72,6 @@ bool GlesDrawables::init() {
 
     _pointcloudDrawable = new pointDrawable;
     _root->addChild(_pointcloudDrawable->createDrawableNode());
-
-//    createObject(_objects,
-//                 "models/andy.obj", "textures/andy.png",
-//                 Matrixf::rotate(PI_2f, Vec3f(.0,.0,1.0)) * Matrixf::translate(Vec3f(.0f, 0.5f, .0f)));
-//    _objects->addUpdateCallback(new )
     return true;
 }
 
@@ -138,19 +115,6 @@ void GlesDrawables::postFrame() {
         }
         _objNum = anchor_num;
     }
-
-//    if(_selectState!=FREE && _selectedNode){
-//        if(_selectState == TRANSLATE){
-//            Matrixf mat = _map[_selectedNode].matrixTrans->getMatrix();
-////            Vec3f trans = mat.getTrans() +
-////            Vec3f trans = Vec3f(mat.getTrans().x(), mat.getTrans().z(), -mat.getTrans().y());
-////            Matrixf camMat = ARCoreManager::instance()->getCameraMatrix();
-////            trans = (trans - camMat.getTrans())* camMat;//Matrixf::rotate(camMat.getRotate()) + camMat.getTrans();
-////            trans = Vec3f(trans.x(), -trans.z(), trans.y());
-////            _map[_selectedNode].matrixTrans->setMatrix(Matrixf::translate(trans));
-//        }
-//
-//    }
 }
 
 bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
@@ -195,6 +159,7 @@ bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
     }
     if(aie->getInteraction() == BUTTON_DRAG && _selectState == ROTATE){
         TrackingManager::instance()->getScreenToClientPos(touchPos);
+        //http://www2.lawrence.edu/fast/GREGGJ/CMSC32/Rotation.html
 //        float oldx = _downPosition.x(), oldy = -_downPosition.z(), oldz = _downPosition.y();
 //        float newx = touchPos.x(), newy=-sqrt(1-touchPos.x()* touchPos.x() - touchPos.y() * touchPos.y()), newz = touchPos.y();
 
@@ -205,14 +170,15 @@ bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
 //
 //        float angle = asin(sqrt(ux*ux + uy*uy + uz*uz));
 //        Matrixf newRot = Matrixf::rotate(angle * 0.05f, Vec3f(ux,uy,uz));
+        
         float deltax = (touchPos.x() - _mPreviousPos.x()) * ConfigManager::TOUCH_SENSITIVE;
         float deltaz = (touchPos.y() - _mPreviousPos.y()) * ConfigManager::TOUCH_SENSITIVE;
         _mPreviousPos = touchPos;
         Matrixf newRot = Matrixf::rotate(deltax,Vec3f(0,0,1)) * Matrixf::rotate(deltaz, Vec3f(1,0,0));
         Matrixf objMat = _map[_selectedNode].matrixTrans->getMatrix();
         Matrixf rotMat = Matrixf::rotate(objMat.getRotate());
-        _map[_selectedNode].matrixTrans->setMatrix(newRot * rotMat * Matrixf::translate(objMat.getTrans()));
-
+        objMat *= Matrixf::translate(-objMat.getTrans()) * newRot * Matrixf::translate(objMat.getTrans());
+        _map[_selectedNode].matrixTrans->setMatrix(objMat);
         return true;
     }
 
