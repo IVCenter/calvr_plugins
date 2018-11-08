@@ -59,6 +59,7 @@ protected:
     std::unordered_map<osg::Node*, isectObj> _map;
     osg::Node* _selectedNode = nullptr;
     sceneState _selectState = FREE;
+    osg::Vec2f _mPreviousPos;
 
     void initMenuButtons();
     void createObject(osg::Group *, const char*, const char*, osg::Matrixf);
