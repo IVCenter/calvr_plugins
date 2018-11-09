@@ -1,4 +1,5 @@
 Makefile
+/[Bb]uild/
 *CMakeFiles*
 cmake_install.cmake
 doc
