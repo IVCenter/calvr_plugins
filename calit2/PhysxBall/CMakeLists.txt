@@ -24,15 +24,19 @@ add_definitions(-DHAVE_PHYSX)
 INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})
 INCLUDE_DIRECTORIES(${PHYSX_INCLUDE_DIR})
 
-target_include_directories(${LIB_NAME} PRIVATE
-            ${ANDROID_NDK}/sources/third_party/vulkan/src/libs/glm)
-
 TARGET_LINK_LIBRARIES(
     ${LIB_NAME}
     ${PHYSX_LIBS}
     ${KERNEL_LIBRARIES}
 )
 
+#set_target_properties(${LIB_NAME} PROPERTIES PUBLIC_HEADER "PhysicsUtils.h;Engine.h;PhysxBall.h")
+IF(ANDROID)
+	file(GLOB PUBLIC_HEADERS
+		"./*.h"
+	)
+	file(COPY ${PUBLIC_HEADERS} DESTINATION "../../include")
+ENDIF(ANDROID)
 ADD_CALVR_LIBRARIES(${LIB_NAME})
 
 

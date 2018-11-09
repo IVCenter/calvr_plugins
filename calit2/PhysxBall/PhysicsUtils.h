@@ -5,10 +5,6 @@
 #include <osg/Vec3>
 #include <osg/Matrix>
 
-#include "gtc/matrix_transform.hpp"
-#include "gtc/type_ptr.hpp"
-#include "gtx/quaternion.hpp"
-
 namespace osgPhysx
 {
     inline physx::PxVec3 toPhysicsVec3( const osg::Vec3& v )
@@ -21,7 +17,6 @@ namespace osgPhysx
 
     extern physx::PxMat44 toPhysicsMatrix( const osg::Matrix& matrix );
     extern osg::Matrix toMatrix( const physx::PxMat44& pmatrix );
-    extern osg::Matrix glm_to_osg(glm::mat4 glm_mat);
 }
 
 #endif

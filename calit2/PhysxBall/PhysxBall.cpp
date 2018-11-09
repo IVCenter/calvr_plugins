@@ -13,8 +13,6 @@
 #include <cvrMenu/BoardMenu/BoardMenuGeometry.h>
 #include "PhysicsUtils.h"
 #include <cvrUtil/ARCoreHelper.h>
-#include <gtc/type_ptr.hpp>
-#include <gtc/matrix_transform.hpp>
 #include <osg/BlendFunc>
 
 using namespace osg;
@@ -52,8 +50,8 @@ void UpdateActorCallback::operator()( osg::Node* node, osg::NodeVisitor* nv )
         }
     }else{
         if (mt && _pd) {
-            Matrix t = glm_to_osg(_pd->_model_mat);
-            mt->setMatrix(t);
+            //Matrix t = glm_to_osg(_pd->_model_mat);
+            //mt->setMatrix(t);
             //
         }
     }
@@ -72,7 +70,7 @@ void PhysxBall::createPlane(osg::Group* parent, osg::Vec3f pos) {
 
 void PhysxBall::preFrame() {
     _phyEngine->update();
-    //syncPlane();
+    syncPlane();
 
 //    if(_planeTurnedOn){
 //        _planeTurnedOn = false;
@@ -174,13 +172,6 @@ bool PhysxBall::init() {
 
     SceneManager::instance()->getSceneRoot()->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
 
-    //Vec3f boardPos = Vec3f(0, 10.0f, 0);
-    //TEST: NO USE TEMPORATELY
-//    createPointCloud(SceneManager::instance()->getSceneRoot());
-//    createBall(_scene, osg::Vec3(.0f, 0.5, 0.5), 0.01f);
-//    createObject(_scene, Vec3f(.0f, 0.5f,.0f));
-//    addBoard(_menu, boardPos);
-//    createText(_menu, boardPos + Vec3f(0.1f,-2,0.1f));
 
     //bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds
     rootSO= new SceneObject("myPluginRoot", false, false, false, false, false);
@@ -353,7 +344,7 @@ bool PhysxBall::processEvent(cvr::InteractionEvent * event){
     AndroidInteractionEvent * aie = event->asAndroidEvent();
     if(aie->getTouchType() != LEFT)
         return false;
-    if(aie->getInteraction()== BUTTON_DOWN){
+    if(aie->getInteraction()== BUTTON_UP){
         throwBall();
         return true;
     }
@@ -448,7 +439,7 @@ void PhysxBall::createBox(osg::Group *parent, osg::Vec3f extent, osg::Vec3f colo
     PxReal density = 1000.0f;
     PxMaterial* mMaterial = _phyEngine->getPhysicsSDK()->createMaterial(10,10,0.65);
     PxBoxGeometry geometryBox(PxVec3(extent.x()/2,extent.y()/2,extent.z()/2));
-    PxTransform transform(toPhysicsMatrix(glm_to_osg(pp->_model_mat)));
+    PxTransform transform(toPhysicsMatrix(pp->_model_mat));
     PxRigidDynamic *actor = PxCreateDynamic(* _phyEngine->getPhysicsSDK(),
                                             transform,
                                             geometryBox,
@@ -482,7 +473,7 @@ ref_ptr<MatrixTransform> PhysxBall::addBox(osg::Group *parent, osg::Vec3f extent
     osg::BlendFunc *func = new osg::BlendFunc();
     func->setFunction(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    Program * program =_assetHelper->createShaderProgramFromFile("shaders/wall.vert","shaders/wall.frag");
+    Program * program =assetLoader::instance()->createShaderProgramFromFile("shaders/wall.vert","shaders/wall.frag");
     osg::StateSet * stateSet = shape->getOrCreateStateSet();
     stateSet->setAttributeAndModes(program,osg::StateAttribute::ON| osg::StateAttribute::OVERRIDE);
     stateSet->setMode(GL_DEPTH_TEST, osg::StateAttribute::ON| osg::StateAttribute::OVERRIDE);
@@ -522,26 +513,22 @@ void PhysxBall::syncPlane() {
             ArPose *arPose;
             ArPose_create(_session, nullptr, &arPose);
             ArPlane_getCenterPose(_session, arPlane, arPose);
-            ArPose_getMatrix(_session, arPose, glm::value_ptr(pp->_model_mat));
+            ArPose_getMatrix(_session, arPose, pp->_model_mat.ptr());
 
-            pp->_model_mat[3][1] = -pp->_model_mat[3][1];
+            pp->_model_mat(3,1) = -pp->_model_mat(3,1);
 
-            glm::mat4 swap_mat(1.0f);
-            swap_mat[1][1] = 0;
-            swap_mat[1][2] = -1;
-            swap_mat[2][1] = -1;
-            swap_mat[2][2] = 0;
+            osg::Matrixf swap_mat;
+
+            swap_mat(1,1) = 0;
+            swap_mat(1,2) = -1;
+            swap_mat(2,1) = -1;
+            swap_mat(2,2) = 0;
 
             pp->_model_mat = swap_mat * pp->_model_mat * swap_mat;
 
-            Matrixf rot(&pp->_model_mat[0][0]);
-
             float raw_center_pose[7] = {.0f};
             ArPose_getPoseRaw(_session, arPose, raw_center_pose);
-            //float centerPose[3];
-            //pp->_centerPose[0] = raw_center_pose[4];//pp->_model_mat[3][0];
-            //pp->_centerPose[1] = raw_center_pose[5];//pp->_model_mat[3][1];
-            //pp->_centerPose[2] = raw_center_pose[6];//pp->_model_mat[3][2];
+
             osg::Quat q(raw_center_pose[0], raw_center_pose[2], raw_center_pose[1], raw_center_pose[3]);
 
             //float extentXZ[2];
@@ -569,9 +556,6 @@ void PhysxBall::syncPlane() {
                     osg::ref_ptr<osg::MatrixTransform> boxTrans;
                     std::tie(actor, boxTrans) = physx_osg_pair[i];
 
-                    auto pos = osg::Vec3();
-                    Matrixf t(&pp->_model_mat[0][0]);
-
                     auto geo_p = static_cast<osg::Geode *>(boxTrans->getChild(0));
                     auto draw_p = static_cast<osg::ShapeDrawable *>(geo_p->getChild(0));
 
@@ -592,7 +576,7 @@ void PhysxBall::syncPlane() {
                     PxBoxGeometry box(PxVec3(extent.x(),extent.y(),extent.z()));
                     (buf[0]).setGeometry(box);
                     //PxQuat(q.x(),q.y(),q.z(),q.w())
-                    PxTransform transform(toPhysicsMatrix(rot));
+                    PxTransform transform(osgPhysx::toPhysicsMatrix(pp->_model_mat));
                     actor->setGlobalPose(transform);
                     count = 0;
                 }else{

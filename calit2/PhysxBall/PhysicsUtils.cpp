@@ -34,14 +34,4 @@ osg::Matrix physX2OSG_Rotation(const PxMat44 &m) {
         return osg::Matrix(&m[0]);
     }
 
-    Matrix glm_to_osg(glm::mat4 glm_mat){
-        Matrix osg_mat;
-        glm::quat q = glm::toQuat(glm_mat);
-        glm::vec3 t(glm_mat[3][0],glm_mat[3][1],glm_mat[3][2]);
-        osg::Quat oq(q.x, q.y, q.z, q.w);
-        Matrix osgt = Matrix::translate(t.x,t.y,t.z);
-        Matrix osgr = Matrix::rotate(oq);
-        osg_mat = osgt * osgr;
-        return osg_mat;
-    }
 }

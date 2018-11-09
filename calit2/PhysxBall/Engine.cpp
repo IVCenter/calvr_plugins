@@ -194,7 +194,7 @@ void Engine::releaseActors( PxScene* scene )
 
 bool Engine::addScene(const std::string& name) {
     PxSceneDesc * _sceneDesc = new PxSceneDesc(_defaultToleranceScale);
-    _sceneDesc->gravity = PxVec3(.0f, -9.81f, .0f);
+    _sceneDesc->gravity = PxVec3(.0f, .0f, -9.81f);
 
     if(!_sceneDesc->cpuDispatcher)
     {

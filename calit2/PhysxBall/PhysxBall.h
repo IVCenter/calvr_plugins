@@ -40,16 +40,13 @@
 #include <osg/ShapeDrawable>
 #include "Engine.h"
 
-#include "gtc/matrix_transform.hpp"
-#include "gtc/type_ptr.hpp"
-#include "gtx/quaternion.hpp"
 /** The callback to update the actor, should be applied to a matrix transform node */
 
 class PlaneData{
 public:
     float _extentXZ[2];
     int _planeType;
-    glm::mat4 _model_mat = glm::mat4(1.0f);
+    osg::Matrixf _model_mat;
 };
 
 
@@ -120,7 +117,7 @@ protected:
     bool last_state = true;
 
     int count = 0;
-    int delay = 90;
+    int delay = 150;
 
 //    std::stack<cvr::glState> _glStateStack;
 
