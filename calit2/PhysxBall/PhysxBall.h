@@ -25,7 +25,6 @@
 #include <cvrUtil/AndroidHelper.h>
 #include <cvrMenu/MenuRangeValueCompact.h>
 
-//#include "pointDrawable.h"
 // OSG
 #include <osg/Group>
 #include <osg/Vec3>
@@ -73,14 +72,7 @@ public:
 class PhysxBall : public cvr::CVRPlugin, public cvr::MenuCallback
 {
 private:
-
-    osg::ref_ptr<osg::Geometry> _makeQuad(float width, float height, osg::Vec4f color, osg::Vec3 pos);
-
-    void createPointCloud(osg::Group*parent);
     void createBall(osg::Group* parent, osg::Vec3f pos, float radius);
-    void createPlane(osg::Group* parent, osg::Vec3f pos);
-    void addBoard(osg::Group* parent, osg::Vec3f pos, osg::Vec3f rotAxis = osg::Vec3f(.0f,.0f,.0f),float rotAngle = .0f );
-    void createObject(osg::Group * parent, osg::Vec3f pos);
 
 
     osg::ref_ptr<osg::MatrixTransform> addSphere(osg::Group*parent, osg::Vec3f pos, float radius);
@@ -92,22 +84,15 @@ private:
 protected:
     osgPhysx::Engine * _phyEngine;
     cvr::SubMenu *_mainMenu;
-    cvr::MenuButton * _addButton, *_pointButton, *_planeButton, *_addAndyButton, *_delAndyButton;
     osg::Group* _menu, *_scene;
     cvr::SceneObject *rootSO, *sceneSO, *menuSo;
-
-    bool _planeTurnedOn;
     std::vector<osg::Uniform *> _uniform_mvps;
-    int _sphereNum = 0;
-    bool planeCreated = false;
-    float _planeHeight;
 
 //_uniform_mvps
 //bounding
 //pp_list
 //PxGeo
     std::vector<osg::ref_ptr<osg::Geode>> bounding;
-    cvr::assetLoader* _assetHelper;
     ArSession * _session;
     cvr::CVRViewer * _viewer;
     cvr::MenuRangeValueCompact * _forceFactor;
@@ -119,12 +104,6 @@ protected:
     int count = 0;
     int delay = 150;
 
-//    std::stack<cvr::glState> _glStateStack;
-
-//    osg::ref_ptr<cvr::pointDrawable> _pointcloudDrawable;
-
-//    osg::ref_ptr<osg::MatrixTransform> sphereTrans;
-//    osg::PositionAttitudeTransform *_ball;
 
 public:
     std::vector<std::tuple<physx::PxRigidDynamic*, osg::ref_ptr<osg::MatrixTransform>>> physx_osg_pair;
