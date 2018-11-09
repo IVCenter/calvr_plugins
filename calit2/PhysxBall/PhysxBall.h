@@ -23,6 +23,8 @@
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/FileHandler.h>
 #include <cvrUtil/AndroidHelper.h>
+#include <cvrMenu/MenuRangeValueCompact.h>
+
 //#include "pointDrawable.h"
 // OSG
 #include <osg/Group>
@@ -35,12 +37,27 @@
 #include <foundation/PxVec3.h>
 #include <osgText/Text>
 #include <PxRigidActor.h>
+#include <osg/ShapeDrawable>
 #include "Engine.h"
+
+#include "gtc/matrix_transform.hpp"
+#include "gtc/type_ptr.hpp"
+#include "gtx/quaternion.hpp"
+/** The callback to update the actor, should be applied to a matrix transform node */
+
+class PlaneData{
+public:
+    float _extentXZ[2];
+    int _planeType;
+    glm::mat4 _model_mat = glm::mat4(1.0f);
+};
+
+
 /** The callback to update the actor, should be applied to a matrix transform node */
 class UpdateActorCallback : public osg::NodeCallback
 {
 public:
-    UpdateActorCallback( physx::PxRigidActor* a=0 ) : _actor(a) {}
+    UpdateActorCallback( physx::PxRigidActor* a=0, PlaneData* pd = 0) : _actor(a), _pd(pd) {}
 
     UpdateActorCallback( const UpdateActorCallback& copy, const osg::CopyOp& op=osg::CopyOp::SHALLOW_COPY )
             : osg::NodeCallback(copy, op), _actor(copy._actor) {}
@@ -51,6 +68,9 @@ public:
 
 protected:
     physx::PxRigidActor* _actor;
+    PlaneData * _pd;
+public:
+    bool update_mat = true;
 };
 
 class PhysxBall : public cvr::CVRPlugin, public cvr::MenuCallback
@@ -64,13 +84,19 @@ private:
     void createPlane(osg::Group* parent, osg::Vec3f pos);
     void addBoard(osg::Group* parent, osg::Vec3f pos, osg::Vec3f rotAxis = osg::Vec3f(.0f,.0f,.0f),float rotAngle = .0f );
     void createObject(osg::Group * parent, osg::Vec3f pos);
+
+
     osg::ref_ptr<osg::MatrixTransform> addSphere(osg::Group*parent, osg::Vec3f pos, float radius);
+
+    void createBox(osg::Group* parent, osg::Vec3f extent, osg::Vec3f color, PlaneData* pp);
+    osg::ref_ptr<osg::MatrixTransform> addBox(osg::Group*parent, osg::Vec3f extent, osg::Vec3f color, physx::PxRigidDynamic* physx_box, PlaneData* pp);
+
     void initMenuButtons();
 protected:
     osgPhysx::Engine * _phyEngine;
     cvr::SubMenu *_mainMenu;
     cvr::MenuButton * _addButton, *_pointButton, *_planeButton, *_addAndyButton, *_delAndyButton;
-    osg::ref_ptr<osg::Group> _menu, _scene;
+    osg::Group* _menu, *_scene;
     cvr::SceneObject *rootSO, *sceneSO, *menuSo;
 
     bool _planeTurnedOn;
@@ -79,6 +105,22 @@ protected:
     bool planeCreated = false;
     float _planeHeight;
 
+//_uniform_mvps
+//bounding
+//pp_list
+//PxGeo
+    std::vector<osg::ref_ptr<osg::Geode>> bounding;
+    cvr::assetLoader* _assetHelper;
+    ArSession * _session;
+    cvr::CVRViewer * _viewer;
+    cvr::MenuRangeValueCompact * _forceFactor;
+    std::vector<PlaneData*> pp_list;
+    std::vector<physx::PxBoxGeometry*> PxGeo;
+    bool _bFirstPress = false;
+    bool last_state = true;
+
+    int count = 0;
+    int delay = 90;
 
 //    std::stack<cvr::glState> _glStateStack;
 
@@ -88,6 +130,12 @@ protected:
 //    osg::PositionAttitudeTransform *_ball;
 
 public:
+    std::vector<std::tuple<physx::PxRigidDynamic*, osg::ref_ptr<osg::MatrixTransform>>> physx_osg_pair;
+    cvr::MenuCheckbox * _bThrowBall;
+    cvr::MenuCheckbox * _bCreatePlane, *_planePButton, *_planeBButton;
+    bool processEvent(cvr::InteractionEvent * event);
+    void throwBall();
+    void syncPlane();
     bool init();
     void menuCallback(cvr::MenuItem * item);
     void preFrame();
