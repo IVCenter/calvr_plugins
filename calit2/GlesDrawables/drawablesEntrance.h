@@ -60,6 +60,7 @@ protected:
     osg::Node* _selectedNode = nullptr;
     sceneState _selectState = FREE;
     osg::Vec2f _mPreviousPos;
+    const bool use_sh = true;
 
     void initMenuButtons();
     void createObject(osg::Group *, const char*, const char*, osg::Matrixf);

@@ -255,22 +255,36 @@ void GlesDrawables::createObject(osg::Group *parent,
     _geometry->setUseDisplayList(false);
 
     std::string fhead(getenv("CALVR_RESOURCE_DIR"));
+    Program * program;
+    osg::StateSet * stateSet;
 
-    Program * program =assetLoader::instance()->createShaderProgramFromFile("shaders/objectOSG.vert","shaders/objectOSG.frag");
-    osg::StateSet * stateSet = _node->getOrCreateStateSet();
-    stateSet->setAttributeAndModes(program);
+    if(use_sh){
+        program =assetLoader::instance()->createShaderProgramFromFile("shaders/objectSH.vert","shaders/objectSH.frag");
+        stateSet = _node->getOrCreateStateSet();
+        stateSet->setAttributeAndModes(program);
 
-    stateSet->addUniform( new osg::Uniform("lightDiffuse",
-                                           osg::Vec4(0.8f, 0.8f, 0.8f, 1.0f)) );
-    stateSet->addUniform( new osg::Uniform("lightSpecular",
-                                           osg::Vec4(1.0f, 1.0f, 0.4f, 1.0f)) );
-    stateSet->addUniform( new osg::Uniform("shininess", 64.0f) );
-    stateSet->addUniform( new osg::Uniform("lightPosition",
-                                           osg::Vec3(0,0,1)));
+        stateSet->addUniform(new Uniform("uLightScale", 1.0f));
+        osg::Uniform *shColorUniform = new osg::Uniform(osg::Uniform::FLOAT_VEC3, "uSHBasis", 9);
+        for(int i = 0; i < 9; ++i)
+            shColorUniform->setElement(i, osg::Vec3f(.0,.0,.0));
+        shColorUniform->setUpdateCallback(new envSHLightCallback);
+        stateSet->addUniform(shColorUniform);
+    }else{
+        program =assetLoader::instance()->createShaderProgramFromFile("shaders/objectOSG.vert","shaders/objectOSG.frag");
+        stateSet = _node->getOrCreateStateSet();
+        stateSet->setAttributeAndModes(program);
+        stateSet->addUniform( new osg::Uniform("lightDiffuse",
+                                               osg::Vec4(0.8f, 0.8f, 0.8f, 1.0f)) );
+        stateSet->addUniform( new osg::Uniform("lightSpecular",
+                                               osg::Vec4(1.0f, 1.0f, 0.4f, 1.0f)) );
+        stateSet->addUniform( new osg::Uniform("shininess", 64.0f) );
+        stateSet->addUniform( new osg::Uniform("lightPosition",
+                                               osg::Vec3(0,0,1)));
 
-    Uniform * envColorUniform = new Uniform(Uniform::FLOAT_VEC4, "uColorCorrection");
-    envColorUniform->setUpdateCallback(new envLightCallback);
-    stateSet->addUniform(envColorUniform);
+        Uniform * envColorUniform = new Uniform(Uniform::FLOAT_VEC4, "uColorCorrection");
+        envColorUniform->setUpdateCallback(new envLightCallback);
+        stateSet->addUniform(envColorUniform);
+    }
 
     osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D;
     texture->setImage( osgDB::readImageFile(fhead+png_file_name) );
