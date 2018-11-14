@@ -72,6 +72,9 @@ bool GlesDrawables::init() {
 
     _pointcloudDrawable = new pointDrawable;
     _root->addChild(_pointcloudDrawable->createDrawableNode());
+
+    createObject(_objects,"models/andy-origin.obj", "textures/andy.png",
+                 osg::Matrixf::translate(Vec3f(.0,1.0,.0)), ARCORE_CORRECTION);
     return true;
 }
 
@@ -109,7 +112,8 @@ void GlesDrawables::postFrame() {
                 Matrixf modelMat;
                 if(!ARCoreManager::instance()->getAnchorModelMatrixAt(modelMat, i))
                     break;
-                createObject(_objects,"models/andy-origin.obj", "textures/andy.png", modelMat);
+                createObject(_objects,"models/andy-origin.obj", "textures/andy.png",
+                             modelMat, SPHERICAL_HARMONICS);
             }
 
         }
@@ -219,7 +223,7 @@ bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
 
 void GlesDrawables::createObject(osg::Group *parent,
                                  const char* obj_file_name, const char* png_file_name,
-                                 Matrixf modelMat) {
+                                 Matrixf modelMat, LightingType type) {
     Transform objectTrans = new MatrixTransform;
     objectTrans->setMatrix(modelMat);
 
@@ -258,12 +262,12 @@ void GlesDrawables::createObject(osg::Group *parent,
     Program * program;
     osg::StateSet * stateSet;
 
-    if(use_sh){
+    if(type == SPHERICAL_HARMONICS){
         program =assetLoader::instance()->createShaderProgramFromFile("shaders/objectSH.vert","shaders/objectSH.frag");
         stateSet = _node->getOrCreateStateSet();
         stateSet->setAttributeAndModes(program);
 
-        stateSet->addUniform(new Uniform("uLightScale", 1.0f));
+        stateSet->addUniform(new Uniform("uLightScale", 0.08f));
         osg::Uniform *shColorUniform = new osg::Uniform(osg::Uniform::FLOAT_VEC3, "uSHBasis", 9);
         for(int i = 0; i < 9; ++i)
             shColorUniform->setElement(i, osg::Vec3f(.0,.0,.0));

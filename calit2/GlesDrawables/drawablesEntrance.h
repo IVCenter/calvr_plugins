@@ -43,6 +43,10 @@ enum sceneState{
     ROTATE,
     TRANSLATE
 };
+enum LightingType{
+    ARCORE_CORRECTION = 0,
+    SPHERICAL_HARMONICS
+};
 class GlesDrawables : public cvr::CVRPlugin, public cvr::MenuCallback
 {
 typedef osg::ref_ptr<osg::MatrixTransform> Transform;
@@ -60,10 +64,9 @@ protected:
     osg::Node* _selectedNode = nullptr;
     sceneState _selectState = FREE;
     osg::Vec2f _mPreviousPos;
-    const bool use_sh = true;
 
     void initMenuButtons();
-    void createObject(osg::Group *, const char*, const char*, osg::Matrixf);
+    void createObject(osg::Group *, const char*, const char*, osg::Matrixf, LightingType);
     void createObject(osg::Group *, const char*, const char*, osg::Matrixf, bool opengl);
     bool tackleHitted(osgUtil::LineSegmentIntersector::Intersection result );
 public:
