@@ -45,7 +45,8 @@ enum sceneState{
 };
 enum LightingType{
     ARCORE_CORRECTION = 0,
-    SPHERICAL_HARMONICS
+    SPHERICAL_HARMONICS,
+    ONES_SOURCE
 };
 class GlesDrawables : public cvr::CVRPlugin, public cvr::MenuCallback
 {

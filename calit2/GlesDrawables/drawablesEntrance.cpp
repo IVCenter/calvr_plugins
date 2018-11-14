@@ -74,7 +74,7 @@ bool GlesDrawables::init() {
     _root->addChild(_pointcloudDrawable->createDrawableNode());
 
     createObject(_objects,"models/andy-origin.obj", "textures/andy.png",
-                 osg::Matrixf::translate(Vec3f(.0,1.0,.0)), ARCORE_CORRECTION);
+                 osg::Matrixf::translate(Vec3f(.0,1.0,.0)), ONES_SOURCE);
     return true;
 }
 
@@ -113,7 +113,7 @@ void GlesDrawables::postFrame() {
                 if(!ARCoreManager::instance()->getAnchorModelMatrixAt(modelMat, i))
                     break;
                 createObject(_objects,"models/andy-origin.obj", "textures/andy.png",
-                             modelMat, SPHERICAL_HARMONICS);
+                             modelMat, ONES_SOURCE);
             }
 
         }
@@ -262,32 +262,55 @@ void GlesDrawables::createObject(osg::Group *parent,
     Program * program;
     osg::StateSet * stateSet;
 
-    if(type == SPHERICAL_HARMONICS){
-        program =assetLoader::instance()->createShaderProgramFromFile("shaders/objectSH.vert","shaders/objectSH.frag");
-        stateSet = _node->getOrCreateStateSet();
-        stateSet->setAttributeAndModes(program);
+    switch(type){
+        case ARCORE_CORRECTION:{
+            program = assetLoader::instance()->createShaderProgramFromFile("shaders/objectOSG.vert","shaders/objectOSG.frag");
+            stateSet = _node->getOrCreateStateSet();
+            stateSet->setAttributeAndModes(program);
+            stateSet->addUniform( new osg::Uniform("lightDiffuse",
+                                                   osg::Vec4(0.8f, 0.8f, 0.8f, 1.0f)) );
+            stateSet->addUniform( new osg::Uniform("lightSpecular",
+                                                   osg::Vec4(1.0f, 1.0f, 0.4f, 1.0f)) );
+            stateSet->addUniform( new osg::Uniform("shininess", 64.0f) );
+            stateSet->addUniform( new osg::Uniform("lightPosition",
+                                                   osg::Vec3(0,0,1)));
 
-        stateSet->addUniform(new Uniform("uLightScale", 0.08f));
-        osg::Uniform *shColorUniform = new osg::Uniform(osg::Uniform::FLOAT_VEC3, "uSHBasis", 9);
-        for(int i = 0; i < 9; ++i)
-            shColorUniform->setElement(i, osg::Vec3f(.0,.0,.0));
-        shColorUniform->setUpdateCallback(new envSHLightCallback);
-        stateSet->addUniform(shColorUniform);
-    }else{
-        program =assetLoader::instance()->createShaderProgramFromFile("shaders/objectOSG.vert","shaders/objectOSG.frag");
-        stateSet = _node->getOrCreateStateSet();
-        stateSet->setAttributeAndModes(program);
-        stateSet->addUniform( new osg::Uniform("lightDiffuse",
-                                               osg::Vec4(0.8f, 0.8f, 0.8f, 1.0f)) );
-        stateSet->addUniform( new osg::Uniform("lightSpecular",
-                                               osg::Vec4(1.0f, 1.0f, 0.4f, 1.0f)) );
-        stateSet->addUniform( new osg::Uniform("shininess", 64.0f) );
-        stateSet->addUniform( new osg::Uniform("lightPosition",
-                                               osg::Vec3(0,0,1)));
+            Uniform * envColorUniform = new Uniform(Uniform::FLOAT_VEC4, "uColorCorrection");
+            envColorUniform->setUpdateCallback(new envLightCallback);
+            stateSet->addUniform(envColorUniform);
+            break;}
+        case SPHERICAL_HARMONICS:{
+            program =assetLoader::instance()->createShaderProgramFromFile("shaders/objectSH.vert","shaders/objectSH.frag");
+            stateSet = _node->getOrCreateStateSet();
+            stateSet->setAttributeAndModes(program);
 
-        Uniform * envColorUniform = new Uniform(Uniform::FLOAT_VEC4, "uColorCorrection");
-        envColorUniform->setUpdateCallback(new envLightCallback);
-        stateSet->addUniform(envColorUniform);
+            stateSet->addUniform(new Uniform("uLightScale", 0.08f));
+            osg::Uniform *shColorUniform = new osg::Uniform(osg::Uniform::FLOAT_VEC3, "uSHBasis", 9);
+            for(int i = 0; i < 9; ++i)
+                shColorUniform->setElement(i, osg::Vec3f(.0,.0,.0));
+            shColorUniform->setUpdateCallback(new envSHLightCallback);
+            stateSet->addUniform(shColorUniform);
+            break;}
+        case ONES_SOURCE:{
+            program =assetLoader::instance()->createShaderProgramFromFile("shaders/objectOSG.vert","shaders/objectOSG.frag");
+            stateSet = _node->getOrCreateStateSet();
+            stateSet->setAttributeAndModes(program);
+            stateSet->addUniform( new osg::Uniform("lightDiffuse",
+                                                   osg::Vec4(0.8f, 0.8f, 0.8f, 1.0f)) );
+            stateSet->addUniform( new osg::Uniform("lightSpecular",
+                                                   osg::Vec4(1.0f, 1.0f, 0.4f, 1.0f)) );
+            stateSet->addUniform( new osg::Uniform("shininess", 64.0f) );
+            stateSet->addUniform( new osg::Uniform("lightPosition",
+                                                   osg::Vec3(0,0,1)));
+
+            Uniform * ligtPos = new Uniform(Uniform::FLOAT_VEC3, "lightPosition");
+            ligtPos->setUpdateCallback(new lightSrcCallback);
+            stateSet->addUniform(ligtPos);
+
+            Uniform * envColorUniformt = new Uniform(Uniform::FLOAT_VEC4, "uColorCorrection");
+            envColorUniformt->setUpdateCallback(new envLightCallback);
+            stateSet->addUniform(envColorUniformt);
+            break;}
     }
 
     osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D;
