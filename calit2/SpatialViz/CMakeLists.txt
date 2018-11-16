@@ -4,7 +4,7 @@ SET(PLUGIN_HEADERS
 )
 
 ADD_LIBRARY(${LIB_NAME}
-    "SHARED"
+    STATIC
     ${PLUGIN_HEADERS}
     SpatialViz.cpp
 )
