@@ -67,6 +67,7 @@ protected:
     osg::Vec2f _mPreviousPos;
 
     void initMenuButtons();
+    void createQuad(osg::Group *);
     void createObject(osg::Group *, const char*, const char*, osg::Matrixf, LightingType);
     void createObject(osg::Group *, const char*, const char*, osg::Matrixf, bool opengl);
     bool tackleHitted(osgUtil::LineSegmentIntersector::Intersection result );

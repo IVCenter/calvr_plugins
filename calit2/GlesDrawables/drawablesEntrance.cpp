@@ -11,6 +11,21 @@
 
 using namespace osg;
 using namespace cvr;
+
+class LightImageCallback:public osg::StateAttributeCallback{
+    virtual void operator() (osg::StateAttribute * attribute, osg::NodeVisitor * nv) {
+        if(_count %100 ==0){
+            Texture2D* tex = static_cast<osg::Texture2D *> (attribute);
+            std::string fhead(getenv("CALVR_RESOURCE_DIR"));
+            tex->setImage(osgDB::readImageFile(fhead+"textures/andy-change.png"));
+        }
+        _count++;
+    }
+
+private:
+    int _count = 0;
+};
+
 bool GlesDrawables:: tackleHitted(osgUtil::LineSegmentIntersector::Intersection result ){
     osg::Node* parent = dynamic_cast<Node*>(result.drawable->getParent(0));
     if(_map.empty() || _map.find(parent) ==_map.end()){
@@ -73,8 +88,11 @@ bool GlesDrawables::init() {
     _pointcloudDrawable = new pointDrawable;
     _root->addChild(_pointcloudDrawable->createDrawableNode());
 
-    createObject(_objects,"models/andy-origin.obj", "textures/andy.png",
-                 osg::Matrixf::translate(Vec3f(.0,1.0,.0)), ONES_SOURCE);
+    createQuad(_root);
+//    createObject(_objects,"models/andy.obj", "textures/andy.png",
+//                 osg::Matrixf::scale(Vec3f(1.5,1.5,1.5))*osg::Matrixf::translate(Vec3f(0.4,1.0,.0)), SPHERICAL_HARMONICS);
+//    createObject(_objects,"models/andy.obj", "textures/andy.png",
+//                 osg::Matrixf::translate(Vec3f(-0.4f,1.0,.0)), ARCORE_CORRECTION);
     return true;
 }
 
@@ -112,7 +130,7 @@ void GlesDrawables::postFrame() {
                 Matrixf modelMat;
                 if(!ARCoreManager::instance()->getAnchorModelMatrixAt(modelMat, i))
                     break;
-                createObject(_objects,"models/andy-origin.obj", "textures/andy.png",
+                createObject(_objects,"models/andy.obj", "textures/andy.png",
                              modelMat, ONES_SOURCE);
             }
 
@@ -219,6 +237,46 @@ bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
         return true;
     }
     return false;
+}
+void GlesDrawables::createQuad(osg::Group * parent) {
+    ref_ptr<Geode> qnode = new osg::Geode;
+    ref_ptr<Geometry> qgeo = new Geometry;
+    qgeo->setUseDisplayList(false);
+    qgeo->setUseVertexBufferObjects(true);
+
+    qnode->addDrawable(qgeo);
+    parent->addChild(qnode);
+
+    ref_ptr<Vec3Array> vertices = new Vec3Array();
+    vertices->push_back(Vec3f(-1.0f, 0.8f, 0.0f));
+    vertices->push_back(Vec3f(1.0f, 0.8f, 0.0f));
+    vertices->push_back(Vec3f(1.0f, 1.0f, 0.0f));
+    vertices->push_back(Vec3f(-1.0f, 1.0f, 0.0f));
+    qgeo->setVertexArray(vertices);
+
+    qgeo->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
+
+    ref_ptr<Vec2Array> uvs = new Vec2Array();
+    uvs->push_back(osg::Vec2(0,0));
+    uvs->push_back(osg::Vec2(1,0));
+    uvs->push_back(osg::Vec2(1,1));
+    uvs->push_back(osg::Vec2(0,1));
+    qgeo->setTexCoordArray(0,uvs);
+
+    Program * program = assetLoader::instance()->createShaderProgramFromFile("shaders/quad.vert","shaders/quad.frag");
+    StateSet * stateSet = qnode->getOrCreateStateSet();
+    stateSet->setAttributeAndModes(program);
+
+    osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D;
+    texture->setWrap( osg::Texture2D::WRAP_S, osg::Texture2D::REPEAT );
+    texture->setWrap( osg::Texture2D::WRAP_T, osg::Texture2D::REPEAT );
+    texture->setFilter( osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR );
+    texture->setFilter( osg::Texture::MAG_FILTER, osg::Texture::LINEAR );
+    texture->setUpdateCallback(new LightImageCallback);
+
+    stateSet->setTextureAttributeAndModes(3, texture.get());
+    stateSet->addUniform(new osg::Uniform("uSampler", 3));
+
 }
 
 void GlesDrawables::createObject(osg::Group *parent,
