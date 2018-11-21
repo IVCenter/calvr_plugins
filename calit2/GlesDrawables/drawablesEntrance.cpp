@@ -69,17 +69,17 @@ bool GlesDrawables::init() {
     rootSO->attachToScene();
 
     _strokeDrawable = new strokeDrawable;
-    _quadDrawable = new quadDrawable;
-    _root->addChild(_quadDrawable->createDrawableNode());
+//    _quadDrawable = new quadDrawable;
+//    _root->addChild(_quadDrawable->createDrawableNode());
     _root->addChild(_strokeDrawable->createDrawableNode(.0f,-0.8f));
 
     _pointcloudDrawable = new pointDrawable;
     _root->addChild(_pointcloudDrawable->createDrawableNode());
-    
+//
     createObject(_objects,"models/andy.obj", "textures/andy.png",
-                 osg::Matrixf::scale(Vec3f(1.5,1.5,1.5))*osg::Matrixf::translate(Vec3f(0.4,1.0,.0)), SPHERICAL_HARMONICS);
-//    createObject(_objects,"models/andy.obj", "textures/andy.png",
-//                 osg::Matrixf::translate(Vec3f(-0.4f,1.0,.0)), ARCORE_CORRECTION);
+                 osg::Matrixf::translate(Vec3f(0.1,0.8,.0)), SPHERICAL_HARMONICS);
+    createObject(_objects,"models/andy.obj", "textures/andy.png",
+                 osg::Matrixf::translate(Vec3f(-0.1f,0.8,.0)), ARCORE_CORRECTION);
     return true;
 }
 
@@ -124,7 +124,7 @@ void GlesDrawables::postFrame() {
         }
         _objNum = anchor_num;
     }
-    _quadDrawable->updateOnFrame(ARCoreManager::instance()->getCameraTransformedUVs());
+//    _quadDrawable->updateOnFrame(ARCoreManager::instance()->getCameraTransformedUVs());
 }
 
 bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
