@@ -5,6 +5,7 @@ ADD_LIBRARY(${LIB_NAME}
     drawablesEntrance.cpp
     strokeDrawable.cpp
     planeDrawable.cpp
+    quadDrawable.cpp
     pointDrawable.cpp)
 
 add_definitions(-DNDEBUG)
