@@ -33,7 +33,7 @@
 #include "pointDrawable.h"
 #include "planeDrawable.h"
 #include "strokeDrawable.h"
-
+#include "quadDrawable.h"
 typedef struct IntersetctObj{
     osg::Uniform * uTexture;
     osg::MatrixTransform * matrixTrans;
@@ -58,6 +58,7 @@ protected:
     cvr::SceneObject *rootSO, *objSO;
 
     osg::ref_ptr<pointDrawable> _pointcloudDrawable;
+    osg::ref_ptr<quadDrawable> _quadDrawable;
     int _plane_num = 0, _objNum = 0;
     std::vector<planeDrawable*> _planeDrawables;
     osg::ref_ptr<strokeDrawable> _strokeDrawable;
@@ -67,7 +68,6 @@ protected:
     osg::Vec2f _mPreviousPos;
 
     void initMenuButtons();
-    void createQuad(osg::Group *);
     void createObject(osg::Group *, const char*, const char*, osg::Matrixf, LightingType);
     void createObject(osg::Group *, const char*, const char*, osg::Matrixf, bool opengl);
     bool tackleHitted(osgUtil::LineSegmentIntersector::Intersection result );
