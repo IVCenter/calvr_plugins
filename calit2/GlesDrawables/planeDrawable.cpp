@@ -1,9 +1,8 @@
 #include <cvrUtil/AndroidHelper.h>
 #include <cvrUtil/AndroidStdio.h>
 #include "planeDrawable.h"
+#include <algorithm>
 void planeDrawable::_update_plane_vertices() {
-
-
     for(int32_t i=0; i<_vertices_num; i++)
         _vertices.push_back(osg::Vec3f(raw_vertices[2*i], raw_vertices[2*i+1], .0f));
 
@@ -15,7 +14,7 @@ void planeDrawable::_update_plane_vertices() {
     // Fill vertex 4 to 7, with alpha set to 1.
     for (int32_t i = 0; i < _vertices_num; ++i) {
         const float scale =
-                1.0f - std::min((kFeatherLength /
+                1.0f - std::min<float>((kFeatherLength /
                         sqrt(raw_vertices[2*i]*raw_vertices[2*i]
                                                        +raw_vertices[2*i+1]*raw_vertices[2*i+1] )),
                                 kFeatherScale);

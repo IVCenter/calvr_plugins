@@ -1,14 +1,26 @@
 #include <cvrUtil/AndroidHelper.h>
-#include <osg/Texture2D>
 #include <cvrUtil/AndroidStdio.h>
 #include "quadDrawable.h"
-#define HEIGHT_RATE 1.0f
+
 using namespace osg;
+quadDrawable::quadDrawable(){
+    _vertices = new GLfloat[12];
+    memcpy(_vertices, _defaultVertices, 12 * sizeof(float));
+    _face_id = -1;
+}
+quadDrawable::quadDrawable(const float *vertices, GLuint id) {
+    _vertices = new GLfloat[12];
+    memcpy(_vertices, vertices, 12 * sizeof(float));
+    _face_id = id;
+}
 void quadDrawable::Initialization(){
     _shader_program = cvr::assetLoader::instance()->createGLShaderProgramFromFile("shaders/screenquad.vert", "shaders/quad.frag");
     if(!_shader_program)
         LOGE("Failed to create shader program");
-
+    if(!_vertices){
+        _vertices = new GLfloat[12];
+        memcpy(_vertices, _defaultVertices, 12 * sizeof(GLfloat));
+    }
     _attrib_vertices = glGetAttribLocation(_shader_program, "a_Position");
     _attrib_uvs = glGetAttribLocation(_shader_program, "a_TexCoord");
 
@@ -17,8 +29,8 @@ void quadDrawable::Initialization(){
     glBindTexture(GL_TEXTURE_2D, _texture_id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     //Generate VAO and bind
     glGenVertexArrays(1, &_VAO);
     glBindVertexArray(_VAO);
@@ -32,23 +44,23 @@ void quadDrawable::Initialization(){
     glVertexAttribPointer(_attrib_vertices, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat),0);
 
     glBindBuffer(GL_ARRAY_BUFFER, _VBO[1]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 8, nullptr, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 8, _uvs, GL_STATIC_DRAW);
     glEnableVertexAttribArray(_attrib_uvs);
-    glVertexAttribPointer(_attrib_uvs, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glVertexAttribPointer(_attrib_uvs, 2, GL_FLOAT, GL_FALSE, 2* sizeof(GLfloat), 0);
+
+    glGenBuffers(1, &_EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
 
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     glUseProgram(_shader_program);
     glUniform1i(glGetUniformLocation(_shader_program, "uSampler"), 0);
     glUseProgram(0);
 }
 
-void quadDrawable::updateOnFrame(const float * new_uvs){
-    glBindBuffer(GL_ARRAY_BUFFER, _VBO[1]);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, 8* sizeof(float), new_uvs);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
 
 void quadDrawable::drawImplementation(osg::RenderInfo&) const{
     cvr::glStateStack::instance()->PushAllState();
@@ -60,12 +72,12 @@ void quadDrawable::drawImplementation(osg::RenderInfo&) const{
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, _texture_id);
 
-    uint8_t * img = cvr::ARCoreManager::instance()->getImageData();
+    uint8_t * img = cvr::ARCoreManager::instance()->getImageData(_face_id);
     if(img)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 640, 480, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 256, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
 
     glBindVertexArray(_VAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
     glDepthMask(GL_TRUE);

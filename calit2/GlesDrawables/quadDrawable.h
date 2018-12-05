@@ -5,8 +5,8 @@
 
 class quadDrawable: public cvr::glesDrawable {
 private:
-//    osg::ref_ptr<osg::Geode> qnode;
     GLuint _texture_id;
+    GLuint _face_id;
 
     GLuint _shader_program;
 
@@ -15,15 +15,18 @@ private:
 
     GLuint _VAO;
     GLuint _VBO[2];
+    GLuint _EBO;
 
-    const GLfloat _vertices[12] = {
-            -1.0f, -1.0f, 0.0f, +1.0f, -1.0f, 0.0f,
-            -1.0f, +1.0f, 0.0f, +1.0f, +1.0f, 0.0f,
-    };
+    GLfloat *_vertices = nullptr;
+    const GLfloat _defaultVertices[12] = {-1.0f, -1.0f, 0.0f, -1.0f, +1.0f, 0.0f, +1.0f, -1.0f, 0.0f, +1.0f, +1.0f, 0.0f};
+    const GLfloat _uvs[8]={0.0f, 0.0f, 1.0f, 0.0f,1.0f, 1.0f, 0.0f, 1.0f};
+    const GLuint elements[6] = {0, 1, 2, 2, 3, 0};
 
 public:
+    quadDrawable();
+    quadDrawable(const float* vertices, GLuint id);
     void Initialization();
-    void updateOnFrame(const float * new_uvs);
+//    void updateOnFrame(const float * new_uvs);
     void drawImplementation(osg::RenderInfo &) const;
 };
 #endif

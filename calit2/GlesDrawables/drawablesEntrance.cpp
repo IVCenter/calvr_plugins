@@ -12,17 +12,35 @@
 using namespace osg;
 using namespace cvr;
 
+osg::Vec3f _lightPosition = osg::Vec3f(.0,.0,.0);
+class LightPosCallback : public osg::Uniform::Callback
+{
+private:
+    osg::Vec3f * _lpos;
+public:
+    LightPosCallback(osg::Vec3f * pos):_lpos(pos){}
+    virtual void operator()( osg::Uniform* uniform,
+                             osg::NodeVisitor* nv )
+    {
+        uniform->set(*_lpos);
+    }
+};
 bool GlesDrawables:: tackleHitted(osgUtil::LineSegmentIntersector::Intersection result ){
     osg::Node* parent = dynamic_cast<Node*>(result.drawable->getParent(0));
     if(_map.empty() || _map.find(parent) ==_map.end()){
         isectObj obj;
         obj.uTexture = parent->getOrCreateStateSet()->getUniform("uTextureChoice");
         obj.matrixTrans = dynamic_cast<MatrixTransform *>(parent->getParent(0));
+        obj.modelMatUniform = parent->getOrCreateStateSet()->getUniform("uModelMatrix");
 
         _map[parent] = obj;
         bool textureChoice;
         _map[parent].uTexture->get(textureChoice);
         _map[parent].uTexture->set(!textureChoice);
+
+//        if(obj.modelMatUniform)
+//            _map[parent].modelMatUniform->set(obj.matrixTrans->getMatrix());
+
         _selectedNode = parent;
         PluginManager::setCallBackRequest("popButtons");
         return true;
@@ -31,17 +49,33 @@ bool GlesDrawables:: tackleHitted(osgUtil::LineSegmentIntersector::Intersection 
 }
 
 void GlesDrawables::initMenuButtons() {
-    _pointButton = new MenuButton("Show PointCloud");
+    _pointButton = new MenuCheckbox("Show PointCloud", true);
     _pointButton->setCallback(this);
     _mainMenu->addItem(_pointButton);
 
-    _planeButton = new MenuButton("Show Detected Planes");
+    _planeButton = new MenuCheckbox("Show Plane", true);
     _planeButton->setCallback(this);
     _mainMenu->addItem(_planeButton);
 
-    _strokeButton = new MenuButton("Show Stroke Ray");
-    _strokeButton->setCallback(this);
-    _mainMenu->addItem(_strokeButton);
+    _quadButton = new MenuCheckbox("Show Environment Map", true);
+    _quadButton->setCallback(this);
+    _mainMenu->addItem(_quadButton);
+
+    _obj1Button = new MenuCheckbox("Basic Lighting Estimation", true);
+    _obj1Button->setCallback(this);
+    _mainMenu->addItem(_obj1Button);
+
+    _obj2Button = new MenuCheckbox("One Light Source", false);
+    _obj2Button->setCallback(this);
+    _mainMenu->addItem(_obj2Button);
+
+    _obj3Button = new MenuCheckbox("Spherical Harmonics Lighting", false);
+    _obj3Button->setCallback(this);
+    _mainMenu->addItem(_obj3Button);
+
+    _lightButton = new MenuCheckbox("Add Light Source", false);
+    _lightButton->setCallback(this);
+    _mainMenu->addItem(_lightButton);
 }
 
 bool GlesDrawables::init() {
@@ -69,21 +103,94 @@ bool GlesDrawables::init() {
     rootSO->attachToScene();
 
     _strokeDrawable = new strokeDrawable;
-//    _quadDrawable = new quadDrawable;
-//    _root->addChild(_quadDrawable->createDrawableNode());
+    for(int i=0;i<6;i++){
+        _quadDrawables.push_back(new quadDrawable(ENV_QUAD_COORDS[i], i));
+        _root->addChild(_quadDrawables.back()->createDrawableNode());
+    }
     _root->addChild(_strokeDrawable->createDrawableNode(.0f,-0.8f));
 
     _pointcloudDrawable = new pointDrawable;
     _root->addChild(_pointcloudDrawable->createDrawableNode());
-//
-    createObject(_objects,"models/andy.obj", "textures/andy.png",
-                 osg::Matrixf::translate(Vec3f(0.1,0.8,.0)), SPHERICAL_HARMONICS);
-    createObject(_objects,"models/andy.obj", "textures/andy.png",
-                 osg::Matrixf::translate(Vec3f(-0.1f,0.8,.0)), ARCORE_CORRECTION);
+
+//    const GLfloat _defaultVertices[12] = {-1.0f/2, 0.9f, 0.0f,//Top-left
+//                                          +1.0f/2, 0.9f, 0.0f,//Top-right
+//                                          +1.0f/2, 0.7f, 0.0, //bottom-right
+//                                          -1.0f/2, 0.7f, 0.0f};// Bottom-left
+//    const GLfloat _uvs[8]={0.0f, 0.0f,
+//                           1.0f, 0.0f,
+//                           1.0f, 1.0f,
+//                           0.0f, 1.0f};
+//    quadDrawable* qdrawable = new quadDrawable(_defaultVertices,_uvs, -1);
+//    _root->addChild(qdrawable->createDrawableNode());
+
+//    createObject(_objects,"models/andy.obj", "textures/andy.png",
+//                 osg::Matrixf::translate(Vec3f(0.1,0.8,.0)), SPHERICAL_HARMONICS);
+//    createObject(_objects, "models/andy.obj", "textures/andy.png",
+//                 osg::Matrixf::translate(Vec3f(.0f, .0f, .0f)), ONES_SOURCE);
+    for(auto b : _quadDrawables){
+        b->setNodeMask(0);
+    }
     return true;
 }
 
 void GlesDrawables::menuCallback(cvr::MenuItem *item) {
+    if(item == _planeButton){
+        if(_planeButton->getValue() && !last_state_plane){
+            for(auto b : _planeDrawables){
+                b->getGLNode()->setNodeMask(0xFFFFFF);
+            }
+        }else if (!_planeButton->getValue() && last_state_plane){
+            for(auto b : _planeDrawables){
+                b->setNodeMask(0);
+            }
+        }
+        last_state_plane = _planeButton->getValue();
+    }
+    if(item == _pointButton){
+        if(_pointButton->getValue() && !last_state_point){
+            _pointcloudDrawable->getGLNode()->setNodeMask(0xFFFFFF);
+        }else if (!_pointButton->getValue() && last_state_point){
+            _pointcloudDrawable->getGLNode()->setNodeMask(0);
+        }
+        last_state_point = _pointButton->getValue();
+    }
+    if(item == _quadButton){
+        if(_quadButton->getValue() && !last_state_quad){
+            for(auto b : _quadDrawables){
+                b->getGLNode()->setNodeMask(0xFFFFFF);
+            }
+        }else if (!_quadButton->getValue() && last_state_quad){
+            for(auto b : _quadDrawables){
+                b->setNodeMask(0);
+            }
+        }
+        last_state_quad = _quadButton->getValue();
+    }
+
+    if(item == _obj1Button){
+        if(last_object_select != 1){
+            _obj2Button->setValue(false);
+            _obj3Button->setValue(false);
+        }
+        last_object_select = 1;
+    }
+    if(item == _obj2Button){
+        if(last_object_select != 2){
+            _obj1Button->setValue(false);
+            _obj3Button->setValue(false);
+        }
+        last_object_select = 2;
+    }
+    if(item == _obj3Button){
+        if(last_object_select != 3){
+            _obj1Button->setValue(false);
+            _obj2Button->setValue(false);
+        }
+        last_object_select = 3;
+    }
+    if(item == _lightButton){
+        _add_light = !_add_light;
+    }
 }
 
 void GlesDrawables::postFrame() {
@@ -117,8 +224,35 @@ void GlesDrawables::postFrame() {
                 Matrixf modelMat;
                 if(!ARCoreManager::instance()->getAnchorModelMatrixAt(modelMat, i))
                     break;
-                createObject(_objects,"models/andy.obj", "textures/andy.png",
-                             modelMat, ONES_SOURCE);
+                if(_add_light){
+                    createDebugSphere(_objects, modelMat);
+//
+                    osg::Vec3f debug = modelMat.getTrans();
+
+                    osg::Vec4f tmp = osg::Vec4f(debug.x(), debug.z(), -debug.y(),1.0) * (*ARCoreManager::instance()->getViewMatrix());
+                    _lightPosition = osg::Vec3f(tmp.x() / tmp.w(), -tmp.z()/tmp.w(), tmp.y()/tmp.w());
+                            LOGE("===LIGHT: %f, %f, %f", _lightPosition.x(), _lightPosition.y(), _lightPosition.z());
+                    _add_light = false;
+                    break;
+                }
+                switch(last_object_select){
+                    case 1:
+                        createObject(_objects,"models/andy.obj", "textures/andy.png",
+                                     modelMat, ONES_SOURCE);
+                        break;
+                    case 2:
+                        createObject(_objects,"models/andy.obj", "textures/andy.png",
+                                     modelMat, ONES_SOURCE);
+                        break;
+                    case 3:
+                        createObject(_objects,"models/andy.obj", "textures/andy.png",
+                                     modelMat, SPHERICAL_HARMONICS);
+                        break;
+                    default:
+                        createObject(_objects,"models/andy.obj", "textures/andy.png",
+                                     modelMat, ARCORE_CORRECTION);
+                }
+
             }
 
         }
@@ -138,6 +272,9 @@ bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
         return true;
     }
     if(aie->getTouchType() == FT_BUTTON){
+        /////!!!!!!!!!!!!!DEBUG ONLY!!!!!!
+//        ARCoreManager::instance()->Estimate_Homography_From_PointCloud();
+
         _selectState = FREE;
         return true;
     }
@@ -155,7 +292,7 @@ bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
         far_plane = Vec3f(far_plane.x(), -far_plane.z(), far_plane.y());
         Vec3f lineDir = near_plane - far_plane;
 
-        Vec3f planeNormal = osg::Vec3f(.0f,1.0,.0f)*TrackingManager::instance()->getCameraRotation();
+        Vec3f planeNormal = osg::Vec3f(.0f,1.0,.0f)*ARCoreManager::instance()->getCameraRotationMatrixOSG();
         Vec3f planePoint = objMat.getTrans();
 
         if(planeNormal * lineDir == 0)
@@ -227,6 +364,69 @@ bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
     return false;
 }
 
+//void GlesDrawables::createObject(osg::Group *parent,
+//                                 const char* obj_file_name, const char* png_file_name,
+//                                 Matrixf modelMat, LightingType type) {
+//    Transform objectTrans = new MatrixTransform;
+//    objectTrans->setMatrix(modelMat);
+//
+//    ref_ptr<Geometry>_geometry = new osg::Geometry();
+//    ref_ptr<Geode> _node = new osg::Geode;
+//    _node->addDrawable(_geometry.get());
+//
+//    ref_ptr<Vec3Array> vertices = new Vec3Array();
+//    ref_ptr<Vec3Array> normals = new Vec3Array();
+//
+//    ref_ptr<Vec2Array> uvs = new Vec2Array();
+//
+//    std::vector<GLfloat> _vertices;
+//    std::vector<GLfloat > _uvs;
+//    std::vector<GLfloat > _normals;
+//    std::vector<GLushort > _indices;
+//
+//    assetLoader::instance()->LoadObjFile(obj_file_name, &_vertices, &_normals, &_uvs, &_indices);
+//
+//    //REstore in OSG Coord or pass REAL_TO_OSG_COORD matrix to shader to flip
+//    for(int i=0; i<_uvs.size()/2; i++){
+//        vertices->push_back(Vec3f(_vertices[3*i] * 0.1, -_vertices[3*i+2] * 0.1, _vertices[3*i+1]*0.1));
+//        normals->push_back(Vec3f(_normals[3*i], -_normals[3*i+2], _normals[3*i+1]));
+////        vertices->push_back(Vec3f(_vertices[3*i] * 0.1, _vertices[3*i+1] * 0.1, _vertices[3*i+2]*0.1));
+////        normals->push_back(Vec3f(_normals[3*i], _normals[3*i+1], _normals[3*i+2]));
+//
+//        uvs->push_back(Vec2f(_uvs[2*i], _uvs[2*i+1]));
+//    }
+//
+//    _geometry->setVertexArray(vertices.get());
+//    _geometry->setNormalArray(normals.get());
+//    _geometry->setTexCoordArray(0, uvs.get());
+//    _geometry->addPrimitiveSet(new DrawElementsUShort(GL_TRIANGLES, (unsigned int)_indices.size(), _indices.data()));
+//    _geometry->setUseVertexBufferObjects(true);
+//    _geometry->setUseDisplayList(false);
+//
+//
+//    Program * program = assetLoader::instance()->createShaderProgramFromFile("shaders/lighting.vert","shaders/lighting.frag");
+//
+//    osg::StateSet * stateSet = _node->getOrCreateStateSet();
+//    stateSet->setAttributeAndModes(program);
+//
+//    stateSet->addUniform( new osg::Uniform("lightDiffuse",
+//                                           osg::Vec4(0.8f, 0.8f, 0.8f, 1.0f)) );
+//    stateSet->addUniform( new osg::Uniform("lightSpecular",
+//                                           osg::Vec4(1.0f, 1.0f, 0.4f, 1.0f)) );
+//    stateSet->addUniform( new osg::Uniform("shininess", 64.0f) );
+//
+//    Uniform * lightUniform = new Uniform(Uniform::FLOAT_VEC3, "lightPosition");
+//    lightUniform->setUpdateCallback(new LightPosCallback(&_lightPosition));
+//    stateSet->addUniform(lightUniform);
+////    stateSet->addUniform( new osg::Uniform("lightPosition", osg::Vec3(0,0,1)));
+//
+//    Uniform * baseColor = new osg::Uniform("uBaseColor", osg::Vec4f(1.0f, .0f, .0f, 1.0f));
+//    stateSet->addUniform(baseColor);
+//
+//    objectTrans->addChild(_node.get());
+//    parent->addChild(objectTrans.get());
+//
+//}
 void GlesDrawables::createObject(osg::Group *parent,
                                  const char* obj_file_name, const char* png_file_name,
                                  Matrixf modelMat, LightingType type) {
@@ -248,7 +448,6 @@ void GlesDrawables::createObject(osg::Group *parent,
     std::vector<GLushort > _indices;
 
     assetLoader::instance()->LoadObjFile(obj_file_name, &_vertices, &_normals, &_uvs, &_indices);
-
 
     //REstore in OSG Coord or pass REAL_TO_OSG_COORD matrix to shader to flip
     for(int i=0; i<_uvs.size()/2; i++){
@@ -273,24 +472,18 @@ void GlesDrawables::createObject(osg::Group *parent,
             program = assetLoader::instance()->createShaderProgramFromFile("shaders/objectOSG.vert","shaders/objectOSG.frag");
             stateSet = _node->getOrCreateStateSet();
             stateSet->setAttributeAndModes(program);
-            stateSet->addUniform( new osg::Uniform("lightDiffuse",
-                                                   osg::Vec4(0.8f, 0.8f, 0.8f, 1.0f)) );
-            stateSet->addUniform( new osg::Uniform("lightSpecular",
-                                                   osg::Vec4(1.0f, 1.0f, 0.4f, 1.0f)) );
-            stateSet->addUniform( new osg::Uniform("shininess", 64.0f) );
-            stateSet->addUniform( new osg::Uniform("lightPosition",
-                                                   osg::Vec3(0,0,1)));
 
             Uniform * envColorUniform = new Uniform(Uniform::FLOAT_VEC4, "uColorCorrection");
             envColorUniform->setUpdateCallback(new envLightCallback);
             stateSet->addUniform(envColorUniform);
+
             break;}
         case SPHERICAL_HARMONICS:{
             program =assetLoader::instance()->createShaderProgramFromFile("shaders/objectSH.vert","shaders/objectSH.frag");
             stateSet = _node->getOrCreateStateSet();
             stateSet->setAttributeAndModes(program);
 
-            stateSet->addUniform(new Uniform("uLightScale", 0.08f));
+            stateSet->addUniform(new Uniform("uLightScale", 0.2f));
             osg::Uniform *shColorUniform = new osg::Uniform(osg::Uniform::FLOAT_VEC3, "uSHBasis", 9);
             for(int i = 0; i < 9; ++i)
                 shColorUniform->setElement(i, osg::Vec3f(.0,.0,.0));
@@ -298,24 +491,22 @@ void GlesDrawables::createObject(osg::Group *parent,
             stateSet->addUniform(shColorUniform);
             break;}
         case ONES_SOURCE:{
-            program =assetLoader::instance()->createShaderProgramFromFile("shaders/objectOSG.vert","shaders/objectOSG.frag");
+            program = assetLoader::instance()->createShaderProgramFromFile("shaders/objectPhong.vert",
+                                                                           "shaders/objectPhong.frag");
             stateSet = _node->getOrCreateStateSet();
             stateSet->setAttributeAndModes(program);
-            stateSet->addUniform( new osg::Uniform("lightDiffuse",
-                                                   osg::Vec4(0.8f, 0.8f, 0.8f, 1.0f)) );
-            stateSet->addUniform( new osg::Uniform("lightSpecular",
-                                                   osg::Vec4(1.0f, 1.0f, 0.4f, 1.0f)) );
-            stateSet->addUniform( new osg::Uniform("shininess", 64.0f) );
-            stateSet->addUniform( new osg::Uniform("lightPosition",
-                                                   osg::Vec3(0,0,1)));
 
-            Uniform * ligtPos = new Uniform(Uniform::FLOAT_VEC3, "lightPosition");
-            ligtPos->setUpdateCallback(new lightSrcCallback);
-            stateSet->addUniform(ligtPos);
+            stateSet->addUniform( new osg::Uniform("uShiness", 50.0f) );
 
-            Uniform * envColorUniformt = new Uniform(Uniform::FLOAT_VEC4, "uColorCorrection");
-            envColorUniformt->setUpdateCallback(new envLightCallback);
-            stateSet->addUniform(envColorUniformt);
+            Uniform * lightUniform = new Uniform(Uniform::FLOAT_VEC3, "uLightPos");
+            lightUniform->setUpdateCallback(new LightPosCallback(&_lightPosition));
+//            lightUniform->setUpdateCallback(new lightSrcCallback);
+            stateSet->addUniform(lightUniform);
+
+            Uniform * envColorUniform = new Uniform(Uniform::FLOAT_VEC4, "uColorCorrection");
+            envColorUniform->setUpdateCallback(new envLightCallback);
+            stateSet->addUniform(envColorUniform);
+
             break;}
     }
 
@@ -344,6 +535,7 @@ void GlesDrawables::createObject(osg::Group *parent,
 
     objectTrans->addChild(_node.get());
     parent->addChild(objectTrans.get());
+//    parent->addChild(_node.get());
 }
 
 void GlesDrawables::createObject(osg::Group *parent,
@@ -420,4 +612,33 @@ void GlesDrawables::createObject(osg::Group *parent,
 
     objectTrans->addChild(_node.get());
     parent->addChild(objectTrans.get());
+}
+
+void GlesDrawables::createDebugSphere(osg::Group*parent, Matrixf modelMat){
+    Transform objectTrans = new MatrixTransform;
+    objectTrans->setMatrix(modelMat);
+    parent->addChild(objectTrans);
+
+    osg::ref_ptr<osg::ShapeDrawable> shape = new osg::ShapeDrawable;
+    shape->setShape(new osg::Sphere(osg::Vec3f(.0,.0,.0), 0.05f));
+    shape->setColor(osg::Vec4f(1.0f,.0f,.0f,1.0f));
+    osg::ref_ptr<osg::Geode> node = new osg::Geode;
+    Program * program = assetLoader::instance()->createShaderProgramFromFile("shaders/lighting.vert","shaders/lighting.frag");
+
+    osg::StateSet * stateSet = shape->getOrCreateStateSet();
+    stateSet->setAttributeAndModes(program);
+
+    stateSet->addUniform( new osg::Uniform("lightDiffuse",
+                                           osg::Vec4(0.8f, 0.8f, 0.8f, 1.0f)) );
+    stateSet->addUniform( new osg::Uniform("lightSpecular",
+                                           osg::Vec4(1.0f, 1.0f, 0.4f, 1.0f)) );
+    stateSet->addUniform( new osg::Uniform("shininess", 64.0f) );
+
+    stateSet->addUniform( new osg::Uniform("lightPosition", osg::Vec3(0,0,1)));
+
+    Uniform * baseColor = new osg::Uniform("uBaseColor", osg::Vec4f(1.0f, .0f, .0f, 1.0f));
+    stateSet->addUniform(baseColor);
+
+    node->addDrawable(shape.get());
+    objectTrans->addChild(node);
 }
