@@ -123,6 +123,8 @@ bool GlesDrawables::init() {
     quadDrawable* qdrawable = new quadDrawable(_defaultVertices, -1);
     _root->addChild(qdrawable->createDrawableNode());
 
+    stitcher = new panoStitcher;
+
 //    createObject(_objects,"models/andy.obj", "textures/andy.png",
 //                 osg::Matrixf::translate(Vec3f(0.1,0.8,.0)), SPHERICAL_HARMONICS);
 //    createObject(_objects, "models/andy.obj", "textures/andy.png",
@@ -260,6 +262,8 @@ void GlesDrawables::postFrame() {
         _objNum = anchor_num;
     }
 //    _quadDrawable->updateOnFrame(ARCoreManager::instance()->getCameraTransformedUVs());
+
+
 }
 
 bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
@@ -273,8 +277,8 @@ bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
         return true;
     }
     if(aie->getTouchType() == FT_BUTTON){
-        /////!!!!!!!!!!!!!DEBUG ONLY!!!!!!
-//        ARCoreManager::instance()->Estimate_Homography_From_PointCloud();
+        ///!!!!!!!!!!!!!DEBUG ONLY!!!!!!
+//        stitcher->StitchCurrentView();
 
         _selectState = FREE;
         return true;

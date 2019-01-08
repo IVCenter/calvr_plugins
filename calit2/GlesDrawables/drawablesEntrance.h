@@ -34,6 +34,7 @@
 #include "planeDrawable.h"
 #include "strokeDrawable.h"
 #include "quadDrawable.h"
+#include "pano.h"
 typedef struct IntersetctObj{
     osg::Uniform * uTexture;
     osg::MatrixTransform * matrixTrans;
@@ -91,6 +92,7 @@ protected:
     osg::Vec2f _mPreviousPos;
     bool last_state_plane = true, last_state_point=true, last_state_quad = true, _add_light=false;
     int last_object_select = 1;
+    panoStitcher* stitcher;
 
 
     void initMenuButtons();

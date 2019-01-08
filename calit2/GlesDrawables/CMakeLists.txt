@@ -3,6 +3,7 @@ SET(LIB_NAME GlesDrawables)
 ADD_LIBRARY(${LIB_NAME}
     STATIC
     drawablesEntrance.cpp
+    pano.cpp
     strokeDrawable.cpp
     planeDrawable.cpp
     quadDrawable.cpp
