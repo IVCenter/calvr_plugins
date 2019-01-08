@@ -103,33 +103,34 @@ bool GlesDrawables::init() {
     rootSO->attachToScene();
 
     _strokeDrawable = new strokeDrawable;
-    for(int i=0;i<6;i++){
-        _quadDrawables.push_back(new quadDrawable(ENV_QUAD_COORDS[i], i));
-        _root->addChild(_quadDrawables.back()->createDrawableNode());
-    }
+//    for(int i=0;i<6;i++){
+//        _quadDrawables.push_back(new quadDrawable(ENV_QUAD_COORDS[i], i));
+//        _root->addChild(_quadDrawables.back()->createDrawableNode());
+//    }
     _root->addChild(_strokeDrawable->createDrawableNode(.0f,-0.8f));
 
     _pointcloudDrawable = new pointDrawable;
     _root->addChild(_pointcloudDrawable->createDrawableNode());
 
-//    const GLfloat _defaultVertices[12] = {-1.0f/2, 0.9f, 0.0f,//Top-left
-//                                          +1.0f/2, 0.9f, 0.0f,//Top-right
-//                                          +1.0f/2, 0.7f, 0.0, //bottom-right
-//                                          -1.0f/2, 0.7f, 0.0f};// Bottom-left
-//    const GLfloat _uvs[8]={0.0f, 0.0f,
-//                           1.0f, 0.0f,
-//                           1.0f, 1.0f,
-//                           0.0f, 1.0f};
-//    quadDrawable* qdrawable = new quadDrawable(_defaultVertices,_uvs, -1);
-//    _root->addChild(qdrawable->createDrawableNode());
+    const GLfloat _defaultVertices[12] = {-1.0f/2, 0.9f, 0.0f,//Top-left
+                                          +1.0f/2, 0.9f, 0.0f,//Top-right
+                                          +1.0f/2, 0.7f, 0.0, //bottom-right
+                                          -1.0f/2, 0.7f, 0.0f};// Bottom-left
+    const GLfloat _uvs[8]={0.0f, 0.0f,
+                           1.0f, 0.0f,
+                           1.0f, 1.0f,
+                           0.0f, 1.0f};
+    quadDrawable* qdrawable = new quadDrawable(_defaultVertices, -1);
+    _root->addChild(qdrawable->createDrawableNode());
 
 //    createObject(_objects,"models/andy.obj", "textures/andy.png",
 //                 osg::Matrixf::translate(Vec3f(0.1,0.8,.0)), SPHERICAL_HARMONICS);
 //    createObject(_objects, "models/andy.obj", "textures/andy.png",
 //                 osg::Matrixf::translate(Vec3f(.0f, .0f, .0f)), ONES_SOURCE);
-    for(auto b : _quadDrawables){
-        b->setNodeMask(0);
-    }
+
+//    for(auto b : _quadDrawables){
+//        b->setNodeMask(0);
+//    }
     return true;
 }
 
@@ -155,16 +156,16 @@ void GlesDrawables::menuCallback(cvr::MenuItem *item) {
         last_state_point = _pointButton->getValue();
     }
     if(item == _quadButton){
-        if(_quadButton->getValue() && !last_state_quad){
-            for(auto b : _quadDrawables){
-                b->getGLNode()->setNodeMask(0xFFFFFF);
-            }
-        }else if (!_quadButton->getValue() && last_state_quad){
-            for(auto b : _quadDrawables){
-                b->setNodeMask(0);
-            }
-        }
-        last_state_quad = _quadButton->getValue();
+//        if(_quadButton->getValue() && !last_state_quad){
+//            for(auto b : _quadDrawables){
+//                b->getGLNode()->setNodeMask(0xFFFFFF);
+//            }
+//        }else if (!_quadButton->getValue() && last_state_quad){
+//            for(auto b : _quadDrawables){
+//                b->setNodeMask(0);
+//            }
+//        }
+//        last_state_quad = _quadButton->getValue();
     }
 
     if(item == _obj1Button){
@@ -483,7 +484,7 @@ void GlesDrawables::createObject(osg::Group *parent,
             stateSet = _node->getOrCreateStateSet();
             stateSet->setAttributeAndModes(program);
 
-            stateSet->addUniform(new Uniform("uLightScale", 0.2f));
+            stateSet->addUniform(new Uniform("uLightScale", 0.25f));
             osg::Uniform *shColorUniform = new osg::Uniform(osg::Uniform::FLOAT_VEC3, "uSHBasis", 9);
             for(int i = 0; i < 9; ++i)
                 shColorUniform->setElement(i, osg::Vec3f(.0,.0,.0));

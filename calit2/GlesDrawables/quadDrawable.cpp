@@ -72,9 +72,14 @@ void quadDrawable::drawImplementation(osg::RenderInfo&) const{
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, _texture_id);
 
-    uint8_t * img = cvr::ARCoreManager::instance()->getImageData(_face_id);
+    int width, height;
+    cvr::ARCoreManager::instance()->getNdkImageSize(width, height);
+    unsigned char* img = cvr::ARCoreManager::instance()->getGrayscaleImageData();
     if(img)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 256, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, width, height, 0, GL_LUMINANCE,
+                     GL_UNSIGNED_BYTE, img);
+        //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, hei
+    // ght, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
 
     glBindVertexArray(_VAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

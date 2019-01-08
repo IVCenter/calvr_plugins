@@ -22,6 +22,8 @@ private:
     const GLfloat _uvs[8]={0.0f, 0.0f, 1.0f, 0.0f,1.0f, 1.0f, 0.0f, 1.0f};
     const GLuint elements[6] = {0, 1, 2, 2, 3, 0};
 
+    int _image_width=0, _image_height=0;
+
 public:
     quadDrawable();
     quadDrawable(const float* vertices, GLuint id);
