@@ -8,7 +8,6 @@
 #include <cvrUtil/AndroidHelper.h>
 #include <osg/ShapeDrawable>
 #include <cvrKernel/PluginManager.h>
-
 using namespace osg;
 using namespace cvr;
 
@@ -124,6 +123,7 @@ bool GlesDrawables::init() {
     _root->addChild(qdrawable->createDrawableNode());
 
     stitcher = new panoStitcher;
+
 
 //    createObject(_objects,"models/andy.obj", "textures/andy.png",
 //                 osg::Matrixf::translate(Vec3f(0.1,0.8,.0)), SPHERICAL_HARMONICS);
@@ -278,7 +278,7 @@ bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
     }
     if(aie->getTouchType() == FT_BUTTON){
         ///!!!!!!!!!!!!!DEBUG ONLY!!!!!!
-//        stitcher->StitchCurrentView();
+        stitcher->StitchCurrentView();
 
         _selectState = FREE;
         return true;

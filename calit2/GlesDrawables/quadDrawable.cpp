@@ -73,14 +73,14 @@ void quadDrawable::drawImplementation(osg::RenderInfo&) const{
     glBindTexture(GL_TEXTURE_2D, _texture_id);
 
     int width, height;
-    cvr::ARCoreManager::instance()->getNdkImageSize(width, height);
-    unsigned char* img = cvr::ARCoreManager::instance()->getGrayscaleImageData();
-//    unsigned char* img =  panoStitcher::instance()->getPanoImageData(width, height);
+//    cvr::ARCoreManager::instance()->getNdkImageSize(width, height);
+//    unsigned char* img = cvr::ARCoreManager::instance()->getGrayscaleImageData();
+    unsigned char* img =  panoStitcher::instance()->getPanoImageData(width, height);
 
     if(img)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, width, height, 0, GL_LUMINANCE,
-                     GL_UNSIGNED_BYTE, img);
-//        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
+//        glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, width, height, 0, GL_LUMINANCE,
+//                     GL_UNSIGNED_BYTE, img);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
 
     glBindVertexArray(_VAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
