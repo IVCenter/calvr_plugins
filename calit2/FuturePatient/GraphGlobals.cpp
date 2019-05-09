@@ -47,7 +47,7 @@ void GraphGlobals::makeTextFit(osgText::Text * text, float maxSize, bool horizon
 {
     checkInit();
 
-    osg::BoundingBox bb = text->getBound();
+    osg::BoundingBox bb = text->getBoundingBox();
     float width;
     if(horizontal)
     {
@@ -73,7 +73,7 @@ void GraphGlobals::makeTextFit(osgText::Text * text, float maxSize, bool horizon
     {
 	str = str.substr(0,str.length()-1);
 	text->setText(str + "..");
-	bb = text->getBound();
+	bb = text->getBoundingBox();
 	if(horizontal)
 	{
 	    width = bb.xMax() - bb.xMin();

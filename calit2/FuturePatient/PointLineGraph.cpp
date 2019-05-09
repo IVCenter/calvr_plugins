@@ -333,7 +333,7 @@ void PointLineGraph::setHover(osg::Vec3 intersect)
 	_hoverText->setCharacterSize(1.0);
 	_hoverText->setText(ss.str());
 	_hoverText->setAlignment(osgText::Text::LEFT_TOP);
-	osg::BoundingBox bb = _hoverText->getBound();
+	osg::BoundingBox bb = _hoverText->getBoundingBox();
 	float csize = GraphGlobals::getHoverHeight() / (bb.zMax() - bb.zMin());
 	_hoverText->setCharacterSize(csize);
 	_hoverText->setPosition(osg::Vec3(pos.x(),-2.5,pos.z()));
@@ -349,7 +349,7 @@ void PointLineGraph::setHover(osg::Vec3 intersect)
 	    hverts->at(2) = osg::Vec3(pos.x(),-2,pos.z());
 	    hverts->at(3) = osg::Vec3(pos.x(),-2,pos.z()-bgheight);
 	    hverts->dirty();
-	    _hoverBGGeom->getBound();
+	    _hoverBGGeom->getBoundingBox();
 	}
 
 	if(!_hoverGeode->getNumParents())
@@ -413,7 +413,7 @@ void PointLineGraph::makeBG()
     geom->setUseVertexBufferObjects(true);
 
     geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,8));
-    geom->getBound();
+    geom->getBoundingBox();
 
     _bgGeode->addDrawable(geom);
 }
@@ -437,7 +437,7 @@ void PointLineGraph::makeHover()
     _hoverBGGeom->setColorArray(colors);
     _hoverBGGeom->setColorBinding(osg::Geometry::BIND_OVERALL);
     _hoverBGGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
-    _hoverBGGeom->getBound();
+    _hoverBGGeom->getBoundingBox();
 }
 
 void PointLineGraph::update()
@@ -482,7 +482,7 @@ void PointLineGraph::updateAxis()
 	osgText::Text * text = GraphGlobals::makeText(_title, osg::Vec4(0,0,0,1));
 	float csize1,csize2;
 
-	osg::BoundingBox bb = text->getBound();
+	osg::BoundingBox bb = text->getBoundingBox();
 	csize1 = (_graphRight-_graphLeft) / (bb.xMax() - bb.xMin());
 	csize2 = (0.90*_height*_topPaddingMult*_titlePaddingMult) / (bb.zMax() - bb.zMin());
 	text->setCharacterSize(std::min(csize1,csize2));
@@ -499,7 +499,7 @@ void PointLineGraph::updateAxis()
 	osgText::Text * text = GraphGlobals::makeText(_catLabels[i], osg::Vec4(0,0,0,1));
 	float csize1,csize2;
 
-	osg::BoundingBox bb = text->getBound();
+	osg::BoundingBox bb = text->getBoundingBox();
 	csize1 = (columnWidth*0.9) / (bb.xMax() - bb.xMin());
 	csize2 = (0.90*_height*_topPaddingMult*_catLabelPaddingMult) / (bb.zMax() - bb.zMin());
 	text->setCharacterSize(std::min(csize1,csize2));
@@ -551,7 +551,7 @@ void PointLineGraph::updateAxis()
 			}
 
 			osg::ref_ptr<osgText::Text> testText = GraphGlobals::makeText(testss.str(),osg::Vec4(0,0,0,1));
-			osg::BoundingBox testbb = testText->getBound();
+			osg::BoundingBox testbb = testText->getBoundingBox();
 			float testWidth = testbb.xMax() - testbb.xMin();
 
 			tickCharacterSize = (labelLeftSize * 0.95 - 2.0 * tickSize) / testWidth;
@@ -606,7 +606,7 @@ void PointLineGraph::updateAxis()
 
 	lineGeom->addPrimitiveSet(new osg::DrawArrays(GL_LINES,0,verts->size()));
 	_axisGeode->addDrawable(lineGeom);
-	lineGeom->getBound();
+	lineGeom->getBoundingBox();
     }
 }
 
@@ -734,7 +734,7 @@ void PointLineGraph::updateSizes()
     if(_dataGeometry)
     {
 	_dataGeometry->dirtyBound();
-	_dataGeometry->getBound();
+	_dataGeometry->getBoundingBox();
     }
 }
 

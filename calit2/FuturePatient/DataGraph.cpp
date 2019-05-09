@@ -463,7 +463,7 @@ bool DataGraph::displayHoverText(osg::Matrix & mat)
 	    _hoverText->setCharacterSize(1.0);
 
 	    float targetHeight = SceneManager::instance()->getTiledWallHeight() * 0.05;
-	    osg::BoundingBox bb = _hoverText->getBound();
+	    osg::BoundingBox bb = _hoverText->getBoundingBox();
 	    _hoverText->setCharacterSize(targetHeight / (bb.zMax() - bb.zMin()));
 
 	    std::map<std::string,std::map<int,PointAction*> >::iterator it = _pointActionMap.find(selectedGraph);
@@ -480,7 +480,7 @@ bool DataGraph::displayHoverText(osg::Matrix & mat)
 		}
 	    }
 
-	    bb = _hoverText->getBound();
+	    bb = _hoverText->getBoundingBox();
 	    osg::Matrix bgScale;
 	    bgScale.makeScale(osg::Vec3((bb.xMax() - bb.xMin()),1.0,(bb.zMax() - bb.zMin())));
 	    _hoverBGScale->setMatrix(bgScale);
@@ -765,7 +765,7 @@ void DataGraph::setLabelDisplayMode(LabelDisplayMode ldm)
 		    minss << (it->second.zMin + (it->second.data->at(minIndex).z() * (it->second.zMax-it->second.zMin)));
 		    text = GraphGlobals::makeText(minss.str(),textColor);
 		    text->setAlignment(osgText::Text::CENTER_CENTER);
-		    bb = text->getBound();
+		    bb = text->getBoundingBox();
 		    csize = textHeight / (bb.zMax() - bb.zMin());
 		    text->setCharacterSize(csize);
 		    text->setPosition(minPoint);
@@ -778,7 +778,7 @@ void DataGraph::setLabelDisplayMode(LabelDisplayMode ldm)
 		    maxss << (it->second.zMin + (it->second.data->at(maxIndex).z() * (it->second.zMax-it->second.zMin)));
 		    text = GraphGlobals::makeText(maxss.str(),textColor);
 		    text->setAlignment(osgText::Text::CENTER_CENTER);
-		    bb = text->getBound();
+		    bb = text->getBoundingBox();
 		    csize = textHeight / (bb.zMax() - bb.zMin());
 		    text->setCharacterSize(csize);
 		    text->setPosition(maxPoint);
@@ -809,7 +809,7 @@ void DataGraph::setLabelDisplayMode(LabelDisplayMode ldm)
 			ss << (it->second.zMin + (it->second.data->at(i).z() * (it->second.zMax-it->second.zMin)));
 			osgText::Text * text = GraphGlobals::makeText(ss.str(),textColor);
 			text->setAlignment(osgText::Text::CENTER_CENTER);
-			osg::BoundingBox bb = text->getBound();
+			osg::BoundingBox bb = text->getBoundingBox();
 			float csize = textHeight / (bb.zMax() - bb.zMin());
 			text->setCharacterSize(csize);
 			text->setPosition(point);
@@ -1195,9 +1195,9 @@ void DataGraph::update()
 
 	it->second.boundsCallback->bbox.set(minxBound,-3,0.0,maxxBound,1,1.0);
 	it->second.pointGeometry->dirtyBound();
-	it->second.pointGeometry->getBound();
+	it->second.pointGeometry->getBoundingBox();
 	it->second.connectorGeometry->dirtyBound();
-	it->second.connectorGeometry->getBound();
+	it->second.connectorGeometry->getBoundingBox();
     }
 
     if(_dataInfoMap.size() > 1)
@@ -1851,7 +1851,7 @@ void DataGraph::updateAxis()
 			positionPadding = positionPadding * _masterTimeScale;
 		    }
 
-		    osg::BoundingBox bb = text->getBound();
+		    osg::BoundingBox bb = text->getBoundingBox();
 		    text->setCharacterSize(targetSize / (bb.zMax() - bb.zMin()));
 		    text->setAxisAlignment(axisAlign);
 		    if(axisAlign == osgText::Text::USER_DEFINED_ROTATION)
@@ -1928,7 +1928,7 @@ void DataGraph::updateAxis()
 		    osgText::Text * text = GraphGlobals::makeText(lowerTextss.str(),textColor);
 
 		    float targetSize = padding * 0.67;
-		    osg::BoundingBox bb = text->getBound();
+		    osg::BoundingBox bb = text->getBoundingBox();
 		    float size1 = targetSize / (bb.zMax() - bb.zMin());
 		    float size2 = totalLength / (bb.xMax() - bb.xMin());
 		    text->setCharacterSize(std::min(size1,size2));
@@ -1986,7 +1986,7 @@ void DataGraph::updateAxis()
 		    osgText::Text * text = GraphGlobals::makeText(ss.str(),textColor);
 
 		    float targetSize = padding * 0.27;
-		    osg::BoundingBox bb = text->getBound();
+		    osg::BoundingBox bb = text->getBoundingBox();
 		    text->setCharacterSize(targetSize / (bb.zMax() - bb.zMin()));
 		    text->setAxisAlignment(axisAlign);
 		    if(axisAlign == osgText::Text::USER_DEFINED_ROTATION)
@@ -2007,7 +2007,7 @@ void DataGraph::updateAxis()
 		    osgText::Text * text = GraphGlobals::makeText(axisLabel,textColor);
 
 		    float targetSize = padding * 0.67;
-		    osg::BoundingBox bb = text->getBound();
+		    osg::BoundingBox bb = text->getBoundingBox();
 		    text->setCharacterSize(targetSize / (bb.zMax() - bb.zMin()));
 		    text->setAxisAlignment(axisAlign);
 		    if(axisAlign == osgText::Text::USER_DEFINED_ROTATION)
@@ -2036,7 +2036,7 @@ void DataGraph::updateAxis()
 
 	float targetHeight = padding * 0.95;
 	float targetWidth = _width - (2.0 * padding);
-	osg::BoundingBox bb = text->getBound();
+	osg::BoundingBox bb = text->getBoundingBox();
 	float hsize = targetHeight / (bb.zMax() - bb.zMin());
 	float wsize = targetWidth / (bb.xMax() - bb.xMin());
 	text->setCharacterSize(std::min(hsize,wsize));
@@ -2058,9 +2058,9 @@ void DataGraph::updateAxis()
 
 	    float size1, size2;
 
-	    osg::BoundingBox bb = spacerText1->getBound();
+	    osg::BoundingBox bb = spacerText1->getBoundingBox();
 	    size1 = bb.xMax() - bb.xMin();
-	    bb = spacerText2->getBound();
+	    bb = spacerText2->getBoundingBox();
 	    size2 = bb.xMax() - bb.xMin();
 
 	    spacerSize = size1 - size2;
@@ -2083,7 +2083,7 @@ void DataGraph::updateAxis()
 	
 	float targetHeight = padding * 0.95;
 	float targetWidth = _width - (2.0 * padding);
-	osg::BoundingBox bb = text->getBound();
+	osg::BoundingBox bb = text->getBoundingBox();
 	float hsize = targetHeight / (bb.zMax() - bb.zMin());
 	float wsize = targetWidth / (bb.xMax() - bb.xMin());
 
@@ -2107,7 +2107,7 @@ void DataGraph::updateAxis()
 		    ttext->setAxisAlignment(osgText::Text::XZ_PLANE);
 		    ttext->setAlignment(osgText::Text::LEFT_CENTER);
 		    ttext->setPosition(osg::Vec3(position,-1,(_height-padding)/2.0));
-		    osg::BoundingBox tbb = ttext->getBound();
+		    osg::BoundingBox tbb = ttext->getBoundingBox();
 		    position += (tbb.xMax() - tbb.xMin());
 		    _axisGeode->addDrawable(ttext);
 		    it++;
@@ -2339,7 +2339,7 @@ void AverageFunction::update(float width, float height, std::map<std::string, Gr
     _averageText->setCharacterSize(1.0);
 
     float textHeight = ((width + height) / 2.0) * 0.015;
-    osg::BoundingBox bb = _averageText->getBound();
+    osg::BoundingBox bb = _averageText->getBoundingBox();
     float csize = textHeight / (bb.zMax() - bb.zMin());
     _averageText->setCharacterSize(csize);
     _averageText->setPosition(osg::Vec3(0,-0.5,zpos+(textHeight*0.01)));
@@ -2353,5 +2353,5 @@ void AverageFunction::update(float width, float height, std::map<std::string, Gr
 
     _boundsCallback->bbox.set(-width/2.0,-3,-height/2.0,width/2.0,1,height/2.0);
     _averageGeometry->dirtyBound();
-    _averageGeometry->getBound();
+    _averageGeometry->getBoundingBox();
 }

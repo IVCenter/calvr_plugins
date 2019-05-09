@@ -180,7 +180,7 @@ void HeatMapGraph::setHover(osg::Vec3 intersect)
 	    _hoverText->setCharacterSize(1.0);
 	    _hoverText->setAlignment(osgText::Text::LEFT_TOP);
 
-	    osg::BoundingBox bb = _hoverText->getBound();
+	    osg::BoundingBox bb = _hoverText->getBoundingBox();
 	    float csize = targetHeight / (bb.zMax() - bb.zMin());
 	    _hoverText->setCharacterSize(csize);
 	    _hoverText->setPosition(osg::Vec3(intersect.x(),-2.5,intersect.z()));
@@ -205,7 +205,7 @@ void HeatMapGraph::setHover(osg::Vec3 intersect)
     else if(newIndex != -1)
     {
 	_hoverText->setPosition(osg::Vec3(intersect.x(),-2.5,intersect.z()));
-	osg::BoundingBox bb = _hoverText->getBound();
+	osg::BoundingBox bb = _hoverText->getBoundingBox();
 	float bgheight = (bb.zMax() - bb.zMin());
 	float bgwidth = (bb.xMax() - bb.xMin());
 	osg::Vec3Array * verts = dynamic_cast<osg::Vec3Array*>(_hoverBGGeom->getVertexArray());
@@ -300,7 +300,7 @@ void HeatMapGraph::update()
     }
     _graphText->setCharacterSize(1.0);
 
-    osg::BoundingBox bb = _graphText->getBound();
+    osg::BoundingBox bb = _graphText->getBoundingBox();
 
     float csize = (_height *(1.0 - (_topPaddingMult + _bottomPaddingMult))) / (bb.zMax() - bb.zMin());
     float csize1 = (_width * (0.5 - _leftPaddingMult)) / (bb.xMax() - bb.xMin());
@@ -382,7 +382,7 @@ void HeatMapGraph::update()
 
     _boundsCallback->bbox.set(-_width / 2.0,-3,-_height / 2.0,_width / 2.0,1,_height / 2.0);
     _graphGeometry->dirtyBound();
-    _graphGeometry->getBound();
+    _graphGeometry->getBoundingBox();
 
     osg::Vec3 scale(_width,1.0,_height);
     osg::Matrix scaleMat;

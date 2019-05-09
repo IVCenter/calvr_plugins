@@ -177,7 +177,7 @@ void ComparativeBarChart::makeBG()
     geom->setUseVertexBufferObjects(true);
 
     geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,8));
-    geom->getBound();
+    geom->getBoundingBox();
 
     _bgGeode->addDrawable(geom);
 }
@@ -208,7 +208,7 @@ void ComparativeBarChart::updateAxis()
 	osgText::Text * text = GraphGlobals::makeText(_title, osg::Vec4(0,0,0,1));
 	float csize1,csize2;
 
-	osg::BoundingBox bb = text->getBound();
+	osg::BoundingBox bb = text->getBoundingBox();
 	csize1 = (_graphRight-_graphLeft) / (bb.xMax() - bb.xMin());
 	csize2 = (0.90*_height*_topPaddingMult) / (bb.zMax() - bb.zMin());
 	text->setCharacterSize(std::min(csize1,csize2));
@@ -230,7 +230,7 @@ void ComparativeBarChart::updateAxis()
 	osgText::Text * text = GraphGlobals::makeText(_axisLabel,osg::Vec4(0,0,0,1));
 	text->setRotation(q);
 
-	osg::BoundingBox bb = text->getBound();
+	osg::BoundingBox bb = text->getBoundingBox();
 	csize1 = (0.80*_height) / (bb.zMax() - bb.zMin());
 	csize2 = (0.9*_axisLabelMult*_leftPaddingMult*_width) / (bb.xMax() - bb.xMin());
 	text->setCharacterSize(std::min(csize1,csize2));
@@ -288,7 +288,7 @@ void ComparativeBarChart::updateAxis()
 		}
 
 		osg::ref_ptr<osgText::Text> testText = GraphGlobals::makeText(testss.str(),osg::Vec4(0,0,0,1));
-		osg::BoundingBox testbb = testText->getBound();
+		osg::BoundingBox testbb = testText->getBoundingBox();
 		float testWidth = testbb.xMax() - testbb.xMin();
 
 		tickCharacterSize = ((1.0-_axisLabelMult) * _leftPaddingMult * _width * 0.95 - 2.0 * tickSize) / testWidth;
@@ -342,7 +342,7 @@ void ComparativeBarChart::updateAxis()
 
     lineGeom->addPrimitiveSet(new osg::DrawArrays(GL_LINES,0,verts->size()));
     _axisGeode->addDrawable(lineGeom);
-    lineGeom->getBound();
+    lineGeom->getBoundingBox();
 }
 
 void ComparativeBarChart::updateGraph()
@@ -420,7 +420,7 @@ void ComparativeBarChart::updateGraph()
 	    myLeft += _barSpacing;
 	}
 	verts->dirty();
-	_dataGeometry->getBound();
+	_dataGeometry->getBoundingBox();
     }
 }
 

@@ -1088,7 +1088,7 @@ void MicrobeGraphWAllObject::updateSelect()
     verts->at(15) = ur;
 
     verts->dirty();
-    _selectGeom->getBound();
+    _selectGeom->getBoundingBox();
 }
 
 void MicrobeGraphWAllObject::makePatientMap()

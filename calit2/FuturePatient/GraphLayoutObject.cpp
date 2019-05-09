@@ -1419,7 +1419,7 @@ void GraphLayoutObject::updateGeometry()
     float targetWidth = _width * 0.9;
     float targetHeight = _height * 0.1 * 0.9;
     _text->setCharacterSize(1.0);
-    osg::BoundingBox bb = _text->getBound();
+    osg::BoundingBox bb = _text->getBoundingBox();
     float hsize = targetHeight / (bb.zMax() - bb.zMin());
     float wsize = targetWidth / (bb.xMax() - bb.xMin());
     _text->setCharacterSize(std::min(hsize,wsize));
@@ -1576,7 +1576,7 @@ void GraphLayoutObject::setTitle(std::string title)
 
     _text = GraphGlobals::makeText(title,osg::Vec4(1.0,1.0,1.0,1.0));
 
-    osg::BoundingBox bb = _text->getBound();
+    osg::BoundingBox bb = _text->getBoundingBox();
     float hsize = targetHeight / (bb.zMax() - bb.zMin());
     float wsize = targetWidth / (bb.xMax() - bb.xMin());
     _text->setCharacterSize(std::min(hsize,wsize));

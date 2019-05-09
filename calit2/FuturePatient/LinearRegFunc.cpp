@@ -201,7 +201,7 @@ void LinearRegFunc::update(float width, float height, std::map<std::string, Grap
 
     _lrBoundsCallback->bbox.set(-width/2.0,-3,-height/2.0,width/2.0,1,height/2.0);
     _lrGeometry->dirtyBound();
-    _lrGeometry->getBound();
+    _lrGeometry->getBoundingBox();
 
 }
 

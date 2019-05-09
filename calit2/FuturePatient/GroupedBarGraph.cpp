@@ -518,7 +518,7 @@ void GroupedBarGraph::setHover(osg::Vec3 intersect)
     {
 	_hoverText->setCharacterSize(1.0);
 	_hoverText->setAlignment(osgText::Text::LEFT_TOP);
-	osg::BoundingBox bb = _hoverText->getBound();
+	osg::BoundingBox bb = _hoverText->getBoundingBox();
 	float csize = targetHeight / (bb.zMax() - bb.zMin());
 	_hoverText->setCharacterSize(csize);
 	_hoverText->setPosition(osg::Vec3(intersect.x(),-2.5,intersect.z()));
@@ -1338,7 +1338,7 @@ void GroupedBarGraph::updateAxis()
 	for(int i = 0; i < textList.size(); ++i)
 	{
 	    osg::BoundingBox bb;
-	    bb = textList[i]->getBound();
+	    bb = textList[i]->getBoundingBox();
 
 	    float width = bb.xMax() - bb.xMin();
 	    float height = bb.zMax() - bb.zMin();
@@ -1500,7 +1500,7 @@ void GroupedBarGraph::updateAxis()
 	    }
 
 	    osg::ref_ptr<osgText::Text> testText = GraphGlobals::makeText(testss.str(),osg::Vec4(0,0,0,1));
-	    osg::BoundingBox testbb = testText->getBound();
+	    osg::BoundingBox testbb = testText->getBoundingBox();
 	    float testWidth = testbb.xMax() - testbb.xMin();
 
 	    float totalLength = _graphTop - _graphBottom;
@@ -1546,7 +1546,7 @@ void GroupedBarGraph::updateAxis()
 	    }
 
 	    osg::ref_ptr<osgText::Text> testText = GraphGlobals::makeText(testss.str(),osg::Vec4(0,0,0,1));
-	    osg::BoundingBox testbb = testText->getBound();
+	    osg::BoundingBox testbb = testText->getBoundingBox();
 	    float testWidth = testbb.xMax() - testbb.xMin();
 
 	    tickCharacterSize = (_leftPaddingMult * _width * 0.6 - 2.0 * tickSize) / testWidth;
@@ -1617,7 +1617,7 @@ void GroupedBarGraph::updateAxis()
 
     osgText::Text * vaText = GraphGlobals::makeText(valueAxisss.str(),osg::Vec4(0,0,0,1));
     vaText->setRotation(q);
-    osg::BoundingBox bb = vaText->getBound();
+    osg::BoundingBox bb = vaText->getBoundingBox();
     float csize = (0.4 * 0.85 * _leftPaddingMult * _width) / (bb.xMax() - bb.xMin());
     float csize2 = (_graphTop - _graphBottom) / (bb.zMax() - bb.zMin());
     vaText->setCharacterSize(std::min(csize,csize2));
@@ -1628,7 +1628,7 @@ void GroupedBarGraph::updateAxis()
     // graphTitle
     osgText::Text * titleText = GraphGlobals::makeText(_title,osg::Vec4(0,0,0,1));
     titleText->setAlignment(osgText::Text::CENTER_CENTER);
-    bb = titleText->getBound();
+    bb = titleText->getBoundingBox();
     csize = (_titleMult * 0.85 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
     csize2 = (_width * 0.95) / (bb.xMax() - bb.xMin());
     titleText->setCharacterSize(std::min(csize,csize2));
@@ -1640,7 +1640,7 @@ void GroupedBarGraph::updateAxis()
 	// group label
 	titleText = GraphGlobals::makeText(_groupLabel,osg::Vec4(0,0,0,1));
 	titleText->setAlignment(osgText::Text::CENTER_CENTER);
-	bb = titleText->getBound();
+	bb = titleText->getBoundingBox();
 	csize = (_topLabelMult * 0.85 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
 	csize2 = (_graphRight - _graphLeft) / (bb.xMax() - bb.xMin());
 	titleText->setCharacterSize(std::min(csize,csize2));
@@ -1648,7 +1648,7 @@ void GroupedBarGraph::updateAxis()
 	_axisGeode->addDrawable(titleText);
 
 	osg::ref_ptr<osgText::Text> tempText = GraphGlobals::makeText("Ay",osg::Vec4(0,0,0,1));
-	bb = tempText->getBound();
+	bb = tempText->getBoundingBox();
 	csize = (_groupLabelMult * 0.7 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
 
 	// group labels
@@ -1661,7 +1661,7 @@ void GroupedBarGraph::updateAxis()
 	    }
 	    osgText::Text * text = GraphGlobals::makeText(_groupOrder[i],osg::Vec4(0,0,0,1));
 	    text->setAlignment(osgText::Text::CENTER_CENTER);
-	    //bb = text->getBound();
+	    //bb = text->getBoundingBox();
 	    //csize = (_groupLabelMult * 0.7 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
 	    text->setCharacterSize(csize);
 
@@ -1709,7 +1709,7 @@ void GroupedBarGraph::updateShading()
 
     _graphBoundsCallback->bbox.set(_graphLeft,-3,_graphBottom,_graphRight,1,_graphTop);
     _barGeom->dirtyBound();
-    osg::BoundingBox bb = _barGeom->getBound();
+    osg::BoundingBox bb = _barGeom->getBoundingBox();
 }
 
 void GroupedBarGraph::updateColors()

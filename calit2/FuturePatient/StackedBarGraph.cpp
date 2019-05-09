@@ -260,7 +260,7 @@ void StackedBarGraph::setHover(osg::Vec3 intersect)
 	    _hoverText->setCharacterSize(1.0);
 	    _hoverText->setText(hoverss.str());
 	    _hoverText->setAlignment(osgText::Text::LEFT_TOP);
-	    osg::BoundingBox bb = _hoverText->getBound();
+	    osg::BoundingBox bb = _hoverText->getBoundingBox();
 	    float csize = GraphGlobals::getHoverHeight() / (bb.zMax() - bb.zMin());
 	    _hoverText->setCharacterSize(csize);
 	    _hoverText->setPosition(osg::Vec3(intersect.x(),-2.5,intersect.z()));
@@ -345,7 +345,7 @@ void StackedBarGraph::setHover(osg::Vec3 intersect)
 	    _hoverText->setCharacterSize(1.0);
 	    _hoverText->setText(hoverss.str());
 	    _hoverText->setAlignment(osgText::Text::LEFT_TOP);
-	    osg::BoundingBox bb = _hoverText->getBound();
+	    osg::BoundingBox bb = _hoverText->getBoundingBox();
 	    float csize = GraphGlobals::getHoverHeight() / (bb.zMax() - bb.zMin());
 	    _hoverText->setCharacterSize(csize);
 	    _hoverText->setPosition(osg::Vec3(intersect.x(),-2.5,intersect.z()));
@@ -772,7 +772,7 @@ void StackedBarGraph::updateAxis()
     float groupLabelHeight = _height * _topPaddingMult * _topCatHeaderMult;
 
     osg::ref_ptr<osgText::Text> tempText = GraphGlobals::makeText("Ay",osg::Vec4(0,0,0,1));
-    osg::BoundingBox bb = tempText->getBound();
+    osg::BoundingBox bb = tempText->getBoundingBox();
     float groupLabelCharSize = (_topCatHeaderMult * 0.7 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
 
     // draw current group outlines
@@ -868,7 +868,7 @@ void StackedBarGraph::updateAxis()
 
     // make title
     osgText::Text * titleText = GraphGlobals::makeText(_title,osg::Vec4(0,0,0,1));
-    bb = titleText->getBound();
+    bb = titleText->getBoundingBox();
     float csize1 = (_topTitleMult * 0.8 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
     float csize2 = (_width * 0.9) / (bb.xMax() - bb.xMin());
     titleText->setCharacterSize(std::min(csize1,csize2));
@@ -889,7 +889,7 @@ void StackedBarGraph::updateAxis()
     if(!pathss.str().empty())
     {
 	osgText::Text * pathText = GraphGlobals::makeText(pathss.str(),osg::Vec4(0,0,0,1));
-	bb = pathText->getBound();
+	bb = pathText->getBoundingBox();
 
 	csize1 = (_topLevelMult * 0.8 * _topPaddingMult * _height) / (bb.zMax() - bb.zMin());
 	csize2 = (_width * 0.8) / (bb.xMax() - bb.xMin());
@@ -913,7 +913,7 @@ void StackedBarGraph::updateAxis()
 	    dlText->setRotation(q);
 	}
 	dlText->setAlignment(osgText::Text::CENTER_CENTER);
-	bb = dlText->getBound();
+	bb = dlText->getBoundingBox();
 	csize1 = (_leftPaddingMult * _width * 0.8) / (bb.xMax() - bb.xMin());
 	csize2 = (barHeight * 0.9) / (bb.zMax() - bb.zMin());
 	dlText->setCharacterSize(std::min(csize1,csize2));

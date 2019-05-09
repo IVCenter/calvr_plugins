@@ -199,7 +199,7 @@ void GraphKeyObject::update()
     for(int i = 0; i < _textList.size(); ++i)
     {
 	_textList[i]->setCharacterSize(1.0);
-	osg::BoundingBox bb = _textList[i]->getBound();
+	osg::BoundingBox bb = _textList[i]->getBoundingBox();
 
 	textSpace += bb.xMax() - bb.xMin();
 
@@ -220,7 +220,7 @@ void GraphKeyObject::update()
     for(int i = 0; i < _textList.size(); ++i)
     {
 	_textList[i]->setCharacterSize(csize);
-	osg::BoundingBox bb = _textList[i]->getBound();
+	osg::BoundingBox bb = _textList[i]->getBoundingBox();
 
 	actualTextSpace += bb.xMax() - bb.xMin();
     }
@@ -248,7 +248,7 @@ void GraphKeyObject::update()
 	    position += boxSize + space;
 
 	    _textList[i]->setPosition(osg::Vec3(position,0,0));
-	    osg::BoundingBox bb = _textList[i]->getBound();
+	    osg::BoundingBox bb = _textList[i]->getBoundingBox();
 
 	    end = position + bb.xMax() - bb.xMin();
 	    _rangeList.push_back(std::pair<float,float>(start,end));

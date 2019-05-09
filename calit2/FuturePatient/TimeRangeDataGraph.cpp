@@ -327,7 +327,7 @@ void TimeRangeDataGraph::setHover(osg::Vec3 intersect)
 	_hoverText->setCharacterSize(1.0);
 	_hoverText->setText(ss.str());
 	_hoverText->setAlignment(osgText::Text::LEFT_TOP);
-	osg::BoundingBox bb = _hoverText->getBound();
+	osg::BoundingBox bb = _hoverText->getBoundingBox();
 	float csize = GraphGlobals::getHoverHeight() / (bb.zMax() - bb.zMin());
 	_hoverText->setCharacterSize(csize);
 	_hoverText->setPosition(osg::Vec3(intersect.x(),-2.5,intersect.z()));
@@ -744,7 +744,7 @@ void TimeRangeDataGraph::updateAxis()
 	osgText::Text * text = GraphGlobals::makeText(_graphList[i]->name,osg::Vec4(0,0,0,1));
 	text->setRotation(q);
 	text->setAlignment(osgText::Text::CENTER_CENTER);
-	osg::BoundingBox bb = text->getBound();
+	osg::BoundingBox bb = text->getBoundingBox();
 	float csize1 = (padding * 0.8) / (bb.xMax() - bb.xMin());
 	float csize2 = (_barHeight * 0.8) / (bb.zMax() - bb.zMin());
 	text->setCharacterSize(std::min(csize1,csize2));

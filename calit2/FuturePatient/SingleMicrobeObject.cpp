@@ -622,7 +622,7 @@ void SingleMicrobeObject::updateSelect()
     verts->at(15) = ur;
 
     verts->dirty();
-    _selectGeom->getBound();
+    _selectGeom->getBoundingBox();
 }
 
 void BandingFunction::added(osg::Geode * geode)
@@ -789,8 +789,8 @@ void BandingFunction::update(float left, float right, float top, float bottom, f
     _boundsCallback->bbox.set(left,-1.95,bottom,right,-1.75,top);
     _bandGeometry->dirtyBound();
     _lineGeometry->dirtyBound();
-    _bandGeometry->getBound();
-    _lineGeometry->getBound();
+    _bandGeometry->getBoundingBox();
+    _lineGeometry->getBoundingBox();
 }
 
 void BandingFunction::setShowStdDev(bool show)

@@ -416,7 +416,7 @@ void GroupedScatterPlot::setHover(osg::Vec3 intersect)
 	_hoverText->setCharacterSize(1.0);
 	_hoverText->setText(ss.str());
 	_hoverText->setAlignment(osgText::Text::LEFT_TOP);
-	osg::BoundingBox bb = _hoverText->getBound();
+	osg::BoundingBox bb = _hoverText->getBoundingBox();
 	float csize = GraphGlobals::getHoverHeight() / (bb.zMax() - bb.zMin());
 	_hoverText->setCharacterSize(csize);
 	_hoverText->setPosition(osg::Vec3(verts->at(pointIndex).x(),-2.5,verts->at(pointIndex).z()));
@@ -432,7 +432,7 @@ void GroupedScatterPlot::setHover(osg::Vec3 intersect)
 	    hverts->at(2) = osg::Vec3(verts->at(pointIndex).x(),-2,verts->at(pointIndex).z());
 	    hverts->at(3) = osg::Vec3(verts->at(pointIndex).x(),-2,verts->at(pointIndex).z()-bgheight);
 	    hverts->dirty();
-	    _hoverBGGeom->getBound();
+	    _hoverBGGeom->getBoundingBox();
 	}
 
 	_currentHoverIndex = index;
@@ -503,7 +503,7 @@ void GroupedScatterPlot::makeBG()
     geom->setUseVertexBufferObjects(true);
 
     geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,8));
-    geom->getBound();
+    geom->getBoundingBox();
 
     _bgGeode->addDrawable(geom);
 }
@@ -527,7 +527,7 @@ void GroupedScatterPlot::makeHover()
     _hoverBGGeom->setColorArray(colors);
     _hoverBGGeom->setColorBinding(osg::Geometry::BIND_OVERALL);
     _hoverBGGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
-    _hoverBGGeom->getBound();
+    _hoverBGGeom->getBoundingBox();
 }
 
 void GroupedScatterPlot::update()
@@ -564,7 +564,7 @@ void GroupedScatterPlot::updateAxis()
 	osgText::Text * text = GraphGlobals::makeText(_title, osg::Vec4(0,0,0,1));
 	float csize1,csize2;
 
-	osg::BoundingBox bb = text->getBound();
+	osg::BoundingBox bb = text->getBoundingBox();
 	csize1 = (_graphRight-_graphLeft) / (bb.xMax() - bb.xMin());
 	csize2 = (0.90*_height*_topPaddingMult) / (bb.zMax() - bb.zMin());
 	text->setCharacterSize(std::min(csize1,csize2));
@@ -590,7 +590,7 @@ void GroupedScatterPlot::updateAxis()
 
 	osgText::Text * text = GraphGlobals::makeText(_firstLabel,osg::Vec4(0,0,0,1));
 	
-	osg::BoundingBox bb = text->getBound();
+	osg::BoundingBox bb = text->getBoundingBox();
 	csize1 = (0.80*_width) / (bb.xMax() - bb.xMin());
 	csize2 = (0.9*labelTextSize) / (bb.zMax() - bb.zMin());
 	text->setCharacterSize(std::min(csize1,csize2));
@@ -601,7 +601,7 @@ void GroupedScatterPlot::updateAxis()
 	text = GraphGlobals::makeText(_secondLabel,osg::Vec4(0,0,0,1));
 	text->setRotation(q);
 
-	bb = text->getBound();
+	bb = text->getBoundingBox();
 	csize1 = (0.8*_height) / (bb.zMax() - bb.zMin());
 	csize2 = (0.9*labelTextSize) / (bb.xMax() - bb.xMin());
 	text->setCharacterSize(std::min(csize1,csize2));
@@ -675,7 +675,7 @@ void GroupedScatterPlot::updateAxis()
 	    }
     
 	    osg::ref_ptr<osgText::Text> testText = GraphGlobals::makeText(testss.str(),osg::Vec4(0,0,0,1));
-	    osg::BoundingBox testbb = testText->getBound();
+	    osg::BoundingBox testbb = testText->getBoundingBox();
 	    float testWidth = testbb.xMax() - testbb.xMin();
 
 	    float totalLength = _graphRight - _graphLeft;
@@ -724,7 +724,7 @@ void GroupedScatterPlot::updateAxis()
 		}
 
 		osg::ref_ptr<osgText::Text> testText = GraphGlobals::makeText(testss.str(),osg::Vec4(0,0,0,1));
-		osg::BoundingBox testbb = testText->getBound();
+		osg::BoundingBox testbb = testText->getBoundingBox();
 		float testHeight = testbb.zMax() - testbb.zMin();
 
 		float csize1, csize2;
@@ -822,7 +822,7 @@ void GroupedScatterPlot::updateAxis()
 	    }
     
 	    osg::ref_ptr<osgText::Text> testText = GraphGlobals::makeText(testss.str(),osg::Vec4(0,0,0,1));
-	    osg::BoundingBox testbb = testText->getBound();
+	    osg::BoundingBox testbb = testText->getBoundingBox();
 	    float testWidth = testbb.xMax() - testbb.xMin();
 
 	    float totalLength = _graphTop - _graphBottom;
@@ -870,7 +870,7 @@ void GroupedScatterPlot::updateAxis()
 		}
 
 		osg::ref_ptr<osgText::Text> testText = GraphGlobals::makeText(testss.str(),osg::Vec4(0,0,0,1));
-		osg::BoundingBox testbb = testText->getBound();
+		osg::BoundingBox testbb = testText->getBoundingBox();
 		float testWidth = testbb.xMax() - testbb.xMin();
 
 		tickCharacterSize = (labelLeftSize * 0.95 - 2.0 * tickSize) / testWidth;
@@ -925,7 +925,7 @@ void GroupedScatterPlot::updateAxis()
 
     lineGeom->addPrimitiveSet(new osg::DrawArrays(GL_LINES,0,verts->size()));
     _axisGeode->addDrawable(lineGeom);
-    lineGeom->getBound();
+    lineGeom->getBoundingBox();
 }
 
 void GroupedScatterPlot::updateGraph()
@@ -1110,7 +1110,7 @@ void GroupedScatterPlot::updateGraph()
 
 
     geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,verts->size()));
-    geom->getBound();
+    geom->getBoundingBox();
 
     _dataGeode->addDrawable(geom);
 }
