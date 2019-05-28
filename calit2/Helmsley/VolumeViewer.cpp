@@ -2,12 +2,12 @@
 #include <cvrMenu/MenuSystem.h>
 #include <osg/ShapeDrawable>
 #include <cvrUtil/AndroidHelper.h>
+#include <cvrKernel/PluginHelper.h>
 #include "VolumeViewer.h"
+
+
 using namespace osg;
 using namespace cvr;
-
-void VolumeViewer::initMenuButtons() {
-}
 
 bool VolumeViewer::init() {
     // --------------- create the menu ---------------
@@ -16,17 +16,27 @@ bool VolumeViewer::init() {
     MenuSystem::instance()->addMenuItem(_mainMenu);
     initMenuButtons();
 
+    _root = new osg::Group;
+    _rootSO = new SceneObject("HelmsleyRoot", false, false, false, false, false);
+    _rootSO->addChild(_root);
+    PluginHelper::registerSceneObject(_rootSO, "GlesDrawablesPlugin");
+    _rootSO->dirtyBounds();
+    _rootSO->attachToScene();
+
+    renderer = new dcmRenderer;
+    _root->addChild(renderer->createDrawableNode());
 
     return true;
 }
-
+void VolumeViewer::initMenuButtons(){}
 void VolumeViewer::menuCallback(cvr::MenuItem *item) {}
 
 void VolumeViewer::postFrame() {
+    renderer->updateOnFrame();
 }
 
 bool VolumeViewer::processEvent(cvr::InteractionEvent * event){
-    return true;
+    return false;
 }
 
 
