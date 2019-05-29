@@ -3,6 +3,7 @@
 #include <cvrUtil/AndroidHelper.h>
 #include <GLES3/gl32.h>
 #include "Color.h"
+#include <cvrUtil/AndroidDCMHelper.h>
 void dcmRenderer::assemble_texture_3d(){
     glGenTextures(1, &_volume_tex_id);
     // bind 3D texture target
@@ -14,8 +15,12 @@ void dcmRenderer::assemble_texture_3d(){
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     // pixel transfer happens here from client to OpenGL server
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage3D(GL_TEXTURE_3D, 0, GL_R8, (int)volume_size.x, (int)volume_size.y, (int)volume_size.z, 0, GL_RED, GL_UNSIGNED_BYTE, cvr::ARCoreManager::dcm_img_data);
-    delete []cvr::ARCoreManager::dcm_img_data;
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_R8,
+            (int)volume_size.x, (int)volume_size.y, (int)volume_size.z,
+            0, GL_RED, GL_UNSIGNED_BYTE,
+            DCMI::volume_data);
+
+    delete []DCMI::volume_data;
 }
 void dcmRenderer::create_trans_texture(){
     glActiveTexture(GL_TEXTURE1);
@@ -32,9 +37,9 @@ void dcmRenderer::create_trans_texture(){
 }
 
 void dcmRenderer::Initialization(){
-    volume_size = glm::vec3(cvr::ARCoreManager::img_width,
-            cvr::ARCoreManager::img_height,
-            cvr::ARCoreManager::img_nums);
+    volume_size = glm::vec3(DCMI::img_width,
+                            DCMI::img_height,
+                            DCMI::img_nums);
     cubeDrawable::Initialization();
     assemble_texture_3d();
     create_trans_texture();

@@ -8,6 +8,7 @@
 #include <cvrKernel/SceneObject.h>
 
 #include "dcmRenderer.h"
+#include "basicDrawables/basisRenderer.h"
 
 class VolumeViewer : public cvr::CVRPlugin, public cvr::MenuCallback{
 typedef osg::ref_ptr<osg::MatrixTransform> Transform;
@@ -19,7 +20,6 @@ protected:
     cvr::SceneObject *_rootSO;
 
     void initMenuButtons();
-    void createDebugSphere(osg::Group *, osg::Matrixf);
 
 public:
     bool init();
@@ -28,7 +28,8 @@ public:
     bool processEvent(cvr::InteractionEvent * event);
 
 private:
-    dcmRenderer* renderer;
+    dcmRenderer* dcm_renderer;
+    basisRender* basis_renderer;
 };
 
 #endif

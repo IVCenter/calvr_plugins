@@ -10,7 +10,7 @@
 using namespace glm;
 
 cubeDrawable::cubeDrawable(){
-    _modelMat = glm::scale(_modelMat, glm::vec3(0.1f, -0.1f, 0.1f));
+    _modelMat = glm::scale(_modelMat, glm::vec3(0.1f, -0.1f, 0.05f));
 }
 void cubeDrawable::restore_original_cube(){
     indices_num_ = 36;

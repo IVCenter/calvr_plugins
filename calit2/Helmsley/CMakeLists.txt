@@ -7,7 +7,11 @@ ADD_LIBRARY(${LIB_NAME}
     STATIC
     VolumeViewer.cpp
     dcmRenderer.cpp
-    cubeDrawable.cpp)
+    cubeDrawable.cpp
+    basicDrawables/basisRenderer.cpp
+    basicDrawables/pointDrawable.cpp
+    basicDrawables/strokeDrawable.cpp
+    basicDrawables/planeDrawable.cpp)
 
 
 
