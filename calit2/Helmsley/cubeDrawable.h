@@ -84,7 +84,6 @@ protected:
     void updateGeometry(std::vector<Polygon> polygon, PolygonMap polygon_map, std::vector<int> rpoints);
 
 public:
-    cubeDrawable();
     void setCuttingPlane(float percent = .0f);
 
     void Initialization();

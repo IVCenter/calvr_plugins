@@ -1,11 +1,14 @@
 #ifndef VOLUME_VIEWER_H
 #define VOLUME_VIEWER_H
 
-#include <cvrKernel/CVRPlugin.h>
-#include <cvrMenu/MenuItem.h>
 #include <osg/MatrixTransform>
-#include <cvrMenu/SubMenu.h>
+
+#include <cvrKernel/CVRPlugin.h>
 #include <cvrKernel/SceneObject.h>
+//cvr menu
+#include <cvrMenu/SubMenu.h>
+#include <cvrMenu/MenuCheckbox.h>
+#include <cvrMenu/MenuItem.h>
 
 #include "dcmRenderer.h"
 #include "basicDrawables/basisRenderer.h"
@@ -19,6 +22,8 @@ protected:
     osg::Group* _root;
     cvr::SceneObject *_rootSO;
 
+    cvr::MenuCheckbox *_pointCB, *_planeCB;
+
     void initMenuButtons();
 
 public:
@@ -28,8 +33,10 @@ public:
     bool processEvent(cvr::InteractionEvent * event);
 
 private:
-    dcmRenderer* dcm_renderer;
-    basisRender* basis_renderer;
+    dcmRenderer* dcm_renderer = nullptr;
+    basisRender* basis_renderer = nullptr;
+
+    bool _dcm_initialized = false;
 };
 
 #endif

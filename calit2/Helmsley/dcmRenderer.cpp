@@ -19,7 +19,7 @@ void dcmRenderer::assemble_texture_3d(){
             (int)volume_size.x, (int)volume_size.y, (int)volume_size.z,
             0, GL_RED, GL_UNSIGNED_BYTE,
             DCMI::volume_data);
-
+    glBindTexture(GL_TEXTURE_3D, 0);
     delete []DCMI::volume_data;
 }
 void dcmRenderer::create_trans_texture(){
@@ -40,6 +40,7 @@ void dcmRenderer::Initialization(){
     volume_size = glm::vec3(DCMI::img_width,
                             DCMI::img_height,
                             DCMI::img_nums);
+    _modelMat = _scaleMat;
     cubeDrawable::Initialization();
     assemble_texture_3d();
     create_trans_texture();
@@ -49,17 +50,24 @@ void dcmRenderer::updateOnFrame(){
 
 }
 void dcmRenderer::drawImplementation(osg::RenderInfo& info) const{
-    cubeDrawable::drawImplementation(info);
+    cvr::glStateStack::instance()->PushAllState();
 
+
+    glEnable(GL_TEXTURE_3D);
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
     glUseProgram(_shader_program);
 
     glActiveTexture(GL_TEXTURE0);
     glUniform1i(glGetUniformLocation(_shader_program, "uSampler_tex"), 0);
     glBindTexture(GL_TEXTURE_3D, _volume_tex_id);
 
+
     glActiveTexture(GL_TEXTURE1);
     glUniform1i(glGetUniformLocation(_shader_program, "uSampler_trans"), 1);
     glBindTexture(GL_TEXTURE_2D, _trans_tex_id);
+
 
 
     glUniform1f(glGetUniformLocation(_shader_program, "sample_step_inverse"), adjustParam[0]);
@@ -83,7 +91,17 @@ void dcmRenderer::drawImplementation(osg::RenderInfo& info) const{
     glUniform3fv(glGetUniformLocation(_shader_program, "Light.Id"), 1, lightId);
     glUniform3fv(glGetUniformLocation(_shader_program, "Light.Is"), 1, lightIs);
     glUniform1f(glGetUniformLocation(_shader_program, "shiness"), 32.0f);
-
+    cubeDrawable::drawImplementation(info);
     glUseProgram(0);
+
+
+    glDisable(GL_TEXTURE_3D);
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+
+    glBindTexture(GL_TEXTURE_2D, 0 );
+    glBindTexture(GL_TEXTURE_3D, 0);
+    cvr::glStateStack::instance()->PushAllState();
 
 }

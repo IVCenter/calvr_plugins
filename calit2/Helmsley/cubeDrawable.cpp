@@ -9,9 +9,6 @@
 #include "mathHelper.h"
 using namespace glm;
 
-cubeDrawable::cubeDrawable(){
-    _modelMat = glm::scale(_modelMat, glm::vec3(0.1f, -0.1f, 0.05f));
-}
 void cubeDrawable::restore_original_cube(){
     indices_num_ = 36;
     vertices_num_ = 8;
@@ -205,24 +202,6 @@ void cubeDrawable::Initialization() {
 
     if(!_shader_program)
         LOGE("=====failed to create shader ===");
-//debug only
-//    std::string fhead(getenv("CALVR_RESOURCE_DIR"));
-//    osg::Image * img = osgDB::readImageFile(fhead+"textures/andy.png");
-//    glGenTextures(1, &_texture_id);
-//    glBindTexture(GL_TEXTURE_2D, _texture_id);
-//    glTexImage2D(GL_TEXTURE_2D, 0,
-//                 img->getPixelFormat(),
-//                 img->s(),img->t(),0,
-//                 img->getPixelFormat(), img->getDataType(),
-//                 img->getDataPointer());
-//
-//
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//    glGenerateMipmap(GL_TEXTURE_2D);
-//    glBindTexture(GL_TEXTURE_2D, 0);
-
-    //init geometry
 
     vertices_ = new GLfloat[MAX_VERTEX_NUM * VAO_DATA_LEN];
     indices_ = new GLuint[MAX_INDICE_NUM];
@@ -250,20 +229,9 @@ void cubeDrawable::Initialization() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     setCuttingPlane();
 
-    glEnable(GL_TEXTURE_3D);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
 }
 
 void cubeDrawable::drawImplementation(osg::RenderInfo &) const {
-//    cvr::glStateStack::instance()->PushAllState();
-    glClear(GL_DEPTH_BUFFER_BIT);
-    //move texture to dcmTexture
-
-
-
-    glUseProgram(_shader_program);
-
     glUniformMatrix4fv(
             glGetUniformLocation(_shader_program, "uModelMat"),
             1,
@@ -286,7 +254,6 @@ void cubeDrawable::drawImplementation(osg::RenderInfo &) const {
 
     glDrawElements(GL_TRIANGLES, indices_num_, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
-//    cvr::glStateStack::instance()->PopAllState();
 }
 
 void cubeDrawable::updateOnFrame() {

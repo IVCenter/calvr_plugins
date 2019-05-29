@@ -16,6 +16,15 @@ public:
         else
             _pointcloudDrawable->getGLNode()->setNodeMask(0);
     }
+    void setPlaneVisiable(bool on){
+        if(on){
+            for(auto p:_planeDrawables)
+                p->setNodeMask(0xFFFFFF);
+        }else{
+            for(auto p:_planeDrawables)
+                p->setNodeMask(0);
+        }
+    }
 protected:
     osg::Group* _root;
     pointDrawable* _pointcloudDrawable;
