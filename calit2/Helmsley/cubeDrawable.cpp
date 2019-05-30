@@ -16,7 +16,13 @@ void cubeDrawable::restore_original_cube(){
     memcpy(indices_, sIndices, sizeof(GLuint) * indices_num_);
 }
 void cubeDrawable::setCuttingPlane(float percent) {
-    is_in_deeper = percent>0.5f;
+    LOGE("=======set cut: %f", percent);
+//    cutting_percent+=percent;
+    cutting_percent = percent;
+    cutting_percent = min(cutting_percent, 1.0f);
+    cutting_percent = max(.0f, cutting_percent);
+
+    is_in_deeper = cutting_percent>0.5f;
     polygon.clear();
     polygon_map.clear();
 
@@ -49,7 +55,7 @@ void cubeDrawable::setCuttingPlane(float percent) {
         }
     }
     if(!is_cutting) return;
-    vec3 pop_model = start_cutting + percent * cutting_length * vdir_model;
+    vec3 pop_model = start_cutting + cutting_percent * cutting_length * vdir_model;
     updateCuttingPlane(pop_model, vdir_model);
 }
 //p and p norm should be in model space

@@ -75,6 +75,7 @@ protected:
     //cutting
     bool is_cutting = true, is_in_deeper = false;
     float cutting_length;
+    float cutting_percent = .0f;
     glm::vec3 last_cutting_norm = glm::vec3(FLT_MAX), start_cutting;
     std::vector<Polygon> polygon;
     PolygonMap polygon_map;
