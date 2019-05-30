@@ -43,7 +43,7 @@ void dcmRenderer::Initialization(){
     _modelMat = _scaleMat;
     cubeDrawable::Initialization();
     assemble_texture_3d();
-    create_trans_texture();
+//    create_trans_texture();
 }
 void dcmRenderer::updateOnFrame(){
     cubeDrawable::updateOnFrame();
@@ -51,11 +51,7 @@ void dcmRenderer::updateOnFrame(){
 }
 void dcmRenderer::drawImplementation(osg::RenderInfo& info) const{
     cvr::glStateStack::instance()->PushAllState();
-
-
     glEnable(GL_TEXTURE_3D);
-    glEnable(GL_TEXTURE_2D);
-    glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glUseProgram(_shader_program);
 
@@ -64,17 +60,16 @@ void dcmRenderer::drawImplementation(osg::RenderInfo& info) const{
     glBindTexture(GL_TEXTURE_3D, _volume_tex_id);
 
 
-    glActiveTexture(GL_TEXTURE1);
-    glUniform1i(glGetUniformLocation(_shader_program, "uSampler_trans"), 1);
-    glBindTexture(GL_TEXTURE_2D, _trans_tex_id);
-
+//    glActiveTexture(GL_TEXTURE1);
+//    glUniform1i(glGetUniformLocation(_shader_program, "uSampler_trans"), 1);
+//    glBindTexture(GL_TEXTURE_2D, _trans_tex_id);
 
 
     glUniform1f(glGetUniformLocation(_shader_program, "sample_step_inverse"), adjustParam[0]);
     glUniform1f(glGetUniformLocation(_shader_program, "val_threshold"),adjustParam[1]);
     glUniform1f(glGetUniformLocation(_shader_program, "brightness"), adjustParam[2]);
 
-    glUniform1i(glGetUniformLocation(_shader_program, "u_use_color_transfer"), use_color_tranfer);
+//    glUniform1i(glGetUniformLocation(_shader_program, "u_use_color_transfer"), use_color_tranfer);
     glUniform1i(glGetUniformLocation(_shader_program, "u_use_ligting"), use_lighting);
     glUniform1i(glGetUniformLocation(_shader_program, "u_use_interpolation"), use_interpolation);
     glUniform1i(glGetUniformLocation(_shader_program, "u_draw_naive"), use_simple_cube);
@@ -94,14 +89,6 @@ void dcmRenderer::drawImplementation(osg::RenderInfo& info) const{
     cubeDrawable::drawImplementation(info);
     glUseProgram(0);
 
-
-    glDisable(GL_TEXTURE_3D);
-    glDisable(GL_TEXTURE_2D);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
-
-    glBindTexture(GL_TEXTURE_2D, 0 );
-    glBindTexture(GL_TEXTURE_3D, 0);
     cvr::glStateStack::instance()->PushAllState();
 
 }
