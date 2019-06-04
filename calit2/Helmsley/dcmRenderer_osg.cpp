@@ -20,28 +20,49 @@ osg::MatrixTransform* dcmRendererOSG::createDCMRenderer(){
     return dcmTrans_;
 }
 void dcmRendererOSG::assemble_texture_3d(){
-    osg::ref_ptr<osg::Texture3D> volume_tex = new osg::Texture3D;
-    ref_ptr<Image> volume_img = new Image;
-    volume_img->setImage(
-            (int)volume_size.x(), (int)volume_size.y(), (int)volume_size.z(),
-            GL_R8, GL_RED, GL_UNSIGNED_BYTE,
-            DCMI::volume_data, osg::Image::USE_NEW_DELETE);
-//    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-//    volume_img->setPacking(1);
-//    volume_tex->setDataVariance(osg::Object::STATIC);
-    volume_tex->setWrap(osg::Texture3D::WRAP_R, osg::Texture3D::CLAMP_TO_EDGE);
-    volume_tex->setWrap(osg::Texture3D::WRAP_T, osg::Texture3D::CLAMP_TO_EDGE);
-    volume_tex->setWrap(osg::Texture3D::WRAP_S, osg::Texture3D::CLAMP_TO_EDGE);
-
-    volume_tex->setFilter(osg::Texture3D::MIN_FILTER, osg::Texture3D::LINEAR);
-    volume_tex->setFilter(osg::Texture3D::MAG_FILTER, osg::Texture3D::LINEAR);
-
-//    volume_tex->setTextureSize((int)volume_size.x(), (int)volume_size.y(), (int)volume_size.z());
-    volume_tex->setImage(volume_img.get());
-
+//    osg::ref_ptr<osg::Texture3D> volume_tex = new osg::Texture3D;
+//    ref_ptr<Image> volume_img = new Image;
+//    volume_img->setImage(
+//            (int)volume_size.x(), (int)volume_size.y(), (int)volume_size.z(),
+//            GL_R8, GL_RED, GL_UNSIGNED_BYTE,
+//            DCMI::volume_data, osg::Image::USE_NEW_DELETE);
+////    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+////    volume_img->setPacking(1);
+////    volume_tex->setDataVariance(osg::Object::STATIC);
+//    volume_tex->setWrap(osg::Texture3D::WRAP_R, osg::Texture3D::CLAMP_TO_EDGE);
+//    volume_tex->setWrap(osg::Texture3D::WRAP_T, osg::Texture3D::CLAMP_TO_EDGE);
+//    volume_tex->setWrap(osg::Texture3D::WRAP_S, osg::Texture3D::CLAMP_TO_EDGE);
+//
+//    volume_tex->setFilter(osg::Texture3D::MIN_FILTER, osg::Texture3D::LINEAR);
+//    volume_tex->setFilter(osg::Texture3D::MAG_FILTER, osg::Texture3D::LINEAR);
+//
+////    volume_tex->setTextureSize((int)volume_size.x(), (int)volume_size.y(), (int)volume_size.z());
+//    volume_tex->setImage(volume_img.get());
+//
+//    ref_ptr<StateSet> stateset = dcmNode_->getOrCreateStateSet();
+//    stateset->setTextureAttributeAndModes(2, volume_tex.get());
+//    stateset->addUniform(new osg::Uniform("uSampler_tex", 2));
     ref_ptr<StateSet> stateset = dcmNode_->getOrCreateStateSet();
-    stateset->setTextureAttributeAndModes(2, volume_tex.get());
     stateset->addUniform(new osg::Uniform("uSampler_tex", 2));
+
+    glGenTextures(1, &_volume_tex_id);
+    // bind 3D texture target
+    glBindTexture(GL_TEXTURE_3D, _volume_tex_id);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    // pixel transfer happens here from client to OpenGL server
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_R8,
+                 (int)volume_size.x(), (int)volume_size.y(), (int)volume_size.z(),
+                 0, GL_RED, GL_UNSIGNED_BYTE,
+                 DCMI::volume_data);
+    glBindTexture(GL_TEXTURE_3D, 0);
+    delete []DCMI::volume_data;
+
+
 }
 void dcmRendererOSG::create_trans_texture(){
     osg::ref_ptr<osg::Texture2D> trans_tex = new osg::Texture2D;
