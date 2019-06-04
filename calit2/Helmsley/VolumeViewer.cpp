@@ -21,18 +21,34 @@ bool VolumeViewer::init() {
 
     initMenuButtons();
 
+    SceneManager::instance()->getSceneRoot()->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
+
     _root = new osg::Group;
     _rootSO = new SceneObject("HelmsleyRoot", false, false, false, false, false);
     _rootSO->addChild(_root);
-    PluginHelper::registerSceneObject(_rootSO, "GlesDrawablesPlugin");
+
+//    _scene = new osg::Group;
+
+    _sceneSO = new SceneObject("HelmsleyScene", false, false, false, false, false);
+    _rootSO->addChild(_sceneSO);
+//    _sceneSO->addChild(_scene);
+
+
+    PluginHelper::registerSceneObject(_rootSO, "HelmsleyPlugin");
     _rootSO->dirtyBounds();
     _rootSO->attachToScene();
 
     basis_renderer = new basisRender;
     _root->addChild(basis_renderer->createBasicRenderer());
-    dcm_renderer = new dcmRenderer;
-    _root->addChild(dcm_renderer->createDrawableNode());
-    dcm_renderer->setNodeMask(0);
+
+//    dcm_renderer = new dcmRenderer;
+//    _root->addChild(dcm_renderer->createDrawableNode());
+//    dcm_renderer->setNodeMask(0);
+
+    dcmRenderer_OSG = new dcmRendererOSG;
+    _sceneSO->addChild(dcmRenderer_OSG->createDCMRenderer());
+    _sceneSO->dirtyBounds();
+//    dcmRenderer_OSG->getRoot()->setNodeMask(0);
     return true;
 }
 void VolumeViewer::initMenuButtons(){
@@ -48,9 +64,14 @@ void VolumeViewer::initMenuButtons(){
     _cutCB->setCallback(this);
     _mainMenu->addItem(_cutCB);
 
+    _osgCB = new MenuCheckbox("Use OSG", true);
+    _osgCB->setCallback(this);
+    _mainMenu->addItem(_osgCB);
+
     _tuneCBs.push_back(new MenuCheckbox("SampleStep", false));
     _tuneCBs.push_back(new MenuCheckbox("Threshold", false));
     _tuneCBs.push_back(new MenuCheckbox("Brightness", false));
+    _tuneCBs.push_back(new MenuCheckbox("AlphaThreshold", false));
 
     for(auto cb: _tuneCBs){
         cb->setCallback(this);
@@ -80,15 +101,25 @@ void VolumeViewer::postFrame() {
     basis_renderer->updateOnFrame();
     osg::Matrixf dcm_modelMat;
     if(ARCoreManager::instance()->getLatestHitAnchorModelMat(dcm_modelMat, true)){
-        if(!_dcm_initialized){
-            _dcm_initialized = true;
-            dcm_renderer->setNodeMask(0xFFFFF);
-        }
-        dcm_renderer->setPosition(dcm_modelMat);
+//        if(!_dcm_initialized){
+//            _dcm_initialized = true;
+//            dcmRenderer_OSG->getRoot()->setNodeMask(0xFFFFF);
+////            if(_osgCB->getValue())
+////                dcmRenderer_OSG->getRoot()->setNodeMask(0xFFFFF);
+////            else
+////                dcm_renderer->setNodeMask(0xFFFFF);
+//        }
+        dcmRenderer_OSG->setPosition(dcm_modelMat);
+//        _sceneSO->getOrComputeBoundingBox();
+//        if(_osgCB->getValue())
+//            dcmRenderer_OSG->setPosition(dcm_modelMat);
+//        else
+//            dcm_renderer->setPosition(dcm_modelMat);
     }
 
 
-        dcm_renderer->updateOnFrame();
+//        dcm_renderer->updateOnFrame();
+    dcmRenderer_OSG->Update();
 }
 
 bool VolumeViewer::processEvent(cvr::InteractionEvent * event){
@@ -113,7 +144,7 @@ bool VolumeViewer::processEvent(cvr::InteractionEvent * event){
         TrackingManager::instance()->getScreenToClientPos(touchPos);
         float percent = touchPos.x() * 0.5f + 0.5f;
 
-        dcm_renderer->setTuneParameter(current_tune_id, MAX_VALUE_TUNE[current_tune_id] * percent);
+//        dcm_renderer->setTuneParameter(current_tune_id, MAX_VALUE_TUNE[current_tune_id] * percent);
         return true;
     }
     if(aie->getInteraction() == BUTTON_DOWN){

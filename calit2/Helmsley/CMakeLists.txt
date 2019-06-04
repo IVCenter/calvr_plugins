@@ -6,8 +6,9 @@ include_directories(${GLM_DIRECTORY})
 ADD_LIBRARY(${LIB_NAME}
     STATIC
     VolumeViewer.cpp
-    dcmRenderer.cpp
-    cubeDrawable.cpp
+    dcmRenderer_osg.cpp
+#    dcmRenderer.cpp
+#    cubeDrawable.cpp
     basicDrawables/basisRenderer.cpp
     basicDrawables/pointDrawable.cpp
     basicDrawables/strokeDrawable.cpp

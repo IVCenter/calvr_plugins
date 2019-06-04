@@ -2,7 +2,7 @@
 #include <GLES3/gl3.h>
 #include <cvrUtil/AndroidHelper.h>
 #include <GLES3/gl32.h>
-#include "Color.h"
+//#include "Color.h"
 #include <cvrUtil/AndroidDCMHelper.h>
 void dcmRenderer::assemble_texture_3d(){
     glGenTextures(1, &_volume_tex_id);
@@ -23,13 +23,12 @@ void dcmRenderer::assemble_texture_3d(){
     delete []DCMI::volume_data;
 }
 void dcmRenderer::create_trans_texture(){
-    glActiveTexture(GL_TEXTURE1);
     //create texture object
     glGenTextures(1, &_trans_tex_id);
     glBindTexture(GL_TEXTURE_2D, _trans_tex_id);
     //bind current texture object and set the data
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 32, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, transfer_color);
+//    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 32, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, transfer_color);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -52,7 +51,10 @@ void dcmRenderer::updateOnFrame(){
 void dcmRenderer::drawImplementation(osg::RenderInfo& info) const{
     cvr::glStateStack::instance()->PushAllState();
     glEnable(GL_TEXTURE_3D);
+
     glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     glUseProgram(_shader_program);
 
     glActiveTexture(GL_TEXTURE0);
@@ -68,6 +70,7 @@ void dcmRenderer::drawImplementation(osg::RenderInfo& info) const{
     glUniform1f(glGetUniformLocation(_shader_program, "sample_step_inverse"), adjustParam[0]);
     glUniform1f(glGetUniformLocation(_shader_program, "val_threshold"),adjustParam[1]);
     glUniform1f(glGetUniformLocation(_shader_program, "brightness"), adjustParam[2]);
+    glUniform1f(glGetUniformLocation(_shader_program, "OpacityThreshold"), adjustParam[3]);
 
 //    glUniform1i(glGetUniformLocation(_shader_program, "u_use_color_transfer"), use_color_tranfer);
     glUniform1i(glGetUniformLocation(_shader_program, "u_use_ligting"), use_lighting);
