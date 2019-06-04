@@ -41,14 +41,14 @@ bool VolumeViewer::init() {
     basis_renderer = new basisRender;
     _root->addChild(basis_renderer->createBasicRenderer());
 
-//    dcm_renderer = new dcmRenderer;
-//    _root->addChild(dcm_renderer->createDrawableNode());
-//    dcm_renderer->setNodeMask(0);
+    dcm_renderer = new dcmRenderer;
+    _sceneSO->addChild(dcm_renderer->createDrawableNode());
+    dcm_renderer->setNodeMask(0);
 
     dcmRenderer_OSG = new dcmRendererOSG;
     _sceneSO->addChild(dcmRenderer_OSG->createDCMRenderer());
     _sceneSO->dirtyBounds();
-//    dcmRenderer_OSG->getRoot()->setNodeMask(0);
+    dcmRenderer_OSG->getRoot()->setNodeMask(0);
     return true;
 }
 void VolumeViewer::initMenuButtons(){
@@ -101,25 +101,24 @@ void VolumeViewer::postFrame() {
     basis_renderer->updateOnFrame();
     osg::Matrixf dcm_modelMat;
     if(ARCoreManager::instance()->getLatestHitAnchorModelMat(dcm_modelMat, true)){
-//        if(!_dcm_initialized){
-//            _dcm_initialized = true;
-//            dcmRenderer_OSG->getRoot()->setNodeMask(0xFFFFF);
-////            if(_osgCB->getValue())
-////                dcmRenderer_OSG->getRoot()->setNodeMask(0xFFFFF);
-////            else
-////                dcm_renderer->setNodeMask(0xFFFFF);
-//        }
+        if(!_dcm_initialized){
+            _dcm_initialized = true;
+            dcmRenderer_OSG->getRoot()->setNodeMask(0xFFFFF);
+            if(_osgCB->getValue())
+                dcmRenderer_OSG->getRoot()->setNodeMask(0xFFFFF);
+            else
+                dcm_renderer->setNodeMask(0xFFFFF);
+        }
         dcmRenderer_OSG->setPosition(dcm_modelMat);
-//        _sceneSO->getOrComputeBoundingBox();
-//        if(_osgCB->getValue())
-//            dcmRenderer_OSG->setPosition(dcm_modelMat);
-//        else
-//            dcm_renderer->setPosition(dcm_modelMat);
+        if(_osgCB->getValue())
+            dcmRenderer_OSG->setPosition(dcm_modelMat);
+        else
+            dcm_renderer->setPosition(dcm_modelMat);
     }
-
-
-//        dcm_renderer->updateOnFrame();
-    dcmRenderer_OSG->Update();
+    if(_osgCB->getValue())
+        dcmRenderer_OSG->Update();
+    else
+        dcm_renderer->updateOnFrame();
 }
 
 bool VolumeViewer::processEvent(cvr::InteractionEvent * event){
@@ -144,7 +143,12 @@ bool VolumeViewer::processEvent(cvr::InteractionEvent * event){
         TrackingManager::instance()->getScreenToClientPos(touchPos);
         float percent = touchPos.x() * 0.5f + 0.5f;
 
-//        dcm_renderer->setTuneParameter(current_tune_id, MAX_VALUE_TUNE[current_tune_id] * percent);
+        if(_osgCB->getValue())
+            dcmRenderer_OSG->setTuneParameter(current_tune_id, MAX_VALUE_TUNE[current_tune_id] * percent);
+        else
+            dcm_renderer->setTuneParameter(current_tune_id, MAX_VALUE_TUNE[current_tune_id] * percent);
+
+
         return true;
     }
     if(aie->getInteraction() == BUTTON_DOWN){

@@ -13,6 +13,7 @@
 //#include "dcmRenderer.h"
 #include "dcmRenderer_osg.h"
 #include "basicDrawables/basisRenderer.h"
+#include "dcmRenderer.h"
 
 class VolumeViewer : public cvr::CVRPlugin, public cvr::MenuCallback{
 typedef osg::ref_ptr<osg::MatrixTransform> Transform;
@@ -35,8 +36,8 @@ public:
     bool processEvent(cvr::InteractionEvent * event);
 
 private:
-//    dcmRenderer* dcm_renderer = nullptr;
-    dcmRendererOSG* dcmRenderer_OSG;
+    dcmRenderer* dcm_renderer = nullptr;
+    dcmRendererOSG* dcmRenderer_OSG = nullptr;
     basisRender* basis_renderer = nullptr;
 
     bool _dcm_initialized = false;

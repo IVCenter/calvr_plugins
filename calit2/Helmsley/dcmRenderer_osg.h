@@ -29,11 +29,7 @@ public:
     void setPosition(osg::Matrixf model_mat);
     void setTuneParameter(int idx, float value);
 
-    void Update(){
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_3D, _volume_tex_id);
-    }
-
+    void Update();
 protected:
     void initialization();
 private:
@@ -42,7 +38,7 @@ private:
     osg::Matrixf modelMat_;
     osg::Geometry* geometry;
 
-    GLuint  _volume_tex_id;//MIAODE WOYE BUZHIDAO WEISHENME ZHEGE WORKAAAAAA
+
     const GLenum _special_unique_texture = GL_TEXTURE3;
     osg::Vec3f volume_size;
 

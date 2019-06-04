@@ -5,36 +5,8 @@
 //#include "Color.h"
 #include <cvrUtil/AndroidDCMHelper.h>
 void dcmRenderer::assemble_texture_3d(){
-    glGenTextures(1, &_volume_tex_id);
-    // bind 3D texture target
-    glBindTexture(GL_TEXTURE_3D, _volume_tex_id);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    // pixel transfer happens here from client to OpenGL server
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage3D(GL_TEXTURE_3D, 0, GL_R8,
-            (int)volume_size.x, (int)volume_size.y, (int)volume_size.z,
-            0, GL_RED, GL_UNSIGNED_BYTE,
-            DCMI::volume_data);
-    glBindTexture(GL_TEXTURE_3D, 0);
-    delete []DCMI::volume_data;
+    DCMI::assemble_texture_3d();
 }
-void dcmRenderer::create_trans_texture(){
-    //create texture object
-    glGenTextures(1, &_trans_tex_id);
-    glBindTexture(GL_TEXTURE_2D, _trans_tex_id);
-    //bind current texture object and set the data
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-//    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 32, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, transfer_color);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
-}
-
 void dcmRenderer::Initialization(){
     volume_size = glm::vec3(DCMI::img_width,
                             DCMI::img_height,
@@ -59,7 +31,7 @@ void dcmRenderer::drawImplementation(osg::RenderInfo& info) const{
 
     glActiveTexture(GL_TEXTURE0);
     glUniform1i(glGetUniformLocation(_shader_program, "uSampler_tex"), 0);
-    glBindTexture(GL_TEXTURE_3D, _volume_tex_id);
+    glBindTexture(GL_TEXTURE_3D, DCMI::volume_tex_id);
 
 
 //    glActiveTexture(GL_TEXTURE1);
