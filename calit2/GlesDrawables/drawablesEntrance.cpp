@@ -3,7 +3,6 @@
 #include <osgUtil/Tessellator>
 #include <osg/Texture>
 #include "drawablesEntrance.h"
-#include "planeDrawable.h"
 #include <osg/Texture2D>
 #include <cvrUtil/AndroidHelper.h>
 #include <osg/ShapeDrawable>
@@ -48,33 +47,16 @@ bool GlesDrawables:: tackleHitted(osgUtil::LineSegmentIntersector::Intersection 
 }
 
 void GlesDrawables::initMenuButtons() {
-    _pointButton = new MenuCheckbox("Show PointCloud", true);
-    _pointButton->setCallback(this);
-    _mainMenu->addItem(_pointButton);
+    _vCheckBox.push_back(new MenuCheckbox("Show PointCloud", cb_map[CB_POINT]));
+    _vCheckBox.push_back(new MenuCheckbox("Show Plane", cb_map[CB_PLANE]));
+    _vCheckBox.push_back(new MenuCheckbox("Basic Lighting Estimation", cb_map[CB_LIGHT+ARCORE_CORRECTION]));
+    _vCheckBox.push_back(new MenuCheckbox("One Light Source", cb_map[CB_LIGHT+ONES_SOURCE]));
+    _vCheckBox.push_back(new MenuCheckbox("Spherical Harmonics Lighting", cb_map[CB_LIGHT+SPHERICAL_HARMONICS]));
 
-    _planeButton = new MenuCheckbox("Show Plane", true);
-    _planeButton->setCallback(this);
-    _mainMenu->addItem(_planeButton);
-
-    _quadButton = new MenuCheckbox("Show Environment Map", true);
-    _quadButton->setCallback(this);
-    _mainMenu->addItem(_quadButton);
-
-    _obj1Button = new MenuCheckbox("Basic Lighting Estimation", true);
-    _obj1Button->setCallback(this);
-    _mainMenu->addItem(_obj1Button);
-
-    _obj2Button = new MenuCheckbox("One Light Source", false);
-    _obj2Button->setCallback(this);
-    _mainMenu->addItem(_obj2Button);
-
-    _obj3Button = new MenuCheckbox("Spherical Harmonics Lighting", false);
-    _obj3Button->setCallback(this);
-    _mainMenu->addItem(_obj3Button);
-
-    _lightButton = new MenuCheckbox("Add Light Source", false);
-    _lightButton->setCallback(this);
-    _mainMenu->addItem(_lightButton);
+    for(auto cb: _vCheckBox){
+        cb->setCallback(this);
+        _mainMenu->addItem(cb);
+    }
 }
 
 bool GlesDrawables::init() {
@@ -101,28 +83,8 @@ bool GlesDrawables::init() {
     rootSO->dirtyBounds();
     rootSO->attachToScene();
 
-    _strokeDrawable = new strokeDrawable;
-//    for(int i=0;i<6;i++){
-//        _quadDrawables.push_back(new quadDrawable(ENV_QUAD_COORDS[i], i));
-//        _root->addChild(_quadDrawables.back()->createDrawableNode());
-//    }
-    _root->addChild(_strokeDrawable->createDrawableNode(.0f,-0.8f));
-
-    _pointcloudDrawable = new pointDrawable;
-    _root->addChild(_pointcloudDrawable->createDrawableNode());
-
-    const GLfloat _defaultVertices[12] = {-1.0f/2, 0.9f, 0.0f,//Top-left
-                                          +1.0f/2, 0.9f, 0.0f,//Top-right
-                                          +1.0f/2, 0.7f, 0.0, //bottom-right
-                                          -1.0f/2, 0.7f, 0.0f};// Bottom-left
-    const GLfloat _uvs[8]={0.0f, 0.0f,
-                           1.0f, 0.0f,
-                           1.0f, 1.0f,
-                           0.0f, 1.0f};
-    quadDrawable* qdrawable = new quadDrawable(_defaultVertices, -1);
-    _root->addChild(qdrawable->createDrawableNode());
-
-    stitcher = new panoStitcher;
+    basis_renderer = new basisRender;
+    _root->addChild(basis_renderer->createBasicRenderer());
 
 
 //    createObject(_objects,"models/andy.obj", "textures/andy.png",
@@ -137,130 +99,86 @@ bool GlesDrawables::init() {
 }
 
 void GlesDrawables::menuCallback(cvr::MenuItem *item) {
-    if(item == _planeButton){
-        if(_planeButton->getValue() && !last_state_plane){
-            for(auto b : _planeDrawables){
-                b->getGLNode()->setNodeMask(0xFFFFFF);
-            }
-        }else if (!_planeButton->getValue() && last_state_plane){
-            for(auto b : _planeDrawables){
-                b->setNodeMask(0);
-            }
+    auto gotbool = std::find(_vCheckBox.begin(), _vCheckBox.end(), item);
+    if(gotbool!=_vCheckBox.end()){
+        int id = std::distance(_vCheckBox.begin(), gotbool);
+        bool value = _vCheckBox[id]->getValue();
+        switch(id){
+            case 0:
+                basis_renderer->setPointCloudVisiable(value);
+                break;
+            case 1:
+                basis_renderer->setPlaneVisiable(value);
+                break;
+            case 2:
+            case 3:
+            case 4:
+                if(last_object_select == id) break;
+                //reset cb selection
+                _vCheckBox[2]->setValue(false);_vCheckBox[3]->setValue(false);_vCheckBox[4]->setValue(false);
+                _vCheckBox[id]->setValue(true);
+                last_object_select = id;
+                break;
+            default:
+                break;
         }
-        last_state_plane = _planeButton->getValue();
-    }
-    if(item == _pointButton){
-        if(_pointButton->getValue() && !last_state_point){
-            _pointcloudDrawable->getGLNode()->setNodeMask(0xFFFFFF);
-        }else if (!_pointButton->getValue() && last_state_point){
-            _pointcloudDrawable->getGLNode()->setNodeMask(0);
-        }
-        last_state_point = _pointButton->getValue();
-    }
-    if(item == _quadButton){
-//        if(_quadButton->getValue() && !last_state_quad){
-//            for(auto b : _quadDrawables){
-//                b->getGLNode()->setNodeMask(0xFFFFFF);
-//            }
-//        }else if (!_quadButton->getValue() && last_state_quad){
-//            for(auto b : _quadDrawables){
-//                b->setNodeMask(0);
-//            }
-//        }
-//        last_state_quad = _quadButton->getValue();
-    }
-
-    if(item == _obj1Button){
-        if(last_object_select != 1){
-            _obj2Button->setValue(false);
-            _obj3Button->setValue(false);
-        }
-        last_object_select = 1;
-    }
-    if(item == _obj2Button){
-        if(last_object_select != 2){
-            _obj1Button->setValue(false);
-            _obj3Button->setValue(false);
-        }
-        last_object_select = 2;
-    }
-    if(item == _obj3Button){
-        if(last_object_select != 3){
-            _obj1Button->setValue(false);
-            _obj2Button->setValue(false);
-        }
-        last_object_select = 3;
-    }
-    if(item == _lightButton){
-        _add_light = !_add_light;
     }
 }
 
 void GlesDrawables::postFrame() {
-    _pointcloudDrawable->updateOnFrame();
-    cvr::planeMap map = ARCoreManager::instance()->getPlaneMap();
-    if(_plane_num < map.size()){
-        for(int i= _plane_num; i<map.size();i++){
-            planeDrawable * pd = new planeDrawable();
-            _root->addChild(pd->createDrawableNode());
-            _planeDrawables.push_back(pd);
-        }
-        _plane_num = map.size();
-    }
-    auto planeIt = map.begin();
-    for(int i=0; i<_plane_num; i++,planeIt++)
-        _planeDrawables[i]->updateOnFrame(planeIt->first, planeIt->second);
+    basis_renderer->updateOnFrame();
+//interactions
 
-
-    Vec3f isPoint;
-    if(TrackingManager::instance()->getIsPoint(isPoint)){
-        _strokeDrawable->updateOnFrame(isPoint);
-        _strokeDrawable->getGLNode()->setNodeMask(0xFFFFFF);
-    } else
-        _strokeDrawable->getGLNode()->setNodeMask(0x0);
-
-
-    size_t anchor_num = ARCoreManager::instance()->getAnchorSize();
-    if( anchor_num != 0){
-        if(_objNum < anchor_num){
-            for(int i=_objNum; i<anchor_num; i++){
-                Matrixf modelMat;
-                if(!ARCoreManager::instance()->getAnchorModelMatrixAt(modelMat, i))
-                    break;
-                if(_add_light){
-                    createDebugSphere(_objects, modelMat);
 //
-                    osg::Vec3f debug = modelMat.getTrans();
-
-                    osg::Vec4f tmp = osg::Vec4f(debug.x(), debug.z(), -debug.y(),1.0) * (*ARCoreManager::instance()->getViewMatrix());
-                    _lightPosition = osg::Vec3f(tmp.x() / tmp.w(), -tmp.z()/tmp.w(), tmp.y()/tmp.w());
-                            LOGE("===LIGHT: %f, %f, %f", _lightPosition.x(), _lightPosition.y(), _lightPosition.z());
-                    _add_light = false;
-                    break;
-                }
-                switch(last_object_select){
-                    case 1:
-                        createObject(_objects,"models/andy.obj", "textures/andy.png",
-                                     modelMat, ONES_SOURCE);
-                        break;
-                    case 2:
-                        createObject(_objects,"models/andy.obj", "textures/andy.png",
-                                     modelMat, ONES_SOURCE);
-                        break;
-                    case 3:
-                        createObject(_objects,"models/andy.obj", "textures/andy.png",
-                                     modelMat, SPHERICAL_HARMONICS);
-                        break;
-                    default:
-                        createObject(_objects,"models/andy.obj", "textures/andy.png",
-                                     modelMat, ARCORE_CORRECTION);
-                }
-
-            }
-
-        }
-        _objNum = anchor_num;
-    }
+//    Vec3f isPoint;
+//    if(TrackingManager::instance()->getIsPoint(isPoint)){
+//        _strokeDrawable->updateOnFrame(isPoint);
+//        _strokeDrawable->getGLNode()->setNodeMask(0xFFFFFF);
+//    } else
+//        _strokeDrawable->getGLNode()->setNodeMask(0x0);
+//
+//
+//    size_t anchor_num = ARCoreManager::instance()->getAnchorSize();
+//    if( anchor_num != 0){
+//        if(_objNum < anchor_num){
+//            for(int i=_objNum; i<anchor_num; i++){
+//                Matrixf modelMat;
+//                if(!ARCoreManager::instance()->getAnchorModelMatrixAt(modelMat, i))
+//                    break;
+//                if(_add_light){
+//                    createDebugSphere(_objects, modelMat);
+////
+//                    osg::Vec3f debug = modelMat.getTrans();
+//
+//                    osg::Vec4f tmp = osg::Vec4f(debug.x(), debug.z(), -debug.y(),1.0) * (*ARCoreManager::instance()->getViewMatrix());
+//                    _lightPosition = osg::Vec3f(tmp.x() / tmp.w(), -tmp.z()/tmp.w(), tmp.y()/tmp.w());
+//                            LOGE("===LIGHT: %f, %f, %f", _lightPosition.x(), _lightPosition.y(), _lightPosition.z());
+//                    _add_light = false;
+//                    break;
+//                }
+//                switch(last_object_select){
+//                    case 1:
+//                        createObject(_objects,"models/andy.obj", "textures/andy.png",
+//                                     modelMat, ONES_SOURCE);
+//                        break;
+//                    case 2:
+//                        createObject(_objects,"models/andy.obj", "textures/andy.png",
+//                                     modelMat, ONES_SOURCE);
+//                        break;
+//                    case 3:
+//                        createObject(_objects,"models/andy.obj", "textures/andy.png",
+//                                     modelMat, SPHERICAL_HARMONICS);
+//                        break;
+//                    default:
+//                        createObject(_objects,"models/andy.obj", "textures/andy.png",
+//                                     modelMat, ARCORE_CORRECTION);
+//                }
+//
+//            }
+//
+//        }
+//        _objNum = anchor_num;
+//    }
 //    _quadDrawable->updateOnFrame(ARCoreManager::instance()->getCameraTransformedUVs());
 
 
@@ -276,13 +194,13 @@ bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
         _selectState = ROTATE;
         return true;
     }
-    if(aie->getTouchType() == FT_BUTTON){
-        ///!!!!!!!!!!!!!DEBUG ONLY!!!!!!
-        stitcher->StitchCurrentView();
-
-        _selectState = FREE;
-        return true;
-    }
+//    if(aie->getTouchType() == FT_BUTTON){
+//        ///!!!!!!!!!!!!!DEBUG ONLY!!!!!!
+//        stitcher->StitchCurrentView();
+//
+//        _selectState = FREE;
+//        return true;
+//    }
 
     if(aie->getTouchType() != LEFT)
         return false;

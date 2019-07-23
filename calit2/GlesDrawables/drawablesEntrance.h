@@ -29,12 +29,9 @@
 #include <osg/Uniform>
 #include <osgDB/ReadFile>
 #include <osgDB/FileUtils>
+//self
+#include "basicDrawables/basisRenderer.h"
 
-#include "pointDrawable.h"
-#include "planeDrawable.h"
-#include "strokeDrawable.h"
-#include "quadDrawable.h"
-#include "pano.h"
 typedef struct IntersetctObj{
     osg::Uniform * uTexture;
     osg::MatrixTransform * matrixTrans;
@@ -54,45 +51,33 @@ enum LightingType{
 class GlesDrawables : public cvr::CVRPlugin, public cvr::MenuCallback
 {
 typedef osg::ref_ptr<osg::MatrixTransform> Transform;
+enum cbTypes{
+    CB_POINT = 0,
+    CB_PLANE,
+    CB_LIGHT
+};
 private:
-//    const float ENV_QUAD_COORDS[6][12]  = {
-//            { -0.4f, -0.6f, 0.0f, -0.4f, -0.4f, 0.0f, -0.1f, -0.6f, 0.0f, -0.1f, -0.4f, 0.0f },
-//            { -1.0f, -0.6f, 0.0f, -1.0f, -0.4f, 0.0f, -0.7f, -0.6f, 0.0f, -0.7f, -0.4f, 0.0f },
-//            { -0.7f, -0.4f, 0.0f, -0.7f, -0.2f, 0.0f, -0.4f, -0.4f, 0.0f, -0.4f, -0.2f, 0.0f },
-//            { -0.7f, -0.8f, 0.0f, -0.7f, -0.6f, 0.0f, -0.4f, -0.8f, 0.0f, -0.4f, -0.6f, 0.0f },
-//            { -0.1f, -0.6f, 0.0f, -0.1f, -0.4f, 0.0f, 0.2f, -0.6f, 0.0f, 0.2f, -0.4f, 0.0f },
-//            { -0.7f, -0.6f, 0.0f, -0.7f, -0.4f, 0.0f, -0.4f, -0.6f, 0.0f, -0.4f, -0.4f, 0.0f }
-//    };
-    const float ENV_QUAD_COORDS[6][12]  = {
-            { -0.4f, -0.4f, 0.0f,  -0.1f, -0.4f, 0.0f, -0.1f, -0.6f, 0.0f, -0.4f, -0.6f, 0.0f},
-            { -1.0f, -0.4f, 0.0f, -0.7f, -0.4f, 0.0f, -0.7f, -0.6f, 0.0f,-1.0f, -0.6f, 0.0f},
-            { -0.7f, -0.2f, 0.0f, -0.4f, -0.2f, 0.0f, -0.4f, -0.4f, 0.0f,-0.7f, -0.4f, 0.0f},
-            {  -0.7f, -0.6f, 0.0f,-0.4f, -0.6f, 0.0f,-0.4f, -0.8f, 0.0f,-0.7f, -0.8f, 0.0f},
-            { -0.1f, -0.4f, 0.0f, 0.2f, -0.4f, 0.0f, 0.2f, -0.6f, 0.0f,-0.1f, -0.6f, 0.0f},
-            { -0.7f, -0.4f, 0.0f, -0.4f, -0.4f, 0.0f,-0.4f, -0.6f, 0.0f,-0.7f, -0.6f, 0.0f}
-    };
-
+    std::unordered_map<int, bool> cb_map = {{CB_POINT, true}, {CB_PLANE, true}, {CB_LIGHT, true}, {CB_LIGHT+1, false}, {CB_LIGHT+2, false}};
 protected:
     cvr::SubMenu *_mainMenu;
 
-    cvr::MenuCheckbox *_pointButton, *_planeButton, *_quadButton;
-    cvr::MenuCheckbox* _obj1Button, *_obj2Button, *_obj3Button, *_lightButton;
+//    cvr::MenuCheckbox *_pointButton, *_planeButton, *_quadButton;
+//    cvr::MenuCheckbox* _obj1Button, *_obj2Button, *_obj3Button, *_lightButton;
+
+    std::vector<cvr::MenuCheckbox*> _vCheckBox;
 
     osg::Group *_root, *_objects;
     cvr::SceneObject *rootSO, *objSO;
 
-    osg::ref_ptr<pointDrawable> _pointcloudDrawable;
-    std::vector<quadDrawable*> _quadDrawables;
-    int _plane_num = 0, _objNum = 0;
-    std::vector<planeDrawable*> _planeDrawables;
-    osg::ref_ptr<strokeDrawable> _strokeDrawable;
+    basisRender* basis_renderer = nullptr;
+
     std::unordered_map<osg::Node*, isectObj> _map;
     osg::Node* _selectedNode = nullptr;
     sceneState _selectState = FREE;
     osg::Vec2f _mPreviousPos;
-    bool last_state_plane = true, last_state_point=true, last_state_quad = true, _add_light=false;
+
+    //_add_light=false;
     int last_object_select = 1;
-    panoStitcher* stitcher;
 
 
     void initMenuButtons();
