@@ -125,63 +125,39 @@ void GlesDrawables::menuCallback(cvr::MenuItem *item) {
     }
 }
 
+void GlesDrawables::create_object(osg::Matrixf modelMat) {
+    switch(last_object_select){
+        case 1:
+            createObject(_objects,"models/andy.obj", "textures/andy.png",
+                         modelMat, ONES_SOURCE);
+            break;
+        case 2:
+            createObject(_objects,"models/andy.obj", "textures/andy.png",
+                         modelMat, ONES_SOURCE);
+            break;
+        case 3:
+            createObject(_objects,"models/andy.obj", "textures/andy.png",
+                         modelMat, SPHERICAL_HARMONICS);
+            break;
+        default:
+            createObject(_objects,"models/andy.obj", "textures/andy.png",
+                         modelMat, ARCORE_CORRECTION);
+    }
+}
+
 void GlesDrawables::postFrame() {
     basis_renderer->updateOnFrame();
-//interactions
 
-//
-//    Vec3f isPoint;
-//    if(TrackingManager::instance()->getIsPoint(isPoint)){
-//        _strokeDrawable->updateOnFrame(isPoint);
-//        _strokeDrawable->getGLNode()->setNodeMask(0xFFFFFF);
-//    } else
-//        _strokeDrawable->getGLNode()->setNodeMask(0x0);
-//
-//
-//    size_t anchor_num = ARCoreManager::instance()->getAnchorSize();
-//    if( anchor_num != 0){
-//        if(_objNum < anchor_num){
-//            for(int i=_objNum; i<anchor_num; i++){
-//                Matrixf modelMat;
-//                if(!ARCoreManager::instance()->getAnchorModelMatrixAt(modelMat, i))
-//                    break;
-//                if(_add_light){
-//                    createDebugSphere(_objects, modelMat);
-////
-//                    osg::Vec3f debug = modelMat.getTrans();
-//
-//                    osg::Vec4f tmp = osg::Vec4f(debug.x(), debug.z(), -debug.y(),1.0) * (*ARCoreManager::instance()->getViewMatrix());
-//                    _lightPosition = osg::Vec3f(tmp.x() / tmp.w(), -tmp.z()/tmp.w(), tmp.y()/tmp.w());
-//                            LOGE("===LIGHT: %f, %f, %f", _lightPosition.x(), _lightPosition.y(), _lightPosition.z());
-//                    _add_light = false;
-//                    break;
-//                }
-//                switch(last_object_select){
-//                    case 1:
-//                        createObject(_objects,"models/andy.obj", "textures/andy.png",
-//                                     modelMat, ONES_SOURCE);
-//                        break;
-//                    case 2:
-//                        createObject(_objects,"models/andy.obj", "textures/andy.png",
-//                                     modelMat, ONES_SOURCE);
-//                        break;
-//                    case 3:
-//                        createObject(_objects,"models/andy.obj", "textures/andy.png",
-//                                     modelMat, SPHERICAL_HARMONICS);
-//                        break;
-//                    default:
-//                        createObject(_objects,"models/andy.obj", "textures/andy.png",
-//                                     modelMat, ARCORE_CORRECTION);
-//                }
-//
-//            }
-//
-//        }
-//        _objNum = anchor_num;
-//    }
-//    _quadDrawable->updateOnFrame(ARCoreManager::instance()->getCameraTransformedUVs());
-
-
+    // check and draw objects
+    size_t anchor_num = ARCoreManager::instance()->getAnchorSize();
+    if (_objNum < anchor_num)
+        for (int i = _objNum; i < anchor_num; i++) {
+            Matrixf modelMat;
+            if (!ARCoreManager::instance()->getAnchorModelMatrixAt(modelMat, i))
+                break;
+            create_object(modelMat);
+        }
+    _objNum = anchor_num;
 }
 
 bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
@@ -194,13 +170,6 @@ bool GlesDrawables::processEvent(cvr::InteractionEvent * event){
         _selectState = ROTATE;
         return true;
     }
-//    if(aie->getTouchType() == FT_BUTTON){
-//        ///!!!!!!!!!!!!!DEBUG ONLY!!!!!!
-//        stitcher->StitchCurrentView();
-//
-//        _selectState = FREE;
-//        return true;
-//    }
 
     if(aie->getTouchType() != LEFT)
         return false;
@@ -535,33 +504,4 @@ void GlesDrawables::createObject(osg::Group *parent,
 
     objectTrans->addChild(_node.get());
     parent->addChild(objectTrans.get());
-}
-
-void GlesDrawables::createDebugSphere(osg::Group*parent, Matrixf modelMat){
-    Transform objectTrans = new MatrixTransform;
-    objectTrans->setMatrix(modelMat);
-    parent->addChild(objectTrans);
-
-    osg::ref_ptr<osg::ShapeDrawable> shape = new osg::ShapeDrawable;
-    shape->setShape(new osg::Sphere(osg::Vec3f(.0,.0,.0), 0.05f));
-    shape->setColor(osg::Vec4f(1.0f,.0f,.0f,1.0f));
-    osg::ref_ptr<osg::Geode> node = new osg::Geode;
-    Program * program = assetLoader::instance()->createShaderProgramFromFile("shaders/lighting.vert","shaders/lighting.frag");
-
-    osg::StateSet * stateSet = shape->getOrCreateStateSet();
-    stateSet->setAttributeAndModes(program);
-
-    stateSet->addUniform( new osg::Uniform("lightDiffuse",
-                                           osg::Vec4(0.8f, 0.8f, 0.8f, 1.0f)) );
-    stateSet->addUniform( new osg::Uniform("lightSpecular",
-                                           osg::Vec4(1.0f, 1.0f, 0.4f, 1.0f)) );
-    stateSet->addUniform( new osg::Uniform("shininess", 64.0f) );
-
-    stateSet->addUniform( new osg::Uniform("lightPosition", osg::Vec3(0,0,1)));
-
-    Uniform * baseColor = new osg::Uniform("uBaseColor", osg::Vec4f(1.0f, .0f, .0f, 1.0f));
-    stateSet->addUniform(baseColor);
-
-    node->addDrawable(shape.get());
-    objectTrans->addChild(node);
 }

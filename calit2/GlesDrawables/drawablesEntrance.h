@@ -58,6 +58,7 @@ enum cbTypes{
 };
 private:
     std::unordered_map<int, bool> cb_map = {{CB_POINT, true}, {CB_PLANE, true}, {CB_LIGHT, true}, {CB_LIGHT+1, false}, {CB_LIGHT+2, false}};
+    void create_object(osg::Matrixf modelMat);
 protected:
     cvr::SubMenu *_mainMenu;
 
@@ -78,6 +79,7 @@ protected:
 
     //_add_light=false;
     int last_object_select = 1;
+    int _objNum = 0;
 
 
     void initMenuButtons();
