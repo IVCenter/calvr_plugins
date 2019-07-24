@@ -58,7 +58,8 @@ enum cbTypes{
 };
 private:
     std::unordered_map<int, bool> cb_map = {{CB_POINT, true}, {CB_PLANE, true}, {CB_LIGHT, true}, {CB_LIGHT+1, false}, {CB_LIGHT+2, false}};
-    void create_object(osg::Matrixf modelMat);
+    void update_objects();
+
 protected:
     cvr::SubMenu *_mainMenu;
 
@@ -83,10 +84,13 @@ protected:
 
 
     void initMenuButtons();
-    void createDebugSphere(osg::Group *, osg::Matrixf);
     void createObject(osg::Group *, const char*, const char*, osg::Matrixf, LightingType);
     void createObject(osg::Group *, const char*, const char*, osg::Matrixf, bool opengl);
     bool tackleHitted(osgUtil::LineSegmentIntersector::Intersection result );
+
+    bool check_obj_selection(osg::Vec2f touchPos);
+    bool translate_obj(osg::Vec2f touchPos);
+    bool rotate_obj(osg::Vec2f touchPos);
 public:
     bool init();
     void menuCallback(cvr::MenuItem * item);
