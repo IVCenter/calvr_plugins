@@ -3,6 +3,7 @@
 
 #include "GeometryShape.h"
 
+#include <osg/Texture2D>
 #include <osg/Geometry>
 
 class RectangleShape : public GeometryShape
@@ -17,6 +18,9 @@ protected:
     RectangleShape();
     void setPosition(osg::Vec3, float width, float height);
     void setColor(osg::Vec4);
+    void setTextureCoords(osg::Vec2, osg::Vec2, osg::Vec2, osg::Vec2);
+    void setTextureImage(std::string);
+    void setShaders(std::string, std::string);
     void update();
 };
 

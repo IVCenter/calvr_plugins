@@ -9,7 +9,7 @@
 
 namespace SimpleShape 
 {
-    enum ShapeType {POINT, TRIANGLE, QUAD, RECTANGLE, CIRCLE, LINE, TEXT};
+    enum ShapeType {POINT, TRIANGLE, QUAD, RECTANGLE, CIRCLE, LINE, TEXT, CUBE, CAPSULE, SPHERE, CONE, CYLINDER, MODEL};
 }
 
 class BasicShape
@@ -18,6 +18,7 @@ class BasicShape
 
         virtual void update(std::string command) = 0;
         virtual osg::Geode* getParent() = 0;
+	virtual osg::MatrixTransform* getMatrixParent() = 0;
         virtual osg::Drawable* asDrawable() = 0;
 	    SimpleShape::ShapeType getType() { return _type; };
         std::string getName();

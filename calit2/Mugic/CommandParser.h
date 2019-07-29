@@ -6,6 +6,8 @@
 #include <OpenThreads/Block>
 #include <osg/Node>
 #include <osg/Geode>
+#include <osg/MatrixTransform>
+#include <osg/Matrixd>
 
 #include "ThreadQueue.h"
 #include "MainNode.h"
@@ -39,6 +41,11 @@ class CommandParser : public OpenThreads::Thread
         std::string getParameter(std::string command, std::string param);
         void remove(std::string elementName);
         void removeAll();
+
+	//MatrixTransform manipulation commands
+	void rotate(std::string elementName, std::string command);
+	void scale(std::string elementName, std::string command);
+	void translate(std::string elementName, std::string command);
 
     public:
     	CommandParser(ThreadQueue<std::string>* queue, MainNode* root);

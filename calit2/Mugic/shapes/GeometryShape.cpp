@@ -16,6 +16,11 @@ GeometryShape::GeometryShape()
     setUpdateCallback(new GeometryUpdateCallback());
 }
 
+osg::MatrixTransform* GeometryShape::getMatrixParent()
+{
+	return (osg::Geometry::getParent(0)->asGeode())->osg::Node::getParent(0)->asTransform()->asMatrixTransform();
+}
+
 osg::Geode* GeometryShape::getParent()
 {
     return osg::Geometry::getParent(0)->asGeode();

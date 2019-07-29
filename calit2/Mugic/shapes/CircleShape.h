@@ -17,8 +17,12 @@ protected:
     CircleShape();
     void setPosition(osg::Vec3, float);
     void setColor(osg::Vec4, osg::Vec4);
+    void setTextureCoords(osg::Vec2, float);
+    void setTextureImage(std::string);
+    void setShaders(std::string, std::string);
     void update();
     int _numFaces;
+    float _texRadius;
 };
 
 #endif
