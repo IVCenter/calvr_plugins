@@ -98,7 +98,8 @@ bool GlesDrawables::init() {
 //                 osg::Matrixf::translate(Vec3f(0.1,0.8,.0)), SPHERICAL_HARMONICS);
 //    createObject(_objects, "models/andy.obj", "textures/andy.png",
 //                 osg::Matrixf::translate(Vec3f(.0f, .0f, .0f)), ONES_SOURCE);
-
+//    createObject(_objects, "models/andy.obj", "textures/andy.png",
+//                 osg::Matrixf::translate(Vec3f(.0f, .0f, .0f)), true);
 //    for(auto b : _quadDrawables){
 //        b->setNodeMask(0);
 //    }
@@ -410,7 +411,7 @@ void GlesDrawables::createObject(osg::Group *parent,
             stateSet = _node->getOrCreateStateSet();
             stateSet->setAttributeAndModes(program);
 
-            stateSet->addUniform(new Uniform("uLightScale", 0.25f));
+            stateSet->addUniform(new Uniform("uLightScale", 0.1f));
             osg::Uniform *shColorUniform = new osg::Uniform(osg::Uniform::FLOAT_VEC3, "uSHBasis", 9);
             for(int i = 0; i < 9; ++i)
                 shColorUniform->setElement(i, osg::Vec3f(.0,.0,.0));
@@ -418,8 +419,12 @@ void GlesDrawables::createObject(osg::Group *parent,
             stateSet->addUniform(shColorUniform);
             break;}
         case ONES_SOURCE:{
-            program = assetLoader::instance()->createShaderProgramFromFile("shaders/objectPhong.vert",
-                                                                           "shaders/objectPhong.frag");
+//            program = assetLoader::instance()->createShaderProgramFromFile("shaders/objectPhong.vert",
+//                                                                           "shaders/objectPhong.frag");
+
+            program = assetLoader::instance()->createShaderProgramFromFile("shaders/compLightOSG.vert",
+                                                                           "shaders/compLightOSG.frag");
+
             stateSet = _node->getOrCreateStateSet();
             stateSet->setAttributeAndModes(program);
 
@@ -429,6 +434,10 @@ void GlesDrawables::createObject(osg::Group *parent,
             lightUniform->setUpdateCallback(new LightPosCallback(&_lightPosition));
 //            lightUniform->setUpdateCallback(new lightSrcCallback);
             stateSet->addUniform(lightUniform);
+
+            Uniform * eyeUniform = new Uniform(Uniform::FLOAT_VEC3, "uEyePos");
+            eyeUniform->setUpdateCallback(new eyePosCallback());
+            stateSet->addUniform(eyeUniform);
 
             Uniform * envColorUniform = new Uniform(Uniform::FLOAT_VEC4, "uColorCorrection");
             envColorUniform->setUpdateCallback(new envLightCallback);
