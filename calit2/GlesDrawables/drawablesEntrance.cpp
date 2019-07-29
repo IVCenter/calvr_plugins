@@ -57,6 +57,13 @@ void GlesDrawables::initMenuButtons() {
         cb->setCallback(this);
         _mainMenu->addItem(cb);
     }
+    _resetButton = new MenuButton("RESET");
+    _resetButton->setCallback(this);
+    _mainMenu->addItem(_resetButton);
+
+    _restartButton = new MenuButton("RESTART");
+    _restartButton->setCallback(this);
+    _mainMenu->addItem(_restartButton);
 }
 
 bool GlesDrawables::init() {
@@ -74,7 +81,7 @@ bool GlesDrawables::init() {
     //bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds
     rootSO= new SceneObject("glesRoot", false, false, false, false, false);
     rootSO->addChild(_root);
-    objSO = new SceneObject("testBoundObj", false, false, false, false, true);
+    objSO = new SceneObject("testBoundObj", false, false, false, false, false);
     rootSO->addChild(objSO);
     objSO->addChild(_objects);
     objSO->dirtyBounds();
@@ -97,8 +104,22 @@ bool GlesDrawables::init() {
 //    }
     return true;
 }
-
+void GlesDrawables::reset_scene(){
+    for(int i = _objNum-1; i>=0; i--)
+        _objects->removeChild( _objects->getChild(i));
+    _objNum = 0;
+    _map.clear();
+}
 void GlesDrawables::menuCallback(cvr::MenuItem *item) {
+    if(item == _resetButton){
+        basis_renderer->reset();
+        reset_scene();
+        return;
+    }
+    if(item == _restartButton){
+        PluginManager::setCallBackRequest("appRestart");
+        return;
+    }
     auto gotbool = std::find(_vCheckBox.begin(), _vCheckBox.end(), item);
     if(gotbool!=_vCheckBox.end()){
         int id = std::distance(_vCheckBox.begin(), gotbool);
@@ -134,15 +155,15 @@ void GlesDrawables::update_objects() {
             if (!ARCoreManager::instance()->getAnchorModelMatrixAt(modelMat, i))
                 break;
             switch(last_object_select){
-                case 1:
+                case CB_LIGHT+ARCORE_CORRECTION:
+                    createObject(_objects,"models/andy.obj", "textures/andy.png",
+                                 modelMat, ARCORE_CORRECTION);
+                    break;
+                case CB_LIGHT+ONES_SOURCE:
                     createObject(_objects,"models/andy.obj", "textures/andy.png",
                                  modelMat, ONES_SOURCE);
                     break;
-                case 2:
-                    createObject(_objects,"models/andy.obj", "textures/andy.png",
-                                 modelMat, ONES_SOURCE);
-                    break;
-                case 3:
+                case CB_LIGHT+SPHERICAL_HARMONICS:
                     createObject(_objects,"models/andy.obj", "textures/andy.png",
                                  modelMat, SPHERICAL_HARMONICS);
                     break;
@@ -160,7 +181,6 @@ void GlesDrawables::postFrame() {
 }
 
 bool GlesDrawables::check_obj_selection(osg::Vec2f touchPos){
-    LOGE("===SELECTION");
     osg::Vec3 pointerStart, pointerEnd;
     pointerStart = TrackingManager::instance()->getHandMat(0).getTrans();
     pointerEnd = ARCoreManager::instance()->getRealWorldPositionFromScreen(touchPos.x(), touchPos.y());
@@ -185,7 +205,6 @@ bool GlesDrawables::check_obj_selection(osg::Vec2f touchPos){
     return true;//finish checking
 }
 bool GlesDrawables::translate_obj(osg::Vec2f touchPos){
-    LOGE("======TRANSLATE===");
     Matrixf objMat = _map[_selectedNode].matrixTrans->getMatrix();
     Vec3f near_plane = ARCoreManager::instance()->getRealWorldPositionFromScreen(touchPos.x(), touchPos.y());
     near_plane = Vec3f(near_plane.x(), -near_plane.z(), near_plane.y());
@@ -205,7 +224,6 @@ bool GlesDrawables::translate_obj(osg::Vec2f touchPos){
     return true;
 }
 bool GlesDrawables::rotate_obj(osg::Vec2f touchPos){
-    LOGE("======ROTATE OBJ====");
     //http://www2.lawrence.edu/fast/GREGGJ/CMSC32/Rotation.html
 //        float oldx = _downPosition.x(), oldy = -_downPosition.z(), oldz = _downPosition.y();
 //        float newx = touchPos.x(), newy=-sqrt(1-touchPos.x()* touchPos.x() - touchPos.y() * touchPos.y()), newz = touchPos.y();

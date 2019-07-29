@@ -65,7 +65,7 @@ protected:
 
 //    cvr::MenuCheckbox *_pointButton, *_planeButton, *_quadButton;
 //    cvr::MenuCheckbox* _obj1Button, *_obj2Button, *_obj3Button, *_lightButton;
-
+    cvr::MenuButton * _resetButton, *_restartButton;
     std::vector<cvr::MenuCheckbox*> _vCheckBox;
 
     osg::Group *_root, *_objects;
@@ -91,6 +91,8 @@ protected:
     bool check_obj_selection(osg::Vec2f touchPos);
     bool translate_obj(osg::Vec2f touchPos);
     bool rotate_obj(osg::Vec2f touchPos);
+
+    void reset_scene();
 public:
     bool init();
     void menuCallback(cvr::MenuItem * item);

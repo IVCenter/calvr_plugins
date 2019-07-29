@@ -26,6 +26,7 @@ public:
         }
         plane_visiable = on;
     }
+    void reset();
 protected:
     osg::Group* _root;
     pointDrawable* _pointcloudDrawable;

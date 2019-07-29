@@ -10,6 +10,12 @@ osg::Group* basisRender::createBasicRenderer(){
     _root->addChild(_strokeDrawable->createDrawableNode(.0f,-0.8f));
     return _root;
 }
+void basisRender::reset(){
+//    _pointcloudDrawable->Reset();
+//    _strokeDrawable->Reset();
+    cvr::ARCoreManager::instance()->onReset();
+//    _plane_num = 0;
+}
 void basisRender::updateOnFrame(){
     //point
     _pointcloudDrawable->updateOnFrame();

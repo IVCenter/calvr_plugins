@@ -34,6 +34,7 @@ public:
     void updateOnFrame(ArPlane* plane, osg::Vec3f color);
     void Initialization();
     void drawImplementation(osg::RenderInfo&) const;
+    void Reset(){}
 };
 
 

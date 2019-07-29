@@ -41,6 +41,8 @@ public:
     void Initialization();
 
     void drawImplementation(osg::RenderInfo&) const;
+
+    void Reset(){}
 };
 
 #endif
