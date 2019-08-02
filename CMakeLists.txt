@@ -9,7 +9,9 @@ OPTION(PLUGINS_GENERAL "Build General Plugins" ON)
 INCLUDE(CVRPluginMacros)
 
 FIND_PACKAGE(CalVR)
-FIND_PACKAGE(OSG)
+FIND_PACKAGE( OpenSceneGraph REQUIRED osgAnimation osgFX osgManipulator osgParticle osgPresentation osgShadow osgSim osgTerrain osgText osgViewer osgVolume osgWidget osgDB osgGA osgUtil)
+SET(OSG_INCLUDE_DIR ${OPENSCENEGRAPH_INCLUDE_DIR})
+SET(OSG_LIBRARIES ${OPENSCENEGRAPH_LIBRARIES})
 
 SET(INSTALL_PREFIX "${CALVR_DIR}" CACHE STRING "library install location - /lib/calvr-plugins will be appended")
 

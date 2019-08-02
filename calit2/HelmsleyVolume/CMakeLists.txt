@@ -1,0 +1,26 @@
+SET(LIB_NAME HelmsleyVolume)
+
+FIND_PACKAGE(DCMTK)
+
+SET(PLUGIN_HEADERS
+    VolumeGroup.h
+    HelmsleyVolume.h
+    ImageLoader.hpp
+)
+
+ADD_LIBRARY(${LIB_NAME}
+    "SHARED"
+    ${PLUGIN_HEADERS}
+    HelmsleyVolume.cpp
+    ImageLoader.cpp
+    VolumeGroup.cpp
+)
+
+
+INCLUDE_DIRECTORIES(${OSG_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${DCMTK_INCLUDE_DIRS})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${OSG_LIBRARIES} ${DCMTK_LIBRARIES})
+
+ADD_CALVR_LIBRARIES(${LIB_NAME})
+
+INSTALL(TARGETS ${LIB_NAME} DESTINATION lib/plugins)
