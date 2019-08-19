@@ -4,11 +4,23 @@
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrKernel/FileHandler.h>
 #include <cvrKernel/SceneObject.h>
+#include <cvrKernel/SceneManager.h>
+#include <cvrKernel/PluginHelper.h>
+#include <cvrKernel/ComController.h>
+
+#include <cvrConfig/ConfigManager.h>
+
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/MenuRadial.h>
+#include <cvrMenu/MenuRangeValue.h>
+#include <cvrMenu/MenuRangeValueCompact.h>
+#include <cvrMenu/PopupMenu.h>
+#include <cvrMenu/MenuSystem.h>
+
 #include "VolumeDrawable.h"
 #include "VolumeGroup.h"
+#include <osg/PositionAttitudeTransform>
 
 #include <string>
 
@@ -21,14 +33,30 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
         bool init();
         void preFrame();
 		void postFrame();
+		bool processEvent(cvr::InteractionEvent* e);
 		void menuCallback(cvr::MenuItem* menuItem);
 		void createList(cvr::SubMenu* , std::string configbase);
 
     protected:
 		cvr::SubMenu * _vMenu;
 		cvr::MenuButton * _vButton;
+		std::vector<VolumeGroup*> _volumes;
+		std::vector<cvr::SceneObject*> _sceneObjects;
 		std::map<cvr::MenuItem*, std::string> _buttonMap;
+		std::map<cvr::MenuItem*, VolumeGroup*> _stepSizeMap;
+		std::map<cvr::MenuItem*, std::pair<std::string, VolumeGroup*>> _computeShaderMap;
 		cvr::MenuRadial * _radial;
+		cvr::PopupMenu * _selectionMenu;
+
+		osg::Matrix _selectionMatrix;
+
+		int _interactButton = 0;
+		int _radialXVal = 0;
+		int _radialYVal = 1;
+
+		bool _radialShown = false;
+		float _radialX = 0;
+		float _radialY = 0;
 };
 
 #endif
