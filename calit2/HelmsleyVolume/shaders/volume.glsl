@@ -7,9 +7,16 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 layout(rg16, binding = 0) uniform image3D volume;
 layout(rg16, binding = 1) uniform image3D baked;
 
-uniform float Exposure;
-uniform float Threshold;
-uniform float Density;
+//uniform float Exposure;
+//uniform float Threshold;
+//uniform float Density;
+
+uniform float ContrastBottom;
+uniform float ContrastTop;
+
+uniform float OpacityCenter;
+uniform float OpacityWidth;
+uniform float OpacityMult;
 
 uniform vec3 WorldScale;
 uniform vec3 TexelSize;
@@ -28,14 +35,19 @@ vec2 Sample(ivec3 p) {
 	s.r = 1 - s.r;
 	#endif
 
+	s.r = (s.r - ContrastBottom) / (ContrastTop - ContrastBottom);
+
 	#ifndef MASK
 	s.g = s.r;
 	#endif
 
-	s.g = max(0.0, (s.g - Threshold) / (1.0 - Threshold)); // subtractive for soft edges
-	s.g *= Density;
+	s.g = 1 - (abs(OpacityCenter - s.r) / OpacityWidth);
+	s.g *= OpacityMult;
 
-	s.r *= Exposure;
+	//s.g = max(0.0, (s.g - Threshold) / (1.0 - Threshold)); // subtractive for soft edges
+	//s.g *= Density;
+
+	//s.r *= Exposure;
 	return s;
 }
 

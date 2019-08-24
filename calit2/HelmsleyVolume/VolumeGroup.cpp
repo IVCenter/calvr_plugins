@@ -8,13 +8,16 @@
 #include <cvrKernel/ScreenConfig.h>
 #include <cvrKernel/CVRViewer.h>
 #include <osg/Texture2D>
+#include <osg/Texture3D>
+#include <osg/Texture>
 #include <osg/Notify>
 #include <osg/BlendFunc>
 #include <osg/MatrixTransform>
+#include <osg/Depth>
 
 std::string VolumeGroup::loadShaderFile(std::string filename) const
 {
-	std::ifstream file(filename);
+	std::ifstream file(filename.c_str());
 	if (!file) return "";
 
 	std::stringstream sstr;
@@ -63,8 +66,8 @@ osg::Matrix VolumeGroup::getWorldToObjectMatrix()
 
 void VolumeGroup::init()
 {
-	_computeUniforms = std::map<std::string, osg::ref_ptr<osg::Uniform>>();
-
+	_computeUniforms = std::map<std::string, osg::ref_ptr<osg::Uniform> >();
+	_dirty = std::map<osg::GraphicsContext*, bool>();
 	
 	std::string shaderDir = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.ShaderDir");
 	std::string vert = loadShaderFile(shaderDir + "test.vert");
@@ -81,9 +84,6 @@ void VolumeGroup::init()
 	_program->setName("Volume");
 	_program->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
 	_program->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
-	//osg::ShaderDefines d = _program->getShaderDefines();
-	//d.insert("SAMPLECOUNT");
-	//_program->setShaderDefines(d);
 	
 	_pat = new osg::PositionAttitudeTransform();
 	_cube = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0, 0, 0), 1, 1, 1));
@@ -97,7 +97,6 @@ void VolumeGroup::init()
 	states->setMode(GL_CULL_FACE, osg::StateAttribute::ON);
 	states->setMode(GL_BLEND, osg::StateAttribute::ON);
 	states->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-
 	states->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
 
 	osg::ref_ptr<osg::Geode> g = new osg::Geode();
@@ -105,66 +104,14 @@ void VolumeGroup::init()
 	_pat->addChild(g);
 	this->addChild(_pat);
 
-
-	/*
-	osg::ref_ptr<osg::Texture2D> tex = new osg::Texture2D;
-	tex->setName("TEX");
-	tex->setTextureSize(1920, 1080);
-	tex->setSourceFormat(GL_DEPTH_COMPONENT);
-	tex->setSourceType(GL_FLOAT);
-	tex->setInternalFormat(GL_DEPTH_COMPONENT24);
-	tex->setFilter(osg::Texture2D::MIN_FILTER,
-		osg::Texture2D::LINEAR);
-	tex->setFilter(osg::Texture2D::MAG_FILTER,
-		osg::Texture2D::LINEAR);
-
-	osg::ref_ptr<osg::Texture2D> tex2 = new osg::Texture2D;
-	tex2->setName("TEX2");
-	tex2->setTextureSize(1920, 1080);
-	tex2->setInternalFormat(GL_RGBA32F_ARB);
-	tex2->setSourceFormat(GL_RGBA);
-	tex2->setSourceType(GL_FLOAT);
-	tex2->setFilter(osg::Texture2D::MIN_FILTER,
-		osg::Texture2D::LINEAR);
-	tex2->setFilter(osg::Texture2D::MAG_FILTER,
-		osg::Texture2D::LINEAR);
-
-	states->setTextureAttribute(1, tex2, osg::StateAttribute::ON);
-	states->setTextureMode(1, GL_TEXTURE_2D, osg::StateAttribute::ON);
-	*/
-
 	
 	std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();
 	cvr::CVRViewer::instance()->getCameras(cameras);
 	for (int i = 0; i < cameras.size(); ++i)
 	{
 		cameras[i]->getGraphicsContext()->getState()->setUseModelViewAndProjectionUniforms(true);
-		/*
-		osg::Camera::BufferAttachmentMap bam = cameras[i]->getBufferAttachmentMap();
-		if (!bam.count(osg::Camera::DEPTH_BUFFER))
-		{
-			//cameras[i]->setRenderOrder(osg::Camera::PRE_RENDER, 0);
-			cameras[i]->setRenderTargetImplementation(osg::Camera::RenderTargetImplementation::FRAME_BUFFER_OBJECT);
-
-			//std::cout << cameras[i]->getName() << std::endl;
-			//tex->setResizeNonPowerOfTwoHint(false);
-			//tex->setUseHardwareMipMapGeneration(false);
-
-			cameras[i]->attach(osg::Camera::DEPTH_BUFFER, tex.get());
-
-
-			//tex2->setResizeNonPowerOfTwoHint(false);
-			//tex2->setUseHardwareMipMapGeneration(false);
-
-			cameras[i]->attach(osg::Camera::COLOR_BUFFER, tex2.get());
-
-
-		}
-		*/
+		//std::cout << i << ": " << cameras[i]->getName() << std::endl;
 	}
-
-	_cube->setDrawCallback(new VolumeDrawCallback(this));
-	_cube->setUseDisplayList(false);
 	
 
 	_PlanePoint = new osg::Uniform("PlanePoint", osg::Vec3(0.f, -2.f, 0.f));
@@ -193,16 +140,19 @@ void VolumeGroup::init()
 	
 	_computeNode = new osg::DispatchCompute(0, 0, 0);
 	_computeNode->setDataVariance(osg::Object::DYNAMIC);
-	_computeNode->setDrawCallback(new ComputeDrawCallback);
+	_computeNode->setDrawCallback(new ComputeDrawCallback(this));
 	osg::StateSet* computeStates = _computeNode->getOrCreateStateSet();
 	computeStates->setAttributeAndModes(_computeProgram.get(), osg::StateAttribute::ON);
-	states->setRenderBinDetails(-1, "RenderBin");
+	computeStates->setRenderBinDetails(-1, "RenderBin");
 	//this->addChild(_computeNode);
 
 
-	_computeUniforms["Exposure"] = new osg::Uniform("Exposure", 1.5f);
-	_computeUniforms["Density"] = new osg::Uniform("Density", .5f);
-	_computeUniforms["Threshold"] = new osg::Uniform("Threshold", .2f);
+	//_computeUniforms["Exposure"] = new osg::Uniform("Exposure", 1.5f);
+	_computeUniforms["OpacityCenter"] = new osg::Uniform("OpacityCenter", 1.0f);
+	_computeUniforms["OpacityWidth"] = new osg::Uniform("OpacityWidth", 1.0f);
+	_computeUniforms["OpacityMult"] = new osg::Uniform("OpacityMult", 1.0f);
+	_computeUniforms["ContrastBottom"] = new osg::Uniform("ContrastBottom", 0.0f);
+	_computeUniforms["ContrastTop"] = new osg::Uniform("ContrastTop", 1.0f);
 
 	_computeUniforms["LightDensity"] = new osg::Uniform("LightDensity", 300.f);
 	_computeUniforms["LightPosition"] = new osg::Uniform("LightPosition", osg::Vec3(0, 0.1f, 0));
@@ -217,31 +167,35 @@ void VolumeGroup::init()
 	_computeUniforms["volume"] = new osg::Uniform("volume", (int)0);
 	_computeUniforms["baked"] = new osg::Uniform("baked", (int)1);
 
-	for (std::map<std::string, osg::ref_ptr<osg::Uniform>>::iterator it = _computeUniforms.begin(); it != _computeUniforms.end(); ++it)
+	for (std::map<std::string, osg::ref_ptr<osg::Uniform> >::iterator it = _computeUniforms.begin(); it != _computeUniforms.end(); ++it)
 	{
 		computeStates->addUniform(it->second);
 	}
 
 }
 
-void VolumeGroup::loadVolume(std::string path)
+void VolumeGroup::loadVolume(std::string path, osg::Vec3 size)
 {
 	//osg::setNotifyLevel(osg::NotifySeverity::DEBUG_INFO);
-	osg::Vec3 size = osg::Vec3(0,0,0);
-	osg::Image* i = ImageLoader::LoadVolume(path, size);
+	osg::Vec3 s = osg::Vec3(0,0,0);
+	osg::Image* i = ImageLoader::LoadVolume(path, s);
 	if (!i)
 	{
 		std::cerr << "Volume could not be loaded" << std::endl;
 		return;
 	}
+	//_pat->setScale(size);
+
+	std::cout << size.x() << ", " << size.y() << ", " << size.z() << std::endl;
+
 	_pat->setScale(size);
-	
+
 
 	_volume = new osg::Texture3D;
 	_volume->setImage(i);
 	_volume->setTextureSize(i->s(), i->t(), i->r());
-	_volume->setFilter(osg::Texture3D::FilterParameter::MIN_FILTER, osg::Texture3D::FilterMode::LINEAR);
-	_volume->setFilter(osg::Texture3D::FilterParameter::MAG_FILTER, osg::Texture3D::FilterMode::LINEAR);
+	_volume->setFilter(osg::Texture3D::MIN_FILTER, osg::Texture3D::LINEAR);
+	_volume->setFilter(osg::Texture3D::MAG_FILTER, osg::Texture3D::LINEAR);
 	_volume->setInternalFormat(GL_RG16);
 	_volume->setName("VOLUME");
 	_volume->setResizeNonPowerOfTwoHint(false);
@@ -253,15 +207,19 @@ void VolumeGroup::loadVolume(std::string path)
 	_computeUniforms["TexelSize"]->set(osg::Vec3(1.0f / (float)i->s(), 1.0f / (float)i->t(), 1.0f / (float)i->r()));
 	
 	osg::StateSet* states = _computeNode->getOrCreateStateSet();
-	//states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
-	//states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
-	states->setTextureAttributeAndModes(0, _volume.get());
-	//states->setAttributeAndModes(imagbinding.get());
+	states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
+	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
 
-	setDirty();
+	//Set dirty on all graphics contexts
+	std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();
+	cvr::CVRViewer::instance()->getCameras(cameras);
+	for (int i = 0; i < cameras.size(); ++i)
+	{
+		setDirty(cameras[i]->getGraphicsContext());
+	}
+
 	precompute();
 
-	//osg::setNotifyLevel(osg::NotifySeverity::NOTICE);
 
 }
 
@@ -275,8 +233,8 @@ void VolumeGroup::precompute()
 		bimage->allocateImage(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth(), GL_RG, GL_UNSIGNED_SHORT);
 		_baked->setImage(bimage);
 		_baked->setTextureSize(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth());
-		_baked->setFilter(osg::Texture3D::FilterParameter::MIN_FILTER, osg::Texture3D::FilterMode::LINEAR);
-		_baked->setFilter(osg::Texture3D::FilterParameter::MAG_FILTER, osg::Texture3D::FilterMode::LINEAR);
+		_baked->setFilter(osg::Texture3D::MIN_FILTER, osg::Texture3D::LINEAR);
+		_baked->setFilter(osg::Texture3D::MAG_FILTER, osg::Texture3D::LINEAR);
 		_baked->setInternalFormat(GL_RG16);
 		_baked->setResizeNonPowerOfTwoHint(false);
 
@@ -284,14 +242,12 @@ void VolumeGroup::precompute()
 		_baked->setTextureSize(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth());
 
 		osg::StateSet* states = _computeNode->getOrCreateStateSet();
-		//states->setTextureAttribute(1, _baked.get(), osg::StateAttribute::ON);
-		//states->setTextureMode(1, GL_TEXTURE_3D, osg::StateAttribute::ON);
-		states->setTextureAttributeAndModes(1, _baked.get());
-		//states->setAttributeAndModes(imagbinding.get());
+		states->setTextureAttribute(1, _baked, osg::StateAttribute::ON);
+		states->setTextureMode(1, GL_TEXTURE_3D, osg::StateAttribute::ON);
 
 
-		osg::ref_ptr<osg::BindImageTexture> imagbinding = new osg::BindImageTexture(1, _baked.get(), osg::BindImageTexture::READ_WRITE, GL_RG16, 0, GL_TRUE);
-		osg::ref_ptr<osg::BindImageTexture> imagbinding2 = new osg::BindImageTexture(0, _volume.get(), osg::BindImageTexture::READ_ONLY, GL_RG16);
+		osg::ref_ptr<osg::BindImageTexture> imagbinding = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
+		osg::ref_ptr<osg::BindImageTexture> imagbinding2 = new osg::BindImageTexture(1, _baked, osg::BindImageTexture::READ_WRITE, GL_RG16, 0, GL_TRUE);
 
 		states->setAttributeAndModes(imagbinding);
 		states->setAttributeAndModes(imagbinding2);
@@ -299,25 +255,12 @@ void VolumeGroup::precompute()
 
 
 		states = _cube->getOrCreateStateSet();
-		//states->setTextureAttribute(0, _baked.get(), osg::StateAttribute::ON);
-		//states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
-		states->setTextureAttributeAndModes(0, _baked.get());
+		states->setTextureAttribute(0, _baked, osg::StateAttribute::ON);
+		states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
 
 
 
 
 		this->addChild(_computeNode);
 	}
-	
-	/*
-	if (_dirty)
-	{
-		this->addChild(_computeNode);
-		setDirty(false);
-	}
-	else
-	{
-		this->removeChild(_computeNode);
-	}
-	*/
 }

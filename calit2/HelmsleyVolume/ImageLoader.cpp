@@ -5,8 +5,10 @@
 #ifdef WIN32
 #include <Shlwapi.h>
 #else
+#include <stdlib.h> 
 #include <sys/types.h>
 #include <dirent.h>
+#include <linux/limits.h>
 #endif
 
 #ifdef LoadImage
@@ -70,6 +72,10 @@ string GetFullPath(const string& str) {
 		return str;
 	}
 	return string(buf);
+#else
+    char buf[PATH_MAX];
+    realpath(str.c_str(), buf);
+    return string(buf);
 #endif
 }
 
@@ -143,14 +149,6 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Vec3& size) {
 			std::cout << "DCM_SliceThickness: " << cnd.bad() << ", " << thickness << "\t - \t " << cnd.text() << std::endl;
 		}
 
-		cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingX, 0, OFTrue);
-		std::cout << "DCM_PixelSpacing: " << cnd.bad() << ", " << spacingX << "\t - \t " << cnd.text() << std::endl;
-		cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingY, 1, OFTrue);
-		std::cout << "DCM_PixelSpacing: " << cnd.bad() << ", " << spacingY << "\t - \t " << cnd.text() << std::endl;
-		cnd = dataset->findAndGetFloat64(DCM_SliceThickness, thickness, 0, OFTrue);
-		std::cout << "DCM_SliceThickness: " << cnd.bad() << ", " << thickness << "\t - \t " << cnd.text() << std::endl;
-
-
 
 		double x;
 		cnd = dataset->findAndGetFloat64(DCM_SliceLocation, x, 0);
@@ -162,7 +160,7 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Vec3& size) {
 		images.push_back(Slice(img, x));
 	}
 
-	std::sort(images.data(), images.data()+images.size());
+	//std::sort(images.data(), images.data()+images.size());
 
 	unsigned int w = images[0].image->getWidth();
 	unsigned int h = images[0].image->getHeight();
@@ -241,8 +239,9 @@ void GetFiles(const string& path, vector<string>& files) {
 	while ((dp = readdir(dirp)) != NULL) {
 		if (strcmp(strrchr(dp->d_name, '.') + 1, "dcm") != 0) continue;
 		// printf("Helmsley: Found dcm %s\n", dp->d_name);
-		files.push_back(dp->d_name);
+		files.push_back(path + dp->d_name);
 	}
+	std::sort(files.begin(), files.end());
 	closedir(dirp);
 	
 #endif
