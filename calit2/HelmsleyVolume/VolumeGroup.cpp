@@ -15,7 +15,7 @@
 #include <osg/MatrixTransform>
 #include <osg/Depth>
 
-std::string VolumeGroup::loadShaderFile(std::string filename) const
+std::string VolumeGroup::loadShaderFile(std::string filename)
 {
 	std::ifstream file(filename.c_str());
 	if (!file) return "";
@@ -103,15 +103,6 @@ void VolumeGroup::init()
 	g->addChild(_cube);
 	_pat->addChild(g);
 	this->addChild(_pat);
-
-	
-	std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();
-	cvr::CVRViewer::instance()->getCameras(cameras);
-	for (int i = 0; i < cameras.size(); ++i)
-	{
-		cameras[i]->getGraphicsContext()->getState()->setUseModelViewAndProjectionUniforms(true);
-		//std::cout << i << ": " << cameras[i]->getName() << std::endl;
-	}
 	
 
 	_PlanePoint = new osg::Uniform("PlanePoint", osg::Vec3(0.f, -2.f, 0.f));

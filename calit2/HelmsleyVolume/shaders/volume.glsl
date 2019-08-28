@@ -36,6 +36,7 @@ vec2 Sample(ivec3 p) {
 	#endif
 
 	s.r = (s.r - ContrastBottom) / (ContrastTop - ContrastBottom);
+	s.r = max(0, min(1, s.r));
 
 	#ifndef MASK
 	s.g = s.r;

@@ -13,6 +13,7 @@ SET(PLUGIN_HEADERS
     VolumeGroup.h
     HelmsleyVolume.h
     ImageLoader.hpp
+	MeasurementTool.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
@@ -21,6 +22,7 @@ ADD_LIBRARY(${LIB_NAME}
     HelmsleyVolume.cpp
     ImageLoader.cpp
     VolumeGroup.cpp
+	MeasurementTool.cpp
 )
 
 

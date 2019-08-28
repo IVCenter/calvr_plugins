@@ -15,8 +15,8 @@
 #undef LoadImage
 #endif
 
-#include <dcmtk/dcmimgle/dcmimage.h>
 #include <dcmtk/dcmdata/dctk.h>
+#include <dcmtk/dcmimgle/dcmimage.h>
 
 #include <algorithm>
 
@@ -135,9 +135,22 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Vec3& size) {
 	double thickness = 0.0;
 	OFCondition cnd;
 
+
+
 	for (unsigned int i = 0; i < files.size(); i++) {
+
+		#ifdef WIN32
+				//char pathA[MAX_PATH];
+				//WideCharToMultiByte(CP_UTF8, 0, (wchar_t*)files[i].c_str(), -1, pathA, (int)files[i].length() + 1, NULL, NULL);
+		wstring pathW(files[i].size(), L' ');
+		pathW.resize(std::mbstowcs(&pathW[0], files[i].c_str(), files[i].size()));
+		#else
+
+		#endif
+
+
 		DcmFileFormat fileFormat;
-		assert((cnd = fileFormat.loadFile(files[i].c_str())).good());
+		assert(fileFormat.loadFile(pathW).good());
 		DcmDataset* dataset = fileFormat.getDataset();
 
 		if (i == 0) {

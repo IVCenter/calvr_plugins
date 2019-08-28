@@ -12,7 +12,7 @@
 
 #include <cvrMenu/SubMenu.h>
 #include <cvrMenu/MenuButton.h>
-//#include <cvrMenu/MenuRadial.h>
+#include <cvrMenu/MenuRadial.h>
 #include <cvrMenu/MenuRangeValue.h>
 #include <cvrMenu/MenuRangeValueCompact.h>
 #include <cvrMenu/PopupMenu.h>
@@ -20,9 +20,11 @@
 #include <cvrMenu/MenuCheckbox.h>
 #include <cvrMenu/MenuList.h>
 
+#include <osg/PositionAttitudeTransform>
+
 #include "VolumeDrawable.h"
 #include "VolumeGroup.h"
-#include <osg/PositionAttitudeTransform>
+#include "MeasurementTool.h"
 
 #include <string>
 
@@ -39,13 +41,20 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		void menuCallback(cvr::MenuItem* menuItem);
 		void createList(cvr::SubMenu* , std::string configbase);
 
-		osg::MatrixTransform* cuttingPlane;
 
     protected:
+		struct MeasurementInfo {
+			osg::Vec3 start;
+			osg::Vec3 end;
+		};
+
 		cvr::SubMenu * _vMenu;
 		cvr::MenuButton * _vButton;
 		std::vector<VolumeGroup*> _volumes;
 		std::vector<cvr::SceneObject*> _sceneObjects;
+		osg::MatrixTransform* cuttingPlane;
+		MeasurementTool* measurementTool;
+
 
 		std::map<cvr::MenuItem*, std::string> _buttonMap;
 		std::map<cvr::MenuItem*, osg::Vec3> _buttonSizeMap;
@@ -54,7 +63,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		std::map<cvr::MenuItem*, std::pair<std::string, VolumeGroup*> > _computeShaderMap;
 		std::map<cvr::MenuItem*, std::pair<std::string, VolumeGroup*> > _volumeDefineMap;
 
-		//cvr::MenuRadial * _radial;
+		cvr::MenuRadial * _radial;
 		cvr::PopupMenu * _selectionMenu;
 
 		osg::Matrix _selectionMatrix;

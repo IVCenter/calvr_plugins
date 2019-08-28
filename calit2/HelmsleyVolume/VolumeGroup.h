@@ -31,7 +31,8 @@ public:
 
 
 	//non-osg functions
-	std::string loadShaderFile(std::string filename) const;
+	static std::string loadShaderFile(std::string filename);
+
 	void init();
 	void loadVolume(std::string path, osg::Vec3 size);
 	void precompute();

@@ -28,11 +28,20 @@ HelmsleyVolume::~HelmsleyVolume()
 
 bool HelmsleyVolume::init()
 {
+
+	std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();
+	cvr::CVRViewer::instance()->getCameras(cameras);
+	for (int i = 0; i < cameras.size(); ++i)
+	{
+		cameras[i]->getGraphicsContext()->getState()->setUseModelViewAndProjectionUniforms(true);
+	}
+
+
 	_interactButton = cvr::ConfigManager::getInt("Plugin.HelmsleyVolume.InteractButton", 0);
 	_cuttingPlaneDistance = cvr::ConfigManager::getFloat("Plugin.HelmsleyVolume.CuttingPlaneDistance", 200.0f);
 	float size = cvr::ConfigManager::getFloat("Plugin.HelmsleyVolume.CuttingPlaneSize", 500.0f);
 
-
+	//Cutting plane setup
 	osg::Drawable* cpd1 = new osg::ShapeDrawable(new osg::Box(osg::Vec3(size * 0.495, 0, 0), size * 0.01, size * 0.001, size));
 	osg::Drawable* cpd2 = new osg::ShapeDrawable(new osg::Box(osg::Vec3(size * -0.495, 0, 0), size * 0.01, size * 0.001, size));
 	osg::Drawable* cpd3 = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0, 0, size * 0.495), size, size * 0.001, size * 0.01));
@@ -47,11 +56,18 @@ bool HelmsleyVolume::init()
 	cuttingPlane = new osg::MatrixTransform();
 	cuttingPlane->addChild(cuttingPlaneGeode);
 
-	SceneObject * so;
-	so = new SceneObject("Cutting Plane Indicator", false, false, false, false, false);
-	so->addChild(cuttingPlane);
-	PluginHelper::registerSceneObject(so, "HelmsleyVolume");
-	so->attachToScene();
+	SceneObject * cpso = new SceneObject("Cutting Plane Indicator", false, false, false, false, false);
+	cpso->addChild(cuttingPlane);
+	PluginHelper::registerSceneObject(cpso, "HelmsleyVolume");
+	cpso->attachToScene();
+
+	//Measurement tool setup
+	measurementTool = new MeasurementTool();
+	measurementTool->setNodeMask(0);
+	SceneObject * mtso = new SceneObject("Measurement Tool", false, false, false, false, false);
+	mtso->addChild(measurementTool);
+	PluginHelper::registerSceneObject(mtso, "HelmsleyVolume");
+	mtso->attachToScene();
 
 
 	_selectionMatrix = osg::Matrix();
@@ -74,22 +90,24 @@ bool HelmsleyVolume::init()
 	std::string modelDir = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.ModelDir");
 	std::cout << modelDir << std::endl;
 
-	//_selectionMenu = new PopupMenu("Interaction options", "", false);
-	//_selectionMenu->setVisible(false);
-	/*
+	_selectionMenu = new PopupMenu("Interaction options", "", false);
+	_selectionMenu->setVisible(false);
+	
 	_radial = new MenuRadial();
 	std::vector<std::string> labels = std::vector<std::string>();
 	std::vector<bool> symbols = std::vector<bool>();
 	labels.push_back(modelDir + "scissors_ucsd.obj");
+	labels.push_back("measure");
 	labels.push_back(modelDir + "pen_ucsd.obj");
 	labels.push_back(modelDir + "eraser_ucsd.obj");
 
 	symbols.push_back(true);
+	symbols.push_back(false);
 	symbols.push_back(true);
 	symbols.push_back(true);
 	_radial->setLabels(labels, symbols);
 	_selectionMenu->addMenuItem(_radial);
-	*/
+	
 	//_vMenu->addItem(_radial);
 
 	createList(fileMenu, "Plugin.HelmsleyVolume.Files");
@@ -147,8 +165,8 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 	{
 		if (e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _interactButton)
 		{
-			//if (_radial->getValue() == 0)
-			//{
+			if (_radial->getValue() == 0)
+			{
 				//Cutting plane
 				osg::Matrix mat = PluginHelper::getHandMat(e->asHandEvent()->getHand());
 				
@@ -202,23 +220,49 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 				cuttingPlane->setMatrix(m);
 				cuttingPlane->setNodeMask(0xffffffff);
 				return true;
-			//}
+			}
+			else if (_radial->getValue() == 1)
+			{
+				//Measurement tool
+				osg::Matrix mat = PluginHelper::getHandMat(e->asHandEvent()->getHand());
+				osg::Vec4d position = osg::Vec4(0, _cuttingPlaneDistance, 0, 1) * mat;
+				osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
+
+				if (e->getInteraction() == BUTTON_DOWN)
+				{
+					measurementTool->setStart(pos);
+				}
+				else
+				{
+					measurementTool->setEnd(pos);
+					measurementTool->setNodeMask(0xffffffff);
+				}
+				return true;
+			}
 		}
 	}
 	else if (e->getInteraction() == BUTTON_UP)
 	{
 		if (e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _interactButton)
 		{
-			//if (_radial->getValue() == 0)
-			//{
+			if (_radial->getValue() == 0)
+			{
 				//Cutting plane
 				cuttingPlane->setNodeMask(0);
 				return true;
-			//}
+			}
+			else if (_radial->getValue() == 1)
+			{
+				//Measurement tool
+				if (measurementTool->getLength() < 5.0)
+				{
+					measurementTool->setNodeMask(0);
+				}
+			}
 		}
 
 	}
-	/*
+	
 	else if (e->asValuatorEvent() && e->asValuatorEvent()->getValuator() == _radialXVal)
 	{
 		_radialX = e->asValuatorEvent()->getValue();
@@ -245,7 +289,7 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 		_radialShown = false;
 		_selectionMenu->setVisible(false);
 	}
-    */
+    
 	return false;
 }
 
