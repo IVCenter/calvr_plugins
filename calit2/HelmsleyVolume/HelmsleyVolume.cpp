@@ -13,7 +13,6 @@ CVRPLUGIN(HelmsleyVolume)
 HelmsleyVolume::HelmsleyVolume()
 {
 	_buttonMap = std::map<cvr::MenuItem*, std::string>();
-	_buttonSizeMap = std::map<cvr::MenuItem*, osg::Vec3>();
 	_stepSizeMap = std::map<cvr::MenuItem*, VolumeGroup*>();
 	_scaleMap = std::map<cvr::MenuItem*, SceneObject*>();
 	_computeShaderMap = std::map<cvr::MenuItem*, std::pair<std::string, VolumeGroup*> >();
@@ -34,6 +33,7 @@ bool HelmsleyVolume::init()
 	for (int i = 0; i < cameras.size(); ++i)
 	{
 		cameras[i]->getGraphicsContext()->getState()->setUseModelViewAndProjectionUniforms(true);
+
 	}
 
 
@@ -131,13 +131,6 @@ void HelmsleyVolume::createList(SubMenu* menu, std::string configbase)
 			MenuButton * button = new MenuButton(list[i]);
 			button->setCallback(this);
 			menu->addItem(button);
-
-			osg::Vec3 v = osg::Vec3(1000, 1000, 1000);
-
-			v.x() = ConfigManager::getDouble(configbase + "." + list[i] + "." + "Width", 1000);
-			v.y() = ConfigManager::getDouble(configbase + "." + list[i] + "." + "Height", 1000);
-			v.z() = ConfigManager::getDouble(configbase + "." + list[i] + "." + "Depth", 1000);
-			_buttonSizeMap[button] = v;
 			_buttonMap[button] = path;
 		}
 		else
@@ -225,7 +218,7 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 			{
 				//Measurement tool
 				osg::Matrix mat = PluginHelper::getHandMat(e->asHandEvent()->getHand());
-				osg::Vec4d position = osg::Vec4(0, _cuttingPlaneDistance, 0, 1) * mat;
+				osg::Vec4d position = osg::Vec4(0, 0, 0, 1) * mat;
 				osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
 
 				if (e->getInteraction() == BUTTON_DOWN)
@@ -301,7 +294,15 @@ void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 		SceneObject * so;
 		so = new SceneObject("volume", false, true, true, true, false);
 		VolumeGroup * g = new VolumeGroup();
-		g->loadVolume(_buttonMap.at(menuItem), _buttonSizeMap.at(menuItem));
+		g->loadVolume(_buttonMap.at(menuItem));
+
+		//std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();
+		//cvr::CVRViewer::instance()->getCameras(cameras);
+		//osg::Texture* t = (cameras[0]->getBufferAttachmentMap())[osg::Camera::DEPTH_BUFFER]._texture;
+
+		//osg::Drawable* cube = g->getDrawable();
+		//g->getDrawable()->getOrCreateStateSet()->setTextureAttributeAndModes(1, t, osg::StateAttribute::ON);
+
 
 		_volumes.push_back(g);
 		_sceneObjects.push_back(so);
@@ -309,10 +310,11 @@ void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 
 		PluginHelper::registerSceneObject(so, "HelmsleyVolume");
 		so->attachToScene();
-		so->setNavigationOn(true);
+		so->setNavigationOn(false);
 		so->addMoveMenuItem();
 		so->addNavigationMenuItem();
 		//so->addScaleMenuItem("Size", 0.1f, 10.0f, 1.0f);
+		so->setShowBounds(true);
 
 
 		MenuRangeValueCompact* scale = new MenuRangeValueCompact("Scale", 0.1, 100.0, 1.0, true);

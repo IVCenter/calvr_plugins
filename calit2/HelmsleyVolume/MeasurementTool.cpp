@@ -57,6 +57,8 @@ void MeasurementTool::init()
 	_text->setAlignment(osgText::TextBase::CENTER_BOTTOM);
 	_text->setAutoRotateToScreen(true);
 	_text->setColor(osg::Vec4(1, 1, 1, 1));
+	_text->setEnableDepthWrites(false);
+	_text->getOrCreateStateSet()->setRenderBinDetails(INT_MAX, "RenderBin");
 
 
 	osg::ref_ptr<osg::Drawable> box = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0, 0, -0.5), 20, 2, 1));
@@ -64,10 +66,10 @@ void MeasurementTool::init()
 	stateset->setMode(GL_LIGHTING, osg::StateAttribute::ON);
 	stateset->addUniform(_ustart);
 	stateset->addUniform(_uend);
-	stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+	//stateset->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
 	stateset->setAttribute(new osg::CullFace(osg::CullFace::BACK));
 	stateset->setMode(GL_CULL_FACE, osg::StateAttribute::ON);
-	stateset->setMode(GL_BLEND, osg::StateAttribute::ON);
+	//stateset->setMode(GL_BLEND, osg::StateAttribute::ON);
 
 
 	osg::Program* program = new osg::Program();

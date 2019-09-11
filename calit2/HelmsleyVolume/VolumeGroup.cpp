@@ -70,8 +70,8 @@ void VolumeGroup::init()
 	_dirty = std::map<osg::GraphicsContext*, bool>();
 	
 	std::string shaderDir = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.ShaderDir");
-	std::string vert = loadShaderFile(shaderDir + "test.vert");
-	std::string frag = loadShaderFile(shaderDir + "test.frag");
+	std::string vert = loadShaderFile(shaderDir + "volume.vert");
+	std::string frag = loadShaderFile(shaderDir + "volume.frag");
 	std::string compute = loadShaderFile(shaderDir + "volume.glsl");
 
 	if (vert.empty() || frag.empty() || compute.empty())
@@ -79,6 +79,33 @@ void VolumeGroup::init()
 		std::cerr << "Helmsley Volume shaders not found!" << std::endl;
 		return;
 	}
+
+
+	//Set up depth buffer fbo
+	_resolveFBO = new osg::FrameBufferObject();
+	_depthTexture = new osg::Texture2D();
+	_depthTexture->setTextureSize(2048, 2048);
+	_depthTexture->setResizeNonPowerOfTwoHint(false);
+	_depthTexture->setSourceFormat(GL_DEPTH_COMPONENT);
+	//_depthTexture->setSourceType(GL_UNSIGNED_INT);
+	_depthTexture->setInternalFormat(GL_DEPTH_COMPONENT32);
+	_depthTexture->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::NEAREST);
+	_depthTexture->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::NEAREST);
+	_depthTexture->setWrap(osg::Texture::WRAP_R, osg::Texture::CLAMP_TO_EDGE);
+	_depthTexture->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+	_resolveFBO->setAttachment(osg::Camera::DEPTH_BUFFER, osg::FrameBufferAttachment(_depthTexture));
+
+	_colorTexture = new osg::Texture2D();
+	_colorTexture->setTextureSize(2048, 2048);
+	_colorTexture->setResizeNonPowerOfTwoHint(false);
+	_colorTexture->setInternalFormat(GL_RGBA);
+	_colorTexture->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::NEAREST);
+	_colorTexture->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::NEAREST);
+	_colorTexture->setWrap(osg::Texture::WRAP_R, osg::Texture::CLAMP_TO_EDGE);
+	_colorTexture->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+	_resolveFBO->setAttachment(osg::Camera::COLOR_BUFFER0, osg::FrameBufferAttachment(_colorTexture));
+
+
 
 	_program = new osg::Program;
 	_program->setName("Volume");
@@ -92,11 +119,17 @@ void VolumeGroup::init()
 	_cube->setColorArray(colors);
 	_cube->setColorBinding(osg::Geometry::BIND_OVERALL);
 
+	_cube->setDrawCallback(new VolumeDrawCallback(this));
+	_cube->setDataVariance(osg::Object::DYNAMIC);
+	_cube->setUseDisplayList(false);
+
 	osg::StateSet* states = _cube->getOrCreateStateSet();
 	states->setAttribute(new osg::CullFace(osg::CullFace::FRONT));
 	states->setMode(GL_CULL_FACE, osg::StateAttribute::ON);
 	states->setMode(GL_BLEND, osg::StateAttribute::ON);
 	states->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+	states->setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
+	//states->setRenderBinDetails(INT_MAX, "RenderBin");
 	states->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
 
 	osg::ref_ptr<osg::Geode> g = new osg::Geode();
@@ -114,11 +147,14 @@ void VolumeGroup::init()
 	states->addUniform(_StepSize);
 
 	osg::ref_ptr<osg::Uniform> vol = new osg::Uniform("Volume", (int)0);
-	osg::ref_ptr<osg::Uniform> dt = new osg::Uniform("DepthTexture", 1);
+	osg::ref_ptr<osg::Uniform> dt = new osg::Uniform("DepthTexture", (int)1);
 
 	states->addUniform(vol);
 	states->addUniform(dt);
 	
+	states->setTextureAttribute(1, _depthTexture, osg::StateAttribute::ON);
+	states->setTextureMode(1, GL_TEXTURE_2D, osg::StateAttribute::ON);
+
 
 
 	_computeProgram = new osg::Program;
@@ -165,7 +201,7 @@ void VolumeGroup::init()
 
 }
 
-void VolumeGroup::loadVolume(std::string path, osg::Vec3 size)
+void VolumeGroup::loadVolume(std::string path)
 {
 	//osg::setNotifyLevel(osg::NotifySeverity::DEBUG_INFO);
 	osg::Vec3 s = osg::Vec3(0,0,0);
@@ -175,11 +211,11 @@ void VolumeGroup::loadVolume(std::string path, osg::Vec3 size)
 		std::cerr << "Volume could not be loaded" << std::endl;
 		return;
 	}
+	_pat->setScale(s);
+
+	//std::cout << size.x() << ", " << size.y() << ", " << size.z() << std::endl;
+
 	//_pat->setScale(size);
-
-	std::cout << size.x() << ", " << size.y() << ", " << size.z() << std::endl;
-
-	_pat->setScale(size);
 
 
 	_volume = new osg::Texture3D;

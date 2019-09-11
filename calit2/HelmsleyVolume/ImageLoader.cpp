@@ -15,6 +15,8 @@
 #undef LoadImage
 #endif
 
+#include <iostream>
+
 #include <dcmtk/dcmdata/dctk.h>
 #include <dcmtk/dcmimgle/dcmimage.h>
 
@@ -93,11 +95,8 @@ osg::Image* LoadDicomImage(const string& path, osg::Vec3& size) {
 	double thickness = 0.0;
 	OFCondition cnd;
 	cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingX, 0);
-	std::cout << "DCM_PixelSpacing: " << cnd.bad()  << ", " << spacingX << std::endl;
 	cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingY, 1);
-	std::cout << "DCM_PixelSpacing: " << cnd.bad() << ", " << spacingY << std::endl;
 	cnd = dataset->findAndGetFloat64(DCM_SliceThickness, thickness, 0);
-	std::cout << "DCM_SliceThickness: " << cnd.bad() << ", " << thickness << std::endl;
 
 	unsigned int w = image->getWidth();
 	unsigned int h = image->getHeight();
@@ -139,33 +138,22 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Vec3& size) {
 
 	for (unsigned int i = 0; i < files.size(); i++) {
 
-		#ifdef WIN32
-				//char pathA[MAX_PATH];
-				//WideCharToMultiByte(CP_UTF8, 0, (wchar_t*)files[i].c_str(), -1, pathA, (int)files[i].length() + 1, NULL, NULL);
-		wstring pathW(files[i].size(), L' ');
-		pathW.resize(std::mbstowcs(&pathW[0], files[i].c_str(), files[i].size()));
-		#else
-
-		#endif
-
+		std::cout << files[i].c_str() << std::endl;
 
 		DcmFileFormat fileFormat;
-		assert(fileFormat.loadFile(pathW).good());
+		cnd = fileFormat.loadFile(files[i].c_str());
+		assert(cnd.good());
 		DcmDataset* dataset = fileFormat.getDataset();
 
 		if (i == 0) {
 			cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingX, 0, OFTrue);
-			std::cout << "DCM_PixelSpacing: " << cnd.bad() << ", " << spacingX << "\t - \t " << cnd.text() << std::endl;
 			cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingY, 1, OFTrue);
-			std::cout << "DCM_PixelSpacing: " << cnd.bad() << ", " << spacingY << "\t - \t " << cnd.text() << std::endl;
 			cnd = dataset->findAndGetFloat64(DCM_SliceThickness, thickness, 0, OFTrue);
-			std::cout << "DCM_SliceThickness: " << cnd.bad() << ", " << thickness << "\t - \t " << cnd.text() << std::endl;
 		}
 
 
 		double x;
 		cnd = dataset->findAndGetFloat64(DCM_SliceLocation, x, 0);
-		std::cout << "DCM_SliceLocation: " << cnd.bad() << ", " << x << "\t - \t " << cnd.text() << std::endl;
 
 		DicomImage* img = new DicomImage(files[i].c_str());
 		assert(img != NULL);
@@ -173,7 +161,7 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Vec3& size) {
 		images.push_back(Slice(img, x));
 	}
 
-	//std::sort(images.data(), images.data()+images.size());
+	std::sort(images.data(), images.data()+images.size());
 
 	unsigned int w = images[0].image->getWidth();
 	unsigned int h = images[0].image->getHeight();
