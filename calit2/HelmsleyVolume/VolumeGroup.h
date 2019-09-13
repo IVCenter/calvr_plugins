@@ -39,6 +39,7 @@ public:
 
 	void init();
 	void loadVolume(std::string path);
+	void loadMask(std::string path, osg::Image* volume);
 	void precompute();
 	void setDirtyAll()
 	{
@@ -50,6 +51,7 @@ public:
 	void setDirty(osg::GraphicsContext* gc, bool d=true) { _dirty[gc] = d; };
 	bool isDirty(osg::GraphicsContext* gc) { return _dirty[gc]; };
 	osg::Drawable* getDrawable() { return _cube; };
+	osg::DispatchCompute* getCompute() { return _computeNode; };
 	
 	void dirtyVolumeShader() { _program->dirtyProgram(); };
 	void dirtyComputeShader() { _computeProgram->dirtyProgram(); };
@@ -101,41 +103,12 @@ public:
 			std::cerr << "group doesn't exist!" << std::endl;
 			return;
 		}
-		//osg::setNotifyLevel(osg::DEBUG_INFO);
 
-		//std::cout << renderInfo.getCurrentCamera()->isRenderToTextureCamera() << std::endl;
-
-		//osg::Texture* dt = renderInfo.getCurrentCamera()->getBufferAttachmentMap()[osg::Camera::COLOR_BUFFER0]._texture;
+		//Resolve depth buffer for use in shader
 		cvr::ScreenBase* screen = cvr::ScreenConfig::instance()->getScreen(cvr::ScreenConfig::instance()->findScreenNumber(renderInfo.getCurrentCamera()));
 		screen->resolveBuffers(renderInfo.getCurrentCamera(), group->_resolveFBO, renderInfo.getState(), GL_DEPTH_BUFFER_BIT);
 
-
-		//const osg::Texture* dt = group->_resolveFBO->getAttachment(osg::Camera::COLOR_BUFFER0).getTexture();
-		//renderInfo.getState()->applyTextureAttribute(1, dt);
-		//renderInfo.getState()->applyTextureMode(1, GL_TEXTURE_2D, osg::StateAttribute::ON);
-
-		/*
-		if (renderInfo.getCurrentCamera()->getName().substr(0, 6).compare("OpenVR") == 0)
-		{
-			//osg::setNotifyLevel(osg::NOTICE);
-			//throw "bleh";
-			const osg::StateAttribute* sa = renderInfo.getState()->getLastAppliedTextureAttribute(0, osg::StateAttribute::TEXTURE);
-			const osg::Texture* t = sa->asTexture();
-		}
-		else
-		{
-			const osg::StateAttribute* sa = renderInfo.getState()->getLastAppliedTextureAttribute(0, osg::StateAttribute::TEXTURE);
-			const osg::Texture* t = sa->asTexture();
-			osg::GraphicsContext* gc = renderInfo.getCurrentCamera()->getGraphicsContext();
-		}
-
-
-		//std::cout << renderInfo.getState()->getLastAppliedTextureAttribute(1, osg::StateAttribute::TEXTURE)->getName() << std::endl;
-
-		*/
 		drawable->drawImplementation(renderInfo);
-		//renderInfo.getState()->applyTextureAttribute(1, NULL);
-		//renderInfo.getState()->applyTextureMode(1, GL_TEXTURE_2D, osg::StateAttribute::ON);
 	}
 };
 
@@ -153,7 +126,7 @@ public:
 		if (group->isDirty(renderInfo.getCurrentCamera()->getGraphicsContext()))
 		{
 
-			//std::cout << "computing\n";
+			//std::cout << "computing in gc " << renderInfo.getState()->getContextID() << "\n";
 			//std::cout << "0: " << renderInfo.getState()->getLastAppliedTextureAttribute(0, osg::StateAttribute::TEXTURE)->getName()
 			//          << ", 1: " << renderInfo.getState()->getLastAppliedTextureAttribute(1, osg::StateAttribute::TEXTURE)->getName() << std::endl;
 			

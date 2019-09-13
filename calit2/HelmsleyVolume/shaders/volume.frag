@@ -1,9 +1,6 @@
 #version 460
 
-#pragma multi_compile SAMPLECOUNT
-#pragma multi_compile COLORFUNCTION
-
-#pragma import_defines ( COLORFUNCTION, VR_ADAPTIVE_QUALITY )
+#pragma import_defines ( SAMPLECOUNT, VR_ADAPTIVE_QUALITY )
 
 out vec4 FragColor;
 
@@ -30,11 +27,7 @@ uniform sampler3D Volume;
 uniform sampler2D DepthTexture;
 
 //function taken from https://github.com/hughsk/glsl-hsv2rgb
-vec3 hsv2rgb(vec3 c) {
-  vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-  vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-  return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
-}
+
 
 vec2 RayCube(vec3 ro, vec3 rd, vec3 extents) {
     vec3 tMin = (-extents - ro) / rd;
@@ -74,19 +67,9 @@ float DepthTextureToObjectDepth(vec3 ro, vec3 screenPos) {
 }
 
 vec4 Sample(vec3 p) {
-	vec4 s;
+	vec4 ra = textureLod(Volume, p, 0.0);
 
-	vec2 ra = textureLod(Volume, p, 0.0).rg;
-
-	#ifdef COLORFUNCTION
-		s.rgb = COLORFUNCTION;
-	#else
-		s.rgb = vec3(ra.r);
-	#endif
-
-	s.a = ra.g;
-
-	return s;
+	return ra;
 }
 
 void main() {

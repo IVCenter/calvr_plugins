@@ -16,6 +16,7 @@ HelmsleyVolume::HelmsleyVolume()
 	_stepSizeMap = std::map<cvr::MenuItem*, VolumeGroup*>();
 	_scaleMap = std::map<cvr::MenuItem*, SceneObject*>();
 	_computeShaderMap = std::map<cvr::MenuItem*, std::pair<std::string, VolumeGroup*> >();
+	_computeDefineMap = std::map<cvr::MenuItem*, std::pair<std::string, VolumeGroup*> >();
 	_volumeDefineMap = std::map<cvr::MenuItem*, std::pair<std::string, VolumeGroup*> >();
 	_volumes = std::vector<VolumeGroup*>();
 	_sceneObjects = std::vector<SceneObject*>();
@@ -131,7 +132,7 @@ void HelmsleyVolume::createList(SubMenu* menu, std::string configbase)
 			MenuButton * button = new MenuButton(list[i]);
 			button->setCallback(this);
 			menu->addItem(button);
-			_buttonMap[button] = path;
+			_buttonMap[button] = configbase + "." + list[i];
 		}
 		else
 		{
@@ -377,7 +378,25 @@ void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 
 		colorfunction->setCallback(this);
 		so->addMenuItem(colorfunction);
-		_volumeDefineMap[colorfunction] = std::pair<std::string, VolumeGroup*>("COLORFUNCTION", g);
+		_computeDefineMap[colorfunction] = std::pair<std::string, VolumeGroup*>("COLORFUNCTION", g);
+
+
+
+		SubMenu* maskoptions = new SubMenu("Mask Options", "Mask Options");
+		so->addMenuItem(maskoptions);
+
+
+		MenuCheckbox* highlightcolon = new MenuCheckbox("Highlight Colon", false);
+		highlightcolon->setCallback(this);
+		maskoptions->addItem(highlightcolon);
+		_computeDefineMap[highlightcolon] = std::pair<std::string, VolumeGroup*>("COLON", g);
+
+		MenuCheckbox* organsonly = new MenuCheckbox("Display organs only", false);
+		organsonly->setCallback(this);
+		maskoptions->addItem(organsonly);
+		_computeDefineMap[organsonly] = std::pair<std::string, VolumeGroup*>("ORGANS_ONLY", g);
+
+
 	}
 	else if (_stepSizeMap.find(menuItem) != _stepSizeMap.end())
 	{
@@ -394,18 +413,35 @@ void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 	}
 	else if (_volumeDefineMap.find(menuItem) != _volumeDefineMap.end())
 	{
-		if (_volumeDefineMap[menuItem].first.compare("COLORFUNCTION") == 0)
+		MenuCheckbox* checkbox = (MenuCheckbox*)menuItem;
+		if (!checkbox)
+		{
+			return;
+		}
+		if (checkbox->getValue())
+		{
+			_volumeDefineMap[menuItem].second->getDrawable()->getOrCreateStateSet()->setDefine(_volumeDefineMap[menuItem].first, osg::StateAttribute::ON);
+		}
+		else
+		{
+			_volumeDefineMap[menuItem].second->getDrawable()->getOrCreateStateSet()->setDefine(_volumeDefineMap[menuItem].first, osg::StateAttribute::OFF);
+		}
+	}
+	else if (_computeDefineMap.find(menuItem) != _computeDefineMap.end())
+	{
+		if (_computeDefineMap[menuItem].first.compare("COLORFUNCTION") == 0)
 		{
 			MenuList* colorfunction = (MenuList*)menuItem;
 
 			if (colorfunction->getValue().compare("Default") == 0)
 			{
-				_volumeDefineMap[menuItem].second->getDrawable()->getOrCreateStateSet()->setDefine(_volumeDefineMap[menuItem].first, osg::StateAttribute::OFF);
+				_computeDefineMap[menuItem].second->getCompute()->getOrCreateStateSet()->setDefine(_computeDefineMap[menuItem].first, osg::StateAttribute::OFF);
 			}
 			else if (colorfunction->getValue().compare("Rainbow") == 0)
 			{
-				_volumeDefineMap[menuItem].second->getDrawable()->getOrCreateStateSet()->setDefine(_volumeDefineMap[menuItem].first, "hsv2rgb(vec3(ra.r, 1, 1))", osg::StateAttribute::ON);
+				_computeDefineMap[menuItem].second->getCompute()->getOrCreateStateSet()->setDefine(_computeDefineMap[menuItem].first, "hsv2rgb(vec3(ra.r * 0.8, 1, 1))", osg::StateAttribute::ON);
 			}
+			_computeDefineMap[menuItem].second->setDirtyAll();
 		}
 		else
 		{
@@ -416,12 +452,14 @@ void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 			}
 			if (checkbox->getValue())
 			{
-				_volumeDefineMap[menuItem].second->getDrawable()->getOrCreateStateSet()->setDefine(_volumeDefineMap[menuItem].first, osg::StateAttribute::ON);
+				_computeDefineMap[menuItem].second->getCompute()->getOrCreateStateSet()->setDefine(_computeDefineMap[menuItem].first, osg::StateAttribute::ON);
 			}
 			else
 			{
-				_volumeDefineMap[menuItem].second->getDrawable()->getOrCreateStateSet()->setDefine(_volumeDefineMap[menuItem].first, osg::StateAttribute::OFF);
+				_computeDefineMap[menuItem].second->getCompute()->getOrCreateStateSet()->setDefine(_computeDefineMap[menuItem].first, osg::StateAttribute::OFF);
 			}
+			_computeDefineMap[menuItem].second->setDirtyAll();
 		}
 	}
+
 }

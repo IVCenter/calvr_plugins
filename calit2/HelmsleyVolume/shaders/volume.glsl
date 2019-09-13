@@ -1,11 +1,12 @@
 #version 460
 
-#pragma multi_compile LIGHT_DIRECTIONAL LIGHT_SPOT LIGHT_POINT
-#pragma multi_compile MASK
+#pragma import_defines ( COLORFUNCTION, ORGANS_ONLY, LIGHT_DIRECTIONAL, LIGHT_SPOT,LIGHT_POINT )
+#pragma import_defines ( COLON, BLADDER, KIDNEYS, SPLEEN )
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 layout(rg16, binding = 0) uniform image3D volume;
-layout(rg16, binding = 1) uniform image3D baked;
+layout(rgba8, binding = 1) uniform image3D baked;
+
 
 //uniform float Exposure;
 //uniform float Threshold;
@@ -28,27 +29,45 @@ uniform float LightAngle;
 uniform float LightAmbient;
 uniform float LightIntensity;
 
-vec2 Sample(ivec3 p) {
-	vec2 s = imageLoad(volume, p).rg;
+vec3 hsv2rgb(vec3 c) {
+  vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+  vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+  return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+vec4 Sample(ivec3 p) {
+	vec2 ra = imageLoad(volume, p).rg;
+	vec4 s = vec4(0,0,0,0);
 
 	#ifdef INVERT
-	s.r = 1 - s.r;
+		ra.r = 1 - ra.r;
 	#endif
 
-	s.r = (s.r - ContrastBottom) / (ContrastTop - ContrastBottom);
-	s.r = max(0, min(1, s.r));
+	ra.r = (ra.r - ContrastBottom) / (ContrastTop - ContrastBottom);
+	ra.r = max(0, min(1, ra.r));
 
-	#ifndef MASK
-	s.g = s.r;
+
+	s.a = 1 - (abs(OpacityCenter - ra.r) / OpacityWidth);
+	s.a *= OpacityMult;
+
+	#ifdef COLORFUNCTION
+		s.rgb = COLORFUNCTION;
+	#else
+		s.rgb = vec3(ra.r);
 	#endif
 
-	s.g = 1 - (abs(OpacityCenter - s.r) / OpacityWidth);
-	s.g *= OpacityMult;
+	#ifdef COLON
+		if(ra.g > 0.01)
+		{
+			s.rgb = vec3(ra.r, 0, 0);
+		}
+	#endif
 
-	//s.g = max(0.0, (s.g - Threshold) / (1.0 - Threshold)); // subtractive for soft edges
-	//s.g *= Density;
+	#ifdef ORGANS_ONLY
+		s.a *= ra.g;
+	#endif
 
-	//s.r *= Exposure;
+
 	return s;
 }
 
@@ -99,7 +118,7 @@ float Light(vec3 p) {
 void main() {
 	ivec3 index = ivec3(gl_GlobalInvocationID.xyz);
 
-	vec2 s = Sample(index);
-	s.r *= Light(vec3(index));
-	imageStore(baked, index, vec4(s, 0.0, 0.0));
+	vec4 s = Sample(index);
+	s.rgb *= Light(vec3(index));
+	imageStore(baked, index, s);
 }

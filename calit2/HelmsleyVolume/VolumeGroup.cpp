@@ -1,12 +1,13 @@
 #include "VolumeGroup.h"
 #include "ImageLoader.hpp"
-#include <osg/Shader>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <cvrConfig/ConfigManager.h>
 #include <cvrKernel/ScreenConfig.h>
 #include <cvrKernel/CVRViewer.h>
+
+#include <osg/Shader>
 #include <osg/Texture2D>
 #include <osg/Texture3D>
 #include <osg/Texture>
@@ -14,6 +15,8 @@
 #include <osg/BlendFunc>
 #include <osg/MatrixTransform>
 #include <osg/Depth>
+
+#include <osgDB/readFile>
 
 std::string VolumeGroup::loadShaderFile(std::string filename)
 {
@@ -201,8 +204,12 @@ void VolumeGroup::init()
 
 }
 
-void VolumeGroup::loadVolume(std::string path)
+void VolumeGroup::loadVolume(std::string configpath)
 {
+	bool found;
+	std::string path = cvr::ConfigManager::getEntry(configpath, "", &found);
+	if (!found) return;
+
 	//osg::setNotifyLevel(osg::NotifySeverity::DEBUG_INFO);
 	osg::Vec3 s = osg::Vec3(0,0,0);
 	osg::Image* i = ImageLoader::LoadVolume(path, s);
@@ -212,6 +219,14 @@ void VolumeGroup::loadVolume(std::string path)
 		return;
 	}
 	_pat->setScale(s);
+
+	path = cvr::ConfigManager::getEntry(configpath + ".Mask", "", &found);
+	if (found)
+	{
+		loadMask(path, i);
+		//_computeNode->getOrCreateStateSet()->setDefine("MASK", true);
+		//_computeNode->getOrCreateStateSet()->setDefine("COLON", true);
+	}
 
 	//std::cout << size.x() << ", " << size.y() << ", " << size.z() << std::endl;
 
@@ -246,8 +261,34 @@ void VolumeGroup::loadVolume(std::string path)
 	}
 
 	precompute();
+}
 
+void VolumeGroup::loadMask(std::string path, osg::Image* volume)
+{
+	unsigned int width = volume->s();
+	unsigned int height = volume->t();
+	unsigned int depth = volume->r();
+	uint16_t * volumeData = (uint16_t*)volume->data();
+	int i = 0;
+	for (i = 0; i < depth; ++i)
+	{
+		std::string maskpath = path + "\\" + std::to_string(depth - (i + 1)) + ".png";
+		osg::ref_ptr<osg::Image> mask = osgDB::readImageFile(maskpath);
+		mask->flipVertical();
+		unsigned int bytesize = mask->getPixelSizeInBits() / 8;
+		unsigned char* maskData = mask->data();
 
+		uint16_t* slice = volumeData + 2 * i * width * height;
+		for (unsigned int y = 0; y < height; ++y)
+		{
+			for (unsigned int x = 0; x < width; ++x)
+			{
+				unsigned int volpixel = 2 * (x + y * width);
+				unsigned int maskpixel = bytesize * (x + y * width);
+				slice[volpixel + 1] = 256 * (uint16_t)(maskData[maskpixel]);
+			}
+		}
+	}
 }
 
 void VolumeGroup::precompute()
@@ -257,12 +298,12 @@ void VolumeGroup::precompute()
 	{
 		_baked = new osg::Texture3D;
 		osg::ref_ptr<osg::Image> bimage = new osg::Image();
-		bimage->allocateImage(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth(), GL_RG, GL_UNSIGNED_SHORT);
+		bimage->allocateImage(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth(), GL_RGBA, GL_UNSIGNED_BYTE);
 		_baked->setImage(bimage);
 		_baked->setTextureSize(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth());
 		_baked->setFilter(osg::Texture3D::MIN_FILTER, osg::Texture3D::LINEAR);
 		_baked->setFilter(osg::Texture3D::MAG_FILTER, osg::Texture3D::LINEAR);
-		_baked->setInternalFormat(GL_RG16);
+		_baked->setInternalFormat(GL_RGBA8);
 		_baked->setResizeNonPowerOfTwoHint(false);
 
 		_baked->setName("BAKED");
@@ -274,7 +315,7 @@ void VolumeGroup::precompute()
 
 
 		osg::ref_ptr<osg::BindImageTexture> imagbinding = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		osg::ref_ptr<osg::BindImageTexture> imagbinding2 = new osg::BindImageTexture(1, _baked, osg::BindImageTexture::READ_WRITE, GL_RG16, 0, GL_TRUE);
+		osg::ref_ptr<osg::BindImageTexture> imagbinding2 = new osg::BindImageTexture(1, _baked, osg::BindImageTexture::READ_WRITE, GL_RGBA8, 0, GL_TRUE);
 
 		states->setAttributeAndModes(imagbinding);
 		states->setAttributeAndModes(imagbinding2);

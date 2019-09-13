@@ -62,6 +62,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		std::map<cvr::MenuItem*, cvr::SceneObject*> _scaleMap;
 		std::map<cvr::MenuItem*, std::pair<std::string, VolumeGroup*> > _computeShaderMap;
 		std::map<cvr::MenuItem*, std::pair<std::string, VolumeGroup*> > _volumeDefineMap;
+		std::map<cvr::MenuItem*, std::pair<std::string, VolumeGroup*> > _computeDefineMap;
 
 		cvr::MenuRadial * _radial;
 		cvr::PopupMenu * _selectionMenu;
