@@ -1,6 +1,6 @@
 #version 460
 
-#pragma import_defines ( COLORFUNCTION, ORGANS_ONLY, LIGHT_DIRECTIONAL, LIGHT_SPOT,LIGHT_POINT )
+#pragma import_defines ( COLOR_FUNCTION, ORGANS_ONLY, LIGHT_DIRECTIONAL, LIGHT_SPOT,LIGHT_POINT )
 #pragma import_defines ( COLON, BLADDER, KIDNEYS, SPLEEN )
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
@@ -50,8 +50,8 @@ vec4 Sample(ivec3 p) {
 	s.a = 1 - (abs(OpacityCenter - ra.r) / OpacityWidth);
 	s.a *= OpacityMult;
 
-	#ifdef COLORFUNCTION
-		s.rgb = COLORFUNCTION;
+	#ifdef COLOR_FUNCTION
+		s.rgb = COLOR_FUNCTION;
 	#else
 		s.rgb = vec3(ra.r);
 	#endif

@@ -1,23 +1,11 @@
 #include "MeasurementTool.h"
+#include "HelmsleyVolume.h"
 #include <cvrConfig/ConfigManager.h>
 #include <osg/CullFace>
+
 #include <sstream>
 #include <iomanip>
-#include <iostream>
-#include <fstream>
 
-std::string MeasurementTool::loadShaderFile(std::string filename)
-{
-	std::ifstream file(filename.c_str());
-	if (!file) return "";
-
-	std::stringstream sstr;
-	sstr << file.rdbuf();
-
-	file.close();
-
-	return sstr.str();
-}
 
 MeasurementTool::MeasurementTool()
 {
@@ -37,9 +25,8 @@ MeasurementTool::~MeasurementTool()
 
 void MeasurementTool::init()
 {
-	std::string shaderDir = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.ShaderDir");
-	std::string vert = loadShaderFile(shaderDir + "ruler.vert");
-	std::string frag = loadShaderFile(shaderDir + "ruler.frag");
+	std::string vert = HelmsleyVolume::loadShaderFile("ruler.vert");
+	std::string frag = HelmsleyVolume::loadShaderFile("ruler.frag");
 
 	if (vert.empty() || frag.empty())
 	{
@@ -114,13 +101,36 @@ void MeasurementTool::update()
 	midpoint += osg::Vec3(0, 0, 25.0);
 	_text->setPosition(midpoint);
 
+	float dist = FLT_MAX;
+	cvr::SceneObject* closest = nullptr;
+	float scale = 1.0f;
+
+	for (int i = 0; i < HelmsleyVolume::instance()->getSceneObjects().size(); ++i)
+	{
+		cvr::SceneObject* so = HelmsleyVolume::instance()->getSceneObjects()[i];
+		const osg::BoundingBox bb = so->getOrComputeBoundingBox();
+
+		float distance = (bb.center() - midpoint).length();
+		if (distance < dist)
+		{
+			dist = distance;
+			closest = so;
+		}
+	}
+
+	if (closest)
+	{
+		scale = closest->getScale();
+	}
+
 	
 	osg::Vec3 forward = (_end - _start);
 	float length = forward.length();
 	//forward.normalize();
 
+
 	std::stringstream stream;
-	stream << std::fixed << std::setprecision(2) << length;
+	stream << std::fixed << std::setprecision(2) << length / scale;
 	setText(stream.str() + "mm");
 
 

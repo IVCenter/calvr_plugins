@@ -12,19 +12,24 @@ if(UNIX)
 endif(UNIX)
 
 SET(PLUGIN_HEADERS
+	VolumeMenu.h
     VolumeGroup.h
     HelmsleyVolume.h
     ImageLoader.hpp
 	MeasurementTool.h
+	ScreenshotTool.h
+	Interactable.h
 )
 
 ADD_LIBRARY(${LIB_NAME}
     "SHARED"
     ${PLUGIN_HEADERS}
+	VolumeMenu.cpp
     HelmsleyVolume.cpp
     ImageLoader.cpp
     VolumeGroup.cpp
 	MeasurementTool.cpp
+	ScreenshotTool.cpp
 )
 
 

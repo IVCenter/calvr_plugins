@@ -1,5 +1,6 @@
 #include "VolumeGroup.h"
 #include "ImageLoader.hpp"
+#include "HelmsleyVolume.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -18,19 +19,6 @@
 
 #include <osgDB/readFile>
 
-std::string VolumeGroup::loadShaderFile(std::string filename)
-{
-	std::ifstream file(filename.c_str());
-	if (!file) return "";
-
-	std::stringstream sstr;
-	sstr << file.rdbuf();
-
-	file.close();
-
-	return sstr.str();
-}
-
 VolumeGroup::VolumeGroup()
 {
 	init();
@@ -45,6 +33,8 @@ VolumeGroup::VolumeGroup(const VolumeGroup & group,
 
 VolumeGroup::~VolumeGroup()
 {
+	_computeUniforms.clear();
+	_dirty.clear();
 }
 
 osg::Matrix VolumeGroup::getObjectToWorldMatrix()
@@ -72,10 +62,9 @@ void VolumeGroup::init()
 	_computeUniforms = std::map<std::string, osg::ref_ptr<osg::Uniform> >();
 	_dirty = std::map<osg::GraphicsContext*, bool>();
 	
-	std::string shaderDir = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.ShaderDir");
-	std::string vert = loadShaderFile(shaderDir + "volume.vert");
-	std::string frag = loadShaderFile(shaderDir + "volume.frag");
-	std::string compute = loadShaderFile(shaderDir + "volume.glsl");
+	std::string vert = HelmsleyVolume::loadShaderFile("volume.vert");
+	std::string frag = HelmsleyVolume::loadShaderFile("volume.frag");
+	std::string compute = HelmsleyVolume::loadShaderFile("volume.glsl");
 
 	if (vert.empty() || frag.empty() || compute.empty())
 	{
@@ -212,7 +201,7 @@ void VolumeGroup::loadVolume(std::string configpath)
 
 	//osg::setNotifyLevel(osg::NotifySeverity::DEBUG_INFO);
 	osg::Vec3 s = osg::Vec3(0,0,0);
-	osg::Image* i = ImageLoader::LoadVolume(path, s);
+	osg::ref_ptr<osg::Image> i = ImageLoader::LoadVolume(path, s);
 	if (!i)
 	{
 		std::cerr << "Volume could not be loaded" << std::endl;
@@ -231,7 +220,6 @@ void VolumeGroup::loadVolume(std::string configpath)
 	//std::cout << size.x() << ", " << size.y() << ", " << size.z() << std::endl;
 
 	//_pat->setScale(size);
-
 
 	_volume = new osg::Texture3D;
 	_volume->setImage(i);

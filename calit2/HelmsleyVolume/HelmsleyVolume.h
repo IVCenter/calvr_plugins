@@ -22,9 +22,10 @@
 
 #include <osg/PositionAttitudeTransform>
 
-#include "VolumeDrawable.h"
 #include "VolumeGroup.h"
+#include "VolumeMenu.h"
 #include "MeasurementTool.h"
+#include "ScreenshotTool.h"
 
 #include <string>
 
@@ -34,6 +35,8 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
         HelmsleyVolume();
         virtual ~HelmsleyVolume();
 
+		static HelmsleyVolume* instance(){ return _instance; }
+
         bool init();
         void preFrame();
 		void postFrame();
@@ -41,6 +44,9 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		void menuCallback(cvr::MenuItem* menuItem);
 		void createList(cvr::SubMenu* , std::string configbase);
 
+		std::vector<cvr::SceneObject*> getSceneObjects() { return _sceneObjects; }
+
+		static std::string loadShaderFile(std::string filename);
 
     protected:
 		struct MeasurementInfo {
@@ -50,20 +56,16 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 
 		cvr::SubMenu * _vMenu;
 		cvr::MenuButton * _vButton;
-		std::vector<VolumeGroup*> _volumes;
-		std::vector<cvr::SceneObject*> _sceneObjects;
 		osg::MatrixTransform* cuttingPlane;
-		MeasurementTool* measurementTool;
+		osg::ref_ptr<MeasurementTool> measurementTool;
+		ScreenshotTool* screenshotTool;
 
+		std::vector<osg::ref_ptr<VolumeGroup> > _volumes;
+		std::vector<cvr::SceneObject*> _sceneObjects;
+		std::vector<VolumeMenu*> _volumeMenus;
+		std::vector<cvr::MenuButton*> _removeButtons;
 
 		std::map<cvr::MenuItem*, std::string> _buttonMap;
-		std::map<cvr::MenuItem*, osg::Vec3> _buttonSizeMap;
-		std::map<cvr::MenuItem*, VolumeGroup*> _stepSizeMap;
-		std::map<cvr::MenuItem*, cvr::SceneObject*> _scaleMap;
-		std::map<cvr::MenuItem*, std::pair<std::string, VolumeGroup*> > _computeShaderMap;
-		std::map<cvr::MenuItem*, std::pair<std::string, VolumeGroup*> > _volumeDefineMap;
-		std::map<cvr::MenuItem*, std::pair<std::string, VolumeGroup*> > _computeDefineMap;
-
 		cvr::MenuRadial * _radial;
 		cvr::PopupMenu * _selectionMenu;
 
@@ -72,12 +74,15 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		float _cuttingPlaneDistance;
 
 		int _interactButton = 0;
+		int _radialButton = 3;
 		int _radialXVal = 0;
 		int _radialYVal = 1;
 
 		bool _radialShown = false;
 		float _radialX = 0;
 		float _radialY = 0;
+
+		static HelmsleyVolume* _instance;
 };
 
 #endif

@@ -34,9 +34,6 @@ public:
 	virtual const char* className() const { return "VolumeGeode"; }
 
 
-	//non-osg functions
-	static std::string loadShaderFile(std::string filename);
-
 	void init();
 	void loadVolume(std::string path);
 	void loadMask(std::string path, osg::Image* volume);
@@ -104,9 +101,10 @@ public:
 			return;
 		}
 
-		//Resolve depth buffer for use in shader
-		cvr::ScreenBase* screen = cvr::ScreenConfig::instance()->getScreen(cvr::ScreenConfig::instance()->findScreenNumber(renderInfo.getCurrentCamera()));
-		screen->resolveBuffers(renderInfo.getCurrentCamera(), group->_resolveFBO, renderInfo.getState(), GL_DEPTH_BUFFER_BIT);
+		if (!cvr::ScreenBase::resolveBuffers(renderInfo.getCurrentCamera(), group->_resolveFBO, renderInfo.getState(), GL_DEPTH_BUFFER_BIT))
+		{
+			std::cout << "Depth buffer could not be resolved" << std::endl;
+		}
 
 		drawable->drawImplementation(renderInfo);
 	}

@@ -1,25 +1,43 @@
 #include "HelmsleyVolume.h"
 
+#include <cvrKernel/NodeMask.h>
+
 #include <ctime>
 #include <iostream>
-#include <cvrKernel/NodeMask.h>
+#include <algorithm>
+#include <sstream>
+#include <fstream>
 
 
 using namespace cvr;
 
+HelmsleyVolume * HelmsleyVolume::_instance = NULL;
+
+
 CVRPLUGIN(HelmsleyVolume)
 
+std::string HelmsleyVolume::loadShaderFile(std::string filename)
+{
+	std::string shaderDir = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.ShaderDir");
+	std::string fileLoc = shaderDir + filename;
+
+	std::ifstream file(fileLoc.c_str());
+	if (!file) return "";
+
+	std::stringstream sstr;
+	sstr << file.rdbuf();
+
+	file.close();
+
+	return sstr.str();
+}
 
 HelmsleyVolume::HelmsleyVolume()
 {
 	_buttonMap = std::map<cvr::MenuItem*, std::string>();
-	_stepSizeMap = std::map<cvr::MenuItem*, VolumeGroup*>();
-	_scaleMap = std::map<cvr::MenuItem*, SceneObject*>();
-	_computeShaderMap = std::map<cvr::MenuItem*, std::pair<std::string, VolumeGroup*> >();
-	_computeDefineMap = std::map<cvr::MenuItem*, std::pair<std::string, VolumeGroup*> >();
-	_volumeDefineMap = std::map<cvr::MenuItem*, std::pair<std::string, VolumeGroup*> >();
-	_volumes = std::vector<VolumeGroup*>();
+	_volumes = std::vector<osg::ref_ptr<VolumeGroup> >();
 	_sceneObjects = std::vector<SceneObject*>();
+	_volumeMenus = std::vector<VolumeMenu*>();
 }
 
 HelmsleyVolume::~HelmsleyVolume()
@@ -28,6 +46,7 @@ HelmsleyVolume::~HelmsleyVolume()
 
 bool HelmsleyVolume::init()
 {
+	_instance = this;
 
 	std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();
 	cvr::CVRViewer::instance()->getCameras(cameras);
@@ -70,11 +89,10 @@ bool HelmsleyVolume::init()
 	PluginHelper::registerSceneObject(mtso, "HelmsleyVolume");
 	mtso->attachToScene();
 
-
-	_selectionMatrix = osg::Matrix();
-	_selectionMatrix.makeTranslate(osg::Vec3(-300, 500, 300));
-
-
+	screenshotTool = new ScreenshotTool("Screenshot Tool", false, true, false, false, false);
+	screenshotTool->setPosition(osg::Vec3(0, 400, 500));
+	PluginHelper::registerSceneObject(screenshotTool, "HelmsleyVolume");
+	screenshotTool->attachToScene();
 
 
 	osg::setNotifyLevel(osg::NOTICE);
@@ -93,6 +111,11 @@ bool HelmsleyVolume::init()
 
 	_selectionMenu = new PopupMenu("Interaction options", "", false);
 	_selectionMenu->setVisible(false);
+
+	_selectionMatrix = osg::Matrix();
+	_selectionMatrix.makeTranslate(osg::Vec3(-300, 500, 300));
+	_selectionMenu->setTransform(_selectionMatrix);
+
 	
 	_radial = new MenuRadial();
 	std::vector<std::string> labels = std::vector<std::string>();
@@ -155,6 +178,10 @@ void HelmsleyVolume::postFrame()
 
 bool HelmsleyVolume::processEvent(InteractionEvent * e)
 {
+	if (e->getInteraction() == BUTTON_DOWN || e->getInteraction() == MOVE)
+	{
+		e->printValues();
+	}
 	if (e->getInteraction() == BUTTON_DOWN || e->getInteraction() == BUTTON_DRAG)
 	{
 		if (e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _interactButton)
@@ -234,6 +261,22 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 				return true;
 			}
 		}
+		if (e->getInteraction() == BUTTON_DOWN && e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _radialButton)
+		{
+			if (!_radialShown)
+			{
+				_selectionMenu->setVisible(true);
+				_selectionMenu->getRootObject()->getParent(0)->removeChild(_selectionMenu->getRootObject());
+				PluginHelper::getHand(e->asHandEvent()->getHand())->addChild(_selectionMenu->getRootObject());
+				_radialShown = true;
+			}
+			else
+			{
+				_radialShown = false;
+				_selectionMenu->setVisible(false);
+				PluginHelper::getHand(e->asHandEvent()->getHand())->removeChild(_selectionMenu->getRootObject());
+			}
+		}
 	}
 	else if (e->getInteraction() == BUTTON_UP)
 	{
@@ -256,57 +299,20 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 		}
 
 	}
-	
-	else if (e->asValuatorEvent() && e->asValuatorEvent()->getValuator() == _radialXVal)
-	{
-		_radialX = e->asValuatorEvent()->getValue();
-	}
-	else if (e->asValuatorEvent() && e->asValuatorEvent()->getValuator() == _radialYVal)
-	{
-		_radialY = e->asValuatorEvent()->getValue();
-	}
-	if (abs(_radialX) > 0.01 ||abs(_radialY) > 0.01)
-	{
-		if (!_radialShown)
-		{
-			_selectionMenu->setVisible(true);
-			_radialShown = true;
-		}
-		std::cout << "x: " << _radialX << ", y: " << _radialY << std::endl;
-		if (e->asHandEvent())
-		{
-			_selectionMenu->setTransform(_selectionMatrix * PluginHelper::getHandMat(e->asHandEvent()->getHand()));
-		}
-	}
-	else
-	{
-		_radialShown = false;
-		_selectionMenu->setVisible(false);
-	}
     
 	return false;
 }
 
 void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 {
-
+	
 	if (_buttonMap.find(menuItem) != _buttonMap.end())
 	{
 		SceneObject * so;
 		so = new SceneObject("volume", false, true, true, true, false);
+
 		VolumeGroup * g = new VolumeGroup();
 		g->loadVolume(_buttonMap.at(menuItem));
-
-		//std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();
-		//cvr::CVRViewer::instance()->getCameras(cameras);
-		//osg::Texture* t = (cameras[0]->getBufferAttachmentMap())[osg::Camera::DEPTH_BUFFER]._texture;
-
-		//osg::Drawable* cube = g->getDrawable();
-		//g->getDrawable()->getOrCreateStateSet()->setTextureAttributeAndModes(1, t, osg::StateAttribute::ON);
-
-
-		_volumes.push_back(g);
-		_sceneObjects.push_back(so);
 		so->addChild(g);
 
 		PluginHelper::registerSceneObject(so, "HelmsleyVolume");
@@ -314,152 +320,36 @@ void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 		so->setNavigationOn(false);
 		so->addMoveMenuItem();
 		so->addNavigationMenuItem();
-		//so->addScaleMenuItem("Size", 0.1f, 10.0f, 1.0f);
 		so->setShowBounds(true);
 
+		VolumeMenu* menu = new VolumeMenu(so, g);
+		menu->init();
 
-		MenuRangeValueCompact* scale = new MenuRangeValueCompact("Scale", 0.1, 100.0, 1.0, true);
-		scale->setCallback(this);
-		so->addMenuItem(scale);
-		_scaleMap[scale] = so;
+		_sceneObjects.push_back(so);
+		_volumes.push_back(g);
+		_volumeMenus.push_back(menu);
 
-
-		//Set up uniforms for shaders
-		MenuRangeValueCompact* sampleDistance = new MenuRangeValueCompact("SampleDistance", .0001, 0.01, .001, true);
-		sampleDistance->setCallback(this);
-		so->addMenuItem(sampleDistance);
-		_stepSizeMap[sampleDistance] = g;
-
-
-		SubMenu* contrast = new SubMenu("Contrast");
-		so->addMenuItem(contrast);
-
-		MenuRangeValueCompact* contrastbottom = new MenuRangeValueCompact("Contrast Bottom", 0.0, 1.0, 0.0, false);
-		contrastbottom->setCallback(this);
-		contrast->addItem(contrastbottom);
-		_computeShaderMap[contrastbottom] = std::pair<std::string, VolumeGroup*>("ContrastBottom", g);
-
-		MenuRangeValueCompact* contrasttop = new MenuRangeValueCompact("Contrast Top", 0.0, 1.0, 1.0, false);
-		contrasttop->setCallback(this);
-		contrast->addItem(contrasttop);
-		_computeShaderMap[contrasttop] = std::pair<std::string, VolumeGroup*>("ContrastTop", g);
-
-
-		SubMenu* opacity = new SubMenu("Opacity");
-		so->addMenuItem(opacity);
-
-		MenuRangeValueCompact* opacitymult = new MenuRangeValueCompact("Opacity Multiplier", 0.01, 10.0, 1.0, false);
-		opacitymult->setCallback(this);
-		opacity->addItem(opacitymult);
-		_computeShaderMap[opacitymult] = std::pair<std::string, VolumeGroup*>("OpacityMult", g);
-
-		MenuRangeValueCompact* opacitycenter = new MenuRangeValueCompact("Opacity Center", 0.0, 1.0, 1.0, false);
-		opacitycenter->setCallback(this);
-		opacity->addItem(opacitycenter);
-		_computeShaderMap[opacitycenter] = std::pair<std::string, VolumeGroup*>("OpacityCenter", g);
-
-		MenuRangeValueCompact* opacitywidth = new MenuRangeValueCompact("Opacity Width", 0.01, 1.0, 1.0, false);
-		opacitywidth->setCallback(this);
-		opacity->addItem(opacitywidth);
-		_computeShaderMap[opacitywidth] = std::pair<std::string, VolumeGroup*>("OpacityWidth", g);
-
-
-		//Setu up shader defines
-		MenuCheckbox* adaptivequality = new MenuCheckbox("Adaptive Quality", false);
-		adaptivequality->setCallback(this);
-		so->addMenuItem(adaptivequality);
-		_volumeDefineMap[adaptivequality] = std::pair<std::string, VolumeGroup*>("VR_ADAPTIVE_QUALITY", g);
-
-		MenuList* colorfunction = new MenuList();
-		std::vector<std::string> colorfunctions = std::vector<std::string>();
-		colorfunctions.push_back("Default");
-		colorfunctions.push_back("Rainbow");
-		colorfunction->setValues(colorfunctions);
-
-		colorfunction->setCallback(this);
-		so->addMenuItem(colorfunction);
-		_computeDefineMap[colorfunction] = std::pair<std::string, VolumeGroup*>("COLORFUNCTION", g);
-
-
-
-		SubMenu* maskoptions = new SubMenu("Mask Options", "Mask Options");
-		so->addMenuItem(maskoptions);
-
-
-		MenuCheckbox* highlightcolon = new MenuCheckbox("Highlight Colon", false);
-		highlightcolon->setCallback(this);
-		maskoptions->addItem(highlightcolon);
-		_computeDefineMap[highlightcolon] = std::pair<std::string, VolumeGroup*>("COLON", g);
-
-		MenuCheckbox* organsonly = new MenuCheckbox("Display organs only", false);
-		organsonly->setCallback(this);
-		maskoptions->addItem(organsonly);
-		_computeDefineMap[organsonly] = std::pair<std::string, VolumeGroup*>("ORGANS_ONLY", g);
-
-
+		MenuButton* removeButton = new MenuButton("Remove Volume");
+		so->addMenuItem(removeButton);
+		removeButton->setCallback(this);
+		_removeButtons.push_back(removeButton);
 	}
-	else if (_stepSizeMap.find(menuItem) != _stepSizeMap.end())
+	else if (std::find(_removeButtons.begin(), _removeButtons.end(), (MenuButton*)menuItem) != _removeButtons.end())
 	{
-		_stepSizeMap[menuItem]->_StepSize->set(((MenuRangeValueCompact*)menuItem)->getValue());
-	}
-	else if (_scaleMap.find(menuItem) != _scaleMap.end())
-	{
-		_scaleMap[menuItem]->setScale(((MenuRangeValueCompact*)menuItem)->getValue());
-	}
-	else if (_computeShaderMap.find(menuItem) != _computeShaderMap.end())
-	{
-		_computeShaderMap[menuItem].second->_computeUniforms[_computeShaderMap[menuItem].first]->set(((MenuRangeValueCompact*)menuItem)->getValue());
-		_computeShaderMap[menuItem].second->setDirtyAll();
-	}
-	else if (_volumeDefineMap.find(menuItem) != _volumeDefineMap.end())
-	{
-		MenuCheckbox* checkbox = (MenuCheckbox*)menuItem;
-		if (!checkbox)
-		{
-			return;
-		}
-		if (checkbox->getValue())
-		{
-			_volumeDefineMap[menuItem].second->getDrawable()->getOrCreateStateSet()->setDefine(_volumeDefineMap[menuItem].first, osg::StateAttribute::ON);
-		}
-		else
-		{
-			_volumeDefineMap[menuItem].second->getDrawable()->getOrCreateStateSet()->setDefine(_volumeDefineMap[menuItem].first, osg::StateAttribute::OFF);
-		}
-	}
-	else if (_computeDefineMap.find(menuItem) != _computeDefineMap.end())
-	{
-		if (_computeDefineMap[menuItem].first.compare("COLORFUNCTION") == 0)
-		{
-			MenuList* colorfunction = (MenuList*)menuItem;
+		std::vector<MenuButton*>::iterator it = std::find(_removeButtons.begin(), _removeButtons.end(), (MenuButton*)menuItem);
+		int index = std::distance(_removeButtons.begin(), it);
 
-			if (colorfunction->getValue().compare("Default") == 0)
-			{
-				_computeDefineMap[menuItem].second->getCompute()->getOrCreateStateSet()->setDefine(_computeDefineMap[menuItem].first, osg::StateAttribute::OFF);
-			}
-			else if (colorfunction->getValue().compare("Rainbow") == 0)
-			{
-				_computeDefineMap[menuItem].second->getCompute()->getOrCreateStateSet()->setDefine(_computeDefineMap[menuItem].first, "hsv2rgb(vec3(ra.r * 0.8, 1, 1))", osg::StateAttribute::ON);
-			}
-			_computeDefineMap[menuItem].second->setDirtyAll();
-		}
-		else
-		{
-			MenuCheckbox* checkbox = (MenuCheckbox*)menuItem;
-			if (!checkbox)
-			{
-				return;
-			}
-			if (checkbox->getValue())
-			{
-				_computeDefineMap[menuItem].second->getCompute()->getOrCreateStateSet()->setDefine(_computeDefineMap[menuItem].first, osg::StateAttribute::ON);
-			}
-			else
-			{
-				_computeDefineMap[menuItem].second->getCompute()->getOrCreateStateSet()->setDefine(_computeDefineMap[menuItem].first, osg::StateAttribute::OFF);
-			}
-			_computeDefineMap[menuItem].second->setDirtyAll();
-		}
+		_sceneObjects[index]->detachFromScene();
+		delete _volumeMenus[index];
+		delete _removeButtons[index];
+		_volumes[index].release();
+		delete _sceneObjects[index];
+		//delete _sceneObjects[index];
+		//delete _volumes[index]; //deleted automatically because no references left once sceneobject is deleted
+		_volumeMenus.erase(_volumeMenus.begin() + index);
+		_volumes.erase(_volumes.begin() + index);
+		_sceneObjects.erase(_sceneObjects.begin() + index);
+		_removeButtons.erase(_removeButtons.begin() + index);
 	}
-
+	
 }

@@ -159,6 +159,8 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Vec3& size) {
 		assert(img != NULL);
 		assert(img->getStatus() == EIS_Normal);
 		images.push_back(Slice(img, x));
+		//delete dataset;
+		//delete fileFormat;
 	}
 
 	std::sort(images.data(), images.data()+images.size());
@@ -187,13 +189,18 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Vec3& size) {
 		uint16_t* pixelData = (uint16_t*)images[i].image->getOutputData(16);
 		uint16_t* slice = data + 2 * i * w * h;
 		unsigned int j = 0;
-		for (unsigned int y = 0; y < h; y++)
+		for (unsigned int y = 0; y < h; y++) {
 			for (unsigned int x = 0; x < w; x++) {
 				j = 2 * (x + y * w);
 				slice[j] = pixelData[x + y * w];
 				//slice[j + 1] = 0xFFFF;
 			}
+		}
+
+		//free memory
+		delete images[i].image;
 	}
+
 
 	return img;
 }

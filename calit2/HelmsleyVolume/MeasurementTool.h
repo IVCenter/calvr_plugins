@@ -1,6 +1,7 @@
 #ifndef MEASUREMENT_TOOL_H
 #define MEASUREMENT_TOOL_H
 
+
 #include <osg/Group>
 #include <osg/Geode>
 #include <osg/ShapeDrawable>
@@ -24,7 +25,6 @@ public:
 	virtual const char* className() const { return "MeasurementTool"; }
 
 
-	static std::string loadShaderFile(std::string filename);
 
 	void setStart(osg::Vec3 v);
 	void setEnd(osg::Vec3 v);
