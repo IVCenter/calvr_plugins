@@ -19,7 +19,15 @@ SET(PLUGIN_HEADERS
 	MeasurementTool.h
 	ScreenshotTool.h
 	Interactable.h
+	FileSelector.h
 )
+
+if(WIN32)
+	SET(PLUGIN_HEADERS
+		${PLUGIN_HEADERS}
+		dirent.h
+	)
+endif(WIN32)
 
 ADD_LIBRARY(${LIB_NAME}
     "SHARED"
@@ -30,6 +38,7 @@ ADD_LIBRARY(${LIB_NAME}
     VolumeGroup.cpp
 	MeasurementTool.cpp
 	ScreenshotTool.cpp
+	FileSelector.cpp
 )
 
 

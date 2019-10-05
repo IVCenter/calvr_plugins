@@ -54,18 +54,19 @@ void VolumeMenu::init()
 	colorFunction->setCallback(this);
 	_scene->addMenuItem(colorFunction);
 
+	if (_volume->hasMask())
+	{
+		SubMenu* maskoptions = new SubMenu("Mask Options", "Mask Options");
+		_scene->addMenuItem(maskoptions);
 
-	SubMenu* maskoptions = new SubMenu("Mask Options", "Mask Options");
-	_scene->addMenuItem(maskoptions);
+		highlightColon = new MenuCheckbox("Highlight Colon", false);
+		highlightColon->setCallback(this);
+		maskoptions->addItem(highlightColon);
 
-	highlightColon = new MenuCheckbox("Highlight Colon", false);
-	highlightColon->setCallback(this);
-	maskoptions->addItem(highlightColon);
-
-	organsOnly = new MenuCheckbox("Display organs only", false);
-	organsOnly->setCallback(this);
-	maskoptions->addItem(organsOnly);
-
+		organsOnly = new MenuCheckbox("Display organs only", false);
+		organsOnly->setCallback(this);
+		maskoptions->addItem(organsOnly);
+	}
 }
 
 

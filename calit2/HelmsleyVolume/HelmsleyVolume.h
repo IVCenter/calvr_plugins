@@ -26,6 +26,7 @@
 #include "VolumeMenu.h"
 #include "MeasurementTool.h"
 #include "ScreenshotTool.h"
+#include "FileSelector.h"
 
 #include <string>
 
@@ -44,6 +45,9 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		void menuCallback(cvr::MenuItem* menuItem);
 		void createList(cvr::SubMenu* , std::string configbase);
 
+		void loadVolume(std::string path, std::string maskpath = "");
+		void removeVolume(int index);
+
 		std::vector<cvr::SceneObject*> getSceneObjects() { return _sceneObjects; }
 
 		static std::string loadShaderFile(std::string filename);
@@ -59,6 +63,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		osg::MatrixTransform* cuttingPlane;
 		osg::ref_ptr<MeasurementTool> measurementTool;
 		ScreenshotTool* screenshotTool;
+		FileSelector* fileSelector;
 
 		std::vector<osg::ref_ptr<VolumeGroup> > _volumes;
 		std::vector<cvr::SceneObject*> _sceneObjects;

@@ -35,8 +35,12 @@ public:
 
 
 	void init();
-	void loadVolume(std::string path);
+	void loadVolume(std::string path, std::string maskpath = "");
 	void loadMask(std::string path, osg::Image* volume);
+	bool hasMask()
+	{
+		return _hasMask;
+	}
 	void precompute();
 	void setDirtyAll()
 	{
@@ -61,11 +65,12 @@ public:
 	osg::Matrix getObjectToWorldMatrix();
 	osg::Matrix getWorldToObjectMatrix();
 
-	osg::ref_ptr<osg::PositionAttitudeTransform> _pat;
+	osg::ref_ptr<osg::MatrixTransform> _transform;
 	osg::ref_ptr<osg::FrameBufferObject> _resolveFBO;
 
 
 protected:
+	bool _hasMask;
 
 	std::map<osg::GraphicsContext*, bool> _dirty;
 

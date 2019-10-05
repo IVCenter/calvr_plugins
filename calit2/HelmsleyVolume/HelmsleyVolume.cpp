@@ -2,6 +2,14 @@
 
 #include <cvrKernel/NodeMask.h>
 
+#include <cvrMenu/NewUI/UIPopup.h>
+#include <cvrMenu/NewUI/UIQuadElement.h>
+#include <cvrMenu/NewUI/UIList.h>
+#include <cvrMenu/NewUI/UIText.h>
+#include <cvrMenu/NewUI/UIButton.h>
+#include <cvrMenu/NewUI/UITexture.h>
+#include <cvrMenu/NewUI/UISlider.h>
+
 #include <ctime>
 #include <iostream>
 #include <algorithm>
@@ -46,6 +54,89 @@ HelmsleyVolume::~HelmsleyVolume()
 
 bool HelmsleyVolume::init()
 {
+
+	std::string fontfile = CalVR::instance()->getResourceDir();
+	fontfile = fontfile + "/resources/ArenaCondensed.ttf";
+
+	osgText::Font * font = osgText::readFontFile(fontfile);
+	if (font)
+	{
+		UIUtil::setDefaultFont(font);
+	}
+
+	UIPopup* pop = new UIPopup();
+	UIQuadElement* bknd = new UIQuadElement(osg::Vec4(0.3, 0.3, 0.3, 1));
+	//UIButton* buttontest = new UIButton();
+	//bknd->addChild(buttontest);
+	pop->addChild(bknd);
+	pop->setPosition(osg::Vec3(0, 0, 1000));
+
+	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
+	//list->setMinSize(200);
+
+	//UIText* t1 = new UIText("asdf asdf asdf asdf asdf asdf asdf asdf asdf", 50, osgText::Text::LEFT_TOP);
+	//UIText* t2 = new UIText("asdf asdf asdf asdf asdf asdf asdf asdf asdf", 50, osgText::Text::CENTER_TOP);
+	//UIText* t3 = new UIText("asdf asdf asdf asdf asdf asdf asdf asdf asdf", 50, osgText::Text::RIGHT_TOP);
+	//UIText* t4 = new UIText("asdf asdf asdf asdf asdf asdf asdf asdf asdf", 50, osgText::Text::LEFT_CENTER);
+	//UIText* t5 = new UIText("asdf asdf asdf asdf asdf asdf asdf asdf asdf", 50, osgText::Text::CENTER_CENTER);
+	//UIText* t6 = new UIText("asdf asdf asdf asdf asdf asdf asdf asdf asdf", 50, osgText::Text::RIGHT_CENTER);
+	//UITexture* t4 = new UITexture(CalVR::instance()->getResourceDir() + "/icons/checkbox=TRUE.rgb");
+	//t4->setAbsoluteSize(osg::Vec3(100, 0, 100));
+	//t4->setPercentSize(osg::Vec3(0, 0, 0));
+	//UITexture* t5 = new UITexture(CalVR::instance()->getResourceDir() + "/icons/checkbox=FALSE.rgb");
+	//UITexture* t6 = new UITexture(CalVR::instance()->getResourceDir() + "/icons/checkbox=TRUE.rgb");
+
+	UISlider* t1 = new UISlider();
+	t1->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
+	t1->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
+	t1->handle->setPercentSize(osg::Vec3(0, 1, 1));
+	UIButton* t2 = new UIButton();
+	UIButton* t3 = new UIButton();
+	UIButton* t4 = new UIButton();
+	UIButton* t5 = new UIButton();
+	UIButton* t6 = new UIButton();
+
+	UIQuadElement* q1 = new UIQuadElement(osg::Vec4(1, 0, 0, 1));
+	UIQuadElement* q2 = new UIQuadElement(osg::Vec4(0, 1, 0, 1));
+	UIQuadElement* q3 = new UIQuadElement(osg::Vec4(0, 0, 1, 1));
+	UIQuadElement* q4 = new UIQuadElement(osg::Vec4(1, 0, 1, 1));
+	UIQuadElement* q5 = new UIQuadElement(osg::Vec4(1, 1, 0, 1));
+	UIQuadElement* q6 = new UIQuadElement(osg::Vec4(0, 1, 1, 1));
+	list->addChild(q1);
+	list->addChild(q2);
+	list->addChild(q3);
+	list->addChild(q4);
+	list->addChild(q5);
+	list->addChild(q6);
+
+	q1->addChild(t1);
+	q2->addChild(t2);
+	q3->addChild(t3);
+	q4->addChild(t4);
+	q5->addChild(t5);
+	q6->addChild(t6);
+
+
+	
+	UIList* list2 = new UIList(UIList::LEFT_TO_RIGHT, UIList::WRAP);
+	list2->setMinSize(400);
+	UIQuadElement* q7 = new UIQuadElement(osg::Vec4(1, 0, 0, 1));
+	UIQuadElement* q8 = new UIQuadElement(osg::Vec4(0, 1, 0, 1));
+	UIQuadElement* q9 = new UIQuadElement(osg::Vec4(0, 0, 1, 1));
+	list2->addChild(q7);
+	list2->addChild(q8);
+	list2->addChild(q9);
+
+	UIList* list3 = new UIList(UIList::LEFT_TO_RIGHT);
+	list3->addChild(list);
+	list3->addChild(list2);
+	
+	pop->addChild(list3);
+	//pop->addChild(list2);
+	pop->setActive(true, true);
+	return true;
+	
+
 	_instance = this;
 
 	std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();
@@ -93,6 +184,8 @@ bool HelmsleyVolume::init()
 	screenshotTool->setPosition(osg::Vec3(0, 400, 500));
 	PluginHelper::registerSceneObject(screenshotTool, "HelmsleyVolume");
 	screenshotTool->attachToScene();
+
+	fileSelector = new FileSelector();
 
 
 	osg::setNotifyLevel(osg::NOTICE);
@@ -178,6 +271,7 @@ void HelmsleyVolume::postFrame()
 
 bool HelmsleyVolume::processEvent(InteractionEvent * e)
 {
+	/*
 	if (e->getInteraction() == BUTTON_DOWN || e->getInteraction() == MOVE)
 	{
 		e->printValues();
@@ -210,8 +304,8 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 					_sceneObjects[i]->getWorldToObjectMatrix().decompose(v, q, v2, q2);
 					m.postMultRotate(q);
 					_volumes[i]->getWorldToObjectMatrix().decompose(v, q, v2, q2);
-					m.postMultRotate(q);
 					m.postMultScale(osg::Vec3(1.0 / v2.x(), 1.0 / v2.y(), 1.0/v2.z()));
+					m.postMultRotate(q);
 
 					osg::Vec4d normal = osg::Vec4(0, 1, 0, 0) * m;
 					osg::Vec3 norm = osg::Vec3(normal.x(), normal.y(), normal.z());
@@ -299,7 +393,7 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 		}
 
 	}
-    
+    */
 	return false;
 }
 
@@ -308,48 +402,67 @@ void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 	
 	if (_buttonMap.find(menuItem) != _buttonMap.end())
 	{
-		SceneObject * so;
-		so = new SceneObject("volume", false, true, true, true, false);
+		bool found;
+		std::string path = cvr::ConfigManager::getEntry(_buttonMap.at(menuItem), "", &found);
+		if (!found) return;
 
-		VolumeGroup * g = new VolumeGroup();
-		g->loadVolume(_buttonMap.at(menuItem));
-		so->addChild(g);
+		std::string maskpath = cvr::ConfigManager::getEntry(_buttonMap.at(menuItem) + ".Mask", "", &found);
 
-		PluginHelper::registerSceneObject(so, "HelmsleyVolume");
-		so->attachToScene();
-		so->setNavigationOn(false);
-		so->addMoveMenuItem();
-		so->addNavigationMenuItem();
-		so->setShowBounds(true);
-
-		VolumeMenu* menu = new VolumeMenu(so, g);
-		menu->init();
-
-		_sceneObjects.push_back(so);
-		_volumes.push_back(g);
-		_volumeMenus.push_back(menu);
-
-		MenuButton* removeButton = new MenuButton("Remove Volume");
-		so->addMenuItem(removeButton);
-		removeButton->setCallback(this);
-		_removeButtons.push_back(removeButton);
+		loadVolume(path, maskpath);
 	}
 	else if (std::find(_removeButtons.begin(), _removeButtons.end(), (MenuButton*)menuItem) != _removeButtons.end())
 	{
 		std::vector<MenuButton*>::iterator it = std::find(_removeButtons.begin(), _removeButtons.end(), (MenuButton*)menuItem);
 		int index = std::distance(_removeButtons.begin(), it);
 
-		_sceneObjects[index]->detachFromScene();
-		delete _volumeMenus[index];
-		delete _removeButtons[index];
-		_volumes[index].release();
-		delete _sceneObjects[index];
-		//delete _sceneObjects[index];
-		//delete _volumes[index]; //deleted automatically because no references left once sceneobject is deleted
-		_volumeMenus.erase(_volumeMenus.begin() + index);
-		_volumes.erase(_volumes.begin() + index);
-		_sceneObjects.erase(_sceneObjects.begin() + index);
-		_removeButtons.erase(_removeButtons.begin() + index);
+		removeVolume(index);
 	}
 	
+}
+
+void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
+{
+
+	SceneObject * so;
+	so = new SceneObject("volume", false, true, true, true, false);
+	so->setPosition(osg::Vec3(0, 0, 500));
+
+	VolumeGroup * g = new VolumeGroup();
+	g->loadVolume(path, maskpath);
+	so->addChild(g);
+
+	PluginHelper::registerSceneObject(so, "HelmsleyVolume");
+	so->attachToScene();
+	so->setNavigationOn(false);
+	so->addMoveMenuItem();
+	so->addNavigationMenuItem();
+	so->setShowBounds(true);
+
+	VolumeMenu* menu = new VolumeMenu(so, g);
+	menu->init();
+
+	_sceneObjects.push_back(so);
+	_volumes.push_back(g);
+	_volumeMenus.push_back(menu);
+
+	MenuButton* removeButton = new MenuButton("Remove Volume");
+	so->addMenuItem(removeButton);
+	removeButton->setCallback(this);
+	_removeButtons.push_back(removeButton);
+
+}
+
+void HelmsleyVolume::removeVolume(int index)
+{
+	_sceneObjects[index]->detachFromScene();
+	delete _volumeMenus[index];
+	delete _removeButtons[index];
+	_volumes[index].release();
+	delete _sceneObjects[index];
+	//delete _sceneObjects[index];
+	//delete _volumes[index]; //deleted automatically because no references left once sceneobject is deleted
+	_volumeMenus.erase(_volumeMenus.begin() + index);
+	_volumes.erase(_volumes.begin() + index);
+	_sceneObjects.erase(_sceneObjects.begin() + index);
+	_removeButtons.erase(_removeButtons.begin() + index);
 }

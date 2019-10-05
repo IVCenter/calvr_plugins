@@ -40,9 +40,9 @@ VolumeGroup::~VolumeGroup()
 osg::Matrix VolumeGroup::getObjectToWorldMatrix()
 {
 	osg::Matrix mat = osg::Matrix::identity();
-	if(_pat)
+	if(_transform)
 	{
-		_pat->computeLocalToWorldMatrix(mat, NULL);
+		_transform->computeLocalToWorldMatrix(mat, NULL);
 	}
 	return mat;
 }
@@ -50,15 +50,16 @@ osg::Matrix VolumeGroup::getObjectToWorldMatrix()
 osg::Matrix VolumeGroup::getWorldToObjectMatrix()
 {
 	osg::Matrix mat = osg::Matrix::identity();
-	if (_pat)
+	if (_transform)
 	{
-		_pat->computeWorldToLocalMatrix(mat, NULL);
+		_transform->computeWorldToLocalMatrix(mat, NULL);
 	}
 	return mat;
 }
 
 void VolumeGroup::init()
 {
+	_hasMask = false;
 	_computeUniforms = std::map<std::string, osg::ref_ptr<osg::Uniform> >();
 	_dirty = std::map<osg::GraphicsContext*, bool>();
 	
@@ -104,7 +105,7 @@ void VolumeGroup::init()
 	_program->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
 	_program->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
 	
-	_pat = new osg::PositionAttitudeTransform();
+	_transform = new osg::MatrixTransform();
 	_cube = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0, 0, 0), 1, 1, 1));
 	osg::Vec4Array* colors = new osg::Vec4Array;
 	colors->push_back(osg::Vec4(1, 1, 1, 1));
@@ -126,8 +127,8 @@ void VolumeGroup::init()
 
 	osg::ref_ptr<osg::Geode> g = new osg::Geode();
 	g->addChild(_cube);
-	_pat->addChild(g);
-	this->addChild(_pat);
+	_transform->addChild(g);
+	this->addChild(_transform);
 	
 
 	_PlanePoint = new osg::Uniform("PlanePoint", osg::Vec3(0.f, -2.f, 0.f));
@@ -193,26 +194,24 @@ void VolumeGroup::init()
 
 }
 
-void VolumeGroup::loadVolume(std::string configpath)
+void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 {
-	bool found;
-	std::string path = cvr::ConfigManager::getEntry(configpath, "", &found);
-	if (!found) return;
-
 	//osg::setNotifyLevel(osg::NotifySeverity::DEBUG_INFO);
-	osg::Vec3 s = osg::Vec3(0,0,0);
-	osg::ref_ptr<osg::Image> i = ImageLoader::LoadVolume(path, s);
+	//osg::Vec3 s = osg::Vec3(0,0,0);
+	osg::Matrix m = osg::Matrix::identity();
+	osg::ref_ptr<osg::Image> i = ImageLoader::LoadVolume(path, m);
 	if (!i)
 	{
 		std::cerr << "Volume could not be loaded" << std::endl;
 		return;
 	}
-	_pat->setScale(s);
+	//_transform->setScale(s);
+	_transform->setMatrix(m);
 
-	path = cvr::ConfigManager::getEntry(configpath + ".Mask", "", &found);
-	if (found)
+	if (maskpath.compare("") != 0)
 	{
-		loadMask(path, i);
+		loadMask(maskpath, i);
+		_hasMask = true;
 		//_computeNode->getOrCreateStateSet()->setDefine("MASK", true);
 		//_computeNode->getOrCreateStateSet()->setDefine("COLON", true);
 	}

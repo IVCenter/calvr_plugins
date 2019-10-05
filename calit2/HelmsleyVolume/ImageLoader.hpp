@@ -15,5 +15,5 @@
 class ImageLoader {
 public:
 	static osg::Image* LoadImage(const std::string& imagePath, osg::Vec3& size);
-	static osg::Image* LoadVolume(const std::string& folder, osg::Vec3& size);
+	static osg::Image* LoadVolume(const std::string& folder, osg::Matrix& transform);
 };

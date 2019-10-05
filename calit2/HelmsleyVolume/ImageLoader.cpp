@@ -124,7 +124,7 @@ osg::Image* LoadDicomImage(const string& path, osg::Vec3& size) {
 
 	return img;
 }
-osg::Image* LoadDicomVolume(const vector<string>& files, osg::Vec3& size) {
+osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform) {
 
 	vector<Slice> images;
 
@@ -132,6 +132,16 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Vec3& size) {
 	double spacingX = 0.0;
 	double spacingY = 0.0;
 	double thickness = 0.0;
+	double positionX = 0.0;
+	double positionY = 0.0;
+	double positionZ = 0.0;
+	double orientation1X = 0.0;
+	double orientation1Y = 0.0;
+	double orientation1Z = 0.0;
+	double orientation2X = 0.0;
+	double orientation2Y = 0.0;
+	double orientation2Z = 0.0;
+
 	OFCondition cnd;
 
 
@@ -146,9 +156,18 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Vec3& size) {
 		DcmDataset* dataset = fileFormat.getDataset();
 
 		if (i == 0) {
-			cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingX, 0, OFTrue);
-			cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingY, 1, OFTrue);
-			cnd = dataset->findAndGetFloat64(DCM_SliceThickness, thickness, 0, OFTrue);
+			cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingX, 0);
+			cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingY, 1);
+			cnd = dataset->findAndGetFloat64(DCM_SliceThickness, thickness, 0);
+			cnd = dataset->findAndGetFloat64(DCM_ImagePositionPatient, positionX, 0);
+			cnd = dataset->findAndGetFloat64(DCM_ImagePositionPatient, positionY, 1);
+			cnd = dataset->findAndGetFloat64(DCM_ImagePositionPatient, positionZ, 2);
+			cnd = dataset->findAndGetFloat64(DCM_ImageOrientationPatient, orientation1X, 0);
+			cnd = dataset->findAndGetFloat64(DCM_ImageOrientationPatient, orientation1Y, 1);
+			cnd = dataset->findAndGetFloat64(DCM_ImageOrientationPatient, orientation1Z, 2);
+			cnd = dataset->findAndGetFloat64(DCM_ImageOrientationPatient, orientation2X, 3);
+			cnd = dataset->findAndGetFloat64(DCM_ImageOrientationPatient, orientation2Y, 4);
+			cnd = dataset->findAndGetFloat64(DCM_ImageOrientationPatient, orientation2Z, 5);
 		}
 
 
@@ -169,6 +188,7 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Vec3& size) {
 	unsigned int h = images[0].image->getHeight();
 	unsigned int d = (unsigned int)images.size();
 
+	osg::Vec3 size = osg::Vec3(0, 0, 0);
 	// volume size in millimeters
 	size.x() = (float)spacingX * (float)w;
 	size.y() = (float)spacingY * (float)h;
@@ -179,6 +199,22 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Vec3& size) {
 	printf("%fm x %fm x %fm\n", (float)spacingX, (float)spacingY, (float)thickness);
 
 	printf("%fm x %fm x %fm\n", size.x(), size.y(), size.z());
+
+	osg::Vec3 rowdir = osg::Vec3(orientation1X, orientation1Y, orientation1Z);
+	osg::Vec3 coldir = osg::Vec3(orientation2X, orientation2Y, orientation2Z);
+	osg::Vec3 depthdir = coldir ^ rowdir;
+
+	//transform
+
+	transform.set(
+		rowdir.x(), rowdir.y(), rowdir.z(), 0,
+		coldir.x(), coldir.y(), coldir.z(), 0,
+		depthdir.x(), depthdir.y(), depthdir.z(), 0,
+		0, 0, 0, 1
+	);
+
+	transform.preMultScale(size);
+
 
 	osg::Image* img = CreateTexture(GL_RG, GL_UNSIGNED_SHORT, w, h, d);
 	uint16_t * data = (uint16_t*)img->data();
@@ -254,7 +290,7 @@ void GetFiles(const string& path, vector<string>& files) {
 	
 #endif
 }
-osg::Image* ImageLoader::LoadVolume(const string& path, osg::Vec3& size) {
+osg::Image* ImageLoader::LoadVolume(const string& path, osg::Matrix& transform) {
 
 	vector<string> files;
 	GetFiles(path, files);
@@ -264,7 +300,7 @@ osg::Image* ImageLoader::LoadVolume(const string& path, osg::Vec3& size) {
 
 	string ext = GetExt(files[0]);
 	if (ext == "dcm")
-		return LoadDicomVolume(files, size);
+		return LoadDicomVolume(files, transform);
 	else
 		return 0;
 }

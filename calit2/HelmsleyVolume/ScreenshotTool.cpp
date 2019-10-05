@@ -20,8 +20,8 @@ void ScreenshotTool::init()
 
 	osg::FrameBufferObject* fbo = new osg::FrameBufferObject();
 	_image = new osg::Image();
-	_image->allocateImage(1920, 1080, 1, GL_RGBA, GL_UNSIGNED_BYTE);
-	_image->setInternalTextureFormat(GL_RGBA8);
+	_image->allocateImage(1920, 1080, 1, GL_RGB, GL_UNSIGNED_BYTE);
+	_image->setInternalTextureFormat(GL_RGB8);
 	_texture = new osg::Texture2D();
 	_texture->setResizeNonPowerOfTwoHint(false);
 	_texture->setImage(_image);
@@ -163,7 +163,7 @@ void ScreenshotTool::menuCallback(cvr::MenuItem* menuItem)
 		time_t t = std::time(nullptr);
 		struct tm* tim = std::localtime(&t);
 		std::stringstream ss = std::stringstream();
-		ss << path << "\\" << std::put_time(tim, "%Y-%m-%d %H-%M-%S") << ".png";
+		ss << path << "\\" << std::put_time(tim, "%Y-%m-%d_%H-%M-%S") << ".png";
 		_pdc = new ScreenshotCallback(this, ss.str());
 		_camera->addPostDrawCallback(_pdc);
 	}
@@ -185,8 +185,8 @@ void ScreenshotTool::takePhoto(std::string filename)
 	_pdc.release();
 
 	_image = new osg::Image();
-	_image->allocateImage(1920, 1080, 1, GL_RGBA, GL_UNSIGNED_BYTE);
-	_image->setInternalTextureFormat(GL_RGBA8);
+	_image->allocateImage(1920, 1080, 1, GL_RGB, GL_UNSIGNED_BYTE);
+	_image->setInternalTextureFormat(GL_RGB8);
 	_texture->setImage(_image);
 
 
