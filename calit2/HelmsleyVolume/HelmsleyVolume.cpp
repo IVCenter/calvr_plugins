@@ -1,4 +1,5 @@
 #include "HelmsleyVolume.h"
+#include "UIExtensions.h"
 
 #include <cvrKernel/NodeMask.h>
 
@@ -90,7 +91,8 @@ bool HelmsleyVolume::init()
 	t1->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
 	t1->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
 	t1->handle->setPercentSize(osg::Vec3(0, 1, 1));
-	UIButton* t2 = new UIButton();
+	//UIButton* t2 = new UIButton();
+	VisibilityToggle* t2 = new VisibilityToggle("Colon");
 	UIButton* t3 = new UIButton();
 	UIButton* t4 = new UIButton();
 	UIButton* t5 = new UIButton();

@@ -20,6 +20,8 @@ SET(PLUGIN_HEADERS
 	ScreenshotTool.h
 	Interactable.h
 	FileSelector.h
+	UIExtensions.h
+
 )
 
 if(WIN32)
@@ -39,6 +41,7 @@ ADD_LIBRARY(${LIB_NAME}
 	MeasurementTool.cpp
 	ScreenshotTool.cpp
 	FileSelector.cpp
+	UIExtensions.cpp
 )
 
 
