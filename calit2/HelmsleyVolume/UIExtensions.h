@@ -6,6 +6,8 @@
 #include <cvrMenu/NewUI/UIToggle.h>
 #include <cvrMenu/NewUI/UISlider.h>
 #include <cvrMenu/NewUI/UIText.h>
+#include <cvrMenu/NewUI/UIRadial.h>
+#include <cvrMenu/NewUI/UIList.h>
 
 #include <cvrConfig/ConfigManager.h>
 
@@ -18,7 +20,22 @@ public:
 	virtual void uiCallback(cvr::UIElement* e) = 0;
 };
 
-class VisibilityToggle : public cvr::UIToggle
+class UICallbackCaller
+{
+public:
+	UICallbackCaller() 
+	{
+		_callback = NULL;
+	}
+
+	void setCallback(UICallback* callback) { _callback = callback; }
+
+protected:
+	UICallback* _callback;
+
+};
+
+class VisibilityToggle : public cvr::UIToggle, public UICallbackCaller
 {
 public:
 
@@ -26,13 +43,25 @@ public:
 
 	virtual bool onToggle() override;
 
-	void setCallback(UICallback* callback) { _callback = callback; }
-
 	cvr::UICheckbox* eye;
 	cvr::UIText* label;
+};
+
+class ToolRadial : public cvr::UIRadial, public UICallbackCaller
+{
+public:
+	ToolRadial();
+
+	virtual void onSelectionChange() override;
+};
+
+class ToolSelector : public cvr::UIList
+{
+public:
+	ToolSelector(Direction d = LEFT_TO_RIGHT, OverflowBehavior o = CUT);
 
 protected:
-	UICallback* _callback;
+	ToolRadial* _toolRadial;
 };
 
 #endif

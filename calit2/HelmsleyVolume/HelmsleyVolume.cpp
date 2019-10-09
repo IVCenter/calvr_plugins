@@ -55,7 +55,7 @@ HelmsleyVolume::~HelmsleyVolume()
 
 bool HelmsleyVolume::init()
 {
-	/*
+	
 	std::string fontfile = CalVR::instance()->getResourceDir();
 	fontfile = fontfile + "/resources/ArenaCondensed.ttf";
 
@@ -118,8 +118,9 @@ bool HelmsleyVolume::init()
 	q5->addChild(t5);
 	q6->addChild(t6);
 
+	ToolSelector* list2 = new ToolSelector(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
 
-	
+	/*
 	UIList* list2 = new UIList(UIList::LEFT_TO_RIGHT, UIList::WRAP);
 	list2->setMinSize(400);
 	UIQuadElement* q7 = new UIQuadElement(osg::Vec4(1, 0, 0, 1));
@@ -128,16 +129,18 @@ bool HelmsleyVolume::init()
 	list2->addChild(q7);
 	list2->addChild(q8);
 	list2->addChild(q9);
-
+	*/
 	UIList* list3 = new UIList(UIList::LEFT_TO_RIGHT);
 	list3->addChild(list);
 	list3->addChild(list2);
 	
-	pop->addChild(list3);
+	bknd->addChild(list3);
 	//pop->addChild(list2);
+	pop->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
+	UIElement* e = list2->getChild(0)->getChild(1);
 	pop->setActive(true, true);
-	return true;
-	*/
+	//return true;
+	
 
 	_instance = this;
 
@@ -273,11 +276,11 @@ void HelmsleyVolume::postFrame()
 
 bool HelmsleyVolume::processEvent(InteractionEvent * e)
 {
-		if (e->getInteraction() == BUTTON_DOWN || e->getInteraction() == BUTTON_DRAG)
+	if (e->getInteraction() == BUTTON_DOWN || e->getInteraction() == BUTTON_DRAG)
 	{
 		if (e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _interactButton)
 		{
-			if (_radial->getValue() == 0)
+			if (_tool == CUTTING_PLANE)
 			{
 				//Cutting plane
 				osg::Matrix mat = PluginHelper::getHandMat(e->asHandEvent()->getHand());
@@ -333,7 +336,7 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 				cuttingPlane->setNodeMask(0xffffffff);
 				return true;
 			}
-			else if (_radial->getValue() == 1)
+			else if (_tool == MEASUREMENT_TOOL)
 			{
 				//Measurement tool
 				osg::Matrix mat = PluginHelper::getHandMat(e->asHandEvent()->getHand());
@@ -352,6 +355,7 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 				return true;
 			}
 		}
+		/* radial menu is disabled for now
 		if (e->getInteraction() == BUTTON_DOWN && e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _radialButton)
 		{
 			if (!_radialShown)
@@ -368,18 +372,19 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 				PluginHelper::getHand(e->asHandEvent()->getHand())->removeChild(_selectionMenu->getRootObject());
 			}
 		}
+		*/
 	}
 	else if (e->getInteraction() == BUTTON_UP)
 	{
 		if (e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _interactButton)
 		{
-			if (_radial->getValue() == 0)
+			if (_tool == CUTTING_PLANE)
 			{
 				//Cutting plane
 				cuttingPlane->setNodeMask(0);
 				return true;
 			}
-			else if (_radial->getValue() == 1)
+			else if (_tool == MEASUREMENT_TOOL)
 			{
 				//Measurement tool
 				if (measurementTool->getLength() < 5.0)
