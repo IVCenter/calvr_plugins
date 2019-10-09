@@ -117,7 +117,7 @@ void VolumeGroup::init()
 	_cube->setUseDisplayList(false);
 
 	osg::StateSet* states = _cube->getOrCreateStateSet();
-	states->setAttribute(new osg::CullFace(osg::CullFace::FRONT));
+	states->setAttribute(new osg::CullFace(osg::CullFace::BACK));
 	states->setMode(GL_CULL_FACE, osg::StateAttribute::ON);
 	states->setMode(GL_BLEND, osg::StateAttribute::ON);
 	states->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);

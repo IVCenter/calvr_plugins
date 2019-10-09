@@ -55,7 +55,7 @@ HelmsleyVolume::~HelmsleyVolume()
 
 bool HelmsleyVolume::init()
 {
-
+	/*
 	std::string fontfile = CalVR::instance()->getResourceDir();
 	fontfile = fontfile + "/resources/ArenaCondensed.ttf";
 
@@ -106,10 +106,10 @@ bool HelmsleyVolume::init()
 	UIQuadElement* q6 = new UIQuadElement(osg::Vec4(0, 1, 1, 1));
 	list->addChild(q1);
 	list->addChild(q2);
-	list->addChild(q3);
-	list->addChild(q4);
-	list->addChild(q5);
-	list->addChild(q6);
+	//list->addChild(q3);
+	//list->addChild(q4);
+	//list->addChild(q5);
+	//list->addChild(q6);
 
 	q1->addChild(t1);
 	q2->addChild(t2);
@@ -137,7 +137,7 @@ bool HelmsleyVolume::init()
 	//pop->addChild(list2);
 	pop->setActive(true, true);
 	return true;
-	
+	*/
 
 	_instance = this;
 
@@ -273,12 +273,7 @@ void HelmsleyVolume::postFrame()
 
 bool HelmsleyVolume::processEvent(InteractionEvent * e)
 {
-	/*
-	if (e->getInteraction() == BUTTON_DOWN || e->getInteraction() == MOVE)
-	{
-		e->printValues();
-	}
-	if (e->getInteraction() == BUTTON_DOWN || e->getInteraction() == BUTTON_DRAG)
+		if (e->getInteraction() == BUTTON_DOWN || e->getInteraction() == BUTTON_DRAG)
 	{
 		if (e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _interactButton)
 		{
@@ -395,7 +390,7 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 		}
 
 	}
-    */
+    
 	return false;
 }
 
