@@ -8,8 +8,8 @@
 #include <osg/MatrixTransform>
 #include <osgText/Text>
 #include <osg/CullFace>
-#include <osgDB/readFile>
-#include <osgDB/writeFile>
+#include <osgDB/ReadFile>
+#include <osgDB/WriteFile>
 #include <osg/Texture2D>
 #include <OpenThreads/Thread>
 
