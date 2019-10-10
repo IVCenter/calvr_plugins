@@ -22,6 +22,7 @@
 
 class VolumeGroup : public osg::Group
 {
+	friend class VolumeDrawCallback;
 public:
 	VolumeGroup();
 	virtual ~VolumeGroup();
@@ -60,6 +61,7 @@ public:
 	osg::ref_ptr<osg::Uniform> _PlanePoint;
 	osg::ref_ptr<osg::Uniform> _PlaneNormal;
 	osg::ref_ptr<osg::Uniform> _StepSize;
+	osg::ref_ptr<osg::Uniform> _RelativeViewport;
 	std::map<std::string, osg::ref_ptr<osg::Uniform> > _computeUniforms;
 
 	osg::Matrix getObjectToWorldMatrix();
@@ -92,27 +94,14 @@ protected:
 
 class VolumeDrawCallback : public osg::Drawable::DrawCallback
 {
+
 public:
 
 	VolumeGroup* group;
 
 	VolumeDrawCallback(VolumeGroup* g) : group(g) {}
 
-	virtual void drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const
-	{
-		if (!group)
-		{
-			std::cerr << "group doesn't exist!" << std::endl;
-			return;
-		}
-
-		if (!cvr::ScreenBase::resolveBuffers(renderInfo.getCurrentCamera(), group->_resolveFBO, renderInfo.getState(), GL_DEPTH_BUFFER_BIT))
-		{
-			std::cout << "Depth buffer could not be resolved" << std::endl;
-		}
-
-		drawable->drawImplementation(renderInfo);
-	}
+	virtual void drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const;
 };
 
 class ComputeDrawCallback : public osg::Drawable::DrawCallback

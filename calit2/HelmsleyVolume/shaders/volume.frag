@@ -13,6 +13,9 @@ in vs_out {
 	mat4 InverseProjection;
 } i;
 
+//widthscale, widthoffset, heightscale, heightoffset
+uniform vec4 RelativeViewport;
+
 uniform float StepSize;
 
 uniform vec2 InvResolution;
@@ -58,7 +61,10 @@ vec2 RayPlane(vec3 ro, vec3 rd, vec3 planep, vec3 planen) {
 float DepthTextureToObjectDepth(vec3 ro, vec3 screenPos) {
 	vec4 clip = vec4(screenPos.xy / screenPos.z, 0.0, 1.0);
 
-	clip.z = textureLod(DepthTexture, clip.xy * .5 + .5, 0.0).r * 2.0 - 1.0;
+	vec2 actualview = clip.xy * .5 + .5;
+	actualview = vec2(actualview.x * RelativeViewport.x + RelativeViewport.z, actualview.y * RelativeViewport.y + RelativeViewport.w);
+
+	clip.z = textureLod(DepthTexture, actualview, 0.0).r * 2.0 - 1.0;
 
     vec4 viewSpacePosition = i.InverseProjection * clip;
     viewSpacePosition /= viewSpacePosition.w;
@@ -74,9 +80,16 @@ vec4 Sample(vec3 p) {
 
 void main() {
 
-	//vec4 clip = vec4((i.sp.xy / i.sp.z + 1.0) / 2.0, 0.0, 1.0);
+	//vec4 clip = vec4(i.sp.xy / i.sp.z, 0.0, 1.0);
 
-	//FragColor = vec4(texture2D(DepthTexture, clip.xy).r, 0, 0, 1);
+	//vec2 actualview = clip.xy * .5 + .5;
+	//actualview = vec2(actualview.x * RelativeViewport.x + RelativeViewport.z, actualview.y * RelativeViewport.y + RelativeViewport.w);
+
+	//FragColor = vec4(texture2D(DepthTexture, actualview.xy).rgb, 1);
+
+	//FragColor = vec4(RelativeViewport.y, 0, RelativeViewport.w, 1);
+	//FragColor = vec4(actualview, 0, 1);
+
 	//return;
 
 

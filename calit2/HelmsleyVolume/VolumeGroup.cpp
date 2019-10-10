@@ -19,6 +19,35 @@
 
 #include <osgDB/readFile>
 
+void VolumeDrawCallback::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const
+{
+	if (!group)
+	{
+		std::cerr << "group doesn't exist!" << std::endl;
+		return;
+	}
+	const osg::GLExtensions* ext = renderInfo.getState()->get<osg::GLExtensions>();
+
+	if (!cvr::ScreenBase::resolveBuffers(renderInfo.getCurrentCamera(), group->_resolveFBO, renderInfo.getState(), GL_DEPTH_BUFFER_BIT))
+	{
+		std::cout << "Depth buffer could not be resolved" << std::endl;
+	}
+
+	const osg::Viewport* currview = renderInfo.getState()->getCurrentViewport();
+	const osg::Viewport* totalview = renderInfo.getCurrentCamera()->getViewport();
+	osg::Vec4 relativeView = osg::Vec4(
+		currview->width() / totalview->width(),
+		currview->height() / totalview->height(),
+		currview->x() / totalview->width(),
+		currview->y() / totalview->height()
+	);
+	group->_RelativeViewport->set(relativeView);
+
+	group->_RelativeViewport->apply(ext, group->_program->getPCP(*renderInfo.getState())->getUniformLocation("RelativeViewport"));
+
+	drawable->drawImplementation(renderInfo);
+}
+
 VolumeGroup::VolumeGroup()
 {
 	init();
@@ -134,10 +163,12 @@ void VolumeGroup::init()
 	_PlanePoint = new osg::Uniform("PlanePoint", osg::Vec3(0.f, -2.f, 0.f));
 	_PlaneNormal = new osg::Uniform("PlaneNormal", osg::Vec3(0.f, 1.f, 0.f));
 	_StepSize = new osg::Uniform("StepSize", .00135f);
+	_RelativeViewport = new osg::Uniform("RelativeViewport", osg::Vec4(1, 1, 0, 0));
 
 	states->addUniform(_PlanePoint);
 	states->addUniform(_PlaneNormal);
 	states->addUniform(_StepSize);
+	//states->addUniform(_RelativeViewport);
 
 	osg::ref_ptr<osg::Uniform> vol = new osg::Uniform("Volume", (int)0);
 	osg::ref_ptr<osg::Uniform> dt = new osg::Uniform("DepthTexture", (int)1);
