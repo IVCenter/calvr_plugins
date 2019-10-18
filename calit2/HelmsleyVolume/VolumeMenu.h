@@ -10,6 +10,9 @@
 #include <cvrMenu/MenuCheckbox.h>
 #include <cvrMenu/MenuList.h>
 
+#include "UIExtensions.h"
+#include <cvrMenu/NewUI/UIPopup.h>
+
 #include "VolumeGroup.h"
 
 class VolumeMenu : public cvr::MenuCallback {
@@ -44,6 +47,41 @@ protected:
 	cvr::MenuCheckbox* organsOnly;
 
 	cvr::MenuList* colorFunction;
+};
+
+
+class NewVolumeMenu : public UICallback {
+public:
+	NewVolumeMenu(cvr::SceneObject* scene, VolumeGroup* volume) : _scene(scene), _volume(volume) {}
+
+	void init();
+
+	virtual void uiCallback(UICallbackCaller * item);
+
+	std::string transferFunction;
+
+protected:
+	cvr::SceneObject* _scene;
+	VolumeGroup* _volume;
+
+	cvr::UIPopup* _menu;
+	cvr::UIPopup* _maskMenu;
+
+	CallbackSlider* _density;
+	CallbackSlider* _contrastBottom;
+	CallbackSlider* _contrastTop;
+
+
+	VisibilityToggle* _organs;
+	VisibilityToggle* _colon;
+	VisibilityToggle* _kidney;
+	VisibilityToggle* _bladder;
+	VisibilityToggle* _spleen;
+
+	CallbackRadial* _transferFunction;
+	ShaderQuad* _colorDisplay;
+	cvr::UIRadialButton* _blacknwhite;
+	cvr::UIRadialButton* _rainbow;
 };
 
 #endif

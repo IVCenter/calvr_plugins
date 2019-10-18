@@ -17,7 +17,7 @@
 #include <osg/MatrixTransform>
 #include <osg/Depth>
 
-#include <osgDB/readFile>
+#include <osgDB/ReadFile>
 
 void VolumeDrawCallback::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const
 {

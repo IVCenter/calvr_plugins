@@ -41,6 +41,11 @@ std::string HelmsleyVolume::loadShaderFile(std::string filename)
 	return sstr.str();
 }
 
+void HelmsleyVolume::resetOrientation()
+{
+
+}
+
 HelmsleyVolume::HelmsleyVolume()
 {
 	_buttonMap = std::map<cvr::MenuItem*, std::string>();
@@ -64,83 +69,6 @@ bool HelmsleyVolume::init()
 	{
 		UIUtil::setDefaultFont(font);
 	}
-
-	UIPopup* pop = new UIPopup();
-	UIQuadElement* bknd = new UIQuadElement(osg::Vec4(0.3, 0.3, 0.3, 1));
-	//UIButton* buttontest = new UIButton();
-	//bknd->addChild(buttontest);
-	pop->addChild(bknd);
-	pop->setPosition(osg::Vec3(0, 0, 1000));
-
-	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
-	//list->setMinSize(200);
-
-	//UIText* t1 = new UIText("asdf asdf asdf asdf asdf asdf asdf asdf asdf", 50, osgText::Text::LEFT_TOP);
-	//UIText* t2 = new UIText("asdf asdf asdf asdf asdf asdf asdf asdf asdf", 50, osgText::Text::CENTER_TOP);
-	//UIText* t3 = new UIText("asdf asdf asdf asdf asdf asdf asdf asdf asdf", 50, osgText::Text::RIGHT_TOP);
-	//UIText* t4 = new UIText("asdf asdf asdf asdf asdf asdf asdf asdf asdf", 50, osgText::Text::LEFT_CENTER);
-	//UIText* t5 = new UIText("asdf asdf asdf asdf asdf asdf asdf asdf asdf", 50, osgText::Text::CENTER_CENTER);
-	//UIText* t6 = new UIText("asdf asdf asdf asdf asdf asdf asdf asdf asdf", 50, osgText::Text::RIGHT_CENTER);
-	//UITexture* t4 = new UITexture(CalVR::instance()->getResourceDir() + "/icons/checkbox=TRUE.rgb");
-	//t4->setAbsoluteSize(osg::Vec3(100, 0, 100));
-	//t4->setPercentSize(osg::Vec3(0, 0, 0));
-	//UITexture* t5 = new UITexture(CalVR::instance()->getResourceDir() + "/icons/checkbox=FALSE.rgb");
-	//UITexture* t6 = new UITexture(CalVR::instance()->getResourceDir() + "/icons/checkbox=TRUE.rgb");
-
-	UISlider* t1 = new UISlider();
-	t1->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
-	t1->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
-	t1->handle->setPercentSize(osg::Vec3(0, 1, 1));
-	//UIButton* t2 = new UIButton();
-	VisibilityToggle* t2 = new VisibilityToggle("Colon");
-	UIButton* t3 = new UIButton();
-	UIButton* t4 = new UIButton();
-	UIButton* t5 = new UIButton();
-	UIButton* t6 = new UIButton();
-
-	UIQuadElement* q1 = new UIQuadElement(osg::Vec4(1, 0, 0, 1));
-	UIQuadElement* q2 = new UIQuadElement(osg::Vec4(0, 1, 0, 1));
-	UIQuadElement* q3 = new UIQuadElement(osg::Vec4(0, 0, 1, 1));
-	UIQuadElement* q4 = new UIQuadElement(osg::Vec4(1, 0, 1, 1));
-	UIQuadElement* q5 = new UIQuadElement(osg::Vec4(1, 1, 0, 1));
-	UIQuadElement* q6 = new UIQuadElement(osg::Vec4(0, 1, 1, 1));
-	list->addChild(q1);
-	list->addChild(q2);
-	//list->addChild(q3);
-	//list->addChild(q4);
-	//list->addChild(q5);
-	//list->addChild(q6);
-
-	q1->addChild(t1);
-	q2->addChild(t2);
-	q3->addChild(t3);
-	q4->addChild(t4);
-	q5->addChild(t5);
-	q6->addChild(t6);
-
-	ToolSelector* list2 = new ToolSelector(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
-
-	/*
-	UIList* list2 = new UIList(UIList::LEFT_TO_RIGHT, UIList::WRAP);
-	list2->setMinSize(400);
-	UIQuadElement* q7 = new UIQuadElement(osg::Vec4(1, 0, 0, 1));
-	UIQuadElement* q8 = new UIQuadElement(osg::Vec4(0, 1, 0, 1));
-	UIQuadElement* q9 = new UIQuadElement(osg::Vec4(0, 0, 1, 1));
-	list2->addChild(q7);
-	list2->addChild(q8);
-	list2->addChild(q9);
-	*/
-	UIList* list3 = new UIList(UIList::LEFT_TO_RIGHT);
-	list3->addChild(list);
-	list3->addChild(list2);
-	
-	bknd->addChild(list3);
-	//pop->addChild(list2);
-	pop->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
-	UIElement* e = list2->getChild(0)->getChild(1);
-	pop->setActive(true, true);
-	//return true;
-	
 
 	_instance = this;
 
@@ -171,6 +99,7 @@ bool HelmsleyVolume::init()
 	cuttingPlaneGeode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
 	cuttingPlane = new osg::MatrixTransform();
 	cuttingPlane->addChild(cuttingPlaneGeode);
+	cuttingPlane->setNodeMask(0);
 
 	SceneObject * cpso = new SceneObject("Cutting Plane Indicator", false, false, false, false, false);
 	cpso->addChild(cuttingPlane);
@@ -186,7 +115,8 @@ bool HelmsleyVolume::init()
 	mtso->attachToScene();
 
 	screenshotTool = new ScreenshotTool("Screenshot Tool", false, true, false, false, false);
-	screenshotTool->setPosition(osg::Vec3(0, 400, 500));
+	screenshotTool->setPosition(osg::Vec3(0, -1000000, 0));
+	//screenshotTool->
 	PluginHelper::registerSceneObject(screenshotTool, "HelmsleyVolume");
 	screenshotTool->attachToScene();
 
@@ -443,6 +373,9 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 	VolumeMenu* menu = new VolumeMenu(so, g);
 	menu->init();
 
+	NewVolumeMenu* newMenu = new NewVolumeMenu(so, g);
+	newMenu->init();
+
 	_sceneObjects.push_back(so);
 	_volumes.push_back(g);
 	_volumeMenus.push_back(menu);
@@ -451,7 +384,6 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 	so->addMenuItem(removeButton);
 	removeButton->setCallback(this);
 	_removeButtons.push_back(removeButton);
-
 }
 
 void HelmsleyVolume::removeVolume(int index)

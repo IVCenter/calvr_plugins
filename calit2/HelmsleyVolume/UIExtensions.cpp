@@ -42,31 +42,18 @@ bool VisibilityToggle::onToggle()
 	return true;
 }
 
-ToolRadial::ToolRadial()
+void CallbackRadial::onSelectionChange()
 {
-}
-
-void ToolRadial::onSelectionChange()
-{
-	std::cerr << "SELECTION " << _current << std::endl;
-	if (_current == -1)
+	if (_callback)
 	{
-		HelmsleyVolume::instance()->setTool(HelmsleyVolume::NONE);
-	}
-	else if (_current == 0)
-	{
-		HelmsleyVolume::instance()->setTool(HelmsleyVolume::CUTTING_PLANE);
-	}
-	else if (_current == 1)
-	{
-		HelmsleyVolume::instance()->setTool(HelmsleyVolume::MEASUREMENT_TOOL);
+		_callback->uiCallback(this);
 	}
 }
 
 ToolSelector::ToolSelector(UIList::Direction d, UIList::OverflowBehavior o)
 	: UIList(d, o)
 {
-	_toolRadial = new ToolRadial();
+	_toolRadial = new CallbackRadial();
 
 	std::string dir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ImageDir");
 	UITexture* scissors = new UITexture(dir + "scissors.png");
@@ -109,5 +96,67 @@ ToolSelector::ToolSelector(UIList::Direction d, UIList::OverflowBehavior o)
 	listItem->addChild(indicator);
 	listItem->addChild(btn);
 	addChild(listItem);
+}
 
+
+void CallbackSlider::setMax(float max)
+{
+	_max = max;
+}
+
+void CallbackSlider::setMin(float min)
+{
+	_min = min;
+}
+
+float CallbackSlider::getMax()
+{
+	return _max;
+}
+
+float CallbackSlider::getMin()
+{
+	return _min;
+}
+
+bool CallbackSlider::onPercentChange()
+{
+	if (_callback)
+	{
+		_callback->uiCallback(this);
+		return true;
+	}
+	return false;
+}
+
+void ShaderQuad::updateGeometry()
+{
+	UIQuadElement::updateGeometry();
+
+	if (_program.valid())
+	{
+		_geode->getDrawable(0)->getOrCreateStateSet()->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
+	}
+}
+
+void ShaderQuad::addUniform(std::string uniform)
+{
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), 0.0f);
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
+void ShaderQuad::addUniform(osg::Uniform* uniform)
+{
+	_uniforms[uniform->getName()] = uniform;
+	_geode->getOrCreateStateSet()->addUniform(uniform);
+}
+
+osg::Uniform* ShaderQuad::getUniform(std::string uniform)
+{
+	return _uniforms[uniform];
+}
+
+void ShaderQuad::setShaderDefine(std::string name, std::string define, osg::StateAttribute::Values on)
+{
+	_geode->getOrCreateStateSet()->setDefine(name, define, on);
 }

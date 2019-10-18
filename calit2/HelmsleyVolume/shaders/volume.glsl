@@ -51,7 +51,7 @@ vec4 Sample(ivec3 p) {
 	s.a *= OpacityMult;
 
 	#ifdef COLOR_FUNCTION
-		s.rgb = COLOR_FUNCTION;
+		s.rgb = COLOR_FUNCTION
 	#else
 		s.rgb = vec3(ra.r);
 	#endif

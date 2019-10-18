@@ -61,6 +61,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		std::vector<cvr::SceneObject*> getSceneObjects() { return _sceneObjects; }
 
 		static std::string loadShaderFile(std::string filename);
+		static void resetOrientation();
 
     protected:
 		struct MeasurementInfo {
