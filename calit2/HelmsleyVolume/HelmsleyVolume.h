@@ -78,7 +78,8 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 
 		std::vector<osg::ref_ptr<VolumeGroup> > _volumes;
 		std::vector<cvr::SceneObject*> _sceneObjects;
-		std::vector<VolumeMenu*> _volumeMenus;
+		std::vector<VolumeMenu*> _contextMenus;
+		std::vector<NewVolumeMenu*> _worldMenus;
 		std::vector<cvr::MenuButton*> _removeButtons;
 
 		std::map<cvr::MenuItem*, std::string> _buttonMap;

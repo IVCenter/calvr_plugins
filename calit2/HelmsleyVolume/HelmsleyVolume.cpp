@@ -51,7 +51,8 @@ HelmsleyVolume::HelmsleyVolume()
 	_buttonMap = std::map<cvr::MenuItem*, std::string>();
 	_volumes = std::vector<osg::ref_ptr<VolumeGroup> >();
 	_sceneObjects = std::vector<SceneObject*>();
-	_volumeMenus = std::vector<VolumeMenu*>();
+	_contextMenus = std::vector<VolumeMenu*>();
+	_worldMenus = std::vector<NewVolumeMenu*>();
 }
 
 HelmsleyVolume::~HelmsleyVolume()
@@ -378,7 +379,8 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 
 	_sceneObjects.push_back(so);
 	_volumes.push_back(g);
-	_volumeMenus.push_back(menu);
+	_contextMenus.push_back(menu);
+	_worldMenus.push_back(newMenu);
 
 	MenuButton* removeButton = new MenuButton("Remove Volume");
 	so->addMenuItem(removeButton);
@@ -389,13 +391,15 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 void HelmsleyVolume::removeVolume(int index)
 {
 	_sceneObjects[index]->detachFromScene();
-	delete _volumeMenus[index];
-	delete _removeButtons[index];
+	delete _contextMenus[index];
+	delete _worldMenus[index];
+	//delete _removeButtons[index];
 	_volumes[index].release();
-	delete _sceneObjects[index];
+	//delete _sceneObjects[index];
 	//delete _sceneObjects[index];
 	//delete _volumes[index]; //deleted automatically because no references left once sceneobject is deleted
-	_volumeMenus.erase(_volumeMenus.begin() + index);
+	_contextMenus.erase(_contextMenus.begin() + index);
+	_worldMenus.erase(_worldMenus.begin() + index);
 	_volumes.erase(_volumes.begin() + index);
 	_sceneObjects.erase(_sceneObjects.begin() + index);
 	_removeButtons.erase(_removeButtons.begin() + index);

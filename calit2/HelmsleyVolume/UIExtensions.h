@@ -39,6 +39,24 @@ protected:
 
 };
 
+class CallbackButton
+	: public cvr::UIButton, public UICallbackCaller
+{
+public:
+	virtual bool onButtonPress(bool pressed)
+	{
+		if (pressed)
+		{
+			if (_callback)
+			{
+				_callback->uiCallback(this);
+			}
+			return true;
+		}
+		return false;
+	}
+};
+
 class VisibilityToggle : public cvr::UIToggle, public UICallbackCaller
 {
 public:

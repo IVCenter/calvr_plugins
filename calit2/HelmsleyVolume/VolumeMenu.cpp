@@ -1,5 +1,6 @@
 #include "VolumeMenu.h"
 #include "HelmsleyVolume.h"
+#include "cvrMenu/MenuManager.h"
 
 using namespace cvr;
 
@@ -134,6 +135,16 @@ void VolumeMenu::menuCallback(cvr::MenuItem * item)
 	}
 }
 
+NewVolumeMenu::~NewVolumeMenu()
+{
+	_menu->setActive(false, false);
+	_maskMenu->setActive(false, false);
+	MenuManager::instance()->removeMenuSystem(_menu);
+	MenuManager::instance()->removeMenuSystem(_maskMenu);
+	delete _menu;
+	delete _maskMenu;
+}
+
 void NewVolumeMenu::init()
 {
 	_menu = new UIPopup();
@@ -151,6 +162,28 @@ void NewVolumeMenu::init()
 	label->setPercentSize(osg::Vec3(1, 1, 0.2));
 	bknd->addChild(label);
 
+
+	UIList* fliplist = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
+
+	_horizontalflip = new CallbackButton();
+	_horizontalflip->setCallback(this);
+	label = new UIText("Flip Sagittal", 50.0f, osgText::TextBase::CENTER_CENTER);
+	_horizontalflip->addChild(label);
+
+	_verticalflip = new CallbackButton();
+	_verticalflip->setCallback(this);
+	label = new UIText("Flip Axial", 50.0f, osgText::TextBase::CENTER_CENTER);
+	_verticalflip->addChild(label);
+
+	_depthflip = new CallbackButton();
+	_depthflip->setCallback(this);
+	label = new UIText("Flip Coronal", 50.0f, osgText::TextBase::CENTER_CENTER);
+	_depthflip->addChild(label);
+
+	fliplist->addChild(_horizontalflip);
+	fliplist->addChild(_verticalflip);
+	fliplist->addChild(_depthflip);
+	list->addChild(fliplist);
 
 	label = new UIText("Density", 30.0f, osgText::TextBase::LEFT_CENTER);
 	label->setPercentPos(osg::Vec3(0.1, 0, 0));
@@ -281,7 +314,25 @@ void NewVolumeMenu::init()
 
 void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 {
-	if (item == _organs)
+	if (item == _horizontalflip)
+	{
+		osg::Matrix m;
+		m.makeScale(osg::Vec3(-1, 1, 1));
+		_volume->_transform->postMult(m);
+	}
+	else if (item == _verticalflip)
+	{
+		osg::Matrix m;
+		m.makeScale(osg::Vec3(1, 1, -1));
+		_volume->_transform->postMult(m);
+	}
+	else if (item == _depthflip)
+	{
+		osg::Matrix m;
+		m.makeScale(osg::Vec3(1, -1, 1));
+		_volume->_transform->postMult(m);
+	}
+	else if (item == _organs)
 	{
 		_volume->getCompute()->getOrCreateStateSet()->setDefine("ORGANS_ONLY", !_organs->isOn());
 		_volume->setDirtyAll();

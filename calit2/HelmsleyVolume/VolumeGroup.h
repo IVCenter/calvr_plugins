@@ -58,6 +58,8 @@ public:
 	void dirtyVolumeShader() { _program->dirtyProgram(); };
 	void dirtyComputeShader() { _computeProgram->dirtyProgram(); };
 
+	void flipCull();
+
 	osg::ref_ptr<osg::Uniform> _PlanePoint;
 	osg::ref_ptr<osg::Uniform> _PlaneNormal;
 	osg::ref_ptr<osg::Uniform> _StepSize;
@@ -87,6 +89,8 @@ protected:
 
 	osg::ref_ptr<osg::Texture2D> _depthTexture;
 	osg::ref_ptr<osg::Texture2D> _colorTexture;
+
+	osg::ref_ptr<osg::CullFace> _side;
 	
 };
 

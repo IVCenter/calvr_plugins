@@ -53,6 +53,7 @@ protected:
 class NewVolumeMenu : public UICallback {
 public:
 	NewVolumeMenu(cvr::SceneObject* scene, VolumeGroup* volume) : _scene(scene), _volume(volume) {}
+	~NewVolumeMenu();
 
 	void init();
 
@@ -66,6 +67,10 @@ protected:
 
 	cvr::UIPopup* _menu;
 	cvr::UIPopup* _maskMenu;
+
+	CallbackButton* _horizontalflip;
+	CallbackButton* _verticalflip;
+	CallbackButton* _depthflip;
 
 	CallbackSlider* _density;
 	CallbackSlider* _contrastBottom;

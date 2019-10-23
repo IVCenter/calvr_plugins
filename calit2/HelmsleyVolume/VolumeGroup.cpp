@@ -146,7 +146,8 @@ void VolumeGroup::init()
 	_cube->setUseDisplayList(false);
 
 	osg::StateSet* states = _cube->getOrCreateStateSet();
-	states->setAttribute(new osg::CullFace(osg::CullFace::BACK));
+	_side = new osg::CullFace(osg::CullFace::FRONT);
+	states->setAttribute(_side);
 	states->setMode(GL_CULL_FACE, osg::StateAttribute::ON);
 	states->setMode(GL_BLEND, osg::StateAttribute::ON);
 	states->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
@@ -238,6 +239,24 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	}
 	//_transform->setScale(s);
 	_transform->setMatrix(m);
+	osg::Vec3 scale;
+	osg::Vec3 translation;
+	osg::Quat rot;
+	osg::Quat so;
+	m.decompose(translation, rot, scale, so);
+	if (scale.x() < 0)
+	{
+		flipCull();
+	}
+	if (scale.y() < 0)
+	{
+		flipCull();
+	}
+	if (scale.z() < 0)
+	{
+		flipCull();
+	}
+	std::cout << "Scale: " << scale.x() << ", " << scale.y() << ", " << scale.z() << std::endl;
 
 	if (maskpath.compare("") != 0)
 	{
@@ -348,5 +367,17 @@ void VolumeGroup::precompute()
 
 
 		this->addChild(_computeNode);
+	}
+}
+
+void VolumeGroup::flipCull()
+{
+	if (_side->getMode() == osg::CullFace::FRONT)
+	{
+		_side->setMode(osg::CullFace::BACK);
+	}
+	else
+	{
+		_side->setMode(osg::CullFace::FRONT);
 	}
 }
