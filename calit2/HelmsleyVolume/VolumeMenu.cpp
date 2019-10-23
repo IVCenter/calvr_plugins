@@ -319,18 +319,22 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		osg::Matrix m;
 		m.makeScale(osg::Vec3(-1, 1, 1));
 		_volume->_transform->postMult(m);
+		_volume->flipCull();
+
 	}
 	else if (item == _verticalflip)
 	{
 		osg::Matrix m;
 		m.makeScale(osg::Vec3(1, 1, -1));
 		_volume->_transform->postMult(m);
+		_volume->flipCull();
 	}
 	else if (item == _depthflip)
 	{
 		osg::Matrix m;
 		m.makeScale(osg::Vec3(1, -1, 1));
 		_volume->_transform->postMult(m);
+		_volume->flipCull();
 	}
 	else if (item == _organs)
 	{
