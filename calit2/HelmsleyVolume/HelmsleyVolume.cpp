@@ -218,7 +218,7 @@ void HelmsleyVolume::postFrame()
 
 bool HelmsleyVolume::processEvent(InteractionEvent * e)
 {
-	if (e->getInteraction() == BUTTON_DOWN || e->getInteraction() == BUTTON_DRAG)
+	if (e->getInteraction() == BUTTON_DRAG)
 	{
 		if (e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _interactButton)
 		{

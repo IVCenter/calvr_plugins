@@ -17,7 +17,8 @@ void FileSelector::init()
 	pathSelections = std::vector<cvr::MenuItem*>();
 
 	addVolumeMenu = new cvr::PopupMenu("Volumes", "", false, true);
-	addVolumeMenu->setPosition(osg::Vec3(-600, 500, 1100));
+	osg::Vec3 menupos = cvr::ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.FileMenu.Position", osg::Vec3(-600, 500, 1100));
+	addVolumeMenu->setPosition(menupos);
 	addVolumeMenu->setVisible(true);
 	//addVolumeMenu->setMovable(false);
 
@@ -26,7 +27,7 @@ void FileSelector::init()
 	addVol->setCallback(this);
 
 	volumeFileSelector = new cvr::PopupMenu("Choose File", "", false, true);
-	volumeFileSelector->setPosition(osg::Vec3(-600, 500, 1000));
+	volumeFileSelector->setPosition(menupos + osg::Vec3(0,0,-100));
 	//volumeFileSelector->getRootSubMenu()->setTextScale(0.5);
 	_currentPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.BaseFolder", "C:/", false);
 	std::cout << "Volume search path: " << _currentPath << std::endl;

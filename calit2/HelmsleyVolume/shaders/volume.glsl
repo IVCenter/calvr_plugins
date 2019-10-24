@@ -59,7 +59,7 @@ vec4 Sample(ivec3 p) {
 	#ifdef COLON
 		if(ra.g > 0.01)
 		{
-			s.rgb = vec3(ra.r, 0, 0);
+			s.rgb = vec3(ra.rr, 0);
 		}
 	#endif
 
