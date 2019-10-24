@@ -1,6 +1,7 @@
 #include "VolumeMenu.h"
 #include "HelmsleyVolume.h"
 #include "cvrMenu/MenuManager.h"
+#include "cvrConfig/ConfigManager.h"
 
 using namespace cvr;
 
@@ -10,65 +11,13 @@ void VolumeMenu::init()
 	scale->setCallback(this);
 	_scene->addMenuItem(scale);
 
-	sampleDistance = new MenuRangeValueCompact("SampleDistance", .0001, 0.01, .001, true);
+	sampleDistance = new MenuRangeValueCompact("SampleDistance", .0001, 0.01, .00066f, true);
 	sampleDistance->setCallback(this);
 	_scene->addMenuItem(sampleDistance);
-
-
-	SubMenu* contrast = new SubMenu("Contrast");
-	_scene->addMenuItem(contrast);
-
-	contrastBottom = new MenuRangeValueCompact("Contrast Bottom", 0.0, 1.0, 0.0, false);
-	contrastBottom->setCallback(this);
-	contrast->addItem(contrastBottom);
-
-	contrastTop = new MenuRangeValueCompact("Contrast Top", 0.0, 1.0, 1.0, false);
-	contrastTop->setCallback(this);
-	contrast->addItem(contrastTop);
-
-
-	SubMenu* opacity = new SubMenu("Opacity");
-	_scene->addMenuItem(opacity);
-
-	opacityMult = new MenuRangeValueCompact("Opacity Multiplier", 0.01, 10.0, 1.0, false);
-	opacityMult->setCallback(this);
-	opacity->addItem(opacityMult);
-
-	opacityCenter = new MenuRangeValueCompact("Opacity Center", 0.0, 1.0, 1.0, false);
-	opacityCenter->setCallback(this);
-	opacity->addItem(opacityCenter);
-
-	opacityWidth = new MenuRangeValueCompact("Opacity Width", 0.01, 1.0, 1.0, false);
-	opacityWidth->setCallback(this);
-	opacity->addItem(opacityWidth);
-
-
+	
 	adaptiveQuality = new MenuCheckbox("Adaptive Quality", false);
 	adaptiveQuality->setCallback(this);
 	_scene->addMenuItem(adaptiveQuality);
-
-	colorFunction = new MenuList();
-	std::vector<std::string> colorfunctions = std::vector<std::string>();
-	colorfunctions.push_back("Default");
-	colorfunctions.push_back("Rainbow");
-	colorFunction->setValues(colorfunctions);
-
-	colorFunction->setCallback(this);
-	_scene->addMenuItem(colorFunction);
-
-	if (_volume->hasMask())
-	{
-		SubMenu* maskoptions = new SubMenu("Mask Options", "Mask Options");
-		_scene->addMenuItem(maskoptions);
-
-		highlightColon = new MenuCheckbox("Highlight Colon", false);
-		highlightColon->setCallback(this);
-		maskoptions->addItem(highlightColon);
-
-		organsOnly = new MenuCheckbox("Display organs only", false);
-		organsOnly->setCallback(this);
-		maskoptions->addItem(organsOnly);
-	}
 }
 
 void VolumeMenu::menuCallback(cvr::MenuItem * item)
@@ -81,68 +30,24 @@ void VolumeMenu::menuCallback(cvr::MenuItem * item)
 	{
 		_scene->setScale(scale->getValue());
 	}
-	else if (item == contrastBottom)
-	{
-		_volume->_computeUniforms["ContrastBottom"]->set(contrastBottom->getValue());
-		_volume->setDirtyAll();
-	}
-	else if (item == contrastTop)
-	{
-		_volume->_computeUniforms["ContrastTop"]->set(contrastTop->getValue());
-		_volume->setDirtyAll();
-	}
-	else if (item == opacityMult)
-	{
-		_volume->_computeUniforms["OpacityMult"]->set(opacityMult->getValue());
-		_volume->setDirtyAll();
-	}
-	else if (item == opacityCenter)
-	{
-		_volume->_computeUniforms["OpacityCenter"]->set(opacityCenter->getValue());
-		_volume->setDirtyAll();
-	}
-	else if (item == opacityWidth)
-	{
-		_volume->_computeUniforms["OpacityWidth"]->set(opacityWidth->getValue());
-		_volume->setDirtyAll();
-	}
-	else if (item == highlightColon)
-	{
-		_volume->getCompute()->getOrCreateStateSet()->setDefine("COLON", highlightColon->getValue());
-		_volume->setDirtyAll();
-	}
-	else if (item == organsOnly)
-	{
-		_volume->getCompute()->getOrCreateStateSet()->setDefine("ORGANS_ONLY", organsOnly->getValue());
-		_volume->setDirtyAll();
-	}
 	else if (item == adaptiveQuality)
 	{
 		_volume->getDrawable()->getOrCreateStateSet()->setDefine("VR_ADAPTIVE_QUALITY", adaptiveQuality->getValue());
-	}
-	else if (item == colorFunction)
-	{
-		if (colorFunction->getIndex() == DEFAULT)
-		{
-			_volume->getCompute()->getOrCreateStateSet()->setDefine("COLOR_FUNCTION", osg::StateAttribute::OFF);
-		}
-		else if (colorFunction->getIndex() == RAINBOW)
-		{
-			_volume->getCompute()->getOrCreateStateSet()->setDefine("COLOR_FUNCTION", "hsv2rgb(vec3(ra.r * 0.8, 1, 1))", osg::StateAttribute::ON);
-		}
-		transferFunction = (ColorFunction)colorFunction->getIndex();
-		_volume->setDirtyAll();
 	}
 }
 
 NewVolumeMenu::~NewVolumeMenu()
 {
 	_menu->setActive(false, false);
-	_maskMenu->setActive(false, false);
 	MenuManager::instance()->removeMenuSystem(_menu);
-	MenuManager::instance()->removeMenuSystem(_maskMenu);
 	delete _menu;
-	delete _maskMenu;
+
+	if (_maskMenu)
+	{
+		_maskMenu->setActive(false, false);
+		MenuManager::instance()->removeMenuSystem(_maskMenu);
+		delete _maskMenu;
+	}
 }
 
 void NewVolumeMenu::init()
@@ -150,8 +55,8 @@ void NewVolumeMenu::init()
 	_menu = new UIPopup();
 	UIQuadElement* bknd = new UIQuadElement(osg::Vec4(0.3, 0.3, 0.3, 1));
 	_menu->addChild(bknd);
-	_menu->setPosition(osg::Vec3(100, 500, 1450));
-	_menu->getRootElement()->setAbsoluteSize(osg::Vec3(600, 1, 600));
+	_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Position", osg::Vec3(500, 500, 1450)));
+	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Scale", osg::Vec3(600, 1, 600)));
 
 	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
 	list->setPercentPos(osg::Vec3(0, 0, -0.2));
@@ -167,17 +72,17 @@ void NewVolumeMenu::init()
 
 	_horizontalflip = new CallbackButton();
 	_horizontalflip->setCallback(this);
-	label = new UIText("Flip Sagittal", 50.0f, osgText::TextBase::CENTER_CENTER);
+	label = new UIText("Flip Sagittal", 30.0f, osgText::TextBase::CENTER_CENTER);
 	_horizontalflip->addChild(label);
 
 	_verticalflip = new CallbackButton();
 	_verticalflip->setCallback(this);
-	label = new UIText("Flip Axial", 50.0f, osgText::TextBase::CENTER_CENTER);
+	label = new UIText("Flip Axial", 30.0f, osgText::TextBase::CENTER_CENTER);
 	_verticalflip->addChild(label);
 
 	_depthflip = new CallbackButton();
 	_depthflip->setCallback(this);
-	label = new UIText("Flip Coronal", 50.0f, osgText::TextBase::CENTER_CENTER);
+	label = new UIText("Flip Coronal", 30.0f, osgText::TextBase::CENTER_CENTER);
 	_depthflip->addChild(label);
 
 	fliplist->addChild(_horizontalflip);
@@ -277,8 +182,10 @@ void NewVolumeMenu::init()
 		_maskMenu = new UIPopup();
 		bknd = new UIQuadElement(osg::Vec4(0.3, 0.3, 0.3, 1));
 		_maskMenu->addChild(bknd);
-		_maskMenu->setPosition(osg::Vec3(200, 500, 800));
-		_maskMenu->getRootElement()->setAbsoluteSize(osg::Vec3(400, 1, 800));
+
+
+		_maskMenu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Position", osg::Vec3(600, 500, 800)));
+		_maskMenu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Scale", osg::Vec3(400, 1, 800)));
 
 		list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
 		list->setPercentPos(osg::Vec3(0, 0, -0.2));

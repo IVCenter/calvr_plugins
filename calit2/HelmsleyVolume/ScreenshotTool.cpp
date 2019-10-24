@@ -6,6 +6,7 @@
 
 #include <sstream>
 #include <iomanip>
+#include <time.h>
 
 void ScreenshotTool::init()
 {
@@ -162,8 +163,12 @@ void ScreenshotTool::menuCallback(cvr::MenuItem* menuItem)
 		//takePhoto(path + "/0.png");
 		time_t t = std::time(nullptr);
 		struct tm* tim = std::localtime(&t);
-		std::stringstream ss = std::stringstream();
-		ss << path << "\\" << std::put_time(tim, "%Y-%m-%d_%H-%M-%S") << ".png";
+		char buf[32];
+
+		strftime(buf, sizeof(buf), "%Y-%m-%d_%H-%M-%S", tim);
+
+		std::stringstream ss;
+		ss << path << "\\" << buf << ".png";//std::put_time(tim, "%Y-%m-%d_%H-%M-%S") << ".png";
 		_pdc = new ScreenshotCallback(this, ss.str());
 		_camera->addPostDrawCallback(_pdc);
 	}

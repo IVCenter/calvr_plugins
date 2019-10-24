@@ -281,9 +281,11 @@ void GetFiles(const string& path, vector<string>& files) {
 	DIR* dirp = opendir(path.c_str());
 	struct dirent* dp;
 	while ((dp = readdir(dirp)) != NULL) {
-		if (strcmp(strrchr(dp->d_name, '.') + 1, "dcm") != 0) continue;
+		const char * ext = strrchr(dp->d_name, '.');
+		if(!ext) continue;
+		if (strcmp(ext + 1, "dcm") != 0) continue;
 		// printf("Helmsley: Found dcm %s\n", dp->d_name);
-		files.push_back(path + dp->d_name);
+		files.push_back(path + "/" + dp->d_name);
 	}
 	std::sort(files.begin(), files.end());
 	closedir(dirp);

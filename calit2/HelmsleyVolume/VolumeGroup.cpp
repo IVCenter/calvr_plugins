@@ -163,7 +163,7 @@ void VolumeGroup::init()
 
 	_PlanePoint = new osg::Uniform("PlanePoint", osg::Vec3(0.f, -2.f, 0.f));
 	_PlaneNormal = new osg::Uniform("PlaneNormal", osg::Vec3(0.f, 1.f, 0.f));
-	_StepSize = new osg::Uniform("StepSize", .00135f);
+	_StepSize = new osg::Uniform("StepSize", .00066f);
 	_RelativeViewport = new osg::Uniform("RelativeViewport", osg::Vec4(1, 1, 0, 0));
 
 	states->addUniform(_PlanePoint);
@@ -309,7 +309,7 @@ void VolumeGroup::loadMask(std::string path, osg::Image* volume)
 	int i = 0;
 	for (i = 0; i < depth; ++i)
 	{
-		std::string maskpath = path + "\\" + std::to_string(depth - (i + 1)) + ".png";
+		std::string maskpath = path + "/" + std::to_string(depth - (i + 1)) + ".png";
 		osg::ref_ptr<osg::Image> mask = osgDB::readImageFile(maskpath);
 		mask->flipVertical();
 		unsigned int bytesize = mask->getPixelSizeInBits() / 8;

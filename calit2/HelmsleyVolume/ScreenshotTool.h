@@ -39,7 +39,7 @@ protected:
 class ScreenshotTool : public cvr::SceneObject
 {
 public:
-	ScreenshotTool::ScreenshotTool(std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds = false)
+	ScreenshotTool(std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds = false)
 		: SceneObject(name, navigation, movable, clip, contextMenu, showBounds)
 	{
 		init();

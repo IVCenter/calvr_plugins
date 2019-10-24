@@ -65,8 +65,8 @@ protected:
 	cvr::SceneObject* _scene;
 	VolumeGroup* _volume;
 
-	cvr::UIPopup* _menu;
-	cvr::UIPopup* _maskMenu;
+	cvr::UIPopup* _menu = nullptr;
+	cvr::UIPopup* _maskMenu = nullptr;
 
 	CallbackButton* _horizontalflip;
 	CallbackButton* _verticalflip;

@@ -116,10 +116,10 @@ bool HelmsleyVolume::init()
 	mtso->attachToScene();
 
 	screenshotTool = new ScreenshotTool("Screenshot Tool", false, true, false, false, false);
-	screenshotTool->setPosition(osg::Vec3(0, -1000000, 0));
+	//screenshotTool->setPosition(osg::Vec3(0, -1000000, 0));
 	//screenshotTool->
 	PluginHelper::registerSceneObject(screenshotTool, "HelmsleyVolume");
-	screenshotTool->attachToScene();
+	//screenshotTool->attachToScene();
 
 	fileSelector = new FileSelector();
 
@@ -134,6 +134,16 @@ bool HelmsleyVolume::init()
 	fileMenu->setCallback(this);
 	_vMenu->addItem(fileMenu);
 
+	_cpButton = new MenuCheckbox("Cutting Plane", false);
+	_cpButton->setCallback(this);
+	_mtButton = new MenuCheckbox("Measurement Tool", false);
+	_mtButton->setCallback(this);
+	_toolButton = nullptr;
+	_stCheckbox = new MenuCheckbox("Screenshot Tool", false);
+	_stCheckbox->setCallback(this);
+	_vMenu->addItem(_cpButton);
+	_vMenu->addItem(_mtButton);
+	_vMenu->addItem(_stCheckbox);
 
 	std::string modelDir = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.ModelDir");
 	std::cout << modelDir << std::endl;
@@ -166,6 +176,7 @@ bool HelmsleyVolume::init()
 	createList(fileMenu, "Plugin.HelmsleyVolume.Files");
 
 	MenuSystem::instance()->addMenuItem(_vMenu);
+
 
     return true;
 }
@@ -350,6 +361,50 @@ void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 
 		removeVolume(index);
 	}
+	else if (menuItem == _cpButton)
+	{
+		if (_cpButton->getValue())
+		{
+			_tool = CUTTING_PLANE;
+			if (_toolButton && _toolButton != _cpButton)
+			{
+				_toolButton->setValue(false);
+			}
+			_toolButton = _cpButton;
+		}
+		else
+		{
+			_tool = NONE;
+			_toolButton = nullptr;
+		}
+	}
+	else if (menuItem == _mtButton)
+	{
+		if (_mtButton->getValue())
+		{
+			_tool = MEASUREMENT_TOOL;
+			if (_toolButton && _toolButton != _mtButton)
+			{
+				_toolButton->setValue(false);
+			}
+			_toolButton = _mtButton;
+		}
+		else
+		{
+			_tool = NONE;
+		}
+	}
+	else if (menuItem == _stCheckbox)
+	{
+		if (_stCheckbox->getValue())
+		{
+			screenshotTool->attachToScene();
+		}
+		else
+		{
+			screenshotTool->detachFromScene();
+		}
+	}
 	
 }
 
@@ -358,7 +413,7 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 
 	SceneObject * so;
 	so = new SceneObject("volume", false, true, true, true, false);
-	so->setPosition(osg::Vec3(0, 0, 500));
+	so->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(0, 750, 500)));
 
 	VolumeGroup * g = new VolumeGroup();
 	g->loadVolume(path, maskpath);

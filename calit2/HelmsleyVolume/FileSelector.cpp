@@ -17,7 +17,7 @@ void FileSelector::init()
 	pathSelections = std::vector<cvr::MenuItem*>();
 
 	addVolumeMenu = new cvr::PopupMenu("Volumes", "", false, true);
-	addVolumeMenu->setPosition(osg::Vec3(-500, 500, 1100));
+	addVolumeMenu->setPosition(osg::Vec3(-600, 500, 1100));
 	addVolumeMenu->setVisible(true);
 	//addVolumeMenu->setMovable(false);
 
@@ -26,9 +26,9 @@ void FileSelector::init()
 	addVol->setCallback(this);
 
 	volumeFileSelector = new cvr::PopupMenu("Choose File", "", false, true);
-	volumeFileSelector->setPosition(osg::Vec3(-500, 500, 1000));
+	volumeFileSelector->setPosition(osg::Vec3(-600, 500, 1000));
 	//volumeFileSelector->getRootSubMenu()->setTextScale(0.5);
-	_currentPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.BaseFolder", "C:\\", false);
+	_currentPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.BaseFolder", "C:/", false);
 	std::cout << "Volume search path: " << _currentPath << std::endl;
 }
 
@@ -72,10 +72,10 @@ void FileSelector::menuCallback(cvr::MenuItem* item)
 
 				std::string maskpath = "";
 
-				DIR* dir = opendir((_currentPath + "\\mask").c_str());
+				DIR* dir = opendir((_currentPath + "/mask").c_str());
 				if (dir != NULL)
 				{
-					maskpath = _currentPath + "\\mask";
+					maskpath = _currentPath + "/mask";
 					closedir(dir);
 				}
 
@@ -86,7 +86,7 @@ void FileSelector::menuCallback(cvr::MenuItem* item)
 			}
 			else
 			{
-				_currentPath = _currentPath + "\\" + button->getText();
+				_currentPath = _currentPath + "/" + button->getText();
 				updateFileSelection();
 			}
 		}
