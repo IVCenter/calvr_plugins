@@ -321,8 +321,12 @@ void VolumeGroup::loadMask(std::string path, osg::Image* volume)
 			for (unsigned int x = 0; x < width; ++x)
 			{
 				unsigned int volpixel = 2 * (x + y * width);
-				unsigned int maskpixel = bytesize * (x + y * width);
+				unsigned int maskpixel = bytesize * (x / 2 + y / 2 * width / 2);
 				slice[volpixel + 1] = 256 * (uint16_t)(maskData[maskpixel]);
+				if (slice[volpixel + 1] != 0)
+				{
+					//std::cout << slice[volpixel + 1] << std::endl;
+				}
 			}
 		}
 	}

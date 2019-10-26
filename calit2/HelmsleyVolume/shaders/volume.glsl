@@ -1,7 +1,7 @@
 #version 460
 
 #pragma import_defines ( COLOR_FUNCTION, ORGANS_ONLY, LIGHT_DIRECTIONAL, LIGHT_SPOT,LIGHT_POINT )
-#pragma import_defines ( COLON, BLADDER, KIDNEYS, SPLEEN )
+#pragma import_defines ( COLON, BLADDER, KIDNEY, SPLEEN )
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 layout(rg16, binding = 0) uniform image3D volume;
@@ -56,15 +56,41 @@ vec4 Sample(ivec3 p) {
 		s.rgb = vec3(ra.r);
 	#endif
 
+	highp int bitmask = int(ra.g * 65535.0);
+
 	#ifdef COLON
-		if(ra.g > 0.01)
+		if(bitmask == 1024)
 		{
 			s.rgb = vec3(ra.rr, 0);
 		}
 	#endif
 
+	#ifdef BLADDER
+		if(bitmask == 256)
+		{
+			s.rgb = vec3(0, ra.rr);
+		}
+	#endif
+
+	#ifdef KIDNEY
+		if(bitmask == 512)
+		{
+			s.rgb = vec3(ra.r, 0, 0);
+		}
+	#endif
+
+	#ifdef SPLEEN
+		if(bitmask == 2048)
+		{
+			s.rgb = vec3(ra.r, 0, ra.r);
+		}
+	#endif
+
 	#ifdef ORGANS_ONLY
-		s.a *= ra.g;
+		if(bitmask == 0)
+		{
+			s.a = 0;
+		}
 	#endif
 
 
