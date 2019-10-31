@@ -2,7 +2,6 @@
 #include "UIExtensions.h"
 
 #include <cvrKernel/NodeMask.h>
-
 #include <cvrMenu/NewUI/UIPopup.h>
 #include <cvrMenu/NewUI/UIQuadElement.h>
 #include <cvrMenu/NewUI/UIList.h>
@@ -10,6 +9,10 @@
 #include <cvrMenu/NewUI/UIButton.h>
 #include <cvrMenu/NewUI/UITexture.h>
 #include <cvrMenu/NewUI/UISlider.h>
+
+#ifdef WITH_OPENVR
+#include <cvrKernel/OpenVRDevice.h>
+#endif
 
 #include <ctime>
 #include <iostream>
@@ -43,7 +46,25 @@ std::string HelmsleyVolume::loadShaderFile(std::string filename)
 
 void HelmsleyVolume::resetOrientation()
 {
+#ifdef WITH_OPENVR
+	if (OpenVRDevice::instance() != nullptr)
+	{
+		OpenVRDevice* device = OpenVRDevice::instance();
+		osg::Matrix curr = device->getUniverseMatrix();
 
+		osg::Vec3 pos = device->position();
+		osg::Quat rot = device->orientation();
+
+		osg::Vec3 startPos = cvr::ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Headset.Position", osg::Vec3(0, 1000, -1000));
+		osg::Vec3 diff = (startPos - pos) / 1000.0f;
+		double xrot = atan2(2 * (rot.w() * rot.x() + rot.y() * rot.z()), 1 - 2 * (rot.x() * rot.x() + rot.y() * rot.y()));
+		osg::Matrix m;
+		m.makeTranslate(diff);
+		//std::cout << pos.x() << ", " << pos.y() << ", " << pos.z() << std::endl;
+		//m.preMultRotate(osg::Quat(xrot, osg::Vec3(0, 1, 0)));
+		device->setUniverseMatrix(m * curr);
+	}
+#endif
 }
 
 HelmsleyVolume::HelmsleyVolume()
@@ -177,6 +198,11 @@ bool HelmsleyVolume::init()
 
 	MenuSystem::instance()->addMenuItem(_vMenu);
 
+#ifdef WITH_OPENVR
+	_resetHMD = new MenuButton("Reset HMD");
+	_resetHMD->setCallback(this);
+	MenuSystem::instance()->addMenuItem(_resetHMD);
+#endif
 
     return true;
 }
@@ -405,7 +431,10 @@ void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 			screenshotTool->detachFromScene();
 		}
 	}
-	
+	else if (menuItem == _resetHMD)
+	{
+		resetOrientation();
+	}
 }
 
 void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)

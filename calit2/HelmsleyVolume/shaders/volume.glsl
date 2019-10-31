@@ -56,31 +56,33 @@ vec4 Sample(ivec3 p) {
 		s.rgb = vec3(ra.r);
 	#endif
 
+	//TODO: change to floatBitsToUint
 	highp int bitmask = int(ra.g * 65535.0);
 
-	#ifdef COLON
-		if(bitmask == 1024)
-		{
-			s.rgb = vec3(ra.rr, 0);
-		}
-	#endif
 
 	#ifdef BLADDER
-		if(bitmask == 256)
+		if(bitmask == 1)
 		{
 			s.rgb = vec3(0, ra.rr);
 		}
 	#endif
 
 	#ifdef KIDNEY
-		if(bitmask == 512)
+		if(bitmask == 2)
 		{
 			s.rgb = vec3(ra.r, 0, 0);
 		}
 	#endif
 
+	#ifdef COLON
+		if(bitmask == 4)
+		{
+			s.rgb = vec3(ra.rr, 0);
+		}
+	#endif
+
 	#ifdef SPLEEN
-		if(bitmask == 2048)
+		if(bitmask == 8)
 		{
 			s.rgb = vec3(ra.r, 0, ra.r);
 		}

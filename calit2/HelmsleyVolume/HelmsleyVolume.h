@@ -75,6 +75,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		cvr::MenuCheckbox * _mtButton;
 		cvr::MenuCheckbox * _toolButton;
 		cvr::MenuCheckbox * _stCheckbox;
+		cvr::MenuButton * _resetHMD;
 		osg::MatrixTransform* cuttingPlane;
 		osg::ref_ptr<MeasurementTool> measurementTool;
 		ScreenshotTool* screenshotTool;

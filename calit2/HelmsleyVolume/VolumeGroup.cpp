@@ -321,8 +321,9 @@ void VolumeGroup::loadMask(std::string path, osg::Image* volume)
 			for (unsigned int x = 0; x < width; ++x)
 			{
 				unsigned int volpixel = 2 * (x + y * width);
-				unsigned int maskpixel = bytesize * (x / 2 + y / 2 * width / 2);
-				slice[volpixel + 1] = 256 * (uint16_t)(maskData[maskpixel]);
+				unsigned int maskpixel = bytesize * (x + y * width);
+				//upper 8 bits are green, bottom 8 are red. use 1-hot encoding
+				slice[volpixel + 1] = (uint16_t)(maskData[maskpixel]) + (uint16_t)(maskData[maskpixel+1]) * 256;
 				if (slice[volpixel + 1] != 0)
 				{
 					//std::cout << slice[volpixel + 1] << std::endl;
