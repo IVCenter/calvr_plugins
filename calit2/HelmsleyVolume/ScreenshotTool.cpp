@@ -116,14 +116,20 @@ void ScreenshotTool::setParams(double fov, double aspect)
 
 void ScreenshotTool::activate()
 {
-	_cameraActive = true;
-	dynamic_cast<osg::Group*>(cvr::CVRViewer::instance()->getSceneData())->addChild(_camera);
+	if (!_cameraActive)
+	{
+		_cameraActive = true;
+		dynamic_cast<osg::Group*>(cvr::CVRViewer::instance()->getSceneData())->addChild(_camera);
+	}
 }
 
 void ScreenshotTool::deactivate()
 {
-	_cameraActive = false;
-	dynamic_cast<osg::Group*>(cvr::CVRViewer::instance()->getSceneData())->removeChild(_camera);
+	if (_cameraActive)
+	{
+		_cameraActive = false;
+		dynamic_cast<osg::Group*>(cvr::CVRViewer::instance()->getSceneData())->removeChild(_camera);
+	}
 }
 
 void ScreenshotTool::updateCallback(int handID, const osg::Matrix & mat)

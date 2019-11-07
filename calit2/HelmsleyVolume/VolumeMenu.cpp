@@ -314,3 +314,71 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		_volume->setDirtyAll();
 	}
 }
+
+ToolMenu::ToolMenu()
+{
+	_menu = new UIPopup();
+	UIQuadElement* bknd = new UIQuadElement(osg::Vec4(0.8, 0.8, 0.8, 1));
+	_menu->addChild(bknd);
+	_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Position", osg::Vec3(-200, 500, 200)));
+	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Scale", osg::Vec3(600, 1, 200)));
+
+	UIList* list = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
+	bknd->addChild(list);
+
+	_tool = new CallbackRadial();
+	_tool->setCallback(this);
+
+	std::string dir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ImageDir");
+
+	_cuttingPlane = new ToolRadialButton(_tool, dir + "slice.png");
+	list->addChild(_cuttingPlane);
+
+	_measuringTool = new ToolRadialButton(_tool, dir + "ruler.png");
+	list->addChild(_measuringTool);
+
+	_screenshotTool = new ToolToggle(dir + "browser.png");
+	_screenshotTool->setCallback(this);
+	list->addChild(_screenshotTool);
+
+	_menu->setActive(true, true);
+}
+
+ToolMenu::~ToolMenu()
+{
+	_menu->setActive(false, false);
+	MenuManager::instance()->removeMenuSystem(_menu);
+	delete _menu;
+}
+
+void ToolMenu::uiCallback(UICallbackCaller* item)
+{
+	if (item == _screenshotTool)
+	{
+		HelmsleyVolume::instance()->toggleScreenshotTool(_screenshotTool->isOn());
+	}
+	else if (item == _tool)
+	{
+		if (_prevButton && _prevButton != _tool->getCurrentButton())
+		{
+			_prevButton->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
+		}
+		if (_tool->getCurrentButton() == _cuttingPlane)
+		{
+			HelmsleyVolume::instance()->setTool(HelmsleyVolume::CUTTING_PLANE);
+			_cuttingPlane->getIcon()->setColor(osg::Vec4(0.75, 0.1, 0.1, 1));
+			_prevButton = _cuttingPlane;
+		}
+		else if (_tool->getCurrentButton() == _measuringTool)
+		{
+			HelmsleyVolume::instance()->setTool(HelmsleyVolume::MEASUREMENT_TOOL);
+			_measuringTool->getIcon()->setColor(osg::Vec4(0.75, 0.1, 0.1, 1));
+			_prevButton = _measuringTool;
+		}
+		else
+		{
+			HelmsleyVolume::instance()->setTool(HelmsleyVolume::NONE);
+			_prevButton = nullptr;
+		}
+	}
+}

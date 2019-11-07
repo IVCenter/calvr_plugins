@@ -89,4 +89,24 @@ protected:
 	cvr::UIRadialButton* _rainbow;
 };
 
+class ToolMenu : public UICallback {
+public:
+	ToolMenu();
+	~ToolMenu();
+
+
+	virtual void uiCallback(UICallbackCaller * item);
+
+protected:
+
+	cvr::UIPopup* _menu = nullptr;
+
+	CallbackRadial* _tool;
+
+	ToolRadialButton* _cuttingPlane;
+	ToolRadialButton* _measuringTool;
+	ToolToggle* _screenshotTool;
+	ToolRadialButton* _prevButton = nullptr;
+};
+
 #endif

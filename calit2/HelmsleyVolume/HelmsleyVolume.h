@@ -52,6 +52,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		bool processEvent(cvr::InteractionEvent* e);
 		void menuCallback(cvr::MenuItem* menuItem);
 		void createList(cvr::SubMenu* , std::string configbase);
+		void toggleScreenshotTool(bool on);
 
 		void loadVolume(std::string path, std::string maskpath = "");
 		void removeVolume(int index);
@@ -90,6 +91,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		std::map<cvr::MenuItem*, std::string> _buttonMap;
 		cvr::MenuRadial * _radial;
 		cvr::PopupMenu * _selectionMenu;
+		ToolMenu* _toolMenu;
 
 		osg::Matrix _selectionMatrix;
 

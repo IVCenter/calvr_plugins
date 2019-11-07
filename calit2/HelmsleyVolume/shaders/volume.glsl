@@ -57,7 +57,7 @@ vec4 Sample(ivec3 p) {
 	#endif
 
 	//TODO: change to floatBitsToUint
-	highp int bitmask = int(ra.g * 65535.0);
+	uint bitmask = uint(ra.g * 65535.0);
 
 
 	#ifdef BLADDER

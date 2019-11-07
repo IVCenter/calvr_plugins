@@ -23,6 +23,15 @@ VisibilityToggle::VisibilityToggle(std::string text)
 	addChild(label);
 }
 
+bool CallbackToggle::onToggle()
+{
+	if (_callback)
+	{
+		_callback->uiCallback(this);
+	}
+	return true;
+}
+
 bool VisibilityToggle::onToggle()
 {
 	std::cerr << "TOGGLE " << _on << std::endl;
@@ -50,52 +59,56 @@ void CallbackRadial::onSelectionChange()
 	}
 }
 
-ToolSelector::ToolSelector(UIList::Direction d, UIList::OverflowBehavior o)
-	: UIList(d, o)
+ToolRadialButton::ToolRadialButton(UIRadial* parent, std::string iconpath)
+	: UIRadialButton(parent)
 {
-	_toolRadial = new CallbackRadial();
+	_icon = new UITexture(iconpath);
+	_icon->setTransparent(true);
+	_icon->setColor(osg::Vec4(0, 0, 0, 1));
+	_icon->setPercentSize(osg::Vec3(0.8, 1, 0.8));
+	_icon->setPercentPos(osg::Vec3(0.1, 0, -0.1));
 
-	std::string dir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ImageDir");
-	UITexture* scissors = new UITexture(dir + "scissors.png");
-	scissors->setTransparent(true);
-	scissors->setAspect(osg::Vec3(1, 0, 1));
-	scissors->setAbsolutePos(osg::Vec3(0, -0.1f, 0));
+	_quad = new UIQuadElement(osg::Vec4(0.95, 0.95, 0.95, 1));
+	_quad->addChild(_icon);
+	addChild(_quad);
+}
 
-	UISwitch* indicator = new UISwitch();
-	UIQuadElement* bknd = new UIQuadElement(osg::Vec4(1, 0, 0, 1));
-	indicator->addChild(bknd);
-	bknd = new UIQuadElement(osg::Vec4(0, 1, 0, 1));
-	indicator->addChild(bknd);
-	indicator->setDisplayed(0);
+void ToolRadialButton::processHover(bool enter)
+{
+	if (enter)
+	{
+		_quad->setColor(osg::Vec4(0.8, 0.8, 0.8, 1));
+	}
+	else
+	{
+		_quad->setColor(osg::Vec4(0.95, 0.95, 0.95, 1.0));
+	}
+}
 
-	UIRadialButton* btn = new UIRadialButton(_toolRadial);
-	
-	UIEmptyElement* listItem = new UIEmptyElement();
-	listItem->addChild(scissors);
-	listItem->addChild(indicator);
-	listItem->addChild(btn);
-	addChild(listItem);
+ToolToggle::ToolToggle(std::string iconpath)
+	: CallbackToggle()
+{
+	_icon = new UITexture(iconpath);
+	_icon->setTransparent(true);
+	_icon->setColor(osg::Vec4(0, 0, 0, 1));
+	_icon->setPercentSize(osg::Vec3(0.8, 1, 0.8));
+	_icon->setPercentPos(osg::Vec3(0.1, 0, -0.1));
 
+	_quad = new UIQuadElement(osg::Vec4(0.95, 0.95, 0.95, 1));
+	_quad->addChild(_icon);
+	addChild(_quad);
+}
 
-	UITexture* measuringTape = new UITexture(dir + "ruler.png");
-	measuringTape->setTransparent(true);
-	measuringTape->setAspect(osg::Vec3(1, 0, 1));
-	measuringTape->setAbsolutePos(osg::Vec3(0, -0.1f, 0));
-
-	indicator = new UISwitch();
-	bknd = new UIQuadElement(osg::Vec4(1, 0, 0, 1));
-	indicator->addChild(bknd);
-	bknd = new UIQuadElement(osg::Vec4(0, 1, 0, 1));
-	indicator->addChild(bknd);
-	indicator->setDisplayed(0);
-
-	btn = new UIRadialButton(_toolRadial);
-
-	listItem = new UIEmptyElement();
-	listItem->addChild(measuringTape);
-	listItem->addChild(indicator);
-	listItem->addChild(btn);
-	addChild(listItem);
+void ToolToggle::processHover(bool enter)
+{
+	if (enter)
+	{
+		_quad->setColor(osg::Vec4(0.8, 0.8, 0.8, 1));
+	}
+	else
+	{
+		_quad->setColor(osg::Vec4(0.95, 0.95, 0.95, 1.0));
+	}
 }
 
 

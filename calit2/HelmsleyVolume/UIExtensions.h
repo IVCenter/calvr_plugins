@@ -57,6 +57,14 @@ public:
 	}
 };
 
+class CallbackToggle : public cvr::UIToggle, public UICallbackCaller
+{
+public:
+
+	virtual bool onToggle() override;
+
+};
+
 class VisibilityToggle : public cvr::UIToggle, public UICallbackCaller
 {
 public:
@@ -76,13 +84,34 @@ public:
 	virtual void onSelectionChange() override;
 };
 
-class ToolSelector : public cvr::UIList
+class ToolRadialButton : public cvr::UIRadialButton
 {
 public:
-	ToolSelector(Direction d = LEFT_TO_RIGHT, OverflowBehavior o = CUT);
+	ToolRadialButton(cvr::UIRadial* parent, std::string iconpath);
+
+	cvr::UITexture* getIcon() { return _icon; }
+	void setIcon(std::string iconpath) { _icon->setTexture(iconpath); }
+
+	virtual void processHover(bool enter) override;
 
 protected:
-	CallbackRadial* _toolRadial;
+	cvr::UITexture* _icon;
+	cvr::UIQuadElement* _quad;
+};
+
+class ToolToggle : public CallbackToggle
+{
+public:
+	ToolToggle(std::string iconpath);
+
+	cvr::UITexture* getIcon() { return _icon; }
+	void setIcon(std::string iconpath) { _icon->setTexture(iconpath); }
+
+	virtual void processHover(bool enter) override;
+
+protected:
+	cvr::UITexture* _icon;
+	cvr::UIQuadElement* _quad;
 };
 
 class CallbackSlider : public cvr::UISlider, public UICallbackCaller

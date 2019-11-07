@@ -176,7 +176,7 @@ bool HelmsleyVolume::init()
 	_selectionMatrix.makeTranslate(osg::Vec3(-300, 500, 300));
 	_selectionMenu->setTransform(_selectionMatrix);
 
-	
+	/*
 	_radial = new MenuRadial();
 	std::vector<std::string> labels = std::vector<std::string>();
 	std::vector<bool> symbols = std::vector<bool>();
@@ -193,6 +193,9 @@ bool HelmsleyVolume::init()
 	_selectionMenu->addMenuItem(_radial);
 	
 	//_vMenu->addItem(_radial);
+	*/
+
+	_toolMenu = new ToolMenu();
 
 	createList(fileMenu, "Plugin.HelmsleyVolume.Files");
 
@@ -244,7 +247,22 @@ void HelmsleyVolume::postFrame()
 
 bool HelmsleyVolume::processEvent(InteractionEvent * e)
 {
-	if (e->getInteraction() == BUTTON_DRAG)
+	if (e->getInteraction() == BUTTON_DOWN)
+	{
+		if (_tool == MEASUREMENT_TOOL)
+		{
+			//Measurement tool
+			osg::Matrix mat = PluginHelper::getHandMat(e->asHandEvent()->getHand());
+			osg::Vec4d position = osg::Vec4(0, 0, 0, 1) * mat;
+			osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
+
+			if (e->getInteraction() == BUTTON_DOWN)
+			{
+				measurementTool->setStart(pos);
+			}
+		}
+	}
+	else if (e->getInteraction() == BUTTON_DRAG)
 	{
 		if (e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _interactButton)
 		{
@@ -311,15 +329,8 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 				osg::Vec4d position = osg::Vec4(0, 0, 0, 1) * mat;
 				osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
 
-				if (e->getInteraction() == BUTTON_DOWN)
-				{
-					measurementTool->setStart(pos);
-				}
-				else
-				{
-					measurementTool->setEnd(pos);
-					measurementTool->setNodeMask(0xffffffff);
-				}
+				measurementTool->setEnd(pos);
+				measurementTool->setNodeMask(0xffffffff);
 				return true;
 			}
 		}
@@ -422,18 +433,25 @@ void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 	}
 	else if (menuItem == _stCheckbox)
 	{
-		if (_stCheckbox->getValue())
-		{
-			screenshotTool->attachToScene();
-		}
-		else
-		{
-			screenshotTool->detachFromScene();
-		}
+		toggleScreenshotTool(_stCheckbox->getValue());
 	}
 	else if (menuItem == _resetHMD)
 	{
 		resetOrientation();
+	}
+}
+
+void HelmsleyVolume::toggleScreenshotTool(bool on)
+{
+	if (on)
+	{
+		screenshotTool->attachToScene();
+		screenshotTool->activate();
+	}
+	else
+	{
+		screenshotTool->detachFromScene();
+		screenshotTool->deactivate();
 	}
 }
 
