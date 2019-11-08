@@ -318,16 +318,18 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 ToolMenu::ToolMenu()
 {
 	_menu = new UIPopup();
-	UIQuadElement* bknd = new UIQuadElement(osg::Vec4(0.8, 0.8, 0.8, 1));
+	UIQuadElement* bknd = new UIQuadElement(osg::Vec4(0.3, 0.3, 0.3, 1));
 	_menu->addChild(bknd);
-	_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Position", osg::Vec3(-200, 500, 200)));
-	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Scale", osg::Vec3(600, 1, 200)));
+	_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Position", osg::Vec3(-150, 500, 600)));
+	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Scale", osg::Vec3(300, 1, 100)));
 
 	UIList* list = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
+	list->setAbsoluteSpacing(5);
 	bknd->addChild(list);
 
 	_tool = new CallbackRadial();
 	_tool->setCallback(this);
+	_tool->allowNoneSelected(true);
 
 	std::string dir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ImageDir");
 
@@ -356,6 +358,14 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 	if (item == _screenshotTool)
 	{
 		HelmsleyVolume::instance()->toggleScreenshotTool(_screenshotTool->isOn());
+		if (_screenshotTool->isOn())
+		{
+			_screenshotTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+		}
+		else 
+		{
+			_screenshotTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
+		}
 	}
 	else if (item == _tool)
 	{
@@ -366,13 +376,13 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 		if (_tool->getCurrentButton() == _cuttingPlane)
 		{
 			HelmsleyVolume::instance()->setTool(HelmsleyVolume::CUTTING_PLANE);
-			_cuttingPlane->getIcon()->setColor(osg::Vec4(0.75, 0.1, 0.1, 1));
+			_cuttingPlane->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
 			_prevButton = _cuttingPlane;
 		}
 		else if (_tool->getCurrentButton() == _measuringTool)
 		{
 			HelmsleyVolume::instance()->setTool(HelmsleyVolume::MEASUREMENT_TOOL);
-			_measuringTool->getIcon()->setColor(osg::Vec4(0.75, 0.1, 0.1, 1));
+			_measuringTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
 			_prevButton = _measuringTool;
 		}
 		else
