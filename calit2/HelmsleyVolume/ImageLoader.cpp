@@ -190,7 +190,7 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 	double prevX = images[0].location;
 	for (unsigned int i = 1; i < images.size(); ++i)
 	{
-		std::cout << images[i].location - prevX << std::endl;
+		//std::cout << images[i].location - prevX << std::endl;
 		prevX = images[i].location;
 	}
 	unsigned int w = images[0].image->getWidth();
