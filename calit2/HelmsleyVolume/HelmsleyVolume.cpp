@@ -136,7 +136,7 @@ bool HelmsleyVolume::init()
 	PluginHelper::registerSceneObject(mtso, "HelmsleyVolume");
 	mtso->attachToScene();
 
-	screenshotTool = new ScreenshotTool("Screenshot Tool", false, true, false, false, false);
+	screenshotTool = new ScreenshotTool("Screenshot Tool", false, true, false, false, true);
 	//screenshotTool->setPosition(osg::Vec3(0, -1000000, 0));
 	//screenshotTool->
 	PluginHelper::registerSceneObject(screenshotTool, "HelmsleyVolume");

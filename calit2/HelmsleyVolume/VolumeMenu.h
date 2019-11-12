@@ -52,7 +52,7 @@ protected:
 
 class NewVolumeMenu : public UICallback {
 public:
-	NewVolumeMenu(cvr::SceneObject* scene, VolumeGroup* volume) : _scene(scene), _volume(volume) {}
+	NewVolumeMenu(cvr::SceneObject* scene, VolumeGroup* volume, bool movable = true) : _scene(scene), _volume(volume), _movable(movable) {}
 	~NewVolumeMenu();
 
 	void init();
@@ -87,11 +87,16 @@ protected:
 	ShaderQuad* _colorDisplay;
 	cvr::UIRadialButton* _blacknwhite;
 	cvr::UIRadialButton* _rainbow;
+
+private:
+	bool _movable;
+	cvr::SceneObject* _container;
+	cvr::SceneObject* _maskContainer;
 };
 
 class ToolMenu : public UICallback {
 public:
-	ToolMenu();
+	ToolMenu(bool movable = true);
 	~ToolMenu();
 
 
@@ -107,6 +112,10 @@ protected:
 	ToolRadialButton* _measuringTool;
 	ToolToggle* _screenshotTool;
 	ToolRadialButton* _prevButton = nullptr;
+
+private:
+	bool _movable;
+	cvr::SceneObject* _container;
 };
 
 #endif

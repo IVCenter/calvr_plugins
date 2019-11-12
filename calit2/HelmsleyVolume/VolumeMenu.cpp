@@ -48,6 +48,18 @@ NewVolumeMenu::~NewVolumeMenu()
 		MenuManager::instance()->removeMenuSystem(_maskMenu);
 		delete _maskMenu;
 	}
+
+	if (_container)
+	{
+		_container->detachFromScene();
+		delete _container;
+	}
+	if (_maskContainer)
+	{
+		_maskContainer->detachFromScene();
+		delete _maskContainer;
+	}
+
 }
 
 void NewVolumeMenu::init()
@@ -171,7 +183,20 @@ void NewVolumeMenu::init()
 	list2->addChild(_rainbow);
 	list->addChild(list2);
 
-	_menu->setActive(true, true);
+	if (!_movable)
+	{
+		_menu->setActive(true, true);
+	}
+	else {
+		_menu->setActive(true, false);
+		_container = new SceneObject("VolumeMenu", false, true, false, false, true);
+		PluginHelper::registerSceneObject(_container, "VolumeMenu");
+		_container->attachToScene();
+		_container->setShowBounds(true);
+		_container->addChild(_menu->getRoot());
+		_menu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
+		_container->dirtyBounds();
+	}
 
 
 	//_menu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
@@ -214,13 +239,30 @@ void NewVolumeMenu::init()
 		list->addChild(_bladder);
 		list->addChild(_spleen);
 
-		_maskMenu->setActive(true, true);
+		if (!_movable)
+		{
+			_maskMenu->setActive(true, true);
+		}
+		else {
+			_maskMenu->setActive(true, false);
+			_maskContainer = new SceneObject("MaskMenu", false, true, false, false, true);
+			PluginHelper::registerSceneObject(_maskContainer, "MaskMenu");
+			_maskContainer->attachToScene();
+			_maskContainer->setShowBounds(true);
+			_maskContainer->addChild(_maskMenu->getRoot());
+			_maskMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
+			_maskContainer->dirtyBounds();
+		}
 	}
 
 }
 
 void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 {
+	//if (_container)
+	//{
+	//	_container->dirtyBounds();
+	//}
 	if (item == _horizontalflip)
 	{
 		osg::Matrix m;
@@ -315,7 +357,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	}
 }
 
-ToolMenu::ToolMenu()
+ToolMenu::ToolMenu(bool movable)
 {
 	_menu = new UIPopup();
 	UIQuadElement* bknd = new UIQuadElement(osg::Vec4(0.3, 0.3, 0.3, 1));
@@ -343,7 +385,19 @@ ToolMenu::ToolMenu()
 	_screenshotTool->setCallback(this);
 	list->addChild(_screenshotTool);
 
-	_menu->setActive(true, true);
+	if (!_movable)
+	{
+		_menu->setActive(true, true);
+	}
+	else {
+		_menu->setActive(true, false);
+		_container = new SceneObject("VolumeMenu", false, true, false, false, true);
+		PluginHelper::registerSceneObject(_container, "VolumeMenu");
+		_container->attachToScene();
+		_container->addChild(_menu->getRoot());
+		_menu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
+		_container->dirtyBounds();
+	}
 }
 
 ToolMenu::~ToolMenu()
@@ -351,13 +405,33 @@ ToolMenu::~ToolMenu()
 	_menu->setActive(false, false);
 	MenuManager::instance()->removeMenuSystem(_menu);
 	delete _menu;
+
+	if (_container)
+	{
+		_container->detachFromScene();
+		delete _container;
+	}
 }
 
 void ToolMenu::uiCallback(UICallbackCaller* item)
 {
 	if (item == _screenshotTool)
 	{
+		osg::Matrix mat = PluginHelper::getHandMat(_screenshotTool->getLastHand());
+		osg::Vec4d position = osg::Vec4(0, 300, 0, 1) * mat;
+		osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
+
+		osg::Quat q = osg::Quat();
+		osg::Quat q2 = osg::Quat();
+		osg::Vec3 v = osg::Vec3();
+		osg::Vec3 v2 = osg::Vec3();
+		mat.decompose(v, q, v2, q2);
+
 		HelmsleyVolume::instance()->toggleScreenshotTool(_screenshotTool->isOn());
+		HelmsleyVolume::instance()->getScreenshotTool()->setRotation(q);
+		HelmsleyVolume::instance()->getScreenshotTool()->setPosition(pos);
+
+
 		if (_screenshotTool->isOn())
 		{
 			_screenshotTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));

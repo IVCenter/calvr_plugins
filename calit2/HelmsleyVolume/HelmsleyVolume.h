@@ -53,6 +53,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		void menuCallback(cvr::MenuItem* menuItem);
 		void createList(cvr::SubMenu* , std::string configbase);
 		void toggleScreenshotTool(bool on);
+		ScreenshotTool* getScreenshotTool() { return screenshotTool; }
 
 		void loadVolume(std::string path, std::string maskpath = "");
 		void removeVolume(int index);
