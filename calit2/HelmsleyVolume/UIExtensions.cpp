@@ -71,6 +71,8 @@ ToolRadialButton::ToolRadialButton(UIRadial* parent, std::string iconpath)
 	_icon->setPercentPos(osg::Vec3(0.1, 0, -0.1));
 
 	_quad = new UIQuadElement(osg::Vec4(0.95, 0.95, 0.95, 1));
+	_quad->setRounding(0.0f, 0.05f);
+	_quad->setTransparent(true);
 	_quad->addChild(_icon);
 	addChild(_quad);
 }
@@ -97,6 +99,8 @@ ToolToggle::ToolToggle(std::string iconpath)
 	_icon->setPercentPos(osg::Vec3(0.1, 0, -0.1));
 
 	_quad = new UIQuadElement(osg::Vec4(0.95, 0.95, 0.95, 1));
+	_quad->setRounding(0.0f, 0.05f);
+	_quad->setTransparent(true);
 	_quad->addChild(_icon);
 	addChild(_quad);
 }

@@ -73,6 +73,7 @@ void NewVolumeMenu::init()
 	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
 	list->setPercentPos(osg::Vec3(0, 0, -0.2));
 	list->setPercentSize(osg::Vec3(1, 1, 0.8));
+	list->setAbsoluteSpacing(10);
 	bknd->addChild(list);
 
 	UIText* label = new UIText("Volume Options", 50.0f, osgText::TextBase::CENTER_CENTER);
@@ -360,14 +361,15 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 ToolMenu::ToolMenu(bool movable)
 {
 	_menu = new UIPopup();
-	UIQuadElement* bknd = new UIQuadElement(osg::Vec4(0.3, 0.3, 0.3, 1));
-	_menu->addChild(bknd);
+	//UIQuadElement* bknd = new UIQuadElement(osg::Vec4(0.3, 0.3, 0.3, 1));
+	//_menu->addChild(bknd);
 	_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Position", osg::Vec3(-150, 500, 600)));
 	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Scale", osg::Vec3(300, 1, 100)));
 
 	UIList* list = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
 	list->setAbsoluteSpacing(5);
-	bknd->addChild(list);
+	//bknd->addChild(list);
+	_menu->addChild(list);
 
 	_tool = new CallbackRadial();
 	_tool->setCallback(this);

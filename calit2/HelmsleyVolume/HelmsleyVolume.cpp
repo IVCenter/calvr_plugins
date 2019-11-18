@@ -14,6 +14,8 @@
 #include <cvrKernel/OpenVRDevice.h>
 #endif
 
+#include <osgDB/ReadFile>
+
 #include <ctime>
 #include <iostream>
 #include <algorithm>
@@ -82,7 +84,20 @@ HelmsleyVolume::~HelmsleyVolume()
 
 bool HelmsleyVolume::init()
 {
-	
+#ifdef WITH_OPENVR
+	std::string modelDir = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.ModelDir");
+	std::cout << "Model Dir: " << modelDir << std::endl;
+
+
+	osgDB::Options* roomOptions = new osgDB::Options("noReverseFaces");
+	osg::Node* room = osgDB::readNodeFile(modelDir + "CrohnsProtoRoom.obj", roomOptions);
+	SceneObject * so;
+	so = new SceneObject("room", false, false, false, false, false);
+	so->addChild(room);
+	PluginHelper::registerSceneObject(so, "HelmsleyVolume");
+	so->attachToScene();
+#endif
+
 	std::string fontfile = CalVR::instance()->getResourceDir();
 	fontfile = fontfile + "/resources/ArenaCondensed.ttf";
 
@@ -165,9 +180,6 @@ bool HelmsleyVolume::init()
 	_vMenu->addItem(_cpButton);
 	_vMenu->addItem(_mtButton);
 	_vMenu->addItem(_stCheckbox);
-
-	std::string modelDir = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.ModelDir");
-	std::cout << modelDir << std::endl;
 
 	_selectionMenu = new PopupMenu("Interaction options", "", false);
 	_selectionMenu->setVisible(false);
@@ -498,7 +510,7 @@ void HelmsleyVolume::removeVolume(int index)
 	//delete _removeButtons[index];
 	_volumes[index].release();
 	//delete _sceneObjects[index];
-	//delete _sceneObjects[index];
+	delete _sceneObjects[index];
 	//delete _volumes[index]; //deleted automatically because no references left once sceneobject is deleted
 	_contextMenus.erase(_contextMenus.begin() + index);
 	_worldMenus.erase(_worldMenus.begin() + index);

@@ -90,8 +90,8 @@ protected:
 
 private:
 	bool _movable;
-	cvr::SceneObject* _container;
-	cvr::SceneObject* _maskContainer;
+	cvr::SceneObject* _container = nullptr;
+	cvr::SceneObject* _maskContainer = nullptr;
 };
 
 class ToolMenu : public UICallback {
@@ -115,7 +115,7 @@ protected:
 
 private:
 	bool _movable;
-	cvr::SceneObject* _container;
+	cvr::SceneObject* _container = nullptr;
 };
 
 #endif
