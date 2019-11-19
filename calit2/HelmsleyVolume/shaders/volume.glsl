@@ -2,6 +2,7 @@
 
 #pragma import_defines ( COLOR_FUNCTION, ORGANS_ONLY, LIGHT_DIRECTIONAL, LIGHT_SPOT,LIGHT_POINT )
 #pragma import_defines ( COLON, BLADDER, KIDNEY, SPLEEN )
+#pragma import_defines ( CONTRAST_ABSOLUTE )
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 layout(rg16, binding = 0) uniform image3D volume;
@@ -43,7 +44,13 @@ vec4 Sample(ivec3 p) {
 		ra.r = 1 - ra.r;
 	#endif
 
+	if(ra.r < ContrastBottom || ra.r > ContrastTop)
+	{
+		ra.r = 0;
+	}
+	#ifndef CONTRAST_ABSOLUTE
 	ra.r = (ra.r - ContrastBottom) / (ContrastTop - ContrastBottom);
+	#endif
 	ra.r = max(0, min(1, ra.r));
 
 
@@ -60,10 +67,17 @@ vec4 Sample(ivec3 p) {
 	uint bitmask = uint(ra.g * 65535.0);
 
 
+	#ifdef ORGANS_ONLY
+		float alpha = 0.0;
+	#else
+		float alpha = s.a;
+	#endif
+
 	#ifdef BLADDER
 		if(bitmask == 1)
 		{
 			s.rgb = vec3(0, ra.rr);
+			alpha = s.a;
 		}
 	#endif
 
@@ -71,6 +85,7 @@ vec4 Sample(ivec3 p) {
 		if(bitmask == 2)
 		{
 			s.rgb = vec3(ra.r, 0, 0);
+			alpha = s.a;
 		}
 	#endif
 
@@ -78,6 +93,7 @@ vec4 Sample(ivec3 p) {
 		if(bitmask == 4)
 		{
 			s.rgb = vec3(ra.rr, 0);
+			alpha = s.a;
 		}
 	#endif
 
@@ -85,15 +101,11 @@ vec4 Sample(ivec3 p) {
 		if(bitmask == 8)
 		{
 			s.rgb = vec3(ra.r, 0, ra.r);
+			alpha = s.a;
 		}
 	#endif
 
-	#ifdef ORGANS_ONLY
-		if(bitmask == 0)
-		{
-			s.a = 0;
-		}
-	#endif
+	s.a = alpha;
 
 
 	return s;

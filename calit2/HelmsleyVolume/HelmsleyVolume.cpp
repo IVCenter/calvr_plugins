@@ -57,7 +57,7 @@ void HelmsleyVolume::resetOrientation()
 		osg::Vec3 pos = device->position();
 		osg::Quat rot = device->orientation();
 
-		osg::Vec3 startPos = cvr::ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Headset.Position", osg::Vec3(0, 1000, -1000));
+		osg::Vec3 startPos = cvr::ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Hmd.Position", osg::Vec3(0, 1000, -1000));
 		osg::Vec3 diff = (startPos - pos) / 1000.0f;
 		double xrot = atan2(2 * (rot.w() * rot.x() + rot.y() * rot.z()), 1 - 2 * (rot.x() * rot.x() + rot.y() * rot.y()));
 		osg::Matrix m;
@@ -84,6 +84,7 @@ HelmsleyVolume::~HelmsleyVolume()
 
 bool HelmsleyVolume::init()
 {
+	/*
 #ifdef WITH_OPENVR
 	std::string modelDir = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.ModelDir");
 	std::cout << "Model Dir: " << modelDir << std::endl;
@@ -97,7 +98,7 @@ bool HelmsleyVolume::init()
 	PluginHelper::registerSceneObject(so, "HelmsleyVolume");
 	so->attachToScene();
 #endif
-
+	*/
 	std::string fontfile = CalVR::instance()->getResourceDir();
 	fontfile = fontfile + "/resources/ArenaCondensed.ttf";
 

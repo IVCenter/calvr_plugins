@@ -121,7 +121,7 @@ void NewVolumeMenu::init()
 	list->addChild(_density);
 
 
-	label = new UIText("Contrast", 30.0f, osgText::TextBase::LEFT_CENTER);
+	label = new UIText("Threshold", 30.0f, osgText::TextBase::LEFT_CENTER);
 	label->setPercentPos(osg::Vec3(0.1, 0, 0));
 	list->addChild(label);
 
@@ -218,7 +218,7 @@ void NewVolumeMenu::init()
 		list->setPercentSize(osg::Vec3(1, 1, 0.8));
 		bknd->addChild(list);
 
-		UIText* label = new UIText("Mask Options", 50.0f, osgText::TextBase::CENTER_CENTER);
+		UIText* label = new UIText("Organs", 50.0f, osgText::TextBase::CENTER_CENTER);
 		label->setPercentSize(osg::Vec3(1, 1, 0.2));
 		bknd->addChild(label);
 
