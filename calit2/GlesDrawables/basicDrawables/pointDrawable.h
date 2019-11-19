@@ -25,6 +25,7 @@ public:
     void Initialization();
     void updateOnFrame();
     void drawImplementation(osg::RenderInfo&) const;
+    void Reset(){_point_num = 0; pointCloudData = nullptr;}
 };
 
 #endif //MYGLES_POINTDRAWABLE_H
