@@ -130,7 +130,7 @@ void MeasurementTool::update()
 
 
 	std::stringstream stream;
-	stream << std::fixed << std::setprecision(2) << length / scale;
+	stream << std::fixed << std::setprecision(0) << length / scale;
 	setText(stream.str() + "mm");
 
 

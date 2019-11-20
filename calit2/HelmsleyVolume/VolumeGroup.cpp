@@ -313,6 +313,8 @@ void VolumeGroup::loadMask(std::string path, osg::Image* volume)
 		osg::ref_ptr<osg::Image> mask = osgDB::readImageFile(maskpath);
 		mask->flipVertical();
 		unsigned int bytesize = mask->getPixelSizeInBits() / 8;
+		//std::cout << "Pixel size in bits" << mask->getPixelSizeInBits() << std::endl;
+		//throw bytesize;
 		unsigned char* maskData = mask->data();
 
 		uint16_t* slice = volumeData + 2 * i * width * height;
@@ -323,7 +325,15 @@ void VolumeGroup::loadMask(std::string path, osg::Image* volume)
 				unsigned int volpixel = 2 * (x + y * width);
 				unsigned int maskpixel = bytesize * (x + y * width);
 				//upper 8 bits are green, bottom 8 are red. use 1-hot encoding
-				slice[volpixel + 1] = (uint16_t)(maskData[maskpixel]) + (uint16_t)(maskData[maskpixel+1]) * 256;
+
+				if (bytesize <= 1 && (uint8_t)(maskData[maskpixel]) != 0) //Binary mask, only care about colon
+				{
+					slice[volpixel + 1] = 4;
+				}
+				else //multi-organ mask
+				{
+					slice[volpixel + 1] = (uint16_t)(maskData[maskpixel]) + (uint16_t)(maskData[maskpixel + 1]) * 256;
+				}
 				if (slice[volpixel + 1] != 0)
 				{
 					//std::cout << slice[volpixel + 1] << std::endl;
