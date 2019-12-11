@@ -306,7 +306,17 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 	{
 		if (e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _interactButton)
 		{
-			
+			if (_tool == MEASUREMENT_TOOL)
+			{
+				//Measurement tool
+				osg::Matrix mat = PluginHelper::getHandMat(e->asHandEvent()->getHand());
+				osg::Vec4d position = osg::Vec4(0, 0, 0, 1) * mat;
+				osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
+
+				measurementTool->setEnd(pos);
+				measurementTool->setNodeMask(0xffffffff);
+				return true;
+			}
 		}
 		/* radial menu is disabled for now
 		if (e->getInteraction() == BUTTON_DOWN && e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _radialButton)
