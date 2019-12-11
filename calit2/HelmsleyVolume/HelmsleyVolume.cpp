@@ -9,6 +9,8 @@
 #include <cvrMenu/NewUI/UIButton.h>
 #include <cvrMenu/NewUI/UITexture.h>
 #include <cvrMenu/NewUI/UISlider.h>
+#include <cvrUtil/ComputeBoundingBoxVisitor.h>
+
 
 #ifdef WITH_OPENVR
 #include <cvrKernel/OpenVRDevice.h>
@@ -76,6 +78,8 @@ HelmsleyVolume::HelmsleyVolume()
 	_sceneObjects = std::vector<SceneObject*>();
 	_contextMenus = std::vector<VolumeMenu*>();
 	_worldMenus = std::vector<NewVolumeMenu*>();
+	_cuttingPlanes = std::vector<CuttingPlane*>();
+	_removeClippingPlaneButtons = std::vector<MenuButton*>();
 }
 
 HelmsleyVolume::~HelmsleyVolume()
@@ -99,6 +103,27 @@ bool HelmsleyVolume::init()
 	so->attachToScene();
 #endif
 	*/
+
+#ifdef WITH_OPENVR
+	osg::MatrixTransform* mt = PluginHelper::getHand(1);
+	if (mt)
+	{
+		OpenVRDevice::instance()->updatePose();
+		osg::Geode* hand = new osg::Geode();
+		hand->addDrawable(OpenVRDevice::instance()->controllers[0].renderModel);
+		mt->addChild(hand);
+		std::cerr << "Set hand 1 to use rendermodel" << std::endl;
+	}
+	mt = PluginHelper::getHand(2);
+	if (mt)
+	{
+		osg::Geode* hand = new osg::Geode();
+		hand->addDrawable(OpenVRDevice::instance()->controllers[1].renderModel);
+		mt->addChild(hand);
+		std::cerr << "Set hand 2 to use rendermodel" << std::endl;
+	}
+#endif
+
 	std::string fontfile = CalVR::instance()->getResourceDir();
 	fontfile = fontfile + "/resources/ArenaCondensed.ttf";
 
@@ -123,6 +148,7 @@ bool HelmsleyVolume::init()
 	_cuttingPlaneDistance = cvr::ConfigManager::getFloat("Plugin.HelmsleyVolume.CuttingPlaneDistance", 200.0f);
 	float size = cvr::ConfigManager::getFloat("Plugin.HelmsleyVolume.CuttingPlaneSize", 500.0f);
 
+	/*
 	//Cutting plane setup
 	osg::Drawable* cpd1 = new osg::ShapeDrawable(new osg::Box(osg::Vec3(size * 0.495, 0, 0), size * 0.01, size * 0.001, size));
 	osg::Drawable* cpd2 = new osg::ShapeDrawable(new osg::Box(osg::Vec3(size * -0.495, 0, 0), size * 0.01, size * 0.001, size));
@@ -143,6 +169,7 @@ bool HelmsleyVolume::init()
 	cpso->addChild(cuttingPlane);
 	PluginHelper::registerSceneObject(cpso, "HelmsleyVolume");
 	cpso->attachToScene();
+	*/
 
 	//Measurement tool setup
 	measurementTool = new MeasurementTool();
@@ -171,7 +198,7 @@ bool HelmsleyVolume::init()
 	fileMenu->setCallback(this);
 	_vMenu->addItem(fileMenu);
 
-	_cpButton = new MenuCheckbox("Cutting Plane", false);
+	_cpButton = new MenuButton("Cutting Plane");
 	_cpButton->setCallback(this);
 	_mtButton = new MenuCheckbox("Measurement Tool", false);
 	_mtButton->setCallback(this);
@@ -279,73 +306,7 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 	{
 		if (e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _interactButton)
 		{
-			if (_tool == CUTTING_PLANE)
-			{
-				//Cutting plane
-				osg::Matrix mat = PluginHelper::getHandMat(e->asHandEvent()->getHand());
-				
-
-				for (int i = 0; i < _volumes.size(); ++i)
-				{
-					osg::Matrix objhand = mat * _sceneObjects[i]->getWorldToObjectMatrix() * _volumes[i]->getWorldToObjectMatrix();
-
-					osg::Matrix w2o = _volumes[i]->getWorldToObjectMatrix();
-					osg::Matrix w2o2 = _sceneObjects[i]->getWorldToObjectMatrix();
-
-					osg::Quat q = osg::Quat();
-					osg::Quat q2 = osg::Quat();
-					osg::Vec3 v = osg::Vec3();
-					osg::Vec3 v2 = osg::Vec3();
-
-					mat.decompose(v, q, v2, q2);
-					osg::Matrix m = osg::Matrix();
-					m.makeRotate(q);
-					_sceneObjects[i]->getWorldToObjectMatrix().decompose(v, q, v2, q2);
-					m.postMultRotate(q);
-					_volumes[i]->getWorldToObjectMatrix().decompose(v, q, v2, q2);
-					m.postMultScale(osg::Vec3(1.0 / v2.x(), 1.0 / v2.y(), 1.0/v2.z()));
-					m.postMultRotate(q);
-
-					osg::Vec4d normal = osg::Vec4(0, 1, 0, 0) * m;
-					osg::Vec3 norm = osg::Vec3(normal.x(), normal.y(), normal.z());
-
-					osg::Vec4f position = osg::Vec4(0, _cuttingPlaneDistance, 0, 1) * objhand;
-					osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
-
-
-
-					_volumes[i]->_PlanePoint->set(pos);
-					_volumes[i]->_PlaneNormal->set(norm);
-
-				}
-
-				osg::Vec4d position = osg::Vec4(0, _cuttingPlaneDistance, 0, 1) * mat;
-				osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
-
-				osg::Quat q = osg::Quat();
-				osg::Quat q2 = osg::Quat();
-				osg::Vec3 v = osg::Vec3();
-				osg::Vec3 v2 = osg::Vec3();
-				mat.decompose(v, q, v2, q2);
-
-				osg::Matrix m = osg::Matrix();
-				m.makeRotate(q);
-				m.postMultTranslate(pos);
-				cuttingPlane->setMatrix(m);
-				cuttingPlane->setNodeMask(0xffffffff);
-				return true;
-			}
-			else if (_tool == MEASUREMENT_TOOL)
-			{
-				//Measurement tool
-				osg::Matrix mat = PluginHelper::getHandMat(e->asHandEvent()->getHand());
-				osg::Vec4d position = osg::Vec4(0, 0, 0, 1) * mat;
-				osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
-
-				measurementTool->setEnd(pos);
-				measurementTool->setNodeMask(0xffffffff);
-				return true;
-			}
+			
 		}
 		/* radial menu is disabled for now
 		if (e->getInteraction() == BUTTON_DOWN && e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _radialButton)
@@ -374,7 +335,8 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 			{
 				//Cutting plane
 				cuttingPlane->setNodeMask(0);
-				return true;
+
+				return true; 
 			}
 			else if (_tool == MEASUREMENT_TOOL)
 			{
@@ -411,21 +373,18 @@ void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 
 		removeVolume(index);
 	}
+	else if (std::find(_removeClippingPlaneButtons.begin(), _removeClippingPlaneButtons.end(), (MenuButton*)menuItem) != _removeClippingPlaneButtons.end())
+	{
+		std::vector<MenuButton*>::iterator it = std::find(_removeClippingPlaneButtons.begin(), _removeClippingPlaneButtons.end(), (MenuButton*)menuItem);
+		int index = std::distance(_removeClippingPlaneButtons.begin(), it);
+
+		removeCuttingPlane(index);
+	}
 	else if (menuItem == _cpButton)
 	{
-		if (_cpButton->getValue())
+		if (_volumes.size())
 		{
-			_tool = CUTTING_PLANE;
-			if (_toolButton && _toolButton != _cpButton)
-			{
-				_toolButton->setValue(false);
-			}
-			_toolButton = _cpButton;
-		}
-		else
-		{
-			_tool = NONE;
-			_toolButton = nullptr;
+			createCuttingPlane(0);
 		}
 	}
 	else if (menuItem == _mtButton)
@@ -468,9 +427,37 @@ void HelmsleyVolume::toggleScreenshotTool(bool on)
 	}
 }
 
+CuttingPlane* HelmsleyVolume::createCuttingPlane(unsigned int i)
+{
+	if (i >= _volumes.size())
+	{
+		return nullptr;
+	}
+	CuttingPlane* cp = new  CuttingPlane("Cutting Plane", false, true, false, true, true);
+	cp->setVolume(_volumes[i]);
+	cp->setSceneObject(_sceneObjects[i]);
+	MenuButton* remove = new MenuButton("Remove Clipping Plane");
+	cp->addMenuItem(remove);
+	remove->setCallback(this);
+	_removeClippingPlaneButtons.push_back(remove);
+	PluginHelper::registerSceneObject(cp, "HelmsleyVolume");
+	//cp->attachToScene();
+	_sceneObjects[i]->addChild(cp);
+	_cuttingPlanes.push_back(cp);
+	return cp;
+}
+
+void HelmsleyVolume::removeCuttingPlane(unsigned int i)
+{
+	_cuttingPlanes[i]->detachFromScene();
+	delete(_cuttingPlanes[i]);
+	_cuttingPlanes.erase(_cuttingPlanes.begin() + i);
+
+	_removeClippingPlaneButtons.erase(_removeClippingPlaneButtons.begin() + i);
+}
+
 void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 {
-
 	SceneObject * so;
 	so = new SceneObject("volume", false, true, true, true, false);
 	so->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(0, 750, 500)));
@@ -485,6 +472,16 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 	so->addMoveMenuItem();
 	so->addNavigationMenuItem();
 	so->setShowBounds(true);
+
+	//Manually set the bounding box (since clipping plane / other things will be attached
+	so->setBoundsCalcMode(SceneObject::MANUAL);
+	osg::BoundingBox bb;
+	bb.init();
+	ComputeBoundingBoxVisitor cbbv;
+	cbbv.setBound(bb);
+	g->accept(cbbv);
+	bb = cbbv.getBound();
+	so->setBoundingBox(bb);
 
 	VolumeMenu* menu = new VolumeMenu(so, g);
 	menu->init();
@@ -505,6 +502,22 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 
 void HelmsleyVolume::removeVolume(int index)
 {
+	//Remove all cutting planes that are attached to the volume
+	std::vector<CuttingPlane*>::iterator it = _cuttingPlanes.begin();
+	while (it != _cuttingPlanes.end()) {
+		if ((*it)->getVolume() == _volumes[index])
+		{
+			(*it)->detachFromScene();
+			delete((*it));
+			it = _cuttingPlanes.erase(it);
+		}
+		else
+		{
+			++it;
+		}
+
+	} 
+
 	_sceneObjects[index]->detachFromScene();
 	delete _contextMenus[index];
 	delete _worldMenus[index];

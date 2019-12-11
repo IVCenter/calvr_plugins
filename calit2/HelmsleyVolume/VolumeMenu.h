@@ -108,7 +108,7 @@ protected:
 
 	CallbackRadial* _tool;
 
-	ToolRadialButton* _cuttingPlane;
+	ToolToggle* _cuttingPlane;
 	ToolRadialButton* _measuringTool;
 	ToolToggle* _screenshotTool;
 	ToolRadialButton* _prevButton = nullptr;

@@ -377,7 +377,8 @@ ToolMenu::ToolMenu(bool movable)
 
 	std::string dir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ImageDir");
 
-	_cuttingPlane = new ToolRadialButton(_tool, dir + "slice.png");
+	_cuttingPlane = new ToolToggle(dir + "slice.png");
+	_cuttingPlane->setCallback(this);
 	list->addChild(_cuttingPlane);
 
 	_measuringTool = new ToolRadialButton(_tool, dir + "ruler.png");
@@ -443,17 +444,27 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 			_screenshotTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}
+	else if (item == _cuttingPlane)
+	{
+
+		_cuttingPlane->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+
+		if (_cuttingPlane->isOn())
+		{
+			HelmsleyVolume::instance()->createCuttingPlane(0);
+			_cuttingPlane->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+		}
+		else
+		{
+			HelmsleyVolume::instance()->removeCuttingPlane(0);
+			_cuttingPlane->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
+		}
+	}
 	else if (item == _tool)
 	{
 		if (_prevButton && _prevButton != _tool->getCurrentButton())
 		{
 			_prevButton->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
-		}
-		if (_tool->getCurrentButton() == _cuttingPlane)
-		{
-			HelmsleyVolume::instance()->setTool(HelmsleyVolume::CUTTING_PLANE);
-			_cuttingPlane->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
-			_prevButton = _cuttingPlane;
 		}
 		else if (_tool->getCurrentButton() == _measuringTool)
 		{

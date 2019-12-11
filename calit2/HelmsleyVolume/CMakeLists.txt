@@ -16,7 +16,7 @@ SET(PLUGIN_HEADERS
 	Interactable.h
 	FileSelector.h
 	UIExtensions.h
-
+	CuttingPlane.h
 )
 
 if(WIN32)
@@ -42,6 +42,7 @@ ADD_LIBRARY(${LIB_NAME}
 	ScreenshotTool.cpp
 	FileSelector.cpp
 	UIExtensions.cpp
+	CuttingPlane.cpp
 )
 
 

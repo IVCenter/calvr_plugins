@@ -30,7 +30,7 @@ void VolumeDrawCallback::drawImplementation(osg::RenderInfo& renderInfo, const o
 
 	if (!cvr::ScreenBase::resolveBuffers(renderInfo.getCurrentCamera(), group->_resolveFBO, renderInfo.getState(), GL_DEPTH_BUFFER_BIT))
 	{
-		std::cout << "Depth buffer could not be resolved" << std::endl;
+		//std::cout << "Depth buffer could not be resolved" << std::endl;
 	}
 
 	const osg::Viewport* currview = renderInfo.getState()->getCurrentViewport();

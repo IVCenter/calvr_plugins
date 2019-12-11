@@ -26,6 +26,7 @@
 #include "VolumeMenu.h"
 #include "MeasurementTool.h"
 #include "ScreenshotTool.h"
+#include "CuttingPlane.h"
 #include "FileSelector.h"
 
 #include <string>
@@ -52,8 +53,12 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		bool processEvent(cvr::InteractionEvent* e);
 		void menuCallback(cvr::MenuItem* menuItem);
 		void createList(cvr::SubMenu* , std::string configbase);
+
 		void toggleScreenshotTool(bool on);
 		ScreenshotTool* getScreenshotTool() { return screenshotTool; }
+
+		CuttingPlane* createCuttingPlane(unsigned int i = 0);
+		void removeCuttingPlane(unsigned int i);
 
 		void loadVolume(std::string path, std::string maskpath = "");
 		void removeVolume(int index);
@@ -73,7 +78,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 
 		cvr::SubMenu * _vMenu;
 		cvr::MenuRadial * _vButton;
-		cvr::MenuCheckbox * _cpButton;
+		cvr::MenuButton * _cpButton;
 		cvr::MenuCheckbox * _mtButton;
 		cvr::MenuCheckbox * _toolButton;
 		cvr::MenuCheckbox * _stCheckbox;
@@ -83,11 +88,13 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		ScreenshotTool* screenshotTool;
 		FileSelector* fileSelector;
 
+		std::vector<CuttingPlane*> _cuttingPlanes;
 		std::vector<osg::ref_ptr<VolumeGroup> > _volumes;
 		std::vector<cvr::SceneObject*> _sceneObjects;
 		std::vector<VolumeMenu*> _contextMenus;
 		std::vector<NewVolumeMenu*> _worldMenus;
 		std::vector<cvr::MenuButton*> _removeButtons;
+		std::vector<cvr::MenuButton*> _removeClippingPlaneButtons;
 
 		std::map<cvr::MenuItem*, std::string> _buttonMap;
 		cvr::MenuRadial * _radial;
