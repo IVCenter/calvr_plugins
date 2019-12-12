@@ -1,5 +1,6 @@
 #include "VolumeMenu.h"
 #include "HelmsleyVolume.h"
+#include "Utils.h"
 #include "cvrMenu/MenuManager.h"
 #include "cvrConfig/ConfigManager.h"
 
@@ -64,10 +65,21 @@ NewVolumeMenu::~NewVolumeMenu()
 
 void NewVolumeMenu::init()
 {
+	_so = new SceneObject("VolumeMenu", false, false, false, false, false);
+	PluginHelper::registerSceneObject(_so, "HelmsleyVolume");
+	_so->attachToScene();
+#ifdef WITH_OPENVR
+	_so->getRoot()->addUpdateCallback(new FollowSceneObjectLerp(_scene, 0.2f));
+	_so->getRoot()->addUpdateCallback(new PointAtHeadLerp(0.2f));
+#endif
+
+	osg::Vec3 volumePos = ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(0, 750, 500));
+	_so->setPosition(volumePos);
+
 	_menu = new UIPopup();
 	UIQuadElement* bknd = new UIQuadElement(osg::Vec4(0.3, 0.3, 0.3, 1));
 	_menu->addChild(bknd);
-	_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Position", osg::Vec3(500, 500, 1450)));
+	_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Position", osg::Vec3(500, 500, 1450)) - volumePos);
 	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Scale", osg::Vec3(600, 1, 600)));
 
 	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
@@ -191,8 +203,10 @@ void NewVolumeMenu::init()
 	else {
 		_menu->setActive(true, false);
 		_container = new SceneObject("VolumeMenu", false, true, false, false, true);
-		PluginHelper::registerSceneObject(_container, "VolumeMenu");
-		_container->attachToScene();
+		//PluginHelper::registerSceneObject(_container, "VolumeMenu");
+		//_container->attachToScene();
+		_so->addChild(_container);
+		//_container->getRoot()->addUpdateCallback(new PointAtHeadLerp(0.1f));
 		_container->setShowBounds(true);
 		_container->addChild(_menu->getRoot());
 		_menu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
@@ -210,7 +224,7 @@ void NewVolumeMenu::init()
 		_maskMenu->addChild(bknd);
 
 
-		_maskMenu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Position", osg::Vec3(600, 500, 800)));
+		_maskMenu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Position", osg::Vec3(600, 500, 800)) - volumePos);
 		_maskMenu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Scale", osg::Vec3(400, 1, 800)));
 
 		list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
@@ -247,8 +261,10 @@ void NewVolumeMenu::init()
 		else {
 			_maskMenu->setActive(true, false);
 			_maskContainer = new SceneObject("MaskMenu", false, true, false, false, true);
-			PluginHelper::registerSceneObject(_maskContainer, "MaskMenu");
-			_maskContainer->attachToScene();
+			//_maskContainer->getRoot()->addUpdateCallback(new PointAtHeadLerp(0.1f));
+			//PluginHelper::registerSceneObject(_maskContainer, "MaskMenu");
+			//_maskContainer->attachToScene();
+			_so->addChild(_maskContainer);
 			_maskContainer->setShowBounds(true);
 			_maskContainer->addChild(_maskMenu->getRoot());
 			_maskMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
@@ -371,9 +387,9 @@ ToolMenu::ToolMenu(bool movable)
 	//bknd->addChild(list);
 	_menu->addChild(list);
 
-	_tool = new CallbackRadial();
-	_tool->setCallback(this);
-	_tool->allowNoneSelected(true);
+	//_tool = new CallbackRadial();
+	//_tool->setCallback(this);
+	//_tool->allowNoneSelected(true);
 
 	std::string dir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ImageDir");
 
@@ -381,7 +397,8 @@ ToolMenu::ToolMenu(bool movable)
 	_cuttingPlane->setCallback(this);
 	list->addChild(_cuttingPlane);
 
-	_measuringTool = new ToolRadialButton(_tool, dir + "ruler.png");
+	_measuringTool = new ToolToggle(dir + "ruler.png");
+	_measuringTool->setCallback(this);
 	list->addChild(_measuringTool);
 
 	_screenshotTool = new ToolToggle(dir + "browser.png");
@@ -446,9 +463,6 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 	}
 	else if (item == _cuttingPlane)
 	{
-
-		_cuttingPlane->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
-
 		if (_cuttingPlane->isOn())
 		{
 			HelmsleyVolume::instance()->createCuttingPlane(0);
@@ -460,22 +474,17 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 			_cuttingPlane->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}
-	else if (item == _tool)
+	else if (item == _measuringTool)
 	{
-		if (_prevButton && _prevButton != _tool->getCurrentButton())
-		{
-			_prevButton->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
-		}
-		else if (_tool->getCurrentButton() == _measuringTool)
+		if (_measuringTool->isOn())
 		{
 			HelmsleyVolume::instance()->setTool(HelmsleyVolume::MEASUREMENT_TOOL);
 			_measuringTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
-			_prevButton = _measuringTool;
 		}
 		else
 		{
 			HelmsleyVolume::instance()->setTool(HelmsleyVolume::NONE);
-			_prevButton = nullptr;
+			_measuringTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}
 }

@@ -59,6 +59,8 @@ public:
 
 	virtual void uiCallback(UICallbackCaller * item);
 
+	cvr::SceneObject* getSceneObject() { return _so; }
+
 	std::string transferFunction;
 
 protected:
@@ -92,6 +94,7 @@ private:
 	bool _movable;
 	cvr::SceneObject* _container = nullptr;
 	cvr::SceneObject* _maskContainer = nullptr;
+	cvr::SceneObject* _so = nullptr;
 };
 
 class ToolMenu : public UICallback {
@@ -106,12 +109,12 @@ protected:
 
 	cvr::UIPopup* _menu = nullptr;
 
-	CallbackRadial* _tool;
+	//CallbackRadial* _tool;
 
 	ToolToggle* _cuttingPlane;
-	ToolRadialButton* _measuringTool;
+	ToolToggle* _measuringTool;
 	ToolToggle* _screenshotTool;
-	ToolRadialButton* _prevButton = nullptr;
+	//ToolRadialButton* _prevButton = nullptr;
 
 private:
 	bool _movable;

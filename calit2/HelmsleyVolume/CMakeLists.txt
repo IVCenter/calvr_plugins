@@ -17,6 +17,7 @@ SET(PLUGIN_HEADERS
 	FileSelector.h
 	UIExtensions.h
 	CuttingPlane.h
+	Utils.h
 )
 
 if(WIN32)
@@ -43,6 +44,7 @@ ADD_LIBRARY(${LIB_NAME}
 	FileSelector.cpp
 	UIExtensions.cpp
 	CuttingPlane.cpp
+	Utils.cpp
 )
 
 

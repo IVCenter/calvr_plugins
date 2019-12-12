@@ -459,11 +459,14 @@ CuttingPlane* HelmsleyVolume::createCuttingPlane(unsigned int i)
 
 void HelmsleyVolume::removeCuttingPlane(unsigned int i)
 {
-	_cuttingPlanes[i]->detachFromScene();
-	delete(_cuttingPlanes[i]);
-	_cuttingPlanes.erase(_cuttingPlanes.begin() + i);
+	if (i < _cuttingPlanes.size() && _cuttingPlanes[i])
+	{
+		_cuttingPlanes[i]->detachFromScene();
+		delete(_cuttingPlanes[i]);
+		_cuttingPlanes.erase(_cuttingPlanes.begin() + i);
 
-	_removeClippingPlaneButtons.erase(_removeClippingPlaneButtons.begin() + i);
+		_removeClippingPlaneButtons.erase(_removeClippingPlaneButtons.begin() + i);
+	}
 }
 
 void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
