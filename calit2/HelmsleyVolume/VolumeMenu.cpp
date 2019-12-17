@@ -69,8 +69,8 @@ void NewVolumeMenu::init()
 	PluginHelper::registerSceneObject(_so, "HelmsleyVolume");
 	_so->attachToScene();
 #ifdef WITH_OPENVR
-	_so->getRoot()->addUpdateCallback(new FollowSceneObjectLerp(_scene, 0.2f));
-	_so->getRoot()->addUpdateCallback(new PointAtHeadLerp(0.2f));
+	_so->getRoot()->addUpdateCallback(new FollowSceneObjectLerp(_scene, 0.2f, _so));
+	_so->getRoot()->addUpdateCallback(new PointAtHeadLerp(0.2f, _so));
 #endif
 
 	osg::Vec3 volumePos = ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(0, 750, 500));
