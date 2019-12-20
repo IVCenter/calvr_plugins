@@ -21,12 +21,28 @@ void CuttingPlane::init()
 	cuttingPlaneGeode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
 
 	addChild(cuttingPlaneGeode);
+
+	_lock = new MenuCheckbox("Lock", false);
+	this->addMenuItem(_lock);
+	_lock->setCallback(this);
 }
 
 bool CuttingPlane::processEvent(InteractionEvent* ie)
 {
 
 	return SceneObject::processEvent(ie);
+}
+
+void CuttingPlane::menuCallback(MenuItem* item)
+{
+	if (item == _lock)
+	{
+		this->setMovable(!_lock->getValue());
+		this->setShowBounds(!_lock->getValue());
+	}
+	else {
+		SceneObject::menuCallback(item);
+	}
 }
 
 void CuttingPlane::updateCallback(int handID, const osg::Matrix& mat)

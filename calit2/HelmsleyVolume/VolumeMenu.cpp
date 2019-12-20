@@ -39,6 +39,7 @@ void VolumeMenu::menuCallback(cvr::MenuItem * item)
 
 NewVolumeMenu::~NewVolumeMenu()
 {
+	delete _toolMenu;
 	_menu->setActive(false, false);
 	MenuManager::instance()->removeMenuSystem(_menu);
 	delete _menu;
@@ -65,6 +66,8 @@ NewVolumeMenu::~NewVolumeMenu()
 
 void NewVolumeMenu::init()
 {
+#pragma region VolumeOptions
+
 	_so = new SceneObject("VolumeMenu", false, false, false, false, false);
 	PluginHelper::registerSceneObject(_so, "HelmsleyVolume");
 	_so->attachToScene();
@@ -213,6 +216,9 @@ void NewVolumeMenu::init()
 		_container->dirtyBounds();
 	}
 
+#pragma endregion
+
+	_toolMenu = new ToolMenu(0, true, _so);
 
 	//_menu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 	//UIElement* e = list2->getChild(0)->getChild(1);
@@ -271,7 +277,6 @@ void NewVolumeMenu::init()
 			_maskContainer->dirtyBounds();
 		}
 	}
-
 }
 
 void NewVolumeMenu::uiCallback(UICallbackCaller * item)
@@ -374,12 +379,23 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	}
 }
 
-ToolMenu::ToolMenu(bool movable)
+ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 {
+	_movable = movable;
+	_index = index;
+
 	_menu = new UIPopup();
 	//UIQuadElement* bknd = new UIQuadElement(osg::Vec4(0.3, 0.3, 0.3, 1));
 	//_menu->addChild(bknd);
-	_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Position", osg::Vec3(-150, 500, 600)));
+	if (parent)
+	{
+		osg::Vec3 volumePos = ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(0, 750, 500));
+		_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Position", osg::Vec3(-150, 500, 600)) - volumePos);
+	}
+	else
+	{
+		_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Position", osg::Vec3(-150, 500, 600)));
+	}
 	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Scale", osg::Vec3(300, 1, 100)));
 
 	UIList* list = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
@@ -405,15 +421,22 @@ ToolMenu::ToolMenu(bool movable)
 	_screenshotTool->setCallback(this);
 	list->addChild(_screenshotTool);
 
-	if (!_movable)
+	if (!_movable && !parent)
 	{
 		_menu->setActive(true, true);
 	}
 	else {
 		_menu->setActive(true, false);
-		_container = new SceneObject("VolumeMenu", false, true, false, false, true);
-		PluginHelper::registerSceneObject(_container, "VolumeMenu");
-		_container->attachToScene();
+		_container = new SceneObject("VolumeMenu", false, _movable, false, false, true);
+		if (parent)
+		{
+			parent->addChild(_container);
+		}
+		else
+		{
+			PluginHelper::registerSceneObject(_container, "VolumeMenu");
+			_container->attachToScene();
+		}
 		_container->addChild(_menu->getRoot());
 		_menu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_container->dirtyBounds();
@@ -479,11 +502,13 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 		if (_measuringTool->isOn())
 		{
 			HelmsleyVolume::instance()->setTool(HelmsleyVolume::MEASUREMENT_TOOL);
+			HelmsleyVolume::instance()->activateMeasurementTool(_index);
 			_measuringTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
 		}
 		else
 		{
 			HelmsleyVolume::instance()->setTool(HelmsleyVolume::NONE);
+			HelmsleyVolume::instance()->deactivateMeasurementTool(_index);
 			_measuringTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}

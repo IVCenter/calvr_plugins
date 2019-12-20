@@ -79,6 +79,7 @@ HelmsleyVolume::HelmsleyVolume()
 	_contextMenus = std::vector<VolumeMenu*>();
 	_worldMenus = std::vector<NewVolumeMenu*>();
 	_cuttingPlanes = std::vector<CuttingPlane*>();
+	_measurementTools = std::vector<MeasurementTool*>();
 	_removeClippingPlaneButtons = std::vector<MenuButton*>();
 }
 
@@ -171,14 +172,6 @@ bool HelmsleyVolume::init()
 	cpso->attachToScene();
 	*/
 
-	//Measurement tool setup
-	measurementTool = new MeasurementTool();
-	measurementTool->setNodeMask(0);
-	SceneObject * mtso = new SceneObject("Measurement Tool", false, false, false, false, false);
-	mtso->addChild(measurementTool);
-	PluginHelper::registerSceneObject(mtso, "HelmsleyVolume");
-	mtso->attachToScene();
-
 	screenshotTool = new ScreenshotTool("Screenshot Tool", false, true, false, false, true);
 	//screenshotTool->setPosition(osg::Vec3(0, -1000000, 0));
 	//screenshotTool->
@@ -235,7 +228,7 @@ bool HelmsleyVolume::init()
 	//_vMenu->addItem(_radial);
 	*/
 
-	_toolMenu = new ToolMenu();
+	//_toolMenu = new ToolMenu();
 
 	createList(fileMenu, "Plugin.HelmsleyVolume.Files");
 
@@ -289,16 +282,16 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 {
 	if (e->getInteraction() == BUTTON_DOWN)
 	{
-		if (_tool == MEASUREMENT_TOOL)
+		if (_tool == MEASUREMENT_TOOL && _lastMeasurementTool >= 0 && _lastMeasurementTool < _volumes.size())
 		{
 			//Measurement tool
 			osg::Matrix mat = PluginHelper::getHandMat(e->asHandEvent()->getHand());
-			osg::Vec4d position = osg::Vec4(0, 0, 0, 1) * mat;
-			osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
+			//osg::Vec4d position = osg::Vec4(0, 0, 0, 1) * mat;
+			//osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
 
 			if (e->getInteraction() == BUTTON_DOWN)
 			{
-				measurementTool->setStart(pos);
+				_measurementTools[_lastMeasurementTool]->setStart(mat.getTrans());
 			}
 		}
 	}
@@ -306,36 +299,18 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 	{
 		if (e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _interactButton)
 		{
-			if (_tool == MEASUREMENT_TOOL)
+			if (_tool == MEASUREMENT_TOOL && _lastMeasurementTool >= 0 && _lastMeasurementTool < _volumes.size())
 			{
 				//Measurement tool
 				osg::Matrix mat = PluginHelper::getHandMat(e->asHandEvent()->getHand());
-				osg::Vec4d position = osg::Vec4(0, 0, 0, 1) * mat;
-				osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
+				//osg::Vec4d position = osg::Vec4(0, 0, 0, 1) * mat;
+				//osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
 
-				measurementTool->setEnd(pos);
-				measurementTool->setNodeMask(0xffffffff);
+				_measurementTools[_lastMeasurementTool]->setEnd(mat.getTrans());
+				_measurementTools[_lastMeasurementTool]->activate();
 				return true;
 			}
 		}
-		/* radial menu is disabled for now
-		if (e->getInteraction() == BUTTON_DOWN && e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _radialButton)
-		{
-			if (!_radialShown)
-			{
-				_selectionMenu->setVisible(true);
-				_selectionMenu->getRootObject()->getParent(0)->removeChild(_selectionMenu->getRootObject());
-				PluginHelper::getHand(e->asHandEvent()->getHand())->addChild(_selectionMenu->getRootObject());
-				_radialShown = true;
-			}
-			else
-			{
-				_radialShown = false;
-				_selectionMenu->setVisible(false);
-				PluginHelper::getHand(e->asHandEvent()->getHand())->removeChild(_selectionMenu->getRootObject());
-			}
-		}
-		*/
 	}
 	else if (e->getInteraction() == BUTTON_UP)
 	{
@@ -348,12 +323,12 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 
 				return true; 
 			}
-			else if (_tool == MEASUREMENT_TOOL)
+			else if (_tool == MEASUREMENT_TOOL && _lastMeasurementTool >= 0 && _lastMeasurementTool < _volumes.size())
 			{
 				//Measurement tool
-				if (measurementTool->getLength() < 5.0)
+				if (_measurementTools[_lastMeasurementTool]->getLength() < 5.0)
 				{
-					measurementTool->setNodeMask(0);
+					_measurementTools[_lastMeasurementTool]->deactivate();
 				}
 			}
 		}
@@ -437,6 +412,17 @@ void HelmsleyVolume::toggleScreenshotTool(bool on)
 	}
 }
 
+void HelmsleyVolume::activateMeasurementTool(int volume)
+{
+	_lastMeasurementTool = volume;
+}
+
+void HelmsleyVolume::deactivateMeasurementTool(int volume)
+{
+	_measurementTools[volume]->deactivate();
+	_lastMeasurementTool = -1;
+}
+
 CuttingPlane* HelmsleyVolume::createCuttingPlane(unsigned int i)
 {
 	if (i >= _volumes.size())
@@ -446,7 +432,7 @@ CuttingPlane* HelmsleyVolume::createCuttingPlane(unsigned int i)
 	CuttingPlane* cp = new  CuttingPlane("Cutting Plane", false, true, false, true, true);
 	cp->setVolume(_volumes[i]);
 	cp->setSceneObject(_sceneObjects[i]);
-	MenuButton* remove = new MenuButton("Remove Clipping Plane");
+	MenuButton* remove = new MenuButton("Remove Cutting Plane");
 	cp->addMenuItem(remove);
 	remove->setCallback(this);
 	_removeClippingPlaneButtons.push_back(remove);
@@ -461,6 +447,8 @@ void HelmsleyVolume::removeCuttingPlane(unsigned int i)
 {
 	if (i < _cuttingPlanes.size() && _cuttingPlanes[i])
 	{
+		_volumes[i]->_PlaneNormal->set(osg::Vec3(0.f, 1.f, 0.f));
+		_volumes[i]->_PlanePoint->set(osg::Vec3(0.f, -2.f, 0.f));
 		_cuttingPlanes[i]->detachFromScene();
 		delete(_cuttingPlanes[i]);
 		_cuttingPlanes.erase(_cuttingPlanes.begin() + i);
@@ -478,6 +466,12 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 	VolumeGroup * g = new VolumeGroup();
 	g->loadVolume(path, maskpath);
 	so->addChild(g);
+
+	MeasurementTool* tool = new MeasurementTool("Measurement Tool", false, false, false, false, false);
+	tool->deactivate();
+	so->addChild(tool);
+	_measurementTools.push_back(tool);
+
 
 	PluginHelper::registerSceneObject(so, "HelmsleyVolume");
 	so->attachToScene();
@@ -506,6 +500,7 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 	_volumes.push_back(g);
 	_contextMenus.push_back(menu);
 	_worldMenus.push_back(newMenu);
+
 
 	MenuButton* removeButton = new MenuButton("Remove Volume");
 	so->addMenuItem(removeButton);

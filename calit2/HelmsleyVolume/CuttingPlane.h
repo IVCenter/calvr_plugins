@@ -5,6 +5,7 @@
 #include <cvrKernel/SceneObject.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/PopupMenu.h>
+#include <cvrMenu/MenuCheckbox.h>
 
 #include <osg/Group>
 #include <osg/Geode>
@@ -24,6 +25,7 @@ public:
 	}
 
 	virtual void updateCallback(int handID, const osg::Matrix& mat);
+	virtual void menuCallback(cvr::MenuItem* menuItem);
 	virtual bool processEvent(cvr::InteractionEvent* ie);
 
 	VolumeGroup* getVolume() { return _volume; }
@@ -38,6 +40,8 @@ protected:
 private:
 	SceneObject* _so = nullptr;
 	VolumeGroup* _volume = nullptr;
+	
+	cvr::MenuCheckbox* _lock = nullptr;
 	//osg::ref_ptr<osg::MatrixTransform> 
 };
 

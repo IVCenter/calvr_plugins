@@ -64,6 +64,8 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		void removeVolume(int index);
 
 		void setTool(ToolState tool) { _tool = tool; }
+		void activateMeasurementTool(int volume);
+		void deactivateMeasurementTool(int volume);
 
 		std::vector<cvr::SceneObject*> getSceneObjects() { return _sceneObjects; }
 
@@ -84,9 +86,11 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		cvr::MenuCheckbox * _stCheckbox;
 		cvr::MenuButton * _resetHMD;
 		osg::MatrixTransform* cuttingPlane;
-		osg::ref_ptr<MeasurementTool> measurementTool;
 		ScreenshotTool* screenshotTool;
 		FileSelector* fileSelector;
+
+		std::vector<MeasurementTool*> _measurementTools;
+		int _lastMeasurementTool;
 
 		std::vector<CuttingPlane*> _cuttingPlanes;
 		std::vector<osg::ref_ptr<VolumeGroup> > _volumes;

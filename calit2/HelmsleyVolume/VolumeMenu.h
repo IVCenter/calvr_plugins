@@ -50,6 +50,36 @@ protected:
 };
 
 
+class ToolMenu : public UICallback {
+public:
+	ToolMenu(int index = 0, bool movable = true, cvr::SceneObject* parent = nullptr);
+	~ToolMenu();
+
+	cvr::SceneObject* getContainer()
+	{
+		return _container;
+	}
+
+
+	virtual void uiCallback(UICallbackCaller* item);
+
+protected:
+
+	cvr::UIPopup* _menu = nullptr;
+
+	//CallbackRadial* _tool;
+
+	ToolToggle* _cuttingPlane;
+	ToolToggle* _measuringTool;
+	ToolToggle* _screenshotTool;
+	//ToolRadialButton* _prevButton = nullptr;
+
+private:
+	bool _movable;
+	int _index;
+	cvr::SceneObject* _container = nullptr;
+};
+
 class NewVolumeMenu : public UICallback {
 public:
 	NewVolumeMenu(cvr::SceneObject* scene, VolumeGroup* volume, bool movable = true) : _scene(scene), _volume(volume), _movable(movable) {}
@@ -91,34 +121,11 @@ protected:
 	cvr::UIRadialButton* _rainbow;
 
 private:
+	ToolMenu* _toolMenu = nullptr;
 	bool _movable;
 	cvr::SceneObject* _container = nullptr;
 	cvr::SceneObject* _maskContainer = nullptr;
 	cvr::SceneObject* _so = nullptr;
-};
-
-class ToolMenu : public UICallback {
-public:
-	ToolMenu(bool movable = true);
-	~ToolMenu();
-
-
-	virtual void uiCallback(UICallbackCaller * item);
-
-protected:
-
-	cvr::UIPopup* _menu = nullptr;
-
-	//CallbackRadial* _tool;
-
-	ToolToggle* _cuttingPlane;
-	ToolToggle* _measuringTool;
-	ToolToggle* _screenshotTool;
-	//ToolRadialButton* _prevButton = nullptr;
-
-private:
-	bool _movable;
-	cvr::SceneObject* _container = nullptr;
 };
 
 #endif

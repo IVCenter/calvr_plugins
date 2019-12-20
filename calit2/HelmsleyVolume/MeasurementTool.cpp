@@ -6,22 +6,7 @@
 #include <sstream>
 #include <iomanip>
 
-
-MeasurementTool::MeasurementTool()
-{
-	init();
-}
-
-MeasurementTool::MeasurementTool(const MeasurementTool & group,
-	const osg::CopyOp & copyop)
-	: Group(group, copyop)
-{
-	init();
-}
-
-MeasurementTool::~MeasurementTool()
-{
-}
+using namespace cvr;
 
 void MeasurementTool::init()
 {
@@ -95,33 +80,27 @@ void MeasurementTool::setText(std::string s)
 	_text->setText(s);
 }
 
+void MeasurementTool::activate()
+{
+	_ruler->setNodeMask(0xFFFFFFFF);
+	_text->setNodeMask(0xFFFFFFFF);
+}
+
+void MeasurementTool::deactivate()
+{
+	_ruler->setNodeMask(0);
+	_text->setNodeMask(0);
+}
+
 void MeasurementTool::update()
 {
 	osg::Vec3 midpoint = (_start + _end) / 2.0;
 	midpoint += osg::Vec3(0, 0, 25.0);
 	_text->setPosition(midpoint);
 
-	float dist = FLT_MAX;
-	cvr::SceneObject* closest = nullptr;
-	float scale = 1.0f;
-
-	for (int i = 0; i < HelmsleyVolume::instance()->getSceneObjects().size(); ++i)
-	{
-		cvr::SceneObject* so = HelmsleyVolume::instance()->getSceneObjects()[i];
-		const osg::BoundingBox bb = so->getOrComputeBoundingBox();
-
-		float distance = (bb.center() - midpoint).length();
-		if (distance < dist)
-		{
-			dist = distance;
-			closest = so;
-		}
-	}
-
-	if (closest)
-	{
-		scale = closest->getScale();
-	}
+	//parent scene object is volume scene object
+	float scale = _parent->getScale();
+	setTransform(osg::Matrix::inverse(_parent->getTransform())); 
 
 	
 	osg::Vec3 forward = (_end - _start);

@@ -3,23 +3,20 @@
 out vec4 FragColor;
 
 in vs_out {
-    vec3 worldPosition;
+    vec3 localPos;
 } i;
 
 uniform vec3 Start;
 uniform vec3 End;
 
 void main() {
+
     vec3 vector = End - Start;
-    vec3 posvector = i.worldPosition - Start;
-    vec3 direction = normalize(vector);
-    //float length = length(vector);
+    vec3 posvector = -i.localPos.z * vector;
 
-    vec3 projected = dot(posvector, direction) * direction;
-    vec3 nonprojected = posvector - projected;
-    float projlength = length(projected);
-    float nonlength = length(nonprojected);
-
+    float projlength = length(posvector);
+    float nonlength = abs(i.localPos.x); 
+    
     vec4 marks = vec4(0,0,0,0.9);
 
     if(nonlength > 3 && mod(projlength + 0.8, 100) < 1.6)
