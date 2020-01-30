@@ -163,7 +163,7 @@ void VolumeGroup::init()
 
 	_PlanePoint = new osg::Uniform("PlanePoint", osg::Vec3(0.f, -2.f, 0.f));
 	_PlaneNormal = new osg::Uniform("PlaneNormal", osg::Vec3(0.f, 1.f, 0.f));
-	_StepSize = new osg::Uniform("StepSize", .00066f);
+	_StepSize = new osg::Uniform("StepSize", .00150f);
 	_RelativeViewport = new osg::Uniform("RelativeViewport", osg::Vec4(1, 1, 0, 0));
 
 	states->addUniform(_PlanePoint);

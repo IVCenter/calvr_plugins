@@ -12,7 +12,7 @@ void VolumeMenu::init()
 	scale->setCallback(this);
 	_scene->addMenuItem(scale);
 
-	sampleDistance = new MenuRangeValueCompact("SampleDistance", .0001, 0.01, .00066f, true);
+	sampleDistance = new MenuRangeValueCompact("SampleDistance", .0001, 0.01, .00150f, true);
 	sampleDistance->setCallback(this);
 	_scene->addMenuItem(sampleDistance);
 	
@@ -80,7 +80,7 @@ void NewVolumeMenu::init()
 	_so->setPosition(volumePos);
 
 	_menu = new UIPopup();
-	UIQuadElement* bknd = new UIQuadElement(osg::Vec4(0.3, 0.3, 0.3, 1));
+	UIQuadElement* bknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 	_menu->addChild(bknd);
 	_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Position", osg::Vec3(500, 500, 1450)) - volumePos);
 	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Scale", osg::Vec3(600, 1, 600)));
@@ -226,7 +226,7 @@ void NewVolumeMenu::init()
 	if (_volume->hasMask())
 	{
 		_maskMenu = new UIPopup();
-		bknd = new UIQuadElement(osg::Vec4(0.3, 0.3, 0.3, 1));
+		bknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 		_maskMenu->addChild(bknd);
 
 
@@ -363,8 +363,8 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 			_volume->getCompute()->getOrCreateStateSet()->setDefine("COLOR_FUNCTION", transferFunction, osg::StateAttribute::ON);
 			_colorDisplay->setShaderDefine("COLOR_FUNCTION", transferFunction, osg::StateAttribute::ON);
 
-			((UIText*)_blacknwhite->getChild(0))->setColor(osg::Vec4(0.8, 1, 0.8, 1));
-			((UIText*)_rainbow->getChild(0))->setColor(osg::Vec4(1, 0.8, 0.8, 1));
+			((UIText*)_blacknwhite->getChild(0))->setColor(UI_ACTIVE_COLOR);
+			((UIText*)_rainbow->getChild(0))->setColor(UI_INACTIVE_COLOR);
 		}
 		else if (_transferFunction->getCurrent() == 1)
 		{
@@ -372,8 +372,8 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 			_volume->getCompute()->getOrCreateStateSet()->setDefine("COLOR_FUNCTION", transferFunction, osg::StateAttribute::ON);
 			_colorDisplay->setShaderDefine("COLOR_FUNCTION", transferFunction, osg::StateAttribute::ON);
 
-			((UIText*)_blacknwhite->getChild(0))->setColor(osg::Vec4(1, 0.8, 0.8, 1));
-			((UIText*)_rainbow->getChild(0))->setColor(osg::Vec4(0.8, 1, 0.8, 1));
+			((UIText*)_blacknwhite->getChild(0))->setColor(UI_INACTIVE_COLOR);
+			((UIText*)_rainbow->getChild(0))->setColor(UI_ACTIVE_COLOR);
 		}
 		_volume->setDirtyAll();
 	}

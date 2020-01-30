@@ -1,6 +1,10 @@
 #ifndef UI_EXTENSIONS_H
 #define UI_EXTENSIONS_H
 
+#define UI_BACKGROUND_COLOR osg::Vec4(0.3, 0.3, 0.3, 1)
+#define UI_ACTIVE_COLOR osg::Vec4(0.8, 1, 0.8, 1)
+#define UI_INACTIVE_COLOR osg::Vec4(1, 0.8, 0.8, 1)
+
 #include <cvrMenu/NewUI/UIButton.h>
 #include <cvrMenu/NewUI/UICheckbox.h>
 #include <cvrMenu/NewUI/UIToggle.h>
@@ -154,4 +158,82 @@ protected:
 	std::map<std::string, osg::Uniform*> _uniforms;
 };
 
+class PlanePointer : public cvr::UIElement
+{
+public:
+	virtual void createGeometry();
+	virtual void updateGeometry();
+
+	virtual bool processEvent(cvr::InteractionEvent* event);
+	virtual bool onPosChange() { return true; }
+
+	virtual void setPointer(float x, float y);
+	virtual osg::Vec2 getPointer() { return _pointer; }
+
+protected:
+	osg::ref_ptr<osg::MatrixTransform> _transform;
+	osg::ref_ptr<osg::Geode> _geode;
+
+	osg::Vec2 _pointer;
+
+	unsigned int _button;
+	bool _held;
+};
+
+
+class ColorPickerSaturationValue : public PlanePointer, public UICallbackCaller
+{
+public:
+	ColorPickerSaturationValue();
+
+	osg::Vec2 getSV() { return _sv; }
+	void setHue(float hue);
+
+	virtual bool onPosChange() override;
+
+private:
+	osg::Vec2 _sv;
+	float _hue;
+
+	static osg::Program* getOrLoadProgram();
+	static osg::Program* _svprogram;
+
+	UIElement* _indicator;
+	ShaderQuad* _shader;
+};
+
+class ColorPickerHue : public PlanePointer, public UICallbackCaller
+{
+public:
+	ColorPickerHue();
+
+	float getHue() { return _hue; }
+	void setSV(osg::Vec2 SV);
+
+	virtual bool onPosChange() override;
+
+private:
+	osg::Vec2 _sv;
+	float _hue;
+
+	static osg::Program* getOrLoadProgram();
+	static osg::Program* _hueprogram;
+
+	UIElement* _indicator;
+	ShaderQuad* _shader;
+};
+
+class ColorPicker : public cvr::UIElement, public UICallback, public UICallbackCaller
+{
+public:
+	ColorPicker();
+	virtual void uiCallback(UICallbackCaller* ui);
+
+private:
+	ColorPickerHue* _hue;
+	ColorPickerSaturationValue* _sv;
+	cvr::UIQuadElement* _bknd;
+
+	osg::Vec3 color;
+};
 #endif

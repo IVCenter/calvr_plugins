@@ -149,34 +149,9 @@ bool HelmsleyVolume::init()
 	_cuttingPlaneDistance = cvr::ConfigManager::getFloat("Plugin.HelmsleyVolume.CuttingPlaneDistance", 200.0f);
 	float size = cvr::ConfigManager::getFloat("Plugin.HelmsleyVolume.CuttingPlaneSize", 500.0f);
 
-	/*
-	//Cutting plane setup
-	osg::Drawable* cpd1 = new osg::ShapeDrawable(new osg::Box(osg::Vec3(size * 0.495, 0, 0), size * 0.01, size * 0.001, size));
-	osg::Drawable* cpd2 = new osg::ShapeDrawable(new osg::Box(osg::Vec3(size * -0.495, 0, 0), size * 0.01, size * 0.001, size));
-	osg::Drawable* cpd3 = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0, 0, size * 0.495), size, size * 0.001, size * 0.01));
-	osg::Drawable* cpd4 = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0, 0, size * -0.495), size, size * 0.001, size * 0.01));
-
-	osg::Geode* cuttingPlaneGeode = new osg::Geode();
-	cuttingPlaneGeode->addDrawable(cpd1);
-	cuttingPlaneGeode->addDrawable(cpd2);
-	cuttingPlaneGeode->addDrawable(cpd3);
-	cuttingPlaneGeode->addDrawable(cpd4);
-	cuttingPlaneGeode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
-	cuttingPlane = new osg::MatrixTransform();
-	cuttingPlane->addChild(cuttingPlaneGeode);
-	cuttingPlane->setNodeMask(0);
-
-	SceneObject * cpso = new SceneObject("Cutting Plane Indicator", false, false, false, false, false);
-	cpso->addChild(cuttingPlane);
-	PluginHelper::registerSceneObject(cpso, "HelmsleyVolume");
-	cpso->attachToScene();
-	*/
 
 	screenshotTool = new ScreenshotTool("Screenshot Tool", false, true, false, false, true);
-	//screenshotTool->setPosition(osg::Vec3(0, -1000000, 0));
-	//screenshotTool->
 	PluginHelper::registerSceneObject(screenshotTool, "HelmsleyVolume");
-	//screenshotTool->attachToScene();
 
 	fileSelector = new FileSelector();
 
@@ -191,6 +166,7 @@ bool HelmsleyVolume::init()
 	fileMenu->setCallback(this);
 	_vMenu->addItem(fileMenu);
 
+	/*
 	_cpButton = new MenuButton("Cutting Plane");
 	_cpButton->setCallback(this);
 	_mtButton = new MenuCheckbox("Measurement Tool", false);
@@ -201,6 +177,7 @@ bool HelmsleyVolume::init()
 	_vMenu->addItem(_cpButton);
 	_vMenu->addItem(_mtButton);
 	_vMenu->addItem(_stCheckbox);
+	
 
 	_selectionMenu = new PopupMenu("Interaction options", "", false);
 	_selectionMenu->setVisible(false);
@@ -209,6 +186,7 @@ bool HelmsleyVolume::init()
 	_selectionMatrix.makeTranslate(osg::Vec3(-300, 500, 300));
 	_selectionMenu->setTransform(_selectionMatrix);
 
+	*/
 	/*
 	_radial = new MenuRadial();
 	std::vector<std::string> labels = std::vector<std::string>();
