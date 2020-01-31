@@ -2,9 +2,12 @@
 #include "HelmsleyVolume.h"
 #include "cvrKernel/NodeMask.h"
 
+#include <algorithm>
+
 using namespace cvr;
 
 osg::Program* ColorPickerSaturationValue::_svprogram = nullptr;
+osg::Program* ColorPickerHue::_hueprogram = nullptr;
 
 
 #pragma region VisibilityToggle
@@ -175,6 +178,13 @@ void ShaderQuad::updateGeometry()
 	}
 }
 
+template <typename T>
+void ShaderQuad::addUniform(std::string uniform, T initialvalue)
+{
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), initialvalue);
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
 void ShaderQuad::addUniform(std::string uniform)
 {
 	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), 0.0f);
@@ -275,7 +285,7 @@ bool PlanePointer::processEvent(InteractionEvent* event)
 
 			osg::Vec4 pl = osg::Vec4(p.x(), p.y(), p.z(), 1) * mi;
 
-			setPointer(pl.x(), pl.y());
+			setPointer(pl.x(), pl.z());
 			//_percent = pl.x(); // _lastHitPoint.x();
 			//_dirty = true;
 			//std::cerr << "<" << _lastHitPoint.x() << ", " << _lastHitPoint.y() << ", " << _lastHitPoint.z() << ">" << std::endl;
@@ -301,17 +311,26 @@ ColorPickerSaturationValue::ColorPickerSaturationValue()
 	_shader = new ShaderQuad();
 	_shader->setProgram(getOrLoadProgram());
 	_shader->addUniform("Hue");
+	_shader->getUniform("Hue")->set(0.0f);
 	addChild(_shader);
+
+	_indicator = new UIQuadElement();
+	_indicator->setSize(osg::Vec3(0, 1, 0), osg::Vec3(20, 0, 20));
+	_indicator->setAbsolutePos(osg::Vec3(-10, -0.2f, 10));
+	addChild(_indicator);
 }
 
 bool ColorPickerSaturationValue::onPosChange()
 {
 	_sv = _pointer;
-	_indicator->setPercentPos(osg::Vec3(_pointer.x(), _pointer.y(), 0));
+	_sv.x() = std::min(std::max(0.0f, _sv.x()), 1.0f);
+	_sv.y() = 1.0f - std::min(std::max(0.0f, -_sv.y()), 1.0f);
+	_indicator->setPercentPos(osg::Vec3(_sv.x(), 0, -1.0f +_sv.y()));
 	if (_callback)
 	{
 		_callback->uiCallback(this);
 	}
+	return true;
 }
 
 void ColorPickerSaturationValue::setHue(float hue)
@@ -319,6 +338,7 @@ void ColorPickerSaturationValue::setHue(float hue)
 	if (_hue != hue)
 	{
 		_hue = hue;
+		std::cout << "Hue: " << osg::Uniform::getTypename(_shader->getUniform("Hue")->getType()) << std::endl;
 		_shader->getUniform("Hue")->set(_hue);
 	}
 }
@@ -347,18 +367,24 @@ ColorPickerHue::ColorPickerHue()
 	_hue = 0;
 	_shader = new ShaderQuad();
 	_shader->setProgram(getOrLoadProgram());
-	_shader->addUniform("SV");
+	_shader->addUniform("SV", osg::Vec2(1.0f, 1.0f));
 	addChild(_shader);
+
+	_indicator = new UIQuadElement();
+	_indicator->setSize(osg::Vec3(1, 1, 0), osg::Vec3(0, 0, 20));
+	_indicator->setAbsolutePos(osg::Vec3(0, -0.2f, 10));
+	addChild(_indicator);
 }
 
 bool ColorPickerHue::onPosChange()
 {
-	_hue = _pointer.y();
-	_indicator->setPercentPos(osg::Vec3(0, _pointer.y(), 0));
+	_hue = 1.0f - std::min(std::max(0.0f, -_pointer.y()), 1.0f);
+	_indicator->setPercentPos(osg::Vec3(0, 0, -1.0f + _hue));
 	if (_callback)
 	{
 		_callback->uiCallback(this);
 	}
+	return true;
 }
 
 void ColorPickerHue::setSV(osg::Vec2 SV)
@@ -366,6 +392,7 @@ void ColorPickerHue::setSV(osg::Vec2 SV)
 	if (_sv != SV)
 	{
 		_sv = SV;
+		std::cout << "SV: " << osg::Uniform::getTypename(_shader->getUniform("SV")->getType()) << std::endl;
 		_shader->getUniform("SV")->set(_sv);
 	}
 }
@@ -377,7 +404,7 @@ osg::Program* ColorPickerHue::getOrLoadProgram()
 		const std::string vert = HelmsleyVolume::loadShaderFile("transferFunction.vert");
 		const std::string frag = HelmsleyVolume::loadShaderFile("colorpickerH.frag");
 		_hueprogram = new osg::Program;
-		_hueprogram->setName("ColorpickerSV");
+		_hueprogram->setName("ColorpickerH");
 		_hueprogram->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
 		_hueprogram->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
 	}
@@ -395,17 +422,20 @@ ColorPicker::ColorPicker() :
 	_bknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 	addChild(_bknd);
 	
-	float border = 25;
+	float border = 20;
 
 	_hue = new ColorPickerHue();
-	_hue->setAbsolutePos(osg::Vec3(border, border, 0.1f));
-	_hue->setSize(osg::Vec3(0.8f, 1.0f, 1.0f), osg::Vec3(-border*2, -border*2, 0.0f));
+	_hue->setPos(osg::Vec3(0.8f, 0.0f, 0.0f), osg::Vec3(border, -0.1f, -border));
+	_hue->setSize(osg::Vec3(0.2f, 1.0f, 1.0f), osg::Vec3(-border*2, 0, -border * 2));
 	_bknd->addChild(_hue);
+	_hue->setCallback(this);
 
 	_sv = new ColorPickerSaturationValue();
-	_sv->setPos(osg::Vec3(0.8f, 0.0f, 0.0f), osg::Vec3(border, border, 0.1f));
-	_sv->setSize(osg::Vec3(0.2f, 1.0f, 1.0f), osg::Vec3(-border*2, -border*2, 0.0f));
+	_sv->setAbsolutePos(osg::Vec3(border, -0.1f, -border));
+	_sv->setSize(osg::Vec3(0.8f, 1.0f, 1.0f), osg::Vec3(-border * 2, 0, -border * 2));
 	_bknd->addChild(_sv);
+	_sv->setCallback(this);
+
 }
 
 void ColorPicker::uiCallback(UICallbackCaller* ui)
@@ -438,5 +468,6 @@ void ColorPicker::uiCallback(UICallbackCaller* ui)
 
 		_hue->setSV(sv);
 	}
+	std::cerr << "Color: <" << color.x() << ", " << color.y() << ", " << color.z() << ">" << std::endl;
 }
 #pragma endregion

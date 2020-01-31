@@ -81,7 +81,7 @@ void NewVolumeMenu::init()
 
 	_menu = new UIPopup();
 	UIQuadElement* bknd = new UIQuadElement(UI_BACKGROUND_COLOR);
-	_menu->addChild(bknd);
+	//_menu->addChild(bknd);
 	_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Position", osg::Vec3(500, 500, 1450)) - volumePos);
 	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Scale", osg::Vec3(600, 1, 600)));
 

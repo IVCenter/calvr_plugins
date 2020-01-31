@@ -15,6 +15,6 @@ vec3 hsv2rgb(vec3 c) {
 }
 
 void main() {
-  vec3 col = hsv2rgb(vec3(i.uv.y, SV))
+  vec3 col = hsv2rgb(vec3(i.uv.y, SV));
 	FragColor = vec4(col, 1);
 }

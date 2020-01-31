@@ -146,7 +146,10 @@ public:
 	virtual void setProgram(osg::Program* p) { _program = p; _dirty = true; }
 	virtual osg::Program* getProgram() { return _program; }
 	virtual osg::Geode* getGeode() { return _geode; }
-	virtual void addUniform(std::string uniform);
+
+	template <typename T>
+	void addUniform(std::string uniform, T initialvalue);
+	void addUniform(std::string uniform);
 	virtual void addUniform(osg::Uniform* uniform);
 	virtual osg::Uniform* getUniform(std::string uniform);
 	virtual void setShaderDefine(std::string name, std::string definition, osg::StateAttribute::Values on);
@@ -191,15 +194,16 @@ public:
 
 	virtual bool onPosChange() override;
 
-private:
-	osg::Vec2 _sv;
-	float _hue;
-
+protected:
 	static osg::Program* getOrLoadProgram();
 	static osg::Program* _svprogram;
 
 	UIElement* _indicator;
 	ShaderQuad* _shader;
+
+private:
+	osg::Vec2 _sv;
+	float _hue;
 };
 
 class ColorPickerHue : public PlanePointer, public UICallbackCaller
@@ -212,15 +216,16 @@ public:
 
 	virtual bool onPosChange() override;
 
-private:
-	osg::Vec2 _sv;
-	float _hue;
-
+protected:
 	static osg::Program* getOrLoadProgram();
 	static osg::Program* _hueprogram;
 
 	UIElement* _indicator;
 	ShaderQuad* _shader;
+
+private:
+	osg::Vec2 _sv;
+	float _hue;
 };
 
 class ColorPicker : public cvr::UIElement, public UICallback, public UICallbackCaller
