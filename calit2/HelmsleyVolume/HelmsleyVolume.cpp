@@ -96,10 +96,15 @@ bool HelmsleyVolume::init()
 
 
 	osgDB::Options* roomOptions = new osgDB::Options("noReverseFaces");
-	osg::Node* room = osgDB::readNodeFile(modelDir + "CrohnsProtoRoom.obj", roomOptions);
+	osg::Node* room = osgDB::readNodeFile(modelDir + "crohnsRoom2.obj", roomOptions);
+	osg::MatrixTransform* scale = new osg::MatrixTransform();
+	osg::Matrix s;
+	s.makeScale(osg::Vec3(1000, 1000, 1000));
+	scale->setMatrix(s);
+	scale->addChild(room);
 	SceneObject * so;
 	so = new SceneObject("room", false, false, false, false, false);
-	so->addChild(room);
+	so->addChild(scale);
 	PluginHelper::registerSceneObject(so, "HelmsleyVolume");
 	so->attachToScene();
 #endif
@@ -146,8 +151,8 @@ bool HelmsleyVolume::init()
 
 
 	_interactButton = cvr::ConfigManager::getInt("Plugin.HelmsleyVolume.InteractButton", 0);
-	_cuttingPlaneDistance = cvr::ConfigManager::getFloat("Plugin.HelmsleyVolume.CuttingPlaneDistance", 200.0f);
-	float size = cvr::ConfigManager::getFloat("Plugin.HelmsleyVolume.CuttingPlaneSize", 500.0f);
+	//_cuttingPlaneDistance = cvr::ConfigManager::getFloat("Plugin.HelmsleyVolume.CuttingPlaneDistance", 200.0f);
+	//float size = cvr::ConfigManager::getFloat("Plugin.HelmsleyVolume.CuttingPlaneSize", 500.0f);
 
 
 	screenshotTool = new ScreenshotTool("Screenshot Tool", false, true, false, false, true);
@@ -459,7 +464,8 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 	so->setShowBounds(true);
 
 	//Manually set the bounding box (since clipping plane / other things will be attached
-	so->setBoundsCalcMode(SceneObject::MANUAL);
+	//so->setBoundsCalcMode(SceneObject::MANUAL);
+	/*
 	osg::BoundingBox bb;
 	bb.init();
 	ComputeBoundingBoxVisitor cbbv;
@@ -467,6 +473,7 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 	g->accept(cbbv);
 	bb = cbbv.getBound();
 	so->setBoundingBox(bb);
+	*/
 
 	VolumeMenu* menu = new VolumeMenu(so, g);
 	menu->init();

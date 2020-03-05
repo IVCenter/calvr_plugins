@@ -80,18 +80,6 @@ vec4 Sample(vec3 p) {
 
 void main() {
 
-	//vec4 clip = vec4(i.sp.xy / i.sp.z, 0.0, 1.0);
-
-	//vec2 actualview = clip.xy * .5 + .5;
-	//actualview = vec2(actualview.x * RelativeViewport.x + RelativeViewport.z, actualview.y * RelativeViewport.y + RelativeViewport.w);
-
-	//FragColor = vec4(texture2D(DepthTexture, actualview.xy).rgb, 1);
-
-	//FragColor = vec4(RelativeViewport.y, 0, RelativeViewport.w, 1);
-	//FragColor = vec4(actualview, 0, 1);
-
-	//return;
-
 
 	vec3 ro = i.ro;//vec3(i.WorldToObject * vec4(osg_ViewMatrixInverse[3].xyz, 1));
 	vec3 rd = normalize(i.rd.xyz);
@@ -130,6 +118,7 @@ void main() {
 		vec4 col = Sample(p);
 		col.a *= stepsize * 1000;
 
+/*
 		if (col.a > 1e-3){
 			if (pd < 1e-3) {
 				// first time entering volume, binary subdivide to get closer to entrance point
@@ -145,15 +134,15 @@ void main() {
 				t = tm;
 				col = Sample(p);
 			}
-
+*/
 			col.rgb *= col.a;
 			sum += col * (1 - sum.a);
-		}
+//		}
 
 		steps++; // only count steps through the volume
 
 		pd = col.a;
-		t += col.a > 1e-3 ? stepsize : stepsize * 8; // step farther if not in dense part
+		t += stepsize;//col.a > 1e-3 ? stepsize : stepsize * 8; // step farther if not in dense part
 	}
 
 	if(sum.a <= 0.01) discard;

@@ -68,7 +68,7 @@ void NewVolumeMenu::init()
 {
 #pragma region VolumeOptions
 
-	_so = new SceneObject("VolumeMenu", false, false, false, false, false);
+	_so = new SceneObject("VolumeMenu", false, false, false, false, true);
 	PluginHelper::registerSceneObject(_so, "HelmsleyVolume");
 	_so->attachToScene();
 #ifdef WITH_OPENVR
@@ -81,9 +81,13 @@ void NewVolumeMenu::init()
 
 	_menu = new UIPopup();
 	UIQuadElement* bknd = new UIQuadElement(UI_BACKGROUND_COLOR);
-	//_menu->addChild(bknd);
+	_menu->addChild(bknd);
 	_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Position", osg::Vec3(500, 500, 1450)) - volumePos);
 	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Scale", osg::Vec3(600, 1, 600)));
+
+	//ColorPicker* cp = new ColorPicker();
+	//_menu->addChild(cp);
+
 
 	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
 	list->setPercentPos(osg::Vec3(0, 0, -0.2));
