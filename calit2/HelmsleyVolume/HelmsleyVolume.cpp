@@ -9,6 +9,7 @@
 #include <cvrMenu/NewUI/UIButton.h>
 #include <cvrMenu/NewUI/UITexture.h>
 #include <cvrMenu/NewUI/UISlider.h>
+#include <cvrMenu/MenuManager.h>
 #include <cvrUtil/ComputeBoundingBoxVisitor.h>
 
 
@@ -109,6 +110,17 @@ bool HelmsleyVolume::init()
 	so->attachToScene();
 #endif
 	*/
+
+	_splashscreen = new UIPopup();
+	_splashscreen->setPosition(osg::Vec3(-800, 600, 1450));
+	_splashscreen->getRootElement()->setAbsoluteSize(osg::Vec3(1600, 1, 900));
+
+	std::string splashdir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ModelDir");
+	UITexture* splashtex = new UITexture(splashdir + "3DMIP_Splash.png");
+
+	_splashscreen->addChild(splashtex);
+	_splashscreen->setActive(true, true);
+
 
 #ifdef WITH_OPENVR
 	osg::MatrixTransform* mt = PluginHelper::getHand(1);
@@ -258,7 +270,22 @@ void HelmsleyVolume::preFrame()
 
 void HelmsleyVolume::postFrame()
 {
+	++_frameNum;
+	int max = 300;
+	int fade = 60;
 
+	if (_frameNum > max)
+	{
+		//_splashscreen->setActive(false, false);
+		MenuManager::instance()->removeMenuSystem(_splashscreen);
+		delete(_splashscreen);
+	}
+	else if(_frameNum > max - fade)
+	{
+		UITexture* splashtex = (UITexture*)_splashscreen->getRootElement()->getChild(0);
+		splashtex->setTransparent(true);
+		splashtex->setColor(osg::Vec4(1, 1, 1, (float)(max - _frameNum) / (float)fade));
+	}
 }
 
 bool HelmsleyVolume::processEvent(InteractionEvent * e)

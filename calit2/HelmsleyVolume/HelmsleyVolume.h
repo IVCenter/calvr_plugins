@@ -104,11 +104,13 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		cvr::MenuRadial * _radial;
 		cvr::PopupMenu * _selectionMenu;
 		ToolMenu* _toolMenu;
+		cvr::UIPopup* _splashscreen;
 
 		osg::Matrix _selectionMatrix;
 
 		float _cuttingPlaneDistance;
 
+		int _frameNum = 0;
 		int _interactButton = 0;
 		int _radialButton = 3;
 		int _radialXVal = 0;
