@@ -8,6 +8,7 @@ using namespace cvr;
 
 osg::Program* ColorPickerSaturationValue::_svprogram = nullptr;
 osg::Program* ColorPickerHue::_hueprogram = nullptr;
+osg::Program* Tent::_triangleProg = nullptr;
 
 
 #pragma region VisibilityToggle
@@ -343,6 +344,10 @@ void ColorPickerSaturationValue::setHue(float hue)
 	}
 }
 
+void ColorPickerSaturationValue::set_indicator() {
+	_indicator->setPercentPos(osg::Vec3(_sv.x(), 0, -1.0f + _sv.y()));
+}
+
 osg::Program* ColorPickerSaturationValue::getOrLoadProgram()
 {
 	if (!_svprogram)
@@ -380,6 +385,11 @@ bool ColorPickerHue::onPosChange()
 {
 	_hue = 1.0f - std::min(std::max(0.0f, -_pointer.y()), 1.0f);
 	_indicator->setPercentPos(osg::Vec3(0, 0, -1.0f + _hue));
+
+	//changebox
+	
+
+	//
 	if (_callback)
 	{
 		_callback->uiCallback(this);
@@ -395,6 +405,11 @@ void ColorPickerHue::setSV(osg::Vec2 SV)
 		std::cout << "SV: " << osg::Uniform::getTypename(_shader->getUniform("SV")->getType()) << std::endl;
 		_shader->getUniform("SV")->set(_sv);
 	}
+}
+
+void ColorPickerHue::set_indicator() {
+	_hue = 1.0f - std::min(std::max(0.0f, -_pointer.y()), 1.0f);
+	_indicator->setPercentPos(osg::Vec3(0, 0, -1.0f + _hue));
 }
 
 osg::Program* ColorPickerHue::getOrLoadProgram()
@@ -413,7 +428,304 @@ osg::Program* ColorPickerHue::getOrLoadProgram()
 }
 #pragma endregion
 
+
+TentWindow::TentWindow() :
+	UIElement()
+{
+	_bknd = new UIQuadElement(osg::Vec4(.04, .25, .4, 1));
+	addChild(_bknd);
+	_bknd->setPercentSize(osg::Vec3(1, 1, 1));
+
+	_tent = new Tent(UI_BLUE_COLOR);
+	_tent->setPercentPos(osg::Vec3(.7, 0, 0));
+	_tent->setPercentSize(osg::Vec3(1, 0.015, .5));
+
+	_bknd->addChild(_tent);
+
+	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
+	list->setPercentPos(osg::Vec3(0, 0, -.50));
+	list->setPercentSize(osg::Vec3(1, 1, .6));
+	list->setAbsoluteSpacing(1);
+	_bknd->addChild(list);
+
+	_centerPos = new CallbackSlider();
+	_centerPos->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
+	_centerPos->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
+	_centerPos->handle->setPercentSize(osg::Vec3(0, 1, 1));
+	_centerPos->handle->setColor(osg::Vec4(0.82, .25, .11, 0.0));
+	_centerPos->filled->setColor(osg::Vec4(0.94, .44, .11, 0.16));
+	
+	_centerPos->setMax(1.0f);
+	_centerPos->setMin(0.001f);
+	_centerPos->setCallback(this);
+	_centerPos->setPercent(.7);
+	
+
+	_bottomWidth = new CallbackSlider();
+	_bottomWidth->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
+	_bottomWidth->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
+	_bottomWidth->handle->setPercentSize(osg::Vec3(0, 1, 1));
+	_bottomWidth->handle->setColor(osg::Vec4(0.82, .25, .11, 0.0));
+	_bottomWidth->filled->setColor(osg::Vec4(0.94, .44, .11, 0.16));
+	_bottomWidth->setMax(1.0f);
+	_bottomWidth->setMin(0.001f);
+	_bottomWidth->setCallback(this);
+	_bottomWidth->setPercent(.5);
+
+	_topWidth = new CallbackSlider();
+	_topWidth->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
+	_topWidth->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
+	_topWidth->handle->setPercentSize(osg::Vec3(0, 1, 1));
+	_topWidth->handle->setColor(osg::Vec4(0.82, .25, .11, 0.0));
+	_topWidth->filled->setColor(osg::Vec4(0.94, .44, .11, 0.16));
+	_topWidth->setMax(1.0f);
+	_topWidth->setMin(0.001f);
+	_topWidth->setCallback(this);
+	_topWidth->setPercent(0.0);
+
+	_height = new CallbackSlider();
+	_height->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
+	_height->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
+	_height->handle->setPercentSize(osg::Vec3(0, 1, 1));
+	_height->handle->setColor(osg::Vec4(0.82, .25, .11, 0.0));
+	_height->filled->setColor(osg::Vec4(0.94, .44, .11, 0.16));
+	_height->setMax(1.0f);
+	_height->setMin(0.001f);
+	_height->setCallback(this);
+	_height->setPercent(1.0);
+
+	UIText* cLabel = new UIText("Center Position", 30.0f, osgText::TextBase::LEFT_CENTER);
+	cLabel->setColor(osg::Vec4(.66, .84, .96, 1.0));
+	UIText* bLabel = new UIText("Bottom Width", 30.0f, osgText::TextBase::LEFT_CENTER);
+	bLabel->setColor(osg::Vec4(.66, .84, .96, 1.0));
+	UIText* tLabel = new UIText("Top Width", 30.0f, osgText::TextBase::LEFT_CENTER);
+	tLabel->setColor(osg::Vec4(.66, .84, .96, 1.0));
+	UIText* hLabel = new UIText("Height", 30.0f, osgText::TextBase::LEFT_CENTER);
+	hLabel->setColor(osg::Vec4(.66, .84, .96, 1.0));
+
+	
+	
+	
+	list->addChild(cLabel);
+	list->addChild(_centerPos);
+	list->addChild(bLabel);
+	list->addChild(_bottomWidth);
+	list->addChild(tLabel);
+	list->addChild(_topWidth);
+	list->addChild(hLabel);
+	list->addChild(_height);
+	
+	
+}
+
+void TentWindow::uiCallback(UICallbackCaller* ui) {
+	if (ui == _bottomWidth) {
+		_volume->_computeUniforms["OpacityWidth"]->set(_bottomWidth->getAdjustedValue()*2);
+		_tent->addUniform("Width", _bottomWidth->getAdjustedValue()*2);
+		_tent->changeBottomVertices(_bottomWidth->getAdjustedValue());
+		
+	}
+	if (ui == _topWidth) {
+		float width = _tent->changeTopVertices(_topWidth->getAdjustedValue());
+		_volume->_computeUniforms["OpacityTopWidth"]->set(width);
+	}
+	if (ui == _centerPos) {
+		std::cout << "Center: " << _centerPos->getAdjustedValue() << std::endl;
+		_tent->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), 0.0, 0.0));
+		_volume->_computeUniforms["OpacityCenter"]->set(_centerPos->getAdjustedValue());
+		_tent->addUniform("Center", _centerPos->getAdjustedValue());
+	}
+	if (ui == _height) {
+		_tent->changeHeight(_height->getAdjustedValue());
+		_volume->_computeUniforms["OpacityMult"]->set(_height->getAdjustedValue());
+	}
+	_volume->setDirtyAll();
+	
+}
+
+void Tent::createGeometry()
+{
+	_transform = new osg::MatrixTransform();
+	_intersect = new osg::Geode();
+
+	_group->addChild(_transform);
+	_transform->addChild(_geode);
+
+	_intersect->setNodeMask(cvr::INTERSECT_MASK);
+	_polyGeom = new osg::Geometry();
+
+	
+	osg::Vec3 myCoords[] =
+	{
+		osg::Vec3(rightPointX, 0.0, -1.0),
+		osg::Vec3(topPointX, 0.0, height),
+		osg::Vec3(topPointX, 0.0, height),
+		osg::Vec3(leftPointX, 0.0, -1.0)
+
+	};
+	int numCoords = sizeof(myCoords) / sizeof(osg::Vec3);
+
+	osg::Vec3Array* vertices = new osg::Vec3Array(numCoords, myCoords);
+
+	
+	_polyGeom->setVertexArray(vertices);
+
+	_polyGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS, 0, numCoords));
+
+	_geode->addDrawable(_polyGeom);
+
+
+	osg::Vec2Array* texcoords = new osg::Vec2Array;
+	texcoords->push_back(osg::Vec2(1, 0));
+	texcoords->push_back(osg::Vec2(0.5 + (topPointX/2.0), 1));
+	texcoords->push_back(osg::Vec2(0.5 - (topPointX/2.0), 1));
+	texcoords->push_back(osg::Vec2(0, 0));
+	
+
+
+	_polyGeom->setVertexAttribArray(1, texcoords, osg::Array::BIND_PER_VERTEX);
+	setTransparent(true);
+
+	updateGeometry();
+}
+
+void Tent::updateGeometry()
+{
+
+	osg::Vec3 myCoords[] =
+	{
+		osg::Vec3(rightPointX, 0.0, -1.0),
+		osg::Vec3(topPointX, 0.0, height),
+		osg::Vec3(-topPointX, 0.0, height),
+		osg::Vec3(leftPointX, 0.0, -1.0)
+
+	};
+	int numCoords = sizeof(myCoords) / sizeof(osg::Vec3);
+
+	osg::Vec3Array* vertices = new osg::Vec3Array(numCoords, myCoords);
+	_polyGeom->setVertexArray(vertices);
+
+	osg::Vec2Array* texcoords = new osg::Vec2Array;	//Memory Leak?
+	texcoords->push_back(osg::Vec2(1, 0));
+	texcoords->push_back(osg::Vec2(.5 + ((topPointX / rightPointX) / 2.0), 1));
+	texcoords->push_back(osg::Vec2(.5 - ((topPointX / rightPointX) / 2.0), 1));
+	texcoords->push_back(osg::Vec2(0, 0));
+
+	_polyGeom->setVertexAttribArray(1, texcoords, osg::Array::BIND_PER_VERTEX);
+
+	osg::Vec4Array* colors = new osg::Vec4Array;
+	colors->push_back(_color);
+	((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_OVERALL);
+	((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_OVERALL);
+
+	osg::Matrix mat = osg::Matrix();
+	mat.makeScale(_actualSize);
+	mat.postMultTranslate(_actualPos);
+	_transform->setMatrix(mat);
+
+
+	if (_program.valid())
+	{
+		_geode->getDrawable(0)->getOrCreateStateSet()->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
+
+	}
+}
+
+void Tent::setColor(osg::Vec4 color)
+{
+	if (_color != color)
+	{
+		_color = color;
+		_dirty = true;
+	}
+}
+
+void Tent::setTransparent(bool transparent)
+{
+	if (transparent)
+	{
+		_geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+		_geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
+	}
+	else
+	{
+		_geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::OPAQUE_BIN);
+		_geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::OFF);
+	}
+}
+
+void Tent::setRounding(float absRounding, float percentRounding)
+{
+	_absoluteRounding->set(absRounding);
+	_percentRounding->set(percentRounding);
+}
+
+
+template <typename T>
+void Tent::addUniform(std::string uniform, T initialvalue)
+{
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), initialvalue);
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
+void Tent::addUniform(std::string uniform)
+{
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), 0.0f);
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
+void Tent::addUniform(osg::Uniform* uniform)
+{
+	_uniforms[uniform->getName()] = uniform;
+	_geode->getOrCreateStateSet()->addUniform(uniform);
+}
+
+osg::Uniform* Tent::getUniform(std::string uniform)
+{
+	return _uniforms[uniform];
+}
+
+void Tent::setShaderDefine(std::string name, std::string define, osg::StateAttribute::Values on)
+{
+	_geode->getOrCreateStateSet()->setDefine(name, define, on);
+}
+
+osg::Program* Tent::getOrLoadProgram()
+{
+	if (!_triangleProg)
+	{
+		const std::string vert = HelmsleyVolume::loadShaderFile("transferFunction.vert");
+		const std::string frag = HelmsleyVolume::loadShaderFile("triangle.frag");
+		_triangleProg = new osg::Program;
+		_triangleProg->setName("Triangle");
+		_triangleProg->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
+		_triangleProg->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
+	}
+
+	return _triangleProg;
+}
+
+void Tent::changeBottomVertices(float x) {
+	rightPointX = x;
+	leftPointX = -x;
+	topPointX = std::min(actualTop, rightPointX);
+	updateGeometry();
+}
+
+float Tent::changeTopVertices(float x) {
+	actualTop = x;
+	topPointX = std::min(x, rightPointX);
+	updateGeometry();
+	return topPointX;
+}
+
+void Tent::changeHeight(float x) {
+	height = x - 1.0;
+	updateGeometry();
+}
+
 #pragma region ColorPicker
+
 ColorPicker::ColorPicker() :
 	UIElement()
 {
@@ -435,6 +747,7 @@ ColorPicker::ColorPicker() :
 	_sv->setSize(osg::Vec3(0.8f, 1.0f, 1.0f), osg::Vec3(-border * 2, 0, -border * 2));
 	_bknd->addChild(_sv);
 	_sv->setCallback(this);
+	
 
 }
 
@@ -468,6 +781,84 @@ void ColorPicker::uiCallback(UICallbackCaller* ui)
 
 		_hue->setSV(sv);
 	}
-	std::cerr << "Color: <" << color.x() << ", " << color.y() << ", " << color.z() << ">" << std::endl;
+
+	//GA
+	*_saveColor = color;
+	osg::Vec3 solidCol = ColorPicker::returnColor();
+	
+	_target->setColor(osg::Vec4(solidCol, 1.0));
+	_transferFunction = "vec3(" + std::to_string(solidCol.x()) + "," + std::to_string(solidCol.y()) + "," + std::to_string(solidCol.z()) + ");";
+
+	
+		switch (_organRGB) {
+			case BLADDER: 
+				_volume->getCompute()->getOrCreateStateSet()->setDefine("BLADDER_RGB", _transferFunction, osg::StateAttribute::ON);
+				break;
+			case COLON:
+				_volume->getCompute()->getOrCreateStateSet()->setDefine("COLON_RGB", _transferFunction, osg::StateAttribute::ON);
+				break;
+			case SPLEEN:
+				_volume->getCompute()->getOrCreateStateSet()->setDefine("SPLEEN_RGB", _transferFunction, osg::StateAttribute::ON);
+				break;
+			case KIDNEY:
+				_volume->getCompute()->getOrCreateStateSet()->setDefine("KIDNEY_RGB", _transferFunction, osg::StateAttribute::ON); 
+				break;
+		}
+
+		_volume->setDirtyAll();
+	
+}
+
+void ColorPicker::setButton(cvr::UIQuadElement* target) {
+	_target = target;
+
+}
+
+osg::Vec3 ColorPicker::returnColor() {
+	//hsv to rgb
+	double H = color.x() * 360.0;
+	double S = color.y();
+	double V = color.z();
+
+	double C = S * V;
+	double X = C * (1 - abs(fmod(H / 60.0, 2) - 1));
+	double m = V - C;
+	double Rs, Gs, Bs;
+
+	if (H >= 0 && H < 60 ) {
+		Rs = C;
+		Gs = X;
+		Bs = 0;
+	}
+	else if (H >= 60  && H < 120 ) {
+		Rs = X;
+		Gs = C;
+		Bs = 0;
+	}
+	else if (H >= 120  && H < 180 ) {
+		Rs = 0;
+		Gs = C;
+		Bs = X;
+	}
+	else if (H >= 180 && H < 240 ) {
+		Rs = 0;
+		Gs = X;
+		Bs = C;
+	}
+	else if (H >= 240  && H < 300 ) {
+		Rs = X;
+		Gs = 0;
+		Bs = C;
+	}
+	else {
+		Rs = C;
+		Gs = 0;
+		Bs = X;
+	}
+
+	rgbColor.x() = (Rs + m);
+	rgbColor.y() = (Gs + m);
+	rgbColor.z() = (Bs + m);
+	return rgbColor;
 }
 #pragma endregion

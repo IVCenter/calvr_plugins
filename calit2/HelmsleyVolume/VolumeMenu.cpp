@@ -4,6 +4,7 @@
 #include "cvrMenu/MenuManager.h"
 #include "cvrConfig/ConfigManager.h"
 
+
 using namespace cvr;
 
 void VolumeMenu::init()
@@ -36,6 +37,7 @@ void VolumeMenu::menuCallback(cvr::MenuItem * item)
 		_volume->getDrawable()->getOrCreateStateSet()->setDefine("VR_ADAPTIVE_QUALITY", adaptiveQuality->getValue());
 	}
 }
+
 
 NewVolumeMenu::~NewVolumeMenu()
 {
@@ -83,29 +85,26 @@ void NewVolumeMenu::init()
 	UIQuadElement* bknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 	_menu->addChild(bknd);
 	_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Position", osg::Vec3(500, 500, 1450)) - volumePos);
-	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Scale", osg::Vec3(600, 1, 600)));
+
+	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Scale", osg::Vec3(1000, 1, 600)));
+
 	
-	/*
 	ColorPicker* cp = new ColorPicker();
-	_menu->addChild(cp);
-	_menu->setActive(true, false);
-	_container = new SceneObject("VolumeMenu", false, true, false, false, false);
-	//PluginHelper::registerSceneObject(_container, "VolumeMenu");
-	//_container->attachToScene();
-	_so->addChild(_container);
-	//_container->getRoot()->addUpdateCallback(new PointAtHeadLerp(0.1f));
-	_container->setShowBounds(true);
-	_container->addChild(_menu->getRoot());
-	_menu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
-	_container->dirtyBounds();
-	return;
-	*/
+	_cp = cp;
+
+	TentWindow* tentWindow = new TentWindow();
+	_menu->addChild(tentWindow);
+	tentWindow->setPercentSize(osg::Vec3(1, 0, .75));
+	tentWindow->setPercentPos(osg::Vec3(0, 0, -1));
+	tentWindow->setVolume(_volume);
 
 	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
 	list->setPercentPos(osg::Vec3(0, 0, -0.2));
 	list->setPercentSize(osg::Vec3(1, 1, 0.8));
 	list->setAbsoluteSpacing(10);
 	bknd->addChild(list);
+
+	
 
 	UIText* label = new UIText("Volume Options", 50.0f, osgText::TextBase::CENTER_CENTER);
 	label->setPercentSize(osg::Vec3(1, 1, 0.2));
@@ -136,7 +135,7 @@ void NewVolumeMenu::init()
 
 	label = new UIText("Density", 30.0f, osgText::TextBase::LEFT_CENTER);
 	label->setPercentPos(osg::Vec3(0.1, 0, 0));
-	list->addChild(label);
+	//list->addChild(label);
 
 	_density = new CallbackSlider();
 	_density->setPercentPos(osg::Vec3(0.025, 0, 0.05));
@@ -148,8 +147,7 @@ void NewVolumeMenu::init()
 	_density->setMin(0.0001f);
 	_density->setCallback(this);
 	_density->setPercent(1);
-
-	list->addChild(_density);
+	//list->addChild(_density);
 
 
 	label = new UIText("Threshold", 30.0f, osgText::TextBase::LEFT_CENTER);
@@ -180,14 +178,17 @@ void NewVolumeMenu::init()
 
 	label = new UIText("Color", 30.0f, osgText::TextBase::LEFT_CENTER);
 	label->setPercentPos(osg::Vec3(0.1, 0, 0));
-	list->addChild(label);
+	//list->addChild(label);
 
 	UIList* list2 = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
+	
 	
 	_transferFunction = new CallbackRadial();
 	_transferFunction->allowNoneSelected(false);
 	_blacknwhite = new UIRadialButton(_transferFunction);
 	_rainbow = new UIRadialButton(_transferFunction);
+	_solid = new UIRadialButton(_transferFunction);
+
 	_transferFunction->setCurrent(0);
 	_transferFunction->setCallback(this);
 
@@ -201,19 +202,27 @@ void NewVolumeMenu::init()
 	_colorDisplay->setProgram(p);
 	_colorDisplay->addUniform(_volume->_computeUniforms["ContrastBottom"]);
 	_colorDisplay->addUniform(_volume->_computeUniforms["ContrastTop"]);
+	_colorDisplay->setPercentSize(osg::Vec3(1.0, 1.0, .5));
+	_colorDisplay->setPercentPos(osg::Vec3(0.0, 0.0, -0.5));
 
-	list->addChild(_colorDisplay);
 
-	UIText* bnw = new UIText("Black and White", 30.0f, osgText::TextBase::CENTER_CENTER);
+	UIText* bnw = new UIText("Grayscale", 40.0f, osgText::TextBase::CENTER_CENTER);
 	bnw->setColor(osg::Vec4(0.8, 1, 0.8, 1));
 	UIText* rnbw = new UIText("Rainbow", 40.0f, osgText::TextBase::CENTER_CENTER);
 	rnbw->setColor(osg::Vec4(1, 0.8, 0.8, 1));
 
+	
+
 	_blacknwhite->addChild(bnw);
 	_rainbow->addChild(rnbw);
+
+
 	list2->addChild(_blacknwhite);
 	list2->addChild(_rainbow);
+
 	list->addChild(list2);
+
+	list->addChild(_colorDisplay);
 
 	if (!_movable)
 	{
@@ -222,10 +231,7 @@ void NewVolumeMenu::init()
 	else {
 		_menu->setActive(true, false);
 		_container = new SceneObject("VolumeMenu", false, true, false, false, true);
-		//PluginHelper::registerSceneObject(_container, "VolumeMenu");
-		//_container->attachToScene();
 		_so->addChild(_container);
-		//_container->getRoot()->addUpdateCallback(new PointAtHeadLerp(0.1f));
 		_container->setShowBounds(true);
 		_container->addChild(_menu->getRoot());
 		_menu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
@@ -236,23 +242,55 @@ void NewVolumeMenu::init()
 
 	_toolMenu = new ToolMenu(0, true, _so);
 
-	//_menu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
-	//UIElement* e = list2->getChild(0)->getChild(1);
-
 	if (_volume->hasMask())
 	{
 		_maskMenu = new UIPopup();
+		_colorMenu = new UIPopup();
 		bknd = new UIQuadElement(UI_BACKGROUND_COLOR);
-		_maskMenu->addChild(bknd);
+		UIQuadElement* cpHeader = new UIQuadElement(UI_BACKGROUND_COLOR);
+		_cpHeader = cpHeader;
+		UIQuadElement* exitBox = new UIQuadElement(osg::Vec4(.85,.45,.45, 1));
+		UIText* cpHLabel = new UIText("Body", 50.0f, osgText::TextBase::CENTER_CENTER);
+		_cpHLabel = cpHLabel;
+		UIText* exitLabel = new UIText("X", 50.0f, osgText::TextBase::CENTER_CENTER);
+		_exitCPCallback = new CallbackButton();
+		_exitCPCallback->setCallback(this);
 
+
+
+		_maskMenu->addChild(bknd);
+		
+
+		_colorMenu->addChild(cp);
+		cp->setPercentSize(osg::Vec3(1, 1, .8));
+		cp->setPercentPos(osg::Vec3(1.015, -0.015, -.2));
+		cp->setVolume(_volume);
+		cp->setFunction(transferFunction);
+		cp->setRadial(_transferFunction);
+		cp->setColorDisplay(_colorDisplay);
+		_colorMenu->addChild(cpHeader);
+		cpHeader->setPercentPos(osg::Vec3(1.015, -0.015, 0));
+		cpHeader->setPercentSize(osg::Vec3(1, 1, .2));
+		cpHLabel->setPercentSize(osg::Vec3(1, 1, 0.2));
+		cpHLabel->setPercentPos(osg::Vec3(0, 0, -.5));
+		cpHeader->addChild(cpHLabel);
+		cpHLabel->addChild(exitBox);
+		exitBox->setPercentSize(osg::Vec3(.2, 1, 1.5));
+		exitBox->setPercentPos(osg::Vec3(.8, 0, 2.5));
+		exitBox->addChild(exitLabel);
+		exitBox->addChild(_exitCPCallback);
 
 		_maskMenu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Position", osg::Vec3(600, 500, 800)) - volumePos);
-		_maskMenu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Scale", osg::Vec3(400, 1, 800)));
+		_maskMenu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Scale", osg::Vec3(500, 1, 800)));
+		_colorMenu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Position", osg::Vec3(600, 500, 800)) - volumePos);
+		_colorMenu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Scale", osg::Vec3(500, 1, 800)));
 
 		list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
 		list->setPercentPos(osg::Vec3(0, 0, -0.2));
-		list->setPercentSize(osg::Vec3(1, 1, 0.8));
+		list->setPercentSize(osg::Vec3(.5, 1, 0.8));
 		bknd->addChild(list);
+
+		
 
 		UIText* label = new UIText("Organs", 50.0f, osgText::TextBase::CENTER_CENTER);
 		label->setPercentSize(osg::Vec3(1, 1, 0.2));
@@ -261,21 +299,61 @@ void NewVolumeMenu::init()
 		_organs = new VisibilityToggle("Body");
 		_organs->toggle();
 		_organs->setCallback(this);
+		
+		
+		_bodyColCallback = new CallbackButton();
+		_bodyColCallback->setCallback(this);
+		_colonColCallback = new CallbackButton();
+		_colonColCallback->setCallback(this);
+		_kidneyColCallback = new CallbackButton();
+		_kidneyColCallback->setCallback(this);
+		_bladderColCallback = new CallbackButton();
+		_bladderColCallback->setCallback(this);
+		_spleenColCallback = new CallbackButton();
+		_spleenColCallback->setCallback(this);
+		
+		
+		UIQuadElement* colonColorButton = new UIQuadElement(osg::Vec4(1, 0, 0, 1));
+		_colonColorButton = colonColorButton;
+		_colonCol = osg::Vec3(0, 1, 1);
+		colonColorButton->addChild(_colonColCallback);
+		colonColorButton->setAbsoluteSize(osg::Vec3(100, 0.1, 100));
+		colonColorButton->setPercentSize(osg::Vec3(0, 1, 0));
+		colonColorButton->setAbsolutePos(osg::Vec3(-100, -0.15f, -325));
+		colonColorButton->setPercentPos(osg::Vec3(1, 0, 0));
+
+		UIQuadElement* kidneyColorButton = new UIQuadElement(osg::Vec4(0, 1, 0, 1));
+		_kidneyColorButton = kidneyColorButton;
+		_kidneyCol = osg::Vec3(.33, 1, 1);
+		kidneyColorButton->addChild(_kidneyColCallback);
+		kidneyColorButton->setAbsoluteSize(osg::Vec3(100, 0.1, 100));
+		kidneyColorButton->setPercentSize(osg::Vec3(0, 1, 0));
+		kidneyColorButton->setAbsolutePos(osg::Vec3(-100, -0.15f, -450));
+		kidneyColorButton->setPercentPos(osg::Vec3(1, 0, 0));
+		
+		UIQuadElement* bladderColorButton = new UIQuadElement(osg::Vec4(0, 0, 1, 1));
+		_bladderColorButton = bladderColorButton;
+		_bladderCol = osg::Vec3(.66, 1, 1);
+		bladderColorButton->addChild(_bladderColCallback);
+		bladderColorButton->setAbsoluteSize(osg::Vec3(100, 0.1, 100));
+		bladderColorButton->setPercentSize(osg::Vec3(0, 1, 0));
+		bladderColorButton->setAbsolutePos(osg::Vec3(-100, -0.15f, -575));
+		bladderColorButton->setPercentPos(osg::Vec3(1, 0, 0));
+		
+		UIQuadElement* spleenColorButton = new UIQuadElement(osg::Vec4(0, 1, 1, 1));
+		_spleenColorButton = spleenColorButton;
+		_spleenCol = osg::Vec3(.5, 1, 1);
+		spleenColorButton->addChild(_spleenColCallback);
+		spleenColorButton->setAbsoluteSize(osg::Vec3(100, 0.1, 100));
+		spleenColorButton->setPercentSize(osg::Vec3(0, 1, 0));
+		spleenColorButton->setAbsolutePos(osg::Vec3(-100, -0.15f, -700));
+		spleenColorButton->setPercentPos(osg::Vec3(1, 0, 0));
 
 
-
-		_test = new CallbackButton();
-		_test->setCallback(this);
-
-		UIQuadElement* redbutton = new UIQuadElement(osg::Vec4(1, 0, 0, 1));
-		redbutton->setAbsoluteSize(osg::Vec3(100, 0, 100));
-		redbutton->setPercentSize(osg::Vec3(0, 1, 0));
-		redbutton->setAbsolutePos(osg::Vec3(-100, -0.1f, 0));
-		redbutton->setPercentPos(osg::Vec3(1, 0, 0));
-
-		bknd->addChild(redbutton);
-		redbutton->addChild(_test);
-
+		bknd->addChild(colonColorButton);
+		bknd->addChild(kidneyColorButton);
+		bknd->addChild(bladderColorButton);
+		bknd->addChild(spleenColorButton);
 
 		_colon = new VisibilityToggle("Colon");
 		_colon->setCallback(this);
@@ -302,28 +380,65 @@ void NewVolumeMenu::init()
 		else {
 			_maskMenu->setActive(true, false);
 			_maskContainer = new SceneObject("MaskMenu", false, true, false, false, true);
-			//_maskContainer->getRoot()->addUpdateCallback(new PointAtHeadLerp(0.1f));
-			//PluginHelper::registerSceneObject(_maskContainer, "MaskMenu");
-			//_maskContainer->attachToScene();
+			
 			_so->addChild(_maskContainer);
 			_maskContainer->setShowBounds(true);
 			_maskContainer->addChild(_maskMenu->getRoot());
 			_maskMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
+			_colorMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 			_maskContainer->dirtyBounds();
 		}
 	}
 }
 
+void NewVolumeMenu::colorButtonPress(cvr::UIQuadElement* button, organRGB organRGB, std::string organName, VisibilityToggle* organEye) {
+	_cp->setButton(button);
+	_cp->setOrganRgb(organRGB);
+	_maskContainer->addChild(_colorMenu->getRoot());//error check
+	_cpHLabel->setText(organName);
+	if(!organEye->isOn())
+		organEye->toggle();
+	std::transform(organName.begin(), organName.end(), organName.begin(), ::toupper);
+	_volume->getCompute()->getOrCreateStateSet()->setDefine(organName, organEye->isOn());
+	_volume->setDirtyAll();
+	setSolid();
+}
+
 void NewVolumeMenu::uiCallback(UICallbackCaller * item)
-{
-	//if (_container)
-	//{
-	//	_container->dirtyBounds();
-	//}
-	if (item == _test)
-	{
-		std::cout << "TESTING WOOOOO" << std::endl;
+{	
+	//<--------------------------------------------------COLORED BUTTONS
+
+	if (item == _colonColCallback) {
+		_cp->setSaveColor(&_colonCol);
+		_cp->setCPColor(_colonCol);
+		
+		colorButtonPress(_colonColorButton, organRGB(COLON), "Colon", _colon);
 	}
+
+	if (item == _kidneyColCallback) {
+		_cp->setSaveColor(&_kidneyCol);
+		_cp->setCPColor(_kidneyCol);
+	
+		colorButtonPress(_kidneyColorButton, organRGB(KIDNEY), "Kidney", _kidney);
+	}
+
+	if (item == _bladderColCallback) {
+		_cp->setSaveColor(&_bladderCol);
+		_cp->setCPColor(_bladderCol);
+		
+		colorButtonPress(_bladderColorButton, organRGB(BLADDER), "Bladder", _bladder);
+	}
+
+	if (item == _spleenColCallback) {
+		_cp->setSaveColor(&_spleenCol);
+		_cp->setCPColor(_spleenCol);
+		
+		colorButtonPress(_spleenColorButton, organRGB(SPLEEN), "Spleen", _spleen);
+	}
+	if (item == _exitCPCallback) {
+		_colorMenu->setActive(false, false);
+	}
+
 	if (item == _horizontalflip)
 	{
 		osg::Matrix m;
@@ -353,21 +468,25 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	}
 	else if (item == _colon)
 	{
+		
 		_volume->getCompute()->getOrCreateStateSet()->setDefine("COLON", _colon->isOn());
 		_volume->setDirtyAll();
 	}
 	else if (item == _kidney)
 	{
+		
 		_volume->getCompute()->getOrCreateStateSet()->setDefine("KIDNEY", _kidney->isOn());
 		_volume->setDirtyAll();
 	}
 	else if (item == _bladder)
 	{
+		
 		_volume->getCompute()->getOrCreateStateSet()->setDefine("BLADDER", _bladder->isOn());
 		_volume->setDirtyAll();
 	}
 	else if (item == _spleen)
 	{
+	
 		_volume->getCompute()->getOrCreateStateSet()->setDefine("SPLEEN", _spleen->isOn());
 		_volume->setDirtyAll();
 	}
@@ -401,18 +520,20 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 			transferFunction = "vec3(ra.r);";
 			_volume->getCompute()->getOrCreateStateSet()->setDefine("COLOR_FUNCTION", transferFunction, osg::StateAttribute::ON);
 			_colorDisplay->setShaderDefine("COLOR_FUNCTION", transferFunction, osg::StateAttribute::ON);
-
 			((UIText*)_blacknwhite->getChild(0))->setColor(UI_ACTIVE_COLOR);
 			((UIText*)_rainbow->getChild(0))->setColor(UI_INACTIVE_COLOR);
+			((UIText*)_solid->getChild(0))->setColor(UI_INACTIVE_COLOR);
+
 		}
 		else if (_transferFunction->getCurrent() == 1)
 		{
 			transferFunction = "hsv2rgb(vec3(ra.r * 0.8, 1, 1));";
 			_volume->getCompute()->getOrCreateStateSet()->setDefine("COLOR_FUNCTION", transferFunction, osg::StateAttribute::ON);
 			_colorDisplay->setShaderDefine("COLOR_FUNCTION", transferFunction, osg::StateAttribute::ON);
-
 			((UIText*)_blacknwhite->getChild(0))->setColor(UI_INACTIVE_COLOR);
 			((UIText*)_rainbow->getChild(0))->setColor(UI_ACTIVE_COLOR);
+			((UIText*)_solid->getChild(0))->setColor(UI_INACTIVE_COLOR);
+
 		}
 		_volume->setDirtyAll();
 	}
@@ -424,8 +545,6 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	_index = index;
 
 	_menu = new UIPopup();
-	//UIQuadElement* bknd = new UIQuadElement(osg::Vec4(0.3, 0.3, 0.3, 1));
-	//_menu->addChild(bknd);
 	if (parent)
 	{
 		osg::Vec3 volumePos = ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(0, 750, 500));
@@ -439,12 +558,7 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 
 	UIList* list = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
 	list->setAbsoluteSpacing(5);
-	//bknd->addChild(list);
 	_menu->addChild(list);
-
-	//_tool = new CallbackRadial();
-	//_tool->setCallback(this);
-	//_tool->allowNoneSelected(true);
 
 	std::string dir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ImageDir");
 
@@ -481,6 +595,7 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 		_container->dirtyBounds();
 	}
 }
+
 
 ToolMenu::~ToolMenu()
 {

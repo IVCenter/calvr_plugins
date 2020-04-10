@@ -41,6 +41,7 @@ protected:
 	cvr::MenuRangeValueCompact* opacityMult;
 	cvr::MenuRangeValueCompact* opacityCenter;
 	cvr::MenuRangeValueCompact* opacityWidth;
+	cvr::MenuRangeValueCompact* opacityTop;
 
 	cvr::MenuCheckbox* adaptiveQuality;
 	cvr::MenuCheckbox* highlightColon;
@@ -90,8 +91,17 @@ public:
 	virtual void uiCallback(UICallbackCaller * item);
 
 	cvr::SceneObject* getSceneObject() { return _so; }
-
 	std::string transferFunction;
+
+	inline void setOrganColPicker(std::string organName)
+	{
+		_maskContainer->addChild(_colorMenu->getRoot());
+		_cpHLabel->setText(organName);
+	}
+	inline void setSolid() {
+		;//_transferFunction->setCurrent(2);
+	}
+	void colorButtonPress(cvr::UIQuadElement* button, organRGB organRGB, std::string organName, VisibilityToggle* organEye);
 
 protected:
 	cvr::SceneObject* _scene;
@@ -99,6 +109,7 @@ protected:
 
 	cvr::UIPopup* _menu = nullptr;
 	cvr::UIPopup* _maskMenu = nullptr;
+	cvr::UIPopup* _colorMenu = nullptr;
 
 	CallbackButton* _horizontalflip;
 	CallbackButton* _verticalflip;
@@ -115,12 +126,33 @@ protected:
 	VisibilityToggle* _bladder;
 	VisibilityToggle* _spleen;
 
-	CallbackButton* _test;
+	cvr::UIQuadElement* _bodyColorButton;
+	cvr::UIQuadElement* _colonColorButton;
+	cvr::UIQuadElement* _kidneyColorButton;
+	cvr::UIQuadElement* _spleenColorButton;
+	cvr::UIQuadElement* _bladderColorButton;
 
+	CallbackButton* _bodyColCallback;
+	CallbackButton* _colonColCallback;
+	CallbackButton* _kidneyColCallback;
+	CallbackButton* _bladderColCallback;
+	CallbackButton* _spleenColCallback;
+	CallbackButton* _exitCPCallback;
+
+	ColorPicker* _cp;
+	cvr::UIQuadElement* _cpHeader;
+	cvr::UIText* _cpHLabel;
 	CallbackRadial* _transferFunction;
 	ShaderQuad* _colorDisplay;
 	cvr::UIRadialButton* _blacknwhite;
 	cvr::UIRadialButton* _rainbow;
+	cvr::UIRadialButton* _solid;//GA
+
+	osg::Vec3 _bodyCol;
+	osg::Vec3 _colonCol;
+	osg::Vec3 _kidneyCol;
+	osg::Vec3 _bladderCol;
+	osg::Vec3 _spleenCol;
 
 private:
 	ToolMenu* _toolMenu = nullptr;

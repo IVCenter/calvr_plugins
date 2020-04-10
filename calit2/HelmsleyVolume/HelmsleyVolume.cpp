@@ -106,7 +106,7 @@ bool HelmsleyVolume::init()
 
 	osgDB::Options* roomOptions = new osgDB::Options("noReverseFaces");
 	osg::Node* room = osgDB::readNodeFile(modelDir + "testPrim.obj", roomOptions);
-	_room = new SceneObject("room", false, true, false, true, false);
+	_room = new SceneObject("room", false, false, false, false, false);
 	_room->addChild(room);
 	_room->setScale(800);
 	_room->setPosition(osg::Vec3(12000, 0, 0));

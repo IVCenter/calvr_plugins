@@ -1,8 +1,10 @@
 #version 460
 
 #pragma import_defines ( COLOR_FUNCTION, ORGANS_ONLY, LIGHT_DIRECTIONAL, LIGHT_SPOT,LIGHT_POINT )
-#pragma import_defines ( COLON, BLADDER, KIDNEY, SPLEEN )
+#pragma import_defines ( COLON, BLADDER, KIDNEY, SPLEEN, BODY )
+#pragma import_defines ( COLON_RGB, BLADDER_RGB, KIDNEY_RGB, SPLEEN_RGB, BODY_RGB )
 #pragma import_defines ( CONTRAST_ABSOLUTE )
+
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 layout(rg16, binding = 0) uniform image3D volume;
@@ -18,7 +20,8 @@ uniform float ContrastTop;
 
 uniform float OpacityCenter;
 uniform float OpacityWidth;
-uniform float OpacityMult;
+uniform float OpacityTopWidth;
+uniform float OpacityMult = 1.0;
 
 uniform vec3 WorldScale;
 uniform vec3 TexelSize;
@@ -29,6 +32,8 @@ uniform vec3 LightDirection;
 uniform float LightAngle;
 uniform float LightAmbient;
 uniform float LightIntensity;
+
+
 
 vec3 hsv2rgb(vec3 c) {
   vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
@@ -54,7 +59,14 @@ vec4 Sample(ivec3 p) {
 	ra.r = max(0, min(1, ra.r));
 
 
-	s.a = 1 - (abs(OpacityCenter - ra.r) / OpacityWidth);
+//	s.a = 1 - (abs(OpacityCenter - ra.r) / OpacityWidth);
+
+
+	
+	s.a = smoothstep((OpacityCenter-OpacityTopWidth) - (OpacityWidth/2.0), OpacityCenter - OpacityTopWidth, ra.r);
+	if(s.a == 1.0){
+		s.a = 1.0 - smoothstep(OpacityCenter+OpacityTopWidth, OpacityCenter+ OpacityTopWidth + (OpacityWidth/2.0), ra.r);
+	}
 	s.a *= OpacityMult;
 
 	#ifdef COLOR_FUNCTION
@@ -63,12 +75,14 @@ vec4 Sample(ivec3 p) {
 		s.rgb = vec3(ra.r);
 	#endif
 
+	
 	//TODO: change to floatBitsToUint
 	uint bitmask = uint(ra.g * 65535.0);
 
 
 	#ifdef ORGANS_ONLY
 		float alpha = 0.0;
+		s.rgb = vec3(ra.r);
 	#else
 		float alpha = s.a;
 	#endif
@@ -76,34 +90,57 @@ vec4 Sample(ivec3 p) {
 	#ifdef BLADDER
 		if(bitmask == 1)
 		{
-			s.rgb = vec3(0, ra.rr);
-			alpha = s.a;
+				s.rgb = vec3(ra.rr, 0);
+				alpha = s.a;
+			#ifdef BLADDER_RGB
+				s.rgb = BLADDER_RGB
+				s.rgb*=ra.r;
+			#endif
 		}
 	#endif
 
 	#ifdef KIDNEY
 		if(bitmask == 2)
 		{
-			s.rgb = vec3(ra.r, 0, 0);
+			s.rgb = vec3(0, ra.r, 0);
 			alpha = s.a;
+			#ifdef KIDNEY_RGB
+				s.rgb = KIDNEY_RGB
+				s.rgb*=ra.r;
+			#endif
 		}
 	#endif
 
 	#ifdef COLON
 		if(bitmask == 4)
 		{
-			s.rgb = vec3(ra.rr, 0);
+			
+			s.rgb = vec3(ra.r, 0, 0);
 			alpha = s.a;
+			#ifdef COLON_RGB
+				s.rgb = COLON_RGB		
+				s.rgb*=ra.r;
+			#endif
 		}
+	
 	#endif
 
 	#ifdef SPLEEN
 		if(bitmask == 8)
 		{
-			s.rgb = vec3(ra.r, 0, ra.r);
+			s.rgb = vec3(0, ra.rr);
 			alpha = s.a;
+			#ifdef SPLEEN_RGB
+				s.rgb = SPLEEN_RGB		
+				s.rgb*=ra.r;
+			#endif
 		}
 	#endif
+
+	
+
+	
+	
 
 	s.a = alpha;
 
