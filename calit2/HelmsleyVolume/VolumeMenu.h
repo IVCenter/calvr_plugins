@@ -115,6 +115,8 @@ protected:
 	VisibilityToggle* _bladder;
 	VisibilityToggle* _spleen;
 
+	CallbackButton* _test;
+
 	CallbackRadial* _transferFunction;
 	ShaderQuad* _colorDisplay;
 	cvr::UIRadialButton* _blacknwhite;

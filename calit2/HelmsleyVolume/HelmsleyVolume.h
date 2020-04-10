@@ -106,6 +106,12 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		ToolMenu* _toolMenu;
 		cvr::UIPopup* _splashscreen;
 
+		cvr::SceneObject* _room;
+		cvr::SubMenu* _roomLocation;
+		cvr::MenuButton* _privateLoc;
+		cvr::MenuButton* _bedLoc;
+		cvr::MenuButton* _screenLoc;
+
 		osg::Matrix _selectionMatrix;
 
 		float _cuttingPlaneDistance;

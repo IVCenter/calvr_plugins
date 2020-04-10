@@ -84,10 +84,22 @@ void NewVolumeMenu::init()
 	_menu->addChild(bknd);
 	_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Position", osg::Vec3(500, 500, 1450)) - volumePos);
 	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Scale", osg::Vec3(600, 1, 600)));
-
-	//ColorPicker* cp = new ColorPicker();
-	//_menu->addChild(cp);
-
+	
+	/*
+	ColorPicker* cp = new ColorPicker();
+	_menu->addChild(cp);
+	_menu->setActive(true, false);
+	_container = new SceneObject("VolumeMenu", false, true, false, false, false);
+	//PluginHelper::registerSceneObject(_container, "VolumeMenu");
+	//_container->attachToScene();
+	_so->addChild(_container);
+	//_container->getRoot()->addUpdateCallback(new PointAtHeadLerp(0.1f));
+	_container->setShowBounds(true);
+	_container->addChild(_menu->getRoot());
+	_menu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
+	_container->dirtyBounds();
+	return;
+	*/
 
 	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
 	list->setPercentPos(osg::Vec3(0, 0, -0.2));
@@ -249,12 +261,31 @@ void NewVolumeMenu::init()
 		_organs = new VisibilityToggle("Body");
 		_organs->toggle();
 		_organs->setCallback(this);
+
+
+
+		_test = new CallbackButton();
+		_test->setCallback(this);
+
+		UIQuadElement* redbutton = new UIQuadElement(osg::Vec4(1, 0, 0, 1));
+		redbutton->setAbsoluteSize(osg::Vec3(100, 0, 100));
+		redbutton->setPercentSize(osg::Vec3(0, 1, 0));
+		redbutton->setAbsolutePos(osg::Vec3(-100, -0.1f, 0));
+		redbutton->setPercentPos(osg::Vec3(1, 0, 0));
+
+		bknd->addChild(redbutton);
+		redbutton->addChild(_test);
+
+
 		_colon = new VisibilityToggle("Colon");
 		_colon->setCallback(this);
+
 		_kidney = new VisibilityToggle("Kidney");
 		_kidney->setCallback(this);
+
 		_bladder = new VisibilityToggle("Bladder");
 		_bladder->setCallback(this);
+
 		_spleen = new VisibilityToggle("Spleen");
 		_spleen->setCallback(this);
 
@@ -289,6 +320,10 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	//{
 	//	_container->dirtyBounds();
 	//}
+	if (item == _test)
+	{
+		std::cout << "TESTING WOOOOO" << std::endl;
+	}
 	if (item == _horizontalflip)
 	{
 		osg::Matrix m;

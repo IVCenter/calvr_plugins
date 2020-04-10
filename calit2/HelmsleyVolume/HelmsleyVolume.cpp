@@ -31,6 +31,11 @@ using namespace cvr;
 HelmsleyVolume * HelmsleyVolume::_instance = NULL;
 
 
+MenuRangeValue* _xpos;
+MenuRangeValue* _ypos;
+MenuRangeValue* _zpos;
+MenuRangeValue* _rotmenu;
+
 CVRPLUGIN(HelmsleyVolume)
 
 std::string HelmsleyVolume::loadShaderFile(std::string filename)
@@ -90,29 +95,62 @@ HelmsleyVolume::~HelmsleyVolume()
 
 bool HelmsleyVolume::init()
 {
-	/*
+	_vMenu = new SubMenu("HelmsleyVolume", "HelmsleyVolume");
+	_vMenu->setCallback(this);
+
+	
 #ifdef WITH_OPENVR
 	std::string modelDir = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.ModelDir");
 	std::cout << "Model Dir: " << modelDir << std::endl;
 
 
 	osgDB::Options* roomOptions = new osgDB::Options("noReverseFaces");
-	osg::Node* room = osgDB::readNodeFile(modelDir + "crohnsRoom2.obj", roomOptions);
-	osg::MatrixTransform* scale = new osg::MatrixTransform();
-	osg::Matrix s;
-	s.makeScale(osg::Vec3(1000, 1000, 1000));
-	scale->setMatrix(s);
-	scale->addChild(room);
-	SceneObject * so;
-	so = new SceneObject("room", false, false, false, false, false);
-	so->addChild(scale);
-	PluginHelper::registerSceneObject(so, "HelmsleyVolume");
-	so->attachToScene();
+	osg::Node* room = osgDB::readNodeFile(modelDir + "testPrim.obj", roomOptions);
+	_room = new SceneObject("room", false, true, false, true, false);
+	_room->addChild(room);
+	_room->setScale(800);
+	_room->setPosition(osg::Vec3(12000, 0, 0));
+
+	PluginHelper::registerSceneObject(_room, "HelmsleyVolume");
+	_room->attachToScene();
+
+
+	_roomLocation = new SubMenu("Location", "Location");
+	_roomLocation->setCallback(this);
+
+	_privateLoc = new MenuButton("Private Lounge");
+	_privateLoc->setCallback(this);
+	_bedLoc = new MenuButton("Pediatric Room");
+	_bedLoc->setCallback(this);
+	_screenLoc = new MenuButton("Radiology Theater");
+	_screenLoc->setCallback(this);
+	
+	_roomLocation->addItem(_privateLoc);
+	_roomLocation->addItem(_bedLoc);
+	_roomLocation->addItem(_screenLoc);
+
+	_vMenu->addItem(_roomLocation);
+
+	_xpos = new MenuRangeValue("X", -20000, 20000, 12000);
+	_ypos = new MenuRangeValue("Y", -20000, 20000, 0);
+	_zpos = new MenuRangeValue("Z", -20000, 20000, 0);
+	_rotmenu = new MenuRangeValue("rot", -osg::PI, osg::PI, 0, osg::PI/2.0);
+
+	_xpos->setCallback(this);
+	_ypos->setCallback(this);
+	_zpos->setCallback(this);
+	_rotmenu->setCallback(this);
+
+	_vMenu->addItem(_xpos);
+	_vMenu->addItem(_ypos);
+	_vMenu->addItem(_zpos);
+	_vMenu->addItem(_rotmenu);
+
 #endif
-	*/
+	
 
 	_splashscreen = new UIPopup();
-	_splashscreen->setPosition(osg::Vec3(-800, 600, 1450));
+	_splashscreen->setPosition(osg::Vec3(-800, 1000, 1850));
 	_splashscreen->getRootElement()->setAbsoluteSize(osg::Vec3(1600, 1, 900));
 
 	std::string splashdir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ModelDir");
@@ -176,8 +214,6 @@ bool HelmsleyVolume::init()
 	osg::setNotifyLevel(osg::NOTICE);
 	std::cerr << "HelmsleyVolume init" << std::endl;
 
-	_vMenu = new SubMenu("HelmsleyVolume", "HelmsleyVolume");
-	_vMenu->setCallback(this);
 
 	SubMenu* fileMenu = new SubMenu("Files", "Files");
 	fileMenu->setCallback(this);
@@ -271,14 +307,14 @@ void HelmsleyVolume::preFrame()
 void HelmsleyVolume::postFrame()
 {
 	++_frameNum;
-	int max = 300;
-	int fade = 60;
+	int max = 900;
+	int fade = 180;
 
 	if (_frameNum > max)
 	{
 		//_splashscreen->setActive(false, false);
 		MenuManager::instance()->removeMenuSystem(_splashscreen);
-		delete(_splashscreen);
+		// delete(_splashscreen);
 	}
 	else if(_frameNum > max - fade)
 	{
@@ -350,7 +386,46 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 
 void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 {
-	
+#ifdef WITH_OPENVR
+	if (menuItem == _privateLoc)
+	{
+		_room->setPosition(osg::Vec3(-800, 3500, -420));
+		_room->setRotation(osg::Quat(-osg::PI/2, osg::Vec3(0, 0, -1)));
+	}
+	else if (menuItem == _screenLoc)
+	{
+		_room->setPosition(osg::Vec3(-12000, -16000, 0));
+		_room->setRotation(osg::Quat(osg::PI * 3.0/4.0, osg::Vec3(0, 0, -1)));
+	}
+	else if (menuItem == _bedLoc)
+	{
+		_room->setPosition(osg::Vec3(-7500, 9000, 0));
+		_room->setRotation(osg::Quat(-osg::PI / 2, osg::Vec3(0, 0, -1)));
+	}
+	else if (menuItem == _xpos)
+	{
+		osg::Vec3 pos = _room->getPosition();
+		pos.x() = _xpos->getValue();
+		_room->setPosition(pos);
+	}
+	else if (menuItem == _ypos)
+	{
+		osg::Vec3 pos = _room->getPosition();
+		pos.y() = _ypos->getValue();
+		_room->setPosition(pos);
+	}
+	else if (menuItem == _zpos)
+	{
+		osg::Vec3 pos = _room->getPosition();
+		pos.z() = _zpos->getValue();
+		_room->setPosition(pos);
+	}
+	else if (menuItem == _rotmenu)
+	{
+		_room->setRotation(osg::Quat(_rotmenu->getValue(), osg::Vec3(0, 0, -1)));
+	}
+#endif
+
 	if (_buttonMap.find(menuItem) != _buttonMap.end())
 	{
 		bool found;
