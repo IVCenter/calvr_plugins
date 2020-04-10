@@ -4,6 +4,7 @@
 #define UI_BACKGROUND_COLOR osg::Vec4(0.3, 0.3, 0.3, 1)
 #define UI_ACTIVE_COLOR osg::Vec4(0.8, 1, 0.8, 1)
 #define UI_INACTIVE_COLOR osg::Vec4(1, 0.8, 0.8, 1)
+#define UI_BLUE_COLOR osg::Vec4(0.8, 0.9, 1.0, 1)
 
 #include <cvrMenu/NewUI/UIButton.h>
 #include <cvrMenu/NewUI/UICheckbox.h>
@@ -15,6 +16,8 @@
 #include <cvrMenu/NewUI/UIQuadElement.h>
 
 #include <cvrConfig/ConfigManager.h>
+
+#include "VolumeGroup.h"//GA
 
 class UICallback;
 class UICallbackCaller;
@@ -161,6 +164,7 @@ protected:
 	std::map<std::string, osg::Uniform*> _uniforms;
 };
 
+
 class PlanePointer : public cvr::UIElement
 {
 public:
@@ -191,7 +195,8 @@ public:
 
 	osg::Vec2 getSV() { return _sv; }
 	void setHue(float hue);
-
+	void setSV(osg::Vec2 sv) { _sv = sv; }
+	void set_indicator();
 	virtual bool onPosChange() override;
 
 protected:
@@ -213,7 +218,8 @@ public:
 
 	float getHue() { return _hue; }
 	void setSV(osg::Vec2 SV);
-
+	void setHue(float hue) { _hue = hue; }
+	void set_indicator();
 	virtual bool onPosChange() override;
 
 protected:
@@ -228,17 +234,155 @@ private:
 	float _hue;
 };
 
+
+class Tent : public cvr::UIElement
+{
+public:
+	Tent(osg::Vec4 color = osg::Vec4(1, 1, 1, 1))
+		: UIElement()
+	{
+		leftPointX = -.25;
+		rightPointX = .25;
+		topPointX = 0.0;
+		actualTop = 0.0;
+		height = 0.0;
+		_color = color;
+		_geode = new osg::Geode();
+		createGeometry();
+		_absoluteRounding = new osg::Uniform("absoluteRounding", 0.0f);
+		_percentRounding = new osg::Uniform("percentRounding", 0.0f);
+		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_absoluteRounding);
+		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_percentRounding);
+
+		
+		setProgram(getOrLoadProgram());
+		addUniform("SV", osg::Vec2(1.0f, 1.0f));
+	}
+
+	void changeBottomVertices(float x);
+	float changeTopVertices(float x);
+	void changeHeight(float x);
+	virtual void createGeometry();
+	virtual void updateGeometry();
+
+	virtual void setColor(osg::Vec4 color);
+
+	virtual void setTransparent(bool transparent);
+
+	virtual void setRounding(float absRounding, float percentRounding);
+
+
+
+	virtual void setProgram(osg::Program* p) { _program = p; _dirty = true; }
+	virtual osg::Program* getProgram() { return _program; }
+	virtual osg::Geode* getGeode() { return _geode; }
+
+	template <typename T>
+	void addUniform(std::string uniform, T initialvalue);
+	void addUniform(std::string uniform);
+	virtual void addUniform(osg::Uniform* uniform);
+	virtual osg::Uniform* getUniform(std::string uniform);
+	virtual void setShaderDefine(std::string name, std::string definition, osg::StateAttribute::Values on);
+
+
+
+
+protected:
+	osg::ref_ptr<osg::MatrixTransform> _transform;
+	osg::ref_ptr<osg::Geode> _geode;
+	osg::Geometry* _polyGeom;
+	osg::Vec3* _coords;
+
+	static osg::Program* getOrLoadProgram();
+	static osg::Program* _triangleProg;
+
+	osg::Vec4 _color;
+	osg::Uniform* _absoluteRounding;
+	osg::Uniform* _percentRounding;
+
+	float leftPointX;
+	float rightPointX;
+	float topPointX;
+	float height;
+	float actualTop; 
+	osg::ref_ptr<osg::Program> _program;
+	std::map<std::string, osg::Uniform*> _uniforms;
+
+};
+
+class TentWindow : public cvr::UIElement, public UICallback, public UICallbackCaller
+
+{
+public:
+	TentWindow();
+	virtual void uiCallback(UICallbackCaller* ui);
+	void setVolume(VolumeGroup* volume) { _volume = volume; }
+private:
+	cvr::UIQuadElement* _bknd;
+	Tent* _tent;
+	CallbackSlider* _bottomWidth;
+	CallbackSlider* _centerPos;
+	CallbackSlider* _topWidth;
+	CallbackSlider* _height;
+	VolumeGroup* _volume;
+};
+
+enum organRGB { BLADDER, COLON, KIDNEY, SPLEEN, BODY};
 class ColorPicker : public cvr::UIElement, public UICallback, public UICallbackCaller
+
 {
 public:
 	ColorPicker();
 	virtual void uiCallback(UICallbackCaller* ui);
+
+	//GA
+	
+	osg::Vec3 returnColor();
+	void setButton(cvr::UIQuadElement* target);
+	void setColorDisplay(ShaderQuad* colorDisplay) { _colorDisplay = colorDisplay; }
+	void setVolume(VolumeGroup* volume) { _volume = volume; }
+	void setFunction(std::string transferFunction) { _transferFunction = transferFunction; }
+	void setRadial(CallbackRadial* radial) { _radial = radial; }
+	void setOrganRgb(organRGB organName) { _organRGB = organName;  }
+	void setSaveColor(osg::Vec3* currOrgan) { _saveColor = currOrgan; }
+	void setCPColor(osg::Vec3 savedColor) { 
+		color = savedColor;
+		_hue->setHue(color.x());
+		_hue->setSV(osg::Vec2(color.y(), color.z()));
+		_sv->setSV(osg::Vec2(color.y(), color.z()));
+		_sv->setHue(color.x());
+		
+		_sv->set_indicator();
+		_hue->set_indicator();
+	}
+	//GA
 
 private:
 	ColorPickerHue* _hue;
 	ColorPickerSaturationValue* _sv;
 	cvr::UIQuadElement* _bknd;
 
+	cvr::UIQuadElement* _target;//ga
+	unsigned short int _currOrgan;
 	osg::Vec3 color;
+
+	//GA
+	osg::Vec3 rgbColor;
+	osg::Vec3* _saveColor;//HSV
+	std::string _transferFunction;
+	organRGB _organRGB;
+
+	VolumeGroup* _volume;
+	ShaderQuad* _colorDisplay;
+	CallbackRadial* _radial;
+
+
+	//GA
+
 };
+
+
+
+
+
 #endif

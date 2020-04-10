@@ -31,6 +31,6 @@ void main() {
 		col = vec3(ra.r);
 	#endif
 
-
+	
 	FragColor = vec4(col, 1);
 }
