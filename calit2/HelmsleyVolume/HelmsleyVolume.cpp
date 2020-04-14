@@ -106,6 +106,8 @@ bool HelmsleyVolume::init()
 
 	osgDB::Options* roomOptions = new osgDB::Options("noReverseFaces");
 	osg::Node* room = osgDB::readNodeFile(modelDir + "testPrim.obj", roomOptions);
+
+	std::cout << "hello" << std::endl;
 	_room = new SceneObject("room", false, false, false, false, false);
 	_room->addChild(room);
 	_room->setScale(800);
@@ -113,10 +115,11 @@ bool HelmsleyVolume::init()
 
 	PluginHelper::registerSceneObject(_room, "HelmsleyVolume");
 	_room->attachToScene();
-
+	_nm = _room->getChildNode(0)->getNodeMask();
 
 	_roomLocation = new SubMenu("Location", "Location");
 	_roomLocation->setCallback(this);
+
 
 	_privateLoc = new MenuButton("Private Lounge");
 	_privateLoc->setCallback(this);
@@ -124,10 +127,15 @@ bool HelmsleyVolume::init()
 	_bedLoc->setCallback(this);
 	_screenLoc = new MenuButton("Radiology Theater");
 	_screenLoc->setCallback(this);
+
+	_hideRoom = new MenuButton("Hide Room");
+	_hideRoom->setCallback(this);
+
 	
 	_roomLocation->addItem(_privateLoc);
 	_roomLocation->addItem(_bedLoc);
 	_roomLocation->addItem(_screenLoc);
+	_roomLocation->addItem(_hideRoom);
 
 	_vMenu->addItem(_roomLocation);
 
@@ -401,6 +409,17 @@ void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 	{
 		_room->setPosition(osg::Vec3(-7500, 9000, 0));
 		_room->setRotation(osg::Quat(-osg::PI / 2, osg::Vec3(0, 0, -1)));
+	}
+	else if (menuItem == _hideRoom)
+	{
+		if (_hideRoom->getText() == "Hide Room") {
+			_room->getChildNode(0)->setNodeMask(0);
+			_hideRoom->setText("Show Room");
+		}
+		else {
+			_room->getChildNode(0)->setNodeMask(_nm);
+			_hideRoom->setText("Hide Room");
+		}
 	}
 	else if (menuItem == _xpos)
 	{

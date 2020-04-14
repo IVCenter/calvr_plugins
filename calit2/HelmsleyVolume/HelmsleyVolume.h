@@ -111,6 +111,8 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		cvr::MenuButton* _privateLoc;
 		cvr::MenuButton* _bedLoc;
 		cvr::MenuButton* _screenLoc;
+		cvr::MenuButton* _hideRoom;
+		unsigned int _nm;
 
 		osg::Matrix _selectionMatrix;
 

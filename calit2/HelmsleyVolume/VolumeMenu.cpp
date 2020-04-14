@@ -187,7 +187,7 @@ void NewVolumeMenu::init()
 	_transferFunction->allowNoneSelected(false);
 	_blacknwhite = new UIRadialButton(_transferFunction);
 	_rainbow = new UIRadialButton(_transferFunction);
-	_solid = new UIRadialButton(_transferFunction);
+
 
 	_transferFunction->setCurrent(0);
 	_transferFunction->setCallback(this);
@@ -401,7 +401,7 @@ void NewVolumeMenu::colorButtonPress(cvr::UIQuadElement* button, organRGB organR
 	std::transform(organName.begin(), organName.end(), organName.begin(), ::toupper);
 	_volume->getCompute()->getOrCreateStateSet()->setDefine(organName, organEye->isOn());
 	_volume->setDirtyAll();
-	setSolid();
+
 }
 
 void NewVolumeMenu::uiCallback(UICallbackCaller * item)
@@ -522,7 +522,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 			_colorDisplay->setShaderDefine("COLOR_FUNCTION", transferFunction, osg::StateAttribute::ON);
 			((UIText*)_blacknwhite->getChild(0))->setColor(UI_ACTIVE_COLOR);
 			((UIText*)_rainbow->getChild(0))->setColor(UI_INACTIVE_COLOR);
-			((UIText*)_solid->getChild(0))->setColor(UI_INACTIVE_COLOR);
+
 
 		}
 		else if (_transferFunction->getCurrent() == 1)
@@ -532,7 +532,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 			_colorDisplay->setShaderDefine("COLOR_FUNCTION", transferFunction, osg::StateAttribute::ON);
 			((UIText*)_blacknwhite->getChild(0))->setColor(UI_INACTIVE_COLOR);
 			((UIText*)_rainbow->getChild(0))->setColor(UI_ACTIVE_COLOR);
-			((UIText*)_solid->getChild(0))->setColor(UI_INACTIVE_COLOR);
+
 
 		}
 		_volume->setDirtyAll();

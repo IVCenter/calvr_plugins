@@ -444,7 +444,7 @@ TentWindow::TentWindow() :
 
 	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
 	list->setPercentPos(osg::Vec3(0, 0, -.50));
-	list->setPercentSize(osg::Vec3(1, 1, .6));
+	list->setPercentSize(osg::Vec3(1, 1, .5));
 	list->setAbsoluteSpacing(1);
 	_bknd->addChild(list);
 

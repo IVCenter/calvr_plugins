@@ -98,9 +98,7 @@ public:
 		_maskContainer->addChild(_colorMenu->getRoot());
 		_cpHLabel->setText(organName);
 	}
-	inline void setSolid() {
-		;//_transferFunction->setCurrent(2);
-	}
+
 	void colorButtonPress(cvr::UIQuadElement* button, organRGB organRGB, std::string organName, VisibilityToggle* organEye);
 
 protected:
@@ -146,7 +144,7 @@ protected:
 	ShaderQuad* _colorDisplay;
 	cvr::UIRadialButton* _blacknwhite;
 	cvr::UIRadialButton* _rainbow;
-	cvr::UIRadialButton* _solid;//GA
+
 
 	osg::Vec3 _bodyCol;
 	osg::Vec3 _colonCol;
