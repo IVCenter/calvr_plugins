@@ -79,14 +79,16 @@ void NewVolumeMenu::init()
 #endif
 
 	osg::Vec3 volumePos = ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(0, 750, 500));
+	std::cout << "CONFIG dIR--------------- " << ConfigManager::getConfigDirectory() << std::endl;
 	_so->setPosition(volumePos);
 
 	_menu = new UIPopup();
 	UIQuadElement* bknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 	_menu->addChild(bknd);
-	_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Position", osg::Vec3(500, 500, 1450)) - volumePos);
+	_menu->setPosition(osg::Vec3(500, 1000, 1350) - volumePos);//ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Position", osg::Vec3(500, -500, 1350)) - volumePos);
 
 	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Scale", osg::Vec3(1000, 1, 600)));
+	
 
 	
 	ColorPicker* cp = new ColorPicker();
@@ -94,7 +96,7 @@ void NewVolumeMenu::init()
 
 	TentWindow* tentWindow = new TentWindow();
 	_menu->addChild(tentWindow);
-	tentWindow->setPercentSize(osg::Vec3(1, 0, .75));
+	tentWindow->setPercentSize(osg::Vec3(1, 1, .75));
 	tentWindow->setPercentPos(osg::Vec3(0, 0, -1));
 	tentWindow->setVolume(_volume);
 
@@ -280,9 +282,9 @@ void NewVolumeMenu::init()
 		exitBox->addChild(exitLabel);
 		exitBox->addChild(_exitCPCallback);
 
-		_maskMenu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Position", osg::Vec3(600, 500, 800)) - volumePos);
+		_maskMenu->setPosition(osg::Vec3(1500, 1000, 800) - volumePos);//ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Position", osg::Vec3(850, 500, 800)) - volumePos);
 		_maskMenu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Scale", osg::Vec3(500, 1, 800)));
-		_colorMenu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Position", osg::Vec3(600, 500, 800)) - volumePos);
+		_colorMenu->setPosition(osg::Vec3(1500, 1000, 800) - volumePos);//ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ColorMenu.Position", osg::Vec3(850, 500, 800)) - volumePos);
 		_colorMenu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Scale", osg::Vec3(500, 1, 800)));
 
 		list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
@@ -548,7 +550,7 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	if (parent)
 	{
 		osg::Vec3 volumePos = ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(0, 750, 500));
-		_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Position", osg::Vec3(-150, 500, 600)) - volumePos);
+		_menu->setPosition(osg::Vec3(-150, 750, 900) - volumePos);//ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Position", osg::Vec3(-150, 500, 600)) - volumePos);
 	}
 	else
 	{

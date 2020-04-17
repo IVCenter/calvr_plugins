@@ -9,6 +9,7 @@ using namespace cvr;
 osg::Program* ColorPickerSaturationValue::_svprogram = nullptr;
 osg::Program* ColorPickerHue::_hueprogram = nullptr;
 osg::Program* Tent::_triangleProg = nullptr;
+osg::Program* Dial::_dialProg = nullptr;
 
 
 #pragma region VisibilityToggle
@@ -16,6 +17,7 @@ VisibilityToggle::VisibilityToggle(std::string text)
 	: UIToggle()
 {
 	std::string dir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ImageDir");
+	
 	eye = new UICheckbox(dir + "eye_closed.png", dir + "eye_open.png");
 	eye->offElement->setTransparent(true);
 	eye->offElement->setColor(osg::Vec4(0,0,0,1));
@@ -434,21 +436,40 @@ TentWindow::TentWindow() :
 {
 	_bknd = new UIQuadElement(osg::Vec4(.04, .25, .4, 1));
 	addChild(_bknd);
-	_bknd->setPercentSize(osg::Vec3(1, 1, 1));
+	_bknd->setPercentSize(osg::Vec3(1, 1, 1.5));
 
-	_tent = new Tent(UI_BLUE_COLOR);
+	_dial = new Dial(osg::Vec4(0.56,0.05,0.25,1.0));
+	//_bknd->addChild(_dial);
+	_dial->setPercentSize(osg::Vec3(.075, 30, 1));
+	_dial->setPercentPos(osg::Vec3(0.075, -6, 0));
+	_dial->setCallback(this);
+
+	_tent = new Tent(osg::Vec4(0.1, 0.1, 0.1, 1.0));
 	_tent->setPercentPos(osg::Vec3(.7, 0, 0));
-	_tent->setPercentSize(osg::Vec3(1, 0.015, .5));
+	_tent->setPercentSize(osg::Vec3(1, 0.015, .25));
 
 	_bknd->addChild(_tent);
 
 	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
-	list->setPercentPos(osg::Vec3(0, 0, -.50));
-	list->setPercentSize(osg::Vec3(1, 1, .5));
+	list->setPercentPos(osg::Vec3(0, 0, -.25));
+	list->setPercentSize(osg::Vec3(1, 1, .75));
 	list->setAbsoluteSpacing(1);
 	_bknd->addChild(list);
 
+	UIList* list2 = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
+	list2->setPercentPos(osg::Vec3(0, 0, -.50));
+	list2->setPercentSize(osg::Vec3(1, 1, .5));
+	list2->setAbsoluteSpacing(1);
+	
+	
+
+
+	
+
 	_centerPos = new CallbackSlider();
+	_centerPos->setPercentSize(osg::Vec3(1.8, 1, 1));
+	_centerPos->setPercentPos(osg::Vec3(-.8, 0, 0));
+
 	_centerPos->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
 	_centerPos->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
 	_centerPos->handle->setPercentSize(osg::Vec3(0, 1, 1));
@@ -504,10 +525,10 @@ TentWindow::TentWindow() :
 	hLabel->setColor(osg::Vec4(.66, .84, .96, 1.0));
 
 	
-	
-	
+	list2->addChild(_dial);
+	list2->addChild(_centerPos);
 	list->addChild(cLabel);
-	list->addChild(_centerPos);
+	list->addChild(list2);
 	list->addChild(bLabel);
 	list->addChild(_bottomWidth);
 	list->addChild(tLabel);
@@ -538,6 +559,18 @@ void TentWindow::uiCallback(UICallbackCaller* ui) {
 	if (ui == _height) {
 		_tent->changeHeight(_height->getAdjustedValue());
 		_volume->_computeUniforms["OpacityMult"]->set(_height->getAdjustedValue());
+
+	}
+	if (ui == _dial)
+	{
+		float dialDiff = _dial->getValue();
+		if (dialDiff != 0.0) {
+			_centerPos->setPercent(std::min(_centerPos->getAdjustedValue() + dialDiff, 1.0f));
+			_tent->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), 0.0, 0.0));
+			_volume->_computeUniforms["OpacityCenter"]->set(_centerPos->getAdjustedValue());
+			_tent->addUniform("Center", _centerPos->getAdjustedValue());
+			std::cout << "dial CALLBACK" << std::endl;
+		}
 	}
 	_volume->setDirtyAll();
 	
@@ -723,6 +756,242 @@ void Tent::changeHeight(float x) {
 	height = x - 1.0;
 	updateGeometry();
 }
+
+
+
+
+
+void Dial::createGeometry()
+{
+	_transform = new osg::MatrixTransform();
+	_intersect = new osg::Geode();
+
+	_group->addChild(_transform);
+	_transform->addChild(_intersect);
+	_transform->addChild(_geode);
+
+	_intersect->setNodeMask(cvr::INTERSECT_MASK);
+	_polyGeom = new osg::Geometry();
+
+	
+	
+	osg::Vec3 myCoords[] =
+	{
+		osg::Vec3(rightPointX, 0.0, -1.0),
+		osg::Vec3(topPointX, 0.0, height),
+		osg::Vec3(topPointX, 0.0, height),
+		osg::Vec3(leftPointX, 0.0, -1.0)
+
+	};
+	int numCoords = sizeof(myCoords) / sizeof(osg::Vec3);
+
+	osg::Vec3Array* vertices = new osg::Vec3Array(numCoords, myCoords);
+
+
+	_polyGeom->setVertexArray(vertices);
+
+	_polyGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS, 0, numCoords));
+
+
+	_sphere = new osg::ShapeDrawable(new osg::Sphere());
+	_geode->addDrawable(_sphere);
+	_intersect->addDrawable(_sphere);
+
+	osg::Vec2Array* texcoords = new osg::Vec2Array;
+	texcoords->push_back(osg::Vec2(1, 0));
+	texcoords->push_back(osg::Vec2(0.5 + (topPointX / 2.0), 1));
+	texcoords->push_back(osg::Vec2(0.5 - (topPointX / 2.0), 1));
+	texcoords->push_back(osg::Vec2(0, 0));
+
+
+
+	_polyGeom->setVertexAttribArray(1, texcoords, osg::Array::BIND_PER_VERTEX);
+	setTransparent(true);
+
+	updateGeometry();
+}
+
+void Dial::updateGeometry()
+{
+
+	
+
+	osg::Vec4Array* colors = new osg::Vec4Array;
+	colors->push_back(_color);
+	((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_OVERALL);
+	
+	osg::Matrix mat = osg::Matrix();
+	mat.makeScale(_actualSize);
+	mat.postMultTranslate(_actualPos);
+	_transform->setMatrix(mat);
+
+
+}
+
+
+
+
+bool Dial::processEvent(cvr::InteractionEvent* event)
+{
+	TrackedButtonInteractionEvent* tie = event->asTrackedButtonEvent();
+	if (tie && tie->getButton() == 0)
+	{
+		if (tie->getInteraction() == BUTTON_DOWN && !holdingDial)
+		{
+			holdingDial = true;
+			if (_callback)
+			{
+				_callback->uiCallback(this);
+			}
+			std::cout << "button DOWN---------------------------------------------------" << std::endl;
+			_startMat = TrackingManager::instance()->getHandMat(tie->getHand());
+		
+		
+		}
+		if (tie->getInteraction() == BUTTON_DRAG && holdingDial)
+		{
+			osg::Matrix currMat = TrackingManager::instance()->getHandMat(tie->getHand());
+			
+			osg::Quat startQuat = _startMat.getRotate();
+			osg::Quat currQuat = currMat.getRotate();
+			osg::Quat diff = currQuat * startQuat.osg::Quat::inverse();
+			float sYN = startQuat.y() + 1.0f;
+			float cYN = currQuat.y() + 1.0f;
+			float diffF = cYN - sYN;
+			std::cout << "Difference " << diffF << std::endl;
+			std::cout << "Curr " << cYN << std::endl;
+			std::cout << "Start " << sYN << std::endl;
+
+			if (_callback)
+			{
+				if (diffF < .0025 && diffF> -.0025) {
+					diffF = 0;
+				}
+			
+				if (diffF > 1.00 || diffF < -1.00) {
+					_jump = _jump ? false : true;
+					diffF = _value;
+					std::cout << "JUMPED----------------------------------------------------- " << std::endl;
+				}
+				std::cout << "jump bool val" << _jump << std::endl;
+				if (_jump) {
+					diffF = -diffF;
+				}
+					
+				_value = diffF;
+				std::cout << "diffF: ------------------------- " << diffF << std::endl;
+				_callback->uiCallback(this);
+
+			}
+			_startMat = currMat;
+			
+		}
+		else if (tie->getInteraction() == BUTTON_UP && holdingDial)
+		{
+			holdingDial = false;
+			_jump = false;
+			std::cout << "button UP-----------------------------------------------------" << std::endl;
+		}
+	}
+	return holdingDial;
+}
+
+float Dial::getValue() {
+	return _value;
+}
+void Dial::setColor(osg::Vec4 color)
+{
+	if (_color != color)
+	{
+		_color = color;
+		_dirty = true;
+	}
+}
+
+void Dial::setTransparent(bool transparent)
+{
+	if (transparent)
+	{
+		_geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+		_geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
+	}
+	else
+	{
+		_geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::OPAQUE_BIN);
+		_geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::OFF);
+	}
+}
+
+void Dial::setRounding(float absRounding, float percentRounding)
+{
+	_absoluteRounding->set(absRounding);
+	_percentRounding->set(percentRounding);
+}
+
+
+template <typename T>
+void Dial::addUniform(std::string uniform, T initialvalue)
+{
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), initialvalue);
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
+void Dial::addUniform(std::string uniform)
+{
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), 0.0f);
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
+void Dial::addUniform(osg::Uniform* uniform)
+{
+	_uniforms[uniform->getName()] = uniform;
+	_geode->getOrCreateStateSet()->addUniform(uniform);
+}
+
+osg::Uniform* Dial::getUniform(std::string uniform)
+{
+	return _uniforms[uniform];
+}
+
+void Dial::setShaderDefine(std::string name, std::string define, osg::StateAttribute::Values on)
+{
+	_geode->getOrCreateStateSet()->setDefine(name, define, on);
+}
+
+osg::Program* Dial::getOrLoadProgram()
+{
+	if (!_dialProg)
+	{
+		const std::string vert = HelmsleyVolume::loadShaderFile("transferFunction.vert");
+		const std::string frag = HelmsleyVolume::loadShaderFile("triangle.frag");
+		_dialProg = new osg::Program;
+		_dialProg->setName("Triangle");
+		_dialProg->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
+		_dialProg->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
+	}
+
+	return _dialProg;
+}
+
+void Dial::changeBottomVertices(float x) {
+	rightPointX = x;
+	leftPointX = -x;
+	topPointX = std::min(actualTop, rightPointX);
+	updateGeometry();
+}
+
+float Dial::changeTopVertices(float x) {
+	actualTop = x;
+	topPointX = std::min(x, rightPointX);
+	updateGeometry();
+	return topPointX;
+}
+
+void Dial::changeHeight(float x) {
+	height = x - 1.0;
+	updateGeometry();
+}
+
 
 #pragma region ColorPicker
 

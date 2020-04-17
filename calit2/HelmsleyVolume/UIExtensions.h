@@ -222,6 +222,7 @@ public:
 	void set_indicator();
 	virtual bool onPosChange() override;
 
+
 protected:
 	static osg::Program* getOrLoadProgram();
 	static osg::Program* _hueprogram;
@@ -310,6 +311,90 @@ protected:
 
 };
 
+class Dial : public cvr::UIElement, public UICallbackCaller
+{
+public:
+	Dial(osg::Vec4 color = osg::Vec4(1, 1, 1, 1))
+		: UIElement()
+	{
+		holdingDial = false;
+		leftPointX = -.25;
+		rightPointX = .25;
+		topPointX = 0.0;
+		actualTop = 0.0;
+		height = 0.0;
+		_color = color;
+		_geode = new osg::Geode();
+		createGeometry();
+		_jump = false;
+		/*_absoluteRounding = new osg::Uniform("absoluteRounding", 0.0f);
+		_percentRounding = new osg::Uniform("percentRounding", 0.0f);
+		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_absoluteRounding);
+		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_percentRounding);*/
+
+
+		setProgram(getOrLoadProgram());
+		addUniform("SV", osg::Vec2(1.0f, 1.0f));
+	}
+	float getValue();
+	void changeBottomVertices(float x);
+	float changeTopVertices(float x);
+	void changeHeight(float x);
+	virtual void createGeometry();
+	virtual void updateGeometry();
+
+	//virtual void processHover(bool enter) override { std::cout << "helloooooo6" << std::endl;}
+	virtual bool processEvent(cvr::InteractionEvent* event) override;
+
+	virtual void setColor(osg::Vec4 color);
+
+	virtual void setTransparent(bool transparent);
+
+	virtual void setRounding(float absRounding, float percentRounding);
+
+
+
+	virtual void setProgram(osg::Program* p) { _program = p; _dirty = true; }
+	virtual osg::Program* getProgram() { return _program; }
+	virtual osg::Geode* getGeode() { return _geode; }
+
+	template <typename T>
+	void addUniform(std::string uniform, T initialvalue);
+	void addUniform(std::string uniform);
+	virtual void addUniform(osg::Uniform* uniform);
+	virtual osg::Uniform* getUniform(std::string uniform);
+	virtual void setShaderDefine(std::string name, std::string definition, osg::StateAttribute::Values on);
+
+
+
+
+protected:
+	osg::ref_ptr<osg::MatrixTransform> _transform;
+	osg::ref_ptr<osg::Geode> _geode;
+	osg::Geometry* _polyGeom;
+	osg::Vec3* _coords;
+	osg::ShapeDrawable* _sphere;
+	static osg::Program* getOrLoadProgram();
+	static osg::Program* _dialProg;
+
+	osg::Vec4 _color;
+	osg::Uniform* _absoluteRounding;
+	osg::Uniform* _percentRounding;
+	float _value;
+	bool _jump;
+	float leftPointX;
+	float rightPointX;
+	float topPointX;
+	float height;
+	float actualTop;
+
+	bool holdingDial;
+	osg::Matrix _startMat;
+	osg::ref_ptr<osg::Program> _program;
+	std::map<std::string, osg::Uniform*> _uniforms;
+
+};
+
 class TentWindow : public cvr::UIElement, public UICallback, public UICallbackCaller
 
 {
@@ -320,6 +405,7 @@ public:
 private:
 	cvr::UIQuadElement* _bknd;
 	Tent* _tent;
+	Dial* _dial;
 	CallbackSlider* _bottomWidth;
 	CallbackSlider* _centerPos;
 	CallbackSlider* _topWidth;
