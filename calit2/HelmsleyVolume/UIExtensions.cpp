@@ -467,8 +467,8 @@ TentWindow::TentWindow() :
 	
 
 	_centerPos = new CallbackSlider();
-	_centerPos->setPercentSize(osg::Vec3(1.8, 1, 1));
-	_centerPos->setPercentPos(osg::Vec3(-.8, 0, 0));
+	_centerPos->setPercentSize(osg::Vec3(1.8, 1, 2));
+	_centerPos->setPercentPos(osg::Vec3(-.8, 0, 1));
 
 	_centerPos->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
 	_centerPos->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
@@ -491,7 +491,7 @@ TentWindow::TentWindow() :
 	_bottomWidth->setMax(1.0f);
 	_bottomWidth->setMin(0.001f);
 	_bottomWidth->setCallback(this);
-	_bottomWidth->setPercent(.5);
+	_bottomWidth->setPercent(.25);
 
 	_topWidth = new CallbackSlider();
 	_topWidth->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
@@ -541,14 +541,17 @@ TentWindow::TentWindow() :
 
 void TentWindow::uiCallback(UICallbackCaller* ui) {
 	if (ui == _bottomWidth) {
-		_volume->_computeUniforms["OpacityWidth"]->set(_bottomWidth->getAdjustedValue()*2);
+		_volume->_computeUniforms["OpacityWidth"]->set(_bottomWidth->getAdjustedValue());
 		_tent->addUniform("Width", _bottomWidth->getAdjustedValue()*2);
-		_tent->changeBottomVertices(_bottomWidth->getAdjustedValue());
+		float width = _tent->changeBottomVertices(_bottomWidth->getAdjustedValue());
+		_volume->_computeUniforms["OpacityTopWidth"]->set(width);
+		_topWidth->setPercent(width);
 		
 	}
 	if (ui == _topWidth) {
 		float width = _tent->changeTopVertices(_topWidth->getAdjustedValue());
 		_volume->_computeUniforms["OpacityTopWidth"]->set(width);
+		_topWidth->setPercent(width);
 	}
 	if (ui == _centerPos) {
 		std::cout << "Center: " << _centerPos->getAdjustedValue() << std::endl;
@@ -738,11 +741,13 @@ osg::Program* Tent::getOrLoadProgram()
 	return _triangleProg;
 }
 
-void Tent::changeBottomVertices(float x) {
+float Tent::changeBottomVertices(float x) {
 	rightPointX = x;
 	leftPointX = -x;
 	topPointX = std::min(actualTop, rightPointX);
+	
 	updateGeometry();
+	return topPointX;
 }
 
 float Tent::changeTopVertices(float x) {

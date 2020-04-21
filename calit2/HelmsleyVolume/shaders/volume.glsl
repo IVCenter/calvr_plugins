@@ -49,25 +49,47 @@ vec4 Sample(ivec3 p) {
 		ra.r = 1 - ra.r;
 	#endif
 
-	if(ra.r < ContrastBottom || ra.r > ContrastTop)
-	{
-		ra.r = 0;
-	}
-	#ifndef CONTRAST_ABSOLUTE
-	ra.r = (ra.r - ContrastBottom) / (ContrastTop - ContrastBottom);
-	#endif
-	ra.r = max(0, min(1, ra.r));
+	
+//	#ifndef CONTRAST_ABSOLUTE
+//	ra.r = (ra.r - ContrastBottom) / (ContrastTop - ContrastBottom);
+//	#endif
+//	ra.r = max(0, min(1, ra.r));
 
 
 //	s.a = 1 - (abs(OpacityCenter - ra.r) / OpacityWidth);
 
 
 	
-	s.a = smoothstep((OpacityCenter-OpacityTopWidth) - (OpacityWidth/2.0), OpacityCenter - OpacityTopWidth, ra.r);
+	s.a = smoothstep((OpacityCenter-OpacityTopWidth) - (OpacityWidth - OpacityTopWidth), OpacityCenter - OpacityTopWidth, ra.r);
 	if(s.a == 1.0){
-		s.a = 1.0 - smoothstep(OpacityCenter+OpacityTopWidth, OpacityCenter+ OpacityTopWidth + (OpacityWidth/2.0), ra.r);
+		s.a = 1.0 - smoothstep(OpacityCenter+OpacityTopWidth, OpacityCenter+ OpacityTopWidth + (OpacityWidth - OpacityTopWidth), ra.r);
 	}
-	s.a *= OpacityMult;
+
+
+	
+	//s.a *= OpacityMult ;
+	
+	s.a *= 1/pow(2, ((1-OpacityMult)*10));
+	
+	vec2 organRA = ra; //removes contrast from organs
+
+	if(ra.r < ContrastBottom) 
+	{
+		ra.r = 0;
+	}
+	if (ra.r > ContrastTop){
+		ra.r = 1;
+	}
+
+	ra.r = smoothstep(ContrastBottom, ContrastTop, ra.r);
+
+
+	#ifdef ORGANS_ONLY
+		float alpha = 0.0;
+		//s.rgb = vec3(ra.r);
+	#else
+		float alpha = s.a;
+	#endif
 
 	#ifdef COLOR_FUNCTION
 		s.rgb = COLOR_FUNCTION
@@ -75,26 +97,23 @@ vec4 Sample(ivec3 p) {
 		s.rgb = vec3(ra.r);
 	#endif
 
-	
+
 	//TODO: change to floatBitsToUint
 	uint bitmask = uint(ra.g * 65535.0);
 
 
-	#ifdef ORGANS_ONLY
-		float alpha = 0.0;
-		s.rgb = vec3(ra.r);
-	#else
-		float alpha = s.a;
-	#endif
+	
 
 	#ifdef BLADDER
 		if(bitmask == 1)
 		{
-				s.rgb = vec3(ra.rr, 0);
-				alpha = s.a;
+				
+				s.rgb = vec3(0,0, organRA.r);
+				//alpha = s.a;
+				alpha = 0.01;
 			#ifdef BLADDER_RGB
 				s.rgb = BLADDER_RGB
-				s.rgb*=ra.r;
+				s.rgb*=organRA.r;
 			#endif
 		}
 	#endif
@@ -102,11 +121,11 @@ vec4 Sample(ivec3 p) {
 	#ifdef KIDNEY
 		if(bitmask == 2)
 		{
-			s.rgb = vec3(0, ra.r, 0);
-			alpha = s.a;
+			s.rgb = vec3(0, organRA.r, 0);
+			alpha = 0.01;
 			#ifdef KIDNEY_RGB
 				s.rgb = KIDNEY_RGB
-				s.rgb*=ra.r;
+				s.rgb*=organRA.r;
 			#endif
 		}
 	#endif
@@ -115,11 +134,14 @@ vec4 Sample(ivec3 p) {
 		if(bitmask == 4)
 		{
 			
-			s.rgb = vec3(ra.r, 0, 0);
-			alpha = s.a;
+			//s.rgb = vec3(organRA.r, 0, 0);
+			s.r = organRA.r;
+			s.g = 0;
+			s.b = 0;
+			alpha = .01;
 			#ifdef COLON_RGB
 				s.rgb = COLON_RGB		
-				s.rgb*=ra.r;
+				s.rgb*=organRA.r;
 			#endif
 		}
 	
@@ -128,11 +150,11 @@ vec4 Sample(ivec3 p) {
 	#ifdef SPLEEN
 		if(bitmask == 8)
 		{
-			s.rgb = vec3(0, ra.rr);
-			alpha = s.a;
+			s.rgb = vec3(0, organRA.rr);
+			alpha = 0.01;
 			#ifdef SPLEEN_RGB
 				s.rgb = SPLEEN_RGB		
-				s.rgb*=ra.r;
+				s.rgb*=organRA.r;
 			#endif
 		}
 	#endif

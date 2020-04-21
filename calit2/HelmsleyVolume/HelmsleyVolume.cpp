@@ -608,10 +608,12 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 	_worldMenus.push_back(newMenu);
 
 
+	/*
 	MenuButton* removeButton = new MenuButton("Remove Volume");
 	so->addMenuItem(removeButton);
 	removeButton->setCallback(this);
 	_removeButtons.push_back(removeButton);
+	*/
 }
 
 void HelmsleyVolume::removeVolume(int index)
@@ -644,5 +646,5 @@ void HelmsleyVolume::removeVolume(int index)
 	_worldMenus.erase(_worldMenus.begin() + index);
 	_volumes.erase(_volumes.begin() + index);
 	_sceneObjects.erase(_sceneObjects.begin() + index);
-	_removeButtons.erase(_removeButtons.begin() + index);
+	//_removeButtons.erase(_removeButtons.begin() + index);
 }

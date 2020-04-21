@@ -260,7 +260,7 @@ public:
 		addUniform("SV", osg::Vec2(1.0f, 1.0f));
 	}
 
-	void changeBottomVertices(float x);
+	float changeBottomVertices(float x);
 	float changeTopVertices(float x);
 	void changeHeight(float x);
 	virtual void createGeometry();
