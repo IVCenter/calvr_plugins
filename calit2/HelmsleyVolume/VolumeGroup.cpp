@@ -201,7 +201,7 @@ void VolumeGroup::init()
 
 	//_computeUniforms["Exposure"] = new osg::Uniform("Exposure", 1.5f);
 	_computeUniforms["OpacityCenter"] = new osg::Uniform("OpacityCenter", 0.7f);
-	_computeUniforms["OpacityWidth"] = new osg::Uniform("OpacityWidth", 1.0f);
+	_computeUniforms["OpacityWidth"] = new osg::Uniform("OpacityWidth", 0.25f);
 	_computeUniforms["OpacityTopWidth"] = new osg::Uniform("OpacityTopWidth", 0.0f);
 	_computeUniforms["OpacityMult"] = new osg::Uniform("OpacityMult", 1.0f);
 	_computeUniforms["ContrastBottom"] = new osg::Uniform("ContrastBottom", 0.0f);

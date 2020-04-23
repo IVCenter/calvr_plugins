@@ -70,7 +70,7 @@ void NewVolumeMenu::init()
 {
 #pragma region VolumeOptions
 
-	_so = new SceneObject("VolumeMenu", false, false, false, false, true);
+	_so = new SceneObject("VolumeMenu", false, false, false, false, false);
 	PluginHelper::registerSceneObject(_so, "HelmsleyVolume");
 	_so->attachToScene();
 #ifdef WITH_OPENVR
@@ -83,6 +83,7 @@ void NewVolumeMenu::init()
 	_so->setPosition(volumePos);
 
 	_menu = new UIPopup();
+	
 	UIQuadElement* bknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 	_menu->addChild(bknd);
 	_menu->setPosition(osg::Vec3(500, 1000, 1350) - volumePos);//ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Position", osg::Vec3(500, -500, 1350)) - volumePos);
@@ -152,7 +153,7 @@ void NewVolumeMenu::init()
 	//list->addChild(_density);
 
 
-	label = new UIText("Threshold", 30.0f, osgText::TextBase::LEFT_CENTER);
+	label = new UIText("Contrast", 30.0f, osgText::TextBase::LEFT_CENTER);
 	label->setPercentPos(osg::Vec3(0.1, 0, 0));
 	list->addChild(label);
 
@@ -225,14 +226,14 @@ void NewVolumeMenu::init()
 	list->addChild(list2);
 
 	list->addChild(_colorDisplay);
-
+	
 	if (!_movable)
 	{
 		_menu->setActive(true, true);
 	}
 	else {
 		_menu->setActive(true, false);
-		_container = new SceneObject("VolumeMenu", false, true, false, false, true);
+		_container = new SceneObject("VolumeMenu", false, true, false, false, false);
 		_so->addChild(_container);
 		_container->setShowBounds(true);
 		_container->addChild(_menu->getRoot());
@@ -282,11 +283,19 @@ void NewVolumeMenu::init()
 		exitBox->addChild(exitLabel);
 		exitBox->addChild(_exitCPCallback);
 
-		_maskMenu->setPosition(osg::Vec3(1500, 1000, 800) - volumePos);//ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Position", osg::Vec3(850, 500, 800)) - volumePos);
-		_maskMenu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Scale", osg::Vec3(500, 1, 800)));
-		_colorMenu->setPosition(osg::Vec3(1500, 1000, 800) - volumePos);//ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ColorMenu.Position", osg::Vec3(850, 500, 800)) - volumePos);
-		_colorMenu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Scale", osg::Vec3(500, 1, 800)));
 
+		osg::Quat rot;
+		rot.makeRotate(-0.707, 0, 0, 1);
+		_maskMenu->setRotation(rot);
+		
+		_maskMenu->setPosition(osg::Vec3(1800, 1000, 800) - volumePos);//ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Position", osg::Vec3(850, 500, 800)) - volumePos);
+		_maskMenu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Scale", osg::Vec3(500, 1, 800)));
+		
+		
+		_colorMenu->setRotation(rot);
+		_colorMenu->setPosition(osg::Vec3(1800, 1000, 800) - volumePos);//ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ColorMenu.Position", osg::Vec3(850, 500, 800)) - volumePos);
+		_colorMenu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Scale", osg::Vec3(500, 1, 800)));
+		
 		list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
 		list->setPercentPos(osg::Vec3(0, 0, -0.2));
 		list->setPercentSize(osg::Vec3(.5, 1, 0.8));
@@ -381,7 +390,7 @@ void NewVolumeMenu::init()
 		}
 		else {
 			_maskMenu->setActive(true, false);
-			_maskContainer = new SceneObject("MaskMenu", false, true, false, false, true);
+			_maskContainer = new SceneObject("MaskMenu", false, true, false, false, false);
 			
 			_so->addChild(_maskContainer);
 			_maskContainer->setShowBounds(true);
@@ -550,7 +559,7 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	if (parent)
 	{
 		osg::Vec3 volumePos = ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(0, 750, 500));
-		_menu->setPosition(osg::Vec3(-150, 750, 900) - volumePos);//ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Position", osg::Vec3(-150, 500, 600)) - volumePos);
+		_menu->setPosition(osg::Vec3(-150, 900, 1500) - volumePos);//ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Position", osg::Vec3(-150, 500, 600)) - volumePos);
 	}
 	else
 	{
@@ -582,7 +591,7 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	}
 	else {
 		_menu->setActive(true, false);
-		_container = new SceneObject("VolumeMenu", false, _movable, false, false, true);
+		_container = new SceneObject("VolumeMenu", false, _movable, false, false, false);
 		if (parent)
 		{
 			parent->addChild(_container);

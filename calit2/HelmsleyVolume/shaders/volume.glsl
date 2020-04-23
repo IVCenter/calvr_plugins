@@ -110,7 +110,7 @@ vec4 Sample(ivec3 p) {
 				
 				s.rgb = vec3(0,0, organRA.r);
 				//alpha = s.a;
-				alpha = 0.01;
+				alpha = 1.00;
 			#ifdef BLADDER_RGB
 				s.rgb = BLADDER_RGB
 				s.rgb*=organRA.r;
@@ -122,7 +122,7 @@ vec4 Sample(ivec3 p) {
 		if(bitmask == 2)
 		{
 			s.rgb = vec3(0, organRA.r, 0);
-			alpha = 0.01;
+			alpha = 1.00;
 			#ifdef KIDNEY_RGB
 				s.rgb = KIDNEY_RGB
 				s.rgb*=organRA.r;
@@ -138,7 +138,7 @@ vec4 Sample(ivec3 p) {
 			s.r = organRA.r;
 			s.g = 0;
 			s.b = 0;
-			alpha = .01;
+			alpha = 1.00;
 			#ifdef COLON_RGB
 				s.rgb = COLON_RGB		
 				s.rgb*=organRA.r;
@@ -151,7 +151,7 @@ vec4 Sample(ivec3 p) {
 		if(bitmask == 8)
 		{
 			s.rgb = vec3(0, organRA.rr);
-			alpha = 0.01;
+			alpha = 1.00;
 			#ifdef SPLEEN_RGB
 				s.rgb = SPLEEN_RGB		
 				s.rgb*=organRA.r;

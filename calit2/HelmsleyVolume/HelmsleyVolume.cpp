@@ -582,7 +582,7 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 	so->setNavigationOn(false);
 	so->addMoveMenuItem();
 	so->addNavigationMenuItem();
-	so->setShowBounds(true);
+	//so->setShowBounds(true);
 
 	//Manually set the bounding box (since clipping plane / other things will be attached
 	//so->setBoundsCalcMode(SceneObject::MANUAL);
