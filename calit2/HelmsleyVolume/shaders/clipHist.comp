@@ -1,0 +1,58 @@
+////////////////////////////////////////
+// clipHist.comp
+// Pass 1 of redistributing the excess pixels above the clipLimit for CLAHE
+////////////////////////////////////////
+
+#version 430
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;	// 64 threads
+
+// input Histogram
+layout(std430, binding = 0) buffer inHist {
+    uint hist[];
+};
+// input Histogram Max Values 
+layout(std430, binding = 1) buffer inHistMax {
+    uint histMax[];
+};
+// input the amount of excess pixels 
+layout (std430, binding = 2) buffer excessPixels {
+    uint excess[];
+};
+
+uniform uint NUM_BINS;      // number of gray values in the Volume 
+uniform float clipLimit;	// limit of pixel values
+
+void main() {
+
+    // figure out the sub block this index belongs to 
+	uint index = gl_GlobalInvocationID.x;
+    uint histIndex = index / NUM_BINS;
+
+    // Pass 1 of redistributing the excess pixels 
+    uint avgInc =  excess[ histIndex ] / NUM_BINS;
+    uint clipValue = uint( float( histMax[ histIndex ] ) * clipLimit );
+	uint upperLimit = clipValue - avgInc ;	// Bins larger than upperLimit set to clipValue
+
+	// if the number in the histogram is too big -> clip the bin
+	uint histValue = hist[index];
+	if (histValue > clipValue) {
+		hist[ index ] = clipValue;
+	}
+	else {
+		// if the value is too large remove from the bin into excess 
+		if (histValue > upperLimit) {
+			if (avgInc > 0){
+				atomicAdd( excess[ histIndex ], -int( histValue - upperLimit));
+			}
+			hist[ index ] = clipValue;
+		}
+		// otherwise put the excess into the bin
+		else {
+			if (avgInc > 0){
+				atomicAdd( excess[ histIndex ], -int(avgInc));
+				atomicAdd( hist[ index ], int(avgInc));
+			}
+		}
+	}
+}

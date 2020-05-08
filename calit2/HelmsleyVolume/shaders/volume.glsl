@@ -17,11 +17,13 @@ layout(rgba8, binding = 1) uniform image3D baked;
 
 uniform float ContrastBottom;
 uniform float ContrastTop;
+uniform float Brightness;
 
 uniform float OpacityCenter;
 uniform float OpacityWidth;
 uniform float OpacityTopWidth;
 uniform float OpacityMult = 1.0;
+uniform float Lowest;
 
 uniform vec3 WorldScale;
 uniform vec3 TexelSize;
@@ -50,27 +52,21 @@ vec4 Sample(ivec3 p) {
 	#endif
 
 	
-//	#ifndef CONTRAST_ABSOLUTE
-//	ra.r = (ra.r - ContrastBottom) / (ContrastTop - ContrastBottom);
-//	#endif
-//	ra.r = max(0, min(1, ra.r));
 
 
-//	s.a = 1 - (abs(OpacityCenter - ra.r) / OpacityWidth);
 
-
-	
+	//Opacity
 	s.a = smoothstep((OpacityCenter-OpacityTopWidth) - (OpacityWidth - OpacityTopWidth), OpacityCenter - OpacityTopWidth, ra.r);
 	if(s.a == 1.0){
 		s.a = 1.0 - smoothstep(OpacityCenter+OpacityTopWidth, OpacityCenter+ OpacityTopWidth + (OpacityWidth - OpacityTopWidth), ra.r);
 	}
+	float lowestLimit = 1/pow(2, ((1-Lowest)*10));
 
-
+	s.a *= 1/pow(2, ((1-OpacityMult)*10));	//Non-Linear Opacity Multiplier
 	
-	//s.a *= OpacityMult ;
-	
-	s.a *= 1/pow(2, ((1-OpacityMult)*10));
-	
+	if(s.a != 0.0)
+		s.a = max(s.a, lowestLimit);
+	//Contrast
 	vec2 organRA = ra; //removes contrast from organs
 
 	if(ra.r < ContrastBottom) 
@@ -80,13 +76,11 @@ vec4 Sample(ivec3 p) {
 	if (ra.r > ContrastTop){
 		ra.r = 1;
 	}
-
 	ra.r = smoothstep(ContrastBottom, ContrastTop, ra.r);
-
+	ra.r = clamp(ra.r + (Brightness - 0.5), 0.0, 1.0);
 
 	#ifdef ORGANS_ONLY
 		float alpha = 0.0;
-		//s.rgb = vec3(ra.r);
 	#else
 		float alpha = s.a;
 	#endif

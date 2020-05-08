@@ -104,19 +104,29 @@ public:
 protected:
 	cvr::SceneObject* _scene;
 	VolumeGroup* _volume;
+	TentWindow* _tentWindow;
 
 	cvr::UIPopup* _menu = nullptr;
 	cvr::UIPopup* _maskMenu = nullptr;
 	cvr::UIPopup* _colorMenu = nullptr;
 
+	cvr::UIQuadElement* _maskBknd;
+
 	CallbackButton* _horizontalflip;
 	CallbackButton* _verticalflip;
 	CallbackButton* _depthflip;
+	CallbackButton* _addTriangle;
+	
+	cvr::UIList* _triangleList;
+	cvr::UIList* _mainMaskList;
 
 	CallbackSlider* _density;
 	CallbackSlider* _contrastBottom;
 	CallbackSlider* _contrastTop;
+	CallbackSlider* _brightness;
 
+	cvr::UIText* _contrastValueLabel;
+	cvr::UIText* _brightValueLabel;
 
 	VisibilityToggle* _organs;
 	VisibilityToggle* _colon;
@@ -142,6 +152,8 @@ protected:
 	cvr::UIText* _cpHLabel;
 	CallbackRadial* _transferFunction;
 	ShaderQuad* _colorDisplay;
+	ShaderQuad* _opacityDisplay;
+	ShaderQuad* _opacityColorDisplay;
 	cvr::UIRadialButton* _blacknwhite;
 	cvr::UIRadialButton* _rainbow;
 
@@ -152,6 +164,8 @@ protected:
 	osg::Vec3 _bladderCol;
 	osg::Vec3 _spleenCol;
 
+
+	int _triangleCount;
 private:
 	ToolMenu* _toolMenu = nullptr;
 	bool _movable;

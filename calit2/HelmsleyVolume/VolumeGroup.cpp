@@ -23,7 +23,7 @@ void VolumeDrawCallback::drawImplementation(osg::RenderInfo& renderInfo, const o
 {
 	if (!group)
 	{
-		std::cerr << "group doesn't exist!" << std::endl;
+		std::cerr << "group does not exist!" << std::endl;
 		return;
 	}
 	const osg::GLExtensions* ext = renderInfo.getState()->get<osg::GLExtensions>();
@@ -206,7 +206,10 @@ void VolumeGroup::init()
 	_computeUniforms["OpacityMult"] = new osg::Uniform("OpacityMult", 1.0f);
 	_computeUniforms["ContrastBottom"] = new osg::Uniform("ContrastBottom", 0.0f);
 	_computeUniforms["ContrastTop"] = new osg::Uniform("ContrastTop", 1.0f);
+	_computeUniforms["Lowest"] = new osg::Uniform("Lowest", 0.0f);
+	
 
+	_computeUniforms["Brightness"] = new osg::Uniform("Brightness", 0.5f);
 	_computeUniforms["LightDensity"] = new osg::Uniform("LightDensity", 300.f);
 	_computeUniforms["LightPosition"] = new osg::Uniform("LightPosition", osg::Vec3(0, 0.1f, 0));
 	_computeUniforms["LightDirection"] = new osg::Uniform("LightDirection", osg::Vec3(1.0f, 0, 0));

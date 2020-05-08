@@ -1,7 +1,7 @@
 #ifndef UI_EXTENSIONS_H
 #define UI_EXTENSIONS_H
 
-#define UI_BACKGROUND_COLOR osg::Vec4(0.3, 0.3, 0.3, 1)
+#define UI_BACKGROUND_COLOR osg::Vec4(0.5, 0.5, 0.5, 1)
 #define UI_ACTIVE_COLOR osg::Vec4(0.8, 1, 0.8, 1)
 #define UI_INACTIVE_COLOR osg::Vec4(1, 0.8, 0.8, 1)
 #define UI_BLUE_COLOR osg::Vec4(0.8, 0.9, 1.0, 1)
@@ -247,14 +247,27 @@ public:
 		topPointX = 0.0;
 		actualTop = 0.0;
 		height = 0.0;
+		bottomHeight = -1.0;
+		actualBottomHeight = -1.0;
 		_color = color;
 		_geode = new osg::Geode();
+
+
+		
+		// add the stateset tor the drawable
+		
+
 		createGeometry();
+	
 		_absoluteRounding = new osg::Uniform("absoluteRounding", 0.0f);
 		_percentRounding = new osg::Uniform("percentRounding", 0.0f);
+		_centerUniform = new osg::Uniform("Center", 0.7f);
+		_widthUniform = new osg::Uniform("Width", 0.5f);
 		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_absoluteRounding);
 		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_percentRounding);
-
+		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_centerUniform);
+		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_widthUniform);
+		this->setTransparent(true);
 		
 		setProgram(getOrLoadProgram());
 		addUniform("SV", osg::Vec2(1.0f, 1.0f));
@@ -262,9 +275,20 @@ public:
 
 	float changeBottomVertices(float x);
 	float changeTopVertices(float x);
-	void changeHeight(float x);
+	float changeHeight(float x);
+	float changeBottomHeight(float x);
+	void setCenter(float x) { _center = x; _centerUniform->set(x);}
+	float getBottomWidth() {return rightPointX;}
+	float getTopWidth() {return topPointX;}
+	float getCenter() {return _center;}
+	float getHeight() {return height + 1.0;}
+	float getBottom() {return bottomHeight + 1.0;}
+	
 	virtual void createGeometry();
 	virtual void updateGeometry();
+
+
+
 
 	virtual void setColor(osg::Vec4 color);
 
@@ -300,12 +324,17 @@ protected:
 	osg::Vec4 _color;
 	osg::Uniform* _absoluteRounding;
 	osg::Uniform* _percentRounding;
+	osg::Uniform* _centerUniform;
+	osg::Uniform* _widthUniform;
 
 	float leftPointX;
 	float rightPointX;
 	float topPointX;
 	float height;
 	float actualTop; 
+	float actualBottomHeight; 
+	float bottomHeight;
+	float _center;
 	osg::ref_ptr<osg::Program> _program;
 	std::map<std::string, osg::Uniform*> _uniforms;
 
@@ -343,7 +372,6 @@ public:
 	virtual void createGeometry();
 	virtual void updateGeometry();
 
-	//virtual void processHover(bool enter) override { std::cout << "helloooooo6" << std::endl;}
 	virtual bool processEvent(cvr::InteractionEvent* event) override;
 
 	virtual void setColor(osg::Vec4 color);
@@ -402,15 +430,28 @@ public:
 	TentWindow();
 	virtual void uiCallback(UICallbackCaller* ui);
 	void setVolume(VolumeGroup* volume) { _volume = volume; }
+	void addTent(int index);
+	void setTent(int index);
 private:
 	cvr::UIQuadElement* _bknd;
+	std::unique_ptr<std::vector<Tent>> _tents; 
+	
 	Tent* _tent;
+	int _tentIndex;
+
 	Dial* _dial;
 	CallbackSlider* _bottomWidth;
 	CallbackSlider* _centerPos;
 	CallbackSlider* _topWidth;
 	CallbackSlider* _height;
+	CallbackSlider* _bottom;
 	VolumeGroup* _volume;
+
+	cvr::UIText* cVLabel;
+	cvr::UIText* bVLabel;
+	cvr::UIText* tVLabel;
+	cvr::UIText* hVLabel;
+	cvr::UIText* lVLabel;
 };
 
 enum organRGB { BLADDER, COLON, KIDNEY, SPLEEN, BODY};
@@ -421,7 +462,6 @@ public:
 	ColorPicker();
 	virtual void uiCallback(UICallbackCaller* ui);
 
-	//GA
 	
 	osg::Vec3 returnColor();
 	void setButton(cvr::UIQuadElement* target);
@@ -441,7 +481,9 @@ public:
 		_sv->set_indicator();
 		_hue->set_indicator();
 	}
-	//GA
+
+
+	
 
 private:
 	ColorPickerHue* _hue;

@@ -1,0 +1,66 @@
+////////////////////////////////////////
+// hist.comp
+// computes the local Histogram for CLAHE
+////////////////////////////////////////
+
+#version 440 
+
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;	// 64 threads
+
+// input Dicom Volume
+layout(binding = 0, r16ui) uniform uimage3D volume;
+layout(r8ui, binding = 1) uniform uimage3D mask;
+
+// input LUT
+layout(std430, binding = 2) buffer lutBuffer {
+    uint LUT[];
+};
+
+// output Histogram
+layout(std430, binding = 3) buffer outHist {
+    uint hist[];
+};
+// output histogram max values 
+layout(std430, binding = 4) buffer outHistMax {
+	uint histMax[];
+};
+
+uniform ivec3 numSB;		// number of Sub Blocks
+uniform uint NUM_BINS;		// number of gray values in the Volume 
+uniform uvec3 offset;		// start of the region to apply CLAHE to
+uniform bool useLUT;		// if we need to use the LUT to map to a different bit range
+uniform uvec3 volumeDims;	// size of the section of the volume we are applying CLAHE to 
+uniform bool useMask;		// if we are performing CLAHE on just the Masked region 
+
+void main() {
+
+	// figure out the sub block this index belongs to 
+	uvec3 index = gl_GlobalInvocationID.xyz;
+	ivec3 sizeSB = ivec3( volumeDims / numSB );	
+	ivec3 currSB = ivec3( index / sizeSB );
+
+	// if we are not within the volume of interest -> return 
+	if ( index.x >= volumeDims.x || index.y >= volumeDims.y || index.z >= volumeDims.z ) {
+		return;
+	}
+	// if we are using the mask but are masked out -> return 
+	uint maskVal = imageLoad(mask, ivec3(index + offset)).x;
+	if ( useMask && maskVal == 0 ) {
+		return;
+	}
+
+	// get the gray value of the Volume
+	uint volSample = imageLoad( volume, ivec3(index + offset) ).x;
+	uint histIndex = (currSB.z * numSB.x * numSB.y + currSB.y * numSB.x + currSB.x);
+	
+	// Increment the appropriate histogram
+	uint grayIndex = (NUM_BINS * histIndex) + volSample;
+	if (useLUT){
+		grayIndex = (NUM_BINS * histIndex) + LUT[ volSample ];
+	}
+	atomicAdd( hist[ grayIndex ], 1 );
+
+	// update the histograms max value
+	atomicMax( histMax[ histIndex ], hist[ grayIndex ] );
+
+}

@@ -436,22 +436,29 @@ TentWindow::TentWindow() :
 {
 	_bknd = new UIQuadElement(osg::Vec4(.04, .25, .4, 1));
 	addChild(_bknd);
-	_bknd->setPercentSize(osg::Vec3(1, 1, 1.5));
+	_bknd->setPercentSize(osg::Vec3(1, 1, 1.90));
 
 	_dial = new Dial(osg::Vec4(0.56,0.05,0.25,1.0));
 	//_bknd->addChild(_dial);
 	_dial->setPercentSize(osg::Vec3(.075, 30, 1));
 	_dial->setPercentPos(osg::Vec3(0.075, -6, 0));
 	_dial->setCallback(this);
-
+	_tents = std::make_unique<std::vector<Tent>>();
 	_tent = new Tent(osg::Vec4(0.1, 0.1, 0.1, 1.0));
-	_tent->setPercentPos(osg::Vec3(.7, 0, 0));
+	_tent->setPercentPos(osg::Vec3(.7, -0.1, 0));
 	_tent->setPercentSize(osg::Vec3(1, 0.015, .25));
+
+	
 
 	_bknd->addChild(_tent);
 
+	
+	_tents->push_back(*_tent);
+	_tentIndex = 0;
+
+
 	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
-	list->setPercentPos(osg::Vec3(0, 0, -.25));
+	list->setPercentPos(osg::Vec3(0, 0, -.3));
 	list->setPercentSize(osg::Vec3(1, 1, .75));
 	list->setAbsoluteSpacing(1);
 	_bknd->addChild(list);
@@ -515,26 +522,87 @@ TentWindow::TentWindow() :
 	_height->setCallback(this);
 	_height->setPercent(1.0);
 
-	UIText* cLabel = new UIText("Center Position", 30.0f, osgText::TextBase::LEFT_CENTER);
+	_bottom = new CallbackSlider();
+	_bottom->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
+	_bottom->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
+	_bottom->handle->setPercentSize(osg::Vec3(0, 1, 1));
+	_bottom->handle->setColor(osg::Vec4(0.82, .25, .11, 0.0));
+	_bottom->filled->setColor(osg::Vec4(0.94, .44, .11, 0.16));
+	_bottom->setMax(1.0f);
+	_bottom->setMin(0.001f);
+	_bottom->setCallback(this);
+	_bottom->setPercent(0.001);
+
+	UIText* cLabel = new UIText("Center", 45.0f, osgText::TextBase::LEFT_CENTER);
 	cLabel->setColor(osg::Vec4(.66, .84, .96, 1.0));
-	UIText* bLabel = new UIText("Bottom Width", 30.0f, osgText::TextBase::LEFT_CENTER);
+	cLabel->setPercentPos(osg::Vec3(.05, 0, 0));
+	cVLabel = new UIText("0.70", 40.0f, osgText::TextBase::RIGHT_CENTER);
+	cVLabel->setPercentPos(osg::Vec3(-.1, 0, 0));
+	cVLabel->setColor(osg::Vec4(0.90, .90, .90, 1.0));
+
+	UIText* bLabel = new UIText("Bottom Width", 45.0f, osgText::TextBase::LEFT_CENTER);
 	bLabel->setColor(osg::Vec4(.66, .84, .96, 1.0));
-	UIText* tLabel = new UIText("Top Width", 30.0f, osgText::TextBase::LEFT_CENTER);
+	bLabel->setPercentPos(osg::Vec3(.05, 0, 0));
+	bVLabel = new UIText("0.25", 45.0f, osgText::TextBase::RIGHT_CENTER);
+	bVLabel->setPercentPos(osg::Vec3(-.05, 0, 0));
+	bVLabel->setColor(osg::Vec4(0.90, .90, .90, 1.0));
+
+	UIText* tLabel = new UIText("Top Width", 45.0f, osgText::TextBase::LEFT_CENTER);
 	tLabel->setColor(osg::Vec4(.66, .84, .96, 1.0));
-	UIText* hLabel = new UIText("Height", 30.0f, osgText::TextBase::LEFT_CENTER);
+	tLabel->setPercentPos(osg::Vec3(.05, 0, 0));
+	tVLabel = new UIText("0.00", 45.0f, osgText::TextBase::RIGHT_CENTER);
+	tVLabel->setPercentPos(osg::Vec3(-.05, 0, 0));
+	tVLabel->setColor(osg::Vec4(0.90, .90, .90, 1.0));
+
+	UIText* hLabel = new UIText("Overall", 45.0f, osgText::TextBase::LEFT_CENTER);
 	hLabel->setColor(osg::Vec4(.66, .84, .96, 1.0));
+	hLabel->setPercentPos(osg::Vec3(.05, 0, 0));
+	hVLabel = new UIText("1.00", 45.0f, osgText::TextBase::RIGHT_CENTER);
+	hVLabel->setPercentPos(osg::Vec3(-.05, 0, 0));
+	hVLabel->setColor(osg::Vec4(0.90, .90, .90, 1.0));
+
+
+	UIText* lLabel = new UIText("Lowest", 45.0f, osgText::TextBase::LEFT_CENTER);
+	lLabel->setColor(osg::Vec4(.66, .84, .96, 1.0));
+	lLabel->setPercentPos(osg::Vec3(.05, 0, 0));
+	lVLabel = new UIText("0.00", 45.0f, osgText::TextBase::RIGHT_CENTER);
+	lVLabel->setPercentPos(osg::Vec3(-.05, 0, 0));
+	lVLabel->setColor(osg::Vec4(0.90, .90, .90, 1.0));
 
 	
+	
+
 	list2->addChild(_dial);
 	list2->addChild(_centerPos);
-	list->addChild(cLabel);
+	UIList* valueList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
+	valueList->addChild(cLabel);
+	valueList->addChild(cVLabel);
+	list->addChild(valueList);
 	list->addChild(list2);
-	list->addChild(bLabel);
+
+	valueList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
+	valueList->addChild(bLabel);
+	valueList->addChild(bVLabel);
+	list->addChild(valueList);
 	list->addChild(_bottomWidth);
-	list->addChild(tLabel);
+
+	valueList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
+	valueList->addChild(tLabel);
+	valueList->addChild(tVLabel);
+	list->addChild(valueList);
 	list->addChild(_topWidth);
-	list->addChild(hLabel);
+
+	valueList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
+	valueList->addChild(hLabel);
+	valueList->addChild(hVLabel);
+	list->addChild(valueList);
 	list->addChild(_height);
+
+	valueList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
+	valueList->addChild(lLabel);
+	valueList->addChild(lVLabel);
+	list->addChild(valueList);
+	list->addChild(_bottom);
 	
 	
 }
@@ -542,43 +610,73 @@ TentWindow::TentWindow() :
 void TentWindow::uiCallback(UICallbackCaller* ui) {
 	if (ui == _bottomWidth) {
 		_volume->_computeUniforms["OpacityWidth"]->set(_bottomWidth->getAdjustedValue());
-		_tent->addUniform("Width", _bottomWidth->getAdjustedValue()*2);
+		//_tent->addUniform("Width", _bottomWidth->getAdjustedValue()*2);
 		float width = _tent->changeBottomVertices(_bottomWidth->getAdjustedValue());
 		_volume->_computeUniforms["OpacityTopWidth"]->set(width);
 		_topWidth->setPercent(width);
+		bVLabel->setText(std::to_string(_bottomWidth->getAdjustedValue()).substr(0, 4));
 		
 	}
 	if (ui == _topWidth) {
 		float width = _tent->changeTopVertices(_topWidth->getAdjustedValue());
 		_volume->_computeUniforms["OpacityTopWidth"]->set(width);
 		_topWidth->setPercent(width);
+		tVLabel->setText(std::to_string(_topWidth->getAdjustedValue()).substr(0, 4));
 	}
 	if (ui == _centerPos) {
-		std::cout << "Center: " << _centerPos->getAdjustedValue() << std::endl;
+		
 		_tent->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), 0.0, 0.0));
+		_tent->setCenter(_centerPos->getAdjustedValue());
 		_volume->_computeUniforms["OpacityCenter"]->set(_centerPos->getAdjustedValue());
-		_tent->addUniform("Center", _centerPos->getAdjustedValue());
+		//_tent->addUniform("Center", _centerPos->getAdjustedValue());
+		cVLabel->setText(std::to_string(_centerPos->getAdjustedValue()).substr(0, 4));
+		
 	}
 	if (ui == _height) {
-		_tent->changeHeight(_height->getAdjustedValue());
+		float height = _tent->changeHeight(_height->getAdjustedValue());
 		_volume->_computeUniforms["OpacityMult"]->set(_height->getAdjustedValue());
-
+		_volume->_computeUniforms["Lowest"]->set(height);
+		_bottom->setPercent(height);
+		hVLabel->setText(std::to_string(_height->getAdjustedValue()).substr(0, 4));
+	}
+	if (ui == _bottom) {
+		float height = _tent->changeBottomHeight(_bottom->getAdjustedValue());
+		_volume->_computeUniforms["Lowest"]->set(height);
+		_bottom->setPercent(height);
+		lVLabel->setText(std::to_string(_bottom->getAdjustedValue()).substr(0, 4));
 	}
 	if (ui == _dial)
 	{
 		float dialDiff = _dial->getValue();
 		if (dialDiff != 0.0) {
-			_centerPos->setPercent(std::min(_centerPos->getAdjustedValue() + dialDiff, 1.0f));
+			_centerPos->setPercent(std::min(_centerPos->getAdjustedValue() + (dialDiff/2.0f), 1.0f));
 			_tent->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), 0.0, 0.0));
 			_volume->_computeUniforms["OpacityCenter"]->set(_centerPos->getAdjustedValue());
 			_tent->addUniform("Center", _centerPos->getAdjustedValue());
-			std::cout << "dial CALLBACK" << std::endl;
+			cVLabel->setText(std::to_string(_centerPos->getAdjustedValue()).substr(0,4));
+			
 		}
 	}
 	_volume->setDirtyAll();
 	
 }
 
+void TentWindow::addTent(int index) {
+	Tent* tent = new Tent(osg::Vec4(0.1, 0.1, 0.1, 1.0));
+	tent->setPercentPos(osg::Vec3(.7, -0.1, 0));
+	tent->setPercentSize(osg::Vec3(1, 0.015, .25));
+	_bknd->addChild(tent);
+	_tents->push_back(*tent);
+	this->setTent(index);
+}
+void TentWindow::setTent(int index) {
+	*_tent = _tents->at(index);
+	_topWidth->setPercent(_tent->getTopWidth());
+	_bottomWidth->setPercent(_tent->getBottomWidth());
+	_height->setPercent(_tent->getHeight());
+	_bottom->setPercent(_tent->getBottom());
+	_centerPos->setPercent(_tent->getCenter());
+}
 void Tent::createGeometry()
 {
 	_transform = new osg::MatrixTransform();
@@ -593,10 +691,10 @@ void Tent::createGeometry()
 	
 	osg::Vec3 myCoords[] =
 	{
-		osg::Vec3(rightPointX, 0.0, -1.0),
+		osg::Vec3(rightPointX, 0.0, bottomHeight),
 		osg::Vec3(topPointX, 0.0, height),
 		osg::Vec3(topPointX, 0.0, height),
-		osg::Vec3(leftPointX, 0.0, -1.0)
+		osg::Vec3(leftPointX, 0.0, bottomHeight)
 
 	};
 	int numCoords = sizeof(myCoords) / sizeof(osg::Vec3);
@@ -630,10 +728,10 @@ void Tent::updateGeometry()
 
 	osg::Vec3 myCoords[] =
 	{
-		osg::Vec3(rightPointX, 0.0, -1.0),
+		osg::Vec3(rightPointX, 0.0, bottomHeight),
 		osg::Vec3(topPointX, 0.0, height),
 		osg::Vec3(-topPointX, 0.0, height),
-		osg::Vec3(leftPointX, 0.0, -1.0)
+		osg::Vec3(leftPointX, 0.0, bottomHeight)
 
 	};
 	int numCoords = sizeof(myCoords) / sizeof(osg::Vec3);
@@ -724,6 +822,7 @@ osg::Uniform* Tent::getUniform(std::string uniform)
 void Tent::setShaderDefine(std::string name, std::string define, osg::StateAttribute::Values on)
 {
 	_geode->getOrCreateStateSet()->setDefine(name, define, on);
+	
 }
 
 osg::Program* Tent::getOrLoadProgram()
@@ -734,8 +833,11 @@ osg::Program* Tent::getOrLoadProgram()
 		const std::string frag = HelmsleyVolume::loadShaderFile("triangle.frag");
 		_triangleProg = new osg::Program;
 		_triangleProg->setName("Triangle");
+		
 		_triangleProg->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
 		_triangleProg->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
+
+		
 	}
 
 	return _triangleProg;
@@ -745,7 +847,7 @@ float Tent::changeBottomVertices(float x) {
 	rightPointX = x;
 	leftPointX = -x;
 	topPointX = std::min(actualTop, rightPointX);
-	
+	_widthUniform->set(x*2);
 	updateGeometry();
 	return topPointX;
 }
@@ -757,9 +859,24 @@ float Tent::changeTopVertices(float x) {
 	return topPointX;
 }
 
-void Tent::changeHeight(float x) {
+float Tent::changeHeight(float x) {
 	height = x - 1.0;
+	bottomHeight = std::min(actualBottomHeight, height);
 	updateGeometry();
+	return bottomHeight + 1.0;
+}
+
+float Tent::changeBottomHeight(float x) {
+	actualBottomHeight = x - 1.0;
+	if (actualBottomHeight >= height)
+	{
+		bottomHeight = height - .001;
+	}
+	else {
+		bottomHeight = actualBottomHeight;
+	}
+	updateGeometry();
+	return bottomHeight + 1.0;
 }
 
 
@@ -863,9 +980,7 @@ bool Dial::processEvent(cvr::InteractionEvent* event)
 			float sYN = startQuat.y() + 1.0f;
 			float cYN = currQuat.y() + 1.0f;
 			float diffF = cYN - sYN;
-			std::cout << "Difference " << diffF << std::endl;
-			std::cout << "Curr " << cYN << std::endl;
-			std::cout << "Start " << sYN << std::endl;
+
 
 			if (_callback)
 			{
