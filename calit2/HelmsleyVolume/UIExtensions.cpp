@@ -667,10 +667,11 @@ void TentWindow::uiCallback(UICallbackCaller* ui) {
 	
 }
 
-void TentWindow::addTent(int index) {
+void TentWindow::addTent(int index, osg::Vec3 color) {
 	Tent* tent = new Tent(osg::Vec4(0.1, 0.1, 0.1, 1.0));
 	tent->setPercentPos(osg::Vec3(.7, -1.0, 0));
 	tent->setPercentSize(osg::Vec3(1, 0, .25));
+	tent->setColor(color);
 	_bknd->addChild(tent);
 	_tents->push_back(tent);
 
@@ -781,13 +782,11 @@ void Tent::updateGeometry()
 	}
 }
 
-void Tent::setColor(osg::Vec4 color)
+void Tent::setColor(osg::Vec3 color)
 {
-	if (_color != color)
-	{
-		_color = color;
-		_dirty = true;
-	}
+	
+	_colorUniform->set(color);
+	
 }
 
 void Tent::setTransparent(bool transparent)

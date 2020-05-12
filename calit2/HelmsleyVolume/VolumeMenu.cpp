@@ -347,7 +347,8 @@ void NewVolumeMenu::init()
 	CallbackButton* triangleButton = new CallbackButton();
 	triangleButton->setCallback(this);
 	label = new UIText("Triangle 0", 50.0f, osgText::TextBase::LEFT_TOP); 
-	label->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	
+	label->setColor(osg::Vec4(triangleColors[0], 1.0));
 	triangleButton->addChild(label);
 
 	_triangleList->addChild(_addTriangle);
@@ -633,14 +634,16 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		CallbackButton* triangleButton = new CallbackButton();
 		triangleButton->setCallback(this);
 		_triangleCount++;
+		osg::Vec3 color = triangleColors[_triangleCount];
 		std::string name = "Triangle " + std::to_string(_triangleCount);
 		UIText* label = new UIText(name, 50.0f, osgText::TextBase::LEFT_TOP);
-		label->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+		label->setColor(osg::Vec4(color, 1.0));
 		triangleButton->addChild(label);
 		
 		_triangleList->addChild(triangleButton);
 		
-		_tentWindow->addTent(_triangleCount);
+		
+		_tentWindow->addTent(_triangleCount, color);
 	}
 
 	else if (item == _contrastBottom)
@@ -714,7 +717,6 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	else {
 		CallbackButton* triangleButton = (CallbackButton*)item;
 		UIText* text = (UIText*)(triangleButton->getChild(0));
-		//text->setColor(UI_ACTIVE_COLOR);
 		std::string name = text->getText();
 		int index = name[name.length() - 1] - '0';
 		_tentWindow->setTent(index);

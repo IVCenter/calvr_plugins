@@ -4,7 +4,12 @@
 #define UI_BACKGROUND_COLOR osg::Vec4(0.5, 0.5, 0.5, 1)
 #define UI_ACTIVE_COLOR osg::Vec4(0.8, 1, 0.8, 1)
 #define UI_INACTIVE_COLOR osg::Vec4(1, 0.8, 0.8, 1)
-#define UI_BLUE_COLOR osg::Vec4(0.8, 0.9, 1.0, 1)
+#define UI_BLUE_COLOR osg::Vec3(0.8, 0.9, 1.0)
+#define UI_RED_COLOR osg::Vec3(1, 0.8, 0.807)
+#define UI_YELLOW_COLOR osg::Vec3(1, 0.964, 0.8)
+#define UI_GREEN_COLOR osg::Vec3(0.8, 1, 0.847)
+#define UI_PURPLE_COLOR osg::Vec3(0.847, 0.8, 1)
+#define UI_PINK_COLOR osg::Vec3(1, 0.8, 0.976)
 
 #include <cvrMenu/NewUI/UIButton.h>
 #include <cvrMenu/NewUI/UICheckbox.h>
@@ -239,7 +244,7 @@ private:
 class Tent : public cvr::UIElement
 {
 public:
-	Tent(osg::Vec4 color = osg::Vec4(1, 1, 1, 1))
+	Tent(osg::Vec4 color = osg::Vec4(UI_BLUE_COLOR, 1))
 		: UIElement()
 	{
 		leftPointX = -.25;
@@ -264,10 +269,12 @@ public:
 		_percentRounding = new osg::Uniform("percentRounding", 0.0f);
 		_centerUniform = new osg::Uniform("Center", 0.7f);
 		_widthUniform = new osg::Uniform("Width", 0.5f);
+		_colorUniform = new osg::Uniform("Color", UI_BLUE_COLOR);
 		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_absoluteRounding);
 		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_percentRounding);
 		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_centerUniform);
 		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_widthUniform);
+		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_colorUniform);
 		this->setTransparent(true);
 		
 		setProgram(getOrLoadProgram());
@@ -291,7 +298,7 @@ public:
 
 
 
-	virtual void setColor(osg::Vec4 color);
+	virtual void setColor(osg::Vec3 color);
 
 	virtual void setTransparent(bool transparent);
 
@@ -327,6 +334,7 @@ protected:
 	osg::Uniform* _percentRounding;
 	osg::Uniform* _centerUniform;
 	osg::Uniform* _widthUniform;
+	osg::Uniform* _colorUniform;
 
 	float leftPointX;
 	float rightPointX;
@@ -431,7 +439,7 @@ public:
 	TentWindow();
 	virtual void uiCallback(UICallbackCaller* ui);
 	void setVolume(VolumeGroup* volume) { _volume = volume; }
-	void addTent(int index);
+	void addTent(int index, osg::Vec3 color);
 	void setTent(int index);
 private:
 	cvr::UIQuadElement* _bknd;

@@ -166,6 +166,7 @@ protected:
 
 
 	int _triangleCount;
+	osg::Vec3 triangleColors[6] = { UI_BLUE_COLOR, UI_GREEN_COLOR, UI_PURPLE_COLOR, UI_RED_COLOR, UI_PINK_COLOR, UI_YELLOW_COLOR};
 private:
 	ToolMenu* _toolMenu = nullptr;
 	bool _movable;
