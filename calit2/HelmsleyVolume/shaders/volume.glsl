@@ -19,11 +19,12 @@ uniform float ContrastBottom;
 uniform float ContrastTop;
 uniform float Brightness;
 
-uniform float OpacityCenter;
-uniform float OpacityWidth;
-uniform float OpacityTopWidth;
-uniform float OpacityMult = 1.0;
-uniform float Lowest;
+uniform float OpacityCenter[10];
+uniform float OpacityWidth[10];
+uniform float OpacityTopWidth[10];
+uniform float OpacityMult[10];
+uniform float Lowest[10];
+uniform float TriangleCount = 1.0;
 
 uniform vec3 WorldScale;
 uniform vec3 TexelSize;
@@ -56,17 +57,26 @@ vec4 Sample(ivec3 p) {
 
 
 	//Opacity
-	s.a = smoothstep((OpacityCenter-OpacityTopWidth) - (OpacityWidth - OpacityTopWidth), OpacityCenter - OpacityTopWidth, ra.r);
-	if(s.a == 1.0){
-		s.a = 1.0 - smoothstep(OpacityCenter+OpacityTopWidth, OpacityCenter+ OpacityTopWidth + (OpacityWidth - OpacityTopWidth), ra.r);
+	float highestOpacity = 0.0;
+	for(int i = 0; i < TriangleCount; i++){
+		s.a = smoothstep((OpacityCenter[i]-OpacityTopWidth[i]) - (OpacityWidth[i] - OpacityTopWidth[i]), OpacityCenter[i] - OpacityTopWidth[i], ra.r);
+		if(s.a == 1.0){
+			s.a = 1.0 - smoothstep(OpacityCenter[i]+OpacityTopWidth[i], OpacityCenter[i]+ OpacityTopWidth[i] + (OpacityWidth[i] - OpacityTopWidth[i]), ra.r);
+		}
+		if(s.a != 0.0){
+			s.a *= 1/pow(2, ((1-OpacityMult[i])*10));
+			if(s.a >= highestOpacity)
+				highestOpacity = s.a;
+		}
+//			float lowestLimit = 1/pow(2, ((1-Lowest[i])*10));
+				//Non-Linear Opacity Multiplier
+//			if(s.a != 0.0)
+//				s.a = max(s.a, lowestLimit);
 	}
-	float lowestLimit = 1/pow(2, ((1-Lowest)*10));
-
-	s.a *= 1/pow(2, ((1-OpacityMult)*10));	//Non-Linear Opacity Multiplier
-	
-	if(s.a != 0.0)
-		s.a = max(s.a, lowestLimit);
+	s.a = highestOpacity;
 	//Contrast
+
+
 	vec2 organRA = ra; //removes contrast from organs
 
 	if(ra.r < ContrastBottom) 

@@ -2,11 +2,11 @@
 
 uniform float Center;
 uniform float Width;
-
+uniform vec3 Color;
 
 out vec4 FragColor;
 
-layout (location = 0) in vec2 cW;
+
 
 in vs_out {
 	vec2 uv;
@@ -23,6 +23,15 @@ void main() {
 	if(alpha == 1.0)
 		alpha = step(0.0, Center + xPos);//Left Bounds
 	vec3 col = vec3(0.8, 0.9, 1.0);
+	if(i.uv.y < 0.05)
+		col = vec3(0.0, 0.0, 0.0);
+	else if(i.uv.y > (i.uv.x*2)-0.05 && i.uv.y < (i.uv.x*2)+0.05)
+		col =  vec3(0.0, 0.0, 0.0);
+	else if(i.uv.y > 2*(-i.uv.x + 1)-0.05  && i.uv.y < 2*((-i.uv.x + 1)+0.05))
+		col =  vec3(0.0, 0.0, 0.0);
+	else
+		col = Color;
+		
 	if(alpha == 1.0)
 		alpha = .3;
 	FragColor = vec4(col, alpha);

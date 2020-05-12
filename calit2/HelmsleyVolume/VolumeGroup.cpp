@@ -200,13 +200,34 @@ void VolumeGroup::init()
 
 
 	//_computeUniforms["Exposure"] = new osg::Uniform("Exposure", 1.5f);
-	_computeUniforms["OpacityCenter"] = new osg::Uniform("OpacityCenter", 0.7f);
-	_computeUniforms["OpacityWidth"] = new osg::Uniform("OpacityWidth", 0.25f);
-	_computeUniforms["OpacityTopWidth"] = new osg::Uniform("OpacityTopWidth", 0.0f);
-	_computeUniforms["OpacityMult"] = new osg::Uniform("OpacityMult", 1.0f);
+
+	_computeUniforms["OpacityCenter"] = new osg::Uniform(osg::Uniform::FLOAT, "OpacityCenter", 10);
+	_computeUniforms["OpacityCenter"]->setElement(0, .7f);
+	//_computeUniforms["OpacityCenter"] = new osg::Uniform("OpacityCenter", .7f);
+
+	_computeUniforms["OpacityWidth"] = new osg::Uniform(osg::Uniform::FLOAT, "OpacityWidth", 10);
+	_computeUniforms["OpacityWidth"]->setElement(0, .25f);
+	//_computeUniforms["OpacityWidth"] = new osg::Uniform("OpacityWidth", .25f);
+
+	_computeUniforms["OpacityTopWidth"] = new osg::Uniform(osg::Uniform::FLOAT, "OpacityTopWidth", 10);
+	_computeUniforms["OpacityTopWidth"]->setElement(0, 0.0f);
+	//_computeUniforms["OpacityTopWidth"] = new osg::Uniform("OpacityTopWidth", 0.0f);
+
+	_computeUniforms["OpacityMult"] = new osg::Uniform(osg::Uniform::FLOAT, "OpacityMult", 10);;
+	_computeUniforms["OpacityMult"]->setElement(0, 1.0f);
+	//_computeUniforms["OpacityMult"] = new osg::Uniform("OpacityMult", 1.0f);
+
+	_computeUniforms["Lowest"] = new osg::Uniform(osg::Uniform::FLOAT, "Lowest", 10);
+	_computeUniforms["Lowest"]->setElement(0, 0.0f);
+	//_computeUniforms["Lowest"] = new osg::Uniform("Lowest", 0.0f);
+
+	_computeUniforms["TriangleCount"] = new osg::Uniform("TriangleCount", 1.0f);
+
 	_computeUniforms["ContrastBottom"] = new osg::Uniform("ContrastBottom", 0.0f);
+
 	_computeUniforms["ContrastTop"] = new osg::Uniform("ContrastTop", 1.0f);
-	_computeUniforms["Lowest"] = new osg::Uniform("Lowest", 0.0f);
+
+	
 	
 
 	_computeUniforms["Brightness"] = new osg::Uniform("Brightness", 0.5f);

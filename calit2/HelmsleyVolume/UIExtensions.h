@@ -249,6 +249,7 @@ public:
 		height = 0.0;
 		bottomHeight = -1.0;
 		actualBottomHeight = -1.0;
+		_center = .7;
 		_color = color;
 		_geode = new osg::Geode();
 
@@ -434,7 +435,7 @@ public:
 	void setTent(int index);
 private:
 	cvr::UIQuadElement* _bknd;
-	std::unique_ptr<std::vector<Tent>> _tents; 
+	std::unique_ptr<std::vector<Tent*>> _tents; 
 	
 	Tent* _tent;
 	int _tentIndex;
@@ -452,6 +453,8 @@ private:
 	cvr::UIText* tVLabel;
 	cvr::UIText* hVLabel;
 	cvr::UIText* lVLabel;
+
+	
 };
 
 enum organRGB { BLADDER, COLON, KIDNEY, SPLEEN, BODY};

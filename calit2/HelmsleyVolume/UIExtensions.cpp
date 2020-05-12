@@ -443,7 +443,7 @@ TentWindow::TentWindow() :
 	_dial->setPercentSize(osg::Vec3(.075, 30, 1));
 	_dial->setPercentPos(osg::Vec3(0.075, -6, 0));
 	_dial->setCallback(this);
-	_tents = std::make_unique<std::vector<Tent>>();
+	_tents = std::make_unique<std::vector<Tent*>>();
 	_tent = new Tent(osg::Vec4(0.1, 0.1, 0.1, 1.0));
 	_tent->setPercentPos(osg::Vec3(.7, -0.1, 0));
 	_tent->setPercentSize(osg::Vec3(1, 0.015, .25));
@@ -452,9 +452,9 @@ TentWindow::TentWindow() :
 
 	_bknd->addChild(_tent);
 
-	
-	_tents->push_back(*_tent);
+	_tents->push_back(_tent);
 	_tentIndex = 0;
+
 
 
 	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
@@ -487,7 +487,8 @@ TentWindow::TentWindow() :
 	_centerPos->setMin(0.001f);
 	_centerPos->setCallback(this);
 	_centerPos->setPercent(.7);
-	
+
+	//_volume->_computeUniforms["OpacityCenter"]->setArray(_centerPosArray);
 
 	_bottomWidth = new CallbackSlider();
 	_bottomWidth->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
@@ -500,6 +501,8 @@ TentWindow::TentWindow() :
 	_bottomWidth->setCallback(this);
 	_bottomWidth->setPercent(.25);
 
+	//_volume->_computeUniforms["OpacityWidth"]->setArray(_bottomWidthArray);
+
 	_topWidth = new CallbackSlider();
 	_topWidth->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
 	_topWidth->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
@@ -510,6 +513,8 @@ TentWindow::TentWindow() :
 	_topWidth->setMin(0.001f);
 	_topWidth->setCallback(this);
 	_topWidth->setPercent(0.0);
+
+	//_volume->_computeUniforms["OpacityTopWidth"]->setArray(_topWidthArray);
 
 	_height = new CallbackSlider();
 	_height->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
@@ -522,6 +527,8 @@ TentWindow::TentWindow() :
 	_height->setCallback(this);
 	_height->setPercent(1.0);
 
+	//_volume->_computeUniforms["OpacityMult"]->setArray(_heightArray);
+
 	_bottom = new CallbackSlider();
 	_bottom->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
 	_bottom->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
@@ -532,6 +539,8 @@ TentWindow::TentWindow() :
 	_bottom->setMin(0.001f);
 	_bottom->setCallback(this);
 	_bottom->setPercent(0.001);
+
+	//_volume->_computeUniforms["Lowest"]->setArray(_bottomArray);
 
 	UIText* cLabel = new UIText("Center", 45.0f, osgText::TextBase::LEFT_CENTER);
 	cLabel->setColor(osg::Vec4(.66, .84, .96, 1.0));
@@ -609,39 +618,36 @@ TentWindow::TentWindow() :
 
 void TentWindow::uiCallback(UICallbackCaller* ui) {
 	if (ui == _bottomWidth) {
-		_volume->_computeUniforms["OpacityWidth"]->set(_bottomWidth->getAdjustedValue());
+		_volume->_computeUniforms["OpacityWidth"]->setElement(_tentIndex, _bottomWidth->getAdjustedValue());
 		//_tent->addUniform("Width", _bottomWidth->getAdjustedValue()*2);
-		float width = _tent->changeBottomVertices(_bottomWidth->getAdjustedValue());
-		_volume->_computeUniforms["OpacityTopWidth"]->set(width);
+		float width = _tents->at(_tentIndex)->changeBottomVertices(_bottomWidth->getAdjustedValue());
+		_volume->_computeUniforms["OpacityTopWidth"]->setElement(_tentIndex, width);
 		_topWidth->setPercent(width);
 		bVLabel->setText(std::to_string(_bottomWidth->getAdjustedValue()).substr(0, 4));
 		
 	}
 	if (ui == _topWidth) {
-		float width = _tent->changeTopVertices(_topWidth->getAdjustedValue());
-		_volume->_computeUniforms["OpacityTopWidth"]->set(width);
+		float width = _tents->at(_tentIndex)->changeTopVertices(_topWidth->getAdjustedValue());
+		_volume->_computeUniforms["OpacityTopWidth"]->setElement(_tentIndex, width);
 		_topWidth->setPercent(width);
 		tVLabel->setText(std::to_string(_topWidth->getAdjustedValue()).substr(0, 4));
 	}
 	if (ui == _centerPos) {
-		
-		_tent->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), 0.0, 0.0));
-		_tent->setCenter(_centerPos->getAdjustedValue());
-		_volume->_computeUniforms["OpacityCenter"]->set(_centerPos->getAdjustedValue());
-		//_tent->addUniform("Center", _centerPos->getAdjustedValue());
+		 _tents->at(_tentIndex)->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), 0.0, 0.0));
+		 _tents->at(_tentIndex)->setCenter(_centerPos->getAdjustedValue());
+		_volume->_computeUniforms["OpacityCenter"]->setElement(_tentIndex, _centerPos->getAdjustedValue());
 		cVLabel->setText(std::to_string(_centerPos->getAdjustedValue()).substr(0, 4));
-		
 	}
 	if (ui == _height) {
-		float height = _tent->changeHeight(_height->getAdjustedValue());
-		_volume->_computeUniforms["OpacityMult"]->set(_height->getAdjustedValue());
-		_volume->_computeUniforms["Lowest"]->set(height);
+		float height = _tents->at(_tentIndex)->changeHeight(_height->getAdjustedValue());
+		_volume->_computeUniforms["OpacityMult"]->setElement(_tentIndex, _height->getAdjustedValue());	//check if cast is working
+		_volume->_computeUniforms["Lowest"]->setElement(_tentIndex, height);
 		_bottom->setPercent(height);
 		hVLabel->setText(std::to_string(_height->getAdjustedValue()).substr(0, 4));
 	}
 	if (ui == _bottom) {
-		float height = _tent->changeBottomHeight(_bottom->getAdjustedValue());
-		_volume->_computeUniforms["Lowest"]->set(height);
+		float height = _tents->at(_tentIndex)->changeBottomHeight(_bottom->getAdjustedValue());
+		_volume->_computeUniforms["Lowest"]->setElement(_tentIndex, height);
 		_bottom->setPercent(height);
 		lVLabel->setText(std::to_string(_bottom->getAdjustedValue()).substr(0, 4));
 	}
@@ -650,9 +656,9 @@ void TentWindow::uiCallback(UICallbackCaller* ui) {
 		float dialDiff = _dial->getValue();
 		if (dialDiff != 0.0) {
 			_centerPos->setPercent(std::min(_centerPos->getAdjustedValue() + (dialDiff/2.0f), 1.0f));
-			_tent->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), 0.0, 0.0));
+			_tents->at(_tentIndex)->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), 0.0, 0.0));
 			_volume->_computeUniforms["OpacityCenter"]->set(_centerPos->getAdjustedValue());
-			_tent->addUniform("Center", _centerPos->getAdjustedValue());
+			_tents->at(_tentIndex)->addUniform("Center", _centerPos->getAdjustedValue());
 			cVLabel->setText(std::to_string(_centerPos->getAdjustedValue()).substr(0,4));
 			
 		}
@@ -663,19 +669,29 @@ void TentWindow::uiCallback(UICallbackCaller* ui) {
 
 void TentWindow::addTent(int index) {
 	Tent* tent = new Tent(osg::Vec4(0.1, 0.1, 0.1, 1.0));
-	tent->setPercentPos(osg::Vec3(.7, -0.1, 0));
-	tent->setPercentSize(osg::Vec3(1, 0.015, .25));
+	tent->setPercentPos(osg::Vec3(.7, -1.0, 0));
+	tent->setPercentSize(osg::Vec3(1, 0, .25));
 	_bknd->addChild(tent);
-	_tents->push_back(*tent);
+	_tents->push_back(tent);
+
+	_volume->_computeUniforms["OpacityWidth"]->setElement(index, tent->getBottomWidth());
+	_volume->_computeUniforms["OpacityTopWidth"]->setElement(index, tent->getTopWidth());
+	_volume->_computeUniforms["OpacityCenter"]->setElement(index, tent->getCenter());
+	_volume->_computeUniforms["OpacityMult"]->setElement(index, tent->getHeight());
+	_volume->_computeUniforms["Lowest"]->setElement(index, tent->getBottom());
+	_volume->_computeUniforms["TriangleCount"]->set(float(index+1));
+
 	this->setTent(index);
 }
 void TentWindow::setTent(int index) {
-	*_tent = _tents->at(index);
-	_topWidth->setPercent(_tent->getTopWidth());
-	_bottomWidth->setPercent(_tent->getBottomWidth());
-	_height->setPercent(_tent->getHeight());
-	_bottom->setPercent(_tent->getBottom());
-	_centerPos->setPercent(_tent->getCenter());
+	std::cout << "index: " << index << std::endl;
+	std::cout << "size: " << _tents->size() << std::endl;
+	_tentIndex = index;
+	_topWidth->setPercent(_tents->at(_tentIndex)->getTopWidth());
+	_bottomWidth->setPercent(_tents->at(_tentIndex)->getBottomWidth());
+	_height->setPercent(_tents->at(_tentIndex)->getHeight());
+	_bottom->setPercent(_tents->at(_tentIndex)->getBottom());
+	_centerPos->setPercent(_tents->at(_tentIndex)->getCenter());
 }
 void Tent::createGeometry()
 {

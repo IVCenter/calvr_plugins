@@ -254,6 +254,7 @@ void NewVolumeMenu::init()
 	_opacityDisplay->addUniform(_volume->_computeUniforms["ContrastBottom"]);
 	_opacityDisplay->addUniform(_volume->_computeUniforms["ContrastTop"]);
 	_opacityDisplay->addUniform(_volume->_computeUniforms["Brightness"]);
+	_opacityDisplay->addUniform(_volume->_computeUniforms["TriangleCount"]);
 	_opacityDisplay->setPercentSize(osg::Vec3(1.0, 1.0, 1.0));
 	
 
@@ -273,6 +274,7 @@ void NewVolumeMenu::init()
 	_opacityColorDisplay->addUniform(_volume->_computeUniforms["ContrastBottom"]);
 	_opacityColorDisplay->addUniform(_volume->_computeUniforms["ContrastTop"]);
 	_opacityColorDisplay->addUniform(_volume->_computeUniforms["Brightness"]);
+	_opacityColorDisplay->addUniform(_volume->_computeUniforms["TriangleCount"]);
 	_opacityColorDisplay->setPercentSize(osg::Vec3(1.0, 1.0, 1.0));
 	
 	
@@ -328,7 +330,7 @@ void NewVolumeMenu::init()
 	label = new UIText(" Add Region ", 50.0f, osgText::TextBase::LEFT_TOP);
 	label->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
 	_addTriangle->addChild(label);
-	_triangleCount = 0;//Index
+	
 
 	
 	regionHeaderBknd->addChild(regionLabel);
@@ -344,7 +346,7 @@ void NewVolumeMenu::init()
 	_triangleList->setPercentSize(osg::Vec3(1.0, 1.0, .75));
 	CallbackButton* triangleButton = new CallbackButton();
 	triangleButton->setCallback(this);
-	label = new UIText("Triangle 1", 50.0f, osgText::TextBase::LEFT_TOP); 
+	label = new UIText("Triangle 0", 50.0f, osgText::TextBase::LEFT_TOP); 
 	label->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
 	triangleButton->addChild(label);
 
@@ -352,7 +354,7 @@ void NewVolumeMenu::init()
 	_triangleList->addChild(triangleButton);
 	regionHeaderBknd->addChild(_triangleList);
 	_maskMenu->addChild(regionHeaderBknd);
-
+	_triangleCount = 0;
 	
 	
 
@@ -622,7 +624,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	}
 	else if (item == _density)
 	{
-		_volume->_computeUniforms["OpacityMult"]->set(_density->getAdjustedValue());
+		//_volume->_computeUniforms["OpacityMult"]->set(_density->getAdjustedValue());
 		_volume->setDirtyAll();
 	}
 	//Triangles
@@ -630,7 +632,8 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	{
 		CallbackButton* triangleButton = new CallbackButton();
 		triangleButton->setCallback(this);
-		std::string name = "Triangle " + std::to_string(_triangleCount++);
+		_triangleCount++;
+		std::string name = "Triangle " + std::to_string(_triangleCount);
 		UIText* label = new UIText(name, 50.0f, osgText::TextBase::LEFT_TOP);
 		label->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
 		triangleButton->addChild(label);
@@ -711,9 +714,11 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	else {
 		CallbackButton* triangleButton = (CallbackButton*)item;
 		UIText* text = (UIText*)(triangleButton->getChild(0));
+		//text->setColor(UI_ACTIVE_COLOR);
 		std::string name = text->getText();
 		int index = name[name.length() - 1] - '0';
 		_tentWindow->setTent(index);
+	
 	}
 }
 

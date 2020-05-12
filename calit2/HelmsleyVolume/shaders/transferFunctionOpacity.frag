@@ -4,11 +4,12 @@
 
 
 
-uniform float OpacityCenter;
-uniform float OpacityWidth;
-uniform float OpacityTopWidth;
-uniform float OpacityMult = 1.0;
-uniform float Lowest;
+uniform float OpacityCenter[10];
+uniform float OpacityWidth[10];
+uniform float OpacityTopWidth[10];
+uniform float OpacityMult[10];
+uniform float Lowest[10];
+uniform float TriangleCount = 1.0;
 
 uniform float ContrastBottom;
 uniform float ContrastTop;
@@ -30,16 +31,25 @@ void main() {
     vec2 ra = i.uv;
 	vec4 col = vec4(0.0,0.0,0.0,0.0);
 
-   col.a = smoothstep((OpacityCenter-OpacityTopWidth) - (OpacityWidth - OpacityTopWidth), OpacityCenter - OpacityTopWidth, ra.r);
-	if(col.a == 1.0){
-		col.a = 1.0 - smoothstep(OpacityCenter+OpacityTopWidth, OpacityCenter+ OpacityTopWidth + (OpacityWidth - OpacityTopWidth), ra.r);
-	}
-	float lowestLimit = 1/pow(2, ((1-Lowest)*10));
-
-	col.a *= 1/pow(2, ((1-OpacityMult)*10));	//Non-Linear Opacity Multiplier
+	float highestOpacity = 0.0;
+	for(int i = 0; i < TriangleCount; i++){
+		col.a = smoothstep((OpacityCenter[i]-OpacityTopWidth[i]) - (OpacityWidth[i] - OpacityTopWidth[i]), OpacityCenter[i] - OpacityTopWidth[i], ra.r);
+		if(col.a == 1.0){
+			col.a = 1.0 - smoothstep(OpacityCenter[i]+OpacityTopWidth[i], OpacityCenter[i]+ OpacityTopWidth[i] + (OpacityWidth[i] - OpacityTopWidth[i]), ra.r);
+		}
+		if(col.a != 0.0){
+			col.a *= OpacityMult[i];
+			if(col.a >= highestOpacity){
+				highestOpacity = col.a;
+			}
+		}
 	
-	if(col.a != 0.0)
-		col.a = max(col.a, lowestLimit);
+//			float lowestLimit = 1/pow(2, ((1-Lowest[i])*10));
+//			col.a *= 1/pow(2, ((1-OpacityMult[i])*10));	//Non-Linear Opacity Multiplier
+//			if(col.a != 0.0)
+//				col.a = max(col.a, lowestLimit);
+	}
+	col.a = highestOpacity;	
    
    
    
