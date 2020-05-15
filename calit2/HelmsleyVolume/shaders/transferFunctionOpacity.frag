@@ -39,6 +39,8 @@ void main() {
 		}
 		if(col.a != 0.0){
 			col.a *= OpacityMult[i];
+			float lowestLimit = Lowest[i];
+			col.a = max(col.a, lowestLimit);
 			if(col.a >= highestOpacity){
 				highestOpacity = col.a;
 			}

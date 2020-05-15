@@ -48,6 +48,8 @@ protected:
 	cvr::MenuCheckbox* organsOnly;
 
 	cvr::MenuList* colorFunction;
+
+	
 };
 
 
@@ -116,8 +118,7 @@ protected:
 	CallbackButton* _verticalflip;
 	CallbackButton* _depthflip;
 	CallbackButton* _addTriangle;
-	
-	cvr::UIList* _triangleList;
+
 	cvr::UIList* _mainMaskList;
 
 	CallbackSlider* _density;
@@ -164,9 +165,21 @@ protected:
 	osg::Vec3 _bladderCol;
 	osg::Vec3 _spleenCol;
 
+	CallbackButton* _Triangle0;
+	CallbackButton* _Triangle1;
+	CallbackButton* _Triangle2;
+	CallbackButton* _Triangle3;
+	CallbackButton* _Triangle4;
+	CallbackButton* _Triangle5;
 
-	int _triangleCount;
-	osg::Vec3 triangleColors[6] = { UI_BLUE_COLOR, UI_GREEN_COLOR, UI_PURPLE_COLOR, UI_RED_COLOR, UI_PINK_COLOR, UI_YELLOW_COLOR};
+	std::vector<CallbackButton*> _triangleCallbacks = {_Triangle0, _Triangle1, _Triangle2, _Triangle3, _Triangle4, _Triangle5};
+
+	cvr::UIList* _triangleList;
+	int _triangleIndex;
+	osg::Vec3 triangleColors[6] = { UI_BLUE_COLOR, UI_RED_COLOR, UI_YELLOW_COLOR, UI_GREEN_COLOR, UI_PURPLE_COLOR, UI_PINK_COLOR};
+	bool checkTriangleCallbacks(UICallbackCaller* item);
+	bool checkTriangleVisCallbacks(UICallbackCaller* item);
+	void NewVolumeMenu::upDatePreviewDefines(std::string tf);
 private:
 	ToolMenu* _toolMenu = nullptr;
 	bool _movable;

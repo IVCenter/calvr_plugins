@@ -39,14 +39,12 @@ void main() {
 		}
 		if(col.a != 0.0){
 			col.a *= OpacityMult[i];
+			float lowestLimit = Lowest[i];
+			col.a = max(col.a, lowestLimit);
 			if(col.a >= highestOpacity){
 				highestOpacity = col.a;
 			}
 		}
-//			float lowestLimit = 1/pow(2, ((1-Lowest[i])*10));
-//			col.a *= 1/pow(2, ((1-OpacityMult[i])*10));	//Non-Linear Opacity Multiplier
-//			if(col.a != 0.0)
-//				col.a = max(col.a, lowestLimit);
 	}
 	col.a = highestOpacity;
    

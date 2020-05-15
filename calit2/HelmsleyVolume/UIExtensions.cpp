@@ -1,7 +1,7 @@
 #include "UIExtensions.h"
 #include "HelmsleyVolume.h"
 #include "cvrKernel/NodeMask.h"
-
+#include <osg/BlendFunc>
 #include <algorithm>
 
 using namespace cvr;
@@ -434,7 +434,8 @@ osg::Program* ColorPickerHue::getOrLoadProgram()
 TentWindow::TentWindow() :
 	UIElement()
 {
-	_bknd = new UIQuadElement(osg::Vec4(.04, .25, .4, 1));
+	_bknd = new UIQuadElement(osg::Vec4(.04, .25, .4, 0));
+	_bknd->setTransparent(false);
 	addChild(_bknd);
 	_bknd->setPercentSize(osg::Vec3(1, 1, 1.90));
 
@@ -445,6 +446,7 @@ TentWindow::TentWindow() :
 	_dial->setCallback(this);
 	_tents = std::make_unique<std::vector<Tent*>>();
 	_tent = new Tent(osg::Vec4(0.1, 0.1, 0.1, 1.0));
+	_tent->getGeode()->getOrCreateStateSet()->setRenderBinDetails(0, "RenderBin");
 	_tent->setPercentPos(osg::Vec3(.7, -0.1, 0));
 	_tent->setPercentSize(osg::Vec3(1, 0.015, .25));
 
@@ -633,17 +635,19 @@ void TentWindow::uiCallback(UICallbackCaller* ui) {
 		tVLabel->setText(std::to_string(_topWidth->getAdjustedValue()).substr(0, 4));
 	}
 	if (ui == _centerPos) {
-		 _tents->at(_tentIndex)->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), 0.0, 0.0));
+		 _tents->at(_tentIndex)->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), _tents->at(_tentIndex)->getPercentPos().y(), 0.0));
 		 _tents->at(_tentIndex)->setCenter(_centerPos->getAdjustedValue());
 		_volume->_computeUniforms["OpacityCenter"]->setElement(_tentIndex, _centerPos->getAdjustedValue());
 		cVLabel->setText(std::to_string(_centerPos->getAdjustedValue()).substr(0, 4));
 	}
 	if (ui == _height) {
-		float height = _tents->at(_tentIndex)->changeHeight(_height->getAdjustedValue());
-		_volume->_computeUniforms["OpacityMult"]->setElement(_tentIndex, _height->getAdjustedValue());	//check if cast is working
-		_volume->_computeUniforms["Lowest"]->setElement(_tentIndex, height);
-		_bottom->setPercent(height);
-		hVLabel->setText(std::to_string(_height->getAdjustedValue()).substr(0, 4));
+		if (_tents->at(_tentIndex)->getSavedHeight() == 0.0) {
+			float height = _tents->at(_tentIndex)->changeHeight(_height->getAdjustedValue());
+			_volume->_computeUniforms["OpacityMult"]->setElement(_tentIndex, _height->getAdjustedValue());
+			_volume->_computeUniforms["Lowest"]->setElement(_tentIndex, height);
+			_bottom->setPercent(height);
+			hVLabel->setText(std::to_string(_height->getAdjustedValue()).substr(0, 4));
+		}
 	}
 	if (ui == _bottom) {
 		float height = _tents->at(_tentIndex)->changeBottomHeight(_bottom->getAdjustedValue());
@@ -656,22 +660,22 @@ void TentWindow::uiCallback(UICallbackCaller* ui) {
 		float dialDiff = _dial->getValue();
 		if (dialDiff != 0.0) {
 			_centerPos->setPercent(std::min(_centerPos->getAdjustedValue() + (dialDiff/2.0f), 1.0f));
-			_tents->at(_tentIndex)->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), 0.0, 0.0));
-			_volume->_computeUniforms["OpacityCenter"]->set(_centerPos->getAdjustedValue());
+			_tents->at(_tentIndex)->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), _tents->at(_tentIndex)->getPercentPos().y(), 0.0));
+			_volume->_computeUniforms["OpacityCenter"]->setElement(_tentIndex, _centerPos->getAdjustedValue());
 			_tents->at(_tentIndex)->addUniform("Center", _centerPos->getAdjustedValue());
 			cVLabel->setText(std::to_string(_centerPos->getAdjustedValue()).substr(0,4));
-			
 		}
 	}
 	_volume->setDirtyAll();
 	
 }
 
-void TentWindow::addTent(int index, osg::Vec3 color) {
+Tent* TentWindow::addTent(int index, osg::Vec3 color) {
 	Tent* tent = new Tent(osg::Vec4(0.1, 0.1, 0.1, 1.0));
-	tent->setPercentPos(osg::Vec3(.7, -1.0, 0));
+	tent->setPercentPos(osg::Vec3(.7, (-index), 0));
 	tent->setPercentSize(osg::Vec3(1, 0, .25));
 	tent->setColor(color);
+	tent->getGeode()->getOrCreateStateSet()->setRenderBinDetails(index, "RenderBin");
 	_bknd->addChild(tent);
 	_tents->push_back(tent);
 
@@ -681,18 +685,41 @@ void TentWindow::addTent(int index, osg::Vec3 color) {
 	_volume->_computeUniforms["OpacityMult"]->setElement(index, tent->getHeight());
 	_volume->_computeUniforms["Lowest"]->setElement(index, tent->getBottom());
 	_volume->_computeUniforms["TriangleCount"]->set(float(index+1));
-
+	_volume->setDirtyAll();
 	this->setTent(index);
+	return tent;
 }
 void TentWindow::setTent(int index) {
 	std::cout << "index: " << index << std::endl;
 	std::cout << "size: " << _tents->size() << std::endl;
+	_tents->at(_tentIndex)->setSelected(false);
 	_tentIndex = index;
+	_tents->at(_tentIndex)->setSelected(true);
+
 	_topWidth->setPercent(_tents->at(_tentIndex)->getTopWidth());
+	tVLabel->setText(std::to_string(_tents->at(_tentIndex)->getTopWidth()).substr(0, 4));
 	_bottomWidth->setPercent(_tents->at(_tentIndex)->getBottomWidth());
+	bVLabel->setText(std::to_string(_tents->at(_tentIndex)->getBottomWidth()).substr(0, 4));
 	_height->setPercent(_tents->at(_tentIndex)->getHeight());
+	hVLabel->setText(std::to_string(_tents->at(_tentIndex)->getHeight()).substr(0, 4));
 	_bottom->setPercent(_tents->at(_tentIndex)->getBottom());
+	lVLabel->setText(std::to_string(_tents->at(_tentIndex)->getBottom()).substr(0, 4));
 	_centerPos->setPercent(_tents->at(_tentIndex)->getCenter());
+	cVLabel->setText(std::to_string(_tents->at(_tentIndex)->getCenter()).substr(0, 4));
+}
+
+void TentWindow::toggleTent(int index) {
+	if (_tents->at(index)->getSavedHeight() == 0.0f) {//If visible
+		_tents->at(index)->setSavedHeight(_tents->at(index)->getHeight());
+		_tents->at(index)->changeHeight(0.0f);
+		_volume->_computeUniforms["OpacityMult"]->setElement(index, 0.0f);
+	}
+	else {
+		_tents->at(index)->changeHeight(_tents->at(index)->getSavedHeight());
+		_tents->at(index)->setSavedHeight(0.0f);
+		_volume->_computeUniforms["OpacityMult"]->setElement(index, _tents->at(index)->getHeight());
+	}
+	_volume->setDirtyAll();
 }
 void Tent::createGeometry()
 {
@@ -708,10 +735,12 @@ void Tent::createGeometry()
 	
 	osg::Vec3 myCoords[] =
 	{
+		osg::Vec3(rightPointX, 0.0, -1.0),
 		osg::Vec3(rightPointX, 0.0, bottomHeight),
 		osg::Vec3(topPointX, 0.0, height),
-		osg::Vec3(topPointX, 0.0, height),
-		osg::Vec3(leftPointX, 0.0, bottomHeight)
+		osg::Vec3(-topPointX, 0.0, height),
+		osg::Vec3(leftPointX, 0.0, bottomHeight),
+		osg::Vec3(leftPointX, 0.0, -1.0)
 
 	};
 	int numCoords = sizeof(myCoords) / sizeof(osg::Vec3);
@@ -721,21 +750,24 @@ void Tent::createGeometry()
 	
 	_polyGeom->setVertexArray(vertices);
 
-	_polyGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS, 0, numCoords));
+	_polyGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POLYGON, 0, numCoords));
 
 	_geode->addDrawable(_polyGeom);
 
 
 	osg::Vec2Array* texcoords = new osg::Vec2Array;
 	texcoords->push_back(osg::Vec2(1, 0));
+	texcoords->push_back(osg::Vec2(1, bottomHeight));
 	texcoords->push_back(osg::Vec2(0.5 + (topPointX/2.0), 1));
 	texcoords->push_back(osg::Vec2(0.5 - (topPointX/2.0), 1));
+	texcoords->push_back(osg::Vec2(0, bottomHeight));
 	texcoords->push_back(osg::Vec2(0, 0));
+
 	
 
 
 	_polyGeom->setVertexAttribArray(1, texcoords, osg::Array::BIND_PER_VERTEX);
-	setTransparent(true);
+	setTransparent(false);
 
 	updateGeometry();
 }
@@ -745,10 +777,12 @@ void Tent::updateGeometry()
 
 	osg::Vec3 myCoords[] =
 	{
+		osg::Vec3(rightPointX, 0.0, -1.0),
 		osg::Vec3(rightPointX, 0.0, bottomHeight),
 		osg::Vec3(topPointX, 0.0, height),
 		osg::Vec3(-topPointX, 0.0, height),
-		osg::Vec3(leftPointX, 0.0, bottomHeight)
+		osg::Vec3(leftPointX, 0.0, bottomHeight),
+		osg::Vec3(leftPointX, 0.0, -1.0)
 
 	};
 	int numCoords = sizeof(myCoords) / sizeof(osg::Vec3);
@@ -756,11 +790,15 @@ void Tent::updateGeometry()
 	osg::Vec3Array* vertices = new osg::Vec3Array(numCoords, myCoords);
 	_polyGeom->setVertexArray(vertices);
 
-	osg::Vec2Array* texcoords = new osg::Vec2Array;	//Memory Leak?
+	osg::Vec2Array* texcoords = new osg::Vec2Array;	
 	texcoords->push_back(osg::Vec2(1, 0));
+	texcoords->push_back(osg::Vec2(1, bottomHeight));
 	texcoords->push_back(osg::Vec2(.5 + ((topPointX / rightPointX) / 2.0), 1));
 	texcoords->push_back(osg::Vec2(.5 - ((topPointX / rightPointX) / 2.0), 1));
+	texcoords->push_back(osg::Vec2(0, bottomHeight));
 	texcoords->push_back(osg::Vec2(0, 0));
+
+
 
 	_polyGeom->setVertexAttribArray(1, texcoords, osg::Array::BIND_PER_VERTEX);
 
@@ -794,10 +832,14 @@ void Tent::setTransparent(bool transparent)
 	if (transparent)
 	{
 		_geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+		
 		_geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
+		_geode->getOrCreateStateSet()->setAttributeAndModes(new osg::BlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA));
+		
 	}
 	else
 	{
+
 		_geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::OPAQUE_BIN);
 		_geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::OFF);
 	}

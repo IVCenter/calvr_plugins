@@ -65,13 +65,12 @@ vec4 Sample(ivec3 p) {
 		}
 		if(s.a != 0.0){
 			s.a *= 1/pow(2, ((1-OpacityMult[i])*10));
+			float lowestLimit = 1/pow(2, ((1-Lowest[i])*10)); //Non-Linear Opacity Multiplier
+			s.a = max(s.a, lowestLimit);
 			if(s.a >= highestOpacity)
 				highestOpacity = s.a;
 		}
-//			float lowestLimit = 1/pow(2, ((1-Lowest[i])*10));
-				//Non-Linear Opacity Multiplier
-//			if(s.a != 0.0)
-//				s.a = max(s.a, lowestLimit);
+			
 	}
 	s.a = highestOpacity;
 	//Contrast

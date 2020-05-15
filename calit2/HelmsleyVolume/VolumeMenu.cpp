@@ -100,6 +100,8 @@ void NewVolumeMenu::init()
 	_tentWindow->setPercentSize(osg::Vec3(1, 1, .75));
 	_tentWindow->setPercentPos(osg::Vec3(0, 0, -1));
 	_tentWindow->setVolume(_volume);
+	
+
 
 	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
 	list->setPercentPos(osg::Vec3(0, 0, -0.2));
@@ -334,6 +336,7 @@ void NewVolumeMenu::init()
 
 	
 	regionHeaderBknd->addChild(regionLabel);
+	regionHeaderBknd->setPercentSize(osg::Vec3(1.62,1.0,0.7));
 	
 
 
@@ -344,27 +347,71 @@ void NewVolumeMenu::init()
 	
 	_triangleList->setPercentPos(osg::Vec3(0.0, 0.0, -.25));
 	_triangleList->setPercentSize(osg::Vec3(1.0, 1.0, .75));
-	CallbackButton* triangleButton = new CallbackButton();
-	triangleButton->setCallback(this);
-	label = new UIText("Triangle 0", 50.0f, osgText::TextBase::LEFT_TOP); 
+
 	
-	label->setColor(osg::Vec4(triangleColors[0], 1.0));
-	triangleButton->addChild(label);
+	_triangleIndex = 0;
+	_triangleCallbacks[_triangleIndex] = new CallbackButton();
+	_triangleCallbacks[_triangleIndex]->setCallback(this);
+	_triangleCallbacks[_triangleIndex]->setPercentPos(osg::Vec3(0.20, 0.0, 0.0));
+
+	label = new UIText("  Triangle 0", 50.0f, osgText::TextBase::LEFT_TOP); 
+	label->setColor(osg::Vec4(triangleColors[_triangleIndex], 1.0));
+	label->setPercentPos(osg::Vec3(-.05, 0.0, 0.0));
+	_triangleCallbacks[_triangleIndex]->addChild(label);
+
+	VisibilityToggle* vT = new VisibilityToggle("");
+	vT->getChild(0)->setPercentSize(osg::Vec3(1, 1, 1));
+	vT->getChild(0)->setPercentPos(osg::Vec3(0, 0, 0));
+	vT->setCallback(this);
+	vT->setPercentPos(osg::Vec3(-0.20, 0.0, 0.1));
+	vT->setPercentSize(osg::Vec3(0.185, 0.0, 0.5));
+	vT->toggle();
+
+
+	ShaderQuad* sq = new ShaderQuad();
+	frag = HelmsleyVolume::loadShaderFile("shaderQuadPreview.frag");
+	vert = HelmsleyVolume::loadShaderFile("transferFunction.vert");
+	p = new osg::Program;
+	p->setName("trianglePreview");
+	p->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
+	p->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
+	sq->setProgram(p);
+	sq->setPercentSize(osg::Vec3(0.5, 1.0, 0.5));
+	sq->setPercentPos(osg::Vec3(.25, 0.0, 0.25));
+	sq->addUniform(_tentWindow->_tents->at(0)->_centerUniform);
+	sq->addUniform(_tentWindow->_tents->at(0)->_widthUniform);
+	sq->addUniform(_volume->_computeUniforms["ContrastBottom"]);
+	sq->addUniform(_volume->_computeUniforms["ContrastTop"]);
+	sq->addUniform(_volume->_computeUniforms["Brightness"]);
+
+	_triangleCallbacks[_triangleIndex]->addChild(vT);
+	_triangleCallbacks[_triangleIndex]->addChild(sq);
+
+
+	label->setAbsoluteSize(osg::Vec3(0.0f, 0.0f, 50.0));
 
 	_triangleList->addChild(_addTriangle);
-	_triangleList->addChild(triangleButton);
+	_triangleList->addChild(_triangleCallbacks[_triangleIndex]);
+	_triangleList->setMaxSize(label->getAbsoluteSize().z()*3);
+
 	regionHeaderBknd->addChild(_triangleList);
 	_maskMenu->addChild(regionHeaderBknd);
-	_triangleCount = 0;
 	
 	
+	osg::Quat rot;
+	rot.makeRotate(-0.707, 0, 0, 1);
+	_maskMenu->setRotation(rot);
+
+	_maskMenu->setPosition(osg::Vec3(1800, 1000, 1250) - volumePos);//ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Position", osg::Vec3(850, 500, 800)) - volumePos);
+	_maskMenu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Scale", osg::Vec3(500, 1, 800)));
 
 	if (_volume->hasMask())
 	{
 		
 		_colorMenu = new UIPopup();
 		_maskBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
-		_maskBknd->setPercentPos((osg::Vec3(1, 0, 0)));
+		_maskBknd->setPercentPos((osg::Vec3(0, 0, -.62)));
+		_maskBknd->setPercentSize((osg::Vec3(1.62, 1, 1)));
 		UIQuadElement* cpHeader = new UIQuadElement(UI_BACKGROUND_COLOR);
 		_cpHeader = cpHeader;
 		UIQuadElement* exitBox = new UIQuadElement(osg::Vec4(.85,.45,.45, 1));
@@ -400,12 +447,7 @@ void NewVolumeMenu::init()
 		exitBox->addChild(_exitCPCallback);
 
 
-		osg::Quat rot;
-		rot.makeRotate(-0.707, 0, 0, 1);
-		_maskMenu->setRotation(rot);
 		
-		_maskMenu->setPosition(osg::Vec3(1800, 1000, 1250) - volumePos);//ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Position", osg::Vec3(850, 500, 800)) - volumePos);
-		_maskMenu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Scale", osg::Vec3(500, 1, 800)));
 		
 		
 		_colorMenu->setRotation(rot);
@@ -506,21 +548,23 @@ void NewVolumeMenu::init()
 		_mainMaskList->addChild(_spleen);
 		
 
-		if (!_movable)
-		{
-			_maskMenu->setActive(true, true);
-		}
-		else {
-			_maskMenu->setActive(true, false);
-			_maskContainer = new SceneObject("MaskMenu", false, true, false, false, false);
-			
-			_so->addChild(_maskContainer);
-			_maskContainer->setShowBounds(true);
-			_maskContainer->addChild(_maskMenu->getRoot());
-			_maskMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
+		
+	}
+	if (!_movable)
+	{
+		_maskMenu->setActive(true, true);
+	}
+	else {
+		_maskMenu->setActive(true, false);
+		_maskContainer = new SceneObject("MaskMenu", false, true, false, false, false);
+
+		_so->addChild(_maskContainer);
+		_maskContainer->setShowBounds(true);
+		_maskContainer->addChild(_maskMenu->getRoot());
+		_maskMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
+		if(_volume->hasMask())
 			_colorMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
-			_maskContainer->dirtyBounds();
-		}
+		_maskContainer->dirtyBounds();
 	}
 }
 
@@ -631,19 +675,57 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	//Triangles
 	else if (item == _addTriangle)
 	{
-		CallbackButton* triangleButton = new CallbackButton();
-		triangleButton->setCallback(this);
-		_triangleCount++;
-		osg::Vec3 color = triangleColors[_triangleCount];
-		std::string name = "Triangle " + std::to_string(_triangleCount);
-		UIText* label = new UIText(name, 50.0f, osgText::TextBase::LEFT_TOP);
-		label->setColor(osg::Vec4(color, 1.0));
-		triangleButton->addChild(label);
+		if (_triangleIndex < 5) {
+			_triangleIndex++;
+			_triangleCallbacks[_triangleIndex] = new CallbackButton();
+			_triangleCallbacks[_triangleIndex]->setCallback(this);
+			_triangleCallbacks[_triangleIndex]->setPercentPos(osg::Vec3(0.20,0.0,0.0));
+			
+			osg::Vec3 color = triangleColors[_triangleIndex];
+			std::string name = "Triangle " + std::to_string(_triangleIndex);
+			UIText* label = new UIText(name, 50.0f, osgText::TextBase::LEFT_TOP);
+			label->setColor(osg::Vec4(color, 1.0));
+			VisibilityToggle* vT = new VisibilityToggle("");
+			vT->getChild(0)->setPercentSize(osg::Vec3(1, 1, 1));
+			vT->getChild(0)->setPercentPos(osg::Vec3(0, 0, 0));
+			vT->setCallback(this);
+			vT->setPercentPos(osg::Vec3(-0.20, 0.0, 0.1));
+			vT->setPercentSize(osg::Vec3(0.185, 0.0, 0.5));
+			vT->toggle();
+
+			Tent* tent = _tentWindow->addTent(_triangleIndex, color);
+
+			ShaderQuad* sq = new ShaderQuad();
+			std::string frag = HelmsleyVolume::loadShaderFile("shaderQuadPreview.frag");
+			std::string vert = HelmsleyVolume::loadShaderFile("transferFunction.vert");
+			osg::Program* p = new osg::Program;
+			p->setName("trianglePreview");
+			p->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
+			p->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
+			sq->setProgram(p);
+			sq->setPercentSize(osg::Vec3(0.5, 1.0, 0.5));
+			sq->setPercentPos(osg::Vec3(.25, 0.0, 0.25));
+			sq->addUniform(tent->_centerUniform);
+			sq->addUniform(tent->_widthUniform);
+
+			
+			sq->addUniform(_volume->_computeUniforms["ContrastBottom"]);
+			sq->addUniform(_volume->_computeUniforms["ContrastTop"]);
+			sq->addUniform(_volume->_computeUniforms["Brightness"]);
+
+
+
+			_triangleList->addChild(_triangleCallbacks[_triangleIndex]);
+
+
 		
-		_triangleList->addChild(triangleButton);
-		
-		
-		_tentWindow->addTent(_triangleCount, color);
+			_triangleCallbacks[_triangleIndex]->addChild(label);
+			_triangleCallbacks[_triangleIndex]->addChild(vT);
+			_triangleCallbacks[_triangleIndex]->addChild(sq);
+
+			
+			
+		}
 	}
 
 	else if (item == _contrastBottom)
@@ -695,6 +777,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 			_colorDisplay->setShaderDefine("COLOR_FUNCTION", transferFunction, osg::StateAttribute::ON);
 			_opacityDisplay->setShaderDefine("COLOR_FUNCTION", transferFunction, osg::StateAttribute::ON);
 			_opacityColorDisplay->setShaderDefine("COLOR_FUNCTION", transferFunction, osg::StateAttribute::ON);
+			upDatePreviewDefines(transferFunction);
 			((UIText*)_blacknwhite->getChild(0))->setColor(UI_ACTIVE_COLOR);
 			((UIText*)_rainbow->getChild(0))->setColor(UI_INACTIVE_COLOR);
 
@@ -707,6 +790,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 			_colorDisplay->setShaderDefine("COLOR_FUNCTION", transferFunction, osg::StateAttribute::ON);
 			_opacityDisplay->setShaderDefine("COLOR_FUNCTION", transferFunction, osg::StateAttribute::ON);
 			_opacityColorDisplay->setShaderDefine("COLOR_FUNCTION", transferFunction, osg::StateAttribute::ON);
+			upDatePreviewDefines(transferFunction);
 			((UIText*)_blacknwhite->getChild(0))->setColor(UI_INACTIVE_COLOR);
 			((UIText*)_rainbow->getChild(0))->setColor(UI_ACTIVE_COLOR);
 
@@ -714,16 +798,61 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		}
 		_volume->setDirtyAll();
 	}
-	else {
+
+	else if (checkTriangleCallbacks(item)) {
+	
+		return;
+	}
+	else if (checkTriangleVisCallbacks(item)) {
+		
+		return;
+	}
+	//dyNAMic triANgLe hAcK
+	/*else {
 		CallbackButton* triangleButton = (CallbackButton*)item;
 		UIText* text = (UIText*)(triangleButton->getChild(0));
 		std::string name = text->getText();
 		int index = name[name.length() - 1] - '0';
 		_tentWindow->setTent(index);
 	
+	}*/
+}
+
+void NewVolumeMenu::upDatePreviewDefines(std::string tf) {
+	for (int i = 0; i < _triangleIndex+1; i++) {
+		ShaderQuad* sq = (ShaderQuad*)_triangleCallbacks[i]->getChild(2);
+		sq->setShaderDefine("COLOR_FUNCTION", tf, osg::StateAttribute::ON);
 	}
 }
 
+bool NewVolumeMenu::checkTriangleCallbacks(UICallbackCaller* item) {
+	bool found = false;
+	int i = 0;
+	while (i <	_triangleIndex+1) {
+		if (item == _triangleCallbacks[i]) {
+			found = true;
+			std::cout << i << std::endl;
+			_tentWindow->setTent(i);
+			break;
+		}
+		i++;
+	}
+	return found;
+}
+
+bool NewVolumeMenu::checkTriangleVisCallbacks(UICallbackCaller* item) {
+	bool found = false;
+	int i = 0;
+	while (i < _triangleIndex + 1) {
+		if (item == (VisibilityToggle*)_triangleCallbacks[i]->getChild(1)) {
+			found = true;
+			_tentWindow->toggleTent(i);
+			break;
+		}
+		i++;
+	}
+	return found;
+}
 ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 {
 	_movable = movable;

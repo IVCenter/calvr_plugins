@@ -254,6 +254,7 @@ public:
 		height = 0.0;
 		bottomHeight = -1.0;
 		actualBottomHeight = -1.0;
+		savedHeight = -1.0;
 		_center = .7;
 		_color = color;
 		_geode = new osg::Geode();
@@ -270,12 +271,16 @@ public:
 		_centerUniform = new osg::Uniform("Center", 0.7f);
 		_widthUniform = new osg::Uniform("Width", 0.5f);
 		_colorUniform = new osg::Uniform("Color", UI_BLUE_COLOR);
+		_selectedUniform = new osg::Uniform("Selected", true);
 		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_absoluteRounding);
 		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_percentRounding);
 		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_centerUniform);
 		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_widthUniform);
 		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_colorUniform);
+		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_selectedUniform);
+
 		this->setTransparent(true);
+		
 		
 		setProgram(getOrLoadProgram());
 		addUniform("SV", osg::Vec2(1.0f, 1.0f));
@@ -286,11 +291,14 @@ public:
 	float changeHeight(float x);
 	float changeBottomHeight(float x);
 	void setCenter(float x) { _center = x; _centerUniform->set(x);}
+	void setSavedHeight(float x) { savedHeight = x - 1.0; }
+	void setSelected(bool selected) { _selectedUniform->set(selected); }
 	float getBottomWidth() {return rightPointX;}
 	float getTopWidth() {return topPointX;}
 	float getCenter() {return _center;}
 	float getHeight() {return height + 1.0;}
 	float getBottom() {return bottomHeight + 1.0;}
+	float getSavedHeight() {return savedHeight + 1.0;}
 	
 	virtual void createGeometry();
 	virtual void updateGeometry();
@@ -317,7 +325,12 @@ public:
 	virtual osg::Uniform* getUniform(std::string uniform);
 	virtual void setShaderDefine(std::string name, std::string definition, osg::StateAttribute::Values on);
 
-
+	osg::Uniform* _absoluteRounding;
+	osg::Uniform* _percentRounding;
+	osg::Uniform* _centerUniform;
+	osg::Uniform* _widthUniform;
+	osg::Uniform* _colorUniform;
+	osg::Uniform* _selectedUniform;
 
 
 protected:
@@ -330,16 +343,13 @@ protected:
 	static osg::Program* _triangleProg;
 
 	osg::Vec4 _color;
-	osg::Uniform* _absoluteRounding;
-	osg::Uniform* _percentRounding;
-	osg::Uniform* _centerUniform;
-	osg::Uniform* _widthUniform;
-	osg::Uniform* _colorUniform;
+	
 
 	float leftPointX;
 	float rightPointX;
 	float topPointX;
 	float height;
+	float savedHeight;
 	float actualTop; 
 	float actualBottomHeight; 
 	float bottomHeight;
@@ -439,11 +449,14 @@ public:
 	TentWindow();
 	virtual void uiCallback(UICallbackCaller* ui);
 	void setVolume(VolumeGroup* volume) { _volume = volume; }
-	void addTent(int index, osg::Vec3 color);
+	Tent* addTent(int index, osg::Vec3 color);
 	void setTent(int index);
+	void toggleTent(int index);
+
+	std::unique_ptr<std::vector<Tent*>> _tents;
 private:
 	cvr::UIQuadElement* _bknd;
-	std::unique_ptr<std::vector<Tent*>> _tents; 
+
 	
 	Tent* _tent;
 	int _tentIndex;
