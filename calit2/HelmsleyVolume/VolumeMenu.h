@@ -133,19 +133,25 @@ protected:
 	VisibilityToggle* _colon;
 	VisibilityToggle* _kidney;
 	VisibilityToggle* _bladder;
+	VisibilityToggle* _illeum;
 	VisibilityToggle* _spleen;
+	VisibilityToggle* _aorta;
 
 	cvr::UIQuadElement* _bodyColorButton;
 	cvr::UIQuadElement* _colonColorButton;
 	cvr::UIQuadElement* _kidneyColorButton;
 	cvr::UIQuadElement* _spleenColorButton;
 	cvr::UIQuadElement* _bladderColorButton;
+	cvr::UIQuadElement* _aortaColorButton;
+	cvr::UIQuadElement* _illeumColorButton;
 
 	CallbackButton* _bodyColCallback;
 	CallbackButton* _colonColCallback;
 	CallbackButton* _kidneyColCallback;
 	CallbackButton* _bladderColCallback;
 	CallbackButton* _spleenColCallback;
+	CallbackButton* _aortaColCallback;
+	CallbackButton* _illeumColCallback;
 	CallbackButton* _exitCPCallback;
 
 	ColorPicker* _cp;
@@ -164,6 +170,8 @@ protected:
 	osg::Vec3 _kidneyCol;
 	osg::Vec3 _bladderCol;
 	osg::Vec3 _spleenCol;
+	osg::Vec3 _aortaCol;
+	osg::Vec3 _illeumCol;
 
 	CallbackButton* _Triangle0;
 	CallbackButton* _Triangle1;

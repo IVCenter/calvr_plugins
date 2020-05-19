@@ -454,20 +454,20 @@ void NewVolumeMenu::init()
 		_colorMenu->setPosition(osg::Vec3(1800, 1000, 1250) - volumePos);//ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ColorMenu.Position", osg::Vec3(850, 500, 800)) - volumePos);
 		_colorMenu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Scale", osg::Vec3(500, 1, 800)));
 		
-		_mainMaskList = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
-		_mainMaskList->setPercentPos(osg::Vec3(0, 0, -0.2));
-		_mainMaskList->setPercentSize(osg::Vec3(.5, 1, 0.8));
-		_maskBknd->addChild(_mainMaskList);
-		
-		
-
 		UIText* label = new UIText("Organs", 50.0f, osgText::TextBase::CENTER_CENTER);
 		label->setPercentSize(osg::Vec3(1, 1, 0.2));
 		_maskBknd->addChild(label);
 
-		_organs = new VisibilityToggle("Body");
-		_organs->toggle();
-		_organs->setCallback(this);
+		_mainMaskList = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
+		_mainMaskList->setPercentPos(osg::Vec3(0, 0, -.2));
+		_mainMaskList->setPercentSize(osg::Vec3(1, 1, .8));
+		_maskBknd->addChild(_mainMaskList);
+		
+		
+
+	
+
+		
 		
 		
 		_bodyColCallback = new CallbackButton();
@@ -480,49 +480,63 @@ void NewVolumeMenu::init()
 		_bladderColCallback->setCallback(this);
 		_spleenColCallback = new CallbackButton();
 		_spleenColCallback->setCallback(this);
+		_aortaColCallback = new CallbackButton();
+		_aortaColCallback->setCallback(this);
+		_illeumColCallback = new CallbackButton();
+		_illeumColCallback->setCallback(this);
 		
 		
+		UIQuadElement* bodyColorbutton = new UIQuadElement(osg::Vec4(1, 0, 0, 0));
+		bodyColorbutton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
+		bodyColorbutton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
+		bodyColorbutton->setTransparent(true);
+
 		UIQuadElement* colonColorButton = new UIQuadElement(osg::Vec4(1, 0, 0, 1));
 		_colonColorButton = colonColorButton;
 		_colonCol = osg::Vec3(0, 1, 1);
 		colonColorButton->addChild(_colonColCallback);
-		colonColorButton->setAbsoluteSize(osg::Vec3(100, 0.1, 100));
-		colonColorButton->setPercentSize(osg::Vec3(0, 1, 0));
-		colonColorButton->setAbsolutePos(osg::Vec3(-100, -0.15f, -325));
-		colonColorButton->setPercentPos(osg::Vec3(1, 0, 0));
+		colonColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
+		colonColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
 
 		UIQuadElement* kidneyColorButton = new UIQuadElement(osg::Vec4(0, 1, 0, 1));
 		_kidneyColorButton = kidneyColorButton;
 		_kidneyCol = osg::Vec3(.33, 1, 1);
 		kidneyColorButton->addChild(_kidneyColCallback);
-		kidneyColorButton->setAbsoluteSize(osg::Vec3(100, 0.1, 100));
-		kidneyColorButton->setPercentSize(osg::Vec3(0, 1, 0));
-		kidneyColorButton->setAbsolutePos(osg::Vec3(-100, -0.15f, -450));
-		kidneyColorButton->setPercentPos(osg::Vec3(1, 0, 0));
+		kidneyColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
+		kidneyColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
 		
 		UIQuadElement* bladderColorButton = new UIQuadElement(osg::Vec4(0, 0, 1, 1));
 		_bladderColorButton = bladderColorButton;
 		_bladderCol = osg::Vec3(.66, 1, 1);
 		bladderColorButton->addChild(_bladderColCallback);
-		bladderColorButton->setAbsoluteSize(osg::Vec3(100, 0.1, 100));
-		bladderColorButton->setPercentSize(osg::Vec3(0, 1, 0));
-		bladderColorButton->setAbsolutePos(osg::Vec3(-100, -0.15f, -575));
-		bladderColorButton->setPercentPos(osg::Vec3(1, 0, 0));
+		bladderColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
+		bladderColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
 		
 		UIQuadElement* spleenColorButton = new UIQuadElement(osg::Vec4(0, 1, 1, 1));
 		_spleenColorButton = spleenColorButton;
 		_spleenCol = osg::Vec3(.5, 1, 1);
 		spleenColorButton->addChild(_spleenColCallback);
-		spleenColorButton->setAbsoluteSize(osg::Vec3(100, 0.1, 100));
-		spleenColorButton->setPercentSize(osg::Vec3(0, 1, 0));
-		spleenColorButton->setAbsolutePos(osg::Vec3(-100, -0.15f, -700));
-		spleenColorButton->setPercentPos(osg::Vec3(1, 0, 0));
+		spleenColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
+		spleenColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
+
+		UIQuadElement* aortaColorButton = new UIQuadElement(osg::Vec4(0, 1, 1, 1));
+		_aortaColorButton = aortaColorButton;
+		_aortaCol = osg::Vec3(.5, 1, 1);
+		aortaColorButton->addChild(_aortaColCallback);
+		aortaColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
+		aortaColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
+
+		UIQuadElement* illeumColorButton = new UIQuadElement(osg::Vec4(0, 1, 1, 1));
+		_illeumColorButton = illeumColorButton;
+		_illeumCol = osg::Vec3(.5, 1, 1);
+		illeumColorButton->addChild(_illeumColCallback);
+		illeumColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
+		illeumColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
 
 
-		_maskBknd->addChild(colonColorButton);
-		_maskBknd->addChild(kidneyColorButton);
-		_maskBknd->addChild(bladderColorButton);
-		_maskBknd->addChild(spleenColorButton);
+		_organs = new VisibilityToggle("Body");
+		_organs->toggle();
+		_organs->setCallback(this);
 
 		_colon = new VisibilityToggle("Colon");
 		_colon->setCallback(this);
@@ -536,16 +550,50 @@ void NewVolumeMenu::init()
 		_spleen = new VisibilityToggle("Spleen");
 		_spleen->setCallback(this);
 
-	
+		_illeum = new VisibilityToggle("Illeum");
+		_illeum->setCallback(this);
 
+		_aorta = new VisibilityToggle("Aorta");
+		_aorta->setCallback(this);
+
+		UIList* bodyList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+		bodyList->addChild(_organs);
+		bodyList->addChild(bodyColorbutton);
+		bodyList->setPercentPos(osg::Vec3(.02, 0.0, 0.0));
+		UIList* colonList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+		colonList->addChild(_colon);
+		colonList->addChild(_colonColorButton);
+		colonList->setPercentPos(osg::Vec3(.02, 0.0, 0.0));
+		UIList* kidneyList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+		kidneyList->addChild(_kidney);
+		kidneyList->addChild(kidneyColorButton);
+		kidneyList->setPercentPos(osg::Vec3(.02, 0.0, 0.0));
+		UIList* bladderList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+		bladderList->addChild(_bladder);
+		bladderList->addChild(_bladderColorButton);
+		bladderList->setPercentPos(osg::Vec3(.02, 0.0, 0.0));
+		UIList* spleenList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+		spleenList->addChild(_spleen);
+		spleenList->addChild(_spleenColorButton);
+		spleenList->setPercentPos(osg::Vec3(.02, 0.0, 0.0));
+		UIList* aortaList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+		aortaList->addChild(_aorta);
+		aortaList->addChild(_aortaColorButton);
+		aortaList->setPercentPos(osg::Vec3(.02, 0.0, 0.0));
+		UIList* illeumList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+		illeumList->addChild(_illeum);
+		illeumList->addChild(_illeumColorButton);
+		illeumList->setPercentPos(osg::Vec3(.02, 0.0, 0.0));
 	
 		
 
-		_mainMaskList->addChild(_organs);
-		_mainMaskList->addChild(_colon);
-		_mainMaskList->addChild(_kidney);
-		_mainMaskList->addChild(_bladder);
-		_mainMaskList->addChild(_spleen);
+		_mainMaskList->addChild(bodyList);
+		_mainMaskList->addChild(colonList);
+		_mainMaskList->addChild(kidneyList);
+		_mainMaskList->addChild(bladderList);
+		_mainMaskList->addChild(spleenList);
+		_mainMaskList->addChild(aortaList);
+		_mainMaskList->addChild(illeumList);
 		
 
 		
@@ -665,6 +713,18 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	{
 	
 		_volume->getCompute()->getOrCreateStateSet()->setDefine("SPLEEN", _spleen->isOn());
+		_volume->setDirtyAll();
+	}
+	else if (item == _illeum)
+	{
+	
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("ILLEUM", _illeum->isOn());
+		_volume->setDirtyAll();
+	}
+	else if (item == _aorta)
+	{
+	
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("AORTA", _aorta->isOn());
 		_volume->setDirtyAll();
 	}
 	else if (item == _density)
@@ -793,7 +853,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 			upDatePreviewDefines(transferFunction);
 			((UIText*)_blacknwhite->getChild(0))->setColor(UI_INACTIVE_COLOR);
 			((UIText*)_rainbow->getChild(0))->setColor(UI_ACTIVE_COLOR);
-
+			
 
 		}
 		_volume->setDirtyAll();
