@@ -15,6 +15,8 @@
 
 #include "VolumeGroup.h"
 
+#include "YamlParser.h"
+
 class VolumeMenu : public cvr::MenuCallback {
 public:
 	VolumeMenu(cvr::SceneObject* scene, VolumeGroup* volume) : _scene(scene), _volume(volume) {}
@@ -48,6 +50,8 @@ protected:
 	cvr::MenuCheckbox* organsOnly;
 
 	cvr::MenuList* colorFunction;
+
+	YamlParser yp;
 
 	
 };
@@ -102,6 +106,7 @@ public:
 	}
 
 	void colorButtonPress(cvr::UIQuadElement* button, organRGB organRGB, std::string organName, VisibilityToggle* organEye);
+	cvr::UIList* addPresets(cvr::UIQuadElement* bknd);
 
 protected:
 	cvr::SceneObject* _scene;
@@ -111,15 +116,18 @@ protected:
 	cvr::UIPopup* _menu = nullptr;
 	cvr::UIPopup* _maskMenu = nullptr;
 	cvr::UIPopup* _colorMenu = nullptr;
-
+	cvr::UIPopup* _presetPopup = nullptr;
 	cvr::UIQuadElement* _maskBknd;
+	cvr::UIQuadElement* _presetBknd;
 
 	CallbackButton* _horizontalflip;
 	CallbackButton* _verticalflip;
 	CallbackButton* _depthflip;
 	CallbackButton* _addTriangle;
-
+	CallbackButton* _addPreset;
+	CallbackButton* _loadPreset;
 	cvr::UIList* _mainMaskList;
+	cvr::UIList* _presetUIList;
 
 	CallbackSlider* _density;
 	CallbackSlider* _contrastBottom;
@@ -163,7 +171,8 @@ protected:
 	ShaderQuad* _opacityColorDisplay;
 	cvr::UIRadialButton* _blacknwhite;
 	cvr::UIRadialButton* _rainbow;
-
+	void useTransferFunction(int tfID);
+	void setContrastValues(float contrastLow, float contrastHigh, float brightness);
 
 	osg::Vec3 _bodyCol;
 	osg::Vec3 _colonCol;
@@ -181,12 +190,18 @@ protected:
 	CallbackButton* _Triangle5;
 
 	std::vector<CallbackButton*> _triangleCallbacks = {_Triangle0, _Triangle1, _Triangle2, _Triangle3, _Triangle4, _Triangle5};
+	std::vector<CallbackButton*> _presetCallbacks;
 
 	cvr::UIList* _triangleList;
 	int _triangleIndex;
 	osg::Vec3 triangleColors[6] = { UI_BLUE_COLOR, UI_RED_COLOR, UI_YELLOW_COLOR, UI_GREEN_COLOR, UI_PURPLE_COLOR, UI_PINK_COLOR};
 	bool checkTriangleCallbacks(UICallbackCaller* item);
 	bool checkTriangleVisCallbacks(UICallbackCaller* item);
+	bool checkPresetCallbacks(UICallbackCaller* item);
+	void usePreset(std::string filename);
+	void clearRegionPreviews();
+	Tent* addRegion();
+	void savePreset();
 	void NewVolumeMenu::upDatePreviewDefines(std::string tf);
 private:
 	ToolMenu* _toolMenu = nullptr;

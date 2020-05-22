@@ -692,11 +692,15 @@ Tent* TentWindow::addTent(int index, osg::Vec3 color) {
 void TentWindow::setTent(int index) {
 	std::cout << "index: " << index << std::endl;
 	std::cout << "size: " << _tents->size() << std::endl;
-	_tents->at(_tentIndex)->setSelected(false);
+	//_tents->at(_tentIndex)->setSelected(false);
+	std::cout << "line: " << 1 << std::endl;
 	_tentIndex = index;
+	std::cout << "line: " << 2 << std::endl;
 	_tents->at(_tentIndex)->setSelected(true);
+	std::cout << "line: " << 3 << std::endl;
 
 	_topWidth->setPercent(_tents->at(_tentIndex)->getTopWidth());
+	std::cout << "line: " << 4 << std::endl;
 	tVLabel->setText(std::to_string(_tents->at(_tentIndex)->getTopWidth()).substr(0, 4));
 	_bottomWidth->setPercent(_tents->at(_tentIndex)->getBottomWidth());
 	bVLabel->setText(std::to_string(_tents->at(_tentIndex)->getBottomWidth()).substr(0, 4));
@@ -720,6 +724,44 @@ void TentWindow::toggleTent(int index) {
 		_volume->_computeUniforms["OpacityMult"]->setElement(index, _tents->at(index)->getHeight());
 	}
 	_volume->setDirtyAll();
+}
+
+void TentWindow::clearTents() {
+	
+	while(!_tents->empty()) {
+		_bknd->removeChild(_tents->at(0));
+		_tents->erase(_tents->begin());
+	}
+	
+	 //memory leak?
+}
+
+void TentWindow::fillTentDetails(int _triangleIndex, float center, float bottomWidth, float topWidth, float height, float lowest) {
+	Tent* tent = _tents->at(_triangleIndex);
+	tent->setPercentPos(osg::Vec3(center, (-_triangleIndex), 0));
+	tent->setCenter(center);
+	tent->changeBottomVertices(bottomWidth);
+	tent->changeTopVertices(topWidth);
+	tent->changeHeight(height);
+	tent->changeBottomHeight(lowest);
+
+	_volume->_computeUniforms["OpacityWidth"]->setElement(_triangleIndex, tent->getBottomWidth());
+	_volume->_computeUniforms["OpacityTopWidth"]->setElement(_triangleIndex, tent->getTopWidth());
+	_volume->_computeUniforms["OpacityCenter"]->setElement(_triangleIndex, tent->getCenter());
+	_volume->_computeUniforms["OpacityMult"]->setElement(_triangleIndex, tent->getHeight());
+	_volume->_computeUniforms["Lowest"]->setElement(_triangleIndex, tent->getBottom());
+	_volume->setDirtyAll();
+	setTent(_triangleIndex);
+}
+
+std::vector<float> TentWindow::getPresetData(int index) {
+	std::vector<float> data;
+	data.push_back(_tents->at(index)->getCenter());
+	data.push_back(_tents->at(index)->getBottomWidth());
+	data.push_back(_tents->at(index)->getTopWidth());
+	data.push_back(_tents->at(index)->getHeight());
+	data.push_back(_tents->at(index)->getBottom());
+	return data;
 }
 void Tent::createGeometry()
 {
@@ -1228,7 +1270,7 @@ void ColorPicker::uiCallback(UICallbackCaller* ui)
 		_hue->setSV(sv);
 	}
 
-	//GA
+
 	*_saveColor = color;
 	osg::Vec3 solidCol = ColorPicker::returnColor();
 	

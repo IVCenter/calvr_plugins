@@ -452,7 +452,9 @@ public:
 	Tent* addTent(int index, osg::Vec3 color);
 	void setTent(int index);
 	void toggleTent(int index);
-
+	void clearTents();
+	void fillTentDetails(int _triangleIndex, float center, float bottomWidth, float topWidth, float height, float lowest);
+	std::vector<float> getPresetData(int index);
 	std::unique_ptr<std::vector<Tent*>> _tents;
 private:
 	cvr::UIQuadElement* _bknd;

@@ -1,0 +1,25 @@
+name: Preset1
+volume:
+    pos: 2
+    scale: [1.43,2.342,3.231]
+    rotation: [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]
+camera:
+    pos: [0,0,3]
+    up: [0,1,0]
+    center: [0,0,2]
+render mode: Raycasting
+transfer function:
+    contrast: [.0,1.0,0.5]
+    opacity: [[1.0, .0, 2.0, .0, 1.0],[1.0, .0, 2.0, .0, 1.0]]
+    color scheme: HSV
+cutting plane:
+    status: Off
+    freeze volume: Off
+    freeze plane: Off
+    percentage: .5
+    ppoint: [0,0,0]
+    pnorm: [0,0,-1]
+mask:
+    status: Off
+    value: [On,On,On,On,On]
+

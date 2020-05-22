@@ -32,6 +32,7 @@ public:
 		CHANGING
 	};
 
+	static std::vector<std::string> getPresets();
 protected:
 
 	void updateFileSelection();
