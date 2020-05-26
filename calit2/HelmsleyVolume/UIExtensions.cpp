@@ -430,6 +430,11 @@ osg::Program* ColorPickerHue::getOrLoadProgram()
 }
 #pragma endregion
 
+void TentWindow::setDialList(UIList* list) {
+	list->setPercentPos(osg::Vec3(0, 0, -.50));
+	list->setPercentSize(osg::Vec3(1, 1, .5));
+	list->setAbsoluteSpacing(1);
+}
 
 TentWindow::TentWindow() :
 	UIElement()
@@ -439,11 +444,9 @@ TentWindow::TentWindow() :
 	addChild(_bknd);
 	_bknd->setPercentSize(osg::Vec3(1, 1, 1.90));
 
-	_dial = new Dial(osg::Vec4(0.56,0.05,0.25,1.0));
-	//_bknd->addChild(_dial);
-	_dial->setPercentSize(osg::Vec3(.075, 30, 1));
-	_dial->setPercentPos(osg::Vec3(0.075, -6, 0));
-	_dial->setCallback(this);
+	initDials();
+	
+
 	_tents = std::make_unique<std::vector<Tent*>>();
 	_tent = new Tent(osg::Vec4(0.1, 0.1, 0.1, 1.0));
 	_tent->getGeode()->getOrCreateStateSet()->setRenderBinDetails(0, "RenderBin");
@@ -465,10 +468,7 @@ TentWindow::TentWindow() :
 	list->setAbsoluteSpacing(1);
 	_bknd->addChild(list);
 
-	UIList* list2 = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
-	list2->setPercentPos(osg::Vec3(0, 0, -.50));
-	list2->setPercentSize(osg::Vec3(1, 1, .5));
-	list2->setAbsoluteSpacing(1);
+	
 	
 	
 
@@ -478,21 +478,20 @@ TentWindow::TentWindow() :
 	_centerPos = new CallbackSlider();
 	_centerPos->setPercentSize(osg::Vec3(1.8, 1, 2));
 	_centerPos->setPercentPos(osg::Vec3(-.8, 0, 1));
-
 	_centerPos->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
 	_centerPos->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
 	_centerPos->handle->setPercentSize(osg::Vec3(0, 1, 1));
 	_centerPos->handle->setColor(osg::Vec4(0.82, .25, .11, 0.0));
 	_centerPos->filled->setColor(osg::Vec4(0.94, .44, .11, 0.16));
-	
 	_centerPos->setMax(1.0f);
 	_centerPos->setMin(0.001f);
 	_centerPos->setCallback(this);
 	_centerPos->setPercent(.7);
 
-	//_volume->_computeUniforms["OpacityCenter"]->setArray(_centerPosArray);
 
 	_bottomWidth = new CallbackSlider();
+	_bottomWidth->setPercentSize(osg::Vec3(1.8, 1, 2));
+	_bottomWidth->setPercentPos(osg::Vec3(-.8, 0, 1));
 	_bottomWidth->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
 	_bottomWidth->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
 	_bottomWidth->handle->setPercentSize(osg::Vec3(0, 1, 1));
@@ -503,9 +502,10 @@ TentWindow::TentWindow() :
 	_bottomWidth->setCallback(this);
 	_bottomWidth->setPercent(.25);
 
-	//_volume->_computeUniforms["OpacityWidth"]->setArray(_bottomWidthArray);
 
 	_topWidth = new CallbackSlider();
+	_topWidth->setPercentSize(osg::Vec3(1.8, 1, 2));
+	_topWidth->setPercentPos(osg::Vec3(-.8, 0, 1));
 	_topWidth->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
 	_topWidth->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
 	_topWidth->handle->setPercentSize(osg::Vec3(0, 1, 1));
@@ -516,9 +516,10 @@ TentWindow::TentWindow() :
 	_topWidth->setCallback(this);
 	_topWidth->setPercent(0.0);
 
-	//_volume->_computeUniforms["OpacityTopWidth"]->setArray(_topWidthArray);
 
 	_height = new CallbackSlider();
+	_height->setPercentSize(osg::Vec3(1.8, 1, 2));
+	_height->setPercentPos(osg::Vec3(-.8, 0, 1));
 	_height->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
 	_height->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
 	_height->handle->setPercentSize(osg::Vec3(0, 1, 1));
@@ -529,9 +530,10 @@ TentWindow::TentWindow() :
 	_height->setCallback(this);
 	_height->setPercent(1.0);
 
-	//_volume->_computeUniforms["OpacityMult"]->setArray(_heightArray);
 
 	_bottom = new CallbackSlider();
+	_bottom->setPercentSize(osg::Vec3(1.8, 1, 2));
+	_bottom->setPercentPos(osg::Vec3(-.8, 0, 1));
 	_bottom->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
 	_bottom->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
 	_bottom->handle->setPercentSize(osg::Vec3(0, 1, 1));
@@ -542,7 +544,6 @@ TentWindow::TentWindow() :
 	_bottom->setCallback(this);
 	_bottom->setPercent(0.001);
 
-	//_volume->_computeUniforms["Lowest"]->setArray(_bottomArray);
 
 	UIText* cLabel = new UIText("Center", 45.0f, osgText::TextBase::LEFT_CENTER);
 	cLabel->setColor(osg::Vec4(.66, .84, .96, 1.0));
@@ -581,9 +582,9 @@ TentWindow::TentWindow() :
 	lVLabel->setColor(osg::Vec4(0.90, .90, .90, 1.0));
 
 	
-	
-
-	list2->addChild(_dial);
+	UIList* list2 = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
+	setDialList(list2);	//makes new list and sets variables
+	list2->addChild(_dialCenter);
 	list2->addChild(_centerPos);
 	UIList* valueList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
 	valueList->addChild(cLabel);
@@ -591,29 +592,45 @@ TentWindow::TentWindow() :
 	list->addChild(valueList);
 	list->addChild(list2);
 
+	list2 = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
+	setDialList(list2);	
+	list2->addChild(_dialBW);
+	list2->addChild(_bottomWidth);
 	valueList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
 	valueList->addChild(bLabel);
 	valueList->addChild(bVLabel);
 	list->addChild(valueList);
-	list->addChild(_bottomWidth);
+	list->addChild(list2);
 
+	list2 = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
+	setDialList(list2);
+	list2->addChild(_dialTW);
+	list2->addChild(_topWidth);
 	valueList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
 	valueList->addChild(tLabel);
 	valueList->addChild(tVLabel);
 	list->addChild(valueList);
-	list->addChild(_topWidth);
+	list->addChild(list2);
 
+	list2 = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
+	setDialList(list2);
+	list2->addChild(_dialHeight);
+	list2->addChild(_height);
 	valueList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
 	valueList->addChild(hLabel);
 	valueList->addChild(hVLabel);
 	list->addChild(valueList);
-	list->addChild(_height);
+	list->addChild(list2);
 
+	list2 = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
+	setDialList(list2);
+	list2->addChild(_dialBottom);
+	list2->addChild(_bottom);
 	valueList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
 	valueList->addChild(lLabel);
 	valueList->addChild(lVLabel);
 	list->addChild(valueList);
-	list->addChild(_bottom);
+	list->addChild(list2);
 	
 	
 }
@@ -621,7 +638,6 @@ TentWindow::TentWindow() :
 void TentWindow::uiCallback(UICallbackCaller* ui) {
 	if (ui == _bottomWidth) {
 		_volume->_computeUniforms["OpacityWidth"]->setElement(_tentIndex, _bottomWidth->getAdjustedValue());
-		//_tent->addUniform("Width", _bottomWidth->getAdjustedValue()*2);
 		float width = _tents->at(_tentIndex)->changeBottomVertices(_bottomWidth->getAdjustedValue());
 		_volume->_computeUniforms["OpacityTopWidth"]->setElement(_tentIndex, width);
 		_topWidth->setPercent(width);
@@ -655,20 +671,105 @@ void TentWindow::uiCallback(UICallbackCaller* ui) {
 		_bottom->setPercent(height);
 		lVLabel->setText(std::to_string(_bottom->getAdjustedValue()).substr(0, 4));
 	}
-	if (ui == _dial)
+
+	if (ui == _dialCenter)
 	{
-		float dialDiff = _dial->getValue();
+		float dialDiff = _dialCenter->getValue();
 		if (dialDiff != 0.0) {
 			_centerPos->setPercent(std::min(_centerPos->getAdjustedValue() + (dialDiff/2.0f), 1.0f));
+
 			_tents->at(_tentIndex)->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), _tents->at(_tentIndex)->getPercentPos().y(), 0.0));
+			_tents->at(_tentIndex)->setCenter(_centerPos->getAdjustedValue());
 			_volume->_computeUniforms["OpacityCenter"]->setElement(_tentIndex, _centerPos->getAdjustedValue());
-			_tents->at(_tentIndex)->addUniform("Center", _centerPos->getAdjustedValue());
-			cVLabel->setText(std::to_string(_centerPos->getAdjustedValue()).substr(0,4));
+			cVLabel->setText(std::to_string(_centerPos->getAdjustedValue()).substr(0, 4));
 		}
 	}
+	if (ui == _dialHeight)
+	{
+		float dialDiff = _dialHeight->getValue();
+		if (dialDiff != 0.0) {
+			if (_tents->at(_tentIndex)->getSavedHeight() == 0.0) {
+				_height->setPercent(std::min(_height->getAdjustedValue() + (dialDiff / 2.0f), 1.0f));
+
+				float height = _tents->at(_tentIndex)->changeHeight(_height->getAdjustedValue());
+				_volume->_computeUniforms["OpacityMult"]->setElement(_tentIndex, _height->getAdjustedValue());
+				_volume->_computeUniforms["Lowest"]->setElement(_tentIndex, height);
+				_bottom->setPercent(height);
+				hVLabel->setText(std::to_string(_height->getAdjustedValue()).substr(0, 4));
+			}
+		}
+	}
+	if (ui == _dialBW)
+	{
+		float dialDiff = _dialBW->getValue();
+		if (dialDiff != 0.0) {
+			_bottomWidth->setPercent(std::min(_bottomWidth->getAdjustedValue() + (dialDiff / 2.0f), 1.0f));
+
+			_volume->_computeUniforms["OpacityWidth"]->setElement(_tentIndex, _bottomWidth->getAdjustedValue());
+			float width = _tents->at(_tentIndex)->changeBottomVertices(_bottomWidth->getAdjustedValue());
+			_volume->_computeUniforms["OpacityTopWidth"]->setElement(_tentIndex, width);
+			_topWidth->setPercent(width);
+			bVLabel->setText(std::to_string(_bottomWidth->getAdjustedValue()).substr(0, 4));
+		}
+	}
+	if (ui == _dialTW)
+	{
+		float dialDiff = _dialTW->getValue();
+		if (dialDiff != 0.0) {
+			_topWidth->setPercent(std::min(_topWidth->getAdjustedValue() + (dialDiff/2.0f), 1.0f));
+
+			float width = _tents->at(_tentIndex)->changeTopVertices(_topWidth->getAdjustedValue());
+			_volume->_computeUniforms["OpacityTopWidth"]->setElement(_tentIndex, width);
+			_topWidth->setPercent(width);
+			tVLabel->setText(std::to_string(_topWidth->getAdjustedValue()).substr(0, 4));
+		}
+	}
+	if (ui == _dialBottom)
+	{
+		float dialDiff = _dialBottom->getValue();
+		if (dialDiff != 0.0) {
+			_bottom->setPercent(std::min(_bottom->getAdjustedValue() + (dialDiff/2.0f), 1.0f));
+
+			float height = _tents->at(_tentIndex)->changeBottomHeight(_bottom->getAdjustedValue());
+			_volume->_computeUniforms["Lowest"]->setElement(_tentIndex, height);
+			_bottom->setPercent(height);
+			lVLabel->setText(std::to_string(_bottom->getAdjustedValue()).substr(0, 4));
+		}
+	}
+
+
 	_volume->setDirtyAll();
 	
 }
+
+void TentWindow::initDials() {
+	_dialCenter = new Dial(osg::Vec4(0.56, 0.05, 0.25, 1.0));
+	_dialCenter->setPercentSize(osg::Vec3(.075, 30, 1));
+	_dialCenter->setPercentPos(osg::Vec3(0.075, -6, 0));
+	_dialCenter->setCallback(this);
+
+	_dialBW = new Dial(osg::Vec4(0.56, 0.05, 0.25, 1.0));
+	_dialBW->setPercentSize(osg::Vec3(.075, 30, 1));
+	_dialBW->setPercentPos(osg::Vec3(0.075, -6, 0));
+	_dialBW->setCallback(this);
+
+	_dialBottom = new Dial(osg::Vec4(0.56, 0.05, 0.25, 1.0));
+	_dialBottom->setPercentSize(osg::Vec3(.075, 30, 1));
+	_dialBottom->setPercentPos(osg::Vec3(0.075, -6, 0));
+	_dialBottom->setCallback(this);
+
+	_dialHeight = new Dial(osg::Vec4(0.56, 0.05, 0.25, 1.0));
+	_dialHeight->setPercentSize(osg::Vec3(.075, 30, 1));
+	_dialHeight->setPercentPos(osg::Vec3(0.075, -6, 0));
+	_dialHeight->setCallback(this);
+
+	_dialTW = new Dial(osg::Vec4(0.56, 0.05, 0.25, 1.0));
+	_dialTW->setPercentSize(osg::Vec3(.075, 30, 1));
+	_dialTW->setPercentPos(osg::Vec3(0.075, -6, 0));
+	_dialTW->setCallback(this);
+}
+
+
 
 Tent* TentWindow::addTent(int index, osg::Vec3 color) {
 	Tent* tent = new Tent(osg::Vec4(0.1, 0.1, 0.1, 1.0));

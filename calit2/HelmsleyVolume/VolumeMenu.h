@@ -97,7 +97,7 @@ public:
 	virtual void uiCallback(UICallbackCaller * item);
 
 	cvr::SceneObject* getSceneObject() { return _so; }
-	std::string transferFunction;
+	std::string _transferFunction;
 
 	inline void setOrganColPicker(std::string organName)
 	{
@@ -129,7 +129,6 @@ protected:
 	cvr::UIList* _mainMaskList;
 	cvr::UIList* _presetUIList;
 
-	CallbackSlider* _density;
 	CallbackSlider* _contrastBottom;
 	CallbackSlider* _contrastTop;
 	CallbackSlider* _brightness;
@@ -165,7 +164,7 @@ protected:
 	ColorPicker* _cp;
 	cvr::UIQuadElement* _cpHeader;
 	cvr::UIText* _cpHLabel;
-	CallbackRadial* _transferFunction;
+	CallbackRadial* _transferFunctionRadial;
 	ShaderQuad* _colorDisplay;
 	ShaderQuad* _opacityDisplay;
 	ShaderQuad* _opacityColorDisplay;

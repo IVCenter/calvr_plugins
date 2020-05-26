@@ -111,7 +111,7 @@ vec4 Sample(ivec3 p) {
 		if(bitmask == 1)	
 		{
 				float adjusted = mix(.5,1.0,organRA.r);
-				s.rgb = vec3(0.854, 0.854, 0.807);
+				s.rgb = vec3(0.235, 0.003, 0.631);
 				s.rgb *= adjusted;
 				//alpha = s.a;
 				alpha = 1.00;
@@ -126,7 +126,7 @@ vec4 Sample(ivec3 p) {
 		if(bitmask == 2)
 		{
 			float adjusted = mix(.5,1.0,organRA.r);
-			s.rgb = vec3(0.117, 0.117, 0.109);
+			s.rgb = vec3(0, 0.278, 1);
 			s.rgb *= adjusted;
 			alpha = 1.00;
 //			#ifdef KIDNEY_RGB
@@ -142,7 +142,7 @@ vec4 Sample(ivec3 p) {
 			
 			//s.rgb = vec3(organRA.r, 0, 0);
 			float adjusted = mix(.7,1.0,organRA.r);
-			s.rgb = vec3(0.431, 0, 0.678);
+			s.rgb = vec3(0.450, 0.090, 1);
 			s.rgb *= adjusted;
 			alpha = 1.00;
 //			#ifdef COLON_RGB
@@ -157,7 +157,7 @@ vec4 Sample(ivec3 p) {
 		if(bitmask == 8)
 		{
 			float adjusted = mix(.5,1.0,organRA.r);
-			s.rgb = vec3(0.968, 0.968, 0.615);
+			s.rgb = vec3(1, 0.874, 0.109);
 			s.rgb *= adjusted;
 			alpha = 1.00;
 //			#ifdef SPLEEN_RGB
@@ -171,7 +171,7 @@ vec4 Sample(ivec3 p) {
 		if(bitmask == 16)
 		{
 			float adjusted = mix(.99,1.0,organRA.r);
-			s.rgb = vec3(0.937, 0.862, 0.949);
+			s.rgb = vec3(0.968, 0.780, 1);
 			s.rgb *= adjusted;
 			alpha = 1.00;
 //			#ifdef ILLEUM_RGB
@@ -185,7 +185,7 @@ vec4 Sample(ivec3 p) {
 		if(bitmask == 32)
 		{
 			float adjusted = mix(.5,1.0,organRA.r);
-			s.rgb = vec3(1, 0, 0);
+			s.rgb = vec3(0.984, 0.109, 0.372);
 			s.rgb *= adjusted;
 			alpha = 1.00;
 //			#ifdef AORTA_RGB

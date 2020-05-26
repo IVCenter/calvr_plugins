@@ -450,6 +450,8 @@ public:
 	virtual void uiCallback(UICallbackCaller* ui);
 	void setVolume(VolumeGroup* volume) { _volume = volume; }
 	Tent* addTent(int index, osg::Vec3 color);
+	void initDials();
+	void setDialList(cvr::UIList* list);
 	void setTent(int index);
 	void toggleTent(int index);
 	void clearTents();
@@ -463,7 +465,11 @@ private:
 	Tent* _tent;
 	int _tentIndex;
 
-	Dial* _dial;
+	Dial* _dialBW;
+	Dial* _dialCenter;
+	Dial* _dialTW;
+	Dial* _dialHeight;
+	Dial* _dialBottom;
 	CallbackSlider* _bottomWidth;
 	CallbackSlider* _centerPos;
 	CallbackSlider* _topWidth;
@@ -516,22 +522,19 @@ private:
 	ColorPickerSaturationValue* _sv;
 	cvr::UIQuadElement* _bknd;
 
-	cvr::UIQuadElement* _target;//ga
+	cvr::UIQuadElement* _target;
 	unsigned short int _currOrgan;
 	osg::Vec3 color;
 
-	//GA
+	
 	osg::Vec3 rgbColor;
-	osg::Vec3* _saveColor;//HSV
+	osg::Vec3* _saveColor;
 	std::string _transferFunction;
 	organRGB _organRGB;
 
 	VolumeGroup* _volume;
 	ShaderQuad* _colorDisplay;
 	CallbackRadial* _radial;
-
-
-	//GA
 
 };
 
