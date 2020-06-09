@@ -14,6 +14,7 @@
 #include <osg/MatrixTransform>
 
 #include "VolumeGroup.h"
+//#include "yaml-cpp/yaml.h"
 
 class CuttingPlane : public cvr::SceneObject
 {

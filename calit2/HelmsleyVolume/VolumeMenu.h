@@ -36,7 +36,7 @@ protected:
 
 	cvr::MenuRangeValueCompact* scale;
 	cvr::MenuRangeValueCompact* sampleDistance;
-
+	 
 	cvr::MenuRangeValueCompact* contrastBottom;
 	cvr::MenuRangeValueCompact* contrastTop;
 

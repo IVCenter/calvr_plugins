@@ -25,7 +25,7 @@ void VolumeMenu::init()
 	mb->setCallback(this);
 	_scene->addMenuItem(mb);
 
-	yp = YamlParser("C:/Users/g3aguirre/Documents/CAL/calvr_plugins/calit2/HelmsleyVolume/config.yml");
+	
 }
 
 void VolumeMenu::menuCallback(cvr::MenuItem * item)
@@ -41,9 +41,6 @@ void VolumeMenu::menuCallback(cvr::MenuItem * item)
 	else if (item == adaptiveQuality)
 	{
 		_volume->getDrawable()->getOrCreateStateSet()->setDefine("VR_ADAPTIVE_QUALITY", adaptiveQuality->getValue());
-	}
-	else if (item->getType() == MenuItemType::BUTTON && ((MenuButton*)item)->getText() == "Preset1") {
-		std::cout << yp.getInfile()["name"].as<std::string>() << std::endl;
 	}
 }
 
@@ -78,8 +75,9 @@ NewVolumeMenu::~NewVolumeMenu()
 void NewVolumeMenu::init()
 {
 #pragma region VolumeOptions
-
+	std::cout << "new vmenu start" << std::endl;
 	_so = new SceneObject("VolumeMenu", false, false, false, false, false);
+	std::cout << "scene object created" << std::endl;
 	PluginHelper::registerSceneObject(_so, "HelmsleyVolume");
 	_so->attachToScene();
 #ifdef WITH_OPENVR
@@ -100,10 +98,10 @@ void NewVolumeMenu::init()
 	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Scale", osg::Vec3(1000, 1, 600)));
 	
 
-	
+
 	ColorPicker* cp = new ColorPicker();
 	_cp = cp;
-
+	std::cout << "cp created" << std::endl;
 	 _tentWindow = new TentWindow();
 	_menu->addChild(_tentWindow);
 	_tentWindow->setPercentSize(osg::Vec3(1, 1, .75));
@@ -318,6 +316,7 @@ void NewVolumeMenu::init()
 
 	UIQuadElement* regionHeaderBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 	_presetBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
+	_presetBknd->setBorderSize(.01);
 	_presetPopup = new UIPopup;
 
 	UIText* regionLabel = new UIText("Regions", 50.0f, osgText::TextBase::CENTER_CENTER);
@@ -341,6 +340,7 @@ void NewVolumeMenu::init()
 	
 	regionHeaderBknd->addChild(regionLabel);
 	regionHeaderBknd->setPercentSize(osg::Vec3(1.62,1.0,0.7));
+	regionHeaderBknd->setBorderSize(.01);
 	
 	UIText* presetsLabel = new UIText("Presets", 50.0f, osgText::TextBase::CENTER_CENTER);
 	presetsLabel->setPercentSize(osg::Vec3(1, 0, 0.2));
@@ -348,10 +348,12 @@ void NewVolumeMenu::init()
 
 	
 	_presetBknd->setPercentSize(osg::Vec3(.3, 0.0, .3));
+	_presetBknd->setBorderSize(.01);
 	_presetBknd->addChild(presetsLabel);
 	_presetPopup->addChild(_presetBknd);
 
 	_presetUIList = addPresets(_presetBknd);
+	std::cout << "presets added" << std::endl;
 	if (_presetUIList == nullptr) {
 		_presetUIList = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
 		_presetUIList->setPercentPos(osg::Vec3(0, 0, -.25));
@@ -390,8 +392,8 @@ void NewVolumeMenu::init()
 	p->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
 	p->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
 	sq->setProgram(p);
-	sq->setPercentSize(osg::Vec3(0.5, 1.0, 0.5));
-	sq->setPercentPos(osg::Vec3(.25, 0.0, 0.25));
+	sq->setPercentSize(osg::Vec3(0.5, 1.0, 0.4));
+	sq->setPercentPos(osg::Vec3(.27, 0.0, 0.1));
 	sq->addUniform(_tentWindow->_tents->at(0)->_centerUniform);
 	sq->addUniform(_tentWindow->_tents->at(0)->_widthUniform);
 	sq->addUniform(_volume->_computeUniforms["ContrastBottom"]);
@@ -424,8 +426,9 @@ void NewVolumeMenu::init()
 	{
 		
 		_maskBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
-		_maskBknd->setPercentPos((osg::Vec3(0, 0, -.62)));
+		_maskBknd->setPercentPos((osg::Vec3(0, 0, -.7)));
 		_maskBknd->setPercentSize((osg::Vec3(1.62, 1, 1)));
+		_maskBknd->setBorderSize(.01);
 		_maskMenu->addChild(_maskBknd);
 		
 
@@ -492,12 +495,14 @@ void NewVolumeMenu::init()
 		bodyColorbutton->setTransparent(true);
 
 		_colonColorButton = new UIQuadElement(osg::Vec4(0.450, 0.090, 1, 1));
+		_colonColorButton->setBorderSize(.05);
 		_colonCol = osg::Vec3(0, 1, 1);
 		_colonColorButton->addChild(_colonColCallback);
 		_colonColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
 		_colonColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
 
 		_kidneyColorButton = new UIQuadElement(osg::Vec4(0, 0.278, 1, 1));
+		_kidneyColorButton->setBorderSize(.05);
 		_kidneyCol = osg::Vec3(.33, 1, 1);
 		_kidneyColorButton->addChild(_kidneyColCallback);
 		_kidneyColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
@@ -505,24 +510,28 @@ void NewVolumeMenu::init()
 		
 	
 		_bladderColorButton = new UIQuadElement(osg::Vec4(0.235, 0.003, 0.631, 1));
+		_bladderColorButton->setBorderSize(.05);
 		_bladderCol = osg::Vec3(.66, 1, 1);
 		_bladderColorButton->addChild(_bladderColCallback);
 		_bladderColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
 		_bladderColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
 		
 		_spleenColorButton = new UIQuadElement(osg::Vec4(1, 0.874, 0.109, 1));
+		_spleenColorButton->setBorderSize(.05);
 		_spleenCol = osg::Vec3(.5, 1, 1);
 		_spleenColorButton->addChild(_spleenColCallback);
 		_spleenColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
 		_spleenColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
 
 		_aortaColorButton = new UIQuadElement(osg::Vec4(1, 0, 0, 1));
+		_aortaColorButton->setBorderSize(.05);
 		_aortaCol = osg::Vec3(0.984, 0.109, 0.372);
 		_aortaColorButton->addChild(_aortaColCallback);
 		_aortaColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
 		_aortaColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
 
 		_illeumColorButton = new UIQuadElement(osg::Vec4(0.968, 0.780, 1, 1));
+		_illeumColorButton->setBorderSize(.05);
 		_illeumCol = osg::Vec3(.5, 1, 1);
 		_illeumColorButton->addChild(_illeumColCallback);
 		_illeumColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
@@ -885,14 +894,23 @@ bool NewVolumeMenu::checkPresetCallbacks(UICallbackCaller* item) {
 	return found;
 }
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 void NewVolumeMenu::usePreset(std::string filename) {
 	_tentWindow->clearTents();
 	clearRegionPreviews();
 	_triangleIndex = -1;
+	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.PresetsFolder", "C:/", false);
+	struct stat info;
+	if (stat(currPath.c_str(), &info) != 0)
+		std::cout<< "Can't access " << currPath <<std::endl ;
+	else if (info.st_mode & S_IFDIR) 
+		std::cout << "Directory found at " << currPath << std::endl;
+	else
+		std::cout << "Can't access " << currPath << std::endl;
 	
-	std::cout << "Reached" << std::endl;
-	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.BaseFolder", "C:/", false);
-	std::string presetPath = currPath + "\\Presets\\" + filename + ".yml";
+	std::string presetPath = currPath + "\\" + filename + ".yml";
 	YAML::Node config = YAML::LoadFile(presetPath);
 
 	//opacities
@@ -958,8 +976,8 @@ Tent* NewVolumeMenu::addRegion() {
 	p->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
 	p->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
 	sq->setProgram(p);
-	sq->setPercentSize(osg::Vec3(0.5, 1.0, 0.5));
-	sq->setPercentPos(osg::Vec3(.25, 0.0, 0.25));
+	sq->setPercentSize(osg::Vec3(0.5, 1.0, 0.4));
+	sq->setPercentPos(osg::Vec3(.27, 0.0, 0.1));
 	sq->addUniform(tent->_centerUniform);
 	sq->addUniform(tent->_widthUniform);
 
@@ -1040,8 +1058,8 @@ void NewVolumeMenu::savePreset(){
 	}
 	out << YAML::EndMap;
 
-	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.BaseFolder", "C:/", false);
-	std::string presetPath = currPath + "\\Presets\\" + name + ".yml";
+	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.PresetsFolder", "C:/", false);
+	std::string presetPath = currPath + "\\" + name + ".yml";
 	std::ofstream fout(presetPath);
 	fout << out.c_str();
 

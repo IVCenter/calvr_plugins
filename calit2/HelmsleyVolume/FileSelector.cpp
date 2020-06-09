@@ -156,8 +156,8 @@ void FileSelector::updateFileSelection()
 }
 
 std::vector<std::string> FileSelector::getPresets() {
-	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.BaseFolder", "C:/", false);
-	std::string presetPath = currPath + "\\Presets";
+	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.PresetsFolder", "C:/", false);
+	std::string presetPath = currPath;
 	DIR* dir = opendir(presetPath.c_str());
 	if (dir == nullptr) {
 		std::cout << "Directory not found in: " << presetPath << std::endl;
@@ -169,9 +169,6 @@ std::vector<std::string> FileSelector::getPresets() {
 			presetPaths.push_back(presetPath + "\\" + entry->d_name);
 		}
 		entry = readdir(dir);
-	}
-	if (presetPaths.empty()) {
-		std::cout << "No presets found in " << presetPath << std::endl;
 	}
 	return presetPaths;
 }

@@ -23,7 +23,7 @@ void VolumeDrawCallback::drawImplementation(osg::RenderInfo& renderInfo, const o
 {
 	if (!group)
 	{
-		std::cerr << "group does not exist!" << std::endl;
+		std::cerr << "group doesnt not xist!" << std::endl;
 		return;
 	}
 	const osg::GLExtensions* ext = renderInfo.getState()->get<osg::GLExtensions>();
@@ -96,9 +96,11 @@ void VolumeGroup::init()
 	std::string frag = HelmsleyVolume::loadShaderFile("volume.frag");
 	std::string compute = HelmsleyVolume::loadShaderFile("volume.glsl");
 
-	if (vert.empty() || frag.empty() || compute.empty())
+	//std::string minMaxFN = HelmsleyVolume::loadShaderFile("minMaxTest.glsl");
+
+	if (vert.empty() || frag.empty() || compute.empty())// || minMaxFN.empty())
 	{
-		std::cerr << "Helmsley Volume shaders not found!" << std::endl;
+		std::cerr << "Helsey Volume shaders not found!" << std::endl;
 		return;
 	}
 
@@ -109,7 +111,6 @@ void VolumeGroup::init()
 	_depthTexture->setTextureSize(2048, 2048);
 	_depthTexture->setResizeNonPowerOfTwoHint(false);
 	_depthTexture->setSourceFormat(GL_DEPTH_COMPONENT);
-	//_depthTexture->setSourceType(GL_UNSIGNED_INT);
 	_depthTexture->setInternalFormat(GL_DEPTH_COMPONENT32);
 	_depthTexture->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::NEAREST);
 	_depthTexture->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::NEAREST);
@@ -152,7 +153,6 @@ void VolumeGroup::init()
 	states->setMode(GL_BLEND, osg::StateAttribute::ON);
 	states->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
 	states->setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
-	//states->setRenderBinDetails(INT_MAX, "RenderBin");
 	states->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
 
 	osg::ref_ptr<osg::Geode> g = new osg::Geode();
@@ -196,30 +196,33 @@ void VolumeGroup::init()
 	osg::StateSet* computeStates = _computeNode->getOrCreateStateSet();
 	computeStates->setAttributeAndModes(_computeProgram.get(), osg::StateAttribute::ON);
 	computeStates->setRenderBinDetails(-1, "RenderBin");
-	//this->addChild(_computeNode);
+
+	/*_minMaxProgram = new osg::Program;
+	_minMaxProgram->setName("MinMax");
+	_minMaxProgram->addShader(new osg::Shader(osg::Shader::COMPUTE, minMaxFN));
+	_minMaxNode = new osg::DispatchCompute(8, 8, 8);
+	_minMaxNode->setDataVariance(osg::Object::DYNAMIC);
+	_minMaxNode->setDrawCallback(new MinMaxDrawCallback(this));
+	osg::StateSet* minMaxComputeStates = _minMaxNode->getOrCreateStateSet();
+	minMaxComputeStates->setAttributeAndModes(_minMaxProgram.get(), osg::StateAttribute::ON);
+	minMaxComputeStates->setRenderBinDetails(-1, "RenderBin");*/
 
 
-	//_computeUniforms["Exposure"] = new osg::Uniform("Exposure", 1.5f);
 
 	_computeUniforms["OpacityCenter"] = new osg::Uniform(osg::Uniform::FLOAT, "OpacityCenter", 10);
 	_computeUniforms["OpacityCenter"]->setElement(0, .7f);
-	//_computeUniforms["OpacityCenter"] = new osg::Uniform("OpacityCenter", .7f);
 
 	_computeUniforms["OpacityWidth"] = new osg::Uniform(osg::Uniform::FLOAT, "OpacityWidth", 10);
 	_computeUniforms["OpacityWidth"]->setElement(0, .25f);
-	//_computeUniforms["OpacityWidth"] = new osg::Uniform("OpacityWidth", .25f);
 
 	_computeUniforms["OpacityTopWidth"] = new osg::Uniform(osg::Uniform::FLOAT, "OpacityTopWidth", 10);
 	_computeUniforms["OpacityTopWidth"]->setElement(0, 0.0f);
-	//_computeUniforms["OpacityTopWidth"] = new osg::Uniform("OpacityTopWidth", 0.0f);
 
 	_computeUniforms["OpacityMult"] = new osg::Uniform(osg::Uniform::FLOAT, "OpacityMult", 10);;
 	_computeUniforms["OpacityMult"]->setElement(0, 1.0f);
-	//_computeUniforms["OpacityMult"] = new osg::Uniform("OpacityMult", 1.0f);
 
 	_computeUniforms["Lowest"] = new osg::Uniform(osg::Uniform::FLOAT, "Lowest", 10);
 	_computeUniforms["Lowest"]->setElement(0, 0.0f);
-	//_computeUniforms["Lowest"] = new osg::Uniform("Lowest", 0.0f);
 
 	_computeUniforms["TriangleCount"] = new osg::Uniform("TriangleCount", 1.0f);
 
@@ -259,7 +262,7 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	osg::ref_ptr<osg::Image> i = ImageLoader::LoadVolume(path, m);
 	if (!i)
 	{
-		std::cerr << "Volume could not be loaded" << std::endl;
+		std::cerr << "Volume couldt be loaded" << std::endl;
 		return;
 	}
 	//_transform->setScale(s);
@@ -287,13 +290,7 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	{
 		loadMask(maskpath, i);
 		_hasMask = true;
-		//_computeNode->getOrCreateStateSet()->setDefine("MASK", true);
-		//_computeNode->getOrCreateStateSet()->setDefine("COLON", true);
 	}
-
-	//std::cout << size.x() << ", " << size.y() << ", " << size.z() << std::endl;
-
-	//_pat->setScale(size);
 
 	_volume = new osg::Texture3D;
 	_volume->setImage(i);
@@ -310,6 +307,11 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	_computeNode->setComputeGroups((i->s() + 7) / 8, (i->t() + 7) / 8, (i->r() + 7) / 8);
 	_computeUniforms["TexelSize"]->set(osg::Vec3(1.0f / (float)i->s(), 1.0f / (float)i->t(), 1.0f / (float)i->r()));
 	
+	//_minMaxNode->setComputeGroups((i->s() + 7) / 8, (i->t() + 7) / 8, (i->r() + 7) / 8);
+	
+	std::cout << "transfer:: computeGroups set" << std::endl;
+
+
 	osg::StateSet* states = _computeNode->getOrCreateStateSet();
 	states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
 	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
@@ -321,6 +323,8 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	{
 		setDirty(cameras[i]->getGraphicsContext());
 	}
+	std::cout << "transfer:: cameras dirtied" << std::endl;
+
 
 	precompute();
 }
@@ -403,10 +407,21 @@ void VolumeGroup::precompute()
 		states->setTextureAttribute(0, _baked, osg::StateAttribute::ON);
 		states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
 
+		//data = new osg::UIntArray();
+		//data->resize(2, 3);
 
+		//_ssbo = new osg::ShaderStorageBufferObject();
+		//data->setBufferObject(_ssbo.get());
 
+		//_ssbb = new osg::ShaderStorageBufferBinding(0, data, 0, data->size() * sizeof(uint32_t));
+		//_ssbb->setUpdateCallback(new ShaderStorageBufferCallback());
 
+		std::cout << "transfer:: ssbos created (end of precompute)" << std::endl;
+		//_minMaxNode->getOrCreateStateSet()->setAttributeAndModes(_ssbb, osg::StateAttribute::ON);
+
+		//this->addChild(_minMaxNode);
 		this->addChild(_computeNode);
+		std::cout << "added compute node" << std::endl;
 	}
 }
 

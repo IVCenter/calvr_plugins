@@ -25,24 +25,24 @@
 using namespace std;
 
 struct Slice {
-    DicomImage* image;
-    double location;
+	DicomImage* image;
+	double location;
 
-    Slice(){};
-    Slice(const Slice &s) : image(s.image), location(s.location){};
-    Slice(DicomImage* img, double loc) : image(img), location(loc){};
-    ~Slice(){};
+	Slice() {};
+	Slice(const Slice& s) : image(s.image), location(s.location) {};
+	Slice(DicomImage* img, double loc) : image(img), location(loc) {};
+	~Slice() {};
 
-    inline friend bool operator < ( Slice const &a, Slice const &b){
-        return a.location < b.location;
-    }
+	inline friend bool operator < (Slice const& a, Slice const& b) {
+		return a.location < b.location;
+	}
 };
 
 osg::Image* CreateTexture(GLenum internalFormat, GLenum type, unsigned int width, unsigned int height, unsigned int depth)
 {
-    osg::Image* img = new osg::Image();
-    img->allocateImage(width, height, depth, internalFormat, type);
-    return img;
+	osg::Image* img = new osg::Image();
+	img->allocateImage(width, height, depth, internalFormat, type);
+	return img;
 }
 
 
@@ -75,9 +75,9 @@ string GetFullPath(const string& str) {
 	}
 	return string(buf);
 #else
-    char buf[PATH_MAX];
-    realpath(str.c_str(), buf);
-    return string(buf);
+	char buf[PATH_MAX];
+	realpath(str.c_str(), buf);
+	return string(buf);
 #endif
 }
 
@@ -89,7 +89,7 @@ osg::Image* LoadDicomImage(const string& path, osg::Vec3& size) {
 	// Get information
 	DcmFileFormat fileFormat;
 	assert(fileFormat.loadFile(path.c_str()).good());
-	DcmDataset * dataset = fileFormat.getDataset();
+	DcmDataset* dataset = fileFormat.getDataset();
 	double spacingX = 0.0;
 	double spacingY = 0.0;
 	double thickness = 0.0;
@@ -108,11 +108,11 @@ osg::Image* LoadDicomImage(const string& path, osg::Vec3& size) {
 	size.z() = .001f * (float)thickness;
 
 	osg::Image* img = CreateTexture(GL_RG, GL_UNSIGNED_SHORT, w, h, d);
-	uint16_t * data = (uint16_t*)img->data();
+	uint16_t* data = (uint16_t*)img->data();
 	memset(data, 0, w * h * d * sizeof(uint16_t) * 2);
 
 	image->setMinMaxWindow();
-	uint16_t * pixelData = (uint16_t*)image->getOutputData(16);
+	uint16_t* pixelData = (uint16_t*)image->getOutputData(16);
 	//memcpy(data + w * h*i, pixelData, w * h * sizeof(uint16_t));
 	unsigned int j = 0;
 	for (unsigned int x = 0; x < w; x++)
@@ -185,7 +185,7 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 		//delete fileFormat;
 	}
 
-	std::sort(images.data(), images.data()+images.size());
+	std::sort(images.data(), images.data() + images.size());
 
 	double prevX = images[0].location;
 	for (unsigned int i = 1; i < images.size(); ++i)
@@ -228,7 +228,7 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 
 
 	osg::Image* img = CreateTexture(GL_RG, GL_UNSIGNED_SHORT, w, h, d);
-	uint16_t * data = (uint16_t*)img->data();
+	uint16_t* data = (uint16_t*)img->data();
 	memset(data, 0, w * h * d * sizeof(uint16_t) * 2);
 
 	for (unsigned int i = 0; i < images.size(); i++) {
@@ -292,15 +292,15 @@ void GetFiles(const string& path, vector<string>& files) {
 	DIR* dirp = opendir(path.c_str());
 	struct dirent* dp;
 	while ((dp = readdir(dirp)) != NULL) {
-		const char * ext = strrchr(dp->d_name, '.');
-		if(!ext) continue;
+		const char* ext = strrchr(dp->d_name, '.');
+		if (!ext) continue;
 		if (strcmp(ext + 1, "dcm") != 0) continue;
 		// printf("Helmsley: Found dcm %s\n", dp->d_name);
 		files.push_back(path + "/" + dp->d_name);
 	}
 	std::sort(files.begin(), files.end());
 	closedir(dirp);
-	
+
 #endif
 }
 osg::Image* ImageLoader::LoadVolume(const string& path, osg::Matrix& transform) {

@@ -84,7 +84,7 @@ void ScreenshotTool::init()
 
 	//_display->tex
 	_display->getOrCreateStateSet()->setTextureAttributeAndModes(0, _texture, osg::StateAttribute::ON);
-	_display->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+	//_display->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
 
 	osg::Geode* displaygeode = new osg::Geode();
 	displaygeode->addChild(_display);

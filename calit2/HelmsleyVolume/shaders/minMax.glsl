@@ -5,7 +5,7 @@
 
 #version 460
 
-layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;	// 64 threads
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;	
 
 // input Dicom volume and mask
 layout(r16ui, binding = 0) uniform uimage3D volume;

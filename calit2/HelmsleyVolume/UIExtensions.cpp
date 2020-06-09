@@ -441,8 +441,9 @@ TentWindow::TentWindow() :
 {
 	_bknd = new UIQuadElement(osg::Vec4(.04, .25, .4, 0));
 	_bknd->setTransparent(false);
+	_bknd->setBorderSize(0.01);
 	addChild(_bknd);
-	_bknd->setPercentSize(osg::Vec3(1, 1, 1.90));
+	_bknd->setPercentSize(osg::Vec3(1, 1, 2.0));
 
 	initDials();
 	
@@ -463,7 +464,7 @@ TentWindow::TentWindow() :
 
 
 	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
-	list->setPercentPos(osg::Vec3(0, 0, -.3));
+	list->setPercentPos(osg::Vec3(0, 0, -.25));
 	list->setPercentSize(osg::Vec3(1, 1, .75));
 	list->setAbsoluteSpacing(1);
 	_bknd->addChild(list);
@@ -745,27 +746,27 @@ void TentWindow::uiCallback(UICallbackCaller* ui) {
 void TentWindow::initDials() {
 	_dialCenter = new Dial(osg::Vec4(0.56, 0.05, 0.25, 1.0));
 	_dialCenter->setPercentSize(osg::Vec3(.075, 30, 1));
-	_dialCenter->setPercentPos(osg::Vec3(0.075, -6, 0));
+	_dialCenter->setPercentPos(osg::Vec3(0.087, -6, 0));
 	_dialCenter->setCallback(this);
 
 	_dialBW = new Dial(osg::Vec4(0.56, 0.05, 0.25, 1.0));
 	_dialBW->setPercentSize(osg::Vec3(.075, 30, 1));
-	_dialBW->setPercentPos(osg::Vec3(0.075, -6, 0));
+	_dialBW->setPercentPos(osg::Vec3(0.087, -6, 0));
 	_dialBW->setCallback(this);
 
 	_dialBottom = new Dial(osg::Vec4(0.56, 0.05, 0.25, 1.0));
 	_dialBottom->setPercentSize(osg::Vec3(.075, 30, 1));
-	_dialBottom->setPercentPos(osg::Vec3(0.075, -6, 0));
+	_dialBottom->setPercentPos(osg::Vec3(0.087, -6, 0));
 	_dialBottom->setCallback(this);
 
 	_dialHeight = new Dial(osg::Vec4(0.56, 0.05, 0.25, 1.0));
 	_dialHeight->setPercentSize(osg::Vec3(.075, 30, 1));
-	_dialHeight->setPercentPos(osg::Vec3(0.075, -6, 0));
+	_dialHeight->setPercentPos(osg::Vec3(0.087, -6, 0));
 	_dialHeight->setCallback(this);
 
 	_dialTW = new Dial(osg::Vec4(0.56, 0.05, 0.25, 1.0));
 	_dialTW->setPercentSize(osg::Vec3(.075, 30, 1));
-	_dialTW->setPercentPos(osg::Vec3(0.075, -6, 0));
+	_dialTW->setPercentPos(osg::Vec3(0.087, -6, 0));
 	_dialTW->setCallback(this);
 }
 

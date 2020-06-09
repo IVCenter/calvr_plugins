@@ -12,6 +12,9 @@
 #include <osg/Texture3D>
 #include <osg/Texture2D>
 #include <osg/DispatchCompute>
+#include <osg/BufferIndexBinding>
+#include <osg/StateAttributeCallback>
+#include <osg/BufferObject>
 #include <osg/CullFace>
 #include <osg/PositionAttitudeTransform>
 #include <osg/FrameBufferObject>
@@ -80,8 +83,14 @@ protected:
 
 	osg::ref_ptr<osg::Program> _program;
 	osg::ref_ptr<osg::Program> _computeProgram;
+	osg::ref_ptr<osg::Program> _minMaxProgram;
+
+	osg::ref_ptr<osg::ShaderStorageBufferObject>  _ssbo;
+	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbb;
+	osg::ref_ptr<osg::UIntArray> data;
 
 	osg::ref_ptr<osg::DispatchCompute> _computeNode;
+	osg::ref_ptr<osg::DispatchCompute> _minMaxNode;
 	osg::ref_ptr<osg::ShapeDrawable> _cube;
 
 	osg::ref_ptr<osg::Texture3D> _volume;
@@ -121,7 +130,7 @@ public:
 		//compute needs to run once per graphics context
 		if (group->isDirty(renderInfo.getCurrentCamera()->getGraphicsContext()))
 		{
-
+			
 			//std::cout << "computing in gc " << renderInfo.getState()->getContextID() << "\n";
 			//std::cout << "0: " << renderInfo.getState()->getLastAppliedTextureAttribute(0, osg::StateAttribute::TEXTURE)->getName()
 			//          << ", 1: " << renderInfo.getState()->getLastAppliedTextureAttribute(1, osg::StateAttribute::TEXTURE)->getName() << std::endl;
@@ -132,6 +141,59 @@ public:
 		}
 	}
 };
+
+class MinMaxDrawCallback : public osg::Drawable::DrawCallback
+{
+public:
+
+	VolumeGroup* group;
+
+	
+	MinMaxDrawCallback(VolumeGroup* g) : group(g) {}
+
+	virtual void drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const
+	{
+		//compute needs to run once per graphics context
+		
+
+			//std::cout << "minmax changed" << "\n";
+			//std::cout << "0: " << renderInfo.getState()->getLastAppliedTextureAttribute(0, osg::StateAttribute::TEXTURE)->getName()
+			//          << ", 1: " << renderInfo.getState()->getLastAppliedTextureAttribute(1, osg::StateAttribute::TEXTURE)->getName() << std::endl;
+			
+			/*drawable->drawImplementation(renderInfo);
+			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);*/
+	
+			
+			
+		
+	}
+};
+
+class ShaderStorageBufferCallback : public osg::StateAttributeCallback
+{
+public:
+	void operator() (osg::StateAttribute* attr, osg::NodeVisitor* nv)
+	{
+		//if you need to process the data in your app-code , better leaving it on GPU and processing there, uploading per frame will make it slow
+		//std::cout << "ssbo callback reached" << std::endl;
+		osg::ShaderStorageBufferBinding* ssbb = static_cast<osg::ShaderStorageBufferBinding*>(attr);
+		osg::UIntArray* array = static_cast<osg::UIntArray*>(ssbb->getBufferData());
+
+		
+
+
+
+		int someValue = array->at(0);
+		int someValue2 = array->at(1);
+		//std::cout << "someValue now: " << someValue << std::endl;
+	//	std::cout << "someValue ow: " << someValue2 << std::endl;
+		//data transfer performance test
+		    array->dirty();
+	}
+};
+
+
+
 
 
 #endif

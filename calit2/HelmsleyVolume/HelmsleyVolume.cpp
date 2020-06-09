@@ -101,7 +101,7 @@ bool HelmsleyVolume::init()
 	
 #ifdef WITH_OPENVR
 	std::string modelDir = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.ModelDir");
-	std::cout << "Model Dir: " << modelDir << std::endl;
+	std::cout << "Modl Dir: " << modelDir << std::endl;
 
 
 	osgDB::Options* roomOptions = new osgDB::Options("noReverseFaces");
@@ -155,7 +155,7 @@ bool HelmsleyVolume::init()
 
 #endif
 	
-
+	osg::setNotifyLevel(osg::NotifySeverity::WARN);
 	_splashscreen = new UIPopup();
 	_splashscreen->setPosition(osg::Vec3(-800, 1000, 1850));
 	_splashscreen->getRootElement()->setAbsoluteSize(osg::Vec3(1600, 1, 900));
@@ -218,7 +218,7 @@ bool HelmsleyVolume::init()
 	fileSelector = new FileSelector();
 
 
-	osg::setNotifyLevel(osg::NOTICE);
+	//osg::setNotifyLevel(osg::NOTICE);
 	std::cerr << "HelmsleyVolume init" << std::endl;
 
 
@@ -567,22 +567,25 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 	so->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(0, 750, 500)));
 
 	VolumeGroup * g = new VolumeGroup();
+	std::cout << "volume group initiated" << std::endl;
 	g->loadVolume(path, maskpath);
 	so->addChild(g);
-
+	std::cout << "volume loaded and added" << std::endl;
 	MeasurementTool* tool = new MeasurementTool("Measurement Tool", false, false, false, false, false);
 	tool->deactivate();
 	so->addChild(tool);
 	_measurementTools.push_back(tool);
+	std::cout << "measurement tool added" << std::endl;
 
 
 	PluginHelper::registerSceneObject(so, "HelmsleyVolume");
+	std::cout << "registered scene object" << std::endl;
 	so->attachToScene();
 	so->setNavigationOn(false);
 	so->addMoveMenuItem();
 	so->addNavigationMenuItem();
-	//so->setShowBounds(true);
-
+	so->setShowBounds(true);
+	std::cout << "scene Object set up" << std::endl;
 	//Manually set the bounding box (since clipping plane / other things will be attached
 	//so->setBoundsCalcMode(SceneObject::MANUAL);
 	/*
@@ -598,9 +601,12 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 	VolumeMenu* menu = new VolumeMenu(so, g);
 	menu->init();
 
+	std::cout << "regular menu created" << std::endl;
+
 	NewVolumeMenu* newMenu = new NewVolumeMenu(so, g);
 	newMenu->init();
 
+	std::cout << "new menu initiated" << std::endl;
 	_sceneObjects.push_back(so);
 	_volumes.push_back(g);
 	_contextMenus.push_back(menu);
