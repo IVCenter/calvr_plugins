@@ -1,0 +1,287 @@
+# Blender MTL File: 'MIPCDVIZV3.blend'
+# Material Count: 26
+
+newmtl Beam
+Ns 225.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Bump C:\\Users\\AppData\\Local\\Temp\\tmpz0oyz00z
+map_Kd C:\\Users\\AppData\\Local\\Temp\\tmp6n0uicy5
+
+newmtl BlackPlastic
+Ns 323.999994
+Ka 1.000000 1.000000 1.000000
+Kd 0.013081 0.013081 0.013081
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl Carpet
+Ns 225.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.207916 0.207916 0.207916
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Bump C:\\Users\\g3aguirre\\Downloads\\carpet\\2K-fabric_17-normal.jpg
+
+newmtl Ceiling
+Ns 225.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Bump C:\\Users\\AppData\\Local\\Temp\\tmpzmcynrur
+map_Kd C:\\Users\\AppData\\Local\\Temp\\tmpjsnckn1m
+
+newmtl Chair
+Ns 81.000006
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:\\Users\\g3aguirre\\Downloads\\Scenes\\Unity Projects\\CrohnsProtoDemo\\Assets\\Realistic_Furniture_And_Interior_Props_Pack\\Texrures\\RFAIPP_Chair_6_albedo.png
+
+newmtl Coffee
+Ns 103.333113
+Ka 1.000000 1.000000 1.000000
+Kd 0.138608 0.085703 0.061770
+Ks 0.458678 0.458678 0.458678
+Ke 0.000000 0.000000 0.000000
+Ni 1.333300
+d 1.000000
+illum 2
+
+newmtl Curtain
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.010023 0.010023 0.010023
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl Dirt
+Ns 225.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Bump C:\\Users\\g3aguirre\\Downloads\\Textures\\dirt_07\\Ground_Dirt_007_normal.jpg
+map_Kd C:\\Users\\g3aguirre\\Downloads\\leaf\\2K-ground_dirt_3-diffuse.jpg
+map_Ns C:\\Users\\g3aguirre\\Downloads\\Textures\\dirt_07\\Ground_Dirt_007_roughness.jpg
+
+newmtl Fabric
+Ns 225.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Bump -bm 0.250000 C:\\Users\\AppData\\Local\\Temp\\tmpf0vlgx3r
+map_Kd C:\\Users\\AppData\\Local\\Temp\\tmpiqlzfyci
+
+newmtl Fabric.002
+Ns 225.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Bump -bm 0.250000 C:\\Users\\AppData\\Local\\Temp\\tmpf0vlgx3r
+map_Kd C:\\Users\\AppData\\Local\\Temp\\tmpiqlzfyci
+
+newmtl FinishedPlastic
+Ns 72.249984
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl Floor
+Ns 323.999994
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Bump C:\\Users\\g3aguirre\\Downloads\\marble floor\\POLAR WHITE - POLISHED - MARBLE-normal.jpg
+map_Kd C:\\Users\\g3aguirre\\Downloads\\marble floor\\POLAR WHITE - POLISHED - MARBLE-diffuse.jpg
+
+newmtl Glass
+Ns 807.756232
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl Leaf
+Ns 225.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.200000
+d 1.000000
+illum 2
+map_Kd C:\\Users\\g3aguirre\\Downloads\\leaftex0.jpg
+
+newmtl Light
+Ns 323.999994
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl Logo.001
+Ns 323.999994
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl Magazine
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:\\Users\\g3aguirre\\Downloads\\JohnsHopkins_US_WI14.jpg
+
+newmtl Magazine2
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:\\Users\\g3aguirre\\Downloads\\cover.jpg
+
+newmtl Metal
+Ns 351.562500
+Ka 1.000000 1.000000 1.000000
+Kd 0.384375 0.384375 0.384375
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+
+newmtl Rug
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.590040 0.563073 0.453897
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl Sensor
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.000000 0.000000 0.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl Wall
+Ns 24.999988
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Bump C:\\Users\\g3aguirre\\Downloads\\4K-Classic Parquet_1_normal.jpg
+map_Kd C:\\Users\\g3aguirre\\Downloads\\4K-Classic Parquet_1_baseColor.jpg
+
+newmtl WindowTrim
+Ns 512.404953
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl Wood
+Ns 225.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Bump -bm 0.500000 C:\\Users\\g3aguirre\\Downloads\\cabinet wood\\Wood_07_2K_Normal.png
+map_Kd C:\\Users\\g3aguirre\\Downloads\\cabinet wood\\Wood_07_2K_Base_Color.png
+map_Ns C:\\Users\\g3aguirre\\Downloads\\cabinet wood\\Wood_07_2K_Roughness.png
+
+newmtl Wood.001
+Ns 225.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Bump -bm 0.500000 C:\\Users\\AppData\\Local\\Temp\\tmpfen2g5nc
+map_Kd C:\\Users\\AppData\\Local\\Temp\\tmpbworcbd0
+
+newmtl lightBoi
+Ns 323.999994
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2

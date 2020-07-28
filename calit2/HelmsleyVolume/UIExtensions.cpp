@@ -9,7 +9,9 @@ using namespace cvr;
 osg::Program* ColorPickerSaturationValue::_svprogram = nullptr;
 osg::Program* ColorPickerHue::_hueprogram = nullptr;
 osg::Program* Tent::_triangleProg = nullptr;
+osg::Program* TriangleButton::_triangleButtonProg = nullptr;
 osg::Program* Dial::_dialProg = nullptr;
+osg::Program* ColorSlider::_colorSlideProg = nullptr;
 
 
 #pragma region VisibilityToggle
@@ -341,7 +343,6 @@ void ColorPickerSaturationValue::setHue(float hue)
 	if (_hue != hue)
 	{
 		_hue = hue;
-		std::cout << "Hue: " << osg::Uniform::getTypename(_shader->getUniform("Hue")->getType()) << std::endl;
 		_shader->getUniform("Hue")->set(_hue);
 	}
 }
@@ -404,7 +405,6 @@ void ColorPickerHue::setSV(osg::Vec2 SV)
 	if (_sv != SV)
 	{
 		_sv = SV;
-		std::cout << "SV: " << osg::Uniform::getTypename(_shader->getUniform("SV")->getType()) << std::endl;
 		_shader->getUniform("SV")->set(_sv);
 	}
 }
@@ -436,9 +436,10 @@ void TentWindow::setDialList(UIList* list) {
 	list->setAbsoluteSpacing(1);
 }
 
-TentWindow::TentWindow() :
+TentWindow::TentWindow(TentWindowOnly* tWOnly) :
 	UIElement()
 {
+	_tWOnly = tWOnly;
 	_bknd = new UIQuadElement(osg::Vec4(.04, .25, .4, 0));
 	_bknd->setTransparent(false);
 	_bknd->setBorderSize(0.01);
@@ -448,24 +449,19 @@ TentWindow::TentWindow() :
 	initDials();
 	
 
-	_tents = std::make_unique<std::vector<Tent*>>();
-	_tent = new Tent(osg::Vec4(0.1, 0.1, 0.1, 1.0));
-	_tent->getGeode()->getOrCreateStateSet()->setRenderBinDetails(0, "RenderBin");
-	_tent->setPercentPos(osg::Vec3(.7, -0.1, 0));
-	_tent->setPercentSize(osg::Vec3(1, 0.015, .25));
+	/*_tents = std::make_unique<std::vector<Tent*>>();*/
 
 	
 
-	_bknd->addChild(_tent);
 
-	_tents->push_back(_tent);
+	/*_tents->push_back(_tent);*/
 	_tentIndex = 0;
 
 
 
 	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
-	list->setPercentPos(osg::Vec3(0, 0, -.25));
-	list->setPercentSize(osg::Vec3(1, 1, .75));
+	list->setPercentPos(osg::Vec3(0, 0, 0));
+	list->setPercentSize(osg::Vec3(1, 1, 1));
 	list->setAbsoluteSpacing(1);
 	_bknd->addChild(list);
 
@@ -639,27 +635,27 @@ TentWindow::TentWindow() :
 void TentWindow::uiCallback(UICallbackCaller* ui) {
 	if (ui == _bottomWidth) {
 		_volume->_computeUniforms["OpacityWidth"]->setElement(_tentIndex, _bottomWidth->getAdjustedValue());
-		float width = _tents->at(_tentIndex)->changeBottomVertices(_bottomWidth->getAdjustedValue());
+		float width = _tWOnly->_tents->at(_tentIndex)->changeBottomVertices(_bottomWidth->getAdjustedValue());
 		_volume->_computeUniforms["OpacityTopWidth"]->setElement(_tentIndex, width);
 		_topWidth->setPercent(width);
 		bVLabel->setText(std::to_string(_bottomWidth->getAdjustedValue()).substr(0, 4));
 		
 	}
 	if (ui == _topWidth) {
-		float width = _tents->at(_tentIndex)->changeTopVertices(_topWidth->getAdjustedValue());
+		float width = _tWOnly->_tents->at(_tentIndex)->changeTopVertices(_topWidth->getAdjustedValue());
 		_volume->_computeUniforms["OpacityTopWidth"]->setElement(_tentIndex, width);
 		_topWidth->setPercent(width);
 		tVLabel->setText(std::to_string(_topWidth->getAdjustedValue()).substr(0, 4));
 	}
 	if (ui == _centerPos) {
-		 _tents->at(_tentIndex)->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), _tents->at(_tentIndex)->getPercentPos().y(), 0.0));
-		 _tents->at(_tentIndex)->setCenter(_centerPos->getAdjustedValue());
+		_tWOnly->_tents->at(_tentIndex)->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), _tWOnly->_tents->at(_tentIndex)->getPercentPos().y(), 0.0));
+		_tWOnly->_tents->at(_tentIndex)->setCenter(_centerPos->getAdjustedValue());
 		_volume->_computeUniforms["OpacityCenter"]->setElement(_tentIndex, _centerPos->getAdjustedValue());
 		cVLabel->setText(std::to_string(_centerPos->getAdjustedValue()).substr(0, 4));
 	}
 	if (ui == _height) {
-		if (_tents->at(_tentIndex)->getSavedHeight() == 0.0) {
-			float height = _tents->at(_tentIndex)->changeHeight(_height->getAdjustedValue());
+		if (_tWOnly->_tents->at(_tentIndex)->getSavedHeight() == 0.0) {
+			float height = _tWOnly->_tents->at(_tentIndex)->changeHeight(_height->getAdjustedValue());
 			_volume->_computeUniforms["OpacityMult"]->setElement(_tentIndex, _height->getAdjustedValue());
 			_volume->_computeUniforms["Lowest"]->setElement(_tentIndex, height);
 			_bottom->setPercent(height);
@@ -667,7 +663,7 @@ void TentWindow::uiCallback(UICallbackCaller* ui) {
 		}
 	}
 	if (ui == _bottom) {
-		float height = _tents->at(_tentIndex)->changeBottomHeight(_bottom->getAdjustedValue());
+		float height = _tWOnly->_tents->at(_tentIndex)->changeBottomHeight(_bottom->getAdjustedValue());
 		_volume->_computeUniforms["Lowest"]->setElement(_tentIndex, height);
 		_bottom->setPercent(height);
 		lVLabel->setText(std::to_string(_bottom->getAdjustedValue()).substr(0, 4));
@@ -679,8 +675,8 @@ void TentWindow::uiCallback(UICallbackCaller* ui) {
 		if (dialDiff != 0.0) {
 			_centerPos->setPercent(std::min(_centerPos->getAdjustedValue() + (dialDiff/2.0f), 1.0f));
 
-			_tents->at(_tentIndex)->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), _tents->at(_tentIndex)->getPercentPos().y(), 0.0));
-			_tents->at(_tentIndex)->setCenter(_centerPos->getAdjustedValue());
+			_tWOnly->_tents->at(_tentIndex)->setPercentPos(osg::Vec3(_centerPos->getAdjustedValue(), _tWOnly->_tents->at(_tentIndex)->getPercentPos().y(), 0.0));
+			_tWOnly->_tents->at(_tentIndex)->setCenter(_centerPos->getAdjustedValue());
 			_volume->_computeUniforms["OpacityCenter"]->setElement(_tentIndex, _centerPos->getAdjustedValue());
 			cVLabel->setText(std::to_string(_centerPos->getAdjustedValue()).substr(0, 4));
 		}
@@ -689,10 +685,10 @@ void TentWindow::uiCallback(UICallbackCaller* ui) {
 	{
 		float dialDiff = _dialHeight->getValue();
 		if (dialDiff != 0.0) {
-			if (_tents->at(_tentIndex)->getSavedHeight() == 0.0) {
+			if (_tWOnly->_tents->at(_tentIndex)->getSavedHeight() == 0.0) {
 				_height->setPercent(std::min(_height->getAdjustedValue() + (dialDiff / 2.0f), 1.0f));
 
-				float height = _tents->at(_tentIndex)->changeHeight(_height->getAdjustedValue());
+				float height = _tWOnly->_tents->at(_tentIndex)->changeHeight(_height->getAdjustedValue());
 				_volume->_computeUniforms["OpacityMult"]->setElement(_tentIndex, _height->getAdjustedValue());
 				_volume->_computeUniforms["Lowest"]->setElement(_tentIndex, height);
 				_bottom->setPercent(height);
@@ -707,7 +703,7 @@ void TentWindow::uiCallback(UICallbackCaller* ui) {
 			_bottomWidth->setPercent(std::min(_bottomWidth->getAdjustedValue() + (dialDiff / 2.0f), 1.0f));
 
 			_volume->_computeUniforms["OpacityWidth"]->setElement(_tentIndex, _bottomWidth->getAdjustedValue());
-			float width = _tents->at(_tentIndex)->changeBottomVertices(_bottomWidth->getAdjustedValue());
+			float width = _tWOnly->_tents->at(_tentIndex)->changeBottomVertices(_bottomWidth->getAdjustedValue());
 			_volume->_computeUniforms["OpacityTopWidth"]->setElement(_tentIndex, width);
 			_topWidth->setPercent(width);
 			bVLabel->setText(std::to_string(_bottomWidth->getAdjustedValue()).substr(0, 4));
@@ -719,7 +715,7 @@ void TentWindow::uiCallback(UICallbackCaller* ui) {
 		if (dialDiff != 0.0) {
 			_topWidth->setPercent(std::min(_topWidth->getAdjustedValue() + (dialDiff/2.0f), 1.0f));
 
-			float width = _tents->at(_tentIndex)->changeTopVertices(_topWidth->getAdjustedValue());
+			float width = _tWOnly->_tents->at(_tentIndex)->changeTopVertices(_topWidth->getAdjustedValue());
 			_volume->_computeUniforms["OpacityTopWidth"]->setElement(_tentIndex, width);
 			_topWidth->setPercent(width);
 			tVLabel->setText(std::to_string(_topWidth->getAdjustedValue()).substr(0, 4));
@@ -731,7 +727,7 @@ void TentWindow::uiCallback(UICallbackCaller* ui) {
 		if (dialDiff != 0.0) {
 			_bottom->setPercent(std::min(_bottom->getAdjustedValue() + (dialDiff/2.0f), 1.0f));
 
-			float height = _tents->at(_tentIndex)->changeBottomHeight(_bottom->getAdjustedValue());
+			float height = _tWOnly->_tents->at(_tentIndex)->changeBottomHeight(_bottom->getAdjustedValue());
 			_volume->_computeUniforms["Lowest"]->setElement(_tentIndex, height);
 			_bottom->setPercent(height);
 			lVLabel->setText(std::to_string(_bottom->getAdjustedValue()).substr(0, 4));
@@ -775,11 +771,11 @@ void TentWindow::initDials() {
 Tent* TentWindow::addTent(int index, osg::Vec3 color) {
 	Tent* tent = new Tent(osg::Vec4(0.1, 0.1, 0.1, 1.0));
 	tent->setPercentPos(osg::Vec3(.7, (-index), 0));
-	tent->setPercentSize(osg::Vec3(1, 0, .25));
+	tent->setPercentSize(osg::Vec3(1, 1, 1));
 	tent->setColor(color);
 	tent->getGeode()->getOrCreateStateSet()->setRenderBinDetails(index, "RenderBin");
-	_bknd->addChild(tent);
-	_tents->push_back(tent);
+	_tWOnly->_bknd->addChild(tent);
+	_tWOnly->_tents->push_back(tent);
 
 	_volume->_computeUniforms["OpacityWidth"]->setElement(index, tent->getBottomWidth());
 	_volume->_computeUniforms["OpacityTopWidth"]->setElement(index, tent->getTopWidth());
@@ -792,54 +788,47 @@ Tent* TentWindow::addTent(int index, osg::Vec3 color) {
 	return tent;
 }
 void TentWindow::setTent(int index) {
-	std::cout << "index: " << index << std::endl;
-	std::cout << "size: " << _tents->size() << std::endl;
-	//_tents->at(_tentIndex)->setSelected(false);
-	std::cout << "line: " << 1 << std::endl;
 	_tentIndex = index;
-	std::cout << "line: " << 2 << std::endl;
-	_tents->at(_tentIndex)->setSelected(true);
-	std::cout << "line: " << 3 << std::endl;
+	_tWOnly->_tents->at(_tentIndex)->setSelected(true);
 
-	_topWidth->setPercent(_tents->at(_tentIndex)->getTopWidth());
-	std::cout << "line: " << 4 << std::endl;
-	tVLabel->setText(std::to_string(_tents->at(_tentIndex)->getTopWidth()).substr(0, 4));
-	_bottomWidth->setPercent(_tents->at(_tentIndex)->getBottomWidth());
-	bVLabel->setText(std::to_string(_tents->at(_tentIndex)->getBottomWidth()).substr(0, 4));
-	_height->setPercent(_tents->at(_tentIndex)->getHeight());
-	hVLabel->setText(std::to_string(_tents->at(_tentIndex)->getHeight()).substr(0, 4));
-	_bottom->setPercent(_tents->at(_tentIndex)->getBottom());
-	lVLabel->setText(std::to_string(_tents->at(_tentIndex)->getBottom()).substr(0, 4));
-	_centerPos->setPercent(_tents->at(_tentIndex)->getCenter());
-	cVLabel->setText(std::to_string(_tents->at(_tentIndex)->getCenter()).substr(0, 4));
+	_topWidth->setPercent(_tWOnly->_tents->at(_tentIndex)->getTopWidth());
+	tVLabel->setText(std::to_string(_tWOnly->_tents->at(_tentIndex)->getTopWidth()).substr(0, 4));
+	_bottomWidth->setPercent(_tWOnly->_tents->at(_tentIndex)->getBottomWidth());
+	bVLabel->setText(std::to_string(_tWOnly->_tents->at(_tentIndex)->getBottomWidth()).substr(0, 4));
+	_height->setPercent(_tWOnly->_tents->at(_tentIndex)->getHeight());
+	hVLabel->setText(std::to_string(_tWOnly->_tents->at(_tentIndex)->getHeight()).substr(0, 4));
+	_bottom->setPercent(_tWOnly->_tents->at(_tentIndex)->getBottom());
+	lVLabel->setText(std::to_string(_tWOnly->_tents->at(_tentIndex)->getBottom()).substr(0, 4));
+	_centerPos->setPercent(_tWOnly->_tents->at(_tentIndex)->getCenter());
+	cVLabel->setText(std::to_string(_tWOnly->_tents->at(_tentIndex)->getCenter()).substr(0, 4));
 }
 
 void TentWindow::toggleTent(int index) {
-	if (_tents->at(index)->getSavedHeight() == 0.0f) {//If visible
-		_tents->at(index)->setSavedHeight(_tents->at(index)->getHeight());
-		_tents->at(index)->changeHeight(0.0f);
+	if (_tWOnly->_tents->at(index)->getSavedHeight() == 0.0f) {//If visible
+		_tWOnly->_tents->at(index)->setSavedHeight(_tWOnly->_tents->at(index)->getHeight());
+		_tWOnly->_tents->at(index)->changeHeight(0.0f);
 		_volume->_computeUniforms["OpacityMult"]->setElement(index, 0.0f);
 	}
 	else {
-		_tents->at(index)->changeHeight(_tents->at(index)->getSavedHeight());
-		_tents->at(index)->setSavedHeight(0.0f);
-		_volume->_computeUniforms["OpacityMult"]->setElement(index, _tents->at(index)->getHeight());
+		_tWOnly->_tents->at(index)->changeHeight(_tWOnly->_tents->at(index)->getSavedHeight());
+		_tWOnly->_tents->at(index)->setSavedHeight(0.0f);
+		_volume->_computeUniforms["OpacityMult"]->setElement(index, _tWOnly->_tents->at(index)->getHeight());
 	}
 	_volume->setDirtyAll();
 }
 
 void TentWindow::clearTents() {
 	
-	while(!_tents->empty()) {
-		_bknd->removeChild(_tents->at(0));
-		_tents->erase(_tents->begin());
+	while(!_tWOnly->_tents->empty()) {
+		_tWOnly->_bknd->removeChild(_tWOnly->_tents->at(0));
+		_tWOnly->_tents->erase(_tWOnly->_tents->begin());
 	}
 	
 	 //memory leak?
 }
 
 void TentWindow::fillTentDetails(int _triangleIndex, float center, float bottomWidth, float topWidth, float height, float lowest) {
-	Tent* tent = _tents->at(_triangleIndex);
+	Tent* tent = _tWOnly->_tents->at(_triangleIndex);
 	tent->setPercentPos(osg::Vec3(center, (-_triangleIndex), 0));
 	tent->setCenter(center);
 	tent->changeBottomVertices(bottomWidth);
@@ -857,6 +846,124 @@ void TentWindow::fillTentDetails(int _triangleIndex, float center, float bottomW
 }
 
 std::vector<float> TentWindow::getPresetData(int index) {
+	std::vector<float> data;
+	data.push_back(_tWOnly->_tents->at(index)->getCenter());
+	data.push_back(_tWOnly->_tents->at(index)->getBottomWidth());
+	data.push_back(_tWOnly->_tents->at(index)->getTopWidth());
+	data.push_back(_tWOnly->_tents->at(index)->getHeight());
+	data.push_back(_tWOnly->_tents->at(index)->getBottom());
+	return data;
+}
+
+TentWindowOnly::TentWindowOnly() :
+	UIElement()
+{
+	_bknd = new UIQuadElement(osg::Vec4(.04, .25, .4, 0));
+	_bknd->setTransparent(false);
+	_bknd->setBorderSize(0.01);
+	addChild(_bknd);
+	_bknd->setPercentSize(osg::Vec3(1, 1, 1.0));
+
+	
+
+	_tents = std::make_unique<std::vector<Tent*>>();
+	_tent = new Tent(osg::Vec4(0.1, 0.1, 0.1, 1.0));
+	_tent->getGeode()->getOrCreateStateSet()->setRenderBinDetails(0, "RenderBin");
+	_tent->setPercentPos(osg::Vec3(.7, -0.1, 0));
+	_tent->setPercentSize(osg::Vec3(1, 0.015, 1));
+
+	
+
+	_bknd->addChild(_tent);
+
+	_tents->push_back(_tent);
+	_tentIndex = 0;
+
+
+
+	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
+	list->setPercentPos(osg::Vec3(0, 0, -.25));
+	list->setPercentSize(osg::Vec3(1, 1, .75));
+	list->setAbsoluteSpacing(1);
+	_bknd->addChild(list);
+
+
+}
+
+void TentWindowOnly::setUpGradients() {
+
+}
+
+void TentWindowOnly::uiCallback(UICallbackCaller* ui) {
+
+}
+
+Tent* TentWindowOnly::addTent(int index, osg::Vec3 color) {
+	Tent* tent = new Tent(osg::Vec4(0.1, 0.1, 0.1, 1.0));
+	tent->setPercentPos(osg::Vec3(.7, (-index), 0));
+	tent->setPercentSize(osg::Vec3(1, 0, .25));
+	tent->setColor(color);
+	tent->getGeode()->getOrCreateStateSet()->setRenderBinDetails(index, "RenderBin");
+	_bknd->addChild(tent);
+	_tents->push_back(tent);
+
+	_volume->_computeUniforms["OpacityWidth"]->setElement(index, tent->getBottomWidth());
+	_volume->_computeUniforms["OpacityTopWidth"]->setElement(index, tent->getTopWidth());
+	_volume->_computeUniforms["OpacityCenter"]->setElement(index, tent->getCenter());
+	_volume->_computeUniforms["OpacityMult"]->setElement(index, tent->getHeight());
+	_volume->_computeUniforms["Lowest"]->setElement(index, tent->getBottom());
+	_volume->_computeUniforms["TriangleCount"]->set(float(index+1));
+	_volume->setDirtyAll();
+	this->setTent(index);
+	return tent;
+}
+void TentWindowOnly::setTent(int index) {
+	_tentIndex = index;
+	_tents->at(_tentIndex)->setSelected(true);
+}
+
+void TentWindowOnly::toggleTent(int index) {
+	if (_tents->at(index)->getSavedHeight() == 0.0f) {//If visible
+		_tents->at(index)->setSavedHeight(_tents->at(index)->getHeight());
+		_tents->at(index)->changeHeight(0.0f);
+		_volume->_computeUniforms["OpacityMult"]->setElement(index, 0.0f);
+	}
+	else {
+		_tents->at(index)->changeHeight(_tents->at(index)->getSavedHeight());
+		_tents->at(index)->setSavedHeight(0.0f);
+		_volume->_computeUniforms["OpacityMult"]->setElement(index, _tents->at(index)->getHeight());
+	}
+	_volume->setDirtyAll();
+}
+
+void TentWindowOnly::clearTents() {
+	
+	while(!_tents->empty()) {
+		_bknd->removeChild(_tents->at(0));
+		_tents->erase(_tents->begin());
+	}
+
+}
+
+void TentWindowOnly::fillTentDetails(int _triangleIndex, float center, float bottomWidth, float topWidth, float height, float lowest) {
+	Tent* tent = _tents->at(_triangleIndex);
+	tent->setPercentPos(osg::Vec3(center, (-_triangleIndex), 0));
+	tent->setCenter(center);
+	tent->changeBottomVertices(bottomWidth);
+	tent->changeTopVertices(topWidth);
+	tent->changeHeight(height);
+	tent->changeBottomHeight(lowest);
+
+	_volume->_computeUniforms["OpacityWidth"]->setElement(_triangleIndex, tent->getBottomWidth());
+	_volume->_computeUniforms["OpacityTopWidth"]->setElement(_triangleIndex, tent->getTopWidth());
+	_volume->_computeUniforms["OpacityCenter"]->setElement(_triangleIndex, tent->getCenter());
+	_volume->_computeUniforms["OpacityMult"]->setElement(_triangleIndex, tent->getHeight());
+	_volume->_computeUniforms["Lowest"]->setElement(_triangleIndex, tent->getBottom());
+	_volume->setDirtyAll();
+	setTent(_triangleIndex);
+}
+
+std::vector<float> TentWindowOnly::getPresetData(int index) {
 	std::vector<float> data;
 	data.push_back(_tents->at(index)->getCenter());
 	data.push_back(_tents->at(index)->getBottomWidth());
@@ -1028,8 +1135,9 @@ void Tent::setShaderDefine(std::string name, std::string define, osg::StateAttri
 
 osg::Program* Tent::getOrLoadProgram()
 {
-	if (!_triangleProg)
-	{
+	/*if (!_triangleProg)
+	{*/
+		
 		const std::string vert = HelmsleyVolume::loadShaderFile("transferFunction.vert");
 		const std::string frag = HelmsleyVolume::loadShaderFile("triangle.frag");
 		_triangleProg = new osg::Program;
@@ -1039,7 +1147,7 @@ osg::Program* Tent::getOrLoadProgram()
 		_triangleProg->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
 
 		
-	}
+	//}
 
 	return _triangleProg;
 }
@@ -1079,11 +1187,175 @@ float Tent::changeBottomHeight(float x) {
 	updateGeometry();
 	return bottomHeight + 1.0;
 }
+//////////////////////////////////////////////////////////////////////////////////
+void TriangleButton::createGeometry()
+{
+	_transform = new osg::MatrixTransform();
+	_intersect = new osg::Geode();
+
+	_group->addChild(_transform);
+	_transform->addChild(_intersect);
+	_transform->addChild(_geode);
+
+	_intersect->setNodeMask(cvr::INTERSECT_MASK);
+	_polyGeom = new osg::Geometry();
+
+
+	osg::Vec3 myCoords[] =
+	{
+		osg::Vec3(-0.5, 0.0, -0.5),
+		osg::Vec3(0.5, 0.0, 0.0),
+		osg::Vec3(-0.5, 0.0, 0.5)
+	};
+	int numCoords = sizeof(myCoords) / sizeof(osg::Vec3);
+
+	osg::Vec3Array* vertices = new osg::Vec3Array(numCoords, myCoords);
+
+
+	_polyGeom->setVertexArray(vertices);
+
+	_polyGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES, 0, numCoords));
+
+	_geode->addDrawable(_polyGeom);
+	_intersect->addDrawable(_polyGeom);
+	osg::Vec2Array* texcoords = new osg::Vec2Array;
+	texcoords->push_back(osg::Vec2(0, 0));
+	texcoords->push_back(osg::Vec2(0, 1));
+	texcoords->push_back(osg::Vec2(1, 1));
+	texcoords->push_back(osg::Vec2(1, 0));
 
 
 
 
+	_polyGeom->setVertexAttribArray(1, texcoords, osg::Array::BIND_PER_VERTEX);
 
+	updateGeometry();
+}
+
+void TriangleButton::updateGeometry()
+{
+
+	osg::Vec3 myCoords[] =
+	{
+		osg::Vec3(-0.5, 0.0, -0.5),
+		osg::Vec3(0.5, 0.0, 0.0),
+		osg::Vec3(-0.5, 0.0, 0.5)
+	};
+	int numCoords = sizeof(myCoords) / sizeof(osg::Vec3);
+
+	osg::Vec3Array* vertices = new osg::Vec3Array(numCoords, myCoords);
+	_polyGeom->setVertexArray(vertices);
+
+	/*osg::Vec2Array* texcoords = new osg::Vec2Array;
+	texcoords->push_back(osg::Vec2(0, 0));
+	texcoords->push_back(osg::Vec2(1, 0));
+	texcoords->push_back(osg::Vec2(0, 1));*/
+
+	//_polyGeom->setVertexAttribArray(1, texcoords, osg::Array::BIND_PER_VERTEX);
+
+	osg::Vec4Array* colors = new osg::Vec4Array;
+	colors->push_back(_color);
+	((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_OVERALL);
+	((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_OVERALL);
+
+	osg::Matrix mat = osg::Matrix();
+	mat.makeScale(_actualSize);
+	mat.postMultTranslate(_actualPos);
+	_transform->setMatrix(mat);
+
+
+	if (_program.valid())
+	{
+		_geode->getDrawable(0)->getOrCreateStateSet()->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
+
+	}
+}
+
+
+
+void TriangleButton::setColor(osg::Vec3 color)
+{
+
+	_colorUniform->set(color);
+
+}
+
+
+
+template <typename T>
+void TriangleButton::addUniform(std::string uniform, T initialvalue)
+{
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), initialvalue);
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
+void TriangleButton::addUniform(std::string uniform)
+{
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), 0.0f);
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
+void TriangleButton::addUniform(osg::Uniform* uniform)
+{
+	_uniforms[uniform->getName()] = uniform;
+	_geode->getOrCreateStateSet()->addUniform(uniform);
+}
+
+osg::Uniform* TriangleButton::getUniform(std::string uniform)
+{
+	return _uniforms[uniform];
+}
+
+void TriangleButton::setShaderDefine(std::string name, std::string define, osg::StateAttribute::Values on)
+{
+	_geode->getOrCreateStateSet()->setDefine(name, define, on);
+
+}
+
+osg::Program* TriangleButton::getOrLoadProgram()
+{
+	/*if (!_triangleProg)
+	{*/
+
+	const std::string vert = HelmsleyVolume::loadShaderFile("transferFunction.vert");
+	const std::string frag = HelmsleyVolume::loadShaderFile("triangleButton.frag");
+	_triangleButtonProg = new osg::Program;
+	_triangleButtonProg->setName("TriangleButton");
+
+	_triangleButtonProg->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
+	_triangleButtonProg->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
+
+
+	//}
+
+	return _triangleButtonProg;
+}
+
+bool TriangleButton::processEvent(cvr::InteractionEvent* event)
+{
+	TrackedButtonInteractionEvent* tie = event->asTrackedButtonEvent();
+	if (tie && tie->getButton() == 0)
+	{
+		if (tie->getInteraction() == BUTTON_DOWN)
+		{
+			
+			if (_callback)
+			{
+				_callback->uiCallback(this);
+			}
+			
+
+		}
+		/*else if (tie->getInteraction() == BUTTON_UP && holdingDial)
+		{
+			holdingDial = false;
+			_jump = false;
+		}*/
+	}
+	return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
 void Dial::createGeometry()
 {
 	_transform = new osg::MatrixTransform();
@@ -1166,7 +1438,6 @@ bool Dial::processEvent(cvr::InteractionEvent* event)
 			{
 				_callback->uiCallback(this);
 			}
-			std::cout << "button DOWN---------------------------------------------------" << std::endl;
 			_startMat = TrackingManager::instance()->getHandMat(tie->getHand());
 		
 		
@@ -1192,15 +1463,12 @@ bool Dial::processEvent(cvr::InteractionEvent* event)
 				if (diffF > 1.00 || diffF < -1.00) {
 					_jump = _jump ? false : true;
 					diffF = _value;
-					std::cout << "JUMPED----------------------------------------------------- " << std::endl;
 				}
-				std::cout << "jump bool val" << _jump << std::endl;
 				if (_jump) {
 					diffF = -diffF;
 				}
 					
 				_value = diffF;
-				std::cout << "diffF: ------------------------- " << diffF << std::endl;
 				_callback->uiCallback(this);
 
 			}
@@ -1211,7 +1479,6 @@ bool Dial::processEvent(cvr::InteractionEvent* event)
 		{
 			holdingDial = false;
 			_jump = false;
-			std::cout << "button UP-----------------------------------------------------" << std::endl;
 		}
 	}
 	return holdingDial;
@@ -1314,6 +1581,161 @@ void Dial::changeHeight(float x) {
 }
 
 
+void ColorSlider::createGeometry()
+{
+	_transform = new osg::MatrixTransform();
+	_intersect = new osg::Geode();
+
+	_group->addChild(_transform);
+	_transform->addChild(_intersect);
+	_transform->addChild(_geode);
+
+	_intersect->setNodeMask(cvr::INTERSECT_MASK);
+
+	_sphere = new osg::ShapeDrawable(new osg::Sphere());
+	
+	_geode->addDrawable(_sphere);
+	_intersect->addDrawable(_sphere);
+
+
+	updateGeometry();
+}
+
+void ColorSlider::updateGeometry()
+{
+
+	
+
+	osg::Vec4Array* colors = new osg::Vec4Array;
+	colors->push_back(_color);
+	((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_OVERALL);
+	
+	osg::Matrix mat = osg::Matrix();
+	mat.makeScale(_actualSize);
+	mat.postMultTranslate(_actualPos);
+	_transform->setMatrix(mat);
+
+
+}
+
+
+void ColorSlider::uiCallback(UICallbackCaller* ui) {
+}
+
+bool ColorSlider::processEvent(cvr::InteractionEvent* event)
+{
+	TrackedButtonInteractionEvent* tie = event->asTrackedButtonEvent();
+	if (tie && tie->getButton() == 0)
+	{
+		if (tie->getInteraction() == BUTTON_DOWN)
+		{
+			if (_callback)
+			{
+				_callback->uiCallback(this);
+			}
+
+		
+		
+		}/*
+		if (tie->getInteraction() == BUTTON_DRAG && holdingDial)
+		{
+			osg::Matrix currMat = TrackingManager::instance()->getHandMat(tie->getHand());
+			
+			osg::Quat startQuat = _startMat.getRotate();
+			osg::Quat currQuat = currMat.getRotate();
+			osg::Quat diff = currQuat * startQuat.osg::Quat::inverse();
+			float sYN = startQuat.y() + 1.0f;
+			float cYN = currQuat.y() + 1.0f;
+			float diffF = cYN - sYN;
+
+
+			if (_callback)
+			{
+				if (diffF < .0025 && diffF> -.0025) {
+					diffF = 0;
+				}
+			
+				if (diffF > 1.00 || diffF < -1.00) {
+					_jump = _jump ? false : true;
+					diffF = _value;
+				}
+				if (_jump) {
+					diffF = -diffF;
+				}
+					
+				_value = diffF;
+				_callback->uiCallback(this);
+
+			}
+			_startMat = currMat;
+			
+		}
+		else if (tie->getInteraction() == BUTTON_UP && holdingDial)
+		{
+			holdingDial = false;
+			_jump = false;
+		}*/
+	}
+	return false;
+}
+
+
+void ColorSlider::setColor(osg::Vec4 color)
+{
+	if (_color != color)
+	{
+		_color = color;
+		_dirty = true;
+		updateGeometry();
+	}
+}
+
+
+
+template <typename T>
+void ColorSlider::addUniform(std::string uniform, T initialvalue)
+{
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), initialvalue);
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
+void ColorSlider::addUniform(std::string uniform)
+{
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), 0.0f);
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
+void ColorSlider::addUniform(osg::Uniform* uniform)
+{
+	_uniforms[uniform->getName()] = uniform;
+	_geode->getOrCreateStateSet()->addUniform(uniform);
+}
+
+osg::Uniform* ColorSlider::getUniform(std::string uniform)
+{
+	return _uniforms[uniform];
+}
+
+void ColorSlider::setShaderDefine(std::string name, std::string define, osg::StateAttribute::Values on)
+{
+	_geode->getOrCreateStateSet()->setDefine(name, define, on);
+}
+
+osg::Program* ColorSlider::getOrLoadProgram()
+{
+	if (!_colorSlideProg)
+	{
+		const std::string vert = HelmsleyVolume::loadShaderFile("transferFunction.vert");
+		const std::string frag = HelmsleyVolume::loadShaderFile("triangle.frag");
+		_colorSlideProg = new osg::Program;
+		_colorSlideProg->setName("Triangle");
+		_colorSlideProg->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
+		_colorSlideProg->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
+	}
+
+	return _colorSlideProg;
+}
+
 #pragma region ColorPicker
 
 ColorPicker::ColorPicker() :
@@ -1372,36 +1794,64 @@ void ColorPicker::uiCallback(UICallbackCaller* ui)
 		_hue->setSV(sv);
 	}
 
-
-	*_saveColor = color;
-	osg::Vec3 solidCol = ColorPicker::returnColor();
+	//osg::Vec3 solidCol = ColorPicker::returnColor();
 	
-	_target->setColor(osg::Vec4(solidCol, 1.0));
-	_transferFunction = "vec3(" + std::to_string(solidCol.x()) + "," + std::to_string(solidCol.y()) + "," + std::to_string(solidCol.z()) + ");";
+	//_transferFunction = "vec3(" + std::to_string(solidCol.x()) + "," + std::to_string(solidCol.y()) + "," + std::to_string(solidCol.z()) + ");";
 
-	
-		switch (_organRGB) {
-			case BLADDER: 
-				_volume->getCompute()->getOrCreateStateSet()->setDefine("BLADDER_RGB", _transferFunction, osg::StateAttribute::ON);
-				break;
-			case COLON:
-				_volume->getCompute()->getOrCreateStateSet()->setDefine("COLON_RGB", _transferFunction, osg::StateAttribute::ON);
-				break;
-			case SPLEEN:
-				_volume->getCompute()->getOrCreateStateSet()->setDefine("SPLEEN_RGB", _transferFunction, osg::StateAttribute::ON);
-				break;
-			case KIDNEY:
-				_volume->getCompute()->getOrCreateStateSet()->setDefine("KIDNEY_RGB", _transferFunction, osg::StateAttribute::ON); 
-				break;
-		}
-
-		_volume->setDirtyAll();
 	
 }
 
 void ColorPicker::setButton(cvr::UIQuadElement* target) {
 	_target = target;
 
+}
+
+//From https://gist.github.com/fairlight1337/4935ae72bcbcc1ba5c72
+osg::Vec3 ColorPicker::RGBtoHSV(float r, float g, float b) {
+	float fH;
+	float fS;
+	float fV;
+	
+	float fR = r;
+	float fG = g;
+	float fB = b;
+
+
+	float fCMax = std::max(std::max(fR, fG), fB);
+	float fCMin = std::min(std::min(fR, fG), fB);
+	float fDelta = fCMax - fCMin;
+
+	if (fDelta > 0) {
+		if (fCMax == fR) {
+			fH = 60 * (fmod(((fG - fB) / fDelta), 6));
+		}
+		else if (fCMax == fG) {
+			fH = 60 * (((fB - fR) / fDelta) + 2);
+		}
+		else if (fCMax == fB) {
+			fH = 60 * (((fR - fG) / fDelta) + 4);
+		}
+
+		if (fCMax > 0) {
+			fS = fDelta / fCMax;
+		}
+		else {
+			fS = 0;
+		}
+
+		fV = fCMax;
+	}
+	else {
+		fH = 0;
+		fS = 0;
+		fV = fCMax;
+	}
+
+	if (fH < 0) {
+		fH = 360 + fH;
+	}
+	osg::Vec3 hsv = osg::Vec3(fH/360, fS, fV);
+	return hsv;
 }
 
 osg::Vec3 ColorPicker::returnColor() {
@@ -1451,4 +1901,39 @@ osg::Vec3 ColorPicker::returnColor() {
 	rgbColor.z() = (Bs + m);
 	return rgbColor;
 }
+
+Selection::Selection(std::string name, std::string icon) :
+	cvr::UIElement()
+{
+	using namespace cvr;
+
+	_name = name;
+	cvr::UIQuadElement* bknd = new cvr::UIQuadElement(UI_WHITE_COLOR);
+	addChild(bknd);
+	bknd->setPercentPos(osg::Vec3(0, -1, 0));
+	bknd->setBorderSize(0.01);
+	_uiText = new UIText(name, 50.0f, osgText::TextBase::CENTER_CENTER);
+	_uiText->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	bknd->addChild(_uiText);
+
+	_button = new CallbackButton();
+	_button->setCallback(this);
+	_button->setId(name);
+	bknd->addChild(_button);
+	
+}
+
+bool Selection::processEvent(cvr::InteractionEvent* event) {
+	return false;
+}
+
+void Selection::uiCallback(UICallbackCaller* ui) {
+	
+}
+
+void Selection::setName(std::string name) {
+	_name = name;
+	_uiText->setText(_name);
+}
+
 #pragma endregion

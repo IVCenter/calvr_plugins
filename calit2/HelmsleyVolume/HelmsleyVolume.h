@@ -60,14 +60,18 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		CuttingPlane* createCuttingPlane(unsigned int i = 0);
 		void removeCuttingPlane(unsigned int i);
 
-		void loadVolume(std::string path, std::string maskpath = "");
-		void removeVolume(int index);
+		void loadVolume(std::string path, std::string maskpath = "", bool onlyVolume = false);
+		void loadVolumeOnly(std::string path, std::string maskpath = "");
+		void removeVolume(int index, bool onlyVolume);
+		void removeVolumeOnly(int index);
 
 		void setTool(ToolState tool) { _tool = tool; }
 		void activateMeasurementTool(int volume);
 		void deactivateMeasurementTool(int volume);
-
+		std::vector<CuttingPlane*> getCuttingPlanes() { return _cuttingPlanes; }
 		std::vector<cvr::SceneObject*> getSceneObjects() { return _sceneObjects; }
+		FileSelector* getFileSelector() { return fileSelector; }
+
 
 		static std::string loadShaderFile(std::string filename);
 		static void resetOrientation();
@@ -108,9 +112,6 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 
 		cvr::SceneObject* _room;
 		cvr::SubMenu* _roomLocation;
-		cvr::MenuButton* _privateLoc;
-		cvr::MenuButton* _bedLoc;
-		cvr::MenuButton* _screenLoc;
 		cvr::MenuButton* _hideRoom;
 		unsigned int _nm;
 

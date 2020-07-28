@@ -18,6 +18,7 @@
 #endif
 
 #include <osgDB/ReadFile>
+#include <osg/Material>
 
 #include <ctime>
 #include <iostream>
@@ -70,8 +71,6 @@ void HelmsleyVolume::resetOrientation()
 		double xrot = atan2(2 * (rot.w() * rot.x() + rot.y() * rot.z()), 1 - 2 * (rot.x() * rot.x() + rot.y() * rot.y()));
 		osg::Matrix m;
 		m.makeTranslate(diff);
-		//std::cout << pos.x() << ", " << pos.y() << ", " << pos.z() << std::endl;
-		//m.preMultRotate(osg::Quat(xrot, osg::Vec3(0, 1, 0)));
 		device->setUniverseMatrix(m * curr);
 	}
 #endif
@@ -101,39 +100,55 @@ bool HelmsleyVolume::init()
 	
 #ifdef WITH_OPENVR
 	std::string modelDir = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.ModelDir");
-	std::cout << "Modl Dir: " << modelDir << std::endl;
 
 
 	osgDB::Options* roomOptions = new osgDB::Options("noReverseFaces");
-	osg::Node* room = osgDB::readNodeFile(modelDir + "testPrim.obj", roomOptions);
+	osg::Node* room = osgDB::readNodeFile(modelDir + "MIPCDVIZV3.obj", roomOptions);
+
+	/////////////////////////
+	osg::Texture2D* texture = new osg::Texture2D;
+
+	osg::ref_ptr<osg::Image> image(osgDB::readImageFile(modelDir + "MIPCDVIZV3.mtl"));
+	texture->setImage(image.get());
+
+	texture->setWrap(osg::Texture2D::WrapParameter::WRAP_S, osg::Texture2D::WrapMode::MIRROR);
+	texture->setWrap(osg::Texture2D::WrapParameter::WRAP_S, osg::Texture2D::WrapMode::MIRROR);
+	texture->setWrap(osg::Texture2D::WrapParameter::WRAP_S, osg::Texture2D::WrapMode::MIRROR);
+
+	texture->setFilter(osg::Texture2D::FilterParameter::MIN_FILTER, osg::Texture2D::FilterMode::LINEAR);
+	texture->setFilter(osg::Texture2D::FilterParameter::MAG_FILTER, osg::Texture2D::FilterMode::LINEAR);
+
+	osg::Material* material= new osg::Material();
+	osg::StateSet* statesetmat = room->getOrCreateStateSet();
+
+	statesetmat->setTextureAttribute(0, texture, osg::StateAttribute::OVERRIDE);
+	statesetmat->setTextureMode(0, GL_TEXTURE_2D, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+	statesetmat->setTextureMode(0, GL_TEXTURE_GEN_S, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+	statesetmat->setTextureMode(0, GL_TEXTURE_GEN_T, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+	statesetmat->setAttribute(material, osg::StateAttribute::OVERRIDE);
+
+	///////////////
+	
+	//osg::Node* room = osgDB::readNodeFile(modelDir + "testPrim.obj", roomOptions);
 
 	_room = new SceneObject("room", false, false, false, false, false);
 	_room->addChild(room);
 	_room->setScale(800);
-	_room->setPosition(osg::Vec3(12000, 0, 0));
+	_room->setPosition(osg::Vec3(-1030, 2125, 0));
+	osg::Quat rot;
+	rot.makeRotate(-osg::PI_2, 0, 0, 1);
+	_room->setRotation(rot);
 
 	PluginHelper::registerSceneObject(_room, "HelmsleyVolume");
 	_room->attachToScene();
 	_nm = _room->getChildNode(0)->getNodeMask();
 
-	_roomLocation = new SubMenu("Location", "Location");
+	_roomLocation = new SubMenu("Room Options", "Location");
 	_roomLocation->setCallback(this);
-
-
-	_privateLoc = new MenuButton("Private Lounge");
-	_privateLoc->setCallback(this);
-	_bedLoc = new MenuButton("Pediatric Room");
-	_bedLoc->setCallback(this);
-	_screenLoc = new MenuButton("Radiology Theater");
-	_screenLoc->setCallback(this);
 
 	_hideRoom = new MenuButton("Hide Room");
 	_hideRoom->setCallback(this);
 
-	
-	_roomLocation->addItem(_privateLoc);
-	_roomLocation->addItem(_bedLoc);
-	_roomLocation->addItem(_screenLoc);
 	_roomLocation->addItem(_hideRoom);
 
 	_vMenu->addItem(_roomLocation);
@@ -394,22 +409,7 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 {
 #ifdef WITH_OPENVR
-	if (menuItem == _privateLoc)
-	{
-		_room->setPosition(osg::Vec3(-800, 3500, -420));
-		_room->setRotation(osg::Quat(-osg::PI/2, osg::Vec3(0, 0, -1)));
-	}
-	else if (menuItem == _screenLoc)
-	{
-		_room->setPosition(osg::Vec3(-12000, -16000, 0));
-		_room->setRotation(osg::Quat(osg::PI * 3.0/4.0, osg::Vec3(0, 0, -1)));
-	}
-	else if (menuItem == _bedLoc)
-	{
-		_room->setPosition(osg::Vec3(-7500, 9000, 0));
-		_room->setRotation(osg::Quat(-osg::PI / 2, osg::Vec3(0, 0, -1)));
-	}
-	else if (menuItem == _hideRoom)
+	if (menuItem == _hideRoom)
 	{
 		if (_hideRoom->getText() == "Hide Room") {
 			_room->getChildNode(0)->setNodeMask(0);
@@ -425,12 +425,14 @@ void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 		osg::Vec3 pos = _room->getPosition();
 		pos.x() = _xpos->getValue();
 		_room->setPosition(pos);
+		std::cout << "X: " << pos.x() << std::endl;
 	}
 	else if (menuItem == _ypos)
 	{
 		osg::Vec3 pos = _room->getPosition();
 		pos.y() = _ypos->getValue();
 		_room->setPosition(pos);
+		std::cout << "Y: " << pos.y() << std::endl;
 	}
 	else if (menuItem == _zpos)
 	{
@@ -459,7 +461,7 @@ void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 		std::vector<MenuButton*>::iterator it = std::find(_removeButtons.begin(), _removeButtons.end(), (MenuButton*)menuItem);
 		int index = std::distance(_removeButtons.begin(), it);
 
-		removeVolume(index);
+		removeVolume(index, false);
 	}
 	else if (std::find(_removeClippingPlaneButtons.begin(), _removeClippingPlaneButtons.end(), (MenuButton*)menuItem) != _removeClippingPlaneButtons.end())
 	{
@@ -560,32 +562,28 @@ void HelmsleyVolume::removeCuttingPlane(unsigned int i)
 	}
 }
 
-void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
+void HelmsleyVolume::loadVolume(std::string path, std::string maskpath, bool onlyVolume)
 {
 	SceneObject * so;
 	so = new SceneObject("volume", false, true, true, true, false);
 	so->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(0, 750, 500)));
 
 	VolumeGroup * g = new VolumeGroup();
-	std::cout << "volume group initiated" << std::endl;
 	g->loadVolume(path, maskpath);
 	so->addChild(g);
-	std::cout << "volume loaded and added" << std::endl;
+	
 	MeasurementTool* tool = new MeasurementTool("Measurement Tool", false, false, false, false, false);
 	tool->deactivate();
 	so->addChild(tool);
 	_measurementTools.push_back(tool);
-	std::cout << "measurement tool added" << std::endl;
 
 
 	PluginHelper::registerSceneObject(so, "HelmsleyVolume");
-	std::cout << "registered scene object" << std::endl;
 	so->attachToScene();
 	so->setNavigationOn(false);
 	so->addMoveMenuItem();
 	so->addNavigationMenuItem();
 	so->setShowBounds(true);
-	std::cout << "scene Object set up" << std::endl;
 	//Manually set the bounding box (since clipping plane / other things will be attached
 	//so->setBoundsCalcMode(SceneObject::MANUAL);
 	/*
@@ -601,16 +599,18 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 	VolumeMenu* menu = new VolumeMenu(so, g);
 	menu->init();
 
-	std::cout << "regular menu created" << std::endl;
-
+	
 	NewVolumeMenu* newMenu = new NewVolumeMenu(so, g);
 	newMenu->init();
+	_worldMenus.push_back(newMenu);
+	
+	
+	
 
-	std::cout << "new menu initiated" << std::endl;
 	_sceneObjects.push_back(so);
 	_volumes.push_back(g);
 	_contextMenus.push_back(menu);
-	_worldMenus.push_back(newMenu);
+	
 
 
 	/*
@@ -621,7 +621,24 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath)
 	*/
 }
 
-void HelmsleyVolume::removeVolume(int index)
+void HelmsleyVolume::loadVolumeOnly(std::string path, std::string maskpath) {
+	VolumeGroup* g = new VolumeGroup();
+	g->loadVolume(path, maskpath);
+	_sceneObjects[0]->addChild(g);	//set new g on so
+	_sceneObjects[0]->attachToScene();
+
+	//VolumeMenu* menu = new VolumeMenu(so, g);	//set new g on menu
+	_contextMenus[0]->setVolume(g);
+
+	//NewVolumeMenu* newMenu = new NewVolumeMenu(so, g);// set new g on newmenu
+	_worldMenus[0]->setNewVolume(g);
+
+	_volumes.push_back(g);
+
+
+}
+
+void HelmsleyVolume::removeVolume(int index, bool onlyVolume)
 {
 	//Remove all cutting planes that are attached to the volume
 	std::vector<CuttingPlane*>::iterator it = _cuttingPlanes.begin();
@@ -638,7 +655,6 @@ void HelmsleyVolume::removeVolume(int index)
 		}
 
 	} 
-
 	_sceneObjects[index]->detachFromScene();
 	delete _contextMenus[index];
 	delete _worldMenus[index];
@@ -652,4 +668,26 @@ void HelmsleyVolume::removeVolume(int index)
 	_volumes.erase(_volumes.begin() + index);
 	_sceneObjects.erase(_sceneObjects.begin() + index);
 	//_removeButtons.erase(_removeButtons.begin() + index);
+}
+
+void HelmsleyVolume::removeVolumeOnly(int index) {
+	std::vector<CuttingPlane*>::iterator it = _cuttingPlanes.begin();
+	while (it != _cuttingPlanes.end()) {
+		if ((*it)->getVolume() == _volumes[index])
+		{
+			(*it)->detachFromScene();
+			delete((*it));
+			it = _cuttingPlanes.erase(it);
+		}
+		else
+		{
+			++it;
+		}
+
+	}
+	_sceneObjects[index]->detachFromScene();
+	_sceneObjects[index]->removeChild(_volumes[index]);
+	_volumes[index].release();
+	_volumes.erase(_volumes.begin() + index);
+	delete _volumes[index];
 }

@@ -10,6 +10,7 @@
 #define UI_GREEN_COLOR osg::Vec3(0.8, 1, 0.847)
 #define UI_PURPLE_COLOR osg::Vec3(0.847, 0.8, 1)
 #define UI_PINK_COLOR osg::Vec3(1, 0.8, 0.976)
+#define UI_WHITE_COLOR osg::Vec4(1, 1, 1, 1)
 
 #include <cvrMenu/NewUI/UIButton.h>
 #include <cvrMenu/NewUI/UICheckbox.h>
@@ -22,7 +23,7 @@
 
 #include <cvrConfig/ConfigManager.h>
 
-#include "VolumeGroup.h"//GA
+#include "VolumeGroup.h"
 
 class UICallback;
 class UICallbackCaller;
@@ -42,13 +43,15 @@ public:
 	UICallbackCaller() 
 	{
 		_callback = NULL;
+		_id = "";
 	}
 
 	void setCallback(UICallback* callback) { _callback = callback; }
-
+	void setId(std::string id) { _id = id; }
+	std::string getId() { return _id; }
 protected:
 	UICallback* _callback;
-
+	std::string _id;
 };
 
 class CallbackButton
@@ -239,8 +242,60 @@ private:
 	osg::Vec2 _sv;
 	float _hue;
 };
+///////////////////////////////////////////////////////////////////////////////
+class TriangleButton : public cvr::UIElement, public UICallbackCaller
+{
+public:
+	TriangleButton(osg::Vec4 color = osg::Vec4(UI_BLUE_COLOR, 1))
+		: UIElement()
+	{
+		_color = color;
+		_geode = new osg::Geode();
+		createGeometry();
+
+		_colorUniform = new osg::Uniform("Color", UI_BLUE_COLOR);
+		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_colorUniform);
+
+		setProgram(getOrLoadProgram());
+	}
+
+	virtual void createGeometry();
+	virtual void updateGeometry();
 
 
+
+
+	virtual void setColor(osg::Vec3 color);
+
+	virtual void setProgram(osg::Program* p) { _program = p; _dirty = true; }
+	virtual osg::Program* getProgram() { return _program; }
+	virtual osg::Geode* getGeode() { return _geode; }
+
+	template <typename T>
+	void addUniform(std::string uniform, T initialvalue);
+	void addUniform(std::string uniform);
+	virtual void addUniform(osg::Uniform* uniform);
+	virtual osg::Uniform* getUniform(std::string uniform);
+	virtual void setShaderDefine(std::string name, std::string definition, osg::StateAttribute::Values on);
+	virtual bool processEvent(cvr::InteractionEvent* event) override;
+	osg::Uniform* _colorUniform;
+
+protected:
+	osg::ref_ptr<osg::MatrixTransform> _transform;
+	osg::ref_ptr<osg::Geode> _geode;
+	osg::Geometry* _polyGeom;
+	osg::Vec3* _coords;
+
+	static osg::Program* getOrLoadProgram();
+	static osg::Program* _triangleButtonProg;
+
+	osg::Vec4 _color;
+
+	osg::ref_ptr<osg::Program> _program;
+	std::map<std::string, osg::Uniform*> _uniforms;
+
+};
+///////////////////////////////////////////////////////////////////////////////////////////
 class Tent : public cvr::UIElement
 {
 public:
@@ -442,11 +497,44 @@ protected:
 
 };
 
+
+
+class TentWindowOnly : public cvr::UIElement, public UICallback, public UICallbackCaller
+
+{
+public:
+	TentWindowOnly();
+	virtual void uiCallback(UICallbackCaller* ui);
+	void setVolume(VolumeGroup* volume) { _volume = volume; }
+	Tent* addTent(int index, osg::Vec3 color);
+	void setTent(int index);
+	void toggleTent(int index);
+	void clearTents();
+	void setUpGradients();
+	void fillTentDetails(int _triangleIndex, float center, float bottomWidth, float topWidth, float height, float lowest);
+	std::vector<float> getPresetData(int index);
+	std::unique_ptr<std::vector<Tent*>> _tents;
+	cvr::UIQuadElement* _bknd;
+private:
+	
+
+	ShaderQuad* _colorGrad;
+	ShaderQuad* _opacGrad;
+	ShaderQuad* _opacColorGrad;
+
+	Tent* _tent;
+	int _tentIndex;
+
+	VolumeGroup* _volume;
+
+};
+
+
 class TentWindow : public cvr::UIElement, public UICallback, public UICallbackCaller
 
 {
 public:
-	TentWindow();
+	TentWindow(TentWindowOnly* tWOnly);
 	virtual void uiCallback(UICallbackCaller* ui);
 	void setVolume(VolumeGroup* volume) { _volume = volume; }
 	Tent* addTent(int index, osg::Vec3 color);
@@ -457,12 +545,14 @@ public:
 	void clearTents();
 	void fillTentDetails(int _triangleIndex, float center, float bottomWidth, float topWidth, float height, float lowest);
 	std::vector<float> getPresetData(int index);
-	std::unique_ptr<std::vector<Tent*>> _tents;
+	//std::unique_ptr<std::vector<Tent*>> _tents;
+	TentWindowOnly* _tWOnly;
 private:
 	cvr::UIQuadElement* _bknd;
 
 	
 	Tent* _tent;
+	//TentWindowOnly* _tWOnly;
 	int _tentIndex;
 
 	Dial* _dialBW;
@@ -502,9 +592,12 @@ public:
 	void setFunction(std::string transferFunction) { _transferFunction = transferFunction; }
 	void setRadial(CallbackRadial* radial) { _radial = radial; }
 	void setOrganRgb(organRGB organName) { _organRGB = organName;  }
+	osg::Vec3 RGBtoHSV(float fR, float fG, float fB);
 	void setSaveColor(osg::Vec3* currOrgan) { _saveColor = currOrgan; }
+
 	void setCPColor(osg::Vec3 savedColor) { 
-		color = savedColor;
+		color = RGBtoHSV(savedColor.x(), savedColor.y(), savedColor.z());
+
 		_hue->setHue(color.x());
 		_hue->setSV(osg::Vec2(color.y(), color.z()));
 		_sv->setSV(osg::Vec2(color.y(), color.z()));
@@ -539,7 +632,82 @@ private:
 };
 
 
+class ColorSlider : public cvr::UIElement, public UICallback, public UICallbackCaller
+{
+public:
+	ColorSlider(ColorPicker* cp, osg::Vec4 color = osg::Vec4(1, 1, 1, 1))
+		: UIElement()
+	{
+		_color = color;
+		_geode = new osg::Geode();
+		createGeometry();
 
 
+		setProgram(getOrLoadProgram());
+
+	}
+	virtual void createGeometry();
+	virtual void updateGeometry();
+
+	virtual bool processEvent(cvr::InteractionEvent* event) override;
+
+	virtual void setColor(osg::Vec4 color);
+	osg::Vec4 getColor() { return _color; }
+	virtual void uiCallback(UICallbackCaller* ui);
+
+
+
+	virtual void setProgram(osg::Program* p) { _program = p; _dirty = true; }
+	virtual osg::Program* getProgram() { return _program; }
+	virtual osg::Geode* getGeode() { return _geode; }
+
+	template <typename T>
+	void addUniform(std::string uniform, T initialvalue);
+	void addUniform(std::string uniform);
+	virtual void addUniform(osg::Uniform* uniform);
+	virtual osg::Uniform* getUniform(std::string uniform);
+	virtual void setShaderDefine(std::string name, std::string definition, osg::StateAttribute::Values on);
+
+
+
+
+protected:
+	ColorPicker* _cp;
+	osg::ref_ptr<osg::MatrixTransform> _transform;
+	osg::ref_ptr<osg::Geode> _geode;
+	osg::Geometry* _polyGeom;
+	osg::Vec3* _coords;
+	osg::ShapeDrawable* _sphere;
+	static osg::Program* getOrLoadProgram();
+	static osg::Program* _colorSlideProg;
+
+	osg::Vec4 _color;
+
+	osg::ref_ptr<osg::Program> _program;
+	std::map<std::string, osg::Uniform*> _uniforms;
+
+
+
+};
+
+class Selection : public cvr::UIElement, public UICallback, public UICallbackCaller {
+public:
+	Selection(std::string name, std::string icon = "");
+
+	virtual void uiCallback(UICallbackCaller* ui);
+
+	virtual bool processEvent(cvr::InteractionEvent* event) override;
+
+	void setButtonCallback(UICallback* ui) { _button->setCallback(ui); }
+
+	std::string getName() { return _name; }
+
+	void setName(std::string name);
+
+protected:
+	CallbackButton* _button;
+	std::string _name;
+	cvr::UIText* _uiText;
+};
 
 #endif

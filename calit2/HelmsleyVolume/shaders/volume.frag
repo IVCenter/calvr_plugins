@@ -117,29 +117,33 @@ void main() {
 		vec3 p = ro + rd * t;
 		vec4 col = Sample(p);
 		col.a *= stepsize * 1000;
+//
+///*
+//		if (col.a > 1e-3){
+//			if (pd < 1e-3) {
+//				// first time entering volume, binary subdivide to get closer to entrance point
+//				float t0 = t - stepsize * 4;
+//				float t1 = t;
+//				float tm;
+//				#define BINARY_SUBDIV tm = (t0 + t1) * .5; p = ro + rd * tm; if (Sample(p).a > .01) t1 = tm; else t0 = tm;
+//				BINARY_SUBDIV
+//				BINARY_SUBDIV
+//				BINARY_SUBDIV
+//				//BINARY_SUBDIV
+//				#undef BINARY_SUBDIV
+//				t = tm;
+//				col = Sample(p);
+//			}
+//*/		
+			
 
-/*
-		if (col.a > 1e-3){
-			if (pd < 1e-3) {
-				// first time entering volume, binary subdivide to get closer to entrance point
-				float t0 = t - stepsize * 4;
-				float t1 = t;
-				float tm;
-				#define BINARY_SUBDIV tm = (t0 + t1) * .5; p = ro + rd * tm; if (Sample(p).a > .01) t1 = tm; else t0 = tm;
-				BINARY_SUBDIV
-				BINARY_SUBDIV
-				BINARY_SUBDIV
-				//BINARY_SUBDIV
-				#undef BINARY_SUBDIV
-				t = tm;
-				col = Sample(p);
-			}
-*/
 			col.rgb *= col.a;
 			sum += col * (1 - sum.a);
 //		}
 
 		steps++; // only count steps through the volume
+
+
 
 		pd = col.a;
 		t += stepsize;//col.a > 1e-3 ? stepsize : stepsize * 8; // step farther if not in dense part

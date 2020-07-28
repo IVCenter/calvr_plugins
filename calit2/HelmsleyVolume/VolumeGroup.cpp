@@ -229,6 +229,9 @@ void VolumeGroup::init()
 	_computeUniforms["ContrastBottom"] = new osg::Uniform("ContrastBottom", 0.0f);
 
 	_computeUniforms["ContrastTop"] = new osg::Uniform("ContrastTop", 1.0f);
+	
+	_computeUniforms["leftColor"] = new osg::Uniform("leftColor", osg::Vec3(1.0f, 0.0f, 0.0f));
+	_computeUniforms["rightColor"] = new osg::Uniform("rightColor", osg::Vec3(1.0f, 1.0f, 1.0f));
 
 	
 	
@@ -284,7 +287,6 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	{
 		flipCull();
 	}
-	std::cout << "Scale: " << scale.x() << ", " << scale.y() << ", " << scale.z() << std::endl;
 
 	if (maskpath.compare("") != 0)
 	{
@@ -309,7 +311,6 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	
 	//_minMaxNode->setComputeGroups((i->s() + 7) / 8, (i->t() + 7) / 8, (i->r() + 7) / 8);
 	
-	std::cout << "transfer:: computeGroups set" << std::endl;
 
 
 	osg::StateSet* states = _computeNode->getOrCreateStateSet();
@@ -323,7 +324,6 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	{
 		setDirty(cameras[i]->getGraphicsContext());
 	}
-	std::cout << "transfer:: cameras dirtied" << std::endl;
 
 
 	precompute();
@@ -342,7 +342,6 @@ void VolumeGroup::loadMask(std::string path, osg::Image* volume)
 		osg::ref_ptr<osg::Image> mask = osgDB::readImageFile(maskpath);
 		mask->flipVertical();
 		unsigned int bytesize = mask->getPixelSizeInBits() / 8;
-		//std::cout << "Pixel size in bits" << mask->getPixelSizeInBits() << std::endl;
 		//throw bytesize;
 		unsigned char* maskData = mask->data();
 
@@ -416,12 +415,10 @@ void VolumeGroup::precompute()
 		//_ssbb = new osg::ShaderStorageBufferBinding(0, data, 0, data->size() * sizeof(uint32_t));
 		//_ssbb->setUpdateCallback(new ShaderStorageBufferCallback());
 
-		std::cout << "transfer:: ssbos created (end of precompute)" << std::endl;
 		//_minMaxNode->getOrCreateStateSet()->setAttributeAndModes(_ssbb, osg::StateAttribute::ON);
 
 		//this->addChild(_minMaxNode);
 		this->addChild(_computeNode);
-		std::cout << "added compute node" << std::endl;
 	}
 }
 

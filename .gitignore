@@ -13,6 +13,9 @@ CMakeCache.txt
 *.suo
 *.o
 *.opendb
+*.VC.db
+*.db
+*.obj
 Debug
 ipch
 *.dir

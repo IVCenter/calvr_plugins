@@ -30,6 +30,7 @@ public:
 		RAINBOW = 1
 	};
 	ColorFunction transferFunction;
+	void setVolume(VolumeGroup* volume) { _volume = volume; }
 protected:
 	cvr::SceneObject* _scene;
 	VolumeGroup* _volume;
@@ -97,6 +98,8 @@ public:
 	virtual void uiCallback(UICallbackCaller * item);
 
 	cvr::SceneObject* getSceneObject() { return _so; }
+	void setNewVolume(VolumeGroup* volume) { _volume = volume; }
+
 	std::string _transferFunction;
 
 	inline void setOrganColPicker(std::string organName)
@@ -112,11 +115,13 @@ protected:
 	cvr::SceneObject* _scene;
 	VolumeGroup* _volume;
 	TentWindow* _tentWindow;
+	TentWindowOnly* _tentWindowOnly;
 
 	cvr::UIPopup* _menu = nullptr;
 	cvr::UIPopup* _maskMenu = nullptr;
 	cvr::UIPopup* _colorMenu = nullptr;
 	cvr::UIPopup* _presetPopup = nullptr;
+	cvr::UIPopup* _tentMenu = nullptr;
 	cvr::UIQuadElement* _maskBknd;
 	cvr::UIQuadElement* _presetBknd;
 
@@ -133,6 +138,10 @@ protected:
 	CallbackSlider* _contrastTop;
 	CallbackSlider* _brightness;
 
+	ColorSlider* _colorSliderLeft;
+	ColorSlider* _colorSliderRight;
+	std::vector<ColorSlider*> _colSliderList = { _colorSliderLeft, _colorSliderRight };
+	
 	cvr::UIText* _contrastValueLabel;
 	cvr::UIText* _brightValueLabel;
 
@@ -170,6 +179,7 @@ protected:
 	ShaderQuad* _opacityColorDisplay;
 	cvr::UIRadialButton* _blacknwhite;
 	cvr::UIRadialButton* _rainbow;
+	cvr::UIRadialButton* _custom;
 	void useTransferFunction(int tfID);
 	void setContrastValues(float contrastLow, float contrastHigh, float brightness);
 
@@ -193,10 +203,12 @@ protected:
 
 	cvr::UIList* _triangleList;
 	int _triangleIndex;
+	int _colorSliderIndex;
 	osg::Vec3 triangleColors[6] = { UI_BLUE_COLOR, UI_RED_COLOR, UI_YELLOW_COLOR, UI_GREEN_COLOR, UI_PURPLE_COLOR, UI_PINK_COLOR};
 	bool checkTriangleCallbacks(UICallbackCaller* item);
 	bool checkTriangleVisCallbacks(UICallbackCaller* item);
 	bool checkPresetCallbacks(UICallbackCaller* item);
+	bool checkColorSliderCallbacks(UICallbackCaller* item);
 	void usePreset(std::string filename);
 	void clearRegionPreviews();
 	Tent* addRegion();
@@ -207,6 +219,7 @@ private:
 	bool _movable;
 	cvr::SceneObject* _container = nullptr;
 	cvr::SceneObject* _maskContainer = nullptr;
+	cvr::SceneObject* _tentWindowContainer = nullptr;
 	cvr::SceneObject* _so = nullptr;
 };
 

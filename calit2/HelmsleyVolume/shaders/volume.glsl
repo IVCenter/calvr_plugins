@@ -26,6 +26,9 @@ uniform float OpacityMult[10];
 uniform float Lowest[10];
 uniform float TriangleCount = 1.0;
 
+uniform vec3 leftColor = vec3(1,0,0);
+uniform vec3 rightColor = vec3(1,1,1);
+
 uniform vec3 WorldScale;
 uniform vec3 TexelSize;
 
@@ -42,6 +45,11 @@ vec3 hsv2rgb(vec3 c) {
   vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
   vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
   return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+vec3 custom(vec3 c) {
+	vec3 color = mix(leftColor, rightColor, c);
+	return color;
 }
 
 vec4 Sample(ivec3 p) {
@@ -111,8 +119,9 @@ vec4 Sample(ivec3 p) {
 		if(bitmask == 1)	
 		{
 				float adjusted = mix(.5,1.0,organRA.r);
-				s.rgb = vec3(0.235, 0.003, 0.631);
-				s.rgb *= adjusted;
+				//s.rgb = vec3(0.992, 0.968, 0.843);
+				//s.rgb *= adjusted;
+				s.rgb *= organRA.r;
 				//alpha = s.a;
 				alpha = 1.00;
 //			#ifdef BLADDER_RGB
@@ -142,8 +151,8 @@ vec4 Sample(ivec3 p) {
 			
 			//s.rgb = vec3(organRA.r, 0, 0);
 			float adjusted = mix(.7,1.0,organRA.r);
-			s.rgb = vec3(0.450, 0.090, 1);
-			s.rgb *= adjusted;
+			//s.rgb = vec3(0.450, 0.090, 1);
+			s.rgb *= vec3(0.752, 0.635, 0.996);
 			alpha = 1.00;
 //			#ifdef COLON_RGB
 //				s.rgb = COLON_RGB		
@@ -171,8 +180,8 @@ vec4 Sample(ivec3 p) {
 		if(bitmask == 16)
 		{
 			float adjusted = mix(.99,1.0,organRA.r);
-			s.rgb = vec3(0.968, 0.780, 1);
-			s.rgb *= adjusted;
+			//s.rgb = vec3(0.968, 0.780, 1);
+			s.rgb *=  vec3(0.968, 0.780, 1);
 			alpha = 1.00;
 //			#ifdef ILLEUM_RGB
 //				s.rgb = ILLEUM_RGB		
