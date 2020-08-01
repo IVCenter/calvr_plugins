@@ -11,10 +11,13 @@
 #endif
 #include <stdio.h>
 
+#include <dcmtk/dcmdata/dctk.h>
+#include <dcmtk/dcmimgle/dcmimage.h>
+
 #undef max
 #include <algorithm>
 
-#define SLOTCOUNT 8
+#define SLOTCOUNT 6
 void FileSelector::init()
 {
 	_state = NEW;
@@ -57,7 +60,14 @@ void FileSelector::init()
 	fsBknd->addChild(_rightArrow);
 	_rightArrow->setPercentSize(osg::Vec3(0.07, 1.0, .2));
 	_rightArrow->setPercentPos(osg::Vec3(0.95, -1.0, -.5));
-	//_rightArrow->setPercentPos(osg::Vec3(0.8, 1.0, -.55));
+	
+	_leftArrow = new TriangleButton(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	_leftArrow->setCallback(this);
+	fsBknd->addChild(_leftArrow);
+	_leftArrow->setPercentSize(osg::Vec3(0.07, 1.0, .2));
+	_leftArrow->setPercentPos(osg::Vec3(0.05, -1.0, -.5));
+	_leftArrow->setRotate(1);
+
 	fsPopup->addChild(fsBknd);
 	fsPopup->setActive(true, true);
 	
@@ -94,7 +104,7 @@ void FileSelector::init()
 	_topList->setPercentPos(osg::Vec3(0.1, 1, -.05));
 	contentBknd->addChild(_botList);
 	_botList->setPercentSize(osg::Vec3(0.8, 1, .4));
-	_botList->setPercentPos(osg::Vec3(0.1, 1, -.55));
+	_botList->setPercentPos(osg::Vec3(0.1, 1, -.50));
 
 	int selectCount = 0;
 	for (auto iter = _patientDirectories.begin(); iter != _patientDirectories.end(); ++iter)
@@ -102,20 +112,23 @@ void FileSelector::init()
 		std::string patient = iter->first;
 		std::cout << patient << std::endl;
 
-		Selection* selec = new Selection(iter->first);
-		selec->setId("selection");
-		selec->setButtonCallback(this);
+		Selection* selec;
 		_selections.push_back(selec);
-		selectCount < 4 ? _topList->addChild(selec) : _botList->addChild(selec);
+		_selections[selectCount] = new Selection(iter->first);
+		_selections[selectCount]->setId("selection");
+		_selections[selectCount]->setButtonCallback(this);
+		
+		selectCount < SLOTCOUNT/2 ? _topList->addChild(_selections[selectCount]) : _botList->addChild(_selections[selectCount]);
 		selectCount++;
 
 
-		if (selectCount == 8) {
+		if (selectCount == SLOTCOUNT) {
 			_selectIndex = selectCount;	
 			break;
 		}
 
 	}
+	_currMap = &_patientDirectories;
 }
 
 void FileSelector::menuCallback(cvr::MenuItem* item)
@@ -165,33 +178,193 @@ void FileSelector::menuCallback(cvr::MenuItem* item)
 
 void FileSelector::uiCallback(UICallbackCaller* ui){
 	if (ui == _rightArrow) {
-		std::cout << "within fileselect" << std::endl;
-		if(_patientDirectories.size() > _selectIndex)
-			updateSelections();
+		if(_currMap->size() > _selectIndex)
+			updateSelections(RIGHT);
+	}
+	if (ui == _leftArrow) {
+		std::cout << "left arrow" << std::endl;
+		if (_selectIndex > SLOTCOUNT)
+			updateSelections(LEFT);
+	}
+	if (checkSelectionCallbacks(ui)) {
+		return;
 	}
 	//std::cout << _patientDirectories[ui->getId()];
 	//newUpdateFileSelection();
 }
 
-void FileSelector::updateSelections() {
-	int slotsLeft = 8;
+bool FileSelector::checkSelectionCallbacks(UICallbackCaller* item) {
+	bool found = false;
+	for (int i = 0; i < SLOTCOUNT; i++) {
+		if (item == _selections[i]->getButton()) {
+			found = true;
+			std::cout << _selections[i]->getName() << std::endl;
+			if(_currMap == &_patientDirectories)
+				loadPatient(_selections[i]->getName());
+		}
+	}
+	return found;
+}
+
+void FileSelector::loadPatient(std::string pName) {
+	std::string pFileName = _patientDirectories[pName];
+	_seriesList.clear();
+	loadSeriesList(pFileName, -1);
+	_selectIndex = 0;
+	_currMap = &_seriesList;
+	updateSelections(RIGHT);
+
+
+
+}
+
+void FileSelector::showDicomThumbnail() {
+	for (int i = 0; i < SLOTCOUNT; i++) {
+		unsigned int seriesIndex = (_selectIndex - SLOTCOUNT) + i;
+		if (seriesIndex >= _seriesList.size())
+			break;
+		std::string path = getMiddleImage(seriesIndex);
+		std::cout << path << std::endl;
+		DicomImage* image = new DicomImage(path.c_str());
+		assert(image != NULL);
+		assert(image->getStatus() == EIS_Normal);
+
+		// Get information
+		DcmFileFormat fileFormat;
+		assert(fileFormat.loadFile(path.c_str()).good());
+		DcmDataset* dataset = fileFormat.getDataset();
+		double spacingX = 0.0;
+		double spacingY = 0.0;
+		double thickness = 0.0;
+		OFCondition cnd;
+		cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingX, 0);
+		cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingY, 1);
+
+
+		unsigned int w = image->getWidth();
+		unsigned int h = image->getHeight();
+		unsigned int d = 1;
+
+
+
+		osg::Image* img = new osg::Image();
+		img->allocateImage(w, h, d, GL_RG, GL_UNSIGNED_SHORT);
+		uint16_t* data = (uint16_t*)img->data();
+		memset(data, 0, w * h * d * sizeof(uint16_t) * 2);
+
+		image->setMinMaxWindow();
+		uint16_t* pixelData = (uint16_t*)image->getOutputData(16);
+
+		//memcpy(data + w * h*i, pixelData, w * h * sizeof(uint16_t));
+		unsigned int j = 0;
+		for (unsigned int x = 0; x < w; x++) {
+			for (unsigned int y = 0; y < h; y++) {
+				j = 2 * (x + y * w);
+				data[j] = pixelData[x + y * w];
+				data[j + 1] = 0xFFFF;
+			}
+		}
+
+		osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D(img);
+		texture->setInternalFormat(GL_RGBA8);
+		cvr::UITexture* imgTexture = new cvr::UITexture(texture);
+		imgTexture->_geode->getDrawable(0)->getOrCreateStateSet()->setDefine("GRAYSCALE", true);
+
+		_selections[i]->setImage(imgTexture);
+	}
+}
+
+std::string FileSelector::getMiddleImage(int seriesIndex) {
+	/////////Test with irbo1
+	auto it = _seriesList.begin();
+	for (unsigned int i = 0; i != seriesIndex; i++) {
+		it++;
+	
+	}
+
+
+	std::string seriesPath = it->second;
+	std::cout << seriesPath << std::endl;
+
+	DIR* dir = opendir(seriesPath.c_str());
+	struct dirent* entry = readdir(dir);
+	int count = 0;
+	while (entry != NULL) {
+		if (entry->d_type == DT_REG && strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0) {
+			count++;
+		}
+		entry = readdir(dir);
+	}
+	closedir(dir);
+
+	std::cout << "middle number: " << count << std::endl;
+
+	dir = opendir(seriesPath.c_str());
+	entry = readdir(dir);
+	for (int i = 0; i < count / 2; i++) {
+		entry = readdir(dir);
+	}
+	closedir(dir);
+	return (seriesPath + "/" + entry->d_name);
+}
+
+int FileSelector::loadSeriesList(std::string pFN, int indexFromDicom) {
+	DIR* dir = opendir(pFN.c_str());
+	struct dirent* entry = readdir(dir);
+	while (entry != NULL) {
+		if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+			//std::cout << "fn: " << fn << std::endl;
+			//std::cout << "newfn: " << entry->d_name << std::endl;
+			std::string newFn = pFN + "/" + entry->d_name;
+			int newIndex = loadSeriesList(newFn, indexFromDicom);
+			if (newIndex > -1) {
+				_seriesList[std::string(entry->d_name)] = pFN + "/" + entry->d_name;
+			}
+		}
+		else if (entry->d_type == DT_REG && strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0) {
+			closedir(dir);
+			return indexFromDicom + 1;
+		}
+		entry = readdir(dir);
+	}
+	closedir(dir);
+	return indexFromDicom + 0;
+}
+
+void FileSelector::updateSelections(SelectChoice choice) {
+
+
+	
+	
+	int slotsLeft = SLOTCOUNT;
 	int topBotIndex = 0;
 
-	auto it = _patientDirectories.begin();
+	if (choice == LEFT)
+		_selectIndex -= SLOTCOUNT * 2;
+
+
+
+	auto it = _currMap->begin();
 	std::advance(it, _selectIndex);
-	
+
 	while (slotsLeft > 0) {
-		
+
 		Selection* selec;
-		topBotIndex < 4 ? selec = (Selection*)_topList->getChild(topBotIndex)
-						 : selec = (Selection*)_botList->getChild(topBotIndex % 4);
-		
-		_patientDirectories.size() > _selectIndex ? selec->setName(it->first)
-												  : selec->setName("");
+		topBotIndex < SLOTCOUNT / 2 ? selec = (Selection*)_topList->getChild(topBotIndex)
+			: selec = (Selection*)_botList->getChild(topBotIndex % (SLOTCOUNT / 2));
+		_currMap->size() > _selectIndex ? selec->setName(it->first)
+			: selec->setName("");
 		topBotIndex++;
 		it++;			//path map iterator
 		_selectIndex++; //path map "index"
-		slotsLeft--;	
+		slotsLeft--;
+	}
+	
+	if (_currMap == &_seriesList) {
+		for (unsigned int i = 0; i < SLOTCOUNT; ++i) {
+			_selections[i]->removeImage();
+		}
+		showDicomThumbnail();
 	}
 	
 }

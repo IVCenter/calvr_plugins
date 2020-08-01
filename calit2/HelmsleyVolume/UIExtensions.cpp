@@ -1207,7 +1207,15 @@ void TriangleButton::createGeometry()
 		osg::Vec3(0.5, 0.0, 0.0),
 		osg::Vec3(-0.5, 0.0, 0.5)
 	};
+	_rot = osg::Matrix::rotate(0, 0, 1, 0);
+	
+	
+	
 	int numCoords = sizeof(myCoords) / sizeof(osg::Vec3);
+
+	for (int i = 0; i < numCoords; i++) {
+		myCoords[i] = _rot * myCoords[i];
+	}
 
 	osg::Vec3Array* vertices = new osg::Vec3Array(numCoords, myCoords);
 
@@ -1241,7 +1249,20 @@ void TriangleButton::updateGeometry()
 		osg::Vec3(0.5, 0.0, 0.0),
 		osg::Vec3(-0.5, 0.0, 0.5)
 	};
+
+
+	
+	
+
+
+
 	int numCoords = sizeof(myCoords) / sizeof(osg::Vec3);
+
+
+	for (int i = 0; i < numCoords; i++) {
+		myCoords[i] = _rot * myCoords[i];
+	}
+
 
 	osg::Vec3Array* vertices = new osg::Vec3Array(numCoords, myCoords);
 	_polyGeom->setVertexArray(vertices);
@@ -1262,6 +1283,7 @@ void TriangleButton::updateGeometry()
 	mat.makeScale(_actualSize);
 	mat.postMultTranslate(_actualPos);
 	_transform->setMatrix(mat);
+	
 
 
 	if (_program.valid())
@@ -1271,7 +1293,10 @@ void TriangleButton::updateGeometry()
 	}
 }
 
-
+void TriangleButton::setRotate(int radians) {
+	_rot = osg::Matrix::rotate(osg::PI*radians, 0, 1, 0);
+	updateGeometry();
+}
 
 void TriangleButton::setColor(osg::Vec3 color)
 {
@@ -1636,45 +1661,7 @@ bool ColorSlider::processEvent(cvr::InteractionEvent* event)
 
 		
 		
-		}/*
-		if (tie->getInteraction() == BUTTON_DRAG && holdingDial)
-		{
-			osg::Matrix currMat = TrackingManager::instance()->getHandMat(tie->getHand());
-			
-			osg::Quat startQuat = _startMat.getRotate();
-			osg::Quat currQuat = currMat.getRotate();
-			osg::Quat diff = currQuat * startQuat.osg::Quat::inverse();
-			float sYN = startQuat.y() + 1.0f;
-			float cYN = currQuat.y() + 1.0f;
-			float diffF = cYN - sYN;
-
-
-			if (_callback)
-			{
-				if (diffF < .0025 && diffF> -.0025) {
-					diffF = 0;
-				}
-			
-				if (diffF > 1.00 || diffF < -1.00) {
-					_jump = _jump ? false : true;
-					diffF = _value;
-				}
-				if (_jump) {
-					diffF = -diffF;
-				}
-					
-				_value = diffF;
-				_callback->uiCallback(this);
-
-			}
-			_startMat = currMat;
-			
 		}
-		else if (tie->getInteraction() == BUTTON_UP && holdingDial)
-		{
-			holdingDial = false;
-			_jump = false;
-		}*/
 	}
 	return false;
 }
@@ -1906,20 +1893,22 @@ Selection::Selection(std::string name, std::string icon) :
 	cvr::UIElement()
 {
 	using namespace cvr;
-
+	_uiTexture = nullptr;
 	_name = name;
-	cvr::UIQuadElement* bknd = new cvr::UIQuadElement(UI_WHITE_COLOR);
-	addChild(bknd);
-	bknd->setPercentPos(osg::Vec3(0, -1, 0));
-	bknd->setBorderSize(0.01);
-	_uiText = new UIText(name, 50.0f, osgText::TextBase::CENTER_CENTER);
+	_bknd = new cvr::UIQuadElement(UI_WHITE_COLOR);
+	addChild(_bknd);
+	_bknd->setPercentPos(osg::Vec3(0, -1, 0));
+	_bknd->setBorderSize(0.01);
+	_uiText = new UIText(name, 35.0f, osgText::TextBase::LEFT_CENTER);
 	_uiText->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
-	bknd->addChild(_uiText);
+	_uiText->setPercentPos(osg::Vec3(0.0, 0.0, -1.0));
+	_uiText->setPercentSize(osg::Vec3(1.0, 0.0, 0.08));
+	_bknd->addChild(_uiText);
 
 	_button = new CallbackButton();
 	_button->setCallback(this);
 	_button->setId(name);
-	bknd->addChild(_button);
+	_bknd->addChild(_button);
 	
 }
 
@@ -1934,6 +1923,28 @@ void Selection::uiCallback(UICallbackCaller* ui) {
 void Selection::setName(std::string name) {
 	_name = name;
 	_uiText->setText(_name);
+	osgText::Text* text = _uiText->getTextObject();
+	if (_name.size() > 20){
+		text->setCharacterSize(30.0f);
+	}
+	else {
+		text->setCharacterSize(40.0f);
+	}
+	
 }
 
+void Selection::lowerTextSize() {
+	osgText::Text* text = _uiText->getTextObject();
+	text->setCharacterSize(30.0f);
+}
+
+void Selection::setImage(UITexture* uiTexture) {
+	_uiTexture = uiTexture;
+	_bknd->addChild(_uiTexture);
+}
+
+void Selection::removeImage() {
+	if(_uiTexture!=nullptr)
+		_bknd->removeChild(_uiTexture);
+}
 #pragma endregion

@@ -32,6 +32,11 @@ public:
 		CHANGING
 	};
 
+	enum SelectChoice {
+		LEFT,
+		RIGHT,
+	};
+
 	static std::vector<std::string> getPresets();
 	virtual void uiCallback(UICallbackCaller* ui);
 	std::string getCurrPath() { return _currentPath; }
@@ -40,10 +45,15 @@ public:
 	void loadVolumeOnly(std::string seriesPath);
 	
 protected:
-	void updateSelections();
+	void updateSelections(SelectChoice choice);
 	void updateFileSelection(); //OLD
 	//void newUpdateFileSelection();
 	int checkIfPatient(std::string fn, int indexFromDicom);
+	bool checkSelectionCallbacks(UICallbackCaller* item);
+	void loadPatient(std::string pName);
+	int loadSeriesList(std::string pFN, int indexFromDicom);
+	void showDicomThumbnail();
+	std::string getMiddleImage(int seriesIndex);
 
 	cvr::SceneObject* _so;
 
@@ -54,11 +64,15 @@ protected:
 	cvr::UIList* _topList;
 	cvr::UIList* _botList;
 	TriangleButton* _rightArrow;
+	TriangleButton* _leftArrow;
 	int _selectIndex;
 	std::vector<Selection*> _selections;
+	
 	//std::map<cvr::MenuItem*, std::string> loadVolumeMenu;
 	std::vector<cvr::MenuItem*> pathSelections;
 	std::map<std::string, std::string> _patientDirectories;	//Patient Folder Name, Directory
+	std::map<std::string, std::string> _seriesList;
+	std::map<std::string, std::string>* _currMap;
 	MenuState _state;
 	std::string _currentPath;
 };

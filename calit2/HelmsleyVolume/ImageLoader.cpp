@@ -109,6 +109,8 @@ osg::Image* LoadDicomImage(const string& path, osg::Vec3& size) {
 
 	osg::Image* img = CreateTexture(GL_RG, GL_UNSIGNED_SHORT, w, h, d);
 	uint16_t* data = (uint16_t*)img->data();
+	
+
 	memset(data, 0, w * h * d * sizeof(uint16_t) * 2);
 
 	image->setMinMaxWindow();
