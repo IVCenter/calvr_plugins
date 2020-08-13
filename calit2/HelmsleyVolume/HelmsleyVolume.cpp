@@ -562,6 +562,21 @@ void HelmsleyVolume::removeCuttingPlane(unsigned int i)
 	}
 }
 
+void HelmsleyVolume::toggleCenterLine(bool on) {
+	std::vector<osg::Geode*>* centerlines = _volumes[0]->getCenterLines();
+	if (on) {//turn off
+		std::cout << "centerline size: " << centerlines->size() << std::endl;
+		for (int i = 0; i < centerlines->size(); i++) {
+			centerlines->at(i)->setNodeMask(0);
+		}
+	}
+	else {
+		for (int i = 0; i < centerlines->size(); i++) {
+			centerlines->at(i)->setNodeMask(0xffffffff);
+		}
+	}
+}
+
 void HelmsleyVolume::loadVolume(std::string path, std::string maskpath, bool onlyVolume)
 {
 	SceneObject * so;

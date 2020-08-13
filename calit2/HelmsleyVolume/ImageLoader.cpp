@@ -228,6 +228,7 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 
 	transform.preMultScale(size);
 
+	
 
 	osg::Image* img = CreateTexture(GL_RG, GL_UNSIGNED_SHORT, w, h, d);
 	uint16_t* data = (uint16_t*)img->data();

@@ -12,6 +12,7 @@
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/PopupMenu.h>
 #include "UIExtensions.h"
+#include <cvrMenu/NewUI/UIPopup.h>
 #include <cvrConfig/ConfigManager.h>
 
 class FileSelector : public cvr::MenuCallback, public UICallback, public UICallbackCaller {
@@ -32,12 +33,18 @@ public:
 		CHANGING
 	};
 
-	enum SelectChoice {
+	enum SelectChoice{
 		LEFT,
 		RIGHT,
 	};
 
+	enum OrganEnum {
+		COLON = 4,
+		ILLEUM = 16
+	};
+
 	static std::vector<std::string> getPresets();
+	static osg::Vec3dArray* loadCenterLine(std::string path, OrganEnum organ);
 	virtual void uiCallback(UICallbackCaller* ui);
 	std::string getCurrPath() { return _currentPath; }
 
@@ -61,10 +68,18 @@ protected:
 	cvr::MenuButton* addVol;
 	cvr::PopupMenu* volumeFileSelector;
 	
+	cvr::UIQuadElement* _contentBknd;
+	cvr::UIQuadElement* _selectBknd;
+	cvr::UIQuadElement* _selectImage;
+	cvr::UITexture* _selectTexture;
+	CallbackButton* _loadVolumeButton;
+	cvr::UIPopup* _fsPopup;
+
 	cvr::UIList* _topList;
 	cvr::UIList* _botList;
 	TriangleButton* _rightArrow;
 	TriangleButton* _leftArrow;
+	TriangleButton* _upArrow;
 	int _selectIndex;
 	std::vector<Selection*> _selections;
 	
@@ -73,8 +88,11 @@ protected:
 	std::map<std::string, std::string> _patientDirectories;	//Patient Folder Name, Directory
 	std::map<std::string, std::string> _seriesList;
 	std::map<std::string, std::string>* _currMap;
+	bool _isOnLoad;
 	MenuState _state;
 	std::string _currentPath;
+
+	int _flag;
 };
 
 

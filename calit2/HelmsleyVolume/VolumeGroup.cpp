@@ -157,6 +157,9 @@ void VolumeGroup::init()
 
 	osg::ref_ptr<osg::Geode> g = new osg::Geode();
 	g->addChild(_cube);
+	g->getOrCreateStateSet()->setRenderBinDetails(4, "RenderBin");
+
+
 	_transform->addChild(g);
 	this->addChild(_transform);
 	
@@ -260,7 +263,24 @@ void VolumeGroup::init()
 void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 {
 	//osg::setNotifyLevel(osg::NotifySeverity::DEBUG_INFO);
-	//osg::Vec3 s = osg::Vec3(0,0,0);
+
+	////////////////centerline
+	_centerLineGeodes = new std::vector<osg::Geode*>();
+	osg::Vec3dArray* colonCoords = FileSelector::loadCenterLine(path, FileSelector::OrganEnum::COLON);
+	if (!colonCoords->empty()) {
+		Line* colonLine = new Line(colonCoords, osg::Vec4(UI_PURPLE_COLOR, 1.0));
+		_centerLineGeodes->push_back(colonLine->getGeode());
+		_transform->addChild(_centerLineGeodes->at(_centerLineGeodes->size()-1));
+		
+	}
+
+	osg::Vec3dArray* illeumCoords = FileSelector::loadCenterLine(path, FileSelector::OrganEnum::ILLEUM);
+	if (!illeumCoords->empty()) {
+		Line* illeumLine = new Line(illeumCoords, osg::Vec4(UI_PURPLE_COLOR, 1.0));
+		_centerLineGeodes->push_back(illeumLine->getGeode());
+		_transform->addChild(_centerLineGeodes->at(_centerLineGeodes->size() - 1));
+	}
+
 	osg::Matrix m = osg::Matrix::identity();
 	osg::ref_ptr<osg::Image> i = ImageLoader::LoadVolume(path, m);
 	if (!i)
@@ -293,6 +313,9 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 		loadMask(maskpath, i);
 		_hasMask = true;
 	}
+
+	
+
 
 	_volume = new osg::Texture3D;
 	_volume->setImage(i);
@@ -406,18 +429,7 @@ void VolumeGroup::precompute()
 		states->setTextureAttribute(0, _baked, osg::StateAttribute::ON);
 		states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
 
-		//data = new osg::UIntArray();
-		//data->resize(2, 3);
 
-		//_ssbo = new osg::ShaderStorageBufferObject();
-		//data->setBufferObject(_ssbo.get());
-
-		//_ssbb = new osg::ShaderStorageBufferBinding(0, data, 0, data->size() * sizeof(uint32_t));
-		//_ssbb->setUpdateCallback(new ShaderStorageBufferCallback());
-
-		//_minMaxNode->getOrCreateStateSet()->setAttributeAndModes(_ssbb, osg::StateAttribute::ON);
-
-		//this->addChild(_minMaxNode);
 		this->addChild(_computeNode);
 	}
 }
@@ -433,3 +445,5 @@ void VolumeGroup::flipCull()
 		_side->setMode(osg::CullFace::FRONT);
 	}
 }
+
+

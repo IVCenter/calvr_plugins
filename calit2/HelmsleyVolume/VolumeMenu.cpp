@@ -912,14 +912,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		_cp->setCPColor(col);
 		return;
 	}
-	//dyNAMic triANgLe hAcK
-	/*else {
-		CallbackButton* triangleButton = (CallbackButton*)item;
-		UIText* text = (UIText*)(triangleButton->getChild(0));
-		std::string name = text->getText();
-		int index = name[name.length() - 1] - '0';
-		_tentWindow->setTent(index);
-	}*/
+	
 }
 void NewVolumeMenu::useTransferFunction(int tfID) {
 	if (tfID == 0)
@@ -1005,6 +998,8 @@ bool NewVolumeMenu::checkPresetCallbacks(UICallbackCaller* item) {
 	for (int i = 0; i < _presetCallbacks.size(); i++) {
 		if (item == _presetCallbacks[i]) {
 			usePreset(((UIText*)_presetCallbacks[i]->getChild(0))->getText());
+			_maskMenu->getRootElement()->getGroup()->removeChild(_presetPopup->getRootElement()->getGroup());
+			_presetPopup->getRootElement()->_parent = nullptr;
 			found = true;
 			break;
 		}
@@ -1103,9 +1098,10 @@ void NewVolumeMenu::usePreset(std::string filename) {
 	_volume->setDirtyAll();
 
 	////////////Cutting Plane/////////////
+	ToolToggle* cuttingPlaneTool = _toolMenu->getCuttingPlaneTool();
 	try {
 		if (config["cutting plane position"].as<std::string>() != "NA") {
-		
+			cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
 		}
 	}
 	catch(...){
@@ -1119,15 +1115,13 @@ void NewVolumeMenu::usePreset(std::string filename) {
 		cutPQuat.y() = config["cutting plane rotation"][1].as<float>();
 		cutPQuat.z() = config["cutting plane rotation"][2].as<float>();
 		cutPQuat.w() = config["cutting plane rotation"][3].as<float>();
-		if (HelmsleyVolume::instance()->HelmsleyVolume::getCuttingPlanes().empty()) {
-			CuttingPlane* cutP = HelmsleyVolume::instance()->HelmsleyVolume::createCuttingPlane(0);
-			cutP->setPosition(cutPpos);
-			cutP->setRotation(cutPQuat);
-		}
-		else {
-			HelmsleyVolume::instance()->HelmsleyVolume::getCuttingPlanes()[0]->setPosition(cutPpos);
-			HelmsleyVolume::instance()->HelmsleyVolume::getCuttingPlanes()[0]->setRotation(cutPQuat);
-		}
+
+	
+		HelmsleyVolume::instance()->HelmsleyVolume::createCuttingPlane(0);
+		CuttingPlane* cutP = HelmsleyVolume::instance()->HelmsleyVolume::getCuttingPlanes()[0];
+		cutP->setPosition(cutPpos);
+		cutP->setRotation(cutPQuat);
+		
 	}
 }
 
@@ -1344,6 +1338,10 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	_screenshotTool->setCallback(this);
 	list->addChild(_screenshotTool);
 
+	_centerLIneTool = new ToolToggle(dir + "browser.png");
+	_centerLIneTool->setCallback(this);
+	list->addChild(_centerLIneTool);
+
 	if (!_movable && !parent)
 	{
 		_menu->setActive(true, true);
@@ -1433,7 +1431,24 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 		{
 			HelmsleyVolume::instance()->setTool(HelmsleyVolume::NONE);
 			HelmsleyVolume::instance()->deactivateMeasurementTool(_index);
+			
 			_measuringTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
+		}
+	}
+	else if (item == _centerLIneTool)
+	{
+		std::cout << "in callback " << std::endl;
+		if (_centerLIneTool->isOn())
+		{
+			std::cout << "is on " << std::endl;
+			_centerLIneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+			HelmsleyVolume::instance()->toggleCenterLine(false);
+		}
+		else
+		{
+			std::cout << "is off " << std::endl;
+			_centerLIneTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
+			HelmsleyVolume::instance()->toggleCenterLine(true);
 		}
 	}
 }

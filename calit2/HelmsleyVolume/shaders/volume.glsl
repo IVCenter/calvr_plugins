@@ -150,9 +150,13 @@ vec4 Sample(ivec3 p) {
 		{
 			
 			//s.rgb = vec3(organRA.r, 0, 0);
-			float adjusted = mix(.7,1.0,organRA.r);
+			if(s.r < .1){
+				float adjusted = .1;// = mix(.3,.8,s.r);
+				s.rgb = vec3(adjusted, adjusted, adjusted);
+			}
 			//s.rgb = vec3(0.450, 0.090, 1);
 			s.rgb *= vec3(0.752, 0.635, 0.996);
+
 			alpha = 1.00;
 //			#ifdef COLON_RGB
 //				s.rgb = COLON_RGB		

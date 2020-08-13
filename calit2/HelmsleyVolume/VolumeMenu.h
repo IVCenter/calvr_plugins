@@ -68,6 +68,8 @@ public:
 		return _container;
 	}
 
+	ToolToggle* getCenterLineTool() { return  _centerLIneTool; }
+	ToolToggle* getCuttingPlaneTool() { return  _cuttingPlane; }
 
 	virtual void uiCallback(UICallbackCaller* item);
 
@@ -80,6 +82,7 @@ protected:
 	ToolToggle* _cuttingPlane;
 	ToolToggle* _measuringTool;
 	ToolToggle* _screenshotTool;
+	ToolToggle* _centerLIneTool;
 	//ToolRadialButton* _prevButton = nullptr;
 
 private:

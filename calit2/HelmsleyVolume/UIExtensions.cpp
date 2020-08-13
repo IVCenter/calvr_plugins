@@ -11,6 +11,7 @@ osg::Program* ColorPickerHue::_hueprogram = nullptr;
 osg::Program* Tent::_triangleProg = nullptr;
 osg::Program* TriangleButton::_triangleButtonProg = nullptr;
 osg::Program* Dial::_dialProg = nullptr;
+osg::Program* Line::_lineProg = nullptr;
 osg::Program* ColorSlider::_colorSlideProg = nullptr;
 
 
@@ -972,6 +973,7 @@ std::vector<float> TentWindowOnly::getPresetData(int index) {
 	data.push_back(_tents->at(index)->getBottom());
 	return data;
 }
+
 void Tent::createGeometry()
 {
 	_transform = new osg::MatrixTransform();
@@ -1187,7 +1189,150 @@ float Tent::changeBottomHeight(float x) {
 	updateGeometry();
 	return bottomHeight + 1.0;
 }
-//////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////centerline
+
+void Line::createGeometry()
+{
+	_transform = new osg::MatrixTransform();
+	_intersect = new osg::Geode();
+
+	_group->addChild(_transform);
+	_transform->addChild(_geode);
+
+	_intersect->setNodeMask(cvr::INTERSECT_MASK);
+	_polyGeom = new osg::Geometry();
+
+
+
+	int numCoords = _coords->size();
+
+	osg::Matrixd rot = osg::Matrix::rotate(osg::PI, 1, 0, 0);
+	
+	/*for (auto& vector : *_coords) {
+		vector = rot * vector;
+	}*/
+
+
+
+	_polyGeom->setVertexArray(_coords);
+
+	_polyGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP, 0, numCoords));
+	
+
+	_geode->addDrawable(_polyGeom);
+
+	setTransparent(false);
+
+	updateGeometry();
+}
+
+void Line::updateGeometry()
+{
+
+
+	osg::Vec4Array* colors = new osg::Vec4Array;
+	colors->push_back(_color);
+	((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_OVERALL);
+	((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_OVERALL);
+
+	osg::Matrix mat = osg::Matrix();
+	mat.makeScale(_actualSize);
+	mat.postMultTranslate(_actualPos);
+	_transform->setMatrix(mat);
+
+
+	if (_program.valid())
+	{
+		_geode->getDrawable(0)->getOrCreateStateSet()->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
+	
+
+	}
+}
+
+void Line::setColor(osg::Vec3 color)
+{
+
+	_colorUniform->set(color);
+
+}
+
+void Line::setTransparent(bool transparent)
+{
+	if (transparent)
+	{
+		_geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+
+		_geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
+		_geode->getOrCreateStateSet()->setAttributeAndModes(new osg::BlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA));
+		_geode->getOrCreateStateSet()->setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
+		osg::LineWidth* linewidth = new osg::LineWidth();
+		linewidth->setWidth(30.0f);
+		_geode->getOrCreateStateSet()->setAttributeAndModes(linewidth, osg::StateAttribute::ON);
+		_geode->getOrCreateStateSet()->setRenderBinDetails(5, "RenderBin");
+
+	}
+	else
+	{
+
+		_geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::OPAQUE_BIN);
+		_geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::OFF);
+	}
+}
+
+
+
+
+template <typename T>
+void Line::addUniform(std::string uniform, T initialvalue)
+{
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), initialvalue);
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
+void Line::addUniform(std::string uniform)
+{
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), 0.0f);
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
+void Line::addUniform(osg::Uniform* uniform)
+{
+	_uniforms[uniform->getName()] = uniform;
+	_geode->getOrCreateStateSet()->addUniform(uniform);
+}
+
+osg::Uniform* Line::getUniform(std::string uniform)
+{
+	return _uniforms[uniform];
+}
+
+void Line::setShaderDefine(std::string name, std::string define, osg::StateAttribute::Values on)
+{
+	_geode->getOrCreateStateSet()->setDefine(name, define, on);
+
+}
+
+osg::Program* Line::getOrLoadProgram()
+{
+	/*if (!_triangleProg)
+	{*/
+
+	const std::string vert = HelmsleyVolume::loadShaderFile("transferFunction.vert");
+	const std::string frag = HelmsleyVolume::loadShaderFile("lines.frag");
+	_lineProg = new osg::Program;
+	_lineProg->setName("Lines");
+
+	_lineProg->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
+	_lineProg->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
+
+
+	//}
+
+	return _lineProg;
+}
+
+
+/////////////////////////////////centerline
 void TriangleButton::createGeometry()
 {
 	_transform = new osg::MatrixTransform();
@@ -1293,7 +1438,7 @@ void TriangleButton::updateGeometry()
 	}
 }
 
-void TriangleButton::setRotate(int radians) {
+void TriangleButton::setRotate(double radians) {
 	_rot = osg::Matrix::rotate(osg::PI*radians, 0, 1, 0);
 	updateGeometry();
 }

@@ -51,9 +51,9 @@ void FileSelector::init()
 	_so->setRotation(rot);
 	_so->setPosition(osg::Vec3(-1900, -1600, 2200));
 	
-	cvr::UIPopup* fsPopup = new cvr::UIPopup();
+	_fsPopup = new cvr::UIPopup();
 
-	fsPopup->getRootElement()->setAbsoluteSize(osg::Vec3(2400, 1, 1500));
+	_fsPopup->getRootElement()->setAbsoluteSize(osg::Vec3(2400, 1, 1500));
 	cvr::UIQuadElement* fsBknd = new cvr::UIQuadElement(UI_BACKGROUND_COLOR);
 	_rightArrow = new TriangleButton(osg::Vec4(0.0, 0.0, 0.0, 1.0));
 	_rightArrow->setCallback(this);
@@ -68,12 +68,20 @@ void FileSelector::init()
 	_leftArrow->setPercentPos(osg::Vec3(0.05, -1.0, -.5));
 	_leftArrow->setRotate(1);
 
-	fsPopup->addChild(fsBknd);
-	fsPopup->setActive(true, true);
+	_upArrow = new TriangleButton(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	_upArrow->setCallback(this);
+	fsBknd->addChild(_upArrow);
+	_upArrow->setPercentSize(osg::Vec3(0.07, 1.0, .1));
+	_upArrow->setPercentPos(osg::Vec3(0.05, -1.0, -.1));
+	_upArrow->setRotate(.5f);
+
+
+	_fsPopup->addChild(fsBknd);
+	_fsPopup->setActive(true, true);
 	
 	
 	cvr::UIQuadElement* titleBknd = new cvr::UIQuadElement();
-	fsPopup->addChild(titleBknd);
+	_fsPopup->addChild(titleBknd);
 	titleBknd->setPercentPos(osg::Vec3(.4, -1, -.03));
 	titleBknd->setPercentSize(osg::Vec3(.2, 1, .1));
 	titleBknd->setBorderSize(.01);
@@ -81,15 +89,17 @@ void FileSelector::init()
 	titleText->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
 	titleBknd->addChild(titleText);
 
-	cvr::UIQuadElement* contentBknd = new cvr::UIQuadElement();
-	contentBknd->setPercentSize(osg::Vec3(.8, 1, .8));
-	contentBknd->setPercentPos(osg::Vec3(.1, -1, -.15));
-	contentBknd->setBorderSize(.01);
-	fsPopup->addChild(contentBknd);
+	 _contentBknd = new cvr::UIQuadElement();
+	_contentBknd->setPercentSize(osg::Vec3(.8, 1, .8));
+	_contentBknd->setPercentPos(osg::Vec3(.1, -1, -.15));
+	_contentBknd->setBorderSize(.01);
+	_fsPopup->addChild(_contentBknd);
 
-	_so->addChild(fsPopup->getRoot());
+
+
+	_so->addChild(_fsPopup->getRoot());
 	_so->attachToScene();
-	fsPopup->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
+	_fsPopup->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 	_so->dirtyBounds();
 
 	checkIfPatient(_currentPath, -1);
@@ -99,10 +109,10 @@ void FileSelector::init()
 
 	_topList = new cvr::UIList(cvr::UIList::LEFT_TO_RIGHT, cvr::UIList::CONTINUE);
 	_botList = new cvr::UIList(cvr::UIList::LEFT_TO_RIGHT, cvr::UIList::CONTINUE);
-	contentBknd->addChild(_topList);
+	_contentBknd->addChild(_topList);
 	_topList->setPercentSize(osg::Vec3(0.8, 1, .4));
 	_topList->setPercentPos(osg::Vec3(0.1, 1, -.05));
-	contentBknd->addChild(_botList);
+	_contentBknd->addChild(_botList);
 	_botList->setPercentSize(osg::Vec3(0.8, 1, .4));
 	_botList->setPercentPos(osg::Vec3(0.1, 1, -.50));
 
@@ -129,6 +139,48 @@ void FileSelector::init()
 
 	}
 	_currMap = &_patientDirectories;
+
+	//////////////////////////////Select View
+	_selectBknd = new cvr::UIQuadElement();
+	_selectBknd->setPercentSize(osg::Vec3(.8, 1, .8));
+	_selectBknd->setPercentPos(osg::Vec3(.1, -1, -.15));
+	_selectBknd->setBorderSize(.01);
+
+
+
+
+	_selectImage = new cvr::UIQuadElement();
+	_selectImage->setPercentSize(osg::Vec3(.2, 1, .5));
+	_selectImage->setPercentPos(osg::Vec3(.1, -1, -.25));
+	_selectImage->setBorderSize(.01);
+
+	_selectTexture = new cvr::UITexture();
+
+
+	cvr::UIQuadElement* loadButton = new cvr::UIQuadElement();
+	loadButton->setPercentSize(osg::Vec3(.3, 1, .125));
+	loadButton->setPercentPos(osg::Vec3(.375, -1, -.8));
+	loadButton->setBorderSize(.01);
+
+	_loadVolumeButton = new CallbackButton();
+	_loadVolumeButton->setCallback(this);
+	loadButton->addChild(_loadVolumeButton);
+
+	cvr::UIText* loadText = new cvr::UIText("Load Dataset", 50.f, osgText::TextBase::CENTER_CENTER);
+	loadText->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	cvr::UIText* seriesNameText = new cvr::UIText("Text", 40.f, osgText::TextBase::CENTER_CENTER);
+	seriesNameText->setPercentSize(osg::Vec3(1, 1, .25));
+
+	_selectBknd->addChild(_selectImage);
+	_selectBknd->addChild(loadButton);
+	_selectBknd->addChild(seriesNameText);
+	_selectImage->addChild(_selectTexture);
+	loadButton->addChild(loadText);
+
+
+
+
+	_isOnLoad = false;
 }
 
 void FileSelector::menuCallback(cvr::MenuItem* item)
@@ -181,16 +233,40 @@ void FileSelector::uiCallback(UICallbackCaller* ui){
 		if(_currMap->size() > _selectIndex)
 			updateSelections(RIGHT);
 	}
-	if (ui == _leftArrow) {
-		std::cout << "left arrow" << std::endl;
+	else if (ui == _leftArrow) {
 		if (_selectIndex > SLOTCOUNT)
 			updateSelections(LEFT);
 	}
-	if (checkSelectionCallbacks(ui)) {
+	else if (ui == _upArrow) {
+		_selectIndex = 0;
+		if (_isOnLoad) {
+			_fsPopup->addChild(_contentBknd);
+			_contentBknd->setActive(true);
+			_fsPopup->getRootElement()->getGroup()->removeChild(_selectBknd->getGroup());
+			_selectBknd->_parent = nullptr;
+			_selectBknd->setActive(false);
+			
+			
+			
+
+			_isOnLoad = false;
+		}
+		else if (_currMap == &_seriesList) {
+			_selectIndex = 0;
+			_currMap = &_patientDirectories;
+			for (unsigned int i = 0; i < SLOTCOUNT; ++i) {
+				_selections[i]->removeImage();
+			}
+		}
+		updateSelections(RIGHT);
+	}
+	else if (checkSelectionCallbacks(ui)) {
 		return;
 	}
-	//std::cout << _patientDirectories[ui->getId()];
-	//newUpdateFileSelection();
+	else if (ui == _loadVolumeButton) {
+		bool change = _state == CHANGING ? true : false;
+		loadVolume(_currentPath, change, false);
+	}
 }
 
 bool FileSelector::checkSelectionCallbacks(UICallbackCaller* item) {
@@ -201,6 +277,22 @@ bool FileSelector::checkSelectionCallbacks(UICallbackCaller* item) {
 			std::cout << _selections[i]->getName() << std::endl;
 			if(_currMap == &_patientDirectories)
 				loadPatient(_selections[i]->getName());
+			else if (_currMap == &_seriesList) {
+				_fsPopup->getRootElement()->getGroup()->removeChild(_contentBknd->getGroup());
+				_contentBknd->_parent = nullptr;
+				_contentBknd->setActive(false);
+
+
+				_fsPopup->addChild(_selectBknd);
+				_selectBknd->setActive(true);
+				_selectTexture->setTexture(_selections[i]->getImage()->getTexture());
+				_selectTexture->_geode->getDrawable(0)->getOrCreateStateSet()->setDefine("GRAYSCALE", true);
+				_selectTexture->setDirty(true);
+				//_selectTexture = _selections[i]->getImage();
+				
+				_currentPath = _seriesList[_selections[i]->getName()];
+				_isOnLoad = true;
+			}
 		}
 	}
 	return found;
@@ -362,7 +454,8 @@ void FileSelector::updateSelections(SelectChoice choice) {
 	
 	if (_currMap == &_seriesList) {
 		for (unsigned int i = 0; i < SLOTCOUNT; ++i) {
-			_selections[i]->removeImage();
+			if(_selections[i] != nullptr)
+				_selections[i]->removeImage();
 		}
 		showDicomThumbnail();
 	}
@@ -386,7 +479,7 @@ void FileSelector::loadVolume(std::string seriesPath, bool change, bool onlyVolu
 	}
 
 	HelmsleyVolume::instance()->loadVolume(seriesPath, maskpath, onlyVolume);
-	_state = CHANGE;
+	_state = CHANGE;//change//changing
 	addVol->setText("Change Volume");
 	volumeFileSelector->setVisible(false);
 }
@@ -520,5 +613,50 @@ std::vector<std::string> FileSelector::getPresets() {
 		entry = readdir(dir);
 	}
 	return presetPaths;
+}
+
+
+osg::Vec3dArray* FileSelector::loadCenterLine(std::string path, OrganEnum organ) {
+	DIR* dir = opendir(path.c_str());
+	osg::Vec3dArray* coords = new osg::Vec3dArray();
+	std::string coordsPath = "";
+
+	if (dir != NULL)
+	{
+		struct dirent* entry = readdir(dir);
+		while (entry != NULL) {
+			if (entry->d_type == DT_REG && strcmp(strrchr(entry->d_name, '.') + 1, "yaml") == 0) {
+				coordsPath = path + "\\" + entry->d_name;
+				std::cout << "yaml found" << std::endl;
+				break;
+			}
+			entry = readdir(dir);
+		}
+		closedir(dir);
+		if (coordsPath != "") {
+
+			YAML::Node yamlFile = YAML::LoadFile(coordsPath);
+			YAML::Node yamlCoords;
+			if (organ == OrganEnum::COLON)
+				yamlCoords = yamlFile[1][std::to_string(organ)];
+			if (organ == OrganEnum::ILLEUM)
+				yamlCoords = yamlFile[2][std::to_string(organ)];
+			
+			//YAML::Node yamlCoords = yamlFile[1]["coords"][0]["x"];
+		
+			//std::cout << yamlFile[1] << std::endl;
+			//std::cout << yamlFile[1]["coords"] << std::endl;
+			//std::cout << "coord size: " << yamlCoords.size() << std::endl;
+			osg::Vec3d coord;
+			for (unsigned i = 0; i < yamlCoords.size(); i++) {
+				coord.x() = (yamlCoords[i]["x"].as<double>());
+				coord.y() = -(yamlCoords[i]["y"].as<double>());
+				coord.z() = ((yamlCoords[i]["z"].as<double>()));
+				coords->push_back(coord);
+			}
+			
+		}
+	}
+	return coords;
 }
 

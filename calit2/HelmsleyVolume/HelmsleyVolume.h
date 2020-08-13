@@ -38,7 +38,8 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 			NONE,
 			CUTTING_PLANE,
 			MEASUREMENT_TOOL,
-			POINTER
+			POINTER,
+			CENTER_LINE
 		};
 
         HelmsleyVolume();
@@ -60,6 +61,8 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		CuttingPlane* createCuttingPlane(unsigned int i = 0);
 		void removeCuttingPlane(unsigned int i);
 
+		void toggleCenterLine(bool on);
+
 		void loadVolume(std::string path, std::string maskpath = "", bool onlyVolume = false);
 		void loadVolumeOnly(std::string path, std::string maskpath = "");
 		void removeVolume(int index, bool onlyVolume);
@@ -70,6 +73,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		void deactivateMeasurementTool(int volume);
 		std::vector<CuttingPlane*> getCuttingPlanes() { return _cuttingPlanes; }
 		std::vector<cvr::SceneObject*> getSceneObjects() { return _sceneObjects; }
+		std::vector<osg::ref_ptr<VolumeGroup>> getVolumes() { return _volumes; }
 		FileSelector* getFileSelector() { return fileSelector; }
 
 

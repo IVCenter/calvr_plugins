@@ -261,7 +261,7 @@ public:
 
 	virtual void createGeometry();
 	virtual void updateGeometry();
-	void setRotate(int radians);
+	void setRotate(double radians);
 
 
 
@@ -468,7 +468,69 @@ protected:
 	std::map<std::string, osg::Uniform*> _uniforms;
 
 };
+///////////////////////////////////////centerline
 
+class Line : public cvr::UIElement
+{
+public:
+	Line(osg::Vec3dArray* coords, osg::Vec4 color = osg::Vec4(UI_RED_COLOR, 1))
+		: UIElement()
+	{
+		_coords = coords;
+		_color = color;
+		_geode = new osg::Geode();
+
+		createGeometry();
+
+		
+		_colorUniform = new osg::Uniform("Color", UI_RED_COLOR);
+
+		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_colorUniform);
+
+		this->setTransparent(true);
+
+
+		setProgram(getOrLoadProgram());
+
+	}
+
+	virtual void createGeometry();
+	virtual void updateGeometry();
+	virtual void setColor(osg::Vec3 color);
+	virtual void setTransparent(bool transparent);
+
+	virtual void setProgram(osg::Program* p) { _program = p; _dirty = true; }
+	virtual osg::Program* getProgram() { return _program; }
+	virtual osg::Geode* getGeode() { return _geode; }
+
+	template <typename T>
+	void addUniform(std::string uniform, T initialvalue);
+	void addUniform(std::string uniform);
+	virtual void addUniform(osg::Uniform* uniform);
+	virtual osg::Uniform* getUniform(std::string uniform);
+	virtual void setShaderDefine(std::string name, std::string definition, osg::StateAttribute::Values on);
+
+	osg::Uniform* _colorUniform;
+
+
+protected:
+	osg::ref_ptr<osg::MatrixTransform> _transform;
+	osg::ref_ptr<osg::Geode> _geode;
+	osg::Geometry* _polyGeom;
+	osg::Vec3dArray* _coords;
+
+	static osg::Program* getOrLoadProgram();
+	static osg::Program* _lineProg;
+
+	osg::Vec4 _color;
+
+	osg::ref_ptr<osg::Program> _program;
+	std::map<std::string, osg::Uniform*> _uniforms;
+
+};
+
+
+///////////////////////////////////////centerline
 class Dial : public cvr::UIElement, public UICallbackCaller
 {
 public:
@@ -761,6 +823,7 @@ public:
 	void setName(std::string name);
 	void lowerTextSize();
 	void setImage(cvr::UITexture* uiTexture);
+	cvr::UITexture* getImage() { return _uiTexture; }
 	void removeImage();
 protected:
 	cvr::UIQuadElement* _bknd;

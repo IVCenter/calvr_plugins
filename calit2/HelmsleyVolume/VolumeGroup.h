@@ -18,9 +18,12 @@
 #include <osg/CullFace>
 #include <osg/PositionAttitudeTransform>
 #include <osg/FrameBufferObject>
+#include <osg/LineWidth>
 #include <iostream>
 #include <cvrKernel/ScreenConfig.h>
 #include <cvrKernel/ScreenBase.h>
+
+
 
 
 class VolumeGroup : public osg::Group
@@ -56,6 +59,9 @@ public:
 	void setDirty(osg::GraphicsContext* gc, bool d=true) { _dirty[gc] = d; };
 	bool isDirty(osg::GraphicsContext* gc) { return _dirty[gc]; };
 	osg::Drawable* getDrawable() { return _cube; };
+
+
+	std::vector<osg::Geode*>* getCenterLines() { return _centerLineGeodes; }
 	osg::DispatchCompute* getCompute() { return _computeNode; };
 	
 	void dirtyVolumeShader() { _program->dirtyProgram(); };
@@ -74,7 +80,7 @@ public:
 
 	osg::ref_ptr<osg::MatrixTransform> _transform;
 	osg::ref_ptr<osg::FrameBufferObject> _resolveFBO;
-
+	
 
 protected:
 	bool _hasMask;
@@ -92,6 +98,8 @@ protected:
 	osg::ref_ptr<osg::DispatchCompute> _computeNode;
 	osg::ref_ptr<osg::DispatchCompute> _minMaxNode;
 	osg::ref_ptr<osg::ShapeDrawable> _cube;
+	
+	std::vector<osg::Geode*>* _centerLineGeodes;
 
 	osg::ref_ptr<osg::Texture3D> _volume;
 	osg::ref_ptr<osg::Texture3D> _baked;
