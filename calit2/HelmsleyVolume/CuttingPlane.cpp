@@ -85,3 +85,8 @@ void CuttingPlane::updateCallback(int handID, const osg::Matrix& mat)
 	_volume->_PlanePoint->set(pos);
 	_volume->_PlaneNormal->set(norm);
 }
+
+
+void UpdateCuttingPlane::dirtyPlane() {
+	((CuttingPlane*)_object)->changePlane();
+}

@@ -44,7 +44,7 @@ void FileSelector::init()
 
 
 	////////////New FileSelect Implement.///////////
-	_so = new cvr::SceneObject("FileSelect", false, true, false, false, false);
+	_so = new cvr::SceneObject("FileSelect", false, false, false, false, false);
 	cvr::PluginHelper::registerSceneObject(_so, "HelmsleyVolume");
 	osg::Quat rot;
 	rot.makeRotate(3.14/2, 0, 0, 1);
@@ -75,6 +75,14 @@ void FileSelector::init()
 	_upArrow->setPercentPos(osg::Vec3(0.05, -1.0, -.1));
 	_upArrow->setRotate(.5f);
 
+	cvr::UIText* legendText = new cvr::UIText("Has Mask:", 45.f, osgText::TextBase::LEFT_CENTER);
+	cvr::UIQuadElement* legendMaskBox = new cvr::UIQuadElement(UI_BLACK_COLOR);
+	legendText->addChild(legendMaskBox);
+	legendMaskBox->setPercentPos(osg::Vec3(1.0, 0.0, 0.0));
+	legendMaskBox->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
+	fsBknd->addChild(legendText);
+	legendText->setPercentPos(osg::Vec3(0.05, -1.0, -.96));
+	legendText->setPercentSize(osg::Vec3(0.1, 1.0, .04));
 
 	_fsPopup->addChild(fsBknd);
 	_fsPopup->setActive(true, true);
@@ -564,16 +572,10 @@ void FileSelector::updateFileSelection()
 }
 
 int FileSelector::checkIfPatient(std::string fn, int indexFromDicom) {
-	//for every file/direct check recursively if there is a series to dicom connection
-	//if true mark file/direct as patient and add to menu
-	
-
 	DIR* dir = opendir(fn.c_str());
 	struct dirent* entry = readdir(dir);
 	while (entry != NULL) {
 		if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
-			std::cout << "fn: " << fn << std::endl;
-			std::cout << "newfn: " << entry->d_name << std::endl;
 			std::string newFn = fn + "/" + entry->d_name;
 			int newIndex = checkIfPatient(newFn, indexFromDicom);
 			if (newIndex > -1) {
@@ -648,7 +650,7 @@ osg::Vec3dArray* FileSelector::loadCenterLine(std::string path, OrganEnum organ)
 			//std::cout << yamlFile[1]["coords"] << std::endl;
 			//std::cout << "coord size: " << yamlCoords.size() << std::endl;
 			osg::Vec3d coord;
-			for (unsigned i = 0; i < yamlCoords.size(); i++) {
+			for (unsigned i = 0; i < yamlCoords.size()/2; i++) {
 				coord.x() = (yamlCoords[i]["x"].as<double>());
 				coord.y() = -(yamlCoords[i]["y"].as<double>());
 				coord.z() = ((yamlCoords[i]["z"].as<double>()));

@@ -11,6 +11,7 @@
 #define UI_PURPLE_COLOR osg::Vec3(0.847, 0.8, 1)
 #define UI_PINK_COLOR osg::Vec3(1, 0.8, 0.976)
 #define UI_WHITE_COLOR osg::Vec4(1, 1, 1, 1)
+#define UI_BLACK_COLOR osg::Vec4(0, 0, 0, 1)
 
 #include <cvrMenu/NewUI/UIButton.h>
 #include <cvrMenu/NewUI/UICheckbox.h>
@@ -479,7 +480,7 @@ public:
 		_coords = coords;
 		_color = color;
 		_geode = new osg::Geode();
-
+		
 		createGeometry();
 
 		
@@ -511,7 +512,9 @@ public:
 	virtual void setShaderDefine(std::string name, std::string definition, osg::StateAttribute::Values on);
 
 	osg::Uniform* _colorUniform;
-
+	osg::ref_ptr<osg::MatrixTransform> getTransform() {
+		return _transform;
+	}
 
 protected:
 	osg::ref_ptr<osg::MatrixTransform> _transform;

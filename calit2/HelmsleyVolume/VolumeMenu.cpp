@@ -1341,6 +1341,7 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	_centerLIneTool = new ToolToggle(dir + "browser.png");
 	_centerLIneTool->setCallback(this);
 	list->addChild(_centerLIneTool);
+	
 
 	if (!_movable && !parent)
 	{
@@ -1406,6 +1407,7 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 			_screenshotTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}
+	
 	else if (item == _cuttingPlane)
 	{
 		if (_cuttingPlane->isOn())
@@ -1437,18 +1439,30 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 	}
 	else if (item == _centerLIneTool)
 	{
-		std::cout << "in callback " << std::endl;
+		osg::Matrix mat = PluginHelper::getHandMat(_centerLIneTool->getLastHand());
+		osg::Vec4d position = osg::Vec4(0, 300, 0, 1) * mat;
+		osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
+
+		osg::Quat q = osg::Quat();
+		osg::Quat q2 = osg::Quat();
+		osg::Vec3 v = osg::Vec3();
+		osg::Vec3 v2 = osg::Vec3();
+		mat.decompose(v, q, v2, q2);
+
+		HelmsleyVolume::instance()->toggleCenterlineTool(_centerLIneTool->isOn());
+		HelmsleyVolume::instance()->getCenterlineTool()->setRotation(q);
+		HelmsleyVolume::instance()->getCenterlineTool()->setPosition(pos);
 		if (_centerLIneTool->isOn())
 		{
-			std::cout << "is on " << std::endl;
 			_centerLIneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
-			HelmsleyVolume::instance()->toggleCenterLine(false);
+			HelmsleyVolume::instance()->toggleCenterLine(true);
+			HelmsleyVolume::instance()->activateClippingPath();
+
 		}
 		else
 		{
-			std::cout << "is off " << std::endl;
 			_centerLIneTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
-			HelmsleyVolume::instance()->toggleCenterLine(true);
+			HelmsleyVolume::instance()->toggleCenterLine(false);
 		}
 	}
 }

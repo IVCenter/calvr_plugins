@@ -59,13 +59,14 @@ public:
 	void setDirty(osg::GraphicsContext* gc, bool d=true) { _dirty[gc] = d; };
 	bool isDirty(osg::GraphicsContext* gc) { return _dirty[gc]; };
 	osg::Drawable* getDrawable() { return _cube; };
-
+	osg::Vec3dArray* getColonCoords() { return _colonCoords; }
 
 	std::vector<osg::Geode*>* getCenterLines() { return _centerLineGeodes; }
 	osg::DispatchCompute* getCompute() { return _computeNode; };
 	
 	void dirtyVolumeShader() { _program->dirtyProgram(); };
 	void dirtyComputeShader() { _computeProgram->dirtyProgram(); };
+	
 
 	void flipCull();
 
@@ -79,6 +80,7 @@ public:
 	osg::Matrix getWorldToObjectMatrix();
 
 	osg::ref_ptr<osg::MatrixTransform> _transform;
+	osg::ref_ptr<osg::MatrixTransform> _lineTransform;
 	osg::ref_ptr<osg::FrameBufferObject> _resolveFBO;
 	
 
@@ -100,7 +102,8 @@ protected:
 	osg::ref_ptr<osg::ShapeDrawable> _cube;
 	
 	std::vector<osg::Geode*>* _centerLineGeodes;
-
+	osg::Vec3dArray* _colonCoords;
+	osg::Vec3dArray* _illeumCoords;
 	osg::ref_ptr<osg::Texture3D> _volume;
 	osg::ref_ptr<osg::Texture3D> _baked;
 

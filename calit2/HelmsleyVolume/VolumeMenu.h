@@ -83,6 +83,7 @@ protected:
 	ToolToggle* _measuringTool;
 	ToolToggle* _screenshotTool;
 	ToolToggle* _centerLIneTool;
+	
 	//ToolRadialButton* _prevButton = nullptr;
 
 private:

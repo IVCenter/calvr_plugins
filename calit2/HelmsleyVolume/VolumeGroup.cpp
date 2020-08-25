@@ -266,19 +266,22 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 
 	////////////////centerline
 	_centerLineGeodes = new std::vector<osg::Geode*>();
-	osg::Vec3dArray* colonCoords = FileSelector::loadCenterLine(path, FileSelector::OrganEnum::COLON);
-	if (!colonCoords->empty()) {
-		Line* colonLine = new Line(colonCoords, osg::Vec4(UI_PURPLE_COLOR, 1.0));
+	_colonCoords = FileSelector::loadCenterLine(path, FileSelector::OrganEnum::COLON);
+	if (!_colonCoords->empty()) {
+		Line* colonLine = new Line(_colonCoords, osg::Vec4(UI_BLUE_COLOR, 1.0));
 		_centerLineGeodes->push_back(colonLine->getGeode());
-		_transform->addChild(_centerLineGeodes->at(_centerLineGeodes->size()-1));
 		
+		_transform->addChild(_centerLineGeodes->at(_centerLineGeodes->size()-1));
+		_centerLineGeodes->at(_centerLineGeodes->size() - 1)->setNodeMask(0);
+		_lineTransform = colonLine->getTransform();
 	}
 
-	osg::Vec3dArray* illeumCoords = FileSelector::loadCenterLine(path, FileSelector::OrganEnum::ILLEUM);
-	if (!illeumCoords->empty()) {
-		Line* illeumLine = new Line(illeumCoords, osg::Vec4(UI_PURPLE_COLOR, 1.0));
+    _illeumCoords = FileSelector::loadCenterLine(path, FileSelector::OrganEnum::ILLEUM);
+	if (0 && !_illeumCoords->empty()) {
+		Line* illeumLine = new Line(_illeumCoords, osg::Vec4(UI_PURPLE_COLOR, 1.0));
 		_centerLineGeodes->push_back(illeumLine->getGeode());
 		_transform->addChild(_centerLineGeodes->at(_centerLineGeodes->size() - 1));
+		_centerLineGeodes->at(_centerLineGeodes->size() - 1)->setNodeMask(0);
 	}
 
 	osg::Matrix m = osg::Matrix::identity();

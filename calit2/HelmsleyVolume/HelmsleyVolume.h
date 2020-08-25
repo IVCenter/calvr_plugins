@@ -26,6 +26,7 @@
 #include "VolumeMenu.h"
 #include "MeasurementTool.h"
 #include "ScreenshotTool.h"
+#include "CenterLineTool.h"
 #include "CuttingPlane.h"
 #include "FileSelector.h"
 
@@ -56,7 +57,9 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		void createList(cvr::SubMenu* , std::string configbase);
 
 		void toggleScreenshotTool(bool on);
+		void toggleCenterlineTool(bool on);
 		ScreenshotTool* getScreenshotTool() { return screenshotTool; }
+		CenterlineTool* getCenterlineTool() { return centerLineTool; }
 
 		CuttingPlane* createCuttingPlane(unsigned int i = 0);
 		void removeCuttingPlane(unsigned int i);
@@ -71,6 +74,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		void setTool(ToolState tool) { _tool = tool; }
 		void activateMeasurementTool(int volume);
 		void deactivateMeasurementTool(int volume);
+		void activateClippingPath();
 		std::vector<CuttingPlane*> getCuttingPlanes() { return _cuttingPlanes; }
 		std::vector<cvr::SceneObject*> getSceneObjects() { return _sceneObjects; }
 		std::vector<osg::ref_ptr<VolumeGroup>> getVolumes() { return _volumes; }
@@ -95,11 +99,13 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		cvr::MenuButton * _resetHMD;
 		osg::MatrixTransform* cuttingPlane;
 		ScreenshotTool* screenshotTool;
+		CenterlineTool* centerLineTool;
 		FileSelector* fileSelector;
 
 		std::vector<MeasurementTool*> _measurementTools;
 		int _lastMeasurementTool;
 
+		
 		std::vector<CuttingPlane*> _cuttingPlanes;
 		std::vector<osg::ref_ptr<VolumeGroup> > _volumes;
 		std::vector<cvr::SceneObject*> _sceneObjects;
@@ -136,6 +142,9 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		ToolState _tool = NONE;
 
 		static HelmsleyVolume* _instance;
+
+	private:
+		osg::Quat MyLookRotation(osg::Vec3 lookAt, osg::Vec3 upDirection);
 };
 
 #endif

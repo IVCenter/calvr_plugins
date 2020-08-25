@@ -2,6 +2,7 @@
 #include "HelmsleyVolume.h"
 #include "cvrKernel/NodeMask.h"
 #include <osg/BlendFunc>
+#include <osg/PolygonMode>
 #include <algorithm>
 
 using namespace cvr;
@@ -1206,14 +1207,7 @@ void Line::createGeometry()
 
 	int numCoords = _coords->size();
 
-	osg::Matrixd rot = osg::Matrix::rotate(osg::PI, 1, 0, 0);
 	
-	/*for (auto& vector : *_coords) {
-		vector = rot * vector;
-	}*/
-
-
-
 	_polyGeom->setVertexArray(_coords);
 
 	_polyGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP, 0, numCoords));
@@ -1232,8 +1226,13 @@ void Line::updateGeometry()
 
 	osg::Vec4Array* colors = new osg::Vec4Array;
 	colors->push_back(_color);
+	/*for (int i = 0; i < _coords->size(); i++) {
+		colors->push_back(_color);
+	}*/
+
 	((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_OVERALL);
 	((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_OVERALL);
+	
 
 	osg::Matrix mat = osg::Matrix();
 	mat.makeScale(_actualSize);
@@ -1260,16 +1259,17 @@ void Line::setTransparent(bool transparent)
 {
 	if (transparent)
 	{
-		_geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+		
 
-		_geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
-		_geode->getOrCreateStateSet()->setAttributeAndModes(new osg::BlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA));
+	
+
 		_geode->getOrCreateStateSet()->setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
 		osg::LineWidth* linewidth = new osg::LineWidth();
 		linewidth->setWidth(30.0f);
 		_geode->getOrCreateStateSet()->setAttributeAndModes(linewidth, osg::StateAttribute::ON);
 		_geode->getOrCreateStateSet()->setRenderBinDetails(5, "RenderBin");
-
+		_geode->getOrCreateStateSet()->setMode(GL_CULL_FACE, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE);
+		_geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
 	}
 	else
 	{
@@ -1317,7 +1317,7 @@ osg::Program* Line::getOrLoadProgram()
 	/*if (!_triangleProg)
 	{*/
 
-	const std::string vert = HelmsleyVolume::loadShaderFile("transferFunction.vert");
+	const std::string vert = HelmsleyVolume::loadShaderFile("lines.vert");
 	const std::string frag = HelmsleyVolume::loadShaderFile("lines.frag");
 	_lineProg = new osg::Program;
 	_lineProg->setName("Lines");

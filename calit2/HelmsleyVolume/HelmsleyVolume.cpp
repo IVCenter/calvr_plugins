@@ -230,6 +230,13 @@ bool HelmsleyVolume::init()
 	screenshotTool = new ScreenshotTool("Screenshot Tool", false, true, false, false, true);
 	PluginHelper::registerSceneObject(screenshotTool, "HelmsleyVolume");
 
+	
+	centerLineTool = new CenterlineTool("CenterLine Tool", false, true, false, false, true);
+	PluginHelper::registerSceneObject(centerLineTool, "HelmsleyVolume");
+	
+
+
+
 	fileSelector = new FileSelector();
 
 
@@ -329,7 +336,7 @@ void HelmsleyVolume::preFrame()
 void HelmsleyVolume::postFrame()
 {
 	++_frameNum;
-	int max = 900;
+	int max = 500;
 	int fade = 180;
 
 	if (_frameNum > max)
@@ -517,6 +524,20 @@ void HelmsleyVolume::toggleScreenshotTool(bool on)
 	}
 }
 
+void HelmsleyVolume::toggleCenterlineTool(bool on)
+{
+	if (on)
+	{
+		centerLineTool->attachToScene();
+		centerLineTool->activate();
+	}
+	else
+	{
+		centerLineTool->detachFromScene();
+		centerLineTool->deactivate();
+	}
+}
+
 void HelmsleyVolume::activateMeasurementTool(int volume)
 {
 	_lastMeasurementTool = volume;
@@ -527,6 +548,29 @@ void HelmsleyVolume::deactivateMeasurementTool(int volume)
 	_measurementTools[volume]->deactivate();
 	_lastMeasurementTool = -1;
 }
+
+void HelmsleyVolume::activateClippingPath() {
+	CuttingPlane* cp;
+	if (_cuttingPlanes.empty()) {
+		 cp = createCuttingPlane(0);
+	}
+	else {
+		cp = _cuttingPlanes[0];
+	}
+
+	
+	osg::Vec3dArray* coords = _volumes[0]->getColonCoords();
+	
+
+	osg::MatrixTransform* transform = new osg::MatrixTransform(_volumes[0]->_transform->getMatrix());
+	osg::MatrixTransform* camTransform = new osg::MatrixTransform(_volumes[0]->getObjectToWorldMatrix());
+	/*osg::Matrix* cpTrans = &cp->getObjectToWorldMatrix();*/
+	
+	centerLineTool->setCoords(coords, camTransform);
+	cp->setCoords(coords, transform);
+	
+}
+
 
 CuttingPlane* HelmsleyVolume::createCuttingPlane(unsigned int i)
 {
@@ -544,7 +588,10 @@ CuttingPlane* HelmsleyVolume::createCuttingPlane(unsigned int i)
 	PluginHelper::registerSceneObject(cp, "HelmsleyVolume");
 	//cp->attachToScene();
 	_sceneObjects[i]->addChild(cp);
+	
 	_cuttingPlanes.push_back(cp);
+
+
 	return cp;
 }
 
@@ -564,15 +611,16 @@ void HelmsleyVolume::removeCuttingPlane(unsigned int i)
 
 void HelmsleyVolume::toggleCenterLine(bool on) {
 	std::vector<osg::Geode*>* centerlines = _volumes[0]->getCenterLines();
-	if (on) {//turn off
-		std::cout << "centerline size: " << centerlines->size() << std::endl;
+	if (on) {
+
 		for (int i = 0; i < centerlines->size(); i++) {
-			centerlines->at(i)->setNodeMask(0);
+			centerlines->at(i)->setNodeMask(0xffffffff);
 		}
 	}
 	else {
+
 		for (int i = 0; i < centerlines->size(); i++) {
-			centerlines->at(i)->setNodeMask(0xffffffff);
+			centerlines->at(i)->setNodeMask(0);
 		}
 	}
 }
