@@ -2034,20 +2034,27 @@ osg::Vec3 ColorPicker::returnColor() {
 	return rgbColor;
 }
 
-Selection::Selection(std::string name, std::string icon) :
+Selection::Selection(std::string name, bool hasMask) :
 	cvr::UIElement()
 {
 	using namespace cvr;
 	_uiTexture = nullptr;
 	_name = name;
+	std::string copy = name;
+	copy.erase(copy.begin());
 	_bknd = new cvr::UIQuadElement(UI_WHITE_COLOR);
 	addChild(_bknd);
 	_bknd->setPercentPos(osg::Vec3(0, -1, 0));
 	_bknd->setBorderSize(0.01);
-	_uiText = new UIText(name, 35.0f, osgText::TextBase::LEFT_CENTER);
+	_uiText = new UIText(copy, 35.0f, osgText::TextBase::LEFT_CENTER);
 	_uiText->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
 	_uiText->setPercentPos(osg::Vec3(0.0, 0.0, -1.0));
 	_uiText->setPercentSize(osg::Vec3(1.0, 0.0, 0.08));
+
+	if (hasMask)
+		addMaskSymbol();
+
+
 	_bknd->addChild(_uiText);
 
 	_button = new CallbackButton();
@@ -2056,6 +2063,29 @@ Selection::Selection(std::string name, std::string icon) :
 	_bknd->addChild(_button);
 	
 }
+
+void Selection::addMaskSymbol() {
+	if (_uiText->getChild(0) == NULL) {
+		cvr::UIQuadElement* symbol = new cvr::UIQuadElement(UI_BLACK_COLOR);
+		_uiText->addChild(symbol);
+		symbol->setPercentPos(osg::Vec3(0.87, 1.0, -0.05));
+		symbol->setPercentSize(osg::Vec3(0.08, 1.0, 1.0));
+	}
+}
+void Selection::removeMaskSymbol() {
+	if (!_uiText->getChild(0) == NULL) {
+		_uiText->removeChild(_uiText->getChild(0));
+	}
+}
+void Selection::setMask(bool hasMask) {
+	if (hasMask) {
+		addMaskSymbol();
+	}
+	else {
+		removeMaskSymbol();
+	}
+}
+
 
 bool Selection::processEvent(cvr::InteractionEvent* event) {
 	return false;
@@ -2067,7 +2097,9 @@ void Selection::uiCallback(UICallbackCaller* ui) {
 
 void Selection::setName(std::string name) {
 	_name = name;
-	_uiText->setText(_name);
+	std::string copy = name;
+	copy.erase(copy.begin());
+	_uiText->setText(copy);
 	osgText::Text* text = _uiText->getTextObject();
 	if (_name.size() > 20){
 		text->setCharacterSize(30.0f);

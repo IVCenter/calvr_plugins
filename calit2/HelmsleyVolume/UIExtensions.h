@@ -812,7 +812,7 @@ protected:
 
 class Selection : public cvr::UIElement, public UICallback, public UICallbackCaller {
 public:
-	Selection(std::string name, std::string icon = "");
+	Selection(std::string name, bool hasMask = false);
 
 	virtual void uiCallback(UICallbackCaller* ui);
 
@@ -824,11 +824,15 @@ public:
 	CallbackButton* getButton() { return _button; }
 
 	void setName(std::string name);
+	void setMask(bool hasMask);
 	void lowerTextSize();
 	void setImage(cvr::UITexture* uiTexture);
 	cvr::UITexture* getImage() { return _uiTexture; }
 	void removeImage();
 protected:
+	void addMaskSymbol();
+	void removeMaskSymbol();
+
 	cvr::UIQuadElement* _bknd;
 	CallbackButton* _button;
 	std::string _name;

@@ -43,11 +43,25 @@ public:
 		ILLEUM = 16
 	};
 
+	enum CategoryEnum {
+		PATIENT,
+		SERIES
+	};
+
+	struct PatientInfo {
+		std::string name;
+		std::string series;
+	};
+
+
+
 	static std::vector<std::string> getPresets();
 	static osg::Vec3dArray* loadCenterLine(std::string path, OrganEnum organ);
+	static bool checkIfMask(std::string fName);
 	virtual void uiCallback(UICallbackCaller* ui);
 	std::string getCurrPath() { return _currentPath; }
 
+	void sortByMask(std::map<std::string, std::string>* currMap);
 	void loadVolume(std::string seriesPath, bool change, bool onlyVolume);
 	void loadVolumeOnly(std::string seriesPath);
 	
@@ -77,6 +91,8 @@ protected:
 
 	cvr::UIList* _topList;
 	cvr::UIList* _botList;
+	cvr::UIList* _categoryList;
+	cvr::UIList* _infoList;
 	TriangleButton* _rightArrow;
 	TriangleButton* _leftArrow;
 	TriangleButton* _upArrow;
@@ -91,6 +107,8 @@ protected:
 	bool _isOnLoad;
 	MenuState _state;
 	std::string _currentPath;
+
+	PatientInfo _patientInfo;
 
 	int _flag;
 };

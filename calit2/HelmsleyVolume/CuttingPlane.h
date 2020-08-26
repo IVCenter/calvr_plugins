@@ -61,8 +61,8 @@ public:
 			}
 		}*/
 		if (_index >= 0 && _index < _coords->size()-1) {
-			osg::Vec3d pos = _coords->at(_index) * _mTransform->getMatrix();
-			osg::Vec3d next = _coords->at((_index + 1)) * _mTransform->getMatrix();
+			osg::Vec3d pos = _coords->at(_index+1) * _mTransform->getMatrix();
+			osg::Vec3d next = _coords->at((_index)) * _mTransform->getMatrix();
 
 			osg::Vec3d posSwitch = osg::Vec3d(pos.x(), pos.z(), pos.y());
 			osg::Vec3d nextSwitch = osg::Vec3d(next.x(), next.z(), next.y());

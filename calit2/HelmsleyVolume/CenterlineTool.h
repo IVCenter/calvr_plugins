@@ -33,13 +33,14 @@ public:
 			
 			osg::Vec3d pos = _coords->at(_index) * _mTransform->getMatrix();
 			osg::Vec3d next = _coords->at((_index + 1)) * _mTransform->getMatrix();
-			osg::Matrix mat = _object->getTransform();
+			osg::Matrix mat;
 
-			osg::Vec3d posSwitch = osg::Vec3d(pos.x(), pos.z(), pos.y());
-			osg::Vec3d nextSwitch = osg::Vec3d(next.x(), next.z(), next.y());
+			osg::Vec3 dir = osg::Vec3(next - pos);
+			dir.normalize();
+			
 			osg::Vec3 up = osg::Vec3(0, 0, 1);
-			mat.makeLookAt(posSwitch, nextSwitch, up);
-			mat.setTrans(pos);
+			mat.makeLookAt(pos - (dir * 40), next, up);
+
 		
 			
 			_camera->setViewMatrix(mat);

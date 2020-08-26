@@ -92,7 +92,8 @@ void CenterlineTool::init()
 
 
 	_camera->addChild((osg::Node*)cvr::SceneManager::instance()->getScene());
-	setParams(60, 16.0 / 9.0);
+	//setParams(60, 16.0 / 9.0);
+	setParams(80, 1.0);
 	activate();
 	updateCallback(0, osg::Matrix());
 

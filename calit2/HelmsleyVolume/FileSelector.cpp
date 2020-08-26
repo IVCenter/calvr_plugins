@@ -110,8 +110,9 @@ void FileSelector::init()
 	_fsPopup->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 	_so->dirtyBounds();
 
-	checkIfPatient(_currentPath, -1);
-
+	checkIfPatient(_currentPath, -1);	//Fills Patient directories
+	_currMap = &_patientDirectories;
+	
 	
 
 
@@ -128,11 +129,12 @@ void FileSelector::init()
 	for (auto iter = _patientDirectories.begin(); iter != _patientDirectories.end(); ++iter)
 	{
 		std::string patient = iter->first;
-		std::cout << patient << std::endl;
+		
 
 		Selection* selec;
 		_selections.push_back(selec);
-		_selections[selectCount] = new Selection(iter->first);
+		std::cout << checkIfMask(iter->second) << std::endl;
+		_selections[selectCount] = new Selection(iter->first, checkIfMask(iter->second));
 		_selections[selectCount]->setId("selection");
 		_selections[selectCount]->setButtonCallback(this);
 		
@@ -146,7 +148,7 @@ void FileSelector::init()
 		}
 
 	}
-	_currMap = &_patientDirectories;
+	
 
 	//////////////////////////////Select View
 	_selectBknd = new cvr::UIQuadElement();
@@ -158,7 +160,7 @@ void FileSelector::init()
 
 
 	_selectImage = new cvr::UIQuadElement();
-	_selectImage->setPercentSize(osg::Vec3(.2, 1, .5));
+	_selectImage->setPercentSize(osg::Vec3(.3125, 1, .5));
 	_selectImage->setPercentPos(osg::Vec3(.1, -1, -.25));
 	_selectImage->setBorderSize(.01);
 
@@ -176,12 +178,37 @@ void FileSelector::init()
 
 	cvr::UIText* loadText = new cvr::UIText("Load Dataset", 50.f, osgText::TextBase::CENTER_CENTER);
 	loadText->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
-	cvr::UIText* seriesNameText = new cvr::UIText("Text", 40.f, osgText::TextBase::CENTER_CENTER);
-	seriesNameText->setPercentSize(osg::Vec3(1, 1, .25));
+
+
+	_categoryList = new cvr::UIList(cvr::UIList::TOP_TO_BOTTOM, cvr::UIList::CONTINUE);
+	cvr::UIText* patientName = new cvr::UIText("Patient: ", 40.f, osgText::TextBase::LEFT_CENTER);
+	patientName->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	cvr::UIText* seriesName = new cvr::UIText("Series: ", 40.f, osgText::TextBase::LEFT_CENTER);
+	seriesName->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	_categoryList->addChild(patientName);
+	_categoryList->addChild(seriesName);
+	_categoryList->setPercentPos(osg::Vec3(0.46, -1, -.25));
+	_categoryList->setPercentSize(osg::Vec3(1.0, 1, .2));
+
+	_infoList = new cvr::UIList(cvr::UIList::TOP_TO_BOTTOM, cvr::UIList::CONTINUE);
+	
+	cvr::UIText* patientInfo = new cvr::UIText("", 40.f, osgText::TextBase::LEFT_CENTER);
+	patientInfo->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	cvr::UIText* seriesInfo = new cvr::UIText("", 40.f, osgText::TextBase::LEFT_CENTER);
+	seriesInfo->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	_infoList->addChild(patientInfo);
+	_infoList->addChild(seriesInfo);
+	_infoList->setPercentPos(osg::Vec3(0.53, -1, -.25));
+	_infoList->setPercentSize(osg::Vec3(1.0, 1, .2));
+
+	
+	
 
 	_selectBknd->addChild(_selectImage);
+	_selectBknd->addChild(_categoryList);
+	_selectBknd->addChild(_infoList);
 	_selectBknd->addChild(loadButton);
-	_selectBknd->addChild(seriesNameText);
+	
 	_selectImage->addChild(_selectTexture);
 	loadButton->addChild(loadText);
 
@@ -274,6 +301,7 @@ void FileSelector::uiCallback(UICallbackCaller* ui){
 	else if (ui == _loadVolumeButton) {
 		bool change = _state == CHANGING ? true : false;
 		loadVolume(_currentPath, change, false);
+
 	}
 }
 
@@ -282,9 +310,12 @@ bool FileSelector::checkSelectionCallbacks(UICallbackCaller* item) {
 	for (int i = 0; i < SLOTCOUNT; i++) {
 		if (item == _selections[i]->getButton()) {
 			found = true;
-			std::cout << _selections[i]->getName() << std::endl;
-			if(_currMap == &_patientDirectories)
+			if (_currMap == &_patientDirectories) {
+				std::string copy = _selections[i]->getName();
+				copy.erase(copy.begin());
+				_patientInfo.name = copy;
 				loadPatient(_selections[i]->getName());
+			}
 			else if (_currMap == &_seriesList) {
 				_fsPopup->getRootElement()->getGroup()->removeChild(_contentBknd->getGroup());
 				_contentBknd->_parent = nullptr;
@@ -296,11 +327,24 @@ bool FileSelector::checkSelectionCallbacks(UICallbackCaller* item) {
 				_selectTexture->setTexture(_selections[i]->getImage()->getTexture());
 				_selectTexture->_geode->getDrawable(0)->getOrCreateStateSet()->setDefine("GRAYSCALE", true);
 				_selectTexture->setDirty(true);
-				//_selectTexture = _selections[i]->getImage();
+
 				
+
 				_currentPath = _seriesList[_selections[i]->getName()];
 				_isOnLoad = true;
+				
+
+				std::string copy = _selections[i]->getName();
+				copy.erase(copy.begin());
+				_patientInfo.series = copy;
+
+				cvr::UIText* category = (cvr::UIText*)_infoList->getChild(FileSelector::CategoryEnum::PATIENT);
+				category->setText(_patientInfo.name);
+				category = (cvr::UIText*)_infoList->getChild(FileSelector::CategoryEnum::SERIES);
+				category->setText(_patientInfo.series);
 			}
+			
+			return found;
 		}
 	}
 	return found;
@@ -418,7 +462,11 @@ int FileSelector::loadSeriesList(std::string pFN, int indexFromDicom) {
 			std::string newFn = pFN + "/" + entry->d_name;
 			int newIndex = loadSeriesList(newFn, indexFromDicom);
 			if (newIndex > -1) {
-				_seriesList[std::string(entry->d_name)] = pFN + "/" + entry->d_name;
+				char mask;
+				std::string key;
+				checkIfMask(pFN + "/" + entry->d_name) ? mask = 'm' : mask = 'n';	//m = mask/n= no mask
+				key = mask + std::string(entry->d_name);
+				_seriesList[key] = pFN + "/" + entry->d_name;
 			}
 		}
 		else if (entry->d_type == DT_REG && strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0) {
@@ -438,7 +486,7 @@ void FileSelector::updateSelections(SelectChoice choice) {
 	
 	int slotsLeft = SLOTCOUNT;
 	int topBotIndex = 0;
-
+	int maskCount = 0;
 	if (choice == LEFT)
 		_selectIndex -= SLOTCOUNT * 2;
 
@@ -447,13 +495,24 @@ void FileSelector::updateSelections(SelectChoice choice) {
 	auto it = _currMap->begin();
 	std::advance(it, _selectIndex);
 
-	while (slotsLeft > 0) {
+	while (slotsLeft > 0) {//crash if irbs less than slotcount 
 
 		Selection* selec;
 		topBotIndex < SLOTCOUNT / 2 ? selec = (Selection*)_topList->getChild(topBotIndex)
 			: selec = (Selection*)_botList->getChild(topBotIndex % (SLOTCOUNT / 2));
-		_currMap->size() > _selectIndex ? selec->setName(it->first)
-			: selec->setName("");
+
+		if (_currMap->size() > _selectIndex) {
+			selec->setName(it->first);
+			bool hasMask = checkIfMask(it->second);
+			selec->setMask(hasMask);
+			if (hasMask)
+				maskCount++;
+		}
+		else {
+			selec->setName("");
+			selec->setMask(false);
+		}
+
 		topBotIndex++;
 		it++;			//path map iterator
 		_selectIndex++; //path map "index"
@@ -468,8 +527,21 @@ void FileSelector::updateSelections(SelectChoice choice) {
 		showDicomThumbnail();
 	}
 	
+	
 }
 
+void FileSelector::sortByMask(std::map<std::string, std::string>* currMap) {
+	
+	for (auto iter = currMap->begin(); iter != currMap->end(); ++iter)
+	{
+		
+		if (checkIfMask(iter->second)) {
+			
+		}
+		
+
+	}
+}
 void FileSelector::loadVolume(std::string seriesPath, bool change, bool onlyVolume) {
 	//Load volume
 	if (change)
@@ -580,7 +652,11 @@ int FileSelector::checkIfPatient(std::string fn, int indexFromDicom) {
 			int newIndex = checkIfPatient(newFn, indexFromDicom);
 			if (newIndex > -1) {
 				if (newIndex == 1) {
-					_patientDirectories[std::string(entry->d_name)] = fn+"/"+entry->d_name;
+					char mask;
+					std::string key;
+					checkIfMask(fn + "/" + entry->d_name) ? mask = 'm' : mask = 'n';	//m = mask/n= no mask
+					key = mask + std::string(entry->d_name);
+					_patientDirectories[key] = fn+"/"+entry->d_name;
 				}
 				else {
 					closedir(dir);
@@ -617,6 +693,30 @@ std::vector<std::string> FileSelector::getPresets() {
 	return presetPaths;
 }
 
+bool FileSelector::checkIfMask(std::string seriesPath) {
+	
+	DIR* mainDir = opendir(seriesPath.c_str());
+	if (mainDir == nullptr)
+		return false;
+	struct dirent* entry = readdir(mainDir);
+	while (entry != NULL) {
+		if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+		
+			if (strcmp(entry->d_name, "mask") == 0) {
+				closedir(mainDir);
+				return true;
+			}
+			std::string newFn = seriesPath + "/" + entry->d_name;
+			if (checkIfMask(newFn)) {
+				closedir(mainDir);
+				return true;
+			}
+		}
+		entry = readdir(mainDir);
+	}
+	return false;
+
+}
 
 osg::Vec3dArray* FileSelector::loadCenterLine(std::string path, OrganEnum organ) {
 	DIR* dir = opendir(path.c_str());
@@ -650,7 +750,7 @@ osg::Vec3dArray* FileSelector::loadCenterLine(std::string path, OrganEnum organ)
 			//std::cout << yamlFile[1]["coords"] << std::endl;
 			//std::cout << "coord size: " << yamlCoords.size() << std::endl;
 			osg::Vec3d coord;
-			for (unsigned i = 0; i < yamlCoords.size()/2; i++) {
+			for (unsigned i = 0; i < yamlCoords.size(); i++) {
 				coord.x() = (yamlCoords[i]["x"].as<double>());
 				coord.y() = -(yamlCoords[i]["y"].as<double>());
 				coord.z() = ((yamlCoords[i]["z"].as<double>()));

@@ -563,7 +563,8 @@ void HelmsleyVolume::activateClippingPath() {
 	
 
 	osg::MatrixTransform* transform = new osg::MatrixTransform(_volumes[0]->_transform->getMatrix());
-	osg::MatrixTransform* camTransform = new osg::MatrixTransform(_volumes[0]->getObjectToWorldMatrix());
+	
+	osg::MatrixTransform* camTransform = new osg::MatrixTransform(_volumes[0]->getObjectToWorldMatrix() * _sceneObjects[0]->getObjectToWorldMatrix());
 	/*osg::Matrix* cpTrans = &cp->getObjectToWorldMatrix();*/
 	
 	centerLineTool->setCoords(coords, camTransform);
