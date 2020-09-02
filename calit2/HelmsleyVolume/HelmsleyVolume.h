@@ -143,8 +143,6 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 
 		static HelmsleyVolume* _instance;
 
-	private:
-		osg::Quat MyLookRotation(osg::Vec3 lookAt, osg::Vec3 upDirection);
 };
 
 #endif

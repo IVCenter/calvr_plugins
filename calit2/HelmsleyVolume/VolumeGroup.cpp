@@ -64,6 +64,7 @@ VolumeGroup::~VolumeGroup()
 {
 	_computeUniforms.clear();
 	_dirty.clear();
+	
 }
 
 osg::Matrix VolumeGroup::getObjectToWorldMatrix()
@@ -316,7 +317,10 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 		loadMask(maskpath, i);
 		_hasMask = true;
 	}
-
+	else {
+		_hasMask = false;
+		
+	}
 	
 
 

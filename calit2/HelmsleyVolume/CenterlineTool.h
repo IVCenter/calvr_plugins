@@ -93,7 +93,7 @@ public:
 	}
 
 	//virtual void updateCallback(int handID, const osg::Matrix& mat);
-	//virtual void menuCallback(cvr::MenuItem* menuItem);
+	virtual void menuCallback(cvr::MenuItem* menuItem);
 	//virtual void enterCallback(int handID, const osg::Matrix& mat);
 	//virtual void leaveCallback(int handID, const osg::Matrix& mat);
 	void setCoords(osg::Vec3dArray* coords, osg::MatrixTransform* trans) {
@@ -115,6 +115,7 @@ protected:
 	osg::ref_ptr<osg::Node> _tablet;
 	osg::ref_ptr<osg::Geometry> _display;
 
+	cvr::MenuButton* _illeumButton;
 	cvr::PopupMenu* _cameraMenu;
 	
 	osg::ref_ptr<osg::Camera::DrawCallback> _pdc;

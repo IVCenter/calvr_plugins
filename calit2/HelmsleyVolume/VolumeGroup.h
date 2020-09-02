@@ -102,8 +102,8 @@ protected:
 	osg::ref_ptr<osg::ShapeDrawable> _cube;
 	
 	std::vector<osg::Geode*>* _centerLineGeodes;
-	osg::Vec3dArray* _colonCoords;
-	osg::Vec3dArray* _illeumCoords;
+	osg::ref_ptr<osg::Vec3dArray> _colonCoords;
+	osg::ref_ptr<osg::Vec3dArray> _illeumCoords;
 	osg::ref_ptr<osg::Texture3D> _volume;
 	osg::ref_ptr<osg::Texture3D> _baked;
 

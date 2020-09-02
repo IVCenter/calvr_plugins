@@ -118,11 +118,11 @@ ToolToggle::ToolToggle(std::string iconpath)
 {
 	_icon = new UITexture(iconpath);
 	_icon->setTransparent(true);
-	_icon->setColor(osg::Vec4(0, 0, 0, 1));
+	//_icon->setColor(osg::Vec4(0, 0, 0, 1));
 	_icon->setPercentSize(osg::Vec3(0.8, 1, 0.8));
 	_icon->setPercentPos(osg::Vec3(0.1, 0, -0.1));
 
-	_quad = new UIQuadElement(osg::Vec4(0.95, 0.95, 0.95, 1));
+	_quad = new UIQuadElement(osg::Vec4(1.00, 1.00, 1.00, 1));
 	_quad->setRounding(0.0f, 0.05f);
 	_quad->setTransparent(true);
 	_quad->addChild(_icon);
@@ -139,6 +139,11 @@ void ToolToggle::processHover(bool enter)
 	{
 		_quad->setColor(osg::Vec4(0.95, 0.95, 0.95, 1.0));
 	}
+}
+
+void ToolToggle::setColor(osg::Vec4 color)
+{
+	_icon->setColor(osg::Vec4(0, 0, 0, 1));
 }
 #pragma endregion
 
@@ -175,6 +180,10 @@ bool CallbackSlider::onPercentChange()
 #pragma endregion
 
 #pragma region ShaderQuad
+ShaderQuad::~ShaderQuad() {
+	
+}
+
 void ShaderQuad::updateGeometry()
 {
 	UIQuadElement::updateGeometry();
@@ -1409,7 +1418,7 @@ void TriangleButton::updateGeometry()
 	}
 
 
-	osg::Vec3Array* vertices = new osg::Vec3Array(numCoords, myCoords);
+	osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array(numCoords, myCoords);
 	_polyGeom->setVertexArray(vertices);
 
 	/*osg::Vec2Array* texcoords = new osg::Vec2Array;
@@ -1419,7 +1428,7 @@ void TriangleButton::updateGeometry()
 
 	//_polyGeom->setVertexAttribArray(1, texcoords, osg::Array::BIND_PER_VERTEX);
 
-	osg::Vec4Array* colors = new osg::Vec4Array;
+	osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array;
 	colors->push_back(_color);
 	((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_OVERALL);
 	((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_OVERALL);

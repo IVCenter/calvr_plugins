@@ -27,6 +27,8 @@
 #include <fstream>
 
 
+
+
 using namespace cvr;
 
 HelmsleyVolume * HelmsleyVolume::_instance = NULL;
@@ -90,10 +92,18 @@ HelmsleyVolume::HelmsleyVolume()
 
 HelmsleyVolume::~HelmsleyVolume()
 {
+	delete fileSelector;
+	screenshotTool->detachFromScene();
+	delete screenshotTool;
+	centerLineTool->detachFromScene();
+	delete centerLineTool;
+	delete _room;
 }
 
 bool HelmsleyVolume::init()
 {
+	
+
 	_vMenu = new SubMenu("HelmsleyVolume", "HelmsleyVolume");
 	_vMenu->setCallback(this);
 
@@ -248,47 +258,6 @@ bool HelmsleyVolume::init()
 	fileMenu->setCallback(this);
 	_vMenu->addItem(fileMenu);
 
-	/*
-	_cpButton = new MenuButton("Cutting Plane");
-	_cpButton->setCallback(this);
-	_mtButton = new MenuCheckbox("Measurement Tool", false);
-	_mtButton->setCallback(this);
-	_toolButton = nullptr;
-	_stCheckbox = new MenuCheckbox("Screenshot Tool", false);
-	_stCheckbox->setCallback(this);
-	_vMenu->addItem(_cpButton);
-	_vMenu->addItem(_mtButton);
-	_vMenu->addItem(_stCheckbox);
-	
-
-	_selectionMenu = new PopupMenu("Interaction options", "", false);
-	_selectionMenu->setVisible(false);
-
-	_selectionMatrix = osg::Matrix();
-	_selectionMatrix.makeTranslate(osg::Vec3(-300, 500, 300));
-	_selectionMenu->setTransform(_selectionMatrix);
-
-	*/
-	/*
-	_radial = new MenuRadial();
-	std::vector<std::string> labels = std::vector<std::string>();
-	std::vector<bool> symbols = std::vector<bool>();
-	labels.push_back(modelDir + "scissors_ucsd.obj");
-	labels.push_back("measure");
-	labels.push_back(modelDir + "pen_ucsd.obj");
-	labels.push_back(modelDir + "eraser_ucsd.obj");
-
-	symbols.push_back(true);
-	symbols.push_back(false);
-	symbols.push_back(true);
-	symbols.push_back(true);
-	_radial->setLabels(labels, symbols);
-	_selectionMenu->addMenuItem(_radial);
-	
-	//_vMenu->addItem(_radial);
-	*/
-
-	//_toolMenu = new ToolMenu();
 
 	createList(fileMenu, "Plugin.HelmsleyVolume.Files");
 
@@ -687,6 +656,7 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath, bool onl
 
 void HelmsleyVolume::loadVolumeOnly(std::string path, std::string maskpath) {
 	VolumeGroup* g = new VolumeGroup();
+
 	g->loadVolume(path, maskpath);
 	_sceneObjects[0]->addChild(g);	//set new g on so
 	_sceneObjects[0]->attachToScene();

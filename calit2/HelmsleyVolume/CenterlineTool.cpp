@@ -105,8 +105,25 @@ void CenterlineTool::init()
 	_cameraMenu->setMovable(false);
 	//_cameraMenu->setRotation(osg:)
 	this->addChild(_cameraMenu->getRootObject());
+
+
+	_illeumButton = new cvr::MenuButton("Illeum");
+	_illeumButton->setCallback(this);
+	_cameraMenu->addMenuItem(_illeumButton);
 	
 	
+}
+
+void CenterlineTool::menuCallback(cvr::MenuItem* menuItem)
+{
+	if (menuItem == _illeumButton)
+	{
+		
+	}
+	else
+	{
+		//SceneObject::menuCallback(menuItem);
+	}
 }
 
 void CenterlineTool::setParams(double fov, double aspect)

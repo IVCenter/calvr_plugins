@@ -39,10 +39,17 @@ void VolumeMenu::menuCallback(cvr::MenuItem * item)
 	}
 }
 
+VolumeMenu::~VolumeMenu() {
+	if (_scene)
+	{
+		delete _scene;
+	}
+}
 
 NewVolumeMenu::~NewVolumeMenu()
 {
 	delete _toolMenu;
+
 	_menu->setActive(false, false);
 	MenuManager::instance()->removeMenuSystem(_menu);
 	delete _menu;
@@ -62,19 +69,24 @@ NewVolumeMenu::~NewVolumeMenu()
 
 	if (_container)
 	{
-		_container->detachFromScene();
 		delete _container;
 	}
 	if (_maskContainer)
 	{
-		_maskContainer->detachFromScene();
 		delete _maskContainer;
 	}
 	if (_tentWindowContainer)
 	{
-		_tentWindowContainer->detachFromScene();
 		delete _tentWindowContainer;
 	}
+
+	if(_cp->_parent == nullptr){
+		delete _cp;
+	}
+	
+	delete _so;
+
+	delete _volume;
 
 }
 
@@ -487,50 +499,16 @@ void NewVolumeMenu::init()
 
 
 
-	if (_volume->hasMask())
+	/*if (_volume->hasMask())
 	{
-		
+	*/	
 		_maskBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 		_maskBknd->setPercentPos((osg::Vec3(0, 0, -.7)));
 		_maskBknd->setPercentSize((osg::Vec3(1.62, 1, 1)));
 		_maskBknd->setBorderSize(.01);
 		_maskMenu->addChild(_maskBknd);
-		
 
-			//>===============================Color Picker (When Needed)==============================<//
-		//UIQuadElement* cpHeader = new UIQuadElement(UI_BACKGROUND_COLOR);
-		//_cpHeader = cpHeader;
-		//UIQuadElement* exitBox = new UIQuadElement(osg::Vec4(.85, .45, .45, 1));
-		//UIText* cpHLabel = new UIText("Body", 50.0f, osgText::TextBase::CENTER_CENTER);
-		//_cpHLabel = cpHLabel;
-		//UIText* exitLabel = new UIText("X", 50.0f, osgText::TextBase::CENTER_CENTER);
-		//_exitCPCallback = new CallbackButton();
-		//_exitCPCallback->setCallback(this);
-		//_colorMenu = new UIPopup();
-		//_colorMenu->addChild(cp);
-		//cp->setPercentSize(osg::Vec3(1, 1, .8));
-		//cp->setPercentPos(osg::Vec3(1.015, -0.015, -.2));
-		//cp->setVolume(_volume);
-		//cp->setFunction(transferFunction);
-		//cp->setRadial(_transferFunctionRadial);
-		//cp->setColorDisplay(_colorDisplay);
-		//_colorMenu->addChild(cpHeader);
-		//cpHeader->setPercentPos(osg::Vec3(1.015, -0.015, 0));
-		//cpHeader->setPercentSize(osg::Vec3(1, 1, .2));
-		//cpHLabel->setPercentSize(osg::Vec3(1, 1, 0.2));
-		//cpHLabel->setPercentPos(osg::Vec3(0, 0, -.5));
-		//cpHeader->addChild(cpHLabel);
-		//cpHLabel->addChild(exitBox);
-		//exitBox->setPercentSize(osg::Vec3(.2, 1, 1.5));
-		//exitBox->setPercentPos(osg::Vec3(.8, 0, 2.5));
-		//exitBox->addChild(exitLabel);
-		//exitBox->addChild(_exitCPCallback);
-		//_colorMenu->setRotation(rot);
-		//_colorMenu->setPosition(osg::Vec3(1800, 1000, 1250) - volumePos);//ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ColorMenu.Position", osg::Vec3(850, 500, 800)) - volumePos);
-		//_colorMenu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.MaskMenu.Scale", osg::Vec3(500, 1, 800)));
-		
-
-		UIText* label = new UIText("Organs", 50.0f, osgText::TextBase::CENTER_CENTER);
+		label = new UIText("Organs", 50.0f, osgText::TextBase::CENTER_CENTER);
 		label->setPercentSize(osg::Vec3(1, 1, 0.2));
 		_maskBknd->addChild(label);
 
@@ -662,7 +640,7 @@ void NewVolumeMenu::init()
 		_mainMaskList->addChild(aortaList);
 		_mainMaskList->addChild(illeumList);
 		
-	}
+	//}
 	if (!_movable)
 	{
 		_maskMenu->setActive(true, true);
@@ -684,23 +662,14 @@ void NewVolumeMenu::init()
 
 		_maskMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_tentMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
-		/*if(_volume->hasMask())
-			_colorMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));*/
 		_maskContainer->dirtyBounds();
 	}
-}
 
-void NewVolumeMenu::colorButtonPress(cvr::UIQuadElement* button, organRGB organRGB, std::string organName, VisibilityToggle* organEye) {
-	_cp->setButton(button);
-	_cp->setOrganRgb(organRGB);
-	_maskContainer->addChild(_colorMenu->getRoot());
-	_cpHLabel->setText(organName);
-	if(!organEye->isOn())
-		organEye->toggle();
-	std::transform(organName.begin(), organName.end(), organName.begin(), ::toupper);
-	_volume->getCompute()->getOrCreateStateSet()->setDefine(organName, organEye->isOn());
-	_volume->setDirtyAll();
-
+	if (!_volume->hasMask()) {
+		_maskMenu->getRootElement()->getGroup()->removeChild(_maskBknd->getGroup());
+		_maskBknd->_parent = nullptr;
+		_maskBknd->setActive(false);
+	}
 }
 
 UIList* NewVolumeMenu::addPresets(UIQuadElement* bknd) {
@@ -730,42 +699,6 @@ UIList* NewVolumeMenu::addPresets(UIQuadElement* bknd) {
 
 void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 {	
-	//<=================================COLORED BUTTONS=================================>//
-
-	/*if (item == _colonColCallback) {
-		_cp->setSaveColor(&_colonCol);
-		_cp->setCPColor(_colonCol);
-		
-		colorButtonPress(_colonColorButton, organRGB(COLON), "Colon", _colon);
-	}
-
-	if (item == _kidneyColCallback) {
-		_cp->setSaveColor(&_kidneyCol);
-		_cp->setCPColor(_kidneyCol);
-	
-		colorButtonPress(_kidneyColorButton, organRGB(KIDNEY), "Kidney", _kidney);
-	}
-
-	if (item == _bladderColCallback) {
-		_cp->setSaveColor(&_bladderCol);
-		_cp->setCPColor(_bladderCol);
-		
-		colorButtonPress(_bladderColorButton, organRGB(BLADDER), "Bladder", _bladder);
-	}
-
-	if (item == _spleenColCallback) {
-		_cp->setSaveColor(&_spleenCol);
-		_cp->setCPColor(_spleenCol);
-		
-		colorButtonPress(_spleenColorButton, organRGB(SPLEEN), "Spleen", _spleen);
-	}
-	if (item == _exitCPCallback) {
-		_colorMenu->setActive(false, false);
-	}*/
-
-
-
-
 	if (item == _horizontalflip)
 	{
 		osg::Matrix m;
@@ -1066,36 +999,47 @@ void NewVolumeMenu::usePreset(std::string filename) {
 	setContrastValues(contrastLow, contrastHigh, brightness);
 
 	///////////////Masks////////////////////
-	int val = config["mask"][0].as<int>();
-	if(_organs->isOn() != val)
-		_organs->toggle();
-	_volume->getCompute()->getOrCreateStateSet()->setDefine("ORGANS_ONLY", !val);
-	val = config["mask"][1].as<int>();
-	if(_colon->isOn() != val)
-		_colon->toggle();
-	_volume->getCompute()->getOrCreateStateSet()->setDefine("COLON", val);
-	val = config["mask"][2].as<int>();
-	if(_kidney->isOn() != val)
-		_kidney->toggle();
-	_volume->getCompute()->getOrCreateStateSet()->setDefine("KIDNEY", val);
-	val = config["mask"][3].as<int>();
-	if(_bladder->isOn() != val)
-		_bladder->toggle();
-	_volume->getCompute()->getOrCreateStateSet()->setDefine("BLADDER", val);
-	val = config["mask"][4].as<int>();
-	if(_spleen->isOn() != val)
-		_spleen->toggle();
-	_volume->getCompute()->getOrCreateStateSet()->setDefine("SPLEEN", val);
-	val = config["mask"][5].as<int>();
-	if(_illeum->isOn() != val)
-		_illeum->toggle();
-	_volume->getCompute()->getOrCreateStateSet()->setDefine("ILLEUM", val);
-	val = config["mask"][6].as<int>();
-	if(_aorta->isOn() != val)
-		_aorta->toggle();
-	_volume->getCompute()->getOrCreateStateSet()->setDefine("AORTA", val);
+	if (_volume->hasMask()) {
+		_maskMenu->addChild(_maskBknd);
+		_maskBknd->setActive(true);
 
-	_volume->setDirtyAll();
+		bool val = config["mask"][0].as<int>();
+
+		if (_organs->isOn() != val)
+			_organs->toggle();
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("ORGANS_ONLY", !val);
+		val = config["mask"][1].as<int>();
+		if (_colon->isOn() != val)
+			_colon->toggle();
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("COLON", val);
+		val = config["mask"][2].as<int>();
+		if (_kidney->isOn() != val)
+			_kidney->toggle();
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("KIDNEY", val);
+		val = config["mask"][3].as<int>();
+		if (_bladder->isOn() != val)
+			_bladder->toggle();
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("BLADDER", val);
+		val = config["mask"][4].as<int>();
+		if (_spleen->isOn() != val)
+			_spleen->toggle();
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("SPLEEN", val);
+		val = config["mask"][5].as<int>();
+		if (_illeum->isOn() != val)
+			_illeum->toggle();
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("ILLEUM", val);
+		val = config["mask"][6].as<int>();
+		if (_aorta->isOn() != val)
+			_aorta->toggle();
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("AORTA", val);
+
+		_volume->setDirtyAll();
+	}
+	else {
+		_maskMenu->getRootElement()->getGroup()->removeChild(_maskBknd->getGroup());
+		_maskBknd->_parent = nullptr;
+		_maskBknd->setActive(false);
+	}
 
 	////////////Cutting Plane/////////////
 	ToolToggle* cuttingPlaneTool = _toolMenu->getCuttingPlaneTool();
@@ -1116,8 +1060,13 @@ void NewVolumeMenu::usePreset(std::string filename) {
 		cutPQuat.z() = config["cutting plane rotation"][2].as<float>();
 		cutPQuat.w() = config["cutting plane rotation"][3].as<float>();
 
-	
-		HelmsleyVolume::instance()->HelmsleyVolume::createCuttingPlane(0);
+		
+		if (!cuttingPlaneTool->isOn())
+			cuttingPlaneTool->toggle();
+		else
+			CuttingPlane* cutP = HelmsleyVolume::instance()->HelmsleyVolume::createCuttingPlane(0);
+		cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+		//CuttingPlane* cutP = HelmsleyVolume::instance()->HelmsleyVolume::createCuttingPlane(0);
 		CuttingPlane* cutP = HelmsleyVolume::instance()->HelmsleyVolume::getCuttingPlanes()[0];
 		cutP->setPosition(cutPpos);
 		cutP->setRotation(cutPQuat);
@@ -1327,18 +1276,21 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	std::string dir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ImageDir");
 
 	_cuttingPlane = new ToolToggle(dir + "slice.png");
+	_cuttingPlane->setColor(UI_BLACK_COLOR);
 	_cuttingPlane->setCallback(this);
 	list->addChild(_cuttingPlane);
 
 	_measuringTool = new ToolToggle(dir + "ruler.png");
+	_measuringTool->setColor(UI_BLACK_COLOR);
 	_measuringTool->setCallback(this);
 	list->addChild(_measuringTool);
 
 	_screenshotTool = new ToolToggle(dir + "browser.png");
+	_screenshotTool->setColor(UI_BLACK_COLOR);
 	_screenshotTool->setCallback(this);
 	list->addChild(_screenshotTool);
 
-	_centerLIneTool = new ToolToggle(dir + "browser.png");
+	_centerLIneTool = new ToolToggle(dir + "line.png");
 	_centerLIneTool->setCallback(this);
 	list->addChild(_centerLIneTool);
 	

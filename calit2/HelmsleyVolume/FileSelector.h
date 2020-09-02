@@ -13,6 +13,7 @@
 #include <cvrMenu/PopupMenu.h>
 #include "UIExtensions.h"
 #include <cvrMenu/NewUI/UIPopup.h>
+
 #include <cvrConfig/ConfigManager.h>
 
 class FileSelector : public cvr::MenuCallback, public UICallback, public UICallbackCaller {
@@ -21,6 +22,7 @@ public:
 	{
 		init();
 	}
+	~FileSelector();
 	//TODO Deconstructor
 	void init();
 
@@ -107,9 +109,8 @@ protected:
 	bool _isOnLoad;
 	MenuState _state;
 	std::string _currentPath;
-
 	PatientInfo _patientInfo;
-
+	bool _menusLoaded;
 	int _flag;
 };
 

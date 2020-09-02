@@ -44,6 +44,7 @@ public:
 	{
 		init();
 	}
+	~ScreenshotTool();
 
 	virtual void updateCallback(int handID, const osg::Matrix& mat);
 	virtual void menuCallback(cvr::MenuItem* menuItem);

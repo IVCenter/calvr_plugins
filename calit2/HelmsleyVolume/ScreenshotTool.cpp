@@ -8,6 +8,9 @@
 #include <iomanip>
 #include <time.h>
 
+ScreenshotTool::~ScreenshotTool() {
+	
+}
 void ScreenshotTool::init()
 {
 	_cameraActive = false;

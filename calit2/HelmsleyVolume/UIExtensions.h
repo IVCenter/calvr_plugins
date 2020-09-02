@@ -122,7 +122,7 @@ public:
 
 	cvr::UITexture* getIcon() { return _icon; }
 	void setIcon(std::string iconpath) { _icon->setTexture(iconpath); }
-
+	void setColor(osg::Vec4 color);
 	virtual void processHover(bool enter) override;
 
 protected:
@@ -152,8 +152,9 @@ public:
 	ShaderQuad()
 		: UIQuadElement(osg::Vec4(1, 1, 1, 1))
 	{
-		_uniforms = std::map<std::string, osg::Uniform*>();
+		_uniforms = std::map<std::string, osg::ref_ptr<osg::Uniform>>();
 	}
+	~ShaderQuad(); 
 
 	virtual void setProgram(osg::Program* p) { _program = p; _dirty = true; }
 	virtual osg::Program* getProgram() { return _program; }
@@ -170,7 +171,7 @@ public:
 
 protected:
 	osg::ref_ptr<osg::Program> _program;
-	std::map<std::string, osg::Uniform*> _uniforms;
+	std::map<std::string, osg::ref_ptr<osg::Uniform>> _uniforms;
 };
 
 
@@ -280,15 +281,15 @@ public:
 	virtual void setShaderDefine(std::string name, std::string definition, osg::StateAttribute::Values on);
 	virtual bool processEvent(cvr::InteractionEvent* event) override;
 	osg::Uniform* _colorUniform;
-
+	osg::ref_ptr<osg::Geode> _geode;
 protected:
 	osg::ref_ptr<osg::MatrixTransform> _transform;
-	osg::ref_ptr<osg::Geode> _geode;
+	
 	osg::Geometry* _polyGeom;
 	osg::Vec3* _coords;
 	osg::Matrix _rot;
 
-	static osg::Program* getOrLoadProgram();
+	static osg::Program* getOrLoadProgram(); 
 	static osg::Program* _triangleButtonProg;
 
 	osg::Vec4 _color;
@@ -297,61 +298,7 @@ protected:
 	std::map<std::string, osg::Uniform*> _uniforms;
 
 };
-///////////////////////////////////////////////////////////////////////////////////////////
-//class ImagePreview : public cvr::UIElement
-//{
-//public:
-//	ImagePreview(osg::Vec4 color = osg::Vec4(UI_BLUE_COLOR, 1))
-//		: UIElement()
-//	{
-//		_color = color;
-//		_geode = new osg::Geode();
-//		createGeometry();
-//
-//		_colorUniform = new osg::Uniform("Color", UI_BLUE_COLOR);
-//		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_colorUniform);
-//
-//		setProgram(getOrLoadProgram());
-//	}
-//
-//	virtual void createGeometry();
-//	virtual void updateGeometry();
-//	void setRotate(int radians);
-//
-//
-//
-//	virtual void setColor(osg::Vec3 color);
-//
-//	virtual void setProgram(osg::Program* p) { _program = p; _dirty = true; }
-//	virtual osg::Program* getProgram() { return _program; }
-//	virtual osg::Geode* getGeode() { return _geode; }
-//
-//	template <typename T>
-//	void addUniform(std::string uniform, T initialvalue);
-//	void addUniform(std::string uniform);
-//	virtual void addUniform(osg::Uniform* uniform);
-//	virtual osg::Uniform* getUniform(std::string uniform);
-//	virtual void setShaderDefine(std::string name, std::string definition, osg::StateAttribute::Values on);
-//	virtual bool processEvent(cvr::InteractionEvent* event) override;
-//	osg::Uniform* _colorUniform;
-//
-//protected:
-//	osg::ref_ptr<osg::MatrixTransform> _transform;
-//	osg::ref_ptr<osg::Geode> _geode;
-//	osg::Geometry* _polyGeom;
-//	osg::Vec3* _coords;
-//	osg::Matrix _rot;
-//
-//	static osg::Program* getOrLoadProgram();
-//	static osg::Program* _triangleButtonProg;
-//
-//	osg::Vec4 _color;
-//
-//	osg::ref_ptr<osg::Program> _program;
-//	std::map<std::string, osg::Uniform*> _uniforms;
-//
-//};
-//////////////////////////////////////////////////////////////////
+
 class Tent : public cvr::UIElement
 {
 public:

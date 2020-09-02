@@ -20,7 +20,7 @@
 class VolumeMenu : public cvr::MenuCallback {
 public:
 	VolumeMenu(cvr::SceneObject* scene, VolumeGroup* volume) : _scene(scene), _volume(volume) {}
-
+	~VolumeMenu();
 	void init();
 
 	virtual void menuCallback(cvr::MenuItem * item);
@@ -102,7 +102,19 @@ public:
 	virtual void uiCallback(UICallbackCaller * item);
 
 	cvr::SceneObject* getSceneObject() { return _so; }
-	void setNewVolume(VolumeGroup* volume) { _volume = volume; }
+	void setNewVolume(VolumeGroup* volume) { 
+		bool prevMask = _volume->hasMask();
+		_volume = volume; 
+		if (!_volume->hasMask()) {
+			_maskMenu->getRootElement()->getGroup()->removeChild(_maskBknd->getGroup());
+			_maskBknd->_parent = nullptr;
+			_maskBknd->setActive(false);
+		}
+		else if (_volume->hasMask() && !prevMask) {
+			_maskMenu->addChild(_maskBknd);
+			_maskBknd->setActive(true);
+		}
+	}
 
 	std::string _transferFunction;
 
@@ -112,7 +124,6 @@ public:
 		_cpHLabel->setText(organName);
 	}
 
-	void colorButtonPress(cvr::UIQuadElement* button, organRGB organRGB, std::string organName, VisibilityToggle* organEye);
 	cvr::UIList* addPresets(cvr::UIQuadElement* bknd);
 
 protected:

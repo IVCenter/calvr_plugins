@@ -4,6 +4,7 @@
 #include "Utils.h"
 #include "UIExtensions.h"
 
+
 #ifdef WIN32
 #include "dirent.h"
 #else
@@ -18,6 +19,18 @@
 #include <algorithm>
 
 #define SLOTCOUNT 6
+
+
+FileSelector::~FileSelector() {
+	delete addVolumeMenu;
+
+	delete _so;
+
+	for (auto p : _selections) {
+		delete p;
+	}
+	_selections.clear();
+}
 void FileSelector::init()
 {
 	_state = NEW;
@@ -26,7 +39,7 @@ void FileSelector::init()
 	addVolumeMenu = new cvr::PopupMenu("Volumes", "", false, true);
 	osg::Vec3 menupos = cvr::ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.FileMenu.Position", osg::Vec3(-600, 500, 1100));
 	addVolumeMenu->setPosition(menupos);
-	addVolumeMenu->setVisible(true);
+	//addVolumeMenu->setVisible(true);
 	//addVolumeMenu->setMovable(false);
 
 	addVol = new cvr::MenuButton("New Volume", true, "checkbox=TRUE.rgb");
@@ -37,7 +50,7 @@ void FileSelector::init()
 	volumeFileSelector->setPosition(menupos + osg::Vec3(0,0,-100));
 	//volumeFileSelector->getRootSubMenu()->setTextScale(0.5);
 	_currentPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.BaseFolder", "C:/", false);
-	std::cout << "Volume search path: " << _currentPath << std::endl;
+	
 
 
 
@@ -133,7 +146,6 @@ void FileSelector::init()
 
 		Selection* selec;
 		_selections.push_back(selec);
-		std::cout << checkIfMask(iter->second) << std::endl;
 		_selections[selectCount] = new Selection(iter->first, checkIfMask(iter->second));
 		_selections[selectCount]->setId("selection");
 		_selections[selectCount]->setButtonCallback(this);
@@ -214,7 +226,7 @@ void FileSelector::init()
 
 
 
-
+	_menusLoaded = false;
 	_isOnLoad = false;
 }
 
@@ -280,9 +292,6 @@ void FileSelector::uiCallback(UICallbackCaller* ui){
 			_fsPopup->getRootElement()->getGroup()->removeChild(_selectBknd->getGroup());
 			_selectBknd->_parent = nullptr;
 			_selectBknd->setActive(false);
-			
-			
-			
 
 			_isOnLoad = false;
 		}
@@ -300,7 +309,14 @@ void FileSelector::uiCallback(UICallbackCaller* ui){
 	}
 	else if (ui == _loadVolumeButton) {
 		bool change = _state == CHANGING ? true : false;
-		loadVolume(_currentPath, change, false);
+		if (_menusLoaded == false) {
+			loadVolume(_currentPath, change, false);
+			_menusLoaded = true;
+		}
+		else {
+			loadVolumeOnly(_currentPath);
+		}
+		
 
 	}
 }
@@ -391,7 +407,7 @@ void FileSelector::showDicomThumbnail() {
 
 
 
-		osg::Image* img = new osg::Image();
+		osg::ref_ptr<osg::Image> img = new osg::Image();
 		img->allocateImage(w, h, d, GL_RG, GL_UNSIGNED_SHORT);
 		uint16_t* data = (uint16_t*)img->data();
 		memset(data, 0, w * h * d * sizeof(uint16_t) * 2);
@@ -415,6 +431,8 @@ void FileSelector::showDicomThumbnail() {
 		imgTexture->_geode->getDrawable(0)->getOrCreateStateSet()->setDefine("GRAYSCALE", true);
 
 		_selections[i]->setImage(imgTexture);
+
+		delete image;
 	}
 }
 
@@ -714,13 +732,14 @@ bool FileSelector::checkIfMask(std::string seriesPath) {
 		}
 		entry = readdir(mainDir);
 	}
+	closedir(mainDir);
 	return false;
 
 }
 
 osg::Vec3dArray* FileSelector::loadCenterLine(std::string path, OrganEnum organ) {
 	DIR* dir = opendir(path.c_str());
-	osg::Vec3dArray* coords = new osg::Vec3dArray();
+	osg::ref_ptr<osg::Vec3dArray> coords = new osg::Vec3dArray();
 	std::string coordsPath = "";
 
 	if (dir != NULL)
