@@ -60,6 +60,7 @@ public:
 	bool isDirty(osg::GraphicsContext* gc) { return _dirty[gc]; };
 	osg::Drawable* getDrawable() { return _cube; };
 	osg::Vec3dArray* getColonCoords() { return _colonCoords; }
+	osg::Vec3dArray* getIlleumCoords() { return _illeumCoords; }
 
 	std::vector<osg::Geode*>* getCenterLines() { return _centerLineGeodes; }
 	osg::DispatchCompute* getCompute() { return _computeNode; };

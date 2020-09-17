@@ -87,6 +87,6 @@ void CuttingPlane::updateCallback(int handID, const osg::Matrix& mat)
 }
 
 
-void UpdateCuttingPlane::dirtyPlane() {
+void CenterlineUpdate::dirtyPlane() {
 	((CuttingPlane*)_object)->changePlane();
 }

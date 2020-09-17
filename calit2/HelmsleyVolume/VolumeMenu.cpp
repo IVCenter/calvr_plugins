@@ -108,7 +108,7 @@ void NewVolumeMenu::init()
 	
 	UIQuadElement* bknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 	_menu->addChild(bknd);
-	_menu->setPosition(osg::Vec3(1000, 450, 1300));//ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Position", osg::Vec3(500, -500, 1350)) - volumePos);
+	_menu->setPosition(osg::Vec3(1000, 450, 1300));
 
 	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.OptionsMenu.Scale", osg::Vec3(1000, 1, 600)));
 	
@@ -327,6 +327,8 @@ void NewVolumeMenu::init()
 	gradientList->addChild(_opacityColorDisplay);
 	gradientList->addChild(_opacityDisplay);
 	gradientList->addChild(_tentWindowOnly);
+
+
 	
 	UIQuadElement* gradientBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 	gradientBknd->setPercentSize(osg::Vec3(1, 1, .4));
@@ -494,7 +496,7 @@ void NewVolumeMenu::init()
 
 	
 	_tentMenu->setPosition(osg::Vec3(-1200, 675, 1880));
-	_tentMenu->getRootElement()->setAbsoluteSize(osg::Vec3(3000, 1, 600));
+	_tentMenu->getRootElement()->setAbsoluteSize(osg::Vec3(1500, 1, 600));
 	
 
 
@@ -517,68 +519,51 @@ void NewVolumeMenu::init()
 		_mainMaskList->setPercentSize(osg::Vec3(1, 1, .8));
 		_maskBknd->addChild(_mainMaskList);
 		
-		_bodyColCallback = new CallbackButton();
-		_bodyColCallback->setCallback(this);
-		_colonColCallback = new CallbackButton();
-		_colonColCallback->setCallback(this);
-		_kidneyColCallback = new CallbackButton();
-		_kidneyColCallback->setCallback(this);
-		_bladderColCallback = new CallbackButton();
-		_bladderColCallback->setCallback(this);
-		_spleenColCallback = new CallbackButton();
-		_spleenColCallback->setCallback(this);
-		_aortaColCallback = new CallbackButton();
-		_aortaColCallback->setCallback(this);
-		_illeumColCallback = new CallbackButton();
-		_illeumColCallback->setCallback(this);
+		
 		
 		UIQuadElement* bodyColorbutton = new UIQuadElement(osg::Vec4(1, 0, 0, 0));
+		bodyColorbutton->setBorderSize(.05);
 		bodyColorbutton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
 		bodyColorbutton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
 		bodyColorbutton->setTransparent(true);
 
-		_colonColorButton = new UIQuadElement(osg::Vec4(0.450, 0.090, 1, 1));
+
+		_colonColorButton = new UIQuadElement(osg::Vec4(0.752, 0.635, 0.996, 1));
 		_colonColorButton->setBorderSize(.05);
-		_colonCol = osg::Vec3(0, 1, 1);
-		_colonColorButton->addChild(_colonColCallback);
-		_colonColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
+  		_colonColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
 		_colonColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
 
 		_kidneyColorButton = new UIQuadElement(osg::Vec4(0, 0.278, 1, 1));
 		_kidneyColorButton->setBorderSize(.05);
-		_kidneyCol = osg::Vec3(.33, 1, 1);
-		_kidneyColorButton->addChild(_kidneyColCallback);
-		_kidneyColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
+  		_kidneyColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
 		_kidneyColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
 		
 	
 		_bladderColorButton = new UIQuadElement(osg::Vec4(0.992, 0.968, 0.843, 1));
 		_bladderColorButton->setBorderSize(.05);
-		_bladderCol = osg::Vec3(.66, 1, 1);
-		_bladderColorButton->addChild(_bladderColCallback);
-		_bladderColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
+  		_bladderColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
 		_bladderColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
 		
 		_spleenColorButton = new UIQuadElement(osg::Vec4(1, 0.874, 0.109, 1));
 		_spleenColorButton->setBorderSize(.05);
-		_spleenCol = osg::Vec3(.5, 1, 1);
-		_spleenColorButton->addChild(_spleenColCallback);
-		_spleenColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
+  		_spleenColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
 		_spleenColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
 
 		_aortaColorButton = new UIQuadElement(osg::Vec4(1, 0, 0, 1));
 		_aortaColorButton->setBorderSize(.05);
-		_aortaCol = osg::Vec3(0.984, 0.109, 0.372);
-		_aortaColorButton->addChild(_aortaColCallback);
-		_aortaColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
+  		_aortaColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
 		_aortaColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
 
 		_illeumColorButton = new UIQuadElement(osg::Vec4(0.968, 0.780, 1, 1));
 		_illeumColorButton->setBorderSize(.05);
-		_illeumCol = osg::Vec3(.5, 1, 1);
-		_illeumColorButton->addChild(_illeumColCallback);
-		_illeumColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
+  		_illeumColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
 		_illeumColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
+
+		UIQuadElement* veinColorButton = new UIQuadElement(osg::Vec4(0, .8, 1, 0));
+		veinColorButton->setBorderSize(.05);
+		veinColorButton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
+		veinColorButton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
+	
 
 
 		_organs = new VisibilityToggle("Body");
@@ -602,6 +587,9 @@ void NewVolumeMenu::init()
 
 		_aorta = new VisibilityToggle("Aorta");
 		_aorta->setCallback(this);
+
+		_vein = new VisibilityToggle("Vena Cava");
+		_vein->setCallback(this);
 
 		UIList* bodyList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
 		bodyList->addChild(_organs);
@@ -631,6 +619,10 @@ void NewVolumeMenu::init()
 		illeumList->addChild(_illeum);
 		illeumList->addChild(_illeumColorButton);
 		illeumList->setPercentPos(osg::Vec3(.02, 0.0, 0.0));
+		UIList* veinList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+		veinList->addChild(_vein);
+		veinList->addChild(veinColorButton);
+		veinList->setPercentPos(osg::Vec3(.02, 0.0, 0.0));
 	
 		_mainMaskList->addChild(bodyList);
 		_mainMaskList->addChild(colonList);
@@ -639,6 +631,7 @@ void NewVolumeMenu::init()
 		_mainMaskList->addChild(spleenList);
 		_mainMaskList->addChild(aortaList);
 		_mainMaskList->addChild(illeumList);
+		_mainMaskList->addChild(veinList);
 		
 	//}
 	if (!_movable)
@@ -753,6 +746,11 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	else if (item == _aorta)
 	{
 		_volume->getCompute()->getOrCreateStateSet()->setDefine("AORTA", _aorta->isOn());
+		_volume->setDirtyAll();
+	}
+	else if (item == _vein)
+	{
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("VEIN", _vein->isOn());
 		_volume->setDirtyAll();
 	}
 	else if (item == _addTriangle)
@@ -888,7 +886,6 @@ void NewVolumeMenu::useTransferFunction(int tfID) {
 	_volume->setDirtyAll();
 
 	osg::Vec3 pos = _container->getPosition();
-	std::cout << "x " << pos.x() << "y " << pos.y() << "z " << pos.z() << std::endl;
 }
 
 void NewVolumeMenu::upDatePreviewDefines(std::string tf) {
@@ -965,7 +962,7 @@ void NewVolumeMenu::usePreset(std::string filename) {
 
 	std::string datasetPath = config["series name"].as<std::string>();
 	FileSelector* fs = HelmsleyVolume::instance()->getFileSelector();
-	fs->loadVolumeOnly(datasetPath);
+	fs->loadVolumeOnly(true, datasetPath);
 	_tentWindow->setVolume(_volume);
 	_tentWindowOnly->setVolume(_volume);
 	//////////////////opacities//////////////////
@@ -1003,7 +1000,7 @@ void NewVolumeMenu::usePreset(std::string filename) {
 		_maskMenu->addChild(_maskBknd);
 		_maskBknd->setActive(true);
 
-		bool val = config["mask"][0].as<int>();
+		bool val = (bool)(config["mask"][0].as<int>());
 
 		if (_organs->isOn() != val)
 			_organs->toggle();
@@ -1032,6 +1029,9 @@ void NewVolumeMenu::usePreset(std::string filename) {
 		if (_aorta->isOn() != val)
 			_aorta->toggle();
 		_volume->getCompute()->getOrCreateStateSet()->setDefine("AORTA", val);
+		if (_vein->isOn() != val)
+			_vein->toggle();
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("VEIN", val);
 
 		_volume->setDirtyAll();
 	}
@@ -1071,6 +1071,120 @@ void NewVolumeMenu::usePreset(std::string filename) {
 		cutP->setPosition(cutPpos);
 		cutP->setRotation(cutPQuat);
 		
+	}
+
+	ToolToggle* mTool = _toolMenu->getMeasuringTool();
+	ToolToggle* centerTool = _toolMenu->getCenterLineTool();
+	ToolToggle* screenTool = _toolMenu->getScreenShotTool();
+	if (mTool->isOn()) {
+		mTool->toggle();
+		mTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
+		HelmsleyVolume::instance()->deactivateMeasurementTool(0);
+	}
+	if (centerTool->isOn()) {
+		centerTool->toggle();
+		centerTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
+		HelmsleyVolume::instance()->toggleCenterlineTool(false);
+	}
+	if (screenTool->isOn()) {
+		screenTool->toggle();
+		screenTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
+		HelmsleyVolume::instance()->toggleScreenshotTool(false);
+	}
+}
+
+void NewVolumeMenu::resetValues() {
+	_tentWindow->clearTents();
+	clearRegionPreviews();
+	_triangleIndex = 0;
+	_tentWindow->setVolume(_volume);
+	_tentWindowOnly->setVolume(_volume);
+	//////////////////opacities//////////////////
+
+		
+		addRegion();
+		float center = .5f;
+		float bottomWidth = 1.0f;
+		float topWidth = 1.0f;
+		float height = 1.0f;
+		float lowest = 0.0f;
+		_tentWindow->fillTentDetails(_triangleIndex, center, bottomWidth, topWidth, height, lowest);
+	
+
+	/////////////////tf & contrast////////////
+
+	
+	int tfid = 0;
+	
+	_transferFunctionRadial->setCurrent(tfid);
+	useTransferFunction(tfid);
+	float contrastLow = 0.0f;
+	float contrastHigh = 1.0f;
+	float brightness = 0.5f;
+	setContrastValues(contrastLow, contrastHigh, brightness);
+
+	///////////////Masks////////////////////
+	if (_volume->hasMask()) {
+		_maskMenu->addChild(_maskBknd);
+		_maskBknd->setActive(true);
+
+		
+
+		if (!_organs->isOn())
+			_organs->toggle();
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("ORGANS_ONLY", false);
+		
+		if (_colon->isOn())
+			_colon->toggle();
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("COLON", false);
+ 		if (_kidney->isOn())
+			_kidney->toggle();
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("KIDNEY", false);
+ 		if (_bladder->isOn())
+			_bladder->toggle();
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("BLADDER", false);
+ 		if (_spleen->isOn())
+			_spleen->toggle();
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("SPLEEN", false);
+ 		if (_illeum->isOn())
+			_illeum->toggle();
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("ILLEUM", false);
+ 		if (_aorta->isOn())
+			_aorta->toggle();
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("AORTA", false);
+		if (_vein->isOn())
+			_vein->toggle();
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("VEIN", false);
+
+		_volume->setDirtyAll();
+	}
+	else {
+		_maskMenu->getRootElement()->getGroup()->removeChild(_maskBknd->getGroup());
+		_maskBknd->_parent = nullptr;
+		_maskBknd->setActive(false);
+	}
+
+	////////////Cutting Plane/////////////
+	ToolToggle* cuttingPlaneTool = _toolMenu->getCuttingPlaneTool();
+	ToolToggle* mTool = _toolMenu->getMeasuringTool();
+	ToolToggle* centerTool = _toolMenu->getCenterLineTool();
+	ToolToggle* screenTool = _toolMenu->getScreenShotTool();
+	
+	if (cuttingPlaneTool->isOn()) {
+		cuttingPlaneTool->toggle();
+		cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
+	}
+	if (mTool->isOn()) {
+		mTool->toggle();
+		mTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
+	}
+	if (centerTool->isOn()) {
+		centerTool->toggle();
+		centerTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
+	}
+	if (screenTool->isOn()) {
+		screenTool->toggle();
+		screenTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
 	}
 }
 
@@ -1134,7 +1248,9 @@ void NewVolumeMenu::setContrastValues(float contrastLow, float contrastHigh, flo
 	_volume->_computeUniforms["ContrastBottom"]->set(contrastLow);
 	_volume->_computeUniforms["ContrastTop"]->set(contrastHigh);
 	_volume->_computeUniforms["Brightness"]->set(brightness);
-
+	_contrastBottom->setPercent(contrastLow);
+	_contrastTop->setPercent(contrastHigh);
+	_brightness->setPercent(brightness);
 	float realValue = brightness - .5;
 	std::string value;
 	if (realValue >= 0.0) {
@@ -1224,6 +1340,7 @@ void NewVolumeMenu::savePreset(){
 		_spleen->isOn() ? maskValues.push_back('1') : maskValues.push_back('0');
 		_illeum->isOn() ? maskValues.push_back('1') : maskValues.push_back('0');
 		_aorta->isOn() ? maskValues.push_back('1') : maskValues.push_back('0');
+		_vein->isOn() ? maskValues.push_back('1') : maskValues.push_back('0');
 		out << YAML::Value << YAML::Flow << maskValues;
 	}
 
@@ -1231,7 +1348,6 @@ void NewVolumeMenu::savePreset(){
 	///////////////////Dataset//////////////////////
 	out << YAML::Key << "series name";
 	FileSelector* fs = HelmsleyVolume::instance()->getFileSelector();
-	std::cout << "currpath " << fs->getCurrPath() << std::endl;
 	std::string datasetPath = fs->getCurrPath();
 	out << YAML::Value << datasetPath;
 
@@ -1391,30 +1507,35 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 	}
 	else if (item == _centerLIneTool)
 	{
-		osg::Matrix mat = PluginHelper::getHandMat(_centerLIneTool->getLastHand());
-		osg::Vec4d position = osg::Vec4(0, 300, 0, 1) * mat;
-		osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
+		if (!HelmsleyVolume::instance()->getVolumes()[0]->getColonCoords()->empty()) {
+			osg::Matrix mat = PluginHelper::getHandMat(_centerLIneTool->getLastHand());
+			osg::Vec4d position = osg::Vec4(0, 300, 0, 1) * mat;
+			osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
 
-		osg::Quat q = osg::Quat();
-		osg::Quat q2 = osg::Quat();
-		osg::Vec3 v = osg::Vec3();
-		osg::Vec3 v2 = osg::Vec3();
-		mat.decompose(v, q, v2, q2);
+			osg::Quat q = osg::Quat(); 
+			osg::Quat q2 = osg::Quat();
+			osg::Vec3 v = osg::Vec3();
+			osg::Vec3 v2 = osg::Vec3();
+			mat.decompose(v, q, v2, q2);
 
-		HelmsleyVolume::instance()->toggleCenterlineTool(_centerLIneTool->isOn());
-		HelmsleyVolume::instance()->getCenterlineTool()->setRotation(q);
-		HelmsleyVolume::instance()->getCenterlineTool()->setPosition(pos);
-		if (_centerLIneTool->isOn())
-		{
-			_centerLIneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
-			HelmsleyVolume::instance()->toggleCenterLine(true);
-			HelmsleyVolume::instance()->activateClippingPath();
+			HelmsleyVolume::instance()->toggleCenterlineTool(_centerLIneTool->isOn());
+			HelmsleyVolume::instance()->getCenterlineTool()->setRotation(q);
+			HelmsleyVolume::instance()->getCenterlineTool()->setPosition(pos);
+			if (_centerLIneTool->isOn())
+			{
+				_centerLIneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+				//HelmsleyVolume::instance()->toggleCenterLine(true);
+				HelmsleyVolume::instance()->activateClippingPath();
 
-		}
-		else
-		{
-			_centerLIneTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
-			HelmsleyVolume::instance()->toggleCenterLine(false);
+			}
+			else
+			{
+
+				_centerLIneTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
+				//HelmsleyVolume::instance()->toggleCenterLine(false);
+				HelmsleyVolume::instance()->removeCuttingPlane(0);
+				
+			}
 		}
 	}
 }

@@ -271,14 +271,12 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	if (!_colonCoords->empty()) {
 		Line* colonLine = new Line(_colonCoords, osg::Vec4(UI_BLUE_COLOR, 1.0));
 		_centerLineGeodes->push_back(colonLine->getGeode());
-		
 		_transform->addChild(_centerLineGeodes->at(_centerLineGeodes->size()-1));
 		_centerLineGeodes->at(_centerLineGeodes->size() - 1)->setNodeMask(0);
-		_lineTransform = colonLine->getTransform();
 	}
 
     _illeumCoords = FileSelector::loadCenterLine(path, FileSelector::OrganEnum::ILLEUM);
-	if (0 && !_illeumCoords->empty()) {
+	if (!_illeumCoords->empty()) {
 		Line* illeumLine = new Line(_illeumCoords, osg::Vec4(UI_PURPLE_COLOR, 1.0));
 		_centerLineGeodes->push_back(illeumLine->getGeode());
 		_transform->addChild(_centerLineGeodes->at(_centerLineGeodes->size() - 1));

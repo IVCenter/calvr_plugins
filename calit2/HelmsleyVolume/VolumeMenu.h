@@ -70,6 +70,8 @@ public:
 
 	ToolToggle* getCenterLineTool() { return  _centerLIneTool; }
 	ToolToggle* getCuttingPlaneTool() { return  _cuttingPlane; }
+	ToolToggle* getMeasuringTool() { return  _measuringTool; }
+	ToolToggle* getScreenShotTool() { return  _screenshotTool; }
 
 	virtual void uiCallback(UICallbackCaller* item);
 
@@ -114,8 +116,40 @@ public:
 			_maskMenu->addChild(_maskBknd);
 			_maskBknd->setActive(true);
 		}
-	}
 
+		_tentWindow->setVolume(_volume);
+		_colorDisplay->addUniform(_volume->_computeUniforms["ContrastBottom"]);
+		_colorDisplay->addUniform(_volume->_computeUniforms["ContrastTop"]);
+		_colorDisplay->addUniform(_volume->_computeUniforms["Brightness"]);
+		_colorDisplay->addUniform(_volume->_computeUniforms["leftColor"]);
+		_colorDisplay->addUniform(_volume->_computeUniforms["rightColor"]);
+		_opacityDisplay->addUniform(_volume->_computeUniforms["OpacityCenter"]);
+		_opacityDisplay->addUniform(_volume->_computeUniforms["OpacityWidth"]);
+		_opacityDisplay->addUniform(_volume->_computeUniforms["OpacityTopWidth"]);
+		_opacityDisplay->addUniform(_volume->_computeUniforms["OpacityMult"]);
+		_opacityDisplay->addUniform(_volume->_computeUniforms["Lowest"]);
+		_opacityDisplay->addUniform(_volume->_computeUniforms["ContrastBottom"]);
+		_opacityDisplay->addUniform(_volume->_computeUniforms["ContrastTop"]);
+		_opacityDisplay->addUniform(_volume->_computeUniforms["Brightness"]);
+		_opacityDisplay->addUniform(_volume->_computeUniforms["TriangleCount"]);
+		_opacityDisplay->addUniform(_volume->_computeUniforms["leftColor"]);
+		_opacityDisplay->addUniform(_volume->_computeUniforms["rightColor"]);
+		_opacityColorDisplay->addUniform(_volume->_computeUniforms["OpacityCenter"]);
+		_opacityColorDisplay->addUniform(_volume->_computeUniforms["OpacityWidth"]);
+		_opacityColorDisplay->addUniform(_volume->_computeUniforms["OpacityTopWidth"]);
+		_opacityColorDisplay->addUniform(_volume->_computeUniforms["OpacityMult"]);
+		_opacityColorDisplay->addUniform(_volume->_computeUniforms["Lowest"]);
+		_opacityColorDisplay->addUniform(_volume->_computeUniforms["ContrastBottom"]);
+		_opacityColorDisplay->addUniform(_volume->_computeUniforms["ContrastTop"]);
+		_opacityColorDisplay->addUniform(_volume->_computeUniforms["Brightness"]);
+		_opacityColorDisplay->addUniform(_volume->_computeUniforms["TriangleCount"]);
+		_opacityColorDisplay->addUniform(_volume->_computeUniforms["leftColor"]);
+		_opacityColorDisplay->addUniform(_volume->_computeUniforms["rightColor"]);
+		
+		
+
+	}
+	void resetValues();
 	std::string _transferFunction;
 
 	inline void setOrganColPicker(std::string organName)
@@ -167,6 +201,7 @@ protected:
 	VisibilityToggle* _illeum;
 	VisibilityToggle* _spleen;
 	VisibilityToggle* _aorta;
+	VisibilityToggle* _vein;
 
 	cvr::UIQuadElement* _bodyColorButton;
 	cvr::UIQuadElement* _colonColorButton;
@@ -176,13 +211,7 @@ protected:
 	cvr::UIQuadElement* _aortaColorButton;
 	cvr::UIQuadElement* _illeumColorButton;
 
-	CallbackButton* _bodyColCallback;
-	CallbackButton* _colonColCallback;
-	CallbackButton* _kidneyColCallback;
-	CallbackButton* _bladderColCallback;
-	CallbackButton* _spleenColCallback;
-	CallbackButton* _aortaColCallback;
-	CallbackButton* _illeumColCallback;
+	
 	CallbackButton* _exitCPCallback;
 
 	ColorPicker* _cp;

@@ -1318,7 +1318,6 @@ osg::Uniform* Line::getUniform(std::string uniform)
 void Line::setShaderDefine(std::string name, std::string define, osg::StateAttribute::Values on)
 {
 	_geode->getOrCreateStateSet()->setDefine(name, define, on);
-
 }
 
 osg::Program* Line::getOrLoadProgram()

@@ -16,7 +16,10 @@ void CenterlineTool::init()
 
 	std::string modelDir = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.ModelDir");
 	_tablet = osgDB::readNodeFile(modelDir + "CameraTool.obj");
-	this->addChild(_tablet);
+	SceneObject* lightQuestionMark = new SceneObject("room", false, false, false, false, false);
+	lightQuestionMark->addChild(_tablet);
+	
+	this->addChild(lightQuestionMark);
 
 
 	osg::FrameBufferObject* fbo = new osg::FrameBufferObject();
@@ -60,11 +63,18 @@ void CenterlineTool::init()
 
 	//_display = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0, 0, 2.5), 270-1, 480-1, 1));
 	_display = new osg::Geometry();
+	//osg::Vec3Array* coords = new osg::Vec3Array(4);
+	//(*coords)[0] = osg::Vec3(-470.0 / 2, -4, -260.0 / 2);
+	//(*coords)[1] = osg::Vec3(470.0 / 2, -4, -260.0 / 2);
+	//(*coords)[2] = osg::Vec3(470.0 / 2, -4, 260.0 / 2);
+	//(*coords)[3] = osg::Vec3(-470.0 / 2, -4, 260.0 / 2);
+
 	osg::Vec3Array* coords = new osg::Vec3Array(4);
-	(*coords)[0] = osg::Vec3(-470.0 / 2, -4, -260.0 / 2);
-	(*coords)[1] = osg::Vec3(470.0 / 2, -4, -260.0 / 2);
-	(*coords)[2] = osg::Vec3(470.0 / 2, -4, 260.0 / 2);
-	(*coords)[3] = osg::Vec3(-470.0 / 2, -4, 260.0 / 2);
+	(*coords)[0] = osg::Vec3(0.0, -4, -360.0);
+	(*coords)[1] = osg::Vec3(640.0, -4, -360.0);
+	(*coords)[2] = osg::Vec3(640.0, -4, 0.0);
+	(*coords)[3] = osg::Vec3(0.0, -4, 0.0);
+
 
 	_display->setVertexArray(coords);
 
@@ -84,7 +94,7 @@ void CenterlineTool::init()
 
 	//_display->tex
 	_display->getOrCreateStateSet()->setTextureAttributeAndModes(0, _texture, osg::StateAttribute::ON);
-	//_display->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+	_display->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
 
 	osg::Geode* displaygeode = new osg::Geode();
 	displaygeode->addChild(_display);
@@ -93,37 +103,79 @@ void CenterlineTool::init()
 
 	_camera->addChild((osg::Node*)cvr::SceneManager::instance()->getScene());
 	//setParams(60, 16.0 / 9.0);
-	setParams(80, 1.0);
+	setParams(90, 16.0 / 9.0);
 	activate();
-	updateCallback(0, osg::Matrix());
+
+	
+	using namespace cvr;
+	
 
 
-	_cameraMenu = new cvr::PopupMenu("CenterLine", "", false);
-	_cameraMenu->setVisible(true);
-	_cameraMenu->getRootObject()->getParent(0)->removeChild(_cameraMenu->getRootObject());
-	_cameraMenu->setPosition(osg::Vec3(20, -5, 230));
-	_cameraMenu->setMovable(false);
-	//_cameraMenu->setRotation(osg:)
-	this->addChild(_cameraMenu->getRootObject());
+	_cameraPop = new cvr::UIPopup();
+	this->addChild(_cameraPop->getRoot());
+	_cameraPop->setPosition(osg::Vec3(0, 4, 0));
+	cvr::UIQuadElement* bknd = new cvr::UIQuadElement(UI_BACKGROUND_COLOR);
+	bknd->setPercentSize(osg::Vec3(1, 1, 0.5));
+	lightQuestionMark->setScale(1);
+	osg::Vec3 pos = lightQuestionMark->getPosition();
+	lightQuestionMark->setPosition(osg::Vec3(500.0, 10, -280.0));
+	lightQuestionMark->setScale(2.2);
+	
 
+	_cameraPop->addChild(bknd);
+	
 
-	_illeumButton = new cvr::MenuButton("Illeum");
+	_colonButton = new CallbackButton();
+	_colonButton->setCallback(this);
+	_illeumButton = new CallbackButton();
 	_illeumButton->setCallback(this);
-	_cameraMenu->addMenuItem(_illeumButton);
-	
-	
+	UIText* colText = new UIText("Colon", 40.0f, osgText::TextBase::CENTER_TOP);
+	UIText* illText = new UIText("Illeum", 40.0f, osgText::TextBase::CENTER_TOP);
+	_colonButton->addChild(colText);
+	_illeumButton->addChild(illText);
+
+	UIList* controlList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
+	UIList* organList = new UIList(UIList::TOP_TO_BOTTOM, UIList::CUT);
+	_cameraPop->addChild(controlList);
+	_cameraPop->addChild(organList);
+	controlList->setPercentSize(osg::Vec3(1.0, 1.0, .1));
+	controlList->setPercentPos(osg::Vec3(0.0, 0.0, -.4));
+	organList->setPercentSize(osg::Vec3(.3, 1.0, .2));
+	organList->setPercentPos(osg::Vec3(0.7, 0.0, 0.0));
+	_imgDir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ImageDir");
+	_playButton = new ToolToggle(_imgDir + "play.png");
+	_playButton->setCallback(this);
+
+	_playButton->setPercentSize(osg::Vec3(0.2, 1.0, 1.0));
+	controlList->addChild(_playButton);
+	organList->addChild(_colonButton);
+	organList->addChild(_illeumButton);
 }
 
-void CenterlineTool::menuCallback(cvr::MenuItem* menuItem)
-{
-	if (menuItem == _illeumButton)
-	{
-		
+void CenterlineTool::uiCallback(UICallbackCaller* ui) {
+	if (ui == _playButton) {
+		if (_playButton->isOn()) {
+			_playButton->setIcon(_imgDir + "pause.png");
+			_updateCallback->play();
+			_cp->play();
+		}
+		else {
+			_playButton->setIcon(_imgDir + "play.png");
+			_updateCallback->pause();
+			_cp->pause();
+		}
+		_playButton->setDirty(true);
 	}
-	else
-	{
-		//SceneObject::menuCallback(menuItem);
+	
+	else if (ui == _colonButton) {
+		_updateCallback->startFromCol();
+		_cp->getUC()->startFromCol();
 	}
+	else if (ui == _illeumButton) {
+		_updateCallback->startFromIll();
+		_cp->getUC()->startFromIll();
+	}
+	
 }
 
 void CenterlineTool::setParams(double fov, double aspect)
@@ -149,19 +201,5 @@ void CenterlineTool::deactivate()
 	}
 }
 
-//void CenterlineTool::updateCallback(int handID, const osg::Matrix& mat)
-//{
-//	if (_cameraActive)
-//	{
-//		osg::Matrix localToWorld = getObjectToWorldMatrix();
-//		osg::Vec4 eye = osg::Vec4(0, 5, 0, 1) * localToWorld;
-//		osg::Vec4 center = osg::Vec4(0, 10, 0, 1) * localToWorld;
-//		osg::Vec4 up = osg::Vec4(0, 0, 1, 0) * localToWorld;
-//		//up.normalize();
-//		_camera->setViewMatrixAsLookAt(osg::Vec3(eye.x(), eye.y(), eye.z()),
-//			osg::Vec3(center.x(), center.y(), center.z()),
-//			osg::Vec3(up.x(), up.y(), up.z()));
-//	}
-//}
 
 

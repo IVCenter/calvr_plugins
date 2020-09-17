@@ -197,8 +197,13 @@ void FileSelector::init()
 	patientName->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
 	cvr::UIText* seriesName = new cvr::UIText("Series: ", 40.f, osgText::TextBase::LEFT_CENTER);
 	seriesName->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	cvr::UIText* studyDate = new cvr::UIText("Study Date: ", 40.f, osgText::TextBase::LEFT_CENTER);
+	studyDate->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+
 	_categoryList->addChild(patientName);
 	_categoryList->addChild(seriesName);
+	_categoryList->addChild(studyDate);
+
 	_categoryList->setPercentPos(osg::Vec3(0.46, -1, -.25));
 	_categoryList->setPercentSize(osg::Vec3(1.0, 1, .2));
 
@@ -208,9 +213,12 @@ void FileSelector::init()
 	patientInfo->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
 	cvr::UIText* seriesInfo = new cvr::UIText("", 40.f, osgText::TextBase::LEFT_CENTER);
 	seriesInfo->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	cvr::UIText* studyDateInfo = new cvr::UIText("", 40.f, osgText::TextBase::LEFT_CENTER);
+	studyDateInfo->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
 	_infoList->addChild(patientInfo);
 	_infoList->addChild(seriesInfo);
-	_infoList->setPercentPos(osg::Vec3(0.53, -1, -.25));
+	_infoList->addChild(studyDateInfo);
+	_infoList->setPercentPos(osg::Vec3(0.6, -1, -.25));
 	_infoList->setPercentSize(osg::Vec3(1.0, 1, .2));
 
 	
@@ -286,7 +294,9 @@ void FileSelector::uiCallback(UICallbackCaller* ui){
 	}
 	else if (ui == _upArrow) {
 		_selectIndex = 0;
+		std::cout << "in callback" << std::endl;
 		if (_isOnLoad) {
+			std::cout << "inload " << std::endl;
 			_fsPopup->addChild(_contentBknd);
 			_contentBknd->setActive(true);
 			_fsPopup->getRootElement()->getGroup()->removeChild(_selectBknd->getGroup());
@@ -294,6 +304,7 @@ void FileSelector::uiCallback(UICallbackCaller* ui){
 			_selectBknd->setActive(false);
 
 			_isOnLoad = false;
+			_currMap = &_seriesList;
 		}
 		else if (_currMap == &_seriesList) {
 			_selectIndex = 0;
@@ -314,10 +325,8 @@ void FileSelector::uiCallback(UICallbackCaller* ui){
 			_menusLoaded = true;
 		}
 		else {
-			loadVolumeOnly(_currentPath);
+			loadVolumeOnly(false, _currentPath);
 		}
-		
-
 	}
 }
 
@@ -331,6 +340,7 @@ bool FileSelector::checkSelectionCallbacks(UICallbackCaller* item) {
 				copy.erase(copy.begin());
 				_patientInfo.name = copy;
 				loadPatient(_selections[i]->getName());
+				_isOnLoad = true;
 			}
 			else if (_currMap == &_seriesList) {
 				_fsPopup->getRootElement()->getGroup()->removeChild(_contentBknd->getGroup());
@@ -347,23 +357,62 @@ bool FileSelector::checkSelectionCallbacks(UICallbackCaller* item) {
 				
 
 				_currentPath = _seriesList[_selections[i]->getName()];
-				_isOnLoad = true;
-				
+			
+				getPatientInfo(_currentPath);
 
 				std::string copy = _selections[i]->getName();
 				copy.erase(copy.begin());
 				_patientInfo.series = copy;
 
+				std::cout << "sd exists " << _patientInfo.studyDate;
+
 				cvr::UIText* category = (cvr::UIText*)_infoList->getChild(FileSelector::CategoryEnum::PATIENT);
 				category->setText(_patientInfo.name);
 				category = (cvr::UIText*)_infoList->getChild(FileSelector::CategoryEnum::SERIES);
 				category->setText(_patientInfo.series);
+				category = (cvr::UIText*)_infoList->getChild(FileSelector::CategoryEnum::STUDYDATE);
+				category->setText(_patientInfo.studyDate);
 			}
 			
 			return found;
 		}
 	}
 	return found;
+}
+
+void FileSelector::getPatientInfo(std::string pName) {
+	
+	DIR* dir = opendir(pName.c_str());
+	std::string filePath = "";
+	if (dir != nullptr) {
+		struct dirent* entry = readdir(dir);
+	
+		while (entry != NULL) {
+			if (entry->d_type == DT_REG && strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0) {
+				filePath = pName + "/" + entry->d_name;
+				break;
+			}
+			entry = readdir(dir);
+		}
+		closedir(dir);
+	}
+
+	
+	DcmFileFormat fileFormat;
+	if (fileFormat.loadFile(filePath.c_str()).good()) {
+	
+	}
+	DcmDataset* dataset = fileFormat.getDataset();
+
+	std::string studyDate = "";
+	OFString oFSTD;
+	if (dataset->findAndGetOFString(DCM_StudyDate, oFSTD).good()) {
+	
+		studyDate = oFSTD.c_str();
+	}
+
+	_patientInfo.studyDate = studyDate;
+
 }
 
 void FileSelector::loadPatient(std::string pName) {
@@ -384,7 +433,6 @@ void FileSelector::showDicomThumbnail() {
 		if (seriesIndex >= _seriesList.size())
 			break;
 		std::string path = getMiddleImage(seriesIndex);
-		std::cout << path << std::endl;
 		DicomImage* image = new DicomImage(path.c_str());
 		assert(image != NULL);
 		assert(image->getStatus() == EIS_Normal);
@@ -399,7 +447,8 @@ void FileSelector::showDicomThumbnail() {
 		OFCondition cnd;
 		cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingX, 0);
 		cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingY, 1);
-
+		
+		
 
 		unsigned int w = image->getWidth();
 		unsigned int h = image->getHeight();
@@ -437,16 +486,11 @@ void FileSelector::showDicomThumbnail() {
 }
 
 std::string FileSelector::getMiddleImage(int seriesIndex) {
-	/////////Test with irbo1
 	auto it = _seriesList.begin();
 	for (unsigned int i = 0; i != seriesIndex; i++) {
 		it++;
-	
 	}
-
-
 	std::string seriesPath = it->second;
-	std::cout << seriesPath << std::endl;
 
 	DIR* dir = opendir(seriesPath.c_str());
 	struct dirent* entry = readdir(dir);
@@ -459,7 +503,7 @@ std::string FileSelector::getMiddleImage(int seriesIndex) {
 	}
 	closedir(dir);
 
-	std::cout << "middle number: " << count << std::endl;
+
 
 	dir = opendir(seriesPath.c_str());
 	entry = readdir(dir);
@@ -475,8 +519,6 @@ int FileSelector::loadSeriesList(std::string pFN, int indexFromDicom) {
 	struct dirent* entry = readdir(dir);
 	while (entry != NULL) {
 		if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
-			//std::cout << "fn: " << fn << std::endl;
-			//std::cout << "newfn: " << entry->d_name << std::endl;
 			std::string newFn = pFN + "/" + entry->d_name;
 			int newIndex = loadSeriesList(newFn, indexFromDicom);
 			if (newIndex > -1) {
@@ -582,7 +624,7 @@ void FileSelector::loadVolume(std::string seriesPath, bool change, bool onlyVolu
 	volumeFileSelector->setVisible(false);
 }
 
-void FileSelector::loadVolumeOnly(std::string seriesPath) {
+void FileSelector::loadVolumeOnly(bool isPreset, std::string seriesPath) {
 	HelmsleyVolume::instance()->removeVolumeOnly(0);
 	std::string maskpath = "";
 
@@ -593,10 +635,8 @@ void FileSelector::loadVolumeOnly(std::string seriesPath) {
 		closedir(dir);
 	}
 
-	HelmsleyVolume::instance()->loadVolumeOnly(seriesPath, maskpath);
+	HelmsleyVolume::instance()->loadVolumeOnly(isPreset, seriesPath, maskpath);
 	_state = CHANGE;
-	addVol->setText("Change Volume");
-	volumeFileSelector->setVisible(false);
 }
 
 void FileSelector::updateFileSelection()
@@ -737,7 +777,7 @@ bool FileSelector::checkIfMask(std::string seriesPath) {
 
 }
 
-osg::Vec3dArray* FileSelector::loadCenterLine(std::string path, OrganEnum organ) {
+osg::ref_ptr<osg::Vec3dArray> FileSelector::loadCenterLine(std::string path, OrganEnum organ) {
 	DIR* dir = opendir(path.c_str());
 	osg::ref_ptr<osg::Vec3dArray> coords = new osg::Vec3dArray();
 	std::string coordsPath = "";
@@ -748,12 +788,11 @@ osg::Vec3dArray* FileSelector::loadCenterLine(std::string path, OrganEnum organ)
 		while (entry != NULL) {
 			if (entry->d_type == DT_REG && strcmp(strrchr(entry->d_name, '.') + 1, "yaml") == 0) {
 				coordsPath = path + "\\" + entry->d_name;
-				std::cout << "yaml found" << std::endl;
 				break;
 			}
 			entry = readdir(dir);
 		}
-		closedir(dir);
+		
 		if (coordsPath != "") {
 
 			YAML::Node yamlFile = YAML::LoadFile(coordsPath);
@@ -762,12 +801,7 @@ osg::Vec3dArray* FileSelector::loadCenterLine(std::string path, OrganEnum organ)
 				yamlCoords = yamlFile[1][std::to_string(organ)];
 			if (organ == OrganEnum::ILLEUM)
 				yamlCoords = yamlFile[2][std::to_string(organ)];
-			
-			//YAML::Node yamlCoords = yamlFile[1]["coords"][0]["x"];
-		
-			//std::cout << yamlFile[1] << std::endl;
-			//std::cout << yamlFile[1]["coords"] << std::endl;
-			//std::cout << "coord size: " << yamlCoords.size() << std::endl;
+
 			osg::Vec3d coord;
 			for (unsigned i = 0; i < yamlCoords.size(); i++) {
 				coord.x() = (yamlCoords[i]["x"].as<double>());
@@ -778,6 +812,7 @@ osg::Vec3dArray* FileSelector::loadCenterLine(std::string path, OrganEnum organ)
 			
 		}
 	}
+	closedir(dir);
 	return coords;
 }
 

@@ -67,7 +67,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		void toggleCenterLine(bool on);
 
 		void loadVolume(std::string path, std::string maskpath = "", bool onlyVolume = false);
-		void loadVolumeOnly(std::string path, std::string maskpath = "");
+		void loadVolumeOnly(bool isPreset, std::string path, std::string maskpath = "");
 		void removeVolume(int index, bool onlyVolume);
 		void removeVolumeOnly(int index);
 

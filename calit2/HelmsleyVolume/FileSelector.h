@@ -47,25 +47,28 @@ public:
 
 	enum CategoryEnum {
 		PATIENT,
-		SERIES
+		SERIES,
+		STUDYDATE
 	};
 
 	struct PatientInfo {
 		std::string name;
 		std::string series;
+		std::string fileCount;
+		std::string studyDate;
 	};
 
 
 
 	static std::vector<std::string> getPresets();
-	static osg::Vec3dArray* loadCenterLine(std::string path, OrganEnum organ);
+	static osg::ref_ptr<osg::Vec3dArray> loadCenterLine(std::string path, OrganEnum organ);
 	static bool checkIfMask(std::string fName);
 	virtual void uiCallback(UICallbackCaller* ui);
 	std::string getCurrPath() { return _currentPath; }
 
 	void sortByMask(std::map<std::string, std::string>* currMap);
 	void loadVolume(std::string seriesPath, bool change, bool onlyVolume);
-	void loadVolumeOnly(std::string seriesPath);
+	void loadVolumeOnly(bool isPreset, std::string seriesPath);
 	
 protected:
 	void updateSelections(SelectChoice choice);
@@ -74,6 +77,7 @@ protected:
 	int checkIfPatient(std::string fn, int indexFromDicom);
 	bool checkSelectionCallbacks(UICallbackCaller* item);
 	void loadPatient(std::string pName);
+	void getPatientInfo(std::string seriesPath);
 	int loadSeriesList(std::string pFN, int indexFromDicom);
 	void showDicomThumbnail();
 	std::string getMiddleImage(int seriesIndex);

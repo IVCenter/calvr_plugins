@@ -17,87 +17,37 @@
 #include <cvrKernel/SceneObject.h>
 #include <cvrMenu/MenuButton.h>
 #include <cvrMenu/PopupMenu.h>
+#include <cvrMenu/NewUI/UIPopup.h>
+#include <cvrMenu/NewUI/UIToggle.h>
 
 #include <iostream>
-
+#include "CuttingPlane.h"
 #include "Interactable.h"
-
-class UpdateCenterlineCam : public osg::NodeCallback
-{
-public:
-	UpdateCenterlineCam(osg::Camera* cam, cvr::SceneObject* object = nullptr) : _camera(cam), _object(object)  {}
-
-	virtual void operator()(osg::Node* node, osg::NodeVisitor* nv)
-	{
-		if (_index >= 0 && _index < _coords->size() - 1) {
-			
-			osg::Vec3d pos = _coords->at(_index) * _mTransform->getMatrix();
-			osg::Vec3d next = _coords->at((_index + 1)) * _mTransform->getMatrix();
-			osg::Matrix mat;
-
-			osg::Vec3 dir = osg::Vec3(next - pos);
-			dir.normalize();
-			
-			osg::Vec3 up = osg::Vec3(0, 0, 1);
-			mat.makeLookAt(pos - (dir * 40), next, up);
-
-		
-			
-			_camera->setViewMatrix(mat);
-			
-
-			_index++;
-
-			//osg::Matrix localToWorld = *_mTransform;
-			//osg::Vec4 eye = osg::Vec4(0, 0, 0, 1) * localToWorld;
-			//osg::Vec4 center = osg::Vec4(0, 10, 0, 1) * localToWorld;
-			//osg::Vec4 up = osg::Vec4(0, 0, 1, 0) * localToWorld;
-			////up.normalize();
-			//_camera->setViewMatrixAsLookAt(osg::Vec3(eye.x(), eye.y(), eye.z()),
-			//	osg::Vec3(center.x(), center.y(), center.z()),
-			//	osg::Vec3(up.x(), up.y(), up.z()));
-
-			//_index++;
-		}
-	}
-
-	void setCoords(osg::Vec3dArray* coords, osg::MatrixTransform* transform) {
-		_coords = coords;
-		_mTransform = transform;
-		_index = 0;
-	}
-
-private:
-	cvr::SceneObject* _object;
-	osg::Vec3dArray* _coords = nullptr;
-	clock_t this_time = clock();
-	clock_t last_time = this_time;
-	double time_counter = 0;
-	double testSeconds = .01;
-	osg::MatrixTransform* _mTransform;
-	osg::Camera* _camera;
-	int _index = -1;
-};
+#include "UIExtensions.h"
 
 
 
-class CenterlineTool : public cvr::SceneObject
+
+
+
+
+class CenterlineTool : public cvr::SceneObject, public UICallback, public UICallbackCaller
 {
 public:
 	CenterlineTool(std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds = false)
 		: SceneObject(name, navigation, movable, clip, contextMenu, showBounds)
 	{
 		init();
-		_updateCallback = new UpdateCenterlineCam(_camera, this);
+	
+		_updateCallback = new CenterlineUpdate(this, _camera);
 		this->getRoot()->addUpdateCallback(_updateCallback);
 	}
-
-	//virtual void updateCallback(int handID, const osg::Matrix& mat);
-	virtual void menuCallback(cvr::MenuItem* menuItem);
-	//virtual void enterCallback(int handID, const osg::Matrix& mat);
-	//virtual void leaveCallback(int handID, const osg::Matrix& mat);
+	virtual void uiCallback(UICallbackCaller* ui);
 	void setCoords(osg::Vec3dArray* coords, osg::MatrixTransform* trans) {
 		_updateCallback->setCoords(coords, trans);
+	}
+	void setCoords(osg::Vec3dArray* coords) {
+		_updateCallback->setCoords(coords);
 	}
 
 
@@ -105,7 +55,8 @@ public:
 	void activate();
 	void deactivate();
 	const bool getIsActive() { return _cameraActive; }
-
+	
+	void setCP(CuttingPlane* cp) { _cp = cp; }
 protected:
 	void init();
 
@@ -115,13 +66,18 @@ protected:
 	osg::ref_ptr<osg::Node> _tablet;
 	osg::ref_ptr<osg::Geometry> _display;
 
-	cvr::MenuButton* _illeumButton;
 	cvr::PopupMenu* _cameraMenu;
+	cvr::UIPopup* _cameraPop;
+	ToolToggle* _playButton;
+	CallbackButton* _colonButton;
+	CallbackButton* _illeumButton;
+	CuttingPlane* _cp;
 	
 	osg::ref_ptr<osg::Camera::DrawCallback> _pdc;
 
-	UpdateCenterlineCam* _updateCallback = nullptr;
-	
+	//UpdateCenterlineCam* _updateCallback = nullptr;
+	CenterlineUpdate* _updateCallback = nullptr;
+	std::string _imgDir;
 
 	bool _cameraActive;
 };
