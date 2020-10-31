@@ -40,13 +40,15 @@ void main() {
 	ra.r = mix(Center-(Width/2), Center+(Width/2), ra.r);
 	ra.r = (ra.r - ContrastBottom) / (ContrastTop - ContrastBottom);
 	ra.r = max(0, min(1, ra.r));
-	ra.r = clamp(ra.r + (Brightness - 0.5), 0.0, 1.0);
+	ra.r = clamp(ra.r , 0.0, 1.0);
     vec3 col = vec3(0.0,0.0,0.0);
+
+
 
     #ifdef COLOR_FUNCTION
 		col = COLOR_FUNCTION
 	#else
-		col = vec3(ra.r);
+		col = vec3(ra.rrr);
 	#endif
 
 	

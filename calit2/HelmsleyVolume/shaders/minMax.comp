@@ -1,0 +1,33 @@
+////////////////////////////////////////
+// minMax.comp
+// computes the min/max values for the volume
+////////////////////////////////////////
+
+#version 460
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+
+layout(rg16, binding = 0) uniform image3D volume;
+layout(binding = 1) uniform atomic_uint[3] data;
+
+uniform ivec3 VolumeDims;	// size of the section of the volume we are applying CLAHE to 
+
+
+void main() {
+
+	// calculate the max and min for the volume 
+	ivec3 index = ivec3(gl_GlobalInvocationID.xyz);
+	float fval = imageLoad(volume, index).r;
+	uint ival = uint(fval*65535);
+	
+//	// if we are not within the volume of interest -> return 
+	if ( index.x >= VolumeDims.x || index.y >= VolumeDims.y || index.z >= VolumeDims.z ) {
+		return;
+	}
+
+	atomicCounterMin(data[1], ival);
+	atomicCounterMax(data[2], ival);
+
+//	// count the number of pixels contributing to the hist (used for the masked version)
+	 atomicCounterAdd(data[0], 1);
+}

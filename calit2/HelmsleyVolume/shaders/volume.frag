@@ -1,6 +1,6 @@
 #version 460
 
-#pragma import_defines ( SAMPLECOUNT, VR_ADAPTIVE_QUALITY )
+#pragma import_defines ( SAMPLECOUNT, VR_ADAPTIVE_QUALITY, CLAHE )
 
 out vec4 FragColor;
 
@@ -17,6 +17,8 @@ in vs_out {
 uniform vec4 RelativeViewport;
 
 uniform float StepSize;
+uniform float TestScale;
+uniform float MaxSteps;
 
 uniform vec2 InvResolution;
 
@@ -73,7 +75,9 @@ float DepthTextureToObjectDepth(vec3 ro, vec3 screenPos) {
 }
 
 vec4 Sample(vec3 p) {
+	
 	vec4 ra = textureLod(Volume, p, 0.0);
+	
 
 	return ra;
 }
@@ -81,7 +85,7 @@ vec4 Sample(vec3 p) {
 void main() {
 
 
-	vec3 ro = i.ro;//vec3(i.WorldToObject * vec4(osg_ViewMatrixInverse[3].xyz, 1));
+	vec3 ro = i.ro;
 	vec3 rd = normalize(i.rd.xyz);
 
 	vec2 intersect = RayCube(ro, rd, vec3(.5));
@@ -97,64 +101,46 @@ void main() {
 	if (intersect.y < intersect.x) discard;
 
 
-	ro += .5; // cube has a radius of .5, transform to UVW space
-	vec4 sum = vec4(0);
+	ro += .5;
+
+	vec4 max_v = vec4(0);
 	uint steps = 0;
 	float pd = 0;
 	float stepsize = StepSize;
 
 	#ifdef VR_ADAPTIVE_QUALITY
 		vec2 clip = (i.sp.xy / i.sp.z) * 1.8;
-		//clip.x *= 0.75; //decrease x to increase horizontal overlap
 		float quality = dot(clip, clip);
 		quality = quality * 1.25 + 0.75;
 		stepsize *= quality;
 	#endif
 
 	for (float t = intersect.x; t < intersect.y;) {
-		if (sum.a > .98 || steps > 750) break;
+		if (max_v.a > .98 || steps > 750) break;
 
 		vec3 p = ro + rd * t;
 		vec4 col = Sample(p);
 		col.a *= stepsize * 1000;
-//
-///*
-//		if (col.a > 1e-3){
-//			if (pd < 1e-3) {
-//				// first time entering volume, binary subdivide to get closer to entrance point
-//				float t0 = t - stepsize * 4;
-//				float t1 = t;
-//				float tm;
-//				#define BINARY_SUBDIV tm = (t0 + t1) * .5; p = ro + rd * tm; if (Sample(p).a > .01) t1 = tm; else t0 = tm;
-//				BINARY_SUBDIV
-//				BINARY_SUBDIV
-//				BINARY_SUBDIV
-//				//BINARY_SUBDIV
-//				#undef BINARY_SUBDIV
-//				t = tm;
-//				col = Sample(p);
-//			}
-//*/		
-			
+		col.rgb *= col.a;
 
-			col.rgb *= col.a;
-			sum += col * (1 - sum.a);
-//		}
-
-		steps++; // only count steps through the volume
+		max_v += col * (1 - max_v.a);
+	
+	
+	
+		steps++; 
 
 
 
 		pd = col.a;
-		t += stepsize;//col.a > 1e-3 ? stepsize : stepsize * 8; // step farther if not in dense part
+		t += stepsize;
 	}
-
-	if(sum.a <= 0.01) discard;
-
+	if(max_v.a <= 0.01) discard;
+	/////////////////////////////////////
+	
 	#ifdef SAMPLECOUNT
 	FragColor = vec4(mix(vec3(.2, .2, 1.0), vec3(1.0, .2, .2), float(steps) / 750.0), 1.0);
 	#else
-	sum.a = clamp(sum.a, 0.0, 1.0);
-	FragColor = sum;
+	max_v.a = clamp(max_v.a, 0.0, 1.0);
+	FragColor = max_v;
 	#endif
 }

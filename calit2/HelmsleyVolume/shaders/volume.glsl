@@ -4,11 +4,14 @@
 #pragma import_defines ( COLON, BLADDER, KIDNEY, SPLEEN, ILLEUM, AORTA, BODY, VEIN )
 #pragma import_defines ( COLON_RGB, BLADDER_RGB, KIDNEY_RGB, SPLEEN_RGB, BODY_RGB, ILLEUM_RGB, AORTA_RGB )
 #pragma import_defines ( CONTRAST_ABSOLUTE )
+#pragma import_defines (  EDGE_DETECTION )
+#pragma import_defines (  CLAHE )
 
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 layout(rg16, binding = 0) uniform image3D volume;
 layout(rgba8, binding = 1) uniform image3D baked;
+layout(rg16, binding = 5) uniform image3D CLAHEvolume;
 
 
 //uniform float Exposure;
@@ -17,7 +20,11 @@ layout(rgba8, binding = 1) uniform image3D baked;
 
 uniform float ContrastBottom;
 uniform float ContrastTop;
-uniform float Brightness;
+uniform float Brightness = 0.0;
+
+uniform float TrueContrast = 1.0;
+uniform float ContrastCenter = .5;
+
 
 uniform float OpacityCenter[10];
 uniform float OpacityWidth[10];
@@ -53,192 +60,13 @@ vec3 custom(vec3 c) {
 }
 
 vec4 Sample(ivec3 p) {
-//	vec2 ra = imageLoad(volume, p).rg;
-//
-//
-//	vec4 s = vec4(0,0,0,0);
-//	bool organBool = false;
-//
-//	#ifdef INVERT
-//		ra.r = 1 - ra.r;
-//	#endif
-//
-//	
-//
-//
-//
-////	//Opacity
-//	float highestOpacity = 0.0;
-//	for(int i = 0; i < TriangleCount; i++){
-//		s.a = smoothstep((OpacityCenter[i]-OpacityTopWidth[i]) - (OpacityWidth[i] - OpacityTopWidth[i]), OpacityCenter[i] - OpacityTopWidth[i], ra.r);
-//		if(s.a == 1.0){
-//			s.a = 1.0 - smoothstep(OpacityCenter[i]+OpacityTopWidth[i], OpacityCenter[i]+ OpacityTopWidth[i] + (OpacityWidth[i] - OpacityTopWidth[i]), ra.r);
-//		}
-//		if(s.a != 0.0){
-//			s.a *= 1/pow(2, ((1-OpacityMult[i])*10));
-//			float lowestLimit = 1/pow(2, ((1-Lowest[i])*10)); //Non-Linear Opacity Multiplier
-//			s.a = max(s.a, lowestLimit);
-//			if(s.a >= highestOpacity)
-//				highestOpacity = s.a;
-//		}
-//			
-//	}
-//	s.a = highestOpacity;
-//	//Contrast
-//
-//
-//	//vec2 ra = ra; //removes contrast from organs
-//
-//
-//
-//	#ifdef ORGANS_ONLY
-//		float alpha = 0.0;
-//	#else
-//		float alpha = s.a;
-//	#endif
-//	//TODO: change to floatBitsToUint
-//	uint bitmask = uint(ra.g * 65535.0);
-//
-//
-//	
-//
-//	#ifdef BLADDER
-//		if(bitmask == 1)	
-//		{
-//				organBool = true;
-//				float adjusted = mix(.5,1.0,ra.r);
-//				
-//				s.rgb *= ra.r;
-//			
-//				alpha = 1.00;
-//
-//		}
-//	#endif
-//
-//	#ifdef KIDNEY
-//		if(bitmask == 2)
-//		{
-//			organBool = true;
-//			float adjusted = mix(.5,1.0,ra.r);
-//			s.rgb = vec3(0, 0.278, 1);
-//			s.rgb *= adjusted;
-//			alpha = 1.00;
-//
-//		}
-//	#endif
-//
-//	#ifdef COLON
-//		if(bitmask == 4)
-//		{
-//			organBool = true;
-//			
-//
-////			
-//			//ra.r = mix(ContrastBottom, ContrastTop, ra.r);
-//			ra.r = clamp(ra.r + (Brightness - 0.5), 0.0, 1.0);
-//			s.rgb = vec3(ra.r);
-//			s.rgb *= vec3(0.752, 0.635, 0.996);
-//			
-//
-//			alpha = 1.00;
-//			
-//		}
-//	
-//	#endif
-//
-////	#ifdef SPLEEN
-////		if(bitmask == 8)
-////		{
-////			ra.r = smoothstep(0.0f, .17f, ra.r);
-////			s.r = ra.r;
-////			s.g = ra.r;
-////			s.b = ra.r;
-////
-////
-////			s.r += .2;
-////			s.g += .2;
-////
-////			s.rgb = vec3(1, 0.874, 0.109);
-////		
-////			alpha = 1.00;
-//////			#ifdef SPLEEN_RGB
-//////				s.rgb = SPLEEN_RGB		
-//////				s.rgb*=ra.r;
-//////			#endif
-////		}
-////	#endif
-////
-////	#ifdef ILLEUM
-////		if(bitmask == 16)
-////		{	
-//////			ra.r = smoothstep(0.0f, .42f, ra.r);
-//////			s.r = ra.r;
-//////			s.g = ra.r;
-//////			s.b = ra.r;
-//////
-//////
-//////			s.r += .1;
-//////			s.g += .1;
-//////			s.b += .1;
-////			//s.rgb = vec3(0.968, 0.780, 1);
-////			ra.r = mix(ContrastBottom, ContrastTop, ra.r);
-////			ra.r = clamp(ra.r + (Brightness - 0.5), 0.0, 1.0);
-////			s.rgb = vec3(ra.r);
-////			s.rgb *=  vec3(0.968, 0.780, 1);
-////			alpha = 1.00;
-//////			#ifdef ILLEUM_RGB
-//////				s.rgb = ILLEUM_RGB		
-//////				s.rgb*=ra.r;
-//////			#endif
-////		}
-////	#endif
-////
-////	#ifdef AORTA
-////		if(bitmask == 32)
-////		{
-////			float adjusted = mix(.5,1.0,ra.r);
-////			s.rgb = vec3(0.984, 0.109, 0.372);
-////			s.rgb *= adjusted;
-////			alpha = 1.00;
-//////			#ifdef AORTA_RGB
-//////				s.rgb = AORTA_RGB		
-//////				s.rgb*=ra.r;
-//////			#endif
-////		}
-////	#endif
-//
-//	
-//	if(!organBool){
-//	
-//		if(ra.r < ContrastBottom) 
-//		{
-//			ra.r = 0;
-//		}
-//		if (ra.r > ContrastTop){
-//			ra.r = 1;
-//		}
-//		ra.r = smoothstep(ContrastBottom, ContrastTop, ra.r);
-//		ra.r = clamp(ra.r + (Brightness - 0.5), 0.0, 1.0);
-//
-//	
-//
-//		#ifdef COLOR_FUNCTION
-//			s.rgb = COLOR_FUNCTION
-//		#else
-//			s.rgb = vec3(ra.r);
-//		#endif
-//
-//	}
-//	s.a = alpha;
-//
-//
-//	return s;
-//
-
-	////////////////////////////////////////////////////New Imp
-	vec2 ra = imageLoad(volume, p).rg;
+	#ifndef CLAHE
+		vec2 ra = imageLoad(volume, p).rg;
+	#else
+		vec2 ra = imageLoad(CLAHEvolume, p).rg;
+	#endif
 	vec4 s = vec4(0,0,0,0);
-	uint bitmask = uint(ra.g * 65535.0);
+	uint bitmask = uint(imageLoad(volume, p).rg.g * 65535.0);
 	const uint organCount = 7;
 	vec3 organColors[organCount] = 
 	vec3[organCount](vec3(0.992, 0.968, 0.843), vec3(0, 0.278, 1), 
@@ -270,29 +98,24 @@ vec4 Sample(ivec3 p) {
 	//etc...
 
 	bitmask &= organMask;
-
+	//ORGANS
 	for (int i = 0; i < organCount; i++){
 	  if (bool(bitmask & (1 << i))) {
 		s.rgb = organColors[i];
+		//Contrast
 		ra.r = mix(ContrastBottom, ContrastTop, ra.r);
-
 		ra.r = clamp(ra.r + (Brightness - 0.5), 0.0, 1.0);
-		
-		float adjust = (1 - ra.r)/4;
-
+		ra.r = (ra.r - ContrastCenter) * TrueContrast + ContrastCenter + (Brightness);
 		s.rgb *= ra.rrr;
-		s.rgb += adjust;
 		s.a = 1.0;
 		return s;
 	  }
 	}
 
-	
-
-	#ifdef ORGANS_ONLY
+	#ifndef ORGANS_ONLY
 		return s;
 	#endif
-
+	//FULLVOLUME
 	//Opacity
 	float highestOpacity = 0.0;
 	for(int i = 0; i < TriangleCount; i++){
@@ -302,12 +125,11 @@ vec4 Sample(ivec3 p) {
 		}
 		if(s.a != 0.0){
 			s.a *= 1/pow(2, ((1-OpacityMult[i])*10));
-			float lowestLimit = 1/pow(2, ((1-Lowest[i])*10)); //Non-Linear Opacity Multiplier
+			float lowestLimit = 1/pow(2, ((1-Lowest[i])*10)); 
 			s.a = max(s.a, lowestLimit);
 			if(s.a >= highestOpacity)
 				highestOpacity = s.a;
 		}
-			
 	}
 	s.a = highestOpacity;	
 
@@ -320,9 +142,7 @@ vec4 Sample(ivec3 p) {
 		ra.r = 1;
 	}
 	ra.r = smoothstep(ContrastBottom, ContrastTop, ra.r);
-	ra.r = clamp(ra.r + (Brightness - 0.5), 0.0, 1.0);
-
-	
+	ra.r = clamp(ra.r, 0.0, 1.0);
 
 	#ifdef COLOR_FUNCTION
 		s.rgb = COLOR_FUNCTION
@@ -379,10 +199,82 @@ float Light(vec3 p) {
 	#endif
 }
 
+float sobel(ivec3 index){
+
+
+	float intensity = 1.0;
+//	//xyz sobel
+	ivec3 i0 =  ivec3(index.x-1, index.y+1, index.z);
+	ivec3 i1 =  ivec3(index.x, index.y+1, index.z);
+	ivec3 i2 =  ivec3(index.x+1, index.y+1, index.z);
+	ivec3 i3 =  ivec3(index.x-1, index.y, index.z);
+
+	ivec3 i5 =  ivec3(index.x+1, index.y, index.z);
+	ivec3 i6 =  ivec3(index.x-1, index.y-1, index.z);
+	ivec3 i7 =  ivec3(index.x, index.y-1, index.z);
+	ivec3 i8 =  ivec3(index.x+1, index.y-1, index.z);
+
+	ivec3 indices[8] = {i0,i1,i2,i3,i5,i6,i7,i8};
+
+	///////////////z///////////
+	ivec3 zi0 =  ivec3(index.x-1, index.y, index.z+1);
+	ivec3 zi1 =  ivec3(index.x, index.y, index.z+1);
+	ivec3 zi2 =  ivec3(index.x+1, index.y, index.z+1);
+	ivec3 zi3 =  ivec3(index.x-1, index.y, index.z-1);
+	ivec3 zi4 =  ivec3(index.x, index.y, index.z-1);
+	ivec3 zi5 =  ivec3(index.x+1, index.y, index.z-1);
+
+	ivec3 zindices[6] = {zi0, zi1, zi2, zi3, zi4, zi5};
+	float zvalues[6];
+	for(int i = 0; i < 6; i++){
+		zvalues[i] = (imageLoad(volume, zindices[i]).r);
+	}
+	float gzValues[6] = {1.0,2.0,1.0,-1.0,-2.0,-1.0};
+	float gz = 0.0;
+	for(int i = 0; i < 6; i++){
+		gz += gzValues[i] * zvalues[i];
+	}
+		///////////////z///////////
+
+	float values[8];
+
+	for(int i = 0; i < 8; i++){
+		values[i] = (imageLoad(volume, indices[i]).r);
+	}
+	
+	float gxValues[8] = {1.0,0.0,-1.0,2.0,-2.0,1.0,0.0,-1.0};
+	float gyValues[8] = {1.0,2.0,1.0,0.0,0.0,-1.0,-2.0,-1.0};
+	
+
+	float gx = 0.0;
+	float gy = 0.0;
+
+	for(int i = 0; i < 8; i++){
+		gx += gxValues[i] * values[i];
+		gy += gyValues[i] * values[i];
+	}
+	
+
+	float g = sqrt(pow(gx,2) + pow(gy,2) + pow(gz,2));
+	
+	float mx = sqrt(48);
+
+	g /= mx;
+
+	return g;
+}
+
 void main() {
 	ivec3 index = ivec3(gl_GlobalInvocationID.xyz);
 
 	vec4 s = Sample(index);
+
 	s.rgb *= Light(vec3(index));
+
+	#ifdef EDGE_DETECTION
+		sobel(index);
+		s.a *= sobel(index);
+	#endif
+
 	imageStore(baked, index, s);
 }

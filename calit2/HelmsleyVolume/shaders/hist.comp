@@ -1,0 +1,48 @@
+////////////////////////////////////////
+// hist.comp
+// computes the local Histogram for CLAHE
+////////////////////////////////////////
+
+#version 460 
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;	// 64 threads
+
+// input Dicom Volume
+layout(rg16, binding = 0) uniform image3D volume;
+
+
+layout(std430, binding = 1) buffer histBuffer{ uint hist[]; };
+layout(std430, binding = 2) buffer histMaxBuffer{ uint histMax[]; };
+
+
+uniform ivec3 numSB;		// number of Sub Blocks
+uniform uint NUM_OUT_BINS;	// number of gray values in the new Volume
+uniform ivec3 VolumeDims;	// size of the section of the volume we are applying CLAHE to 
+
+void main() {
+
+	// figure out the sub block this index belongs to 
+	uvec3 index = gl_GlobalInvocationID.xyz;
+	ivec3 sizeSB = ivec3( VolumeDims / numSB );	
+	ivec3 currSB = ivec3( index / sizeSB );
+
+	// if we are not within the volume of interest -> return 
+	if ( index.x >= VolumeDims.x || index.y >= VolumeDims.y || index.z >= VolumeDims.z ) {
+		return;
+	}
+	
+	// get the gray value of the Volume
+	float volSamplef = imageLoad( volume, ivec3(index) ).x;
+	uint volSample = uint(volSamplef*NUM_OUT_BINS);
+	uint histIndex = uint(currSB.z * numSB.x * numSB.y + currSB.y * numSB.x + currSB.x);
+	
+	// Increment the appropriate histogram
+	uint grayIndex = (NUM_OUT_BINS * histIndex) + volSample;
+
+	atomicAdd(hist[grayIndex], 1 );
+	
+	
+	 //update the histograms max value
+	atomicMax( histMax[histIndex],  (hist[ grayIndex ]));
+
+}

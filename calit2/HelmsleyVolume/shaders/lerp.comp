@@ -1,0 +1,176 @@
+////////////////////////////////////////
+// lerp.comp
+// Trilinear Interpolation for CLAHE
+////////////////////////////////////////
+
+#version 460
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;	// 64 threads
+
+// input Dicom volume
+layout(rg16, binding = 0) uniform image3D volume;
+//// input LUT
+//layout(std430, binding = 1) buffer lutBuffer {
+//    uint LUT[];
+//};
+// input Histogram
+
+
+// output Volume Data
+layout(rg16, binding = 5) uniform image3D newVolume;
+
+layout(std430, binding = 1) buffer histBuffer{ uint hist[]; };
+
+uniform ivec3 numSB;	// number of Sub Blocks
+uniform uint NUM_IN_BINS;	// number of gray values in the Volume 
+uniform uint NUM_OUT_BINS;	// number of gray values in the new Volume
+//uniform bool useLUT;	// if we need to use the LUT to map to a different bit range
+//
+void main() {
+
+	// figure out which block this voxel belongs to
+	uvec3 index = gl_GlobalInvocationID.xyz;
+	ivec3 volumeDims = imageSize(volume);
+
+	// number of blocks to interpolate over is 2x number of SB the volume is divided into
+	ivec3 numBlocks = numSB * ivec3(2);	
+	ivec3 sizeBlock = ivec3( volumeDims / numBlocks );
+	ivec3 currBlock = ivec3( index / sizeBlock );
+	
+
+	// find the neighbooring subBlocks and interpolation values (a,b,c) for the 
+	// block we are interpolating over
+	uint xRight, xLeft, yUp, yDown, zFront, zBack;
+	uint a, aInv, b, bInv, c, cInv;
+	uvec3 size = sizeBlock;
+
+	////////////////////////////////////////////////////////////////////////////
+	// X neighboors
+	if (currBlock.x == 0) {
+		xLeft = 0;							xRight = 0;
+		// X interpolation coefficients 
+		a = index.x - currBlock.x * sizeBlock.x;
+	}
+	else if (currBlock.x == numBlocks.x - 1) {
+		xLeft = currBlock.x / 2 ;			xRight = xLeft;
+		// X interpolation coefficients 
+		a = index.x - currBlock.x * sizeBlock.x;
+	}
+	else {
+		size.x *= 2;
+		if (currBlock.x % 2 == 0)	{
+			xLeft = currBlock.x / 2 - 1;	xRight = xLeft + 1;
+			a = index.x - currBlock.x * sizeBlock.x + sizeBlock.x;
+
+		}
+		else {
+			xLeft = currBlock.x / 2;		xRight = xLeft + 1;
+			// X interpolation coefficients 
+			a = index.x - currBlock.x * sizeBlock.x;
+		}
+	}
+	// X interpolation coefficients 
+	aInv = size.x - a;
+
+	////////////////////////////////////////////////////////////////////////////
+	// Y neighboors
+	if (currBlock.y == 0) {
+		yUp = 0;							yDown = 0;
+		b = index.y - currBlock.y * sizeBlock.y;
+	}
+	else if (currBlock.y == numBlocks.y - 1) {
+		yUp = currBlock.y / 2;				yDown = yUp;
+		b = index.y - currBlock.y * sizeBlock.y;
+	}
+	else {
+		size.y *= 2;
+		if (currBlock.y % 2 == 0) {
+			yUp = currBlock.y / 2 - 1;		yDown = yUp + 1;
+			b = index.y - currBlock.y * sizeBlock.y + sizeBlock.y;
+		}
+		else {
+			yUp = currBlock.y / 2;			yDown = yUp + 1;
+			b = index.y - currBlock.y * sizeBlock.y;
+		}
+	}
+	// Y interpolation coefficients 
+	bInv = size.y - b;
+
+	////////////////////////////////////////////////////////////////////////////
+	// Z neighboors
+	if (currBlock.z == 0) {
+		zFront = 0;							zBack = 0;
+		c = index.z - currBlock.z * sizeBlock.z;
+	}
+	else if (currBlock.z == numBlocks.z - 1) {
+		zFront = currBlock.z / 2;			zBack = zFront;
+		c = index.z - currBlock.z * sizeBlock.z;
+	}
+	else {
+		size.z *= 2;
+		if (currBlock.z % 2 == 0) {
+			zFront = currBlock.z / 2 - 1;	zBack = zFront + 1;
+			c = index.z - currBlock.z * sizeBlock.z + sizeBlock.z;
+		}
+		else {
+			zFront = currBlock.z / 2;		zBack = zFront + 1;
+			c = index.z - currBlock.z * sizeBlock.z;
+		}
+	}
+	// Z interpolation coefficients 
+	cInv = size.z - c;
+	
+
+	////////////////////////////////////////////////////////////////////////////
+	// get the histogram indices for the neighbooring subblocks 
+	uint LUF = NUM_IN_BINS * (zFront * numSB.x * numSB.y + yUp   * numSB.x + xLeft  );
+	uint RUF = NUM_IN_BINS * (zFront * numSB.x * numSB.y + yUp   * numSB.x + xRight );
+	uint LDF = NUM_IN_BINS * (zFront * numSB.x * numSB.y + yDown * numSB.x + xLeft  );
+	uint RDF = NUM_IN_BINS * (zFront * numSB.x * numSB.y + yDown * numSB.x + xRight );
+
+	uint LUB = NUM_IN_BINS * (zBack * numSB.x * numSB.y + yUp   * numSB.x + xLeft   );
+	uint RUB = NUM_IN_BINS * (zBack * numSB.x * numSB.y + yUp   * numSB.x + xRight  );
+	uint LDB = NUM_IN_BINS * (zBack * numSB.x * numSB.y + yDown * numSB.x + xLeft   );
+	uint RDB = NUM_IN_BINS * (zBack * numSB.x * numSB.y + yDown * numSB.x + xRight  );
+
+	////////////////////////////////////////////////////////////////////////////
+	// LERP
+
+	// get the current gray value 
+	uint greyValue = uint(imageLoad(volume, ivec3(index)).x * NUM_OUT_BINS);
+
+//	if (useLUT) {
+//		greyValue = LUT [ greyValue ];
+//	}
+
+	// bilinear interpolation - zFront
+	float up_front = aInv * float(hist[LUF + greyValue]) / float(NUM_IN_BINS) + a * float(hist[RUF + greyValue]) / float(NUM_IN_BINS);
+	float dn_front = aInv * float(hist[LDF + greyValue]) / float(NUM_IN_BINS) + a * float(hist[RDF + greyValue]) / float(NUM_IN_BINS);
+	float front  = bInv * up_front + b * dn_front;
+
+	// bilinear interpolation - zBack
+	float up_back = aInv * float(hist[LUB + greyValue]) / float(NUM_IN_BINS) + a * float(hist[RUB + greyValue]) / float(NUM_IN_BINS);
+	float dn_back = aInv * float(hist[LDB + greyValue]) / float(NUM_IN_BINS) + a * float(hist[RDB + greyValue]) / float(NUM_IN_BINS);
+	float back  = bInv * up_back + b * dn_back;
+
+	// trilinear interpolation
+	float normFactor = float(size.x) * float(size.y) * float(size.z);
+	float ans = (cInv * front + c * back) / normFactor;
+
+
+
+	// use mask data only to get the mappings for the entire volume
+	//imageStore(newVolume, ivec3(index), vec4(g, 0, 0, 1.0));//DELETE
+	imageStore(newVolume, ivec3(index), vec4(ans, 0, 0, 0));
+
+
+//	// if we are using masks AND we are masked out -> store the original grayValue
+//	uint maskVal = imageLoad(mask, ivec3(index)).r;
+//	if (useMask && maskVal == 0) {
+//		imageStore(newVolume, ivec3(index), vec4(greyValue / float(NUM_OUT_BINS), 0, 0, 0));
+//	}
+//	// otherwise -> store the new value 
+//	else {
+//		imageStore(newVolume, ivec3(index), vec4(ans, 0, 0, 0));
+//	}
+}

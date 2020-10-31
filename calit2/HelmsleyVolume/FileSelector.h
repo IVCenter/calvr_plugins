@@ -69,6 +69,7 @@ public:
 	void sortByMask(std::map<std::string, std::string>* currMap);
 	void loadVolume(std::string seriesPath, bool change, bool onlyVolume);
 	void loadVolumeOnly(bool isPreset, std::string seriesPath);
+	void loadSecondVolume(std::string seriesPath);
 	
 protected:
 	void updateSelections(SelectChoice choice);
@@ -93,6 +94,7 @@ protected:
 	cvr::UIQuadElement* _selectImage;
 	cvr::UITexture* _selectTexture;
 	CallbackButton* _loadVolumeButton;
+	CallbackButton* _loadSecondButton;
 	cvr::UIPopup* _fsPopup;
 
 	cvr::UIList* _topList;
@@ -102,7 +104,7 @@ protected:
 	TriangleButton* _rightArrow;
 	TriangleButton* _leftArrow;
 	TriangleButton* _upArrow;
-	int _selectIndex;
+	int _selectIndex = 0;
 	std::vector<Selection*> _selections;
 	
 	//std::map<cvr::MenuItem*, std::string> loadVolumeMenu;

@@ -36,6 +36,8 @@ protected:
 	VolumeGroup* _volume;
 
 	cvr::MenuRangeValueCompact* scale;
+	cvr::MenuRangeValueCompact* testScale;
+	cvr::MenuRangeValueCompact* maxSteps;
 	cvr::MenuRangeValueCompact* sampleDistance;
 	 
 	cvr::MenuRangeValueCompact* contrastBottom;
@@ -47,6 +49,8 @@ protected:
 	cvr::MenuRangeValueCompact* opacityTop;
 
 	cvr::MenuCheckbox* adaptiveQuality;
+	cvr::MenuCheckbox* test;
+	cvr::MenuCheckbox* edgeDetectBox;
 	cvr::MenuCheckbox* highlightColon;
 	cvr::MenuCheckbox* organsOnly;
 
@@ -94,61 +98,63 @@ private:
 	cvr::SceneObject* _container = nullptr;
 };
 
+class VolumeMenuUpdate : public osg::NodeCallback
+{
+public:
+	VolumeMenuUpdate(){}
+
+	virtual void operator()(osg::Node* node, osg::NodeVisitor* nv)
+	{
+		if (_Linked) {
+			Link();
+		}
+
+	}
+
+	void setLinkOn() {
+		_Linked = true;
+	}
+	void setLinkOff() {
+		_Linked = false;
+	}
+
+	void setCuttingPlanes(cvr::SceneObject* cuttingPlane, cvr::SceneObject* cuttingPlane2) { _cP1 = cuttingPlane; _cP2 = cuttingPlane2; }
+
+	void Link();
+
+
+private:
+
+	cvr::SceneObject* _cP1;
+	cvr::SceneObject* _cP2;
+	bool _Linked = false;
+	osg::Vec3 _prevPos = osg::Vec3(0,0,0);
+};
+
 class NewVolumeMenu : public UICallback {
 public:
-	NewVolumeMenu(cvr::SceneObject* scene, VolumeGroup* volume, bool movable = true) : _scene(scene), _volume(volume), _movable(movable) {}
+	NewVolumeMenu(cvr::SceneObject* scene, VolumeGroup* volume, bool movable = true) : _scene(scene), _volume(volume), _movable(movable) {
+		
+	}
 	~NewVolumeMenu();
 
 	void init();
+	
 
 	virtual void uiCallback(UICallbackCaller * item);
 
 	cvr::SceneObject* getSceneObject() { return _so; }
-	void setNewVolume(VolumeGroup* volume) { 
-		bool prevMask = _volume->hasMask();
-		_volume = volume; 
-		if (!_volume->hasMask()) {
-			_maskMenu->getRootElement()->getGroup()->removeChild(_maskBknd->getGroup());
-			_maskBknd->_parent = nullptr;
-			_maskBknd->setActive(false);
-		}
-		else if (_volume->hasMask() && !prevMask) {
-			_maskMenu->addChild(_maskBknd);
-			_maskBknd->setActive(true);
-		}
+	void setNewVolume(VolumeGroup* volume, int index = -1);
+	
 
-		_tentWindow->setVolume(_volume);
-		_colorDisplay->addUniform(_volume->_computeUniforms["ContrastBottom"]);
-		_colorDisplay->addUniform(_volume->_computeUniforms["ContrastTop"]);
-		_colorDisplay->addUniform(_volume->_computeUniforms["Brightness"]);
-		_colorDisplay->addUniform(_volume->_computeUniforms["leftColor"]);
-		_colorDisplay->addUniform(_volume->_computeUniforms["rightColor"]);
-		_opacityDisplay->addUniform(_volume->_computeUniforms["OpacityCenter"]);
-		_opacityDisplay->addUniform(_volume->_computeUniforms["OpacityWidth"]);
-		_opacityDisplay->addUniform(_volume->_computeUniforms["OpacityTopWidth"]);
-		_opacityDisplay->addUniform(_volume->_computeUniforms["OpacityMult"]);
-		_opacityDisplay->addUniform(_volume->_computeUniforms["Lowest"]);
-		_opacityDisplay->addUniform(_volume->_computeUniforms["ContrastBottom"]);
-		_opacityDisplay->addUniform(_volume->_computeUniforms["ContrastTop"]);
-		_opacityDisplay->addUniform(_volume->_computeUniforms["Brightness"]);
-		_opacityDisplay->addUniform(_volume->_computeUniforms["TriangleCount"]);
-		_opacityDisplay->addUniform(_volume->_computeUniforms["leftColor"]);
-		_opacityDisplay->addUniform(_volume->_computeUniforms["rightColor"]);
-		_opacityColorDisplay->addUniform(_volume->_computeUniforms["OpacityCenter"]);
-		_opacityColorDisplay->addUniform(_volume->_computeUniforms["OpacityWidth"]);
-		_opacityColorDisplay->addUniform(_volume->_computeUniforms["OpacityTopWidth"]);
-		_opacityColorDisplay->addUniform(_volume->_computeUniforms["OpacityMult"]);
-		_opacityColorDisplay->addUniform(_volume->_computeUniforms["Lowest"]);
-		_opacityColorDisplay->addUniform(_volume->_computeUniforms["ContrastBottom"]);
-		_opacityColorDisplay->addUniform(_volume->_computeUniforms["ContrastTop"]);
-		_opacityColorDisplay->addUniform(_volume->_computeUniforms["Brightness"]);
-		_opacityColorDisplay->addUniform(_volume->_computeUniforms["TriangleCount"]);
-		_opacityColorDisplay->addUniform(_volume->_computeUniforms["leftColor"]);
-		_opacityColorDisplay->addUniform(_volume->_computeUniforms["rightColor"]);
-		
+	void setSecondVolume(VolumeGroup* v2) {
+		_volume2 = v2;
+		_volume1 = _volume;
+		switchVolumes(1);
 		
 
 	}
+	void clearVolumes();
 	void resetValues();
 	std::string _transferFunction;
 
@@ -159,15 +165,22 @@ public:
 	}
 
 	cvr::UIList* addPresets(cvr::UIQuadElement* bknd);
-
+	void setLinkOff() { _updateCallback->setLinkOff(); }
+	void toggleSwapOpacity();
+	void toggleLinkOpacity(bool turnOn);
 protected:
 	cvr::SceneObject* _scene;
 	VolumeGroup* _volume;
+	VolumeGroup* _volume1 = nullptr;
+	VolumeGroup* _volume2 = nullptr;
+	bool _prevMask = false;
+
 	TentWindow* _tentWindow;
 	TentWindowOnly* _tentWindowOnly;
 
 	cvr::UIPopup* _menu = nullptr;
 	cvr::UIPopup* _maskMenu = nullptr;
+	cvr::UIPopup* _contrastMenu = nullptr;
 	cvr::UIPopup* _colorMenu = nullptr;
 	cvr::UIPopup* _presetPopup = nullptr;
 	cvr::UIPopup* _tentMenu = nullptr;
@@ -180,12 +193,21 @@ protected:
 	CallbackButton* _addTriangle;
 	CallbackButton* _addPreset;
 	CallbackButton* _loadPreset;
+	CallbackButton* _volume1Button;
+	CallbackButton* _volume2Button;
+	CallbackButton* _linkButton;
+	CallbackButton* _swapButton;
+	bool _swapOpacity = false;
+
 	cvr::UIList* _mainMaskList;
 	cvr::UIList* _presetUIList;
 
 	CallbackSlider* _contrastBottom;
 	CallbackSlider* _contrastTop;
 	CallbackSlider* _brightness;
+
+	CallbackSlider* _trueContrast;
+	CallbackSlider* _contrastCenter;
 
 	ColorSlider* _colorSliderLeft;
 	ColorSlider* _colorSliderRight;
@@ -224,8 +246,13 @@ protected:
 	cvr::UIRadialButton* _blacknwhite;
 	cvr::UIRadialButton* _rainbow;
 	cvr::UIRadialButton* _custom;
+	void switchVolumes(int index = -1);
+	void linkVolumes();
+	void saveValues(VolumeGroup* vg);
 	void useTransferFunction(int tfID);
 	void setContrastValues(float contrastLow, float contrastHigh, float brightness);
+	void fillFromVolume(VolumeGroup* vg);
+
 
 	osg::Vec3 _bodyCol;
 	osg::Vec3 _colonCol;
@@ -248,6 +275,7 @@ protected:
 	cvr::UIList* _triangleList;
 	int _triangleIndex;
 	int _colorSliderIndex;
+	int _volumeIndex = 0;
 	osg::Vec3 triangleColors[6] = { UI_BLUE_COLOR, UI_RED_COLOR, UI_YELLOW_COLOR, UI_GREEN_COLOR, UI_PURPLE_COLOR, UI_PINK_COLOR};
 	bool checkTriangleCallbacks(UICallbackCaller* item);
 	bool checkTriangleVisCallbacks(UICallbackCaller* item);
@@ -263,8 +291,11 @@ private:
 	bool _movable;
 	cvr::SceneObject* _container = nullptr;
 	cvr::SceneObject* _maskContainer = nullptr;
+	cvr::SceneObject* _contrastContainer = nullptr;
 	cvr::SceneObject* _tentWindowContainer = nullptr;
 	cvr::SceneObject* _so = nullptr;
+
+	VolumeMenuUpdate* _updateCallback;
 };
 
 #endif

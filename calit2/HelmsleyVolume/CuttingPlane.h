@@ -151,7 +151,7 @@ private:
 	double testSeconds = .01;
 	osg::MatrixTransform* _mTransform;
 	osg::Camera* _camera;
-	int _index = -1;
+	long long int _index = -1;
 	int col;
 	bool _pause = true;
 };

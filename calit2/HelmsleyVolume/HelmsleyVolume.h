@@ -61,15 +61,17 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		ScreenshotTool* getScreenshotTool() { return screenshotTool; }
 		CenterlineTool* getCenterlineTool() { return centerLineTool; }
 
-		CuttingPlane* createCuttingPlane(unsigned int i = 0);
-		void removeCuttingPlane(unsigned int i);
+		CuttingPlane* createCuttingPlane();
+		void removeCuttingPlane();
 
 		void toggleCenterLine(bool on);
 
 		void loadVolume(std::string path, std::string maskpath = "", bool onlyVolume = false);
 		void loadVolumeOnly(bool isPreset, std::string path, std::string maskpath = "");
+		void loadSecondVolume(std::string path, std::string maskpath = "");
 		void removeVolume(int index, bool onlyVolume);
 		void removeVolumeOnly(int index);
+		void removeSecondVolume();
 
 		void setTool(ToolState tool) { _tool = tool; }
 		void activateMeasurementTool(int volume);
@@ -84,6 +86,11 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		static std::string loadShaderFile(std::string filename);
 		static void resetOrientation();
 
+		void setVolumeIndex(int i) { 
+			_volumeIndex = i;
+			_sceneObjects[i]->updateColor(osg::Vec4(0.0,0.0,1.0,1.0));
+		}
+		int getVolumeIndex() { return _volumeIndex; }
     protected:
 		struct MeasurementInfo {
 			osg::Vec3 start;
@@ -142,7 +149,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		ToolState _tool = NONE;
 
 		static HelmsleyVolume* _instance;
-
+		int _volumeIndex = 0;
 };
 
 #endif

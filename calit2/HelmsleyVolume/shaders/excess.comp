@@ -1,0 +1,47 @@
+////////////////////////////////////////
+// hist.comp
+// computes the local Histogram for CLAHE
+////////////////////////////////////////
+
+#version 460 
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;	// 64 threads
+
+// input Histogram
+layout(std430, binding = 1) buffer inHist {
+    uint hist[];
+};
+
+layout(std430, binding = 2) buffer inHistMax {
+    uint histmax[];
+};
+
+// output the amount of excess pixels 
+layout (std430, binding = 3) buffer excessPixels {
+    uint excess[];
+};
+
+uniform uint NUM_BINS;      // number of gray values in the Final Volume
+uniform float clipLimit;    // limit of pixel values
+uniform uint minClipValue;  // lower limit for the Clip Value
+
+void main() {
+
+	// figure out the sub Block histogram this index belongs to 
+    uvec3 indexVec = gl_WorkGroupID.xyz;
+    uint dim = NUM_BINS;
+    uint index = indexVec.z*dim*dim + indexVec.y*dim + indexVec.x;
+    index = index * 64 + gl_GlobalInvocationID.x;
+    //index = gl_GlobalInvocationID.x;
+    
+    uint histIndex = index / NUM_BINS;
+
+    // Compute the clip value of the current Histogram
+    uint clipValue = uint( float( histmax[ histIndex ] ) * clipLimit );
+    clipValue = max(minClipValue, clipValue);
+    
+    // Calculate the number of excess pixels
+    atomicAdd( excess[ histIndex ], max(0, int(hist[index]) - int(clipValue)));
+
+
+}

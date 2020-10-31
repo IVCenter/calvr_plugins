@@ -13,6 +13,14 @@ void VolumeMenu::init()
 	scale->setCallback(this);
 	_scene->addMenuItem(scale);
 
+	testScale = new MenuRangeValueCompact("testScale", 0.001, 1.0, 0.001, true);
+	testScale->setCallback(this);
+	_scene->addMenuItem(testScale);
+	
+	maxSteps = new MenuRangeValueCompact("Max Steps", 0.01, 1.0, 0.98, true);
+	maxSteps->setCallback(this);
+	_scene->addMenuItem(maxSteps);
+
 	sampleDistance = new MenuRangeValueCompact("SampleDistance", .0001, 0.01, .00150f, true);
 	sampleDistance->setCallback(this);
 	_scene->addMenuItem(sampleDistance);
@@ -20,6 +28,16 @@ void VolumeMenu::init()
 	adaptiveQuality = new MenuCheckbox("Adaptive Quality", false);
 	adaptiveQuality->setCallback(this);
 	_scene->addMenuItem(adaptiveQuality);
+
+	edgeDetectBox = new MenuCheckbox("Edges", false);
+	edgeDetectBox->setCallback(this);
+	_scene->addMenuItem(edgeDetectBox);
+
+	test = new MenuCheckbox("CLAHE", false);
+	test->setCallback(this);
+	_scene->addMenuItem(test);
+
+
 	
 }
 
@@ -33,9 +51,27 @@ void VolumeMenu::menuCallback(cvr::MenuItem * item)
 	{
 		_scene->setScale(scale->getValue());
 	}
+	else if (item == testScale)
+	{
+		_volume->_testScale->set(testScale->getValue());
+	}
+	else if (item == maxSteps)
+	{
+		_volume->_maxSteps->set(maxSteps->getValue());
+	}
 	else if (item == adaptiveQuality)
 	{
 		_volume->getDrawable()->getOrCreateStateSet()->setDefine("VR_ADAPTIVE_QUALITY", adaptiveQuality->getValue());
+	}
+	else if (item == test)
+	{
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("CLAHE", test->getValue());
+		_volume->setDirtyAll();
+	}
+	else if (item == edgeDetectBox)
+	{
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("EDGE_DETECTION", edgeDetectBox->getValue());
+		_volume->setDirtyAll();
 	}
 }
 
@@ -60,6 +96,12 @@ NewVolumeMenu::~NewVolumeMenu()
 		MenuManager::instance()->removeMenuSystem(_maskMenu);
 		delete _maskMenu;
 	}
+	if (_contrastMenu)
+	{
+		_contrastMenu->setActive(false, false);
+		MenuManager::instance()->removeMenuSystem(_contrastMenu);
+		delete _contrastMenu;
+	}
 	if (_tentMenu)
 	{
 		_tentMenu->setActive(false, false);
@@ -75,6 +117,10 @@ NewVolumeMenu::~NewVolumeMenu()
 	{
 		delete _maskContainer;
 	}
+	if (_contrastContainer)
+	{
+		delete _contrastContainer;
+	}
 	if (_tentWindowContainer)
 	{
 		delete _tentWindowContainer;
@@ -84,9 +130,13 @@ NewVolumeMenu::~NewVolumeMenu()
 		delete _cp;
 	}
 	
+	
+
 	delete _so;
 
 	delete _volume;
+
+	
 
 }
 
@@ -100,6 +150,8 @@ void NewVolumeMenu::init()
 	_so->getRoot()->addUpdateCallback(new FollowSceneObjectLerp(_scene, 0.2f, _so));
 	_so->getRoot()->addUpdateCallback(new PointAtHeadLerp(0.2f, _so));
 #endif
+	_updateCallback = new VolumeMenuUpdate();
+	_so->getRoot()->addUpdateCallback(_updateCallback);
 
 	osg::Vec3 volumePos = ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(0, 750, 1000));
 	_so->setPosition(volumePos);
@@ -167,7 +219,7 @@ void NewVolumeMenu::init()
 	label->setPercentPos(osg::Vec3(0.1, 0, 0));
 
 	UIList* valueList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
-	label = new UIText("Contrast", 40.0f, osgText::TextBase::LEFT_CENTER);
+	label = new UIText("Low Range", 40.0f, osgText::TextBase::LEFT_CENTER);
 	label->setPercentPos(osg::Vec3(0.1, 0, 0));
 	valueList->addChild(label);
 	_contrastValueLabel = new UIText("Low 0.00 / High 1.00", 35.0f, osgText::TextBase::RIGHT_CENTER);
@@ -184,6 +236,9 @@ void NewVolumeMenu::init()
 	_contrastBottom->setCallback(this);
 	_contrastBottom->setPercent(0);
 
+	label = new UIText("High Range", 40.0f, osgText::TextBase::LEFT_CENTER);
+	label->setPercentPos(osg::Vec3(0.1, 0, 0));
+
 	_contrastTop = new CallbackSlider();
 	_contrastTop->setPercentPos(osg::Vec3(0.025, 0, 0.05));
 	_contrastTop->setPercentSize(osg::Vec3(0.95, 1, 0.9));
@@ -193,28 +248,12 @@ void NewVolumeMenu::init()
 	_contrastTop->setCallback(this);
 	_contrastTop->setPercent(1);
 
-	_brightness = new CallbackSlider();
-	_brightness->setPercentPos(osg::Vec3(0.025, 0, 0.05));
-	_brightness->setPercentSize(osg::Vec3(0.95, 1, 0.9));
-	_brightness->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
-	_brightness->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
-	_brightness->handle->setPercentSize(osg::Vec3(0, 1, 1));
-	_brightness->setCallback(this);
-	_brightness->setPercent(.5f);
+	
 
 	list->addChild(_contrastBottom);
+	list->addChild(label);
 	list->addChild(_contrastTop);
-
-
-	valueList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
-	label = new UIText("Brightness", 40.0f, osgText::TextBase::LEFT_CENTER);
-	label->setPercentPos(osg::Vec3(0.1, 0, 0));
-	valueList->addChild(label);
-	_brightValueLabel = new UIText("+0.00", 35.0f, osgText::TextBase::RIGHT_CENTER);
-	_brightValueLabel->setPercentPos(osg::Vec3(-0.1, 0, 0));
-	valueList->addChild(_brightValueLabel);
-	list->addChild(valueList);
-	list->addChild(_brightness);
+	
 
 
 	
@@ -243,7 +282,6 @@ void NewVolumeMenu::init()
 	_colorDisplay->setProgram(p);
 	_colorDisplay->addUniform(_volume->_computeUniforms["ContrastBottom"]);
 	_colorDisplay->addUniform(_volume->_computeUniforms["ContrastTop"]);
-	_colorDisplay->addUniform(_volume->_computeUniforms["Brightness"]);
 	_colorDisplay->addUniform(_volume->_computeUniforms["leftColor"]);
 	_colorDisplay->addUniform(_volume->_computeUniforms["rightColor"]);
 	_colorDisplay->setPercentSize(osg::Vec3(1.0, 1.0, 0.5));
@@ -264,7 +302,6 @@ void NewVolumeMenu::init()
 	_opacityDisplay->addUniform(_volume->_computeUniforms["Lowest"]);
 	_opacityDisplay->addUniform(_volume->_computeUniforms["ContrastBottom"]);
 	_opacityDisplay->addUniform(_volume->_computeUniforms["ContrastTop"]);
-	_opacityDisplay->addUniform(_volume->_computeUniforms["Brightness"]);
 	_opacityDisplay->addUniform(_volume->_computeUniforms["TriangleCount"]);
 	_opacityDisplay->addUniform(_volume->_computeUniforms["leftColor"]);
 	_opacityDisplay->addUniform(_volume->_computeUniforms["rightColor"]);
@@ -287,7 +324,6 @@ void NewVolumeMenu::init()
 	_opacityColorDisplay->addUniform(_volume->_computeUniforms["Lowest"]);
 	_opacityColorDisplay->addUniform(_volume->_computeUniforms["ContrastBottom"]);
 	_opacityColorDisplay->addUniform(_volume->_computeUniforms["ContrastTop"]);
-	_opacityColorDisplay->addUniform(_volume->_computeUniforms["Brightness"]);
 	_opacityColorDisplay->addUniform(_volume->_computeUniforms["TriangleCount"]);
 	_opacityColorDisplay->addUniform(_volume->_computeUniforms["leftColor"]);
 	_opacityColorDisplay->addUniform(_volume->_computeUniforms["rightColor"]);
@@ -384,6 +420,7 @@ void NewVolumeMenu::init()
 	//>===============================MASKS AND REGIONS==============================<//
 	_toolMenu = new ToolMenu(0, true, _so);
 	_maskMenu = new UIPopup();
+	_contrastMenu = new UIPopup();
 	UIQuadElement* regionHeaderBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 	_presetBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 	_presetBknd->setBorderSize(.01);
@@ -469,7 +506,6 @@ void NewVolumeMenu::init()
 	sq->addUniform(_tentWindow->_tWOnly->_tents->at(0)->_widthUniform);
 	sq->addUniform(_volume->_computeUniforms["ContrastBottom"]);
 	sq->addUniform(_volume->_computeUniforms["ContrastTop"]);
-	sq->addUniform(_volume->_computeUniforms["Brightness"]);
 
 	_triangleCallbacks[_triangleIndex]->addChild(vT);
 	_triangleCallbacks[_triangleIndex]->addChild(sq);
@@ -490,10 +526,70 @@ void NewVolumeMenu::init()
 	osg::Quat rot;
 	rot.makeRotate(0.707, 0, 0, 1);
 	_maskMenu->setRotation(rot);
-	_maskMenu->setPosition(osg::Vec3(-2000, -1000, 1300));
+	_maskMenu->setPosition(osg::Vec3(-1000, -100, 1300));
 	_maskMenu->getRootElement()->setAbsoluteSize(osg::Vec3(500, 1, 800));
 
 
+	//_contrastMenu->setRotation(rot);
+	//_contrastMenu->setPosition(osg::Vec3(1000, 200, 1300));
+	
+	//_contrastMenu->getRootElement()->setAbsoluteSize(osg::Vec3(1000, 1, 200));
+
+	UIQuadElement* contrastBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
+	_maskMenu->addChild(contrastBknd);
+	contrastBknd->setPercentPos(osg::Vec3(0.0, 0.0, -.7));
+	contrastBknd->setPercentSize(osg::Vec3(1.62, 1.0, 0.33));
+	contrastBknd->setBorderSize(0.02);
+	//_contrastMenu->addChild(contrastBknd);
+
+	UIList* contrastList = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
+
+
+	label = new UIText("Contrast", 40.0f, osgText::TextBase::LEFT_CENTER);
+	label->setPercentPos(osg::Vec3(0.1, 0, 0));
+	contrastList->addChild(label);
+
+	_trueContrast = new CallbackSlider();
+	_trueContrast->setPercentPos(osg::Vec3(0.025, 0, 0.05));
+	_trueContrast->setPercentSize(osg::Vec3(0.95, 1, 0.9));
+	_trueContrast->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
+	_trueContrast->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
+	_trueContrast->handle->setPercentSize(osg::Vec3(0, 1, 1));
+	_trueContrast->setCallback(this);
+	_trueContrast->setPercent(0);
+	_trueContrast->setMax(10.0);
+	_trueContrast->setMin(1.0);
+	contrastList->addChild(_trueContrast);
+
+	label = new UIText("Brightness", 40.0f, osgText::TextBase::LEFT_CENTER);
+	label->setPercentPos(osg::Vec3(0.1, 0, 0));
+	contrastList->addChild(label);
+
+	_brightness = new CallbackSlider();
+	_brightness->setPercentPos(osg::Vec3(0.025, 0, 0.05));
+	_brightness->setPercentSize(osg::Vec3(0.95, 1, 0.9));
+	_brightness->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
+	_brightness->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
+	_brightness->handle->setPercentSize(osg::Vec3(0, 1, 1));
+	_brightness->setCallback(this);
+	_brightness->setPercent(.5f);
+	contrastList->addChild(_brightness);
+
+	label = new UIText("Center", 40.0f, osgText::TextBase::LEFT_CENTER);
+	label->setPercentPos(osg::Vec3(0.1, 0, 0));
+	contrastList->addChild(label);
+
+	_contrastCenter = new CallbackSlider();
+	_contrastCenter->setPercentPos(osg::Vec3(0.025, 0, 0.05));
+	_contrastCenter->setPercentSize(osg::Vec3(0.95, 1, 0.9));
+	_contrastCenter->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
+	_contrastCenter->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
+	_contrastCenter->handle->setPercentSize(osg::Vec3(0, 1, 1));
+	_contrastCenter->setCallback(this);
+	_contrastCenter->setPercent(.5);
+	contrastList->addChild(_contrastCenter);
+
+	contrastBknd->addChild(contrastList);
 	
 	_tentMenu->setPosition(osg::Vec3(-1200, 675, 1880));
 	_tentMenu->getRootElement()->setAbsoluteSize(osg::Vec3(1500, 1, 600));
@@ -505,7 +601,7 @@ void NewVolumeMenu::init()
 	{
 	*/	
 		_maskBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
-		_maskBknd->setPercentPos((osg::Vec3(0, 0, -.7)));
+		_maskBknd->setPercentPos((osg::Vec3(0, 0, -1.025)));
 		_maskBknd->setPercentSize((osg::Vec3(1.62, 1, 1)));
 		_maskBknd->setBorderSize(.01);
 		_maskMenu->addChild(_maskBknd);
@@ -569,6 +665,7 @@ void NewVolumeMenu::init()
 		_organs = new VisibilityToggle("Body");
 		_organs->toggle();
 		_organs->setCallback(this);
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("ORGANS_ONLY", _organs->isOn());
 
 		_colon = new VisibilityToggle("Colon");
 		_colon->setCallback(this);
@@ -632,20 +729,83 @@ void NewVolumeMenu::init()
 		_mainMaskList->addChild(aortaList);
 		_mainMaskList->addChild(illeumList);
 		_mainMaskList->addChild(veinList);
+
+		UIQuadElement* volumeSwitchBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
+		volumeSwitchBknd->setPercentPos((osg::Vec3(0, 0, -2.025)));
+		volumeSwitchBknd->setPercentSize((osg::Vec3(1.62, 1, .3)));
+		volumeSwitchBknd->setBorderSize(.04);
+		_maskMenu->addChild(volumeSwitchBknd);
+
+		UIList* volumeList = new UIList(UIList::LEFT_TO_RIGHT , UIList::CONTINUE);
+		_volume1Button = new CallbackButton();
+		_volume1Button->setCallback(this);
+		UIText* v1Text = new UIText("Volume 1", 40.0f, osgText::TextBase::CENTER_CENTER);
+		_volume1Button->addChild(v1Text);
+		_volume2Button = new CallbackButton();
+		_volume2Button->setCallback(this);
+		UIText* v2Text = new UIText("Volume 2", 40.0f, osgText::TextBase::CENTER_CENTER);
+		_volume2Button->addChild(v2Text);
+		volumeList->addChild(_volume1Button);
+		volumeList->addChild(_volume2Button);
+
+
+		UIList* volumeInteraction = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
+		_swapButton = new CallbackButton();
+		_swapButton->setCallback(this);
+		v1Text = new UIText("Swap", 40.0f, osgText::TextBase::CENTER_CENTER);
+		v1Text->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+		v1Text->setColor(osg::Vec4(1.0, 1.0, 1.0, 0.4));
+		_swapButton->addChild(v1Text);
+		UIQuadElement* swpbknd = new UIQuadElement(osg::Vec4(.8, .1, .1, 0.4));
+		swpbknd->setPercentSize(osg::Vec3(.8, 1, .8));
+		swpbknd->setPercentPos(osg::Vec3(.1, 0, -.1));
+		_swapButton->addChild(swpbknd);
+		swpbknd->setRounding(0, .2);
+		//swpbknd->setBorderSize(.1);
+		swpbknd->setTransparent(true);
+
+
+		_linkButton = new CallbackButton();
+		_linkButton->setCallback(this);
+		v2Text = new UIText("Link", 40.0f, osgText::TextBase::CENTER_CENTER);
+		v2Text->setColor(osg::Vec4(1.0, 1.0, 1.0, 0.4));
+		v2Text->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+		_linkButton->addChild(v2Text);
+		UIQuadElement* linkbknd = new UIQuadElement(osg::Vec4(.8, .1, .1, 0.4));
+		linkbknd->setPercentSize(osg::Vec3(.8, 1, .8));
+		linkbknd->setPercentPos(osg::Vec3(.1, 0, -.1));
+		_linkButton->addChild(linkbknd);
+		linkbknd->setRounding(0, .2);
+		//swpbknd->setBorderSize(.1);
+		linkbknd->setTransparent(true);
+
+		volumeInteraction->addChild(_swapButton);
+		volumeInteraction->addChild(_linkButton);
+
+		UIList* lists = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+		lists->addChild(volumeInteraction);
+		lists->addChild(volumeList);
+		volumeSwitchBknd->addChild(lists);
+		
+		
 		
 	//}
 	if (!_movable)
 	{
 		_maskMenu->setActive(true, true);
+		_contrastMenu->setActive(true, true);
 		_tentMenu->setActive(true, true);
 	}
 	else {
 		_maskMenu->setActive(true, false);
+		_contrastMenu->setActive(true, false);
 		_tentMenu->setActive(true, false);
 		_maskContainer = new SceneObject("MaskMenu", false, true, false, false, false);
+		_contrastContainer = new SceneObject("ContrastMenu", false, true, false, false, false);
 		_tentWindowContainer = new SceneObject("TentWindow", false, true, false, false, false);
 		_so->addChild(_maskContainer);
 		_so->addChild(_tentWindowContainer);
+		_so->addChild(_contrastContainer);
 
 		_maskContainer->setShowBounds(false);
 		_maskContainer->addChild(_maskMenu->getRoot());
@@ -653,8 +813,12 @@ void NewVolumeMenu::init()
 		_tentWindowContainer->setShowBounds(false);
 		_tentWindowContainer->addChild(_tentMenu->getRoot());
 
+		_contrastContainer->setShowBounds(false);
+		_contrastContainer->addChild(_contrastMenu->getRoot());
+		
 		_maskMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_tentMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
+		_contrastMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_maskContainer->dirtyBounds();
 	}
 
@@ -662,6 +826,28 @@ void NewVolumeMenu::init()
 		_maskMenu->getRootElement()->getGroup()->removeChild(_maskBknd->getGroup());
 		_maskBknd->_parent = nullptr;
 		_maskBknd->setActive(false);
+	}
+}
+
+void NewVolumeMenu::toggleSwapOpacity() {
+	_swapOpacity ? _swapOpacity = false : _swapOpacity = true;
+	if (_swapOpacity) {
+		((UIText*)_swapButton->getChild(0))->setColor(osg::Vec4(1.0, 1.0, 1.0, 1.0));
+		((UIQuadElement*)_swapButton->getChild(1))->setColor(osg::Vec4(0.8, 0.1, 0.1, 1.0));
+	}
+	else {
+		((UIText*)_swapButton->getChild(0))->setColor(osg::Vec4(1.0, 1.0, 1.0, 0.4));
+		((UIQuadElement*)_swapButton->getChild(1))->setColor(osg::Vec4(0.8, 0.1, 0.1, 0.4));
+	}
+}
+void NewVolumeMenu::toggleLinkOpacity(bool turnOn) {
+	if (turnOn) {
+		((UIText*)_linkButton->getChild(0))->setColor(osg::Vec4(1.0, 1.0, 1.0, 1.0));
+		((UIQuadElement*)_linkButton->getChild(1))->setColor(osg::Vec4(0.8, 0.1, 0.1, 1.0));
+	}
+	else {
+		((UIText*)_linkButton->getChild(0))->setColor(osg::Vec4(1.0, 1.0, 1.0, 0.4));
+		((UIQuadElement*)_linkButton->getChild(1))->setColor(osg::Vec4(0.8, 0.1, 0.1, 0.4));
 	}
 }
 
@@ -715,7 +901,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	}
 	else if (item == _organs)
 	{
-		_volume->getCompute()->getOrCreateStateSet()->setDefine("ORGANS_ONLY", !_organs->isOn());
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("ORGANS_ONLY", _organs->isOn());
 		_volume->setDirtyAll();
 	}
 	else if (item == _colon)
@@ -790,10 +976,22 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		_contrastValueLabel->setText("Low " + low + " / " + "High " + high);
 		_volume->setDirtyAll();
 	}
+	else if (item == _trueContrast)
+	{
+		
+		_volume->_computeUniforms["TrueContrast"]->set(_trueContrast->getAdjustedValue());
+		
+		_volume->setDirtyAll();
+	}
+
+	else if (item == _contrastCenter) {
+		_volume->_computeUniforms["ContrastCenter"]->set(_contrastCenter->getAdjustedValue());
+		_volume->setDirtyAll();
+	}
 	else if (item == _brightness)
 	{
 		_volume->_computeUniforms["Brightness"]->set(_brightness->getAdjustedValue());
-		float realValue = _brightness->getAdjustedValue() - .5;
+	/*	float realValue = _brightness->getAdjustedValue() - .5;
 		std::string value;
 		if (realValue >= 0.0) {
 			value = "+" + std::to_string(realValue).substr(0, 4);
@@ -801,9 +999,8 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		else {
 			value = std::to_string(realValue).substr(0, 5);
 		}
-		
-		
-		_brightValueLabel->setText(value);
+		_brightValueLabel->setText(value);*/
+
 		_volume->setDirtyAll();
 	}
 	else if (item == _transferFunctionRadial)
@@ -844,7 +1041,277 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		return;
 	}
 	
+	else if (item == _swapButton) {
+		switchVolumes();
+	}
+	else if (item == _linkButton) {
+		linkVolumes();
+	}
+	
+	
 }
+
+void NewVolumeMenu::switchVolumes(int index) {
+
+	if (_volume2 == nullptr)
+		return;
+
+	saveValues(_volume);
+
+	
+
+	_volume1 = _volume2;
+	_volume2 = _volume;
+	setNewVolume(_volume1, index);
+
+	
+	
+}
+
+void VolumeMenuUpdate::Link() {
+	if(_cP1 && _cP2)
+	{
+		osg::Vec3 pos = ((CuttingPlane*)_cP1)->getPosition();
+		if (_prevPos != pos) {
+			osg::Quat rot = ((CuttingPlane*)_cP1)->getRotation();
+			((CuttingPlane*)_cP2)->setPosition(_prevPos);
+			((CuttingPlane*)_cP2)->setRotation(rot);
+			((CuttingPlane*)_cP2)->changePlane();
+			_prevPos = pos;
+		}
+	}
+	else {
+		setLinkOff();
+	}
+}
+
+void NewVolumeMenu::linkVolumes() {
+	auto cps = HelmsleyVolume::instance()->getCuttingPlanes();
+	/*if (cps.size() == 2) {
+		osg::Vec3 pos = cps[0]->getPosition();
+		osg::Quat rot = cps[0]->getRotation();
+		cps[1]->setPosition(pos);
+		cps[1]->setRotation(rot);
+	}*/
+	if (cps.size() == 2) {
+		_updateCallback->setCuttingPlanes(cps[0], cps[1]);
+		_updateCallback->setLinkOn();
+	}
+}
+
+void NewVolumeMenu::clearVolumes() {
+	bool _prevMask = _volume->hasMask();
+	_updateCallback->setLinkOff();
+	if (_volume1) {
+		delete (_volume1);
+		_volume1 = nullptr;
+	}
+	if (_volume2) {
+		delete(_volume2);
+		_volume2 = nullptr;
+	}
+	else if (_volume) {
+		delete(_volume);
+	}
+	
+}
+
+void NewVolumeMenu::setNewVolume(VolumeGroup* volume , int index) {
+	
+	
+	_volume = volume;
+
+	if (_volume2 != nullptr) {
+		HelmsleyVolume::instance()->getVolumeIndex() == 0 ? HelmsleyVolume::instance()->setVolumeIndex(1) :
+			HelmsleyVolume::instance()->setVolumeIndex(0);
+	}
+	if (index > -1) {
+		HelmsleyVolume::instance()->setVolumeIndex(index);
+	}
+	
+
+	if (!_volume->hasMask()) {
+		_maskMenu->getRootElement()->getGroup()->removeChild(_maskBknd->getGroup());
+		_maskBknd->_parent = nullptr;
+		_maskBknd->setActive(false);
+	}
+	else if (_volume->hasMask() && !_prevMask) {
+		_maskMenu->addChild(_maskBknd);
+		_maskBknd->setActive(true);
+	}
+
+	_tentWindow->setVolume(_volume);
+	_colorDisplay->addUniform(_volume->_computeUniforms["ContrastBottom"]);
+	_colorDisplay->addUniform(_volume->_computeUniforms["ContrastTop"]);
+	_colorDisplay->addUniform(_volume->_computeUniforms["leftColor"]);
+	_colorDisplay->addUniform(_volume->_computeUniforms["rightColor"]);
+	_opacityDisplay->addUniform(_volume->_computeUniforms["OpacityCenter"]);
+	_opacityDisplay->addUniform(_volume->_computeUniforms["OpacityWidth"]);
+	_opacityDisplay->addUniform(_volume->_computeUniforms["OpacityTopWidth"]);
+	_opacityDisplay->addUniform(_volume->_computeUniforms["OpacityMult"]);
+	_opacityDisplay->addUniform(_volume->_computeUniforms["Lowest"]);
+	_opacityDisplay->addUniform(_volume->_computeUniforms["ContrastBottom"]);
+	_opacityDisplay->addUniform(_volume->_computeUniforms["ContrastTop"]);
+	_opacityDisplay->addUniform(_volume->_computeUniforms["TriangleCount"]);
+	_opacityDisplay->addUniform(_volume->_computeUniforms["leftColor"]);
+	_opacityDisplay->addUniform(_volume->_computeUniforms["rightColor"]);
+	_opacityColorDisplay->addUniform(_volume->_computeUniforms["OpacityCenter"]);
+	_opacityColorDisplay->addUniform(_volume->_computeUniforms["OpacityWidth"]);
+	_opacityColorDisplay->addUniform(_volume->_computeUniforms["OpacityTopWidth"]);
+	_opacityColorDisplay->addUniform(_volume->_computeUniforms["OpacityMult"]);
+	_opacityColorDisplay->addUniform(_volume->_computeUniforms["Lowest"]);
+	_opacityColorDisplay->addUniform(_volume->_computeUniforms["ContrastBottom"]);
+	_opacityColorDisplay->addUniform(_volume->_computeUniforms["ContrastTop"]);
+	_opacityColorDisplay->addUniform(_volume->_computeUniforms["TriangleCount"]);
+	_opacityColorDisplay->addUniform(_volume->_computeUniforms["leftColor"]);
+	_opacityColorDisplay->addUniform(_volume->_computeUniforms["rightColor"]);
+
+	if (!volume->values.saved) {
+		resetValues();
+	}
+	else {
+		fillFromVolume(volume);
+	}
+
+}
+
+void NewVolumeMenu::saveValues(VolumeGroup* vg) {
+	vg->values.contrastData = { _contrastBottom->getAdjustedValue(), _contrastTop->getAdjustedValue(), _brightness->getAdjustedValue() };
+	if (_transferFunctionRadial->getCurrent() == 0) {
+		vg->values.tf = 0;
+	}
+	else {
+		vg->values.tf = 1;
+	}
+	;
+	vg->values.tentCount = _triangleIndex+1;
+	vg->values.opacityData.clear();
+	for (int i = 0; i < vg->values.tentCount; i++) {
+		vg->values.opacityData.push_back(_tentWindow->getPresetData(i));
+	}
+	
+	///////////////////Cutting Plane///////////////////////
+	std::vector<CuttingPlane*> cPs = HelmsleyVolume::instance()->getCuttingPlanes();
+	std::vector<CuttingPlane*>::iterator it = cPs.begin();
+
+	while (it != cPs.end()) {
+		if ((*it)->getVolume() == vg)
+		{
+			vg->values.cpPos = (*it)->getPosition();
+			vg->values.cpRot = (*it)->getRotation();
+			vg->values.cpToggle = true;
+			break;
+		}
+		else
+		{
+			vg->values.cpToggle = false;
+		}
+		++it;
+	}
+	//std::vector<CuttingPlane*> cPs = HelmsleyVolume::instance()->getCuttingPlanes();
+	//if (!cPs.empty()) {
+	//	vg->values.cpPos = cPs[0]->getPosition();
+	//	vg->values.cpRot = cPs[0]->getRotation();
+	//	vg->values.cpToggle = true;
+	//}
+
+	///////////////////Masks////////////////////////
+	std::vector<VisibilityToggle*> organToggles = {_organs, _colon, _kidney, _bladder,
+													_spleen, _illeum, _aorta, _vein};
+
+	vg->values.masks.clear();
+	for (int i = 0; i < organToggles.size(); i++) {
+		organToggles[i]->isOn() ? vg->values.masks.push_back(true) : vg->values.masks.push_back(false);
+	}
+
+
+
+	vg->values.saved = true;
+}
+
+void NewVolumeMenu::fillFromVolume(VolumeGroup* vg) {
+	_tentWindow->clearTents();
+	clearRegionPreviews();
+	int tentCount = vg->values.tentCount;
+	_tentWindow->setVolume(vg);
+	_tentWindowOnly->setVolume(vg);
+	_triangleIndex = -1;
+	//////////////////opacities//////////////////
+	for (int i = 0; i < tentCount; i++) {
+		_triangleIndex++;
+		char presetIndex = '0' + i;
+		std::string presetName = "tent ";
+		presetName += presetIndex;
+		addRegion();
+		float center = vg->values.opacityData[i][0];
+		float bottomWidth = vg->values.opacityData[i][1];
+		float topWidth = vg->values.opacityData[i][2];
+		float height = vg->values.opacityData[i][3];
+		float lowest = vg->values.opacityData[i][4];
+		_tentWindow->fillTentDetails(_triangleIndex, center, bottomWidth, topWidth, height, lowest);
+	}
+
+	/////////////////tf & contrast////////////
+
+
+	int tfid = vg->values.tf;
+
+	_transferFunctionRadial->setCurrent(tfid);
+	useTransferFunction(tfid);
+
+	//contrast Data 0 = bottom, 1 = top, 2 = brightness
+	float contrastLow = vg->values.contrastData[0];
+	float contrastHigh = vg->values.contrastData[1];
+	float brightness = vg->values.contrastData[2];
+	setContrastValues(contrastLow, contrastHigh, brightness);
+
+	///////////////Masks////////////////////
+	if (vg->hasMask()) {
+		_maskMenu->addChild(_maskBknd);
+		_maskBknd->setActive(true);
+
+		std::vector<bool> volumeToggles = vg->values.masks ;
+		
+
+		std::vector<VisibilityToggle*> organToggles = { _organs, _colon, _kidney, _bladder,
+													_spleen, _illeum, _aorta, _vein };
+
+		std::vector<std::string> organNames = { "ORGANS_ONLY", "COLON","KIDNEY", "BLADDER","SPLEEN","ILLEUM", "AORTA", "VEIN" };
+		for (int i = 0; i < organToggles.size(); i++) {
+			if (volumeToggles[i] ^ organToggles[i]->isOn()) {
+				organToggles[i]->toggle();
+
+				
+				vg->getCompute()->getOrCreateStateSet()->setDefine(organNames[i], volumeToggles[i]);
+			}
+		}
+		_volume->setDirtyAll();
+	}
+	else {
+		_maskMenu->getRootElement()->getGroup()->removeChild(_maskBknd->getGroup());
+		_maskBknd->_parent = nullptr;
+		_maskBknd->setActive(false);
+	}
+
+	//Tools
+	////////////Cutting Plane/////////////
+	ToolToggle* cuttingPlaneTool = _toolMenu->getCuttingPlaneTool();
+	if (!cuttingPlaneTool->isOn() && _volume->values.cpToggle) {
+		cuttingPlaneTool->turnOn();
+		cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+	}
+	if (cuttingPlaneTool->isOn() && !_volume->values.cpToggle) {
+		cuttingPlaneTool->turnOff();
+		cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
+	}
+		
+
+	//cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+
+
+
+}
+
 void NewVolumeMenu::useTransferFunction(int tfID) {
 	if (tfID == 0)
 	{
@@ -953,9 +1420,6 @@ bool NewVolumeMenu::checkColorSliderCallbacks(UICallbackCaller* item) {
 //#include <sys/stat.h>
 
 void NewVolumeMenu::usePreset(std::string filename) {
-	_tentWindow->clearTents();
-	clearRegionPreviews();
-	_triangleIndex = -1;
 	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.PresetsFolder", "C:/", false);
 	std::string presetPath = currPath + "\\" + filename + ".yml";
 	YAML::Node config = YAML::LoadFile(presetPath);
@@ -963,7 +1427,10 @@ void NewVolumeMenu::usePreset(std::string filename) {
 	std::string datasetPath = config["series name"].as<std::string>();
 	FileSelector* fs = HelmsleyVolume::instance()->getFileSelector();
 	fs->loadVolumeOnly(true, datasetPath);
-	_tentWindow->setVolume(_volume);
+	_tentWindow->clearTents();
+	clearRegionPreviews();
+	_triangleIndex = -1;
+	//_tentWindow->setVolume(_volume);
 	_tentWindowOnly->setVolume(_volume);
 	//////////////////opacities//////////////////
 	for (int i = 0; i < config["tent count"].as<int>(); i++) {
@@ -997,14 +1464,14 @@ void NewVolumeMenu::usePreset(std::string filename) {
 
 	///////////////Masks////////////////////
 	if (_volume->hasMask()) {
-		_maskMenu->addChild(_maskBknd);
-		_maskBknd->setActive(true);
+	/*	_maskMenu->addChild(_maskBknd);
+		_maskBknd->setActive(true);*/
 
 		bool val = (bool)(config["mask"][0].as<int>());
 
 		if (_organs->isOn() != val)
 			_organs->toggle();
-		_volume->getCompute()->getOrCreateStateSet()->setDefine("ORGANS_ONLY", !val);
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("ORGANS_ONLY", val);
 		val = config["mask"][1].as<int>();
 		if (_colon->isOn() != val)
 			_colon->toggle();
@@ -1035,20 +1502,47 @@ void NewVolumeMenu::usePreset(std::string filename) {
 
 		_volume->setDirtyAll();
 	}
-	else {
+	/*else {
 		_maskMenu->getRootElement()->getGroup()->removeChild(_maskBknd->getGroup());
 		_maskBknd->_parent = nullptr;
 		_maskBknd->setActive(false);
-	}
+	}*/
 
-	////////////Cutting Plane/////////////
+	//////////Cutting Plane/////////////
+
 	ToolToggle* cuttingPlaneTool = _toolMenu->getCuttingPlaneTool();
 	try {
-		if (config["cutting plane position"].as<std::string>() != "NA") {
+		if (!config["cutting plane position"]) {
 			cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
+			cuttingPlaneTool->turnOff();
+			
+		}
+		else {
+			osg::Vec3 cutPpos;
+			cutPpos.x() = config["cutting plane position"][0].as<float>();
+			cutPpos.y() = config["cutting plane position"][1].as<float>();
+			cutPpos.z() = config["cutting plane position"][2].as<float>();
+
+			osg::Quat cutPQuat;
+			cutPQuat.x() = config["cutting plane rotation"][0].as<float>();
+			cutPQuat.y() = config["cutting plane rotation"][1].as<float>();
+			cutPQuat.z() = config["cutting plane rotation"][2].as<float>();
+			cutPQuat.w() = config["cutting plane rotation"][3].as<float>();
+
+
+			if (!cuttingPlaneTool->isOn()) {
+				cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+				cuttingPlaneTool->turnOn();
+			}
+
+			CuttingPlane* cutP = HelmsleyVolume::instance()->HelmsleyVolume::createCuttingPlane();
+			cutP->setPosition(cutPpos);
+			cutP->setRotation(cutPQuat);
+
 		}
 	}
 	catch(...){
+	
 		osg::Vec3 cutPpos;
 		cutPpos.x() = config["cutting plane position"][0].as<float>();
 		cutPpos.y() = config["cutting plane position"][1].as<float>();
@@ -1061,13 +1555,12 @@ void NewVolumeMenu::usePreset(std::string filename) {
 		cutPQuat.w() = config["cutting plane rotation"][3].as<float>();
 
 		
-		if (!cuttingPlaneTool->isOn())
-			cuttingPlaneTool->toggle();
-		else
-			CuttingPlane* cutP = HelmsleyVolume::instance()->HelmsleyVolume::createCuttingPlane(0);
-		cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
-		//CuttingPlane* cutP = HelmsleyVolume::instance()->HelmsleyVolume::createCuttingPlane(0);
-		CuttingPlane* cutP = HelmsleyVolume::instance()->HelmsleyVolume::getCuttingPlanes()[0];
+		if (!cuttingPlaneTool->isOn()) {
+			cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+			cuttingPlaneTool->turnOn();
+		}
+		
+		CuttingPlane* cutP = HelmsleyVolume::instance()->HelmsleyVolume::createCuttingPlane();
 		cutP->setPosition(cutPpos);
 		cutP->setRotation(cutPQuat);
 		
@@ -1096,6 +1589,8 @@ void NewVolumeMenu::usePreset(std::string filename) {
 void NewVolumeMenu::resetValues() {
 	_tentWindow->clearTents();
 	clearRegionPreviews();
+	
+
 	_triangleIndex = 0;
 	_tentWindow->setVolume(_volume);
 	_tentWindowOnly->setVolume(_volume);
@@ -1125,14 +1620,14 @@ void NewVolumeMenu::resetValues() {
 
 	///////////////Masks////////////////////
 	if (_volume->hasMask()) {
-		_maskMenu->addChild(_maskBknd);
-		_maskBknd->setActive(true);
+		/*_maskMenu->addChild(_maskBknd);
+		_maskBknd->setActive(true);*/
 
 		
 
 		if (!_organs->isOn())
 			_organs->toggle();
-		_volume->getCompute()->getOrCreateStateSet()->setDefine("ORGANS_ONLY", false);
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("ORGANS_ONLY", true);
 		
 		if (_colon->isOn())
 			_colon->toggle();
@@ -1158,11 +1653,11 @@ void NewVolumeMenu::resetValues() {
 
 		_volume->setDirtyAll();
 	}
-	else {
+	/*else {
 		_maskMenu->getRootElement()->getGroup()->removeChild(_maskBknd->getGroup());
 		_maskBknd->_parent = nullptr;
 		_maskBknd->setActive(false);
-	}
+	}*/
 
 	////////////Cutting Plane/////////////
 	ToolToggle* cuttingPlaneTool = _toolMenu->getCuttingPlaneTool();
@@ -1171,7 +1666,7 @@ void NewVolumeMenu::resetValues() {
 	ToolToggle* screenTool = _toolMenu->getScreenShotTool();
 	
 	if (cuttingPlaneTool->isOn()) {
-		cuttingPlaneTool->toggle();
+		cuttingPlaneTool->turnOff();
 		cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
 	}
 	if (mTool->isOn()) {
@@ -1186,6 +1681,10 @@ void NewVolumeMenu::resetValues() {
 		screenTool->toggle();
 		screenTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
 	}
+
+
+
+
 }
 
 void NewVolumeMenu::clearRegionPreviews() {
@@ -1229,7 +1728,6 @@ Tent* NewVolumeMenu::addRegion() {
 
 	sq->addUniform(_volume->_computeUniforms["ContrastBottom"]);
 	sq->addUniform(_volume->_computeUniforms["ContrastTop"]);
-	sq->addUniform(_volume->_computeUniforms["Brightness"]);
 
 
 
@@ -1252,14 +1750,14 @@ void NewVolumeMenu::setContrastValues(float contrastLow, float contrastHigh, flo
 	_contrastTop->setPercent(contrastHigh);
 	_brightness->setPercent(brightness);
 	float realValue = brightness - .5;
-	std::string value;
+	/*std::string value;
 	if (realValue >= 0.0) {
 		value = "+" + std::to_string(realValue).substr(0, 4);
 	}
 	else {
 		value = std::to_string(realValue).substr(0, 5);
 	}
-	_brightValueLabel->setText(value);
+	_brightValueLabel->setText(value);*/
 
 	std::string low = std::to_string(contrastLow).substr(0, 4);
 	std::string high = std::to_string(contrastHigh).substr(0, 4);
@@ -1480,12 +1978,13 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 	{
 		if (_cuttingPlane->isOn())
 		{
-			HelmsleyVolume::instance()->createCuttingPlane(0);
+			
+			HelmsleyVolume::instance()->createCuttingPlane();
 			_cuttingPlane->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
 		}
 		else
 		{
-			HelmsleyVolume::instance()->removeCuttingPlane(0);
+			HelmsleyVolume::instance()->removeCuttingPlane();
 			_cuttingPlane->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}
@@ -1533,7 +2032,7 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 
 				_centerLIneTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 				//HelmsleyVolume::instance()->toggleCenterLine(false);
-				HelmsleyVolume::instance()->removeCuttingPlane(0);
+				HelmsleyVolume::instance()->removeCuttingPlane();
 				
 			}
 		}

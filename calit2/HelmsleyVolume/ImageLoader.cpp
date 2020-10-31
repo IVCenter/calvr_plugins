@@ -153,10 +153,10 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 
 		std::cout << files[i].c_str() << std::endl;
 
-		DcmFileFormat fileFormat;
-		cnd = fileFormat.loadFile(files[i].c_str());
+		DcmFileFormat* fileFormat = new DcmFileFormat();
+		cnd = fileFormat->loadFile(files[i].c_str());
 		assert(cnd.good());
-		DcmDataset* dataset = fileFormat.getDataset();
+		DcmDataset* dataset = fileFormat->getDataset();
 
 		if (i == 0) {
 			cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingX, 0);
@@ -183,8 +183,8 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 		assert(img != NULL);
 		assert(img->getStatus() == EIS_Normal);
 		images.push_back(Slice(img, x));
-		//delete dataset;
-		//delete fileFormat;
+		
+		delete fileFormat;
 	}
 
 	std::sort(images.data(), images.data() + images.size());
@@ -198,7 +198,7 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 	unsigned int w = images[0].image->getWidth();
 	unsigned int h = images[0].image->getHeight();
 	unsigned int d = (unsigned int)images.size();
-
+	std::cout << "w " << w << "h " << h << "d " << d << std::endl;
 	osg::Vec3 size = osg::Vec3(0, 0, 0);
 	// volume size in millimeters
 	size.x() = (float)spacingX * (float)w;
@@ -251,7 +251,7 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 		delete images[i].image;
 	}
 
-
+	
 	return img;
 }
 

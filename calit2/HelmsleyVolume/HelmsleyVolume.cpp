@@ -19,6 +19,7 @@
 
 #include <osgDB/ReadFile>
 #include <osg/Material>
+#include <osg/TextureCubeMap>
 
 #include <ctime>
 #include <iostream>
@@ -41,6 +42,8 @@ MenuRangeValue* _rotmenu;
 
 CVRPLUGIN(HelmsleyVolume)
 
+
+
 std::string HelmsleyVolume::loadShaderFile(std::string filename)
 {
 	std::string shaderDir = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.ShaderDir");
@@ -53,7 +56,7 @@ std::string HelmsleyVolume::loadShaderFile(std::string filename)
 	sstr << file.rdbuf();
 
 	file.close();
-
+	
 	return sstr.str();
 }
 
@@ -104,6 +107,7 @@ bool HelmsleyVolume::init()
 {
 	
 
+
 	_vMenu = new SubMenu("HelmsleyVolume", "HelmsleyVolume");
 	_vMenu->setCallback(this);
 
@@ -114,7 +118,107 @@ bool HelmsleyVolume::init()
 
 	osgDB::Options* roomOptions = new osgDB::Options("noReverseFaces");
 	osg::Node* room = osgDB::readNodeFile(modelDir + "MIPCDVIZV3.obj", roomOptions);
+	////////////////////////////Ryans forloop///////////////////
+	//for (unsigned int i = 0; i < room->asGroup()->getNumChildren(); i++) {
 
+	//	osg::Geode* g = dynamic_cast<osg::Geode*> (room->asGroup()->getChild(i));
+	//	osg::Geometry* gm = g->getDrawable(0)->asGeometry();
+	//	osg::Vec3Array* v = (osg::Vec3Array*) gm->getVertexArray();
+	//	osg::Vec3Array* tv = (osg::Vec3Array*)(gm->getTexCoordArray(0));
+	//	osg::Vec3Array* nv = (osg::Vec3Array*)(gm->getNormalArray());
+
+	//	gm->setVertexAttribArray(0, v, osg::Array::BIND_PER_VERTEX);
+
+	//	osg::ref_ptr<osg::Program> program(new osg::Program());
+
+	//	if (g->getDrawable(0)->getOrCreateStateSet()->getTextureAttributeList().size() != 0) {
+
+	//		gm->setVertexAttribArray(2, tv, osg::Array::BIND_PER_VERTEX);
+	//		gm->setVertexAttribArray(1, nv, osg::Array::BIND_PER_VERTEX);
+
+	//		program->addShader(new osg::Shader(osg::Shader::VERTEX, loadShaderFile("room.vert")));
+	//		program->addShader(new osg::Shader(osg::Shader::FRAGMENT, loadShaderFile("texBRDF.frag")));
+
+	//		osg::Uniform* textureUniform = new osg::Uniform(osg::Uniform::SAMPLER_2D, "tex");
+	//		textureUniform->set(0);
+	//		g->getDrawable(0)->getOrCreateStateSet()->addUniform(textureUniform);
+	//		osg::Uniform* bumpUniform = new osg::Uniform(osg::Uniform::SAMPLER_2D, "normal");
+	//		bumpUniform->set(1);
+	//		g->getDrawable(0)->getOrCreateStateSet()->addUniform(bumpUniform);
+
+	//		if (i >= 5 && i <= 6) {
+	//			osg::Uniform* heightMap = new osg::Uniform("heightMap", 1);
+	//			g->getDrawable(0)->getOrCreateStateSet()->addUniform(heightMap);
+	//		}
+	//		else {
+	//			osg::Uniform* heightMap = new osg::Uniform("heightMap", 0);
+	//			g->getDrawable(0)->getOrCreateStateSet()->addUniform(heightMap);
+	//		}
+	//	}
+	//	else if (i == 25) {
+
+	//		gm->setVertexAttribArray(1, nv, osg::Array::BIND_PER_VERTEX);
+
+	//		program->addShader(new osg::Shader(osg::Shader::VERTEX, loadShaderFile("glass.vert")));
+	//		program->addShader(new osg::Shader(osg::Shader::FRAGMENT, loadShaderFile("glass.frag")));
+	//		osg::ref_ptr<osg::TextureCubeMap> cubemap = new osg::TextureCubeMap;
+
+	//		osg::Image* imagePosX = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
+	//		osg::Image* imageNegX = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
+	//		osg::Image* imagePosY = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
+	//		osg::Image* imageNegY = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
+	//		osg::Image* imagePosZ = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
+	//		osg::Image* imageNegZ = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
+
+	//		cubemap->setImage(osg::TextureCubeMap::POSITIVE_X, imagePosX);
+	//		cubemap->setImage(osg::TextureCubeMap::NEGATIVE_X, imageNegX);
+	//		cubemap->setImage(osg::TextureCubeMap::POSITIVE_Y, imagePosY);
+	//		cubemap->setImage(osg::TextureCubeMap::NEGATIVE_Y, imageNegY);
+	//		cubemap->setImage(osg::TextureCubeMap::POSITIVE_Z, imagePosZ);
+	//		cubemap->setImage(osg::TextureCubeMap::NEGATIVE_Z, imageNegZ);
+
+	//		cubemap->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+	//		cubemap->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+	//		cubemap->setWrap(osg::Texture::WRAP_R, osg::Texture::CLAMP_TO_EDGE);
+
+	//		cubemap->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
+	//		cubemap->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+
+	//		cubemap->setResizeNonPowerOfTwoHint(true);
+
+	//		g->getDrawable(0)->getOrCreateStateSet()->setTextureAttributeAndModes(0, cubemap, osg::StateAttribute::ON);
+
+	//		osg::Uniform* environment = new osg::Uniform("skybox", 0);
+	//		g->getDrawable(0)->getOrCreateStateSet()->addUniform(environment);
+	//	}
+	//	else {
+
+	//		gm->setVertexAttribArray(1, nv, osg::Array::BIND_PER_VERTEX);
+
+	//		program->addShader(new osg::Shader(osg::Shader::VERTEX, loadShaderFile("colored.vert")));
+	//		program->addShader(new osg::Shader(osg::Shader::FRAGMENT, loadShaderFile("BRDF.frag")));
+	//	}
+
+	//	g->getDrawable(0)->getOrCreateStateSet()->setAttributeAndModes(program.get(), osg::StateAttribute::ON);
+
+	//	osg::Material* mat = (osg::Material*)(g->getDrawable(0)->getOrCreateStateSet()->getAttribute(osg::StateAttribute::MATERIAL, 0));
+	//	osg::Uniform* diffuse = new osg::Uniform("diffuseVal", mat->getDiffuse(osg::Material::Face::FRONT));
+	//	g->getDrawable(0)->getOrCreateStateSet()->addUniform(diffuse);
+	//	osg::Uniform* ambient = new osg::Uniform("ambientVal", mat->getAmbient(osg::Material::Face::FRONT));
+	//	g->getDrawable(0)->getOrCreateStateSet()->addUniform(ambient);
+	//	osg::Uniform* specular = new osg::Uniform("specularVal", mat->getSpecular(osg::Material::Face::FRONT));
+	//	g->getDrawable(0)->getOrCreateStateSet()->addUniform(specular);
+	//	osg::Uniform* shininess = new osg::Uniform("shininess", mat->getShininess(osg::Material::Face::FRONT));
+	//	g->getDrawable(0)->getOrCreateStateSet()->addUniform(shininess);
+
+	//	osg::Uniform* metalUni = new osg::Uniform("metalUni", mat->getSpecular(osg::Material::Face::FRONT).x());
+	//	g->getDrawable(0)->getOrCreateStateSet()->addUniform(metalUni);
+
+	//	osg::Uniform* roughUni = new osg::Uniform("roughUni", mat->getSpecular(osg::Material::Face::FRONT).y());
+	//	g->getDrawable(0)->getOrCreateStateSet()->addUniform(roughUni);
+	//}
+
+	/////////////////////////////////////////////////////////
 	_room = new SceneObject("room", false, false, false, false, false);
 	_room->addChild(room);
 	_room->setScale(800);
@@ -122,7 +226,6 @@ bool HelmsleyVolume::init()
 	osg::Quat rot;
 	rot.makeRotate(-osg::PI_2, 0, 0, 1);
 	_room->setRotation(rot);
-
 	PluginHelper::registerSceneObject(_room, "HelmsleyVolume");
 	_room->attachToScene();
 	_nm = _room->getChildNode(0)->getNodeMask();
@@ -416,13 +519,13 @@ void HelmsleyVolume::menuCallback(MenuItem* menuItem)
 		std::vector<MenuButton*>::iterator it = std::find(_removeClippingPlaneButtons.begin(), _removeClippingPlaneButtons.end(), (MenuButton*)menuItem);
 		int index = std::distance(_removeClippingPlaneButtons.begin(), it);
 
-		removeCuttingPlane(index);
+		removeCuttingPlane();
 	}
 	else if (menuItem == _cpButton)
 	{
 		if (_volumes.size())
 		{
-			createCuttingPlane(0);
+			createCuttingPlane();
 		}
 	}
 	else if (menuItem == _mtButton)
@@ -493,7 +596,7 @@ void HelmsleyVolume::deactivateMeasurementTool(int volume)
 void HelmsleyVolume::activateClippingPath() {
 	CuttingPlane* cp;
 	if (_cuttingPlanes.empty()) {
-		 cp = createCuttingPlane(0);
+		 cp = createCuttingPlane();
 	}
 	else {
 		cp = _cuttingPlanes[0];
@@ -518,41 +621,62 @@ void HelmsleyVolume::activateClippingPath() {
 }
 
 
-CuttingPlane* HelmsleyVolume::createCuttingPlane(unsigned int i)
+CuttingPlane* HelmsleyVolume::createCuttingPlane()
 {
-	if (i >= _volumes.size())
+	if (_volumeIndex >= _volumes.size())
 	{
 		return nullptr;
 	}
+
+	
 	CuttingPlane* cp = new  CuttingPlane("Cutting Plane", false, true, false, true, true);
-	cp->setVolume(_volumes[i]);
-	cp->setSceneObject(_sceneObjects[i]);
+	cp->setVolume(_volumes[_volumeIndex]);
+	cp->setSceneObject(_sceneObjects[_volumeIndex]);
 	MenuButton* remove = new MenuButton("Remove Cutting Plane");
 	cp->addMenuItem(remove);
 	remove->setCallback(this);
 	_removeClippingPlaneButtons.push_back(remove);
 	PluginHelper::registerSceneObject(cp, "HelmsleyVolume");
-	//cp->attachToScene();
-	_sceneObjects[i]->addChild(cp);
-	
+	_sceneObjects[_volumeIndex]->addChild(cp);
+	cp->changePlane();
 	_cuttingPlanes.push_back(cp);
+	if (_volumeIndex == 0 && _cuttingPlanes.size() == 2) {
+		CuttingPlane* temp = _cuttingPlanes[0];
+		_cuttingPlanes[0] = _cuttingPlanes[1];
+		_cuttingPlanes[1] = temp;
+		
+	}
+	if (_cuttingPlanes.size() == 2) {
+		_worldMenus[0]->toggleLinkOpacity(true);
+	}
 
 
 	return cp;
 }
 
-void HelmsleyVolume::removeCuttingPlane(unsigned int i)
+void HelmsleyVolume::removeCuttingPlane()
 {
-	if (i < _cuttingPlanes.size() && _cuttingPlanes[i])
-	{
-		_volumes[i]->_PlaneNormal->set(osg::Vec3(0.f, 1.f, 0.f));
-		_volumes[i]->_PlanePoint->set(osg::Vec3(0.f, -2.f, 0.f));
-		_cuttingPlanes[i]->detachFromScene();
-		delete(_cuttingPlanes[i]);
-		_cuttingPlanes.erase(_cuttingPlanes.begin() + i);
 
-		_removeClippingPlaneButtons.erase(_removeClippingPlaneButtons.begin() + i);
-	}
+		_volumes[_volumeIndex]->_PlaneNormal->set(osg::Vec3(0.f, 1.f, 0.f));
+		_volumes[_volumeIndex]->_PlanePoint->set(osg::Vec3(0.f, -2.f, 0.f));
+
+		if (_cuttingPlanes.size() > 1) {
+			_cuttingPlanes[_volumeIndex]->detachFromScene();
+			delete(_cuttingPlanes[_volumeIndex]);
+			_cuttingPlanes.erase(_cuttingPlanes.begin() + _volumeIndex);
+
+			_removeClippingPlaneButtons.erase(_removeClippingPlaneButtons.begin() + _volumeIndex);
+		}
+		else {
+			_cuttingPlanes[0]->detachFromScene();
+			delete(_cuttingPlanes[0]);
+			_cuttingPlanes.erase(_cuttingPlanes.begin() + 0);
+
+			_removeClippingPlaneButtons.erase(_removeClippingPlaneButtons.begin() + 0);
+		}
+		_worldMenus[0]->setLinkOff();
+		_worldMenus[0]->toggleLinkOpacity(false);
+		
 }
 
 void HelmsleyVolume::toggleCenterLine(bool on) {
@@ -630,6 +754,45 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath, bool onl
 	*/
 }
 
+void HelmsleyVolume::loadSecondVolume(std::string path, std::string maskpath)
+{
+
+	SceneObject * so;
+	VolumeGroup* g = new VolumeGroup();
+	if (_sceneObjects.size() < 2) {
+		so = new SceneObject("volume", false, true, true, true, false);
+		_sceneObjects.push_back(so);
+	}
+	else {
+		so = _sceneObjects[1];
+		
+	}
+	so->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(300, 750, 500)));
+
+	g->loadVolume(path, maskpath);
+	so->addChild(g);
+	PluginHelper::registerSceneObject(so, "HelmsleyVolume");
+	so->attachToScene();
+	so->setNavigationOn(false);
+	so->addMoveMenuItem();
+	so->addNavigationMenuItem();
+	so->setShowBounds(true);
+	VolumeMenu* menu = new VolumeMenu(so, g);
+	menu->init();
+	
+
+	
+	_volumes.push_back(g);
+	_contextMenus.push_back(menu);
+
+	_worldMenus[0]->setSecondVolume(g);
+	_worldMenus[0]->toggleSwapOpacity();
+	
+	
+	
+}
+
+
 void HelmsleyVolume::loadVolumeOnly(bool isPreset, std::string path, std::string maskpath) {
 	VolumeGroup* g = new VolumeGroup();
 
@@ -641,13 +804,14 @@ void HelmsleyVolume::loadVolumeOnly(bool isPreset, std::string path, std::string
 	_contextMenus[0]->setVolume(g);
 
 	//NewVolumeMenu* newMenu = new NewVolumeMenu(so, g);// set new g on newmenu
+	_worldMenus[0]->clearVolumes();
+	HelmsleyVolume::instance()->setVolumeIndex(0);
 	_worldMenus[0]->setNewVolume(g);
-	if(!isPreset)
-		_worldMenus[0]->resetValues();
+	_worldMenus[0]->toggleSwapOpacity();
+	/*if(!isPreset)
+		_worldMenus[0]->resetValues();*/
 
 	_volumes.push_back(g);
-
-
 }
 
 void HelmsleyVolume::removeVolume(int index, bool onlyVolume)
@@ -683,23 +847,48 @@ void HelmsleyVolume::removeVolume(int index, bool onlyVolume)
 }
 
 void HelmsleyVolume::removeVolumeOnly(int index) {
+
 	std::vector<CuttingPlane*>::iterator it = _cuttingPlanes.begin();
 	while (it != _cuttingPlanes.end()) {
-		if ((*it)->getVolume() == _volumes[index])
-		{
 			(*it)->detachFromScene();
 			delete((*it));
 			it = _cuttingPlanes.erase(it);
-		}
-		else
-		{
-			++it;
-		}
-
 	}
-	_sceneObjects[index]->detachFromScene();
-	_sceneObjects[index]->removeChild(_volumes[index]);
-	_volumes[index].release();
-	_volumes.erase(_volumes.begin() + index);
-	delete _volumes[index];
+
+	for (int i = 0; i < _sceneObjects.size(); i++) {
+		_sceneObjects[i]->detachFromScene();
+		_sceneObjects[i]->removeChild(_volumes[0]);
+		_volumes[0].release();
+		_volumes.erase(_volumes.begin());
+	}
+	_worldMenus[0]->setLinkOff();
+	_worldMenus[0]->toggleLinkOpacity(false);
+	/*_sceneObjects[index]->detachFromScene();
+	_sceneObjects[index]->removeChild(_volumes[0]);
+	_volumes[0].release();
+	_volumes.erase(_volumes.begin());*/
+	//delete _volumes[index];
+}
+
+void HelmsleyVolume::removeSecondVolume() {
+	if (_volumes.size() > 1) {
+		std::vector<CuttingPlane*>::iterator it = _cuttingPlanes.begin();
+		while (it != _cuttingPlanes.end()) {
+			if ((*it)->getVolume() == _volumes[1])
+			{
+				(*it)->detachFromScene();
+				delete((*it));
+				it = _cuttingPlanes.erase(it);
+			}
+			else
+			{
+				++it;
+			}
+
+		}
+		_sceneObjects[1]->detachFromScene();
+		_sceneObjects[1]->removeChild(_volumes[1]);
+		_volumes[1].release();
+		_volumes.erase(_volumes.begin() + 1);
+	}
 }

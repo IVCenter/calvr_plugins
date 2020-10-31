@@ -1,0 +1,38 @@
+
+#version 460 
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;	// 64 threads
+
+// input Dicom Volume
+
+
+
+layout(std430, binding = 6) buffer histBuffer{ uint hist[]; };
+layout(binding = 7) uniform atomic_uint[1] maxBinVal;
+
+uniform uint NUM_BINS;	// number of gray values in the new Volume
+uniform ivec3 VolumeDims;	// size of the section of the volume we are applying CLAHE to 
+uniform sampler3D Volume;
+void main() {
+
+	// figure out the sub block this index belongs to 
+	uvec3 index = gl_GlobalInvocationID.xyz;
+
+
+	// if we are not within the volume of interest -> return 
+	if ( index.x >= VolumeDims.x || index.y >= VolumeDims.y || index.z >= VolumeDims.z ) {
+		return;
+	}
+	
+	// get the gray value of the Volume
+	float volSamplef = textureLod(Volume, index, 0.0).x;
+	uint volSample = uint(volSamplef*NUM_BINS);
+	
+	
+	// Increment the histogram
+
+	atomicAdd(hist[volSample], 1 );
+
+	atomicCounterMax(maxBinVal[0], hist[volSample]);
+	
+}

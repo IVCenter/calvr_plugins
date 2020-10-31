@@ -1,9 +1,9 @@
 #ifndef UI_EXTENSIONS_H
 #define UI_EXTENSIONS_H
 
-#define UI_BACKGROUND_COLOR osg::Vec4(0.5, 0.5, 0.5, 1)
-#define UI_ACTIVE_COLOR osg::Vec4(0.8, 1, 0.8, 1)
-#define UI_INACTIVE_COLOR osg::Vec4(1, 0.8, 0.8, 1)
+#define UI_BACKGROUND_COLOR osg::Vec4(0.15, 0.15, 0.15, 1)
+#define UI_ACTIVE_COLOR osg::Vec4(.243, .561, 1, 1)
+#define UI_INACTIVE_COLOR osg::Vec4(.243, .561, 1, .4)
 #define UI_BLUE_COLOR osg::Vec3(0.8, 0.9, 1.0)
 #define UI_RED_COLOR osg::Vec3(1, 0.8, 0.807)
 #define UI_YELLOW_COLOR osg::Vec3(1, 0.964, 0.8)
@@ -78,7 +78,7 @@ class CallbackToggle : public cvr::UIToggle, public UICallbackCaller
 public:
 
 	virtual bool onToggle() override;
-
+	
 };
 
 class VisibilityToggle : public cvr::UIToggle, public UICallbackCaller

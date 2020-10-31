@@ -181,15 +181,26 @@ void FileSelector::init()
 
 	cvr::UIQuadElement* loadButton = new cvr::UIQuadElement();
 	loadButton->setPercentSize(osg::Vec3(.3, 1, .125));
-	loadButton->setPercentPos(osg::Vec3(.375, -1, -.8));
+	loadButton->setPercentPos(osg::Vec3(.150, -1, -.8));
 	loadButton->setBorderSize(.01);
 
 	_loadVolumeButton = new CallbackButton();
 	_loadVolumeButton->setCallback(this);
 	loadButton->addChild(_loadVolumeButton);
+	
+	cvr::UIQuadElement* loadSecondBknd = new cvr::UIQuadElement();
+	loadSecondBknd->setPercentSize(osg::Vec3(.3, 1, .125));
+	loadSecondBknd->setPercentPos(osg::Vec3(.525, -1, -.8));
+	loadSecondBknd->setBorderSize(.01);
+
+	_loadSecondButton = new CallbackButton();
+	_loadSecondButton->setCallback(this);
+	loadSecondBknd->addChild(_loadSecondButton);
 
 	cvr::UIText* loadText = new cvr::UIText("Load Dataset", 50.f, osgText::TextBase::CENTER_CENTER);
 	loadText->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	cvr::UIText* loadSecondText = new cvr::UIText("Load as Second", 50.f, osgText::TextBase::CENTER_CENTER);
+	loadSecondText->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
 
 
 	_categoryList = new cvr::UIList(cvr::UIList::TOP_TO_BOTTOM, cvr::UIList::CONTINUE);
@@ -228,9 +239,11 @@ void FileSelector::init()
 	_selectBknd->addChild(_categoryList);
 	_selectBknd->addChild(_infoList);
 	_selectBknd->addChild(loadButton);
+	_selectBknd->addChild(loadSecondBknd);
 	
 	_selectImage->addChild(_selectTexture);
 	loadButton->addChild(loadText);
+	loadSecondBknd->addChild(loadSecondText);
 
 
 
@@ -294,9 +307,7 @@ void FileSelector::uiCallback(UICallbackCaller* ui){
 	}
 	else if (ui == _upArrow) {
 		_selectIndex = 0;
-		std::cout << "in callback" << std::endl;
 		if (_isOnLoad) {
-			std::cout << "inload " << std::endl;
 			_fsPopup->addChild(_contentBknd);
 			_contentBknd->setActive(true);
 			_fsPopup->getRootElement()->getGroup()->removeChild(_selectBknd->getGroup());
@@ -328,6 +339,10 @@ void FileSelector::uiCallback(UICallbackCaller* ui){
 			loadVolumeOnly(false, _currentPath);
 		}
 	}
+	else if (ui == _loadSecondButton && _menusLoaded) {
+		//bool change = _state == CHANGING ? true : false;
+		loadSecondVolume(_currentPath);
+	}
 }
 
 bool FileSelector::checkSelectionCallbacks(UICallbackCaller* item) {
@@ -340,7 +355,7 @@ bool FileSelector::checkSelectionCallbacks(UICallbackCaller* item) {
 				copy.erase(copy.begin());
 				_patientInfo.name = copy;
 				loadPatient(_selections[i]->getName());
-				_isOnLoad = true;
+				
 			}
 			else if (_currMap == &_seriesList) {
 				_fsPopup->getRootElement()->getGroup()->removeChild(_contentBknd->getGroup());
@@ -364,7 +379,6 @@ bool FileSelector::checkSelectionCallbacks(UICallbackCaller* item) {
 				copy.erase(copy.begin());
 				_patientInfo.series = copy;
 
-				std::cout << "sd exists " << _patientInfo.studyDate;
 
 				cvr::UIText* category = (cvr::UIText*)_infoList->getChild(FileSelector::CategoryEnum::PATIENT);
 				category->setText(_patientInfo.name);
@@ -372,6 +386,8 @@ bool FileSelector::checkSelectionCallbacks(UICallbackCaller* item) {
 				category->setText(_patientInfo.series);
 				category = (cvr::UIText*)_infoList->getChild(FileSelector::CategoryEnum::STUDYDATE);
 				category->setText(_patientInfo.studyDate);
+
+				_isOnLoad = true;
 			}
 			
 			return found;
@@ -426,6 +442,7 @@ void FileSelector::loadPatient(std::string pName) {
 
 
 }
+
 
 void FileSelector::showDicomThumbnail() {
 	for (int i = 0; i < SLOTCOUNT; i++) {
@@ -626,6 +643,8 @@ void FileSelector::loadVolume(std::string seriesPath, bool change, bool onlyVolu
 
 void FileSelector::loadVolumeOnly(bool isPreset, std::string seriesPath) {
 	HelmsleyVolume::instance()->removeVolumeOnly(0);
+	
+
 	std::string maskpath = "";
 
 	DIR* dir = opendir((seriesPath + "/mask").c_str());
@@ -636,6 +655,21 @@ void FileSelector::loadVolumeOnly(bool isPreset, std::string seriesPath) {
 	}
 
 	HelmsleyVolume::instance()->loadVolumeOnly(isPreset, seriesPath, maskpath);
+	_state = CHANGE;
+}
+
+void FileSelector::loadSecondVolume(std::string seriesPath) {
+	HelmsleyVolume::instance()->removeSecondVolume();
+	std::string maskpath = "";
+
+	DIR* dir = opendir((seriesPath + "/mask").c_str());
+	if (dir != NULL)
+	{
+		maskpath = seriesPath + "/mask";
+		closedir(dir);
+	}
+
+	HelmsleyVolume::instance()->loadSecondVolume(seriesPath, maskpath);
 	_state = CHANGE;
 }
 
@@ -738,7 +772,7 @@ std::vector<std::string> FileSelector::getPresets() {
 	std::string presetPath = currPath;
 	DIR* dir = opendir(presetPath.c_str());
 	if (dir == nullptr) {
-		std::cout << "Directory not found in: " << presetPath << std::endl;
+
 	}
 	std::vector<std::string> presetPaths;
 	struct dirent* entry = readdir(dir);
