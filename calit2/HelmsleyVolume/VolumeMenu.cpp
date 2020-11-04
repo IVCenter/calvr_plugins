@@ -37,6 +37,7 @@ void VolumeMenu::init()
 	test->setCallback(this);
 	_scene->addMenuItem(test);
 
+	
 
 	
 }
@@ -73,6 +74,8 @@ void VolumeMenu::menuCallback(cvr::MenuItem * item)
 		_volume->getCompute()->getOrCreateStateSet()->setDefine("EDGE_DETECTION", edgeDetectBox->getValue());
 		_volume->setDirtyAll();
 	}
+
+	
 }
 
 VolumeMenu::~VolumeMenu() {
@@ -108,6 +111,12 @@ NewVolumeMenu::~NewVolumeMenu()
 		MenuManager::instance()->removeMenuSystem(_tentMenu);
 		delete _tentMenu;
 	}
+	if (_claheMenu)
+	{
+		_claheMenu->setActive(false, false);
+		MenuManager::instance()->removeMenuSystem(_claheMenu);
+		delete _claheMenu;
+	}
 
 	if (_container)
 	{
@@ -124,6 +133,10 @@ NewVolumeMenu::~NewVolumeMenu()
 	if (_tentWindowContainer)
 	{
 		delete _tentWindowContainer;
+	}
+	if (_toolContainer)
+	{
+		delete _toolContainer;
 	}
 
 	if(_cp->_parent == nullptr){
@@ -169,11 +182,15 @@ void NewVolumeMenu::init()
 	ColorPicker* cp = new ColorPicker();
 	_cp = cp;
 	_tentWindowOnly = new TentWindowOnly();
+	_histQuad = new HistQuad();
 	 _tentWindow = new TentWindow(_tentWindowOnly);
 	_menu->addChild(_tentWindow);
 	_tentWindow->setPercentSize(osg::Vec3(1, 1, .75));
 	_tentWindow->setPercentPos(osg::Vec3(0, 0, -1));
 	_tentWindow->setVolume(_volume);
+	_histQuad->setVolume(_volume);
+	_histQuad->setMax(_volume->getHistMax());
+	_histQuad->setBB(_volume->getHistBB());
 	
 
 
@@ -355,9 +372,12 @@ void NewVolumeMenu::init()
 	list->addChild(list2);
 	list->setAbsoluteSpacing(0.0);
 	_tentMenu = new UIPopup();
+	_claheMenu = new UIPopup();
 	
 	_tentWindowOnly->setPercentSize(osg::Vec3(1, 1, 3.0));
 	_tentWindowOnly->setPercentPos(osg::Vec3(0, 0, 1.50));
+
+
 	UIList* gradientList = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
 	gradientList->addChild(_colorDisplay);
 	gradientList->addChild(_opacityColorDisplay);
@@ -398,7 +418,11 @@ void NewVolumeMenu::init()
 	_tentMenu->addChild(gradientBknd);
 	_tentMenu->addChild(gradientList);
 
-	
+
+	UIQuadElement* claheBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
+
+
+	_claheMenu->addChild(claheBknd);
 	
 	
 
@@ -414,7 +438,11 @@ void NewVolumeMenu::init()
 		_container->addChild(_menu->getRoot());
 		_menu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_container->dirtyBounds();
-	}
+
+		_toolContainer = new SceneObject("toolmenu", false, true, false, false, false);
+		_so->addChild(_toolContainer);
+		_toolContainer->setShowBounds(false);
+ 	}
 
 #pragma endregion
 	//>===============================MASKS AND REGIONS==============================<//
@@ -593,6 +621,44 @@ void NewVolumeMenu::init()
 	
 	_tentMenu->setPosition(osg::Vec3(-1200, 675, 1880));
 	_tentMenu->getRootElement()->setAbsoluteSize(osg::Vec3(1500, 1, 600));
+
+
+	label = new UIText("CLAHE Options", 40.0f, osgText::TextBase::CENTER_TOP);
+	UIList* claheUI = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
+	claheUI->addChild(label);
+
+	UIList* numBinTexts = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+	label = new UIText("Number of Bins: ", 32.0f, osgText::TextBase::LEFT_CENTER);
+	numBinTexts->addChild(label);
+	_numBinsLabel = new UIText("255", 32.0f, osgText::TextBase::RIGHT_CENTER);
+	numBinTexts->addChild(_numBinsLabel);
+	claheUI->addChild(numBinTexts);
+
+	_numBinsSlider = new CallbackSlider();
+	_numBinsSlider->setCallback(this);
+	_numBinsSlider->setPercent(.5f);
+	_numBinsSlider->setPercentPos(osg::Vec3(0.025, 0, 0.05));
+	_numBinsSlider->setPercentSize(osg::Vec3(0.95, 1, 0.9));
+	_numBinsSlider->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
+	_numBinsSlider->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
+	_numBinsSlider->handle->setPercentSize(osg::Vec3(0, 1, 1));
+	claheUI->addChild(_numBinsSlider);
+
+	_genClaheButton = new CallbackButton();
+	_genClaheButton->setCallback(this);
+	_genClaheButton->setPercentSize(osg::Vec3(.33, 1.0, .5));
+	_genClaheButton->setPercentPos(osg::Vec3(.33, 0.0, 0.0));
+	UIQuadElement* buttonBknd = new UIQuadElement(osg::Vec4(1.0,0.0,0.0,1.0));
+	label = new UIText("Generate CLAHE", 32.0f, osgText::TextBase::CENTER_CENTER);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+
+	_genClaheButton->addChild(buttonBknd);
+	_genClaheButton->addChild(label);
+	claheUI->addChild(_genClaheButton);
+
+	_claheMenu->addChild(claheUI);
+	_claheMenu->setPosition(osg::Vec3(-150, 150, 800));
+	_claheMenu->getRootElement()->setAbsoluteSize(osg::Vec3(750, 1, 300));
 	
 
 
@@ -800,6 +866,7 @@ void NewVolumeMenu::init()
 		_maskMenu->setActive(true, false);
 		_contrastMenu->setActive(true, false);
 		_tentMenu->setActive(true, false);
+		_claheMenu->setActive(true, false);
 		_maskContainer = new SceneObject("MaskMenu", false, true, false, false, false);
 		_contrastContainer = new SceneObject("ContrastMenu", false, true, false, false, false);
 		_tentWindowContainer = new SceneObject("TentWindow", false, true, false, false, false);
@@ -818,6 +885,7 @@ void NewVolumeMenu::init()
 		
 		_maskMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_tentMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
+		_claheMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_contrastMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_maskContainer->dirtyBounds();
 	}
@@ -1046,6 +1114,27 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	}
 	else if (item == _linkButton) {
 		linkVolumes();
+	}
+
+	else if (item == _numBinsSlider) {
+		if (_numBinsSlider->getAdjustedValue() > .8) {
+			_numBinsLabel->setText("65536");
+			_volume->setNumBins(65536);
+			
+		}
+		if (_numBinsSlider->getAdjustedValue() > .5 && _numBinsSlider->getAdjustedValue() < .8) {
+			_numBinsLabel->setText("255");
+			_volume->setNumBins(255);
+		}
+		if (_numBinsSlider->getAdjustedValue() < .5) {
+			_numBinsLabel->setText("16");
+			_volume->setNumBins(16);
+		}
+
+	}
+
+	else if (item == _genClaheButton) {
+		_volume->genClahe();
 	}
 	
 	
@@ -1866,6 +1955,27 @@ void NewVolumeMenu::savePreset(){
 
 }
 
+void NewVolumeMenu::toggleHistogram(bool on) {
+	if (on) {
+		_histQuad->setMax(_volume->getHistMax());
+		_tentWindowOnly->addChild(_histQuad);
+	}
+	else {
+		_tentWindowOnly->getGroup()->removeChild(_histQuad->getGroup());
+		_histQuad->_parent = nullptr;
+	}
+}
+
+void NewVolumeMenu::toggleClaheTools(bool on) {
+	if (on) {
+		
+		_toolContainer->addChild(_claheMenu->getRoot());
+	}
+	else {
+		
+	}
+}
+
 ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 {
 	_movable = movable;
@@ -1907,6 +2017,16 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	_centerLIneTool = new ToolToggle(dir + "line.png");
 	_centerLIneTool->setCallback(this);
 	list->addChild(_centerLIneTool);
+
+	_histogramTool = new ToolToggle(dir + "slice.png");
+	_histogramTool->setColor(UI_BLACK_COLOR);
+	_histogramTool->setCallback(this);
+	list->addChild(_histogramTool);
+
+	_claheTool = new ToolToggle(dir + "ruler.png");
+	_claheTool->setColor(UI_BLACK_COLOR);
+	_claheTool->setCallback(this);
+	list->addChild(_claheTool);
 	
 
 	if (!_movable && !parent)
@@ -1986,6 +2106,36 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 		{
 			HelmsleyVolume::instance()->removeCuttingPlane();
 			_cuttingPlane->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
+		}
+	}
+
+	else if (item == _histogramTool)
+	{
+		if (_histogramTool->isOn())
+		{
+			
+			HelmsleyVolume::instance()->toggleHistogram(true);
+			_histogramTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+		}
+		else
+		{
+			HelmsleyVolume::instance()->toggleHistogram(false);
+			_histogramTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
+		}
+	}
+
+	else if (item == _claheTool)
+	{
+		if (_claheTool->isOn())
+		{
+			
+			HelmsleyVolume::instance()->toggleClaheTools(true);
+			_claheTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+		}
+		else
+		{
+			HelmsleyVolume::instance()->toggleClaheTools(false);
+			_claheTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}
 	else if (item == _measuringTool)

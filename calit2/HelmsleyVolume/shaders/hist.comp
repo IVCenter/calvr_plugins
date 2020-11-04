@@ -33,12 +33,13 @@ void main() {
 	
 	// get the gray value of the Volume
 	float volSamplef = imageLoad( volume, ivec3(index) ).x;
-	uint volSample = uint(volSamplef*NUM_OUT_BINS);
+	uint volSample = uint(volSamplef*(NUM_OUT_BINS-1u));
 	uint histIndex = uint(currSB.z * numSB.x * numSB.y + currSB.y * numSB.x + currSB.x);
 	
 	// Increment the appropriate histogram
-	uint grayIndex = (NUM_OUT_BINS * histIndex) + volSample;
+	uint grayIndex = ((NUM_OUT_BINS-1u) * histIndex) + volSample;
 
+	
 	atomicAdd(hist[grayIndex], 1 );
 	
 	

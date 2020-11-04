@@ -137,7 +137,7 @@ void main() {
 	// LERP
 
 	// get the current gray value 
-	uint greyValue = uint(imageLoad(volume, ivec3(index)).x * NUM_OUT_BINS);
+	uint greyValue = uint(imageLoad(volume, ivec3(index)).x * (NUM_OUT_BINS-1u));
 
 //	if (useLUT) {
 //		greyValue = LUT [ greyValue ];

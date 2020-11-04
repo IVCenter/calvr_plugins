@@ -9,6 +9,7 @@ using namespace cvr;
 
 osg::Program* ColorPickerSaturationValue::_svprogram = nullptr;
 osg::Program* ColorPickerHue::_hueprogram = nullptr;
+osg::Program* HistQuad::_histprogram = nullptr;
 osg::Program* Tent::_triangleProg = nullptr;
 osg::Program* TriangleButton::_triangleButtonProg = nullptr;
 osg::Program* Dial::_dialProg = nullptr;
@@ -983,7 +984,39 @@ std::vector<float> TentWindowOnly::getPresetData(int index) {
 	data.push_back(_tents->at(index)->getBottom());
 	return data;
 }
+///////////////Hist
+HistQuad::HistQuad() :
+	UIElement()
+{
+	_bknd = new ShaderQuad();
+	_bknd->setProgram(getOrLoadProgram());
+	addChild(_bknd);
 
+}
+
+osg::Program* HistQuad::getOrLoadProgram() {
+	if (!_histprogram)
+	{
+		const std::string vert = HelmsleyVolume::loadShaderFile("transferFunction.vert");
+		const std::string frag = HelmsleyVolume::loadShaderFile("hist.frag");
+		_histprogram = new osg::Program;
+		_histprogram->setName("HistFrag");
+		_histprogram->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
+		_histprogram->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
+	}
+
+	return _histprogram;
+}
+
+void HistQuad::setBB(osg::ref_ptr<osg::ShaderStorageBufferBinding> bb) {
+	_bknd->getGeode()->getOrCreateStateSet()->setAttribute(bb, osg::StateAttribute::ON);
+}
+
+void HistQuad::setMax(unsigned int histMax) {
+	std::cout << histMax << std::endl;
+	_bknd->addUniform("histMax", histMax);
+}
+/////////////////////Histo
 void Tent::createGeometry()
 {
 	_transform = new osg::MatrixTransform();

@@ -27,7 +27,7 @@
 #include <cvrKernel/ScreenConfig.h>
 #include <cvrKernel/ScreenBase.h>
 
-#define NUMGRAYVALS 65536u
+//#define NUMGRAYVALS 255u
 #define CLIPLIMIT3D .85f
 #define ORGANCOUNT 8
 
@@ -64,20 +64,28 @@ public:
 	float _clipLimit3D = 0.85f;
 	float _minClipValue = 0.0;
 	osg::Vec3i _volDims = osg::Vec3i(0, 0, 0);
-	unsigned int _histSize = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z() * NUMGRAYVALS;
+	unsigned int _numGrayVals = 255u;
+	unsigned int _histSize = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z() * _numGrayVals;
 	unsigned int _numHist = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z();
 	//CLAHE Variables///////
 
+	///////Main Methods
 	t_acbb precompMinMax();
+ 	std::pair<t_ssbb, t_ssbb> precompHist();
+ 	t_ssbb precompExcess(t_ssbb ssbbHist, t_ssbb ssbbHistMax);
+ 	void precompHistClip(t_ssbb ssbbHist, t_ssbb ssbbHistMax, t_ssbb ssbbExcess, t_acbb acbbminmax);
+ 	void precompLerp(t_ssbb ssbbHist);
+	//Main Methods//////////
 
-	std::pair<t_ssbb, t_ssbb> precompHist();
-
-	t_ssbb precompExcess(t_ssbb ssbbHist, t_ssbb ssbbHistMax);
-
-	void precompHistClip(t_ssbb ssbbHist, t_ssbb ssbbHistMax, t_ssbb ssbbExcess, t_acbb acbbminmax);
-
-	void precompLerp(t_ssbb ssbbHist);
+	////Extra Methods
+	void setNumBins(unsigned int numBins) { _numGrayVals = numBins; }
+	void genClahe();
+	//Extra Methods//
 	//CLAHE//////////////
+	unsigned int getHistMax();
+
+	osg::ref_ptr<osg::ShaderStorageBufferBinding> getHistBB();
+
 
 	void precompute();
 
@@ -230,8 +238,8 @@ public:
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-			//if(_claheDirty[0] != 1)
-				//group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
+			if(_claheDirty[0] != 1)
+				group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
 			
 		}
 	}
@@ -323,8 +331,7 @@ public:
 		
 		if (group->isDirty(renderInfo.getCurrentCamera()->getGraphicsContext()) && stop[0] != 1)
 		{
-			std::cout << "Hist executed." << std::endl;
-			std::cout << "ReadShaderBufferDataCalback executed." << std::endl << std::flush;
+ 			std::cout << "Total hist executed." << std::endl << std::flush;
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
@@ -335,7 +342,7 @@ public:
 			unsigned int value = osg::maximum(1u, _atomicCounterArray->front());
 
 			std::cout << "Max Bin Value: " << value << std::endl;
- 
+			histMax[0] = value;
 			stop[0] = 1;
 			group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
 		}
@@ -347,6 +354,7 @@ public:
 	
 
 	uint16_t* stop = new uint16_t(2);
+	uint32_t* histMax = new uint32_t(0);
 	int _buffersize;
 	
  	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbb;
@@ -418,6 +426,7 @@ public:
 	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbbHistMax; //excess
 	osg::ref_ptr<osg::Program> _clipshader2;
 	int numPixels;
+	unsigned int _numGrayVals;
 	osg::Vec3i volDims;
 	osg::ref_ptr<osg::AtomicCounterBufferBinding> _acbbminMax;
 

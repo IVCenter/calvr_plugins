@@ -10,13 +10,11 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 layout(rg16, binding = 0) uniform image3D volume;
-layout(rgba8, binding = 1) uniform image3D baked;
-layout(rg16, binding = 5) uniform image3D CLAHEvolume;
+layout(rgba16, binding = 1) uniform image3D baked;
+ layout(rg16, binding = 5) uniform image3D CLAHEvolume;
 
 
-//uniform float Exposure;
-//uniform float Threshold;
-//uniform float Density;
+
 
 uniform float ContrastBottom;
 uniform float ContrastTop;
@@ -60,12 +58,17 @@ vec3 custom(vec3 c) {
 }
 
 vec4 Sample(ivec3 p) {
+	vec4 s = vec4(0,0,0,0);
 	#ifndef CLAHE
 		vec2 ra = imageLoad(volume, p).rg;
+		
 	#else
 		vec2 ra = imageLoad(CLAHEvolume, p).rg;
+		s.rgb = vec3(ra.r);
+		s.a = 1.0f;
+		return s;
 	#endif
-	vec4 s = vec4(0,0,0,0);
+	
 	uint bitmask = uint(imageLoad(volume, p).rg.g * 65535.0);
 	const uint organCount = 7;
 	vec3 organColors[organCount] = 
@@ -275,6 +278,7 @@ void main() {
 		sobel(index);
 		s.a *= sobel(index);
 	#endif
+
 
 	imageStore(baked, index, s);
 }

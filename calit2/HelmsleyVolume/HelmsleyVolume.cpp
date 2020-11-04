@@ -695,6 +695,14 @@ void HelmsleyVolume::toggleCenterLine(bool on) {
 	//}
 }
 
+void HelmsleyVolume::toggleHistogram(bool on) {
+	_worldMenus[0]->toggleHistogram(on);
+}
+
+void HelmsleyVolume::toggleClaheTools(bool on) {
+	_worldMenus[0]->toggleClaheTools(on);
+}
+
 void HelmsleyVolume::loadVolume(std::string path, std::string maskpath, bool onlyVolume)
 {
 	SceneObject * so;

@@ -89,6 +89,8 @@ protected:
 	ToolToggle* _measuringTool;
 	ToolToggle* _screenshotTool;
 	ToolToggle* _centerLIneTool;
+	ToolToggle* _histogramTool;
+	ToolToggle* _claheTool;
 	
 	//ToolRadialButton* _prevButton = nullptr;
 
@@ -168,6 +170,8 @@ public:
 	void setLinkOff() { _updateCallback->setLinkOff(); }
 	void toggleSwapOpacity();
 	void toggleLinkOpacity(bool turnOn);
+	void toggleHistogram(bool on);
+	void toggleClaheTools(bool on);
 protected:
 	cvr::SceneObject* _scene;
 	VolumeGroup* _volume;
@@ -177,6 +181,7 @@ protected:
 
 	TentWindow* _tentWindow;
 	TentWindowOnly* _tentWindowOnly;
+	HistQuad* _histQuad;
 
 	cvr::UIPopup* _menu = nullptr;
 	cvr::UIPopup* _maskMenu = nullptr;
@@ -184,6 +189,8 @@ protected:
 	cvr::UIPopup* _colorMenu = nullptr;
 	cvr::UIPopup* _presetPopup = nullptr;
 	cvr::UIPopup* _tentMenu = nullptr;
+
+	cvr::UIPopup* _claheMenu = nullptr;
 	cvr::UIQuadElement* _maskBknd;
 	cvr::UIQuadElement* _presetBknd;
 
@@ -205,6 +212,9 @@ protected:
 	CallbackSlider* _contrastBottom;
 	CallbackSlider* _contrastTop;
 	CallbackSlider* _brightness;
+
+	CallbackSlider* _numBinsSlider;
+	CallbackButton* _genClaheButton;
 
 	CallbackSlider* _trueContrast;
 	CallbackSlider* _contrastCenter;
@@ -239,6 +249,7 @@ protected:
 	ColorPicker* _cp;
 	cvr::UIQuadElement* _cpHeader;
 	cvr::UIText* _cpHLabel;
+	cvr::UIText* _numBinsLabel;
 	CallbackRadial* _transferFunctionRadial;
 	ShaderQuad* _colorDisplay;
 	ShaderQuad* _opacityDisplay;
@@ -293,6 +304,7 @@ private:
 	cvr::SceneObject* _maskContainer = nullptr;
 	cvr::SceneObject* _contrastContainer = nullptr;
 	cvr::SceneObject* _tentWindowContainer = nullptr;
+	cvr::SceneObject* _toolContainer = nullptr;
 	cvr::SceneObject* _so = nullptr;
 
 	VolumeMenuUpdate* _updateCallback;

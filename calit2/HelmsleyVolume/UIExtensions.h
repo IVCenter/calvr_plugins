@@ -595,7 +595,29 @@ private:
 	VolumeGroup* _volume;
 
 };
+////////////Hist
+class HistQuad : public cvr::UIElement
 
+{
+public:
+	HistQuad();
+	void setVolume(VolumeGroup* volume) { _volume = volume; }
+	void setBB(osg::ref_ptr<osg::ShaderStorageBufferBinding> bb);
+	void setMax(unsigned int histMax);
+
+	ShaderQuad* _bknd;
+	static osg::Program* getOrLoadProgram();
+	static osg::Program* _histprogram;
+
+	osg::ref_ptr<osg::ShaderStorageBufferBinding> histBB = nullptr;
+private:
+	
+
+
+	VolumeGroup* _volume;
+
+};
+////////////Hist
 
 class TentWindow : public cvr::UIElement, public UICallback, public UICallbackCaller
 
