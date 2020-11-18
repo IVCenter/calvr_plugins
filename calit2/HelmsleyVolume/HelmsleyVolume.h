@@ -91,7 +91,19 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 
 		void setVolumeIndex(int i) { 
 			_volumeIndex = i;
-			_sceneObjects[i]->updateColor(osg::Vec4(0.0,0.0,1.0,1.0));
+
+			if (i == 0) {
+				_sceneObjects[0]->updateBBActiveColor(osg::Vec4(UI_ACTIVE_COLOR));
+				_sceneObjects[0]->updateBBPassiveColor(osg::Vec4(UI_INACTIVE_COLOR));
+				_sceneObjects[1]->updateBBActiveColor(osg::Vec4(UI_WHITE_COLOR));
+				_sceneObjects[1]->updateBBPassiveColor(osg::Vec4(UI_INACTIVE_WHITE_COLOR));
+			}
+			else {
+				_sceneObjects[1]->updateBBActiveColor(osg::Vec4(UI_ACTIVE_COLOR));
+				_sceneObjects[1]->updateBBPassiveColor(osg::Vec4(UI_INACTIVE_COLOR));
+				_sceneObjects[0]->updateBBActiveColor(osg::Vec4(UI_WHITE_COLOR));
+				_sceneObjects[0]->updateBBPassiveColor(osg::Vec4(UI_INACTIVE_WHITE_COLOR));
+			}
 		}
 		int getVolumeIndex() { return _volumeIndex; }
     protected:

@@ -71,14 +71,24 @@ public:
 
 	///////Main Methods
 	t_acbb precompMinMax();
+	t_acbb setupMinmaxSSBO();
  	std::pair<t_ssbb, t_ssbb> precompHist();
+ 	std::pair<t_ssbb, t_ssbb> setupHistSSBO();
  	t_ssbb precompExcess(t_ssbb ssbbHist, t_ssbb ssbbHistMax);
+ 	t_ssbb setupExcessSSBO(t_ssbb ssbbHist, t_ssbb ssbbHistMax);
+
  	void precompHistClip(t_ssbb ssbbHist, t_ssbb ssbbHistMax, t_ssbb ssbbExcess, t_acbb acbbminmax);
+ 	void setupClip(t_ssbb ssbbHist, t_ssbb ssbbHistMax, t_ssbb ssbbExcess, t_acbb acbbminmax);
+
  	void precompLerp(t_ssbb ssbbHist);
+ 	void setupLerp(t_ssbb ssbbHist);
 	//Main Methods//////////
 
 	////Extra Methods
-	void setNumBins(unsigned int numBins) { _numGrayVals = numBins; }
+	void setNumBins(unsigned int numBins) { 
+		_numGrayVals = numBins;
+		_histSize = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z() * _numGrayVals;
+	}
 	void genClahe();
 	//Extra Methods//
 	//CLAHE//////////////
@@ -238,8 +248,8 @@ public:
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-			if(_claheDirty[0] != 1)
-				group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
+		/*	if(_claheDirty[0] != 1)
+				group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);*/
 			
 		}
 	}
@@ -276,6 +286,7 @@ public:
 			std::cout << "Max: " << _atomicCounterArray->at(2) << std::endl;*/
 			
 			stop[0] = 1;
+			
 		}
 	}
 
@@ -306,7 +317,40 @@ public:
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
 
+		//	///////////////DEBUGGING
+		//{
+		//	osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(32);
+		//	osg::GLBufferObject* glBufferObject = _ssbb2->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
+ 
+		//	GLint previousID = 1;
+		//	glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &previousID);
+
+		//	if ((GLuint)previousID != glBufferObject->getGLObjectID())
+		//		glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, glBufferObject->getGLObjectID());
+
+		//	GLubyte* data = (GLubyte*)glBufferObject->_extensions->glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY_ARB);
+ 	//		if (data)
+		//	{
+		//		size_t size = osg::minimum<int>(_ssbb2->getSize(), uintArray->getTotalDataSize());
+		//		memcpy((void*)&(uintArray->front()), data + _ssbb2->getOffset(), size);
+		//		glBufferObject->_extensions->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+		//	}
+
+		//	if ((GLuint)previousID != glBufferObject->getGLObjectID())
+		//		glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
+
+
+		//	for (int i = 0; i < 32; i++) {
+		//		std::cout << uintArray->at(i) << std::endl;
+		//	}
+
+ 	//	}
+		////DEBUGGING/////////////////////////////
+
+
+
 			stop[0] = 1;
+ 
 		}
 	}
 
@@ -345,6 +389,7 @@ public:
 			histMax[0] = value;
 			stop[0] = 1;
 			group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
+
 		}
 	}
 

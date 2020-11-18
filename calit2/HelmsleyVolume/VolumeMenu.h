@@ -10,7 +10,9 @@
 #include <cvrMenu/MenuCheckbox.h>
 #include <cvrMenu/MenuList.h>
 
+#include "CurvedMenu.h"
 #include "UIExtensions.h"
+
 #include <cvrMenu/NewUI/UIPopup.h>
 
 #include "VolumeGroup.h"
@@ -208,6 +210,7 @@ protected:
 
 	cvr::UIList* _mainMaskList;
 	cvr::UIList* _presetUIList;
+	cvr::UIList* _volumeList;
 
 	CallbackSlider* _contrastBottom;
 	CallbackSlider* _contrastTop;

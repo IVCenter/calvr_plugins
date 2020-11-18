@@ -11,6 +11,7 @@ osg::Program* ColorPickerSaturationValue::_svprogram = nullptr;
 osg::Program* ColorPickerHue::_hueprogram = nullptr;
 osg::Program* HistQuad::_histprogram = nullptr;
 osg::Program* Tent::_triangleProg = nullptr;
+osg::Program* CurvedQuad::_curvedQuadProg = nullptr;
 osg::Program* TriangleButton::_triangleButtonProg = nullptr;
 osg::Program* Dial::_dialProg = nullptr;
 osg::Program* Line::_lineProg = nullptr;
@@ -452,12 +453,12 @@ TentWindow::TentWindow(TentWindowOnly* tWOnly) :
 	UIElement()
 {
 	_tWOnly = tWOnly;
-	_bknd = new UIQuadElement(osg::Vec4(.04, .25, .4, 0));
+	_bknd = new UIQuadElement(osg::Vec4(.04, .25, .4, 1.0));
 	_bknd->setTransparent(false);
 	_bknd->setBorderSize(0.01);
 	addChild(_bknd);
 	_bknd->setPercentSize(osg::Vec3(1, 1, 2.0));
-
+	
 	initDials();
 	
 
@@ -1017,6 +1018,245 @@ void HistQuad::setMax(unsigned int histMax) {
 	_bknd->addUniform("histMax", histMax);
 }
 /////////////////////Histo
+
+float getPt(float n1, float n2, float perc)
+{
+	float diff = n2 - n1;
+
+	return n1 + (diff * perc);
+}
+
+
+void CurvedQuad::createGeometry()
+{
+	_transform = new osg::MatrixTransform();
+	_intersect = new osg::Geode();
+
+	_group->addChild(_transform);
+	_transform->addChild(_geode);
+
+	_intersect->setNodeMask(cvr::INTERSECT_MASK);
+	_polyGeom = new osg::Geometry();
+
+	const int res = 100;
+
+	osg::Vec3 curvedCoords[res]; //Top
+	osg::Vec3 curvedCoords2[res];	//Bot
+
+	osg::Vec2 containerCoords[] =
+	{
+		osg::Vec2(0.0,0.0),
+		osg::Vec2(0.0,0.75),
+		osg::Vec2(1.0,0.75),
+		osg::Vec2(1.0,0.0)
+	};
+
+	//scale
+	//osg::Vec2 size(100, 100);
+	//for (int i = 0; i < 4; i++) {
+	//	containerCoords[i].x() *= size.x();
+	//	containerCoords[i].y() *= size.y();
+	//}
+	
+
+
+	
+	int index = 0;
+	for (float i = 0; i < 1; i += 0.01)
+	{
+		// The Green Lines
+		float xa = getPt(containerCoords[0].x(), containerCoords[1].x(), i);
+		float ya = getPt(containerCoords[0].y(), containerCoords[1].y(), i);
+		float xb = getPt(containerCoords[1].x(), containerCoords[2].x(), i);
+		float yb = getPt(containerCoords[1].y(), containerCoords[2].y(), i);
+		float xc = getPt(containerCoords[2].x(), containerCoords[3].x(), i);
+		float yc = getPt(containerCoords[2].y(), containerCoords[3].y(), i);
+
+		// The Blue Line
+		float xm = getPt(xa, xb, i);
+		float ym = getPt(ya, yb, i);
+		float xn = getPt(xb, xc, i);
+		float yn = getPt(yb, yc, i);
+
+		// The Black Dot
+		float x = getPt(xm, xn, i);
+		float y = getPt(ym, yn, i);
+
+		curvedCoords[index] = osg::Vec3(x, 0.0, y);
+		index++;
+	}
+
+	for (int i = 0; i < res; i++) {
+		osg::Vec3 botCoord = curvedCoords[i];
+		botCoord.z() -= 1.0;
+		botCoord.x() *= .95;
+		botCoord.x() += .025;
+		curvedCoords2[i] = botCoord;
+	}
+
+	osg::ref_ptr<osg::Vec3Array> quadCoords = new osg::Vec3Array();
+	quadCoords->push_back(curvedCoords[0]);
+	for (int i = 0; i < res-1; i++) {
+		osg::Vec3 coord1 = curvedCoords2[i];
+		quadCoords->push_back(coord1);
+		osg::Vec3 coord2 = curvedCoords[i+1];
+		quadCoords->push_back(coord2);
+	}
+
+	int numCoords = 0;
+	if (_total != 1) { // segment
+		osg::ref_ptr<osg::Vec3Array> segmentCoords = new osg::Vec3Array();
+		float segmentSize = 1.0 / (float)_total;
+		int size = quadCoords->size();
+
+		int index = 0;
+		while (index < size  && quadCoords->at(index).x() < segmentSize*(_curr+1) ) {
+			if (quadCoords->at(index).x() >= segmentSize* _curr) {
+				segmentCoords->push_back(quadCoords->at(index));
+			}
+			index++;
+		}
+
+		//normalize 
+		for (int i = 0; i < segmentCoords->size(); i++) {
+			segmentCoords->at(i).x() -= segmentSize * _curr ;
+			segmentCoords->at(i).x() *= _total ;
+
+		}
+
+
+
+		numCoords = segmentCoords->size();
+		_polyGeom->setVertexArray(segmentCoords);
+
+
+
+	}
+	else {
+		numCoords = quadCoords->size();
+		_polyGeom->setVertexArray(quadCoords);
+	}
+
+	
+ 
+
+
+	_polyGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLE_STRIP, 0, numCoords));
+
+	_geode->addDrawable(_polyGeom);
+	
+
+	osg::Vec2Array* texcoords = new osg::Vec2Array;
+	texcoords->push_back(osg::Vec2(1, 0));
+	texcoords->push_back(osg::Vec2(1, 1));
+	texcoords->push_back(osg::Vec2(0, 1));
+	texcoords->push_back(osg::Vec2(0, 0));
+
+	_polyGeom->setVertexAttribArray(1, texcoords, osg::Array::BIND_PER_VERTEX);
+	setTransparent(false);
+
+	updateGeometry();
+}
+
+void CurvedQuad::updateGeometry() {
+	osg::Vec4Array* colors = new osg::Vec4Array;
+	colors->push_back(_color);
+	((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_OVERALL);
+	((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_OVERALL);
+
+	osg::Matrix mat = osg::Matrix();
+	mat.makeScale(_actualSize);
+	mat.postMultTranslate(_actualPos);
+	_transform->setMatrix(mat);
+
+
+	if (_program.valid())
+	{
+		_geode->getDrawable(0)->getOrCreateStateSet()->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
+
+	}
+}
+
+void CurvedQuad::setColor(osg::Vec3 color)
+{
+
+	_colorUniform->set(color);
+
+}
+
+void CurvedQuad::setTransparent(bool transparent)
+{
+	if (transparent)
+	{
+ 		osg::LineWidth* linewidth = new osg::LineWidth();
+		linewidth->setWidth(30.0f);
+		_geode->getOrCreateStateSet()->setAttributeAndModes(linewidth, osg::StateAttribute::ON);
+		_geode->getOrCreateStateSet()->setRenderBinDetails(5, "RenderBin");
+		_geode->getOrCreateStateSet()->setMode(GL_CULL_FACE, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+		_geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+
+	}
+	else
+	{
+
+		_geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::OPAQUE_BIN);
+		_geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::OFF);
+	}
+}
+
+ 
+
+
+template <typename T>
+void CurvedQuad::addUniform(std::string uniform, T initialvalue)
+{
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), initialvalue);
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
+void CurvedQuad::addUniform(std::string uniform)
+{
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), 0.0f);
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
+void CurvedQuad::addUniform(osg::Uniform* uniform)
+{
+	_uniforms[uniform->getName()] = uniform;
+	_geode->getOrCreateStateSet()->addUniform(uniform);
+}
+
+osg::Uniform* CurvedQuad::getUniform(std::string uniform)
+{
+	return _uniforms[uniform];
+}
+
+void CurvedQuad::setShaderDefine(std::string name, std::string define, osg::StateAttribute::Values on)
+{
+	_geode->getOrCreateStateSet()->setDefine(name, define, on);
+
+}
+
+osg::Program* CurvedQuad::getOrLoadProgram()
+{
+	/*if (!_triangleProg)
+	{*/
+
+	const std::string vert = HelmsleyVolume::loadShaderFile("transferFunction.vert");
+	const std::string frag = HelmsleyVolume::loadShaderFile("curvedQuad.frag");
+	_curvedQuadProg = new osg::Program;
+	_curvedQuadProg->setName("CurvedQuad");
+
+	_curvedQuadProg->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
+	_curvedQuadProg->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
+
+
+	//}
+
+	return _curvedQuadProg;
+}
+
+//////////////////////Tent
 void Tent::createGeometry()
 {
 	_transform = new osg::MatrixTransform();

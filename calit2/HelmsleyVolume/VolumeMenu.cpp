@@ -212,20 +212,41 @@ void NewVolumeMenu::init()
 	_horizontalflip = new CallbackButton();
 	_horizontalflip->setCallback(this);
 	label = new UIText("Flip Sagittal", 30.0f, osgText::TextBase::CENTER_CENTER);
-	label->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	label->setColor(UI_WHITE_COLOR);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+	UIQuadElement* labelbknd = new UIQuadElement(osg::Vec4(.8, .1, .1, 1.0));
+	labelbknd->setPercentPos(osg::Vec3(.1, 1, -.15));
+	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
+ 	labelbknd->setRounding(0, .2);
+	labelbknd->setTransparent(true);
+	label->addChild(labelbknd);
 	_horizontalflip->addChild(label);
 
 	_verticalflip = new CallbackButton();
 	_verticalflip->setCallback(this);
 	label = new UIText("Flip Axial", 30.0f, osgText::TextBase::CENTER_CENTER);
-	label->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	label->setColor(UI_WHITE_COLOR);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+	labelbknd = new UIQuadElement(osg::Vec4(.8, .1, .1, 1.0));
+	labelbknd->setPercentPos(osg::Vec3(.1, 1, -.15));
+	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
+	labelbknd->setRounding(0, .2);
+	labelbknd->setTransparent(true);
+	label->addChild(labelbknd);
 	_verticalflip->addChild(label);
 
 	_depthflip = new CallbackButton();
 	_depthflip->setCallback(this);
 	label = new UIText("Flip Coronal", 30.0f, osgText::TextBase::CENTER_CENTER);
-	label->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
-	_depthflip->addChild(label);
+	label->setColor(UI_WHITE_COLOR);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+	labelbknd = new UIQuadElement(osg::Vec4(.8, .1, .1, 1.0));
+	labelbknd->setPercentPos(osg::Vec3(.1, 1, -.15));
+	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
+	labelbknd->setRounding(0, .2);
+	labelbknd->setTransparent(true);
+	label->addChild(labelbknd);
+ 	_depthflip->addChild(label);
 
 	fliplist->addChild(_horizontalflip);
 	fliplist->addChild(_verticalflip);
@@ -352,11 +373,41 @@ void NewVolumeMenu::init()
 	
 	
 	UIText* bnw = new UIText("Grayscale", 40.0f, osgText::TextBase::CENTER_CENTER);
-	bnw->setColor(osg::Vec4(0.8, 1, 0.8, 1));
+	bnw->setColor(UI_WHITE_COLOR);
+	bnw->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+	labelbknd = new UIQuadElement(UI_BLUE_COLOR2);
+	labelbknd->setPercentPos(osg::Vec3(.1, 1, -.15));
+	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
+	labelbknd->setRounding(0, .2);
+	labelbknd->setTransparent(true);
+	labelbknd->setBorderColor(UI_BLUE_COLOR2);
+	labelbknd->setBorderSize(.1f);
+	bnw->addChild(labelbknd);
+
 	UIText* rnbw = new UIText("Rainbow", 40.0f, osgText::TextBase::CENTER_CENTER);
-	rnbw->setColor(osg::Vec4(1, 0.8, 0.8, 1));
+	rnbw->setColor(UI_WHITE_COLOR);
+	rnbw->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+	labelbknd = new UIQuadElement(UI_BACKGROUND_COLOR);
+	labelbknd->setPercentPos(osg::Vec3(.1, 1, -.15));
+	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
+	labelbknd->setRounding(0, .2);
+	labelbknd->setTransparent(true);
+	labelbknd->setBorderColor(UI_BLUE_COLOR2);
+	labelbknd->setBorderSize(.1f);
+	rnbw->addChild(labelbknd);
+
 	UIText* cstm = new UIText("Custom", 40.0f, osgText::TextBase::CENTER_CENTER);
-	cstm->setColor(osg::Vec4(1, 0.8, 0.8, 1));
+	cstm->setColor(UI_WHITE_COLOR);
+	cstm->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+	labelbknd = new UIQuadElement(UI_BACKGROUND_COLOR);
+	labelbknd->setPercentPos(osg::Vec3(.1, 1, -.15));
+	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
+	labelbknd->setRounding(0, .2);
+	labelbknd->setTransparent(true);
+	labelbknd->setBorderColor(UI_BLUE_COLOR2);
+	labelbknd->setBorderSize(.1f);
+	cstm->addChild(labelbknd);
+
 
 	
 
@@ -442,6 +493,14 @@ void NewVolumeMenu::init()
 		_toolContainer = new SceneObject("toolmenu", false, true, false, false, false);
 		_so->addChild(_toolContainer);
 		_toolContainer->setShowBounds(false);
+
+
+		/*CurvedQuad* curvedQuad = new CurvedQuad();
+		curvedQuad->setAbsoluteSize(osg::Vec3(100, 100, 100));
+		_toolContainer->addChild(curvedQuad->getGroup());*/
+	/*	UIQuadElement* curvedQuad = new UIQuadElement();
+		curvedQuad->setAbsoluteSize(osg::Vec3(100, 1, 100));
+		_toolContainer->addChild(curvedQuad->getGroup());*/
  	}
 
 #pragma endregion
@@ -463,16 +522,42 @@ void NewVolumeMenu::init()
 	_loadPreset = new CallbackButton();
 	_loadPreset->setCallback(this);
 
-	label = new UIText(" Add Region ", 50.0f, osgText::TextBase::LEFT_TOP);
-	label->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+
+
+	label = new UIText(" Add Region ", 35.0f, osgText::TextBase::CENTER_CENTER);
+	label->setColor(UI_WHITE_COLOR);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+	labelbknd = new UIQuadElement(osg::Vec4(.8, .1, .1, 1.0));
+	labelbknd->setPercentPos(osg::Vec3(.1, 1, -.15));
+	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
+  	labelbknd->setRounding(0, .2);
+	labelbknd->setTransparent(true);
 	_addTriangle->addChild(label);
-	UIText* addPresetLabel = new UIText(" Save Preset ", 50.0f, osgText::TextBase::CENTER_TOP);
-	addPresetLabel->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	label->addChild(labelbknd);
+
+	UIText* addPresetLabel = new UIText(" Save Preset ", 35.0f, osgText::TextBase::CENTER_CENTER);
+	addPresetLabel->setColor(UI_WHITE_COLOR);
+	addPresetLabel->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+	labelbknd = new UIQuadElement(osg::Vec4(.8, .1, .1, 1.0));
+	labelbknd->setPercentPos(osg::Vec3(.1, 1, -.15));
+	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
+	labelbknd->setRounding(0, .2);
+	labelbknd->setTransparent(true);
 	_addPreset->addChild(addPresetLabel);
-	UIText* loadPresetLabel = new UIText(" Load Preset ", 50.0f, osgText::TextBase::RIGHT_TOP);
-	loadPresetLabel->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	addPresetLabel->addChild(labelbknd);
+
+	UIText* loadPresetLabel = new UIText(" Load Preset ", 35.0f, osgText::TextBase::CENTER_CENTER);
+	loadPresetLabel->setColor(UI_WHITE_COLOR);
 	_loadPreset->addChild(loadPresetLabel);
-	
+	loadPresetLabel->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+	labelbknd = new UIQuadElement(osg::Vec4(.8, .1, .1, 1.0));
+	labelbknd->setPercentPos(osg::Vec3(.1, 1, -.15));
+	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
+	labelbknd->setRounding(0, .2);
+	labelbknd->setTransparent(true);
+ 	loadPresetLabel->addChild(labelbknd);
+
+
 	regionHeaderBknd->addChild(regionLabel);
 	regionHeaderBknd->setPercentSize(osg::Vec3(1.62,1.0,0.7));
 	regionHeaderBknd->setBorderSize(.01);
@@ -541,6 +626,7 @@ void NewVolumeMenu::init()
 
 	label->setAbsoluteSize(osg::Vec3(0.0f, 0.0f, 50.0));
 	UIList* regionTopList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+	regionTopList->setPercentPos(osg::Vec3(0.0, 0.0, .25));
 	regionTopList->addChild(_addTriangle);
 	regionTopList->addChild(_addPreset);
 	regionTopList->addChild(_loadPreset);
@@ -685,6 +771,7 @@ void NewVolumeMenu::init()
 		
 		UIQuadElement* bodyColorbutton = new UIQuadElement(osg::Vec4(1, 0, 0, 0));
 		bodyColorbutton->setBorderSize(.05);
+		bodyColorbutton->setBorderColor(UI_BACKGROUND_COLOR);
 		bodyColorbutton->setPercentPos(osg::Vec3(0.6, 0.0, 0.0));
 		bodyColorbutton->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
 		bodyColorbutton->setTransparent(true);
@@ -802,17 +889,18 @@ void NewVolumeMenu::init()
 		volumeSwitchBknd->setBorderSize(.04);
 		_maskMenu->addChild(volumeSwitchBknd);
 
-		UIList* volumeList = new UIList(UIList::LEFT_TO_RIGHT , UIList::CONTINUE);
-		_volume1Button = new CallbackButton();
-		_volume1Button->setCallback(this);
+		_volumeList = new UIList(UIList::LEFT_TO_RIGHT , UIList::CONTINUE);
+		//_volume1Button = new CallbackButton();
+		//_volume1Button->setCallback(this);
 		UIText* v1Text = new UIText("Volume 1", 40.0f, osgText::TextBase::CENTER_CENTER);
-		_volume1Button->addChild(v1Text);
-		_volume2Button = new CallbackButton();
-		_volume2Button->setCallback(this);
+		v1Text->setColor(UI_ACTIVE_COLOR);
+		//_volume1Button->addChild(v1Text);
+		//_volume2Button = new CallbackButton();
+		//_volume2Button->setCallback(this);
 		UIText* v2Text = new UIText("Volume 2", 40.0f, osgText::TextBase::CENTER_CENTER);
-		_volume2Button->addChild(v2Text);
-		volumeList->addChild(_volume1Button);
-		volumeList->addChild(_volume2Button);
+		//_volume2Button->addChild(v2Text);
+		_volumeList->addChild(v1Text);
+		_volumeList->addChild(v2Text);
 
 
 		UIList* volumeInteraction = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
@@ -850,7 +938,7 @@ void NewVolumeMenu::init()
 
 		UIList* lists = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
 		lists->addChild(volumeInteraction);
-		lists->addChild(volumeList);
+		lists->addChild(_volumeList);
 		volumeSwitchBknd->addChild(lists);
 		
 		
@@ -1111,6 +1199,8 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	
 	else if (item == _swapButton) {
 		switchVolumes();
+		
+
 	}
 	else if (item == _linkButton) {
 		linkVolumes();
@@ -1153,7 +1243,15 @@ void NewVolumeMenu::switchVolumes(int index) {
 	_volume2 = _volume;
 	setNewVolume(_volume1, index);
 
-	
+
+	if (HelmsleyVolume::instance()->getVolumeIndex() == 0) {
+		((UIText*)_volumeList->getChild(0))->setColor(osg::Vec4(UI_ACTIVE_COLOR));
+		((UIText*)_volumeList->getChild(1))->setColor(osg::Vec4(UI_INACTIVE_COLOR));
+	}
+	else {
+		((UIText*)_volumeList->getChild(1))->setColor(osg::Vec4(UI_ACTIVE_COLOR));
+		((UIText*)_volumeList->getChild(0))->setColor(osg::Vec4(UI_INACTIVE_COLOR));
+	}
 	
 }
 
@@ -1297,12 +1395,6 @@ void NewVolumeMenu::saveValues(VolumeGroup* vg) {
 		}
 		++it;
 	}
-	//std::vector<CuttingPlane*> cPs = HelmsleyVolume::instance()->getCuttingPlanes();
-	//if (!cPs.empty()) {
-	//	vg->values.cpPos = cPs[0]->getPosition();
-	//	vg->values.cpRot = cPs[0]->getRotation();
-	//	vg->values.cpToggle = true;
-	//}
 
 	///////////////////Masks////////////////////////
 	std::vector<VisibilityToggle*> organToggles = {_organs, _colon, _kidney, _bladder,
@@ -1312,8 +1404,6 @@ void NewVolumeMenu::saveValues(VolumeGroup* vg) {
 	for (int i = 0; i < organToggles.size(); i++) {
 		organToggles[i]->isOn() ? vg->values.masks.push_back(true) : vg->values.masks.push_back(false);
 	}
-
-
 
 	vg->values.saved = true;
 }
@@ -1395,19 +1485,21 @@ void NewVolumeMenu::fillFromVolume(VolumeGroup* vg) {
 	}
 		
 
-	//cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
-
-
-
 }
 
 void NewVolumeMenu::useTransferFunction(int tfID) {
 	if (tfID == 0)
 	{
 		_transferFunction = "vec3(ra.r);";
-		((UIText*)_blacknwhite->getChild(0))->setColor(UI_ACTIVE_COLOR);
+		/*((UIText*)_blacknwhite->getChild(0))->setColor(UI_ACTIVE_COLOR);
 		((UIText*)_rainbow->getChild(0))->setColor(UI_INACTIVE_COLOR);
-		((UIText*)_custom->getChild(0))->setColor(UI_INACTIVE_COLOR);
+		((UIText*)_custom->getChild(0))->setColor(UI_INACTIVE_COLOR);*/
+		((UIQuadElement*)_blacknwhite->getChild(0)->getChild(0))->setColor(UI_BLUE_COLOR2);
+		((UIQuadElement*)_rainbow->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
+		((UIQuadElement*)_custom->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
+ 
+
+
 		_colSliderList[0]->getGeode()->setNodeMask(0);
 		_colSliderList[1]->getGeode()->setNodeMask(0);
 		_tentMenu->getRootElement()->getGroup()->removeChild(_cp->getGroup());
@@ -1416,9 +1508,12 @@ void NewVolumeMenu::useTransferFunction(int tfID) {
 	else if (tfID == 1)
 	{
 		_transferFunction = "hsv2rgb(vec3(ra.r * 0.8, 1, 1));";
-		((UIText*)_blacknwhite->getChild(0))->setColor(UI_INACTIVE_COLOR);
+	/*	((UIText*)_blacknwhite->getChild(0))->setColor(UI_INACTIVE_COLOR);
 		((UIText*)_rainbow->getChild(0))->setColor(UI_ACTIVE_COLOR);
-		((UIText*)_custom->getChild(0))->setColor(UI_INACTIVE_COLOR);
+		((UIText*)_custom->getChild(0))->setColor(UI_INACTIVE_COLOR);*/
+		((UIQuadElement*)_blacknwhite->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
+		((UIQuadElement*)_rainbow->getChild(0)->getChild(0))->setColor(UI_BLUE_COLOR2);
+		((UIQuadElement*)_custom->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
 		_colSliderList[0]->getGeode()->setNodeMask(0);
 		_colSliderList[1]->getGeode()->setNodeMask(0);
 		_tentMenu->getRootElement()->getGroup()->removeChild(_cp->getGroup());
@@ -1427,9 +1522,12 @@ void NewVolumeMenu::useTransferFunction(int tfID) {
 	else if (tfID == 2)
 	{
 		_transferFunction = "custom(vec3(ra.r));";;
-		((UIText*)_blacknwhite->getChild(0))->setColor(UI_INACTIVE_COLOR);
+		/*((UIText*)_blacknwhite->getChild(0))->setColor(UI_INACTIVE_COLOR);
 		((UIText*)_rainbow->getChild(0))->setColor(UI_INACTIVE_COLOR);
-		((UIText*)_custom->getChild(0))->setColor(UI_ACTIVE_COLOR);
+		((UIText*)_custom->getChild(0))->setColor(UI_ACTIVE_COLOR);*/
+		((UIQuadElement*)_blacknwhite->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
+		((UIQuadElement*)_rainbow->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
+		((UIQuadElement*)_custom->getChild(0)->getChild(0))->setColor(UI_BLUE_COLOR2);
 		_colSliderList[0]->getGeode()->setNodeMask(0xffffffff);
 		_colSliderList[1]->getGeode()->setNodeMask(0xffffffff);
 		_tentMenu->addChild(_cp);
@@ -1553,8 +1651,7 @@ void NewVolumeMenu::usePreset(std::string filename) {
 
 	///////////////Masks////////////////////
 	if (_volume->hasMask()) {
-	/*	_maskMenu->addChild(_maskBknd);
-		_maskBknd->setActive(true);*/
+
 
 		bool val = (bool)(config["mask"][0].as<int>());
 
@@ -1591,11 +1688,7 @@ void NewVolumeMenu::usePreset(std::string filename) {
 
 		_volume->setDirtyAll();
 	}
-	/*else {
-		_maskMenu->getRootElement()->getGroup()->removeChild(_maskBknd->getGroup());
-		_maskBknd->_parent = nullptr;
-		_maskBknd->setActive(false);
-	}*/
+	
 
 	//////////Cutting Plane/////////////
 
@@ -1772,7 +1865,9 @@ void NewVolumeMenu::resetValues() {
 	}
 
 
-
+	/////Etc/////
+	((UIText*)_volumeList->getChild(0))->setColor(UI_ACTIVE_COLOR);
+	((UIText*)_volumeList->getChild(1))->setColor(UI_INACTIVE_COLOR);
 
 }
 
@@ -1971,8 +2066,9 @@ void NewVolumeMenu::toggleClaheTools(bool on) {
 		
 		_toolContainer->addChild(_claheMenu->getRoot());
 	}
-	else {
-		
+	else {		
+ 		_toolContainer->removeChild(_claheMenu->getRoot());
+		_claheMenu->getRootElement()->_parent = nullptr;
 	}
 }
 
@@ -1991,13 +2087,25 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	{
 		_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Position", osg::Vec3(-150, 500, 600)));
 	}
-	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Scale", osg::Vec3(300, 1, 100)));
+	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Scale", osg::Vec3(600, 1, 100)));
+
 
 	UIList* list = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
 	list->setAbsoluteSpacing(5);
-	_menu->addChild(list);
-
+	//_menu->addChild(list);	UNCOMMENT!!!
 	std::string dir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ImageDir");
+	
+	CurvedMenu* curvedMenu = new CurvedMenu(8);
+	curvedMenu->setImage(0, dir + "slice.png");
+	curvedMenu->setImage(1, dir + "ruler.png");
+	curvedMenu->setImage(2, dir + "browser.png");
+	curvedMenu->setImage(3, dir + "line.png");
+	curvedMenu->setImage(4, dir + "slice.png");
+	curvedMenu->setImage(5, dir + "slice.png");
+	curvedMenu->setImage(6, dir + "slice.png");
+	_menu->addChild(curvedMenu);
+	
+	
 
 	_cuttingPlane = new ToolToggle(dir + "slice.png");
 	_cuttingPlane->setColor(UI_BLACK_COLOR);

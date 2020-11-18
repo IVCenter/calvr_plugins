@@ -5,12 +5,14 @@
 #define UI_ACTIVE_COLOR osg::Vec4(.243, .561, 1, 1)
 #define UI_INACTIVE_COLOR osg::Vec4(.243, .561, 1, .4)
 #define UI_BLUE_COLOR osg::Vec3(0.8, 0.9, 1.0)
+#define UI_BLUE_COLOR2 osg::Vec4(.04, .25, .4, 1.0)
 #define UI_RED_COLOR osg::Vec3(1, 0.8, 0.807)
 #define UI_YELLOW_COLOR osg::Vec3(1, 0.964, 0.8)
 #define UI_GREEN_COLOR osg::Vec3(0.8, 1, 0.847)
 #define UI_PURPLE_COLOR osg::Vec3(0.847, 0.8, 1)
 #define UI_PINK_COLOR osg::Vec3(1, 0.8, 0.976)
 #define UI_WHITE_COLOR osg::Vec4(1, 1, 1, 1)
+#define UI_INACTIVE_WHITE_COLOR osg::Vec4(1, 1, 1, .4)
 #define UI_BLACK_COLOR osg::Vec4(0, 0, 0, 1)
 
 #include <cvrMenu/NewUI/UIButton.h>
@@ -399,8 +401,7 @@ protected:
 
 	static osg::Program* getOrLoadProgram();
 	static osg::Program* _triangleProg;
-
-	osg::Vec4 _color;
+ 	osg::Vec4 _color;
 	
 
 	float leftPointX;
@@ -416,8 +417,84 @@ protected:
 	std::map<std::string, osg::Uniform*> _uniforms;
 
 };
-///////////////////////////////////////centerline
+//curved quad//////////////
+class CurvedQuad : public cvr::UIElement, public UICallbackCaller
+{
+public:
+	CurvedQuad(int curr = 1, int total = 1, osg::Vec4 color = osg::Vec4(UI_BLUE_COLOR, 1))
+		: UIElement()
+	{
+		 
+		_color = color;
+		_geode = new osg::Geode();
 
+		_curr = curr;
+		_total = total;
+		
+		// add the stateset tor the drawable
+		
+
+		createGeometry();
+	
+   		_colorUniform = new osg::Uniform("Color", color);
+ 		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_colorUniform);
+ 
+		this->setTransparent(true);
+		
+		
+		setProgram(getOrLoadProgram());
+ 	}
+
+ 	
+	virtual void createGeometry();
+	virtual void updateGeometry();
+
+
+
+
+	virtual void setColor(osg::Vec3 color);
+
+	virtual void setTransparent(bool transparent);
+
+ 
+
+
+	virtual void setProgram(osg::Program* p) { _program = p; _dirty = true; }
+	virtual osg::Program* getProgram() { return _program; }
+	virtual osg::Geode* getGeode() { return _geode; }
+
+	template <typename T>
+	void addUniform(std::string uniform, T initialvalue);
+	void addUniform(std::string uniform);
+	virtual void addUniform(osg::Uniform* uniform);
+	virtual osg::Uniform* getUniform(std::string uniform);
+	virtual void setShaderDefine(std::string name, std::string definition, osg::StateAttribute::Values on);
+
+   	osg::Uniform* _colorUniform;
+ 
+	static osg::Program* _curvedQuadProg;
+	
+
+
+protected:
+	osg::ref_ptr<osg::MatrixTransform> _transform;
+	osg::ref_ptr<osg::Geode> _geode;
+	osg::Geometry* _polyGeom;
+	osg::Vec3* _coords;
+
+	static osg::Program* getOrLoadProgram();
+	static osg::Program* _triangleProg;
+
+	osg::Vec4 _color;
+	
+	int _curr = 1;	//For Segmenting
+	int _total = 1;
+	
+	osg::ref_ptr<osg::Program> _program;
+	std::map<std::string, osg::Uniform*> _uniforms;
+
+};
+ /////////////curved quad
 class Line : public cvr::UIElement
 {
 public:
@@ -497,10 +574,6 @@ public:
 		_geode = new osg::Geode();
 		createGeometry();
 		_jump = false;
-		/*_absoluteRounding = new osg::Uniform("absoluteRounding", 0.0f);
-		_percentRounding = new osg::Uniform("percentRounding", 0.0f);
-		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_absoluteRounding);
-		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_percentRounding);*/
 
 
 		setProgram(getOrLoadProgram());
