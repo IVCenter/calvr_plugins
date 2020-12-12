@@ -85,9 +85,8 @@ void ScreenshotTool::init()
 	_display->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS, 0, 4));
 
 
-	//_display->tex
-	_display->getOrCreateStateSet()->setTextureAttributeAndModes(0, _texture, osg::StateAttribute::ON);
-	//_display->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+ 	_display->getOrCreateStateSet()->setTextureAttributeAndModes(0, _texture, osg::StateAttribute::ON);
+	_display->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
 
 	osg::Geode* displaygeode = new osg::Geode();
 	displaygeode->addChild(_display);

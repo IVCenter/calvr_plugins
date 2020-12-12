@@ -813,7 +813,7 @@ void HelmsleyVolume::loadVolumeOnly(bool isPreset, std::string path, std::string
 
 	//NewVolumeMenu* newMenu = new NewVolumeMenu(so, g);// set new g on newmenu
 	_worldMenus[0]->clearVolumes();
-	HelmsleyVolume::instance()->setVolumeIndex(0);
+	HelmsleyVolume::instance()->setVolumeIndex(0, false);
 	_worldMenus[0]->setNewVolume(g);
 	_worldMenus[0]->toggleSwapOpacity();
 	/*if(!isPreset)

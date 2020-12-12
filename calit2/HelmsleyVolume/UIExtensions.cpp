@@ -1014,8 +1014,7 @@ void HistQuad::setBB(osg::ref_ptr<osg::ShaderStorageBufferBinding> bb) {
 }
 
 void HistQuad::setMax(unsigned int histMax) {
-	std::cout << histMax << std::endl;
-	_bknd->addUniform("histMax", histMax);
+ 	_bknd->addUniform("histMax", histMax);
 }
 /////////////////////Histo
 
@@ -1034,9 +1033,12 @@ void CurvedQuad::createGeometry()
 
 	_group->addChild(_transform);
 	_transform->addChild(_geode);
+	_transform->addChild(_intersect);
 
 	_intersect->setNodeMask(cvr::INTERSECT_MASK);
 	_polyGeom = new osg::Geometry();
+
+
 
 	const int res = 100;
 
@@ -1044,7 +1046,7 @@ void CurvedQuad::createGeometry()
 	osg::Vec3 curvedCoords2[res];	//Bot
 
 	osg::Vec2 containerCoords[] =
-	{
+	{ 
 		osg::Vec2(0.0,0.0),
 		osg::Vec2(0.0,0.75),
 		osg::Vec2(1.0,0.75),
@@ -1064,7 +1066,7 @@ void CurvedQuad::createGeometry()
 	int index = 0;
 	for (float i = 0; i < 1; i += 0.01)
 	{
-		// The Green Lines
+		// 1st
 		float xa = getPt(containerCoords[0].x(), containerCoords[1].x(), i);
 		float ya = getPt(containerCoords[0].y(), containerCoords[1].y(), i);
 		float xb = getPt(containerCoords[1].x(), containerCoords[2].x(), i);
@@ -1072,13 +1074,13 @@ void CurvedQuad::createGeometry()
 		float xc = getPt(containerCoords[2].x(), containerCoords[3].x(), i);
 		float yc = getPt(containerCoords[2].y(), containerCoords[3].y(), i);
 
-		// The Blue Line
+		// 2nd
 		float xm = getPt(xa, xb, i);
 		float ym = getPt(ya, yb, i);
 		float xn = getPt(xb, xc, i);
 		float yn = getPt(yb, yc, i);
 
-		// The Black Dot
+		// 3rd
 		float x = getPt(xm, xn, i);
 		float y = getPt(ym, yn, i);
 
@@ -1144,7 +1146,7 @@ void CurvedQuad::createGeometry()
 	_polyGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLE_STRIP, 0, numCoords));
 
 	_geode->addDrawable(_polyGeom);
-	
+	_intersect->addDrawable(_polyGeom);
 
 	osg::Vec2Array* texcoords = new osg::Vec2Array;
 	texcoords->push_back(osg::Vec2(1, 0));
@@ -1156,6 +1158,11 @@ void CurvedQuad::createGeometry()
 	setTransparent(false);
 
 	updateGeometry();
+
+
+	
+	
+	
 }
 
 void CurvedQuad::updateGeometry() {
@@ -1177,9 +1184,9 @@ void CurvedQuad::updateGeometry() {
 	}
 }
 
-void CurvedQuad::setColor(osg::Vec3 color)
+void CurvedQuad::setColor(osg::Vec4 color)
 {
-
+	
 	_colorUniform->set(color);
 
 }
@@ -1204,7 +1211,20 @@ void CurvedQuad::setTransparent(bool transparent)
 	}
 }
 
- 
+
+void CurvedQuad::processHover(bool enter)
+{
+	if (!isOn()) {
+		if (enter)
+		{
+			_colorUniform->set(osg::Vec4(UI_RED_COLOR, 1.0));
+		}
+		else
+		{
+			_colorUniform->set(UI_BACKGROUND_COLOR);
+		}
+	}
+}
 
 
 template <typename T>
@@ -2329,7 +2349,7 @@ Selection::Selection(std::string name, bool hasMask) :
 	_bknd->setBorderSize(0.01);
 	_uiText = new UIText(copy, 35.0f, osgText::TextBase::LEFT_CENTER);
 	_uiText->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
-	_uiText->setPercentPos(osg::Vec3(0.0, 0.0, -1.0));
+	_uiText->setPercentPos(osg::Vec3(0.0, -1.0, -1.0));
 	_uiText->setPercentSize(osg::Vec3(1.0, 0.0, 0.08));
 
 	if (hasMask)
@@ -2397,6 +2417,7 @@ void Selection::lowerTextSize() {
 }
 
 void Selection::setImage(UITexture* uiTexture) {
+
 	_uiTexture = uiTexture;
 	_bknd->addChild(_uiTexture);
 }

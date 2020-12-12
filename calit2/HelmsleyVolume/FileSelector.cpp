@@ -39,8 +39,7 @@ void FileSelector::init()
 	addVolumeMenu = new cvr::PopupMenu("Volumes", "", false, true);
 	osg::Vec3 menupos = cvr::ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.FileMenu.Position", osg::Vec3(-600, 500, 1100));
 	addVolumeMenu->setPosition(menupos);
-	//addVolumeMenu->setVisible(true);
-	//addVolumeMenu->setMovable(false);
+ 
 
 	addVol = new cvr::MenuButton("New Volume", true, "checkbox=TRUE.rgb");
 	addVolumeMenu->addMenuItem(addVol);
@@ -48,12 +47,7 @@ void FileSelector::init()
 
 	volumeFileSelector = new cvr::PopupMenu("Choose File", "", false, true);
 	volumeFileSelector->setPosition(menupos + osg::Vec3(0,0,-100));
-	//volumeFileSelector->getRootSubMenu()->setTextScale(0.5);
-	_currentPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.BaseFolder", "C:/", false);
-	
-
-
-
+ 	_currentPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.BaseFolder", "C:/", false);
 
 
 	////////////New FileSelect Implement.///////////
@@ -68,6 +62,9 @@ void FileSelector::init()
 
 	_fsPopup->getRootElement()->setAbsoluteSize(osg::Vec3(2400, 1, 1500));
 	cvr::UIQuadElement* fsBknd = new cvr::UIQuadElement(UI_BACKGROUND_COLOR);
+	fsBknd->setBorderSize(.01);
+	fsBknd->setTransparent(true);
+	fsBknd->setRounding(0, .05);
 	_rightArrow = new TriangleButton(osg::Vec4(0.0, 0.0, 0.0, 1.0));
 	_rightArrow->setCallback(this);
 	fsBknd->addChild(_rightArrow);
@@ -91,10 +88,12 @@ void FileSelector::init()
 	cvr::UIText* legendText = new cvr::UIText("Has Mask:", 45.f, osgText::TextBase::LEFT_CENTER);
 	cvr::UIQuadElement* legendMaskBox = new cvr::UIQuadElement(UI_BLACK_COLOR);
 	legendText->addChild(legendMaskBox);
+	legendText->setColor(UI_BLACK_COLOR);
 	legendMaskBox->setPercentPos(osg::Vec3(1.0, 0.0, 0.0));
 	legendMaskBox->setPercentSize(osg::Vec3(.25, 1.0, 0.8));
-	fsBknd->addChild(legendText);
-	legendText->setPercentPos(osg::Vec3(0.05, -1.0, -.96));
+	//fsBknd->addChild(legendText);
+	
+	legendText->setPercentPos(osg::Vec3(0.05, -1.0, -.94));
 	legendText->setPercentSize(osg::Vec3(0.1, 1.0, .04));
 
 	_fsPopup->addChild(fsBknd);
@@ -114,6 +113,7 @@ void FileSelector::init()
 	_contentBknd->setPercentSize(osg::Vec3(.8, 1, .8));
 	_contentBknd->setPercentPos(osg::Vec3(.1, -1, -.15));
 	_contentBknd->setBorderSize(.01);
+	_contentBknd->addChild(legendText);
 	_fsPopup->addChild(_contentBknd);
 
 
@@ -123,7 +123,7 @@ void FileSelector::init()
 	_fsPopup->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 	_so->dirtyBounds();
 
-	checkIfPatient(_currentPath, -1);	//Fills Patient directories
+	checkIfPatient(_currentPath, 0);	//Fills Patient directories
 	_currMap = &_patientDirectories;
 	
 	
@@ -160,7 +160,18 @@ void FileSelector::init()
 		}
 
 	}
-	
+	while (selectCount < SLOTCOUNT) {
+		Selection* selec;
+		_selections.push_back(selec);
+		_selections[selectCount] = new Selection("");
+		_selections[selectCount]->setId("selection");
+		_selections[selectCount]->setButtonCallback(this);
+
+		selectCount < SLOTCOUNT / 2 ? _topList->addChild(_selections[selectCount]) : _botList->addChild(_selections[selectCount]);
+		selectCount++;
+	}
+
+
 
 	//////////////////////////////Select View
 	_selectBknd = new cvr::UIQuadElement();
@@ -240,8 +251,10 @@ void FileSelector::init()
 	_selectBknd->addChild(_infoList);
 	_selectBknd->addChild(loadButton);
 	_selectBknd->addChild(loadSecondBknd);
+
 	
 	_selectImage->addChild(_selectTexture);
+	_selectTexture->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
 	loadButton->addChild(loadText);
 	loadSecondBknd->addChild(loadSecondText);
 
@@ -352,12 +365,19 @@ bool FileSelector::checkSelectionCallbacks(UICallbackCaller* item) {
 			found = true;
 			if (_currMap == &_patientDirectories) {
 				std::string copy = _selections[i]->getName();
-				copy.erase(copy.begin());
+				if (copy == "")
+					break;
+
+				copy.erase(copy.begin());	//erase m/n
 				_patientInfo.name = copy;
 				loadPatient(_selections[i]->getName());
-				
-			}
+
+ 			}
 			else if (_currMap == &_seriesList) {
+				std::string copy = _selections[i]->getName();
+				if (copy == "")
+					break;
+
 				_fsPopup->getRootElement()->getGroup()->removeChild(_contentBknd->getGroup());
 				_contentBknd->_parent = nullptr;
 				_contentBknd->setActive(false);
@@ -366,6 +386,7 @@ bool FileSelector::checkSelectionCallbacks(UICallbackCaller* item) {
 				_fsPopup->addChild(_selectBknd);
 				_selectBknd->setActive(true);
 				_selectTexture->setTexture(_selections[i]->getImage()->getTexture());
+
 				_selectTexture->_geode->getDrawable(0)->getOrCreateStateSet()->setDefine("GRAYSCALE", true);
 				_selectTexture->setDirty(true);
 
@@ -375,7 +396,10 @@ bool FileSelector::checkSelectionCallbacks(UICallbackCaller* item) {
 			
 				getPatientInfo(_currentPath);
 
-				std::string copy = _selections[i]->getName();
+			
+
+
+
 				copy.erase(copy.begin());
 				_patientInfo.series = copy;
 
@@ -494,6 +518,7 @@ void FileSelector::showDicomThumbnail() {
 		osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D(img);
 		texture->setInternalFormat(GL_RGBA8);
 		cvr::UITexture* imgTexture = new cvr::UITexture(texture);
+		imgTexture->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
 		imgTexture->_geode->getDrawable(0)->getOrCreateStateSet()->setDefine("GRAYSCALE", true);
 
 		_selections[i]->setImage(imgTexture);
@@ -572,7 +597,7 @@ void FileSelector::updateSelections(SelectChoice choice) {
 	auto it = _currMap->begin();
 	std::advance(it, _selectIndex);
 
-	while (slotsLeft > 0) {//crash if irbs less than slotcount 
+	while (slotsLeft > 0) {
 
 		Selection* selec;
 		topBotIndex < SLOTCOUNT / 2 ? selec = (Selection*)_topList->getChild(topBotIndex)
@@ -735,35 +760,58 @@ void FileSelector::updateFileSelection()
 	closedir(dir);
 }
 
-int FileSelector::checkIfPatient(std::string fn, int indexFromDicom) {
+std::pair<int, bool> FileSelector::checkIfPatient(std::string fn, int indexFromDicom) {
+	std::pair<int, bool> toReturn(indexFromDicom, false);
 	DIR* dir = opendir(fn.c_str());
 	struct dirent* entry = readdir(dir);
 	while (entry != NULL) {
-		if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+		if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0 && strcmp(entry->d_name, "mask") != 0) {
 			std::string newFn = fn + "/" + entry->d_name;
-			int newIndex = checkIfPatient(newFn, indexFromDicom);
-			if (newIndex > -1) {
-				if (newIndex == 1) {
-					char mask;
-					std::string key;
-					checkIfMask(fn + "/" + entry->d_name) ? mask = 'm' : mask = 'n';	//m = mask/n= no mask
-					key = mask + std::string(entry->d_name);
-					_patientDirectories[key] = fn+"/"+entry->d_name;
+			toReturn.first++;
+			toReturn = checkIfPatient(newFn, indexFromDicom);
+			if (toReturn.second == true) {
+
+ 				std::string seriesPath = fn + "/" + entry->d_name;
+				std::size_t pos = fn.find_last_of("\\");
+				std::size_t pos2 = fn.find_last_of("/");
+
+				if (pos != std::string::npos && pos2 != std::string::npos) {
+					pos = std::max(pos, pos2);
 				}
 				else {
-					closedir(dir);
-					return newIndex + 1;
+					pos = min(pos, pos2);
 				}
+				
+				
+
+				std::string patientName = fn.substr(pos+1);
+				
+
+ 				std::string patientDir = fn.substr(0, pos+1);
+ 				char mask;
+				std::string key;
+				checkIfMask(patientDir) ? mask = 'm' : mask = 'n';	//m = mask/n= no mask
+				key = mask + patientName;
+
+				_patientDirectories[key] = fn;
+				toReturn.second = false;
+				
+
 			}
+			
 		}
 		else if (entry->d_type == DT_REG && strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0) {
 			closedir(dir);
-			return indexFromDicom + 1;
+			toReturn.second = true;
+
+
+			//toReturn.second = true;
+			return toReturn;
 		}
 		entry = readdir(dir);
 	}
 	closedir(dir);
-	return indexFromDicom + 0;
+	return toReturn;
 
 }
 

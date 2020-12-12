@@ -80,11 +80,11 @@ public:
 	ToolToggle* getScreenShotTool() { return  _screenshotTool; }
 
 	virtual void uiCallback(UICallbackCaller* item);
-
+	std::list<CurvedQuad*> getCurvedMenuItems();
 protected:
 
 	cvr::UIPopup* _menu = nullptr;
-
+	CurvedMenu* _curvedMenu = nullptr;
 	//CallbackRadial* _tool;
 
 	ToolToggle* _cuttingPlane;
@@ -218,6 +218,7 @@ protected:
 
 	CallbackSlider* _numBinsSlider;
 	CallbackButton* _genClaheButton;
+	CallbackButton* _useClaheButton;
 
 	CallbackSlider* _trueContrast;
 	CallbackSlider* _contrastCenter;

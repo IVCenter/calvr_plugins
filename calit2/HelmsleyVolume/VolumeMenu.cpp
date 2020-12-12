@@ -471,7 +471,10 @@ void NewVolumeMenu::init()
 
 
 	UIQuadElement* claheBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
-
+	claheBknd->setRounding(0, .2);
+	claheBknd->setTransparent(true);
+	claheBknd->setBorderColor(UI_BLACK_COLOR);
+	claheBknd->setBorderSize(.02);
 
 	_claheMenu->addChild(claheBknd);
 	
@@ -493,14 +496,6 @@ void NewVolumeMenu::init()
 		_toolContainer = new SceneObject("toolmenu", false, true, false, false, false);
 		_so->addChild(_toolContainer);
 		_toolContainer->setShowBounds(false);
-
-
-		/*CurvedQuad* curvedQuad = new CurvedQuad();
-		curvedQuad->setAbsoluteSize(osg::Vec3(100, 100, 100));
-		_toolContainer->addChild(curvedQuad->getGroup());*/
-	/*	UIQuadElement* curvedQuad = new UIQuadElement();
-		curvedQuad->setAbsoluteSize(osg::Vec3(100, 1, 100));
-		_toolContainer->addChild(curvedQuad->getGroup());*/
  	}
 
 #pragma endregion
@@ -709,14 +704,17 @@ void NewVolumeMenu::init()
 	_tentMenu->getRootElement()->setAbsoluteSize(osg::Vec3(1500, 1, 600));
 
 
-	label = new UIText("CLAHE Options", 40.0f, osgText::TextBase::CENTER_TOP);
+	label = new UIText("CLAHE Options", 32.0f, osgText::TextBase::CENTER_TOP);
 	UIList* claheUI = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
+ 	label->setPercentPos(osg::Vec3(0.0, 0.0, -.5));
 	claheUI->addChild(label);
 
 	UIList* numBinTexts = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
-	label = new UIText("Number of Bins: ", 32.0f, osgText::TextBase::LEFT_CENTER);
+	label = new UIText("Number of Bins: ", 24.0f, osgText::TextBase::LEFT_CENTER);
+	label->setPercentPos(osg::Vec3(0.05, 0.0, 0.0));
 	numBinTexts->addChild(label);
-	_numBinsLabel = new UIText("255", 32.0f, osgText::TextBase::RIGHT_CENTER);
+	_numBinsLabel = new UIText("255", 24.0f, osgText::TextBase::RIGHT_CENTER);
+	_numBinsLabel->setPercentPos(osg::Vec3(-0.05, 0.0, 0.0));
 	numBinTexts->addChild(_numBinsLabel);
 	claheUI->addChild(numBinTexts);
 
@@ -724,23 +722,47 @@ void NewVolumeMenu::init()
 	_numBinsSlider->setCallback(this);
 	_numBinsSlider->setPercent(.5f);
 	_numBinsSlider->setPercentPos(osg::Vec3(0.025, 0, 0.05));
-	_numBinsSlider->setPercentSize(osg::Vec3(0.95, 1, 0.9));
+	_numBinsSlider->setPercentSize(osg::Vec3(0.95, 1, 0.5));
 	_numBinsSlider->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
 	_numBinsSlider->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
 	_numBinsSlider->handle->setPercentSize(osg::Vec3(0, 1, 1));
 	claheUI->addChild(_numBinsSlider);
 
+
+	UIList* buttonList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+
 	_genClaheButton = new CallbackButton();
 	_genClaheButton->setCallback(this);
-	_genClaheButton->setPercentSize(osg::Vec3(.33, 1.0, .5));
-	_genClaheButton->setPercentPos(osg::Vec3(.33, 0.0, 0.0));
+	_genClaheButton->setPercentSize(osg::Vec3(.5, 1.0, .7));
+	//_genClaheButton->setPercentPos(osg::Vec3(.33, 0.0, 0.0));
 	UIQuadElement* buttonBknd = new UIQuadElement(osg::Vec4(1.0,0.0,0.0,1.0));
-	label = new UIText("Generate CLAHE", 32.0f, osgText::TextBase::CENTER_CENTER);
+	label = new UIText("Generate CLAHE", 24.0f, osgText::TextBase::CENTER_CENTER);
 	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
 
 	_genClaheButton->addChild(buttonBknd);
 	_genClaheButton->addChild(label);
 	claheUI->addChild(_genClaheButton);
+
+	_useClaheButton = new CallbackButton();
+	_useClaheButton->setCallback(this);
+	_useClaheButton->setPercentSize(osg::Vec3(.5, 1.0, .7));
+	//_useClaheButton->setPercentPos(osg::Vec3(.33, 0.0, 0.0));
+	buttonBknd = new UIQuadElement(UI_INACTIVE_RED_COLOR);
+	/*buttonBknd->setBorderColor(osg::Vec4(1.0,0.0,0.0,1.0));
+	buttonBknd->setBorderSize(.05);*/
+	label = new UIText("Use CLAHE", 24.0f, osgText::TextBase::CENTER_CENTER);
+	label->setColor(UI_INACTIVE_WHITE_COLOR);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+
+	_useClaheButton->addChild(buttonBknd);
+	_useClaheButton->addChild(label);
+
+	buttonList->setPercentPos(osg::Vec3(.125, 0.0, 0.5));
+	buttonList->addChild(_genClaheButton);
+	buttonList->addChild(_useClaheButton);
+	claheUI->addChild(buttonList);
+
+	
 
 	_claheMenu->addChild(claheUI);
 	_claheMenu->setPosition(osg::Vec3(-150, 150, 800));
@@ -990,7 +1012,7 @@ void NewVolumeMenu::toggleSwapOpacity() {
 	if (_swapOpacity) {
 		((UIText*)_swapButton->getChild(0))->setColor(osg::Vec4(1.0, 1.0, 1.0, 1.0));
 		((UIQuadElement*)_swapButton->getChild(1))->setColor(osg::Vec4(0.8, 0.1, 0.1, 1.0));
-	}
+ 	}
 	else {
 		((UIText*)_swapButton->getChild(0))->setColor(osg::Vec4(1.0, 1.0, 1.0, 0.4));
 		((UIQuadElement*)_swapButton->getChild(1))->setColor(osg::Vec4(0.8, 0.1, 0.1, 0.4));
@@ -1225,6 +1247,19 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 
 	else if (item == _genClaheButton) {
 		_volume->genClahe();
+		((UIQuadElement*)_useClaheButton->getChild(0))->setColor(UI_RED_ACTIVE_COLOR);
+		((UIText*)_useClaheButton->getChild(1))->setColor(UI_WHITE_COLOR);
+		((UIText*)_useClaheButton->getChild(1))->setText("Use CLAHE");
+		 
+	}
+	else if (item == _useClaheButton) {
+		bool on = ((UIText*)_useClaheButton->getChild(1))->getText() == "Use CLAHE";
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("CLAHE", on);
+		_volume->setDirtyAll();
+		if(on)
+			((UIText*)_useClaheButton->getChild(1))->setText("Disable CLAHE");
+		else
+			((UIText*)_useClaheButton->getChild(1))->setText("Use CLAHE");
 	}
 	
 	
@@ -1236,13 +1271,9 @@ void NewVolumeMenu::switchVolumes(int index) {
 		return;
 
 	saveValues(_volume);
-
-	
-
 	_volume1 = _volume2;
 	_volume2 = _volume;
 	setNewVolume(_volume1, index);
-
 
 	if (HelmsleyVolume::instance()->getVolumeIndex() == 0) {
 		((UIText*)_volumeList->getChild(0))->setColor(osg::Vec4(UI_ACTIVE_COLOR));
@@ -1251,8 +1282,7 @@ void NewVolumeMenu::switchVolumes(int index) {
 	else {
 		((UIText*)_volumeList->getChild(1))->setColor(osg::Vec4(UI_ACTIVE_COLOR));
 		((UIText*)_volumeList->getChild(0))->setColor(osg::Vec4(UI_INACTIVE_COLOR));
-	}
-	
+	}	
 }
 
 void VolumeMenuUpdate::Link() {
@@ -1309,11 +1339,11 @@ void NewVolumeMenu::setNewVolume(VolumeGroup* volume , int index) {
 	_volume = volume;
 
 	if (_volume2 != nullptr) {
-		HelmsleyVolume::instance()->getVolumeIndex() == 0 ? HelmsleyVolume::instance()->setVolumeIndex(1) :
-			HelmsleyVolume::instance()->setVolumeIndex(0);
+		HelmsleyVolume::instance()->getVolumeIndex() == 0 ? HelmsleyVolume::instance()->setVolumeIndex(1, true) :
+			HelmsleyVolume::instance()->setVolumeIndex(0, true);
 	}
 	if (index > -1) {
-		HelmsleyVolume::instance()->setVolumeIndex(index);
+		HelmsleyVolume::instance()->setVolumeIndex(index, false);
 	}
 	
 
@@ -1370,7 +1400,7 @@ void NewVolumeMenu::saveValues(VolumeGroup* vg) {
 	else {
 		vg->values.tf = 1;
 	}
-	;
+	
 	vg->values.tentCount = _triangleIndex+1;
 	vg->values.opacityData.clear();
 	for (int i = 0; i < vg->values.tentCount; i++) {
@@ -1394,6 +1424,14 @@ void NewVolumeMenu::saveValues(VolumeGroup* vg) {
 			vg->values.cpToggle = false;
 		}
 		++it;
+	}
+
+	std::list<CurvedQuad*> curvedMenuItems = _toolMenu->getCurvedMenuItems();
+
+	int index = 0;
+	for (std::list<CurvedQuad*>::iterator it = curvedMenuItems.begin(); it != curvedMenuItems.end(); ++it) {
+		vg->values.toolToggles[index] = (*it)->isOn();
+		index++;
 	}
 
 	///////////////////Masks////////////////////////
@@ -1474,16 +1512,19 @@ void NewVolumeMenu::fillFromVolume(VolumeGroup* vg) {
 
 	//Tools
 	////////////Cutting Plane/////////////
-	ToolToggle* cuttingPlaneTool = _toolMenu->getCuttingPlaneTool();
-	if (!cuttingPlaneTool->isOn() && _volume->values.cpToggle) {
-		cuttingPlaneTool->turnOn();
-		cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+	std::list<CurvedQuad*> curvedMenuItems = _toolMenu->getCurvedMenuItems();
+	int index = 0;
+	for (std::list<CurvedQuad*>::iterator it = curvedMenuItems.begin(); it != curvedMenuItems.end(); ++it) {
+		if (!(*it)->isOn() && _volume->values.toolToggles[index]) {
+			(*it)->turnOn();
+			(*it)->setColor(UI_RED_ACTIVE_COLOR);
+		}
+		if ((*it)->isOn() && !_volume->values.toolToggles[index]) {
+			(*it)->turnOff();
+			(*it)->setColor(UI_BACKGROUND_COLOR);
+		}
+		index++;
 	}
-	if (cuttingPlaneTool->isOn() && !_volume->values.cpToggle) {
-		cuttingPlaneTool->turnOff();
-		cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
-	}
-		
 
 }
 
@@ -1491,9 +1532,6 @@ void NewVolumeMenu::useTransferFunction(int tfID) {
 	if (tfID == 0)
 	{
 		_transferFunction = "vec3(ra.r);";
-		/*((UIText*)_blacknwhite->getChild(0))->setColor(UI_ACTIVE_COLOR);
-		((UIText*)_rainbow->getChild(0))->setColor(UI_INACTIVE_COLOR);
-		((UIText*)_custom->getChild(0))->setColor(UI_INACTIVE_COLOR);*/
 		((UIQuadElement*)_blacknwhite->getChild(0)->getChild(0))->setColor(UI_BLUE_COLOR2);
 		((UIQuadElement*)_rainbow->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
 		((UIQuadElement*)_custom->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
@@ -1508,9 +1546,6 @@ void NewVolumeMenu::useTransferFunction(int tfID) {
 	else if (tfID == 1)
 	{
 		_transferFunction = "hsv2rgb(vec3(ra.r * 0.8, 1, 1));";
-	/*	((UIText*)_blacknwhite->getChild(0))->setColor(UI_INACTIVE_COLOR);
-		((UIText*)_rainbow->getChild(0))->setColor(UI_ACTIVE_COLOR);
-		((UIText*)_custom->getChild(0))->setColor(UI_INACTIVE_COLOR);*/
 		((UIQuadElement*)_blacknwhite->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
 		((UIQuadElement*)_rainbow->getChild(0)->getChild(0))->setColor(UI_BLUE_COLOR2);
 		((UIQuadElement*)_custom->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
@@ -1522,9 +1557,6 @@ void NewVolumeMenu::useTransferFunction(int tfID) {
 	else if (tfID == 2)
 	{
 		_transferFunction = "custom(vec3(ra.r));";;
-		/*((UIText*)_blacknwhite->getChild(0))->setColor(UI_INACTIVE_COLOR);
-		((UIText*)_rainbow->getChild(0))->setColor(UI_INACTIVE_COLOR);
-		((UIText*)_custom->getChild(0))->setColor(UI_ACTIVE_COLOR);*/
 		((UIQuadElement*)_blacknwhite->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
 		((UIQuadElement*)_rainbow->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
 		((UIQuadElement*)_custom->getChild(0)->getChild(0))->setColor(UI_BLUE_COLOR2);
@@ -1842,6 +1874,15 @@ void NewVolumeMenu::resetValues() {
 	}*/
 
 	////////////Cutting Plane/////////////
+	std::list<CurvedQuad*> curvedMenuItems = _toolMenu->getCurvedMenuItems();
+	for (std::list<CurvedQuad*>::iterator it = curvedMenuItems.begin(); it != curvedMenuItems.end(); ++it) {
+		if ((*it)->isOn()) {
+			(*it)->turnOff();
+			(*it)->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
+		}
+	}
+
+
 	ToolToggle* cuttingPlaneTool = _toolMenu->getCuttingPlaneTool();
 	ToolToggle* mTool = _toolMenu->getMeasuringTool();
 	ToolToggle* centerTool = _toolMenu->getCenterLineTool();
@@ -2092,18 +2133,19 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 
 	UIList* list = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
 	list->setAbsoluteSpacing(5);
-	//_menu->addChild(list);	UNCOMMENT!!!
+	//_menu->addChild(list);	
 	std::string dir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ImageDir");
 	
-	CurvedMenu* curvedMenu = new CurvedMenu(8);
-	curvedMenu->setImage(0, dir + "slice.png");
-	curvedMenu->setImage(1, dir + "ruler.png");
-	curvedMenu->setImage(2, dir + "browser.png");
-	curvedMenu->setImage(3, dir + "line.png");
-	curvedMenu->setImage(4, dir + "slice.png");
-	curvedMenu->setImage(5, dir + "slice.png");
-	curvedMenu->setImage(6, dir + "slice.png");
-	_menu->addChild(curvedMenu);
+	_curvedMenu = new CurvedMenu(this, 8);
+	_curvedMenu->setImage(0, dir + "browser.png");
+	_curvedMenu->setImage(1, dir + "slice.png");
+	_curvedMenu->setImage(2, dir + "histogram.png");
+	_curvedMenu->setImage(3, dir + "clahe.png");
+	_curvedMenu->setImage(4, dir + "ruler.png");
+	_curvedMenu->setImage(5, dir + "centerline.png");
+	_curvedMenu->setImage(6, dir + "cube.png");
+	_curvedMenu->setImage(7, dir + "cube.png");
+	_menu->addChild(_curvedMenu);
 	
 	
 
@@ -2159,6 +2201,10 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	}
 }
 
+std::list<CurvedQuad*> ToolMenu::getCurvedMenuItems() {
+	std::list<CurvedQuad*> toReturn = _curvedMenu->getCurvedMenuItems();
+	return toReturn;
+}
 
 ToolMenu::~ToolMenu()
 {
@@ -2175,9 +2221,12 @@ ToolMenu::~ToolMenu()
 
 void ToolMenu::uiCallback(UICallbackCaller* item)
 {
-	if (item == _screenshotTool)
+	std::pair<int, CurvedQuad*> index = _curvedMenu->getCallbackIndex(item);
+	
+	//if (item == _screenshotTool)
+	if (index.first == 0)
 	{
-		osg::Matrix mat = PluginHelper::getHandMat(_screenshotTool->getLastHand());
+		osg::Matrix mat = PluginHelper::getHandMat(index.second->getLastHand());
 		osg::Vec4d position = osg::Vec4(0, 300, 0, 1) * mat;
 		osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
 
@@ -2187,85 +2236,97 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 		osg::Vec3 v2 = osg::Vec3();
 		mat.decompose(v, q, v2, q2);
 
-		HelmsleyVolume::instance()->toggleScreenshotTool(_screenshotTool->isOn());
+		HelmsleyVolume::instance()->toggleScreenshotTool(index.second->isOn());
 		HelmsleyVolume::instance()->getScreenshotTool()->setRotation(q);
 		HelmsleyVolume::instance()->getScreenshotTool()->setPosition(pos);
 
 
-		if (_screenshotTool->isOn())
+		if (index.second->isOn())
 		{
-			_screenshotTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+			index.second->setColor(UI_RED_ACTIVE_COLOR);
+			//_screenshotTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
 		}
 		else 
 		{
-			_screenshotTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
+			index.second->setColor(UI_BACKGROUND_COLOR);
+			//_screenshotTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}
 	
-	else if (item == _cuttingPlane)
+	//else if (item == _cuttingPlane)
+	else if (index.first == 1)
 	{
-		if (_cuttingPlane->isOn())
+		if (index.second->isOn())
 		{
-			
+			index.second->setColor(UI_RED_ACTIVE_COLOR);
 			HelmsleyVolume::instance()->createCuttingPlane();
-			_cuttingPlane->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+			//_cuttingPlane->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
 		}
 		else
 		{
+			index.second->setColor(UI_BACKGROUND_COLOR);
 			HelmsleyVolume::instance()->removeCuttingPlane();
-			_cuttingPlane->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
+			//_cuttingPlane->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}
 
-	else if (item == _histogramTool)
+	//else if (item == _histogramTool)
+	else if (index.first == 2)
 	{
-		if (_histogramTool->isOn())
+		if (index.second->isOn())
 		{
-			
+			index.second->setColor(UI_RED_ACTIVE_COLOR);
 			HelmsleyVolume::instance()->toggleHistogram(true);
-			_histogramTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+			//_histogramTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
 		}
 		else
 		{
+			index.second->setColor(UI_BACKGROUND_COLOR);
 			HelmsleyVolume::instance()->toggleHistogram(false);
-			_histogramTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
+			//_histogramTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}
 
-	else if (item == _claheTool)
+	//else if (item == _claheTool)
+	else if (index.first == 3)
 	{
-		if (_claheTool->isOn())
+		if (index.second->isOn())
 		{
-			
+			index.second->setColor(UI_RED_ACTIVE_COLOR);
 			HelmsleyVolume::instance()->toggleClaheTools(true);
-			_claheTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+			//_claheTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
 		}
 		else
 		{
+			index.second->setColor(UI_BACKGROUND_COLOR);
 			HelmsleyVolume::instance()->toggleClaheTools(false);
-			_claheTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
+			//_claheTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}
-	else if (item == _measuringTool)
+	//else if (item == _measuringTool)
+	else if (index.first == 4)
 	{
-		if (_measuringTool->isOn())
+		if (index.second->isOn())
 		{
+			index.second->setColor(UI_RED_ACTIVE_COLOR);
 			HelmsleyVolume::instance()->setTool(HelmsleyVolume::MEASUREMENT_TOOL);
 			HelmsleyVolume::instance()->activateMeasurementTool(_index);
-			_measuringTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+			//_measuringTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
 		}
 		else
 		{
+			index.second->setColor(UI_BACKGROUND_COLOR);
 			HelmsleyVolume::instance()->setTool(HelmsleyVolume::NONE);
 			HelmsleyVolume::instance()->deactivateMeasurementTool(_index);
 			
-			_measuringTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
+			//_measuringTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}
-	else if (item == _centerLIneTool)
+	//else if (item == _centerLIneTool)
+	else if (index.first == 5)
 	{
 		if (!HelmsleyVolume::instance()->getVolumes()[0]->getColonCoords()->empty()) {
-			osg::Matrix mat = PluginHelper::getHandMat(_centerLIneTool->getLastHand());
+			osg::Matrix mat = PluginHelper::getHandMat(index.second->getLastHand());
 			osg::Vec4d position = osg::Vec4(0, 300, 0, 1) * mat;
 			osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
 
@@ -2275,20 +2336,20 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 			osg::Vec3 v2 = osg::Vec3();
 			mat.decompose(v, q, v2, q2);
 
-			HelmsleyVolume::instance()->toggleCenterlineTool(_centerLIneTool->isOn());
+			HelmsleyVolume::instance()->toggleCenterlineTool(index.second->isOn());
 			HelmsleyVolume::instance()->getCenterlineTool()->setRotation(q);
 			HelmsleyVolume::instance()->getCenterlineTool()->setPosition(pos);
-			if (_centerLIneTool->isOn())
+			if (index.second->isOn())
 			{
-				_centerLIneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+				//_centerLIneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
 				//HelmsleyVolume::instance()->toggleCenterLine(true);
 				HelmsleyVolume::instance()->activateClippingPath();
-
+				index.second->setColor(UI_RED_ACTIVE_COLOR);
 			}
 			else
 			{
-
-				_centerLIneTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
+				index.second->setColor(UI_BACKGROUND_COLOR);
+				//_centerLIneTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 				//HelmsleyVolume::instance()->toggleCenterLine(false);
 				HelmsleyVolume::instance()->removeCuttingPlane();
 				

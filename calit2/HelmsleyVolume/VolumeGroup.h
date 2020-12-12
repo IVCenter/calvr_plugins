@@ -30,6 +30,7 @@
 //#define NUMGRAYVALS 255u
 #define CLIPLIMIT3D .85f
 #define ORGANCOUNT 8
+#define TOOLCOUNT 8
 
 class VolumeGroup : public osg::Group
 {
@@ -155,6 +156,8 @@ public:
 		//////////////////Tools/////////////////////////
 		bool cpToggle = false;
 
+		bool toolToggles[TOOLCOUNT];
+	
 		bool saved = false;
 
 	};
@@ -164,6 +167,7 @@ public:
 
 protected:
 	bool _hasMask;
+	bool _claheAvailable = false;
 	std::string _minMaxShader;
 	std::string _excessShader;
 	std::string _histShader;
@@ -241,15 +245,9 @@ public:
 		if (group->isDirty(renderInfo.getCurrentCamera()->getGraphicsContext()))
 		{
 			
-			//std::cout << "computing in gc " << renderInfo.getState()->getContextID() << "\n";
-			//std::cout << "0: " << renderInfo.getState()->getLastAppliedTextureAttribute(0, osg::StateAttribute::TEXTURE)->getName()
-			//          << ", 1: " << renderInfo.getState()->getLastAppliedTextureAttribute(1, osg::StateAttribute::TEXTURE)->getName() << std::endl;
 			
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
-
-		/*	if(_claheDirty[0] != 1)
-				group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);*/
 			
 		}
 	}
@@ -273,17 +271,7 @@ public:
 		{
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
-			/*osg::ref_ptr<osg::UIntArray> _atomicCounterArray = new osg::UIntArray();
-			_atomicCounterArray->push_back(0);
-			_atomicCounterArray->push_back(0);
-			_atomicCounterArray->push_back(0);
-			_acbb->readData(*renderInfo.getState(), *_atomicCounterArray);
-			
-			unsigned int value = osg::maximum(1u, _atomicCounterArray->front());
-			
-			std::cout << "Pixel Count: " << value << std::endl;
-			std::cout << "Min: " << _atomicCounterArray->at(1) << std::endl;
-			std::cout << "Max: " << _atomicCounterArray->at(2) << std::endl;*/
+		
 			
 			stop[0] = 1;
 			
@@ -311,8 +299,7 @@ public:
 		
 		if (group->isDirty(renderInfo.getCurrentCamera()->getGraphicsContext()) && stop[0] != 1)
 		{
-			std::cout << "Hist executed." << std::endl;
-			std::cout << "ReadShaderBufferDataCalback executed." << std::endl << std::flush;
+			
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
@@ -354,7 +341,7 @@ public:
 		}
 	}
 
-	uint16_t* stop = new uint16_t(2);
+	uint16_t* stop = new uint16_t(1);
 	int _buffersize;
 	int _buffersize2;
 	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbb;
@@ -375,8 +362,7 @@ public:
 		
 		if (group->isDirty(renderInfo.getCurrentCamera()->getGraphicsContext()) && stop[0] != 1)
 		{
- 			std::cout << "Total hist executed." << std::endl << std::flush;
-			drawable->drawImplementation(renderInfo);
+ 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
 			osg::ref_ptr<osg::UIntArray> _atomicCounterArray = new osg::UIntArray;
@@ -385,8 +371,7 @@ public:
 
 			unsigned int value = osg::maximum(1u, _atomicCounterArray->front());
 
-			std::cout << "Max Bin Value: " << value << std::endl;
-			histMax[0] = value;
+ 			histMax[0] = value;
 			stop[0] = 1;
 			group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
 
@@ -398,7 +383,7 @@ public:
 
 	
 
-	uint16_t* stop = new uint16_t(2);
+	uint16_t* stop = new uint16_t(0);
 	uint32_t* histMax = new uint32_t(0);
 	int _buffersize;
 	
@@ -418,8 +403,7 @@ public:
 	{
 		if (group->isDirty(renderInfo.getCurrentCamera()->getGraphicsContext()) && stop[0] != 1)
 		{
-			std::cout << "Excess executed." << std::endl << std::flush;
-			osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_buffersize);
+ 			osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_buffersize);
 
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
@@ -429,7 +413,7 @@ public:
 		}
 	}
 
-	uint16_t* stop = new uint16_t(2);
+	uint16_t* stop = new uint16_t(1);
 	int _buffersize;
 	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbb;
 };
@@ -464,7 +448,7 @@ public:
 
 
 	
-	uint16_t* stop = new uint16_t(2);
+	uint16_t* stop = new uint16_t(1);
 	int _buffersize;
 	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbbExcess; //excess
 	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbbHist; //excess
@@ -493,15 +477,14 @@ public:
 			
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
-			std::cout << "CLAHE READY" << std::endl;
-			
+ 			
 			stop[0] = 1;
 			_claheDirty[0] = 0;
 			//group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
 		}
 	}
 
-	uint16_t* stop = new uint16_t(2);
+	uint16_t* stop = new uint16_t(1);
 	uint16_t* _claheDirty;
 	int _buffersize;
 	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbb;

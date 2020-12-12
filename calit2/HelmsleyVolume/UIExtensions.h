@@ -3,16 +3,18 @@
 
 #define UI_BACKGROUND_COLOR osg::Vec4(0.15, 0.15, 0.15, 1)
 #define UI_ACTIVE_COLOR osg::Vec4(.243, .561, 1, 1)
+#define UI_RED_ACTIVE_COLOR osg::Vec4(1.0, 0.0, 0.0, 1)
 #define UI_INACTIVE_COLOR osg::Vec4(.243, .561, 1, .4)
 #define UI_BLUE_COLOR osg::Vec3(0.8, 0.9, 1.0)
 #define UI_BLUE_COLOR2 osg::Vec4(.04, .25, .4, 1.0)
-#define UI_RED_COLOR osg::Vec3(1, 0.8, 0.807)
+#define UI_RED_COLOR osg::Vec3(1, 0.4, 0.4)
 #define UI_YELLOW_COLOR osg::Vec3(1, 0.964, 0.8)
 #define UI_GREEN_COLOR osg::Vec3(0.8, 1, 0.847)
 #define UI_PURPLE_COLOR osg::Vec3(0.847, 0.8, 1)
 #define UI_PINK_COLOR osg::Vec3(1, 0.8, 0.976)
 #define UI_WHITE_COLOR osg::Vec4(1, 1, 1, 1)
 #define UI_INACTIVE_WHITE_COLOR osg::Vec4(1, 1, 1, .4)
+#define UI_INACTIVE_RED_COLOR osg::Vec4(0.8, 0.1, 0.1, 1.0)
 #define UI_BLACK_COLOR osg::Vec4(0, 0, 0, 1)
 
 #include <cvrMenu/NewUI/UIButton.h>
@@ -418,11 +420,11 @@ protected:
 
 };
 //curved quad//////////////
-class CurvedQuad : public cvr::UIElement, public UICallbackCaller
+class CurvedQuad : public CallbackToggle
 {
 public:
 	CurvedQuad(int curr = 1, int total = 1, osg::Vec4 color = osg::Vec4(UI_BLUE_COLOR, 1))
-		: UIElement()
+		: CallbackToggle()
 	{
 		 
 		_color = color;
@@ -448,20 +450,15 @@ public:
  	
 	virtual void createGeometry();
 	virtual void updateGeometry();
-
-
-
-
-	virtual void setColor(osg::Vec3 color);
-
-	virtual void setTransparent(bool transparent);
-
+ 	virtual void setColor(osg::Vec4 color);
+ 	virtual void setTransparent(bool transparent);
  
-
-
+ 
 	virtual void setProgram(osg::Program* p) { _program = p; _dirty = true; }
 	virtual osg::Program* getProgram() { return _program; }
 	virtual osg::Geode* getGeode() { return _geode; }
+	virtual void processHover(bool enter) override;
+
 
 	template <typename T>
 	void addUniform(std::string uniform, T initialvalue);

@@ -75,7 +75,7 @@ protected:
 	void updateSelections(SelectChoice choice);
 	void updateFileSelection(); //OLD
 	//void newUpdateFileSelection();
-	int checkIfPatient(std::string fn, int indexFromDicom);
+	std::pair<int, bool> checkIfPatient(std::string fn, int indexFromDicom);
 	bool checkSelectionCallbacks(UICallbackCaller* item);
 	void loadPatient(std::string pName);
 	void getPatientInfo(std::string seriesPath);

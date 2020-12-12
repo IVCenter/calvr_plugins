@@ -89,20 +89,22 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		static std::string loadShaderFile(std::string filename);
 		static void resetOrientation();
 
-		void setVolumeIndex(int i) { 
+		void setVolumeIndex(int i, bool second) { 
 			_volumeIndex = i;
 
-			if (i == 0) {
-				_sceneObjects[0]->updateBBActiveColor(osg::Vec4(UI_ACTIVE_COLOR));
-				_sceneObjects[0]->updateBBPassiveColor(osg::Vec4(UI_INACTIVE_COLOR));
-				_sceneObjects[1]->updateBBActiveColor(osg::Vec4(UI_WHITE_COLOR));
-				_sceneObjects[1]->updateBBPassiveColor(osg::Vec4(UI_INACTIVE_WHITE_COLOR));
-			}
-			else {
-				_sceneObjects[1]->updateBBActiveColor(osg::Vec4(UI_ACTIVE_COLOR));
-				_sceneObjects[1]->updateBBPassiveColor(osg::Vec4(UI_INACTIVE_COLOR));
-				_sceneObjects[0]->updateBBActiveColor(osg::Vec4(UI_WHITE_COLOR));
-				_sceneObjects[0]->updateBBPassiveColor(osg::Vec4(UI_INACTIVE_WHITE_COLOR));
+			if (second) {
+				if (i == 0) {
+					_sceneObjects[0]->updateBBActiveColor(osg::Vec4(UI_ACTIVE_COLOR));
+					_sceneObjects[0]->updateBBPassiveColor(osg::Vec4(UI_INACTIVE_COLOR));
+					_sceneObjects[1]->updateBBActiveColor(osg::Vec4(UI_WHITE_COLOR));
+					_sceneObjects[1]->updateBBPassiveColor(osg::Vec4(UI_INACTIVE_WHITE_COLOR));
+				}
+				else {
+					_sceneObjects[1]->updateBBActiveColor(osg::Vec4(UI_ACTIVE_COLOR));
+					_sceneObjects[1]->updateBBPassiveColor(osg::Vec4(UI_INACTIVE_COLOR));
+					_sceneObjects[0]->updateBBActiveColor(osg::Vec4(UI_WHITE_COLOR));
+					_sceneObjects[0]->updateBBPassiveColor(osg::Vec4(UI_INACTIVE_WHITE_COLOR));
+				}
 			}
 		}
 		int getVolumeIndex() { return _volumeIndex; }

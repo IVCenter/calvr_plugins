@@ -151,7 +151,7 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 
 	for (unsigned int i = 0; i < files.size(); i++) {
 
-		std::cout << files[i].c_str() << std::endl;
+		//std::cout << files[i].c_str() << std::endl;
 
 		DcmFileFormat* fileFormat = new DcmFileFormat();
 		cnd = fileFormat->loadFile(files[i].c_str());
@@ -192,26 +192,25 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 	double prevX = images[0].location;
 	for (unsigned int i = 1; i < images.size(); ++i)
 	{
-		//std::cout << images[i].location - prevX << std::endl;
-		prevX = images[i].location;
+ 		prevX = images[i].location;
 	}
 	unsigned int w = images[0].image->getWidth();
 	unsigned int h = images[0].image->getHeight();
 	unsigned int d = (unsigned int)images.size();
-	std::cout << "w " << w << "h " << h << "d " << d << std::endl;
+	//std::cout << "w " << w << "h " << h << "d " << d << std::endl;
 	osg::Vec3 size = osg::Vec3(0, 0, 0);
 	// volume size in millimeters
 	size.x() = (float)spacingX * (float)w;
 	size.y() = (float)spacingY * (float)h;
 	size.z() = maxPos - minPos + thickness;//(float)thickness * (float)images.size();
 
-	printf("%fm x %fm x %fm\n", (float)w, (float)h, (float)images.size());
+	/*printf("%fm x %fm x %fm\n", (float)w, (float)h, (float)images.size());
 
 	printf("%fm x %fm x %fm\n", (float)spacingX, (float)spacingY, (float)thickness);
 
 	printf("%fm x %fm x %fm\n", size.x(), size.y(), size.z());
 
-	printf("min: %f    max: %f", (float)minPos, (float)maxPos);
+	printf("min: %f    max: %f", (float)minPos, (float)maxPos);*/
 
 	osg::Vec3 rowdir = osg::Vec3(orientation1X, orientation1Y, orientation1Z);
 	osg::Vec3 coldir = osg::Vec3(orientation2X, orientation2Y, orientation2Z);

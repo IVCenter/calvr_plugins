@@ -327,7 +327,7 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 		_hasMask = false;
 		
 	}
-	
+ 	
 
 
 	_volume = new osg::Texture3D;
@@ -395,6 +395,8 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	
 	////////////////////////////////////clahe/////////////////////////
 	precompTotalHistogram();
+
+
 	//Set dirty on all graphics contexts
 	std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();/////////////uncomment
 	cvr::CVRViewer::instance()->getCameras(cameras);
@@ -792,6 +794,7 @@ void VolumeGroup::genClahe() {
 	((LerpSSB*)_lerpNode->getDrawCallback())->_claheDirty[0] = 1;
 	
 	//dirty vol
+	_claheAvailable = true;
 	this->setDirtyAll();
 }
 
@@ -883,8 +886,8 @@ void VolumeGroup::precompute()
 
 		///////////////////////clahe///////////////////
 		states = _totalHistNode->getOrCreateStateSet();
-		osg::ref_ptr<osg::BindImageTexture> imagbinding7 = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		//osg::ref_ptr<osg::BindImageTexture> imagbinding7 = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
+		//osg::ref_ptr<osg::BindImageTexture> imagbinding7 = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
+		osg::ref_ptr<osg::BindImageTexture> imagbinding7 = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
 		//osg::ref_ptr<osg::BindImageTexture> imagbinding7 = new osg::BindImageTexture(1, _baked, osg::BindImageTexture::READ_ONLY, GL_RGBA16, 0, GL_TRUE);
 		states->setAttributeAndModes(imagbinding7);
 
@@ -928,7 +931,7 @@ void VolumeGroup::precompTotalHistogram() {
 	acbo->setBufferData(0, dati);
 	osg::ref_ptr<osg::AtomicCounterBufferBinding> acbb = new osg::AtomicCounterBufferBinding(7, acbo->getBufferData(0), 0, sizeof(GLuint));
 	dati.release();
-	acbo->releaseGLObjects();
+	acbo.release();
 
 
 	
@@ -954,12 +957,12 @@ void VolumeGroup::precompTotalHistogram() {
 
 	osg::StateSet* states = _totalHistNode->getOrCreateStateSet();
 	states->setRenderBinDetails(7, "RenderBin");
-	states->setTextureAttribute(5, _claheVolume, osg::StateAttribute::ON);
-	states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);
+	/*states->setTextureAttribute(5, _claheVolume, osg::StateAttribute::ON);
+	states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
 	/*states->setTextureAttribute(1, _baked, osg::StateAttribute::ON);
 	states->setTextureMode(1, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
-	//states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
-	//states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
+	states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
+	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
 
 	states->addUniform(new osg::Uniform("VolumeDims", _volDims.x(), _volDims.y(), _volDims.z()));
  	states->addUniform(new osg::Uniform("NUM_BINS", numBins));
@@ -983,8 +986,7 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 	{
 
 		
-		std::cout << "Clip executed." << std::endl;
-		osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_buffersize);
+ 		osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_buffersize);
 
 		drawable->drawImplementation(renderInfo);
 		renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
@@ -1059,7 +1061,7 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 			glGetIntegerv(GL_CURRENT_PROGRAM, &id);
 		 
 
- 			renderInfo.getState()->get<osg::GLExtensions>()->glUseProgram(0);
+ 			//renderInfo.getState()->get<osg::GLExtensions>()->glUseProgram(0);
 
 		 
 			_clipshader2->apply(*state);
@@ -1193,8 +1195,7 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 		////DEBUGGING/////////////////////////////
 
 
-		std::cout << "end of clip" << std::endl;
-		stop[0] = 1;
+ 		stop[0] = 1;
 
 	}
 

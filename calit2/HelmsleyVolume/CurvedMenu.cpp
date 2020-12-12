@@ -20,6 +20,8 @@ CurvedMenu::CurvedMenu(UICallback* callback, int numItems) : UIElement() {
 
 		CurvedQuad* segment = new CurvedQuad(i, numItems, UI_BACKGROUND_COLOR);
 		segment->setCallback(callback);
+		
+	
 		//segment->setPercentSize(osg::Vec3(numItems, 1.0, 1.0));
 		//
 		//segment->setPercentSize(osg::Vec3(1.0/(float)numItems, 1.0, 1.0));
@@ -27,6 +29,7 @@ CurvedMenu::CurvedMenu(UICallback* callback, int numItems) : UIElement() {
 		//segment->setPercentPos(osg::Vec3((1/(float)numItems * i) - .5, 0.0, 0.0));
 		//_parent->addChild(segment);
 		_list->addChild(segment);
+		
 		//}
 	}
 
@@ -36,8 +39,42 @@ CurvedMenu::CurvedMenu(UICallback* callback, int numItems) : UIElement() {
 void CurvedMenu::setImage(int index, std::string iconPath) {
 	cvr::UITexture* uitext = new cvr::UITexture(iconPath);
 	uitext->setTransparent(true);
-	uitext->setPercentPos(osg::Vec3(0.1, 0.0, .4));
-	uitext->setPercentSize(osg::Vec3(0.7, 1.0, .8));
+	
+	uitext->setPercentSize(osg::Vec3(0.8, 1.0, 0.8));
+	
+ 	float maxRadian = .175;
+	float currRadian = float(index) / float(_numItems-1) * maxRadian;
+	currRadian -= maxRadian * .5;
+	uitext->setPercentPos(osg::Vec3(0.1, 0.0, 0.5 + -std::abs(currRadian)*4));
 
+	osg::Matrix rotMat = osg::Matrix::rotate(currRadian * osg::PI, osg::Vec3(0, 1, 0));
+	uitext->setRot(rotMat.getRotate());
+  
+	std::cout << "currRadian: " << currRadian << std::endl;
+ 	
+
+ 
 	_list->getChild(index)->addChild(uitext);
+}
+
+std::pair<int, CurvedQuad*> CurvedMenu::getCallbackIndex(UICallbackCaller* item) {
+	std::pair<int, CurvedQuad*> index;
+	index.first = -1;
+	index.second = nullptr;
+	for (int i = 0; i < _numItems; i++) {
+		if (item == ((CurvedQuad*)(_list->getChild(i)))) {
+			index.first = i;
+			index.second = ((CurvedQuad*)(_list->getChild(i)));
+			return index;
+		}
+	}
+	return index;
+}
+
+std::list<CurvedQuad*> CurvedMenu::getCurvedMenuItems() {
+	std::list<CurvedQuad*> toReturn;
+	for (int i = 0; i < _numItems; i++) {
+		toReturn.push_back((CurvedQuad*)(_list->getChild(i)));
+	}
+	return toReturn;
 }
