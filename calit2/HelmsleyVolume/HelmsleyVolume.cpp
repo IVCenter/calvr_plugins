@@ -316,7 +316,7 @@ bool HelmsleyVolume::init()
 
 	screenshotTool = new ScreenshotTool("Screenshot Tool", false, true, false, false, true);
 	PluginHelper::registerSceneObject(screenshotTool, "HelmsleyVolume");
-
+	
 	
 	centerLineTool = new CenterlineTool("CenterLine Tool", false, true, false, false, false);
 	PluginHelper::registerSceneObject(centerLineTool, "HelmsleyVolume");
@@ -703,6 +703,14 @@ void HelmsleyVolume::toggleClaheTools(bool on) {
 	_worldMenus[0]->toggleClaheTools(on);
 }
 
+void HelmsleyVolume::toggleMaskAndPresets(bool on) {
+	_worldMenus[0]->toggleMaskMenu(on);
+}
+
+void HelmsleyVolume::toggleTFUI(bool on) {
+	_worldMenus[0]->toggleTFUI(on);
+}
+
 void HelmsleyVolume::loadVolume(std::string path, std::string maskpath, bool onlyVolume)
 {
 	SceneObject * so;
@@ -744,7 +752,7 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath, bool onl
 	NewVolumeMenu* newMenu = new NewVolumeMenu(so, g);
 	newMenu->init();
 	_worldMenus.push_back(newMenu);
-	
+	screenshotTool->setWorldMenu(_worldMenus[0]);
 	
 	
 

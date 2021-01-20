@@ -21,6 +21,8 @@
 #include <iostream>
 
 #include "Interactable.h"
+//#include "UIExtensions.h"
+#include "VolumeMenu.h"
 
 class ScreenshotSaverThread : public OpenThreads::Thread
 {
@@ -36,7 +38,7 @@ protected:
 	bool _done;
 };
 
-class ScreenshotTool : public cvr::SceneObject
+class ScreenshotTool : public cvr::SceneObject, public UICallback
 {
 public:
 	ScreenshotTool(std::string name, bool navigation, bool movable, bool clip, bool contextMenu, bool showBounds = false)
@@ -48,6 +50,8 @@ public:
 
 	virtual void updateCallback(int handID, const osg::Matrix& mat);
 	virtual void menuCallback(cvr::MenuItem* menuItem);
+	//virtual void uiCallback(cvr::MenuItem* menuItem);
+	virtual void uiCallback(UICallbackCaller* ui);
 	//virtual void enterCallback(int handID, const osg::Matrix& mat);
 	//virtual void leaveCallback(int handID, const osg::Matrix& mat);
 
@@ -56,6 +60,12 @@ public:
 	void deactivate();
 	const bool getIsActive() { return _cameraActive; }
 	void takePhoto(std::string filename);
+	void setPhoto(std::string imgLocation);
+
+	void setWorldMenu(NewVolumeMenu* vm) { _vm = vm; }
+	void saveAsYaml();
+	void takingPhoto(bool takingPhoto) { takingPhoto = _takingPhoto; }
+	osg::ref_ptr<osg::Camera> getCam(){ return _camera; }
 protected:
 	void init();
 
@@ -69,9 +79,17 @@ protected:
 	cvr::MenuButton* _pictureButton;
 	osg::ref_ptr<osg::Camera::DrawCallback> _pdc;
 
+	CallbackButton* _takePicture;
+	CallbackButton* _renderCinematic;
+	NewVolumeMenu* _vm;
+
 	std::vector<ScreenshotSaverThread*> _saveThreads;
 
 	bool _cameraActive;
+	bool _showingPhoto = false;
+	bool _takingPhoto = false;
+	bool _pictureSaved = false;
+	std::string _imgCineFP;
 };
 
 class ScreenshotCallback : public osg::Camera::DrawCallback
@@ -87,6 +105,7 @@ public:
 protected:
 	ScreenshotTool* _tool;
 	std::string _path;
+	
 };
 
 #endif

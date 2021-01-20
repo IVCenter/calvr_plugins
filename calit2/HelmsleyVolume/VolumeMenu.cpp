@@ -3,6 +3,8 @@
 #include "Utils.h"
 #include "cvrMenu/MenuManager.h"
 #include "cvrConfig/ConfigManager.h"
+#include <windows.h>
+#include <tchar.h>
 
 
 using namespace cvr;
@@ -179,8 +181,8 @@ void NewVolumeMenu::init()
 	
 
 
-	ColorPicker* cp = new ColorPicker();
-	_cp = cp;
+	
+	_cp = new ColorPicker();
 	_tentWindowOnly = new TentWindowOnly();
 	_histQuad = new HistQuad();
 	 _tentWindow = new TentWindow(_tentWindowOnly);
@@ -440,6 +442,7 @@ void NewVolumeMenu::init()
 	UIQuadElement* gradientBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 	gradientBknd->setPercentSize(osg::Vec3(1, 1, .4));
 
+	
 	_colorSliderIndex = 0;
 	_colSliderList[_colorSliderIndex] = new ColorSlider(_cp, osg::Vec4(1.0, 0.0, 0.0, 1.0));
 	_colSliderList[_colorSliderIndex]->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
@@ -489,7 +492,7 @@ void NewVolumeMenu::init()
 		_container = new SceneObject("VolumeMenu", false, true, false, false, false);
 		_so->addChild(_container);
 		_container->setShowBounds(true);
-		_container->addChild(_menu->getRoot());
+		//_container->addChild(_menu->getRoot());
 		_menu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_container->dirtyBounds();
 
@@ -614,6 +617,8 @@ void NewVolumeMenu::init()
 	sq->addUniform(_tentWindow->_tWOnly->_tents->at(0)->_widthUniform);
 	sq->addUniform(_volume->_computeUniforms["ContrastBottom"]);
 	sq->addUniform(_volume->_computeUniforms["ContrastTop"]);
+	sq->addUniform(_volume->_computeUniforms["leftColor"]);
+	sq->addUniform(_volume->_computeUniforms["rightColor"]);
 
 	_triangleCallbacks[_triangleIndex]->addChild(vT);
 	_triangleCallbacks[_triangleIndex]->addChild(sq);
@@ -985,13 +990,13 @@ void NewVolumeMenu::init()
 		_so->addChild(_contrastContainer);
 
 		_maskContainer->setShowBounds(false);
-		_maskContainer->addChild(_maskMenu->getRoot());
+		//_maskContainer->addChild(_maskMenu->getRoot());
 
 		_tentWindowContainer->setShowBounds(false);
-		_tentWindowContainer->addChild(_tentMenu->getRoot());
+		//_tentWindowContainer->addChild(_tentMenu->getRoot());
 
 		_contrastContainer->setShowBounds(false);
-		_contrastContainer->addChild(_contrastMenu->getRoot());
+		//_contrastContainer->addChild(_contrastMenu->getRoot());
 		
 		_maskMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_tentMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
@@ -1056,6 +1061,7 @@ UIList* NewVolumeMenu::addPresets(UIQuadElement* bknd) {
 
 void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 {	
+	///////////////Rotations/////////////////////
 	if (item == _horizontalflip)
 	{
 		osg::Matrix m;
@@ -1077,6 +1083,8 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		_volume->_transform->postMult(m);
 		_volume->flipCull();
 	}
+
+	/////////////////////////Masks/////////////////
 	else if (item == _organs)
 	{
 		_volume->getCompute()->getOrCreateStateSet()->setDefine("ORGANS_ONLY", _organs->isOn());
@@ -1117,6 +1125,9 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		_volume->getCompute()->getOrCreateStateSet()->setDefine("VEIN", _vein->isOn());
 		_volume->setDirtyAll();
 	}
+
+
+
 	else if (item == _addTriangle)
 	{
 		if (_triangleIndex < 5) {
@@ -1169,16 +1180,6 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	else if (item == _brightness)
 	{
 		_volume->_computeUniforms["Brightness"]->set(_brightness->getAdjustedValue());
-	/*	float realValue = _brightness->getAdjustedValue() - .5;
-		std::string value;
-		if (realValue >= 0.0) {
-			value = "+" + std::to_string(realValue).substr(0, 4);
-		}
-		else {
-			value = std::to_string(realValue).substr(0, 5);
-		}
-		_brightValueLabel->setText(value);*/
-
 		_volume->setDirtyAll();
 	}
 	else if (item == _transferFunctionRadial)
@@ -1213,6 +1214,8 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		_volume->setDirtyAll();
 	}
 	else if (checkColorSliderCallbacks(item)) {
+
+ 
 		osg::Vec4 col4 = _colSliderList[_colorSliderIndex]->getColor();
 		osg::Vec3 col; col.x() = col4.x(); col.y() = col4.y(); col.z() = col4.z();
 		_cp->setCPColor(col);
@@ -1832,6 +1835,9 @@ void NewVolumeMenu::resetValues() {
 	float brightness = 0.5f;
 	setContrastValues(contrastLow, contrastHigh, brightness);
 
+	_colSliderList[0]->setColor(osg::Vec4(1.0,0.0,0.0,1.0));
+	_colSliderList[1]->setColor(osg::Vec4(1.0,1.0,1.0,1.0));
+
 	///////////////Masks////////////////////
 	if (_volume->hasMask()) {
 		/*_maskMenu->addChild(_maskBknd);
@@ -1953,6 +1959,8 @@ Tent* NewVolumeMenu::addRegion() {
 
 	sq->addUniform(_volume->_computeUniforms["ContrastBottom"]);
 	sq->addUniform(_volume->_computeUniforms["ContrastTop"]);
+	sq->addUniform(_volume->_computeUniforms["leftColor"]);
+	sq->addUniform(_volume->_computeUniforms["rightColor"]);
 
 
 
@@ -2087,9 +2095,289 @@ void NewVolumeMenu::savePreset(){
 	presetbutton->addChild(presetText);
 	_presetUIList->addChild(presetbutton);
 	_presetCallbacks.push_back(presetbutton);
-
-
 }
+
+inline osg::Matrix ToEulerAngles(osg::Quat q) {
+	
+
+	// roll (x-axis rotation)
+	double sinr_cosp = 2 * (q.w() * q.x() + q.y() * q.z());
+	double cosr_cosp = 1 - 2 * (q.x() * q.x() + q.y() * q.y());
+	double rollAngle = std::atan2(sinr_cosp, cosr_cosp);
+
+	// pitch (y-axis rotation)
+	double sinp = 2 * (q.w() * q.y() - q.z() * q.x());
+
+	double pitch;
+	if (std::abs(sinp) >= 1)
+		pitch = std::copysign(osg::PI / 2, sinp); // use 90 degrees if out of range
+	else
+		pitch = std::asin(sinp);
+
+	// yaw (z-axis rotation)
+	double siny_cosp = 2 * (q.w() * q.z() + q.x() * q.y());
+	double cosy_cosp = 1 - 2 * (q.y() * q.y() + q.z() * q.z());
+	double yaw = std::atan2(siny_cosp, cosy_cosp);
+
+	osg::Matrix rotMat;
+	rotMat.osg::Matrix::makeRotate(rollAngle, osg::Vec3(0, 0, 1));
+	std::cout << "rollangle: " << rollAngle << std::endl;
+
+	rotMat.osg::Matrix::makeRotate(yaw, osg::Vec3(0, 1, 0));
+	std::cout << "yawangle: " << yaw << std::endl;
+	rotMat.osg::Matrix::makeRotate(pitch, osg::Vec3(1, 0, 0));
+
+	return rotMat;
+}
+
+void NewVolumeMenu::saveYamlForCinematic() {
+	//volume properties
+	osg::Matrix worldMatrix = _volume->getObjectToWorldMatrix() * _scene->getObjectToWorldMatrix();
+	osg::Vec3f wmScale = worldMatrix.getScale();
+
+	osg::Vec3d osgtrans = worldMatrix.getTrans();
+	osgtrans.x()/=wmScale.x(); osgtrans.y()/=wmScale.y(); osgtrans.z()/=wmScale.z(); 
+	
+	//std::vector<float> trans; trans.push_back(osgtrans.x());  trans.push_back(osgtrans.z());  trans.push_back(osgtrans.y());
+	std::vector<float> trans; trans.push_back(0);  trans.push_back(0);  trans.push_back(3);//HARD CODED
+	
+	float total = wmScale.x() + wmScale.y() + wmScale.z();
+ 	//std::vector<float> scaleVec = { wmScale.x()/total, wmScale.z()/total, wmScale.y()/total };
+ 	std::vector<float> scaleVec = { 1, 1, 1};//HARD CODED
+	
+	
+	//osg::Quat osgrot = worldMatrix.getRotate();
+	osg::Quat osgrot(0,0,0,1);// = worldMatrix.getRotate();
+	
+
+	//Camera properties
+	osg::Vec3 osgpos;
+	osg::Vec3 osgcenter;
+	osg::Vec3 osgup;
+
+	HelmsleyVolume::instance()->getScreenshotTool()->getCam()->getViewMatrixAsLookAt(osgpos, osgcenter, osgup);
+
+	osgpos.x() /= wmScale.x(); osgpos.y() /= wmScale.y(); osgpos.z() /= wmScale.z();
+	//std::vector<float> pos; pos.push_back(osgpos.x());  pos.push_back(osgpos.z());  pos.push_back(osgpos.y()); 
+	std::vector<float> pos; pos.push_back(0);  pos.push_back(0);  pos.push_back(0); //HARD CODED
+
+
+	osgcenter.x() /= wmScale.x(); osgcenter.y() /= wmScale.y(); osgcenter.z() /= wmScale.z();
+	//std::vector<float> center; center.push_back(osgcenter.x());  center.push_back(osgcenter.z());  center.push_back(osgcenter.y());
+	//std::vector<float> center; center.push_back(osgcenter.x());  center.push_back(osgcenter.z());  center.push_back(osgcenter.y());
+	std::vector<float> center = trans;
+
+	//osgup.x() /= wmScale.x(); osgup.y() /= wmScale.y(); osgup.z() /= wmScale.z();
+	osgup.x() = 0; osgup.y() = 0; osgup.z() = 1;
+	std::vector<float> up; up.push_back(osgup.x());  up.push_back(osgup.z());  up.push_back(osgup.y());
+	//up[0]*=-1.f; up[1]*=-1.f; up[2]*=-1.f;
+	
+
+	std::string renderMode = "Texture-based";
+	 
+	std::vector<std::vector<float>> opacities;
+	std::vector<float> opacityData;
+	std::vector<float> contrastData = { _contrastBottom->getAdjustedValue(), _contrastTop->getAdjustedValue()};
+	
+	
+
+
+
+	YAML::Emitter out;
+	std::string name = "cineparams";
+	
+
+	out << YAML::BeginMap;
+	out << YAML::Key << "name";
+	out << YAML::Value << name;
+
+	out << YAML::Key << "volume";
+	out << YAML::Value << YAML::BeginMap;
+	out << YAML::Key << "pos";
+	out << YAML::Value << YAML::Flow << trans;
+	out << YAML::Key << "rotation";
+	
+	osg::Matrix rotMat; rotMat.osg::Matrix::makeRotate(osgrot);
+   //osg::Matrix rotMat = ToEulerAngles(osgrot);
+
+
+	std::vector<double> rotArray;
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			rotArray.push_back(rotMat(i, j));
+		}
+	}
+
+	out << YAML::Value << YAML::Flow << rotArray;
+	out << YAML::Key << "scale";
+	out << YAML::Value << YAML::Flow << scaleVec;
+	out << YAML::EndMap;
+
+	out << YAML::Key << "camera";
+	out << YAML::Value << YAML::BeginMap;
+	out << YAML::Key << "pos";
+	out << YAML::Value << YAML::Flow << pos;
+	out << YAML::Key << "up";
+	out << YAML::Value << YAML::Flow << up;
+	out << YAML::Key << "center";
+	out << YAML::Value << YAML::Flow << center;
+	out << YAML::EndMap;
+
+	out << YAML::Key << "render mode";
+	out << YAML::Value << renderMode;
+
+	out << YAML::Key << "transfer function";
+	out << YAML::Value << YAML::BeginMap;
+	out << YAML::Key << "contrast";
+	out << YAML::Value << YAML::Flow << contrastData;
+
+
+	opacityData = _tentWindow->getCinePresetData(0);
+	
+	opacities.push_back(opacityData);
+
+
+	out << YAML::Key << "opacity";
+	out  << YAML::BeginSeq << YAML::Flow << opacityData;
+	out << YAML::EndSeq;
+	std::string tf;
+	std::vector<std::vector<float>> gradient;
+	if (_transferFunctionRadial->getCurrent() == 0) {
+		tf = "grayscale";
+	}
+	else if (_transferFunctionRadial->getCurrent() == 1) {
+		tf = "color";
+	}
+	else if (_transferFunctionRadial->getCurrent() == 2) {
+		tf = "RGB-gradient";
+
+		
+
+		osg::Vec4 col_1 = _colSliderList[0]->getColor();
+		osg::Vec4 col_2 = _colSliderList[1]->getColor();
+		std::vector<float> stdcol1; stdcol1.push_back(col_1.x()); stdcol1.push_back(col_1.y()); stdcol1.push_back(col_1.z());
+		std::vector<float> stdcol2; stdcol2.push_back(col_2.x()); stdcol2.push_back(col_2.y()); stdcol2.push_back(col_2.z());
+
+		gradient.push_back(stdcol1);
+		gradient.push_back(stdcol2);
+	}
+	
+	out << YAML::Key << "color scheme";
+	out << YAML::Value << tf;
+
+	
+
+	if (tf == "RGB-gradient") {
+		out << YAML::Key << "gradient";
+		out << YAML::Value << YAML::Flow << gradient;
+	}
+	out << YAML::EndMap;
+
+	out << YAML::Key << "cubemap";
+	out << YAML::Value << "studio1";
+	out << YAML::Key << "itrs";
+	out << YAML::Value << 101;
+	
+		
+	///////////////////Cutting Plane///////////////////////
+	out << YAML::Key << "cutting plane";
+	out << YAML::Value << YAML::BeginMap;
+	out << YAML::Key << "status";
+	std::vector<CuttingPlane*> cPs = HelmsleyVolume::instance()->getCuttingPlanes();
+	std::vector<float> ppoint;
+	std::vector<float> pnorm;
+	if (!cPs.empty()) {
+		out << YAML::Value << "true";
+		osg::FloatArray* osgarraypp = _volume->_PlanePoint->getFloatArray();
+		osg::FloatArray* osgarraypn = _volume->_PlaneNormal->getFloatArray();
+
+		ppoint.push_back(osgarraypp->at(0)); ppoint.push_back(osgarraypp->at(1)); ppoint.push_back(osgarraypp->at(2));
+		pnorm.push_back(osgarraypn->at(0)); pnorm.push_back(osgarraypn->at(1)); pnorm.push_back(osgarraypn->at(2));
+		
+		out << YAML::Key << "ppoint";
+		out << YAML::Value << YAML::Flow << ppoint;
+		out << YAML::Key << "pnormal";
+		out << YAML::Value << YAML::Flow << pnorm;
+
+	}
+	else {
+		out << YAML::Value << "false";
+		out << YAML::Key << "ppoint";
+		out << YAML::Value << YAML::Flow << ppoint;
+		out << YAML::Key << "pnormal";
+		out << YAML::Value << YAML::Flow << pnorm;
+	}
+	out << YAML::EndMap;
+	///////////////////Masks////////////////////////
+	if (_volume->hasMask()) {
+		out << YAML::Key << "mask";
+		out << YAML::Value << YAML::BeginMap;
+		out << YAML::Key << "value";
+		std::vector<bool> maskValues;
+		_organs->isOn() ? maskValues.push_back(true) : maskValues.push_back(false);
+		_colon->isOn() ? maskValues.push_back(true) : maskValues.push_back(false);
+		_kidney->isOn() ? maskValues.push_back(true) : maskValues.push_back(false);
+		_bladder->isOn() ? maskValues.push_back(true) : maskValues.push_back(false);
+		_spleen->isOn() ? maskValues.push_back(true) : maskValues.push_back(false);
+		_illeum->isOn() ? maskValues.push_back(true) : maskValues.push_back(false);
+		_aorta->isOn() ? maskValues.push_back(true) : maskValues.push_back(false);
+		_vein->isOn() ? maskValues.push_back(true) : maskValues.push_back(false);
+		out << YAML::Value << YAML::Flow << maskValues;
+		out << YAML::EndMap;
+	}
+	
+	
+
+
+	///////////////////Dataset//////////////////////
+	out << YAML::Key << "series name";
+	FileSelector* fs = HelmsleyVolume::instance()->getFileSelector();
+	std::string datasetPath = fs->getCurrPath();
+	out << YAML::Value << datasetPath;
+
+	out << YAML::EndMap;
+
+	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.PresetsFolder", "C:/", false);
+ 	std::string presetPath = "C:/Users/g3aguirre/Downloads/ivl-cr-master/ivl-cr-master/configs/" + name + ".yml";
+	std::ofstream fout(presetPath);
+	fout << out.c_str();
+
+	CallbackButton* presetbutton = new CallbackButton();
+	presetbutton->setCallback(this);
+	UIText* presetText = new UIText(name, 40.0f, osgText::TextBase::CENTER_CENTER);
+	presetbutton->addChild(presetText);
+	_presetUIList->addChild(presetbutton);
+	_presetCallbacks.push_back(presetbutton);
+
+	_futures.push_back(std::async(std::launch::async, runCinematicThread, datasetPath, presetPath));
+	//_futures[0].wait();
+ }
+
+void NewVolumeMenu::runCinematicThread(std::string datasetPath, std::string configPath) {
+ 	LPCSTR lp = _T("C:/Users/g3aguirre/Downloads/ivl-cr-master/ivl-cr-master/x64/Release/ivl-cr.exe");
+	LPCSTR open = _T("open");
+	LPCSTR dir = _T("C:/Users/g3aguirre/Downloads/ivl-cr-master/ivl-cr-master");
+
+	std::replace(datasetPath.begin(), datasetPath.end(), '\\', '/');
+	std::cout << datasetPath << std::endl;
+	std::cout << configPath << std::endl;
+
+	std::string paramsStr = datasetPath + " " + configPath;
+	const char* paramsChar = {paramsStr.c_str()};
+	LPCSTR params = _T(paramsChar);
+
+
+	//HelmsleyVolume::instance()->getScreenshotTool()->takingPhoto(true);
+	HANDLE ghMutex = ShellExecute(NULL, open, lp, params, dir, SW_SHOWDEFAULT);
+	WaitForSingleObject(
+		ghMutex,    // handle to mutex
+		10000);  // no time-out interval
+
+	HelmsleyVolume::instance()->getScreenshotTool()->setPhoto(datasetPath);
+	//HelmsleyVolume::instance()->getScreenshotTool()->takingPhoto(false);
+}
+
+
 
 void NewVolumeMenu::toggleHistogram(bool on) {
 	if (on) {
@@ -2110,6 +2398,32 @@ void NewVolumeMenu::toggleClaheTools(bool on) {
 	else {		
  		_toolContainer->removeChild(_claheMenu->getRoot());
 		_claheMenu->getRootElement()->_parent = nullptr;
+	}
+}
+
+void NewVolumeMenu::toggleTFUI(bool on) {
+	if (on) {
+		_tentWindowContainer->addChild(_tentMenu->getRoot());
+		_contrastContainer->addChild(_contrastMenu->getRoot());
+		_container->addChild(_menu->getRoot());
+	}
+	else {
+		_tentWindowContainer->removeChild(_tentMenu->getRoot());
+		_tentMenu->getRootElement()->_parent = nullptr;
+		_contrastContainer->removeChild(_contrastMenu->getRoot());
+		_contrastMenu->getRootElement()->_parent = nullptr;
+		_container->removeChild(_menu->getRoot());
+		_menu->getRootElement()->_parent = nullptr;
+	}
+}
+
+void NewVolumeMenu::toggleMaskMenu(bool on) {
+	if (on) {
+		_maskContainer->addChild(_maskMenu->getRoot());
+	}
+	else {
+		_maskContainer->removeChild(_maskMenu->getRoot());
+		_maskMenu->getRootElement()->_parent = nullptr;
 	}
 }
 
@@ -2355,5 +2669,33 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 				
 			}
 		}
+	}
+
+	//Mask menu
+	else if (index.first == 6) {
+		if(index.second->isOn())
+		{
+			index.second->setColor(UI_RED_ACTIVE_COLOR);
+			HelmsleyVolume::instance()->toggleMaskAndPresets(true);
+ 		}
+	else
+		{
+			index.second->setColor(UI_BACKGROUND_COLOR);
+			HelmsleyVolume::instance()->toggleMaskAndPresets(false);
+ 		}
+	}
+
+	//Mask menu
+	else if (index.first == 7) {
+		if(index.second->isOn())
+		{
+			index.second->setColor(UI_RED_ACTIVE_COLOR);
+			HelmsleyVolume::instance()->toggleTFUI(true);
+ 		}
+	else
+		{
+			index.second->setColor(UI_BACKGROUND_COLOR);
+			HelmsleyVolume::instance()->toggleTFUI(false);
+ 		}
 	}
 }

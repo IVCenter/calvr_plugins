@@ -4,7 +4,7 @@
 
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrKernel/SceneObject.h>
-
+#include <future>
 #include <cvrMenu/MenuItem.h>
 #include <cvrMenu/MenuRangeValue.h>
 #include <cvrMenu/MenuRangeValueCompact.h>
@@ -70,6 +70,10 @@ public:
 	void loadVolume(std::string seriesPath, bool change, bool onlyVolume);
 	void loadVolumeOnly(bool isPreset, std::string seriesPath);
 	void loadSecondVolume(std::string seriesPath);
+
+	static void threadTest();
+
+
 	
 protected:
 	void updateSelections(SelectChoice choice);
@@ -118,6 +122,9 @@ protected:
 	PatientInfo _patientInfo;
 	bool _menusLoaded;
 	int _flag;
+
+
+	std::vector<std::future<void>> _futures; 
 };
 
 

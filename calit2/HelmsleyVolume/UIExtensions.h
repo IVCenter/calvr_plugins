@@ -14,7 +14,7 @@
 #define UI_PINK_COLOR osg::Vec3(1, 0.8, 0.976)
 #define UI_WHITE_COLOR osg::Vec4(1, 1, 1, 1)
 #define UI_INACTIVE_WHITE_COLOR osg::Vec4(1, 1, 1, .4)
-#define UI_INACTIVE_RED_COLOR osg::Vec4(0.8, 0.1, 0.1, 1.0)
+#define UI_INACTIVE_RED_COLOR osg::Vec4(0.8, 0.1, 0.1, 0.4)
 #define UI_BLACK_COLOR osg::Vec4(0, 0, 0, 1)
 
 #include <cvrMenu/NewUI/UIButton.h>
@@ -704,6 +704,7 @@ public:
 	void clearTents();
 	void fillTentDetails(int _triangleIndex, float center, float bottomWidth, float topWidth, float height, float lowest);
 	std::vector<float> getPresetData(int index);
+	std::vector<float> getCinePresetData(int index);
 	//std::unique_ptr<std::vector<Tent*>> _tents;
 	TentWindowOnly* _tWOnly;
 private:

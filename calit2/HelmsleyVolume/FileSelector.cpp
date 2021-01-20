@@ -3,7 +3,7 @@
 #include "HelmsleyVolume.h"
 #include "Utils.h"
 #include "UIExtensions.h"
-
+ 
 
 #ifdef WIN32
 #include "dirent.h"
@@ -309,7 +309,16 @@ void FileSelector::menuCallback(cvr::MenuItem* item)
 	}
 }
 
+void FileSelector::threadTest() {
+	int result = system("C:/Users/g3aguirre/Documents/CAL/Testing/ExternalAppTest/x64/Release/ExternalAppTest.exe");
+  }
+
 void FileSelector::uiCallback(UICallbackCaller* ui){
+	
+
+	//_futures.push_back(std::async(std::launch::async, threadTest));
+	
+	
 	if (ui == _rightArrow) {
 		if(_currMap->size() > _selectIndex)
 			updateSelections(RIGHT);
@@ -356,6 +365,9 @@ void FileSelector::uiCallback(UICallbackCaller* ui){
 		//bool change = _state == CHANGING ? true : false;
 		loadSecondVolume(_currentPath);
 	}
+
+
+
 }
 
 bool FileSelector::checkSelectionCallbacks(UICallbackCaller* item) {

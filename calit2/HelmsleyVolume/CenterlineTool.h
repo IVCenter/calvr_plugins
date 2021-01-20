@@ -24,13 +24,7 @@
 #include "CuttingPlane.h"
 #include "Interactable.h"
 #include "UIExtensions.h"
-
-
-
-
-
-
-
+ 
 class CenterlineTool : public cvr::SceneObject, public UICallback, public UICallbackCaller
 {
 public:

@@ -1,6 +1,7 @@
 #ifndef HELMSLEY_VOLUME_MENU_H
 #define HELMSLEY_VOLUME_MENU_H
 
+#include <future>
 #include <cvrKernel/CVRPlugin.h>
 #include <cvrKernel/SceneObject.h>
 
@@ -155,8 +156,6 @@ public:
 		_volume2 = v2;
 		_volume1 = _volume;
 		switchVolumes(1);
-		
-
 	}
 	void clearVolumes();
 	void resetValues();
@@ -174,6 +173,9 @@ public:
 	void toggleLinkOpacity(bool turnOn);
 	void toggleHistogram(bool on);
 	void toggleClaheTools(bool on);
+	void toggleMaskMenu(bool on);
+	void toggleTFUI(bool on);
+	void saveYamlForCinematic();
 protected:
 	cvr::SceneObject* _scene;
 	VolumeGroup* _volume;
@@ -301,6 +303,9 @@ protected:
 	Tent* addRegion();
 	void savePreset();
 	void NewVolumeMenu::upDatePreviewDefines(std::string tf);
+
+	static void runCinematicThread(std::string datasetPath, std::string configPath);
+	std::vector<std::future<void>> _futures;
 private:
 	ToolMenu* _toolMenu = nullptr;
 	bool _movable;

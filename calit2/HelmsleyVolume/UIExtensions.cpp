@@ -335,6 +335,7 @@ ColorPickerSaturationValue::ColorPickerSaturationValue()
 	_indicator = new UIQuadElement();
 	_indicator->setSize(osg::Vec3(0, 1, 0), osg::Vec3(20, 0, 20));
 	_indicator->setAbsolutePos(osg::Vec3(-10, -0.2f, 10));
+	_indicator->setPercentPos(osg::Vec3(1.0, 0.0, 0.0));
 	addChild(_indicator);
 }
 
@@ -865,6 +866,16 @@ std::vector<float> TentWindow::getPresetData(int index) {
 	data.push_back(_tWOnly->_tents->at(index)->getTopWidth());
 	data.push_back(_tWOnly->_tents->at(index)->getHeight());
 	data.push_back(_tWOnly->_tents->at(index)->getBottom());
+	return data;
+}
+
+std::vector<float> TentWindow::getCinePresetData(int index) {
+	std::vector<float> data;
+	data.push_back(_tWOnly->_tents->at(index)->getHeight());
+	data.push_back(_tWOnly->_tents->at(index)->getBottom());
+	data.push_back(_tWOnly->_tents->at(index)->getBottomWidth());
+	data.push_back(_tWOnly->_tents->at(index)->getTopWidth());
+	data.push_back(_tWOnly->_tents->at(index)->getCenter());
 	return data;
 }
 
