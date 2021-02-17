@@ -29,11 +29,10 @@ void main() {
     // figure out the sub block this index belongs to 
     uvec3 indexVec = gl_WorkGroupID.xyz;
     uint dim = NUM_BINS;
-    uint index = indexVec.z*dim*dim + indexVec.y*dim + indexVec.x;
-    
+    uint index = indexVec.z*dim*dim + indexVec.y*dim + indexVec.x;    
 	index = index * 64 + gl_GlobalInvocationID.x;
-	// index = gl_GlobalInvocationID.x;
 	uint histIndex = index / NUM_BINS;
+
 
     // Pass 1 of redistributing the excess pixels 
     uint avgInc =  excess[ histIndex ] / NUM_BINS;

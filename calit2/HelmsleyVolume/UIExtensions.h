@@ -248,8 +248,7 @@ private:
 	osg::Vec2 _sv;
 	float _hue;
 };
-///////////////////////////////////////////////////////////////////////////////
-class TriangleButton : public cvr::UIElement, public UICallbackCaller
+ class TriangleButton : public cvr::UIElement, public UICallbackCaller
 {
 public:
 	TriangleButton(osg::Vec4 color = osg::Vec4(UI_BLUE_COLOR, 1))
@@ -491,7 +490,7 @@ protected:
 	std::map<std::string, osg::Uniform*> _uniforms;
 
 };
- /////////////curved quad
+ 
 class Line : public cvr::UIElement
 {
 public:
@@ -553,8 +552,56 @@ protected:
 
 };
 
+class MarchingCubesRender : public cvr::UIElement
+{
+public:
+	MarchingCubesRender(osg::ref_ptr<osg::FloatArray> coords, osg::Vec3i volDims)
+		: UIElement()
+	{
+		_coords = coords;
+	
+		_geode = new osg::Geode();
+		_voldims = volDims;
+		
+		createGeometry();
+		setProgram(getOrLoadProgram());
+	}
 
-///////////////////////////////////////centerline
+	virtual void createGeometry();
+	virtual void updateGeometry();
+
+	virtual void setProgram(osg::Program* p) { _program = p; _dirty = true; }
+	virtual osg::Program* getProgram() { return _program; }
+	virtual const osg::ref_ptr<osg::Geode> getGeode() { return _geode; }
+
+	template <typename T>
+	void addUniform(std::string uniform, T initialvalue);
+	void addUniform(std::string uniform);
+	virtual void addUniform(osg::Uniform* uniform);
+	virtual osg::Uniform* getUniform(std::string uniform);
+	virtual void setShaderDefine(std::string name, std::string definition, osg::StateAttribute::Values on);
+
+ 	osg::ref_ptr<osg::MatrixTransform> getTransform() {
+		return _transform;
+	}
+
+
+protected:
+	osg::ref_ptr<osg::MatrixTransform> _transform;
+	osg::ref_ptr<osg::Geode> _geode;
+	osg::Geometry* _polyGeom;
+	osg::ref_ptr<osg::FloatArray> _coords;
+	osg::Vec3i _voldims;
+
+	static osg::Program* getOrLoadProgram();
+	static osg::Program* _mcProg;
+
+	osg::ref_ptr<osg::Program> _program;
+	std::map<std::string, osg::Uniform*> _uniforms;
+};
+
+
+
 class Dial : public cvr::UIElement, public UICallbackCaller
 {
 public:

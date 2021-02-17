@@ -711,6 +711,10 @@ void HelmsleyVolume::toggleTFUI(bool on) {
 	_worldMenus[0]->toggleTFUI(on);
 }
 
+void HelmsleyVolume::toggleMCRedner(bool on) {
+	_worldMenus[0]->toggleMCRedner(on);
+}
+
 void HelmsleyVolume::loadVolume(std::string path, std::string maskpath, bool onlyVolume)
 {
 	SceneObject * so;

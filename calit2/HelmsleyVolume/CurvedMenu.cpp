@@ -50,7 +50,7 @@ void CurvedMenu::setImage(int index, std::string iconPath) {
 	osg::Matrix rotMat = osg::Matrix::rotate(currRadian * osg::PI, osg::Vec3(0, 1, 0));
 	uitext->setRot(rotMat.getRotate());
   
-	std::cout << "currRadian: " << currRadian << std::endl;
+	//std::cout << "currRadian: " << currRadian << std::endl;
  	
 
  

@@ -20,6 +20,13 @@
 
 #include "YamlParser.h"
 
+
+enum ToolIndex {
+	UNDEFINED0,
+	CUTTINGPLANE,
+	UNDEFINED1
+};
+
 class VolumeMenu : public cvr::MenuCallback {
 public:
 	VolumeMenu(cvr::SceneObject* scene, VolumeGroup* volume) : _scene(scene), _volume(volume) {}
@@ -65,7 +72,11 @@ protected:
 };
 
 
+
 class ToolMenu : public UICallback {
+	
+
+
 public:
 	ToolMenu(int index = 0, bool movable = true, cvr::SceneObject* parent = nullptr);
 	~ToolMenu();
@@ -76,7 +87,16 @@ public:
 	}
 
 	ToolToggle* getCenterLineTool() { return  _centerLIneTool; }
-	ToolToggle* getCuttingPlaneTool() { return  _cuttingPlane; }
+	CurvedQuad* getCuttingPlaneTool() {
+		auto curvedMenuItems = _curvedMenu->getCurvedMenuItems();
+		int toolIndex = 0;
+		for (std::list<CurvedQuad*>::iterator it = curvedMenuItems.begin(); it != curvedMenuItems.end(); ++it) {
+			if (toolIndex == CUTTINGPLANE)
+				return (*it);
+		toolIndex++;
+		}
+		return nullptr;
+	}
 	ToolToggle* getMeasuringTool() { return  _measuringTool; }
 	ToolToggle* getScreenShotTool() { return  _screenshotTool; }
 
@@ -175,6 +195,7 @@ public:
 	void toggleClaheTools(bool on);
 	void toggleMaskMenu(bool on);
 	void toggleTFUI(bool on);
+	void toggleMCRedner(bool on);
 	void saveYamlForCinematic();
 protected:
 	cvr::SceneObject* _scene;

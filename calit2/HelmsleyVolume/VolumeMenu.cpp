@@ -1727,10 +1727,11 @@ void NewVolumeMenu::usePreset(std::string filename) {
 
 	//////////Cutting Plane/////////////
 
-	ToolToggle* cuttingPlaneTool = _toolMenu->getCuttingPlaneTool();
-	try {
-		if (!config["cutting plane position"]) {
-			cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
+	//ToolToggle* cuttingPlaneTool = _toolMenu->getCuttingPlaneTool();
+	CurvedQuad* cuttingPlaneTool = _toolMenu->getCuttingPlaneTool();
+
+		if (config["cutting plane value"].as<int>() == 0) {
+			cuttingPlaneTool->setColor(UI_BACKGROUND_COLOR);
 			cuttingPlaneTool->turnOff();
 			
 		}
@@ -1748,7 +1749,7 @@ void NewVolumeMenu::usePreset(std::string filename) {
 
 
 			if (!cuttingPlaneTool->isOn()) {
-				cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+				cuttingPlaneTool->setColor(UI_RED_ACTIVE_COLOR);
 				cuttingPlaneTool->turnOn();
 			}
 
@@ -1757,31 +1758,7 @@ void NewVolumeMenu::usePreset(std::string filename) {
 			cutP->setRotation(cutPQuat);
 
 		}
-	}
-	catch(...){
 	
-		osg::Vec3 cutPpos;
-		cutPpos.x() = config["cutting plane position"][0].as<float>();
-		cutPpos.y() = config["cutting plane position"][1].as<float>();
-		cutPpos.z() = config["cutting plane position"][2].as<float>();
-
-		osg::Quat cutPQuat;
-		cutPQuat.x() = config["cutting plane rotation"][0].as<float>();
-		cutPQuat.y() = config["cutting plane rotation"][1].as<float>();
-		cutPQuat.z() = config["cutting plane rotation"][2].as<float>();
-		cutPQuat.w() = config["cutting plane rotation"][3].as<float>();
-
-		
-		if (!cuttingPlaneTool->isOn()) {
-			cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
-			cuttingPlaneTool->turnOn();
-		}
-		
-		CuttingPlane* cutP = HelmsleyVolume::instance()->HelmsleyVolume::createCuttingPlane();
-		cutP->setPosition(cutPpos);
-		cutP->setRotation(cutPQuat);
-		
-	}
 
 	ToolToggle* mTool = _toolMenu->getMeasuringTool();
 	ToolToggle* centerTool = _toolMenu->getCenterLineTool();
@@ -1889,7 +1866,7 @@ void NewVolumeMenu::resetValues() {
 	}
 
 
-	ToolToggle* cuttingPlaneTool = _toolMenu->getCuttingPlaneTool();
+	/*ToolToggle* cuttingPlaneTool = _toolMenu->getCuttingPlaneTool();
 	ToolToggle* mTool = _toolMenu->getMeasuringTool();
 	ToolToggle* centerTool = _toolMenu->getCenterLineTool();
 	ToolToggle* screenTool = _toolMenu->getScreenShotTool();
@@ -1909,7 +1886,7 @@ void NewVolumeMenu::resetValues() {
 	if (screenTool->isOn()) {
 		screenTool->toggle();
 		screenTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
-	}
+	}*/
 
 
 	/////Etc/////
@@ -2037,6 +2014,10 @@ void NewVolumeMenu::savePreset(){
 	///////////////////Cutting Plane///////////////////////
 	std::vector<CuttingPlane*> cPs = HelmsleyVolume::instance()->getCuttingPlanes();
 	if (!cPs.empty()) {
+		out << YAML::Key << "cutting plane value";
+		out << YAML::Value << 1;
+
+
 		osg::Vec3 cPPos = cPs[0]->getPosition();
 		std::vector<float> fPos;
 		fPos.push_back(cPPos.x());
@@ -2057,8 +2038,8 @@ void NewVolumeMenu::savePreset(){
 		out << YAML::Value << YAML::Flow << fQuat;
 	}
 	else {
-		out << YAML::Key << "cutting plane position";
-		out << YAML::Value << "NA";
+		out << YAML::Key << "cutting plane value";
+		out << YAML::Value << 0;
 	}
 	///////////////////Masks////////////////////////
 	if (_volume->hasMask()) {
@@ -2374,6 +2355,7 @@ void NewVolumeMenu::runCinematicThread(std::string datasetPath, std::string conf
 		10000);  // no time-out interval
 
 	HelmsleyVolume::instance()->getScreenshotTool()->setPhoto(datasetPath);
+	std::remove(configPath.c_str());
 	//HelmsleyVolume::instance()->getScreenshotTool()->takingPhoto(false);
 }
 
@@ -2417,6 +2399,16 @@ void NewVolumeMenu::toggleTFUI(bool on) {
 	}
 }
 
+void NewVolumeMenu::toggleMCRedner(bool on) {
+	if (on) {
+		if (!_volume->isMCRInitialized())
+			_volume->intializeMCR();
+	}
+	else {
+		;
+	}
+}
+
 void NewVolumeMenu::toggleMaskMenu(bool on) {
 	if (on) {
 		_maskContainer->addChild(_maskMenu->getRoot());
@@ -2450,7 +2442,7 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	//_menu->addChild(list);	
 	std::string dir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ImageDir");
 	
-	_curvedMenu = new CurvedMenu(this, 8);
+	_curvedMenu = new CurvedMenu(this, 9);
 	_curvedMenu->setImage(0, dir + "browser.png");
 	_curvedMenu->setImage(1, dir + "slice.png");
 	_curvedMenu->setImage(2, dir + "histogram.png");
@@ -2459,6 +2451,7 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	_curvedMenu->setImage(5, dir + "centerline.png");
 	_curvedMenu->setImage(6, dir + "cube.png");
 	_curvedMenu->setImage(7, dir + "cube.png");
+	_curvedMenu->setImage(8, dir + "cube.png");
 	_menu->addChild(_curvedMenu);
 	
 	
@@ -2685,7 +2678,7 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
  		}
 	}
 
-	//Mask menu
+	//TF menu
 	else if (index.first == 7) {
 		if(index.second->isOn())
 		{
@@ -2696,6 +2689,20 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 		{
 			index.second->setColor(UI_BACKGROUND_COLOR);
 			HelmsleyVolume::instance()->toggleTFUI(false);
+ 		}
+	}
+
+	//Marching Cube
+	else if (index.first == 8) {
+		if(index.second->isOn())
+		{
+			index.second->setColor(UI_RED_ACTIVE_COLOR);
+			HelmsleyVolume::instance()->toggleMCRedner(true);
+ 		}
+	else
+		{
+			index.second->setColor(UI_BACKGROUND_COLOR);
+			HelmsleyVolume::instance()->toggleMCRedner(false);
  		}
 	}
 }

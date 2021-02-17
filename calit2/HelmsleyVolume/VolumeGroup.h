@@ -22,15 +22,17 @@
 
 
 
+
 #include <iostream>
 #include <thread>
 #include <cvrKernel/ScreenConfig.h>
 #include <cvrKernel/ScreenBase.h>
-
+#include "MarchingCubesLUTs.h"
 //#define NUMGRAYVALS 255u
 #define CLIPLIMIT3D .85f
 #define ORGANCOUNT 8
 #define TOOLCOUNT 8
+
 
 class VolumeGroup : public osg::Group
 {
@@ -68,8 +70,6 @@ public:
 	unsigned int _numGrayVals = 255u;
 	unsigned int _histSize = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z() * _numGrayVals;
 	unsigned int _numHist = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z();
-	//CLAHE Variables///////
-
 	///////Main Methods
 	t_acbb precompMinMax();
 	t_acbb setupMinmaxSSBO();
@@ -83,7 +83,14 @@ public:
 
  	void precompLerp(t_ssbb ssbbHist);
  	void setupLerp(t_ssbb ssbbHist);
-	//Main Methods//////////
+	//MC
+	osg::ref_ptr<osg::FloatArray> _mcVertices = nullptr;
+	bool _mcrInitialized = false;
+	
+
+	void setMCVertices(osg::ref_ptr<osg::FloatArray> floats) { _mcVertices = floats; }
+	bool isMCRInitialized() { return _mcrInitialized; }
+	void intializeMCR();
 
 	////Extra Methods
 	void setNumBins(unsigned int numBins) { 
@@ -113,6 +120,7 @@ public:
 	osg::Vec3dArray* getColonCoords() { return _colonCoords; }
 	osg::Vec3dArray* getIlleumCoords() { return _illeumCoords; }
 	void precompTotalHistogram();
+	void precompMarchingCubes();
 
 
 	std::vector<osg::ref_ptr<osg::Geode>>* getCenterLines() { return _centerLineGeodes; }
@@ -176,6 +184,7 @@ protected:
 	std::string _lerpShader;
 
 	std::string _totalHistShader;
+	std::string _marchingCubesShader;
 
 
 	std::map<osg::GraphicsContext*, bool> _dirty;
@@ -197,13 +206,16 @@ protected:
 	osg::ref_ptr<osg::DispatchCompute> _lerpNode;
 
 	osg::ref_ptr<osg::DispatchCompute> _totalHistNode;
+	osg::ref_ptr<osg::DispatchCompute> _marchingCubeNode;
 	osg::ref_ptr<osg::ShapeDrawable> _cube;
+	
 
 
 	//osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbHist;
 //	osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbExcess;
 
 	std::vector<osg::ref_ptr<osg::Geode>>* _centerLineGeodes;
+	
 	osg::ref_ptr<osg::Vec3dArray> _colonCoords;
 	osg::ref_ptr<osg::Vec3dArray> _illeumCoords;
 	osg::ref_ptr<osg::Texture3D> _volume;
@@ -248,6 +260,8 @@ public:
 			
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+		
 			
 		}
 	}
@@ -257,11 +271,11 @@ public:
 
 
 
-class AtomicCallback : public osg::Drawable::DrawCallback
+class MinMaxCallback : public osg::Drawable::DrawCallback
 {
 public:
 	VolumeGroup* group;
-	AtomicCallback(VolumeGroup* g) : group(g)
+	MinMaxCallback(VolumeGroup* g) : group(g)
 	{
 	}
 
@@ -285,12 +299,12 @@ public:
 
 
 
-class ReadShaderStorageBufferCallback : public osg::Drawable::DrawCallback
+class CLAHEHistCallback : public osg::Drawable::DrawCallback
 {
 public:
 	VolumeGroup* group;
 
-	ReadShaderStorageBufferCallback(VolumeGroup* g) : group(g)
+	CLAHEHistCallback(VolumeGroup* g) : group(g)
 	{
 	}
 
@@ -302,39 +316,6 @@ public:
 			
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
-
-
-		//	///////////////DEBUGGING
-		//{
-		//	osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(32);
-		//	osg::GLBufferObject* glBufferObject = _ssbb2->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
- 
-		//	GLint previousID = 1;
-		//	glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &previousID);
-
-		//	if ((GLuint)previousID != glBufferObject->getGLObjectID())
-		//		glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, glBufferObject->getGLObjectID());
-
-		//	GLubyte* data = (GLubyte*)glBufferObject->_extensions->glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY_ARB);
- 	//		if (data)
-		//	{
-		//		size_t size = osg::minimum<int>(_ssbb2->getSize(), uintArray->getTotalDataSize());
-		//		memcpy((void*)&(uintArray->front()), data + _ssbb2->getOffset(), size);
-		//		glBufferObject->_extensions->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-		//	}
-
-		//	if ((GLuint)previousID != glBufferObject->getGLObjectID())
-		//		glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
-
-
-		//	for (int i = 0; i < 32; i++) {
-		//		std::cout << uintArray->at(i) << std::endl;
-		//	}
-
- 	//	}
-		////DEBUGGING/////////////////////////////
-
-
 
 			stop[0] = 1;
  
@@ -348,47 +329,6 @@ public:
 	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbb2;
 };
 
-class TotalHistCallback : public osg::Drawable::DrawCallback
-{
-public:
-	VolumeGroup* group;
-
-	TotalHistCallback(VolumeGroup* g) : group(g)
-	{
-	}
-
-	virtual void drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const
-	{
-		
-		if (group->isDirty(renderInfo.getCurrentCamera()->getGraphicsContext()) && stop[0] != 1)
-		{
- 			drawable->drawImplementation(renderInfo);
-			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
-
-			osg::ref_ptr<osg::UIntArray> _atomicCounterArray = new osg::UIntArray;
-			_atomicCounterArray->push_back(0);
-			_acbb->readData(*renderInfo.getState(), *_atomicCounterArray);
-
-			unsigned int value = osg::maximum(1u, _atomicCounterArray->front());
-
- 			histMax[0] = value;
-			stop[0] = 1;
-			group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
-
-		}
-	}
-
- 	osg::ref_ptr<osg::AtomicCounterBufferBinding> _acbb;
-
-
-	
-
-	uint16_t* stop = new uint16_t(0);
-	uint32_t* histMax = new uint32_t(0);
-	int _buffersize;
-	
- 	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbb;
- };
 
 class ExcessSSB : public osg::Drawable::DrawCallback
 {
@@ -490,6 +430,120 @@ public:
 	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbb;
 };
 
+
+class TotalHistCallback : public osg::Drawable::DrawCallback
+{
+public:
+	VolumeGroup* group;
+
+	TotalHistCallback(VolumeGroup* g) : group(g)
+	{
+	}
+
+	virtual void drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const
+	{
+
+		if (group->isDirty(renderInfo.getCurrentCamera()->getGraphicsContext()) && stop[0] != 1)
+		{
+			drawable->drawImplementation(renderInfo);
+			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+			osg::ref_ptr<osg::UIntArray> _atomicCounterArray = new osg::UIntArray;
+			_atomicCounterArray->push_back(0);
+			_acbb->readData(*renderInfo.getState(), *_atomicCounterArray);
+
+			unsigned int value = osg::maximum(1u, _atomicCounterArray->front());
+
+			histMax[0] = value;
+			stop[0] = 1;
+			group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
+
+		}
+	}
+
+	osg::ref_ptr<osg::AtomicCounterBufferBinding> _acbb;
+
+
+
+
+	uint16_t* stop = new uint16_t(0);
+	uint32_t* histMax = new uint32_t(0);
+	int _buffersize;
+
+	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbb;
+};
+
+
+
+class MarchingCubeCallback : public osg::Drawable::DrawCallback
+{
+public:
+	VolumeGroup* group;
+
+	MarchingCubeCallback(VolumeGroup* g) : group(g)
+	{
+	}
+
+	virtual void drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const
+	{
+
+		if (group->isDirty(renderInfo.getCurrentCamera()->getGraphicsContext()) && stop[0] != 1)
+		{
+			drawable->drawImplementation(renderInfo);
+			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+			//	///////////////DEBUGGING
+			{
+				osg::ref_ptr<osg::FloatArray> uintArray = new osg::FloatArray(_buffersize);
+				osg::GLBufferObject* glBufferObject = _ssbb->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
+
+				GLint previousID = 1;
+				glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &previousID);
+
+				if ((GLuint)previousID != glBufferObject->getGLObjectID())
+					glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, glBufferObject->getGLObjectID());
+
+				GLubyte* data = (GLubyte*)glBufferObject->_extensions->glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY_ARB);
+				if (data)
+				{
+					size_t size = osg::minimum<int>(_ssbb->getSize(), uintArray->getTotalDataSize());
+					memcpy((void*)&(uintArray->front()), data + _ssbb->getOffset(), size);
+					glBufferObject->_extensions->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+				}
+
+				if ((GLuint)previousID != glBufferObject->getGLObjectID())
+					glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
+
+
+				/*for (int i = 0; i < 90; i+=3) {
+					std::cout << std::endl;
+					std::cout << uintArray->at(i) << ", " << uintArray->at(i+1) << ", " << uintArray->at(i+2);
+				}*/
+				group->setMCVertices(uintArray);
+			}
+			////DEBUGGING/////////////////////////////
+
+
+			stop[0] = 1;
+			ready[0] = 1;
+			group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
+
+		}
+	}
+
+
+
+	uint16_t* stop = new uint16_t(0);
+	uint16_t* ready = new uint16_t(0);
+	int _buffersize;
+	osg::ref_ptr<osg::Vec3dArray> vertices;
+	MarchingCubesLUTs luts;
+	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbb;
+	osg::Vec3i _volDims;
+
+
+
+};
 
 
 

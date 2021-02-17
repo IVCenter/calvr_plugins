@@ -15,6 +15,7 @@ osg::Program* CurvedQuad::_curvedQuadProg = nullptr;
 osg::Program* TriangleButton::_triangleButtonProg = nullptr;
 osg::Program* Dial::_dialProg = nullptr;
 osg::Program* Line::_lineProg = nullptr;
+osg::Program* MarchingCubesRender::_mcProg = nullptr;
 osg::Program* ColorSlider::_colorSlideProg = nullptr;
 
 
@@ -666,6 +667,7 @@ void TentWindow::uiCallback(UICallbackCaller* ui) {
 		_tWOnly->_tents->at(_tentIndex)->setCenter(_centerPos->getAdjustedValue());
 		_volume->_computeUniforms["OpacityCenter"]->setElement(_tentIndex, _centerPos->getAdjustedValue());
 		cVLabel->setText(std::to_string(_centerPos->getAdjustedValue()).substr(0, 4));
+		std::cout << "Center: " << _centerPos->getAdjustedValue() << std::endl;
 	}
 	if (ui == _height) {
 		if (_tWOnly->_tents->at(_tentIndex)->getSavedHeight() == 0.0) {
@@ -1451,8 +1453,8 @@ void Tent::setShaderDefine(std::string name, std::string define, osg::StateAttri
 
 osg::Program* Tent::getOrLoadProgram()
 {
-	/*if (!_triangleProg)
-	{*/
+	if (!_triangleProg)
+	{
 		
 		const std::string vert = HelmsleyVolume::loadShaderFile("transferFunction.vert");
 		const std::string frag = HelmsleyVolume::loadShaderFile("triangle.frag");
@@ -1463,7 +1465,7 @@ osg::Program* Tent::getOrLoadProgram()
 		_triangleProg->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
 
 		
-	//}
+	}
 
 	return _triangleProg;
 }
@@ -1644,7 +1646,157 @@ osg::Program* Line::getOrLoadProgram()
 }
 
 
-/////////////////////////////////centerline
+void MarchingCubesRender::createGeometry()
+{
+	//_transform = new osg::MatrixTransform();
+	//_group->addChild(_transform);
+	//_transform->addChild(_geode);
+	_polyGeom = new osg::Geometry();
+
+	int numFloats = _coords->size();
+	osg::ref_ptr<osg::Vec3Array> vec3Coords = new osg::Vec3Array();
+	osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array;
+	for (int i = 0; i < numFloats; i ++) {
+		if (_coords->at(i) == std::numeric_limits<float>::max()) {
+			continue;
+		}
+		osg::Vec3 vec3;
+		vec3.x() = _coords->at(i);
+		i++;
+		vec3.y() = _coords->at(i);
+		i++;
+		vec3.z() = _coords->at(i);
+
+		osg::Vec3 originalVec3 = vec3;
+		vec3.x() = (vec3.x() / _voldims.x()) - .5f;
+		vec3.y() = ((vec3.y() / _voldims.y())-.5f);
+		vec3.z() = (vec3.z() / _voldims.z())-.5f;
+
+		vec3Coords->push_back(vec3);
+		
+		int currsize = vec3Coords->size();
+		if (currsize % 3 == 0) {
+			osg::Vec3 p1 = vec3Coords->at(currsize - 3); p1.x() = (p1.x()+.5)*_voldims.x(); p1.y() = (p1.y()+.5)*_voldims.y(); p1.z() = (p1.z()+.5)*_voldims.z();
+			osg::Vec3 p2 = vec3Coords->at(currsize - 2); p2.x() = (p2.x() + .5) * _voldims.x(); p2.y() = (p2.y() + .5) * _voldims.y(); p2.z() = (p2.z() + .5) * _voldims.z();
+			osg::Vec3 p3 = vec3Coords->at(currsize - 1); p3.x() = (p3.x() + .5) * _voldims.x(); p3.y() = (p3.y() + .5) * _voldims.y(); p3.z() = (p3.z() + .5) * _voldims.z();
+			
+
+
+
+			osg::Vec3 vecA = p2 - p1; //p2-p1
+			osg::Vec3 vecB = p3 - p2; //p3-p2
+			
+			osg::Vec3 normal = vecA ^ vecB;
+			normal.normalize();
+			normal.x() = (normal.x() / 2.0f) + .5f;
+			normal.y() = (normal.y() / 2.0f) + .5f;
+			normal.z() = (normal.z() / 2.0f) + .5f;
+
+			/*float temp = normal.y();
+			normal.y() = normal.z();
+			normal.z() = temp;*/
+
+
+			colors->push_back(osg::Vec4(normal, 1.0));
+			colors->push_back(osg::Vec4(normal, 1.0));
+			colors->push_back(osg::Vec4(normal, 1.0));
+
+			//std::cout << "normal check: " << normal.x() << ", " << normal.y() << ", " << normal.z() << std::endl;
+		}
+
+		
+	}
+
+	int numCoords = vec3Coords->size();
+	_polyGeom->setVertexArray(vec3Coords);
+	_polyGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES, 0, numCoords));
+	_geode->addDrawable(_polyGeom);
+	((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_PER_VERTEX);
+	((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_PER_VERTEX);
+	updateGeometry();
+}
+
+void MarchingCubesRender::updateGeometry()
+{
+
+	_geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::OPAQUE_BIN);
+	_geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::OFF);
+
+
+	//osg::Vec4Array* colors = new osg::Vec4Array;
+	//colors->push_back(osg::Vec4(1.0,0.0,1.0,1.0));
+	//((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_OVERALL);
+	/*((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_OVERALL);
+	((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_OVERALL);*/
+	_geode->getOrCreateStateSet()->setMode(GL_CULL_FACE, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+	_geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+
+	/*osg::Matrix mat = osg::Matrix();
+	mat.makeScale(_actualSize);
+	mat.postMultTranslate(_actualPos);
+	_transform->setMatrix(mat);*/
+
+ 	if (_program.valid())
+	{
+
+		_geode->getDrawable(0)->getOrCreateStateSet()->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
+		std::cout << "program applied" << std::endl;
+	}
+
+
+
+}
+
+
+template <typename T>
+void MarchingCubesRender::addUniform(std::string uniform, T initialvalue)
+{
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), initialvalue);
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
+void MarchingCubesRender::addUniform(std::string uniform)
+{
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), 0.0f);
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
+void MarchingCubesRender::addUniform(osg::Uniform* uniform)
+{
+	_uniforms[uniform->getName()] = uniform;
+	_geode->getOrCreateStateSet()->addUniform(uniform);
+}
+
+osg::Uniform* MarchingCubesRender::getUniform(std::string uniform)
+{
+	return _uniforms[uniform];
+}
+
+void MarchingCubesRender::setShaderDefine(std::string name, std::string define, osg::StateAttribute::Values on)
+{
+	_geode->getOrCreateStateSet()->setDefine(name, define, on);
+}
+
+osg::Program* MarchingCubesRender::getOrLoadProgram()
+{
+	if (!_mcProg)
+	{
+
+	const std::string vert = HelmsleyVolume::loadShaderFile("mc.vert");
+	const std::string frag = HelmsleyVolume::loadShaderFile("mc.frag");
+	_mcProg = new osg::Program;
+	_mcProg->setName("MCRender");
+
+	_mcProg->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
+	_mcProg->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
+	
+
+	}
+
+	return _mcProg;
+}
+
+
 void TriangleButton::createGeometry()
 {
 	_transform = new osg::MatrixTransform();
