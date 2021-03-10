@@ -51,6 +51,18 @@ void VolumeDrawCallback::drawImplementation(osg::RenderInfo& renderInfo, const o
 	group->_RelativeViewport->apply(ext, group->_program->getPCP(*renderInfo.getState())->getUniformLocation("RelativeViewport"));
 
 	drawable->drawImplementation(renderInfo);
+
+	//checkStatuses();
+
+
+}
+
+void VolumeDrawCallback::checkStatuses() const{
+	if (group->_statusDirty) {
+		if (((MarchingCubeCallback*)group->_marchingCubeNode->getDrawCallback())->ready[0] == 1) {
+			group->readyMCUI();
+		}
+	}
 }
 
 VolumeGroup::VolumeGroup()
@@ -715,6 +727,8 @@ void VolumeGroup::genClahe() {
 
 	((TotalHistCallback*)_totalHistNode->getDrawCallback())->stop[0] = 0;
 
+	((MarchingCubeCallback*)_marchingCubeNode->getDrawCallback())->stop[0] = 0;
+
 
 	
 	//dirty vol
@@ -883,12 +897,12 @@ void VolumeGroup::precompTotalHistogram() {
 	_totalHistNode->setDrawCallback(shaderStorageCallback);
 	shaderStorageCallback->_ssbb = ssbbHist;
 	shaderStorageCallback->_acbb = acbb;
-	shaderStorageCallback->_buffersize = numBins;
+	/*shaderStorageCallback->_buffersize = numBins;*/
   
 
 
 	osg::StateSet* states = _totalHistNode->getOrCreateStateSet();
-	states->setRenderBinDetails(7, "RenderBin");
+	states->setRenderBinDetails(9, "RenderBin");
 	/*states->setTextureAttribute(5, _claheVolume, osg::StateAttribute::ON);
 	states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
 	/*states->setTextureAttribute(1, _baked, osg::StateAttribute::ON);
@@ -975,12 +989,38 @@ void VolumeGroup::precompMarchingCubes() {
 
 }
 
-void VolumeGroup::intializeMCR() {
-	if (((MarchingCubeCallback*)_marchingCubeNode->getDrawCallback())->ready[0] == 1) {
+
+
+
+void VolumeGroup::intializeMC() {
+	/*if (((MarchingCubeCallback*)_marchingCubeNode->getDrawCallback())->ready[0] == 1) {
 		_mcrInitialized = true;
 		MarchingCubesRender* mcr = new MarchingCubesRender(_mcVertices, _volDims);
 		_transform->addChild(mcr->getGeode());
+		std::cout << "executed" << std::endl;
+	}*/
+	((MarchingCubeCallback*)_marchingCubeNode->getDrawCallback())->stop[0] = 0;
+	this->setDirtyAll();
+	this->_UIDirty = true;
+}
+
+bool VolumeGroup::toggleMC() {
+	if (_mcIsReady) {
+		if (_mcrGeode == nullptr) {
+			MarchingCubesRender* mcr = new MarchingCubesRender(_mcVertices, _volDims);
+			_mcrGeode = mcr->getGeode();
+		}
+		if (_transform->removeChild(_mcrGeode) == false) {
+			_transform->addChild(_mcrGeode);
+			return true;
+		}
+		return false;
 	}
+	return false;
+}
+
+void VolumeGroup::readyMCUI() {
+	_mcIsReady = true;
 }
 
 unsigned int VolumeGroup::getHistMax() {
@@ -1066,7 +1106,7 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 
 
 		 
-			GLenum err;
+			
 			GLint id;
 			glGetIntegerv(GL_CURRENT_PROGRAM, &id);
 		 

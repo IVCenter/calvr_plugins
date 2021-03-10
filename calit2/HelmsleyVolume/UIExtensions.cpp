@@ -836,8 +836,9 @@ void TentWindow::toggleTent(int index) {
 void TentWindow::clearTents() {
 	
 	while(!_tWOnly->_tents->empty()) {
-		_tWOnly->_bknd->removeChild(_tWOnly->_tents->at(0));
-		_tWOnly->_tents->erase(_tWOnly->_tents->begin());
+		//_tWOnly->_bknd->removeChild(_tWOnly->_tents->at(_tWOnly->_tents->size()-1));
+		_tWOnly->_tents->pop_back();
+		
 	}
 	
 	 //memory leak?

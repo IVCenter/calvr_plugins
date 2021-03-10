@@ -18,7 +18,9 @@
 
 #include "VolumeGroup.h"
 
-#include "YamlParser.h"
+#include <yaml-cpp/yaml.h>
+
+
 
 
 enum ToolIndex {
@@ -66,7 +68,6 @@ protected:
 
 	cvr::MenuList* colorFunction;
 
-	YamlParser yp;
 
 	
 };
@@ -123,6 +124,7 @@ private:
 	cvr::SceneObject* _container = nullptr;
 };
 
+
 class VolumeMenuUpdate : public osg::NodeCallback
 {
 public:
@@ -133,7 +135,7 @@ public:
 		if (_Linked) {
 			Link();
 		}
-
+		traverse(node, nv);
 	}
 
 	void setLinkOn() {
@@ -156,6 +158,7 @@ private:
 	osg::Vec3 _prevPos = osg::Vec3(0,0,0);
 };
 
+class UIMenuUpdate;
 class NewVolumeMenu : public UICallback {
 public:
 	NewVolumeMenu(cvr::SceneObject* scene, VolumeGroup* volume, bool movable = true) : _scene(scene), _volume(volume), _movable(movable) {
@@ -196,6 +199,8 @@ public:
 	void toggleMaskMenu(bool on);
 	void toggleTFUI(bool on);
 	void toggleMCRedner(bool on);
+
+	void updateMCUI(bool on);
 	void saveYamlForCinematic();
 protected:
 	cvr::SceneObject* _scene;
@@ -216,6 +221,7 @@ protected:
 	cvr::UIPopup* _tentMenu = nullptr;
 
 	cvr::UIPopup* _claheMenu = nullptr;
+	cvr::UIPopup* _marchingCubesMenu = nullptr;
 	cvr::UIQuadElement* _maskBknd;
 	cvr::UIQuadElement* _presetBknd;
 
@@ -243,6 +249,11 @@ protected:
 	CallbackButton* _genClaheButton;
 	CallbackButton* _useClaheButton;
 
+	//Marchinc Cubes UI
+	CallbackButton* _UseMarchingCubesButton;
+	CallbackButton* _GenMarchCubesButton;
+
+	//Contrast UI
 	CallbackSlider* _trueContrast;
 	CallbackSlider* _contrastCenter;
 
@@ -327,6 +338,8 @@ protected:
 
 	static void runCinematicThread(std::string datasetPath, std::string configPath);
 	std::vector<std::future<void>> _futures;
+
+	
 private:
 	ToolMenu* _toolMenu = nullptr;
 	bool _movable;
@@ -338,6 +351,34 @@ private:
 	cvr::SceneObject* _so = nullptr;
 
 	VolumeMenuUpdate* _updateCallback;
+	UIMenuUpdate* _uiMenuUpdate;
+
+
+};
+
+
+class UIMenuUpdate : public osg::NodeCallback
+{
+public:
+	UIMenuUpdate(VolumeGroup* vg, NewVolumeMenu* vm) { _vg = vg; _vm = vm; }
+
+	virtual void operator()(osg::Node* node, osg::NodeVisitor* nv)
+	{
+		if (_vg->_UIDirty) {
+			if (_vg->_mcIsReady) {
+				_vm->updateMCUI(false);
+				_vg->_UIDirty = false;
+			}
+		}
+		traverse(node, nv);
+	}
+
+
+
+
+private:
+	VolumeGroup* _vg = nullptr;
+	NewVolumeMenu* _vm = nullptr;
 };
 
 #endif

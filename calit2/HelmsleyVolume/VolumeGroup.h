@@ -56,7 +56,7 @@ public:
 	{
 		return _hasMask;
 	}
-
+	bool _statusDirty = false;
 
 	////////////////CLAHE
 	typedef  osg::ref_ptr<osg::ShaderStorageBufferBinding> t_ssbb;
@@ -70,7 +70,7 @@ public:
 	unsigned int _numGrayVals = 255u;
 	unsigned int _histSize = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z() * _numGrayVals;
 	unsigned int _numHist = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z();
-	///////Main Methods
+	///////CLAHE Methods
 	t_acbb precompMinMax();
 	t_acbb setupMinmaxSSBO();
  	std::pair<t_ssbb, t_ssbb> precompHist();
@@ -86,20 +86,21 @@ public:
 	//MC
 	osg::ref_ptr<osg::FloatArray> _mcVertices = nullptr;
 	bool _mcrInitialized = false;
+	bool _mcIsReady = false;
 	
-
+	
 	void setMCVertices(osg::ref_ptr<osg::FloatArray> floats) { _mcVertices = floats; }
-	bool isMCRInitialized() { return _mcrInitialized; }
-	void intializeMCR();
-
+	bool isMCInitialized() { return _mcrInitialized; }
+	bool toggleMC();
+	void intializeMC();
+	void readyMCUI();
 	////Extra Methods
 	void setNumBins(unsigned int numBins) { 
 		_numGrayVals = numBins;
 		_histSize = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z() * _numGrayVals;
 	}
 	void genClahe();
-	//Extra Methods//
-	//CLAHE//////////////
+ 
 	unsigned int getHistMax();
 
 	osg::ref_ptr<osg::ShaderStorageBufferBinding> getHistBB();
@@ -146,6 +147,8 @@ public:
 	osg::ref_ptr<osg::MatrixTransform> _transform;
 	osg::ref_ptr<osg::MatrixTransform> _lineTransform;
 	osg::ref_ptr<osg::FrameBufferObject> _resolveFBO;
+	
+	osg::ref_ptr<osg::Geode> _mcrGeode = nullptr;
 
 
 	struct Values {
@@ -171,7 +174,7 @@ public:
 	};
 
 	Values values;
-	
+	bool _UIDirty = false;
 
 protected:
 	bool _hasMask;
@@ -188,6 +191,7 @@ protected:
 
 
 	std::map<osg::GraphicsContext*, bool> _dirty;
+	
 
 	osg::ref_ptr<osg::Program> _program;
 	osg::ref_ptr<osg::Program> _computeProgram;
@@ -241,6 +245,8 @@ public:
 	VolumeDrawCallback(VolumeGroup* g) : group(g) {}
 
 	virtual void drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const;
+	
+	void checkStatuses() const;
 };
 
 class ComputeDrawCallback : public osg::Drawable::DrawCallback
@@ -343,7 +349,7 @@ public:
 	{
 		if (group->isDirty(renderInfo.getCurrentCamera()->getGraphicsContext()) && stop[0] != 1)
 		{
- 			osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_buffersize);
+ 			/*osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_buffersize);*/
 
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
@@ -448,13 +454,13 @@ public:
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-			osg::ref_ptr<osg::UIntArray> _atomicCounterArray = new osg::UIntArray;
-			_atomicCounterArray->push_back(0);
+			/*osg::ref_ptr<osg::UIntArray> _atomicCounterArray = new osg::UIntArray(1);
+			
 			_acbb->readData(*renderInfo.getState(), *_atomicCounterArray);
 
-			unsigned int value = osg::maximum(1u, _atomicCounterArray->front());
+			unsigned int value = osg::maximum(1u, _atomicCounterArray->front());*/
 
-			histMax[0] = value;
+			histMax[0] = 1000u;
 			stop[0] = 1;
 			group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
 
@@ -468,7 +474,7 @@ public:
 
 	uint16_t* stop = new uint16_t(0);
 	uint32_t* histMax = new uint32_t(0);
-	int _buffersize;
+	
 
 	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbb;
 };
@@ -526,6 +532,10 @@ public:
 
 			stop[0] = 1;
 			ready[0] = 1;
+			std::cout << "ready test" << std::endl;
+
+			group->readyMCUI();
+
 			group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
 
 		}
@@ -533,7 +543,7 @@ public:
 
 
 
-	uint16_t* stop = new uint16_t(0);
+	uint16_t* stop = new uint16_t(1);
 	uint16_t* ready = new uint16_t(0);
 	int _buffersize;
 	osg::ref_ptr<osg::Vec3dArray> vertices;

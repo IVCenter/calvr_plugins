@@ -119,6 +119,12 @@ NewVolumeMenu::~NewVolumeMenu()
 		MenuManager::instance()->removeMenuSystem(_claheMenu);
 		delete _claheMenu;
 	}
+	if (_marchingCubesMenu)
+	{
+		_marchingCubesMenu->setActive(false, false);
+		MenuManager::instance()->removeMenuSystem(_marchingCubesMenu);
+		delete _marchingCubesMenu;
+	}
 
 	if (_container)
 	{
@@ -166,7 +172,10 @@ void NewVolumeMenu::init()
 	_so->getRoot()->addUpdateCallback(new PointAtHeadLerp(0.2f, _so));
 #endif
 	_updateCallback = new VolumeMenuUpdate();
+	_uiMenuUpdate = new UIMenuUpdate(_volume, this);
+	
 	_so->getRoot()->addUpdateCallback(_updateCallback);
+	_so->getRoot()->addUpdateCallback(_uiMenuUpdate);
 
 	osg::Vec3 volumePos = ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(0, 750, 1000));
 	_so->setPosition(volumePos);
@@ -426,7 +435,8 @@ void NewVolumeMenu::init()
 	list->setAbsoluteSpacing(0.0);
 	_tentMenu = new UIPopup();
 	_claheMenu = new UIPopup();
-	
+
+
 	_tentWindowOnly->setPercentSize(osg::Vec3(1, 1, 3.0));
 	_tentWindowOnly->setPercentPos(osg::Vec3(0, 0, 1.50));
 
@@ -708,7 +718,7 @@ void NewVolumeMenu::init()
 	_tentMenu->setPosition(osg::Vec3(-1200, 675, 1880));
 	_tentMenu->getRootElement()->setAbsoluteSize(osg::Vec3(1500, 1, 600));
 
-
+	//Clahe UI
 	label = new UIText("CLAHE Options", 32.0f, osgText::TextBase::CENTER_TOP);
 	UIList* claheUI = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
  	label->setPercentPos(osg::Vec3(0.0, 0.0, -.5));
@@ -739,8 +749,7 @@ void NewVolumeMenu::init()
 	_genClaheButton = new CallbackButton();
 	_genClaheButton->setCallback(this);
 	_genClaheButton->setPercentSize(osg::Vec3(.5, 1.0, .7));
-	//_genClaheButton->setPercentPos(osg::Vec3(.33, 0.0, 0.0));
-	UIQuadElement* buttonBknd = new UIQuadElement(osg::Vec4(1.0,0.0,0.0,1.0));
+ 	UIQuadElement* buttonBknd = new UIQuadElement(osg::Vec4(1.0,0.0,0.0,1.0));
 	label = new UIText("Generate CLAHE", 24.0f, osgText::TextBase::CENTER_CENTER);
 	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
 
@@ -751,10 +760,7 @@ void NewVolumeMenu::init()
 	_useClaheButton = new CallbackButton();
 	_useClaheButton->setCallback(this);
 	_useClaheButton->setPercentSize(osg::Vec3(.5, 1.0, .7));
-	//_useClaheButton->setPercentPos(osg::Vec3(.33, 0.0, 0.0));
-	buttonBknd = new UIQuadElement(UI_INACTIVE_RED_COLOR);
-	/*buttonBknd->setBorderColor(osg::Vec4(1.0,0.0,0.0,1.0));
-	buttonBknd->setBorderSize(.05);*/
+ 	buttonBknd = new UIQuadElement(UI_INACTIVE_RED_COLOR);
 	label = new UIText("Use CLAHE", 24.0f, osgText::TextBase::CENTER_CENTER);
 	label->setColor(UI_INACTIVE_WHITE_COLOR);
 	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
@@ -773,12 +779,56 @@ void NewVolumeMenu::init()
 	_claheMenu->setPosition(osg::Vec3(-150, 150, 800));
 	_claheMenu->getRootElement()->setAbsoluteSize(osg::Vec3(750, 1, 300));
 	
+	////////////Marching Cubes UI/////////////////
+	_marchingCubesMenu = new UIPopup();
+	UIQuadElement* mcBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
+	mcBknd->setRounding(0, .2);
+	mcBknd->setTransparent(true);
+	mcBknd->setBorderColor(UI_BLACK_COLOR);
+	mcBknd->setBorderSize(.02);
+
+	_marchingCubesMenu->addChild(mcBknd);
+
+	label = new UIText("Marching Cubes Options", 32.0f, osgText::TextBase::CENTER_TOP);
+	UIList* mcUI = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
+	label->setPercentPos(osg::Vec3(0.0, 0.0, -.5));
+	mcUI->addChild(label);
+
+	buttonList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+
+	_UseMarchingCubesButton = new CallbackButton();
+	_UseMarchingCubesButton->setCallback(this);
+	_UseMarchingCubesButton->setPercentSize(osg::Vec3(.5, 1.0, .7));
+
+	buttonBknd = new UIQuadElement(UI_INACTIVE_RED_COLOR);
+	label = new UIText("Use Polygon", 24.0f, osgText::TextBase::CENTER_CENTER);
+	label->setColor(UI_INACTIVE_WHITE_COLOR);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+
+	_UseMarchingCubesButton->addChild(buttonBknd);
+	_UseMarchingCubesButton->addChild(label);
+
+	_GenMarchCubesButton = new CallbackButton();
+	_GenMarchCubesButton->setCallback(this);
+	_GenMarchCubesButton->setPercentSize(osg::Vec3(.5, 1.0, .7));
+
+	buttonBknd = new UIQuadElement(osg::Vec4(1.0, 0.0, 0.0, 1.0));
+	label = new UIText("Gen Polygon", 24.0f, osgText::TextBase::CENTER_CENTER);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+
+	_GenMarchCubesButton->addChild(buttonBknd);
+	_GenMarchCubesButton->addChild(label);
+
+	buttonList->setPercentPos(osg::Vec3(.125, 0.0, 0.0));
+	buttonList->addChild(_GenMarchCubesButton);
+	buttonList->addChild(_UseMarchingCubesButton);
+	mcUI->addChild(buttonList);
+	_marchingCubesMenu->addChild(mcUI);
+	_marchingCubesMenu->setPosition(osg::Vec3(-150, 150, 800));
+	_marchingCubesMenu->getRootElement()->setAbsoluteSize(osg::Vec3(750, 1, 300));
 
 
-
-	/*if (_volume->hasMask())
-	{
-	*/	
+	///////////Masks UI///////////////
 		_maskBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 		_maskBknd->setPercentPos((osg::Vec3(0, 0, -1.025)));
 		_maskBknd->setPercentSize((osg::Vec3(1.62, 1, 1)));
@@ -982,6 +1032,7 @@ void NewVolumeMenu::init()
 		_contrastMenu->setActive(true, false);
 		_tentMenu->setActive(true, false);
 		_claheMenu->setActive(true, false);
+		_marchingCubesMenu->setActive(true, false);
 		_maskContainer = new SceneObject("MaskMenu", false, true, false, false, false);
 		_contrastContainer = new SceneObject("ContrastMenu", false, true, false, false, false);
 		_tentWindowContainer = new SceneObject("TentWindow", false, true, false, false, false);
@@ -1001,6 +1052,7 @@ void NewVolumeMenu::init()
 		_maskMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_tentMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_claheMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
+		_marchingCubesMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_contrastMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_maskContainer->dirtyBounds();
 	}
@@ -1264,8 +1316,36 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		else
 			((UIText*)_useClaheButton->getChild(1))->setText("Use CLAHE");
 	}
+
+	else if (item == _GenMarchCubesButton) {
+		if (!_volume->isMCInitialized()) {
+			std::cout << "in ui callback" << std::endl;
+			_volume->intializeMC();
+ 		}
+	}
+	
+
+	else if (item == _UseMarchingCubesButton) {
+			updateMCUI(_volume->toggleMC());
+			
+	}
+
 	
 	
+	
+}
+
+void NewVolumeMenu::updateMCUI(bool on) {
+	if (_volume->_mcIsReady == true) {
+		((UIQuadElement*)_UseMarchingCubesButton->getChild(0))->setColor(UI_RED_ACTIVE_COLOR);
+		((UIText*)_UseMarchingCubesButton->getChild(1))->setColor(UI_WHITE_COLOR);
+	}
+	if (!on) {		
+		((UIText*)_UseMarchingCubesButton->getChild(1))->setText("Show Polygon");
+	}
+	else {
+		((UIText*)_UseMarchingCubesButton->getChild(1))->setText("Hide Polygon");
+	}
 }
 
 void NewVolumeMenu::switchVolumes(int index) {
@@ -2401,11 +2481,11 @@ void NewVolumeMenu::toggleTFUI(bool on) {
 
 void NewVolumeMenu::toggleMCRedner(bool on) {
 	if (on) {
-		if (!_volume->isMCRInitialized())
-			_volume->intializeMCR();
+			_toolContainer->addChild(_marchingCubesMenu->getRoot());
 	}
 	else {
-		;
+		_toolContainer->removeChild(_marchingCubesMenu->getRoot());
+		_marchingCubesMenu->getRootElement()->_parent = nullptr;
 	}
 }
 
