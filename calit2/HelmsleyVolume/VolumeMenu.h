@@ -79,6 +79,18 @@ class ToolMenu : public UICallback {
 
 
 public:
+	enum class TOOLID {
+		CUTTINGPLANE,
+		CLAHE,
+		MARCHINGCUBES,
+		CENTERLINE,
+		SCREENSHOT,
+		HISTOGRAM,
+		RULER,
+		MASKMENU,
+		TFMENU
+	};
+
 	ToolMenu(int index = 0, bool movable = true, cvr::SceneObject* parent = nullptr);
 	~ToolMenu();
 
@@ -91,7 +103,7 @@ public:
 	CurvedQuad* getCuttingPlaneTool() {
 		auto curvedMenuItems = _curvedMenu->getCurvedMenuItems();
 		int toolIndex = 0;
-		for (std::list<CurvedQuad*>::iterator it = curvedMenuItems.begin(); it != curvedMenuItems.end(); ++it) {
+		for (std::vector<CurvedQuad*>::iterator it = curvedMenuItems.begin(); it != curvedMenuItems.end(); ++it) {
 			if (toolIndex == CUTTINGPLANE)
 				return (*it);
 		toolIndex++;
@@ -101,8 +113,10 @@ public:
 	ToolToggle* getMeasuringTool() { return  _measuringTool; }
 	ToolToggle* getScreenShotTool() { return  _screenshotTool; }
 
+	void toggleOtherMenus(TOOLID currentActiveTool);
+
 	virtual void uiCallback(UICallbackCaller* item);
-	std::list<CurvedQuad*> getCurvedMenuItems();
+	std::vector<CurvedQuad*> getCurvedMenuItems();
 protected:
 
 	cvr::UIPopup* _menu = nullptr;
@@ -198,7 +212,8 @@ public:
 	void toggleClaheTools(bool on);
 	void toggleMaskMenu(bool on);
 	void toggleTFUI(bool on);
-	void toggleMCRedner(bool on);
+	void toggleMCRender(bool on);
+	void removeAllToolMenus();
 
 	void updateMCUI(bool on);
 	void saveYamlForCinematic();

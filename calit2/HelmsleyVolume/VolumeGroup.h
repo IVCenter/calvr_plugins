@@ -67,6 +67,7 @@ public:
 	float _clipLimit3D = 0.85f;
 	float _minClipValue = 0.0;
 	osg::Vec3i _volDims = osg::Vec3i(0, 0, 0);
+	unsigned int _volArea = 0;
 	unsigned int _numGrayVals = 255u;
 	unsigned int _histSize = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z() * _numGrayVals;
 	unsigned int _numHist = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z();
@@ -84,16 +85,24 @@ public:
  	void precompLerp(t_ssbb ssbbHist);
  	void setupLerp(t_ssbb ssbbHist);
 	//MC
-	osg::ref_ptr<osg::FloatArray> _mcVertices = nullptr;
+	MarchingCubesLUTs _luts;
+	osg::ref_ptr<osg::Vec3Array> _mcVertices = nullptr;
+	osg::ref_ptr<osg::Geometry> geo = nullptr;
+	osg::ref_ptr<osg::Vec3Array> _va = nullptr;
 	bool _mcrInitialized = false;
 	bool _mcIsReady = false;
-	
-	
-	void setMCVertices(osg::ref_ptr<osg::FloatArray> floats) { _mcVertices = floats; }
+	bool _clahePrecomped = false;
+	bool _mcPrecomped = false;
+
+	void setMCVertices(osg::ref_ptr<osg::Vec3Array> floats) { _mcVertices = floats; }
 	bool isMCInitialized() { return _mcrInitialized; }
 	bool toggleMC();
 	void intializeMC();
 	void readyMCUI();
+	osg::ref_ptr<osg::Geometry> getMCGeom();
+	unsigned int getMCVertCount();
+	osg::ref_ptr<osg::Vec3Array> getVA();
+	osg::ref_ptr<osg::ShaderStorageBufferBinding> getMCSSBB();
 	////Extra Methods
 	void setNumBins(unsigned int numBins) { 
 		_numGrayVals = numBins;
@@ -497,13 +506,22 @@ public:
 		{
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
+			_VA->dirty();
+			
+			osg::ref_ptr<osg::UIntArray> _atomicCounterArray = new osg::UIntArray();
+			_atomicCounterArray->push_back(0);
+			_acbb->readData(*renderInfo.getState(), *_atomicCounterArray);
+			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
+			
+			unsigned int value = _atomicCounterArray->front();
+			//std::cout << "value: " << value << std::endl;
+			vertexCount[0] = value;
 
-			//	///////////////DEBUGGING
-			{
-				osg::ref_ptr<osg::FloatArray> uintArray = new osg::FloatArray(_buffersize);
+
+ 			{
+				osg::ref_ptr<osg::Vec3Array> uintArray = new osg::Vec3Array(_buffersize/3);
 				osg::GLBufferObject* glBufferObject = _ssbb->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
-
-				GLint previousID = 1;
+ 				GLint previousID = 1;
 				glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &previousID);
 
 				if ((GLuint)previousID != glBufferObject->getGLObjectID())
@@ -520,20 +538,15 @@ public:
 				if ((GLuint)previousID != glBufferObject->getGLObjectID())
 					glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
 
-
-				/*for (int i = 0; i < 90; i+=3) {
-					std::cout << std::endl;
-					std::cout << uintArray->at(i) << ", " << uintArray->at(i+1) << ", " << uintArray->at(i+2);
-				}*/
+				
 				group->setMCVertices(uintArray);
 			}
-			////DEBUGGING/////////////////////////////
 
 
+			
 			stop[0] = 1;
 			ready[0] = 1;
-			std::cout << "ready test" << std::endl;
-
+ 
 			group->readyMCUI();
 
 			group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
@@ -541,16 +554,19 @@ public:
 		}
 	}
 
-
+	//const_cast
 
 	uint16_t* stop = new uint16_t(1);
 	uint16_t* ready = new uint16_t(0);
+	uint32_t* vertexCount = new uint32_t(0);
 	int _buffersize;
 	osg::ref_ptr<osg::Vec3dArray> vertices;
+	osg::ref_ptr<osg::Vec3Array> _VA;
 	MarchingCubesLUTs luts;
 	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbb;
 	osg::Vec3i _volDims;
-
+	osg::ref_ptr<osg::Geometry> _geomToPass;
+	osg::ref_ptr<osg::AtomicCounterBufferBinding> _acbb;
 
 
 };

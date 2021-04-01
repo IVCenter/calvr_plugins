@@ -6,8 +6,9 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 layout(rg16, binding = 0) uniform image3D volume;
 
 
-  layout(std430, binding = 2) buffer configLUT{ int cLUT[]; };	
+ layout(std430, binding = 2) buffer configLUT{ int cLUT[]; };	
  layout(std430, binding = 3) buffer triangleVertices{ float tVs[]; };	
+  layout(binding = 4) uniform atomic_uint[1] vertCount;
 
  uniform float IsoLevel;
  uniform int McFactor;
@@ -50,6 +51,15 @@ vec3 interpolateVerts(vec4 v1, vec4 v2) {
 
 	return (v1.xyz+v2.xyz)*0.5f;
 	
+}
+
+void scaleVertices(inout vec3 vertA, inout vec3 vertB, inout vec3 vertC) {
+	vertA.x = float(vertA.x / VolumeDims.x) -.5f;	vertB.x = float(vertB.x / VolumeDims.x) - .5f;	vertC.x = float(vertC.x / VolumeDims.x) - .5f;
+	vertA.y = float(vertA.y / VolumeDims.y) - .5f;	vertB.y = float(vertB.y / VolumeDims.y) - .5f;	vertC.y = float(vertC.y / VolumeDims.y) - .5f;
+	vertA.z = float(vertA.z / VolumeDims.z) - .5f;	vertB.z = float(vertB.z / VolumeDims.z) - .5f;	vertC.z = float(vertC.z / VolumeDims.z) - .5f;
+	//	vec3.x() = (vec3.x() / _voldims.x()) - .5f;
+	//	vec3.y() = ((vec3.y() / _voldims.y())-.5f);
+	//	vec3.z() = (vec3.z() / _voldims.z())-.5f;
 }
 
 uint[9] getTriangleVerticeIndeces(uint volIndex1D, int edgeIndex){
@@ -126,26 +136,24 @@ void getIDs(ivec3 idx){
 		vec3 vertC = interpolateVerts(cubeCornersIdx[corner5], cubeCornersIdx[corner6]);
 
 
+		//NEWIMP
+		scaleVertices(vertA, vertB, vertC);
+ 		uint vCount = atomicCounterAdd(vertCount[0], 1);
+		tVs[9u * vCount+0] = vertA.x;	tVs[9u * vCount + 1] = vertA.y; tVs[9u * vCount + 2] = vertA.z;
+		tVs[9u * vCount+3] = vertB.x;	tVs[9u * vCount + 4] = vertB.y; tVs[9u * vCount + 5] = vertB.z;
+		tVs[9u * vCount+6] = vertC.x;	tVs[9u * vCount + 7] = vertC.y; tVs[9u * vCount + 8] = vertC.z;
+		
 
 
-		uint triangleVerticleIndeces[9] = getTriangleVerticeIndeces(volIndex1D, i);
-
-
-
+		//OLDIMP
+		/*uint triangleVerticleIndeces[9] = getTriangleVerticeIndeces(volIndex1D, i);
 		tVs[triangleVerticleIndeces[0]] = vertA.x;	tVs[triangleVerticleIndeces[1]] = vertA.y;	tVs[triangleVerticleIndeces[2]] = vertA.z;
 		tVs[triangleVerticleIndeces[3]] = vertB.x;	tVs[triangleVerticleIndeces[4]] = vertB.y;	tVs[triangleVerticleIndeces[5]] = vertB.z;
-		tVs[triangleVerticleIndeces[6]] = vertC.x;	tVs[triangleVerticleIndeces[7]] = vertC.y;	tVs[triangleVerticleIndeces[8]] = vertC.z;
+		tVs[triangleVerticleIndeces[6]] = vertC.x;	tVs[triangleVerticleIndeces[7]] = vertC.y;	tVs[triangleVerticleIndeces[8]] = vertC.z;*/
+
+ 	}
 
 		
-	}
-
-		//tVs[uint(volIndex1D/McFactor)] = 1.0f;
-
-	//Get Corners from Edges
-
-
-	//atomicAdd(tIDs[0],1);
-	//tIDs[triIndex] = cubeIndex;
 	
 
 	
@@ -154,7 +162,8 @@ void getIDs(ivec3 idx){
 
 void main() {
 	ivec3 index = ivec3(gl_GlobalInvocationID.xyz);
-
+	//atomicAdd(vertCount[0], 1);
+	
 	//if we are not within the volume of interest -> return 
 	int xCheck =  VolumeDims.x-McFactor;
 	int yCheck =  VolumeDims.y-McFactor;

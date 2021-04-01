@@ -308,28 +308,23 @@ public:
 	Tent(osg::Vec4 color = osg::Vec4(UI_BLUE_COLOR, 1))
 		: UIElement()
 	{
-		leftPointX = -.25;
-		rightPointX = .25;
-		topPointX = 0.0;
+		leftPointX = -.5;
+		rightPointX = .5;
+		topPointX = 0.5;
 		actualTop = 0.0;
 		height = 0.0;
 		bottomHeight = -1.0;
 		actualBottomHeight = -1.0;
 		savedHeight = -1.0;
-		_center = .7;
+		_center = .5;
 		_color = color;
 		_geode = new osg::Geode();
-
-
-		
-		// add the stateset tor the drawable
-		
 
 		createGeometry();
 	
 		_absoluteRounding = new osg::Uniform("absoluteRounding", 0.0f);
 		_percentRounding = new osg::Uniform("percentRounding", 0.0f);
-		_centerUniform = new osg::Uniform("Center", 0.7f);
+		_centerUniform = new osg::Uniform("Center", 0.5f);
 		_widthUniform = new osg::Uniform("Width", 0.5f);
 		_colorUniform = new osg::Uniform("Color", UI_BLUE_COLOR);
 		_selectedUniform = new osg::Uniform("Selected", true);
@@ -555,13 +550,16 @@ protected:
 class MarchingCubesRender : public cvr::UIElement
 {
 public:
-	MarchingCubesRender(osg::ref_ptr<osg::FloatArray> coords, osg::Vec3i volDims)
-		: UIElement()
+	MarchingCubesRender(osg::ref_ptr<osg::Vec3Array> coords, osg::Vec3i volDims, osg::ref_ptr<osg::Geometry> geom, unsigned int verticeCount, osg::ref_ptr<osg::Vec3Array> va
+,osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbb)
+		: UIElement(), _verticeCount(verticeCount), _VA(va), _ssbb(ssbb)
 	{
 		_coords = coords;
 	
 		_geode = new osg::Geode();
 		_voldims = volDims;
+
+		_mcGeom = geom;
 		
 		createGeometry();
 		setProgram(getOrLoadProgram());
@@ -585,12 +583,14 @@ public:
 		return _transform;
 	}
 
+	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbb;
 
 protected:
 	osg::ref_ptr<osg::MatrixTransform> _transform;
 	osg::ref_ptr<osg::Geode> _geode;
 	osg::Geometry* _polyGeom;
-	osg::ref_ptr<osg::FloatArray> _coords;
+	osg::ref_ptr<osg::Vec3Array> _coords;
+	osg::ref_ptr<osg::Vec3Array> _VA;
 	osg::Vec3i _voldims;
 
 	static osg::Program* getOrLoadProgram();
@@ -598,6 +598,10 @@ protected:
 
 	osg::ref_ptr<osg::Program> _program;
 	std::map<std::string, osg::Uniform*> _uniforms;
+
+
+	osg::ref_ptr<osg::Geometry> _mcGeom;
+	unsigned int _verticeCount;
 };
 
 
@@ -697,7 +701,7 @@ public:
 	void setUpGradients();
 	void fillTentDetails(int _triangleIndex, float center, float bottomWidth, float topWidth, float height, float lowest);
 	std::vector<float> getPresetData(int index);
-	std::unique_ptr<std::vector<Tent*>> _tents;
+	std::vector<Tent*> _tents;
 	cvr::UIQuadElement* _bknd;
 private:
 	

@@ -21,7 +21,7 @@
 
 #define ISOVALUE 0.08f
 #define MCFACTOR 2
-
+#define CONFIGLUTSIZE 4096
 
 
 void VolumeDrawCallback::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const
@@ -152,8 +152,6 @@ void VolumeGroup::init()
 	_colorTexture->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
 	_resolveFBO->setAttachment(osg::Camera::COLOR_BUFFER0, osg::FrameBufferAttachment(_colorTexture));
 
-
-
 	_program = new osg::Program;
 	_program->setName("Volume");
 	_program->addShader(new osg::Shader(osg::Shader::VERTEX, vert));
@@ -182,9 +180,7 @@ void VolumeGroup::init()
 	osg::ref_ptr<osg::Geode> g = new osg::Geode();
 	g->addChild(_cube);
 	g->getOrCreateStateSet()->setRenderBinDetails(7, "RenderBin");
-
-
-
+ 
 	_transform->addChild(g);
 	this->addChild(_transform);
 	
@@ -229,40 +225,23 @@ void VolumeGroup::init()
 	computeStates->setAttributeAndModes(_computeProgram.get(), osg::StateAttribute::ON);
 	computeStates->setRenderBinDetails(6, "RenderBin");
 
-
-
-
-
-
 	_computeUniforms["OpacityCenter"] = new osg::Uniform(osg::Uniform::FLOAT, "OpacityCenter", 10);
-	_computeUniforms["OpacityCenter"]->setElement(0, .7f);
-
+	_computeUniforms["OpacityCenter"]->setElement(0, .5f);
 	_computeUniforms["OpacityWidth"] = new osg::Uniform(osg::Uniform::FLOAT, "OpacityWidth", 10);
-	_computeUniforms["OpacityWidth"]->setElement(0, .25f);
-
+	_computeUniforms["OpacityWidth"]->setElement(0, 1.0f);
 	_computeUniforms["OpacityTopWidth"] = new osg::Uniform(osg::Uniform::FLOAT, "OpacityTopWidth", 10);
-	_computeUniforms["OpacityTopWidth"]->setElement(0, 0.0f);
-
+	_computeUniforms["OpacityTopWidth"]->setElement(0, 1.0f);
 	_computeUniforms["OpacityMult"] = new osg::Uniform(osg::Uniform::FLOAT, "OpacityMult", 10);;
 	_computeUniforms["OpacityMult"]->setElement(0, 1.0f);
-
 	_computeUniforms["Lowest"] = new osg::Uniform(osg::Uniform::FLOAT, "Lowest", 10);
 	_computeUniforms["Lowest"]->setElement(0, 0.0f);
-
 	_computeUniforms["TriangleCount"] = new osg::Uniform("TriangleCount", 1.0f);
-
 	_computeUniforms["ContrastBottom"] = new osg::Uniform("ContrastBottom", 0.0f);
-
 	_computeUniforms["ContrastTop"] = new osg::Uniform("ContrastTop", 1.0f);
 	_computeUniforms["TrueContrast"] = new osg::Uniform("TrueContrast", 1.0f);
 	_computeUniforms["ContrastCenter"] = new osg::Uniform("ContrastCenter", 0.5f);
-	
 	_computeUniforms["leftColor"] = new osg::Uniform("leftColor", osg::Vec3(1.0f, 0.0f, 0.0f));
 	_computeUniforms["rightColor"] = new osg::Uniform("rightColor", osg::Vec3(1.0f, 1.0f, 1.0f));
-
-	
-	
-
 	_computeUniforms["Brightness"] = new osg::Uniform("Brightness", 0.5f);
 	_computeUniforms["LightDensity"] = new osg::Uniform("LightDensity", 300.f);
 	_computeUniforms["LightPosition"] = new osg::Uniform("LightPosition", osg::Vec3(0, 0.1f, 0));
@@ -270,7 +249,6 @@ void VolumeGroup::init()
 	_computeUniforms["LightAngle"] = new osg::Uniform("LightAngle", .5f);
 	_computeUniforms["LightAmbient"] = new osg::Uniform("LightAmbient", .2f);
 	_computeUniforms["LightIntensity"] = new osg::Uniform("LightIntensity", 100.0f);
-
 	_computeUniforms["WorldScale"] = new osg::Uniform("WorldScale", osg::Vec3(1, 1, 1));
 	_computeUniforms["TexelSize"] = new osg::Uniform("TexelSize", osg::Vec3(1.0f / 512.0f, 1.0f / 512.0f, 1.0f / 128.0f));
 
@@ -356,60 +334,50 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	_volume->setName("VOLUME");
 	_volume->setResizeNonPowerOfTwoHint(false);
 
-	_claheVolume = new osg::Texture3D;
-	//_claheVolume->setImage(i);
-	_claheVolume->setTextureSize(i->s(), i->t(), i->r());
-	osg::ref_ptr<osg::Image> bimage = new osg::Image();
-	bimage->allocateImage(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth(), GL_RG, GL_UNSIGNED_SHORT);
-	_claheVolume->setImage(bimage);
-	_claheVolume->setFilter(osg::Texture3D::MIN_FILTER, osg::Texture3D::NEAREST);
-	_claheVolume->setFilter(osg::Texture3D::MAG_FILTER, osg::Texture3D::NEAREST);
-	_claheVolume->setInternalFormat(GL_RG16);
-	_claheVolume->setName("CLAHEVOLUME");
-	_claheVolume->setResizeNonPowerOfTwoHint(false);
+	//_claheVolume = new osg::Texture3D;
+	//_claheVolume->setTextureSize(i->s(), i->t(), i->r());
+	//osg::ref_ptr<osg::Image> bimage = new osg::Image();
+	//bimage->allocateImage(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth(), GL_RG, GL_UNSIGNED_SHORT);
+	//_claheVolume->setImage(bimage);
+	//_claheVolume->setFilter(osg::Texture3D::MIN_FILTER, osg::Texture3D::NEAREST);
+	//_claheVolume->setFilter(osg::Texture3D::MAG_FILTER, osg::Texture3D::NEAREST);
+	//_claheVolume->setInternalFormat(GL_RG16);
+	//_claheVolume->setName("CLAHEVOLUME");
+	//_claheVolume->setResizeNonPowerOfTwoHint(false);
 
 	//OSG_NOTICE << "Volume texture size: " << (int)(_volume->getTextureWidth()) << ", " << (int)(_volume->getTextureHeight()) << ", " << (int)(_volume->getTextureDepth()) << std::endl;
 
 
 	_computeNode->setComputeGroups((i->s() + 7) / 8, (i->t() + 7) / 8, (i->r() + 7) / 8);
 	_computeUniforms["TexelSize"]->set(osg::Vec3(1.0f / (float)i->s(), 1.0f / (float)i->t(), 1.0f / (float)i->r()));
-	
-	
-
-
 	osg::StateSet* states = _computeNode->getOrCreateStateSet();
 	states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
 	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
-	states->setTextureAttribute(5, _claheVolume, osg::StateAttribute::ON);
-	states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);
-
-
-	//////////////////////////////////////clahe/////////////////////////
+	/*states->setTextureAttribute(5, _claheVolume, osg::StateAttribute::ON);
+	states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
+	////////////////////////////////////////clahe/////////////////////////
 	_volDims = osg::Vec3i(i->s(), i->t(), i->r());
-	_sizeSB = osg::Vec3i(_volDims.x() / _numSB_3D.x(), _volDims.y() / _numSB_3D.y(), _volDims.z() / _numSB_3D.z());
-	float tempClipValue = 1.1f * (_sizeSB.x() * _sizeSB.y() * _sizeSB.z()) / _numGrayVals;
-	_minClipValue = unsigned int(tempClipValue + 0.5f);
-	//////////////////////MinMax//////////////
-	auto acbbMinMax = precompMinMax();
-	//////////////////////////Hist///////////////////////////
-	auto ssbbPair = precompHist();
-	//////////////////////////Excess////////////////////////
-	auto ssbbexcess = precompExcess(ssbbPair.first, ssbbPair.second);
-	///////////////////////////HistClip///////////////////////////
-	precompHistClip(ssbbPair.first, ssbbPair.second, ssbbexcess, acbbMinMax);
-	///////////////////////////Lerp///////////////////////
-	precompLerp(ssbbPair.first);
+	_volArea = _volDims.x() * _volDims.y() * _volDims.z();
+	//_sizeSB = osg::Vec3i(_volDims.x() / _numSB_3D.x(), _volDims.y() / _numSB_3D.y(), _volDims.z() / _numSB_3D.z());
+	//float tempClipValue = 1.1f * (_sizeSB.x() * _sizeSB.y() * _sizeSB.z()) / _numGrayVals;
+	//_minClipValue = unsigned int(tempClipValue + 0.5f);
+	////////////////////////MinMax//////////////
+	//auto acbbMinMax = precompMinMax();
+	////////////////////////////Hist///////////////////////////
+	//auto ssbbPair = precompHist();
+	////////////////////////////Excess////////////////////////
+	//auto ssbbexcess = precompExcess(ssbbPair.first, ssbbPair.second);
+	/////////////////////////////HistClip///////////////////////////
+	//precompHistClip(ssbbPair.first, ssbbPair.second, ssbbexcess, acbbMinMax);
+	/////////////////////////////Lerp///////////////////////
+	//precompLerp(ssbbPair.first);
+	//
+	////release refptrs
+	//acbbMinMax.release();
+	//ssbbPair.first.release();
+	//ssbbPair.second.release();
+	//ssbbexcess.release();
 	
-	//release refptrs
-	acbbMinMax.release();
-	ssbbPair.first.release();
-	ssbbPair.second.release();
-	ssbbexcess.release();
-	
-	////////////////////////////////////nonClahe/////////////////////////
-	precompTotalHistogram();
-	precompMarchingCubes();
-
 	//Set dirty on all graphics contexts
 	std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();/////////////uncomment
 	cvr::CVRViewer::instance()->getCameras(cameras);
@@ -462,8 +430,7 @@ osg::ref_ptr<osg::AtomicCounterBufferBinding> VolumeGroup::setupMinmaxSSBO() {
 	sourceNode->getOrCreateStateSet()->addUniform(new osg::Uniform("numBins", _numGrayVals));
 
 	return acbb;
-
-}
+ }
 
 
 
@@ -697,6 +664,73 @@ void VolumeGroup::setupLerp(t_ssbb ssbbHist) {
 }
 
 void VolumeGroup::genClahe() {
+	if (!_clahePrecomped) {
+		_claheVolume = new osg::Texture3D;
+		_claheVolume->setTextureSize(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth());
+		osg::ref_ptr<osg::Image> bimage = new osg::Image();
+		bimage->allocateImage(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth(), GL_RG, GL_UNSIGNED_SHORT);
+		_claheVolume->setImage(bimage);
+		_claheVolume->setFilter(osg::Texture3D::MIN_FILTER, osg::Texture3D::NEAREST);
+		_claheVolume->setFilter(osg::Texture3D::MAG_FILTER, osg::Texture3D::NEAREST);
+		_claheVolume->setInternalFormat(GL_RG16);
+		_claheVolume->setName("CLAHEVOLUME");
+		_claheVolume->setResizeNonPowerOfTwoHint(false);
+
+		osg::StateSet* states = _computeNode->getOrCreateStateSet();
+		states->setTextureAttribute(5, _claheVolume, osg::StateAttribute::ON);
+		states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);
+
+		//////////////////////////////////////clahe/////////////////////////
+		//_volDims = osg::Vec3i(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth());
+		_sizeSB = osg::Vec3i(_volDims.x() / _numSB_3D.x(), _volDims.y() / _numSB_3D.y(), _volDims.z() / _numSB_3D.z());
+		float tempClipValue = 1.1f * (_sizeSB.x() * _sizeSB.y() * _sizeSB.z()) / _numGrayVals;
+		_minClipValue = unsigned int(tempClipValue + 0.5f);
+
+
+
+		//////////////////////MinMax//////////////
+		auto acbbMinMax = precompMinMax();
+		//////////////////////////Hist///////////////////////////
+		auto ssbbPair = precompHist();
+		//////////////////////////Excess////////////////////////
+		auto ssbbexcess = precompExcess(ssbbPair.first, ssbbPair.second);
+		///////////////////////////HistClip///////////////////////////
+		precompHistClip(ssbbPair.first, ssbbPair.second, ssbbexcess, acbbMinMax);
+		///////////////////////////Lerp///////////////////////
+		precompLerp(ssbbPair.first);
+
+		//release refptrs
+		acbbMinMax.release();
+		ssbbPair.first.release();
+		ssbbPair.second.release();
+		ssbbexcess.release();
+
+
+		osg::ref_ptr<osg::BindImageTexture> imagbinding = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_WRITE, GL_RG16, 0, GL_TRUE);
+		states->setAttributeAndModes(imagbinding);
+		///////////////////////clahe///////////////////
+		states = sourceNode->getOrCreateStateSet();
+		imagbinding = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
+		states->setAttributeAndModes(imagbinding);
+
+		states = _histNode->getOrCreateStateSet();
+		imagbinding = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
+		states->setAttributeAndModes(imagbinding);
+
+		states = _lerpNode->getOrCreateStateSet();
+		imagbinding = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
+		states->setAttributeAndModes(imagbinding);
+		imagbinding = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_WRITE, GL_RG16, 0, GL_TRUE);
+		states->setAttributeAndModes(imagbinding);
+
+	
+
+
+
+		_clahePrecomped = true;
+	}
+
+
 	((MinMaxCallback*)sourceNode->getDrawCallback())->_acbb.release();
 	auto minmaxSSBB = setupMinmaxSSBO();
 
@@ -725,9 +759,7 @@ void VolumeGroup::genClahe() {
 
 	((LerpSSB*)_lerpNode->getDrawCallback())->_claheDirty[0] = 1;
 
-	((TotalHistCallback*)_totalHistNode->getDrawCallback())->stop[0] = 0;
 
-	((MarchingCubeCallback*)_marchingCubeNode->getDrawCallback())->stop[0] = 0;
 
 
 	
@@ -803,39 +835,28 @@ void VolumeGroup::precompute()
 		states->setTextureMode(1, GL_TEXTURE_3D, osg::StateAttribute::ON);
 		osg::ref_ptr<osg::BindImageTexture> imagbinding = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
 		osg::ref_ptr<osg::BindImageTexture> imagbinding2 = new osg::BindImageTexture(1, _baked, osg::BindImageTexture::READ_WRITE, GL_RGBA16, 0, GL_TRUE);
-		osg::ref_ptr<osg::BindImageTexture> imagbinding25 = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_WRITE, GL_RG16, 0, GL_TRUE);
+		//osg::ref_ptr<osg::BindImageTexture> imagbinding25 = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_WRITE, GL_RG16, 0, GL_TRUE);
 
 		
 		states->setAttributeAndModes(imagbinding);
 		states->setAttributeAndModes(imagbinding2);
-		states->setAttributeAndModes(imagbinding25);
-		///////////////////////clahe///////////////////
-		states = sourceNode->getOrCreateStateSet();
-		osg::ref_ptr<osg::BindImageTexture> imagbinding3 = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		states->setAttributeAndModes(imagbinding3);
-		
-		states = _histNode->getOrCreateStateSet();
-		osg::ref_ptr<osg::BindImageTexture> imagbinding4 = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		states->setAttributeAndModes(imagbinding4);
+		//states->setAttributeAndModes(imagbinding25);
+		/////////////////////////clahe///////////////////
+		//states = sourceNode->getOrCreateStateSet();
+		//osg::ref_ptr<osg::BindImageTexture> imagbinding3 = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
+		//states->setAttributeAndModes(imagbinding3);
+		//
+		//states = _histNode->getOrCreateStateSet();
+		//osg::ref_ptr<osg::BindImageTexture> imagbinding4 = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
+		//states->setAttributeAndModes(imagbinding4);
 
-		states = _lerpNode->getOrCreateStateSet();
-		osg::ref_ptr<osg::BindImageTexture> imagbinding5 = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		osg::ref_ptr<osg::BindImageTexture> imagbinding6 = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_WRITE, GL_RG16, 0, GL_TRUE);
-		states->setAttributeAndModes(imagbinding5);
-		states->setAttributeAndModes(imagbinding6);
+		//states = _lerpNode->getOrCreateStateSet();
+		//osg::ref_ptr<osg::BindImageTexture> imagbinding5 = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
+		//osg::ref_ptr<osg::BindImageTexture> imagbinding6 = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_WRITE, GL_RG16, 0, GL_TRUE);
+		//states->setAttributeAndModes(imagbinding5);
+		//states->setAttributeAndModes(imagbinding6);
 
-		///////////////////////clahe///////////////////
-		states = _totalHistNode->getOrCreateStateSet();
-		//osg::ref_ptr<osg::BindImageTexture> imagbinding7 = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		osg::ref_ptr<osg::BindImageTexture> imagbinding7 = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		//osg::ref_ptr<osg::BindImageTexture> imagbinding7 = new osg::BindImageTexture(1, _baked, osg::BindImageTexture::READ_ONLY, GL_RGBA16, 0, GL_TRUE);
-		states->setAttributeAndModes(imagbinding7);
-
-		states = _marchingCubeNode->getOrCreateStateSet();
-		//osg::ref_ptr<osg::BindImageTexture> imagbinding7 = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		osg::ref_ptr<osg::BindImageTexture> imagbinding8 = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		//osg::ref_ptr<osg::BindImageTexture> imagbinding7 = new osg::BindImageTexture(1, _baked, osg::BindImageTexture::READ_ONLY, GL_RGBA16, 0, GL_TRUE);
-		states->setAttributeAndModes(imagbinding8);
+	
 
 
 		states = _cube->getOrCreateStateSet();
@@ -922,32 +943,54 @@ void VolumeGroup::precompTotalHistogram() {
 void VolumeGroup::precompMarchingCubes() {
 
 	//TriangleIDs buffer
-	unsigned int structSize =  _volDims.x()* _volDims.y()* _volDims.z();
- 	std::cout << "voldims: " << _volDims.x() << "   " << _volDims.y() << "   " << _volDims.z() << std::endl;
+	
+ 	//std::cout << "voldims: " << _volDims.x() << "   " << _volDims.y() << "   " << _volDims.z() << std::endl;
+	//Vec Count Value
+	osg::ref_ptr<osg::UIntArray> dati = new osg::UIntArray;
+	dati->push_back(0);
+	osg::ref_ptr<osg::BufferObject> acbo = new osg::AtomicCounterBufferObject;
+	acbo->setBufferData(0, dati);
+	osg::ref_ptr<osg::AtomicCounterBufferBinding> acbb = new osg::AtomicCounterBufferBinding(4, acbo->getBufferData(0), 0, sizeof(GLuint));
+	dati.release();
+	acbo.release();
 
 	//ConfigLookup buffer
-	MarchingCubesLUTs luts;
-	int configLutSize = 4096;
-	osg::ref_ptr<osg::IntArray> configLUTArray = new osg::IntArray(configLutSize);
-	memcpy((void*)&(configLUTArray->front()), &luts.triangulation[0], configLutSize*sizeof(int));
+	osg::ref_ptr<osg::IntArray> configLUTArray = new osg::IntArray(CONFIGLUTSIZE);
+	memcpy((void*)&(configLUTArray->front()), &_luts.triangulation[0], CONFIGLUTSIZE *sizeof(int));
 	osg::ref_ptr<osg::ShaderStorageBufferObject> ssboCL = new osg::ShaderStorageBufferObject;	
 	configLUTArray->setBufferObject(ssboCL);
-	osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbCL = new osg::ShaderStorageBufferBinding(2, ssboCL->getBufferData(0), 0, sizeof(GLint) * configLutSize);
+	osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbCL = new osg::ShaderStorageBufferBinding(2, ssboCL->getBufferData(0), 0, sizeof(GLint) * 4096);
 	configLUTArray.release();
 	ssboCL.release();
 
 	//TriangleVertices buffer
 	int newStructSize = _volDims.x() / MCFACTOR * _volDims.y() / MCFACTOR * _volDims.z() / MCFACTOR;
-	int triangleStructMaxSize = newStructSize*45;//Maximum_Index(max edge index(14)*Vertice_Count(3) + Float_Count(9) = 51
-	osg::ref_ptr<osg::FloatArray> verticesArray = new osg::FloatArray(triangleStructMaxSize);
-	for (int i = 0; i < triangleStructMaxSize; i++) {
-		verticesArray->at(i) = std::numeric_limits<float>::max();
+	unsigned int triangleStructMaxSize = newStructSize*45;//Maximum_Index(max edge index(15)*Vertice_Count(3) + Float_Count(9) = 51
+	_va = new osg::Vec3Array(triangleStructMaxSize/3u);
+	for (int i = 0; i < triangleStructMaxSize/3; i++) {
+		_va->at(i).x() = std::numeric_limits<float>::max();
+		_va->at(i).y() = std::numeric_limits<float>::max();
+		_va->at(i).z() = std::numeric_limits<float>::max();
 	}
-	osg::ref_ptr<osg::ShaderStorageBufferObject> ssboTV = new osg::ShaderStorageBufferObject;	
-	verticesArray->setBufferObject(ssboTV);
-	osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbTV = new osg::ShaderStorageBufferBinding(3, ssboTV->getBufferData(0), 0, sizeof(GLfloat) * triangleStructMaxSize);
-	verticesArray.release();
-	ssboTV.release();
+
+	
+	geo = new osg::Geometry;	
+	geo->setUseVertexBufferObjects(true);
+
+	osg::VertexBufferObject* vbo = new osg::VertexBufferObject;
+	vbo->setArray(0, _va);
+	osg::Vec3Array* va = new osg::Vec3Array;
+	va->setVertexBufferObject(vbo);
+
+	geo->setVertexArray(_va);
+ 
+	//WEIRD SHAPE
+	//osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbTV = new osg::ShaderStorageBufferBinding(3,geo->getVertexArray()->getBufferObject()->getBufferData(0), 0, sizeof(GLfloat) * triangleStructMaxSize);
+	osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbTV = new osg::ShaderStorageBufferBinding(3, vbo->getArray(0), 0, sizeof(GLfloat) * triangleStructMaxSize);
+	
+	
+	
+	//verticesArray.release();
 	
 
 	osg::ref_ptr<osg::Program> prog = new osg::Program;
@@ -959,6 +1002,7 @@ void VolumeGroup::precompMarchingCubes() {
 	_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(prog.get());
  	_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(ssbbCL, osg::StateAttribute::ON);
 	_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(ssbbTV, osg::StateAttribute::ON);
+	_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(acbb, osg::StateAttribute::ON);
 	_marchingCubeNode->setDataVariance(osg::Object::DYNAMIC);
 
 	MarchingCubeCallback* shaderStorageCallback = new MarchingCubeCallback(this);
@@ -966,6 +1010,10 @@ void VolumeGroup::precompMarchingCubes() {
 	shaderStorageCallback->_ssbb = ssbbTV;
  	shaderStorageCallback->_buffersize = triangleStructMaxSize;
  	shaderStorageCallback->_volDims = _volDims;
+ 	shaderStorageCallback->_geomToPass = geo;
+ 	shaderStorageCallback->_acbb = acbb;
+ 	shaderStorageCallback->_VA = _va;
+
 	
   
 
@@ -976,6 +1024,7 @@ void VolumeGroup::precompMarchingCubes() {
 	states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
 	/*states->setTextureAttribute(1, _baked, osg::StateAttribute::ON);
 	states->setTextureMode(1, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
+
 	states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
 	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
 
@@ -985,20 +1034,39 @@ void VolumeGroup::precompMarchingCubes() {
 
 	this->addChild(_marchingCubeNode);
 
-	
+ 	
 
 }
 
+osg::ref_ptr<osg::Geometry> VolumeGroup::getMCGeom() {
+	return ((MarchingCubeCallback*)_marchingCubeNode->getDrawCallback())->_geomToPass;
+}
 
+unsigned int VolumeGroup::getMCVertCount() {
+	return ((MarchingCubeCallback*)_marchingCubeNode->getDrawCallback())->vertexCount[0];
+}
+
+osg::ref_ptr<osg::Vec3Array> VolumeGroup::getVA() {
+	return ((MarchingCubeCallback*)_marchingCubeNode->getDrawCallback())->_VA;
+}
+
+osg::ref_ptr<osg::ShaderStorageBufferBinding> VolumeGroup::getMCSSBB() {
+	return ((MarchingCubeCallback*)_marchingCubeNode->getDrawCallback())->_ssbb;
+}
 
 
 void VolumeGroup::intializeMC() {
-	/*if (((MarchingCubeCallback*)_marchingCubeNode->getDrawCallback())->ready[0] == 1) {
-		_mcrInitialized = true;
-		MarchingCubesRender* mcr = new MarchingCubesRender(_mcVertices, _volDims);
-		_transform->addChild(mcr->getGeode());
-		std::cout << "executed" << std::endl;
-	}*/
+	if (!_mcPrecomped) {
+		precompMarchingCubes();
+
+		osg::StateSet* states = _marchingCubeNode->getOrCreateStateSet();
+		//osg::ref_ptr<osg::BindImageTexture> imagbinding7 = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
+		osg::ref_ptr<osg::BindImageTexture> imagbinding8 = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
+		//osg::ref_ptr<osg::BindImageTexture> imagbinding7 = new osg::BindImageTexture(1, _baked, osg::BindImageTexture::READ_ONLY, GL_RGBA16, 0, GL_TRUE);
+		states->setAttributeAndModes(imagbinding8);
+
+		_mcPrecomped = true;
+	}
 	((MarchingCubeCallback*)_marchingCubeNode->getDrawCallback())->stop[0] = 0;
 	this->setDirtyAll();
 	this->_UIDirty = true;
@@ -1007,7 +1075,9 @@ void VolumeGroup::intializeMC() {
 bool VolumeGroup::toggleMC() {
 	if (_mcIsReady) {
 		if (_mcrGeode == nullptr) {
-			MarchingCubesRender* mcr = new MarchingCubesRender(_mcVertices, _volDims);
+			
+			MarchingCubesRender* mcr = new MarchingCubesRender(_mcVertices, _volDims, getMCGeom(), getMCVertCount(), getVA(), getMCSSBB());
+ 
 			_mcrGeode = mcr->getGeode();
 		}
 		if (_transform->removeChild(_mcrGeode) == false) {

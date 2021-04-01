@@ -71,8 +71,8 @@ std::pair<int, CurvedQuad*> CurvedMenu::getCallbackIndex(UICallbackCaller* item)
 	return index;
 }
 
-std::list<CurvedQuad*> CurvedMenu::getCurvedMenuItems() {
-	std::list<CurvedQuad*> toReturn;
+std::vector<CurvedQuad*> CurvedMenu::getCurvedMenuItems() {
+	std::vector<CurvedQuad*> toReturn;
 	for (int i = 0; i < _numItems; i++) {
 		toReturn.push_back((CurvedQuad*)(_list->getChild(i)));
 	}

@@ -193,16 +193,16 @@ void NewVolumeMenu::init()
 	
 	_cp = new ColorPicker();
 	_tentWindowOnly = new TentWindowOnly();
-	_histQuad = new HistQuad();
+	//_histQuad = new HistQuad();
 	 _tentWindow = new TentWindow(_tentWindowOnly);
 	_menu->addChild(_tentWindow);
 	_tentWindow->setPercentSize(osg::Vec3(1, 1, .75));
 	_tentWindow->setPercentPos(osg::Vec3(0, 0, -1));
 	_tentWindow->setVolume(_volume);
-	_histQuad->setVolume(_volume);
-	_histQuad->setMax(_volume->getHistMax());
-	_histQuad->setBB(_volume->getHistBB());
-	
+	//_histQuad->setVolume(_volume);
+	//_histQuad->setMax(_volume->getHistMax());
+	//_histQuad->setBB(_volume->getHistBB());
+	//
 
 
 	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
@@ -623,12 +623,16 @@ void NewVolumeMenu::init()
 	sq->setProgram(p);
 	sq->setPercentSize(osg::Vec3(0.5, 1.0, 0.4));
 	sq->setPercentPos(osg::Vec3(.27, 0.0, 0.1));
-	sq->addUniform(_tentWindow->_tWOnly->_tents->at(0)->_centerUniform);
-	sq->addUniform(_tentWindow->_tWOnly->_tents->at(0)->_widthUniform);
+	sq->addUniform(_tentWindow->_tWOnly->_tents.at(0)->_centerUniform);
+	sq->addUniform(_tentWindow->_tWOnly->_tents.at(0)->_widthUniform);
 	sq->addUniform(_volume->_computeUniforms["ContrastBottom"]);
 	sq->addUniform(_volume->_computeUniforms["ContrastTop"]);
 	sq->addUniform(_volume->_computeUniforms["leftColor"]);
 	sq->addUniform(_volume->_computeUniforms["rightColor"]);
+	_transferFunction = "vec3(ra.r);";
+	sq->setShaderDefine("COLOR_FUNCTION", _transferFunction, osg::StateAttribute::ON);
+
+
 
 	_triangleCallbacks[_triangleIndex]->addChild(vT);
 	_triangleCallbacks[_triangleIndex]->addChild(sq);
@@ -1319,8 +1323,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 
 	else if (item == _GenMarchCubesButton) {
 		if (!_volume->isMCInitialized()) {
-			std::cout << "in ui callback" << std::endl;
-			_volume->intializeMC();
+ 			_volume->intializeMC();
  		}
 	}
 	
@@ -1509,10 +1512,10 @@ void NewVolumeMenu::saveValues(VolumeGroup* vg) {
 		++it;
 	}
 
-	std::list<CurvedQuad*> curvedMenuItems = _toolMenu->getCurvedMenuItems();
+	std::vector<CurvedQuad*> curvedMenuItems = _toolMenu->getCurvedMenuItems();
 
 	int index = 0;
-	for (std::list<CurvedQuad*>::iterator it = curvedMenuItems.begin(); it != curvedMenuItems.end(); ++it) {
+	for (std::vector<CurvedQuad*>::iterator it = curvedMenuItems.begin(); it != curvedMenuItems.end(); ++it) {
 		vg->values.toolToggles[index] = (*it)->isOn();
 		index++;
 	}
@@ -1594,19 +1597,36 @@ void NewVolumeMenu::fillFromVolume(VolumeGroup* vg) {
 	}
 
 	//Tools
+#define NUMBER_OF_VOLUME_DEPENDENT_TOOLS 4
 	////////////Cutting Plane/////////////
-	std::list<CurvedQuad*> curvedMenuItems = _toolMenu->getCurvedMenuItems();
+	std::vector<CurvedQuad*> curvedMenuItems = _toolMenu->getCurvedMenuItems();
 	int index = 0;
-	for (std::list<CurvedQuad*>::iterator it = curvedMenuItems.begin(); it != curvedMenuItems.end(); ++it) {
-		if (!(*it)->isOn() && _volume->values.toolToggles[index]) {
-			(*it)->turnOn();
-			(*it)->setColor(UI_RED_ACTIVE_COLOR);
+	for (std::vector<CurvedQuad*>::iterator it = curvedMenuItems.begin(); it != curvedMenuItems.end(); ++it) {
+		if (index == int(ToolMenu::TOOLID::CUTTINGPLANE)) {
+			if (!(*it)->isOn() && _volume->values.toolToggles[index]) {
+				(*it)->turnOn();
+				(*it)->setColor(UI_RED_ACTIVE_COLOR);
+			}
+			if ((*it)->isOn() && !_volume->values.toolToggles[index]) {
+				(*it)->turnOff();
+				(*it)->setColor(UI_BACKGROUND_COLOR);
+			}
+			index++;
+			continue;
 		}
-		if ((*it)->isOn() && !_volume->values.toolToggles[index]) {
-			(*it)->turnOff();
-			(*it)->setColor(UI_BACKGROUND_COLOR);
+		if (index < NUMBER_OF_VOLUME_DEPENDENT_TOOLS) {
+			if (!(*it)->isOn() && _volume->values.toolToggles[index]) {
+				(*it)->toggle();
+				(*it)->setColor(UI_RED_ACTIVE_COLOR);
+			}
+			if ((*it)->isOn() && !_volume->values.toolToggles[index]) {
+				(*it)->toggle();
+				(*it)->setColor(UI_BACKGROUND_COLOR);
+			}
+			index++;
 		}
-		index++;
+		else
+			break;
 	}
 
 }
@@ -1651,7 +1671,7 @@ void NewVolumeMenu::useTransferFunction(int tfID) {
 	_colorDisplay->setShaderDefine("COLOR_FUNCTION", _transferFunction, osg::StateAttribute::ON);
 	_opacityDisplay->setShaderDefine("COLOR_FUNCTION", _transferFunction, osg::StateAttribute::ON);
 	_opacityColorDisplay->setShaderDefine("COLOR_FUNCTION", _transferFunction, osg::StateAttribute::ON);
-	upDatePreviewDefines(_transferFunction);
+	//upDatePreviewDefines(_transferFunction);
 	_volume->setDirtyAll();
 
 	osg::Vec3 pos = _container->getPosition();
@@ -1936,38 +1956,31 @@ void NewVolumeMenu::resetValues() {
 		_maskBknd->setActive(false);
 	}*/
 
+	//Tools
+#define NUMBER_OF_VOLUME_DEPENDENT_TOOLS 4
 	////////////Cutting Plane/////////////
-	std::list<CurvedQuad*> curvedMenuItems = _toolMenu->getCurvedMenuItems();
-	for (std::list<CurvedQuad*>::iterator it = curvedMenuItems.begin(); it != curvedMenuItems.end(); ++it) {
-		if ((*it)->isOn()) {
-			(*it)->turnOff();
-			(*it)->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
+	std::vector<CurvedQuad*> curvedMenuItems = _toolMenu->getCurvedMenuItems();
+	int index = 0;
+	for (std::vector<CurvedQuad*>::iterator it = curvedMenuItems.begin(); it != curvedMenuItems.end(); ++it) {
+		if (index == int(ToolMenu::TOOLID::CUTTINGPLANE)) {	
+ 			(*it)->turnOff();
+			(*it)->setColor(UI_BACKGROUND_COLOR);
+ 			index++;
+			continue;
 		}
+		if (index < NUMBER_OF_VOLUME_DEPENDENT_TOOLS) {
+			if ((*it)->isOn()) {
+				(*it)->toggle();
+				(*it)->setColor(UI_BACKGROUND_COLOR);
+			}
+			index++;
+		}
+		else
+			break;
 	}
 
-
-	/*ToolToggle* cuttingPlaneTool = _toolMenu->getCuttingPlaneTool();
-	ToolToggle* mTool = _toolMenu->getMeasuringTool();
-	ToolToggle* centerTool = _toolMenu->getCenterLineTool();
-	ToolToggle* screenTool = _toolMenu->getScreenShotTool();
+	//TOOLS
 	
-	if (cuttingPlaneTool->isOn()) {
-		cuttingPlaneTool->turnOff();
-		cuttingPlaneTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
-	}
-	if (mTool->isOn()) {
-		mTool->toggle();
-		mTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
-	}
-	if (centerTool->isOn()) {
-		centerTool->toggle();
-		centerTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
-	}
-	if (screenTool->isOn()) {
-		screenTool->toggle();
-		screenTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
-	}*/
-
 
 	/////Etc/////
 	((UIText*)_volumeList->getChild(0))->setColor(UI_ACTIVE_COLOR);
@@ -2010,8 +2023,8 @@ Tent* NewVolumeMenu::addRegion() {
 	sq->setProgram(p);
 	sq->setPercentSize(osg::Vec3(0.5, 1.0, 0.4));
 	sq->setPercentPos(osg::Vec3(.27, 0.0, 0.1));
-	sq->addUniform(tent->_centerUniform);
-	sq->addUniform(tent->_widthUniform);
+	/*sq->addUniform(tent->_centerUniform);
+	sq->addUniform(tent->_widthUniform);*/
 	sq->setShaderDefine("COLOR_FUNCTION", _transferFunction, osg::StateAttribute::ON);
 
 	sq->addUniform(_volume->_computeUniforms["ContrastBottom"]);
@@ -2029,7 +2042,8 @@ Tent* NewVolumeMenu::addRegion() {
 	_triangleCallbacks[_triangleIndex]->addChild(vT);
 	_triangleCallbacks[_triangleIndex]->addChild(sq);
 
-	return tent;
+	return nullptr;
+	//return tent;
 }
 
 void NewVolumeMenu::setContrastValues(float contrastLow, float contrastHigh, float brightness) {
@@ -2454,7 +2468,7 @@ void NewVolumeMenu::toggleHistogram(bool on) {
 
 void NewVolumeMenu::toggleClaheTools(bool on) {
 	if (on) {
-		
+		removeAllToolMenus();
 		_toolContainer->addChild(_claheMenu->getRoot());
 	}
 	else {		
@@ -2479,9 +2493,19 @@ void NewVolumeMenu::toggleTFUI(bool on) {
 	}
 }
 
-void NewVolumeMenu::toggleMCRedner(bool on) {
+void NewVolumeMenu::removeAllToolMenus() {
+	_toolContainer->removeChild(_claheMenu->getRoot());
+	_claheMenu->getRootElement()->_parent = nullptr;
+
+
+	_toolContainer->removeChild(_marchingCubesMenu->getRoot());
+	_marchingCubesMenu->getRootElement()->_parent = nullptr;
+}
+
+void NewVolumeMenu::toggleMCRender(bool on) {
 	if (on) {
-			_toolContainer->addChild(_marchingCubesMenu->getRoot());
+		removeAllToolMenus();
+		_toolContainer->addChild(_marchingCubesMenu->getRoot());
 	}
 	else {
 		_toolContainer->removeChild(_marchingCubesMenu->getRoot());
@@ -2523,18 +2547,18 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	std::string dir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ImageDir");
 	
 	_curvedMenu = new CurvedMenu(this, 9);
-	_curvedMenu->setImage(0, dir + "browser.png");
-	_curvedMenu->setImage(1, dir + "slice.png");
-	_curvedMenu->setImage(2, dir + "histogram.png");
-	_curvedMenu->setImage(3, dir + "clahe.png");
-	_curvedMenu->setImage(4, dir + "ruler.png");
-	_curvedMenu->setImage(5, dir + "centerline.png");
-	_curvedMenu->setImage(6, dir + "cube.png");
-	_curvedMenu->setImage(7, dir + "cube.png");
-	_curvedMenu->setImage(8, dir + "cube.png");
+	_curvedMenu->setImage(int(TOOLID::SCREENSHOT), dir + "browser.png");
+	_curvedMenu->setImage(int(TOOLID::CUTTINGPLANE), dir + "slice.png");
+	_curvedMenu->setImage(int(TOOLID::HISTOGRAM), dir + "histogram.png");
+	_curvedMenu->setImage(int(TOOLID::CLAHE), dir + "clahe.png");
+	_curvedMenu->setImage(int(TOOLID::RULER), dir + "ruler.png");
+	_curvedMenu->setImage(int(TOOLID::CENTERLINE), dir + "centerline.png");
+	_curvedMenu->setImage(int(TOOLID::MASKMENU), dir + "maskIcon.png");
+	_curvedMenu->setImage(int(TOOLID::TFMENU), dir + "opacityAndGradient.png");
+	_curvedMenu->setImage(int(TOOLID::MARCHINGCUBES), dir + "polygon.png");
 	_menu->addChild(_curvedMenu);
 	
-	
+	/*
 
 	_cuttingPlane = new ToolToggle(dir + "slice.png");
 	_cuttingPlane->setColor(UI_BLACK_COLOR);
@@ -2563,7 +2587,7 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	_claheTool = new ToolToggle(dir + "ruler.png");
 	_claheTool->setColor(UI_BLACK_COLOR);
 	_claheTool->setCallback(this);
-	list->addChild(_claheTool);
+	list->addChild(_claheTool);*/
 	
 
 	if (!_movable && !parent)
@@ -2588,10 +2612,12 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	}
 }
 
-std::list<CurvedQuad*> ToolMenu::getCurvedMenuItems() {
-	std::list<CurvedQuad*> toReturn = _curvedMenu->getCurvedMenuItems();
+std::vector<CurvedQuad*> ToolMenu::getCurvedMenuItems() {
+	std::vector<CurvedQuad*> toReturn = _curvedMenu->getCurvedMenuItems();
 	return toReturn;
 }
+
+
 
 ToolMenu::~ToolMenu()
 {
@@ -2610,8 +2636,7 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 {
 	std::pair<int, CurvedQuad*> index = _curvedMenu->getCallbackIndex(item);
 	
-	//if (item == _screenshotTool)
-	if (index.first == 0)
+ 	if (index.first == int(TOOLID::SCREENSHOT))
 	{
 		osg::Matrix mat = PluginHelper::getHandMat(index.second->getLastHand());
 		osg::Vec4d position = osg::Vec4(0, 300, 0, 1) * mat;
@@ -2631,86 +2656,71 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 		if (index.second->isOn())
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
-			//_screenshotTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
-		}
+ 		}
 		else 
 		{
 			index.second->setColor(UI_BACKGROUND_COLOR);
-			//_screenshotTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}
 	
-	//else if (item == _cuttingPlane)
-	else if (index.first == 1)
+	else if (index.first == int(TOOLID::CUTTINGPLANE))
 	{
 		if (index.second->isOn())
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
 			HelmsleyVolume::instance()->createCuttingPlane();
-			//_cuttingPlane->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
 		}
 		else
 		{
 			index.second->setColor(UI_BACKGROUND_COLOR);
 			HelmsleyVolume::instance()->removeCuttingPlane();
-			//_cuttingPlane->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}
 
-	//else if (item == _histogramTool)
-	else if (index.first == 2)
+	else if (index.first == int(TOOLID::HISTOGRAM))
 	{
 		if (index.second->isOn())
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
 			HelmsleyVolume::instance()->toggleHistogram(true);
-			//_histogramTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
 		}
 		else
 		{
 			index.second->setColor(UI_BACKGROUND_COLOR);
 			HelmsleyVolume::instance()->toggleHistogram(false);
-			//_histogramTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}
 
-	//else if (item == _claheTool)
-	else if (index.first == 3)
+	else if (index.first == int(TOOLID::CLAHE))
 	{
 		if (index.second->isOn())
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
 			HelmsleyVolume::instance()->toggleClaheTools(true);
-			//_claheTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
+			toggleOtherMenus(TOOLID::CLAHE);
 		}
 		else
 		{
 			index.second->setColor(UI_BACKGROUND_COLOR);
 			HelmsleyVolume::instance()->toggleClaheTools(false);
-			//_claheTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}
-	//else if (item == _measuringTool)
-	else if (index.first == 4)
+	else if (index.first == int(TOOLID::RULER))
 	{
 		if (index.second->isOn())
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
 			HelmsleyVolume::instance()->setTool(HelmsleyVolume::MEASUREMENT_TOOL);
 			HelmsleyVolume::instance()->activateMeasurementTool(_index);
-			//_measuringTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
 		}
 		else
 		{
 			index.second->setColor(UI_BACKGROUND_COLOR);
 			HelmsleyVolume::instance()->setTool(HelmsleyVolume::NONE);
 			HelmsleyVolume::instance()->deactivateMeasurementTool(_index);
-			
-			//_measuringTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
 		}
 	}
-	//else if (item == _centerLIneTool)
-	else if (index.first == 5)
+	else if (index.first == int(TOOLID::CENTERLINE))
 	{
 		if (!HelmsleyVolume::instance()->getVolumes()[0]->getColonCoords()->empty()) {
 			osg::Matrix mat = PluginHelper::getHandMat(index.second->getLastHand());
@@ -2728,24 +2738,19 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 			HelmsleyVolume::instance()->getCenterlineTool()->setPosition(pos);
 			if (index.second->isOn())
 			{
-				//_centerLIneTool->getIcon()->setColor(osg::Vec4(0.1, 0.4, 0.1, 1));
-				//HelmsleyVolume::instance()->toggleCenterLine(true);
 				HelmsleyVolume::instance()->activateClippingPath();
 				index.second->setColor(UI_RED_ACTIVE_COLOR);
 			}
 			else
 			{
 				index.second->setColor(UI_BACKGROUND_COLOR);
-				//_centerLIneTool->getIcon()->setColor(osg::Vec4(0, 0, 0, 1));
-				//HelmsleyVolume::instance()->toggleCenterLine(false);
 				HelmsleyVolume::instance()->removeCuttingPlane();
 				
 			}
 		}
 	}
 
-	//Mask menu
-	else if (index.first == 6) {
+	else if (index.first == int(TOOLID::MASKMENU)) {
 		if(index.second->isOn())
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
@@ -2758,8 +2763,7 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
  		}
 	}
 
-	//TF menu
-	else if (index.first == 7) {
+	else if (index.first == int(TOOLID::TFMENU)) {
 		if(index.second->isOn())
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
@@ -2772,17 +2776,30 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
  		}
 	}
 
-	//Marching Cube
-	else if (index.first == 8) {
+	else if (index.first == int(TOOLID::MARCHINGCUBES)) {
+
 		if(index.second->isOn())
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
-			HelmsleyVolume::instance()->toggleMCRedner(true);
+			HelmsleyVolume::instance()->toggleMCRender(true);
+			toggleOtherMenus(TOOLID::MARCHINGCUBES);
  		}
 	else
 		{
 			index.second->setColor(UI_BACKGROUND_COLOR);
-			HelmsleyVolume::instance()->toggleMCRedner(false);
+			HelmsleyVolume::instance()->toggleMCRender(false);
  		}
 	}
+}
+
+void ToolMenu::toggleOtherMenus(TOOLID currentActiveTool) {
+	auto menu = _curvedMenu->getCurvedMenuItems();
+	menu[int(TOOLID::CLAHE)]->setColor(UI_BACKGROUND_COLOR);
+	menu[int(TOOLID::CLAHE)]->turnOff();
+	menu[int(TOOLID::MARCHINGCUBES)]->setColor(UI_BACKGROUND_COLOR);
+	menu[int(TOOLID::MARCHINGCUBES)]->turnOff();
+	
+	menu[int(currentActiveTool)]->setColor(UI_RED_ACTIVE_COLOR);
+	menu[int(currentActiveTool)]->turnOn();
+
 }

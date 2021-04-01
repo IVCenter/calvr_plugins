@@ -352,9 +352,8 @@ void FileSelector::uiCallback(UICallbackCaller* ui){
 		return;
 	}
 	else if (ui == _loadVolumeButton) {
-		bool change = _state == CHANGING ? true : false;
 		if (_menusLoaded == false) {
-			loadVolume(_currentPath, change, false);
+			loadVolume(_currentPath, false, false);
 			_menusLoaded = true;
 		}
 		else {
@@ -657,12 +656,6 @@ void FileSelector::sortByMask(std::map<std::string, std::string>* currMap) {
 	}
 }
 void FileSelector::loadVolume(std::string seriesPath, bool change, bool onlyVolume) {
-	//Load volume
-	if (change)
-	{
-		HelmsleyVolume::instance()->removeVolume(0, onlyVolume);
-	}
-
 	std::string maskpath = "";
 
 	DIR* dir = opendir((seriesPath + "/mask").c_str());
@@ -674,8 +667,6 @@ void FileSelector::loadVolume(std::string seriesPath, bool change, bool onlyVolu
 
 	HelmsleyVolume::instance()->loadVolume(seriesPath, maskpath, onlyVolume);
 	_state = CHANGE;//change//changing
-	addVol->setText("Change Volume");
-	volumeFileSelector->setVisible(false);
 }
 
 void FileSelector::loadVolumeOnly(bool isPreset, std::string seriesPath) {

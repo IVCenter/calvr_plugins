@@ -70,7 +70,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		void toggleClaheTools(bool on);
 		void toggleMaskAndPresets(bool on);
 		void toggleTFUI(bool on);
-		void toggleMCRedner(bool on);
+		void toggleMCRender(bool on);
 
 
 		void loadVolume(std::string path, std::string maskpath = "", bool onlyVolume = false);

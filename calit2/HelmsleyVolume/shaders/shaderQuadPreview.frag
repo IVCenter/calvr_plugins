@@ -45,11 +45,12 @@ void main() {
 
 
 
-    #ifdef COLOR_FUNCTION
-		col = COLOR_FUNCTION
-	#else
-		col = vec3(ra.rrr);
-	#endif
+//    #ifdef COLOR_FUNCTION
+//		col = COLOR_FUNCTION
+//	#else
+//		col = vec3(ra.r, ra.r, ra.r);
+//	#endif
+col = COLOR_FUNCTION
 
 	
 	FragColor = vec4(col, 1);
