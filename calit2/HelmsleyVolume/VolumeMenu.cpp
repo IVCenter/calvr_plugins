@@ -736,6 +736,7 @@ void NewVolumeMenu::init()
 	_numBinsLabel->setPercentPos(osg::Vec3(-0.05, 0.0, 0.0));
 	numBinTexts->addChild(_numBinsLabel);
 	claheUI->addChild(numBinTexts);
+	
 
 	_numBinsSlider = new CallbackSlider();
 	_numBinsSlider->setCallback(this);
@@ -746,6 +747,25 @@ void NewVolumeMenu::init()
 	_numBinsSlider->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
 	_numBinsSlider->handle->setPercentSize(osg::Vec3(0, 1, 1));
 	claheUI->addChild(_numBinsSlider);
+
+	UIList* clipLimitTexts = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+	label = new UIText("Clip Limit: ", 24.0f, osgText::TextBase::LEFT_CENTER);
+	label->setPercentPos(osg::Vec3(0.05, 0.0, 0.0));
+	clipLimitTexts->addChild(label);
+	_clipLimitLabel = new UIText(".85", 24.0f, osgText::TextBase::RIGHT_CENTER);
+	_clipLimitLabel->setPercentPos(osg::Vec3(-0.05, 0.0, 0.0));
+	clipLimitTexts->addChild(_clipLimitLabel);
+	claheUI->addChild(clipLimitTexts);
+
+	_clipLimitSlider = new CallbackSlider();
+	_clipLimitSlider->setCallback(this);
+	_clipLimitSlider->setPercent(.85f);
+	_clipLimitSlider->setPercentPos(osg::Vec3(0.025, 0, 0.05));
+	_clipLimitSlider->setPercentSize(osg::Vec3(0.95, 1, 0.5));
+	_clipLimitSlider->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
+	_clipLimitSlider->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
+	_clipLimitSlider->handle->setPercentSize(osg::Vec3(0, 1, 1));
+	claheUI->addChild(_clipLimitSlider);
 
 
 	UIList* buttonList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
@@ -1304,12 +1324,21 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 
 	}
 
+	else if (item == _clipLimitSlider) {
+		_clipLimitLabel->setText(std::to_string(_clipLimitSlider->getAdjustedValue()).substr(0, 4));
+		_volume->setClipLimit(_clipLimitSlider->getAdjustedValue());
+	}
+
 	else if (item == _genClaheButton) {
 		_volume->genClahe();
 		((UIQuadElement*)_useClaheButton->getChild(0))->setColor(UI_RED_ACTIVE_COLOR);
 		((UIText*)_useClaheButton->getChild(1))->setColor(UI_WHITE_COLOR);
 		((UIText*)_useClaheButton->getChild(1))->setText("Use CLAHE");
 		 
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("CLAHE", true);
+		_volume->setDirtyAll();
+		
+		((UIText*)_useClaheButton->getChild(1))->setText("Disable CLAHE");
 	}
 	else if (item == _useClaheButton) {
 		bool on = ((UIText*)_useClaheButton->getChild(1))->getText() == "Use CLAHE";

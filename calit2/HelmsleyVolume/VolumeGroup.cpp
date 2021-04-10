@@ -328,8 +328,8 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	_volume->setTextureSize(i->s(), i->t(), i->r());
 	
 	
-	_volume->setFilter(osg::Texture3D::MIN_FILTER, osg::Texture3D::NEAREST);
-	_volume->setFilter(osg::Texture3D::MAG_FILTER, osg::Texture3D::NEAREST);
+	_volume->setFilter(osg::Texture3D::MIN_FILTER, osg::Texture3D::LINEAR);
+	_volume->setFilter(osg::Texture3D::MAG_FILTER, osg::Texture3D::LINEAR);
 	_volume->setInternalFormat(GL_RG16);
 	_volume->setName("VOLUME");
 	_volume->setResizeNonPowerOfTwoHint(false);
@@ -506,12 +506,12 @@ osg::ref_ptr<osg::ShaderStorageBufferBinding> VolumeGroup::precompExcess(t_ssbb 
 	osg::ref_ptr<osg::Program> excessShader = new osg::Program;
 	excessShader->addShader(new osg::Shader(osg::Shader::COMPUTE, _excessShader));
 
-	int width = 4096;
+	/*int width = 4096;
 	int count = (_histSize + 63) / 64;
 	GLuint dispatchWidth = count / (width*width);
 	GLuint dispatchHeight = (count / width) % width;
-	GLuint dispatchDepth = count % width;
-	_excessNode = new osg::DispatchCompute(_numSB_3D.x(), _numSB_3D.y(), _numSB_3D.z());
+	GLuint dispatchDepth = count % width;*/
+	_excessNode = new osg::DispatchCompute(_histSize+63/64, 1, 1);	
 	//_excessNode = new osg::DispatchCompute(dispatchWidth, dispatchHeight, dispatchDepth);
 	
 	_excessNode->getOrCreateStateSet()->setAttributeAndModes(excessShader.get());	
@@ -519,8 +519,8 @@ osg::ref_ptr<osg::ShaderStorageBufferBinding> VolumeGroup::precompExcess(t_ssbb 
 
 	osg::StateSet* states = _excessNode->getOrCreateStateSet();
 	states->setRenderBinDetails(3, "RenderBin");
- 	states->addUniform(new osg::Uniform("clipLimit", _clipLimit3D));
-	states->addUniform(new osg::Uniform("minClipValue", _minClipValue));
+ 	/*states->addUniform(new osg::Uniform("clipLimit", _clipLimit3D));
+	states->addUniform(new osg::Uniform("minClipValue", _minClipValue));*/
 	states->addUniform(new osg::Uniform("blocksDims", _numSB_3D.x(), _numSB_3D.y(), _numSB_3D.z()));
 
 	ExcessSSB* shaderStorageCallback = new ExcessSSB(this);
@@ -550,7 +550,8 @@ osg::ref_ptr<osg::ShaderStorageBufferBinding> VolumeGroup::setupExcessSSBO(t_ssb
 	_excessNode->getOrCreateStateSet()->setAttributeAndModes(ssbbHist, osg::StateAttribute::ON);
 	_excessNode->getOrCreateStateSet()->setAttributeAndModes(ssbbHistMax, osg::StateAttribute::ON);
 	_excessNode->getOrCreateStateSet()->addUniform(new osg::Uniform("NUM_BINS", _numGrayVals));
-
+	_excessNode->getOrCreateStateSet()->addUniform(new osg::Uniform("clipLimit", _clipLimit3D));
+	
 	((ExcessSSB*)_excessNode->getDrawCallback())->_buffersize = _numHist;
 	((ExcessSSB*)_excessNode->getDrawCallback())->_ssbb = ssbbExcess;
 
@@ -578,7 +579,7 @@ void VolumeGroup::precompHistClip(t_ssbb ssbbHist, t_ssbb ssbbHistMax, t_ssbb ss
 
 	osg::StateSet* states = _clipHist1Node->getOrCreateStateSet();
 	states->setRenderBinDetails(4, "RenderBin");
-	states->addUniform(new osg::Uniform("clipLimit", _clipLimit3D));
+	/*states->addUniform(new osg::Uniform("clipLimit", _clipLimit3D));*/
 	states->addUniform(new osg::Uniform("minClipValue", _minClipValue));
 	
 	//Clipshader2 Used in Callback
@@ -611,8 +612,9 @@ void VolumeGroup::setupClip(t_ssbb ssbbHist, t_ssbb ssbbHistMax, t_ssbb ssbbExce
 	_clipHist1Node->getOrCreateStateSet()->setAttributeAndModes(ssbbHist, osg::StateAttribute::ON);
 	_clipHist1Node->getOrCreateStateSet()->setAttributeAndModes(ssbbHistMax, osg::StateAttribute::ON);
 	_clipHist1Node->getOrCreateStateSet()->addUniform(new osg::Uniform("NUM_BINS", _numGrayVals));
+	_clipHist1Node->getOrCreateStateSet()->addUniform(new osg::Uniform("clipLimit", _clipLimit3D));
 
-	
+
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_buffersize = _numHist;
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_ssbbExcess = ssbbExcess;
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_ssbbHist = ssbbHist;
@@ -621,6 +623,7 @@ void VolumeGroup::setupClip(t_ssbb ssbbHist, t_ssbb ssbbHistMax, t_ssbb ssbbExce
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_acbbminMax = acbbminmax;
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->volDims = _volDims;
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_numGrayVals = _numGrayVals;
+	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_clipLimit = _clipLimit3D;
 }
 
 void VolumeGroup::precompLerp(t_ssbb ssbbHist) {
@@ -1171,12 +1174,7 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 			renderInfo.getState()->get<osg::GLExtensions>()->glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 			osg::State* state = renderInfo.getState();
-
-
-
-
-		 
-			
+			 
 			GLint id;
 			glGetIntegerv(GL_CURRENT_PROGRAM, &id);
 		 
@@ -1197,7 +1195,7 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 			renderInfo.getState()->get<osg::GLExtensions>()->glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, stepSizeBuffer);
 
 			const unsigned int numOutGrayVals = _numGrayVals;
-			const float clipLimit =0.85f;
+			const float clipLimit = _clipLimit;
 
 
 			float tempClipValue = 1.1f * (numSB.x() * numSB.y() * numSB.z()) / numOutGrayVals;

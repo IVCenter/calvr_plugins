@@ -108,6 +108,9 @@ public:
 		_numGrayVals = numBins;
 		_histSize = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z() * _numGrayVals;
 	}
+	void setClipLimit(float clipLimit) {
+		_clipLimit3D = clipLimit;
+	}
 	void genClahe();
  
 	unsigned int getHistMax();
@@ -411,6 +414,7 @@ public:
 	osg::ref_ptr<osg::Program> _clipshader2;
 	int numPixels;
 	unsigned int _numGrayVals;
+	float _clipLimit;
 	osg::Vec3i volDims;
 	osg::ref_ptr<osg::AtomicCounterBufferBinding> _acbbminMax;
 
@@ -546,7 +550,7 @@ public:
 			
 			stop[0] = 1;
 			ready[0] = 1;
- 
+			
 			group->readyMCUI();
 
 			group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
@@ -555,8 +559,7 @@ public:
 	}
 
 	//const_cast
-
-	uint16_t* stop = new uint16_t(1);
+ 	uint16_t* stop = new uint16_t(1);
 	uint16_t* ready = new uint16_t(0);
 	uint32_t* vertexCount = new uint32_t(0);
 	int _buffersize;

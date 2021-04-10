@@ -261,6 +261,7 @@ protected:
 	CallbackSlider* _brightness;
 
 	CallbackSlider* _numBinsSlider;
+	CallbackSlider* _clipLimitSlider;
 	CallbackButton* _genClaheButton;
 	CallbackButton* _useClaheButton;
 
@@ -303,6 +304,7 @@ protected:
 	cvr::UIQuadElement* _cpHeader;
 	cvr::UIText* _cpHLabel;
 	cvr::UIText* _numBinsLabel;
+	cvr::UIText* _clipLimitLabel;
 	CallbackRadial* _transferFunctionRadial;
 	ShaderQuad* _colorDisplay;
 	ShaderQuad* _opacityDisplay;

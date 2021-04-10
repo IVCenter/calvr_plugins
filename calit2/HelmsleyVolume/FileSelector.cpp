@@ -36,7 +36,7 @@ void FileSelector::init()
 	_state = NEW;
 	pathSelections = std::vector<cvr::MenuItem*>();
 
-	addVolumeMenu = new cvr::PopupMenu("Volumes", "", false, true);
+	/*addVolumeMenu = new cvr::PopupMenu("Volumes", "", false, true);
 	osg::Vec3 menupos = cvr::ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.FileMenu.Position", osg::Vec3(-600, 500, 1100));
 	addVolumeMenu->setPosition(menupos);
  
@@ -46,7 +46,7 @@ void FileSelector::init()
 	addVol->setCallback(this);
 
 	volumeFileSelector = new cvr::PopupMenu("Choose File", "", false, true);
-	volumeFileSelector->setPosition(menupos + osg::Vec3(0,0,-100));
+	volumeFileSelector->setPosition(menupos + osg::Vec3(0,0,-100));*/
  	_currentPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.BaseFolder", "C:/", false);
 
 

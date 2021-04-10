@@ -64,9 +64,10 @@ vec4 Sample(ivec3 p) {
 		
 	#else
 		vec2 ra = imageLoad(CLAHEvolume, p).rg;
-		s.rgb = vec3(ra.r);
+		//ra.a = imageLoad(volume, p).g;
+		/*s.rgb = vec3(ra.r);
 		s.a = 1.0f;
-		return s;
+		return s;*/
 	#endif
 	
 	uint bitmask = uint(imageLoad(volume, p).rg.g * 65535.0);
