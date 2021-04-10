@@ -18,6 +18,7 @@ SET(PLUGIN_HEADERS
 	CuttingPlane.h
 	Utils.h
 	CurvedMenu.h
+	CenterlineTool.h
 )
 
 if(WIN32)
@@ -46,6 +47,7 @@ ADD_LIBRARY(${LIB_NAME}
 	CuttingPlane.cpp
 	Utils.cpp
 	CurvedMenu.cpp
+	CenterlineTool.cpp
 )
 
 
