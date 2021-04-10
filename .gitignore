@@ -16,6 +16,9 @@ CMakeCache.txt
 *.VC.db
 *.db
 *.obj
+*.VC
+*.db
+*.vs
 Debug
 ipch
 *.dir
