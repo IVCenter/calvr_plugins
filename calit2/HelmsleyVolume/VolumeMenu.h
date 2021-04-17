@@ -342,7 +342,7 @@ protected:
 	int _triangleIndex;
 	int _colorSliderIndex;
 	int _volumeIndex = 0;
-	osg::Vec3 triangleColors[6] = { UI_BLUE_COLOR, UI_RED_COLOR, UI_YELLOW_COLOR, UI_GREEN_COLOR, UI_PURPLE_COLOR, UI_PINK_COLOR};
+	osg::Vec3 triangleColors[6] = { UI_BLUE_COLOR, UI_RED_HOVER_COLOR, UI_YELLOW_COLOR, UI_GREEN_COLOR, UI_PURPLE_COLOR, UI_PINK_COLOR};
 	bool checkTriangleCallbacks(UICallbackCaller* item);
 	bool checkTriangleVisCallbacks(UICallbackCaller* item);
 	bool checkPresetCallbacks(UICallbackCaller* item);

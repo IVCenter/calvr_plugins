@@ -22,7 +22,7 @@
 
 
 FileSelector::~FileSelector() {
-	delete addVolumeMenu;
+	//delete addVolumeMenu;
 
 	delete _so;
 
@@ -65,20 +65,21 @@ void FileSelector::init()
 	fsBknd->setBorderSize(.01);
 	fsBknd->setTransparent(true);
 	fsBknd->setRounding(0, .05);
-	_rightArrow = new TriangleButton(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	osg::Vec4 redcolor = osg::Vec4(1, 0.749, 0.729, 1.0);
+	_rightArrow = new TriangleButton(UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
 	_rightArrow->setCallback(this);
 	fsBknd->addChild(_rightArrow);
 	_rightArrow->setPercentSize(osg::Vec3(0.07, 1.0, .2));
 	_rightArrow->setPercentPos(osg::Vec3(0.95, -1.0, -.5));
 	
-	_leftArrow = new TriangleButton(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	_leftArrow = new TriangleButton(UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
 	_leftArrow->setCallback(this);
 	fsBknd->addChild(_leftArrow);
 	_leftArrow->setPercentSize(osg::Vec3(0.07, 1.0, .2));
 	_leftArrow->setPercentPos(osg::Vec3(0.05, -1.0, -.5));
 	_leftArrow->setRotate(1);
 
-	_upArrow = new TriangleButton(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	_upArrow = new TriangleButton(UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
 	_upArrow->setCallback(this);
 	fsBknd->addChild(_upArrow);
 	_upArrow->setPercentSize(osg::Vec3(0.07, 1.0, .1));
@@ -100,13 +101,14 @@ void FileSelector::init()
 	_fsPopup->setActive(true, true);
 	
 	
-	cvr::UIQuadElement* titleBknd = new cvr::UIQuadElement();
+	cvr::UIQuadElement* titleBknd = new cvr::UIQuadElement(UI_BACKGROUND_COLOR);
 	_fsPopup->addChild(titleBknd);
-	titleBknd->setPercentPos(osg::Vec3(.4, -1, -.03));
-	titleBknd->setPercentSize(osg::Vec3(.2, 1, .1));
-	titleBknd->setBorderSize(.01);
-	cvr::UIText* titleText = new cvr::UIText("Load Volume", 70.f, osgText::TextBase::CENTER_CENTER);
-	titleText->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+	titleBknd->setPercentPos(osg::Vec3(.3, -1, -.03));
+	titleBknd->setPercentSize(osg::Vec3(.4, 1, .1));
+
+	//titleBknd->setBorderSize(.01);
+	cvr::UIText* titleText = new cvr::UIText("Load Volume", 140.f, osgText::TextBase::CENTER_CENTER);
+	titleText->setColor(UI_WHITE_COLOR);
 	titleBknd->addChild(titleText);
 
 	 _contentBknd = new cvr::UIQuadElement();
@@ -190,28 +192,21 @@ void FileSelector::init()
 	_selectTexture = new cvr::UITexture();
 
 
-	cvr::UIQuadElement* loadButton = new cvr::UIQuadElement();
-	loadButton->setPercentSize(osg::Vec3(.3, 1, .125));
-	loadButton->setPercentPos(osg::Vec3(.150, -1, -.8));
-	loadButton->setBorderSize(.01);
+	FullButton* loadVolButton = new FullButton("Load Dataset", UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
+	loadVolButton->setPercentSize(osg::Vec3(.3, 1, .125));
+	loadVolButton->setPercentPos(osg::Vec3(.150, -1, -.8));
+	_loadVolumeButton = loadVolButton->getButton();
+	loadVolButton->setButtonCallback(this);
+	loadVolButton->setCallback(this);
 
-	_loadVolumeButton = new CallbackButton();
-	_loadVolumeButton->setCallback(this);
-	loadButton->addChild(_loadVolumeButton);
-	
-	cvr::UIQuadElement* loadSecondBknd = new cvr::UIQuadElement();
-	loadSecondBknd->setPercentSize(osg::Vec3(.3, 1, .125));
-	loadSecondBknd->setPercentPos(osg::Vec3(.525, -1, -.8));
-	loadSecondBknd->setBorderSize(.01);
 
-	_loadSecondButton = new CallbackButton();
-	_loadSecondButton->setCallback(this);
-	loadSecondBknd->addChild(_loadSecondButton);
+	FullButton* loadVolButton2 = new FullButton("Load as Second", UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
+	loadVolButton2->setPercentSize(osg::Vec3(.3, 1, .125));
+	loadVolButton2->setPercentPos(osg::Vec3(.525, -1, -.8));
+	loadVolButton2->getButton()->setDisabledColor(UI_RED_DISABLED_COLOR_VEC4);
+	_loadSecondButton = loadVolButton2->getButton();
+	loadVolButton2->setButtonCallback(this);
 
-	cvr::UIText* loadText = new cvr::UIText("Load Dataset", 50.f, osgText::TextBase::CENTER_CENTER);
-	loadText->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
-	cvr::UIText* loadSecondText = new cvr::UIText("Load as Second", 50.f, osgText::TextBase::CENTER_CENTER);
-	loadSecondText->setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
 
 
 	_categoryList = new cvr::UIList(cvr::UIList::TOP_TO_BOTTOM, cvr::UIList::CONTINUE);
@@ -249,14 +244,17 @@ void FileSelector::init()
 	_selectBknd->addChild(_selectImage);
 	_selectBknd->addChild(_categoryList);
 	_selectBknd->addChild(_infoList);
-	_selectBknd->addChild(loadButton);
-	_selectBknd->addChild(loadSecondBknd);
+	/*_selectBknd->addChild(loadButton);
+	_selectBknd->addChild(loadSecondBknd);*/
+	_selectBknd->addChild(loadVolButton);
+	_selectBknd->addChild(loadVolButton2);
+	//_selectBknd->addChild(loadSecondBknd);
 
 	
 	_selectImage->addChild(_selectTexture);
 	_selectTexture->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
-	loadButton->addChild(loadText);
-	loadSecondBknd->addChild(loadSecondText);
+	/*loadButton->addChild(loadText);
+	loadSecondBknd->addChild(loadSecondText);*/
 
 
 
@@ -355,6 +353,7 @@ void FileSelector::uiCallback(UICallbackCaller* ui){
 		if (_menusLoaded == false) {
 			loadVolume(_currentPath, false, false);
 			_menusLoaded = true;
+			_loadSecondButton->setDisabledColor(UI_NULL_COLOR_VEC4);	//Enables Button
 		}
 		else {
 			loadVolumeOnly(false, _currentPath);

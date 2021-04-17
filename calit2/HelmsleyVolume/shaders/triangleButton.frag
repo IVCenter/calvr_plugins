@@ -1,6 +1,6 @@
 #version 460
 
-uniform vec3 Color;
+uniform vec4 Color;
 
 out vec4 FragColor;
 
@@ -15,7 +15,7 @@ in vs_out {
 void main() {
 	float alpha = 1.0;
 	float borderColor = 0.0f;
-	vec3 col;
+	vec4 col;
 
 
 	if(i.uv.y < 0.05)
@@ -29,5 +29,5 @@ void main() {
 	else if(true)
 		col = Color;
 		
-	FragColor = vec4(col, alpha);
+	FragColor = vec4(col);
 }

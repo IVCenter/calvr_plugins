@@ -361,22 +361,7 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	//_sizeSB = osg::Vec3i(_volDims.x() / _numSB_3D.x(), _volDims.y() / _numSB_3D.y(), _volDims.z() / _numSB_3D.z());
 	//float tempClipValue = 1.1f * (_sizeSB.x() * _sizeSB.y() * _sizeSB.z()) / _numGrayVals;
 	//_minClipValue = unsigned int(tempClipValue + 0.5f);
-	////////////////////////MinMax//////////////
-	//auto acbbMinMax = precompMinMax();
-	////////////////////////////Hist///////////////////////////
-	//auto ssbbPair = precompHist();
-	////////////////////////////Excess////////////////////////
-	//auto ssbbexcess = precompExcess(ssbbPair.first, ssbbPair.second);
-	/////////////////////////////HistClip///////////////////////////
-	//precompHistClip(ssbbPair.first, ssbbPair.second, ssbbexcess, acbbMinMax);
-	/////////////////////////////Lerp///////////////////////
-	//precompLerp(ssbbPair.first);
-	//
-	////release refptrs
-	//acbbMinMax.release();
-	//ssbbPair.first.release();
-	//ssbbPair.second.release();
-	//ssbbexcess.release();
+	
 	
 	//Set dirty on all graphics contexts
 	std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();/////////////uncomment
@@ -539,12 +524,12 @@ osg::ref_ptr<osg::ShaderStorageBufferBinding> VolumeGroup::setupExcessSSBO(t_ssb
 	excess.release();
 	excessBuffer.release();
 
-	int width = 4096;
+	/*int width = 4096;
 	int count = (_histSize + 63) / 64;
 	GLuint dispatchWidth = count / (width * width);
 	GLuint dispatchHeight = (count / width) % width;
 	GLuint dispatchDepth = count % width;
-	_excessNode->setComputeGroups(dispatchWidth, dispatchHeight, dispatchDepth);
+	_excessNode->setComputeGroups(dispatchWidth, dispatchHeight, dispatchDepth);*/
 
 	_excessNode->getOrCreateStateSet()->setAttributeAndModes(ssbbExcess, osg::StateAttribute::ON);
 	_excessNode->getOrCreateStateSet()->setAttributeAndModes(ssbbHist, osg::StateAttribute::ON);
@@ -1151,6 +1136,7 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 			}
 		}
 
+		
 		renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
 		//////////////////////computepass 2 ///////////////////
 		osg::Vec3 numSB = osg::Vec3(4, 4, 2);
@@ -1178,7 +1164,7 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 			GLint id;
 			glGetIntegerv(GL_CURRENT_PROGRAM, &id);
 		 
-
+			std::cout << "test id.. " << id << std::endl;
  			//renderInfo.getState()->get<osg::GLExtensions>()->glUseProgram(0);
 
 		 
@@ -1188,6 +1174,7 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 		 
 			glGetIntegerv(GL_CURRENT_PROGRAM, &id);
 			 
+			std::cout << "test id.. " << id << std::endl;
 
 			renderInfo.getState()->get<osg::GLExtensions>()->glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, histID);
 			renderInfo.getState()->get<osg::GLExtensions>()->glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, histMaxID);
@@ -1199,6 +1186,7 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 
 
 			float tempClipValue = 1.1f * (numSB.x() * numSB.y() * numSB.z()) / numOutGrayVals;
+			std::cout << "temp clip... " << tempClipValue << std::endl;
 			unsigned int minClipValue = unsigned int(tempClipValue + 0.5f);
 
 
@@ -1210,7 +1198,42 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 			renderInfo.getState()->get<osg::GLExtensions>()->glUniform1ui(
 				renderInfo.getState()->get<osg::GLExtensions>()->glGetUniformLocation(id, "minClipValue"), minClipValue);
 
+			///////////////DEBUGGING
+			{
+				osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(32*_numGrayVals);
+				osg::GLBufferObject* glBufferObject = _ssbbHist->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
+				//std::cout << glBufferObject << std::endl;
 
+				GLint previousID = 1;
+				glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &previousID);
+
+				if ((GLuint)previousID != glBufferObject->getGLObjectID())
+					glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, glBufferObject->getGLObjectID());
+
+				GLubyte* data = (GLubyte*)glBufferObject->_extensions->glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY_ARB);
+				//std::cout << data << std::endl;
+				if (data)
+				{
+					size_t size = osg::minimum<int>(_ssbbHist->getSize(), uintArray->getTotalDataSize());
+					memcpy((void*)&(uintArray->front()), data + _ssbbHist->getOffset(), size);
+					glBufferObject->_extensions->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+				}
+
+				if ((GLuint)previousID != glBufferObject->getGLObjectID())
+					glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
+
+
+				unsigned int value = uintArray->front();
+				std::cout << "Excess after clip" << value << std::endl;
+
+				for (int i = 0; i < 100; i++) {
+					std::cout << uintArray->at(i) << std::endl;
+
+				}
+
+
+			}
+			//DEBUGGING/////////////////////////////
 
 
 			renderInfo.getState()->get<osg::GLExtensions>()->glDispatchCompute((GLuint)((histSize + 63) / 64), 1, 1);
@@ -1221,6 +1244,45 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 			renderInfo.getState()->get<osg::GLExtensions>()->glDeleteBuffers(1, &stepSizeBuffer);
 
 
+
+
+
+			///////////////DEBUGGING
+			{
+				osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(32*_numGrayVals);
+				osg::GLBufferObject* glBufferObject = _ssbbHist->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
+				//std::cout << glBufferObject << std::endl;
+
+				GLint previousID = 1;
+				glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &previousID);
+
+				if ((GLuint)previousID != glBufferObject->getGLObjectID())
+					glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, glBufferObject->getGLObjectID());
+
+				GLubyte* data = (GLubyte*)glBufferObject->_extensions->glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY_ARB);
+				//std::cout << data << std::endl;
+				if (data)
+				{
+					size_t size = osg::minimum<int>(_ssbbHist->getSize(), uintArray->getTotalDataSize());
+					memcpy((void*)&(uintArray->front()), data + _ssbbHist->getOffset(), size);
+					glBufferObject->_extensions->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+				}
+
+				if ((GLuint)previousID != glBufferObject->getGLObjectID())
+					glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
+
+
+				unsigned int value = uintArray->front();
+				std::cout << "Excess after clip" << value << std::endl;
+
+				for (int i = 0; i < 100; i++) {
+						std::cout << uintArray->at(i) << std::endl;
+
+				}
+
+
+			}
+			//DEBUGGING/////////////////////////////
 			delete[] stepSize;
 		}
 
@@ -1273,44 +1335,42 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 
 
 
-		/////////////////DEBUGGING
-		//{
-		//	osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_numGrayVals * 32);
-		//	osg::GLBufferObject* glBufferObject = _ssbbHist->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
-		//	//std::cout << glBufferObject << std::endl;
+		///////////////DEBUGGING
+		{
+			osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_numGrayVals * 32);
+			osg::GLBufferObject* glBufferObject = _ssbbHist->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
+			//std::cout << glBufferObject << std::endl;
 
-		//	GLint previousID = 1;
-		//	glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &previousID);
+			GLint previousID = 1;
+			glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &previousID);
 
-		//	if ((GLuint)previousID != glBufferObject->getGLObjectID())
-		//		glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, glBufferObject->getGLObjectID());
+			if ((GLuint)previousID != glBufferObject->getGLObjectID())
+				glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, glBufferObject->getGLObjectID());
 
-		//	GLubyte* data = (GLubyte*)glBufferObject->_extensions->glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY_ARB);
-		//	//std::cout << data << std::endl;
-		//	if (data)
-		//	{
-		//		size_t size = osg::minimum<int>(_ssbbHist->getSize(), uintArray->getTotalDataSize());
-		//		memcpy((void*)&(uintArray->front()), data + _ssbbHist->getOffset(), size);
-		//		glBufferObject->_extensions->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-		//	}
+			GLubyte* data = (GLubyte*)glBufferObject->_extensions->glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY_ARB);
+			//std::cout << data << std::endl;
+			if (data)
+			{
+				size_t size = osg::minimum<int>(_ssbbHist->getSize(), uintArray->getTotalDataSize());
+				memcpy((void*)&(uintArray->front()), data + _ssbbHist->getOffset(), size);
+				glBufferObject->_extensions->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+			}
 
-		//	if ((GLuint)previousID != glBufferObject->getGLObjectID())
-		//		glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
+			if ((GLuint)previousID != glBufferObject->getGLObjectID())
+				glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
 
 
-		//	/*unsigned int value = uintArray->front();
-		//	std::cout << "Hist Check before Lerp " << value << std::endl;*/
+			unsigned int value = uintArray->front();
+			/*std::cout << "Hist after clip" << value << std::endl;
 
-		//	for (int i = 0; i < _numGrayVals; i++) {
-		//		if (uintArray->at(i) != 0) {
-		//			std::cout << "NONZEROFOUND" << std::endl;
-		//			break;
-		//		}
-		//	}
+			for (int i = 0; i < 100; i++) {
+ 					std::cout << uintArray->at(i) << std::endl;
+				
+			}*/
 
-		//	std::cout << "No non zero found" << std::endl;
-		//}
-		////DEBUGGING/////////////////////////////
+			
+		}
+		//DEBUGGING/////////////////////////////
 
 
  		stop[0] = 1;

@@ -1228,7 +1228,7 @@ void CurvedQuad::processHover(bool enter)
 	if (!isOn()) {
 		if (enter)
 		{
-			_colorUniform->set(osg::Vec4(UI_RED_COLOR, 1.0));
+			_colorUniform->set(osg::Vec4(UI_RED_HOVER_COLOR, 1.0));
 		}
 		else
 		{
@@ -1700,22 +1700,12 @@ void MarchingCubesRender::createGeometry()
 	
 
 
- 	//_polyGeom->setVertexArray(vec3Coords);
-	/*_polyGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES, 0, numCoords));
-	_geode->addDrawable(_polyGeom);*/
+ 	_polyGeom->setVertexArray(vec3Coords);
+	_polyGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES, 0, numCoords));
+	_geode->addDrawable(_polyGeom);
 	
-	_VA->dirty();
-	//std::cout << "Va check" << std::endl;
-	
-	 
-	_mcGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES, 0, _verticeCount));
-
-	_geode->addDrawable(_mcGeom);
-
-
-	
-	//((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_PER_VERTEX);
-	//((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_PER_VERTEX);
+	((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_PER_VERTEX);
+	((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_PER_VERTEX);
 	
 
 	updateGeometry();
@@ -1735,13 +1725,10 @@ void MarchingCubesRender::updateGeometry()
 
  	if (_program.valid())
 	{
-
-		_geode->getDrawable(0)->getOrCreateStateSet()->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
+ 		_geode->getDrawable(0)->getOrCreateStateSet()->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
 		std::cout << "program applied" << std::endl;
 	}
-
-
-
+	 
 }
 
 
@@ -2586,4 +2573,56 @@ void Selection::removeImage() {
 	if(_uiTexture!=nullptr)
 		_bknd->removeChild(_uiTexture);
 }
+#pragma endregion
+
+#pragma region FullButton
+FullButton::FullButton(std::string txt, osg::Vec4 color, osg::Vec4 color2) :
+	cvr::UIElement(), _originalColor(color), _savedColor(color2)
+{
+	_bknd = new cvr::UIQuadElement(color);
+	
+	
+
+	addChild(_bknd);
+	_bknd->setPercentPos(osg::Vec3(0, -1, 0));
+
+	_uiText = new UIText(txt, 50.f, osgText::TextBase::CENTER_CENTER);
+	_uiText->setColor(osg::Vec4(1.0, 1.0, 1.0, 1.0));
+	_bknd->addChild(_uiText);
+
+	_button = new HoverButton(_bknd, color, color2);
+	_button->setCallback(this);
+ 	_bknd->addChild(_button);
+
+	if (color2.x() == -1) {
+		_savedColor == _originalColor;
+	}
+}
+
+
+bool FullButton::processEvent(cvr::InteractionEvent* event) {
+	return false;
+}
+
+void FullButton::uiCallback(UICallbackCaller* ui) {
+
+}
+
+
+void FullButton::processHover(bool enter)
+{
+	
+	if (enter)
+	{
+		
+		_bknd->setColor(_savedColor);
+	}
+	else
+	{
+		_bknd->setColor(_originalColor);
+		
+	}
+	std::cout << "on hover" << std::endl;
+}
+
 #pragma endregion

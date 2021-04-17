@@ -7,7 +7,10 @@
 #define UI_INACTIVE_COLOR osg::Vec4(.243, .561, 1, .4)
 #define UI_BLUE_COLOR osg::Vec3(0.8, 0.9, 1.0)
 #define UI_BLUE_COLOR2 osg::Vec4(.04, .25, .4, 1.0)
-#define UI_RED_COLOR osg::Vec3(1, 0.4, 0.4)
+#define UI_RED_HOVER_COLOR osg::Vec3(1, 0.4, 0.4)
+#define UI_RED_HOVER_COLOR_VEC4 osg::Vec4(1, 0.4, 0.4, 1)
+#define UI_RED_DISABLED_COLOR_VEC4 osg::Vec4(0.51, 0.282, 0.2671, .4)
+#define UI_NULL_COLOR_VEC4 osg::Vec4(-1, 0, 0, 0)
 #define UI_YELLOW_COLOR osg::Vec3(1, 0.964, 0.8)
 #define UI_GREEN_COLOR osg::Vec3(0.8, 1, 0.847)
 #define UI_PURPLE_COLOR osg::Vec3(0.847, 0.8, 1)
@@ -75,6 +78,42 @@ public:
 		}
 		return false;
 	}
+};
+
+class HoverButton
+	: public CallbackButton
+{
+public:
+	HoverButton(cvr::UIQuadElement* bknd, osg::Vec4 originalColor, osg::Vec4 hoverColor) :
+		_bknd(bknd), _originalColor(originalColor), _hoverColor(hoverColor) {}
+
+	void processHover(bool enter) override
+	{
+		if (_disabledColor == UI_NULL_COLOR_VEC4) {		//If the button is not disabled...
+			if (enter)
+			{
+				_bknd->setColor(_hoverColor);
+			}
+			else {
+				_bknd->setColor(_originalColor);
+			}
+		}
+	}
+
+	void setDisabledColor(osg::Vec4 color) 
+	{ 
+		_disabledColor = color;
+		if(_disabledColor != UI_NULL_COLOR_VEC4)
+			_bknd->setColor(_disabledColor);
+		else {
+			_bknd->setColor(_originalColor);
+		}
+	}
+
+	cvr::UIQuadElement* _bknd;
+	osg::Vec4 _originalColor;
+	osg::Vec4 _hoverColor;
+	osg::Vec4 _disabledColor = UI_NULL_COLOR_VEC4;
 };
 
 class CallbackToggle : public cvr::UIToggle, public UICallbackCaller
@@ -251,14 +290,14 @@ private:
  class TriangleButton : public cvr::UIElement, public UICallbackCaller
 {
 public:
-	TriangleButton(osg::Vec4 color = osg::Vec4(UI_BLUE_COLOR, 1))
-		: UIElement()
+	TriangleButton(osg::Vec4 color = osg::Vec4(UI_BLUE_COLOR, 1), osg::Vec4 hoverColor = osg::Vec4(UI_BLUE_COLOR,1))
+		: UIElement(), _hoverColor(hoverColor)
 	{
 		_color = color;
 		_geode = new osg::Geode();
 		createGeometry();
 
-		_colorUniform = new osg::Uniform("Color", UI_BLUE_COLOR);
+		_colorUniform = new osg::Uniform("Color", _color);
 		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_colorUniform);
 
 		setProgram(getOrLoadProgram());
@@ -283,6 +322,14 @@ public:
 	virtual osg::Uniform* getUniform(std::string uniform);
 	virtual void setShaderDefine(std::string name, std::string definition, osg::StateAttribute::Values on);
 	virtual bool processEvent(cvr::InteractionEvent* event) override;
+	virtual void processHover(bool enter) override {
+		osg::Vec4 temp = _color;
+		_color = _hoverColor;
+		_hoverColor = temp;
+		_colorUniform->set(_color);
+
+		_dirty = true;
+	}
 	osg::Uniform* _colorUniform;
 	osg::ref_ptr<osg::Geode> _geode;
 protected:
@@ -296,6 +343,8 @@ protected:
 	static osg::Program* _triangleButtonProg;
 
 	osg::Vec4 _color;
+	
+	osg::Vec4 _hoverColor;
 
 	osg::ref_ptr<osg::Program> _program;
 	std::map<std::string, osg::Uniform*> _uniforms;
@@ -489,7 +538,7 @@ protected:
 class Line : public cvr::UIElement
 {
 public:
-	Line(osg::Vec3dArray* coords, osg::Vec4 color = osg::Vec4(UI_RED_COLOR, 1))
+	Line(osg::Vec3dArray* coords, osg::Vec4 color = osg::Vec4(UI_RED_HOVER_COLOR, 1))
 		: UIElement()
 	{
 		_coords = coords;
@@ -499,7 +548,7 @@ public:
 		createGeometry();
 
 		
-		_colorUniform = new osg::Uniform("Color", UI_RED_COLOR);
+		_colorUniform = new osg::Uniform("Color", UI_RED_HOVER_COLOR);
 
 		(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_colorUniform);
 
@@ -930,5 +979,32 @@ protected:
 	cvr::UIText* _uiText;
 	cvr::UITexture* _uiTexture;
 };
+
+class FullButton: public cvr::UIElement, public UICallback, public UICallbackCaller {
+public:
+	FullButton(std::string txt, osg::Vec4 color = UI_RED_ACTIVE_COLOR, osg::Vec4 color2 = osg::Vec4(-1,0,0,0));
+
+	virtual void uiCallback(UICallbackCaller* ui);
+
+
+
+	virtual bool processEvent(cvr::InteractionEvent* event) override;
+	virtual void processHover(bool enter) override;
+
+	void setButtonCallback(UICallback* ui) { _button->setCallback(ui); }
+
+	std::string getName() { return _name; }
+	HoverButton* getButton() { return _button; }
+
+protected:
+	
+
+	cvr::UIQuadElement* _bknd;
+	HoverButton* _button;
+	std::string _name;
+	cvr::UIText* _uiText;
+	osg::Vec4 _originalColor;
+	osg::Vec4 _savedColor;
+ };
 
 #endif

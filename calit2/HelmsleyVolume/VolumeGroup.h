@@ -335,6 +335,78 @@ public:
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
+			///////////////DEBUGGING
+			{
+				osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_buffersize);
+				osg::GLBufferObject* glBufferObject = _ssbb->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
+				//std::cout << glBufferObject << std::endl;
+
+				GLint previousID = 1;
+				glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &previousID);
+
+				if ((GLuint)previousID != glBufferObject->getGLObjectID())
+					glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, glBufferObject->getGLObjectID());
+
+				GLubyte* data = (GLubyte*)glBufferObject->_extensions->glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY_ARB);
+				//std::cout << data << std::endl;
+				if (data)
+				{
+					size_t size = osg::minimum<int>(_ssbb->getSize(), uintArray->getTotalDataSize());
+					memcpy((void*)&(uintArray->front()), data + _ssbb->getOffset(), size);
+					glBufferObject->_extensions->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+				}
+
+				if ((GLuint)previousID != glBufferObject->getGLObjectID())
+					glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
+
+
+				unsigned int value = uintArray->front();
+				std::cout << "Hist before clip" << value << std::endl;
+
+				/*for (int i = 0; i < 100; i++) {
+					std::cout << uintArray->at(i) << std::endl;
+
+				}*/
+
+
+			}
+			//DEBUGGING/////////////////////////////
+			/////////////////DEBUGGING
+			//{
+			//	osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_buffersize2);
+			//	osg::GLBufferObject* glBufferObject = _ssbb2->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
+			//	//std::cout << glBufferObject << std::endl;
+
+			//	GLint previousID = 1;
+			//	glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &previousID);
+
+			//	if ((GLuint)previousID != glBufferObject->getGLObjectID())
+			//		glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, glBufferObject->getGLObjectID());
+
+			//	GLubyte* data = (GLubyte*)glBufferObject->_extensions->glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY_ARB);
+			//	//std::cout << data << std::endl;
+			//	if (data)
+			//	{
+			//		size_t size = osg::minimum<int>(_ssbb2->getSize(), uintArray->getTotalDataSize());
+			//		memcpy((void*)&(uintArray->front()), data + _ssbb2->getOffset(), size);
+			//		glBufferObject->_extensions->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+			//	}
+
+			//	if ((GLuint)previousID != glBufferObject->getGLObjectID())
+			//		glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
+
+
+			//	/*unsigned int value = uintArray->front();
+			//	std::cout << "Hist Check before Lerp " << value << std::endl;*/
+			//	std::cout << "testing histmax..." << std::endl;
+			//	for (int i = 0; i < _buffersize2; i++) {
+			//		std::cout << uintArray->at(i) << std::endl;
+			//	}
+
+			//}
+			////DEBUGGING/////////////////////////////
+
+
 			stop[0] = 1;
  
 		}
@@ -365,6 +437,9 @@ public:
 
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+			
+
 
 
 			stop[0] = 1;
