@@ -20,7 +20,7 @@
 #include <osgDB/ReadFile>
 
 #define ISOVALUE 0.08f
-#define MCFACTOR 2
+#define MCFACTOR 16
 #define CONFIGLUTSIZE 4096
 
 
@@ -358,8 +358,8 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	////////////////////////////////////////clahe/////////////////////////
 	_volDims = osg::Vec3i(i->s(), i->t(), i->r());
 	_volArea = _volDims.x() * _volDims.y() * _volDims.z();
-	//_sizeSB = osg::Vec3i(_volDims.x() / _numSB_3D.x(), _volDims.y() / _numSB_3D.y(), _volDims.z() / _numSB_3D.z());
-	//float tempClipValue = 1.1f * (_sizeSB.x() * _sizeSB.y() * _sizeSB.z()) / _numGrayVals;
+	//_numSB_3D = osg::Vec3i(_volDims.x() / _numSB_3D.x(), _volDims.y() / _numSB_3D.y(), _volDims.z() / _numSB_3D.z());
+	//float tempClipValue = 1.1f * (_numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z()) / _numGrayVals;
 	//_minClipValue = unsigned int(tempClipValue + 0.5f);
 	
 	
@@ -439,7 +439,7 @@ std::pair< osg::ref_ptr<osg::ShaderStorageBufferBinding>, osg::ref_ptr<osg::Shad
 	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
 	
 	states->addUniform(new osg::Uniform("VolumeDims", _volDims.x(), _volDims.y(), _volDims.z()));
-	states->addUniform(new osg::Uniform("numSB", _numSB_3D.x(), _numSB_3D.y(), _numSB_3D.z()));
+	
  
 	this->addChild(_histNode);
 	return setupHistSSBO();
@@ -465,6 +465,7 @@ std::pair< osg::ref_ptr<osg::ShaderStorageBufferBinding>, osg::ref_ptr<osg::Shad
 
 	_histNode->getOrCreateStateSet()->setAttributeAndModes(ssbbHist, osg::StateAttribute::ON);
 	_histNode->getOrCreateStateSet()->setAttributeAndModes(ssbbHistMax, osg::StateAttribute::ON);
+	_histNode->getOrCreateStateSet()->addUniform(new osg::Uniform("numSB", _numSB_3D.x(), _numSB_3D.y(), _numSB_3D.z()));
 	_histNode->getOrCreateStateSet()->addUniform(new osg::Uniform("NUM_OUT_BINS", _numGrayVals)); 
 	
 	((CLAHEHistCallback*)_histNode->getDrawCallback())->_ssbb = ssbbHist;
@@ -506,7 +507,7 @@ osg::ref_ptr<osg::ShaderStorageBufferBinding> VolumeGroup::precompExcess(t_ssbb 
 	states->setRenderBinDetails(3, "RenderBin");
  	/*states->addUniform(new osg::Uniform("clipLimit", _clipLimit3D));
 	states->addUniform(new osg::Uniform("minClipValue", _minClipValue));*/
-	states->addUniform(new osg::Uniform("blocksDims", _numSB_3D.x(), _numSB_3D.y(), _numSB_3D.z()));
+	
 
 	ExcessSSB* shaderStorageCallback = new ExcessSSB(this);
 	_excessNode->setDrawCallback(shaderStorageCallback);
@@ -524,19 +525,14 @@ osg::ref_ptr<osg::ShaderStorageBufferBinding> VolumeGroup::setupExcessSSBO(t_ssb
 	excess.release();
 	excessBuffer.release();
 
-	/*int width = 4096;
-	int count = (_histSize + 63) / 64;
-	GLuint dispatchWidth = count / (width * width);
-	GLuint dispatchHeight = (count / width) % width;
-	GLuint dispatchDepth = count % width;
-	_excessNode->setComputeGroups(dispatchWidth, dispatchHeight, dispatchDepth);*/
+	_excessNode->setComputeGroups(_histSize + 63 / 64, 1, 1);
 
 	_excessNode->getOrCreateStateSet()->setAttributeAndModes(ssbbExcess, osg::StateAttribute::ON);
 	_excessNode->getOrCreateStateSet()->setAttributeAndModes(ssbbHist, osg::StateAttribute::ON);
 	_excessNode->getOrCreateStateSet()->setAttributeAndModes(ssbbHistMax, osg::StateAttribute::ON);
 	_excessNode->getOrCreateStateSet()->addUniform(new osg::Uniform("NUM_BINS", _numGrayVals));
 	_excessNode->getOrCreateStateSet()->addUniform(new osg::Uniform("clipLimit", _clipLimit3D));
-	
+	_excessNode->getOrCreateStateSet()->addUniform(new osg::Uniform("blocksDims", _numSB_3D.x(), _numSB_3D.y(), _numSB_3D.z()));
 	((ExcessSSB*)_excessNode->getDrawCallback())->_buffersize = _numHist;
 	((ExcessSSB*)_excessNode->getDrawCallback())->_ssbb = ssbbExcess;
 
@@ -550,12 +546,8 @@ void VolumeGroup::precompHistClip(t_ssbb ssbbHist, t_ssbb ssbbHistMax, t_ssbb ss
 	osg::Shader* shader = new osg::Shader(osg::Shader::COMPUTE, _clipShader);
 	clipShader->addShader(shader);
 	
-	int width = 4096;
-	int count = (_histSize + 63) / 64;
-	GLuint dispatchWidth = count / (width * width);
-	GLuint dispatchHeight = (count / width) % width;
-	GLuint dispatchDepth = count % width;
-	_clipHist1Node = new osg::DispatchCompute(dispatchWidth, dispatchHeight, dispatchDepth);
+	
+	_clipHist1Node = new osg::DispatchCompute(1, 1, 1);
 
 
 	_clipHist1Node->getOrCreateStateSet()->setAttributeAndModes(clipShader.get());
@@ -609,6 +601,7 @@ void VolumeGroup::setupClip(t_ssbb ssbbHist, t_ssbb ssbbHistMax, t_ssbb ssbbExce
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->volDims = _volDims;
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_numGrayVals = _numGrayVals;
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_clipLimit = _clipLimit3D;
+	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_sb3D = _numSB_3D;
 }
 
 void VolumeGroup::precompLerp(t_ssbb ssbbHist) {
@@ -628,7 +621,7 @@ void VolumeGroup::precompLerp(t_ssbb ssbbHist) {
 	states->setTextureAttribute(5, _claheVolume, osg::StateAttribute::ON);
 	states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);
 	states->setRenderBinDetails(5, "RenderBin");
-	states->addUniform(new osg::Uniform("numSB", _numSB_3D.x(), _numSB_3D.y(), _numSB_3D.z()));
+	
 
 	LerpSSB* shaderStorageCallback = new LerpSSB(this);
 	shaderStorageCallback->_claheDirty = ((ComputeDrawCallback*)_computeNode->getDrawCallback())->_claheDirty;
@@ -646,7 +639,7 @@ void VolumeGroup::setupLerp(t_ssbb ssbbHist) {
 	states->setAttributeAndModes(ssbbHist, osg::StateAttribute::ON);
 	states->addUniform(new osg::Uniform("NUM_IN_BINS", _numGrayVals));
 	states->addUniform(new osg::Uniform("NUM_OUT_BINS", _numGrayVals));
-
+	states->addUniform(new osg::Uniform("numSB", _numSB_3D.x(), _numSB_3D.y(), _numSB_3D.z()));
 	((LerpSSB*)_lerpNode->getDrawCallback())->_buffersize = _histSize;
 	((LerpSSB*)_lerpNode->getDrawCallback())->_ssbb = ssbbHist;
 }
@@ -670,9 +663,7 @@ void VolumeGroup::genClahe() {
 
 		//////////////////////////////////////clahe/////////////////////////
 		//_volDims = osg::Vec3i(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth());
-		_sizeSB = osg::Vec3i(_volDims.x() / _numSB_3D.x(), _volDims.y() / _numSB_3D.y(), _volDims.z() / _numSB_3D.z());
-		float tempClipValue = 1.1f * (_sizeSB.x() * _sizeSB.y() * _sizeSB.z()) / _numGrayVals;
-		_minClipValue = unsigned int(tempClipValue + 0.5f);
+		_minClipValue = unsigned int(0);
 
 
 
@@ -952,7 +943,7 @@ void VolumeGroup::precompMarchingCubes() {
 	ssboCL.release();
 
 	//TriangleVertices buffer
-	int newStructSize = _volDims.x() / MCFACTOR * _volDims.y() / MCFACTOR * _volDims.z() / MCFACTOR;
+	int newStructSize = _volDims.x() / MCFACTOR * _volDims.y() / MCFACTOR * _volDims.z();
 	unsigned int triangleStructMaxSize = newStructSize*45;//Maximum_Index(max edge index(15)*Vertice_Count(3) + Float_Count(9) = 51
 	_va = new osg::Vec3Array(triangleStructMaxSize/3u);
 	for (int i = 0; i < triangleStructMaxSize/3; i++) {
@@ -1139,9 +1130,9 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 		
 		renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
 		//////////////////////computepass 2 ///////////////////
-		osg::Vec3 numSB = osg::Vec3(4, 4, 2);
 		
-		unsigned int histSize = 32 * _numGrayVals;
+		unsigned int numHist = _sb3D.x() * _sb3D.y() * _sb3D.z();
+		unsigned int histSize = numHist * _numGrayVals;
 	
 		GLuint ssbbExcessID = _ssbbExcess->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID())->getGLObjectID();
 		GLuint histID = _ssbbHist->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID())->getGLObjectID();
@@ -1185,9 +1176,8 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 			const float clipLimit = _clipLimit;
 
 
-			float tempClipValue = 1.1f * (numSB.x() * numSB.y() * numSB.z()) / numOutGrayVals;
-			std::cout << "temp clip... " << tempClipValue << std::endl;
-			unsigned int minClipValue = unsigned int(tempClipValue + 0.5f);
+			
+			unsigned int minClipValue = unsigned int(0.0f);
 
 
 
@@ -1224,12 +1214,12 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 
 
 				unsigned int value = uintArray->front();
-				std::cout << "Excess after clip" << value << std::endl;
+				/*std::cout << "Excess after clip" << value << std::endl;
 
 				for (int i = 0; i < 100; i++) {
 					std::cout << uintArray->at(i) << std::endl;
 
-				}
+				}*/
 
 
 			}
@@ -1273,12 +1263,12 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 
 
 				unsigned int value = uintArray->front();
-				std::cout << "Excess after clip" << value << std::endl;
+				/*std::cout << "Excess after clip" << value << std::endl;
 
 				for (int i = 0; i < 100; i++) {
 						std::cout << uintArray->at(i) << std::endl;
 
-				}
+				}*/
 
 
 			}
@@ -1306,7 +1296,7 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 
 		uint32_t numPixelsSB;
 		if (numPixels == -1) {
-			osg::Vec3 sizeSB = osg::Vec3(volDims.x() / numSB.x(), volDims.y() / numSB.y(), volDims.z() / numSB.z());
+			osg::Vec3 sizeSB = osg::Vec3(volDims.x() / _sb3D.x(), volDims.y() / _sb3D.y(), volDims.z() / _sb3D.z());
 			numPixelsSB = sizeSB.x() * sizeSB.y() * sizeSB.z();
 		}
 		else {
@@ -1337,7 +1327,7 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 
 		///////////////DEBUGGING
 		{
-			osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_numGrayVals * 32);
+			osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_numGrayVals * numHist);
 			osg::GLBufferObject* glBufferObject = _ssbbHist->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
 			//std::cout << glBufferObject << std::endl;
 

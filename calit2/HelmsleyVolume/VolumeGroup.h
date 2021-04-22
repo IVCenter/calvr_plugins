@@ -62,8 +62,12 @@ public:
 	typedef  osg::ref_ptr<osg::ShaderStorageBufferBinding> t_ssbb;
 	typedef  osg::ref_ptr<osg::AtomicCounterBufferBinding> t_acbb;
 	///////CLAHE Variables
+	
+	float _claheRes = 4.0f;
 	osg::Vec3i _numSB_3D = osg::Vec3i(4, 4, 2);
 	osg::Vec3i _sizeSB = osg::Vec3i(0, 0, 0);
+
+
 	float _clipLimit3D = 0.85f;
 	float _minClipValue = 0.0;
 	osg::Vec3i _volDims = osg::Vec3i(0, 0, 0);
@@ -110,6 +114,12 @@ public:
 	}
 	void setClipLimit(float clipLimit) {
 		_clipLimit3D = clipLimit;
+	}
+	void setClaheRes(float res) {
+		_claheRes = res;
+		_numSB_3D.x() = res; _numSB_3D.y() = res; _numSB_3D.z() = 2;
+		_numHist = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z();
+		_histSize = _numHist * _numGrayVals;
 	}
 	void genClahe();
  
@@ -491,6 +501,7 @@ public:
 	unsigned int _numGrayVals;
 	float _clipLimit;
 	osg::Vec3i volDims;
+	osg::Vec3i _sb3D;
 	osg::ref_ptr<osg::AtomicCounterBufferBinding> _acbbminMax;
 
 };

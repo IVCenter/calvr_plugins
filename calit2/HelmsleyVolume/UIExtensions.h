@@ -628,6 +628,8 @@ public:
 	virtual osg::Uniform* getUniform(std::string uniform);
 	virtual void setShaderDefine(std::string name, std::string definition, osg::StateAttribute::Values on);
 
+	void printSTLFile();
+
  	osg::ref_ptr<osg::MatrixTransform> getTransform() {
 		return _transform;
 	}

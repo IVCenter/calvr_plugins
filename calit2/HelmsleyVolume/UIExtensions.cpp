@@ -1716,10 +1716,9 @@ void MarchingCubesRender::updateGeometry()
 
 	_geode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::OPAQUE_BIN);
 	_geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::OFF);
-	_geode->getOrCreateStateSet()->setAttributeAndModes(_ssbb, osg::StateAttribute::ON);
 
 
-	_geode->getOrCreateStateSet()->setMode(GL_CULL_FACE, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+	_geode->getOrCreateStateSet()->setMode(GL_CULL_FACE, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
 	_geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
 
 
@@ -1729,6 +1728,7 @@ void MarchingCubesRender::updateGeometry()
 		std::cout << "program applied" << std::endl;
 	}
 	 
+	printSTLFile();
 }
 
 
@@ -1780,6 +1780,50 @@ osg::Program* MarchingCubesRender::getOrLoadProgram()
 	return _mcProg;
 }
 
+void MarchingCubesRender::printSTLFile() {
+	osg::ref_ptr<osg::Vec4Array> normals = ((osg::Vec4Array*)((osg::Geometry*)_geode->getDrawable(0))->getColorArray());
+	std::string filename = "stltest";
+	std::string header_info = "solid output";
+	char head[80];
+	std::strncpy(head, header_info.c_str(), sizeof(head) - 1);
+	char attribute[2] = "0";
+	unsigned long nTriLong = _coords->size();
+
+	std::ofstream myfile;
+
+	myfile.open((filename + "-out.stl").c_str(), std::ios::out | std::ios::binary);
+	myfile.write(head, sizeof(head));
+	myfile.write((char*)&nTriLong, 4);
+	
+	//write down every triangle
+	for (int i = 0; i < _coords->size(); i+=3) {
+		//normal vector coordinates
+		osg::Vec4 norm = (normals->at(i%3));
+		myfile.write((char*)&norm.x(), 4);
+		myfile.write((char*)&norm.y(), 4);
+		myfile.write((char*)&norm.z(), 4);
+
+		//p1 coordinates
+		myfile.write((char*)&_coords->at(i).x(), 4);
+		myfile.write((char*)&_coords->at(i).y(), 4);
+		myfile.write((char*)&_coords->at(i).z(), 4);
+
+		//p2 coordinates
+		myfile.write((char*)&_coords->at(i+1).x(), 4);
+		myfile.write((char*)&_coords->at(i+1).y(), 4);
+		myfile.write((char*)&_coords->at(i+1).z(), 4);
+
+		//p3 coordinates
+		myfile.write((char*)&_coords->at(i+2).x(), 4);
+		myfile.write((char*)&_coords->at(i+2).y(), 4);
+		myfile.write((char*)&_coords->at(i+2).z(), 4);
+
+		myfile.write(attribute, 2);
+	}
+
+	myfile.close();
+
+}
 
 void TriangleButton::createGeometry()
 {
