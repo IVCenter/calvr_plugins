@@ -2458,31 +2458,29 @@ void NewVolumeMenu::saveYamlForCinematic() {
  }
 
 void NewVolumeMenu::runCinematicThread(std::string datasetPath, std::string configPath) {
- 	LPCSTR lp = _T("C:/Users/g3aguirre/Downloads/ivl-cr-master/ivl-cr-master/x64/Release/ivl-cr.exe");
-	LPCSTR open = _T("open");
-	LPCSTR dir = _T("C:/Users/g3aguirre/Downloads/ivl-cr-master/ivl-cr-master");
+ //	LPCSTR lp = _T("C:/Users/g3aguirre/Downloads/ivl-cr-master/ivl-cr-master/x64/Release/ivl-cr.exe");
+	//LPCSTR open = _T("open");
+	//LPCSTR dir = _T("C:/Users/g3aguirre/Downloads/ivl-cr-master/ivl-cr-master");
 
-	std::replace(datasetPath.begin(), datasetPath.end(), '\\', '/');
-	std::cout << datasetPath << std::endl;
-	std::cout << configPath << std::endl;
+	//std::replace(datasetPath.begin(), datasetPath.end(), '\\', '/');
+	//std::cout << datasetPath << std::endl;
+	//std::cout << configPath << std::endl;
 
-	std::string paramsStr = datasetPath + " " + configPath;
-	const char* paramsChar = {paramsStr.c_str()};
-	LPCSTR params = _T(paramsChar);
+	//std::string paramsStr = datasetPath + " " + configPath;
+	//const char* paramsChar = {paramsStr.c_str()};
+	//LPCSTR params = _T(paramsChar);
 
 
-	//HelmsleyVolume::instance()->getScreenshotTool()->takingPhoto(true);
-	HANDLE ghMutex = ShellExecute(NULL, open, lp, params, dir, SW_SHOWDEFAULT);
-	WaitForSingleObject(
-		ghMutex,    // handle to mutex
-		10000);  // no time-out interval
+	////HelmsleyVolume::instance()->getScreenshotTool()->takingPhoto(true);
+	//HANDLE ghMutex = ShellExecute(NULL, open, lp, params, dir, SW_SHOWDEFAULT);
+	//WaitForSingleObject(
+	//	ghMutex,    // handle to mutex
+	//	10000);  // no time-out interval
 
-	HelmsleyVolume::instance()->getScreenshotTool()->setPhoto(datasetPath);
-	std::remove(configPath.c_str());
-	//HelmsleyVolume::instance()->getScreenshotTool()->takingPhoto(false);
+	//HelmsleyVolume::instance()->getScreenshotTool()->setPhoto(datasetPath);
+	//std::remove(configPath.c_str());
+	////HelmsleyVolume::instance()->getScreenshotTool()->takingPhoto(false);
 }
-
-
 
 void NewVolumeMenu::toggleHistogram(bool on) {
 	if (on) {

@@ -1650,7 +1650,7 @@ void MarchingCubesRender::createGeometry()
 
 	int numFloats = _coords->size();
 	osg::ref_ptr<osg::Vec3Array> vec3Coords = new osg::Vec3Array();
-	osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array;
+	osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array();
 
 
 	for (int i = 0; i < numFloats; i ++) {
@@ -1688,9 +1688,54 @@ void MarchingCubesRender::createGeometry()
 			normal.y() = (normal.y() / 2.0f) + .5f;
 			normal.z() = (normal.z() / 2.0f) + .5f;
 
-			colors->push_back(osg::Vec4(normal, 1.0));
-			colors->push_back(osg::Vec4(normal, 1.0));
-			colors->push_back(osg::Vec4(normal, 1.0));
+			//Material variables for organ
+			osg::Vec3 mat_ambient = osg::Vec3(0.5, 0.3, 0.3);
+			osg::Vec3 mat_diffuse = osg::Vec3(1.0, 0.42, 0.42);
+			osg::Vec3 mat_specular = osg::Vec3(0.5, 0.03, 0.03);
+			float shininess = 30.0;
+
+			//Lighting variables for directional light
+			osg::Vec3 lightColor = osg::Vec3(1.0, 1.0, 1.0);
+			osg::Vec3 lightDir = osg::Vec3(-1.0, -1.0, 0.0);
+			osg::Vec3 lightAmbient = osg::Vec3(0.5, 0.5, 0.5);
+			osg::Vec3 lightDiffuse = osg::Vec3(1.0, 1.0, 1.0);
+			osg::Vec3 lightSpecular = osg::Vec3(1.0, 1.0, 1.0);
+
+
+			//View variables
+			osg::Vec3 viewPos = osg::Vec3(0, 0, 20);
+			lightDir.normalize();
+			osg::Vec3 viewDir1 = viewPos - p1;
+			osg::Vec3 viewDir2 = viewPos - p2;
+			osg::Vec3 viewDir3 = viewPos - p3;
+
+			// diffuse shading
+			float diff_temp = normal * lightDir;
+			float diff = std::max(diff_temp, 0.0f);
+
+			// specular shading
+			osg::Vec3 reflectDir = lightDir - (normal * 2.0f * (lightDir * normal));
+			float spec_temp1 = viewDir1 * reflectDir;
+			float spec_temp2 = viewDir2 * reflectDir;
+			float spec_temp3 = viewDir3 * reflectDir;
+			float spec1 = std::pow(std::max(spec_temp1, 0.0f), shininess);
+			float spec2 = std::pow(std::max(spec_temp2, 0.0f), shininess);
+			float spec3 = std::pow(std::max(spec_temp3, 0.0f), shininess);
+
+			// combine results
+			osg::Vec3 ambient = osg::componentMultiply(lightAmbient, mat_ambient);
+			osg::Vec3 diffuse = osg::componentMultiply(lightDiffuse, mat_diffuse);
+			osg::Vec3 specular1 = osg::componentMultiply(lightSpecular, mat_specular) * spec1;
+			osg::Vec3 specular2 = osg::componentMultiply(lightSpecular, mat_specular) * spec2;
+			osg::Vec3 specular3 = osg::componentMultiply(lightSpecular, mat_specular) * spec3;
+
+			osg::Vec3 result1 = ambient + diffuse + specular1;
+			osg::Vec3 result2 = ambient + diffuse + specular2;
+			osg::Vec3 result3 = ambient + diffuse + specular3;
+
+			colors->push_back(osg::Vec4(result1, 1.0));	//p1
+			colors->push_back(osg::Vec4(result2, 1.0));	//p2
+			colors->push_back(osg::Vec4(result3, 1.0));	//p3
 		}
 	}
 
@@ -1700,22 +1745,16 @@ void MarchingCubesRender::createGeometry()
 	
 
 
- 	//_polyGeom->setVertexArray(vec3Coords);
-	/*_polyGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES, 0, numCoords));
-	_geode->addDrawable(_polyGeom);*/
-	
-	_VA->dirty();
-	//std::cout << "Va check" << std::endl;
+ 	_polyGeom->setVertexArray(vec3Coords);
+	_polyGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES, 0, numCoords));
+	_geode->addDrawable(_polyGeom);
 	
 	 
-	_mcGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES, 0, _verticeCount));
-
-	_geode->addDrawable(_mcGeom);
 
 
 	
-	//((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_PER_VERTEX);
-	//((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_PER_VERTEX);
+	((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_PER_VERTEX);
+	((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_PER_VERTEX);
 	
 
 	updateGeometry();
