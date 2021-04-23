@@ -262,6 +262,7 @@ protected:
 
 	CallbackSlider* _numBinsSlider;
 	CallbackSlider* _clipLimitSlider;
+	CallbackSlider* _claheResSlider;
 	CallbackButton* _genClaheButton;
 	CallbackButton* _useClaheButton;
 
@@ -305,6 +306,7 @@ protected:
 	cvr::UIText* _cpHLabel;
 	cvr::UIText* _numBinsLabel;
 	cvr::UIText* _clipLimitLabel;
+	cvr::UIText* _claheResLabel;
 	CallbackRadial* _transferFunctionRadial;
 	ShaderQuad* _colorDisplay;
 	ShaderQuad* _opacityDisplay;
@@ -342,7 +344,7 @@ protected:
 	int _triangleIndex;
 	int _colorSliderIndex;
 	int _volumeIndex = 0;
-	osg::Vec3 triangleColors[6] = { UI_BLUE_COLOR, UI_RED_COLOR, UI_YELLOW_COLOR, UI_GREEN_COLOR, UI_PURPLE_COLOR, UI_PINK_COLOR};
+	osg::Vec3 triangleColors[6] = { UI_BLUE_COLOR, UI_RED_HOVER_COLOR, UI_YELLOW_COLOR, UI_GREEN_COLOR, UI_PURPLE_COLOR, UI_PINK_COLOR};
 	bool checkTriangleCallbacks(UICallbackCaller* item);
 	bool checkTriangleVisCallbacks(UICallbackCaller* item);
 	bool checkPresetCallbacks(UICallbackCaller* item);

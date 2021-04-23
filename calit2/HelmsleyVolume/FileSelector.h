@@ -97,8 +97,8 @@ protected:
 	cvr::UIQuadElement* _selectBknd;
 	cvr::UIQuadElement* _selectImage;
 	cvr::UITexture* _selectTexture;
-	CallbackButton* _loadVolumeButton;
-	CallbackButton* _loadSecondButton;
+	HoverButton* _loadVolumeButton;
+	HoverButton* _loadSecondButton;
 	cvr::UIPopup* _fsPopup;
 
 	cvr::UIList* _topList;

@@ -767,6 +767,26 @@ void NewVolumeMenu::init()
 	_clipLimitSlider->handle->setPercentSize(osg::Vec3(0, 1, 1));
 	claheUI->addChild(_clipLimitSlider);
 
+	UIList* claheResTexts = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+	label = new UIText("Resolution: ", 24.0f, osgText::TextBase::LEFT_CENTER);
+	label->setPercentPos(osg::Vec3(0.05, 0.0, 0.0));
+	claheResTexts->addChild(label);
+	_claheResLabel = new UIText("4", 24.0f, osgText::TextBase::RIGHT_CENTER);
+	_claheResLabel->setPercentPos(osg::Vec3(-0.05, 0.0, 0.0));
+	claheResTexts->addChild(_claheResLabel);
+	claheUI->addChild(claheResTexts);
+
+	_claheResSlider = new CallbackSlider();
+	_claheResSlider->setCallback(this);
+	_claheResSlider->setPercent(.4f);
+	_claheResSlider->setMin(0.1);
+	_claheResSlider->setPercentPos(osg::Vec3(0.025, 0, 0.05));
+	_claheResSlider->setPercentSize(osg::Vec3(0.95, 1, 0.5));
+	_claheResSlider->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
+	_claheResSlider->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
+	_claheResSlider->handle->setPercentSize(osg::Vec3(0, 1, 1));
+	claheUI->addChild(_claheResSlider);
+
 
 	UIList* buttonList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
 
@@ -1307,6 +1327,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		linkVolumes();
 	}
 
+	//CLAHE
 	else if (item == _numBinsSlider) {
 		if (_numBinsSlider->getAdjustedValue() > .8) {
 			_numBinsLabel->setText("65536");
@@ -1327,6 +1348,15 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	else if (item == _clipLimitSlider) {
 		_clipLimitLabel->setText(std::to_string(_clipLimitSlider->getAdjustedValue()).substr(0, 4));
 		_volume->setClipLimit(_clipLimitSlider->getAdjustedValue());
+	}
+	
+	else if (item == _claheResSlider) {
+		if(_claheResSlider->getAdjustedValue() * 10 < 10.0)
+			_claheResLabel->setText(std::to_string(_claheResSlider->getAdjustedValue()*10).substr(0, 1));
+		else
+			_claheResLabel->setText(std::to_string(_claheResSlider->getAdjustedValue()*10).substr(0, 2));
+		
+		_volume->setClaheRes(int(_claheResSlider->getAdjustedValue()*10.0f));
 	}
 
 	else if (item == _genClaheButton) {
@@ -1349,7 +1379,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		else
 			((UIText*)_useClaheButton->getChild(1))->setText("Use CLAHE");
 	}
-
+	//Marching Cubes
 	else if (item == _GenMarchCubesButton) {
 		if (!_volume->isMCInitialized()) {
  			_volume->intializeMC();

@@ -57,42 +57,33 @@ void scaleVertices(inout vec3 vertA, inout vec3 vertB, inout vec3 vertC) {
 	vertA.x = float(vertA.x / VolumeDims.x) -.5f;	vertB.x = float(vertB.x / VolumeDims.x) - .5f;	vertC.x = float(vertC.x / VolumeDims.x) - .5f;
 	vertA.y = float(vertA.y / VolumeDims.y) - .5f;	vertB.y = float(vertB.y / VolumeDims.y) - .5f;	vertC.y = float(vertC.y / VolumeDims.y) - .5f;
 	vertA.z = float(vertA.z / VolumeDims.z) - .5f;	vertB.z = float(vertB.z / VolumeDims.z) - .5f;	vertC.z = float(vertC.z / VolumeDims.z) - .5f;
-	//	vec3.x() = (vec3.x() / _voldims.x()) - .5f;
-	//	vec3.y() = ((vec3.y() / _voldims.y())-.5f);
-	//	vec3.z() = (vec3.z() / _voldims.z())-.5f;
 }
 
 uint[9] getTriangleVerticeIndeces(uint volIndex1D, int edgeIndex){
 	uint indecesToReturn[9];
 	for(int i = 0; i < 9; i++){
-		//indecesToReturn[i] = (uint(volIndex1D)/McFactor)+uint(edgeIndex*3)+uint(i);
 		indecesToReturn[i] = uint(volIndex1D*45)+uint(edgeIndex*3)+uint(i);
 	}
 	return indecesToReturn;
 }
 
 void getIDs(ivec3 idx){
-
-	//uint arraySize =  uint((VolumeDims.x / McFactor) * (VolumeDims.y / McFactor) * (VolumeDims.z / McFactor));
-	uint volIndex1D = uint(idx.z/McFactor * VolumeDims.x/McFactor * VolumeDims.y/McFactor + idx.y/McFactor * VolumeDims.x/McFactor + idx.x/McFactor);
-	//uint volIndex1D = uint(idx.z * VolumeDims.x * VolumeDims.y + idx.y * VolumeDims.x + idx.x);
-
 	//Skip values between cubes
-	if (idx.x % McFactor != 0 && idx.y % McFactor != 0 && idx.z % McFactor == -1)
+	if (idx.x % McFactor != 0 && idx.y % McFactor != 0)
 		return;
 
 	//Organ Selection
-	if(uint(imageLoad(volume, idx).g * 65535.0) == -1)
-		return;
+	/*if(uint(imageLoad(volume, idx).g * 65535.0) != 4)
+		return;*/
 
 	//Get corner coordinates
 	vec4 cubeCornersIdx[8];
-	cubeCornersIdx[0].xyz = vec3(idx.x, idx.y, idx.z+McFactor);
-	cubeCornersIdx[1].xyz = vec3(idx.x+McFactor, idx.y, idx.z+McFactor);
+	cubeCornersIdx[0].xyz = vec3(idx.x, idx.y, idx.z+1);
+	cubeCornersIdx[1].xyz = vec3(idx.x+McFactor, idx.y, idx.z+1);
 	cubeCornersIdx[2].xyz = vec3(idx.x+McFactor, idx.y, idx.z);
 	cubeCornersIdx[3].xyz = vec3(idx.x, idx.y, idx.z);
-	cubeCornersIdx[4].xyz = vec3(idx.x, idx.y+McFactor, idx.z+McFactor);
-	cubeCornersIdx[5].xyz = vec3(idx.x+McFactor, idx.y+McFactor, idx.z+McFactor);
+	cubeCornersIdx[4].xyz = vec3(idx.x, idx.y+McFactor, idx.z+1);
+	cubeCornersIdx[5].xyz = vec3(idx.x+McFactor, idx.y+McFactor, idx.z+1);
 	cubeCornersIdx[6].xyz = vec3(idx.x+McFactor, idx.y+McFactor, idx.z);
 	cubeCornersIdx[7].xyz = vec3(idx.x, idx.y+McFactor, idx.z);
 
@@ -142,14 +133,6 @@ void getIDs(ivec3 idx){
 		tVs[9u * vCount+0] = vertA.x;	tVs[9u * vCount + 1] = vertA.y; tVs[9u * vCount + 2] = vertA.z;
 		tVs[9u * vCount+3] = vertB.x;	tVs[9u * vCount + 4] = vertB.y; tVs[9u * vCount + 5] = vertB.z;
 		tVs[9u * vCount+6] = vertC.x;	tVs[9u * vCount + 7] = vertC.y; tVs[9u * vCount + 8] = vertC.z;
-		
-
-
-		//OLDIMP
-		/*uint triangleVerticleIndeces[9] = getTriangleVerticeIndeces(volIndex1D, i);
-		tVs[triangleVerticleIndeces[0]] = vertA.x;	tVs[triangleVerticleIndeces[1]] = vertA.y;	tVs[triangleVerticleIndeces[2]] = vertA.z;
-		tVs[triangleVerticleIndeces[3]] = vertB.x;	tVs[triangleVerticleIndeces[4]] = vertB.y;	tVs[triangleVerticleIndeces[5]] = vertB.z;
-		tVs[triangleVerticleIndeces[6]] = vertC.x;	tVs[triangleVerticleIndeces[7]] = vertC.y;	tVs[triangleVerticleIndeces[8]] = vertC.z;*/
 
  	}
 
@@ -162,12 +145,12 @@ void getIDs(ivec3 idx){
 
 void main() {
 	ivec3 index = ivec3(gl_GlobalInvocationID.xyz);
-	//atomicAdd(vertCount[0], 1);
+
 	
 	//if we are not within the volume of interest -> return 
 	int xCheck =  VolumeDims.x-McFactor;
 	int yCheck =  VolumeDims.y-McFactor;
-	int zCheck =  VolumeDims.z-McFactor;
+	int zCheck =  VolumeDims.z;
 	if ( index.x >= xCheck || index.y >= yCheck || index.z >= zCheck ) {
 		return;
 	}
