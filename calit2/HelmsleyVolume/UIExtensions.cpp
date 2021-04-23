@@ -1728,7 +1728,6 @@ void MarchingCubesRender::updateGeometry()
 		std::cout << "program applied" << std::endl;
 	}
 	 
-	printSTLFile();
 }
 
 
@@ -1792,35 +1791,49 @@ void MarchingCubesRender::printSTLFile() {
 	std::ofstream myfile;
 
 	myfile.open((filename + "-out.stl").c_str(), std::ios::out | std::ios::binary);
-	myfile.write(head, sizeof(head));
-	myfile.write((char*)&nTriLong, 4);
+	myfile << head << std::endl;
+
+	//myfile.write(head, sizeof(head));
+
 	
 	//write down every triangle
 	for (int i = 0; i < _coords->size(); i+=3) {
+		osg::Vec4 norm = (normals->at(i / 3));
+		myfile << " facet normal " << norm.x() << " " << norm.y() << " " << norm.z() << std::endl;
+		myfile << "  outer loop" << std::endl;
+		myfile << "   vertex " << _coords->at(i).x() << " " << _coords->at(i).y() << " " << _coords->at(i).z() << std::endl;
+		myfile << "   vertex " << _coords->at(i+1).x() << " " << _coords->at(i+1).y() << " " << _coords->at(i+1).z() << std::endl;
+		myfile << "   vertex " << _coords->at(i+2).x() << " " << _coords->at(i+2).y() << " " << _coords->at(i+2).z() << std::endl;
+		/*myfile << "   vertex " << (_coords->at(i).x() + 1) * 1000 << " " << (_coords->at(i).y() + 1) * 1000 << " " << (_coords->at(i).z() + 1) * 1000 << std::endl;
+		myfile << "   vertex " << (_coords->at(i + 1).x() + 1) * 1000 << " " << (_coords->at(i + 1).y() + 1) * 1000 << " " << (_coords->at(i + 1).z() + 1) * 1000 << std::endl;
+		myfile << "   vertex " << (_coords->at(i + 2).x() + 1) * 1000 << " " << (_coords->at(i + 2).y() + 1) * 1000 << " " << (_coords->at(i + 2).z() + 1) * 1000 << std::endl;*/
+		myfile << "  endloop" << std::endl;
+		myfile << " endfacet" << std::endl;
 		//normal vector coordinates
-		osg::Vec4 norm = (normals->at(i%3));
-		myfile.write((char*)&norm.x(), 4);
-		myfile.write((char*)&norm.y(), 4);
-		myfile.write((char*)&norm.z(), 4);
+		
+		
+		//myfile.write((char*)norm.x(), 4);
+		//myfile.write((char*)&norm.y(), 4);
+		//myfile.write((char*)&norm.z(), 4);
 
-		//p1 coordinates
-		myfile.write((char*)&_coords->at(i).x(), 4);
-		myfile.write((char*)&_coords->at(i).y(), 4);
-		myfile.write((char*)&_coords->at(i).z(), 4);
+		////p1 coordinates
+		//myfile.write((char*)&_coords->at(i).x(), 4);
+		//myfile.write((char*)&_coords->at(i).y(), 4);
+		//myfile.write((char*)&_coords->at(i).z(), 4);
 
-		//p2 coordinates
-		myfile.write((char*)&_coords->at(i+1).x(), 4);
-		myfile.write((char*)&_coords->at(i+1).y(), 4);
-		myfile.write((char*)&_coords->at(i+1).z(), 4);
+		////p2 coordinates
+		//myfile.write((char*)&_coords->at(i+1).x(), 4);
+		//myfile.write((char*)&_coords->at(i+1).y(), 4);
+		//myfile.write((char*)&_coords->at(i+1).z(), 4);
 
-		//p3 coordinates
-		myfile.write((char*)&_coords->at(i+2).x(), 4);
-		myfile.write((char*)&_coords->at(i+2).y(), 4);
-		myfile.write((char*)&_coords->at(i+2).z(), 4);
+		////p3 coordinates
+		//myfile.write((char*)&_coords->at(i+2).x(), 4);
+		//myfile.write((char*)&_coords->at(i+2).y(), 4);
+		//myfile.write((char*)&_coords->at(i+2).z(), 4);
 
-		myfile.write(attribute, 2);
+		//myfile.write(attribute, 2);
 	}
-
+	myfile << "endsolid output" << std::endl;
 	myfile.close();
 
 }
@@ -2620,25 +2633,26 @@ void Selection::removeImage() {
 #pragma endregion
 
 #pragma region FullButton
-FullButton::FullButton(std::string txt, osg::Vec4 color, osg::Vec4 color2) :
-	cvr::UIElement(), _originalColor(color), _savedColor(color2)
+FullButton::FullButton(std::string txt, float textsize, osg::Vec4 primaryColor, osg::Vec4 hoverColor) :
+	cvr::UIElement(), _originalColor(primaryColor), _savedColor(hoverColor)
 {
-	_bknd = new cvr::UIQuadElement(color);
+	_bknd = new cvr::UIQuadElement(primaryColor);
 	
 	
 
 	addChild(_bknd);
 	_bknd->setPercentPos(osg::Vec3(0, -1, 0));
 
-	_uiText = new UIText(txt, 50.f, osgText::TextBase::CENTER_CENTER);
+	_uiText = new UIText(txt, textsize, osgText::TextBase::CENTER_CENTER);
 	_uiText->setColor(osg::Vec4(1.0, 1.0, 1.0, 1.0));
+	_uiText->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
 	_bknd->addChild(_uiText);
 
-	_button = new HoverButton(_bknd, color, color2);
+	_button = new HoverButton(_bknd, primaryColor, hoverColor);
 	_button->setCallback(this);
  	_bknd->addChild(_button);
 
-	if (color2.x() == -1) {
+	if (hoverColor.x() == -1) {
 		_savedColor == _originalColor;
 	}
 }

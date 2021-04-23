@@ -192,7 +192,7 @@ void FileSelector::init()
 	_selectTexture = new cvr::UITexture();
 
 
-	FullButton* loadVolButton = new FullButton("Load Dataset", UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
+	FullButton* loadVolButton = new FullButton("Load Dataset", 50.0f, UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
 	loadVolButton->setPercentSize(osg::Vec3(.3, 1, .125));
 	loadVolButton->setPercentPos(osg::Vec3(.150, -1, -.8));
 	_loadVolumeButton = loadVolButton->getButton();
@@ -200,7 +200,7 @@ void FileSelector::init()
 	loadVolButton->setCallback(this);
 
 
-	FullButton* loadVolButton2 = new FullButton("Load as Second", UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
+	FullButton* loadVolButton2 = new FullButton("Load as Second", 50.0f, UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
 	loadVolButton2->setPercentSize(osg::Vec3(.3, 1, .125));
 	loadVolButton2->setPercentPos(osg::Vec3(.525, -1, -.8));
 	loadVolButton2->getButton()->setDisabledColor(UI_RED_DISABLED_COLOR_VEC4);

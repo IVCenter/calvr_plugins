@@ -984,7 +984,7 @@ protected:
 
 class FullButton: public cvr::UIElement, public UICallback, public UICallbackCaller {
 public:
-	FullButton(std::string txt, osg::Vec4 color = UI_RED_ACTIVE_COLOR, osg::Vec4 color2 = osg::Vec4(-1,0,0,0));
+	FullButton(std::string txt, float textsize = 50.f, osg::Vec4 color = UI_RED_ACTIVE_COLOR, osg::Vec4 color2 = UI_NULL_COLOR_VEC4);
 
 	virtual void uiCallback(UICallbackCaller* ui);
 
@@ -997,6 +997,7 @@ public:
 
 	std::string getName() { return _name; }
 	HoverButton* getButton() { return _button; }
+	cvr::UIText* getText() { return _uiText; }
 
 protected:
 	

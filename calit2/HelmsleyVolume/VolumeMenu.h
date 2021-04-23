@@ -216,7 +216,7 @@ public:
 	void removeAllToolMenus();
 
 	void updateMCUI(bool on);
-	void saveYamlForCinematic();
+ 	void saveYamlForCinematic();
 protected:
 	cvr::SceneObject* _scene;
 	VolumeGroup* _volume;
@@ -269,6 +269,8 @@ protected:
 	//Marchinc Cubes UI
 	CallbackButton* _UseMarchingCubesButton;
 	CallbackButton* _GenMarchCubesButton;
+	CallbackButton* _PrintStlCallbackButton;
+	FullButton* _printStlButton;
 
 	//Contrast UI
 	CallbackSlider* _trueContrast;
