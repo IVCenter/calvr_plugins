@@ -1733,9 +1733,9 @@ void MarchingCubesRender::createGeometry()
 			osg::Vec3 result2 = ambient + diffuse + specular2;
 			osg::Vec3 result3 = ambient + diffuse + specular3;
 
-			colors->push_back(osg::Vec4(result1, 1.0));	//p1
-			colors->push_back(osg::Vec4(result2, 1.0));	//p2
-			colors->push_back(osg::Vec4(result3, 1.0));	//p3
+			colors->push_back(osg::Vec4(normal, 1.0));	//p1
+			colors->push_back(osg::Vec4(normal, 1.0));	//p2
+			colors->push_back(osg::Vec4(normal, 1.0));	//p3
 		}
 	}
 
