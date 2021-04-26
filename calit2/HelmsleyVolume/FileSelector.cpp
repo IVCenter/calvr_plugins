@@ -22,10 +22,6 @@
 
 
 FileSelector::~FileSelector() {
-<<<<<<< HEAD
-=======
-	//delete addVolumeMenu;
->>>>>>> db966d0e6cc862a10fd0d1ba6635e112b085ff2c
 
 	delete _so;
 
