@@ -1836,59 +1836,86 @@ osg::Program* MarchingCubesRender::getOrLoadProgram()
 
 void MarchingCubesRender::printSTLFile() {
 	osg::ref_ptr<osg::Vec4Array> normals = ((osg::Vec4Array*)((osg::Geometry*)_geode->getDrawable(0))->getColorArray());
-	std::string filename = "stltest";
-	std::string header_info = "solid output";
+ 	std::string filename = "Helmsley-OrganName"; 
+	//std::string header_info = "Hemlsey";
+	std::string header_info = "Hemlsey";
 	char head[80];
 	std::strncpy(head, header_info.c_str(), sizeof(head) - 1);
 	char attribute[2] = "0";
-	unsigned long nTriLong = _coords->size();
+	unsigned long int nTriLong = _coords->size()/3;
 
 	std::ofstream myfile;
 
 	myfile.open((filename + "-out.stl").c_str(), std::ios::out | std::ios::binary);
-	myfile << head << std::endl;
+	//myfile << head << std::endl;
 
-	//myfile.write(head, sizeof(head));
+	myfile.write(head, sizeof(head));
+	myfile.write((char*)&nTriLong, sizeof(nTriLong));
 
 	
 	//write down every triangle
 	for (int i = 0; i < _coords->size(); i+=3) {
 		osg::Vec4 norm = (normals->at(i / 3));
-		myfile << " facet normal " << norm.x() << " " << norm.y() << " " << norm.z() << std::endl;
-		myfile << "  outer loop" << std::endl;
-		myfile << "   vertex " << _coords->at(i).x() << " " << _coords->at(i).y() << " " << _coords->at(i).z() << std::endl;
-		myfile << "   vertex " << _coords->at(i+1).x() << " " << _coords->at(i+1).y() << " " << _coords->at(i+1).z() << std::endl;
-		myfile << "   vertex " << _coords->at(i+2).x() << " " << _coords->at(i+2).y() << " " << _coords->at(i+2).z() << std::endl;
-		/*myfile << "   vertex " << (_coords->at(i).x() + 1) * 1000 << " " << (_coords->at(i).y() + 1) * 1000 << " " << (_coords->at(i).z() + 1) * 1000 << std::endl;
-		myfile << "   vertex " << (_coords->at(i + 1).x() + 1) * 1000 << " " << (_coords->at(i + 1).y() + 1) * 1000 << " " << (_coords->at(i + 1).z() + 1) * 1000 << std::endl;
-		myfile << "   vertex " << (_coords->at(i + 2).x() + 1) * 1000 << " " << (_coords->at(i + 2).y() + 1) * 1000 << " " << (_coords->at(i + 2).z() + 1) * 1000 << std::endl;*/
-		myfile << "  endloop" << std::endl;
-		myfile << " endfacet" << std::endl;
-		//normal vector coordinates
-		
-		
-		//myfile.write((char*)norm.x(), 4);
-		//myfile.write((char*)&norm.y(), 4);
-		//myfile.write((char*)&norm.z(), 4);
 
-		////p1 coordinates
-		//myfile.write((char*)&_coords->at(i).x(), 4);
-		//myfile.write((char*)&_coords->at(i).y(), 4);
-		//myfile.write((char*)&_coords->at(i).z(), 4);
+		////ASCII Implementation
+		//myfile << " facet normal " << norm.x() << " " << norm.y() << " " << norm.z() << std::endl;
+		//myfile << "  outer loop" << std::endl;
+		//myfile << "   vertex " << _coords->at(i).x() << " " << _coords->at(i).y() << " " << _coords->at(i).z() << std::endl;
+		//myfile << "   vertex " << _coords->at(i+1).x() << " " << _coords->at(i+1).y() << " " << _coords->at(i+1).z() << std::endl;
+		//myfile << "   vertex " << _coords->at(i+2).x() << " " << _coords->at(i+2).y() << " " << _coords->at(i+2).z() << std::endl;
+		///*myfile << "   vertex " << (_coords->at(i).x() + 1) * 1000 << " " << (_coords->at(i).y() + 1) * 1000 << " " << (_coords->at(i).z() + 1) * 1000 << std::endl;
+		//myfile << "   vertex " << (_coords->at(i + 1).x() + 1) * 1000 << " " << (_coords->at(i + 1).y() + 1) * 1000 << " " << (_coords->at(i + 1).z() + 1) * 1000 << std::endl;
+		//myfile << "   vertex " << (_coords->at(i + 2).x() + 1) * 1000 << " " << (_coords->at(i + 2).y() + 1) * 1000 << " " << (_coords->at(i + 2).z() + 1) * 1000 << std::endl;*/
+		//myfile << "  endloop" << std::endl;
+		//myfile << " endfacet" << std::endl;
+ 		
+		//Binary Implementation
+		char normalChar[4];
+		memcpy(normalChar, &(float)norm.x(), 4);
+		myfile.write(normalChar, 4);
+		memcpy(normalChar, &(float)norm.z(), 4);
+		myfile.write(normalChar, 4);
+		memcpy(normalChar, &(float)norm.y(), 4);
+		myfile.write(normalChar, 4);
 
-		////p2 coordinates
-		//myfile.write((char*)&_coords->at(i+1).x(), 4);
-		//myfile.write((char*)&_coords->at(i+1).y(), 4);
-		//myfile.write((char*)&_coords->at(i+1).z(), 4);
 
-		////p3 coordinates
-		//myfile.write((char*)&_coords->at(i+2).x(), 4);
-		//myfile.write((char*)&_coords->at(i+2).y(), 4);
-		//myfile.write((char*)&_coords->at(i+2).z(), 4);
+		//p1 coordinates
+		char coord[4];
+		float tn = (float)_coords->at(i).x() * 1000;
+		memcpy(coord, &tn, 4);
+		myfile.write(coord, 4);
+		tn = (float)_coords->at(i).z() * 500;
+		memcpy(coord, &tn, 4);
+		myfile.write(coord, 4);
+		tn = (float)_coords->at(i).y() * 1000;
+		memcpy(coord, &tn, 4);
+		myfile.write(coord, 4);
 
-		//myfile.write(attribute, 2);
+		//p2 coordinates
+		tn = (float)_coords->at(i+1).x() * 1000;
+		memcpy(coord, &tn, 4);
+		myfile.write(coord, 4);
+		tn = (float)_coords->at(i + 1).z() * 500;
+		memcpy(coord, &tn, 4);
+		myfile.write(coord, 4);
+		tn = (float)_coords->at(i + 1).y() * 1000;
+		memcpy(coord, &tn, 4);
+		myfile.write(coord, 4);
+
+		//p3 coordinates
+		tn = (float)_coords->at(i + 2).x() * 1000;
+		memcpy(coord, &tn, 4);
+		myfile.write(coord, 4);
+		tn = (float)_coords->at(i + 2).z() * 500;
+		memcpy(coord, &tn, 4);
+		myfile.write(coord, 4);
+		tn = (float)_coords->at(i + 2).y() * 1000;
+		memcpy(coord, &tn, 4);
+		myfile.write(coord, 4);
+
+		myfile.write(attribute, 2);
 	}
-	myfile << "endsolid output" << std::endl;
+	//myfile << "endsolid Hemlsey" << std::endl;
 	myfile.close();
 
 }
