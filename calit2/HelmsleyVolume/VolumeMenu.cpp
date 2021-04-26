@@ -842,7 +842,7 @@ void NewVolumeMenu::init()
 
 	_UseMarchingCubesButton = new CallbackButton();
 	_UseMarchingCubesButton->setCallback(this);
-	_UseMarchingCubesButton->setPercentSize(osg::Vec3(.5, 1.0, .7));
+	_UseMarchingCubesButton->setPercentSize(osg::Vec3(.7, 1.0, .7));
 
 	buttonBknd = new UIQuadElement(UI_INACTIVE_RED_COLOR);
 	label = new UIText("Use Polygon", 24.0f, osgText::TextBase::CENTER_CENTER);
@@ -854,7 +854,7 @@ void NewVolumeMenu::init()
 
 	_GenMarchCubesButton = new CallbackButton();
 	_GenMarchCubesButton->setCallback(this);
-	_GenMarchCubesButton->setPercentSize(osg::Vec3(.5, 1.0, .7));
+	_GenMarchCubesButton->setPercentSize(osg::Vec3(.7, 1.0, .7));
 
 	buttonBknd = new UIQuadElement(osg::Vec4(1.0, 0.0, 0.0, 1.0));
 	label = new UIText("Gen Polygon", 24.0f, osgText::TextBase::CENTER_CENTER);
@@ -863,9 +863,18 @@ void NewVolumeMenu::init()
 	_GenMarchCubesButton->addChild(buttonBknd);
 	_GenMarchCubesButton->addChild(label);
 
-	buttonList->setPercentPos(osg::Vec3(.125, 0.0, 0.0));
+	_printStlButton = new FullButton("Print STL File", 24.0f, UI_RED_ACTIVE_COLOR, UI_RED_ACTIVE_COLOR);
+	_printStlButton->getButton()->setDisabledColor(UI_INACTIVE_RED_COLOR);
+	_printStlButton->getButton()->setCallback(this);
+	_printStlButton->getText()->setColor(UI_INACTIVE_WHITE_COLOR);
+	_printStlButton->setPercentSize(osg::Vec3(.7, 1.0, .7));
+	_PrintStlCallbackButton = _printStlButton->getButton();
+
+	buttonList->setPercentPos(osg::Vec3(.05, 0.0, 0.0));
 	buttonList->addChild(_GenMarchCubesButton);
 	buttonList->addChild(_UseMarchingCubesButton);
+	buttonList->addChild(_printStlButton);
+
 	mcUI->addChild(buttonList);
 	_marchingCubesMenu->addChild(mcUI);
 	_marchingCubesMenu->setPosition(osg::Vec3(-150, 150, 800));
@@ -1383,6 +1392,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	else if (item == _GenMarchCubesButton) {
 		if (!_volume->isMCInitialized()) {
  			_volume->intializeMC();
+			updateMCUI(true);
  		}
 	}
 	
@@ -1390,6 +1400,10 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	else if (item == _UseMarchingCubesButton) {
 			updateMCUI(_volume->toggleMC());
 			
+	}
+	//Print stl file if mcs are gen-ed
+	else if (item == _PrintStlCallbackButton) {
+		_volume->printSTLFile();
 	}
 
 	
@@ -1407,8 +1421,12 @@ void NewVolumeMenu::updateMCUI(bool on) {
 	}
 	else {
 		((UIText*)_UseMarchingCubesButton->getChild(1))->setText("Hide Polygon");
+		_printStlButton->getButton()->setDisabledColor(UI_NULL_COLOR_VEC4);
+		_printStlButton->getText()->setColor(UI_WHITE_COLOR);
 	}
 }
+
+
 
 void NewVolumeMenu::switchVolumes(int index) {
 

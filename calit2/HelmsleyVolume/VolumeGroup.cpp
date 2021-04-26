@@ -1055,9 +1055,9 @@ bool VolumeGroup::toggleMC() {
 	if (_mcIsReady) {
 		if (_mcrGeode == nullptr) {
 			
-			MarchingCubesRender* mcr = new MarchingCubesRender(_mcVertices, _volDims, getMCGeom(), getMCVertCount(), getVA(), getMCSSBB());
+			mcr = new MarchingCubesRender(_mcVertices, _volDims, getMCGeom(), getMCVertCount(), getVA(), getMCSSBB());
  
-			_mcrGeode = mcr->getGeode();
+			_mcrGeode = static_cast<MarchingCubesRender*>(mcr)->getGeode();
 		}
 		if (_transform->removeChild(_mcrGeode) == false) {
 			_transform->addChild(_mcrGeode);
@@ -1070,6 +1070,13 @@ bool VolumeGroup::toggleMC() {
 
 void VolumeGroup::readyMCUI() {
 	_mcIsReady = true;
+	toggleMC();
+}
+
+void VolumeGroup::printSTLFile() {
+	if (_mcrGeode != nullptr) {
+		static_cast<MarchingCubesRender*>(mcr)->printSTLFile();
+	}
 }
 
 unsigned int VolumeGroup::getHistMax() {

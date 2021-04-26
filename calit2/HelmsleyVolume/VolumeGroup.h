@@ -107,6 +107,7 @@ public:
 	unsigned int getMCVertCount();
 	osg::ref_ptr<osg::Vec3Array> getVA();
 	osg::ref_ptr<osg::ShaderStorageBufferBinding> getMCSSBB();
+	void printSTLFile();
 	////Extra Methods
 	void setNumBins(unsigned int numBins) { 
 		_numGrayVals = numBins;
@@ -171,7 +172,7 @@ public:
 	osg::ref_ptr<osg::FrameBufferObject> _resolveFBO;
 	
 	osg::ref_ptr<osg::Geode> _mcrGeode = nullptr;
-
+	void* mcr;
 
 	struct Values {
 		std::vector<std::vector<float>> opacityData;//0=Center, 1=BottomWidth, 2=TopWidth, 3= Height, 4 = Lowest
