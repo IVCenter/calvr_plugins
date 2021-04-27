@@ -610,8 +610,8 @@ public:
 
 		_mcGeom = geom;
 		
-		createGeometry();
 		setProgram(getOrLoadProgram());
+		createGeometry();
 	}
 
 	virtual void createGeometry();

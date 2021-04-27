@@ -20,7 +20,7 @@
 #include <osgDB/ReadFile>
 
 #define ISOVALUE 0.08f
-#define MCFACTOR 16
+#define MCFACTOR 4
 #define CONFIGLUTSIZE 4096
 
 
