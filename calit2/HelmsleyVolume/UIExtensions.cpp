@@ -1719,8 +1719,13 @@ void MarchingCubesRender::createGeometry()
 
 	//((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_PER_VERTEX);
 	((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_PER_VERTEX);
+	std::string uniform = "lightPos";
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), osg::Vec3(10.0, 5.0, 0.0));
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+
 
 	updateGeometry();
+	//_geode->getOrCreateStateSet()->getUniform(uniform)->set(osg::Vec3(0.0, 0.0, 0.0));
 }
 
 void MarchingCubesRender::updateGeometry()
@@ -1739,7 +1744,6 @@ void MarchingCubesRender::updateGeometry()
  		_geode->getDrawable(0)->getOrCreateStateSet()->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
 		std::cout << "program applied" << std::endl;
 	}
-	 
 }
 
 
