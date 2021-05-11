@@ -19,9 +19,9 @@ void main() {
     float numLights = 1;
 	vec3 lightColor = vec3(1.0);
 	vec3 lightPosMult[] = {
-        vec3(10.0, 5.0, 0.0),
-        vec3(0.0, -5.0, 10.0),
-        vec3(-10.0, 5.0, -10.0)
+        vec3(20.0, 10.0, 0.0),
+        vec3(0.0, -10.0, 20.0),
+        vec3(-20.0, 10.0, -20.0)
     };
 
     vec3 result = vec3(0.0);
@@ -56,8 +56,8 @@ vec3 CalcPointLight(vec3 lightColor, vec3 lightPos) {
     vec3 norm = normalize(i.norm);
     vec3 lightDir = normalize(lightPos - i.fragPos);
     float diff = max(dot(norm, lightDir), 0.0);
-    //vec3 diffuse = lightColor * (diff * matDiffuse);
-    vec3 diffuse = ColonTexture();
+    vec3 diffuse = lightColor * (diff * ColonTexture());
+    //vec3 diffuse = ColonTexture();
     
     // specular
     vec3 viewDir = normalize(viewPos - i.fragPos);
@@ -65,17 +65,13 @@ vec3 CalcPointLight(vec3 lightColor, vec3 lightPos) {
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
     vec3 specular = lightColor * (spec * matSpecular);  
 
-    // texture (noise)
-    vec3 tex = ColonTexture();
-    return normalize(ambient + diffuse + specular);// + tex);
+    return ambient + diffuse + specular;
 }
 
 vec3 ColonTexture() {
-    //vec3 result = vec3( hash1(uint(i.vertPos.x + i.vertPos.z)));
-	vec3 ratio = vec3(1, 0.42, 0.42);
+	vec3 ratio = normalize(vec3(1, 0.42, 0.42));
 
     float rand = hash1(uint(i.vertPos.x * i.vertPos.y * i.vertPos.z));
-    //float scale = ((((rand + 1) / 2) * 105) + 150);
     float scale = ((rand + 1) / 2);
 
     vec3 result = ratio * scale;
@@ -88,5 +84,4 @@ float hash1( uint n ) {
     n = n * (n * n * 15731U + 789221U) + 1376312589U;
     return float( n & uvec3(0x7fffffffU))/float(0x7fffffff);
 }
-
 
