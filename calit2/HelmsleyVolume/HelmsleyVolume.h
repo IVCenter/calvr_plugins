@@ -29,6 +29,7 @@
 #include "CenterLineTool.h"
 #include "CuttingPlane.h"
 #include "FileSelector.h"
+#include "LightSphere.h"
 
 #include <string>
 

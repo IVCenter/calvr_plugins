@@ -256,7 +256,14 @@ bool HelmsleyVolume::init()
 	_vMenu->addItem(_rotmenu);
 
 #endif
-	
+
+#ifndef WITH_OPENVR
+	_room = new SceneObject("room", false, false, false, false, false);
+	_room->setPosition(osg::Vec3(-1030, 2125, 0));
+
+#endif // !WITH_OPENVRR
+
+
 	osg::setNotifyLevel(osg::NotifySeverity::WARN);
 	_splashscreen = new UIPopup();
 	_splashscreen->setPosition(osg::Vec3(-800, 1000, 1850));
@@ -302,11 +309,18 @@ bool HelmsleyVolume::init()
 
 	std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();
 	cvr::CVRViewer::instance()->getCameras(cameras);
+
+	/*
+	osg::Vec3 eye = osg::Vec3(0, 2000, -1000);
+	osg::Vec3 center = osg::Vec3(0, 1, 0);
+	osg::Vec3 up = osg::Vec3(0, 0, 1);
+	*/
 	for (int i = 0; i < cameras.size(); ++i)
 	{
 		cameras[i]->getGraphicsContext()->getState()->setUseModelViewAndProjectionUniforms(true);
-
+		//cameras[i]->setViewMatrixAsLookAt(eye, center, up);
 	}
+
 
 
 	_interactButton = cvr::ConfigManager::getInt("Plugin.HelmsleyVolume.InteractButton", 0);
@@ -325,6 +339,11 @@ bool HelmsleyVolume::init()
 
 
 	fileSelector = new FileSelector();
+
+#ifndef WITH_OPENVR
+	//fileSelector->getSO()->setPosition(osg::Vec3(-5000, -1600, 5000));
+
+#endif
 
 
 	//osg::setNotifyLevel(osg::NOTICE);

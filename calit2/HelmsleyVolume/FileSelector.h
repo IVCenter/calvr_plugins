@@ -72,6 +72,7 @@ public:
 	void loadSecondVolume(std::string seriesPath);
 
 	static void threadTest();
+	cvr::SceneObject* getSO() { return _so; }
 
 
 	

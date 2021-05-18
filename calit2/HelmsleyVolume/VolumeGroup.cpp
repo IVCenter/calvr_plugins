@@ -158,7 +158,9 @@ void VolumeGroup::init()
 	_program->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
 	
 	_transform = new osg::MatrixTransform();
+	_transform_sphere = new osg::MatrixTransform();
 	_cube = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0, 0, 0), 1, 1, 1));
+	_sphere = new osg::ShapeDrawable(new osg::Sphere(osg::Vec3(0, 0, 0), 20.0f));
 	osg::Vec4Array* colors = new osg::Vec4Array;
 	colors->push_back(osg::Vec4(1, 1, 1, 1));
 	_cube->setColorArray(colors);
@@ -167,6 +169,13 @@ void VolumeGroup::init()
 	_cube->setDrawCallback(new VolumeDrawCallback(this));
 	_cube->setDataVariance(osg::Object::DYNAMIC);
 	_cube->setUseDisplayList(false);
+
+	_sphere->setColorArray(colors);
+	_sphere->setColorBinding(osg::Geometry::BIND_OVERALL);
+
+	_sphere->setDrawCallback(new VolumeDrawCallback(this));
+	_sphere->setDataVariance(osg::Object::DYNAMIC);
+	_sphere->setUseDisplayList(false);
 
 	osg::StateSet* states = _cube->getOrCreateStateSet();
 	_side = new osg::CullFace(osg::CullFace::FRONT);
@@ -178,11 +187,21 @@ void VolumeGroup::init()
 	states->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
 
 	osg::ref_ptr<osg::Geode> g = new osg::Geode();
+	osg::ref_ptr<osg::Geode> gs = new osg::Geode();
 	g->addChild(_cube);
 	g->getOrCreateStateSet()->setRenderBinDetails(7, "RenderBin");
  
+	gs->addChild(_sphere);
+
 	_transform->addChild(g);
+	_transform_sphere->addChild(gs);
 	this->addChild(_transform);
+	this->addChild(_transform_sphere);
+
+
+	//LIGHT SOURCE for MC
+	//lightSphere = new LightSphere();
+	//this->addChild(lightSphere->getTransform());
 	
 
 	_PlanePoint = new osg::Uniform("PlanePoint", osg::Vec3(0.f, -2.f, 0.f));

@@ -28,6 +28,7 @@
 #include <cvrKernel/ScreenConfig.h>
 #include <cvrKernel/ScreenBase.h>
 #include "MarchingCubesLUTs.h"
+#include "LightSphere.h"
 //#define NUMGRAYVALS 255u
 #define CLIPLIMIT3D .85f
 #define ORGANCOUNT 8
@@ -168,6 +169,7 @@ public:
 	osg::Matrix getWorldToObjectMatrix();
 
 	osg::ref_ptr<osg::MatrixTransform> _transform;
+	osg::ref_ptr<osg::MatrixTransform> _transform_sphere;
 	osg::ref_ptr<osg::MatrixTransform> _lineTransform;
 	osg::ref_ptr<osg::FrameBufferObject> _resolveFBO;
 	
@@ -200,6 +202,9 @@ public:
 	bool _UIDirty = false;
 
 protected:
+	//LIGHT SOURCE FOR MC
+	//LightSphere* lightSphere;
+
 	bool _hasMask;
 	bool _claheAvailable = false;
 	std::string _minMaxShader;
@@ -235,7 +240,7 @@ protected:
 	osg::ref_ptr<osg::DispatchCompute> _totalHistNode;
 	osg::ref_ptr<osg::DispatchCompute> _marchingCubeNode;
 	osg::ref_ptr<osg::ShapeDrawable> _cube;
-	
+	osg::ref_ptr<osg::ShapeDrawable> _sphere;
 
 
 	//osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbHist;
@@ -253,6 +258,7 @@ protected:
 	osg::ref_ptr<osg::Texture2D> _colorTexture;
 
 	osg::ref_ptr<osg::CullFace> _side;
+
 	
 };
 

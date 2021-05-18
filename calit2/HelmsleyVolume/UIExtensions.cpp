@@ -2310,6 +2310,7 @@ void ColorSlider::createGeometry()
 
 	_intersect->setNodeMask(cvr::INTERSECT_MASK);
 
+
 	_sphere = new osg::ShapeDrawable(new osg::Sphere());
 	
 	_geode->addDrawable(_sphere);
