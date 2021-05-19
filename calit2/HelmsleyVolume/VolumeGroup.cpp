@@ -128,6 +128,9 @@ void VolumeGroup::init()
 		return;
 	}
 
+	// Initialize Light Sphere
+	lightSphere = new LightSphere(20.0f, osg::Vec3(0, 0, 0));
+
 
 	//Set up depth buffer fbo
 	_resolveFBO = new osg::FrameBufferObject();
@@ -160,7 +163,10 @@ void VolumeGroup::init()
 	_transform = new osg::MatrixTransform();
 	_transform_sphere = new osg::MatrixTransform();
 	_cube = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0, 0, 0), 1, 1, 1));
-	_sphere = new osg::ShapeDrawable(new osg::Sphere(osg::Vec3(0, 0, 0), 20.0f));
+	//_sphere = new osg::Sphere(osg::Vec3(0, 0, 0), 20.0f);
+	//_sphere->setCenter(osg::Vec3(100, 100, 100));
+	//_sd = new osg::ShapeDrawable(_sphere);
+	//lightSphere->moveSphere(osg::Vec3(100, 100, 100));
 	osg::Vec4Array* colors = new osg::Vec4Array;
 	colors->push_back(osg::Vec4(1, 1, 1, 1));
 	_cube->setColorArray(colors);
@@ -170,12 +176,15 @@ void VolumeGroup::init()
 	_cube->setDataVariance(osg::Object::DYNAMIC);
 	_cube->setUseDisplayList(false);
 
-	_sphere->setColorArray(colors);
-	_sphere->setColorBinding(osg::Geometry::BIND_OVERALL);
+	//_sd->setColorArray(colors);
+	//_sd->setColorBinding(osg::Geometry::BIND_OVERALL);
 
-	_sphere->setDrawCallback(new VolumeDrawCallback(this));
-	_sphere->setDataVariance(osg::Object::DYNAMIC);
-	_sphere->setUseDisplayList(false);
+	//_sd->setDrawCallback(new VolumeDrawCallback(this));
+	//_sd->setDataVariance(osg::Object::DYNAMIC);
+	//_sd->setUseDisplayList(false);
+	lightSphere->sd->setDrawCallback(new VolumeDrawCallback(this));
+	lightSphere->sd->setDataVariance(osg::Object::DYNAMIC);
+	lightSphere->sd->setUseDisplayList(false);
 
 	osg::StateSet* states = _cube->getOrCreateStateSet();
 	_side = new osg::CullFace(osg::CullFace::FRONT);
@@ -191,12 +200,14 @@ void VolumeGroup::init()
 	g->addChild(_cube);
 	g->getOrCreateStateSet()->setRenderBinDetails(7, "RenderBin");
  
-	gs->addChild(_sphere);
+	gs->addChild(lightSphere->sd);
 
 	_transform->addChild(g);
-	_transform_sphere->addChild(gs);
+	//_transform_sphere->addChild(gs);
+	lightSphere->transform->addChild(gs);
 	this->addChild(_transform);
-	this->addChild(_transform_sphere);
+	//this->addChild(_transform_sphere);
+	this->addChild(lightSphere->transform);
 
 
 	//LIGHT SOURCE for MC

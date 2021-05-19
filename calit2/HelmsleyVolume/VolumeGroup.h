@@ -203,7 +203,7 @@ public:
 
 protected:
 	//LIGHT SOURCE FOR MC
-	//LightSphere* lightSphere;
+	LightSphere* lightSphere;
 
 	bool _hasMask;
 	bool _claheAvailable = false;
@@ -240,7 +240,8 @@ protected:
 	osg::ref_ptr<osg::DispatchCompute> _totalHistNode;
 	osg::ref_ptr<osg::DispatchCompute> _marchingCubeNode;
 	osg::ref_ptr<osg::ShapeDrawable> _cube;
-	osg::ref_ptr<osg::ShapeDrawable> _sphere;
+	osg::ref_ptr<osg::ShapeDrawable> _sd;
+	osg::ref_ptr<osg::Sphere> _sphere;
 
 
 	//osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbHist;
