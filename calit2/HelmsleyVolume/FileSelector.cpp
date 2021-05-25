@@ -33,6 +33,7 @@ FileSelector::~FileSelector() {
 }
 void FileSelector::init()
 {
+	
 	_state = NEW;
 	pathSelections = std::vector<cvr::MenuItem*>();
 
@@ -664,6 +665,19 @@ void FileSelector::loadVolume(std::string seriesPath, bool change, bool onlyVolu
 		closedir(dir);
 	}
 
+
+	//TESTING
+	std::string attnMap = "";
+
+	dir = opendir((seriesPath + "/att_localnormalization").c_str());
+	if (dir != NULL)
+	{
+		//maskpath = seriesPath + "/att_localnormalization";
+		maskpath = seriesPath + "/att_globalnormalization";
+		closedir(dir);
+	}
+	//
+
 	HelmsleyVolume::instance()->loadVolume(seriesPath, maskpath, onlyVolume);
 	_state = CHANGE;//change//changing
 }
@@ -844,7 +858,7 @@ bool FileSelector::checkIfMask(std::string seriesPath) {
 	while (entry != NULL) {
 		if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
 		
-			if (strcmp(entry->d_name, "mask") == 0) {
+			if (strcmp(entry->d_name, "mask") == 0 || strcmp(entry->d_name, "att_localnormalization") == 0) {
 				closedir(mainDir);
 				return true;
 			}

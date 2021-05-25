@@ -118,7 +118,7 @@ bool HelmsleyVolume::init()
 
 	osgDB::Options* roomOptions = new osgDB::Options("noReverseFaces");
 	osg::Node* room = osgDB::readNodeFile(modelDir + "MIPCDVIZV3.obj", roomOptions);
-	//////////////////////////////Ryans forloop///////////////////
+	////////////////////////////////Ryans forloop///////////////////
 	//for (unsigned int i = 0; i < room->asGroup()->getNumChildren(); i++) {
 
 	//	osg::Geode* g = dynamic_cast<osg::Geode*> (room->asGroup()->getChild(i));
@@ -218,7 +218,7 @@ bool HelmsleyVolume::init()
 	//	g->getDrawable(0)->getOrCreateStateSet()->addUniform(roughUni);
 	//}
 
-	/////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////
 	_room = new SceneObject("room", false, false, false, false, false);
 	_room->addChild(room);
 	_room->setScale(800);
@@ -233,7 +233,7 @@ bool HelmsleyVolume::init()
 	_roomLocation = new SubMenu("Room Options", "Location");
 	_roomLocation->setCallback(this);
 
-	_hideRoom = new MenuButton("Hide Room");
+	_hideRoom = new MenuButton("Hide  Room");
 	_hideRoom->setCallback(this);
 
 	_roomLocation->addItem(_hideRoom);
@@ -305,7 +305,6 @@ bool HelmsleyVolume::init()
 	for (int i = 0; i < cameras.size(); ++i)
 	{
 		cameras[i]->getGraphicsContext()->getState()->setUseModelViewAndProjectionUniforms(true);
-
 	}
 
 
@@ -703,6 +702,10 @@ void HelmsleyVolume::toggleClaheTools(bool on) {
 	_worldMenus[0]->toggleClaheTools(on);
 }
 
+void HelmsleyVolume::toggleAttnMapsTools(bool on) {
+	_worldMenus[0]->toggleAttnMapsTools(on);
+}
+
 void HelmsleyVolume::toggleMaskAndPresets(bool on) {
 	_worldMenus[0]->toggleMaskMenu(on);
 }
@@ -713,6 +716,10 @@ void HelmsleyVolume::toggleTFUI(bool on) {
 
 void HelmsleyVolume::toggleMCRender(bool on) {
 	_worldMenus[0]->toggleMCRender(on);
+}
+
+bool HelmsleyVolume::hasCenterLineCoords() {
+	return _worldMenus[0]->hasCenterLineCoords();
 }
 
 void HelmsleyVolume::loadVolume(std::string path, std::string maskpath, bool onlyVolume)
@@ -738,14 +745,16 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath, bool onl
 	so->addNavigationMenuItem();
 	so->setShowBounds(true);
 
-	VolumeMenu* menu = new VolumeMenu(so, g);
-	menu->init();
+	
 
 	NewVolumeMenu* newMenu = new NewVolumeMenu(so, g);
 	newMenu->init();
 	_worldMenus.push_back(newMenu);
 	screenshotTool->setWorldMenu(_worldMenus[0]);
 	
+	VolumeMenu* menu = new VolumeMenu(so, g);
+	menu->init();
+
 	_sceneObjects.push_back(so);
 	_volumes.push_back(g);
 	_contextMenus.push_back(menu);
@@ -774,6 +783,7 @@ void HelmsleyVolume::loadSecondVolume(std::string path, std::string maskpath)
 	so->addMoveMenuItem();
 	so->addNavigationMenuItem();
 	so->setShowBounds(true);
+
 	VolumeMenu* menu = new VolumeMenu(so, g);
 	menu->init();
 	

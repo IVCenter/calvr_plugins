@@ -68,9 +68,11 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		
 		void toggleHistogram(bool on);
 		void toggleClaheTools(bool on);
+		void toggleAttnMapsTools(bool on);
 		void toggleMaskAndPresets(bool on);
 		void toggleTFUI(bool on);
 		void toggleMCRender(bool on);
+		bool hasCenterLineCoords();
 
 
 		void loadVolume(std::string path, std::string maskpath = "", bool onlyVolume = false);

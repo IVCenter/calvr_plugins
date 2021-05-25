@@ -337,8 +337,10 @@ void ScreenshotTool::setPhoto(std::string imgLocation) {
 
 	((cvr::UIText*)_takePicture->getChild(1))->setText("Save Image");//text
 	((cvr::UIText*)_renderCinematic->getChild(1))->setText("OK");//text
+	//std::remove(_imgCineFP.c_str());
 
 	_showingPhoto = true;
+
 }
 
 

@@ -33,6 +33,12 @@
 #define ORGANCOUNT 8
 #define TOOLCOUNT 8
 
+enum class ORGANID {
+	COLON = 4u,
+	ILLEUM = 16u,
+	AORTA = 32u,
+	VEIN = 64u
+};
 
 class VolumeGroup : public osg::Group
 {
@@ -52,6 +58,7 @@ public:
 	void init();
 	void loadVolume(std::string path, std::string maskpath = "");
 	void loadMask(std::string path, osg::Image* volume);
+	void loadAttnMaps(std::string path, osg::Image* volume);
 	bool hasMask()
 	{
 		return _hasMask;
@@ -75,6 +82,9 @@ public:
 	unsigned int _numGrayVals = 255u;
 	unsigned int _histSize = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z() * _numGrayVals;
 	unsigned int _numHist = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z();
+
+	bool _clahePrecomped = false;
+
 	///////CLAHE Methods
 	t_acbb precompMinMax();
 	t_acbb setupMinmaxSSBO();
@@ -93,15 +103,18 @@ public:
 	osg::ref_ptr<osg::Vec3Array> _mcVertices = nullptr;
 	osg::ref_ptr<osg::Geometry> geo = nullptr;
 	osg::ref_ptr<osg::Vec3Array> _va = nullptr;
+	t_ssbb _ssbbTV;
 	bool _mcrInitialized = false;
 	bool _mcIsReady = false;
-	bool _clahePrecomped = false;
 	bool _mcPrecomped = false;
+	short unsigned int _mcRes = 16;
+	ORGANID _mcOrgan = ORGANID::COLON;
 
 	void setMCVertices(osg::ref_ptr<osg::Vec3Array> floats) { _mcVertices = floats; }
 	bool isMCInitialized() { return _mcrInitialized; }
 	bool toggleMC();
 	void intializeMC();
+	void genMCs();
 	void readyMCUI();
 	osg::ref_ptr<osg::Geometry> getMCGeom();
 	unsigned int getMCVertCount();
@@ -116,12 +129,7 @@ public:
 	void setClipLimit(float clipLimit) {
 		_clipLimit3D = clipLimit;
 	}
-	void setClaheRes(float res) {
-		_claheRes = res;
-		_numSB_3D.x() = res; _numSB_3D.y() = res; _numSB_3D.z() = 2;
-		_numHist = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z();
-		_histSize = _numHist * _numGrayVals;
-	}
+	void setClaheRes(float res);
 	void genClahe();
  
 	unsigned int getHistMax();
@@ -172,6 +180,7 @@ public:
 	osg::ref_ptr<osg::FrameBufferObject> _resolveFBO;
 	
 	osg::ref_ptr<osg::Geode> _mcrGeode = nullptr;
+	bool _mcrDirty = false;
 	void* mcr;
 
 	struct Values {
@@ -243,7 +252,7 @@ protected:
 
 	std::vector<osg::ref_ptr<osg::Geode>>* _centerLineGeodes;
 	
-	osg::ref_ptr<osg::Vec3dArray> _colonCoords;
+	osg::ref_ptr<osg::Vec3dArray> _colonCoords = nullptr;
 	osg::ref_ptr<osg::Vec3dArray> _illeumCoords;
 	osg::ref_ptr<osg::Texture3D> _volume;
 	osg::ref_ptr<osg::Texture3D> _claheVolume;
@@ -642,6 +651,7 @@ public:
 
 			group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
 
+			std::cout << "marching cubes transfer done" << std::endl;
 		}
 	}
 

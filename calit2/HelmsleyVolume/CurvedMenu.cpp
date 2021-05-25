@@ -57,6 +57,10 @@ void CurvedMenu::setImage(int index, std::string iconPath) {
 	_list->getChild(index)->addChild(uitext);
 }
 
+void CurvedMenu::disableButton(int index) {
+	((CurvedQuad*)_list->getChild(index))->setEnable(false, UI_DISABLED_BACKGROUND_COLOR);
+}
+
 std::pair<int, CurvedQuad*> CurvedMenu::getCallbackIndex(UICallbackCaller* item) {
 	std::pair<int, CurvedQuad*> index;
 	index.first = -1;

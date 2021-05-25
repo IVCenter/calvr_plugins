@@ -873,8 +873,8 @@ std::vector<float> TentWindow::getCinePresetData(int index) {
 	std::vector<float> data;
 	data.push_back(_tWOnly->_tents.at(index)->getHeight());
 	data.push_back(_tWOnly->_tents.at(index)->getBottom());
-	data.push_back(_tWOnly->_tents.at(index)->getBottomWidth()*2);
-	data.push_back(_tWOnly->_tents.at(index)->getTopWidth()*2);
+	data.push_back(_tWOnly->_tents.at(index)->getBottomWidth());
+	data.push_back(_tWOnly->_tents.at(index)->getTopWidth());
 	data.push_back(_tWOnly->_tents.at(index)->getCenter());
 	return data;
 }
@@ -1222,19 +1222,24 @@ void CurvedQuad::setTransparent(bool transparent)
 	}
 }
 
-
+void CurvedQuad::setEnable(bool enable, osg::Vec4 disableColor) {
+	_enabled = enable;
+	if (_enabled) {
+		this->setColor(UI_BACKGROUND_COLOR);
+	}
+	else {
+		this->setColor(disableColor);
+	}
+}
 void CurvedQuad::processHover(bool enter)
 {
-	if (!isOn()) {
-		if (enter)
-		{
-			_colorUniform->set(osg::Vec4(UI_RED_HOVER_COLOR, 1.0));
-		}
-		else
-		{
-			_colorUniform->set(UI_BACKGROUND_COLOR);
-		}
-	}
+	if (!_enabled || isOn()) return;
+
+	if (enter)
+		_colorUniform->set(osg::Vec4(UI_RED_HOVER_COLOR, 1.0));
+	else
+		_colorUniform->set(UI_BACKGROUND_COLOR);
+	
 }
 
 
@@ -1656,6 +1661,8 @@ void MarchingCubesRender::createGeometry()
 	for (int i = 0; i < numFloats; i ++) {
 		if (_coords->at(i).x() == std::numeric_limits<float>::max()) {
 			std::cout << "index: " << i << std::endl;
+			std::cout << "vertexcount: " << _verticeCount << std::endl;
+
 			break;
 		}
 		//std::cout << "coords: " << _coords->at(i) << std::endl;
@@ -1695,8 +1702,7 @@ void MarchingCubesRender::createGeometry()
 	}
 
 	int numCoords = vec3Coords->size();
- 	
-  	
+   	
 	
 
 
@@ -1707,6 +1713,7 @@ void MarchingCubesRender::createGeometry()
 	((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_PER_VERTEX);
 	((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_PER_VERTEX);
 	
+	std::cout << "marching cube render created" << std::endl;
 
 	updateGeometry();
 }
@@ -1721,9 +1728,10 @@ void MarchingCubesRender::updateGeometry()
 	_geode->getOrCreateStateSet()->setMode(GL_CULL_FACE, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
 	_geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
 
-
+	
  	if (_program.valid())
 	{
+		
  		_geode->getDrawable(0)->getOrCreateStateSet()->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
 		std::cout << "program applied" << std::endl;
 	}
@@ -1762,7 +1770,7 @@ void MarchingCubesRender::setShaderDefine(std::string name, std::string define, 
 
 osg::Program* MarchingCubesRender::getOrLoadProgram()
 {
-	if (!_mcProg)
+	if (_mcProg == nullptr)
 	{
 
 	const std::string vert = HelmsleyVolume::loadShaderFile("mc.vert");

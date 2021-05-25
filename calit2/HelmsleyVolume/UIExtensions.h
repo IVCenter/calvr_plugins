@@ -2,6 +2,7 @@
 #define UI_EXTENSIONS_H
 
 #define UI_BACKGROUND_COLOR osg::Vec4(0.15, 0.15, 0.15, 1)
+#define UI_DISABLED_BACKGROUND_COLOR osg::Vec4(0.45, 0.45, 0.45, .4)
 #define UI_ACTIVE_COLOR osg::Vec4(.243, .561, 1, 1)
 #define UI_RED_ACTIVE_COLOR osg::Vec4(1.0, 0.0, 0.0, 1)
 #define UI_INACTIVE_COLOR osg::Vec4(.243, .561, 1, .4)
@@ -495,7 +496,7 @@ public:
 	virtual void updateGeometry();
  	virtual void setColor(osg::Vec4 color);
  	virtual void setTransparent(bool transparent);
- 
+	void setEnable(bool enabled, osg::Vec4 disableColor = UI_DISABLED_BACKGROUND_COLOR);
  
 	virtual void setProgram(osg::Program* p) { _program = p; _dirty = true; }
 	virtual osg::Program* getProgram() { return _program; }
@@ -529,7 +530,8 @@ protected:
 	
 	int _curr = 1;	//For Segmenting
 	int _total = 1;
-	
+	bool _enabled = true;
+
 	osg::ref_ptr<osg::Program> _program;
 	std::map<std::string, osg::Uniform*> _uniforms;
 
@@ -599,19 +601,21 @@ protected:
 class MarchingCubesRender : public cvr::UIElement
 {
 public:
-	MarchingCubesRender(osg::ref_ptr<osg::Vec3Array> coords, osg::Vec3i volDims, osg::ref_ptr<osg::Geometry> geom, unsigned int verticeCount, osg::ref_ptr<osg::Vec3Array> va
-,osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbb)
-		: UIElement(), _verticeCount(verticeCount), _VA(va), _ssbb(ssbb)
+	MarchingCubesRender(osg::ref_ptr<osg::Vec3Array> coords, osg::Vec3i volDims, unsigned int verticeCount)
+		: UIElement()
 	{
 		_coords = coords;
 	
 		_geode = new osg::Geode();
 		_voldims = volDims;
 
-		_mcGeom = geom;
+		_verticeCount = verticeCount;
+		
 		
 		createGeometry();
+
 		setProgram(getOrLoadProgram());
+		
 	}
 
 	virtual void createGeometry();

@@ -14,7 +14,7 @@ uniform mat4 osg_ModelViewProjectionMatrix;
 
 void main() {
     o.uv = uv;
-    o.vertex = uv;
+    o.vertex = vertex;
 
     gl_Position = osg_ModelViewProjectionMatrix * vec4(vertex, 1.0);
 }

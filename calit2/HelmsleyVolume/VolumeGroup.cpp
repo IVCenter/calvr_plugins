@@ -52,8 +52,6 @@ void VolumeDrawCallback::drawImplementation(osg::RenderInfo& renderInfo, const o
 
 	drawable->drawImplementation(renderInfo);
 
-	//checkStatuses();
-
 
 }
 
@@ -110,9 +108,9 @@ void VolumeGroup::init()
 	_computeUniforms = std::map<std::string, osg::ref_ptr<osg::Uniform> >();
 	_dirty = std::map<osg::GraphicsContext*, bool>();
 	
-	std::string vert = HelmsleyVolume::loadShaderFile("volume.vert");
+	std::string vert = HelmsleyVolume::loadShaderFile("volume.vert"); 
 	std::string frag = HelmsleyVolume::loadShaderFile("volume.frag");
-	std::string compute = HelmsleyVolume::loadShaderFile("volume.glsl");
+	std::string compute = HelmsleyVolume::loadShaderFile("volume.comp");
 	_minMaxShader = HelmsleyVolume::loadShaderFile("minMax.comp");
 	_excessShader = HelmsleyVolume::loadShaderFile("excess.comp");
 	_histShader = HelmsleyVolume::loadShaderFile("hist.comp");
@@ -120,7 +118,7 @@ void VolumeGroup::init()
 	_clipShader2 = HelmsleyVolume::loadShaderFile("clipHist2.comp");
 	_lerpShader = HelmsleyVolume::loadShaderFile("lerp.comp");
 	_totalHistShader = HelmsleyVolume::loadShaderFile("nonClaheHist.comp");
-	_marchingCubesShader = HelmsleyVolume::loadShaderFile("marchingcube.glsl");
+	_marchingCubesShader = HelmsleyVolume::loadShaderFile("marchingcube.comp");
 
 	if (vert.empty() || frag.empty() || compute.empty())
 	{
@@ -288,7 +286,7 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	osg::ref_ptr<osg::Image> i = ImageLoader::LoadVolume(path, m);
 	if (!i)
 	{
-		std::cerr << "Volume couldt be loaded" << std::endl;
+		std::cerr << "Volume couldn't be loaded" << std::endl;
 		return;
 	}
 	//_transform->setScale(s);
@@ -313,14 +311,17 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 
 	if (maskpath.compare("") != 0)
 	{
+		
 		loadMask(maskpath, i);
 		_hasMask = true;
 	}
 	else {
+		//loadAttnMaps(maskpath, i);
 		_hasMask = false;
 		
 	}
  	
+
 
 
 	_volume = new osg::Texture3D;
@@ -334,33 +335,15 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	_volume->setName("VOLUME");
 	_volume->setResizeNonPowerOfTwoHint(false);
 
-	//_claheVolume = new osg::Texture3D;
-	//_claheVolume->setTextureSize(i->s(), i->t(), i->r());
-	//osg::ref_ptr<osg::Image> bimage = new osg::Image();
-	//bimage->allocateImage(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth(), GL_RG, GL_UNSIGNED_SHORT);
-	//_claheVolume->setImage(bimage);
-	//_claheVolume->setFilter(osg::Texture3D::MIN_FILTER, osg::Texture3D::NEAREST);
-	//_claheVolume->setFilter(osg::Texture3D::MAG_FILTER, osg::Texture3D::NEAREST);
-	//_claheVolume->setInternalFormat(GL_RG16);
-	//_claheVolume->setName("CLAHEVOLUME");
-	//_claheVolume->setResizeNonPowerOfTwoHint(false);
-
-	//OSG_NOTICE << "Volume texture size: " << (int)(_volume->getTextureWidth()) << ", " << (int)(_volume->getTextureHeight()) << ", " << (int)(_volume->getTextureDepth()) << std::endl;
-
 
 	_computeNode->setComputeGroups((i->s() + 7) / 8, (i->t() + 7) / 8, (i->r() + 7) / 8);
 	_computeUniforms["TexelSize"]->set(osg::Vec3(1.0f / (float)i->s(), 1.0f / (float)i->t(), 1.0f / (float)i->r()));
 	osg::StateSet* states = _computeNode->getOrCreateStateSet();
 	states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
 	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
-	/*states->setTextureAttribute(5, _claheVolume, osg::StateAttribute::ON);
-	states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
-	////////////////////////////////////////clahe/////////////////////////
+	
 	_volDims = osg::Vec3i(i->s(), i->t(), i->r());
 	_volArea = _volDims.x() * _volDims.y() * _volDims.z();
-	//_numSB_3D = osg::Vec3i(_volDims.x() / _numSB_3D.x(), _volDims.y() / _numSB_3D.y(), _volDims.z() / _numSB_3D.z());
-	//float tempClipValue = 1.1f * (_numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z()) / _numGrayVals;
-	//_minClipValue = unsigned int(tempClipValue + 0.5f);
 	
 	
 	//Set dirty on all graphics contexts
@@ -746,6 +729,21 @@ void VolumeGroup::genClahe() {
 	_claheAvailable = true;
 	this->setDirtyAll();
 }
+void VolumeGroup::setClaheRes(float res) {
+	if (_claheRes == res)return;
+	_claheRes = res;
+	float zRes = _claheRes;
+	float ratio = (float)_volDims.z() / (float)_volDims.x();
+	ratio = std::ceil(ratio * _claheRes);
+
+	while ((int)_volDims.z() % (int)zRes != 0 || zRes > ratio)
+		zRes -= 1.0;
+
+	std::cout << "claheres " << _claheRes << " " << "zres " << zRes << " ratio " << ratio << std::endl;
+	_numSB_3D.x() = _claheRes; _numSB_3D.y() = _claheRes; _numSB_3D.z() = zRes;
+	_numHist = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z();
+	_histSize = _numHist * _numGrayVals;
+}
 
 void VolumeGroup::loadMask(std::string path, osg::Image* volume)
 {
@@ -788,6 +786,52 @@ void VolumeGroup::loadMask(std::string path, osg::Image* volume)
 		}
 	}
 }
+
+void VolumeGroup::loadAttnMaps(std::string path, osg::Image* volume)
+{
+	unsigned int width = volume->s();
+	unsigned int height = volume->t();
+	unsigned int depth = volume->r();
+	uint16_t * volumeData = (uint16_t*)volume->data();
+	int i = 0;
+	for (i = 0; i < depth-1; ++i)
+	{
+		std::string attnMapPath = path + "/" + std::to_string(depth - (i + 1)) + ".png";
+		osg::ref_ptr<osg::Image> mask = osgDB::readImageFile(attnMapPath);
+		if (mask == nullptr) return;
+
+		mask->flipVertical();
+		unsigned int bytesize = mask->getPixelSizeInBits() / 8;
+		//throw bytesize;
+		unsigned char* maskData = mask->data();
+
+		uint16_t* slice = volumeData + (int)2 * i * width * height;
+		for (unsigned int y = 0; y < height; ++y)
+		{
+			for (unsigned int x = 0; x < width; ++x)
+			{
+				unsigned int volpixel = 2 * (x + y * width);
+				unsigned int maskpixel = bytesize * (x + y * width);
+				//upper 8 bits are green, bottom 8 are red. use 1-hot encoding
+
+				if (bytesize <= 1 && (uint8_t)(maskData[maskpixel]) != 0) //Binary mask, only care about colon
+				{
+					slice[volpixel + 1] = (maskData[maskpixel]) * 256;
+				}
+				else //multi-organ mask
+				{
+					slice[volpixel + 1] = (maskData[maskpixel]) * 256;
+				}
+				if (slice[volpixel + 1] != 0)
+				{
+					//std::cout << slice[volpixel + 1] << std::endl;
+				}
+			}
+		}
+	}
+}
+
+
 
 void VolumeGroup::precompute()
 {
@@ -924,14 +968,7 @@ void VolumeGroup::precompMarchingCubes() {
 	//TriangleIDs buffer
 	
  	//std::cout << "voldims: " << _volDims.x() << "   " << _volDims.y() << "   " << _volDims.z() << std::endl;
-	//Vec Count Value
-	osg::ref_ptr<osg::UIntArray> dati = new osg::UIntArray;
-	dati->push_back(0);
-	osg::ref_ptr<osg::BufferObject> acbo = new osg::AtomicCounterBufferObject;
-	acbo->setBufferData(0, dati);
-	osg::ref_ptr<osg::AtomicCounterBufferBinding> acbb = new osg::AtomicCounterBufferBinding(4, acbo->getBufferData(0), 0, sizeof(GLuint));
-	dati.release();
-	acbo.release();
+	
 
 	//ConfigLookup buffer
 	osg::ref_ptr<osg::IntArray> configLUTArray = new osg::IntArray(CONFIGLUTSIZE);
@@ -942,30 +979,30 @@ void VolumeGroup::precompMarchingCubes() {
 	configLUTArray.release();
 	ssboCL.release();
 
-	//TriangleVertices buffer
-	int newStructSize = _volDims.x() / MCFACTOR * _volDims.y() / MCFACTOR * _volDims.z();
-	unsigned int triangleStructMaxSize = newStructSize*45;//Maximum_Index(max edge index(15)*Vertice_Count(3) + Float_Count(9) = 51
-	_va = new osg::Vec3Array(triangleStructMaxSize/3u);
-	for (int i = 0; i < triangleStructMaxSize/3; i++) {
-		_va->at(i).x() = std::numeric_limits<float>::max();
-		_va->at(i).y() = std::numeric_limits<float>::max();
-		_va->at(i).z() = std::numeric_limits<float>::max();
-	}
+	////TriangleVertices buffer
+	//int newStructSize = _volDims.x() / _mcRes * _volDims.y() / _mcRes * _volDims.z();
+	//unsigned int triangleStructMaxSize = newStructSize*45;//Maximum_Index(max edge index(15)*Vertice_Count(3) + Float_Count(9) = 51
+	//_va = new osg::Vec3Array(triangleStructMaxSize/3u);
+	//for (int i = 0; i < triangleStructMaxSize/3; i++) {
+	//	_va->at(i).x() = std::numeric_limits<float>::max();
+	//	_va->at(i).y() = std::numeric_limits<float>::max();
+	//	_va->at(i).z() = std::numeric_limits<float>::max();
+	//}
 
 	
 	geo = new osg::Geometry;	
 	geo->setUseVertexBufferObjects(true);
 
-	osg::VertexBufferObject* vbo = new osg::VertexBufferObject;
-	vbo->setArray(0, _va);
-	osg::Vec3Array* va = new osg::Vec3Array;
-	va->setVertexBufferObject(vbo);
+	//osg::VertexBufferObject* vbo = new osg::VertexBufferObject;
+	//vbo->setArray(0, _va);
+	//osg::Vec3Array* va = new osg::Vec3Array;
+	//va->setVertexBufferObject(vbo);
 
-	geo->setVertexArray(_va);
- 
-	//WEIRD SHAPE
-	//osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbTV = new osg::ShaderStorageBufferBinding(3,geo->getVertexArray()->getBufferObject()->getBufferData(0), 0, sizeof(GLfloat) * triangleStructMaxSize);
-	osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbTV = new osg::ShaderStorageBufferBinding(3, vbo->getArray(0), 0, sizeof(GLfloat) * triangleStructMaxSize);
+	//geo->setVertexArray(_va);
+ //
+	////WEIRD SHAPE
+	////osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbTV = new osg::ShaderStorageBufferBinding(3,geo->getVertexArray()->getBufferObject()->getBufferData(0), 0, sizeof(GLfloat) * triangleStructMaxSize);
+	//osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbTV = new osg::ShaderStorageBufferBinding(3, vbo->getArray(0), 0, sizeof(GLfloat) * triangleStructMaxSize);
 	
 	
 	
@@ -980,18 +1017,17 @@ void VolumeGroup::precompMarchingCubes() {
 	_marchingCubeNode = new osg::DispatchCompute((_volDims.x() + 7) / 8, (_volDims.y() + 7) / 8, (_volDims.z() + 7) / 8);
 	_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(prog.get());
  	_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(ssbbCL, osg::StateAttribute::ON);
-	_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(ssbbTV, osg::StateAttribute::ON);
-	_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(acbb, osg::StateAttribute::ON);
+	//_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(ssbbTV, osg::StateAttribute::ON);
+	//_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(acbb, osg::StateAttribute::ON);
 	_marchingCubeNode->setDataVariance(osg::Object::DYNAMIC);
 
 	MarchingCubeCallback* shaderStorageCallback = new MarchingCubeCallback(this);
 	_marchingCubeNode->setDrawCallback(shaderStorageCallback);
-	shaderStorageCallback->_ssbb = ssbbTV;
- 	shaderStorageCallback->_buffersize = triangleStructMaxSize;
+	/*shaderStorageCallback->_ssbb = ssbbTV;
+ 	shaderStorageCallback->_buffersize = triangleStructMaxSize;*/
  	shaderStorageCallback->_volDims = _volDims;
  	shaderStorageCallback->_geomToPass = geo;
- 	shaderStorageCallback->_acbb = acbb;
- 	shaderStorageCallback->_VA = _va;
+ 	//shaderStorageCallback->_VA = _va;
 
 	
   
@@ -1009,13 +1045,78 @@ void VolumeGroup::precompMarchingCubes() {
 
 	states->addUniform(new osg::Uniform("VolumeDims", _volDims.x(), _volDims.y(), _volDims.z()));
  	states->addUniform(new osg::Uniform("IsoLevel",ISOVALUE));
- 	states->addUniform(new osg::Uniform("McFactor", MCFACTOR));
+ 	//states->addUniform(new osg::Uniform("McFactor", _mcRes));
 
 	this->addChild(_marchingCubeNode);
-
+	genMCs();
  	
 
 }
+
+
+void VolumeGroup::genMCs() {
+	//Vec Count Value
+	osg::ref_ptr<osg::UIntArray> dati = new osg::UIntArray;
+	dati->push_back(0);
+	osg::ref_ptr<osg::BufferObject> acbo = new osg::AtomicCounterBufferObject;
+	acbo->setBufferData(0, dati);
+	osg::ref_ptr<osg::AtomicCounterBufferBinding> acbb = new osg::AtomicCounterBufferBinding(4, acbo->getBufferData(0), 0, sizeof(GLuint));
+	dati.release();
+	acbo.release();
+
+	//TriangleVertices buffer
+	int newStructSize = _volDims.x() / _mcRes * _volDims.y() / _mcRes * _volDims.z();
+	unsigned int triangleStructMaxSize = newStructSize * 45;//Maximum_Index(max edge index(15)*Vertice_Count(3) + Float_Count(9) = 51
+	_va.release();
+	_va = new osg::Vec3Array(triangleStructMaxSize / 3u);
+	for (int i = 0; i < triangleStructMaxSize / 3; i++) {
+		_va->at(i).x() = std::numeric_limits<float>::max();
+		_va->at(i).y() = std::numeric_limits<float>::max();
+		_va->at(i).z() = std::numeric_limits<float>::max();
+	}
+
+	osg::VertexBufferObject* vbo = new osg::VertexBufferObject;
+	vbo->setArray(0, _va);
+	osg::Vec3Array* va = new osg::Vec3Array;
+	va->setVertexBufferObject(vbo);
+
+	geo->setVertexArray(_va);
+
+
+	//WEIRD SHAPE
+	//osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbTV = new osg::ShaderStorageBufferBinding(3,geo->getVertexArray()->getBufferObject()->getBufferData(0), 0, sizeof(GLfloat) * triangleStructMaxSize);
+	_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(_ssbbTV, osg::StateAttribute::OFF);
+	_ssbbTV.release();
+	_ssbbTV = new osg::ShaderStorageBufferBinding(3, vbo->getArray(0), 0, sizeof(GLfloat) * triangleStructMaxSize);
+	_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(_ssbbTV, osg::StateAttribute::ON);
+	_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(acbb, osg::StateAttribute::ON);
+
+
+	
+
+	MarchingCubeCallback* shaderStorageCallback = (MarchingCubeCallback*)_marchingCubeNode->getDrawCallback();
+	shaderStorageCallback->_ssbb = _ssbbTV;
+	shaderStorageCallback->_buffersize = triangleStructMaxSize;
+	shaderStorageCallback->_VA = _va;
+	shaderStorageCallback->_acbb = acbb;
+
+
+	osg::StateSet* states = _marchingCubeNode->getOrCreateStateSet();
+	states->addUniform(new osg::Uniform("McFactor", _mcRes));
+ 	states->addUniform(new osg::Uniform("OrganID", (int)_mcOrgan));
+
+
+	this->setDirtyAll();
+	this->_UIDirty = true;
+	_transform->removeChild(_mcrGeode);
+	_mcrGeode = nullptr ;
+	_mcIsReady = false;
+	_mcrInitialized = false;
+	((MarchingCubeCallback*)_marchingCubeNode->getDrawCallback())->stop[0] = 0;
+	
+}
+
+
 
 osg::ref_ptr<osg::Geometry> VolumeGroup::getMCGeom() {
 	return ((MarchingCubeCallback*)_marchingCubeNode->getDrawCallback())->_geomToPass;
@@ -1051,17 +1152,19 @@ void VolumeGroup::intializeMC() {
 	this->_UIDirty = true;
 }
 
+
 bool VolumeGroup::toggleMC() {
 	if (_mcIsReady) {
 		if (_mcrGeode == nullptr) {
 			
-			mcr = new MarchingCubesRender(_mcVertices, _volDims, getMCGeom(), getMCVertCount(), getVA(), getMCSSBB());
- 
+			mcr = new MarchingCubesRender(_mcVertices, _volDims, getMCVertCount());
+			
 			_mcrGeode = static_cast<MarchingCubesRender*>(mcr)->getGeode();
-		}
+
+ 		}
 		if (_transform->removeChild(_mcrGeode) == false) {
 			_transform->addChild(_mcrGeode);
-			return true;
+ 			return true;
 		}
 		return false;
 	}
@@ -1070,6 +1173,7 @@ bool VolumeGroup::toggleMC() {
 
 void VolumeGroup::readyMCUI() {
 	_mcIsReady = true;
+	_mcrInitialized = true;
 	toggleMC();
 }
 

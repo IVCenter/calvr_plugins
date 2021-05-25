@@ -9,6 +9,7 @@ public:
 	void setImage(int index, std::string iconPath);
 	std::pair<int, CurvedQuad*> getCallbackIndex(UICallbackCaller* item);
 	std::vector<CurvedQuad*> getCurvedMenuItems();
+	void disableButton(int index);
 
 protected:
 	int _numItems = 0;

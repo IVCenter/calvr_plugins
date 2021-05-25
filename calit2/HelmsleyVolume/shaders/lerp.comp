@@ -160,7 +160,6 @@ void main() {
 
 
 	// use mask data only to get the mappings for the entire volume
-	//imageStore(newVolume, ivec3(index), vec4(g, 0, 0, 1.0));//DELETE
 	imageStore(newVolume, ivec3(index), vec4(ans, 0, 0, 0));
 
 

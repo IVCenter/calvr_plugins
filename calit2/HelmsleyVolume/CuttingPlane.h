@@ -30,6 +30,7 @@ public:
 				if (_index >= 0 && _index < _coords->size() - 1 && col == 0 && (!_pause || _index == 0)) {	
 
 					osg::Vec3d pos = _coords->at(_index) * _mTransform->getMatrix();
+					
 					osg::Vec3d next = _coords->at((_index + 1)) * _mTransform->getMatrix();
 					osg::Matrix mat;
 					osg::Vec3 dir = osg::Vec3(next - pos);

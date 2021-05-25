@@ -63,8 +63,11 @@ protected:
 	cvr::MenuCheckbox* adaptiveQuality;
 	cvr::MenuCheckbox* test;
 	cvr::MenuCheckbox* edgeDetectBox;
+	cvr::MenuCheckbox* attnMapBox;
 	cvr::MenuCheckbox* highlightColon;
 	cvr::MenuCheckbox* organsOnly;
+	cvr::MenuCheckbox* fireColorMap;
+	cvr::MenuCheckbox* cetColorMap;
 
 	cvr::MenuList* colorFunction;
 
@@ -85,7 +88,7 @@ public:
 		MARCHINGCUBES,
 		CENTERLINE,
 		SCREENSHOT,
-		HISTOGRAM,
+		//HISTOGRAM,
 		RULER,
 		MASKMENU,
 		TFMENU
@@ -117,6 +120,8 @@ public:
 
 	virtual void uiCallback(UICallbackCaller* item);
 	std::vector<CurvedQuad*> getCurvedMenuItems();
+
+	void disableUnavailableButtons(VolumeGroup* volume);
 protected:
 
 	cvr::UIPopup* _menu = nullptr;
@@ -210,11 +215,13 @@ public:
 	void toggleLinkOpacity(bool turnOn);
 	void toggleHistogram(bool on);
 	void toggleClaheTools(bool on);
+	void toggleAttnMapsTools(bool on);
 	void toggleMaskMenu(bool on);
 	void toggleTFUI(bool on);
 	void toggleMCRender(bool on);
 	void removeAllToolMenus();
 
+	bool hasCenterLineCoords();
 	void updateMCUI(bool on);
  	void saveYamlForCinematic();
 protected:
@@ -236,6 +243,7 @@ protected:
 	cvr::UIPopup* _tentMenu = nullptr;
 
 	cvr::UIPopup* _claheMenu = nullptr;
+	cvr::UIPopup* _attnMapsMenu = nullptr;
 	cvr::UIPopup* _marchingCubesMenu = nullptr;
 	cvr::UIQuadElement* _maskBknd;
 	cvr::UIQuadElement* _presetBknd;
@@ -261,8 +269,15 @@ protected:
 	CallbackSlider* _brightness;
 
 	CallbackSlider* _numBinsSlider;
+	CallbackSlider* _minAttnSlider;
+	CallbackSlider* _mcResSlider;
+	CallbackSlider* _mcOrganSlider;
 	CallbackSlider* _clipLimitSlider;
 	CallbackSlider* _claheResSlider;
+	CallbackButton* _attnMapOnlyButton;
+	bool _attnMapOnlyToggle = false;
+	CallbackButton* _useAttnMapsButton;
+	bool _useAttnMapsToggle = false;
 	CallbackButton* _genClaheButton;
 	CallbackButton* _useClaheButton;
 
@@ -307,6 +322,9 @@ protected:
 	cvr::UIQuadElement* _cpHeader;
 	cvr::UIText* _cpHLabel;
 	cvr::UIText* _numBinsLabel;
+	cvr::UIText* _minAttentionLabel;
+	cvr::UIText* _mcResolutionLabel;
+	cvr::UIText* _mcOrganPickLabel;
 	cvr::UIText* _clipLimitLabel;
 	cvr::UIText* _claheResLabel;
 	CallbackRadial* _transferFunctionRadial;

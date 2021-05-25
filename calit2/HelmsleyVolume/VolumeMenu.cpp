@@ -14,10 +14,6 @@ void VolumeMenu::init()
 	scale = new MenuRangeValueCompact("Scale", 0.1, 100.0, 1.0, true);
 	scale->setCallback(this);
 	_scene->addMenuItem(scale);
-
-	testScale = new MenuRangeValueCompact("testScale", 0.001, 1.0, 0.001, true);
-	testScale->setCallback(this);
-	_scene->addMenuItem(testScale);
 	
 	maxSteps = new MenuRangeValueCompact("Max Steps", 0.01, 1.0, 0.98, true);
 	maxSteps->setCallback(this);
@@ -35,11 +31,17 @@ void VolumeMenu::init()
 	edgeDetectBox->setCallback(this);
 	_scene->addMenuItem(edgeDetectBox);
 
-	test = new MenuCheckbox("CLAHE", false);
-	test->setCallback(this);
-	_scene->addMenuItem(test);
+	attnMapBox = new MenuCheckbox("Attention Masks Menu", false);
+	attnMapBox->setCallback(this);
+	_scene->addMenuItem(attnMapBox);
 
-	
+	fireColorMap = new MenuCheckbox("Fire Color Map", false);
+	fireColorMap->setCallback(this);
+	_scene->addMenuItem(fireColorMap);
+
+	cetColorMap = new MenuCheckbox("CET Color Map", false);
+	cetColorMap->setCallback(this);
+	_scene->addMenuItem(cetColorMap);
 
 	
 }
@@ -54,10 +56,6 @@ void VolumeMenu::menuCallback(cvr::MenuItem * item)
 	{
 		_scene->setScale(scale->getValue());
 	}
-	else if (item == testScale)
-	{
-		_volume->_testScale->set(testScale->getValue());
-	}
 	else if (item == maxSteps)
 	{
 		_volume->_maxSteps->set(maxSteps->getValue());
@@ -66,14 +64,30 @@ void VolumeMenu::menuCallback(cvr::MenuItem * item)
 	{
 		_volume->getDrawable()->getOrCreateStateSet()->setDefine("VR_ADAPTIVE_QUALITY", adaptiveQuality->getValue());
 	}
-	else if (item == test)
-	{
-		_volume->getCompute()->getOrCreateStateSet()->setDefine("CLAHE", test->getValue());
-		_volume->setDirtyAll();
-	}
 	else if (item == edgeDetectBox)
 	{
 		_volume->getCompute()->getOrCreateStateSet()->setDefine("EDGE_DETECTION", edgeDetectBox->getValue());
+		_volume->setDirtyAll();
+	}
+
+	else if (item == attnMapBox)
+	{
+		/*_volume->getCompute()->getOrCreateStateSet()->setDefine("ATTN_MAPS", attnMapBox->getValue());
+		_volume->setDirtyAll();*/
+		HelmsleyVolume::instance()->toggleAttnMapsTools(attnMapBox->getValue());
+	}
+	else if (item == fireColorMap)
+	{ 
+		std::string transferFunction = "useLut(ra.r,0);";
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("COLOR_FUNCTION", transferFunction, fireColorMap->getValue());
+		cetColorMap->setValue(false);
+		_volume->setDirtyAll();
+	}
+	else if (item == cetColorMap)
+	{ 
+		fireColorMap->setValue(false);
+		std::string transferFunction = "useLut(ra.r,1);";
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("COLOR_FUNCTION", transferFunction, cetColorMap->getValue());
 		_volume->setDirtyAll();
 	}
 
@@ -118,6 +132,12 @@ NewVolumeMenu::~NewVolumeMenu()
 		_claheMenu->setActive(false, false);
 		MenuManager::instance()->removeMenuSystem(_claheMenu);
 		delete _claheMenu;
+	}
+	if (_attnMapsMenu)
+	{
+		_attnMapsMenu->setActive(false, false);
+		MenuManager::instance()->removeMenuSystem(_attnMapsMenu);
+		delete _attnMapsMenu;
 	}
 	if (_marchingCubesMenu)
 	{
@@ -435,6 +455,7 @@ void NewVolumeMenu::init()
 	list->setAbsoluteSpacing(0.0);
 	_tentMenu = new UIPopup();
 	_claheMenu = new UIPopup();
+	_attnMapsMenu = new UIPopup();
 
 
 	_tentWindowOnly->setPercentSize(osg::Vec3(1, 1, 3.0));
@@ -514,6 +535,8 @@ void NewVolumeMenu::init()
 #pragma endregion
 	//>===============================MASKS AND REGIONS==============================<//
 	_toolMenu = new ToolMenu(0, true, _so);
+	_toolMenu->disableUnavailableButtons(_volume);
+	
 	_maskMenu = new UIPopup();
 	_contrastMenu = new UIPopup();
 	UIQuadElement* regionHeaderBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
@@ -722,7 +745,7 @@ void NewVolumeMenu::init()
 	_tentMenu->setPosition(osg::Vec3(-1200, 675, 1880));
 	_tentMenu->getRootElement()->setAbsoluteSize(osg::Vec3(1500, 1, 600));
 
-	//Clahe UI
+	////////////Clahe UI////////////////////
 	label = new UIText("CLAHE Options", 32.0f, osgText::TextBase::CENTER_TOP);
 	UIList* claheUI = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
  	label->setPercentPos(osg::Vec3(0.0, 0.0, -.5));
@@ -823,6 +846,75 @@ void NewVolumeMenu::init()
 	_claheMenu->setPosition(osg::Vec3(-150, 150, 800));
 	_claheMenu->getRootElement()->setAbsoluteSize(osg::Vec3(750, 1, 300));
 	
+	////////////Attention Maps UI/////////////////
+
+	UIQuadElement* attnMapsBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
+	attnMapsBknd->setRounding(0, .2);
+	attnMapsBknd->setTransparent(true);
+	attnMapsBknd->setBorderColor(UI_BLACK_COLOR);
+	attnMapsBknd->setBorderSize(.02);
+
+	_attnMapsMenu->addChild(attnMapsBknd);
+
+	label = new UIText("Attention Maps Options", 32.0f, osgText::TextBase::CENTER_TOP);
+	UIList* attnMapsUI = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
+	label->setPercentPos(osg::Vec3(0.0, 0.0, -.5));
+	attnMapsUI->addChild(label);
+
+	UIList* minAttentionTexts = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+	label = new UIText("Minimum Attention Value: ", 24.0f, osgText::TextBase::LEFT_CENTER);
+	label->setPercentPos(osg::Vec3(0.05, 0.0, 0.0));
+	minAttentionTexts->addChild(label);
+	_minAttentionLabel = new UIText("0.00", 24.0f, osgText::TextBase::RIGHT_CENTER);
+	_minAttentionLabel->setPercentPos(osg::Vec3(-0.05, 0.0, 0.0));
+	minAttentionTexts->addChild(_minAttentionLabel);
+	attnMapsUI->addChild(minAttentionTexts);
+	_volume->getCompute()->getOrCreateStateSet()->setDefine("MIN_ATTN_VALUE", "0.0", osg::StateAttribute::ON);
+
+	_minAttnSlider = new CallbackSlider();
+	_minAttnSlider->setCallback(this);
+	_minAttnSlider->setPercent(0.0f);
+	_minAttnSlider->setPercentPos(osg::Vec3(0.025, 0, 0.05));
+	_minAttnSlider->setPercentSize(osg::Vec3(0.95, 1, 0.5));
+	_minAttnSlider->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
+	_minAttnSlider->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
+	_minAttnSlider->handle->setPercentSize(osg::Vec3(0, 1, 1));
+	attnMapsUI->addChild(_minAttnSlider);
+
+	buttonList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+
+	_attnMapOnlyButton = new CallbackButton();
+	_attnMapOnlyButton->setCallback(this);
+	_attnMapOnlyButton->setPercentSize(osg::Vec3(.5, 1.0, .7));
+	buttonBknd = new UIQuadElement(UI_INACTIVE_RED_COLOR);
+	label = new UIText("Enable Maps Only", 24.0f, osgText::TextBase::CENTER_CENTER);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+
+	_attnMapOnlyButton->addChild(buttonBknd);
+	_attnMapOnlyButton->addChild(label);
+
+	_useAttnMapsButton = new CallbackButton();
+	_useAttnMapsButton->setCallback(this);
+	_useAttnMapsButton->setPercentSize(osg::Vec3(.5, 1.0, .7));
+	buttonBknd = new UIQuadElement(UI_INACTIVE_RED_COLOR);
+	label = new UIText("Show Maps", 24.0f, osgText::TextBase::CENTER_CENTER);
+	label->setColor(UI_WHITE_COLOR);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+
+	_useAttnMapsButton->addChild(buttonBknd);
+	_useAttnMapsButton->addChild(label);
+
+	buttonList->setPercentPos(osg::Vec3(.125, 0.0, 0.35));
+	buttonList->addChild(_useAttnMapsButton);
+	buttonList->addChild(_attnMapOnlyButton);
+	attnMapsUI->addChild(buttonList);
+
+
+
+	_attnMapsMenu->addChild(attnMapsUI);
+	_attnMapsMenu->setPosition(osg::Vec3(-150, 150, 800));
+	_attnMapsMenu->getRootElement()->setAbsoluteSize(osg::Vec3(750, 1, 300));
+	
 	////////////Marching Cubes UI/////////////////
 	_marchingCubesMenu = new UIPopup();
 	UIQuadElement* mcBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
@@ -835,8 +927,49 @@ void NewVolumeMenu::init()
 
 	label = new UIText("Marching Cubes Options", 32.0f, osgText::TextBase::CENTER_TOP);
 	UIList* mcUI = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
+	mcUI->setPercentSize(osg::Vec3(1, 1, .9));
+	mcUI->setPercentPos(osg::Vec3(0, 0, -.025));
 	label->setPercentPos(osg::Vec3(0.0, 0.0, -.5));
 	mcUI->addChild(label);
+
+
+	UIList* mcResolutionTexts = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+	label = new UIText("Resolution ", 24.0f, osgText::TextBase::LEFT_CENTER);
+	label->setPercentPos(osg::Vec3(0.05, 0.0, 0.0));
+	mcResolutionTexts->addChild(label);
+	_mcResolutionLabel = new UIText("Lowest", 24.0f, osgText::TextBase::RIGHT_CENTER);
+	_mcResolutionLabel->setPercentPos(osg::Vec3(-0.05, 0.0, 0.0));
+	mcResolutionTexts->addChild(_mcResolutionLabel);
+	mcUI->addChild(mcResolutionTexts);
+
+	_mcResSlider = new CallbackSlider();
+	_mcResSlider->setCallback(this);
+	_mcResSlider->setPercent(0);
+ 	_mcResSlider->setPercentPos(osg::Vec3(0.025, 0, 0.05));
+	_mcResSlider->setPercentSize(osg::Vec3(0.95, 1, 0.5));
+	_mcResSlider->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
+	_mcResSlider->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
+	_mcResSlider->handle->setPercentSize(osg::Vec3(0, 1, 1));
+	mcUI->addChild(_mcResSlider);
+
+	UIList* mcOrganPickTexts = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+	label = new UIText("Organ ", 24.0f, osgText::TextBase::LEFT_CENTER);
+	label->setPercentPos(osg::Vec3(0.05, 0.0, 0.0));
+	mcOrganPickTexts->addChild(label);
+	_mcOrganPickLabel = new UIText("Colon", 24.0f, osgText::TextBase::RIGHT_CENTER);
+	_mcOrganPickLabel->setPercentPos(osg::Vec3(-0.05, 0.0, 0.0));
+	mcOrganPickTexts->addChild(_mcOrganPickLabel);
+	mcUI->addChild(mcOrganPickTexts);
+
+	_mcOrganSlider = new CallbackSlider();
+	_mcOrganSlider->setCallback(this);
+	_mcOrganSlider->setPercent(0.0f);
+	_mcOrganSlider->setPercentPos(osg::Vec3(0.025, 0, 0.05));
+	_mcOrganSlider->setPercentSize(osg::Vec3(0.95, 1, 0.5));
+	_mcOrganSlider->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
+	_mcOrganSlider->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
+	_mcOrganSlider->handle->setPercentSize(osg::Vec3(0, 1, 1));
+	mcUI->addChild(_mcOrganSlider);
 
 	buttonList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
 
@@ -878,7 +1011,7 @@ void NewVolumeMenu::init()
 	mcUI->addChild(buttonList);
 	_marchingCubesMenu->addChild(mcUI);
 	_marchingCubesMenu->setPosition(osg::Vec3(-150, 150, 800));
-	_marchingCubesMenu->getRootElement()->setAbsoluteSize(osg::Vec3(750, 1, 300));
+	_marchingCubesMenu->getRootElement()->setAbsoluteSize(osg::Vec3(750, 1, 450));
 
 
 	///////////Masks UI///////////////
@@ -888,7 +1021,7 @@ void NewVolumeMenu::init()
 		_maskBknd->setBorderSize(.01);
 		_maskMenu->addChild(_maskBknd);
 
-		label = new UIText("Organs", 50.0f, osgText::TextBase::CENTER_CENTER);
+		label = new UIText("Organ Masks", 50.0f, osgText::TextBase::CENTER_CENTER);
 		label->setPercentSize(osg::Vec3(1, 1, 0.2));
 		_maskBknd->addChild(label);
 
@@ -1365,7 +1498,21 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		else
 			_claheResLabel->setText(std::to_string(_claheResSlider->getAdjustedValue()*10).substr(0, 2));
 		
-		_volume->setClaheRes(int(_claheResSlider->getAdjustedValue()*10.0f));
+		float rawFloat = _claheResSlider->getAdjustedValue();
+		if (rawFloat <= .25) {
+			_volume->setClaheRes(2);
+		}
+		else if (rawFloat <= .50) {
+			_volume->setClaheRes(4);
+		}
+		else if (rawFloat <= .75) {
+			_volume->setClaheRes(8);
+		}
+		else if (rawFloat <= 1) {
+			_volume->setClaheRes(16);
+		}
+
+		
 	}
 
 	else if (item == _genClaheButton) {
@@ -1388,12 +1535,52 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		else
 			((UIText*)_useClaheButton->getChild(1))->setText("Use CLAHE");
 	}
+	//AttnMaps
+	else if (item == _useAttnMapsButton) {
+		_useAttnMapsToggle = _useAttnMapsToggle == true ? false : true;
+		std::cout << "use maps bool: " << _useAttnMapsToggle << std::endl;
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("ATTN_MAPS", _useAttnMapsToggle);
+		_volume->setDirtyAll();
+		if (_useAttnMapsToggle) {
+			((UIText*)_useAttnMapsButton->getChild(1))->setText("Hide Maps");
+			((UIQuadElement*)_useAttnMapsButton->getChild(0))->setColor(UI_RED_ACTIVE_COLOR);
+		}
+		else {
+			((UIText*)_useAttnMapsButton->getChild(1))->setText("Show Maps");
+			((UIQuadElement*)_useAttnMapsButton->getChild(0))->setColor(UI_INACTIVE_RED_COLOR);
+		}
+	}
+	else if (item == _attnMapOnlyButton) {
+ 		_attnMapOnlyToggle = _attnMapOnlyToggle == true ? false : true;
+		
+ 		_volume->getCompute()->getOrCreateStateSet()->setDefine("ATTN_MAP_ONLY", _attnMapOnlyToggle);
+		_volume->setDirtyAll();
+		if (_attnMapOnlyToggle) {
+			((UIText*)_attnMapOnlyButton->getChild(1))->setText("Disable Maps Only");
+			((UIQuadElement*)_attnMapOnlyButton->getChild(0))->setColor(UI_RED_ACTIVE_COLOR);
+		}
+		else {
+			((UIText*)_attnMapOnlyButton->getChild(1))->setText("Enable Maps Only");
+			((UIQuadElement*)_attnMapOnlyButton->getChild(0))->setColor(UI_INACTIVE_RED_COLOR);
+
+		}
+	}
+
+
+	else if (item == _minAttnSlider) {
+	_minAttentionLabel->setText(std::to_string(_minAttnSlider->getAdjustedValue()).substr(0, 4));
+	_volume->getCompute()->getOrCreateStateSet()->setDefine("MIN_ATTN_VALUE", std::to_string(_minAttnSlider->getAdjustedValue()).substr(0, 4), osg::StateAttribute::ON);
+	}
+
 	//Marching Cubes
 	else if (item == _GenMarchCubesButton) {
 		if (!_volume->isMCInitialized()) {
  			_volume->intializeMC();
 			updateMCUI(true);
  		}
+		else {
+			_volume->genMCs();
+		}
 	}
 	
 
@@ -1401,6 +1588,47 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 			updateMCUI(_volume->toggleMC());
 			
 	}
+	
+	else if (item == _mcResSlider) {
+		float rawFloat = _mcResSlider->getAdjustedValue();
+		if (rawFloat <= .25) {
+			_volume->_mcRes = 16;
+			_mcResolutionLabel->setText("Lowest");
+		}
+		else if (rawFloat <= .50) {
+			_volume->_mcRes = 8;
+			_mcResolutionLabel->setText("Medium");
+		}
+		else if (rawFloat <= .75) {
+			_volume->_mcRes = 4;
+			_mcResolutionLabel->setText("High");
+		}
+		else if (rawFloat <= 1) {
+			_volume->_mcRes = 2;
+			_mcResolutionLabel->setText("Max");
+		}
+	
+	}
+
+	else if (item == _mcOrganSlider) {
+		float rawFloat = _mcOrganSlider->getAdjustedValue();
+		if (rawFloat <= .25) {
+			_volume->_mcOrgan = ORGANID::COLON;
+			_mcOrganPickLabel->setText("Colon");
+		}
+		else if (rawFloat <= .50) {
+			_volume->_mcOrgan = ORGANID::ILLEUM;
+			_mcOrganPickLabel->setText("Illeum");
+		}
+		else if (rawFloat <= .75) {
+			_volume->_mcOrgan = ORGANID::VEIN;
+			_mcOrganPickLabel->setText("Vena Cava");
+		}
+		else if (rawFloat <= 1) {
+			_volume->_mcOrgan = ORGANID::AORTA;
+			_mcOrganPickLabel->setText("Aorta");
+		}
+ 	}
 	//Print stl file if mcs are gen-ed
 	else if (item == _PrintStlCallbackButton) {
 		_volume->printSTLFile();
@@ -2291,11 +2519,11 @@ void NewVolumeMenu::saveYamlForCinematic() {
 	osgtrans.x()/=wmScale.x(); osgtrans.y()/=wmScale.y(); osgtrans.z()/=wmScale.z(); 
 	
 	//std::vector<float> trans; trans.push_back(osgtrans.x());  trans.push_back(osgtrans.z());  trans.push_back(osgtrans.y());
-	std::vector<float> trans; trans.push_back(0);  trans.push_back(0);  trans.push_back(3);//HARD CODED
+	std::vector<float> trans; trans.push_back(0);  trans.push_back(0);  trans.push_back(0);//HARD CODED
 	
 	float total = wmScale.x() + wmScale.y() + wmScale.z();
  	//std::vector<float> scaleVec = { wmScale.x()/total, wmScale.z()/total, wmScale.y()/total };
- 	std::vector<float> scaleVec = { 1, 1, 1};//HARD CODED
+ 	std::vector<float> scaleVec = { 1, 1, 0.454};//HARD CODED
 	
 	
 	//osg::Quat osgrot = worldMatrix.getRotate();
@@ -2311,13 +2539,14 @@ void NewVolumeMenu::saveYamlForCinematic() {
 
 	osgpos.x() /= wmScale.x(); osgpos.y() /= wmScale.y(); osgpos.z() /= wmScale.z();
 	//std::vector<float> pos; pos.push_back(osgpos.x());  pos.push_back(osgpos.z());  pos.push_back(osgpos.y()); 
-	std::vector<float> pos; pos.push_back(0);  pos.push_back(0);  pos.push_back(0); //HARD CODED
+	std::vector<float> pos; pos.push_back(0);  pos.push_back(0);  pos.push_back(1.5); //HARD CODED
 
 
 	osgcenter.x() /= wmScale.x(); osgcenter.y() /= wmScale.y(); osgcenter.z() /= wmScale.z();
 	//std::vector<float> center; center.push_back(osgcenter.x());  center.push_back(osgcenter.z());  center.push_back(osgcenter.y());
 	//std::vector<float> center; center.push_back(osgcenter.x());  center.push_back(osgcenter.z());  center.push_back(osgcenter.y());
-	std::vector<float> center = trans;
+	//std::vector<float> center = trans;
+	std::vector<float> center = { 0.0,0.0,2.0 };//HARD CODED
 
 	//osgup.x() /= wmScale.x(); osgup.y() /= wmScale.y(); osgup.z() /= wmScale.z();
 	osgup.x() = 0; osgup.y() = 0; osgup.z() = 1;
@@ -2428,43 +2657,57 @@ void NewVolumeMenu::saveYamlForCinematic() {
 	out << YAML::Key << "cubemap";
 	out << YAML::Value << "studio1";
 	out << YAML::Key << "itrs";
-	out << YAML::Value << 101;
+	out << YAML::Value << 100;
 	
 		
 	///////////////////Cutting Plane///////////////////////
-	out << YAML::Key << "cutting plane";
-	out << YAML::Value << YAML::BeginMap;
-	out << YAML::Key << "status";
+
+	
 	std::vector<CuttingPlane*> cPs = HelmsleyVolume::instance()->getCuttingPlanes();
 	std::vector<float> ppoint;
 	std::vector<float> pnorm;
 	if (!cPs.empty()) {
-		out << YAML::Value << "true";
+		out << YAML::Key << "cutting plane";
+		out << YAML::Value << YAML::BeginMap;
+		
 		osg::FloatArray* osgarraypp = _volume->_PlanePoint->getFloatArray();
 		osg::FloatArray* osgarraypn = _volume->_PlaneNormal->getFloatArray();
-
-		ppoint.push_back(osgarraypp->at(0)); ppoint.push_back(osgarraypp->at(1)); ppoint.push_back(osgarraypp->at(2));
-		pnorm.push_back(osgarraypn->at(0)); pnorm.push_back(osgarraypn->at(1)); pnorm.push_back(osgarraypn->at(2));
+		std::cout << "cp Z" << osgarraypp->at(2) << std::endl;
+		float z = trans.at(2) - (osgarraypp->at(2)+.5);
+		z = .1 + (.5 - osgarraypp->at(2));
+		z =  .5 + osgarraypp->at(2);
+		
+		//float z = ((1 - osgarraypp->at(1)) - .5)/2.0 + trans.at(2);
+		//ppoint.push_back(0.0); ppoint.push_back(0.0); ppoint.push_back(.6);
+		ppoint.push_back(0.0); ppoint.push_back(0.0); ppoint.push_back(z);
+		pnorm.push_back(0.0); pnorm.push_back(0.0); pnorm.push_back(1.0);
+		
+		
+		//ppoint.push_back(osgarraypp->at(0)); ppoint.push_back(osgarraypp->at(2)); ppoint.push_back(osgarraypp->at(1));
+		//pnorm.push_back(osgarraypn->at(0)); pnorm.push_back(osgarraypn->at(1)); pnorm.push_back(osgarraypn->at(2));
 		
 		out << YAML::Key << "ppoint";
 		out << YAML::Value << YAML::Flow << ppoint;
-		out << YAML::Key << "pnormal";
+		out << YAML::Key << "pnorm";
 		out << YAML::Value << YAML::Flow << pnorm;
+		out << YAML::EndMap;
 
-	}
-	else {
-		out << YAML::Value << "false";
-		out << YAML::Key << "ppoint";
-		out << YAML::Value << YAML::Flow << ppoint;
-		out << YAML::Key << "pnormal";
-		out << YAML::Value << YAML::Flow << pnorm;
-	}
-	out << YAML::EndMap;
+		std::cout << "ppoint " << "x: " << ppoint.at(0) << "y: " << ppoint.at(1) << "z: " << ppoint.at(2) << std::endl;
+		std::cout << "pnorm " << "x: " << pnorm.at(0) << "y: " << pnorm.at(1) << "z: " << pnorm.at(2) << std::endl;
+		std::cout << "pos " << "x: " << osgpos.x() << "y: " << osgpos.y() << "z: " << osgpos.z() << std::endl;
+ 	}
+	
 	///////////////////Masks////////////////////////
+	out << YAML::Key << "mask";
 	if (_volume->hasMask()) {
-		out << YAML::Key << "mask";
-		out << YAML::Value << YAML::BeginMap;
-		out << YAML::Key << "value";
+		if(!_organs->isOn() && _colon->isOn())
+			out << YAML::Value << "isolate";
+		else if (_colon->isOn())
+			out << YAML::Value << "body";
+		else
+			out << YAML::Value << "none";
+		//out << YAML::Value << YAML::BeginMap;
+		/*out << YAML::Key << "value";
 		std::vector<bool> maskValues;
 		_organs->isOn() ? maskValues.push_back(true) : maskValues.push_back(false);
 		_colon->isOn() ? maskValues.push_back(true) : maskValues.push_back(false);
@@ -2475,7 +2718,10 @@ void NewVolumeMenu::saveYamlForCinematic() {
 		_aorta->isOn() ? maskValues.push_back(true) : maskValues.push_back(false);
 		_vein->isOn() ? maskValues.push_back(true) : maskValues.push_back(false);
 		out << YAML::Value << YAML::Flow << maskValues;
-		out << YAML::EndMap;
+		out << YAML::EndMap;*/
+	}
+	else {
+		out << YAML::Value << "none";
 	}
 	
 	
@@ -2490,9 +2736,10 @@ void NewVolumeMenu::saveYamlForCinematic() {
 	out << YAML::EndMap;
 
 	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.PresetsFolder", "C:/", false);
- 	std::string presetPath = "C:/Users/g3aguirre/Downloads/ivl-cr-master/ivl-cr-master/configs/" + name + ".yml";
+ 	std::string presetPath = "C:/Users/g3aguirre/Documents/CAL/ivl-cr/ivl-cr/ivl-cr/configs/" + name + ".yaml";
 	std::ofstream fout(presetPath);
 	fout << out.c_str();
+	std::cout << "wrting to... " << presetPath << std::endl;
 
 	CallbackButton* presetbutton = new CallbackButton();
 	presetbutton->setCallback(this);
@@ -2502,13 +2749,12 @@ void NewVolumeMenu::saveYamlForCinematic() {
 	_presetCallbacks.push_back(presetbutton);
 
 	_futures.push_back(std::async(std::launch::async, runCinematicThread, datasetPath, presetPath));
-	//_futures[0].wait();
  }
 
 void NewVolumeMenu::runCinematicThread(std::string datasetPath, std::string configPath) {
- 	LPCSTR lp = _T("C:/Users/g3aguirre/Downloads/ivl-cr-master/ivl-cr-master/x64/Release/ivl-cr.exe");
+ 	LPCSTR lp = _T("C:/Users/g3aguirre/Documents/CAL/ivl-cr/ivl-cr/ivl-cr/x64/Release/ivl-cr.exe");
 	LPCSTR open = _T("open");
-	LPCSTR dir = _T("C:/Users/g3aguirre/Downloads/ivl-cr-master/ivl-cr-master");
+	LPCSTR dir = _T("C:/Users/g3aguirre/Documents/CAL/ivl-cr/ivl-cr/ivl-cr");
 
 	std::replace(datasetPath.begin(), datasetPath.end(), '\\', '/');
 	std::cout << datasetPath << std::endl;
@@ -2526,7 +2772,7 @@ void NewVolumeMenu::runCinematicThread(std::string datasetPath, std::string conf
 		10000);  // no time-out interval
 
 	HelmsleyVolume::instance()->getScreenshotTool()->setPhoto(datasetPath);
-	std::remove(configPath.c_str());
+	//std::remove(configPath.c_str());
 	//HelmsleyVolume::instance()->getScreenshotTool()->takingPhoto(false);
 }
 
@@ -2551,6 +2797,17 @@ void NewVolumeMenu::toggleClaheTools(bool on) {
 	else {		
  		_toolContainer->removeChild(_claheMenu->getRoot());
 		_claheMenu->getRootElement()->_parent = nullptr;
+	}
+}
+
+void NewVolumeMenu::toggleAttnMapsTools(bool on) {
+	if (on) {
+		removeAllToolMenus();
+		_toolContainer->addChild(_attnMapsMenu->getRoot());
+	}
+	else {		
+		_toolContainer->removeChild(_attnMapsMenu->getRoot());
+		_attnMapsMenu->getRootElement()->_parent = nullptr;
 	}
 }
 
@@ -2600,6 +2857,10 @@ void NewVolumeMenu::toggleMaskMenu(bool on) {
 	}
 }
 
+bool NewVolumeMenu::hasCenterLineCoords() {
+	return _volume->getColonCoords() == nullptr ? true : false;
+}
+
 ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 {
 	_movable = movable;
@@ -2626,46 +2887,16 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	_curvedMenu = new CurvedMenu(this, 9);
 	_curvedMenu->setImage(int(TOOLID::SCREENSHOT), dir + "browser.png");
 	_curvedMenu->setImage(int(TOOLID::CUTTINGPLANE), dir + "slice.png");
-	_curvedMenu->setImage(int(TOOLID::HISTOGRAM), dir + "histogram.png");
+	//_curvedMenu->setImage(int(TOOLID::HISTOGRAM), dir + "histogram.png");
 	_curvedMenu->setImage(int(TOOLID::CLAHE), dir + "clahe.png");
 	_curvedMenu->setImage(int(TOOLID::RULER), dir + "ruler.png");
 	_curvedMenu->setImage(int(TOOLID::CENTERLINE), dir + "centerline.png");
+	
 	_curvedMenu->setImage(int(TOOLID::MASKMENU), dir + "maskIcon.png");
 	_curvedMenu->setImage(int(TOOLID::TFMENU), dir + "opacityAndGradient.png");
 	_curvedMenu->setImage(int(TOOLID::MARCHINGCUBES), dir + "polygon.png");
 	_menu->addChild(_curvedMenu);
-	
-	/*
 
-	_cuttingPlane = new ToolToggle(dir + "slice.png");
-	_cuttingPlane->setColor(UI_BLACK_COLOR);
-	_cuttingPlane->setCallback(this);
-	list->addChild(_cuttingPlane);
-
-	_measuringTool = new ToolToggle(dir + "ruler.png");
-	_measuringTool->setColor(UI_BLACK_COLOR);
-	_measuringTool->setCallback(this);
-	list->addChild(_measuringTool);
-
-	_screenshotTool = new ToolToggle(dir + "browser.png");
-	_screenshotTool->setColor(UI_BLACK_COLOR);
-	_screenshotTool->setCallback(this);
-	list->addChild(_screenshotTool);
-
-	_centerLIneTool = new ToolToggle(dir + "line.png");
-	_centerLIneTool->setCallback(this);
-	list->addChild(_centerLIneTool);
-
-	_histogramTool = new ToolToggle(dir + "slice.png");
-	_histogramTool->setColor(UI_BLACK_COLOR);
-	_histogramTool->setCallback(this);
-	list->addChild(_histogramTool);
-
-	_claheTool = new ToolToggle(dir + "ruler.png");
-	_claheTool->setColor(UI_BLACK_COLOR);
-	_claheTool->setCallback(this);
-	list->addChild(_claheTool);*/
-	
 
 	if (!_movable && !parent)
 	{
@@ -2694,6 +2925,11 @@ std::vector<CurvedQuad*> ToolMenu::getCurvedMenuItems() {
 	return toReturn;
 }
 
+void ToolMenu::disableUnavailableButtons(VolumeGroup* volume) {
+	if (volume->getColonCoords()->empty()) {
+		_curvedMenu->disableButton(int(TOOLID::CENTERLINE));
+	}
+}
 
 
 ToolMenu::~ToolMenu()
@@ -2754,7 +2990,7 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 		}
 	}
 
-	else if (index.first == int(TOOLID::HISTOGRAM))
+	/*else if (index.first == int(TOOLID::HISTOGRAM))
 	{
 		if (index.second->isOn())
 		{
@@ -2766,7 +3002,7 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 			index.second->setColor(UI_BACKGROUND_COLOR);
 			HelmsleyVolume::instance()->toggleHistogram(false);
 		}
-	}
+	}*/
 
 	else if (index.first == int(TOOLID::CLAHE))
 	{
@@ -2799,31 +3035,39 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 	}
 	else if (index.first == int(TOOLID::CENTERLINE))
 	{
-		if (!HelmsleyVolume::instance()->getVolumes()[0]->getColonCoords()->empty()) {
-			osg::Matrix mat = PluginHelper::getHandMat(index.second->getLastHand());
-			osg::Vec4d position = osg::Vec4(0, 300, 0, 1) * mat;
-			osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
+		if (HelmsleyVolume::instance()->hasCenterLineCoords()) {
+			std::cout << "true" << std::endl;
+			if (!HelmsleyVolume::instance()->getVolumes()[0]->getColonCoords()->empty()) {
+				osg::Matrix mat = PluginHelper::getHandMat(index.second->getLastHand());
+				osg::Vec4d position = osg::Vec4(0, 300, 0, 1) * mat;
+				osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
 
-			osg::Quat q = osg::Quat(); 
-			osg::Quat q2 = osg::Quat();
-			osg::Vec3 v = osg::Vec3();
-			osg::Vec3 v2 = osg::Vec3();
-			mat.decompose(v, q, v2, q2);
 
-			HelmsleyVolume::instance()->toggleCenterlineTool(index.second->isOn());
-			HelmsleyVolume::instance()->getCenterlineTool()->setRotation(q);
-			HelmsleyVolume::instance()->getCenterlineTool()->setPosition(pos);
-			if (index.second->isOn())
-			{
-				HelmsleyVolume::instance()->activateClippingPath();
-				index.second->setColor(UI_RED_ACTIVE_COLOR);
+
+				osg::Quat q = osg::Quat();
+				osg::Quat q2 = osg::Quat();
+				osg::Vec3 v = osg::Vec3();
+				osg::Vec3 v2 = osg::Vec3();
+				mat.decompose(v, q, v2, q2);
+
+				HelmsleyVolume::instance()->toggleCenterlineTool(index.second->isOn());
+				HelmsleyVolume::instance()->getCenterlineTool()->setRotation(q);
+				HelmsleyVolume::instance()->getCenterlineTool()->setPosition(pos);
+				if (index.second->isOn())
+				{
+					HelmsleyVolume::instance()->activateClippingPath();
+					index.second->setColor(UI_RED_ACTIVE_COLOR);
+				}
+				else
+				{
+					index.second->setColor(UI_BACKGROUND_COLOR);
+					HelmsleyVolume::instance()->removeCuttingPlane();
+
+				}
 			}
-			else
-			{
-				index.second->setColor(UI_BACKGROUND_COLOR);
-				HelmsleyVolume::instance()->removeCuttingPlane();
-				
-			}
+		}
+		else {
+			std::cout << "false" << std::endl;
 		}
 	}
 
