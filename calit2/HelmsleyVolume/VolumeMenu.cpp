@@ -1392,7 +1392,9 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	else if (item == _GenMarchCubesButton) {
 		if (!_volume->isMCInitialized()) {
  			_volume->intializeMC();
+			_volume->pairWithMC(_volume);
 			updateMCUI(true);
+
  		}
 	}
 	

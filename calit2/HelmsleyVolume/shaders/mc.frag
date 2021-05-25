@@ -18,17 +18,13 @@ float hash1(uint n);
 void main() {
     float numLights = 1;
 	vec3 lightColor = vec3(1.0);
-	vec3 lightPosMult[] = {
-        vec3(20.0, 10.0, 0.0),
-        vec3(0.0, -10.0, 20.0),
-        vec3(-20.0, 10.0, -20.0)
-    };
 
     vec3 result = vec3(0.0);
-    for(int i = 0; i < numLights; ++i) {
+    //for(int i = 0; i < numLights; ++i) {
         //result += CalcPointLight(lightColor, lightPos[i]);
-        result += CalcPointLight(lightColor, lightPos);
-    }
+        //result += CalcPointLight(lightColor, lightPos);
+    //}
+	result = CalcPointLight(lightColor, lightPos);
 
     // attenuation
     //float dist = length(lightPos - i.fragPos);

@@ -1719,9 +1719,9 @@ void MarchingCubesRender::createGeometry()
 
 	//((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_PER_VERTEX);
 	((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_PER_VERTEX);
-	std::string uniform = "lightPos";
-	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), osg::Vec3(100.0, 50.0, 75.0));
-	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+	//std::string uniform = "lightPos";
+	//_uniforms[uniform] = new osg::Uniform(uniform.c_str(), osg::Vec3(100.0, 50.0, 75.0));
+	//_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
 
 
 	updateGeometry();
@@ -1744,6 +1744,7 @@ void MarchingCubesRender::updateGeometry()
  		_geode->getDrawable(0)->getOrCreateStateSet()->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
 		std::cout << "program applied" << std::endl;
 	}
+	_volume->setLightSpherePos(osg::Vec3(200, 200, 200));
 }
 
 
@@ -1752,6 +1753,20 @@ void MarchingCubesRender::addUniform(std::string uniform, T initialvalue)
 {
 	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), initialvalue);
 	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+}
+
+bool MarchingCubesRender::processEvent(cvr::InteractionEvent* event)
+{
+	/*TrackedButtonInteractionEvent* tie = event->asTrackedButtonEvent();
+
+	osg::Matrix mat = TrackingManager::instance()->getHandMat(tie->getHand());
+	osg::Vec4d position = osg::Vec4(0, 300, 0, 1) * mat;
+	osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
+
+	_volume->setLightSpherePos(pos);
+	//set volume sphere to match controller position if some button is pressed
+	*/
+	return false;
 }
 
 void MarchingCubesRender::addUniform(std::string uniform)

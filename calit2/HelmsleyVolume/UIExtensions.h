@@ -618,8 +618,10 @@ public:
 	virtual void updateGeometry();
 
 	virtual void setProgram(osg::Program* p) { _program = p; _dirty = true; }
+	void setVolume(VolumeGroup* volume) { _volume = volume; }
 	virtual osg::Program* getProgram() { return _program; }
 	virtual const osg::ref_ptr<osg::Geode> getGeode() { return _geode; }
+	virtual bool processEvent(cvr::InteractionEvent* event) override;
 
 	template <typename T>
 	void addUniform(std::string uniform, T initialvalue);
@@ -643,6 +645,8 @@ protected:
 	osg::ref_ptr<osg::Vec3Array> _coords;
 	osg::ref_ptr<osg::Vec3Array> _VA;
 	osg::Vec3i _voldims;
+	VolumeGroup* _volume;
+
 
 	static osg::Program* getOrLoadProgram();
 	static osg::Program* _mcProg;

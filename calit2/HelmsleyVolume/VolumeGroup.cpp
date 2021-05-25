@@ -128,9 +128,6 @@ void VolumeGroup::init()
 		return;
 	}
 
-	// Initialize Light Sphere
-	lightSphere = new LightSphere(20.0f, osg::Vec3(0, 0, 0));
-
 
 	//Set up depth buffer fbo
 	_resolveFBO = new osg::FrameBufferObject();
@@ -163,10 +160,10 @@ void VolumeGroup::init()
 	_transform = new osg::MatrixTransform();
 	_transform_sphere = new osg::MatrixTransform();
 	_cube = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0, 0, 0), 1, 1, 1));
-	//_sphere = new osg::Sphere(osg::Vec3(0, 0, 0), 20.0f);
-	//_sphere->setCenter(osg::Vec3(100, 100, 100));
-	//_sd = new osg::ShapeDrawable(_sphere);
-	//lightSphere->moveSphere(osg::Vec3(100, 100, 100));
+	_sphere = new osg::Sphere(osg::Vec3(0, 0, 0), 20.0f);
+	//_sphere->setCenter(osg::Vec3(0, 0, 0));
+	_sd = new osg::ShapeDrawable(_sphere);
+
 	osg::Vec4Array* colors = new osg::Vec4Array;
 	colors->push_back(osg::Vec4(1, 1, 1, 1));
 	_cube->setColorArray(colors);
@@ -176,15 +173,12 @@ void VolumeGroup::init()
 	_cube->setDataVariance(osg::Object::DYNAMIC);
 	_cube->setUseDisplayList(false);
 
-	//_sd->setColorArray(colors);
-	//_sd->setColorBinding(osg::Geometry::BIND_OVERALL);
+	_sd->setColorArray(colors);
+	_sd->setColorBinding(osg::Geometry::BIND_OVERALL);
 
-	//_sd->setDrawCallback(new VolumeDrawCallback(this));
-	//_sd->setDataVariance(osg::Object::DYNAMIC);
-	//_sd->setUseDisplayList(false);
-	lightSphere->sd->setDrawCallback(new VolumeDrawCallback(this));
-	lightSphere->sd->setDataVariance(osg::Object::DYNAMIC);
-	lightSphere->sd->setUseDisplayList(false);
+	_sd->setDrawCallback(new VolumeDrawCallback(this));
+	_sd->setDataVariance(osg::Object::DYNAMIC);
+	_sd->setUseDisplayList(false);
 
 	osg::StateSet* states = _cube->getOrCreateStateSet();
 	_side = new osg::CullFace(osg::CullFace::FRONT);
@@ -200,20 +194,14 @@ void VolumeGroup::init()
 	g->addChild(_cube);
 	g->getOrCreateStateSet()->setRenderBinDetails(7, "RenderBin");
  
-	gs->addChild(lightSphere->sd);
+	gs->addChild(_sd);
 
 	_transform->addChild(g);
-	//_transform_sphere->addChild(gs);
-	lightSphere->transform->addChild(gs);
+	_transform_sphere->addChild(gs);
 	this->addChild(_transform);
-	//this->addChild(_transform_sphere);
-	this->addChild(lightSphere->transform);
+	this->addChild(_transform_sphere);
 
-
-	//LIGHT SOURCE for MC
-	//lightSphere = new LightSphere();
-	//this->addChild(lightSphere->getTransform());
-	
+	_sphere->setCenter(osg::Vec3(200, 200, 200));
 
 	_PlanePoint = new osg::Uniform("PlanePoint", osg::Vec3(0.f, -2.f, 0.f));
 	_PlaneNormal = new osg::Uniform("PlaneNormal", osg::Vec3(0.f, 1.f, 0.f));
@@ -221,6 +209,11 @@ void VolumeGroup::init()
 	_testScale = new osg::Uniform("TestScale", .001f);
 	_maxSteps = new osg::Uniform("MaxSteps", .98f);
 	_RelativeViewport = new osg::Uniform("RelativeViewport", osg::Vec4(1, 1, 0, 0));
+
+	//Creating and passing uniform for light position of mc
+	//lightPos = new osg::Uniform("lightPos", osg::Vec3(0.0, 0.0, 0.0));
+	//states->addUniform(lightPos);
+
 
 	states->addUniform(_PlanePoint);
 	states->addUniform(_PlaneNormal);
@@ -1081,6 +1074,11 @@ void VolumeGroup::intializeMC() {
 	this->_UIDirty = true;
 }
 
+void VolumeGroup::setLightSpherePos(osg::Vec3 pos)
+{
+	std::cout << "move the sphere now" << std::endl;
+}
+
 bool VolumeGroup::toggleMC() {
 	if (_mcIsReady) {
 		if (_mcrGeode == nullptr) {
@@ -1106,6 +1104,13 @@ void VolumeGroup::readyMCUI() {
 void VolumeGroup::printSTLFile() {
 	if (_mcrGeode != nullptr) {
 		static_cast<MarchingCubesRender*>(mcr)->printSTLFile();
+	}
+}
+
+void VolumeGroup::pairWithMC(VolumeGroup* volume)
+{
+	if (_mcrGeode != nullptr) {
+		static_cast<MarchingCubesRender*>(mcr)->setVolume(volume);
 	}
 }
 

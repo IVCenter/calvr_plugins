@@ -99,6 +99,10 @@ public:
 	bool _clahePrecomped = false;
 	bool _mcPrecomped = false;
 
+	void setLightSpherePos(osg::Vec3 pos);
+	
+	/*============================================*/
+
 	void setMCVertices(osg::ref_ptr<osg::Vec3Array> floats) { _mcVertices = floats; }
 	bool isMCInitialized() { return _mcrInitialized; }
 	bool toggleMC();
@@ -109,6 +113,7 @@ public:
 	osg::ref_ptr<osg::Vec3Array> getVA();
 	osg::ref_ptr<osg::ShaderStorageBufferBinding> getMCSSBB();
 	void printSTLFile();
+	void pairWithMC(VolumeGroup* vol);
 	////Extra Methods
 	void setNumBins(unsigned int numBins) { 
 		_numGrayVals = numBins;
@@ -157,6 +162,9 @@ public:
 
 	void flipCull();
 
+	//Uniforms for light sphere
+	osg::ref_ptr<osg::Uniform> lightPos;
+
 	osg::ref_ptr<osg::Uniform> _PlanePoint;
 	osg::ref_ptr<osg::Uniform> _PlaneNormal;
 	osg::ref_ptr<osg::Uniform> _StepSize;
@@ -202,9 +210,6 @@ public:
 	bool _UIDirty = false;
 
 protected:
-	//LIGHT SOURCE FOR MC
-	LightSphere* lightSphere;
-
 	bool _hasMask;
 	bool _claheAvailable = false;
 	std::string _minMaxShader;
