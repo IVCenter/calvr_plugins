@@ -28,7 +28,6 @@
 #include <cvrKernel/ScreenConfig.h>
 #include <cvrKernel/ScreenBase.h>
 #include "MarchingCubesLUTs.h"
-#include "LightSphere.h"
 //#define NUMGRAYVALS 255u
 #define CLIPLIMIT3D .85f
 #define ORGANCOUNT 8
@@ -247,6 +246,7 @@ protected:
 	osg::ref_ptr<osg::ShapeDrawable> _cube;
 	osg::ref_ptr<osg::ShapeDrawable> _sd;
 	osg::ref_ptr<osg::Sphere> _sphere;
+	osg::ref_ptr<osg::Geode> _intersect_sphere;
 
 
 	//osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbHist;

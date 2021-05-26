@@ -160,9 +160,9 @@ void VolumeGroup::init()
 	_transform = new osg::MatrixTransform();
 	_transform_sphere = new osg::MatrixTransform();
 	_cube = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0, 0, 0), 1, 1, 1));
-	_sphere = new osg::Sphere(osg::Vec3(0, 0, 0), 20.0f);
-	//_sphere->setCenter(osg::Vec3(0, 0, 0));
-	_sd = new osg::ShapeDrawable(_sphere);
+	//_sphere = new osg::Sphere(osg::Vec3(0, 0, 0), 20.0f);
+	//_sphere->setCenter(osg::Vec3(100, 100,100));
+	//_sd = new osg::ShapeDrawable(_sphere);
 
 	osg::Vec4Array* colors = new osg::Vec4Array;
 	colors->push_back(osg::Vec4(1, 1, 1, 1));
@@ -173,12 +173,12 @@ void VolumeGroup::init()
 	_cube->setDataVariance(osg::Object::DYNAMIC);
 	_cube->setUseDisplayList(false);
 
-	_sd->setColorArray(colors);
-	_sd->setColorBinding(osg::Geometry::BIND_OVERALL);
+	//_sd->setColorArray(colors);
+	//_sd->setColorBinding(osg::Geometry::BIND_OVERALL);
 
-	_sd->setDrawCallback(new VolumeDrawCallback(this));
-	_sd->setDataVariance(osg::Object::DYNAMIC);
-	_sd->setUseDisplayList(false);
+	//_sd->setDrawCallback(new VolumeDrawCallback(this));
+	//_sd->setDataVariance(osg::Object::DYNAMIC);
+	//_sd->setUseDisplayList(false);
 
 	osg::StateSet* states = _cube->getOrCreateStateSet();
 	_side = new osg::CullFace(osg::CullFace::FRONT);
@@ -190,18 +190,17 @@ void VolumeGroup::init()
 	states->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
 
 	osg::ref_ptr<osg::Geode> g = new osg::Geode();
-	osg::ref_ptr<osg::Geode> gs = new osg::Geode();
+	//osg::ref_ptr<osg::Geode> gs = new osg::Geode();
 	g->addChild(_cube);
 	g->getOrCreateStateSet()->setRenderBinDetails(7, "RenderBin");
  
-	gs->addChild(_sd);
+	//gs->addChild(_sd);
 
 	_transform->addChild(g);
-	_transform_sphere->addChild(gs);
+	//_transform_sphere->addChild(gs);
 	this->addChild(_transform);
-	this->addChild(_transform_sphere);
+	//this->addChild(_transform_sphere);
 
-	_sphere->setCenter(osg::Vec3(200, 200, 200));
 
 	_PlanePoint = new osg::Uniform("PlanePoint", osg::Vec3(0.f, -2.f, 0.f));
 	_PlaneNormal = new osg::Uniform("PlaneNormal", osg::Vec3(0.f, 1.f, 0.f));
@@ -1076,14 +1075,19 @@ void VolumeGroup::intializeMC() {
 
 void VolumeGroup::setLightSpherePos(osg::Vec3 pos)
 {
-	std::cout << "move the sphere now" << std::endl;
+	osg::Matrix sm = _transform_sphere->getMatrix();
+	sm = sm.translate(pos);
+	_transform_sphere->setMatrix(sm);
+	std::cout << "moving light sphere: " << pos.x() << ", " << pos.y() << ", " << pos.z() << std::endl;
+	this->setDirtyAll();
 }
 
 bool VolumeGroup::toggleMC() {
 	if (_mcIsReady) {
 		if (_mcrGeode == nullptr) {
 			
-			mcr = new MarchingCubesRender(_mcVertices, _volDims, getMCGeom(), getMCVertCount(), getVA(), getMCSSBB());
+			mcr = new MarchingCubesRender(_mcVertices, _volDims, getMCGeom(), getMCVertCount(), getVA(), getMCSSBB(), this);
+			//static_cast<MarchingCubesRender*>(mcr)->setVolume(this);
  
 			_mcrGeode = static_cast<MarchingCubesRender*>(mcr)->getGeode();
 		}

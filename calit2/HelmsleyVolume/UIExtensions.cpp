@@ -5,6 +5,7 @@
 #include <osg/PolygonMode>
 #include <algorithm>
 
+
 using namespace cvr;
 
 osg::Program* ColorPickerSaturationValue::_svprogram = nullptr;
@@ -1644,6 +1645,26 @@ osg::Program* Line::getOrLoadProgram()
 }
 
 
+MarchingCubesRender::MarchingCubesRender(osg::ref_ptr<osg::Vec3Array> coords, osg::Vec3i volDims, osg::ref_ptr<osg::Geometry> geom, unsigned int verticeCount, osg::ref_ptr<osg::Vec3Array> va, osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbb, VolumeGroup* volume)
+	: UIElement(), _verticeCount(verticeCount), _VA(va), _ssbb(ssbb), _volume(volume)
+{
+		_coords = coords;
+	
+		_geode = new osg::Geode();
+		_voldims = volDims;
+
+		_mcGeom = geom;
+
+		_lightSphere = new LightSphere();
+		_lightSphere->setSceneObject(HelmsleyVolume::instance()->getSceneObjects()[0]);
+		PluginHelper::registerSceneObject(_lightSphere, "HelmsleyVolume");
+		_lightSphere->_so->addChild(_lightSphere);
+		//_volume->addChild(_lightSphere->getGroup());
+		
+		setProgram(getOrLoadProgram());
+		createGeometry();
+}
+
 void MarchingCubesRender::createGeometry()
 {
 	_polyGeom = new osg::Geometry();
@@ -1719,9 +1740,9 @@ void MarchingCubesRender::createGeometry()
 
 	//((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_PER_VERTEX);
 	((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_PER_VERTEX);
-	//std::string uniform = "lightPos";
-	//_uniforms[uniform] = new osg::Uniform(uniform.c_str(), osg::Vec3(100.0, 50.0, 75.0));
-	//_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+	std::string uniform = "lightPos";
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), osg::Vec3(0,0, 0));
+	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
 
 
 	updateGeometry();
@@ -1744,7 +1765,8 @@ void MarchingCubesRender::updateGeometry()
  		_geode->getDrawable(0)->getOrCreateStateSet()->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
 		std::cout << "program applied" << std::endl;
 	}
-	_volume->setLightSpherePos(osg::Vec3(200, 200, 200));
+
+	_lightSphere->moveLightPos(osg::Vec3(200, 200, 200));
 }
 
 
@@ -1755,19 +1777,6 @@ void MarchingCubesRender::addUniform(std::string uniform, T initialvalue)
 	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
 }
 
-bool MarchingCubesRender::processEvent(cvr::InteractionEvent* event)
-{
-	/*TrackedButtonInteractionEvent* tie = event->asTrackedButtonEvent();
-
-	osg::Matrix mat = TrackingManager::instance()->getHandMat(tie->getHand());
-	osg::Vec4d position = osg::Vec4(0, 300, 0, 1) * mat;
-	osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
-
-	_volume->setLightSpherePos(pos);
-	//set volume sphere to match controller position if some button is pressed
-	*/
-	return false;
-}
 
 void MarchingCubesRender::addUniform(std::string uniform)
 {

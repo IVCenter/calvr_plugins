@@ -116,9 +116,9 @@ vec4 Sample(ivec3 p) {
 	  }
 	}
 
-	#ifndef ORGANS_ONLY
+	//#ifndef ORGANS_ONLY
 		return s;
-	#endif
+	//#endif
 	//FULLVOLUME
 	//Opacity
 	float highestOpacity = 0.0;

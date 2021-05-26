@@ -92,7 +92,7 @@ void getIDs(ivec3 idx){
 	for(int i = 0; i < 8; i++){
 		cubeCornersIdx[i].w = imageLoad(volume, ivec3(cubeCornersIdx[i].xyz)).g * 65535.0;
 		//cubeCornersIdx[i].w = imageLoad(volume, ivec3(cubeCornersIdx[i].xyz)).r;
-		if (cubeCornersIdx[i].w == 16){
+		if (cubeCornersIdx[i].w == 4){
 			uint value =  uint(pow(2u,uint(i))); 
 			cubeIndex = cubeIndex | value;
 		}

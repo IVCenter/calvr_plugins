@@ -32,6 +32,7 @@
 #include <cvrConfig/ConfigManager.h>
 
 #include "VolumeGroup.h"
+#include "LightSphere.h"
 
 class UICallback;
 class UICallbackCaller;
@@ -600,19 +601,7 @@ class MarchingCubesRender : public cvr::UIElement
 {
 public:
 	MarchingCubesRender(osg::ref_ptr<osg::Vec3Array> coords, osg::Vec3i volDims, osg::ref_ptr<osg::Geometry> geom, unsigned int verticeCount, osg::ref_ptr<osg::Vec3Array> va
-,osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbb)
-		: UIElement(), _verticeCount(verticeCount), _VA(va), _ssbb(ssbb)
-	{
-		_coords = coords;
-	
-		_geode = new osg::Geode();
-		_voldims = volDims;
-
-		_mcGeom = geom;
-		
-		setProgram(getOrLoadProgram());
-		createGeometry();
-	}
+		, osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbb, VolumeGroup* volume);
 
 	virtual void createGeometry();
 	virtual void updateGeometry();
@@ -621,7 +610,6 @@ public:
 	void setVolume(VolumeGroup* volume) { _volume = volume; }
 	virtual osg::Program* getProgram() { return _program; }
 	virtual const osg::ref_ptr<osg::Geode> getGeode() { return _geode; }
-	virtual bool processEvent(cvr::InteractionEvent* event) override;
 
 	template <typename T>
 	void addUniform(std::string uniform, T initialvalue);
@@ -646,6 +634,7 @@ protected:
 	osg::ref_ptr<osg::Vec3Array> _VA;
 	osg::Vec3i _voldims;
 	VolumeGroup* _volume;
+	LightSphere* _lightSphere;
 
 
 	static osg::Program* getOrLoadProgram();
