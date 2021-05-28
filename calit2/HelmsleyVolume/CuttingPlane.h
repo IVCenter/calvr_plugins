@@ -170,7 +170,7 @@ public:
 
 	virtual void updateCallback(int handID, const osg::Matrix& mat);
 	virtual void menuCallback(cvr::MenuItem* menuItem);
-	virtual bool processEvent(cvr::InteractionEvent* ie);
+	virtual bool processEvent(cvr::InteractionEvent* ie) override;
 
 	VolumeGroup* getVolume() { return _volume; }
 	void setVolume(VolumeGroup* v) { _volume = v; }

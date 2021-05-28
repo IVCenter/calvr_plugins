@@ -40,6 +40,19 @@ enum class ORGANID {
 	VEIN = 64u
 };
 
+enum class RENDERBIN_ORDER {
+	UNDEFINED,
+	MINMAX,
+	CLAHEHIST,
+	EXCESS,
+	CLIP,
+	LERP,
+	VOLUME,
+	CUBE,
+	MCS,
+	NONCLAHEHIST
+};
+
 class VolumeGroup : public osg::Group
 {
 	friend class VolumeDrawCallback;
@@ -78,8 +91,7 @@ public:
 	float _clipLimit3D = 0.85f;
 	float _minClipValue = 0.0;
 	osg::Vec3i _volDims = osg::Vec3i(0, 0, 0);
-	unsigned int _volArea = 0;
-	unsigned int _numGrayVals = 255u;
+ 	unsigned int _numGrayVals = 255u;
 	unsigned int _histSize = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z() * _numGrayVals;
 	unsigned int _numHist = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z();
 
@@ -161,7 +173,7 @@ public:
 	void dirtyVolumeShader() { _program->dirtyProgram(); };
 	void dirtyComputeShader() { _computeProgram->dirtyProgram(); };
 	
-
+	void readyCenterLine(std::string path);
 	void flipCull();
 
 	osg::ref_ptr<osg::Uniform> _PlanePoint;
@@ -251,7 +263,8 @@ protected:
 //	osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbExcess;
 
 	std::vector<osg::ref_ptr<osg::Geode>>* _centerLineGeodes;
-	
+	std::shared_ptr<void> _illeumLine;
+	std::shared_ptr<void> _colonLine;
 	osg::ref_ptr<osg::Vec3dArray> _colonCoords = nullptr;
 	osg::ref_ptr<osg::Vec3dArray> _illeumCoords;
 	osg::ref_ptr<osg::Texture3D> _volume;
@@ -273,13 +286,9 @@ class VolumeDrawCallback : public osg::Drawable::DrawCallback
 public:
 
 	VolumeGroup* group;
-
 	VolumeDrawCallback(VolumeGroup* g) : group(g) {}
-
-	virtual void drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const;
-	
-	void checkStatuses() const;
-};
+	virtual void drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const;	
+ };
 
 class ComputeDrawCallback : public osg::Drawable::DrawCallback
 {

@@ -726,7 +726,7 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath, bool onl
 {
 	SceneObject * so;
 	so = new SceneObject("volume", false, true, true, true, false);
-	so->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(0, 750, 500)));
+	so->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", VOLUME_POS));
 
 	VolumeGroup * g = new VolumeGroup();
 	g->loadVolume(path, maskpath);

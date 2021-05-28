@@ -82,17 +82,7 @@ class ToolMenu : public UICallback {
 
 
 public:
-	enum class TOOLID {
-		CUTTINGPLANE,
-		CLAHE,
-		MARCHINGCUBES,
-		CENTERLINE,
-		SCREENSHOT,
-		//HISTOGRAM,
-		RULER,
-		MASKMENU,
-		TFMENU
-	};
+	
 
 	ToolMenu(int index = 0, bool movable = true, cvr::SceneObject* parent = nullptr);
 	~ToolMenu();
@@ -101,22 +91,20 @@ public:
 	{
 		return _container;
 	}
-
-	ToolToggle* getCenterLineTool() { return  _centerLIneTool; }
-	CurvedQuad* getCuttingPlaneTool() {
+	
+	CurvedQuad* getTool(int toolID) {
 		auto curvedMenuItems = _curvedMenu->getCurvedMenuItems();
 		int toolIndex = 0;
 		for (std::vector<CurvedQuad*>::iterator it = curvedMenuItems.begin(); it != curvedMenuItems.end(); ++it) {
-			if (toolIndex == CUTTINGPLANE)
+			if (toolIndex == toolID)
 				return (*it);
-		toolIndex++;
+			toolIndex++;
 		}
 		return nullptr;
 	}
-	ToolToggle* getMeasuringTool() { return  _measuringTool; }
-	ToolToggle* getScreenShotTool() { return  _screenshotTool; }
 
-	void toggleOtherMenus(TOOLID currentActiveTool);
+	
+	void toggleOtherMenus(int currentActiveTool);
 
 	virtual void uiCallback(UICallbackCaller* item);
 	std::vector<CurvedQuad*> getCurvedMenuItems();
@@ -248,12 +236,12 @@ protected:
 	cvr::UIQuadElement* _maskBknd;
 	cvr::UIQuadElement* _presetBknd;
 
-	CallbackButton* _horizontalflip;
-	CallbackButton* _verticalflip;
-	CallbackButton* _depthflip;
-	CallbackButton* _addTriangle;
-	CallbackButton* _addPreset;
-	CallbackButton* _loadPreset;
+ 	std::unique_ptr<HoverButton> _horiFlipButton;
+	std::unique_ptr<HoverButton> _vertiFlipButton;
+	std::unique_ptr<HoverButton> _depthFlipButton;
+ 	std::shared_ptr<HoverButton> _addTriangleButton;
+	std::shared_ptr<HoverButton> _addPresetButton;
+	std::shared_ptr<HoverButton> _loadPresetButton;
 	CallbackButton* _volume1Button;
 	CallbackButton* _volume2Button;
 	CallbackButton* _linkButton;
@@ -399,7 +387,7 @@ private:
 class UIMenuUpdate : public osg::NodeCallback
 {
 public:
-	UIMenuUpdate(VolumeGroup* vg, NewVolumeMenu* vm) { _vg = vg; _vm = vm; }
+	UIMenuUpdate(VolumeGroup* vg, NewVolumeMenu* vm, cvr::SceneObject* so) { _vg = vg; _vm = vm, _so = so; }
 
 	virtual void operator()(osg::Node* node, osg::NodeVisitor* nv)
 	{
@@ -409,15 +397,15 @@ public:
 				_vg->_UIDirty = false;
 			}
 		}
-		traverse(node, nv);
+ 		traverse(node, nv);
+
 	}
-
-
-
+ 
 
 private:
 	VolumeGroup* _vg = nullptr;
 	NewVolumeMenu* _vm = nullptr;
+	cvr::SceneObject* _so = nullptr;
 };
 
 #endif

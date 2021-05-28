@@ -455,7 +455,8 @@ TentWindow::TentWindow(TentWindowOnly* tWOnly) :
 	UIElement()
 {
 	_tWOnly = tWOnly;
-	_bknd = new UIQuadElement(osg::Vec4(.04, .25, .4, 1.0));
+	_bknd = new UIQuadElement(osg::Vec4(UI_BLUE_COLOR2));
+	
 	_bknd->setTransparent(false);
 	_bknd->setBorderSize(0.01);
 	addChild(_bknd);
@@ -755,27 +756,27 @@ void TentWindow::uiCallback(UICallbackCaller* ui) {
 }
 
 void TentWindow::initDials() {
-	_dialCenter = new Dial(osg::Vec4(0.56, 0.05, 0.25, 1.0));
+	_dialCenter = new Dial(osg::Vec4(UI_RED_HOVER_COLOR, 1));
 	_dialCenter->setPercentSize(osg::Vec3(.075, 30, 1));
 	_dialCenter->setPercentPos(osg::Vec3(0.087, -6, 0));
 	_dialCenter->setCallback(this);
 
-	_dialBW = new Dial(osg::Vec4(0.56, 0.05, 0.25, 1.0));
+	_dialBW = new Dial(osg::Vec4(UI_RED_HOVER_COLOR, 1));
 	_dialBW->setPercentSize(osg::Vec3(.075, 30, 1));
 	_dialBW->setPercentPos(osg::Vec3(0.087, -6, 0));
 	_dialBW->setCallback(this);
 
-	_dialBottom = new Dial(osg::Vec4(0.56, 0.05, 0.25, 1.0));
+	_dialBottom = new Dial(osg::Vec4(UI_RED_HOVER_COLOR, 1));
 	_dialBottom->setPercentSize(osg::Vec3(.075, 30, 1));
 	_dialBottom->setPercentPos(osg::Vec3(0.087, -6, 0));
 	_dialBottom->setCallback(this);
 
-	_dialHeight = new Dial(osg::Vec4(0.56, 0.05, 0.25, 1.0));
+	_dialHeight = new Dial(osg::Vec4(UI_RED_HOVER_COLOR, 1));
 	_dialHeight->setPercentSize(osg::Vec3(.075, 30, 1));
 	_dialHeight->setPercentPos(osg::Vec3(0.087, -6, 0));
 	_dialHeight->setCallback(this);
 
-	_dialTW = new Dial(osg::Vec4(0.56, 0.05, 0.25, 1.0));
+	_dialTW = new Dial(osg::Vec4(UI_RED_HOVER_COLOR, 1));
 	_dialTW->setPercentSize(osg::Vec3(.075, 30, 1));
 	_dialTW->setPercentPos(osg::Vec3(0.087, -6, 0));
 	_dialTW->setCallback(this);
@@ -1809,18 +1810,6 @@ void MarchingCubesRender::printSTLFile() {
 	//write down every triangle
 	for (int i = 0; i < _coords->size(); i+=3) {
 		osg::Vec4 norm = (normals->at(i / 3));
-
-		////ASCII Implementation
-		//myfile << " facet normal " << norm.x() << " " << norm.y() << " " << norm.z() << std::endl;
-		//myfile << "  outer loop" << std::endl;
-		//myfile << "   vertex " << _coords->at(i).x() << " " << _coords->at(i).y() << " " << _coords->at(i).z() << std::endl;
-		//myfile << "   vertex " << _coords->at(i+1).x() << " " << _coords->at(i+1).y() << " " << _coords->at(i+1).z() << std::endl;
-		//myfile << "   vertex " << _coords->at(i+2).x() << " " << _coords->at(i+2).y() << " " << _coords->at(i+2).z() << std::endl;
-		///*myfile << "   vertex " << (_coords->at(i).x() + 1) * 1000 << " " << (_coords->at(i).y() + 1) * 1000 << " " << (_coords->at(i).z() + 1) * 1000 << std::endl;
-		//myfile << "   vertex " << (_coords->at(i + 1).x() + 1) * 1000 << " " << (_coords->at(i + 1).y() + 1) * 1000 << " " << (_coords->at(i + 1).z() + 1) * 1000 << std::endl;
-		//myfile << "   vertex " << (_coords->at(i + 2).x() + 1) * 1000 << " " << (_coords->at(i + 2).y() + 1) * 1000 << " " << (_coords->at(i + 2).z() + 1) * 1000 << std::endl;*/
-		//myfile << "  endloop" << std::endl;
-		//myfile << " endfacet" << std::endl;
  		
 		//Binary Implementation
 		char normalChar[4];
@@ -2133,7 +2122,19 @@ void Dial::updateGeometry()
 
 }
 
+void Dial::processHover(bool enter) {
+	if (enter)
+	{
 
+		_color = UI_RED_ACTIVE_COLOR;
+	}
+	else
+	{
+		_color = UI_RED_HOVER_COLOR_VEC4;
+
+	}
+	updateGeometry();
+}
 
 
 bool Dial::processEvent(cvr::InteractionEvent* event)
@@ -2715,7 +2716,6 @@ void FullButton::processHover(bool enter)
 		_bknd->setColor(_originalColor);
 		
 	}
-	std::cout << "on hover" << std::endl;
-}
+ }
 
 #pragma endregion

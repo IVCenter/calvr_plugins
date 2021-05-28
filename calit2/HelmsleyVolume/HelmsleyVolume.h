@@ -32,6 +32,22 @@
 
 #include <string>
 
+#define VOLUME_POS osg::Vec3(-413, 1052, 885)
+#define MENU_POS osg::Vec3(-301, -141, -331)
+
+enum class TOOLID {
+	CUTTINGPLANE,
+	CLAHE,
+	MARCHINGCUBES,
+	CENTERLINE,
+	SCREENSHOT,
+	//HISTOGRAM,
+	RULER,
+	MASKMENU,
+	TFMENU,
+	COUNT
+};
+
 class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 {
     public:
@@ -114,6 +130,13 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 			}
 		}
 		int getVolumeIndex() { return _volumeIndex; }
+
+
+	#ifdef DEBUGCODE
+		inline std::string printVec3OSG(osg::Vec3 vec3) {
+			return "x: " + std::to_string(vec3.x()) + "	y: " + std::to_string(vec3.y()) + "	z: " + std::to_string(vec3.z());
+		}
+	#endif 
     protected:
 		struct MeasurementInfo {
 			osg::Vec3 start;

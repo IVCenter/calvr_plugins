@@ -192,12 +192,12 @@ void NewVolumeMenu::init()
 	_so->getRoot()->addUpdateCallback(new PointAtHeadLerp(0.2f, _so));
 #endif
 	_updateCallback = new VolumeMenuUpdate();
-	_uiMenuUpdate = new UIMenuUpdate(_volume, this);
+	_uiMenuUpdate = new UIMenuUpdate(_volume, this, _so);
 	
 	_so->getRoot()->addUpdateCallback(_updateCallback);
 	_so->getRoot()->addUpdateCallback(_uiMenuUpdate);
 
-	osg::Vec3 volumePos = ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(0, 750, 1000));
+	osg::Vec3 volumePos = ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(-413, 1052, 885));
 	_so->setPosition(volumePos);
 
 	_menu = new UIPopup();
@@ -240,48 +240,49 @@ void NewVolumeMenu::init()
 
 	UIList* fliplist = new UIList(UIList::LEFT_TO_RIGHT, UIList::CUT);
 
-	_horizontalflip = new CallbackButton();
-	_horizontalflip->setCallback(this);
-	label = new UIText("Flip Sagittal", 30.0f, osgText::TextBase::CENTER_CENTER);
+ 	label = new UIText("Flip Sagittal", 30.0f, osgText::TextBase::CENTER_CENTER);
 	label->setColor(UI_WHITE_COLOR);
 	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
-	UIQuadElement* labelbknd = new UIQuadElement(osg::Vec4(.8, .1, .1, 1.0));
+	UIQuadElement* labelbknd = new UIQuadElement(UI_RED_HOVER_COLOR_VEC4);
 	labelbknd->setPercentPos(osg::Vec3(.1, 1, -.15));
 	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
  	labelbknd->setRounding(0, .2);
 	labelbknd->setTransparent(true);
 	label->addChild(labelbknd);
-	_horizontalflip->addChild(label);
+	_horiFlipButton = std::make_unique<HoverButton>(labelbknd, UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
+	_horiFlipButton->setCallback(this);
+	_horiFlipButton->addChild(label);
 
-	_verticalflip = new CallbackButton();
-	_verticalflip->setCallback(this);
-	label = new UIText("Flip Axial", 30.0f, osgText::TextBase::CENTER_CENTER);
+  	label = new UIText("Flip Axial", 30.0f, osgText::TextBase::CENTER_CENTER);
 	label->setColor(UI_WHITE_COLOR);
 	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
-	labelbknd = new UIQuadElement(osg::Vec4(.8, .1, .1, 1.0));
+	labelbknd = new UIQuadElement(UI_RED_HOVER_COLOR_VEC4);
 	labelbknd->setPercentPos(osg::Vec3(.1, 1, -.15));
 	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
 	labelbknd->setRounding(0, .2);
 	labelbknd->setTransparent(true);
 	label->addChild(labelbknd);
-	_verticalflip->addChild(label);
+ 	_vertiFlipButton = std::make_unique<HoverButton>(labelbknd, UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
+	_vertiFlipButton->setCallback(this);
+	_vertiFlipButton->addChild(label);
 
-	_depthflip = new CallbackButton();
-	_depthflip->setCallback(this);
-	label = new UIText("Flip Coronal", 30.0f, osgText::TextBase::CENTER_CENTER);
+
+  	label = new UIText("Flip Coronal", 30.0f, osgText::TextBase::CENTER_CENTER);
 	label->setColor(UI_WHITE_COLOR);
 	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
-	labelbknd = new UIQuadElement(osg::Vec4(.8, .1, .1, 1.0));
+	labelbknd = new UIQuadElement(UI_RED_HOVER_COLOR_VEC4);
 	labelbknd->setPercentPos(osg::Vec3(.1, 1, -.15));
 	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
 	labelbknd->setRounding(0, .2);
 	labelbknd->setTransparent(true);
 	label->addChild(labelbknd);
- 	_depthflip->addChild(label);
+ 	_depthFlipButton = std::make_unique<HoverButton>(labelbknd, UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
+	_depthFlipButton->setCallback(this);
+	_depthFlipButton->addChild(label);
 
-	fliplist->addChild(_horizontalflip);
-	fliplist->addChild(_verticalflip);
-	fliplist->addChild(_depthflip);
+	fliplist->addChild(_horiFlipButton.get());
+	fliplist->addChild(_vertiFlipButton.get());
+	fliplist->addChild(_depthFlipButton.get());
 	list->addChild(fliplist);
 
 	label = new UIText("Density", 30.0f, osgText::TextBase::LEFT_CENTER);
@@ -546,47 +547,48 @@ void NewVolumeMenu::init()
 
 	UIText* regionLabel = new UIText("Regions", 50.0f, osgText::TextBase::CENTER_CENTER);
 	regionLabel->setPercentSize(osg::Vec3(1, 1, 0.2));
-	_addTriangle = new CallbackButton();
-	_addTriangle->setCallback(this);
-	_addPreset = new CallbackButton();
-	_addPreset->setCallback(this);
-	_loadPreset = new CallbackButton();
-	_loadPreset->setCallback(this);
 
+	
 
 
 	label = new UIText(" Add Region ", 35.0f, osgText::TextBase::CENTER_CENTER);
 	label->setColor(UI_WHITE_COLOR);
 	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
-	labelbknd = new UIQuadElement(osg::Vec4(.8, .1, .1, 1.0));
-	labelbknd->setPercentPos(osg::Vec3(.1, 1, -.15));
+	labelbknd = new UIQuadElement(UI_RED_HOVER_COLOR_VEC4);
+	labelbknd->setPercentPos(osg::Vec3(.1, -1, -.15));
 	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
   	labelbknd->setRounding(0, .2);
 	labelbknd->setTransparent(true);
-	_addTriangle->addChild(label);
-	label->addChild(labelbknd);
+	labelbknd->addChild(label);
+	_addTriangleButton = std::make_shared<HoverButton>(labelbknd, UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
+	_addTriangleButton->setCallback(this);
+	_addTriangleButton->addChild(labelbknd);
 
-	UIText* addPresetLabel = new UIText(" Save Preset ", 35.0f, osgText::TextBase::CENTER_CENTER);
-	addPresetLabel->setColor(UI_WHITE_COLOR);
-	addPresetLabel->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
-	labelbknd = new UIQuadElement(osg::Vec4(.8, .1, .1, 1.0));
-	labelbknd->setPercentPos(osg::Vec3(.1, 1, -.15));
+	label = new UIText(" Save Preset ", 35.0f, osgText::TextBase::CENTER_CENTER);
+	label->setColor(UI_WHITE_COLOR);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+	labelbknd = new UIQuadElement(UI_RED_HOVER_COLOR_VEC4);
+	labelbknd->setPercentPos(osg::Vec3(.1, -1, -.15));
 	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
 	labelbknd->setRounding(0, .2);
 	labelbknd->setTransparent(true);
-	_addPreset->addChild(addPresetLabel);
-	addPresetLabel->addChild(labelbknd);
+	labelbknd->addChild(label);
+	_addPresetButton = std::make_shared<HoverButton>(labelbknd, UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
+	_addPresetButton->setCallback(this);
+	_addPresetButton->addChild(labelbknd);
 
-	UIText* loadPresetLabel = new UIText(" Load Preset ", 35.0f, osgText::TextBase::CENTER_CENTER);
-	loadPresetLabel->setColor(UI_WHITE_COLOR);
-	_loadPreset->addChild(loadPresetLabel);
-	loadPresetLabel->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
-	labelbknd = new UIQuadElement(osg::Vec4(.8, .1, .1, 1.0));
-	labelbknd->setPercentPos(osg::Vec3(.1, 1, -.15));
+	label = new UIText(" Load Preset ", 35.0f, osgText::TextBase::CENTER_CENTER);
+	label->setColor(UI_WHITE_COLOR);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+	labelbknd = new UIQuadElement(UI_RED_HOVER_COLOR_VEC4);
+	labelbknd->setPercentPos(osg::Vec3(.1, -1, -.15));
 	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
 	labelbknd->setRounding(0, .2);
 	labelbknd->setTransparent(true);
- 	loadPresetLabel->addChild(labelbknd);
+	labelbknd->addChild(label);
+	_loadPresetButton = std::make_shared<HoverButton>(labelbknd, UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
+	_loadPresetButton->setCallback(this);
+	_loadPresetButton->addChild(labelbknd);
 
 
 	regionHeaderBknd->addChild(regionLabel);
@@ -664,9 +666,9 @@ void NewVolumeMenu::init()
 	label->setAbsoluteSize(osg::Vec3(0.0f, 0.0f, 50.0));
 	UIList* regionTopList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
 	regionTopList->setPercentPos(osg::Vec3(0.0, 0.0, .25));
-	regionTopList->addChild(_addTriangle);
-	regionTopList->addChild(_addPreset);
-	regionTopList->addChild(_loadPreset);
+	regionTopList->addChild(_addTriangleButton.get());
+	regionTopList->addChild(_addPresetButton.get());
+	regionTopList->addChild(_loadPresetButton.get());
 	_triangleList->addChild(regionTopList);
 	_triangleList->addChild(_triangleCallbacks[_triangleIndex]);
 	_triangleList->setMaxSize(label->getAbsoluteSize().z()*3);
@@ -681,18 +683,12 @@ void NewVolumeMenu::init()
 	_maskMenu->getRootElement()->setAbsoluteSize(osg::Vec3(500, 1, 800));
 
 
-	//_contrastMenu->setRotation(rot);
-	//_contrastMenu->setPosition(osg::Vec3(1000, 200, 1300));
-	
-	//_contrastMenu->getRootElement()->setAbsoluteSize(osg::Vec3(1000, 1, 200));
-
 	UIQuadElement* contrastBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 	_maskMenu->addChild(contrastBknd);
 	contrastBknd->setPercentPos(osg::Vec3(0.0, 0.0, -.7));
 	contrastBknd->setPercentSize(osg::Vec3(1.62, 1.0, 0.33));
 	contrastBknd->setBorderSize(0.02);
-	//_contrastMenu->addChild(contrastBknd);
-
+ 
 	UIList* contrastList = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
 
 
@@ -1300,21 +1296,21 @@ UIList* NewVolumeMenu::addPresets(UIQuadElement* bknd) {
 void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 {	
 	///////////////Rotations/////////////////////
-	if (item == _horizontalflip)
+	if (item == _horiFlipButton.get())
 	{
 		osg::Matrix m;
 		m.makeScale(osg::Vec3(-1, 1, 1));
 		_volume->_transform->postMult(m);
 		_volume->flipCull();
 	}
-	else if (item == _verticalflip)
+	else if (item == _vertiFlipButton.get())
 	{
 		osg::Matrix m;
 		m.makeScale(osg::Vec3(1, 1, -1));
 		_volume->_transform->postMult(m);
 		_volume->flipCull();
 	}
-	else if (item == _depthflip)
+	else if (item == _depthFlipButton.get())
 	{
 		osg::Matrix m;
 		m.makeScale(osg::Vec3(1, -1, 1));
@@ -1366,7 +1362,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 
 
 
-	else if (item == _addTriangle)
+	else if (item == _addTriangleButton.get())
 	{
 		if (_triangleIndex < 5) {
 			_triangleIndex++;
@@ -1424,10 +1420,10 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	{
 		useTransferFunction(_transferFunctionRadial->getCurrent());
 	}
-	else if (item == _addPreset) {
+	else if (item == _addPresetButton.get()) {
 		savePreset();
 	}
-	else if (item == _loadPreset) {
+	else if (item == _loadPresetButton.get()) {
 		_maskMenu->addChild(_presetPopup->getRootElement());
 		_presetPopup->getRootElement()->setPercentPos(osg::Vec3(1.62, 0.0, 0.0));
 	}
@@ -1907,7 +1903,7 @@ void NewVolumeMenu::fillFromVolume(VolumeGroup* vg) {
 	std::vector<CurvedQuad*> curvedMenuItems = _toolMenu->getCurvedMenuItems();
 	int index = 0;
 	for (std::vector<CurvedQuad*>::iterator it = curvedMenuItems.begin(); it != curvedMenuItems.end(); ++it) {
-		if (index == int(ToolMenu::TOOLID::CUTTINGPLANE)) {
+		if (index == int(TOOLID::CUTTINGPLANE)) {
 			if (!(*it)->isOn() && _volume->values.toolToggles[index]) {
 				(*it)->turnOn();
 				(*it)->setColor(UI_RED_ACTIVE_COLOR);
@@ -2133,7 +2129,7 @@ void NewVolumeMenu::usePreset(std::string filename) {
 	//////////Cutting Plane/////////////
 
 	//ToolToggle* cuttingPlaneTool = _toolMenu->getCuttingPlaneTool();
-	CurvedQuad* cuttingPlaneTool = _toolMenu->getCuttingPlaneTool();
+	CurvedQuad* cuttingPlaneTool = _toolMenu->getTool(int(TOOLID::CUTTINGPLANE));
 
 		if (config["cutting plane value"].as<int>() == 0) {
 			cuttingPlaneTool->setColor(UI_BACKGROUND_COLOR);
@@ -2165,23 +2161,20 @@ void NewVolumeMenu::usePreset(std::string filename) {
 		}
 	
 
-	ToolToggle* mTool = _toolMenu->getMeasuringTool();
-	ToolToggle* centerTool = _toolMenu->getCenterLineTool();
-	ToolToggle* screenTool = _toolMenu->getScreenShotTool();
+	CurvedQuad* mTool = _toolMenu->getTool(int(TOOLID::RULER));
+	CurvedQuad* centerTool = _toolMenu->getTool(int(TOOLID::CENTERLINE));
+	CurvedQuad* screenTool = _toolMenu->getTool(int(TOOLID::SCREENSHOT));
 	if (mTool->isOn()) {
 		mTool->toggle();
-		mTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
-		HelmsleyVolume::instance()->deactivateMeasurementTool(0);
+ 		HelmsleyVolume::instance()->deactivateMeasurementTool(0);
 	}
 	if (centerTool->isOn()) {
 		centerTool->toggle();
-		centerTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
-		HelmsleyVolume::instance()->toggleCenterlineTool(false);
+ 		HelmsleyVolume::instance()->toggleCenterlineTool(false);
 	}
 	if (screenTool->isOn()) {
 		screenTool->toggle();
-		screenTool->getIcon()->setColor(osg::Vec4(0.0, 0.0, 0.0, 1));
-		HelmsleyVolume::instance()->toggleScreenshotTool(false);
+ 		HelmsleyVolume::instance()->toggleScreenshotTool(false);
 	}
 }
 
@@ -2267,7 +2260,7 @@ void NewVolumeMenu::resetValues() {
 	std::vector<CurvedQuad*> curvedMenuItems = _toolMenu->getCurvedMenuItems();
 	int index = 0;
 	for (std::vector<CurvedQuad*>::iterator it = curvedMenuItems.begin(); it != curvedMenuItems.end(); ++it) {
-		if (index == int(ToolMenu::TOOLID::CUTTINGPLANE)) {	
+		if (index == int(TOOLID::CUTTINGPLANE)) {	
  			(*it)->turnOff();
 			(*it)->setColor(UI_BACKGROUND_COLOR);
  			index++;
@@ -2858,7 +2851,7 @@ void NewVolumeMenu::toggleMaskMenu(bool on) {
 }
 
 bool NewVolumeMenu::hasCenterLineCoords() {
-	return _volume->getColonCoords() == nullptr ? true : false;
+	return _volume->getColonCoords() == nullptr ? false : true;
 }
 
 ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
@@ -2869,12 +2862,12 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	_menu = new UIPopup();
 	if (parent)
 	{
-		osg::Vec3 volumePos = ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", osg::Vec3(0, 750, 500));
-		_menu->setPosition(osg::Vec3(-150, 900, 1500) - volumePos);
-	}
+		osg::Vec3 volPos = VOLUME_POS;
+		_menu->setPosition(MENU_POS);
+ 	}
 	else
 	{
-		_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Position", osg::Vec3(-150, 500, 600)));
+		_menu->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Position", MENU_POS));
 	}
 	_menu->getRootElement()->setAbsoluteSize(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.ToolMenu.Scale", osg::Vec3(600, 1, 100)));
 
@@ -2884,7 +2877,7 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	//_menu->addChild(list);	
 	std::string dir = ConfigManager::getEntry("Plugin.HelmsleyVolume.ImageDir");
 	
-	_curvedMenu = new CurvedMenu(this, 9);
+	_curvedMenu = new CurvedMenu(this, int(TOOLID::COUNT));
 	_curvedMenu->setImage(int(TOOLID::SCREENSHOT), dir + "browser.png");
 	_curvedMenu->setImage(int(TOOLID::CUTTINGPLANE), dir + "slice.png");
 	//_curvedMenu->setImage(int(TOOLID::HISTOGRAM), dir + "histogram.png");
@@ -3010,7 +3003,7 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
 			HelmsleyVolume::instance()->toggleClaheTools(true);
-			toggleOtherMenus(TOOLID::CLAHE);
+			toggleOtherMenus((int)TOOLID::CLAHE);
 		}
 		else
 		{
@@ -3103,7 +3096,7 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
 			HelmsleyVolume::instance()->toggleMCRender(true);
-			toggleOtherMenus(TOOLID::MARCHINGCUBES);
+			toggleOtherMenus((int)TOOLID::MARCHINGCUBES);
  		}
 	else
 		{
@@ -3111,9 +3104,11 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 			HelmsleyVolume::instance()->toggleMCRender(false);
  		}
 	}
+
+	
 }
 
-void ToolMenu::toggleOtherMenus(TOOLID currentActiveTool) {
+void ToolMenu::toggleOtherMenus(int currentActiveTool) {
 	auto menu = _curvedMenu->getCurvedMenuItems();
 	menu[int(TOOLID::CLAHE)]->setColor(UI_BACKGROUND_COLOR);
 	menu[int(TOOLID::CLAHE)]->turnOff();

@@ -32,10 +32,9 @@ void VolumeDrawCallback::drawImplementation(osg::RenderInfo& renderInfo, const o
 		return;
 	}
 	const osg::GLExtensions* ext = renderInfo.getState()->get<osg::GLExtensions>();
-
 	if (!cvr::ScreenBase::resolveBuffers(renderInfo.getCurrentCamera(), group->_resolveFBO, renderInfo.getState(), GL_DEPTH_BUFFER_BIT))
 	{
-		//std::cout << "Depth buffer could not be resolved" << std::endl;
+		std::cout << "Depth buffer could not be resolved" << std::endl;
 	}
 
 	const osg::Viewport* currview = renderInfo.getState()->getCurrentViewport();
@@ -46,22 +45,12 @@ void VolumeDrawCallback::drawImplementation(osg::RenderInfo& renderInfo, const o
 		currview->x() / totalview->width(),
 		currview->y() / totalview->height()
 	);
+
 	group->_RelativeViewport->set(relativeView);
-
 	group->_RelativeViewport->apply(ext, group->_program->getPCP(*renderInfo.getState())->getUniformLocation("RelativeViewport"));
-
 	drawable->drawImplementation(renderInfo);
-
-
 }
 
-void VolumeDrawCallback::checkStatuses() const{
-	if (group->_statusDirty) {
-		if (((MarchingCubeCallback*)group->_marchingCubeNode->getDrawCallback())->ready[0] == 1) {
-			group->readyMCUI();
-		}
-	}
-}
 
 VolumeGroup::VolumeGroup()
 {
@@ -79,7 +68,6 @@ VolumeGroup::~VolumeGroup()
 {
 	_computeUniforms.clear();
 	_dirty.clear();
-
 }
 
 osg::Matrix VolumeGroup::getObjectToWorldMatrix()
@@ -177,8 +165,7 @@ void VolumeGroup::init()
 
 	osg::ref_ptr<osg::Geode> g = new osg::Geode();
 	g->addChild(_cube);
-	g->getOrCreateStateSet()->setRenderBinDetails(7, "RenderBin");
- 
+	g->getOrCreateStateSet()->setRenderBinDetails((int)RENDERBIN_ORDER::CUBE, "RenderBin");
 	_transform->addChild(g);
 	this->addChild(_transform);
 	
@@ -201,12 +188,9 @@ void VolumeGroup::init()
 	osg::ref_ptr<osg::Uniform> dt = new osg::Uniform("DepthTexture", (int)1);
 
 	states->addUniform(vol);
-	states->addUniform(dt);
-	
+	states->addUniform(dt);	
 	states->setTextureAttribute(1, _depthTexture, osg::StateAttribute::ON);
 	states->setTextureMode(1, GL_TEXTURE_2D, osg::StateAttribute::ON);
-
-
 
 	_computeProgram = new osg::Program;
 	_computeProgram->setName("Bake");
@@ -221,7 +205,7 @@ void VolumeGroup::init()
 	_computeNode->setDrawCallback(new ComputeDrawCallback(this));
 	osg::StateSet* computeStates = _computeNode->getOrCreateStateSet();
 	computeStates->setAttributeAndModes(_computeProgram.get(), osg::StateAttribute::ON);
-	computeStates->setRenderBinDetails(6, "RenderBin");
+	computeStates->setRenderBinDetails((int)RENDERBIN_ORDER::VOLUME, "RenderBin");
 
 	_computeUniforms["OpacityCenter"] = new osg::Uniform(osg::Uniform::FLOAT, "OpacityCenter", 10);
 	_computeUniforms["OpacityCenter"]->setElement(0, .5f);
@@ -262,25 +246,7 @@ void VolumeGroup::init()
 
 void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 {
-	//osg::setNotifyLevel(osg::NotifySeverity::DEBUG_INFO);
-
-	////////////////centerline
-	_centerLineGeodes = new std::vector<osg::ref_ptr<osg::Geode>>();
-	_colonCoords = FileSelector::loadCenterLine(path, FileSelector::OrganEnum::COLON);
-	if (!_colonCoords->empty()) {
-		Line* colonLine = new Line(_colonCoords, osg::Vec4(UI_BLUE_COLOR, 1.0));
-		_centerLineGeodes->push_back(colonLine->getGeode());
-		_transform->addChild(_centerLineGeodes->at(_centerLineGeodes->size()-1));
-		_centerLineGeodes->at(_centerLineGeodes->size() - 1)->setNodeMask(0);
-	}
-
-    _illeumCoords = FileSelector::loadCenterLine(path, FileSelector::OrganEnum::ILLEUM);
-	if (!_illeumCoords->empty()) {
-		Line* illeumLine = new Line(_illeumCoords, osg::Vec4(UI_PURPLE_COLOR, 1.0));
-		_centerLineGeodes->push_back(illeumLine->getGeode());
-		_transform->addChild(_centerLineGeodes->at(_centerLineGeodes->size() - 1));
-		_centerLineGeodes->at(_centerLineGeodes->size() - 1)->setNodeMask(0);
-	}
+	
 
 	osg::Matrix m = osg::Matrix::identity();
 	osg::ref_ptr<osg::Image> i = ImageLoader::LoadVolume(path, m);
@@ -289,7 +255,7 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 		std::cerr << "Volume couldn't be loaded" << std::endl;
 		return;
 	}
-	//_transform->setScale(s);
+
 	_transform->setMatrix(m);
 	osg::Vec3 scale;
 	osg::Vec3 translation;
@@ -321,14 +287,9 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 		
 	}
  	
-
-
-
 	_volume = new osg::Texture3D;
 	_volume->setImage(i);
 	_volume->setTextureSize(i->s(), i->t(), i->r());
-	
-	
 	_volume->setFilter(osg::Texture3D::MIN_FILTER, osg::Texture3D::LINEAR);
 	_volume->setFilter(osg::Texture3D::MAG_FILTER, osg::Texture3D::LINEAR);
 	_volume->setInternalFormat(GL_RG16);
@@ -338,14 +299,13 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 
 	_computeNode->setComputeGroups((i->s() + 7) / 8, (i->t() + 7) / 8, (i->r() + 7) / 8);
 	_computeUniforms["TexelSize"]->set(osg::Vec3(1.0f / (float)i->s(), 1.0f / (float)i->t(), 1.0f / (float)i->r()));
+
 	osg::StateSet* states = _computeNode->getOrCreateStateSet();
 	states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
 	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
 	
 	_volDims = osg::Vec3i(i->s(), i->t(), i->r());
-	_volArea = _volDims.x() * _volDims.y() * _volDims.z();
-	
-	
+ 	
 	//Set dirty on all graphics contexts
 	std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();/////////////uncomment
 	cvr::CVRViewer::instance()->getCameras(cameras);
@@ -354,8 +314,8 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 		setDirty(cameras[i]->getGraphicsContext());
 	}
 
-
 	precompute();
+	readyCenterLine(path);
 }
 
 
@@ -366,17 +326,15 @@ osg::ref_ptr<osg::AtomicCounterBufferBinding> VolumeGroup::precompMinMax() {
 	sourceNode = new osg::DispatchCompute((_volDims.x() + 7) / 8, (_volDims.y() + 7) / 8, (_volDims.z() + 7) / 8);
 	sourceNode->getOrCreateStateSet()->setAttributeAndModes(prog.get());
 	sourceNode->setDataVariance(osg::Object::DYNAMIC);
+	sourceNode->setDrawCallback(new MinMaxCallback(this));
 
-	MinMaxCallback* accallback = new MinMaxCallback(this);
-	sourceNode->setDrawCallback(accallback);
 	osg::StateSet* states = sourceNode->getOrCreateStateSet();
 	states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
 	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
-	states->setRenderBinDetails(1, "RenderBin");
+	states->setRenderBinDetails((int)RENDERBIN_ORDER::MINMAX, "RenderBin");
 	states->addUniform(new osg::Uniform("VolumeDims", _volDims.x(), _volDims.y(), _volDims.z()));
 
 	this->addChild(sourceNode);
-
 	return setupMinmaxSSBO();
 }
 
@@ -394,13 +352,10 @@ osg::ref_ptr<osg::AtomicCounterBufferBinding> VolumeGroup::setupMinmaxSSBO() {
 
 	((MinMaxCallback*)sourceNode->getDrawCallback())->_acbb = acbb;
 	sourceNode->getOrCreateStateSet()->setAttributeAndModes(acbb, osg::StateAttribute::ON);
-
 	sourceNode->getOrCreateStateSet()->addUniform(new osg::Uniform("numBins", _numGrayVals));
 
 	return acbb;
  }
-
-
 
 std::pair< osg::ref_ptr<osg::ShaderStorageBufferBinding>, osg::ref_ptr<osg::ShaderStorageBufferBinding>> VolumeGroup::precompHist() {
 
@@ -417,13 +372,11 @@ std::pair< osg::ref_ptr<osg::ShaderStorageBufferBinding>, osg::ref_ptr<osg::Shad
 	_histNode->setDrawCallback(shaderStorageCallback);
 
 	osg::StateSet* states = _histNode->getOrCreateStateSet();
-	states->setRenderBinDetails(2, "RenderBin");
+	states->setRenderBinDetails((int)RENDERBIN_ORDER::CLAHEHIST, "RenderBin");
 	states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
 	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
-	
 	states->addUniform(new osg::Uniform("VolumeDims", _volDims.x(), _volDims.y(), _volDims.z()));
 	
- 
 	this->addChild(_histNode);
 	return setupHistSSBO();
 }
@@ -467,31 +420,17 @@ osg::ref_ptr<osg::ShaderStorageBufferBinding> VolumeGroup::precompExcess(t_ssbb 
 	////////////////////////////////////////////////////////////////////////////
 	// Calculate the excess pixels based on the clipLimit
 
-	// buffer for the pixels to re-distribute
-	
-	// calculate the minClipValue
-
 	//Set up Compute Shader
 	osg::ref_ptr<osg::Program> excessShader = new osg::Program;
 	excessShader->addShader(new osg::Shader(osg::Shader::COMPUTE, _excessShader));
-
-	/*int width = 4096;
-	int count = (_histSize + 63) / 64;
-	GLuint dispatchWidth = count / (width*width);
-	GLuint dispatchHeight = (count / width) % width;
-	GLuint dispatchDepth = count % width;*/
 	_excessNode = new osg::DispatchCompute(_histSize+63/64, 1, 1);	
-	//_excessNode = new osg::DispatchCompute(dispatchWidth, dispatchHeight, dispatchDepth);
-	
+ 	
 	_excessNode->getOrCreateStateSet()->setAttributeAndModes(excessShader.get());	
 	_excessNode->setDataVariance(osg::Object::DYNAMIC);
 
 	osg::StateSet* states = _excessNode->getOrCreateStateSet();
-	states->setRenderBinDetails(3, "RenderBin");
- 	/*states->addUniform(new osg::Uniform("clipLimit", _clipLimit3D));
-	states->addUniform(new osg::Uniform("minClipValue", _minClipValue));*/
-	
-
+	states->setRenderBinDetails((int)RENDERBIN_ORDER::EXCESS, "RenderBin");
+ 
 	ExcessSSB* shaderStorageCallback = new ExcessSSB(this);
 	_excessNode->setDrawCallback(shaderStorageCallback);
 		
@@ -534,12 +473,10 @@ void VolumeGroup::precompHistClip(t_ssbb ssbbHist, t_ssbb ssbbHistMax, t_ssbb ss
 
 
 	_clipHist1Node->getOrCreateStateSet()->setAttributeAndModes(clipShader.get());
-
 	_clipHist1Node->setDataVariance(osg::Object::DYNAMIC);
 
 	osg::StateSet* states = _clipHist1Node->getOrCreateStateSet();
-	states->setRenderBinDetails(4, "RenderBin");
-	/*states->addUniform(new osg::Uniform("clipLimit", _clipLimit3D));*/
+	states->setRenderBinDetails((int)RENDERBIN_ORDER::CLIP, "RenderBin");
 	states->addUniform(new osg::Uniform("minClipValue", _minClipValue));
 	
 	//Clipshader2 Used in Callback
@@ -603,7 +540,7 @@ void VolumeGroup::precompLerp(t_ssbb ssbbHist) {
 	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
 	states->setTextureAttribute(5, _claheVolume, osg::StateAttribute::ON);
 	states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);
-	states->setRenderBinDetails(5, "RenderBin");
+	states->setRenderBinDetails((int)RENDERBIN_ORDER::LERP, "RenderBin");
 	
 
 	LerpSSB* shaderStorageCallback = new LerpSSB(this);
@@ -629,6 +566,7 @@ void VolumeGroup::setupLerp(t_ssbb ssbbHist) {
 
 void VolumeGroup::genClahe() {
 	if (!_clahePrecomped) {
+		//////////////////////////////////////clahe/////////////////////////
 		_claheVolume = new osg::Texture3D;
 		_claheVolume->setTextureSize(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth());
 		osg::ref_ptr<osg::Image> bimage = new osg::Image();
@@ -644,11 +582,7 @@ void VolumeGroup::genClahe() {
 		states->setTextureAttribute(5, _claheVolume, osg::StateAttribute::ON);
 		states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);
 
-		//////////////////////////////////////clahe/////////////////////////
-		//_volDims = osg::Vec3i(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth());
 		_minClipValue = unsigned int(0);
-
-
 
 		//////////////////////MinMax//////////////
 		auto acbbMinMax = precompMinMax();
@@ -685,10 +619,6 @@ void VolumeGroup::genClahe() {
 		imagbinding = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_WRITE, GL_RG16, 0, GL_TRUE);
 		states->setAttributeAndModes(imagbinding);
 
-	
-
-
-
 		_clahePrecomped = true;
 	}
 
@@ -721,12 +651,7 @@ void VolumeGroup::genClahe() {
 
 	((LerpSSB*)_lerpNode->getDrawCallback())->_claheDirty[0] = 1;
 
-
-
-
-	
-	//dirty vol
-	_claheAvailable = true;
+ 	_claheAvailable = true;
 	this->setDirtyAll();
 }
 void VolumeGroup::setClaheRes(float res) {
@@ -739,7 +664,6 @@ void VolumeGroup::setClaheRes(float res) {
 	while ((int)_volDims.z() % (int)zRes != 0 || zRes > ratio)
 		zRes -= 1.0;
 
-	std::cout << "claheres " << _claheRes << " " << "zres " << zRes << " ratio " << ratio << std::endl;
 	_numSB_3D.x() = _claheRes; _numSB_3D.y() = _claheRes; _numSB_3D.z() = zRes;
 	_numHist = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z();
 	_histSize = _numHist * _numGrayVals;
@@ -863,25 +787,7 @@ void VolumeGroup::precompute()
 		
 		states->setAttributeAndModes(imagbinding);
 		states->setAttributeAndModes(imagbinding2);
-		//states->setAttributeAndModes(imagbinding25);
-		/////////////////////////clahe///////////////////
-		//states = sourceNode->getOrCreateStateSet();
-		//osg::ref_ptr<osg::BindImageTexture> imagbinding3 = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		//states->setAttributeAndModes(imagbinding3);
-		//
-		//states = _histNode->getOrCreateStateSet();
-		//osg::ref_ptr<osg::BindImageTexture> imagbinding4 = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		//states->setAttributeAndModes(imagbinding4);
-
-		//states = _lerpNode->getOrCreateStateSet();
-		//osg::ref_ptr<osg::BindImageTexture> imagbinding5 = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		//osg::ref_ptr<osg::BindImageTexture> imagbinding6 = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_WRITE, GL_RG16, 0, GL_TRUE);
-		//states->setAttributeAndModes(imagbinding5);
-		//states->setAttributeAndModes(imagbinding6);
-
-	
-
-
+		
 		states = _cube->getOrCreateStateSet();
 		states->setTextureAttribute(0, _baked, osg::StateAttribute::ON);
 		states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
@@ -889,6 +795,26 @@ void VolumeGroup::precompute()
 
 		this->addChild(_computeNode);
 
+	}
+
+}
+
+void VolumeGroup::readyCenterLine(std::string path) {
+	_centerLineGeodes = new std::vector<osg::ref_ptr<osg::Geode>>();
+	_colonCoords = FileSelector::loadCenterLine(path, FileSelector::OrganEnum::COLON);
+	if (!_colonCoords->empty()) {
+		_colonLine = std::make_shared<Line>(_colonCoords, osg::Vec4(UI_BLUE_COLOR, 1.0));
+		_centerLineGeodes->push_back(((Line*)_colonLine.get())->getGeode());
+		_transform->addChild(_centerLineGeodes->at(_centerLineGeodes->size() - 1));
+		_centerLineGeodes->at(_centerLineGeodes->size() - 1)->setNodeMask(0);
+	}
+
+	_illeumCoords = FileSelector::loadCenterLine(path, FileSelector::OrganEnum::ILLEUM);
+	if (!_illeumCoords->empty()) {
+		_illeumLine = std::make_shared<Line>(_illeumCoords, osg::Vec4(UI_BLUE_COLOR, 1.0));
+		_centerLineGeodes->push_back(((Line*)_illeumLine.get())->getGeode());
+		_transform->addChild(_centerLineGeodes->at(_centerLineGeodes->size() - 1));
+		_centerLineGeodes->at(_centerLineGeodes->size() - 1)->setNodeMask(0);
 	}
 }
 
@@ -906,60 +832,55 @@ void VolumeGroup::flipCull()
 
 void VolumeGroup::precompTotalHistogram() {
 
-	//Hist Buffer
-	unsigned int numBins = 255;
-	osg::ref_ptr<osg::UIntArray> hist = new osg::UIntArray(numBins);
-	osg::ref_ptr<osg::ShaderStorageBufferObject> histBuffer = new osg::ShaderStorageBufferObject;	
-	hist->setBufferObject(histBuffer);
-	osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbHist = new osg::ShaderStorageBufferBinding(6, histBuffer->getBufferData(0), 0, sizeof(GLuint) * numBins);
-	hist.release();
-	histBuffer.release();
- 
-	//Max Hist Value
-	osg::ref_ptr<osg::UIntArray> dati = new osg::UIntArray(1);
-	osg::ref_ptr<osg::BufferObject> acbo = new osg::AtomicCounterBufferObject;
-	acbo->setBufferData(0, dati);
-	osg::ref_ptr<osg::AtomicCounterBufferBinding> acbb = new osg::AtomicCounterBufferBinding(7, acbo->getBufferData(0), 0, sizeof(GLuint));
-	dati.release();
-	acbo.release();
+	////Hist Buffer
+	//unsigned int numBins = 255;
+	//osg::ref_ptr<osg::UIntArray> hist = new osg::UIntArray(numBins);
+	//osg::ref_ptr<osg::ShaderStorageBufferObject> histBuffer = new osg::ShaderStorageBufferObject;	
+	//hist->setBufferObject(histBuffer);
+	//osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbHist = new osg::ShaderStorageBufferBinding(6, histBuffer->getBufferData(0), 0, sizeof(GLuint) * numBins);
+	//hist.release();
+	//histBuffer.release();
+ //
+	////Max Hist Value
+	//osg::ref_ptr<osg::UIntArray> dati = new osg::UIntArray(1);
+	//osg::ref_ptr<osg::BufferObject> acbo = new osg::AtomicCounterBufferObject;
+	//acbo->setBufferData(0, dati);
+	//osg::ref_ptr<osg::AtomicCounterBufferBinding> acbb = new osg::AtomicCounterBufferBinding(7, acbo->getBufferData(0), 0, sizeof(GLuint));
+	//dati.release();
+	//acbo.release();
+
+	//osg::ref_ptr<osg::Program> prog2 = new osg::Program;
+	//osg::Shader* shader = new osg::Shader(osg::Shader::COMPUTE, _totalHistShader);
+	//prog2->addShader(shader);
 
 
-	
+	//_totalHistNode = new osg::DispatchCompute((_volDims.x() + 7) / 8, (_volDims.y() + 7) / 8, (_volDims.z() + 7) / 8);
+	//_totalHistNode->getOrCreateStateSet()->setAttributeAndModes(prog2.get());
+	//_totalHistNode->getOrCreateStateSet()->setAttributeAndModes(ssbbHist, osg::StateAttribute::ON);
+	//_totalHistNode->getOrCreateStateSet()->setAttributeAndModes(acbb, osg::StateAttribute::ON);
+	//_totalHistNode->setDataVariance(osg::Object::DYNAMIC);
 
-	osg::ref_ptr<osg::Program> prog2 = new osg::Program;
-	osg::Shader* shader = new osg::Shader(osg::Shader::COMPUTE, _totalHistShader);
-	prog2->addShader(shader);
-
-
-	_totalHistNode = new osg::DispatchCompute((_volDims.x() + 7) / 8, (_volDims.y() + 7) / 8, (_volDims.z() + 7) / 8);
-	_totalHistNode->getOrCreateStateSet()->setAttributeAndModes(prog2.get());
-	_totalHistNode->getOrCreateStateSet()->setAttributeAndModes(ssbbHist, osg::StateAttribute::ON);
-	_totalHistNode->getOrCreateStateSet()->setAttributeAndModes(acbb, osg::StateAttribute::ON);
-	_totalHistNode->setDataVariance(osg::Object::DYNAMIC);
-
-	TotalHistCallback* shaderStorageCallback = new TotalHistCallback(this);
-	_totalHistNode->setDrawCallback(shaderStorageCallback);
-	shaderStorageCallback->_ssbb = ssbbHist;
-	shaderStorageCallback->_acbb = acbb;
-	/*shaderStorageCallback->_buffersize = numBins;*/
-  
+	//TotalHistCallback* shaderStorageCallback = new TotalHistCallback(this);
+	//_totalHistNode->setDrawCallback(shaderStorageCallback);
+	//shaderStorageCallback->_ssbb = ssbbHist;
+	//shaderStorageCallback->_acbb = acbb;
+	///*shaderStorageCallback->_buffersize = numBins;*/
+ // 
 
 
-	osg::StateSet* states = _totalHistNode->getOrCreateStateSet();
-	states->setRenderBinDetails(9, "RenderBin");
-	/*states->setTextureAttribute(5, _claheVolume, osg::StateAttribute::ON);
-	states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
-	/*states->setTextureAttribute(1, _baked, osg::StateAttribute::ON);
-	states->setTextureMode(1, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
-	states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
-	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
+	//osg::StateSet* states = _totalHistNode->getOrCreateStateSet();
+	//states->setRenderBinDetails((int)RENDERBIN_ORDER::NONCLAHEHIST, "RenderBin");
+	///*states->setTextureAttribute(5, _claheVolume, osg::StateAttribute::ON);
+	//states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
+	///*states->setTextureAttribute(1, _baked, osg::StateAttribute::ON);
+	//states->setTextureMode(1, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
+	//states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
+	//states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
 
-	states->addUniform(new osg::Uniform("VolumeDims", _volDims.x(), _volDims.y(), _volDims.z()));
- 	states->addUniform(new osg::Uniform("NUM_BINS", numBins));
+	//states->addUniform(new osg::Uniform("VolumeDims", _volDims.x(), _volDims.y(), _volDims.z()));
+ //	states->addUniform(new osg::Uniform("NUM_BINS", numBins));
 
-	this->addChild(_totalHistNode);
-
-	
+	//this->addChild(_totalHistNode);
 
 }
 
@@ -967,8 +888,7 @@ void VolumeGroup::precompMarchingCubes() {
 
 	//TriangleIDs buffer
 	
- 	//std::cout << "voldims: " << _volDims.x() << "   " << _volDims.y() << "   " << _volDims.z() << std::endl;
-	
+ 	
 
 	//ConfigLookup buffer
 	osg::ref_ptr<osg::IntArray> configLUTArray = new osg::IntArray(CONFIGLUTSIZE);
@@ -979,36 +899,10 @@ void VolumeGroup::precompMarchingCubes() {
 	configLUTArray.release();
 	ssboCL.release();
 
-	////TriangleVertices buffer
-	//int newStructSize = _volDims.x() / _mcRes * _volDims.y() / _mcRes * _volDims.z();
-	//unsigned int triangleStructMaxSize = newStructSize*45;//Maximum_Index(max edge index(15)*Vertice_Count(3) + Float_Count(9) = 51
-	//_va = new osg::Vec3Array(triangleStructMaxSize/3u);
-	//for (int i = 0; i < triangleStructMaxSize/3; i++) {
-	//	_va->at(i).x() = std::numeric_limits<float>::max();
-	//	_va->at(i).y() = std::numeric_limits<float>::max();
-	//	_va->at(i).z() = std::numeric_limits<float>::max();
-	//}
-
-	
+	 
 	geo = new osg::Geometry;	
 	geo->setUseVertexBufferObjects(true);
-
-	//osg::VertexBufferObject* vbo = new osg::VertexBufferObject;
-	//vbo->setArray(0, _va);
-	//osg::Vec3Array* va = new osg::Vec3Array;
-	//va->setVertexBufferObject(vbo);
-
-	//geo->setVertexArray(_va);
- //
-	////WEIRD SHAPE
-	////osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbTV = new osg::ShaderStorageBufferBinding(3,geo->getVertexArray()->getBufferObject()->getBufferData(0), 0, sizeof(GLfloat) * triangleStructMaxSize);
-	//osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbTV = new osg::ShaderStorageBufferBinding(3, vbo->getArray(0), 0, sizeof(GLfloat) * triangleStructMaxSize);
-	
-	
-	
-	//verticesArray.release();
-	
-
+ 
 	osg::ref_ptr<osg::Program> prog = new osg::Program;
 	osg::Shader* shader = new osg::Shader(osg::Shader::COMPUTE, _marchingCubesShader);
 	prog->addShader(shader);
@@ -1017,29 +911,22 @@ void VolumeGroup::precompMarchingCubes() {
 	_marchingCubeNode = new osg::DispatchCompute((_volDims.x() + 7) / 8, (_volDims.y() + 7) / 8, (_volDims.z() + 7) / 8);
 	_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(prog.get());
  	_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(ssbbCL, osg::StateAttribute::ON);
-	//_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(ssbbTV, osg::StateAttribute::ON);
-	//_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(acbb, osg::StateAttribute::ON);
+	 
 	_marchingCubeNode->setDataVariance(osg::Object::DYNAMIC);
 
 	MarchingCubeCallback* shaderStorageCallback = new MarchingCubeCallback(this);
 	_marchingCubeNode->setDrawCallback(shaderStorageCallback);
-	/*shaderStorageCallback->_ssbb = ssbbTV;
- 	shaderStorageCallback->_buffersize = triangleStructMaxSize;*/
+	 
  	shaderStorageCallback->_volDims = _volDims;
  	shaderStorageCallback->_geomToPass = geo;
- 	//shaderStorageCallback->_VA = _va;
-
+  
 	
   
 
 
 	osg::StateSet* states = _marchingCubeNode->getOrCreateStateSet();
-	states->setRenderBinDetails(8, "RenderBin");
-	/*states->setTextureAttribute(5, _claheVolume, osg::StateAttribute::ON);
-	states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
-	/*states->setTextureAttribute(1, _baked, osg::StateAttribute::ON);
-	states->setTextureMode(1, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
-
+	states->setRenderBinDetails((int)RENDERBIN_ORDER::MCS, "RenderBin");
+	 
 	states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
 	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
 
@@ -1091,9 +978,6 @@ void VolumeGroup::genMCs() {
 	_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(_ssbbTV, osg::StateAttribute::ON);
 	_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(acbb, osg::StateAttribute::ON);
 
-
-	
-
 	MarchingCubeCallback* shaderStorageCallback = (MarchingCubeCallback*)_marchingCubeNode->getDrawCallback();
 	shaderStorageCallback->_ssbb = _ssbbTV;
 	shaderStorageCallback->_buffersize = triangleStructMaxSize;
@@ -1140,10 +1024,8 @@ void VolumeGroup::intializeMC() {
 		precompMarchingCubes();
 
 		osg::StateSet* states = _marchingCubeNode->getOrCreateStateSet();
-		//osg::ref_ptr<osg::BindImageTexture> imagbinding7 = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		osg::ref_ptr<osg::BindImageTexture> imagbinding8 = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		//osg::ref_ptr<osg::BindImageTexture> imagbinding7 = new osg::BindImageTexture(1, _baked, osg::BindImageTexture::READ_ONLY, GL_RGBA16, 0, GL_TRUE);
-		states->setAttributeAndModes(imagbinding8);
+ 		osg::ref_ptr<osg::BindImageTexture> imagbinding8 = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
+ 		states->setAttributeAndModes(imagbinding8);
 
 		_mcPrecomped = true;
 	}
@@ -1266,9 +1148,7 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 			GLint id;
 			glGetIntegerv(GL_CURRENT_PROGRAM, &id);
 		 
-			std::cout << "test id.. " << id << std::endl;
- 			//renderInfo.getState()->get<osg::GLExtensions>()->glUseProgram(0);
-
+ 
 		 
 			_clipshader2->apply(*state);
 
@@ -1276,8 +1156,7 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 		 
 			glGetIntegerv(GL_CURRENT_PROGRAM, &id);
 			 
-			std::cout << "test id.. " << id << std::endl;
-
+ 
 			renderInfo.getState()->get<osg::GLExtensions>()->glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, histID);
 			renderInfo.getState()->get<osg::GLExtensions>()->glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, histMaxID);
 			renderInfo.getState()->get<osg::GLExtensions>()->glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbbExcessID);

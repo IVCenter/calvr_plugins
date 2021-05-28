@@ -8,9 +8,9 @@
 #define UI_INACTIVE_COLOR osg::Vec4(.243, .561, 1, .4)
 #define UI_BLUE_COLOR osg::Vec3(0.8, 0.9, 1.0)
 #define UI_BLUE_COLOR2 osg::Vec4(.04, .25, .4, 1.0)
-#define UI_RED_HOVER_COLOR osg::Vec3(1, 0.4, 0.4)
-#define UI_RED_HOVER_COLOR_VEC4 osg::Vec4(1, 0.4, 0.4, 1)
-#define UI_RED_DISABLED_COLOR_VEC4 osg::Vec4(0.51, 0.282, 0.2671, .4)
+#define UI_RED_HOVER_COLOR osg::Vec3(1, 0.25, 0.25)
+#define UI_RED_HOVER_COLOR_VEC4 osg::Vec4(1, 0.25, 0.25, 1)
+#define UI_RED_DISABLED_COLOR_VEC4 osg::Vec4(1, 0.81, 0.81, 1)
 #define UI_NULL_COLOR_VEC4 osg::Vec4(-1, 0, 0, 0)
 #define UI_YELLOW_COLOR osg::Vec3(1, 0.964, 0.8)
 #define UI_GREEN_COLOR osg::Vec3(0.8, 1, 0.847)
@@ -690,6 +690,7 @@ public:
 	virtual void updateGeometry();
 
 	virtual bool processEvent(cvr::InteractionEvent* event) override;
+	void processHover(bool enter) override;
 
 	virtual void setColor(osg::Vec4 color);
 
@@ -1002,6 +1003,7 @@ public:
 	std::string getName() { return _name; }
 	HoverButton* getButton() { return _button; }
 	cvr::UIText* getText() { return _uiText; }
+	cvr::UIQuadElement* getBknd() { return _bknd; }
 
 protected:
 	

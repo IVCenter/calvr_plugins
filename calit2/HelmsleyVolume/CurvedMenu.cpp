@@ -22,12 +22,6 @@ CurvedMenu::CurvedMenu(UICallback* callback, int numItems) : UIElement() {
 		segment->setCallback(callback);
 		
 	
-		//segment->setPercentSize(osg::Vec3(numItems, 1.0, 1.0));
-		//
-		//segment->setPercentSize(osg::Vec3(1.0/(float)numItems, 1.0, 1.0));
-		//float spaceBetween = 1 / (float)numItems;// +1 / numItems / numItems;
-		//segment->setPercentPos(osg::Vec3((1/(float)numItems * i) - .5, 0.0, 0.0));
-		//_parent->addChild(segment);
 		_list->addChild(segment);
 		
 		//}

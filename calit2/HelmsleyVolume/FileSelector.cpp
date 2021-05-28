@@ -62,7 +62,7 @@ void FileSelector::init()
 	_fsPopup = new cvr::UIPopup();
 
 	_fsPopup->getRootElement()->setAbsoluteSize(osg::Vec3(2400, 1, 1500));
-	cvr::UIQuadElement* fsBknd = new cvr::UIQuadElement(UI_BACKGROUND_COLOR);
+	cvr::UIQuadElement* fsBknd = new cvr::UIQuadElement(UI_BLUE_COLOR2);
 	fsBknd->setBorderSize(.01);
 	fsBknd->setTransparent(true);
 	fsBknd->setRounding(0, .05);
@@ -102,7 +102,7 @@ void FileSelector::init()
 	_fsPopup->setActive(true, true);
 	
 	
-	cvr::UIQuadElement* titleBknd = new cvr::UIQuadElement(UI_BACKGROUND_COLOR);
+	cvr::UIQuadElement* titleBknd = new cvr::UIQuadElement(UI_BLUE_COLOR2);
 	_fsPopup->addChild(titleBknd);
 	titleBknd->setPercentPos(osg::Vec3(.3, -1, -.03));
 	titleBknd->setPercentSize(osg::Vec3(.4, 1, .1));
@@ -199,7 +199,9 @@ void FileSelector::init()
 	_loadVolumeButton = loadVolButton->getButton();
 	loadVolButton->setButtonCallback(this);
 	loadVolButton->setCallback(this);
-
+	loadVolButton->getBknd()->setRounding(0, 0.2);
+	loadVolButton->getBknd()->setBorderSize(.01);
+	loadVolButton->getBknd()->setTransparent(true);
 
 	FullButton* loadVolButton2 = new FullButton("Load as Second", 50.0f, UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
 	loadVolButton2->setPercentSize(osg::Vec3(.3, 1, .125));
@@ -207,7 +209,9 @@ void FileSelector::init()
 	loadVolButton2->getButton()->setDisabledColor(UI_RED_DISABLED_COLOR_VEC4);
 	_loadSecondButton = loadVolButton2->getButton();
 	loadVolButton2->setButtonCallback(this);
-
+	loadVolButton2->getBknd()->setRounding(0, 0.2);
+	loadVolButton2->getBknd()->setBorderSize(.01);
+	loadVolButton2->getBknd()->setTransparent(true);
 
 
 	_categoryList = new cvr::UIList(cvr::UIList::TOP_TO_BOTTOM, cvr::UIList::CONTINUE);
