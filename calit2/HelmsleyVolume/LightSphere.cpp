@@ -1,8 +1,8 @@
 #include <iostream>
 
 #include "LightSphere.h"
-
-
+#include "UIExtensions.h"
+#include "HelmsleyVolume.h"
 
 LightSphere::LightSphere(float radius, osg::Vec3 position)
 	:SceneObject("light_sphere", false, true, false, false, true), position(position), radius(radius) 
@@ -27,72 +27,53 @@ LightSphere::LightSphere(float radius, osg::Vec3 position)
 	
 	this->addChild(geode);
 
-	std::cout << "========================Constructor=======================" << std::endl;
+	this->getRoot()->addUpdateCallback(new LightUpdate(this));
+
 	createGeometry();
 }
 
 void LightSphere::createGeometry()
 {
-	//_intersect = new osg::Geode();
 
-	//_group->addChild(transform);
-	//transform->addChild(_intersect);
-
-	//_intersect->setNodeMask(cvr::INTERSECT_MASK);
-
-	//_intersect->addDrawable(sd);
-
-	std::cout << "======================Creating Geometrey for Light Sphere============================" << std::endl;
 	updateGeometry();
 }
 
 void LightSphere::updateGeometry()
 {
-	std::cout << "=========================Geometry Updated================================" << std::endl;
+}
+
+osg::Vec3 LightSphere::getWorldPosition() {
+	osg::MatrixTransform* _obj2World = new osg::MatrixTransform(HelmsleyVolume::instance()->getSceneObjects()[0]->getObjectToWorldMatrix());
+
+	return (this->getPosition() * _obj2World->getMatrix());
 }
 
 bool LightSphere::processEvent(cvr::InteractionEvent* ie)
 {
-	std::cout << "======================processing event===================================" << std::endl;
-
+	//osg::Vec3 tempPos = transform->getMatrix().getTrans();
+	//osg::Vec3 tempPos = this->getPosition();
+	//static_cast<MarchingCubesRender*>(_mcr)->setPointLightPos(tempPos);
+	
 	return SceneObject::processEvent(ie);
 }
-
-/*
-void LightSphere::processHover(bool event)
-{
-	std::cout << "======================processing event===================================" << std::endl;
-	/*cvr::TrackedButtonInteractionEvent* tie = event->asTrackedButtonEvent();
-	osg::Matrix mat = cvr::TrackingManager::instance()->getHandMat(tie->getHand());
-	osg::Quat q = osg::Quat();
-	osg::Quat q2 = osg::Quat();
-	osg::Vec3 v2 = osg::Vec3();
-	osg::Vec3 pos = osg::Vec3();
-	mat.decompose(pos, q, v2, q2);
-
-	//if correct button is pressed
-	if (true) {
-	}
-	
-	moveLightPos(osg::Vec3(0, 0, 0));
-}
-*/
 
 void LightSphere::setSceneObject(SceneObject* so)
 {
 	_so = so;
 }
 
-void LightSphere::moveLightPos(osg::Vec3 position)
-{
-	osg::Matrix sm = transform->getMatrix();
-	sm = sm.translate(position);
-	transform->setMatrix(sm);
-	std::cout << "moving light sphere: " << position.x() << ", " << position.y() << ", " << position.z() << std::endl;
-
-}
-
 osg::MatrixTransform* LightSphere::getTransform()
 {
 	return transform;
+}
+
+void LightUpdate::operator()(osg::Node* node, osg::NodeVisitor* nv)
+{
+	if (_ls->getWorldPosition() != _lastPos) {
+		std::cout << "spherePos: " << HelmsleyVolume::instance()->printVec3OSG(_lastPos) << std::endl;
+		static_cast<MarchingCubesRender*>(_ls->_mcr)->setPointLightPos(_ls->getWorldPosition());
+		_lastPos = _ls->getWorldPosition();
+	}
+
+	traverse(node, nv);
 }

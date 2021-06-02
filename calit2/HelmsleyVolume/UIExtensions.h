@@ -606,6 +606,7 @@ public:
 	virtual void createGeometry();
 	virtual void updateGeometry();
 
+	void setPointLightPos(osg::Vec3 pos);
 	virtual void setProgram(osg::Program* p) { _program = p; _dirty = true; }
 	void setVolume(VolumeGroup* volume) { _volume = volume; }
 	virtual osg::Program* getProgram() { return _program; }
@@ -635,6 +636,7 @@ protected:
 	osg::Vec3i _voldims;
 	VolumeGroup* _volume;
 	LightSphere* _lightSphere;
+	osg::MatrixTransform* _obj2World;
 
 
 	static osg::Program* getOrLoadProgram();

@@ -7,10 +7,23 @@
 #include <osg/ShapeDrawable>
 #include "cvrKernel/NodeMask.h"
 
+class LightSphere;
+
+class LightUpdate : public osg::NodeCallback {
+public:
+	LightUpdate(LightSphere* ls)
+	:_ls(ls){};
+
+	virtual void operator()(osg::Node* node, osg::NodeVisitor* nv);
+
+private:
+	LightSphere* _ls;
+	osg::Vec3 _lastPos;
+};
 
 class LightSphere : public cvr::SceneObject {
 public:
-	LightSphere(float radius = 25.0f, osg::Vec3 position = osg::Vec3(0, 0, 0));
+	LightSphere(float radius = 25.0f, osg::Vec3 position = osg::Vec3(100, 100, 100));
 
 	osg::ref_ptr<osg::Sphere> sphere;
 	osg::ref_ptr<osg::ShapeDrawable> sd;
@@ -18,6 +31,7 @@ public:
 	osg::ref_ptr<osg::Geode> geode;
 	osg::Geometry* polyGeom;
 	SceneObject* _so;
+	void* _mcr;
 
 	osg::Vec4 color;
 	osg::Vec3 position;
@@ -25,12 +39,12 @@ public:
 
 	virtual void createGeometry();
 	virtual void updateGeometry();
+	osg::Vec3 getWorldPosition();
 	virtual bool processEvent(cvr::InteractionEvent* event) override;
-	//virtual void processHover(bool event) override;
 
 	void setSceneObject(SceneObject* so);
+	//void setMCRenderer(MarchingCubesRender* mcr);
 
-	void moveLightPos(osg::Vec3 position);
 	osg::MatrixTransform* getTransform();
 
 };

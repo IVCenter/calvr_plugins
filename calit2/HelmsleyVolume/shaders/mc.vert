@@ -14,13 +14,15 @@ out vs_out {
 } o;
 
 uniform mat4 osg_ModelViewProjectionMatrix;
+uniform mat4 osg_ModelViewMatrix;
+uniform mat4 osg_ViewMatrixInverse;
 
 void main() {
 	mat4 model = mat4(1.0);
     o.uv = uv;
     o.vertex = vertex;
     o.normal = normal;
-    o.fragment = vec3(model * vec4(vertex, 1.0));
+    o.fragment = vec3(osg_ViewMatrixInverse * osg_ModelViewMatrix * vec4(vertex, 1.0));
 
     gl_Position = osg_ModelViewProjectionMatrix * vec4(vertex, 1.0);
 }

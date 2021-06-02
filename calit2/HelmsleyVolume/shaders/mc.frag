@@ -10,21 +10,21 @@ in vs_out {
 } i;
 
 uniform vec3 lightPos;
+//uniform mat4 objToWorld;
 
 vec3 CalcPointLight(vec3 lightColor, vec3 lightPos);
 vec3 ColonTexture();
 float hash1(uint n);
 
 void main() {
+    //vec3 pLight = vec3(objToWorld * vec4(lightPos, 1.0));
     float numLights = 1;
 	vec3 lightColor = vec3(1.0);
 
     vec3 result = vec3(0.0);
-    //for(int i = 0; i < numLights; ++i) {
-        //result += CalcPointLight(lightColor, lightPos[i]);
-        //result += CalcPointLight(lightColor, lightPos);
-    //}
-	result = CalcPointLight(lightColor, lightPos);
+    for(int i = 0; i < numLights; ++i) {
+        result += CalcPointLight(lightColor, lightPos);
+    }
 
     // attenuation
     //float dist = length(lightPos - i.fragPos);
@@ -50,7 +50,7 @@ vec3 CalcPointLight(vec3 lightColor, vec3 lightPos) {
   	
     // diffuse 
     vec3 norm = normalize(i.norm);
-    vec3 lightDir = normalize(lightPos - i.fragPos);
+    vec3 lightDir = normalize(i.fragPos - lightPos);
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = lightColor * (diff * ColonTexture());
     //vec3 diffuse = ColonTexture();

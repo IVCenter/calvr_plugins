@@ -1657,6 +1657,7 @@ MarchingCubesRender::MarchingCubesRender(osg::ref_ptr<osg::Vec3Array> coords, os
 
 		_lightSphere = new LightSphere();
 		_lightSphere->setSceneObject(HelmsleyVolume::instance()->getSceneObjects()[0]);
+		_lightSphere->_mcr = this;
 		PluginHelper::registerSceneObject(_lightSphere, "HelmsleyVolume");
 		_lightSphere->_so->addChild(_lightSphere);
 		//_volume->addChild(_lightSphere->getGroup());
@@ -1740,10 +1741,11 @@ void MarchingCubesRender::createGeometry()
 
 	//((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_PER_VERTEX);
 	((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_PER_VERTEX);
-	std::string uniform = "lightPos";
-	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), osg::Vec3(0,0, 0));
-	_geode->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
 
+	_obj2World = new osg::MatrixTransform(HelmsleyVolume::instance()->getSceneObjects()[0]->getObjectToWorldMatrix());
+	//std::string uniform = "objToWorld";
+	//_uniforms[uniform] = new osg::Uniform(uniform.c_str(), obj2World->getMatrix());
+	//(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
 
 	updateGeometry();
 	//_geode->getOrCreateStateSet()->getUniform(uniform)->set(osg::Vec3(0.0, 0.0, 0.0));
@@ -1766,7 +1768,17 @@ void MarchingCubesRender::updateGeometry()
 		std::cout << "program applied" << std::endl;
 	}
 
-	_lightSphere->moveLightPos(osg::Vec3(200, 200, 200));
+}
+
+void MarchingCubesRender::setPointLightPos(osg::Vec3 pos)
+{
+	//osg::Vec3 temp = pos * _obj2World->getMatrix();
+	std::string uniform = "lightPos";
+	//std::cout << "POSITION OF LIGHT: " << pos.x() << ":" << pos.y() << ":" << pos.z() << std::endl;
+	//std::cout << "POSITION OF LIGHT WORLD: " << temp.x() << ":" << temp.y() << ":" << temp.z() << std::endl;
+	_uniforms[uniform] = new osg::Uniform(uniform.c_str(), pos);
+	(_geode->getDrawable(0))->getOrCreateStateSet()->addUniform(_uniforms[uniform]);
+
 }
 
 

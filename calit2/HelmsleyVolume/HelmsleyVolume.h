@@ -112,6 +112,11 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 				}
 			}
 		}
+
+		inline std::string printVec3OSG(osg::Vec3 vec3) {
+			return "x: " + std::to_string(vec3.x()) + "    y: " + std::to_string(vec3.y()) + "    z: " + std::to_string(vec3.z());
+		}
+
 		int getVolumeIndex() { return _volumeIndex; }
     protected:
 		struct MeasurementInfo {
