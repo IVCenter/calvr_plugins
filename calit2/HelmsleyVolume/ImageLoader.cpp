@@ -254,6 +254,99 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 	return img;
 }
 
+// An unsigned char can store 1 Bytes (8bits) of data (0-255)
+typedef unsigned char BYTE;
+
+long getFileSize(FILE* file)
+{
+	long lCurPos, lEndPos;
+	lCurPos = ftell(file);
+	fseek(file, 0, 2);
+	lEndPos = ftell(file);
+	fseek(file, lCurPos, 0);
+	return lEndPos;
+}
+
+osg::Image* LoadRAWVolumeImage(const string& file, osg::Matrix& transform) {
+	std::string whdString = file.substr(file.find_first_of("_")+1, file.find_last_of("_") - file.find_first_of("_")-1);
+	std::string wString = whdString.substr(0, whdString.find_first_of("x"));
+	std::string hString = whdString.substr(whdString.find_first_of("x")+1, whdString.find_last_of("x") - whdString.find_first_of("x")-1);
+	std::string dString = whdString.substr(whdString.find_last_of("x")+1, whdString.length() - whdString.find_last_of("x"));
+ 	
+
+
+	unsigned int w = std::stoi(wString);
+	unsigned int h = std::stoi(hString);
+	unsigned int d = std::stoi(dString);
+	//std::cout << "w " << w << "h " << h << "d " << d << std::endl;
+	osg::Vec3 size = osg::Vec3(0, 0, 0);
+	// volume size in millimeters
+	size.x() = (float)w;
+	size.y() = (float)h;
+	size.z() = (float)d;
+
+	
+
+	transform.preMultScale(size);
+	
+
+	//GETDATA
+ 	FILE* filepath = NULL;		// File pointer
+	BYTE* fileBuf; // Pointer to our buffered data
+	// Open the file in binary mode using the "rb" format string
+	// This also checks if the file exists and/or can be opened for reading correctly
+	using namespace std;
+	if ((filepath = fopen(file.c_str(), "rb")) == NULL)
+		cout << "Could not open specified file" << endl;
+	else
+		cout << "File opened successfully" << endl;
+
+	// Get the size of the file in bytes
+	long fileSize = getFileSize(filepath);
+
+	// Allocate space in the buffer for the whole file
+	fileBuf = new BYTE[fileSize];
+
+	// Read the file in to the buffer
+	fread(fileBuf, fileSize, 1, filepath);
+
+	// Now that we have the entire file buffered, we can take a look at some binary infomation
+	// Lets take a look in hexadecimal
+	//for (int i = 0; i < fileSize; i++)
+	//	if(i%2048)
+	//		printf("%X ", fileBuf[i]);
+ 
+	osg::Image* img = CreateTexture(GL_RG, GL_UNSIGNED_SHORT, w, h, d);
+	uint16_t* data = (uint16_t*)img->data();
+	memset(data, 0, w * h * d * sizeof(uint16_t) * 2);
+	uint16_t* pixelData = (uint16_t*)fileBuf;
+	
+
+	for (unsigned int i = 0; i < d; i++) {
+		
+		uint16_t* slice = data + 2 * i * w * h;
+
+		unsigned int j = 0;
+
+		for (unsigned int y = 0; y < h; y++) {
+			for (unsigned int x = 0; x < w; x++) {
+				j = 2 * (x + y * w);
+				slice[j] = fileBuf[x + y * w + i*h*w] * 255;
+				//slice[j + 1] = 0xFFFF;
+			}
+		}
+
+		//free memory
+ 	}
+
+
+	delete[]fileBuf;
+	fclose(filepath);   // Almost forgot this 
+
+
+	return img;
+}
+
 osg::Image* ImageLoader::LoadImage(const string& path, osg::Vec3& size) {
 	string ext = GetExt(path.c_str());
 	if (ext == "dcm")
@@ -305,6 +398,52 @@ void GetFiles(const string& path, vector<string>& files) {
 
 #endif
 }
+
+
+std::string ImageLoader::GetRawFile(const string& path) {
+#ifdef WIN32
+	string d = path + "\\*";
+
+	WIN32_FIND_DATAA ffd;
+	HANDLE hFind = FindFirstFile(d.c_str(), &ffd);
+	if (hFind == INVALID_HANDLE_VALUE) {
+		assert(false);
+		return "";
+	}
+
+	do {
+		if (ffd.cFileName[0] == L'.') continue;
+
+		string c = path + "\\" + ffd.cFileName;
+
+		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+			// file is a directory
+		}
+		else {
+			string ext = GetExt(c);
+			if (ext == "dcm" || ext == "raw" || ext == "png")
+				return GetFullPath(c);
+		}
+	} while (FindNextFileA(hFind, &ffd) != 0);
+
+	FindClose(hFind);
+#else    
+
+	DIR* dirp = opendir(path.c_str());
+	struct dirent* dp;
+	while ((dp = readdir(dirp)) != NULL) {
+		const char* ext = strrchr(dp->d_name, '.');
+		if (!ext) continue;
+		if (strcmp(ext + 1, "raw") != 0) continue;
+		// printf("Helmsley: Found dcm %s\n", dp->d_name);
+		return path + "/" + dp->d_name);
+	}
+	
+	closedir(dirp);
+
+#endif
+}
+
 osg::Image* ImageLoader::LoadVolume(const string& path, osg::Matrix& transform) {
 
 	vector<string> files;
@@ -316,6 +455,19 @@ osg::Image* ImageLoader::LoadVolume(const string& path, osg::Matrix& transform) 
 	string ext = GetExt(files[0]);
 	if (ext == "dcm")
 		return LoadDicomVolume(files, transform);
+	else
+		return 0;
+}
+osg::Image* ImageLoader::LoadRawVolume(const string& path, osg::Matrix& transform) {
+
+	string file = GetRawFile(path);
+ 
+	if (file.empty())
+		return 0;
+
+	string ext = GetExt(file);
+	if (ext == "raw")
+		return LoadRAWVolumeImage(file, transform);
 	else
 		return 0;
 }

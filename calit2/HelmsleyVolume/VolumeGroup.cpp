@@ -243,6 +243,78 @@ void VolumeGroup::init()
 	}
 
 }
+#ifdef DEBUGCODE
+
+
+
+void VolumeGroup::loadRawVolume(std::string seriesPath) {
+	osg::Matrix m = osg::Matrix::identity();
+	osg::ref_ptr<osg::Image> i = ImageLoader::LoadRawVolume(seriesPath, m);
+
+	if (!i)
+	{
+		std::cerr << "Raw Volume couldn't be loaded" << std::endl;
+		return;
+	}
+
+	_transform->setMatrix(m);
+	osg::Vec3 scale;
+	osg::Vec3 translation;
+	osg::Quat rot;
+	osg::Quat so;
+	m.decompose(translation, rot, scale, so);
+	if (scale.x() < 0)
+	{
+		flipCull();
+	}
+	if (scale.y() < 0)
+	{
+		flipCull();
+	}
+	if (scale.z() < 0)
+	{
+		flipCull();
+	}
+
+	
+		//loadAttnMaps(maskpath, i);
+		_hasMask = false;
+
+	
+
+	_volume = new osg::Texture3D;
+	_volume->setImage(i);
+	_volume->setTextureSize(i->s(), i->t(), i->r());
+	_volume->setFilter(osg::Texture3D::MIN_FILTER, osg::Texture3D::LINEAR);
+	_volume->setFilter(osg::Texture3D::MAG_FILTER, osg::Texture3D::LINEAR);
+	_volume->setInternalFormat(GL_RG16);
+	_volume->setName("VOLUME");
+	_volume->setResizeNonPowerOfTwoHint(false);
+
+
+	_computeNode->setComputeGroups((i->s() + 7) / 8, (i->t() + 7) / 8, (i->r() + 7) / 8);
+	_computeUniforms["TexelSize"]->set(osg::Vec3(1.0f / (float)i->s(), 1.0f / (float)i->t(), 1.0f / (float)i->r()));
+
+	osg::StateSet* states = _computeNode->getOrCreateStateSet();
+	states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
+	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
+
+	_volDims = osg::Vec3i(i->s(), i->t(), i->r());
+
+	//Set dirty on all graphics contexts
+	std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();/////////////uncomment
+	cvr::CVRViewer::instance()->getCameras(cameras);
+	for (int i = 0; i < cameras.size(); ++i)
+	{
+		setDirty(cameras[i]->getGraphicsContext());
+	}
+
+	precompute();
+	readyCenterLine(seriesPath);
+}
+#endif // DEBUGCODE
+
+
 
 void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 {
@@ -252,7 +324,7 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	osg::ref_ptr<osg::Image> i = ImageLoader::LoadVolume(path, m);
 	if (!i)
 	{
-		std::cerr << "Volume couldn't be loaded" << std::endl;
+		std::cerr << "Dicom Volume couldn't be loaded" << std::endl;
 		return;
 	}
 

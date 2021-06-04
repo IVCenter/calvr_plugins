@@ -69,6 +69,13 @@ public:
 
 
 	void init();
+
+#ifdef DEBUGCODE
+	void loadRawVolume(std::string path);
+#endif // DEBUGCODE
+
+
+
 	void loadVolume(std::string path, std::string maskpath = "");
 	void loadMask(std::string path, osg::Image* volume);
 	void loadAttnMaps(std::string path, osg::Image* volume);

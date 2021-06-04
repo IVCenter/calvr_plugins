@@ -39,7 +39,7 @@ void main() {
 	// Increment the appropriate histogram
 	uint grayIndex = ((NUM_OUT_BINS-1u) * histIndex) + volSample;
 
-	
+
 	atomicAdd(hist[grayIndex], 1 );
 	
 	

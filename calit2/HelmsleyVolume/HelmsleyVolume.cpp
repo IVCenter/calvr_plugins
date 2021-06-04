@@ -722,14 +722,30 @@ bool HelmsleyVolume::hasCenterLineCoords() {
 	return _worldMenus[0]->hasCenterLineCoords();
 }
 
+
+//Loads first volume + menu
 void HelmsleyVolume::loadVolume(std::string path, std::string maskpath, bool onlyVolume)
 {
-	SceneObject * so;
+	
+
+	VolumeGroup * g = new VolumeGroup();
+
+	
+
+#ifdef DEBUGCODE
+	if (path.find("raws") != std::string::npos) {
+		g->loadRawVolume(path);
+	}
+	else 
+		g->loadVolume(path, maskpath);
+#elif
+	g->loadVolume(path, maskpath);
+#endif
+	SceneObject* so;
 	so = new SceneObject("volume", false, true, true, true, false);
 	so->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", VOLUME_POS));
 
-	VolumeGroup * g = new VolumeGroup();
-	g->loadVolume(path, maskpath);
+
 	so->addChild(g);
 	
 	MeasurementTool* tool = new MeasurementTool("Measurement Tool", false, false, false, false, false);

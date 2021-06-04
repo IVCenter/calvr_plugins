@@ -37,21 +37,12 @@ void FileSelector::init()
 	_state = NEW;
 	pathSelections = std::vector<cvr::MenuItem*>();
 
-	/*addVolumeMenu = new cvr::PopupMenu("Volumes", "", false, true);
-	osg::Vec3 menupos = cvr::ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.FileMenu.Position", osg::Vec3(-600, 500, 1100));
-	addVolumeMenu->setPosition(menupos);
- 
-
-	addVol = new cvr::MenuButton("New Volume", true, "checkbox=TRUE.rgb");
-	addVolumeMenu->addMenuItem(addVol);
-	addVol->setCallback(this);
-
-	volumeFileSelector = new cvr::PopupMenu("Choose File", "", false, true);
-	volumeFileSelector->setPosition(menupos + osg::Vec3(0,0,-100));*/
+	 
  	_currentPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.BaseFolder", "C:/", false);
 
 
 	////////////New FileSelect Implement.///////////
+	//UI
 	_so = new cvr::SceneObject("FileSelect", false, false, false, false, false);
 	cvr::PluginHelper::registerSceneObject(_so, "HelmsleyVolume");
 	osg::Quat rot;
@@ -126,7 +117,8 @@ void FileSelector::init()
 	_fsPopup->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 	_so->dirtyBounds();
 
-	checkIfPatient(_currentPath, 0);	//Fills Patient directories
+	//Fills Patient directories
+	checkIfPatient(_currentPath, 0);	
 	_currMap = &_patientDirectories;
 	
 	
@@ -297,7 +289,7 @@ void FileSelector::menuCallback(cvr::MenuItem* item)
 				updateFileSelection();
 			}
 			else if (button->getText().find(".dcm") != std::string::npos && 
-				button->getText().find(".dcm") == button->getText().find_last_of("."))
+				button->getText().find(".dcm") == button->getText().find_last_of(".") || button->getText().find(".raw") != std::string::npos)
 			{
 				////Load volume
 				bool change = _state == CHANGING ? true : false;
@@ -586,7 +578,7 @@ int FileSelector::loadSeriesList(std::string pFN, int indexFromDicom) {
 				_seriesList[key] = pFN + "/" + entry->d_name;
 			}
 		}
-		else if (entry->d_type == DT_REG && strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0) {
+		else if (entry->d_type == DT_REG && (strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0 || strcmp(strrchr(entry->d_name, '.') + 1, "raw") == 0)) {
 			closedir(dir);
 			return indexFromDicom + 1;
 		}
@@ -747,7 +739,7 @@ void FileSelector::updateFileSelection()
 	while (entry != NULL)
 	{
 		if ((entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "mask") != 0) || //folders
-			(entry->d_type == DT_REG && strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0)) //first dcm file
+			(entry->d_type == DT_REG && (strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0) || strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0)) //first dcm file
 		{
 			if (entry->d_type == DT_REG)
 			{
@@ -813,14 +805,14 @@ std::pair<int, bool> FileSelector::checkIfPatient(std::string fn, int indexFromD
 				checkIfMask(patientDir) ? mask = 'm' : mask = 'n';	//m = mask/n= no mask
 				key = mask + patientName;
 
-				_patientDirectories[key] = fn;
+ 				_patientDirectories[key] = fn;
 				toReturn.second = false;
 				
 
 			}
 			
 		}
-		else if (entry->d_type == DT_REG && strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0) {
+		else if (entry->d_type == DT_REG && (strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0 || strcmp(strrchr(entry->d_name, '.') + 1, "raw") == 0)) {
 			closedir(dir);
 			toReturn.second = true;
 
