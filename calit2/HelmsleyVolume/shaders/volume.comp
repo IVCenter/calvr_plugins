@@ -9,6 +9,7 @@
 #pragma import_defines (  ATTN_MAPS )
 #pragma import_defines (  ATTN_MAP_ONLY )
 #pragma import_defines (  MIN_ATTN_VALUE )
+#pragma import_defines (  SELECTION )
 
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;

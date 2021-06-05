@@ -25,6 +25,7 @@
 #include "VolumeGroup.h"
 #include "VolumeMenu.h"
 #include "MeasurementTool.h"
+#include "Selection3DTool.h"
 #include "ScreenshotTool.h"
 #include "CenterLineTool.h"
 #include "CuttingPlane.h"
@@ -45,6 +46,7 @@ enum class TOOLID {
 	RULER,
 	MASKMENU,
 	TFMENU,
+	SELECTION3D,
 	COUNT
 };
 
@@ -56,7 +58,8 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 			CUTTING_PLANE,
 			MEASUREMENT_TOOL,
 			POINTER,
-			CENTER_LINE
+			CENTER_LINE,
+			SELECTION3D
 		};
 
         HelmsleyVolume();
@@ -68,7 +71,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
         void preFrame();
 		void postFrame();
 
-		bool processEvent(cvr::InteractionEvent* e);
+		bool processEvent(cvr::InteractionEvent* e) override;
 		void menuCallback(cvr::MenuItem* menuItem);
 		void createList(cvr::SubMenu* , std::string configbase);
 
@@ -101,6 +104,8 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		void setTool(ToolState tool) { _tool = tool; }
 		void activateMeasurementTool(int volume);
 		void deactivateMeasurementTool(int volume);
+		void activateSelectionTool(int volume);
+		void deactivateSelectionTool(int volume);
 		void activateClippingPath();
 		std::vector<CuttingPlane*> getCuttingPlanes() { return _cuttingPlanes; }
 		std::vector<cvr::SceneObject*> getSceneObjects() { return _sceneObjects; }
@@ -157,6 +162,8 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 
 		std::vector<MeasurementTool*> _measurementTools;
 		int _lastMeasurementTool;
+		std::vector<Selection3DTool*> _selectionTools;
+		int _lastSelectionTool;
 
 		
 		std::vector<CuttingPlane*> _cuttingPlanes;

@@ -2888,6 +2888,7 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	_curvedMenu->setImage(int(TOOLID::MASKMENU), dir + "maskIcon.png");
 	_curvedMenu->setImage(int(TOOLID::TFMENU), dir + "opacityAndGradient.png");
 	_curvedMenu->setImage(int(TOOLID::MARCHINGCUBES), dir + "polygon.png");
+	_curvedMenu->setImage(int(TOOLID::SELECTION3D), dir + "ruler.png");
 	_menu->addChild(_curvedMenu);
 
 
@@ -3017,6 +3018,21 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
 			HelmsleyVolume::instance()->setTool(HelmsleyVolume::MEASUREMENT_TOOL);
+			HelmsleyVolume::instance()->activateMeasurementTool(_index);
+		}
+		else
+		{
+			index.second->setColor(UI_BACKGROUND_COLOR);
+			HelmsleyVolume::instance()->setTool(HelmsleyVolume::NONE);
+			HelmsleyVolume::instance()->deactivateMeasurementTool(_index);
+		}
+	}
+	else if (index.first == int(TOOLID::SELECTION3D))
+	{
+		if (index.second->isOn())
+		{
+			index.second->setColor(UI_RED_ACTIVE_COLOR);
+			HelmsleyVolume::instance()->setTool(HelmsleyVolume::SELECTION3D);
 			HelmsleyVolume::instance()->activateMeasurementTool(_index);
 		}
 		else

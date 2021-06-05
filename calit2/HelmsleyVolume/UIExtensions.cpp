@@ -2050,6 +2050,7 @@ bool TriangleButton::processEvent(cvr::InteractionEvent* event)
 			holdingDial = false;
 			_jump = false;
 		}*/
+
 	}
 	return false;
 }

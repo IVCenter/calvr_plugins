@@ -400,6 +400,9 @@ void HelmsleyVolume::postFrame()
 
 bool HelmsleyVolume::processEvent(InteractionEvent * e)
 {
+	if(_tool == SELECTION3D && _lastSelectionTool >= 0 && _lastSelectionTool < _volumes.size())
+		_selectionTools[_lastSelectionTool]->processEvent(e);
+
 	if (e->getInteraction() == BUTTON_DOWN)
 	{
 		if (_tool == MEASUREMENT_TOOL && _lastMeasurementTool >= 0 && _lastMeasurementTool < _volumes.size())
@@ -413,6 +416,20 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 			{
 				_measurementTools[_lastMeasurementTool]->setStart(mat.getTrans());
 			}
+		}
+
+		if (_tool == SELECTION3D && _lastSelectionTool >= 0 && _lastSelectionTool < _volumes.size())
+		{
+			//Measurement tool
+			osg::Matrix mat = PluginHelper::getHandMat(e->asHandEvent()->getHand());
+			//osg::Vec4d position = osg::Vec4(0, 0, 0, 1) * mat;
+			//osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
+
+			if (e->getInteraction() == BUTTON_DOWN && e->asTrackedButtonEvent()->getButton() == _interactButton)
+			{
+				_selectionTools[_lastSelectionTool]->setStart(mat.getTrans());
+			}
+
 		}
 	}
 	else if (e->getInteraction() == BUTTON_DRAG)
@@ -429,6 +446,20 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 				_measurementTools[_lastMeasurementTool]->setEnd(mat.getTrans());
 				_measurementTools[_lastMeasurementTool]->activate();
 				return true;
+			}
+		}
+
+		if (e->asTrackedButtonEvent() && e->asTrackedButtonEvent()->getButton() == _interactButton)
+		{
+			if (_tool == SELECTION3D && _lastSelectionTool >= 0 && _lastSelectionTool < _volumes.size())
+			{
+				//Measurement tool
+				osg::Matrix mat = PluginHelper::getHandMat(e->asHandEvent()->getHand());
+				//osg::Vec4d position = osg::Vec4(0, 0, 0, 1) * mat;
+				//osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
+
+				_selectionTools[_lastSelectionTool]->setEnd(mat.getTrans());
+				_selectionTools[_lastSelectionTool]->activate();
 			}
 		}
 	}
@@ -451,10 +482,20 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 					_measurementTools[_lastMeasurementTool]->deactivate();
 				}
 			}
+			else if (_tool == SELECTION3D && _lastSelectionTool >= 0 && _lastSelectionTool < _volumes.size())
+			{
+				//Measurement tool
+				if (_selectionTools[_lastSelectionTool]->getLength() < 5.0)
+				{
+					_selectionTools[_lastSelectionTool]->deactivate();
+				}
+
+			}
 		}
 
 	}
-    
+
+	
 	return false;
 }
 
@@ -590,6 +631,17 @@ void HelmsleyVolume::deactivateMeasurementTool(int volume)
 {
 	_measurementTools[volume]->deactivate();
 	_lastMeasurementTool = -1;
+}
+
+void HelmsleyVolume::activateSelectionTool(int volume)
+{
+	_lastSelectionTool = volume;
+}
+
+void HelmsleyVolume::deactivateSelectionTool(int volume)
+{
+	_selectionTools[volume]->deactivate();
+	_lastSelectionTool = -1;
 }
 
 void HelmsleyVolume::activateClippingPath() {
@@ -752,6 +804,12 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath, bool onl
 	tool->deactivate();
 	so->addChild(tool);
 	_measurementTools.push_back(tool);
+	
+	Selection3DTool* selectionTool = new Selection3DTool("Selection Tool", false, true, true, false, true);
+	PluginHelper::registerSceneObject(selectionTool, "HelmsleyVolume");
+ 	selectionTool->deactivate();
+	so->addChild(selectionTool);
+	_selectionTools.push_back(selectionTool);
 
 
 	PluginHelper::registerSceneObject(so, "HelmsleyVolume");
