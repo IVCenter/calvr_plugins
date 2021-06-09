@@ -12,7 +12,7 @@ in vs_out {
 uniform vec3 lightPos;
 //uniform mat4 objToWorld;
 
-vec3 CalcPointLight(vec3 lightColor, vec3 lightPos);
+vec3 CalcPointLight(vec3 lightColor, vec3 lightPos, float constant, float linear, float quadratic);
 vec3 ColonTexture();
 float hash1(uint n);
 
@@ -23,19 +23,13 @@ void main() {
 
     vec3 result = vec3(0.0);
     for(int i = 0; i < numLights; ++i) {
-        result += CalcPointLight(lightColor, lightPos);
+        result += CalcPointLight(lightColor, lightPos, 0.75f, 0.0003f, 0.000001f);
     }
-
-    // attenuation
-    //float dist = length(lightPos - i.fragPos);
-    //float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));    
-
-    
         
     FragColor = vec4(result, 1.0);
 }
 
-vec3 CalcPointLight(vec3 lightColor, vec3 lightPos) {
+vec3 CalcPointLight(vec3 lightColor, vec3 lightPos, float constant, float linear, float quadratic) {
    //MVP
 	vec3 viewPos = vec3(0.0);
 
@@ -53,7 +47,6 @@ vec3 CalcPointLight(vec3 lightColor, vec3 lightPos) {
     vec3 lightDir = normalize(i.fragPos - lightPos);
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = lightColor * (diff * ColonTexture());
-    //vec3 diffuse = ColonTexture();
     
     // specular
     vec3 viewDir = normalize(viewPos - i.fragPos);
@@ -61,7 +54,17 @@ vec3 CalcPointLight(vec3 lightColor, vec3 lightPos) {
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
     vec3 specular = lightColor * (spec * matSpecular);  
 
-    return ambient + diffuse + specular;
+    // attenuation
+    float lightDist    = length(lightPos - i.fragPos);
+    float attenuation = 1.0 / (constant + linear * lightDist + 
+  			     quadratic * (lightDist * lightDist));  
+
+    // combine results
+    ambient *= attenuation;
+    diffuse *= attenuation;
+    specular *= attenuation;
+
+    return (ambient + diffuse + specular);
 }
 
 vec3 ColonTexture() {

@@ -8,6 +8,7 @@ LightSphere::LightSphere(float radius, osg::Vec3 position)
 	:SceneObject("light_sphere", false, true, false, false, true), position(position), radius(radius) 
 {
 	sphere = new osg::Sphere(position, radius);
+	//sphere = new osg::Cone(position, radius, 100.0f);
 	sd = new osg::ShapeDrawable(sphere);
 	transform = new osg::MatrixTransform();
 	geode = new osg::Geode();

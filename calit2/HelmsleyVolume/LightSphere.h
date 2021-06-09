@@ -23,9 +23,10 @@ private:
 
 class LightSphere : public cvr::SceneObject {
 public:
-	LightSphere(float radius = 25.0f, osg::Vec3 position = osg::Vec3(100, 100, 100));
+	LightSphere(float radius = 25.0f, osg::Vec3 position = osg::Vec3(0.0f, 0.0f, 0.0f));
 
 	osg::ref_ptr<osg::Sphere> sphere;
+	//osg::ref_ptr<osg::Cone> sphere;
 	osg::ref_ptr<osg::ShapeDrawable> sd;
 	osg::ref_ptr<osg::MatrixTransform> transform;
 	osg::ref_ptr<osg::Geode> geode;
