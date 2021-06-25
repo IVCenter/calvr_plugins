@@ -35,6 +35,11 @@ uniform float OpacityMult[10];
 uniform float Lowest[10];
 uniform float TriangleCount = 1.0;
 
+uniform vec3 SelectionsDims[10];
+uniform vec3 SelectionsCenters[10];
+uniform vec3 volDims;
+uniform vec3 offset;
+
 uniform vec3 leftColor = vec3(1,0,0);
 uniform vec3 rightColor = vec3(1,1,1);
 
@@ -76,7 +81,33 @@ vec3 custom(vec3 c) {
 	return color;
 }
 
+vec3 vecCoordTransform(vec3 vec){
+	vec3 transformedVec = vec;
+	transformedVec.z = volDims.z - transformedVec.z;
+	transformedVec.y = volDims.y - transformedVec.y;
+
+	return transformedVec;
+}
+
+
+
+
+
 vec4 Sample(ivec3 p) {
+	
+	#ifdef SELECTION
+		vec3 lowerBounds = SelectionsCenters[0] - SelectionsDims[0]/2;
+		vec3 upperBounds = SelectionsCenters[0] + SelectionsDims[0]/2;
+		
+		bool outOfSelection = p.x <= lowerBounds.x ||  p.y <= lowerBounds.y ||  p.z <= lowerBounds.z
+								||  p.x >= upperBounds.x ||  p.y >= upperBounds.y ||  p.z >= upperBounds.z;
+
+		if(outOfSelection)
+			{
+				return vec4(-1,-1,-1,-1);		
+			}
+	#endif
+
 	vec4 s = vec4(0,0,0,0);
 	#ifndef CLAHE
 		vec2 ra = imageLoad(volume, p).rg;
@@ -313,8 +344,13 @@ float sobel(ivec3 index){
 
 void main() {
 	ivec3 index = ivec3(gl_GlobalInvocationID.xyz);
+	if ( index.x >= volDims.x || index.y >= volDims.y || index.z >= volDims.z ) {
+		return;
+	}
 
 	vec4 s = Sample(index);
+	if(s.x == -1)
+		return;
 
 	s.rgb *= Light(vec3(index));
 

@@ -22,6 +22,7 @@
 #define ISOVALUE 0.08f
 #define MCFACTOR 16
 #define CONFIGLUTSIZE 4096
+#define HINSTANCE HelmsleyVolume::instance()
 
 
 void VolumeDrawCallback::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const
@@ -144,7 +145,7 @@ void VolumeGroup::init()
 	_program->addShader(new osg::Shader(osg::Shader::FRAGMENT, frag));
 	
 	_transform = new osg::MatrixTransform();
-	_cube = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0, 0, 0), 1, 1, 1));
+ 	_cube = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0, 0, 0), 1, 1, 1));
 	osg::Vec4Array* colors = new osg::Vec4Array;
 	colors->push_back(osg::Vec4(1, 1, 1, 1));
 	_cube->setColorArray(colors);
@@ -168,20 +169,17 @@ void VolumeGroup::init()
 	g->getOrCreateStateSet()->setRenderBinDetails((int)RENDERBIN_ORDER::CUBE, "RenderBin");
 	_transform->addChild(g);
 	this->addChild(_transform);
-	
 
 	_PlanePoint = new osg::Uniform("PlanePoint", osg::Vec3(0.f, -2.f, 0.f));
 	_PlaneNormal = new osg::Uniform("PlaneNormal", osg::Vec3(0.f, 1.f, 0.f));
 	_StepSize = new osg::Uniform("StepSize", .00150f);
-	_testScale = new osg::Uniform("TestScale", .001f);
-	_maxSteps = new osg::Uniform("MaxSteps", .98f);
+ 	_maxSteps = new osg::Uniform("MaxSteps", .98f);
 	_RelativeViewport = new osg::Uniform("RelativeViewport", osg::Vec4(1, 1, 0, 0));
 
 	states->addUniform(_PlanePoint);
 	states->addUniform(_PlaneNormal);
 	states->addUniform(_StepSize);
-	states->addUniform(_testScale);
-	states->addUniform(_maxSteps);
+ 	states->addUniform(_maxSteps);
 	//states->addUniform(_RelativeViewport);
 
 	osg::ref_ptr<osg::Uniform> vol = new osg::Uniform("Volume", (int)0);
@@ -217,6 +215,10 @@ void VolumeGroup::init()
 	_computeUniforms["OpacityMult"]->setElement(0, 1.0f);
 	_computeUniforms["Lowest"] = new osg::Uniform(osg::Uniform::FLOAT, "Lowest", 10);
 	_computeUniforms["Lowest"]->setElement(0, 0.0f);
+	_computeUniforms["SelectionsDims"] = new osg::Uniform(osg::Uniform::FLOAT_VEC3, "SelectionsDims", 10);
+	_computeUniforms["SelectionsCenters"] = new osg::Uniform(osg::Uniform::FLOAT_VEC3, "SelectionsCenters", 10);
+	_computeUniforms["SelectionsDims"]->setElement(0, osg::Vec3(0,0,0));
+	_computeUniforms["SelectionsCenters"]->setElement(0, osg::Vec3(0,0,0));
 	_computeUniforms["TriangleCount"] = new osg::Uniform("TriangleCount", 1.0f);
 	_computeUniforms["ContrastBottom"] = new osg::Uniform("ContrastBottom", 0.0f);
 	_computeUniforms["ContrastTop"] = new osg::Uniform("ContrastTop", 1.0f);
@@ -233,6 +235,8 @@ void VolumeGroup::init()
 	_computeUniforms["LightIntensity"] = new osg::Uniform("LightIntensity", 100.0f);
 	_computeUniforms["WorldScale"] = new osg::Uniform("WorldScale", osg::Vec3(1, 1, 1));
 	_computeUniforms["TexelSize"] = new osg::Uniform("TexelSize", osg::Vec3(1.0f / 512.0f, 1.0f / 512.0f, 1.0f / 128.0f));
+
+	_computeUniforms["volDims"] = new osg::Uniform("volDims", osg::Vec3(_volDims.x(), _volDims.y(), _volDims.z()));
 
 	_computeUniforms["volume"] = new osg::Uniform("volume", (int)0);
 	_computeUniforms["baked"] = new osg::Uniform("baked", (int)1);
@@ -263,6 +267,7 @@ void VolumeGroup::loadRawVolume(std::string seriesPath) {
 	osg::Quat rot;
 	osg::Quat so;
 	m.decompose(translation, rot, scale, so);
+	std::cout << "translation " << HelmsleyVolume::instance()->printVec3OSG(translation) << std::endl;
 	if (scale.x() < 0)
 	{
 		flipCull();
@@ -300,6 +305,7 @@ void VolumeGroup::loadRawVolume(std::string seriesPath) {
 	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
 
 	_volDims = osg::Vec3i(i->s(), i->t(), i->r());
+	_computeUniforms["volDims"]->set(osg::Vec3(_volDims.x(), _volDims.y(), _volDims.z()));
 
 	//Set dirty on all graphics contexts
 	std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();/////////////uncomment
@@ -347,6 +353,7 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 		flipCull();
 	}
 
+
 	if (maskpath.compare("") != 0)
 	{
 		
@@ -377,8 +384,12 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
 	
 	_volDims = osg::Vec3i(i->s(), i->t(), i->r());
- 	
-	//Set dirty on all graphics contexts
+	_computeUniforms["volDims"]->set(osg::Vec3(_volDims.x(), _volDims.y(), _volDims.z()));
+
+ 
+	_scale = HelmsleyVolume::instance()->divideVec3OSG(osg::Vec3(_volDims.x(), _volDims.y(), _volDims.z()), scale);
+
+ 	//Set dirty on all graphics contexts
 	std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();/////////////uncomment
 	cvr::CVRViewer::instance()->getCameras(cameras);
 	for (int i = 0; i < cameras.size(); ++i)
@@ -395,18 +406,18 @@ osg::ref_ptr<osg::AtomicCounterBufferBinding> VolumeGroup::precompMinMax() {
 	osg::ref_ptr<osg::Program> prog = new osg::Program;
 	prog->addShader(new osg::Shader(osg::Shader::COMPUTE, _minMaxShader));
 
-	sourceNode = new osg::DispatchCompute((_volDims.x() + 7) / 8, (_volDims.y() + 7) / 8, (_volDims.z() + 7) / 8);
-	sourceNode->getOrCreateStateSet()->setAttributeAndModes(prog.get());
-	sourceNode->setDataVariance(osg::Object::DYNAMIC);
-	sourceNode->setDrawCallback(new MinMaxCallback(this));
+	_minMaxNode = new osg::DispatchCompute((_volDims.x() + 7) / 8, (_volDims.y() + 7) / 8, (_volDims.z() + 7) / 8);
+	_minMaxNode->getOrCreateStateSet()->setAttributeAndModes(prog.get());
+	_minMaxNode->setDataVariance(osg::Object::DYNAMIC);
+	_minMaxNode->setDrawCallback(new MinMaxCallback(this));
 
-	osg::StateSet* states = sourceNode->getOrCreateStateSet();
+	osg::StateSet* states = _minMaxNode->getOrCreateStateSet();
 	states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
 	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
 	states->setRenderBinDetails((int)RENDERBIN_ORDER::MINMAX, "RenderBin");
 	states->addUniform(new osg::Uniform("VolumeDims", _volDims.x(), _volDims.y(), _volDims.z()));
 
-	this->addChild(sourceNode);
+	this->addChild(_minMaxNode);
 	return setupMinmaxSSBO();
 }
 
@@ -422,9 +433,12 @@ osg::ref_ptr<osg::AtomicCounterBufferBinding> VolumeGroup::setupMinmaxSSBO() {
 	dati.release();
  	acbo.release();
 
-	((MinMaxCallback*)sourceNode->getDrawCallback())->_acbb = acbb;
-	sourceNode->getOrCreateStateSet()->setAttributeAndModes(acbb, osg::StateAttribute::ON);
-	sourceNode->getOrCreateStateSet()->addUniform(new osg::Uniform("numBins", _numGrayVals));
+	((MinMaxCallback*)_minMaxNode->getDrawCallback())->_acbb = acbb;
+	_minMaxNode->getOrCreateStateSet()->setAttributeAndModes(acbb, osg::StateAttribute::ON);
+	_minMaxNode->getOrCreateStateSet()->addUniform(new osg::Uniform("numBins", _numGrayVals));
+	_minMaxNode->getOrCreateStateSet()->addUniform(_computeUniforms["SelectionsDims"]);
+	_minMaxNode->getOrCreateStateSet()->addUniform(_computeUniforms["SelectionsCenters"]);
+
 
 	return acbb;
  }
@@ -475,6 +489,8 @@ std::pair< osg::ref_ptr<osg::ShaderStorageBufferBinding>, osg::ref_ptr<osg::Shad
 	_histNode->getOrCreateStateSet()->setAttributeAndModes(ssbbHistMax, osg::StateAttribute::ON);
 	_histNode->getOrCreateStateSet()->addUniform(new osg::Uniform("numSB", _numSB_3D.x(), _numSB_3D.y(), _numSB_3D.z()));
 	_histNode->getOrCreateStateSet()->addUniform(new osg::Uniform("NUM_OUT_BINS", _numGrayVals)); 
+	_minMaxNode->getOrCreateStateSet()->addUniform(_computeUniforms["SelectionsDims"]);
+	_minMaxNode->getOrCreateStateSet()->addUniform(_computeUniforms["SelectionsCenters"]);
 	
 	((CLAHEHistCallback*)_histNode->getDrawCallback())->_ssbb = ssbbHist;
 	((CLAHEHistCallback*)_histNode->getDrawCallback())->_buffersize = _histSize;
@@ -591,6 +607,9 @@ void VolumeGroup::setupClip(t_ssbb ssbbHist, t_ssbb ssbbHistMax, t_ssbb ssbbExce
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->numPixels = -1;
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_acbbminMax = acbbminmax;
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->volDims = _volDims;
+	osg::Vec3 selecDims;
+	_computeUniforms["SelectionsDims"]->getElement(0, selecDims);
+	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_selectionVec = selecDims;
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_numGrayVals = _numGrayVals;
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_clipLimit = _clipLimit3D;
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_sb3D = _numSB_3D;
@@ -632,6 +651,8 @@ void VolumeGroup::setupLerp(t_ssbb ssbbHist) {
 	states->addUniform(new osg::Uniform("NUM_IN_BINS", _numGrayVals));
 	states->addUniform(new osg::Uniform("NUM_OUT_BINS", _numGrayVals));
 	states->addUniform(new osg::Uniform("numSB", _numSB_3D.x(), _numSB_3D.y(), _numSB_3D.z()));
+	states->addUniform(_computeUniforms["SelectionsDims"]);
+	states->addUniform(_computeUniforms["SelectionsCenters"]);
 	((LerpSSB*)_lerpNode->getDrawCallback())->_buffersize = _histSize;
 	((LerpSSB*)_lerpNode->getDrawCallback())->_ssbb = ssbbHist;
 }
@@ -677,7 +698,7 @@ void VolumeGroup::genClahe() {
 		osg::ref_ptr<osg::BindImageTexture> imagbinding = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_WRITE, GL_RG16, 0, GL_TRUE);
 		states->setAttributeAndModes(imagbinding);
 		///////////////////////clahe///////////////////
-		states = sourceNode->getOrCreateStateSet();
+		states = _minMaxNode->getOrCreateStateSet();
 		imagbinding = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
 		states->setAttributeAndModes(imagbinding);
 
@@ -695,7 +716,7 @@ void VolumeGroup::genClahe() {
 	}
 
 
-	((MinMaxCallback*)sourceNode->getDrawCallback())->_acbb.release();
+	((MinMaxCallback*)_minMaxNode->getDrawCallback())->_acbb.release();
 	auto minmaxSSBB = setupMinmaxSSBO();
 
 	((CLAHEHistCallback*)_histNode->getDrawCallback())->_ssbb.release();
@@ -715,7 +736,7 @@ void VolumeGroup::genClahe() {
 	setupLerp(ssbbs.first);
 
 	//dirty callbacks
-	((MinMaxCallback*)sourceNode->getDrawCallback())->stop[0] = 0;
+	((MinMaxCallback*)_minMaxNode->getDrawCallback())->stop[0] = 0;
 	((CLAHEHistCallback*)_histNode->getDrawCallback())->stop[0] = 0;
 	((ExcessSSB*)_excessNode->getDrawCallback())->stop[0] = 0;
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->stop[0] = 0;
@@ -740,6 +761,7 @@ void VolumeGroup::setClaheRes(float res) {
 	_numHist = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z();
 	_histSize = _numHist * _numGrayVals;
 }
+
 
 void VolumeGroup::loadMask(std::string path, osg::Image* volume)
 {
@@ -1137,6 +1159,45 @@ void VolumeGroup::printSTLFile() {
 	}
 }
 
+//Selection Methods
+void VolumeGroup::lockSelection(bool lock) {
+	HINSTANCE->getSelectionTools()[HINSTANCE->getVolumeIndex()]->setLock(lock);
+}
+void VolumeGroup::removeSelection(bool remove) {
+	HINSTANCE->getSelectionTools()[HINSTANCE->getVolumeIndex()]->setRemove(remove);
+
+	if(remove)
+		getCompute()->getOrCreateStateSet()->setDefine("SELECTION", osg::StateAttribute::OFF);
+	else {
+		getCompute()->getOrCreateStateSet()->setDefine("SELECTION", osg::StateAttribute::ON);
+	}
+}
+
+void VolumeGroup::disableSelection(bool disable) {
+	HINSTANCE->getSelectionTools()[HINSTANCE->getVolumeIndex()]->setDisable(disable);
+}
+
+
+void VolumeGroup::setCLAHEUseSelection(bool use) {
+	if (_clahePrecomped) {
+		if (use) {
+			_minMaxNode->getStateSet()->setDefine("SELECTION", osg::StateAttribute::ON);
+			_histNode->getStateSet()->setDefine("SELECTION", osg::StateAttribute::ON);
+			_lerpNode->getStateSet()->setDefine("SELECTION", osg::StateAttribute::ON);
+			osg::Vec3 dims;
+			_computeUniforms["SelectionsDims"]->getElement(0, dims);
+			((Clip1SSB*)_clipHist1Node->getDrawCallback())->_selectionVec = dims;
+
+		}
+		else {
+			_minMaxNode->getStateSet()->setDefine("SELECTION", osg::StateAttribute::OFF);
+			_histNode->getStateSet()->setDefine("SELECTION", osg::StateAttribute::OFF);
+			_lerpNode->getStateSet()->setDefine("SELECTION", osg::StateAttribute::OFF);
+			((Clip1SSB*)_clipHist1Node->getDrawCallback())->_selectionVec = osg::Vec3(-1, -1, -1);
+		}
+	}
+}
+
 unsigned int VolumeGroup::getHistMax() {
 	return ((TotalHistCallback*)_totalHistNode->getDrawCallback())->histMax[0];
 }
@@ -1357,8 +1418,16 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 
 
 		uint32_t numPixelsSB;
+
+
 		if (numPixels == -1) {
-			osg::Vec3 sizeSB = osg::Vec3(volDims.x() / _sb3D.x(), volDims.y() / _sb3D.y(), volDims.z() / _sb3D.z());
+			osg::Vec3 sizeSB;
+		/*	if (_selectionVec.x() != -1) {
+				 sizeSB = osg::Vec3(_selectionVec.x() / _sb3D.x(), _selectionVec.y() / _sb3D.y(), _selectionVec.z() / _sb3D.z());
+			}
+			else {*/
+				 sizeSB = osg::Vec3(volDims.x() / _sb3D.x(), volDims.y() / _sb3D.y(), volDims.z() / _sb3D.z());
+			//}
 			numPixelsSB = sizeSB.x() * sizeSB.y() * sizeSB.z();
 		}
 		else {

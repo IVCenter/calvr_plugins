@@ -28,6 +28,8 @@
 #include <cvrKernel/ScreenConfig.h>
 #include <cvrKernel/ScreenBase.h>
 #include "MarchingCubesLUTs.h"
+#include "defines.h"
+
 //#define NUMGRAYVALS 255u
 #define CLIPLIMIT3D .85f
 #define ORGANCOUNT 8
@@ -52,6 +54,10 @@ enum class RENDERBIN_ORDER {
 	MCS,
 	NONCLAHEHIST
 };
+
+
+
+
 
 class VolumeGroup : public osg::Group
 {
@@ -140,7 +146,12 @@ public:
 	osg::ref_ptr<osg::Vec3Array> getVA();
 	osg::ref_ptr<osg::ShaderStorageBufferBinding> getMCSSBB();
 	void printSTLFile();
-	////Extra Methods
+
+	//Selection Methods
+	void lockSelection(bool lock);
+	void removeSelection(bool remove);
+	void disableSelection(bool disable);
+	//Clahe Methods
 	void setNumBins(unsigned int numBins) { 
 		_numGrayVals = numBins;
 		_histSize = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z() * _numGrayVals;
@@ -150,6 +161,8 @@ public:
 	}
 	void setClaheRes(float res);
 	void genClahe();
+	void setCLAHEUseSelection(bool use);
+
  
 	unsigned int getHistMax();
 
@@ -186,8 +199,7 @@ public:
 	osg::ref_ptr<osg::Uniform> _PlanePoint;
 	osg::ref_ptr<osg::Uniform> _PlaneNormal;
 	osg::ref_ptr<osg::Uniform> _StepSize;
-	osg::ref_ptr<osg::Uniform> _testScale;
-	osg::ref_ptr<osg::Uniform> _maxSteps;
+ 	osg::ref_ptr<osg::Uniform> _maxSteps;
 	osg::ref_ptr<osg::Uniform> _RelativeViewport;
 	std::map<std::string, osg::ref_ptr<osg::Uniform> > _computeUniforms;
 
@@ -218,7 +230,7 @@ public:
 		//////////////////Tools/////////////////////////
 		bool cpToggle = false;
 
-		bool toolToggles[TOOLCOUNT];
+		bool toolToggles[(int)TOOLID::COUNT];
 	
 		bool saved = false;
 
@@ -226,10 +238,15 @@ public:
 
 	Values values;
 	bool _UIDirty = false;
+	
+	//Getters
+	osg::Vec3 getScale() { return _scale; }
 
 protected:
 	bool _hasMask;
 	bool _claheAvailable = false;
+	osg::Vec3 _scale = osg::Vec3(0, 0, 0);
+
 	std::string _minMaxShader;
 	std::string _excessShader;
 	std::string _histShader;
@@ -253,11 +270,10 @@ protected:
 	osg::ref_ptr<osg::UIntArray> data;
 
 	osg::ref_ptr<osg::DispatchCompute> _computeNode;
-	osg::ref_ptr<osg::DispatchCompute> sourceNode;
+	osg::ref_ptr<osg::DispatchCompute> _minMaxNode;
 	osg::ref_ptr<osg::DispatchCompute> _histNode;
 	osg::ref_ptr<osg::DispatchCompute> _excessNode;
-	osg::ref_ptr<osg::DispatchCompute> _minMaxNode;
-	osg::ref_ptr<osg::DispatchCompute> _clipHist1Node;
+ 	osg::ref_ptr<osg::DispatchCompute> _clipHist1Node;
 	osg::ref_ptr<osg::DispatchCompute> _lerpNode;
 
 	osg::ref_ptr<osg::DispatchCompute> _totalHistNode;
@@ -526,7 +542,9 @@ public:
 	int numPixels;
 	unsigned int _numGrayVals;
 	float _clipLimit;
+	
 	osg::Vec3i volDims;
+	osg::Vec3 _selectionVec = osg::Vec3(-1,-1,-1);
 	osg::Vec3i _sb3D;
 	osg::ref_ptr<osg::AtomicCounterBufferBinding> _acbbminMax;
 

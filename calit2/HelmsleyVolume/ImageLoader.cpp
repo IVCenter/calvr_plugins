@@ -115,7 +115,6 @@ osg::Image* LoadDicomImage(const string& path, osg::Vec3& size) {
 
 	image->setMinMaxWindow();
 	uint16_t* pixelData = (uint16_t*)image->getOutputData(16);
-	//memcpy(data + w * h*i, pixelData, w * h * sizeof(uint16_t));
 	unsigned int j = 0;
 	for (unsigned int x = 0; x < w; x++)
 		for (unsigned int y = 0; y < h; y++) {
@@ -197,7 +196,7 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 	unsigned int w = images[0].image->getWidth();
 	unsigned int h = images[0].image->getHeight();
 	unsigned int d = (unsigned int)images.size();
-	//std::cout << "w " << w << "h " << h << "d " << d << std::endl;
+	std::cout << "w " << w << "h " << h << "d " << d << std::endl;
 	osg::Vec3 size = osg::Vec3(0, 0, 0);
 	// volume size in millimeters
 	size.x() = (float)spacingX * (float)w;
@@ -226,7 +225,7 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 	);
 
 	transform.preMultScale(size);
-
+	std::cout << "size: " << "x: " << size.x() << "y: " << size.y() << "z: " << size.z() << std::endl;
 	
 
 	osg::Image* img = CreateTexture(GL_RG, GL_UNSIGNED_SHORT, w, h, d);

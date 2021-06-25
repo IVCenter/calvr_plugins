@@ -145,6 +145,13 @@ NewVolumeMenu::~NewVolumeMenu()
 		MenuManager::instance()->removeMenuSystem(_marchingCubesMenu);
 		delete _marchingCubesMenu;
 	}
+	
+	if (_selectionMenu)
+	{
+		_selectionMenu->setActive(false, false);
+		MenuManager::instance()->removeMenuSystem(_selectionMenu);
+		delete _selectionMenu;
+	}
 
 	if (_container)
 	{
@@ -456,7 +463,10 @@ void NewVolumeMenu::init()
 	list->setAbsoluteSpacing(0.0);
 	_tentMenu = new UIPopup();
 	_claheMenu = new UIPopup();
+	popupMenus.push_back(_claheMenu);
 	_attnMapsMenu = new UIPopup();
+	popupMenus.push_back(_attnMapsMenu);
+
 
 
 	_tentWindowOnly->setPercentSize(osg::Vec3(1, 1, 3.0));
@@ -514,7 +524,7 @@ void NewVolumeMenu::init()
 	_claheMenu->addChild(claheBknd);
 	
 	
-
+	std::cout << "moveable" << _movable << std::endl;
 	if (!_movable)
 	{
 		_menu->setActive(true, true);
@@ -811,8 +821,9 @@ void NewVolumeMenu::init()
 
 	_genClaheButton = new CallbackButton();
 	_genClaheButton->setCallback(this);
-	_genClaheButton->setPercentSize(osg::Vec3(.5, 1.0, .7));
- 	UIQuadElement* buttonBknd = new UIQuadElement(osg::Vec4(1.0,0.0,0.0,1.0));
+
+	_genClaheButton->setPercentSize(osg::Vec3(.7, 1.0, 1));
+ 	UIQuadElement* buttonBknd = new UIQuadElement(UI_RED_ACTIVE_COLOR);
 	label = new UIText("Generate CLAHE", 24.0f, osgText::TextBase::CENTER_CENTER);
 	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
 
@@ -822,25 +833,38 @@ void NewVolumeMenu::init()
 
 	_useClaheButton = new CallbackButton();
 	_useClaheButton->setCallback(this);
-	_useClaheButton->setPercentSize(osg::Vec3(.5, 1.0, .7));
+	_useClaheButton->setPercentSize(osg::Vec3(.7, 1.0, 1));
  	buttonBknd = new UIQuadElement(UI_INACTIVE_RED_COLOR);
-	label = new UIText("Use CLAHE", 24.0f, osgText::TextBase::CENTER_CENTER);
+	label = new UIText("Enable CLAHE", 24.0f, osgText::TextBase::CENTER_CENTER);
 	label->setColor(UI_INACTIVE_WHITE_COLOR);
 	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
 
 	_useClaheButton->addChild(buttonBknd);
 	_useClaheButton->addChild(label);
 
-	buttonList->setPercentPos(osg::Vec3(.125, 0.0, 0.5));
+	_useClaheSelection = new CallbackButton();
+	_useClaheSelection->setCallback(this);
+	_useClaheSelection->setPercentSize(osg::Vec3(.7, 1.0, 1));
+ 	buttonBknd = new UIQuadElement(UI_RED_ACTIVE_COLOR);
+	label = new UIText("Enable Selection", 24.0f, osgText::TextBase::CENTER_CENTER);
+	label->setColor(UI_INACTIVE_WHITE_COLOR);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+
+	_useClaheSelection->addChild(buttonBknd);
+	_useClaheSelection->addChild(label);
+
+	buttonList->setPercentPos(osg::Vec3(.05, 0.0, 1.0));
 	buttonList->addChild(_genClaheButton);
 	buttonList->addChild(_useClaheButton);
+	buttonList->addChild(_useClaheSelection);
 	claheUI->addChild(buttonList);
 
 	
 
 	_claheMenu->addChild(claheUI);
-	_claheMenu->setPosition(osg::Vec3(-150, 150, 800));
-	_claheMenu->getRootElement()->setAbsoluteSize(osg::Vec3(750, 1, 300));
+	
+	_claheMenu->setPosition(POPUP_POS);
+	_claheMenu->getRootElement()->setAbsoluteSize(osg::Vec3(POPUP_WIDTH, 1, 450));
 	
 	////////////Attention Maps UI/////////////////
 
@@ -908,11 +932,12 @@ void NewVolumeMenu::init()
 
 
 	_attnMapsMenu->addChild(attnMapsUI);
-	_attnMapsMenu->setPosition(osg::Vec3(-150, 150, 800));
-	_attnMapsMenu->getRootElement()->setAbsoluteSize(osg::Vec3(750, 1, 300));
+	_attnMapsMenu->setPosition(POPUP_POS);
+	_attnMapsMenu->getRootElement()->setAbsoluteSize(osg::Vec3(POPUP_WIDTH, 1, 450));
 	
 	////////////Marching Cubes UI/////////////////
 	_marchingCubesMenu = new UIPopup();
+	popupMenus.push_back(_marchingCubesMenu);
 	UIQuadElement* mcBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 	mcBknd->setRounding(0, .2);
 	mcBknd->setTransparent(true);
@@ -1006,8 +1031,76 @@ void NewVolumeMenu::init()
 
 	mcUI->addChild(buttonList);
 	_marchingCubesMenu->addChild(mcUI);
-	_marchingCubesMenu->setPosition(osg::Vec3(-150, 150, 800));
-	_marchingCubesMenu->getRootElement()->setAbsoluteSize(osg::Vec3(750, 1, 450));
+	_marchingCubesMenu->setPosition(POPUP_POS);
+	_marchingCubesMenu->getRootElement()->setAbsoluteSize(osg::Vec3(POPUP_WIDTH, 1, 450));
+	
+	////////////Selection UI/////////////////
+	_selectionMenu = new UIPopup();
+	popupMenus.push_back(_selectionMenu);
+	UIQuadElement* selectionBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
+	selectionBknd->setRounding(0, .2);
+	selectionBknd->setTransparent(true);
+	selectionBknd->setBorderColor(UI_BLACK_COLOR);
+	selectionBknd->setBorderSize(.02);
+
+	_selectionMenu->addChild(selectionBknd);
+
+	label = new UIText("3D Selection", 32.0f, osgText::TextBase::CENTER_TOP);
+	UIList* selectUI = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
+	selectUI->setPercentSize(osg::Vec3(1, 1, .9));
+	selectUI->setPercentPos(osg::Vec3(0, 0, -.025));
+	label->setPercentPos(osg::Vec3(0.0, 0.0, -.5));
+	selectUI->addChild(label);
+
+	buttonList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
+
+	_lockSelectionButton = new CallbackButton();
+	_lockSelectionButton->setCallback(this);
+	_lockSelectionButton->setPercentSize(osg::Vec3(.7, 1.0, .7));
+
+	buttonBknd = new UIQuadElement(UI_RED_ACTIVE_COLOR);
+	label = new UIText("Lock Size", 24.0f, osgText::TextBase::CENTER_CENTER);
+	label->setColor(UI_WHITE_COLOR);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+
+	_lockSelectionButton->addChild(buttonBknd);
+	_lockSelectionButton->addChild(label);
+
+	_resetSelectionButton = new CallbackButton();
+	_resetSelectionButton->setCallback(this);
+	_resetSelectionButton->setPercentSize(osg::Vec3(.7, 1.0, .7));
+
+	buttonBknd = new UIQuadElement(UI_RED_ACTIVE_COLOR);
+	label = new UIText("Remove Selection", 24.0f, osgText::TextBase::CENTER_CENTER);
+	label->setColor(UI_WHITE_COLOR);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+
+	_resetSelectionButton->addChild(buttonBknd);
+	_resetSelectionButton->addChild(label);
+
+	_toggleSelection = new CallbackButton();
+	_toggleSelection->setCallback(this);
+	_toggleSelection->setPercentSize(osg::Vec3(.7, 1.0, .7));
+
+	buttonBknd = new UIQuadElement(UI_RED_ACTIVE_COLOR);
+	label = new UIText("Disable Selection", 24.0f, osgText::TextBase::CENTER_CENTER);
+	label->setColor(UI_WHITE_COLOR);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+
+	_toggleSelection->addChild(buttonBknd);
+	_toggleSelection->addChild(label);
+
+
+	buttonList->setPercentPos(osg::Vec3(.05, 0.0, 0.0));
+	buttonList->addChild(_lockSelectionButton);
+	buttonList->addChild(_toggleSelection);
+	buttonList->addChild(_resetSelectionButton);
+
+
+	selectUI->addChild(buttonList);
+	_selectionMenu->addChild(selectUI);
+	_selectionMenu->setPosition(POPUP_POS);
+	_selectionMenu->getRootElement()->setAbsoluteSize(osg::Vec3(POPUP_WIDTH, 1, 450));
 
 
 	///////////Masks UI///////////////
@@ -1203,6 +1296,8 @@ void NewVolumeMenu::init()
 		
 		
 	//}
+		std::cout << "moveable" << _movable << std::endl;
+
 	if (!_movable)
 	{
 		_maskMenu->setActive(true, true);
@@ -1213,8 +1308,11 @@ void NewVolumeMenu::init()
 		_maskMenu->setActive(true, false);
 		_contrastMenu->setActive(true, false);
 		_tentMenu->setActive(true, false);
-		_claheMenu->setActive(true, false);
-		_marchingCubesMenu->setActive(true, false);
+		_claheMenu->setActive(false, false);
+		_marchingCubesMenu->setActive(false, false);
+		_attnMapsMenu->setActive(false, false);
+		_selectionMenu->setActive(false, false);
+		
 		_maskContainer = new SceneObject("MaskMenu", false, true, false, false, false);
 		_contrastContainer = new SceneObject("ContrastMenu", false, true, false, false, false);
 		_tentWindowContainer = new SceneObject("TentWindow", false, true, false, false, false);
@@ -1235,6 +1333,7 @@ void NewVolumeMenu::init()
 		_tentMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_claheMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_marchingCubesMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
+		_selectionMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_contrastMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_maskContainer->dirtyBounds();
 	}
@@ -1465,7 +1564,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		linkVolumes();
 	}
 
-	//CLAHE
+	//CLAHE Callbacks
 	else if (item == _numBinsSlider) {
 		if (_numBinsSlider->getAdjustedValue() > .8) {
 			_numBinsLabel->setText("65536");
@@ -1515,7 +1614,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		_volume->genClahe();
 		((UIQuadElement*)_useClaheButton->getChild(0))->setColor(UI_RED_ACTIVE_COLOR);
 		((UIText*)_useClaheButton->getChild(1))->setColor(UI_WHITE_COLOR);
-		((UIText*)_useClaheButton->getChild(1))->setText("Use CLAHE");
+		((UIText*)_useClaheButton->getChild(1))->setText("Enable CLAHE");
 		 
 		_volume->getCompute()->getOrCreateStateSet()->setDefine("CLAHE", true);
 		_volume->setDirtyAll();
@@ -1523,14 +1622,26 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		((UIText*)_useClaheButton->getChild(1))->setText("Disable CLAHE");
 	}
 	else if (item == _useClaheButton) {
-		bool on = ((UIText*)_useClaheButton->getChild(1))->getText() == "Use CLAHE";
+		bool on = ((UIText*)_useClaheButton->getChild(int(UI_ID::TEXT)))->getText() == "Enable CLAHE";
 		_volume->getCompute()->getOrCreateStateSet()->setDefine("CLAHE", on);
 		_volume->setDirtyAll();
 		if(on)
-			((UIText*)_useClaheButton->getChild(1))->setText("Disable CLAHE");
+			((UIText*)_useClaheButton->getChild(int(UI_ID::TEXT)))->setText("Disable CLAHE");
 		else
-			((UIText*)_useClaheButton->getChild(1))->setText("Use CLAHE");
+			((UIText*)_useClaheButton->getChild(int(UI_ID::TEXT)))->setText("Enable CLAHE");
 	}
+
+	else if (item == _useClaheSelection) {
+		bool on = ((UIText*)_useClaheSelection->getChild(int(UI_ID::TEXT)))->getText() == "Enable Selection";
+		_volume->setCLAHEUseSelection(on);
+		_volume->setDirtyAll();
+		if(on)
+			((UIText*)_useClaheSelection->getChild(int(UI_ID::TEXT)))->setText("Disable Selection");
+		else
+			((UIText*)_useClaheSelection->getChild(int(UI_ID::TEXT)))->setText("Enable Selection");
+	}
+	
+
 	//AttnMaps
 	else if (item == _useAttnMapsButton) {
 		_useAttnMapsToggle = _useAttnMapsToggle == true ? false : true;
@@ -1538,12 +1649,12 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		_volume->getCompute()->getOrCreateStateSet()->setDefine("ATTN_MAPS", _useAttnMapsToggle);
 		_volume->setDirtyAll();
 		if (_useAttnMapsToggle) {
-			((UIText*)_useAttnMapsButton->getChild(1))->setText("Hide Maps");
-			((UIQuadElement*)_useAttnMapsButton->getChild(0))->setColor(UI_RED_ACTIVE_COLOR);
+			((UIText*)_useAttnMapsButton->getChild(int(UI_ID::TEXT)))->setText("Hide Maps");
+			((UIQuadElement*)_useAttnMapsButton->getChild(int(UI_ID::BACKGROUND)))->setColor(UI_RED_ACTIVE_COLOR);
 		}
 		else {
-			((UIText*)_useAttnMapsButton->getChild(1))->setText("Show Maps");
-			((UIQuadElement*)_useAttnMapsButton->getChild(0))->setColor(UI_INACTIVE_RED_COLOR);
+			((UIText*)_useAttnMapsButton->getChild(int(UI_ID::TEXT)))->setText("Show Maps");
+			((UIQuadElement*)_useAttnMapsButton->getChild(int(UI_ID::BACKGROUND)))->setColor(UI_INACTIVE_RED_COLOR);
 		}
 	}
 	else if (item == _attnMapOnlyButton) {
@@ -1552,12 +1663,12 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
  		_volume->getCompute()->getOrCreateStateSet()->setDefine("ATTN_MAP_ONLY", _attnMapOnlyToggle);
 		_volume->setDirtyAll();
 		if (_attnMapOnlyToggle) {
-			((UIText*)_attnMapOnlyButton->getChild(1))->setText("Disable Maps Only");
-			((UIQuadElement*)_attnMapOnlyButton->getChild(0))->setColor(UI_RED_ACTIVE_COLOR);
+			((UIText*)_attnMapOnlyButton->getChild(int(UI_ID::TEXT)))->setText("Disable Maps Only");
+			((UIQuadElement*)_attnMapOnlyButton->getChild(int(UI_ID::BACKGROUND)))->setColor(UI_RED_ACTIVE_COLOR);
 		}
 		else {
-			((UIText*)_attnMapOnlyButton->getChild(1))->setText("Enable Maps Only");
-			((UIQuadElement*)_attnMapOnlyButton->getChild(0))->setColor(UI_INACTIVE_RED_COLOR);
+			((UIText*)_attnMapOnlyButton->getChild(int(UI_ID::TEXT)))->setText("Enable Maps Only");
+			((UIQuadElement*)_attnMapOnlyButton->getChild(int(UI_ID::BACKGROUND)))->setColor(UI_INACTIVE_RED_COLOR);
 
 		}
 	}
@@ -1630,7 +1741,37 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		_volume->printSTLFile();
 	}
 
-	
+	//Selection UI
+	else if (item == _lockSelectionButton) {
+		if (((cvr::UIText*)_lockSelectionButton->getChild(int(UI_ID::TEXT)))->getText() == "Lock Size") {
+			_volume->lockSelection(true);
+			((cvr::UIText*)_lockSelectionButton->getChild(int(UI_ID::TEXT)))->setText("Unlock Size");
+		}
+		else {
+			_volume->lockSelection(false);
+			((cvr::UIText*)_lockSelectionButton->getChild(int(UI_ID::TEXT)))->setText("Lock Size");
+		}
+	}
+	else if (item == _resetSelectionButton) {
+		if (((cvr::UIText*)_resetSelectionButton->getChild(int(UI_ID::TEXT)))->getText() == "Remove Selection") {
+			_volume->removeSelection(true);
+			((cvr::UIText*)_resetSelectionButton->getChild(int(UI_ID::TEXT)))->setText("Add Selection");
+		}
+		else {
+			_volume->removeSelection(false);
+			((cvr::UIText*)_resetSelectionButton->getChild(int(UI_ID::TEXT)))->setText("Remove Selection");
+		}
+	}
+	else if (item == _toggleSelection) {
+		if (((cvr::UIText*)_toggleSelection->getChild(int(UI_ID::TEXT)))->getText() == "Disable Selection") {
+			_volume->disableSelection(true);
+			((cvr::UIText*)_toggleSelection->getChild(int(UI_ID::TEXT)))->setText("Enable Selection");
+		}
+		else {
+			_volume->disableSelection(false);
+			((cvr::UIText*)_toggleSelection->getChild(int(UI_ID::TEXT)))->setText("Disable Selection");
+		}
+	}
 	
 	
 }
@@ -2266,15 +2407,15 @@ void NewVolumeMenu::resetValues() {
  			index++;
 			continue;
 		}
-		if (index < NUMBER_OF_VOLUME_DEPENDENT_TOOLS) {
+		else {
 			if ((*it)->isOn()) {
 				(*it)->toggle();
 				(*it)->setColor(UI_BACKGROUND_COLOR);
 			}
 			index++;
 		}
-		else
-			break;
+		
+		
 	}
 
 	//TOOLS
@@ -2784,23 +2925,84 @@ void NewVolumeMenu::toggleHistogram(bool on) {
 
 void NewVolumeMenu::toggleClaheTools(bool on) {
 	if (on) {
-		removeAllToolMenus();
+		//removeAllToolMenus();
+		_menuCount++;
+		osg::Vec3 newPos = getCorrectMenuPosition();
+		_claheMenu->setPosition(newPos);
 		_toolContainer->addChild(_claheMenu->getRoot());
+		_claheMenu->setActive(true, true);
+
 	}
-	else {		
+	else {
+		
+		
  		_toolContainer->removeChild(_claheMenu->getRoot());
 		_claheMenu->getRootElement()->_parent = nullptr;
+		_claheMenu->setActive(false, false);
+
+		if (_menuCount--) {
+			resetMenuPos();
+		};
 	}
 }
 
 void NewVolumeMenu::toggleAttnMapsTools(bool on) {
 	if (on) {
-		removeAllToolMenus();
+		//removeAllToolMenus();
+		_menuCount++;
+		osg::Vec3 newPos = getCorrectMenuPosition();
+		_attnMapsMenu->setPosition(newPos);
 		_toolContainer->addChild(_attnMapsMenu->getRoot());
-	}
+		_attnMapsMenu->setActive(true, true);
+ 	}
 	else {		
-		_toolContainer->removeChild(_attnMapsMenu->getRoot());
+ 		_toolContainer->removeChild(_attnMapsMenu->getRoot());
 		_attnMapsMenu->getRootElement()->_parent = nullptr;
+		_attnMapsMenu->setActive(false, false);
+
+		if (_menuCount--) {
+			resetMenuPos();
+		};
+	}
+}
+
+
+void NewVolumeMenu::toggleMCRender(bool on) {
+	if (on) {
+		//removeAllToolMenus();
+		_menuCount++;
+		_marchingCubesMenu->setPosition(getCorrectMenuPosition());
+		_toolContainer->addChild(_marchingCubesMenu->getRoot());
+		_marchingCubesMenu->setActive(true, true);
+	}
+	else {
+		 
+		_toolContainer->removeChild(_marchingCubesMenu->getRoot());
+		_marchingCubesMenu->getRootElement()->_parent = nullptr;
+		_marchingCubesMenu->setActive(false, false);
+
+		if (_menuCount--) {
+			resetMenuPos();
+		};
+	}
+}
+
+void NewVolumeMenu::toggle3DSelection(bool on) {
+	if (on) {
+		//removeAllToolMenus();
+		_menuCount++;
+		_selectionMenu->setPosition(getCorrectMenuPosition());
+		_toolContainer->addChild(_selectionMenu->getRoot());
+		_selectionMenu->setActive(true, true);
+	}
+	else {
+ 		_toolContainer->removeChild(_selectionMenu->getRoot());
+		_selectionMenu->getRootElement()->_parent = nullptr;
+		_selectionMenu->setActive(false, false);
+
+		if (_menuCount--) {
+			resetMenuPos();
+		};
 	}
 }
 
@@ -2829,14 +3031,22 @@ void NewVolumeMenu::removeAllToolMenus() {
 	_marchingCubesMenu->getRootElement()->_parent = nullptr;
 }
 
-void NewVolumeMenu::toggleMCRender(bool on) {
-	if (on) {
-		removeAllToolMenus();
-		_toolContainer->addChild(_marchingCubesMenu->getRoot());
-	}
-	else {
-		_toolContainer->removeChild(_marchingCubesMenu->getRoot());
-		_marchingCubesMenu->getRootElement()->_parent = nullptr;
+osg::Vec3 NewVolumeMenu::getCorrectMenuPosition(){
+	osg::Vec3 newPos = POPUP_POS;
+	int leftOrRight = _menuCount % 2 == 0 ? 1 : -1;	//If count is even put it on right side
+	int multiplier = (int)(_menuCount / 2) * leftOrRight; 
+	newPos.x() += POPUP_WIDTH * multiplier;
+	return newPos;
+}
+
+void NewVolumeMenu::resetMenuPos() {
+	_menuCount = 0;
+	for (cvr::UIPopup* currMenu : popupMenus) {
+		if (currMenu->isActive()) {
+			_menuCount++;
+			currMenu->setPosition(getCorrectMenuPosition());
+			
+		}
 	}
 }
 
@@ -2847,6 +3057,20 @@ void NewVolumeMenu::toggleMaskMenu(bool on) {
 	else {
 		_maskContainer->removeChild(_maskMenu->getRoot());
 		_maskMenu->getRootElement()->_parent = nullptr;
+	}
+}
+
+void NewVolumeMenu::togglePopupMenu(bool on, cvr::UIPopup* menu) {
+	if (on) {
+		osg::Vec3 newPos = getCorrectMenuPosition();
+		menu->setPosition(newPos);
+		_toolContainer->addChild(menu->getRoot());
+		_menuCount++;
+	}
+	else {
+		_toolContainer->removeChild(menu->getRoot());
+		menu->getRootElement()->_parent = nullptr;
+		_menuCount--;
 	}
 }
 
@@ -2891,6 +3115,7 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	_curvedMenu->setImage(int(TOOLID::SELECTION3D), dir + "ruler.png");
 	_menu->addChild(_curvedMenu);
 
+	std::cout << "moveable" << _movable << std::endl;
 
 	if (!_movable && !parent)
 	{
@@ -3004,7 +3229,7 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
 			HelmsleyVolume::instance()->toggleClaheTools(true);
-			toggleOtherMenus((int)TOOLID::CLAHE);
+			//toggleOtherMenus((int)TOOLID::CLAHE);
 		}
 		else
 		{
@@ -3033,13 +3258,17 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
 			HelmsleyVolume::instance()->setTool(HelmsleyVolume::SELECTION3D);
-			HelmsleyVolume::instance()->activateMeasurementTool(_index);
+			HelmsleyVolume::instance()->activateSelectionTool(_index);
+			HelmsleyVolume::instance()->toggle3DSelection(true);
 		}
 		else
 		{
 			index.second->setColor(UI_BACKGROUND_COLOR);
 			HelmsleyVolume::instance()->setTool(HelmsleyVolume::NONE);
-			HelmsleyVolume::instance()->deactivateMeasurementTool(_index);
+			HelmsleyVolume::instance()->deactivateSelectionTool(_index);
+			//HelmsleyVolume::instance()->toggle3DSelection(false);
+			HelmsleyVolume::instance()->toggle3DSelection(false);
+
 		}
 	}
 	else if (index.first == int(TOOLID::CENTERLINE))
@@ -3112,7 +3341,7 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
 			HelmsleyVolume::instance()->toggleMCRender(true);
-			toggleOtherMenus((int)TOOLID::MARCHINGCUBES);
+			//toggleOtherMenus((int)TOOLID::MARCHINGCUBES);
  		}
 	else
 		{

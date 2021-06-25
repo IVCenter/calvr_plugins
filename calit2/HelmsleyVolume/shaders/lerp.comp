@@ -4,6 +4,7 @@
 ////////////////////////////////////////
 
 #version 460
+#pragma import_defines (SELECTION)
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;	// 64 threads
 
@@ -24,6 +25,9 @@ layout(std430, binding = 1) buffer histBuffer{ uint hist[]; };
 uniform ivec3 numSB;	// number of Sub Blocks
 uniform uint NUM_IN_BINS;	// number of gray values in the Volume 
 uniform uint NUM_OUT_BINS;	// number of gray values in the new Volume
+uniform vec3 SelectionsDims[10];
+uniform vec3 SelectionsCenters[10];
+
 //uniform bool useLUT;	// if we need to use the LUT to map to a different bit range
 //
 void main() {
@@ -32,9 +36,30 @@ void main() {
 	uvec3 index = gl_GlobalInvocationID.xyz;
 	ivec3 volumeDims = imageSize(volume);
 
-	// number of blocks to interpolate over is 2x number of SB the volume is divided into
+	if ( index.x >= volumeDims.x || index.y >= volumeDims.y || index.z >= volumeDims.z ) {
+		return;
+	}
 	ivec3 numBlocks = numSB * ivec3(2);	
-	ivec3 sizeBlock = ivec3( volumeDims / numBlocks );
+	ivec3 sizeBlock = ivec3( volumeDims / numBlocks );	
+
+	
+	#ifdef SELECTION
+		vec3 lowerBounds = SelectionsCenters[0] - SelectionsDims[0]/2;
+		vec3 upperBounds = SelectionsCenters[0] + SelectionsDims[0]/2;
+		
+		bool outOfSelection = index.x <= lowerBounds.x ||  index.y <= lowerBounds.y ||  index.z <= lowerBounds.z
+								||  index.x >= upperBounds.x ||  index.y >= upperBounds.y ||  index.z >= upperBounds.z;
+		sizeBlock = ivec3(SelectionDims[0]/numBlocks);	
+
+		if(outOfSelection)
+			{
+				return;		
+			}
+ 			
+	#endif
+
+ 	// number of blocks to interpolate over is 2x number of SB the volume is divided into
+	
 	ivec3 currBlock = ivec3( index / sizeBlock );
 	
 

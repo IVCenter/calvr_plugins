@@ -4,6 +4,8 @@
 ////////////////////////////////////////
 
 #version 460 
+#pragma import_defines (SELECTION)
+
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;	// 64 threads
 
@@ -18,19 +20,38 @@ layout(std430, binding = 2) buffer histMaxBuffer{ uint histMax[]; };
 uniform ivec3 numSB;		// number of Sub Blocks
 uniform uint NUM_OUT_BINS;	// number of gray values in the new Volume
 uniform ivec3 VolumeDims;	// size of the section of the volume we are applying CLAHE to 
+uniform vec3 SelectionsDims[10];
+uniform vec3 SelectionsCenters[10];
 
 void main() {
 
 	// figure out the sub block this index belongs to 
 	uvec3 index = gl_GlobalInvocationID.xyz;
-	ivec3 sizeSB = ivec3( VolumeDims / numSB );	
-	ivec3 currSB = ivec3( index / sizeSB );
-
+ 
+//
 	// if we are not within the volume of interest -> return 
 	if ( index.x >= VolumeDims.x || index.y >= VolumeDims.y || index.z >= VolumeDims.z ) {
 		return;
 	}
+	ivec3 sizeSB = ivec3( VolumeDims / numSB );	
+	#ifdef SELECTION
+		vec3 lowerBounds = SelectionsCenters[0] - SelectionsDims[0]/2;
+		vec3 upperBounds = SelectionsCenters[0] + SelectionsDims[0]/2;
+		
+		bool outOfSelection = index.x <= lowerBounds.x ||  index.y <= lowerBounds.y ||  index.z <= lowerBounds.z
+								||  index.x >= upperBounds.x ||  index.y >= upperBounds.y ||  index.z >= upperBounds.z;
+		sizeSB = ivec3(SelectionDims[0]/numSB);	
+
+		if(outOfSelection)
+			{
+				return;		
+			}
+			
+	#endif
 	
+
+
+	ivec3 currSB = ivec3( index / sizeSB );
 	// get the gray value of the Volume
 	float volSamplef = imageLoad( volume, ivec3(index) ).x;
 	uint volSample = uint(volSamplef*(NUM_OUT_BINS-1u));

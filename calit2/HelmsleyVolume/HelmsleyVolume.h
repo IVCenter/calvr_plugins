@@ -30,24 +30,32 @@
 #include "CenterLineTool.h"
 #include "CuttingPlane.h"
 #include "FileSelector.h"
+#include "defines.h"
 
 #include <string>
 
 #define VOLUME_POS osg::Vec3(-413, 1052, 885)
+#define VOLUME_POS2 osg::Vec3(-1000, 1052, 885)
 #define MENU_POS osg::Vec3(-301, -141, -331)
+#define POPUP_POS osg::Vec3(-150, 150, 800)
+#define POPUP_WIDTH 750
 
-enum class TOOLID {
-	CUTTINGPLANE,
-	CLAHE,
-	MARCHINGCUBES,
-	CENTERLINE,
-	SCREENSHOT,
-	//HISTOGRAM,
-	RULER,
-	MASKMENU,
-	TFMENU,
-	SELECTION3D,
-	COUNT
+
+enum class UI_ID {
+	BACKGROUND,
+	TEXT
+};
+
+
+
+class VolumeGroupPosUpdate : public osg::NodeCallback
+{
+public:
+	VolumeGroupPosUpdate(cvr::SceneObject* so) : _so(so) {}
+
+	virtual void operator()(osg::Node* node, osg::NodeVisitor* nv);
+
+	cvr::SceneObject* _so;
 };
 
 class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
@@ -91,6 +99,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		void toggleMaskAndPresets(bool on);
 		void toggleTFUI(bool on);
 		void toggleMCRender(bool on);
+		void toggle3DSelection(bool on);
 		bool hasCenterLineCoords();
 
 
@@ -110,6 +119,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		std::vector<CuttingPlane*> getCuttingPlanes() { return _cuttingPlanes; }
 		std::vector<cvr::SceneObject*> getSceneObjects() { return _sceneObjects; }
 		std::vector<osg::ref_ptr<VolumeGroup>> getVolumes() { return _volumes; }
+		std::vector<Selection3DTool*> getSelectionTools() { return _selectionTools; }
 		FileSelector* getFileSelector() { return fileSelector; }
 
 
@@ -140,6 +150,9 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 	#ifdef DEBUGCODE
 		inline std::string printVec3OSG(osg::Vec3 vec3) {
 			return "x: " + std::to_string(vec3.x()) + "	y: " + std::to_string(vec3.y()) + "	z: " + std::to_string(vec3.z());
+		}
+		inline osg::Vec3 divideVec3OSG(osg::Vec3 a, osg::Vec3 b) {
+			return osg::Vec3(a.x() / b.x(), a.y() / b.y(), a.z() / b.z());
 		}
 	#endif 
     protected:

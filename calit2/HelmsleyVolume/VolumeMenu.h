@@ -48,8 +48,7 @@ protected:
 	VolumeGroup* _volume;
 
 	cvr::MenuRangeValueCompact* scale;
-	cvr::MenuRangeValueCompact* testScale;
-	cvr::MenuRangeValueCompact* maxSteps;
+ 	cvr::MenuRangeValueCompact* maxSteps;
 	cvr::MenuRangeValueCompact* sampleDistance;
 	 
 	cvr::MenuRangeValueCompact* contrastBottom;
@@ -61,8 +60,7 @@ protected:
 	cvr::MenuRangeValueCompact* opacityTop;
 
 	cvr::MenuCheckbox* adaptiveQuality;
-	cvr::MenuCheckbox* test;
-	cvr::MenuCheckbox* edgeDetectBox;
+ 	cvr::MenuCheckbox* edgeDetectBox;
 	cvr::MenuCheckbox* attnMapBox;
 	cvr::MenuCheckbox* highlightColon;
 	cvr::MenuCheckbox* organsOnly;
@@ -207,8 +205,14 @@ public:
 	void toggleMaskMenu(bool on);
 	void toggleTFUI(bool on);
 	void toggleMCRender(bool on);
-	void removeAllToolMenus();
+	void toggle3DSelection(bool on);
+	void togglePopupMenu(bool on, cvr::UIPopup* menu);
+	void resetMenuPos();
 
+
+	void removeAllToolMenus();
+	osg::Vec3 getCorrectMenuPosition();
+	
 	bool hasCenterLineCoords();
 	void updateMCUI(bool on);
  	void saveYamlForCinematic();
@@ -233,6 +237,13 @@ protected:
 	cvr::UIPopup* _claheMenu = nullptr;
 	cvr::UIPopup* _attnMapsMenu = nullptr;
 	cvr::UIPopup* _marchingCubesMenu = nullptr;
+	cvr::UIPopup* _selectionMenu = nullptr;
+
+	std::vector<cvr::UIPopup*> popupMenus;
+
+	unsigned short int _menuCount = 0;
+	unsigned short int _menuPos = 0;
+
 	cvr::UIQuadElement* _maskBknd;
 	cvr::UIQuadElement* _presetBknd;
 
@@ -268,12 +279,19 @@ protected:
 	bool _useAttnMapsToggle = false;
 	CallbackButton* _genClaheButton;
 	CallbackButton* _useClaheButton;
+	CallbackButton* _useClaheSelection;
 
 	//Marchinc Cubes UI
 	CallbackButton* _UseMarchingCubesButton;
 	CallbackButton* _GenMarchCubesButton;
 	CallbackButton* _PrintStlCallbackButton;
 	FullButton* _printStlButton;
+	
+	//3D Selection UI
+	CallbackButton* _lockSelectionButton;
+	CallbackButton* _resetSelectionButton;
+	CallbackButton* _toggleSelection;
+ 	
 
 	//Contrast UI
 	CallbackSlider* _trueContrast;
@@ -369,7 +387,7 @@ protected:
 	
 private:
 	ToolMenu* _toolMenu = nullptr;
-	bool _movable;
+	bool _movable = true;
 	cvr::SceneObject* _container = nullptr;
 	cvr::SceneObject* _maskContainer = nullptr;
 	cvr::SceneObject* _contrastContainer = nullptr;

@@ -5,6 +5,9 @@
 
 #version 460
 
+#pragma import_defines (SELECTION)
+
+
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
 layout(rg16, binding = 0) uniform image3D volume;
@@ -12,18 +15,38 @@ layout(binding = 1) uniform atomic_uint[3] data;
 
 uniform ivec3 VolumeDims;	// size of the section of the volume we are applying CLAHE to 
 uniform uint numBins;
+uniform vec3 SelectionsDims[10];
+uniform vec3 SelectionsCenters[10];
 
 void main() {
 
 	// calculate the max and min for the volume 
 	ivec3 index = ivec3(gl_GlobalInvocationID.xyz);
-	float fval = imageLoad(volume, index).r;
-	uint ival = uint(fval*(numBins-1u));
-	
-//	// if we are not within the volume of interest -> return 
+
+	// if we are not within the volume of interest -> return 
 	if ( index.x >= VolumeDims.x || index.y >= VolumeDims.y || index.z >= VolumeDims.z ) {
 		return;
 	}
+
+	#ifdef SELECTION
+		vec3 lowerBounds = SelectionsCenters[0] - SelectionsDims[0]/2;
+		vec3 upperBounds = SelectionsCenters[0] + SelectionsDims[0]/2;
+		
+		bool outOfSelection = index.x <= lowerBounds.x ||  index.y <= lowerBounds.y ||  index.z <= lowerBounds.z
+								||  index.x >= upperBounds.x ||  index.y >= upperBounds.y ||  index.z >= upperBounds.z;
+
+		if(outOfSelection)
+			{
+				return;		
+			}
+	#endif
+
+
+
+	float fval = imageLoad(volume, index).r;
+	uint ival = uint(fval*(numBins-1u));
+	
+//	
 
 	atomicCounterMin(data[1], ival);
 	atomicCounterMax(data[2], ival);
