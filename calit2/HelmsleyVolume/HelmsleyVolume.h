@@ -35,7 +35,7 @@
 #include <string>
 
 #define VOLUME_POS osg::Vec3(-413, 1052, 885)
-#define VOLUME_POS2 osg::Vec3(-1000, 1052, 885)
+#define VOLUME_POS2 osg::Vec3(200, 1052, 885)
 #define MENU_POS osg::Vec3(-301, -141, -331)
 #define POPUP_POS osg::Vec3(-150, 150, 800)
 #define POPUP_WIDTH 750
@@ -96,8 +96,10 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		void toggleHistogram(bool on);
 		void toggleClaheTools(bool on);
 		void toggleAttnMapsTools(bool on);
+		void toggleSpecialTF(int TFID);
 		void toggleMaskAndPresets(bool on);
 		void toggleTFUI(bool on);
+		void unselectSpecialTFs();
 		void toggleMCRender(bool on);
 		void toggle3DSelection(bool on);
 		bool hasCenterLineCoords();
@@ -111,6 +113,7 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		void removeSecondVolume();
 
 		void setTool(ToolState tool) { _tool = tool; }
+		void setLastSelectionTool(int lastSelection) { _lastSelectionTool = lastSelection; }
 		void activateMeasurementTool(int volume);
 		void deactivateMeasurementTool(int volume);
 		void activateSelectionTool(int volume);

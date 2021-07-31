@@ -196,7 +196,7 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 	unsigned int w = images[0].image->getWidth();
 	unsigned int h = images[0].image->getHeight();
 	unsigned int d = (unsigned int)images.size();
-	std::cout << "w " << w << "h " << h << "d " << d << std::endl;
+	//std::cout << "w " << w << "h " << h << "d " << d << std::endl;
 	osg::Vec3 size = osg::Vec3(0, 0, 0);
 	// volume size in millimeters
 	size.x() = (float)spacingX * (float)w;
@@ -225,7 +225,7 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 	);
 
 	transform.preMultScale(size);
-	std::cout << "size: " << "x: " << size.x() << "y: " << size.y() << "z: " << size.z() << std::endl;
+	//std::cout << "size: " << "x: " << size.x() << "y: " << size.y() << "z: " << size.z() << std::endl;
 	
 
 	osg::Image* img = CreateTexture(GL_RG, GL_UNSIGNED_SHORT, w, h, d);
@@ -319,7 +319,7 @@ osg::Image* LoadRAWVolumeImage(const string& file, osg::Matrix& transform) {
 	uint16_t* data = (uint16_t*)img->data();
 	memset(data, 0, w * h * d * sizeof(uint16_t) * 2);
 	uint16_t* pixelData = (uint16_t*)fileBuf;
-	
+	int zeroCounter = 0;
 
 	for (unsigned int i = 0; i < d; i++) {
 		
@@ -331,13 +331,12 @@ osg::Image* LoadRAWVolumeImage(const string& file, osg::Matrix& transform) {
 			for (unsigned int x = 0; x < w; x++) {
 				j = 2 * (x + y * w);
 				slice[j] = fileBuf[x + y * w + i*h*w] * 255;
-				//slice[j + 1] = 0xFFFF;
+			 
+
+
 			}
 		}
-
-		//free memory
- 	}
-
+ 	} 
 
 	delete[]fileBuf;
 	fclose(filepath);   // Almost forgot this 
@@ -467,6 +466,8 @@ osg::Image* ImageLoader::LoadRawVolume(const string& path, osg::Matrix& transfor
 	string ext = GetExt(file);
 	if (ext == "raw")
 		return LoadRAWVolumeImage(file, transform);
-	else
+	else {
 		return 0;
+		std::cerr << "Not a raw file" << std::endl;
+	}
 }

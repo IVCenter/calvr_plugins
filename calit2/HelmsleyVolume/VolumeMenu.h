@@ -20,15 +20,6 @@
 
 #include <yaml-cpp/yaml.h>
 
-
-
-
-enum ToolIndex {
-	UNDEFINED0,
-	CUTTINGPLANE,
-	UNDEFINED1
-};
-
 class VolumeMenu : public cvr::MenuCallback {
 public:
 	VolumeMenu(cvr::SceneObject* scene, VolumeGroup* volume) : _scene(scene), _volume(volume) {}
@@ -43,6 +34,7 @@ public:
 	};
 	ColorFunction transferFunction;
 	void setVolume(VolumeGroup* volume) { _volume = volume; }
+	void unselectSpecialTFs();
 protected:
 	cvr::SceneObject* _scene;
 	VolumeGroup* _volume;
@@ -69,7 +61,9 @@ protected:
 
 	cvr::MenuList* colorFunction;
 
-
+#ifdef VOLKIT
+	cvr::MenuCheckbox* _useVolkitBox;
+#endif
 	
 };
 
@@ -108,6 +102,8 @@ public:
 	std::vector<CurvedQuad*> getCurvedMenuItems();
 
 	void disableUnavailableButtons(VolumeGroup* volume);
+
+	void setIndex(int index) { _index = index; }
 protected:
 
 	cvr::UIPopup* _menu = nullptr;
@@ -197,6 +193,7 @@ public:
 
 	cvr::UIList* addPresets(cvr::UIQuadElement* bknd);
 	void setLinkOff() { _updateCallback->setLinkOff(); }
+	void useTransferFunction(int tfID);
 	void toggleSwapOpacity();
 	void toggleLinkOpacity(bool turnOn);
 	void toggleHistogram(bool on);
@@ -239,7 +236,7 @@ protected:
 	cvr::UIPopup* _marchingCubesMenu = nullptr;
 	cvr::UIPopup* _selectionMenu = nullptr;
 
-	std::vector<cvr::UIPopup*> popupMenus;
+	std::map<cvr::UIPopup*, bool> popupMenus;
 
 	unsigned short int _menuCount = 0;
 	unsigned short int _menuPos = 0;
@@ -343,7 +340,6 @@ protected:
 	void switchVolumes(int index = -1);
 	void linkVolumes();
 	void saveValues(VolumeGroup* vg);
-	void useTransferFunction(int tfID);
 	void setContrastValues(float contrastLow, float contrastHigh, float brightness);
 	void fillFromVolume(VolumeGroup* vg);
 

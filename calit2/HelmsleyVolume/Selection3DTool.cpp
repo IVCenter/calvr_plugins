@@ -1,9 +1,10 @@
+#pragma once
+
 #include "Selection3DTool.h"
 #include "HelmsleyVolume.h"
 #include <cvrConfig/ConfigManager.h>
 
-#include <sstream>
-#include <iomanip>
+
 
 using namespace cvr;
 
@@ -28,7 +29,7 @@ osg::Matrix getObjectToWorldMatrixSelecion3D(osg::ref_ptr<osg::MatrixTransform> 
 
 void Selection3DToolUpdate::operator()(osg::Node* node, osg::NodeVisitor* nv)
 {
-	if (_mainSO) { 
+	if (_mainSO && _active) { 
 
 		osg::Vec3 cubeWorldPos = _cubeMT->getMatrix().getTrans() * _mainSO->getObjectToWorldMatrix();
   		osg::Vec3 selectionWorldPos = _ruler->getMatrix().getTrans() * _selectionSO->getObjectToWorldMatrix();
@@ -39,40 +40,16 @@ void Selection3DToolUpdate::operator()(osg::Node* node, osg::NodeVisitor* nv)
  		cubeCoord += osg::Vec3(.5, .5, .5);
 		cubeCoord = osg::Vec3(std::abs(_dims.x() * cubeCoord.x()), std::abs(_dims.z() * cubeCoord.y()), std::abs(_dims.y() * cubeCoord.z()));
 
-
-		
-
-		 
- /*
-
-		osg::Vec3 scaledDims = static_cast<Selection3DTool*>(_selectionSO)->_scaledDims;
-		osg::Vec3 scale = static_cast<Selection3DTool*>(_selectionSO)->_scale;
-
-		scaledDims = osg::Vec3(std::abs(scaledDims.x() * scale.x()), std::abs(scaledDims.y() * scale.y()), std::abs(scaledDims.z() * scale.z()));
-
-
-		osg::Vec3 lowerBounds = cubeCoord - (scaledDims / 2);
-		osg::Vec3 upperBounds = cubeCoord + (scaledDims / 2);
-
-		
-		*/
-		 
-
-
 		_selectionCenter->setElement(0, cubeCoord);
-		//std::cout << "scaledDims: " << HelmsleyVolume::instance()->printVec3OSG(scaledDims) << std::endl;
-		////std::cout << "ruler: " << HelmsleyVolume::instance()->printVec3OSG(_ruler->getMatrix().getTrans()) << std::endl;
-		//////std::cout << "OLD: " << HelmsleyVolume::instance()->printVec3OSG(cubeWorldPosOLD) << std::endl;
-		////std::cout << "selectionWorldPos: " << HelmsleyVolume::instance()->printVec3OSG(selectionWorldPos) << std::endl;
-		////std::cout << "cubeCoord: " << HelmsleyVolume::instance()->printVec3OSG(cubeCoord) << std::endl;
- 	//	//std::cout << "selectionWorldPos: " << HelmsleyVolume::instance()->printVec3OSG(selectionWorldPos) << std::endl;
-  //		std::cout << "center pos: " << HelmsleyVolume::instance()->printVec3OSG(cubeCoord) << std::endl;
- 	//	std::cout << "lowerBounds: " << HelmsleyVolume::instance()->printVec3OSG(lowerBounds) << std::endl;
-		//std::cout << "upperBound: " << HelmsleyVolume::instance()->printVec3OSG(upperBounds) << std::endl;
+		
 	}
 	traverse(node, nv);
 }
 
+void Selection3DToolUpdate::updateVolume(osg::ref_ptr<osg::MatrixTransform> cubeMT, osg::Vec3 dims) {
+	_cubeMT = cubeMT;
+	_dims = dims;
+}
 
 void Selection3DTool::init()
 {
@@ -225,4 +202,16 @@ void Selection3DTool::setDisable(bool disable) {
 	else {
 		_selectionDims->setElement(0, _scaledDims);
 	}
+}
+
+void Selection3DTool::setNewVolume(VolumeGroup* g) {
+	osg::Vec3 dims = osg::Vec3( g->_volDims.x(), g->_volDims.z(), g->_volDims.y());
+	_cubeMT = g->_transform;
+	setVoldims(dims,  g->getScale());
+	linkUniforms(g->_computeUniforms["SelectionsDims"], g->_computeUniforms["SelectionsCenters"]);
+	updateCallbackVolume();
+ }
+
+void Selection3DTool::updateCallbackVolume() {
+	_updateCallback->updateVolume(_cubeMT, _dims);
 }

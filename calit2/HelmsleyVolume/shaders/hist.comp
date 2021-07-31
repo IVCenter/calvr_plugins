@@ -41,7 +41,6 @@ void main() {
 		bool outOfSelection = index.x <= lowerBounds.x ||  index.y <= lowerBounds.y ||  index.z <= lowerBounds.z
 								||  index.x >= upperBounds.x ||  index.y >= upperBounds.y ||  index.z >= upperBounds.z;
 		sizeSB = ivec3(SelectionDims[0]/numSB);	
-
 		if(outOfSelection)
 			{
 				return;		
@@ -59,7 +58,9 @@ void main() {
 	
 	// Increment the appropriate histogram
 	uint grayIndex = ((NUM_OUT_BINS-1u) * histIndex) + volSample;
-
+	
+	
+//	
 
 	atomicAdd(hist[grayIndex], 1 );
 	

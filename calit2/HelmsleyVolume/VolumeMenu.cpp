@@ -5,7 +5,14 @@
 #include "cvrConfig/ConfigManager.h"
 #include <windows.h>
 #include <tchar.h>
+#include <filesystem>
 
+
+#ifdef WIN32
+#include "dirent.h"
+#else
+#include <dirent.h>
+#endif
 
 using namespace cvr;
 
@@ -43,6 +50,14 @@ void VolumeMenu::init()
 	cetColorMap->setCallback(this);
 	_scene->addMenuItem(cetColorMap);
 
+
+#ifdef VOLKIT
+
+	_useVolkitBox = new MenuCheckbox("Use Volkit", false);
+	_useVolkitBox->setCallback(this);
+	_scene->addMenuItem(_useVolkitBox);
+#endif
+
 	
 }
 
@@ -78,20 +93,34 @@ void VolumeMenu::menuCallback(cvr::MenuItem * item)
 	}
 	else if (item == fireColorMap)
 	{ 
-		std::string transferFunction = "useLut(ra.r,0);";
-		_volume->getCompute()->getOrCreateStateSet()->setDefine("COLOR_FUNCTION", transferFunction, fireColorMap->getValue());
+		/*std::string transferFunction = "useLut(ra.r,0);";
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("COLOR_FUNCTION", transferFunction, fireColorMap->getValue());*/
+		HelmsleyVolume::instance()->toggleSpecialTF(TFID::FIRE);
 		cetColorMap->setValue(false);
 		_volume->setDirtyAll();
 	}
 	else if (item == cetColorMap)
 	{ 
 		fireColorMap->setValue(false);
-		std::string transferFunction = "useLut(ra.r,1);";
-		_volume->getCompute()->getOrCreateStateSet()->setDefine("COLOR_FUNCTION", transferFunction, cetColorMap->getValue());
+	/*	std::string transferFunction = "useLut(ra.r,1);";
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("COLOR_FUNCTION", transferFunction, cetColorMap->getValue());*/
+		HelmsleyVolume::instance()->toggleSpecialTF(TFID::CET);
+
 		_volume->setDirtyAll();
 	}
 
-	
+#ifdef VOLKIT
+
+	else if (item == _useVolkitBox)
+	{
+		_volume->setUseVolkit(_useVolkitBox->getValue());
+	}
+#endif
+}
+
+void VolumeMenu::unselectSpecialTFs() {
+	fireColorMap->setValue(false);
+	cetColorMap->setValue(false);
 }
 
 VolumeMenu::~VolumeMenu() {
@@ -339,7 +368,7 @@ void NewVolumeMenu::init()
 	
 	
 	_transferFunctionRadial = new CallbackRadial();
-	_transferFunctionRadial->allowNoneSelected(false);
+	_transferFunctionRadial->allowNoneSelected(true);
 	_blacknwhite = new UIRadialButton(_transferFunctionRadial);
 	_rainbow = new UIRadialButton(_transferFunctionRadial);
 	_custom = new UIRadialButton(_transferFunctionRadial);
@@ -463,9 +492,9 @@ void NewVolumeMenu::init()
 	list->setAbsoluteSpacing(0.0);
 	_tentMenu = new UIPopup();
 	_claheMenu = new UIPopup();
-	popupMenus.push_back(_claheMenu);
+	popupMenus.insert({ _claheMenu, false });
 	_attnMapsMenu = new UIPopup();
-	popupMenus.push_back(_attnMapsMenu);
+	popupMenus.insert({ _attnMapsMenu, false });
 
 
 
@@ -524,8 +553,7 @@ void NewVolumeMenu::init()
 	_claheMenu->addChild(claheBknd);
 	
 	
-	std::cout << "moveable" << _movable << std::endl;
-	if (!_movable)
+ 	if (!_movable)
 	{
 		_menu->setActive(true, true);
 	}
@@ -937,7 +965,7 @@ void NewVolumeMenu::init()
 	
 	////////////Marching Cubes UI/////////////////
 	_marchingCubesMenu = new UIPopup();
-	popupMenus.push_back(_marchingCubesMenu);
+	popupMenus.insert({ _marchingCubesMenu, false });
 	UIQuadElement* mcBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 	mcBknd->setRounding(0, .2);
 	mcBknd->setTransparent(true);
@@ -999,7 +1027,7 @@ void NewVolumeMenu::init()
 	_UseMarchingCubesButton->setPercentSize(osg::Vec3(.7, 1.0, .7));
 
 	buttonBknd = new UIQuadElement(UI_INACTIVE_RED_COLOR);
-	label = new UIText("Use Polygon", 24.0f, osgText::TextBase::CENTER_CENTER);
+	label = new UIText("Show Polygon", 24.0f, osgText::TextBase::CENTER_CENTER);
 	label->setColor(UI_INACTIVE_WHITE_COLOR);
 	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
 
@@ -1036,7 +1064,7 @@ void NewVolumeMenu::init()
 	
 	////////////Selection UI/////////////////
 	_selectionMenu = new UIPopup();
-	popupMenus.push_back(_selectionMenu);
+	popupMenus.insert({ _selectionMenu, false });
 	UIQuadElement* selectionBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 	selectionBknd->setRounding(0, .2);
 	selectionBknd->setTransparent(true);
@@ -1295,8 +1323,7 @@ void NewVolumeMenu::init()
 		
 		
 		
-	//}
-		std::cout << "moveable" << _movable << std::endl;
+ 
 
 	if (!_movable)
 	{
@@ -1333,7 +1360,7 @@ void NewVolumeMenu::init()
 		_tentMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_claheMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_marchingCubesMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
-		_selectionMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
+		//_selectionMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_contrastMenu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_maskContainer->dirtyBounds();
 	}
@@ -1556,7 +1583,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	}
 	
 	else if (item == _swapButton) {
-		switchVolumes();
+		switchVolumes(_volumeIndex);
 		
 
 	}
@@ -1645,8 +1672,7 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	//AttnMaps
 	else if (item == _useAttnMapsButton) {
 		_useAttnMapsToggle = _useAttnMapsToggle == true ? false : true;
-		std::cout << "use maps bool: " << _useAttnMapsToggle << std::endl;
-		_volume->getCompute()->getOrCreateStateSet()->setDefine("ATTN_MAPS", _useAttnMapsToggle);
+ 		_volume->getCompute()->getOrCreateStateSet()->setDefine("ATTN_MAPS", _useAttnMapsToggle);
 		_volume->setDirtyAll();
 		if (_useAttnMapsToggle) {
 			((UIText*)_useAttnMapsButton->getChild(int(UI_ID::TEXT)))->setText("Hide Maps");
@@ -1683,7 +1709,6 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	else if (item == _GenMarchCubesButton) {
 		if (!_volume->isMCInitialized()) {
  			_volume->intializeMC();
-			updateMCUI(true);
  		}
 		else {
 			_volume->genMCs();
@@ -1777,9 +1802,9 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 }
 
 void NewVolumeMenu::updateMCUI(bool on) {
-	if (_volume->_mcIsReady == true) {
+	if (_volume->_mcPrecomped == true) {
 		((UIQuadElement*)_UseMarchingCubesButton->getChild(0))->setColor(UI_RED_ACTIVE_COLOR);
-		((UIText*)_UseMarchingCubesButton->getChild(1))->setColor(UI_WHITE_COLOR);
+		((cvr::UIText*)_UseMarchingCubesButton->getChild(1))->setColor(UI_WHITE_COLOR);
 	}
 	if (!on) {		
 		((UIText*)_UseMarchingCubesButton->getChild(1))->setText("Show Polygon");
@@ -1870,9 +1895,12 @@ void NewVolumeMenu::setNewVolume(VolumeGroup* volume , int index) {
 		HelmsleyVolume::instance()->getVolumeIndex() == 0 ? HelmsleyVolume::instance()->setVolumeIndex(1, true) :
 			HelmsleyVolume::instance()->setVolumeIndex(0, true);
 	}
-	if (index > -1) {
+	else if (index > -1) {
 		HelmsleyVolume::instance()->setVolumeIndex(index, false);
 	}
+ 	_toolMenu->setIndex(HelmsleyVolume::instance()->getVolumeIndex());
+	HelmsleyVolume::instance()->setLastSelectionTool(HelmsleyVolume::instance()->getVolumeIndex());
+
 	
 
 	if (!_volume->hasMask()) {
@@ -1954,6 +1982,7 @@ void NewVolumeMenu::saveValues(VolumeGroup* vg) {
 		++it;
 	}
 
+	//Tools
 	std::vector<CurvedQuad*> curvedMenuItems = _toolMenu->getCurvedMenuItems();
 
 	int index = 0;
@@ -2074,41 +2103,65 @@ void NewVolumeMenu::fillFromVolume(VolumeGroup* vg) {
 }
 
 void NewVolumeMenu::useTransferFunction(int tfID) {
-	if (tfID == 0)
+	if (tfID == TFID::GRAYSCALE)
 	{
 		_transferFunction = "vec3(ra.r);";
 		((UIQuadElement*)_blacknwhite->getChild(0)->getChild(0))->setColor(UI_BLUE_COLOR2);
 		((UIQuadElement*)_rainbow->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
 		((UIQuadElement*)_custom->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
- 
+		HelmsleyVolume::instance()->unselectSpecialTFs();
 
 
 		_colSliderList[0]->getGeode()->setNodeMask(0);
 		_colSliderList[1]->getGeode()->setNodeMask(0);
 		_tentMenu->getRootElement()->getGroup()->removeChild(_cp->getGroup());
 		_cp->_parent = nullptr;
+
+
 	}
-	else if (tfID == 1)
+	else if (tfID == TFID::COLOR)
 	{
 		_transferFunction = "hsv2rgb(vec3(ra.r * 0.8, 1, 1));";
 		((UIQuadElement*)_blacknwhite->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
 		((UIQuadElement*)_rainbow->getChild(0)->getChild(0))->setColor(UI_BLUE_COLOR2);
 		((UIQuadElement*)_custom->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
+		HelmsleyVolume::instance()->unselectSpecialTFs();
+
 		_colSliderList[0]->getGeode()->setNodeMask(0);
 		_colSliderList[1]->getGeode()->setNodeMask(0);
 		_tentMenu->getRootElement()->getGroup()->removeChild(_cp->getGroup());
 		_cp->_parent = nullptr;
 	}
-	else if (tfID == 2)
+	else if (tfID == TFID::CUSTOM)
 	{
 		_transferFunction = "custom(vec3(ra.r));";;
 		((UIQuadElement*)_blacknwhite->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
 		((UIQuadElement*)_rainbow->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
 		((UIQuadElement*)_custom->getChild(0)->getChild(0))->setColor(UI_BLUE_COLOR2);
+		HelmsleyVolume::instance()->unselectSpecialTFs();
+
 		_colSliderList[0]->getGeode()->setNodeMask(0xffffffff);
 		_colSliderList[1]->getGeode()->setNodeMask(0xffffffff);
 		_tentMenu->addChild(_cp);
 	}
+	else if (tfID == TFID::FIRE){
+		_transferFunction = "useLut(ra.r,0);";
+		((UIQuadElement*)_blacknwhite->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
+		((UIQuadElement*)_rainbow->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
+		((UIQuadElement*)_custom->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
+		_colSliderList[0]->getGeode()->setNodeMask(0);
+		_colSliderList[1]->getGeode()->setNodeMask(0);
+	}
+	else if (tfID == TFID::CET){
+		_transferFunction = "useLut(ra.r,1);";
+		((UIQuadElement*)_blacknwhite->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
+		((UIQuadElement*)_rainbow->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
+		((UIQuadElement*)_custom->getChild(0)->getChild(0))->setColor(UI_BACKGROUND_COLOR);
+		_colSliderList[0]->getGeode()->setNodeMask(0);
+		_colSliderList[1]->getGeode()->setNodeMask(0);
+	}
+
+
 	_volume->getCompute()->getOrCreateStateSet()->setDefine("COLOR_FUNCTION", _transferFunction, osg::StateAttribute::ON);
 	_colorDisplay->setShaderDefine("COLOR_FUNCTION", _transferFunction, osg::StateAttribute::ON);
 	_opacityDisplay->setShaderDefine("COLOR_FUNCTION", _transferFunction, osg::StateAttribute::ON);
@@ -2184,8 +2237,16 @@ bool NewVolumeMenu::checkColorSliderCallbacks(UICallbackCaller* item) {
 //#include <sys/stat.h>
 
 void NewVolumeMenu::usePreset(std::string filename) {
-	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.PresetsFolder", "C:/", false);
-	std::string presetPath = currPath + "\\" + filename + ".yml";
+
+	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.AppDir", "C:/", false);
+	//_camera->addPostDrawCallback()
+	currPath += "\\Presets";
+	DIR* dir = opendir(currPath.c_str());
+	std::string filePath = "";
+	if (dir == nullptr) {
+		std::filesystem::create_directory(currPath);
+	}
+ 	std::string presetPath = currPath + "\\" + filename + ".yml";
 	YAML::Node config = YAML::LoadFile(presetPath);
 
 	std::string datasetPath = config["series name"].as<std::string>();
@@ -2389,6 +2450,9 @@ void NewVolumeMenu::resetValues() {
 
 		_volume->setDirtyAll();
 	}
+	else {
+		_volume->getCompute()->getOrCreateStateSet()->setDefine("ORGANS_ONLY", true);
+	}
 	/*else {
 		_maskMenu->getRootElement()->getGroup()->removeChild(_maskBknd->getGroup());
 		_maskBknd->_parent = nullptr;
@@ -2418,8 +2482,7 @@ void NewVolumeMenu::resetValues() {
 		
 	}
 
-	//TOOLS
-	
+
 
 	/////Etc/////
 	((UIText*)_volumeList->getChild(0))->setColor(UI_ACTIVE_COLOR);
@@ -2598,7 +2661,16 @@ void NewVolumeMenu::savePreset(){
 
 	out << YAML::EndMap;
 
-	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.PresetsFolder", "C:/", false);
+	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.AppDir", "C:/", false);
+	//_camera->addPostDrawCallback()
+	currPath += "\\Presets";
+	DIR* dir = opendir(currPath.c_str());
+	std::string filePath = "";
+	if (dir == nullptr) {
+		std::filesystem::create_directory(currPath);
+	}
+
+
 	std::string presetPath = currPath + "\\" + name + ".yml";
 	std::ofstream fout(presetPath);
 	fout << out.c_str();
@@ -2635,11 +2707,9 @@ inline osg::Matrix ToEulerAngles(osg::Quat q) {
 
 	osg::Matrix rotMat;
 	rotMat.osg::Matrix::makeRotate(rollAngle, osg::Vec3(0, 0, 1));
-	std::cout << "rollangle: " << rollAngle << std::endl;
-
+ 
 	rotMat.osg::Matrix::makeRotate(yaw, osg::Vec3(0, 1, 0));
-	std::cout << "yawangle: " << yaw << std::endl;
-	rotMat.osg::Matrix::makeRotate(pitch, osg::Vec3(1, 0, 0));
+ 	rotMat.osg::Matrix::makeRotate(pitch, osg::Vec3(1, 0, 0));
 
 	return rotMat;
 }
@@ -2806,8 +2876,7 @@ void NewVolumeMenu::saveYamlForCinematic() {
 		
 		osg::FloatArray* osgarraypp = _volume->_PlanePoint->getFloatArray();
 		osg::FloatArray* osgarraypn = _volume->_PlaneNormal->getFloatArray();
-		std::cout << "cp Z" << osgarraypp->at(2) << std::endl;
-		float z = trans.at(2) - (osgarraypp->at(2)+.5);
+ 		float z = trans.at(2) - (osgarraypp->at(2)+.5);
 		z = .1 + (.5 - osgarraypp->at(2));
 		z =  .5 + osgarraypp->at(2);
 		
@@ -2825,10 +2894,7 @@ void NewVolumeMenu::saveYamlForCinematic() {
 		out << YAML::Key << "pnorm";
 		out << YAML::Value << YAML::Flow << pnorm;
 		out << YAML::EndMap;
-
-		std::cout << "ppoint " << "x: " << ppoint.at(0) << "y: " << ppoint.at(1) << "z: " << ppoint.at(2) << std::endl;
-		std::cout << "pnorm " << "x: " << pnorm.at(0) << "y: " << pnorm.at(1) << "z: " << pnorm.at(2) << std::endl;
-		std::cout << "pos " << "x: " << osgpos.x() << "y: " << osgpos.y() << "z: " << osgpos.z() << std::endl;
+		 
  	}
 	
 	///////////////////Masks////////////////////////
@@ -2869,11 +2935,18 @@ void NewVolumeMenu::saveYamlForCinematic() {
 
 	out << YAML::EndMap;
 
-	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.PresetsFolder", "C:/", false);
- 	std::string presetPath = "C:/Users/g3aguirre/Documents/CAL/ivl-cr/ivl-cr/ivl-cr/configs/" + name + ".yaml";
-	std::ofstream fout(presetPath);
+	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.AppDir", "C:/", false);
+	//_camera->addPostDrawCallback()
+	currPath += "\\Presets";
+	DIR* dir = opendir(currPath.c_str());
+	std::string filePath = "";
+	if (dir == nullptr) {
+		std::filesystem::create_directory(currPath);
+	}
+
+ 	std::ofstream fout(currPath);
 	fout << out.c_str();
-	std::cout << "wrting to... " << presetPath << std::endl;
+	std::cout << "wrting to... " << currPath << std::endl;
 
 	CallbackButton* presetbutton = new CallbackButton();
 	presetbutton->setCallback(this);
@@ -2882,7 +2955,7 @@ void NewVolumeMenu::saveYamlForCinematic() {
 	_presetUIList->addChild(presetbutton);
 	_presetCallbacks.push_back(presetbutton);
 
-	_futures.push_back(std::async(std::launch::async, runCinematicThread, datasetPath, presetPath));
+	_futures.push_back(std::async(std::launch::async, runCinematicThread, datasetPath, currPath));
  }
 
 void NewVolumeMenu::runCinematicThread(std::string datasetPath, std::string configPath) {
@@ -2930,7 +3003,7 @@ void NewVolumeMenu::toggleClaheTools(bool on) {
 		osg::Vec3 newPos = getCorrectMenuPosition();
 		_claheMenu->setPosition(newPos);
 		_toolContainer->addChild(_claheMenu->getRoot());
-		_claheMenu->setActive(true, true);
+		popupMenus[_claheMenu] = true;
 
 	}
 	else {
@@ -2938,7 +3011,7 @@ void NewVolumeMenu::toggleClaheTools(bool on) {
 		
  		_toolContainer->removeChild(_claheMenu->getRoot());
 		_claheMenu->getRootElement()->_parent = nullptr;
-		_claheMenu->setActive(false, false);
+		popupMenus[_claheMenu] = false;
 
 		if (_menuCount--) {
 			resetMenuPos();
@@ -2954,11 +3027,13 @@ void NewVolumeMenu::toggleAttnMapsTools(bool on) {
 		_attnMapsMenu->setPosition(newPos);
 		_toolContainer->addChild(_attnMapsMenu->getRoot());
 		_attnMapsMenu->setActive(true, true);
+		popupMenus[_attnMapsMenu] = true;
+
  	}
 	else {		
  		_toolContainer->removeChild(_attnMapsMenu->getRoot());
 		_attnMapsMenu->getRootElement()->_parent = nullptr;
-		_attnMapsMenu->setActive(false, false);
+		popupMenus[_attnMapsMenu] = false;
 
 		if (_menuCount--) {
 			resetMenuPos();
@@ -2973,13 +3048,13 @@ void NewVolumeMenu::toggleMCRender(bool on) {
 		_menuCount++;
 		_marchingCubesMenu->setPosition(getCorrectMenuPosition());
 		_toolContainer->addChild(_marchingCubesMenu->getRoot());
-		_marchingCubesMenu->setActive(true, true);
+		popupMenus[_marchingCubesMenu] = true;
 	}
 	else {
 		 
 		_toolContainer->removeChild(_marchingCubesMenu->getRoot());
 		_marchingCubesMenu->getRootElement()->_parent = nullptr;
-		_marchingCubesMenu->setActive(false, false);
+		popupMenus[_marchingCubesMenu] = false;
 
 		if (_menuCount--) {
 			resetMenuPos();
@@ -2989,16 +3064,18 @@ void NewVolumeMenu::toggleMCRender(bool on) {
 
 void NewVolumeMenu::toggle3DSelection(bool on) {
 	if (on) {
-		//removeAllToolMenus();
-		_menuCount++;
+ 		_menuCount++;
 		_selectionMenu->setPosition(getCorrectMenuPosition());
 		_toolContainer->addChild(_selectionMenu->getRoot());
-		_selectionMenu->setActive(true, true);
+		popupMenus[_selectionMenu] = true;
+		//_selectionMenu->setActive(true);//Reason for double menu
 	}
 	else {
  		_toolContainer->removeChild(_selectionMenu->getRoot());
 		_selectionMenu->getRootElement()->_parent = nullptr;
-		_selectionMenu->setActive(false, false);
+		//_selectionMenu->setActive(false);
+		popupMenus[_selectionMenu] = false;
+
 
 		if (_menuCount--) {
 			resetMenuPos();
@@ -3041,10 +3118,10 @@ osg::Vec3 NewVolumeMenu::getCorrectMenuPosition(){
 
 void NewVolumeMenu::resetMenuPos() {
 	_menuCount = 0;
-	for (cvr::UIPopup* currMenu : popupMenus) {
-		if (currMenu->isActive()) {
+	for (std::pair<cvr::UIPopup*, bool> currMenu : popupMenus) {
+		if (currMenu.second) {
 			_menuCount++;
-			currMenu->setPosition(getCorrectMenuPosition());
+			currMenu.first->setPosition(getCorrectMenuPosition());
 			
 		}
 	}
@@ -3112,11 +3189,10 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	_curvedMenu->setImage(int(TOOLID::MASKMENU), dir + "maskIcon.png");
 	_curvedMenu->setImage(int(TOOLID::TFMENU), dir + "opacityAndGradient.png");
 	_curvedMenu->setImage(int(TOOLID::MARCHINGCUBES), dir + "polygon.png");
-	_curvedMenu->setImage(int(TOOLID::SELECTION3D), dir + "ruler.png");
+	_curvedMenu->setImage(int(TOOLID::SELECTION3D), dir + "selection.png");
 	_menu->addChild(_curvedMenu);
 
-	std::cout << "moveable" << _movable << std::endl;
-
+ 
 	if (!_movable && !parent)
 	{
 		_menu->setActive(true, true);
@@ -3145,7 +3221,7 @@ std::vector<CurvedQuad*> ToolMenu::getCurvedMenuItems() {
 }
 
 void ToolMenu::disableUnavailableButtons(VolumeGroup* volume) {
-	if (volume->getColonCoords()->empty()) {
+	if (!volume->getColonCoords() || volume->getColonCoords()->empty()) {
 		_curvedMenu->disableButton(int(TOOLID::CENTERLINE));
 	}
 }
@@ -3223,7 +3299,7 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 		}
 	}*/
 
-	else if (index.first == int(TOOLID::CLAHE))
+	else if (index.first == TOOLID::CLAHE)
 	{
 		if (index.second->isOn())
 		{
@@ -3237,7 +3313,7 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 			HelmsleyVolume::instance()->toggleClaheTools(false);
 		}
 	}
-	else if (index.first == int(TOOLID::RULER))
+	else if (index.first ==  TOOLID::RULER)
 	{
 		if (index.second->isOn())
 		{
@@ -3252,13 +3328,14 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 			HelmsleyVolume::instance()->deactivateMeasurementTool(_index);
 		}
 	}
-	else if (index.first == int(TOOLID::SELECTION3D))
+	else if (index.first == TOOLID::SELECTION3D)
 	{
 		if (index.second->isOn())
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
 			HelmsleyVolume::instance()->setTool(HelmsleyVolume::SELECTION3D);
-			HelmsleyVolume::instance()->activateSelectionTool(_index);
+ 			HelmsleyVolume::instance()->activateSelectionTool(_index);
+
 			HelmsleyVolume::instance()->toggle3DSelection(true);
 		}
 		else
@@ -3271,11 +3348,10 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 
 		}
 	}
-	else if (index.first == int(TOOLID::CENTERLINE))
+	else if (index.first == TOOLID::CENTERLINE)
 	{
 		if (HelmsleyVolume::instance()->hasCenterLineCoords()) {
-			std::cout << "true" << std::endl;
-			if (!HelmsleyVolume::instance()->getVolumes()[0]->getColonCoords()->empty()) {
+ 			if (!HelmsleyVolume::instance()->getVolumes()[0]->getColonCoords()->empty()) {
 				osg::Matrix mat = PluginHelper::getHandMat(index.second->getLastHand());
 				osg::Vec4d position = osg::Vec4(0, 300, 0, 1) * mat;
 				osg::Vec3f pos = osg::Vec3(position.x(), position.y(), position.z());
@@ -3305,11 +3381,11 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 			}
 		}
 		else {
-			std::cout << "false" << std::endl;
-		}
+			;
+ 		}
 	}
 
-	else if (index.first == int(TOOLID::MASKMENU)) {
+	else if (index.first == TOOLID::MASKMENU) {
 		if(index.second->isOn())
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
@@ -3322,7 +3398,7 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
  		}
 	}
 
-	else if (index.first == int(TOOLID::TFMENU)) {
+	else if (index.first ==  TOOLID::TFMENU) {
 		if(index.second->isOn())
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
@@ -3335,7 +3411,7 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
  		}
 	}
 
-	else if (index.first == int(TOOLID::MARCHINGCUBES)) {
+	else if (index.first == TOOLID::MARCHINGCUBES) {
 
 		if(index.second->isOn())
 		{

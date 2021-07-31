@@ -1661,8 +1661,7 @@ void MarchingCubesRender::createGeometry()
 
 	for (int i = 0; i < numFloats; i ++) {
 		if (_coords->at(i).x() == std::numeric_limits<float>::max()) {
-			std::cout << "index: " << i << std::endl;
-			std::cout << "vertexcount: " << _verticeCount << std::endl;
+		 
 
 			break;
 		}
@@ -1714,8 +1713,7 @@ void MarchingCubesRender::createGeometry()
 	((osg::Geometry*)_geode->getDrawable(0))->setColorArray(colors, osg::Array::BIND_PER_VERTEX);
 	((osg::Geometry*)_geode->getDrawable(0))->setVertexAttribArray(2, colors, osg::Array::BIND_PER_VERTEX);
 	
-	std::cout << "marching cube render created" << std::endl;
-
+ 
 	updateGeometry();
 }
 
@@ -1734,8 +1732,7 @@ void MarchingCubesRender::updateGeometry()
 	{
 		
  		_geode->getDrawable(0)->getOrCreateStateSet()->setAttributeAndModes(_program.get(), osg::StateAttribute::ON);
-		std::cout << "program applied" << std::endl;
-	}
+ 	}
 	 
 }
 

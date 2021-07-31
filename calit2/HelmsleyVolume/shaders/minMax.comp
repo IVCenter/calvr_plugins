@@ -43,10 +43,12 @@ void main() {
 
 
 
+
+
 	float fval = imageLoad(volume, index).r;
 	uint ival = uint(fval*(numBins-1u));
 	
-//	
+
 
 	atomicCounterMin(data[1], ival);
 	atomicCounterMax(data[2], ival);

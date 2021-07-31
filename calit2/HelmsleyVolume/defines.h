@@ -1,6 +1,7 @@
 #pragma once
 
-enum class TOOLID {
+
+enum TOOLID : int {
 	CUTTINGPLANE,
 	CLAHE,
 	MARCHINGCUBES,
@@ -13,3 +14,18 @@ enum class TOOLID {
 	SELECTION3D,
 	COUNT
 };
+
+enum VOLUMEID : int {
+	LEFT,
+	RIGHT
+};
+
+enum TFID : int {
+	GRAYSCALE,
+	COLOR,
+	CUSTOM,
+	FIRE,
+	CET
+};
+
+#define MAXVOLUMES 2

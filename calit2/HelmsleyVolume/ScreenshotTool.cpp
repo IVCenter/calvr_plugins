@@ -7,6 +7,14 @@
 #include <sstream>
 #include <iomanip>
 #include <time.h>
+#include <filesystem>
+
+
+#ifdef WIN32
+#include "dirent.h"
+#else
+#include <dirent.h>
+#endif
 
 ScreenshotTool::~ScreenshotTool() {
 	
@@ -124,11 +132,12 @@ void ScreenshotTool::init()
 	_takePicture->setCallback(this);
 
 	_renderCinematic = new CallbackButton();
-	bttnbknd = new UIQuadElement(UI_RED_ACTIVE_COLOR);
+	bttnbknd = new UIQuadElement(UI_INACTIVE_RED_COLOR);
 	bttnbknd->setTransparent(true);
 	bttnbknd->setRounding(0, .2);
 	bttnbknd->setBorderSize(.02);
 	bttntxt = new UIText("Take Cinematic", 24.0f, osgText::TextBase::CENTER_CENTER);
+	bttntxt->setColor(UI_INACTIVE_WHITE_COLOR);
 	bttntxt->setPercentPos(osg::Vec3(0, -1, 0));
 	_renderCinematic->setPercentSize(osg::Vec3(.5, 1, .2));
 	_renderCinematic->addChild(bttnbknd);
@@ -213,7 +222,14 @@ void ScreenshotTool::menuCallback(cvr::MenuItem* menuItem)
 		_camera->dirtyAttachmentMap();
 
 		//_camera->addPostDrawCallback()
-		std::string path = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.PictureLocation");
+		std::string path = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.AppDir");
+		path += "/Screenshots";
+		DIR* dir = opendir(path.c_str());
+		std::string filePath = "";
+		if (dir == nullptr) {
+			std::filesystem::create_directory(path);
+		}
+
 		//takePhoto(path + "/0.png");
 		time_t t = std::time(nullptr);
 		struct tm* tim = std::localtime(&t);
@@ -225,6 +241,8 @@ void ScreenshotTool::menuCallback(cvr::MenuItem* menuItem)
 		ss << path << "\\" << buf << ".png";//std::put_time(tim, "%Y-%m-%d_%H-%M-%S") << ".png";
 		_pdc = new ScreenshotCallback(this, ss.str());
 		_camera->addPostDrawCallback(_pdc);
+
+		std::cout << "picture stored in " << path << std::endl;
 	}
 	else
 	{
@@ -243,7 +261,14 @@ void ScreenshotTool::uiCallback(UICallbackCaller* ui) {
 				_camera->dirtyAttachmentMap();
 
 				//_camera->addPostDrawCallback()
-				std::string path = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.PictureLocation");
+				std::string path = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.AppDir");
+				path += "/Screenshots";
+				DIR* dir = opendir(path.c_str());
+				std::string filePath = "";
+				if (dir == nullptr) {
+					std::filesystem::create_directory(path);
+				}
+				//std::string path = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.PictureLocation");
 				//takePhoto(path + "/0.png");
 				time_t t = std::time(nullptr);
 				struct tm* tim = std::localtime(&t);
@@ -253,10 +278,11 @@ void ScreenshotTool::uiCallback(UICallbackCaller* ui) {
 
 				std::stringstream ss;
 				ss << path << "\\" << buf << ".png";//std::put_time(tim, "%Y-%m-%d_%H-%M-%S") << ".png";
+				std::cout << "picture stored in " << path << std::endl;
 				_pdc = new ScreenshotCallback(this, ss.str());
 				_camera->addPostDrawCallback(_pdc);
 			}
-			else if (ui == _renderCinematic) {
+			else if (ui == _renderCinematic && false) { //disabled
 				//create yaml
 				((cvr::UIText*)_renderCinematic->getChild(1))->setText("Loading...");
 				saveAsYaml();
@@ -264,7 +290,7 @@ void ScreenshotTool::uiCallback(UICallbackCaller* ui) {
 			}
 		}
 		else {
-			if (ui == _takePicture && !_pictureSaved)//Save picture
+			if (ui == _takePicture && !_pictureSaved)//Save picture 
 			{
 				std::string path = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.PictureLocation");
 				time_t t = std::time(nullptr);
@@ -279,7 +305,7 @@ void ScreenshotTool::uiCallback(UICallbackCaller* ui) {
 				_pictureSaved = true;
 
 			}
-			else if (ui == _renderCinematic)//OK
+			else if (ui == _renderCinematic && false)////DISABLED
 			{
 				_display->getOrCreateStateSet()->setTextureAttributeAndModes(0, _texture, osg::StateAttribute::ON);
 				((cvr::UIText*)_takePicture->getChild(1))->setText("Take Picture"); 

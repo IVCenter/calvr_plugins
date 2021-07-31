@@ -19,6 +19,17 @@
 
 #include <osgDB/ReadFile>
 
+#include <vkt/ExecutionPolicy.hpp>
+#include <vkt/InputStream.hpp>
+#include <vkt/Histogram.hpp>
+#include <vkt/LookupTable.hpp>
+#include <vkt/Render.hpp>
+#include <vkt/Resample.hpp>
+#include <vkt/StructuredVolume.hpp>
+#include <vkt/VolumeFile.hpp>
+
+
+
 #define ISOVALUE 0.08f
 #define MCFACTOR 16
 #define CONFIGLUTSIZE 4096
@@ -69,6 +80,7 @@ VolumeGroup::~VolumeGroup()
 {
 	_computeUniforms.clear();
 	_dirty.clear();
+
 }
 
 osg::Matrix VolumeGroup::getObjectToWorldMatrix()
@@ -101,6 +113,7 @@ void VolumeGroup::init()
 	std::string frag = HelmsleyVolume::loadShaderFile("volume.frag");
 	std::string compute = HelmsleyVolume::loadShaderFile("volume.comp");
 	_minMaxShader = HelmsleyVolume::loadShaderFile("minMax.comp");
+	_lutShader = HelmsleyVolume::loadShaderFile("LUT.comp");
 	_excessShader = HelmsleyVolume::loadShaderFile("excess.comp");
 	_histShader = HelmsleyVolume::loadShaderFile("hist.comp");
 	_clipShader = HelmsleyVolume::loadShaderFile("clipHist1.comp");
@@ -267,8 +280,7 @@ void VolumeGroup::loadRawVolume(std::string seriesPath) {
 	osg::Quat rot;
 	osg::Quat so;
 	m.decompose(translation, rot, scale, so);
-	std::cout << "translation " << HelmsleyVolume::instance()->printVec3OSG(translation) << std::endl;
-	if (scale.x() < 0)
+ 	if (scale.x() < 0)
 	{
 		flipCull();
 	}
@@ -306,6 +318,11 @@ void VolumeGroup::loadRawVolume(std::string seriesPath) {
 
 	_volDims = osg::Vec3i(i->s(), i->t(), i->r());
 	_computeUniforms["volDims"]->set(osg::Vec3(_volDims.x(), _volDims.y(), _volDims.z()));
+	 
+	 
+
+	_scale = HelmsleyVolume::instance()->divideVec3OSG(osg::Vec3(_volDims.x(), _volDims.y(), _volDims.z()), scale);
+
 
 	//Set dirty on all graphics contexts
 	std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();/////////////uncomment
@@ -316,7 +333,8 @@ void VolumeGroup::loadRawVolume(std::string seriesPath) {
 	}
 
 	precompute();
-	readyCenterLine(seriesPath);
+ 
+	_fileName = ImageLoader::GetRawFile(seriesPath);
 }
 #endif // DEBUGCODE
 
@@ -405,7 +423,7 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 osg::ref_ptr<osg::AtomicCounterBufferBinding> VolumeGroup::precompMinMax() {
 	osg::ref_ptr<osg::Program> prog = new osg::Program;
 	prog->addShader(new osg::Shader(osg::Shader::COMPUTE, _minMaxShader));
-
+	prog->setName("minmax");
 	_minMaxNode = new osg::DispatchCompute((_volDims.x() + 7) / 8, (_volDims.y() + 7) / 8, (_volDims.z() + 7) / 8);
 	_minMaxNode->getOrCreateStateSet()->setAttributeAndModes(prog.get());
 	_minMaxNode->setDataVariance(osg::Object::DYNAMIC);
@@ -443,12 +461,57 @@ osg::ref_ptr<osg::AtomicCounterBufferBinding> VolumeGroup::setupMinmaxSSBO() {
 	return acbb;
  }
 
+
+osg::ref_ptr<osg::ShaderStorageBufferBinding> VolumeGroup::precompLUT(t_acbb minMax) {
+	osg::ref_ptr<osg::Program> prog = new osg::Program;
+	prog->addShader(new osg::Shader(osg::Shader::COMPUTE, _lutShader));
+	prog->setName("lut");
+
+	_lutNode = new osg::DispatchCompute(_numGrayVals + 63 / 64, 1, 1);
+	_lutNode->getOrCreateStateSet()->setAttributeAndModes(prog.get());
+	_lutNode->setDataVariance(osg::Object::DYNAMIC);
+	_lutNode->setDrawCallback(new LUTCallback(this));
+
+	osg::StateSet* states = _lutNode->getOrCreateStateSet();
+	states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
+	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
+	states->setRenderBinDetails(RENDERBIN_ORDER::LUT, "RenderBin");
+ 
+	this->addChild(_lutNode);
+	return setupLUTSSBO(minMax);
+}
+
+
+osg::ref_ptr<osg::ShaderStorageBufferBinding> VolumeGroup::setupLUTSSBO(t_acbb minMax) {
+	osg::ref_ptr<osg::UIntArray> lutArray = new osg::UIntArray(_numGrayVals);
+ 
+
+	osg::ref_ptr<osg::ShaderStorageBufferObject> lutBuffer = new osg::ShaderStorageBufferObject;
+ 
+	lutArray->setBufferObject(lutBuffer);
+ 
+	osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbLUT = new osg::ShaderStorageBufferBinding(1, lutBuffer->getBufferData(0), 0, sizeof(GLuint) * _histSize);
+	lutArray.release();
+	lutBuffer.release();
+	
+	_lutNode->getOrCreateStateSet()->setAttributeAndModes(minMax, osg::StateAttribute::ON);
+	_lutNode->getOrCreateStateSet()->setAttributeAndModes(ssbbLUT, osg::StateAttribute::ON);
+ 	_lutNode->getOrCreateStateSet()->addUniform(new osg::Uniform("NUM_OUT_BINS", _numGrayVals));
+  
+	((LUTCallback*)_lutNode->getDrawCallback())->_ssbb = ssbbLUT;
+	((LUTCallback*)_lutNode->getDrawCallback())->_buffersize = _numGrayVals;
+	 
+	 
+
+	return ssbbLUT;
+}
+
 std::pair< osg::ref_ptr<osg::ShaderStorageBufferBinding>, osg::ref_ptr<osg::ShaderStorageBufferBinding>> VolumeGroup::precompHist() {
 
 	osg::ref_ptr<osg::Program> prog2 = new osg::Program;
 	osg::Shader* shader = new osg::Shader(osg::Shader::COMPUTE, _histShader);
 	prog2->addShader(shader);
-	
+	prog2->setName("hist");
 
 	_histNode = new osg::DispatchCompute((_volDims.x() + 7) / 8, (_volDims.y() + 7) / 8, (_volDims.z() + 7) / 8);
 	_histNode->getOrCreateStateSet()->setAttributeAndModes(prog2.get());
@@ -489,8 +552,8 @@ std::pair< osg::ref_ptr<osg::ShaderStorageBufferBinding>, osg::ref_ptr<osg::Shad
 	_histNode->getOrCreateStateSet()->setAttributeAndModes(ssbbHistMax, osg::StateAttribute::ON);
 	_histNode->getOrCreateStateSet()->addUniform(new osg::Uniform("numSB", _numSB_3D.x(), _numSB_3D.y(), _numSB_3D.z()));
 	_histNode->getOrCreateStateSet()->addUniform(new osg::Uniform("NUM_OUT_BINS", _numGrayVals)); 
-	_minMaxNode->getOrCreateStateSet()->addUniform(_computeUniforms["SelectionsDims"]);
-	_minMaxNode->getOrCreateStateSet()->addUniform(_computeUniforms["SelectionsCenters"]);
+	_histNode->getOrCreateStateSet()->addUniform(_computeUniforms["SelectionsDims"]);
+	_histNode->getOrCreateStateSet()->addUniform(_computeUniforms["SelectionsCenters"]);
 	
 	((CLAHEHistCallback*)_histNode->getDrawCallback())->_ssbb = ssbbHist;
 	((CLAHEHistCallback*)_histNode->getDrawCallback())->_buffersize = _histSize;
@@ -511,6 +574,7 @@ osg::ref_ptr<osg::ShaderStorageBufferBinding> VolumeGroup::precompExcess(t_ssbb 
 	//Set up Compute Shader
 	osg::ref_ptr<osg::Program> excessShader = new osg::Program;
 	excessShader->addShader(new osg::Shader(osg::Shader::COMPUTE, _excessShader));
+	excessShader->setName("excess");
 	_excessNode = new osg::DispatchCompute(_histSize+63/64, 1, 1);	
  	
 	_excessNode->getOrCreateStateSet()->setAttributeAndModes(excessShader.get());	
@@ -555,7 +619,7 @@ void VolumeGroup::precompHistClip(t_ssbb ssbbHist, t_ssbb ssbbHistMax, t_ssbb ss
 	osg::ref_ptr<osg::Program> clipShader = new osg::Program;
 	osg::Shader* shader = new osg::Shader(osg::Shader::COMPUTE, _clipShader);
 	clipShader->addShader(shader);
-	
+	clipShader->setName("clip");
 	
 	_clipHist1Node = new osg::DispatchCompute(1, 1, 1);
 
@@ -571,6 +635,7 @@ void VolumeGroup::precompHistClip(t_ssbb ssbbHist, t_ssbb ssbbHistMax, t_ssbb ss
 	osg::ref_ptr<osg::Program> clipShader2Prog = new osg::Program;
 	osg::ref_ptr<osg::Shader> clipShader2 = new osg::Shader(osg::Shader::COMPUTE, _clipShader2);
 	clipShader2Prog->addShader(clipShader2);
+	clipShader2Prog->setName("clip2");
 	
 	
 	Clip1SSB* shaderStorageCallback = new Clip1SSB(this);
@@ -607,9 +672,7 @@ void VolumeGroup::setupClip(t_ssbb ssbbHist, t_ssbb ssbbHistMax, t_ssbb ssbbExce
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->numPixels = -1;
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_acbbminMax = acbbminmax;
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->volDims = _volDims;
-	osg::Vec3 selecDims;
-	_computeUniforms["SelectionsDims"]->getElement(0, selecDims);
-	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_selectionVec = selecDims;
+ 	 
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_numGrayVals = _numGrayVals;
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_clipLimit = _clipLimit3D;
 	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_sb3D = _numSB_3D;
@@ -620,7 +683,7 @@ void VolumeGroup::precompLerp(t_ssbb ssbbHist) {
 
 	osg::ref_ptr<osg::Program> lerpProgram = new osg::Program;
 	lerpProgram->addShader(new osg::Shader(osg::Shader::COMPUTE, _lerpShader));
-
+	lerpProgram->setName("lerp");
 	_lerpNode = new osg::DispatchCompute((_volDims.x() + 7) / 8, (_volDims.y() + 7) / 8, (_volDims.z() + 7) / 8);
 	osg::StateSet* states = _lerpNode->getOrCreateStateSet();
 	
@@ -636,6 +699,7 @@ void VolumeGroup::precompLerp(t_ssbb ssbbHist) {
 
 	LerpSSB* shaderStorageCallback = new LerpSSB(this);
 	shaderStorageCallback->_claheDirty = ((ComputeDrawCallback*)_computeNode->getDrawCallback())->_claheDirty;
+	shaderStorageCallback->_minmaxCallback = ((MinMaxCallback*)_minMaxNode->getDrawCallback());
 
 	_lerpNode->setDrawCallback(shaderStorageCallback);
 
@@ -674,78 +738,176 @@ void VolumeGroup::genClahe() {
 		osg::StateSet* states = _computeNode->getOrCreateStateSet();
 		states->setTextureAttribute(5, _claheVolume, osg::StateAttribute::ON);
 		states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);
-
-		_minClipValue = unsigned int(0);
-
-		//////////////////////MinMax//////////////
-		auto acbbMinMax = precompMinMax();
-		//////////////////////////Hist///////////////////////////
-		auto ssbbPair = precompHist();
-		//////////////////////////Excess////////////////////////
-		auto ssbbexcess = precompExcess(ssbbPair.first, ssbbPair.second);
-		///////////////////////////HistClip///////////////////////////
-		precompHistClip(ssbbPair.first, ssbbPair.second, ssbbexcess, acbbMinMax);
-		///////////////////////////Lerp///////////////////////
-		precompLerp(ssbbPair.first);
-
-		//release refptrs
-		acbbMinMax.release();
-		ssbbPair.first.release();
-		ssbbPair.second.release();
-		ssbbexcess.release();
-
-
 		osg::ref_ptr<osg::BindImageTexture> imagbinding = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_WRITE, GL_RG16, 0, GL_TRUE);
-		states->setAttributeAndModes(imagbinding);
-		///////////////////////clahe///////////////////
-		states = _minMaxNode->getOrCreateStateSet();
-		imagbinding = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		states->setAttributeAndModes(imagbinding);
-
-		states = _histNode->getOrCreateStateSet();
-		imagbinding = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		states->setAttributeAndModes(imagbinding);
-
-		states = _lerpNode->getOrCreateStateSet();
-		imagbinding = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
-		states->setAttributeAndModes(imagbinding);
-		imagbinding = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_WRITE, GL_RG16, 0, GL_TRUE);
 		states->setAttributeAndModes(imagbinding);
 
 		_clahePrecomped = true;
+
+#ifdef VOLKIT
+		if (_useVolkit)
+			goto usingVolkit;
+#endif 
+
+			_minClipValue = unsigned int(0);
+
+			//////////////////////MinMax//////////////
+			auto acbbMinMax = precompMinMax();
+			//////////////////////////Hist///////////////////////////
+			auto ssbbPair = precompHist();
+			//////////////////////////Excess////////////////////////
+			auto ssbbexcess = precompExcess(ssbbPair.first, ssbbPair.second);
+			///////////////////////////HistClip///////////////////////////
+			precompHistClip(ssbbPair.first, ssbbPair.second, ssbbexcess, acbbMinMax);
+			///////////////////////////Lerp///////////////////////
+			precompLerp(ssbbPair.first);
+
+			//release refptrs
+			acbbMinMax.release();
+			ssbbPair.first.release();
+			ssbbPair.second.release();
+			ssbbexcess.release();
+
+
+		
+			///////////////////////clahe///////////////////
+			states = _minMaxNode->getOrCreateStateSet();
+			imagbinding = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
+			states->setAttributeAndModes(imagbinding);
+
+			states = _histNode->getOrCreateStateSet();
+			imagbinding = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
+			states->setAttributeAndModes(imagbinding);
+
+			states = _lerpNode->getOrCreateStateSet();
+			imagbinding = new osg::BindImageTexture(0, _volume, osg::BindImageTexture::READ_ONLY, GL_RG16, 0, GL_TRUE);
+			states->setAttributeAndModes(imagbinding);
+			imagbinding = new osg::BindImageTexture(5, _claheVolume, osg::BindImageTexture::READ_WRITE, GL_RG16, 0, GL_TRUE);
+			states->setAttributeAndModes(imagbinding);
+
 	}
 
+	{
+		((MinMaxCallback*)_minMaxNode->getDrawCallback())->_acbb.release();
+		auto minmaxSSBB = setupMinmaxSSBO();
 
-	((MinMaxCallback*)_minMaxNode->getDrawCallback())->_acbb.release();
-	auto minmaxSSBB = setupMinmaxSSBO();
+		((CLAHEHistCallback*)_histNode->getDrawCallback())->_ssbb.release();
+		((CLAHEHistCallback*)_histNode->getDrawCallback())->_ssbb2.release();
+		auto ssbbs = setupHistSSBO();
 
-	((CLAHEHistCallback*)_histNode->getDrawCallback())->_ssbb.release();
-	((CLAHEHistCallback*)_histNode->getDrawCallback())->_ssbb2.release();
-	auto ssbbs = setupHistSSBO();
+		((ExcessSSB*)_excessNode->getDrawCallback())->_ssbb.release();
+		auto excessSSBB = setupExcessSSBO(ssbbs.first, ssbbs.second);
 
-	((ExcessSSB*)_excessNode->getDrawCallback())->_ssbb.release();
- 	auto excessSSBB = setupExcessSSBO(ssbbs.first, ssbbs.second);
+		((Clip1SSB*)_clipHist1Node->getDrawCallback())->_acbbminMax.release();
+		((Clip1SSB*)_clipHist1Node->getDrawCallback())->_ssbbExcess.release();
+		((Clip1SSB*)_clipHist1Node->getDrawCallback())->_ssbbHist.release();
+		((Clip1SSB*)_clipHist1Node->getDrawCallback())->_ssbbHistMax.release();
+		setupClip(ssbbs.first, ssbbs.second, excessSSBB, minmaxSSBB);
 
-	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_acbbminMax.release();
-	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_ssbbExcess.release();
-	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_ssbbHist.release();
-	((Clip1SSB*)_clipHist1Node->getDrawCallback())->_ssbbHistMax.release();
-	setupClip(ssbbs.first, ssbbs.second, excessSSBB, minmaxSSBB);
+		((LerpSSB*)_lerpNode->getDrawCallback())->_ssbb.release();
+		setupLerp(ssbbs.first);
 
-	((LerpSSB*)_lerpNode->getDrawCallback())->_ssbb.release();
-	setupLerp(ssbbs.first);
+		//dirty callbacks
+		((MinMaxCallback*)_minMaxNode->getDrawCallback())->stop[0] = 0;
+		((CLAHEHistCallback*)_histNode->getDrawCallback())->stop[0] = 0;
+		((ExcessSSB*)_excessNode->getDrawCallback())->stop[0] = 0;
+		((Clip1SSB*)_clipHist1Node->getDrawCallback())->stop[0] = 0;
+		((LerpSSB*)_lerpNode->getDrawCallback())->stop[0] = 0;
 
-	//dirty callbacks
-	((MinMaxCallback*)_minMaxNode->getDrawCallback())->stop[0] = 0;
-	((CLAHEHistCallback*)_histNode->getDrawCallback())->stop[0] = 0;
-	((ExcessSSB*)_excessNode->getDrawCallback())->stop[0] = 0;
-	((Clip1SSB*)_clipHist1Node->getDrawCallback())->stop[0] = 0;
-	((LerpSSB*)_lerpNode->getDrawCallback())->stop[0] = 0;
+		((LerpSSB*)_lerpNode->getDrawCallback())->_claheDirty[0] = 1;
+	}
+ 
 
-	((LerpSSB*)_lerpNode->getDrawCallback())->_claheDirty[0] = 1;
 
- 	_claheAvailable = true;
+#ifdef  VOLKIT
+	usingVolkit :
+
+	if (!_fileName.empty() && _useVolkit)
+	{
+		vkt::ExecutionPolicy ep = vkt::GetThreadExecutionPolicy();
+		ep.printPerformance = vkt::True;
+ 
+
+		ep.device = vkt::ExecutionPolicy::Device::CPU;
+		vkt::SetThreadExecutionPolicy(ep);
+
+
+		vkt::VolumeFile file(_fileName.c_str(), vkt::OpenMode::Read);
+
+		vkt::VolumeFileHeader header = file.getHeader();
+		std::cout << _fileName.c_str() << std::endl;
+		if (!header.isStructured)
+		{
+			std::cerr << "No valid volume file\n";
+			return;
+		}
+
+		vkt::Vec3i dims = header.dims;
+		std::cout << dims.x << " " << dims.y << " " << dims.z << std::endl;
+		if (dims.x * dims.y * dims.z < 1)
+		{
+			std::cerr << "Cannot parse dimensions from file name\n";
+			return;
+		}
+
+		vkt::DataFormat dataFormat = header.dataFormat;
+		if (dataFormat == vkt::DataFormat::Unspecified)
+		{
+			std::cerr << "Cannot parse data format from file name, guessing uint8...\n";
+			dataFormat = vkt::DataFormat::UInt8;
+		}
+
+		vkt::StructuredVolume volume(dims.x, dims.y, dims.z, dataFormat);
+		vkt::InputStream is(file);
+		is.read(volume);
+
+		// Resample using contrast limited adaptive histogram equalization
+		// Source volume is also dest volume
+		vkt::ResampleCLAHE(volume, volume);
+
+ 
+		
+		//Set Data from VKT to 3D Texture
+		osg::Image* claheImg = _claheVolume->getImage();
+		uint16_t* txtrData = (uint16_t*)claheImg->data();
+		unsigned int w = claheImg->s();
+		unsigned int h = claheImg->t();
+		unsigned int d = claheImg->r();
+
+		
+
+
+		for (unsigned int i = 0; i < d; i++) {
+
+			uint16_t* slice = txtrData + 2 * i * w * h; 
+
+			unsigned int j = 0;
+
+			for (unsigned int y = 0; y < h; y++) {
+				for (unsigned int x = 0; x < w; x++) {
+					j = 2 * (x + y * w);
+					uint16_t data;
+					volume.getBytes(x, y, i, (uint8_t*)&data);
+					if (volume.getDataFormat() == vkt::DataFormat::UInt8) {
+						slice[j] = data * 255;
+ 
+					}
+					else if (volume.getDataFormat() == vkt::DataFormat::UInt16) {
+						slice[j] = data;
+ 
+					}
+ 					 
+ 				}
+			}
+			 
+		}
+
+		 
+ 	}
+#endif 
+
+	_claheAvailable = true;
 	this->setDirtyAll();
+
 }
 void VolumeGroup::setClaheRes(float res) {
 	if (_claheRes == res)return;
@@ -1000,7 +1162,7 @@ void VolumeGroup::precompMarchingCubes() {
 	osg::ref_ptr<osg::Program> prog = new osg::Program;
 	osg::Shader* shader = new osg::Shader(osg::Shader::COMPUTE, _marchingCubesShader);
 	prog->addShader(shader);
-
+	prog->setName("marching cubes");
 
 	_marchingCubeNode = new osg::DispatchCompute((_volDims.x() + 7) / 8, (_volDims.y() + 7) / 8, (_volDims.z() + 7) / 8);
 	_marchingCubeNode->getOrCreateStateSet()->setAttributeAndModes(prog.get());
@@ -1150,7 +1312,7 @@ bool VolumeGroup::toggleMC() {
 void VolumeGroup::readyMCUI() {
 	_mcIsReady = true;
 	_mcrInitialized = true;
-	toggleMC();
+	//toggleMC();
 }
 
 void VolumeGroup::printSTLFile() {
@@ -1162,7 +1324,7 @@ void VolumeGroup::printSTLFile() {
 //Selection Methods
 void VolumeGroup::lockSelection(bool lock) {
 	HINSTANCE->getSelectionTools()[HINSTANCE->getVolumeIndex()]->setLock(lock);
-}
+ }
 void VolumeGroup::removeSelection(bool remove) {
 	HINSTANCE->getSelectionTools()[HINSTANCE->getVolumeIndex()]->setRemove(remove);
 
@@ -1181,20 +1343,16 @@ void VolumeGroup::disableSelection(bool disable) {
 void VolumeGroup::setCLAHEUseSelection(bool use) {
 	if (_clahePrecomped) {
 		if (use) {
-			_minMaxNode->getStateSet()->setDefine("SELECTION", osg::StateAttribute::ON);
+			/*_minMaxNode->getStateSet()->setDefine("SELECTION", osg::StateAttribute::ON);
 			_histNode->getStateSet()->setDefine("SELECTION", osg::StateAttribute::ON);
-			_lerpNode->getStateSet()->setDefine("SELECTION", osg::StateAttribute::ON);
-			osg::Vec3 dims;
-			_computeUniforms["SelectionsDims"]->getElement(0, dims);
-			((Clip1SSB*)_clipHist1Node->getDrawCallback())->_selectionVec = dims;
-
+			_lerpNode->getStateSet()->setDefine("SELECTION", osg::StateAttribute::ON);*/
+   
 		}
 		else {
-			_minMaxNode->getStateSet()->setDefine("SELECTION", osg::StateAttribute::OFF);
+			/*_minMaxNode->getStateSet()->setDefine("SELECTION", osg::StateAttribute::OFF);
 			_histNode->getStateSet()->setDefine("SELECTION", osg::StateAttribute::OFF);
-			_lerpNode->getStateSet()->setDefine("SELECTION", osg::StateAttribute::OFF);
-			((Clip1SSB*)_clipHist1Node->getDrawCallback())->_selectionVec = osg::Vec3(-1, -1, -1);
-		}
+			_lerpNode->getStateSet()->setDefine("SELECTION", osg::StateAttribute::OFF);*/
+ 		}
 	}
 }
 

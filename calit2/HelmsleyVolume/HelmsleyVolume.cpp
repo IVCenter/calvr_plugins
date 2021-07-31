@@ -21,7 +21,6 @@
 #include <osg/Material>
 #include <osg/TextureCubeMap>
 
-#include <ctime>
 #include <iostream>
 #include <algorithm>
 #include <sstream>
@@ -410,7 +409,7 @@ bool HelmsleyVolume::processEvent(InteractionEvent * e)
 
 	if (e->getInteraction() == BUTTON_DOWN)
 	{
-		if (_tool == MEASUREMENT_TOOL && _lastMeasurementTool >= 0 && _lastMeasurementTool < _volumes.size())
+ 		if (_tool == MEASUREMENT_TOOL && _lastMeasurementTool >= 0 && _lastMeasurementTool < _volumes.size())
 		{
 			//Measurement tool
 			osg::Matrix mat = PluginHelper::getHandMat(e->asHandEvent()->getHand());
@@ -767,12 +766,19 @@ void HelmsleyVolume::toggleAttnMapsTools(bool on) {
 	_worldMenus[0]->toggleAttnMapsTools(on);
 }
 
+void HelmsleyVolume::toggleSpecialTF(int TFID) {
+	_worldMenus[0]->useTransferFunction(TFID);
+}
+
 void HelmsleyVolume::toggleMaskAndPresets(bool on) {
 	_worldMenus[0]->toggleMaskMenu(on);
 }
 
 void HelmsleyVolume::toggleTFUI(bool on) {
 	_worldMenus[0]->toggleTFUI(on);
+}
+void HelmsleyVolume::unselectSpecialTFs() {
+	_contextMenus[_volumeIndex]->unselectSpecialTFs();
 }
 
 void HelmsleyVolume::toggleMCRender(bool on) {
@@ -791,17 +797,17 @@ bool HelmsleyVolume::hasCenterLineCoords() {
 //Loads first volume + menu
 void HelmsleyVolume::loadVolume(std::string path, std::string maskpath, bool onlyVolume)
 {
-	
 
-	VolumeGroup * g = new VolumeGroup();
 
-	
+	VolumeGroup* g = new VolumeGroup();
+
+
 
 #ifdef DEBUGCODE
 	if (path.find("raws") != std::string::npos) {
 		g->loadRawVolume(path);
 	}
-	else 
+	else
 		g->loadVolume(path, maskpath);
 #elif
 	g->loadVolume(path, maskpath);
@@ -818,14 +824,13 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath, bool onl
 	so->addChild(tool);
 	_measurementTools.push_back(tool);
 	
+	//Selection
 	Selection3DTool* selectionTool = new Selection3DTool(g->_transform, so, "Selection Tool", false, true, true, false, true);
-
 	PluginHelper::registerSceneObject(selectionTool, "HelmsleyVolume");
  	selectionTool->deactivate();
 	so->addChild(selectionTool);
 	osg::Vec3 dims = osg::Vec3(g->_volDims.x(), g->_volDims.z(), g->_volDims.y());
-	//std::cout << "dims " << HelmsleyVolume::instance()->printVec3OSG(dims) << std::endl;
-	selectionTool->setVoldims(dims, g->getScale());
+ 	selectionTool->setVoldims(dims, g->getScale());
 	selectionTool->initCallback();
 	selectionTool->linkUniforms(g->_computeUniforms["SelectionsDims"], g->_computeUniforms["SelectionsCenters"]);
 	_selectionTools.push_back(selectionTool);
@@ -858,8 +863,10 @@ void HelmsleyVolume::loadSecondVolume(std::string path, std::string maskpath)
 
 	SceneObject * so;
 	VolumeGroup* g = new VolumeGroup();
+	Selection3DTool* selectionTool;
 
-	if (_sceneObjects.size() < 2) {
+
+	if (_sceneObjects.size() < MAXVOLUMES) {
 		so = new SceneObject("volume", false, true, true, true, false);
 		_sceneObjects.push_back(so);
 	}
@@ -871,7 +878,7 @@ void HelmsleyVolume::loadSecondVolume(std::string path, std::string maskpath)
 
 	VolumeMenu* menu;
 	
-	if (_contextMenus.size() < 2) {
+	if (_contextMenus.size() < MAXVOLUMES) {
 		menu = new VolumeMenu(so, g);
 		menu->init();
 	}
@@ -880,11 +887,19 @@ void HelmsleyVolume::loadSecondVolume(std::string path, std::string maskpath)
 	}
 
 
-
-
 	so->setPosition(ConfigManager::getVec3("Plugin.HelmsleyVolume.Orientation.Volume.Position", VOLUME_POS2));
 
+
+#ifdef DEBUGCODE
+	if (path.find("raws") != std::string::npos) {
+		g->loadRawVolume(path);
+	}
+	else
+		g->loadVolume(path, maskpath);
+#elif
 	g->loadVolume(path, maskpath);
+#endif
+
 	so->addChild(g);
 	PluginHelper::registerSceneObject(so, "HelmsleyVolume");
 	so->attachToScene();
@@ -892,6 +907,24 @@ void HelmsleyVolume::loadSecondVolume(std::string path, std::string maskpath)
 	so->addMoveMenuItem();
 	so->addNavigationMenuItem();
 	so->setShowBounds(true);
+
+	//Selection
+	if (_selectionTools.size() < MAXVOLUMES) {
+		selectionTool = new Selection3DTool(g->_transform, so, "Selection Tool", false, true, true, false, true);
+		PluginHelper::registerSceneObject(selectionTool, "HelmsleyVolume");
+		selectionTool->deactivate();
+		so->addChild(selectionTool);
+		osg::Vec3 dims = osg::Vec3(g->_volDims.x(), g->_volDims.z(), g->_volDims.y());
+		selectionTool->setVoldims(dims, g->getScale());
+		selectionTool->initCallback();
+		selectionTool->linkUniforms(g->_computeUniforms["SelectionsDims"], g->_computeUniforms["SelectionsCenters"]);
+		_selectionTools.push_back(selectionTool);
+
+	}
+	else {
+		_selectionTools[1]->setNewVolume(g);
+	}
+	
 
 	
 	_volumes.push_back(g);
@@ -908,20 +941,37 @@ void HelmsleyVolume::loadSecondVolume(std::string path, std::string maskpath)
 void HelmsleyVolume::loadVolumeOnly(bool isPreset, std::string path, std::string maskpath) {
 	VolumeGroup* g = new VolumeGroup();
 
+#ifdef DEBUGCODE
+	if (path.find("raws") != std::string::npos) {
+		g->loadRawVolume(path);
+	}
+	else
+		g->loadVolume(path, maskpath);
+#elif
 	g->loadVolume(path, maskpath);
-	_sceneObjects[0]->addChild(g);	//set new g on so
+#endif
+
+	_sceneObjects[0]->addChild(g);	//set new g on szo
 	_sceneObjects[0]->attachToScene();
 
 	//VolumeMenu* menu = new VolumeMenu(so, g);	//set new g on menu
 	_contextMenus[0]->setVolume(g);
+	_selectionTools[VOLUMEID::LEFT]->setNewVolume(g);
+
 
 	//NewVolumeMenu* newMenu = new NewVolumeMenu(so, g);// set new g on newmenu
 	_worldMenus[0]->clearVolumes();
+
 	HelmsleyVolume::instance()->setVolumeIndex(0, false);
 	_worldMenus[0]->setNewVolume(g);
 	_worldMenus[0]->toggleSwapOpacity();
 	/*if(!isPreset)
 		_worldMenus[0]->resetValues();*/
+
+	//Selection
+	
+
+
 
 	_volumes.push_back(g);
 }
@@ -975,6 +1025,8 @@ void HelmsleyVolume::removeVolumeOnly(int index) {
 	}
 	_worldMenus[0]->setLinkOff();
 	_worldMenus[0]->toggleLinkOpacity(false);
+
+	
 	/*_sceneObjects[index]->detachFromScene();
 	_sceneObjects[index]->removeChild(_volumes[0]);
 	_volumes[0].release();

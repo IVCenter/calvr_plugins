@@ -25,6 +25,8 @@
 
 #include <iostream>
 #include <thread>
+
+
 #include <cvrKernel/ScreenConfig.h>
 #include <cvrKernel/ScreenBase.h>
 #include "MarchingCubesLUTs.h"
@@ -42,9 +44,10 @@ enum class ORGANID {
 	VEIN = 64u
 };
 
-enum class RENDERBIN_ORDER {
+enum RENDERBIN_ORDER : int {
 	UNDEFINED,
 	MINMAX,
+	LUT,
 	CLAHEHIST,
 	EXCESS,
 	CLIP,
@@ -54,6 +57,7 @@ enum class RENDERBIN_ORDER {
 	MCS,
 	NONCLAHEHIST
 };
+
 
 
 
@@ -113,6 +117,8 @@ public:
 	///////CLAHE Methods
 	t_acbb precompMinMax();
 	t_acbb setupMinmaxSSBO();
+	t_ssbb precompLUT(t_acbb minMax);
+	t_ssbb setupLUTSSBO(t_acbb minMax);
  	std::pair<t_ssbb, t_ssbb> precompHist();
  	std::pair<t_ssbb, t_ssbb> setupHistSSBO();
  	t_ssbb precompExcess(t_ssbb ssbbHist, t_ssbb ssbbHistMax);
@@ -238,7 +244,12 @@ public:
 
 	Values values;
 	bool _UIDirty = false;
-	
+
+#ifdef VOLKIT
+ 	void setUseVolkit(bool use) {
+		_useVolkit = use;
+	};
+#endif 
 	//Getters
 	osg::Vec3 getScale() { return _scale; }
 
@@ -248,6 +259,7 @@ protected:
 	osg::Vec3 _scale = osg::Vec3(0, 0, 0);
 
 	std::string _minMaxShader;
+	std::string _lutShader;
 	std::string _excessShader;
 	std::string _histShader;
 	std::string _clipShader;
@@ -271,6 +283,7 @@ protected:
 
 	osg::ref_ptr<osg::DispatchCompute> _computeNode;
 	osg::ref_ptr<osg::DispatchCompute> _minMaxNode;
+	osg::ref_ptr<osg::DispatchCompute> _lutNode;
 	osg::ref_ptr<osg::DispatchCompute> _histNode;
 	osg::ref_ptr<osg::DispatchCompute> _excessNode;
  	osg::ref_ptr<osg::DispatchCompute> _clipHist1Node;
@@ -299,6 +312,14 @@ protected:
 
 	osg::ref_ptr<osg::CullFace> _side;
 	
+	//Volkit
+#ifdef VOLKIT
+	bool _useVolkit = false;
+	std::string _fileName = "";
+#endif 
+	
+
+ 
 };
 
 
@@ -353,9 +374,14 @@ public:
 	{
 		if (group->isDirty(renderInfo.getCurrentCamera()->getGraphicsContext()) && stop[0] != 1)
 		{
+ 
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
-		
+			auto t1 = std::chrono::high_resolution_clock::now();
+			auto ms_int = std::chrono::time_point_cast<std::chrono::milliseconds>(t1);
+			auto epoch = ms_int.time_since_epoch();
+			auto value = std::chrono::duration_cast<std::chrono::milliseconds>(epoch);
+			const_cast<long&>(_t1) = value.count();
 			
 			stop[0] = 1;
 			
@@ -364,7 +390,36 @@ public:
 
 	uint16_t* stop = new uint16_t(2);
 	osg::ref_ptr<osg::AtomicCounterBufferBinding> _acbb;
+	long _t1;
+ 
+};
 
+
+
+class LUTCallback : public osg::Drawable::DrawCallback
+{
+public:
+	VolumeGroup* group;
+	LUTCallback(VolumeGroup* g) : group(g)
+	{
+	}
+
+	virtual void drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const
+	{
+		if (group->isDirty(renderInfo.getCurrentCamera()->getGraphicsContext()) && stop[0] != 1)
+		{
+ 
+			drawable->drawImplementation(renderInfo);
+			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
+			 
+			stop[0] = 1;
+			
+		}
+	}
+
+	uint16_t* stop = new uint16_t(2);
+	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbb;
+	unsigned int _buffersize;
 };
 
 
@@ -413,7 +468,7 @@ public:
 
 
 				unsigned int value = uintArray->front();
-				std::cout << "Hist before clip" << value << std::endl;
+				//std::cout << "Hist before clip" << value << std::endl;
 
 				/*for (int i = 0; i < 100; i++) {
 					std::cout << uintArray->at(i) << std::endl;
@@ -544,8 +599,7 @@ public:
 	float _clipLimit;
 	
 	osg::Vec3i volDims;
-	osg::Vec3 _selectionVec = osg::Vec3(-1,-1,-1);
-	osg::Vec3i _sb3D;
+ 	osg::Vec3i _sb3D;
 	osg::ref_ptr<osg::AtomicCounterBufferBinding> _acbbminMax;
 
 };
@@ -567,9 +621,17 @@ public:
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
  			
+			
+			//group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
+ 			auto t2 = std::chrono::high_resolution_clock::now();
+			auto ms_int = std::chrono::time_point_cast<std::chrono::milliseconds>(t2);
+			auto epoch = ms_int.time_since_epoch();
+			auto value = std::chrono::duration_cast<std::chrono::milliseconds>(epoch);
+
+			std::cout << "time: " << value.count() - _minmaxCallback->_t1   << " milliseconds"<< std::endl;
+ 			 
 			stop[0] = 1;
 			_claheDirty[0] = 0;
-			//group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
 		}
 	}
 
@@ -577,6 +639,9 @@ public:
 	uint16_t* _claheDirty;
 	int _buffersize;
 	osg::ref_ptr<osg::ShaderStorageBufferBinding> _ssbb;
+	MinMaxCallback* _minmaxCallback;
+
+
 };
 
 
@@ -685,8 +750,7 @@ public:
 
 			group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
 
-			std::cout << "marching cubes transfer done" << std::endl;
-		}
+ 		}
 	}
 
 	//const_cast

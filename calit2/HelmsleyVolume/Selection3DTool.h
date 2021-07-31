@@ -1,6 +1,7 @@
 #ifndef Selection3D_H
 #define Selection3D_H
 
+#pragma once
 
 #include <osg/Group>
 #include <osg/Geode>
@@ -13,8 +14,8 @@
 
 #include <cvrKernel/SceneObject.h>
 
-#include <iostream>
-
+ 
+class VolumeGroup;
 
 class Selection3DToolUpdate : public osg::NodeCallback
 {
@@ -22,14 +23,18 @@ public:
 	Selection3DToolUpdate(cvr::SceneObject* object, cvr::SceneObject* mainSO, osg::ref_ptr<osg::MatrixTransform> cubeMT, osg::MatrixTransform* ruler, osg::Vec3 dims) : _selectionSO(object), _mainSO(mainSO), _cubeMT(cubeMT), _ruler(ruler), _dims(dims) {}
 
 	virtual void operator()(osg::Node* node, osg::NodeVisitor* nv);
-	
+	void setActive(bool active) { _active = active; }
+	void updateVolume(osg::ref_ptr<osg::MatrixTransform> cubeMT, osg::Vec3 dims);
+
 	cvr::SceneObject* _selectionSO;
 	cvr::SceneObject* _mainSO;
 	osg::MatrixTransform* _ruler;
 	osg::Vec3 _dims;
 	osg::Uniform* _selectionCenter;
 	osg::ref_ptr<osg::MatrixTransform> _cubeMT;
-	
+
+private:
+	bool _active = false;
 };
 
 class Selection3DTool : public cvr::SceneObject
@@ -48,11 +53,13 @@ public:
 	void activate();
 	void deactivate();
 	void initCallback() {
+		
 		_updateCallback = new Selection3DToolUpdate(this, _mainSO, _cubeMT, _selectionMatrixTrans, _dims);
 		
 
 		this->getRoot()->addUpdateCallback(_updateCallback);
 	}
+	void updateCallbackVolume();
 	void setVoldims(osg::Vec3 dims, osg::Vec3 scale)	
 	{
 		_dims = dims;
@@ -64,6 +71,8 @@ public:
 		_selectionDims = selectionDims;
 
 		_updateCallback->_selectionCenter = selectionCenter;
+
+		_updateCallback->setActive(true);
  	}
 
 	osg::Vec3 getCenter() { return _selectionCenterVector; }
@@ -72,6 +81,8 @@ public:
 	}
 	void setRemove(bool remove);
 	void setDisable(bool disable);
+
+	void setNewVolume(VolumeGroup* volumeGroup);
 
 	osg::Vec3 _scaledDims;
 	osg::Vec3 _scale = osg::Vec3(0, 0, 0);
@@ -94,7 +105,7 @@ protected:
 	osg::Uniform* _ustart;
 	osg::Uniform* _uend;
 	osg::StateSet* _stateset;
-	Selection3DToolUpdate* _updateCallback;
+	Selection3DToolUpdate* _updateCallback = nullptr;
 
 	osg::ref_ptr<osg::MatrixTransform> _cubeMT;
 	cvr::SceneObject* _mainSO;

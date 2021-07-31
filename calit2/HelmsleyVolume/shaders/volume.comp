@@ -167,7 +167,7 @@ vec4 Sample(ivec3 p) {
 	}
 
 	#ifndef ORGANS_ONLY
-		return s;
+  			return s;
 	#endif
 	//FULLVOLUME
 	//Opacity
@@ -178,14 +178,17 @@ vec4 Sample(ivec3 p) {
 			s.a = 1.0 - smoothstep(OpacityCenter[i]+OpacityTopWidth[i], OpacityCenter[i]+ OpacityTopWidth[i] + (OpacityWidth[i] - OpacityTopWidth[i]), ra.r);
 		}
 		if(s.a != 0.0){
-			s.a *= 1/pow(2, ((1-OpacityMult[i])*10));
+ 			s.a *= 1/pow(2, ((1-OpacityMult[i])*10));
 			float lowestLimit = 1/pow(2, ((1-Lowest[i])*10)); 
 			s.a = max(s.a, lowestLimit);
 			if(s.a >= highestOpacity)
 				highestOpacity = s.a;
 		}
+		if(OpacityMult[i] < 0.01)
+			highestOpacity = 0.;	
 	}
 	s.a = highestOpacity;	
+	
 
 	//Volume Contrast
 	if(ra.r < ContrastBottom) 
