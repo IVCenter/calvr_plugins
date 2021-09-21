@@ -20,6 +20,7 @@
 #include <osgDB/ReadFile>
 #include <osg/Material>
 #include <osg/TextureCubeMap>
+#include <osg/ShadeModel>
 
 #include <iostream>
 #include <algorithm>
@@ -107,21 +108,43 @@ HelmsleyVolume::~HelmsleyVolume()
 	delete _room;
 }
 
+
+
+
 bool HelmsleyVolume::init()
 {
-	
-
-
+	 
 	_vMenu = new SubMenu("HelmsleyVolume", "HelmsleyVolume");
 	_vMenu->setCallback(this);
 
 	
 #ifdef WITH_OPENVR
 	std::string modelDir = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.ModelDir");
-
-
+ 
 	osgDB::Options* roomOptions = new osgDB::Options("noReverseFaces");
+
+	  
 	osg::Node* room = osgDB::readNodeFile(modelDir + "MIPCDVIZV3.obj", roomOptions);
+
+	//osg::Node* room =
+	/*osg::ref_ptr<osg::ShapeDrawable> sphere = new osg::ShapeDrawable(new osg::Sphere());
+	osg::ref_ptr<osg::Geode> room = new osg::Geode();
+	room->getOrCreateStateSet()->setMode(GL_CULL_FACE, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+	osg::ref_ptr<osg::ShadeModel> shadeModel = new osg::ShadeModel(osg::ShadeModel::FLAT);
+	room->getOrCreateStateSet()->setAttributeAndModes(shadeModel.get(), osg::StateAttribute::ON);
+	room->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+ 	room->addDrawable(sphere);
+
+	osg::ref_ptr<osg::Texture2D> tex = new osg::Texture2D();
+	osg::Image* textureMap = osgDB::readImageFile(modelDir + "textures/spacegamma.jpg");
+	tex->setImage(textureMap);
+	tex->setWrap(osg::Texture::WRAP_S, osg::Texture::MIRROR);
+	tex->setWrap(osg::Texture::WRAP_T, osg::Texture::MIRROR);
+	tex->setWrap(osg::Texture::WRAP_R, osg::Texture::MIRROR);
+
+	room->getDrawable(0)->getOrCreateStateSet()->setTextureAttributeAndModes(0, tex, osg::StateAttribute::ON);*/
+
+	//osg::Node* room = osgDB::readNodeFile(modelDir + "MIPCDVIZV3.obj", roomOptions);
 	////////////////////////////////Ryans forloop///////////////////
 	//for (unsigned int i = 0; i < room->asGroup()->getNumChildren(); i++) {
 
@@ -222,9 +245,10 @@ bool HelmsleyVolume::init()
 	//	g->getDrawable(0)->getOrCreateStateSet()->addUniform(roughUni);
 	//}
 
-	/////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////
 	_room = new SceneObject("room", false, false, false, false, false);
 	_room->addChild(room);
+	//_room->setScale(50000);
 	_room->setScale(800);
 	_room->setPosition(osg::Vec3(-1030, 2125, 0));
 	osg::Quat rot;
@@ -754,9 +778,11 @@ void HelmsleyVolume::toggleCenterLine(bool on) {
 	//}
 }
 
+#ifdef HIST
 void HelmsleyVolume::toggleHistogram(bool on) {
 	_worldMenus[0]->toggleHistogram(on);
 }
+#endif
 
 void HelmsleyVolume::toggleClaheTools(bool on) {
 	_worldMenus[0]->toggleClaheTools(on);
@@ -844,17 +870,18 @@ void HelmsleyVolume::loadVolume(std::string path, std::string maskpath, bool onl
 	so->setShowBounds(true);
 
 	
+	_volumes.push_back(g);
 
 	NewVolumeMenu* newMenu = new NewVolumeMenu(so, g, true);
 	newMenu->init();
 	_worldMenus.push_back(newMenu);
 	screenshotTool->setWorldMenu(_worldMenus[0]);
 	
+
 	VolumeMenu* menu = new VolumeMenu(so, g);
 	menu->init();
 
 	_sceneObjects.push_back(so);
-	_volumes.push_back(g);
 	_contextMenus.push_back(menu);
 }
 

@@ -9,7 +9,9 @@ using namespace cvr;
 
 osg::Program* ColorPickerSaturationValue::_svprogram = nullptr;
 osg::Program* ColorPickerHue::_hueprogram = nullptr;
+#ifdef HIST
 osg::Program* HistQuad::_histprogram = nullptr;
+#endif
 osg::Program* Tent::_triangleProg = nullptr;
 osg::Program* CurvedQuad::_curvedQuadProg = nullptr;
 osg::Program* TriangleButton::_triangleButtonProg = nullptr;
@@ -860,7 +862,7 @@ void TentWindow::fillTentDetails(int _triangleIndex, float center, float bottomW
 	setTent(_triangleIndex);
 }
 
-std::vector<float> TentWindow::getPresetData(int index) {
+ std::vector<float> TentWindow::getTentData(int index) {
 	std::vector<float> data;
 	data.push_back(_tWOnly->_tents.at(index)->getCenter());
 	data.push_back(_tWOnly->_tents.at(index)->getBottomWidth()*2);
@@ -869,6 +871,8 @@ std::vector<float> TentWindow::getPresetData(int index) {
 	data.push_back(_tWOnly->_tents.at(index)->getBottom());
 	return data;
 }
+ 
+#ifdef CINE
 
 std::vector<float> TentWindow::getCinePresetData(int index) {
 	std::vector<float> data;
@@ -879,6 +883,8 @@ std::vector<float> TentWindow::getCinePresetData(int index) {
 	data.push_back(_tWOnly->_tents.at(index)->getCenter());
 	return data;
 }
+#endif // CINE
+
 
 TentWindowOnly::TentWindowOnly() :
 	UIElement()
@@ -987,8 +993,8 @@ void TentWindowOnly::fillTentDetails(int _triangleIndex, float center, float bot
 	_volume->setDirtyAll();
 	setTent(_triangleIndex);
 }
-
-std::vector<float> TentWindowOnly::getPresetData(int index) {
+#ifdef PRESET
+std::vector<float> TentWindowOnly::getTentData(int index) {
 	std::vector<float> data;
 	data.push_back(_tents.at(index)->getCenter());
 	data.push_back(_tents.at(index)->getBottomWidth());
@@ -997,7 +1003,10 @@ std::vector<float> TentWindowOnly::getPresetData(int index) {
 	data.push_back(_tents.at(index)->getBottom());
 	return data;
 }
+#endif PRESET
 ///////////////Hist
+
+#ifdef HIST
 HistQuad::HistQuad() :
 	UIElement()
 {
@@ -1029,6 +1038,7 @@ void HistQuad::setMax(unsigned int histMax) {
  	_bknd->addUniform("histMax", histMax);
 }
 /////////////////////Histo
+#endif
 
 float getPt(float n1, float n2, float perc)
 {

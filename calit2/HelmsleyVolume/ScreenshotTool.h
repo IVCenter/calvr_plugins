@@ -80,7 +80,12 @@ protected:
 	osg::ref_ptr<osg::Camera::DrawCallback> _pdc;
 
 	CallbackButton* _takePicture;
+	//CINE
+#ifdef CINE
 	CallbackButton* _renderCinematic;
+	std::string _imgCineFP;
+#endif
+
 	NewVolumeMenu* _vm;
 
 	std::vector<ScreenshotSaverThread*> _saveThreads;
@@ -89,7 +94,6 @@ protected:
 	bool _showingPhoto = false;
 	bool _takingPhoto = false;
 	bool _pictureSaved = false;
-	std::string _imgCineFP;
 };
 
 class ScreenshotCallback : public osg::Camera::DrawCallback

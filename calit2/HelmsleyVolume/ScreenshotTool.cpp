@@ -131,6 +131,15 @@ void ScreenshotTool::init()
 	_takePicture->addChild(bttntxt);
 	_takePicture->setCallback(this);
 
+
+
+
+	buttonList->addChild(_takePicture);
+	
+	buttonList->setPercentPos(osg::Vec3(.125, 0, -.775));
+	bknd->addChild(buttonList);
+
+#ifdef CINE
 	_renderCinematic = new CallbackButton();
 	bttnbknd = new UIQuadElement(UI_INACTIVE_RED_COLOR);
 	bttnbknd->setTransparent(true);
@@ -143,13 +152,8 @@ void ScreenshotTool::init()
 	_renderCinematic->addChild(bttnbknd);
 	_renderCinematic->addChild(bttntxt);
 	_renderCinematic->setCallback(this);
-
-
-
-	buttonList->addChild(_takePicture);
 	buttonList->addChild(_renderCinematic);
-	buttonList->setPercentPos(osg::Vec3(.125, 0, -.775));
-	bknd->addChild(buttonList);
+#endif
 
 
 	
@@ -282,13 +286,15 @@ void ScreenshotTool::uiCallback(UICallbackCaller* ui) {
 				_pdc = new ScreenshotCallback(this, ss.str());
 				_camera->addPostDrawCallback(_pdc);
 			}
+
+#ifdef CINE
 			else if (ui == _renderCinematic && false) { //disabled
 				//create yaml
 				((cvr::UIText*)_renderCinematic->getChild(1))->setText("Loading...");
 				saveAsYaml();
 				
 			}
-		}
+ 		}
 		else {
 			if (ui == _takePicture && !_pictureSaved)//Save picture 
 			{
@@ -305,7 +311,7 @@ void ScreenshotTool::uiCallback(UICallbackCaller* ui) {
 				_pictureSaved = true;
 
 			}
-			else if (ui == _renderCinematic && false)////DISABLED
+ 			else if (ui == _renderCinematic && false)////DISABLED
 			{
 				_display->getOrCreateStateSet()->setTextureAttributeAndModes(0, _texture, osg::StateAttribute::ON);
 				((cvr::UIText*)_takePicture->getChild(1))->setText("Take Picture"); 
@@ -314,16 +320,18 @@ void ScreenshotTool::uiCallback(UICallbackCaller* ui) {
 				_showingPhoto = false;
 				_pictureSaved = false;
 			}
+#endif
 		}
 	}
 
 }
 
+#ifdef CINE
 void ScreenshotTool::saveAsYaml() {
 	_vm->saveYamlForCinematic();
 
 }
-
+#endif CINE
 
 void ScreenshotTool::takePhoto(std::string filename)
 {
@@ -349,8 +357,10 @@ void ScreenshotTool::takePhoto(std::string filename)
 
 }
 
+#ifdef CINE
+
 void ScreenshotTool::setPhoto(std::string imgLocation) {
-	
+
 
 	std::string seriesName = imgLocation.substr(imgLocation.find_last_of("/"));
 	std::string patientDir = imgLocation.substr(0, imgLocation.find_last_of("/"));
@@ -359,7 +369,7 @@ void ScreenshotTool::setPhoto(std::string imgLocation) {
 
 	osg::ref_ptr<osg::Texture2D> text = cvr::UIUtil::loadImage(_imgCineFP);
 	_display->getOrCreateStateSet()->setTextureAttributeAndModes(0, text, osg::StateAttribute::ON);
-	
+
 
 	((cvr::UIText*)_takePicture->getChild(1))->setText("Save Image");//text
 	((cvr::UIText*)_renderCinematic->getChild(1))->setText("OK");//text
@@ -369,6 +379,8 @@ void ScreenshotTool::setPhoto(std::string imgLocation) {
 
 }
 
+
+#endif  
 
 void ScreenshotSaverThread::run()
 {

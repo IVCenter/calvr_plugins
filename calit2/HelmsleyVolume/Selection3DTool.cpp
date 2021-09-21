@@ -38,9 +38,13 @@ void Selection3DToolUpdate::operator()(osg::Node* node, osg::NodeVisitor* nv)
 		_cubeMT->computeWorldToLocalMatrix(cubeMat, NULL);
 		osg::Vec3 cubeCoord = selectionWorldPos * _mainSO->getWorldToObjectMatrix() * cubeMat;
  		cubeCoord += osg::Vec3(.5, .5, .5);
+		_currCubeCoordNorm = cubeCoord;
+
 		cubeCoord = osg::Vec3(std::abs(_dims.x() * cubeCoord.x()), std::abs(_dims.z() * cubeCoord.y()), std::abs(_dims.y() * cubeCoord.z()));
 
 		_selectionCenter->setElement(0, cubeCoord);
+
+		_currCubeCoord = cubeCoord;
 		
 	}
 	traverse(node, nv);
@@ -151,7 +155,7 @@ void Selection3DTool::update()
 	m = osg::Matrix::inverse(m);
 
 	_scaledDims = osg::Vec3(std::abs(forward.x()), std::abs(forward.z()), std::abs(forward.y()));
-	//_scaledDims = osg::Vec3(480, 480, 179);
+	//_scaledDims = osg::Vec3(osg::Vec3(_dims.x(), _dims.y()/2, _dims.z()));
  
  
 	//if(_dims == osg::Vec3(0,0,0))
@@ -175,7 +179,8 @@ void Selection3DTool::update()
 	
 	//std::cout << "center: " << HelmsleyVolume::instance()->printVec3OSG(_selectionCenterVector) << std::endl;
 	_scaledDims = osg::Vec3(std::abs(_scaledDims.x() * _scale.x()), std::abs(_scaledDims.y() * _scale.y()), std::abs(_scaledDims.z() * _scale.z()));
-
+	_normDims = osg::Vec3(_scaledDims.x() / _dims.x(), _scaledDims.y() / _dims.y(), _scaledDims.z() / _dims.z());
+	//_normDims = osg::Vec3(_dims.x(), _dims.y(),  _dims.z());
 
 	_selectionDims->setElement(0, _scaledDims);
 	//scaleDims = osg::Vec3(std::abs(scaleDims.x()*_scale.x()), std::abs(scaleDims.y()*_scale.y()), std::abs(scaleDims.z() * _scale.z()));
@@ -214,4 +219,18 @@ void Selection3DTool::setNewVolume(VolumeGroup* g) {
 
 void Selection3DTool::updateCallbackVolume() {
 	_updateCallback->updateVolume(_cubeMT, _dims);
+}
+
+std::pair<osg::Vec3, osg::Vec3> Selection3DTool::getSelectionCenterAndDims() {
+	//osg::Vec3 normalizedCenter = _updateCallback->_currCubeCoordNorm;
+	/*float temp = normalizedCenter.y();*/
+	/*normalizedCenter.y() = normalizedCenter.z();
+	normalizedCenter.z() = temp;*/
+
+  	osg::Vec3 normalizedDims = _normDims;
+	float temp = normalizedDims.y();
+	normalizedDims.y() = normalizedDims.z();
+	normalizedDims.z() = temp;
+	 
+		return std::pair<osg::Vec3, osg::Vec3>(normalizedDims, _updateCallback->_currCubeCoordNorm);
 }

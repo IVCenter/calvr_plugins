@@ -497,7 +497,10 @@ public:
  	virtual void setColor(osg::Vec4 color);
  	virtual void setTransparent(bool transparent);
 	void setEnable(bool enabled, osg::Vec4 disableColor = UI_DISABLED_BACKGROUND_COLOR);
- 
+	bool isEnabled() {
+		return _enabled;
+	}
+
 	virtual void setProgram(osg::Program* p) { _program = p; _dirty = true; }
 	virtual osg::Program* getProgram() { return _program; }
 	virtual osg::Geode* getGeode() { return _geode; }
@@ -756,7 +759,7 @@ public:
 	void clearTents();
 	void setUpGradients();
 	void fillTentDetails(int _triangleIndex, float center, float bottomWidth, float topWidth, float height, float lowest);
-	std::vector<float> getPresetData(int index);
+	std::vector<float> getTentData(int index);
 	std::vector<Tent*> _tents;
 	cvr::UIQuadElement* _bknd;
 private:
@@ -773,6 +776,7 @@ private:
 
 };
 ////////////Hist
+#ifdef HIST
 class HistQuad : public cvr::UIElement
 
 {
@@ -794,6 +798,7 @@ private:
 	VolumeGroup* _volume;
 
 };
+#endif
 ////////////Hist
 
 class TentWindow : public cvr::UIElement, public UICallback, public UICallbackCaller
@@ -810,8 +815,11 @@ public:
 	void toggleTent(int index);
 	void clearTents();
 	void fillTentDetails(int _triangleIndex, float center, float bottomWidth, float topWidth, float height, float lowest);
-	std::vector<float> getPresetData(int index);
+	std::vector<float> getTentData(int index);
+
+#ifdef CINE
 	std::vector<float> getCinePresetData(int index);
+#endif
 	//std::unique_ptr<std::vector<Tent*>> _tents;
 	TentWindowOnly* _tWOnly;
 private:

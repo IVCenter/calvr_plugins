@@ -303,16 +303,12 @@ void FileSelector::menuCallback(cvr::MenuItem* item)
 		}
 	}
 }
-
-void FileSelector::threadTest() {
-	int result = system("C:/Users/g3aguirre/Documents/CAL/Testing/ExternalAppTest/x64/Release/ExternalAppTest.exe");
-  }
+ 
 
 void FileSelector::uiCallback(UICallbackCaller* ui){
 	
 
-	//_futures.push_back(std::async(std::launch::async, threadTest));
-	
+ 	
 	
 	if (ui == _rightArrow) {
 		if(_currMap->size() > _selectIndex)
@@ -435,7 +431,7 @@ void FileSelector::getPatientInfo(std::string pName) {
 		struct dirent* entry = readdir(dir);
 	
 		while (entry != NULL) {
-			if (entry->d_type == DT_REG && strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0) {
+			if (entry->d_type == DT_REG && (strrchr(entry->d_name, '.') == nullptr) || strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0) {
 				filePath = pName + "/" + entry->d_name;
 				break;
 			}
@@ -545,7 +541,7 @@ std::string FileSelector::getMiddleImage(int seriesIndex) {
 	struct dirent* entry = readdir(dir);
 	int count = 0;
 	while (entry != NULL) {
-		if (entry->d_type == DT_REG && strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0) {
+		if (entry->d_type == DT_REG && (strrchr(entry->d_name, '.') == nullptr) || strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0) {
 			count++;
 		}
 		entry = readdir(dir);
@@ -578,7 +574,7 @@ int FileSelector::loadSeriesList(std::string pFN, int indexFromDicom) {
 				_seriesList[key] = pFN + "/" + entry->d_name;
 			}
 		}
-		else if (entry->d_type == DT_REG && (strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0 || strcmp(strrchr(entry->d_name, '.') + 1, "raw") == 0)) {
+		else if (entry->d_type == DT_REG && (strrchr(entry->d_name, '.') == nullptr) || (strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0 || strcmp(strrchr(entry->d_name, '.') + 1, "raw") == 0)) {
 			closedir(dir);
 			return indexFromDicom + 1;
 		}
@@ -739,7 +735,7 @@ void FileSelector::updateFileSelection()
 	while (entry != NULL)
 	{
 		if ((entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "mask") != 0) || //folders
-			(entry->d_type == DT_REG && (strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0) || strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0)) //first dcm file
+			(entry->d_type == DT_REG && (strrchr(entry->d_name, '.') == nullptr) || (strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0) || strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0)) //first dcm file
 		{
 			if (entry->d_type == DT_REG)
 			{
@@ -777,6 +773,7 @@ std::pair<int, bool> FileSelector::checkIfPatient(std::string fn, int indexFromD
 	DIR* dir = opendir(fn.c_str());
 	struct dirent* entry = readdir(dir);
 	while (entry != NULL) {
+		try {
 		if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0 && strcmp(entry->d_name, "mask") != 0) {
 			std::string newFn = fn + "/" + entry->d_name;
 			toReturn.first++;
@@ -812,7 +809,8 @@ std::pair<int, bool> FileSelector::checkIfPatient(std::string fn, int indexFromD
 			}
 			
 		}
-		else if (entry->d_type == DT_REG && (strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0 || strcmp(strrchr(entry->d_name, '.') + 1, "raw") == 0)) {
+		
+		else if (entry->d_type == DT_REG && (strrchr(entry->d_name, '.') == nullptr) || (strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0 || strcmp(strrchr(entry->d_name, '.') + 1, "raw") == 0)) {
 			closedir(dir);
 			toReturn.second = true;
 
@@ -820,6 +818,11 @@ std::pair<int, bool> FileSelector::checkIfPatient(std::string fn, int indexFromD
 			//toReturn.second = true;
 			return toReturn;
 		}
+		}
+		catch (const std::exception& e) {
+			std::cout << e.what() << std::endl;
+		}
+		
 		entry = readdir(dir);
 	}
 	closedir(dir);
@@ -828,12 +831,14 @@ std::pair<int, bool> FileSelector::checkIfPatient(std::string fn, int indexFromD
 }
 
 std::vector<std::string> FileSelector::getPresets() {
-	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.PresetsFolder", "C:/", false);
-	std::string presetPath = currPath;
+ 	std::string presetPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.AppDir");
+	presetPath += "/Presets";
 	DIR* dir = opendir(presetPath.c_str());
+	std::string filePath = "";
 	if (dir == nullptr) {
-
+		std::filesystem::create_directory(presetPath);
 	}
+
 	std::vector<std::string> presetPaths;
 	struct dirent* entry = readdir(dir);
 	while (entry != NULL) {

@@ -191,12 +191,10 @@ public:
 		_cpHLabel->setText(organName);
 	}
 
-	cvr::UIList* addPresets(cvr::UIQuadElement* bknd);
 	void setLinkOff() { _updateCallback->setLinkOff(); }
 	void useTransferFunction(int tfID);
 	void toggleSwapOpacity();
 	void toggleLinkOpacity(bool turnOn);
-	void toggleHistogram(bool on);
 	void toggleClaheTools(bool on);
 	void toggleAttnMapsTools(bool on);
 	void toggleMaskMenu(bool on);
@@ -212,7 +210,19 @@ public:
 	
 	bool hasCenterLineCoords();
 	void updateMCUI(bool on);
- 	void saveYamlForCinematic();
+	//CINE
+#ifdef CINE
+	static void runCinematicThread(std::string datasetPath, std::string configPath);
+	void saveYamlForCinematic();
+#endif
+
+	//HIST
+#ifdef HIST
+	HistQuad* _histQuad;
+	void toggleHistogram(bool on);
+
+#endif
+
 protected:
 	cvr::SceneObject* _scene;
 	VolumeGroup* _volume;
@@ -222,13 +232,13 @@ protected:
 
 	TentWindow* _tentWindow;
 	TentWindowOnly* _tentWindowOnly;
-	HistQuad* _histQuad;
+	
 
 	cvr::UIPopup* _menu = nullptr;
 	cvr::UIPopup* _maskMenu = nullptr;
 	cvr::UIPopup* _contrastMenu = nullptr;
 	cvr::UIPopup* _colorMenu = nullptr;
-	cvr::UIPopup* _presetPopup = nullptr;
+	
 	cvr::UIPopup* _tentMenu = nullptr;
 
 	cvr::UIPopup* _claheMenu = nullptr;
@@ -242,14 +252,13 @@ protected:
 	unsigned short int _menuPos = 0;
 
 	cvr::UIQuadElement* _maskBknd;
-	cvr::UIQuadElement* _presetBknd;
+	
 
  	std::unique_ptr<HoverButton> _horiFlipButton;
 	std::unique_ptr<HoverButton> _vertiFlipButton;
 	std::unique_ptr<HoverButton> _depthFlipButton;
  	std::shared_ptr<HoverButton> _addTriangleButton;
-	std::shared_ptr<HoverButton> _addPresetButton;
-	std::shared_ptr<HoverButton> _loadPresetButton;
+	
 	CallbackButton* _volume1Button;
 	CallbackButton* _volume2Button;
 	CallbackButton* _linkButton;
@@ -257,7 +266,7 @@ protected:
 	bool _swapOpacity = false;
 
 	cvr::UIList* _mainMaskList;
-	cvr::UIList* _presetUIList;
+	
 	cvr::UIList* _volumeList;
 
 	CallbackSlider* _contrastBottom;
@@ -278,6 +287,8 @@ protected:
 	CallbackButton* _useClaheButton;
 	CallbackButton* _useClaheSelection;
 
+	
+
 	//Marchinc Cubes UI
 	CallbackButton* _UseMarchingCubesButton;
 	CallbackButton* _GenMarchCubesButton;
@@ -288,7 +299,25 @@ protected:
 	CallbackButton* _lockSelectionButton;
 	CallbackButton* _resetSelectionButton;
 	CallbackButton* _toggleSelection;
- 	
+
+	//Preset
+#ifdef PRESET
+	cvr::UIList* addPresets(cvr::UIQuadElement* bknd);
+	cvr::UIPopup* _presetPopup = nullptr;
+	cvr::UIQuadElement* _presetBknd;
+	std::shared_ptr<HoverButton> _addPresetButton;
+	std::shared_ptr<HoverButton> _loadPresetButton;
+	cvr::UIList* _presetUIList;
+	std::vector<CallbackButton*> _presetCallbacks;
+	bool checkPresetCallbacks(UICallbackCaller* item);
+	void usePreset(std::string filename);
+	void savePreset();
+
+#endif 
+
+#ifdef VOLKIT
+	CallbackButton* _cropButton;
+#endif // VOLKIT
 
 	//Contrast UI
 	CallbackSlider* _trueContrast;
@@ -360,7 +389,7 @@ protected:
 	CallbackButton* _Triangle5;
 
 	std::vector<CallbackButton*> _triangleCallbacks = {_Triangle0, _Triangle1, _Triangle2, _Triangle3, _Triangle4, _Triangle5};
-	std::vector<CallbackButton*> _presetCallbacks;
+	
 
 	cvr::UIList* _triangleList;
 	int _triangleIndex;
@@ -369,15 +398,15 @@ protected:
 	osg::Vec3 triangleColors[6] = { UI_BLUE_COLOR, UI_RED_HOVER_COLOR, UI_YELLOW_COLOR, UI_GREEN_COLOR, UI_PURPLE_COLOR, UI_PINK_COLOR};
 	bool checkTriangleCallbacks(UICallbackCaller* item);
 	bool checkTriangleVisCallbacks(UICallbackCaller* item);
-	bool checkPresetCallbacks(UICallbackCaller* item);
+	
 	bool checkColorSliderCallbacks(UICallbackCaller* item);
-	void usePreset(std::string filename);
+	
 	void clearRegionPreviews();
 	Tent* addRegion();
-	void savePreset();
+	
 	void NewVolumeMenu::upDatePreviewDefines(std::string tf);
 
-	static void runCinematicThread(std::string datasetPath, std::string configPath);
+	
 	std::vector<std::future<void>> _futures;
 
 	
@@ -404,14 +433,14 @@ public:
 	UIMenuUpdate(VolumeGroup* vg, NewVolumeMenu* vm, cvr::SceneObject* so) { _vg = vg; _vm = vm, _so = so; }
 
 	virtual void operator()(osg::Node* node, osg::NodeVisitor* nv)
-	{
+	{/*
 		if (_vg->_UIDirty) {
 			if (_vg->_mcIsReady) {
 				_vm->updateMCUI(false);
 				_vg->_UIDirty = false;
 			}
 		}
- 		traverse(node, nv);
+ 		traverse(node, nv);*/
 
 	}
  

@@ -57,7 +57,7 @@ void main() {
 	uint histIndex = uint(currSB.z * numSB.x * numSB.y + currSB.y * numSB.x + currSB.x);
 	
 	// Increment the appropriate histogram
-	uint grayIndex = ((NUM_OUT_BINS-1u) * histIndex) + volSample;
+	uint grayIndex = (NUM_OUT_BINS * histIndex) + volSample;
 	
 	
 //	

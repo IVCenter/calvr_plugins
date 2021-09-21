@@ -16,19 +16,22 @@
 #include <osg/BlendFunc>
 #include <osg/MatrixTransform>
 #include <osg/Depth>
+#include <osg/io_utils>
 
 #include <osgDB/ReadFile>
 
-#include <vkt/ExecutionPolicy.hpp>
-#include <vkt/InputStream.hpp>
-#include <vkt/Histogram.hpp>
-#include <vkt/LookupTable.hpp>
-#include <vkt/Render.hpp>
-#include <vkt/Resample.hpp>
-#include <vkt/StructuredVolume.hpp>
-#include <vkt/VolumeFile.hpp>
-
-
+#ifdef VOLKIT
+	#include <vkt/ExecutionPolicy.hpp>
+	#include <vkt/InputStream.hpp>
+	#include <vkt/Histogram.hpp>
+	#include <vkt/LookupTable.hpp>
+	#include <vkt/Render.hpp>
+	#include <vkt/Resample.hpp>
+	#include <vkt/StructuredVolume.hpp>
+	#include <vkt/VolumeFile.hpp>
+	#include <vkt/HierarchicalVolume.hpp>
+	#include <vkt/Crop.hpp>
+ #endif
 
 #define ISOVALUE 0.08f
 #define MCFACTOR 16
@@ -38,6 +41,7 @@
 
 void VolumeDrawCallback::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const
 {
+
 	if (!group)
 	{
 		std::cerr << "group doesnt not xist!" << std::endl;
@@ -119,7 +123,9 @@ void VolumeGroup::init()
 	_clipShader = HelmsleyVolume::loadShaderFile("clipHist1.comp");
 	_clipShader2 = HelmsleyVolume::loadShaderFile("clipHist2.comp");
 	_lerpShader = HelmsleyVolume::loadShaderFile("lerp.comp");
+#ifdef HIST
 	_totalHistShader = HelmsleyVolume::loadShaderFile("nonClaheHist.comp");
+#endif
 	_marchingCubesShader = HelmsleyVolume::loadShaderFile("marchingcube.comp");
 
 	if (vert.empty() || frag.empty() || compute.empty())
@@ -259,6 +265,7 @@ void VolumeGroup::init()
 		computeStates->addUniform(it->second);
 	}
 
+	
 }
 #ifdef DEBUGCODE
 
@@ -317,12 +324,16 @@ void VolumeGroup::loadRawVolume(std::string seriesPath) {
 	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
 
 	_volDims = osg::Vec3i(i->s(), i->t(), i->r());
+	std::cout << "voldims " << i->s() << ", " << i->t() << ", " << i->r();
+
 	_computeUniforms["volDims"]->set(osg::Vec3(_volDims.x(), _volDims.y(), _volDims.z()));
 	 
 	 
 
 	_scale = HelmsleyVolume::instance()->divideVec3OSG(osg::Vec3(_volDims.x(), _volDims.y(), _volDims.z()), scale);
-
+#ifdef HIST
+	precompTotalHistogram();
+#endif
 
 	//Set dirty on all graphics contexts
 	std::vector<osg::Camera*> cameras = std::vector<osg::Camera*>();/////////////uncomment
@@ -333,8 +344,12 @@ void VolumeGroup::loadRawVolume(std::string seriesPath) {
 	}
 
 	precompute();
- 
+#ifdef VOLKIT
 	_fileName = ImageLoader::GetRawFile(seriesPath);
+	_seriesPath = seriesPath;
+	std::cout << seriesPath << std::endl;
+#endif 
+
 }
 #endif // DEBUGCODE
 
@@ -416,7 +431,9 @@ void VolumeGroup::loadVolume(std::string path, std::string maskpath)
 	}
 
 	precompute();
+#ifdef CENTERLINE
 	readyCenterLine(path);
+#endif
 }
 
 
@@ -650,12 +667,11 @@ void VolumeGroup::precompHistClip(t_ssbb ssbbHist, t_ssbb ssbbHistMax, t_ssbb ss
 }
 
 void VolumeGroup::setupClip(t_ssbb ssbbHist, t_ssbb ssbbHistMax, t_ssbb ssbbExcess, t_acbb acbbminmax) {
-	int width = 4096;
-	int count = (_histSize + 63) / 64;
-	GLuint dispatchWidth = count / (width * width);//TODO : look into this
-	GLuint dispatchHeight = (count / width) % width;
-	GLuint dispatchDepth = count % width;
-	_clipHist1Node->setComputeGroups(dispatchWidth, dispatchHeight, dispatchDepth);
+ 	int count = (_histSize + 63) / 64;
+ 
+	_clipHist1Node->setComputeGroups(count, 1, 1);
+	 
+
 
 
  	_clipHist1Node->getOrCreateStateSet()->setAttributeAndModes(ssbbExcess, osg::StateAttribute::ON);
@@ -721,6 +737,27 @@ void VolumeGroup::setupLerp(t_ssbb ssbbHist) {
 	((LerpSSB*)_lerpNode->getDrawCallback())->_ssbb = ssbbHist;
 }
 
+#ifdef VOLKIT
+void read(vkt::HierarchicalVolume& hv, std::string fileName) {
+	std::ifstream dump(fileName, std::ios::binary);
+
+	uint64_t numBricks;
+	dump.read((char*)&numBricks, sizeof(numBricks));
+	std::vector<vkt::Brick> bricks(numBricks);
+	dump.read((char*)bricks.data(), numBricks * sizeof(vkt::Brick));
+
+	vkt::DataFormat df;
+	dump.read((char*)&df, sizeof(df));
+	vkt::Vec2f vm;
+	dump.read((char*)&vm, sizeof(vm));
+
+	hv = vkt::HierarchicalVolume(bricks.data(), numBricks, df, vm.x, vm.y);
+	vkt::Brick lastBrick = bricks[hv.getNumBricks() - 1];
+	uint64_t scalarsSize = lastBrick.offsetInBytes + lastBrick.dims.x * lastBrick.dims.y
+		* lastBrick.dims.z * sizeof(float);
+	dump.read((char*)hv.getData(), scalarsSize);
+}
+#endif
 void VolumeGroup::genClahe() {
 	if (!_clahePrecomped) {
 		//////////////////////////////////////clahe/////////////////////////
@@ -728,6 +765,7 @@ void VolumeGroup::genClahe() {
 		_claheVolume->setTextureSize(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth());
 		osg::ref_ptr<osg::Image> bimage = new osg::Image();
 		bimage->allocateImage(_volume->getTextureWidth(), _volume->getTextureHeight(), _volume->getTextureDepth(), GL_RG, GL_UNSIGNED_SHORT);
+
 		_claheVolume->setImage(bimage);
 		_claheVolume->setFilter(osg::Texture3D::MIN_FILTER, osg::Texture3D::NEAREST);
 		_claheVolume->setFilter(osg::Texture3D::MAG_FILTER, osg::Texture3D::NEAREST);
@@ -742,6 +780,10 @@ void VolumeGroup::genClahe() {
 		states->setAttributeAndModes(imagbinding);
 
 		_clahePrecomped = true;
+		//((TotalHistCallback*)_totalHistNode->getDrawCallback())->stop[0] = 0;
+		
+
+
 
 #ifdef VOLKIT
 		if (_useVolkit)
@@ -821,94 +863,240 @@ void VolumeGroup::genClahe() {
 #ifdef  VOLKIT
 	usingVolkit :
 
-	if (!_fileName.empty() && _useVolkit)
-	{
-		vkt::ExecutionPolicy ep = vkt::GetThreadExecutionPolicy();
-		ep.printPerformance = vkt::True;
- 
-
-		ep.device = vkt::ExecutionPolicy::Device::CPU;
-		vkt::SetThreadExecutionPolicy(ep);
-
-
-		vkt::VolumeFile file(_fileName.c_str(), vkt::OpenMode::Read);
-
-		vkt::VolumeFileHeader header = file.getHeader();
-		std::cout << _fileName.c_str() << std::endl;
-		if (!header.isStructured)
-		{
-			std::cerr << "No valid volume file\n";
-			return;
-		}
-
-		vkt::Vec3i dims = header.dims;
-		std::cout << dims.x << " " << dims.y << " " << dims.z << std::endl;
-		if (dims.x * dims.y * dims.z < 1)
-		{
-			std::cerr << "Cannot parse dimensions from file name\n";
-			return;
-		}
-
-		vkt::DataFormat dataFormat = header.dataFormat;
-		if (dataFormat == vkt::DataFormat::Unspecified)
-		{
-			std::cerr << "Cannot parse data format from file name, guessing uint8...\n";
-			dataFormat = vkt::DataFormat::UInt8;
-		}
-
-		vkt::StructuredVolume volume(dims.x, dims.y, dims.z, dataFormat);
-		vkt::InputStream is(file);
-		is.read(volume);
-
-		// Resample using contrast limited adaptive histogram equalization
-		// Source volume is also dest volume
-		vkt::ResampleCLAHE(volume, volume);
-
- 
-		
-		//Set Data from VKT to 3D Texture
-		osg::Image* claheImg = _claheVolume->getImage();
-		uint16_t* txtrData = (uint16_t*)claheImg->data();
-		unsigned int w = claheImg->s();
-		unsigned int h = claheImg->t();
-		unsigned int d = claheImg->r();
-
-		
-
-
-		for (unsigned int i = 0; i < d; i++) {
-
-			uint16_t* slice = txtrData + 2 * i * w * h; 
-
-			unsigned int j = 0;
-
-			for (unsigned int y = 0; y < h; y++) {
-				for (unsigned int x = 0; x < w; x++) {
-					j = 2 * (x + y * w);
-					uint16_t data;
-					volume.getBytes(x, y, i, (uint8_t*)&data);
-					if (volume.getDataFormat() == vkt::DataFormat::UInt8) {
-						slice[j] = data * 255;
- 
-					}
-					else if (volume.getDataFormat() == vkt::DataFormat::UInt16) {
-						slice[j] = data;
- 
-					}
- 					 
- 				}
-			}
-			 
-		}
-
-		 
- 	}
+	
 #endif 
 
 	_claheAvailable = true;
 	this->setDirtyAll();
 
 }
+
+#ifdef VOLKIT
+
+typedef vkt::Vec3i vec3i;
+typedef vkt::Vec3f vec3f;
+
+std::ostream& operator<<(std::ostream& out, vkt::Vec3f v) {
+	 out << "(" << v.x << ',' << v.y << ',' << v.z << ")";
+	 return out;
+}
+
+std::ostream& operator<<(std::ostream& out, vkt::Vec3i v) {
+	 out << "(" << v.x << ',' << v.y << ',' << v.z << ")";
+	 return out;
+}
+
+
+int argmin(vec3f v)
+{
+	int res = v.x < v.y ? 0 : 1;
+	if (res == 0)
+		res = v.z < v.x ? 2 : 0;
+	else
+		res = v.z < v.y ? 2 : 1;
+	return res;
+}
+
+vec3i computeBestDims(vec3f aspect, vec3i minDims, vec3i maxDims,
+	int voxelSizeInBytes, int numTargetVoxels)
+{
+	// modify aspect so that the smallest is always 1
+	int minAsp = argmin(aspect);
+	float* aspPtr = (float*)&aspect;
+	float div = aspPtr[minAsp];
+
+	std::cout << "minasp: " << minAsp << std::endl;
+	std::cout << "aspect: " << aspect.x << ", " << aspect.y << ", " << aspect.z << std::endl;
+	for (int i = 0; i < 3; ++i)
+		aspPtr[i] /= div;
+	
+
+	 
+	std::cout << "aspect: " << aspect.x << ", " << aspect.y << ", " << aspect.z << std::endl;
+
+	int diff = numTargetVoxels * voxelSizeInBytes;
+
+	vec3f dimsf;
+	dimsf.x = minDims.x * aspect.x;
+	dimsf.y = minDims.y * aspect.y;
+	dimsf.z = minDims.z * aspect.z;
+
+	vec3i dims{ (int)dimsf.x,(int)dimsf.y,(int)dimsf.z };
+
+	for (;;) {
+		int currSize = dims.x * dims.y * dims.z * voxelSizeInBytes;
+		int currDiff = abs(numTargetVoxels - currSize);
+
+		if (currDiff > diff)
+			break;
+
+		diff = currDiff;
+
+		dimsf.x += aspect.x;
+		dimsf.y += aspect.y;
+		dimsf.z += aspect.z;
+
+		vec3i temp = { (int)dimsf.x,(int)dimsf.y,(int)dimsf.z };
+
+		if (temp.x >= maxDims.x || temp.y >= maxDims.y || temp.z >= maxDims.z)
+			break;
+
+		dims = temp;
+	}
+
+	return dims;
+}
+ // VOLKIT
+
+void clampOsg(osg::Vec3& vec) {
+	vec.x() = std::min(std::max(vec.x(), 0.f), 1.f);
+	vec.y() = std::min(std::max(vec.y(), 0.f), 1.f);
+	vec.z() = std::min(std::max(vec.z(), 0.f), 1.f);
+}
+
+void VolumeGroup::vktCrop() {
+
+	if (!_fileName.empty())
+	{
+
+		auto coord_dims = getSelectionCenterAndDims();
+		std::cout << "Selection Dims: ";
+ 		
+		std::cout << HelmsleyVolume::instance()->printVec3OSG(coord_dims.first) << std::endl;
+		std::cout << "Selection Center: ";
+		
+		std::cout << HelmsleyVolume::instance()->printVec3OSG(coord_dims.second) << std::endl;
+		bool doCrop = true;
+ 		static std::shared_ptr<vkt::HierarchicalVolume> _hvPtr = nullptr;
+		if (_hvPtr == nullptr){
+			
+			_hvPtr = std::make_shared<vkt::HierarchicalVolume>();
+			read(*_hvPtr, "C:/Users/g3aguirre/Documents/CAL/DICOMSdebug/vkt/dump.vkt");
+
+			doCrop = false;
+
+			std::cout << "read hv" << std::endl;
+		}
+		vkt::Vec3i vecHVDims = _hvPtr->getDims();
+
+
+		auto clamp = [](vkt::Vec3i& vec, vkt::Vec3i maxDims) {
+			vec.x = std::min(std::max(vec.x, 0), maxDims.x - 1);
+			vec.y = std::min(std::max(vec.y, 0), maxDims.y - 1);
+			vec.z = std::min(std::max(vec.z, 0), maxDims.z - 1);
+		};
+
+		vkt::ExecutionPolicy ep = vkt::GetThreadExecutionPolicy();
+		ep.printPerformance = vkt::True;
+		ep.device = vkt::ExecutionPolicy::Device::CPU;
+		vkt::SetThreadExecutionPolicy(ep);
+
+
+
+		osg::Vec3 selectionDims = coord_dims.first;
+		osg::Vec3 middleCoord = coord_dims.second;
+
+		clampOsg(middleCoord);
+		clampOsg(selectionDims);
+
+
+		osg::Vec3 minCorner = middleCoord - (selectionDims / 2.f);
+		osg::Vec3 maxCorner = middleCoord + (selectionDims / 2.f);
+
+		clampOsg(minCorner);
+		clampOsg(maxCorner);
+
+
+		vkt::Vec3i lowerCrop{ 0,0,0 };
+
+		vkt::Vec3i upperCrop = vecHVDims ;
+		
+		if (doCrop && _hvPtr != nullptr) {
+			std::shared_ptr<vkt::HierarchicalVolume> hv2 = std::make_shared<vkt::HierarchicalVolume>(nullptr, 0, vkt::DataFormat::Float32);
+
+ 		    lowerCrop = { int(minCorner.x() * vecHVDims.x), int(minCorner.y() * vecHVDims.y), int(minCorner.z() * vecHVDims.z) };
+ 		    upperCrop = { int(maxCorner.x() * vecHVDims.x), int(maxCorner.y() * vecHVDims.y), int(maxCorner.z() * vecHVDims.z) };
+			clamp(lowerCrop, vecHVDims);
+			clamp(upperCrop, vecHVDims);
+
+
+			std::cout << "lowercrop: " << lowerCrop << std::endl;
+			std::cout << "upperCrop: " << upperCrop << std::endl;
+			std::cout << "minCorner: " << minCorner << std::endl;
+			std::cout << "maxCorner: " << maxCorner << std::endl;
+			std::cout << "vecHVDims: " << vecHVDims << std::endl;
+			
+			vkt::CropResize(*hv2, *_hvPtr, lowerCrop, upperCrop);
+			vkt::Crop(*hv2, *_hvPtr, lowerCrop, upperCrop);
+			_hvPtr = hv2;
+		
+			std::cout << "cropped" << std::endl;
+
+		}
+		
+		vkt::Vec3f cropDimsf = { float(upperCrop.x - lowerCrop.x), float(upperCrop.y - lowerCrop.y), float(upperCrop.z - lowerCrop.z) };
+		vkt::Vec3i bestDims = computeBestDims(cropDimsf, { 32,32,32 }, { 2048,2048,2048 }, 1, 50000000);
+		std::cout << "best dims: " << bestDims.x << ", "<< bestDims.y << ", "<< bestDims.z << std::endl;
+		vkt::StructuredVolume sv(bestDims.x, bestDims.y, bestDims.z, vkt::DataFormat::UInt8);
+
+		//vkt::StructuredVolume sv(32,32,640,vkt::DataFormat::UInt16);
+		// vkt::StructuredVolume sv(32,32,24,vkt::DataFormat::UInt8);
+		 
+			vkt::Resample(sv, *_hvPtr, vkt::Filter::Linear);
+	 
+		//Set Data from VKT to 3D Texture
+		//vkt::StructuredVolume& volume = sv;
+		//vkt::Vec3i vktDims = sv.getDims();
+
+		std::stringstream ss;
+		std::string dataStr;
+		if (sv.getDataFormat() == vkt::DataFormat::UInt8) {
+			dataStr = "_uint8";
+		}
+		else if (sv.getDataFormat() == vkt::DataFormat::UInt16) {
+			dataStr = "_uint16";
+		}
+		std::string rawPath = _seriesPath;
+
+		auto rawsPtr = _seriesPath.find("raws");
+		rawsPtr += 4;
+		rawPath = _seriesPath.substr(0, rawsPtr);
+		 
+
+		auto t1 = std::chrono::high_resolution_clock::now();
+		auto ms_int = std::chrono::time_point_cast<std::chrono::milliseconds>(t1);
+		auto epoch = ms_int.time_since_epoch();
+		auto value = std::chrono::duration_cast<std::chrono::milliseconds>(epoch);
+		std::string dirName = std::to_string(value.count());
+		std::string amrPath = rawPath + "/crop/" + dirName + "/";
+
+
+		ss << amrPath << "amr_" << bestDims.x << "x" << bestDims.y << "x" << bestDims.z << dataStr << ".raw";
+		try {
+			std::filesystem::create_directory(amrPath);
+		}
+		catch(std::exception& e ){
+			std::cout << e.what() << std::endl;
+		}
+
+		//std::string amrPath = ss.str().substr(0, ss.str().find_last_of("\\/"));
+		std::ofstream os;
+		os.open(ss.str(), std::ios::binary);
+		os.write((char*)sv.getData(), sv.getSizeInBytes());
+
+		HelmsleyVolume::instance()->getFileSelector()->loadVolumeOnly(false, amrPath);
+
+	}
+	else {
+		std::cout << "filename empty " << std::endl;
+	}
+}
+#endif
+
+std::pair<osg::Vec3, osg::Vec3> VolumeGroup::getSelectionCenterAndDims() {
+	return HelmsleyVolume::instance()->getLastSelectionTool()->getSelectionCenterAndDims();
+}
+
 void VolumeGroup::setClaheRes(float res) {
 	if (_claheRes == res)return;
 	_claheRes = res;
@@ -922,6 +1110,11 @@ void VolumeGroup::setClaheRes(float res) {
 	_numSB_3D.x() = _claheRes; _numSB_3D.y() = _claheRes; _numSB_3D.z() = zRes;
 	_numHist = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z();
 	_histSize = _numHist * _numGrayVals;
+
+
+	//_numSB_3D.z() = res;
+	//_numHist = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z();
+	//_histSize = _numHist * _numGrayVals;
 }
 
 
@@ -1086,59 +1279,73 @@ void VolumeGroup::flipCull()
 	}
 }
 
+#ifdef HIST
 void VolumeGroup::precompTotalHistogram() {
 
-	////Hist Buffer
-	//unsigned int numBins = 255;
-	//osg::ref_ptr<osg::UIntArray> hist = new osg::UIntArray(numBins);
-	//osg::ref_ptr<osg::ShaderStorageBufferObject> histBuffer = new osg::ShaderStorageBufferObject;	
-	//hist->setBufferObject(histBuffer);
-	//osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbHist = new osg::ShaderStorageBufferBinding(6, histBuffer->getBufferData(0), 0, sizeof(GLuint) * numBins);
-	//hist.release();
-	//histBuffer.release();
- //
-	////Max Hist Value
-	//osg::ref_ptr<osg::UIntArray> dati = new osg::UIntArray(1);
-	//osg::ref_ptr<osg::BufferObject> acbo = new osg::AtomicCounterBufferObject;
-	//acbo->setBufferData(0, dati);
-	//osg::ref_ptr<osg::AtomicCounterBufferBinding> acbb = new osg::AtomicCounterBufferBinding(7, acbo->getBufferData(0), 0, sizeof(GLuint));
-	//dati.release();
-	//acbo.release();
-
-	//osg::ref_ptr<osg::Program> prog2 = new osg::Program;
-	//osg::Shader* shader = new osg::Shader(osg::Shader::COMPUTE, _totalHistShader);
-	//prog2->addShader(shader);
+	//Hist Buffer
+	unsigned int numBins = 255;
+	osg::ref_ptr<osg::UIntArray> hist = new osg::UIntArray(numBins);
+	osg::ref_ptr<osg::ShaderStorageBufferObject> histBuffer = new osg::ShaderStorageBufferObject;	
+	hist->setBufferObject(histBuffer);
+	osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbHist = new osg::ShaderStorageBufferBinding(6, histBuffer->getBufferData(0), 0, sizeof(GLuint) * numBins);
+	hist.release();
+	histBuffer.release();
+ 
+	//Max Hist Value
+	osg::ref_ptr<osg::UIntArray> dati = new osg::UIntArray;
+	dati->push_back(0);
+	osg::ref_ptr<osg::BufferObject> acbo = new osg::AtomicCounterBufferObject;
+	acbo->setBufferData(0, dati);
+	osg::ref_ptr<osg::AtomicCounterBufferBinding> acbb = new osg::AtomicCounterBufferBinding(7, acbo->getBufferData(0), 0, sizeof(GLuint));
+	dati.release();
+	acbo.release();
 
 
-	//_totalHistNode = new osg::DispatchCompute((_volDims.x() + 7) / 8, (_volDims.y() + 7) / 8, (_volDims.z() + 7) / 8);
-	//_totalHistNode->getOrCreateStateSet()->setAttributeAndModes(prog2.get());
-	//_totalHistNode->getOrCreateStateSet()->setAttributeAndModes(ssbbHist, osg::StateAttribute::ON);
-	//_totalHistNode->getOrCreateStateSet()->setAttributeAndModes(acbb, osg::StateAttribute::ON);
-	//_totalHistNode->setDataVariance(osg::Object::DYNAMIC);
-
-	//TotalHistCallback* shaderStorageCallback = new TotalHistCallback(this);
-	//_totalHistNode->setDrawCallback(shaderStorageCallback);
-	//shaderStorageCallback->_ssbb = ssbbHist;
-	//shaderStorageCallback->_acbb = acbb;
-	///*shaderStorageCallback->_buffersize = numBins;*/
- // 
+	osg::ref_ptr<osg::Program> prog2 = new osg::Program;
+	osg::Shader* shader = new osg::Shader(osg::Shader::COMPUTE, _totalHistShader);
+	prog2->addShader(shader);
 
 
-	//osg::StateSet* states = _totalHistNode->getOrCreateStateSet();
-	//states->setRenderBinDetails((int)RENDERBIN_ORDER::NONCLAHEHIST, "RenderBin");
-	///*states->setTextureAttribute(5, _claheVolume, osg::StateAttribute::ON);
-	//states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
-	///*states->setTextureAttribute(1, _baked, osg::StateAttribute::ON);
-	//states->setTextureMode(1, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
-	//states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
-	//states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
+	_totalHistNode = new osg::DispatchCompute((_volDims.x() + 7) / 8, (_volDims.y() + 7) / 8, (_volDims.z() + 7) / 8);
+	_totalHistNode->getOrCreateStateSet()->setAttributeAndModes(prog2.get());
+	_totalHistNode->getOrCreateStateSet()->setAttributeAndModes(ssbbHist, osg::StateAttribute::ON);
+	_totalHistNode->getOrCreateStateSet()->setAttributeAndModes(acbb, osg::StateAttribute::ON);
+	_totalHistNode->setDataVariance(osg::Object::DYNAMIC);
 
-	//states->addUniform(new osg::Uniform("VolumeDims", _volDims.x(), _volDims.y(), _volDims.z()));
- //	states->addUniform(new osg::Uniform("NUM_BINS", numBins));
+	TotalHistCallback* shaderStorageCallback = new TotalHistCallback(this);
+	_totalHistNode->setDrawCallback(shaderStorageCallback);
+	shaderStorageCallback->_ssbb = ssbbHist;
+	shaderStorageCallback->_acbb = acbb;
+	/*shaderStorageCallback->_buffersize = numBins;*/
+  
 
-	//this->addChild(_totalHistNode);
+
+	osg::StateSet* states = _totalHistNode->getOrCreateStateSet();
+	states->setRenderBinDetails((int)RENDERBIN_ORDER::NONCLAHEHIST, "RenderBin");
+	/*states->setTextureAttribute(5, _claheVolume, osg::StateAttribute::ON);
+	states->setTextureMode(5, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
+	/*states->setTextureAttribute(1, _baked, osg::StateAttribute::ON);
+	states->setTextureMode(1, GL_TEXTURE_3D, osg::StateAttribute::ON);*/
+	states->setTextureAttribute(0, _volume, osg::StateAttribute::ON);
+	states->setTextureMode(0, GL_TEXTURE_3D, osg::StateAttribute::ON);
+
+	states->addUniform(new osg::Uniform("VolumeDims", _volDims.x(), _volDims.y(), _volDims.z()));
+ 	states->addUniform(new osg::Uniform("NUM_BINS", numBins));
+
+	this->addChild(_totalHistNode);
+	this->setDirtyAll();
 
 }
+
+
+unsigned int VolumeGroup::getHistMax() {
+	return ((TotalHistCallback*)_totalHistNode->getDrawCallback())->histMax[0];
+}
+osg::ref_ptr<osg::ShaderStorageBufferBinding> VolumeGroup::getHistBB() {
+	return ((TotalHistCallback*)_totalHistNode->getDrawCallback())->_ssbb;
+}
+
+#endif
 
 void VolumeGroup::precompMarchingCubes() {
 
@@ -1356,12 +1563,6 @@ void VolumeGroup::setCLAHEUseSelection(bool use) {
 	}
 }
 
-unsigned int VolumeGroup::getHistMax() {
-	return ((TotalHistCallback*)_totalHistNode->getDrawCallback())->histMax[0];
-}
-osg::ref_ptr<osg::ShaderStorageBufferBinding> VolumeGroup::getHistBB() {
-	return ((TotalHistCallback*)_totalHistNode->getDrawCallback())->_ssbb;
-}
 
 void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const
 {
@@ -1371,8 +1572,28 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 		
  		osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_buffersize);
 
-		drawable->drawImplementation(renderInfo);
-		renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
+		{
+			auto t1 = std::chrono::high_resolution_clock::now();
+			auto ms_int = std::chrono::time_point_cast<std::chrono::nanoseconds>(t1);
+			auto epoch = ms_int.time_since_epoch();
+			auto value = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch);
+
+			drawable->drawImplementation(renderInfo);
+			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+			auto t2 = std::chrono::high_resolution_clock::now();
+			auto ms_int2 = std::chrono::time_point_cast<std::chrono::nanoseconds>(t2);
+			auto epoch2 = ms_int2.time_since_epoch();
+			auto value2 = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch2);
+
+			std::cout << "Clip1: " << std::endl;
+			std::cout << "time: " << value2.count() - value.count() << " nanoseconds" << std::endl;
+
+		}
+
+
+
+
 
 		osg::GLBufferObject* glBufferObject = _ssbbExcess->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
  
@@ -1394,14 +1615,21 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 			glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
 
 
-		unsigned int value = uintArray->front();
- 
+		 
+		 
 
- 		
+
+		
+
+
+ 		//Go through Excess Buffer
 		uint32_t* stepSize = new uint32_t[_buffersize];
 		memset(stepSize, 0, _buffersize * sizeof(uint32_t));
 		bool computePass2 = false;
+		//std::cout << "Excess Values: " << std::endl;
+
 		for (unsigned int i = 0; i < _buffersize; i++) {
+			//std::cout << uintArray->at(i) << " ";
 			if (uintArray->at(i) == 0) {
 				stepSize[i] = 0;
 			}
@@ -1469,47 +1697,28 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 			renderInfo.getState()->get<osg::GLExtensions>()->glUniform1ui(
 				renderInfo.getState()->get<osg::GLExtensions>()->glGetUniformLocation(id, "minClipValue"), minClipValue);
 
-			///////////////DEBUGGING
-			{
-				osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(32*_numGrayVals);
-				osg::GLBufferObject* glBufferObject = _ssbbHist->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
-				//std::cout << glBufferObject << std::endl;
+			
 
-				GLint previousID = 1;
-				glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &previousID);
-
-				if ((GLuint)previousID != glBufferObject->getGLObjectID())
-					glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, glBufferObject->getGLObjectID());
-
-				GLubyte* data = (GLubyte*)glBufferObject->_extensions->glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY_ARB);
-				//std::cout << data << std::endl;
-				if (data)
-				{
-					size_t size = osg::minimum<int>(_ssbbHist->getSize(), uintArray->getTotalDataSize());
-					memcpy((void*)&(uintArray->front()), data + _ssbbHist->getOffset(), size);
-					glBufferObject->_extensions->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-				}
-
-				if ((GLuint)previousID != glBufferObject->getGLObjectID())
-					glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
-
-
-				unsigned int value = uintArray->front();
-				/*std::cout << "Excess after clip" << value << std::endl;
-
-				for (int i = 0; i < 100; i++) {
-					std::cout << uintArray->at(i) << std::endl;
-
-				}*/
-
-
-			}
-			//DEBUGGING/////////////////////////////
-
+			auto t1 = std::chrono::high_resolution_clock::now();
+			auto ms_int = std::chrono::time_point_cast<std::chrono::nanoseconds>(t1);
+			auto epoch = ms_int.time_since_epoch();
+			auto value = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch);
 
 			renderInfo.getState()->get<osg::GLExtensions>()->glDispatchCompute((GLuint)((histSize + 63) / 64), 1, 1);
 
  			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+
+			auto t2 = std::chrono::high_resolution_clock::now();
+			auto ms_int2 = std::chrono::time_point_cast<std::chrono::nanoseconds>(t2);
+			auto epoch2 = ms_int2.time_since_epoch();
+			auto value2 = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch2);
+
+			std::cout << "Clip2: " << std::endl;
+			std::cout << "time: " << value2.count() - value.count() << " nanoseconds" << std::endl;
+
+
+
 			renderInfo.getState()->get<osg::GLExtensions>()->glUseProgram(0);
 
 			renderInfo.getState()->get<osg::GLExtensions>()->glDeleteBuffers(1, &stepSizeBuffer);
@@ -1518,138 +1727,87 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 
 
 
-			///////////////DEBUGGING
-			{
-				osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(32*_numGrayVals);
-				osg::GLBufferObject* glBufferObject = _ssbbHist->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
-				//std::cout << glBufferObject << std::endl;
-
-				GLint previousID = 1;
-				glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &previousID);
-
-				if ((GLuint)previousID != glBufferObject->getGLObjectID())
-					glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, glBufferObject->getGLObjectID());
-
-				GLubyte* data = (GLubyte*)glBufferObject->_extensions->glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY_ARB);
-				//std::cout << data << std::endl;
-				if (data)
-				{
-					size_t size = osg::minimum<int>(_ssbbHist->getSize(), uintArray->getTotalDataSize());
-					memcpy((void*)&(uintArray->front()), data + _ssbbHist->getOffset(), size);
-					glBufferObject->_extensions->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-				}
-
-				if ((GLuint)previousID != glBufferObject->getGLObjectID())
-					glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
-
-
-				unsigned int value = uintArray->front();
-				/*std::cout << "Excess after clip" << value << std::endl;
-
-				for (int i = 0; i < 100; i++) {
-						std::cout << uintArray->at(i) << std::endl;
-
-				}*/
-
-
-			}
-			//DEBUGGING/////////////////////////////
-			delete[] stepSize;
+			
 		}
 
 
 		////////////////////////////////////////////////////////////////////////////
 	// Map the histograms 
 	// - calculate the CDF for each of the histograms and store it in hist
-		
-		
-
-		osg::ref_ptr<osg::UIntArray> _atomicCounterArray = new osg::UIntArray();
-		_atomicCounterArray->push_back(0);
-		_atomicCounterArray->push_back(0);
-		_atomicCounterArray->push_back(0);
-		_acbbminMax->readData(*renderInfo.getState(), *_atomicCounterArray);
-		renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
-		
-
-		
-
-
-		uint32_t numPixelsSB;
-
-
-		if (numPixels == -1) {
-			osg::Vec3 sizeSB;
-		/*	if (_selectionVec.x() != -1) {
-				 sizeSB = osg::Vec3(_selectionVec.x() / _sb3D.x(), _selectionVec.y() / _sb3D.y(), _selectionVec.z() / _sb3D.z());
-			}
-			else {*/
-				 sizeSB = osg::Vec3(volDims.x() / _sb3D.x(), volDims.y() / _sb3D.y(), volDims.z() / _sb3D.z());
-			//}
-			numPixelsSB = sizeSB.x() * sizeSB.y() * sizeSB.z();
-		}
-		else {
-			numPixelsSB = numPixels;
-		}
-
-		uint32_t* hist = new uint32_t[histSize];
-		memset(hist, 0, histSize * sizeof(uint32_t));
-		GLEX()->glBindBuffer(GL_SHADER_STORAGE_BUFFER, histID);
-		hist = (uint32_t*)(GLEX()->glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE_ARB));
-
-		
-
-		std::vector<std::thread> threads;
-		for (unsigned int currHistIndex = 0; currHistIndex < _buffersize; currHistIndex++) {
-			uint32_t* currHist = &hist[currHistIndex * _numGrayVals];
-			threads.push_back(std::thread(mapHistogram, (uint32_t)_atomicCounterArray->at(1), (uint32_t)_atomicCounterArray->at(2), numPixelsSB, (uint32_t)_numGrayVals, currHist));
-		}
-		for (auto& currThread : threads) {
-			currThread.join();
-		}
-		
-		GLEX()->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-		GLEX()->glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-
-
-
-
-		///////////////DEBUGGING
 		{
-			osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_numGrayVals * numHist);
-			osg::GLBufferObject* glBufferObject = _ssbbHist->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
-			//std::cout << glBufferObject << std::endl;
 
-			GLint previousID = 1;
-			glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &previousID);
+			osg::ref_ptr<osg::UIntArray> _atomicCounterArray = new osg::UIntArray();
+			_atomicCounterArray->push_back(0);
+			_atomicCounterArray->push_back(0);
+			_atomicCounterArray->push_back(0);
+			_acbbminMax->readData(*renderInfo.getState(), *_atomicCounterArray);
+			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-			if ((GLuint)previousID != glBufferObject->getGLObjectID())
-				glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, glBufferObject->getGLObjectID());
 
-			GLubyte* data = (GLubyte*)glBufferObject->_extensions->glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY_ARB);
-			//std::cout << data << std::endl;
-			if (data)
-			{
-				size_t size = osg::minimum<int>(_ssbbHist->getSize(), uintArray->getTotalDataSize());
-				memcpy((void*)&(uintArray->front()), data + _ssbbHist->getOffset(), size);
-				glBufferObject->_extensions->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+
+
+			uint32_t numPixelsSB;
+
+
+			if (numPixels == -1) {
+				osg::Vec3 sizeSB;
+				/*	if (_selectionVec.x() != -1) {
+						 sizeSB = osg::Vec3(_selectionVec.x() / _sb3D.x(), _selectionVec.y() / _sb3D.y(), _selectionVec.z() / _sb3D.z());
+					}
+					else {*/
+				sizeSB = osg::Vec3(volDims.x() / _sb3D.x(), volDims.y() / _sb3D.y(), volDims.z() / _sb3D.z());
+				//}
+				numPixelsSB = sizeSB.x() * sizeSB.y() * sizeSB.z();
+			}
+			else {
+				numPixelsSB = numPixels;
 			}
 
-			if ((GLuint)previousID != glBufferObject->getGLObjectID())
-				glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
+			uint32_t* hist = new uint32_t[histSize];
+			memset(hist, 0, histSize * sizeof(uint32_t));
+			GLEX()->glBindBuffer(GL_SHADER_STORAGE_BUFFER, histID);
+			hist = (uint32_t*)(GLEX()->glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE_ARB));
 
 
-			unsigned int value = uintArray->front();
-			/*std::cout << "Hist after clip" << value << std::endl;
 
-			for (int i = 0; i < 100; i++) {
- 					std::cout << uintArray->at(i) << std::endl;
-				
-			}*/
+			auto t1 = std::chrono::high_resolution_clock::now();
+			auto ms_int = std::chrono::time_point_cast<std::chrono::nanoseconds>(t1);
+			auto epoch = ms_int.time_since_epoch();
+			auto value = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch);
 
-			
+
+
+			std::vector<std::thread> threads;
+			std::vector<std::future<void>> _futures;
+
+			for (unsigned int currHistIndex = 0; currHistIndex < _buffersize; currHistIndex++) {
+				uint32_t* currHist = &hist[currHistIndex * _numGrayVals];
+				_futures.push_back(std::async(std::launch::async, mapHistogram, (uint32_t)_atomicCounterArray->at(1), (uint32_t)_atomicCounterArray->at(2), numPixelsSB, (uint32_t)_numGrayVals, currHist));
+ 			}
+			for (auto& currThread : _futures) {
+				currThread.get();
+			}
+
+			//for (unsigned int currHistIndex = 0; currHistIndex < _buffersize; currHistIndex++) {
+			//	uint32_t* currHist = &hist[currHistIndex * _numGrayVals];
+			//	 mapHistogram((uint32_t)_atomicCounterArray->at(1), (uint32_t)_atomicCounterArray->at(2), numPixelsSB, (uint32_t)_numGrayVals, currHist);
+			//} 
+			auto t2 = std::chrono::high_resolution_clock::now();
+			auto ms_int2 = std::chrono::time_point_cast<std::chrono::nanoseconds>(t2);
+			auto epoch2 = ms_int2.time_since_epoch();
+			auto value2 = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch2);
+
+			std::cout << "Extra Cpu Clip: " << std::endl;
+			std::cout << "time: " << value2.count() - value.count() << " nanoseconds" << std::endl;
+
+			GLEX()->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+			GLEX()->glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+
+
+
 		}
-		//DEBUGGING/////////////////////////////
 
 
  		stop[0] = 1;
@@ -1658,4 +1816,20 @@ void Clip1SSB::drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawab
 
 
 	
+}
+
+void Clip1SSB::mapHistogram(uint32_t minVal, uint32_t maxVal, uint32_t numPixelsSB, uint32_t numBins, uint32_t* localHist) {
+
+	float sum = 0;
+	const float scale = ((float)(maxVal - minVal)) / (float)numPixelsSB;
+
+	// for each bin
+	for (unsigned int i = 0; i < numBins; i++) {
+
+		// add the histogram value for this contextual region to the sum 
+		sum += localHist[i];
+
+		// normalize the cdf
+		localHist[i] = (unsigned int)(std::min(minVal + sum * scale, (float)maxVal));
+	}
 }

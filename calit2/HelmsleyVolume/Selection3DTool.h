@@ -33,6 +33,9 @@ public:
 	osg::Uniform* _selectionCenter;
 	osg::ref_ptr<osg::MatrixTransform> _cubeMT;
 
+	osg::Vec3 _currCubeCoord;
+	osg::Vec3 _currCubeCoordNorm;
+
 private:
 	bool _active = false;
 };
@@ -84,8 +87,11 @@ public:
 
 	void setNewVolume(VolumeGroup* volumeGroup);
 
-	osg::Vec3 _scaledDims;
+	osg::Vec3 _scaledDims = osg::Vec3(0, 0, 0);
+	osg::Vec3 _normDims = osg::Vec3(0, 0, 0);
 	osg::Vec3 _scale = osg::Vec3(0, 0, 0);
+
+	std::pair<osg::Vec3, osg::Vec3> getSelectionCenterAndDims();
 
 protected:
 	void init();

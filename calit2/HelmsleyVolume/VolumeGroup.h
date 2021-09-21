@@ -60,7 +60,9 @@ enum RENDERBIN_ORDER : int {
 
 
 
-
+namespace vkt {
+	class HierarchicalVolume;
+}
 
 
 class VolumeGroup : public osg::Group
@@ -101,14 +103,14 @@ public:
 	///////CLAHE Variables
 	
 	float _claheRes = 4.0f;
-	osg::Vec3i _numSB_3D = osg::Vec3i(4, 4, 2);
+	osg::Vec3i _numSB_3D = osg::Vec3i(4, 4, 4);
 	osg::Vec3i _sizeSB = osg::Vec3i(0, 0, 0);
 
 
 	float _clipLimit3D = 0.85f;
 	float _minClipValue = 0.0;
 	osg::Vec3i _volDims = osg::Vec3i(0, 0, 0);
- 	unsigned int _numGrayVals = 255u;
+ 	unsigned int _numGrayVals = 256u;
 	unsigned int _histSize = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z() * _numGrayVals;
 	unsigned int _numHist = _numSB_3D.x() * _numSB_3D.y() * _numSB_3D.z();
 
@@ -249,9 +251,11 @@ public:
  	void setUseVolkit(bool use) {
 		_useVolkit = use;
 	};
+	void vktCrop();
 #endif 
 	//Getters
 	osg::Vec3 getScale() { return _scale; }
+	std::pair<osg::Vec3, osg::Vec3> getSelectionCenterAndDims();
 
 protected:
 	bool _hasMask;
@@ -295,9 +299,7 @@ protected:
 	
 
 
-	//osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbHist;
-//	osg::ref_ptr<osg::ShaderStorageBufferBinding> ssbbExcess;
-
+ 
 	std::vector<osg::ref_ptr<osg::Geode>>* _centerLineGeodes;
 	std::shared_ptr<void> _illeumLine;
 	std::shared_ptr<void> _colonLine;
@@ -316,6 +318,10 @@ protected:
 #ifdef VOLKIT
 	bool _useVolkit = false;
 	std::string _fileName = "";
+	std::string _seriesPath = "";
+	
+	int _hvDims[3];
+	static void vktCrop(std::string path);
 #endif 
 	
 
@@ -374,15 +380,36 @@ public:
 	{
 		if (group->isDirty(renderInfo.getCurrentCamera()->getGraphicsContext()) && stop[0] != 1)
 		{
- 
+			auto t1 = std::chrono::high_resolution_clock::now();
+			auto ms_int = std::chrono::time_point_cast<std::chrono::nanoseconds>(t1);
+			auto epoch = ms_int.time_since_epoch();
+			auto value = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch);
+			const_cast<long&>(_t1) = value.count();
+			long duration = value.count();
+
+			auto t3 = std::chrono::high_resolution_clock::now();
+			auto ms_int3 = std::chrono::time_point_cast<std::chrono::milliseconds>(t3);
+			auto epoch3 = ms_int3.time_since_epoch();
+			auto value3 = std::chrono::duration_cast<std::chrono::milliseconds>(epoch3);
+			const_cast<long&>(_t1) = value3.count();
+			
+
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
-			auto t1 = std::chrono::high_resolution_clock::now();
-			auto ms_int = std::chrono::time_point_cast<std::chrono::milliseconds>(t1);
-			auto epoch = ms_int.time_since_epoch();
-			auto value = std::chrono::duration_cast<std::chrono::milliseconds>(epoch);
-			const_cast<long&>(_t1) = value.count();
 			
+			auto t2 = std::chrono::high_resolution_clock::now();
+			auto ms_int2 = std::chrono::time_point_cast<std::chrono::nanoseconds>(t2);
+			auto epoch2 = ms_int2.time_since_epoch();
+			auto value2 = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch2);
+			long duration2 = value2.count();
+
+			long d = duration2 - duration;
+
+
+
+			std::cout << "MinMax: " << std::endl;
+			std::cout << "time: " << d << " nanoseconds" << std::endl;
+
 			stop[0] = 1;
 			
 		}
@@ -439,49 +466,26 @@ public:
 		if (group->isDirty(renderInfo.getCurrentCamera()->getGraphicsContext()) && stop[0] != 1)
 		{
 			
+			auto t1 = std::chrono::high_resolution_clock::now();
+			auto ms_int = std::chrono::time_point_cast<std::chrono::nanoseconds>(t1);
+			auto epoch = ms_int.time_since_epoch();
+			auto value = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch);
+ 
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-			///////////////DEBUGGING
-			{
-				osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_buffersize);
-				osg::GLBufferObject* glBufferObject = _ssbb->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
-				//std::cout << glBufferObject << std::endl;
+			auto t2 = std::chrono::high_resolution_clock::now();
+			auto ms_int2 = std::chrono::time_point_cast<std::chrono::nanoseconds>(t2);
+			auto epoch2 = ms_int2.time_since_epoch();
+			auto value2 = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch2);
 
-				GLint previousID = 1;
-				glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &previousID);
+			std::cout << "Hist: " << std::endl;
+			std::cout << "time: " << value2.count() - value.count() << " nanoseconds" << std::endl;
 
-				if ((GLuint)previousID != glBufferObject->getGLObjectID())
-					glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, glBufferObject->getGLObjectID());
-
-				GLubyte* data = (GLubyte*)glBufferObject->_extensions->glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY_ARB);
-				//std::cout << data << std::endl;
-				if (data)
-				{
-					size_t size = osg::minimum<int>(_ssbb->getSize(), uintArray->getTotalDataSize());
-					memcpy((void*)&(uintArray->front()), data + _ssbb->getOffset(), size);
-					glBufferObject->_extensions->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-				}
-
-				if ((GLuint)previousID != glBufferObject->getGLObjectID())
-					glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
-
-
-				unsigned int value = uintArray->front();
-				//std::cout << "Hist before clip" << value << std::endl;
-
-				/*for (int i = 0; i < 100; i++) {
-					std::cout << uintArray->at(i) << std::endl;
-
-				}*/
-
-
-			}
-			//DEBUGGING/////////////////////////////
 			/////////////////DEBUGGING
 			//{
-			//	osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_buffersize2);
-			//	osg::GLBufferObject* glBufferObject = _ssbb2->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
+			//	osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_buffersize);
+			//	osg::GLBufferObject* glBufferObject = _ssbb->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
 			//	//std::cout << glBufferObject << std::endl;
 
 			//	GLint previousID = 1;
@@ -494,8 +498,8 @@ public:
 			//	//std::cout << data << std::endl;
 			//	if (data)
 			//	{
-			//		size_t size = osg::minimum<int>(_ssbb2->getSize(), uintArray->getTotalDataSize());
-			//		memcpy((void*)&(uintArray->front()), data + _ssbb2->getOffset(), size);
+			//		size_t size = osg::minimum<int>(_ssbb->getSize(), uintArray->getTotalDataSize());
+			//		memcpy((void*)&(uintArray->front()), data + _ssbb->getOffset(), size);
 			//		glBufferObject->_extensions->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 			//	}
 
@@ -503,15 +507,18 @@ public:
 			//		glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
 
 
-			//	/*unsigned int value = uintArray->front();
-			//	std::cout << "Hist Check before Lerp " << value << std::endl;*/
-			//	std::cout << "testing histmax..." << std::endl;
-			//	for (int i = 0; i < _buffersize2; i++) {
-			//		std::cout << uintArray->at(i) << std::endl;
+			//	unsigned int value = uintArray->front();
+			//	/*std::cout << "CLAHE Hist before clip" << value << std::endl;
+			//	long int sum = 0;
+			//	for (int i = 0; i < 256; i++) {
+			//		std::cout << uintArray->at(i) << " ";
+			//		sum += uintArray->at(i);
+
 			//	}
+			//	std::cout << "CLAHE sum " << sum;*/
+
 
 			//}
-			////DEBUGGING/////////////////////////////
 
 
 			stop[0] = 1;
@@ -542,10 +549,56 @@ public:
 		{
  			/*osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_buffersize);*/
 
+			auto t1 = std::chrono::high_resolution_clock::now();
+			auto ms_int = std::chrono::time_point_cast<std::chrono::nanoseconds>(t1);
+			auto epoch = ms_int.time_since_epoch();
+			auto value = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch);
+
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-			
+			auto t2 = std::chrono::high_resolution_clock::now();
+			auto ms_int2 = std::chrono::time_point_cast<std::chrono::nanoseconds>(t2);
+			auto epoch2 = ms_int2.time_since_epoch();
+			auto value2 = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch2);
+
+			std::cout << "Excess: " << std::endl;
+			std::cout << "time: " << value2.count() - value.count() << " nanoseconds" << std::endl;
+
+			/////////////////DEBUGGING
+			//{
+			//	osg::ref_ptr<osg::UIntArray> uintArray = new osg::UIntArray(_buffersize);
+			//	osg::GLBufferObject* glBufferObject = _ssbb->getBufferData()->getBufferObject()->getOrCreateGLBufferObject(renderInfo.getState()->getContextID());
+ 
+			//	GLint previousID = 1;
+			//	glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &previousID);
+
+			//	if ((GLuint)previousID != glBufferObject->getGLObjectID())
+			//		glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, glBufferObject->getGLObjectID());
+
+			//	GLubyte* data = (GLubyte*)glBufferObject->_extensions->glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY_ARB);
+ 		//		if (data)
+			//	{
+			//		size_t size = osg::minimum<int>(_ssbb->getSize(), uintArray->getTotalDataSize());
+			//		memcpy((void*)&(uintArray->front()), data + _ssbb->getOffset(), size);
+			//		glBufferObject->_extensions->glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+			//	}
+
+			//	if ((GLuint)previousID != glBufferObject->getGLObjectID())
+			//		glBufferObject->_extensions->glBindBuffer(GL_SHADER_STORAGE_BUFFER, previousID);
+
+
+ 		//		/*std::cout << "CLAHE Excess " << std::endl;
+			//	long int sum = 0;
+			//	for (int i = 0; i < _buffersize; i++) {
+			//		std::cout << uintArray->at(i) << " ";
+			//		sum += uintArray->at(i);
+
+			//	}
+			//	std::cout << "CLAHE Excess sum " << sum;*/
+
+
+			//}
 
 
 
@@ -570,21 +623,8 @@ public:
 	virtual void drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const;
 	
 
-	static void mapHistogram(uint32_t minVal, uint32_t maxVal, uint32_t numPixelsSB, uint32_t numBins, uint32_t* localHist) {
-
-		float sum = 0;
-		const float scale = ((float)(maxVal - minVal)) / (float)numPixelsSB;
-
-		// for each bin
-		for (unsigned int i = 0; i < numBins; i++) {
-
-			// add the histogram value for this contextual region to the sum 
-			sum += localHist[i];
-
-			// normalize the cdf
-			localHist[i] = (unsigned int)(std::min(minVal + sum * scale, (float)maxVal));
-		}
-	}
+	static void mapHistogram(uint32_t minVal, uint32_t maxVal, uint32_t numPixelsSB, uint32_t numBins, uint32_t* localHist);
+		 
 
 
 	
@@ -617,19 +657,32 @@ public:
 	{
 		if (group->isDirty(renderInfo.getCurrentCamera()->getGraphicsContext()) && stop[0] != 1)
 		{
-			
+
+			auto t1 = std::chrono::high_resolution_clock::now();
+			auto ms_int = std::chrono::time_point_cast<std::chrono::nanoseconds>(t1);
+			auto epoch = ms_int.time_since_epoch();
+			auto value = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch);
+
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+			auto t2 = std::chrono::high_resolution_clock::now();
+			auto ms_int2 = std::chrono::time_point_cast<std::chrono::nanoseconds>(t2);
+			auto epoch2 = ms_int2.time_since_epoch();
+			auto value2 = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch2);
+
+			std::cout << "Lerp: " << std::endl;
+			std::cout << "time: " << value2.count() - value.count() << " nanoseconds" << std::endl;
  			
 			
 			//group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
- 			auto t2 = std::chrono::high_resolution_clock::now();
-			auto ms_int = std::chrono::time_point_cast<std::chrono::milliseconds>(t2);
-			auto epoch = ms_int.time_since_epoch();
-			auto value = std::chrono::duration_cast<std::chrono::milliseconds>(epoch);
+ 			auto t3 = std::chrono::high_resolution_clock::now();
+			auto ms_int3 = std::chrono::time_point_cast<std::chrono::milliseconds>(t3);
+			auto epoch3 = ms_int3.time_since_epoch();
+			auto value3 = std::chrono::duration_cast<std::chrono::milliseconds>(epoch3);
 
-			std::cout << "time: " << value.count() - _minmaxCallback->_t1   << " milliseconds"<< std::endl;
- 			 
+			std::cout << "Total time: " << value3.count() - _minmaxCallback->_t1   << " milliseconds"<< std::endl;
+ 		//	 
 			stop[0] = 1;
 			_claheDirty[0] = 0;
 		}
@@ -662,13 +715,17 @@ public:
 			drawable->drawImplementation(renderInfo);
 			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-			/*osg::ref_ptr<osg::UIntArray> _atomicCounterArray = new osg::UIntArray(1);
-			
+
+			osg::ref_ptr<osg::UIntArray> _atomicCounterArray = new osg::UIntArray();
+			_atomicCounterArray->push_back(0);
 			_acbb->readData(*renderInfo.getState(), *_atomicCounterArray);
+			renderInfo.getState()->get<osg::GLExtensions>()->glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-			unsigned int value = osg::maximum(1u, _atomicCounterArray->front());*/
 
-			histMax[0] = 1000u;
+			unsigned int value = osg::maximum(1u, _atomicCounterArray->front());
+
+			histMax[0] = value;
+			std::cout << "value: " << value << std::endl;
 			stop[0] = 1;
 			group->setDirty(renderInfo.getCurrentCamera()->getGraphicsContext(), false);
 
@@ -680,7 +737,7 @@ public:
 
 
 
-	uint16_t* stop = new uint16_t(0);
+	uint16_t* stop = new uint16_t(1);
 	uint32_t* histMax = new uint32_t(0);
 	
 

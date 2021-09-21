@@ -331,6 +331,7 @@ osg::Image* LoadRAWVolumeImage(const string& file, osg::Matrix& transform) {
 			for (unsigned int x = 0; x < w; x++) {
 				j = 2 * (x + y * w);
 				slice[j] = fileBuf[x + y * w + i*h*w] * 255;
+				//slice[j] = fileBuf[x + y * w + i*h*w];
 			 
 
 
@@ -347,7 +348,7 @@ osg::Image* LoadRAWVolumeImage(const string& file, osg::Matrix& transform) {
 
 osg::Image* ImageLoader::LoadImage(const string& path, osg::Vec3& size) {
 	string ext = GetExt(path.c_str());
-	if (ext == "dcm")
+	if (ext == "dcm" || ext == "")
 		return LoadDicomImage(path, size);
 	else
 		return 0;
@@ -368,13 +369,12 @@ void GetFiles(const string& path, vector<string>& files) {
 		if (ffd.cFileName[0] == L'.') continue;
 
 		string c = path + "\\" + ffd.cFileName;
-
 		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
 			// file is a directory
 		}
 		else {
 			string ext = GetExt(c);
-			if (ext == "dcm" || ext == "raw" || ext == "png")
+			if (ext == "dcm" || ext == "raw" || ext == "png" || ext == "")
 				files.push_back(GetFullPath(c));
 		}
 	} while (FindNextFileA(hFind, &ffd) != 0);
@@ -451,7 +451,7 @@ osg::Image* ImageLoader::LoadVolume(const string& path, osg::Matrix& transform) 
 	if (files.size() == 0) return 0;
 
 	string ext = GetExt(files[0]);
-	if (ext == "dcm")
+	if (ext == "dcm" || ext == "")
 		return LoadDicomVolume(files, transform);
 	else
 		return 0;

@@ -5,7 +5,7 @@
 #include "cvrConfig/ConfigManager.h"
 #include <windows.h>
 #include <tchar.h>
-#include <filesystem>
+
 
 
 #ifdef WIN32
@@ -249,16 +249,19 @@ void NewVolumeMenu::init()
 	
 	_cp = new ColorPicker();
 	_tentWindowOnly = new TentWindowOnly();
-	//_histQuad = new HistQuad();
+#ifdef HIST
+	_histQuad = new HistQuad();
+	_histQuad->setVolume(_volume);
+	//_histQuad->setMax(_volume->getHistMax());
+	//_histQuad->setBB(_volume->getHistBB());
+#endif
 	 _tentWindow = new TentWindow(_tentWindowOnly);
 	_menu->addChild(_tentWindow);
 	_tentWindow->setPercentSize(osg::Vec3(1, 1, .75));
 	_tentWindow->setPercentPos(osg::Vec3(0, 0, -1));
 	_tentWindow->setVolume(_volume);
-	//_histQuad->setVolume(_volume);
-	//_histQuad->setMax(_volume->getHistMax());
-	//_histQuad->setBB(_volume->getHistBB());
-	//
+
+	
 
 
 	UIList* list = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
@@ -579,28 +582,30 @@ void NewVolumeMenu::init()
 	_maskMenu = new UIPopup();
 	_contrastMenu = new UIPopup();
 	UIQuadElement* regionHeaderBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
+
+#ifdef PRESET
 	_presetBknd = new UIQuadElement(UI_BACKGROUND_COLOR);
 	_presetBknd->setBorderSize(.01);
 	_presetPopup = new UIPopup;
 
-	UIText* regionLabel = new UIText("Regions", 50.0f, osgText::TextBase::CENTER_CENTER);
-	regionLabel->setPercentSize(osg::Vec3(1, 1, 0.2));
 
-	
+	UIText* presetsLabel = new UIText("Presets", 50.0f, osgText::TextBase::CENTER_CENTER);
+	presetsLabel->setPercentSize(osg::Vec3(1, 0, 0.2));
+	presetsLabel->setPercentPos(osg::Vec3(0, -.1, -.05));
 
+	_presetBknd->setPercentSize(osg::Vec3(.3, 0.0, .3));
+	_presetBknd->setBorderSize(.01);
+	_presetBknd->addChild(presetsLabel);
+	_presetPopup->addChild(_presetBknd);
 
-	label = new UIText(" Add Region ", 35.0f, osgText::TextBase::CENTER_CENTER);
-	label->setColor(UI_WHITE_COLOR);
-	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
-	labelbknd = new UIQuadElement(UI_RED_HOVER_COLOR_VEC4);
-	labelbknd->setPercentPos(osg::Vec3(.1, -1, -.15));
-	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
-  	labelbknd->setRounding(0, .2);
-	labelbknd->setTransparent(true);
-	labelbknd->addChild(label);
-	_addTriangleButton = std::make_shared<HoverButton>(labelbknd, UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
-	_addTriangleButton->setCallback(this);
-	_addTriangleButton->addChild(labelbknd);
+	_presetUIList = addPresets(_presetBknd);
+	if (_presetUIList == nullptr) {
+		_presetUIList = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
+		_presetUIList->setPercentPos(osg::Vec3(0, 0, -.25));
+		_presetUIList->setPercentSize(osg::Vec3(1.0, 1.0, .75));
+		_presetBknd->addChild(_presetUIList);
+	}
+
 
 	label = new UIText(" Save Preset ", 35.0f, osgText::TextBase::CENTER_CENTER);
 	label->setColor(UI_WHITE_COLOR);
@@ -629,27 +634,32 @@ void NewVolumeMenu::init()
 	_loadPresetButton->addChild(labelbknd);
 
 
+#endif PRESET
+	UIText* regionLabel = new UIText("Regions", 50.0f, osgText::TextBase::CENTER_CENTER);
+	regionLabel->setPercentSize(osg::Vec3(1, 1, 0.2));
+
+	
+
+
+	label = new UIText(" Add Region ", 35.0f, osgText::TextBase::CENTER_CENTER);
+	label->setColor(UI_WHITE_COLOR);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+	labelbknd = new UIQuadElement(UI_RED_HOVER_COLOR_VEC4);
+	labelbknd->setPercentPos(osg::Vec3(.1, -1, -.15));
+	labelbknd->setPercentSize(osg::Vec3(.8, 1, .65));
+  	labelbknd->setRounding(0, .2);
+	labelbknd->setTransparent(true);
+	labelbknd->addChild(label);
+	_addTriangleButton = std::make_shared<HoverButton>(labelbknd, UI_RED_HOVER_COLOR_VEC4, UI_RED_ACTIVE_COLOR);
+	_addTriangleButton->setCallback(this);
+	_addTriangleButton->addChild(labelbknd);
+
+
 	regionHeaderBknd->addChild(regionLabel);
 	regionHeaderBknd->setPercentSize(osg::Vec3(1.62,1.0,0.7));
 	regionHeaderBknd->setBorderSize(.01);
 	
-	UIText* presetsLabel = new UIText("Presets", 50.0f, osgText::TextBase::CENTER_CENTER);
-	presetsLabel->setPercentSize(osg::Vec3(1, 0, 0.2));
-	presetsLabel->setPercentPos(osg::Vec3(0, -.1, -.05));
 
-	
-	_presetBknd->setPercentSize(osg::Vec3(.3, 0.0, .3));
-	_presetBknd->setBorderSize(.01);
-	_presetBknd->addChild(presetsLabel);
-	_presetPopup->addChild(_presetBknd);
-
-	_presetUIList = addPresets(_presetBknd);
-	if (_presetUIList == nullptr) {
-		_presetUIList = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
-		_presetUIList->setPercentPos(osg::Vec3(0, 0, -.25));
-		_presetUIList->setPercentSize(osg::Vec3(1.0, 1.0, .75));
-		_presetBknd->addChild(_presetUIList);
-	}
 
 	_triangleList = new UIList(UIList::TOP_TO_BOTTOM, UIList::CONTINUE);
 	_triangleList->setPercentPos(osg::Vec3(0.0, 0.0, -.25));
@@ -705,8 +715,10 @@ void NewVolumeMenu::init()
 	UIList* regionTopList = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
 	regionTopList->setPercentPos(osg::Vec3(0.0, 0.0, .25));
 	regionTopList->addChild(_addTriangleButton.get());
+#ifdef PRESET
 	regionTopList->addChild(_addPresetButton.get());
 	regionTopList->addChild(_loadPresetButton.get());
+#endif
 	_triangleList->addChild(regionTopList);
 	_triangleList->addChild(_triangleCallbacks[_triangleIndex]);
 	_triangleList->setMaxSize(label->getAbsoluteSize().z()*3);
@@ -789,7 +801,7 @@ void NewVolumeMenu::init()
 	label = new UIText("Number of Bins: ", 24.0f, osgText::TextBase::LEFT_CENTER);
 	label->setPercentPos(osg::Vec3(0.05, 0.0, 0.0));
 	numBinTexts->addChild(label);
-	_numBinsLabel = new UIText("255", 24.0f, osgText::TextBase::RIGHT_CENTER);
+	_numBinsLabel = new UIText("256", 24.0f, osgText::TextBase::RIGHT_CENTER);
 	_numBinsLabel->setPercentPos(osg::Vec3(-0.05, 0.0, 0.0));
 	numBinTexts->addChild(_numBinsLabel);
 	claheUI->addChild(numBinTexts);
@@ -803,6 +815,7 @@ void NewVolumeMenu::init()
 	_numBinsSlider->handle->setAbsoluteSize(osg::Vec3(20, 0, 0));
 	_numBinsSlider->handle->setAbsolutePos(osg::Vec3(-10, -0.2f, 0));
 	_numBinsSlider->handle->setPercentSize(osg::Vec3(0, 1, 1));
+
 	claheUI->addChild(_numBinsSlider);
 
 	UIList* clipLimitTexts = new UIList(UIList::LEFT_TO_RIGHT, UIList::CONTINUE);
@@ -881,10 +894,14 @@ void NewVolumeMenu::init()
 	_useClaheSelection->addChild(buttonBknd);
 	_useClaheSelection->addChild(label);
 
+
 	buttonList->setPercentPos(osg::Vec3(.05, 0.0, 1.0));
 	buttonList->addChild(_genClaheButton);
 	buttonList->addChild(_useClaheButton);
 	buttonList->addChild(_useClaheSelection);
+
+
+
 	claheUI->addChild(buttonList);
 
 	
@@ -1123,7 +1140,20 @@ void NewVolumeMenu::init()
 	buttonList->addChild(_lockSelectionButton);
 	buttonList->addChild(_toggleSelection);
 	buttonList->addChild(_resetSelectionButton);
+//
 
+#ifdef VOLKIT
+	_cropButton = new CallbackButton();
+	_cropButton->setCallback(this);
+	_cropButton->setPercentSize(osg::Vec3(.7, 1.0, .7));
+	buttonBknd = new UIQuadElement(UI_RED_ACTIVE_COLOR);
+	label = new UIText("Crop Selection", 24.0f, osgText::TextBase::CENTER_CENTER);
+	label->setPercentPos(osg::Vec3(0.0, -1.0, 0.0));
+
+	_cropButton->addChild(buttonBknd);
+	_cropButton->addChild(label);
+	buttonList->addChild(_cropButton);
+#endif // VOLKIT
 
 	selectUI->addChild(buttonList);
 	_selectionMenu->addChild(selectUI);
@@ -1394,6 +1424,7 @@ void NewVolumeMenu::toggleLinkOpacity(bool turnOn) {
 	}
 }
 
+#ifdef PRESET
 UIList* NewVolumeMenu::addPresets(UIQuadElement* bknd) {
 	std::vector<std::string> presetFilePaths = FileSelector::getPresets();
 	UIList* presetUIList;
@@ -1418,6 +1449,7 @@ UIList* NewVolumeMenu::addPresets(UIQuadElement* bknd) {
 	bknd->addChild(presetUIList);
 	return presetUIList;
 }
+#endif PRESET
 
 void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 {	
@@ -1546,6 +1578,8 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 	{
 		useTransferFunction(_transferFunctionRadial->getCurrent());
 	}
+
+#ifdef PRESET
 	else if (item == _addPresetButton.get()) {
 		savePreset();
 	}
@@ -1553,15 +1587,18 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 		_maskMenu->addChild(_presetPopup->getRootElement());
 		_presetPopup->getRootElement()->setPercentPos(osg::Vec3(1.62, 0.0, 0.0));
 	}
+	else if (checkPresetCallbacks(item)) {
+		return;
+	}
+#endif PRESET
+
 	else if (checkTriangleCallbacks(item)) {
 		return;
 	}
 	else if (checkTriangleVisCallbacks(item)) {
 		return;
 	}
-	else if (checkPresetCallbacks(item)) {
-		return;
-	}
+	
 	else if (item == _cp) {
 		osg::Vec3 col = _cp->returnColor();
 
@@ -1599,13 +1636,16 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 			
 		}
 		if (_numBinsSlider->getAdjustedValue() > .5 && _numBinsSlider->getAdjustedValue() < .8) {
-			_numBinsLabel->setText("255");
-			_volume->setNumBins(255);
+			_numBinsLabel->setText("256");
+			_volume->setNumBins(256);
 		}
 		if (_numBinsSlider->getAdjustedValue() < .5) {
 			_numBinsLabel->setText("16");
 			_volume->setNumBins(16);
 		}
+
+	/*	_numBinsLabel->setText(std::to_string(_numBinsSlider->getAdjustedValue()));
+		_volume->setNumBins(_numBinsSlider->getAdjustedValue());*/
 
 	}
 
@@ -1634,7 +1674,11 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 			_volume->setClaheRes(16);
 		}
 
-		
+		//_volume->setClaheRes(_claheResSlider->getAdjustedValue() * 10);
+		//if(_claheResSlider->getAdjustedValue() * 10 < 10.0)
+		//	_claheResLabel->setText(std::to_string(_claheResSlider->getAdjustedValue()*10).substr(0, 1));
+		//else
+		//	_claheResLabel->setText(std::to_string(_claheResSlider->getAdjustedValue()*10).substr(0, 2));
 	}
 
 	else if (item == _genClaheButton) {
@@ -1658,6 +1702,16 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 			((UIText*)_useClaheButton->getChild(int(UI_ID::TEXT)))->setText("Enable CLAHE");
 	}
 
+	else if (item == _useClaheSelection) {
+		bool on = ((UIText*)_useClaheSelection->getChild(int(UI_ID::TEXT)))->getText() == "Enable Selection";
+		_volume->setCLAHEUseSelection(on);
+		_volume->setDirtyAll();
+		if(on)
+			((UIText*)_useClaheSelection->getChild(int(UI_ID::TEXT)))->setText("Disable Selection");
+		else
+			((UIText*)_useClaheSelection->getChild(int(UI_ID::TEXT)))->setText("Enable Selection");
+	}
+	
 	else if (item == _useClaheSelection) {
 		bool on = ((UIText*)_useClaheSelection->getChild(int(UI_ID::TEXT)))->getText() == "Enable Selection";
 		_volume->setCLAHEUseSelection(on);
@@ -1797,7 +1851,13 @@ void NewVolumeMenu::uiCallback(UICallbackCaller * item)
 			((cvr::UIText*)_toggleSelection->getChild(int(UI_ID::TEXT)))->setText("Disable Selection");
 		}
 	}
-	
+#ifdef VOLKIT
+
+	else if (item == _cropButton) {
+	_volume->vktCrop();
+	}
+#endif // VOLKIT
+
 	
 }
 
@@ -1959,8 +2019,10 @@ void NewVolumeMenu::saveValues(VolumeGroup* vg) {
 	
 	vg->values.tentCount = _triangleIndex+1;
 	vg->values.opacityData.clear();
+
+
 	for (int i = 0; i < vg->values.tentCount; i++) {
-		vg->values.opacityData.push_back(_tentWindow->getPresetData(i));
+		vg->values.opacityData.push_back(_tentWindow->getTentData(i));
 	}
 	
 	///////////////////Cutting Plane///////////////////////
@@ -2013,9 +2075,9 @@ void NewVolumeMenu::fillFromVolume(VolumeGroup* vg) {
 	//////////////////opacities//////////////////
 	for (int i = 0; i < tentCount; i++) {
 		_triangleIndex++;
-		char presetIndex = '0' + i;
-		std::string presetName = "tent ";
-		presetName += presetIndex;
+		char tentIndex = '0' + i;
+		std::string tentName = "tent ";
+		tentName += tentIndex;
 		addRegion();
 		float center = vg->values.opacityData[i][0];
 		float bottomWidth = vg->values.opacityData[i][1];
@@ -2207,6 +2269,7 @@ bool NewVolumeMenu::checkTriangleVisCallbacks(UICallbackCaller* item) {
 	return found;
 }
 
+#ifdef PRESET
 bool NewVolumeMenu::checkPresetCallbacks(UICallbackCaller* item) {
 	bool found = false;
 	for (int i = 0; i < _presetCallbacks.size(); i++) {
@@ -2220,6 +2283,7 @@ bool NewVolumeMenu::checkPresetCallbacks(UICallbackCaller* item) {
 	}
 	return found;
 }
+#endif PRESET
 
 bool NewVolumeMenu::checkColorSliderCallbacks(UICallbackCaller* item) {
 	bool found = false;
@@ -2236,6 +2300,7 @@ bool NewVolumeMenu::checkColorSliderCallbacks(UICallbackCaller* item) {
 //#include <sys/types.h>
 //#include <sys/stat.h>
 
+#ifdef PRESET
 void NewVolumeMenu::usePreset(std::string filename) {
 
 	std::string currPath = cvr::ConfigManager::getEntry("Plugin.HelmsleyVolume.AppDir", "C:/", false);
@@ -2379,6 +2444,7 @@ void NewVolumeMenu::usePreset(std::string filename) {
  		HelmsleyVolume::instance()->toggleScreenshotTool(false);
 	}
 }
+#endif
 
 void NewVolumeMenu::resetValues() {
 	_tentWindow->clearTents();
@@ -2571,6 +2637,7 @@ void NewVolumeMenu::setContrastValues(float contrastLow, float contrastHigh, flo
 	_volume->setDirtyAll();
 }
 
+#ifdef PRESET
 void NewVolumeMenu::savePreset(){
 	std::vector<float> opacityData;//0=Center, 1=BottomWidth, 2=TopWidth, 3= Height, 4 = Lowest
 	std::vector<float> contrastData = { _contrastBottom->getAdjustedValue(), _contrastTop->getAdjustedValue(), _brightness->getAdjustedValue()};
@@ -2597,7 +2664,7 @@ void NewVolumeMenu::savePreset(){
 	out << YAML::Value << _triangleIndex + 1;
 
 	for (int i = 0; i < _triangleIndex + 1; i++) {
-		opacityData = _tentWindow->getPresetData(i);
+		opacityData = _tentWindow->getTentData(i);
 		std::string tentString = "tent ";
 		char tentIndex = '0' + i;
 		std::string tentStringIndex = tentString += tentIndex;
@@ -2682,6 +2749,7 @@ void NewVolumeMenu::savePreset(){
 	_presetUIList->addChild(presetbutton);
 	_presetCallbacks.push_back(presetbutton);
 }
+#endif PRESET
 
 inline osg::Matrix ToEulerAngles(osg::Quat q) {
 	
@@ -2714,6 +2782,7 @@ inline osg::Matrix ToEulerAngles(osg::Quat q) {
 	return rotMat;
 }
 
+#ifdef CINE
 void NewVolumeMenu::saveYamlForCinematic() {
 	//volume properties
 	osg::Matrix worldMatrix = _volume->getObjectToWorldMatrix() * _scene->getObjectToWorldMatrix();
@@ -2815,7 +2884,6 @@ void NewVolumeMenu::saveYamlForCinematic() {
 	out << YAML::Value << YAML::BeginMap;
 	out << YAML::Key << "contrast";
 	out << YAML::Value << YAML::Flow << contrastData;
-
 
 	opacityData = _tentWindow->getCinePresetData(0);
 	
@@ -2957,6 +3025,8 @@ void NewVolumeMenu::saveYamlForCinematic() {
 
 	_futures.push_back(std::async(std::launch::async, runCinematicThread, datasetPath, currPath));
  }
+ 
+
 
 void NewVolumeMenu::runCinematicThread(std::string datasetPath, std::string configPath) {
  	LPCSTR lp = _T("C:/Users/g3aguirre/Documents/CAL/ivl-cr/ivl-cr/ivl-cr/x64/Release/ivl-cr.exe");
@@ -2983,11 +3053,13 @@ void NewVolumeMenu::runCinematicThread(std::string datasetPath, std::string conf
 	//HelmsleyVolume::instance()->getScreenshotTool()->takingPhoto(false);
 }
 
+#endif
 
-
+#ifdef HIST
 void NewVolumeMenu::toggleHistogram(bool on) {
 	if (on) {
 		_histQuad->setMax(_volume->getHistMax());
+		_histQuad->setBB(_volume->getHistBB());
 		_tentWindowOnly->addChild(_histQuad);
 	}
 	else {
@@ -2995,7 +3067,7 @@ void NewVolumeMenu::toggleHistogram(bool on) {
 		_histQuad->_parent = nullptr;
 	}
 }
-
+#endif
 void NewVolumeMenu::toggleClaheTools(bool on) {
 	if (on) {
 		//removeAllToolMenus();
@@ -3181,7 +3253,7 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 	_curvedMenu = new CurvedMenu(this, int(TOOLID::COUNT));
 	_curvedMenu->setImage(int(TOOLID::SCREENSHOT), dir + "browser.png");
 	_curvedMenu->setImage(int(TOOLID::CUTTINGPLANE), dir + "slice.png");
-	//_curvedMenu->setImage(int(TOOLID::HISTOGRAM), dir + "histogram.png");
+	_curvedMenu->setImage(int(TOOLID::HISTOGRAM), dir + "histogram.png");
 	_curvedMenu->setImage(int(TOOLID::CLAHE), dir + "clahe.png");
 	_curvedMenu->setImage(int(TOOLID::RULER), dir + "ruler.png");
 	_curvedMenu->setImage(int(TOOLID::CENTERLINE), dir + "centerline.png");
@@ -3213,6 +3285,17 @@ ToolMenu::ToolMenu(int index, bool movable, cvr::SceneObject* parent)
 		_menu->getRootElement()->updateElement(osg::Vec3(0, 0, 0), osg::Vec3(0, 0, 0));
 		_container->dirtyBounds();
 	}
+
+	//DISABLES
+#ifndef HIST
+	_curvedMenu->disableButton(int(TOOLID::HISTOGRAM));
+
+#endif // !HIST
+
+	if (!HelmsleyVolume::instance()->getVolumes()[HelmsleyVolume::instance()->getVolumeIndex()]->hasMask()) {
+		_curvedMenu->disableButton(int(TOOLID::MARCHINGCUBES));
+	}
+
 }
 
 std::vector<CurvedQuad*> ToolMenu::getCurvedMenuItems() {
@@ -3285,7 +3368,8 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 		}
 	}
 
-	/*else if (index.first == int(TOOLID::HISTOGRAM))
+#ifdef HIST
+	else if (index.first == int(TOOLID::HISTOGRAM))
 	{
 		if (index.second->isOn())
 		{
@@ -3297,7 +3381,8 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 			index.second->setColor(UI_BACKGROUND_COLOR);
 			HelmsleyVolume::instance()->toggleHistogram(false);
 		}
-	}*/
+	}
+#endif
 
 	else if (index.first == TOOLID::CLAHE)
 	{
@@ -3381,7 +3466,7 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 			}
 		}
 		else {
-			;
+			
  		}
 	}
 
@@ -3412,14 +3497,16 @@ void ToolMenu::uiCallback(UICallbackCaller* item)
 	}
 
 	else if (index.first == TOOLID::MARCHINGCUBES) {
-
+		if (!index.second->isEnabled())
+			return;
+		
 		if(index.second->isOn())
 		{
 			index.second->setColor(UI_RED_ACTIVE_COLOR);
 			HelmsleyVolume::instance()->toggleMCRender(true);
 			//toggleOtherMenus((int)TOOLID::MARCHINGCUBES);
  		}
-	else
+		else
 		{
 			index.second->setColor(UI_BACKGROUND_COLOR);
 			HelmsleyVolume::instance()->toggleMCRender(false);

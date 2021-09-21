@@ -169,20 +169,18 @@ void main() {
 //	}
 
 	// bilinear interpolation - zFront
-	float up_front = aInv * float(hist[LUF + greyValue]) / float(NUM_IN_BINS) + a * float(hist[RUF + greyValue]) / float(NUM_IN_BINS);
-	float dn_front = aInv * float(hist[LDF + greyValue]) / float(NUM_IN_BINS) + a * float(hist[RDF + greyValue]) / float(NUM_IN_BINS);
+	float up_front = aInv * float(hist[LUF + greyValue]) / float(NUM_IN_BINS-1u) + a * float(hist[RUF + greyValue]) / float(NUM_IN_BINS-1u);
+	float dn_front = aInv * float(hist[LDF + greyValue]) / float(NUM_IN_BINS-1u) + a * float(hist[RDF + greyValue]) / float(NUM_IN_BINS-1u);
 	float front  = bInv * up_front + b * dn_front;
 
 	// bilinear interpolation - zBack
-	float up_back = aInv * float(hist[LUB + greyValue]) / float(NUM_IN_BINS) + a * float(hist[RUB + greyValue]) / float(NUM_IN_BINS);
-	float dn_back = aInv * float(hist[LDB + greyValue]) / float(NUM_IN_BINS) + a * float(hist[RDB + greyValue]) / float(NUM_IN_BINS);
+	float up_back = aInv * float(hist[LUB + greyValue]) / float(NUM_IN_BINS-1u) + a * float(hist[RUB + greyValue]) / float(NUM_IN_BINS-1u);
+	float dn_back = aInv * float(hist[LDB + greyValue]) / float(NUM_IN_BINS-1u) + a * float(hist[RDB + greyValue]) / float(NUM_IN_BINS-1u);
 	float back  = bInv * up_back + b * dn_back;
 
 	// trilinear interpolation
 	float normFactor = float(size.x) * float(size.y) * float(size.z);
 	float ans = (cInv * front + c * back) / normFactor;
-
-
 
 	// use mask data only to get the mappings for the entire volume
 	imageStore(newVolume, ivec3(index), vec4(ans, 0, 0, 0));

@@ -33,6 +33,7 @@
 #include "defines.h"
 
 #include <string>
+#include <filesystem>
 
 #define VOLUME_POS osg::Vec3(-413, 1052, 885)
 #define VOLUME_POS2 osg::Vec3(200, 1052, 885)
@@ -148,7 +149,9 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 			}
 		}
 		int getVolumeIndex() { return _volumeIndex; }
-
+		Selection3DTool* getLastSelectionTool() {
+			return _selectionTools[_lastSelectionTool];
+		}
 
 	#ifdef DEBUGCODE
 		inline std::string printVec3OSG(osg::Vec3 vec3) {
@@ -179,8 +182,9 @@ class HelmsleyVolume : public cvr::MenuCallback, public cvr::CVRPlugin
 		std::vector<MeasurementTool*> _measurementTools;
 		int _lastMeasurementTool;
 		std::vector<Selection3DTool*> _selectionTools;
-		int _lastSelectionTool;
+		int _lastSelectionTool = 0;
 
+		
 		
 		std::vector<CuttingPlane*> _cuttingPlanes;
 		std::vector<osg::ref_ptr<VolumeGroup> > _volumes;
