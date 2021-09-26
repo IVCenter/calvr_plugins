@@ -477,9 +477,12 @@ void FileSelector::showDicomThumbnail() {
 		if (seriesIndex >= _seriesList.size())
 			break;
 		std::string path = getMiddleImage(seriesIndex);
-		DicomImage* image = new DicomImage(path.c_str());
+
+		if (path == "") continue;
+ 		DicomImage* image = new DicomImage(path.c_str());
 		assert(image != NULL);
 		assert(image->getStatus() == EIS_Normal);
+		image->setVoiLut(0);
 
 		// Get information
 		DcmFileFormat fileFormat;
@@ -555,6 +558,18 @@ std::string FileSelector::getMiddleImage(int seriesIndex) {
 	for (int i = 0; i < count / 2; i++) {
 		entry = readdir(dir);
 	}
+	while (entry != NULL) {
+		if (entry->d_name[0] == L'.' || !(entry->d_type == DT_REG && (strrchr(entry->d_name, '.') == nullptr) || strcmp(strrchr(entry->d_name, '.') + 1, "dcm") == 0)) {
+			entry = readdir(dir);
+		}
+		else {
+			break;
+		}
+	}
+	if (entry == NULL)
+		return "";
+
+
 	closedir(dir);
 	return (seriesPath + "/" + entry->d_name);
 }

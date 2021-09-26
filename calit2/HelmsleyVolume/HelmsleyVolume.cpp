@@ -126,8 +126,7 @@ bool HelmsleyVolume::init()
 	  
 	osg::Node* room = osgDB::readNodeFile(modelDir + "MIPCDVIZV3.obj", roomOptions);
 
-	//osg::Node* room =
-	/*osg::ref_ptr<osg::ShapeDrawable> sphere = new osg::ShapeDrawable(new osg::Sphere());
+ 	/*osg::ref_ptr<osg::ShapeDrawable> sphere = new osg::ShapeDrawable(new osg::Sphere());
 	osg::ref_ptr<osg::Geode> room = new osg::Geode();
 	room->getOrCreateStateSet()->setMode(GL_CULL_FACE, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
 	osg::ref_ptr<osg::ShadeModel> shadeModel = new osg::ShadeModel(osg::ShadeModel::FLAT);
@@ -145,107 +144,107 @@ bool HelmsleyVolume::init()
 	room->getDrawable(0)->getOrCreateStateSet()->setTextureAttributeAndModes(0, tex, osg::StateAttribute::ON);*/
 
 	//osg::Node* room = osgDB::readNodeFile(modelDir + "MIPCDVIZV3.obj", roomOptions);
-	////////////////////////////////Ryans forloop///////////////////
-	//for (unsigned int i = 0; i < room->asGroup()->getNumChildren(); i++) {
+	//////////////////////////////Ryans forloop///////////////////
+	for (unsigned int i = 0; i < room->asGroup()->getNumChildren(); i++) {
 
-	//	osg::Geode* g = dynamic_cast<osg::Geode*> (room->asGroup()->getChild(i));
-	//	osg::Geometry* gm = g->getDrawable(0)->asGeometry();
-	//	osg::Vec3Array* v = (osg::Vec3Array*) gm->getVertexArray();
-	//	osg::Vec3Array* tv = (osg::Vec3Array*)(gm->getTexCoordArray(0));
-	//	osg::Vec3Array* nv = (osg::Vec3Array*)(gm->getNormalArray());
+		osg::Geode* g = dynamic_cast<osg::Geode*> (room->asGroup()->getChild(i));
+		osg::Geometry* gm = g->getDrawable(0)->asGeometry();
+		osg::Vec3Array* v = (osg::Vec3Array*) gm->getVertexArray();
+		osg::Vec3Array* tv = (osg::Vec3Array*)(gm->getTexCoordArray(0));
+		osg::Vec3Array* nv = (osg::Vec3Array*)(gm->getNormalArray());
 
-	//	gm->setVertexAttribArray(0, v, osg::Array::BIND_PER_VERTEX);
+		gm->setVertexAttribArray(0, v, osg::Array::BIND_PER_VERTEX);
 
-	//	osg::ref_ptr<osg::Program> program(new osg::Program());
+		osg::ref_ptr<osg::Program> program(new osg::Program());
 
-	//	if (g->getDrawable(0)->getOrCreateStateSet()->getTextureAttributeList().size() != 0) {
+		if (g->getDrawable(0)->getOrCreateStateSet()->getTextureAttributeList().size() != 0) {
 
-	//		gm->setVertexAttribArray(2, tv, osg::Array::BIND_PER_VERTEX);
-	//		gm->setVertexAttribArray(1, nv, osg::Array::BIND_PER_VERTEX);
+			gm->setVertexAttribArray(2, tv, osg::Array::BIND_PER_VERTEX);
+			gm->setVertexAttribArray(1, nv, osg::Array::BIND_PER_VERTEX);
 
-	//		program->addShader(new osg::Shader(osg::Shader::VERTEX, loadShaderFile("room.vert")));
-	//		program->addShader(new osg::Shader(osg::Shader::FRAGMENT, loadShaderFile("texBRDF.frag")));
+			program->addShader(new osg::Shader(osg::Shader::VERTEX, loadShaderFile("room.vert")));
+			program->addShader(new osg::Shader(osg::Shader::FRAGMENT, loadShaderFile("texBRDF.frag")));
 
-	//		osg::Uniform* textureUniform = new osg::Uniform(osg::Uniform::SAMPLER_2D, "tex");
-	//		textureUniform->set(0);
-	//		g->getDrawable(0)->getOrCreateStateSet()->addUniform(textureUniform);
-	//		osg::Uniform* bumpUniform = new osg::Uniform(osg::Uniform::SAMPLER_2D, "normal");
-	//		bumpUniform->set(1);
-	//		g->getDrawable(0)->getOrCreateStateSet()->addUniform(bumpUniform);
+			osg::Uniform* textureUniform = new osg::Uniform(osg::Uniform::SAMPLER_2D, "tex");
+			textureUniform->set(0);
+			g->getDrawable(0)->getOrCreateStateSet()->addUniform(textureUniform);
+			osg::Uniform* bumpUniform = new osg::Uniform(osg::Uniform::SAMPLER_2D, "normal");
+			bumpUniform->set(1);
+			g->getDrawable(0)->getOrCreateStateSet()->addUniform(bumpUniform);
 
-	//		if (i >= 5 && i <= 6) {
-	//			osg::Uniform* heightMap = new osg::Uniform("heightMap", 1);
-	//			g->getDrawable(0)->getOrCreateStateSet()->addUniform(heightMap);
-	//		}
-	//		else {
-	//			osg::Uniform* heightMap = new osg::Uniform("heightMap", 0);
-	//			g->getDrawable(0)->getOrCreateStateSet()->addUniform(heightMap);
-	//		}
-	//	}
-	//	else if (i == 25) {
+			if (i >= 5 && i <= 6) {
+				osg::Uniform* heightMap = new osg::Uniform("heightMap", 1);
+				g->getDrawable(0)->getOrCreateStateSet()->addUniform(heightMap);
+			}
+			else {
+				osg::Uniform* heightMap = new osg::Uniform("heightMap", 0);
+				g->getDrawable(0)->getOrCreateStateSet()->addUniform(heightMap);
+			}
+		}
+		else if (i == 25) {
 
-	//		gm->setVertexAttribArray(1, nv, osg::Array::BIND_PER_VERTEX);
+			gm->setVertexAttribArray(1, nv, osg::Array::BIND_PER_VERTEX);
 
-	//		program->addShader(new osg::Shader(osg::Shader::VERTEX, loadShaderFile("glass.vert")));
-	//		program->addShader(new osg::Shader(osg::Shader::FRAGMENT, loadShaderFile("glass.frag")));
-	//		osg::ref_ptr<osg::TextureCubeMap> cubemap = new osg::TextureCubeMap;
+			program->addShader(new osg::Shader(osg::Shader::VERTEX, loadShaderFile("glass.vert")));
+			program->addShader(new osg::Shader(osg::Shader::FRAGMENT, loadShaderFile("glass.frag")));
+			osg::ref_ptr<osg::TextureCubeMap> cubemap = new osg::TextureCubeMap;
 
-	//		osg::Image* imagePosX = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
-	//		osg::Image* imageNegX = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
-	//		osg::Image* imagePosY = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
-	//		osg::Image* imageNegY = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
-	//		osg::Image* imagePosZ = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
-	//		osg::Image* imageNegZ = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
+			osg::Image* imagePosX = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
+			osg::Image* imageNegX = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
+			osg::Image* imagePosY = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
+			osg::Image* imageNegY = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
+			osg::Image* imagePosZ = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
+			osg::Image* imageNegZ = osgDB::readImageFile(modelDir + "textures/blurrytrees.jpg");
 
-	//		cubemap->setImage(osg::TextureCubeMap::POSITIVE_X, imagePosX);
-	//		cubemap->setImage(osg::TextureCubeMap::NEGATIVE_X, imageNegX);
-	//		cubemap->setImage(osg::TextureCubeMap::POSITIVE_Y, imagePosY);
-	//		cubemap->setImage(osg::TextureCubeMap::NEGATIVE_Y, imageNegY);
-	//		cubemap->setImage(osg::TextureCubeMap::POSITIVE_Z, imagePosZ);
-	//		cubemap->setImage(osg::TextureCubeMap::NEGATIVE_Z, imageNegZ);
+			cubemap->setImage(osg::TextureCubeMap::POSITIVE_X, imagePosX);
+			cubemap->setImage(osg::TextureCubeMap::NEGATIVE_X, imageNegX);
+			cubemap->setImage(osg::TextureCubeMap::POSITIVE_Y, imagePosY);
+			cubemap->setImage(osg::TextureCubeMap::NEGATIVE_Y, imageNegY);
+			cubemap->setImage(osg::TextureCubeMap::POSITIVE_Z, imagePosZ);
+			cubemap->setImage(osg::TextureCubeMap::NEGATIVE_Z, imageNegZ);
 
-	//		cubemap->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
-	//		cubemap->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
-	//		cubemap->setWrap(osg::Texture::WRAP_R, osg::Texture::CLAMP_TO_EDGE);
+			cubemap->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+			cubemap->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+			cubemap->setWrap(osg::Texture::WRAP_R, osg::Texture::CLAMP_TO_EDGE);
 
-	//		cubemap->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
-	//		cubemap->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+			cubemap->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
+			cubemap->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
 
-	//		cubemap->setResizeNonPowerOfTwoHint(true);
+			cubemap->setResizeNonPowerOfTwoHint(true);
 
-	//		g->getDrawable(0)->getOrCreateStateSet()->setTextureAttributeAndModes(0, cubemap, osg::StateAttribute::ON);
+			g->getDrawable(0)->getOrCreateStateSet()->setTextureAttributeAndModes(0, cubemap, osg::StateAttribute::ON);
 
-	//		osg::Uniform* environment = new osg::Uniform("skybox", 0);
-	//		g->getDrawable(0)->getOrCreateStateSet()->addUniform(environment);
-	//	}
-	//	else {
+			osg::Uniform* environment = new osg::Uniform("skybox", 0);
+			g->getDrawable(0)->getOrCreateStateSet()->addUniform(environment);
+		}
+		else {
 
-	//		gm->setVertexAttribArray(1, nv, osg::Array::BIND_PER_VERTEX);
+			gm->setVertexAttribArray(1, nv, osg::Array::BIND_PER_VERTEX);
 
-	//		program->addShader(new osg::Shader(osg::Shader::VERTEX, loadShaderFile("colored.vert")));
-	//		program->addShader(new osg::Shader(osg::Shader::FRAGMENT, loadShaderFile("BRDF.frag")));
-	//	}
+			program->addShader(new osg::Shader(osg::Shader::VERTEX, loadShaderFile("colored.vert")));
+			program->addShader(new osg::Shader(osg::Shader::FRAGMENT, loadShaderFile("BRDF.frag")));
+		}
 
-	//	g->getDrawable(0)->getOrCreateStateSet()->setAttributeAndModes(program.get(), osg::StateAttribute::ON);
+		g->getDrawable(0)->getOrCreateStateSet()->setAttributeAndModes(program.get(), osg::StateAttribute::ON);
 
-	//	osg::Material* mat = (osg::Material*)(g->getDrawable(0)->getOrCreateStateSet()->getAttribute(osg::StateAttribute::MATERIAL, 0));
-	//	osg::Uniform* diffuse = new osg::Uniform("diffuseVal", mat->getDiffuse(osg::Material::Face::FRONT));
-	//	g->getDrawable(0)->getOrCreateStateSet()->addUniform(diffuse);
-	//	osg::Uniform* ambient = new osg::Uniform("ambientVal", mat->getAmbient(osg::Material::Face::FRONT));
-	//	g->getDrawable(0)->getOrCreateStateSet()->addUniform(ambient);
-	//	osg::Uniform* specular = new osg::Uniform("specularVal", mat->getSpecular(osg::Material::Face::FRONT));
-	//	g->getDrawable(0)->getOrCreateStateSet()->addUniform(specular);
-	//	osg::Uniform* shininess = new osg::Uniform("shininess", mat->getShininess(osg::Material::Face::FRONT));
-	//	g->getDrawable(0)->getOrCreateStateSet()->addUniform(shininess);
+		osg::Material* mat = (osg::Material*)(g->getDrawable(0)->getOrCreateStateSet()->getAttribute(osg::StateAttribute::MATERIAL, 0));
+		osg::Uniform* diffuse = new osg::Uniform("diffuseVal", mat->getDiffuse(osg::Material::Face::FRONT));
+		g->getDrawable(0)->getOrCreateStateSet()->addUniform(diffuse);
+		osg::Uniform* ambient = new osg::Uniform("ambientVal", mat->getAmbient(osg::Material::Face::FRONT));
+		g->getDrawable(0)->getOrCreateStateSet()->addUniform(ambient);
+		osg::Uniform* specular = new osg::Uniform("specularVal", mat->getSpecular(osg::Material::Face::FRONT));
+		g->getDrawable(0)->getOrCreateStateSet()->addUniform(specular);
+		osg::Uniform* shininess = new osg::Uniform("shininess", mat->getShininess(osg::Material::Face::FRONT));
+		g->getDrawable(0)->getOrCreateStateSet()->addUniform(shininess);
 
-	//	osg::Uniform* metalUni = new osg::Uniform("metalUni", mat->getSpecular(osg::Material::Face::FRONT).x());
-	//	g->getDrawable(0)->getOrCreateStateSet()->addUniform(metalUni);
+		osg::Uniform* metalUni = new osg::Uniform("metalUni", mat->getSpecular(osg::Material::Face::FRONT).x());
+		g->getDrawable(0)->getOrCreateStateSet()->addUniform(metalUni);
 
-	//	osg::Uniform* roughUni = new osg::Uniform("roughUni", mat->getSpecular(osg::Material::Face::FRONT).y());
-	//	g->getDrawable(0)->getOrCreateStateSet()->addUniform(roughUni);
-	//}
+		osg::Uniform* roughUni = new osg::Uniform("roughUni", mat->getSpecular(osg::Material::Face::FRONT).y());
+		g->getDrawable(0)->getOrCreateStateSet()->addUniform(roughUni);
+	}
 
-	///////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////
 	_room = new SceneObject("room", false, false, false, false, false);
 	_room->addChild(room);
 	//_room->setScale(50000);

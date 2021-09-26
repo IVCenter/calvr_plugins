@@ -114,7 +114,11 @@ osg::Image* LoadDicomImage(const string& path, osg::Vec3& size) {
 	memset(data, 0, w * h * d * sizeof(uint16_t) * 2);
 
 	image->setMinMaxWindow();
-	uint16_t* pixelData = (uint16_t*)image->getOutputData(16);
+	uint16_t* pixelData = (uint16_t*)image->getOutputData(16) != NULL ? (uint16_t*)image->getOutputData(16) : nullptr;
+	if (pixelData = nullptr) {
+		std::cout << "error" << std::endl;
+	}
+
 	unsigned int j = 0;
 	for (unsigned int x = 0; x < w; x++)
 		for (unsigned int y = 0; y < h; y++) {
@@ -161,9 +165,9 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 			cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingX, 0);
 			cnd = dataset->findAndGetFloat64(DCM_PixelSpacing, spacingY, 1);
 			cnd = dataset->findAndGetFloat64(DCM_SliceThickness, thickness, 0);
-			cnd = dataset->findAndGetFloat64(DCM_ImagePositionPatient, positionX, 0);
-			cnd = dataset->findAndGetFloat64(DCM_ImagePositionPatient, positionY, 1);
-			cnd = dataset->findAndGetFloat64(DCM_ImagePositionPatient, positionZ, 2);
+			
+			
+
 			cnd = dataset->findAndGetFloat64(DCM_ImageOrientationPatient, orientation1X, 0);
 			cnd = dataset->findAndGetFloat64(DCM_ImageOrientationPatient, orientation1Y, 1);
 			cnd = dataset->findAndGetFloat64(DCM_ImageOrientationPatient, orientation1Z, 2);
@@ -171,10 +175,81 @@ osg::Image* LoadDicomVolume(const vector<string>& files, osg::Matrix& transform)
 			cnd = dataset->findAndGetFloat64(DCM_ImageOrientationPatient, orientation2Y, 4);
 			cnd = dataset->findAndGetFloat64(DCM_ImageOrientationPatient, orientation2Z, 5);
 		}
-
+		cnd = dataset->findAndGetFloat64(DCM_ImagePositionPatient, positionX, 0);
+		cnd = dataset->findAndGetFloat64(DCM_ImagePositionPatient, positionY, 1);
+		cnd = dataset->findAndGetFloat64(DCM_ImagePositionPatient, positionZ, 2);
+		double positions[3] = { positionX, positionY, positionZ };
 
 		double x;
+
 		cnd = dataset->findAndGetFloat64(DCM_SliceLocation, x, 0);
+		OFString instanceNumber;
+		if (cnd.bad()) {
+			
+			
+		
+			
+				OFString orientation;
+				if (dataset->findAndGetOFStringArray(DCM_ImageOrientationPatient, orientation).good()) {
+					const int numOfAxis = 6;
+					std::string stdOri = orientation.c_str();
+					int oriArray[numOfAxis];
+					std::string axis = "";
+
+					int pos = 0;
+					int i = 0;
+					do {
+						int nextSlash = stdOri.find("\\", pos);
+						int length = nextSlash - pos;
+						axis = stdOri.substr(pos, length);
+						oriArray[i] = std::abs(std::round(std::stod(axis)));
+						pos = nextSlash + 1;
+						i++;
+
+					} while (i < numOfAxis);
+					 
+
+					std::string lcstr = "";
+					std::string rcstr = "";
+					for (int i = 0; i < numOfAxis / 2; i++) {
+						lcstr.append(std::to_string(oriArray[i]));
+						rcstr.append(std::to_string(oriArray[numOfAxis / 2 + i]));
+					}
+
+					//newimplementation
+
+
+
+
+					int LBin = std::stoi(lcstr, nullptr, 2);
+					int RBin = std::stoi(rcstr, nullptr, 2);
+					
+					
+
+					int outBin = LBin | RBin;
+					int positionIndex;
+					switch (outBin) {
+					case 6:
+						positionIndex = 2; //Z
+						break;
+					case 5:
+						positionIndex = 1; //Y
+						break;
+					case 3:
+						positionIndex = 0; //X
+						break;
+					default:
+						break;	//Needs to account for non right angles
+					}
+					
+					x = positions[positionIndex];
+					std::cout << x << std::endl;
+				}
+				else if (dataset->findAndGetOFString(DCM_InstanceNumber, instanceNumber).good()) {
+					x = std::stod(std::string(instanceNumber.c_str()));
+				}
+			
+		}
 		minPos = minPos < x ? minPos : x;
 		maxPos = maxPos > x ? maxPos : x;
 

@@ -3147,7 +3147,7 @@ void NewVolumeMenu::toggle3DSelection(bool on) {
 		_selectionMenu->getRootElement()->_parent = nullptr;
 		//_selectionMenu->setActive(false);
 		popupMenus[_selectionMenu] = false;
-
+		_volume->removeSelection(true);
 
 		if (_menuCount--) {
 			resetMenuPos();
